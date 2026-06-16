@@ -36,11 +36,11 @@ Et spill opprettet i ~1-timersvinduet som straddler UTC/Oslo nyttår (1. jan 00:
 
 ## Suksesskriterier
 
-- [ ] **K1 — Oslo-år.** `osloYearWindow(d).year === osloParts(d).year` for alle instanter, inkl. nyttårs-straddle: `2026-12-31T23:30:00Z` (= 2027-01-01 00:30 Oslo) → `year === 2027`, ikke 2026. *Evidens: unit-test grønn + helper-kildekode.*
-- [ ] **K2 — Oslo-grenser.** `startIso` = UTC-instant av Oslo 1. jan 00:00 for `year`; `endIso` = samme for `year+1`. Konkret: `osloYearWindow(new Date('2026-06-15T10:00:00Z')).startIso === '2025-12-31T23:00:00.000Z'`. *Evidens: unit-test grønn.*
-- [ ] **K3 — Vindu-kjeding & inneslutning.** `endIso` for år Y === `startIso` for år Y+1 (ingen gap/overlapp). Straddle-instanten `2026-12-31T23:30:00Z` ligger i `[startIso, endIso)` for sitt eget (2027-)vindu. *Evidens: unit-test grønn.*
-- [ ] **K4 — `getSakNumber` bruker helperen.** Server-komponenten leser `{ year, startIso, endIso }` fra `osloYearWindow(created)` og filtrerer tellingen på `startIso`/`endIso`; ingen gjenværende `getFullYear()` eller `…T00:00:00Z`-streng i funksjonen. Returtype + render-steder uendret. *Evidens: `page.tsx`-diff + grep.*
-- [ ] **K5 — Gates grønne.** Co-located test + `tsc --noEmit` + `npm run build` passerer. Versjon patch-bumpet, CHANGELOG-oppføring lagt til (commit-msg-hook tilfredsstilt). *Evidens: kommando-output.*
+- [x] **K1 — Oslo-år.** `osloYearWindow(d).year === osloParts(d).year` for alle instanter, inkl. nyttårs-straddle: `2026-12-31T23:30:00Z` (= 2027-01-01 00:30 Oslo) → `year === 2027`, ikke 2026. *Evidens: `osloCalendar.test.ts:34,53` grønn; helper `osloCalendar.ts:54-58` leser `osloParts(date).year`. Vitest 18/18 passed.*
+- [x] **K2 — Oslo-grenser.** `startIso` = UTC-instant av Oslo 1. jan 00:00 for `year`; `endIso` = samme for `year+1`. Konkret: `osloYearWindow(new Date('2026-06-15T10:00:00Z')).startIso === '2025-12-31T23:00:00.000Z'`. *Evidens: `osloCalendar.test.ts:23-28` grønn (asserter både `startIso` og `endIso`).*
+- [x] **K3 — Vindu-kjeding & inneslutning.** `endIso` for år Y === `startIso` for år Y+1 (ingen gap/overlapp). Straddle-instanten `2026-12-31T23:30:00Z` ligger i `[startIso, endIso)` for sitt eget (2027-)vindu. *Evidens: `osloCalendar.test.ts:43-47` (kjeding) + `61-69` (inneslutning) grønn.*
+- [x] **K4 — `getSakNumber` bruker helperen.** Server-komponenten leser `{ year, startIso, endIso }` fra `osloYearWindow(created)` og filtrerer tellingen på `startIso`/`endIso`; ingen gjenværende `getFullYear()` eller `…T00:00:00Z`-streng i funksjonen. Returtype + render-steder uendret. *Evidens: `page.tsx:142-153` diff; grep av linjene 138-160 viser kun `osloYearWindow`/`startIso`/`endIso`, ingen `getFullYear`/`T00:00:00Z`.*
+- [x] **K5 — Gates grønne.** Co-located test + `tsc --noEmit` + `npm run build` passerer. Versjon patch-bumpet, CHANGELOG-oppføring lagt til (commit-msg-hook tilfredsstilt). *Evidens: vitest 18 passed; `tsc --noEmit` exit 0; `npm run build` fullførte med route-tre + legende; bump 1.130.8→1.130.9; CHANGELOG `[1.130.9]`-oppføring; `fix(...)`-commit `89ea90a8` passerte commit-msg-hook.*
 
 ## Gates (scoped til endringen)
 
