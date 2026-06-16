@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { calculateCourseHandicap, applyAllowance } from './courseHandicap';
+import {
+  calculateCourseHandicap,
+  applyAllowance,
+  displayCourseHandicap,
+} from './courseHandicap';
 
 describe('calculateCourseHandicap', () => {
   it('matches Byneset Nord tee 57 example: 26.8 → 31', () => {
@@ -34,5 +38,67 @@ describe('applyAllowance', () => {
   });
   it('0% gives zero', () => {
     expect(applyAllowance(31, 0)).toBe(0);
+  });
+});
+
+describe('displayCourseHandicap', () => {
+  // The pre-start game-home info card needs a CH to show before the game is
+  // auto-started (which freezes game_players.course_handicap). This helper
+  // must produce the EXACT same number startScheduledGame freezes: it composes
+  // calculateCourseHandicap + applyAllowance in the same order, so the display
+  // value and the later frozen value never disagree.
+  it('matches the calculate + applyAllowance pipeline used at start', () => {
+    const raw = calculateCourseHandicap({
+      hcpIndex: 26.8,
+      slope: 130,
+      courseRating: 70,
+      par: 70,
+    });
+    const frozen = applyAllowance(raw, 85);
+    expect(
+      displayCourseHandicap({
+        hcpIndex: 26.8,
+        slope: 130,
+        courseRating: 70,
+        par: 70,
+        allowancePct: 85,
+      }),
+    ).toBe(frozen);
+  });
+
+  it('100% allowance equals the unadjusted course handicap', () => {
+    expect(
+      displayCourseHandicap({
+        hcpIndex: 26.8,
+        slope: 130,
+        courseRating: 70,
+        par: 70,
+        allowancePct: 100,
+      }),
+    ).toBe(31);
+  });
+
+  it('returns null when the tee rating is missing', () => {
+    expect(
+      displayCourseHandicap({
+        hcpIndex: 26.8,
+        slope: null,
+        courseRating: 70,
+        par: 70,
+        allowancePct: 100,
+      }),
+    ).toBeNull();
+  });
+
+  it('returns null when hcp index is not a finite number', () => {
+    expect(
+      displayCourseHandicap({
+        hcpIndex: Number.NaN,
+        slope: 130,
+        courseRating: 70,
+        par: 70,
+        allowancePct: 100,
+      }),
+    ).toBeNull();
   });
 });
