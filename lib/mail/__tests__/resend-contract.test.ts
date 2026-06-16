@@ -11,7 +11,7 @@ import type { SendArgs, SendResult } from './_helpers';
 // vi.mock-registreringen hoistes til toppen av denne filen av Vitest, så
 // selve mock-oppsettet ligger her (ikke i _helpers.ts — se kommentar der).
 //
-// Dekker alle 11 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
+// Dekker alle 12 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
 // fortsatt sin egen Resend-mock for å snapshot-e copy/HTML — denne fila
 // kompletterer dem ved å samle de strukturelle kontraktene ett sted.
 
@@ -59,6 +59,19 @@ const senders = [
       return sendInviteNotification({
         to: 'venn@example.com',
         invitedByName: 'Jørgen',
+      });
+    },
+  },
+  {
+    name: 'sendClubInviteNotification',
+    invoke: async () => {
+      const { sendClubInviteNotification } = await import(
+        '../clubInviteNotification'
+      );
+      return sendClubInviteNotification({
+        to: 'venn@example.com',
+        invitedByName: 'Jørgen',
+        clubName: 'Stiklestad Golfklubb',
       });
     },
   },

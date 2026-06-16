@@ -17,6 +17,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.131.y — Klubb-invitasjon på e-post
+
+Issue [#644](https://github.com/jdlarssen/golf-app/issues/644). Før måtte folk ha en Tørny-konto før du kunne legge dem til i en klubb. Nå kan du invitere hvem som helst på e-post.
+
+### [1.131.0] - 2026-06-16 · #644
+
+> Legg til et klubbmedlem på e-post selv om de ikke har Tørny fra før. De får en invitasjon i innboksen, og når de logger inn første gang er de medlem med en gang. Ventende invitasjoner ligger synlig i klubben til de blir godtatt, og du kan trekke dem tilbake.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny tabell `public.club_invitations` (migrasjon 0099) — speiler `public.invitations`, men scopet til en klubb (`group_id`) i stedet for et spill. Admin-only RLS (`is_group_admin`), partial-unique på `(group_id, lower(email)) where accepted_at is null`.
+- Ny mail-sender `lib/mail/clubInviteNotification.ts` (locale-aware via `lib/mail/i18n.ts`, default norsk), med approval-snapshot-test og rad i den delte Resend-kontrakt-testen. Nye `mail.clubInvite.*`-nøkler i `no.json` + `en.json`.
+- Ventende-invitasjon-liste i klubb-rommet (`app/[locale]/klubber/[id]/page.tsx`) med «ventende»-merke og trekk-tilbake (delete via ny `cancelInvitation`-action). `getClubDetail` returnerer nå `pendingInvitations`.
+
+#### Changed
+- `add_club_member_by_email` (migrasjon 0099, CREATE OR REPLACE): en ukjent e-post gir nå en ventende klubb-invitasjon og retur-koden `invited` i stedet for `not_found`. Medlemstaket teller aktive medlemmer + åpne invitasjoner. Ny `accept_club_invitations()`-RPC kjøres fra `verifyCode` etter spill-avstemmingen, så en klubb-invitert ny bruker blir medlem ved første innlogging (best-effort, blokkerer aldri login).
+- `addMember`-action håndterer `invited` → suksess-redirect + best-effort `sendClubInviteNotification`. Hjelpeteksten under e-postfeltet (`klubb.room.emailHint` / `klubb.create.ownerEmailHint`) sier nå at uregistrerte får en invitasjon på e-post.
+
+</details>
+
 ## 1.130.y — Lag-matchplay uten cup
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.

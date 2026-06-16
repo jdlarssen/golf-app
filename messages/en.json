@@ -4160,6 +4160,14 @@
 			"getStartedHtml": "To get started: go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you.",
 			"getStartedText": "Go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you."
 		},
+		"clubInvite": {
+			"subject": "You're invited to {clubName} on Tørny",
+			"heading": "You're invited to a club",
+			"intro": "<strong>{name}</strong> has invited you to the club <em>{club}</em> on Tørny.",
+			"footerDisclaimer": "Don't know {name}? Just ignore this message.",
+			"getStartedHtml": "To join: go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you. You'll be a member right away.",
+			"getStartedText": "Go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you. You'll be a member right away."
+		},
 		"registrationApproved": {
 			"subject": "You're in: {gameName}",
 			"heading": "You're in",
