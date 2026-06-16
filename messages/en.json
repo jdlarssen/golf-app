@@ -696,7 +696,7 @@
 			"missingPrefix": "Missing: {items}",
 			"playersSolo": "{count} player",
 			"playersPlural": "{count} players",
-			"playersUnassigned": "{count} {playerWord} (not assigned)",
+			"playersUnassigned": "{playerWord} (not assigned)",
 			"players1v1": "1 v 1",
 			"playersUnassignedMatchplay": "Not assigned",
 			"teamsBestBall": "{teams} teams of 2",

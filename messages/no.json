@@ -696,7 +696,7 @@
 			"missingPrefix": "Mangler: {items}",
 			"playersSolo": "{count} spiller",
 			"playersPlural": "{count} spillere",
-			"playersUnassigned": "{count} {playerWord} (ikke fordelt)",
+			"playersUnassigned": "{playerWord} (ikke fordelt)",
 			"players1v1": "1 v 1",
 			"playersUnassignedMatchplay": "Ikke fordelt",
 			"teamsBestBall": "{teams} lag à 2 spillere",

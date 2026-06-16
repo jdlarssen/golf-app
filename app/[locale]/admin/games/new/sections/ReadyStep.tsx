@@ -105,7 +105,7 @@ export function ReadyStep({
     ).length;
     if (teamsCount === 0) {
       const base = count === 1 ? t('playersSolo', { count }) : t('playersPlural', { count });
-      return t('playersUnassigned', { count, playerWord: base });
+      return t('playersUnassigned', { playerWord: base });
     }
     if (isBestBall) {
       return t('teamsBestBall', { teams: teamsCount });
