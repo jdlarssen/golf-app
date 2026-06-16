@@ -1522,7 +1522,7 @@
 			"backToGame": "Tilbake til spillet",
 			"withdrawLabel": "Marker som trukket",
 			"explanationAllowWd": "Avslutter du nå, blir spillere uten hake stående som ikke levert. Scorene de rakk å registrere teller fortsatt. Spillere med hake markeres som Trukket og teller ikke i rangeringen. Resten låses og leaderboard åpnes for alle.",
-			"explanationNoWd": "Avslutter du nå, blir disse stående som ikke levert. Scorene de rakk å registrere teller fortsatt. Resten låses og leaderboard åpnes for alle.",
+			"explanationNoWd": "Dette formatet trekker ikke enkeltspillere, så du markerer dem ikke hver for seg her. Avslutter du nå, blir de stående som ikke levert, men scorene de rakk å registrere teller fortsatt. Resten låses og leaderboard åpnes for alle.",
 			"finishAnywayButton": "Avslutt likevel",
 			"finishButton": "Avslutt spillet",
 			"finishPending": "Avslutter …",

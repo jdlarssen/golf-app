@@ -1522,7 +1522,7 @@
 			"backToGame": "Back to game",
 			"withdrawLabel": "Mark as withdrawn",
 			"explanationAllowWd": "If you finish now, players without a tick will be recorded as not submitted. Scores they managed to enter still count. Players with a tick will be marked as Withdrawn and won't count in the standings. The rest will be locked and the leaderboard will open for everyone.",
-			"explanationNoWd": "If you finish now, these players will be recorded as not submitted. Scores they managed to enter still count. The rest will be locked and the leaderboard will open for everyone.",
+			"explanationNoWd": "This format doesn't withdraw individual players, so you don't mark them one by one here. If you finish now, they'll be recorded as not submitted, but scores they managed to enter still count. The rest will be locked and the leaderboard will open for everyone.",
 			"finishAnywayButton": "Finish anyway",
 			"finishButton": "Finish game",
 			"finishPending": "Finishing …",
