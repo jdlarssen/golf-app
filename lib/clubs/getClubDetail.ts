@@ -15,6 +15,12 @@ export type PendingJoinRequest = {
   requestedAt: string;
 };
 
+export type PendingClubInvitation = {
+  id: string;
+  email: string;
+  invitedAt: string;
+};
+
 export type ClubDetail = {
   club: {
     id: string;
@@ -27,6 +33,8 @@ export type ClubDetail = {
   myRole: 'owner' | 'admin' | 'member';
   /** Pending join requests — populated only when caller is owner/admin; [] for members. */
   pendingRequests: PendingJoinRequest[];
+  /** Pending email invitations (#644) — populated only for owner/admin; [] for members. */
+  pendingInvitations: PendingClubInvitation[];
 };
 
 const ROLE_ORDER: Record<'owner' | 'admin' | 'member', number> = {
@@ -78,7 +86,7 @@ export async function getClubDetail(
 
   const isAdmin = myRole === 'owner' || myRole === 'admin';
 
-  const [clubRes, membersRes, requestsRes] = await Promise.all([
+  const [clubRes, membersRes, requestsRes, invitationsRes] = await Promise.all([
     admin
       .from('groups')
       .select('id, name, short_id, member_cap, valid_until')
@@ -95,6 +103,15 @@ export async function getClubDetail(
           .select('id, created_at, user_id, users(name, nickname)')
           .eq('group_id', clubId)
           .eq('status', 'pending')
+          .order('created_at', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    // #644: open email invitations — owner/admin only. Open = not accepted.
+    isAdmin
+      ? admin
+          .from('club_invitations')
+          .select('id, email, created_at')
+          .eq('group_id', clubId)
+          .is('accepted_at', null)
           .order('created_at', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -143,6 +160,18 @@ export async function getClubDetail(
     };
   });
 
+  const pendingInvitations: PendingClubInvitation[] = (
+    invitationsRes.data ?? []
+  ).map((row) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rowAny = row as any;
+    return {
+      id: rowAny.id as string,
+      email: rowAny.email as string,
+      invitedAt: rowAny.created_at as string,
+    };
+  });
+
   return {
     club: {
       id: clubRes.data.id,
@@ -154,5 +183,6 @@ export async function getClubDetail(
     members,
     myRole,
     pendingRequests,
+    pendingInvitations,
   };
 }

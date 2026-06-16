@@ -19,11 +19,14 @@ import { CopyJoinLinkButton } from './CopyJoinLinkButton';
 import { ClubLeaguesSection } from './ClubLeaguesSection';
 import { ClubCupsSection } from './ClubCupsSection';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
-import { addMember, decideRequest } from './actions';
+import { addMember, decideRequest, cancelInvitation } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   added?: string | string[];
+  invited?: string | string[];
+  mail?: string | string[];
+  cancelled?: string | string[];
   error?: string | string[];
   email?: string | string[];
   decided?: string | string[];
@@ -62,7 +65,7 @@ export default async function KlubbDetailPage({
   const detail = await getClubDetail(supabase, id, user!.id);
   if (!detail) notFound();
 
-  const { club, members, myRole, pendingRequests } = detail;
+  const { club, members, myRole, pendingRequests, pendingInvitations } = detail;
   const isAdmin = myRole === 'owner' || myRole === 'admin';
 
   // #480: klubbens ligaer. RLS («leagues select scoped») lar medlemmer se
@@ -91,6 +94,9 @@ export default async function KlubbDetailPage({
   const iSoleOwner = myRole === 'owner' && ownerCount === 1;
 
   const addedEmail = first(sp.added);
+  const invitedEmail = first(sp.invited);
+  const invitedMailFailed = first(sp.mail) === 'failed';
+  const cancelledCode = first(sp.cancelled);
   const errorCode = first(sp.error);
   const errorEmail = first(sp.email);
   const decidedCode = first(sp.decided);
@@ -154,6 +160,26 @@ export default async function KlubbDetailPage({
       {addedEmail && (
         <div className="mb-6">
           <Banner tone="success">{t('addedBanner', { email: addedEmail })}</Banner>
+        </div>
+      )}
+
+      {invitedEmail && (
+        <div className="mb-6">
+          <Banner tone={invitedMailFailed ? 'warning' : 'success'}>
+            {invitedMailFailed
+              ? t('invitedMailFailedBanner', { email: invitedEmail })
+              : t('invitedBanner', { email: invitedEmail })}
+          </Banner>
+        </div>
+      )}
+
+      {cancelledCode && (
+        <div className="mb-6">
+          <Banner tone={cancelledCode === 'ok' ? 'success' : 'error'}>
+            {cancelledCode === 'ok'
+              ? t('cancelledBanner')
+              : t('cancelledErrorBanner')}
+          </Banner>
         </div>
       )}
 
@@ -225,6 +251,44 @@ export default async function KlubbDetailPage({
                         pendingLabel={t('rejectPending')}
                       >
                         {t('rejectButton')}
+                      </SubmitButton>
+                    </form>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Pending email invitations (#644) — visible only to owner/admin */}
+      {isAdmin && pendingInvitations.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            {t('invitationsHeading', { count: pendingInvitations.length })}
+          </h2>
+          <div className="space-y-2">
+            {pendingInvitations.map((inv) => (
+              <Card key={inv.id} className="p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-sans text-[15px] font-medium text-text">
+                      {inv.email}
+                    </span>
+                    <span className="shrink-0 rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
+                      {t('invitationPendingBadge')}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0">
+                    <form action={cancelInvitation}>
+                      <input type="hidden" name="invitationId" value={inv.id} />
+                      <input type="hidden" name="groupId" value={club.id} />
+                      <SubmitButton
+                        variant="secondary"
+                        className="min-h-[44px] px-4 text-sm"
+                        pendingLabel={t('cancelInvitePending')}
+                      >
+                        {t('cancelInviteButton')}
                       </SubmitButton>
                     </form>
                   </div>
