@@ -41,6 +41,7 @@ import {
   resolveFormatContentKey,
 } from '@/lib/games/formatLabel';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
+import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
@@ -396,6 +397,39 @@ export default async function GameHomePage({
   const playerRating = game.tee_boxes
     ? getRatingForGender(game.tee_boxes, me.tee_gender)
     : null;
+
+  // #640 item 1: DIN INFO showed «Banehandicap —» for a beat right after an
+  // auto-start — startScheduledGame had frozen course_handicap, but the cache
+  // invalidation runs in after(), so the cached `me.course_handicap` was still
+  // the pre-start NULL. CH is a pure HCP+tee+allowance function, so compute it
+  // on the fly for display when the frozen value isn't visible yet. Once the
+  // cache refreshes, `me.course_handicap` is non-null and we show the frozen
+  // value verbatim (no extra fetch). displayCourseHandicap reuses the exact
+  // calculate+allowance pipeline from start, so display and frozen never drift.
+  let displayedCourseHandicap: number | null = me.course_handicap;
+  if (displayedCourseHandicap == null && playerRating) {
+    const [meHcpRes, allowanceRes] = await Promise.all([
+      supabase
+        .from('users')
+        .select('hcp_index')
+        .eq('id', userId)
+        .single<{ hcp_index: number | string }>(),
+      supabase
+        .from('games')
+        .select('hcp_allowance_pct')
+        .eq('id', id)
+        .single<{ hcp_allowance_pct: number }>(),
+    ]);
+    if (meHcpRes.data && allowanceRes.data) {
+      displayedCourseHandicap = displayCourseHandicap({
+        hcpIndex: Number(meHcpRes.data.hcp_index),
+        slope: playerRating.slope,
+        courseRating: playerRating.courseRating,
+        par: playerRating.par,
+        allowancePct: allowanceRes.data.hcp_allowance_pct,
+      });
+    }
+  }
 
   // Mode content from the message catalog (i18n Fase D, #592). One read shared
   // by both ModeGuideCard call sites in scheduled + active branches below.
@@ -856,7 +890,7 @@ export default async function GameHomePage({
                 <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
                   <dt className="text-muted">{t('courseHandicap')}</dt>
                   <dd className="score-num text-text text-right">
-                    {me.course_handicap ?? '—'}
+                    {displayedCourseHandicap ?? '—'}
                   </dd>
                 </dl>
               </>
@@ -872,7 +906,7 @@ export default async function GameHomePage({
                 </dd>
                 <dt className="text-muted">{t('courseHandicap')}</dt>
                 <dd className="score-num text-text text-right">
-                  {me.course_handicap ?? '—'}
+                  {displayedCourseHandicap ?? '—'}
                 </dd>
               </dl>
             )}
