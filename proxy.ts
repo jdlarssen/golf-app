@@ -82,6 +82,14 @@ export async function proxy(request: NextRequest) {
   // won't pick up a users.locale change made on ANOTHER device until its
   // cookie is refreshed — the Profil toggle (Phase 1) updates both DB and
   // cookie, which keeps same-device behavior exact.
+  //
+  // #640 item 6: this branch only runs for an authenticated user (the !user
+  // guard above redirected anonymous visitors), so we pass signedIn: true.
+  // That skips the Accept-Language step — a logged-in user with NULL
+  // users.locale defaults to 'no' instead of inheriting an English-language
+  // browser. Anonymous visitors hit public pages via handleI18nRouting (whose
+  // own next-intl detection still honors Accept-Language), so they're
+  // unaffected.
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value ?? null;
   let resolvedLocale: string | null = null;
   if (!cookieLocale) {
@@ -93,6 +101,7 @@ export async function proxy(request: NextRequest) {
     resolvedLocale = resolveLocale({
       userLocale: userRow?.locale,
       acceptLanguage: request.headers.get('accept-language'),
+      signedIn: true,
     });
     // Feed our resolution into next-intl's detection (cookie has top
     // non-URL priority there) so both layers agree on the locale.
