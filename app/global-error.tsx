@@ -70,6 +70,7 @@ export default function GlobalError({
             >
               Prøv igjen
             </button>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- global-error erstatter router-skallet; et rått <a> tvinger full reload tilbake til en fungerende app (next/link ville prøvd klient-nav på en død router). */}
             <a
               href="/"
               style={{
