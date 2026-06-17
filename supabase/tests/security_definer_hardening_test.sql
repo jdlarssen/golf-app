@@ -1,9 +1,9 @@
 -- supabase/tests/security_definer_hardening_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Catalog-based test for migration 0104 (#671):
---   1. email_is_in_auth_users has NO EXECUTE grant to `anon`
---   2. email_is_invited          STILL has EXECUTE grant to `anon` (must not break)
---   3. email_is_registered       STILL has NO EXECUTE grant to `anon` (unchanged)
+--   1. email_is_in_auth_users has NO EXECUTE grant to `anon` (revoked by 0104)
+--   2. email_is_in_auth_users STILL has EXECUTE grant to `authenticated` (no regression)
+--   3. email_is_invited          STILL has EXECUTE grant to `anon` (login gate must not break)
 --   4–8. The 5 hardened RLS helpers all have SET search_path in their prosrc /
 --        pg_proc.proconfig — verified via information_schema + pg_proc.
 --

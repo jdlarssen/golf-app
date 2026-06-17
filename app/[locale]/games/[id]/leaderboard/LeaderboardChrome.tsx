@@ -25,7 +25,8 @@ export interface LeaderboardShellProps {
  * Montert her: `LeaderboardRealtime` (issue #679). Siden hver format-visning
  * rendrer gjennom denne shellen, får alle ~14 score-/standings-flatene live
  * auto-refresh uten at noen av visnings-filene må røres. Komponenten leser
- * spill-ID fra rute-segmentet (`useParams`) — shellen får den ikke som prop.
+ * spill-ID fra `window.location` siden shellen ikke får den som prop (ikke
+ * `useParams`, som ville sprengt format-visnings-testene).
  */
 export function LeaderboardShell({
   children,
