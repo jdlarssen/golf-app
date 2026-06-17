@@ -29,7 +29,11 @@ export function SubmitForm({ submitAction, missingHoles }: Props) {
         }
       }}
     >
-      <SubmitButton className="w-full" pendingLabel={t('submitPending')}>
+      <SubmitButton
+        data-testid="submit-scorecard"
+        className="w-full"
+        pendingLabel={t('submitPending')}
+      >
         {t('submitButton')}
       </SubmitButton>
     </form>

@@ -41,3 +41,43 @@ jobs:
       - name: Lint (non-blocking until pre-existing errors are cleaned)
         run: npm run lint
         continue-on-error: true
+
+  # Authenticated e2e gate (#674): the golden-path scoring loop + cup/liga
+  # lifecycle smoke — the flows where #641/#642/#647 lived. These run against the
+  # real Supabase (prod-DB per "Production-only testing"), so they need
+  # service-role secrets + two pre-seeded test users. They self-skip without the
+  # env (see e2e/_helpers/games.ts), but booting the dev server still needs the
+  # public Supabase keys — so this whole job is gated OFF until activated.
+  #
+  # OWNER ACTION TO ACTIVATE (Settings → Secrets and variables → Actions):
+  #   1. Add repository SECRETS: NEXT_PUBLIC_SUPABASE_URL,
+  #      NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
+  #      E2E_ADMIN_EMAIL (an is_admin user), E2E_PLAYER_EMAIL (a separate
+  #      profile-complete user).
+  #   2. Add repository VARIABLE RUN_E2E = true.
+  # Until RUN_E2E is set this job is skipped (never red), so it can't block a PR.
+  e2e:
+    if: ${{ vars.RUN_E2E == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Authenticated e2e (golden-path + cup/liga smoke)
+        run: npm run e2e
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_PLAYER_EMAIL: ${{ secrets.E2E_PLAYER_EMAIL }}

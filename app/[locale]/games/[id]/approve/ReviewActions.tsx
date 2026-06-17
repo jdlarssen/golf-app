@@ -30,7 +30,11 @@ export function ReviewActions({
       {!showReject ? (
         <div className="grid grid-cols-2 gap-2">
           <form action={approveAction}>
-            <SubmitButton className="w-full" pendingLabel={t('approvePending')}>
+            <SubmitButton
+              data-testid="approve-scorecard"
+              className="w-full"
+              pendingLabel={t('approvePending')}
+            >
               {t('approveButton')}
             </SubmitButton>
           </form>

@@ -205,6 +205,107 @@ export async function createTestGame(
   };
 }
 
+export type ActiveGame = {
+  id: string;
+  shortId: string;
+  name: string;
+  adminUserId: string;
+  playerUserId: string;
+};
+
+/**
+ * Seeder et AKTIVT solo-stableford-spill med to spillere i samme flight: admin
+ * (oppretteren) + en separat test-spiller. Begge får `accepted_at` satt og en
+ * `course_handicap`, så RLS-medlemskaps-sjekken passerer og leaderboard kan
+ * regne netto-poeng. Brukes av den autentiserte golden-path-spec-en (#674):
+ * spiller taster slag → leverer → admin godkjenner → leaderboard.
+ *
+ * Insert-shapet er validert mot live-skjema (game_players har INGEN `status`-
+ * kolonne; `tee_gender` er NOT NULL men har default — vi setter den eksplisitt).
+ * Caller MÅ kalle `cleanupTestGame(id)` i `afterAll`. Velger en bane-tee med
+ * herre-rating (samme som liga-spec-en) så hull-par + stroke_index finnes for
+ * scoring/leaderboard.
+ */
+export async function seedActiveStablefordGame(
+  nameSuffix?: string,
+): Promise<ActiveGame> {
+  const admin = adminClient();
+  if (!ADMIN_EMAIL || !PLAYER_EMAIL) {
+    throw new Error('E2E_ADMIN_EMAIL / E2E_PLAYER_EMAIL ikke satt');
+  }
+
+  const { data: adminUser } = await admin
+    .from('users')
+    .select('id')
+    .ilike('email', ADMIN_EMAIL)
+    .maybeSingle<{ id: string }>();
+  const { data: playerUser } = await admin
+    .from('users')
+    .select('id')
+    .ilike('email', PLAYER_EMAIL)
+    .maybeSingle<{ id: string }>();
+  if (!adminUser) throw new Error(`Admin-bruker ${ADMIN_EMAIL} ikke funnet`);
+  if (!playerUser) throw new Error(`Spiller-bruker ${PLAYER_EMAIL} ikke funnet`);
+
+  const { data: tee } = await admin
+    .from('tee_boxes')
+    .select('id, course_id')
+    .not('par_total_mens', 'is', null)
+    .limit(1)
+    .maybeSingle<{ id: string; course_id: string }>();
+  if (!tee) throw new Error('Ingen tee_box med herre-rating tilgjengelig');
+
+  const name = `TEST-GoldenPath-${Date.now()}${nameSuffix ? `-${nameSuffix}` : ''}`;
+  const { data: game, error: gameErr } = await admin
+    .from('games')
+    .insert({
+      name,
+      course_id: tee.course_id,
+      tee_box_id: tee.id,
+      game_mode: 'stableford',
+      mode_config: {},
+      registration_mode: 'invite_only',
+      registration_type: 'solo',
+      status: 'active',
+      created_by: adminUser.id,
+    })
+    .select('id, short_id, name')
+    .single<{ id: string; short_id: string; name: string }>();
+  if (gameErr || !game) {
+    throw new Error(`Insert aktivt TEST-spill feilet: ${gameErr?.message ?? 'no row'}`);
+  }
+
+  const acceptedAt = new Date().toISOString();
+  const { error: gpErr } = await admin.from('game_players').insert([
+    {
+      game_id: game.id,
+      user_id: adminUser.id,
+      flight_number: 1,
+      course_handicap: 18,
+      accepted_at: acceptedAt,
+    },
+    {
+      game_id: game.id,
+      user_id: playerUser.id,
+      flight_number: 1,
+      course_handicap: 18,
+      accepted_at: acceptedAt,
+    },
+  ]);
+  if (gpErr) {
+    await cleanupTestGame(game.id);
+    throw new Error(`Insert game_players feilet: ${gpErr.message}`);
+  }
+
+  return {
+    id: game.id,
+    shortId: game.short_id,
+    name: game.name,
+    adminUserId: adminUser.id,
+    playerUserId: playerUser.id,
+  };
+}
+
 /**
  * Sletter test-spillet. Cascade på `games.id` rydder `game_players`,
  * `game_registration_requests`, `notifications` (de som har payload-ref til

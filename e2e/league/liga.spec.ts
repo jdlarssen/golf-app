@@ -116,3 +116,172 @@ test.describe('Liga', () => {
     await expect(page.getByTestId('liga-round')).toHaveCount(1);
   });
 });
+
+/**
+ * #674 (del 1, #647-reproduser): den forrige liga-testen seeder rundene/
+ * spillerne DIREKTE og asserter bare tom-tilstanden — den kjører aldri
+ * standings-fra-ferdig-flight-stien der #647 levde (flight-insert-constraint +
+ * course_holes.par-krasj). Denne seeder en FERDIG flight (samme shape som
+ * `startLeagueRoundFlight`: `solo_strokeplay`, `league_round_id`) + scores, og
+ * asserter at den offentlige standings-tabellen rendrer TALL — ikke tom-
+ * tilstanden og ikke #680-error-fallbacken som en par-500 ville utløst.
+ */
+test.describe('Liga — finished-flight standings (#647 read-path)', () => {
+  test.skip(!envReady, skipReason);
+  test.slow();
+
+  let leagueId: string | null = null;
+  let flightGameId: string | null = null;
+
+  test.afterAll(async () => {
+    const admin = adminClient();
+    if (flightGameId) await admin.from('games').delete().eq('id', flightGameId);
+    if (leagueId) await admin.from('leagues').delete().eq('id', leagueId);
+  });
+
+  test('a delivered finished flight makes the standings table render numbers', async ({
+    page,
+  }) => {
+    const admin = adminClient();
+
+    const { data: adminUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', ADMIN_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    const { data: playerUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', PLAYER_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    expect(adminUser, 'admin user seeded').toBeTruthy();
+    expect(playerUser, 'player user seeded').toBeTruthy();
+
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    expect(tee, 'a tee with a mens rating').toBeTruthy();
+
+    const now = Date.now();
+    const day = 86_400_000;
+    const { data: league, error: lErr } = await admin
+      .from('leagues')
+      .insert({
+        name: `TEST-Liga-finished-${now}`,
+        season_start: new Date(now - day).toISOString().slice(0, 10),
+        season_end: new Date(now + 30 * day).toISOString().slice(0, 10),
+        format: 'stroke',
+        scoring: 'net',
+        standings_model: 'total',
+        course_scope: 'single_course_single_tee',
+        course_id: tee!.course_id,
+        tee_box_id: tee!.id,
+        status: 'active',
+        created_by: adminUser!.id,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(lErr).toBeNull();
+    leagueId = league!.id;
+
+    const { data: round, error: rErr } = await admin
+      .from('league_rounds')
+      .insert({
+        league_id: leagueId,
+        sequence: 1,
+        label: 'Runde 1',
+        course_id: tee!.course_id,
+        tee_box_id: tee!.id,
+        opens_at: new Date(now - day).toISOString(),
+        closes_at: new Date(now + 7 * day).toISOString(),
+        original_closes_at: new Date(now + 7 * day).toISOString(),
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(rErr).toBeNull();
+    const roundId = round!.id;
+
+    const stampIso = new Date().toISOString();
+    await admin.from('league_players').insert([
+      { league_id: leagueId, user_id: adminUser!.id, accepted_at: stampIso },
+      { league_id: leagueId, user_id: playerUser!.id, accepted_at: stampIso },
+    ]);
+
+    // Finished flight tied to the round — mirrors startLeagueRoundFlight's shape
+    // (solo_strokeplay, league_round_id), delivered + approved.
+    const { data: flight, error: fErr } = await admin
+      .from('games')
+      .insert({
+        name: `TEST-Liga-finished-${now} – Runde`,
+        course_id: tee!.course_id,
+        tee_box_id: tee!.id,
+        status: 'finished',
+        game_mode: 'solo_strokeplay',
+        mode_config: { kind: 'solo_strokeplay', team_size: 1 },
+        created_by: adminUser!.id,
+        league_round_id: roundId,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(fErr).toBeNull();
+    flightGameId = flight!.id;
+
+    await admin.from('game_players').insert([
+      {
+        game_id: flightGameId,
+        user_id: adminUser!.id,
+        team_number: null,
+        flight_number: 1,
+        course_handicap: 12,
+        accepted_at: stampIso,
+        submitted_at: stampIso,
+        approved_at: stampIso,
+      },
+      {
+        game_id: flightGameId,
+        user_id: playerUser!.id,
+        team_number: null,
+        flight_number: 1,
+        course_handicap: 18,
+        accepted_at: stampIso,
+        submitted_at: stampIso,
+        approved_at: stampIso,
+      },
+    ]);
+
+    const scoreRows = [1, 2, 3, 4, 5].flatMap((hole) => [
+      {
+        game_id: flightGameId!,
+        user_id: adminUser!.id,
+        hole_number: hole,
+        strokes: 4,
+        entered_by: adminUser!.id,
+        client_updated_at: stampIso,
+      },
+      {
+        game_id: flightGameId!,
+        user_id: playerUser!.id,
+        hole_number: hole,
+        strokes: 5,
+        entered_by: playerUser!.id,
+        client_updated_at: stampIso,
+      },
+    ]);
+    const { error: sErr } = await admin.from('scores').insert(scoreRows);
+    expect(sErr).toBeNull();
+
+    // Public liga page: standings render the numeric table (#647 read-path:
+    // per-gender par), not the empty-state and not a 500.
+    await page.goto('/login?next=/');
+    await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto(`/liga/${leagueId}`);
+    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('liga-standings')).toBeVisible();
+    await expect(
+      page.getByTestId('liga-standings-row').first(),
+    ).toBeVisible();
+  });
+});
