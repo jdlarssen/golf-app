@@ -17,6 +17,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.133.y — Helse- og flyt-audit
+
+Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
+
+### [1.133.0] - 2026-06-17 · #679
+
+> Resultatlista oppdaterer seg nå av seg selv mens medspillerne taster, uansett spilleform. Følger du en stableford-, skins-, wolf- eller hvilken som helst annen runde live, ser du tallene oppdatere seg så snart noen i flighten taster en score. Det samme gjelder «Hull for hull».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny `'use client'`-komponent `LeaderboardRealtime` (`app/[locale]/games/[id]/leaderboard/LeaderboardRealtime.tsx`) som abonnerer på `scores`-INSERT for spillet via den eksisterende `subscribeRealtimeChannel`-helperen (`lib/sync/realtimeChannel.ts`) og kaller `useRouter().refresh()` med 300 ms debounce, så et helt scorekort levert samtidig kollapser til én refresh. Helperen eier `supabase.realtime.setAuth()`-quirken (JWT må settes eksplisitt før `subscribe()`) og lekk-resistent opprydding — gjenbrukt verbatim, ikke gjenoppfunnet.
+- Montert én gang i `LeaderboardChrome` (`LeaderboardShell`, begge grener) så alle ~14 format-visningene arver live-refresh uten å røre de 19 visnings-filene. Per-hull-siden (`leaderboard/holes/page.tsx`) rendrer ikke gjennom `LeaderboardShell`, så den får egen montering via en `withRealtime`-wrapper rundt alle 10 grenene, gatet på `game.status === 'active'`.
+- Spill-ID leses fra prop med fallback til `window.location.pathname` (bevisst ikke `useParams`, som ville sprengt eksisterende view-tester som kun mocker `useRouter`). Avvik fra issue-skissen: avsluttede podier rendrer også gjennom `LeaderboardShell` og får et inert (effektløst) abonnement siden shellen ikke kjenner spill-status — et avsluttet spill produserer ingen `scores`-INSERT, så socketen er stille. Per-hull-siden har ekte status-gate. Én co-located behavior-test; hele `leaderboard/`-suiten grønn. (#679)
+
+</details>
+
 ## 1.132.y — Småfunn fra modus-gjennomgangen
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.

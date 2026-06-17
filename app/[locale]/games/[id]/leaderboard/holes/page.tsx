@@ -1,4 +1,4 @@
-import { Suspense, cache } from 'react';
+import { Suspense, cache, type ReactNode } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
@@ -62,6 +62,7 @@ import type { SoloStrokeplayPlayerInfo } from '../SoloStrokeplayView';
 import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
 import { SoloStablefordHolesView } from './SoloStablefordHolesView';
 import type { SoloStablefordPlayerInfo } from '../SoloStablefordView';
+import { LeaderboardRealtime } from '../LeaderboardRealtime';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -167,72 +168,83 @@ export default async function LeaderboardHolesPage({
     notFound();
   }
 
+  // Live auto-refresh (#679). Per-hull-siden rendrer ikke gjennom
+  // `LeaderboardShell`, så den får sin egen montering. Gatet på aktivt spill:
+  // et avsluttet «Hull for hull» trenger ingen WebSocket. Wrapper hver
+  // format-gren så alle per-hull-visningene arver den.
+  const withRealtime = (body: ReactNode) => (
+    <>
+      <LeaderboardRealtime gameId={id} active={isActive} />
+      {body}
+    </>
+  );
+
   // Format-bevisst «Hull for hull» (epic #496): solo-format får sin egen
   // per-hull-visning i stedet for det generiske best-ball lag-scorekortet,
   // som aldri forgrenet på game_mode. Alle solo-format tatt: Skins + Wolf +
   // Nines + Round Robin + Acey-Deucey + Bingo Bango Bongo + Nassau + solo
   // strokeplay + solo/modified stableford.
   if (game.game_mode === 'skins') {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <SkinsHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
   if (game.game_mode === 'wolf') {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <WolfHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
   if (game.game_mode === 'nines') {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <NinesHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
   if (game.game_mode === 'round_robin') {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <RoundRobinHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
   if (game.game_mode === 'acey_deucey') {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <AceyDeuceyHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
   if (game.game_mode === 'bingo_bango_bongo') {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <BingoBangoBongoHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
   if (game.game_mode === 'nassau') {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <NassauHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
   if (game.game_mode === 'solo_strokeplay') {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <SoloStrokeplayHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
@@ -244,14 +256,14 @@ export default async function LeaderboardHolesPage({
       game.mode_config.kind === 'modified_stableford') &&
     game.mode_config.team_size === 1
   ) {
-    return (
+    return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
         <SoloStablefordHolesBody gameId={id} courseId={game.course_id} />
-      </Suspense>
+      </Suspense>,
     );
   }
 
-  return (
+  return withRealtime(
     <Suspense fallback={<DrilldownSkeleton />}>
       <DrilldownBody
         gameId={id}
@@ -260,7 +272,7 @@ export default async function LeaderboardHolesPage({
         isActive={isActive}
         requestedTeam={requestedTeam}
       />
-    </Suspense>
+    </Suspense>,
   );
 }
 

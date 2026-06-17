@@ -4,6 +4,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
+import { LeaderboardRealtime } from './LeaderboardRealtime';
 
 export interface LeaderboardShellProps {
   children: ReactNode;
@@ -20,6 +21,11 @@ export interface LeaderboardShellProps {
  * bak innholdet, valgfri `AppShell`-wrapper. Trukket ut fra ~40 identiske
  * lokale `Shell`-kopier (issue #598). `chromeless=false` (default) matcher
  * den paddede full-side-varianten; `chromeless=true` den bare backdrop-en.
+ *
+ * Montert her: `LeaderboardRealtime` (issue #679). Siden hver format-visning
+ * rendrer gjennom denne shellen, får alle ~14 score-/standings-flatene live
+ * auto-refresh uten at noen av visnings-filene må røres. Komponenten leser
+ * spill-ID fra rute-segmentet (`useParams`) — shellen får den ikke som prop.
  */
 export function LeaderboardShell({
   children,
@@ -28,6 +34,7 @@ export function LeaderboardShell({
   if (chromeless) {
     return (
       <div className="relative isolate">
+        <LeaderboardRealtime />
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
       </div>
@@ -36,6 +43,7 @@ export function LeaderboardShell({
   return (
     <AppShell>
       <div className="relative isolate pb-12">
+        <LeaderboardRealtime />
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
       </div>
