@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.4] - 2026-06-17 · #671
+
+> Ikke-innloggede kan ikke lenger sjekke om en e-postadresse har en konto. Oppslaget er nå låst til innloggede brukere. Du merker ingen forskjell i appen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Security
+- Migrasjon `0104`: `REVOKE EXECUTE ... FROM anon` på `email_is_in_auth_users` (definert i 0017), som ga anonyme klienter et e-post-enumererings-orakel via PostgREST. Begge callere (`invite/actions.ts`, `admin/spillere/[id]/actions.ts`) er authenticated-only server-actions, så `authenticated`-grant-en er bevart. `email_is_invited`-grant-en til `anon` er bevisst bevart — den er `shouldCreateUser`-gaten i den pre-login `sendCode`-stien, og en revoke ville brutt innlogging.
+- La til `SET search_path = public, pg_catalog` på de fem RLS-helperne som manglet det (`is_admin`, `same_flight`, `is_in_game`, `can_score_for`, `same_flight_or_solo`) via `CREATE OR REPLACE` med byte-identiske kropper, så de ikke lar seg lure av en manipulert `search_path`. Ny pgTAP-test `supabase/tests/security_definer_hardening_test.sql` (catalog-assertions, ingen seed). Appen er funksjonelt uendret for alle brukere. Funnet i helse-auditen 2026-06-17. (#671)
+
+</details>
+
 ### [1.133.3] - 2026-06-17 · #684
 
 > Nassau rangerer nå spillere riktig når ikke alle hull er spilt. Den som fullførte runden ryker ikke lenger bak en som spilte færre hull og dermed fikk en lavere rå sum.
