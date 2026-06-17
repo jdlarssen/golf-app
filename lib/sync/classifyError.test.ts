@@ -22,6 +22,14 @@ describe('isPermanentSyncError', () => {
     // Rate limit — transient backoff, not permanent.
     ['rate limit exceeded (429)', false],
     ['too many requests', false],
+    // Request timeout / abort — lost signal, must retry.
+    ['Request timed out', false],
+    ['The operation timed out', false],
+    ['AbortError: The operation was aborted', false],
+    // Digit-collision guard: a transient message whose number coincidentally
+    // contains "400" must NOT be mistaken for an HTTP 400 (#668 invariant).
+    ['Request timed out after 1400ms', false],
+    ['stalled at 31400ms', false],
     // Unknown / empty — safe default is NOT permanent (rather loop than lose).
     [null, false],
     [undefined, false],

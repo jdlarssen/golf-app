@@ -15,10 +15,33 @@
 // gis opp. Transiente feil rammes aldri av dette taket.
 export const MAX_PERMANENT_ATTEMPTS = 5;
 
-// Mønstre som signaliserer en feil som ikke løser seg ved å prøve på nytt:
-// RLS-avvisning, constraint-brudd, eller en malformed forespørsel. Sjekkes mot
-// den rå feilmeldingen i lowercase.
-const PERMANENT_PATTERNS = [
+// Transiente markører som ALLTID skal prøves på nytt: nettverk/offline,
+// timeout/abort, auth-utløp (lykkes etter re-login), rate-limit. Sjekkes FØR
+// de permanente mønstrene så de alltid vinner — et tapt signal må aldri ende i
+// abandon. Auth-utløp er teknisk 4xx, men hører hjemme her.
+const TRANSIENT_PATTERNS = [
+  'load failed',
+  'failed to fetch',
+  'networkerror',
+  'network request failed',
+  'network',
+  'timeout',
+  'timed out',
+  'aborted',
+  'jwt',
+  'expired',
+  'session',
+  '401',
+  'unauthorized',
+  'rate limit',
+  'too many',
+  '429',
+];
+
+// Tekstlige markører på en write som ikke løser seg ved retry: RLS-avvisning,
+// constraint-brudd, eller en malformed forespørsel. Substring-matchet mot den
+// rå feilmeldingen i lowercase.
+const PERMANENT_TEXT_PATTERNS = [
   'permission',
   'forbidden',
   'row-level',
@@ -27,31 +50,31 @@ const PERMANENT_PATTERNS = [
   'constraint',
   'invalid input',
   'not-null',
-  '403',
-  '400',
-  '422',
 ];
 
+// HTTP-statuskoder som betyr en permanent klient-feil. Matchet med ord-grenser
+// (\b) så en tilfeldig sifferrekke (f.eks. «timed out after 1400ms») ikke
+// forveksles med en 400 og abandoner et egentlig-transient slag (#668).
+const PERMANENT_STATUS_RE = /\b(?:400|403|422)\b/;
+
 /**
- * True bare når feilen tydelig er permanent. Ukjente / tomme feil regnes som
- * IKKE permanente (trygg default: hellere loope enn å miste et ekte slag).
- * Auth-utløp (401 / JWT / expired) er transient — den lykkes etter re-login —
- * og sjekkes før de generiske permanente mønstrene siden den teknisk er 4xx.
+ * True bare når feilen tydelig er permanent. Transiente mønstre (nettverk,
+ * timeout, auth-utløp, rate-limit) sjekkes først og vinner alltid. Ukjente /
+ * tomme feil regnes som IKKE permanente (trygg default: hellere loope enn å
+ * miste et ekte slag).
  */
 export function isPermanentSyncError(
   rawError: string | null | undefined,
 ): boolean {
   if (!rawError) return false;
   const lower = rawError.toLowerCase();
-  if (
-    lower.includes('jwt') ||
-    lower.includes('expired') ||
-    lower.includes('401') ||
-    lower.includes('unauthorized')
-  ) {
+  if (TRANSIENT_PATTERNS.some((pattern) => lower.includes(pattern))) {
     return false;
   }
-  return PERMANENT_PATTERNS.some((pattern) => lower.includes(pattern));
+  return (
+    PERMANENT_TEXT_PATTERNS.some((pattern) => lower.includes(pattern)) ||
+    PERMANENT_STATUS_RE.test(lower)
+  );
 }
 
 /**
