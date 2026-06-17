@@ -15,7 +15,7 @@
 - [ ] `strokesForHole(-18, si)` returnerer -1 for alle si 1..18, 0 ellers — uendret fra dagens kode
 - [ ] `strokesForHole(-19, si)` returnerer -2 for SI 18, -1 for SI 1..17 (sum = -19)
 - [ ] `strokesForHole(-20, si)` returnerer -2 for SI 17 og 18, -1 for SI 1..16 (sum = -20)
-- [ ] `strokesForHole(-24, si)` returnerer -2 for SI 7..18 (dvs. de 6 hardeste), -1 for SI 1..6 (sum = -24)
+- [ ] `strokesForHole(-24, si)` returnerer -2 for SI 13..18 (dvs. de 6 letteste — plus-handicap gir slag tilbake fra letteste hull), -1 for SI 1..12 (sum = -24)
 - [ ] `strokesForHole(-36, si)` returnerer -2 for alle SI 1..18 (sum = -36)
 - [ ] `allStrokeAllocations(-20)` summer til -20
 - [ ] `allStrokeAllocations(-36)` summer til -36

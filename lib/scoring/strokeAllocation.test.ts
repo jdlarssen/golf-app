@@ -92,7 +92,7 @@ describe('strokesForHole — plus-handicap multi-round distribution', () => {
     }
   });
 
-  it('HCP -24: SI 13..18 (6 hardest) get -2, SI 1..12 get -1', () => {
+  it('HCP -24: SI 13..18 (6 easiest) get -2, SI 1..12 get -1', () => {
     // remainder = 24 % 18 = 6, threshold = 18 - 6 + 1 = 13
     for (let si = 13; si <= 18; si++) {
       expect(strokesForHole(-24, si)).toBe(-2);
