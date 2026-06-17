@@ -913,9 +913,14 @@ export async function attachToCaptainTeam(
   // Verifiser at invitations-raden tilhører denne brukeren (matching email).
   const { data: invitation } = await admin
     .from('invitations')
-    .select('id, email, game_id')
+    .select('id, email, game_id, invited_by')
     .eq('id', invitationId)
-    .maybeSingle<{ id: string; email: string; game_id: string | null }>();
+    .maybeSingle<{
+      id: string;
+      email: string;
+      game_id: string | null;
+      invited_by: string | null;
+    }>();
   if (!invitation || invitation.game_id !== game.id) {
     return { ok: false, error: 'not_found' };
   }
@@ -1018,6 +1023,25 @@ export async function attachToCaptainTeam(
     .from('invitations')
     .update({ accepted_at: new Date().toISOString() })
     .eq('id', invitation.id);
+
+  // #481/#676: auto-vennskap med inviteren. For lag-scopede spill ('team'/'both')
+  // står invitasjonen pending ved innlogging, så befriend_inviter no-op-er i
+  // verifyCode (gaten krever akseptert invitasjon). Den fyres derfor her — etter
+  // at accepted_at er satt over — så vennegrafen fortsatt vokser når en e-post-
+  // invitert medspiller faktisk blir med på laget. RPC-en gateres på auth.uid()
+  // (invitéen), så vi bruker bruker-konteksten, ikke admin. Best-effort: stille.
+  if (invitation.invited_by && invitation.invited_by !== user.id) {
+    const supabase = await getServerClient();
+    const { error: befriendError } = await supabase.rpc('befriend_inviter', {
+      p_inviter: invitation.invited_by,
+    });
+    if (befriendError) {
+      console.error(
+        '[attachToCaptainTeam] befriend_inviter failed',
+        befriendError,
+      );
+    }
+  }
 
   // Notify kapteinen om at medspiller har akseptert.
   await notify({

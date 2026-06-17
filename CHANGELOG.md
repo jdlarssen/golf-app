@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.13] - 2026-06-17 · #676, #481
+
+> Blir du invitert på e-post til et lag og melder deg på, blir du nå automatisk venn med den som inviterte deg, akkurat som når du melder deg på et spill alene.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Følgefiks til #676: `befriend_inviter`-RPC-en (#481) gateres på en akseptert invitasjon og ble kun kalt fra `verifyCode`. Siden #676 nå lar lag-scopede invitasjoner (`'team'`/`'both'`) stå pending ved innlogging, no-op-et auto-vennskapet for e-postinviterte medspillere — en regresjon for `'team'`-stien (som tidligere fikk vennskap via det ubetingede `accepted_at`-flippet). `attachToCaptainTeam` (`app/[locale]/signup/[shortId]/teamActions.ts`) kaller nå `befriend_inviter` i bruker-konteksten rett etter at den setter `accepted_at`, så vennegrafen vokser når medspilleren faktisk blir med på laget. Best-effort, idempotent RPC uendret. Funnet av evaluator under #676-gjennomgangen. (#676, #481)
+
+</details>
+
 ### [1.133.12] - 2026-06-17 · #688
 
 > Taster to mobiler samme hull samtidig, mister du ikke lenger tallet ditt i det stille. Og blir tallet til en medspiller gjeldende, sier appen fra med en kort melding i stedet for at tallet bare bytter seg ut.
