@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.7] - 2026-06-17 · #669 #667
+
+> Du kan nå opprette Wolf med fem spillere, og lag-turneringer med flere enn fire lag, som før stoppet med en lagrings-feil. Og melder noen seg på med et lag, blir ikke kapteinen lenger borte fra spillerlista uten beskjed hvis noe glipper underveis.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `game_players_team_number_check` (0030) capet `team_number` på 1–4 og ble aldri utvidet da 0095 utvidet `flight_number`. 5-spiller Wolf (`team_number=5`, som `validateWolf` tillater) og klubb-skala scramble/Patsome med over fire lag traff dermed en CHECK-violation og en «Klarte ikke å lagre spillerne»-blindvei. Migrasjon `0101_widen_team_number` utvider constrainten til `team_number is null or team_number >= 1` (speiler 0095). Per-format-validatorene binder fortsatt der formatet krever det, så app-laget er grensen. Applisert til prod. (#669)
+- Offentlig lag-selvpåmelding (`submitTeamRegistration`) svelget en feil på kapteinens `game_players`-insert og returnerte suksess likevel, så kapteinen sto utenfor spillerlista uten beskjed. Returnerer nå `db_error` så de kan prøve igjen (`game_registration_requests`-raden er allerede lagret). `acceptTeamInvite` håndterte dette fatalt fra før. Admin-godkjenningsstien (`signups/actions.ts`) capet lag-slots på 4; hevet til 50 for konsistens med den utvidede constrainten. Funnet i helse-audit. (#667)
+
+</details>
+
 ### [1.132.6] - 2026-06-17 · #666
 
 > Et lag som ikke hadde tastet en eneste score kunne vises øverst på resultatlista og bli kåret som vinner. Nå havner et lag uten scores nederst, så det er laget som faktisk har spilt som leder.

@@ -361,8 +361,11 @@ export async function submitTeamRegistration(
         '[submitTeamRegistration] captain game_players insert failed',
         captainPlayerError,
       );
-      // Ikke fatal — kaptein-raden i game_registration_requests er på
-      // plass, admin kan plukke opp manuelt. Returnerer suksess.
+      // Fatal (#667): uten game_players-raden står kapteinen utenfor
+      // spillerlista selv om de ellers ville sett en suksess-skjerm. Returner
+      // feil så de kan prøve igjen — game_registration_requests-raden er
+      // allerede på plass, så det er trygt å re-kjøre.
+      return { ok: false, error: 'db_error' };
     }
   }
 
