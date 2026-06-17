@@ -9,6 +9,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
+import { soloPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -204,9 +205,28 @@ export async function registerForOpenGame(
     return { ok: false, error: 'rate_limited' };
   }
 
+  // #661: spillertak for eksakt-antall-formater (Wolf 3–5, Nines 3, RoundRobin 4,
+  // AceyDeucey 4, Skins/Nassau/BBB 2–16). Matchplay-familien ekskluderes her —
+  // side-kapasitet håndteres av sin egen sjekk under. Fail-open ved DB-error
+  // (la INSERT-sjansen leve; `buildInsertPayload` er hard-gaten ved publisering).
+  const admin = getAdminClient();
+  const cap = soloPlayerCap(game.game_mode);
+  if (cap !== null) {
+    const { count: playerCount, error: capCountError } = await admin
+      .from('game_players')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('game_id', game.id)
+      .is('withdrawn_at', null);
+    if (capCountError) {
+      console.error('[registerForOpenGame] player cap count failed', capCountError);
+      // Fail-open: don't block signup on a transient DB error.
+    } else if ((playerCount ?? 0) >= cap) {
+      return { ok: false, error: 'game_full' };
+    }
+  }
+
   // #544: for matchplay-familien leser vi `side` fra formData og setter
   // team_number + flight_number. Ikke-matchplay-modi ignorerer feltet.
-  const admin = getAdminClient();
   let teamNumber: number | null = null;
   let flightNumber: number | null = null;
 

@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.9] - 2026-06-17 · #661
+
+> Melder du deg på et fullt Wolf-, Nines- eller Skins-spill, får du nå beskjed om at det er fullt med en gang, i stedet for å bli strandet uten plass når runden settes i gang.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Selv-påmeldingsstien (`registerForOpenGame`, `app/[locale]/signup/[shortId]/actions.ts`) håndhevet ikke noe spillertak for solo-format med øvre grense (Wolf 5, Nines 3, RoundRobin 4, Acey-Deucey 4, Skins/Nassau/Bingo-Bango-Bongo 16), så en spiller kunne melde seg på utover taket og bli strandet ved publisering. Ny `soloPlayerCap(gameMode)` i `lib/wizard/fitsPlayerCount.ts` utleder samme tak som `fitsPlayerCount`; `registerForOpenGame` kjører nå en pre-insert tell-sjekk og returnerer den eksisterende `game_full`-feilkoden (var dead code, allerede oversatt i begge kataloger). Ingen post-insert race-vakt for disse formatene siden de bruker `team_number = null` (ingen slot-konkurranse), og `buildInsertPayload` er fortsatt den harde porten ved publisering. Test-først. (#661)
+
+</details>
+
 ### [1.133.8] - 2026-06-17 · #681, #678
 
 > Par-asterisken på hull-siden og resultatlista viser nå riktige kjønnsetiketter på engelsk. Og en cup-kamp som venter på start forteller spilleren at arrangøren starter kampen, i stedet for å love et tee-off-tidspunkt som ikke finnes.

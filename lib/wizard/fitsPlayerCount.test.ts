@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { fitsPlayerCount } from './fitsPlayerCount';
+import { fitsPlayerCount, soloPlayerCap } from './fitsPlayerCount';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 // ── stableford / modified_stableford: 1+ (solo OR par config) ────────────────
@@ -321,5 +321,39 @@ describe('fitsPlayerCount — permissive fallback', () => {
 
   it('unknown mode n=0 → false (n<=0 guard wins)', () => {
     expect(fitsPlayerCount(unknownMode, 0)).toBe(false);
+  });
+});
+
+// ── soloPlayerCap (#661) ─────────────────────────────────────────────────────
+// Returns the upper player-count cap for solo formats that have a hard ceiling.
+// Used by registerForOpenGame to block signup before INSERT.
+
+describe('soloPlayerCap (#661)', () => {
+  it.each([
+    ['wolf', 5],
+    ['nines', 3],
+    ['round_robin', 4],
+    ['acey_deucey', 4],
+    ['nassau', 16],
+    ['skins', 16],
+    ['bingo_bango_bongo', 16],
+  ] as [GameMode, number][])('%s → %i', (mode, expected) => {
+    expect(soloPlayerCap(mode)).toBe(expected);
+  });
+
+  it.each([
+    'stableford',
+    'modified_stableford',
+    'solo_strokeplay',
+    // matchplay family excluded (side-cap handles it separately)
+    'singles_matchplay',
+    'fourball_matchplay',
+    'foursomes_matchplay',
+    // team formats excluded
+    'texas_scramble',
+    'best_ball',
+    'patsome',
+  ] as GameMode[])('%s → null (no cap)', (mode) => {
+    expect(soloPlayerCap(mode)).toBeNull();
   });
 });

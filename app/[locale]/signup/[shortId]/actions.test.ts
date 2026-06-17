@@ -475,6 +475,124 @@ describe('registerForOpenGame', () => {
       flight_number: null,
     });
   });
+
+  // ── eksakt-antall-format cap (#661) ────────────────────────────────────────
+
+  it('#661: wolf-spill med 5 påmeldte — 6. spiller avvises med game_full', async () => {
+    // Wolf støtter max 5 spillere. En 6. spiller som prøver å melde seg på
+    // skal avvises med game_full (eksisterende feilkode) og ingen INSERT.
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'wolf',
+        mode_config: { kind: 'wolf', team_size: 1, teams_count: 5, wolf_scoring: 'net' },
+      }),
+    );
+
+    // Spillertelling: 5 aktive spillere (ved cap)
+    const countBuilder = {
+      select: () => countBuilder,
+      eq: () => countBuilder,
+      is: () => countBuilder,
+      then: (onFulfilled?: (v: unknown) => unknown) =>
+        Promise.resolve({ count: 5, error: null }).then(onFulfilled),
+    };
+    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(countBuilder);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+
+    // Ingen INSERT skal ha skjedd
+    const insertCall = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'insert',
+    );
+    expect(insertCall).toBeUndefined();
+  });
+
+  it('#661: nines-spill med 3 påmeldte — 4. spiller avvises med game_full', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'nines',
+        mode_config: { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' },
+      }),
+    );
+
+    // Spillertelling: 3 aktive spillere (nøyaktig cap)
+    const countBuilder = {
+      select: () => countBuilder,
+      eq: () => countBuilder,
+      is: () => countBuilder,
+      then: (onFulfilled?: (v: unknown) => unknown) =>
+        Promise.resolve({ count: 3, error: null }).then(onFulfilled),
+    };
+    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(countBuilder);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+  });
+
+  it('#661: skins-spill med 16 påmeldte — 17. spiller avvises med game_full', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'skins',
+        mode_config: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+      }),
+    );
+
+    const countBuilder = {
+      select: () => countBuilder,
+      eq: () => countBuilder,
+      is: () => countBuilder,
+      then: (onFulfilled?: (v: unknown) => unknown) =>
+        Promise.resolve({ count: 16, error: null }).then(onFulfilled),
+    };
+    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(countBuilder);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+  });
+
+  it('#661: wolf-spill med 4 påmeldte (under cap 5) — påmelding går gjennom', async () => {
+    // Regresjonstest: cap-sjekken blokkerer IKKE når det er plass.
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'wolf',
+        mode_config: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
+      }),
+    );
+
+    // admin-mock kø: count=4 (via thenable), insert, notify lookup.
+    // Spillertelling brukes FØR insert, så count-builder er FØRSTE kall.
+    adminMock = buildSupabaseMock([
+      { data: null, error: null }, // insert (popp 2)
+      { data: { name: 'Kari', nickname: null, email: 'kari@x.no' }, error: null }, // notify lookup (popp 3)
+    ]);
+    // count-query bruker thenable (count: 'exact', head: true) — vi injiserer
+    // countBuilder som første retur fra adminMock.from().
+    const countBuilder = {
+      select: () => countBuilder,
+      eq: () => countBuilder,
+      is: () => countBuilder,
+      then: (onFulfilled?: (v: unknown) => unknown) =>
+        Promise.resolve({ count: 4, error: null }).then(onFulfilled),
+    };
+    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(countBuilder);
+
+    const { registerForOpenGame } = await import('./actions');
+    await expect(
+      registerForOpenGame(fd({ shortId: SHORT_ID })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/games/${GAME_ID}` }),
+    );
+  });
 });
 
 describe('requestApproval', () => {

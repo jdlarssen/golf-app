@@ -101,3 +101,43 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
       return true;
   }
 }
+
+/**
+ * soloPlayerCap — øvre spillertak for solo-formater som har en hard grense.
+ *
+ * Brukes av selv-påmeldings-action-en (`registerForOpenGame`) for å avvise
+ * en N+1-spiller FØR INSERT, slik at publisering aldri blokkeres av
+ * `too_many_players_for_mode` fra `buildInsertPayload`.
+ *
+ * Returnerer:
+ *  - tallet maksimale spillere for formater med et øvre tak
+ *  - `null` for formater uten relevant tak (unbounded, lag-format, matchplay-
+ *    familien — disse har egne side-cap-logikker eller team_size-validering)
+ *
+ * Verdiene speiler `fitsPlayerCount`-logikken:
+ *  - wolf → 5 (støtter 3–5 spillere)
+ *  - nines → 3 (nøyaktig 3)
+ *  - round_robin → 4 (nøyaktig 4)
+ *  - acey_deucey → 4 (nøyaktig 4)
+ *  - nassau / skins / bingo_bango_bongo → 16 (#460: utvidet fra 4)
+ *
+ * Matchplay-familien ekskluderes bevisst — side-kapasitet håndteres av
+ * `isMatchplayMode` + den eksisterende tellingen i `registerForOpenGame`.
+ */
+export function soloPlayerCap(gameMode: GameMode): number | null {
+  switch (gameMode) {
+    case 'wolf':
+      return 5;
+    case 'nines':
+      return 3;
+    case 'round_robin':
+    case 'acey_deucey':
+      return 4;
+    case 'nassau':
+    case 'skins':
+    case 'bingo_bango_bongo':
+      return 16;
+    default:
+      return null;
+  }
+}
