@@ -201,6 +201,23 @@ export async function inviteEmailToGame(
     .maybeSingle<{ id: string }>();
 
   if (existingInvite) {
+    // Re-send the notification mail best-effort so a retry by the organiser
+    // always delivers — covers the case where the original send silently
+    // dropped (Resend error, spam filter, etc.) without the row being rolled
+    // back. Errors here are swallowed: the invitation row already exists and
+    // we don't want to confuse the organiser with a spurious error state.
+    const invitedByNameForRetry =
+      inviterName?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør');
+    try {
+      await sendInviteNotification({
+        to: rawEmail,
+        invitedByName: invitedByNameForRetry,
+        gameName: game.name,
+        gameMode: game.game_mode,
+      });
+    } catch (retryErr) {
+      console.error('[inviteToGame/inviteEmail] retry mail failed (best-effort)', retryErr);
+    }
     revalidateTag(`game-${gameId}`, 'max');
     redirect({ href: `${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`, locale });
   }
@@ -229,6 +246,20 @@ export async function inviteEmailToGame(
     });
   } catch (err) {
     console.error('[inviteToGame/inviteEmail] mail failed', err);
+    // Roll back the just-inserted invitations row so the organiser can retry
+    // the same email address and get a fresh insert + send. Without this,
+    // the idempotent check at the top of this branch finds the orphaned row
+    // and silently short-circuits without ever sending the mail — stranding
+    // the invitee permanently.
+    const { error: deleteErr } = await supabase
+      .from('invitations')
+      .delete()
+      .ilike('email', rawEmail)
+      .eq('game_id', gameId)
+      .is('accepted_at', null);
+    if (deleteErr) {
+      console.error('[inviteToGame/inviteEmail] rollback delete failed', deleteErr);
+    }
     redirect({ href: `${detailPath}?error=mail_failed&email=${encodeURIComponent(rawEmail)}`, locale });
   }
 
