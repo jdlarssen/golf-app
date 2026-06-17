@@ -233,6 +233,76 @@ create or replace function torny_rls.try_update_score(p_target uuid, p_hole int)
   end;
   $$;
 
+-- ── game_players UPDATE probes (#670) ─────────────────────────────────────────
+-- These exercise the BEFORE UPDATE guard-trigger from migration 0103, which
+-- blocks a non-admin player from self-approving (approved_at/approved_by_user_id
+-- on their own row) or editing their own course_handicap after game start.
+-- Same boolean-return shape as the score probes: TRUE if the UPDATE landed,
+-- FALSE if the trigger (or RLS) rejected it. insufficient_privilege covers both
+-- the trigger's raised SQLSTATE 42501 and an RLS USING/WITH CHECK reject.
+
+-- try_self_approve(target): the current impersonated user UPDATEs `target`'s row
+-- to stamp approved_at + approved_by_user_id = themselves. When target = the
+-- current auth.uid() this is the forbidden self-approval; when target is another
+-- player it is legitimate peer-approval. Returns whether the row was updated.
+create or replace function torny_rls.try_self_approve(p_target uuid) returns boolean
+  language plpgsql
+  as $$
+  declare
+    v_actor uuid := nullif(current_setting('request.jwt.claims', true), '')::json ->> 'sub';
+    v_rows  int;
+  begin
+    update public.game_players
+       set approved_at = now(),
+           approved_by_user_id = coalesce(v_actor, p_target)
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- trigger 42501 or RLS reject
+  end;
+  $$;
+
+-- try_set_handicap(target, hcp): the current impersonated user UPDATEs `target`'s
+-- course_handicap. When target = current auth.uid() in an active game this is the
+-- forbidden self-handicap edit; admin (or service) can set anyone's. Returns
+-- whether the row was updated.
+create or replace function torny_rls.try_set_handicap(p_target uuid, p_hcp int) returns boolean
+  language plpgsql
+  as $$
+  declare
+    v_rows int;
+  begin
+    update public.game_players
+       set course_handicap = p_hcp
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- trigger 42501 or RLS reject
+  end;
+  $$;
+
+-- try_submit(target): the current impersonated user UPDATEs `target`'s
+-- submitted_at (the submitScorecard path, legitimate on one's own row). Returns
+-- whether the row was updated. Distinct hole-free — game_players has no per-hole
+-- collision, so repeated calls just re-stamp.
+create or replace function torny_rls.try_submit(p_target uuid) returns boolean
+  language plpgsql
+  as $$
+  declare
+    v_rows int;
+  begin
+    update public.game_players
+       set submitted_at = now()
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;
+  end;
+  $$;
+
 -- ── Grants ────────────────────────────────────────────────────────────────────
 -- The probes run AS the impersonated `authenticated` role (SECURITY INVOKER, so
 -- the public.scores writes are genuinely RLS-checked). That means `authenticated`
