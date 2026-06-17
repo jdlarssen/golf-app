@@ -139,7 +139,7 @@ test.describe('Liga — finished-flight standings (#647 read-path)', () => {
     if (leagueId) await admin.from('leagues').delete().eq('id', leagueId);
   });
 
-  test('a delivered finished flight makes the standings table render numbers', async ({
+  test('a delivered finished flight makes the standings table render numbers @gate', async ({
     page,
   }) => {
     const admin = adminClient();

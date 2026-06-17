@@ -100,10 +100,14 @@ export async function signInViaOtp(page: Page, email: string): Promise<void> {
   await page.goto(`/login?${qs.toString()}`);
 
   await expect(page.getByLabel('Kode')).toBeVisible();
-  await page.getByLabel('Kode').fill(otp);
+  // pressSequentially (ikke fill): skriver siffer for siffer så komponentens
+  // onChange-baserte auto-submit (ved 8 siffer) fyrer pålitelig ÉN gang. `fill`
+  // setter verdien i ett jafs og trigget auto-submit ustabilt — testen ble da
+  // stående på verify-steget uten å levere (ingen `error=`), en #674-gate-flak.
+  await page.getByLabel('Kode').pressSequentially(otp);
 
-  // Auto-submit skjer ved OTP_LENGTH=8. For 6-sifrete prosjekter klikker vi
-  // fallback-knappen. Begge greiner venter på at URL-en forlater /login.
+  // <8-sifrete OTP-er når aldri auto-submit-terskelen — klikk knappen. (Ingen
+  // dobbel-submit: 8-sifret auto-submitter alt, kortere gjør det ikke.)
   if (otp.length < 8) {
     await page.getByRole('button', { name: 'Logg inn' }).click();
   }

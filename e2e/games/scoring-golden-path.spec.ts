@@ -44,7 +44,7 @@ test.describe('Scoring golden path (solo stableford)', () => {
     if (game) await cleanupTestGame(game.id);
   });
 
-  test('player scores → submits → admin approves → leaderboard shows the player', async ({
+  test('player scores → submits → admin approves → leaderboard shows the player @gate', async ({
     browser,
   }) => {
     const gameId = game!.id;

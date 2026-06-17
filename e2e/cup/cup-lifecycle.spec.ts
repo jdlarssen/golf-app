@@ -41,7 +41,7 @@ test.describe('Cup lifecycle smoke', () => {
     await admin.from('tournaments').delete().eq('id', tournamentId);
   });
 
-  test('seeded cup renders admin detail + public leaderboard without a 500', async ({
+  test('seeded cup renders admin detail + public leaderboard without a 500 @gate', async ({
     page,
   }) => {
     const admin = adminClient();

@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "e2e:gate": "playwright test e2e/games/scoring-golden-path.spec.ts e2e/cup/cup-lifecycle.spec.ts e2e/league/liga.spec.ts",
+    "e2e:gate": "playwright test --grep @gate",
     "test:rls": "if command -v supabase >/dev/null 2>&1; then supabase test db; else echo '[test:rls] Supabase CLI not found — RLS integration tests need a local Postgres. Install the CLI + start the stack, then re-run. See supabase/tests/README.md. (skipped, not failed)'; fi",
     "postinstall": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
