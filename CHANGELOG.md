@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.6] - 2026-06-17 · #666
+
+> Et lag som ikke hadde tastet en eneste score kunne vises øverst på resultatlista og bli kåret som vinner. Nå havner et lag uten scores nederst, så det er laget som faktisk har spilt som leder.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `computeLeaderboard` i `lib/leaderboard.ts` (legacy best-ball-aggregatoren bak live leaderboard, champion-reveal, profil-statistikk og CSV-eksport) paddet manglende hull med `0` i rank-arrayet. Et lag uten en eneste registrert score fikk dermed total 0 og ble rangert først av `rankTeams` (stigende sortering). #635-fiksen var lagt i `bestBall.ts` m.fl., men aldri back-portet hit. Padder nå zero-score-lag med `UNPLAYED_PADDING` på alle hull (speiler `bestBall.ts`); lag som har spilt minst ett hull er uendret (manglende hull = 0, flagget via `missingHoles`). Ny `lib/leaderboard.test.ts` (fila hadde ingen tester) dekker regresjonen pluss basis netto/brutto-rangering. Funnet i helse-audit. (#666)
+
+</details>
+
 ### [1.132.5] - 2026-06-17 · #659
 
 > Inviterer du noen uten Tørny-konto til klubben på e-post, kommer de nå inn. Invitasjonen åpner innloggingen, så engangskoden virker og de blir medlem med en gang.

@@ -2,7 +2,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { bestBallForHole } from '@/lib/scoring/modes/bestBall';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import type { ScoringGender, ScoringHole } from '@/lib/scoring/modes/types';
-import { rankTeams, type RankedTeam } from '@/lib/scoring/tiebreaker';
+import { rankTeams, UNPLAYED_PADDING, type RankedTeam } from '@/lib/scoring/tiebreaker';
 
 export type LeaderboardMode = 'netto' | 'brutto';
 
@@ -192,14 +192,17 @@ export function computeLeaderboard(opts: {
     },
   );
 
-  // For ranking: build an 18-length array per team. Missing holes get the
-  // team's average so partial totals are compared fairly without crushing
-  // the team's rank. Per spec, don't algorithmically penalize.
+  // For ranking: build an 18-length array per team. A team that played at least
+  // one hole counts its missing holes as 0 (flagged via missingHoles for the
+  // UI). A team with NO scores at all is padded with UNPLAYED_PADDING on every
+  // hole — otherwise its sum of 0 reads as the best net and the team is crowned
+  // winner (#666 / #635). Mirrors lib/scoring/modes/bestBall.ts.
   const teamsForRanking = lines.map((l) => {
+    const teamPlayedAny = l.holes.some((h) => h?.teamNet != null);
     const arr: number[] = [];
     for (let i = 0; i < 18; i++) {
       const h = l.holes[i];
-      arr.push(h?.teamNet ?? 0);
+      arr.push(h?.teamNet ?? (teamPlayedAny ? 0 : UNPLAYED_PADDING));
     }
     return { id: l.teamNumber, holes: arr };
   });
