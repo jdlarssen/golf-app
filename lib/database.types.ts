@@ -385,46 +385,28 @@ export type Database = {
       formats: {
         Row: {
           created_at: string
-          display_name: string
           icon_key: string
           is_active: boolean
           is_cup_eligible: boolean
-          rules_example: string | null
-          rules_long: string | null
-          rules_points: string[] | null
-          rules_summary: string | null
           scoring_module: string
-          short_description: string
           slug: string
           updated_at: string
         }
         Insert: {
           created_at?: string
-          display_name: string
           icon_key: string
           is_active?: boolean
           is_cup_eligible?: boolean
-          rules_example?: string | null
-          rules_long?: string | null
-          rules_points?: string[] | null
-          rules_summary?: string | null
           scoring_module: string
-          short_description: string
           slug: string
           updated_at?: string
         }
         Update: {
           created_at?: string
-          display_name?: string
           icon_key?: string
           is_active?: boolean
           is_cup_eligible?: boolean
-          rules_example?: string | null
-          rules_long?: string | null
-          rules_points?: string[] | null
-          rules_summary?: string | null
           scoring_module?: string
-          short_description?: string
           slug?: string
           updated_at?: string
         }
@@ -1220,6 +1202,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          archived_at: string | null
           created_at: string
           id: string
           kind: string
@@ -1228,6 +1211,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           id?: string
           kind: string
@@ -1236,6 +1220,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           id?: string
           kind?: string
@@ -1690,6 +1675,10 @@ export type Database = {
         Returns: string
       }
       befriend_inviter: { Args: { p_inviter: string }; Returns: string }
+      can_score_for: {
+        Args: { p_game_id: string; p_other_user: string }
+        Returns: boolean
+      }
       connect_via_friend_code: { Args: { p_code: string }; Returns: Json }
       consume_admin_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number }
