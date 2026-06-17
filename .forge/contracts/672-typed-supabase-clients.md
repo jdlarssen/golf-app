@@ -38,12 +38,12 @@ generic-en gjør hele bug-klassen til byggefeil. Dette issuet er prerequisitt fo
 
 ## Suksesskriterier
 
-- [ ] K1: `lib/database.types.ts` er regenerert fra prod — inneholder `notifications.archived_at` + `can_score_for`, og IKKE de 6 droppede `formats`-kolonnene.
-- [ ] K2: Alle fire fabrikkene er parameterisert med `<Database>`: `createServerClient<Database>` (server.ts + middleware.ts), `createBrowserClient<Database>` (client.ts), `createClient<Database>` (admin.ts), hver med `import type { Database }`.
-- [ ] K3: `npx tsc --noEmit` gir **0 feil** (alle 16 fallout-feil fikset per beslutning 2/3).
-- [ ] K4: Hver av de 16 fiksene er en ekte type-korrekt løsning (guard/typet payload), ikke en `as any`/`@ts-ignore`-undertrykkelse. `git grep -n "as any\|@ts-ignore"` viser ingen NYE forekomster i de endrede filene.
-- [ ] K5: `typecheck`-script lagt til i package.json (`"typecheck": "tsc --noEmit"`).
-- [ ] K6: Ingen oppførselsendring — `npm test` (vitest) forblir grønn; ingen logikk-/copy-endring utenfor type-fiksene.
+- [x] K1: `lib/database.types.ts` regenerert fra prod (commit b2617a9c). Evidens: i fila nå `archived_at`×6, `can_score_for`×1, `display_name`×0 (de 6 droppede `formats`-kolonnene borte).
+- [x] K2: Alle fire fabrikkene parameterisert (commit 50fd56f0): `createServerClient<Database>` i server.ts:6 + middleware.ts:24, `createBrowserClient<Database>` i client.ts:4, `createClient<Database>` i admin.ts:15; hver med `import type { Database } from '@/lib/database.types'`.
+- [x] K3: `npm run typecheck` → **0 feil** (alle 16 fallout-feil fikset).
+- [x] K4: Ingen nye `as any`/`@ts-ignore` — `git diff --name-only HEAD~1 | xargs grep "as any\|@ts-ignore"` = NONE. Fiksene: 5× `as string`-after-guard (codebase-idiom), 3× nullable RPC-arg-cast m/kommentar, 5× `TablesUpdate<...>`/`Json`.
+- [x] K5: `"typecheck": "tsc --noEmit"` lagt til i package.json scripts (commit 50fd56f0).
+- [x] K6: `npm test` → 281 filer / **3561 tester grønne**. Kun type-narrowing endret; ingen runtime-/logikk-/copy-endring.
 
 ## Gates (kjør scoped til det som endres)
 
