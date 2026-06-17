@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Pre-push-gate for Tørny. BLOKKERENDE — speiler CI-ens `verify`-jobb.
+#
+# Kjører de samme to sjekkene som .github/workflows/ci.yml blokkerer på, FØR
+# koden forlater maskinen:
+#   1. typecheck (tsc --noEmit) — fanger schema-drift mot Supabase-typene.
+#      Dette er rotårsaken bak prod-havariene (#641/#642/#647/#648, helse-
+#      auditen 2026-06-17): en kolonne som ikke fantes kompilerte grønt og
+#      feilet først i prod. Med <Database>-typen koblet inn (#672) blir det en
+#      rød strek her i stedet for en 500-side hos en bruker.
+#   2. test (vitest run) — fanger logikk-regresjoner.
+#
+# Hvorfor lokalt: ekte branch protection er paywallet på private gratis-repo
+# (GitHub krever Pro eller offentlig repo). Dette er den gratis erstatningen
+# som hindrer at rød kode i det hele tatt når en PR. CI kjører de samme to på
+# PR-en som synlig backstop ved merge.
+#
+# Bevisst UTELATT: lint (ikke-blokkerende i CI til #692 rydder de 22 gamle
+# feilene) og e2e (trenger live-env + er treg — kjøres kun i CI via RUN_E2E).
+#
+# Nød-utvei finnes (git push --no-verify), men CLAUDE.md forbyr den. Den hører
+# til ekte nødssituasjoner, ikke til å slippe unna en rød gate.
+
+# pre-push får <remote-navn> <remote-url> som argumenter; gaten gjelder uansett
+# hvilken remote/branch du pusher, fordi hver branch blir en PR der CI kjører.
+
+# Uten avhengigheter kan vi ikke kjøre gaten. Bedre å slippe pushen gjennom enn
+# å brikke et friskt klon før `npm install` — du har uansett ikke kunnet bygge
+# eller teste uten dem.
+if [ ! -d node_modules ]; then
+  printf '⚠️  pre-push: node_modules mangler — hopper over gaten. Kjør `npm install`.\n' >&2
+  exit 0
+fi
+
+run_gate() {
+  label="$1"; shift
+  printf '▶ pre-push: %s …\n' "$label" >&2
+  if ! "$@"; then
+    printf '\n✗ Push blokkert: «%s» feilet.\n' "$label" >&2
+    printf '  Fiks rødt før du pusher. Dette er den samme porten CI kjører på PR-en,\n' >&2
+    printf '  bare flyttet hit så feilen aldri rekker fram til main.\n' >&2
+    printf '  (Nød-utvei `git push --no-verify` finnes, men CLAUDE.md forbyr den.)\n\n' >&2
+    exit 1
+  fi
+}
+
+# typecheck først: billigst signal, og det er schema-drift-vakta — rotårsaken.
+run_gate "typecheck (schema-drift-vakt)" npm run typecheck
+run_gate "test (vitest)" npm test
+
+printf '✓ pre-push-gate grønn — typecheck + test passerte.\n' >&2
+exit 0
