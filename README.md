@@ -80,7 +80,7 @@ npm run lint
 npm run build
 ```
 
-CI (GitHub Actions) runs typecheck + tests on every PR to `main`, and a daily schema-drift job regenerates the Supabase types from prod and fails if [`lib/database.types.ts`](lib/database.types.ts) is stale — run `npm run gen:types` to refresh it (needs the Supabase CLI + a `SUPABASE_ACCESS_TOKEN`).
+CI (GitHub Actions) runs typecheck + tests on every PR to `main`, and a daily schema-drift job regenerates the Supabase types from prod and fails if [`lib/database.types.ts`](lib/database.types.ts) is stale — run `npm run gen:types` to refresh it (needs the Supabase CLI + a `SUPABASE_ACCESS_TOKEN`). An optional authenticated-e2e gate (the scoring golden path + cup/liga smoke) is wired but off by default; set the `RUN_E2E` repo variable and the Supabase service-role + `E2E_*` secrets to activate it.
 
 ## How it fits together
 
