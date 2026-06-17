@@ -1483,6 +1483,7 @@
 			"editButton": "← Edit",
 			"submitButton": "Submit ✓",
 			"submitPending": "Submitting …",
+			"syncingPending": "Saving strokes …",
 			"confirmBase": "Submit the scorecard? This cannot be undone without admin.",
 			"confirmMissing": "{count, plural, one {1 hole is missing and will be saved as not played.} other {# holes are missing and will be saved as not played.}}",
 			"unknownPlayer": "(unknown player)"

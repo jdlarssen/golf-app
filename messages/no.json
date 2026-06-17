@@ -1483,6 +1483,7 @@
 			"editButton": "← Rediger",
 			"submitButton": "Lever ✓",
 			"submitPending": "Leverer …",
+			"syncingPending": "Lagrer slag …",
 			"confirmBase": "Levere scorekortet? Dette kan ikke angres uten admin.",
 			"confirmMissing": "{count, plural, one {1 hull mangler og blir lagret som ikke spilt.} other {# hull mangler og blir lagret som ikke spilt.}}",
 			"unknownPlayer": "(ukjent spiller)"

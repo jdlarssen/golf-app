@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.11] - 2026-06-17 · #668
+
+> Har du tastet inn alle 18 hull mens du var offline, dukker «Lever»-knappen nå opp som den skal. Og åpner du leveringssiden mens noen slag ennå ikke er lagret, lagrer appen dem ferdig før kortet låses, så ingen runde leveres med blanke hull.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Submit-CTA-en på hull-flaten ble gjemt så lenge `myCompletedHoles < 18`, og den tellingen var et server-side øyeblikksbilde som aldri konsulterte Dexie. En spiller som tastet alle 18 hull offline fant dermed aldri «Lever»-knappen. `HoleClient` unionerer nå server-snapshot-en med en live `useLiveQuery`-telling av lokale non-null scores via `Math.max(myCompletedHoles, localCompletedHoles ?? 0) >= 18` — server-tallet er gulvet (synkede hull fra tidligere økter), den lokale tellingen legger til det usynkede. Rent additivt: kan bare avsløre CTA-en tidligere, aldri skjule en som før var synlig.
+- `/submit` (`SubmitForm`) leste kortet fra Postgres, så et slag som ennå lå i Dexie-køen viste seg som «mangler» — og leverte spilleren, frøs RLS kortet og det køede slaget gikk tapt. Formen kicker nå `drainQueue()` ved mount og blokkerer «Lever»-knappen (label → «Lagrer slag …») så lenge ikke-abandonerte kø-elementer finnes. Når køen tømmes, kalles `router.refresh()` så preview-en re-renderer med de nå-synkede hullene. Dekker også re-levering etter en reject: spilleren MÅ innom `/submit`, så drain-vakta fyrer der. (#668)
+
+</details>
+
 ### [1.132.10] - 2026-06-17 · #668
 
 > Skulle et slag ikke la seg lagre, fortsetter ikke appen å prøve i det uendelige uten å si fra. Den sier nå tydelig fra at slaget ikke kom fram, så du ikke tror kortet er komplett når det ikke er det.
