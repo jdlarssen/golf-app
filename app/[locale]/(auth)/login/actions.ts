@@ -250,15 +250,55 @@ export async function verifyCode(formData: FormData) {
         { id: string; game_id: string | null; invited_by: string | null }[]
       >();
 
-    await supabase
-      .from('invitations')
-      .update({ accepted_at: new Date().toISOString() })
-      .ilike('email', email)
-      .is('accepted_at', null);
-
     const gameScoped = (pendingInvites ?? []).filter(
       (inv) => inv.game_id != null && inv.invited_by != null,
     );
+
+    // #676: resolve registration_type + short_id for every game-scoped
+    // invitation so we know which are team-scoped BEFORE deciding which
+    // invitations to consume and where to redirect.
+    //
+    // 'both' games must be treated identically to 'team' games here — a
+    // co-player invited by a captain on a 'both' game should route to
+    // /signup/[shortId]/team (attach flow), not be auto-inserted as a solo
+    // game_players row. Consuming accepted_at before the attach flow runs
+    // destroys the signal team/page.tsx relies on to show "Bli med på lag".
+    const resolvedGameScoped = await Promise.all(
+      gameScoped.map(async (inv) => {
+        const { data: gameRow } = await admin
+          .from('games')
+          .select('registration_type, short_id')
+          .eq('id', inv.game_id!)
+          .maybeSingle<{ registration_type: string; short_id: string }>();
+        const isTeamScoped =
+          gameRow?.registration_type === 'team' ||
+          gameRow?.registration_type === 'both';
+        return {
+          inv,
+          isTeamScoped,
+          shortId: gameRow?.short_id ?? null,
+        };
+      }),
+    );
+
+    // Only consume (flip accepted_at) invitations that are NOT team-scoped.
+    // Team-scoped invitations must remain pending so the attach flow on
+    // /signup/[shortId]/team can detect them. Game-less invitations (no
+    // game_id) are always consumed — they are friend/club rows with no
+    // downstream attach dependency.
+    const teamScopedInvIds = new Set(
+      resolvedGameScoped.filter((r) => r.isTeamScoped).map((r) => r.inv.id),
+    );
+    const inviteIdsToConsume = (pendingInvites ?? [])
+      .filter((inv) => !teamScopedInvIds.has(inv.id))
+      .map((inv) => inv.id);
+
+    if (inviteIdsToConsume.length > 0) {
+      await supabase
+        .from('invitations')
+        .update({ accepted_at: new Date().toISOString() })
+        .in('id', inviteIdsToConsume);
+    }
 
     if (gameScoped.length > 0) {
       const { data: userRow } = await admin
@@ -268,30 +308,9 @@ export async function verifyCode(formData: FormData) {
         .maybeSingle<{ id: string; profile_completed_at: string | null }>();
 
       if (userRow?.id) {
-        // Resolve hver scopet invitasjons registration_type FØRST. Vi trenger
-        // den til to ting: (a) hoppe over solo-game_players-insert på team-only
-        // spill (#199), og (b) #356 — avgjøre hvor invitéen skal lande etterpå.
-        // Team-only spill (#199) skal ikke få en solo-rad auto-opprettet — det
-        // ville bryte CHECK-constraint på team_number/flight_number-konsistens.
-        // I stedet havner invitéen på `/signup/[shortId]/team` når de melder seg
-        // på laget.
-        const resolved = await Promise.all(
-          gameScoped.map(async (inv) => {
-            const { data: gameRow } = await admin
-              .from('games')
-              .select('registration_type')
-              .eq('id', inv.game_id!)
-              .maybeSingle<{ registration_type: string }>();
-            return {
-              inv,
-              isTeamOnly: gameRow?.registration_type === 'team',
-            };
-          }),
-        );
-
         await Promise.allSettled(
-          resolved.map(async ({ inv, isTeamOnly }) => {
-            if (!isTeamOnly) {
+          resolvedGameScoped.map(async ({ inv, isTeamScoped }) => {
+            if (!isTeamScoped) {
               const { error: insertError } = await admin
                 .from('game_players')
                 .insert({
@@ -322,7 +341,7 @@ export async function verifyCode(formData: FormData) {
 
             // notifyInvitedToGame skipper finished-spill internt og swallow-er
             // egne feil, så vi trenger ingen guard her ut over Promise.allSettled.
-            // For team-only spill: invitéen får et team_invite-varsel når de
+            // For team-scoped spill: invitéen får et team_invite-varsel når de
             // klikker "Bli med på lag"-knappen på /signup/[shortId]/team
             // — verifyCode trigger her bare standard game-scoped invite-varsel
             // som en hilsen "du er logget inn, nå kan du melde deg på laget".
@@ -336,7 +355,7 @@ export async function verifyCode(formData: FormData) {
 
         // #481: e-postinvitert som blir med → auto-vennskap med inviteren, så
         // vennegrafen vokser organisk gjennom invitasjoner (ikke bare manuelle
-        // forespørsler). Gjelder også team-only spill — vennskapet henger på
+        // forespørsler). Gjelder også team-scoped spill — vennskapet henger på
         // invitasjonen, ikke på en game_players-rad. RPC-en er idempotent og
         // gated på en akseptert invitasjon, så den er trygg å fyre per inviter.
         // Best-effort: feiler stille, blokkerer aldri innloggingen.
@@ -352,14 +371,28 @@ export async function verifyCode(formData: FormData) {
           }),
         );
 
-        // #356: send en spill-scopet invitee rett til spillet sitt i stedet for
-        // å dumpe dem på hjem-skjermen for å lete. Gjelder kun når det er ett
-        // entydig solo-spill og ingen eksplisitt `next` (f.eks. /signup-deep-
-        // link) — flere invitasjoner eller team-only faller tilbake til hjem.
-        const soloInvites = resolved.filter((r) => !r.isTeamOnly);
-        if (!hasExplicitNext && soloInvites.length === 1) {
-          gameDest = `/games/${soloInvites[0].inv.game_id}`;
-          profileIncomplete = userRow.profile_completed_at == null;
+        // #356 / #676: route an invitee directly to their game.
+        // - Exactly one solo game (no team-scoped): → /games/[id]
+        // - Exactly one team-scoped game ('team' or 'both'), no solo: →
+        //   /signup/[shortId]/team so the attach flow finds the still-pending
+        //   invitation and shows "Bli med på lag".
+        // - Mixed or multiple invitations: fall back to home (ambiguous).
+        // All destination-overrides are skipped when an explicit `next` is set.
+        const soloInvites = resolvedGameScoped.filter((r) => !r.isTeamScoped);
+        const teamScopedInvites = resolvedGameScoped.filter(
+          (r) => r.isTeamScoped && r.shortId != null,
+        );
+        if (!hasExplicitNext) {
+          if (soloInvites.length === 1 && teamScopedInvites.length === 0) {
+            gameDest = `/games/${soloInvites[0].inv.game_id}`;
+            profileIncomplete = userRow.profile_completed_at == null;
+          } else if (
+            teamScopedInvites.length === 1 &&
+            soloInvites.length === 0
+          ) {
+            gameDest = `/signup/${teamScopedInvites[0].shortId}/team`;
+            profileIncomplete = userRow.profile_completed_at == null;
+          }
         }
       }
     }

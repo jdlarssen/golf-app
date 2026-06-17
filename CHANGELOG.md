@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.11] - 2026-06-17 · #676
+
+> Inviterer en lagkaptein en medspiller på e-post til et spill der man både kan melde seg på alene og som lag, havner medspilleren nå riktig på laget i stedet for som en løs solo-spiller uten vei tilbake.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `verifyCode` (`app/[locale]/(auth)/login/actions.ts`) behandlet kun `registration_type === 'team'` som lag-scopet. På et `'both'`-spill ble en e-postinvitert medspiller derfor auto-lagt inn som solo-rad i `game_players`, og invitasjonens `accepted_at` ble konsumert — som ødela signalet `/signup/[shortId]/team` bruker for å tilby «Bli med på lag», så medspilleren endte i `teamDashNoTeamBanner`-blindveien. Fiks: lag-scopet = `'team'` **eller** `'both'` (ingen solo-insert for disse), `accepted_at`-flippet hopper nå over lag-scopede invitasjoner (id-skopet `.in('id', …)` i stedet for blank flip-alle), og en entydig lag-scopet invitasjon ruter til `/signup/[shortId]/team`. `attachToCaptainTeam` konsumerer invitasjonen når spilleren faktisk blir med. Solo-invitasjoner og klubb-/venne-invitasjoner uendret. Ingen migrasjon. Co-located tester. (#676)
+
+</details>
+
 ### [1.133.10] - 2026-06-17 · #705
 
 > Hvis en e-postinvitasjon til et spill ikke går igjennom, rydder appen nå trygt bort bare den invitasjonen som feilet, uten å røre andre invitasjoner til samme adresse.

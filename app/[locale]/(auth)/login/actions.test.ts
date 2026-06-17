@@ -66,12 +66,15 @@ let adminUserLookup: {
 let expiredInviteLookup: { id: string } | null = null;
 let gamePlayersInsertResult: { error: unknown } = { error: null };
 /**
- * Default for games-lookup i verifyCode (#199 chunk 9): vi sjekker
- * registration_type for å skippe game_players-insert hvis spillet er team-only.
- * Solo + both default-er til 'solo' (eksisterende #182-tester); team-only-
- * tester override-er per case.
+ * Default for games-lookup i verifyCode (#199 chunk 9 / #676): vi sjekker
+ * registration_type + short_id for å skippe game_players-insert og rute
+ * invitéen riktig. Solo default-er slik at eksisterende #182-tester
+ * ikke trenger endringer; team/both-tester override-er per case.
  */
-let adminGameLookup: { registration_type: string } | null = {
+let adminGameLookup: {
+  registration_type: string;
+  short_id?: string;
+} | null = {
   registration_type: 'solo',
 };
 const adminUpdateMock = vi.fn();
@@ -617,9 +620,14 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
         invited_by: '00000000-0000-0000-0000-0000000000bb',
       },
     ];
-    adminUserLookup = { id: 'new-user-1' };
-    adminGameLookup = { registration_type: 'team' };
-    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+    adminUserLookup = {
+      id: 'new-user-1',
+      profile_completed_at: '2026-01-01T00:00:00.000Z',
+    };
+    adminGameLookup = { registration_type: 'team', short_id: 'abc12345' };
+    // No queue item: the accepted_at flip is skipped for team-scoped invitations,
+    // so the server client should not perform any invitation update.
+    supabaseMock = buildSupabaseMock([]);
 
     const { verifyCode } = await import('./actions');
     await expect(
@@ -628,5 +636,102 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
 
     expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
     expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
+    // #676: team-scoped → invitation NOT consumed; redirect to attach flow.
+    expect(lastRedirect()).toBe('/signup/abc12345/team');
+  });
+});
+
+describe('verifyCode — #676 both-game email-invite co-player', () => {
+  it("'both' game: no solo game_players insert, invitation stays pending, redirect to team attach page", async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-both-1',
+        game_id: '00000000-0000-0000-0000-0000000000cc',
+        invited_by: '00000000-0000-0000-0000-0000000000dd',
+      },
+    ];
+    adminUserLookup = {
+      id: 'co-player-1',
+      profile_completed_at: '2026-01-01T00:00:00.000Z',
+    };
+    // 'both' game — captain registered as team, co-player invited via email.
+    adminGameLookup = { registration_type: 'both', short_id: 'xyz98765' };
+    // No queue item: the accepted_at flip must be skipped for 'both' games
+    // so team/page.tsx can still find the pending invitation via .is('accepted_at', null).
+    supabaseMock = buildSupabaseMock([]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'coplayer@example.com', token: '654321' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Critical: no solo row auto-inserted — the attach flow creates the proper
+    // team-linked game_players row when the co-player clicks "Bli med på lag".
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+
+    // Notify still fires so the co-player gets a "you've been invited" nudge.
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
+    expect(notifyInvitedToGameMock).toHaveBeenCalledWith({
+      recipientUserId: 'co-player-1',
+      gameId: '00000000-0000-0000-0000-0000000000cc',
+      inviterUserId: '00000000-0000-0000-0000-0000000000dd',
+    });
+
+    // Routes to the team attach page, not /games/[id].
+    expect(lastRedirect()).toBe('/signup/xyz98765/team');
+  });
+
+  it("'both' game with incomplete profile: routes via /complete-profile carrying the team attach page as next", async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-both-2',
+        game_id: '00000000-0000-0000-0000-0000000000cc',
+        invited_by: '00000000-0000-0000-0000-0000000000dd',
+      },
+    ];
+    // profile_completed_at is null → incomplete profile.
+    adminUserLookup = { id: 'new-co-player', profile_completed_at: null };
+    adminGameLookup = { registration_type: 'both', short_id: 'xyz98765' };
+    supabaseMock = buildSupabaseMock([]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'newco@example.com', token: '111222' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe(
+      '/complete-profile?next=%2Fsignup%2Fxyz98765%2Fteam',
+    );
+  });
+
+  it("'both' game with explicit next: skips team-attach routing, honors the explicit next", async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-both-3',
+        game_id: '00000000-0000-0000-0000-0000000000cc',
+        invited_by: '00000000-0000-0000-0000-0000000000dd',
+      },
+    ];
+    adminUserLookup = { id: 'co-player-3', profile_completed_at: '2026-01-01T00:00:00.000Z' };
+    adminGameLookup = { registration_type: 'both', short_id: 'xyz98765' };
+    supabaseMock = buildSupabaseMock([]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(
+        fd({
+          email: 'coplayer3@example.com',
+          token: '333444',
+          next: '/signup/xyz98765/team',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Explicit next takes precedence — gameDest is not set.
+    expect(lastRedirect()).toBe('/signup/xyz98765/team');
   });
 });
