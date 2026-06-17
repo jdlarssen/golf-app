@@ -32,37 +32,49 @@ gi BARE opp på eksplisitt permanente feil, ALDRI på tapt signal (eier-beslutni
 
 ## Suksesskriterier
 
-- [ ] **K1 (Del 1a — RPC graceful no-op for submitted).** `upsert_score_if_newer` returnerer
+- [x] **K1 (Del 1a — RPC graceful no-op for submitted).** `upsert_score_if_newer` returnerer
   `was_applied = false` uten å forsøke INSERT/UPDATE når mål-spilleren har `submitted_at is not null`
   (i tillegg til eksisterende `withdrawn_at`). Speiler 0073-mønsteret. Ny migrasjon `0102_*.sql`,
   applikert til prod via MCP (bakoverkompatibel — gammel klient kaller fortsatt via RPC).
-  *Bevis:* `pg_get_functiondef` viser submitted-grenen; funksjonell no-op-probe mot en submitted
-  game_player gir `was_applied=false` og muterer ingen rad.
+  *Bevis:* `def_has_submitted_guard=true` (pg_get_functiondef); no-op-probe mot submitted
+  game_player `e045ac34…` med NYERE timestamp + strokes=99 ga `was_applied=f`, `strokes_after=3`
+  (umutert), rullet tilbake via RAISE. Migrasjon `0102` + `apply_migration` success.
 
-- [ ] **K2 (Del 2 — lokal hull-telling).** `HoleClient` unionerer server-snapshot-en med en
+- [x] **K2 (Del 2 — lokal hull-telling).** `HoleClient` unionerer server-snapshot-en med en
   `useLiveQuery`-telling av lokale non-null scores for `(gameId, myUserId)` over alle 18 hull:
   `roundComplete = Math.max(myCompletedHoles, localCompletedHoles ?? 0) >= 18`. `Math.max` (ikke
   ren fallback) så server-synkede hull fra en tidligere økt aldri under-telles. Rent additivt —
-  ingen skjema/RPC-endring. *Bevis:* `roundComplete` leser lokal telling; en spiller med 18 lokale
-  hull men server-count <18 får submit-CTA-en.
+  ingen skjema/RPC-endring. *Bevis:* `HoleClient.tsx` `useLiveQuery(... .where('[gameId+userId]')
+  .equals([gameId, myUserId]).filter(r => r.strokes != null).count())` + `Math.max`-union på
+  roundComplete-linja; 22/22 HoleClient-tester grønne (ingen regresjon — kan bare avsløre CTA-en
+  tidligere). Commit `3209691c`.
 
-- [ ] **K3 (Del 1b + Del 3 — drain før levering).** `/submit` kicker `drainQueue()` ved mount og
+- [x] **K3 (Del 1b + Del 3 — drain før levering).** `/submit` kicker `drainQueue()` ved mount og
   blokkerer «Lever»-knappen så lenge `localDb.syncQueue` har ventende elementer (label → «Lagrer
   slag …»). Når køen går fra ikke-tom → tom, kalles `router.refresh()` så preview-en re-renderer
   med de nå-synkede scorene (riktige hull-tall + brutto). Dekker Del 3 automatisk: spilleren MÅ
-  innom `/submit` for å re-levere etter en reject, så drain-vakta fyrer der. *Bevis:* SubmitForm
-  har useLiveQuery på syncQueue + mount-drain + refresh-på-tom; knappen er disabled mens kø ikke-tom.
+  innom `/submit` for å re-levere etter en reject, så drain-vakta fyrer der. *Bevis:* `SubmitForm.tsx`
+  `useLiveQuery(syncQueue.filter(abandonedAt==null).count())`, mount-`drainQueue()`, `wasPending`-ref →
+  `router.refresh()` på tom, `disabled={syncing}` + onSubmit-guard `if (syncing) preventDefault()`;
+  ny i18n-nøkkel `game.submit.syncingPending` i begge kataloger (parity grønn). Build grønn (force-dynamic).
 
-- [ ] **K4 (Del 4 — nett-trygg attempt-cap).** `drainQueue` gir opp på et element KUN når feilen er
+- [x] **K4 (Del 4 — nett-trygg attempt-cap).** `drainQueue` gir opp på et element KUN når feilen er
   eksplisitt permanent (`isPermanentSyncError` = permission/403/row-level/constraint/invalid/400) OG
   `attemptCount + 1 >= MAX_PERMANENT_ATTEMPTS` (5). Da settes `abandonedAt` på kø-elementet og det
   hoppes over i alle videre drains. Nettverks-, auth-utløp-, rate-limit- og *ukjente* feil er ALDRI
   permanente → retry uendelig (tapt signal mister aldri slag). `SyncBanner` surfacer abandoned-elementer
-  distinkt. *Bevis:* `lib/sync/classifyError.ts` med pure `isPermanentSyncError` + `syncRetryDecision`;
-  Type A-test dekker matrisen; drainQueue hopper over `abandonedAt`-elementer.
+  distinkt. *Bevis:* `lib/sync/classifyError.ts` (`isPermanentSyncError` + `syncRetryDecision`);
+  `classifyError.test.ts` 24 grønne (network/auth/unknown=retry uansett antall, permanent=abandon ved cap);
+  `syncWorker.ts:` `if (item.abandonedAt) continue;` + `decision === 'abandon'`-gren. Commit `9f95170d`.
+  Herdet i `fcc0889b` (evaluator-funn): statuskoder matches nå med ord-grenser (`\b400\b`) + timeout/abort
+  eksplisitt transient, så ingen siffer-kollisjon (f.eks. «1400ms») kan abandone et offline-slag. 29
+  classifier-tester grønne.
 
-- [ ] **K5 (Gates grønne).** `npx tsc --noEmit`, `npm run build`, og full `npx vitest run` grønne.
-  Ny `lib/sync/classifyError.test.ts` grønn. Ingen norsk copy-regresjon (humanizer på nye strenger).
+- [x] **K5 (Gates grønne).** `npx tsc --noEmit` exit 0; `npm run build` grønn (full rute-tabell);
+  full `npx vitest run` = **283 filer / 3590 tester grønne**. `lib/sync/classifyError.test.ts` 24 grønne.
+  Humanizer kjørt på nye strenger («Kunne ikke lagre N slag …», «Lagrer slag …», CHANGELOG-taglines);
+  pre-commit-advarsel kun på en intern kode-kommentar-em-dash (ikke bruker-copy) + pre-eksisterende
+  SyncBanner-hardkoding (ikke ekstrahert ennå — OK per hook).
 
 ## Gates (kjør scoped til det som endres)
 
