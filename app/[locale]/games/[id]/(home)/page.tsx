@@ -543,7 +543,9 @@ export default async function GameHomePage({
             {t('registered')}
           </Kicker>
           <h1 className="mt-1.5 font-serif text-[26px] font-medium tracking-[-0.015em] leading-tight text-text">
-            {t('scorecardOpensAtTeeOff')}
+            {teeOffDate
+              ? t('scorecardOpensAtTeeOff')
+              : t('scorecardOpensWhenOrganizerStarts')}
           </h1>
         </section>
 

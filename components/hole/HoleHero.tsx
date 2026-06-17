@@ -101,7 +101,13 @@ export function HoleHero(props: HoleHeroProps): JSX.Element {
   const ts = useTranslations('scorecard');
   const showAside = parByGender ? hasParDifference(parByGender) : false;
   const tooltip = showAside
-    ? ts('parAsideTooltip', { genders: formatOtherGendersPar(parByGender!, playerGender) })
+    ? ts('parAsideTooltip', {
+        genders: formatOtherGendersPar(parByGender!, playerGender, {
+          mens: ts('parGenderMens', { par: parByGender!.mens }),
+          ladies: ts('parGenderLadies', { par: parByGender!.ladies }),
+          juniors: ts('parGenderJuniors', { par: parByGender!.juniors }),
+        }),
+      })
     : '';
   return (
     <div style={containerStyle}>

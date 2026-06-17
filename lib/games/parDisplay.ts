@@ -31,24 +31,44 @@ export function hasParDifference(par: HoleParByGender): boolean {
 }
 
 /**
- * Norsk forklaring av andre kjønns par-verdier. Brukes som tooltip/aria-label
- * på avvik-indikatoren. Spillerens egen kjønn ekskluderes — vi viser bare hva
+ * Pre-translated label strings for the three scoring genders. When passed to
+ * `formatOtherGendersPar`, the caller controls how each gender is labelled so
+ * the output is locale-aware. Each string should already include the par value
+ * (e.g. `t('parGenderMens', { par: 4 })` → `"Men: 4"`). #681.
+ */
+export type ParGenderLabels = {
+  mens: string;
+  ladies: string;
+  juniors: string;
+};
+
+/**
+ * Forklaring av andre kjønns par-verdier. Brukes som tooltip/aria-label på
+ * avvik-indikatoren. Spillerens egen kjønn ekskluderes — vi viser bare hva
  * MEDSPILLERE av andre kjønn ser. #240.
  *
  * Eksempel: playerGender='mens', par={mens:4, ladies:5, juniors:4}
- *   → "Damer: 5, junior: 4"
+ *   → "Damer: 5, Junior: 4" (norsk) / "Ladies: 5, Juniors: 4" (engelsk)
  *
  * Når `playerGender` er undefined (leaderboard-kontekst uten seer-kjønn),
  * vises alle tre par-verdier slik at leseren selv kan tolke hva som avviker.
+ *
+ * @param labels - Valgfrie forhåndsoversatte kjønnsetiketter. Når oppgitt brukes
+ *   disse istedenfor de hardkodede norske fallback-verdiene. Kall-steder som har
+ *   tilgang til `t()` fra next-intl bør alltid sende inn oversatte etiketter. #681.
  */
 export function formatOtherGendersPar(
   par: HoleParByGender,
   playerGender: ScoringGender | undefined,
+  labels?: ParGenderLabels,
 ): string {
   const parts: string[] = [];
-  if (playerGender !== 'mens') parts.push(`Herrer: ${par.mens}`);
-  if (playerGender !== 'ladies') parts.push(`Damer: ${par.ladies}`);
-  if (playerGender !== 'juniors') parts.push(`Junior: ${par.juniors}`);
+  if (playerGender !== 'mens')
+    parts.push(labels ? labels.mens : `Herrer: ${par.mens}`);
+  if (playerGender !== 'ladies')
+    parts.push(labels ? labels.ladies : `Damer: ${par.ladies}`);
+  if (playerGender !== 'juniors')
+    parts.push(labels ? labels.juniors : `Junior: ${par.juniors}`);
   return parts.join(', ');
 }
 

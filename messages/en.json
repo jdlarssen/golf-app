@@ -1377,6 +1377,7 @@
 			"backHome": "← Home",
 			"registered": "YOU'RE IN",
 			"scorecardOpensAtTeeOff": "Your scorecard opens at tee-off.",
+			"scorecardOpensWhenOrganizerStarts": "Your scorecard opens when the organiser starts the match.",
 			"courseLabel": "COURSE",
 			"unknownCourse": "(unknown course)",
 			"holeCount": "18 holes",
@@ -2068,7 +2069,10 @@
 			"playerScoreAriaUsed": "Best net used: {initial}, gross {gross}, +{extra} strokes, net {net}",
 			"playerScoreAria": "{initial}, gross {gross}, +{extra} strokes, net {net}",
 			"parAsideTitle": "This hole has a different par for other genders. {genders}.",
-			"parAsideAriaLabel": "Different par for other genders. {genders}."
+			"parAsideAriaLabel": "Different par for other genders. {genders}.",
+			"parGenderMens": "Men: {par}",
+			"parGenderLadies": "Ladies: {par}",
+			"parGenderJuniors": "Juniors: {par}"
 		},
 		"bingoBangoBongo": {
 			"revealHiddenSub": "Bingo Bango Bongo scores are hidden until the admin ends the game.",

@@ -1377,6 +1377,7 @@
 			"backHome": "← Hjem",
 			"registered": "DU ER PÅMELDT",
 			"scorecardOpensAtTeeOff": "Scorekortet åpner ved tee-off.",
+			"scorecardOpensWhenOrganizerStarts": "Scorekortet åpner når arrangøren starter kampen.",
 			"courseLabel": "BANE",
 			"unknownCourse": "(ukjent bane)",
 			"holeCount": "18 hull",
@@ -2068,7 +2069,10 @@
 			"playerScoreAriaUsed": "Brukt netto for laget: {initial}, brutto {gross}, +{extra} slag, netto {net}",
 			"playerScoreAria": "{initial}, brutto {gross}, +{extra} slag, netto {net}",
 			"parAsideTitle": "Dette hullet har annerledes par for andre kjønn. {genders}.",
-			"parAsideAriaLabel": "Avvikende par for andre kjønn. {genders}."
+			"parAsideAriaLabel": "Avvikende par for andre kjønn. {genders}.",
+			"parGenderMens": "Herrer: {par}",
+			"parGenderLadies": "Damer: {par}",
+			"parGenderJuniors": "Junior: {par}"
 		},
 		"bingoBangoBongo": {
 			"revealHiddenSub": "Bingo Bango Bongo-poeng holdes hemmelig til admin avslutter spillet.",

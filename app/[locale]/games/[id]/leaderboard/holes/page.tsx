@@ -1420,8 +1420,20 @@ function HoleRow({
           {row.parByGender && hasParDifference(row.parByGender) && (
             <sup
               data-testid="par-aside-marker"
-              title={t('parAsideTitle', { genders: formatOtherGendersPar(row.parByGender, undefined) })}
-              aria-label={t('parAsideAriaLabel', { genders: formatOtherGendersPar(row.parByGender, undefined) })}
+              title={t('parAsideTitle', {
+                genders: formatOtherGendersPar(row.parByGender, undefined, {
+                  mens: t('parGenderMens', { par: row.parByGender.mens }),
+                  ladies: t('parGenderLadies', { par: row.parByGender.ladies }),
+                  juniors: t('parGenderJuniors', { par: row.parByGender.juniors }),
+                }),
+              })}
+              aria-label={t('parAsideAriaLabel', {
+                genders: formatOtherGendersPar(row.parByGender, undefined, {
+                  mens: t('parGenderMens', { par: row.parByGender.mens }),
+                  ladies: t('parGenderLadies', { par: row.parByGender.ladies }),
+                  juniors: t('parGenderJuniors', { par: row.parByGender.juniors }),
+                }),
+              })}
               className="ml-0.5 cursor-help text-[0.65em] font-semibold text-muted"
             >
               *

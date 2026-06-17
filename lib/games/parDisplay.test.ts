@@ -4,6 +4,7 @@ import {
   formatOtherGendersPar,
   parForPlayer,
   type HoleParByGender,
+  type ParGenderLabels,
 } from './parDisplay';
 
 describe('hasParDifference', () => {
@@ -33,28 +34,62 @@ describe('hasParDifference', () => {
 describe('formatOtherGendersPar', () => {
   const par: HoleParByGender = { mens: 4, ladies: 5, juniors: 3 };
 
-  it('excludes mens for a men player', () => {
+  // ── fallback (no labels) — hardcoded Norwegian ──────────────────────────
+  it('excludes mens for a men player (Norwegian fallback)', () => {
     expect(formatOtherGendersPar(par, 'mens')).toBe('Damer: 5, Junior: 3');
   });
 
-  it('excludes ladies for a women player', () => {
+  it('excludes ladies for a women player (Norwegian fallback)', () => {
     expect(formatOtherGendersPar(par, 'ladies')).toBe('Herrer: 4, Junior: 3');
   });
 
-  it('excludes juniors for a junior player', () => {
+  it('excludes juniors for a junior player (Norwegian fallback)', () => {
     expect(formatOtherGendersPar(par, 'juniors')).toBe('Herrer: 4, Damer: 5');
   });
 
-  it('lists all three when playerGender is undefined', () => {
+  it('lists all three when playerGender is undefined (Norwegian fallback)', () => {
     expect(formatOtherGendersPar(par, undefined)).toBe(
       'Herrer: 4, Damer: 5, Junior: 3',
     );
   });
 
-  it('handles non-difference data shape without crashing', () => {
+  it('handles non-difference data shape without crashing (Norwegian fallback)', () => {
     expect(
       formatOtherGendersPar({ mens: 4, ladies: 4, juniors: 4 }, 'mens'),
     ).toBe('Damer: 4, Junior: 4');
+  });
+
+  // ── with pre-translated labels (locale-aware path) #681 ─────────────────
+  describe('with labels (locale-aware)', () => {
+    const enLabels: ParGenderLabels = {
+      mens: 'Men: 4',
+      ladies: 'Ladies: 5',
+      juniors: 'Juniors: 3',
+    };
+
+    it('excludes mens label for a men player', () => {
+      expect(formatOtherGendersPar(par, 'mens', enLabels)).toBe(
+        'Ladies: 5, Juniors: 3',
+      );
+    });
+
+    it('excludes ladies label for a women player', () => {
+      expect(formatOtherGendersPar(par, 'ladies', enLabels)).toBe(
+        'Men: 4, Juniors: 3',
+      );
+    });
+
+    it('excludes juniors label for a junior player', () => {
+      expect(formatOtherGendersPar(par, 'juniors', enLabels)).toBe(
+        'Men: 4, Ladies: 5',
+      );
+    });
+
+    it('lists all three when playerGender is undefined', () => {
+      expect(formatOtherGendersPar(par, undefined, enLabels)).toBe(
+        'Men: 4, Ladies: 5, Juniors: 3',
+      );
+    });
   });
 });
 

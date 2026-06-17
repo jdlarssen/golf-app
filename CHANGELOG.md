@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.8] - 2026-06-17 · #681, #678
+
+> Par-asterisken på hull-siden og resultatlista viser nå riktige kjønnsetiketter på engelsk. Og en cup-kamp som venter på start forteller spilleren at arrangøren starter kampen, i stedet for å love et tee-off-tidspunkt som ikke finnes.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- **#681** — `formatOtherGendersPar` (`lib/games/parDisplay.ts`) hadde hardkodede norske kjønns-etiketter, så par-asterisken viste «Herrer/Damer/Junior» også på engelsk locale, og helperen var duplisert i flere kall-steder. La til en valgfri `labels`-param (bakoverkompatibel) og flyttet etikettene til message-katalogen (`leaderboard.holes.parGender*` i `no.json` + `en.json`); `components/hole/HoleHero.tsx` og leaderboard-`holes/page.tsx` sender nå oversatte etiketter via `useTranslations`. De tre `ParAsideInline`-kopiene i submit/approve/scorecard brukte allerede riktig i18n-mønster og ble ikke rørt (ren dedup av dem utsatt). (#681)
+- **#678** — En cup-kamp i `scheduled`-status uten satt tee-off-tid viste overskriften «Scorekortet åpner ved tee-off» — en blindvei, for det finnes ingen tee-off-tid å vente på. Game-home viser nå «Scorekortet åpner når arrangøren starter kampen» (ny nøkkel `game.home.scorecardOpensWhenOrganizerStarts`) når tee-off mangler. Minimal copy-fiks, ingen ny backend. (#678)
+
+</details>
+
 ### [1.133.7] - 2026-06-17 · #687
 
 > Liga-runder viser nå riktig dato og åpner på norsk midnatt, ikke en time på skjeve. En månedlig runde starter ved midnatt den 1. og stenger 23:59 siste dag i måneden, slik arrangøren forventer.
