@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.12] - 2026-06-17 · #683
+
+> Pluss-handicap under -18 fordelte slag feil — spillere med handicap -20 eller lavere fikk feil nettoscore. Matematikken er nå riktig uansett handicap.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `strokesForHole` i `lib/scoring/strokeAllocation.ts` capper ikke lenger pluss-grenen på -18. Erstatter `threshold = 18 - abs + 1`-logikken med samme multi-runde-mønster som positiv grenen: `base = Math.floor(abs/18)` slag på alle hull, pluss ett ekstra slag på de `remainder = abs % 18` vanskeligste (høyest SI). Et handicap på -20 gir dermed -1 på alle 18 hull og ytterligere -1 på SI 17 og 18 (sum = -20). Inkluderer `strokes === 0 ? 0 : -strokes` for å unngå `-0` i JavaScript. (#683)
+- Ni nye tester i `lib/scoring/strokeAllocation.test.ts` dekker HCP -18/-19/-20/-24/-36 — både per-hull-fordeling og allStrokeAllocations-summer.
+
+</details>
+
 ### [1.132.11] - 2026-06-17 · #668
 
 > Har du tastet inn alle 18 hull mens du var offline, dukker «Lever»-knappen nå opp som den skal. Og åpner du leveringssiden mens noen slag ennå ikke er lagret, lagrer appen dem ferdig før kortet låses, så ingen runde leveres med blanke hull.

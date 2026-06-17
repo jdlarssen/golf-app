@@ -11,10 +11,14 @@ export function strokesForHole(courseHandicap: number, strokeIndex: number): num
     return base + extra;
   }
 
-  // Plus golfer: hand back strokes from highest SI down.
+  // Plus golfer: give back strokes from highest SI down (mirrors positive branch).
+  // e.g. -20 → base=1 on all 18, extra -1 on the 2 hardest (SI 17-18) = -20 total.
   const abs = Math.abs(courseHandicap);
-  const threshold = 18 - abs + 1;
-  return strokeIndex >= threshold ? -1 : 0;
+  const base = Math.floor(abs / 18);
+  const remainder = abs % 18;
+  const extra = remainder > 0 && strokeIndex >= (18 - remainder + 1) ? 1 : 0;
+  const strokes = base + extra;
+  return strokes === 0 ? 0 : -strokes;
 }
 
 export function allStrokeAllocations(courseHandicap: number): Record<number, number> {
