@@ -223,13 +223,17 @@ export async function inviteEmailToGame(
   }
 
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-  const { error: insertError } = await supabase.from('invitations').insert({
-    email: rawEmail,
-    token: randomUUID(),
-    invited_by: inviterUserId,
-    game_id: gameId,
-    expires_at: expiresAt,
-  });
+  const { data: insertedInvitation, error: insertError } = await supabase
+    .from('invitations')
+    .insert({
+      email: rawEmail,
+      token: randomUUID(),
+      invited_by: inviterUserId,
+      game_id: gameId,
+      expires_at: expiresAt,
+    })
+    .select('id')
+    .single<{ id: string }>();
   if (insertError) {
     console.error('[inviteToGame/inviteEmail] invitations insert failed', insertError);
     redirect({ href: `${detailPath}?error=invite_failed`, locale });
@@ -251,14 +255,18 @@ export async function inviteEmailToGame(
     // the idempotent check at the top of this branch finds the orphaned row
     // and silently short-circuits without ever sending the mail — stranding
     // the invitee permanently.
-    const { error: deleteErr } = await supabase
-      .from('invitations')
-      .delete()
-      .ilike('email', rawEmail)
-      .eq('game_id', gameId)
-      .is('accepted_at', null);
-    if (deleteErr) {
-      console.error('[inviteToGame/inviteEmail] rollback delete failed', deleteErr);
+    //
+    // Scoped by primary key (row id returned from INSERT … RETURNING) to avoid
+    // accidentally deleting a concurrently inserted pending invite for the same
+    // email + game (#705).
+    if (insertedInvitation?.id) {
+      const { error: deleteErr } = await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', insertedInvitation.id);
+      if (deleteErr) {
+        console.error('[inviteToGame/inviteEmail] rollback delete failed', deleteErr);
+      }
     }
     redirect({ href: `${detailPath}?error=mail_failed&email=${encodeURIComponent(rawEmail)}`, locale });
   }

@@ -371,7 +371,8 @@ describe('inviteEmailToGame', () => {
     expect(lastRedirect()).toContain('status=invite_sent');
   });
 
-  it('mail-feil ved ukjent e-post: ruller invitations-raden tilbake', async () => {
+  it('mail-feil ved ukjent e-post: ruller invitations-raden tilbake via row-id (#705)', async () => {
+    const INSERTED_ROW_ID = 'aabbccdd-1111-2222-3333-444455556666';
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       {
@@ -382,9 +383,9 @@ describe('inviteEmailToGame', () => {
       { data: null, error: null },
       // invitations.select.ilike.eq.is.maybeSingle — ingen pending
       { data: null, error: null },
-      // invitations insert — lykkes
-      { data: null, error: null },
-      // rollback: invitations.delete.ilike.eq.is — lykkes
+      // invitations insert + .select('id').single() — returnerer den nye rad-id-en
+      { data: { id: INSERTED_ROW_ID }, error: null },
+      // rollback: invitations.delete.eq('id', INSERTED_ROW_ID) — lykkes
       { data: null, error: null },
     ]);
     authedAsAdmin();
@@ -400,8 +401,16 @@ describe('inviteEmailToGame', () => {
     // Mailen feilet → den nylig insertede raden slettes igjen, så en ny
     // sending på samme adresse ikke kortsluttes av idempotens-sjekken.
     expect(sendInviteNotificationMock).toHaveBeenCalledTimes(1);
+
+    // Rollback MÅ skje på primærnøkkelen (row-id), ikke på email+game_id+accepted_at,
+    // slik at en concurrently inserted pending-rad for samme email ikke utilsiktet slettes.
+    const eqCallOnId = supabaseMock.__fromCalls.find(
+      (c) => c.method === 'eq' && c.args[0] === 'id' && c.args[1] === INSERTED_ROW_ID,
+    );
+    expect(eqCallOnId, 'rollback .eq("id", insertedRowId) mangler i fromCalls').toBeDefined();
     const deleteCall = supabaseMock.__fromCalls.find((c) => c.method === 'delete');
     expect(deleteCall?.table).toBe('invitations');
+
     expect(lastRedirect()).toContain('error=mail_failed');
     expect(lastRedirect()).toContain('email=nykompis');
   });

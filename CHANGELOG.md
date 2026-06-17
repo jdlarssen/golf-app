@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.10] - 2026-06-17 · #705
+
+> Hvis en e-postinvitasjon til et spill ikke går igjennom, rydder appen nå trygt bort bare den invitasjonen som feilet, uten å røre andre invitasjoner til samme adresse.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Den kompenserende rollback-deleten i `inviteEmailToGame` (`app/[locale]/admin/games/[id]/inviteToGameActions.ts`, lagt til i #686) matchet på `email + game_id + accepted_at IS NULL` i stedet for rad-id. I et samtidighets-scenario kunne en andre pending-invitasjon for samme adresse bli slettet sammen med den som feilet. INSERT-en returnerer nå rad-id-en (`.select('id').single()`), og rollback-deleten er skopet med `.eq('id', …)` — den rører kun raden den selv opprettet. Happy-path og best-effort-mail uendret. Partial-unique-index-herdingen (issue-alternativ 2) er utenfor scope. Co-located test. (#705)
+
+</details>
+
 ### [1.133.9] - 2026-06-17 · #661
 
 > Melder du deg på et fullt Wolf-, Nines- eller Skins-spill, får du nå beskjed om at det er fullt med en gang, i stedet for å bli strandet uten plass når runden settes i gang.
