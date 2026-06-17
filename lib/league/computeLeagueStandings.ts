@@ -155,6 +155,9 @@ export function computeLeagueStandings(
       if (roundsPlayed === 0) ranked = false;
     } else {
       // total
+      // A player who never appeared in any counting round has no standing yet —
+      // mirror the same guard used by average/best_n/points models.
+      if (roundsPlayed === 0) ranked = false;
       let sum = 0;
       let missingAny = false;
       for (const rm of counting) {

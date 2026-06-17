@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.14] - 2026-06-17 · #664
+
+> En spiller som aldri stilte til start i en ligarunde vises ikke lenger som «aktiv» i sesongtabellen — de plasseres utenfor rangeringen til de spiller sin første runde.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- I `computeLeagueStandings` (`lib/league/computeLeagueStandings.ts`) manglet `total`-grenen en guard for spillere med `roundsPlayed === 0`. Med `pointsBased=true` (stableford) returnerer `penaltyForRound` 0 for uteblitte runder, så en spiller som aldri møtte opp akkumulerte `sum=0` og fikk `ranked=true` — semantisk identisk med en spiller som faktisk spilte og scoret 0 poeng. Lagt til `if (roundsPlayed === 0) ranked = false` i `total`-grenen, som speiler den eksisterende guard-en i `average`-, `best_n`- og `points`-grenene. Gjelder også slagspill (`pointsBased=false`) for konsistens, selv om verdien der (`worst+1 > 0`) skiller tilfellene verdimessig. (#664)
+- Ny Type A-test skiller «aldri spilt» (`ranked=false`) fra «spilte og scoret 0 stableford» (`ranked=true`). Eksisterende test oppdatert til å assertere korrekt `ranked=false` for en penalty-kalkylert aldri-spilt slagspiller.
+
+</details>
+
 ### [1.132.13] - 2026-06-17 · #686
 
 > Hvis varslings-mailen feiler første gang du inviterer noen til et spill, kan du nå sende på nytt til samme adresse. Invitasjonen blir ikke liggende låst. Og prøver du en adresse som allerede er invitert, sender appen meldingen en gang til, så ingen blir hengende uten beskjed.

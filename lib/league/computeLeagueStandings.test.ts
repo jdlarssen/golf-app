@@ -113,12 +113,15 @@ describe('computeLeagueStandings — total model', () => {
     expect(aR2).toMatchObject({ value: null, penalised: false });
   });
 
-  it('penalises a player who played nothing under the penalty policy', () => {
+  it('a never-played player is ranked=false (unranked) even with penalty applied', () => {
+    // The penalty value is still computed so the cell is display-correct, but a
+    // player who never played any counting round has no standing yet — ranked=false.
     const rounds = [round('r1', 1, [score('A', 2)])];
     const res = computeLeagueStandings(cfg(), rounds, ['A', 'B']);
-    expect(rowOf(res, 'B').value).toBe(3); // worst (2) + 1
-    expect(rowOf(res, 'B').ranked).toBe(true);
+    expect(rowOf(res, 'B').value).toBe(3); // penalty: worst (2) + 1
+    expect(rowOf(res, 'B').ranked).toBe(false);
     expect(rowOf(res, 'A').rank).toBe(1);
+    expect(rowOf(res, 'B').rank).toBeNull();
   });
 
   it('carries the delivered-outside-window flag onto the round cell', () => {
@@ -385,7 +388,32 @@ describe('computeLeagueStandings — stableford (points-based, higher best)', ()
     expect(aR1.points).toBe(3);
   });
 
-  it('dedupes a player’s multiple flights to the best (highest) points', () => {
+  it("total + penalty: never-played player is ranked=false; a player who played and scored 0 is ranked=true", () => {
+    // This distinguishes the two cases: (a) no counting rounds played at all → unranked;
+    // (b) played every counting round but scored 0 stableford points → still ranked.
+    const rounds = [
+      round('r1', 1, [score('A', 30), score('B', 0)]), // B played but scored 0
+      round('r2', 2, [score('A', 25), score('B', 0)]), // B played but scored 0 again
+      // C never appears in any counting round
+    ];
+    const res = computeLeagueStandings(sf(), rounds, ['A', 'B', 'C']);
+
+    // A: normal ranked player
+    expect(rowOf(res, 'A').ranked).toBe(true);
+    expect(rowOf(res, 'A').rank).toBe(1);
+
+    // B: played every round, earned 0 points → still ranked (a genuine last place)
+    expect(rowOf(res, 'B').value).toBe(0);
+    expect(rowOf(res, 'B').ranked).toBe(true);
+
+    // C: never played a single counting round → must NOT be ranked
+    expect(rowOf(res, 'C').ranked).toBe(false);
+    expect(rowOf(res, 'C').rank).toBeNull();
+    // C should appear after the ranked players
+    expect(res.rows[res.rows.length - 1].userId).toBe('C');
+  });
+
+  it("dedupes a player's multiple flights to the best (highest) points", () => {
     const rounds = [round('r1', 1, [score('A', 20), score('A', 35), score('B', 30)])];
     const res = computeLeagueStandings(sf(), rounds, ['A', 'B']);
     expect(rowOf(res, 'A').value).toBe(35);
