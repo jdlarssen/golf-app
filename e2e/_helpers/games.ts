@@ -74,21 +74,32 @@ export async function fetchOtpForEmail(email: string): Promise<string> {
 }
 
 /**
- * Kjører to-stegs OTP-login i UI på `page`. Forutsetter at `page` allerede er
- * på `/login` (caller styrer URL — vi støtter `?next=` slik at oppfølgende
- * redirect lander der vi vil). Venter på at vi har forlatt `/login` før retur.
+ * Logger inn `email` ved å drive KUN verify-steget på `/login` — vi hopper
+ * bevisst over «Send meg kode» (sendCode → signInWithOtp).
+ *
+ * Hvorfor: send-steget er rate-limitet to veier — appens per-e-post/per-IP-
+ * bøtte (`consumeLoginRateLimit`, kun i `sendCode`) OG Supabase sin egen
+ * OTP-send-throttle. Suiten logger de samme få e-postene inn flere ganger fra
+ * én CI-IP, som trigger begge og gir `?error=rate_limited`. Verify-steget
+ * kaller aldri rate-limiteren, så vi henter en gyldig OTP via admin-API-et
+ * (`generateLink`) og navigerer rett til `?step=verify`. Den ekte session-
+ * settende stien (`verifyOtp` → cookie) kjøres fortsatt.
+ *
+ * Forutsetter at caller har navigert til `/login?next=<beskyttet>` (vi leser
+ * `next` fra URL-en så post-verify-redirecten lander der testen forventer).
+ * Venter på at vi har forlatt `/login` før retur.
  */
 export async function signInViaOtp(page: Page, email: string): Promise<void> {
-  // /login har INGEN «Logg inn»-heading (BrandHero viser «Tørny»); «Logg inn» er
-  // verify-stegets knapp. Vent på e-post-feltet i sendCode-skjemaet i stedet —
-  // den robuste markøren for at login-siden er klar.
-  await expect(page.getByLabel('E-post')).toBeVisible();
-  await page.getByLabel('E-post').fill(email);
-  await page.getByRole('button', { name: 'Send meg kode' }).click();
+  const next = new URL(page.url()).searchParams.get('next') ?? '';
 
-  await expect(page).toHaveURL(/\bstep=verify\b/, { timeout: 15_000 });
-
+  // Mint OTP via admin (ingen send-steg → unngår begge rate-limit-lagene).
   const otp = await fetchOtpForEmail(email);
+
+  const qs = new URLSearchParams({ step: 'verify', email });
+  if (next) qs.set('next', next);
+  await page.goto(`/login?${qs.toString()}`);
+
+  await expect(page.getByLabel('Kode')).toBeVisible();
   await page.getByLabel('Kode').fill(otp);
 
   // Auto-submit skjer ved OTP_LENGTH=8. For 6-sifrete prosjekter klikker vi
