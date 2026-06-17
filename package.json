@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "gen:types": "supabase gen types typescript --project-id glofubopddkjhymcbaph --schema public > lib/database.types.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
