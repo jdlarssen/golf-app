@@ -22,6 +22,10 @@ describe('cupMatchLabel', () => {
     ['singles_matchplay', 1, 'Singel 1'],
     ['fourball_matchplay', 2, 'Four-ball 2'],
     ['foursomes_matchplay', 3, 'Foursome 3'],
+    // #663: new 2v2 formats
+    ['greensome_matchplay', 1, 'Greensome 1'],
+    ['chapman_matchplay', 2, 'Chapman 2'],
+    ['gruesome_matchplay', 3, 'Gruesome 3'],
   ] as const)('%s #%i → %s', (format, n, expected) => {
     expect(cupMatchLabel(format, n)).toBe(expected);
   });
@@ -100,6 +104,33 @@ describe('generateCupPlan — 2v2 formats', () => {
     expect(plan[0].side1.sort()).toEqual(['A1', 'A4']);
     expect(plan[1].side1.sort()).toEqual(['A2', 'A3']);
   });
+
+  // #663: greensome/chapman/gruesome reuse the foursomes pairing path (2 per side)
+  it.each([
+    ['greensome_matchplay', 'Greensome'],
+    ['chapman_matchplay', 'Chapman'],
+    ['gruesome_matchplay', 'Gruesome'],
+  ] as const)(
+    '%s: 2 players per side, correct label prefix, all used once',
+    (format, labelPrefix) => {
+      const t1 = team('A', [5, 10, 15, 20]);
+      const t2 = team('B', [6, 11, 16, 21]);
+      const plan = generateCupPlan({
+        team1: t1,
+        team2: t2,
+        sessions: [{ format, matchCount: 2 }],
+        strategy: 'handicap',
+      });
+      expect(plan).toHaveLength(2);
+      for (const m of plan) {
+        expect(m.side1).toHaveLength(2);
+        expect(m.side2).toHaveLength(2);
+        expect(m.label).toMatch(new RegExp(`^${labelPrefix} \\d+$`));
+      }
+      const used1 = plan.flatMap((m) => m.side1).sort();
+      expect(used1).toEqual(['A1', 'A2', 'A3', 'A4']);
+    },
+  );
 });
 
 describe('generateCupPlan — sessions + reuse', () => {

@@ -160,6 +160,33 @@ export function CupSetup({
         bruttoHelperText={t('foursomesAllowanceBruttoHelper')}
       />
 
+      <AllowanceField
+        fieldName="greensome_allowance_pct"
+        defaultPct={100}
+        legend={t('greensomeAllowanceLegend')}
+        description={t('greensomeAllowanceDescription')}
+        nettoHelperText={t('greensomeAllowanceNettoHelper')}
+        bruttoHelperText={t('greensomeAllowanceBruttoHelper')}
+      />
+
+      <AllowanceField
+        fieldName="chapman_allowance_pct"
+        defaultPct={100}
+        legend={t('chapmanAllowanceLegend')}
+        description={t('chapmanAllowanceDescription')}
+        nettoHelperText={t('chapmanAllowanceNettoHelper')}
+        bruttoHelperText={t('chapmanAllowanceBruttoHelper')}
+      />
+
+      <AllowanceField
+        fieldName="gruesome_allowance_pct"
+        defaultPct={50}
+        legend={t('gruesomeAllowanceLegend')}
+        description={t('gruesomeAllowanceDescription')}
+        nettoHelperText={t('gruesomeAllowanceNettoHelper')}
+        bruttoHelperText={t('gruesomeAllowanceBruttoHelper')}
+      />
+
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
           {t('allowedFormatsLegend')}

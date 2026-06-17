@@ -18,6 +18,14 @@ describe('sessionMatchCount', () => {
     ['fourball_matchplay', 5, 2], // odd → floor, one bye
     ['foursomes_matchplay', 6, 3],
     ['fourball_matchplay', 1, 0], // can't field a pair
+    // #663: greensome/chapman/gruesome are 2v2, same pairing path as foursomes
+    ['greensome_matchplay', 4, 2],
+    ['greensome_matchplay', 5, 2],
+    ['greensome_matchplay', 1, 0],
+    ['chapman_matchplay', 4, 2],
+    ['chapman_matchplay', 6, 3],
+    ['gruesome_matchplay', 4, 2],
+    ['gruesome_matchplay', 1, 0],
   ])('2v2 %s @ teamSize %i → %i matches', (format, size, expected) => {
     expect(sessionMatchCount(format, size)).toBe(expected);
   });

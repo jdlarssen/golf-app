@@ -14,7 +14,10 @@
 export type CupSessionFormat =
   | 'foursomes_matchplay'
   | 'fourball_matchplay'
-  | 'singles_matchplay';
+  | 'singles_matchplay'
+  | 'greensome_matchplay'
+  | 'chapman_matchplay'
+  | 'gruesome_matchplay';
 
 export type CupPreset = {
   id: string;

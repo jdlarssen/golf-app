@@ -273,6 +273,9 @@ function Step3Setup({
     foursomes_matchplay: t('generate.formatFoursomes'),
     fourball_matchplay: t('generate.formatFourball'),
     singles_matchplay: t('generate.formatSingles'),
+    greensome_matchplay: t('generate.formatGreensome'),
+    chapman_matchplay: t('generate.formatChapman'),
+    gruesome_matchplay: t('generate.formatGruesome'),
   };
 
   function getSessionsForId(id: string): CupSessionFormat[] {
@@ -385,6 +388,9 @@ function Step3Setup({
                         <option value="singles_matchplay">{t('generate.formatSingles')}</option>
                         <option value="fourball_matchplay">{t('generate.formatFourball')}</option>
                         <option value="foursomes_matchplay">{t('generate.formatFoursomes')}</option>
+                        <option value="greensome_matchplay">{t('generate.formatGreensome')}</option>
+                        <option value="chapman_matchplay">{t('generate.formatChapman')}</option>
+                        <option value="gruesome_matchplay">{t('generate.formatGruesome')}</option>
                       </select>
                       <button
                         type="button"
@@ -485,6 +491,9 @@ function Step4Preview({
     foursomes_matchplay: t('generate.formatFoursomes'),
     fourball_matchplay: t('generate.formatFourball'),
     singles_matchplay: t('generate.formatSingles'),
+    greensome_matchplay: t('generate.formatGreensome'),
+    chapman_matchplay: t('generate.formatChapman'),
+    gruesome_matchplay: t('generate.formatGruesome'),
   };
 
   function usedIdsInSide(match: PlannedMatch, side: 'side1' | 'side2'): Set<string> {
@@ -617,6 +626,9 @@ function Step5Confirm({
     foursomes_matchplay: t('generate.formatFoursomes'),
     fourball_matchplay: t('generate.formatFourball'),
     singles_matchplay: t('generate.formatSingles'),
+    greensome_matchplay: t('generate.formatGreensome'),
+    chapman_matchplay: t('generate.formatChapman'),
+    gruesome_matchplay: t('generate.formatGruesome'),
   };
 
   function handleConfirm() {
@@ -846,6 +858,17 @@ export function GenerateMatchesWizard({
     return null;
   })();
 
+  // Validation message for step 3: show why "Neste" is disabled instead of
+  // leaving users with a silently-greyed button (#663).
+  const step3ValidationMsg: string | null = (() => {
+    if (step !== 3) return null;
+    const plan = getSessionPlan();
+    const total = plan.reduce((sum, s) => sum + s.matchCount, 0);
+    if (total === 0) return t('generate.step3ZeroMatchesMsg');
+    if (matchCap !== undefined && total > matchCap) return null; // overCap already shown by Banner
+    return null;
+  })();
+
   return (
     <div className="space-y-6">
       {errorMsg && (
@@ -919,6 +942,9 @@ export function GenerateMatchesWizard({
           <div className="mt-6 space-y-3">
             {step1ValidationMsg && (
               <p className="text-xs text-warning text-center">{step1ValidationMsg}</p>
+            )}
+            {step3ValidationMsg && (
+              <p className="text-xs text-warning text-center">{step3ValidationMsg}</p>
             )}
             <div className="flex gap-3">
               <Button

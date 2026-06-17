@@ -63,6 +63,45 @@ function parseFoursomesAllowancePct(raw: string): number | null {
   return n;
 }
 
+/**
+ * Parser greensome_allowance_pct fra cup-create/edit-form (#663).
+ * Default 100 (WHS-standard). Greensome: begge spiller første slag, velger
+ * det beste, og alternerer deretter — handicap-allowance er 100 per spiller.
+ */
+function parseGreensomeAllowancePct(raw: string): number | null {
+  const cleaned = raw.trim();
+  if (cleaned === '') return 100;
+  const n = Number(cleaned);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+/**
+ * Parser chapman_allowance_pct fra cup-create/edit-form (#663).
+ * Default 100. Chapman (også kalt «pinehurst»): begge spiller første slag,
+ * bytter, velger deretter beste og alternerer — handicap-allowance som greensome.
+ */
+function parseChapmanAllowancePct(raw: string): number | null {
+  const cleaned = raw.trim();
+  if (cleaned === '') return 100;
+  const n = Number(cleaned);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+/**
+ * Parser gruesome_allowance_pct fra cup-create/edit-form (#663).
+ * Default 50. Gruesome: begge spiller første slag, men motstanderlaget velger
+ * hvilken ball som brukes — mer krevende variant; allowance 50 som foursomes.
+ */
+function parseGruesomeAllowancePct(raw: string): number | null {
+  const cleaned = raw.trim();
+  if (cleaned === '') return 50;
+  const n = Number(cleaned);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
 async function loadTournamentParticipantEmails(
   supabase: Awaited<ReturnType<typeof getServerClient>>,
   tournamentId: string,
@@ -147,6 +186,9 @@ export async function createTournamentDraft(formData: FormData) {
   const foursomesAllowanceRaw = String(
     formData.get('foursomes_allowance_pct') ?? '',
   );
+  const greensomeAllowanceRaw = String(formData.get('greensome_allowance_pct') ?? '');
+  const chapmanAllowanceRaw = String(formData.get('chapman_allowance_pct') ?? '');
+  const gruesomeAllowanceRaw = String(formData.get('gruesome_allowance_pct') ?? '');
 
   if (!NAME_RE.test(name)) redirect(`${errBase}cup_name`);
   if (!TEAM_NAME_RE.test(team1)) redirect(`${errBase}cup_team_1`);
@@ -159,6 +201,12 @@ export async function createTournamentDraft(formData: FormData) {
   if (fourballAllowance === null) redirect(`${errBase}cup_allowance`);
   const foursomesAllowance = parseFoursomesAllowancePct(foursomesAllowanceRaw);
   if (foursomesAllowance === null) redirect(`${errBase}cup_foursomes_allowance`);
+  const greensomeAllowance = parseGreensomeAllowancePct(greensomeAllowanceRaw);
+  if (greensomeAllowance === null) redirect(`${errBase}cup_greensome_allowance`);
+  const chapmanAllowance = parseChapmanAllowancePct(chapmanAllowanceRaw);
+  if (chapmanAllowance === null) redirect(`${errBase}cup_chapman_allowance`);
+  const gruesomeAllowance = parseGruesomeAllowancePct(gruesomeAllowanceRaw);
+  if (gruesomeAllowance === null) redirect(`${errBase}cup_gruesome_allowance`);
 
   const supabase = await getServerClient();
   // Klubb-cup: klubb-eier/-admin (eller global admin) oppretter. Personlig
@@ -178,6 +226,9 @@ export async function createTournamentDraft(formData: FormData) {
       points_to_win: points as number,
       fourball_allowance_pct: fourballAllowance as number,
       foursomes_allowance_pct: foursomesAllowance as number,
+      greensome_allowance_pct: greensomeAllowance as number,
+      chapman_allowance_pct: chapmanAllowance as number,
+      gruesome_allowance_pct: gruesomeAllowance as number,
       created_by: userId,
       group_id: groupId,
     })
@@ -216,6 +267,9 @@ export async function updateTournament(formData: FormData) {
   const foursomesAllowanceRaw = String(
     formData.get('foursomes_allowance_pct') ?? '',
   );
+  const greensomeAllowanceRaw = String(formData.get('greensome_allowance_pct') ?? '');
+  const chapmanAllowanceRaw = String(formData.get('chapman_allowance_pct') ?? '');
+  const gruesomeAllowanceRaw = String(formData.get('gruesome_allowance_pct') ?? '');
 
   if (!NAME_RE.test(name)) redirect(`${base.path}?error=name`);
   if (!TEAM_NAME_RE.test(team1)) redirect(`${base.path}?error=team_1`);
@@ -229,6 +283,15 @@ export async function updateTournament(formData: FormData) {
   const foursomesAllowance = parseFoursomesAllowancePct(foursomesAllowanceRaw);
   if (foursomesAllowance === null)
     redirect(`${base.path}?error=foursomes_allowance`);
+  const greensomeAllowance = parseGreensomeAllowancePct(greensomeAllowanceRaw);
+  if (greensomeAllowance === null)
+    redirect(`${base.path}?error=greensome_allowance`);
+  const chapmanAllowance = parseChapmanAllowancePct(chapmanAllowanceRaw);
+  if (chapmanAllowance === null)
+    redirect(`${base.path}?error=chapman_allowance`);
+  const gruesomeAllowance = parseGruesomeAllowancePct(gruesomeAllowanceRaw);
+  if (gruesomeAllowance === null)
+    redirect(`${base.path}?error=gruesome_allowance`);
 
   const { error } = await supabase
     .from('tournaments')
@@ -239,6 +302,9 @@ export async function updateTournament(formData: FormData) {
       points_to_win: points as number,
       fourball_allowance_pct: fourballAllowance as number,
       foursomes_allowance_pct: foursomesAllowance as number,
+      greensome_allowance_pct: greensomeAllowance as number,
+      chapman_allowance_pct: chapmanAllowance as number,
+      gruesome_allowance_pct: gruesomeAllowance as number,
     })
     .eq('id', id);
 

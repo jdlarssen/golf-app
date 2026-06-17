@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.15] - 2026-06-17 · #663
+
+> Cup-veiviseren kan nå faktisk lage greensome-, chapman- og gruesome-kamper, ikke bare four-ball, foursomes og singel. Og gir en kombinasjon ingen kamper, forklarer veiviseren hvorfor i stedet for å gråne ut «Neste» uten et ord.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Bulk-generatoren (`CupSessionFormat`, `lib/cup/cupTemplates.ts`) støttet bare 3 formater, men cup-opprettelse lot admin huke av greensome/chapman/gruesome som cup-kvalifiserte — for klubb-cuper (kun generator tilgjengelig) kunne de aldri genereres. Eier-ratifisert: utvid generatoren (formatene er 2-spiller-lag-matchplay som foursomes; scoring-laget håndterte dem allerede, og allowance-kolonnene fantes fra 0063/0064/0065). `CupSessionFormat` utvidet til 6; alle uttømmende `Record`-er + «Tilpasset»-`<select>` oppdatert; `cupMatchModeConfig` ruter hvert format til sin allowance (greensome 100 / chapman 100 / gruesome 50); `CupSetup` fikk allowance-felt + parse/persist i `createTournamentDraft`/`updateTournament`. Gjenbruker eksisterende 2-spiller-paringslogikk (`playersPerSide === 2`) — ingen ny algoritme, ingen skjema-endring.
+- Steg 3 i veiviseren grået ut «Neste» uten forklaring når en format/lag-kombinasjon ga 0 kamper. Viser nå en inline-melding («Valgt format krever minst 2 spillere per lag») i stedet, etter samme mønster som steg 1. Nye i18n-nøkler (no + en); tester utvidet. (#663)
+
+</details>
+
 ### [1.133.14] - 2026-06-17 · #704
 
 > Når en medspiller godkjenner scorekortet ditt, blir det nå faktisk godkjent. Før kunne appen si «godkjent» mens ingenting ble lagret, så runden aldri lot seg avslutte.

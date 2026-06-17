@@ -42,6 +42,9 @@ const FORMAT_LABEL: Record<CupSessionFormat, string> = {
   singles_matchplay: 'Singel',
   fourball_matchplay: 'Four-ball',
   foursomes_matchplay: 'Foursome',
+  greensome_matchplay: 'Greensome',
+  chapman_matchplay: 'Chapman',
+  gruesome_matchplay: 'Gruesome',
 };
 
 export function cupMatchLabel(format: CupSessionFormat, n: number): string {

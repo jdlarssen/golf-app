@@ -32,6 +32,9 @@ const MATCH_LABEL_MAX = 80;
 const GAME_NAME_MAX = 120;
 const DEFAULT_FOURBALL_ALLOWANCE = 85;
 const DEFAULT_FOURSOMES_ALLOWANCE = 50;
+const DEFAULT_GREENSOME_ALLOWANCE = 100;
+const DEFAULT_CHAPMAN_ALLOWANCE = 100;
+const DEFAULT_GRUESOME_ALLOWANCE = 50;
 
 /**
  * Bygger mode_config i samme form som de manuelt opprettede cup-matchene lagrer
@@ -42,12 +45,23 @@ function cupMatchModeConfig(
   format: CupSessionFormat,
   fourballPct: number,
   foursomesPct: number,
+  greensomePct: number,
+  chapmanPct: number,
+  gruesomePct: number,
 ): GameModeConfig {
   if (format === 'singles_matchplay') {
     return { kind: 'singles_matchplay', team_size: 1 } as GameModeConfig;
   }
   const allowance_pct =
-    format === 'fourball_matchplay' ? fourballPct : foursomesPct;
+    format === 'fourball_matchplay'
+      ? fourballPct
+      : format === 'foursomes_matchplay'
+        ? foursomesPct
+        : format === 'greensome_matchplay'
+          ? greensomePct
+          : format === 'chapman_matchplay'
+            ? chapmanPct
+            : gruesomePct; // gruesome_matchplay
   return {
     kind: format,
     team_size: 2,
@@ -93,7 +107,7 @@ export async function createCupMatchesFromPlan(
 
   const { data: cup, error: cupErr } = await supabase
     .from('tournaments')
-    .select('name, status, group_id, fourball_allowance_pct, foursomes_allowance_pct')
+    .select('name, status, group_id, fourball_allowance_pct, foursomes_allowance_pct, greensome_allowance_pct, chapman_allowance_pct, gruesome_allowance_pct')
     .eq('id', tournamentId)
     .maybeSingle();
   if (cupErr || !cup) return { error: 'not_found' };
@@ -157,8 +171,13 @@ export async function createCupMatchesFromPlan(
   const fourballPct =
     (cup.fourball_allowance_pct as number | null) ?? DEFAULT_FOURBALL_ALLOWANCE;
   const foursomesPct =
-    (cup.foursomes_allowance_pct as number | null) ??
-    DEFAULT_FOURSOMES_ALLOWANCE;
+    (cup.foursomes_allowance_pct as number | null) ?? DEFAULT_FOURSOMES_ALLOWANCE;
+  const greensomePct =
+    (cup.greensome_allowance_pct as number | null) ?? DEFAULT_GREENSOME_ALLOWANCE;
+  const chapmanPct =
+    (cup.chapman_allowance_pct as number | null) ?? DEFAULT_CHAPMAN_ALLOWANCE;
+  const gruesomePct =
+    (cup.gruesome_allowance_pct as number | null) ?? DEFAULT_GRUESOME_ALLOWANCE;
 
   // Resolve tee_gender per player from their profile in one round-trip.
   const userIds = Array.from(
@@ -201,7 +220,7 @@ export async function createCupMatchesFromPlan(
         tee_box_id: teeBoxId,
         status: 'scheduled',
         game_mode: match.format,
-        mode_config: cupMatchModeConfig(match.format, fourballPct, foursomesPct),
+        mode_config: cupMatchModeConfig(match.format, fourballPct, foursomesPct, greensomePct, chapmanPct, gruesomePct),
         created_by: userId,
         tournament_id: tournamentId,
         tournament_match_label: match.label.slice(0, MATCH_LABEL_MAX),
