@@ -74,19 +74,30 @@ export function SyncBanner() {
   }, []);
 
   if (!queue || queue.length === 0) return null;
-  const oldestCreatedAt = queue.reduce((acc, i) => {
+
+  // Quarantined items (#668): drainQueue gave up after a permanently-failing
+  // sync. They never retry, so they're surfaced separately from the still-
+  // retrying "active" items — a lost stroke must never be silent.
+  const abandoned = queue.filter((i) => i.abandonedAt != null);
+  const active = queue.filter((i) => i.abandonedAt == null);
+  const abandonedCount = abandoned.length;
+
+  const oldestCreatedAt = active.reduce((acc, i) => {
     const t = new Date(i.createdAt).getTime();
     return t < acc ? t : acc;
   }, Number.POSITIVE_INFINITY);
   const oldestAgeMs = now - oldestCreatedAt;
-  const hasErrors = queue.some(
+  const hasErrors = active.some(
     (i) => i.attemptCount > 0 || i.lastError != null,
   );
-  const isStuck = oldestAgeMs > STUCK_THRESHOLD_MS;
+  const isStuck = active.length > 0 && oldestAgeMs > STUCK_THRESHOLD_MS;
 
-  if (!hasErrors && !isStuck) return null;
+  if (abandonedCount === 0 && !hasErrors && !isStuck) return null;
 
-  const rawError = queue.find((i) => i.lastError)?.lastError ?? null;
+  const rawError = active.find((i) => i.lastError)?.lastError ?? null;
+  // Retry only does something for active items; quarantined items are skipped
+  // by drainQueue, so hide the button when there's nothing left to retry.
+  const showRetry = active.length > 0;
 
   const handleRetry = async () => {
     if (retrying) return;
@@ -98,13 +109,18 @@ export function SyncBanner() {
     setRetrying(false);
   };
 
-  const message = hasErrors
-    ? `${friendlySyncError(rawError)}. ${queue.length} slag venter.`
-    : `${queue.length} slag venter på lagring.`;
+  // Abandoned takes priority — it's the most severe (genuine data loss).
+  const message =
+    abandonedCount > 0
+      ? `Kunne ikke lagre ${abandonedCount} slag. Kontakt arrangøren.`
+      : hasErrors
+        ? `${friendlySyncError(rawError)}. ${active.length} slag venter.`
+        : `${active.length} slag venter på lagring.`;
 
-  const toneClasses = hasErrors
-    ? 'bg-danger/[0.08] border-danger/30 text-danger'
-    : 'bg-warning/[0.10] border-warning/40 text-warning';
+  const toneClasses =
+    abandonedCount > 0 || hasErrors
+      ? 'bg-danger/[0.08] border-danger/30 text-danger'
+      : 'bg-warning/[0.10] border-warning/40 text-warning';
 
   return (
     <div
@@ -123,14 +139,16 @@ export function SyncBanner() {
         <div className="min-w-0 text-sm font-medium leading-tight">
           <div className="truncate">{message}</div>
         </div>
-        <button
-          type="button"
-          onClick={handleRetry}
-          disabled={retrying}
-          className="shrink-0 rounded-md border border-current px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50"
-        >
-          {retrying ? 'Sender…' : 'Prøv igjen'}
-        </button>
+        {showRetry && (
+          <button
+            type="button"
+            onClick={handleRetry}
+            disabled={retrying}
+            className="shrink-0 rounded-md border border-current px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50"
+          >
+            {retrying ? 'Sender…' : 'Prøv igjen'}
+          </button>
+        )}
       </div>
     </div>
   );

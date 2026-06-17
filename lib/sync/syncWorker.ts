@@ -1,5 +1,6 @@
 import { localDb } from './db';
 import { getBrowserClient } from '@/lib/supabase/client';
+import { syncRetryDecision } from './classifyError';
 
 let inFlight = false;
 
@@ -7,19 +8,27 @@ export async function drainQueue(): Promise<{
   pushed: number;
   rejected: number;
   errored: number;
+  abandoned: number;
 }> {
-  if (inFlight) return { pushed: 0, rejected: 0, errored: 0 };
+  if (inFlight) return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
   inFlight = true;
   try {
     const queue = await localDb.syncQueue.orderBy('createdAt').toArray();
-    if (queue.length === 0) return { pushed: 0, rejected: 0, errored: 0 };
+    if (queue.length === 0)
+      return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
 
     const supabase = getBrowserClient();
     let pushed = 0;
     let rejected = 0;
     let errored = 0;
+    let abandoned = 0;
 
     for (const item of queue) {
+      // Quarantined (#668): a permanently-failing item we already gave up on.
+      // Skip it so it never re-enters the retry loop; it stays in the queue as
+      // a record of failure that SyncBanner surfaces to the player.
+      if (item.abandonedAt) continue;
+
       const score = await localDb.scores.get(item.scoreId);
       if (!score) {
         await localDb.syncQueue.delete(item.id);
@@ -38,11 +47,31 @@ export async function drainQueue(): Promise<{
       });
 
       if (error) {
-        await localDb.syncQueue.update(item.id, {
-          attemptCount: item.attemptCount + 1,
-          lastError: error.message,
+        // #668: a stuck item used to retry forever. Cap ONLY explicitly
+        // permanent failures (RLS / constraint / malformed) — transient
+        // network / auth / rate-limit / unknown errors keep retrying so a
+        // genuinely-entered stroke is never dropped because the player was
+        // offline. A withdrawn / submitted target no longer errors here at
+        // all: the RPC returns a graceful no-op (was_applied=false) and falls
+        // through to the success branch below.
+        const decision = syncRetryDecision({
+          attemptCount: item.attemptCount,
+          errorMessage: error.message,
         });
-        errored++;
+        if (decision === 'abandon') {
+          await localDb.syncQueue.update(item.id, {
+            attemptCount: item.attemptCount + 1,
+            lastError: error.message,
+            abandonedAt: new Date().toISOString(),
+          });
+          abandoned++;
+        } else {
+          await localDb.syncQueue.update(item.id, {
+            attemptCount: item.attemptCount + 1,
+            lastError: error.message,
+          });
+          errored++;
+        }
         continue;
       }
 
@@ -67,7 +96,7 @@ export async function drainQueue(): Promise<{
       await localDb.syncQueue.delete(item.id);
     }
 
-    return { pushed, rejected, errored };
+    return { pushed, rejected, errored, abandoned };
   } finally {
     inFlight = false;
   }

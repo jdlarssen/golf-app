@@ -17,6 +17,14 @@ export interface SyncQueueItem {
   attemptCount: number;
   lastError: string | null;
   createdAt: string;
+  /**
+   * Set (#668) when drainQueue gives up on a permanently-failing item after
+   * MAX_PERMANENT_ATTEMPTS. Quarantined items are skipped by every subsequent
+   * drain (no more retry-forever loop) and surfaced distinctly by SyncBanner.
+   * Non-indexed — adding it needs no Dexie version bump. Absent on transient /
+   * still-retrying items.
+   */
+  abandonedAt?: string | null;
 }
 
 class GolfDb extends Dexie {

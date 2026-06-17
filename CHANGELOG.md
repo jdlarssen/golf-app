@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.10] - 2026-06-17 · #668
+
+> Skulle et slag ikke la seg lagre, fortsetter ikke appen å prøve i det uendelige uten å si fra. Den sier nå tydelig fra at slaget ikke kom fram, så du ikke tror kortet er komplett når det ikke er det.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Sync-laget (`lib/sync/syncWorker.ts` + ny `lib/sync/classifyError.ts`) ga opp aldri på et gift-element: en RPC-feil bumpet bare `attemptCount` og lot elementet ligge, så det ble re-fyrt hvert 30s/online/focus i det uendelige. Drainen gir nå opp (`abandonedAt`) bare på EKSPLISITT permanente feil (RLS-avvisning / constraint / malformed 4xx) etter `MAX_PERMANENT_ATTEMPTS` (5). Nettverks-, auth-utløp-, rate-limit- og *ukjente* feil er aldri permanente — de prøver på nytt for alltid, så et ekte slag aldri droppes fordi spilleren var offline. `SyncBanner` surfacer abandoned-elementer distinkt («Kunne ikke lagre N slag. Kontakt arrangøren.») uten prøv-igjen-knapp. Ny `lib/sync/classifyError.test.ts` (Type A) dekker klassifiseringen og retry-vs-abandon-matrisen.
+- `upsert_score_if_newer` (migrasjon `0102`) ga den graceful no-op-en (`was_applied=false` uten write) bare for `withdrawn_at` (0073), ikke for `submitted_at`. Et slag køet offline og levert FØR synk traff dermed RLS WITH CHECK `submitted_at is not null` som hard error → retry-loopen over. RPC-guarden dekker nå begge frosne tilstander (`withdrawn_at is not null or submitted_at is not null`); RLS-policyene er uendret. Applisert til prod, verifisert med no-op-probe mot en submitted spiller (rullet tilbake). Funnet i helse-audit. (#668)
+
+</details>
+
 ### [1.132.9] - 2026-06-17 · #675
 
 > Skjærer noe seg når du genererer cup-matcher eller oppretter en liga, blir det ikke lenger liggende en halvferdig turnering du ikke får ryddet. Appen rydder opp etter seg selv.
@@ -44,6 +57,7 @@ Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småf
 - Tre error-grenser der det før ikke fantes noen i `app/`. `app/[locale]/games/[id]/error.tsx` fanger hull-, leaderboard-, submit- og (home)-sidene, der hver server-komponent kaster på enhver Supabase-feil; `app/[locale]/error.tsx` er catch-all for resten av locale-segmentet (inkl. `games/[id]/layout.tsx`); `app/global-error.tsx` er siste skanse ved rot-layout-feil (egne `<html>`/`<body>`, hardkodet norsk, inline-stiler). De to rute-grensene deler `components/ui/ErrorScreen.tsx` — merket champagne-medaljong-fallback i samme chrome som `not-found.tsx`, med «Prøv igjen» pluss vei tilbake (til spillet / til Hjem). Bruker Next 16.2 `unstable_retry` (re-fetcher og re-rendrer segmentet) framfor `reset`. Ny `error`-i18n-namespace i `no.json`/`en.json` + Type-C render-test. Funnet i helse-audit 2026-06-17. (#680)
 
 </details>
+
 
 ### [1.132.7] - 2026-06-17 · #669 #667
 
