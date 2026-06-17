@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.14] - 2026-06-17 · #704
+
+> Når en medspiller godkjenner scorekortet ditt, blir det nå faktisk godkjent. Før kunne appen si «godkjent» mens ingenting ble lagret, så runden aldri lot seg avslutte.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Peer-godkjenning (`approveScorecard`/`rejectScorecard`, `app/[locale]/games/[id]/approve/actions.ts`) var stille knekt: en samme-flight-spiller som verken er admin eller skaper traff ingen `game_players` UPDATE-policy, så skrivingen rammet 0 rader. Supabase returnerer `error == null` på en 0-rads-UPDATE, så appen rapporterte falsk suksess + sendte godkjennings-varsel mens `approved_at` aldri ble satt — og spillet kunne aldri avsluttes (`not_all_approved`). Fiks (eier-ratifisert: behold peer-godkjenning, utvid RLS trygt): migrasjon `0106` legger til en permissive UPDATE-policy gated på den eksisterende `can_score_for`-helperen (0095, SQL-tvilling til `peersForApproval`) + utvider guard-triggeren `guard_game_players_self_update` (0103/#670) med en allowlist så en ikke-admin-peer KUN kan endre godkjennings-kolonnene (`approved_at`/`approved_by_user_id`/`rejection_reason`/`submitted_at`) på en annens rad — ikke handicap, lag eller flight. Admin og spillets skaper (også ikke-admin trusted/klubb-skaper) beholder full roster-tilgang: triggeren no-op-er eksplisitt for dem, så skaperens handicap-/lag-/flight-redigering virker uendret. `approveScorecard`/`rejectScorecard` sjekker nå rader-rammet via `.select()` og rapporterer ikke suksess / sender ikke varsel på en 0-rads-skriv. pgTAP-test i `supabase/tests/`. Migrasjon `0106` applikert til prod via MCP, atferd verifisert i rullet-tilbake txn (peer godkjenner ✓, peer-handicap blokkert ✓, skaper-handicap ✓, kryss-flight blokkert ✓). (#704)
+
+</details>
+
 ### [1.133.13] - 2026-06-17 · #676, #481
 
 > Blir du invitert på e-post til et lag og melder deg på, blir du nå automatisk venn med den som inviterte deg, akkurat som når du melder deg på et spill alene.

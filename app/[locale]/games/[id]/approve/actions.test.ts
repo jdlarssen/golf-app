@@ -16,7 +16,14 @@ import {
  *      for entire game (peersForApproval — #543)
  *
  * Then on the action itself:
- *   5. game_players.update(...).eq.eq.not.is  (resolves)
+ *   5. game_players.update(...).eq.eq.not.is.select  (resolves to affected rows)
+ *
+ * Since #704 the UPDATE ends in `.select('user_id')` so the action can detect a
+ * 0-row write (RLS-blocked peer-approval → Supabase returns error == null on a
+ * 0-row UPDATE). A successful write resolves to `{ data: [{ user_id }] }`; a
+ * blocked write resolves to `{ data: [] }`, after which approveScorecard does a
+ * follow-up read of `approved_at` to tell "already approved" (idempotent) from
+ * "write rejected" (the bug) apart.
  *
  * Tests configure the queue to match this sequence per case.
  */
@@ -89,7 +96,7 @@ describe('approveScorecard', () => {
     supabaseMock = buildSupabaseMock([
       { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
       { data: { is_admin: true }, error: null }, // users.is_admin
-      { data: null, error: null }, // game_players.update
+      { data: [{ user_id: 'player-2' }], error: null }, // game_players.update → 1 row affected
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
@@ -105,6 +112,68 @@ describe('approveScorecard', () => {
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1/approve');
     expect(lastRedirect()).toBe('/games/game-1/approve?status=approved');
+  });
+
+  it('#704: 0-row write (RLS-blocked peer) → ?error=db, no success, no notification', async () => {
+    // The bug: a same-flight peer who is not creator/admin matches no UPDATE
+    // policy → 0 rows, error == null. Without the rows-affected guard this would
+    // falsely redirect ?status=approved and send the approval notification.
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: false }, error: null }, // users.is_admin
+      {
+        data: [
+          { user_id: 'side1', flight_number: 1, withdrawn_at: null },
+          { user_id: 'side2', flight_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      }, // game_players for peersForApproval
+      { data: [], error: null }, // game_players.update → 0 rows (RLS blocked)
+      { data: { approved_at: null }, error: null }, // follow-up read: still not approved
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'side2' } },
+    });
+
+    const { approveScorecard } = await import('./actions');
+
+    await expect(approveScorecard('game-1', 'side1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/games/game-1/approve?error=db');
+    // Critical: no success-revalidation, so no notification was sent.
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('#704: 0-row write but already approved → idempotent ?status=approved, no re-notification', async () => {
+    // An already-approved card legitimately matches 0 rows (the `.is(approved_at,
+    // null)` filter). The follow-up read finds approved_at set → idempotent
+    // success, but the notification is NOT re-sent.
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: false }, error: null }, // users.is_admin
+      {
+        data: [
+          { user_id: 'side1', flight_number: 1, withdrawn_at: null },
+          { user_id: 'side2', flight_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      }, // game_players for peersForApproval
+      { data: [], error: null }, // game_players.update → 0 rows (already approved)
+      { data: { approved_at: '2026-06-17T10:00:00Z' }, error: null }, // follow-up read: already approved
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'side2' } },
+    });
+
+    const { approveScorecard } = await import('./actions');
+
+    await expect(approveScorecard('game-1', 'side1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/games/game-1/approve?status=approved');
+    // Idempotent success still revalidates so stale "pending" UI clears.
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
   });
 
   it('edge case (authorization): non-admin in a different flight (>4 spill) redirects to /', async () => {
@@ -155,7 +224,7 @@ describe('approveScorecard', () => {
         ],
         error: null,
       },
-      { data: null, error: null }, // game_players.update (approve)
+      { data: [{ user_id: 'side1' }], error: null }, // game_players.update (approve) → 1 row
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'side2' } }, // motstander godkjenner
@@ -169,5 +238,61 @@ describe('approveScorecard', () => {
     );
     expect(lastRedirect()).toBe('/games/game-1/approve?status=approved');
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+  });
+});
+
+describe('rejectScorecard', () => {
+  function makeFormData(playerUserId: string, reason = 'Feil sum') {
+    const fd = new FormData();
+    fd.set('player_user_id', playerUserId);
+    fd.set('reason', reason);
+    return fd;
+  }
+
+  it('happy path (admin): clears submitted_at and redirects with ?status=rejected', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: [{ user_id: 'player-2' }], error: null }, // game_players.update → 1 row
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { rejectScorecard } = await import('./actions');
+
+    await expect(
+      rejectScorecard('game-1', makeFormData('player-2')),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/approve?status=rejected');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+  });
+
+  it('#704: 0-row reject (RLS-blocked peer) → ?error=db, no success redirect', async () => {
+    // Same trap as approveScorecard: a 0-row UPDATE returns error == null. Reject
+    // has no idempotency filter, so 0 rows unambiguously means access denied.
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: false }, error: null }, // users.is_admin
+      {
+        data: [
+          { user_id: 'side1', flight_number: 1, withdrawn_at: null },
+          { user_id: 'side2', flight_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      }, // game_players for peersForApproval
+      { data: [], error: null }, // game_players.update → 0 rows (RLS blocked)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'side2' } },
+    });
+
+    const { rejectScorecard } = await import('./actions');
+
+    await expect(
+      rejectScorecard('game-1', makeFormData('side1')),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/approve?error=db');
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });

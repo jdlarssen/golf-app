@@ -94,7 +94,7 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
   );
   if (!authz.ok) redirect({ href: '/', locale });
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('game_players')
     .update({
       approved_at: new Date().toISOString(),
@@ -104,9 +104,37 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
     .eq('game_id', gameId)
     .eq('user_id', playerUserId)
     .not('submitted_at', 'is', null)
-    .is('approved_at', null);
+    .is('approved_at', null)
+    .select('user_id');
 
   if (error) {
+    redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
+  }
+
+  // #704: en 0-rads-UPDATE returnerer error == null (Supabase-quirk), så uten
+  // denne vakta ville en RLS-blokkert peer-godkjenning rapportere falsk suksess
+  // og sende varsel mens approved_at aldri ble skrevet. Skiller to 0-rads-grunner:
+  //   • allerede godkjent → idempotent no-op (rediger til suksess, IKKE nytt varsel)
+  //   • RLS/rad-tilgang nektet → ekte feil (?error=db, ingen varsel)
+  if (!updated || updated.length === 0) {
+    const { data: existing } = await supabase
+      .from('game_players')
+      .select('approved_at')
+      .eq('game_id', gameId)
+      .eq('user_id', playerUserId)
+      .maybeSingle<{ approved_at: string | null }>();
+
+    if (existing?.approved_at) {
+      // Allerede godkjent — idempotent. Ikke send varsel på nytt.
+      revalidateTag(`game-${gameId}`, 'max');
+      revalidatePath(`/games/${gameId}`);
+      revalidatePath(`/games/${gameId}/approve`);
+      redirect({ href: `/games/${gameId}/approve?status=approved` as string, locale });
+    }
+    // Skrivingen traff ingen rad og kortet er fortsatt ikke godkjent →
+    // tilgang nektet (eller ikke-levert kort). Ikke rapporter suksess. Bruker
+    // den eksisterende `db`-feilkoden («Klarte ikke å lagre endringen») i stedet
+    // for å introdusere en ny i18n-nøkkel.
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
 
@@ -166,7 +194,7 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   const { supabase, authz } = await loadAndAuthorize(gameId, playerUserId);
   if (!authz.ok) redirect({ href: '/', locale });
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('game_players')
     .update({
       submitted_at: null,
@@ -175,9 +203,19 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
       rejection_reason: reason,
     })
     .eq('game_id', gameId)
-    .eq('user_id', playerUserId);
+    .eq('user_id', playerUserId)
+    .select('user_id');
 
   if (error) {
+    redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
+  }
+
+  // #704: samme 0-rads-felle som approveScorecard. Uten denne vakta ville en
+  // RLS-blokkert peer-avvisning rapportere falsk suksess (redirect ?status=
+  // rejected) mens raden aldri ble rørt. Reject har ingen idempotens-filter, så
+  // en 0-rads-UPDATE betyr utvetydig nektet tilgang (eller manglende rad). Bruker
+  // den eksisterende `db`-feilkoden i stedet for en ny i18n-nøkkel.
+  if (!updated || updated.length === 0) {
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
 
