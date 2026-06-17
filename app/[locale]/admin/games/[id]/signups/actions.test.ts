@@ -215,6 +215,77 @@ describe('approveRequest', () => {
     expect(notifiedUsers).toContain(MATE_USER_ID);
   });
 
+  it('#662: kaptein godkjent når slot 1–4 tatt → tildeles slot 5', async () => {
+    // Regression-guard: approvePath used `slot <= 4` which blocked approval
+    // when slots 1–4 were occupied. Fixed to `slot <= 50` (same as teamActions).
+    serverMock = buildSupabaseMock([
+      {
+        data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' },
+        error: null,
+      },
+    ]);
+    adminMock = buildSupabaseMock([
+      // load request (kaptein)
+      {
+        data: {
+          id: CAPTAIN_REQUEST_ID,
+          game_id: GAME_ID,
+          user_id: CAPTAIN_USER_ID,
+          status: 'pending',
+          is_team_captain: true,
+          team_name: 'Lag Fem',
+          team_request_id: null,
+        },
+        error: null,
+      },
+      // load game
+      {
+        data: {
+          id: GAME_ID,
+          name: 'Best Ball-turnering',
+          status: 'scheduled',
+          created_by: ADMIN_ID,
+        },
+        error: null,
+      },
+      // no team children (solo captain for simplicity)
+      { data: [], error: null },
+      // existing teams: slots 1–4 taken
+      {
+        data: [
+          { team_number: 1 },
+          { team_number: 2 },
+          { team_number: 3 },
+          { team_number: 4 },
+        ],
+        error: null,
+      },
+      // UPDATE status
+      { data: null, error: null },
+      // UPSERT game_players
+      { data: null, error: null },
+    ]);
+    authedAsAdmin();
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(CAPTAIN_REQUEST_ID)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    // Must succeed (not redirect to ?error=no_team_slot)
+    expect(lastRedirect()).toBe(
+      `/admin/games/${GAME_ID}/signups?status=approved`,
+    );
+
+    // Verify team_number=5 was assigned in the upsert payload
+    const upsertCall = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'upsert',
+    );
+    expect(upsertCall).toBeDefined();
+    const rows = upsertCall!.args[0] as Array<{ team_number: number }>;
+    expect(rows[0]?.team_number).toBe(5);
+  });
+
   it('avviser når status er allerede approved (not_pending)', async () => {
     serverMock = buildSupabaseMock([
       {
