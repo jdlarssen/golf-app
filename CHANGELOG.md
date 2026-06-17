@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.8] - 2026-06-17 · #680
+
+> Hikker nettet midt i en runde, får du nå en vennlig norsk side med «Prøv igjen», ikke en engelsk feilmelding uten vei videre.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Tre error-grenser der det før ikke fantes noen i `app/`. `app/[locale]/games/[id]/error.tsx` fanger hull-, leaderboard-, submit- og (home)-sidene, der hver server-komponent kaster på enhver Supabase-feil; `app/[locale]/error.tsx` er catch-all for resten av locale-segmentet (inkl. `games/[id]/layout.tsx`); `app/global-error.tsx` er siste skanse ved rot-layout-feil (egne `<html>`/`<body>`, hardkodet norsk, inline-stiler). De to rute-grensene deler `components/ui/ErrorScreen.tsx` — merket champagne-medaljong-fallback i samme chrome som `not-found.tsx`, med «Prøv igjen» pluss vei tilbake (til spillet / til Hjem). Bruker Next 16.2 `unstable_retry` (re-fetcher og re-rendrer segmentet) framfor `reset`. Ny `error`-i18n-namespace i `no.json`/`en.json` + Type-C render-test. Funnet i helse-audit 2026-06-17. (#680)
+
+</details>
+
 ### [1.132.7] - 2026-06-17 · #669 #667
 
 > Du kan nå opprette Wolf med fem spillere, og lag-turneringer med flere enn fire lag, som før stoppet med en lagrings-feil. Og melder noen seg på med et lag, blir ikke kapteinen lenger borte fra spillerlista uten beskjed hvis noe glipper underveis.

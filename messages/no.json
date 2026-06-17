@@ -7,6 +7,14 @@
 		"body": "Lenken peker på noe som er flyttet eller borte. Gå til Hjem, så finner du fram igjen.",
 		"button": "Til Hjem"
 	},
+	"error": {
+		"heading": "Noe gikk galt",
+		"body": "Vi fikk ikke lastet dette akkurat nå. Som regel er det bare en kort hikke på nettet. Prøv igjen om et øyeblikk.",
+		"retry": "Prøv igjen",
+		"toGame": "Til spillet",
+		"toHome": "Til Hjem",
+		"reference": "Referanse: {digest}"
+	},
 	"onboarding": {
 		"errors": {
 			"name_required": "Du må fylle inn navn.",

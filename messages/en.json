@@ -7,6 +7,14 @@
 		"body": "The link points to something that has moved or been removed. Head to Home to find your way from there.",
 		"button": "Go home"
 	},
+	"error": {
+		"heading": "Something went wrong",
+		"body": "We couldn't load this right now. It's usually just a brief network hiccup. Try again in a moment.",
+		"retry": "Try again",
+		"toGame": "To the game",
+		"toHome": "Go home",
+		"reference": "Reference: {digest}"
+	},
 	"onboarding": {
 		"errors": {
 			"name_required": "Name is required.",
