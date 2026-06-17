@@ -75,6 +75,7 @@ Open [http://localhost:3000](http://localhost:3000). You'll need a `.env.local` 
 ```bash
 npm test          # vitest (2000+ unit + integration)
 npm run e2e       # playwright
+npm run typecheck # tsc --noEmit (Supabase clients are typed, so schema drift fails here)
 npm run lint
 npm run build
 ```
