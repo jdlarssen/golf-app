@@ -230,7 +230,15 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     };
   });
 
-  const holesByCourse = new Map<string, Array<{ number: number; par: number; strokeIndex: number }>>();
+  const holesByCourse = new Map<
+    string,
+    Array<{
+      number: number;
+      par: number;
+      parByGender: { mens: number; ladies: number; juniors: number };
+      strokeIndex: number;
+    }>
+  >();
   for (const h of (holesRes.data ?? []) as Array<{
     course_id: string;
     hole_number: number;
@@ -240,7 +248,14 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     stroke_index: number;
   }>) {
     const arr = holesByCourse.get(h.course_id) ?? [];
-    arr.push({ number: h.hole_number, par: h.par_mens, strokeIndex: h.stroke_index });
+    // #677: carry per-gender par so stableford resolves each player's points
+    // against THEIR tee par via parFor(hole, teeGender) — not men's par for all.
+    arr.push({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: { mens: h.par_mens, ladies: h.par_ladies, juniors: h.par_juniors },
+      strokeIndex: h.stroke_index,
+    });
     holesByCourse.set(h.course_id, arr);
   }
 
@@ -313,7 +328,12 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
         courseHandicap: p.course_handicap ?? 0,
         teeGender: p.tee_gender,
       })),
-      holes: holes.map((h) => ({ number: h.number, par: h.par, strokeIndex: h.strokeIndex })),
+      holes: holes.map((h) => ({
+        number: h.number,
+        par: h.par,
+        parByGender: h.parByGender,
+        strokeIndex: h.strokeIndex,
+      })),
       scores: gScores.map((s) => ({ userId: s.user_id, holeNumber: s.hole_number, gross: s.strokes })),
       parByUser,
       deliveredOutsideWindow: game.delivered_outside_window,

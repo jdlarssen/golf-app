@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.2] - 2026-06-17 · #677
+
+> Stableford-ligaen regner nå dame- og juniorpoeng mot riktig par for tee-en de spiller fra. Sesongtabellen blir dermed rettferdig i blandede ligaer, der herre-par tidligere ble brukt for alle.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `lib/league/getLigaSnapshot.ts` satte `par: h.par_mens` for alle spillere, så dame- og juniortee fikk feil stableford-poeng på hull der paret deres avviker fra herre-par. Vanlig-spill- og flight-start-stiene var allerede rettet (#647), men ligasnapshotet hadde drevet fra. Bygger nå `parByGender` (`{ mens, ladies, juniors }`) fra de allerede SELECT-ede per-kjønn-kolonnene og sender det videre til `computeFlightRoundValues`, der `parFor()` plukker riktig variant per spillers tee. Ren mapping, ingen ny DB-spørring. Kun stableford- og modifisert-stableford-ligaer var rammet; slagspill og cup var aldri det. (#677)
+
+</details>
+
 ### [1.133.1] - 2026-06-17 · #703
 
 > Ligatabellen lar ikke lenger en spiller som aldri stilte til start snike seg inn på den aktive lista i Beste-N-ligaer. De står utenfor rangeringen til de spiller sin første runde, akkurat som i de andre poengmodellene.
