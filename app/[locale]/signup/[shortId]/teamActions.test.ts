@@ -557,6 +557,49 @@ describe('submitTeamRegistration — happy paths', () => {
       expect.objectContaining({ href: `/login?next=/signup/${SHORT_ID}` }),
     );
   });
+
+  it('#667: captain game_players upsert feiler → db_error (ikke ok:true)', async () => {
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        registration_mode: 'open',
+        mode_config: {
+          kind: 'texas_scramble',
+          team_size: 2,
+          teams_count: 4,
+          team_handicap_pct: 25,
+        },
+      }),
+    );
+    lookupUserByEmailMock.mockResolvedValue({
+      id: KNOWN_USER_ID,
+      name: 'Kjent Bruker',
+      email: 'kjent@example.com',
+    });
+    // admin-mock queue — speiler happy-path-sekvensen men call #4
+    // (captain game_players upsert) returnerer en feil.
+    //   1) captain insert → {id: captain-request-id}
+    //   2) captain display lookup (users)
+    //   3) existing teams lookup (empty)
+    //   4) captain game_players upsert → ERROR (#667)
+    adminMock = buildSupabaseMock([
+      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+      {
+        data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
+        error: null,
+      }, // captain display
+      { data: [], error: null }, // existing teams (empty)
+      { data: null, error: { message: 'db constraint violation' } }, // captain game_players upsert feiler
+    ]);
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Birdie-jegerne',
+      slots: [{ mode: 'lookup', value: 'kjent@example.com' }],
+    });
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+  });
 });
 
 describe('#543: stengt påmelding — accept/attach-guards', () => {

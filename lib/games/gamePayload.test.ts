@@ -2440,6 +2440,32 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     expect(result.players).toHaveLength(5);
   });
 
+  it('#669: 5-spiller wolf → 5. spillers team_number er 5 (DB-constraint 0101)', () => {
+    // Låser at app-laget aksepterer 5 spillere med slot 1-5 og at den 5.
+    // spillerens team_number faktisk er 5 — verifiserer at widened DB-constraint
+    // (migration 0101) og validator er i samsvar.
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+          { userId: 'e', slot: 5 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 2, flight_number: 2 },
+      { user_id: 'c', team_number: 3, flight_number: 3 },
+      { user_id: 'd', team_number: 4, flight_number: 4 },
+      { user_id: 'e', team_number: 5, flight_number: 5 },
+    ]);
+  });
+
   it('publish med 2 spillere → min_players_for_mode (#465)', () => {
     const result = buildGameInsertPayload(
       wolfFd({

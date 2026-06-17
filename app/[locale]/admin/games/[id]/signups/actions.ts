@@ -164,7 +164,9 @@ export async function approveRequest(requestId: string): Promise<void> {
       redirect({ href: `${detailPath}?error=db_team_slot`, locale });
     }
     const taken = new Set((existing ?? []).map((r) => r.team_number));
-    for (let slot = 1; slot <= 4; slot += 1) {
+    // Match the public self-reg cap (teamActions.ts) and the widened
+    // game_players_team_number_check (0101): clubs can run more than 4 teams.
+    for (let slot = 1; slot <= 50; slot += 1) {
       if (!taken.has(slot)) {
         teamNumber = slot;
         break;
