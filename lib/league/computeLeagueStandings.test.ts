@@ -176,19 +176,30 @@ describe('computeLeagueStandings — best_n model', () => {
     expect(rowOf(res, 'A').roundsPlayed).toBe(3);
   });
 
-  it('penalty-fills up to N when a player has played fewer than N rounds', () => {
+  it('penalty-fills up to N for a player who PLAYED at least one but fewer than N rounds', () => {
     const rounds = [
       round('r1', 1, [score('A', 3), score('B', 4)]),
       round('r2', 2, [score('A', 2), score('B', 6)]),
       round('r3', 3, [score('A', 5), score('B', 1)]),
     ];
-    // C played nothing: each round penalty = worst-in-round + 1 → r1:5, r2:7, r3:6.
-    const res = computeLeagueStandings(bestN(3), rounds, ['A', 'B', 'C']);
+    const res = computeLeagueStandings(bestN(3), rounds, ['A', 'B']);
     expect(rowOf(res, 'A').value).toBe(10); // 3 + 2 + 5
-    expect(rowOf(res, 'C').value).toBe(18); // best 3 of penalties {5,7,6} = 5 + 6 + 7
-    expect(rowOf(res, 'C').ranked).toBe(true); // penalty-fill keeps them ranked, last
+    expect(rowOf(res, 'B').value).toBe(11); // 4 + 6 + 1
+    expect(rowOf(res, 'A').roundsPlayed).toBe(3);
+  });
+
+  it('#703: a never-played player is unranked under best_n (not penalty-ranked last)', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 3), score('B', 4)]),
+      round('r2', 2, [score('A', 2), score('B', 6)]),
+      round('r3', 3, [score('A', 5), score('B', 1)]),
+    ];
+    // C played nothing → no standing yet; the penalty-fill must not rank them.
+    const res = computeLeagueStandings(bestN(3), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'C').ranked).toBe(false);
+    expect(rowOf(res, 'C').rank).toBeNull();
     expect(rowOf(res, 'C').roundsPlayed).toBe(0);
-    expect(res.rows[res.rows.length - 1].userId).toBe('C');
+    expect(res.rows[res.rows.length - 1].userId).toBe('C'); // unranked sorts last
   });
 
   it('mixes played rounds with penalty fill when played < N', () => {
@@ -222,6 +233,22 @@ describe('computeLeagueStandings — best_n model', () => {
     const rounds = [round('r1', 1, []), round('r2', 2, [])];
     const res = computeLeagueStandings(bestN(2), rounds, ['A']);
     expect(rowOf(res, 'A').ranked).toBe(false);
+  });
+
+  it('#703: a never-played player is unranked even when other rounds have results', () => {
+    // Per-player guard, matching total/average/points: a player who appeared in
+    // zero counting rounds has no standing yet, so the penalty-fill must NOT
+    // sneak them into the active ranking just because the field played.
+    const rounds = [
+      round('r1', 1, [score('A', 3), score('B', 4)]),
+      round('r2', 2, [score('A', 2), score('B', 6)]),
+    ];
+    const res = computeLeagueStandings(bestN(2), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'C').roundsPlayed).toBe(0);
+    expect(rowOf(res, 'C').ranked).toBe(false);
+    expect(rowOf(res, 'C').rank).toBeNull();
+    expect(res.rows[res.rows.length - 1].userId).toBe('C'); // unranked sorts last
+    expect(rowOf(res, 'A').rank).toBe(1);
   });
 
   it('leaves per-round cells as played-or-null (no penalty display) under best_n', () => {
@@ -363,14 +390,15 @@ describe('computeLeagueStandings — stableford (points-based, higher best)', ()
     expect(res.rows[0].userId).toBe('A');
   });
 
-  it('best_n: a no-show 0-fills and stays ranked last', () => {
+  it('best_n: a never-played no-show is unranked and sorts last (#703)', () => {
     const rounds = [
       round('r1', 1, [score('A', 30), score('B', 20)]),
       round('r2', 2, [score('A', 25), score('B', 20)]),
     ];
     const res = computeLeagueStandings(sf({ standingsModel: 'best_n', bestNCount: 2 }), rounds, ['A', 'B', 'C']);
-    expect(rowOf(res, 'C').value).toBe(0); // best 2 of {0, 0}
-    expect(rowOf(res, 'C').ranked).toBe(true);
+    // C appeared in zero counting rounds → no standing yet (matches total/points).
+    expect(rowOf(res, 'C').ranked).toBe(false);
+    expect(rowOf(res, 'C').rank).toBeNull();
     expect(res.rows[res.rows.length - 1].userId).toBe('C');
   });
 

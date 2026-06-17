@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.1] - 2026-06-17 · #703
+
+> Ligatabellen lar ikke lenger en spiller som aldri stilte til start snike seg inn på den aktive lista i Beste-N-ligaer. De står utenfor rangeringen til de spiller sin første runde, akkurat som i de andre poengmodellene.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `best_n`-grenen i `lib/league/computeLeagueStandings.ts` brukte fortsatt en svakere global guard (`candidates.length === 0`), mens `total`-, `average`- og `points`-grenene etter #664 markerer hver spiller som uranket når `roundsPlayed === 0`. I en Beste-N-liga kunne derfor en spiller som aldri stilte til start havne på den aktive lista med en straffeverdi. Byttet til samme per-spiller-guard, så atferden er lik på tvers av alle fire poengmodellene. To eksisterende tester kodet det gamle (gale) utfallet og ble korrigert; den lovlige penalty-fill-stien (spilte minst én, men færre enn N, runder) er bevart i egen test. (#703)
+
+</details>
+
 ### [1.133.0] - 2026-06-17 · #679
 
 > Resultatlista oppdaterer seg nå av seg selv mens medspillerne taster, uansett spilleform. Følger du en stableford-, skins-, wolf- eller hvilken som helst annen runde live, ser du tallene oppdatere seg så snart noen i flighten taster en score. Det samme gjelder «Hull for hull».

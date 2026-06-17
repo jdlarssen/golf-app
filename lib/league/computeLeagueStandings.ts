@@ -131,7 +131,11 @@ export function computeLeagueStandings(
         const s = rm.byUser.get(userId);
         return s ? metricOf(s) : penaltyForRound(config, rm.byUser, metricOf);
       });
-      if (candidates.length === 0) {
+      // Per-player guard (#703): a player who appeared in zero counting rounds
+      // has no standing yet — mirror the total/average/points branches instead
+      // of the weaker global `candidates.length === 0` (which only fired when the
+      // whole field was empty, letting penalty-fill rank a never-played player).
+      if (roundsPlayed === 0) {
         ranked = false;
       } else {
         const n = Math.min(config.bestNCount ?? candidates.length, candidates.length);
