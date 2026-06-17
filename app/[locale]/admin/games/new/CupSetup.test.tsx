@@ -9,6 +9,10 @@ import type { CupEligibleFormat } from '@/lib/formats/getFormatsForIntent';
 // cup-grenen (#526/#530: matchCap → lavere point-mål-default). Cap-logikken selv
 // er Type A i lib/cup/limits.test. Form action submits via createTournamentDraft
 // (server-action) — vi sjekker DOM-struktur, ikke submit-flyt.
+//
+// #689: format-valget (checkboxene) er ikke persistert og har ingen
+// runtime-effekt — den tidligere disabled-sperra er fjernet. Submit-knappen
+// er alltid enabled uavhengig av antall avhukede formater.
 
 // Mock createTournamentDraft — vi binder action-en kun for type-safety,
 // tester aldri faktisk submit her (det testes i lib/cup/actions.test).
@@ -41,16 +45,16 @@ describe('CupSetup', () => {
     expect(singles).toBeChecked();
     expect(fourball).toBeChecked();
 
-    // Avhuk én — submit-knapp forblir enabled (1 valgt ≥ 1).
-    fireEvent.click(singles);
-    expect(singles).not.toBeChecked();
+    // #689: submit-knapp er alltid enabled — format-valget er ikke persistert
+    // og blokkerer derfor ikke opprettelse, uansett antall avhukede formater.
     expect(screen.getByRole('button', { name: /opprett cup/i })).not.toBeDisabled();
 
-    // Avhuk begge → submit disabled (validering: minst ett valg).
+    // Avhuk alle → knapp forblir enabled (ingen dead gate).
+    fireEvent.click(singles);
     fireEvent.click(fourball);
+    expect(singles).not.toBeChecked();
     expect(fourball).not.toBeChecked();
-    expect(screen.getByRole('button', { name: /opprett cup/i })).toBeDisabled();
-    expect(screen.getByText(/velg minst ett match-format/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /opprett cup/i })).not.toBeDisabled();
   });
 
   it('senker point-mål-default til 2,5 og forklarer taket for en capped personlig cup', () => {

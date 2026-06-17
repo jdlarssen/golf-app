@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.6] - 2026-06-17 · #689
+
+> Du kan nå opprette en cup selv om du ikke huker av et match-format i lista. Valget var uten effekt, og det skal ikke stå i veien for å komme i gang.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `CupSetup.tsx` blokkerte «Opprett cup» på et format-valg (`atLeastOneFormat`) som verken ble lagret eller håndhevet nedstrøms: `createTournamentDraft` (`lib/cup/actions.ts`) leser ikke noe format-felt, og kolonnen finnes ikke i `tournaments`-tabellen. Fjernet den døde guarden (den avledede variabelen, feil-paragrafen og `disabled`-betingelsen på submit-knappen). Knappen er nå klikkbar så snart de obligatoriske feltene (navn, lagnavn, poengmål) er fylt ut. Co-lokalisert test oppdatert til å verifisere at knappen ikke er deaktivert når ingen format er huket av. (#689)
+
+</details>
+
 ### [1.133.5] - 2026-06-17 · #660
 
 > Når en klubb er full, blokkeres godkjenning av innmeldingsforespørsler. Ventende invitasjoner teller nå med i plasstaket, akkurat som når du legger til noen på e-post, så klubben kan ikke lenger sprenge taket sitt.

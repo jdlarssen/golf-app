@@ -73,8 +73,6 @@ export function CupSetup({
     });
   }
 
-  const atLeastOneFormat = selectedFormats.size >= 1;
-
   if (cupEligibleFormats.length === 0) {
     return (
       <p
@@ -216,18 +214,12 @@ export function CupSetup({
             );
           })}
         </ul>
-        {!atLeastOneFormat && (
-          <p className="mt-2 text-xs text-danger">
-            {t('atLeastOneFormatError')}
-          </p>
-        )}
       </fieldset>
 
       <div className="pt-2">
         <Button
           type="submit"
           className="w-full"
-          disabled={!atLeastOneFormat}
         >
           {t('submitButton')}
         </Button>
