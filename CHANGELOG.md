@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.15] - 2026-06-17 · #670
+
+> Scorekortet ditt må fortsatt godkjennes av en medspiller eller arrangøren. Du kan ikke lenger snike inn en godkjenning på ditt eget kort, og handicapet for runden er låst når spillet er i gang, så ingen kan justere sitt eget tall for å klatre på resultatlista.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- RLS-policyen `game_players self submit` (`0092`, uendret siden `0002`) gatet kun på `is_admin() OR user_id = auth.uid()` uten kolonne-restriksjon, så en innlogget spiller kunne sende en rå PostgREST-`PATCH` mot sin egen `game_players`-rad og skrive hvilken som helst kolonne — inkludert å sette `approved_at`/`approved_by_user_id` (selv-godkjenne kortet sitt forbi peer/admin-flyten) eller senke `course_handicap` (som mater netto-resultatlista via `getGameWithPlayers`). App-laget gjorde det rette, men RLS var eneste backstop og var vidåpen. Migrasjon `0103` legger til en `BEFORE UPDATE`-trigger `guard_game_players_self_update` (`SECURITY DEFINER`, `search_path = ''`) som for en ikke-admin aktør avviser å sette `approved_at`/`approved_by_user_id` på EGEN rad, og å endre `course_handicap` på egen rad etter at spillet er startet (`status in ('active','finished')`). Trigger framfor kolonne-`GRANT`/`WITH CHECK` fordi peer-godkjenning (`approveScorecard`) skriver `approved_at` på en ANNENS rad via bruker-klienten — en kolonne-grant kan ikke skille egen-rad fra annens-rad, og `WITH CHECK` ser ikke OLD vs NEW. Triggeren no-op-er for admin (`is_admin()`) og service-rolla (`auth.uid()` er NULL), så `submitScorecard`, peer-godkjenning, admin-handicap-justering, `startGame` og signup står urørt. Ny pgTAP-suite `supabase/tests/game_players_update_rls_test.sql` (8 asserts) speiler `scores_write_rls_test.sql` og beviser de to forbudte PATCH-ene avvises mens de lovlige stiene passerer. Funnet i helse-audit 2026-06-17. (#670)
+
+</details>
+
 ### [1.132.14] - 2026-06-17 · #664
 
 > En spiller som aldri stilte til start i en ligarunde vises ikke lenger som «aktiv» i sesongtabellen — de plasseres utenfor rangeringen til de spiller sin første runde.
