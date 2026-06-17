@@ -30,9 +30,9 @@ Related: `docs/schema-ground-truth.md` (live-schema snapshot) · `lib/supabase/A
 **How to apply:**
 - Chain `.select()` on every mutation and assert the returned row count.
 - Use the `expectAffected` / `expectOne` helpers in `lib/supabase/affectedRows.ts` — they make the intent explicit and collapse the multi-line guard into a single call.
-- Roughly 180 existing Supabase mutation call sites (insert/update/delete) predate the helper; they are being retrofitted incrementally. New code has no excuse.
+- Roughly 180 existing Supabase mutation call sites (insert/update/delete) predate the helper; they are being retrofitted incrementally (#712). New code has no excuse.
 
-**Enforced:** `lib/supabase/affectedRows.ts` helper · open retrofit issue for existing sites.
+**Enforced:** `lib/supabase/affectedRows.ts` helper · retrofit issue #712 for existing sites.
 
 ---
 
