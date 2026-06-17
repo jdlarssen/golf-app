@@ -42,17 +42,12 @@ typecheck + test før merge, og en schema-drift-jobb fanger hvis de håndholdte 
 
 ## Suksesskriterier
 
-- [ ] K1: `package.json` har `"gen:types": "supabase gen types typescript --project-id glofubopddkjhymcbaph --schema public > lib/database.types.ts"`.
-- [ ] K2: `.github/workflows/ci.yml` finnes: trigget på `pull_request` mot `main`; Node 20; `npm ci`;
-      kjører `npm run typecheck` og `npm test` som BLOKKERENDE steg, og `npm run lint` som `continue-on-error`.
-- [ ] K3: `.github/workflows/schema-drift.yml` finnes: schedule + workflow_dispatch + migrations-path-PR;
-      regenererer typer via Supabase CLI og diff-er mot committed `lib/database.types.ts`, feiler på drift;
-      SKIPPER pent (exit 0 + notice) når `SUPABASE_ACCESS_TOKEN` mangler.
-- [ ] K4: Begge YAML-filene er gyldig YAML og refererer kun npm-scripts som faktisk finnes.
-- [ ] K5: **Den faktiske CI-kjøringen på denne PR-en er grønn** (typecheck + test passerer; lint synlig men
-      ikke-blokkerende). Verifisert via `gh run`.
-- [ ] K6: Eier-stegene dokumentert (legg til `SUPABASE_ACCESS_TOKEN`-secret; slå på required checks i
-      branch protection) — i workflow-kommentarer + en kort note i issue/closing.
+- [x] K1: `package.json:11` har `"gen:types": "supabase gen types typescript --project-id glofubopddkjhymcbaph --schema public > lib/database.types.ts"`.
+- [x] K2: `.github/workflows/ci.yml` — `on: pull_request: branches:[main]`; `node-version-file: .nvmrc` (Node 20); `npm ci`; `npm run typecheck` + `npm test` blokkerende; `npm run lint` med `continue-on-error: true`. Kjørte GRØNT live (run 27683629237).
+- [~] K3: `.github/workflows/schema-drift.yml` finnes med schedule + workflow_dispatch + `paths: supabase/migrations/**`; regenererer via `supabase/setup-cli` + `supabase gen types`, diff-er, exit 1 på drift; skip-guard (`if [ -z "$TOKEN" ]` → run=false → `if: run=='true'` på resten). YAML gyldig. **Live skip-kjøring kan først testes etter merge** (workflow_dispatch krever workflow på default-branch — GitHub-begrensning). Logikk validert ved konstruksjon.
+- [x] K4: Begge filene parser som gyldig YAML (node `yaml.parse`); refererer kun eksisterende scripts (typecheck/test/lint/gen:types alle i package.json).
+- [x] K5: **Live CI grønn** — run 27683629237 `conclusion=success`; Typecheck-steg 0 feil, Test-steg passerte, Lint non-blocking. Vercel preview også grønn.
+- [x] K6: Eier-steg dokumentert i PR #691-body + ci.yml/schema-drift.yml-kommentarer + README (secret + branch protection).
 
 ## Gates
 
