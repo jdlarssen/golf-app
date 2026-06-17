@@ -13,6 +13,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import type { AppLocale } from '@/i18n/routing';
+import type { TablesUpdate } from '@/lib/database.types';
 
 export async function updateUser(formData: FormData) {
   const locale = (await getLocale()) as AppLocale;
@@ -111,7 +112,7 @@ export async function updateUser(formData: FormData) {
   // an endorsement of the current hcp_index, even if the value didn't
   // change. Spares the player a stale-handicap prompt right after admin
   // just fixed it for them.
-  const updatePayload: Record<string, unknown> = {
+  const updatePayload: TablesUpdate<'users'> = {
     name,
     nickname: nickname || null,
     hcp_index: hcp,

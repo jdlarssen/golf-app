@@ -49,8 +49,12 @@ export async function createClubForAdmin(formData: FormData) {
   const { data, error } = await supabase.rpc('admin_create_club', {
     p_name: name,
     p_owner_email: ownerEmail,
-    p_member_cap: memberCap,
-    p_valid_until: validUntil,
+    // admin_create_club accepts NULL for "no cap" (groups.member_cap is nullable);
+    // generated RPC arg type is non-null so we cast.
+    p_member_cap: memberCap as number,
+    // admin_create_club accepts NULL for "no expiry" (groups.valid_until is nullable);
+    // generated RPC arg type is non-null so we cast.
+    p_valid_until: validUntil as string,
   });
 
   if (error) {

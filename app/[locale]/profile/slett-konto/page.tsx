@@ -20,10 +20,9 @@ export default async function SlettKontoPage({
 }) {
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('profile.deleteAccount');
-  const userId = await getProxyVerifiedUserId();
-  if (!userId) {
-    redirect({ href: '/login', locale });
-  }
+  const userIdRaw = await getProxyVerifiedUserId();
+  if (!userIdRaw) redirect({ href: '/login', locale });
+  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
 
   const supabase = await getServerClient();
   const params = await searchParams;

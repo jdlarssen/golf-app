@@ -251,8 +251,9 @@ export default async function LeaderboardPage({
       : '';
 
   const locale = await getLocale();
-  const { supabase, userId } = await getLeaderboardContext();
-  if (!userId) redirect({ href: '/login', locale });
+  const { supabase, userId: userIdRaw } = await getLeaderboardContext();
+  if (!userIdRaw) redirect({ href: '/login', locale });
+  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
 
   // Game + players come from the tag-cached helper. Profile lookup
   // (is_admin) stays direct since it isn't game-scoped.

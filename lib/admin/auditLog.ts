@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import type { Json } from '@/lib/database.types';
 
 /**
  * Event types recorded to `public.admin_audit_log`. New events must be added
@@ -47,7 +48,9 @@ export async function logAdminEvent(event: {
       event_type: event.eventType,
       target_type: event.targetType ?? null,
       target_id: event.targetId ?? null,
-      payload: event.payload ?? {},
+      // Audit payloads are always plain JSON-serializable data; cast to Json
+      // since the column type is Json but the param type is Record<string,unknown>.
+      payload: (event.payload ?? {}) as Json,
     });
     if (error) {
       console.error('[auditLog] insert failed', {

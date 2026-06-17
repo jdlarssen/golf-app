@@ -32,10 +32,9 @@ type GameWithStats = GameRow & {
 export default async function HistorikkPage() {
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('profile.historikk');
-  const userId = await getProxyVerifiedUserId();
-  if (!userId) {
-    redirect({ href: '/login', locale });
-  }
+  const userIdRaw = await getProxyVerifiedUserId();
+  if (!userIdRaw) redirect({ href: '/login', locale });
+  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
 
   const supabase = await getServerClient();
 
@@ -62,7 +61,7 @@ export default async function HistorikkPage() {
     const { data: scores, error: scoresError } = await supabase
       .from('scores')
       .select('game_id, strokes')
-      .eq('user_id', userId)
+      .eq('user_id', userId) // userId is string — narrowed after redirect guard above
       .in('game_id', gameIds)
       .not('strokes', 'is', null);
 

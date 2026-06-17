@@ -30,7 +30,9 @@ export async function drainQueue(): Promise<{
         p_game_id: score.gameId,
         p_user_id: score.userId,
         p_hole_number: score.holeNumber,
-        p_strokes: score.strokes,
+        // scores.strokes is a nullable column; null is a valid score-clear value.
+        // Generated RPC arg type is non-null so we cast.
+        p_strokes: score.strokes as number,
         p_entered_by: score.enteredBy,
         p_client_updated_at: score.clientUpdatedAt,
       });

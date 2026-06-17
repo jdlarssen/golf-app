@@ -13,6 +13,7 @@ import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import { generateRounds } from './generateRounds';
 import { leagueFlightGameConfig, isPointsBasedFormat } from './flightFormat';
+import type { TablesUpdate } from '@/lib/database.types';
 import type {
   CourseScope,
   LeagueFormat,
@@ -222,7 +223,7 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
   if (!roundId || !leagueId) return { error: 'missing' };
   await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
-  const patch: Record<string, unknown> = {};
+  const patch: TablesUpdate<'league_rounds'> = {};
   const label = str(formData, 'label');
   if (label) patch.label = label;
   const courseId = str(formData, 'course_id');
@@ -312,7 +313,7 @@ export async function overrideRoundWindow(formData: FormData): Promise<LeagueAct
   const { userId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
   // datetime-local is Oslo wall-clock → convert to a real UTC instant (#648).
-  const patch: Record<string, unknown> = {
+  const patch: TablesUpdate<'league_rounds'> = {
     closes_at: parseOsloDateTimeLocal(closesAtRaw),
     window_overridden_by: userId,
     window_overridden_at: new Date().toISOString(),
@@ -455,7 +456,7 @@ async function setLeagueStatus(
 ): Promise<LeagueActionError> {
   const supabase = await getServerClient();
   await requireAdminOrClubAdminOfLeague(supabase, leagueId);
-  const patch: Record<string, unknown> = { status: next };
+  const patch: TablesUpdate<'leagues'> = { status: next };
   if (next === 'active') patch.started_at = new Date().toISOString();
   if (next === 'finished') patch.finished_at = new Date().toISOString();
   const { error } = await supabase.from('leagues').update(patch).eq('id', leagueId);

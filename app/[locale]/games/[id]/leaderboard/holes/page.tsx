@@ -130,8 +130,9 @@ export default async function LeaderboardHolesPage({
   const requestedTeam = teamParam ? Number.parseInt(teamParam, 10) : null;
 
   const locale = await getLocale();
-  const { supabase, userId } = await getDrilldownContext();
-  if (!userId) redirect({ href: '/login', locale });
+  const { supabase, userId: userIdRaw } = await getDrilldownContext();
+  if (!userIdRaw) redirect({ href: '/login', locale });
+  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
 
   // Game + players come from the tag-cached helper. Admin check stays
   // direct since it isn't game-scoped.

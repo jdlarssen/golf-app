@@ -1,5 +1,6 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 
 // Service-role Supabase client. MUST NEVER be imported from client components
 // or anything that ends up in the client bundle. Used only from server
@@ -12,7 +13,7 @@ export function getAdminClient() {
   if (!url || !key) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
   }
-  return createClient(url, key, {
+  return createClient<Database>(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

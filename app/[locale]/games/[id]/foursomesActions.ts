@@ -3,6 +3,7 @@
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import type { TablesUpdate } from '@/lib/database.types';
 
 /**
  * Setter (eller endrer) hvem på en foursomes-side som teer ut på odd-hull.
@@ -77,14 +78,17 @@ export async function setFoursomesTeeStarter(
     return { ok: false, error: 'wrong_game_mode' };
   }
 
-  const column =
+  // Build the update payload as a typed TablesUpdate<'games'> so the generic
+  // Supabase client can validate it. The column is always one of the two
+  // foursomes_side{N}_tee_starter_user_id columns — both are string | null.
+  const updatePayload: TablesUpdate<'games'> =
     sideNumber === 1
-      ? 'foursomes_side1_tee_starter_user_id'
-      : 'foursomes_side2_tee_starter_user_id';
+      ? { foursomes_side1_tee_starter_user_id: userId }
+      : { foursomes_side2_tee_starter_user_id: userId };
 
   const { error } = await supabase
     .from('games')
-    .update({ [column]: userId })
+    .update(updatePayload)
     .eq('id', gameId);
 
   if (error) {
