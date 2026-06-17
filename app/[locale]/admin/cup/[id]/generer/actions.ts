@@ -177,6 +177,20 @@ export async function createCupMatchesFromPlan(
 
   const cupName = cup.name as string;
 
+  // Løkka er ikke-atomisk: hver match er en egen games- + game_players-insert.
+  // Feiler én av dem midtveis, er tidligere matchers rader allerede committet.
+  // Samle alle innsatte game-id-er og rull hele batchen tilbake ved feil, ellers
+  // blir en halvbygd cup liggende som eier ikke kan rydde (#675; samme symptom
+  // som #641). game_players ryddes av FK `on delete cascade` (0001) når
+  // games-raden slettes. Bruker request-klienten — games-DELETE-policyen (0071)
+  // dekker oppretterens egne rader.
+  const insertedGameIds: string[] = [];
+  const rollbackBatch = async () => {
+    if (insertedGameIds.length > 0) {
+      await supabase.from('games').delete().in('id', insertedGameIds);
+    }
+  };
+
   for (const match of matches) {
     const name = `${cupName} – ${match.label}`.slice(0, GAME_NAME_MAX);
     const { data: game, error: gameErr } = await supabase
@@ -197,9 +211,13 @@ export async function createCupMatchesFromPlan(
       })
       .select('id')
       .single();
-    if (gameErr || !game) return { error: 'insert_failed' };
+    if (gameErr || !game) {
+      await rollbackBatch();
+      return { error: 'insert_failed' };
+    }
 
     const gameId = (game as { id: string }).id;
+    insertedGameIds.push(gameId);
     const acceptedAt = new Date().toISOString();
     const playerRows = [
       ...match.side1.map((uid) => ({ uid, team: 1 })),
@@ -221,7 +239,10 @@ export async function createCupMatchesFromPlan(
     const { error: gpErr } = await supabase
       .from('game_players')
       .insert(playerRows);
-    if (gpErr) return { error: 'insert_failed' };
+    if (gpErr) {
+      await rollbackBatch();
+      return { error: 'insert_failed' };
+    }
   }
 
   revalidateTag(`tournament-${tournamentId}`, 'max');

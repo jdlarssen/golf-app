@@ -360,3 +360,44 @@ describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
     ).toBe(false);
   });
 });
+
+describe('createCupMatchesFromPlan — rollback on mid-loop failure (#675)', () => {
+  const genderRows = [
+    { id: 'A1', gender: 'male' },
+    { id: 'A2', gender: 'male' },
+    { id: 'A3', gender: 'female' },
+    { id: 'B1', gender: 'male' },
+    { id: 'B2', gender: 'male' },
+    { id: 'B3', gender: 'male' },
+  ];
+
+  it('game_players insert fails on match 2: deletes ALL accumulated games, returns insert_failed', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin
+      { data: draftCup, error: null }, // tournament gate
+      { data: genderRows, error: null }, // tee_gender roster
+      { data: { id: 'game-1' }, error: null }, // match 1 game insert
+      { data: null, error: null }, // match 1 game_players insert OK
+      { data: { id: 'game-2' }, error: null }, // match 2 game insert
+      { data: null, error: { message: 'boom' } }, // match 2 game_players insert FAILS
+      { data: null, error: null }, // rollback: games.delete().in(...)
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'insert_failed',
+    });
+
+    // The orphan-prevention: every game row inserted so far is deleted (the
+    // game_players rows follow via FK cascade), not left as a half-built cup.
+    const deleteCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'delete',
+    );
+    expect(deleteCall, 'games.delete issued for rollback').toBeDefined();
+    const inCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'in',
+    );
+    expect(inCall!.args).toEqual(['id', ['game-1', 'game-2']]);
+  });
+});

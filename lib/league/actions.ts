@@ -178,7 +178,14 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       original_closes_at: w.closes_at,
     }));
     const { error: rErr } = await supabase.from('league_rounds').insert(roundRows);
-    if (rErr) return { error: 'rounds_failed' };
+    if (rErr) {
+      // Rull tilbake den allerede committede leagues-raden så en feil her ikke
+      // etterlater en foreldreløs draft-liga i /admin/liga (#675). league_rounds
+      // + league_players ryddes av FK `on delete cascade` (0080). Speiler
+      // rollback-mønsteret i startLeagueRoundFlight.
+      await supabase.from('leagues').delete().eq('id', leagueId);
+      return { error: 'rounds_failed' };
+    }
   }
 
   // Klubb-liga: behold kun deltakere som faktisk er medlemmer av klubben.
@@ -205,7 +212,13 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
         accepted_at: acceptedAtForActor(userId, uid, draftNow),
       })),
     );
-    if (pErr) return { error: 'players_failed' };
+    if (pErr) {
+      // Samme rollback som over: ikke la en feilet spiller-insert etterlate en
+      // foreldreløs leagues-rad (+ ev. allerede innsatte league_rounds, som
+      // cascade rydder) (#675).
+      await supabase.from('leagues').delete().eq('id', leagueId);
+      return { error: 'players_failed' };
+    }
   }
 
   // Klubb-liga: en klubb-admin når ikke /admin/liga (global-admin-gatet), så

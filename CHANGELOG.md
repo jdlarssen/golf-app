@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.9] - 2026-06-17 · #675
+
+> Skjærer noe seg når du genererer cup-matcher eller oppretter en liga, blir det ikke lenger liggende en halvferdig turnering du ikke får ryddet. Appen rydder opp etter seg selv.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Cup-match-generering (`createCupMatchesFromPlan`) og liga-oppretting (`createLeagueDraft`) satte inn rader i flere ikke-transaksjonelle steg; en feil midtveis etterlot foreldreløse `games`-/`leagues`-rader som den ikke-tekniske eieren ikke kan rydde via SQL (samme symptom som #641). Cup-generatoren samler nå alle innsatte `gameId`-er og sletter hele batchen ved enhver feil (`game_players` følger via FK `on delete cascade`); `createLeagueDraft` sletter `leagues`-raden ved både `rounds_failed` og `players_failed` (`league_rounds`/`league_players` cascade). Speiler det eksisterende rollback-mønsteret i `startLeagueRoundFlight`. To nye rollback-tester. Bevisst valg av kompenserende sletting framfor SECURITY DEFINER-RPC (holder kolonne-logikken i den typede TS-stien — RPC ville lagt til samme utypede skjema-kobling som #672 peker på). Funnet i helse-audit 2026-06-17. (#675)
+
+</details>
+
 ### [1.132.8] - 2026-06-17 · #680
 
 > Hikker nettet midt i en runde, får du nå en vennlig norsk side med «Prøv igjen», ikke en engelsk feilmelding uten vei videre.

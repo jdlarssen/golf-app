@@ -91,3 +91,52 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
     expect(coPlayer.accepted_at).toBeNull();
   });
 });
+
+/**
+ * #675: createLeagueDraft inserted leagues, then league_rounds, then
+ * league_players in separate non-transactional steps. A failure after the
+ * leagues insert left an orphan draft league in /admin/liga that the
+ * non-technical owner could not clean up. The fix rolls the leagues row back
+ * (FK on delete cascade clears rounds + players), mirroring
+ * startLeagueRoundFlight's rollback.
+ */
+describe('createLeagueDraft — rollback on insert failure (#675)', () => {
+  function leagueForm(): FormData {
+    const fd = new FormData();
+    fd.set('name', 'Test-liga');
+    fd.set('season_start', '2026-01-01');
+    fd.set('season_end', '2026-12-31');
+    fd.set('format', 'stroke');
+    fd.set('scoring', 'net');
+    fd.set('standings_model', 'total');
+    fd.set('missed_round_policy', 'penalty');
+    fd.set('penalty_kind', 'worst_plus_one');
+    fd.set('course_scope', 'multi_course'); // no course/tee fields needed
+    fd.set('frequency', 'monthly'); // a full season → >0 round windows
+    return fd;
+  }
+
+  it('deletes the committed leagues row when league_rounds insert fails', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin (loadRole)
+      { data: { id: 'L1' }, error: null }, // leagues.insert().select('id').single
+      { error: { message: 'boom' } }, // league_rounds.insert FAILS
+      { error: null }, // rollback: leagues.delete().eq('id', 'L1')
+    ]);
+    setUser('admin-1');
+    const { createLeagueDraft } = await import('./actions');
+
+    expect(await createLeagueDraft(leagueForm())).toEqual({
+      error: 'rounds_failed',
+    });
+
+    const del = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'leagues' && c.method === 'delete',
+    );
+    expect(del, 'leagues.delete issued for rollback').toBeDefined();
+    const eqCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'leagues' && c.method === 'eq',
+    );
+    expect(eqCall!.args).toEqual(['id', 'L1']);
+  });
+});
