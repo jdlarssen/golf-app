@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.5] - 2026-06-17 · #659
+
+> Inviterer du noen uten Tørny-konto til klubben på e-post, kommer de nå inn. Invitasjonen åpner innloggingen, så engangskoden virker og de blir medlem med en gang.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `email_is_invited()` (RPC som gater `shouldCreateUser` i `sendCode`) sjekket bare `public.invitations`, ikke `club_invitations`. En uregistrert e-post invitert til en klubb (#644, migrasjon 0099) ble derfor avvist på OTP-steg 1 med mindre `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION` var på, og nådde aldri `verifyCode` der `accept_club_invitations()` gjør invitéen til medlem. Migrasjon `0100_email_is_invited_club_aware.sql` utvider funksjonen til å returnere true også ved en åpen, ikke-utløpt `club_invitations`-rad. Spill-invitasjons-grenen er byte-uendret. Funnet i flyt-audit. (#659)
+
+</details>
+
 ### [1.132.4] - 2026-06-16 · #640
 
 > Avslutter du en runde der noen ikke har levert, viste noen formater avkrysningsbokser per spiller og andre bare navnene. Det var ikke en feil, men det var forvirrende. På formatene uten bokser sier appen nå tydelig at det formatet ikke trekker enkeltspillere, så du skjønner at du bare avslutter runden, og at de uten levert står som ikke levert.
