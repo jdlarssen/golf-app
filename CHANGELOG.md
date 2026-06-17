@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.5] - 2026-06-17 · #660
+
+> Når en klubb er full, blokkeres godkjenning av innmeldingsforespørsler. Ventende invitasjoner teller nå med i plasstaket, akkurat som når du legger til noen på e-post, så klubben kan ikke lenger sprenge taket sitt.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Migrasjon `0105`: `CREATE OR REPLACE` av `decide_join_request` (definert i 0076). Eneste endring er cap-tellingen i approve-grenen: den teller nå aktive medlemmer pluss åpne `club_invitations` (ikke-godtatte, ikke-utløpte), i stedet for kun medlemmer. Uten dette kunne en klubb overstige `member_cap` ved å godkjenne innmeldingsforespørsler mens invitasjoner fortsatt lå ute. Formelen speiler `add_club_member_by_email` (0099). All annen logikk (signatur, `SECURITY DEFINER`, `search_path = ''`, utløps-sjekk, retur-koder) er bevart verbatim; UI-laget håndterer allerede `club_full`-retur, så ingen kodeendring. (#660)
+
+</details>
+
 ### [1.133.4] - 2026-06-17 · #671
 
 > Ikke-innloggede kan ikke lenger sjekke om en e-postadresse har en konto. Oppslaget er nå låst til innloggede brukere. Du merker ingen forskjell i appen.
