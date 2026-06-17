@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
 
+### [1.132.13] - 2026-06-17 · #686
+
+> Hvis varslings-mailen feiler første gang du inviterer noen til et spill, kan du nå sende på nytt til samme adresse. Invitasjonen blir ikke liggende låst. Og prøver du en adresse som allerede er invitert, sender appen meldingen en gang til, så ingen blir hengende uten beskjed.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `inviteEmailToGame` i `app/[locale]/admin/games/[id]/inviteToGameActions.ts` inserterte `invitations`-raden og sendte så Resend-mailen som to uavhengige trinn. Kastet `sendInviteNotification`, redirectet acsjonen til `?error=mail_failed` uten å rydde opp — raden ble liggende. Neste gang admin prøvde samme adresse, fant idempotent-sjekken raden og redirectet til `?status=invite_sent` uten mail; invitéen ble strandert uten mulighet til retry.
+- Fix A (primær): i `catch`-blokken, før redirect til `?error=mail_failed`, slettes den nettopp inserterte raden (`supabase.from('invitations').delete().ilike('email', rawEmail).eq('game_id', gameId).is('accepted_at', null)`). Slette-feil logges og avbrytes taust — flowet til `?error=mail_failed` er allerede riktig.
+- Fix B (superset): i `if (existingInvite)`-grenen (idempotent short-circuit) sendes nå mailen best-effort før redirect til `?status=invite_sent`. Fanger opp tilfeller der mailen aldri ble levert av en annen grunn — retry-handlingen til admin har nå alltid effekt.
+- To nye tester i `inviteToGameActions.test.ts` dekker de nye stiene (rollback-delete ved mail-feil + re-send i idempotent-grenen); den eksisterende «idempotent»-testen ble oppdatert til Fix B. (#686)
+
+</details>
+
 ### [1.132.12] - 2026-06-17 · #683
 
 > Pluss-handicap under -18 fordelte slag feil — spillere med handicap -20 eller lavere fikk feil nettoscore. Matematikken er nå riktig uansett handicap.
