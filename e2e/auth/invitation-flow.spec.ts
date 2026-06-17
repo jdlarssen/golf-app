@@ -92,9 +92,9 @@ async function fetchOtpForEmail(email: string): Promise<string> {
  * that so they can pass `?next=...` if desired.
  */
 async function signInViaOtp(page: Page, email: string) {
-  await expect(
-    page.getByRole('heading', { name: 'Logg inn' }),
-  ).toBeVisible();
+  // /login har ingen «Logg inn»-heading (BrandHero viser «Tørny»); «Logg inn» er
+  // verify-stegets knapp. Vent på e-post-feltet i stedet (#674-funn).
+  await expect(page.getByLabel('E-post')).toBeVisible();
   await page.getByLabel('E-post').fill(email);
   await page.getByRole('button', { name: 'Send meg kode' }).click();
 

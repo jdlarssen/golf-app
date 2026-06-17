@@ -252,7 +252,17 @@ test.describe('Liga — finished-flight standings (#647 read-path)', () => {
       },
     ]);
 
-    const scoreRows = [1, 2, 3, 4, 5].flatMap((hole) => [
+    // Seed en score per HULL på banen (ikke bare et utvalg): standings filtrerer
+    // bort runder der `holesPlayed !== holeCount` (roundScoring), så en delvis
+    // runde ville gitt tomme celler. Full runde ⇒ tellende ⇒ tall i tabellen.
+    const { data: courseHoles } = await admin
+      .from('course_holes')
+      .select('hole_number')
+      .eq('course_id', tee!.course_id)
+      .order('hole_number');
+    const holeNumbers = (courseHoles ?? []).map((h) => h.hole_number as number);
+    expect(holeNumbers.length, 'course has holes seeded').toBeGreaterThan(0);
+    const scoreRows = holeNumbers.flatMap((hole) => [
       {
         game_id: flightGameId!,
         user_id: adminUser!.id,

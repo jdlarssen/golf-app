@@ -59,17 +59,20 @@ test.describe('Scoring golden path (solo stableford)', () => {
       await playerPage.goto(`/login?next=/games/${gameId}/holes/1`);
       await signInViaOtp(playerPage, PLAYER_EMAIL!);
 
+      // Les visningen før +1 og assert at den ENDRES — score-number viser par som
+      // spøkelse i utgangspunktet, så «≠ —» ville vært tomt. Endring beviser at
+      // +1 faktisk registrerte et slag.
       await playerPage.goto(`/games/${gameId}/holes/1`);
+      const score1 = playerPage.locator('[data-testid="score-number"]').first();
+      const before1 = (await score1.textContent()) ?? '';
       await playerPage.getByRole('button', { name: '+1' }).first().click();
-      await expect(
-        playerPage.locator('[data-testid="score-number"]').first(),
-      ).not.toHaveText('—');
+      await expect(score1).not.toHaveText(before1);
 
       await playerPage.goto(`/games/${gameId}/holes/2`);
+      const score2 = playerPage.locator('[data-testid="score-number"]').first();
+      const before2 = (await score2.textContent()) ?? '';
       await playerPage.getByRole('button', { name: '+1' }).first().click();
-      await expect(
-        playerPage.locator('[data-testid="score-number"]').first(),
-      ).not.toHaveText('—');
+      await expect(score2).not.toHaveText(before2);
     });
 
     await test.step('Player submits the scorecard (submitted_at set)', async () => {

@@ -79,7 +79,10 @@ export async function fetchOtpForEmail(email: string): Promise<string> {
  * redirect lander der vi vil). Venter på at vi har forlatt `/login` før retur.
  */
 export async function signInViaOtp(page: Page, email: string): Promise<void> {
-  await expect(page.getByRole('heading', { name: 'Logg inn' })).toBeVisible();
+  // /login har INGEN «Logg inn»-heading (BrandHero viser «Tørny»); «Logg inn» er
+  // verify-stegets knapp. Vent på e-post-feltet i sendCode-skjemaet i stedet —
+  // den robuste markøren for at login-siden er klar.
+  await expect(page.getByLabel('E-post')).toBeVisible();
   await page.getByLabel('E-post').fill(email);
   await page.getByRole('button', { name: 'Send meg kode' }).click();
 
