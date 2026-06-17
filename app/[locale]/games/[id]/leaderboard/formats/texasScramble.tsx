@@ -6,7 +6,6 @@ import {
 } from '../TexasScrambleView';
 import { TexasScramblePodium } from '../TexasScramblePodium';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
-import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';

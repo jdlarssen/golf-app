@@ -13,7 +13,7 @@ import {
   WithdrawnPlayersSection,
   type WithdrawnPlayer,
 } from '../WithdrawnPlayersSection';
-import { computeLeaderboard as computeModeResult, isStablefordFamily } from '@/lib/scoring';
+import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';

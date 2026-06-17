@@ -38,7 +38,6 @@ import {
 } from '@/lib/games/getGameWithPlayers';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
-import type { TeeGender } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay } from '@/lib/scoring';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
@@ -46,9 +45,6 @@ import {
   getLeaderboardContext,
   fetchSideWinners,
 } from './leaderboardContext';
-import {
-  renderSideTournamentTabs,
-} from './sideTournament';
 import { renderStableford } from './formats/stableford';
 import { renderMatchplay } from './formats/matchplay';
 import { renderFourballMatchplay } from './formats/fourballMatchplay';
