@@ -1,0 +1,57 @@
+# Catches the case where lib/database.types.ts drifts from the live prod schema
+# (the root cause behind #641/#642/#647). Regenerates the types from prod and
+# diffs against the committed file; fails if they differ.
+#
+# Requires a SUPABASE_ACCESS_TOKEN repo secret (Settings → Secrets and variables
+# → Actions → New repository secret). Generate one at
+# https://supabase.com/dashboard/account/tokens.
+#
+# Until that secret exists the job SKIPS gracefully (green, with a notice) so it
+# never blocks a PR. First real run may flag a formatting-only diff between the
+# CLI output and the committed file — if so, run `npm run gen:types` once and
+# commit to canonicalise.
+name: Schema drift
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # daily 05:00 UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if Supabase token is not configured
+        id: guard
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::SUPABASE_ACCESS_TOKEN not set — skipping schema-drift check. Add it in Settings → Secrets and variables → Actions."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.guard.outputs.run == 'true'
+        with:
+          version: latest
+
+      - name: Regenerate types from prod and diff against committed file
+        if: steps.guard.outputs.run == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase gen types typescript \
+            --project-id glofubopddkjhymcbaph --schema public > /tmp/fresh.types.ts
+          if ! diff -u lib/database.types.ts /tmp/fresh.types.ts; then
+            echo "::error::lib/database.types.ts is out of sync with the live schema. Run 'npm run gen:types' and commit the result."
+            exit 1
+          fi
+          echo "lib/database.types.ts is in sync with the live schema."

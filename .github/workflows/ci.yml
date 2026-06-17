@@ -1,0 +1,43 @@
+# Pre-merge gate. Runs on every PR to main so schema-drift / type / test
+# regressions are caught BEFORE merge — Vercel only builds AFTER merge, which
+# is too late (see #673, and the #641/#642/#647 prod-break cluster).
+#
+# typecheck + test are BLOCKING. lint is non-blocking for now because the repo
+# has 22 pre-existing lint errors (the deliberate /legal/privacy <a> pattern);
+# once those are cleaned, drop `continue-on-error` to make lint blocking too.
+#
+# Owner action to enforce: Settings → Branches → add a branch-protection rule
+# for `main` requiring the "verify" check to pass before merge.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (blocking — schema drift fails here)
+        run: npm run typecheck
+
+      - name: Test (blocking)
+        run: npm test
+
+      - name: Lint (non-blocking until pre-existing errors are cleaned)
+        run: npm run lint
+        continue-on-error: true

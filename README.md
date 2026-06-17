@@ -80,6 +80,8 @@ npm run lint
 npm run build
 ```
 
+CI (GitHub Actions) runs typecheck + tests on every PR to `main`, and a daily schema-drift job regenerates the Supabase types from prod and fails if [`lib/database.types.ts`](lib/database.types.ts) is stale — run `npm run gen:types` to refresh it (needs the Supabase CLI + a `SUPABASE_ACCESS_TOKEN`).
+
 ## How it fits together
 
 The scoring logic ([`lib/scoring/`](lib/scoring/)) is plain TypeScript with no Supabase dependency. It has its own tests and its own TDD discipline, so don't touch it without writing a new test first. This is where the WHS formula, stroke allocation, best-ball aggregation, the five-tier tiebreaker, and all twenty-odd game modes live.
