@@ -408,6 +408,39 @@ export function formatShortOsloDayMonthLocale(
 }
 
 /**
+ * Oslo-pinned sibling of `formatShortDateWithYearLocale`: short day + month +
+ * year read in Europe/Oslo wall-clock. Used for liga round-window labels so a
+ * timestamptz boundary near midnight Oslo renders the correct calendar date on
+ * a UTC Vercel server, instead of drifting to the adjacent day (#687).
+ *
+ * Norwegian ('no'): «30. jun 2026» (legacy NO_MONTHS_SHORT, Oslo month index).
+ * English ('en'):   «30 Jun 2026» (en-GB Intl pinned to Oslo).
+ *
+ * Input: ISO timestamp string or a Date. Day/month/year are all Oslo wall-clock
+ * — a `21:59:00Z` instant in June («30. jun» Oslo) stays on the 30th here even
+ * though UTC has not yet rolled past midnight.
+ */
+export function formatShortOsloDateWithYearLocale(
+  input: string | Date,
+  locale: AppLocale,
+): string {
+  const d = toDate(input);
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: OSLO,
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  }).formatToParts(d);
+  const dayStr = parts.find((p) => p.type === 'day')?.value ?? '';
+  const yearStr = parts.find((p) => p.type === 'year')?.value ?? '';
+  const monthIdx = Number(parts.find((p) => p.type === 'month')?.value ?? '1') - 1;
+  if (locale === 'no') {
+    return `${dayStr}. ${NO_MONTHS_SHORT[monthIdx]} ${yearStr}`;
+  }
+  return `${dayStr} ${shortMonthLocale(monthIdx, 'en')} ${yearStr}`;
+}
+
+/**
  * 24-hour «HH:MM» in Europe/Oslo wall-clock (#646). Locale-independent — the
  * 24-hour clock renders identically for 'no' and 'en' — but pinned to Oslo so
  * the Klubbhuset activity log shows the time the action actually happened in

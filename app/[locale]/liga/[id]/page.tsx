@@ -20,7 +20,10 @@ import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import type { LeagueFormat } from '@/lib/league/types';
-import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import {
+  formatShortDateWithYearLocale,
+  formatShortOsloDateWithYearLocale,
+} from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 
 
@@ -42,12 +45,15 @@ function windowStatus(
  * Format an ISO date/timestamp string as a short locale-aware date.
  * For plain YYYY-MM-DD dates (season start/end), we parse as local time by
  * appending T12:00:00 (midday avoids any UTC-midnight edge near DST).
- * For timestamptz strings (round windows), we use them directly.
+ * For timestamptz strings (round windows), we read them in Oslo wall-clock so a
+ * boundary near midnight Oslo shows the right calendar date on a UTC server (#687).
  */
 function fmtWindow(iso: string, locale: AppLocale): string {
   // Plain date: "2026-06-01" — no time component
-  const d = iso.length === 10 ? new Date(`${iso}T12:00:00`) : new Date(iso);
-  return formatShortDateWithYearLocale(d, locale);
+  if (iso.length === 10) {
+    return formatShortDateWithYearLocale(new Date(`${iso}T12:00:00`), locale);
+  }
+  return formatShortOsloDateWithYearLocale(iso, locale);
 }
 
 const WINDOW_CHIP_STYLES: Record<

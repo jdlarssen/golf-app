@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { createLeagueDraft, type LeagueActionError } from '@/lib/league/actions';
 import { generateRounds } from '@/lib/league/generateRounds';
 import { shortMonthLocale } from '@/lib/i18n/format';
+import { osloParts } from '@/lib/format/teeOff';
 import type { AppLocale } from '@/i18n/routing';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
@@ -667,7 +668,10 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
             {frequency === 'monthly'
               ? t('frequencyPreviewMonthly', {
                   months: roundPreview
-                    .map((w) => shortMonthLocale(new Date(w.opens_at).getUTCMonth(), locale))
+                    // Oslo month, not UTC: a window opening just after Oslo
+                    // midnight on the 1st must label the right month on a UTC
+                    // server (#687). osloParts.month is 0-based, like getUTCMonth.
+                    .map((w) => shortMonthLocale(osloParts(new Date(w.opens_at)).month, locale))
                     .join(', '),
                 })
               : t('frequencyPreviewWindowed', { days: frequency === 'weekly' ? '7' : '14' })}

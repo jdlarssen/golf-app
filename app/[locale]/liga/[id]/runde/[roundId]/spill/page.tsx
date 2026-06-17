@@ -9,7 +9,10 @@ import { LinkButton } from '@/components/ui/Button';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getServerClient } from '@/lib/supabase/server';
-import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import {
+  formatShortDateWithYearLocale,
+  formatShortOsloDateWithYearLocale,
+} from '@/lib/i18n/format';
 import { RoundStartClient } from './RoundStartClient';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -27,8 +30,13 @@ function windowStatus(
 }
 
 function fmtWindow(iso: string, locale: AppLocale): string {
-  const d = iso.length === 10 ? new Date(`${iso}T12:00:00`) : new Date(iso);
-  return formatShortDateWithYearLocale(d, locale);
+  // Round windows are timestamptz — read in Oslo wall-clock so a near-midnight
+  // boundary shows the right calendar date on a UTC server (#687). Plain
+  // YYYY-MM-DD season dates have no time component, parse at midday.
+  if (iso.length === 10) {
+    return formatShortDateWithYearLocale(new Date(`${iso}T12:00:00`), locale);
+  }
+  return formatShortOsloDateWithYearLocale(iso, locale);
 }
 
 export default async function RoundSpillPage({ params }: { params: Params }) {

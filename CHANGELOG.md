@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.7] - 2026-06-17 · #687
+
+> Liga-runder viser nå riktig dato og åpner på norsk midnatt, ikke en time på skjeve. En månedlig runde starter ved midnatt den 1. og stenger 23:59 siste dag i måneden, slik arrangøren forventer.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `lib/league/generateRounds.ts` forankrer nå rundevinduer til Europe/Oslo via `parseOsloDateTimeLocal` (samme mønster som #648-stiene): månedlig stepper Oslo-kalendermåned, ukentlig/annenhver re-forankrer hvert vindu til Oslo midnatt (DST-stabilt), i stedet for den gamle UTC-cursoren (`…T00:00:00.000Z` / `Date.UTC(…,23,59,…)` / `getUTCMonth`). Ny `formatShortOsloDateWithYearLocale` i `lib/i18n/format.ts` (Oslo-pinnet søsken av den eksisterende formatteren); begge `fmtWindow`-kopiene (`liga/[id]/page.tsx` + `liga/[id]/runde/[roundId]/spill/page.tsx`) og måned-previewen i `CreateLigaForm` formaterer nå i Oslo-tid i stedet for UTC. Gating-semantikk (`windowStatus`, `startLeagueRoundFlight`) er urørt — ren tz-korreksjon. TDD: failing test først (Oslo-forankrede vindus-grenser for sommer/CET-vinter/ukentlig). (#687)
+
+</details>
+
 ### [1.133.6] - 2026-06-17 · #689
 
 > Du kan nå opprette en cup selv om du ikke huker av et match-format i lista. Valget var uten effekt, og det skal ikke stå i veien for å komme i gang.
