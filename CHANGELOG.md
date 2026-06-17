@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.16] - 2026-06-17 · #685
+
+> Åpner du en lenke til et privat lag-spill du ikke er invitert til, får du nå en knapp tilbake til forsiden i stedet for å stå fast på en melding uten vei videre.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- På `/signup/[shortId]` for et `invite_only` lag-spill viste en uinvitert besøkende et statisk banner uten knapp eller vei videre (`page.tsx`), mens solo-varianten fikk en «be om plass»-form i #368. `invite_only` er den private modusen, så en uinvitert kan ikke melde seg på selv — det er meningen (eier-beslutning: privat → minimal). Banneret forklarer allerede at man må be arrangøren invitere laget; fiks legger til en «Til forsiden»-knapp (gjenbruker `notFoundButton`) så blindveien blir navigerbar. Ingen backend/RLS/ny copy. (#685)
+
+</details>
+
 ### [1.133.15] - 2026-06-17 · #663
 
 > Cup-veiviseren kan nå faktisk lage greensome-, chapman- og gruesome-kamper, ikke bare four-ball, foursomes og singel. Og gir en kombinasjon ingen kamper, forklarer veiviseren hvorfor i stedet for å gråne ut «Neste» uten et ord.

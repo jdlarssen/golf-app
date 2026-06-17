@@ -392,13 +392,20 @@ function renderBody({
         </div>
       );
     }
-    // Lag-spill via invitasjon: solo-forespørsel passer ikke. Behold en
-    // informativ melding (team self-request støttes ikke for noen modus ennå).
+    // Lag-spill via invitasjon (#685): invite_only er den private modusen, så en
+    // uinvitert kan ikke melde seg på selv — det er meningen. Banneret forklarer
+    // hva de skal gjøre (be arrangøren invitere laget). Tidligere var det en
+    // stille blindvei uten vei videre; nå får de en knapp tilbake til forsiden.
     if (game.registration_type === 'team') {
       return (
-        <Banner tone="info">
-          {t('inviteTeamOnlyBanner')}
-        </Banner>
+        <div className="space-y-4">
+          <Banner tone="info">
+            {t('inviteTeamOnlyBanner')}
+          </Banner>
+          <LinkButton href="/" full variant="secondary">
+            {t('notFoundButton')}
+          </LinkButton>
+        </div>
       );
     }
     // Gjør blindveien til en handling (#368): du har lenken, så du kan be
