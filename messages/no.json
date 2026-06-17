@@ -4303,5 +4303,9 @@
 			"bodySoloStrokeplay": "Runden i <g>{game}</g> er ferdig. Du endte på <p>{rank}. plass{total, plural, =0{} other{ av #}}</p> med <pts>{net} slag netto</pts> ({gross} brutto).{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}",
 			"bodyTexasScramble": "Runden i <g>{game}</g> er ferdig. Laget endte på <p>{rank}. plass{total, plural, =0{} other{ av # lag}}</p> med <pts>{net} slag netto</pts> ({gross} brutto).{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}{hasPartners, select, yes{ Du spilte med <pa>{partnerList}</pa>.} other{}}"
 		}
+	},
+	"SyncBanner": {
+		"conflictNotice": "Hull {holeNumber} ble endret av en medspiller. Det nyeste tallet gjelder nå.",
+		"conflictDismiss": "OK"
 	}
 }

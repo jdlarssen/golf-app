@@ -1,6 +1,7 @@
 import { localDb } from './db';
 import { getBrowserClient } from '@/lib/supabase/client';
 import { syncRetryDecision } from './classifyError';
+import { resolveConflict } from './conflict';
 
 let inFlight = false;
 
@@ -84,14 +85,52 @@ export async function drainQueue(): Promise<{
         });
         pushed++;
       } else {
-        // Server had a newer entry. Replace our local copy with the server's.
-        await localDb.scores.update(item.scoreId, {
-          strokes: row.strokes,
-          enteredBy: row.entered_by,
-          clientUpdatedAt: row.client_updated_at,
-          serverUpdatedAt: row.updated_at,
+        // Server had a newer-or-equal entry. Resolve via LWW timestamp
+        // comparison to decide what to do:
+        //
+        // - 'server-wins': overwrite local with the server row (genuine LWW).
+        // - 'equal': impossible post-#688 (writeScore now guarantees strictly
+        //   increasing timestamps) but kept defensive — treat as keep-local to
+        //   avoid a silent drop on any edge that bypasses writeScore.
+        // - 'local-wins': should not happen (RPC rejects only when server >=
+        //   local), but if it somehow does, keep local.
+        //
+        // When server genuinely wins AND the local score was entered by the
+        // current user AND strokes actually differ, write a ConflictRecord so
+        // SyncBanner can surface the silent overwrite (#688 Part 2).
+        const resolution = resolveConflict({
+          localClientUpdatedAt: score.clientUpdatedAt,
+          serverClientUpdatedAt: row.client_updated_at,
         });
-        rejected++;
+
+        if (resolution === 'server-wins') {
+          // Surface the overwrite as a ConflictRecord when the local score was
+          // entered by the owner of this device AND strokes actually changed.
+          // `score` is the local row read above — no extra DB call needed.
+          const strokesChanged = score.strokes !== row.strokes;
+          const enteredByCurrentUser = score.enteredBy === score.userId;
+
+          if (strokesChanged && enteredByCurrentUser) {
+            await localDb.conflicts.put({
+              id: item.scoreId,
+              gameId: score.gameId,
+              userId: score.userId,
+              holeNumber: score.holeNumber,
+              localStrokes: score.strokes,
+              serverStrokes: row.strokes,
+              resolvedAt: new Date().toISOString(),
+            });
+          }
+
+          await localDb.scores.update(item.scoreId, {
+            strokes: row.strokes,
+            enteredBy: row.entered_by,
+            clientUpdatedAt: row.client_updated_at,
+            serverUpdatedAt: row.updated_at,
+          });
+          rejected++;
+        }
+        // 'equal' or 'local-wins': keep local data as-is, just remove from queue.
       }
       await localDb.syncQueue.delete(item.id);
     }

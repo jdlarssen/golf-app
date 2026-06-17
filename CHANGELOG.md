@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.12] - 2026-06-17 · #688
+
+> Taster to mobiler samme hull samtidig, mister du ikke lenger tallet ditt i det stille. Og blir tallet til en medspiller gjeldende, sier appen fra med en kort melding i stedet for at tallet bare bytter seg ut.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- **Tie-håndtering (korrekthet)** — `writeScore` stemplet `new Date().toISOString()` (ms-oppløsning), mens server-RPC-en (`0073`) kun skriver på strikt `>` og realtime/catch-up holder lokalt på `>=`. På en ms-kollisjon (dobbel-fyr, replayet kø, to enheter) avviste RPC-en og `syncWorker` overskrev lokalt tall stille. `writeScore` garanterer nå strengt økende `clientUpdatedAt` per `(gameId, userId, holeNumber)` (leser eksisterende Dexie-rad først, bumper +1 ms ved kollisjon). `resolveConflict` (`lib/sync/conflict.ts`, tidligere dead code) er wiret inn i `syncWorker` server-wins-grenen: `'equal'`/`'local-wins'` holder lokalt i stedet for å overskrive. RPC-en (`0073`) og realtime-`>=` urørt. TDD: rød-så-grønn.
+- **Synlig konflikt-varsel (#688 Del 2)** — server-wins-grenen overskrev lokalt tall uten noe signal. Ny Dexie `conflicts`-tabell (versjon 2-oppgradering, databasenavnet `'golf-app'` bevart) får en rad når serveren vinner *og* lokalt tall var tastet av brukeren selv *og* tallet faktisk endret seg. `SyncBanner` viser en kort melding per konflikt (`SyncBanner.conflictNotice`, no + en) som lukkes ved trykk. Last-write-wins uendret — kun åpenhet. (#688)
+
+</details>
+
 ### [1.133.11] - 2026-06-17 · #676
 
 > Inviterer en lagkaptein en medspiller på e-post til et spill der man både kan melde seg på alene og som lag, havner medspilleren nå riktig på laget i stedet for som en løs solo-spiller uten vei tilbake.

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { localDb, type SyncQueueItem } from '@/lib/sync/db';
+import { useTranslations } from 'next-intl';
+import { localDb, type SyncQueueItem, type ConflictRecord } from '@/lib/sync/db';
 import { drainQueue } from '@/lib/sync/syncWorker';
 
 const STUCK_THRESHOLD_MS = 30_000;
@@ -59,8 +60,16 @@ function friendlySyncError(rawError: string | null): string {
 }
 
 export function SyncBanner() {
+  const t = useTranslations('SyncBanner');
   const queue = useLiveQuery<SyncQueueItem[] | undefined>(
     () => localDb.syncQueue.toArray(),
+    [],
+  );
+  // Conflicts (#688 Part 2): records written by syncWorker when server silently
+  // overwrites a score the current user had entered. One notice per record,
+  // dismissed individually.
+  const conflicts = useLiveQuery<ConflictRecord[] | undefined>(
+    () => localDb.conflicts.toArray(),
     [],
   );
   // Tick `now` once per second so the "is older than 30s" check re-evaluates
@@ -73,67 +82,66 @@ export function SyncBanner() {
     return () => clearInterval(id);
   }, []);
 
-  if (!queue || queue.length === 0) return null;
+  const hasConflicts = (conflicts?.length ?? 0) > 0;
 
-  // Quarantined items (#668): drainQueue gave up after a permanently-failing
-  // sync. They never retry, so they're surfaced separately from the still-
-  // retrying "active" items — a lost stroke must never be silent.
-  const abandoned = queue.filter((i) => i.abandonedAt != null);
-  const active = queue.filter((i) => i.abandonedAt == null);
-  const abandonedCount = abandoned.length;
-
-  const oldestCreatedAt = active.reduce((acc, i) => {
-    const t = new Date(i.createdAt).getTime();
-    return t < acc ? t : acc;
-  }, Number.POSITIVE_INFINITY);
-  const oldestAgeMs = now - oldestCreatedAt;
-  const hasErrors = active.some(
-    (i) => i.attemptCount > 0 || i.lastError != null,
-  );
-  const isStuck = active.length > 0 && oldestAgeMs > STUCK_THRESHOLD_MS;
-
-  if (abandonedCount === 0 && !hasErrors && !isStuck) return null;
-
-  const rawError = active.find((i) => i.lastError)?.lastError ?? null;
-  // Retry only does something for active items; quarantined items are skipped
-  // by drainQueue, so hide the button when there's nothing left to retry.
-  const showRetry = active.length > 0;
-
-  const handleRetry = async () => {
-    if (retrying) return;
-    setRetrying(true);
-    await Promise.all([
-      drainQueue(),
-      new Promise((r) => setTimeout(r, RETRY_MIN_FEEDBACK_MS)),
-    ]);
-    setRetrying(false);
+  const handleDismissConflict = async (conflictId: string) => {
+    await localDb.conflicts.delete(conflictId);
   };
 
-  // Abandoned takes priority — it's the most severe (genuine data loss).
-  const message =
-    abandonedCount > 0
-      ? `Kunne ikke lagre ${abandonedCount} slag. Kontakt arrangøren.`
-      : hasErrors
-        ? `${friendlySyncError(rawError)}. ${active.length} slag venter.`
-        : `${active.length} slag venter på lagring.`;
+  // Render the queue-related banner (unchanged logic from before).
+  const queueBanner = (() => {
+    if (!queue || queue.length === 0) return null;
 
-  const toneClasses =
-    abandonedCount > 0 || hasErrors
-      ? 'bg-danger/[0.08] border-danger/30 text-danger'
-      : 'bg-warning/[0.10] border-warning/40 text-warning';
+    // Quarantined items (#668): drainQueue gave up after a permanently-failing
+    // sync. They never retry, so they're surfaced separately from the still-
+    // retrying "active" items — a lost stroke must never be silent.
+    const abandoned = queue.filter((i) => i.abandonedAt != null);
+    const active = queue.filter((i) => i.abandonedAt == null);
+    const abandonedCount = abandoned.length;
 
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="sticky top-0 z-40 px-3 pt-2 pointer-events-none"
-      style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))' }}
-    >
+    const oldestCreatedAt = active.reduce((acc, i) => {
+      const t = new Date(i.createdAt).getTime();
+      return t < acc ? t : acc;
+    }, Number.POSITIVE_INFINITY);
+    const oldestAgeMs = now - oldestCreatedAt;
+    const hasErrors = active.some(
+      (i) => i.attemptCount > 0 || i.lastError != null,
+    );
+    const isStuck = active.length > 0 && oldestAgeMs > STUCK_THRESHOLD_MS;
+
+    if (abandonedCount === 0 && !hasErrors && !isStuck) return null;
+
+    const rawError = active.find((i) => i.lastError)?.lastError ?? null;
+    // Retry only does something for active items; quarantined items are skipped
+    // by drainQueue, so hide the button when there's nothing left to retry.
+    const showRetry = active.length > 0;
+
+    const handleRetry = async () => {
+      if (retrying) return;
+      setRetrying(true);
+      await Promise.all([
+        drainQueue(),
+        new Promise((r) => setTimeout(r, RETRY_MIN_FEEDBACK_MS)),
+      ]);
+      setRetrying(false);
+    };
+
+    // Abandoned takes priority — it's the most severe (genuine data loss).
+    const message =
+      abandonedCount > 0
+        ? `Kunne ikke lagre ${abandonedCount} slag. Kontakt arrangøren.`
+        : hasErrors
+          ? `${friendlySyncError(rawError)}. ${active.length} slag venter.`
+          : `${active.length} slag venter på lagring.`;
+
+    const toneClasses =
+      abandonedCount > 0 || hasErrors
+        ? 'bg-danger/[0.08] border-danger/30 text-danger'
+        : 'bg-warning/[0.10] border-warning/40 text-warning';
+
+    return (
       <div
         className={`pointer-events-auto flex items-center justify-between gap-2 rounded-xl border px-3 py-2 shadow-sm ${toneClasses}`}
-        // Raw error stays accessible to admin via hover/long-press tooltip
-        // (and via Dexie's queue.lastError) without being shoved in the
-        // player's face on every load.
         title={rawError ?? undefined}
       >
         <div className="min-w-0 text-sm font-medium leading-tight">
@@ -150,6 +158,38 @@ export function SyncBanner() {
           </button>
         )}
       </div>
+    );
+  })();
+
+  if (!queueBanner && !hasConflicts) return null;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="sticky top-0 z-40 px-3 pt-2 pointer-events-none flex flex-col gap-1"
+      style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))' }}
+    >
+      {queueBanner}
+      {conflicts?.map((conflict) => (
+        <div
+          key={conflict.id}
+          className="pointer-events-auto flex items-center justify-between gap-2 rounded-xl border px-3 py-2 shadow-sm bg-warning/[0.10] border-warning/40 text-warning"
+        >
+          <div className="min-w-0 text-sm font-medium leading-tight">
+            <div className="truncate">
+              {t('conflictNotice', { holeNumber: conflict.holeNumber })}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleDismissConflict(conflict.id)}
+            className="shrink-0 rounded-md border border-current px-2.5 py-1 text-xs font-semibold uppercase tracking-wide"
+          >
+            {t('conflictDismiss')}
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

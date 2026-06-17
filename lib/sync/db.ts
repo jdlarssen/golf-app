@@ -27,15 +27,37 @@ export interface SyncQueueItem {
   abandonedAt?: string | null;
 }
 
+/**
+ * Written by syncWorker (#688) when the server-wins branch overwrites a score
+ * that the local user had entered. Surfaced by SyncBanner as a one-line notice
+ * so the overwrite is never silent. The record is removed when the user
+ * dismisses the banner.
+ */
+export interface ConflictRecord {
+  id: string; // ${gameId}:${userId}:${holeNumber}
+  gameId: string;
+  userId: string;
+  holeNumber: number;
+  localStrokes: number | null;
+  serverStrokes: number | null;
+  resolvedAt: string;
+}
+
 class GolfDb extends Dexie {
   scores!: Table<LocalScore, string>;
   syncQueue!: Table<SyncQueueItem, string>;
+  conflicts!: Table<ConflictRecord, string>;
 
   constructor() {
     super('golf-app');
     this.version(1).stores({
       scores: 'id, gameId, [gameId+userId], [gameId+holeNumber]',
       syncQueue: 'id, createdAt',
+    });
+    this.version(2).stores({
+      scores: 'id, gameId, [gameId+userId], [gameId+holeNumber]',
+      syncQueue: 'id, createdAt',
+      conflicts: 'id, gameId, resolvedAt',
     });
   }
 }
