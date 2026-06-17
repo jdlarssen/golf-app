@@ -59,4 +59,52 @@ describe('allStrokeAllocations', () => {
     const total = Object.values(result).reduce((a, b) => a + b, 0);
     expect(total).toBe(-2);
   });
+
+  it.each([-18, -19, -20, -24, -36])(
+    'sums to %i for plus golfer beyond -18',
+    (ch) => {
+      const result = allStrokeAllocations(ch);
+      const total = Object.values(result).reduce((a, b) => a + b, 0);
+      expect(total).toBe(ch);
+    }
+  );
+});
+
+describe('strokesForHole — plus-handicap multi-round distribution', () => {
+  it('HCP -18: -1 on every hole', () => {
+    for (let si = 1; si <= 18; si++) {
+      expect(strokesForHole(-18, si)).toBe(-1);
+    }
+  });
+
+  it('HCP -19: only SI 18 gets -2, rest get -1', () => {
+    expect(strokesForHole(-19, 18)).toBe(-2);
+    for (let si = 1; si <= 17; si++) {
+      expect(strokesForHole(-19, si)).toBe(-1);
+    }
+  });
+
+  it('HCP -20: SI 17 and 18 get -2, SI 1..16 get -1', () => {
+    expect(strokesForHole(-20, 17)).toBe(-2);
+    expect(strokesForHole(-20, 18)).toBe(-2);
+    for (let si = 1; si <= 16; si++) {
+      expect(strokesForHole(-20, si)).toBe(-1);
+    }
+  });
+
+  it('HCP -24: SI 13..18 (6 hardest) get -2, SI 1..12 get -1', () => {
+    // remainder = 24 % 18 = 6, threshold = 18 - 6 + 1 = 13
+    for (let si = 13; si <= 18; si++) {
+      expect(strokesForHole(-24, si)).toBe(-2);
+    }
+    for (let si = 1; si <= 12; si++) {
+      expect(strokesForHole(-24, si)).toBe(-1);
+    }
+  });
+
+  it('HCP -36: -2 on every hole (two full rounds)', () => {
+    for (let si = 1; si <= 18; si++) {
+      expect(strokesForHole(-36, si)).toBe(-2);
+    }
+  });
 });
