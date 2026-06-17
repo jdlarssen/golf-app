@@ -278,6 +278,11 @@ export function compute(ctx: ScoringContext): NassauResult {
 
     const total18Line = total18.players.find((pl) => pl.userId === p.userId);
     const total18EffectiveStrokes = total18Line?.totalEffectiveStrokes ?? 0;
+    // Padded rank fra total18-seksjonen: rankTeams bruker 999 for uspilte hull,
+    // så én spiller som hopper over hull ikke kan «vinne» tiebreak mot én som
+    // fullfører runden. Fallback 999 sikrer at en spiller som mangler fra
+    // total18 (kan ikke forekomme normalt) rangeres sist.
+    const total18SectionRank = total18Line?.rank ?? 999;
 
     return {
       userId: p.userId,
@@ -288,29 +293,30 @@ export function compute(ctx: ScoringContext): NassauResult {
         total18: wonTotal18,
       },
       total18EffectiveStrokes,
+      total18SectionRank,
       rank: 0, // settes etter sortering
       tiedWith: [], // settes etter sortering
     };
   });
 
-  // Ranking: units desc, så total18EffectiveStrokes asc, så userId asc
-  // (deterministisk tiebreaker når alt annet er likt).
+  // Ranking: units desc, så total18SectionRank asc (padded rank — riktig
+  // håndtering av ufullstendige runder), så userId asc (deterministisk).
   playersAggregated.sort((a, b) => {
     if (a.units !== b.units) return b.units - a.units;
-    if (a.total18EffectiveStrokes !== b.total18EffectiveStrokes) {
-      return a.total18EffectiveStrokes - b.total18EffectiveStrokes;
+    if (a.total18SectionRank !== b.total18SectionRank) {
+      return a.total18SectionRank - b.total18SectionRank;
     }
     return a.userId.localeCompare(b.userId);
   });
 
   // Tildel rank med shared-rank-håndtering: spillere med samme (units,
-  // total18EffectiveStrokes) deler rank og refererer hverandre i tiedWith.
+  // total18SectionRank) deler rank og refererer hverandre i tiedWith.
   for (let i = 0; i < playersAggregated.length; i++) {
     const cur = playersAggregated[i];
     const firstTiedIndex = playersAggregated.findIndex(
       (other) =>
         other.units === cur.units &&
-        other.total18EffectiveStrokes === cur.total18EffectiveStrokes,
+        other.total18SectionRank === cur.total18SectionRank,
     );
     cur.rank = firstTiedIndex + 1;
     cur.tiedWith = playersAggregated
@@ -318,7 +324,7 @@ export function compute(ctx: ScoringContext): NassauResult {
         (other, j) =>
           j !== i &&
           other.units === cur.units &&
-          other.total18EffectiveStrokes === cur.total18EffectiveStrokes,
+          other.total18SectionRank === cur.total18SectionRank,
       )
       .map((other) => other.userId);
   }

@@ -1524,10 +1524,20 @@ export interface NassauUnitLine {
   /** 0-3. Antall seksjoner spilleren vant alene. */
   units: number;
   unitBreakdown: { front9: boolean; back9: boolean; total18: boolean };
-  /** Total18-effective-strokes som tiebreak ved units-tie. */
+  /**
+   * Total18-effective-strokes for display (rå sum av spilte hull, IKKE padded).
+   * Brukes kun til visning — IKKE til rangeringen (se total18SectionRank).
+   */
   total18EffectiveStrokes: number;
+  /**
+   * Padded rank fra total18-seksjonen (beregnet av rankTeams med 999 for
+   * uspilte hull). Brukes som tiebreaker ved units-tie, slik at en spiller
+   * som ikke fullførte runden IKKE rangeres foran én som har spilt alle hull.
+   * Lavere = bedre (rank 1 = seksjons-vinner eller best i cascade).
+   */
+  total18SectionRank: number;
   rank: number;
-  /** Spillere med eksakt samme (units, total18-cascade). */
+  /** Spillere med eksakt samme (units, total18SectionRank). */
   tiedWith: string[];
 }
 

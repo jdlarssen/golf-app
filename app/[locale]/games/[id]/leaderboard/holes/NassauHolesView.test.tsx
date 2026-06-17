@@ -53,6 +53,7 @@ function unitLine(
     units,
     unitBreakdown: breakdown,
     total18EffectiveStrokes: 72,
+    total18SectionRank: rank,
     rank,
     tiedWith: [],
   };

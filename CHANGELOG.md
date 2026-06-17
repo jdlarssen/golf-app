@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.3] - 2026-06-17 · #684
+
+> Nassau rangerer nå spillere riktig når ikke alle hull er spilt. Den som fullførte runden ryker ikke lenger bak en som spilte færre hull og dermed fikk en lavere rå sum.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Nassau-tiebreakeren brukte en rå effektiv-slag-delsum (`total18EffectiveStrokes`), som belønnet å ha spilt færre hull (færre hull gir lavere rå sum). Byttet til padded seksjonrang (`total18SectionRank`, der uspilte hull rangerer 999) i både sorterings-komparatoren og rank-tildelingen i `lib/scoring/modes/nassau.ts`. Nytt felt `total18SectionRank` på `NassauUnitLine` (`lib/scoring/modes/types.ts`); `total18EffectiveStrokes` beholdes som display-felt så UI-flatene står urørt. Fixture-builders i tre leaderboard-tester fikk det nye feltet (ingen logikk-endring). Test-først per scoring-disiplinen. (#684)
+
+</details>
+
 ### [1.133.2] - 2026-06-17 · #677
 
 > Stableford-ligaen regner nå dame- og juniorpoeng mot riktig par for tee-en de spiller fra. Sesongtabellen blir dermed rettferdig i blandede ligaer, der herre-par tidligere ble brukt for alle.

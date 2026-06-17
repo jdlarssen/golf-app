@@ -687,6 +687,56 @@ describe('nassau.compute — antalls-agnostisk over 4 spillere (#460)', () => {
 });
 
 // -----------------------------------------------------------------------------
+// Tiebreaker-fix: issue #684 — rå delsum belønnet færre hull (asc raw sum →
+// lavere sum for den som pick-uppet/ikke spilte). Riktig tiebreaker er den
+// padded total18-seksjonrangen (allerede beregnet av rankTeams med 999 for
+// uspilte hull), slik at en spiller som IKKE fullførte runden rangeres BAKOVER.
+// -----------------------------------------------------------------------------
+describe('nassau.compute — tiebreaker bruker padded seksjonrang, ikke rå delsum (#684)', () => {
+  it('to spillere tied 0 units: den med fullstendig runde slår den med færre hull', () => {
+    // Scenario: u3 vinner alle tre seksjoner (units=3). u1 og u2 har 0 units.
+    //
+    // u1: spiller BARE hull 1–9 med score 5 (bogey) → rå total18-sum = 45.
+    //     Hull 10–18 er uspilte → paddes med 999 i cascade.
+    //
+    // u2: spiller ALLE 18 hull med score 4 (par) → rå total18-sum = 72.
+    //     Alle hull spilt → ingen padding.
+    //
+    // u3: par 3 × 18 → vinner front9/back9/total18, units=3, rank=1.
+    //
+    // Uten fix (rå sum): u1.total18EffectiveStrokes=45 < u2=72 → u1 rank 2 (FEIL).
+    // Med fix (padded rank): cascade hull 1 → u1=5, u2=4 → u2 rangerer foran u1
+    //   i total18-seksjon → u2 rank 2, u1 rank 3 (riktig).
+    const ctx = makeCtx({
+      players: [soloPlayer('u1'), soloPlayer('u2'), soloPlayer('u3')],
+      holes: par4Holes(18),
+      scores: [
+        // u1 spiller kun front 9, score 5 per hull
+        ...scoresFor('u1', Array(9).fill(5)),
+        // u2 spiller alle 18, score 4 per hull
+        ...scoresFor('u2', Array(18).fill(4)),
+        // u3 spiller alle 18, score 3 → vinner alle seksjoner
+        ...scoresFor('u3', Array(18).fill(3)),
+      ],
+      nassauScoring: 'gross',
+    });
+    const result = compute(ctx);
+
+    // Forutsetninger: u3 har alle seksjonene, u1 og u2 har 0 units.
+    const u3 = result.players.find((p) => p.userId === 'u3')!;
+    const u1 = result.players.find((p) => p.userId === 'u1')!;
+    const u2 = result.players.find((p) => p.userId === 'u2')!;
+    expect(u3.units).toBe(3);
+    expect(u1.units).toBe(0);
+    expect(u2.units).toBe(0);
+
+    // Kjerne-assertion (#684): u2 (fullstendig runde) skal rangeres FORAN u1
+    // (færre hull). u1 skal IKKE ha lavere rank enn u2 bare fordi rå delsum er lavere.
+    expect(u2.rank).toBeLessThan(u1.rank);
+  });
+});
+
+// -----------------------------------------------------------------------------
 // Per-hull-eksponering (epic #496, PR 7). `result.holes` mater den format-
 // bevisste «Hull for hull»-flaten (NassauHolesView) og H2H-momentum-strippen.
 // Additivt felt — eksisterende cases over forblir grønne.

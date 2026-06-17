@@ -26,6 +26,7 @@ function makeUnitLine(
     units,
     unitBreakdown,
     total18EffectiveStrokes: total18Effective,
+    total18SectionRank: rank,
     rank,
     tiedWith: [],
   };
