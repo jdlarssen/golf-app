@@ -56,6 +56,7 @@ jobs:
   #      profile-complete user).
   #   2. Add repository VARIABLE RUN_E2E = true.
   # Until RUN_E2E is set this job is skipped (never red), so it can't block a PR.
+  # Activated 2026-06-17: all 5 secrets + RUN_E2E=true are configured (#674).
   e2e:
     if: ${{ vars.RUN_E2E == 'true' }}
     runs-on: ubuntu-latest
