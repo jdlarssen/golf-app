@@ -14,8 +14,11 @@ import {
  *  - Disposable-domener blokkeres for ikke-admin-arrangør, ikke for admin (#422).
  *  - Status gate: only draft/scheduled allow add/invite.
  *  - Capacity gate: best_ball refuses at 8 players.
- *  - Idempotency: duplicate (game_id, user_id) swallow-es; duplicate pending
- *    invitation for samme spill swallow-es.
+ *  - Idempotency: duplicate (game_id, user_id) swallow-es; en allerede-pending
+ *    invitasjon for samme spill oppretter ingen ny rad, men re-sender mailen
+ *    best-effort så en tapt første-sending når fram ved retry (#686).
+ *  - Mail-feil ved ny invitasjon ruller invitations-raden tilbake, så
+ *    arrangøren kan prøve samme adresse på nytt (#686).
  *  - notify fires after game_players insert; never blocks the action.
  *  - inviter-self: no notify.
  */
@@ -336,7 +339,7 @@ describe('inviteEmailToGame', () => {
     expect(lastRedirect()).toContain('email=nykompis');
   });
 
-  it('idempotent: pending invitation for samme spill swallow-es', async () => {
+  it('idempotent: pending invitation re-sender mail best-effort (ingen ny rad)', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       {
@@ -355,9 +358,52 @@ describe('inviteEmailToGame', () => {
       inviteEmailToGame(GAME_ID, formData({ email: 'kompis@example.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    // Fix B (#686): en retry på en allerede-pending invitasjon sender mailen
+    // på nytt best-effort, så en invitasjon som tapte mailen første gang
+    // likevel når fram. Ingen ny invitations-rad opprettes (ingen insert).
+    expect(sendInviteNotificationMock).toHaveBeenCalledWith({
+      to: 'kompis@example.com',
+      invitedByName: 'Jørgen',
+      gameName: 'Stiklestad',
+      gameMode: 'stableford',
+    });
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toContain('status=invite_sent');
+  });
+
+  it('mail-feil ved ukjent e-post: ruller invitations-raden tilbake', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
+      {
+        data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
+        error: null,
+      },
+      // users.select.ilike.maybeSingle — ingen treff
+      { data: null, error: null },
+      // invitations.select.ilike.eq.is.maybeSingle — ingen pending
+      { data: null, error: null },
+      // invitations insert — lykkes
+      { data: null, error: null },
+      // rollback: invitations.delete.ilike.eq.is — lykkes
+      { data: null, error: null },
+    ]);
+    authedAsAdmin();
+    sendInviteNotificationMock.mockImplementationOnce(async () => {
+      throw new Error('resend down');
+    });
+
+    const { inviteEmailToGame } = await import('./inviteToGameActions');
+    await expect(
+      inviteEmailToGame(GAME_ID, formData({ email: 'NyKompis@Example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Mailen feilet → den nylig insertede raden slettes igjen, så en ny
+    // sending på samme adresse ikke kortsluttes av idempotens-sjekken.
+    expect(sendInviteNotificationMock).toHaveBeenCalledTimes(1);
+    const deleteCall = supabaseMock.__fromCalls.find((c) => c.method === 'delete');
+    expect(deleteCall?.table).toBe('invitations');
+    expect(lastRedirect()).toContain('error=mail_failed');
+    expect(lastRedirect()).toContain('email=nykompis');
   });
 
   it('avviser ugyldig e-post', async () => {

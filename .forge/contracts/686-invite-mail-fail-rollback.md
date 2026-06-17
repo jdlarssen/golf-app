@@ -50,7 +50,7 @@ Merk: `sendInviteNotification`-signaturen i `lib/mail/inviteNotification.ts` er 
 
 - `npx tsc --noEmit` (ingen TypeScript-feil)
 - `npm run build` (Next.js build uten feil)
-- Ingen eksisterende tester for denne server-acsjonen finnes — ingen ny test kreves, men build+tsc er tilstrekkelig gate for en server-action uten side-effects utover to Supabase-kall + ett Resend-kall
+- `npx vitest run app/[locale]/admin/games/[id]/inviteToGameActions.test.ts` — denne server-acsjonen HAR en co-located test-suite (16 tester). Den eksisterende «idempotent: pending invitation»-testen må oppdateres til Fix B (re-send), og to nye tester dekker de nye stiene (rollback-delete ved mail-feil + re-send i idempotent-grenen).
 
 ## Scope-grense
 
