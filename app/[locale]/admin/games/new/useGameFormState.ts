@@ -502,8 +502,13 @@ export function useGameFormState({
   // gruppa ikke rendres — dekker både ferskt klubb-valg, ?klubb=-deep-link og edit
   // av et eldre klubb-spill med annen modus.
   const isClubScoped = groupId !== '';
+  // The proper fix is to derive an effective registration mode at the payload
+  // site instead of syncing state in an effect (react-hooks flags the
+  // setState-in-effect as a cascading-render risk). Deferred to #715 to keep
+  // #692 a pure lint-hygiene change — the create-game wizard is a core flow.
   useEffect(() => {
     if (isClubScoped && registrationMode !== 'invite_only') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRegistrationMode('invite_only');
     }
   }, [isClubScoped, registrationMode]);
