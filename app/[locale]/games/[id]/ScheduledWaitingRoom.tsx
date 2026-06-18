@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatCountdownLocale } from '@/lib/i18n/format';
 import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
-import { joinFlight, type FlightJoinError } from './flightJoinActions';
+import { joinFlight } from './flightJoinActions';
 import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
 
 /** En flight som velgeren viser. */

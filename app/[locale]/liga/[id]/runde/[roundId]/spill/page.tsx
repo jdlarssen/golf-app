@@ -1,5 +1,4 @@
 import { redirect } from '@/i18n/navigation';
-import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';

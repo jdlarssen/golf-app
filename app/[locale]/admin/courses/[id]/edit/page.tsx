@@ -15,7 +15,6 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import {
   ArchivedTeesSection,
   type ArchivedTeeRow,
-  type ArchivedTeesSectionStrings,
 } from './ArchivedTeesSection';
 import { formatShortDateLocale } from '@/lib/i18n/format';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';

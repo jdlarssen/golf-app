@@ -466,7 +466,6 @@ function Step4Preview({
   team2Name,
   onRegenerate,
   onMatchChange,
-  playerById,
   t,
 }: {
   matches: PlannedMatch[];
@@ -476,7 +475,6 @@ function Step4Preview({
   team2Name: string;
   onRegenerate: () => void;
   onMatchChange: (matchId: string, side: 'side1' | 'side2', idx: number, userId: string) => void;
-  playerById: Map<string, WizardPlayer>;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
   // Group by format for display
@@ -640,7 +638,6 @@ function Step5Confirm({
         matches,
       });
       if (result?.error) {
-        const key = result.error as keyof typeof result.error;
         const errorMap: Record<string, string> = {
           not_draft: t('generate.errors.not_draft'),
           missing_course: t('generate.errors.missing_course'),
@@ -748,8 +745,6 @@ export function GenerateMatchesWizard({
   const team2Players = players.filter((p) => assignments[p.id] === 'team2');
   const team1Count = team1Players.length;
   const team2Count = team2Players.length;
-
-  const playerById = new Map<string, WizardPlayer>(players.map((p) => [p.id, p]));
 
   function getSelectedPreset(): CupPreset | null {
     return CUP_PRESETS.find((p) => p.id === presetId) ?? null;
@@ -921,7 +916,6 @@ export function GenerateMatchesWizard({
             team2Name={team2Name}
             onRegenerate={runGenerate}
             onMatchChange={handleMatchChange}
-            playerById={playerById}
             t={t}
           />
         )}

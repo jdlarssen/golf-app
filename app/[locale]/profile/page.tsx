@@ -1,6 +1,5 @@
 import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
-import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
