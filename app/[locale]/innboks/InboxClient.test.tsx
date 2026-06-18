@@ -34,22 +34,27 @@ vi.mock('next/navigation', async () => {
 
 // InboxClient uses @/i18n/navigation (locale-aware wrapper); wire the same
 // routerPushMock so navigation assertions work after the i18n migration.
-vi.mock('@/i18n/navigation', () => ({
-  useRouter: () => ({
-    push: routerPushMock,
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    pathname: '/innboks',
-  }),
-  usePathname: () => '/innboks',
-  Link: ({ children, href }: { children: React.ReactNode; href: string }) =>
-    // eslint-disable-next-line jsx-a11y/anchor-has-content
-    require('react').createElement('a', { href }, children),
-  redirect: vi.fn(),
-}));
+vi.mock('@/i18n/navigation', async () => {
+  // importActual instead of require(): vi.mock factories are hoisted above
+  // imports, so the top-level React binding can't be referenced here. Mirrors
+  // the next/navigation mock above.
+  const { createElement } = await vi.importActual<typeof import('react')>('react');
+  return {
+    useRouter: () => ({
+      push: routerPushMock,
+      replace: vi.fn(),
+      prefetch: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+      pathname: '/innboks',
+    }),
+    usePathname: () => '/innboks',
+    Link: ({ children, href }: { children: React.ReactNode; href: string }) =>
+      createElement('a', { href }, children),
+    redirect: vi.fn(),
+  };
+});
 
 beforeEach(() => {
   vi.useFakeTimers();
