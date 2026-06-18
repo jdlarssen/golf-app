@@ -2,9 +2,8 @@
 # regressions are caught BEFORE merge — Vercel only builds AFTER merge, which
 # is too late (see #673, and the #641/#642/#647 prod-break cluster).
 #
-# typecheck + test are BLOCKING. lint is non-blocking for now because the repo
-# has 22 pre-existing lint errors (the deliberate /legal/privacy <a> pattern);
-# once those are cleaned, drop `continue-on-error` to make lint blocking too.
+# typecheck + test + lint are all BLOCKING (the pre-existing lint errors were
+# cleaned in #692). lint fails on errors only; warnings don't block.
 #
 # Owner action to enforce: Settings → Branches → add a branch-protection rule
 # for `main` requiring the "verify" check to pass before merge.
@@ -38,9 +37,8 @@ jobs:
       - name: Test (blocking)
         run: npm test
 
-      - name: Lint (non-blocking until pre-existing errors are cleaned)
+      - name: Lint (blocking)
         run: npm run lint
-        continue-on-error: true
 
   # Authenticated e2e gate (#674): the golden-path scoring loop + cup/liga
   # lifecycle smoke — the flows where #641/#642/#647 lived. These run against the
