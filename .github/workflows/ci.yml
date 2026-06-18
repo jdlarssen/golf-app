@@ -5,8 +5,10 @@
 # typecheck + test + lint are all BLOCKING (the pre-existing lint errors were
 # cleaned in #692). lint fails on errors only; warnings don't block.
 #
-# Owner action to enforce: Settings → Branches → add a branch-protection rule
-# for `main` requiring the "verify" check to pass before merge.
+# Real enforcement is the local pre-push hook (.githooks/pre-push), which runs
+# the same three checks BEFORE a push leaves the machine — GitHub branch
+# protection is Pro-only on private repos, so this CI job is the visible
+# backstop on the PR rather than a hard merge gate.
 name: CI
 
 on:
