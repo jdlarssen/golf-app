@@ -17,6 +17,22 @@ const eslintConfig = defineConfig([
     // noise (e.g. they assume a global `React`).
     "docs/design/**",
   ]),
+  {
+    // Underscore-prefixed identifiers are a deliberate "intentionally unused"
+    // marker across the codebase (e.g. leaderboard-view props kept for
+    // signature parity: `_gameId`, `_gameStatus`). Codify the convention so the
+    // linter stops flagging them.
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
