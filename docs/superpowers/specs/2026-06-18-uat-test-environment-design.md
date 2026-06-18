@@ -1,7 +1,7 @@
 # Design: separat test-/UAT-miljø (egen Supabase-DB)
 
 **Dato:** 2026-06-18
-**Status:** Forslag — venter på eier-godkjenning
+**Status:** Godkjent av eier 2026-06-18 — klar til utførelse (Fase 1 + 2)
 **Forfatter:** Claude (brainstorming-sesjon)
 
 ## 1. Bakgrunn og problem
@@ -69,7 +69,7 @@ PROD (uendret)
   tornygolf.no
 
 TEST / UAT (nytt)
-  Supabase: torny-test (nytt free-prosjekt)  ← kun test-data
+  Supabase: torny-staging (nytt free-prosjekt)  ← kun test-data
   Vercel Preview env               → peker på test-DB
   PR preview-URL-er                = klikkbar UAT-flate
   GitHub CI e2e-hemmeligheter      → peker på test-DB
@@ -79,12 +79,12 @@ LOKAL UTVIKLING (uendret)
 ```
 
 **Dataflyt — e2e i CI etter endring:**
-`PR åpnes → CI booter app lokalt → app + e2e snakker med torny-test-DB →
+`PR åpnes → CI booter app lokalt → app + e2e snakker med torny-staging-DB →
 testspill/varsler havner i test-DB → prod og Jørgens Innboks urørt.`
 
 ## 5. Komponenter
 
-1. **Nytt Supabase-prosjekt `torny-test`** (EU-region, free-tier). Egen DB, egen auth,
+1. **Nytt Supabase-prosjekt `torny-staging`** (EU-region, free-tier). Egen DB, egen auth,
    egne nøkler.
 2. **Skjema:** alle 107 migrasjoner (`supabase/migrations/0001`–`0106`) påført det nye
    prosjektet, så skjemaet er identisk med det koden forventer.
@@ -102,7 +102,7 @@ testspill/varsler havner i test-DB → prod og Jørgens Innboks urørt.`
 ## 6. Faseinndeling
 
 ### Fase 1 — flytt automatisk testing av prod (kjernen, stopper roten av problemet)
-- Opprett `torny-test`-prosjektet.
+- Opprett `torny-staging`-prosjektet.
 - Påfør alle migrasjoner.
 - Seed test-admin + test-spiller + bane/tee.
 - Bytt de 5 GitHub CI-hemmelighetene til test-prosjektet.
@@ -126,7 +126,7 @@ kode/SQL/diagnostikk.
 
 | # | Steg | Hvem | Detalj |
 |---|------|------|--------|
-| 1 | Opprett `torny-test`-prosjektet | **Eier** | Supabase Dashboard → New project → EU-region → noter DB-passord |
+| 1 | Opprett `torny-staging`-prosjektet | **Eier** | Supabase Dashboard → New project → EU-region → noter DB-passord |
 | 2 | Del prosjekt-ref + nøkler | **Eier** | Kopier Project URL, anon key, service_role key fra Settings → API |
 | 3 | Påfør 107 migrasjoner | **Claude** | Via Supabase MCP (`apply_migration` mot nytt project-id). Fallback: SQL-bundle eier limer i SQL Editor |
 | 4 | Opprett auth-brukere | **Eier** | Authentication → Add user: test-admin + test-spiller (foreslåtte aliaser i §9) |
@@ -179,12 +179,15 @@ Reversibelt når som helst ved å bytte de 5 GitHub-hemmelighetene (og Vercel Pr
 tilbake til prod-verdiene. Test-prosjektet kan stå urørt eller slettes. Ingen
 kode-/skjemaendring i prod-repoet kreves for rollback.
 
-## 12. Åpne spørsmål
+## 12. Avklarte beslutninger (eier, 2026-06-18)
+
+1. **Prosjektnavn:** `torny-staging`.
+2. **Omfang:** Fase 1 **og** Fase 2 bygges i samme runde (klikkbar UAT med en gang).
+   Fase 3 (keep-alive/skjema-sync) er polish, tas ved behov.
+3. **Sporing:** GitHub-issue (Backlog-milestone) med denne spec-en som body.
+
+## 13. Gjenstående åpne spørsmål
 
 1. **Migrasjonsapplikasjon:** Kan Supabase-MCP-en nå det nye prosjektet (samme org)? Hvis
    ja → Claude påfører alle 107 direkte. Hvis nei → eier limer en samlet SQL-bundle i
    SQL Editor. Avklares ved utførelse (steg 3).
-2. **Prosjektnavn:** `torny-test` foreslått. Eier kan overstyre (`torny-uat`,
-   `torny-staging`, …).
-3. **Fase 2 nå eller senere?** Fase 1 stopper prod-forurensningen alene. Fase 2 (klikkbar
-   UAT) kan komme i samme runde eller utsettes.
