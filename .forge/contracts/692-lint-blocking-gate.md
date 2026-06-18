@@ -40,21 +40,24 @@ eslint-disable directive» (løses av require-fixen).
 
 ## Suksesskriterier
 
-- [ ] **K1 — 0 errors:** `npm run lint` rapporterer 0 errors. (Gate krever dette.)
-- [ ] **K2 — html-link suppressed:** AppVersionFooter har én dokumentert
+- [x] **K1 — 0 errors:** `npm run lint` rapporterer 0 errors. (Gate krever dette.)
+  → `npm run lint` exit 0; «NO PROBLEMS — clean», error|warning-count = 0.
+- [x] **K2 — html-link suppressed:** AppVersionFooter har én dokumentert
   `eslint-disable-next-line @next/next/no-html-link-for-pages` ved `<a href="/legal/privacy">`;
-  alle 20 rapportene borte.
-- [ ] **K3 — require borte:** `InboxClient.test.tsx` bruker `vi.importActual('react')`
-  (ingen `require()`), og InboxClient-testen er fortsatt grønn.
-- [ ] **K4 — effekt-feil suppressed + follow-up:** `useGameFormState.ts:507`-effekten har en
-  dokumentert `eslint-disable-next-line` som forklarer #643-scope-tvangen; eget issue
-  opprettet (med milestone) for derived-state-refaktoren.
-- [ ] **K5 — 0 warnings:** eslint-config ignorerer `^_`-prefiks (args+vars), døde
-  `notFound`-imports slettet → `npm run lint` rapporterer 0 problems totalt.
-- [ ] **K6 — gate flippet:** `continue-on-error: true` fjernet fra lint-steget i
-  `.github/workflows/ci.yml`, og header-/steg-kommentarene oppdatert (ikke lenger «22
-  pre-existing errors»).
-- [ ] **K7 — ingen regresjon:** `npm run typecheck` og `npm test` fortsatt grønne.
+  alle 20 rapportene borte. → `components/ui/AppVersionFooter.tsx`; lint gikk fra
+  «✖ 23 (22 errors)» → «✖ 3 (2 errors)» med én disable.
+- [x] **K3 — require borte:** `InboxClient.test.tsx` bruker `vi.importActual('react')`
+  (ingen `require()`), og InboxClient-testen er fortsatt grønn. → 13/13 passed.
+- [x] **K4 — effekt-feil suppressed + follow-up:** `useGameFormState.ts`-effekten har en
+  dokumentert `eslint-disable-next-line react-hooks/set-state-in-effect` ved
+  `setRegistrationMode`-kallet, med peker til #715; issue #715 opprettet (milestone
+  Backlog).
+- [x] **K5 — 0 warnings:** eslint-config ignorerer `^_`-prefiks (args+vars), 7 ekte døde
+  vars/imports slettet, redundante disables fjernet → `npm run lint` 0 problems totalt.
+- [x] **K6 — gate flippet:** `continue-on-error: true` fjernet fra lint-steget i
+  `.github/workflows/ci.yml` (grep: «OK: no continue-on-error on lint»), header-/steg-
+  kommentarene oppdatert.
+- [x] **K7 — ingen regresjon:** `npm run typecheck` clean, `npm test` 3677 passed (287 filer).
 
 ## Gates
 
