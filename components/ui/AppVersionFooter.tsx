@@ -9,6 +9,10 @@ export function AppVersionFooter() {
         {sha ? ` · ${sha}` : ''}
       </span>
       {' · '}
+      {/* Deliberate <a>, not <Link>: /legal/privacy is a public page reachable
+          past the auth-gate via its own proxy.ts matcher (see CLAUDE.md). A full
+          navigation re-runs that gate; client-side <Link> would not. */}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       <a
         href="/legal/privacy"
         className="underline underline-offset-2 hover:text-text transition-colors"
