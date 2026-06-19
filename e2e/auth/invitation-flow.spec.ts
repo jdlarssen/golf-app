@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { test, expect } from '@playwright/test';
+import { adminClient, signInViaOtp } from '../_helpers/games';
 
 /**
  * Full invitation flow e2e — covers issue #30.
@@ -15,13 +15,15 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
  *     score — kjøres bare hvis `E2E_TEST_GAME_ID` er satt. Ellers logges
  *     blokkeren og fasen hoppes over.
  *
- * OTP-strategi:
- *  Supabase Auth viser ikke OTP-koder til klienten (de sendes via mail).
- *  Vi bruker derfor service-role `auth.admin.generateLink({ type: 'magiclink' })`
- *  som returnerer `email_otp` i responsen. Dette er den kanoniske teknikken
- *  for OTP-testing mot Supabase. Mailen sendes også (Supabase kan ikke
- *  undertrykke det), men testen leser koden direkte fra API-en og lar
- *  send-grenen være best-effort.
+ * OTP-strategi (verify-only, delt med `_helpers/games.ts`):
+ *  Vi driver KUN verify-steget på `/login` — aldri «Send meg kode» (sendCode →
+ *  signInWithOtp). Send-steget er rate-limitet to veier (appens per-IP-bøtte
+ *  `consumeLoginRateLimit` + Supabase sin OTP-send-throttle); når @gate logger
+ *  de samme få e-postene inn fra én CI-IP trippes begge og gir
+ *  `?error=rate_limited`. Den delte `signInViaOtp` minter en gyldig OTP via
+ *  service-role `admin.generateLink({ type: 'magiclink' })` og navigerer rett
+ *  til `?step=verify` — den ekte session-settende stien (verifyOtp → cookie)
+ *  kjøres fortsatt, men send-laget berøres aldri.
  *
  * Env-krav:
  *  - `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (begge fra
@@ -48,76 +50,6 @@ const INVITEE_EMAIL =
   process.env.E2E_INVITEE_EMAIL?.trim().toLowerCase() ??
   `e2e-invitee+${Date.now()}@tornygolf.no`;
 const TEST_GAME_ID = process.env.E2E_TEST_GAME_ID?.trim();
-
-function adminClient(): SupabaseClient {
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    throw new Error(
-      'Supabase service-role env missing — call envReady() first.',
-    );
-  }
-  return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-/**
- * Generates a fresh OTP for the given email via service-role and returns the
- * raw `email_otp` string. Works whether or not the user already exists —
- * `generateLink({type:'magiclink'})` creates the user on demand if needed.
- *
- * Always strips any whitespace before returning so the test's `fill()` call
- * matches the digits-only pattern enforced by VerifyCodeForm (the iOS quirk
- * that motivated the regex-strip is the same one we sidestep here).
- */
-async function fetchOtpForEmail(email: string): Promise<string> {
-  const admin = adminClient();
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: 'magiclink',
-    email,
-  });
-  if (error) {
-    throw new Error(`generateLink for ${email} failed: ${error.message}`);
-  }
-  const otp = data?.properties?.email_otp?.replace(/\s+/g, '');
-  if (!otp) {
-    throw new Error(`generateLink returned no email_otp for ${email}`);
-  }
-  return otp;
-}
-
-/**
- * Runs the two-step OTP login UI on the given page for an email. Asserts the
- * URL transitions step=email → step=verify → final destination (usually `/`
- * or the `next` redirect). Does NOT navigate to /login itself — caller does
- * that so they can pass `?next=...` if desired.
- */
-async function signInViaOtp(page: Page, email: string) {
-  // /login har ingen «Logg inn»-heading (BrandHero viser «Tørny»); «Logg inn» er
-  // verify-stegets knapp. Vent på e-post-feltet i stedet (#674-funn).
-  await expect(page.getByLabel('E-post')).toBeVisible();
-  await page.getByLabel('E-post').fill(email);
-  await page.getByRole('button', { name: 'Send meg kode' }).click();
-
-  // Wait for the step=verify redirect to settle before fetching the OTP.
-  // We fetch the OTP AFTER sendCode has run because `generateLink` issues a
-  // fresh code and the most recent one is the one Supabase accepts during
-  // verifyOtp.
-  await expect(page).toHaveURL(/\bstep=verify\b/, { timeout: 15_000 });
-
-  const otp = await fetchOtpForEmail(email);
-
-  await page.getByLabel('Kode').fill(otp);
-
-  // The form auto-submits at length 8 (see VerifyCodeForm OTP_LENGTH).
-  // We also explicitly click as a fallback in case the auto-submit
-  // path didn't fire (e.g. shorter OTP from a project with 6-digit codes).
-  // Either way we wait for the URL to leave /login.
-  if (otp.length < 8) {
-    await page.getByRole('button', { name: 'Logg inn' }).click();
-  }
-
-  await expect(page).not.toHaveURL(/\/login\b/, { timeout: 15_000 });
-}
 
 /**
  * Removes any prior auth.users + public.users + invitations rows for the
