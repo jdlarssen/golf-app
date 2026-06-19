@@ -42,6 +42,13 @@ export async function consumeRegistrationRateLimit(opts: {
   /** Vinduslengde i sekunder. Default 24 timer. */
   windowSeconds?: number;
 }): Promise<RegistrationRateLimitResult> {
+  // CI / test-env bypass: when SELFREG_RATE_LIMIT_DISABLED=true, skip all
+  // bucket checks so the shared test player doesn't exhaust its 5/24h quota
+  // after repeated @gate runs against staging. Mirrors the RESEND_STUB_SEND
+  // pattern in lib/mail/inviteNotification.ts. Prod never sets this var (#698).
+  if (process.env.SELFREG_RATE_LIMIT_DISABLED === 'true') {
+    return { ok: true };
+  }
   const {
     userId,
     ip,

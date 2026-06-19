@@ -91,3 +91,7 @@ jobs:
           # Stub Resend in CI so the invite-notification path reaches status=sent
           # without a real API key. Prod never sets this variable (#698).
           RESEND_STUB_SEND: 'true'
+          # Disable the self-registration rate limit (5 signups/24h per player)
+          # so the shared E2E_PLAYER doesn't exhaust its quota across repeated
+          # @gate runs against staging. Prod never sets this variable (#698).
+          SELFREG_RATE_LIMIT_DISABLED: 'true'
