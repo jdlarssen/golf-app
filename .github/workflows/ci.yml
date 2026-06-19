@@ -58,11 +58,11 @@ jobs:
   # Until RUN_E2E is set this job is skipped (never red), so it can't block a PR.
   # Activated 2026-06-17: all 5 secrets + RUN_E2E=true are configured (#674).
   #
-  # Scope: `npm run e2e:gate` runs ONLY the three @gate-tagged #674 tests
-  # (golden-path + cup + the liga finished-flight #647 reproducer). Other
-  # authenticated specs — the pre-existing signup/invitation suite (needs a
-  # Resend key) and the older #453 liga create/empty-state tests (flaky) — are
-  # excluded from this safety-net gate and tracked in #698.
+  # Scope: `npm run e2e:gate` runs the @gate-tagged specs — the three #674 tests
+  # (golden-path + cup + the liga finished-flight #647 reproducer) plus the five
+  # pre-existing signup/invitation specs brought in by #698 (Resend stubbed via
+  # RESEND_STUB_SEND below, norsk-copy asserts swapped for data-testid). Still
+  # excluded: the older #453 liga create/empty-state tests (flaky).
   e2e:
     if: ${{ vars.RUN_E2E == 'true' }}
     runs-on: ubuntu-latest
