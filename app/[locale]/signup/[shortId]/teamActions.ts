@@ -16,6 +16,7 @@ import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 
 /**
  * Lag-formasjons-actions for selv-påmelding (#199 chunks 8+9).
@@ -734,16 +735,25 @@ export async function declineTeamInvite(
     return { ok: false, error: 'game_locked' };
   }
 
-  const { error: updateError } = await admin
-    .from('game_registration_requests')
-    .update({
-      status: 'rejected',
-      decided_at: new Date().toISOString(),
-      decided_by_user_id: user.id,
-    })
-    .eq('id', req.id);
-  if (updateError) {
-    console.error('[declineTeamInvite] update failed', updateError);
+  // #712: expectAffected catches both DB errors and 0-row no-ops. 0 rows here
+  // means the request was already decided (race: captain removed the member
+  // at the same time) → return db_error rather than notifying the captain of
+  // a withdrawal that was never recorded.
+  try {
+    expectAffected(
+      await admin
+        .from('game_registration_requests')
+        .update({
+          status: 'rejected',
+          decided_at: new Date().toISOString(),
+          decided_by_user_id: user.id,
+        })
+        .eq('id', req.id)
+        .select('id'),
+      'declineTeamInvite',
+    );
+  } catch (updateErr) {
+    console.error('[declineTeamInvite] update failed', updateErr);
     return { ok: false, error: 'db_error' };
   }
 
