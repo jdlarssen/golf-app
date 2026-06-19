@@ -7,6 +7,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { supportsWithdrawal } from '@/lib/scoring';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 
 /**
  * Self-withdraw fra et spill (#199 chunk 11).
@@ -107,17 +108,23 @@ export async function withdrawFromGame(
       return { ok: false, error: 'not_registered' };
     }
     // UPDATE game_players SET withdrawn_at, withdrawn_by_user_id.
-    const { error: updateError } = await admin
-      .from('game_players')
-      .update({
-        withdrawn_at: new Date().toISOString(),
-        withdrawn_by_user_id: user.id,
-      })
-      .eq('game_id', gameId)
-      .eq('user_id', user.id);
-
-    if (updateError) {
-      console.error('[withdrawFromGame] active update failed', updateError);
+    // #712: expectAffected catches 0-row no-op (row vanished between the
+    // pre-flight read above and this write — e.g. concurrent admin removal).
+    try {
+      expectAffected(
+        await admin
+          .from('game_players')
+          .update({
+            withdrawn_at: new Date().toISOString(),
+            withdrawn_by_user_id: user.id,
+          })
+          .eq('game_id', gameId)
+          .eq('user_id', user.id)
+          .select('user_id'),
+        'withdrawFromGame/active',
+      );
+    } catch (updateErr) {
+      console.error('[withdrawFromGame] active update failed', updateErr);
       return { ok: false, error: 'db_error' };
     }
 
@@ -290,14 +297,20 @@ export async function undoWithdraw(
     return { ok: false, error: 'not_registered' };
   }
 
-  const { error: updateError } = await admin
-    .from('game_players')
-    .update({ withdrawn_at: null, withdrawn_by_user_id: null })
-    .eq('game_id', gameId)
-    .eq('user_id', user.id);
-
-  if (updateError) {
-    console.error('[undoWithdraw] update failed', updateError);
+  // #712: expectAffected catches 0-row no-op (row vanished or withdrawn_at
+  // already null — e.g. concurrent undo by admin).
+  try {
+    expectAffected(
+      await admin
+        .from('game_players')
+        .update({ withdrawn_at: null, withdrawn_by_user_id: null })
+        .eq('game_id', gameId)
+        .eq('user_id', user.id)
+        .select('user_id'),
+      'undoWithdraw',
+    );
+  } catch (updateErr) {
+    console.error('[undoWithdraw] update failed', updateErr);
     return { ok: false, error: 'db_error' };
   }
 

@@ -133,8 +133,8 @@ describe('withdrawFromGame', () => {
       },
       // 2) game_players — bruker er påmeldt
       { data: { user_id: USER_ID, team_number: null }, error: null },
-      // 3) UPDATE game_players (set withdrawn_at)
-      { data: null, error: null },
+      // 3) UPDATE game_players (set withdrawn_at) — #712: .select() returns affected rows
+      { data: [{ user_id: USER_ID }], error: null },
     ]);
     const { withdrawFromGame } = await import('./withdrawActions');
 
@@ -334,8 +334,8 @@ describe('undoWithdraw', () => {
         data: { user_id: USER_ID, withdrawn_at: '2026-06-01T10:00:00.000Z' },
         error: null,
       },
-      // 3) UPDATE game_players (clear withdrawn_at)
-      { data: null, error: null },
+      // 3) UPDATE game_players (clear withdrawn_at) — #712: .select() returns affected rows
+      { data: [{ user_id: USER_ID }], error: null },
     ]);
     const { undoWithdraw } = await import('./withdrawActions');
 
