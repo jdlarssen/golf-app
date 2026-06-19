@@ -275,7 +275,8 @@ describe('adminApproveScorecard', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users (loadRole)
       { data: { status: 'active' }, error: null }, // games.select(status)
-      { data: null, error: null }, // game_players.update (approved_at)
+      // #712: expectAffected requires .select() on the mutation. 1-row response = success.
+      { data: [{ user_id: 'user-a' }], error: null }, // game_players.update (approved_at) → 1 row
       { data: { name: 'Vinter-cup' }, error: null }, // games.select(name) for notify
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -296,7 +297,8 @@ describe('adminApproveScorecard', () => {
       { data: { is_admin: false, name: 'Kari' }, error: null }, // users (loadRole)
       { data: { created_by: 'creator-1' }, error: null }, // games.created_by (owner)
       { data: { status: 'active' }, error: null }, // games.select(status)
-      { data: null, error: null }, // game_players.update (approved_at)
+      // #712: expectAffected requires .select() on the mutation. 1-row response = success.
+      { data: [{ user_id: 'user-a' }], error: null }, // game_players.update → 1 row
       { data: { name: 'Lørdagsrunde' }, error: null }, // games.select(name)
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({

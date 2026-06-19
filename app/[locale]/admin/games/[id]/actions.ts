@@ -25,6 +25,7 @@ import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import {
   notifyPlayersGameFinished,
   notifyPlayersGameStarted,
@@ -287,20 +288,38 @@ export async function adminApproveScorecard(
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
-  const { error } = await supabase
-    .from('game_players')
-    .update({
-      approved_at: new Date().toISOString(),
-      approved_by_user_id: user.id,
-      rejection_reason: null,
-    })
-    .eq('game_id', gameId)
-    .eq('user_id', playerUserId)
-    .not('submitted_at', 'is', null)
-    .is('approved_at', null);
-  if (error) {
-    console.error('[adminApproveScorecard] approve update failed', error);
-    redirect({ href: `${detailPath}?error=db_players`, locale });
+  // #712: expectAffected turns a silent 0-row UPDATE into an explicit failure.
+  // 0 rows here means the scorecard was already approved (idempotent no-op) or
+  // the player row doesn't exist. Either way there's nothing to approve, so
+  // we redirect to ?status=admin_approved (idempotent) rather than firing the
+  // audit log and notification for a write that never happened.
+  try {
+    expectAffected(
+      await supabase
+        .from('game_players')
+        .update({
+          approved_at: new Date().toISOString(),
+          approved_by_user_id: user.id,
+          rejection_reason: null,
+        })
+        .eq('game_id', gameId)
+        .eq('user_id', playerUserId)
+        .not('submitted_at', 'is', null)
+        .is('approved_at', null)
+        .select('user_id'),
+      'adminApproveScorecard',
+    );
+  } catch (err) {
+    // NoRowsAffectedError → already approved (idempotent). Plain Error → DB failure.
+    const isNoRows =
+      err instanceof Error && err.constructor.name === 'NoRowsAffectedError';
+    if (!isNoRows) {
+      console.error('[adminApproveScorecard] approve update failed', err);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
+    // Idempotent: scorecard already approved → treat as success without re-notifying.
+    revalidateTag(`game-${gameId}`, 'max');
+    redirect({ href: `${detailPath}?status=admin_approved`, locale });
   }
 
   await logAdminEvent({
