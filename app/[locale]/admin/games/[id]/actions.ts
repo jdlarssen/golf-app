@@ -25,7 +25,7 @@ import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
-import { expectAffected } from '@/lib/supabase/affectedRows';
+import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import {
   notifyPlayersGameFinished,
   notifyPlayersGameStarted,
@@ -311,8 +311,9 @@ export async function adminApproveScorecard(
     );
   } catch (err) {
     // NoRowsAffectedError → already approved (idempotent). Plain Error → DB failure.
-    const isNoRows =
-      err instanceof Error && err.constructor.name === 'NoRowsAffectedError';
+    // instanceof (not constructor.name) survives prod server minification — the
+    // helper restores the prototype chain for exactly this check.
+    const isNoRows = err instanceof NoRowsAffectedError;
     if (!isNoRows) {
       console.error('[adminApproveScorecard] approve update failed', err);
       redirect({ href: `${detailPath}?error=db_players`, locale });

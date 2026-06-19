@@ -311,6 +311,27 @@ describe('adminApproveScorecard', () => {
     expect(lastRedirect()).toBe('/games/game-1/spillere?status=admin_approved');
   });
 
+  it('admin: 0-row update (already approved) → idempotent success, no re-notify', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users (loadRole)
+      { data: { status: 'active' }, error: null }, // games.select(status)
+      // #712: scorecard already approved → UPDATE matches 0 rows. expectAffected
+      // throws NoRowsAffectedError; the catch treats it as idempotent success
+      // WITHOUT firing the audit log or notification (the latent bug #712 fixed).
+      { data: [], error: null }, // game_players.update → 0 rows
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { adminApproveScorecard } = await import('./actions');
+
+    await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved');
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(logAdminEventMock).not.toHaveBeenCalled();
+  });
+
   it('redirects with ?error=not_active for a non-active game', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
