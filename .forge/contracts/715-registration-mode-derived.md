@@ -80,13 +80,13 @@ Med effekten var klubb-låsen **destruktiv**: velg «open» → fest klubb → e
 
 ## Akseptansekriterier
 
-- [ ] **AC1 — Effekten fjernet.** `grep -n "useEffect" useGameFormState.ts` returnerer **0** treff (både kall og import borte). Ingen `eslint-disable.*set-state-in-effect` igjen i fila.
-- [ ] **AC2 — Derivert effektiv modus.** `registrationMode` er en derivert `const` (`isClubScoped ? 'invite_only' : registrationModeChoice`); det rå valget ligger i egen `useState`-variabel satt av `setRegistrationMode`. Verifiseres ved kodelesing (file:line) + at hookens retur fortsatt eksponerer `registrationMode` og `setRegistrationMode`.
-- [ ] **AC3 — Klubb låses i payloaden uavhengig av forrige valg.** Co-located test: velg `open` → fest klubb → `result.current.registrationMode === 'invite_only'`. Pre-fylt klubb-spill med `registration_mode: 'open'` → `'invite_only'` ved mount. (Eksisterende #643-tester dekker dette; de skal passere for den NYE deriverte grunnen.)
-- [ ] **AC4 — Ikke-klubb bevarer valg.** Co-located test: `setRegistrationMode('open')` uten klubb → `registrationMode === 'invite_only'`? Nei → `'open'`. (Eksisterende test 3.)
-- [ ] **AC5 — Lint grønn.** `npx eslint "app/[locale]/admin/games/new/useGameFormState.ts"` gir 0 errors/warnings (ingen `set-state-in-effect`, ingen unused `useEffect`-import).
-- [ ] **AC6 — Typecheck grønn.** `npm run typecheck` (tsc --noEmit) passerer.
-- [ ] **AC7 — Konsumenter urørt.** `git diff --name-only` viser at `GameForm.tsx`, `GameWizard.tsx`, `RegistrationSection.tsx` IKKE er endret (bekrefter null-konsument-churn-designet).
+- [x] **AC1 — Effekten fjernet.** `grep -n "useEffect"` → `NONE ✓` (både kall og import borte). Ingen `eslint-disable`-direktiv igjen (kun en prosa-kommentar som navngir regelen — påvirker ikke eslint).
+- [x] **AC2 — Derivert effektiv modus.** `useGameFormState.ts:514-516` — `const registrationMode: RegistrationMode = isClubScoped ? 'invite_only' : registrationModeChoice;`. Rå valg i `registrationModeChoice` (`:471`) satt av `setRegistrationMode`. Retur (`:1589-1590`) eksponerer fortsatt `registrationMode` + `setRegistrationMode`.
+- [x] **AC3 — Klubb låses i payloaden uavhengig av forrige valg.** `vitest run` → 35 passed; #643-test 1 (open→klubb→invite_only) + test 2 (pre-fylt klubb open→invite_only ved mount) grønne for den nye deriverte grunnen.
+- [x] **AC4 — Ikke-klubb bevarer valg.** #643-test 3 grønn (`setRegistrationMode('open')` uten klubb → `'open'`).
+- [x] **AC5 — Lint grønn.** `npx eslint "…/useGameFormState.ts"` → `ESLINT CLEAN ✓` (ingen set-state-in-effect, ingen unused import).
+- [x] **AC6 — Typecheck grønn.** `npm run typecheck` → `TYPECHECK CLEAN ✓` (tsc --noEmit, hele prosjektet).
+- [x] **AC7 — Konsumenter urørt.** `git status --short` → kun `M app/[locale]/admin/games/new/useGameFormState.ts` (+ contract-doc). `GameForm.tsx`/`GameWizard.tsx`/`RegistrationSection.tsx` uendret.
 
 ---
 
