@@ -54,13 +54,13 @@ Begrens kategori-valget til det tee-en faktisk rater. Tre lag, ingen `useEffect`
 
 ## Akseptansekriterier
 
-- [ ] **AC1 — Tilgjengelighet derivert.** `teeGenderAvailability` reflekterer valgt tees `has_*`; default alle-true uten valgt tee. (file:line + Type A-test.)
-- [ ] **AC2 — Klem ved tee-bytte.** Junior-spiller (default `J`) + bytt til herre-only-tee → `playerGenders[pid]` blir `M`. Multi-kategori-tee bevarer eksisterende gyldig valg. (Type A-test.)
-- [ ] **AC3 — `clampGenderToTee` ren + korrekt.** `it.each` over (g, avail)→forventet: J på {M} → M; D på {M,J} → M (D utilgjengelig, første tilgjengelige); M på {M,D,J} → M; J på {M,D,J} → J.
-- [ ] **AC4 — Toggle disabler utilgjengelig kategori.** Begge toggle-steder: knapp for kategori tee-en ikke rater er `disabled`. (Kodelesing + evt. én fokusert render-assert.)
-- [ ] **AC5 — Defensiv publish-guard.** Tving (via `setPlayerGenders`) en spiller til `J` på herre-only-tee → `canPublish === false` og `missingForPublish` inneholder kategori-rating-meldingen. (Type A-test.)
-- [ ] **AC6 — i18n komplett + bilingual.** Ny bruker-copy (disabled-knapp `title` + publish-melding) finnes i `messages/no.json` **og** `messages/en.json`; `catalogParity`-test grønn; humanizer kjørt på norsk copy.
-- [ ] **AC7 — Gates grønne.** Co-located test (`useGameFormState.test.ts`) + `tsc --noEmit` + `eslint` på endrede filer, alle grønne. PATCH-bump + CHANGELOG-oppføring i samme commit.
+- [x] **AC1 — Tilgjengelighet derivert.** `teeGenderAvailability` (useGameFormState.ts) deriverer `{M,D,J}` fra `selectedTeeBox?.has_*`, default alle-true uten tee. Type A-tester «teeGenderAvailability (AC1)» grønne (default, herre-only, multi-kategori, nullstilling).
+- [x] **AC2 — Klem ved tee-bytte.** `setTeeBoxId`-wrapper klemmer alle `playerGenders` via `clampGenderToTee`. Tester «klem ved tee-bytte (AC2)»: junior→M + dame→M på herre-only; junior→M på M+D; dame beholder D; herre beholder M. Alle grønne.
+- [x] **AC3 — `clampGenderToTee` ren + korrekt.** Eksportert ren fn; `it.each` med 6 meningsfulle case (inkl. J på {M,D-utilgj,J-utilgj}→D). Grønn.
+- [x] **AC4 — Toggle disabler utilgjengelig kategori.** Begge toggle-steder bruker delt `PlayerGenderToggle` med `disabled={!teeGenderAvailability[g]}` + `title`. Skjult input binder til allerede-klemt state (ingen lekkasje). Bekreftet av evaluator (kodelesing).
+- [x] **AC5 — Defensiv publish-guard.** `playersWithUnratedCategory` filtrerer `selectedPlayerIds`; lagt i `canPublish` + `missingForPublish`. Test «defensiv publish-guard (AC5)»: gyldig solo-stableford publiserbart → tving ugyldig kategori → `canPublish === false` + melding lagt til. Grønn.
+- [x] **AC6 — i18n komplett + bilingual.** `categoryNotRated` + `categoryMissingRating` i `messages/no.json` **og** `messages/en.json`; `catalogParity.test.ts` 3 grønne; humanizer kjørt (anglicismen «rater»→«støtter», «Denne tee-en»→«Tee-en mangler»).
+- [x] **AC7 — Gates grønne.** `useGameFormState.test` 51 passed · `catalogParity` 3 passed · eslint clean · `tsc --noEmit` clean. PATCH-bump 1.133.16→1.133.17 + CHANGELOG i samme `fix(...)`-commit (510b4132). Forge-evaluator: ACCEPT, ingen blokkerende funn.
 
 ---
 
