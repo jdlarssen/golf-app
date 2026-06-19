@@ -18,7 +18,7 @@ import {
  * «Meld meg på»-knapp.
  */
 
-test.describe('Påmelding · invite_only-modus (full flow)', () => {
+test.describe('Påmelding · invite_only-modus (full flow) @gate', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
   test.slow();
 
@@ -52,16 +52,18 @@ test.describe('Påmelding · invite_only-modus (full flow)', () => {
       { timeout: 15_000 },
     );
 
+    // «invite_only» utan invitasjon: viser be-om-plass-containeren (data-testid
+    // i stedet for norsk copy — test-disiplin D). Etter #368 er den totale
+    // blindvegen erstatta med ein RegistrationForm i manual_approval-modus,
+    // så «Send forespørsel»-knappen er no tilsikta til stades. Berre
+    // «Meld meg på» (open-mode-knappen) skal vere fråverande.
     await expect(
-      page.getByText(/Dette spillet krever invitasjon/i),
+      page.getByTestId('invite-only-banner'),
     ).toBeVisible();
 
-    // Ingen påmeldings-knapper skal være synlige.
+    // «Meld meg på» (open-mode-knapp) skal ikkje visast på invite_only.
     await expect(
       page.getByRole('button', { name: 'Meld meg på' }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: 'Send forespørsel' }),
     ).toHaveCount(0);
   });
 });

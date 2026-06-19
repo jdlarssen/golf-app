@@ -88,3 +88,6 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_PLAYER_EMAIL: ${{ secrets.E2E_PLAYER_EMAIL }}
+          # Stub Resend in CI so the invite-notification path reaches status=sent
+          # without a real API key. Prod never sets this variable (#698).
+          RESEND_STUB_SEND: 'true'

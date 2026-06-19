@@ -69,7 +69,7 @@ export function RegistrationForm({
   // suksess redirecter via server-action, så vi når aldri hit i den grenen.
   if (result?.ok && mode === 'manual_approval') {
     return (
-      <Banner tone="success">
+      <Banner tone="success" testId="request-sent-banner">
         {t('requestSentBanner')}
       </Banner>
     );

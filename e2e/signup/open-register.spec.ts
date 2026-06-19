@@ -38,7 +38,7 @@ test.describe('Påmelding · open-modus (logged-out smoke)', () => {
   });
 });
 
-test.describe('Påmelding · open-modus (full flow)', () => {
+test.describe('Påmelding · open-modus (full flow) @gate', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
   test.slow();
 

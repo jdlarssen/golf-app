@@ -23,7 +23,7 @@ import {
  * `invitation-flow.spec.ts`. Ingen state lekker mellom dem.
  */
 
-test.describe('Påmelding · manual_approval-modus (full flow)', () => {
+test.describe('Påmelding · manual_approval-modus (full flow) @gate', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
   test.slow();
 
@@ -68,9 +68,10 @@ test.describe('Påmelding · manual_approval-modus (full flow)', () => {
         .getByLabel('Valgfri hilsen til arrangøren')
         .fill(hilsen);
       await playerPage.getByRole('button', { name: 'Send forespørsel' }).click();
-      // Suksess-banner vises i stedet for redirect.
+      // Suksess-banner vises i stedet for redirect. Bruk data-testid (ikkje
+      // norsk copy) per test-disiplin D.
       await expect(
-        playerPage.getByText(/Forespørsel sendt/i),
+        playerPage.getByTestId('request-sent-banner'),
       ).toBeVisible({ timeout: 15_000 });
     });
 

@@ -92,6 +92,15 @@ function resolveModeHint(
 export async function sendInviteNotification(
   params: InviteNotificationParams,
 ): Promise<void> {
+  // CI / test-env stub: when RESEND_STUB_SEND=true the function returns early
+  // without touching Resend. Prod never sets this variable, so the full send
+  // path is unchanged there. The invitation row has already been written before
+  // this function is called, so the flow reaches status=sent as expected.
+  if (process.env.RESEND_STUB_SEND === 'true') {
+    console.log('[sendInviteNotification] stub mode — skipping Resend send');
+    return;
+  }
+
   const { to, invitedByName, gameName, gameMode, locale } = params;
   const loc = resolveMailLocale(locale);
   const t = getMailTranslator(locale);

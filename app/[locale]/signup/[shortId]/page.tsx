@@ -412,7 +412,7 @@ function renderBody({
     // arrangøren om plass. Gjenbruker forespørsel-flyten — `requestApproval`
     // godtar nå invite_only. Spillet forblir uoppdagbart i «Finn turneringer».
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" data-testid="invite-only-banner">
         <p className="font-sans text-sm leading-relaxed text-text">
           {t('inviteNotInvitedIntro')}
         </p>
