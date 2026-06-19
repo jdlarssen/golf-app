@@ -146,6 +146,22 @@ export function defaultTexasHandicapPct(teamSize: TeamSize): number {
   return 25;
 }
 
+/**
+ * Klemmer en spiller-kategori til nærmeste tilgjengelige kategori på en tee.
+ * Returnerer `g` hvis den er tilgjengelig, ellers første av ['M','D','J'] som
+ * er tilgjengelig, ellers `g` som siste fallback (aldri tom streng).
+ *
+ * Ren, importerbar for tester (AC3).
+ */
+export function clampGenderToTee(
+  g: 'M' | 'D' | 'J',
+  avail: { M: boolean; D: boolean; J: boolean },
+): 'M' | 'D' | 'J' {
+  if (avail[g]) return g;
+  const fallback = (['M', 'D', 'J'] as const).find((c) => avail[c]);
+  return fallback ?? g;
+}
+
 // Re-derive gender-toggle defaults fra spillerens profil. Brukes ved mount og
 // ved bane-bytte i `setCourseId`, slik at admin ikke mister D/J-merkene når
 // banen endres etter at wizard har derived defaults én gang.
@@ -218,7 +234,7 @@ export function useGameFormState({
   const [courseId, setCourseIdRaw] = useState<string>(
     initialValues?.course_id ?? '',
   );
-  const [teeBoxId, setTeeBoxId] = useState<string>(
+  const [teeBoxId, setTeeBoxIdRaw] = useState<string>(
     initialValues?.tee_box_id ?? '',
   );
   const [playerGenders, setPlayerGenders] = useState<Record<string, 'M' | 'D' | 'J'>>(
@@ -535,8 +551,35 @@ export function useGameFormState({
   // re-derive holder D/J-merkene istedenfor å kollapse alle til 'M'.
   function setCourseId(next: string) {
     setCourseIdRaw(next);
-    setTeeBoxId('');
+    setTeeBoxIdRaw(''); // ingen klem ved tee-nullstilling — ingen tee valgt ennå
     setPlayerGenders(deriveDefaultGenders(players));
+  }
+
+  // Tee-bytte: sett ny tee OG klem alle spillere til en tilgjengelig kategori
+  // på den nye tee-en. Speiler setCourseId-mønsteret for setter-wrappere.
+  // Tee-en slås opp i HELE kurs-listen (ikke `availableTees`, som avhenger av at
+  // `courseId` allerede er committet i en tidligere render). Tee-id-er er globalt
+  // unike, så dette finner riktig tee uavhengig av om kurs og tee settes i samme
+  // batch — og holder klemmen robust mot render-timing. Tom/ukjent id → ingen
+  // klemming (ingen tee = ingen begrensning).
+  function setTeeBoxId(nextTeeId: string) {
+    setTeeBoxIdRaw(nextTeeId);
+    const newTee = courses
+      .flatMap((c) => c.tee_boxes)
+      .find((t) => t.id === nextTeeId);
+    if (!newTee) return;
+    const avail = {
+      M: newTee.has_mens,
+      D: newTee.has_ladies,
+      J: newTee.has_juniors,
+    };
+    setPlayerGenders((prev) => {
+      const clamped: Record<string, 'M' | 'D' | 'J'> = {};
+      for (const [pid, g] of Object.entries(prev)) {
+        clamped[pid] = clampGenderToTee(g, avail);
+      }
+      return clamped;
+    });
   }
 
   // #373: setter for expectedPlayerCount. Når antallet endres slik at det
@@ -714,6 +757,27 @@ export function useGameFormState({
   }, [players, playerSearch, selectedPlayerIds]);
 
   const availableTees = selectedCourse?.tee_boxes ?? [];
+
+  // Valgt tee-boks-objekt — null når ingen tee er valgt ennå. Avhenger av det
+  // memoiserte `selectedCourse` (ikke `availableTees`, som er en fersk array
+  // hver render → ville re-kjørt memoet hver gang).
+  const selectedTeeBox = useMemo(
+    () => selectedCourse?.tee_boxes.find((t) => t.id === teeBoxId) ?? null,
+    [selectedCourse, teeBoxId],
+  );
+
+  // Hvilke kjønnskategorier den valgte tee-en faktisk rater. Alle-true
+  // når ingen tee er valgt (ingen begrensning ennå). Brukes til å disable
+  // utilgjengelige kategori-knapper i TeamsAssignmentSection og til den
+  // defensive publish-guarden (AC1).
+  const teeGenderAvailability = useMemo(
+    () => ({
+      M: selectedTeeBox?.has_mens ?? true,
+      D: selectedTeeBox?.has_ladies ?? true,
+      J: selectedTeeBox?.has_juniors ?? true,
+    }),
+    [selectedTeeBox],
+  );
 
   // Map team -> [playerId, playerId | undefined] so each lag-card can display
   // its two slots even before they're filled.
@@ -1311,6 +1375,13 @@ export function useGameFormState({
   // valgfri ved publish — speiler effective-mode-flippen i
   // `buildGameInsertPayload`. Admin kan publisere et tomt spill og la
   // spillerne melde seg på via lenken.
+  // Defensiv publish-backstop (#721): spillere med kategori tee-en ikke rater
+  // bør aldri nå publisering takket være klem-ved-tee-bytte, men om pre-
+  // eksisterende data eller en edge-case omgår UI-klemmet, stopper vi her.
+  const playersWithUnratedCategory = selectedPlayerIds.filter(
+    (pid) => !teeGenderAvailability[playerGenders[pid] ?? 'M'],
+  );
+
   const canPublish =
     courseId !== '' &&
     teeBoxId !== '' &&
@@ -1318,7 +1389,8 @@ export function useGameFormState({
     (isRoundRobin
       ? roundRobinAllowancePctValid
       : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey || isPatsome || isTeamMatchplay || allowanceValid) &&
-    hasTeeOff;
+    hasTeeOff &&
+    playersWithUnratedCategory.length === 0;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
   // best-ball-stien teller opp til 8 spillere + lag-/flight-fordeling,
@@ -1330,6 +1402,10 @@ export function useGameFormState({
   if (courseId === '') missingForPublish.push(tMissing('course'));
   if (teeBoxId === '') missingForPublish.push(tMissing('teeBox'));
   if (!hasTeeOff) missingForPublish.push(tMissing('teeOffTime'));
+  // #721: backstop — kategori uten tee-rating bør aldri nå hit takket være
+  // klem-ved-tee-bytte, men pre-eksisterende edit-data kan ha ugyldig tilstand.
+  if (playersWithUnratedCategory.length > 0)
+    missingForPublish.push(tMissing('categoryMissingRating'));
   // Når selv-påmelding er på er spillerlisten valgfri ved publish; vi
   // hopper over per-modus completeness-meldingene helt. hcp_allowance-
   // sjekken nederst gjelder fortsatt fordi den er en konfig-verdi, ikke
@@ -1633,6 +1709,7 @@ export function useGameFormState({
     selectedCourse,
     filteredPlayers,
     availableTees,
+    teeGenderAvailability,
     playersByTeam,
     teamsComplete,
     flightsComplete,

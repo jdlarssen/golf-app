@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGameFormState, deriveDefaultGenders } from './useGameFormState';
+import { useGameFormState, deriveDefaultGenders, clampGenderToTee } from './useGameFormState';
 import type { CourseOption, PlayerOption } from './GameForm';
 
 const COURSES: CourseOption[] = [
@@ -16,6 +16,22 @@ const COURSES: CourseOption[] = [
     name: 'Bane B',
     tee_boxes: [
       { id: 'tee-b1', name: 'Rød', has_mens: true, has_ladies: true, has_juniors: false },
+    ],
+  },
+  // Herre-only tee — brukt av AC1/AC2/AC3/AC5
+  {
+    id: 'course-c',
+    name: 'Bane C',
+    tee_boxes: [
+      { id: 'tee-c1', name: 'Svart', has_mens: true, has_ladies: false, has_juniors: false },
+    ],
+  },
+  // Multi-kategori tee (herre + dame, ingen junior) — brukt av AC2
+  {
+    id: 'course-d',
+    name: 'Bane D',
+    tee_boxes: [
+      { id: 'tee-d1', name: 'Blå', has_mens: true, has_ladies: true, has_juniors: false },
     ],
   },
 ];
@@ -462,5 +478,167 @@ describe('useGameFormState — klubb-turnering låser registreringsmodus (#643)'
     });
     expect(result.current.isClubScoped).toBe(false);
     expect(result.current.registrationMode).toBe('open');
+  });
+});
+
+// ─── AC3 — clampGenderToTee (ren helper) ─────────────────────────────────────
+
+describe('clampGenderToTee — AC3', () => {
+  it.each([
+    // g, avail, expected
+    ['J', { M: true, D: false, J: false }, 'M'],   // junior på herre-only → M
+    ['D', { M: true, D: false, J: true }, 'M'],    // dame utilgjengelig, første tilgjengelige er M
+    ['M', { M: true, D: true, J: true }, 'M'],     // M tilgjengelig → uendret
+    ['J', { M: true, D: true, J: true }, 'J'],     // J tilgjengelig → uendret
+    ['D', { M: false, D: true, J: true }, 'D'],    // D tilgjengelig → uendret
+    ['J', { M: false, D: true, J: false }, 'D'],   // J utilgjengelig, M utilgjengelig → D
+  ] as const)(
+    '%s på avail=%o → %s',
+    (g, avail, expected) => {
+      expect(clampGenderToTee(g, avail)).toBe(expected);
+    },
+  );
+});
+
+// ─── AC1 — teeGenderAvailability derivasjon ───────────────────────────────────
+
+describe('useGameFormState — teeGenderAvailability (AC1)', () => {
+  it('default alle-true når ingen tee er valgt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    expect(result.current.teeGenderAvailability).toEqual({ M: true, D: true, J: true });
+  });
+
+  it('reflekterer herre-only tee korrekt (course-c tee-c1)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.setCourseId('course-c');
+      result.current.setTeeBoxId('tee-c1');
+    });
+    expect(result.current.teeGenderAvailability).toEqual({ M: true, D: false, J: false });
+  });
+
+  it('reflekterer multi-kategori tee (course-d tee-d1: M+D, ingen J)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.setCourseId('course-d');
+      result.current.setTeeBoxId('tee-d1');
+    });
+    expect(result.current.teeGenderAvailability).toEqual({ M: true, D: true, J: false });
+  });
+
+  it('tilbake til alle-true når tee-valget nullstilles (bane-bytte)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.setCourseId('course-c');
+      result.current.setTeeBoxId('tee-c1');
+    });
+    act(() => {
+      result.current.setCourseId('course-a'); // nullstiller teeBoxId til ''
+    });
+    expect(result.current.teeGenderAvailability).toEqual({ M: true, D: true, J: true });
+  });
+});
+
+// ─── AC2 — klem ved tee-bytte ────────────────────────────────────────────────
+
+describe('useGameFormState — klem ved tee-bytte (AC2)', () => {
+  it('junior-spiller klemes til M ved bytte til herre-only-tee', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    // Legg til junior-spiller og velg herre-only tee
+    act(() => {
+      result.current.togglePlayer('p-junior');
+      result.current.setCourseId('course-c');
+      result.current.setTeeBoxId('tee-c1');
+    });
+    // Junior ble koreografert til M (eneste tilgjengelige)
+    expect(result.current.playerGenders['p-junior']).toBe('M');
+  });
+
+  it('dame-spiller klemes til M ved bytte til herre-only-tee', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.togglePlayer('p-dame');
+      result.current.setCourseId('course-c');
+      result.current.setTeeBoxId('tee-c1');
+    });
+    expect(result.current.playerGenders['p-dame']).toBe('M');
+  });
+
+  it('junior klemes til M på M+D-tee (J utilgjengelig)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.togglePlayer('p-junior');
+      result.current.setCourseId('course-d');
+      result.current.setTeeBoxId('tee-d1');
+    });
+    expect(result.current.playerGenders['p-junior']).toBe('M');
+  });
+
+  it('dame-spiller beholder D på M+D-tee (D tilgjengelig)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.togglePlayer('p-dame');
+      result.current.setCourseId('course-d');
+      result.current.setTeeBoxId('tee-d1');
+    });
+    expect(result.current.playerGenders['p-dame']).toBe('D');
+  });
+
+  it('herrespiller beholder M ved bytte til herre-only-tee', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.togglePlayer('p-mann');
+      result.current.setCourseId('course-c');
+      result.current.setTeeBoxId('tee-c1');
+    });
+    expect(result.current.playerGenders['p-mann']).toBe('M');
+  });
+});
+
+// ─── AC5 — defensiv publish-guard ────────────────────────────────────────────
+
+describe('useGameFormState — defensiv publish-guard (AC5)', () => {
+  it('blokkerer publisering når en spiller tvinges til en kategori tee-en mangler', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    // Sett opp en fullt publiserbar solo-stableford på en herre-only tee.
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setCourseId('course-c');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-c1'); // herre-only
+      result.current.togglePlayer('p-mann');
+      result.current.setScheduledTeeOffAt('2026-07-01T10:00');
+    });
+    // p-mann (M) er gyldig på herre-only tee → publiserbart.
+    expect(result.current.canPublish).toBe(true);
+    const baseline = result.current.missingForPublish.length;
+
+    // Tving en ugyldig kombinasjon (UI klemmer normalt; backstop tester kanten).
+    act(() => {
+      result.current.setPlayerGenders((prev) => ({ ...prev, 'p-mann': 'J' }));
+    });
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublish.length).toBe(baseline + 1);
   });
 });

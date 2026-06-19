@@ -690,7 +690,8 @@
         "teamBadge": "Lag {team}",
         "teePerPlayerHeading": "Tee per spiller",
         "teePerPlayerDescription": "Velg tee per spiller. M = herre, D = dame, J = junior.",
-        "teeGroupAriaLabel": "Tee for spiller"
+        "teeGroupAriaLabel": "Tee for spiller",
+        "categoryNotRated": "Tee-en mangler rating for denne kategorien"
       },
       "advanced": {
         "heading": "6. Innstillinger",
@@ -853,7 +854,8 @@
         "teamMatchplayTooMany": "for mange spillere (2 på hver side)",
         "teamMatchplayAssign": "side-fordeling (2 på hver side)",
         "soloMin": "minst én spiller",
-        "invalidAllowance": "gyldig HCP-andel"
+        "invalidAllowance": "gyldig HCP-andel",
+        "categoryMissingRating": "en eller flere spillere har en kategori tee-en ikke støtter"
       }
     },
     "steps": {

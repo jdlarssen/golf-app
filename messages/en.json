@@ -690,7 +690,8 @@
         "teamBadge": "Team {team}",
         "teePerPlayerHeading": "Tee per player",
         "teePerPlayerDescription": "Select tee per player. M = men's, D = ladies', J = juniors'.",
-        "teeGroupAriaLabel": "Tee for player"
+        "teeGroupAriaLabel": "Tee for player",
+        "categoryNotRated": "This tee does not have a rating for this category"
       },
       "advanced": {
         "heading": "6. Settings",
@@ -853,7 +854,8 @@
         "teamMatchplayTooMany": "too many players (2 per side)",
         "teamMatchplayAssign": "side assignment (2 per side)",
         "soloMin": "at least one player",
-        "invalidAllowance": "valid HCP allowance"
+        "invalidAllowance": "valid HCP allowance",
+        "categoryMissingRating": "one or more players have a category the tee does not rate"
       }
     },
     "steps": {

@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.18] - 2026-06-19 · #721
+
+> Setter du en spiller til junior eller dame, men den valgte tee-en mangler rating for den kategorien, blir kategorien nå utilgjengelig i veiviseren. Slik slipper du å planlegge en runde som ikke får startet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- I opprett-spill-veiviseren kunne en spiller settes til en kategori (M/D/J) den valgte tee-en manglet rating for (f.eks. junior på en tee med kun herrerating), så banehandicap ikke kunne regnes ut og auto-start (#502) feilet med `tee_missing_rating` etter planlagt tee-tid. M/D/J-velgeren (`TeamsAssignmentSection`, ekstrahert til delt `PlayerGenderToggle`) disabler nå kategorier `teeGenderAvailability` ikke dekker, og `setTeeBoxId` klemmer hver spillers kategori til en tilgjengelig en ved tee-bytte (ren, testet `clampGenderToTee`). Defensiv backstop i `canPublish`/`missingForPublish`. Nye i18n-nøkler (no + en). Ingen server-side endring — scoring-laget (`getRatingForGender`) håndterte allerede manglende rating pent; dette er forebyggende UX. (#721)
+
+</details>
+
 ### [1.133.17] - 2026-06-19 · #698
 
 > Når noen ber om å bli med i et spill du arrangerer, dukker forespørselen opp igjen på påmeldingssiden, med hilsenen de skrev. Den forsvant i en stille databasefeil, så lista sto tom selv om forespørselen var sendt.

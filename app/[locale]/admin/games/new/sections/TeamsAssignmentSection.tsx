@@ -34,6 +34,67 @@ type Props = {
   hideNumbering?: boolean;
 };
 
+/**
+ * M/D/J-kategorivelger for én spiller. Brukt to steder (flight-grid og
+ * tee-per-spiller), så logikken for å disable en kategori tee-en mangler
+ * rating for (#721) bor ett sted. En utilgjengelig kategori er `disabled`
+ * med en forklarende `title`; klem-ved-tee-bytte i hooken sørger for at
+ * ingen spiller står igjen på en utilgjengelig kategori.
+ */
+function PlayerGenderToggle({
+  pid,
+  playerGenders,
+  setPlayerGenders,
+  teeGenderAvailability,
+  ariaLabel,
+  unavailableTitle,
+}: {
+  pid: string;
+  playerGenders: GameFormState['playerGenders'];
+  setPlayerGenders: GameFormState['setPlayerGenders'];
+  teeGenderAvailability: GameFormState['teeGenderAvailability'];
+  ariaLabel: string;
+  unavailableTitle: string;
+}) {
+  return (
+    <div className="flex gap-1" role="group" aria-label={ariaLabel}>
+      {(['M', 'D', 'J'] as const).map((g) => {
+        const unavailable = !teeGenderAvailability[g];
+        const selected = (playerGenders[pid] ?? 'M') === g;
+        return (
+          <button
+            key={g}
+            type="button"
+            disabled={unavailable}
+            title={unavailable ? unavailableTitle : undefined}
+            onClick={() =>
+              setPlayerGenders((prev) => ({ ...prev, [pid]: g }))
+            }
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+              unavailable
+                ? 'bg-surface border border-border text-muted/40 cursor-not-allowed'
+                : selected
+                  ? g === 'M'
+                    ? 'bg-primary text-white dark:text-bg'
+                    : g === 'D'
+                      ? 'bg-accent text-text'
+                      : 'bg-muted text-text'
+                  : 'bg-surface border border-border text-muted hover:text-text'
+            }`}
+          >
+            {g}
+          </button>
+        );
+      })}
+      <input
+        type="hidden"
+        name={`player_${pid}_gender`}
+        value={playerGenders[pid] ?? 'M'}
+      />
+    </div>
+  );
+}
+
 export function TeamsAssignmentSection({
   state,
   players,
@@ -54,6 +115,7 @@ export function TeamsAssignmentSection({
     flightByPlayer,
     playerGenders,
     setPlayerGenders,
+    teeGenderAvailability,
     playersByTeam,
     teamsComplete,
     isSolo,
@@ -320,33 +382,14 @@ export function TeamsAssignmentSection({
                     <span className="text-sm text-text flex-1 truncate">
                       {shortName(p)}
                     </span>
-                    <div className="flex gap-1" role="group" aria-label={t('teeGroupAriaLabel')}>
-                      {(['M', 'D', 'J'] as const).map((g) => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() =>
-                            setPlayerGenders((prev) => ({ ...prev, [pid]: g }))
-                          }
-                          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                            (playerGenders[pid] ?? 'M') === g
-                              ? g === 'M'
-                                ? 'bg-primary text-white dark:text-bg'
-                                : g === 'D'
-                                  ? 'bg-accent text-text'
-                                  : 'bg-muted text-text'
-                              : 'bg-surface border border-border text-muted hover:text-text'
-                          }`}
-                        >
-                          {g}
-                        </button>
-                      ))}
-                      <input
-                        type="hidden"
-                        name={`player_${pid}_gender`}
-                        value={playerGenders[pid] ?? 'M'}
-                      />
-                    </div>
+                    <PlayerGenderToggle
+                      pid={pid}
+                      playerGenders={playerGenders}
+                      setPlayerGenders={setPlayerGenders}
+                      teeGenderAvailability={teeGenderAvailability}
+                      ariaLabel={t('teeGroupAriaLabel')}
+                      unavailableTitle={t('categoryNotRated')}
+                    />
                     <select
                       value={flight}
                       onChange={(e) =>
@@ -405,33 +448,14 @@ export function TeamsAssignmentSection({
                   <span className="text-sm text-text flex-1 truncate">
                     {shortName(p)}
                   </span>
-                  <div className="flex gap-1" role="group" aria-label={t('teeGroupAriaLabel')}>
-                    {(['M', 'D', 'J'] as const).map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() =>
-                          setPlayerGenders((prev) => ({ ...prev, [pid]: g }))
-                        }
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          (playerGenders[pid] ?? 'M') === g
-                            ? g === 'M'
-                              ? 'bg-primary text-white dark:text-bg'
-                              : g === 'D'
-                                ? 'bg-accent text-text'
-                                : 'bg-muted text-text'
-                            : 'bg-surface border border-border text-muted hover:text-text'
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                    <input
-                      type="hidden"
-                      name={`player_${pid}_gender`}
-                      value={playerGenders[pid] ?? 'M'}
-                    />
-                  </div>
+                  <PlayerGenderToggle
+                    pid={pid}
+                    playerGenders={playerGenders}
+                    setPlayerGenders={setPlayerGenders}
+                    teeGenderAvailability={teeGenderAvailability}
+                    ariaLabel={t('teeGroupAriaLabel')}
+                    unavailableTitle={t('categoryNotRated')}
+                  />
                 </div>
               );
             })}
