@@ -176,13 +176,17 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
     });
 
     await test.step('Phase 6: Invitee fyller ut profil-skjema', async () => {
-      await inviteePage.getByLabel('Navn').fill('E2E Test Spiller');
+      // exact:true is required: 'Kallenavn' is a substring match for 'Navn'
+      // (case-insensitive), so getByLabel('Navn') without exact resolves to 2
+      // elements and throws a strict-mode violation. (#698)
+      await inviteePage.getByLabel('Navn', { exact: true }).fill('E2E Test Spiller');
       // Kallenavn er valgfritt — droppes for å verifisere at NULL-pathen
       // i completeProfile-actionen håndteres riktig.
-      await inviteePage.getByLabel('Handicap-index').fill('18.5');
+      await inviteePage.getByLabel('Handicap-index', { exact: true }).fill('18.5');
 
+      // Norwegian submit button is 'Sett i gang' (onboarding.submitButton in no.json).
       await inviteePage
-        .getByRole('button', { name: 'Fullfør profilen' })
+        .getByRole('button', { name: 'Sett i gang' })
         .click();
 
       // completeProfile redirecter til '/' ved suksess.
