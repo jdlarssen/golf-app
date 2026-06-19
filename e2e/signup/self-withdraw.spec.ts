@@ -18,7 +18,7 @@ import {
  * bekrefter, og verifiserer at game_players-raden er borte.
  */
 
-test.describe('Påmelding · self-withdraw (full flow) @gate', () => {
+test.describe('Påmelding · self-withdraw (full flow)', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
   test.slow();
 

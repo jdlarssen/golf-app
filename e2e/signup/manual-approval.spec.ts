@@ -23,7 +23,7 @@ import {
  * `invitation-flow.spec.ts`. Ingen state lekker mellom dem.
  */
 
-test.describe('Påmelding · manual_approval-modus (full flow) @gate', () => {
+test.describe('Påmelding · manual_approval-modus (full flow)', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
   test.slow();
 

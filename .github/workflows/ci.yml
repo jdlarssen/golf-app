@@ -59,10 +59,13 @@ jobs:
   # Activated 2026-06-17: all 5 secrets + RUN_E2E=true are configured (#674).
   #
   # Scope: `npm run e2e:gate` runs the @gate-tagged specs — the three #674 tests
-  # (golden-path + cup + the liga finished-flight #647 reproducer) plus the five
-  # pre-existing signup/invitation specs brought in by #698 (Resend stubbed via
-  # RESEND_STUB_SEND below, norsk-copy asserts swapped for data-testid). Still
-  # excluded: the older #453 liga create/empty-state tests (flaky).
+  # (golden-path + cup + the liga finished-flight #647 reproducer) plus the
+  # invite_only signup spec brought in by #698 (Resend stubbed via
+  # RESEND_STUB_SEND + selfreg limit disabled below, norsk-copy asserts swapped
+  # for data-testid). The four full-flow signup specs (invitation-flow,
+  # manual-approval, open-register, self-withdraw) have current-behavior drift
+  # and stay un-gated — tracked in #698. Still excluded: the older #453 liga
+  # create/empty-state tests (flaky).
   e2e:
     if: ${{ vars.RUN_E2E == 'true' }}
     runs-on: ubuntu-latest

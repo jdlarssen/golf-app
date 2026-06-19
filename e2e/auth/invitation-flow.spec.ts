@@ -81,7 +81,7 @@ const skipReason = !SUPABASE_URL
       ? 'E2E_ADMIN_EMAIL ikke satt — påkrevet for å signe inn admin som sender invitasjonen'
       : '';
 
-test.describe('Full invitation flow (admin → OTP → profile → first round) @gate', () => {
+test.describe('Full invitation flow (admin → OTP → profile → first round)', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
 
   // Disse testene tar tid — Supabase Auth + Resend round-trip kan være 3–5 s.
