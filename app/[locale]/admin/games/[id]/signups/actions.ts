@@ -6,6 +6,7 @@ import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import { notify } from '@/lib/notifications/notify';
 import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
 import { sendRegistrationRejectedMail } from '@/lib/mail/registrationRejected';
@@ -180,18 +181,28 @@ export async function approveRequest(requestId: string): Promise<void> {
   const decidedAt = new Date().toISOString();
 
   // UPDATE status først — hvis denne feiler, ikke insert i game_players.
+  // #712: expectAffected catches both DB errors (throws Error) and silent
+  // 0-row no-ops (throws NoRowsAffectedError). 0 rows means all requests
+  // were already decided (race between two admin tabs) — redirect to error
+  // rather than proceeding to insert game_players + fire notifications for
+  // a write that never happened.
   const idsToUpdate = allRows.map((r) => r.id);
-  const { error: updateError } = await admin
-    .from('game_registration_requests')
-    .update({
-      status: 'approved',
-      decided_at: decidedAt,
-      decided_by_user_id: actorId,
-    })
-    .in('id', idsToUpdate)
-    .eq('status', 'pending');
-  if (updateError) {
-    console.error('[approveRequest] status update failed', updateError);
+  try {
+    expectAffected(
+      await admin
+        .from('game_registration_requests')
+        .update({
+          status: 'approved',
+          decided_at: decidedAt,
+          decided_by_user_id: actorId,
+        })
+        .in('id', idsToUpdate)
+        .eq('status', 'pending')
+        .select('id'),
+      'approveRequest',
+    );
+  } catch (err) {
+    console.error('[approveRequest] status update failed', err);
     redirect({ href: `${detailPath}?error=db_update`, locale });
   }
 
@@ -317,20 +328,27 @@ export async function rejectRequest(
     ...cascadeRows,
   ];
 
+  // #712: same 0-row trap as approveRequest. If all requests were already
+  // rejected (race), 0 rows returns error==null — without this guard
+  // notifications would fire for a write that never happened.
   const decidedAt = new Date().toISOString();
-  const { error: updateError } = await admin
-    .from('game_registration_requests')
-    .update({
-      status: 'rejected',
-      rejection_reason: reason,
-      decided_at: decidedAt,
-      decided_by_user_id: actorId,
-    })
-    .in('id', allRows.map((r) => r.id))
-    .eq('status', 'pending');
-
-  if (updateError) {
-    console.error('[rejectRequest] status update failed', updateError);
+  try {
+    expectAffected(
+      await admin
+        .from('game_registration_requests')
+        .update({
+          status: 'rejected',
+          rejection_reason: reason,
+          decided_at: decidedAt,
+          decided_by_user_id: actorId,
+        })
+        .in('id', allRows.map((r) => r.id))
+        .eq('status', 'pending')
+        .select('id'),
+      'rejectRequest',
+    );
+  } catch (updateErr) {
+    console.error('[rejectRequest] status update failed', updateErr);
     redirect({ href: `${detailPath}?error=db_update`, locale });
   }
 

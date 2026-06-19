@@ -121,8 +121,8 @@ describe('approveRequest', () => {
         },
         error: null,
       },
-      // UPDATE game_registration_requests
-      { data: null, error: null },
+      // UPDATE game_registration_requests — #712: .select() returns affected rows
+      { data: [{ id: SOLO_REQUEST_ID }], error: null },
       // UPSERT game_players
       { data: null, error: null },
     ]);
@@ -195,8 +195,8 @@ describe('approveRequest', () => {
       },
       // existing teams (none taken → slot 1)
       { data: [], error: null },
-      // UPDATE status (kaptein + medspiller)
-      { data: null, error: null },
+      // UPDATE status (kaptein + medspiller) — #712: .select() returns affected rows
+      { data: [{ id: CAPTAIN_REQUEST_ID }, { id: MATE_REQUEST_ID }], error: null },
       // UPSERT game_players (kaptein + medspiller)
       { data: null, error: null },
     ]);
@@ -260,8 +260,8 @@ describe('approveRequest', () => {
         ],
         error: null,
       },
-      // UPDATE status
-      { data: null, error: null },
+      // UPDATE status — #712: .select() returns affected rows
+      { data: [{ id: CAPTAIN_REQUEST_ID }], error: null },
       // UPSERT game_players
       { data: null, error: null },
     ]);
@@ -327,6 +327,56 @@ describe('approveRequest', () => {
     expect(lastRedirect()).toBe(
       `/admin/games/${GAME_ID}/signups?error=not_pending`,
     );
+  });
+
+  it('#712: 0-row UPDATE (alle requests allerede behandlet) → error redirect, ingen notify', async () => {
+    // Race: to admin-faner forsøker å godkjenne samme forespørsel. Andre tab
+    // vinner — vår UPDATE matcher 0 pending-rader. expectAffected kaster
+    // NoRowsAffectedError, vi redirecter til ?error=db_update uten notify.
+    serverMock = buildSupabaseMock([
+      {
+        data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' },
+        error: null,
+      },
+    ]);
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: SOLO_REQUEST_ID,
+          game_id: GAME_ID,
+          user_id: SOLO_USER_ID,
+          status: 'pending',
+          is_team_captain: false,
+          team_name: null,
+          team_request_id: null,
+        },
+        error: null,
+      },
+      {
+        data: {
+          id: GAME_ID,
+          name: 'Vinter-cup',
+          status: 'scheduled',
+          created_by: ADMIN_ID,
+        },
+        error: null,
+      },
+      // UPDATE returns 0 rows (all requests already decided by another actor)
+      { data: [], error: null },
+    ]);
+    authedAsAdmin();
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(SOLO_REQUEST_ID)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe(
+      `/admin/games/${GAME_ID}/signups?error=db_update`,
+    );
+    // Critical: no notification sent when write was a no-op
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('avviser når spillet er active (game-lock)', async () => {
@@ -403,8 +453,8 @@ describe('rejectRequest', () => {
         },
         error: null,
       },
-      // UPDATE
-      { data: null, error: null },
+      // UPDATE — #712: .select() returns affected rows
+      { data: [{ id: SOLO_REQUEST_ID }], error: null },
     ]);
     authedAsAdmin();
 
@@ -464,8 +514,8 @@ describe('rejectRequest', () => {
         data: [{ id: MATE_REQUEST_ID, user_id: MATE_USER_ID }],
         error: null,
       },
-      // UPDATE
-      { data: null, error: null },
+      // UPDATE — #712: .select() returns affected rows
+      { data: [{ id: CAPTAIN_REQUEST_ID }, { id: MATE_REQUEST_ID }], error: null },
     ]);
     authedAsAdmin();
 
