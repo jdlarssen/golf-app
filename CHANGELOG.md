@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.17] - 2026-06-19 · #698
+
+> Når noen ber om å bli med i et spill du arrangerer, dukker forespørselen opp igjen på påmeldingssiden, med hilsenen de skrev. Den forsvant i en stille databasefeil, så lista sto tom selv om forespørselen var sendt.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Påmeldings-fanen (`/admin/games/[id]/signups`) hentet `game_registration_requests` med en `users(...)`-embed som var tvetydig: tabellen har to FK-er til `users` (`user_id` = forespørreren, `decided_by_user_id` = admin som avgjorde), så PostgREST returnerte `PGRST201` og hele fetchen feilet. Feilen ble logget, men svelget (`rawRequests ?? []`), så fanen viste null forespørsler selv når det fantes ventende. Fikset ved å pinne FK-en eksplisitt: `users!game_registration_requests_user_id_fkey(...)`. Avdekket av e2e-gaten (#698), der `manual_approval`-spec-en feilet fordi admin ikke så hilsenen. (#698)
+
+</details>
+
 ### [1.133.16] - 2026-06-17 · #685
 
 > Åpner du en lenke til et privat lag-spill du ikke er invitert til, får du nå en knapp tilbake til forsiden i stedet for å stå fast på en melding uten vei videre.

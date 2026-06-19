@@ -104,10 +104,15 @@ export default async function PåmeldingerPage({
 
   // Hent forespørsler for valgt fane. Vi henter brukerkolonner via FK-joinen
   // slik at vi kan vise navn/nickname uten en ekstra round-trip per rad.
+  // `game_registration_requests` har TO FK-er til `users` (`user_id` =
+  // forespørreren, `decided_by_user_id` = admin som avgjorde). Uten eksplisitt
+  // FK-hint blir embedden tvetydig (PostgREST PGRST201) og hele fetchen feiler,
+  // så fanen viser null forespørsler. Vi pinner `user_id`-FK-en — det er
+  // forespørrerens navn vi rendrer i `toRequestRow`.
   const { data: rawRequests, error: requestsError } = await supabase
     .from('game_registration_requests')
     .select(
-      'id, user_id, status, team_name, is_team_captain, team_request_id, message, rejection_reason, created_at, decided_at, users(name, nickname, email)',
+      'id, user_id, status, team_name, is_team_captain, team_request_id, message, rejection_reason, created_at, decided_at, users!game_registration_requests_user_id_fkey(name, nickname, email)',
     )
     .eq('game_id', id)
     .eq('status', activeTab.status)
