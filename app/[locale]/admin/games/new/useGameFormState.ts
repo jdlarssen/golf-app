@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   CLASSIC_DISABLED_CATEGORIES,
@@ -466,7 +466,9 @@ export function useGameFormState({
   // Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' — dagens
   // flyt bevart 100% når admin ikke aktivt velger noe annet. Edit-flyten
   // pre-fyller fra initialValues hvis spillet allerede er konfigurert.
-  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>(
+  // Rå admin-valg (det brukeren faktisk klikket i påmeldings-radioene). Den
+  // effektive modusen deriveres lenger ned fra dette pluss klubb-scope.
+  const [registrationModeChoice, setRegistrationMode] = useState<RegistrationMode>(
     initialValues?.registration_mode ?? 'invite_only',
   );
   const [registrationType, setRegistrationType] = useState<RegistrationType>(
@@ -502,16 +504,16 @@ export function useGameFormState({
   // gruppa ikke rendres — dekker både ferskt klubb-valg, ?klubb=-deep-link og edit
   // av et eldre klubb-spill med annen modus.
   const isClubScoped = groupId !== '';
-  // The proper fix is to derive an effective registration mode at the payload
-  // site instead of syncing state in an effect (react-hooks flags the
-  // setState-in-effect as a cascading-render risk). Deferred to #715 to keep
-  // #692 a pure lint-hygiene change — the create-game wizard is a core flow.
-  useEffect(() => {
-    if (isClubScoped && registrationMode !== 'invite_only') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setRegistrationMode('invite_only');
-    }
-  }, [isClubScoped, registrationMode]);
+  // #715: deriver den effektive modusen i stedet for å synke state i en effekt.
+  // React-regelen `set-state-in-effect` flagget den gamle effekten som en
+  // cascading-render-risiko. Det rå admin-valget (`registrationModeChoice`)
+  // bevares uendret, så et klubb-spill som senere løsrives gjenoppretter
+  // valget. Alle lesere — serialisering (skjult `registration_mode`-input),
+  // publish-gating (`playersStepOptional` under) og påmeldings-radioene i
+  // RegistrationSection — leser denne effektive verdien via `registrationMode`.
+  const registrationMode: RegistrationMode = isClubScoped
+    ? 'invite_only'
+    : registrationModeChoice;
   // #199 derived flags
   // - registrationModeSupportsTeams: speilet av gameModeSupportsTeams — UI-
   //   et bruker det til å disable 'team'/'both'-radioene når modus ikke
