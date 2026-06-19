@@ -16,6 +16,11 @@ const eslintConfig = defineConfig([
     // pattern-matching, not part of the app source. Linting them creates
     // noise (e.g. they assume a global `React`).
     "docs/design/**",
+    // Nested git worktrees (other sessions) hold full repo copies. The parent
+    // checkout's lint must not descend into them — CI checks out clean and
+    // never sees them; locally they'd otherwise be linted as foreign source.
+    ".claude/worktrees/**",
+    ".claire/worktrees/**",
   ]),
   {
     // Underscore-prefixed identifiers are a deliberate "intentionally unused"

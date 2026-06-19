@@ -18,7 +18,16 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
-    exclude: [...configDefaults.exclude, 'e2e/**'],
+    // Nested git worktrees (other sessions) live under .claude/.claire — they
+    // hold full repo copies whose *.test files would otherwise be scanned by the
+    // parent checkout's run. CI checks out clean so never sees them; locally we
+    // must exclude them or every run balloons + fails on foreign node_modules.
+    exclude: [
+      ...configDefaults.exclude,
+      'e2e/**',
+      '**/.claude/worktrees/**',
+      '**/.claire/worktrees/**',
+    ],
     // #506: the 5000ms default is too tight for a 248-file parallel jsdom suite.
     // Heavy render tests (GameForm/GameWizard) run in ≤122ms isolated but balloon
     // to 5–7s under full-suite CPU/memory contention (10 forks saturating 10 cores
