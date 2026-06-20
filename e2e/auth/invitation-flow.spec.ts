@@ -121,10 +121,14 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
         adminPage.getByRole('heading', { name: 'Spillere' }),
       ).toBeVisible();
 
-      // InviteForm er pakket i <details> — må klikkes opp før input dukker opp.
-      await adminPage.getByTestId('invite-toggle').click();
-
+      // InviteForm ligger i <details>. Etter #779 åpnes den automatisk når det
+      // ikke finnes ventende invitasjoner, og er ellers lukket. Vi åpner den
+      // derfor bare hvis e-postfeltet ikke alt er synlig, så testen er robust
+      // uansett hvor mange ventende invitasjoner staging har.
       const emailInput = adminPage.getByLabel('E-postadresse');
+      if (!(await emailInput.isVisible())) {
+        await adminPage.getByTestId('invite-toggle').click();
+      }
       await expect(emailInput).toBeVisible();
       await emailInput.fill(INVITEE_EMAIL);
       await adminPage.getByRole('button', { name: 'Send invitasjon' }).click();
