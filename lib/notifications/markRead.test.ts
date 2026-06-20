@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
-vi.mock('@/lib/supabase/server', () => ({
-  getServerClient: async () => supabaseMock,
+// #726: markRead bruker admin-client (cookies-fri) fordi flere call-sites
+// kjører inni after(), der Next 16 forbyr cookies(). Mock derfor admin, ikke
+// server — en revert til getServerClient ville treffe ekte cookies() her og
+// feile, så mock-kilden er i seg selv regresjonsvakten.
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => supabaseMock,
 }));
 
 const revalidateTagMock = vi.fn();

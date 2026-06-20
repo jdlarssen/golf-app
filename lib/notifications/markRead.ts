@@ -1,6 +1,6 @@
 import 'server-only';
 import { revalidateTag } from 'next/cache';
-import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import type { NotificationKind } from './types';
 
 export type MarkReadOpts = {
@@ -17,9 +17,16 @@ export type MarkReadOpts = {
  * Markerer matching uleste varsler som lest for `userId`. Best-effort:
  * feiler stille på error, blokkerer aldri parent-page-render.
  *
- * Bruker getServerClient() (cookies-basert) framfor admin — update er
- * gated av RLS-policy notifications_update_own så vi får authz «gratis»
- * fra Postgres uten å måtte gjenta auth-sjekken her.
+ * Bruker getAdminClient() (service-role, cookies-fri) framfor cookies-
+ * klienten fordi flere call-sites kjører inni `after()` (leaderboard,
+ * approve, game-home, admin-protokoll), og Next.js 16 forbyr `cookies()`
+ * der — cookies-klienten kastet stille og varselet ble aldri markert lest
+ * (#726). Speiler maybeAutoConfirmParticipation, som løser samme problem i
+ * samme after(). Authz bevares: update-en er alltid scopet `.eq('user_id',
+ * userId)`, og hver caller utleder userId server-side (getProxyVerifiedUserId)
+ * — aldri klient-levert, så en bruker kan kun markere sine egne varsler.
+ * RLS-policyen notifications_update_own blir stående og garderer fortsatt
+ * den offentlige PostgREST-flaten.
  *
  * Brukes både ved tap-i-innboks og fra server-side helper på målsider
  * (f.eks. /games/[id]/leaderboard markerer game_finished-varsler for det
@@ -27,7 +34,7 @@ export type MarkReadOpts = {
  * samme target-rute.
  */
 export async function markNotificationsRead(opts: MarkReadOpts): Promise<void> {
-  const supabase = await getServerClient();
+  const supabase = getAdminClient();
 
   let q = supabase
     .from('notifications')

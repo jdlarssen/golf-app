@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.19] - 2026-06-20 · #726
+
+> Når du åpner resultattavla eller godkjenner et scorekort, forsvinner varselprikken igjen slik den alltid skulle.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `markNotificationsRead` (`lib/notifications/markRead.ts`) hentet en cookies-basert Supabase-klient via `getServerClient()`, men ble kalt inni `after()` på fire sider (`/games/[id]/leaderboard`, `/approve`, game-home og admin-protokollen). Next.js 16 forbyr `cookies()` inni en `after()`-callback, så hele callbacken kastet stille — varselet ble aldri markert lest og `revalidateTag(`notifications-${userId}`)` fyrte aldri, så bell-prikken ble hengende selv etter at brukeren åpnet siden (#726). Byttet til `getAdminClient()` (service-role, cookies-fri), som speiler `maybeAutoConfirmParticipation` som allerede løser samme problem i samme `after()`. Authz er uendret: update-en er fortsatt scopet `.eq('user_id', userId)`, og hver caller utleder `userId` server-side (`getProxyVerifiedUserId`) — aldri klient-levert. RLS-policyen `notifications_update_own` blir stående og garderer fortsatt den offentlige PostgREST-flaten. Issuet navnga to ruter; rot-fixen reparerer alle fire uten call-site-endring. (#726)
+
+</details>
+
 ### [1.133.18] - 2026-06-19 · #721
 
 > Setter du en spiller til junior eller dame, men den valgte tee-en mangler rating for den kategorien, blir kategorien nå utilgjengelig i veiviseren. Slik slipper du å planlegge en runde som ikke får startet.
