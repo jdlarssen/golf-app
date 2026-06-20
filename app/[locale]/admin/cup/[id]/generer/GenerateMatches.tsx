@@ -10,7 +10,6 @@ import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { Banner } from '@/components/ui/Banner';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
