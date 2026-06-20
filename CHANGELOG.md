@@ -30,6 +30,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.42] - 2026-06-20 · #756
 
 > Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.39] - 2026-06-20 · #779
+
+> Når du ikke har noen ventende invitasjoner, er invitasjonsskjemaet nå åpent med én gang — ingen ekstra trykk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `InviteForm.tsx` henter nå antall ventende invitasjoner med en `head: true`-query og setter `open`-attributtet på `<details>` betinget (`pendingCount === 0`). Når ventelisten er tom åpnes skjemaet automatisk og følger tom-tilstandens oppfordring («Inviter en spiller nedenfor»). Kollapset-design beholdes når det finnes ventende rader. (#779)
+
+</details>
+
 ### [1.133.38] - 2026-06-20 · #778
 
 > Spiller-søket filtrerer nå mens du skriver — ingen submit-knapp, ingen side-reload, akkurat som Baner-katalogen.

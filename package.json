@@ -1,6 +1,6 @@
 {
   "name": "torny",
-  "version": "1.133.38",
+  "version": "1.133.39",
   "private": true,
   "scripts": {
     "dev": "next dev",
