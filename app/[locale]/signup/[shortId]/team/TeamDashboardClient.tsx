@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/navigation';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import {
@@ -83,6 +84,7 @@ type Props =
  */
 export function TeamDashboardClient(props: Props) {
   const t = useTranslations('signup');
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -103,13 +105,10 @@ export function TeamDashboardClient(props: Props) {
           setError(mapError(res.error));
         } else {
           setSuccess(successMessage);
-          // Soft reload — server-componenten henter på nytt på neste
-          // navigasjon. For umiddelbar effekt anbefaler vi brukeren å
-          // refreshe (full reload), men suksess-banneret er tilstrekkelig
-          // feedback for nå.
-          if (typeof window !== 'undefined') {
-            setTimeout(() => window.location.reload(), 500);
-          }
+          // Soft refresh — server-componenten henter roster på nytt uten
+          // full sidelast. Bruker beholder scroll-posisjon og suksess-
+          // banneret forblir synlig mens RSC-payload lastes.
+          router.refresh();
         }
       } finally {
         setPendingKey(null);

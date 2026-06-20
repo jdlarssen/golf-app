@@ -33,6 +33,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.41] - 2026-06-20 · #783
 
 > Har du ikke lagt inn navn ennå, sier appen nå «God morgen.» i stedet for det litt rare «God morgen, spiller.»
+### [1.133.51] - 2026-06-20 · #767
+
+> Aksepter- og Fjern-knappene på lagoversikten blinker ikke lenger siden — de oppdaterer seg på stedet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/[locale]/signup/[shortId]/team/TeamDashboardClient.tsx`: erstattet `setTimeout(() => window.location.reload(), 500)` med `router.refresh()` (import fra `@/i18n/navigation` for locale-prefiks). Dropper 500ms-forsinkelsen — `router.refresh()` er synkron i Next.js RSC-arkitekturen og trigges inni `useTransition`. Eksisterende 3 tester passerer uendret. (#767)
+
+</details>
+
 ### [1.133.50] - 2026-06-20 · #763
 
 > Etter at du har invitert noen fra Venner-siden, blir du nå værende der — ikke kastet til profilsiden.
