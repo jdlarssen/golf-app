@@ -30,6 +30,12 @@ let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
+// requireAdminOrClubAdminOfLeague reads the league's group_id via the admin
+// client before delegating to the role gate; the #727 test below drives that path.
+let adminMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => adminMock,
+}));
 
 function setUser(id: string) {
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -138,5 +144,42 @@ describe('createLeagueDraft — rollback on insert failure (#675)', () => {
       (c) => c.table === 'leagues' && c.method === 'eq',
     );
     expect(eqCall!.args).toEqual(['id', 'L1']);
+  });
+});
+
+/**
+ * #727: the cup/liga UPDATE-by-id paths now route their write through
+ * expectAffected, so a silent 0-row no-op (id vanished after the pre-flight
+ * fetch) surfaces as the action's error code instead of a false success. One
+ * representative path locks the throw→error-code + .select() wiring; the helper
+ * itself is unit-tested in lib/supabase/affectedRows.test.ts.
+ */
+describe('updateLeagueRound — 0-row update is a failure (#727)', () => {
+  it('returns update_failed when the round update matches no row', async () => {
+    // group_id null → requireAdminOrClubAdminOfLeague delegates to requireAdmin.
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole users.single
+      { data: [] }, // league_rounds.update(...).eq('id').select('id') → 0 rows
+    ]);
+    setUser('admin-1');
+
+    const fd = new FormData();
+    fd.set('round_id', 'r1');
+    fd.set('league_id', 'l1');
+    fd.set('label', 'Runde 1'); // non-empty patch so the update is issued
+
+    const { updateLeagueRound } = await import('./actions');
+    expect(await updateLeagueRound(fd)).toEqual({ error: 'update_failed' });
+
+    const upd = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'league_rounds' && c.method === 'update',
+    );
+    expect(upd, 'league_rounds update issued').toBeDefined();
+    // The retrofit must chain .select() so PostgREST returns the affected rows.
+    const sel = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'league_rounds' && c.method === 'select',
+    );
+    expect(sel, 'update chained .select() for row-count assertion').toBeDefined();
   });
 });

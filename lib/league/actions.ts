@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import {
   requireAdmin,
   requireAdminOrClubAdmin,
@@ -252,8 +253,17 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
   if (closesAt) patch.closes_at = parseOsloDateTimeLocal(closesAt);
 
   if (Object.keys(patch).length > 0) {
-    const { error } = await supabase.from('league_rounds').update(patch).eq('id', roundId);
-    if (error) return { error: 'update_failed' };
+    // #727: assert the update touched a row; also surfaces real DB errors the
+    // bare `if (error)` previously returned without logging (bug-prevention #2).
+    try {
+      expectAffected(
+        await supabase.from('league_rounds').update(patch).eq('id', roundId).select('id'),
+        'updateLeagueRound',
+      );
+    } catch (err) {
+      console.error('[league] updateLeagueRound failed', { roundId, err });
+      return { error: 'update_failed' };
+    }
   }
   revalidatePath(`/admin/liga/${leagueId}`);
   revalidatePath(`/liga/${leagueId}`);
@@ -300,17 +310,28 @@ export async function addLeagueRound(formData: FormData): Promise<LeagueActionEr
   const sequence = ((lastRound?.sequence as number | undefined) ?? 0) + 1;
   const label = str(formData, 'label') || `Runde ${sequence}`;
 
-  const { error } = await supabase.from('league_rounds').insert({
-    league_id: leagueId,
-    sequence,
-    label,
-    course_id: league.course_scope === 'multi_course' ? null : league.course_id,
-    tee_box_id: league.course_scope === 'single_course_single_tee' ? league.tee_box_id : null,
-    opens_at: opensAt,
-    closes_at: closesAt,
-    original_closes_at: closesAt,
-  });
-  if (error) return { error: 'insert_failed' };
+  // #727: assert the insert produced a row (bug-prevention #2).
+  try {
+    expectAffected(
+      await supabase
+        .from('league_rounds')
+        .insert({
+          league_id: leagueId,
+          sequence,
+          label,
+          course_id: league.course_scope === 'multi_course' ? null : league.course_id,
+          tee_box_id: league.course_scope === 'single_course_single_tee' ? league.tee_box_id : null,
+          opens_at: opensAt,
+          closes_at: closesAt,
+          original_closes_at: closesAt,
+        })
+        .select('id'),
+      'addLeagueRound',
+    );
+  } catch (err) {
+    console.error('[league] addLeagueRound failed', { leagueId, err });
+    return { error: 'insert_failed' };
+  }
   revalidatePath(`/admin/liga/${leagueId}`);
   revalidatePath(`/liga/${leagueId}`);
   return { error: '' };
@@ -333,8 +354,16 @@ export async function overrideRoundWindow(formData: FormData): Promise<LeagueAct
   };
   if (opensAtRaw) patch.opens_at = parseOsloDateTimeLocal(opensAtRaw);
 
-  const { error } = await supabase.from('league_rounds').update(patch).eq('id', roundId);
-  if (error) return { error: 'update_failed' };
+  // #727: assert the override touched a row (bug-prevention #2).
+  try {
+    expectAffected(
+      await supabase.from('league_rounds').update(patch).eq('id', roundId).select('id'),
+      'overrideRoundWindow',
+    );
+  } catch (err) {
+    console.error('[league] overrideRoundWindow failed', { roundId, err });
+    return { error: 'update_failed' };
+  }
   revalidatePath(`/admin/liga/${leagueId}`);
   revalidatePath(`/liga/${leagueId}`);
   return { error: '' };
@@ -472,8 +501,17 @@ async function setLeagueStatus(
   const patch: TablesUpdate<'leagues'> = { status: next };
   if (next === 'active') patch.started_at = new Date().toISOString();
   if (next === 'finished') patch.finished_at = new Date().toISOString();
-  const { error } = await supabase.from('leagues').update(patch).eq('id', leagueId);
-  if (error) return { error: 'status_failed' };
+  // #727: assert the status update touched a row (bug-prevention #2). Covers the
+  // finishLeague path, which routes through here (sibling of startLeague).
+  try {
+    expectAffected(
+      await supabase.from('leagues').update(patch).eq('id', leagueId).select('id'),
+      'setLeagueStatus',
+    );
+  } catch (err) {
+    console.error('[league] setLeagueStatus failed', { leagueId, next, err });
+    return { error: 'status_failed' };
+  }
   revalidatePath(`/admin/liga/${leagueId}`);
   revalidatePath(`/liga/${leagueId}`);
   return { error: '' };
@@ -494,11 +532,20 @@ export async function startLeague(formData: FormData): Promise<LeagueActionError
   if ((roundsCount.count ?? 0) < 1) return { error: 'no_rounds' };
   if ((playersCount.count ?? 0) < 2) return { error: 'too_few_players' };
 
-  const { error } = await supabase
-    .from('leagues')
-    .update({ status: 'active', started_at: new Date().toISOString() })
-    .eq('id', leagueId);
-  if (error) return { error: 'status_failed' };
+  // #727: assert the start flip touched a row (bug-prevention #2).
+  try {
+    expectAffected(
+      await supabase
+        .from('leagues')
+        .update({ status: 'active', started_at: new Date().toISOString() })
+        .eq('id', leagueId)
+        .select('id'),
+      'startLeague',
+    );
+  } catch (err) {
+    console.error('[league] startLeague failed', { leagueId, err });
+    return { error: 'status_failed' };
+  }
   revalidatePath(`/admin/liga/${leagueId}`);
   revalidatePath(`/liga/${leagueId}`);
   return { error: '' };
