@@ -14,6 +14,10 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # Manual trigger so the full gate can run against staging on demand — e.g. to
+  # verify main directly after several PRs land. CI otherwise only runs on
+  # pull_request, so main itself is never re-gated post-merge.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
