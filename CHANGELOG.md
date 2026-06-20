@@ -30,6 +30,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.42] - 2026-06-20 · #756
 
 > Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.37] - 2026-06-20 · #777
+
+> Sekretariat-forsiden hopper ikke lenger når innholdet lastes — skjelettet matcher nå de 10 flisene som faktisk vises.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `TilesSkeleton` i `app/[locale]/admin/page.tsx` rendret 5 placeholder-kort; `TilesGrid` rendrer 10. Endret til `Array.from({ length: 10 })` for å eliminere ~216 px layout-hopp ved hydratering. (#777)
+
+</details>
+
 ### [1.133.36] - 2026-06-20 · #751
 
 > Feilmeldinger i admin-flaten peker deg nå mot noe du kan gjøre — ikke mot Vercel-logger du ikke har tilgang til.

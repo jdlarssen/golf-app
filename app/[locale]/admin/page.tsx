@@ -498,7 +498,7 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
 function TilesSkeleton() {
   return (
     <div className="mb-2 grid grid-cols-2 gap-2.5">
-      {[0, 1, 2, 3, 4].map((i) => (
+      {Array.from({ length: 10 }).map((_, i) => (
         <div
           key={i}
           className="min-h-[108px] rounded-2xl border border-border bg-surface px-3.5 pt-3.5 pb-3"
