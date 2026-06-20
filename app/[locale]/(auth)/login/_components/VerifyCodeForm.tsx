@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { verifyCode } from '../actions';
+import { sendCode, verifyCode } from '../actions';
 
 // Supabase's default OTP length is 8 digits (per v0.4.1 fix). When the
 // input reaches this length — typically via iOS Safari's auto-fill from
@@ -18,28 +18,32 @@ const OTP_LENGTH = 8;
 export function VerifyCodeForm({
   email,
   next,
-  resendHref,
 }: {
   email: string;
   next: string;
-  resendHref: string;
+  /** @deprecated No longer used — resend is now an inline form action. */
+  resendHref?: string;
 }) {
   return (
-    <form action={verifyCode} className="space-y-4">
-      <input type="hidden" name="email" value={email} />
-      <input type="hidden" name="next" value={next} />
-      <FormBody email={email} resendHref={resendHref} />
-    </form>
+    // Resend-knappen er i et separat <form> UNDER verify-skjemaet for å unngå
+    // nøstede <form>-elementer (ugyldig HTML) og kollisjon med verifyCode-
+    // action og «token required»-validering.
+    <div className="space-y-4">
+      <form action={verifyCode} className="space-y-4">
+        <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="next" value={next} />
+        <FormBody email={email} />
+      </form>
+      <form action={sendCode} className="text-center">
+        <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="next" value={next} />
+        <ResendFooter />
+      </form>
+    </div>
   );
 }
 
-function FormBody({
-  email,
-  resendHref,
-}: {
-  email: string;
-  resendHref: string;
-}) {
+function FormBody({ email }: { email: string }) {
   const { pending } = useFormStatus();
   const t = useTranslations('auth.verifyCode');
 
@@ -68,13 +72,24 @@ function FormBody({
       <Button type="submit" className="w-full mt-2">
         {t('submitButton')}
       </Button>
-      <p className="text-xs text-muted mt-6 text-center">
-        {t('resendPrompt')}{' '}
-        <a href={resendHref} className="underline">
-          {t('resendLink')}
-        </a>
-      </p>
     </>
+  );
+}
+
+function ResendFooter() {
+  const { pending } = useFormStatus();
+  const t = useTranslations('auth.verifyCode');
+  return (
+    <p className="text-xs text-muted mt-2">
+      {t('resendPrompt')}{' '}
+      <button
+        type="submit"
+        disabled={pending}
+        className="underline text-xs text-muted disabled:opacity-50"
+      >
+        {t('resendLink')}
+      </button>
+    </p>
   );
 }
 

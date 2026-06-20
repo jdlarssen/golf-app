@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.25] - 2026-06-20 · #768
+
+> «Send ny kode» sender nå koden med én gang du trykker — ingen retur til e-postskjemaet og ekstra knappetapp.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- «Send ny kode» i `VerifyCodeForm.tsx` var en `<a href>`-lenke tilbake til e-poststeget, som krevde et ekstra tapp på «Send meg kode». Lenken er byttet til en `<button type="submit">` i et eget `<form action={sendCode}>` plassert etter (utenfor) verify-`<form>`-en — nøstede `<form>`-elementer er ugyldig HTML og ville kollidert med `verifyCode`-action og `token required`-validering. Email og next bæres som skjulte felt. `resendHref`-prop-en på `VerifyCodeForm` er beholdt som valgfri (`?`) for bakoverkompatibilitet, men brukes ikke lenger. (#768)
+
+</details>
+
 ### [1.133.24] - 2026-06-20 · #766
 
 > Lurer du på om innloggingskoden er på vei? Du får nå et hint om å sjekke søppelposten, rett under e-postadressen.
