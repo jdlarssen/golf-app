@@ -16,7 +16,7 @@ describe('SpecificValueSheet', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders 4 buttons for par=4: par-2, par-1, par, X', () => {
+  it('renders 6 buttons for par=4: par-2 through par+2, X', () => {
     render(
       <SpecificValueSheet
         open={true}
@@ -29,12 +29,12 @@ describe('SpecificValueSheet', () => {
     const buttons = screen
       .getByTestId('specific-value-sheet')
       .querySelectorAll('button');
-    expect(buttons.length).toBe(4);
+    expect(buttons.length).toBe(6);
     const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['2', '3', '4', 'X']);
+    expect(texts).toEqual(['2', '3', '4', '5', '6', 'X']);
   });
 
-  it('renders 4 buttons for par=3: 1, 2, 3, X (1 is hole-in-one)', () => {
+  it('renders 6 buttons for par=3: par-2 through par+2, X (1 is hole-in-one)', () => {
     render(
       <SpecificValueSheet
         open={true}
@@ -47,12 +47,12 @@ describe('SpecificValueSheet', () => {
     const buttons = screen
       .getByTestId('specific-value-sheet')
       .querySelectorAll('button');
-    expect(buttons.length).toBe(4);
+    expect(buttons.length).toBe(6);
     const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['1', '2', '3', 'X']);
+    expect(texts).toEqual(['1', '2', '3', '4', '5', 'X']);
   });
 
-  it('filters out values < 1 (par=2 → 3 buttons: 1, 2, X)', () => {
+  it('filters out values < 1 (par=2 → 5 buttons: 1 through 4, X)', () => {
     render(
       <SpecificValueSheet
         open={true}
@@ -65,9 +65,9 @@ describe('SpecificValueSheet', () => {
     const buttons = screen
       .getByTestId('specific-value-sheet')
       .querySelectorAll('button');
-    expect(buttons.length).toBe(3);
+    expect(buttons.length).toBe(5);
     const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['1', '2', 'X']);
+    expect(texts).toEqual(['1', '2', '3', '4', 'X']);
   });
 
   it('clicking a number button calls onPick(value) then onClose', () => {

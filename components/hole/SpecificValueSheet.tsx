@@ -49,7 +49,7 @@ const kickerStyle: CSSProperties = {
 
 const gridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)',
+  gridTemplateColumns: 'repeat(3, 1fr)',
   gap: 8,
 };
 
@@ -96,9 +96,13 @@ export function SpecificValueSheet(
     e.stopPropagation();
   }
 
-  // Quick-pick: only under-par + par. The +/− stepper handles bogey-and-worse
-  // efficiently, and the X-button clears a score that was set by mistake.
-  const values: number[] = [par - 2, par - 1, par].filter((v) => v >= 1);
+  // Quick-pick: par-2 through par+2. The most common deviations (bogey /
+  // double bogey) are now one tap away. MAX_STROKES mirrors ScoreCard.tsx
+  // (15 strokes cap) and keeps the list safe for any par value.
+  const MAX_STROKES = 15; // same as ScoreCard.tsx — kept local since not exported
+  const values: number[] = [par - 2, par - 1, par, par + 1, par + 2].filter(
+    (v) => v >= 1 && v <= MAX_STROKES,
+  );
 
   return (
     <div
