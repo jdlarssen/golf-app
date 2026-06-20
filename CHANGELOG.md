@@ -24,6 +24,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.25] - 2026-06-20 · #768
 
 > «Send ny kode» sender nå koden med én gang du trykker — ingen retur til e-postskjemaet og ekstra knappetapp.
+### [1.133.32] - 2026-06-20 · #752
+
+> Prøver du å generere matcher uten spillere eller baner, får du nå en forklaring og en snarvei videre — i stedet for en veiviser som aldri kan fullføres.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `GenerateMatches.tsx` rendret veiviseren selv om `players.length === 0` eller `courses.length === 0` (inkl. «alle tees arkivert»-tilfellet, allerede filtrert ut på l.114). Lagt til en tidlig-retur-gren som viser Card-blokker med forklaringstekst og lenke: spillere → `/admin/spillere` (admin/personlig) eller `/klubber/${groupId}` (klubb-cup); baner → `/admin/courses/new`. Tre nye i18n-nøkler i `generate`-nøkkelrommet (no + en). Shell + TopBar + BrassRibbon + PageHeader er med i begge greiner for konsistent chrome. (#752)
+
+</details>
+
 ### [1.133.31] - 2026-06-20 · #747
 
 > Cup-siden som sendes til spillerne snakker nå norsk fra topp til bunn — ingen engelsk blant matchene.

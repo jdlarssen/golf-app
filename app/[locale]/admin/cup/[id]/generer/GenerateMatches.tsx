@@ -9,6 +9,9 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { Banner } from '@/components/ui/Banner';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
@@ -201,6 +204,57 @@ export async function GenerateMatches({
   // uncapped. Speiler cap-håndhevingen i createCupMatchesFromPlan.
   const matchCap =
     !groupId && !isAdmin ? MAX_PERSONAL_CUP_MATCHES : undefined;
+
+  // #752: guided empty-state — vis forklaring + lenke i stedet for veiviseren
+  // når det mangler spillere eller baner (inkl. «alle tees arkivert»-tilfellet
+  // som allerede er filtrert ut av courses-mappingen over).
+  const hasPlayers = players.length > 0;
+  const hasCourses = courses.length > 0;
+
+  if (!hasPlayers || !hasCourses) {
+    const playerHref =
+      groupId
+        ? `/klubber/${groupId}`
+        : `/admin/spillere`;
+    return (
+      <Shell>
+        <TopBar backHref={backHref} kicker={kicker} />
+        <BrassRibbon kicker={ribbonKicker} />
+        <PageHeader
+          title={t('generate.pageTitle')}
+          subtitle={`${tournament.team_1_name} ${t('generate.mot')} ${tournament.team_2_name}`}
+        />
+        <div className="space-y-3">
+          {!hasPlayers && (
+            <Card>
+              <p className="text-sm text-muted mb-2">
+                {t('generate.emptyStatePlayers')}
+              </p>
+              <SmartLink
+                href={playerHref}
+                className="text-sm text-text underline hover:no-underline"
+              >
+                {t('generate.emptyStatePlayersLink')}
+              </SmartLink>
+            </Card>
+          )}
+          {!hasCourses && (
+            <Card>
+              <p className="text-sm text-muted mb-2">
+                {t('generate.emptyStateCourses')}
+              </p>
+              <SmartLink
+                href="/admin/courses/new"
+                className="text-sm text-text underline hover:no-underline"
+              >
+                {t('generate.emptyStateCoursesLink')}
+              </SmartLink>
+            </Card>
+          )}
+        </div>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>

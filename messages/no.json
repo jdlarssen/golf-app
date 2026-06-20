@@ -3909,7 +3909,11 @@
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",
       "formatGruesome": "Gruesome",
-      "step3ZeroMatchesMsg": "Valgt format krever minst 2 spillere per lag."
+      "step3ZeroMatchesMsg": "Valgt format krever minst 2 spillere per lag.",
+      "emptyStatePlayers": "Ingen spillere er klare ennå. Inviter spillere, så dukker de opp her.",
+      "emptyStatePlayersLink": "Åpne spillerlisten",
+      "emptyStateCourses": "Du trenger minst én bane med aktive teer for å generere matcher.",
+      "emptyStateCoursesLink": "Legg inn en bane"
     },
     "delete": {
       "brassRibbon": "Bekreft sletting",

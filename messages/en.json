@@ -3909,7 +3909,11 @@
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",
       "formatGruesome": "Gruesome",
-      "step3ZeroMatchesMsg": "The selected format requires at least 2 players per team."
+      "step3ZeroMatchesMsg": "The selected format requires at least 2 players per team.",
+      "emptyStatePlayers": "No players are ready yet. Invite players and they will appear here.",
+      "emptyStatePlayersLink": "Open the player list",
+      "emptyStateCourses": "You need at least one course with active tees to generate matches.",
+      "emptyStateCoursesLink": "Add a course"
     },
     "delete": {
       "brassRibbon": "Confirm deletion",
