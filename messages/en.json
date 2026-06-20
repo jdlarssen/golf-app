@@ -306,6 +306,7 @@
     "subtitle": "Friends can see your games and show up when you fill teams.",
     "status": {
       "requested": "Friend request sent.",
+      "invited": "Invitation sent to {email}.",
       "accepted": "You''re friends now!",
       "already_friends": "You''re already friends.",
       "already_pending": "The request has already been sent.",

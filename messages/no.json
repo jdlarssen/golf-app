@@ -306,6 +306,7 @@
     "subtitle": "Venner ser spillene dine og dukker opp når du fyller lag.",
     "status": {
       "requested": "Venneforespørsel sendt.",
+      "invited": "Invitasjon sendt til {email}.",
       "accepted": "Dere er venner nå!",
       "already_friends": "Dere er allerede venner.",
       "already_pending": "Forespørselen er allerede sendt.",

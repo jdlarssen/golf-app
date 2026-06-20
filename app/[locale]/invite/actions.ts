@@ -130,6 +130,11 @@ export async function sendFriendInvite(formData: FormData) {
     console.error('[invite] notification mail failed', err);
   }
 
+  const returnTo = String(formData.get('return') ?? '').trim();
+  if (returnTo === 'venner') {
+    const qs = new URLSearchParams({ status: 'invited', invite_email: email });
+    redirect({ href: `/profile/venner?${qs.toString()}`, locale });
+  }
   const qs = new URLSearchParams({ invite: 'sent', invite_email: email });
   redirect({ href: `/profile?${qs.toString()}`, locale });
 }

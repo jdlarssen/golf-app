@@ -70,6 +70,7 @@ export default async function VennerPage({
 
   const TONE: Record<string, 'success' | 'error' | 'info'> = {
     requested: 'success',
+    invited: 'success',
     accepted: 'success',
     already_friends: 'info',
     already_pending: 'info',
@@ -82,6 +83,7 @@ export default async function VennerPage({
 
   type StatusKey =
     | 'requested'
+    | 'invited'
     | 'accepted'
     | 'already_friends'
     | 'already_pending'
@@ -95,7 +97,10 @@ export default async function VennerPage({
     statusCode && statusCode in TONE
       ? {
           tone: TONE[statusCode] as 'success' | 'error' | 'info',
-          text: t(`status.${statusCode as StatusKey}`),
+          text:
+            statusCode === 'invited' && inviteEmail
+              ? t('status.invited', { email: inviteEmail })
+              : t(`status.${statusCode as StatusKey}`),
         }
       : undefined;
 
@@ -130,6 +135,7 @@ export default async function VennerPage({
             </p>
             <form action={sendFriendInvite} className="flex items-center gap-2">
               <input type="hidden" name="email" value={inviteEmail} />
+              <input type="hidden" name="return" value="venner" />
               <SubmitButton pendingLabel={t('invitePending')}>
                 {t('inviteButton', { email: inviteEmail })}
               </SubmitButton>

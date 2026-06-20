@@ -33,6 +33,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.41] - 2026-06-20 · #783
 
 > Har du ikke lagt inn navn ennå, sier appen nå «God morgen.» i stedet for det litt rare «God morgen, spiller.»
+### [1.133.50] - 2026-06-20 · #763
+
+> Etter at du har invitert noen fra Venner-siden, blir du nå værende der — ikke kastet til profilsiden.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/[locale]/profile/venner/page.tsx`: la til skjult `<input name="return" value="venner">` i invite-kortet og ny `invited`-nøkkel i `TONE`-mappen og `StatusKey`-typen. `app/[locale]/invite/actions.ts`: leser `return`-feltet og redirecter til `/profile/venner?status=invited&invite_email=<email>` når satt. Ny i18n-nøkkel `friends.status.invited` (med ICU `{email}`-parameter) i no.json og en.json. Eksisterende default-redirect til `/profile` er uendret. (#763)
+
+</details>
+
 ### [1.133.49] - 2026-06-20 · #742
 
 > Etter at du har sendt inn en bli-med-forespørsel, kan du gå rett videre til «Finn turneringer» med ett trykk.
