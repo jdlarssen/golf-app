@@ -23,7 +23,7 @@ import {
  * `invitation-flow.spec.ts`. Ingen state lekker mellom dem.
  */
 
-test.describe('Påmelding · manual_approval-modus (full flow)', () => {
+test.describe('Påmelding · manual_approval-modus (full flow) @gate', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
   test.slow();
 
@@ -99,8 +99,13 @@ test.describe('Påmelding · manual_approval-modus (full flow)', () => {
 
     await test.step('admin klikker «Godkjenn» og raden flyttes til Godkjent', async () => {
       await adminPage.getByRole('button', { name: 'Godkjenn' }).click();
-      // Optimistisk skjuling i klienten fjerner raden umiddelbart. Vi
-      // navigerer til Godkjent-fanen for å verifisere persistens.
+      // approveRequest kjører i en startTransition (ikke-blokkerende) og
+      // redirecter til ?status=approved FØRST når skrivingen er committet
+      // (signups/actions.ts:276). Vent på det signalet før vi navigerer til
+      // Godkjent-fanen — ellers racer goto-en mot server-skrivingen. (#698)
+      await expect(adminPage).toHaveURL(/[?&]status=approved\b/, {
+        timeout: 15_000,
+      });
       await adminPage.goto(
         `/admin/games/${game!.id}/signups?tab=approved`,
       );
@@ -113,7 +118,7 @@ test.describe('Påmelding · manual_approval-modus (full flow)', () => {
       const admin = adminClient();
       const { data: players } = await admin
         .from('game_players')
-        .select('user_id, users!inner(email)')
+        .select('user_id, users!game_players_user_id_fkey(email)')
         .eq('game_id', game!.id)
         .returns<{ user_id: string; users: { email: string } }[]>();
       const found = (players ?? []).some(

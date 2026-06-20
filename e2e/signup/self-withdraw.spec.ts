@@ -18,7 +18,7 @@ import {
  * bekrefter, og verifiserer at game_players-raden er borte.
  */
 
-test.describe('Påmelding · self-withdraw (full flow)', () => {
+test.describe('Påmelding · self-withdraw (full flow) @gate', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
   test.slow();
 
@@ -89,7 +89,7 @@ test.describe('Påmelding · self-withdraw (full flow)', () => {
       const admin = adminClient();
       const { data: players } = await admin
         .from('game_players')
-        .select('user_id, users!inner(email)')
+        .select('user_id, users!game_players_user_id_fkey(email)')
         .eq('game_id', game!.id)
         .returns<{ user_id: string; users: { email: string } }[]>();
       const stillThere = (players ?? []).some(

@@ -38,7 +38,7 @@ test.describe('Påmelding · open-modus (logged-out smoke)', () => {
   });
 });
 
-test.describe('Påmelding · open-modus (full flow)', () => {
+test.describe('Påmelding · open-modus (full flow) @gate', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
   test.slow();
 
@@ -90,7 +90,7 @@ test.describe('Påmelding · open-modus (full flow)', () => {
       const admin = adminClient();
       const { data: players } = await admin
         .from('game_players')
-        .select('user_id, users!inner(email)')
+        .select('user_id, users!game_players_user_id_fkey(email)')
         .eq('game_id', game!.id)
         .returns<{ user_id: string; users: { email: string } }[]>();
       const found = (players ?? []).some(

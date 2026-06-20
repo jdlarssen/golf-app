@@ -80,7 +80,7 @@ npm run lint
 npm run build
 ```
 
-CI (GitHub Actions) runs typecheck + tests + lint on every PR to `main`, and a daily schema-drift job regenerates the Supabase types from prod and fails if [`lib/database.types.ts`](lib/database.types.ts) is stale — run `npm run gen:types` to refresh it (needs the Supabase CLI + a `SUPABASE_ACCESS_TOKEN`). An optional authenticated-e2e gate (the scoring golden path, cup/liga smoke, and the invite-only signup flow) is wired but off by default; set the `RUN_E2E` repo variable and the Supabase service-role + `E2E_*` secrets to activate it. A local `pre-push` git hook ([`.githooks/pre-push`](.githooks/pre-push), enabled automatically by `npm install`) runs the same typecheck + lint + tests before every push, so red code never leaves your machine — it stands in for branch protection, which GitHub paywalls on a private free-tier repo.
+CI (GitHub Actions) runs typecheck + tests + lint on every PR to `main`, and a daily schema-drift job regenerates the Supabase types from prod and fails if [`lib/database.types.ts`](lib/database.types.ts) is stale — run `npm run gen:types` to refresh it (needs the Supabase CLI + a `SUPABASE_ACCESS_TOKEN`). An optional authenticated-e2e gate (the scoring golden path, cup/liga smoke, and the signup/invite flows) is wired but off by default; set the `RUN_E2E` repo variable and the Supabase service-role + `E2E_*` secrets to activate it. A local `pre-push` git hook ([`.githooks/pre-push`](.githooks/pre-push), enabled automatically by `npm install`) runs the same typecheck + lint + tests before every push, so red code never leaves your machine — it stands in for branch protection, which GitHub paywalls on a private free-tier repo.
 
 ## How it fits together
 

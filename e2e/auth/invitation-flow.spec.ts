@@ -81,7 +81,7 @@ const skipReason = !SUPABASE_URL
       ? 'E2E_ADMIN_EMAIL ikke satt — påkrevet for å signe inn admin som sender invitasjonen'
       : '';
 
-test.describe('Full invitation flow (admin → OTP → profile → first round)', () => {
+test.describe('Full invitation flow (admin → OTP → profile → first round) @gate', () => {
   test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
 
   // Disse testene tar tid — Supabase Auth + Resend round-trip kan være 3–5 s.
@@ -183,6 +183,10 @@ test.describe('Full invitation flow (admin → OTP → profile → first round)'
       // Kallenavn er valgfritt — droppes for å verifisere at NULL-pathen
       // i completeProfile-actionen håndteres riktig.
       await inviteePage.getByLabel('Handicap-index', { exact: true }).fill('18.5');
+      // Gender is a required radio (complete-profile/page.tsx) — completeProfile
+      // returns fail('gender_required') and stays on /complete-profile without it.
+      // 'Herre' = onboarding.genderMale. (#698)
+      await inviteePage.getByRole('radio', { name: 'Herre' }).check();
 
       // Norwegian submit button is 'Sett i gang' (onboarding.submitButton in no.json).
       await inviteePage
