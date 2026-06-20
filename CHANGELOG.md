@@ -36,6 +36,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.51] - 2026-06-20 · #767
 
 > Aksepter- og Fjern-knappene på lagoversikten blinker ikke lenger siden — de oppdaterer seg på stedet.
+### [1.133.27] - 2026-06-20 · #746
+
+> Ser du ingen spillformer i veiviseren, sier appen nå hva du kan justere — ikke kryptisk kode-sjargong.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `wizard.formatGrid.emptyState` i no.json og en.json erstattet med norsk tekst uten em-dash, kode-termer («formats»/«intent») og blind «kontakt admin»-blindvei. (#746)
+
+</details>
+
 ### [1.133.26] - 2026-06-20 · #743
 
 > Opprettar du best ball for fire kompiser, sier veiviseren nå «2, 4, 6 eller 8 spillere» — ikke «8 spillere» som var feil og sperret.

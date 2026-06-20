@@ -427,7 +427,7 @@
       "groupSecondary": "More options",
       "groupAriaMain": "Main formats",
       "groupAriaSecondary": "Secondary formats",
-      "emptyState": "No formats available for this intent — contact admin.",
+      "emptyState": "Adjust the number of players, or choose a different type of event.",
       "howItWorks": "How it works →"
     },
     "teamSize": {

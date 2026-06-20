@@ -427,7 +427,7 @@
       "groupSecondary": "Flere muligheter",
       "groupAriaMain": "Hovedformater",
       "groupAriaSecondary": "Sekundære formater",
-      "emptyState": "Ingen formats tilgjengelig for denne intent — kontakt admin.",
+      "emptyState": "Juster antall spillere, eller velg en annen type arrangement.",
       "howItWorks": "Slik funker det →"
     },
     "teamSize": {
