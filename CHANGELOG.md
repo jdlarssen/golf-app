@@ -21,24 +21,6 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
-### [1.133.25] - 2026-06-20 · #768
-
-> «Send ny kode» sender nå koden med én gang du trykker — ingen retur til e-postskjemaet og ekstra knappetapp.
-### [1.133.33] - 2026-06-20 · #762
-
-> Cup-listen er nå helt norsk — også på engelsk: «for å komme i gang» lekker ikke lenger inn i den engelske visningen.
-### [1.133.42] - 2026-06-20 · #756
-
-> Tom historikk viser nå én ryddig melding i stedet for to overlappende.
-### [1.133.41] - 2026-06-20 · #783
-
-> Har du ikke lagt inn navn ennå, sier appen nå «God morgen.» i stedet for det litt rare «God morgen, spiller.»
-### [1.133.51] - 2026-06-20 · #767
-
-> Aksepter- og Fjern-knappene på lagoversikten blinker ikke lenger siden — de oppdaterer seg på stedet.
-### [1.133.30] - 2026-06-20 · #764
-
-> Trykker du «Vis alle» i veiviseren, sier appen nå «Viser alle spillformer.» i stedet for å vise et spørsmålstegn.
 ### [1.133.55] - 2026-06-20 · #782
 
 > Forklaringen av slagspill sier ikke lenger at du kappes mot «klokken». Slagspill har ingen klokke. Teksten er rettet og leser nå rent.
@@ -87,55 +69,9 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 </details>
 
-### [1.133.29] - 2026-06-20 · #755
+### [1.133.51] - 2026-06-20 · #767
 
-> Steg 3 og 4 i veiviseren sier nå «Bane og tidspunkt» og «Hvem skal spille?» — ikke «1. Spillet» og «2. Spillere» som hørte hjemme i det gamle formen.
-
-<details>
-<summary>Teknisk</summary>
-
-#### Fixed
-- `wizard.sections.basics.heading` endret til «Bane og tidspunkt» (no) / «Course and time» (en) — fjerner nummer som dupliserer steg-telleren. Test i `GameWizard.test.tsx` oppdatert tilsvarende. (#755)
-- Ny nøkkel `wizard.sections.players.headingWizard` = «Hvem skal spille?» (no) / «Who is playing?» (en); `GameWizard.tsx` steg 4 bruker den i stedet for `headingDefault` «2. Spillere». Full GameForm beholder sin nummererte `headingDefault`. (#755)
-
-</details>
-
-### [1.133.28] - 2026-06-20 · #759
-
-> Én ting heter én ting: «spillformer» hele veien gjennom opprettelsesveiviseren.
-
-<details>
-<summary>Teknisk</summary>
-
-#### Fixed
-- `wizard.playerCount.hint` i no.json: «formater» → «spillformer» for konsistent norsk begrep gjennom steg 2 (teller-hint, legend og tom-tilstand sier nå det samme). (#759)
-
-</details>
-
-### [1.133.27] - 2026-06-20 · #746
-
-> Ser du ingen spillformer i veiviseren, sier appen nå hva du kan justere — ikke kryptisk kode-sjargong.
-
-<details>
-<summary>Teknisk</summary>
-
-#### Fixed
-- `wizard.formatGrid.emptyState` i no.json og en.json erstattet med norsk tekst uten em-dash, kode-termer («formats»/«intent») og blind «kontakt admin»-blindvei. (#746)
-
-</details>
-
-### [1.133.26] - 2026-06-20 · #743
-
-> Opprettar du best ball for fire kompiser, sier veiviseren nå «2, 4, 6 eller 8 spillere» — ikke «8 spillere» som var feil og sperret.
-
-<details>
-<summary>Teknisk</summary>
-
-#### Fixed
-- `app/[locale]/signup/[shortId]/team/TeamDashboardClient.tsx`: erstattet `setTimeout(() => window.location.reload(), 500)` med `router.refresh()` (import fra `@/i18n/navigation` for locale-prefiks). Dropper 500ms-forsinkelsen — `router.refresh()` er synkron i Next.js RSC-arkitekturen og trigges inni `useTransition`. Eksisterende 3 tester passerer uendret. (#767)
-
-</details>
-
+> Aksepter- og Fjern-knappene på lagoversikten blinker ikke lenger siden — de oppdaterer seg på stedet.
 ### [1.133.50] - 2026-06-20 · #763
 
 > Etter at du har invitert noen fra Venner-siden, blir du nå værende der — ikke kastet til profilsiden.
@@ -172,6 +108,72 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 </details>
 
+### [1.133.47] - 2026-06-20 · #775
+
+> Hjem-velkomsten gjentar ikke «Klubbhuset» to ganger lenger, og på klubblista ser du en enkel lenke i stedet for en hel CTA når du allerede er med i en klubb.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `completeProfile`-actionen bærer nå med seg innsendte feltverdier (`name`, `nickname`, `hcp_index`, `hcp_plus`, `gender`) i `?`-parameterne ved valideringsfeil-redirect, slik at siden kan gjenopprette dem. `page.tsx` leser disse via `searchParams` og setter `defaultValue`/`defaultChecked` på alle felt. `OnboardingHcpField` fikk `initialMagnitude`/`initialPlus`-props for å initialisere `useState` med de gjenopprettede verdiene (server-side `defaultValue` alene fungerer ikke for kontrollerte React-inputs). Låst redirect-test i `actions.test.ts` oppdatert til å matche den nye query-strengen. (#748)
+
+</details>
+
+### [1.133.46] - 2026-06-20 · #776
+
+> Under «Eksporter mine data» forklarer appen nå kort hva filen inneholder — før du laster den ned.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny `profile.exportSublabel`-nøkkel i `no.json` + `en.json`; sendt som `sublabel`-prop til eksport-`SettingRow` i `app/[locale]/profile/page.tsx`. (#776)
+
+</details>
+
+### [1.133.45] - 2026-06-20 · #771
+
+> Kjønn- og spillerklasse-knappene er to piksler høyere og lettere å treffe med fingeren.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- La til en `text-xs text-muted`-linje under instruksjons-`<p>` i `VerifyCodeForm.tsx` med ny i18n-nøkkel `auth.verifyCode.spamHint`. Nøkkelen er lagt til i begge `messages/no.json` og `messages/en.json` (catalogParity-test grønn). Hjelper brukere som ellers avbryter flyten fordi de tror appen er ødelagt. (#766)
+
+</details>
+
+### [1.133.44] - 2026-06-20 · #761
+
+> «Personvern»-lenken i bunnteksten vises nå på riktig språk uansett om du bruker appen på norsk eller engelsk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- «Send ny kode» i `VerifyCodeForm.tsx` var en `<a href>`-lenke tilbake til e-poststeget, som krevde et ekstra tapp på «Send meg kode». Lenken er byttet til en `<button type="submit">` i et eget `<form action={sendCode}>` plassert etter (utenfor) verify-`<form>`-en — nøstede `<form>`-elementer er ugyldig HTML og ville kollidert med `verifyCode`-action og `token required`-validering. Email og next bæres som skjulte felt. `resendHref`-prop-en på `VerifyCodeForm` er beholdt som valgfri (`?`) for bakoverkompatibilitet, men brukes ikke lenger. (#768)
+
+</details>
+
+### [1.133.43] - 2026-06-20 · #758
+
+> Alle sider i appen får nå en nøytral innlastings-animasjon i stedet for en feilformet Hjem-skjelett.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `GenerateMatches.tsx` rendret veiviseren selv om `players.length === 0` eller `courses.length === 0` (inkl. «alle tees arkivert»-tilfellet, allerede filtrert ut på l.114). Lagt til en tidlig-retur-gren som viser Card-blokker med forklaringstekst og lenke: spillere → `/admin/spillere` (admin/personlig) eller `/klubber/${groupId}` (klubb-cup); baner → `/admin/courses/new`. Tre nye i18n-nøkler i `generate`-nøkkelrommet (no + en). Shell + TopBar + BrassRibbon + PageHeader er med i begge greiner for konsistent chrome. (#752)
+
+</details>
+
+### [1.133.42] - 2026-06-20 · #756
+
+> Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.41] - 2026-06-20 · #783
+
+> Har du ikke lagt inn navn ennå, sier appen nå «God morgen.» i stedet for det litt rare «God morgen, spiller.»
 ### [1.133.40] - 2026-06-20 · #780
 
 > Ny snarvei i bane-skjemaet: ett trykk fyller stroke-indeks 1–18 stigende, så du slipper 18 tastatur-popups.
@@ -257,22 +259,13 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 </details>
 
+### [1.133.33] - 2026-06-20 · #762
+
+> Cup-listen er nå helt norsk — også på engelsk: «for å komme i gang» lekker ikke lenger inn i den engelske visningen.
 ### [1.133.32] - 2026-06-20 · #752
 
 > Prøver du å generere matcher uten spillere eller baner, får du nå en forklaring og en snarvei videre — i stedet for en veiviser som aldri kan fullføres.
 - Skjuler `roundCount`-paragrafen når `finishedCount === 0` i `app/[locale]/profile/historikk/page.tsx` — ICU =0-grenen i begge kataloger er urørt (catalogParity). (#756)
-
-</details>
-
-### [1.133.43] - 2026-06-20 · #758
-
-> Alle sider i appen får nå en nøytral innlastings-animasjon i stedet for en feilformet Hjem-skjelett.
-
-<details>
-<summary>Teknisk</summary>
-
-#### Fixed
-- `GenerateMatches.tsx` rendret veiviseren selv om `players.length === 0` eller `courses.length === 0` (inkl. «alle tees arkivert»-tilfellet, allerede filtrert ut på l.114). Lagt til en tidlig-retur-gren som viser Card-blokker med forklaringstekst og lenke: spillere → `/admin/spillere` (admin/personlig) eller `/klubber/${groupId}` (klubb-cup); baner → `/admin/courses/new`. Tre nye i18n-nøkler i `generate`-nøkkelrommet (no + en). Shell + TopBar + BrassRibbon + PageHeader er med i begge greiner for konsistent chrome. (#752)
 
 </details>
 
@@ -284,18 +277,61 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 </details>
 
-### [1.133.44] - 2026-06-20 · #761
+### [1.133.30] - 2026-06-20 · #764
 
-> «Personvern»-lenken i bunnteksten vises nå på riktig språk uansett om du bruker appen på norsk eller engelsk.
+> Trykker du «Vis alle» i veiviseren, sier appen nå «Viser alle spillformer.» i stedet for å vise et spørsmålstegn.
+### [1.133.29] - 2026-06-20 · #755
+
+> Steg 3 og 4 i veiviseren sier nå «Bane og tidspunkt» og «Hvem skal spille?» — ikke «1. Spillet» og «2. Spillere» som hørte hjemme i det gamle formen.
 
 <details>
 <summary>Teknisk</summary>
 
 #### Fixed
-- «Send ny kode» i `VerifyCodeForm.tsx` var en `<a href>`-lenke tilbake til e-poststeget, som krevde et ekstra tapp på «Send meg kode». Lenken er byttet til en `<button type="submit">` i et eget `<form action={sendCode}>` plassert etter (utenfor) verify-`<form>`-en — nøstede `<form>`-elementer er ugyldig HTML og ville kollidert med `verifyCode`-action og `token required`-validering. Email og next bæres som skjulte felt. `resendHref`-prop-en på `VerifyCodeForm` er beholdt som valgfri (`?`) for bakoverkompatibilitet, men brukes ikke lenger. (#768)
+- `wizard.sections.basics.heading` endret til «Bane og tidspunkt» (no) / «Course and time» (en) — fjerner nummer som dupliserer steg-telleren. Test i `GameWizard.test.tsx` oppdatert tilsvarende. (#755)
+- Ny nøkkel `wizard.sections.players.headingWizard` = «Hvem skal spille?» (no) / «Who is playing?» (en); `GameWizard.tsx` steg 4 bruker den i stedet for `headingDefault` «2. Spillere». Full GameForm beholder sin nummererte `headingDefault`. (#755)
 
 </details>
 
+### [1.133.28] - 2026-06-20 · #759
+
+> Én ting heter én ting: «spillformer» hele veien gjennom opprettelsesveiviseren.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `wizard.playerCount.hint` i no.json: «formater» → «spillformer» for konsistent norsk begrep gjennom steg 2 (teller-hint, legend og tom-tilstand sier nå det samme). (#759)
+
+</details>
+
+### [1.133.27] - 2026-06-20 · #746
+
+> Ser du ingen spillformer i veiviseren, sier appen nå hva du kan justere — ikke kryptisk kode-sjargong.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `wizard.formatGrid.emptyState` i no.json og en.json erstattet med norsk tekst uten em-dash, kode-termer («formats»/«intent») og blind «kontakt admin»-blindvei. (#746)
+
+</details>
+
+### [1.133.26] - 2026-06-20 · #743
+
+> Opprettar du best ball for fire kompiser, sier veiviseren nå «2, 4, 6 eller 8 spillere» — ikke «8 spillere» som var feil og sperret.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/[locale]/signup/[shortId]/team/TeamDashboardClient.tsx`: erstattet `setTimeout(() => window.location.reload(), 500)` med `router.refresh()` (import fra `@/i18n/navigation` for locale-prefiks). Dropper 500ms-forsinkelsen — `router.refresh()` er synkron i Next.js RSC-arkitekturen og trigges inni `useTransition`. Eksisterende 3 tester passerer uendret. (#767)
+
+</details>
+
+### [1.133.25] - 2026-06-20 · #768
+
+> «Send ny kode» sender nå koden med én gang du trykker — ingen retur til e-postskjemaet og ekstra knappetapp.
 ### [1.133.24] - 2026-06-20 · #766
 
 > Lurer du på om innloggingskoden er på vei? Du får nå et hint om å sjekke søppelposten, rett under e-postadressen.
@@ -303,46 +339,10 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 </details>
 
-### [1.133.45] - 2026-06-20 · #771
-
-> Kjønn- og spillerklasse-knappene er to piksler høyere og lettere å treffe med fingeren.
-
-<details>
-<summary>Teknisk</summary>
-
-#### Fixed
-- La til en `text-xs text-muted`-linje under instruksjons-`<p>` i `VerifyCodeForm.tsx` med ny i18n-nøkkel `auth.verifyCode.spamHint`. Nøkkelen er lagt til i begge `messages/no.json` og `messages/en.json` (catalogParity-test grønn). Hjelper brukere som ellers avbryter flyten fordi de tror appen er ødelagt. (#766)
-
-</details>
-
 ### [1.133.23] - 2026-06-20 · #748
 
 > Glemmer du å fylle ut ett felt i profilskjemaet, mister du ikke alt du allerede har skrevet. Navn, kallenavn, handicap og kjønn er der igjen når du prøver på nytt.
 - Byttet `min-h-[42px]` → `min-h-[44px]` i `SegmentedField.tsx:56` — oppfyller intern 44 px-norm for trykkmål på delt UI-primitiv. (#771)
-
-</details>
-
-### [1.133.46] - 2026-06-20 · #776
-
-> Under «Eksporter mine data» forklarer appen nå kort hva filen inneholder — før du laster den ned.
-
-<details>
-<summary>Teknisk</summary>
-
-#### Added
-- Ny `profile.exportSublabel`-nøkkel i `no.json` + `en.json`; sendt som `sublabel`-prop til eksport-`SettingRow` i `app/[locale]/profile/page.tsx`. (#776)
-
-</details>
-
-### [1.133.47] - 2026-06-20 · #775
-
-> Hjem-velkomsten gjentar ikke «Klubbhuset» to ganger lenger, og på klubblista ser du en enkel lenke i stedet for en hel CTA når du allerede er med i en klubb.
-
-<details>
-<summary>Teknisk</summary>
-
-#### Fixed
-- `completeProfile`-actionen bærer nå med seg innsendte feltverdier (`name`, `nickname`, `hcp_index`, `hcp_plus`, `gender`) i `?`-parameterne ved valideringsfeil-redirect, slik at siden kan gjenopprette dem. `page.tsx` leser disse via `searchParams` og setter `defaultValue`/`defaultChecked` på alle felt. `OnboardingHcpField` fikk `initialMagnitude`/`initialPlus`-props for å initialisere `useState` med de gjenopprettede verdiene (server-side `defaultValue` alene fungerer ikke for kontrollerte React-inputs). Låst redirect-test i `actions.test.ts` oppdatert til å matche den nye query-strengen. (#748)
 
 </details>
 
