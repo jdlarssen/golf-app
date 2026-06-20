@@ -50,7 +50,14 @@ export default async function SpillformaterPage() {
         subtitle={t('listPageSubtitle')}
       />
 
-      <FormatGuideList entries={entries} />
+      <FormatGuideList
+        entries={entries}
+        cardLabels={{
+          showRules: t('cardShowRules'),
+          hideRules: t('cardHideRules'),
+          readMore: t('cardReadMore'),
+        }}
+      />
     </AppShell>
   );
 }

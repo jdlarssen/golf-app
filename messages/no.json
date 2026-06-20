@@ -1070,6 +1070,9 @@
     "detailFallbackMeta": "Spillformat",
     "detailHowItWorks": "Slik fungerer det",
     "detailExample": "Konkret eksempel",
+    "cardShowRules": "Vis regler",
+    "cardHideRules": "Skjul regler",
+    "cardReadMore": "Les mer →",
     "content": {
       "stableford": {
         "shortDescription": "Solo, poeng vs par. Klassisk klubb-format.",

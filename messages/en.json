@@ -1070,6 +1070,9 @@
     "detailFallbackMeta": "Game format",
     "detailHowItWorks": "How it works",
     "detailExample": "An example",
+    "cardShowRules": "Show rules",
+    "cardHideRules": "Hide rules",
+    "cardReadMore": "Read more →",
     "content": {
       "stableford": {
         "shortDescription": "Solo, points vs par. The classic club format.",

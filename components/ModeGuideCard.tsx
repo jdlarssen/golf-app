@@ -29,6 +29,9 @@ export function ModeGuideCard({
   playStyleTeamSize,
   className,
   id,
+  showRulesLabel = 'Vis regler',
+  hideRulesLabel = 'Skjul regler',
+  readMoreLabel = 'Les mer →',
 }: {
   /** Sammendrag-setning — alltid synlig i lukket tilstand. */
   summary: string;
@@ -52,6 +55,12 @@ export function ModeGuideCard({
   className?: string;
   /** Valgfri element-id — lar et ark scrolle til et bestemt format (#498). */
   id?: string;
+  /** Oversatt tekst for «Vis regler»-knappen (standard: norsk hardkodet). */
+  showRulesLabel?: string;
+  /** Oversatt tekst for «Skjul regler»-knappen. */
+  hideRulesLabel?: string;
+  /** Oversatt tekst for «Les mer»-lenken. */
+  readMoreLabel?: string;
 }) {
   return (
     <details
@@ -71,8 +80,8 @@ export function ModeGuideCard({
           </div>
           <p className="mt-1 text-sm text-muted">{summary}</p>
           <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">
-            <span className="group-open:hidden">Vis regler</span>
-            <span className="hidden group-open:inline">Skjul regler</span>
+            <span className="group-open:hidden">{showRulesLabel}</span>
+            <span className="hidden group-open:inline">{hideRulesLabel}</span>
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
@@ -104,7 +113,7 @@ export function ModeGuideCard({
             href={detailHref}
             className="text-xs font-medium text-primary hover:underline"
           >
-            Les mer →
+            {readMoreLabel}
           </SmartLink>
         </div>
       )}

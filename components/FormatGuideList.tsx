@@ -27,12 +27,19 @@ export type FormatGuideEntry = {
  * klient-bundlen via arket. `ModeGuideCard` er native `<details>`, så ingen
  * client-state trengs her.
  */
+export type CardLabels = {
+  showRules: string;
+  hideRules: string;
+  readMore: string;
+};
+
 export function FormatGuideList({
   entries,
   withDetailLinks = true,
   routeBase = '/spillformater',
   cardIdPrefix,
   className,
+  cardLabels,
 }: {
   entries: FormatGuideEntry[];
   /** Vis «Les mer →»-lenke til detaljsiden. Arket setter dette false. */
@@ -42,6 +49,12 @@ export function FormatGuideList({
   /** Når satt får hvert kort id `${cardIdPrefix}${key}` for scroll-to. */
   cardIdPrefix?: string;
   className?: string;
+  /**
+   * Oversatte kontroll-strenger for kortene. Sendes inn fra server- eller
+   * klient-caller slik at ModeGuideCard ikke trenger eigen i18n-import (#760).
+   * Utelates ved bruk i «?»-arket (klienten bruker egne useTranslations).
+   */
+  cardLabels?: CardLabels;
 }) {
   return (
     <div className={`space-y-3 ${className ?? ''}`}>
@@ -55,6 +68,9 @@ export function FormatGuideList({
           detailHref={withDetailLinks ? `${routeBase}/${entry.mode}` : undefined}
           mode={entry.mode}
           playStyleTeamSize={entry.playStyleTeamSize}
+          showRulesLabel={cardLabels?.showRules}
+          hideRulesLabel={cardLabels?.hideRules}
+          readMoreLabel={cardLabels?.readMore}
         />
       ))}
     </div>

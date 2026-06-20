@@ -39,6 +39,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.30] - 2026-06-20 · #764
 
 > Trykker du «Vis alle» i veiviseren, sier appen nå «Viser alle spillformer.» i stedet for å vise et spørsmålstegn.
+### [1.133.53] - 2026-06-20 · #760
+
+> Knappene «Vis regler» og «Skjul regler» på format-kortene vises nå på riktig språk for engelskspråklige brukere.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `ModeGuideCard` fikk tre valgfrie props (`showRulesLabel`, `hideRulesLabel`, `readMoreLabel`) med norske fallback-verdier. `FormatGuideList` fikk en ny `cardLabels`-prop som sender oversatte strenger videre til kortene. `spillformater/page.tsx` henter `cardShowRules`/`cardHideRules`/`cardReadMore` fra `formatGuide`-namespacet via `getTranslations` og sender dem inn. Ny i18n-nøkler lagt til i `messages/no.json` og `messages/en.json`. Ingen 'use client'-konvertering av `ModeGuideCard`. (#760)
+
+</details>
+
 ### [1.133.52] - 2026-06-20 · #757
 
 > Avslaget i innboksen leser nå «Du kom ikke med i {spillnavn}» — du ser utfallet med én gang, uten å måtte lese detaljen.
