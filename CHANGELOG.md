@@ -36,6 +36,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.51] - 2026-06-20 · #767
 
 > Aksepter- og Fjern-knappene på lagoversikten blinker ikke lenger siden — de oppdaterer seg på stedet.
+### [1.133.30] - 2026-06-20 · #764
+
+> Trykker du «Vis alle» i veiviseren, sier appen nå «Viser alle spillformer.» i stedet for å vise et spørsmålstegn.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `PlayerCountPicker` i `GameWizard.tsx`: hint-paragrafen vises alltid (ikke bare når `value !== undefined`) — i «Vis alle»-tilstand vises `playerCount.showAllHint` («Viser alle spillformer.»). Nytt `aria-live="polite"` på hint-paragrafen kunngjør skiftet til skjermleser. Count-spanens `aria-label` bytter til `playerCount.showAllAriaLabel` i undefined-tilstand slik at skjermleser ikke annonserer stale teller. (#764)
+
+</details>
+
 ### [1.133.29] - 2026-06-20 · #755
 
 > Steg 3 og 4 i veiviseren sier nå «Bane og tidspunkt» og «Hvem skal spille?» — ikke «1. Spillet» og «2. Spillere» som hørte hjemme i det gamle formen.

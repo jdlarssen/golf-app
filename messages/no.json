@@ -898,8 +898,10 @@
       "lessAriaLabel": "Færre spillere",
       "moreAriaLabel": "Flere spillere",
       "countAriaLabel": "{count} spillere",
+      "showAllAriaLabel": "Viser alle spillformer",
       "showAll": "Vis alle",
-      "hint": "Viser spillformer som passer for {count} {count, plural, one {spiller} other {spillere}}."
+      "hint": "Viser spillformer som passer for {count} {count, plural, one {spiller} other {spillere}}.",
+      "showAllHint": "Viser alle spillformer."
     },
     "club": {
       "legend": "For hvilken klubb?",

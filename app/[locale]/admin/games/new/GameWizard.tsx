@@ -1251,7 +1251,11 @@ function PlayerCountPicker({
         </button>
         <span
           aria-live="polite"
-          aria-label={t('playerCount.countAriaLabel', { count })}
+          aria-label={
+            value !== undefined
+              ? t('playerCount.countAriaLabel', { count })
+              : t('playerCount.showAllAriaLabel')
+          }
           className="min-w-[3ch] text-center font-serif text-2xl tabular-nums text-text"
         >
           {value !== undefined ? count : '?'}
@@ -1275,11 +1279,11 @@ function PlayerCountPicker({
           </button>
         )}
       </div>
-      {value !== undefined && (
-        <p className="font-sans text-xs text-muted">
-          {t('playerCount.hint', { count })}
-        </p>
-      )}
+      <p aria-live="polite" className="font-sans text-xs text-muted">
+        {value !== undefined
+          ? t('playerCount.hint', { count })
+          : t('playerCount.showAllHint')}
+      </p>
     </div>
   );
 }

@@ -898,8 +898,10 @@
       "lessAriaLabel": "Fewer players",
       "moreAriaLabel": "More players",
       "countAriaLabel": "{count} players",
+      "showAllAriaLabel": "Showing all game formats",
       "showAll": "Show all",
-      "hint": "Showing formats suitable for {count} {count, plural, one {player} other {players}}."
+      "hint": "Showing formats suitable for {count} {count, plural, one {player} other {players}}.",
+      "showAllHint": "Showing all game formats."
     },
     "club": {
       "legend": "For which club?",
