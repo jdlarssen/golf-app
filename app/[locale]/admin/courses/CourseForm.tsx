@@ -218,6 +218,14 @@ export function CourseForm({
     );
   }
 
+  // Fills stroke_index for all 18 holes with 1..18 in order. Saves 18
+  // keyboard-popup taps for the common case (admin only adjusts exceptions).
+  function fillSiAscending() {
+    setHoles((prev) =>
+      prev.map((h, i) => ({ ...h, stroke_index: String(i + 1) })),
+    );
+  }
+
   function updateTee(index: number, patch: Partial<TeeBoxData>) {
     setTeeBoxes((prev) =>
       prev.map((tee, i) => (i === index ? { ...tee, ...patch } : tee)),
@@ -371,6 +379,13 @@ export function CourseForm({
       <section>
         <h2 className="text-sm font-medium text-text mb-1">{t('holesHeading')}</h2>
         <p className="text-xs text-muted mb-3">{t('holesHint')}</p>
+        <button
+          type="button"
+          onClick={fillSiAscending}
+          className="mb-3 block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
+        >
+          {initialData ? t('setSiAscButtonEdit') : t('setSiAscButton')}
+        </button>
         <div className="space-y-3">
           {holes.map((hole, index) => (
             <div

@@ -2449,6 +2449,8 @@
       "namePlaceholder": "f.eks. Stiklestad Golfbane",
       "holesHeading": "Hull 1–18",
       "holesHint": "Velg par 3, 4 eller 5 per hull. Stroke-indeks 1–18 må brukes nøyaktig én gang hver.",
+      "setSiAscButton": "Sett SI 1–18 (stigende)",
+      "setSiAscButtonEdit": "Overskriv SI med 1–18 (stigende)",
       "holeLabel": "Hull {number}",
       "siLabel": "SI",
       "teeBoxesHeading": "Tee-bokser ({count}/{max})",

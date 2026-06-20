@@ -30,6 +30,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.42] - 2026-06-20 · #756
 
 > Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.40] - 2026-06-20 · #780
+
+> Ny snarvei i bane-skjemaet: ett trykk fyller stroke-indeks 1–18 stigende, så du slipper 18 tastatur-popups.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `CourseForm.tsx`: lagt til `fillSiAscending()`-handler og en `<button type="button">` øverst i hull-seksjonen. Knappen kaller `setHoles` og setter `stroke_index` til `String(i + 1)` for alle 18 hull. I edit-flyten (`initialData !== undefined`) vises knappen som «Overskriv SI med 1–18 (stigende)» for å signalisere at det er destruktivt. Nye nøkler `courseForm.form.setSiAscButton` + `setSiAscButtonEdit` i no.json + en.json. (#780)
+
+</details>
+
 ### [1.133.39] - 2026-06-20 · #779
 
 > Når du ikke har noen ventende invitasjoner, er invitasjonsskjemaet nå åpent med én gang — ingen ekstra trykk.
