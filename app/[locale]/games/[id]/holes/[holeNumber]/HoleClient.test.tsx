@@ -14,8 +14,11 @@ vi.mock('@/lib/sync/db', () => {
     put: vi.fn().mockResolvedValue(undefined),
     bulkGet: vi.fn().mockResolvedValue([]),
   };
+  const syncQueue = {
+    toArray: vi.fn().mockResolvedValue([]),
+  };
   return {
-    localDb: { scores },
+    localDb: { scores, syncQueue },
     scoreKey: (gameId: string, userId: string, holeNumber: number) =>
       `${gameId}:${userId}:${holeNumber}`,
   };
@@ -76,10 +79,25 @@ function baseProps(
   };
 }
 
+// useLiveQuery is called three times per HoleClient render:
+//   1st: localRows (scores per player) — return [undefined,...] per player slot
+//   2nd: localCompletedHoles (count) — return undefined (treated as 0)
+//   3rd: syncQueue (pending items) — return [] (empty queue, no pending)
+// Using mockImplementation with a counter lets each call return the right shape.
+function defaultUseLiveQueryImpl() {
+  let callCount = 0;
+  return () => {
+    callCount++;
+    if (callCount === 1) return [undefined, undefined, undefined, undefined];
+    if (callCount === 3) return [];
+    return undefined;
+  };
+}
+
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
-  useLiveQueryMock.mockReturnValue([undefined, undefined, undefined, undefined]);
+  useLiveQueryMock.mockImplementation(defaultUseLiveQueryImpl());
 });
 
 afterEach(() => {

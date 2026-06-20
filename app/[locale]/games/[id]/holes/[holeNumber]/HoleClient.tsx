@@ -337,6 +337,13 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     [gameId, myUserId],
   );
 
+  // #754: count non-abandoned items in the sync queue so SyncStatusLine can
+  // show a "waiting for network" state while scores are queued but unsynced.
+  const syncQueue = useLiveQuery(() => localDb.syncQueue.toArray(), []);
+  const pendingCount = (syncQueue ?? []).filter(
+    (item) => item != null && item.abandonedAt == null,
+  ).length;
+
   const cards = players.map((p, i) => {
     const row = localRows?.[i];
     const score = row?.strokes ?? null;
@@ -810,8 +817,12 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             />
           );
         })}
-        {(syncing || savedAt.length > 0) && (
-          <SyncStatusLine syncing={syncing} savedAt={savedAt} />
+        {(syncing || savedAt.length > 0 || pendingCount > 0) && (
+          <SyncStatusLine
+            syncing={syncing}
+            savedAt={savedAt}
+            pendingCount={pendingCount}
+          />
         )}
       </div>
 

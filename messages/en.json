@@ -1737,7 +1737,8 @@
     "sync": {
       "sending": "Sending…",
       "savedAt": "Saved · {time}",
-      "savedRecently": "Saved recently"
+      "savedRecently": "Saved recently",
+      "waitingForNetwork": "Saved on your phone · sends when you're back online"
     },
     "onboarding": {
       "prefix": "Try this:",

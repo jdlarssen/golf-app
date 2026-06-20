@@ -1737,7 +1737,8 @@
     "sync": {
       "sending": "Sender…",
       "savedAt": "Lagret · {time}",
-      "savedRecently": "Lagret nylig"
+      "savedRecently": "Lagret nylig",
+      "waitingForNetwork": "Lagret på telefonen · sendes når nettet er tilbake"
     },
     "onboarding": {
       "prefix": "Prøv dette:",
