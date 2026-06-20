@@ -3808,7 +3808,8 @@
       "pageSubtitle": "Multi-match-turneringer i Ryder Cup-stil.",
       "emptyText": "Du har ingen cuper ennå.",
       "emptyLink": "Sett opp en cup",
-      "rowSubtitle": "{team1} mot {team2} · først til {points} poeng"
+      "rowSubtitle": "{team1} mot {team2} · først til {points} poeng",
+      "emptyBody": "Du har ingen cuper ennå. <a>Sett opp en cup</a> for å komme i gang."
     },
     "manage": {
       "brassRibbonAdmin": "Cup · {status}",

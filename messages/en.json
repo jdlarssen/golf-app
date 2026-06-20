@@ -3808,7 +3808,8 @@
       "pageSubtitle": "Multi-match tournaments in Ryder Cup style.",
       "emptyText": "You have no cups yet.",
       "emptyLink": "Set up a cup",
-      "rowSubtitle": "{team1} vs {team2} · first to {points} points"
+      "rowSubtitle": "{team1} vs {team2} · first to {points} points",
+      "emptyBody": "You have no cups yet. <a>Set up a cup</a> to get started."
     },
     "manage": {
       "brassRibbonAdmin": "Cup · {status}",

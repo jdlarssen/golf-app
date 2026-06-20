@@ -88,14 +88,16 @@ export default async function CupListPage({
       {rows.length === 0 ? (
         <Card>
           <p className="text-sm text-muted">
-            {t('ledger.emptyText')}{' '}
-            <SmartLink
-              href="/admin/games/new?intent=cup"
-              className="text-text underline hover:no-underline"
-            >
-              {t('ledger.emptyLink')}
-            </SmartLink>{' '}
-            for å komme i gang.
+            {t.rich('ledger.emptyBody', {
+              a: (chunks) => (
+                <SmartLink
+                  href="/admin/games/new?intent=cup"
+                  className="text-text underline hover:no-underline"
+                >
+                  {chunks}
+                </SmartLink>
+              ),
+            })}
           </p>
         </Card>
       ) : (

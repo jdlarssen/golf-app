@@ -24,6 +24,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.25] - 2026-06-20 · #768
 
 > «Send ny kode» sender nå koden med én gang du trykker — ingen retur til e-postskjemaet og ekstra knappetapp.
+### [1.133.33] - 2026-06-20 · #762
+
+> Cup-listen er nå helt norsk — også på engelsk: «for å komme i gang» lekker ikke lenger inn i den engelske visningen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- I admin-cup-listen brukte tom-tilstand-blokken en sammensetning av to katalognøkler (`ledger.emptyText` + `ledger.emptyLink`) pluss hardkodet norsk «for å komme i gang.». I engelsk locale ble resultatet «You have no cups yet. Set up a cup for å komme i gang.». Erstatt med én `t.rich('ledger.emptyBody', { a: ... })`-kall der `<a>`-chunken rendres som `SmartLink` med eksisterende `className`. Ny katalognøkkel `ledger.emptyBody` lagt til i `messages/no.json` og `messages/en.json`; no-verdien er «Du har ingen cuper ennå. <a>Sett opp en cup</a> for å komme i gang.», en-verdien er «You have no cups yet. <a>Set up a cup</a> to get started.». Etablert t.rich-mønster fra `CupSetup.tsx` + `trekk-tilbake/page.tsx`. (#762)
+
+</details>
+
 ### [1.133.32] - 2026-06-20 · #752
 
 > Prøver du å generere matcher uten spillere eller baner, får du nå en forklaring og en snarvei videre — i stedet for en veiviser som aldri kan fullføres.
