@@ -3646,7 +3646,13 @@
       "addButton": "Legg til {count} {count, plural, one {spiller} other {spillere}}",
       "addButtonEmpty": "Legg til spillere",
       "addPending": "Legger til …",
-      "unknownPlayer": "Ukjent spiller"
+      "unknownPlayer": "Ukjent spiller",
+      "errors": {
+        "missing": "Mangler ligainformasjon.",
+        "players": "Ugyldig spillerliste.",
+        "players_failed": "Klarte ikke å legge til spillerne. Prøv igjen.",
+        "fallback": "Noe gikk galt."
+      }
     },
     "addRound": {
       "summaryLabel": "+ Legg til runde",

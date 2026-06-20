@@ -3646,7 +3646,13 @@
       "addButton": "Add {count} {count, plural, one {player} other {players}}",
       "addButtonEmpty": "Add players",
       "addPending": "Adding …",
-      "unknownPlayer": "Unknown player"
+      "unknownPlayer": "Unknown player",
+      "errors": {
+        "missing": "Missing league information.",
+        "players": "Invalid player list.",
+        "players_failed": "Could not add the players. Please try again.",
+        "fallback": "Something went wrong."
+      }
     },
     "addRound": {
       "summaryLabel": "+ Add round",

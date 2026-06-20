@@ -104,9 +104,18 @@ export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague
         ))}
       </ul>
 
-      {state.error && state.error !== '' && (
-        <p className="font-sans text-[12px] text-danger">{state.error}</p>
-      )}
+      {(() => {
+        const error = state.error
+          ? (['missing', 'players', 'players_failed'] as const).includes(
+              state.error as 'missing' | 'players' | 'players_failed',
+            )
+            ? t(`errors.${state.error as 'missing' | 'players' | 'players_failed'}`)
+            : t('errors.fallback')
+          : null;
+        return error ? (
+          <p className="font-sans text-[12px] text-danger">{error}</p>
+        ) : null;
+      })()}
 
       <SubmitButton
         variant="secondary"
