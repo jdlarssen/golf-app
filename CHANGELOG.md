@@ -87,7 +87,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 ### [1.133.45] - 2026-06-20 · #771
 
-> Kjønn- og spillerklasse-knappene er 2 piksler høyere og lettere å treffe med fingeren.
+> Kjønn- og spillerklasse-knappene er to piksler høyere og lettere å treffe med fingeren.
 
 <details>
 <summary>Teknisk</summary>

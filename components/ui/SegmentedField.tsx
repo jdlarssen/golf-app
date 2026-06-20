@@ -53,7 +53,7 @@ export function SegmentedField({
               role="radio"
               aria-checked={selected}
               onClick={() => onChange(opt.value)}
-              className={`flex min-h-[42px] items-center justify-center rounded-xl border px-3 font-sans text-sm transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+              className={`flex min-h-[44px] items-center justify-center rounded-xl border px-3 font-sans text-sm transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                 selected
                   ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
                   : 'border-border bg-surface text-muted hover:bg-primary-soft/60 hover:text-text'
