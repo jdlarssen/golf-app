@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import {
   getRoleContext,
   requireAdminOrClubAdmin,
@@ -293,23 +294,30 @@ export async function updateTournament(formData: FormData) {
   if (gruesomeAllowance === null)
     redirect(`${base.path}?error=gruesome_allowance`);
 
-  const { error } = await supabase
-    .from('tournaments')
-    .update({
-      name,
-      team_1_name: team1,
-      team_2_name: team2,
-      points_to_win: points as number,
-      fourball_allowance_pct: fourballAllowance as number,
-      foursomes_allowance_pct: foursomesAllowance as number,
-      greensome_allowance_pct: greensomeAllowance as number,
-      chapman_allowance_pct: chapmanAllowance as number,
-      gruesome_allowance_pct: gruesomeAllowance as number,
-    })
-    .eq('id', id);
-
-  if (error) {
-    console.error('[cup] updateTournament failed', { id, error });
+  // #727: assert the update touched a row — a silent 0-row no-op (id vanished
+  // between the auth/redirect-base fetch and this write) should hit the error
+  // path, not fall through to a "updated" redirect (bug-prevention #2).
+  try {
+    expectAffected(
+      await supabase
+        .from('tournaments')
+        .update({
+          name,
+          team_1_name: team1,
+          team_2_name: team2,
+          points_to_win: points as number,
+          fourball_allowance_pct: fourballAllowance as number,
+          foursomes_allowance_pct: foursomesAllowance as number,
+          greensome_allowance_pct: greensomeAllowance as number,
+          chapman_allowance_pct: chapmanAllowance as number,
+          gruesome_allowance_pct: gruesomeAllowance as number,
+        })
+        .eq('id', id)
+        .select('id'),
+      'updateTournament',
+    );
+  } catch (err) {
+    console.error('[cup] updateTournament failed', { id, err });
     redirect(`${base.path}?error=update_failed`);
   }
 
@@ -346,12 +354,18 @@ export async function startTournament(formData: FormData) {
     redirect(`${base.path}?error=wrong_status`);
   }
 
-  const { error } = await supabase
-    .from('tournaments')
-    .update({ status: 'active', started_at: new Date().toISOString() })
-    .eq('id', id);
-  if (error) {
-    console.error('[cup] startTournament failed', { id, error });
+  // #727: assert the status flip touched a row (see updateTournament).
+  try {
+    expectAffected(
+      await supabase
+        .from('tournaments')
+        .update({ status: 'active', started_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('id'),
+      'startTournament',
+    );
+  } catch (err) {
+    console.error('[cup] startTournament failed', { id, err });
     redirect(`${base.path}?error=start_failed`);
   }
 
@@ -428,16 +442,22 @@ export async function finishTournament(formData: FormData) {
     winnerTeam = 2;
   }
 
-  const { error } = await supabase
-    .from('tournaments')
-    .update({
-      status: 'finished',
-      finished_at: new Date().toISOString(),
-      winner_team: winnerTeam,
-    })
-    .eq('id', id);
-  if (error) {
-    console.error('[cup] finishTournament failed', { id, error });
+  // #727: assert the finish update touched a row (see updateTournament).
+  try {
+    expectAffected(
+      await supabase
+        .from('tournaments')
+        .update({
+          status: 'finished',
+          finished_at: new Date().toISOString(),
+          winner_team: winnerTeam,
+        })
+        .eq('id', id)
+        .select('id'),
+      'finishTournament',
+    );
+  } catch (err) {
+    console.error('[cup] finishTournament failed', { id, err });
     redirect(`${base.path}?error=finish_failed`);
   }
 
