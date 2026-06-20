@@ -600,7 +600,7 @@
         "scoringGrossDesc": "Raw strokes"
       },
       "basics": {
-        "heading": "1. Game",
+        "heading": "Course and time",
         "gameNameLabel": "Game name",
         "gameNamePlaceholder": "e.g. Stiklestad 17 May",
         "courseLabel": "Course",
@@ -650,6 +650,7 @@
       },
       "players": {
         "headingDefault": "2. Players",
+        "headingWizard": "Who is playing?",
         "pendingLabel": "Invited player",
         "waitingChip": "Waiting",
         "searchLabel": "Search players",

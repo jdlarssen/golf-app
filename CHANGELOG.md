@@ -36,6 +36,19 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.51] - 2026-06-20 · #767
 
 > Aksepter- og Fjern-knappene på lagoversikten blinker ikke lenger siden — de oppdaterer seg på stedet.
+### [1.133.29] - 2026-06-20 · #755
+
+> Steg 3 og 4 i veiviseren sier nå «Bane og tidspunkt» og «Hvem skal spille?» — ikke «1. Spillet» og «2. Spillere» som hørte hjemme i det gamle formen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `wizard.sections.basics.heading` endret til «Bane og tidspunkt» (no) / «Course and time» (en) — fjerner nummer som dupliserer steg-telleren. Test i `GameWizard.test.tsx` oppdatert tilsvarende. (#755)
+- Ny nøkkel `wizard.sections.players.headingWizard` = «Hvem skal spille?» (no) / «Who is playing?» (en); `GameWizard.tsx` steg 4 bruker den i stedet for `headingDefault` «2. Spillere». Full GameForm beholder sin nummererte `headingDefault`. (#755)
+
+</details>
+
 ### [1.133.28] - 2026-06-20 · #759
 
 > Én ting heter én ting: «spillformer» hele veien gjennom opprettelsesveiviseren.

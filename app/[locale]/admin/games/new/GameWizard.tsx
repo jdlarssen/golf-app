@@ -867,7 +867,7 @@ export function GameWizard({
             state={state}
             players={players}
             selectableIds={pickIds}
-            heading={t('sections.players.headingDefault')}
+            heading={t('sections.players.headingWizard')}
           />
           {/* TeamsAssignmentSection er self-gating per modus — den rendrer
               kun de relevante under-blokkene (matchplay-sider / lag-grid /

@@ -600,7 +600,7 @@
         "scoringGrossDesc": "Rå slag"
       },
       "basics": {
-        "heading": "1. Spillet",
+        "heading": "Bane og tidspunkt",
         "gameNameLabel": "Spillnavn",
         "gameNamePlaceholder": "f.eks. Stiklestad 17. mai",
         "courseLabel": "Bane",
@@ -650,6 +650,7 @@
       },
       "players": {
         "headingDefault": "2. Spillere",
+        "headingWizard": "Hvem skal spille?",
         "pendingLabel": "Invitert spiller",
         "waitingChip": "Venter",
         "searchLabel": "Søk i spillere",

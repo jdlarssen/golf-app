@@ -382,7 +382,7 @@ describe('GameWizard — escape-hatch til full-form bevarer state', () => {
     );
 
     expect(
-      screen.getByRole('heading', { name: /^1\. spillet$/i }),
+      screen.getByRole('heading', { name: /^bane og tidspunkt$/i }),
     ).toBeInTheDocument();
 
     const backLink = screen.getByRole('button', {
