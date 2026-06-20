@@ -4367,5 +4367,24 @@
   "SyncBanner": {
     "conflictNotice": "Hole {holeNumber} was changed by another player. The most recent value now applies.",
     "conflictDismiss": "OK"
+  },
+  "installBanner": {
+    "title": "Install Tørny as an app",
+    "body": "Opens faster, and you can enter scores without a connection.",
+    "install": "Install",
+    "closeAria": "Close"
+  },
+  "installInstructions": {
+    "titleSafari": "How to install Tørny",
+    "titleOtherBrowser": "Switch to Safari to install",
+    "iosStep2": "Scroll down and tap «Add to Home Screen».",
+    "iosStep3": "Tap «Add» in the top right.",
+    "iosOtherDescription": "On iPhone, only Safari can add Tørny to your home screen. Other iOS browsers don't support it.",
+    "iosOtherInstructions": "Open tornygolf.no in Safari and try again.",
+    "unsupportedDescription": "Your browser can't add Tørny to your home screen automatically.",
+    "unsupportedInstructions": "Try opening tornygolf.no in Chrome, Edge, or Safari on your phone.",
+    "closeAria": "Close",
+    "iosStep1Pre": "Tap the share icon",
+    "iosStep1Post": "at the bottom of the screen."
   }
 }

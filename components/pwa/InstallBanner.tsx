@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
+import { useTranslations } from 'next-intl';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { InstallInstructionsModal } from './InstallInstructionsModal';
 
@@ -23,6 +24,7 @@ const getSnapshot = () => {
 const getServerSnapshot = () => true;
 
 export function InstallBanner() {
+  const t = useTranslations('installBanner');
   const { status, install } = useInstallPrompt();
   const dismissed = useSyncExternalStore(
     subscribe,
@@ -66,10 +68,10 @@ export function InstallBanner() {
       <div className="mb-4 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-text">
-            Installer Tørny som app
+            {t('title')}
           </p>
           <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
-            Raskere åpning, og du kan registrere slag uten dekning.
+            {t('body')}
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -78,12 +80,12 @@ export function InstallBanner() {
             onClick={onInstall}
             className="rounded-full bg-primary text-bg-tint px-3 py-1.5 text-xs font-medium"
           >
-            Installer
+            {t('install')}
           </button>
           <button
             type="button"
             onClick={dismiss}
-            aria-label="Lukk"
+            aria-label={t('closeAria')}
             className="text-text-muted hover:text-text px-1.5 py-1"
           >
             ✕

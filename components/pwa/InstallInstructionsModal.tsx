@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 type Variant = 'ios-safari' | 'ios-other' | 'unsupported';
 
@@ -13,6 +14,8 @@ export function InstallInstructionsModal({
   onClose: () => void;
   variant: Variant;
 }) {
+  const t = useTranslations('installInstructions');
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -47,79 +50,66 @@ export function InstallInstructionsModal({
             className="font-serif text-xl font-medium text-text"
           >
             {variant === 'ios-other'
-              ? 'Bytt til Safari for å installere'
-              : 'Slik installerer du Tørny'}
+              ? t('titleOtherBrowser')
+              : t('titleSafari')}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Lukk"
+            aria-label={t('closeAria')}
             className="-mt-1 -mr-1 px-2 text-text-muted hover:text-text"
           >
             ✕
           </button>
         </div>
 
-        {variant === 'ios-safari' && <IosSafariSteps />}
-        {variant === 'ios-other' && <IosOtherSteps />}
-        {variant === 'unsupported' && <UnsupportedSteps />}
+        {variant === 'ios-safari' && <IosSafariSteps t={t} />}
+        {variant === 'ios-other' && <IosOtherSteps t={t} />}
+        {variant === 'unsupported' && <UnsupportedSteps t={t} />}
       </div>
     </div>
   );
 }
 
-function IosSafariSteps() {
+type TFn = ReturnType<typeof useTranslations<'installInstructions'>>;
+
+function IosSafariSteps({ t }: { t: TFn }) {
   return (
     <ol className="space-y-4 text-sm text-text">
       <li className="flex gap-3">
         <Step n={1} />
         <span className="leading-relaxed">
-          Trykk på del-ikonet{' '}
+          {t('iosStep1Pre')}{' '}
           <SafariShareGlyph className="inline-block align-text-bottom mx-0.5" />{' '}
-          nederst på skjermen.
+          {t('iosStep1Post')}
         </span>
       </li>
       <li className="flex gap-3">
         <Step n={2} />
-        <span className="leading-relaxed">
-          Bla nedover og trykk på «Legg til på Hjem-skjerm».
-        </span>
+        <span className="leading-relaxed">{t('iosStep2')}</span>
       </li>
       <li className="flex gap-3">
         <Step n={3} />
-        <span className="leading-relaxed">
-          Trykk «Legg til» øverst til høyre.
-        </span>
+        <span className="leading-relaxed">{t('iosStep3')}</span>
       </li>
     </ol>
   );
 }
 
-function IosOtherSteps() {
+function IosOtherSteps({ t }: { t: TFn }) {
   return (
     <div className="space-y-3 text-sm text-text leading-relaxed">
-      <p>
-        På iPhone er det bare{' '}
-        <strong className="font-medium">Safari</strong> som kan legge Tørny
-        på hjem-skjermen. Andre nettlesere på iOS støtter det ikke.
-      </p>
-      <p>
-        Åpne <strong className="font-medium">tornygolf.no</strong> i Safari og
-        prøv igjen.
-      </p>
+      <p>{t('iosOtherDescription')}</p>
+      <p>{t('iosOtherInstructions')}</p>
     </div>
   );
 }
 
-function UnsupportedSteps() {
+function UnsupportedSteps({ t }: { t: TFn }) {
   return (
     <div className="space-y-3 text-sm text-text leading-relaxed">
-      <p>
-        Nettleseren din kan ikke legge Tørny på hjem-skjermen automatisk.
-      </p>
-      <p>
-        Prøv å åpne tornygolf.no i Chrome, Edge eller Safari på telefonen.
-      </p>
+      <p>{t('unsupportedDescription')}</p>
+      <p>{t('unsupportedInstructions')}</p>
     </div>
   );
 }

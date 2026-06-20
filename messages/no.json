@@ -4367,5 +4367,24 @@
   "SyncBanner": {
     "conflictNotice": "Hull {holeNumber} ble endret av en medspiller. Det nyeste tallet gjelder nå.",
     "conflictDismiss": "OK"
+  },
+  "installBanner": {
+    "title": "Installer Tørny som app",
+    "body": "Raskere åpning, og du kan registrere slag uten dekning.",
+    "install": "Installer",
+    "closeAria": "Lukk"
+  },
+  "installInstructions": {
+    "titleSafari": "Slik installerer du Tørny",
+    "titleOtherBrowser": "Bytt til Safari for å installere",
+    "iosStep2": "Bla nedover og trykk på «Legg til på Hjem-skjerm».",
+    "iosStep3": "Trykk «Legg til» øverst til høyre.",
+    "iosOtherDescription": "På iPhone er det bare Safari som kan legge Tørny på hjem-skjermen. Andre nettlesere på iOS støtter det ikke.",
+    "iosOtherInstructions": "Åpne tornygolf.no i Safari og prøv igjen.",
+    "unsupportedDescription": "Nettleseren din kan ikke legge Tørny på hjem-skjermen automatisk.",
+    "unsupportedInstructions": "Prøv å åpne tornygolf.no i Chrome, Edge eller Safari på telefonen.",
+    "closeAria": "Lukk",
+    "iosStep1Pre": "Trykk på del-ikonet",
+    "iosStep1Post": "nederst på skjermen."
   }
 }
