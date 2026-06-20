@@ -227,6 +227,13 @@ export default async function LigaPublicPage({
         </section>
       )}
 
+      {/* #774: season-finished banner */}
+      {league.status === 'finished' && (
+        <div className="mb-6">
+          <Banner tone="success">{t('seasonFinishedBanner')}</Banner>
+        </div>
+      )}
+
       {/* Standings table */}
       <section className="mb-8">
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">

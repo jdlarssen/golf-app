@@ -3727,6 +3727,7 @@
       },
       "kicker": "League",
       "seasonTableHeading": "Season standings",
+      "seasonFinishedBanner": "The season is over. Here's how the table finished.",
       "roundsHeading": "Rounds",
       "noRoundsYet": "No rounds set up yet.",
       "roundLabel": "Round {sequence}",

@@ -3727,6 +3727,7 @@
       },
       "kicker": "Liga",
       "seasonTableHeading": "Sesong-tabell",
+      "seasonFinishedBanner": "Sesongen er ferdig. Slik endte tabellen.",
       "roundsHeading": "Runder",
       "noRoundsYet": "Ingen runder er satt opp ennå.",
       "roundLabel": "Runde {sequence}",
