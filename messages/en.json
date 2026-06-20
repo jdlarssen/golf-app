@@ -113,7 +113,7 @@
         "detail": "Your registration has been approved"
       },
       "registrationRejected": {
-        "title": "Application to {gameName}",
+        "title": "You didn''t get a spot in {gameName}",
         "detail": "{reason}",
         "defaultReason": "Sorry, your registration wasn''t approved",
         "reasonCodes": {

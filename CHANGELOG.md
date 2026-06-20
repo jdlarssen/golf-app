@@ -39,6 +39,9 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.30] - 2026-06-20 · #764
 
 > Trykker du «Vis alle» i veiviseren, sier appen nå «Viser alle spillformer.» i stedet for å vise et spørsmålstegn.
+### [1.133.52] - 2026-06-20 · #757
+
+> Avslaget i innboksen leser nå «Du kom ikke med i {spillnavn}» — du ser utfallet med én gang, uten å måtte lese detaljen.
 
 <details>
 <summary>Teknisk</summary>
@@ -336,6 +339,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 - Nye nøkler lagt til i `admin.game.rows` (`notSubmittedWaiting`, `notSubmittedFinished`) og `admin.games` (`unknownCourse`) i no.json + en.json. (#750)
 - `lib/clubs/getClubDetail.ts`: la til `message` i SELECT på `group_join_requests` og i `PendingJoinRequest`-typen (additiv optional `message: string | null`). `app/[locale]/klubber/[id]/page.tsx`: rendrer hilsenen betinget som `break-words`-linje under dato i forespørsels-kortet. Ingen skjema-/RLS-endring — kolonne finnes allerede (0075) og admin-klienten leser raden i sin helhet. (#741)
 - `wizard.stepSubText.step4BestBall` i no.json og en.json rettet til å liste opp alle gyldige antall (2/4/6/8) i stedet for å si «8 spillere» alene — falsk blokkering for små gjenger. (#743)
+- `inbox.kinds.registrationRejected.title` endret fra «Søknad til {gameName}» til «Du kom ikke med i {gameName}» i `messages/no.json`; tilsvarende engelsk nøkkel oppdatert i `messages/en.json`. (#757)
 
 </details>
 

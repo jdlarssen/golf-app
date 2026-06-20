@@ -113,7 +113,7 @@
         "detail": "Påmeldingen er godkjent"
       },
       "registrationRejected": {
-        "title": "Søknad til {gameName}",
+        "title": "Du kom ikke med i {gameName}",
         "detail": "{reason}",
         "defaultReason": "Påmeldingen ble dessverre ikke godkjent",
         "reasonCodes": {
