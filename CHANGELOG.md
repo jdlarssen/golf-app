@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.21] - 2026-06-20 · #739
+
+> iOS korrigerer ikke lenger e-postadressen din når du logger inn. Skrivefeil som ola@gnail.com forblir akkurat slik du tastet dem.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- La til `autoCapitalize="none"`, `autoCorrect="off"` og `spellCheck={false}` på e-post-`<Input>` i `SendCodeForm.tsx`. iOS Safari kan ellers autokorrigere local-part eller domene til noe annet — f.eks. `gnail.com` → `gmail.com` — som sender kode til feil innboks uten at brukeren aner det. Ren HTML-attributt-endring, ingen logikk. (#739)
+
+</details>
+
 ### [1.133.20] - 2026-06-20 · #731
 
 > Vi tettet et hull i databasen der en innlogget bruker i teorien kunne gitt seg selv admin-tilgang. Du merker ingenting når du spiller. Dette er sikkerhets-herding under panseret.

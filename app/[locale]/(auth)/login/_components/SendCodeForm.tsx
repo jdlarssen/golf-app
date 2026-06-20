@@ -91,7 +91,11 @@ function FormBody({
         name="email"
         type="email"
         label={t('emailLabel')}
+        inputMode="email"
         autoComplete="email"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
         defaultValue={defaultEmail}
         required
       />
