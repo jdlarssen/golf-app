@@ -33,6 +33,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.41] - 2026-06-20 · #783
 
 > Har du ikke lagt inn navn ennå, sier appen nå «God morgen.» i stedet for det litt rare «God morgen, spiller.»
+### [1.133.49] - 2026-06-20 · #742
+
+> Etter at du har sendt inn en bli-med-forespørsel, kan du gå rett videre til «Finn turneringer» med ett trykk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/[locale]/signup/[shortId]/RegistrationForm.tsx`: la til `LinkButton` til `/finn-turneringer` under `requestSentBanner` i `manual_approval`-suksess-grenen. Ny nøkkel `signup.findMoreButton` i `no.json` og `en.json`. (#742)
+
+</details>
+
 ### [1.133.48] - 2026-06-20 · #741
 
 > Hilsenen «hvem er du?» fra bli-med-skjemaet vises nå for eieren. Godkjenning er ikke lenger blind gjetting.

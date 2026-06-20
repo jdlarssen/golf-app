@@ -4041,6 +4041,7 @@
     "teeOffLabel": "Tee-off:",
     "alreadyRegisteredBanner": "Du er allerede påmeldt dette spillet.",
     "goToGameButton": "Gå til spillet",
+    "findMoreButton": "Finn flere turneringer",
     "pendingRequestBanner": "Forespørsel sendt — du får varsel når arrangøren har bestemt seg.",
     "gameLockedBanner": "Påmelding er stengt. Spillet er {status}.",
     "gameLockedActive": "i gang",

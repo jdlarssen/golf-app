@@ -4041,6 +4041,7 @@
     "teeOffLabel": "Tee-off:",
     "alreadyRegisteredBanner": "You''re already signed up for this game.",
     "goToGameButton": "Go to the game",
+    "findMoreButton": "Find more tournaments",
     "pendingRequestBanner": "Request sent — you''ll be notified once the organiser has decided.",
     "gameLockedBanner": "Sign-up is closed. The game is {status}.",
     "gameLockedActive": "in progress",

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/Button';
+import { Button, LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import {
   registerForOpenGame,
@@ -69,9 +69,14 @@ export function RegistrationForm({
   // suksess redirecter via server-action, så vi når aldri hit i den grenen.
   if (result?.ok && mode === 'manual_approval') {
     return (
-      <Banner tone="success" testId="request-sent-banner">
-        {t('requestSentBanner')}
-      </Banner>
+      <div className="space-y-3">
+        <Banner tone="success" testId="request-sent-banner">
+          {t('requestSentBanner')}
+        </Banner>
+        <LinkButton href="/finn-turneringer" variant="secondary" full>
+          {t('findMoreButton')}
+        </LinkButton>
+      </div>
     );
   }
 
