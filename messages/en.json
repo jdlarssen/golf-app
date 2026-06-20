@@ -999,11 +999,11 @@
       "bad_side_ctp_count": "The number of closest-to-pin winners must be 0, 1 or 2.",
       "tee_missing_rating": "The selected tee is missing a rating for a player's gender (M/D/J). Check course administration or change the player's tee gender.",
       "tee_off_required": "Tee-off time is required.",
-      "db_game": "Failed to save the game. Please try again, or check the Supabase logs.",
+      "db_game": "Failed to save the game. Please try again in a moment.",
       "db_users": "Failed to read players from the database. Please try again.",
       "db_tee": "Failed to read the tee box from the database. Please try again.",
       "db_roster": "Failed to read the player list from the database.",
-      "db_players": "Failed to save the players to the game. Please try again, or check the Supabase logs.",
+      "db_players": "Failed to save the players. Please try again in a moment.",
       "not_editable": "The game can no longer be edited because it has already started or finished.",
       "mode_required": "You must choose a game mode before you can publish the game.",
       "unsupported_mode_size_combo": "The selected team size is not yet supported for this game mode.",
@@ -1017,7 +1017,7 @@
       "cup_team_dup": "The teams must have different names.",
       "cup_points": "The points target must be a positive number (typically 4.5 for 8 matches).",
       "cup_allowance": "Allowance must be between 0 and 100.",
-      "cup_insert_failed": "Failed to create the cup. Please try again, or check the Vercel logs.",
+      "cup_insert_failed": "Failed to create the cup. Please try again in a moment.",
       "pending_players": "These players have not completed registration yet{list}. They must log in and fill in their name and handicap before the game can be published."
     },
     "page": {
@@ -2421,9 +2421,9 @@
     "adminErrors": {
       "tee_required": "At least one tee box must be added.",
       "tee_no_rating": "Each tee must have at least one complete rating set per gender (Men / Ladies / Juniors).",
-      "db_course": "Could not save the course. Please try again, or check the Supabase logs.",
-      "db_holes": "Could not save the course. Please try again, or check the Supabase logs.",
-      "db_tees": "Could not save the course. Please try again, or check the Supabase logs."
+      "db_course": "Failed to save the course. Please try again in a moment.",
+      "db_holes": "Failed to save the course. Please try again in a moment.",
+      "db_tees": "Failed to save the course. Please try again in a moment."
     },
     "door": {
       "kicker": "New course",
@@ -2799,7 +2799,7 @@
         "deletingBusy": "Deleting …",
         "cancel": "Cancel",
         "errors": {
-          "delete_failed": "Deletion failed. Try again, or check the Vercel logs."
+          "delete_failed": "Deletion failed. Please try again in a moment."
         },
         "warnings": {
           "scheduled": "The game is scheduled and players have been invited. They will not receive a cancellation notice — you will need to inform them yourself.",
@@ -2945,7 +2945,7 @@
         "email_required": "Please enter an email address.",
         "already_invited": "There is already a pending invitation for this address. Use «Resend» instead.",
         "log_failed": "Invitation sent, but logging failed.",
-        "mail_failed": "The email did not go out. Check the Vercel logs for details.",
+        "mail_failed": "The invitation was saved, but the email didn't go through. Try resending it.",
         "resend_failed": "Could not resend the invitation. Please try again.",
         "rate_limited": "Too many invitations in a short time. Wait a minute and try again.",
         "withdraw_failed": "Could not withdraw the invitation. Please try again.",
@@ -3031,7 +3031,7 @@
           "not_admin": "You do not have access.",
           "self_delete_forbidden": "You cannot delete your own account.",
           "still_has_games": "This player has game history and cannot be deleted.",
-          "auth_delete_failed": "Could not delete the account. It likely has data associated with it (invitations sent, courses created or scores written) that is blocking deletion. Check the Vercel logs.",
+          "auth_delete_failed": "Could not delete the account. It probably has data attached (invitations sent, courses created, or scores written) that prevents deletion. Contact the administrator.",
           "email_invalid": "Invalid email address.",
           "email_in_use": "This email address is already registered.",
           "email_update_failed": "Could not update the email address. Please try again.",
@@ -3070,7 +3070,7 @@
         "not_found": "Course not found.",
         "in_use": "Cannot delete the course because at least one game uses it. Delete the games first.",
         "not_owned": "You can only delete courses you created yourself.",
-        "delete_failed": "Could not delete the course. Please try again or check the Supabase logs."
+        "delete_failed": "Failed to delete the course. Please try again in a moment."
       },
       "statusMessages": {
         "created": "✓ Course «{name}» was saved.",
@@ -3113,9 +3113,9 @@
           "tee_no_rating": "Each tee must have at least one complete rating set per gender (Men / Ladies / Juniors).",
           "tee_not_found": "The tee no longer exists. Reload the page to see the updated list.",
           "tee_not_archived": "This tee is not archived, so there is nothing to reopen.",
-          "db_course": "Could not save the course. Please try again or check the Supabase logs.",
-          "db_holes": "Could not save the course. Please try again or check the Supabase logs.",
-          "db_tees": "Could not save the course. Please try again or check the Supabase logs.",
+          "db_course": "Failed to save the course. Please try again in a moment.",
+          "db_holes": "Failed to save the course. Please try again in a moment.",
+          "db_tees": "Failed to save the course. Please try again in a moment.",
           "db_load": "Could not read the course from the database. Please try again."
         }
       },
@@ -3139,7 +3139,7 @@
         "cancel": "Cancel",
         "inUseBanner": "The course is used in {count, plural, one {# game} other {# games}} and cannot be deleted. Delete the games that use it first.",
         "errors": {
-          "delete_failed": "Deletion failed. Please try again or check the Vercel logs.",
+          "delete_failed": "Deletion failed. Please try again in a moment.",
           "not_owned": "You can only delete courses you created yourself.",
           "in_use": "The course is used in at least one game and cannot be deleted."
         }
@@ -3155,7 +3155,7 @@
         "not_found": "Format not found.",
         "last_primary": "Cannot remove the last primary for this occasion. Activate another format as primary first.",
         "demote_first": "Demote the star first — a primary format must be visible. Uncheck the primary star before hiding the row.",
-        "db_error": "Could not save the change. Please try again or check the Vercel logs."
+        "db_error": "Failed to save the change. Please try again in a moment."
       },
       "status": {
         "updated": "Change saved.",
@@ -3202,8 +3202,8 @@
         "body_required": "Body text is required.",
         "link_must_be_internal": "Link must point to an internal route (must start with «/»).",
         "cta_without_link": "Button text requires a link to be filled in.",
-        "publish_failed": "Could not publish. Check the Vercel logs.",
-        "digest_failed": "Could not send the monthly digest. Check the Vercel logs."
+        "publish_failed": "Failed to publish. Please try again in a moment.",
+        "digest_failed": "Failed to send the newsletter. Please try again in a moment."
       },
       "success": {
         "published": "Update live for {count} users.",
@@ -3689,7 +3689,7 @@
       "deletePending": "Deleting …",
       "cancelButton": "Cancel",
       "errors": {
-        "delete_failed": "Delete failed. Please try again, or check the Vercel logs.",
+        "delete_failed": "Deletion failed. Please try again in a moment.",
         "missing": "Something went wrong. Please try again."
       },
       "warnings": {
@@ -3933,7 +3933,7 @@
       "deletePending": "Deleting…",
       "cancelButton": "Cancel",
       "errors": {
-        "delete_failed": "Deletion failed. Please try again, or check the Vercel logs."
+        "delete_failed": "Deletion failed. Please try again in a moment."
       },
       "warnings": {
         "active": "The cup is currently active. Deleting it removes the cup permanently, but the individual matches remain as standalone games.",

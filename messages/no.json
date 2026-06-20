@@ -999,11 +999,11 @@
       "bad_side_ctp_count": "Antall closest-to-pin-vinnere må være 0, 1 eller 2.",
       "tee_missing_rating": "Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.",
       "tee_off_required": "Tee-off-tidspunkt er påkrevd.",
-      "db_game": "Klarte ikke å lagre spillet. Prøv igjen, eller sjekk Supabase-loggene.",
+      "db_game": "Klarte ikke å lagre spillet. Prøv igjen om litt.",
       "db_users": "Klarte ikke å lese spillere fra databasen. Prøv igjen.",
       "db_tee": "Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.",
       "db_roster": "Klarte ikke å lese spillerlisten fra databasen.",
-      "db_players": "Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.",
+      "db_players": "Klarte ikke å lagre spillerne. Prøv igjen om litt.",
       "not_editable": "Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.",
       "mode_required": "Du må velge en spillmodus før du kan publisere spillet.",
       "unsupported_mode_size_combo": "Den valgte lagstørrelsen er ikke støttet for denne spillmodusen ennå.",
@@ -1017,7 +1017,7 @@
       "cup_team_dup": "Lagene må ha forskjellige navn.",
       "cup_points": "Poengmålet må være et positivt tall (typisk 4,5 for 8 matcher).",
       "cup_allowance": "Handicap-andelen må være mellom 0 og 100.",
-      "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen, eller sjekk Vercel-loggene.",
+      "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen om litt.",
       "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres."
     },
     "page": {
@@ -2421,9 +2421,9 @@
     "adminErrors": {
       "tee_required": "Minst én tee-boks må legges til.",
       "tee_no_rating": "Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).",
-      "db_course": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.",
-      "db_holes": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.",
-      "db_tees": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene."
+      "db_course": "Klarte ikke å lagre banen. Prøv igjen om litt.",
+      "db_holes": "Klarte ikke å lagre banen. Prøv igjen om litt.",
+      "db_tees": "Klarte ikke å lagre banen. Prøv igjen om litt."
     },
     "door": {
       "kicker": "Ny bane",
@@ -2799,7 +2799,7 @@
         "deletingBusy": "Sletter …",
         "cancel": "Avbryt",
         "errors": {
-          "delete_failed": "Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene."
+          "delete_failed": "Slettingen feilet. Prøv igjen om litt."
         },
         "warnings": {
           "scheduled": "Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er kansellert. Du må evt. si fra selv.",
@@ -2945,7 +2945,7 @@
         "email_required": "Du må fylle inn en e-postadresse.",
         "already_invited": "Det finnes allerede en ventende invitasjon til denne adressen. Bruk \"Send på nytt\" istedenfor.",
         "log_failed": "Invitasjonen ble sendt, men loggføring feilet.",
-        "mail_failed": "Mailen kom ikke ut. Sjekk Vercel-loggene for detaljer.",
+        "mail_failed": "Invitasjonen ble lagret, men e-posten kom ikke fram. Prøv å sende på nytt.",
         "resend_failed": "Klarte ikke sende invitasjonen på nytt. Prøv igjen.",
         "rate_limited": "For mange invitasjoner på kort tid. Vent et minutt og prøv igjen.",
         "withdraw_failed": "Klarte ikke trekke tilbake invitasjonen. Prøv igjen.",
@@ -3031,7 +3031,7 @@
           "not_admin": "Du har ikke tilgang.",
           "self_delete_forbidden": "Du kan ikke slette din egen konto.",
           "still_has_games": "Spilleren har spillhistorikk og kan ikke slettes.",
-          "auth_delete_failed": "Klarte ikke slette kontoen. Den har sannsynligvis data knyttet til seg (invitasjoner sendt, baner opprettet eller scores skrevet) som blokkerer sletting. Sjekk Vercel-loggene.",
+          "auth_delete_failed": "Klarte ikke slette kontoen. Den har sannsynligvis data knyttet til seg (invitasjoner sendt, baner opprettet eller scorer skrevet) som blokkerer sletting. Ta kontakt med administratoren.",
           "email_invalid": "Ugyldig e-postadresse.",
           "email_in_use": "E-postadressen er allerede registrert.",
           "email_update_failed": "Klarte ikke oppdatere e-postadressen. Prøv igjen.",
@@ -3070,7 +3070,7 @@
         "not_found": "Banen ble ikke funnet.",
         "in_use": "Kan ikke slette banen fordi minst ett spill bruker den. Slett spillene først.",
         "not_owned": "Du kan kun slette baner du selv har laget.",
-        "delete_failed": "Klarte ikke å slette banen. Prøv igjen, eller sjekk Supabase-loggene."
+        "delete_failed": "Klarte ikke å slette banen. Prøv igjen om litt."
       },
       "statusMessages": {
         "created": "✓ Banen «{name}» ble lagret.",
@@ -3113,9 +3113,9 @@
           "tee_no_rating": "Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).",
           "tee_not_found": "Tee-en finnes ikke lenger. Last siden på nytt for å se oppdatert liste.",
           "tee_not_archived": "Denne tee-en er ikke arkivert, så det er ingenting å gjenåpne.",
-          "db_course": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.",
-          "db_holes": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.",
-          "db_tees": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.",
+          "db_course": "Klarte ikke å lagre banen. Prøv igjen om litt.",
+          "db_holes": "Klarte ikke å lagre banen. Prøv igjen om litt.",
+          "db_tees": "Klarte ikke å lagre banen. Prøv igjen om litt.",
           "db_load": "Klarte ikke å lese banen fra databasen. Prøv igjen."
         }
       },
@@ -3139,7 +3139,7 @@
         "cancel": "Avbryt",
         "inUseBanner": "Banen er i bruk i {count, plural, one {# spill} other {# spill}} og kan ikke slettes. Slett spillene som bruker den først.",
         "errors": {
-          "delete_failed": "Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene.",
+          "delete_failed": "Slettingen feilet. Prøv igjen om litt.",
           "not_owned": "Du kan bare slette baner du har laget selv.",
           "in_use": "Banen er i bruk i minst ett spill og kan ikke slettes."
         }
@@ -3155,7 +3155,7 @@
         "not_found": "Formatet ble ikke funnet.",
         "last_primary": "Kan ikke fjerne siste primær-format for dette arrangementet. Aktiver et annet format som primær først.",
         "demote_first": "Senk stjernen først — et primær-format må være synlig. Avhuk primær-stjernen før du skjuler raden.",
-        "db_error": "Klarte ikke å lagre endringen. Prøv igjen, eller sjekk Vercel-loggene."
+        "db_error": "Klarte ikke å lagre endringen. Prøv igjen om litt."
       },
       "status": {
         "updated": "Endringen er lagret.",
@@ -3202,8 +3202,8 @@
         "body_required": "Du må fylle inn brødtekst.",
         "link_must_be_internal": "Lenke må peke til en intern rute (starte med «/»).",
         "cta_without_link": "Knappe-tekst krever at du også fyller inn en lenke.",
-        "publish_failed": "Klarte ikke å publisere. Sjekk Vercel-loggene.",
-        "digest_failed": "Klarte ikke å sende månedsbrev. Sjekk Vercel-loggene."
+        "publish_failed": "Klarte ikke å publisere. Prøv igjen om litt.",
+        "digest_failed": "Klarte ikke å sende månedsbrev. Prøv igjen om litt."
       },
       "success": {
         "published": "Lanseringen er ute hos {count} brukere.",
@@ -3689,7 +3689,7 @@
       "deletePending": "Sletter …",
       "cancelButton": "Avbryt",
       "errors": {
-        "delete_failed": "Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene.",
+        "delete_failed": "Slettingen feilet. Prøv igjen om litt.",
         "missing": "Noe gikk galt. Prøv igjen."
       },
       "warnings": {
@@ -3933,7 +3933,7 @@
       "deletePending": "Sletter …",
       "cancelButton": "Avbryt",
       "errors": {
-        "delete_failed": "Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene."
+        "delete_failed": "Slettingen feilet. Prøv igjen om litt."
       },
       "warnings": {
         "active": "Cupen pågår nå. Sletting fjerner cup-en for alltid, men selve matchene forblir som frittstående spill.",

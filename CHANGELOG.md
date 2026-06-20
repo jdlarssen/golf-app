@@ -30,6 +30,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.42] - 2026-06-20 · #756
 
 > Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.36] - 2026-06-20 · #751
+
+> Feilmeldinger i admin-flaten peker deg nå mot noe du kan gjøre — ikke mot Vercel-logger du ikke har tilgang til.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- 19 feilmeldinger i `messages/no.json` og `messages/en.json` som henviste til «Vercel-loggene» eller «Supabase-loggene» er erstattet med handlbar copy («Prøv igjen om litt.» / «Prøv å sende på nytt.» / «Ta kontakt med administratoren.»). Berørte nøkler: `wizard.errors.db_game/db_players/cup_insert_failed`, `admin.game.delete.errors.delete_failed`, `admin.players.errors.mail_failed`, `admin.players.profile.errors.auth_delete_failed`, `admin.courses.errors/edit.errors/delete.errors.*`, `admin.formats.errors.db_error`, `admin.launches.errors.publish_failed/digest_failed`, `liga.delete.errors.delete_failed`, `cup.delete.errors.delete_failed`, `courseForm.adminErrors.*`. (#751)
+
+</details>
+
 ### [1.133.35] - 2026-06-20 · #753
 
 > Når noen ikke har levert, ser du nå purre-knappen øverst — Avslutt likevel er fortsatt der, men lengre nede.
