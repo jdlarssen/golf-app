@@ -346,3 +346,12 @@ describe('HoleClient — modified stableford (#281)', () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe('HoleClient — sync status line (#744)', () => {
+  it('skjuler synkstatus-linjen på et tomt hull før første tastetrykk', () => {
+    // On mount: syncing=false, savedAt='' — no real activity yet.
+    // The SyncStatusLine must not appear to avoid a false "Lagret nylig" receipt.
+    render(<HoleClient {...baseProps()} />);
+    expect(screen.queryByTestId('sync-dot')).not.toBeInTheDocument();
+  });
+});

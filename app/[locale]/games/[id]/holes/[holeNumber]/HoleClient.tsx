@@ -810,7 +810,9 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             />
           );
         })}
-        <SyncStatusLine syncing={syncing} savedAt={savedAt} />
+        {(syncing || savedAt.length > 0) && (
+          <SyncStatusLine syncing={syncing} savedAt={savedAt} />
+        )}
       </div>
 
       {/* Bingo Bango Bongo — additiv seksjon under slag-padden, speiler
