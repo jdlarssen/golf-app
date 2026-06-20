@@ -44,7 +44,8 @@ jobs:
 
   # Authenticated e2e gate (#674): the golden-path scoring loop + cup/liga
   # lifecycle smoke — the flows where #641/#642/#647 lived. These run against the
-  # real Supabase (prod-DB per "Production-only testing"), so they need
+  # torny-staging Supabase (testing moved OFF prod — #717/PR #719 repointed the
+  # secrets below to staging; prod is never written by tests), so they need
   # service-role secrets + two pre-seeded test users. They self-skip without the
   # env (see e2e/_helpers/games.ts), but booting the dev server still needs the
   # public Supabase keys — so this whole job is gated OFF until activated.

@@ -125,7 +125,7 @@ Etter `v1.0.0` (2026-05-13) går alt arbeid via PR — **ikke direkte push til `
 
    <tagline fra CHANGELOG-oppføring>"
    ```
-4. **Vercel preview-deploy:** Vercel deployer PR-branchen automatisk til en preview-URL. Spot-sjekk i Safari hvis endringen er visuelt synlig.
+4. **Verifisering på staging (ikke prod):** for bruker-synlige endringer, verifiser den berørte flyten på `torny-staging` FØR merge — kjør appen mot staging og klikk gjennom flyten (se «### Testing — staging, aldri prod»). Dette erstatter den gamle manuelle prod-QA-en. Vercel deployer også PR-branchen til en preview-URL (peker på staging) for visuell spot-sjekk.
 5. **Merge:** `gh pr merge --rebase --delete-branch` — rebase holder linear `main`-historie og bevarer atomic-commit-disiplinen. **Squash brukes ikke** (mister granulær audit-trail per commit).
 6. **Auto-close:** `Closes #N` i PR-body lukker issue-en ved merge. Bekreft med `gh issue view N --json state` hvis usikker.
 
@@ -234,6 +234,22 @@ Når du legger til eller endrer norske strenger som vises til brukeren — i `.t
 - Mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser eksakt streng)
 - «Sekretariat»-stemmen i admin-flater
 - Engelske achievement-navn (Turkey/Solid/Snowman — bevisste sportstermer)
+
+### Testing — staging, aldri prod
+
+**Tørny er i ekte bruk i prod (fra 2026-06-20). Test ALDRI ved å skrive til prod.** All testing — automatisk og manuell klikk-gjennom — skjer mot `torny-staging` (Supabase-ref `snwmueecmfqqdurxedxv`). Den gamle «production-only testing»-konvensjonen er opphevet.
+
+**Bruker-synlige fikser MÅ verifiseres på staging før merge** (erstatter den manuelle prod-QA-en). De automatiske portene — `tsc` + `lint` + `vitest` (pre-push + CI) pluss e2e-`@gate`-en mot staging — fanger type-/skjema-drift, testet logikk og de tre kjerne-flytene (slag→lever→godkjenn, cup-smoke, liga-smoke), men IKKE at den spesifikke fiksen oppfører seg riktig ende-til-ende. Den siste milen er en staging-klikkrunde av den berørte flyten.
+
+**Kjør appen mot staging (oppsett ligger klart i repoet):**
+
+- **Node 22 kreves** (`source ~/.nvm/nvm.sh && nvm use 22`) — appen krasjer på Node 20 (supabase-js krever native WebSocket).
+- `.env.staging.local` (gitignorert) har staging-URL + anon + `SUPABASE_SERVICE_ROLE_KEY` + `E2E_ADMIN_EMAIL`/`E2E_PLAYER_EMAIL`. Din vanlige `.env.local` (prod) røres ikke.
+- Boot via `preview_start("torny-staging")` (launch-config i `.claude/launch.json`); driv med `preview_*`-verktøyene.
+- **Autonom login** (ingen e-post/SMTP): mint kode via service-role REST `POST $NEXT_PUBLIC_SUPABASE_URL/auth/v1/admin/generate_link` → `email_otp` → fyll login-skjemaet (`input[type=email]` → «Send meg kode» → `input[name=token]` → «Logg inn»). Admin = `E2E_ADMIN_EMAIL`, spiller = `E2E_PLAYER_EMAIL`.
+- **Prod-vakt:** en staging-mintet kode validerer kun mot staging — bekreft det (og at data er staging-formet) før du skriver noe.
+
+**DB-/skjema-endringer:** påfør staging først via Supabase MCP, verifiser, DERETTER prod (0107-mønsteret). Aldri uverifiserte migrasjoner rett på prod. (`gen:types` leser prod-skjemaet read-only — greit; prod er fasiten for det som er deployet.)
 
 ### Feilhåndtering / bugs
 
