@@ -2534,6 +2534,7 @@
       "saksbehandlerLabel": "Case officer",
       "klubbhusLabel": "Clubhouse",
       "greetingHeading": "Good {timeOfDay}, {name}.",
+      "greetingHeadingNoName": "Good {timeOfDay}.",
       "timeOfDayMorgen": "morning",
       "timeOfDayFormiddag": "morning",
       "timeOfDayEttermiddag": "afternoon",
@@ -2581,6 +2582,7 @@
       "playerSpillformater": "Game formats",
       "playerSpillformaterMeta": "Get to know the formats",
       "playerGreeting": "Hi, {name}.",
+      "playerGreetingNoName": "Hi.",
       "playerSubtitle": "Set up a round or add a course.",
       "playerPullQuote": "A good round starts with good planning."
     },

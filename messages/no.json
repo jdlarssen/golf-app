@@ -2534,6 +2534,7 @@
       "saksbehandlerLabel": "Saksbehandler",
       "klubbhusLabel": "Klubbhuset",
       "greetingHeading": "God {timeOfDay}, {name}.",
+      "greetingHeadingNoName": "God {timeOfDay}.",
       "timeOfDayMorgen": "morgen",
       "timeOfDayFormiddag": "formiddag",
       "timeOfDayEttermiddag": "ettermiddag",
@@ -2581,6 +2582,7 @@
       "playerSpillformater": "Spillformater",
       "playerSpillformaterMeta": "Bli kjent med formatene",
       "playerGreeting": "Hei, {name}.",
+      "playerGreetingNoName": "Hei.",
       "playerSubtitle": "Sett opp en runde eller legg til en bane.",
       "playerPullQuote": "En god runde begynner med god planlegging."
     },

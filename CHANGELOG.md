@@ -30,6 +30,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.42] - 2026-06-20 · #756
 
 > Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.41] - 2026-06-20 · #783
+
+> Har du ikke lagt inn navn ennå, sier appen nå «God morgen.» i stedet for det litt rare «God morgen, spiller.»
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `GreetingCard` og `PlayerKlubbhus` i `app/[locale]/admin/page.tsx` brukte `firstName() ?? 'saksbehandler'`/`'spiller'` som fallback når profil-navn mangler. Migration 0014 setter `name=NULL` for self-reg-brukere, så dette var DEFAULT-opplevelsen, ikke en sjelden glitch. Fallback-ordene er fjernet; i stedet velger koden mellom `greetingHeading`/`playerGreeting` (med navn) og de nye nøklene `greetingHeadingNoName` (`«God {timeOfDay}.»`) / `playerGreetingNoName` (`«Hei.»`) i no+en. (#783)
+
+</details>
+
 ### [1.133.40] - 2026-06-20 · #780
 
 > Ny snarvei i bane-skjemaet: ett trykk fyller stroke-indeks 1–18 stigende, så du slipper 18 tastatur-popups.

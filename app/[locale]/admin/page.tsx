@@ -131,7 +131,7 @@ async function GreetingCard({
     .select('name')
     .eq('id', userId!)
     .single();
-  const firstNameValue = firstName(profile?.name) ?? 'saksbehandler';
+  const firstNameValue = firstName(profile?.name);
 
   return (
     <section
@@ -146,7 +146,9 @@ async function GreetingCard({
         {t('saksbehandlerLabel')}
       </p>
       <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
-        {t('greetingHeading', { timeOfDay: timeOfDayWord, name: firstNameValue })}
+        {firstNameValue
+          ? t('greetingHeading', { timeOfDay: timeOfDayWord, name: firstNameValue })
+          : t('greetingHeadingNoName', { timeOfDay: timeOfDayWord })}
       </h1>
       <p className="mt-1.5 font-sans text-xs tabular-nums text-muted">
         {dateLine}
@@ -420,7 +422,7 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
     .select('name')
     .eq('id', role.userId)
     .single();
-  const firstNameValue = firstName(profile?.name) ?? 'spiller';
+  const firstNameValue = firstName(profile?.name);
 
   const banerTile: Tile = role.isTrusted
     ? {
@@ -478,7 +480,9 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
           {t('klubbhusLabel')}
         </p>
         <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
-          {t('playerGreeting', { name: firstNameValue })}
+          {firstNameValue
+            ? t('playerGreeting', { name: firstNameValue })
+            : t('playerGreetingNoName')}
         </h1>
         <p className="mt-1.5 font-sans text-xs text-muted">
           {t('playerSubtitle')}
