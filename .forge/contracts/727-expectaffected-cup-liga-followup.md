@@ -106,16 +106,31 @@ logged (current gap); idempotent 0-row stays silent.
   `refactor(...)` pass without a bump).
 
 ## Acceptance criteria
-- [ ] Area 1: cup `updateTournament` / `startTournament` / `finishTournament`
+- [x] Area 1: cup `updateTournament` / `startTournament` / `finishTournament`
       route their UPDATE through `expectAffected` + `.select('id')`; 0-row/error
       hits the existing redirect path. Happy path unchanged.
-- [ ] Area 2: league `updateLeagueRound` / `addLeagueRound` / `overrideRoundWindow`
+      — `lib/cup/actions.ts:296-318, 348-360, 430-453` (commit e96dfda2); success
+      redirects stay OUTSIDE the try (no NEXT_REDIRECT-swallow).
+- [x] Area 2: league `updateLeagueRound` / `addLeagueRound` / `overrideRoundWindow`
       / `startLeague` / `setLeagueStatus` route their mutation through
       `expectAffected` + `.select('id')`; 0-row/error returns the existing error
       code. Happy path unchanged.
-- [ ] Area 3: `maybeAutoConfirmLeagueParticipation` routes through `expectAffected`;
+      — `lib/league/actions.ts:254-266, 303-330, 354-363, 506-514, 535-547`
+      (commit 7ebaee51); `setLeagueStatus` covers `finishLeague`.
+- [x] Area 3: `maybeAutoConfirmLeagueParticipation` routes through `expectAffected`;
       real errors logged, `NoRowsAffectedError` swallowed as idempotent no-op.
-- [ ] One Type-A 0-row test added for a league path; green.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npx vitest run lib/cup lib/league lib/supabase/affectedRows.test.ts` green.
-- [ ] No version bump; one `refactor(...)` commit per area with `Refs #727`.
+      — `lib/league/confirmLeagueParticipation.ts:14-34` (commit d4fcd4f3); catch
+      guards `if (!(e instanceof NoRowsAffectedError))`.
+- [x] One Type-A 0-row test added for a league path; green.
+      — `lib/league/actions.test.ts:151-189` (`updateLeagueRound — 0-row update is
+      a failure (#727)`); verified non-vacuous by the evaluator.
+- [x] `npx tsc --noEmit` clean. — exit 0 (self + evaluator).
+- [x] `npx vitest run lib/cup lib/league lib/supabase/affectedRows.test.ts` green.
+      — 14 files / 157 tests passed.
+- [x] No version bump; one `refactor(...)` commit per area with `Refs #727`.
+      — three-dot diff of package.json/package-lock.json/CHANGELOG.md is empty;
+      commits e96dfda2 / 7ebaee51 / d4fcd4f3 + docs contract 968bf79a.
+
+## Verdict
+**ACCEPT** (skeptical fresh-context evaluation 2026-06-20) — see
+`.forge/evaluations/727-expectaffected-cup-liga-followup.md`. No issues found.
