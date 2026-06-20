@@ -27,6 +27,9 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.33] - 2026-06-20 · #762
 
 > Cup-listen er nå helt norsk — også på engelsk: «for å komme i gang» lekker ikke lenger inn i den engelske visningen.
+### [1.133.42] - 2026-06-20 · #756
+
+> Tom historikk viser nå én ryddig melding i stedet for to overlappende.
 
 <details>
 <summary>Teknisk</summary>
@@ -39,6 +42,13 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.32] - 2026-06-20 · #752
 
 > Prøver du å generere matcher uten spillere eller baner, får du nå en forklaring og en snarvei videre — i stedet for en veiviser som aldri kan fullføres.
+- Skjuler `roundCount`-paragrafen når `finishedCount === 0` i `app/[locale]/profile/historikk/page.tsx` — ICU =0-grenen i begge kataloger er urørt (catalogParity). (#756)
+
+</details>
+
+### [1.133.43] - 2026-06-20 · #758
+
+> Alle sider i appen får nå en nøytral innlastings-animasjon i stedet for en feilformet Hjem-skjelett.
 
 <details>
 <summary>Teknisk</summary>
@@ -51,6 +61,13 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.31] - 2026-06-20 · #747
 
 > Cup-siden som sendes til spillerne snakker nå norsk fra topp til bunn — ingen engelsk blant matchene.
+- Fjernet bjelle-sirkel (`SkeletonCircle` l.20) og admin-rutenettet (`grid grid-cols-2`, l.36) fra `HomeSkeleton` — skeleton er nå rute-nøytral og gjenspeiler brand-rad + generiske kort-seksjoner. `app/[locale]/loading.tsx` bruker fortsatt `HomeSkeleton` (navnenavn ikke endret for å unngå import-rotasjon). (#758)
+
+</details>
+
+### [1.133.44] - 2026-06-20 · #761
+
+> «Personvern»-lenken i bunnteksten vises på riktig språk uansett om du bruker appen på norsk eller engelsk.
 
 <details>
 <summary>Teknisk</summary>
@@ -63,6 +80,13 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.24] - 2026-06-20 · #766
 
 > Lurer du på om innloggingskoden er på vei? Du får nå et hint om å sjekke søppelposten, rett under e-postadressen.
+- `AppVersionFooter` er konvertert til `'use client'`-komponent med `useTranslations('legal.privacy')` — gjenbruker eksisterende `kicker`-nøkkel («Personvern» / «Privacy»). Null ny nøkkel nødvendig. (#761)
+
+</details>
+
+### [1.133.45] - 2026-06-20 · #771
+
+> Kjønn- og spillerklasse-knappene er 2 piksler høyere og lettere å treffe med fingeren.
 
 <details>
 <summary>Teknisk</summary>
@@ -75,6 +99,25 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.23] - 2026-06-20 · #748
 
 > Glemmer du å fylle ut ett felt i profilskjemaet, mister du ikke alt du allerede har skrevet. Navn, kallenavn, handicap og kjønn er der igjen når du prøver på nytt.
+- Byttet `min-h-[42px]` → `min-h-[44px]` i `SegmentedField.tsx:56` — oppfyller intern 44 px-norm for trykkmål på delt UI-primitiv. (#771)
+
+</details>
+
+### [1.133.46] - 2026-06-20 · #776
+
+> Under «Eksporter mine data» forklarer appen nå hva filen inneholder før du laster den ned.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny `profile.exportSublabel`-nøkkel i `no.json` + `en.json`; sendt som `sublabel`-prop til eksport-`SettingRow` i `app/[locale]/profile/page.tsx`. (#776)
+
+</details>
+
+### [1.133.47] - 2026-06-20 · #775
+
+> Hjem-velkomsten gjentar ikke «Klubbhuset» tre ganger, og kontakt-lenken på klubb-lista er mer diskret når du allerede er med i en klubb.
 
 <details>
 <summary>Teknisk</summary>
@@ -106,6 +149,8 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 #### Fixed
 - La til `autoCapitalize="none"`, `autoCorrect="off"` og `spellCheck={false}` på e-post-`<Input>` i `SendCodeForm.tsx`. iOS Safari kan ellers autokorrigere local-part eller domene til noe annet — f.eks. `gnail.com` → `gmail.com` — som sender kode til feil innboks uten at brukeren aner det. Ren HTML-attributt-endring, ingen logikk. (#739)
 - Offentlig cup-side (`cup/[id]/page.tsx`) brukte hardkodet engelsk: overskriften «Matches», telleren «{n} av {m} matches spilt» og tom-tilstand-teksten «Ingen matches er opprettet ennå.». Lagt til `getTranslations('cup')` og hentet inn `manage.matchesHeading` for overskriften; to nye nøkler `public.matchesSummary` og `public.noMatches` i `messages/no.json` + `messages/en.json` for teller og tom-tilstand. Singularis-/flertallsgreina (`match`/`matches`) er borte — nøkkelen dekker begge. IKKE rørt `m.matchLabel ?? 'Match'` (l.176, DB-drevet golf-term, bevisst uendret per issue). (#747)
+- `home.emptyKicker` endret fra «KLUBBHUSET ER ÅPENT» til «KLAR FOR FØRSTE RUNDE» (no) / «READY FOR YOUR FIRST ROUND» (en) — fjerner duplikat-ekko mot body og knapp. (#775)
+- `app/[locale]/klubber/page.tsx`: kontakt-`Card` dempes til en diskret linje (`text-sm text-muted`) når `clubs.length > 0`; full CTA bevares i tom-tilstand. Ny nøkkel `klubb.list.ctaDiscrete` i begge kataloger. (#775)
 
 </details>
 

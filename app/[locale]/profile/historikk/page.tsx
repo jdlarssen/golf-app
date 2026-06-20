@@ -112,7 +112,9 @@ export default async function HistorikkPage() {
         kicker={t('kicker')}
       />
 
-      <p className="mb-4 text-sm text-muted">{t('roundCount', { count: finishedCount })}</p>
+      {finishedCount > 0 && (
+        <p className="mb-4 text-sm text-muted">{t('roundCount', { count: finishedCount })}</p>
+      )}
 
       {finishedCount === 0 ? (
         <Card>
