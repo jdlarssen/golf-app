@@ -74,11 +74,11 @@ export function InstallBanner() {
             {t('body')}
           </p>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onInstall}
-            className="rounded-full bg-primary text-bg-tint px-3 py-1.5 text-xs font-medium"
+            className="rounded-full bg-primary text-bg-tint px-3 py-1.5 text-xs font-medium min-h-11"
           >
             {t('install')}
           </button>
@@ -86,7 +86,7 @@ export function InstallBanner() {
             type="button"
             onClick={dismiss}
             aria-label={t('closeAria')}
-            className="text-text-muted hover:text-text px-1.5 py-1"
+            className="text-text-muted hover:text-text px-1.5 py-1 min-h-11 min-w-11 flex items-center justify-center"
           >
             ✕
           </button>
