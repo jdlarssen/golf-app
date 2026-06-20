@@ -39,15 +39,18 @@ function gameIdFromPath(pathname: string): string | null {
  * stableford, skins, wolf, nassau, … — arver auto-oppdatering uten å røre de
  * 19 visnings-filene.
  *
- * Abonnerer på `scores`-INSERT for spillet og kaller `router.refresh()` når en
- * flight-medspiller taster en score, slik at den server-rendrede tabellen
- * re-evalueres mot fersk Postgres-data. Følger samme mønster som
- * `PreRoundLeaderboardRealtime`: `subscribeRealtimeChannel` eier `setAuth`-
- * quirken (WebSocket-transporten plukker ikke opp cookie-sesjonen automatisk)
- * og den lekk-resistente oppryddingen.
+ * Abonnerer på `scores`-INSERT og `scores`-UPDATE for spillet. INSERT-en
+ * tripper når en ny score registreres; UPDATE-en tripper når en score
+ * korrigeres via `upsert_score_if_newer` (#745), slik at en tilskuers tall
+ * aldri henger igjen etter en korrigering. Begge ruter gjennom den 300ms-
+ * debouncede `scheduleRefresh` så en byge av INSERT-er (helt scorekort)
+ * kollapser til én refresh.
  *
- * En enkel debounce kollapser en byge av INSERT-er (et helt scorekort levert
- * på én gang) til én refresh.
+ * Følger samme mønster som `PreRoundLeaderboardRealtime`:
+ * `subscribeRealtimeChannel` eier `setAuth`-quirken (WebSocket-transporten
+ * plukker ikke opp cookie-sesjonen automatisk) og den lekk-resistente
+ * oppryddingen. `scores` har REPLICA IDENTITY FULL (0006) og er i
+ * realtime-publikasjonen (0005), så UPDATE-events er leverbare.
  */
 export function LeaderboardRealtime({ gameId, active = true }: Props): null {
   const router = useRouter();
@@ -67,16 +70,27 @@ export function LeaderboardRealtime({ gameId, active = true }: Props): null {
     const unsubscribe = subscribeRealtimeChannel(
       `leaderboard-live:${resolvedGameId}`,
       (channel) =>
-        channel.on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'scores',
-            filter: `game_id=eq.${resolvedGameId}`,
-          },
-          scheduleRefresh,
-        ),
+        channel
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'scores',
+              filter: `game_id=eq.${resolvedGameId}`,
+            },
+            scheduleRefresh,
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'scores',
+              filter: `game_id=eq.${resolvedGameId}`,
+            },
+            scheduleRefresh,
+          ),
     );
 
     return () => {
