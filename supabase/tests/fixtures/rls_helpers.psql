@@ -38,7 +38,13 @@ create or replace function torny_rls.reset() returns void
   begin
     delete from public.scores       where game_id = torny_rls.game_id();
     delete from public.game_players where game_id = torny_rls.game_id();
+    -- #0107 column-immutability suites: invitation + club-join fixtures (FK-safe,
+    -- before games / groups / users below).
+    delete from public.invitations         where game_id  = torny_rls.game_id();
+    delete from public.group_join_requests where group_id = torny_rls.group_id();
+    delete from public.group_members       where group_id = torny_rls.group_id();
     delete from public.games        where id      = torny_rls.game_id();
+    delete from public.groups       where id      = torny_rls.group_id();
     delete from public.tee_boxes    where id      = torny_rls.tee_box_id();
     delete from public.course_holes where course_id = torny_rls.course_id();
     delete from public.courses      where id      = torny_rls.course_id();
@@ -52,6 +58,10 @@ create or replace function torny_rls.reset() returns void
 create or replace function torny_rls.course_id()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000c0'::uuid $$;
 create or replace function torny_rls.tee_box_id() returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000c1'::uuid $$;
 create or replace function torny_rls.game_id()    returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000a0'::uuid $$;
+-- Club fixture (for the group_join_requests guard suite, #0107). Owned by
+-- flightmate_id (is_admin = FALSE) so the is_group_admin bypass is exercised in
+-- isolation from the global-admin bypass.
+create or replace function torny_rls.group_id()   returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000e0'::uuid $$;
 
 -- The four actors the score-write suite needs. Helpers return their ids so
 -- callers never hard-code UUIDs.
@@ -82,6 +92,22 @@ create or replace function torny_rls.as_user(p_uid uuid) returns void
     perform set_config(
       'request.jwt.claims',
       json_build_object('sub', p_uid::text, 'role', 'authenticated')::text,
+      true
+    );
+  end;
+  $$;
+
+-- as_invitee(uid, email): like as_user, but also carries an `email` JWT claim.
+-- The invitations "self mark accepted" policy gates on auth.jwt()->>'email', so an
+-- invitee must impersonate with the email their invitation is addressed to.
+create or replace function torny_rls.as_invitee(p_uid uuid, p_email text) returns void
+  language plpgsql
+  as $$
+  begin
+    perform set_config('role', 'authenticated', true);
+    perform set_config(
+      'request.jwt.claims',
+      json_build_object('sub', p_uid::text, 'role', 'authenticated', 'email', p_email)::text,
       true
     );
   end;
@@ -164,6 +190,42 @@ create or replace function torny_rls.seed_active_game() returns void
       (torny_rls.game_id(), torny_rls.flightmate_id(), 1, 1, null, null),
       (torny_rls.game_id(), torny_rls.withdrawn_id(),  1, 1, null, now()),
       (torny_rls.game_id(), torny_rls.submitted_id(),  1, 1, now(), null);
+  end;
+  $$;
+
+-- ── seed_invitation() (#0107 invitations guard) ──────────────────────────────
+-- Run AFTER seed_active_game() (needs the users + game). Inserts a pending
+-- game-invitation addressed to outsider_id's email, invited by admin_id. The
+-- email matches outsider_id's seeded email so as_invitee(outsider_id, …) passes
+-- the invitations RLS email check. Must run as the service role.
+create or replace function torny_rls.seed_invitation() returns void
+  language plpgsql
+  as $$
+  begin
+    delete from public.invitations where game_id = torny_rls.game_id();
+    insert into public.invitations (email, token, invited_by, game_id, expires_at, accepted_at)
+      values ('rls-outsider@example.test', 'rls-inv-token', torny_rls.admin_id(),
+              torny_rls.game_id(), now() + interval '7 days', null);
+  end;
+  $$;
+
+-- ── seed_group_join() (#0107 group_join_requests guard) ───────────────────────
+-- Run AFTER seed_active_game() (needs the users). flightmate_id (is_admin = FALSE)
+-- owns the club so the is_group_admin bypass is tested in isolation from the
+-- global-admin bypass; outsider_id has a pending join request. Service role only.
+create or replace function torny_rls.seed_group_join() returns void
+  language plpgsql
+  as $$
+  begin
+    delete from public.group_join_requests where group_id = torny_rls.group_id();
+    delete from public.group_members       where group_id = torny_rls.group_id();
+    delete from public.groups              where id        = torny_rls.group_id();
+    insert into public.groups (id, name, created_by)
+      values (torny_rls.group_id(), 'RLS Test Club', torny_rls.flightmate_id());
+    insert into public.group_members (group_id, user_id, role)
+      values (torny_rls.group_id(), torny_rls.flightmate_id(), 'owner');
+    insert into public.group_join_requests (group_id, user_id, status)
+      values (torny_rls.group_id(), torny_rls.outsider_id(), 'pending');
   end;
   $$;
 
@@ -332,6 +394,59 @@ create or replace function torny_rls.try_set_is_admin(p_target uuid, p_val boole
   declare v_rows int;
   begin
     update public.users set is_admin = p_val where id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- 0107 trigger 42501 or RLS reject
+  end;
+  $$;
+
+-- ── invitations probes (#0107: invitee may flip only accepted_at) ─────────────
+-- try_invitation_accept_only(): the legit accept path — set accepted_at only.
+create or replace function torny_rls.try_invitation_accept_only() returns boolean
+  language plpgsql
+  as $$
+  declare v_rows int;
+  begin
+    update public.invitations set accepted_at = now() where token = 'rls-inv-token';
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- 0107 trigger 42501 or RLS reject
+  end;
+  $$;
+
+-- try_invitation_rewrite_inviter(new): the forbidden path — flip accepted_at AND
+-- overwrite invited_by (rewriting invited_by forges befriend_inviter, PR #489).
+create or replace function torny_rls.try_invitation_rewrite_inviter(p_new_inviter uuid) returns boolean
+  language plpgsql
+  as $$
+  declare v_rows int;
+  begin
+    update public.invitations
+       set accepted_at = now(), invited_by = p_new_inviter
+     where token = 'rls-inv-token';
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- 0107 trigger 42501 or RLS reject
+  end;
+  $$;
+
+-- ── group_join_requests probe (#0107: requester may change only status) ───────
+-- try_gjr_set(status, decider): UPDATE outsider_id's request to `status`; when
+-- `decider` is non-null also stamp decided_by_user_id/decided_at (the forbidden
+-- audit columns on the requester path, the legit ones on the group-admin path).
+create or replace function torny_rls.try_gjr_set(p_status text, p_decider uuid) returns boolean
+  language plpgsql
+  as $$
+  declare v_rows int;
+  begin
+    update public.group_join_requests
+       set status = p_status::public.registration_request_status,
+           decided_by_user_id = case when p_decider is not null then p_decider else decided_by_user_id end,
+           decided_at = case when p_decider is not null then now() else decided_at end
+     where group_id = torny_rls.group_id() and user_id = torny_rls.outsider_id();
     get diagnostics v_rows = row_count;
     return v_rows > 0;
   exception
