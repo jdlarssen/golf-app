@@ -2973,6 +2973,7 @@
       "resendingBusy": "Sender …",
       "withdrawButton": "Trekk tilbake",
       "searchPlaceholder": "Søk på navn, kallenavn eller e-post...",
+      "searchAriaLabel": "Søk i spillerlisten",
       "emptyNoPlayers": "Ingen registrerte spillere ennå.",
       "emptyNoMatch": "Ingen treff på «{query}».",
       "timeAgo": {

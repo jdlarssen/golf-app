@@ -1,9 +1,10 @@
+// Server component: fetches all fully-onboarded players and passes them to
+// PlayersListClient for live in-memory filtering (mirrors the Baner/courses
+// catalog pattern in CoursesLedgerClient.tsx).
 import { getTranslations, getLocale } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
-import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
-import { formatHcpDisplay } from '@/lib/handicap/sign';
-import { Input } from '@/components/ui/Input';
+import { PlayersListClient } from './PlayersListClient';
 
 type User = {
   id: string;
@@ -33,82 +34,20 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
   if (error) throw error;
 
   const users = data ?? [];
-  const q = searchQuery.trim().toLowerCase();
-  const filtered = q
-    ? users.filter(
-        (u) =>
-          (u.name?.toLowerCase() ?? '').includes(q) ||
-          (u.nickname?.toLowerCase() ?? '').includes(q) ||
-          u.email.toLowerCase().includes(q),
-      )
-    : users;
+
+  // Pass the template string with a literal '{query}' so the client component
+  // can interpolate the live search term without a server roundtrip.
+  const emptyNoMatchTemplate = t('emptyNoMatch', { query: '{query}' });
 
   return (
-    <>
-      <form method="GET" action="/admin/spillere" className="mb-2">
-        <Input
-          id="q"
-          name="q"
-          type="search"
-          label=""
-          placeholder={t('searchPlaceholder')}
-          defaultValue={searchQuery}
-          autoComplete="off"
-        />
-      </form>
-
-      {filtered.length === 0 ? (
-        <div className="rounded-xl border border-border bg-surface px-5 py-6 text-center text-sm text-muted">
-          {q
-            ? t('emptyNoMatch', { query: searchQuery })
-            : t('emptyNoPlayers')}
-        </div>
-      ) : (
-        <div
-          className="overflow-hidden rounded-xl border border-border bg-surface"
-          style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
-        >
-          {filtered.map((u, i) => (
-            <SmartLink
-              key={u.id}
-              href={`/admin/spillere/${u.id}`}
-              className="reveal-up flex items-center justify-between gap-3 px-3.5 py-3 transition hover:bg-row-hover"
-              style={{
-                animationDelay: `${60 + i * 50}ms`,
-                borderTop:
-                  i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
-              }}
-            >
-              <div className="min-w-0">
-                <p className="truncate font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
-                  {u.name ?? u.email}
-                  {u.nickname && (
-                    <span className="ml-1.5 font-sans text-[11.5px] text-muted">
-                      ({u.nickname})
-                    </span>
-                  )}
-                </p>
-                <p className="mt-0.5 truncate font-sans text-[11.5px] text-muted">
-                  {u.email}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="font-sans text-[12px] tabular-nums text-text">
-                  {formatHcpDisplay(u.hcp_index, locale)}
-                </p>
-                {u.is_admin && (
-                  <p
-                    className="mt-0.5 font-sans text-[9.5px] font-semibold uppercase"
-                    style={{ letterSpacing: '0.16em', color: 'var(--score-over1-fg)' }}
-                  >
-                    Admin
-                  </p>
-                )}
-              </div>
-            </SmartLink>
-          ))}
-        </div>
-      )}
-    </>
+    <PlayersListClient
+      users={users}
+      initialQuery={searchQuery}
+      locale={locale}
+      searchAriaLabel={t('searchAriaLabel')}
+      searchPlaceholder={t('searchPlaceholder')}
+      emptyNoPlayers={t('emptyNoPlayers')}
+      emptyNoMatchTemplate={emptyNoMatchTemplate}
+    />
   );
 }

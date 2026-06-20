@@ -30,6 +30,19 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.42] - 2026-06-20 · #756
 
 > Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.38] - 2026-06-20 · #778
+
+> Spiller-søket filtrerer nå mens du skriver — ingen submit-knapp, ingen side-reload, akkurat som Baner-katalogen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `PlayersList.tsx` er delt i en server-wrapper (henter alle spillere) og `PlayersListClient.tsx` (ny `'use client'`-komponent). Klient-komponenten filtrerer i minne med `useMemo` på hvert tastetrykk og synker `?q=`-param til URL via `useSearchParams` + `router.replace` + `startTransition` — identisk mønster med `CoursesLedgerClient.tsx`. GET-formen med `action="/admin/spillere"` er fjernet. (#778)
+- `<label htmlFor="players-search" className="sr-only">` med ny nøkkel `admin.players.searchAriaLabel` er lagt til (korrigerer a11y-regresjon der `label=""` var tomt). (#778)
+
+</details>
+
 ### [1.133.37] - 2026-06-20 · #777
 
 > Sekretariat-forsiden hopper ikke lenger når innholdet lastes — skjelettet matcher nå de 10 flisene som faktisk vises.

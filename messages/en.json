@@ -2973,6 +2973,7 @@
       "resendingBusy": "Sending …",
       "withdrawButton": "Withdraw",
       "searchPlaceholder": "Search by name, nickname or email...",
+      "searchAriaLabel": "Search the player list",
       "emptyNoPlayers": "No registered players yet.",
       "emptyNoMatch": "No results for «{query}».",
       "timeAgo": {
