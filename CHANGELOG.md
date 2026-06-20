@@ -36,6 +36,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.51] - 2026-06-20 · #767
 
 > Aksepter- og Fjern-knappene på lagoversikten blinker ikke lenger siden — de oppdaterer seg på stedet.
+### [1.133.28] - 2026-06-20 · #759
+
+> Én ting heter én ting: «spillformer» hele veien gjennom opprettelsesveiviseren.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `wizard.playerCount.hint` i no.json: «formater» → «spillformer» for konsistent norsk begrep gjennom steg 2 (teller-hint, legend og tom-tilstand sier nå det samme). (#759)
+
+</details>
+
 ### [1.133.27] - 2026-06-20 · #746
 
 > Ser du ingen spillformer i veiviseren, sier appen nå hva du kan justere — ikke kryptisk kode-sjargong.
