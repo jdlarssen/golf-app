@@ -3298,7 +3298,8 @@
       "pageTitle": "Klubbene dine",
       "emptyState": "Du er ikke med i noen klubber ennå. Får du en invitasjonslenke, dukker klubben opp her.",
       "ctaHeading": "Vil du ha en klubb for laget ditt?",
-      "ctaBody": "Send en e-post til {email}, så setter vi den opp for deg."
+      "ctaBody": "Send en e-post til {email}, så setter vi den opp for deg.",
+      "ctaDiscrete": "Vil du opprette en ny klubb? Send en e-post til {email}."
     },
     "room": {
       "addedBanner": "{email} er lagt til i klubben.",
@@ -4002,7 +4003,7 @@
   "home": {
     "profileUpdatedBanner": "✓ Profilen din er oppdatert.",
     "gameDeletedBanner": "✓ «{name}» er slettet.",
-    "emptyKicker": "KLUBBHUSET ER ÅPENT",
+    "emptyKicker": "KLAR FOR FØRSTE RUNDE",
     "emptyWelcome": "Velkommen, {name}.",
     "emptyBodyWithDiscovery": "Ingen turneringer enda. Sett opp en runde i Klubbhuset, eller bli med i en åpen turnering under.",
     "emptyBodyNoDiscovery": "Ingen turneringer enda. Sett opp en runde i Klubbhuset, så er du i gang.",

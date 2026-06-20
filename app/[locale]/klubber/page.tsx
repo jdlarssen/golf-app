@@ -69,13 +69,30 @@ export default async function KlubbListePage() {
         </nav>
       )}
 
-      {/* Admin-gated opprettelse (#50): kontakt-vei i stedet for opprett-dør. */}
-      <Card className="space-y-1.5 bg-surface/60">
-        <p className="font-sans text-sm font-medium text-text">
-          {t('ctaHeading')}
-        </p>
-        <p className="font-sans text-sm text-muted">
-          {t.rich('ctaBody', {
+      {/* Admin-gated opprettelse (#50): kontakt-vei i stedet for opprett-dør.
+          Vis full CTA i tom-tilstand; diskret énlinje-linje når eier allerede
+          har en eller flere klubber (#775). */}
+      {clubs.length === 0 ? (
+        <Card className="space-y-1.5 bg-surface/60">
+          <p className="font-sans text-sm font-medium text-text">
+            {t('ctaHeading')}
+          </p>
+          <p className="font-sans text-sm text-muted">
+            {t.rich('ctaBody', {
+              email: (chunks) => (
+                <a
+                  href="mailto:klubb@tornygolf.no"
+                  className="font-medium text-primary underline underline-offset-2"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
+          </p>
+        </Card>
+      ) : (
+        <p className="text-sm text-muted">
+          {t.rich('ctaDiscrete', {
             email: (chunks) => (
               <a
                 href="mailto:klubb@tornygolf.no"
@@ -86,7 +103,7 @@ export default async function KlubbListePage() {
             ),
           })}
         </p>
-      </Card>
+      )}
     </AppShell>
   );
 }

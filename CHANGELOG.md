@@ -118,7 +118,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 ### [1.133.47] - 2026-06-20 · #775
 
-> Hjem-velkomsten gjentar ikke «Klubbhuset» tre ganger, og kontakt-lenken på klubb-lista er mer diskret når du allerede er med i en klubb.
+> Hjem-velkomsten gjentar ikke «Klubbhuset» to ganger lenger, og på klubblista ser du en enkel lenke i stedet for en hel CTA når du allerede er med i en klubb.
 
 <details>
 <summary>Teknisk</summary>
