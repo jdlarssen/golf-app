@@ -2400,6 +2400,7 @@
       "submitButton": "Logg inn",
       "resendPrompt": "Fikk du ikke koden?",
       "resendLink": "Send ny kode",
+      "spamHint": "Kommer den ikke? Sjekk søppelposten. Koden kan ta et par minutter.",
       "spinnerLabel": "Laster"
     }
   },

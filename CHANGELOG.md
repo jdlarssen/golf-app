@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.24] - 2026-06-20 · #766
+
+> Lurer du på om innloggingskoden er på vei? Du får nå et hint om å sjekke søppelposten, rett under e-postadressen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- La til en `text-xs text-muted`-linje under instruksjons-`<p>` i `VerifyCodeForm.tsx` med ny i18n-nøkkel `auth.verifyCode.spamHint`. Nøkkelen er lagt til i begge `messages/no.json` og `messages/en.json` (catalogParity-test grønn). Hjelper brukere som ellers avbryter flyten fordi de tror appen er ødelagt. (#766)
+
+</details>
+
 ### [1.133.23] - 2026-06-20 · #748
 
 > Glemmer du å fylle ut ett felt i profilskjemaet, mister du ikke alt du allerede har skrevet. Navn, kallenavn, handicap og kjønn er der igjen når du prøver på nytt.

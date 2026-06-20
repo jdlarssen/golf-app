@@ -61,6 +61,9 @@ function FormBody({
         <strong className="text-foreground">{email}</strong>
         {t('instructionSuffix')}
       </p>
+      <p className="text-xs text-muted -mt-1">
+        {t('spamHint')}
+      </p>
       <CodeInput />
       <Button type="submit" className="w-full mt-2">
         {t('submitButton')}

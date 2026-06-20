@@ -2400,6 +2400,7 @@
       "submitButton": "Log in",
       "resendPrompt": "Didn't get the code?",
       "resendLink": "Send a new code",
+      "spamHint": "Not showing up? Check your spam folder. The code can take a couple of minutes.",
       "spinnerLabel": "Loading"
     }
   },
