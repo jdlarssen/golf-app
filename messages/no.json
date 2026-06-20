@@ -874,7 +874,7 @@
       "step2": "Hva skal dere spille?",
       "step3": "Hvor og når?",
       "step4Solo": "Hvem skal spille?",
-      "step4BestBall": "Velg 8 spillere, så fordeler du lag og flights",
+      "step4BestBall": "Velg 2, 4, 6 eller 8 spillere, så fordeler du lag og flights.",
       "step4Matchplay": "Velg 2 spillere og sett én på hver side",
       "step4ParStableford": "Velg minst 2 spillere fordelt to og to på lag",
       "step4TeamSize": "Velg minst {teamSize} spillere, så fordeler du lag",

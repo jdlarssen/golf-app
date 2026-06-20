@@ -874,7 +874,7 @@
       "step2": "What will you play?",
       "step3": "Where and when?",
       "step4Solo": "Who is playing?",
-      "step4BestBall": "Select 8 players, then assign teams and flights",
+      "step4BestBall": "Select 2, 4, 6 or 8 players, then assign teams and flights.",
       "step4Matchplay": "Select 2 players and put one on each side",
       "step4ParStableford": "Select at least 2 players in pairs for each team",
       "step4TeamSize": "Select at least {teamSize} players, then assign teams",

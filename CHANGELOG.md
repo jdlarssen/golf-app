@@ -36,6 +36,9 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.51] - 2026-06-20 · #767
 
 > Aksepter- og Fjern-knappene på lagoversikten blinker ikke lenger siden — de oppdaterer seg på stedet.
+### [1.133.26] - 2026-06-20 · #743
+
+> Opprettar du best ball for fire kompiser, sier veiviseren nå «2, 4, 6 eller 8 spillere» — ikke «8 spillere» som var feil og sperret.
 
 <details>
 <summary>Teknisk</summary>
@@ -283,6 +286,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 - Hardkodet `'(ukjent bane)'` i spill-listen (`admin/games/page.tsx`) erstattet med `t('unknownCourse')`. (#750)
 - Nye nøkler lagt til i `admin.game.rows` (`notSubmittedWaiting`, `notSubmittedFinished`) og `admin.games` (`unknownCourse`) i no.json + en.json. (#750)
 - `lib/clubs/getClubDetail.ts`: la til `message` i SELECT på `group_join_requests` og i `PendingJoinRequest`-typen (additiv optional `message: string | null`). `app/[locale]/klubber/[id]/page.tsx`: rendrer hilsenen betinget som `break-words`-linje under dato i forespørsels-kortet. Ingen skjema-/RLS-endring — kolonne finnes allerede (0075) og admin-klienten leser raden i sin helhet. (#741)
+- `wizard.stepSubText.step4BestBall` i no.json og en.json rettet til å liste opp alle gyldige antall (2/4/6/8) i stedet for å si «8 spillere» alene — falsk blokkering for små gjenger. (#743)
 
 </details>
 
