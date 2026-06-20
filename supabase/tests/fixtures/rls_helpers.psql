@@ -303,6 +303,42 @@ create or replace function torny_rls.try_submit(p_target uuid) returns boolean
   end;
   $$;
 
+-- ── game_players grouping probe (#0107: team/flight self-reassign) ────────────
+-- try_set_team_flight(target, team, flight): the current impersonated user UPDATEs
+-- target's team_number + flight_number. On the own-row path the 0107 guard blocks
+-- it (grouping is admin/creator-controlled); admin/creator/service may set anyone's.
+create or replace function torny_rls.try_set_team_flight(p_target uuid, p_team int, p_flight int) returns boolean
+  language plpgsql
+  as $$
+  declare v_rows int;
+  begin
+    update public.game_players
+       set team_number = p_team, flight_number = p_flight
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- 0107 trigger 42501 or RLS reject
+  end;
+  $$;
+
+-- ── users.is_admin probe (#0107: self-promotion to global admin) ──────────────
+-- try_set_is_admin(target, val): the current impersonated user UPDATEs target's
+-- is_admin flag. On a non-admin self-row the 0107 guard blocks it; an admin (or
+-- the service role) may set it. Returns whether the row was updated.
+create or replace function torny_rls.try_set_is_admin(p_target uuid, p_val boolean) returns boolean
+  language plpgsql
+  as $$
+  declare v_rows int;
+  begin
+    update public.users set is_admin = p_val where id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- 0107 trigger 42501 or RLS reject
+  end;
+  $$;
+
 -- ── Grants ────────────────────────────────────────────────────────────────────
 -- The probes run AS the impersonated `authenticated` role (SECURITY INVOKER, so
 -- the public.scores writes are genuinely RLS-checked). That means `authenticated`

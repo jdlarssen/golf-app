@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.20] - 2026-06-20 · #731
+
+> Vi tettet et hull i databasen der en innlogget bruker i teorien kunne gitt seg selv admin-tilgang. Du merker ingenting når du spiller. Dette er sikkerhets-herding under panseret.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Security
+- En adversarial RLS hostile-PATCH-sweep (mot staging-speilet, bekreftet read-only mot prod) avdekket at flere UPDATE-policyer pinner rad-eierskap men ikke hvilke kolonner som endres. En direkte PostgREST-PATCH kunne dermed skrive privilegerte felt forbi alle server-action-guards. Ny migrasjon `0107_harden_rls_column_immutability.sql` legger til BEFORE-UPDATE-triggere (samme mønster som det eksisterende `guard_game_players_self_update`): `users.is_admin` kan ikke self-promotes (kritisk: vertikal privilegie-eskalering fra hvilken som helst konto, 17 prod-brukere var eksponert), `game_players.team_number`/`flight_number` kan ikke self-reassignes (flight driver peer-approval via `can_score_for`), invitéen kan kun flippe `invitations.accepted_at` (forfalsket `invited_by` lurte ellers `befriend_inviter`), og forespørrer kan ikke skrive beslutnings-audit på `group_join_requests`. Alle bypasser service-role (`auth.uid()` null) og global admin (`is_admin()`). Verifisert live: alle fire angrep blokkeres nå (`42501`) og alle legitime flyter virker uendret, på både staging og prod (kritisk #1 bevist i prod med en efemer syntetisk bruker, rullet tilbake). pgTAP-regresjon lagt til for `users.is_admin` + `game_players` team/flight; resterende dekning i #732. Frittstående cup/liga-lesbarhet for alle innloggede ble vurdert og bevisst beholdt (dokumentert design i 0083/0089). (#731)
+
+</details>
+
 ### [1.133.19] - 2026-06-20 · #726
 
 > Når du åpner resultattavla eller godkjenner et scorekort, forsvinner varselprikken igjen slik den alltid skulle.

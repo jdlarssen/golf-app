@@ -34,7 +34,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(11);
 
 \ir fixtures/rls_helpers.psql
 
@@ -68,6 +68,14 @@ select ok(
   'non-admin player is BLOCKED from changing their OWN course_handicap in an active game'
 );
 
+-- 0107: grouping (team_number / flight_number) is admin/creator-controlled —
+-- a player must not be able to re-flight themselves (flight drives can_score_for
+-- peer-approval) or split into a phantom team on their OWN row.
+select ok(
+  not torny_rls.try_set_team_flight(torny_rls.active_id(), 2, 2),
+  'non-admin player is BLOCKED from changing their OWN team_number/flight_number (0107 grouping guard)'
+);
+
 -- ═════════════════════════════════════════════════════════════════════════════
 -- ALLOWED — legitimate paths the trigger must not break
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -93,6 +101,13 @@ select ok(
   'non-admin game creator CAN approve ANOTHER player''s row (peer-approval not self-approval)'
 );
 
+-- 0107: the creator path for roster management must keep working — the creator
+-- (another's row) may still set team_number / flight_number.
+select ok(
+  torny_rls.try_set_team_flight(torny_rls.active_id(), 4, 4),
+  'non-admin game creator CAN set ANOTHER player''s team_number/flight_number (roster management preserved)'
+);
+
 -- ═════════════════════════════════════════════════════════════════════════════
 -- ALLOWED — admin bypasses the trigger entirely
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -101,6 +116,11 @@ select torny_rls.as_user(torny_rls.admin_id());
 select ok(
   torny_rls.try_set_handicap(torny_rls.flightmate_id(), 12),
   'admin CAN set a player''s course_handicap (admin handicap adjustment)'
+);
+
+select ok(
+  torny_rls.try_set_team_flight(torny_rls.flightmate_id(), 3, 3),
+  'admin CAN set a player''s team_number/flight_number (admin bypass)'
 );
 
 select ok(
