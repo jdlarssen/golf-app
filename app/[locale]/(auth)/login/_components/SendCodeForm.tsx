@@ -96,6 +96,7 @@ function FormBody({
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
+        autoFocus
         defaultValue={defaultEmail}
         required
       />

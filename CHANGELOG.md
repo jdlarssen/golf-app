@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.22] - 2026-06-20 · #765
+
+> Tastaturet spretter opp med én gang du åpner innloggingssiden. Ingen unødvendig tapping for å komme i gang.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- La til `autoFocus` på e-post-`<Input>` i `SendCodeForm.tsx`, slik at trinn 1 i innloggingsflyten matcher trinn 2 (kodefeltet har hatt `autoFocus` siden starten). Skjemaene vises aldri samtidig, så ingen fokusskollisjon er mulig. (#765)
+
+</details>
+
 ### [1.133.21] - 2026-06-20 · #739
 
 > iOS korrigerer ikke lenger e-postadressen din når du logger inn. Skrivefeil som ola@gnail.com forblir akkurat slik du tastet dem.
