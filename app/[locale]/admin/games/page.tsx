@@ -246,7 +246,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
         }}
       >
         {games.map((g, i) => {
-          const courseName = g.courses?.name ?? '(ukjent bane)';
+          const courseName = g.courses?.name ?? t('unknownCourse');
           const shortDate = (iso: string | null) =>
             iso ? formatShortDateLocale(iso, locale as AppLocale) : null;
           const dateLine =

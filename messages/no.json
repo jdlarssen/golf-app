@@ -2517,6 +2517,7 @@
       "emptyOngoingHeading": "Ingen spill ennå.",
       "emptyOngoingBody": "Trykk «{createLabel}» for å sette opp den første runden.",
       "tapHint": "Trykk på et spill for å redigere protokollen.",
+      "unknownCourse": "(ukjent bane)",
       "errors": {
         "not_found": "Spillet ble ikke funnet."
       },
@@ -2694,7 +2695,9 @@
         "genderMens": "Herrer",
         "genderLadies": "Damer",
         "genderJuniors": "Junior",
-        "unknownCourse": "(ukjent)"
+        "unknownCourse": "(ukjent)",
+        "notSubmittedWaiting": "{count, plural, one {# venter} other {# venter}}",
+        "notSubmittedFinished": "{count, plural, one {# leverte ikke} other {# leverte ikke}}"
       },
       "cta": {
         "draftBody": "Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.",

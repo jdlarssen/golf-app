@@ -531,9 +531,9 @@ async function PlayersSections({
           sub={
             notSubmittedCount > 0
               ? game.status === 'finished'
-                ? `${notSubmittedCount} leverte ikke`
+                ? tRows('notSubmittedFinished', { count: notSubmittedCount })
                 : game.status === 'active'
-                  ? `${notSubmittedCount} venter`
+                  ? tRows('notSubmittedWaiting', { count: notSubmittedCount })
                   : undefined
               : undefined
           }

@@ -2517,6 +2517,7 @@
       "emptyOngoingHeading": "No games yet.",
       "emptyOngoingBody": "Tap «{createLabel}» to set up the first round.",
       "tapHint": "Tap a game to edit the log.",
+      "unknownCourse": "(unknown course)",
       "errors": {
         "not_found": "Game not found."
       },
@@ -2694,7 +2695,9 @@
         "genderMens": "Men",
         "genderLadies": "Ladies",
         "genderJuniors": "Juniors",
-        "unknownCourse": "(unknown)"
+        "unknownCourse": "(unknown)",
+        "notSubmittedWaiting": "{count, plural, one {# waiting} other {# waiting}}",
+        "notSubmittedFinished": "{count, plural, one {# did not submit} other {# did not submit}}"
       },
       "cta": {
         "draftBody": "The game is still a draft — only you can see it. Fill in what''s missing and publish when you''re ready.",

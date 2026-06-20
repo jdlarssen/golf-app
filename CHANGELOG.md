@@ -30,6 +30,9 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.42] - 2026-06-20 · #756
 
 > Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.34] - 2026-06-20 · #750
+
+> I engelsk locale vises admin-flater nå fullt oversatt — ingen rå norsk lenger i spill-listen eller på scorekort-raden.
 
 <details>
 <summary>Teknisk</summary>
@@ -152,6 +155,9 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 - Offentlig cup-side (`cup/[id]/page.tsx`) brukte hardkodet engelsk: overskriften «Matches», telleren «{n} av {m} matches spilt» og tom-tilstand-teksten «Ingen matches er opprettet ennå.». Lagt til `getTranslations('cup')` og hentet inn `manage.matchesHeading` for overskriften; to nye nøkler `public.matchesSummary` og `public.noMatches` i `messages/no.json` + `messages/en.json` for teller og tom-tilstand. Singularis-/flertallsgreina (`match`/`matches`) er borte — nøkkelen dekker begge. IKKE rørt `m.matchLabel ?? 'Match'` (l.176, DB-drevet golf-term, bevisst uendret per issue). (#747)
 - `home.emptyKicker` endret fra «KLUBBHUSET ER ÅPENT» til «KLAR FOR FØRSTE RUNDE» (no) / «READY FOR YOUR FIRST ROUND» (en) — fjerner duplikat-ekko mot body og knapp. (#775)
 - `app/[locale]/klubber/page.tsx`: kontakt-`Card` dempes til en diskret linje (`text-sm text-muted`) når `clubs.length > 0`; full CTA bevares i tom-tilstand. Ny nøkkel `klubb.list.ctaDiscrete` i begge kataloger. (#775)
+- Hardkodet `«{n} leverte ikke»` og `«{n} venter»` på scorekort-raden i `admin/games/[id]/page.tsx` erstattet med `tRows('notSubmittedFinished')`/`tRows('notSubmittedWaiting')` (ICU plural). (#750)
+- Hardkodet `'(ukjent bane)'` i spill-listen (`admin/games/page.tsx`) erstattet med `t('unknownCourse')`. (#750)
+- Nye nøkler lagt til i `admin.game.rows` (`notSubmittedWaiting`, `notSubmittedFinished`) og `admin.games` (`unknownCourse`) i no.json + en.json. (#750)
 
 </details>
 
