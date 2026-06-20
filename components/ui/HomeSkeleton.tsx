@@ -1,13 +1,12 @@
-import { Skeleton, SkeletonCircle } from './Skeleton';
+import { Skeleton } from './Skeleton';
 
 /**
- * Loading state for the Hjem screen — mirrors the list layout (active games +
- * admin grid) since that's the case returning users land on after magic-link
- * login. Empty-state users see a brief content swap; that path is rare.
+ * Route-neutral loading skeleton — used by app/[locale]/loading.tsx which is
+ * inherited by ~18 child routes. Renders a brand header + generic card sections
+ * without any Home-specific elements (bell circle, admin tile grid) that would
+ * cause a layout-shift flash on non-Home routes.
  *
- * Stagger pattern: 0 → 90 → 180 → 270ms across the four card-equivalent
- * surfaces (two active-game cards, two admin tiles). Within each card, every
- * shape shares the card's delay so the shimmer phase reads as one row.
+ * Stagger pattern: 0 → 90 → 180ms across three card-equivalent surfaces.
  */
 export function HomeSkeleton() {
   return (
@@ -17,7 +16,6 @@ export function HomeSkeleton() {
           Tørny
         </span>
         <div className="flex-1" />
-        <SkeletonCircle className="w-[30px] h-[30px]" />
       </header>
 
       <section className="px-5 pb-[18px]">
@@ -31,11 +29,7 @@ export function HomeSkeleton() {
       <section className="px-3.5 flex flex-col gap-3">
         <ActiveGameCardSkeleton delay={0} />
         <ActiveGameCardSkeleton delay={90} />
-      </section>
-
-      <section className="px-3.5 mt-[18px] grid grid-cols-2 gap-2.5">
-        <AdminTileSkeleton delay={180} />
-        <AdminTileSkeleton delay={270} />
+        <ActiveGameCardSkeleton delay={180} />
       </section>
     </div>
   );
@@ -98,11 +92,3 @@ function ActiveGameCardSkeleton({ delay }: { delay: number }) {
   );
 }
 
-function AdminTileSkeleton({ delay }: { delay: number }) {
-  return (
-    <div className="bg-surface border border-border rounded-[14px] p-3.5 h-[92px] flex flex-col justify-between">
-      <Skeleton delay={delay} className="w-8 h-8 rounded-[9px]" />
-      <Skeleton delay={delay} className="w-[70%] h-[13px] rounded-[5px]" />
-    </div>
-  );
-}

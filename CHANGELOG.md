@@ -62,6 +62,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 > Cup-siden som sendes til spillerne snakker nå norsk fra topp til bunn — ingen engelsk blant matchene.
 - Fjernet bjelle-sirkel (`SkeletonCircle` l.20) og admin-rutenettet (`grid grid-cols-2`, l.36) fra `HomeSkeleton` — skeleton er nå rute-nøytral og gjenspeiler brand-rad + generiske kort-seksjoner. `app/[locale]/loading.tsx` bruker fortsatt `HomeSkeleton` (navnenavn ikke endret for å unngå import-rotasjon). (#758)
+- Fjernet bjelle-sirkel (`SkeletonCircle` l.20) og admin-rutenettet (`grid grid-cols-2`, l.36) fra `HomeSkeleton`; lagt til en tredje kort-rad for mer realistisk flater-balanse. `app/[locale]/loading.tsx` bruker fortsatt `HomeSkeleton` (navnenavn ikke endret for å unngå import-rotasjon). (#758)
 
 </details>
 
