@@ -3739,6 +3739,8 @@
       "leaveLink": "Meld deg av ligaen",
       "notReadyYet": "Ikke klar ennå",
       "opensOn": "Åpner {date}",
+      "delivered": "Levert ✓",
+      "deliveredAria": "Du har levert denne runden",
       "playButton": "Spill",
       "windowChip": {
         "open": "Åpen",

@@ -24,6 +24,7 @@ const mkRound = (id: string, sequence: number): LeagueRoundView => ({
   windowOverriddenAt: null,
   flaggedFlights: 0,
   flightCount: 1,
+  deliveredUserIds: [],
 });
 const rounds: LeagueRoundView[] = [mkRound('r1', 1), mkRound('r2', 2)];
 

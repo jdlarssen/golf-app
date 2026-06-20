@@ -266,6 +266,12 @@ export default async function LigaPublicPage({
               const ws = windowStatus(round.opensAt, round.closesAt);
               const roundReady = round.courseId !== null && round.teeBoxId !== null;
               const canPlay = isParticipant && ws === 'open' && roundReady;
+              // #740: mirrors the server gate in startLeagueRoundFlight —
+              // finished + non-withdrawn. Withdrawn and started-not-finished → false.
+              const alreadyDelivered =
+                isParticipant &&
+                currentUserId != null &&
+                round.deliveredUserIds.includes(currentUserId);
 
               return (
                 <li key={round.id} data-testid="liga-round">
@@ -299,7 +305,14 @@ export default async function LigaPublicPage({
 
                       {/* Action area */}
                       <div className="shrink-0 self-center">
-                        {canPlay ? (
+                        {alreadyDelivered ? (
+                          <span
+                            className="text-xs text-muted"
+                            aria-label={t('deliveredAria')}
+                          >
+                            {t('delivered')}
+                          </span>
+                        ) : canPlay ? (
                           <LinkButton
                             href={`/liga/${id}/runde/${round.id}/spill`}
                             variant="primary"

@@ -3739,6 +3739,8 @@
       "leaveLink": "Withdraw from the league",
       "notReadyYet": "Not ready yet",
       "opensOn": "Opens {date}",
+      "delivered": "Delivered ✓",
+      "deliveredAria": "You delivered this round",
       "playButton": "Play",
       "windowChip": {
         "open": "Open",

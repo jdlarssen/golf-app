@@ -21,6 +21,57 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.59] - 2026-06-20 · #740
+
+> Har du allerede levert en runde i ligaen, viser runden nå «Levert ✓» i stedet for «Spill». Slik slipper du å trykke deg tre steg inn for å oppdage at du er ferdig.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `lib/league/getLigaSnapshot.ts`: ny `deliveredByRound: Map<roundId, Set<userId>>` bygget ved å iterere over `games` med `status === 'finished'` og tilhørende `game_players` med `withdrawn_at === null` — speilbilde av server-gaten i `startLeagueRoundFlight` (actions.ts:656–663). Populeres som `deliveredUserIds: string[]` på `LeagueRoundView`. En trukket spiller er IKKE i settet (kan starte ny flight); en started-men-ikke-ferdig spiller er heller ikke med (game.status !== 'finished').
+- `app/[locale]/liga/[id]/page.tsx`: ny `alreadyDelivered`-variabel per runde. Legges inn som FØRSTE gren i aksjon-kolonnen, foran `canPlay`-grenen. Rendres som muted tekst med `aria-label`. Ny `LeagueRoundView.deliveredUserIds`-prop lagt til i testfiksturen i `LeagueStandingsTable.test.tsx`.
+- Tre nye tester i `getLigaSnapshot.test.ts` verifiserer de tre gate-tilfellene: ferdig+ikke-trukket → inkludert; trukket → ekskludert; aktiv (ikke ferdig) → ekskludert.
+- Nye i18n-nøkler `liga.player.delivered` og `liga.player.deliveredAria` i no + en. (#740)
+
+</details>
+
+### [1.133.58] - 2026-06-20 · #773
+
+> Har du en kommende runde i ligaen, ser du nå datoen den åpner i stedet for ingenting. Slik slipper du å lure på om du har gått glipp av noe.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/[locale]/liga/[id]/page.tsx`: i aksjon-kolonnen for runder, ny gren `ws === 'upcoming'` som rendrer muted tekst med `t('opensOn', { date: fmtWindow(round.opensAt, locale) })`. Strengt gated til `'upcoming'` — ikke `'closed'`. Ny i18n-nøkkel `liga.player.opensOn` i no + en. (#773)
+
+</details>
+
+### [1.133.57] - 2026-06-20 · #774
+
+> Avsluttede ligaer får nå et grønt banner øverst som bekrefter at sesongen er over, slik at det er tydelig at innholdet er en avsluttet sesong og ikke noe som venter på handling.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/[locale]/liga/[id]/page.tsx`: når `league.status === 'finished'`, rendres `<Banner tone="success">` med ny nøkkel `liga.player.seasonFinishedBanner` over standings-tabellen. `Banner` var allerede importert. Ingen server- eller DB-endring. Ny i18n-nøkkel i no + en. (#774)
+
+</details>
+
+### [1.133.56] - 2026-06-20 · #772
+
+> Feilmeldingen du fikk når admin ikke klarte å legge til spillere i ligaen, var en uleselig kode på engelsk. Den er nå norsk og forklarende.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `LigaAddPlayers.tsx` rendret råkodene `players_failed`/`players`/`missing` rett i brukergrensesnittet ved server-feil. Fikset ved å kopiere allow-list+`t()`-mønsteret fra søster-komponenten `LigaAddRound.tsx`: ukjente koder faller til `errors.fallback`. Nye i18n-nøkler i `liga.addPlayers.errors` (no + en). (#772)
+
+</details>
+
 ### [1.133.55] - 2026-06-20 · #782
 
 > Forklaringen av slagspill sier ikke lenger at du kappes mot «klokken». Slagspill har ingen klokke. Teksten er rettet og leser nå rent.
