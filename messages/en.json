@@ -3944,6 +3944,10 @@
         "cup_foursomes_allowance": "Check the handicap allowance for foursomes.",
         "cup_insert_failed": "Failed to create the cup. Please try again."
       }
+    },
+    "public": {
+      "matchesSummary": "{finished} of {total} matches played",
+      "noMatches": "No matches have been created yet."
     }
   },
   "klubbhuset": {

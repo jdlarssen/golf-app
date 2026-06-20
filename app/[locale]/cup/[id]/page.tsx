@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -14,7 +15,10 @@ function formatPoints(n: number): string {
 
 export default async function PublicCupPage({ params }: { params: Params }) {
   const { id } = await params;
-  const userId = await getProxyVerifiedUserId();
+  const [userId, t] = await Promise.all([
+    getProxyVerifiedUserId(),
+    getTranslations('cup'),
+  ]);
   const snapshot = await getCupSnapshot(id);
   if (!snapshot) notFound();
 
@@ -141,20 +145,22 @@ export default async function PublicCupPage({ params }: { params: Params }) {
           </div>
         </div>
         <p className="text-center text-xs text-muted mt-3">
-          {leaderboard.finishedMatches} av {leaderboard.matches.length}{' '}
-          {leaderboard.matches.length === 1 ? 'match' : 'matches'} spilt
+          {t('public.matchesSummary', {
+            finished: leaderboard.finishedMatches,
+            total: leaderboard.matches.length,
+          })}
         </p>
       </section>
 
       {/* Matches-liste */}
       <section>
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
-          Matches
+          {t('manage.matchesHeading')}
         </h2>
         {leaderboard.matches.length === 0 ? (
           <Card>
             <p className="text-sm text-muted">
-              Ingen matches er opprettet ennå.
+              {t('public.noMatches')}
             </p>
           </Card>
         ) : (

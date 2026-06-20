@@ -3944,6 +3944,10 @@
         "cup_foursomes_allowance": "Sjekk handicap-andelen for foursomes.",
         "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen."
       }
+    },
+    "public": {
+      "matchesSummary": "{finished} av {total} matcher spilt",
+      "noMatches": "Ingen matcher er opprettet ennå."
     }
   },
   "klubbhuset": {

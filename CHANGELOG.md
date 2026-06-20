@@ -24,6 +24,9 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.25] - 2026-06-20 · #768
 
 > «Send ny kode» sender nå koden med én gang du trykker — ingen retur til e-postskjemaet og ekstra knappetapp.
+### [1.133.31] - 2026-06-20 · #747
+
+> Cup-siden som sendes til spillerne snakker nå norsk fra topp til bunn — ingen engelsk blant matchene.
 
 <details>
 <summary>Teknisk</summary>
@@ -78,6 +81,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 #### Fixed
 - La til `autoCapitalize="none"`, `autoCorrect="off"` og `spellCheck={false}` på e-post-`<Input>` i `SendCodeForm.tsx`. iOS Safari kan ellers autokorrigere local-part eller domene til noe annet — f.eks. `gnail.com` → `gmail.com` — som sender kode til feil innboks uten at brukeren aner det. Ren HTML-attributt-endring, ingen logikk. (#739)
+- Offentlig cup-side (`cup/[id]/page.tsx`) brukte hardkodet engelsk: overskriften «Matches», telleren «{n} av {m} matches spilt» og tom-tilstand-teksten «Ingen matches er opprettet ennå.». Lagt til `getTranslations('cup')` og hentet inn `manage.matchesHeading` for overskriften; to nye nøkler `public.matchesSummary` og `public.noMatches` i `messages/no.json` + `messages/en.json` for teller og tom-tilstand. Singularis-/flertallsgreina (`match`/`matches`) er borte — nøkkelen dekker begge. IKKE rørt `m.matchLabel ?? 'Match'` (l.176, DB-drevet golf-term, bevisst uendret per issue). (#747)
 
 </details>
 
