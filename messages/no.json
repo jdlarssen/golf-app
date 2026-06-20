@@ -1073,6 +1073,10 @@
     "cardShowRules": "Vis regler",
     "cardHideRules": "Skjul regler",
     "cardReadMore": "Les mer →",
+    "sectionSolo": "SOLO OG STABLEFORD",
+    "sectionLag": "LAG OG SCRAMBLE",
+    "sectionMatchplay": "MATCHPLAY",
+    "sectionVeddemaal": "VEDDEMÅL OG DUELLER",
     "content": {
       "stableford": {
         "shortDescription": "Solo, poeng vs par. Klassisk klubb-format.",

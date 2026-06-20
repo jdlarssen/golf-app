@@ -24,13 +24,20 @@ type CatalogEntry = {
    * team_size 2 slik at den viser 4BBB-navn + -forklaring.
    */
   modeConfig?: GameModeConfig;
+  /**
+   * Valgfri seksjons-nøkkel (i `formatGuide`-namespacet) for oppslagssiden
+   * /spillformater (#781). Settes kun på første format i bolken. `FormatGuideList`
+   * med `showSections=true` rendrer en synlig seksjonsoverskrift foran disse.
+   */
+  sectionKey?: string;
 };
 
 // Pedagogisk rekkefølge: de vanligste klubb-/kompis-formatene først, de mer
 // spesielle veddemåls-/lag-formatene til slutt. Eksplisitt array framfor
 // Object.keys så rekkefølgen er bevisst, ikke avhengig av union-rekkefølge.
+// Seksjons-bolker (#781): sectionKey merker første rad i hver bolk.
 const CATALOG: CatalogEntry[] = [
-  { key: 'stableford', mode: 'stableford' },
+  { key: 'stableford', mode: 'stableford', sectionKey: 'sectionSolo' },
   {
     key: 'stableford-4bbb',
     mode: 'stableford',
@@ -38,25 +45,25 @@ const CATALOG: CatalogEntry[] = [
   },
   { key: 'modified_stableford', mode: 'modified_stableford' },
   { key: 'solo_strokeplay', mode: 'solo_strokeplay' },
-  { key: 'best_ball', mode: 'best_ball' },
+  { key: 'best_ball', mode: 'best_ball', sectionKey: 'sectionLag' },
   { key: 'texas_scramble', mode: 'texas_scramble' },
   { key: 'ambrose', mode: 'ambrose' },
   { key: 'florida_scramble', mode: 'florida_scramble' },
-  { key: 'singles_matchplay', mode: 'singles_matchplay' },
+  { key: 'shamble', mode: 'shamble' },
+  { key: 'patsome', mode: 'patsome' },
+  { key: 'singles_matchplay', mode: 'singles_matchplay', sectionKey: 'sectionMatchplay' },
   { key: 'fourball_matchplay', mode: 'fourball_matchplay' },
   { key: 'foursomes_matchplay', mode: 'foursomes_matchplay' },
   { key: 'greensome_matchplay', mode: 'greensome_matchplay' },
   { key: 'chapman_matchplay', mode: 'chapman_matchplay' },
   { key: 'gruesome_matchplay', mode: 'gruesome_matchplay' },
-  { key: 'nassau', mode: 'nassau' },
+  { key: 'nassau', mode: 'nassau', sectionKey: 'sectionVeddemaal' },
   { key: 'skins', mode: 'skins' },
   { key: 'wolf', mode: 'wolf' },
   { key: 'bingo_bango_bongo', mode: 'bingo_bango_bongo' },
   { key: 'nines', mode: 'nines' },
   { key: 'round_robin', mode: 'round_robin' },
   { key: 'acey_deucey', mode: 'acey_deucey' },
-  { key: 'shamble', mode: 'shamble' },
-  { key: 'patsome', mode: 'patsome' },
 ];
 
 export async function getFormatGuideEntries(): Promise<FormatGuideEntry[]> {
@@ -86,6 +93,9 @@ export async function getFormatGuideEntries(): Promise<FormatGuideEntry[]> {
       summary: content.summary,
       points: content.points,
       playStyleTeamSize: entry.modeConfig ? teamSize : undefined,
+      sectionLabel: entry.sectionKey
+        ? tContent(entry.sectionKey as Parameters<typeof tContent>[0])
+        : undefined,
     };
   });
 }

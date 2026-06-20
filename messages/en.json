@@ -1073,6 +1073,10 @@
     "cardShowRules": "Show rules",
     "cardHideRules": "Hide rules",
     "cardReadMore": "Read more →",
+    "sectionSolo": "SOLO AND STABLEFORD",
+    "sectionLag": "TEAM AND SCRAMBLE",
+    "sectionMatchplay": "MATCHPLAY",
+    "sectionVeddemaal": "SIDE BETS AND DUELS",
     "content": {
       "stableford": {
         "shortDescription": "Solo, points vs par. The classic club format.",

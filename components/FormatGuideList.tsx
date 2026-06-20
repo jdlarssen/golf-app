@@ -16,6 +16,12 @@ export type FormatGuideEntry = {
   points: string[];
   /** Lagstørrelse for variant-bevisste chips (4BBB → «Lag»). */
   playStyleTeamSize?: number;
+  /**
+   * Valgfri oversatt seksjons-overskrift (#781). Settes kun på første format
+   * i bolken. `FormatGuideList` med `showSections=true` rendrer overskriften
+   * foran dette kortet.
+   */
+  sectionLabel?: string;
 };
 
 /**
@@ -40,6 +46,7 @@ export function FormatGuideList({
   cardIdPrefix,
   className,
   cardLabels,
+  showSections = false,
 }: {
   entries: FormatGuideEntry[];
   /** Vis «Les mer →»-lenke til detaljsiden. Arket setter dette false. */
@@ -55,23 +62,35 @@ export function FormatGuideList({
    * Utelates ved bruk i «?»-arket (klienten bruker egne useTranslations).
    */
   cardLabels?: CardLabels;
+  /**
+   * Vis seksjonsoverskrifter mellom bolkene (#781). Bygger på `sectionLabel`-
+   * feltet på hvert entry. Oppslagssiden /spillformater setter dette true;
+   * «?»-arket i veiviseren lar det stå false (flat liste som før).
+   */
+  showSections?: boolean;
 }) {
   return (
     <div className={`space-y-3 ${className ?? ''}`}>
       {entries.map((entry) => (
-        <ModeGuideCard
-          key={entry.key}
-          id={cardIdPrefix ? `${cardIdPrefix}${entry.key}` : undefined}
-          label={entry.label}
-          summary={entry.summary}
-          points={entry.points}
-          detailHref={withDetailLinks ? `${routeBase}/${entry.mode}` : undefined}
-          mode={entry.mode}
-          playStyleTeamSize={entry.playStyleTeamSize}
-          showRulesLabel={cardLabels?.showRules}
-          hideRulesLabel={cardLabels?.hideRules}
-          readMoreLabel={cardLabels?.readMore}
-        />
+        <div key={entry.key}>
+          {showSections && entry.sectionLabel && (
+            <h2 className="mb-3 mt-6 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted first:mt-0">
+              {entry.sectionLabel}
+            </h2>
+          )}
+          <ModeGuideCard
+            id={cardIdPrefix ? `${cardIdPrefix}${entry.key}` : undefined}
+            label={entry.label}
+            summary={entry.summary}
+            points={entry.points}
+            detailHref={withDetailLinks ? `${routeBase}/${entry.mode}` : undefined}
+            mode={entry.mode}
+            playStyleTeamSize={entry.playStyleTeamSize}
+            showRulesLabel={cardLabels?.showRules}
+            hideRulesLabel={cardLabels?.hideRules}
+            readMoreLabel={cardLabels?.readMore}
+          />
+        </div>
       ))}
     </div>
   );

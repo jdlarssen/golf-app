@@ -52,6 +52,7 @@ export default async function SpillformaterPage() {
 
       <FormatGuideList
         entries={entries}
+        showSections
         cardLabels={{
           showRules: t('cardShowRules'),
           hideRules: t('cardHideRules'),

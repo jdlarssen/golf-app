@@ -39,6 +39,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.30] - 2026-06-20 · #764
 
 > Trykker du «Vis alle» i veiviseren, sier appen nå «Viser alle spillformer.» i stedet for å vise et spørsmålstegn.
+### [1.133.54] - 2026-06-20 · #781
+
+> Spillformat-oppslagsverket er nå delt i fire tydelige bolker — Solo og stableford, Lag og scramble, Matchplay, og Veddemål og dueller. Wolf er ikke lenger kort nummer 17 i en lang ubrutt liste.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `buildFormatGuide.ts`: `CatalogEntry` fikk et valgfritt `sectionKey`-felt. Første format i hver bolk (`stableford`, `best_ball`, `singles_matchplay`, `nassau`) bærer nøkkelen. Rekkefølgen er justert: `shamble`/`patsome` er flyttet inn i lag-bolken. `getFormatGuideEntries` leser `sectionLabel` fra `formatGuide`-namespacet og sender det videre på `FormatGuideEntry`. `FormatGuideList` fikk `showSections`-prop og rendrer `<h2>` med FormatGrid-stil (`text-[10px] uppercase tracking-[0.2em] text-muted`) foran hvert kort med `sectionLabel`. `spillformater/page.tsx` setter `showSections`. «?»-arket i veiviseren bruker fortsatt flat liste. Nye i18n-nøkler i begge `messages/*.json`. (#781)
+
+</details>
+
 ### [1.133.53] - 2026-06-20 · #760
 
 > Knappene «Vis regler» og «Skjul regler» på format-kortene vises nå på riktig språk for engelskspråklige brukere.
