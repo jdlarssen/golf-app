@@ -193,8 +193,10 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
         .getByRole('button', { name: 'Sett i gang' })
         .click();
 
-      // completeProfile redirecter til '/' ved suksess.
-      await expect(inviteePage).toHaveURL(/^\/?(\?.*)?$/, {
+      // completeProfile redirecter til '/' ved suksess. toHaveURL matcher mot
+      // hele URL-en, så regexen må inkludere host (jf. self-withdraw.spec.ts) —
+      // en path-only regex matcher aldri 'http://localhost:3000/'. (#698)
+      await expect(inviteePage).toHaveURL(/^http:\/\/localhost:3000\/?(\?.*)?$/, {
         timeout: 15_000,
       });
     });
