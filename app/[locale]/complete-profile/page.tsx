@@ -15,6 +15,11 @@ import { first, resolveErrorCode } from '@/lib/url/searchParams';
 type SearchParams = Promise<{
   error?: string | string[];
   next?: string | string[];
+  name?: string | string[];
+  nickname?: string | string[];
+  hcp_index?: string | string[];
+  hcp_plus?: string | string[];
+  gender?: string | string[];
 }>;
 
 /** Only accept same-origin relative paths as a post-onboarding destination. */
@@ -50,6 +55,14 @@ export default async function CompleteProfile({
   // #356: carry the post-onboarding destination (e.g. a game-scoped invitee's
   // `/games/[id]`) through the profile step so the user lands there afterwards.
   const next = safeNext(first(params.next));
+
+  // #748: echo submitted values back into the form after a validation bounce
+  // so the user doesn't have to retype everything.
+  const echoName = first(params.name) ?? '';
+  const echoNickname = first(params.nickname) ?? '';
+  const echoHcpIndex = first(params.hcp_index) ?? '';
+  const echoHcpPlus = first(params.hcp_plus) === 'on';
+  const echoGender = first(params.gender) ?? '';
 
   // If the user has already completed their profile, send them on. The trigger
   // pre-creates a placeholder row with profile_completed_at = NULL, so the row
@@ -96,6 +109,7 @@ export default async function CompleteProfile({
             type="text"
             label={t('nameLabel')}
             autoComplete="name"
+            defaultValue={echoName}
             required
           />
 
@@ -106,9 +120,10 @@ export default async function CompleteProfile({
             label={t('nicknameLabel')}
             hint={t('nicknameHint')}
             autoComplete="nickname"
+            defaultValue={echoNickname}
           />
 
-          <OnboardingHcpField />
+          <OnboardingHcpField initialMagnitude={echoHcpIndex} initialPlus={echoHcpPlus} />
 
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -116,11 +131,11 @@ export default async function CompleteProfile({
             </legend>
             <div className="mt-2 flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="gender" value="mens" required />
+                <input type="radio" name="gender" value="mens" required defaultChecked={echoGender === 'mens'} />
                 <span className="font-serif text-base text-text">{t('genderMale')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="gender" value="ladies" required />
+                <input type="radio" name="gender" value="ladies" required defaultChecked={echoGender === 'ladies'} />
                 <span className="font-serif text-base text-text">{t('genderFemale')}</span>
               </label>
             </div>

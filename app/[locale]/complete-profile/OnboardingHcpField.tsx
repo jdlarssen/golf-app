@@ -13,10 +13,21 @@ const INPUT_CLASS =
  * (spilleren slipper å taste fortegn på mobil), med live «Lagres som …»-
  * bekreftelse. Sender `hcp_index` (magnitude) + `hcp_plus`; server-actionen
  * regner ut signert verdi. Fortegns-logikken bor i `lib/handicap/sign`.
+ *
+ * `initialMagnitude`/`initialPlus` brukes til å gjenopprette verdier etter
+ * en valideringsfeil-redirect (#748) — `defaultValue` alene er ikke nok fordi
+ * React bruker `useState`-initialiserings-verdien, ikke DOM-attributten, for
+ * kontrollerte inputs.
  */
-export function OnboardingHcpField() {
-  const [magnitude, setMagnitude] = useState('');
-  const [isPlus, setIsPlus] = useState(false);
+export function OnboardingHcpField({
+  initialMagnitude = '',
+  initialPlus = false,
+}: {
+  initialMagnitude?: string;
+  initialPlus?: boolean;
+}) {
+  const [magnitude, setMagnitude] = useState(initialMagnitude);
+  const [isPlus, setIsPlus] = useState(initialPlus);
   const t = useTranslations('onboarding');
   const locale = useLocale() as AppLocale;
   const num = Number.parseFloat(magnitude.replace(',', '.'));

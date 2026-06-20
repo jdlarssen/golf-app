@@ -29,11 +29,16 @@ export async function completeProfile(formData: FormData) {
   const next =
     nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '/';
 
-  // Bounce back to the form on a validation error, keeping `next` so the
-  // destination survives the round-trip.
+  // Bounce back to the form on a validation error, keeping `next` and the
+  // already-entered field values so the user doesn't lose their input.
   const fail = (code: string): never => {
     const qs = new URLSearchParams({ error: code });
     if (next !== '/') qs.set('next', next);
+    if (name) qs.set('name', name);
+    if (nicknameRaw) qs.set('nickname', nicknameRaw);
+    if (hcpRaw) qs.set('hcp_index', hcpRaw);
+    if (hcpPlus) qs.set('hcp_plus', 'on');
+    if (genderRaw) qs.set('gender', genderRaw);
     redirect(`/complete-profile?${qs.toString()}`);
   };
 

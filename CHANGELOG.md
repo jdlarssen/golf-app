@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.23] - 2026-06-20 · #748
+
+> Glemmer du å fylle ut ett felt i profilskjemaet, mister du ikke alt du allerede har skrevet. Navn, kallenavn, handicap og kjønn er der igjen når du prøver på nytt.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `completeProfile`-actionen bærer nå med seg innsendte feltverdier (`name`, `nickname`, `hcp_index`, `hcp_plus`, `gender`) i `?`-parameterne ved valideringsfeil-redirect, slik at siden kan gjenopprette dem. `page.tsx` leser disse via `searchParams` og setter `defaultValue`/`defaultChecked` på alle felt. `OnboardingHcpField` fikk `initialMagnitude`/`initialPlus`-props for å initialisere `useState` med de gjenopprettede verdiene (server-side `defaultValue` alene fungerer ikke for kontrollerte React-inputs). Låst redirect-test i `actions.test.ts` oppdatert til å matche den nye query-strengen. (#748)
+
+</details>
+
 ### [1.133.22] - 2026-06-20 · #765
 
 > Tastaturet spretter opp med én gang du åpner innloggingssiden. Ingen unødvendig tapping for å komme i gang.

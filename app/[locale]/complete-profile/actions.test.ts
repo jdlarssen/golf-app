@@ -95,7 +95,7 @@ describe('completeProfile — #356 next round-trip', () => {
 
     expect(updateEqMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toBe(
-      '/complete-profile?error=name_required&next=%2Fgames%2Fabc',
+      '/complete-profile?error=name_required&next=%2Fgames%2Fabc&hcp_index=12%2C5&gender=mens',
     );
   });
 });
