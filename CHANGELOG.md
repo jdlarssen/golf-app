@@ -68,7 +68,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 ### [1.133.44] - 2026-06-20 · #761
 
-> «Personvern»-lenken i bunnteksten vises på riktig språk uansett om du bruker appen på norsk eller engelsk.
+> «Personvern»-lenken i bunnteksten vises nå på riktig språk uansett om du bruker appen på norsk eller engelsk.
 
 <details>
 <summary>Teknisk</summary>

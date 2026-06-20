@@ -1,4 +1,9 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 export function AppVersionFooter() {
+  const t = useTranslations('legal.privacy');
   const version = process.env.NEXT_PUBLIC_APP_VERSION;
   const sha = process.env.NEXT_PUBLIC_APP_SHA;
   if (!version) return null;
@@ -17,7 +22,7 @@ export function AppVersionFooter() {
         href="/legal/privacy"
         className="underline underline-offset-2 hover:text-text transition-colors"
       >
-        Personvern
+        {t('kicker')}
       </a>
     </p>
   );
