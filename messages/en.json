@@ -3738,6 +3738,7 @@
       "joinPending": "Signing up …",
       "leaveLink": "Withdraw from the league",
       "notReadyYet": "Not ready yet",
+      "opensOn": "Opens {date}",
       "playButton": "Play",
       "windowChip": {
         "open": "Open",

@@ -3738,6 +3738,7 @@
       "joinPending": "Melder deg på …",
       "leaveLink": "Meld deg av ligaen",
       "notReadyYet": "Ikke klar ennå",
+      "opensOn": "Åpner {date}",
       "playButton": "Spill",
       "windowChip": {
         "open": "Åpen",

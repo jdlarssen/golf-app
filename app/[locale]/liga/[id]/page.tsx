@@ -311,6 +311,10 @@ export default async function LigaPublicPage({
                           <span className="text-xs text-muted italic">
                             {t('notReadyYet')}
                           </span>
+                        ) : ws === 'upcoming' ? (
+                          <span className="text-xs text-muted">
+                            {t('opensOn', { date: fmtWindow(round.opensAt, locale) })}
+                          </span>
                         ) : null}
                       </div>
                     </div>
