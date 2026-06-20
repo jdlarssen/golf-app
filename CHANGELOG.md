@@ -106,7 +106,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 
 ### [1.133.46] - 2026-06-20 · #776
 
-> Under «Eksporter mine data» forklarer appen nå hva filen inneholder før du laster den ned.
+> Under «Eksporter mine data» forklarer appen nå kort hva filen inneholder — før du laster den ned.
 
 <details>
 <summary>Teknisk</summary>

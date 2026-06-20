@@ -189,6 +189,7 @@
     "historikkRow": "Min historikk",
     "statistikkRow": "Klubbstatistikker",
     "exportRow": "Eksporter mine data",
+    "exportSublabel": "Last ned alt vi har lagret om deg som en fil.",
     "deleteRow": "Slett konto",
     "logoutButton": "Logg ut",
     "logoutPending": "Logger ut …",

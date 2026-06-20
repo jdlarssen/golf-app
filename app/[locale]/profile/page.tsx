@@ -122,6 +122,7 @@ export default async function ProfilePage({
             href="/profile/export"
             download
             label={t('exportRow')}
+            sublabel={t('exportSublabel')}
           />
           <SettingRow
             href="/profile/slett-konto"
