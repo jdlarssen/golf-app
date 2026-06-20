@@ -30,6 +30,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.42] - 2026-06-20 · #756
 
 > Tom historikk viser nå én ryddig melding i stedet for to overlappende.
+### [1.133.35] - 2026-06-20 · #753
+
+> Når noen ikke har levert, ser du nå purre-knappen øverst — Avslutt likevel er fortsatt der, men lengre nede.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- I `onlyMissingBlocks`-grenen i `admin/games/[id]/page.tsx` er «Se spillerstatus og send påminnelse →» lagt til som sekundær-knapp (`text-primary`, `border-border`) mellom advarselen og «Avslutt likevel»-knappen. Gjenbruker eksisterende `tCta('viewStatusWithReminderLink')` og `/admin/games/${gameId}/status`-ruta. (#753)
+
+</details>
+
 ### [1.133.34] - 2026-06-20 · #750
 
 > I engelsk locale vises admin-flater nå fullt oversatt — ingen rå norsk lenger i spill-listen eller på scorekort-raden.

@@ -1072,6 +1072,12 @@ async function PlayersSections({
                   </p>
                 </div>
                 <SmartLink
+                  href={`/admin/games/${gameId}/status`}
+                  className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-primary transition-colors hover:bg-surface-2"
+                >
+                  {tCta('viewStatusWithReminderLink')}
+                </SmartLink>
+                <SmartLink
                   href={avsluttLikevelHref}
                   className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
                 >
