@@ -39,6 +39,18 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.30] - 2026-06-20 · #764
 
 > Trykker du «Vis alle» i veiviseren, sier appen nå «Viser alle spillformer.» i stedet for å vise et spørsmålstegn.
+### [1.133.55] - 2026-06-20 · #782
+
+> Forklaringen av slagspill sier ikke lenger at du kappes mot «klokken». Slagspill har ingen klokke. Teksten er rettet og leser nå rent.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `messages/no.json`: `formatGuide.content.solo_strokeplay.long` er erstattet med ny tekst som fjerner faktafeilen («klokken») og em-dash-kjeden. Full streng skrevet om, ikke find-replace. Ingen endring i `messages/en.json` (norsk-bare-fiks per issue). (#782)
+
+</details>
+
 ### [1.133.54] - 2026-06-20 · #781
 
 > Spillformat-oppslagsverket er nå delt i fire tydelige bolker — Solo og stableford, Lag og scramble, Matchplay, og Veddemål og dueller. Wolf er ikke lenger kort nummer 17 i en lang ubrutt liste.

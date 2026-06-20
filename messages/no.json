@@ -1116,7 +1116,7 @@
           "Du spiller for deg selv, ingen lag.",
           "Lavest sum etter 18 hull vinner."
         ],
-        "long": "Klassisk slagspill: du teller alle slagene dine gjennom hele runden og trekker fra handikap-slagene til slutt. Ingen lagkamerater, ingen hull-per-hull-oppgjør — bare du mot banen og klokken. Den som ender med færrest netto-slag etter 18 hull, vinner.",
+        "long": "Klassisk slagspill: du teller alle slagene dine gjennom hele runden og trekker fra handikap-slagene til slutt. Ingen lagkamerater, ingen hull-per-hull-oppgjør, bare du mot banen. Den som ender med færrest netto-slag etter 18 hull, vinner.",
         "example": "Du spiller en runde med CH 10. Bruttoscore er 85. Netto = 85 − 10 = 75. Konkurrenten din scorer 83 brutto med CH 7, netto 76. Du vinner med netto 75 mot 76. Ett dårlig hull gjør deg ikke ferdig, men alt teller til slutt."
       },
       "best_ball": {
