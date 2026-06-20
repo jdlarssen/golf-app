@@ -21,6 +21,78 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.65] - 2026-06-20 · #754
+
+> Grønn hake betyr nå at scoren er på vei til serveren. Er du uten nett, ser du i stedet en gul dot med teksten «Lagret på telefonen · sendes når nettet er tilbake» — så du aldri er i tvil om hva som er synkronisert.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `SyncStatusLine` fikk ny valgfri prop `pendingCount?: number` og en tredje tilstand mellom "sender" og "lagret": `(pendingCount ?? 0) > 0` → gul dot (`var(--warning)`) + teksten `holes.sync.waitingForNetwork`. Presedens: syncing → pending → savedAt → fallback. Eksisterende props er uendret, `pendingCount` defaulter til 0/absent så de 3 låste testene (`syncing=true`, `savedAt='14:32'`, tom savedAt) er identisk grønne. Ny test for gul tilstand lagt til. `HoleClient` leser køen via `useLiveQuery(() => localDb.syncQueue.toArray(), [])`, filtrerer ut `abandonedAt != null` (karantene-items), og sender `pendingCount` til linjen. Visibility-predikatet utvidet til `(syncing || savedAt.length > 0 || pendingCount > 0)`. `holes.sync.waitingForNetwork` lagt til i no.json og en.json; `catalogParity` grønn. (#754)
+
+</details>
+
+### [1.133.64] - 2026-06-20 · #744
+
+> «Lagret nylig» vises ikke lenger på tomme hull før du har tastet noe. Statuslinjen dukker opp første gang som en ekte kvittering — ikke som en falsk bekreftelse.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `SyncStatusLine` ble rendret ubetinget i `HoleClient`, noe som ga en grønn «Lagret nylig»-dot på alle tomme hull ved mount (pga. `key={holeNumber}`-remount). Lagt til `{(syncing || savedAt.length > 0) && <SyncStatusLine .../>}` slik at linjen kun vises etter reell skriveaktivitet. En ny Type C-test (`HoleClient.test.tsx`) verifiserer at `sync-dot` er fraværende på et fersk hull. (#744)
+
+</details>
+
+### [1.133.63] - 2026-06-20 · #770
+
+> Installerknappen og lukkknappen i app-banneret, samt pil-tilbake og leaderboard-ikonet på hull-skjermen, er nå lettere å treffe med fingeren.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `InstallBanner`: «Installer»-knappen fikk `min-h-11` (Tailwind 44px); «✕»-knappen fikk `min-h-11 min-w-11 flex items-center justify-center`; container `gap-1` → `gap-2`. `HoleClient`: `backLinkStyle` bumpa fra `minWidth/minHeight:32` til `44`; `leaderboardIconLinkStyle` bumpa fra `width/height:34` til `44`. De negative `-6`-margene er beholdt så det visuelle fotavtrykket er uendret — bare treffområdet vokser. Rent stil-endring, ingen logikk rørt. (#770)
+
+</details>
+
+### [1.133.62] - 2026-06-20 · #749
+
+> Installér-banneret og installasjonsveiviseren vises nå på riktig språk. Engelske brukere ser ikke lenger norsk tekst her.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `InstallBanner` og `InstallInstructionsModal` hadde hardkodede norske strenger. Begge byttet til `useTranslations('installBanner')` / `useTranslations('installInstructions')`. To nye namespaces lagt til i `messages/no.json` (prod-strenger kopiert verbatim) og `messages/en.json` (idiomatic engelsk). Trinn 1 i iOS-Safari-flyten er delt i `iosStep1Pre`/`iosStep1Post` rundt det SVG-baserte del-ikonet som sitter inline i teksten. `<strong>`-uthevingen av «Safari»/«tornygolf.no» i ios-other- og unsupported-variantene ble forenklet til ren tekst (markup ble ikke ført inn i oversettelsene); del-ikonet i trinn 1 er bevart via Pre/Post-splitten. catalogParity grønn. (#749)
+
+</details>
+
+### [1.133.61] - 2026-06-20 · #769
+
+> Hurtigvalget når du taster score viser nå par+1 og par+2 i tillegg. Bogey og dobbelt-bogey er ett trykk unna i stedet for flere trykk på +.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `SpecificValueSheet` utvidet verdilisten fra `[par-2, par-1, par]` til `[par-2, par-1, par, par+1, par+2]`, filtrert mot `>= 1` og `<= 15` (MAX_STROKES, speilet fra ScoreCard). Grid ble endret fra `repeat(4,1fr)` til `repeat(3,1fr)` slik at 5 tall-knapper + X-knappen danner en ryddig 2×3 layout. Tap-targets er uendret (buttonStyle padding 14px 0 ≈ 50px høyde). Kommentar ved verdilisten oppdatert. Tester oppdatert: par=4→6 knapper ['2','3','4','5','6','X'], par=3→6 knapper ['1','2','3','4','5','X'], par=2→5 knapper ['1','2','3','4','X'] (par-2=0 filtrert ut). (#769)
+
+</details>
+
+### [1.133.60] - 2026-06-20 · #745
+
+> Resultattavla fanger nå opp rettede scorer i tillegg til nye. Fikser du et slag du tastet feil, ser alle tilskuere den riktige scoren umiddelbart.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `LeaderboardRealtime` og `PreRoundLeaderboardRealtime` abonnerte kun på `scores`-INSERT. Score-korreksjoner skjer via `upsert_score_if_newer` som utsteder UPDATE — disse ble aldri fanget, og tilskuerens tall ble stående til neste INSERT refreshet siden. Lagt til en andre `.on('postgres_changes', {event:'UPDATE', ...})` på `scores`-tabellen i begge komponenter; `LeaderboardRealtime` ruter dem gjennom den eksisterende 300ms-debouncede `scheduleRefresh` (kollapser burst av UPDATE-er til én refresh), `PreRoundLeaderboardRealtime` bruker `() => router.refresh()` som de eksisterende handlene der. `scores` har REPLICA IDENTITY FULL (0006) og er i realtime-publikasjonen (0005) — ingen migrasjon nødvendig. (#745)
+
+</details>
+
 ### [1.133.59] - 2026-06-20 · #740
 
 > Har du allerede levert en runde i ligaen, viser runden nå «Levert ✓» i stedet for «Spill». Slik slipper du å trykke deg tre steg inn for å oppdage at du er ferdig.
