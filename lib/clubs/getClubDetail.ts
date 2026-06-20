@@ -13,6 +13,7 @@ export type PendingJoinRequest = {
   id: string;
   requesterName: string;
   requestedAt: string;
+  message: string | null;
 };
 
 export type PendingClubInvitation = {
@@ -100,7 +101,7 @@ export async function getClubDetail(
     isAdmin
       ? admin
           .from('group_join_requests')
-          .select('id, created_at, user_id, users(name, nickname)')
+          .select('id, created_at, user_id, message, users(name, nickname)')
           .eq('group_id', clubId)
           .eq('status', 'pending')
           .order('created_at', { ascending: true })
@@ -157,6 +158,7 @@ export async function getClubDetail(
       id: rowAny.id as string,
       requesterName,
       requestedAt: rowAny.created_at as string,
+      message: (rowAny.message as string | null) ?? null,
     };
   });
 

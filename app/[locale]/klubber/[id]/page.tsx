@@ -228,6 +228,11 @@ export default async function KlubbDetailPage({
                         year: 'numeric',
                       })}
                     </span>
+                    {req.message && (
+                      <span className="mt-1 break-words font-sans text-sm text-muted">
+                        {req.message}
+                      </span>
+                    )}
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <form action={decideRequest}>

@@ -33,6 +33,9 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 ### [1.133.41] - 2026-06-20 · #783
 
 > Har du ikke lagt inn navn ennå, sier appen nå «God morgen.» i stedet for det litt rare «God morgen, spiller.»
+### [1.133.48] - 2026-06-20 · #741
+
+> Hilsenen «hvem er du?» fra bli-med-skjemaet vises nå for eieren. Godkjenning er ikke lenger blind gjetting.
 
 <details>
 <summary>Teknisk</summary>
@@ -243,6 +246,7 @@ Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issu
 - Hardkodet `«{n} leverte ikke»` og `«{n} venter»` på scorekort-raden i `admin/games/[id]/page.tsx` erstattet med `tRows('notSubmittedFinished')`/`tRows('notSubmittedWaiting')` (ICU plural). (#750)
 - Hardkodet `'(ukjent bane)'` i spill-listen (`admin/games/page.tsx`) erstattet med `t('unknownCourse')`. (#750)
 - Nye nøkler lagt til i `admin.game.rows` (`notSubmittedWaiting`, `notSubmittedFinished`) og `admin.games` (`unknownCourse`) i no.json + en.json. (#750)
+- `lib/clubs/getClubDetail.ts`: la til `message` i SELECT på `group_join_requests` og i `PendingJoinRequest`-typen (additiv optional `message: string | null`). `app/[locale]/klubber/[id]/page.tsx`: rendrer hilsenen betinget som `break-words`-linje under dato i forespørsels-kortet. Ingen skjema-/RLS-endring — kolonne finnes allerede (0075) og admin-klienten leser raden i sin helhet. (#741)
 
 </details>
 
