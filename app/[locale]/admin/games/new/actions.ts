@@ -238,6 +238,12 @@ async function createGameInternal(
   });
   const { error: gpError } = await supabase.from('game_players').insert(rows);
   if (gpError) {
+    // #737: rull tilbake den committede games-raden. Uten dette etterlater en
+    // feilet spiller-insert en foreldreløs game uten spillere — skaperen ser en
+    // tom, ødelagt runde i listene sine, og ingen kan rydde den. Skaperen har
+    // DELETE-RLS på egne games (0071), så request-klienten kan slette her;
+    // game_players cascade-ryddes av FK (0001). Speiler #675-rollbacken i cup/liga.
+    await supabase.from('games').delete().eq('id', game!.id);
     console.error('[createGameInternal] game_players insert failed', gpError);
     redirect({ href: `${errorBase}?error=db_players`, locale });
   }

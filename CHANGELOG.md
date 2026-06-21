@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.81] - 2026-06-22 · #737
+
+> Glipper det mens du lager en runde, rydder appen vekk den tomme runden, så du slipper en halvferdig runde i lista.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `createGameInternal` insertet `games` og deretter `game_players` uten rollback. Feilet spiller-inserten etter at game-raden var committet, ble en foreldreløs runde uten spillere liggende — skaperen så en tom, ødelagt runde i listene sine. Lagt til kompenserende slett av game-raden (skaperen har DELETE-RLS på egne games, 0071; `game_players` cascade-ryddes av FK), som speiler #675-rollbacken i cup/liga. Chaos-injection-test dekker stien (spiller-insert feiler → `games.delete` + lokalisert `db_players`-feil). (#737)
+
+</details>
+
 ### [1.133.80] - 2026-06-22 · #737
 
 > Glipper noe mens du lager en bane, rydder appen bort hele forsøket, så du ikke blir sittende med en halvferdig bane du ikke får slettet.

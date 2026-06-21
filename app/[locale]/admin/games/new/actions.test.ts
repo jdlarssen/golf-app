@@ -531,3 +531,39 @@ describe('backfill invite-notify (#182)', () => {
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * #737 chaos-injection: createGameInternal inserted `games` then `game_players`
+ * with NO rollback. A failed player insert after the game row committed left an
+ * orphan game with no players — the creator saw an empty, broken round in their
+ * lists. The fix deletes the committed game (the creator has DELETE-RLS on own
+ * games, 0071; game_players follow via FK cascade), mirroring #675.
+ */
+describe('createGameInternal — rollback on player-insert failure (#737)', () => {
+  it('deletes the committed games row when game_players insert fails, then shows db_players', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // gate: users.is_admin
+      { data: { id: 'g-orphan' }, error: null }, // games.insert(...).select.single
+      { data: null, error: { message: 'boom' } }, // game_players.insert FAILS
+      { data: null, error: null }, // rollback: games.delete().eq('id','g-orphan')
+    ]);
+    signIn('admin-1');
+
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(fd({ name: 'Orphan-test', side_tournament_enabled: 'false' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // The committed game row is rolled back — no half-built game is left behind.
+    const del = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'delete',
+    );
+    expect(del, 'games.delete issued for rollback').toBeDefined();
+    const eqCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'eq',
+    );
+    expect(eqCall!.args).toEqual(['id', 'g-orphan']);
+    // A localized error surfaces (never a silent orphan).
+    expect(lastRedirect()).toBe('/admin/games/new?error=db_players');
+  });
+});
