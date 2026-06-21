@@ -12,6 +12,7 @@ import {
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
+import { teeGenderOf } from '@/lib/games/teeGender';
 import { generateRounds } from './generateRounds';
 import { leagueFlightGameConfig, isPointsBasedFormat } from './flightFormat';
 import type { TablesUpdate } from '@/lib/database.types';
@@ -28,10 +29,7 @@ const NAME_RE = /^.{1,80}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const GAME_NAME_MAX = 120;
 
-/** Profile gender → tee_gender. NULL/'male' → 'mens', 'female' → 'ladies'. */
-function teeGenderOf(gender: string | null): 'mens' | 'ladies' {
-  return gender === 'female' ? 'ladies' : 'mens';
-}
+// teeGenderOf imported from @/lib/games/teeGender (#809).
 
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
 

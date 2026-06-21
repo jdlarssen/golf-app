@@ -11,6 +11,7 @@ import {
   requireAdminOrClubAdminOfCup,
 } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
+import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
 import {
@@ -33,75 +34,8 @@ function parsePointsToWin(raw: string): number | null {
   return Math.round(n * 10) / 10;
 }
 
-/**
- * Parser fourball_allowance_pct fra cup-create/edit-form (#217).
- *
- * Range 0..100 (heltall). 0 = brutto, 1..100 = netto med den prosenten. Tom
- * string defaulter til 85 (WHS-default) — UI-toggle skal alltid sende eksplisitt
- * verdi (0 ved brutto-modus, eller pct fra netto-input), så tom string betyr
- * at form ble submittet med stale state og default er det trygge valget.
- */
-function parseFourballAllowancePct(raw: string): number | null {
-  const cleaned = raw.trim();
-  if (cleaned === '') return 85;
-  const n = Number(cleaned);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
-}
-
-/**
- * Parser foursomes_allowance_pct fra cup-create/edit-form (#218).
- *
- * Speiler fourball-helperen strukturelt — eneste forskjell er default 50
- * (WHS-standard for foursomes matchplay; diff-basert formel der lavlaget
- * får 0 strokes og høylaget får round(|combined_diff| × pct/100) via SI).
- */
-function parseFoursomesAllowancePct(raw: string): number | null {
-  const cleaned = raw.trim();
-  if (cleaned === '') return 50;
-  const n = Number(cleaned);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
-}
-
-/**
- * Parser greensome_allowance_pct fra cup-create/edit-form (#663).
- * Default 100 (WHS-standard). Greensome: begge spiller første slag, velger
- * det beste, og alternerer deretter — handicap-allowance er 100 per spiller.
- */
-function parseGreensomeAllowancePct(raw: string): number | null {
-  const cleaned = raw.trim();
-  if (cleaned === '') return 100;
-  const n = Number(cleaned);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
-}
-
-/**
- * Parser chapman_allowance_pct fra cup-create/edit-form (#663).
- * Default 100. Chapman (også kalt «pinehurst»): begge spiller første slag,
- * bytter, velger deretter beste og alternerer — handicap-allowance som greensome.
- */
-function parseChapmanAllowancePct(raw: string): number | null {
-  const cleaned = raw.trim();
-  if (cleaned === '') return 100;
-  const n = Number(cleaned);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
-}
-
-/**
- * Parser gruesome_allowance_pct fra cup-create/edit-form (#663).
- * Default 50. Gruesome: begge spiller første slag, men motstanderlaget velger
- * hvilken ball som brukes — mer krevende variant; allowance 50 som foursomes.
- */
-function parseGruesomeAllowancePct(raw: string): number | null {
-  const cleaned = raw.trim();
-  if (cleaned === '') return 50;
-  const n = Number(cleaned);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
-}
+// Allowance parsers are consolidated in ./allowance.ts (#809).
+// Use parseAllowancePct(raw, ALLOWANCE_DEFAULTS.<format>) at call-sites.
 
 async function loadTournamentParticipantEmails(
   supabase: Awaited<ReturnType<typeof getServerClient>>,
@@ -198,15 +132,15 @@ export async function createTournamentDraft(formData: FormData) {
     redirect(`${errBase}cup_team_dup`);
   const points = parsePointsToWin(pointsRaw);
   if (points === null) redirect(`${errBase}cup_points`);
-  const fourballAllowance = parseFourballAllowancePct(allowanceRaw);
+  const fourballAllowance = parseAllowancePct(allowanceRaw, ALLOWANCE_DEFAULTS.fourball);
   if (fourballAllowance === null) redirect(`${errBase}cup_allowance`);
-  const foursomesAllowance = parseFoursomesAllowancePct(foursomesAllowanceRaw);
+  const foursomesAllowance = parseAllowancePct(foursomesAllowanceRaw, ALLOWANCE_DEFAULTS.foursomes);
   if (foursomesAllowance === null) redirect(`${errBase}cup_foursomes_allowance`);
-  const greensomeAllowance = parseGreensomeAllowancePct(greensomeAllowanceRaw);
+  const greensomeAllowance = parseAllowancePct(greensomeAllowanceRaw, ALLOWANCE_DEFAULTS.greensome);
   if (greensomeAllowance === null) redirect(`${errBase}cup_greensome_allowance`);
-  const chapmanAllowance = parseChapmanAllowancePct(chapmanAllowanceRaw);
+  const chapmanAllowance = parseAllowancePct(chapmanAllowanceRaw, ALLOWANCE_DEFAULTS.chapman);
   if (chapmanAllowance === null) redirect(`${errBase}cup_chapman_allowance`);
-  const gruesomeAllowance = parseGruesomeAllowancePct(gruesomeAllowanceRaw);
+  const gruesomeAllowance = parseAllowancePct(gruesomeAllowanceRaw, ALLOWANCE_DEFAULTS.gruesome);
   if (gruesomeAllowance === null) redirect(`${errBase}cup_gruesome_allowance`);
 
   const supabase = await getServerClient();
@@ -279,18 +213,18 @@ export async function updateTournament(formData: FormData) {
     redirect(`${base.path}?error=team_dup`);
   const points = parsePointsToWin(pointsRaw);
   if (points === null) redirect(`${base.path}?error=points`);
-  const fourballAllowance = parseFourballAllowancePct(allowanceRaw);
+  const fourballAllowance = parseAllowancePct(allowanceRaw, ALLOWANCE_DEFAULTS.fourball);
   if (fourballAllowance === null) redirect(`${base.path}?error=allowance`);
-  const foursomesAllowance = parseFoursomesAllowancePct(foursomesAllowanceRaw);
+  const foursomesAllowance = parseAllowancePct(foursomesAllowanceRaw, ALLOWANCE_DEFAULTS.foursomes);
   if (foursomesAllowance === null)
     redirect(`${base.path}?error=foursomes_allowance`);
-  const greensomeAllowance = parseGreensomeAllowancePct(greensomeAllowanceRaw);
+  const greensomeAllowance = parseAllowancePct(greensomeAllowanceRaw, ALLOWANCE_DEFAULTS.greensome);
   if (greensomeAllowance === null)
     redirect(`${base.path}?error=greensome_allowance`);
-  const chapmanAllowance = parseChapmanAllowancePct(chapmanAllowanceRaw);
+  const chapmanAllowance = parseAllowancePct(chapmanAllowanceRaw, ALLOWANCE_DEFAULTS.chapman);
   if (chapmanAllowance === null)
     redirect(`${base.path}?error=chapman_allowance`);
-  const gruesomeAllowance = parseGruesomeAllowancePct(gruesomeAllowanceRaw);
+  const gruesomeAllowance = parseAllowancePct(gruesomeAllowanceRaw, ALLOWANCE_DEFAULTS.gruesome);
   if (gruesomeAllowance === null)
     redirect(`${base.path}?error=gruesome_allowance`);
 

@@ -11,6 +11,8 @@ import {
   exceedsPersonalMatchCap,
   exceedsPersonalPlayerCap,
 } from '@/lib/cup/limits';
+import { ALLOWANCE_DEFAULTS } from '@/lib/cup/allowance';
+import { teeGenderOf } from '@/lib/games/teeGender';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import type { CupSessionFormat } from '@/lib/cup/cupTemplates';
 import type { PlannedMatch } from '@/lib/cup/cupPairing';
@@ -30,11 +32,7 @@ import type { PlannedMatch } from '@/lib/cup/cupPairing';
 
 const MATCH_LABEL_MAX = 80;
 const GAME_NAME_MAX = 120;
-const DEFAULT_FOURBALL_ALLOWANCE = 85;
-const DEFAULT_FOURSOMES_ALLOWANCE = 50;
-const DEFAULT_GREENSOME_ALLOWANCE = 100;
-const DEFAULT_CHAPMAN_ALLOWANCE = 100;
-const DEFAULT_GRUESOME_ALLOWANCE = 50;
+// Allowance defaults imported from @/lib/cup/allowance (ALLOWANCE_DEFAULTS) — #809.
 
 /**
  * Bygger mode_config i samme form som de manuelt opprettede cup-matchene lagrer
@@ -70,10 +68,7 @@ function cupMatchModeConfig(
   } as GameModeConfig;
 }
 
-/** Profil-kjønn → tee_gender. NULL/'male' → 'mens', 'female' → 'ladies'. */
-function teeGenderOf(gender: string | null): 'mens' | 'ladies' {
-  return gender === 'female' ? 'ladies' : 'mens';
-}
+// teeGenderOf imported from @/lib/games/teeGender (#809).
 
 export type CupBatchInput = {
   tournamentId: string;
@@ -169,15 +164,15 @@ export async function createCupMatchesFromPlan(
   }
 
   const fourballPct =
-    (cup.fourball_allowance_pct as number | null) ?? DEFAULT_FOURBALL_ALLOWANCE;
+    (cup.fourball_allowance_pct as number | null) ?? ALLOWANCE_DEFAULTS.fourball;
   const foursomesPct =
-    (cup.foursomes_allowance_pct as number | null) ?? DEFAULT_FOURSOMES_ALLOWANCE;
+    (cup.foursomes_allowance_pct as number | null) ?? ALLOWANCE_DEFAULTS.foursomes;
   const greensomePct =
-    (cup.greensome_allowance_pct as number | null) ?? DEFAULT_GREENSOME_ALLOWANCE;
+    (cup.greensome_allowance_pct as number | null) ?? ALLOWANCE_DEFAULTS.greensome;
   const chapmanPct =
-    (cup.chapman_allowance_pct as number | null) ?? DEFAULT_CHAPMAN_ALLOWANCE;
+    (cup.chapman_allowance_pct as number | null) ?? ALLOWANCE_DEFAULTS.chapman;
   const gruesomePct =
-    (cup.gruesome_allowance_pct as number | null) ?? DEFAULT_GRUESOME_ALLOWANCE;
+    (cup.gruesome_allowance_pct as number | null) ?? ALLOWANCE_DEFAULTS.gruesome;
 
   // Resolve tee_gender per player from their profile in one round-trip.
   const userIds = Array.from(
