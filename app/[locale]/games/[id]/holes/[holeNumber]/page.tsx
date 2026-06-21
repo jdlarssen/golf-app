@@ -7,7 +7,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
-import { isStablefordFamily } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, isScrambleFamily } from '@/lib/scoring/modes/types';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { nameInitials } from '@/lib/names/initials';
@@ -129,7 +129,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const playerIds = flight.map((p) => p.user_id);
 
   const isStableford = isStablefordFamily(game.game_mode);
-  const isTexas = game.game_mode === 'texas_scramble' || game.game_mode === 'ambrose' || game.game_mode === 'florida_scramble';
+  const isTexas = isScrambleFamily(game.game_mode);
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isGreensome = game.game_mode === 'greensome_matchplay';
   const isChapman = game.game_mode === 'chapman_matchplay';
