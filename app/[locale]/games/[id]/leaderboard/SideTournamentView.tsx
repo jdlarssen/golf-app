@@ -68,6 +68,138 @@ const GROUP_ORDER: readonly GroupId[] = [
 ];
 
 /**
+ * Simple dual-variant award pairs (lag + individuell) som følger ÉN rigid mal:
+ * lag-varianten viser `tieSuffix`, individ-varianten viser vinnerens fornavn.
+ * Rekkefølgen her ER den nåværende emisjons-rekkefølgen innen hver gruppe —
+ * IKKE sorter eller grupper om (par-4 ligger bevisst etter eagles, ikke ved
+ * par-3/par-5). Bespoke kategorier (streak/score/penalty m.fl.) hører ikke
+ * hjemme her og emiteres fortsatt eksplisitt.
+ *
+ * Den endelige visnings-rekkefølgen avgjøres uansett av per-gruppe-sorteringen
+ * (poeng desc, deretter category), så denne lista styrer kun innsettings-
+ * rekkefølgen — men holdes i emisjons-rekkefølge for et rent, etterprøvbart
+ * diff mot karakteriserings-snapshotet (#812).
+ */
+type SimpleDualAward = {
+  group: GroupId;
+  teamCategory: string;
+  individualCategory: string;
+  teamPointsKey: keyof typeof SIDE_TOURNAMENT_POINTS;
+  individualPointsKey: keyof typeof SIDE_TOURNAMENT_POINTS;
+  /** Nøkkel under `awards.*` for lag-varianten (ingen interpolering). */
+  teamI18nKey: string;
+  /** Nøkkel under `awards.*` for individ-varianten (interpolerer `{name}`). */
+  individualI18nKey: string;
+};
+
+const SIMPLE_DUAL_AWARDS: readonly SimpleDualAward[] = [
+  // ─── Skill og rarity (4p lag / 2p individ) ──────────────────────────────
+  {
+    group: 'skill',
+    teamCategory: 'best_brutto_18_team',
+    individualCategory: 'best_brutto_18_individual',
+    teamPointsKey: 'bestBrutto18Team',
+    individualPointsKey: 'bestBrutto18Individual',
+    teamI18nKey: 'bestBrutto18Team',
+    individualI18nKey: 'bestBrutto18Individual',
+  },
+  {
+    group: 'skill',
+    teamCategory: 'king_par3_team',
+    individualCategory: 'king_par3_individual',
+    teamPointsKey: 'kingPar3Team',
+    individualPointsKey: 'kingPar3Individual',
+    teamI18nKey: 'kingPar3Team',
+    individualI18nKey: 'kingPar3Individual',
+  },
+  {
+    group: 'skill',
+    teamCategory: 'king_par5_team',
+    individualCategory: 'king_par5_individual',
+    teamPointsKey: 'kingPar5Team',
+    individualPointsKey: 'kingPar5Individual',
+    teamI18nKey: 'kingPar5Team',
+    individualI18nKey: 'kingPar5Individual',
+  },
+  {
+    group: 'skill',
+    teamCategory: 'most_eagles_team',
+    individualCategory: 'most_eagles_individual',
+    teamPointsKey: 'mostEaglesTeam',
+    individualPointsKey: 'mostEaglesIndividual',
+    teamI18nKey: 'mostEaglesTeam',
+    individualI18nKey: 'mostEaglesIndividual',
+  },
+  // v1.19.0 — King par-4 (ligger bevisst etter eagles)
+  {
+    group: 'skill',
+    teamCategory: 'king_par4_team',
+    individualCategory: 'king_par4_individual',
+    teamPointsKey: 'kingPar4Team',
+    individualPointsKey: 'kingPar4Individual',
+    teamI18nKey: 'kingPar4Team',
+    individualI18nKey: 'kingPar4Individual',
+  },
+  // v1.19.0 — Most albatrosses
+  {
+    group: 'skill',
+    teamCategory: 'most_albatrosses_team',
+    individualCategory: 'most_albatrosses_individual',
+    teamPointsKey: 'mostAlbatrossesTeam',
+    individualPointsKey: 'mostAlbatrossesIndividual',
+    teamI18nKey: 'mostAlbatrossesTeam',
+    individualI18nKey: 'mostAlbatrossesIndividual',
+  },
+  // v1.19.0 — Most hole-in-ones
+  {
+    group: 'skill',
+    teamCategory: 'most_hole_in_ones_team',
+    individualCategory: 'most_hole_in_ones_individual',
+    teamPointsKey: 'mostHoleInOnesTeam',
+    individualPointsKey: 'mostHoleInOnesIndividual',
+    teamI18nKey: 'mostHoleInOnesTeam',
+    individualI18nKey: 'mostHoleInOnesIndividual',
+  },
+  // ─── Moderate (2p lag / 1p individ) ─────────────────────────────────────
+  {
+    group: 'moderate',
+    teamCategory: 'best_brutto_f9_team',
+    individualCategory: 'best_brutto_f9_individual',
+    teamPointsKey: 'bestBruttoF9Team',
+    individualPointsKey: 'bestBruttoF9Individual',
+    teamI18nKey: 'bestBruttoF9Team',
+    individualI18nKey: 'bestBruttoF9Individual',
+  },
+  {
+    group: 'moderate',
+    teamCategory: 'best_brutto_b9_team',
+    individualCategory: 'best_brutto_b9_individual',
+    teamPointsKey: 'bestBruttoB9Team',
+    individualPointsKey: 'bestBruttoB9Individual',
+    teamI18nKey: 'bestBruttoB9Team',
+    individualI18nKey: 'bestBruttoB9Individual',
+  },
+  {
+    group: 'moderate',
+    teamCategory: 'most_birdies_team',
+    individualCategory: 'most_birdies_individual',
+    teamPointsKey: 'mostBirdiesTeam',
+    individualPointsKey: 'mostBirdiesIndividual',
+    teamI18nKey: 'mostBirdiesTeam',
+    individualI18nKey: 'mostBirdiesIndividual',
+  },
+  {
+    group: 'moderate',
+    teamCategory: 'most_pars_team',
+    individualCategory: 'most_pars_individual',
+    teamPointsKey: 'mostParsTeam',
+    individualPointsKey: 'mostParsIndividual',
+    teamI18nKey: 'mostParsTeam',
+    individualI18nKey: 'mostParsIndividual',
+  },
+];
+
+/**
  * Hvilken gruppe en gitt SideCategory tilhører. Brukes til å fordele awards
  * over de seks under-overskriftene i lag-expand. Penalty-gruppen er kun for
  * snowman (negativ-poeng) og rendres med varselsfarge i Task 8.3.
@@ -357,6 +489,42 @@ function TeamAwards({
     return t('streakRange', { start: startHole, end: endHole });
   };
 
+  /**
+   * Emits the lag + individuell rows for every {@link SIMPLE_DUAL_AWARDS} entry
+   * in a given group, in config order. Each entry fires its lag-variant first
+   * (med `tieSuffix`), så individ-varianten (med vinner-fornavn) — identisk med
+   * den tidligere håndskrevne to-blokk-malen. Tomme varianter hoppes over.
+   */
+  const pushSimpleDualAwards = (group: GroupId) => {
+    for (const def of SIMPLE_DUAL_AWARDS) {
+      if (def.group !== group) continue;
+      if (awards.some((aw) => aw.category === def.teamCategory)) {
+        const pts = SIDE_TOURNAMENT_POINTS[def.teamPointsKey];
+        push(group, def.teamCategory, pts, def.teamCategory, (
+          <>
+            {t(`awards.${def.teamI18nKey}` as Parameters<typeof t>[0])}{' '}
+            <Pts n={pts} />
+            {tieSuffix(tieMates(def.teamCategory))}
+          </>
+        ));
+      }
+      if (awards.some((aw) => aw.category === def.individualCategory)) {
+        const pts = SIDE_TOURNAMENT_POINTS[def.individualPointsKey];
+        const name = winnerName(
+          findAward(def.individualCategory as SideCategoryAward['category']),
+        );
+        push(group, def.individualCategory, pts, def.individualCategory, (
+          <>
+            {t(`awards.${def.individualI18nKey}` as Parameters<typeof t>[0], {
+              name,
+            })}{' '}
+            <Pts n={pts} />
+          </>
+        ));
+      }
+    }
+  };
+
   // ─── Hovedkonkurranser ──────────────────────────────────────────────────
   if (awards.some((a) => a.category === 'best_netto_18')) {
     push('hovedkonkurranser', 'best_netto_18', 10, 'best_netto_18', (
@@ -384,135 +552,10 @@ function TeamAwards({
   }
 
   // ─── Skill og rarity ────────────────────────────────────────────────────
-  if (awards.some((a) => a.category === 'best_brutto_18_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.bestBrutto18Team;
-    push('skill', 'best_brutto_18_team', pts, 'best_brutto_18_team', (
-      <>
-        {t('awards.bestBrutto18Team')} <Pts n={pts} />
-        {tieSuffix(tieMates('best_brutto_18_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'best_brutto_18_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.bestBrutto18Individual;
-    const name = winnerName(findAward('best_brutto_18_individual'));
-    push('skill', 'best_brutto_18_individual', pts, 'best_brutto_18_individual', (
-      <>
-        {t('awards.bestBrutto18Individual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'king_par3_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.kingPar3Team;
-    push('skill', 'king_par3_team', pts, 'king_par3_team', (
-      <>
-        {t('awards.kingPar3Team')} <Pts n={pts} />
-        {tieSuffix(tieMates('king_par3_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'king_par3_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.kingPar3Individual;
-    const name = winnerName(findAward('king_par3_individual'));
-    push('skill', 'king_par3_individual', pts, 'king_par3_individual', (
-      <>
-        {t('awards.kingPar3Individual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'king_par5_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.kingPar5Team;
-    push('skill', 'king_par5_team', pts, 'king_par5_team', (
-      <>
-        {t('awards.kingPar5Team')} <Pts n={pts} />
-        {tieSuffix(tieMates('king_par5_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'king_par5_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.kingPar5Individual;
-    const name = winnerName(findAward('king_par5_individual'));
-    push('skill', 'king_par5_individual', pts, 'king_par5_individual', (
-      <>
-        {t('awards.kingPar5Individual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'most_eagles_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostEaglesTeam;
-    push('skill', 'most_eagles_team', pts, 'most_eagles_team', (
-      <>
-        {t('awards.mostEaglesTeam')} <Pts n={pts} />
-        {tieSuffix(tieMates('most_eagles_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'most_eagles_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostEaglesIndividual;
-    const name = winnerName(findAward('most_eagles_individual'));
-    push('skill', 'most_eagles_individual', pts, 'most_eagles_individual', (
-      <>
-        {t('awards.mostEaglesIndividual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  // v1.19.0 — King par-4
-  if (awards.some((a) => a.category === 'king_par4_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.kingPar4Team;
-    push('skill', 'king_par4_team', pts, 'king_par4_team', (
-      <>
-        {t('awards.kingPar4Team')} <Pts n={pts} />
-        {tieSuffix(tieMates('king_par4_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'king_par4_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.kingPar4Individual;
-    const name = winnerName(findAward('king_par4_individual'));
-    push('skill', 'king_par4_individual', pts, 'king_par4_individual', (
-      <>
-        {t('awards.kingPar4Individual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  // v1.19.0 — Most albatrosses
-  if (awards.some((a) => a.category === 'most_albatrosses_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostAlbatrossesTeam;
-    push('skill', 'most_albatrosses_team', pts, 'most_albatrosses_team', (
-      <>
-        {t('awards.mostAlbatrossesTeam')} <Pts n={pts} />
-        {tieSuffix(tieMates('most_albatrosses_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'most_albatrosses_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostAlbatrossesIndividual;
-    const name = winnerName(findAward('most_albatrosses_individual'));
-    push('skill', 'most_albatrosses_individual', pts, 'most_albatrosses_individual', (
-      <>
-        {t('awards.mostAlbatrossesIndividual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  // v1.19.0 — Most hole-in-ones
-  if (awards.some((a) => a.category === 'most_hole_in_ones_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostHoleInOnesTeam;
-    push('skill', 'most_hole_in_ones_team', pts, 'most_hole_in_ones_team', (
-      <>
-        {t('awards.mostHoleInOnesTeam')} <Pts n={pts} />
-        {tieSuffix(tieMates('most_hole_in_ones_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'most_hole_in_ones_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostHoleInOnesIndividual;
-    const name = winnerName(findAward('most_hole_in_ones_individual'));
-    push('skill', 'most_hole_in_ones_individual', pts, 'most_hole_in_ones_individual', (
-      <>
-        {t('awards.mostHoleInOnesIndividual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
+  // Simple dual-variant pairs (best_brutto_18, king_par3/4/5, most_eagles,
+  // most_albatrosses, most_hole_in_ones) — emitted in config order via the
+  // shared loop. King par-4 sits deliberately after eagles (see config).
+  pushSimpleDualAwards('skill');
   // v1.19.0 — Clean front/back 9, no double plus round
   {
     const cf = findAward('clean_front_9');
@@ -573,78 +616,9 @@ function TeamAwards({
   }
 
   // ─── Moderate ───────────────────────────────────────────────────────────
-  if (awards.some((a) => a.category === 'best_brutto_f9_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.bestBruttoF9Team;
-    push('moderate', 'best_brutto_f9_team', pts, 'best_brutto_f9_team', (
-      <>
-        {t('awards.bestBruttoF9Team')} <Pts n={pts} />
-        {tieSuffix(tieMates('best_brutto_f9_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'best_brutto_f9_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.bestBruttoF9Individual;
-    const name = winnerName(findAward('best_brutto_f9_individual'));
-    push('moderate', 'best_brutto_f9_individual', pts, 'best_brutto_f9_individual', (
-      <>
-        {t('awards.bestBruttoF9Individual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'best_brutto_b9_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.bestBruttoB9Team;
-    push('moderate', 'best_brutto_b9_team', pts, 'best_brutto_b9_team', (
-      <>
-        {t('awards.bestBruttoB9Team')} <Pts n={pts} />
-        {tieSuffix(tieMates('best_brutto_b9_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'best_brutto_b9_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.bestBruttoB9Individual;
-    const name = winnerName(findAward('best_brutto_b9_individual'));
-    push('moderate', 'best_brutto_b9_individual', pts, 'best_brutto_b9_individual', (
-      <>
-        {t('awards.bestBruttoB9Individual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'most_birdies_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostBirdiesTeam;
-    push('moderate', 'most_birdies_team', pts, 'most_birdies_team', (
-      <>
-        {t('awards.mostBirdiesTeam')} <Pts n={pts} />
-        {tieSuffix(tieMates('most_birdies_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'most_birdies_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostBirdiesIndividual;
-    const name = winnerName(findAward('most_birdies_individual'));
-    push('moderate', 'most_birdies_individual', pts, 'most_birdies_individual', (
-      <>
-        {t('awards.mostBirdiesIndividual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'most_pars_team')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostParsTeam;
-    push('moderate', 'most_pars_team', pts, 'most_pars_team', (
-      <>
-        {t('awards.mostParsTeam')} <Pts n={pts} />
-        {tieSuffix(tieMates('most_pars_team'))}
-      </>
-    ));
-  }
-  if (awards.some((a) => a.category === 'most_pars_individual')) {
-    const pts = SIDE_TOURNAMENT_POINTS.mostParsIndividual;
-    const name = winnerName(findAward('most_pars_individual'));
-    push('moderate', 'most_pars_individual', pts, 'most_pars_individual', (
-      <>
-        {t('awards.mostParsIndividual', { name })} <Pts n={pts} />
-      </>
-    ));
-  }
+  // Simple dual-variant pairs (best_brutto_f9, best_brutto_b9, most_birdies,
+  // most_pars) — emitted in config order via the shared loop.
+  pushSimpleDualAwards('moderate');
   // Lowest single hole
   {
     const low = findAward('lowest_single_hole_brutto');
