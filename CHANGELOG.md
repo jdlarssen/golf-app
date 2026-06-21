@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.76] - 2026-06-21 · #817
+
+> Direkte PostgREST-innskriving av tee-bokser med kursrating utenfor WHS-området (50–80) blir nå avvist i databasen — ikke bare i skjemaet. Det hindrer at en korrumpert rating ødelegger banehandicapen for alle i runden.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `tee_boxes.course_rating_{mens,ladies,juniors}` manglet DB CHECK. `parseGenderRating` (CR_MIN=50/CR_MAX=80) klipper ut-av-område-verdier i UI, men direkte PostgREST-insert omgikk validatoren (bekreftet på staging: `course_rating_mens=999` persisterte, noe som forskyver WHS banehandicap med ~+927). Migrasjon 0112 legger til tre CHECK-constraints parallelt med eksisterende `slope_*_check` og `par_total_*_check`. Migrasjon scrubber out-of-range CR-rader til NULL før constraint-tillegg. Trap #4-avtaletest lagt til i `lib/courses/courseRatingDbCheck.test.ts`. (#817)
+
+</details>
+
 ### [1.133.75] - 2026-06-21 · #804
 
 > Spill med et ugyldig spillformat avvises nå direkte av databasen. Appen godtar bare kjente spillformat — ikke vilkårlige verdier lagt inn via API-kall.
