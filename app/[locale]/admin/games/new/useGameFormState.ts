@@ -34,6 +34,71 @@ export function isTeamNumber(n: number): n is TeamNumber {
   return n === 1 || n === 2 || n === 3 || n === 4;
 }
 
+// ─── validateTeamSizeFormat ───────────────────────────────────────────────────
+//
+// Pure, React-free helper that encodes the shared validity logic for the four
+// scramble-family formats (Texas, Ambrose, Shamble, Florida). Previously this
+// logic was copy-pasted verbatim in four consecutive blocks inside the hook.
+//
+// Callers supply the current team-assignment maps and a `handicapPct` value.
+// The only real behavioural difference between the formats is how the pct is
+// validated:
+//   Texas    → requireIntegerPct=true  (Number.isInteger check)
+//   Ambrose  → requireIntegerPct=false (typeof number + !isNaN)
+//   Florida  → requireIntegerPct=false (same as Ambrose)
+//   Shamble  → handicapPct=undefined   (no pct term; handicapPctValid always true)
+//
+// Mirrors the server-side validators in lib/games/gamePayload.ts — if those
+// change, this function must change too ("a rule has one home", AGENTS.md).
+export interface ValidateTeamSizeFormatArgs {
+  playersByTeam: Record<TeamNumber, string[]>;
+  selectedPlayerIds: string[];
+  teamByPlayer: Record<string, TeamNumber>;
+  teamSize: number;
+  handicapPct: number | undefined;
+  requireIntegerPct: boolean;
+}
+
+export interface ValidateTeamSizeFormatResult {
+  teamsBalanced: boolean;
+  hasAtLeastOneTeam: boolean;
+  handicapPctValid: boolean;
+  playersValid: boolean;
+}
+
+export function validateTeamSizeFormat({
+  playersByTeam,
+  selectedPlayerIds,
+  teamByPlayer,
+  teamSize,
+  handicapPct,
+  requireIntegerPct,
+}: ValidateTeamSizeFormatArgs): ValidateTeamSizeFormatResult {
+  const teamsBalanced = TEAM_NUMBERS.every(
+    (t) =>
+      playersByTeam[t].length === 0 ||
+      playersByTeam[t].length === teamSize,
+  );
+  const hasAtLeastOneTeam = TEAM_NUMBERS.some(
+    (t) => playersByTeam[t].length === teamSize,
+  );
+  const handicapPctValid =
+    handicapPct === undefined
+      ? true
+      : requireIntegerPct
+        ? Number.isInteger(handicapPct) && handicapPct >= 0 && handicapPct <= 100
+        : typeof handicapPct === 'number' && !isNaN(handicapPct) && handicapPct >= 0 && handicapPct <= 100;
+  const playersValid =
+    selectedPlayerIds.length >= teamSize &&
+    selectedPlayerIds.length % teamSize === 0 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    teamsBalanced &&
+    hasAtLeastOneTeam &&
+    handicapPctValid;
+
+  return { teamsBalanced, hasAtLeastOneTeam, handicapPctValid, playersValid };
+}
+
 /**
  * splitmix32 — kort, deterministisk PRNG for Wolf-rotasjon-shuffle.
  *
@@ -1137,94 +1202,65 @@ export function useGameFormState({
   // Texas-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
   // (2 eller 4), alle valgte spillere må ha team_number satt, og minst ett
   // lag må være fullt. Speiler `validateTexasScramble` i `lib/games/gamePayload.ts`.
-  const texasTeamsBalanced = TEAM_NUMBERS.every(
-    (t) =>
-      playersByTeam[t].length === 0 ||
-      playersByTeam[t].length === teamSize,
-  );
-  const texasHasAtLeastOneTeam = TEAM_NUMBERS.some(
-    (t) => playersByTeam[t].length === teamSize,
-  );
   // Texas tillater team_size=2 eller 4. Med 8-slot-limit i payload-laget
   // betyr det maks 4 lag á 2 (= 8) eller 2 lag á 4 (= 8) spillere.
-  const texasHandicapPctValid =
-    Number.isInteger(texasHandicapPct) &&
-    texasHandicapPct >= 0 &&
-    texasHandicapPct <= 100;
-  const texasPlayersValid =
-    selectedPlayerIds.length >= teamSize &&
-    selectedPlayerIds.length % teamSize === 0 &&
-    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
-    texasTeamsBalanced &&
-    texasHasAtLeastOneTeam &&
-    texasHandicapPctValid;
+  // Texas krever heltalls-pct (requireIntegerPct=true).
+  const {
+    handicapPctValid: texasHandicapPctValid,
+    playersValid: texasPlayersValid,
+  } = validateTeamSizeFormat({
+    playersByTeam,
+    selectedPlayerIds,
+    teamByPlayer,
+    teamSize,
+    handicapPct: texasHandicapPct,
+    requireIntegerPct: true,
+  });
 
   // Ambrose-validitet (#284): speiler Texas-validitets-reglene, men
   // `ambroseHandicapPctValid` tillater fraksjonell prosent (12,5 % for
   // 4-mannslag er default). `validateAmbrose` i gamePayload.ts aksepterer
   // desimaler; UI-validiteten gjør det samme.
-  const ambroseTeamsBalanced = TEAM_NUMBERS.every(
-    (t) =>
-      playersByTeam[t].length === 0 ||
-      playersByTeam[t].length === teamSize,
-  );
-  const ambroseHasAtLeastOneTeam = TEAM_NUMBERS.some(
-    (t) => playersByTeam[t].length === teamSize,
-  );
-  const ambroseHandicapPctValid =
-    typeof ambroseHandicapPct === 'number' &&
-    !isNaN(ambroseHandicapPct) &&
-    ambroseHandicapPct >= 0 &&
-    ambroseHandicapPct <= 100;
-  const ambrosePlayersValid =
-    selectedPlayerIds.length >= teamSize &&
-    selectedPlayerIds.length % teamSize === 0 &&
-    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
-    ambroseTeamsBalanced &&
-    ambroseHasAtLeastOneTeam &&
-    ambroseHandicapPctValid;
+  const {
+    handicapPctValid: ambroseHandicapPctValid,
+    playersValid: ambrosePlayersValid,
+  } = validateTeamSizeFormat({
+    playersByTeam,
+    selectedPlayerIds,
+    teamByPlayer,
+    teamSize,
+    handicapPct: ambroseHandicapPct,
+    requireIntegerPct: false,
+  });
 
   // Shamble-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
   // (3 eller 4), alle valgte spillere må ha team_number satt, og minst ett
   // lag må være fullt. Speiler `validateShamble` i `lib/games/gamePayload.ts`.
   // Ingen handicap-pct-sjekk (shamble bruker full course handicap per spiller).
-  const shambleTeamsBalanced = TEAM_NUMBERS.every(
-    (t) =>
-      playersByTeam[t].length === 0 ||
-      playersByTeam[t].length === teamSize,
-  );
-  const shambleHasAtLeastOneTeam = TEAM_NUMBERS.some(
-    (t) => playersByTeam[t].length === teamSize,
-  );
-  const shamblePlayersValid =
-    selectedPlayerIds.length >= teamSize &&
-    selectedPlayerIds.length % teamSize === 0 &&
-    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
-    shambleTeamsBalanced &&
-    shambleHasAtLeastOneTeam;
+  const {
+    playersValid: shamblePlayersValid,
+  } = validateTeamSizeFormat({
+    playersByTeam,
+    selectedPlayerIds,
+    teamByPlayer,
+    teamSize,
+    handicapPct: undefined,
+    requireIntegerPct: false,
+  });
 
   // Florida Scramble-validitet (#283): speiler Ambrose-validitets-reglene.
   // Fraksjonell prosent tillatt (validator aksepterer desimaler).
-  const floridaTeamsBalanced = TEAM_NUMBERS.every(
-    (t) =>
-      playersByTeam[t].length === 0 ||
-      playersByTeam[t].length === teamSize,
-  );
-  const floridaHasAtLeastOneTeam = TEAM_NUMBERS.some(
-    (t) => playersByTeam[t].length === teamSize,
-  );
-  const floridaHandicapPctValid =
-    typeof floridaHandicapPct === 'number' &&
-    !isNaN(floridaHandicapPct) &&
-    floridaHandicapPct >= 0 &&
-    floridaHandicapPct <= 100;
-  const floridaPlayersValid =
-    selectedPlayerIds.length >= teamSize &&
-    selectedPlayerIds.length % teamSize === 0 &&
-    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
-    floridaTeamsBalanced &&
-    floridaHasAtLeastOneTeam &&
-    floridaHandicapPctValid;
+  const {
+    handicapPctValid: floridaHandicapPctValid,
+    playersValid: floridaPlayersValid,
+  } = validateTeamSizeFormat({
+    playersByTeam,
+    selectedPlayerIds,
+    teamByPlayer,
+    teamSize,
+    handicapPct: floridaHandicapPct,
+    requireIntegerPct: false,
+  });
 
   // Matchplay-validitet: nøyaktig 2 spillere, én på side 1 og én på side 2.
   // Speiler `validateSinglesMatchplay` i `lib/games/gamePayload.ts` —
