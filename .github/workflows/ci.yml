@@ -101,3 +101,20 @@ jobs:
           # so the shared E2E_PLAYER doesn't exhaust its quota across repeated
           # @gate runs against staging. Prod never sets this variable (#698).
           SELFREG_RATE_LIMIT_DISABLED: 'true'
+
+      # Heavier real-generator lifecycle lanes (#736). The cup lane drives the
+      # PPR-heavy 5-step wizard + creates/deletes ephemeral auth users on shared
+      # staging — too much failure surface to gate every merge on. continue-on-
+      # error keeps a flake from blocking a PR while still surfacing a real
+      # regression in the cup match-generation write path.
+      - name: Authenticated e2e — lifecycle (non-blocking)
+        continue-on-error: true
+        run: npm run e2e:lifecycle
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_PLAYER_EMAIL: ${{ secrets.E2E_PLAYER_EMAIL }}
+          RESEND_STUB_SEND: 'true'
+          SELFREG_RATE_LIMIT_DISABLED: 'true'
