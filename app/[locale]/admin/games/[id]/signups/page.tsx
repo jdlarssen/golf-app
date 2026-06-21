@@ -13,6 +13,7 @@ import { PåmeldingerClient } from './PåmeldingerClient';
 import type { RequestStatus, RequestRow, TabKey } from './types';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -28,6 +29,7 @@ type GameRow = {
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   registration_mode: 'invite_only' | 'manual_approval' | 'open';
   registration_type: 'solo' | 'team' | 'both';
+  game_mode: GameMode;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
 };
@@ -86,7 +88,7 @@ export default async function PåmeldingerPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, courses(name)',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, courses(name)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -231,6 +233,8 @@ export default async function PåmeldingerPage({
             requests={requests}
             tab={activeTab.key}
             locked={gameLocked}
+            gameMode={game.game_mode}
+            approvedCount={counts.approved}
           />
         </div>
       </section>

@@ -2935,7 +2935,8 @@
         "rejectSubmitButton": "Avvis påmelding",
         "rejectSubmittingBusy": "Avviser …",
         "rejectCancelButton": "Avbryt",
-        "rejectionReasonDisplay": "Begrunnelse: {reason}"
+        "rejectionReasonDisplay": "Begrunnelse: {reason}",
+        "capWarning": "Formatet har plass til {cap} {cap, plural, one {spiller} other {spillere}}, og {count} er allerede godkjent. Godkjenner du flere, risikerer du at spillet ikke kan publiseres."
       },
       "withdraw": {
         "topBarKicker": "Trekk spiller",

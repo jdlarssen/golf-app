@@ -2935,7 +2935,8 @@
         "rejectSubmitButton": "Decline signup",
         "rejectSubmittingBusy": "Declining …",
         "rejectCancelButton": "Cancel",
-        "rejectionReasonDisplay": "Reason: {reason}"
+        "rejectionReasonDisplay": "Reason: {reason}",
+        "capWarning": "This format supports up to {cap} {cap, plural, one {player} other {players}}, and {count} {count, plural, one {is} other {are}} already approved. Approving more may prevent the game from being published."
       },
       "withdraw": {
         "topBarKicker": "Withdraw player",

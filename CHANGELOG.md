@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.73] - 2026-06-21 · #805
+
+> Godkjenner du flere påmeldinger enn formatet har plass til, sier appen fra med en gang, i stedet for at du først oppdager det når du prøver å publisere spillet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `PåmeldingerClient` viser nå en kapasitets-advarsel (`admin.game.signups.capWarning`) øverst i «Venter»-fanen når antall godkjente spillere er på eller over formatets tak. Taket hentes fra `soloPlayerCap(gameMode)` (null for formater uten streng øvre grense, som stableford og lag-formater med team_size-validering), så advarselen dukker bare opp der det finnes et reelt tak. Den blokkerer ikke godkjenning (den harde porten ved publisering, `too_many_players_for_mode`, er fortsatt sannhets-laget), men admin/trusted creator får signalet ved godkjenning i stedet for først ved publisering. `game_mode` + godkjent-antall tres gjennom fra `signups/page.tsx`. Ny streng i no.json + en.json (`catalogParity` grønn); `data-testid="cap-warning"` for e2e. (#805)
+
+</details>
+
 ### [1.133.72] - 2026-06-21 · #801
 
 > Valgte admin «skjul til avslutning», skjuler leaderboarden nå faktisk resultatet underveis, også for stableford, slagspill og scramble. Runden kan holdes hemmelig helt frem til avslutning, slik innstillingen lover.

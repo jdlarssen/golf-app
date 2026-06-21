@@ -39,6 +39,8 @@ describe('PåmeldingerClient — pending tab', () => {
         requests={[makeRequest({ displayName: 'Anna Hansen' })]}
         tab="pending"
         locked={false}
+        gameMode="stableford"
+        approvedCount={0}
       />,
     );
     expect(screen.getByText('Anna Hansen')).toBeInTheDocument();
@@ -59,6 +61,8 @@ describe('PåmeldingerClient — pending tab', () => {
         ]}
         tab="pending"
         locked={false}
+        gameMode="stableford"
+        approvedCount={0}
       />,
     );
     expect(
@@ -84,6 +88,8 @@ describe('PåmeldingerClient — pending tab', () => {
         requests={[captain, mate]}
         tab="pending"
         locked={false}
+        gameMode="stableford"
+        approvedCount={0}
       />,
     );
     expect(screen.getByText(/Albatross/)).toBeInTheDocument();
@@ -100,6 +106,8 @@ describe('PåmeldingerClient — pending tab', () => {
         requests={[makeRequest({ displayName: 'Anna Hansen' })]}
         tab="pending"
         locked={false}
+        gameMode="stableford"
+        approvedCount={0}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Avvis' }));
@@ -118,6 +126,8 @@ describe('PåmeldingerClient — pending tab', () => {
         requests={[]}
         tab="pending"
         locked={false}
+        gameMode="stableford"
+        approvedCount={0}
       />,
     );
     expect(
@@ -140,6 +150,8 @@ describe('PåmeldingerClient — approved tab (read-only)', () => {
         ]}
         tab="approved"
         locked={false}
+        gameMode="stableford"
+        approvedCount={0}
       />,
     );
     expect(screen.getByText('Anna Hansen')).toBeInTheDocument();
@@ -161,6 +173,8 @@ describe('PåmeldingerClient — approved tab (read-only)', () => {
         ]}
         tab="rejected"
         locked={false}
+        gameMode="stableford"
+        approvedCount={0}
       />,
     );
     expect(screen.getByText(/Begrunnelse: Fullt allerede/)).toBeInTheDocument();
@@ -175,9 +189,69 @@ describe('PåmeldingerClient — locked', () => {
         requests={[makeRequest({ status: 'pending' })]}
         tab="pending"
         locked
+        gameMode="stableford"
+        approvedCount={0}
       />,
     );
     expect(screen.queryByRole('button', { name: 'Godkjenn' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Avvis' })).toBeNull();
+  });
+});
+
+describe('PåmeldingerClient — kapasitets-advarsel (#805)', () => {
+  it('viser cap-advarsel i pending-fanen når approvedCount er på grensen', () => {
+    render(
+      <PåmeldingerClient
+        gameId={GAME_ID}
+        requests={[makeRequest()]}
+        tab="pending"
+        locked={false}
+        gameMode="nines"
+        approvedCount={3}
+      />,
+    );
+    expect(screen.getByTestId('cap-warning')).toBeInTheDocument();
+  });
+
+  it('viser ingen cap-advarsel når approvedCount er under grensen', () => {
+    render(
+      <PåmeldingerClient
+        gameId={GAME_ID}
+        requests={[makeRequest()]}
+        tab="pending"
+        locked={false}
+        gameMode="nines"
+        approvedCount={2}
+      />,
+    );
+    expect(screen.queryByTestId('cap-warning')).toBeNull();
+  });
+
+  it('viser ingen cap-advarsel for formater uten streng øvre grense (stableford)', () => {
+    render(
+      <PåmeldingerClient
+        gameId={GAME_ID}
+        requests={[makeRequest()]}
+        tab="pending"
+        locked={false}
+        gameMode="stableford"
+        approvedCount={100}
+      />,
+    );
+    expect(screen.queryByTestId('cap-warning')).toBeNull();
+  });
+
+  it('viser ingen cap-advarsel i godkjent-fanen selv om over cap', () => {
+    render(
+      <PåmeldingerClient
+        gameId={GAME_ID}
+        requests={[makeRequest({ status: 'approved', decidedAt: '2026-05-26T11:00:00Z' })]}
+        tab="approved"
+        locked={false}
+        gameMode="nines"
+        approvedCount={4}
+      />,
+    );
+    expect(screen.queryByTestId('cap-warning')).toBeNull();
   });
 });

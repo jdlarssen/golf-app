@@ -8,12 +8,18 @@ import { approveRequest, rejectRequest } from './actions';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { RequestRow, TabKey } from './types';
+import { soloPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 type Props = {
   gameId: string;
   requests: RequestRow[];
   tab: TabKey;
   locked: boolean;
+  /** Format-modus for kapasitets-advarselen (#805). */
+  gameMode: GameMode;
+  /** Antall allerede godkjente spillere på tvers av alle faner (#805). */
+  approvedCount: number;
 };
 
 const REJECTION_REASON_MAX = 200;
@@ -68,13 +74,19 @@ function groupByTeam(rows: RequestRow[]): RequestRow[][] {
   return groups;
 }
 
-export function PåmeldingerClient({ gameId, requests, tab, locked }: Props) {
+export function PåmeldingerClient({ gameId, requests, tab, locked, gameMode, approvedCount }: Props) {
   const locale = useLocale();
   const t = useTranslations('admin.game.signups');
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [rejectingFor, setRejectingFor] = useState<RequestRow | null>(null);
   const [reason, setReason] = useState('');
   const [, startTransition] = useTransition();
+
+  // #805: vis kapasitets-advarsel når approved-antallet er på eller over
+  // format-taket. soloPlayerCap() returnerer null for formater uten streng
+  // øvre grense (f.eks. stableford, lag-formater med team_size-validering).
+  const cap = soloPlayerCap(gameMode);
+  const atOrOverCap = cap !== null && approvedCount >= cap;
 
   const visibleRequests = useMemo(
     () => requests.filter((r) => !pendingIds.has(r.id)),
@@ -133,14 +145,34 @@ export function PåmeldingerClient({ gameId, requests, tab, locked }: Props) {
 
   if (groups.length === 0) {
     return (
-      <div className="px-3.5 py-6 text-center text-sm text-muted">
-        {t(`emptyMessages.${tab}` as Parameters<typeof t>[0])}
-      </div>
+      <>
+        {tab === 'pending' && atOrOverCap && cap !== null && (
+          <div
+            data-testid="cap-warning"
+            role="alert"
+            className="border-b border-warning/30 bg-warning/10 px-3.5 py-3 text-sm font-medium text-warning"
+          >
+            {t('capWarning', { cap, count: approvedCount })}
+          </div>
+        )}
+        <div className="px-3.5 py-6 text-center text-sm text-muted">
+          {t(`emptyMessages.${tab}` as Parameters<typeof t>[0])}
+        </div>
+      </>
     );
   }
 
   return (
     <>
+      {tab === 'pending' && atOrOverCap && cap !== null && (
+        <div
+          data-testid="cap-warning"
+          role="alert"
+          className="border-b border-warning/30 bg-warning/10 px-3.5 py-3 text-sm font-medium text-warning"
+        >
+          {t('capWarning', { cap, count: approvedCount })}
+        </div>
+      )}
       <ul className="divide-y divide-border">
         {groups.map((group) => (
           <li key={group[0].id} className="px-3.5 py-3.5">
