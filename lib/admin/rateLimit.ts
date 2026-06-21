@@ -1,6 +1,7 @@
 import 'server-only';
 import { headers } from 'next/headers';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 
 /**
  * Fixed-window rate-limit check for an admin invitation attempt.
@@ -23,7 +24,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * out of their own invite flow.
  */
 export async function consumeAdminInviteRateLimit(opts: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient<Database>;
   adminId: string;
   ip: string;
   /** Max attempts per admin per window. Default 20. */

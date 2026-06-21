@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 
 export type MyClub = {
   id: string;
@@ -22,8 +23,7 @@ export type MyClub = {
  * ikke lenger klubber.
  */
 export async function getMyClubs(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<{ clubs: MyClub[] }> {
   const { data } = await supabase

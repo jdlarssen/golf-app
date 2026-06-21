@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import { getAdminClient } from '@/lib/supabase/admin';
 
 export type ClubMember = {
@@ -65,8 +66,7 @@ const ROLE_ORDER: Record<'owner' | 'admin' | 'member', number> = {
  * Part of #442 (Opprett klubb — eierskap + klubb-scoped oppdagbarhet).
  */
 export async function getClubDetail(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient<Database>,
   clubId: string,
   userId: string,
 ): Promise<ClubDetail | null> {
