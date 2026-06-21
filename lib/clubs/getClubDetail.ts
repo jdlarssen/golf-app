@@ -101,7 +101,10 @@ export async function getClubDetail(
     isAdmin
       ? admin
           .from('group_join_requests')
-          .select('id, created_at, user_id, message, users(name, nickname)')
+          // FK hint required: group_join_requests has 2 FKs to users (#798).
+          .select(
+            'id, created_at, user_id, message, users!group_join_requests_user_id_fkey(name, nickname)',
+          )
           .eq('group_id', clubId)
           .eq('status', 'pending')
           .order('created_at', { ascending: true })
@@ -118,6 +121,21 @@ export async function getClubDetail(
   ]);
 
   if (!clubRes.data) return null;
+
+  // Surface (don't silently swallow) PostgREST errors. This is how #798 hid:
+  // an ambiguous embed returned PGRST201, `data ?? []` degraded to an empty
+  // list, and club admins saw zero pending join-requests with no signal at all.
+  // We keep degrading (a transient read error shouldn't 500 the club page) but
+  // log so the next regression is visible in the runtime logs.
+  if (membersRes.error) {
+    console.error('[getClubDetail] members query failed', { clubId, error: membersRes.error });
+  }
+  if (requestsRes.error) {
+    console.error('[getClubDetail] join-requests query failed', { clubId, error: requestsRes.error });
+  }
+  if (invitationsRes.error) {
+    console.error('[getClubDetail] invitations query failed', { clubId, error: invitationsRes.error });
+  }
 
   const members: ClubMember[] = (membersRes.data ?? [])
     .map((row) => {

@@ -79,7 +79,9 @@ export async function buildModeResultForGame(
     client
       .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, tee_gender, withdrawn_at, users(name, nickname)',
+        // FK hint required: game_players has 3 FKs to users (#798) — without it
+        // PostgREST returns PGRST201 and result_summary is never persisted.
+        'user_id, team_number, flight_number, course_handicap, tee_gender, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
       )
       .eq('game_id', game.id)
       .returns<GamePlayerRow[]>(),

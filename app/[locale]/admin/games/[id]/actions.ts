@@ -165,7 +165,10 @@ export async function startGame(gameId: string) {
   // incomplete_sides guard below (mirrors startScheduledGame.ts:91-92).
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
-    .select('user_id, tee_gender, team_number, withdrawn_at, users(hcp_index)')
+    // FK hint required: game_players has 3 FKs to users (#798).
+    .select(
+      'user_id, tee_gender, team_number, withdrawn_at, users!game_players_user_id_fkey(hcp_index)',
+    )
     .eq('game_id', gameId)
     .returns<
       {

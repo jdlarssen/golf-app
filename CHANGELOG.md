@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.66] - 2026-06-21 · #798
+
+> Når en runde er ferdigspilt, viser resultatkortet igjen plasseringene i stedet for bare et trofé-ikon. Og som klubbeier ser du igjen dem som har bedt om å bli med, så du kan godkjenne eller avslå dem.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Tvetydige PostgREST-embeds mot `users` (`PGRST201`) på tabeller med flere enn én fremmednøkkel til `users`. Skjemaet har fått 2.–3. bruker-FK på flere tabeller (`game_players`, `group_join_requests` m.fl.), så uhinta `users(...)`-embeds feilet i prod. Tre steder rettet med eksplisitt FK-hint (`users!<constraint>(...)`): `buildModeResultForGame` (→ `persistResultSummaries` i `endGame` lagrer nå `game_players.result_summary` for alle spillemodi i stedet for å feile stille, så resultatkortene fylles ut), `getClubDetail` (klubb-eier/-admin ser nå ventende «be om å bli med»-forespørsler igjen), og `startGame`. `getClubDetail` svelger ikke lenger lese-feil stille — feil på `members`/`joinRequests`/`invitations`-spørringene logges nå. Lagt til én delt regresjonsvakt (`lib/supabase/embedAmbiguity.ts` + co-located test) som feiler statisk hvis et uhinta multi-FK-embed gjeninnføres noe sted i `app/`, `lib/` eller `components/`. (#798)
+
+</details>
+
 ### [1.133.65] - 2026-06-20 · #754
 
 > Grønn hake betyr nå at scoren er på vei til serveren. Er du uten nett, ser du i stedet en gul dot med teksten «Lagret på telefonen · sendes når nettet er tilbake» — så du aldri er i tvil om hva som er synkronisert.
