@@ -2,8 +2,6 @@ import { useTranslations } from 'next-intl';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import type { GroupId } from './SideTournamentView';
 
-/** Lag-kun-kategorier som aldri fyrer i solo (alle `*_team` + de to rene
- * coord-bonusene). Brukes til å skjule dem fra regel-panelet for solo. */
 function isTeamOnlyCategory(id: string): boolean {
   return (
     id.endsWith('_team') ||
