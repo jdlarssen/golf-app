@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGameFormState, deriveDefaultGenders, clampGenderToTee } from './useGameFormState';
+import { useGameFormState, deriveDefaultGenders, clampGenderToTee, validateTeamSizeFormat } from './useGameFormState';
 import type { CourseOption, PlayerOption } from './GameForm';
 
 const COURSES: CourseOption[] = [
@@ -610,6 +610,269 @@ describe('useGameFormState — klem ved tee-bytte (AC2)', () => {
       result.current.setTeeBoxId('tee-c1');
     });
     expect(result.current.playerGenders['p-mann']).toBe('M');
+  });
+});
+
+// ─── validateTeamSizeFormat — characterisation tests (TDD for #808 refactor) ─
+//
+// Pins the truth-table for all 4 scramble-family formats BEFORE the pure helper
+// is extracted. Each case maps one scenario to the exact flags the current
+// in-hook code produces so the extraction cannot silently flip a flag.
+//
+// Key differences across formats:
+//   Texas    — requireIntegerPct=true  (Number.isInteger check)
+//   Ambrose  — requireIntegerPct=false (typeof number + !isNaN)
+//   Florida  — requireIntegerPct=false (same as Ambrose)
+//   Shamble  — handicapPct=undefined   (no pct validation at all)
+describe('validateTeamSizeFormat — pure helper (#808)', () => {
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  /** Build a playersByTeam map from an array of per-team lists. */
+  function makeTeams(
+    ...slots: Array<string[]>
+  ): Record<1 | 2 | 3 | 4, string[]> {
+    return {
+      1: slots[0] ?? [],
+      2: slots[1] ?? [],
+      3: slots[2] ?? [],
+      4: slots[3] ?? [],
+    };
+  }
+
+  /** Build teamByPlayer from same slots. */
+  function makeTeamByPlayer(
+    ...slots: Array<string[]>
+  ): Record<string, 1 | 2 | 3 | 4> {
+    const out: Record<string, 1 | 2 | 3 | 4> = {};
+    slots.forEach((players, idx) => {
+      const team = (idx + 1) as 1 | 2 | 3 | 4;
+      for (const pid of players) out[pid] = team;
+    });
+    return out;
+  }
+
+  // ── Texas scramble (requireIntegerPct=true, teamSize=2) ───────────────────
+
+  it('Texas valid: 4 spillere, 2 fulle lag á 2, integer pct=50', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
+        teamSize: 2,
+        handicapPct: 50,
+        requireIntegerPct: true,
+      }),
+    ).toEqual({
+      teamsBalanced: true,
+      hasAtLeastOneTeam: true,
+      handicapPctValid: true,
+      playersValid: true,
+    });
+  });
+
+  it('Texas ugyldig: odde antall spillere (3 valgt, teamSize=2)', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b'], ['c']),
+        selectedPlayerIds: ['a', 'b', 'c'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c']),
+        teamSize: 2,
+        handicapPct: 50,
+        requireIntegerPct: true,
+      }),
+    ).toMatchObject({ playersValid: false });
+  });
+
+  it('Texas ugyldig: under-lag (1 spiller < teamSize=2)', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a']),
+        selectedPlayerIds: ['a'],
+        teamByPlayer: makeTeamByPlayer(['a']),
+        teamSize: 2,
+        handicapPct: 50,
+        requireIntegerPct: true,
+      }),
+    ).toMatchObject({ playersValid: false });
+  });
+
+  it('Texas ugyldig: ubalansert lag (lag 1 = 1 spiller av 2)', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a'], ['c', 'd']),
+        selectedPlayerIds: ['a', 'c', 'd'],
+        teamByPlayer: makeTeamByPlayer(['a'], ['c', 'd']),
+        teamSize: 2,
+        handicapPct: 50,
+        requireIntegerPct: true,
+      }),
+    ).toMatchObject({ teamsBalanced: false, playersValid: false });
+  });
+
+  it('Texas ugyldig: uvalgt spiller (mangler teamByPlayer-inngang)', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b'], []),
+        selectedPlayerIds: ['a', 'b', 'x'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b']),
+        teamSize: 2,
+        handicapPct: 50,
+        requireIntegerPct: true,
+      }),
+    ).toMatchObject({ playersValid: false });
+  });
+
+  it('Texas ugyldig: fraksjonell pct=12.5 (krever heltall)', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
+        teamSize: 2,
+        handicapPct: 12.5,
+        requireIntegerPct: true,
+      }),
+    ).toMatchObject({ handicapPctValid: false, playersValid: false });
+  });
+
+  it('Texas ugyldig: pct utenfor grense (>100)', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
+        teamSize: 2,
+        handicapPct: 150,
+        requireIntegerPct: true,
+      }),
+    ).toMatchObject({ handicapPctValid: false, playersValid: false });
+  });
+
+  // ── Ambrose / Florida (requireIntegerPct=false, aksepterer desimaler) ──────
+
+  it('Ambrose valid: 4 spillere, 2 lag á 2, fraksjonell pct=12.5', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
+        teamSize: 2,
+        handicapPct: 12.5,
+        requireIntegerPct: false,
+      }),
+    ).toEqual({
+      teamsBalanced: true,
+      hasAtLeastOneTeam: true,
+      handicapPctValid: true,
+      playersValid: true,
+    });
+  });
+
+  it('Ambrose ugyldig: pct=NaN', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
+        teamSize: 2,
+        handicapPct: NaN,
+        requireIntegerPct: false,
+      }),
+    ).toMatchObject({ handicapPctValid: false, playersValid: false });
+  });
+
+  it('Florida valid: 6 spillere, 2 lag á 3, pct=15', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b', 'c'], ['d', 'e', 'f']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd', 'e', 'f'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b', 'c'], ['d', 'e', 'f']),
+        teamSize: 3,
+        handicapPct: 15,
+        requireIntegerPct: false,
+      }),
+    ).toEqual({
+      teamsBalanced: true,
+      hasAtLeastOneTeam: true,
+      handicapPctValid: true,
+      playersValid: true,
+    });
+  });
+
+  it('Florida ugyldig: fraksjonell pct aksepteres (12.5 er gyldig, ≠ Texas)', () => {
+    // Florida and Ambrose share requireIntegerPct=false — 12.5 must be VALID
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b', 'c'], ['d', 'e', 'f']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd', 'e', 'f'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b', 'c'], ['d', 'e', 'f']),
+        teamSize: 3,
+        handicapPct: 12.5,
+        requireIntegerPct: false,
+      }),
+    ).toMatchObject({ handicapPctValid: true, playersValid: true });
+  });
+
+  // ── Shamble (ingen handicapPct — undefined) ───────────────────────────────
+
+  it('Shamble valid: 6 spillere, 2 lag á 3, ingen pct-sjekk', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b', 'c'], ['d', 'e', 'f']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd', 'e', 'f'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b', 'c'], ['d', 'e', 'f']),
+        teamSize: 3,
+        handicapPct: undefined,
+        requireIntegerPct: false,
+      }),
+    ).toEqual({
+      teamsBalanced: true,
+      hasAtLeastOneTeam: true,
+      handicapPctValid: true, // always true when pct=undefined
+      playersValid: true,
+    });
+  });
+
+  it('Shamble valid: 8 spillere, 2 lag á 4', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b', 'c', 'd'], ['e', 'f', 'g', 'h']),
+        selectedPlayerIds: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b', 'c', 'd'], ['e', 'f', 'g', 'h']),
+        teamSize: 4,
+        handicapPct: undefined,
+        requireIntegerPct: false,
+      }),
+    ).toMatchObject({ playersValid: true });
+  });
+
+  it('Shamble ugyldig: berre 2 spillere valgt (< teamSize=3)', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams(['a', 'b']),
+        selectedPlayerIds: ['a', 'b'],
+        teamByPlayer: makeTeamByPlayer(['a', 'b']),
+        teamSize: 3,
+        handicapPct: undefined,
+        requireIntegerPct: false,
+      }),
+    ).toMatchObject({ playersValid: false });
+  });
+
+  // ── hasAtLeastOneTeam detalj ──────────────────────────────────────────────
+
+  it('hasAtLeastOneTeam=false når ingen lag er fullt fylt (tomme lag)', () => {
+    expect(
+      validateTeamSizeFormat({
+        playersByTeam: makeTeams([], [], [], []),
+        selectedPlayerIds: [],
+        teamByPlayer: {},
+        teamSize: 2,
+        handicapPct: 50,
+        requireIntegerPct: true,
+      }),
+    ).toMatchObject({ hasAtLeastOneTeam: false, playersValid: false });
   });
 });
 
