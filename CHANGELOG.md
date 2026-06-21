@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.77] - 2026-06-21 · #802
+
+> Forhindrer at en spiller kan fjerne sin egen trekking eller trekke seg fra modus som ikke støtter det — databasen håndhever nå at kun admin kan sette eller nullstille `withdrawn_at`.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `guard_game_players_self_update` (migrasjon 0108): la til `withdrawn_at` og `withdrawn_by_user_id` i selbetjent-denylist på `game_players`. Spiller-raden kan nå kun endres av admin eller spill-oppretter. Direkte PostgREST-PATCH mot egne trekkkolonner gir `42501`. Ny pgTAP-fil `supabase/tests/withdrawn_columns_self_update_rls_test.sql` (8 assertions). (#802)
+
+</details>
+
 ### [1.133.76] - 2026-06-21 · #817
 
 > Direkte PostgREST-innskriving av tee-bokser med kursrating utenfor WHS-området (50–80) blir nå avvist i databasen — ikke bare i skjemaet. Det hindrer at en korrumpert rating ødelegger banehandicapen for alle i runden.
