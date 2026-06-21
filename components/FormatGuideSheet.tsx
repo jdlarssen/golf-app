@@ -142,6 +142,11 @@ export function FormatGuideSheet({
             entries={entries}
             withDetailLinks={false}
             cardIdPrefix={CARD_ID_PREFIX}
+            cardLabels={{
+              showRules: t('cardShowRules'),
+              hideRules: t('cardHideRules'),
+              readMore: t('cardReadMore'),
+            }}
           />
         </div>
       </div>

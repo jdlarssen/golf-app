@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.69] - 2026-06-21 · #793
+
+> «Vis regler» og «Skjul regler»-knappene i veiviserens format-ark vises nå på riktig språk — engelske brukere ser «Show rules» / «Hide rules» / «Read more →».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `FormatGuideSheet.tsx` sendte ikke `cardLabels`-propen videre til `FormatGuideList`, så `ModeGuideCard`-kortene inne i «?»-arket falt tilbake til norske default-strenger. Propen er nå lagt til med `t('cardShowRules')`, `t('cardHideRules')` og `t('cardReadMore')` fra det allerede tilstedeværende `useTranslations('formatGuide')`-kallet i komponenten. Ingen ny i18n-nøkkel trengs — `formatGuide.card{Show,Hide}Rules` og `formatGuide.cardReadMore` ble lagt til av #760. (#793)
+
+</details>
+
 ### [1.133.68] - 2026-06-21 · #818
 
 > Profil-raden «Installer som app» vises nå på riktig språk — engelske brukere ser «Install app».
