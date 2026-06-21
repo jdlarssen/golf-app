@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   envReady,
   skipReason,
-  ADMIN_EMAIL,
+  PLAYER_EMAIL,
   signInViaOtp,
   seedSoloFlightlessGame,
   cleanupTestGame,
@@ -38,8 +38,13 @@ test.describe('Solo roster (FlightRoster flightNumber=null) @gate', () => {
     expect(game).not.toBeNull();
     const gameId = game!.id;
 
+    // Sign in as the player (also a flightless participant in the seeded
+    // game, so they hit the identical Regel 3 → FlightRoster(null) path).
+    // We use PLAYER_EMAIL rather than ADMIN_EMAIL because the serialized
+    // @gate run signs ADMIN_EMAIL in many times (cup/invitation/liga); a
+    // late extra admin OTP mint clustered with those, hanging at verify.
     await page.goto(`/login?next=/games/${gameId}`);
-    await signInViaOtp(page, ADMIN_EMAIL!);
+    await signInViaOtp(page, PLAYER_EMAIL!);
     await expect(page).toHaveURL(new RegExp(`/games/${gameId}\\b`), {
       timeout: 15_000,
     });
