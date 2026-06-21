@@ -117,8 +117,9 @@ export function formatTeeOffTimeLocale(date: Date, locale: AppLocale): string {
  */
 export function formatTeeOffDateLocale(date: Date, locale: AppLocale): string {
   if (locale === 'no') return formatTeeOffDateNb(date);
-  // en-GB: weekday short ("Tue"), day numeric, month short ("May"), no year.
-  const fmt = new Intl.DateTimeFormat('en-GB', {
+  // Locale-driven: weekday short, day numeric, month short, no year. nb-NO
+  // delegates above; every other locale renders in its own language via Intl.
+  const fmt = new Intl.DateTimeFormat(intlLocaleTag(locale), {
     timeZone: OSLO,
     weekday: 'short',
     day: 'numeric',
@@ -270,7 +271,9 @@ export function formatRelativeLocale(
   if (locale === 'no') return formatRelativeNbLegacy(iso, nowMs);
 
   const diff = Math.max(0, nowMs - new Date(iso).getTime());
-  const rtf = new Intl.RelativeTimeFormat('en-GB', { numeric: 'auto' });
+  const rtf = new Intl.RelativeTimeFormat(intlLocaleTag(locale), {
+    numeric: 'auto',
+  });
 
   if (diff < MINUTE_MS) return rtf.format(-Math.round(diff / SECOND_MS), 'second');
   if (diff < HOUR_MS) return rtf.format(-Math.round(diff / MINUTE_MS), 'minute');
@@ -309,7 +312,7 @@ export function shortMonthLocale(monthIndex: number, locale: AppLocale): string 
   if (locale === 'no') return NO_MONTHS_SHORT[monthIndex];
   // Probe a fixed day (15) to avoid month-boundary ambiguity.
   const probe = new Date(Date.UTC(2000, monthIndex, 15));
-  return new Intl.DateTimeFormat('en-GB', {
+  return new Intl.DateTimeFormat(intlLocaleTag(locale), {
     timeZone: 'UTC',
     month: 'short',
   }).format(probe);
@@ -330,7 +333,7 @@ export function formatMonthLongLocale(
 ): string {
   if (locale === 'no') return formatMonthLongNb(iso);
   const d = iso instanceof Date ? iso : new Date(iso);
-  return new Intl.DateTimeFormat('en-GB', {
+  return new Intl.DateTimeFormat(intlLocaleTag(locale), {
     month: 'long',
     year: 'numeric',
   }).format(d);
@@ -356,8 +359,8 @@ export function formatShortUTCDayMonthLocale(iso: string, locale: AppLocale): st
     return `${day}. ${NO_MONTHS_SHORT[monthIdx]}`;
   }
 
-  // en-GB Intl with timeZone UTC for consistent output.
-  const fmt = new Intl.DateTimeFormat('en-GB', {
+  // Locale-driven Intl with timeZone UTC for consistent output (nb-NO above).
+  const fmt = new Intl.DateTimeFormat(intlLocaleTag(locale), {
     timeZone: 'UTC',
     day: 'numeric',
     month: 'short',
@@ -397,7 +400,7 @@ export function formatShortOsloDayMonthLocale(
     const monthIdx = Number(parts.find((p) => p.type === 'month')?.value ?? '1') - 1;
     return `${dayStr}. ${NO_MONTHS_SHORT[monthIdx]}`;
   }
-  const parts = new Intl.DateTimeFormat('en-GB', {
+  const parts = new Intl.DateTimeFormat(intlLocaleTag(locale), {
     timeZone: OSLO,
     day: 'numeric',
     month: 'short',
@@ -437,7 +440,7 @@ export function formatShortOsloDateWithYearLocale(
   if (locale === 'no') {
     return `${dayStr}. ${NO_MONTHS_SHORT[monthIdx]} ${yearStr}`;
   }
-  return `${dayStr} ${shortMonthLocale(monthIdx, 'en')} ${yearStr}`;
+  return `${dayStr} ${shortMonthLocale(monthIdx, locale)} ${yearStr}`;
 }
 
 /**

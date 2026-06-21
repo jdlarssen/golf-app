@@ -19,8 +19,11 @@ import {
   shortMonthLocale,
   formatShortUTCDayMonthLocale,
   formatShortOsloDayMonthLocale,
+  formatShortOsloDateWithYearLocale,
+  formatMonthLongLocale,
   formatHHMMOslo,
 } from './format';
+import type { AppLocale } from '@/i18n/routing';
 import {
   formatTeeOffTime,
   formatTeeOffDate,
@@ -40,6 +43,65 @@ describe('intlLocaleTag', () => {
     ['en', 'en-GB'],
   ] as const)('%s -> %s', (locale, tag) => {
     expect(intlLocaleTag(locale)).toBe(tag);
+  });
+});
+
+// A locale beyond the shipped no/en, cast to AppLocale. Proves the date
+// helpers' else-branches follow the active locale (intlLocaleTag) rather than
+// pinning English — the N-locale criterion from routing.ts (#845/#61).
+const SV = 'sv' as AppLocale;
+
+describe('N-locale safety (probe locale beyond no/en)', () => {
+  it('formatTeeOffDateLocale renders Swedish weekday + month, not English', () => {
+    expect(formatTeeOffDateLocale(WHEN, SV)).toBe('fre 8 maj');
+    expect(formatTeeOffDateLocale(WHEN, SV)).not.toBe(
+      formatTeeOffDateLocale(WHEN, 'en'),
+    );
+  });
+
+  it('shortMonthLocale renders the Swedish abbreviation', () => {
+    expect(shortMonthLocale(4, SV)).toBe('maj');
+    expect(shortMonthLocale(4, SV)).not.toBe(shortMonthLocale(4, 'en'));
+  });
+
+  it('formatMonthLongLocale renders the Swedish long month', () => {
+    expect(formatMonthLongLocale(WHEN, SV)).toBe(
+      new Intl.DateTimeFormat('sv', { month: 'long', year: 'numeric' }).format(WHEN),
+    );
+    expect(formatMonthLongLocale(WHEN, SV)).not.toBe(
+      formatMonthLongLocale(WHEN, 'en'),
+    );
+  });
+
+  it('formatShortUTCDayMonthLocale renders the Swedish month', () => {
+    const iso = '2026-05-12T10:00:00Z';
+    expect(formatShortUTCDayMonthLocale(iso, SV)).toBe('12 maj');
+    expect(formatShortUTCDayMonthLocale(iso, SV)).not.toBe(
+      formatShortUTCDayMonthLocale(iso, 'en'),
+    );
+  });
+
+  it('formatShortOsloDayMonthLocale renders the Swedish month', () => {
+    expect(formatShortOsloDayMonthLocale(WHEN, SV)).toContain('maj');
+    expect(formatShortOsloDayMonthLocale(WHEN, SV)).not.toBe(
+      formatShortOsloDayMonthLocale(WHEN, 'en'),
+    );
+  });
+
+  it('formatShortOsloDateWithYearLocale uses the locale month, not literal en', () => {
+    expect(formatShortOsloDateWithYearLocale(WHEN, SV)).toContain('maj');
+    expect(formatShortOsloDateWithYearLocale(WHEN, SV)).not.toBe(
+      formatShortOsloDateWithYearLocale(WHEN, 'en'),
+    );
+  });
+
+  it('formatRelativeLocale renders Swedish relative time', () => {
+    const now = WHEN.getTime();
+    const fiveMinAgo = new Date(now - 5 * 60_000).toISOString();
+    expect(formatRelativeLocale(fiveMinAgo, SV, now)).toBe('för 5 minuter sedan');
+    expect(formatRelativeLocale(fiveMinAgo, SV, now)).not.toBe(
+      formatRelativeLocale(fiveMinAgo, 'en', now),
+    );
   });
 });
 
