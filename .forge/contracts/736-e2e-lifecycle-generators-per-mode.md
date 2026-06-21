@@ -73,15 +73,15 @@
 
 ## Suksess-kriterier (evidens før avkrysning)
 
-- [ ] **C1.** `GenerateMatchesWizard.tsx` har `data-testid` på alle 5 steg + Neste/Generer/roster/course/tee. *Evidens: `grep -c data-testid` på fila + filnavn:linje.*
-- [ ] **C2.** Cup-livssyklus-e2e driver den ekte `createCupMatchesFromPlan` via UI og asserter gyldige `game_players`/flight-rader + leaderboard-render. *Evidens: testen kjører grønn mot staging; spec-utdrag som viser DB-assert + render-assert.*
-- [ ] **C3.** `RoundStartClient.tsx` har `data-testid` på checkbox + submit. *Evidens: filnavn:linje.*
-- [ ] **C4.** Liga-livssyklus-e2e driver den ekte `startLeagueRoundFlight` via UI og asserter gyldig flight-game + standings-tall. *Evidens: grønn mot staging; spec-utdrag.*
-- [ ] **C5.** `seedFinishedModeGame`-harness finnes og brukes av per-modus-spec. *Evidens: filnavn:linje.*
-- [ ] **C6.** Per-modus finish-and-validate for **alle 4 round-1-moduser** asserterer leaderboard-DOM mot hardkodet uavhengig orakel. *Evidens: 4 grønne lanes; for hver modus: scenariet + det hardkodede tallet + matchende DOM-assert.*
-- [ ] **C7.** Nye `@gate`-lanes (cup + liga livssyklus, og evt. per-modus) kjører grønt via `npm run e2e:gate` mot staging. Cup-veiviser-lane: ≥3 grønne kjøringer dokumentert ELLER nedgradert til `@lifecycle` med begrunnelse. *Evidens: kommando-utdata.*
-- [ ] **C8.** Hele suiten passerer portene: `tsc --noEmit`, `eslint`, `vitest run` (eksisterende co-located tester urørt grønne). *Evidens: kommando-utdata.*
-- [ ] **C9.** Oppfølgings-issues opprettet for utsatt scope (≥3-spiller-moduser; rolle-replay) med milestone. *Evidens: issue-nummer.*
+- [x] **C1.** `GenerateMatchesWizard.tsx` har `data-testid` på alle 5 steg + Neste/Generer/roster/course/tee. *Evidens: 14 `data-testid` på fila (`cup-wizard-step1..5`, `-assign-{id}-{team}`, `-course`/`-tee`, `-preset-*`, `-strategy-*`, `-prev`/`-next`/`-generate`); commit `8f6278a2`.*
+- [x] **C2.** Cup-livssyklus-e2e driver den ekte `createCupMatchesFromPlan` via UI og asserter gyldige `game_players`/flight-rader + leaderboard-render. *Evidens: `e2e/cup/cup-lifecycle.spec.ts:208`; asserter 2 matcher + 4 game_players (flight_number=1, team 1/2, accepted_at) + public leaderboard; 3/3 grønn staging (14.9s/9.4s/8.1s); commit `529a87f5`.*
+- [x] **C3.** `RoundStartClient.tsx` har `data-testid` på checkbox + submit. *Evidens: `liga-round-start-player-{userId}` + `liga-round-start-submit`; commit `182c9ce1`.*
+- [x] **C4.** Liga-livssyklus-e2e driver den ekte `startLeagueRoundFlight` via UI og asserter gyldig flight-game + standings-tall. *Evidens: `e2e/league/liga.spec.ts:324`; asserter solo_strokeplay flight + team_number null (#647) + standings-rad; grønn staging (9.8s); commit `182c9ce1`.*
+- [x] **C5.** `seedFinishedModeGame`-harness finnes og brukes av per-modus-spec. *Evidens: `e2e/_helpers/games.ts` (`seedFinishedModeGame`, `seedEphemeralPlayers`/`deleteEphemeralPlayers`); commit `52eaeedf`.*
+- [x] **C6.** Per-modus finish-and-validate for **alle 4 round-1-moduser** asserterer leaderboard-DOM mot hardkodet uavhengig orakel. *Evidens: 4 grønne lanes (7.2s) — solo_strokeplay (net 36/gross 54 duell), singles_matchplay («10&8»), skins (6 skins, carryover+push), nassau (sweep); `e2e/games/lifecycle-validate.spec.ts`; commit `52eaeedf`.*
+- [x] **C7.** Nye `@gate`-lanes kjører grønt via `npm run e2e:gate` mot staging. Cup-veiviser-lane: ≥3 grønne kjøringer ELLER `@lifecycle` med begrunnelse. *Evidens: full `@gate` (14 tester, workers=1, CI-like) 14/14 grønn (51.6s); cup-lane satt `@lifecycle` (PPR-wizard + ephemeral auth users) + non-blocking CI-step, 3/3 dokumentert; commit `c0e72157`.*
+- [x] **C8.** Hele suiten passerer portene: `tsc --noEmit`, `eslint`, `vitest run`. *Evidens: `vitest run` 3873 tester / 295 filer grønn; `tsc --noEmit` exit 0; `eslint` ren på alle berørte filer.*
+- [x] **C9.** Oppfølgings-issues opprettet for utsatt scope med milestone. *Evidens: #848 (≥3-spiller-moduser), #849 (rolle-replay), begge milestone Backlog + `tests`-label.*
 
 ---
 
