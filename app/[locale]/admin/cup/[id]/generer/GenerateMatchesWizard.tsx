@@ -110,7 +110,7 @@ function Step1Roster({
   const diff = Math.abs(team1Count - team2Count);
 
   return (
-    <div>
+    <div data-testid="cup-wizard-step1">
       <SectionHeading>{t('generate.step1Heading')}</SectionHeading>
       {diff >= 2 && team1Count > 0 && team2Count > 0 && (
         <div className="mb-4">
@@ -142,6 +142,7 @@ function Step1Roster({
                     <button
                       key={opt}
                       type="button"
+                      data-testid={`cup-wizard-assign-${p.id}-${opt}`}
                       onClick={() => onChange(p.id, opt)}
                       className={`min-h-[36px] px-2.5 py-1 transition-colors ${
                         val === opt
@@ -196,7 +197,7 @@ function Step2Course({
   const selectedCourse = courses.find((c) => c.id === courseId);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="cup-wizard-step2">
       <div>
         <SectionHeading>{t('generate.step2BaneHeading')}</SectionHeading>
         <label htmlFor="generer-course" className="block text-sm font-medium text-text mb-1.5">
@@ -204,6 +205,7 @@ function Step2Course({
         </label>
         <select
           id="generer-course"
+          data-testid="cup-wizard-course"
           value={courseId}
           onChange={(e) => onCourseChange(e.target.value)}
           className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
@@ -225,6 +227,7 @@ function Step2Course({
           </label>
           <select
             id="generer-tee"
+            data-testid="cup-wizard-tee"
             value={teeBoxId}
             onChange={(e) => onTeeChange(e.target.value)}
             className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
@@ -306,7 +309,7 @@ function Step3Setup({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="cup-wizard-step3">
       {matchCap !== undefined && (
         <Banner tone={overCap ? 'warning' : 'info'}>
           {overCap
@@ -330,6 +333,7 @@ function Step3Setup({
                 type="radio"
                 name="preset"
                 value={preset.id}
+                data-testid={`cup-wizard-preset-${preset.id}`}
                 checked={presetId === preset.id}
                 onChange={() => onPresetChange(preset.id)}
                 className="mt-0.5 accent-primary"
@@ -363,6 +367,7 @@ function Step3Setup({
               type="radio"
               name="preset"
               value="tilpasset"
+              data-testid="cup-wizard-preset-tilpasset"
               checked={presetId === 'tilpasset'}
               onChange={() => onPresetChange('tilpasset')}
               className="mt-0.5 accent-primary"
@@ -440,6 +445,7 @@ function Step3Setup({
                 type="radio"
                 name="strategy"
                 value={val}
+                data-testid={`cup-wizard-strategy-${val}`}
                 checked={strategy === val}
                 onChange={() => onStrategyChange(val)}
                 className="mt-0.5 accent-primary"
@@ -500,7 +506,7 @@ function Step4Preview({
   }
 
   return (
-    <div>
+    <div data-testid="cup-wizard-step4">
       <div className="flex items-center justify-between mb-4">
         <SectionHeading>{t('generate.step4Heading')}</SectionHeading>
         <button
@@ -659,7 +665,7 @@ function Step5Confirm({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="cup-wizard-step5">
       <div>
         <SectionHeading>{t('generate.step5Heading')}</SectionHeading>
         <Card>
@@ -690,6 +696,7 @@ function Step5Confirm({
       <Button
         type="button"
         className="w-full"
+        data-testid="cup-wizard-generate"
         onClick={handleConfirm}
         pending={isPending}
         pendingLabel={t('generate.confirmPending')}
@@ -945,6 +952,7 @@ export function GenerateMatchesWizard({
                 type="button"
                 variant="secondary"
                 className="flex-1"
+                data-testid="cup-wizard-prev"
                 onClick={handleBack}
                 disabled={step === 1}
               >
@@ -953,6 +961,7 @@ export function GenerateMatchesWizard({
               <Button
                 type="button"
                 className="flex-1"
+                data-testid="cup-wizard-next"
                 onClick={handleNext}
                 disabled={!canAdvance()}
               >
