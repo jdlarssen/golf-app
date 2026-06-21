@@ -10,11 +10,11 @@ import { expect, type Page } from '@playwright/test';
  * bevisst — `npm run e2e` skal aldri feile bare fordi en utvikler ikke har
  * service-role nøkkelen lokalt.
  *
- * **VIKTIG:** Tørny tester mot prod-DB (per CLAUDE.md "Production-only testing").
- * Alle hjelpere her oppretter rader med tydelig `TEST-Påmelding-`-prefiks og
- * gir cleanup-callbacks vi kan kalle i `afterEach`/`afterAll`. Slik er
- * test-skitten lett å spore (`gh ... | grep TEST-Påmelding-`) og rydde manuelt
- * dersom en test krasjer midt-i.
+ * **VIKTIG:** Tørny tester mot `torny-staging`, ALDRI prod (production-only-
+ * konvensjonen ble opphevet 2026-06-20 — appen er i ekte prod-bruk). Alle
+ * hjelpere her oppretter rader med tydelig `TEST-`-prefiks og gir cleanup-
+ * callbacks vi kaller i `afterEach`/`afterAll`. Staging-DB-en deles på tvers av
+ * worktree-sesjoner, så hold cleanup scoped til egne id-er.
  */
 
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

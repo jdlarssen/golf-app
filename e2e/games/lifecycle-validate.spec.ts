@@ -56,6 +56,9 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     adminId = a.data.id;
     playerId = p.data.id;
     adminName = (a.data.nickname?.trim() || a.data.name?.trim()) ?? '';
+    // Resolved once so the per-mode winner-identity assertions are unconditional
+    // (an empty name would otherwise silently skip the "A is the winner" check).
+    expect(adminName, 'admin display name resolved').toBeTruthy();
 
     ctx = await browser.newContext();
     page = await ctx.newPage();
@@ -101,12 +104,14 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     // 2-player strokeplay → head-to-head duel view (the 2-player leaderboard).
     const duel = page.getByTestId('head-to-head');
     await expect(duel).toBeVisible();
-    // Oracle: A gross 54 (18 × 3, independent), net 36 (54 − 18); verdict names
-    // A as the winner with the net duel score "36–72".
+    // Oracle: A gross 54 (18 × 3, independent), net 36 (54 − 18); B net 72. The
+    // verdict names A as the winner with the net duel score "36–72" — assert
+    // BOTH net scores so a wrong aggregate can't coincidentally match.
     await expect(duel).toContainText('54');
     const verdict = duel.getByTestId('h2h-verdict');
+    await expect(verdict).toContainText(adminName);
     await expect(verdict).toContainText('36');
-    if (adminName) await expect(verdict).toContainText(adminName);
+    await expect(verdict).toContainText('72');
   });
 
   test('singles_matchplay: A wins all 10 played holes → decided 10&8 @gate', async () => {
@@ -132,7 +137,7 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     await expect(banner).toBeVisible();
     // Oracle: decided result string is "10&8" (marginUp & remainingAtDecision).
     await expect(banner).toContainText('10&8');
-    if (adminName) await expect(banner.getByText(adminName).first()).toBeVisible();
+    await expect(banner.getByText(adminName).first()).toBeVisible();
   });
 
   test('skins: ties carry over, A sweeps the rest → 6 skins / 4 holes @gate', async () => {
@@ -166,9 +171,9 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     const duel = page.getByTestId('head-to-head');
     await expect(duel).toBeVisible();
     const verdict = duel.getByTestId('h2h-verdict');
+    await expect(verdict).toContainText(adminName);
     await expect(verdict).toContainText('6');
     await expect(verdict).toContainText('0');
-    if (adminName) await expect(verdict).toContainText(adminName);
   });
 
   test('nassau: A wins front + back + total → sweeps @gate', async () => {
@@ -190,11 +195,15 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     await page.goto(`/games/${id}/leaderboard`);
     await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
 
-    // 2-player nassau → head-to-head duel. Oracle: A wins all 3 segments, so the
-    // verdict names A as the duel winner (front+back+total swept).
+    // 2-player nassau → head-to-head duel. Oracle: A wins all 3 segments
+    // (front + back + total), so units = 3 (a sweep) and B = 0 → verdict "3–0".
+    // The duel score is the nassau unit count (formats/nassau.tsx: score = units),
+    // so asserting 3 & 0 catches a units-aggregation regression that still names A.
     const duel = page.getByTestId('head-to-head');
     await expect(duel).toBeVisible();
     const verdict = duel.getByTestId('h2h-verdict');
-    if (adminName) await expect(verdict).toContainText(adminName);
+    await expect(verdict).toContainText(adminName);
+    await expect(verdict).toContainText('3');
+    await expect(verdict).toContainText('0');
   });
 });
