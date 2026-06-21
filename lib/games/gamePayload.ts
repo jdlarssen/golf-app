@@ -1014,6 +1014,101 @@ function parseFloridaHandicapPct(formData: FormData): number | null {
 }
 
 /**
+ * Felles allowance-parser for 2v2 matchplay-formatene (fourball/foursomes/
+ * greensome/chapman/gruesome — #813-dedup). Leser `fieldName` fra form-data og
+ * returnerer et heltall 0..100, eller null hvis ugyldig.
+ *
+ * Tom string defaulter til `draftDefault` i draft (defensiv partial-state) men
+ * returnerer null ved publish (krever eksplisitt verdi fra wizarden). Range
+ * 0..100 håndheves uansett — NaN/negativ/>100/desimal returnerer null →
+ * `bad_allowance`.
+ *
+ * ⚠️ `draftDefault` er IKKE delt mellom formatene: foursomes/gruesome = 50,
+ * fourball/greensome/chapman = 100. Hver call-site sender sin egen verdi.
+ */
+function parseMatchplayAllowancePct(
+  formData: FormData,
+  fieldName: string,
+  draftDefault: number,
+  mode: PayloadMode,
+): number | null {
+  const raw = formData.get(fieldName);
+  if (raw === null || raw === '') {
+    return mode === 'draft' ? draftDefault : null;
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+/**
+ * Felles spiller-parser + publish-balansesjekk for 2v2 matchplay-formatene
+ * (fourball/foursomes/greensome/chapman/gruesome — #813-dedup). Identisk på
+ * tvers av formatene: les opptil 8 slots, dedup, team strengt 1 eller 2
+ * (flight = team for DB-CHECK `game_players_team_flight_consistency`), og ved
+ * publish EKSAKT 4 spillere fordelt 2-2 på sidene.
+ *
+ * Returnerer `{ ok: true, players }` eller en feilkode (`duplicate_player`,
+ * `bad_team`, `min_players_for_mode`, `too_many_players_for_mode`,
+ * `team_balance`). Call-site legger på sin egen `mode_config.kind` +
+ * allowance_pct.
+ */
+function validate2v2MatchplayPlayers(
+  formData: FormData,
+  mode: PayloadMode,
+):
+  | { ok: true; players: GamePlayerInput[] }
+  | {
+      ok: false;
+      errorCode:
+        | 'duplicate_player'
+        | 'bad_team'
+        | 'min_players_for_mode'
+        | 'too_many_players_for_mode'
+        | 'team_balance';
+    } {
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // 2v2-sider er strengt 1 eller 2 (speiler singles_matchplay-mønsteret).
+    if (!Number.isInteger(team_number) || team_number < 1 || team_number > 2) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // flight_number = team_number for å oppfylle DB-CHECK
+    // game_players_team_flight_consistency (begge satt sammen).
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    // Nøyaktig 4 spillere — sjekk 2-2-fordeling på sidene.
+    const sideCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
+    }
+    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return { ok: true, players };
+}
+
+/**
  * Four-ball matchplay-validator (issue #217, fase 2 av #47 — 2v2 best-ball-matchplay).
  *
  * Regler:
@@ -1042,56 +1137,24 @@ function validateFourballMatchplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const allowancePct = parseFourballAllowancePct(formData, mode);
+  // Tom allowance i draft defaulter til 100; publish krever eksplisitt verdi
+  // (wizarden pre-fyller fra `tournaments.fourball_allowance_pct`).
+  const allowancePct = parseMatchplayAllowancePct(
+    formData,
+    'fourball_allowance_pct',
+    100,
+    mode,
+  );
   if (allowancePct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    // Fourball-sider er strengt 1 eller 2 (speiler singles_matchplay-mønsteret).
-    if (
-      !Number.isInteger(team_number) ||
-      team_number < 1 ||
-      team_number > 2
-    ) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    // flight_number = team_number for å oppfylle DB-CHECK
-    // game_players_team_flight_consistency (begge satt sammen).
-    const flight_number = team_number;
-    players.push({ user_id, team_number, flight_number });
-  }
-
-  if (mode === 'publish') {
-    if (players.length < 4) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 4) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
-    // Nøyaktig 4 spillere — sjekk 2-2-fordeling på sidene.
-    const sideCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
-    }
-    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
-      return { ok: false, errorCode: 'team_balance' };
-    }
-  }
+  const parsed = validate2v2MatchplayPlayers(formData, mode);
+  if (!parsed.ok) return parsed;
 
   return {
     ok: true,
-    players,
+    players: parsed.players,
     mode_config: {
       kind: 'fourball_matchplay',
       team_size: 2,
@@ -1099,29 +1162,6 @@ function validateFourballMatchplay(
       allowance_pct: allowancePct,
     },
   };
-}
-
-/**
- * Leser `fourball_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
- * eller null hvis ugyldig.
- *
- * Tom string i draft defaulter til 100 så partial form-state ikke kaster;
- * publish krever eksplisitt gyldig verdi. Range 0..100 håndheves uansett —
- * verdier utenfor (NaN, negative, >100) returnerer null → bad_allowance.
- */
-function parseFourballAllowancePct(
-  formData: FormData,
-  mode: PayloadMode,
-): number | null {
-  const raw = formData.get('fourball_allowance_pct');
-  if (raw === null || raw === '') {
-    // Draft: defensiv default. Publish: krev eksplisitt verdi via wizard
-    // (som alltid pre-fyller fra cup eller setter 85 som fallback).
-    return mode === 'draft' ? 100 : null;
-  }
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
 }
 
 /**
@@ -1151,54 +1191,24 @@ function validateFoursomesMatchplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const allowancePct = parseFoursomesAllowancePct(formData, mode);
+  // ⚠️ Foursomes draft-default = 50 (WHS-standard), IKKE 100 som fourball/
+  // greensome/chapman. Wizarden pre-fyller fra `tournaments.foursomes_allowance_pct`.
+  const allowancePct = parseMatchplayAllowancePct(
+    formData,
+    'foursomes_allowance_pct',
+    50,
+    mode,
+  );
   if (allowancePct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    // Foursomes-sider er strengt 1 eller 2 (speiler fourball/singles).
-    if (
-      !Number.isInteger(team_number) ||
-      team_number < 1 ||
-      team_number > 2
-    ) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    const flight_number = team_number;
-    players.push({ user_id, team_number, flight_number });
-  }
-
-  if (mode === 'publish') {
-    if (players.length < 4) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 4) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
-    // Nøyaktig 4 spillere — sjekk 2-2-fordeling på sidene.
-    const sideCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
-    }
-    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
-      return { ok: false, errorCode: 'team_balance' };
-    }
-  }
+  const parsed = validate2v2MatchplayPlayers(formData, mode);
+  if (!parsed.ok) return parsed;
 
   return {
     ok: true,
-    players,
+    players: parsed.players,
     mode_config: {
       kind: 'foursomes_matchplay',
       team_size: 2,
@@ -1206,27 +1216,6 @@ function validateFoursomesMatchplay(
       allowance_pct: allowancePct,
     },
   };
-}
-
-/**
- * Leser `foursomes_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
- * eller null hvis ugyldig.
- *
- * Tom string i draft defaulter til 50 (WHS-standard) så partial form-state
- * ikke kaster; publish krever eksplisitt gyldig verdi (wizarden pre-fyller
- * fra cup eller setter 50 som fallback). Range 0..100 håndheves uansett.
- */
-function parseFoursomesAllowancePct(
-  formData: FormData,
-  mode: PayloadMode,
-): number | null {
-  const raw = formData.get('foursomes_allowance_pct');
-  if (raw === null || raw === '') {
-    return mode === 'draft' ? 50 : null;
-  }
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
 }
 
 /**
@@ -1254,54 +1243,23 @@ function validateGreensomeMatchplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const allowancePct = parseGreensomeAllowancePct(formData, mode);
+  // Greensome draft-default = 100 (WHS-standard, samme som fourball/chapman).
+  const allowancePct = parseMatchplayAllowancePct(
+    formData,
+    'greensome_allowance_pct',
+    100,
+    mode,
+  );
   if (allowancePct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    // Greensome-sider er strengt 1 eller 2 (speiler foursomes/fourball/singles).
-    if (
-      !Number.isInteger(team_number) ||
-      team_number < 1 ||
-      team_number > 2
-    ) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    const flight_number = team_number;
-    players.push({ user_id, team_number, flight_number });
-  }
-
-  if (mode === 'publish') {
-    if (players.length < 4) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 4) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
-    // Nøyaktig 4 spillere — sjekk 2-2-fordeling på sidene.
-    const sideCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
-    }
-    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
-      return { ok: false, errorCode: 'team_balance' };
-    }
-  }
+  const parsed = validate2v2MatchplayPlayers(formData, mode);
+  if (!parsed.ok) return parsed;
 
   return {
     ok: true,
-    players,
+    players: parsed.players,
     mode_config: {
       kind: 'greensome_matchplay',
       team_size: 2,
@@ -1309,27 +1267,6 @@ function validateGreensomeMatchplay(
       allowance_pct: allowancePct,
     },
   };
-}
-
-/**
- * Leser `greensome_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
- * eller null hvis ugyldig.
- *
- * Tom string i draft defaulter til 100 (WHS-standard for greensome) så partial
- * form-state ikke kaster; publish krever eksplisitt gyldig verdi (wizarden
- * pre-fyller fra cup eller setter 100 som fallback). Range 0..100 håndheves uansett.
- */
-function parseGreensomeAllowancePct(
-  formData: FormData,
-  mode: PayloadMode,
-): number | null {
-  const raw = formData.get('greensome_allowance_pct');
-  if (raw === null || raw === '') {
-    return mode === 'draft' ? 100 : null;
-  }
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
 }
 
 /**
@@ -1346,49 +1283,23 @@ function validateChapmanMatchplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const allowancePct = parseChapmanAllowancePct(formData, mode);
+  // Chapman draft-default = 100 (WHS — full diff etter 60/40-reduksjonen).
+  const allowancePct = parseMatchplayAllowancePct(
+    formData,
+    'chapman_allowance_pct',
+    100,
+    mode,
+  );
   if (allowancePct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    // Chapman-sider er strengt 1 eller 2 (speiler foursomes/greensome).
-    if (!Number.isInteger(team_number) || team_number < 1 || team_number > 2) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    const flight_number = team_number;
-    players.push({ user_id, team_number, flight_number });
-  }
-
-  if (mode === 'publish') {
-    if (players.length < 4) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 4) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
-    const sideCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
-    }
-    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
-      return { ok: false, errorCode: 'team_balance' };
-    }
-  }
+  const parsed = validate2v2MatchplayPlayers(formData, mode);
+  if (!parsed.ok) return parsed;
 
   return {
     ok: true,
-    players,
+    players: parsed.players,
     mode_config: {
       kind: 'chapman_matchplay',
       team_size: 2,
@@ -1396,25 +1307,6 @@ function validateChapmanMatchplay(
       allowance_pct: allowancePct,
     },
   };
-}
-
-/**
- * Leser `chapman_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
- * eller null hvis ugyldig. Tom string i draft defaulter til 100 (WHS Chapman
- * matchplay-standard — full diff etter 60/40-reduksjonen); publish krever
- * eksplisitt gyldig verdi. Range 0..100 håndheves uansett.
- */
-function parseChapmanAllowancePct(
-  formData: FormData,
-  mode: PayloadMode,
-): number | null {
-  const raw = formData.get('chapman_allowance_pct');
-  if (raw === null || raw === '') {
-    return mode === 'draft' ? 100 : null;
-  }
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
 }
 
 /**
@@ -1442,49 +1334,24 @@ function validateGruesomeMatchplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const allowancePct = parseGruesomeAllowancePct(formData, mode);
+  // ⚠️ Gruesome draft-default = 50 (WHS foursomes-standard, sum-handicap),
+  // IKKE 100 som chapman/greensome.
+  const allowancePct = parseMatchplayAllowancePct(
+    formData,
+    'gruesome_allowance_pct',
+    50,
+    mode,
+  );
   if (allowancePct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    // Gruesome-sider er strengt 1 eller 2 (speiler foursomes/greensome/chapman).
-    if (!Number.isInteger(team_number) || team_number < 1 || team_number > 2) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    const flight_number = team_number;
-    players.push({ user_id, team_number, flight_number });
-  }
-
-  if (mode === 'publish') {
-    if (players.length < 4) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 4) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
-    const sideCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
-    }
-    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
-      return { ok: false, errorCode: 'team_balance' };
-    }
-  }
+  const parsed = validate2v2MatchplayPlayers(formData, mode);
+  if (!parsed.ok) return parsed;
 
   return {
     ok: true,
-    players,
+    players: parsed.players,
     mode_config: {
       kind: 'gruesome_matchplay',
       team_size: 2,
@@ -1492,25 +1359,6 @@ function validateGruesomeMatchplay(
       allowance_pct: allowancePct,
     },
   };
-}
-
-/**
- * Leser `gruesome_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
- * eller null hvis ugyldig. Tom string i draft defaulter til 50 (WHS foursomes-
- * standard — gruesome bruker sum-handicap, identisk med foursomes); publish
- * krever eksplisitt gyldig verdi. Range 0..100 håndheves uansett.
- */
-function parseGruesomeAllowancePct(
-  formData: FormData,
-  mode: PayloadMode,
-): number | null {
-  const raw = formData.get('gruesome_allowance_pct');
-  if (raw === null || raw === '') {
-    return mode === 'draft' ? 50 : null;
-  }
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
-  return n;
 }
 
 /**
@@ -1919,7 +1767,7 @@ function validateRoundRobin(
  * Tom string i draft defaulter til 85 (WHS-default for matchplay) så partial
  * form-state ikke kaster; publish krever eksplisitt gyldig verdi (wizarden
  * pre-fyller 85 som fallback). Range 0..100 håndheves uansett.
- * Speiler `parseFourballAllowancePct`-mønsteret.
+ * Speiler `parseMatchplayAllowancePct`-mønsteret (egen parser pga. RR-default 85).
  */
 function parseRoundRobinAllowancePct(
   formData: FormData,
