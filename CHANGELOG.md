@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.67] - 2026-06-21 · #816
+
+> Engelske brukere ser nå riktig apostrof i innboks, profil og venner-flaten — ikke lenger dobbel apostrof (f.eks. «You're friends now» i stedet for «You''re friends now»).
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- 66 statiske engelske strenger i `messages/en.json` viste dobbel apostrof fordi next-intl bare av-escaper ICU `''` → `'` i strenger med placeholder (`{…}`). Placeholder-løse strenger returneres ordrett. Alle 66 rettet til enkel `'`; de 13 argumenterte strengene (med `{…}`) har korrekt `''` og ble ikke rørt. Lagt til `messages/apostropheParity.test.ts` som feiler hvis mønsteret gjeninnføres. (#816)
+
+</details>
+
 ### [1.133.66] - 2026-06-21 · #798
 
 > Når en runde er ferdigspilt, viser resultatkortet igjen plasseringene i stedet for bare et trofé-ikon. Og som klubbeier ser du igjen dem som har bedt om å bli med, så du kan godkjenne eller avslå dem.
