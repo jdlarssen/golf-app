@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.79] - 2026-06-21 · #799
+
+> Forhindrer at en klubbeier kan gjøre klubben eierløs ved å melde seg ut direkte — databasen krever nå alltid minst én eier igjen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Ny `BEFORE DELETE`-trigger `guard_group_members_last_owner_delete` (migrasjon 0110) på `public.group_members`: kaster `P0001 last_owner` hvis raden som slettes er den eneste med `role='owner'` i gruppen. Speiler sist-eier-guarden i `set_club_member_role` (0076). Global admin og service-role bypasser vakten. Sletting av ikke-siste eier eller admin/vanlig-medlem er upåvirket. pgTAP-fil `supabase/tests/group_members_last_owner_delete_guard_test.sql` (6 assertions). (#799)
+
+</details>
+
 ### [1.133.78] - 2026-06-21 · #803
 
 > Forhindrer at en flight-deltaker kan stille slagtidsstempelet til år 2099 for å fryse en medspillers hull permanent — databasen avviser nå tidsstempler langt frem i tid og tilbake-daterte skriv.
