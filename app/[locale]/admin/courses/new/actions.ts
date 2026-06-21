@@ -61,42 +61,25 @@ export async function createCourse(formData: FormData) {
     fail,
   );
 
-  // #366: alle innloggede skriver via request-scoped klient. RLS-policyen
-  // "courses authenticated insert own" (migrasjon 0070) tillater INSERT når
-  // created_by = auth.uid(); admin dekkes òg av "courses admin write". Ingen
-  // service-role-bypass — created_by = user.id er den eneste tillatte eieren.
-  const { data: course, error: courseError } = await supabase
-    .from('courses')
-    .insert({ name, created_by: (user as NonNullable<typeof user>).id })
-    .select('id')
-    .single();
-
-  if (courseError || !course) {
-    // `return` so TS narrows `course` to non-null below (a bare never-returning
-    // call through the `fail` arrow isn't recognized by control-flow analysis).
+  // #737: atomisk oppretting. Tidligere insertet vi courses → course_holes →
+  // tee_boxes sekvensielt UTEN rollback; feilet en barn-insert, ble en
+  // foreldreløs course liggende. En kompenserende slett (#675-mønsteret) hjelper
+  // ikke her: en ikke-admin-skaper har INGEN DELETE-RLS på courses (kun "courses
+  // admin delete", 0092), så sletten ville blitt blokkert av RLS og orphanen
+  // bestått. Vi flytter de tre insertene inn i én SECURITY DEFINER RPC
+  // (migrasjon 0113) som kjører dem i én transaksjon: feiler noe (DB-feil eller
+  // CHECK-brudd), ruller hele oppretelsen tilbake — en halvbygd bane kan aldri
+  // committes. RPC-en tvinger created_by = auth.uid() internt (#366), så eieren
+  // er aldri klient-styrt. teeBoxes-radenes diff-only `id` ignoreres av RPC-ens
+  // jsonb_to_recordset (kun navngitte kolonner leses). Feilkoden holdes generisk
+  // (`db_course`) — de tre gamle kodene mappet uansett til samme melding.
+  const { data: courseId, error: rpcError } = await supabase.rpc(
+    'create_course_with_layout',
+    { p_name: name, p_holes: holes, p_tees: teeBoxes },
+  );
+  if (rpcError || !courseId) {
+    console.error('[createCourse] create_course_with_layout failed', rpcError);
     return fail('db_course');
-  }
-
-  const holesToInsert = holes.map((h) => ({ ...h, course_id: course.id }));
-  const { error: holesError } = await supabase
-    .from('course_holes')
-    .insert(holesToInsert);
-  if (holesError) {
-    fail('db_holes');
-  }
-
-  // A fresh course lets the DB generate tee-box PKs — drop the diff-only `id`
-  // (undefined is omitted from the insert payload, so the column default wins).
-  const teesToInsert = teeBoxes.map((t) => ({
-    ...t,
-    id: undefined,
-    course_id: course.id,
-  }));
-  const { error: teeError } = await supabase
-    .from('tee_boxes')
-    .insert(teesToInsert);
-  if (teeError) {
-    fail('db_tees');
   }
 
   redirect({

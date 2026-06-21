@@ -1684,6 +1684,10 @@ export type Database = {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number }
         Returns: boolean
       }
+      create_course_with_layout: {
+        Args: { p_holes: Json; p_name: string; p_tees: Json }
+        Returns: string
+      }
       decide_join_request: {
         Args: { p_approve: boolean; p_request_id: string }
         Returns: string

@@ -3,19 +3,18 @@ import {
   buildSupabaseMock,
   makeRedirectMock,
   RedirectError,
-  type QueryResult,
 } from '@/tests/serverActionMocks';
 
 /**
- * Unit tests for createCourse — #366 (vanlige brukere oppretter baner).
+ * Unit tests for createCourse — #366 (vanlige brukere oppretter baner) +
+ * #737 (atomisk oppretting via SECURITY DEFINER RPC).
  *
- * Fokus på det #366 endrer:
+ * Fokus:
  * - Gate åpnet til ENHVER innlogget bruker (uinnlogget → /login).
- * - Writes via request-scoped klient (ingen getAdminClient-bypass) — RLS
- *   håndhever created_by = auth.uid(). Beviset er at action-en ikke en gang
- *   importerer admin-klienten lenger; en regular user insert lykkes på den
- *   vanlige mock-en.
- * - created_by settes til den innloggede brukeren.
+ * - #737: de tre sekvensielle insertene (courses → course_holes → tee_boxes) er
+ *   erstattet med ett `create_course_with_layout`-RPC-kall som kjører dem i én
+ *   transaksjon. created_by tvinges til auth.uid() INNE i RPC-en — aldri en param.
+ *   En RPC-feil ruller alt tilbake (ingen orphan course) og viser lokalisert feil.
  * - redirect_base / success_redirect respekteres OG saniteres (open-redirect).
  */
 
@@ -41,13 +40,13 @@ function setAuth(user: { id: string } | null) {
   })) as unknown as typeof supabaseMock.auth.getUser;
 }
 
-/** Three queue entries: course-insert (single), holes-insert, tees-insert. */
-function happyQueue(): QueryResult[] {
-  return [
-    { data: { id: 'course-1' }, error: null },
-    { error: null },
-    { error: null },
-  ];
+/**
+ * Mock whose `create_course_with_layout` RPC resolves to a new course id —
+ * the #737 happy path. No `.from()` queries run anymore (the action is auth →
+ * pure parse → single RPC).
+ */
+function happyMock() {
+  return buildSupabaseMock([], { create_course_with_layout: 'course-1' });
 }
 
 /** Build a complete, valid course FormData (18 holes + one rated tee). */
@@ -71,11 +70,8 @@ function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
 }
 
-function coursesInsertArgs(): Record<string, unknown> | undefined {
-  const call = supabaseMock.__fromCalls.find(
-    (c) => c.table === 'courses' && c.method === 'insert',
-  );
-  return call?.args[0] as Record<string, unknown> | undefined;
+function rpcCall(name: string) {
+  return supabaseMock.__rpcCalls.find((c) => c.name === name);
 }
 
 beforeEach(() => {
@@ -92,14 +88,15 @@ describe('createCourse — #366 gate + RLS-write', () => {
       RedirectError,
     );
     expect(lastRedirect()).toBe('/login');
-    // No write attempted.
+    // No write attempted — neither a direct insert nor the RPC.
     expect(
       supabaseMock.__fromCalls.some((c) => c.method === 'insert'),
     ).toBe(false);
+    expect(supabaseMock.__rpcCalls).toHaveLength(0);
   });
 
-  it('lets a regular (non-admin) user create a course via the request-scoped client', async () => {
-    supabaseMock = buildSupabaseMock(happyQueue());
+  it('creates a course atomically via the create_course_with_layout RPC (#737)', async () => {
+    supabaseMock = happyMock();
     setAuth({ id: regularUserId });
     const { createCourse } = await import('./actions');
 
@@ -107,16 +104,23 @@ describe('createCourse — #366 gate + RLS-write', () => {
       RedirectError,
     );
 
-    // created_by is forced to the logged-in user — never client-supplied.
-    expect(coursesInsertArgs()).toMatchObject({
-      name: 'Testbanen',
-      created_by: regularUserId,
-    });
-    // All three tables written through the same (request-scoped) client.
-    const tables = supabaseMock.__fromCalls
-      .filter((c) => c.method === 'insert')
-      .map((c) => c.table);
-    expect(tables).toEqual(['courses', 'course_holes', 'tee_boxes']);
+    // #737: one atomic RPC, never three sequential table inserts.
+    expect(supabaseMock.__fromCalls.some((c) => c.method === 'insert')).toBe(
+      false,
+    );
+    const rpc = rpcCall('create_course_with_layout');
+    expect(rpc, 'create_course_with_layout invoked').toBeDefined();
+    const params = rpc!.params as {
+      p_name: string;
+      p_holes: unknown[];
+      p_tees: unknown[];
+    };
+    expect(params.p_name).toBe('Testbanen');
+    expect(params.p_holes).toHaveLength(18);
+    expect(params.p_tees).toHaveLength(1);
+    // created_by is set server-side (auth.uid()) inside the RPC — never a
+    // client-supplied param, which is a stronger guarantee than the old insert.
+    expect(params).not.toHaveProperty('created_by');
     // Default success redirect (admin path) when no override supplied.
     expect(lastRedirect()).toBe(
       '/admin/courses?status=created&name=Testbanen',
@@ -124,7 +128,7 @@ describe('createCourse — #366 gate + RLS-write', () => {
   });
 
   it('honors success_redirect + redirect_base for the non-admin /opprett-bane route', async () => {
-    supabaseMock = buildSupabaseMock(happyQueue());
+    supabaseMock = happyMock();
     setAuth({ id: regularUserId });
     const { createCourse } = await import('./actions');
 
@@ -136,6 +140,33 @@ describe('createCourse — #366 gate + RLS-write', () => {
     expect(lastRedirect()).toBe(
       '/opprett-bane?status=created&name=Testbanen',
     );
+  });
+
+  // #737 chaos-injection: the atomicity lives in Postgres (the RPC runs the three
+  // inserts in one transaction). This proves the TS path routes through the RPC
+  // and surfaces a localized error — never a partial multi-insert — when it
+  // fails, so a half-built course can never leak to the user.
+  it('rolls back cleanly: an RPC failure shows a localized error and leaks no insert (#737)', async () => {
+    supabaseMock = buildSupabaseMock([]);
+    setAuth({ id: regularUserId });
+    // Override the RPC to fail (the shared mock always resolves error:null).
+    // Still record the call into __rpcCalls so the assertion below can see it.
+    supabaseMock.rpc = vi.fn(async (name: string, params?: unknown) => {
+      supabaseMock.__rpcCalls.push({ name, params });
+      return { data: null, error: { message: 'boom' } };
+    }) as unknown as typeof supabaseMock.rpc;
+    const { createCourse } = await import('./actions');
+
+    await expect(createCourse(validCourseFormData())).rejects.toThrow(
+      RedirectError,
+    );
+    // No direct courses/holes/tees insert could have leaked a partial course.
+    expect(supabaseMock.__fromCalls.some((c) => c.method === 'insert')).toBe(
+      false,
+    );
+    // The RPC was attempted, and the failure bounced to a localized error.
+    expect(rpcCall('create_course_with_layout')).toBeDefined();
+    expect(lastRedirect()).toBe('/admin/courses/new?error=db_course');
   });
 
   it('bounces validation errors to redirect_base (non-admin route)', async () => {

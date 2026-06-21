@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.80] - 2026-06-22 · #737
+
+> Glipper noe mens du lager en bane, rydder appen bort hele forsøket, så du ikke blir sittende med en halvferdig bane du ikke får slettet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `createCourse` insertet tidligere `courses` → `course_holes` → `tee_boxes` i tre sekvensielle PostgREST-kall uten rollback. Feilet en barn-insert, ble en foreldreløs `courses`-rad liggende. Verre: en ikke-admin-skaper har ingen DELETE-policy på `courses` (kun «courses admin delete», 0092), så en kompenserende slett (#675-mønsteret) ville blitt blokkert av RLS og orphanen bestått. De tre insertene er flyttet inn i én `SECURITY DEFINER`-RPC `create_course_with_layout` (migrasjon 0113) som kjører dem i én transaksjon: feiler noe (DB-feil eller CHECK-brudd), ruller hele oppretelsen tilbake. RPC-en tvinger `created_by = auth.uid()` internt (sterkere garanti enn den gamle klient-satte verdien). Kolonne-shape verifisert mot live prod-skjema (trap #1); atomisitet smoke-testet på staging (gyldig kall → 18 hull + tee, ugyldig kall → 0 orphan-baner). Påført staging + prod. (#737)
+- Chaos-injection-test: en feilet RPC viser lokalisert feil og lekker aldri en direkte insert. Eksisterende happy-path-test omskrevet til å asserte RPC-kallet i stedet for de tre insertene. (#737)
+
+</details>
+
 ### [1.133.79] - 2026-06-21 · #799
 
 > Forhindrer at en klubbeier kan gjøre klubben eierløs ved å melde seg ut direkte — databasen krever nå alltid minst én eier igjen.
