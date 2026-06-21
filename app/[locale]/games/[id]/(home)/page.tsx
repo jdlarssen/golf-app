@@ -1,6 +1,5 @@
 import { first } from '@/lib/url/searchParams';
-import { Suspense, cache } from 'react';
-import { useTranslations } from 'next-intl';
+import { Suspense } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { formatNumber, formatTeeOffTimeLocale, formatTeeOffDateLocale } from '@/lib/i18n/format';
@@ -9,9 +8,7 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
 import { revalidateTag } from 'next/cache';
-import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { TopBar } from '@/components/ui/TopBar';
@@ -21,13 +18,10 @@ import { LinkButton } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { type GameStatus } from '@/lib/games/status';
 import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
-import { firstName } from '@/lib/firstName';
-import { nameInitials } from '@/lib/names/initials';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { notifyPlayersGameStarted } from '@/lib/notifications/events';
 import {
@@ -50,7 +44,6 @@ import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
 import { submitUndoWithdraw } from '../trekk-fra/actions';
-import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import {
   isMatchplayMode,
   computeSideShortfall,
@@ -63,6 +56,13 @@ import {
   type FlightPlayer,
 } from '@/lib/games/flightScope';
 import type { FlightOption } from '../ScheduledWaitingRoom';
+import { getGameContext } from './gameContext';
+import { FlightRoster, FlightRosterSkeleton } from './FlightRoster';
+import { DraftTeamsOverview } from './DraftTeamsOverview';
+import { PendingApprovalsBanner } from './PendingApprovalsBanner';
+import { CupStandingsLink } from './CupStandingsLink';
+import { CreatorControls } from './CreatorControls';
+import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -86,7 +86,7 @@ const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted: 'bannerSubmitted',
 };
 
-type GameRow = {
+export type GameRow = {
   id: string;
   name: string;
   status: GameStatus;
@@ -143,67 +143,10 @@ type GameRow = {
 const GAME_SELECT =
   'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
-type FlightRosterRow = {
-  user_id: string;
-  flight_number: number | null;
-  accepted_at: string | null;
-  users: {
-    // `name` is null for pending invitees per migration 0014. The flight
-    // roster only renders for active games, and the publish-gate (Task 7)
-    // prevents a game from leaving 'draft' with pending players on the
-    // roster — so in practice this is always set here. Kept nullable to
-    // match the DB column and stay safe against future flows.
-    name: string | null;
-    nickname: string | null;
-    hcp_index: number | string | null;
-  } | null;
-};
-
 /** Locale-aware thousands-separator. 6124 → "6 124" (no) / "6,124" (en). */
 function formatLengthMeters(n: number, locale: AppLocale): string {
   return formatNumber(n, locale);
 }
-
-type FlightMatePlayerRow = {
-  user_id: string;
-  flight_number: number;
-  submitted_at: string | null;
-  approved_at: string | null;
-};
-
-type UiState =
-  | 'not_started'
-  | 'in_progress'
-  | 'ready_to_submit'
-  | 'submitted_pending_approval'
-  | 'submitted_approved';
-
-function computeState(opts: {
-  strokesCount: number;
-  submittedAt: string | null;
-  approvedAt: string | null;
-  requirePeerApproval: boolean;
-}): UiState {
-  const { strokesCount, submittedAt, approvedAt, requirePeerApproval } = opts;
-  if (submittedAt) {
-    if (requirePeerApproval && !approvedAt) {
-      return 'submitted_pending_approval';
-    }
-    return 'submitted_approved';
-  }
-  if (strokesCount === 0) return 'not_started';
-  if (strokesCount >= 18) return 'ready_to_submit';
-  return 'in_progress';
-}
-
-// Request-scoped Supabase client + verified user id. Sharing the same client
-// across suspended siblings means we don't pay the cookie-auth round-trip
-// per section.
-const getGameContext = cache(async () => {
-  const supabase = await getServerClient();
-  const userId = await getProxyVerifiedUserId();
-  return { supabase, userId };
-});
 
 export default async function GameHomePage({
   params,
@@ -1066,518 +1009,5 @@ export default async function GameHomePage({
         </div>
       </div>
     </AppShell>
-  );
-}
-
-// ─── Scheduled-state flight roster ───────────────────────────────────────
-
-async function FlightRoster({
-  gameId,
-  flightNumber,
-  currentUserId,
-  testId,
-}: {
-  gameId: string;
-  /** null betyr «hele spillet» (singleFlight-modus — #543). */
-  flightNumber: number | null;
-  currentUserId: string;
-  /** data-testid til <ul>-elementet — kun for e2e-guards, ikke produksjon. */
-  testId?: string;
-}) {
-  const { supabase } = await getGameContext();
-  // #543: flightNumber=null betyr singleFlight → hent alle, ingen flight-filter.
-  const query = supabase
-    .from('game_players')
-    .select(
-      'user_id, flight_number, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
-    )
-    .eq('game_id', gameId)
-    .order('user_id');
-  const { data: flightRows } = await (
-    flightNumber != null ? query.eq('flight_number', flightNumber) : query
-  ).returns<FlightRosterRow[]>();
-
-  const tHome = await getTranslations('game.home');
-  const flight = (flightRows ?? []).map((row) => ({
-    userId: row.user_id,
-    isCurrentUser: row.user_id === currentUserId,
-    name: row.users?.name ?? tHome('unknownPlayer'),
-    hcpIndex:
-      row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
-    acceptedAt: row.accepted_at,
-  }));
-
-  return (
-    <ul className="mt-2 flex flex-col gap-2" data-testid={testId}>
-      {flight.map((p) => (
-        <li key={p.userId} className="flex items-center gap-3">
-          {/*
-            E5 dark-mode pass: inactive avatar uses bg-surface (not
-            bg-bg). In dark mode bg-bg matches the page bg
-            (--bg #0f1612), so the avatar would disappear into the
-            layout with only the border visible — a hole punched in
-            the page. bg-surface (--surface #1a2e1f in dark) sits as a
-            slightly lighter forest disc against the page bg. Light
-            mode is unchanged in feel: bg-surface (#ffffff) on the
-            --bg linen still reads as a paper-on-paper subtle disc.
-          */}
-          <span
-            className={`shrink-0 w-7 h-7 rounded-full grid place-items-center font-serif text-[12px] font-medium ${
-              p.isCurrentUser
-                ? 'bg-primary text-white dark:text-bg'
-                : 'bg-surface text-text border border-border'
-            }`}
-          >
-            {nameInitials(p.name)}
-          </span>
-          <span
-            className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
-          >
-            {firstName(p.name) ?? p.name}
-            {p.isCurrentUser && (
-              <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
-                {tHome('youLabel')}
-              </span>
-            )}
-          </span>
-          {p.acceptedAt == null && !p.isCurrentUser && (
-            <UnconfirmedBadge className="shrink-0" />
-          )}
-          <span className="shrink-0 text-xs text-muted tabular-nums">
-            HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-
-function FlightRosterSkeleton() {
-  return (
-    <ul className="mt-2 flex flex-col gap-2">
-      {[0, 1, 2, 3].map((i) => (
-        <li key={i} className="flex items-center gap-3">
-          <Skeleton className="shrink-0 h-7 w-7 rounded-full" delay={i * 90} />
-          <Skeleton className="flex-1 h-4" delay={i * 90 + 30} />
-          <Skeleton className="shrink-0 h-3 w-14" delay={i * 90 + 60} />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// ─── Draft-state teams overview ──────────────────────────────────────────
-
-type DraftRosterRow = {
-  user_id: string;
-  team_number: number;
-  users: {
-    // name is null until the invitee completes their profile — see
-    // migration 0014. Draft games can carry pending placeholders, so
-    // fall back to email when rendering.
-    name: string | null;
-    email: string;
-  } | null;
-};
-
-async function DraftTeamsOverview({
-  gameId,
-  currentUserId,
-}: {
-  gameId: string;
-  currentUserId: string;
-}) {
-  const { supabase } = await getGameContext();
-  const { data: rows } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, team_number, users!game_players_user_id_fkey(name, email)',
-    )
-    .eq('game_id', gameId)
-    .order('team_number')
-    .order('user_id')
-    .returns<DraftRosterRow[]>();
-
-  const players = rows ?? [];
-
-  const tHome = await getTranslations('game.home');
-  if (players.length === 0) {
-    return (
-      <p className="text-sm text-muted text-center py-4">{tHome('playersComingSoon')}</p>
-    );
-  }
-
-  const teamsWithPlayers = [1, 2, 3, 4].filter((teamNum) =>
-    players.some((p) => p.team_number === teamNum),
-  );
-
-  return (
-    <ul className="flex flex-col gap-3">
-      {teamsWithPlayers.map((teamNum) => {
-        const teamPlayers = players.filter((p) => p.team_number === teamNum);
-        return (
-          <li key={teamNum}>
-            <p className="text-xs text-muted uppercase tracking-[0.14em] font-semibold mb-1.5">
-              {tHome('teamLabel2', { number: teamNum })}
-            </p>
-            <ul className="flex flex-col gap-1">
-              {teamPlayers.map((p) => {
-                const isCurrent = p.user_id === currentUserId;
-                // Pending invitees (no profile yet) have null name — show
-                // their email instead so the team layout reads usefully.
-                const fullName = p.users?.name ?? p.users?.email ?? null;
-                const displayName =
-                  (fullName && firstName(fullName)) ??
-                  fullName ??
-                  tHome('unknownPlayer');
-                return (
-                  <li
-                    key={p.user_id}
-                    className={`flex items-center gap-2 text-[13.5px] ${
-                      isCurrent ? 'font-semibold' : ''
-                    }`}
-                  >
-                    <span
-                      className={`shrink-0 w-6 h-6 rounded-full grid place-items-center font-serif text-[11px] font-medium ${
-                        isCurrent
-                          ? 'bg-primary text-white dark:text-bg'
-                          : 'bg-surface text-text border border-border'
-                      }`}
-                    >
-                      {nameInitials(fullName)}
-                    </span>
-                    <span className="truncate">
-                      {displayName}
-                      {isCurrent && (
-                        <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
-                          {tHome('youLabel')}
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-// ─── Pending-approvals info banner (active state) ────────────────────────
-
-async function PendingApprovalsBanner({
-  gameId,
-  gameMode,
-  flightNumber,
-  currentUserId,
-  requirePeerApproval,
-  isActive,
-}: {
-  gameId: string;
-  gameMode: GameRow['game_mode'];
-  flightNumber: number | null;
-  currentUserId: string;
-  requirePeerApproval: boolean;
-  isActive: boolean;
-}) {
-  if (!requirePeerApproval || !isActive) return null;
-
-  const { supabase } = await getGameContext();
-  // Hent alle aktive spillere for å avgjøre singleFlight.
-  const { data: allMates } = await supabase
-    .from('game_players')
-    .select('user_id, flight_number, submitted_at, approved_at, withdrawn_at')
-    .eq('game_id', gameId)
-    .returns<(FlightMatePlayerRow & { withdrawn_at: string | null })[]>();
-
-  // #543: én-flight-regelen — alle i spillet er attestanter.
-  const singleFlight = isSingleFlightGame(
-    gameMode as Parameters<typeof isSingleFlightGame>[0],
-    (allMates ?? []).map((m) => ({
-      user_id: m.user_id,
-      flight_number: m.flight_number,
-      withdrawn_at: m.withdrawn_at,
-    })),
-  );
-  const mates = singleFlight
-    ? (allMates ?? [])
-    : (allMates ?? []).filter(
-        (m) =>
-          flightNumber != null && m.flight_number === flightNumber,
-      );
-
-  const pendingApprovalsForMe = (mates ?? []).filter(
-    (m) =>
-      m.user_id !== currentUserId &&
-      m.submitted_at != null &&
-      m.approved_at == null,
-  ).length;
-
-  if (pendingApprovalsForMe === 0) return null;
-
-  const tHome = await getTranslations('game.home');
-  return (
-    <div className="mb-4">
-      <Banner tone="info">
-        <div className="flex items-center justify-between gap-3">
-          <span>
-            {tHome('pendingApprovals', { count: pendingApprovalsForMe })}
-          </span>
-          <SmartLink
-            href={`/games/${gameId}/approve`}
-            className="text-sm font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary whitespace-nowrap"
-          >
-            {tHome('reviewLink')}
-          </SmartLink>
-        </div>
-      </Banner>
-    </div>
-  );
-}
-
-// ─── Cup-standings link (#347) ───────────────────────────────────────────
-
-/**
- * When a game belongs to a cup (`games.tournament_id` set), surface a link to
- * the public cup leaderboard so a participating player can reach the cup
- * standing straight from the match — not only via a direct URL (#347, part of
- * the «én vei til rom»-umbrella #344). Self-fetches like the other sections
- * here, so it streams behind Suspense and the shared `getGameWithPlayers`
- * cache helper stays untouched. Returns null for non-cup games and for cups
- * that no longer exist (so we never link to a deleted cup → 404).
- */
-async function CupStandingsLink({ gameId }: { gameId: string }) {
-  const { supabase } = await getGameContext();
-  const { data: row } = await supabase
-    .from('games')
-    .select('tournament_id')
-    .eq('id', gameId)
-    .maybeSingle<{ tournament_id: string | null }>();
-  const tournamentId = row?.tournament_id ?? null;
-  if (!tournamentId) return null;
-
-  const { data: cup } = await supabase
-    .from('tournaments')
-    .select('id')
-    .eq('id', tournamentId)
-    .maybeSingle<{ id: string }>();
-  if (!cup) return null;
-
-  const tHome = await getTranslations('game.home');
-  return (
-    <SmartLink href={`/cup/${tournamentId}`} className="block">
-      <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
-        <span className="text-base font-medium text-text">
-          {tHome('cupStandings')}
-        </span>
-        <span aria-hidden className="text-muted">
-          →
-        </span>
-      </Card>
-    </SmartLink>
-  );
-}
-
-// ─── Creator controls (#428) ─────────────────────────────────────────────
-
-/**
- * Arrangør-kontroll for spillets oppretter: rediger + slett. Kun draft/scheduled
- * — når runden har startet er handicaps frosset og scores finnes, så spillet er
- * effektivt låst (sletting av active/finished er admin-only, eier-beslutning
- * #428). Returnerer null for active/finished, så den kan rendres ubetinget
- * (gated på isCreator av kalleren) i både venterom- og hovedvisningen.
- */
-function CreatorControls({
-  gameId,
-  status,
-}: {
-  gameId: string;
-  status: GameStatus;
-}) {
-  const t = useTranslations('game.home');
-  // Pre-start: edit + delete the whole game. Roster management («Styr spillere»)
-  // opens once registration is live and stays available through active play
-  // (where it becomes withdraw + approval-override). Finished → nothing.
-  const preStart = status === 'draft' || status === 'scheduled';
-  const showRoster = status === 'scheduled' || status === 'active';
-  if (!preStart && !showRoster) return null;
-  return (
-    <div className="pt-2">
-      <Kicker tone="muted" className="mb-2">
-        {t('arrangerSection')}
-      </Kicker>
-      <div className="space-y-2">
-        {showRoster && (
-          <SmartLink href={`/games/${gameId}/spillere`} className="block">
-            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
-              <span className="text-base font-medium text-text">
-                {t('managePlayersLink')}
-              </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </Card>
-          </SmartLink>
-        )}
-        {preStart && (
-          <SmartLink href={`/games/${gameId}/rediger`} className="block">
-            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
-              <span className="text-base font-medium text-text">
-                {t('editGameLink')}
-              </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </Card>
-          </SmartLink>
-        )}
-        {preStart && (
-          <SmartLink href={`/games/${gameId}/slett`} className="block">
-            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-danger/40">
-              <span className="text-base font-medium text-danger">
-                {t('deleteGameLink')}
-              </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </Card>
-          </SmartLink>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Primary CTA (active state) ──────────────────────────────────────────
-
-async function PrimaryCtaSection({
-  gameId,
-  currentUserId,
-  submittedAt,
-  approvedAt,
-  requirePeerApproval,
-}: {
-  gameId: string;
-  currentUserId: string;
-  submittedAt: string | null;
-  approvedAt: string | null;
-  requirePeerApproval: boolean;
-}) {
-  const { supabase } = await getGameContext();
-
-  const { data: filledRows } = await supabase
-    .from('scores')
-    .select('hole_number')
-    .eq('game_id', gameId)
-    .eq('user_id', currentUserId)
-    .not('strokes', 'is', null);
-  const filledHoles = (filledRows ?? []).map((r) => r.hole_number);
-  const strokesCount = filledHoles.length;
-
-  // Issue #164: «Fortsett runden»-knappen skal peke på første tomme hull,
-  // ikke hardkodet hull 1. Sekvensiell scan 1→18 returnerer det første hullet
-  // uten score; ved full runde havner vi i ready_to_submit-state og denne
-  // verdien brukes ikke (CTA-en routes til /submit i stedet).
-  const filledSet = new Set(filledHoles);
-  let nextHole = 1;
-  for (let h = 1; h <= 18; h++) {
-    if (!filledSet.has(h)) {
-      nextHole = h;
-      break;
-    }
-  }
-
-  const state = computeState({
-    strokesCount,
-    submittedAt,
-    approvedAt,
-    requirePeerApproval,
-  });
-
-  return (
-    <PrimaryCta
-      gameId={gameId}
-      state={state}
-      strokesCount={strokesCount}
-      nextHole={nextHole}
-    />
-  );
-}
-
-function PrimaryCtaSkeleton() {
-  return <Skeleton className="h-12 w-full rounded-full" />;
-}
-
-function PrimaryCta({
-  gameId,
-  state,
-  strokesCount,
-  nextHole,
-}: {
-  gameId: string;
-  state: UiState;
-  strokesCount: number;
-  nextHole: number;
-}) {
-  const t = useTranslations('game.home');
-  const subtext =
-    state === 'in_progress' || state === 'ready_to_submit'
-      ? t('ctaHolesFilled', { count: strokesCount })
-      : null;
-
-  if (state === 'not_started') {
-    return (
-      <LinkButton href={`/games/${gameId}/holes/${nextHole}`} full>
-        {t('ctaStartRound')}
-      </LinkButton>
-    );
-  }
-
-  if (state === 'in_progress') {
-    return (
-      <div className="space-y-1.5">
-        <LinkButton href={`/games/${gameId}/holes/${nextHole}`} full>
-          {t('ctaContinueRound')}
-        </LinkButton>
-        {subtext && (
-          <p className="text-center text-xs text-muted tabular-nums">
-            {subtext}
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  if (state === 'ready_to_submit') {
-    return (
-      <div className="space-y-1.5">
-        <LinkButton href={`/games/${gameId}/submit`} full>
-          {t('ctaReviewAndSubmit')}
-        </LinkButton>
-        {subtext && (
-          <p className="text-center text-xs text-muted tabular-nums">
-            {subtext}
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  if (state === 'submitted_pending_approval') {
-    return (
-      <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-        {t('ctaSubmittedPendingApproval')}
-      </div>
-    );
-  }
-
-  // submitted_approved
-  return (
-    <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-      {t('ctaSubmittedApproved')}
-    </div>
   );
 }
