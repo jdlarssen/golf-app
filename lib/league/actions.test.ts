@@ -183,3 +183,104 @@ describe('updateLeagueRound — 0-row update is a failure (#727)', () => {
     expect(sel, 'update chained .select() for row-count assertion').toBeDefined();
   });
 });
+
+/**
+ * #737 chaos-injection: the league-draft and league-flight rollbacks (#675/#647)
+ * each lacked a test for one branch. These cover the remaining mid-sequence
+ * failures so every multi-step league creation path proves it leaves no orphan.
+ */
+describe('createLeagueDraft — rollback on league_players failure (#737)', () => {
+  function leagueFormWithPlayers(): FormData {
+    const fd = new FormData();
+    fd.set('name', 'Test-liga');
+    fd.set('season_start', '2026-01-01');
+    fd.set('season_end', '2026-12-31');
+    fd.set('format', 'stroke');
+    fd.set('scoring', 'net');
+    fd.set('standings_model', 'total');
+    fd.set('missed_round_policy', 'penalty');
+    fd.set('penalty_kind', 'worst_plus_one');
+    fd.set('course_scope', 'multi_course');
+    fd.set('frequency', 'monthly');
+    fd.set('player_ids', JSON.stringify(['p1', 'p2'])); // standalone → no member filter
+    return fd;
+  }
+
+  it('deletes the committed leagues row when league_players insert fails', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin
+      { data: { id: 'L2' }, error: null }, // leagues.insert().select('id').single
+      { error: null }, // league_rounds.insert OK
+      { error: { message: 'boom' } }, // league_players.insert FAILS
+      { error: null }, // rollback: leagues.delete().eq('id','L2')
+    ]);
+    setUser('admin-1');
+    const { createLeagueDraft } = await import('./actions');
+
+    expect(await createLeagueDraft(leagueFormWithPlayers())).toEqual({
+      error: 'players_failed',
+    });
+
+    const del = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'leagues' && c.method === 'delete',
+    );
+    expect(del, 'leagues.delete issued for rollback').toBeDefined();
+    const eqCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'leagues' && c.method === 'eq',
+    );
+    expect(eqCall!.args).toEqual(['id', 'L2']);
+  });
+});
+
+describe('startLeagueRoundFlight — rollback on game_players failure (#737)', () => {
+  it('deletes the committed games row when the flight game_players insert fails', async () => {
+    supabaseMock = buildSupabaseMock([
+      // 1. round (wide window so the gate passes)
+      {
+        data: {
+          id: 'r1',
+          league_id: 'l1',
+          course_id: 'c1',
+          tee_box_id: 'tb1',
+          opens_at: '2000-01-01T00:00:00Z',
+          closes_at: '2099-01-01T00:00:00Z',
+          original_closes_at: '2099-01-01T00:00:00Z',
+        },
+      },
+      // 2. league (active)
+      { data: { id: 'l1', name: 'Test-liga', course_id: 'c1', tee_box_id: 'tb1', status: 'active', format: 'stroke' } },
+      // 3. membership
+      { data: [{ user_id: 'u1' }, { user_id: 'u2' }] },
+      // 4. prior finished flights → none
+      { data: [] },
+      // 5. tee_gender roster
+      { data: [{ id: 'u1', gender: 'male' }, { id: 'u2', gender: 'female' }] },
+      // 6. games.insert(...).select('id').single
+      { data: { id: 'g1' }, error: null },
+      // 7. game_players.insert FAILS
+      { error: { message: 'boom' } },
+      // 8. rollback: games.delete().eq('id','g1')
+      { error: null },
+    ]);
+    setUser('u1');
+    const { startLeagueRoundFlight } = await import('./actions');
+
+    expect(await startLeagueRoundFlight('r1', ['u2'])).toEqual({
+      error: 'insert_failed',
+    });
+
+    // The committed flight game is rolled back (game_players cascade), so no
+    // orphan game is left for the round.
+    const calls = supabaseMock.__fromCalls;
+    const delIdx = calls.findIndex(
+      (c) => c.table === 'games' && c.method === 'delete',
+    );
+    expect(delIdx, 'games.delete issued for rollback').toBeGreaterThanOrEqual(0);
+    // The `eq` that targets the rollback delete is the first games-eq after it
+    // (earlier games-eq calls belong to the prior-finished-flights query).
+    const eqAfter = calls
+      .slice(delIdx)
+      .find((c) => c.table === 'games' && c.method === 'eq');
+    expect(eqAfter!.args).toEqual(['id', 'g1']);
+  });
+});
