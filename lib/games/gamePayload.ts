@@ -292,6 +292,77 @@ function parseGameMode(formData: FormData): GameMode | null {
 }
 
 /**
+ * Leser en `<mode>_scoring`-toggle fra form-data. Defaulter til 'net' når feltet
+ * mangler eller har en ugyldig verdi — speiler Tørny's HCP-default-ethos. Delt
+ * helper for de score-baserte solo-formatene (wolf/nassau/skins/acey_deucey/
+ * nines/shamble/patsome), som alle leser samme 'gross'|'net'-felt.
+ */
+function parseScoringToggle(
+  formData: FormData,
+  formKey: string,
+): 'gross' | 'net' {
+  const raw = String(formData.get(formKey) ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
+/**
+ * Leser solo-format-spillere fra `player_${i}_id`-slots (0..slotCount-1) og
+ * nullstiller team_number/flight_number — DB-CHECK
+ * `game_players_team_flight_consistency` krever begge satt sammen eller begge
+ * null. Delt helper for de null-team solo-validatorene hvis loop-kropp er
+ * byte-identisk; slot-count varierer (8 vs 17) og er derfor en parameter.
+ *
+ * Returnerer `{ ok: true, players }` eller `{ ok: false, errorCode:
+ * 'duplicate_player' }` ved første duplikat — call-site eier alle videre
+ * publish-/cap-/team-sjekker.
+ */
+function parseSoloPlayers(
+  formData: FormData,
+  slotCount: number,
+):
+  | { ok: true; players: GamePlayerInput[] }
+  | { ok: false; errorCode: 'duplicate_player' } {
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < slotCount; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+  return { ok: true, players };
+}
+
+/**
+ * Sjekker at hvert ikke-tomt lag har EKSAKT `requiredSize` spillere. Returnerer
+ * `'team_balance'` ved første lag i ubalanse, ellers `null`. Delt helper for
+ * lag-formatene som teller per team_number og krever en fast lagstørrelse
+ * (best-ball/par-stableford = 2; texas/ambrose/florida/shamble = team_size;
+ * patsome = 2). Ekskluderer 2v2-matchplay-validatorene (foursomes-familien),
+ * som bruker en distinkt side-1/side-2-sjekk.
+ */
+function validateTeamBalance(
+  players: GamePlayerInput[],
+  requiredSize: number,
+): 'team_balance' | null {
+  const teamCounts = new Map<number, number>();
+  for (const p of players) {
+    if (p.team_number === null) continue;
+    teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
+  }
+  for (const [, count] of teamCounts) {
+    if (count !== requiredSize) {
+      return 'team_balance';
+    }
+  }
+  return null;
+}
+
+/**
  * Best-ball-netto-validator. Fleksibel lagstørrelse (#374):
  *  - publish krever ≥1 lag à 2 spillere (2, 4, 6 eller 8 spillere),
  *    hvert ikke-tomt lag har EKSAKT 2 spillere — speiler validateStablefordTeam
@@ -1508,7 +1579,7 @@ function validateWolf(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const wolfScoring = parseWolfScoring(formData);
+  const wolfScoring = parseScoringToggle(formData, 'wolf_scoring');
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
@@ -1565,16 +1636,6 @@ function validateWolf(
 }
 
 /**
- * Leser `wolf_scoring` fra form-data. Defaulter til 'net' når feltet mangler
- * eller har en ugyldig verdi — speiler Tørny's HCP-default-ethos.
- */
-function parseWolfScoring(formData: FormData): 'gross' | 'net' {
-  const raw = String(formData.get('wolf_scoring') ?? '').trim();
-  if (raw === 'gross') return 'gross';
-  return 'net';
-}
-
-/**
  * Nassau-validator (issue #276 — front 9 + back 9 + total 18).
  *
  * Regler:
@@ -1597,7 +1658,7 @@ function validateNassau(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const nassauScoring = parseNassauScoring(formData);
+  const nassauScoring = parseScoringToggle(formData, 'nassau_scoring');
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
@@ -1634,16 +1695,6 @@ function validateNassau(
 }
 
 /**
- * Leser `nassau_scoring` fra form-data. Defaulter til 'net' når feltet mangler
- * eller har en ugyldig verdi — speiler Wolf-mønstret + Tørny's HCP-default.
- */
-function parseNassauScoring(formData: FormData): 'gross' | 'net' {
-  const raw = String(formData.get('nassau_scoring') ?? '').trim();
-  if (raw === 'gross') return 'gross';
-  return 'net';
-}
-
-/**
  * Skins-validator (issue #275 — skins med carryover).
  *
  * Speiler `validateNassau`: solo-format, 2-16 spillere ved publish (#460), ingen
@@ -1660,7 +1711,7 @@ function validateSkins(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const skinsScoring = parseSkinsScoring(formData);
+  const skinsScoring = parseScoringToggle(formData, 'skins_scoring');
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
@@ -1697,17 +1748,6 @@ function validateSkins(
 }
 
 /**
- * Leser `skins_scoring` fra form-data. Defaulter til 'net' når feltet mangler
- * eller har en ugyldig verdi — speiler Nassau/Wolf-mønstret + Tørny's
- * HCP-default.
- */
-function parseSkinsScoring(formData: FormData): 'gross' | 'net' {
-  const raw = String(formData.get('skins_scoring') ?? '').trim();
-  if (raw === 'gross') return 'gross';
-  return 'net';
-}
-
-/**
  * Acey Deucey-validator (issue #279 — 4-spiller per-hull point-game).
  *
  * Speiler `validateSkins`/`validateNassau` for scoring-toggle; speiler
@@ -1730,7 +1770,7 @@ function validateAceyDeucey(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const aceyDeuceyScoring = parseAceyDeuceyScoring(formData);
+  const aceyDeuceyScoring = parseScoringToggle(formData, 'acey_deucey_scoring');
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
@@ -1762,16 +1802,6 @@ function validateAceyDeucey(
       acey_deucey_scoring: aceyDeuceyScoring,
     },
   };
-}
-
-/**
- * Leser `acey_deucey_scoring` fra form-data. Defaulter til 'net' når feltet
- * mangler eller har en ugyldig verdi — speiler Nassau/Wolf/Skins-mønstret.
- */
-function parseAceyDeuceyScoring(formData: FormData): 'gross' | 'net' {
-  const raw = String(formData.get('acey_deucey_scoring') ?? '').trim();
-  if (raw === 'gross') return 'gross';
-  return 'net';
 }
 
 /**
@@ -1825,12 +1855,6 @@ function parseNinesVariant(formData: FormData): 'nines' | 'split_sixes' {
   return 'nines';
 }
 
-function parseNinesScoring(formData: FormData): 'gross' | 'net' {
-  const raw = String(formData.get('nines_scoring') ?? '').trim();
-  if (raw === 'gross') return 'gross';
-  return 'net';
-}
-
 /**
  * Nines / Split Sixes-validator (issue #278).
  *
@@ -1845,7 +1869,7 @@ function validateNines(
   mode: PayloadMode,
 ): ModeValidationResult {
   const ninesVariant = parseNinesVariant(formData);
-  const ninesScoring = parseNinesScoring(formData);
+  const ninesScoring = parseScoringToggle(formData, 'nines_scoring');
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
@@ -1990,12 +2014,6 @@ function parseShambleVariant(formData: FormData): 'shamble' | 'champagne' {
   return 'shamble';
 }
 
-function parseShambleScoring(formData: FormData): 'gross' | 'net' {
-  const raw = String(formData.get('shamble_scoring') ?? '').trim();
-  if (raw === 'gross') return 'gross';
-  return 'net';
-}
-
 /**
  * Leser `shamble_team_size` fra form-data. Returnerer 3, 4 eller null
  * (manglende felt / ugyldig verdi). Shamble spilles i lag à 3 eller 4.
@@ -2045,7 +2063,7 @@ function validateShamble(
   }
 
   const variant = parseShambleVariant(formData);
-  const scoring = parseShambleScoring(formData);
+  const scoring = parseScoringToggle(formData, 'shamble_scoring');
   const count = parseShambleCount(formData, variant);
 
   const players: GamePlayerInput[] = [];
@@ -2098,17 +2116,6 @@ function validateShamble(
 }
 
 /**
- * Leser `patsome_scoring` fra form-data. Defaulter til 'net' når feltet
- * mangler eller har en ugyldig verdi — speiler Wolf/Nassau/Skins/Nines-mønstret
- * + Tørny's HCP-default.
- */
-function parsePatsomeScoring(formData: FormData): 'gross' | 'net' {
-  const raw = String(formData.get('patsome_scoring') ?? '').trim();
-  if (raw === 'gross') return 'gross';
-  return 'net';
-}
-
-/**
  * Patsome-validator (issue #286 — 6 hull 4BBB → 6 greensome → 6 foursomes).
  *
  * Lag à 2, felt av 2+ lag (ingen fast øvre grense — klubb-format). Speiler
@@ -2133,7 +2140,7 @@ function validatePatsome(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const patsomeScoring = parsePatsomeScoring(formData);
+  const patsomeScoring = parseScoringToggle(formData, 'patsome_scoring');
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
