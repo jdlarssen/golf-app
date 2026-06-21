@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.70] - 2026-06-21 · #819
+
+> Appen lagrer ikke lenger innholdet på innloggede sider i nettleser-cachen. Skulle noen andre bruke samme telefon uten nett, ser de aldri din profil, dine resultater eller adminpanelet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `public/sw.js`: service workeren cachet HTML for alle same-origin navigasjoner, inkludert autentiserte sider (`/en/profile`, `/admin/*`, `/cup/*`, `/liga/*`, `/games/*` m.fl.). Offline-fallbacken serverte da `cache.match(request)` uten sesjonsjekk, noe som på en delt enhet kunne eksponere forrige brukers HTML. Løst ved å bytte fra en denylist til en **allowlist** for navigasjonsbufring: kun kjente offentlige shell-ruter skrives til cachen (`/`, `/{locale}`, `/login`, `/legal/*`, `/spillformater`, `/finn-turneringer`, pluss locale-prefiks-varianter). Autentiserte ruter hentes fortsatt nettverksfirst, men caches aldri. Offline-fallback bruker kun cachet app-shell (`/`), aldri personlig HTML. `CACHE_VERSION` bumpa `v1` → `v2` så aktiveringshandleren sletter alle gamle cacher (inkludert autentisert HTML fra v1-klienter) ved SW-oppdatering. Offline scoring-loop er Dexie-basert og upåvirket. (#819)
+
+</details>
+
 ### [1.133.69] - 2026-06-21 · #793
 
 > «Vis regler» og «Skjul regler»-knappene i veiviserens format-ark vises nå på riktig språk — engelske brukere ser «Show rules» / «Hide rules» / «Read more →».

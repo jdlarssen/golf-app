@@ -3,13 +3,45 @@
 // Strategy:
 //   * Runtime caching only — we do NOT precache hashed Next.js chunks because
 //     they change every build. The first navigation seeds the cache.
-//   * Network-first for HTML navigations so users see fresh data when online.
+//   * Network-first for HTML navigations so online users see fresh content.
 //   * Cache-first for /_next/* static assets (immutable, content-hashed).
 //   * Pass-through for cross-origin (e.g. Supabase) and /auth/* and /api/*.
 //
-// Bump CACHE_VERSION when SW logic changes so old clients get the new SW.
-const CACHE_VERSION = 'v1';
+// Security: we only cache a known allowlist of PUBLIC shell routes.
+// Authenticated / personal SSR pages (profile, admin, games, cup, liga, …)
+// are deliberately NOT written to the runtime cache so that offline fallback
+// can never serve one user's HTML to another session on the same device.
+// The offline scoring loop is Dexie-based and does not rely on cached HTML.
+//
+// Bump CACHE_VERSION when SW logic changes so old clients get the new SW
+// and stale entries (including any authed HTML cached by the old v1 SW)
+// are evicted during activate.
+const CACHE_VERSION = 'v2';
 const RUNTIME_CACHE = `golf-app-runtime-${CACHE_VERSION}`;
+
+// Locale prefixes that next-intl injects (keep in sync with i18n config).
+const LOCALES = ['no', 'en'];
+
+// Allowlist of navigation paths whose HTML is safe to cache.
+// Matches are exact or prefix-based — see isPublicNavigation() below.
+// Everything NOT in this list falls through to network-only (no cache write).
+const PUBLIC_NAV_PREFIXES = [
+  // Legal / info pages — no personal data, no auth gate.
+  '/legal/',
+  ...LOCALES.map((l) => `/${l}/legal/`),
+  // Format catalogue — publicly browsable, no auth.
+  '/spillformater',
+  ...LOCALES.map((l) => `/${l}/spillformater`),
+  // Discover-tournaments page — publicly browsable, no auth.
+  '/finn-turneringer',
+  ...LOCALES.map((l) => `/${l}/finn-turneringer`),
+  // Login page — no personal data, needed for offline UX shell.
+  '/login',
+  ...LOCALES.map((l) => `/${l}/login`),
+];
+
+// Exact paths whose HTML is safe to cache (home / app shell).
+const PUBLIC_NAV_EXACT = ['/', ...LOCALES.map((l) => `/${l}`)];
 
 self.addEventListener('install', () => {
   // Take over as soon as the new SW is installed; we have no precache to wait on.
@@ -21,6 +53,7 @@ self.addEventListener('activate', (event) => {
     (async () => {
       const names = await caches.keys();
       await Promise.all(
+        // Delete ALL previous golf-app caches (including v1 with authed HTML).
         names
           .filter((n) => n.startsWith('golf-app-') && n !== RUNTIME_CACHE)
           .map((n) => caches.delete(n)),
@@ -31,13 +64,21 @@ self.addEventListener('activate', (event) => {
 });
 
 function shouldCache(url) {
-  // Cache same-origin Next.js static assets and navigation HTML.
-  // Do NOT cache Supabase API calls (we have IndexedDB), the auth callback,
-  // or anything cross-origin.
+  // Cache same-origin Next.js static assets only.
+  // Navigation HTML is handled separately with a stricter allowlist.
   if (url.origin !== self.location.origin) return false;
   if (url.pathname.startsWith('/auth/')) return false;
   if (url.pathname.startsWith('/api/')) return false;
   return true;
+}
+
+// Returns true only for navigation requests to the known public allowlist.
+// Authenticated routes (profile, admin, games, cup, liga, innboks, …)
+// return false and their HTML is never written to the cache.
+function isPublicNavigation(url) {
+  const { pathname } = url;
+  if (PUBLIC_NAV_EXACT.includes(pathname)) return true;
+  return PUBLIC_NAV_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 self.addEventListener('fetch', (event) => {
@@ -52,17 +93,30 @@ self.addEventListener('fetch', (event) => {
 
   // Network-first for navigations so online users see fresh content.
   if (isNavigation) {
+    const cacheAllowed = isPublicNavigation(url);
     event.respondWith(
       (async () => {
         try {
           const fresh = await fetch(request);
-          const cache = await caches.open(RUNTIME_CACHE);
-          cache.put(request, fresh.clone());
+          // Only cache public shell routes — never cache authed/personal HTML.
+          if (cacheAllowed) {
+            const cache = await caches.open(RUNTIME_CACHE);
+            cache.put(request, fresh.clone());
+          }
           return fresh;
         } catch {
+          // Offline fallback: serve cached public shell if available.
+          if (cacheAllowed) {
+            const cache = await caches.open(RUNTIME_CACHE);
+            const cached = await cache.match(request);
+            if (cached) return cached;
+          }
+          // Fall back to the cached home/app-shell regardless of route —
+          // showing a generic shell is safe; showing another user's authed
+          // HTML is not.
           const cache = await caches.open(RUNTIME_CACHE);
-          const cached = (await cache.match(request)) || (await cache.match('/'));
-          if (cached) return cached;
+          const shell = await cache.match('/');
+          if (shell) return shell;
           return Response.error();
         }
       })(),
@@ -70,7 +124,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for hashed static assets.
+  // Cache-first for hashed static assets (/_next/*).
   if (url.pathname.startsWith('/_next/')) {
     event.respondWith(
       (async () => {
