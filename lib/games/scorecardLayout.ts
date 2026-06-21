@@ -8,6 +8,7 @@ import {
 } from '@/lib/scoring/modes/singlesMatchplay';
 import {
   isStablefordFamily,
+  isScrambleFamily,
   isAlternateShotMatchplay,
 } from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
@@ -126,7 +127,7 @@ export function resolveScorecardLayout(
   const mode = game.game_mode;
   const cfg = game.mode_config;
 
-  if (mode === 'texas_scramble' || mode === 'ambrose' || mode === 'florida_scramble') {
+  if (isScrambleFamily(mode)) {
     const teamMembers = players.filter((p) => p.team_number === me.team_number);
     const captainId =
       teamMembers.length > 0

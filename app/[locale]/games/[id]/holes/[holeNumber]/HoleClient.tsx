@@ -26,7 +26,7 @@ import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
 import { PokalIcon } from '@/components/icons';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
-import { isStablefordFamily } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, isScrambleFamily } from '@/lib/scoring/modes/types';
 import type {
   GameMode,
   ScoringGender,
@@ -268,7 +268,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // med ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
   // mot myUserId må derfor falle tilbake til lag-kortet for non-captain-
   // medlemmer. Submit-state speiler hele lagets state.
-  const isTexas = gameMode === 'texas_scramble' || gameMode === 'ambrose' || gameMode === 'florida_scramble';
+  const isTexas = isScrambleFamily(gameMode);
   // Florida Scramble (#283): step-aside-regelen vises som påminnelse på hull-flaten.
   // Kun for florida — ikke for texas eller ambrose.
   const isFlorida = gameMode === 'florida_scramble';

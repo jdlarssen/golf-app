@@ -1,4 +1,4 @@
-import { isStablefordFamily, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, isScrambleFamily, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
 
 export interface ScorecardTitleKeys {
   /** Key in the `scorecard` namespace — TopBar kicker / page heading. */
@@ -37,9 +37,7 @@ export function scorecardTitle(
 
   const isTeamMode =
     gameMode === 'best_ball' ||
-    gameMode === 'texas_scramble' ||
-    gameMode === 'ambrose' ||
-    gameMode === 'florida_scramble' ||
+    isScrambleFamily(gameMode) ||
     gameMode === 'patsome' ||
     (isStablefordFamily(gameMode) && (modeConfig.kind === 'stableford' || modeConfig.kind === 'modified_stableford') && modeConfig.team_size === 2);
 
