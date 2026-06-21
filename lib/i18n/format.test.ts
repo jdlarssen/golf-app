@@ -14,7 +14,7 @@ import {
   formatShortDateWithYearLocale,
   formatShortDateLocale,
   formatRelativeLocale,
-  formatCountdownLocale,
+  countdownParts,
   formatTeeOffLineLocale,
   shortMonthLocale,
   formatShortUTCDayMonthLocale,
@@ -31,6 +31,9 @@ import {
 import { formatShortDateNb, formatShortDateNbWithYear } from '@/lib/format/date';
 import { formatRelativeNb } from '@/lib/format/relativeTimeNb';
 import { formatCountdown } from '@/lib/format/countdown';
+import { createTranslator } from 'next-intl';
+import noMessages from '@/messages/no.json';
+import enMessages from '@/messages/en.json';
 
 // 2026-05-08 14:30 UTC — formatted in UTC throughout so tests are
 // timezone-independent.
@@ -264,8 +267,58 @@ describe('formatShortDateWithYearLocale', () => {
   });
 });
 
-describe('formatCountdownLocale', () => {
-  const CASES: Array<[number]> = [
+describe('countdownParts', () => {
+  it.each([
+    [-1000, { kind: 'soon' }],
+    [0, { kind: 'soon' }],
+    [45_000, { kind: 'seconds', n: 45 }],
+    [59_000, { kind: 'seconds', n: 59 }],
+    [60_000, { kind: 'minutes', n: 1 }],
+    [45 * 60_000, { kind: 'minutes', n: 45 }],
+    [3_600_000, { kind: 'hoursMinutes', h: 1, m: 0 }],
+    [(2 * 60 + 14) * 60_000, { kind: 'hoursMinutes', h: 2, m: 14 }],
+    [36 * 60 * 60_000, { kind: 'days', n: 1 }],
+    [4 * 24 * 60 * 60_000, { kind: 'days', n: 4 }],
+  ] as const)('classifies %s ms', (ms, expected) => {
+    expect(countdownParts(ms)).toEqual(expected);
+  });
+});
+
+// Renders the countdown via the message catalog (the production path) and
+// proves the `no` strings are byte-identical to the legacy formatCountdown
+// helper, while `en` renders idiomatic English — no hardcoded prose in the TS.
+describe('countdown catalog render', () => {
+  const NS = 'game.waitingRoom.countdown';
+  const noT = createTranslator({
+    locale: 'no',
+    messages: noMessages,
+    namespace: NS,
+    timeZone: 'Europe/Oslo',
+  });
+  const enT = createTranslator({
+    locale: 'en',
+    messages: enMessages,
+    namespace: NS,
+    timeZone: 'Europe/Oslo',
+  });
+
+  function render(t: typeof noT, ms: number): string {
+    const p = countdownParts(ms);
+    switch (p.kind) {
+      case 'soon':
+        return t('soon');
+      case 'seconds':
+        return t('seconds', { n: p.n });
+      case 'minutes':
+        return t('minutes', { n: p.n });
+      case 'hoursMinutes':
+        return t('hoursMinutes', { h: p.h, m: p.m });
+      case 'days':
+        return t('days', { n: p.n });
+    }
+  }
+
+  it.each([
     [-1000],
     [0],
     [45_000],
@@ -275,44 +328,18 @@ describe('formatCountdownLocale', () => {
     [(2 * 60 + 14) * 60_000],
     [4 * 24 * 60 * 60_000],
     [36 * 60 * 60_000],
-  ];
-
-  it.each(CASES)(
-    "'no' output is byte-identical to legacy formatCountdown (%s ms)",
-    (ms) => {
-      expect(formatCountdownLocale(ms, 'no')).toBe(formatCountdown(ms));
-    },
-  );
-
-  it('en: ≤0 → "Starting soon"', () => {
-    expect(formatCountdownLocale(0, 'en')).toBe('Starting soon');
-    expect(formatCountdownLocale(-1000, 'en')).toBe('Starting soon');
+    [86_400_000],
+  ])('no render == legacy formatCountdown (%s ms)', (ms) => {
+    expect(render(noT, ms)).toBe(formatCountdown(ms));
   });
 
-  it('en: seconds bucket', () => {
-    expect(formatCountdownLocale(45_000, 'en')).toBe('Starting in 45s');
-  });
-
-  it('en: minutes bucket', () => {
-    expect(formatCountdownLocale(45 * 60_000, 'en')).toBe('Starting in 45 min');
-  });
-
-  it('en: hours+minutes bucket', () => {
-    expect(formatCountdownLocale((2 * 60 + 14) * 60_000, 'en')).toBe(
-      'Starting in 2h 14 min',
-    );
-  });
-
-  it('en: days bucket — plural', () => {
-    expect(formatCountdownLocale(4 * 24 * 60 * 60_000, 'en')).toBe(
-      'Starting in 4 days',
-    );
-  });
-
-  it('en: days bucket — singular', () => {
-    expect(formatCountdownLocale(36 * 60 * 60_000, 'en')).toBe(
-      'Starting in 1 day',
-    );
+  it('en renders idiomatic English', () => {
+    expect(render(enT, 0)).toBe('Starting soon');
+    expect(render(enT, 45_000)).toBe('Starting in 45s');
+    expect(render(enT, 45 * 60_000)).toBe('Starting in 45 min');
+    expect(render(enT, (2 * 60 + 14) * 60_000)).toBe('Starting in 2h 14 min');
+    expect(render(enT, 36 * 60 * 60_000)).toBe('Starting in 1 day');
+    expect(render(enT, 4 * 24 * 60 * 60_000)).toBe('Starting in 4 days');
   });
 });
 

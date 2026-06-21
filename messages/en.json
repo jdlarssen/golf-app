@@ -1469,6 +1469,13 @@
       "unknownPlayer": "(unknown)"
     },
     "waitingRoom": {
+      "countdown": {
+        "soon": "Starting soon",
+        "seconds": "Starting in {n}s",
+        "minutes": "Starting in {n} min",
+        "hoursMinutes": "Starting in {h}h {m} min",
+        "days": "Starting in {n, plural, one {# day} other {# days}}"
+      },
       "countdownBody": "We'll notify you when the scorecard opens.",
       "joinFlightLabel": "Choose your flight",
       "flightLabel": "Flight {number}",

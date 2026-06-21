@@ -8,7 +8,6 @@ import {
   formatShortDateNbWithYear as formatShortDateNbWithYearLegacy,
   formatMonthLongNb,
 } from '@/lib/format/date';
-import { formatCountdown as formatCountdownNb } from '@/lib/format/countdown';
 import { formatRelativeNb as formatRelativeNbLegacy } from '@/lib/format/relativeTimeNb';
 
 /**
@@ -464,37 +463,35 @@ export function formatHHMMOslo(input: DateInput): string {
 }
 
 /**
- * Locale-aware countdown string.
+ * Locale-independent classifier for a tee-off countdown.
  *
- * Norwegian ('no'): delegates to legacy helper (byte-identical output).
- * English ('en'):   analogous English phrasing:
- *   ≤0 ms     → "Starting soon"
- *   <60 s     → "Starting in {n}s"
- *   <60 min   → "Starting in {n} min"
- *   <24 h     → "Starting in {h}h {m} min"
- *   ≥24 h     → "Starting in {n} day" / "Starting in {n} days"
+ * Returns which tier the remaining time falls in plus the numbers to render —
+ * the actual phrasing lives in the message catalog (`game.waitingRoom.countdown.*`)
+ * so every locale gets its own wording via next-intl ICU, with no hardcoded
+ * English (the N-locale criterion, #845). The arithmetic mirrors the legacy
+ * `formatCountdown` (lib/format/countdown.ts) so the catalog's `no` strings
+ * render byte-identically to it.
  */
-export function formatCountdownLocale(
-  msUntilTeeOff: number,
-  locale: AppLocale,
-): string {
-  if (locale === 'no') return formatCountdownNb(msUntilTeeOff);
+export type CountdownParts =
+  | { kind: 'soon' }
+  | { kind: 'seconds'; n: number }
+  | { kind: 'minutes'; n: number }
+  | { kind: 'hoursMinutes'; h: number; m: number }
+  | { kind: 'days'; n: number };
 
-  // English path — same arithmetic as the Norwegian helper.
-  if (msUntilTeeOff <= 0) return 'Starting soon';
+export function countdownParts(msUntilTeeOff: number): CountdownParts {
+  if (msUntilTeeOff <= 0) return { kind: 'soon' };
 
   const totalSeconds = Math.floor(msUntilTeeOff / 1000);
-  if (totalSeconds < 60) return `Starting in ${totalSeconds}s`;
+  if (totalSeconds < 60) return { kind: 'seconds', n: totalSeconds };
 
   const totalMinutes = Math.floor(totalSeconds / 60);
-  if (totalMinutes < 60) return `Starting in ${totalMinutes} min`;
+  if (totalMinutes < 60) return { kind: 'minutes', n: totalMinutes };
 
   const totalHours = Math.floor(totalMinutes / 60);
   if (totalHours < 24) {
-    const minutes = totalMinutes - totalHours * 60;
-    return `Starting in ${totalHours}h ${minutes} min`;
+    return { kind: 'hoursMinutes', h: totalHours, m: totalMinutes - totalHours * 60 };
   }
 
-  const days = Math.floor(totalHours / 24);
-  return `Starting in ${days} ${days === 1 ? 'day' : 'days'}`;
+  return { kind: 'days', n: Math.floor(totalHours / 24) };
 }

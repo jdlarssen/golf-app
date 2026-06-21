@@ -1469,6 +1469,13 @@
       "unknownPlayer": "(ukjent)"
     },
     "waitingRoom": {
+      "countdown": {
+        "soon": "Starter snart",
+        "seconds": "Starter om {n} s",
+        "minutes": "Starter om {n} min",
+        "hoursMinutes": "Starter om {h} t {m} min",
+        "days": "Starter om {n, plural, one {# dag} other {# dager}}"
+      },
       "countdownBody": "Vi gir deg beskjed når kortet åpner.",
       "joinFlightLabel": "Velg din flight",
       "flightLabel": "Flight {number}",

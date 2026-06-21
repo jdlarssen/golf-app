@@ -2,9 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/navigation';
-import { useLocale, useTranslations } from 'next-intl';
-import type { AppLocale } from '@/i18n/routing';
-import { formatCountdownLocale } from '@/lib/i18n/format';
+import { useTranslations } from 'next-intl';
+import { countdownParts } from '@/lib/i18n/format';
 import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
 import { joinFlight } from './flightJoinActions';
 import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
@@ -42,7 +41,6 @@ export function ScheduledWaitingRoom({
   currentFlightNumber = null,
 }: WaitingRoomProps) {
   const router = useRouter();
-  const locale = useLocale() as AppLocale;
   const t = useTranslations('game.waitingRoom');
   const [now, setNow] = useState(() => Date.now());
   const [isPending, startTransition] = useTransition();
@@ -92,7 +90,17 @@ export function ScheduledWaitingRoom({
   }, [gameId, router]);
 
   const msUntil = new Date(teeOffAt).getTime() - now;
-  const text = formatCountdownLocale(msUntil, locale);
+  const parts = countdownParts(msUntil);
+  const text =
+    parts.kind === 'soon'
+      ? t('countdown.soon')
+      : parts.kind === 'seconds'
+        ? t('countdown.seconds', { n: parts.n })
+        : parts.kind === 'minutes'
+          ? t('countdown.minutes', { n: parts.n })
+          : parts.kind === 'hoursMinutes'
+            ? t('countdown.hoursMinutes', { h: parts.h, m: parts.m })
+            : t('countdown.days', { n: parts.n });
 
   function handleJoinFlight(flightNumber: number) {
     setJoinError(null);
