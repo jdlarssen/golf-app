@@ -3936,3 +3936,201 @@ describe('buildGameInsertPayload — gruesome_matchplay (issue #291)', () => {
     }
   });
 });
+
+describe('buildGameInsertPayload — greensome_matchplay (issue #289)', () => {
+  /**
+   * Karakteriserings-tester for greensome (#813 — lukker dekningshullet:
+   * `validateGreensomeMatchplay` hadde NULL coverage før dette). Greensome
+   * deler 2v2-validator-logikken med foursomes/chapman/gruesome — eneste
+   * forskjell er allowance-feltet `greensome_allowance_pct` og default 100
+   * (WHS-standard, SAMME som fourball/chapman, IKKE 50 som foursomes/gruesome).
+   *
+   * Helper speiler foursomesFd-mønsteret, men default allowance 100.
+   */
+  function greensomeFd(opts: {
+    sides?: Array<{ userId: string; side: number }>;
+    allowancePct?: number | string | null;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { sides = [], allowancePct = 100, extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Greensome Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'greensome_matchplay',
+    };
+    if (allowancePct !== null) {
+      base['greensome_allowance_pct'] = String(allowancePct);
+    }
+    sides.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.side);
+      base[`player_${i}_flight`] = String(p.side);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  const full2v2 = [
+    { userId: 'a', side: 1 },
+    { userId: 'b', side: 1 },
+    { userId: 'c', side: 2 },
+    { userId: 'd', side: 2 },
+  ];
+
+  it('publish 4 spillere 2v2 → ok, mode_config kind=greensome_matchplay, allowance 100', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({ sides: full2v2 }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('greensome_matchplay');
+    expect(result.mode_config).toEqual({
+      kind: 'greensome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('publish 3 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish 5 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 2 },
+          { userId: 'e', side: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('publish 4 spillere 3-1 → team_balance', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 1 },
+          { userId: 'd', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish ugyldig side (3) → bad_team', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 3 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('publish duplikat-spiller → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({
+        sides: [
+          { userId: 'dup', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'dup', side: 2 },
+          { userId: 'd', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('publish allowance 0 (brutto) → ok', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({ sides: full2v2, allowancePct: 0 }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'greensome_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(0);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish allowance 101 → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({ sides: full2v2, allowancePct: 101 }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish tom allowance-string → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({ sides: full2v2, allowancePct: '' }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('draft tom allowance defaulter til 100 (WHS greensome-standard)', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({ sides: [{ userId: 'a', side: 1 }], allowancePct: '' }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'greensome_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(100);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('draft tolererer 2 spillere (ufullstendig greensome-oppsett)', () => {
+    const result = buildGameInsertPayload(
+      greensomeFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 2 },
+        ],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+    if (result.mode_config.kind === 'greensome_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(100);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+});
