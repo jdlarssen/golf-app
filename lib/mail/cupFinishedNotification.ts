@@ -9,6 +9,7 @@
 
 import { Resend } from 'resend';
 import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { formatNumber } from '@/lib/i18n/format';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -39,12 +40,6 @@ export type CupFinishedNotificationParams = {
   locale?: string | null;
 };
 
-function formatPoints(n: number, locale: string): string {
-  // Norsk: komma som desimal-separator. Engelsk: standard punktum.
-  const s = String(n);
-  return locale === 'no' ? s.replace('.', ',') : s;
-}
-
 export async function sendCupFinishedNotification(
   params: CupFinishedNotificationParams,
 ): Promise<void> {
@@ -70,8 +65,8 @@ export async function sendCupFinishedNotification(
     ? t('cupFinished.salutationNamed', { name: playerFirstName })
     : t('cupFinished.salutationGeneric');
 
-  const p1 = formatPoints(team1Points, loc);
-  const p2 = formatPoints(team2Points, loc);
+  const p1 = formatNumber(team1Points, loc, { useGrouping: false });
+  const p2 = formatNumber(team2Points, loc, { useGrouping: false });
   const scoreLine = `${escapeHtml(team1Name)} ${p1} — ${p2} ${escapeHtml(team2Name)}`;
   const scoreLineText = `${team1Name} ${p1} — ${p2} ${team2Name}`;
 

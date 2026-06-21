@@ -9,6 +9,7 @@
 
 import { Resend } from 'resend';
 import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { formatNumber } from '@/lib/i18n/format';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -37,12 +38,6 @@ export type CupStartedNotificationParams = {
   locale?: string | null;
 };
 
-function formatPoints(n: number, locale: string): string {
-  // Norsk: komma som desimal-separator. Engelsk: standard punktum.
-  const s = String(n);
-  return locale === 'no' ? s.replace('.', ',') : s;
-}
-
 export async function sendCupStartedNotification(
   params: CupStartedNotificationParams,
 ): Promise<void> {
@@ -65,7 +60,7 @@ export async function sendCupStartedNotification(
   const salutation = playerFirstName
     ? t('cupStarted.salutationNamed', { name: playerFirstName })
     : t('cupStarted.salutationGeneric');
-  const pointsLabel = formatPoints(pointsToWin, loc);
+  const pointsLabel = formatNumber(pointsToWin, loc, { useGrouping: false });
 
   const bodyStartedHtml = t.markup('cupStarted.bodyStarted', {
     tournamentName: escapeHtml(tournamentName),
