@@ -4369,6 +4369,9 @@
     "conflictNotice": "Hole {holeNumber} was changed by another player. The most recent value now applies.",
     "conflictDismiss": "OK"
   },
+  "installButton": {
+    "label": "Install app"
+  },
   "installBanner": {
     "title": "Install Tørny as an app",
     "body": "Opens faster, and you can enter scores without a connection.",

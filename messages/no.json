@@ -4369,6 +4369,9 @@
     "conflictNotice": "Hull {holeNumber} ble endret av en medspiller. Det nyeste tallet gjelder nå.",
     "conflictDismiss": "OK"
   },
+  "installButton": {
+    "label": "Installer som app"
+  },
   "installBanner": {
     "title": "Installer Tørny som app",
     "body": "Raskere åpning, og du kan registrere slag uten dekning.",

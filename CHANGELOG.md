@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.68] - 2026-06-21 · #818
+
+> Profil-raden «Installer som app» vises nå på riktig språk — engelske brukere ser «Install app».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `InstallButton.tsx` hadde hardkodet norsk label `"Installer som app"` i stedet for `t('label')`. Lagt til namespace `installButton` (med nøkkel `label`) i både `messages/no.json` og `messages/en.json`. Komponenten bruker nå `useTranslations('installButton')`. catalogParity grønn. (#818)
+
+</details>
+
 ### [1.133.67] - 2026-06-21 · #816
 
 > Engelske brukere ser nå riktig apostrof i innboks, profil og venner-flaten — ikke lenger dobbel apostrof (f.eks. «You're friends now» i stedet for «You''re friends now»).

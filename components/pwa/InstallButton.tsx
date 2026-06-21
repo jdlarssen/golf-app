@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { InstallInstructionsModal } from './InstallInstructionsModal';
 
 /**
- * Renders an "Installer som app" row for the profile settings list. Self-hides
+ * Renders a localizable "Install app" row for the profile settings list. Self-hides
  * when the app is already installed (`standalone`) or while the prompt status
  * is still loading, so it slots into a {@link SettingList} as an optional row.
  */
 export function InstallButton() {
+  const t = useTranslations('installButton');
   const { status, install } = useInstallPrompt();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -33,7 +35,7 @@ export function InstallButton() {
 
   return (
     <>
-      <SettingRow label="Installer som app" onClick={onClick} />
+      <SettingRow label={t('label')} onClick={onClick} />
       <InstallInstructionsModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
