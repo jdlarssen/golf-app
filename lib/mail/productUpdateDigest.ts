@@ -60,7 +60,7 @@ export async function sendProductUpdateDigest(
   const { to, recipientFirstName, periodLabel, updates, unsubToken, locale } = params;
 
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   const subject = t('productUpdate.subject', { periodLabel });
   // unsubUrl is an API endpoint — no locale prefix needed.

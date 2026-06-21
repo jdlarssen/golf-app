@@ -158,7 +158,7 @@ export type GameFinishedNotificationParams = {
   locale?: string | null;
 };
 
-type MailTranslator = ReturnType<typeof getMailTranslator>;
+type MailTranslator = Awaited<ReturnType<typeof getMailTranslator>>;
 
 // Tag callbacks for `t.markup`. HTML wraps each emphasised chunk in <strong>;
 // plain text passes the chunk through unchanged. The same per-branch ICU message
@@ -279,7 +279,7 @@ export async function sendGameFinishedNotification(
 ): Promise<void> {
   const { to, playerFirstName, gameName, gameId, mode, locale } = params;
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   const subject = t('gameFinished.subject', { gameName });
   const leaderboardUrl = mailUrl(locale, `/games/${gameId}/leaderboard`);

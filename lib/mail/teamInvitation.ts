@@ -47,7 +47,7 @@ export async function sendTeamInvitationMail(
   const { to, captainName, gameName, teamName, gameShortId, locale } = params;
 
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   // Locale-riktig fallback når navnet mangler — payloaden holdes språk-nøytral (#583).
   const name = captainName ?? t('common.somePlayerFallback');

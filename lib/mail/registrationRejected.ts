@@ -43,7 +43,7 @@ export async function sendRegistrationRejectedMail(
 ): Promise<void> {
   const { to, gameName, reason, locale } = params;
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   const subject = t('registrationRejected.subject', { gameName });
 

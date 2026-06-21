@@ -48,7 +48,7 @@ export async function sendRegistrationRequestMail(
 ): Promise<void> {
   const { to, gameName, gameShortId, requesterName, message, locale } = params;
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   // Locale-riktig fallback når navnet mangler — payloaden holdes språk-nøytral (#583).
   const name = requesterName ?? t('common.somePlayerFallback');

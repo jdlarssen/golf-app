@@ -73,7 +73,7 @@ export type InviteNotificationParams = {
 function resolveModeHint(
   hasGame: boolean,
   gameMode: string | undefined,
-  messages: ReturnType<typeof getMailMessages>,
+  messages: Awaited<ReturnType<typeof getMailMessages>>,
 ): { label: string; summary: string } | null {
   if (!hasGame || !gameMode) return null;
   if (!Object.prototype.hasOwnProperty.call(MODE_LABELS, gameMode)) return null;
@@ -103,8 +103,8 @@ export async function sendInviteNotification(
 
   const { to, invitedByName, gameName, gameMode, locale } = params;
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
-  const messages = getMailMessages(locale);
+  const t = await getMailTranslator(locale);
+  const messages = await getMailMessages(locale);
 
   const hasGame = typeof gameName === 'string' && gameName.length > 0;
   const modeHint = resolveModeHint(hasGame, gameMode, messages);

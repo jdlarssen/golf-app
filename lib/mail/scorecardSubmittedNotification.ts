@@ -46,7 +46,7 @@ export async function sendScorecardSubmittedNotification(
 ): Promise<void> {
   const { to, adminFirstName, playerName, gameName, gameId, locale } = params;
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   const subject = t('scorecardSubmitted.subject', { playerName, gameName });
   const adminUrl = mailUrl(locale, `/admin/games/${gameId}`);

@@ -57,7 +57,7 @@ export async function sendCupFinishedNotification(
   } = params;
 
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   const subject = t('cupFinished.subject', { tournamentName });
   const leaderboardUrl = mailUrl(locale, `/cup/${tournamentId}`);

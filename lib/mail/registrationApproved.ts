@@ -41,7 +41,7 @@ export async function sendRegistrationApprovedMail(
 ): Promise<void> {
   const { to, gameName, gameId, locale } = params;
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   const subject = t('registrationApproved.subject', { gameName });
   const gameUrl = mailUrl(locale, `/games/${gameId}`);

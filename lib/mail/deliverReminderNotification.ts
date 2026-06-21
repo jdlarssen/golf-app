@@ -46,7 +46,7 @@ export async function sendDeliverReminderNotification(
 ): Promise<void> {
   const { to, playerFirstName, gameName, gameId, locale } = params;
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   const subject = t('deliverReminder.subject', { gameName });
   const submitUrl = mailUrl(locale, `/games/${gameId}/submit`);

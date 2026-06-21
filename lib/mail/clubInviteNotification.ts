@@ -53,7 +53,7 @@ export async function sendClubInviteNotification(
 ): Promise<void> {
   const { to, invitedByName, clubName, locale } = params;
   const loc = resolveMailLocale(locale);
-  const t = getMailTranslator(locale);
+  const t = await getMailTranslator(locale);
 
   const loginUrl = mailUrl(locale, '/login');
 

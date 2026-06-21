@@ -13,22 +13,12 @@
 
 import { createTranslator } from 'next-intl';
 import noMessages from '@/messages/no.json';
-import enMessages from '@/messages/en.json';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { toSupportedLocale } from '@/lib/i18n/resolveLocale';
 
 /** The catalog shape — the default-locale catalog is the canonical structure. */
 type MailCatalog = typeof noMessages;
 type AnyRecord = Record<string, unknown>;
-
-// Only locales with a shipped mail catalog are handled. Everything else — null,
-// an unknown string, or `gd`/`ga` before Phase G lands their catalogs — falls
-// back to the default locale, never a raw key or empty mail. Forward-compatible:
-// Phase G adds its catalogs to this map and nothing else changes.
-const CATALOGS: Partial<Record<AppLocale, MailCatalog>> = {
-  no: noMessages,
-  en: enMessages,
-};
 
 // Merge the requested locale ON TOP of the default catalog, so a key missing in
 // e.g. `en` renders the `no` string. Mirror of the fallback merge in
@@ -62,34 +52,44 @@ export function resolveMailLocale(locale: string | null | undefined): AppLocale 
  * The merged catalog for a recipient's locale. Use for dynamic, runtime-keyed
  * lookups (`formatGuide.content[gameMode]`, `modes[gameMode]`) that don't fit a
  * typed `t('key')`. Static mail strings should go through `getMailTranslator`.
+ *
+ * The non-default catalog is loaded via dynamic import — mirroring
+ * `i18n/request.ts` — so a new `messages/<code>.json` is picked up with no edit
+ * here (the N-locale criterion, #845). A locale whose catalog file is missing
+ * falls back to the default, never a raw key or empty mail.
  */
-export function getMailMessages(locale: string | null | undefined): MailCatalog {
+export async function getMailMessages(
+  locale: string | null | undefined,
+): Promise<MailCatalog> {
   const loc = resolveMailLocale(locale);
   if (loc === routing.defaultLocale) return noMessages;
-  const overlay = CATALOGS[loc];
-  return overlay
-    ? (deepMerge(noMessages as AnyRecord, overlay as AnyRecord) as MailCatalog)
-    : noMessages;
+  try {
+    const overlay = (await import(`../../messages/${loc}.json`))
+      .default as AnyRecord;
+    return deepMerge(noMessages as AnyRecord, overlay) as MailCatalog;
+  } catch {
+    return noMessages;
+  }
 }
 
 /**
  * A translator scoped to the `mail` namespace for a recipient's locale.
- * `getMailTranslator('en')('invite.subject', { name })` renders the English
- * `mail.invite.subject` with the same ICU semantics the app uses.
+ * `(await getMailTranslator('en'))('invite.subject', { name })` renders the
+ * English `mail.invite.subject` with the same ICU semantics the app uses.
  *
  * `timeZone` is pinned so date interpolation doesn't bake in the server's zone.
  */
-export function getMailTranslator(locale: string | null | undefined) {
+export async function getMailTranslator(locale: string | null | undefined) {
   const loc = resolveMailLocale(locale);
   return createTranslator({
     locale: loc,
-    messages: getMailMessages(loc),
+    messages: await getMailMessages(loc),
     namespace: 'mail',
     timeZone: 'Europe/Oslo',
   });
 }
 
-export type MailTranslator = ReturnType<typeof getMailTranslator>;
+export type MailTranslator = Awaited<ReturnType<typeof getMailTranslator>>;
 
 const APP_BASE_URL = 'https://tornygolf.no';
 
