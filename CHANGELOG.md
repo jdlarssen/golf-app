@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.75] - 2026-06-21 · #804
+
+> Spill med et ugyldig spillformat avvises nå direkte av databasen. Appen godtar bare kjente spillformat — ikke vilkårlige verdier lagt inn via API-kall.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `games.game_mode` manglet DB CHECK/FK etter at `games_mode_check` ble droppet i 0047. En bruker kunne POST-e en `games`-rad med vilkårlig `game_mode` utenom TS-validatoren `isValidActiveGameMode`. Migrasjon 0111 gjeninnfører CHECK-constraint med alle 22 gyldige format-slugs (0047–0065). FK ble bevisst valgt bort (se 0047-kommentar: soft-deaktivering av et format må ikke ugyldiggjøre historiske spill). Migrasjon scrubber eventuelle invalide rader til `solo_strokeplay` før constraint-tillegg. Trap #4-avtaletest lagt til i `lib/formats/gameModeDbCheck.test.ts`. (#804)
+
+</details>
+
 ### [1.133.74] - 2026-06-21 · #734
 
 > Hullchipen (Par X · SI Y) og birdie/bogey-fargen bruker nå riktig par for dame- og juniortee, ikke herrenes par for alle.
