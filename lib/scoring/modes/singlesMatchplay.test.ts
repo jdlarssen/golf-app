@@ -178,7 +178,10 @@ describe('compute — singles matchplay basis', () => {
     });
   });
 
-  it('2up etter 18: side 1 vinner 10 hull, side 2 vinner 8 hull', () => {
+  it('lukk-ute «10&8»: side 1 vinner hull 1–10, side 2 vinner 11–18 (alle 18 tastet)', () => {
+    // Matchen avgjøres etter hull 10: side1=10, side2=0 → 10 up med 8 igjen.
+    // Hull 11–18 er tastet inn i etterkant (side2 vinner dem alle).
+    // Sluttresultat etter 18: holesUp=2 — men golf-standarden er «10&8» (#800).
     const scores: ScoringHoleScore[] = [];
     for (let h = 1; h <= 18; h++) {
       if (h <= 10) {
@@ -195,10 +198,13 @@ describe('compute — singles matchplay basis', () => {
       scores,
     });
     const r = compute(ctx);
-    expect(r.holesUp).toBe(2);
+    expect(r.holesUp).toBe(2); // endelig holesUp etter alle 18 (side2 hentet inn 8)
     expect(r.holesPlayed).toBe(18);
-    expect(r.result?.formatted).toBe('2up');
+    // Golf-korrekt: mat-em etter hull 10 → «10&8», ikkje «2up»
+    expect(r.result?.formatted).toBe('10&8');
     expect(r.result?.winner).toBe('side1');
+    expect(r.result?.marginUp).toBe(10);
+    expect(r.result?.remainingAtDecision).toBe(8);
   });
 
   it('tied hole: lik netto → result="tied", bidrar ikke til holesUp', () => {
@@ -336,6 +342,109 @@ describe('compute — singles matchplay basis', () => {
     expect(r.sides[1].sideNumber).toBe(2);
     expect(r.sides[1].userId).toBe('b');
     expect(r.sides[1].courseHandicap).toBe(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bug #800: «18up» vises når alle 18 hull tastes inn etter at matchen er
+// matematisk avgjort. Korrekt golfformat er «X&Y» (lukk-ute-form).
+// ---------------------------------------------------------------------------
+
+describe('compute — lukk-ute-form når alle 18 hull er spilt men matchen var avgjort tidligere (#800)', () => {
+  it('«10&8» når side 1 vinner alle 18 hull (avgjort etter hull 10)', () => {
+    // side1 vinner alle 18 hull: par vs par+3 på hvert hull.
+    // Matchen avgjøres etter hull 10: side1Wins=10, side2Wins=0 → 10 up med 8 igjen.
+    // Hull 11–18 er spilt men matchen var allerede over.
+    // Uten fix: compute() sender (holesUp=18, holesPlayed=18, holesRemaining=0)
+    //   til computeMatchResult → «18up».
+    // Med fix: mat-em fanges etter hull 10 → «10&8».
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 18; h++) {
+      scores.push({ userId: 'a', holeNumber: h, gross: 4 }); // par
+      scores.push({ userId: 'b', holeNumber: h, gross: 7 }); // triple bogey (+3)
+    }
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: par4Holes(18),
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(18);
+    expect(r.holesUp).toBe(18);
+    expect(r.result).not.toBeNull();
+    expect(r.result!.formatted).toBe('10&8');
+    expect(r.result!.winner).toBe('side1');
+    expect(r.result!.marginUp).toBe(10);
+    expect(r.result!.remainingAtDecision).toBe(8);
+  });
+
+  it('«5&4» via compute() — mat-em mid-runde, hull 15–18 tastet i etterkant', () => {
+    // side1 vinner hull 1–3 og 13–14, hull 4–12 tied, hull 15–18 tastet (tied).
+    // Etter hull 14: side1Wins=5, played=14, remaining=4 → |5|>4 = mat-em → «5&4».
+    // Hull 15–18 spilles likevel (alle tied).
+    // Sluttresultat: holesPlayed=18, holesUp=5.
+    // Uten fix: «5up». Etter fix: mat-em-snapshot etter hull 14 → «5&4».
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 18; h++) {
+      if (h <= 3 || (h >= 13 && h <= 14)) {
+        // side1 vinner
+        scores.push({ userId: 'a', holeNumber: h, gross: 3 }); // birdie
+        scores.push({ userId: 'b', holeNumber: h, gross: 5 }); // bogey
+      } else {
+        // tied
+        scores.push({ userId: 'a', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'b', holeNumber: h, gross: 4 });
+      }
+    }
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: par4Holes(18),
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(18);
+    expect(r.holesUp).toBe(5); // sluttresultat etter alle 18
+    expect(r.result).not.toBeNull();
+    // Mat-em skjedde etter hull 14 med 5 up og 4 igjen → «5&4»
+    expect(r.result!.formatted).toBe('5&4');
+    expect(r.result!.winner).toBe('side1');
+    expect(r.result!.marginUp).toBe(5);
+    expect(r.result!.remainingAtDecision).toBe(4);
+  });
+
+  it('«3&1» via compute() — side 1 vinner hull 1–2 og 17, hull 3–16 og 18 tied', () => {
+    // side1 vinner hull 1, 2 (holesUp=2). Hull 3–16 tied (holesUp forblir 2).
+    // Etter hull 16: played=16, remaining=2 → |2|>2? NEI (lik, ikkje større) → ikke mat-em.
+    // side1 vinner hull 17 (holesUp=3). Etter hull 17: played=17, remaining=1 → |3|>1 = mat-em → «3&1».
+    // Hull 18 tastes inn (tied) etter at matchen er avgjort.
+    // Sluttresultat: holesPlayed=18, holesUp=3.
+    // Uten fix: «3up». Etter fix: mat-em-snapshot etter hull 17 → «3&1».
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 18; h++) {
+      if (h <= 2 || h === 17) {
+        // side1 vinner
+        scores.push({ userId: 'a', holeNumber: h, gross: 3 });
+        scores.push({ userId: 'b', holeNumber: h, gross: 5 });
+      } else {
+        // tied
+        scores.push({ userId: 'a', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'b', holeNumber: h, gross: 4 });
+      }
+    }
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: par4Holes(18),
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(18);
+    expect(r.holesUp).toBe(3);
+    // Skal returnere lukk-ute-form etter hull 17, IKKE «3up»
+    expect(r.result).not.toBeNull();
+    expect(r.result!.formatted).toBe('3&1');
+    expect(r.result!.winner).toBe('side1');
+    expect(r.result!.marginUp).toBe(3);
+    expect(r.result!.remainingAtDecision).toBe(1);
   });
 });
 

@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.71] - 2026-06-21 · #800
+
+> Matchplay-resultater viser nå alltid den golf-lovlige avgjørelsesformen, «10&8» i stedet for «18up», også når alle 18 hull er tastet inn etter at matchen var ferdig.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `compute()` i `lib/scoring/modes/singlesMatchplay.ts` fanget ikke opp mat-em-punktet når scorekortbrukere tastet inn hull etter at matchen matematisk var avgjort. Sluttresultatet ble «18up» (eller andre meningsløse margintal) i stedet for golf-lovlig «10&8»-form. Fikset ved å spore mat-em-snapshot hull-for-hull under iterasjonen: første hull der `|holesUp| > holesRemaining` låses som avgjørelsespunkt og brukes som endelig resultat, uavhengig av om ytterligere hull tastes inn. `computeMatchResult` er uendret — «Nup»/«AS»-grenene aktiveres bare når mat-em aldri ble oppdaget underveis (ekte 18-hols-finish). Fourball/foursomes via `computeCupMatchResult` arver fiksen uten kodeendring. (#800)
+
+</details>
+
 ### [1.133.70] - 2026-06-21 · #819
 
 > Appen lagrer ikke lenger innholdet på innloggede sider i nettleser-cachen. Skulle noen andre bruke samme telefon uten nett, ser de aldri din profil, dine resultater eller adminpanelet.

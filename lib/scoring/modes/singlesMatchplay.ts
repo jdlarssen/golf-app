@@ -65,6 +65,13 @@ function placeholderSides(): [MatchplaySide, MatchplaySide] {
  *  - Spilt ferdig 18 hull + holesUp === 0:
  *    Format: `'AS'` (all square).
  *  - Ellers (live midt i runden): `null`.
+ *
+ * OBS — lukk-ute etter alle 18 hull (#800): Denne funksjonen kan ikke
+ * rekonstruere mat-em-punktet fra aggregerte verdier alene. `compute()` fangar
+ * opp dette hull-for-hull og kaller `computeMatchResult` med verdiane frå da
+ * matchen faktisk vart avgjort (ikkje frå dei endelege 18-hols-verdiane).
+ * Kall med `holesPlayed < 18` er dermed primærbrukstilfellet for mat-em-banen;
+ * holesPlayed=18-grenen returnerer alltid «Nup» eller «AS».
  */
 export function computeMatchResult(
   holesUp: number,
@@ -264,6 +271,10 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
   let side1Wins = 0;
   let side2Wins = 0;
   let holesPlayed = 0;
+  // Snapshot av mat-em-tidspunktet (første hull der |holesUp| > holesRemaining).
+  // Fanget hull-for-hull slik at vi kan vise golf-lovlig «X&Y» lukk-ute-form
+  // også når alle 18 hull er tastet inn etter at matchen alt er avgjort (#800).
+  let matEmResult: MatchplayMatchResult | null = null;
 
   const holes: MatchplayHoleRow[] = holesSorted.map((hole) => {
     const side1Gross = grossByKey.get(`${side1Player.userId}#${hole.number}`) ?? null;
@@ -288,6 +299,25 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
       holesPlayed += 1;
     } else if (result === 'tied') {
       holesPlayed += 1;
+    }
+
+    // Oppdager mat-em-punktet ved første hull der |holesUp| > holesRemaining
+    // (#800). Lagrer berre det første treffet — seinare hull endrar ikkje
+    // det golf-lovlege lukk-ute-tidspunktet.
+    if (matEmResult === null) {
+      const holesUpSoFar = side1Wins - side2Wins;
+      const absUpSoFar = Math.abs(holesUpSoFar);
+      const remainingSoFar = Math.max(0, 18 - holesPlayed);
+      if (absUpSoFar > remainingSoFar) {
+        const winner: 'side1' | 'side2' = holesUpSoFar > 0 ? 'side1' : 'side2';
+        matEmResult = {
+          winner,
+          marginUp: absUpSoFar,
+          decidedAtHole: holesPlayed,
+          remainingAtDecision: remainingSoFar,
+          formatted: `${absUpSoFar}&${remainingSoFar}`,
+        };
+      }
     }
 
     // Per-side par via parFor — fanger blandet-kjønn-match der side 1 og
@@ -318,7 +348,10 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
   // (matchplay krever begge), men de "blokkerer" heller ikke matematisk —
   // de telles fortsatt som remaining inntil begge har levert.
   const holesRemaining = Math.max(0, 18 - holesPlayed);
-  const result = computeMatchResult(holesUp, holesPlayed, holesRemaining);
+  // Bruker mat-em-snapshot hvis matchen vart avgjort undervegs — dette sikrar
+  // golf-lovleg «X&Y»-form også når alle 18 hull er tastet inn i etterkant
+  // (#800). Elles: standard computeMatchResult for live / 18-hols-«Nup» / AS.
+  const result = matEmResult ?? computeMatchResult(holesUp, holesPlayed, holesRemaining);
 
   return {
     kind: 'singles_matchplay',

@@ -486,20 +486,10 @@ describe('buildGameFinishedRecipients', () => {
   };
 
   it('matchplay: side 1 vinner — side 1 får won, side 2 får lost; begge ser motspillerens fornavn', async () => {
-    // 1 hull par 4, CH=0:
-    //   side 1 (u1) gross 3 → netto 3 → vinner hullet
-    //   side 2 (u2) gross 4 → netto 4 → taper hullet
-    // 17 hull igjen, men 1 hull foran > 0 hull igjen er ikke nok for mat-em.
-    // Match-state: side1 1up, holesRemaining 17 → live. Vi trenger mat-em
-    // for å få et resultat — bygger 16 par-spilte hull der side 1 vinner
-    // alle for å treffe mat-em 16&2 (men i praksis 9&9 etter 9 hull). For
-    // testen er det enklere å gi side 1 et knusende lead som forblir live
-    // gjennom 17 par-hull, eller … kort vei: spille 18 hull der side 1
-    // vinner f.eks. 2up.
-    //
-    // Vi gjør 18 hull der side 1 vinner 2up: side 1 birdier 2 hull og
-    // pars resten; side 2 pars alle 18. Det gir side1Wins=2, side2Wins=0,
-    // holesUp=2, holesPlayed=18 → 2up.
+    // side 1 (u1) birdier hull 1+2, pars resten; side 2 (u2) pars alle 18. CH=0.
+    // Etter hull 17: side1Wins=2, side2Wins=0, holesUp=2, remaining=1 → |2|>1 = mat-em.
+    // Golf-korrekt resultat: «2&1» (avgjort etter hull 17 med 1 hull igjen, #800).
+    // Hull 18 tastes inn (tied), men avgjørelsen var allerede fanget.
     const holes = Array.from({ length: 18 }, (_, i) => ({
       hole_number: i + 1,
       par_mens: 4,
@@ -559,14 +549,14 @@ describe('buildGameFinishedRecipients', () => {
     expect(alice?.mode).toEqual({
       kind: 'singles_matchplay',
       matchResult: 'won',
-      formattedResult: '2up',
+      formattedResult: '2&1',
       opponentName: 'Bjørn',
       selfSide: 1,
     });
     expect(bjorn?.mode).toEqual({
       kind: 'singles_matchplay',
       matchResult: 'lost',
-      formattedResult: '2up',
+      formattedResult: '2&1',
       opponentName: 'Alice',
       selfSide: 2,
     });
