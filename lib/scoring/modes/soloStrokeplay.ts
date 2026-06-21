@@ -12,6 +12,7 @@
 
 import { strokesForHole } from '../strokeAllocation';
 import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
+import { parFor } from './parResolver';
 import type {
   ScoringContext,
   ScoringHole,
@@ -104,11 +105,12 @@ function computeHoleRows(
         gross === null
           ? null
           : gross - strokesForHole(p.courseHandicap, hole.strokeIndex);
-      return { userId: p.userId, gross, net };
+      // #734: per-spiller par for riktig birdie/bogey-farge i UI.
+      return { userId: p.userId, gross, net, par: parFor(hole, p.teeGender) };
     });
 
     const played = perPlayer.filter(
-      (c): c is { userId: string; gross: number; net: number } => c.net !== null,
+      (c): c is { userId: string; gross: number; net: number; par: number } => c.net !== null,
     );
     let bestUserIds: string[] = [];
     if (played.length > 0) {
@@ -120,6 +122,8 @@ function computeHoleRows(
       holeNumber: hole.number,
       par: hole.par,
       strokeIndex: hole.strokeIndex,
+      // #734: eksponeres til UI slik at par-chip kan vise spillerens eget par.
+      parByGender: hole.parByGender,
       perPlayer,
       bestUserIds,
     };

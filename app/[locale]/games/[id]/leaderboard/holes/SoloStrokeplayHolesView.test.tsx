@@ -26,8 +26,8 @@ function hole(
     par: 4,
     strokeIndex: holeNumber,
     perPlayer: [
-      { userId: 'u1', gross: u1, net: u1 },
-      { userId: 'u2', gross: u2, net: u2 },
+      { userId: 'u1', gross: u1, net: u1, par: 4 },
+      { userId: 'u2', gross: u2, net: u2, par: 4 },
     ],
     bestUserIds,
   };

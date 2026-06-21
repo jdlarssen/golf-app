@@ -319,6 +319,21 @@ function HoleCard({
     return b.points - a.points;
   });
 
+  // #734: par-chip viser spillerens eget par når alle er på samme tee,
+  // ellers herre-par som safe fallback for blandet-kjønn-felt.
+  const firstPlayerTeeGender = rows[0]
+    ? playersById.get(rows[0].userId)?.teeGender
+    : undefined;
+  const allSameTee =
+    rows.length > 0 &&
+    rows.every(
+      (c) => playersById.get(c.userId)?.teeGender === firstPlayerTeeGender,
+    );
+  const chipPar =
+    allSameTee && hole.parByGender && firstPlayerTeeGender
+      ? hole.parByGender[firstPlayerTeeGender]
+      : hole.par;
+
   return (
     <li
       className="list-none"
@@ -331,7 +346,7 @@ function HoleCard({
               {tc('hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
-              {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
+              {tc('parSiChip', { par: chipPar, si: hole.strokeIndex })}
             </span>
           </div>
           {!scored && <span className="text-[10.5px] text-muted/70">{t('common.venter')}</span>}
@@ -368,9 +383,10 @@ function HoleCard({
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2 tabular-nums">
+                  {/* #734: bruk cell.par (spillerens eget par) for riktig birdie/bogey-farge. */}
                   <ScoreShape
-                    shape={scoreShape(cell.gross, hole.par)}
-                    tone={scoreTone(cell.gross, hole.par)}
+                    shape={scoreShape(cell.gross, cell.par)}
+                    tone={scoreTone(cell.gross, cell.par)}
                     size="sm"
                   >
                     {cell.gross == null ? '–' : String(cell.gross)}

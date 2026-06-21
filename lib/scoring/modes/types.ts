@@ -728,11 +728,16 @@ export interface StablefordPlayerLine {
  * stableford-poeng fra den aktive tabellen (kan være negativ i modified
  * stableford). `gross` er `null` når hullet ikke er spilt — som skiller et
  * spilt 0-poengs-hull (dobbeltbogey, eller par i modified) fra et uspilt hull.
+ *
+ * `par` = spillerens eget par for hullet (`parFor(hole, player.teeGender)`).
+ * Brukes av UI til å vise riktig birdie/bogey-farge for dame-/junior-tee. #734.
  */
 export interface StablefordSoloHolePlayerCell {
   userId: string;
   gross: number | null;
   points: number;
+  /** Spillerens par for hullet (`parFor(hole, player.teeGender)`). #734. */
+  par: number;
 }
 
 /**
@@ -746,6 +751,11 @@ export interface StablefordSoloHoleRow {
   holeNumber: number;
   par: number;
   strokeIndex: number;
+  /**
+   * Per-kjønn par-verdier fra kursen. Samme kilde som `ScoringHole.parByGender`.
+   * UI bruker dette til å vise riktig par-chip for spillerens eget tee. #734.
+   */
+  parByGender?: { mens: number; ladies: number; juniors: number };
   perPlayer: StablefordSoloHolePlayerCell[];
   bestUserIds: string[];
 }
@@ -995,11 +1005,16 @@ export interface SoloStrokeplayPlayerLine {
  * Per-spiller-celle på ett solo-strokeplay-hull. `net` = gross − tildelte slag.
  * Begge felt er `null` når hullet ikke er spilt (pick-up / ikke tastet) — IKKE
  * 999-padding-verdien ranking-cascaden bruker internt.
+ *
+ * `par` = spillerens eget par for hullet (`parFor(hole, player.teeGender)`).
+ * Brukes av UI til å vise riktig birdie/bogey-farge for dame-/junior-tee. #734.
  */
 export interface SoloStrokeplayHolePlayerCell {
   userId: string;
   gross: number | null;
   net: number | null;
+  /** Spillerens par for hullet (`parFor(hole, player.teeGender)`). #734. */
+  par: number;
 }
 
 /**
@@ -1012,6 +1027,11 @@ export interface SoloStrokeplayHoleRow {
   holeNumber: number;
   par: number;
   strokeIndex: number;
+  /**
+   * Per-kjønn par-verdier fra kursen. Samme kilde som `ScoringHole.parByGender`.
+   * UI bruker dette til å vise riktig par-chip for spillerens eget tee. #734.
+   */
+  parByGender?: { mens: number; ladies: number; juniors: number };
   perPlayer: SoloStrokeplayHolePlayerCell[];
   bestUserIds: string[];
 }

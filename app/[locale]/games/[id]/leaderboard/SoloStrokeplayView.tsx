@@ -12,10 +12,15 @@ import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
  * Caller (leaderboard-page) bygger map-en fra game_players-joinen. Speilet
  * `SoloStablefordPlayerInfo` 1:1 — slagspill og solo-stableford bruker samme
  * info-shape siden ranking-skjermen bare trenger navn + kallenavn for visning.
+ *
+ * `teeGender` brukes av «Hull for hull» til å vise riktig par-chip
+ * (parByGender[teeGender]) for dame-/junior-tee. #734.
  */
 export interface SoloStrokeplayPlayerInfo {
   name: string;
   nickname: string | null;
+  /** Spillerens tee-gender — brukes til å hente riktig par-verdi. #734. */
+  teeGender?: 'mens' | 'ladies' | 'juniors';
 }
 
 export interface SoloStrokeplayViewProps {

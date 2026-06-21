@@ -190,8 +190,10 @@ function computeSoloHoleRows(
       const gross = grossByKey.get(`${p.userId}#${hole.number}`) ?? null;
       const netStrokes =
         gross === null ? null : gross - strokesForHole(p.courseHandicap, hole.strokeIndex);
-      const points = pointsFn({ par: parFor(hole, p.teeGender), netStrokes });
-      return { userId: p.userId, gross, points };
+      const playerPar = parFor(hole, p.teeGender);
+      const points = pointsFn({ par: playerPar, netStrokes });
+      // #734: per-spiller par for riktig birdie/bogey-farge i UI.
+      return { userId: p.userId, gross, points, par: playerPar };
     });
 
     const played = perPlayer.filter((c) => c.gross !== null);
@@ -205,6 +207,8 @@ function computeSoloHoleRows(
       holeNumber: hole.number,
       par: hole.par,
       strokeIndex: hole.strokeIndex,
+      // #734: eksponeres til UI slik at par-chip kan vise spillerens eget par.
+      parByGender: hole.parByGender,
       perPlayer,
       bestUserIds,
     };

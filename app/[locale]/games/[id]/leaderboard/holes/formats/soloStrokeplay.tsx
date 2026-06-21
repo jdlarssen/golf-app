@@ -52,6 +52,9 @@ export async function SoloStrokeplayHolesBody({
     playersById.set(p.user_id, {
       name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
+      // #734: teeGender sendes videre slik at «Hull for hull» kan vise
+      // riktig par-chip for dame-/junior-tee.
+      teeGender: p.tee_gender,
     });
   }
 

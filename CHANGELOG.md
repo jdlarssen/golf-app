@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.74] - 2026-06-21 · #734
+
+> Hullchipen (Par X · SI Y) og birdie/bogey-fargen bruker nå riktig par for dame- og juniortee, ikke herrenes par for alle.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Per-hull «Par X · SI Y»-chip-en og birdie/bogey-fargen i solo strokeplay og solo stableford leste herre-par (`hole.par` = `par_mens`) kjønns-blindt, så en dame eller junior på et hull der `par_ladies`/`par_juniors` ≠ `par_mens` fikk feil par-tall og feil farge (en netto-par kunne vises som bogey). Scoringen var aldri påvirket — poeng/netto har alltid brukt `parFor(hole, teeGender)`; dette gjaldt kun visningen. (#734)
+- Mode-byggerne (`lib/scoring/modes/soloStrokeplay.ts`, `stableford.ts`) eksponerer nå spillerens eget par per celle (`parFor(hole, p.teeGender)`) og kursens `parByGender` per hull-rad. Holes-viewene bruker cellens `par` til `scoreShape`/`scoreTone`, og viser spillerens eget par i chip-en når alle i feltet er på samme tee — ellers beholdes herre-par som trygg fallback for blandet-kjønn-felt. Fler-spiller-modusene med delt chip (Nassau, Skins, Wolf m.fl.) er bevisst urørt, jf. eier-anbefalingen i issuet.
+
+</details>
+
 ### [1.133.73] - 2026-06-21 · #805
 
 > Godkjenner du flere påmeldinger enn formatet har plass til, sier appen fra med en gang, i stedet for at du først oppdager det når du prøver å publisere spillet.
