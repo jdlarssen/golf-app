@@ -6,6 +6,12 @@
 // for å regne ut stableford-leaderboard kun bor ett sted.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  COURSE_HOLES_SELECT,
+  SCORES_SELECT,
+  type CourseHoleRow,
+  type ScoreRow,
+} from '@/lib/supabase/queryFragments';
 import { computeLeaderboard } from '@/lib/scoring';
 import {
   isStablefordFamily,
@@ -143,17 +149,15 @@ export async function buildGameFinishedRecipients(
   const [scoresRes, holesRes] = await Promise.all([
     supabase
       .from('scores')
-      .select('user_id, hole_number, strokes')
+      .select(SCORES_SELECT)
       .eq('game_id', gameId)
-      .returns<
-        { user_id: string; hole_number: number; strokes: number | null }[]
-      >(),
+      .returns<ScoreRow[]>(),
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
-      .returns<{ hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[]>(),
+      .returns<CourseHoleRow[]>(),
   ]);
   if (scoresRes.error || holesRes.error) {
     console.error(
@@ -342,17 +346,15 @@ async function buildMatchplayRecipients(
   const [scoresRes, holesRes] = await Promise.all([
     supabase
       .from('scores')
-      .select('user_id, hole_number, strokes')
+      .select(SCORES_SELECT)
       .eq('game_id', gameId)
-      .returns<
-        { user_id: string; hole_number: number; strokes: number | null }[]
-      >(),
+      .returns<ScoreRow[]>(),
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
-      .returns<{ hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[]>(),
+      .returns<CourseHoleRow[]>(),
   ]);
   if (scoresRes.error || holesRes.error) {
     console.error(
@@ -512,17 +514,15 @@ async function buildSoloStrokeplayRecipients(
   const [scoresRes, holesRes] = await Promise.all([
     supabase
       .from('scores')
-      .select('user_id, hole_number, strokes')
+      .select(SCORES_SELECT)
       .eq('game_id', gameId)
-      .returns<
-        { user_id: string; hole_number: number; strokes: number | null }[]
-      >(),
+      .returns<ScoreRow[]>(),
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
-      .returns<{ hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[]>(),
+      .returns<CourseHoleRow[]>(),
   ]);
   if (scoresRes.error || holesRes.error) {
     console.error(
@@ -637,17 +637,15 @@ async function buildTexasScrambleRecipients(
   const [scoresRes, holesRes] = await Promise.all([
     supabase
       .from('scores')
-      .select('user_id, hole_number, strokes')
+      .select(SCORES_SELECT)
       .eq('game_id', gameId)
-      .returns<
-        { user_id: string; hole_number: number; strokes: number | null }[]
-      >(),
+      .returns<ScoreRow[]>(),
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
-      .returns<{ hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[]>(),
+      .returns<CourseHoleRow[]>(),
   ]);
   if (scoresRes.error || holesRes.error) {
     console.error(

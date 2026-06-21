@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
@@ -172,7 +173,7 @@ export default async function HolePage({ params }: { params: Params }) {
   ] = await Promise.all([
       supabase
         .from('course_holes')
-        .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+        .select(COURSE_HOLES_SELECT)
         .eq('course_id', game.course_id)
         .eq('hole_number', holeNumber)
         .single<HoleRow>(),
@@ -192,7 +193,7 @@ export default async function HolePage({ params }: { params: Params }) {
       isStableford
         ? supabase
             .from('course_holes')
-            .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+            .select(COURSE_HOLES_SELECT)
             .eq('course_id', game.course_id)
             .returns<HoleRow[]>()
         : Promise.resolve({ data: null, error: null }),
@@ -208,14 +209,14 @@ export default async function HolePage({ params }: { params: Params }) {
       isWolf
         ? supabase
             .from('scores')
-            .select('user_id, hole_number, strokes')
+            .select(SCORES_SELECT)
             .eq('game_id', id)
             .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>()
         : Promise.resolve({ data: null, error: null }),
       isWolf
         ? supabase
             .from('course_holes')
-            .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+            .select(COURSE_HOLES_SELECT)
             .eq('course_id', game.course_id)
             .returns<HoleRow[]>()
         : Promise.resolve({ data: null, error: null }),
@@ -224,14 +225,14 @@ export default async function HolePage({ params }: { params: Params }) {
       isSkins
         ? supabase
             .from('scores')
-            .select('user_id, hole_number, strokes')
+            .select(SCORES_SELECT)
             .eq('game_id', id)
             .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>()
         : Promise.resolve({ data: null, error: null }),
       isSkins
         ? supabase
             .from('course_holes')
-            .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+            .select(COURSE_HOLES_SELECT)
             .eq('course_id', game.course_id)
             .returns<HoleRow[]>()
         : Promise.resolve({ data: null, error: null }),

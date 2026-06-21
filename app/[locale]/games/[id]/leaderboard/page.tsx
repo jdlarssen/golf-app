@@ -5,6 +5,7 @@ import { after } from 'next/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { firstName } from '@/lib/firstName';
+import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { isFrontNineOpen } from '@/lib/leaderboard/frontNineGate';
 import {
   computeLeaderboard,
@@ -238,13 +239,13 @@ async function LeaderboardBody({
     getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', gameRow.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
     supabase
       .from('scores')
-      .select('user_id, hole_number, strokes')
+      .select(SCORES_SELECT)
       .eq('game_id', gameId)
       .returns<ScoreRow[]>(),
     gameRow.course_id

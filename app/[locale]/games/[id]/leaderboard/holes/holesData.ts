@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import {
   getGameWithPlayers,
@@ -84,13 +85,13 @@ export async function fetchHolesAndScores(
     getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
     supabase
       .from('scores')
-      .select('user_id, hole_number, strokes')
+      .select(SCORES_SELECT)
       .eq('game_id', gameId)
       .returns<ScoreRow[]>(),
   ]);

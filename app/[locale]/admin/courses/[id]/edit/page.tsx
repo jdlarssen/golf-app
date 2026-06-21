@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
+import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
@@ -231,7 +232,7 @@ async function EditCourseFormBody({
   const [holesResult, teesResult, affectedGamesResult] = await Promise.all([
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true }),
     supabase

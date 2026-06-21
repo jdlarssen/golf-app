@@ -7,6 +7,7 @@ import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
 import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
+import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -164,7 +165,7 @@ async function PendingApprovals({
     getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<HoleRow[]>(),
@@ -187,7 +188,7 @@ async function PendingApprovals({
   const { data: scoresData, error: scoresError } = pendingIds.length
     ? await supabase
         .from('scores')
-        .select('user_id, hole_number, strokes')
+        .select(SCORES_SELECT)
         .eq('game_id', gameId)
         .in('user_id', pendingIds)
         .returns<ScoreRow[]>()

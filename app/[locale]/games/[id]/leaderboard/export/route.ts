@@ -3,6 +3,7 @@ import { hasLocale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
+import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import {
@@ -109,13 +110,13 @@ export async function GET(
   const [rawHolesRes, rawScoresRes] = await Promise.all([
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
     supabase
       .from('scores')
-      .select('user_id, hole_number, strokes')
+      .select(SCORES_SELECT)
       .eq('game_id', id)
       .returns<ScoreRow[]>(),
   ]);

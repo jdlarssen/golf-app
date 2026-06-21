@@ -6,6 +6,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -198,7 +199,7 @@ async function ReviewBody({
   const [holesRes, scoresRes] = await Promise.all([
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<HoleRow[]>(),

@@ -1,6 +1,7 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -92,12 +93,12 @@ export default async function StatistikkPage() {
       .returns<GamePlayerRow[]>(),
     supabase
       .from('course_holes')
-      .select('course_id, hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(`course_id, ${COURSE_HOLES_SELECT}`)
       .in('course_id', courseIds)
       .returns<CourseHoleRow[]>(),
     supabase
       .from('scores')
-      .select('game_id, user_id, hole_number, strokes')
+      .select(`game_id, ${SCORES_SELECT}`)
       .in('game_id', gameIds)
       .returns<ScoreRow[]>(),
   ]);

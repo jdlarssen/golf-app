@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -214,13 +215,13 @@ async function ScorecardTable({
   const [holesRes, scoresRes] = await Promise.all([
     supabase
       .from('course_holes')
-      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .select(COURSE_HOLES_SELECT)
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<HoleRow[]>(),
     adminSupabase
       .from('scores')
-      .select('user_id, hole_number, strokes')
+      .select(SCORES_SELECT)
       .eq('game_id', gameId)
       .in('user_id', layout.scoreUserIds)
       .returns<ScoreRow[]>(),

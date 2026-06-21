@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { computeCupMatchResult } from './computeCupMatchResult';
 import type { GameStatus } from '@/lib/games/status';
 import {
@@ -149,7 +150,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       ? Promise.resolve({ data: [] as ScoreRow[], error: null })
       : supabase
           .from('scores')
-          .select('game_id, user_id, hole_number, strokes')
+          .select(`game_id, ${SCORES_SELECT}`)
           .in('game_id', gameIds),
     games.length === 0
       ? Promise.resolve({
@@ -167,7 +168,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
           .from('course_holes')
           // `par` ble droppet i migrasjon 0040 til fordel for per-kjønn-kolonner.
           // Map til `par` nedstrøms via par_mens (samme som buildModeResultForGame).
-          .select('course_id, hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+          .select(`course_id, ${COURSE_HOLES_SELECT}`)
           .in(
             'course_id',
             Array.from(new Set(games.map((g) => g.course_id).filter((id): id is string => Boolean(id)))),
