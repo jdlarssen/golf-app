@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.72] - 2026-06-21 · #801
+
+> Valgte admin «skjul til avslutning», skjuler leaderboarden nå faktisk resultatet underveis, også for stableford, slagspill og scramble. Runden kan holdes hemmelig helt frem til avslutning, slik innstillingen lover.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `score_visibility='reveal'` ble ignorert av hovedleaderboarden for stableford / modified_stableford, solo_strokeplay, texas_scramble / ambrose / florida og hele matchplay-familien. Format-grenene returnerte tidlig i `page.tsx` uten å nå den generiske `reveal-active → RevealBruttoView`-blokka. Fikset ved å koble `revealState` + `shouldHideNetto` inn i `formats/stableford.tsx`, `formats/soloStrokeplay.tsx`, `formats/texasScramble.tsx`, `formats/matchplay.tsx`, `formats/fourballMatchplay.tsx` og `formats/foursomesMatchplay.tsx`. For solo-formater (stableford solo / solo_strokeplay) der `team_number = 0` i DB, tilordnes hver aktive spiller et sekvensielt 1-basert `teamNumber` for `computeLeaderboard`-kallet fra `lib/leaderboard` slik at brutto-view-en rendrer én rad per spiller. Team-formater (team-stableford, texas-scramble og matchplay-familie) bruker reelle `team_number`-verdier. Ferdig spill (`status='finished'`) faller gjennom til normal podium-vei uberørt. (#801)
+
+</details>
+
 ### [1.133.71] - 2026-06-21 · #800
 
 > Matchplay-resultater viser nå alltid den golf-lovlige avgjørelsesformen, «10&8» i stedet for «18up», også når alle 18 hull er tastet inn etter at matchen var ferdig.

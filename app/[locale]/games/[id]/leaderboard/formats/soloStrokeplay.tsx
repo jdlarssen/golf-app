@@ -15,17 +15,24 @@ import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { RevealBruttoView } from '../RevealBruttoView';
+import { computeLeaderboard } from '@/lib/leaderboard';
+import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
 /**
  * Solo strokeplay-grenen — bygger ScoringContext fra rå-rad-ene, kjører
- * mode-router-en (`computeModeResult`) og velger view per `game.status`:
+ * mode-router-en (`computeModeResult`) og velger view per `game.status`
+ * og `score_visibility`:
  *
+ *   - `score_visibility='reveal'` + `status='active'` → RevealBruttoView:
+ *     viser brutto-slag-totaler mens netto-rangeringen skjules til admin
+ *     avslutter spillet (issue #801).
  *   - `finished` → SoloStrokeplayPodium: topp 3 podium med konfetti på 1.-plass
  *     og resten av rangeringen collapsed under.
- *   - alt annet (active/scheduled) → SoloStrokeplayView: flat liste sortert
- *     på laveste netto-total, samme view brukes både midt-runde og post-finished.
+ *   - alt annet (active/scheduled, live-visibility) → SoloStrokeplayView: flat
+ *     liste sortert på laveste netto-total.
  *
  * Speilet `renderStableford`-pattern for konsistens. Solo strokeplay har
  * `team_size = 1` i `mode_config` (validatoren håndhever), så `teamNumber`
@@ -68,6 +75,67 @@ export async function renderSoloStrokeplay(opts: {
     }));
 
   const holesPlayed = maxHolesPlayed(rawScoresRows);
+
+  // Reveal-modus (issue #801): mens spillet er aktivt og score_visibility='reveal'
+  // skjules netto-rangeringen — kun brutto-slag vises. Solo strokeplay har
+  // team_number=0 i DB (solo-validatoren), så vi tilordner hvert aktive spillers
+  // unike sekvensielle teamNumber for computeLeaderboard fra lib/leaderboard.
+  const revSt = revealState(game.score_visibility, game.status);
+  if (shouldHideNetto(revSt)) {
+    const wdSection = <WithdrawnPlayersSection players={soloWithdrawn} />;
+    const withdrawnIdsSet = new Set(
+      gwp.players
+        .filter((p) => p.withdrawn_at != null)
+        .map((p) => p.user_id),
+    );
+    const bruttoPlayers = gwp.players
+      .filter((p) => p.users != null && p.withdrawn_at == null)
+      .map((p, idx) => ({
+        userId: p.user_id,
+        name: p.users!.name ?? unknownPlayer,
+        nickname: p.users!.nickname ?? null,
+        // Solo: each player is their own «team» (sequential 1-based IDs).
+        teamNumber: idx + 1,
+        courseHandicap: p.course_handicap ?? 0,
+        teeGender: p.tee_gender,
+      }));
+    const bruttoHoles = rawHolesRows.map((h) => ({
+      holeNumber: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    }));
+    const bruttoScores = rawScoresRows
+      .filter((s) => !withdrawnIdsSet.has(s.user_id))
+      .map((s) => ({
+        userId: s.user_id,
+        holeNumber: s.hole_number,
+        strokes: s.strokes,
+      }));
+    const bruttoLines = computeLeaderboard({
+      mode: 'brutto',
+      players: bruttoPlayers,
+      holes: bruttoHoles,
+      scores: bruttoScores,
+    });
+    const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
+    return (
+      <>
+        <RevealBruttoView
+          gameId={gameId}
+          gameName={game.name}
+          teams={orderedBrutto}
+          holesPlayed={holesPlayed}
+          backHref={backHref}
+        />
+        {wdSection}
+      </>
+    );
+  }
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
   // (SoloStrokeplayHolesBody), inkl. WD-filtrering, så map-logikken ikke

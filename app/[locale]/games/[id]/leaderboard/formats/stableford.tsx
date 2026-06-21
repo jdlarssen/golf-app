@@ -17,21 +17,24 @@ import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { RevealBruttoView } from '../RevealBruttoView';
+import { computeLeaderboard } from '@/lib/leaderboard';
+import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
 /**
  * Stableford-grenen — bygger ScoringContext fra rå-rad-ene, kjører
- * mode-router-en (`computeModeResult`) og velger view per `game.status`:
+ * mode-router-en (`computeModeResult`) og velger view per `game.status`
+ * og `score_visibility`:
  *
- *   - `finished` → SoloStablefordPodium (reveal, fase 6): topp 3 podium
- *     med konfetti på 1.-plass og resten av rangeringen collapsed under.
- *   - alt annet (active/scheduled) → SoloStablefordView: flat liste sortert
- *     på poeng, samme view brukes både midt-runde og post-finished i fase 5.
- *
- * Reveal-modus (`game.score_visibility = 'reveal'`) er ikke implementert for
- * stableford ennå — vi behandler det som vanlig live-flow ved aktivt spill.
- * Når spillet flippes til finished får alle se podiet uansett visibility-flagg.
+ *   - `score_visibility='reveal'` + `status='active'` → RevealBruttoView:
+ *     viser brutto-slag-totaler mens netto-rangeringen skjules til admin
+ *     avslutter spillet (issue #801).
+ *   - `finished` → SoloStablefordPodium: topp 3 podium med konfetti på
+ *     1.-plass og resten av rangeringen collapsed under.
+ *   - alt annet (active/scheduled, live-visibility) → SoloStablefordView:
+ *     flat liste sortert på poeng.
  *
  * For best-ball reuser vi state #3/#3.5-grenene fordi de avhenger av flight-
  * og lag-strukturen. Solo-stableford trenger ingen «venterom»-stat ennå
@@ -117,6 +120,79 @@ export async function renderStableford(opts: {
   // The WD section is appended after the main leaderboard content on every
   // return path. Renders nothing when stablefordWithdrawn is empty.
   const wdSection = <WithdrawnPlayersSection players={stablefordWithdrawn} />;
+
+  // Reveal-modus (issue #801): mens spillet er aktivt og score_visibility='reveal'
+  // skjules netto-rangeringen — kun brutto-slag vises. RevealBruttoView bruker
+  // computeLeaderboard fra lib/leaderboard med mode:'brutto'. For solo-stableford
+  // (team_number=0 i DB) tilordner vi hvert aktive spillers unike sekvensielle
+  // teamNumber for å gruppere de som enkeltspiller-«lag». For team-stableford
+  // brukes game_players.team_number direkte. Ferdig spill (status='finished')
+  // faller gjennom til normal podium-vei.
+  const revSt = revealState(game.score_visibility, game.status);
+  if (shouldHideNetto(revSt)) {
+    const activePlayers = gwp.players.filter(
+      (p) => p.users != null && p.withdrawn_at == null,
+    );
+    // Determine whether this is the team-variant (par-stableford: team_size=2).
+    // The same logic as buildStablefordContext so we stay in sync.
+    const modeConfig = game.mode_config as { team_size?: number } | null;
+    const isTeamVariant =
+      modeConfig != null &&
+      typeof modeConfig === 'object' &&
+      modeConfig.team_size === 2;
+    const bruttoPlayers = activePlayers.map((p, idx) => ({
+      userId: p.user_id,
+      name: p.users!.name ?? unknownPlayer,
+      nickname: p.users!.nickname ?? null,
+      // Team variant: use the real team_number. Solo: assign sequential IDs
+      // (1-based) so each player forms their own one-person «team» in the
+      // brutto computeLeaderboard call (team_number=0 in DB for solo formats).
+      teamNumber: isTeamVariant ? p.team_number : idx + 1,
+      courseHandicap: p.course_handicap ?? 0,
+      teeGender: p.tee_gender,
+    }));
+    const bruttoHoles = rawHolesRows.map((h) => ({
+      holeNumber: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    }));
+    const withdrawnIdsSet = new Set(
+      gwp.players
+        .filter((p) => p.withdrawn_at != null)
+        .map((p) => p.user_id),
+    );
+    const bruttoScores = rawScoresRows
+      .filter((s) => !withdrawnIdsSet.has(s.user_id))
+      .map((s) => ({
+        userId: s.user_id,
+        holeNumber: s.hole_number,
+        strokes: s.strokes,
+      }));
+    const bruttoLines = computeLeaderboard({
+      mode: 'brutto',
+      players: bruttoPlayers,
+      holes: bruttoHoles,
+      scores: bruttoScores,
+    });
+    const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
+    return (
+      <>
+        <RevealBruttoView
+          gameId={gameId}
+          gameName={game.name}
+          teams={orderedBrutto}
+          holesPlayed={holesPlayed}
+          backHref={backHref}
+        />
+        {wdSection}
+      </>
+    );
+  }
 
   // Variant-router: par-stableford (team) → team-view/podium, solo → solo-
   // view/podium. State4-flippen (finished vs live) er identisk på begge:

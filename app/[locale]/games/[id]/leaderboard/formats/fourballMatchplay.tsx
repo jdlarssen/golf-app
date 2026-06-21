@@ -7,6 +7,9 @@ import {
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { getLeaderboardContext } from '../leaderboardContext';
 import { renderMatchplaySideSection } from '../sideTournament';
+import { RevealBruttoView } from '../RevealBruttoView';
+import { computeLeaderboard } from '@/lib/leaderboard';
+import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -43,6 +46,54 @@ export async function renderFourballMatchplay(opts: {
 }) {
   const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  // Reveal-modus (issue #801): konsistent reveal-gate for fourball matchplay.
+  const revSt = revealState(game.score_visibility, game.status);
+  if (shouldHideNetto(revSt)) {
+    const unknownPlayerForReveal = tc('unknownPlayer');
+    const bruttoPlayers = gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        name: p.users!.name ?? unknownPlayerForReveal,
+        nickname: p.users!.nickname ?? null,
+        teamNumber: p.team_number ?? 0,
+        courseHandicap: p.course_handicap ?? 0,
+        teeGender: p.tee_gender,
+      }));
+    const bruttoHoles = rawHolesRows.map((h) => ({
+      holeNumber: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    }));
+    const bruttoScores = rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      strokes: s.strokes,
+    }));
+    const bruttoLines = computeLeaderboard({
+      mode: 'brutto',
+      players: bruttoPlayers,
+      holes: bruttoHoles,
+      scores: bruttoScores,
+    });
+    const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
+    const holesPlayedForReveal = new Set(rawScoresRows.map((s) => s.hole_number)).size;
+    return (
+      <RevealBruttoView
+        gameId={gameId}
+        gameName={game.name}
+        teams={orderedBrutto}
+        holesPlayed={holesPlayedForReveal}
+        backHref={backHref}
+      />
+    );
+  }
 
   const ctx = {
     game: {
