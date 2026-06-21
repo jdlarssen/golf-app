@@ -358,10 +358,6 @@
       "connectPending": "Blir venner …"
     }
   },
-  "localeSwitcher": {
-    "no": "Norsk",
-    "en": "English"
-  },
   "gameStatus": {
     "draft": "Utkast",
     "scheduled": "Planlagt",

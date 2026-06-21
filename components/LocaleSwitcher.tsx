@@ -1,11 +1,26 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { usePathname } from '@/i18n/navigation';
 import { routing } from '@/i18n/routing';
 import { setLocale } from '@/lib/i18n/localeActions';
 import { useLocale } from 'next-intl';
+
+/**
+ * Autonym for a locale code — 'no' → «Norsk», 'en' → «English», 'sv' →
+ * «Svenska». Capitalised because some languages render lowercase. Derived from
+ * Intl.DisplayNames so the label set scales with routing.locales automatically
+ * (the N-locale criterion, #845) — no per-locale catalog key to maintain.
+ */
+function languageLabel(locale: string): string {
+  try {
+    const name = new Intl.DisplayNames([locale], { type: 'language' }).of(locale);
+    if (name) return name.charAt(0).toUpperCase() + name.slice(1);
+  } catch {
+    // Unsupported tag on an old engine — fall back to the bare code.
+  }
+  return locale.toUpperCase();
+}
 
 /**
  * Segmented Norsk / English control. Submits the setLocale server action
@@ -16,7 +31,6 @@ import { useLocale } from 'next-intl';
  * Tap targets are min 44 px per design guidelines.
  */
 export function LocaleSwitcher() {
-  const t = useTranslations('localeSwitcher');
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentLocale = useLocale();
@@ -44,7 +58,7 @@ export function LocaleSwitcher() {
                   : 'text-muted hover:bg-primary-soft/60 hover:text-text'
               }`}
             >
-              {t(locale)}
+              {languageLabel(locale)}
             </button>
           );
         })}
