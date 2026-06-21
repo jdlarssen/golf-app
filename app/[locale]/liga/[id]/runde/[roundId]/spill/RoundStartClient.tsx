@@ -70,6 +70,7 @@ export function RoundStartClient({
               return (
                 <li key={p.userId}>
                   <label
+                    data-testid={`liga-round-start-player-${p.userId}`}
                     className={[
                       'flex items-center gap-3 cursor-pointer rounded-xl border px-4 py-3 transition-colors min-h-[44px]',
                       checked
@@ -128,6 +129,7 @@ export function RoundStartClient({
         type="submit"
         variant="primary"
         className="w-full"
+        data-testid="liga-round-start-submit"
         disabled={selected.size === 0 || isPending || coPlayers.length === 0}
         pending={isPending}
         pendingLabel={t('startPending')}
