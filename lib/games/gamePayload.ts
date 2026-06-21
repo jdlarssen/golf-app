@@ -496,17 +496,11 @@ function validateStablefordSolo(
   mode: PayloadMode,
   variant: 'stableford' | 'modified_stableford' = 'stableford',
 ): ModeValidationResult {
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  const playersResult = parseSoloPlayers(formData, 8);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish' && players.length < 1) {
     return { ok: false, errorCode: 'min_players_for_mode' };
@@ -703,17 +697,11 @@ function validateSoloStrokeplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  const playersResult = parseSoloPlayers(formData, 8);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish' && players.length < 1) {
     return { ok: false, errorCode: 'min_players_for_mode' };
@@ -1660,19 +1648,13 @@ function validateNassau(
 ): ModeValidationResult {
   const nassauScoring = parseScoringToggle(formData, 'nassau_scoring');
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
   // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
   // av cap-sjekken under i stedet for å trunkeres stille til 16.
-  for (let i = 0; i < 17; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  const playersResult = parseSoloPlayers(formData, 17);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length < 2) {
@@ -1713,19 +1695,13 @@ function validateSkins(
 ): ModeValidationResult {
   const skinsScoring = parseScoringToggle(formData, 'skins_scoring');
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
   // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
   // av cap-sjekken under i stedet for å trunkeres stille til 16.
-  for (let i = 0; i < 17; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  const playersResult = parseSoloPlayers(formData, 17);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length < 2) {
@@ -1772,17 +1748,11 @@ function validateAceyDeucey(
 ): ModeValidationResult {
   const aceyDeuceyScoring = parseScoringToggle(formData, 'acey_deucey_scoring');
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  const playersResult = parseSoloPlayers(formData, 8);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length < 4) {
@@ -1816,19 +1786,13 @@ function validateBingoBangoBongo(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
   // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
   // av cap-sjekken under i stedet for å trunkeres stille til 16.
-  for (let i = 0; i < 17; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  const playersResult = parseSoloPlayers(formData, 17);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length < 2) {
@@ -1871,17 +1835,11 @@ function validateNines(
   const ninesVariant = parseNinesVariant(formData);
   const ninesScoring = parseScoringToggle(formData, 'nines_scoring');
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  const playersResult = parseSoloPlayers(formData, 8);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length < 3) {
