@@ -372,13 +372,18 @@ export async function seedSoloFlightlessGame(
       mode_config: {},
       registration_mode: 'invite_only',
       registration_type: 'solo',
-      status: 'active',
+      // 'scheduled', not 'active': the solo participant roster (Regel 3 →
+      // FlightRoster(flightNumber=null)) only renders in the scheduled
+      // waiting-room view. An active game redirects the player into play, so
+      // the roster — and its data-testid — would never mount. No
+      // scheduled_tee_off_at is set, so the auto-start fallback stays inert.
+      status: 'scheduled',
       created_by: adminUser.id,
     })
     .select('id, short_id, name')
     .single<{ id: string; short_id: string; name: string }>();
   if (gameErr || !game) {
-    throw new Error(`Insert aktivt TEST-spill feilet: ${gameErr?.message ?? 'no row'}`);
+    throw new Error(`Insert scheduled TEST-spill feilet: ${gameErr?.message ?? 'no row'}`);
   }
 
   // flight_number er bevisst null — dette er nøyaktig stien som utløser
