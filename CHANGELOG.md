@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.78] - 2026-06-21 · #803
+
+> Forhindrer at en flight-deltaker kan stille slagtidsstempelet til år 2099 for å fryse en medspillers hull permanent — databasen avviser nå tidsstempler langt frem i tid og tilbake-daterte skriv.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Ny `BEFORE UPDATE`-trigger `guard_scores_self_update` (migrasjon 0109) på `public.scores`: avviser `client_updated_at` som enten beveger seg bakover (ikke-monoton) eller er satt mer enn 5 minutter frem i tid for ikke-admin-skriv. Legitime slag via `upsert_score_if_newer` (security invoker, sanntids-tidsstempel) passerer uten falske positive. Admin og service-role bypasser vakt som vanlig. pgTAP-fil `supabase/tests/scores_client_updated_at_guard_test.sql` (7 assertions). ⚠ Staging-verifisering av RPC-kompatibilitet påkrevd før merge — se PR. (#803)
+
+</details>
+
 ### [1.133.77] - 2026-06-21 · #802
 
 > Forhindrer at en spiller kan fjerne sin egen trekking eller trekke seg fra modus som ikke støtter det — databasen håndhever nå at kun admin kan sette eller nullstille `withdrawn_at`.
