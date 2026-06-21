@@ -634,11 +634,18 @@ export default async function GameHomePage({
               );
             } else if (soloMode) {
               // Regel 3: solo uten inndeling — vis alle deltakere (uendret).
+              // FlightRoster med flightNumber=null henter hele game_players-tabellen,
+              // identisk med den tidligere SoloRoster-varianten (#814).
               return (
                 <>
                   <Kicker tone="muted">{t('participantsLabel')}</Kicker>
                   <Suspense fallback={<FlightRosterSkeleton />}>
-                    <SoloRoster gameId={id} currentUserId={userId} />
+                    <FlightRoster
+                      gameId={id}
+                      flightNumber={null}
+                      currentUserId={userId}
+                      testId="solo-participant-list"
+                    />
                   </Suspense>
                 </>
               );
@@ -1068,11 +1075,14 @@ async function FlightRoster({
   gameId,
   flightNumber,
   currentUserId,
+  testId,
 }: {
   gameId: string;
   /** null betyr «hele spillet» (singleFlight-modus — #543). */
   flightNumber: number | null;
   currentUserId: string;
+  /** data-testid til <ul>-elementet — kun for e2e-guards, ikke produksjon. */
+  testId?: string;
 }) {
   const { supabase } = await getGameContext();
   // #543: flightNumber=null betyr singleFlight → hent alle, ingen flight-filter.
@@ -1098,7 +1108,7 @@ async function FlightRoster({
   }));
 
   return (
-    <ul className="mt-2 flex flex-col gap-2">
+    <ul className="mt-2 flex flex-col gap-2" data-testid={testId}>
       {flight.map((p) => (
         <li key={p.userId} className="flex items-center gap-3">
           {/*
@@ -1142,82 +1152,6 @@ async function FlightRoster({
   );
 }
 
-/**
- * Solo-modus-variant av FlightRoster: lister hele game_players-tabellen,
- * ikke filtrert på flight_number (som er null for stableford solo). Samme
- * visuelle behandling som FlightRoster — gjenbruk for konsistens.
- */
-async function SoloRoster({
-  gameId,
-  currentUserId,
-}: {
-  gameId: string;
-  currentUserId: string;
-}) {
-  const { supabase } = await getGameContext();
-  const { data: rows } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
-    )
-    .eq('game_id', gameId)
-    .order('user_id')
-    .returns<
-      {
-        user_id: string;
-        accepted_at: string | null;
-        users: {
-          name: string | null;
-          nickname: string | null;
-          hcp_index: number | string | null;
-        } | null;
-      }[]
-    >();
-
-  const tHome = await getTranslations('game.home');
-  const players = (rows ?? []).map((row) => ({
-    userId: row.user_id,
-    isCurrentUser: row.user_id === currentUserId,
-    name: row.users?.name ?? tHome('unknownPlayer'),
-    hcpIndex:
-      row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
-    acceptedAt: row.accepted_at,
-  }));
-
-  return (
-    <ul className="mt-2 flex flex-col gap-2">
-      {players.map((p) => (
-        <li key={p.userId} className="flex items-center gap-3">
-          <span
-            className={`shrink-0 w-7 h-7 rounded-full grid place-items-center font-serif text-[12px] font-medium ${
-              p.isCurrentUser
-                ? 'bg-primary text-white dark:text-bg'
-                : 'bg-surface text-text border border-border'
-            }`}
-          >
-            {nameInitials(p.name)}
-          </span>
-          <span
-            className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
-          >
-            {firstName(p.name) ?? p.name}
-            {p.isCurrentUser && (
-              <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
-                {tHome('youLabel')}
-              </span>
-            )}
-          </span>
-          {p.acceptedAt == null && !p.isCurrentUser && (
-            <UnconfirmedBadge className="shrink-0" />
-          )}
-          <span className="shrink-0 text-xs text-muted tabular-nums">
-            HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 function FlightRosterSkeleton() {
   return (
