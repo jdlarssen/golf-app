@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import {
   calculateCourseHandicap,
   applyAllowance,
@@ -54,7 +55,7 @@ export type StartScheduledGameResult =
  * The caller decides redirects / revalidation based on the structured result.
  */
 export async function startScheduledGame(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   gameId: string,
 ): Promise<StartScheduledGameResult> {
   // 1. Verify status is still 'scheduled' and load tee-box + allowance.

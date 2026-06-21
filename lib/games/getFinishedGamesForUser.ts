@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { byEndedAtDesc } from './finishedOrder';
@@ -45,7 +46,7 @@ type FinishedRow = {
  * finished games via `game_players` membership + the finished-visibility policy.
  */
 export async function getFinishedGamesForUser(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<FinishedGame[]> {
   const { data } = await supabase

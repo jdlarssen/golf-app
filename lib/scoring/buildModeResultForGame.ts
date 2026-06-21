@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import {
   COURSE_HOLES_SELECT,
   SCORES_SELECT,
@@ -64,7 +65,7 @@ interface GamePlayerRow {
  * så kallstedet kan la `result_summary` stå `null` (→ 🏆-fallback).
  */
 export async function buildModeResultForGame(
-  client: SupabaseClient,
+  client: SupabaseClient<Database>,
   game: GameForScoring,
 ): Promise<ModeResult | null> {
   const [playersRes, holesRes, scoresRes] = await Promise.all([
@@ -295,7 +296,7 @@ function buildUniformContext(
 }
 
 async function fetchWolfChoices(
-  client: SupabaseClient,
+  client: SupabaseClient<Database>,
   gameId: string,
 ): Promise<WolfHoleChoice[]> {
   const { data, error } = await client
@@ -321,7 +322,7 @@ async function fetchWolfChoices(
 }
 
 async function fetchBingoBangoBongoHoles(
-  client: SupabaseClient,
+  client: SupabaseClient<Database>,
   gameId: string,
 ): Promise<BingoBangoBongoHoleInput[]> {
   const { data, error } = await client

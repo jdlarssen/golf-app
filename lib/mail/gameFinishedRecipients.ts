@@ -6,6 +6,7 @@
 // for å regne ut stableford-leaderboard kun bor ett sted.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import {
   COURSE_HOLES_SELECT,
   SCORES_SELECT,
@@ -57,7 +58,7 @@ export interface FinishedMailRecipient {
  * Spillere uten email droppes (ingen feil — admin kan ikke maile dem uansett).
  */
 export async function buildGameFinishedRecipients(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   gameId: string,
   game: {
     course_id: string;
@@ -332,7 +333,7 @@ export async function buildGameFinishedRecipients(
  *    `opponentName: null` — mail-laget bytter til «motstanderen»-fallback.
  */
 async function buildMatchplayRecipients(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   gameId: string,
   game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
   playerRows: {
@@ -500,7 +501,7 @@ async function buildMatchplayRecipients(
  *    leaderboardet) får ingen mode-payload, ender opp med nøytral copy.
  */
 async function buildSoloStrokeplayRecipients(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   gameId: string,
   game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
   playerRows: {
@@ -623,7 +624,7 @@ async function buildSoloStrokeplayRecipients(
  *    2|4 ved publish) får ingen mode-payload.
  */
 async function buildTexasScrambleRecipients(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   gameId: string,
   game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
   playerRows: {

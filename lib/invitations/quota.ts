@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 
 /**
  * Structured time-until result — locale-agnostic.
@@ -37,7 +38,7 @@ export type QuotaState = {
 };
 
 export async function getQuotaState(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<QuotaState> {
   const windowStart = new Date(Date.now() - QUOTA_WINDOW_MS).toISOString();
