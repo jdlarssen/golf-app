@@ -419,6 +419,179 @@ export async function seedSoloFlightlessGame(
   };
 }
 
+export type ModePlayerSeed = {
+  userId: string;
+  courseHandicap: number;
+  /** Matchplay-familien: 1/2. Solo/poeng-format: null (default). */
+  teamNumber?: number | null;
+};
+
+/**
+ * Seeder et FERDIG spill for `gameMode` med gitte spillere + en score-matrise,
+ * der alle `game_players` er accepted+submitted+approved. Brukes av per-modus
+ * finish-and-validate-banene (#736, del C): den ekte fetch+scoring+render-
+ * pipelinen kjører mot dette, og spec-en asserter at leaderboard-DOM matcher et
+ * uavhengig hardkodet orakel.
+ *
+ * `scoresByHole[holeNumber] = { [userId]: strokes }`. Kun hull i matrisa seedes
+ * — send et delsett for å drive en «avgjort tidlig» matchplay. Scores seedes kun
+ * for hull-numre som faktisk finnes på banen (så par/SI-oppslag aldri treffer en
+ * manglende rad, #642). Caller MÅ kalle `cleanupTestGame(id)` i `afterAll`.
+ */
+export async function seedFinishedModeGame(input: {
+  nameSuffix: string;
+  gameMode: string;
+  modeConfig: Record<string, unknown>;
+  players: ModePlayerSeed[];
+  scoresByHole: Record<number, Record<string, number>>;
+}): Promise<{ id: string; courseId: string; teeBoxId: string }> {
+  const admin = adminClient();
+  const { data: tee } = await admin
+    .from('tee_boxes')
+    .select('id, course_id')
+    .not('par_total_mens', 'is', null)
+    .limit(1)
+    .maybeSingle<{ id: string; course_id: string }>();
+  if (!tee) throw new Error('Ingen tee_box med herre-rating tilgjengelig');
+
+  const { data: holes } = await admin
+    .from('course_holes')
+    .select('hole_number')
+    .eq('course_id', tee.course_id);
+  const validHoles = new Set((holes ?? []).map((h) => h.hole_number as number));
+
+  const stampIso = new Date().toISOString();
+  const name = `TEST-Mode-${input.gameMode}-${Date.now()}-${input.nameSuffix}`;
+  const { data: game, error } = await admin
+    .from('games')
+    .insert({
+      name,
+      course_id: tee.course_id,
+      tee_box_id: tee.id,
+      status: 'finished',
+      game_mode: input.gameMode,
+      mode_config: input.modeConfig,
+      created_by: input.players[0].userId,
+    })
+    .select('id')
+    .single<{ id: string }>();
+  if (error || !game) {
+    throw new Error(`seed mode game failed: ${error?.message ?? 'no row'}`);
+  }
+  const gameId = game.id;
+
+  const { error: gpErr } = await admin.from('game_players').insert(
+    input.players.map((p) => ({
+      game_id: gameId,
+      user_id: p.userId,
+      team_number: p.teamNumber ?? null,
+      flight_number: 1,
+      course_handicap: p.courseHandicap,
+      accepted_at: stampIso,
+      submitted_at: stampIso,
+      approved_at: stampIso,
+    })),
+  );
+  if (gpErr) {
+    await cleanupTestGame(gameId);
+    throw new Error(`game_players insert failed: ${gpErr.message}`);
+  }
+
+  const scoreRows: Record<string, unknown>[] = [];
+  for (const [holeStr, byUser] of Object.entries(input.scoresByHole)) {
+    const hole = Number(holeStr);
+    if (!validHoles.has(hole)) continue;
+    for (const [userId, strokes] of Object.entries(byUser)) {
+      scoreRows.push({
+        game_id: gameId,
+        user_id: userId,
+        hole_number: hole,
+        strokes,
+        entered_by: userId,
+        client_updated_at: stampIso,
+      });
+    }
+  }
+  if (scoreRows.length > 0) {
+    const { error: sErr } = await admin.from('scores').insert(scoreRows);
+    if (sErr) {
+      await cleanupTestGame(gameId);
+      throw new Error(`scores insert failed: ${sErr.message}`);
+    }
+  }
+
+  return { id: gameId, courseId: tee.course_id, teeBoxId: tee.id };
+}
+
+export type EphemeralPlayer = { id: string; email: string };
+
+/**
+ * Oppretter `count` efemere test-brukere via service-role `auth.admin.createUser`
+ * (trigger `on_auth_user_created` lager public.users-raden), og setter
+ * `profile_completed_at` + `name` + `hcp_index` så de dukker opp i cup-roster og
+ * kan bli `game_players`. Disse logger ALDRI inn selv — de er kun roster-
+ * fyllmasse for å nå veiviserens 4-spiller-gulv (#736, del A). Caller MÅ kalle
+ * `deleteEphemeralPlayers(ids)` i `afterAll`. Bruker `@torny-e2e.invalid`-domene
+ * + `Date.now()`-stamp så leftovers er trivielle å spore på den delte staging-DB-en.
+ */
+export async function seedEphemeralPlayers(
+  count: number,
+  opts?: { hcpIndex?: number },
+): Promise<EphemeralPlayer[]> {
+  const admin = adminClient();
+  const out: EphemeralPlayer[] = [];
+  const stamp = Date.now();
+  for (let i = 0; i < count; i++) {
+    const email = `test-ephemeral-${stamp}-${i}@torny-e2e.invalid`;
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+    });
+    if (error || !data.user) {
+      // Best-effort cleanup of any already-created users before bailing.
+      await deleteEphemeralPlayers(out.map((p) => p.id));
+      throw new Error(`createUser(${email}) failed: ${error?.message ?? 'no user'}`);
+    }
+    const id = data.user.id;
+
+    // The on_auth_user_created trigger inserts public.users in the same txn, so
+    // the row exists here. Poll briefly anyway to absorb any replication lag.
+    let updated = false;
+    for (let attempt = 0; attempt < 5 && !updated; attempt++) {
+      const { data: rows } = await admin
+        .from('users')
+        .update({
+          name: `TEST Ephemeral ${i}`,
+          hcp_index: opts?.hcpIndex ?? 18,
+          profile_completed_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select('id');
+      updated = (rows ?? []).length > 0;
+      if (!updated) await new Promise((r) => setTimeout(r, 200));
+    }
+    if (!updated) {
+      await deleteEphemeralPlayers([...out.map((p) => p.id), id]);
+      throw new Error(`profile update for ${email} affected 0 rows`);
+    }
+    out.push({ id, email });
+  }
+  return out;
+}
+
+/** Sletter efemere test-brukere (cascade rydder game_players via FK). Idempotent. */
+export async function deleteEphemeralPlayers(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const admin = adminClient();
+  for (const id of ids) {
+    try {
+      await admin.auth.admin.deleteUser(id);
+    } catch (err) {
+      console.error('[deleteEphemeralPlayers] swallow error', err);
+    }
+  }
+}
+
 /**
  * Sletter test-spillet. Cascade på `games.id` rydder `game_players`,
  * `game_registration_requests`, `notifications` (de som har payload-ref til
