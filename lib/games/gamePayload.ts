@@ -405,16 +405,10 @@ function validateBestBall(
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    const teamCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
-    }
     // Hvert ikke-tomt lag må ha EKSAKT 2 spillere
-    for (const [, count] of teamCounts) {
-      if (count !== 2) {
-        return { ok: false, errorCode: 'team_balance' };
-      }
+    const balanceError = validateTeamBalance(players, 2);
+    if (balanceError) {
+      return { ok: false, errorCode: balanceError };
     }
   }
 
@@ -570,16 +564,10 @@ function validateStablefordTeam(
       // "modus uten spillere" snarere enn "lag i ubalanse".
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    const teamCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
-    }
     // Hvert lag må ha EKSAKT 2 spillere — det er kjernen i 4BBB.
-    for (const [, count] of teamCounts) {
-      if (count !== 2) {
-        return { ok: false, errorCode: 'team_balance' };
-      }
+    const balanceError = validateTeamBalance(players, 2);
+    if (balanceError) {
+      return { ok: false, errorCode: balanceError };
     }
   }
 
@@ -780,15 +768,9 @@ function validateTexasScramble(
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    const teamCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
-    }
-    for (const [, count] of teamCounts) {
-      if (count !== teamSize) {
-        return { ok: false, errorCode: 'team_balance' };
-      }
+    const balanceError = validateTeamBalance(players, teamSize);
+    if (balanceError) {
+      return { ok: false, errorCode: balanceError };
     }
   }
 
@@ -886,15 +868,9 @@ function validateAmbrose(
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    const teamCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
-    }
-    for (const [, count] of teamCounts) {
-      if (count !== teamSize) {
-        return { ok: false, errorCode: 'team_balance' };
-      }
+    const balanceError = validateTeamBalance(players, teamSize);
+    if (balanceError) {
+      return { ok: false, errorCode: balanceError };
     }
   }
 
@@ -993,15 +969,9 @@ function validateFloridaScramble(
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    const teamCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
-    }
-    for (const [, count] of teamCounts) {
-      if (count !== teamSize) {
-        return { ok: false, errorCode: 'team_balance' };
-      }
+    const balanceError = validateTeamBalance(players, teamSize);
+    if (balanceError) {
+      return { ok: false, errorCode: balanceError };
     }
   }
 
@@ -2045,15 +2015,9 @@ function validateShamble(
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    const teamCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
-    }
-    for (const [, teamMembers] of teamCounts) {
-      if (teamMembers !== teamSize) {
-        return { ok: false, errorCode: 'team_balance' };
-      }
+    const balanceError = validateTeamBalance(players, teamSize);
+    if (balanceError) {
+      return { ok: false, errorCode: balanceError };
     }
   }
 
@@ -2122,16 +2086,10 @@ function validatePatsome(
     if (players.length < 4) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    const teamCounts = new Map<number, number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
-    }
     // Hvert lag må ha EKSAKT 2 spillere — Patsome er 2-spiller-format.
-    for (const [, count] of teamCounts) {
-      if (count !== 2) {
-        return { ok: false, errorCode: 'team_balance' };
-      }
+    const balanceError = validateTeamBalance(players, 2);
+    if (balanceError) {
+      return { ok: false, errorCode: balanceError };
     }
   }
 
