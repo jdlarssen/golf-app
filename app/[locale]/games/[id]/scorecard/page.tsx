@@ -13,6 +13,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { ScorecardTableSkeleton } from './TableSkeleton';
+import { ParAsideInline } from '../_components/ParAsideInline';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
@@ -36,11 +37,7 @@ import {
 } from '@/lib/games/scorecardLayout';
 import { nameInitials } from '@/lib/names/initials';
 import { firstName } from '@/lib/firstName';
-import {
-  hasParDifference,
-  parForPlayer,
-  type HoleParByGender,
-} from '@/lib/games/parDisplay';
+import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -717,37 +714,6 @@ function LayoutBTable({
         </tfoot>
       </table>
     </Card>
-  );
-}
-
-/**
- * Liten avvik-indikator vist etter par-tallet i scorekortets par-kolonne.
- * Vises bare når `parByGender` har avvik mellom kjønn. Title-attributtet
- * gir tooltip på desktop og long-press på iOS. #240.
- */
-function ParAsideInline({
-  parByGender,
-  playerGender,
-}: {
-  parByGender: HoleParByGender;
-  playerGender: ScoringGender;
-}) {
-  const t = useTranslations('scorecard');
-  if (!hasParDifference(parByGender)) return null;
-  const parts: string[] = [];
-  if (playerGender !== 'mens') parts.push(t('parGenderMens', { par: parByGender.mens }));
-  if (playerGender !== 'ladies') parts.push(t('parGenderLadies', { par: parByGender.ladies }));
-  if (playerGender !== 'juniors') parts.push(t('parGenderJuniors', { par: parByGender.juniors }));
-  const tooltip = t('parAsideTooltip', { genders: parts.join(', ') });
-  return (
-    <sup
-      data-testid="par-aside-marker"
-      title={tooltip}
-      aria-label={tooltip}
-      className="ml-0.5 cursor-help text-[0.65em] font-semibold text-muted"
-    >
-      *
-    </sup>
   );
 }
 
