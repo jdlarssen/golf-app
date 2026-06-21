@@ -86,7 +86,7 @@ const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted: 'bannerSubmitted',
 };
 
-export type GameRow = {
+type GameRow = {
   id: string;
   name: string;
   status: GameStatus;
