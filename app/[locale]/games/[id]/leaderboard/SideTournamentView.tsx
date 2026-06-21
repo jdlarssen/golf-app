@@ -200,67 +200,6 @@ const SIMPLE_DUAL_AWARDS: readonly SimpleDualAward[] = [
 ];
 
 /**
- * Hvilken gruppe en gitt SideCategory tilhører. Brukes til å fordele awards
- * over de seks under-overskriftene i lag-expand. Penalty-gruppen er kun for
- * snowman (negativ-poeng) og rendres med varselsfarge i Task 8.3.
- */
-const CATEGORY_GROUPS: Record<string, GroupId> = {
-  // Hovedkonkurranser — 10p / 5p / 5p
-  best_netto_18: 'hovedkonkurranser',
-  best_netto_front9: 'hovedkonkurranser',
-  best_netto_back9: 'hovedkonkurranser',
-  // Skill og rarity — 4p lag / 2p individ
-  best_brutto_18_team: 'skill',
-  best_brutto_18_individual: 'skill',
-  king_par3_team: 'skill',
-  king_par3_individual: 'skill',
-  king_par5_team: 'skill',
-  king_par5_individual: 'skill',
-  most_eagles_team: 'skill',
-  most_eagles_individual: 'skill',
-  longest_bogey_free_streak: 'skill',
-  // Moderate — 2p lag / 1p individ
-  best_brutto_f9_team: 'moderate',
-  best_brutto_f9_individual: 'moderate',
-  best_brutto_b9_team: 'moderate',
-  best_brutto_b9_individual: 'moderate',
-  most_birdies_team: 'moderate',
-  most_birdies_individual: 'moderate',
-  most_pars_team: 'moderate',
-  most_pars_individual: 'moderate',
-  lowest_single_hole_brutto: 'moderate',
-  // Hull-konkurranser — 2p each
-  hole_win: 'hull',
-  longest_drive: 'hull',
-  closest_to_pin: 'hull',
-  // Achievements (positive)
-  turkey: 'achievements',
-  solid: 'achievements',
-  team_all_birdied_bonus: 'achievements',
-  team_no_bogey_hole_coord: 'achievements',
-  // Penalty (negative — eigen visuell tone)
-  snowman: 'penalty',
-  worst_single_hole_brutto: 'penalty',
-  most_double_bogeys_individual: 'penalty',
-  // v1.19.0 nye kategoriar — skill (4p lag / 2p individ eller 4p individ-terskel)
-  most_albatrosses_team: 'skill',
-  most_albatrosses_individual: 'skill',
-  most_hole_in_ones_team: 'skill',
-  most_hole_in_ones_individual: 'skill',
-  king_par4_team: 'skill',
-  king_par4_individual: 'skill',
-  clean_front_9: 'skill',
-  clean_back_9: 'skill',
-  no_double_plus_round: 'skill',
-  // v1.19.0 — moderate (2p individ)
-  hardest_hole_winner: 'moderate',
-  comeback_kid: 'moderate',
-  all_par_groups_birdie: 'moderate',
-  even_par_round: 'moderate',
-  back_to_back_birdies: 'moderate',
-};
-
-/**
  * Sideturnering — presentational view for the "Sideturnering" tab on the
  * leaderboard. Visible only when game.status === 'finished' AND
  * side_tournament_enabled.
@@ -1269,6 +1208,6 @@ function ScoringRulesPanel({
   );
 }
 
-// Re-export for any future helper modules that want to import the group map.
-export { CATEGORY_GROUPS, GROUP_ORDER };
+// Re-export for any future helper modules that want to import the group order.
+export { GROUP_ORDER };
 export type { GroupId };
