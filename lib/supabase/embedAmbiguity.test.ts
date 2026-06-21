@@ -5,6 +5,7 @@ import {
   parseSelectEmbeds,
   findAmbiguousEmbeds,
   isAmbiguousPair,
+  MULTI_FK_TO_USERS,
 } from './embedAmbiguity';
 
 /**
@@ -195,4 +196,95 @@ it('no unhinted ambiguous PostgREST embeds anywhere in the source', () => {
       "Add the FK hint, e.g. `users!game_players_user_id_fkey(name)` — see " +
       'lib/supabase/embedAmbiguity.ts and lib/cup/actions.ts for the pattern.',
   ).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------
+// Part 3 — schema-parity guard: MULTI_FK_TO_USERS must match database.types.ts.
+//
+// The guard's hand-held pair list cannot drift silently when the schema gains a
+// new table with >1 FK to `users`. This test parses the in-repo generated types
+// file (lib/database.types.ts) — entirely hermetically, no DB connection needed
+// — and asserts the discovered set equals MULTI_FK_TO_USERS exactly.
+//
+// If this test fails: either
+//   (a) the schema gained a new multi-FK table → add it to MULTI_FK_TO_USERS
+//       in embedAmbiguity.ts and add the FK-hinted embed everywhere needed, or
+//   (b) the types file is stale → run `npm run gen:types` to regenerate it.
+// ---------------------------------------------------------------------------
+
+/**
+ * Parses lib/database.types.ts and returns the set of public table names that
+ * hold more than one foreign key pointing at `users` (i.e. the tables for which
+ * a bare `users(...)` embed is ambiguous).
+ *
+ * Approach: scan the Tables section of the generated types file for each table's
+ * Relationships block, count occurrences of `referencedRelation: "users"` per
+ * table, and collect those with count > 1.
+ *
+ * The generated types file has a highly stable, machine-produced format, so
+ * regex-based parsing is reliable here.
+ */
+function deriveMultiFkToUsersFromTypes(): Set<string> {
+  const typesPath = join(REPO_ROOT, 'lib', 'database.types.ts');
+  const source = readFileSync(typesPath, 'utf8');
+
+  // Extract the Tables section (between `Tables: {` and `Views: {`).
+  const tablesStart = source.indexOf('Tables: {');
+  const tablesEnd = source.indexOf('Views: {', tablesStart);
+  if (tablesStart === -1 || tablesEnd === -1) {
+    throw new Error('Could not locate Tables section in lib/database.types.ts');
+  }
+  const tablesSection = source.slice(tablesStart, tablesEnd);
+
+  // Find each top-level table entry: `      tableName: {`
+  // The generated file consistently indents table names with 6 spaces.
+  const tablePattern = /^ {6}([a-z_][a-z0-9_]*): \{/gm;
+  const multiFkTables = new Set<string>();
+
+  let tableMatch: RegExpExecArray | null;
+  const tableEntries: Array<{ name: string; startIndex: number }> = [];
+  while ((tableMatch = tablePattern.exec(tablesSection)) !== null) {
+    tableEntries.push({ name: tableMatch[1], startIndex: tableMatch.index });
+  }
+
+  for (let i = 0; i < tableEntries.length; i++) {
+    const { name, startIndex } = tableEntries[i];
+    // The table block runs from its start up to the next table (or end of section).
+    const blockEnd = i + 1 < tableEntries.length ? tableEntries[i + 1].startIndex : tablesSection.length;
+    const block = tablesSection.slice(startIndex, blockEnd);
+
+    // Count how many FKs in this table's Relationships array point to "users".
+    const usersRefPattern = /referencedRelation: "users"/g;
+    let count = 0;
+    while (usersRefPattern.exec(block) !== null) count++;
+
+    if (count > 1) multiFkTables.add(name);
+  }
+
+  return multiFkTables;
+}
+
+describe('schema-parity: MULTI_FK_TO_USERS matches database.types.ts', () => {
+  it('derives the same multi-FK-to-users tables as the hand-held list', () => {
+    const schemaSet = deriveMultiFkToUsersFromTypes();
+    const guardSet = new Set(MULTI_FK_TO_USERS);
+
+    // Tables in schema but missing from the guard list — guard is blind to them.
+    const missing = [...schemaSet].filter((t) => !guardSet.has(t)).sort();
+    // Tables in guard list but not found in schema — stale entries.
+    const extra = [...guardSet].filter((t) => !schemaSet.has(t)).sort();
+
+    expect(
+      { missing, extra },
+      missing.length > 0
+        ? `MULTI_FK_TO_USERS is missing tables that have >1 FK to \`users\` in ` +
+            `lib/database.types.ts: ${missing.join(', ')}. Add them to MULTI_FK_TO_USERS ` +
+            `in lib/supabase/embedAmbiguity.ts and add FK-hinted embeds wherever needed (#798).`
+        : extra.length > 0
+          ? `MULTI_FK_TO_USERS contains tables not found as multi-FK in lib/database.types.ts: ` +
+              `${extra.join(', ')}. Either the types file is stale (run \`npm run gen:types\`) ` +
+              `or these entries should be removed from MULTI_FK_TO_USERS.`
+          : 'MULTI_FK_TO_USERS matches schema',
+    ).toEqual({ missing: [], extra: [] });
+  });
 });
