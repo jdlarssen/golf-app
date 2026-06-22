@@ -284,7 +284,11 @@ async function HomeBody() {
   // «Mine spill» (planlagte/utkast): uendret kort med status-pille, lenker til
   // spill-oversikten.
   const renderGameCard = (g: (typeof activeGames)[number]) => (
-    <SmartLink key={g.id} href={`/games/${g.id}`} className="block">
+    <SmartLink
+      key={g.id}
+      href={`/games/${g.id}`}
+      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    >
       <Card className="min-h-[44px] transition-colors p-5 hover:border-primary/30">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -400,7 +404,9 @@ async function HomeBody() {
         action={handicapChip}
       />
 
-      <nav className="space-y-6">
+      {/* #882: not a nav landmark — these are links to data, not site/app
+          navigation. The real global nav is the bottom-nav in the layout. */}
+      <div className="space-y-6">
         {inProgressGames.length > 0 && (
           <Section label={t('sectionInProgress')} accent>
             {inProgressGames.map((g) => renderActiveGameCard(g))}
@@ -423,7 +429,10 @@ async function HomeBody() {
           <HomeDiscoverySection data={discoveryData} preview />
         ) : (
           <Section label={t('sectionFindTournaments')}>
-            <SmartLink href="/finn-turneringer" className="block">
+            <SmartLink
+              href="/finn-turneringer"
+              className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
               <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
                 <span className="text-base font-medium text-text">
                   {t('discoverCard')}
@@ -444,7 +453,10 @@ async function HomeBody() {
               <FinishedGameCard key={g.id} game={g} />
             ))}
             {finishedGames.length > 5 && (
-              <SmartLink href="/spill-arkiv" className="block">
+              <SmartLink
+                href="/spill-arkiv"
+                className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
                 <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
                   <span className="text-base font-medium text-text">
                     {t('sectionFinishedShowAll')}
@@ -458,7 +470,7 @@ async function HomeBody() {
           </Section>
         )}
 
-      </nav>
+      </div>
     </>
   );
 }
@@ -510,13 +522,16 @@ function Section({
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <p
+        {/* #882: section labels are h2s (mirrors HomeDiscoverySection) so
+            screen-reader rotor/heading nav has more than the single h1.
+            Same styling → no visual change. */}
+        <h2
           className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
             accent ? 'text-accent' : 'text-muted'
           }`}
         >
           {label}
-        </p>
+        </h2>
         <div
           className={`h-px flex-1 ${accent ? 'bg-accent/30' : 'bg-border'}`}
         />

@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.
 
+### [1.135.3] - 2026-06-22 · #882
+
+> Hjem er ryddet opp for skjermlesere og tastatur: seksjonene er nå ekte overskrifter du kan hoppe mellom, og spill-kortene viser en tydelig ramme når du blar deg til dem med tastaturet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- Hjems kropps-wrapper byttet fra `<nav>` til `<div>` (`app/[locale]/page.tsx`): kortene er lenker til *data*, ikke side-/app-navigasjon, så et `<nav>`-landemerke konkurrerte falskt med den ekte bunn-nav-en.
+- Seksjons-etikettene i `Section`-helperen byttet fra `<p>` til `<h2>` (speiler `HomeDiscoverySection`). Skjermleser-rotor/heading-nav får nå mer enn bare h1-en. Identisk styling → ingen visuell endring.
+- La til synlig `focus-visible`-ring (`focus-visible:ring-2 focus-visible:ring-accent/40`, app-standard) på Hjems spill-kort-lenker (planlagte spill, funn-lenkekort, «vis alle avsluttede») og på `FinishedGameCard` (brukt på Hjem + `/spill-arkiv`). Tastatur-/switch-brukere ser nå hvilket kort som er fokusert.
+
+</details>
+
 ### [1.135.2] - 2026-06-22 · #881
 
 > Når Hjem laster, viser den nå plassholder-kort i samme størrelse som de ekte kortene, så siden ikke hopper nedover idet spillene dine dukker opp.

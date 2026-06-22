@@ -33,7 +33,10 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
     : null;
 
   return (
-    <SmartLink href={`/games/${game.id}/leaderboard`} className="block">
+    <SmartLink
+      href={`/games/${game.id}/leaderboard`}
+      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    >
       <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
