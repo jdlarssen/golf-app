@@ -17,6 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.136.y — Dine egne tall
+
+Profilen din er ikke lenger bare innstillinger: nå ser du dine egne tall fra runder du har spilt, og den globale tavla har flyttet ut på Hjem som «Toppliste».
+
+### [1.136.0] - 2026-06-23 · #865
+
+> Nå ser du dine egne tall på profilen: runder spilt, brutto-snitt og beste runde, pluss bragder som hole-in-one og birdie. Den gamle «Klubbstatistikker» heter nå «Toppliste» og ligger på Hjem, så profilen handler om deg.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+
+- `lib/stats/playerStats.ts` (+ `playerStats.test.ts`, 24 tester): ren, I/O-fri `computePlayerStats(rounds)` som teller runder spilt, brutto-snitt og beste runde over komplette 18-hulls-runder, samt livstids-bragder (hole-in-one, eagle, birdie, turkey, snowman). Rent brutto mot kjønns-par — netto er historikkens domene (#866). Turkey = ikke-overlappende vinduer av 3 sammenhengende birdie-eller-bedre-hull i samme runde.
+- `app/[locale]/profile/page.tsx`: nytt Suspense-wrappet «Mine tall»-kort mellom profilskjema og invitér-kort. Egen `cache()`-wrappet request-scoped henter (`game_players` + `course_holes` + `scores`, RLS-trygg, ingen admin-client) som velger par per `tee_gender` og mater `computePlayerStats`. Vennlig empty-state ved 0 runder.
+- `app/[locale]/page.tsx`: «Toppliste»-inngang (lenkekort til `/profile/statistikk`) i fylt Hjem-tilstand.
+- `messages/no.json` + `messages/en.json`: `profile.myStats.*` + `home.sectionToppliste`/`home.topplisteCard`.
+
+#### Changed
+
+- `app/[locale]/profile/statistikk/page.tsx`: «Klubbstatistikker» → «Toppliste» (heading + kicker), `backHref` `/profile` → `/`. Selve tavla, vinner-/aktiv-seksjonene og cache-laget (#887/#869) er uendret.
+- `app/[locale]/page.tsx`: avsluttede spill på Hjem kompaktert fra 5 til 3 kort (med «Se alle» → `/spill-arkiv`), så Toppliste-inngangen ikke gjør Hjem scroll-tung.
+
+#### Removed
+
+- `app/[locale]/profile/page.tsx`: «Klubbstatistikker»-raden i «Aktivitet»-seksjonen (én dør per rom — tavla nås nå fra Hjem). `profile.statistikkRow`-nøkkelen er fjernet i begge kataloger.
+
+</details>
+
 ## 1.135.y — Funn rett på Hjem
 
 Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.

@@ -194,7 +194,6 @@
     "friendsRow": "Friends",
     "friendsSublabel": "Add friends and see their games",
     "historikkRow": "My history",
-    "statistikkRow": "Club statistics",
     "exportRow": "Export my data",
     "exportSublabel": "Download everything we have stored about you as a JSON file. The data is yours to take with you.",
     "deleteRow": "Delete account",
@@ -289,9 +288,9 @@
       "resultLink": "View leaderboard"
     },
     "statistikk": {
-      "kicker": "Statistics",
-      "backLabel": "Back to profile",
-      "heading": "Club statistics",
+      "kicker": "Leaderboard",
+      "backLabel": "Back to home",
+      "heading": "Leaderboard",
       "subtitle": "From all completed games on Tørny.",
       "emptyState": "No completed games yet. Statistics will appear as soon as an admin finishes the first game. Then you'll see who has won the most and who has played the most.",
       "winnersLabel": "Winners",
@@ -306,6 +305,19 @@
       "unitGameSingular": "game",
       "unitGamePlural": "games",
       "unknownPlayer": "(unknown)"
+    },
+    "myStats": {
+      "heading": "My numbers",
+      "roundsPlayed": "Rounds played",
+      "grossAverage": "Gross average",
+      "bestRound": "Best round",
+      "emptyState": "Play your first round and your numbers will show up here.",
+      "achievementsLabel": "Highlights",
+      "achievementHoleInOne": "Hole-in-one",
+      "achievementEagle": "Eagle",
+      "achievementBirdie": "Birdie",
+      "achievementTurkey": "Turkey",
+      "achievementSnowman": "Snowman"
     },
     "theme": {
       "rowLabel": "Theme",
@@ -4077,6 +4089,8 @@
     "sectionFinished": "Finished games",
     "sectionFinishedShowAll": "Show all finished games",
     "discoverCard": "Join an open tournament",
+    "sectionToppliste": "Leaderboard",
+    "topplisteCard": "Most wins and most active",
     "teeOffSeparator": "at",
     "teamFlight": "Team {teamNumber} · Flight {flightNumber}",
     "archiveMetaTitle": "Finished games",

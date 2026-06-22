@@ -194,7 +194,6 @@
     "friendsRow": "Venner",
     "friendsSublabel": "Legg til venner og se spillene deres",
     "historikkRow": "Min historikk",
-    "statistikkRow": "Klubbstatistikker",
     "exportRow": "Eksporter mine data",
     "exportSublabel": "Last ned alt vi har lagret om deg som en JSON-fil. Dataene er dine å ta med.",
     "deleteRow": "Slett konto",
@@ -289,9 +288,9 @@
       "resultLink": "Se resultatliste"
     },
     "statistikk": {
-      "kicker": "Statistikk",
-      "backLabel": "Tilbake til profil",
-      "heading": "Klubbstatistikker",
+      "kicker": "Toppliste",
+      "backLabel": "Tilbake til hjem",
+      "heading": "Toppliste",
       "subtitle": "Fra alle ferdigspilte spill i Tørny.",
       "emptyState": "Ingen ferdige spill ennå. Statistikken fylles inn så snart admin avslutter det første spillet. Da ser du hvem som har vunnet flest og hvem som har vært med på flest.",
       "winnersLabel": "Vinnerliste",
@@ -306,6 +305,19 @@
       "unitGameSingular": "spill",
       "unitGamePlural": "spill",
       "unknownPlayer": "(ukjent)"
+    },
+    "myStats": {
+      "heading": "Mine tall",
+      "roundsPlayed": "Runder spilt",
+      "grossAverage": "Brutto-snitt",
+      "bestRound": "Beste runde",
+      "emptyState": "Spill din første runde, så dukker tallene dine opp her.",
+      "achievementsLabel": "Bragder",
+      "achievementHoleInOne": "Hole-in-one",
+      "achievementEagle": "Eagle",
+      "achievementBirdie": "Birdie",
+      "achievementTurkey": "Turkey",
+      "achievementSnowman": "Snowman"
     },
     "theme": {
       "rowLabel": "Tema",
@@ -4077,6 +4089,8 @@
     "sectionFinished": "Avsluttede spill",
     "sectionFinishedShowAll": "Vis alle avsluttede spill",
     "discoverCard": "Bli med i en åpen turnering",
+    "sectionToppliste": "Toppliste",
+    "topplisteCard": "Flest seire og mest aktive",
     "teeOffSeparator": "kl.",
     "teamFlight": "Lag {teamNumber} · Flight {flightNumber}",
     "archiveMetaTitle": "Avsluttede spill",

@@ -445,14 +445,34 @@ async function HomeBody() {
           </Section>
         )}
 
+        {/* #865: Toppliste-inngang (global tavle, flyttet fra profilen). Kun i
+            fylt tilstand — en fersk bruker uten spill får ren velkomst-hero.
+            Ett kompakt lenkekort, samme mønster som «Finn turneringer». */}
+        <Section label={t('sectionToppliste')}>
+          <SmartLink
+            href="/profile/statistikk"
+            className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+              <span className="text-base font-medium text-text">
+                {t('topplisteCard')}
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        </Section>
+
         {finishedGames.length > 0 && (
           <Section label={t('sectionFinished')}>
-            {/* #571: hjem er play + discover-navet, ikke et arkiv. Vis de
-                siste 5; lenk til /spill-arkiv for resten når det finnes flere. */}
-            {finishedGames.slice(0, 5).map((g) => (
+            {/* #571 + #865: hjem er play + discover-navet, ikke et arkiv. Vis de
+                siste 3 (kompakt, så Toppliste-inngangen ikke gjør Hjem scroll-
+                tung); lenk til /spill-arkiv for resten når det finnes flere. */}
+            {finishedGames.slice(0, 3).map((g) => (
               <FinishedGameCard key={g.id} game={g} />
             ))}
-            {finishedGames.length > 5 && (
+            {finishedGames.length > 3 && (
               <SmartLink
                 href="/spill-arkiv"
                 className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"

@@ -246,7 +246,7 @@ export default async function StatistikkPage() {
   return (
     <AppShell>
       <TopBar
-        backHref="/profile"
+        backHref="/"
         backLabel={t('backLabel')}
         kicker={t('kicker')}
       />
@@ -288,7 +288,7 @@ async function EmptyStateView() {
   return (
     <AppShell>
       <TopBar
-        backHref="/profile"
+        backHref="/"
         backLabel={t('backLabel')}
         kicker={t('kicker')}
       />
