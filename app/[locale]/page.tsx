@@ -138,26 +138,30 @@ async function HomeBody() {
 
   // Parallel-fetch profile, active games, finished games — they don't depend
   // on each other and roughly triple-tripled the latency when run serially.
-  const [profileRes, rawActiveRes, finishedGames] = await Promise.all([
-    supabase
-      .from('users')
-      .select(
-        'name, email, profile_completed_at, hcp_index, handicap_updated_at',
-      )
-      .eq('id', userId!)
-      .single(),
-    supabase
-      .from('game_players')
-      .select(
-        'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name))',
-      )
-      .eq('user_id', userId!)
-      .in('games.status', ['draft', 'scheduled', 'active'])
-      .returns<GameRow[]>(),
-    // #571: finished games via the shared helper (same fetch the /spill-arkiv
-    // page uses), already filtered + sorted newest-first (byEndedAtDesc).
-    getFinishedGamesForUser(supabase, userId!),
-  ]);
+  const [profileRes, rawActiveRes, finishedGames, discoveryData] =
+    await Promise.all([
+      supabase
+        .from('users')
+        .select(
+          'name, email, profile_completed_at, hcp_index, handicap_updated_at',
+        )
+        .eq('id', userId!)
+        .single(),
+      supabase
+        .from('game_players')
+        .select(
+          'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name))',
+        )
+        .eq('user_id', userId!)
+        .in('games.status', ['draft', 'scheduled', 'active'])
+        .returns<GameRow[]>(),
+      // #571: finished games via the shared helper (same fetch the /spill-arkiv
+      // page uses), already filtered + sorted newest-first (byEndedAtDesc).
+      getFinishedGamesForUser(supabase, userId!),
+      // #879: funn-feeden hentes for ALLE innloggede (ikke lenger gated på tom-
+      // tilstand) og parallelt her, så den ikke legger til seriell latens.
+      getDiscoverableGames(userId!),
+    ]);
 
   const { data: profile, error: profileError } = profileRes;
 
@@ -214,15 +218,13 @@ async function HomeBody() {
   // dører eller Sekretariat/Klubbhus-snarveier lenger — det er play + discover-
   // navet. Tom-tilstanden peker en fersk bruker mot Klubbhuset under.
 
-  // Discovery i tom-tilstand: vis åpne turneringer en fersk spiller kan bli med
-  // i, ved siden av pekeren til Klubbhuset for å arrangere egne.
-  const discoveryData =
-    isEmptyState && userId ? await getDiscoverableGames(userId) : null;
+  // #879: funn-feeden (hentet i Promise.all-en over) vises både i tom-tilstand
+  // (full) og i fylt tilstand (kappet forhåndsvisning + «Se alle»-hale).
   const hasDiscoveryContent =
-    (discoveryData?.clubGames.length ?? 0) > 0 ||
-    (discoveryData?.openGames.length ?? 0) > 0 ||
-    (discoveryData?.friendGames.length ?? 0) > 0 ||
-    (discoveryData?.pendingRequests.length ?? 0) > 0;
+    discoveryData.clubGames.length > 0 ||
+    discoveryData.openGames.length > 0 ||
+    discoveryData.friendGames.length > 0 ||
+    discoveryData.pendingRequests.length > 0;
 
   if (isEmptyState) {
     return (
@@ -253,7 +255,7 @@ async function HomeBody() {
           </PullQuote>
         </section>
 
-        {discoveryData && hasDiscoveryContent && (
+        {hasDiscoveryContent && (
           <HomeDiscoverySection data={discoveryData} />
         )}
       </>
@@ -411,22 +413,28 @@ async function HomeBody() {
           </Section>
         )}
 
-        {/* Vedvarende «Finn turneringer»-inngang (#357, #392, #500). Hjem er
-            play + discover-navet (arrangering bor i Klubbhuset), så alle
-            innloggede kan oppdage åpne turneringer herfra — rett under egne
-            spill, over de avsluttede. */}
-        <Section label={t('sectionFindTournaments')}>
-          <SmartLink href="/finn-turneringer" className="block">
-            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-              <span className="text-base font-medium text-text">
-                {t('discoverCard')}
-              </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </Card>
-          </SmartLink>
-        </Section>
+        {/* Vedvarende funn-inngang (#357, #392, #500, #879). Hjem er play +
+            discover-navet (arrangering bor i Klubbhuset), så alle innloggede
+            kan oppdage turneringer herfra — rett under egne spill, over de
+            avsluttede. Med innhold: kappet forhåndsvisning (klubb/venner/åpne
+            + egne forespørsler) + «Se alle»-hale. Uten: ett lenkekort som
+            persistent inngang. Ingen create-dører her (#392). */}
+        {hasDiscoveryContent ? (
+          <HomeDiscoverySection data={discoveryData} preview />
+        ) : (
+          <Section label={t('sectionFindTournaments')}>
+            <SmartLink href="/finn-turneringer" className="block">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                <span className="text-base font-medium text-text">
+                  {t('discoverCard')}
+                </span>
+                <span aria-hidden className="text-muted">
+                  →
+                </span>
+              </Card>
+            </SmartLink>
+          </Section>
+        )}
 
         {finishedGames.length > 0 && (
           <Section label={t('sectionFinished')}>

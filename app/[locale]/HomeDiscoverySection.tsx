@@ -22,8 +22,12 @@ import { localizeGameName } from '@/lib/games/autoGameName';
  * samme query kan styre BÅDE velkomst-teksten over og denne seksjonen —
  * uten å fyre lookup-en to ganger.
  */
+/** #879: how many passive funn-kort each list shows in Home-preview mode. */
+const PREVIEW_CAP = 3;
+
 export function HomeDiscoverySection({
   data,
+  preview = false,
 }: {
   data: {
     clubGames: DiscoverableClubGame[];
@@ -31,13 +35,36 @@ export function HomeDiscoverySection({
     friendGames: DiscoverableFriendGame[];
     pendingRequests: PendingRequest[];
   };
+  /**
+   * Hjems fylt-tilstand-forhåndsvisning (#879): kapp de passive listene
+   * (klubb/venner/åpne) til `PREVIEW_CAP` og legg på en «Se alle»-hale til
+   * /finn-turneringer. Egne ventende forespørsler er spillerens egen handling
+   * og kappes aldri. Default (false) = fulle lister — brukes av Hjems tom-
+   * tilstand og /finn-turneringer-siden.
+   */
+  preview?: boolean;
 }) {
   const t = useTranslations('discover');
   const locale = useLocale() as AppLocale;
-  const { clubGames, openGames, friendGames, pendingRequests } = data;
+  const { pendingRequests } = data;
+  const clubGames = preview
+    ? data.clubGames.slice(0, PREVIEW_CAP)
+    : data.clubGames;
+  const friendGames = preview
+    ? data.friendGames.slice(0, PREVIEW_CAP)
+    : data.friendGames;
+  const openGames = preview
+    ? data.openGames.slice(0, PREVIEW_CAP)
+    : data.openGames;
+  // «Se alle»-halen og siste-blokk-spacing kobler på om det fantes NOEN passive
+  // funn (før kapping), ikke på om noe ble kuttet.
+  const hasPassiveDiscovery =
+    data.clubGames.length > 0 ||
+    data.friendGames.length > 0 ||
+    data.openGames.length > 0;
 
   return (
-    <section className="mt-10 w-full">
+    <section className={preview ? 'w-full' : 'mt-10 w-full'}>
       {clubGames.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -84,7 +111,7 @@ export function HomeDiscoverySection({
       )}
 
       {pendingRequests.length > 0 && (
-        <div>
+        <div className={preview && hasPassiveDiscovery ? 'mb-8' : undefined}>
           <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
             {t('myRequests')}
           </h2>
@@ -96,6 +123,22 @@ export function HomeDiscoverySection({
             ))}
           </ul>
         </div>
+      )}
+
+      {/* #879: «Se alle»-hale til den fulle funn-siden når Hjem viser en kappet
+          forhåndsvisning. Kun når det finnes passive funn å se mer av. */}
+      {preview && hasPassiveDiscovery && (
+        <SmartLink
+          href="/finn-turneringer"
+          className="flex min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        >
+          <span className="font-sans text-sm font-medium text-text">
+            {t('seeAllTournaments')}
+          </span>
+          <span aria-hidden className="text-muted">
+            →
+          </span>
+        </SmartLink>
       )}
     </section>
   );

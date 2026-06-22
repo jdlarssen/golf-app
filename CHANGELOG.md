@@ -17,6 +17,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.135.y — Funn rett på Hjem
+
+Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.
+
+### [1.135.0] - 2026-06-22 · #879
+
+> Turneringer fra klubbene og vennene dine vises nå på Hjem også etter at du har fått ditt første spill, ikke bare når du er helt fersk. Du ser et lite utvalg med en «Se alle»-snarvei, og egne forespørsler du venter på blir liggende.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `getDiscoverableGames` hentes nå for alle innloggede (ikke lenger gated på tom-tilstand) og parallelt i Hjems `Promise.all`, så den ikke legger til seriell latens. I fylt tilstand rendres en kappet forhåndsvisning (`HomeDiscoverySection` i `preview`-modus: topp 3 per passiv liste — klubb/venner/åpne) med en «Se alle»-hale til `/finn-turneringer`. Egne ventende forespørsler vises i sin helhet (spillerens egen handling, kappes aldri). Uten funn-innhold beholdes ett lenkekort som persistent inngang. `home.discoverCard` strammet til action-verb, ny `discover.seeAllTournaments`-streng, begge locales.
+
+</details>
+
 ## 1.134.y — Velg tema selv
 
 Profilen lar deg nå styre lyst og mørkt selv, ikke bare arve det fra telefonen.
