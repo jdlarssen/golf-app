@@ -9,12 +9,9 @@ import {
   SUPABASE_URL,
   signInViaOtp,
   seedActiveStablefordGame,
-  seedEphemeralPlayers,
-  deleteEphemeralPlayers,
   cleanupTestGame,
   fetchOtpForEmail,
   type ActiveGame,
-  type EphemeralPlayer,
 } from '../_helpers/games';
 
 /**
@@ -81,6 +78,44 @@ async function signedInClient(email: string) {
   return client;
 }
 
+/**
+ * Seed a real score row (service-role) so a hostile UPDATE/READ has an EXISTING
+ * row to target. Without this, a 0-row result is vacuous — it would hold even
+ * with RLS wide open, simply because there was nothing to touch. With a real row
+ * present, 0-rows proves RLS actually filtered/blocked it.
+ */
+async function seedScoreRow(
+  gameId: string,
+  userId: string,
+  hole: number,
+  strokes: number,
+): Promise<void> {
+  const admin = adminClient();
+  const { error } = await admin.from('scores').insert({
+    game_id: gameId,
+    user_id: userId,
+    hole_number: hole,
+    strokes,
+    entered_by: userId,
+    client_updated_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(`seedScoreRow failed: ${error.message}`);
+}
+
+/**
+ * Non-vacuity guard: assert (via service-role, bypassing RLS) that ≥1 score row
+ * exists for the game. Call this right before a hostile read/update so a passing
+ * 0-row assertion can only mean "RLS blocked it", never "there was nothing here".
+ */
+async function assertScoresExist(gameId: string): Promise<void> {
+  const admin = adminClient();
+  const { data } = await admin.from('scores').select('id').eq('game_id', gameId);
+  expect(
+    (data ?? []).length,
+    'non-vacuity: a real score row must exist before the hostile attempt',
+  ).toBeGreaterThan(0);
+}
+
 // ---------------------------------------------------------------------------
 // Role A — anon (logged out) page redirect tests (no seeds needed)
 // ---------------------------------------------------------------------------
@@ -126,6 +161,8 @@ test.describe('Role A – anon direct DB write blocked @lifecycle', () => {
 
   test.beforeAll(async () => {
     game = await seedActiveStablefordGame('RoleA-write');
+    // Seed a real score so the hostile UPDATE below targets an existing row.
+    await seedScoreRow(game.id, game.adminUserId, 1, 4);
   });
 
   test.afterAll(async () => {
@@ -135,6 +172,7 @@ test.describe('Role A – anon direct DB write blocked @lifecycle', () => {
   test('anon cannot write scores — RLS returns 0 rows', async () => {
     test.slow();
     expect(game).not.toBeNull();
+    await assertScoresExist(game!.id);
     const anon = anonClient();
     const { data, error } = await anon
       .from('scores')
@@ -170,36 +208,15 @@ test.describe('Role B – non-participant blocked from active game @lifecycle', 
   test.describe.configure({ mode: 'serial' });
 
   let game: ActiveGame | null = null;
-  let ephemeral: EphemeralPlayer[] = [];
   // Browser session signed in as the non-participant player
   let ctx: BrowserContext;
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
-    // Seed an active game that the ephemeral player is NOT part of
-    game = await seedActiveStablefordGame('RoleB');
-    // Create one ephemeral user who is NOT added to the game
-    ephemeral = await seedEphemeralPlayers(1);
-
-    // Sign in the *known* PLAYER_EMAIL as the non-participant for page tests.
-    // (The ephemeral user can't receive email, so we use the known player email
-    // for the browser session. They are NOT in this specific seeded game because
-    // seedActiveStablefordGame adds only adminUser + playerUser of the *seed*,
-    // but we need a separate game where neither email is a participant.
-    //
-    // Strategy: seed a second game with only the ephemeral player, then test
-    // PLAYER_EMAIL against THAT game. But PLAYER_EMAIL can't receive OTP. So
-    // instead: use the first seeded game (admin + PLAYER_EMAIL ARE participants),
-    // and test with the ephemeral user (supabase-js client only, not browser
-    // since ephemeral can't receive email). For page redirect tests, we need a
-    // game where PLAYER_EMAIL is NOT a participant — seed a separate one.
-    //
-    // Simplest: use a game seeded with only the admin (not PLAYER_EMAIL) as participant.
-    // We achieve this by creating a game and adding only adminUser.
-    await cleanupTestGame(game.id);
-    game = null;
-
-    // Seed a minimal active game with ONLY the admin user as participant
+    // The non-participant is PLAYER_EMAIL — a real test user who can receive an
+    // OTP (so we can drive both a browser session and a signed-in REST client),
+    // but who is NOT a member of the game we seed here. We seed a minimal active
+    // game with ONLY the admin as participant; PLAYER_EMAIL is the outsider.
     const admin = adminClient();
     const { data: adminUser } = await admin
       .from('users')
@@ -246,6 +263,11 @@ test.describe('Role B – non-participant blocked from active game @lifecycle', 
       throw new Error(`game_players insert failed: ${gpErr.message}`);
     }
 
+    // Seed a real score (the admin participant's) so the non-participant read +
+    // scores-PATCH tests are non-vacuous: a 0-row result then proves RLS
+    // isolation, not that the table was simply empty.
+    await seedScoreRow(newGame.id, adminUser.id, 1, 4);
+
     game = {
       id: newGame.id,
       shortId: newGame.short_id,
@@ -263,13 +285,13 @@ test.describe('Role B – non-participant blocked from active game @lifecycle', 
 
   test.afterAll(async () => {
     if (game) await cleanupTestGame(game.id);
-    await deleteEphemeralPlayers(ephemeral.map((p) => p.id));
     await ctx?.close();
   });
 
   test('non-participant cannot read active game scores via RLS', async () => {
     test.slow();
     expect(game).not.toBeNull();
+    await assertScoresExist(game!.id);
     // Use a signed-in client for PLAYER_EMAIL (who is not in this game).
     const client = await signedInClient(PLAYER_EMAIL!);
     try {
@@ -314,6 +336,7 @@ test.describe('Role B – non-participant blocked from active game @lifecycle', 
   test('hostile PATCH to scores affects 0 rows', async () => {
     test.slow();
     expect(game).not.toBeNull();
+    await assertScoresExist(game!.id);
     const client = await signedInClient(PLAYER_EMAIL!);
     try {
       const { data, error } = await client
@@ -371,35 +394,35 @@ test.describe('Role C – withdrawn player write blocked @lifecycle', () => {
 
   test.beforeAll(async () => {
     game = await seedActiveStablefordGame('RoleC-withdrawn');
+    // Score the player legitimately entered while still active (hole 5). After
+    // withdrawal the UPDATE test targets THIS row, so its 0-row result proves the
+    // withdrawn_at guard blocked the write — not that there was nothing to update.
+    await seedScoreRow(game.id, game.playerUserId, 5, 4);
+    // Withdraw the player (service-role) in beforeAll so BOTH write attempts run
+    // against an already-withdrawn participant — neither test depends on the
+    // other's ordering (no implicit serial dependency).
+    const admin = adminClient();
+    const { data: gpRows, error: withdrawErr } = await admin
+      .from('game_players')
+      .update({ withdrawn_at: new Date().toISOString() })
+      .eq('game_id', game.id)
+      .eq('user_id', game.playerUserId)
+      .select('user_id');
+    if (withdrawErr) throw new Error(`service-role withdraw failed: ${withdrawErr.message}`);
+    if ((gpRows ?? []).length !== 1) {
+      throw new Error(`withdraw should affect exactly 1 row, got ${(gpRows ?? []).length}`);
+    }
   });
 
   test.afterAll(async () => {
     if (game) await cleanupTestGame(game!.id);
   });
 
-  test('withdrawn player: score write affects 0 rows', async () => {
+  test('withdrawn player: score INSERT affects 0 rows', async () => {
     test.slow();
     expect(game).not.toBeNull();
 
-    // Mark the player (PLAYER_EMAIL) as withdrawn in this game via service-role.
-    const admin = adminClient();
-    const withdrawnAt = new Date().toISOString();
-    const { data: gpRows, error: withdrawErr } = await admin
-      .from('game_players')
-      .update({ withdrawn_at: withdrawnAt })
-      .eq('game_id', game!.id)
-      .eq('user_id', game!.playerUserId)
-      .select('user_id');
-    expect(
-      withdrawErr,
-      `service-role withdraw update failed: ${withdrawErr?.message}`,
-    ).toBeNull();
-    expect(
-      (gpRows ?? []).length,
-      'service-role withdraw should affect exactly 1 row',
-    ).toBe(1);
-
-    // Now sign in as that player and attempt a score write.
+    // Sign in as the (now withdrawn) player and attempt a fresh score INSERT.
     const client = await signedInClient(PLAYER_EMAIL!);
     try {
       const { data, error } = await client
@@ -429,8 +452,10 @@ test.describe('Role C – withdrawn player write blocked @lifecycle', () => {
   test('withdrawn player: score update affects 0 rows', async () => {
     test.slow();
     expect(game).not.toBeNull();
+    // The hole-5 row seeded in beforeAll exists at the DB layer → non-vacuous.
+    await assertScoresExist(game!.id);
 
-    // The player is already marked withdrawn from the previous test. Attempt UPDATE.
+    // Player was withdrawn in beforeAll. Attempt to UPDATE their existing score.
     const client = await signedInClient(PLAYER_EMAIL!);
     try {
       const { data, error } = await client
