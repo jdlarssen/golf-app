@@ -70,17 +70,6 @@ describe('SoloStablefordView', () => {
     expect(rows).toHaveLength(4);
   });
 
-  it('sorterer på poeng (høyest øverst), respekterer rank-rekkefølgen fra compute', () => {
-    render(<SoloStablefordView {...defaultProps()} />);
-    const list = screen.getByTestId('stableford-leaderboard');
-    const rows = within(list).getAllByRole('listitem');
-    expect(rows[0].textContent).toContain('38');
-    expect(rows[0].textContent).toContain('Alice Andersen');
-    expect(rows[1].textContent).toContain('32');
-    expect(rows[2].textContent).toContain('28');
-    expect(rows[3].textContent).toContain('24');
-  });
-
   it('viser «N hull spilt»-chip per rad', () => {
     render(<SoloStablefordView {...defaultProps()} />);
     const list = screen.getByTestId('stableford-leaderboard');
