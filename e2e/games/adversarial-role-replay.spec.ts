@@ -1,0 +1,454 @@
+import { createClient } from '@supabase/supabase-js';
+import { test, expect, type BrowserContext, type Page } from '@playwright/test';
+import {
+  envReady,
+  skipReason,
+  adminClient,
+  ADMIN_EMAIL,
+  PLAYER_EMAIL,
+  SUPABASE_URL,
+  signInViaOtp,
+  seedActiveStablefordGame,
+  seedEphemeralPlayers,
+  deleteEphemeralPlayers,
+  cleanupTestGame,
+  fetchOtpForEmail,
+  type ActiveGame,
+  type EphemeralPlayer,
+} from '../_helpers/games';
+
+/**
+ * Adversarial role-replay spec (#849).
+ *
+ * Replays key lifecycle steps as the WRONG role to catch RLS holes mid-flow:
+ *
+ *   Role A — anon (logged out)
+ *     · Game-home / hole / scorecard / submit redirects to /login.
+ *     · Direct PostgREST write to scores affects 0 rows (anon client, no session).
+ *
+ *   Role B — non-participant (logged in, not in the game)
+ *     · Cannot read active game scores (0 rows returned by RLS).
+ *     · Hostile PATCH to game_players affects 0 rows.
+ *     · Hostile PATCH to scores affects 0 rows.
+ *
+ *   Role C — withdrawn player
+ *     · After withdrawal (withdrawn_at set), write to scores affects 0 rows.
+ *     · (Withdrawn player is still auth'd but excluded by RLS.)
+ *
+ * Assertions: HTTP redirect URL, or .select()-returns-0-rows. NEVER on Norwegian
+ * copy (test discipline D). Hostile writes use supabase-js clients signed in as
+ * the attacker role so we test RLS at the DB layer, not the server-action layer.
+ *
+ * Tagged @lifecycle (seeds multiple roles + logs in; individual tests are >15s).
+ * Env-gated to staging; never touches prod.
+ */
+
+// ANON_KEY is public — used to build the unauthenticated supabase client.
+const ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  '<staging-anon-key-redacted>';
+
+/**
+ * Build an unauthenticated anon supabase-js client. No session — exactly what a
+ * logged-out browser would have if it tried to call the REST API directly.
+ */
+function anonClient() {
+  if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
+  return createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+/**
+ * Build a supabase-js client signed in as `email`. We mint an OTP via the
+ * admin API (no rate-limit hit), then call verifyOtp to get a real session.
+ * Returns the authed client; caller should sign out when done.
+ */
+async function signedInClient(email: string) {
+  if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
+  const client = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const otp = await fetchOtpForEmail(email);
+  const { error } = await client.auth.verifyOtp({
+    email,
+    token: otp,
+    type: 'email',
+  });
+  if (error) {
+    throw new Error(`verifyOtp for ${email} failed: ${error.message}`);
+  }
+  return client;
+}
+
+// ---------------------------------------------------------------------------
+// Role A — anon (logged out) page redirect tests (no seeds needed)
+// ---------------------------------------------------------------------------
+
+test.describe('Role A – anon redirects to /login @lifecycle', () => {
+  test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
+
+  const FAKE_ID = '00000000-0000-0000-0000-000000000000';
+
+  test('game home redirects to /login', async ({ page }) => {
+    test.slow();
+    await page.goto(`/games/${FAKE_ID}`);
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+  });
+
+  test('hole entry redirects to /login', async ({ page }) => {
+    test.slow();
+    await page.goto(`/games/${FAKE_ID}/holes/1`);
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+  });
+
+  test('scorecard redirects to /login', async ({ page }) => {
+    test.slow();
+    await page.goto(`/games/${FAKE_ID}/scorecard`);
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+  });
+
+  test('submit redirects to /login', async ({ page }) => {
+    test.slow();
+    await page.goto(`/games/${FAKE_ID}/submit`);
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role A — anon direct PostgREST write (no session)
+// ---------------------------------------------------------------------------
+
+test.describe('Role A – anon direct DB write blocked @lifecycle', () => {
+  test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
+
+  let game: ActiveGame | null = null;
+
+  test.beforeAll(async () => {
+    game = await seedActiveStablefordGame('RoleA-write');
+  });
+
+  test.afterAll(async () => {
+    if (game) await cleanupTestGame(game.id);
+  });
+
+  test('anon cannot write scores — RLS returns 0 rows', async () => {
+    test.slow();
+    expect(game).not.toBeNull();
+    const anon = anonClient();
+    const { data, error } = await anon
+      .from('scores')
+      .update({ strokes: 99 })
+      .eq('game_id', game!.id)
+      .select();
+    // RLS blocks: error may be null (PostgREST silent) or set; data must be empty.
+    // We assert 0 rows returned — never use Norwegian copy.
+    const rowCount = (data ?? []).length;
+    expect(
+      rowCount,
+      `anon write to scores returned ${rowCount} rows (expected 0) — RLS hole!`,
+    ).toBe(0);
+    // Also assert that the error is not a network/infra failure (that would mask
+    // a real test infrastructure problem as a false-positive RLS result).
+    if (error) {
+      // "permission denied" / "row-level security" errors from PostgREST are expected.
+      // Unexpected: connection refused, timeout, invalid JWT format issues.
+      expect(
+        error.message,
+        `anon write got unexpected error: ${error.message}`,
+      ).toMatch(/permission|rls|denied|security|policy|violat/i);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role B — non-participant (authed, not in the game)
+// ---------------------------------------------------------------------------
+
+test.describe('Role B – non-participant blocked from active game @lifecycle', () => {
+  test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
+  test.describe.configure({ mode: 'serial' });
+
+  let game: ActiveGame | null = null;
+  let ephemeral: EphemeralPlayer[] = [];
+  // Browser session signed in as the non-participant player
+  let ctx: BrowserContext;
+  let page: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    // Seed an active game that the ephemeral player is NOT part of
+    game = await seedActiveStablefordGame('RoleB');
+    // Create one ephemeral user who is NOT added to the game
+    ephemeral = await seedEphemeralPlayers(1);
+
+    // Sign in the *known* PLAYER_EMAIL as the non-participant for page tests.
+    // (The ephemeral user can't receive email, so we use the known player email
+    // for the browser session. They are NOT in this specific seeded game because
+    // seedActiveStablefordGame adds only adminUser + playerUser of the *seed*,
+    // but we need a separate game where neither email is a participant.
+    //
+    // Strategy: seed a second game with only the ephemeral player, then test
+    // PLAYER_EMAIL against THAT game. But PLAYER_EMAIL can't receive OTP. So
+    // instead: use the first seeded game (admin + PLAYER_EMAIL ARE participants),
+    // and test with the ephemeral user (supabase-js client only, not browser
+    // since ephemeral can't receive email). For page redirect tests, we need a
+    // game where PLAYER_EMAIL is NOT a participant — seed a separate one.
+    //
+    // Simplest: use a game seeded with only the admin (not PLAYER_EMAIL) as participant.
+    // We achieve this by creating a game and adding only adminUser.
+    await cleanupTestGame(game.id);
+    game = null;
+
+    // Seed a minimal active game with ONLY the admin user as participant
+    const admin = adminClient();
+    const { data: adminUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', ADMIN_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    if (!adminUser) throw new Error(`Admin user ${ADMIN_EMAIL} not found`);
+
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    if (!tee) throw new Error('No tee_box available');
+
+    const { data: newGame, error: gameErr } = await admin
+      .from('games')
+      .insert({
+        name: `TEST-RoleB-NonParticipant-${Date.now()}`,
+        course_id: tee.course_id,
+        tee_box_id: tee.id,
+        game_mode: 'stableford',
+        mode_config: {},
+        registration_mode: 'invite_only',
+        registration_type: 'solo',
+        status: 'active',
+        created_by: adminUser.id,
+      })
+      .select('id, short_id')
+      .single<{ id: string; short_id: string }>();
+    if (gameErr || !newGame) throw new Error(`Game insert failed: ${gameErr?.message}`);
+
+    const acceptedAt = new Date().toISOString();
+    const { error: gpErr } = await admin.from('game_players').insert({
+      game_id: newGame.id,
+      user_id: adminUser.id,
+      flight_number: 1,
+      course_handicap: 18,
+      accepted_at: acceptedAt,
+    });
+    if (gpErr) {
+      await cleanupTestGame(newGame.id);
+      throw new Error(`game_players insert failed: ${gpErr.message}`);
+    }
+
+    game = {
+      id: newGame.id,
+      shortId: newGame.short_id,
+      name: `TEST-RoleB-NonParticipant`,
+      adminUserId: adminUser.id,
+      playerUserId: '', // PLAYER_EMAIL is NOT in this game
+    };
+
+    // Open browser session signed in as PLAYER_EMAIL (who is NOT in the game)
+    ctx = await browser.newContext();
+    page = await ctx.newPage();
+    await page.goto('/login?next=/');
+    await signInViaOtp(page, PLAYER_EMAIL!);
+  });
+
+  test.afterAll(async () => {
+    if (game) await cleanupTestGame(game.id);
+    await deleteEphemeralPlayers(ephemeral.map((p) => p.id));
+    await ctx?.close();
+  });
+
+  test('non-participant cannot read active game scores via RLS', async () => {
+    test.slow();
+    expect(game).not.toBeNull();
+    // Use a signed-in client for PLAYER_EMAIL (who is not in this game).
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { data } = await client
+        .from('scores')
+        .select('id')
+        .eq('game_id', game!.id);
+      const rowCount = (data ?? []).length;
+      expect(
+        rowCount,
+        `non-participant read ${rowCount} score rows from active game (expected 0) — RLS hole!`,
+      ).toBe(0);
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('hostile PATCH to game_players affects 0 rows', async () => {
+    test.slow();
+    expect(game).not.toBeNull();
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      // Try to add yourself to the game by updating a game_players row
+      const { data, error } = await client
+        .from('game_players')
+        .update({ course_handicap: 0 })
+        .eq('game_id', game!.id)
+        .select();
+      const rowCount = (data ?? []).length;
+      expect(
+        rowCount,
+        `non-participant PATCH to game_players returned ${rowCount} rows (expected 0) — RLS hole!`,
+      ).toBe(0);
+      if (error) {
+        expect(error.message).toMatch(/permission|rls|denied|security|policy|violat/i);
+      }
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('hostile PATCH to scores affects 0 rows', async () => {
+    test.slow();
+    expect(game).not.toBeNull();
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { data, error } = await client
+        .from('scores')
+        .update({ strokes: 1 })
+        .eq('game_id', game!.id)
+        .select();
+      const rowCount = (data ?? []).length;
+      expect(
+        rowCount,
+        `non-participant PATCH to scores returned ${rowCount} rows (expected 0) — RLS hole!`,
+      ).toBe(0);
+      if (error) {
+        expect(error.message).toMatch(/permission|rls|denied|security|policy|violat/i);
+      }
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('non-participant page request: game home redirects or shows 404', async () => {
+    test.slow();
+    expect(game).not.toBeNull();
+    // Non-participant (PLAYER_EMAIL not in game) navigates to the game home.
+    // Expected: redirect to /login (RLS 401), notFound() (404 rendered), or
+    // some redirect away from the game. It must NOT show the game content.
+    const response = await page.goto(`/games/${game!.id}`, { waitUntil: 'commit' });
+    // Either redirected to /login, or the server returned 404, or the page is
+    // not at the game URL (notFound() causes a different URL/content).
+    const currentUrl = page.url();
+    const isOnGamePage =
+      currentUrl.includes(`/games/${game!.id}`) &&
+      !currentUrl.includes('/login');
+    if (isOnGamePage) {
+      // If we landed on the game page, assert there's no game content (it should
+      // be a 404 page). We check status or a 404 indicator.
+      const status = response?.status() ?? 0;
+      expect(
+        status,
+        `non-participant accessed game page (status ${status}) — should be 404 or redirect`,
+      ).toBeGreaterThanOrEqual(400);
+    }
+    // Otherwise we were redirected to /login (or another page) — that's fine.
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role C — withdrawn player cannot write scores
+// ---------------------------------------------------------------------------
+
+test.describe('Role C – withdrawn player write blocked @lifecycle', () => {
+  test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
+
+  let game: ActiveGame | null = null;
+
+  test.beforeAll(async () => {
+    game = await seedActiveStablefordGame('RoleC-withdrawn');
+  });
+
+  test.afterAll(async () => {
+    if (game) await cleanupTestGame(game!.id);
+  });
+
+  test('withdrawn player: score write affects 0 rows', async () => {
+    test.slow();
+    expect(game).not.toBeNull();
+
+    // Mark the player (PLAYER_EMAIL) as withdrawn in this game via service-role.
+    const admin = adminClient();
+    const withdrawnAt = new Date().toISOString();
+    const { data: gpRows, error: withdrawErr } = await admin
+      .from('game_players')
+      .update({ withdrawn_at: withdrawnAt })
+      .eq('game_id', game!.id)
+      .eq('user_id', game!.playerUserId)
+      .select('user_id');
+    expect(
+      withdrawErr,
+      `service-role withdraw update failed: ${withdrawErr?.message}`,
+    ).toBeNull();
+    expect(
+      (gpRows ?? []).length,
+      'service-role withdraw should affect exactly 1 row',
+    ).toBe(1);
+
+    // Now sign in as that player and attempt a score write.
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { data, error } = await client
+        .from('scores')
+        .insert({
+          game_id: game!.id,
+          user_id: game!.playerUserId,
+          hole_number: 1,
+          strokes: 4,
+          entered_by: game!.playerUserId,
+          client_updated_at: new Date().toISOString(),
+        })
+        .select();
+      const rowCount = (data ?? []).length;
+      expect(
+        rowCount,
+        `withdrawn player INSERT to scores returned ${rowCount} rows (expected 0) — RLS hole!`,
+      ).toBe(0);
+      if (error) {
+        expect(error.message).toMatch(/permission|rls|denied|security|policy|violat/i);
+      }
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('withdrawn player: score update affects 0 rows', async () => {
+    test.slow();
+    expect(game).not.toBeNull();
+
+    // The player is already marked withdrawn from the previous test. Attempt UPDATE.
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { data, error } = await client
+        .from('scores')
+        .update({ strokes: 99 })
+        .eq('game_id', game!.id)
+        .eq('user_id', game!.playerUserId)
+        .select();
+      const rowCount = (data ?? []).length;
+      expect(
+        rowCount,
+        `withdrawn player UPDATE to scores returned ${rowCount} rows (expected 0) — RLS hole!`,
+      ).toBe(0);
+      if (error) {
+        expect(error.message).toMatch(/permission|rls|denied|security|policy|violat/i);
+      }
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+});
