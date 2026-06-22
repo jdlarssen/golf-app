@@ -40,13 +40,26 @@ export interface GameForScoring {
 
 interface GamePlayerRow {
   user_id: string;
-  team_number: number;
+  // Nullable in database.types.ts + live prod (#844). Defused at the single
+  // normalization boundary in `buildModeResultFromData` (`team_number ?? 0`);
+  // typed honestly here so future drift surfaces instead of being papered over.
+  team_number: number | null;
   flight_number: number | null;
   course_handicap: number | null;
   tee_gender: ScoringGender;
   withdrawn_at: string | null;
   users: { name: string | null; nickname: string | null } | null;
 }
+
+/**
+ * Player row after the nullable `team_number` has been resolved to a concrete
+ * value (the `?? 0` map in `buildModeResultFromData`). The per-mode context
+ * builders require a non-null team_number, so the null is collapsed once at
+ * that boundary and the typed shape flows downstream.
+ */
+type NormalizedPlayerRow = Omit<GamePlayerRow, 'team_number'> & {
+  team_number: number;
+};
 
 /**
  * Bygger `ModeResult` (samme som leaderboard-siden) for ett spill — uavhengig av
@@ -145,7 +158,7 @@ export function buildModeResultFromData(
 
 function buildContext(
   game: GameForScoring,
-  players: GamePlayerRow[],
+  players: NormalizedPlayerRow[],
   holesRows: CourseHoleRow[],
   scoresRows: ScoreRow[],
   extras: ModeResultExtras,
@@ -256,7 +269,7 @@ function buildContext(
  */
 function buildUniformContext(
   game: GameForScoring,
-  players: GamePlayerRow[],
+  players: NormalizedPlayerRow[],
   holesRows: CourseHoleRow[],
   scoresRows: ScoreRow[],
 ): ScoringContext {
@@ -270,7 +283,7 @@ function buildUniformContext(
       .filter((p) => p.users != null && p.withdrawn_at == null)
       .map((p) => ({
         userId: p.user_id,
-        teamNumber: p.team_number ?? 0,
+        teamNumber: p.team_number,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
         teeGender: p.tee_gender,
