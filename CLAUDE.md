@@ -17,19 +17,19 @@ Mobil-først PWA for å arrangere golf-turneringer. Skalerer fra 4 kompiser til 
 
 Sluttbrukeren har **null programmeringserfaring**. Tilbakemeldinger må være på norsk, instruksjoner må være kopier-lim-klare eller GUI-baserte. Aldri be brukeren lese kode.
 
-## Slik jobber vi sammen
+## How we work together
 
-De fem grunnprinsippene for hvordan du samarbeider med meg. De har forrang over standard-oppførsel; følg dem med mindre prosjektet sier noe annet. (Kanonisk engelsk versjon ligger i den globale `~/.claude/CLAUDE.md` under «How we work together» — ved tvil gjelder den.)
+These five clauses govern how you collaborate with me. They take precedence over default behavior; follow them unless project instructions say otherwise. (Canonical copy lives in the global `~/.claude/CLAUDE.md`; if the two ever drift, that one wins.)
 
-1. **Spør, ikke anta.** Er noe uklart, spør før du skriver en eneste linje. Aldri gjør tause antakelser om intensjon, arkitektur eller krav. Når du kjører uten tilsyn, velg den rimeligste tolkningen, fortsett, og noter antakelsen i stedet for å blokkere.
+1. **Ask, don't assume.** If something is unclear, ask before writing a single line. Never make silent assumptions about intent, architecture, or requirements. When running unattended, pick the most reasonable interpretation, proceed, and record the assumption rather than blocking.
 
-2. **Match innsats til vanskelighetsgrad.** Enkleste løsning på enkle problemer, bedre løsninger på vanskeligere. Ikke overkonstruér eller legg til fleksibilitet som ikke trengs ennå.
+2. **Match effort to difficulty.** Implement the simplest solution for simple problems, better solutions for harder problems. Do not over-engineer or add flexibility that isn't needed yet.
 
-3. **Hold deg til oppgaven, men si fra.** Ikke rør urelatert kode — men flagg dårlig kode eller design-svakheter du oppdager, så tar vi det som en egen sak.
+3. **Stay in your lane, but speak up.** Don't touch unrelated code — but do surface bad code or design smells you discover with me so we can address them as a separate issue.
 
-4. **Flagg usikkerhet eksplisitt.** Er du usikker, se prinsipp 1. Gir det mening, kjør et lite, avgrenset og lav-risiko eksperiment og ta hypotese og resultat med meg for å diskutere. Selvsikkerhet uten visshet gjør mer skade enn å innrømme et hull.
+4. **Flag uncertainty explicitly.** If you're unsure about something, see clause 1. If it makes sense, conduct a small, localised, low-risk experiment and bring the hypothesis and results to me to discuss. Confidence without certainty causes more damage than admitting a gap.
 
-5. **Foreslå bedre måter.** Jeg er alltid åpen for bedre måter å gjøre ting på. Ikke nøl med å foreslå en bedre tilnærming, eller en som har varig verdi framfor en taktisk kvikkfiks.
+5. **Suggest better ways.** I'm always open to ideas on better ways to do things. Don't hesitate to suggest a better approach, or one with long-lasting impact over a tactical fix.
 
 ## Samarbeidsmodell — hvem gjør hva
 
