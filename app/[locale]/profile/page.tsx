@@ -39,6 +39,24 @@ const getProfileContext = cache(async () => {
   return { supabase, userId };
 });
 
+/**
+ * Fetches the full users row needed by both `ProfileFormCard` and
+ * `GenderSoftPrompt`. React `cache()` memoises per render — the two separate
+ * Suspense subtrees get the same promise so only one round-trip fires. (#874)
+ */
+const getProfileRow = cache(async () => {
+  const { supabase, userId } = await getProfileContext();
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('users')
+    .select(
+      'name, nickname, hcp_index, handicap_updated_at, email, profile_completed_at, gender, level',
+    )
+    .eq('id', userId)
+    .single();
+  return { data, error };
+});
+
 export default async function ProfilePage({
   searchParams,
 }: {
@@ -171,15 +189,9 @@ async function ProfileFormCard({
 }) {
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('profile');
-  const { supabase, userId } = await getProfileContext();
 
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select(
-      'name, nickname, hcp_index, handicap_updated_at, email, profile_completed_at, gender, level',
-    )
-    .eq('id', userId!)
-    .single();
+  const result = await getProfileRow();
+  const { data: profile, error: profileError } = result ?? { data: null, error: null };
 
   // Old logic was: "no row" means not yet onboarded — but the auth.users trigger
   // now pre-creates a placeholder row, so check the completion timestamp instead.
@@ -190,12 +202,15 @@ async function ProfileFormCard({
     redirect({ href: '/complete-profile', locale });
   }
 
-  const displayName = profile.name ?? '';
+  // profile is guaranteed non-null after the redirect above (redirect() is not
+  // typed as `never` in next-intl, so TS can't narrow automatically).
+  const p = profile!;
+  const displayName = p.name ?? '';
   const initial = displayName.trim().charAt(0).toUpperCase() || '?';
   const hcpDisplay =
-    profile.hcp_index == null
+    p.hcp_index == null
       ? '–'
-      : formatHcpDisplay(profile.hcp_index, locale);
+      : formatHcpDisplay(p.hcp_index, locale);
 
   return (
     <Card>
@@ -216,15 +231,15 @@ async function ProfileFormCard({
         </div>
       </div>
       <ProfileFormBody
-        email={profile.email}
-        handicapUpdatedAt={profile.handicap_updated_at}
+        email={p.email}
+        handicapUpdatedAt={p.handicap_updated_at}
         initial={{
-          name: profile.name ?? '',
-          nickname: profile.nickname ?? '',
+          name: p.name ?? '',
+          nickname: p.nickname ?? '',
           hcpIndex:
-            profile.hcp_index == null ? '' : String(profile.hcp_index),
-          gender: profile.gender,
-          level: profile.level,
+            p.hcp_index == null ? '' : String(p.hcp_index),
+          gender: p.gender,
+          level: p.level,
         }}
         action={updateProfile}
         next={next}
@@ -235,13 +250,9 @@ async function ProfileFormCard({
 
 async function GenderSoftPrompt() {
   const t = await getTranslations('profile');
-  const { supabase, userId } = await getProfileContext();
-  if (!userId) return null;
-  const { data: profile } = await supabase
-    .from('users')
-    .select('gender')
-    .eq('id', userId)
-    .single();
+  const result = await getProfileRow();
+  if (!result) return null;
+  const { data: profile } = result;
   if (!profile || profile.gender !== null) return null;
 
   return (
