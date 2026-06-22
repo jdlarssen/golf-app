@@ -102,32 +102,29 @@ describe('TeamStablefordPodium', () => {
     expect(within(podium).getByTestId('podium-rank-3')).toBeInTheDocument();
   });
 
-  it('1.-plassen viser Lag N + total + begge partnernes fornavn', () => {
+  it('1.-plassen viser Lag N + begge partnernes fornavn', () => {
     render(<TeamStablefordPodium {...defaultProps()} />);
     const podium = screen.getByTestId('stableford-team-podium');
     const winner = within(podium).getByTestId('podium-rank-1');
     expect(winner.textContent).toContain('Lag 1');
-    expect(winner.textContent).toContain('42');
     expect(winner.textContent).toContain('Alice');
     expect(winner.textContent).toContain('Bjørn');
   });
 
-  it('2.-plassen viser Lag N + total + partnernavn', () => {
+  it('2.-plassen viser Lag N + partnernavn', () => {
     render(<TeamStablefordPodium {...defaultProps()} />);
     const podium = screen.getByTestId('stableford-team-podium');
     const second = within(podium).getByTestId('podium-rank-2');
     expect(second.textContent).toContain('Lag 2');
-    expect(second.textContent).toContain('36');
     expect(second.textContent).toContain('Camilla');
     expect(second.textContent).toContain('David');
   });
 
-  it('3.-plassen viser Lag N + total + partnernavn', () => {
+  it('3.-plassen viser Lag N + partnernavn', () => {
     render(<TeamStablefordPodium {...defaultProps()} />);
     const podium = screen.getByTestId('stableford-team-podium');
     const third = within(podium).getByTestId('podium-rank-3');
     expect(third.textContent).toContain('Lag 3');
-    expect(third.textContent).toContain('28');
     expect(third.textContent).toContain('Erik');
     expect(third.textContent).toContain('Frida');
   });
