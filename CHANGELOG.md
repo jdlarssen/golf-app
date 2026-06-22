@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Profilen lar deg nå styre lyst og mørkt selv, ikke bare arve det fra telefonen.
 
+### [1.134.4] - 2026-06-22 · #897
+
+> Klubb-siden lastet ikke på grunn av en feil i kontakt-lenken. Nå åpner den som normalt igjen, og lenken for å få satt opp en klubb virker.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `/klubber` krasjet i error-boundary («Noe gikk galt») fordi kontakt-CTA-en kalte `t.rich('ctaBody'/'ctaDiscrete', {email: (chunks) => <a>})`, mens meldingene brukte en verdi-placeholder `{email}` i stedet for tag-syntaks. next-intl rendret da render-funksjonen som et React-barn → «Functions are not valid as a child of Client Components», og hele siden falt. Begge grener (tom-tilstand + ikke-tom) var rammet, så siden krasjet for alle. Fikset ved å bytte `{email}` → `<email>klubb@tornygolf.no</email>` i begge nøkler og begge locales; `t.rich`-callbacken (uendret) gjør nå adressen om til en mailto-lenke. Funnet under staging-QA av #863. (#897)
+
+</details>
+
 ### [1.134.3] - 2026-06-22 · #863
 
 > Klubbhuset-fanen lyser nå opp også når du er inne på klubb- eller spillformat-sidene, så du alltid ser hvor du er. Kortene der inne reagerer når du trykker, og tellingen står endelig riktig ved ett spill: «1 aktiv · 1 planlagt».
