@@ -427,6 +427,33 @@ export type ModePlayerSeed = {
 };
 
 /**
+ * Per-hull Wolf-valg (`wolf_hole_choices`). Wolf-scoring leser disse direkte
+ * (kanonisk kilde) — uten dem faller modulen tilbake på rotasjon, men outcome
+ * blir 'pending' (ingen choice → ingen poeng). Et finished-validerings-orakel
+ * MÅ seede dem. DB-CHECK `partner_only_when_partner_choice`: `partnerUserId`
+ * settes KUN når `choice === 'partner'`.
+ */
+export type WolfChoiceSeed = {
+  holeNumber: number;
+  wolfUserId: string;
+  choice: 'partner' | 'lone' | 'blind';
+  partnerUserId?: string | null;
+};
+
+/**
+ * Per-hull Bingo-Bango-Bongo-prestasjonsrad (`bingo_bango_bongo_holes`). BBB-
+ * poeng utledes IKKE fra slag — de kommer fra disse radene. Et finished-
+ * validerings-orakel MÅ seede dem (ellers deler ingen hull ut poeng). Alle tre
+ * felt er nullable (et hull kan mangle en mottaker).
+ */
+export type BingoBangoBongoHoleSeed = {
+  holeNumber: number;
+  bingoUserId?: string | null;
+  bangoUserId?: string | null;
+  bongoUserId?: string | null;
+};
+
+/**
  * Seeder et FERDIG spill for `gameMode` med gitte spillere + en score-matrise,
  * der alle `game_players` er accepted+submitted+approved. Brukes av per-modus
  * finish-and-validate-banene (#736, del C): den ekte fetch+scoring+render-
@@ -437,6 +464,11 @@ export type ModePlayerSeed = {
  * — send et delsett for å drive en «avgjort tidlig» matchplay. Scores seedes kun
  * for hull-numre som faktisk finnes på banen (så par/SI-oppslag aldri treffer en
  * manglende rad, #642). Caller MÅ kalle `cleanupTestGame(id)` i `afterAll`.
+ *
+ * Wolf/BBB henter per-hull-valg fra egne tabeller (`wolf_hole_choices` /
+ * `bingo_bango_bongo_holes`) som scores IKKE dekker — send dem via `wolfChoices`
+ * / `bingoBangoBongoHoles` (#848). Uten dem gir Wolf 'pending' (0 poeng) og BBB
+ * 0 poeng, så et validerings-orakel for disse to modusene MÅ seede dem.
  */
 export async function seedFinishedModeGame(input: {
   nameSuffix: string;
@@ -444,6 +476,10 @@ export async function seedFinishedModeGame(input: {
   modeConfig: Record<string, unknown>;
   players: ModePlayerSeed[];
   scoresByHole: Record<number, Record<string, number>>;
+  /** Per-hull Wolf-valg (kun for `gameMode === 'wolf'`). */
+  wolfChoices?: WolfChoiceSeed[];
+  /** Per-hull BBB-rader (kun for `gameMode === 'bingo_bango_bongo'`). */
+  bingoBangoBongoHoles?: BingoBangoBongoHoleSeed[];
 }): Promise<{ id: string; courseId: string; teeBoxId: string }> {
   const admin = adminClient();
   const { data: tee } = await admin
@@ -517,6 +553,55 @@ export async function seedFinishedModeGame(input: {
     if (sErr) {
       await cleanupTestGame(gameId);
       throw new Error(`scores insert failed: ${sErr.message}`);
+    }
+  }
+
+  // Wolf per-hull-valg: scoring leser disse direkte. `entered_by` må være en
+  // ekte bruker — vi bruker oppretteren (players[0]). Kun hull som finnes seedes.
+  if (input.wolfChoices && input.wolfChoices.length > 0) {
+    const enteredBy = input.players[0].userId;
+    const choiceRows = input.wolfChoices
+      .filter((c) => validHoles.has(c.holeNumber))
+      .map((c) => ({
+        game_id: gameId,
+        hole_number: c.holeNumber,
+        wolf_user_id: c.wolfUserId,
+        choice: c.choice,
+        partner_user_id: c.choice === 'partner' ? (c.partnerUserId ?? null) : null,
+        entered_by: enteredBy,
+      }));
+    if (choiceRows.length > 0) {
+      const { error: wErr } = await admin
+        .from('wolf_hole_choices')
+        .insert(choiceRows);
+      if (wErr) {
+        await cleanupTestGame(gameId);
+        throw new Error(`wolf_hole_choices insert failed: ${wErr.message}`);
+      }
+    }
+  }
+
+  // BBB per-hull-prestasjonsrader: poeng utledes herfra, ikke fra slag.
+  if (input.bingoBangoBongoHoles && input.bingoBangoBongoHoles.length > 0) {
+    const enteredBy = input.players[0].userId;
+    const bbbRows = input.bingoBangoBongoHoles
+      .filter((h) => validHoles.has(h.holeNumber))
+      .map((h) => ({
+        game_id: gameId,
+        hole_number: h.holeNumber,
+        bingo_user_id: h.bingoUserId ?? null,
+        bango_user_id: h.bangoUserId ?? null,
+        bongo_user_id: h.bongoUserId ?? null,
+        entered_by: enteredBy,
+      }));
+    if (bbbRows.length > 0) {
+      const { error: bErr } = await admin
+        .from('bingo_bango_bongo_holes')
+        .insert(bbbRows);
+      if (bErr) {
+        await cleanupTestGame(gameId);
+        throw new Error(`bingo_bango_bongo_holes insert failed: ${bErr.message}`);
+      }
     }
   }
 
