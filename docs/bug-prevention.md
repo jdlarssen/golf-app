@@ -76,9 +76,10 @@ Related: `docs/schema-ground-truth.md` (live-schema snapshot) · `lib/supabase/A
 - Wrap multi-insert flows in a compensating delete (mirror the `startLeagueRoundFlight` pattern) or move them into a single RPC so Postgres rolls back on error.
 - **A compensating delete only works if the creator can actually delete the parent.** Check the table's DELETE policy first: games/leagues grant creator/club-admin DELETE (0071/0092), so a compensating delete cleans up; `courses` grants DELETE to admins only, so a non-admin creator's cleanup is blocked by RLS and the orphan persists. There, the only real fix is a single transaction — a SECURITY DEFINER RPC that runs every insert in one statement-block (`create_course_with_layout`, 0113, #737). It forces `created_by = auth.uid()` and keeps the column shape verified against live schema (trap #1).
 - Every multi-step creation path needs a chaos-injection test: mock a mid-sequence insert (or the RPC) to fail and assert it rolls back / fails atomically AND surfaces a localized error — never a partial state (#737).
+- **Multi-step *edits* need a transaction too — there's no parent to delete to undo an edit.** `updateCourse` rewrote a course in steps (UPDATE course → DELETE+INSERT holes → tee diff); a mid-sequence failure left it inconsistent, worst case with zero holes between the holes DELETE and INSERT (#642-class crash). The fix is one transaction: `update_course_with_layout` (0114, #846). It is **SECURITY INVOKER** (not definer) because "trusted creator" is a TS email allowlist with no DB row, so a definer function couldn't authz it — as invoker, RLS gates direct JWT calls while the service-role path stays TS-gated. The subtle tee diff stays in TS; the RPC is a dumb atomic executor.
 - Every route that runs a creation flow must have a co-located `error.tsx`.
 
-**Enforced:** compensating-delete pattern, games/cup/liga (#675) · transaction RPC where the creator lacks DELETE-RLS, courses (#737) · chaos-injection tests on all five creation paths (#737) · `error.tsx` boundaries (#680).
+**Enforced:** compensating-delete pattern, games/cup/liga (#675) · transaction RPC where the creator lacks DELETE-RLS, courses create (#737) · transaction RPC for multi-step edits, courses edit (#846) · chaos-injection tests on all creation/edit paths (#737, #846) · `error.tsx` boundaries (#680).
 
 ---
 
