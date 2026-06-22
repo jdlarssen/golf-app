@@ -45,33 +45,28 @@ empty-state/discovery-grenen på Hjem.
 
 ## Success criteria
 
-- [ ] **C1 — Query utvidet.** Home `game_players`-spørringen henter `submitted_at, withdrawn_at,
-  approved_at`; `games!inner`-joinen henter `require_peer_approval, game_mode`. `GameRow`-typen og
-  `activeGames`-mappingen reflekterer feltene. *Evidence: select-string + type i `page.tsx`.*
-- [ ] **C2 — Tilstands-resolver (ren + testet).** `lib/games/activeCardState.ts` eksporterer en ren
-  funksjon som mapper `{ submitted_at, withdrawn_at, approved_at, require_peer_approval }` →
-  `'continue' | 'submitted' | 'pending_approval' | 'withdrawn'`. Unit-test (`it.each`) dekker alle
-  fire utfall + grensen peer-approval på/av. *Evidence: `npx vitest run lib/games/activeCardState.test.ts` grønt.*
-- [ ] **C3 — Tilstands-etikett på kortet.** «Pågår nå»-kortet viser et tilstands-ord i stedet for den
-  generiske `StatusPill`: Fortsett (forest) · Levert ✓ (grønn/success — semantisk «ferdig») · Til
-  godkjenning (nøytral/info) · Trukket (dempet). Ikke-aktive kort i «Mine spill» beholder eksisterende
-  `StatusPill` uendret. *Evidence: render-gren i `page.tsx` + strenger i no.json/en.json.*
-- [ ] **C4 — «Rett inn i runden»-lenke.** Aktivt, ikke-levert, ikke-trukket kort lenker til neste
-  utastede hull (`/games/[id]/holes/[n]`), eller `/games/[id]/submit` når alle 18 er tastet. Levert/
-  trukket aktivt + alle ikke-aktive kort lenker til `/games/[id]` (dagens). Neste-hull beregnes via ett
-  scoped scores-oppslag for de aktive-ikke-leverte spillene (parallelt, ikke N+1). *Evidence: routing-
-  logikk + scores-oppslag i `page.tsx`/helper.*
-- [ ] **C5 — Peer-godkjenning-nudge.** Egen accent-linje under kortet, kun når `require_peer_approval
-  && active && pendingApprovalsForMe > 0`, med `game.home.pendingApprovals`-tekst + `reviewLink` →
-  `/games/[id]/approve`. `pendingApprovalsForMe` beregnes med SAMME regel som
-  `PendingApprovalsBanner` (gjenbruk `isSingleFlightGame`). Linja er et søsken-element, IKKE nestet i
-  kort-`SmartLink`. *Evidence: render + gjenbruk av `isSingleFlightGame` i helper.*
-- [ ] **C6 — Fullfør #363.** `<Section label={t('sectionInProgress')} accent>` på `page.tsx:287` —
-  etikett + skillelinje får champagne-tone. *Evidence: diff på linje 287.*
-- [ ] **C7 — Ingen regresjon.** Empty-state, discovery, «Mine spill», «Finn turneringer», «Avsluttede
-  spill» uendret. Ingen schema/auth/RLS-endring. *Evidence: diff scope + gates.*
-- [ ] **C8 — Copy humanizer-ren.** Nye norske strenger kjørt gjennom `humanizer`-skillet; en.json-
-  paritet (naturlig engelsk). *Evidence: humanizer-pass nevnt i commit.*
+- [x] **C1 — Query utvidet.** ✅ `page.tsx` select henter nå `submitted_at, withdrawn_at, approved_at`
+  + `games!inner(... require_peer_approval, game_mode ...)`; `GameRow`-typen + `activeGames`-mappingen
+  oppdatert. *Evidence: `page.tsx` select-string + `GameRow`-type + mapping (commit dec3b8ef).*
+- [x] **C2 — Tilstands-resolver (ren + testet).** ✅ `lib/games/activeCardState.ts` →
+  `'continue' | 'submitted' | 'pending_approval' | 'withdrawn'`; 6 `it.each`-cases (alle 4 utfall +
+  peer-approval på/av + withdrawn-presedens). *Evidence: `vitest run lib/games/activeCardState.test.ts` → 6 passed.*
+- [x] **C3 — Tilstands-etikett.** ✅ `ActiveStateLabel` (forest/success-grønn/amber/muted) erstatter
+  `StatusPill` for aktive kort; «Mine spill» beholder `StatusPill`. Strenger i no.json + en.json
+  (cardState{Continue,Submitted,PendingApproval,Withdrawn}). *Evidence: `page.tsx` render + i18n-katalogene.*
+- [x] **C4 — «Rett inn i runden».** ✅ `getActiveGameCardData` setter href = neste utastede hull /
+  `/submit` ved 18/18 for `continue`, ellers `/games/[id]`. Scores-oppslag scoped til `continue`-spill,
+  parallelt med mates-oppslag (Promise.all), ikke N+1. *Evidence: `lib/games/getActiveGameCardData.ts`.*
+- [x] **C5 — Peer-godkjenning-nudge.** ✅ Søsken-`SmartLink` (ikke nestet) under kortet, kun når
+  `pendingApprovalsForMe > 0`; gjenbruker `isSingleFlightGame` + `game.home.pendingApprovals`/`reviewLink`.
+  *Evidence: `page.tsx` nudge-render + helper `isSingleFlightGame`-bruk.*
+- [x] **C6 — Fullfør #363.** ✅ `<Section label={t('sectionInProgress')} accent>`. *Evidence: `page.tsx` Section-bruk.*
+- [x] **C7 — Ingen regresjon.** ✅ `tsc --noEmit` rent, full `vitest` 296 filer / 3894 tester grønt,
+  eslint rent på endrede filer. Empty-state/discovery/«Mine spill» urørt; ingen schema/auth/RLS.
+  *Evidence: gate-kjøringer + diff-scope.*
+- [x] **C8 — Copy humanizer-ren.** ✅ Fire korte imperativer, ingen AI-tells; tre gjenbruker etablerte
+  app-termer (Fortsett/Levert/Trukket). Pre-commit-hook (humanizer) ga ingen blokkering. en.json-paritet.
+  *Evidence: commit dec3b8ef passerte pre-commit + commit-msg-hook.*
 
 ## Gates (kjør scoped til endret kode)
 
