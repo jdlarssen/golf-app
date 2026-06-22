@@ -3134,6 +3134,7 @@
           "tee_no_rating": "Each tee must have at least one complete rating set per gender (Men / Ladies / Juniors).",
           "tee_not_found": "The tee no longer exists. Reload the page to see the updated list.",
           "tee_not_archived": "This tee is not archived, so there is nothing to reopen.",
+          "not_owned": "You can only edit courses you created yourself.",
           "db_course": "Failed to save the course. Please try again in a moment.",
           "db_holes": "Failed to save the course. Please try again in a moment.",
           "db_tees": "Failed to save the course. Please try again in a moment.",

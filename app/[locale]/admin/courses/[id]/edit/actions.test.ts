@@ -261,26 +261,17 @@ describe('restoreTee', () => {
     expect(supabaseMock.from).not.toHaveBeenCalled();
   });
 
-  it('regression: updateCourse iterates the tee-parsing loop (v1.26.1 fix)', async () => {
+  it('regression: updateCourse parses the tee loop and sends it to the atomic RPC (v1.26.1 + #846)', async () => {
     // v1.26.1 bug: MAX_TEE_BOXES was exported from a 'use client' module and
-    // became a throw-function on the server, so the parsing loop never
-    // iterated and every save returned error=tee_required. This test runs
-    // the full FormData parse path; if MAX_TEE_BOXES regresses back into the
-    // client boundary, the loop never sees tee_0_name and the assertion
-    // fails. See feedback_use_client_exports_to_server memory.
+    // became a throw-function on the server, so the parsing loop never iterated
+    // and every save returned error=tee_required. #846 moved the writes into one
+    // atomic RPC; this still guards the parse — the new tee must reach
+    // p_tee_inserts. See feedback_use_client_exports_to_server memory.
     supabaseMock = buildSupabaseMock([
-      // requireAdmin: users.is_admin lookup
+      // requireAdminOrTrustedCreator: users.is_admin lookup
       { data: { is_admin: true }, error: null },
-      // SELECT existing tees (toDelete computation)
+      // SELECT existing tees (toDelete computation) → none
       { data: [], error: null },
-      // UPDATE courses (audit bump)
-      { error: null },
-      // DELETE course_holes
-      { error: null },
-      // INSERT course_holes
-      { error: null },
-      // INSERT tee_boxes (single new tee)
-      { error: null },
     ]);
     setupAdminAuth();
 
@@ -303,11 +294,106 @@ describe('restoreTee', () => {
 
     expect(lastRedirect()).toMatch(/\/admin\/courses\?status=updated/);
 
-    // Critical: the tee_boxes.insert was reached, proving the loop iterated.
-    const insertCalls = supabaseMock.__fromCalls.filter(
-      (c) => c.method === 'insert' && c.table === 'tee_boxes',
+    // #846: one atomic RPC, never per-table writes.
+    const writes = supabaseMock.__fromCalls.filter(
+      (c) =>
+        c.method === 'insert' || c.method === 'update' || c.method === 'delete',
     );
-    expect(insertCalls).toHaveLength(1);
+    expect(writes).toHaveLength(0);
+    // The parsed tee reached the RPC's p_tee_inserts (proves the loop iterated).
+    const rpc = supabaseMock.__rpcCalls.find(
+      (c) => c.name === 'update_course_with_layout',
+    );
+    expect(rpc, 'update_course_with_layout invoked').toBeDefined();
+    const params = rpc!.params as {
+      p_name: string;
+      p_holes: unknown[];
+      p_tee_inserts: unknown[];
+      p_tee_updates: unknown[];
+    };
+    expect(params.p_name).toBe('Sjø-bane Trondheim');
+    expect(params.p_holes).toHaveLength(18);
+    expect(params.p_tee_inserts).toHaveLength(1);
+    expect(params.p_tee_updates).toHaveLength(0);
+  });
+
+  it('#846 chaos: a failed updateCourse RPC shows a localized error and leaks no per-table write', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // gate
+      { data: [], error: null }, // existing tees
+    ]);
+    setupAdminAuth();
+    // Force the atomic RPC to fail (shared mock resolves error:null otherwise);
+    // still record the call so the assertion can see it.
+    supabaseMock.rpc = vi.fn(async (name: string, params?: unknown) => {
+      supabaseMock.__rpcCalls.push({ name, params });
+      return { data: null, error: { message: 'boom' } };
+    }) as unknown as typeof supabaseMock.rpc;
+
+    const formData = new FormData();
+    formData.set('name', 'Sjø-bane');
+    for (let i = 1; i <= 18; i++) {
+      formData.set(`hole_${i}_par_mens`, '4');
+      formData.set(`hole_${i}_si`, String(i));
+    }
+    formData.set('tee_0_name', 'Gul');
+    formData.set('tee_0_slope_mens', '113');
+    formData.set('tee_0_cr_mens', '70.0');
+
+    const { updateCourse } = await import('./actions');
+    await expect(updateCourse(courseId, formData)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    // Atomicity is enforced in Postgres; here we prove the TS path routes through
+    // the RPC and surfaces a localized error rather than a partial multi-write.
+    const writes = supabaseMock.__fromCalls.filter(
+      (c) =>
+        c.method === 'insert' || c.method === 'update' || c.method === 'delete',
+    );
+    expect(writes).toHaveLength(0);
+    expect(
+      supabaseMock.__rpcCalls.find(
+        (c) => c.name === 'update_course_with_layout',
+      ),
+    ).toBeDefined();
+    expect(lastRedirect()).toBe(
+      `/admin/courses/${courseId}/edit?error=db_course`,
+    );
+  });
+
+  it('#846: trusted tries to restore a tee on a course they do NOT own → not_owned, no write', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, email: trustedEmail, name: 'Even' }, error: null }, // loadRole
+      // tee_boxes.maybeSingle — found, belongs to course, archived
+      {
+        data: {
+          id: teeId,
+          course_id: courseId,
+          archived_at: '2026-05-20T10:00:00.000Z',
+        },
+        error: null,
+      },
+      // courses.select created_by — owned by ANOTHER user
+      { data: { created_by: adminUserId }, error: null },
+    ]);
+    setupTrustedAuth();
+    adminClientMock = buildSupabaseMock([]);
+
+    const { restoreTee } = await import('./actions');
+    await expect(restoreTee(courseId, teeId)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe(
+      `/admin/courses/${courseId}/edit?error=not_owned`,
+    );
+    // No write on either client.
+    expect(
+      supabaseMock.__fromCalls.filter((c) => c.method === 'update'),
+    ).toHaveLength(0);
+    expect(
+      adminClientMock.__fromCalls.filter((c) => c.method === 'update'),
+    ).toHaveLength(0);
   });
 
   it('redirects with error=db_tees when archived_at update fails', async () => {
@@ -497,26 +583,19 @@ describe('deleteCourse — trusted-non-admin path (Fase 4 ownership-check)', () 
   });
 });
 
-describe('updateCourse — trusted-non-admin path (Fase 4)', () => {
-  it('trusted edit goes through admin-client for writes, audit-bump uses trusted user id', async () => {
+describe('updateCourse — trusted-non-admin path (Fase 4 + #846)', () => {
+  it('trusted edit: ownership-checked, atomic RPC routed via admin-client, audit uses trusted id', async () => {
     supabaseMock = buildSupabaseMock([
-      // loadRole
+      // loadRole — trusted, NOT admin
       { data: { is_admin: false, email: trustedEmail, name: 'Even' }, error: null },
+      // #846 ownership check: courses.created_by — owned by the trusted user
+      { data: { created_by: trustedUserId }, error: null },
       // SELECT existing tees (toDelete computation) — request-scoped read is OK
       { data: [], error: null },
     ]);
     setupTrustedAuth();
-    // All writes route to the service-role client.
-    adminClientMock = buildSupabaseMock([
-      // courses.update (audit bump)
-      { error: null },
-      // course_holes.delete
-      { error: null },
-      // course_holes.insert
-      { error: null },
-      // tee_boxes.insert (single new tee)
-      { error: null },
-    ]);
+    // The atomic RPC routes to the service-role client (RLS writes are admin-only).
+    adminClientMock = buildSupabaseMock([]);
 
     const formData = new FormData();
     formData.set('name', 'Sjø-bane Trondheim');
@@ -536,8 +615,7 @@ describe('updateCourse — trusted-non-admin path (Fase 4)', () => {
 
     expect(lastRedirect()).toMatch(/\/admin\/courses\?status=updated/);
 
-    // No mutations on the request-scoped client (would trip the
-    // is_admin()-RLS-policy in prod).
+    // No writes and no RPC on the request-scoped client (would trip is_admin RLS).
     const reqWrites = supabaseMock.__fromCalls.filter(
       (c) =>
         c.method === 'update' ||
@@ -545,19 +623,50 @@ describe('updateCourse — trusted-non-admin path (Fase 4)', () => {
         c.method === 'delete',
     );
     expect(reqWrites).toHaveLength(0);
+    expect(supabaseMock.__rpcCalls).toHaveLength(0);
 
-    // Audit-bump on courses carries the trusted user's id.
-    const courseUpdates = adminClientMock.__fromCalls.filter(
-      (c) => c.method === 'update' && c.table === 'courses',
+    // The atomic RPC landed on the service-role client, carrying the trusted id.
+    const rpc = adminClientMock.__rpcCalls.find(
+      (c) => c.name === 'update_course_with_layout',
     );
-    expect(courseUpdates).toHaveLength(1);
-    const courseUpdate = courseUpdates[0].args[0] as { updated_by: string };
-    expect(courseUpdate.updated_by).toBe(trustedUserId);
+    expect(rpc, 'RPC routed via admin-client').toBeDefined();
+    const params = rpc!.params as {
+      p_updated_by: string;
+      p_tee_inserts: unknown[];
+    };
+    expect(params.p_updated_by).toBe(trustedUserId);
+    expect(params.p_tee_inserts).toHaveLength(1);
+  });
 
-    // The new tee was inserted via admin-client.
-    const teeInserts = adminClientMock.__fromCalls.filter(
-      (c) => c.method === 'insert' && c.table === 'tee_boxes',
+  it('#846: trusted edit of a course they do NOT own → not_owned, before parse, no RPC', async () => {
+    supabaseMock = buildSupabaseMock([
+      // loadRole — trusted, NOT admin
+      { data: { is_admin: false, email: trustedEmail, name: 'Even' }, error: null },
+      // ownership check: courses.created_by — owned by ANOTHER user
+      { data: { created_by: adminUserId }, error: null },
+    ]);
+    setupTrustedAuth();
+    adminClientMock = buildSupabaseMock([]);
+
+    const formData = new FormData();
+    formData.set('name', 'Sjø-bane');
+    for (let i = 1; i <= 18; i++) {
+      formData.set(`hole_${i}_par_mens`, '4');
+      formData.set(`hole_${i}_si`, String(i));
+    }
+    formData.set('tee_0_name', 'Gul');
+    formData.set('tee_0_slope_mens', '113');
+    formData.set('tee_0_cr_mens', '70.0');
+
+    const { updateCourse } = await import('./actions');
+    await expect(updateCourse(courseId, formData)).rejects.toBeInstanceOf(
+      RedirectError,
     );
-    expect(teeInserts).toHaveLength(1);
+    expect(lastRedirect()).toBe(
+      `/admin/courses/${courseId}/edit?error=not_owned`,
+    );
+    // The guard fires before any write/RPC on either client.
+    expect(supabaseMock.__rpcCalls).toHaveLength(0);
+    expect(adminClientMock.__rpcCalls).toHaveLength(0);
   });
 });

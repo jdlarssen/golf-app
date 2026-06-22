@@ -20,6 +20,22 @@ export async function updateCourse(courseId: string, formData: FormData) {
   const fail = (code: string): never =>
     redirect({ href: `${editPath}?error=${code}`, locale });
 
+  // #846: trusted-creators (non-admin) may only edit courses they created —
+  // mirror deleteCourse's ownership guard (further down this file). Admin
+  // unaffected. RLS on courses/holes/tees is admin-only (0092), so the
+  // service-role write path below has no built-in own-course guard; this
+  // app-layer check is it.
+  if (!role.isAdmin) {
+    const { data: owned } = await supabase
+      .from('courses')
+      .select('created_by')
+      .eq('id', courseId)
+      .maybeSingle();
+    if (!owned || owned.created_by !== role.userId) {
+      fail('not_owned');
+    }
+  }
+
   const { name, holes, teeBoxes } = parseCourseHolesAndTees(
     formData,
     MAX_TEE_BOXES,
@@ -73,91 +89,33 @@ export async function updateCourse(courseId: string, formData: FormData) {
   // request-scoped + service-role.
   const writeClient = role.isAdmin ? supabase : getAdminClient();
 
-  const { error: courseUpdateError } = await writeClient
-    .from('courses')
-    .update({
-      name,
-      updated_at: new Date().toISOString(),
-      updated_by: role.userId,
-    })
-    .eq('id', courseId);
-  if (courseUpdateError) {
-    console.error('[updateCourse] course update failed', courseUpdateError);
+  // #846: all writes (course rename + holes replace + tee updates/inserts/
+  // hard-deletes/archives) run in ONE transaction via the RPC, so a mid-sequence
+  // failure can't leave the course inconsistent. Most importantly, the holes
+  // delete+reinsert no longer has a window where the course has zero holes
+  // (#642-class leaderboard crash) — the whole edit either lands or rolls back.
+  // The tee diff (archive vs hard-delete, computed above from the games-FK
+  // lookup) stays here in TS where it's tested; the RPC is a dumb atomic
+  // executor. writeClient keeps the admin=request / trusted=service-role split.
+  // The RPC is SECURITY INVOKER, so RLS still gates a direct JWT call (admin-only
+  // write policies), while the service-role path stays TS-gated + ownership-
+  // checked above.
+  const { error: rpcError } = await writeClient.rpc('update_course_with_layout', {
+    p_course_id: courseId,
+    p_name: name,
+    p_updated_by: role.userId,
+    p_holes: holes,
+    // Tees with an id are updates; without, inserts. The RPC's jsonb_to_recordset
+    // reads only the named columns, so passing the parsed rows as-is is safe
+    // (a null `id` on an insert row is ignored).
+    p_tee_updates: teeBoxes.filter((t) => t.id),
+    p_tee_inserts: teeBoxes.filter((t) => !t.id),
+    p_tee_hard_delete: toHardDelete,
+    p_tee_archive: toArchive,
+  });
+  if (rpcError) {
+    console.error('[updateCourse] update_course_with_layout failed', rpcError);
     redirect({ href: `${editPath}?error=db_course`, locale });
-  }
-
-  // course_holes stays delete-and-reinsert: no FK from games/scores into
-  // course_holes (scores use hole_number int), so safe to replace wholesale.
-  const { error: deleteHolesError } = await writeClient
-    .from('course_holes')
-    .delete()
-    .eq('course_id', courseId);
-  if (deleteHolesError) {
-    console.error('[updateCourse] holes delete failed', deleteHolesError);
-    redirect({ href: `${editPath}?error=db_holes`, locale });
-  }
-
-  const holesToInsert = holes.map((h) => ({ ...h, course_id: courseId }));
-  const { error: insertHolesError } = await writeClient
-    .from('course_holes')
-    .insert(holesToInsert);
-  if (insertHolesError) {
-    console.error('[updateCourse] holes insert failed', insertHolesError);
-    redirect({ href: `${editPath}?error=db_holes`, locale });
-  }
-
-  for (const tee of teeBoxes) {
-    const row = {
-      course_id: courseId,
-      name: tee.name,
-      length_meters: tee.length_meters,
-      slope_mens: tee.slope_mens,
-      course_rating_mens: tee.course_rating_mens,
-      par_total_mens: tee.par_total_mens,
-      slope_ladies: tee.slope_ladies,
-      course_rating_ladies: tee.course_rating_ladies,
-      par_total_ladies: tee.par_total_ladies,
-      slope_juniors: tee.slope_juniors,
-      course_rating_juniors: tee.course_rating_juniors,
-      par_total_juniors: tee.par_total_juniors,
-    };
-    if (tee.id) {
-      const { error } = await writeClient
-        .from('tee_boxes')
-        .update(row)
-        .eq('id', tee.id);
-      if (error) {
-        console.error('[updateCourse] tee update failed', error);
-        redirect({ href: `${editPath}?error=db_tees`, locale });
-      }
-    } else {
-      const { error } = await writeClient.from('tee_boxes').insert(row);
-      if (error) {
-        console.error('[updateCourse] tee insert failed', error);
-        redirect({ href: `${editPath}?error=db_tees`, locale });
-      }
-    }
-  }
-
-  if (toHardDelete.length > 0) {
-    const { error } = await writeClient
-      .from('tee_boxes')
-      .delete()
-      .in('id', toHardDelete);
-    if (error) {
-      console.error('[updateCourse] tee hard-delete failed', error);
-      redirect({ href: `${editPath}?error=db_tees`, locale });
-    }
-  }
-  if (toArchive.length > 0) {
-    const { error } = await writeClient
-      .from('tee_boxes')
-      .update({ archived_at: new Date().toISOString() })
-      .in('id', toArchive);
-    if (error) {
-      console.error('[updateCourse] tee archive failed', error);
-      redirect({ href: `${editPath}?error=db_tees`, locale });
-    }
   }
 
   redirect({ href: `/admin/courses?status=updated&name=${encodeURIComponent(name)}`, locale });
@@ -183,6 +141,20 @@ export async function restoreTee(
   if (loadError || !tee) redirect({ href: `${editPath}?error=tee_not_found`, locale });
   if (tee!.course_id !== courseId) redirect({ href: `${editPath}?error=tee_not_found`, locale });
   if (tee!.archived_at === null) redirect({ href: `${editPath}?error=tee_not_archived`, locale });
+
+  // #846: trusted-creators (non-admin) may only restore tees on courses they
+  // created — mirror the updateCourse/deleteCourse ownership guard, so the
+  // whole course-editing surface is consistent. Admin unaffected.
+  if (!role.isAdmin) {
+    const { data: owned } = await supabase
+      .from('courses')
+      .select('created_by')
+      .eq('id', courseId)
+      .maybeSingle();
+    if (!owned || owned.created_by !== role.userId) {
+      redirect({ href: `${editPath}?error=not_owned`, locale });
+    }
+  }
 
   // Writes bypass RLS via admin-client for trusted-non-admin (same pattern
   // as updateCourse).
