@@ -74,45 +74,125 @@ export async function fetchOtpForEmail(email: string): Promise<string> {
 }
 
 /**
- * Logger inn `email` ved å drive KUN verify-steget på `/login` — vi hopper
- * bevisst over «Send meg kode» (sendCode → signInWithOtp).
- *
- * Hvorfor: send-steget er rate-limitet to veier — appens per-e-post/per-IP-
- * bøtte (`consumeLoginRateLimit`, kun i `sendCode`) OG Supabase sin egen
- * OTP-send-throttle. Suiten logger de samme få e-postene inn flere ganger fra
- * én CI-IP, som trigger begge og gir `?error=rate_limited`. Verify-steget
- * kaller aldri rate-limiteren, så vi henter en gyldig OTP via admin-API-et
- * (`generateLink`) og navigerer rett til `?step=verify`. Den ekte session-
- * settende stien (`verifyOtp` → cookie) kjøres fortsatt.
- *
- * Forutsetter at caller har navigert til `/login?next=<beskyttet>` (vi leser
- * `next` fra URL-en så post-verify-redirecten lander der testen forventer).
- * Venter på at vi har forlatt `/login` før retur.
+ * Mottak-type for et enkelt OTP-verifiserings-forsøk i `withFreshOtpRetry`.
+ * `retryable` skiller en superseded/utløpt token (prøv på nytt med fersk OTP) fra
+ * en ekte feil (kast med en gang).
  */
-export async function signInViaOtp(page: Page, email: string): Promise<void> {
+export type OtpAttemptResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; retryable: boolean };
+
+/**
+ * Mint-og-verifiser-med-retry-primitiv (#861).
+ *
+ * Hver `generateLink`-mint REGENERERER brukerens ene engangs-token og ugyldiggjør
+ * den forrige. Når to innlogginger på samme e-post flettes (parallelle Playwright-
+ * workers lokalt, eller TTL-drift), kan et tidligere `verifyOtp` lande på en token
+ * en senere mint allerede har supersedet → Supabase svarer «expired or invalid» →
+ * appen redirecter til `/login?...&error=code_expired`.
+ *
+ * Vi absorberer racen ved å mint en FERSK OTP per forsøk og prøve på nytt ved en
+ * retryable feil, med jittret backoff så to racende workers de-korrelerer i stedet
+ * for å låse-steg inn i å ugyldiggjøre hverandre på nytt. `mint` injiseres (ikke
+ * hardkodet til `fetchOtpForEmail`) så den deterministiske bevis-spec-en kan kjøre
+ * den EKTE attempt/navigerings-logikken med en «forgiftet» mint.
+ */
+export async function withFreshOtpRetry<T>(
+  mint: () => Promise<string>,
+  attempt: (otp: string) => Promise<OtpAttemptResult<T>>,
+  opts?: { maxAttempts?: number; label?: string },
+): Promise<T> {
+  const maxAttempts = opts?.maxAttempts ?? 3;
+  let lastReason = 'ingen forsøk kjørt';
+  for (let i = 1; i <= maxAttempts; i++) {
+    const otp = await mint();
+    const res = await attempt(otp);
+    if (res.ok) return res.value;
+    lastReason = `forsøk ${i}/${maxAttempts} feilet (retryable=${res.retryable})`;
+    if (!res.retryable || i === maxAttempts) break;
+    // Jittret backoff (~250–650 ms): de-korrelerer parallelle re-mints så to
+    // racere ikke umiddelbart ugyldiggjør hverandre på nytt i lås-steg.
+    await new Promise((r) => setTimeout(r, 250 + Math.floor(Math.random() * 400)));
+  }
+  throw new Error(
+    `withFreshOtpRetry(${opts?.label ?? 'otp'}) brukte opp ${maxAttempts} forsøk: ${lastReason}`,
+  );
+}
+
+/**
+ * Testbar kjerne for `signInViaOtp`: driver KUN verify-steget på `/login` med en
+ * injiserbar `mint`. Produksjons-wrapperen sender `() => fetchOtpForEmail(email)`;
+ * bevis-spec-en sender en mint som tvinger `code_expired` på første forsøk (#861).
+ *
+ * Hvorfor verify-only: send-steget («Send meg kode» → sendCode → signInWithOtp) er
+ * rate-limitet to veier (appens `consumeLoginRateLimit` + Supabase sin OTP-send-
+ * throttle). Verify-steget kaller aldri rate-limiteren, så vi henter en gyldig OTP
+ * via admin-API-et og navigerer rett til `?step=verify`. Den ekte session-settende
+ * stien (`verifyOtp` → cookie) kjøres fortsatt.
+ *
+ * Forutsetter at caller har navigert til `/login?next=<beskyttet>` — vi leser
+ * `next` ÉN gang før løkka og re-bruker den på hvert forsøk (et feilet forsøk lander
+ * på `/login?...&error=...` uten `next`).
+ */
+export async function signInViaOtpWith(
+  page: Page,
+  email: string,
+  mint: () => Promise<string>,
+): Promise<void> {
   const next = new URL(page.url()).searchParams.get('next') ?? '';
 
-  // Mint OTP via admin (ingen send-steg → unngår begge rate-limit-lagene).
-  const otp = await fetchOtpForEmail(email);
+  await withFreshOtpRetry<void>(
+    mint,
+    async (otp) => {
+      const qs = new URLSearchParams({ step: 'verify', email });
+      if (next) qs.set('next', next);
+      await page.goto(`/login?${qs.toString()}`);
 
-  const qs = new URLSearchParams({ step: 'verify', email });
-  if (next) qs.set('next', next);
-  await page.goto(`/login?${qs.toString()}`);
+      await expect(page.getByLabel('Kode')).toBeVisible();
+      // pressSequentially (ikke fill): skriver siffer for siffer så komponentens
+      // onChange-baserte auto-submit (ved 8 siffer) fyrer pålitelig ÉN gang. `fill`
+      // setter verdien i ett jafs og trigget auto-submit ustabilt — testen ble da
+      // stående på verify-steget uten å levere (ingen `error=`), en #674-gate-flak.
+      await page.getByLabel('Kode').pressSequentially(otp);
 
-  await expect(page.getByLabel('Kode')).toBeVisible();
-  // pressSequentially (ikke fill): skriver siffer for siffer så komponentens
-  // onChange-baserte auto-submit (ved 8 siffer) fyrer pålitelig ÉN gang. `fill`
-  // setter verdien i ett jafs og trigget auto-submit ustabilt — testen ble da
-  // stående på verify-steget uten å levere (ingen `error=`), en #674-gate-flak.
-  await page.getByLabel('Kode').pressSequentially(otp);
+      // <8-sifrete OTP-er når aldri auto-submit-terskelen — klikk knappen. (Ingen
+      // dobbel-submit: 8-sifret auto-submitter alt, kortere gjør det ikke.)
+      if (otp.length < 8) {
+        await page.getByRole('button', { name: 'Logg inn' }).click();
+      }
 
-  // <8-sifrete OTP-er når aldri auto-submit-terskelen — klikk knappen. (Ingen
-  // dobbel-submit: 8-sifret auto-submitter alt, kortere gjør det ikke.)
-  if (otp.length < 8) {
-    await page.getByRole('button', { name: 'Logg inn' }).click();
-  }
+      // Vent på at verify-redirecten lander: enten har vi forlatt `/login`
+      // (suksess) eller en `error`-param dukket opp (code_expired/code_invalid).
+      await page.waitForURL(
+        (url) => !/\/login\b/.test(url.pathname) || url.searchParams.has('error'),
+        { timeout: 15_000 },
+      );
 
-  await expect(page).not.toHaveURL(/\/login\b/, { timeout: 15_000 });
+      const landed = new URL(page.url());
+      if (!/\/login\b/.test(landed.pathname)) {
+        return { ok: true, value: undefined };
+      }
+      const err = landed.searchParams.get('error');
+      // En supersedet/utløpt token gir code_expired (og av og til code_invalid
+      // siden vi alltid mater en fersk, korrekt OTP). Begge er retryable her.
+      return {
+        ok: false,
+        retryable: err === 'code_expired' || err === 'code_invalid',
+      };
+    },
+    { label: `signInViaOtp(${email})` },
+  );
+
+  await expect(page).not.toHaveURL(/\/login\b/);
+}
+
+/**
+ * Logger inn `email` ved å drive KUN verify-steget på `/login`. Tynn wrapper over
+ * `signInViaOtpWith` med produksjons-minten (`fetchOtpForEmail`) — beholder retry-
+ * mot-`code_expired` (#861) for alle eksisterende callers uten signatur-endring.
+ */
+export async function signInViaOtp(page: Page, email: string): Promise<void> {
+  await signInViaOtpWith(page, email, () => fetchOtpForEmail(email));
 }
 
 export type CreatedGame = {
