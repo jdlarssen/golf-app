@@ -184,7 +184,6 @@
     "displayNameFallback": "Profile",
     "updatedBanner": "✓ Your profile has been updated.",
     "inviteSentBanner": "✓ Invitation sent{email, select, empty {} other { to {email}}}.",
-    "accountSection": "Account & more",
     "sectionSocial": "Social",
     "sectionPersonal": "Activity",
     "sectionApp": "App",

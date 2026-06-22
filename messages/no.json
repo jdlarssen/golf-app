@@ -184,7 +184,6 @@
     "displayNameFallback": "Profil",
     "updatedBanner": "✓ Profilen din er oppdatert.",
     "inviteSentBanner": "✓ Invitasjon sendt{email, select, empty {} other { til {email}}}.",
-    "accountSection": "Konto og mer",
     "sectionSocial": "Sosialt",
     "sectionPersonal": "Aktivitet",
     "sectionApp": "App",
