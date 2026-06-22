@@ -3337,8 +3337,8 @@
       "pageTitle": "Klubbene dine",
       "emptyState": "Du er ikke med i noen klubber ennå. Får du en invitasjonslenke, dukker klubben opp her.",
       "ctaHeading": "Vil du ha en klubb for laget ditt?",
-      "ctaBody": "Send en e-post til {email}, så setter vi den opp for deg.",
-      "ctaDiscrete": "Vil du opprette en ny klubb? Send en e-post til {email}."
+      "ctaBody": "Send en e-post til <email>klubb@tornygolf.no</email>, så setter vi den opp for deg.",
+      "ctaDiscrete": "Vil du opprette en ny klubb? Send en e-post til <email>klubb@tornygolf.no</email>."
     },
     "room": {
       "addedBanner": "{email} er lagt til i klubben.",

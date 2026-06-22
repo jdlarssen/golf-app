@@ -3337,8 +3337,8 @@
       "pageTitle": "Your clubs",
       "emptyState": "You are not a member of any clubs yet. If you receive an invite link, the club will appear here.",
       "ctaHeading": "Want a club for your group?",
-      "ctaBody": "Send an email to {email} and we''ll set it up for you.",
-      "ctaDiscrete": "Want to create another club? Email {email}."
+      "ctaBody": "Send an email to <email>klubb@tornygolf.no</email> and we''ll set it up for you.",
+      "ctaDiscrete": "Want to create another club? Email <email>klubb@tornygolf.no</email>."
     },
     "room": {
       "addedBanner": "{email} has been added to the club.",
