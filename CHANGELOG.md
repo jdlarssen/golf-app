@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Profilen lar deg nå styre lyst og mørkt selv, ikke bare arve det fra telefonen.
 
+### [1.134.1] - 2026-06-22 · #878
+
+> «Pågår nå»-kortet på Hjem vet nå hvor du er i runden. Ett trykk tar deg rett til neste hull du mangler. Når du har levert, står det «Levert ✓» på kortet, og venter noen i flighten på at du godkjenner scorekortet deres, dukker det opp en egen påminnelse rett under.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- «Pågår nå»-kortet på Hjem er nå tilstands-bevisst (#878). Home-spørringen henter `submitted_at`/`withdrawn_at`/`approved_at` (game_players) + `require_peer_approval`/`game_mode` (games), og en ren resolver `lib/games/activeCardState.ts` (unit-testet) mapper dem til Fortsett / Levert ✓ / Til godkjenning / Trukket — erstatter den generiske status-pillen for aktive spill. «Mine spill» (planlagte/utkast) beholder pillen uendret.
+- «Rett inn i runden»: et aktivt, ikke-levert kort lenker nå til neste utastede hull (eller lever-siden ved 18/18) via `lib/games/getActiveGameCardData.ts`. Levert/trukket + ikke-aktive kort lenker til spill-oversikten som før.
+- Peer-godkjenning-nudge på Hjem: når en flight-peer har levert og venter på din godkjenning, vises en egen accent-linje under kortet som dyplenker til `/games/[id]/approve`. Gjenbruker én-flight-regelen `isSingleFlightGame` (#543) + strengene `game.home.pendingApprovals`/`reviewLink` fra `PendingApprovalsBanner`.
+
+#### Changed
+- Fullført #363: «Pågår nå»-seksjonens etikett + skillelinje får champagne-accent (`Section`-ens `accent`-prop var tidligere aldri satt).
+
+Ingen schema-/auth-/RLS-endring. Aktiv-kort-data hentes via to scoped spørringer (scores + game_players), begrenset til brukerens aktive spill (ikke N+1). Verifisert på staging i alle fire tilstander + godkjenning-nudge. (#878)
+
+</details>
+
 ### [1.134.0] - 2026-06-22 · #876
 
 > Du kan nå velge om appen skal være lys, mørk eller følge telefonens innstilling. Valget ligger på profilen din, rett under Språk, og huskes til neste gang du åpner appen.
