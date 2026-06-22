@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.
 
+### [1.135.1] - 2026-06-22 · #884
+
+> Et planlagt spill på Hjem fikk en grønn merkelapp, som lett kunne leses som «ferdig». Nå har planlagte runder en rolig farge som sier «venter», så du ikke tror noe allerede er gjort.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `scheduled`-status-pillen i Hjems «Mine spill»-liste byttet fra `bg-success/10 text-success` (sage-grønn — semantisk «fullført/ok») til den rolige forest-tonen `bg-primary-soft text-primary`. Grønn reserveres for fullført utfall. Aktive spill rendres via `ActiveStateLabel`, ikke denne pillen, så ingen visuell kollisjon (`app/[locale]/page.tsx`).
+- Tom-tilstandens velkomst-`h1` byttet fra `tracking-[-0.02em]` til `tracking-tight` så den matcher `PageHeader`-h1-en i fylt tilstand — én kanonisk overskrifts-stil, ingen letter-spacing-drift ved overgangen tom→fylt.
+
+Dark-mode hero-kontrasten (#884 punkt 3) ble vurdert som ikke-blokkerende og trenger en visuell staging-sjekk før evt. justering — ikke endret her.
+
+</details>
+
 ### [1.135.0] - 2026-06-22 · #879
 
 > Turneringer fra klubbene og vennene dine vises nå på Hjem også etter at du har fått ditt første spill, ikke bare når du er helt fersk. Du ser et lite utvalg med en «Se alle»-snarvei, og egne forespørsler du venter på blir liggende.

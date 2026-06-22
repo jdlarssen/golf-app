@@ -236,7 +236,7 @@ async function HomeBody() {
           <Kicker tone="accent" className="mb-2.5">
             {t('emptyKicker')}
           </Kicker>
-          <h1 className="font-serif text-[30px] font-medium tracking-[-0.02em] leading-tight text-text">
+          <h1 className="font-serif text-[30px] font-medium tracking-tight leading-tight text-text">
             {t('emptyWelcome', { name: firstNameValue })}
           </h1>
           <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
@@ -554,7 +554,10 @@ function StatusPill({
     status === 'active'
       ? 'bg-primary-soft text-primary border-primary/20'
       : status === 'scheduled'
-        ? 'bg-success/10 text-success border-success/30'
+        ? // #884: a planlagt (not-yet-played) game must not wear success-green —
+          // green reads as «done/ok» and made a waiting round look finished.
+          // Calm forest tone signals «informative, upcoming» instead.
+          'bg-primary-soft text-primary border-primary/20'
         : status === 'draft'
           ? 'bg-warning/10 text-warning border-warning/30'
           : 'bg-border/40 text-muted border-border';
