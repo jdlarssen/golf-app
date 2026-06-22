@@ -465,51 +465,34 @@ async function HomeBody() {
 
 // ─── Body skeleton ───────────────────────────────────────────────────────
 
+// Skeleton-troskap (#881): a neutral loading state that doesn't lurch.
+// Two earlier problems: (a) flat `h-[72px]` cards nearly doubled to ~116px
+// when real cards (Card + p-5 + serif title + meta lines) streamed in, and
+// (b) the skeleton always rendered the filled-list shape with section labels,
+// which jumped for a fresh user whose real state is the centered hero. Now:
+// a greeting line + card-shaped skeletons that match the real card frame and
+// height, with no section labels committing to the filled layout.
 function HomeBodySkeleton() {
   return (
-    <>
-      <div className="mb-6">
-        <Skeleton className="h-9 w-3/5" />
+    <div className="space-y-6">
+      <Skeleton className="h-9 w-3/5" />
+      <div className="space-y-3">
+        <HomeCardSkeleton delay={0} />
+        <HomeCardSkeleton delay={120} />
       </div>
-
-      <nav className="space-y-6">
-        <SectionSkeleton labelWidth={80} cardCount={1} delay={0} />
-        <SectionSkeleton labelWidth={140} cardCount={1} delay={120} />
-        <SectionSkeleton labelWidth={60} cardCount={1} delay={240} />
-      </nav>
-    </>
+    </div>
   );
 }
 
-function SectionSkeleton({
-  labelWidth,
-  cardCount,
-  delay,
-}: {
-  labelWidth: number;
-  cardCount: number;
-  delay: number;
-}) {
+function HomeCardSkeleton({ delay }: { delay: number }) {
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <Skeleton
-          className="h-2.5"
-          style={{ width: labelWidth }}
-          delay={delay}
-        />
-        <div className="h-px flex-1 bg-border" />
+    <Card className="p-5">
+      <div className="space-y-2.5">
+        <Skeleton className="h-5 w-1/2" delay={delay} />
+        <Skeleton className="h-3 w-2/3" delay={delay + 30} />
+        <Skeleton className="h-3 w-1/3" delay={delay + 60} />
       </div>
-      <div className="space-y-3">
-        {Array.from({ length: cardCount }).map((_, i) => (
-          <Skeleton
-            key={i}
-            className="h-[72px] rounded-2xl"
-            delay={delay + 30 + i * 30}
-          />
-        ))}
-      </div>
-    </div>
+    </Card>
   );
 }
 

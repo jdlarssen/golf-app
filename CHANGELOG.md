@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.
 
+### [1.135.2] - 2026-06-22 · #881
+
+> Når Hjem laster, viser den nå plassholder-kort i samme størrelse som de ekte kortene, så siden ikke hopper nedover idet spillene dine dukker opp.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `HomeBodySkeleton` skrevet om for skeleton-troskap (`app/[locale]/page.tsx`): de flate `h-[72px]`-plassholderne (som nesten doblet seg til ~116px når ekte `Card`-kort med `p-5` + serif-tittel + meta-linjer strømmet inn) erstattet med en kort-formet `HomeCardSkeleton` som matcher ekte ramme og høyde. Seksjons-etikettene fjernet fra skjelettet så det ikke låser seg til fylt-liste-layouten og hopper for en fersk bruker (hvis ekte tilstand er den sentrerte helten). `SectionSkeleton`-helperen fjernet (ikke lenger i bruk).
+
+</details>
+
 ### [1.135.1] - 2026-06-22 · #884
 
 > Et planlagt spill på Hjem fikk en grønn merkelapp, som lett kunne leses som «ferdig». Nå har planlagte runder en rolig farge som sier «venter», så du ikke tror noe allerede er gjort.
