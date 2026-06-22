@@ -284,7 +284,7 @@
       "roundCount": "{count, plural, =0 {No completed rounds yet} one {1 completed round} other {{count} completed rounds}}",
       "emptyState": "You have no completed rounds yet. Join a game first.",
       "colBrutto": "Gross",
-      "colAvgPerHole": "Avg/hole",
+      "colNetto": "Net",
       "resultLink": "View leaderboard"
     },
     "statistikk": {

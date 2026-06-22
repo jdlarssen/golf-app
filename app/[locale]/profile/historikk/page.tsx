@@ -8,6 +8,10 @@ import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
+import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
+import type { ResultSummary } from '@/lib/scoring/resultSummary';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
 
 type GameRow = {
@@ -15,6 +19,8 @@ type GameRow = {
   name: string;
   scheduled_tee_off_at: string | null;
   ended_at: string | null;
+  game_mode: GameMode;
+  mode_config: GameModeConfig;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
 };
@@ -24,32 +30,50 @@ type ScoreRow = {
   strokes: number | null;
 };
 
-type GameWithStats = GameRow & {
+/** Et avsluttet spill beriket med spillerens egne tall (#866). */
+type GameWithMeta = GameRow & {
+  /** Strokes received — netto = brutto − dette (#866). */
+  course_handicap: number | null;
+  /** Format-riktig utfall (#572) → resultat-badge. */
+  result_summary: ResultSummary | null;
+};
+
+type GameWithStats = GameWithMeta & {
   bruttoSum: number | null;
+  nettoSum: number | null;
   holeCount: number;
 };
 
 export default async function HistorikkPage() {
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('profile.historikk');
+  const tModes = await getTranslations('modes');
+  const tFinished = await getTranslations('finishedCard');
   const userIdRaw = await getProxyVerifiedUserId();
   if (!userIdRaw) redirect({ href: '/login', locale });
   const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
 
   const supabase = await getServerClient();
 
-  // Round-trip 1: fetch all finished games the user participated in.
+  // Round-trip 1: all finished games the user participated in, with the
+  // player's own strokes-received (`course_handicap`) and stored per-mode
+  // outcome (`result_summary`, #572) for netto + result badge.
+  // No SQL `.order()` here: supabase-js foreignTable-order is a no-op on a
+  // to-one `games!inner` embed (#569) — the JS sort below is authoritative.
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
-    .select('game_id, games!inner(id, name, scheduled_tee_off_at, ended_at, courses(name))')
+    .select(
+      'game_id, course_handicap, result_summary, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, courses(name))',
+    )
     .eq('user_id', userId)
-    .eq('games.status', 'finished')
-    .order('games(scheduled_tee_off_at)', { ascending: false });
+    .eq('games.status', 'finished');
 
   if (gpError) throw gpError;
 
   const rows = (gamePlayers ?? []) as unknown as Array<{
     game_id: string;
+    course_handicap: number | null;
+    result_summary: ResultSummary | null;
     games: GameRow;
   }>;
 
@@ -74,9 +98,14 @@ export default async function HistorikkPage() {
     }
   }
 
-  // Sort games by tee-off date descending (newest first).
-  const sortedGames = rows
-    .map((r) => r.games)
+  // Carry course_handicap + result_summary onto the game, then sort by tee-off
+  // date descending (newest first).
+  const sortedGames: GameWithMeta[] = rows
+    .map((r) => ({
+      ...r.games,
+      course_handicap: r.course_handicap,
+      result_summary: r.result_summary,
+    }))
     .sort((a, b) => {
       const aTime = a.scheduled_tee_off_at
         ? new Date(a.scheduled_tee_off_at).getTime()
@@ -91,7 +120,7 @@ export default async function HistorikkPage() {
       return bTime - aTime;
     });
 
-  // Compute stats per game.
+  // Compute brutto + netto per game.
   const gamesWithStats: GameWithStats[] = sortedGames.map((game) => {
     const gameScores = scoresByGame.get(game.id) ?? [];
     const holeCount = gameScores.length;
@@ -99,7 +128,11 @@ export default async function HistorikkPage() {
       holeCount > 0
         ? gameScores.reduce((acc, s) => acc + (s.strokes ?? 0), 0)
         : null;
-    return { ...game, bruttoSum, holeCount };
+    const nettoSum =
+      bruttoSum != null && game.course_handicap != null
+        ? bruttoSum - game.course_handicap
+        : null;
+    return { ...game, bruttoSum, nettoSum, holeCount };
   });
 
   const finishedCount = gamesWithStats.length;
@@ -124,9 +157,36 @@ export default async function HistorikkPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {gamesWithStats.map((game) => (
-            <GameHistoryCard key={game.id} game={game} locale={locale} colBrutto={t('colBrutto')} colAvgPerHole={t('colAvgPerHole')} resultLink={t('resultLink')} />
-          ))}
+          {gamesWithStats.map((game) => {
+            const formatLabel = tModes(
+              formatDisplayLabelKey(
+                game.game_mode,
+                game.mode_config,
+              ) as Parameters<typeof tModes>[0],
+            );
+            const badge = game.result_summary
+              ? finishedResultBadge(game.result_summary)
+              : null;
+            const resultText = badge
+              ? tFinished(
+                  badge.key as Parameters<typeof tFinished>[0],
+                  badge.values as Parameters<typeof tFinished>[1],
+                )
+              : null;
+            return (
+              <GameHistoryCard
+                key={game.id}
+                game={game}
+                locale={locale}
+                colBrutto={t('colBrutto')}
+                colNetto={t('colNetto')}
+                resultLink={t('resultLink')}
+                formatLabel={formatLabel}
+                resultText={resultText}
+                resultIsWin={badge?.isWin ?? false}
+              />
+            );
+          })}
         </div>
       )}
     </AppShell>
@@ -137,24 +197,25 @@ function GameHistoryCard({
   game,
   locale,
   colBrutto,
-  colAvgPerHole,
+  colNetto,
   resultLink,
+  formatLabel,
+  resultText,
+  resultIsWin,
 }: {
   game: GameWithStats;
   locale: AppLocale;
   colBrutto: string;
-  colAvgPerHole: string;
+  colNetto: string;
   resultLink: string;
+  formatLabel: string;
+  resultText: string | null;
+  resultIsWin: boolean;
 }) {
   const dateString = game.scheduled_tee_off_at
     ? formatTeeOffDateLocale(new Date(game.scheduled_tee_off_at), locale)
     : game.ended_at
       ? formatTeeOffDateLocale(new Date(game.ended_at), locale)
-      : null;
-
-  const avgPerHole =
-    game.bruttoSum !== null && game.holeCount > 0
-      ? (game.bruttoSum / game.holeCount).toFixed(1)
       : null;
 
   return (
@@ -172,9 +233,25 @@ function GameHistoryCard({
                 {dateString}
               </p>
             )}
+            {/* #866: spillform-merke + ditt resultat — så «96» får kontekst. */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-border bg-bg px-2 py-0.5 font-sans text-[11px] text-muted">
+                {formatLabel}
+              </span>
+              {resultText && (
+                <span
+                  className={`font-sans text-[13px] font-medium ${
+                    resultIsWin ? 'text-accent' : 'text-muted'
+                  }`}
+                >
+                  {resultText}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Stats cluster */}
+          {/* Stats cluster: brutto + netto (#866 — netto erstatter snitt/hull,
+              det mest meningsfulle tallet for en spiller med handicap). */}
           <div className="flex shrink-0 gap-4 items-center">
             <div className="text-right">
               <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1">
@@ -186,10 +263,10 @@ function GameHistoryCard({
             </div>
             <div className="text-right">
               <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1">
-                {colAvgPerHole}
+                {colNetto}
               </p>
               <p className="font-sans tabular-nums text-base font-semibold text-text leading-none">
-                {avgPerHole !== null ? avgPerHole : '—'}
+                {game.nettoSum !== null ? game.nettoSum : '—'}
               </p>
             </div>
           </div>

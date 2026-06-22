@@ -284,7 +284,7 @@
       "roundCount": "{count, plural, =0 {Ingen fullførte runder ennå} one {1 fullført runde} other {{count} fullførte runder}}",
       "emptyState": "Du har ingen fullførte runder ennå. Bli med på et spill først.",
       "colBrutto": "Brutto",
-      "colAvgPerHole": "Snitt/hull",
+      "colNetto": "Netto",
       "resultLink": "Se resultatliste"
     },
     "statistikk": {

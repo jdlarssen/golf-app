@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Profilen din er ikke lenger bare innstillinger: nå ser du dine egne tall fra runder du har spilt, og den globale tavla har flyttet ut på Hjem som «Toppliste».
 
+### [1.136.1] - 2026-06-23 · #866
+
+> Min historikk viser nå mer enn brutto: du ser netto, spillform-merke og ditt eget resultat per runde, så «96» faktisk forteller hvor godt du spilte.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `app/[locale]/profile/historikk/page.tsx`: hver runde-rad viser nå netto (brutto − `course_handicap`), et spillform-merke (`formatDisplayLabelKey` → `modes`-katalogen, variant-bevisst per #282) og et resultat-badge (`finishedResultBadge` på lagret `result_summary` #572 → `finishedCard`-katalogen, gull-accent ved egen seier). «Snitt/hull»-kolonnen er byttet ut med netto — det mest meningsfulle tallet for en spiller med handicap.
+- Spørringen henter nå `course_handicap`, `result_summary`, `game_mode` og `mode_config`; den døde SQL-`.order()`-en (no-op på to-one-embed, #569) er fjernet, så JS-sorten står alene som autoritativ.
+- `messages/no.json` + `messages/en.json`: `profile.historikk.colNetto` lagt til, `colAvgPerHole` fjernet.
+
+</details>
+
 ### [1.136.0] - 2026-06-23 · #865
 
 > Nå ser du dine egne tall på profilen: runder spilt, brutto-snitt og beste runde, pluss bragder som hole-in-one og birdie. Den gamle «Klubbstatistikker» heter nå «Toppliste» og ligger på Hjem, så profilen handler om deg.
