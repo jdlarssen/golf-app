@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.84] - 2026-06-22 · #869
+
+> Klubbstatistikker laster kjapt selv om det ligger en haug ferdige spill bak. Tallene er de samme som før: vinnerlista og «mest aktive» regnes ut fra alle ferdigspilte spill.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- **Klubbstatistikk-siden cacher den tunge utregningen.** `app/[locale]/profile/statistikk/page.tsx` hentet ALLE ferdige spill + alle spillere + alle hull + alle scores inn i minnet og kjørte `computeLeaderboard` per spill på hvert sidebesøk – uten cap og uten cache. Arbeidet vokser med (spill × spillere × hull), så mot klubb-skala (~150 spillere, mange spill) var dette en reell skalerings-klippe. Aggregeringen er flyttet inn i en `unstable_cache`-wrappet helper (`getClubStatsAggregate`) med tag `club-statistikk` og 5-minutters `revalidate`. Cachen lagrer et lokale-agnostisk råaggregat (userId→antall + navn som serialiserbare arrays); `unknownPlayer`-fallback og sortering skjer per request ved render, så samme blob betjener både `no` og `en`. Utlistet output er byte-identisk – ingen semantikk- eller copy-endring. Cache-callbacken bruker `getAdminClient()` (cookies/headers kan ikke leses inne i `unstable_cache`), likt `lib/games/getGameWithPlayers.ts`; det utvider ikke eksponering siden alle ferdige spill allerede er verdens-lesbare via den åpne `games.status = 'finished'`-RLS-policyen, og auth-gaten (`getProxyVerifiedUserId`) står uendret på call-site utenfor cachen. Tidsbasert `revalidate` velges framfor tag-invalidering fordi spill-avslutnings-actionene ligger utenfor denne filens scope – et ferskt avsluttet spill dukker opp i statistikken innen ~5 min. (#869)
+
+</details>
+
 ### [1.133.83] - 2026-06-22 · #867
 
 > Krasjer profilen, ser du nå en fornuftig feilmelding med «Til profil»-knapp i stedet for å bli sendt hjem. Lasting av profil viser en presis skjema-silhuett i stedet for kortlisten fra forsiden.

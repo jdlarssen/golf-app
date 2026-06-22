@@ -1,6 +1,7 @@
+import { unstable_cache } from 'next/cache';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -55,6 +56,204 @@ type PlayerStat = {
   count: number;
 };
 
+/**
+ * Locale-agnostic aggregate the cache layer stores. Plain serializable arrays
+ * (not `Map`s) because `unstable_cache` JSON-serializes its return value. The
+ * locale-dependent `unknownPlayer` fallback and `nameInitials` formatting are
+ * deliberately NOT baked in here — they're applied per-request at render time
+ * so the same cached blob serves both `no` and `en`.
+ */
+type ClubStatsAggregate = {
+  /** True when at least one finished game exists. Drives the empty-state
+   *  branch identically to the old `games.length === 0` check — note this is
+   *  about games existing, not about anyone having a stat (a finished game
+   *  with only corrupt/zero-player data still leaves this `true`, so the page
+   *  renders with "Ingen data ennå." sections rather than the empty state). */
+  hasGames: boolean;
+  /** `[userId, winCount]` for every player that has ≥1 best-ball-netto win. */
+  winnerCounts: Array<[string, number]>;
+  /** `[userId, gameCount]` for every player in ≥1 finished game. */
+  participationCounts: Array<[string, number]>;
+  /** `[userId, name]` — first non-null name seen for each player. */
+  userNames: Array<[string, string]>;
+};
+
+/**
+ * Aggregate club-wide stats from every finished game. This is the expensive
+ * part of the page: it reads ALL finished games + their players + holes +
+ * scores and runs `computeLeaderboard` once per game. The work grows with
+ * (games × players × holes), so against club scale (~150 players, many games)
+ * it's a real scaling cliff.
+ *
+ * ## Why the admin client
+ *
+ * `unstable_cache` callbacks cannot read request-scoped APIs (`cookies()`,
+ * `headers()`), so the cookie-based `getServerClient()` can't be used inside
+ * the cache. We use the service-role `getAdminClient()` (same pattern as
+ * `lib/games/getGameWithPlayers.ts`). This does NOT widen exposure: the data
+ * is already globally public — every finished game is world-readable via the
+ * open `games.status = 'finished'` RLS policy, and this page is reachable by
+ * any logged-in user. The auth gate (`getProxyVerifiedUserId`) stays at the
+ * call-site, outside the cache, so the gate is unchanged.
+ *
+ * ## Why a time-based revalidate (and no tag invalidation)
+ *
+ * The natural invalidation trigger is "a game was finished", but wiring
+ * `revalidateTag` into the game-finishing server-actions lives outside this
+ * file's scope. Instead we self-heal with a 5-minute `revalidate`: a freshly
+ * finished game shows up in these stats within ~5 minutes of a cache miss.
+ * That staleness window is fine for a leaderboard of lifetime wins/activity —
+ * it's not a live scoreboard. The `club-statistikk` tag is declared so a
+ * future cross-file `revalidateTag('club-statistikk')` can invalidate on
+ * demand if we later decide the lag matters.
+ */
+const getClubStatsAggregate = unstable_cache(
+  async (): Promise<ClubStatsAggregate> => {
+    const supabase = getAdminClient();
+
+    // Round-trip 1: all finished games + their course_id.
+    const { data: gamesRaw, error: gamesError } = await supabase
+      .from('games')
+      .select('id, course_id')
+      .eq('status', 'finished')
+      .returns<GameRow[]>();
+    if (gamesError) throw gamesError;
+    const games = gamesRaw ?? [];
+
+    if (games.length === 0) {
+      return {
+        hasGames: false,
+        winnerCounts: [],
+        participationCounts: [],
+        userNames: [],
+      };
+    }
+
+    const gameIds = games.map((g) => g.id);
+    const courseIds = Array.from(new Set(games.map((g) => g.course_id)));
+
+    // Round-trips 2, 3, 4: bulk-fetch players, holes, scores in parallel.
+    const [playersRes, holesRes, scoresRes] = await Promise.all([
+      supabase
+        .from('game_players')
+        .select(
+          'game_id, user_id, team_number, course_handicap, tee_gender, users!game_players_user_id_fkey(name, nickname)',
+        )
+        .in('game_id', gameIds)
+        .returns<GamePlayerRow[]>(),
+      supabase
+        .from('course_holes')
+        .select(`course_id, ${COURSE_HOLES_SELECT}`)
+        .in('course_id', courseIds)
+        .returns<CourseHoleRow[]>(),
+      supabase
+        .from('scores')
+        .select(`game_id, ${SCORES_SELECT}`)
+        .in('game_id', gameIds)
+        .returns<ScoreRow[]>(),
+    ]);
+
+    if (playersRes.error) throw playersRes.error;
+    if (holesRes.error) throw holesRes.error;
+    if (scoresRes.error) throw scoresRes.error;
+
+    const allPlayers = playersRes.data ?? [];
+    const allHoles = holesRes.data ?? [];
+    const allScores = scoresRes.data ?? [];
+
+    // Index for fast lookup per game / course.
+    const playersByGame = groupBy(allPlayers, (p) => p.game_id);
+    const holesByCourse = groupBy(allHoles, (h) => h.course_id);
+    const scoresByGame = groupBy(allScores, (s) => s.game_id);
+
+    // Aggregators.
+    const winnerCount = new Map<string, number>();
+    const participationCount = new Map<string, number>();
+    const userNames = new Map<string, string>();
+
+    // The aggregate is locale-agnostic, so the unknown-player fallback name is
+    // resolved at render time, not here. Best-ball lines need a placeholder
+    // name to compute (it's never read back out of the result), so use an
+    // empty string — it has no effect on win attribution (we key on userId).
+    const NAME_PLACEHOLDER = '';
+
+    for (const game of games) {
+      const gamePlayers = playersByGame.get(game.id) ?? [];
+      if (gamePlayers.length === 0) {
+        // Corrupt data — finished game with no players. Skip silently.
+        continue;
+      }
+
+      // Track participation (any player in the finished game counts).
+      for (const gp of gamePlayers) {
+        participationCount.set(
+          gp.user_id,
+          (participationCount.get(gp.user_id) ?? 0) + 1,
+        );
+        if (gp.users?.name && !userNames.has(gp.user_id)) {
+          userNames.set(gp.user_id, gp.users.name);
+        }
+      }
+
+      // Compute winner team(s) via the same logic used on the live leaderboard.
+      // Tied #1 teams all share the win (rank === 1 covers ties via rankTeams).
+      const lbPlayers: LbPlayer[] = gamePlayers.map((p) => ({
+        userId: p.user_id,
+        name: p.users?.name ?? NAME_PLACEHOLDER,
+        nickname: p.users?.nickname ?? null,
+        teamNumber: p.team_number,
+        courseHandicap: p.course_handicap ?? 0,
+        teeGender: p.tee_gender,
+      }));
+
+      const lbHoles: LbHole[] = (holesByCourse.get(game.course_id) ?? []).map(
+        (h) => ({
+          holeNumber: h.hole_number,
+          par: h.par_mens,
+          parByGender: {
+            mens: h.par_mens,
+            ladies: h.par_ladies,
+            juniors: h.par_juniors,
+          },
+          strokeIndex: h.stroke_index,
+        }),
+      );
+
+      const lbScores: LbScore[] = (scoresByGame.get(game.id) ?? []).map((s) => ({
+        userId: s.user_id,
+        holeNumber: s.hole_number,
+        strokes: s.strokes,
+      }));
+
+      // Best-ball requires at least one hole — guard against corrupt data.
+      if (lbHoles.length === 0) continue;
+
+      const lines = computeLeaderboard({
+        mode: 'netto',
+        players: lbPlayers,
+        holes: lbHoles,
+        scores: lbScores,
+      });
+
+      const winningTeams = lines.filter((l) => l.rank === 1);
+      for (const team of winningTeams) {
+        for (const p of team.players) {
+          winnerCount.set(p.userId, (winnerCount.get(p.userId) ?? 0) + 1);
+        }
+      }
+    }
+
+    return {
+      hasGames: true,
+      winnerCounts: Array.from(winnerCount.entries()),
+      participationCounts: Array.from(participationCount.entries()),
+      userNames: Array.from(userNames.entries()),
+    };
+  },
+  ['club-statistikk'],
+  { tags: ['club-statistikk'], revalidate: 300 },
+);
+
 export default async function StatistikkPage() {
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('profile.statistikk');
@@ -63,134 +262,30 @@ export default async function StatistikkPage() {
     redirect({ href: '/login', locale });
   }
 
-  const supabase = await getServerClient();
+  const {
+    hasGames,
+    winnerCounts,
+    participationCounts,
+    userNames: userNamesRaw,
+  } = await getClubStatsAggregate();
 
-  // Round-trip 1: all finished games + their course_id. RLS allows reading
-  // every finished game (`games.status = 'finished'` policy is open).
-  const { data: gamesRaw, error: gamesError } = await supabase
-    .from('games')
-    .select('id, course_id')
-    .eq('status', 'finished')
-    .returns<GameRow[]>();
-  if (gamesError) throw gamesError;
-  const games = gamesRaw ?? [];
-
-  if (games.length === 0) {
+  if (!hasGames) {
     return <EmptyStateView />;
   }
 
-  const gameIds = games.map((g) => g.id);
-  const courseIds = Array.from(new Set(games.map((g) => g.course_id)));
-
-  // Round-trips 2, 3, 4: bulk-fetch players, holes, scores in parallel.
-  const [playersRes, holesRes, scoresRes] = await Promise.all([
-    supabase
-      .from('game_players')
-      .select(
-        'game_id, user_id, team_number, course_handicap, tee_gender, users!game_players_user_id_fkey(name, nickname)',
-      )
-      .in('game_id', gameIds)
-      .returns<GamePlayerRow[]>(),
-    supabase
-      .from('course_holes')
-      .select(`course_id, ${COURSE_HOLES_SELECT}`)
-      .in('course_id', courseIds)
-      .returns<CourseHoleRow[]>(),
-    supabase
-      .from('scores')
-      .select(`game_id, ${SCORES_SELECT}`)
-      .in('game_id', gameIds)
-      .returns<ScoreRow[]>(),
-  ]);
-
-  if (playersRes.error) throw playersRes.error;
-  if (holesRes.error) throw holesRes.error;
-  if (scoresRes.error) throw scoresRes.error;
-
-  const allPlayers = playersRes.data ?? [];
-  const allHoles = holesRes.data ?? [];
-  const allScores = scoresRes.data ?? [];
-
-  // Index for fast lookup per game / course.
-  const playersByGame = groupBy(allPlayers, (p) => p.game_id);
-  const holesByCourse = groupBy(allHoles, (h) => h.course_id);
-  const scoresByGame = groupBy(allScores, (s) => s.game_id);
-
-  // Aggregators.
-  const winnerCount = new Map<string, number>();
-  const participationCount = new Map<string, number>();
-  const userNames = new Map<string, string>();
-
   const unknownPlayer = t('unknownPlayer');
+  const userNames = new Map(userNamesRaw);
 
-  for (const game of games) {
-    const gamePlayers = playersByGame.get(game.id) ?? [];
-    if (gamePlayers.length === 0) {
-      // Corrupt data — finished game with no players. Skip silently.
-      continue;
-    }
-
-    // Track participation (any player in the finished game counts).
-    for (const gp of gamePlayers) {
-      participationCount.set(
-        gp.user_id,
-        (participationCount.get(gp.user_id) ?? 0) + 1,
-      );
-      if (gp.users?.name && !userNames.has(gp.user_id)) {
-        userNames.set(gp.user_id, gp.users.name);
-      }
-    }
-
-    // Compute winner team(s) via the same logic used on the live leaderboard.
-    // Tied #1 teams all share the win (rank === 1 covers ties via rankTeams).
-    const lbPlayers: LbPlayer[] = gamePlayers.map((p) => ({
-      userId: p.user_id,
-      name: p.users?.name ?? unknownPlayer,
-      nickname: p.users?.nickname ?? null,
-      teamNumber: p.team_number,
-      courseHandicap: p.course_handicap ?? 0,
-      teeGender: p.tee_gender,
-    }));
-
-    const lbHoles: LbHole[] = (holesByCourse.get(game.course_id) ?? []).map(
-      (h) => ({
-        holeNumber: h.hole_number,
-        par: h.par_mens,
-        parByGender: {
-          mens: h.par_mens,
-          ladies: h.par_ladies,
-          juniors: h.par_juniors,
-        },
-        strokeIndex: h.stroke_index,
-      }),
-    );
-
-    const lbScores: LbScore[] = (scoresByGame.get(game.id) ?? []).map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      strokes: s.strokes,
-    }));
-
-    // Best-ball requires at least one hole — guard against corrupt data.
-    if (lbHoles.length === 0) continue;
-
-    const lines = computeLeaderboard({
-      mode: 'netto',
-      players: lbPlayers,
-      holes: lbHoles,
-      scores: lbScores,
-    });
-
-    const winningTeams = lines.filter((l) => l.rank === 1);
-    for (const team of winningTeams) {
-      for (const p of team.players) {
-        winnerCount.set(p.userId, (winnerCount.get(p.userId) ?? 0) + 1);
-      }
-    }
-  }
-
-  const winners = toSortedStats(winnerCount, userNames, unknownPlayer).slice(0, 10);
-  const mostActive = toSortedStats(participationCount, userNames, unknownPlayer).slice(0, 10);
+  const winners = toSortedStats(
+    new Map(winnerCounts),
+    userNames,
+    unknownPlayer,
+  ).slice(0, 10);
+  const mostActive = toSortedStats(
+    new Map(participationCounts),
+    userNames,
+    unknownPlayer,
+  ).slice(0, 10);
 
   return (
     <AppShell>
