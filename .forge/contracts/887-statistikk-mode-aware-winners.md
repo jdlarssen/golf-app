@@ -115,7 +115,7 @@ Engelsk-paritet oppdateres tilsvarende (tredjeperson). Kjør `humanizer`-skillet
 - [x] Spill med heldekkende `null` `result_summary` setter `needsFallback` og krediterer vinneren `buildModeResultForGame` gir. **Bevis:** test «flags needsFallback…» + «uses fallback winners…»; fallback-sti i `page.tsx:108-140` (admin-klient → `buildModeResultForGame` → `computeResultSummaries` → `isWinningSummary`).
 - [x] `computeLeaderboard`-løkka + `course_holes`/`scores`-bulk-fetchene er borte fra happy-path-en. **Bevis:** `page.tsx` importerer ikke lenger `computeLeaderboard`/`COURSE_HOLES_SELECT`/`SCORES_SELECT`; happy-path henter kun `games` + `game_players`.
 - [x] `winnersSubtitle` + `mostActiveSubtitle` er tredjeperson + format-agnostiske i både `no.json` og `en.json`; ingen «best-ball-netto» eller «laget ditt»; humanizer-ren. **Bevis:** `no.json:291/294`, `en.json:291/294`.
-- [ ] `/profile/statistikk` rendrer uten feil på staging (ingen 500), med riktige tall mot et kjent ferdig spill. *(Verifiseres i evaluator/staging-steget.)*
+- [x] `/profile/statistikk` rendrer uten feil på staging (ingen 500), med riktige tall mot et kjent ferdig spill. **Bevis:** seedet ett ferdig stableford-spill (Test Admin = placement rank 1, Test Spiller = rank 2) på `torny-staging`, logget inn som ikke-admin (Test Spiller) via OTP, siden rendret v1.133.83 med «Flest spill vunnet» → `1. Test Admin — 1 seier` (rank-2 ikke kreditert) og «Mest aktive» → begge med 1 spill. Undertitlene viste den nye tredjeperson-copyen. Seed slettet etterpå (staging tilbake til 0 ferdige spill).
 
 ## Gates
 
@@ -123,7 +123,7 @@ Engelsk-paritet oppdateres tilsvarende (tredjeperson). Kjør `humanizer`-skillet
 - [x] `npx vitest run lib/stats/clubStats.test.ts` passerer — 14/14. Full suite: 296 filer / 3902 tester grønne.
 - [x] `npm run lint` passerer — rent på endrede filer.
 - [x] PATCH-bump i `package.json` (1.133.82 → 1.133.83) + `CHANGELOG.md`-oppføring under åpen «1.133.y»-serie, i samme commit som fiksen.
-- [ ] Staging spot-sjekk: boot mot `torny-staging`, åpne `/profile/statistikk`, verifiser at en kjent ikke-netto-runde krediterer riktig vinner. *(Pending — evaluator/staging.)*
+- [x] Staging spot-sjekk: boot mot `torny-staging`, åpne `/profile/statistikk`, verifiser at en kjent ikke-netto-runde krediterer riktig vinner. **Bestått** — se siste suksesskriterium (seed → render → riktig vinner → cleanup).
 
 ## Files Likely Touched
 
