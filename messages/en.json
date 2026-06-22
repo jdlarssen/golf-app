@@ -2558,6 +2558,10 @@
       "sectionLabel": "Recent activity",
       "saksbehandlerLabel": "Case officer",
       "klubbhusLabel": "Clubhouse",
+      "pullQuote": "Order in the records.",
+      "ledgerUnknown": "(unknown)",
+      "ledgerGameFallback": "(game)",
+      "ledgerClubInvite": "club invitation",
       "greetingHeading": "Good {timeOfDay}, {name}.",
       "greetingHeadingNoName": "Good {timeOfDay}.",
       "timeOfDayMorgen": "morning",
@@ -2585,7 +2589,7 @@
       "tilesSpillformater": "Game formats",
       "metaActive": "{n, plural, one {# active} other {# active}}",
       "metaPlanned": "{n, plural, one {# planned} other {# planned}}",
-      "metaActiveAndPlanned": "{active} active · {planned} planned",
+      "metaActiveAndPlanned": "{active, plural, one {# active} other {# active}} · {planned, plural, one {# planned} other {# planned}}",
       "metaRegistered": "{n, plural, one {# registered} other {# registered}}",
       "metaRegisteredPending": "{n} registered · {pending} waiting",
       "metaNoneRegistered": "None registered yet",
@@ -3329,7 +3333,7 @@
       "endDateHint": "Valid until the end of this day."
     },
     "list": {
-      "kicker": "Clubhouse",
+      "kicker": "Clubs",
       "pageTitle": "Your clubs",
       "emptyState": "You are not a member of any clubs yet. If you receive an invite link, the club will appear here.",
       "ctaHeading": "Want a club for your group?",
@@ -4003,7 +4007,7 @@
     }
   },
   "klubbhuset": {
-    "kicker": "Clubhouse",
+    "kicker": "Games",
     "pageTitle": "Your games",
     "pageSubtitle": "The games you are organising. Tap a game to manage it.",
     "emptyState": "You are not organising any games yet. Set up a round and it will appear here.",

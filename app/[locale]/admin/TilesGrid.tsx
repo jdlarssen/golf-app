@@ -206,7 +206,7 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
         <SmartLink
           key={tile.label}
           href={tile.href}
-          className="reveal-up min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left"
+          className="reveal-up min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           style={{
             animationDelay: `${60 + i * 70}ms`,
             background: tile.accent ? 'var(--surface-strong)' : 'var(--surface)',

@@ -48,7 +48,14 @@ export default async function KlubbhusetPage() {
           notifications inside the room (#392). */}
       <TopBar backHref="/" kicker={tNav('klubbhus')} />
 
-      <Suspense fallback={<GreetingSkeleton dateLine={dateLine} />}>
+      <Suspense
+        fallback={
+          <GreetingSkeleton
+            dateLine={dateLine}
+            saksbehandlerLabel={t('saksbehandlerLabel')}
+          />
+        }
+      >
         <GreetingCard
           dateLine={dateLine}
           timeOfDayWord={timeOfDayWord}
@@ -67,7 +74,7 @@ export default async function KlubbhusetPage() {
         <ActivityLedger />
       </Suspense>
 
-      <PullQuote className="mt-6">Orden i protokollen.</PullQuote>
+      <PullQuote className="mt-6">{t('pullQuote')}</PullQuote>
     </AdminShell>
   );
 }
@@ -112,7 +119,13 @@ async function GreetingCard({
   );
 }
 
-function GreetingSkeleton({ dateLine }: { dateLine: string }) {
+function GreetingSkeleton({
+  dateLine,
+  saksbehandlerLabel,
+}: {
+  dateLine: string;
+  saksbehandlerLabel: string;
+}) {
   return (
     <section
       className="relative mb-4 overflow-hidden rounded-2xl border px-5 py-[18px]"
@@ -123,7 +136,7 @@ function GreetingSkeleton({ dateLine }: { dateLine: string }) {
       }}
     >
       <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Saksbehandler
+        {saksbehandlerLabel}
       </p>
       <Skeleton className="mt-1 h-7 w-3/5" />
       <p className="mt-1.5 font-sans text-xs tabular-nums text-muted">

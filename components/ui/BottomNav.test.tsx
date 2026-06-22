@@ -50,8 +50,16 @@ describe('BottomNav', () => {
   });
 
   it('vises på Klubbhus-rommet og markerer Klubbhuset aktiv på alle flatene', () => {
-    // Rommet (/admin) + Spill-seksjonen (/klubbhuset) hører til samme fane.
-    for (const path of ['/admin/games/abc', '/klubbhuset', '/opprett-spill']) {
+    // Rommet (/admin) + alle seksjonene inne hører til samme fane: Spill
+    // (/klubbhuset), create-dørene, klubber og spillformater (#863).
+    for (const path of [
+      '/admin/games/abc',
+      '/klubbhuset',
+      '/opprett-spill',
+      '/klubber',
+      '/klubber/abc',
+      '/spillformater',
+    ]) {
       mockPathname = path;
       const { unmount } = render(<BottomNav userId="user-1" />);
       const klubbhuset = screen.getByRole('link', { name: 'Klubbhuset' });

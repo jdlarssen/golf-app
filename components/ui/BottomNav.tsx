@@ -83,7 +83,13 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
       labelKey: 'clubhouse' as const,
       Icon: KlubbhusIcon,
       dot: false,
-      also: ['/klubbhuset', '/opprett-spill', '/opprett-bane'],
+      also: [
+        '/klubbhuset',
+        '/opprett-spill',
+        '/opprett-bane',
+        '/klubber',
+        '/spillformater',
+      ],
     },
     { href: '/profile', labelKey: 'profile' as const, Icon: ProfilIcon, dot: false, also: [] },
   ] as const;

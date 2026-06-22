@@ -13,8 +13,8 @@ type Activity = {
   ref: string;
 };
 
-function shortName(full: string | undefined | null): string {
-  if (!full) return '(ukjent)';
+function shortName(full: string | undefined | null, fallback: string): string {
+  if (!full) return fallback;
   const parts = full.trim().split(/\s+/);
   if (parts.length === 1) return parts[0];
   return `${parts[0]} ${parts[parts.length - 1][0]}.`;
@@ -104,17 +104,17 @@ export async function ActivityLedger() {
   for (const r of subsRes.data ?? []) {
     activity.push({
       ts: r.submitted_at,
-      who: shortName(r.users?.name),
+      who: shortName(r.users?.name, t('ledgerUnknown')),
       action: t('actionsSubmitted'),
-      ref: r.games?.name ?? '(spill)',
+      ref: r.games?.name ?? t('ledgerGameFallback'),
     });
   }
   for (const r of apprsRes.data ?? []) {
     activity.push({
       ts: r.approved_at,
-      who: shortName(r.users?.name),
+      who: shortName(r.users?.name, t('ledgerUnknown')),
       action: t('actionsApproved'),
-      ref: r.games?.name ?? '(spill)',
+      ref: r.games?.name ?? t('ledgerGameFallback'),
     });
   }
   for (const g of gamesRes.data ?? []) {
@@ -146,9 +146,9 @@ export async function ActivityLedger() {
   for (const inv of invitesRes.data ?? []) {
     activity.push({
       ts: inv.accepted_at,
-      who: shortName(inv.email.split('@')[0]),
+      who: shortName(inv.email.split('@')[0], t('ledgerUnknown')),
       action: t('actionsAcceptedInvite'),
-      ref: inv.games?.name ?? 'klubbinvitasjon',
+      ref: inv.games?.name ?? t('ledgerClubInvite'),
     });
   }
   activity.sort((a, b) => (a.ts < b.ts ? 1 : -1));

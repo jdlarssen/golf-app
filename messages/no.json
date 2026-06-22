@@ -2558,6 +2558,10 @@
       "sectionLabel": "Siste hendelser",
       "saksbehandlerLabel": "Saksbehandler",
       "klubbhusLabel": "Klubbhuset",
+      "pullQuote": "Orden i protokollen.",
+      "ledgerUnknown": "(ukjent)",
+      "ledgerGameFallback": "(spill)",
+      "ledgerClubInvite": "klubbinvitasjon",
       "greetingHeading": "God {timeOfDay}, {name}.",
       "greetingHeadingNoName": "God {timeOfDay}.",
       "timeOfDayMorgen": "morgen",
@@ -2585,7 +2589,7 @@
       "tilesSpillformater": "Spillformater",
       "metaActive": "{n, plural, one {# aktiv} other {# aktive}}",
       "metaPlanned": "{n, plural, one {# planlagt} other {# planlagte}}",
-      "metaActiveAndPlanned": "{active} aktive · {planned} planlagte",
+      "metaActiveAndPlanned": "{active, plural, one {# aktiv} other {# aktive}} · {planned, plural, one {# planlagt} other {# planlagte}}",
       "metaRegistered": "{n, plural, one {# registrert} other {# registrerte}}",
       "metaRegisteredPending": "{n} registrert · {pending} venter",
       "metaNoneRegistered": "Ingen registrerte ennå",
@@ -3329,7 +3333,7 @@
       "endDateHint": "Gjelder til og med midnatt denne dagen."
     },
     "list": {
-      "kicker": "Klubbhuset",
+      "kicker": "Klubber",
       "pageTitle": "Klubbene dine",
       "emptyState": "Du er ikke med i noen klubber ennå. Får du en invitasjonslenke, dukker klubben opp her.",
       "ctaHeading": "Vil du ha en klubb for laget ditt?",
@@ -4003,7 +4007,7 @@
     }
   },
   "klubbhuset": {
-    "kicker": "Klubbhuset",
+    "kicker": "Spill",
     "pageTitle": "Spillene dine",
     "pageSubtitle": "Spillene du arrangerer. Trykk et spill for å styre det.",
     "emptyState": "Du arrangerer ingen spill ennå. Sett opp en runde, så dukker den opp her.",

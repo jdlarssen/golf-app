@@ -21,6 +21,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Profilen lar deg nå styre lyst og mørkt selv, ikke bare arve det fra telefonen.
 
+### [1.134.3] - 2026-06-22 · #863
+
+> Klubbhuset-fanen lyser nå opp også når du er inne på klubb- eller spillformat-sidene, så du alltid ser hvor du er. Kortene der inne reagerer når du trykker, og tellingen står endelig riktig ved ett spill: «1 aktiv · 1 planlagt».
+
+<details>
+<summary>Teknisk</summary>
+
+Polish-bunt på Klubbhuset-flaten — funn fra en multi-agent-analyse + skeptisk verifisering mot live kode. (#863)
+
+#### Changed
+- Bunn-nav-fanen «Klubbhuset» er nå aktiv også på `/klubber` og `/spillformater` (`BottomNav.tsx`), så ingen rom-side står igjen uten markert fane.
+- Kicker-kollisjon ryddet: `/klubber` viser «Klubber», `/klubbhuset` viser «Spill»; «Klubbhuset» beholdes kun på selve hub-en.
+- Tile-lenkene i Klubbhuset fikk trykk-/hover-respons og en synlig `focus-visible`-ring (a11y for tastatur- og switch-brukere).
+
+#### Fixed
+- `metaActiveAndPlanned` bruker nå ICU-flertall, så Spill-tile-en viser korrekt «1 aktiv · 1 planlagt» ved ett spill i stedet for «1 aktive · 1 planlagte».
+- Hardkodet norsk i admin-dashboardet (pull-quote, hilsen-skjelett, aktivitets-logg-fallbacks) er flyttet til oversettelses-nøkler, så engelsk locale ikke lenger lekker norsk.
+
+#### Internal
+- Hilsen og spiller-Klubbhuset leser visningsnavnet fra rolle-konteksten i stedet for en ekstra `users`-spørring (raskere paint, ingen oppførsels-endring). Skilt ut i egen `refactor`-commit uten bump.
+</details>
+
 ### [1.134.2] - 2026-06-22 · #887
 
 > Vinnerlista i statistikken krediterer nå den som faktisk vant hver runde, uansett spilleform. Matchplay, stableford og skins får riktig vinner i stedet for et netto-gjett.
