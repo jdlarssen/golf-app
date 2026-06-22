@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.82] - 2026-06-22 · #846
+
+> Redigerer du en bane, lagres alt på én gang eller ingenting, så en avbrutt lagring aldri etterlater en halv-ødelagt bane. Brukere som får lage baner, kan nå bare endre baner de selv har laget.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `updateCourse` rewriter en bane i mange ikke-atomiske steg (UPDATE `courses` → DELETE+INSERT `course_holes` → tee-diff med UPDATE/INSERT/hard-delete/arkiver). En feil midtveis etterlot banen inkonsistent — verst mellom holes-DELETE og -INSERT, der banen hadde null hull og leaderboards krasjet (#642-klasse). Alle skrivene er flyttet inn i én transaksjon via ny RPC `update_course_with_layout` (migrasjon 0114): feiler noe, ruller hele redigeringen tilbake. RPC-en er `SECURITY INVOKER` (ikke definer) fordi «trusted creator» er en TS-e-post-allowlist uten DB-representasjon — som invoker forblir RLS authz-laget for direkte kall, mens service-role-stien er TS-gatet. Den subtile tee-diffen (arkiver vs hard-delete via games-FK-oppslag) blir værende i TS; RPC-en er en ren atomisk eksekutor. Atomisitet smoke-testet på staging (avbrutt redigering → hull + navn uendret). Påført staging + prod. (#846)
+
+#### Changed
+- **Eierskaps-sjekk på bane-redigering:** en betrodd bane-skaper (ikke-admin) kan nå bare redigere og gjenåpne tees på baner de selv har laget — speiler den eksisterende guarden på sletting. Admin er upåvirket. Gjelder både `updateCourse` og `restoreTee`. (#846)
+
+</details>
+
 ### [1.133.81] - 2026-06-22 · #737
 
 > Glipper det mens du lager en runde, rydder appen vekk den tomme runden, så du slipper en halvferdig runde i lista.

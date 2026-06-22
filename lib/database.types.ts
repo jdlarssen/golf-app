@@ -1742,6 +1742,19 @@ export type Database = {
         }
         Returns: string
       }
+      update_course_with_layout: {
+        Args: {
+          p_course_id: string
+          p_holes: Json
+          p_name: string
+          p_tee_archive: Json
+          p_tee_hard_delete: Json
+          p_tee_inserts: Json
+          p_tee_updates: Json
+          p_updated_by: string
+        }
+        Returns: undefined
+      }
       upsert_score_if_newer: {
         Args: {
           p_client_updated_at: string

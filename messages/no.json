@@ -3131,6 +3131,7 @@
           "tee_no_rating": "Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).",
           "tee_not_found": "Tee-en finnes ikke lenger. Last siden på nytt for å se oppdatert liste.",
           "tee_not_archived": "Denne tee-en er ikke arkivert, så det er ingenting å gjenåpne.",
+          "not_owned": "Du kan bare redigere baner du har laget selv.",
           "db_course": "Klarte ikke å lagre banen. Prøv igjen om litt.",
           "db_holes": "Klarte ikke å lagre banen. Prøv igjen om litt.",
           "db_tees": "Klarte ikke å lagre banen. Prøv igjen om litt.",
