@@ -7,7 +7,6 @@
 # Tørny — brukerflyt-kart
 
 Mobil-først PWA. To personas: **Admin/arrangør** (`is_admin`) og **Spiller** (invitert).
-En tredje halv-rolle finnes: **Trusted creator** (e-post-allowlist) — kan opprette spill og baner, men ser ikke admin-flatene inne i Klubbhuset.
 
 Diagrammene under er Mermaid (renderes på GitHub / i preview). Lenger ned:
 teknisk-kobling per steg, og en prioritert brukervennlighets-vurdering.
@@ -166,7 +165,7 @@ flowchart LR
 
 ### A1 — Opprett spill (GameWizard, 5 steg)
 
-Inngang: via Klubbhuset (#392) — admin går Spill-flaten → `/admin/games/new`; vanlig spiller / trusted creator går Spill-flaten → `/opprett-spill`. Samme `GameWizard`-komponent, steg via `?step=1..5` + klient-state (ikke rute-per-steg).
+Inngang: via Klubbhuset (#392) — admin går Spill-flaten → `/admin/games/new`; vanlig spiller går Spill-flaten → `/opprett-spill`. Samme `GameWizard`-komponent, steg via `?step=1..5` + klient-state (ikke rute-per-steg).
 
 ```mermaid
 flowchart LR
@@ -200,7 +199,7 @@ flowchart LR
 
 | Område | Ruter | Notat |
 |---|---|---|
-| Baner | `/admin/courses` (+ `/new`, `/[id]/edit`) | Hull/par/SI/tee-bokser. Tee soft-arkiveres hvis i bruk. **Sletting er inline (ingen confirm-side)** — avvik. Trusted creators har tilgang hit. |
+| Baner | `/admin/courses` (+ `/new`, `/[id]/edit`) | Hull/par/SI/tee-bokser. Tee soft-arkiveres hvis i bruk. **Sletting er inline (ingen confirm-side)** — avvik. |
 | Spillere | `/admin/spillere` (+ `/[id]`, `/[id]/slett`) | Inviter (`sendInvitation` + Resend), resend, **trekk tilbake** (`/invitations/[id]/trekk-tilbake`), rediger, slett (**dedikert side**). |
 | Cup | `/admin/cup` (+ `/[id]`, `/generer`, `/slett`) | Fler-match-turnering; matcher legges til via wizard cup-link. |
 | Formater | `/admin/formats` | Styr format-katalogen som driver wizard-grid-en. |
@@ -208,7 +207,7 @@ flowchart LR
 
 ### A4 — Klubbhuset / Sekretariatet (dashboard)
 
-`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). For admin: hilsen + tile-grid (Spill / Spillere / Baner / Resultatprotokoll / Lanseringer / Cuper / Formats) + aktivitets-logg (siste 14 dager). For vanlig spiller / trusted creator: en minimal visning med Spill- og Baner-flatene (oppretting bor her), uten admin-tellinger eller aktivitets-logg.
+`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). For admin: hilsen + tile-grid (Spill / Spillere / Baner / Resultatprotokoll / Lanseringer / Cuper / Formats) + aktivitets-logg (siste 14 dager). For vanlig spiller: en minimal visning med Spill- og Baner-flatene (oppretting bor her), uten admin-tellinger eller aktivitets-logg.
 
 ---
 
@@ -229,7 +228,7 @@ flowchart LR
 Sluttbruker har **null programmeringserfaring**, tester på **iPhone Safari/PWA**. Sortert etter effekt.
 
 ### Det som funker bra (behold)
-- **Én Opprett-dør** med rolle-routing (#346) — admin→`/admin/games/new`, trusted→`/opprett-spill`.
+- **Én Opprett-dør** med rolle-routing (#346) — admin→`/admin/games/new`, spiller→`/opprett-spill`.
 - **Dedikerte `/slett`-sider** for spill og spillere, med status-bevisste advarsler.
 - **Offline-først** med synlig `SyncBanner`; auto-start så planlagte spill bare starter.
 - **GDPR**: selv-eksport + selv-sletting med aktivt-spill-guard.

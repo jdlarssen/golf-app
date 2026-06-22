@@ -8,7 +8,7 @@ import {
 /**
  * Unit-tester for approve/reject server-actions på /admin/games/[id]/signups
  * (#199). Verifiserer:
- *  - Auth via requireAdminOrTrustedCreator (admin OR creator).
+ *  - Auth via requireAdmin (admin-only).
  *  - Status gate: kun pending-requests kan avgjøres.
  *  - Game-lock gate: active/finished blokkerer.
  *  - Cascade for kaptein-rader (alle team-children oppdateres samme status).
@@ -51,12 +51,6 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminMock,
 }));
 
-// Trusted-creator-check brukes via auth.ts → trustedCreators. Mock returnerer
-// false som standard slik at det er admin-flag på `users` som styrer auth-gaten.
-vi.mock('@/lib/admin/trustedCreators', () => ({
-  isTrustedCreator: () => false,
-}));
-
 const ADMIN_ID = '11111111-1111-1111-1111-111111111111';
 const SOLO_USER_ID = '22222222-2222-2222-2222-222222222222';
 const CAPTAIN_USER_ID = '33333333-3333-3333-3333-333333333333';
@@ -91,7 +85,7 @@ beforeEach(() => {
 describe('approveRequest', () => {
   it('approve-er en pending solo-request: oppdaterer status, insertes i game_players, notify fyrer', async () => {
     serverMock = buildSupabaseMock([
-      // requireAdminOrTrustedCreator: users.select.single
+      // requireAdmin: users.select.single
       {
         data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' },
         error: null,

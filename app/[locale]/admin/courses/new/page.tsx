@@ -8,7 +8,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { CourseForm } from '../CourseForm';
 import { createCourse } from './actions';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { requireAdmin } from '@/lib/admin/auth';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -19,7 +19,7 @@ export default async function NewCoursePage({
 }) {
   // Page-level gate: admin OR trusted creator (Fase 4).
   const supabase = await getServerClient();
-  await requireAdminOrTrustedCreator(supabase);
+  await requireAdmin(supabase);
 
   const locale = await getLocale();
   const t = await getTranslations({ locale, namespace: 'courseForm' });

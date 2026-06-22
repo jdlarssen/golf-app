@@ -19,7 +19,7 @@ import {
 } from './ArchivedTeesSection';
 import { formatShortDateLocale } from '@/lib/i18n/format';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { requireAdmin } from '@/lib/admin/auth';
 import type { AppLocale } from '@/i18n/routing';
 
 // Buffer mellom created_at og updated_at som regnes som «samme transaksjon»
@@ -90,7 +90,7 @@ export default async function EditCoursePage({
 
   const { supabase } = await getEditCourseContext();
   // Page-level gate: trusted creators are allowed alongside admin (Fase 4).
-  await requireAdminOrTrustedCreator(supabase);
+  await requireAdmin(supabase);
   // Gating: fetch the course row so the title bar can render synchronously.
   // Inkluderer audit-felter + embed på `users` via begge FK-er for visning
   // av «Lagt til av X» / «Sist endret av Y» kicker.
