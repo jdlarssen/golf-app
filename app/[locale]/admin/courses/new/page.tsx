@@ -17,7 +17,7 @@ export default async function NewCoursePage({
 }: {
   searchParams: SearchParams;
 }) {
-  // Page-level gate: admin OR trusted creator (Fase 4).
+  // Page-level gate: admin-only.
   const supabase = await getServerClient();
   await requireAdmin(supabase);
 
