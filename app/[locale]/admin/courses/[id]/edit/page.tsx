@@ -89,7 +89,7 @@ export default async function EditCoursePage({
     first(statusCode) === 'restored' ? tEdit('statusRestored') : undefined;
 
   const { supabase } = await getEditCourseContext();
-  // Page-level gate: trusted creators are allowed alongside admin (Fase 4).
+  // Page-level gate: admin-only.
   await requireAdmin(supabase);
   // Gating: fetch the course row so the title bar can render synchronously.
   // Inkluderer audit-felter + embed på `users` via begge FK-er for visning
