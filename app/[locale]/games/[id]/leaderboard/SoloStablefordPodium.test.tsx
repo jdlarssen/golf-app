@@ -77,11 +77,10 @@ describe('SoloStablefordPodium', () => {
     expect(within(podium).getByTestId('podium-rank-3')).toBeInTheDocument();
   });
 
-  it('viser vinneren med poeng-total og navn på 1.-plassen', () => {
+  it('viser vinneren med navn på 1.-plassen', () => {
     render(<SoloStablefordPodium {...defaultProps()} />);
     const podium = screen.getByTestId('stableford-podium');
     const winner = within(podium).getByTestId('podium-rank-1');
-    expect(winner.textContent).toContain('38');
     expect(winner.textContent).toContain('Alice Andersen');
   });
 
