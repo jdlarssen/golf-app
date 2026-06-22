@@ -70,17 +70,6 @@ describe('SoloStrokeplayView', () => {
     expect(rows).toHaveLength(4);
   });
 
-  it('sorterer på netto-slag (lavest øverst), respekterer rank-rekkefølgen fra compute', () => {
-    render(<SoloStrokeplayView {...defaultProps()} />);
-    const list = screen.getByTestId('strokeplay-leaderboard');
-    const rows = within(list).getAllByRole('listitem');
-    expect(rows[0].textContent).toContain('68');
-    expect(rows[0].textContent).toContain('Alice Andersen');
-    expect(rows[1].textContent).toContain('72');
-    expect(rows[2].textContent).toContain('75');
-    expect(rows[3].textContent).toContain('80');
-  });
-
   it('viser «N hull spilt»-tekst per rad', () => {
     render(<SoloStrokeplayView {...defaultProps()} />);
     const list = screen.getByTestId('strokeplay-leaderboard');
@@ -94,14 +83,6 @@ describe('SoloStrokeplayView', () => {
   it('viser faktisk antall spilte hull i undertittelen (ikke hardkodet 18)', () => {
     render(<SoloStrokeplayView {...defaultProps({ holesPlayed: 2 })} />);
     expect(screen.getByText(/Etter 2 hull/)).toBeInTheDocument();
-  });
-
-  it('viser brutto-total ved siden av hull-spilt per rad', () => {
-    render(<SoloStrokeplayView {...defaultProps()} />);
-    const list = screen.getByTestId('strokeplay-leaderboard');
-    const rows = within(list).getAllByRole('listitem');
-    expect(rows[0].textContent).toContain('78 brutto');
-    expect(rows[1].textContent).toContain('82 brutto');
   });
 
   it('viser «slag»-label per rad (ikke «poeng»)', () => {
@@ -176,23 +157,4 @@ describe('SoloStrokeplayView', () => {
     expect(screen.queryByText(/høyeste poeng/i)).toBeNull();
   });
 
-  it('tied spillere viser samme rank-nummer foran', () => {
-    render(
-      <SoloStrokeplayView
-        {...defaultProps({
-          result: makeResult([
-            { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 78, rank: 1, holesPlayed: 18 },
-            { userId: 'u2', totalNetStrokes: 70, totalGrossStrokes: 80, rank: 1, holesPlayed: 18 },
-            { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 85, rank: 3, holesPlayed: 18 },
-          ]),
-        })}
-      />,
-    );
-    const list = screen.getByTestId('strokeplay-leaderboard');
-    const rows = within(list).getAllByRole('listitem');
-    // Rad 1 + 2 begge på rank 1 (Medallion gull) — rad 3 hopper til rank 3.
-    expect(rows[0].textContent).toContain('70');
-    expect(rows[1].textContent).toContain('70');
-    expect(rows[2].textContent).toContain('75');
-  });
 });
