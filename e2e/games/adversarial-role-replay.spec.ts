@@ -11,6 +11,7 @@ import {
   seedActiveStablefordGame,
   cleanupTestGame,
   fetchOtpForEmail,
+  withFreshOtpRetry,
   type ActiveGame,
 } from '../_helpers/games';
 
@@ -66,15 +67,23 @@ async function signedInClient(email: string) {
   const client = createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const otp = await fetchOtpForEmail(email);
-  const { error } = await client.auth.verifyOtp({
-    email,
-    token: otp,
-    type: 'email',
-  });
-  if (error) {
-    throw new Error(`verifyOtp for ${email} failed: ${error.message}`);
-  }
+  // Same supersede-race as the page-driven login (#861): a concurrent mint on
+  // this email can invalidate our token before verifyOtp runs. Retry with a
+  // fresh OTP on an expired/invalid error instead of throwing on the first miss.
+  await withFreshOtpRetry<void>(
+    () => fetchOtpForEmail(email),
+    async (otp) => {
+      const { error } = await client.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+      if (!error) return { ok: true, value: undefined };
+      const msg = error.message?.toLowerCase() ?? '';
+      return { ok: false, retryable: msg.includes('expired') || msg.includes('invalid') };
+    },
+    { label: `signedInClient(${email})` },
+  );
   return client;
 }
 
