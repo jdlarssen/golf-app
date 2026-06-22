@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { safeNextPath } from './safeNext';
 import { toSignedHcp } from '@/lib/handicap/sign';
+import { expectOne } from '@/lib/supabase/affectedRows';
 import type { AppLocale } from '@/i18n/routing';
 
 const HCP_MIN = -10;
@@ -81,21 +82,31 @@ export async function updateProfile(formData: FormData) {
   // Drives the stale-handicap prompt in the scheduled-game waiting room
   // (see lib/handicap/staleness.ts).
   const now = new Date().toISOString();
-  const { error } = await supabase
-    .from('users')
-    .update({
-      name,
-      nickname,
-      hcp_index: hcpParsed,
-      handicap_updated_at: now,
-      profile_completed_at: now,
-      gender,
-      level,
-    })
-    .eq('id', user.id);
-
-  if (error) {
-    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=unknown`, locale });
+  try {
+    expectOne(
+      await supabase
+        .from('users')
+        .update({
+          name,
+          nickname,
+          hcp_index: hcpParsed,
+          handicap_updated_at: now,
+          profile_completed_at: now,
+          gender,
+          level,
+        })
+        .eq('id', user.id)
+        .select(),
+      'updateProfile',
+    );
+  } catch (err) {
+    // Catches both DB errors (Error) and silent 0-row writes (NoRowsAffectedError)
+    // — trap #2 from AGENTS.md. Keep the same redirect-on-error behaviour so
+    // the user sees the existing error banner rather than a raw 500.
+    if (err instanceof Error) {
+      redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=unknown`, locale });
+    }
+    throw err; // rethrow unexpected non-Error throws (should never happen)
   }
 
   redirect({ href: nextSafe ?? '/profile?profile=updated', locale });
