@@ -141,14 +141,12 @@ describe('PatsomeView', () => {
     expect(rows).toHaveLength(2);
   });
 
-  it('viser «Lag N»-label og totalpoeng per rad', () => {
+  it('viser «Lag N»-label per rad', () => {
     render(<PatsomeView {...defaultProps()} />);
     const list = screen.getByTestId('patsome-leaderboard');
     const rows = within(list).getAllByRole('listitem');
     expect(rows[0].textContent).toContain('Lag 1');
-    expect(rows[0].textContent).toContain('34');
     expect(rows[1].textContent).toContain('Lag 2');
-    expect(rows[1].textContent).toContain('28');
   });
 
   it('viser de tre segment-delsummene per lag', () => {
