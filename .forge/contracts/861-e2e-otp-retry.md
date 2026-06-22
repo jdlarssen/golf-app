@@ -22,7 +22,7 @@ or a future lifecycle-CI job that runs them together.
 
 - All page-driven logins route through `signInViaOtp` ([e2e/_helpers/games.ts:92](e2e/_helpers/games.ts:92)) — single chokepoint.
 - One sibling path mints+verifies **programmatically** (not via the page):
-  `signedInClient` in [e2e/games/adversarial-role-replay.spec.ts:64](e2e/games/adversarial-role-replay.spec.ts:64)
+  `signedInClient` in [e2e/games/adversarial-role-replay.spec.ts:65](e2e/games/adversarial-role-replay.spec.ts:65)
   calls `client.auth.verifyOtp` directly. Same supersede-race, same `code_expired`/invalid class.
 - On expiry the page-driven flow surfaces the error in the URL (`?error=code_expired`);
   the programmatic flow surfaces it as `error.message` containing "expired"/"invalid".
@@ -79,27 +79,36 @@ same flake resurfacing in #849.
 
 ## Success criteria
 
-- [ ] **C1 — Primitive exists & is injectable.** `withFreshOtpRetry(mint, attempt, opts)` added to
-      `e2e/_helpers/games.ts`: bounded (`maxAttempts` default 3), re-mints per attempt, jittered
-      backoff between retries, throws a labelled diagnostic on exhaustion. Evidence: file:line + code.
-- [ ] **C2 — Page-driven path uses it, callers unchanged.** `signInViaOtp(page, email)` keeps its
-      exact signature and delegates to `signInViaOtpWith(page, email, mint)`. All existing call
-      sites compile without edits. Evidence: `tsc --noEmit` green + grep of unchanged call sites.
-- [ ] **C3 — Retry classification correct.** Success = left `/login`; retryable = URL
-      `error=code_expired` or `error=code_invalid`; everything else is fatal (not retried). The
-      `next` param is captured once and re-applied on every attempt. Evidence: code + proof spec.
-- [ ] **C4 — Programmatic path uses it.** `signedInClient` in
-      `e2e/games/adversarial-role-replay.spec.ts` routes through `withFreshOtpRetry`, retrying on
-      "expired"/"invalid" verifyOtp errors. Evidence: file:line.
-- [ ] **C5 — Deterministic recovery proof.** New spec `e2e/auth/otp-retry-recovery.spec.ts`
-      (tagged `@lifecycle`, env-gated skip like the other staging specs) forces `code_expired` on
-      attempt 1 by injecting a mint that mints OTP_A then immediately mints OTP_B to supersede it,
-      returning the stale OTP_A; attempt 2 mints fresh. It drives the **real** `signInViaOtpWith`
-      and asserts: the helper recovered (left `/login`, authenticated) and took ≥2 mints. Evidence:
-      captured staging run output showing the spec passing (1 passed), plus the deliberate
-      attempt-1 failure being absorbed.
-- [ ] **C6 — Gates green.** `npm run typecheck` and `npm run lint` pass. No version bump / CHANGELOG
-      (test-only change; `test(e2e):` commits bypass the version hook). Evidence: command output.
+- [x] **C1 — Primitive exists & is injectable.** `withFreshOtpRetry(mint, attempt, opts)` added at
+      [e2e/_helpers/games.ts:100](e2e/_helpers/games.ts:100): bounded (`maxAttempts` default 3),
+      re-mints per attempt (`const otp = await mint()` inside the loop), jittered backoff
+      (`250 + Math.floor(Math.random()*400)` ms) between retries, throws a labelled diagnostic on
+      exhaustion (`withFreshOtpRetry(<label>) brukte opp N forsøk: ...`). Evidence: code at cited line.
+- [x] **C2 — Page-driven path uses it, callers unchanged.** `signInViaOtp(page, email)` keeps its
+      exact signature ([e2e/_helpers/games.ts:194](e2e/_helpers/games.ts:194)) and delegates to
+      `signInViaOtpWith(page, email, () => fetchOtpForEmail(email))`. All existing call sites compile
+      untouched. Evidence: `tsc --noEmit` exit 0; no edits to any of the ~10 specs importing
+      `signInViaOtp`.
+- [x] **C3 — Retry classification correct.** In `signInViaOtpWith`: success = `!/\/login\b/` on the
+      landed URL; retryable = `error=code_expired || code_invalid`; any other error → `retryable:false`
+      (fatal, not retried). `next` captured once before the loop and re-applied each attempt
+      ([e2e/_helpers/games.ts:142](e2e/_helpers/games.ts:142)). Evidence: code + the proof spec
+      exercising the retryable branch on staging.
+- [x] **C4 — Programmatic path uses it.** `signedInClient` in
+      [e2e/games/adversarial-role-replay.spec.ts:65](e2e/games/adversarial-role-replay.spec.ts:65)
+      routes through `withFreshOtpRetry`, retrying when the `verifyOtp` error message contains
+      "expired"/"invalid". Evidence: code at cited line; `tsc`/`eslint` exit 0.
+- [x] **C5 — Deterministic recovery proof.** New spec `e2e/auth/otp-retry-recovery.spec.ts`
+      (tagged `@lifecycle`, env-gated skip). Injected mint mints OTP_A then OTP_B (supersede),
+      returns stale OTP_A on attempt 1, fresh thereafter; asserts `stale ≠ fresh` (non-vacuity),
+      drives the **real** `signInViaOtpWith`, then asserts authenticated (left `/login`) and
+      `mintCalls ≥ 2` (retry fired — it only fires on a retryable failure). **Staging run:**
+      `✓ 1 [chromium] … signInViaOtp recovers from a forced code_expired on attempt 1 @lifecycle (4.2s)`
+      → `1 passed (5.1s)`, playwright exit 0. Attempt 2 is itself a normal successful login through the
+      production path, so the happy path is proven non-regressed by the same run.
+- [x] **C6 — Gates green.** `npm run typecheck` (tsc --noEmit) exit 0; `npm run lint` (eslint) exit 0
+      on all three touched files. No version bump / CHANGELOG (test-only; `test(e2e):` commits bypass
+      the version hook — three commits landed clean). Evidence: command output above.
 
 ## Gates
 
