@@ -356,13 +356,16 @@ function StatSection({
                     idx < stats.length - 1 ? 'border-b border-border' : ''
                   } ${isLeader ? 'bg-accent/[0.06]' : ''}`}
                 >
+                  {/* Rank number: text-text on leader row for WCAG AA contrast
+                      (text-accent ~2.16:1 fails); row tint keeps visual cue). */}
                   <span
                     className={`shrink-0 w-6 font-serif tabular-nums text-[13px] text-right ${
-                      isLeader ? 'text-accent font-semibold' : 'text-muted'
+                      isLeader ? 'text-text font-semibold' : 'text-muted'
                     }`}
                   >
                     {rank}
                   </span>
+                  {/* Avatar initial: decorative, keeps accent tint. */}
                   <span
                     className={`shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full border font-sans text-[12px] font-semibold ${
                       isLeader
@@ -373,16 +376,18 @@ function StatSection({
                   >
                     {stat.initials}
                   </span>
+                  {/* Player name: text-text for AA contrast on leader row. */}
                   <span
                     className={`min-w-0 flex-1 truncate font-serif text-[15px] font-medium ${
-                      isLeader ? 'text-accent' : 'text-text'
+                      isLeader ? 'text-text' : 'text-text'
                     }`}
                   >
                     {stat.name}
                   </span>
+                  {/* Count: text-text for AA contrast on leader row. */}
                   <span
                     className={`shrink-0 font-sans tabular-nums text-sm ${
-                      isLeader ? 'text-accent font-semibold' : 'text-muted'
+                      isLeader ? 'text-text font-semibold' : 'text-muted'
                     }`}
                   >
                     {stat.count}{' '}

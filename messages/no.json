@@ -244,7 +244,8 @@
       "levelAdult": "Voksen",
       "levelSenior": "Senior",
       "savePending": "Lagrer …",
-      "saveButton": "Lagre"
+      "saveButton": "Lagre",
+      "saveHint": "Lagre blir aktiv når du endrer noe."
     },
     "inviteForm": {
       "emailLabel": "E-post",

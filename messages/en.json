@@ -244,7 +244,8 @@
       "levelAdult": "Adult",
       "levelSenior": "Senior",
       "savePending": "Saving …",
-      "saveButton": "Save"
+      "saveButton": "Save",
+      "saveHint": "Save activates once you change something."
     },
     "inviteForm": {
       "emailLabel": "Email",

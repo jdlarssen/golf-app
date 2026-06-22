@@ -160,9 +160,11 @@ function GameHistoryCard({
   return (
     <Card className="p-0 overflow-hidden">
       <div className="px-5 py-4">
-        <div className="flex items-start justify-between gap-3">
+        {/* flex-wrap lets the stats cluster drop below the name on narrow
+            screens (~360px) instead of squeezing the game name to one word. */}
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
           <div className="min-w-0">
-            <h2 className="font-serif text-base font-medium text-text leading-snug truncate">
+            <h2 className="font-serif text-base font-medium text-text leading-snug">
               {localizeGameName(game.name, game.courses?.name ?? null, locale)}
             </h2>
             {dateString && (
@@ -173,7 +175,7 @@ function GameHistoryCard({
           </div>
 
           {/* Stats cluster */}
-          <div className="shrink-0 flex gap-4 items-center">
+          <div className="flex shrink-0 gap-4 items-center">
             <div className="text-right">
               <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1">
                 {colBrutto}

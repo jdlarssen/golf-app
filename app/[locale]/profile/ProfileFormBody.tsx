@@ -92,9 +92,17 @@ export function ProfileFormBody({
       if (window.location.hash === '#kjonn') {
         setShowMore(true);
         setTimeout(() => {
-          document
-            .getElementById('kjonn')
-            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const el = document.getElementById('kjonn');
+          if (!el) return;
+          const prefersReduced = window.matchMedia(
+            '(prefers-reduced-motion: reduce)',
+          ).matches;
+          el.scrollIntoView({
+            behavior: prefersReduced ? 'auto' : 'smooth',
+            block: 'center',
+          });
+          // Move focus to the fieldset so keyboard/AT users land at the field.
+          el.focus({ preventScroll: true });
         }, 0);
       }
     }
@@ -268,6 +276,14 @@ export function ProfileFormBody({
         <SubmitButton pendingLabel={t('savePending')} disabled={!dirty}>
           {t('saveButton')}
         </SubmitButton>
+        {!dirty && (
+          <p
+            aria-live="polite"
+            className="mt-1.5 text-xs text-muted"
+          >
+            {t('saveHint')}
+          </p>
+        )}
       </div>
     </form>
   );

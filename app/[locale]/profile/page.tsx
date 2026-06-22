@@ -220,13 +220,16 @@ async function ProfileFormCard({
         </div>
       )}
       <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-soft font-serif text-lg font-medium text-text">
+        <div
+          aria-hidden="true"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-soft font-serif text-lg font-medium text-text"
+        >
           {initial}
         </div>
         <div className="min-w-0">
-          <p className="font-serif text-lg font-medium text-text leading-tight truncate">
+          <h1 className="font-serif text-lg font-medium text-text leading-tight truncate">
             {displayName || t('displayNameFallback')}
-          </p>
+          </h1>
           <p className="text-sm text-muted tabular-nums">hcp {hcpDisplay}</p>
         </div>
       </div>

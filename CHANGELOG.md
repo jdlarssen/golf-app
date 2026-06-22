@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.
 
+### [1.135.6] - 2026-06-22 · #871
+
+> Profilen er mer tilgjengelig: vinneren i statistikklisten er lettere å lese, «Lagre»-knappen forklarer seg selv, og historikk-kort bretter seg pent på smal skjerm.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- `app/[locale]/profile/statistikk/page.tsx`: leder-rad (rank 1) brukte `text-accent` (~2.16:1) på rangnummer, spillernavn og antall — byttet til `text-text` (oppfyller WCAG AA). Avatar-sirkel er dekorativ (`aria-hidden="true"`) og beholder accent-fargen.
+- `app/[locale]/profile/ProfileFormBody.tsx`: `scrollIntoView({ behavior: 'smooth' })` på `#kjonn`-ankeret ignorer nå `prefers-reduced-motion`; faller tilbake til `'auto'` når bruker har valgt redusert bevegelse. Fokus flyttes til feltets `<fieldset>` etter scroll, slik at tastatur-/AT-brukere lander på feltet.
+- `app/[locale]/profile/page.tsx` (`ProfileFormCard`): profilnavnet er byttet fra `<p>` til `<h1>` slik at skjermleserens heading-rotor kan hoppe til det. Avatar-initialen fikk `aria-hidden="true"` (dekorativ).
+- `app/[locale]/profile/ProfileFormBody.tsx`: `disabled={!dirty}`-knappen får nå en kort `aria-live="polite"`-tekst som forklarer at «Lagre» aktiveres etter en endring. Knappen forblir deaktivert til skjemaet er endret.
+- `app/[locale]/profile/historikk/page.tsx`: statistikkblokken er byttet fra `flex justify-between` til `flex flex-wrap` med `gap-y-2`, så den bretter seg under spillnavnet på smal skjerm (~360px) i stedet for å klemme teksten.
+- `messages/no.json` + `messages/en.json`: ny nøkkel `profile.form.saveHint` (NO/EN) for aria-live-hint-teksten.
+
+</details>
+
 ### [1.135.5] - 2026-06-22 · #873
 
 > Tekst-opprydding på profilen: handicap-feilmeldingen viser nå riktig tallområde og peker på +-knappen, «info-tag» er byttet til vanlig norsk, eksport sier hvilket filformat du får, og en aforisme-strek er ryddet bort.
