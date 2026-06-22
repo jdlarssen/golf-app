@@ -4054,10 +4054,10 @@
     "gameDeletedBanner": "✓ «{name}» er slettet.",
     "emptyKicker": "KLAR FOR FØRSTE RUNDE",
     "emptyWelcome": "Velkommen, {name}.",
-    "emptyBodyWithDiscovery": "Ingen turneringer enda. Sett opp en runde i Klubbhuset, eller bli med i en åpen turnering under.",
-    "emptyBodyNoDiscovery": "Ingen turneringer enda. Sett opp en runde i Klubbhuset, så er du i gang.",
+    "emptyBodyWithDiscovery": "Ingen turneringer ennå. Sett opp en runde i Klubbhuset, eller bli med i en åpen turnering under.",
+    "emptyBodyNoDiscovery": "Ingen turneringer ennå. Sett opp en runde i Klubbhuset, så er du i gang.",
     "emptyOpenClubhouse": "Åpne Klubbhuset",
-    "emptyPullQuote": "En god runde begynner med god planlegging.",
+    "emptyPullQuote": "Fyr opp den første runden, så samler gjengen seg.",
     "greeting": "Hei, {name}.",
     "playerFallback": "spiller",
     "sectionInProgress": "Pågår nå",
@@ -4077,7 +4077,7 @@
     "archiveKicker": "SPILL-ARKIV",
     "archiveTitle": "Avsluttede spill",
     "archiveSubtitle": "Alle rundene dine, nyeste først.",
-    "archiveEmpty": "Du har ingen avsluttede spill enda. Når en runde er ferdigspilt, havner den her.",
+    "archiveEmpty": "Du har ingen avsluttede spill ennå. Når en runde er ferdigspilt, havner den her.",
     "archiveNoDate": "Uten dato"
   },
   "signup": {

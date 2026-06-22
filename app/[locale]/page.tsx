@@ -400,7 +400,7 @@ async function HomeBody() {
   return (
     <>
       <PageHeader
-        title={t('greeting', { name: profile?.name ?? t('playerFallback') })}
+        title={t('greeting', { name: firstNameValue })}
         action={handicapChip}
       />
 

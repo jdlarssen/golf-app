@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.
 
+### [1.135.4] - 2026-06-22 · #883
+
+> Småplukk i teksten på Hjem: «enda» rettet til «ennå», du hilses med fornavn både før og etter at du har spill, og tom-tilstanden får en sportsligere avslutningslinje.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- Rettskrivning «enda» → «ennå» (temporal) i `home.emptyBodyWithDiscovery`, `home.emptyBodyNoDiscovery` og `home.archiveEmpty` (`messages/no.json`; engelsk-katalogen var allerede korrekt).
+
+#### Changed
+
+- Hilsenen i fylt tilstand bruker nå fornavn (`firstNameValue`) i stedet for fullt navn, så den matcher tom-tilstandens «Velkommen, {fornavn}.» — ingen brå overgang fra varm onboarding til formelt fullt navn, og fullt navn brekker ikke lenger på smal skjerm (`app/[locale]/page.tsx`).
+- Tom-tilstandens pull-quote byttet fra «En god runde begynner med god planlegging.» (floskel med «god…god»-gjentakelse) til «Fyr opp den første runden, så samler gjengen seg.» — sporty kompis-register med «fyr opp»-idiomet. Begge locales (`messages/no.json` + `en.json`), humanizer-vurdert.
+
+Punkt 4 (discover-CTA) var allerede løst av #879 («Bli med i en åpen turnering»). Punkt 5 (vokabular «spill»/«turnering»/«runde») krever en eier-beslutning om kanonisk vokabular og er ikke tatt her.
+
+</details>
+
 ### [1.135.3] - 2026-06-22 · #882
 
 > Hjem er ryddet opp for skjermlesere og tastatur: seksjonene er nå ekte overskrifter du kan hoppe mellom, og spill-kortene viser en tydelig ramme når du blar deg til dem med tastaturet.
