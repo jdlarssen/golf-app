@@ -8,14 +8,14 @@ import { ChampagneMedallion } from './ChampagneMedallion';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { Button, LinkButton } from './Button';
 
-type BackTarget = { href: string; labelKey: 'toGame' | 'toHome' };
+type BackTarget = { href: string; labelKey: 'toGame' | 'toHome' | 'toProfile' };
 
 /**
- * Delt fallback-skall for rute-error-grensene (#680). Begge `error.tsx`-filene
- * — game-scoped (`games/[id]/error.tsx`) og `[locale]`-catch-all — rendrer
- * denne; de skiller seg bare i hvor «tilbake»-lenken peker. Speiler chromen i
- * `not-found.tsx` (merke + champagne-medaljong) så feil-tilstand og 404 føles
- * som samme familie.
+ * Delt fallback-skall for rute-error-grensene (#680). Alle `error.tsx`-filene
+ * — game-scoped (`games/[id]/error.tsx`), profil-scoped (`profile/error.tsx`)
+ * og `[locale]`-catch-all — rendrer denne; de skiller seg bare i hvor
+ * «tilbake»-lenken peker. Speiler chromen i `not-found.tsx` (merke +
+ * champagne-medaljong) så feil-tilstand og 404 føles som samme familie.
  *
  * NB: rute-grensene gir `unstable_retry` (Next 16.2+), ikke `reset`. Retry
  * re-fetcher og re-rendrer segmentet — riktig respons på en forbigående

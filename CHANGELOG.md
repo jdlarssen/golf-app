@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.83] - 2026-06-22 · #867
+
+> Krasjer profilen, ser du nå en fornuftig feilmelding med «Til profil»-knapp i stedet for å bli sendt hjem. Lasting av profil viser en presis skjema-silhuett i stedet for kortlisten fra forsiden.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/[locale]/profile/error.tsx` — scoped error boundary for profil-segmentet. Fanger Supabase-feil fra `ProfileFormCard` og andre server-komponenter under `/profile`. Rendrer den delte `ErrorScreen`-chromen (samme som game- og catch-all-grensene) med «Prøv igjen» og «Til profil»-knapp, og bruker `unstable_retry` (Next 16.2+) for å re-fetche segmentet. `ErrorScreen`-`BackTarget.labelKey` utvidet med `'toProfile'`; ny `error.toProfile`-nøkkel i `messages/no.json` og `messages/en.json`. (#867)
+- `app/[locale]/profile/loading.tsx` — scoped loading skeleton for profil-segmentet. Gjengir en `ProfileFormSkeleton`-lignende silhuett (avatar + tre skjemafelt + invite-kort) med samme stagger-mønster som `ProfileFormSkeleton` i `page.tsx`. Erstatter `HomeSkeleton` (fra top-level `[locale]/loading.tsx`) som blinket kortlisten fra forsiden ved navigering til profil. (#867)
+
+</details>
+
 ### [1.133.82] - 2026-06-22 · #846
 
 > Redigerer du en bane, lagres alt på én gang eller ingenting, så en avbrutt lagring aldri etterlater en halv-ødelagt bane. Brukere som får lage baner, kan nå bare endre baner de selv har laget.

@@ -13,6 +13,7 @@
     "retry": "Try again",
     "toGame": "To the game",
     "toHome": "Go home",
+    "toProfile": "Back to profile",
     "reference": "Reference: {digest}"
   },
   "onboarding": {
