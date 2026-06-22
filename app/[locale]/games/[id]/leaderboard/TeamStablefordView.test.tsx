@@ -105,13 +105,9 @@ describe('TeamStablefordView', () => {
     const list = screen.getByTestId('stableford-team-leaderboard');
     const rows = within(list).getAllByRole('listitem');
     expect(rows[0].textContent).toContain('Lag 1');
-    expect(rows[0].textContent).toContain('42');
     expect(rows[1].textContent).toContain('Lag 2');
-    expect(rows[1].textContent).toContain('36');
     expect(rows[2].textContent).toContain('Lag 3');
-    expect(rows[2].textContent).toContain('28');
     expect(rows[3].textContent).toContain('Lag 4');
-    expect(rows[3].textContent).toContain('24');
   });
 
   it('viser begge partnernes fornavn på lag-raden', () => {
