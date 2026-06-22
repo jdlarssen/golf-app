@@ -9,7 +9,7 @@ import { firstName } from '@/lib/firstName';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { osloIsoWeek, osloTimeOfDayBucket } from '@/lib/format/osloCalendar';
 import type { AppLocale } from '@/i18n/routing';
-import { getAdminContext, getRole, TIME_OF_DAY_KEY } from './_dashboardContext';
+import { getRole, TIME_OF_DAY_KEY } from './_dashboardContext';
 import { TilesGrid, TilesSkeleton, PlayerKlubbhus } from './TilesGrid';
 import { ActivityLedger, LedgerSkeleton } from './ActivityLedger';
 
@@ -49,7 +49,11 @@ export default async function KlubbhusetPage() {
       <TopBar backHref="/" kicker={tNav('klubbhus')} />
 
       <Suspense fallback={<GreetingSkeleton dateLine={dateLine} />}>
-        <GreetingCard dateLine={dateLine} timeOfDayWord={timeOfDayWord} />
+        <GreetingCard
+          dateLine={dateLine}
+          timeOfDayWord={timeOfDayWord}
+          firstNameValue={firstName(role.name)}
+        />
       </Suspense>
 
       <Suspense fallback={<TilesSkeleton />}>
@@ -73,18 +77,15 @@ export default async function KlubbhusetPage() {
 async function GreetingCard({
   dateLine,
   timeOfDayWord,
+  firstNameValue,
 }: {
   dateLine: string;
   timeOfDayWord: string;
+  firstNameValue: string | null;
 }) {
-  const { supabase, userId } = await getAdminContext();
+  // Name is resolved once by the page's cached getRole() and passed in — the
+  // greeting no longer pays its own users round-trip.
   const t = await getTranslations('admin.dashboard');
-  const { data: profile } = await supabase
-    .from('users')
-    .select('name')
-    .eq('id', userId!)
-    .single();
-  const firstNameValue = firstName(profile?.name);
 
   return (
     <section

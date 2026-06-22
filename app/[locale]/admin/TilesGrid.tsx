@@ -255,15 +255,12 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
  * players get the create-only door (#366 gave them create, not edit).
  */
 export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
-  const { supabase } = await getAdminContext();
   const t = await getTranslations('admin.dashboard');
   const tNav = await getTranslations('admin.nav');
-  const { data: profile } = await supabase
-    .from('users')
-    .select('name')
-    .eq('id', role.userId)
-    .single();
-  const firstNameValue = firstName(profile?.name);
+  // Display name is already on the role context (lib/admin/auth.ts) — no need
+  // for a second `users` round-trip. With this gone PlayerKlubbhus awaits no
+  // data of its own and paints immediately.
+  const firstNameValue = firstName(role.name);
 
   const banerTile: Tile = role.isTrusted
     ? {
