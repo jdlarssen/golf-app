@@ -299,6 +299,15 @@
       "unitGameSingular": "spill",
       "unitGamePlural": "spill",
       "unknownPlayer": "(ukjent)"
+    },
+    "theme": {
+      "rowLabel": "Tema",
+      "groupLabel": "Velg tema",
+      "options": {
+        "auto": "Auto",
+        "light": "Lys",
+        "dark": "Mørk"
+      }
     }
   },
   "friends": {

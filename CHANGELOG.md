@@ -17,6 +17,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.134.y — Velg tema selv
+
+Profilen lar deg nå styre lyst og mørkt selv, ikke bare arve det fra telefonen.
+
+### [1.134.0] - 2026-06-22 · #876
+
+> Du kan nå velge om appen skal være lys, mørk eller følge telefonens innstilling. Valget ligger på profilen din, rett under Språk, og huskes til neste gang du åpner appen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny Auto/Lys/Mørk-rad i `SettingList` på Profil (`app/[locale]/profile/page.tsx`), gruppert med Språk- og Installer-radene som annen app-konfig. CSS-kontrakten i `app/globals.css` fantes allerede (`[data-theme='light'|'dark']` på `<html>`, OS-mørk via `prefers-color-scheme` på `:root:not([data-theme='light'])`) — ingen palett- eller layout-endring; bryteren matcher kontrakten i stedet for å finne opp et nytt tema-system. «Auto» fjerner `data-theme` (følg OS), «Lys»/«Mørk» setter attributtet og lagrer valget i `localStorage` (`torny-theme`).
+- Ny klient-komponent `components/ui/ThemeSwitcher.tsx` i samme pille-stil som `LocaleSwitcher`, med `role="radiogroup"`/`role="radio"` og `aria-checked` for skjermlesere. DOM-/storage-logikken er trukket ut til en SSR-trygg ren helper `lib/theme/themePreference.ts` (vakter rundt `window`/`document`/`localStorage`), dekket av en co-located unit-test. Valget leses via `useSyncExternalStore` (server-snapshot = `'auto'`) så det ikke oppstår hydration-mismatch og ingen `setState`-i-effect. En liten temaglimt ved aller første paint godtas i v1; FOUC-fjerning ville krevd endring i delt root-layout, som er bevisst utelatt. (#876)
+
+</details>
+
 ## 1.133.y — Helse- og flyt-audit
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.

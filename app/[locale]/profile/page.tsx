@@ -20,6 +20,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { formatHcpDisplay } from '@/lib/handicap/sign';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -116,6 +117,12 @@ export default async function ProfilePage({
               {t('languageRowLabel')}
             </span>
             <LocaleSwitcher />
+          </div>
+          <div className="flex w-full items-center justify-between gap-3 min-h-[56px] px-5 py-3 border-t border-border first:border-t-0">
+            <span className="font-serif text-base font-medium text-text">
+              {t('theme.rowLabel')}
+            </span>
+            <ThemeSwitcher />
           </div>
           <InstallButton />
           <SettingRow

@@ -299,6 +299,15 @@
       "unitGameSingular": "game",
       "unitGamePlural": "games",
       "unknownPlayer": "(unknown)"
+    },
+    "theme": {
+      "rowLabel": "Theme",
+      "groupLabel": "Choose theme",
+      "options": {
+        "auto": "Auto",
+        "light": "Light",
+        "dark": "Dark"
+      }
     }
   },
   "friends": {
