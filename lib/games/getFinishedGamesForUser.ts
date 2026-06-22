@@ -49,7 +49,7 @@ export async function getFinishedGamesForUser(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<FinishedGame[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('game_players')
     .select(
       'result_summary, games!inner(id, name, ended_at, game_mode, mode_config, courses(name))',
@@ -57,6 +57,12 @@ export async function getFinishedGamesForUser(
     .eq('user_id', userId)
     .eq('games.status', 'finished')
     .returns<FinishedRow[]>();
+
+  // #877: a swallowed error returned `[]`, which on Home computed as
+  // `isEmptyState` and rendered the «start here» welcome — hiding the user's
+  // games. Throw so the locale `error.tsx` shows an honest retry screen
+  // (covers both Home and /spill-arkiv, which share this helper).
+  if (error) throw error;
 
   return (data ?? [])
     .filter((row): row is FinishedRow & { games: NonNullable<FinishedRow['games']> } =>

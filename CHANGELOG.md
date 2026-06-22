@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Profilen lar deg nå styre lyst og mørkt selv, ikke bare arve det fra telefonen.
 
+### [1.134.5] - 2026-06-22 · #877
+
+> Hvis Hjem ikke klarer å laste spillene dine et øyeblikk, viser den nå en «prøv igjen»-skjerm i stedet for en tom velkomst. Da ser en pågående runde aldri ut til å være borte.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- Hjems aktiv-spill-spørring og `getFinishedGamesForUser` svelget en feilet fetch og returnerte `[]`. På Hjem regnet det tomme arrayet seg til `isEmptyState`, som rendret «start her»-velkomsten over en reell pågående runde. Begge kaster nå feilen, så locale-`error.tsx` viser en ærlig retry-skjerm i stedet. Fiksen dekker også `/spill-arkiv`, som deler `getFinishedGamesForUser`.
+
+</details>
+
 ### [1.134.4] - 2026-06-22 · #897
 
 > Klubb-siden lastet ikke på grunn av en feil i kontakt-lenken. Nå åpner den som normalt igjen, og lenken for å få satt opp en klubb virker.

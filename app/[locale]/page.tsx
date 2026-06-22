@@ -170,6 +170,14 @@ async function HomeBody() {
     redirect({ href: '/complete-profile', locale });
   }
 
+  // #877: must throw BEFORE deriving activeGames/isEmptyState — otherwise a
+  // failed fetch falls through to `[]`, computes as `isEmptyState`, and renders
+  // the «start here» welcome over a real in-progress round. error.tsx catches
+  // this and shows a «Noe gikk galt»-retry instead (mirrors profileError above).
+  if (rawActiveRes.error) {
+    throw rawActiveRes.error;
+  }
+
   const activeGames = (rawActiveRes.data ?? [])
     .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
       row.games != null,
