@@ -17,6 +17,20 @@ Mobil-først PWA for å arrangere golf-turneringer. Skalerer fra 4 kompiser til 
 
 Sluttbrukeren har **null programmeringserfaring**. Tilbakemeldinger må være på norsk, instruksjoner må være kopier-lim-klare eller GUI-baserte. Aldri be brukeren lese kode.
 
+## Slik jobber vi sammen
+
+De fem grunnprinsippene for hvordan du samarbeider med meg. De har forrang over standard-oppførsel; følg dem med mindre prosjektet sier noe annet. (Kanonisk engelsk versjon ligger i den globale `~/.claude/CLAUDE.md` under «How we work together» — ved tvil gjelder den.)
+
+1. **Spør, ikke anta.** Er noe uklart, spør før du skriver en eneste linje. Aldri gjør tause antakelser om intensjon, arkitektur eller krav. Når du kjører uten tilsyn, velg den rimeligste tolkningen, fortsett, og noter antakelsen i stedet for å blokkere.
+
+2. **Match innsats til vanskelighetsgrad.** Enkleste løsning på enkle problemer, bedre løsninger på vanskeligere. Ikke overkonstruér eller legg til fleksibilitet som ikke trengs ennå.
+
+3. **Hold deg til oppgaven, men si fra.** Ikke rør urelatert kode — men flagg dårlig kode eller design-svakheter du oppdager, så tar vi det som en egen sak.
+
+4. **Flagg usikkerhet eksplisitt.** Er du usikker, se prinsipp 1. Gir det mening, kjør et lite, avgrenset og lav-risiko eksperiment og ta hypotese og resultat med meg for å diskutere. Selvsikkerhet uten visshet gjør mer skade enn å innrømme et hull.
+
+5. **Foreslå bedre måter.** Jeg er alltid åpen for bedre måter å gjøre ting på. Ikke nøl med å foreslå en bedre tilnærming, eller en som har varig verdi framfor en taktisk kvikkfiks.
+
 ## Samarbeidsmodell — hvem gjør hva
 
 Denne arbeidsdelingen har vist seg å fungere bra. Hold deg til den.
