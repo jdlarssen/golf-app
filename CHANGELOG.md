@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Funn fra helse-auditen ([#666–#689](https://github.com/jdlarssen/golf-app/issues/689)) og flyt-gjennomgangene. En bunke korrekthets- og sikkerhetsfikser i liga, Nassau, cup og innmelding, pluss at resultatlista nå oppdaterer seg av seg selv mens runden spilles.
 
+### [1.133.85] - 2026-06-22 · #872
+
+> Du kan nå bruke piltastene til å velge mellom alternativene i alle valg-felter i appen — nyttig om du bruker tastatur eller skjermleser.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `SegmentedField` hadde `role="radiogroup"` på container og `role="radio"` på knappene, men manglet roving tabindex og tastaturstyring — piltaster gjorde ingenting, i strid med WAI-ARIA radiogroup-kontrakten. Lagt til: roving tabindex (valgt alternativ = `tabIndex=0`, alle andre = `tabIndex=-1`; ingen valgt = første), `onKeyDown`-handler for ArrowRight/Down (neste, med wrap), ArrowLeft/Up (forrige, med wrap), Home og End. Piltast kaller `onChange` og `focus()` på knappen i samme hendelse — forblir et kontrollert komponent. `useRef`-array holder referanser til alle knapper uten å introdusere intern state. (#872)
+
+</details>
+
 ### [1.133.84] - 2026-06-22 · #869
 
 > Klubbstatistikker laster kjapt selv om det ligger en haug ferdige spill bak. Tallene er de samme som før: vinnerlista og «mest aktive» regnes ut fra alle ferdigspilte spill.

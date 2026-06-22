@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+import { useState } from 'react';
 import { SegmentedField } from './SegmentedField';
 
 beforeEach(() => {
@@ -51,5 +52,47 @@ describe('SegmentedField', () => {
     );
     expect(screen.getByRole('radio', { name: 'Herre' })).not.toBeChecked();
     expect(screen.getByRole('radio', { name: 'Dame' })).not.toBeChecked();
+  });
+
+  it('piltaster flytter valg og fokus (WAI-ARIA radiogroup-mønster)', () => {
+    // Kontrollert wrapper så vi kan re-rendre med oppdatert value etter keydown
+    function Wrapper() {
+      const [val, setVal] = useState<string | null>('mens');
+      return (
+        <SegmentedField
+          legend="Kjønn"
+          options={opts}
+          value={val}
+          onChange={setVal}
+        />
+      );
+    }
+
+    render(<Wrapper />);
+
+    const herre = screen.getByRole('radio', { name: 'Herre' });
+    const dame = screen.getByRole('radio', { name: 'Dame' });
+
+    // Fokuser det valgte alternativet og trykk ArrowRight
+    act(() => {
+      herre.focus();
+    });
+    fireEvent.keyDown(herre, { key: 'ArrowRight' });
+
+    // Etter ArrowRight: Dame skal være valgt og ha fokus
+    expect(dame).toBeChecked();
+    expect(herre).not.toBeChecked();
+    expect(dame).toHaveFocus();
+
+    // ArrowRight fra siste alternativ wrapper rundt til første
+    fireEvent.keyDown(dame, { key: 'ArrowRight' });
+    expect(herre).toBeChecked();
+    expect(dame).not.toBeChecked();
+    expect(herre).toHaveFocus();
+
+    // ArrowLeft fra første alternativ wrapper rundt til siste
+    fireEvent.keyDown(herre, { key: 'ArrowLeft' });
+    expect(dame).toBeChecked();
+    expect(dame).toHaveFocus();
   });
 });
