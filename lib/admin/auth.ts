@@ -1,6 +1,5 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
-import { isTrustedCreator } from './trustedCreators';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { getServerClient } from '@/lib/supabase/server';
 
@@ -15,7 +14,6 @@ export interface AdminRoleContext {
   // without an extra query.
   name: string | null;
   isAdmin: boolean;
-  isTrusted: boolean;
 }
 
 async function loadRole(supabase: ServerSupabase): Promise<AdminRoleContext> {
@@ -38,7 +36,6 @@ async function loadRole(supabase: ServerSupabase): Promise<AdminRoleContext> {
     email,
     name: (profile?.name as string | null | undefined) ?? null,
     isAdmin: profile?.is_admin === true,
-    isTrusted: isTrustedCreator(email),
   };
 }
 
@@ -59,11 +56,8 @@ export async function getRoleContext(
 
 /**
  * Gate for admin-only routes. Authenticates the user, loads role context,
- * and redirects non-admins:
- *  - Trusted creators → `/admin` so they stay inside Sekretariatet (and
- *    can still reach the Baner-flyt that opens up in Fase 4 chunk 2).
- *  - Other authenticated users → `/`.
- *  - Unauthenticated → `/login` (raised inside loadRole).
+ * and redirects non-admins to `/` (unauthenticated → `/login`, raised inside
+ * loadRole).
  *
  * Returns the full `AdminRoleContext` so callers can read `userId` / `name`
  * without a second `users` round-trip.
@@ -72,15 +66,7 @@ export async function requireAdmin(
   supabase: ServerSupabase,
 ): Promise<AdminRoleContext> {
   const ctx = await loadRole(supabase);
-  if (!ctx.isAdmin) redirect(ctx.isTrusted ? '/admin' : '/');
-  return ctx;
-}
-
-export async function requireAdminOrTrustedCreator(
-  supabase: ServerSupabase,
-): Promise<AdminRoleContext> {
-  const ctx = await loadRole(supabase);
-  if (!ctx.isAdmin && !ctx.isTrusted) redirect('/');
+  if (!ctx.isAdmin) redirect('/');
   return ctx;
 }
 

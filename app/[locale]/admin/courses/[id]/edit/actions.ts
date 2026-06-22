@@ -4,37 +4,20 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { requireAdmin } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
 import type { AppLocale } from '@/i18n/routing';
 import { parseCourseHolesAndTees } from '@/lib/courses/parseCourseForm';
 
 export async function updateCourse(courseId: string, formData: FormData) {
   const supabase = await getServerClient();
-  const role = await requireAdminOrTrustedCreator(supabase);
+  const role = await requireAdmin(supabase);
   const locale = (await getLocale()) as AppLocale;
 
   const editPath = `/admin/courses/${courseId}/edit`;
 
   const fail = (code: string): never =>
     redirect({ href: `${editPath}?error=${code}`, locale });
-
-  // #846: trusted-creators (non-admin) may only edit courses they created —
-  // mirror deleteCourse's ownership guard (further down this file). Admin
-  // unaffected. RLS on courses/holes/tees is admin-only (0092), so the
-  // service-role write path below has no built-in own-course guard; this
-  // app-layer check is it.
-  if (!role.isAdmin) {
-    const { data: owned } = await supabase
-      .from('courses')
-      .select('created_by')
-      .eq('id', courseId)
-      .maybeSingle();
-    if (!owned || owned.created_by !== role.userId) {
-      fail('not_owned');
-    }
-  }
 
   const { name, holes, teeBoxes } = parseCourseHolesAndTees(
     formData,
@@ -83,12 +66,6 @@ export async function updateCourse(courseId: string, formData: FormData) {
     toHardDelete = toDelete.filter((id) => !inUseIds.has(id));
   }
 
-  // Writes go through admin-client when caller is trusted-non-admin to
-  // bypass RLS policies that require is_admin(). Single writeClient binding
-  // per action so a mixed write-sequence can't accidentally split between
-  // request-scoped + service-role.
-  const writeClient = role.isAdmin ? supabase : getAdminClient();
-
   // #846: all writes (course rename + holes replace + tee updates/inserts/
   // hard-deletes/archives) run in ONE transaction via the RPC, so a mid-sequence
   // failure can't leave the course inconsistent. Most importantly, the holes
@@ -96,11 +73,8 @@ export async function updateCourse(courseId: string, formData: FormData) {
   // (#642-class leaderboard crash) — the whole edit either lands or rolls back.
   // The tee diff (archive vs hard-delete, computed above from the games-FK
   // lookup) stays here in TS where it's tested; the RPC is a dumb atomic
-  // executor. writeClient keeps the admin=request / trusted=service-role split.
-  // The RPC is SECURITY INVOKER, so RLS still gates a direct JWT call (admin-only
-  // write policies), while the service-role path stays TS-gated + ownership-
-  // checked above.
-  const { error: rpcError } = await writeClient.rpc('update_course_with_layout', {
+  // executor. The RPC is SECURITY INVOKER, so RLS gates the write to admins.
+  const { error: rpcError } = await supabase.rpc('update_course_with_layout', {
     p_course_id: courseId,
     p_name: name,
     p_updated_by: role.userId,
@@ -127,7 +101,7 @@ export async function restoreTee(
   _formData?: FormData,
 ) {
   const supabase = await getServerClient();
-  const role = await requireAdminOrTrustedCreator(supabase);
+  const role = await requireAdmin(supabase);
   const locale = (await getLocale()) as AppLocale;
   const editPath = `/admin/courses/${courseId}/edit`;
 
@@ -142,25 +116,7 @@ export async function restoreTee(
   if (tee!.course_id !== courseId) redirect({ href: `${editPath}?error=tee_not_found`, locale });
   if (tee!.archived_at === null) redirect({ href: `${editPath}?error=tee_not_archived`, locale });
 
-  // #846: trusted-creators (non-admin) may only restore tees on courses they
-  // created — mirror the updateCourse/deleteCourse ownership guard, so the
-  // whole course-editing surface is consistent. Admin unaffected.
-  if (!role.isAdmin) {
-    const { data: owned } = await supabase
-      .from('courses')
-      .select('created_by')
-      .eq('id', courseId)
-      .maybeSingle();
-    if (!owned || owned.created_by !== role.userId) {
-      redirect({ href: `${editPath}?error=not_owned`, locale });
-    }
-  }
-
-  // Writes bypass RLS via admin-client for trusted-non-admin (same pattern
-  // as updateCourse).
-  const writeClient = role.isAdmin ? supabase : getAdminClient();
-
-  const { error: restoreError } = await writeClient
+  const { error: restoreError } = await supabase
     .from('tee_boxes')
     .update({ archived_at: null })
     .eq('id', teeId);
@@ -171,7 +127,7 @@ export async function restoreTee(
 
   // Restore is a course change → bump audit fields on courses, same pattern
   // as updateCourse.
-  const { error: courseUpdateError } = await writeClient
+  const { error: courseUpdateError } = await supabase
     .from('courses')
     .update({
       updated_at: new Date().toISOString(),
@@ -198,13 +154,11 @@ export async function restoreTee(
 
 export async function deleteCourse(courseId: string) {
   const supabase = await getServerClient();
-  const role = await requireAdminOrTrustedCreator(supabase);
+  await requireAdmin(supabase);
   const locale = (await getLocale()) as AppLocale;
 
   // Guard: refuse to delete if any games reference this course. Avoids
   // surprising FK-violation errors and preserves history.
-  // Runs BEFORE ownership-check so trusted-non-owner of an in-use course
-  // sees the informative «in_use» message rather than «not_owned».
   const { data: gameUsage, error: gameUsageError } = await supabase
     .from('games')
     .select('id')
@@ -217,27 +171,8 @@ export async function deleteCourse(courseId: string) {
     redirect({ href: '/admin/courses?error=in_use', locale });
   }
 
-  // Ownership-check for trusted-non-admin: they can only delete courses
-  // they created themselves. Admin is unaffected (can delete anything).
-  // Missing-course (NULL) is treated as not_owned — defense-in-depth
-  // against forged DELETE-POSTs.
-  if (!role.isAdmin) {
-    const { data: course } = await supabase
-      .from('courses')
-      .select('created_by')
-      .eq('id', courseId)
-      .maybeSingle();
-    if (!course || course.created_by !== role.userId) {
-      redirect({ href: '/admin/courses?error=not_owned', locale });
-    }
-  }
-
-  // Trust verified → switch to admin-client for the actual delete so the
-  // is_admin()-RLS-policy doesn't block trusted-non-admin.
-  const writeClient = role.isAdmin ? supabase : getAdminClient();
-
   // course_holes and tee_boxes cascade via FK on the courses table.
-  const { error: deleteError } = await writeClient
+  const { error: deleteError } = await supabase
     .from('courses')
     .delete()
     .eq('id', courseId);

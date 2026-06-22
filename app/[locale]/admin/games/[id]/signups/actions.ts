@@ -5,7 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { requireAdmin } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { notify } from '@/lib/notifications/notify';
 import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
@@ -14,12 +14,10 @@ import { sendRegistrationRejectedMail } from '@/lib/mail/registrationRejected';
 /**
  * Approve/reject server-actions for game-registration-requests (issue #199).
  *
- * Authz: `requireAdminOrTrustedCreator` is the primary gate — trusted creators
- * may approve påmeldinger on spill de selv har laget. Defense-in-depth:
- * the SQL helper `is_game_creator_or_admin` (migrasjon 0041) gates the
- * UPDATE via RLS uansett, men siden vi bruker admin-client her for å unngå
- * RLS-rekursjon, sjekker vi `games.created_by` manuelt for ikke-admin-trusted
- * creators før vi muterer.
+ * Authz: `requireAdmin` — these flows are admin-only. We mutate via the
+ * admin-client to avoid RLS-recursion on the `is_game_creator_or_admin`
+ * UPDATE policy (migrasjon 0041), so the requireAdmin gate in the action
+ * code above is the authz boundary.
  *
  * Cascade for team-requests: når kapteinens rad approve-es/reject-es,
  * cascade-er vi automatisk alle medspiller-rader (`team_request_id` =
@@ -62,11 +60,11 @@ async function loadDecisionContext(requestId: string): Promise<{
 }> {
   const locale = await getLocale();
   const supabase = await getServerClient();
-  const role = await requireAdminOrTrustedCreator(supabase);
+  const role = await requireAdmin(supabase);
 
   // Admin-client bypass — RLS-policy `admin updates request` gater på
   // `is_game_creator_or_admin(game_id)` som krever auth-context på samme
-  // forbindelse. Vi har allerede auth-gated via requireAdminOrTrustedCreator
+  // forbindelse. Vi har allerede auth-gated via requireAdmin
   // i action-koden over; admin-client gjør at vi unngår å bygge to parallelle
   // klient-forbindelser for selve mutasjonen.
   const admin = getAdminClient();
@@ -89,12 +87,6 @@ async function loadDecisionContext(requestId: string): Promise<{
 
   if (gameError || !game) {
     redirect({ href: `/admin/games?error=game_not_found`, locale });
-  }
-
-  // Defense-in-depth for trusted creators: kun spill-creator (eller admin)
-  // kan godkjenne påmeldinger til et spesifikt spill.
-  if (!role.isAdmin && game!.created_by !== role.userId) {
-    redirect({ href: `/admin/games/${game!.id}?error=not_authorized`, locale });
   }
 
   // Approve/reject gir bare mening pre-active. Etter at runden er startet

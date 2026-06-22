@@ -11,7 +11,7 @@ import { LedgerHeader } from '@/components/admin/LedgerHeader';
 import { BaneIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { requireAdmin } from '@/lib/admin/auth';
 import { CoursesLedgerClient } from './CoursesLedgerClient';
 import { deriveCourseItem, type CourseRow } from './derive';
 
@@ -53,7 +53,7 @@ export default async function CoursesPage({
 }) {
   // Page-level gate: admin OR trusted creator (Fase 4).
   const supabase = await getServerClient();
-  await requireAdminOrTrustedCreator(supabase);
+  await requireAdmin(supabase);
 
   const t = await getTranslations('admin.courses');
   const tNav = await getTranslations('admin.nav');

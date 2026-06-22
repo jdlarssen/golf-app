@@ -2,7 +2,7 @@ import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
@@ -42,7 +42,7 @@ export default async function SlettBanePage({
     : undefined;
 
   const supabase = await getServerClient();
-  await requireAdminOrTrustedCreator(supabase);
+  await requireAdmin(supabase);
 
   const { data: course } = await supabase
     .from('courses')

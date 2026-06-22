@@ -262,19 +262,12 @@ export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
   // data of its own and paints immediately.
   const firstNameValue = firstName(role.name);
 
-  const banerTile: Tile = role.isTrusted
-    ? {
-        label: t('playerBaner'),
-        href: '/admin/courses',
-        meta: t('playerBanerTrustedMeta'),
-        icon: 'bane',
-      }
-    : {
-        label: t('playerBaner'),
-        href: '/opprett-bane',
-        meta: t('playerBanerMeta'),
-        icon: 'bane',
-      };
+  const banerTile: Tile = {
+    label: t('playerBaner'),
+    href: '/opprett-bane',
+    meta: t('playerBanerMeta'),
+    icon: 'bane',
+  };
 
   const tiles: Tile[] = [
     {
