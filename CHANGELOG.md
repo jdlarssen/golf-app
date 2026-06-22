@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.
 
+### [1.135.5] - 2026-06-22 · #873
+
+> Tekst-opprydding på profilen: handicap-feilmeldingen viser nå riktig tallområde og peker på +-knappen, «info-tag» er byttet til vanlig norsk, eksport sier hvilket filformat du får, og en aforisme-strek er ryddet bort.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `profile.errors.hcp_invalid`: «mellom -10 og 54,0» → «mellom 0 og 54. Bruk +-knappen for plusshandicap» — matcher UI-modellen (feltet har `min=0` + egen +-toggle, så bruker taster aldri negativt). Begge locales.
+- `profile.form.levelHint`: «Senior er en info-tag for nå» → «Senior er foreløpig bare et merke og endrer ikke spillet» — fjerner dev-engelsk «tag» og forklarer konsekvensen. Begge locales.
+- `profile.exportSublabel`: nevner nå filformatet (JSON) og rammer det som dataportabilitet, så en ikke-teknisk bruker vet hva nedlastingen er. Begge locales.
+- `profile.statistikk.emptyState`: em-dash-kjede splittet til to setninger (humanizer-tell). Begge locales.
+
+Punkt 3 (winners-undertittel) var allerede tredjeperson + format-agnostisk i live-katalogen (#887) — ikke endret. Identisk `hcp_invalid` finnes også i `onboarding`-namespacet (samme -10-lekkasje), men ligger utenfor dette issuets profil-scope.
+
+</details>
+
 ### [1.135.4] - 2026-06-22 · #883
 
 > Småplukk i teksten på Hjem: «enda» rettet til «ennå», du hilses med fornavn både før og etter at du har spill, og tom-tilstanden får en sportsligere avslutningslinje.
