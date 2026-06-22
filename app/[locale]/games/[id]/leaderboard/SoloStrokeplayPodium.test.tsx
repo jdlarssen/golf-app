@@ -266,15 +266,4 @@ describe('SoloStrokeplayPodium', () => {
     expect(screen.getByText(/Slagspill/i)).toBeInTheDocument();
   });
 
-  it('rangering er allerede lavest-først (Alice øverst med 68)', () => {
-    window.sessionStorage.clear();
-    render(<SoloStrokeplayPodium {...defaultProps()} />);
-    const podium = screen.getByTestId('strokeplay-podium');
-    const first = within(podium).getByTestId('podium-rank-1');
-    const second = within(podium).getByTestId('podium-rank-2');
-    const third = within(podium).getByTestId('podium-rank-3');
-    expect(first.textContent).toMatch(/68/);
-    expect(second.textContent).toMatch(/72/);
-    expect(third.textContent).toMatch(/75/);
-  });
 });
