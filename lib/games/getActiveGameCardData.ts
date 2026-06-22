@@ -10,7 +10,7 @@ const HOLE_COUNT = 18;
 export type ActiveGameForCard = {
   id: string;
   game_mode: GameMode;
-  flightNumber: number;
+  flightNumber: number | null;
   require_peer_approval: boolean;
   submitted_at: string | null;
   withdrawn_at: string | null;
@@ -129,9 +129,14 @@ export async function getActiveGameCardData(
           withdrawn_at: m.withdrawn_at,
         })),
       );
+      // Mirror PendingApprovalsBanner exactly: outside single-flight, only
+      // same-flight peers attest, and a null viewer flight matches no one.
       const mates = singleFlight
         ? all
-        : all.filter((m) => m.flight_number === g.flightNumber);
+        : all.filter(
+            (m) =>
+              g.flightNumber != null && m.flight_number === g.flightNumber,
+          );
       pendingApprovalsForMe = mates.filter(
         (m) =>
           m.user_id !== userId &&
