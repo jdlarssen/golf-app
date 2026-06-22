@@ -22,6 +22,8 @@ import { InstallButton } from '@/components/pwa/InstallButton';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { formatHcpDisplay } from '@/lib/handicap/sign';
+import { isHandicapStale } from '@/lib/handicap/staleness';
+import { formatDate } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
@@ -121,40 +123,81 @@ export default async function ProfilePage({
         </Suspense>
       </div>
 
-      <div className="mt-8">
-        <SettingList ariaLabel={t('accountSection')}>
-          <SettingRow
-            href="/profile/venner"
-            label={t('friendsRow')}
-            sublabel={t('friendsSublabel')}
-          />
-          <SettingRow href="/profile/historikk" label={t('historikkRow')} />
-          <SettingRow href="/profile/statistikk" label={t('statistikkRow')} />
-          <div className="flex w-full items-center justify-between gap-3 min-h-[56px] px-5 py-3 border-t border-border first:border-t-0">
-            <span className="font-serif text-base font-medium text-text">
-              {t('languageRowLabel')}
-            </span>
-            <LocaleSwitcher />
+      {/* Settings split into labelled sections for clarity. Extra vertical
+          space before «Slett konto» prevents accidental taps on the destructive
+          action (one-door-per-room: dedicated /slett-konto confirm page). */}
+      <div className="mt-8 space-y-6">
+        {/* Sosialt */}
+        <section>
+          <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            {t('sectionSocial')}
+          </p>
+          <SettingList>
+            <SettingRow
+              href="/profile/venner"
+              label={t('friendsRow')}
+              sublabel={t('friendsSublabel')}
+            />
+          </SettingList>
+        </section>
+
+        {/* Aktivitet */}
+        <section>
+          <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            {t('sectionPersonal')}
+          </p>
+          <SettingList>
+            <SettingRow href="/profile/historikk" label={t('historikkRow')} />
+            <SettingRow href="/profile/statistikk" label={t('statistikkRow')} />
+          </SettingList>
+        </section>
+
+        {/* App */}
+        <section>
+          <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            {t('sectionApp')}
+          </p>
+          <SettingList>
+            <div className="flex w-full items-center justify-between gap-3 min-h-[56px] px-5 py-3 border-t border-border first:border-t-0">
+              <span className="font-serif text-base font-medium text-text">
+                {t('languageRowLabel')}
+              </span>
+              <LocaleSwitcher />
+            </div>
+            <div className="flex w-full items-center justify-between gap-3 min-h-[56px] px-5 py-3 border-t border-border first:border-t-0">
+              <span className="font-serif text-base font-medium text-text">
+                {t('theme.rowLabel')}
+              </span>
+              <ThemeSwitcher />
+            </div>
+            <InstallButton />
+          </SettingList>
+        </section>
+
+        {/* Konto — eksport og destruktiv slett-handling */}
+        <section>
+          <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            {t('sectionAccount')}
+          </p>
+          <SettingList>
+            <SettingRow
+              href="/profile/export"
+              download
+              label={t('exportRow')}
+              sublabel={t('exportSublabel')}
+            />
+          </SettingList>
+          {/* Extra spacing isolates the destructive action visually. */}
+          <div className="mt-4">
+            <SettingList>
+              <SettingRow
+                href="/profile/slett-konto"
+                label={t('deleteRow')}
+                tone="danger"
+              />
+            </SettingList>
           </div>
-          <div className="flex w-full items-center justify-between gap-3 min-h-[56px] px-5 py-3 border-t border-border first:border-t-0">
-            <span className="font-serif text-base font-medium text-text">
-              {t('theme.rowLabel')}
-            </span>
-            <ThemeSwitcher />
-          </div>
-          <InstallButton />
-          <SettingRow
-            href="/profile/export"
-            download
-            label={t('exportRow')}
-            sublabel={t('exportSublabel')}
-          />
-          <SettingRow
-            href="/profile/slett-konto"
-            label={t('deleteRow')}
-            tone="danger"
-          />
-        </SettingList>
+        </section>
       </div>
 
       <AccountActions />
@@ -207,10 +250,16 @@ async function ProfileFormCard({
   const p = profile!;
   const displayName = p.name ?? '';
   const initial = displayName.trim().charAt(0).toUpperCase() || '?';
-  const hcpDisplay =
-    p.hcp_index == null
-      ? '–'
-      : formatHcpDisplay(p.hcp_index, locale);
+  const hasHcp = p.hcp_index != null;
+  const hcpDisplay = hasHcp ? formatHcpDisplay(p.hcp_index!, locale) : null;
+  const stale = isHandicapStale(p.handicap_updated_at);
+  const oppdatertDato =
+    hasHcp && p.handicap_updated_at && !stale
+      ? formatDate(p.handicap_updated_at, locale, {
+          day: 'numeric',
+          month: 'long',
+        })
+      : null;
 
   return (
     <Card>
@@ -230,7 +279,30 @@ async function ProfileFormCard({
           <h1 className="font-serif text-lg font-medium text-text leading-tight truncate">
             {displayName || t('displayNameFallback')}
           </h1>
-          <p className="text-sm text-muted tabular-nums">hcp {hcpDisplay}</p>
+          {hcpDisplay ? (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+              <p className="text-sm text-muted tabular-nums">hcp {hcpDisplay}</p>
+              {stale ? (
+                <span className="rounded-full bg-warning/10 px-2 py-0.5 font-sans text-[11px] text-warning">
+                  {t('hcpStaleShort')}
+                </span>
+              ) : oppdatertDato ? (
+                <span className="font-sans text-[11px] text-muted">
+                  {t('hcpUpdatedShort', { dato: oppdatertDato })}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm text-muted tabular-nums">hcp –</p>
+              <SmartLink
+                href="#hcp_index"
+                className="rounded-full bg-primary/10 px-2 py-0.5 font-sans text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors"
+              >
+                {t('setHandicap')}
+              </SmartLink>
+            </div>
+          )}
         </div>
       </div>
       <ProfileFormBody

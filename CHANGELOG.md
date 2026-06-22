@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Hjem viser nå turneringer å bli med i også når du allerede har spill, så du oppdager klubb- og venne-runder uten å lete deg bort.
 
+### [1.135.7] - 2026-06-22 · #875
+
+> Profilsiden er ryddet opp: manglende handicap gir en «Sett handicap»-snarvei, Golfprofil-raden viser kjønn og klasse i kollapset tilstand, innstillingene er gruppert i fire seksjoner, og «Slett konto» er skilt ut med ekstra luft.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `app/[locale]/profile/page.tsx` (`ProfileFormCard`): når `hcp_index` er null vises «Sett handicap»-chip ved siden av «hcp –» i stedet for bare en strek uten CTA. Chipen lenker til `#hcp_index`.
+- `app/[locale]/profile/page.tsx` (`ProfileFormCard`): ferskhetssignal (stale/oppdatert) er løftet opp til header-hcp-linja via inline-chip — ikke duplisert logikk, importerer `isHandicapStale` + `formatDate` på server.
+- `app/[locale]/profile/ProfileFormBody.tsx` (Golfprofil-disclosure): kollapset rad viser nå «· Herre, Voksen» (eller tilsvarende) via `aria-hidden="true"` span — tilgjengelig navn inneholder fortsatt «Golfprofil» (test-krav bevart).
+- `app/[locale]/profile/page.tsx` (SettingList): én udifferensiert liste byttet til fire navngitte `<section>`-blokker med kaps-etiketter («Sosialt», «Aktivitet», «App», «Konto»). «Slett konto» er isolert i et eget `SettingList`-kort med `mt-4` over, adskilt fra Eksporter.
+- `messages/no.json` + `messages/en.json`: nye nøkler `sectionSocial`, `sectionPersonal`, `sectionApp`, `sectionAccount`, `setHandicap`, `hcpStaleShort`, `hcpUpdatedShort`.
+
+</details>
+
 ### [1.135.6] - 2026-06-22 · #871
 
 > Profilen er mer tilgjengelig: vinneren i statistikklisten er lettere å lese, «Lagre»-knappen forklarer seg selv, og historikk-kort bretter seg pent på smal skjerm.

@@ -237,8 +237,29 @@ export function ProfileFormBody({
           aria-controls="profile-more-settings"
           className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
         >
-          <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            {t('golfProfileLabel')}
+          <span className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+              {t('golfProfileLabel')}
+            </span>
+            {!showMore && (gender || level) && (
+              <span className="font-sans text-[11px] text-muted truncate" aria-hidden="true">
+                ·{' '}
+                {[
+                  gender === 'mens'
+                    ? t('genderMale')
+                    : gender === 'ladies'
+                      ? t('genderFemale')
+                      : null,
+                  level === 'junior'
+                    ? t('levelJunior')
+                    : level === 'senior'
+                      ? t('levelSenior')
+                      : t('levelAdult'),
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+              </span>
+            )}
           </span>
           <DisclosureChevron open={showMore} />
         </button>
