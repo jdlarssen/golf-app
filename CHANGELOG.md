@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Profilen lar deg nå styre lyst og mørkt selv, ikke bare arve det fra telefonen.
 
+### [1.134.2] - 2026-06-22 · #887
+
+> Vinnerlista i statistikken krediterer nå den som faktisk vant hver runde, uansett spilleform. Matchplay, stableford og skins får riktig vinner i stedet for et netto-gjett.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Statistikk-siden («Klubbstatistikker») regnet vinneren av hvert ferdige spill som netto best-ball uansett faktisk modus (`computeLeaderboard({ mode: 'netto' })`). Matchplay (som ikke har en netto-totalsum, men avgjøres hull for hull), stableford, skins m.fl. krediterte dermed feil spiller. Siden leser nå det allerede lagrede, modus-riktige `game_players.result_summary` (#572) som sannhetskilde; bare spill uten lagret utfall (pre-#572 eller feilet persist) faller tilbake til `buildModeResultForGame` med admin-klient. Trukne spillere (`withdrawn_at`) utelates nå fra både vinner- og deltakelse-opptellingen, på linje med scoring-, leaderboard- og liga-flatene. Aggregeringen er trukket ut til en ren `lib/stats/clubStats.ts` (`isWinningSummary` / `aggregateFinishedGame` / `tallyClubStats`) med 14 unit-tester; hull-/scores-fetchene og hele `computeLeaderboard`-løkka er borte fra happy-path-en. Logikken er nå INNI #869-cachen (`getClubStatsAggregate`), så resultatet er både cachet og modus-riktig. (#887)
+
+#### Changed
+- Undertitlene på vinner- og aktiv-lista er gjort tredjeperson og format-agnostiske (no + en). Den globale tavla sier ikke lenger «laget ditt» eller hardkoder «best-ball-netto». Løser #873 punkt 3. (#887)
+
+</details>
+
 ### [1.134.1] - 2026-06-22 · #878
 
 > «Pågår nå»-kortet på Hjem vet nå hvor du er i runden. Ett trykk tar deg rett til neste hull du mangler. Når du har levert, står det «Levert ✓» på kortet, og venter noen i flighten på at du godkjenner scorekortet deres, dukker det opp en egen påminnelse rett under.

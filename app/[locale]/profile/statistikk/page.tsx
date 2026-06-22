@@ -2,51 +2,40 @@ import { unstable_cache } from 'next/cache';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
+import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import {
-  computeLeaderboard,
-  type LbHole,
-  type LbPlayer,
-  type LbScore,
-} from '@/lib/leaderboard';
+  computeResultSummaries,
+  type ResultSummary,
+} from '@/lib/scoring/resultSummary';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import {
+  aggregateFinishedGame,
+  isWinningSummary,
+  tallyClubStats,
+  type FinishedGameForTally,
+} from '@/lib/stats/clubStats';
 import { nameInitials } from '@/lib/names/initials';
 import type { AppLocale } from '@/i18n/routing';
 
 type GameRow = {
   id: string;
   course_id: string;
+  game_mode: GameMode;
+  mode_config: GameModeConfig;
 };
 
 type GamePlayerRow = {
   game_id: string;
   user_id: string;
-  team_number: number;
-  course_handicap: number | null;
-  tee_gender: 'mens' | 'ladies' | 'juniors';
+  withdrawn_at: string | null;
+  result_summary: ResultSummary | null;
   users: {
     name: string | null;
-    nickname: string | null;
   } | null;
-};
-
-type CourseHoleRow = {
-  course_id: string;
-  hole_number: number;
-  par_mens: number;
-  par_ladies: number;
-  par_juniors: number;
-  stroke_index: number;
-};
-
-type ScoreRow = {
-  game_id: string;
-  user_id: string;
-  hole_number: number;
-  strokes: number | null;
 };
 
 type PlayerStat = {
@@ -70,7 +59,7 @@ type ClubStatsAggregate = {
    *  with only corrupt/zero-player data still leaves this `true`, so the page
    *  renders with "Ingen data ennå." sections rather than the empty state). */
   hasGames: boolean;
-  /** `[userId, winCount]` for every player that has ≥1 best-ball-netto win. */
+  /** `[userId, winCount]` for every player with ≥1 mode-correct win. */
   winnerCounts: Array<[string, number]>;
   /** `[userId, gameCount]` for every player in ≥1 finished game. */
   participationCounts: Array<[string, number]>;
@@ -79,11 +68,18 @@ type ClubStatsAggregate = {
 };
 
 /**
- * Aggregate club-wide stats from every finished game. This is the expensive
- * part of the page: it reads ALL finished games + their players + holes +
- * scores and runs `computeLeaderboard` once per game. The work grows with
- * (games × players × holes), so against club scale (~150 players, many games)
- * it's a real scaling cliff.
+ * Aggregate club-wide stats from every finished game.
+ *
+ * The winner of each game is read from the stored, mode-correct
+ * `game_players.result_summary` (#572) — NOT recomputed as netto best-ball
+ * (the #887 fix). Reading the stored outcome is cheap (no per-game
+ * `computeLeaderboard`, no holes/scores fetch on the happy path) and correct
+ * for every mode (matchplay/stableford/skins/…). Only games with NO stored
+ * summary at all (finished before #572, or a failed best-effort persist) fall
+ * back to `buildModeResultForGame`, which re-derives the same `ModeResult` the
+ * summaries were built from. Withdrawn players (`withdrawn_at`) are excluded
+ * from both the winner and the participation tally, matching every other
+ * surface; the fallback engine already drops them too.
  *
  * ## Why the admin client
  *
@@ -111,10 +107,11 @@ const getClubStatsAggregate = unstable_cache(
   async (): Promise<ClubStatsAggregate> => {
     const supabase = getAdminClient();
 
-    // Round-trip 1: all finished games + their course_id.
+    // Round-trip 1: all finished games + mode + course (mode/config feed the
+    // rare fallback path that re-derives the result for null-summary games).
     const { data: gamesRaw, error: gamesError } = await supabase
       .from('games')
-      .select('id, course_id')
+      .select('id, course_id, game_mode, mode_config')
       .eq('status', 'finished')
       .returns<GameRow[]>();
     if (gamesError) throw gamesError;
@@ -130,123 +127,82 @@ const getClubStatsAggregate = unstable_cache(
     }
 
     const gameIds = games.map((g) => g.id);
-    const courseIds = Array.from(new Set(games.map((g) => g.course_id)));
 
-    // Round-trips 2, 3, 4: bulk-fetch players, holes, scores in parallel.
-    const [playersRes, holesRes, scoresRes] = await Promise.all([
-      supabase
-        .from('game_players')
-        .select(
-          'game_id, user_id, team_number, course_handicap, tee_gender, users!game_players_user_id_fkey(name, nickname)',
-        )
-        .in('game_id', gameIds)
-        .returns<GamePlayerRow[]>(),
-      supabase
-        .from('course_holes')
-        .select(`course_id, ${COURSE_HOLES_SELECT}`)
-        .in('course_id', courseIds)
-        .returns<CourseHoleRow[]>(),
-      supabase
-        .from('scores')
-        .select(`game_id, ${SCORES_SELECT}`)
-        .in('game_id', gameIds)
-        .returns<ScoreRow[]>(),
-    ]);
+    // Round-trip 2: all players for those games, with their stored per-mode
+    // outcome (`result_summary`, #572) and `withdrawn_at`. No holes/scores
+    // fetch — the stored summary is the source of truth for who won.
+    const { data: playersRaw, error: playersError } = await supabase
+      .from('game_players')
+      .select(
+        'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name)',
+      )
+      .in('game_id', gameIds)
+      .returns<GamePlayerRow[]>();
+    if (playersError) throw playersError;
+    const allPlayers = playersRaw ?? [];
 
-    if (playersRes.error) throw playersRes.error;
-    if (holesRes.error) throw holesRes.error;
-    if (scoresRes.error) throw scoresRes.error;
-
-    const allPlayers = playersRes.data ?? [];
-    const allHoles = holesRes.data ?? [];
-    const allScores = scoresRes.data ?? [];
-
-    // Index for fast lookup per game / course.
     const playersByGame = groupBy(allPlayers, (p) => p.game_id);
-    const holesByCourse = groupBy(allHoles, (h) => h.course_id);
-    const scoresByGame = groupBy(allScores, (s) => s.game_id);
 
-    // Aggregators.
-    const winnerCount = new Map<string, number>();
-    const participationCount = new Map<string, number>();
+    // Current name per user (first non-null wins; every row carries the live
+    // name via the FK join).
     const userNames = new Map<string, string>();
-
-    // The aggregate is locale-agnostic, so the unknown-player fallback name is
-    // resolved at render time, not here. Best-ball lines need a placeholder
-    // name to compute (it's never read back out of the result), so use an
-    // empty string — it has no effect on win attribution (we key on userId).
-    const NAME_PLACEHOLDER = '';
-
-    for (const game of games) {
-      const gamePlayers = playersByGame.get(game.id) ?? [];
-      if (gamePlayers.length === 0) {
-        // Corrupt data — finished game with no players. Skip silently.
-        continue;
-      }
-
-      // Track participation (any player in the finished game counts).
-      for (const gp of gamePlayers) {
-        participationCount.set(
-          gp.user_id,
-          (participationCount.get(gp.user_id) ?? 0) + 1,
-        );
-        if (gp.users?.name && !userNames.has(gp.user_id)) {
-          userNames.set(gp.user_id, gp.users.name);
-        }
-      }
-
-      // Compute winner team(s) via the same logic used on the live leaderboard.
-      // Tied #1 teams all share the win (rank === 1 covers ties via rankTeams).
-      const lbPlayers: LbPlayer[] = gamePlayers.map((p) => ({
-        userId: p.user_id,
-        name: p.users?.name ?? NAME_PLACEHOLDER,
-        nickname: p.users?.nickname ?? null,
-        teamNumber: p.team_number,
-        courseHandicap: p.course_handicap ?? 0,
-        teeGender: p.tee_gender,
-      }));
-
-      const lbHoles: LbHole[] = (holesByCourse.get(game.course_id) ?? []).map(
-        (h) => ({
-          holeNumber: h.hole_number,
-          par: h.par_mens,
-          parByGender: {
-            mens: h.par_mens,
-            ladies: h.par_ladies,
-            juniors: h.par_juniors,
-          },
-          strokeIndex: h.stroke_index,
-        }),
-      );
-
-      const lbScores: LbScore[] = (scoresByGame.get(game.id) ?? []).map((s) => ({
-        userId: s.user_id,
-        holeNumber: s.hole_number,
-        strokes: s.strokes,
-      }));
-
-      // Best-ball requires at least one hole — guard against corrupt data.
-      if (lbHoles.length === 0) continue;
-
-      const lines = computeLeaderboard({
-        mode: 'netto',
-        players: lbPlayers,
-        holes: lbHoles,
-        scores: lbScores,
-      });
-
-      const winningTeams = lines.filter((l) => l.rank === 1);
-      for (const team of winningTeams) {
-        for (const p of team.players) {
-          winnerCount.set(p.userId, (winnerCount.get(p.userId) ?? 0) + 1);
-        }
+    for (const p of allPlayers) {
+      if (p.users?.name && !userNames.has(p.user_id)) {
+        userNames.set(p.user_id, p.users.name);
       }
     }
 
+    // Shape into the pure-tally input.
+    const tallyGames: FinishedGameForTally[] = games.map((g) => ({
+      id: g.id,
+      players: (playersByGame.get(g.id) ?? []).map((p) => ({
+        userId: p.user_id,
+        name: p.users?.name ?? null,
+        withdrawnAt: p.withdrawn_at,
+        resultSummary: p.result_summary,
+      })),
+    }));
+
+    // Games with NO stored summary at all (pre-#572 / failed persist) →
+    // recompute the real per-mode result via the same engine that wrote the
+    // summaries. The engine excludes withdrawn players, so winners are WD-clean.
+    const fallbackGameIds = tallyGames
+      .filter((g) => aggregateFinishedGame(g.players).needsFallback)
+      .map((g) => g.id);
+
+    const fallbackWinnersByGameId = new Map<string, string[]>();
+    if (fallbackGameIds.length > 0) {
+      const gamesById = new Map(games.map((g) => [g.id, g]));
+      await Promise.all(
+        fallbackGameIds.map(async (id) => {
+          const game = gamesById.get(id);
+          if (!game) return;
+          const result = await buildModeResultForGame(supabase, {
+            id: game.id,
+            game_mode: game.game_mode,
+            mode_config: game.mode_config,
+            course_id: game.course_id,
+          });
+          if (result === null) return;
+          const summaries = computeResultSummaries(result);
+          const winners: string[] = [];
+          for (const [uid, summary] of summaries) {
+            if (isWinningSummary(summary)) winners.push(uid);
+          }
+          fallbackWinnersByGameId.set(id, winners);
+        }),
+      );
+    }
+
+    const { winnerCounts, participationCounts } = tallyClubStats(
+      tallyGames,
+      fallbackWinnersByGameId,
+    );
+
     return {
       hasGames: true,
-      winnerCounts: Array.from(winnerCount.entries()),
-      participationCounts: Array.from(participationCount.entries()),
+      winnerCounts: Array.from(winnerCounts.entries()),
+      participationCounts: Array.from(participationCounts.entries()),
       userNames: Array.from(userNames.entries()),
     };
   },
