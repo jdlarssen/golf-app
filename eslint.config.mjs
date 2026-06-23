@@ -73,6 +73,41 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // Cognitive-complexity-vakt (#slop-prevention): fanger gnarly funksjoner før de
+    // vokser seg uvedlikeholdbare. WARN, ikke error — den blokkerer ikke lint/CI
+    // (som feiler på errors), og tersklene er romslige med vilje: store filer er
+    // ofte legitimt store her (skalerer med 22 spillemodi), så vi måler KOMPLEKSITET
+    // og NESTING, ikke rå lengde (max-lines bevisst utelatt = ville vært ren støy).
+    // Copy-paste-duplikat dekkes av `npm run dup` (jscpd), ikke av eslint.
+    files: ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}", "**/__tests__/**"],
+    rules: {
+      complexity: ["warn", 25],
+      "max-depth": ["warn", 5],
+      "max-nested-callbacks": ["warn", 4],
+    },
+  },
+  {
+    // Next.js 16-felle (AGENTS.md): middleware-konvensjonen heter `proxy.ts`,
+    // IKKE `middleware.ts`. En root `middleware.ts` ignoreres STILLE av Next 16
+    // — auth/session-refresh-logikken som havner der kjører aldri, og ingenting
+    // feiler. Gjør selve eksistensen til en lint-feil så tabben dukker opp på
+    // pre-push/CI i stedet for som en stille auth-regresjon i prod. Scope er
+    // root + src/, så den legitime `lib/supabase/middleware.ts`-session-helperen
+    // (ikke en Next-middleware) er urørt.
+    files: ["middleware.ts", "src/middleware.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Program",
+          message:
+            "Next.js 16 bruker proxy.ts, ikke middleware.ts — en root middleware.ts ignoreres stille (auth/session-logikken kjører aldri). Flytt innholdet til proxy.ts. Se AGENTS.md.",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

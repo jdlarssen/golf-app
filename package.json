@@ -15,7 +15,9 @@
     "e2e:gate": "playwright test --grep @gate",
     "e2e:lifecycle": "playwright test --grep @lifecycle",
     "test:rls": "if command -v supabase >/dev/null 2>&1; then supabase test db; else echo '[test:rls] Supabase CLI not found — RLS integration tests need a local Postgres. Install the CLI + start the stack, then re-run. See supabase/tests/README.md. (skipped, not failed)'; fi",
-    "postinstall": "git config core.hooksPath .githooks 2>/dev/null || true"
+    "postinstall": "git config core.hooksPath .githooks 2>/dev/null || true",
+    "dup": "jscpd app lib components",
+    "dup:html": "jscpd app lib components --reporters html --output ./.jscpd-report"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -40,6 +42,7 @@
     "@vitest/ui": "^4.1.5",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "jscpd": "^5.0.11",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "typescript": "^5",

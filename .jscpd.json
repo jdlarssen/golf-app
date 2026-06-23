@@ -1,0 +1,15 @@
+{
+  "minTokens": 60,
+  "minLines": 5,
+  "reporters": ["console"],
+  "gitignore": true,
+  "ignore": [
+    "**/*.test.{ts,tsx}",
+    "**/*.spec.{ts,tsx}",
+    "**/__tests__/**",
+    "lib/database.types.ts",
+    "messages/**",
+    "e2e/**",
+    "supabase/**"
+  ]
+}
