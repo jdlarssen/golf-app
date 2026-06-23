@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.5] - 2026-06-23 · #908
+
+> Avkrysningsbokser og radioknapper i skjemaene er nå i Tørny-grønt i stedet for system-blått. Den blå haken du så når du krysset av forsvinner.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- App-bred feiing: la `accent-primary` på 26 native checkbox/radio-felt som rendret default OS-aksent (system-blå på hover/avkrysset). Berørte filer: `AdvancedSettingsSection.tsx`, `BasicsSection.tsx`, `PlayersSection.tsx`, `RegistrationSection.tsx`, `components/admin/SideCategoriesPicker.tsx`, `complete-profile/page.tsx`, `admin/spillere/[id]/page.tsx`. `accent-primary` løser til `--primary` (forest `#1b4332` lyst, sage `#7eaa80` mørkt), så aksenten har kontrast i begge moduser.
+- `sr-only`-inputs (segmented-control-kortene i AceyDeucey/Nassau/Nines/Patsome/Shamble/Skins/Wolf-oppsett, AllowanceField, RoundStartClient) er bevisst hoppet over — deres synlige state ligger på label-en, så native-aksenten er aldri synlig.
+
+</details>
+
 ### [1.140.4] - 2026-06-23 · #910
 
 > Hjelpetekstene i sideturnering-velgeren er ryddet, og lange kategorinavn brytes nå pent i stedet for å krasje inn i poeng-kolonnen til høyre.

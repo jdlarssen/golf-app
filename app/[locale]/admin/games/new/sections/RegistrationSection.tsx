@@ -119,7 +119,7 @@ export function RegistrationSection({
                     checked={registrationMode === mode}
                     onChange={() => setRegistrationMode(mode)}
                     disabled={lockGameMode}
-                    className="mt-1 h-5 w-5"
+                    className="mt-1 h-5 w-5 accent-primary"
                   />
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -146,7 +146,7 @@ export function RegistrationSection({
                             setLetFriendsSkipGate(e.target.checked)
                           }
                           disabled={lockGameMode}
-                          className="mt-0.5 h-4 w-4 flex-shrink-0"
+                          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
                         />
                         <div>
                           <span className="font-sans text-sm text-text">
@@ -193,7 +193,7 @@ export function RegistrationSection({
                   checked={registrationType === type}
                   onChange={() => setRegistrationType(type)}
                   disabled={disabled}
-                  className="mt-1 h-5 w-5"
+                  className="mt-1 h-5 w-5 accent-primary"
                 />
                 <div>
                   <div className="font-serif text-base text-text">

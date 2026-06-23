@@ -183,7 +183,7 @@ export function BasicsSection({
                   value="live"
                   defaultChecked={initialScoreVisibility !== 'reveal'}
                   disabled={lockScoreVisibility}
-                  className="mt-1"
+                  className="mt-1 accent-primary"
                 />
                 <div>
                   <div className="font-serif text-base text-text">
@@ -201,7 +201,7 @@ export function BasicsSection({
                   value="reveal"
                   defaultChecked={initialScoreVisibility === 'reveal'}
                   disabled={lockScoreVisibility}
-                  className="mt-1"
+                  className="mt-1 accent-primary"
                 />
                 <div>
                   <div className="font-serif text-base text-text">
@@ -239,7 +239,7 @@ export function BasicsSection({
                   checked={sideEnabled}
                   onChange={(e) => setSideEnabled(e.target.checked)}
                   disabled={lockSideTournament}
-                  className="mt-1"
+                  className="mt-1 accent-primary"
                 />
                 <div>
                   <div className="font-serif text-base text-text">
@@ -278,6 +278,7 @@ export function BasicsSection({
                             value={n}
                             defaultChecked={initialLdCount === n}
                             disabled={lockSideTournament}
+                            className="accent-primary"
                           />
                           <span className="font-serif text-base text-text tabular-nums">{n}</span>
                         </label>
@@ -298,6 +299,7 @@ export function BasicsSection({
                             value={n}
                             defaultChecked={initialCtpCount === n}
                             disabled={lockSideTournament}
+                            className="accent-primary"
                           />
                           <span className="font-serif text-base text-text tabular-nums">{n}</span>
                         </label>

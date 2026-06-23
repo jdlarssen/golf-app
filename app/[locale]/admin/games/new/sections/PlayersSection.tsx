@@ -217,7 +217,7 @@ export function PlayersSection({
                         disabled={atCap}
                         onChange={() => togglePlayer(p.id)}
                         aria-label={`${playerLabel(p)}${p.pending ? t('pendingPlayerAriaNote') : ''}`}
-                        className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
+                        className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40 accent-primary"
                       />
                       <span className="flex-1 min-w-0 truncate text-sm text-text">
                         {playerLabel(p)}

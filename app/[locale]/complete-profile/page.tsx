@@ -131,11 +131,11 @@ export default async function CompleteProfile({
             </legend>
             <div className="mt-2 flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="gender" value="mens" required defaultChecked={echoGender === 'mens'} />
+                <input type="radio" name="gender" value="mens" required defaultChecked={echoGender === 'mens'} className="accent-primary" />
                 <span className="font-serif text-base text-text">{t('genderMale')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="gender" value="ladies" required defaultChecked={echoGender === 'ladies'} />
+                <input type="radio" name="gender" value="ladies" required defaultChecked={echoGender === 'ladies'} className="accent-primary" />
                 <span className="font-serif text-base text-text">{t('genderFemale')}</span>
               </label>
             </div>
@@ -150,15 +150,15 @@ export default async function CompleteProfile({
             </legend>
             <div className="mt-2 flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="level" value="junior" />
+                <input type="radio" name="level" value="junior" className="accent-primary" />
                 <span className="font-serif text-base text-text">{t('levelJunior')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="level" value="normal" defaultChecked />
+                <input type="radio" name="level" value="normal" defaultChecked className="accent-primary" />
                 <span className="font-serif text-base text-text">{t('levelAdult')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="level" value="senior" />
+                <input type="radio" name="level" value="senior" className="accent-primary" />
                 <span className="font-serif text-base text-text">{t('levelSenior')}</span>
               </label>
             </div>

@@ -230,6 +230,7 @@ export default async function PlayerDetailPage({
                     value="mens"
                     defaultChecked={target.gender === 'mens'}
                     required
+                    className="accent-primary"
                   />
                   <span className="font-serif text-base text-text">{tProfile('genderMens')}</span>
                 </label>
@@ -240,6 +241,7 @@ export default async function PlayerDetailPage({
                     value="ladies"
                     defaultChecked={target.gender === 'ladies'}
                     required
+                    className="accent-primary"
                   />
                   <span className="font-serif text-base text-text">{tProfile('genderLadies')}</span>
                 </label>
@@ -259,6 +261,7 @@ export default async function PlayerDetailPage({
                     name="level"
                     value="junior"
                     defaultChecked={target.level === 'junior'}
+                    className="accent-primary"
                   />
                   <span className="font-serif text-base text-text">{tProfile('levelJunior')}</span>
                 </label>
@@ -268,6 +271,7 @@ export default async function PlayerDetailPage({
                     name="level"
                     value="normal"
                     defaultChecked={target.level === 'normal'}
+                    className="accent-primary"
                   />
                   <span className="font-serif text-base text-text">{tProfile('levelNormal')}</span>
                 </label>
@@ -277,6 +281,7 @@ export default async function PlayerDetailPage({
                     name="level"
                     value="senior"
                     defaultChecked={target.level === 'senior'}
+                    className="accent-primary"
                   />
                   <span className="font-serif text-base text-text">{tProfile('levelSenior')}</span>
                 </label>

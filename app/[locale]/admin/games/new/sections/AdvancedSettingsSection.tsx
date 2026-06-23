@@ -64,7 +64,7 @@ export function AdvancedSettingsSection({
           name="require_peer_approval"
           checked={requirePeerApproval}
           onChange={(e) => setRequirePeerApproval(e.target.checked)}
-          className="mt-0.5 h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
+          className="mt-0.5 h-5 w-5 rounded border-border text-primary focus:ring-accent/40 accent-primary"
         />
         <span>
           <span className="block text-sm font-medium text-text">
@@ -92,7 +92,7 @@ export function AdvancedSettingsSection({
                   value="live"
                   defaultChecked={initialScoreVisibility !== 'reveal'}
                   disabled={lockScoreVisibility}
-                  className="mt-1"
+                  className="mt-1 accent-primary"
                 />
                 <div>
                   <div className="font-serif text-base text-text">
@@ -110,7 +110,7 @@ export function AdvancedSettingsSection({
                   value="reveal"
                   defaultChecked={initialScoreVisibility === 'reveal'}
                   disabled={lockScoreVisibility}
-                  className="mt-1"
+                  className="mt-1 accent-primary"
                 />
                 <div>
                   <div className="font-serif text-base text-text">
@@ -148,7 +148,7 @@ export function AdvancedSettingsSection({
                   checked={sideEnabled}
                   onChange={(e) => setSideEnabled(e.target.checked)}
                   disabled={lockSideTournament}
-                  className="mt-1"
+                  className="mt-1 accent-primary"
                 />
                 <div>
                   <div className="font-serif text-base text-text">
@@ -184,6 +184,7 @@ export function AdvancedSettingsSection({
                             value={n}
                             defaultChecked={initialLdCount === n}
                             disabled={lockSideTournament}
+                            className="accent-primary"
                           />
                           <span className="font-serif text-base text-text tabular-nums">{n}</span>
                         </label>
@@ -204,6 +205,7 @@ export function AdvancedSettingsSection({
                             value={n}
                             defaultChecked={initialCtpCount === n}
                             disabled={lockSideTournament}
+                            className="accent-primary"
                           />
                           <span className="font-serif text-base text-text tabular-nums">{n}</span>
                         </label>

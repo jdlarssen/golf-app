@@ -436,7 +436,7 @@ export function SideCategoriesPicker({
                         checked={isEnabled}
                         disabled={locked}
                         onChange={() => toggleRow(row.ids)}
-                        className="h-5 w-5 shrink-0 rounded border-border text-primary focus:ring-accent/40 disabled:cursor-not-allowed"
+                        className="h-5 w-5 shrink-0 rounded border-border text-primary focus:ring-accent/40 disabled:cursor-not-allowed accent-primary"
                       />
                       <span className="flex-1 text-pretty text-sm leading-snug text-text">
                         {row.label}
