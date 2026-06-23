@@ -10,7 +10,8 @@ import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { osloIsoWeek, osloTimeOfDayBucket } from '@/lib/format/osloCalendar';
 import type { AppLocale } from '@/i18n/routing';
 import { getRole, TIME_OF_DAY_KEY } from './_dashboardContext';
-import { TilesGrid, TilesSkeleton, PlayerKlubbhus } from './TilesGrid';
+import { TilesGrid, TilesSkeleton } from './TilesGrid';
+import { PlayerKlubbhus } from './PlayerKlubbhus';
 import { ActivityLedger, LedgerSkeleton } from './ActivityLedger';
 import { ActionItemsStripe } from './ActionItemsStripe';
 
