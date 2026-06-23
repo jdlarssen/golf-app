@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.6] - 2026-06-23 · #906
+
+> Når du legger til spillere på et spill, kan du nå bare velge venner og folk du har spilt med, samme regel som da spillet ble opprettet. Lange spillernavn dytter ikke lenger «Legg til»-knappen ut av stilling.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- `addExistingPlayerToGame` + eksisterende-bruker-grenen i `inviteEmailToGame` (`app/[locale]/admin/games/[id]/inviteToGameActions.ts`) håndhever nå venne-/klubb-scoping server-side for ikke-admin oppretter (#906, AGENTS.md felle #3 — server er den egentlige authz). En oppretter kan ikke lenger legge en vilkårlig registrert bruker til sitt eget spill via et direkte action-kall; ikke-kvalifisert recipient avvises med ny `invite_not_allowed`-feilmelding (no/en). Global admin er unntatt (kurator-modellen, samme som disposable-guarden #422).
+- Ny `lib/games/inviteEligibility.ts`: `getInviteEligibleIds` = venne-connections ∪ co-players ∪ klubbmedlemmer (når spillet har `group_id`). Unionen av alt de scopede invite-UI-ene tilbyr, så server-guarden aldri avviser en kandidat en picker viste (felle #4). Fail-safe: en transient lookup-feil krymper settet (avviser) i stedet for å åpne.
+- `InviteToGameClient.tsx`: «+ Legg til»-knappen får `shrink-0` + `whitespace-nowrap` så lange spillernavn ikke bryter den til to linjer.
+
+RLS-laget (defense-in-depth mot et forged-JWT direkte-PATCH) spores som eget oppfølgings-issue.
+
+</details>
+
 ### [1.140.5] - 2026-06-23 · #908
 
 > Avkrysningsbokser og radioknapper i skjemaene er nå i Tørny-grønt i stedet for system-blått. Den blå haken du så når du krysset av forsvinner.

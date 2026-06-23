@@ -1654,6 +1654,7 @@
         "disposable_email": "Den e-postadressen ser ut som en engangsadresse. Be om en vanlig e-post.",
         "invite_invalid_email": "Ugyldig e-postadresse.",
         "invite_missing_user": "Fant ikke spilleren.",
+        "invite_not_allowed": "Du kan bare legge til venner og folk du har spilt med. Inviter andre med e-post.",
         "remove_missing_user": "Fant ikke spilleren.",
         "game_locked": "Spillet er i gang. Du kan ikke endre spillerne nå.",
         "roster_locked": "Spillet er i gang. Trekk spilleren i stedet for å fjerne.",

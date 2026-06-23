@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
+import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 
@@ -15,6 +16,7 @@ type GameSnapshot = {
   name: string;
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   game_mode: string;
+  group_id: string | null;
 };
 
 const BEST_BALL_MAX_PLAYERS = 8;
@@ -51,6 +53,15 @@ export async function addExistingPlayerToGame(
 
   if (game.status === 'active' || game.status === 'finished') {
     redirect({ href: `${detailPath}?error=game_locked`, locale });
+  }
+
+  // Venne-/klubb-scoping (#906, felle #3 — server er den egentlige authz). Admin
+  // er unntatt (kurator-modellen, jf. disposable-guarden #422); self alltid lov.
+  if (!ctx.isAdmin && recipientUserId !== inviterUserId) {
+    const eligible = await getInviteEligibleIds(inviterUserId, game.group_id);
+    if (!eligible.has(recipientUserId)) {
+      redirect({ href: `${detailPath}?error=invite_not_allowed`, locale });
+    }
   }
 
   if (game.game_mode === 'best_ball') {
@@ -160,6 +171,16 @@ export async function inviteEmailToGame(
     .maybeSingle<{ id: string }>();
 
   if (existingUser) {
+    // Eksisterende-bruker-grenen er funksjonelt picker-add → samme venne-/klubb-
+    // scoping (#906). Admin unntatt; self alltid lov. Ukjent-e-post-grenen under
+    // guardes bevisst IKKE — å invitere en ny e-post er venne-anskaffelses-stien.
+    if (!ctx.isAdmin && existingUser.id !== inviterUserId) {
+      const eligible = await getInviteEligibleIds(inviterUserId, game.group_id);
+      if (!eligible.has(existingUser.id)) {
+        redirect({ href: `${detailPath}?error=invite_not_allowed`, locale });
+      }
+    }
+
     const { error: insertError } = await supabase.from('game_players').insert({
       game_id: gameId,
       user_id: existingUser.id,
@@ -283,7 +304,7 @@ async function loadGameForInvite(
   const locale = await getLocale();
   const { data, error } = await supabase
     .from('games')
-    .select('id, name, status, game_mode')
+    .select('id, name, status, game_mode, group_id')
     .eq('id', gameId)
     .single<GameSnapshot>();
 

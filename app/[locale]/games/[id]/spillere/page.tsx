@@ -42,6 +42,7 @@ const ERROR_KEYS = new Set([
   'disposable_email',
   'invite_invalid_email',
   'invite_missing_user',
+  'invite_not_allowed',
   'remove_missing_user',
   'game_locked',
   'roster_locked',

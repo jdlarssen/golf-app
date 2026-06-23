@@ -51,6 +51,16 @@ vi.mock('@/lib/mail/inviteNotification', () => ({
     sendInviteNotificationMock(...args),
 }));
 
+// Venne-/klubb-eligibility-resolveren (#906) bruker admin-client, så vi mocker
+// den ut og styrer settet per test. Default: RECIPIENT_ID er kvalifisert, så de
+// eksisterende ikke-admin-happy-path-testene fortsatt passerer.
+const inviteEligibleIdsMock = vi.fn<(...args: unknown[]) => Promise<Set<string>>>(
+  async () => new Set<string>([RECIPIENT_ID]),
+);
+vi.mock('@/lib/games/inviteEligibility', () => ({
+  getInviteEligibleIds: (...args: unknown[]) => inviteEligibleIdsMock(...args),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -272,6 +282,99 @@ describe('addExistingPlayerToGame', () => {
       addExistingPlayerToGame(GAME_ID, formData({ recipient_user_id: RECIPIENT_ID })),
     ).rejects.toBeInstanceOf(RedirectError);
 
+    expect(notifyInvitedToGameMock).toHaveBeenCalled();
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=invite_added`);
+  });
+
+  it('#906: avviser ikke-kvalifisert recipient for ikke-admin oppretter', async () => {
+    supabaseMock = buildSupabaseMock([
+      CREATOR_ROLE_READ,
+      CREATOR_OWNS_GAME,
+      {
+        data: { id: GAME_ID, name: 'Lørdagsrunde', status: 'scheduled', game_mode: 'stableford', group_id: null },
+        error: null,
+      },
+      // INGEN insert: guarden avviser før vi når dit.
+    ]);
+    authedAsCreator();
+    inviteEligibleIdsMock.mockResolvedValueOnce(new Set<string>());
+
+    const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+    await expect(
+      addExistingPlayerToGame(GAME_ID, formData({ recipient_user_id: RECIPIENT_ID })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(inviteEligibleIdsMock).toHaveBeenCalledWith(CREATOR_ID, null);
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe(`/games/${GAME_ID}/spillere?error=invite_not_allowed`);
+  });
+
+  it('#906: tillater kvalifisert recipient for ikke-admin oppretter (klubb-scope)', async () => {
+    supabaseMock = buildSupabaseMock([
+      CREATOR_ROLE_READ,
+      CREATOR_OWNS_GAME,
+      {
+        data: { id: GAME_ID, name: 'Klubbrunde', status: 'scheduled', game_mode: 'stableford', group_id: 'club-1' },
+        error: null,
+      },
+      { data: null, error: null }, // insert
+    ]);
+    authedAsCreator();
+    // Default-mock har RECIPIENT_ID → kvalifisert. Bekreft at group_id sendes med.
+
+    const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+    await expect(
+      addExistingPlayerToGame(GAME_ID, formData({ recipient_user_id: RECIPIENT_ID })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(inviteEligibleIdsMock).toHaveBeenCalledWith(CREATOR_ID, 'club-1');
+    expect(notifyInvitedToGameMock).toHaveBeenCalledWith({
+      recipientUserId: RECIPIENT_ID,
+      gameId: GAME_ID,
+      inviterUserId: CREATOR_ID,
+    });
+    expect(lastRedirect()).toBe(`/games/${GAME_ID}/spillere?status=invite_added`);
+  });
+
+  it('#906: self er alltid lov — eligibility-resolveren konsulteres ikke', async () => {
+    supabaseMock = buildSupabaseMock([
+      CREATOR_ROLE_READ,
+      CREATOR_OWNS_GAME,
+      {
+        data: { id: GAME_ID, name: 'Lørdagsrunde', status: 'scheduled', game_mode: 'stableford', group_id: null },
+        error: null,
+      },
+      { data: null, error: null }, // insert
+    ]);
+    authedAsCreator();
+
+    const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+    await expect(
+      addExistingPlayerToGame(GAME_ID, formData({ recipient_user_id: CREATOR_ID })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(inviteEligibleIdsMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe(`/games/${GAME_ID}/spillere?status=invite_added`);
+  });
+
+  it('#906: admin slipper forbi eligibility-guarden (kurator-unntak)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
+      {
+        data: { id: GAME_ID, name: 'Klubbcup', status: 'scheduled', game_mode: 'stableford', group_id: null },
+        error: null,
+      },
+      { data: null, error: null }, // insert
+    ]);
+    authedAsAdmin();
+
+    const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+    await expect(
+      addExistingPlayerToGame(GAME_ID, formData({ recipient_user_id: RECIPIENT_ID })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(inviteEligibleIdsMock).not.toHaveBeenCalled();
     expect(notifyInvitedToGameMock).toHaveBeenCalled();
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=invite_added`);
   });
@@ -516,5 +619,31 @@ describe('inviteEmailToGame', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=game_locked`);
+  });
+
+  it('#906: eksisterende e-post ikke-kvalifisert for ikke-admin oppretter → avvist', async () => {
+    supabaseMock = buildSupabaseMock([
+      CREATOR_ROLE_READ,
+      CREATOR_OWNS_GAME,
+      {
+        data: { id: GAME_ID, name: 'Lørdagsrunde', status: 'scheduled', game_mode: 'stableford', group_id: null },
+        error: null,
+      },
+      // users.select.ilike.maybeSingle — finner eksisterende, men ikke-venn
+      { data: { id: RECIPIENT_ID }, error: null },
+      // INGEN insert: guarden avviser før dit.
+    ]);
+    authedAsCreator();
+    inviteEligibleIdsMock.mockResolvedValueOnce(new Set<string>());
+
+    const { inviteEmailToGame } = await import('./inviteToGameActions');
+    await expect(
+      inviteEmailToGame(GAME_ID, formData({ email: 'fremmed@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(inviteEligibleIdsMock).toHaveBeenCalledWith(CREATOR_ID, null);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe(`/games/${GAME_ID}/spillere?error=invite_not_allowed`);
   });
 });

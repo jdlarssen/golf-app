@@ -77,11 +77,11 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
                     HCP {c.hcpIndex.toFixed(1)}
                   </p>
                 </div>
-                <form action={addAction}>
+                <form action={addAction} className="shrink-0">
                   <input type="hidden" name="recipient_user_id" value={c.id} />
                   <SubmitButton
                     disabled={disabled}
-                    className="px-4 py-2 text-sm"
+                    className="whitespace-nowrap px-4 py-2 text-sm"
                     pendingLabel={t('addingBusy')}
                   >
                     {t('addButton')}

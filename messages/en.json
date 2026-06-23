@@ -1654,6 +1654,7 @@
         "disposable_email": "That email address looks like a disposable address. Please ask for a regular email.",
         "invite_invalid_email": "Invalid email address.",
         "invite_missing_user": "Player not found.",
+        "invite_not_allowed": "You can only add friends and people you've played with. Invite others by email.",
         "remove_missing_user": "Player not found.",
         "game_locked": "The game is in progress. You can't change players now.",
         "roster_locked": "The game is in progress. Withdraw the player instead of removing.",
