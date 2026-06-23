@@ -8,6 +8,7 @@ import { requireAdminOrCreator } from '@/lib/admin/auth';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
+  isTeeOffInPast,
 } from '@/lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
@@ -79,6 +80,18 @@ async function updateGameInternal(
     }
   } else if (mode !== 'save_draft') {
     redirect({ href: `${editBase}?error=tee_off_required`, locale });
+  }
+
+  // #902: same past-tee-off guard as the create flow. Applies when publishing a
+  // draft or editing a scheduled game (both produce a live, countdown-bearing
+  // row); save_draft is exempt and tolerates a past/partial tee-off. The shared
+  // isTeeOffInPast helper keeps create + edit in agreement (AGENTS.md trap #4).
+  if (
+    (mode === 'publish' || mode === 'update_scheduled') &&
+    scheduledTeeOffAt &&
+    isTeeOffInPast(scheduledTeeOffAt)
+  ) {
+    redirect({ href: `${editBase}?error=tee_off_in_past`, locale });
   }
 
   // Side-tournament config (parsed up front; persisted below only if the row

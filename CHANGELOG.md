@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.8] - 2026-06-23 · #902
+
+> Setter du opp et spill med tee-off som allerede har passert, sier appen fra og ber deg velge et tidspunkt fra nå av.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+
+- Past-tee-off-guard på opprett- og edit-flyten (#902): publisering (`createGameInternal`) og publisering/oppdatering av et `scheduled` spill (`updateGameInternal`) avvises nå med ny `tee_off_in_past`-feil (no/en) hvis tee-off ligger mer enn 5 minutter bak «nå». Server er autoritativ (AGENTS.md felle #3); grace-marginen slipper gjennom «start runden nå»-flyten + skjema-latens. Draft/`save_draft` er unntatt — de er ikke live ennå.
+- Delt ren helper `isTeeOffInPast(iso, nowMs)` + `TEE_OFF_PAST_GRACE_MS` i `lib/games/gamePayload.ts`, importert av begge action-sitene så de er enige per konstruksjon (AGENTS.md felle #4). 9 unit-tester for grace-grensen + ett wiring-case per action-site.
+- `datetime-local`-feltet i `BasicsSection.tsx` har nå `min` satt til «nå» (via `useSyncExternalStore` for hydrerings-sikkerhet) så den native velgeren motvirker fortidsvalg. UX-hint; server-guarden er det egentlige vernet.
+
+</details>
+
 ### [1.140.7] - 2026-06-23 · #907
 
 > Hvis noe svikter akkurat idet du lagrer en endret spillerliste på et publisert spill, mister du ikke lenger hele lista. Den settes tilbake slik den var, så du kan prøve på nytt.

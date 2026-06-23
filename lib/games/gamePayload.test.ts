@@ -3,6 +3,8 @@ import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
   formatOsloDateTimeLocal,
+  isTeeOffInPast,
+  TEE_OFF_PAST_GRACE_MS,
 } from './gamePayload';
 
 function fd(entries: Record<string, string>): FormData {
@@ -59,6 +61,37 @@ describe('formatOsloDateTimeLocal (#648)', () => {
 
   it('throws on an unparseable ISO string', () => {
     expect(() => formatOsloDateTimeLocal('not-a-date')).toThrow();
+  });
+});
+
+describe('isTeeOffInPast (#902)', () => {
+  // Fixed reference instant so the grace boundary is deterministic.
+  const NOW = new Date('2026-06-23T12:00:00.000Z').getTime();
+  const minutesFromNow = (m: number) =>
+    new Date(NOW + m * 60_000).toISOString();
+
+  it('grace margin is 5 minutes', () => {
+    expect(TEE_OFF_PAST_GRACE_MS).toBe(5 * 60 * 1000);
+  });
+
+  it.each([
+    // [label, teeOffIso, expectedInPast]
+    ['10 min in the past → rejected', minutesFromNow(-10), true],
+    ['just past the grace edge (5 min 1 s ago) → rejected', new Date(NOW - 5 * 60_000 - 1000).toISOString(), true],
+    ['exactly at the grace edge (5 min ago) → accepted', minutesFromNow(-5), false],
+    ['within grace (4 min ago) → accepted', minutesFromNow(-4), false],
+    ['exactly now → accepted', minutesFromNow(0), false],
+    ['in the future → accepted', minutesFromNow(120), false],
+  ])('%s', (_label, iso, expected) => {
+    expect(isTeeOffInPast(iso, NOW)).toBe(expected);
+  });
+
+  it('treats a malformed ISO string as not-in-past (handled upstream)', () => {
+    expect(isTeeOffInPast('not-a-date', NOW)).toBe(false);
+  });
+
+  it('defaults nowMs to Date.now() — a far-past tee-off is in the past', () => {
+    expect(isTeeOffInPast('2000-01-01T00:00:00.000Z')).toBe(true);
   });
 });
 

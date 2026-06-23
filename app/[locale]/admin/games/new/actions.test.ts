@@ -76,6 +76,15 @@ function fd(entries: Record<string, string>): FormData {
   return data;
 }
 
+// #902: a tee-off comfortably in the future so the past-tee-off guard never
+// rejects these fixtures. Computed relative to now so it can't go stale the way
+// a hard-coded date did. No test asserts the persisted tee-off value.
+const FUTURE_TEE_OFF = (() => {
+  const d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+})();
+
 /** Build a "minimum-valid publish payload" with 8 balanced players. */
 function fullPublishFormData(overrides: Record<string, string> = {}): FormData {
   const base: Record<string, string> = {
@@ -83,7 +92,7 @@ function fullPublishFormData(overrides: Record<string, string> = {}): FormData {
     course_id: 'course-1',
     tee_box_id: 'tee-1',
     hcp_allowance_pct: '100',
-    scheduled_tee_off_at: '2026-06-15T09:00',
+    scheduled_tee_off_at: FUTURE_TEE_OFF,
     side_tournament_enabled: 'false',
   };
   for (let i = 0; i < 8; i++) {
@@ -309,7 +318,7 @@ describe('createAndPublishGame', () => {
           course_id: 'course-1',
           tee_box_id: 'tee-1',
           hcp_allowance_pct: '100',
-          scheduled_tee_off_at: '2026-06-15T09:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           side_tournament_enabled: 'false',
           game_mode: 'fourball_matchplay',
           fourball_allowance_pct: '85',
@@ -360,7 +369,7 @@ describe('createAndPublishGame', () => {
           course_id: 'course-1',
           tee_box_id: 'tee-1',
           hcp_allowance_pct: '100',
-          scheduled_tee_off_at: '2026-06-15T09:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           side_tournament_enabled: 'false',
           game_mode: 'fourball_matchplay',
           // Bevisst dropper fourball_allowance_pct
@@ -383,6 +392,29 @@ describe('createAndPublishGame', () => {
     expect(lastRedirect()).toBe('/admin/games/new?error=bad_allowance');
   });
 
+  it('publish med tee-off i fortid: redirects med ?error=tee_off_in_past (#902)', async () => {
+    // The guard fires after the tee-off parse, before the pending-gate RPC and
+    // the games.insert — so only the is_admin gate row is consumed, and no write
+    // should happen.
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    signIn('admin-1');
+
+    const { createAndPublishGame } = await import('./actions');
+
+    await expect(
+      createAndPublishGame(
+        fullPublishFormData({ scheduled_tee_off_at: '2020-01-01T09:00' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/new?error=tee_off_in_past');
+    expect(
+      supabaseMock.__fromCalls.find(
+        (c) => c.table === 'games' && c.method === 'insert',
+      ),
+    ).toBeUndefined();
+  });
+
   it('happy path (stableford publish): inserts solo game with mode_config={team_size:1}', async () => {
     supabaseMock = buildSupabaseMock(
       [
@@ -403,7 +435,7 @@ describe('createAndPublishGame', () => {
           course_id: 'course-1',
           tee_box_id: 'tee-1',
           hcp_allowance_pct: '100',
-          scheduled_tee_off_at: '2026-06-15T09:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           side_tournament_enabled: 'false',
           game_mode: 'stableford',
           player_0_id: 'u1',

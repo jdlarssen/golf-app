@@ -6,6 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
+  isTeeOffInPast,
 } from '@/lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
@@ -91,6 +92,21 @@ async function createGameInternal(
     }
   } else if (mode === 'publish') {
     redirect({ href: `${errorBase}?error=tee_off_required`, locale });
+  }
+
+  // #902: block publishing a game whose tee-off is in the past. A past tee-off
+  // makes the E1 auto-start fallback fire immediately (the game jumps to
+  // 'active' on first visit without "Start runden nå"), and countdowns go
+  // negative — almost always a mistyped date. Server is authoritative; the
+  // datetime-local `min` is only a UX nudge. A small grace margin still allows
+  // the legit "create the game as the round starts" flow. Drafts are exempt:
+  // they're not live yet and a valid tee-off is re-checked at publish.
+  if (
+    mode === 'publish' &&
+    scheduledTeeOffAt &&
+    isTeeOffInPast(scheduledTeeOffAt)
+  ) {
+    redirect({ href: `${errorBase}?error=tee_off_in_past`, locale });
   }
 
   // Side-tournament config. Master toggle gates the LD/CTP counts; when off,

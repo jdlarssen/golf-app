@@ -77,6 +77,15 @@ function fd(entries: Record<string, string>): FormData {
   return data;
 }
 
+// #902: a tee-off comfortably in the future so the past-tee-off guard never
+// rejects these fixtures. Computed relative to now so it can't go stale the way
+// a hard-coded date did. No test asserts the persisted tee-off value.
+const FUTURE_TEE_OFF = (() => {
+  const d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+})();
+
 /** Full best-ball publish-payload med 8 balanserte spillere. */
 function fullBestBallFormData(
   overrides: Record<string, string> = {},
@@ -86,7 +95,7 @@ function fullBestBallFormData(
     course_id: 'course-1',
     tee_box_id: 'tee-1',
     hcp_allowance_pct: '100',
-    scheduled_tee_off_at: '2026-06-15T09:00',
+    scheduled_tee_off_at: FUTURE_TEE_OFF,
     side_tournament_enabled: 'false',
     game_mode: 'best_ball',
   };
@@ -133,7 +142,7 @@ describe('updateScheduledAction — mode-lock', () => {
           course_id: 'course-1',
           tee_box_id: 'tee-1',
           hcp_allowance_pct: '100',
-          scheduled_tee_off_at: '2026-06-15T09:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           side_tournament_enabled: 'false',
           game_mode: 'stableford',
           player_0_id: 'u1',
@@ -150,6 +159,32 @@ describe('updateScheduledAction — mode-lock', () => {
       ['update', 'insert', 'delete'].includes(c.method),
     );
     expect(writeMethods).toHaveLength(0);
+  });
+
+  it('update_scheduled med tee-off i fortid: redirects med ?error=tee_off_in_past (#902)', async () => {
+    // Guarden fyrer etter tee-off-parsingen, før pending-gate-RPC-en, mode-lock-
+    // fetchen og enhver skriving — kun loadRole-users.select konsumeres.
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole: users.select
+    ]);
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+
+    await expect(
+      updateScheduledAction(
+        'game-1',
+        fullBestBallFormData({ scheduled_tee_off_at: '2020-01-01T09:00' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      '/admin/games/game-1/edit?error=tee_off_in_past',
+    );
+    const writes = supabaseMock.__fromCalls.filter((c) =>
+      ['update', 'insert', 'delete'].includes(c.method),
+    );
+    expect(writes).toHaveLength(0);
   });
 
   it('tillater oppdatering når payload-mode matcher eksisterende game_mode', async () => {

@@ -1005,6 +1005,7 @@
       "bad_side_ctp_count": "The number of closest-to-pin winners must be 0, 1 or 2.",
       "tee_missing_rating": "The selected tee is missing a rating for a player's gender (M/D/J). Check course administration or change the player's tee gender.",
       "tee_off_required": "Tee-off time is required.",
+      "tee_off_in_past": "The tee-off time can't be in the past. Pick a time from now on.",
       "db_game": "Failed to save the game. Please try again in a moment.",
       "db_users": "Failed to read players from the database. Please try again.",
       "db_tee": "Failed to read the tee box from the database. Please try again.",

@@ -1005,6 +1005,7 @@
       "bad_side_ctp_count": "Antall closest-to-pin-vinnere må være 0, 1 eller 2.",
       "tee_missing_rating": "Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.",
       "tee_off_required": "Tee-off-tidspunkt er påkrevd.",
+      "tee_off_in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",
       "db_game": "Klarte ikke å lagre spillet. Prøv igjen om litt.",
       "db_users": "Klarte ikke å lese spillere fra databasen. Prøv igjen.",
       "db_tee": "Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.",

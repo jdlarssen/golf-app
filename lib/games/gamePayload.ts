@@ -33,6 +33,32 @@ import {
  *
  * Throws RangeError on malformed input.
  */
+/**
+ * Grace margin for the "no past tee-off" guard (#902). A tee-off up to this far
+ * before "now" is still allowed — it absorbs the legit "create the game as the
+ * round starts" flow plus form-submit latency and small client/server clock skew.
+ */
+export const TEE_OFF_PAST_GRACE_MS = 5 * 60 * 1000;
+
+/**
+ * True when the tee-off instant is more than {@link TEE_OFF_PAST_GRACE_MS} before
+ * `nowMs` (#902). Instant-vs-instant comparison, so it is timezone-correct: the
+ * Oslo wall-clock has already been resolved to a UTC ISO by
+ * {@link parseOsloDateTimeLocal}. A malformed/empty ISO returns `false` —
+ * required-ness and parse errors are handled upstream in the action.
+ *
+ * The server is the authoritative guard (the client `min` on the datetime-local
+ * field is only a UX nudge and is not enforced across browsers).
+ */
+export function isTeeOffInPast(
+  teeOffIso: string,
+  nowMs: number = Date.now(),
+): boolean {
+  const t = new Date(teeOffIso).getTime();
+  if (Number.isNaN(t)) return false;
+  return t < nowMs - TEE_OFF_PAST_GRACE_MS;
+}
+
 export function parseOsloDateTimeLocal(s: string): string {
   const [datePart] = s.split('T');
   const [y, m, d] = datePart.split('-').map(Number);
