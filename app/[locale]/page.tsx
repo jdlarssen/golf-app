@@ -1,5 +1,5 @@
 import { first } from '@/lib/url/searchParams';
-import { Suspense, cache } from 'react';
+import { Suspense, cache, Children, isValidElement } from 'react';
 import {
   type QueryData,
   type SupabaseClient,
@@ -569,7 +569,16 @@ function Section({
           className={`h-px flex-1 ${accent ? 'bg-accent/30' : 'bg-border'}`}
         />
       </div>
-      <div className="space-y-3">{children}</div>
+      {/* #885: a list of games is a list — give it ul/li semantics so a screen
+          reader announces «list, 3 items» / «1 of 3». list-none p-0 keeps it
+          pixel-identical to the old `space-y-3` div (Preflight already zeroes
+          ul margin). Children.toArray strips falsy children (e.g. a
+          `cond && <…>` that is false) so no empty <li> is emitted. */}
+      <ul className="list-none p-0 space-y-3">
+        {Children.toArray(children).map((child, index) => (
+          <li key={isValidElement(child) ? child.key : index}>{child}</li>
+        ))}
+      </ul>
     </div>
   );
 }
