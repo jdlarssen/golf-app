@@ -403,3 +403,115 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
     expect(writeMethods).toHaveLength(0);
   });
 });
+
+describe('updateScheduledAction — roster rollback (#907)', () => {
+  it('insert-feil ruller tilbake til snapshot-rosteret (rosteret ender ikke tomt)', async () => {
+    // games.update har committet og delete har tømt rosteret. Insert feiler →
+    // uten rollback ville spillet stå publisert uten spillere (felle #5). Vi
+    // forventer at snapshotet (alle kolonner) re-insertes og at redirecten
+    // fortsatt er db_players.
+    const priorRows = [
+      {
+        game_id: 'game-1',
+        user_id: 'u0',
+        team_number: 1,
+        flight_number: 1,
+        tee_gender: 'mens',
+        course_handicap: null,
+        accepted_at: '2026-06-01T00:00:00Z',
+        approved_at: null,
+        submitted_at: null,
+        withdrawn_at: null,
+      },
+      {
+        game_id: 'game-1',
+        user_id: 'u1',
+        team_number: 1,
+        flight_number: 1,
+        tee_gender: 'ladies',
+        course_handicap: null,
+        accepted_at: null,
+        approved_at: null,
+        submitted_at: null,
+        withdrawn_at: null,
+      },
+    ];
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball' },
+          error: null,
+        }, // mode-lock
+        { data: { id: 'game-1' }, error: null }, // games.update
+        { data: priorRows, error: null }, // priorRoster select('*')
+        { data: null, error: null }, // delete (ok)
+        { data: null, error: { message: 'insert boom' } }, // insert FAILS
+        { data: null, error: null }, // rollback re-insert (ok)
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // To game_players-inserts: den feilede nye rosteren + rollback-re-inserten.
+    const inserts = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'game_players' && c.method === 'insert',
+    );
+    expect(inserts).toHaveLength(2);
+    // Rollback-inserten må bruke det fulle snapshotet (gjenoppretter rosteret).
+    expect(inserts[1]!.args[0]).toEqual(priorRows);
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players');
+    // Notify fyrer aldri — vi redirecter på feil-stien før notify-blokken.
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+
+  it('rollback-re-insert som også feiler logges, men redirecten er fortsatt db_players', async () => {
+    const priorRows = [
+      {
+        game_id: 'game-1',
+        user_id: 'u0',
+        team_number: 1,
+        flight_number: 1,
+        tee_gender: 'mens',
+        course_handicap: null,
+        accepted_at: null,
+        approved_at: null,
+        submitted_at: null,
+        withdrawn_at: null,
+      },
+    ];
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball' },
+          error: null,
+        }, // mode-lock
+        { data: { id: 'game-1' }, error: null }, // games.update
+        { data: priorRows, error: null }, // priorRoster select('*')
+        { data: null, error: null }, // delete (ok)
+        { data: null, error: { message: 'insert boom' } }, // insert FAILS
+        { data: null, error: { message: 'rollback boom' } }, // rollback FAILS too
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Vi forsøkte fortsatt rollbacken (to inserts) og redirecter likt.
+    const inserts = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'game_players' && c.method === 'insert',
+    );
+    expect(inserts).toHaveLength(2);
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players');
+  });
+});

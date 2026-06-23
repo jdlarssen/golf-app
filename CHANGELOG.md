@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.7] - 2026-06-23 · #907
+
+> Hvis noe svikter akkurat idet du lagrer en endret spillerliste på et publisert spill, mister du ikke lenger hele lista. Den settes tilbake slik den var, så du kan prøve på nytt.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- `updateGameInternal` (`app/[locale]/admin/games/[id]/edit/actions.ts`): roster-byttet i edit-flyten gjorde delete-så-insert uten rollback — feilet insert-en etter at delete hadde tømt rosteret, satt spillet igjen publisert/scheduled **uten spillere** (AGENTS.md felle #5). Snapshotet av forrige roster er utvidet fra `user_id` til alle kolonner (`select('*')`, samme round-trip) og re-insertes hvis insert feiler, så rosteret gjenopprettes til før-edit-tilstanden. Speiler den kompenserende rollbacken `createGameInternal` fikk i #737. Dobbel-feil (rollbacken feiler også) logges; redirect er fortsatt `db_players`.
+- 2 nye unit-tester: insert-feil → rollback med fullt snapshot; rollback-feil → logget, redirect uendret.
+
+</details>
+
 ### [1.140.6] - 2026-06-23 · #906
 
 > Når du legger til spillere på et spill, kan du nå bare velge venner og folk du har spilt med, samme regel som da spillet ble opprettet. Lange spillernavn dytter ikke lenger «Legg til»-knappen ut av stilling.

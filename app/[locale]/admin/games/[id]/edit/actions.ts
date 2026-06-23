@@ -11,6 +11,7 @@ import {
 } from '@/lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
+import type { Tables } from '@/lib/database.types';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
@@ -205,16 +206,21 @@ async function updateGameInternal(
     redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
 
-  // Snapshot eksisterende roster FØR delete + insert. Brukes til å regne
-  // ut hvilke spillere som faktisk er nye i diff-en, slik at notify kun
-  // fyres for dem (ikke for spillere som var på rosteren fra før og ble
-  // re-insertet av wholesale-replace-strategien under).
+  // Snapshot eksisterende roster FØR delete + insert. To formål fra samme
+  // round-trip: (1) notify-diff — hvilke spillere er faktisk nye i diff-en, så
+  // notify kun fyres for dem; (2) rollback-kilde — hvis re-insertet under
+  // feiler, re-inserter vi disse radene så rosteret aldri ender tomt på et
+  // publisert/scheduled spill (#907, AGENTS.md felle #5). `select('*')` fordi
+  // rollbacken må gjenopprette ALLE kolonner (team/flight/tee_gender/
+  // accepted_at …), ikke bare user_id. game_players har ingen auto-generert
+  // PK/created_at (komposit-PK game_id+user_id), så radene re-inserter ordrett.
   const { data: priorRoster } = await supabase
     .from('game_players')
-    .select('user_id')
+    .select('*')
     .eq('game_id', gameId)
-    .returns<{ user_id: string }[]>();
-  const priorRosterIds = new Set((priorRoster ?? []).map((r) => r.user_id));
+    .returns<Tables<'game_players'>[]>();
+  const priorRosterRows = priorRoster ?? [];
+  const priorRosterIds = new Set(priorRosterRows.map((r) => r.user_id));
 
   // Replace the roster wholesale. For both 'draft' and 'scheduled' starting
   // states no `scores` rows exist yet (handicaps haven't been frozen — that
@@ -249,6 +255,23 @@ async function updateGameInternal(
       .insert(rows);
     if (insertError) {
       console.error('[updateGameInternal] roster insert failed', insertError);
+      // #907: delete-en over har allerede tømt rosteret, og games.update har
+      // committet. Uten dette sitter spillet igjen publisert/scheduled UTEN
+      // spillere (AGENTS.md felle #5). Re-insert snapshotet så rosteret
+      // gjenopprettes til før-edit-tilstanden. Dobbel-feil (også rollbacken
+      // feiler) logges — vi har gjort det vi kan; arrangøren ser db_players og
+      // kan prøve på nytt. Speiler den kompenserende rollbacken i #737.
+      if (priorRosterRows.length > 0) {
+        const { error: rollbackError } = await supabase
+          .from('game_players')
+          .insert(priorRosterRows);
+        if (rollbackError) {
+          console.error(
+            '[updateGameInternal] roster rollback re-insert failed',
+            rollbackError,
+          );
+        }
+      }
       redirect({ href: `${editBase}?error=db_players`, locale });
     }
   }
