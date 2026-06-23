@@ -4068,6 +4068,11 @@
     "discoverCard": "Bli med i en åpen turnering",
     "sectionToppliste": "Toppliste",
     "topplisteCard": "Flest seire og mest aktive",
+    "proximity": {
+      "today": "I dag kl. {time}",
+      "tomorrow": "I morgen",
+      "days": "Om {days} dager"
+    },
     "teeOffSeparator": "kl.",
     "teamFlight": "Lag {teamNumber} · Flight {flightNumber}",
     "archiveMetaTitle": "Avsluttede spill",

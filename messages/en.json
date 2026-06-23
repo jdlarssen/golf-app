@@ -4068,6 +4068,11 @@
     "discoverCard": "Join an open tournament",
     "sectionToppliste": "Leaderboard",
     "topplisteCard": "Most wins and most active",
+    "proximity": {
+      "today": "Today at {time}",
+      "tomorrow": "Tomorrow",
+      "days": "In {days} days"
+    },
     "teeOffSeparator": "at",
     "teamFlight": "Team {teamNumber} · Flight {flightNumber}",
     "archiveMetaTitle": "Finished games",

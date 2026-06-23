@@ -24,6 +24,7 @@ import {
   formatTeeOffDateLocale,
   formatTeeOffTimeLocale,
 } from '@/lib/i18n/format';
+import { teeOffProximity } from '@/lib/format/teeOffProximity';
 import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { FinishedGameCard } from '@/components/games/FinishedGameCard';
@@ -201,7 +202,20 @@ async function HomeBody() {
   // Løft pågående runder øverst (#363): et aktivt spill skal ikke være bare
   // ett kort blant flere. Splitt på status='active' vs. resten (planlagte).
   const inProgressGames = activeGames.filter((g) => g.status === 'active');
-  const upcomingGames = activeGames.filter((g) => g.status !== 'active');
+  // #880: sorter planlagte spill stigende på tee-off (nulls sist) så nærmeste
+  // runde ligger øverst. `now` regnes ut én gang til relativ-merkingen under.
+  const now = new Date();
+  const upcomingGames = activeGames
+    .filter((g) => g.status !== 'active')
+    .sort((a, b) => {
+      const at = a.scheduled_tee_off_at
+        ? new Date(a.scheduled_tee_off_at).getTime()
+        : Infinity;
+      const bt = b.scheduled_tee_off_at
+        ? new Date(b.scheduled_tee_off_at).getTime()
+        : Infinity;
+      return at - bt;
+    });
   const firstNameValue = firstName(profile?.name) ?? t('playerFallback');
   // Always-visible handicap reflection (#209). Only render when we have
   // both fields — defensive against a degraded fetch.
@@ -303,10 +317,24 @@ async function HomeBody() {
             {g.scheduled_tee_off_at &&
               (() => {
                 const d = new Date(g.scheduled_tee_off_at);
+                const prox = teeOffProximity(g.scheduled_tee_off_at, now);
                 return (
-                  <span className="block text-xs text-muted mt-1 tabular-nums truncate">
-                    {formatTeeOffDateLocale(d, locale)} {t('teeOffSeparator')} {formatTeeOffTimeLocale(d, locale)}
-                  </span>
+                  <>
+                    {prox && (
+                      <span className="block text-xs font-medium text-text mt-1 truncate">
+                        {prox.kind === 'today'
+                          ? t('proximity.today', {
+                              time: formatTeeOffTimeLocale(d, locale),
+                            })
+                          : prox.kind === 'tomorrow'
+                            ? t('proximity.tomorrow')
+                            : t('proximity.days', { days: prox.days })}
+                      </span>
+                    )}
+                    <span className="block text-xs text-muted mt-1 tabular-nums truncate">
+                      {formatTeeOffDateLocale(d, locale)} {t('teeOffSeparator')} {formatTeeOffTimeLocale(d, locale)}
+                    </span>
+                  </>
                 );
               })()}
             <span className="block text-xs text-muted mt-1 truncate">

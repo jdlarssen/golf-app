@@ -17,6 +17,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.138.y — Nærmeste runde øverst
+
+Planlagte spill på Hjem ligger nå i tee-off-rekkefølge, og den runden som starter snart får en «I dag»/«I morgen»-etikett så du ikke kommer for sent.
+
+### [1.138.0] - 2026-06-23 · #880
+
+> Under «Mine spill» på Hjem ligger de planlagte rundene nå sortert etter når de starter — nærmeste øverst. Den runden som starter i dag eller i morgen får en tydelig «I dag kl. 09:00» / «I morgen» / «Om 2 dager»-etikett, så det nærmeste spillet ikke drukner blant runder uker frem.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+
+- `lib/format/teeOffProximity.ts` (+ `teeOffProximity.test.ts`, 9 tester): ren `teeOffProximity(teeOffISO, now)` → `today` / `tomorrow` / `days{n}` / `null`, regnet på Oslo kalender-dager via `osloParts` (ikke `(teeOff − now)/DAY` — så den ikke feil-bøtter over midnatt eller DST). Kun «snart»-spill (i dag .. 6 dager frem) får en bøtte.
+- `messages/no.json` + `messages/en.json`: `home.proximity.{today,tomorrow,days}` (ICU).
+
+#### Changed
+
+- `app/[locale]/page.tsx`: `upcomingGames` sorteres nå stigende på `scheduled_tee_off_at` (nulls sist) client-side. `renderGameCard` viser en relativ etikett (`text-text`, fremhevet) over den dempede dato/tid-linja når runden er nær. Ingen gull-accent (reservert vinnere/«Pågår nå», #363); ingen schema/auth.
+
+</details>
+
 ## 1.137.y — Én dør til vennene
 
 Profilen har nå én vei til vennene dine i stedet for to, og kortet lyser opp når noen vil bli venn med deg.
