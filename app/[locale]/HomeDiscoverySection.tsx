@@ -1,10 +1,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
-import {
-  formatTeeOffDateLocale,
-  formatTeeOffTimeLocale,
-} from '@/lib/i18n/format';
+import { formatTeeOffParts } from '@/lib/i18n/format';
 import type {
   DiscoverableClubGame,
   DiscoverableFriendGame,
@@ -151,8 +148,7 @@ function formatTeeOffLine(
   locale: AppLocale,
   t: T,
 ): string {
-  const date = formatTeeOffDateLocale(teeOff, locale);
-  const time = formatTeeOffTimeLocale(teeOff, locale);
+  const { date, time } = formatTeeOffParts(teeOff, locale);
   return t('teeOffLine', { date, time });
 }
 

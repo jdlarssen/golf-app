@@ -133,6 +133,23 @@ export function formatTeeOffDateLocale(date: Date, locale: AppLocale): string {
 }
 
 /**
+ * Locale-aware tee-off date + time parts in one call. Thin composition of
+ * `formatTeeOffDateLocale` + `formatTeeOffTimeLocale` — the single place that
+ * computes both halves of a «{date} {sep} {time}» tee-off line, so Home's
+ * «Mine spill»-kort and the funn-feed cards don't each re-derive it. Callers
+ * own the separator/wrapping (they live in different i18n namespaces).
+ */
+export function formatTeeOffParts(
+  date: Date,
+  locale: AppLocale,
+): { date: string; time: string } {
+  return {
+    date: formatTeeOffDateLocale(date, locale),
+    time: formatTeeOffTimeLocale(date, locale),
+  };
+}
+
+/**
  * Locale-aware short date with year.
  *
  * Norwegian ('no'): delegates to legacy helper → "14. mai 2026" (byte-identical).
