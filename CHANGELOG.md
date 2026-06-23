@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.9] - 2026-06-23 · #921
+
+> Vi tettet et databasehull der en innlogget bruker i teorien kunne lagt en vilkårlig person til sitt eget spill ved å gå utenom appen. Du merker ingenting når du spiller — dette er sikkerhets-herding under panseret.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Security
+
+- #906 lukket venne-/klubb-scoping for «Inviter spillere» på **action-laget** (`inviteToGameActions` → `getInviteEligibleIds`), men en direkte PostgREST-`INSERT` mot `game_players` med en gyldig spiller-JWT omgikk TS-guarden (AGENTS.md felle #3 — RLS er den egentlige authz). `game_players creator insert`-policyen (0071/0092) håndhevet at oppretteren eier spillet, men ikke at `user_id` var kvalifisert. Migrasjon `0115` legger til en `BEFORE INSERT`-trigger `guard_game_players_invite_eligibility` (`SECURITY DEFINER`, `search_path = ''`) som for en ikke-admin oppretter avviser en `user_id` som verken er venne-connection (accepted ∪ pending, begge retninger), co-player (delt minst ett spill) eller klubbmedlem (når spillet har `group_id`). Eligibility-logikken ligger i en ny `SECURITY DEFINER`-funksjon `is_invite_eligible(creator, recipient, group_id)` som speiler `getInviteEligibleIds` (`lib/games/inviteEligibility.ts`) gren for gren, så lagene gir samme svar (felle #4). Triggeren no-op-er for service-rolla (`auth.uid()` NULL), global admin (`is_admin()`, kurator-modellen) og self (`new.user_id = auth.uid()`), så ny-spill-veiviser, cup-generering, self-register, admin og `startGame` står urørt. Ny `adversarial-role-replay.spec.ts`-blokk (#921) beviser at en ukvalifisert hostile-INSERT avvises (`42501`) mens en seedet venn slipper gjennom. Applikert staging→prod (0107-mønster). Defense-in-depth-oppfølging fra #906. (#921)
+
+</details>
+
 ### [1.140.8] - 2026-06-23 · #902
 
 > Setter du opp et spill med tee-off som allerede har passert, sier appen fra og ber deg velge et tidspunkt fra nå av.
