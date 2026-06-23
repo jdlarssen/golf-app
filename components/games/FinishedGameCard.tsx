@@ -1,7 +1,6 @@
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
-import { SmartLink } from '@/components/ui/SmartLink';
-import { Card } from '@/components/ui/Card';
+import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
 import { formatShortDateLocale } from '@/lib/i18n/format';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -33,53 +32,49 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
     : null;
 
   return (
-    <SmartLink
+    <GameRowCard
       href={`/games/${game.id}/leaderboard`}
-      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-    >
-      <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-              {localizeGameName(game.name, game.courses?.name ?? null, locale)}
-            </span>
-            <span className="block text-xs text-muted mt-1 truncate">
-              {[
-                game.courses?.name,
-                tModes(
-                  formatDisplayLabelKey(
-                    game.game_mode,
-                    game.mode_config,
-                  ) as Parameters<typeof tModes>[0],
-                ),
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
-            {game.ended_at && (
-              <span className="block text-xs text-muted mt-1 tabular-nums truncate">
-                {formatShortDateLocale(game.ended_at, locale)}
-              </span>
-            )}
-          </div>
-          {badge ? (
-            <span
-              className={`shrink-0 max-w-[45%] text-right text-sm font-medium leading-snug ${
-                badge.isWin ? 'text-accent' : 'text-muted'
-              }`}
-            >
-              {t(
-                badge.key as Parameters<typeof t>[0],
-                badge.values as Parameters<typeof t>[1],
-              )}
-            </span>
-          ) : (
-            <span aria-hidden className="text-accent shrink-0">
-              🏆
-            </span>
+      title={localizeGameName(game.name, game.courses?.name ?? null, locale)}
+      meta={
+        <>
+          <GameRowMetaLine>
+            {[
+              game.courses?.name,
+              tModes(
+                formatDisplayLabelKey(
+                  game.game_mode,
+                  game.mode_config,
+                ) as Parameters<typeof tModes>[0],
+              ),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </GameRowMetaLine>
+          {game.ended_at && (
+            <GameRowMetaLine tabular>
+              {formatShortDateLocale(game.ended_at, locale)}
+            </GameRowMetaLine>
           )}
-        </div>
-      </Card>
-    </SmartLink>
+        </>
+      }
+      trailing={
+        badge ? (
+          <span
+            className={`shrink-0 max-w-[45%] text-right text-sm font-medium leading-snug ${
+              badge.isWin ? 'text-accent' : 'text-muted'
+            }`}
+          >
+            {t(
+              badge.key as Parameters<typeof t>[0],
+              badge.values as Parameters<typeof t>[1],
+            )}
+          </span>
+        ) : (
+          <span aria-hidden className="text-accent shrink-0">
+            🏆
+          </span>
+        )
+      }
+    />
   );
 }

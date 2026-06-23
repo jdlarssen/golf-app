@@ -25,14 +25,12 @@ import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
-import {
-  formatTeeOffDateLocale,
-  formatTeeOffTimeLocale,
-} from '@/lib/i18n/format';
+import { formatTeeOffParts } from '@/lib/i18n/format';
 import { teeOffProximity } from '@/lib/format/teeOffProximity';
 import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { FinishedGameCard } from '@/components/games/FinishedGameCard';
+import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 import {
@@ -301,60 +299,54 @@ async function HomeBody() {
 
   // «Mine spill» (planlagte/utkast): uendret kort med status-pille, lenker til
   // spill-oversikten.
-  const renderGameCard = (g: (typeof activeGames)[number]) => (
-    <SmartLink
-      key={g.id}
-      href={`/games/${g.id}`}
-      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-    >
-      <Card className="min-h-[44px] transition-colors p-5 hover:border-primary/30">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-              {localizeGameName(g.name, g.courses?.name ?? null, locale)}
-            </span>
+  const renderGameCard = (g: (typeof activeGames)[number]) => {
+    const teeOff = g.scheduled_tee_off_at
+      ? new Date(g.scheduled_tee_off_at)
+      : null;
+    const prox = teeOffProximity(g.scheduled_tee_off_at, now);
+    const teeParts = teeOff ? formatTeeOffParts(teeOff, locale) : null;
+    return (
+      <GameRowCard
+        key={g.id}
+        href={`/games/${g.id}`}
+        title={localizeGameName(g.name, g.courses?.name ?? null, locale)}
+        meta={
+          <>
             {g.courses?.name && (
-              <span className="block text-xs text-muted mt-1 truncate">
-                {g.courses.name}
-              </span>
+              <GameRowMetaLine>{g.courses.name}</GameRowMetaLine>
             )}
-            {g.scheduled_tee_off_at &&
-              (() => {
-                const d = new Date(g.scheduled_tee_off_at);
-                const prox = teeOffProximity(g.scheduled_tee_off_at, now);
-                return (
-                  <>
-                    {prox && (
-                      <span className="block text-xs font-medium text-text mt-1 truncate">
-                        {prox.kind === 'today'
-                          ? t('proximity.today', {
-                              time: formatTeeOffTimeLocale(d, locale),
-                            })
-                          : prox.kind === 'tomorrow'
-                            ? t('proximity.tomorrow')
-                            : t('proximity.days', { days: prox.days })}
-                      </span>
-                    )}
-                    <span className="block text-xs text-muted mt-1 tabular-nums truncate">
-                      {formatTeeOffDateLocale(d, locale)} {t('teeOffSeparator')} {formatTeeOffTimeLocale(d, locale)}
-                    </span>
-                  </>
-                );
-              })()}
-            <span className="block text-xs text-muted mt-1 truncate">
+            {teeParts && (
+              <>
+                {prox && (
+                  <span className="block text-xs font-medium text-text mt-1 truncate">
+                    {prox.kind === 'today'
+                      ? t('proximity.today', { time: teeParts.time })
+                      : prox.kind === 'tomorrow'
+                        ? t('proximity.tomorrow')
+                        : t('proximity.days', { days: prox.days })}
+                  </span>
+                )}
+                <GameRowMetaLine tabular>
+                  {teeParts.date} {t('teeOffSeparator')} {teeParts.time}
+                </GameRowMetaLine>
+              </>
+            )}
+            <GameRowMetaLine>
               {t('teamFlight', { teamNumber: g.teamNumber, flightNumber: g.flightNumber })}
-            </span>
-          </div>
+            </GameRowMetaLine>
+          </>
+        }
+        trailing={
           <div className="flex items-center gap-3 shrink-0">
             <StatusPill status={g.status} label={tStatus(g.status)} />
             <span aria-hidden className="text-muted">
               →
             </span>
           </div>
-        </div>
-      </Card>
-    </SmartLink>
-  );
+        }
+      />
+    );
+  };
 
   // #878: «Pågår nå»-kortet er kjerne-løkke-bevisst — state-etikett i stedet for
   // generisk status-pille, lenker «rett inn i runden» (neste utastede hull /
@@ -376,40 +368,29 @@ async function HomeBody() {
             : t('cardStateWithdrawn');
     return (
       <div key={g.id} className="space-y-2">
-        <SmartLink
+        <GameRowCard
           href={extras.href}
-          className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-        >
-          <Card
-            className={`min-h-[44px] transition-colors p-5 ${
-              extras.state === 'continue'
-                ? 'border-accent'
-                : 'hover:border-primary/30'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-                  {localizeGameName(g.name, g.courses?.name ?? null, locale)}
-                </span>
-                {g.courses?.name && (
-                  <span className="block text-xs text-muted mt-1 truncate">
-                    {g.courses.name}
-                  </span>
-                )}
-                <span className="block text-xs text-muted mt-1 truncate">
-                  {t('teamFlight', { teamNumber: g.teamNumber, flightNumber: g.flightNumber })}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <ActiveStateLabel state={extras.state} label={stateLabel} />
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </div>
+          highlighted={extras.state === 'continue'}
+          title={localizeGameName(g.name, g.courses?.name ?? null, locale)}
+          meta={
+            <>
+              {g.courses?.name && (
+                <GameRowMetaLine>{g.courses.name}</GameRowMetaLine>
+              )}
+              <GameRowMetaLine>
+                {t('teamFlight', { teamNumber: g.teamNumber, flightNumber: g.flightNumber })}
+              </GameRowMetaLine>
+            </>
+          }
+          trailing={
+            <div className="flex items-center gap-3 shrink-0">
+              <ActiveStateLabel state={extras.state} label={stateLabel} />
+              <span aria-hidden className="text-muted">
+                →
+              </span>
             </div>
-          </Card>
-        </SmartLink>
+          }
+        />
         {extras.pendingApprovalsForMe > 0 && (
           <SmartLink
             href={`/games/${g.id}/approve`}
