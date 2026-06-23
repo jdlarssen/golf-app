@@ -2552,6 +2552,9 @@
     },
     "dashboard": {
       "sectionLabel": "Recent activity",
+      "actionItemsHeading": "Needs action",
+      "actionItemsUnsubmitted": "{count, plural, one {1 game with undelivered scorecards} other {{count} games with undelivered scorecards}}",
+      "actionItemsPendingApproval": "{count, plural, one {1 game awaiting approval} other {{count} games awaiting approval}}",
       "saksbehandlerLabel": "Case officer",
       "klubbhusLabel": "Clubhouse",
       "pullQuote": "Order in the records.",

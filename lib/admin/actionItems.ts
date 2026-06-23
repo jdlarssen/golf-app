@@ -1,8 +1,5 @@
 import { cache } from 'react';
-import {
-  classifyDeliveryStatus,
-  TOTAL_HOLES,
-} from '@/lib/games/deliveryStatus';
+import { classifyDeliveryStatus } from '@/lib/games/deliveryStatus';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 

@@ -12,6 +12,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getRole, TIME_OF_DAY_KEY } from './_dashboardContext';
 import { TilesGrid, TilesSkeleton, PlayerKlubbhus } from './TilesGrid';
 import { ActivityLedger, LedgerSkeleton } from './ActivityLedger';
+import { ActionItemsStripe } from './ActionItemsStripe';
 
 // Page — shell. Each data-bearing section sits behind a Suspense boundary
 // so the shell paints immediately and each section streams in as its query
@@ -61,6 +62,12 @@ export default async function KlubbhusetPage() {
           timeOfDayWord={timeOfDayWord}
           firstNameValue={firstName(role.name)}
         />
+      </Suspense>
+
+      {/* «Krever handling»-stripe (#864): egen Suspense-grense, rendrer
+          ingenting på rolige dager (begge tellinger 0). */}
+      <Suspense fallback={null}>
+        <ActionItemsStripe />
       </Suspense>
 
       <Suspense fallback={<TilesSkeleton />}>

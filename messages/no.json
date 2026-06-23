@@ -2552,6 +2552,9 @@
     },
     "dashboard": {
       "sectionLabel": "Siste hendelser",
+      "actionItemsHeading": "Krever handling",
+      "actionItemsUnsubmitted": "{count, plural, one {1 spill med uleverte scorekort} other {{count} spill med uleverte scorekort}}",
+      "actionItemsPendingApproval": "{count, plural, one {1 spill venter på godkjenning} other {{count} spill venter på godkjenning}}",
       "saksbehandlerLabel": "Saksbehandler",
       "klubbhusLabel": "Klubbhuset",
       "pullQuote": "Orden i protokollen.",

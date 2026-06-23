@@ -3,6 +3,7 @@ import { formatHHMMOslo } from '@/lib/i18n/format';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
 import { getAdminContext } from './_dashboardContext';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { SmartLink } from '@/components/ui/SmartLink';
 
 // ─── Activity ledger ─────────────────────────────────────────────────────
 
@@ -11,6 +12,9 @@ type Activity = {
   who: string;
   action: string;
   ref: string;
+  /** #864: deep-link target. Non-interactive rows (klubbinvitasjon uten
+   *  game) lar dette stå undefined og rendres som en vanlig `<div>`. */
+  href?: string;
 };
 
 function shortName(full: string | undefined | null, fallback: string): string {
@@ -30,14 +34,15 @@ export async function ActivityLedger() {
   type SubmissionRow = {
     submitted_at: string;
     users: { name: string | null } | null;
-    games: { name: string } | null;
+    games: { id: string; name: string } | null;
   };
   type ApprovalRow = {
     approved_at: string;
     users: { name: string | null } | null;
-    games: { name: string } | null;
+    games: { id: string; name: string } | null;
   };
   type GameLifecycleRow = {
+    id: string;
     name: string;
     started_at: string | null;
     ended_at: string | null;
@@ -50,7 +55,7 @@ export async function ActivityLedger() {
   type InvitationRow = {
     accepted_at: string;
     email: string;
-    games: { name: string } | null;
+    games: { id: string; name: string } | null;
   };
 
   const [subsRes, apprsRes, gamesRes, coursesEvRes, invitesRes] =
@@ -58,7 +63,7 @@ export async function ActivityLedger() {
       supabase
         .from('game_players')
         .select(
-          'submitted_at, users!game_players_user_id_fkey(name), games(name)',
+          'submitted_at, users!game_players_user_id_fkey(name), games(id, name)',
         )
         .not('submitted_at', 'is', null)
         .gte('submitted_at', sinceIso)
@@ -68,7 +73,7 @@ export async function ActivityLedger() {
       supabase
         .from('game_players')
         .select(
-          'approved_at, users!game_players_user_id_fkey(name), games(name)',
+          'approved_at, users!game_players_user_id_fkey(name), games(id, name)',
         )
         .not('approved_at', 'is', null)
         .gte('approved_at', sinceIso)
@@ -77,7 +82,7 @@ export async function ActivityLedger() {
         .returns<ApprovalRow[]>(),
       supabase
         .from('games')
-        .select('name, started_at, ended_at')
+        .select('id, name, started_at, ended_at')
         .or(`started_at.gte.${sinceIso},ended_at.gte.${sinceIso}`)
         .limit(12)
         .returns<GameLifecycleRow[]>(),
@@ -92,7 +97,7 @@ export async function ActivityLedger() {
         .returns<CourseRow[]>(),
       supabase
         .from('invitations')
-        .select('accepted_at, email, games(name)')
+        .select('accepted_at, email, games(id, name)')
         .not('accepted_at', 'is', null)
         .gte('accepted_at', sinceIso)
         .order('accepted_at', { ascending: false })
@@ -107,6 +112,7 @@ export async function ActivityLedger() {
       who: shortName(r.users?.name, t('ledgerUnknown')),
       action: t('actionsSubmitted'),
       ref: r.games?.name ?? t('ledgerGameFallback'),
+      href: r.games ? `/admin/games/${r.games.id}/status` : undefined,
     });
   }
   for (const r of apprsRes.data ?? []) {
@@ -115,6 +121,7 @@ export async function ActivityLedger() {
       who: shortName(r.users?.name, t('ledgerUnknown')),
       action: t('actionsApproved'),
       ref: r.games?.name ?? t('ledgerGameFallback'),
+      href: r.games ? `/admin/games/${r.games.id}/status` : undefined,
     });
   }
   for (const g of gamesRes.data ?? []) {
@@ -124,6 +131,7 @@ export async function ActivityLedger() {
         who: t('actionsSecretary'),
         action: t('actionsStarted'),
         ref: g.name,
+        href: `/admin/games/${g.id}`,
       });
     }
     if (g.ended_at && g.ended_at >= sinceIso) {
@@ -132,6 +140,7 @@ export async function ActivityLedger() {
         who: t('actionsSecretary'),
         action: t('actionsSigned'),
         ref: g.name,
+        href: `/admin/games/${g.id}`,
       });
     }
   }
@@ -141,6 +150,7 @@ export async function ActivityLedger() {
       who: displayName(c.created_by_user) ?? t('actionsSecretary'),
       action: t('actionsNewCourse'),
       ref: c.name,
+      href: '/admin/courses',
     });
   }
   for (const inv of invitesRes.data ?? []) {
@@ -149,6 +159,7 @@ export async function ActivityLedger() {
       who: shortName(inv.email.split('@')[0], t('ledgerUnknown')),
       action: t('actionsAcceptedInvite'),
       ref: inv.games?.name ?? t('ledgerClubInvite'),
+      href: inv.games ? `/admin/games/${inv.games.id}` : undefined,
     });
   }
   activity.sort((a, b) => (a.ts < b.ts ? 1 : -1));
@@ -161,29 +172,46 @@ export async function ActivityLedger() {
           {t('noActivity')}
         </p>
       ) : (
-        ledger.map((row, i) => (
-          <div
-            key={`${row.ts}-${i}`}
-            className="reveal-up grid grid-cols-[42px_1fr] items-baseline gap-2.5 px-3.5 py-2.5"
-            style={{
-              animationDelay: `${60 + i * 60}ms`,
-              borderTop:
-                i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
-            }}
-          >
-            <span className="font-serif text-xs font-medium tabular-nums text-muted">
-              {formatHHMMOslo(row.ts)}
-            </span>
-            <div>
-              <p className="text-[13px] text-text">
-                <b className="font-semibold">{row.who}</b> {row.action}
-              </p>
-              <p className="mt-0.5 font-serif text-[11px] italic text-muted">
-                {row.ref}
-              </p>
+        ledger.map((row, i) => {
+          const style = {
+            animationDelay: `${60 + i * 60}ms`,
+            borderTop: i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
+          };
+          const baseClass =
+            'reveal-up grid grid-cols-[42px_1fr] items-baseline gap-2.5 px-3.5 py-2.5';
+          const inner = (
+            <>
+              <span className="font-serif text-xs font-medium tabular-nums text-muted">
+                {formatHHMMOslo(row.ts)}
+              </span>
+              <div>
+                <p className="text-[13px] text-text">
+                  <b className="font-semibold">{row.who}</b> {row.action}
+                </p>
+                <p className="mt-0.5 font-serif text-[11px] italic text-muted">
+                  {row.ref}
+                </p>
+              </div>
+            </>
+          );
+          // #864: rader med en href blir trykkbare SmartLink-er (submitted/
+          // approved → spillets status-side, lifecycle → spill-detalj, ny bane
+          // → /admin/courses). Klubbinvitasjon uten game forblir en `<div>`.
+          return row.href ? (
+            <SmartLink
+              key={`${row.ts}-${i}`}
+              href={row.href}
+              className={`${baseClass} transition-colors hover:bg-bg/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40`}
+              style={style}
+            >
+              {inner}
+            </SmartLink>
+          ) : (
+            <div key={`${row.ts}-${i}`} className={baseClass} style={style}>
+              {inner}
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
