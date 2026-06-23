@@ -521,8 +521,9 @@ async function PlayersSections({
 
   return (
     <>
-      {/* Card 1 — Registration */}
-      <SectionCard ribbon={tSections('registration')}>
+      {/* Card 1 — Oversikt (#904): tall-sammendrag (spillere/levering/lag).
+          «Påmelding» eies av RegistrationOverviewSection rett under. */}
+      <SectionCard ribbon={tSections('overview')}>
         <Row
           label={tRows('players')}
           value={`${players.length}`}

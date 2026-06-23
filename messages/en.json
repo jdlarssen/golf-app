@@ -2696,7 +2696,7 @@
         "signups_reopened": "✓ Signups reopened."
       },
       "sections": {
-        "registration": "Registration",
+        "overview": "Overview",
         "manageSignups": "Manage signups",
         "format": "Format",
         "course": "Course",

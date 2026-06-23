@@ -2696,7 +2696,7 @@
         "signups_reopened": "✓ Påmeldingen er gjenåpnet."
       },
       "sections": {
-        "registration": "Påmelding",
+        "overview": "Oversikt",
         "manageSignups": "Administrer påmelding",
         "format": "Format",
         "course": "Banen",

@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.3] - 2026-06-23 · #904
+
+> Spill-detaljsida hadde to seksjoner med samme overskrift «Påmelding» rett etter hverandre. Det øverste kortet med tall (spillere, leverte, lag) heter nå «Oversikt», så det er lettere å se hva som er hva.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `app/[locale]/admin/games/[id]/page.tsx`: Kort 1's ribbon byttet fra `sections.registration` til ny `sections.overview` — kortet er et tall-sammendrag, ikke selve påmeldingen (som `RegistrationOverviewSection` eier rett under).
+- `messages/no.json` + `messages/en.json`: `admin.game.sections.registration` («Påmelding»/«Registration») omdøpt til `admin.game.sections.overview` («Oversikt»/«Overview»). Eneste konsument var Kort 1, så nøkkelen ble renamet i stedet for å etterlate en foreldreløs.
+
+</details>
+
 ### [1.140.2] - 2026-06-23 · #905
 
 > Et spill som venter på start viser ikke lenger «Levert 0/N» eller en tom banehandicap-kolonne. Spillerne står nå som «Påmeldt» helt til du trykker «Start runden nå», så detaljsida lover ikke noe som ikke gir mening ennå.
