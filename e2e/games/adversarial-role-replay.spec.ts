@@ -12,7 +12,10 @@ import {
   cleanupTestGame,
   fetchOtpForEmail,
   withFreshOtpRetry,
+  seedEphemeralPlayers,
+  deleteEphemeralPlayers,
   type ActiveGame,
+  type EphemeralPlayer,
 } from '../_helpers/games';
 
 /**
@@ -32,6 +35,13 @@ import {
  *   Role C — withdrawn player
  *     · After withdrawal (withdrawn_at set), write to scores affects 0 rows.
  *     · (Withdrawn player is still auth'd but excluded by RLS.)
+ *
+ *   Role D — non-admin creator adding an INELIGIBLE player (#921)
+ *     · Hostile direct INSERT of a stranger (no friendship/co-play/club) into the
+ *       creator's own game_players is rejected by the guard_game_players_invite_
+ *       eligibility trigger (42501).
+ *     · Same INSERT of an ELIGIBLE friend SUCCEEDS — proving the trigger matches
+ *       the #906 action guard (getInviteEligibleIds) and never false-blocks.
  *
  * Assertions: HTTP redirect URL, or .select()-returns-0-rows. NEVER on Norwegian
  * copy (test discipline D). Hostile writes use supabase-js clients signed in as
@@ -481,6 +491,165 @@ test.describe('Role C – withdrawn player write blocked @lifecycle', () => {
       if (error) {
         expect(error.message).toMatch(/permission|rls|denied|security|policy|violat/i);
       }
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role D — non-admin creator hostile INSERT into game_players (#921)
+// ---------------------------------------------------------------------------
+//
+// #906 scoped "Inviter spillere" to friends/co-players/club members for a
+// non-admin creator at the ACTION layer. #921 closes the RLS-layer half: a
+// crafted direct PostgREST INSERT must be rejected by the BEFORE INSERT trigger
+// guard_game_players_invite_eligibility when the recipient is ineligible — and
+// must SUCCEED for an eligible (friend) recipient, proving the trigger mirrors
+// getInviteEligibleIds (AGENTS.md trap #4) and never false-blocks a legit add.
+//
+// Setup: PLAYER_EMAIL owns a fresh DRAFT game (created_by = player, so the
+// "game_players creator insert" RLS policy applies to the player's own INSERT).
+// Two ephemeral users — `friend` (seeded accepted friendship → eligible) and
+// `stranger` (freshly created → no friendship/co-play/club → ineligible). The
+// creator is NOT a participant, so SELECT-RLS hides game_players on read-back;
+// we assert on the INSERT error and verify presence/absence via the service role.
+//
+// The stranger-blocked vs friend-allowed pair shares the same creator, game and
+// insert shape — the ONLY difference is eligibility, so it isolates the trigger
+// as the differentiator (the creator-insert RLS policy permits both).
+test.describe('Role D – non-admin creator invite-eligibility on game_players @lifecycle', () => {
+  test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
+  test.describe.configure({ mode: 'serial' });
+
+  let gameId = '';
+  let playerUserId = '';
+  let friend: EphemeralPlayer | null = null;
+  let stranger: EphemeralPlayer | null = null;
+
+  test.beforeAll(async () => {
+    const admin = adminClient();
+
+    const { data: playerUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', PLAYER_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    if (!playerUser) throw new Error(`Player user ${PLAYER_EMAIL} not found`);
+    playerUserId = playerUser.id;
+
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    if (!tee) throw new Error('No tee_box available');
+
+    // DRAFT game OWNED BY THE NON-ADMIN PLAYER (created_by = player). group_id
+    // null → eligibility reduces to friends ∪ co-players.
+    const { data: game, error: gameErr } = await admin
+      .from('games')
+      .insert({
+        name: `TEST-RoleD-InviteEligibility-${Date.now()}`,
+        course_id: tee.course_id,
+        tee_box_id: tee.id,
+        game_mode: 'stableford',
+        mode_config: {},
+        registration_mode: 'invite_only',
+        registration_type: 'solo',
+        status: 'draft',
+        created_by: playerUserId,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    if (gameErr || !game) throw new Error(`Game insert failed: ${gameErr?.message}`);
+    gameId = game.id;
+
+    // Fresh ephemeral users have NO friendship/co-play/club → stranger is a
+    // guaranteed INELIGIBLE recipient.
+    const players = await seedEphemeralPlayers(2);
+    friend = players[0];
+    stranger = players[1];
+
+    // Seed an ACCEPTED friendship player↔friend so the friend is eligible via the
+    // friend branch of is_invite_eligible (mirrors connectedIdsFromRows: any
+    // direction, accepted or pending). FK on_delete_cascade clears it in afterAll.
+    const { error: friErr } = await admin.from('friendships').insert({
+      requester_id: playerUserId,
+      addressee_id: friend.id,
+      status: 'accepted',
+    });
+    if (friErr) throw new Error(`friendship seed failed: ${friErr.message}`);
+  });
+
+  test.afterAll(async () => {
+    if (gameId) await cleanupTestGame(gameId);
+    const ids = [friend?.id, stranger?.id].filter(Boolean) as string[];
+    await deleteEphemeralPlayers(ids); // cascade clears friendships + game_players
+  });
+
+  test('ineligible stranger: hostile INSERT is rejected by the trigger', async () => {
+    test.slow();
+    expect(stranger).not.toBeNull();
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { error } = await client.from('game_players').insert({
+        game_id: gameId,
+        user_id: stranger!.id,
+        accepted_at: null,
+      });
+      // The BEFORE INSERT trigger RAISEs insufficient_privilege (42501) → PostgREST
+      // surfaces an error. Assert the write was rejected (never on Norwegian copy).
+      expect(
+        error,
+        'hostile INSERT of an ineligible user_id must be rejected by the trigger',
+      ).not.toBeNull();
+      if (error) {
+        expect(
+          error.code === '42501' ||
+            /eligible|permission|denied|insufficient|policy|violat/i.test(error.message),
+          `unexpected error shape: ${error.code} ${error.message}`,
+        ).toBeTruthy();
+      }
+      // Non-vacuity: confirm via service-role that no row was inserted.
+      const admin = adminClient();
+      const { data: rows } = await admin
+        .from('game_players')
+        .select('user_id')
+        .eq('game_id', gameId)
+        .eq('user_id', stranger!.id);
+      expect((rows ?? []).length, 'ineligible stranger must not have been added').toBe(0);
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('eligible friend: same hostile INSERT succeeds (no false-block)', async () => {
+    test.slow();
+    expect(friend).not.toBeNull();
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { error } = await client.from('game_players').insert({
+        game_id: gameId,
+        user_id: friend!.id,
+        accepted_at: null,
+      });
+      // Same creator, game and insert shape as the stranger case — only eligibility
+      // differs. An eligible friend must pass the trigger AND the creator-insert RLS
+      // WITH CHECK, proving the DB layer agrees with the #906 action guard (trap #4).
+      expect(
+        error,
+        `eligible friend INSERT was rejected (${error?.code}: ${error?.message}) — trigger false-block!`,
+      ).toBeNull();
+      // Confirm via service-role that the friend row now exists.
+      const admin = adminClient();
+      const { data: rows } = await admin
+        .from('game_players')
+        .select('user_id')
+        .eq('game_id', gameId)
+        .eq('user_id', friend!.id);
+      expect((rows ?? []).length, 'eligible friend should have been added').toBe(1);
     } finally {
       await client.auth.signOut();
     }
