@@ -181,6 +181,7 @@ export function BasicsSection({
         value={scheduledTeeOffAt}
         onChange={(e) => setScheduledTeeOffAt(e.target.value)}
         hint={t('teeOffHint')}
+        error={state.teeOffInPast ? t('teeOffPastError') : undefined}
         // iOS: native datetime-local ignorerer width:100% og strekker seg
         // utenfor kortet. appearance-none + min-w-0 krymper kontrollen til
         // containeren (samme fiks som dato-feltene i CreateLigaForm, #453).

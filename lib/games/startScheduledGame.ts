@@ -58,6 +58,8 @@ export async function startScheduledGame(
   supabase: SupabaseClient<Database>,
   gameId: string,
 ): Promise<StartScheduledGameResult> {
+  // Starting is "begin now" — a planned tee-off that has since passed is irrelevant
+  // once the game goes active. No guard against past scheduled_tee_off_at (#928 decision).
   // 1. Verify status is still 'scheduled' and load tee-box + allowance.
   //    The game's tee carries up to three independent rating-sets
   //    (mens/ladies/juniors); each player picks one via tee_gender.

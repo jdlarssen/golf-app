@@ -4,6 +4,7 @@ import {
   parseOsloDateTimeLocal,
   formatOsloDateTimeLocal,
   isTeeOffInPast,
+  isDatetimeLocalInPast,
   TEE_OFF_PAST_GRACE_MS,
 } from './gamePayload';
 
@@ -92,6 +93,47 @@ describe('isTeeOffInPast (#902)', () => {
 
   it('defaults nowMs to Date.now() — a far-past tee-off is in the past', () => {
     expect(isTeeOffInPast('2000-01-01T00:00:00.000Z')).toBe(true);
+  });
+});
+
+describe('isDatetimeLocalInPast (#928)', () => {
+  // Build nowMs and test values in the SAME local frame so the suite is
+  // TZ-independent: new Date(year, month, day, h, m) uses local time, and so
+  // does the function under test when it parses 'YYYY-MM-DDTHH:mm'.
+  const now = new Date(2026, 5, 24, 12, 0); // 2026-06-24 12:00 local
+  const nowMs = now.getTime();
+
+  it('10 min before now is in the past', () => {
+    expect(isDatetimeLocalInPast('2026-06-24T11:50', nowMs)).toBe(true);
+  });
+
+  it('4 min before now (within 5-min grace) is NOT in the past', () => {
+    expect(isDatetimeLocalInPast('2026-06-24T11:56', nowMs)).toBe(false);
+  });
+
+  it('exactly at the grace edge (5 min ago) is NOT in the past', () => {
+    // now - 5 min exactly: t < nowMs - TEE_OFF_PAST_GRACE_MS is false when equal
+    expect(isDatetimeLocalInPast('2026-06-24T11:55', nowMs)).toBe(false);
+  });
+
+  it('exactly now is NOT in the past', () => {
+    expect(isDatetimeLocalInPast('2026-06-24T12:00', nowMs)).toBe(false);
+  });
+
+  it('future time is NOT in the past', () => {
+    expect(isDatetimeLocalInPast('2026-06-24T13:00', nowMs)).toBe(false);
+  });
+
+  it('empty string returns false', () => {
+    expect(isDatetimeLocalInPast('', nowMs)).toBe(false);
+  });
+
+  it('garbage input returns false', () => {
+    expect(isDatetimeLocalInPast('garbage', nowMs)).toBe(false);
+  });
+
+  it('defaults nowMs to Date.now() — a far-past wall-clock is in the past', () => {
+    expect(isDatetimeLocalInPast('2000-01-01T00:00')).toBe(true);
   });
 });
 

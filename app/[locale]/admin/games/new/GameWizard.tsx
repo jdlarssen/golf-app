@@ -333,7 +333,7 @@ export function GameWizard({
       // FormatGrid eller låst inn via cup-link/edit) før vi kan gå videre.
       return state.formatChosen;
     }
-    if (step === 3) return state.courseId !== '' && state.teeBoxId !== '';
+    if (step === 3) return state.courseId !== '' && state.teeBoxId !== '' && !state.teeOffInPast;
     // Steg 4: vanligvis krever vi en gyldig spiller-fordeling per modus.
     // #199: når selv-påmelding er på (open / manual_approval) er spiller-
     // listen valgfri — admin kan publisere et tomt spill og la spillerne
@@ -352,6 +352,7 @@ export function GameWizard({
     if (step === 3) {
       if (state.courseId === '') return t('disabledHint.step3NoCourse');
       if (state.teeBoxId === '') return t('disabledHint.step3NoTee');
+      if (state.teeOffInPast) return t('disabledHint.step3TeeOffPast');
     }
     if (step === 4) {
       // playersValidForMode false → ta første mangel fra liste-en. Filtrer

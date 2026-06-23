@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   CLASSIC_DISABLED_CATEGORIES,
@@ -17,6 +17,7 @@ import {
   type RegistrationType,
 } from '@/lib/games/registration';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
+import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
 
 // Lag-numre er en bevisst smal union — andre tall (5, 6, …) er ikke meningsfulle
 // i Tørny per d.d. og blir narrower'ed via `isTeamNumber`-guarden under.
@@ -309,6 +310,16 @@ export function useGameFormState({
   // `canPublish` below. Drafts may omit it. Empty string === "not set".
   const [scheduledTeeOffAt, setScheduledTeeOffAt] = useState<string>(
     initialValues?.scheduled_tee_off_at ?? '',
+  );
+  // Hydration-safe mount flag (#928). `canPublish` is SSR-rendered into `disabled`
+  // on buttons; calling Date.now() during render would cause a hydration mismatch on
+  // the edit page. useSyncExternalStore returns the server snapshot (false) during
+  // SSR and the client snapshot (true) after hydration — no useState+useEffect needed
+  // (avoids react-hooks/set-state-in-effect lint rule).
+  const hasMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
   );
   // Substring-filter for the spiller-listen. Empty string = vis alle.
   // Klargjør for klubbskala (100+ spillere) der den flate listen blir
@@ -799,6 +810,9 @@ export function useGameFormState({
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
   const hasTeeOff = scheduledTeeOffAt !== '';
+  // Client-side inline guard (#928): true only after hydration (hasMounted) so
+  // SSR/client HTML agree on the `disabled` prop. False during SSR → no mismatch.
+  const teeOffInPast = hasMounted && isDatetimeLocalInPast(scheduledTeeOffAt);
 
   const selectedCourse = useMemo(
     () => courses.find((c) => c.id === courseId) ?? null,
@@ -1426,6 +1440,7 @@ export function useGameFormState({
       ? roundRobinAllowancePctValid
       : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey || isPatsome || isTeamMatchplay || allowanceValid) &&
     hasTeeOff &&
+    !teeOffInPast &&
     playersWithUnratedCategory.length === 0;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -1438,6 +1453,9 @@ export function useGameFormState({
   if (courseId === '') missingForPublish.push(tMissing('course'));
   if (teeBoxId === '') missingForPublish.push(tMissing('teeBox'));
   if (!hasTeeOff) missingForPublish.push(tMissing('teeOffTime'));
+  // A past tee-off is invalid, not "missing", so it does NOT go in missingForPublish
+  // (would read "Mangler: tee-off-tid i fortiden"). canPublish already excludes it via
+  // `!teeOffInPast`, and BasicsSection shows the inline error at the field (#928).
   // #721: backstop — kategori uten tee-rating bør aldri nå hit takket være
   // klem-ved-tee-bytte, men pre-eksisterende edit-data kan ha ugyldig tilstand.
   if (playersWithUnratedCategory.length > 0)
@@ -1741,6 +1759,7 @@ export function useGameFormState({
     isPatsome,
     isTeamMatchplay,
     hasTeeOff,
+    teeOffInPast,
     // Memoiserte derivasjoner
     selectedCourse,
     filteredPlayers,

@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset møter deg nå som spiller: en invitasjon til å arrangere, klubbene dine og det du selv har satt opp, i stedet for en flis-katalog som var tom hvis du aldri arrangerer.
 
+### [1.141.1] - 2026-06-24 · #928
+
+> Taster du inn en tee-off som har vært, sier appen fra med en gang ved feltet — ikke først når du trykker publiser. Du blir ikke lenger kasta tilbake til starten av veiviseren, og «Publiser» er gråa ut til du retter tiden. Et spill som ikke er startet kan du fortsatt endre fritt.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- Past-tee-off-valideringen (#902) flyttet fra publish-tid til **input-tid** (#928). `useGameFormState` regner ut `teeOffInPast` (hydreringssikkert via `useSyncExternalStore` så SSR/klient er enige om `disabled`-propen) og ekskluderer det fra `canPublish`. Det gater både wizardens «Neste» (steg 3, `canAdvance`) og edit-skjemaets «Publiser»-knapper i én kilde. `BasicsSection` viser en inline-feil rett ved tee-off-feltet, så feedbacken kommer der øyet er — ikke som et off-screen banner. Ny delt klient-helper `isDatetimeLocalInPast` i `lib/games/gamePayload.ts` deler `TEE_OFF_PAST_GRACE_MS` (5 min) med server-guarden (AGENTS.md felle #4).
+- Server-guarden fra #902 (`createGameInternal`/`updateGameInternal`) er uendret som stille backstop.
+- «Start spillet»/«Start runden nå» er bevisst ikke vernet mot en passert planlagt tee-off (eier-beslutning #928): start betyr «begynn nå», så en planlagt tid som har vært er irrelevant når spillet blir aktivt. Dokumentert med kommentar i `startGame` + `startScheduledGame`.
+- Nye norske/engelske strenger for inline-feilen + wizardens disabled-hint. Test-fixturer bruker dynamisk fremtidsdato så de ikke går ut på dato.
+
+</details>
+
 ### [1.141.0] - 2026-06-24 · #892
 
 > Klubbhuset er bygget om for deg som mest blir med på spill. Før møtte du en «Spill»-flis som var tom hvis du aldri arrangerte noe selv. Nå får du en invitasjon til å sette opp en runde, klubbene dine listet rett opp, og spillene og cupene dine hvis du arrangerer. Blir du bare med på spill, ser du et rolig rom uten blindveier.

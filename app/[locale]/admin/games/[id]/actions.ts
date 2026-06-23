@@ -140,6 +140,8 @@ export async function startScheduledGameAction(gameId: string) {
 }
 
 export async function startGame(gameId: string) {
+  // Starting is "begin now" — a planned tee-off that has since passed is irrelevant
+  // once the game goes active. No guard against past scheduled_tee_off_at (#928 decision).
   const locale = await getLocale();
   const { supabase } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;

@@ -7,6 +7,14 @@ import type {
   CupEligibleFormat,
 } from '@/lib/formats/getFormatsForIntent';
 
+// #928: tee-off 7 days out so the past-tee-off guard never rejects these
+// fixtures. Computed relative to now so it can't go stale like a hard-coded date.
+const FUTURE_TEE_OFF = (() => {
+  const d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+})();
+
 // Tester GameWizard-orchestratoren etter F2-redesign (#272): 5-stegs
 // navigasjons-flyt med intent-først, per-steg-validering, escape-hatch til
 // full-form, auto-name basert på bane/tee-off, og bekreftelse på at FormData
@@ -173,7 +181,7 @@ describe('GameWizard — happy-path solo stableford', () => {
       target: { value: 'tee-1' },
     });
     fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-06-01T10:00' },
+      target: { value: FUTURE_TEE_OFF },
     });
     clickNext();
 
@@ -222,7 +230,7 @@ describe('GameWizard — #464 picker-kilde (kun venner)', () => {
       target: { value: 'tee-1' },
     });
     fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-06-01T10:00' },
+      target: { value: FUTURE_TEE_OFF },
     });
     clickNext(); // steg 3 → 4
     expectStep(4);
@@ -275,7 +283,7 @@ describe('GameWizard — best-ball inline team/flight på steg 4', () => {
       target: { value: 'tee-1' },
     });
     fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-06-01T10:00' },
+      target: { value: FUTURE_TEE_OFF },
     });
     clickNext(); // → steg 4
 
@@ -370,7 +378,7 @@ describe('GameWizard — escape-hatch til full-form bevarer state', () => {
       target: { value: 'tee-1' },
     });
     fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-06-01T10:00' },
+      target: { value: FUTURE_TEE_OFF },
     });
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
@@ -492,7 +500,7 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
       target: { value: 'tee-1' },
     });
     fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-06-01T10:00' },
+      target: { value: FUTURE_TEE_OFF },
     });
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
@@ -507,11 +515,15 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     expect(fd.get('stableford_team_size')).toBe('1');
     expect(fd.get('course_id')).toBe('course-1');
     expect(fd.get('tee_box_id')).toBe('tee-1');
-    expect(fd.get('scheduled_tee_off_at')).toBe('2026-06-01T10:00');
+    expect(fd.get('scheduled_tee_off_at')).toBe(FUTURE_TEE_OFF);
     expect(fd.get('player_0_id')).toBe('u0');
     expect(fd.get('player_0_team')).toBe('');
     expect(fd.get('player_0_flight')).toBe('');
-    expect(fd.get('name')).toBe('Stiklestad GK 1. juni');
+    // Auto-name derives "{course} {day}. {nb-month}" from the tee-off date;
+    // compute it from FUTURE_TEE_OFF so it tracks the dynamic fixture.
+    const teeDate = new Date(FUTURE_TEE_OFF);
+    const nbMonths = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+    expect(fd.get('name')).toBe(`Stiklestad GK ${teeDate.getDate()}. ${nbMonths[teeDate.getMonth()]}`);
   });
 
   it('best-ball: FormData inkluderer 8 player_${i}_*-rader + game_mode=best_ball', () => {
@@ -527,7 +539,7 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
       target: { value: 'tee-1' },
     });
     fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-06-01T10:00' },
+      target: { value: FUTURE_TEE_OFF },
     });
     clickNext();
     for (const player of EIGHT_PLAYERS) {

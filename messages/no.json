@@ -614,6 +614,7 @@
         "teePlaceholderWithCourse": "Velg tee-boks…",
         "teeOffLabel": "Tee-off",
         "teeOffHint": "Påkrevd ved publisering. Valgfritt for utkast.",
+        "teeOffPastError": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",
         "visibilityLegend": "Synlighet under runden",
         "visibilityLiveTitle": "Vis alt under runden",
         "visibilityLiveDesc": "Netto-tall synlige fra hull 1 (standard)",
@@ -892,6 +893,7 @@
       "step2NoFormat": "Velg spillform først",
       "step3NoCourse": "Velg bane først",
       "step3NoTee": "Velg tee-boks",
+      "step3TeeOffPast": "Rett tee-off-tiden. Den kan ikke være i fortiden.",
       "step4Prefix": "Mangler: {item}"
     },
     "backToQuickSetup": "← Tilbake til hurtig-oppsett",

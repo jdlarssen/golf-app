@@ -614,6 +614,7 @@
         "teePlaceholderWithCourse": "Select tee box…",
         "teeOffLabel": "Tee-off",
         "teeOffHint": "Required when publishing. Optional for drafts.",
+        "teeOffPastError": "The tee-off time can't be in the past. Pick a time from now on.",
         "visibilityLegend": "Visibility during the round",
         "visibilityLiveTitle": "Show everything during the round",
         "visibilityLiveDesc": "Net scores visible from hole 1 (default)",
@@ -892,6 +893,7 @@
       "step2NoFormat": "Choose a game format first",
       "step3NoCourse": "Choose a course first",
       "step3NoTee": "Choose a tee box",
+      "step3TeeOffPast": "Fix the tee-off time. It can't be in the past.",
       "step4Prefix": "Missing: {item}"
     },
     "backToQuickSetup": "← Back to quick setup",

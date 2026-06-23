@@ -59,6 +59,29 @@ export function isTeeOffInPast(
   return t < nowMs - TEE_OFF_PAST_GRACE_MS;
 }
 
+/**
+ * True when a datetime-local wall-clock value ('YYYY-MM-DDTHH:mm', browser-local)
+ * is more than the grace margin before `nowMs`. Empty/malformed → false. Client-side
+ * nudge consistent with the `min` attribute; the server `isTeeOffInPast` (Oslo instant)
+ * stays authoritative. Shares TEE_OFF_PAST_GRACE_MS so both layers agree (AGENTS.md trap #4).
+ */
+export function isDatetimeLocalInPast(
+  value: string,
+  nowMs: number = Date.now(),
+): boolean {
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return false;
+  const t = new Date(
+    Number(m[1]),
+    Number(m[2]) - 1,
+    Number(m[3]),
+    Number(m[4]),
+    Number(m[5]),
+  ).getTime();
+  if (Number.isNaN(t)) return false;
+  return t < nowMs - TEE_OFF_PAST_GRACE_MS;
+}
+
 export function parseOsloDateTimeLocal(s: string): string {
   const [datePart] = s.split('T');
   const [y, m, d] = datePart.split('-').map(Number);

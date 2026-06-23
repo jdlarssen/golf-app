@@ -905,3 +905,69 @@ describe('useGameFormState — defensiv publish-guard (AC5)', () => {
     expect(result.current.missingForPublish.length).toBe(baseline + 1);
   });
 });
+
+// ─── #928 — teeOffInPast / canPublish ────────────────────────────────────────
+
+/** Format a Date as 'YYYY-MM-DDTHH:mm' (browser-local, no timezone suffix). */
+function toDatetimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+describe('useGameFormState — teeOffInPast blocks canPublish (#928)', () => {
+  /** Bring a solo-stableford form to a fully publishable state with a FUTURE tee-off. */
+  function setupPublishableForm() {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setCourseId('course-a');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-a1');
+      result.current.togglePlayer('p-mann');
+      // Set a future tee-off (1 day from now) so the form starts publishable.
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() + 86_400_000)),
+      );
+    });
+    return { result };
+  }
+
+  it('canPublish is true and teeOffInPast is false with a future tee-off', () => {
+    const { result } = setupPublishableForm();
+    expect(result.current.teeOffInPast).toBe(false);
+    expect(result.current.canPublish).toBe(true);
+  });
+
+  it('canPublish becomes false and teeOffInPast becomes true when tee-off is set to the past', () => {
+    const { result } = setupPublishableForm();
+    // Switch to a past value (1 day ago — well outside the 5-min grace window).
+    act(() => {
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() - 86_400_000)),
+      );
+    });
+    expect(result.current.teeOffInPast).toBe(true);
+    expect(result.current.canPublish).toBe(false);
+  });
+
+  it('canPublish recovers to true when tee-off is corrected back to the future', () => {
+    const { result } = setupPublishableForm();
+    act(() => {
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() - 86_400_000)),
+      );
+    });
+    expect(result.current.teeOffInPast).toBe(true);
+    // Fix the tee-off — canPublish should recover.
+    act(() => {
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() + 86_400_000)),
+      );
+    });
+    expect(result.current.teeOffInPast).toBe(false);
+    expect(result.current.canPublish).toBe(true);
+  });
+});

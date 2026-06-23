@@ -6,6 +6,14 @@ import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
 // players-first-flow + best-ball-grid-default slik at vi vet om
 // senere refaktorering (epic #41 fase 4) brekker eksisterende oppførsel.
 
+// #928: tee-off 7 days out so the past-tee-off guard never rejects these
+// fixtures. Computed relative to now so it can't go stale like a hard-coded date.
+const FUTURE_TEE_OFF = (() => {
+  const d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+})();
+
 const COURSES: CourseOption[] = [
   {
     id: 'course-1',
@@ -413,7 +421,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
           name: 'Par Cup',
           course_id: 'course-1',
           tee_box_id: 'tee-1',
-          scheduled_tee_off_at: '2026-06-01T10:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           hcp_allowance_pct: '100',
         }}
       />,
@@ -465,7 +473,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
           name: 'Par Cup',
           course_id: 'course-1',
           tee_box_id: 'tee-1',
-          scheduled_tee_off_at: '2026-06-01T10:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           hcp_allowance_pct: '100',
         }}
       />,
@@ -502,7 +510,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
           name: 'Par Cup',
           course_id: 'course-1',
           tee_box_id: 'tee-1',
-          scheduled_tee_off_at: '2026-06-01T10:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           hcp_allowance_pct: '100',
         }}
       />,
@@ -895,7 +903,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
           name: 'Match Cup',
           course_id: 'course-1',
           tee_box_id: 'tee-1',
-          scheduled_tee_off_at: '2026-06-01T10:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           hcp_allowance_pct: '100',
         }}
       />,
@@ -937,7 +945,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
           name: 'Match Cup',
           course_id: 'course-1',
           tee_box_id: 'tee-1',
-          scheduled_tee_off_at: '2026-06-01T10:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           hcp_allowance_pct: '100',
         }}
       />,
@@ -967,7 +975,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
           name: 'Match Cup',
           course_id: 'course-1',
           tee_box_id: 'tee-1',
-          scheduled_tee_off_at: '2026-06-01T10:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           hcp_allowance_pct: '100',
         }}
       />,
@@ -1229,7 +1237,7 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
           name: 'Klubbmesterskap',
           course_id: 'course-1',
           tee_box_id: 'tee-1',
-          scheduled_tee_off_at: '2026-06-01T10:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           hcp_allowance_pct: '100',
         }}
       />,
@@ -1256,7 +1264,7 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
           name: 'Klubbmesterskap',
           course_id: 'course-1',
           tee_box_id: 'tee-1',
-          scheduled_tee_off_at: '2026-06-01T10:00',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
           hcp_allowance_pct: '100',
         }}
       />,
