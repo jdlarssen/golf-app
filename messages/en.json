@@ -183,8 +183,6 @@
     "backLabel": "Back to home",
     "displayNameFallback": "Profile",
     "updatedBanner": "✓ Your profile has been updated.",
-    "inviteSentBanner": "✓ Invitation sent{email, select, empty {} other { to {email}}}.",
-    "sectionSocial": "Social",
     "sectionPersonal": "Activity",
     "sectionApp": "App",
     "sectionAccount": "Account",
@@ -193,6 +191,7 @@
     "hcpUpdatedShort": "Updated {dato}",
     "friendsRow": "Friends",
     "friendsSublabel": "Add friends and see their games",
+    "friendsBadgeSublabel": "{count, plural, one {1 person wants to be your friend} other {{count} people want to be your friends}}",
     "historikkRow": "My history",
     "exportRow": "Export my data",
     "exportSublabel": "Download everything we have stored about you as a JSON file. The data is yours to take with you.",
@@ -206,26 +205,10 @@
       "level_invalid": "Invalid player class.",
       "unknown": "Something went wrong. Please try again."
     },
-    "inviteErrors": {
-      "email_required": "Please enter an email address.",
-      "invalid_email": "Invalid email address.",
-      "already_user": "This person is already on Tørny. Ask an admin to add them to a game.",
-      "already_invited": "This address has already been invited. You don't need to do anything else.",
-      "disposable_email": "Disposable email addresses aren't accepted. Ask your friend for a regular email address.",
-      "quota": "You've used up today's invite quota.",
-      "rate_limited": "Please wait a moment before trying again.",
-      "unknown": "Something went wrong with the invitation. Please try again."
-    },
     "genderPrompt": {
       "heading": "Choose gender for tee recommendation",
       "body": "Tørny doesn't know which tee you normally play from. Set it here and it'll be quicker when someone creates a game you're joining.",
       "cta": "Set gender"
-    },
-    "invite": {
-      "heading": "Invite a friend",
-      "exhaustedSubtitle": "Next invitation in ~{timeUntil}",
-      "exhaustedSoon": "soon",
-      "subtitle": "Bring your mates to Tørny"
     },
     "form": {
       "nameLabel": "Name",
@@ -251,12 +234,6 @@
       "savePending": "Saving …",
       "saveButton": "Save",
       "saveHint": "Save activates once you change something."
-    },
-    "inviteForm": {
-      "emailLabel": "Email",
-      "emailPlaceholder": "friend@email.com",
-      "sendPending": "Sending …",
-      "sendButton": "Send"
     },
     "deleteAccount": {
       "kicker": "Delete account",

@@ -9,13 +9,11 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { getQuotaState, timeUntilStructured } from '@/lib/invitations/quota';
 import { updateProfile } from './actions';
 import { safeNextPath } from './safeNext';
-import { sendFriendInvite } from '../invite/actions';
 import { ProfileFormBody } from './ProfileFormBody';
-import { InviteFriendForm } from './InviteFriendForm';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { getIncomingFriendRequestCount } from '@/lib/friends/getIncomingFriendRequestCount';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
@@ -58,9 +56,6 @@ function parForGender(h: CourseHoleRow, gender: ScoringGender | null): number {
 type SearchParams = Promise<{
   error?: string | string[];
   profile?: string | string[];
-  invite?: string | string[];
-  invite_error?: string | string[];
-  invite_email?: string | string[];
   next?: string | string[];
 }>;
 
@@ -201,12 +196,6 @@ export default async function ProfilePage({
     : errorCode ? t('errors.unknown') : undefined;
   const profileUpdated = first(params.profile) === 'updated';
   const nextSafe = safeNextPath(first(params.next));
-  const inviteSent = first(params.invite) === 'sent';
-  const inviteSentEmail = first(params.invite_email) ?? '';
-  const inviteErrorCode = first(params.invite_error);
-  const inviteErrorMessage = inviteErrorCode && t.has(`inviteErrors.${inviteErrorCode}` as Parameters<typeof t>[0])
-    ? t(`inviteErrors.${inviteErrorCode}` as Parameters<typeof t>[0])
-    : inviteErrorCode ? t('inviteErrors.unknown') : undefined;
 
   return (
     <AppShell>
@@ -215,20 +204,6 @@ export default async function ProfilePage({
       {profileUpdated && (
         <div className="mb-4">
           <Banner tone="success">{t('updatedBanner')}</Banner>
-        </div>
-      )}
-
-      {inviteSent && (
-        <div className="mb-4">
-          <Banner tone="success">
-            {t('inviteSentBanner', { email: inviteSentEmail || 'empty' })}
-          </Banner>
-        </div>
-      )}
-
-      {inviteErrorMessage && (
-        <div className="mb-4">
-          <Banner tone="error">{inviteErrorMessage}</Banner>
         </div>
       )}
 
@@ -247,8 +222,8 @@ export default async function ProfilePage({
       </div>
 
       <div className="mt-6">
-        <Suspense fallback={<Skeleton className="h-[88px] rounded-2xl" />}>
-          <InviteAFriendCard />
+        <Suspense fallback={<Skeleton className="h-[76px] rounded-2xl" />}>
+          <VennerCard />
         </Suspense>
       </div>
 
@@ -256,20 +231,6 @@ export default async function ProfilePage({
           space before «Slett konto» prevents accidental taps on the destructive
           action (one-door-per-room: dedicated /slett-konto confirm page). */}
       <div className="mt-8 space-y-6">
-        {/* Sosialt */}
-        <section>
-          <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            {t('sectionSocial')}
-          </p>
-          <SettingList>
-            <SettingRow
-              href="/profile/venner"
-              label={t('friendsRow')}
-              sublabel={t('friendsSublabel')}
-            />
-          </SettingList>
-        </section>
-
         {/* Aktivitet */}
         <section>
           <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -591,48 +552,51 @@ function MyStatsSkeleton() {
   );
 }
 
-async function InviteAFriendCard() {
+/**
+ * Profilens ENE venne-dør (#870). Det tidligere invitér-kortet er fjernet —
+ * Venner-siden dekker alt det gjorde (legg-til-på-e-post faller selv tilbake
+ * til invitasjon når adressen ikke er på Tørny). Kortet bærer et merke når det
+ * finnes innkommende venneforespørsler («én dør per rom»). Slankt count-kall,
+ * ikke hele `getFriendData`-fan-out-en.
+ */
+async function VennerCard() {
   const t = await getTranslations('profile');
-  const { supabase, userId } = await getProfileContext();
-  const quota = await getQuotaState(supabase, userId!);
-
-  if (quota.isExhausted) {
-    const timeUntilResult = quota.nextSlotAt
-      ? timeUntilStructured(quota.nextSlotAt)
-      : null;
-
-    let timeUntilStr: string;
-    if (!timeUntilResult || timeUntilResult.kind === 'soon') {
-      timeUntilStr = t('invite.exhaustedSoon');
-    } else if (timeUntilResult.kind === 'hours') {
-      timeUntilStr = `${timeUntilResult.n} t`;
-    } else {
-      timeUntilStr = `${timeUntilResult.n} min`;
-    }
-
-    return (
-      <Card>
-        <div aria-disabled="true" className="opacity-60">
-          <h2 className="font-serif text-base font-medium text-text mb-0.5">
-            {t('invite.heading')}
-          </h2>
-          <p className="text-sm text-muted">
-            {t('invite.exhaustedSubtitle', { timeUntil: timeUntilStr })}
-          </p>
-        </div>
-      </Card>
-    );
-  }
+  const { userId } = await getProfileContext();
+  const incomingCount = userId
+    ? await getIncomingFriendRequestCount(userId)
+    : 0;
+  const hasIncoming = incomingCount > 0;
 
   return (
-    <Card>
-      <div className="mb-3">
-        <h2 className="font-serif text-base font-medium text-text mb-0.5">
-          {t('invite.heading')}
-        </h2>
-        <p className="text-sm text-muted">{t('invite.subtitle')}</p>
-      </div>
-      <InviteFriendForm action={sendFriendInvite} />
-    </Card>
+    <SmartLink
+      href="/profile/venner"
+      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    >
+      <Card className="min-h-[44px] flex items-center justify-between gap-3 hover:border-primary/30 transition-colors p-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="font-serif text-base font-medium text-text">
+              {t('friendsRow')}
+            </h2>
+            {hasIncoming && (
+              <span
+                aria-hidden="true"
+                className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-accent px-1.5 py-0.5 font-sans text-[11px] font-semibold tabular-nums text-bg"
+              >
+                {incomingCount > 9 ? '9+' : incomingCount}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-muted mt-0.5">
+            {hasIncoming
+              ? t('friendsBadgeSublabel', { count: incomingCount })
+              : t('friendsSublabel')}
+          </p>
+        </div>
+        <span aria-hidden className="text-muted shrink-0">
+          →
+        </span>
+      </Card>
+    </SmartLink>
   );
 }

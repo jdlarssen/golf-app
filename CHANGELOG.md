@@ -17,6 +17,33 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.137.y — Én dør til vennene
+
+Profilen har nå én vei til vennene dine i stedet for to, og kortet lyser opp når noen vil bli venn med deg.
+
+### [1.137.0] - 2026-06-23 · #870
+
+> Profilen hadde to dører til det samme — et invitér-kort og en Venner-rad. Nå er det ett «Venner»-kort, og det får et merke når noen har sendt deg en venneforespørsel. Alt om venner bor på Venner-siden, som inviterer på e-post helt som før.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `app/[locale]/profile/page.tsx`: `InviteAFriendCard` + «Venner»-`SettingRow` erstattet av ett tappbart `VennerCard` i samme slot. Kortet viser et champagne-merke + plural-undertittel når det finnes innkommende venneforespørsler (badge `aria-hidden`; undertittelen bærer tallet for skjermlesere). «Sosialt»-seksjonen er fjernet (tom etter flyttingen).
+
+#### Added
+
+- `lib/friends/getIncomingFriendRequestCount.ts`: slankt admin-client count-kall (`friendships` der `addressee_id = meg` og `status = 'pending'`) — ikke hele `getFriendData`-fan-out-en. Best-effort → 0 ved feil.
+- `messages/no.json` + `messages/en.json`: `profile.friendsBadgeSublabel` (ICU plural).
+
+#### Removed
+
+- `app/[locale]/profile/InviteFriendForm.tsx`: dødt etter at invitér-kortet ble fjernet. Venner-sidens «legg til på e-post» dekker invitasjon (faller selv tilbake til invitasjon når adressen ikke er på Tørny), så ingen funksjonalitet tapt. `sendFriendInvite`-handlingen er uendret (brukes fortsatt av Venner-siden).
+- Døde profil-nøkler: `invite`, `inviteForm`, `inviteSentBanner`, `inviteErrors`, `sectionSocial` (begge kataloger).
+
+</details>
+
 ## 1.136.y — Dine egne tall
 
 Profilen din er ikke lenger bare innstillinger: nå ser du dine egne tall fra runder du har spilt, og den globale tavla har flyttet ut på Hjem som «Toppliste».

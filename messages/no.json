@@ -183,8 +183,6 @@
     "backLabel": "Tilbake til hjem",
     "displayNameFallback": "Profil",
     "updatedBanner": "✓ Profilen din er oppdatert.",
-    "inviteSentBanner": "✓ Invitasjon sendt{email, select, empty {} other { til {email}}}.",
-    "sectionSocial": "Sosialt",
     "sectionPersonal": "Aktivitet",
     "sectionApp": "App",
     "sectionAccount": "Konto",
@@ -193,6 +191,7 @@
     "hcpUpdatedShort": "Oppdatert {dato}",
     "friendsRow": "Venner",
     "friendsSublabel": "Legg til venner og se spillene deres",
+    "friendsBadgeSublabel": "{count, plural, one {1 vil bli venn med deg} other {{count} vil bli venner med deg}}",
     "historikkRow": "Min historikk",
     "exportRow": "Eksporter mine data",
     "exportSublabel": "Last ned alt vi har lagret om deg som en JSON-fil. Dataene er dine å ta med.",
@@ -206,26 +205,10 @@
       "level_invalid": "Ugyldig spillerklasse.",
       "unknown": "Noe gikk galt. Prøv igjen."
     },
-    "inviteErrors": {
-      "email_required": "Du må skrive inn en e-postadresse.",
-      "invalid_email": "Ugyldig e-postadresse.",
-      "already_user": "Denne personen er allerede på Tørny. Be admin om å legge dem til et spill.",
-      "already_invited": "Denne adressen er allerede invitert. Du trenger ikke gjøre noe mer.",
-      "disposable_email": "Engangs-e-post går ikke. Be vennen om en vanlig e-postadresse.",
-      "quota": "Du har brukt opp dagens kvote.",
-      "rate_limited": "Vent litt før du prøver igjen.",
-      "unknown": "Noe gikk galt med invitasjonen. Prøv igjen."
-    },
     "genderPrompt": {
       "heading": "Velg kjønn for tee-anbefaling",
       "body": "Tørny vet ikke hvilken tee du normalt spiller fra. Sett det her, så går det raskere når noen oppretter et spill du skal være med på.",
       "cta": "Sett kjønn"
-    },
-    "invite": {
-      "heading": "Invitér en venn",
-      "exhaustedSubtitle": "Ny invitasjon om ~{timeUntil}",
-      "exhaustedSoon": "snart",
-      "subtitle": "Dra med kompiser inn på Tørny"
     },
     "form": {
       "nameLabel": "Navn",
@@ -251,12 +234,6 @@
       "savePending": "Lagrer …",
       "saveButton": "Lagre",
       "saveHint": "Lagre blir aktiv når du endrer noe."
-    },
-    "inviteForm": {
-      "emailLabel": "E-post",
-      "emailPlaceholder": "venn@epost.no",
-      "sendPending": "Sender …",
-      "sendButton": "Send"
     },
     "deleteAccount": {
       "kicker": "Slett konto",
