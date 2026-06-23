@@ -60,7 +60,7 @@ type Group = {
 const GROUPS: readonly Group[] = [
   {
     title: 'Hovedkonkurranser',
-    hint: 'Bjelkene i sideturneringen — flest poeng å hente.',
+    hint: 'Bjelkene i sideturneringen. Her er det flest poeng å hente.',
     rows: [
       {
         key: 'best_netto_18',
@@ -156,7 +156,7 @@ const GROUPS: readonly Group[] = [
   },
   {
     title: 'Moderat',
-    hint: 'Volum og litt-mindre-sjeldne ferdigheter.',
+    hint: 'Volum og litt mindre sjeldne ferdigheter.',
     rows: [
       {
         key: 'best_brutto_f9',
@@ -234,7 +234,7 @@ const GROUPS: readonly Group[] = [
   },
   {
     title: 'Bragder',
-    hint: 'Bonuser som stables — kan utløses flere ganger samme runde.',
+    hint: 'Bonuser som stables. De kan utløses flere ganger i samme runde.',
     rows: [
       {
         key: 'turkey',
@@ -264,7 +264,7 @@ const GROUPS: readonly Group[] = [
   },
   {
     title: 'Minuspoeng',
-    hint: 'Humor og uflaks — gir trekk fra totalen.',
+    hint: 'Humor og uflaks. Gir trekk fra totalen.',
     rows: [
       {
         key: 'snowman',
@@ -404,7 +404,7 @@ export function SideCategoriesPicker({
         </div>
         <p className="text-xs text-muted">
           Velg hvilke kategorier som gjelder for runden. Bytt forhåndsvalg for
-          å komme raskt i gang — bryterne under følger med.
+          å komme raskt i gang, så følger bryterne under med.
         </p>
       </div>
 
@@ -438,10 +438,10 @@ export function SideCategoriesPicker({
                         onChange={() => toggleRow(row.ids)}
                         className="h-5 w-5 shrink-0 rounded border-border text-primary focus:ring-accent/40 disabled:cursor-not-allowed"
                       />
-                      <span className="flex-1 text-sm text-text">
+                      <span className="flex-1 text-pretty text-sm leading-snug text-text">
                         {row.label}
                       </span>
-                      <span className="shrink-0 font-sans text-xs tabular-nums text-muted">
+                      <span className="shrink-0 whitespace-nowrap font-sans text-xs tabular-nums text-muted">
                         {row.pointsLabel}
                       </span>
                     </label>

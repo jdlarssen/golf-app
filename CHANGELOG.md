@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.4] - 2026-06-23 · #910
+
+> Hjelpetekstene i sideturnering-velgeren er ryddet, og lange kategorinavn brytes nå pent i stedet for å krasje inn i poeng-kolonnen til høyre.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `components/admin/SideCategoriesPicker.tsx`: em-dash-kjeder i gruppe-hintene (Hovedkonkurranser, Bragder, Minuspoeng) og preset-hjelpeteksten splittet til punktum/komma; «litt-mindre-sjeldne» avhyfenert. Kjørt gjennom `humanizer`-skillet.
+- `components/admin/SideCategoriesPicker.tsx`: kategori-rad-layouten tåler nå lange navn — navn-spennet får `text-pretty leading-snug`, poeng-labelen `whitespace-nowrap` så den aldri brytes inn i navnet.
+
+</details>
+
 ### [1.140.3] - 2026-06-23 · #904
 
 > Spill-detaljsida hadde to seksjoner med samme overskrift «Påmelding» rett etter hverandre. Det øverste kortet med tall (spillere, leverte, lag) heter nå «Oversikt», så det er lettere å se hva som er hva.
