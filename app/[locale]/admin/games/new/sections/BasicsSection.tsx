@@ -9,7 +9,7 @@
  * løfter advanced-blokken inn i AdvancedSettingsSection istedenfor.
  */
 
-import { useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import type { CourseOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
@@ -32,11 +32,6 @@ type Props = {
    */
   showAdvancedInline?: boolean;
 };
-
-/** No-op subscribe: the `min` value is read once per render, never pushed. */
-function subscribeNever(): () => void {
-  return () => {};
-}
 
 /** Current browser-local wall-clock as a `datetime-local` `min` ('YYYY-MM-DDTHH:mm'). */
 function getLocalDatetimeMin(): string {
@@ -87,17 +82,19 @@ export function BasicsSection({
     initialCtpCount,
   } = state;
 
-  // #902: nudge the native datetime-local picker away from past tee-offs. The
-  // server snapshot is `undefined` (no `min` in the SSR HTML) and the client
-  // snapshot is the current browser-local wall-clock, so useSyncExternalStore
-  // hydrates without a mismatch — React expects the two to differ. Browser-local
-  // is correct here (the user's device, not the UTC server). UX hint only; the
+  // #902: nudge the native datetime-local picker away from past tee-offs by
+  // setting `min` to "now". Done imperatively in an effect (after mount) rather
+  // than as a render prop: the SSR HTML carries no `min`, so adding it
+  // client-side avoids a hydration mismatch, and a direct DOM write keeps it out
+  // of React state (no `react-hooks/set-state-in-effect`). Browser-local is
+  // correct here — it's the user's device, not the UTC server. UX hint only; the
   // server action in actions.ts is the authoritative guard.
-  const minTeeOff = useSyncExternalStore(
-    subscribeNever,
-    getLocalDatetimeMin,
-    () => undefined,
-  );
+  useEffect(() => {
+    const el = document.getElementById(
+      'scheduled_tee_off_at',
+    ) as HTMLInputElement | null;
+    if (el) el.min = getLocalDatetimeMin();
+  }, []);
 
   return (
     <section className="space-y-4">
@@ -183,7 +180,6 @@ export function BasicsSection({
         label={t('teeOffLabel')}
         value={scheduledTeeOffAt}
         onChange={(e) => setScheduledTeeOffAt(e.target.value)}
-        min={minTeeOff}
         hint={t('teeOffHint')}
         // iOS: native datetime-local ignorerer width:100% og strekker seg
         // utenfor kortet. appearance-none + min-w-0 krymper kontrollen til

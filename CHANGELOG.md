@@ -32,7 +32,7 @@ Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de 
 
 - Past-tee-off-guard på opprett- og edit-flyten (#902): publisering (`createGameInternal`) og publisering/oppdatering av et `scheduled` spill (`updateGameInternal`) avvises nå med ny `tee_off_in_past`-feil (no/en) hvis tee-off ligger mer enn 5 minutter bak «nå». Server er autoritativ (AGENTS.md felle #3); grace-marginen slipper gjennom «start runden nå»-flyten + skjema-latens. Draft/`save_draft` er unntatt — de er ikke live ennå.
 - Delt ren helper `isTeeOffInPast(iso, nowMs)` + `TEE_OFF_PAST_GRACE_MS` i `lib/games/gamePayload.ts`, importert av begge action-sitene så de er enige per konstruksjon (AGENTS.md felle #4). 9 unit-tester for grace-grensen + ett wiring-case per action-site.
-- `datetime-local`-feltet i `BasicsSection.tsx` har nå `min` satt til «nå» (via `useSyncExternalStore` for hydrerings-sikkerhet) så den native velgeren motvirker fortidsvalg. UX-hint; server-guarden er det egentlige vernet.
+- `datetime-local`-feltet i `BasicsSection.tsx` har nå `min` satt til «nå» (imperativt i en `useEffect` etter mount, så SSR-HTML-en uten `min` hydrerer uten mismatch) så den native velgeren motvirker fortidsvalg. UX-hint; server-guarden er det egentlige vernet.
 
 </details>
 
