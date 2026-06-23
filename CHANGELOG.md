@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.2] - 2026-06-23 · #905
+
+> Et spill som venter på start viser ikke lenger «Levert 0/N» eller en tom banehandicap-kolonne. Spillerne står nå som «Påmeldt» helt til du trykker «Start runden nå», så detaljsida lover ikke noe som ikke gir mening ennå.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- `app/[locale]/admin/games/[id]/page.tsx`: tre felt som først er meningsfulle etter runde-start gates nå på `isPlayPhase` (`active`/`finished`): «Levert scorekort»-raden, «Banehcp»-kolonnen (header + celle) og banehandicap-verdien. På `scheduled` får hver spiller en egen «Påmeldt»-status i stedet for «⏳ Spiller».
+- `messages/no.json` + `messages/en.json`: `admin.game.detail.colCH` «CH» → «Banehcp» / «Course HCP» (krypterte forkortelser ut, jf. #614); ny `admin.game.detail.statusScheduled` = «Påmeldt» / «Enrolled».
+
+</details>
+
 ### [1.140.1] - 2026-06-23 · #918
 
 > Når et spill er avsluttet, maser ikke status-sida lenger om å purre spillere som ikke har bekreftet. Spillere som spilte ferdig uten å levere scorekortet vises nå som et rolig «Ikke levert», ikke et gult varsel. Scorene deres teller allerede i resultatet.

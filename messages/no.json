@@ -2662,6 +2662,7 @@
         "statusWithdrawn": "Trukket",
         "statusNotSubmitted": "Ikke levert",
         "statusPlaying": "⏳ Spiller",
+        "statusScheduled": "Påmeldt",
         "statusWaiting": "⏳ Venter",
         "statusSubmitted": "✓ Levert",
         "undoWithdraw": "Angre",
@@ -2673,7 +2674,7 @@
         "colName": "Navn",
         "colTeam": "{label}",
         "colFlight": "Flight",
-        "colCH": "CH",
+        "colCH": "Banehcp",
         "colStatus": "Status"
       },
       "banners": {

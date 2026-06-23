@@ -515,6 +515,9 @@ async function PlayersSections({
 
   const teamCount = [1, 2, 3, 4].filter((t) => byTeam[t].length > 0).length;
   const submittedCount = rankablePlayers.filter((p) => p.submitted_at != null).length;
+  // Banehandicap fryses + scorekort kan leveres først ved «Start runden nå».
+  // Skjul levering/CH og bruk en egen «Påmeldt»-status før det (#905).
+  const isPlayPhase = game.status === 'active' || game.status === 'finished';
 
   return (
     <>
@@ -525,19 +528,20 @@ async function PlayersSections({
           value={`${players.length}`}
           tone={players.length > 0 ? 'full' : undefined}
         />
-        <Row
-          label={tRows('submittedScorecard')}
-          value={`${submittedCount} / ${rankablePlayers.length}`}
-          sub={
-            notSubmittedCount > 0
-              ? game.status === 'finished'
-                ? tRows('notSubmittedFinished', { count: notSubmittedCount })
-                : game.status === 'active'
-                  ? tRows('notSubmittedWaiting', { count: notSubmittedCount })
-                  : undefined
-              : undefined
-          }
-        />
+        {/* #905: levering gir først mening etter start — skjul på draft/scheduled. */}
+        {isPlayPhase && (
+          <Row
+            label={tRows('submittedScorecard')}
+            value={`${submittedCount} / ${rankablePlayers.length}`}
+            sub={
+              notSubmittedCount > 0
+                ? game.status === 'finished'
+                  ? tRows('notSubmittedFinished', { count: notSubmittedCount })
+                  : tRows('notSubmittedWaiting', { count: notSubmittedCount })
+                : undefined
+            }
+          />
+        )}
         {!isSolo && (
           <Row label={isMatchplay ? tRows('teamCount') : tRows('teamCountDefault')} value={`${teamCount} / ${teamsMax}`} />
         )}
@@ -807,7 +811,11 @@ async function PlayersSections({
                   {isBestBall && (
                     <th className="px-2 py-1.5 font-semibold">{tDetail('colFlight')}</th>
                   )}
-                  <th className="px-2 py-1.5 text-right font-semibold">{tDetail('colCH')}</th>
+                  {/* #905: banehandicap fryses først ved start — skjul kolonnen
+                      til den faktisk har verdier (active/finished). */}
+                  {isPlayPhase && (
+                    <th className="px-2 py-1.5 text-right font-semibold">{tDetail('colCH')}</th>
+                  )}
                   {game.status !== 'draft' && (
                     <th className="px-2 py-1.5 font-semibold">{tDetail('colStatus')}</th>
                   )}
@@ -820,6 +828,12 @@ async function PlayersSections({
                   // Withdrawn (#386): WD takes precedence over all other states.
                   if (p.withdrawn_at) {
                     statusLabel = tDetail('statusWithdrawn');
+                    statusClass = 'text-muted';
+                  } else if (game.status === 'scheduled') {
+                    // #905: før start spiller ingen ennå — de er påmeldt og venter
+                    // på «Start runden nå». «Ikke bekreftet»-badgen dekker
+                    // ubekreftede separat ved siden av navnet.
+                    statusLabel = tDetail('statusScheduled');
                     statusClass = 'text-muted';
                   } else if (!p.submitted_at) {
                     // På avsluttet spill leverte spilleren aldri scorekortet
@@ -869,9 +883,11 @@ async function PlayersSections({
                       {isBestBall && (
                         <td className="px-2 py-2 text-text">{p.flight_number}</td>
                       )}
-                      <td className="px-2 py-2 text-right text-text">
-                        {p.course_handicap ?? '—'}
-                      </td>
+                      {isPlayPhase && (
+                        <td className="px-2 py-2 text-right text-text">
+                          {p.course_handicap ?? '—'}
+                        </td>
+                      )}
                       {game.status !== 'draft' && (
                         <td className={`px-2 py-2 text-xs ${statusClass}`}>
                           <div className="flex items-center gap-2">
