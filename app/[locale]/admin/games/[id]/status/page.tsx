@@ -101,6 +101,11 @@ export default async function GameStatusPage({
   const players = playersRes.data ?? [];
   const scores = scoresRes.data ?? [];
 
+  const isActive = game.status === 'active';
+  // På avsluttet spill roes leverings-rammingen ned (#918): «ikke levert» blir
+  // et nøytralt historisk faktum, ikke en ventende handling.
+  const isFinished = game.status === 'finished';
+
   // Aggreger per spiller: antall hull med registrert slag + siste registrering
   // (max updated_at). Ingen strokes-verdier hentes — ingen spoiler.
   const filledByUser = new Map<string, number>();
@@ -132,14 +137,20 @@ export default async function GameStatusPage({
         acceptedAt: p.accepted_at,
       };
     })
-    .sort(
-      (a, b) =>
-        SORT_ORDER[a.status] - SORT_ORDER[b.status] ||
-        a.name.localeCompare(b.name, 'nb'),
+    .sort((a, b) =>
+      // Avsluttet: rolig alfabetisk oversikt — ingen accent-topp-sortering av
+      // ferdig-ikke-levert (#918). Aktivt: purre-kandidater øverst.
+      isFinished
+        ? a.name.localeCompare(b.name, 'nb')
+        : SORT_ORDER[a.status] - SORT_ORDER[b.status] ||
+          a.name.localeCompare(b.name, 'nb'),
     );
 
   const statusLabels: Record<DeliveryStatus, { label: string; className: string }> = {
-    ready_not_delivered: { label: t('statusLabels.ready_not_delivered'), className: 'text-accent' },
+    // Avsluttet (#918): «Ikke levert» som nøytralt faktum (muted), ikke accent-varsel.
+    ready_not_delivered: isFinished
+      ? { label: tDetail('statusNotSubmitted'), className: 'text-muted' }
+      : { label: t('statusLabels.ready_not_delivered'), className: 'text-accent' },
     pending_approval: { label: t('statusLabels.pending_approval'), className: 'text-warning' },
     playing: { label: t('statusLabels.playing'), className: 'text-muted' },
     not_started: { label: t('statusLabels.not_started'), className: 'text-muted' },
@@ -156,7 +167,6 @@ export default async function GameStatusPage({
     (p) => p.accepted_at == null && !p.withdrawn_at,
   ).length;
 
-  const isActive = game.status === 'active';
   const remindAction = remindUnsubmittedPlayers.bind(null, id);
   const remindUnconfirmedAction = remindUnconfirmedPlayers.bind(null, id);
 
@@ -180,7 +190,7 @@ export default async function GameStatusPage({
         </h1>
         <p className="mt-1 font-sans text-xs tabular-nums text-muted">
           {t('deliveredSummary', { delivered: deliveredCount, total: rankable.length })}
-          {targetCount > 0 && ` ${t('readyMissingDelivery', { count: targetCount })}`}
+          {!isFinished && targetCount > 0 && ` ${t('readyMissingDelivery', { count: targetCount })}`}
         </p>
       </div>
 
@@ -231,8 +241,9 @@ export default async function GameStatusPage({
         </section>
       )}
 
-      {/* Ubekreftet-purre-seksjon — kun spill med ubekreftede spillere. */}
-      {unconfirmedCount > 0 && (
+      {/* Ubekreftet-purre-seksjon — kun aktive spill med ubekreftede spillere (#918).
+          På avsluttet/scheduled spill er det ingen handling igjen å purre. */}
+      {isActive && unconfirmedCount > 0 && (
         <section className="mt-3">
           <div className="rounded-xl border border-border bg-surface px-4 py-4">
             <p className="mb-3 font-sans text-[13px] leading-relaxed text-muted">
@@ -287,7 +298,7 @@ export default async function GameStatusPage({
                     <p
                       className={`font-sans text-[12px] font-semibold ${meta.className}`}
                     >
-                      {isTarget ? '⚠️ ' : ''}
+                      {isTarget && !isFinished ? '⚠️ ' : ''}
                       {meta.label}
                     </p>
                     <p className="mt-0.5 font-sans text-[11px] tabular-nums text-muted">

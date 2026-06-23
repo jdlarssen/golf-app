@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
 
+### [1.140.1] - 2026-06-23 · #918
+
+> Når et spill er avsluttet, maser ikke status-sida lenger om å purre spillere som ikke har bekreftet. Spillere som spilte ferdig uten å levere scorekortet vises nå som et rolig «Ikke levert», ikke et gult varsel. Scorene deres teller allerede i resultatet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- `app/[locale]/admin/games/[id]/status/page.tsx`: ubekreftet-purre-seksjonen manglet `isActive`-vakten som leverings-purren allerede hadde, så «Purr N ubekreftet spiller» dukket opp også på avsluttede (og scheduled) spill. Gated nå på `isActive`.
+
+#### Changed
+
+- `app/[locale]/admin/games/[id]/status/page.tsx`: på avsluttede spill roes leverings-rammingen ned. `ready_not_delivered` vises som muted «Ikke levert» (gjenbruker `admin.game.detail.statusNotSubmitted`, matcher detalj-sida) uten ⚠️ og uten accent-topp-sortering, og oppsummeringens «N ferdig mangler levering»-suffiks droppes. Lista sorteres alfabetisk i stedet for purre-kandidat-først. Aktive spill er uendret.
+
+</details>
+
 ### [1.140.0] - 2026-06-23 · #914
 
 > Klubbhuset viser nå tallene rett på flisene: Spill får et merke når noen venter på handling, Spillere når invitasjoner venter på svar. Veggen er også ryddet — de fire flisene du bruker daglig (Spill, Spillere, Baner, Resultatprotokoll) står stort øverst, resten ligger samlet under «Mer i Sekretariatet».
