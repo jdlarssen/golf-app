@@ -41,6 +41,7 @@ import {
 } from '@/lib/games/getActiveGameCardData';
 import type { ActiveCardState } from '@/lib/games/activeCardState';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import type { GameStatus } from '@/lib/games/status';
 import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
@@ -185,6 +186,10 @@ async function HomeBody() {
     // works in the narrower GameMode union. The query never broadens it at
     // runtime, so bridge the type here (honest cast at the data boundary).
     game_mode: row.games.game_mode as GameMode,
+    // The query filters status to draft/scheduled/active, so a finished game
+    // never reaches the StatusPill — narrow the type to match the runtime
+    // invariant (and to keep the pill's prop type free of the dead branch).
+    status: row.games.status as Exclude<GameStatus, 'finished'>,
     // team_number/flight_number are nullable in the schema but always assigned
     // for a joined player; the prior hand-typed GameRow asserted them non-null
     // and the teamFlight label still does — keep that exact assumption here.
@@ -592,7 +597,10 @@ function StatusPill({
   status,
   label,
 }: {
-  status: 'draft' | 'scheduled' | 'active' | 'finished';
+  // The Home query only surfaces draft/scheduled/active games, so this pill is
+  // never asked to render a finished one — the type excludes it so a future
+  // mis-use is a tsc error, not a silently-dead branch.
+  status: Exclude<GameStatus, 'finished'>;
   label: string;
 }) {
   const classes =
@@ -603,9 +611,8 @@ function StatusPill({
           // green reads as «done/ok» and made a waiting round look finished.
           // Calm forest tone signals «informative, upcoming» instead.
           'bg-primary-soft text-primary border-primary/20'
-        : status === 'draft'
-          ? 'bg-warning/10 text-warning border-warning/30'
-          : 'bg-border/40 text-muted border-border';
+        : // draft — the only remaining status (finished never reaches this pill).
+          'bg-warning/10 text-warning border-warning/30';
   return (
     <span
       className={`inline-flex items-center text-[10px] font-medium uppercase tracking-widest px-2 py-0.5 rounded-full border ${classes}`}
