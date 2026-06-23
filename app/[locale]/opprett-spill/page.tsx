@@ -16,6 +16,7 @@ import {
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
 import { getRoleContext } from '@/lib/admin/auth';
+import { parseIntent, type Intent } from '@/lib/wizard/intent';
 import {
   getFormatsForIntent,
   getCupEligibleFormats,
@@ -36,6 +37,8 @@ type SearchParams = Promise<{
   emails?: string | string[];
   // #442: klubb-side kan dyplenke med forhåndsvalgt klubb.
   klubb?: string | string[];
+  // #892: Klubbhuset kan dyplenke «… eller en cup» med ?intent=cup.
+  intent?: string | string[];
 }>;
 
 export default async function OpprettSpillPage({
@@ -71,6 +74,11 @@ export default async function OpprettSpillPage({
 
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
+  // #892: en eksplisitt ?intent= (f.eks. cup fra Klubbhusets «… eller en cup»)
+  // vinner; ellers er en ?klubb=-dyplenke per definisjon en klubb-arrangement-flyt.
+  const initialIntent: Intent | undefined =
+    parseIntent(first(sp.intent)) ?? (first(sp.klubb) ? 'klubb' : undefined);
+
   return (
     <AppShell>
       <TopBar backHref="/" kicker={t('createDoor.kicker')} />
@@ -99,6 +107,7 @@ export default async function OpprettSpillPage({
           <Suspense fallback={<GameFormSkeleton />}>
             <GameFormBody
               defaultGroupId={first(sp.klubb)}
+              initialIntent={initialIntent}
               userId={currentUserId}
               isAdmin={isAdmin}
             />
@@ -141,10 +150,12 @@ async function PlayerShortageBanner() {
 
 async function GameFormBody({
   defaultGroupId,
+  initialIntent,
   userId,
   isAdmin,
 }: {
   defaultGroupId: string | undefined;
+  initialIntent: Intent | undefined;
   userId: string;
   isAdmin: boolean;
 }) {
@@ -206,9 +217,9 @@ async function GameFormBody({
       cupEligibleFormats={cupEligibleFormats}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
-      // En ?klubb=-dyplenke er en klubb-arrangement-flyt → pre-velg klubb-intent
+      // #892: eksplisitt intent (cup) vinner; en ?klubb=-dyplenke gir klubb-intent
       // så ClubPicker (kun for klubb-intent) viser den forhåndsvalgte klubben (#50-fix).
-      initialIntent={defaultGroupId ? 'klubb' : undefined}
+      initialIntent={initialIntent}
       friendPlayerIds={friendPlayerIds}
       clubMemberIdsByClub={clubMembers.memberIdsByClub}
       currentUserId={userId}

@@ -2603,18 +2603,22 @@
       "metaFormats": "Styr spillformene i veiviseren",
       "metaKlubber": "Opprett og styr klubber",
       "metaSpillformater": "Bli kjent med formatene",
-      "playerSpill": "Spill",
-      "playerSpillMeta": "Spillene du arrangerer",
       "playerBaner": "Baner",
       "playerBanerMeta": "Legg til en bane",
-      "playerKlubber": "Klubber",
-      "playerKlubberMeta": "Klubbene dine",
       "playerSpillformater": "Spillformater",
       "playerSpillformaterMeta": "Bli kjent med formatene",
       "playerGreeting": "Hei, {name}.",
       "playerGreetingNoName": "Hei.",
-      "playerSubtitle": "Sett opp en runde eller legg til en bane.",
-      "playerPullQuote": "En god runde begynner med god planlegging."
+      "playerSubtitle": "Her organiserer du golf og holder kontakt med klubbene dine.",
+      "playerInviteHeading": "Sett opp en runde",
+      "playerInviteOrCup": "… eller en cup",
+      "playerNewRound": "Ny runde",
+      "playerArrangedLabel": "Det du arrangerer",
+      "playerSeeAll": "Se alle",
+      "playerCupRow": "{n, plural, one {Cupen din} other {Cupene dine}} ({n})",
+      "playerClubsLabel": "Dine klubber",
+      "playerNoClub": "Ikke med i en klubb ennå",
+      "playerToolsLabel": "Verktøy"
     },
     "game": {
       "errors": {

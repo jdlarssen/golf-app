@@ -2603,18 +2603,22 @@
       "metaFormats": "Manage game formats in the wizard",
       "metaKlubber": "Create and manage clubs",
       "metaSpillformater": "Get to know the formats",
-      "playerSpill": "Games",
-      "playerSpillMeta": "Games you arrange",
       "playerBaner": "Courses",
       "playerBanerMeta": "Add a course",
-      "playerKlubber": "Clubs",
-      "playerKlubberMeta": "Your clubs",
       "playerSpillformater": "Game formats",
       "playerSpillformaterMeta": "Get to know the formats",
       "playerGreeting": "Hi, {name}.",
       "playerGreetingNoName": "Hi.",
-      "playerSubtitle": "Set up a round or add a course.",
-      "playerPullQuote": "A good round starts with good planning."
+      "playerSubtitle": "Where you organise golf and keep up with your clubs.",
+      "playerInviteHeading": "Set up a round",
+      "playerInviteOrCup": "… or a cup",
+      "playerNewRound": "New round",
+      "playerArrangedLabel": "What you arrange",
+      "playerSeeAll": "See all",
+      "playerCupRow": "{n, plural, one {Your cup} other {Your cups}} ({n})",
+      "playerClubsLabel": "Your clubs",
+      "playerNoClub": "Not in a club yet",
+      "playerToolsLabel": "Tools"
     },
     "game": {
       "errors": {

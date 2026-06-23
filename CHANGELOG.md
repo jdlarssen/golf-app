@@ -17,6 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.141.y — Spillerens klubbhus
+
+Klubbhuset møter deg nå som spiller: en invitasjon til å arrangere, klubbene dine og det du selv har satt opp, i stedet for en flis-katalog som var tom hvis du aldri arrangerer.
+
+### [1.141.0] - 2026-06-24 · #892
+
+> Klubbhuset er bygget om for deg som mest blir med på spill. Før møtte du en «Spill»-flis som var tom hvis du aldri arrangerte noe selv. Nå får du en invitasjon til å sette opp en runde, klubbene dine listet rett opp, og spillene og cupene dine hvis du arrangerer. Blir du bare med på spill, ser du et rolig rom uten blindveier.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- Spiller-Klubbhuset (`/admin` for ikke-admin) er bygget om fra en statisk flis-katalog til et **adaptivt rom** (#892). Rommet varierer kun på to fakta: har du klubber, og har du opprettet noe spill/cup. Seksjoner: hilsen (umiddelbar paint) → arrangement-blokk → Dine klubber → Verktøy.
+  - **0 opprettet spill →** hero-invitasjon «Sett opp en runde» (+ «… eller en cup»). **≥1 →** rolig «+ Ny runde»-affordance over en capped liste (inntil 4, «Se alle →» til `/klubbhuset` ved flere) av spillene du arrangerer.
+  - **Cup-rad** «Cupene dine (n) →» dukker opp når du har ≥1 personlig cup, uavhengig av spill (løser discoverability for personlige cuper, #10).
+  - **Dine klubber:** inline liste via `getMyClubs` (én rad per klubb → `/klubber/[id]`); 0 klubber gir en diskret «Ikke med i en klubb ennå →»-linje. **Verktøy:** Baner + Spillformater, nedtonet nederst.
+  - Arrangement-blokken og klubb-lista strømmer bak hver sin `<Suspense>`; hilsen + Verktøy paint umiddelbart. Request-scoped klient hele veien (RLS 0071 + select-own), ingen admin-tellinger i spiller-rommet. `ClubStamp` + pull-quote droppet på spiller-visningen.
+
+#### Added
+
+- `app/[locale]/admin/PlayerKlubbhus.tsx` (rom + seksjons-fetchere) + `PlayerKlubbhusViews.tsx` (presentational views) + `PlayerKlubbhus.test.tsx` (én Type-C render-test, tre personaer). Tile-primitivene trukket ut til `app/[locale]/admin/TilesView.tsx` så både admin-griden og Verktøy deler dem uten å dra `server-only`-avhengigheter inn i testen.
+- `/opprett-spill?intent=cup`-dyplenke: «… eller en cup» lander rett på cup-skjemaet. Eksplisitt `?intent=` vinner over `?klubb=` (som fortsatt pre-velger klubb-intent).
+
+#### Removed
+
+- Ubrukte i18n-nøkler `playerSpill`/`playerSpillMeta`/`playerKlubber`/`playerKlubberMeta`/`playerPullQuote` (begge locales).
+
+</details>
+
 ## 1.140.y — Tall på flisene
 
 Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
