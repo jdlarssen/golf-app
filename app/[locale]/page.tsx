@@ -1,5 +1,10 @@
 import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
+import {
+  type QueryData,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { redirect } from '@/i18n/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -106,6 +111,26 @@ export default async function Home({
 
 // ─── Body ────────────────────────────────────────────────────────────────
 
+// The viewer's open games (draft/scheduled/active) with the embedded game +
+// course. Defined as a query thunk so `GameRow` is DERIVED from the select
+// string via `QueryData` — the select string is the single source of truth,
+// so dropping a column tsc-fails its consumer instead of silently drifting
+// (AGENTS.md trap #1, the class that drove #641/#647). `game_status` comes
+// through as the generated enum, which keeps the StatusPill union honest.
+const activeGamesQuery = (
+  supabase: SupabaseClient<Database>,
+  userId: string,
+) =>
+  supabase
+    .from('game_players')
+    .select(
+      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name))',
+    )
+    .eq('user_id', userId)
+    .in('games.status', ['draft', 'scheduled', 'active']);
+
+type GameRow = QueryData<ReturnType<typeof activeGamesQuery>>[number];
+
 async function HomeBody() {
   const { supabase, userId } = await getHomeContext();
   const locale = (await getLocale()) as AppLocale;
@@ -114,28 +139,6 @@ async function HomeBody() {
   // #878: reuse the spill-hjem peer-approval strings (pendingApprovals/reviewLink)
   // for the Home nudge — same wording, one source of truth.
   const tGameHome = await getTranslations('game.home');
-
-  type GameRow = {
-    game_id: string;
-    team_number: number;
-    flight_number: number;
-    // #878: the viewer's own per-player lifecycle on this game — drives the
-    // state-aware «Pågår nå» card label (Fortsett / Levert / Til godkjenning /
-    // Trukket) and the peer-approval nudge.
-    submitted_at: string | null;
-    withdrawn_at: string | null;
-    approved_at: string | null;
-    games: {
-      id: string;
-      name: string;
-      status: 'draft' | 'scheduled' | 'active' | 'finished';
-      ended_at: string | null;
-      scheduled_tee_off_at: string | null;
-      require_peer_approval: boolean;
-      game_mode: GameMode;
-      courses: { name: string } | null;
-    } | null;
-  };
 
   // Parallel-fetch profile, active games, finished games — they don't depend
   // on each other and roughly triple-tripled the latency when run serially.
@@ -148,14 +151,7 @@ async function HomeBody() {
         )
         .eq('id', userId!)
         .single(),
-      supabase
-        .from('game_players')
-        .select(
-          'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name))',
-        )
-        .eq('user_id', userId!)
-        .in('games.status', ['draft', 'scheduled', 'active'])
-        .returns<GameRow[]>(),
+      activeGamesQuery(supabase, userId!),
       // #571: finished games via the shared helper (same fetch the /spill-arkiv
       // page uses), already filtered + sorted newest-first (byEndedAtDesc).
       getFinishedGamesForUser(supabase, userId!),
@@ -183,18 +179,21 @@ async function HomeBody() {
     throw rawActiveRes.error;
   }
 
-  const activeGames = (rawActiveRes.data ?? [])
-    .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
-      row.games != null,
-    )
-    .map((row) => ({
-      ...row.games,
-      teamNumber: row.team_number,
-      flightNumber: row.flight_number,
-      submitted_at: row.submitted_at,
-      withdrawn_at: row.withdrawn_at,
-      approved_at: row.approved_at,
-    }));
+  const activeGames = (rawActiveRes.data ?? []).map((row: GameRow) => ({
+    ...row.games,
+    // The generated types widen `games.game_mode` to plain `string`; the app
+    // works in the narrower GameMode union. The query never broadens it at
+    // runtime, so bridge the type here (honest cast at the data boundary).
+    game_mode: row.games.game_mode as GameMode,
+    // team_number/flight_number are nullable in the schema but always assigned
+    // for a joined player; the prior hand-typed GameRow asserted them non-null
+    // and the teamFlight label still does — keep that exact assumption here.
+    teamNumber: row.team_number as number,
+    flightNumber: row.flight_number as number,
+    submitted_at: row.submitted_at,
+    withdrawn_at: row.withdrawn_at,
+    approved_at: row.approved_at,
+  }));
 
   const isEmptyState =
     activeGames.length === 0 && finishedGames.length === 0;
