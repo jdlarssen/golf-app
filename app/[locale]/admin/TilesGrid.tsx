@@ -19,6 +19,7 @@ import { firstName } from '@/lib/firstName';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { type AdminRoleContext } from '@/lib/admin/auth';
+import { getActionItemCounts, totalActionableGames } from '@/lib/admin/actionItems';
 import { getAdminContext } from './_dashboardContext';
 
 // ─── Tile grid ───────────────────────────────────────────────────────────
@@ -30,6 +31,8 @@ export type Tile = {
   meta: string;
   icon: TileIconKind;
   accent?: boolean;
+  /** Optional count surfaced as a champagne pill top-right (capped «9+»). */
+  badge?: number;
 };
 
 export async function TilesGrid() {
@@ -51,6 +54,7 @@ export async function TilesGrid() {
     lastPublishedRes,
     activeCupsRes,
     activeLeaguesRes,
+    actionCounts,
   ] = await Promise.all([
     supabase
       .from('games')
@@ -88,6 +92,9 @@ export async function TilesGrid() {
       .from('leagues')
       .select('id', { count: 'exact', head: true })
       .in('status', ['draft', 'active']),
+    // #914: Spill-tile badge. cache()-delt med «Krever handling»-stripa (#864),
+    // så dette er samme query-runde — ikke en ekstra round-trip.
+    getActionItemCounts(),
   ]);
 
   const activeCount = activeGamesRes.count ?? 0;
@@ -102,14 +109,19 @@ export async function TilesGrid() {
   )?.created_at;
   const activeCupCount = activeCupsRes.count ?? 0;
   const activeLeagueCount = activeLeaguesRes.count ?? 0;
+  const actionableGames = totalActionableGames(actionCounts);
 
-  const tiles: Tile[] = [
+  // #914: tier the wall — the everyday core loop keeps full cards; the rest
+  // moves to a denser «Mer i Sekretariatet»-section below. Everything stays
+  // visible (one door per room — no door is hidden).
+  const coreTiles: Tile[] = [
     {
       label: t('tilesSpill'),
       href: '/admin/games',
       meta: t('metaActiveAndPlanned', { active: activeCount, planned: plannedCount }),
       icon: 'flagg',
       accent: true,
+      badge: actionableGames,
     },
     {
       label: t('tilesSpillere'),
@@ -121,6 +133,7 @@ export async function TilesGrid() {
             ? t('metaRegisteredPending', { n: userCount, pending: pendingInvites })
             : t('metaRegistered', { n: userCount }),
       icon: 'konvolutt',
+      badge: pendingInvites,
     },
     {
       label: t('tilesBaner'),
@@ -139,14 +152,9 @@ export async function TilesGrid() {
         : t('metaNoneSigned'),
       icon: 'pokal',
     },
-    {
-      label: t('tilesLanseringer'),
-      href: '/admin/lanseringer',
-      meta: lastPublishedAt
-        ? t('metaLastPublished', { date: formatShortOsloDayMonthLocale(lastPublishedAt, locale as AppLocale) })
-        : t('metaNonePublished'),
-      icon: 'sparkle',
-    },
+  ];
+
+  const moreTiles: Tile[] = [
     {
       label: t('tilesCuper'),
       href: '/admin/cup',
@@ -165,6 +173,21 @@ export async function TilesGrid() {
           : t('metaActive', { n: activeLeagueCount }),
       icon: 'pokal',
     },
+    {
+      label: t('tilesLanseringer'),
+      href: '/admin/lanseringer',
+      meta: lastPublishedAt
+        ? t('metaLastPublished', { date: formatShortOsloDayMonthLocale(lastPublishedAt, locale as AppLocale) })
+        : t('metaNonePublished'),
+      icon: 'sparkle',
+    },
+    // #50: klubber — admin governance (opprett og styr klubber).
+    {
+      label: t('tilesKlubber'),
+      href: '/admin/klubber',
+      meta: t('metaKlubber'),
+      icon: 'laurbaer',
+    },
     // F3 (#273): admin format-mapping. Mappings + cup-eligibility +
     // active-flagg styres herfra. Meta er statisk (vi har ingen tellbar
     // KPI per d.d. — kan utvides hvis vi vil vise antall aktive formats).
@@ -173,13 +196,6 @@ export async function TilesGrid() {
       href: '/admin/formats',
       meta: t('metaFormats'),
       icon: 'formats',
-    },
-    // #50: klubber — admin governance (opprett og styr klubber).
-    {
-      label: t('tilesKlubber'),
-      href: '/admin/klubber',
-      meta: t('metaKlubber'),
-      icon: 'laurbaer',
     },
     // #500: oppslagsverket — et rolig sted å lese om formatene (flyttet hit fra
     // Hjem; den raske «slik funker det» bor bak «?» i veiviseren).
@@ -191,7 +207,15 @@ export async function TilesGrid() {
     },
   ];
 
-  return <TileGridView tiles={tiles} />;
+  return (
+    <>
+      <TileGridView tiles={coreTiles} />
+      <p className="mt-6 mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        {t('moreInSecretariat')}
+      </p>
+      <CompactTileGrid tiles={moreTiles} />
+    </>
+  );
 }
 
 /**
@@ -206,7 +230,7 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
         <SmartLink
           key={tile.label}
           href={tile.href}
-          className="reveal-up min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="reveal-up relative min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           style={{
             animationDelay: `${60 + i * 70}ms`,
             background: tile.accent ? 'var(--surface-strong)' : 'var(--surface)',
@@ -217,6 +241,7 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
               : '0 1px 2px rgba(26, 46, 31, 0.03)',
           }}
         >
+          {tile.badge ? <TileBadge count={tile.badge} /> : null}
           <div
             className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-[9px]"
             style={{
@@ -244,6 +269,58 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
         </SmartLink>
       ))}
     </div>
+  );
+}
+
+/**
+ * Compact tile grid — the «Mer i Sekretariatet»-section (#914). Same data
+ * shape as TileGridView but a denser single-row layout (icon + label, meta
+ * dropped) so the everyday core cards stay visually dominant. Tap target stays
+ * ≥44px (min-h-[56px]); the champagne badge is supported here too.
+ */
+export function CompactTileGrid({ tiles }: { tiles: Tile[] }) {
+  return (
+    <div className="mb-2 grid grid-cols-2 gap-2.5">
+      {tiles.map((tile, i) => (
+        <SmartLink
+          key={tile.label}
+          href={tile.href}
+          className="reveal-up relative flex min-h-[56px] items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2.5 text-left text-text transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          style={{ animationDelay: `${60 + i * 70}ms` }}
+        >
+          {tile.badge ? <TileBadge count={tile.badge} /> : null}
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px]"
+            style={{ background: 'var(--admin-bg)', color: 'var(--primary)' }}
+          >
+            <TileIcon kind={tile.icon} size={18} />
+          </span>
+          <span className="font-serif text-sm font-medium tracking-[-0.005em]">
+            {tile.label}
+          </span>
+        </SmartLink>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Champagne count pill, top-right of a tile (#914). Reuses the BottomNav-dot
+ * treatment — accent fill, page-bg border to lift it off the card — but carries
+ * a number with `tabular-nums`, capped at «9+». Decorative: the count is also
+ * conveyed by the tile meta / «Krever handling»-stripa, so it's aria-hidden.
+ */
+function TileBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      aria-hidden
+      data-testid="tile-badge"
+      className="absolute right-2.5 top-2.5 flex h-5 min-w-[20px] items-center justify-center rounded-full border-2 border-bg px-1 font-sans text-[11px] font-semibold tabular-nums"
+      style={{ background: 'var(--accent)', color: 'var(--primary)' }}
+    >
+      {count > 9 ? '9+' : count}
+    </span>
   );
 }
 
@@ -331,30 +408,46 @@ export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
 }
 
 export function TilesSkeleton() {
+  // Lockstep with the tiered structure (#914): 4 full core cards, then the
+  // «Mer i Sekretariatet»-label, then 6 compact cards.
   return (
-    <div className="mb-2 grid grid-cols-2 gap-2.5">
-      {Array.from({ length: 10 }).map((_, i) => (
-        <div
-          key={i}
-          className="min-h-[108px] rounded-2xl border border-border bg-surface px-3.5 pt-3.5 pb-3"
-        >
-          <Skeleton className="mb-2.5 h-9 w-9 rounded-[9px]" delay={i * 90} />
-          <Skeleton className="h-4 w-16" delay={i * 90 + 30} />
-          <Skeleton className="mt-1.5 h-3 w-24" delay={i * 90 + 60} />
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="mb-2 grid grid-cols-2 gap-2.5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="min-h-[108px] rounded-2xl border border-border bg-surface px-3.5 pt-3.5 pb-3"
+          >
+            <Skeleton className="mb-2.5 h-9 w-9 rounded-[9px]" delay={i * 90} />
+            <Skeleton className="h-4 w-16" delay={i * 90 + 30} />
+            <Skeleton className="mt-1.5 h-3 w-24" delay={i * 90 + 60} />
+          </div>
+        ))}
+      </div>
+      <Skeleton className="mt-6 mb-1.5 ml-1 h-3 w-32" delay={360} />
+      <div className="mb-2 grid grid-cols-2 gap-2.5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex min-h-[56px] items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2.5"
+          >
+            <Skeleton className="h-8 w-8 shrink-0 rounded-[8px]" delay={i * 90} />
+            <Skeleton className="h-3.5 w-20" delay={i * 90 + 30} />
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
-function TileIcon({ kind }: { kind: TileIconKind }) {
-  if (kind === 'flagg') return <FlaggIcon width={22} height={22} />;
-  if (kind === 'konvolutt') return <KonvoluttIcon width={22} height={22} />;
-  if (kind === 'bane') return <BaneIcon width={22} height={22} />;
-  if (kind === 'sparkle') return <SparkleIcon width={22} height={22} />;
-  if (kind === 'formats') return <FormatsIcon width={22} height={22} />;
-  if (kind === 'laurbaer') return <LaurbaerIcon width={22} height={22} />;
-  if (kind === 'spillformater') return <ScorekortIcon width={22} height={22} />;
-  return <PokalIcon width={22} height={22} />;
+function TileIcon({ kind, size = 22 }: { kind: TileIconKind; size?: number }) {
+  if (kind === 'flagg') return <FlaggIcon width={size} height={size} />;
+  if (kind === 'konvolutt') return <KonvoluttIcon width={size} height={size} />;
+  if (kind === 'bane') return <BaneIcon width={size} height={size} />;
+  if (kind === 'sparkle') return <SparkleIcon width={size} height={size} />;
+  if (kind === 'formats') return <FormatsIcon width={size} height={size} />;
+  if (kind === 'laurbaer') return <LaurbaerIcon width={size} height={size} />;
+  if (kind === 'spillformater') return <ScorekortIcon width={size} height={size} />;
+  return <PokalIcon width={size} height={size} />;
 }
 

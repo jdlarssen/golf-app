@@ -17,6 +17,29 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.140.y — Tall på flisene
+
+Klubbhuset merker nå flisene som krever noe av deg, og veggen er ryddet så de daglige kortene står stort øverst.
+
+### [1.140.0] - 2026-06-23 · #914
+
+> Klubbhuset viser nå tallene rett på flisene: Spill får et merke når noen venter på handling, Spillere når invitasjoner venter på svar. Veggen er også ryddet — de fire flisene du bruker daglig (Spill, Spillere, Baner, Resultatprotokoll) står stort øverst, resten ligger samlet under «Mer i Sekretariatet».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+
+- `app/[locale]/admin/TilesGrid.tsx`: `badge?: number` på `Tile`-typen + ny `TileBadge` (champagne-pille øverst-til-høyre, gjenbruker BottomNav-dot-stilen — accent-fyll, `border-bg`-kant — men med tall i `tabular-nums`, kappet «9+»; `aria-hidden` siden tallet også finnes i meta/«Krever handling»-stripa). Wiret på Spillere (`pendingInvites`) og Spill (`totalActionableGames(getActionItemCounts())` — `cache()`-delt med stripa fra #864, ingen ekstra query-runde; foldet inn i den eksisterende `Promise.all`).
+- `app/[locale]/admin/TilesGrid.tsx`: ny `CompactTileGrid` — tettere 2-kol seksjon (ikon + label, meta droppet, tap-target ≥44px, samme badge-støtte) for «Mer i Sekretariatet».
+- `messages/no.json` + `messages/en.json`: `admin.dashboard.moreInSecretariat`.
+
+#### Changed
+
+- `TilesGrid` deler nå flisene i kjerne (Spill, Spillere, Baner, Resultatprotokoll → fulle kort via `TileGridView`) og resten (Cuper, Ligaer, Lanseringer, Klubber, Format-styring, Spillformater → `CompactTileGrid` under «Mer i Sekretariatet»). Alt fortsatt synlig (én dør per rom). `TilesSkeleton` oppdatert i lockstep: 4 fulle + label + 6 kompakte. `TileGridView`-signaturen er uendret, så `PlayerKlubbhus` (uten badges) er upåvirket.
+
+</details>
+
 ## 1.139.y — Klubbhuset som kommandosentral
 
 Sekretariatet viser nå hva som krever handling og lar deg hoppe rett inn — fra en «Krever handling»-stripe og trykkbare aktivitets-rader.

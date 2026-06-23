@@ -2552,6 +2552,7 @@
     },
     "dashboard": {
       "sectionLabel": "Recent activity",
+      "moreInSecretariat": "More in the Secretariat",
       "actionItemsHeading": "Needs action",
       "actionItemsUnsubmitted": "{count, plural, one {1 game with undelivered scorecards} other {{count} games with undelivered scorecards}}",
       "actionItemsPendingApproval": "{count, plural, one {1 game awaiting approval} other {{count} games awaiting approval}}",
