@@ -26,6 +26,27 @@
 # pre-push får <remote-navn> <remote-url> som argumenter; gaten gjelder uansett
 # hvilken remote/branch du pusher, fordi hver branch blir en PR der CI kjører.
 
+# ── Vakt: aldri direkte push til main (CLAUDE.md → "Branch + PR-flyt"). ──
+# Etter v1.0.0 går alt arbeid via PR. Git gir oss linjer på stdin på formen
+# "<local-ref> <local-sha> <remote-ref> <remote-sha>" — vi blokkerer hvis noen
+# av dem peker på refs/heads/main. Ekte vedlikeholds-unntak: kjør pushen med
+# ALLOW_MAIN_PUSH=1 foran. Kjøres FØRST (billigst, og skal blokkere uansett
+# node_modules-status).
+if [ "${ALLOW_MAIN_PUSH:-0}" != "1" ]; then
+  while read -r _localref _localsha remoteref _remotesha; do
+    case "$remoteref" in
+      refs/heads/main)
+        printf '\n✗ Push blokkert: direkte push til main er ikke tillatt.\n' >&2
+        printf '  Alt arbeid går via PR (CLAUDE.md → "Branch + PR-flyt"):\n' >&2
+        printf '    git push origin <branch>\n' >&2
+        printf '    gh pr create --base main --title "…" --body "Closes #N\\n\\n…"\n' >&2
+        printf '  Ekte vedlikeholds-unntak: ALLOW_MAIN_PUSH=1 git push …\n\n' >&2
+        exit 1
+        ;;
+    esac
+  done
+fi
+
 # Uten avhengigheter kan vi ikke kjøre gaten. Bedre å slippe pushen gjennom enn
 # å brikke et friskt klon før `npm install` — du har uansett ikke kunnet bygge
 # eller teste uten dem.

@@ -21,6 +21,25 @@ case "$msg" in
   Merge\ *|Revert\ *|"fixup! "*|"squash! "*) exit 0 ;;
 esac
 
+# ─────────────────────────────────────────────────────────────────────
+# Issue-referanse (CLAUDE.md → "Branch + PR-flyt": «alle med Refs #N i body»).
+# Alt backlog-arbeid spores i GitHub Issues, så feat/fix/perf/refactor MÅ peke
+# på et issue i commit-body-en. Escape for ekte issue-løse endringer: skriv
+# [no-issue] i body-en.
+# ─────────────────────────────────────────────────────────────────────
+if printf '%s' "$msg" | grep -qE '^(feat|fix|perf|refactor)(\([^)]+\))?!?: '; then
+  body="$(cat "$msg_file")"
+  if ! printf '%s' "$body" | grep -qE '(Refs|Closes|Fixes|Resolves) #[0-9]+' \
+     && ! printf '%s' "$body" | grep -qF '[no-issue]'; then
+    printf '\n✗ Commit blokkert: mangler issue-referanse i body.\n\n' >&2
+    printf '  Alt backlog-arbeid spores i GitHub Issues. Legg til en body-linje:\n' >&2
+    printf '    Refs #123      (eller Closes #123 på siste commit i en PR)\n\n' >&2
+    printf '  Reglene står i CLAUDE.md → "Branch + PR-flyt".\n' >&2
+    printf '  Ekte issue-løs endring (sjelden)? Skriv [no-issue] i body-en.\n\n' >&2
+    exit 1
+  fi
+fi
+
 # Bare håndhev for bruker-synlige commit-typer
 if ! printf '%s' "$msg" | grep -qE '^(feat|fix|perf)(\([^)]+\))?!?: '; then
   exit 0
@@ -66,6 +85,55 @@ if [ "$fail" -eq 1 ]; then
   printf '  test(...)    test-endringer\n' >&2
   printf '  chore(...)   tooling/config\n\n' >&2
   exit 1
+fi
+
+# ─────────────────────────────────────────────────────────────────────
+# Bump-TYPE-vakt (CLAUDE.md → "Versjonering / CHANGELOG"): H1 over sjekker at
+# version-feltet ENDRET seg; her sjekker vi at det endret seg til RIKTIG type.
+#   feat        → MINOR eller MAJOR (blokker hvis kun PATCH)
+#   fix | perf  → PATCH (blokker MINOR; MAJOR kun ved breaking «!» / BREAKING CHANGE)
+# Legit major/breaking-bump slipper gjennom, så ~null falske treff.
+# ─────────────────────────────────────────────────────────────────────
+old="$(git diff --cached package.json | grep -E '^-  "version":' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+new="$(git diff --cached package.json | grep -E '^\+  "version":' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+
+if [ -n "$old" ] && [ -n "$new" ]; then
+  IFS=. read -r oM om op <<EOF
+$old
+EOF
+  IFS=. read -r nM nm np <<EOF
+$new
+EOF
+  prefix="$(printf '%s' "$msg" | grep -oE '^(feat|fix|perf)')"
+  breaking=0
+  if printf '%s' "$msg" | grep -qE '^(feat|fix|perf)(\([^)]+\))?!:'; then breaking=1; fi
+  if cat "$msg_file" | grep -qE 'BREAKING CHANGE'; then breaking=1; fi
+
+  if [ "$nM" -gt "$oM" ]; then kind=major
+  elif [ "$nM" -eq "$oM" ] && [ "$nm" -gt "$om" ]; then kind=minor
+  elif [ "$nM" -eq "$oM" ] && [ "$nm" -eq "$om" ] && [ "$np" -gt "$op" ]; then kind=patch
+  else kind=unknown; fi
+
+  typefail=""
+  case "$prefix" in
+    feat)
+      [ "$kind" = patch ] && typefail="feat krever MINOR- (eller MAJOR-) bump — du gjorde en PATCH ($old → $new)"
+      ;;
+    fix|perf)
+      [ "$kind" = minor ] && typefail="$prefix krever PATCH-bump — du gjorde en MINOR ($old → $new)"
+      [ "$kind" = major ] && [ "$breaking" -ne 1 ] && typefail="$prefix krever PATCH-bump — MAJOR er kun for breaking endringer (merk med «!» eller «BREAKING CHANGE»)"
+      ;;
+  esac
+  [ "$kind" = unknown ] && typefail="version øker ikke korrekt ($old → $new)"
+
+  if [ -n "$typefail" ]; then
+    printf '\n✗ Commit blokkert: feil bump-type.\n\n' >&2
+    printf '  %s\n\n' "$typefail" >&2
+    printf '  Reglene står i CLAUDE.md → "Versjonering / CHANGELOG":\n' >&2
+    printf '    feat → npm version minor --no-git-tag-version\n' >&2
+    printf '    fix/perf → npm version patch --no-git-tag-version\n\n' >&2
+    exit 1
+  fi
 fi
 
 exit 0

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Pre-commit-warns for Tørny. Non-blocking — alltid exit 0.
+# Pre-commit-warns for Tørny. Warn-only (exit 0) MED ÉTT unntak: en hard blokk
+# på Dexie-DB-rename (sletter alle brukeres lokale data — se under). Alt annet
+# her er rådgivende.
 #
 # Tre familier av sjekker:
 #   1. Humanizer: AI-tells i nye bruker-rettede strenger i komponent-kode.
@@ -11,6 +13,25 @@
 # (brand-tagline, snapshot-låste mail-subjects, sekretariat-stemmen, etc.).
 
 set -e
+
+# ─────────────────────────────────────────────────────────────────────
+# HARD BLOKK (eneste i denne hooken): Dexie-DB-rename.
+# lib/sync/db.ts kaller super('golf-app'). Å endre/fjerne det navnet
+# invaliderer ALLE brukeres lokale IndexedDB-data (CLAUDE.md + AGENTS.md:
+# «rename = sletter brukernes lokale data»). Vi blokkerer hvis en staget
+# endring fjerner en linje som inneholder 'golf-app' i lib/sync/.
+# ─────────────────────────────────────────────────────────────────────
+dexie_removed=$(git diff --cached -U0 -- 'lib/sync/*.ts' 2>/dev/null \
+  | grep -E '^-[^-]' | grep -F 'golf-app' || true)
+if [ -n "$dexie_removed" ]; then
+  printf '\n✗ Commit blokkert: Dexie-databasenavnet «golf-app» endres/fjernes.\n' >&2
+  printf '%s\n' "$dexie_removed" | sed 's/^/      /' >&2
+  printf '  Dette navnet er historisk og MÅ stå urørt — endring sletter alle\n' >&2
+  printf '  brukeres lokale data (CLAUDE.md → lib/sync, AGENTS.md).\n' >&2
+  printf '  Behold super('\''golf-app'\'') i lib/sync/db.ts. Bevisst data-migrasjon?\n' >&2
+  printf '  Diskuter med eier først.\n\n' >&2
+  exit 1
+fi
 
 # Plukk ut staget .tsx/.ts-filer (komponent-kode), ekskluder tester.
 # Markdown-filer (CHANGELOG, email-templates, etc.) skannes IKKE — de håndteres
