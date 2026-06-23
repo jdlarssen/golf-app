@@ -27,27 +27,31 @@ rad-formede lenke-kortene: «Pågår nå» + «Mine spill» + `FinishedGameCard`
 
 ## Success Criteria
 
-- [ ] **C1 — Delt primitiv finnes og brukes.** `components/games/GameRowCard.tsx` eksporterer
-  `GameRowCard` (+ meta-linje-helper); `renderGameCard`, `renderActiveGameCard` og `FinishedGameCard`
-  rendrer alle gjennom den.
-- [ ] **C2 — Liste-semantikk.** `Section` rendrer `<ul className="list-none p-0 space-y-3">` med `<li>`
-  per kort; ingen tom `<li>` for false-barn.
-- [ ] **C3 — Død gren borte.** `StatusPill`-prop = `Exclude<GameStatus,'finished'>`; `else`-grenen fjernet.
-- [ ] **C4 — Tee-off deduplisert.** `formatTeeOffParts` i `lib/i18n/format.ts`; IIFE-en i `page.tsx`
-  borte; `HomeDiscoverySection.formatTeeOffLine` bruker helperen.
-- [ ] **C5 — `GameRow` modul-nivå + derivert.** Typen ligger på modul-nivå, derivert via `QueryData`;
-  `.returns<GameRow[]>()` fjernet.
-- [ ] **C6 — Pixel-identisk.** Hjem (Pågår nå / Mine spill / Finn turneringer / Toppliste / Avsluttede)
-  + `/spill-arkiv` rendrer pixel-identisk; #878-tilstander + nudge uendret.
-- [ ] **C7 — Ingen bump, ingen ny copy.** Ingen `package.json`/`CHANGELOG.md`-endring; ingen nye
-  i18n-nøkler; alle commits `refactor(...)`.
+- [x] **C1 — Delt primitiv finnes og brukes.** `components/games/GameRowCard.tsx:24` eksporterer
+  `GameRowCard` + `GameRowMetaLine`; `renderGameCard` (`page.tsx`), `renderActiveGameCard` og
+  `FinishedGameCard.tsx:35` rendrer alle gjennom den. Ingen gjenværende inline Card+p-5-rad-markup.
+- [x] **C2 — Liste-semantikk.** `Section` (`page.tsx`) rendrer `<ul className="list-none p-0
+  space-y-3">` med `<li>` per kort via `Children.toArray` (stripper falsy → ingen tom `<li>`).
+- [x] **C3 — Død gren borte.** `StatusPill`-prop = `Exclude<GameStatus,'finished'>`; `bg-border/40`-
+  else-grenen fjernet (3 reachable states beholder eksakte klasser).
+- [x] **C4 — Tee-off deduplisert.** `formatTeeOffParts` i `lib/i18n/format.ts`; `grep "(() =>"` i
+  page.tsx = tom; `HomeDiscoverySection.formatTeeOffLine` bruker helperen.
+- [x] **C5 — `GameRow` modul-nivå + derivert.** `page.tsx:131 type GameRow =
+  QueryData<ReturnType<typeof activeGamesQuery>>[number]`; `.returns<GameRow[]>()` fjernet.
+- [x] **C6 — Pixel-identisk.** Klasse-sett-ekvivalens-gjennomgang (OLD origin/main vs NEW): alle tre
+  kort har identiske klasse-SETT + identisk DOM-struktur; kun klasse-rekkefølge normalisert i 2
+  punkter (tee-off tabular-linje, FinishedGameCard Card — Tailwind rekkefølge-uavhengig) + Preflight-
+  nøytrale `ul`/`li`-wrappere. Badge-spennet byte-identisk. #878-states + nudge uendret.
+- [x] **C7 — Ingen bump, ingen ny copy.** `git diff origin/main...HEAD --name-only` = kun de 6 filene;
+  ingen `package.json`/`CHANGELOG.md`/`messages/`; alle 5 commits `refactor(...)`.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` — grønt
-- [ ] `npm run lint` (scoped til endrede filer) — grønt
-- [ ] `npx vitest run components/games/FinishedGameCard.test.tsx "app/[locale]/HomeDiscoverySection.test.tsx"` — grønt
-- [ ] Selv-sjekk: les hver migrerte render-gren, bekreft klasse-settet matcher dagens.
+- [x] `npx tsc --noEmit` — grønt (post-rebase)
+- [x] `npm run lint` (endrede filer) — grønt (kun pre-eksisterende HomeBody-complexity-26-WARNING fra
+  origin/main, ikke introdusert; warnings feiler ikke `eslint`-scriptet)
+- [x] `npx vitest run components/games/FinishedGameCard.test.tsx "app/[locale]/HomeDiscoverySection.test.tsx"` — 4 passed
+- [x] Selv-sjekk: klasse-sett-ekvivalens verifisert per kort (se C6).
 
 ## Build Order (atomiske commits, alle `refactor(...)`)
 
