@@ -34,7 +34,7 @@ flowchart TD
   Nav --> Klub["Klubbhuset → /admin"]
   Klub --> KP{is_admin?}
   KP -- ja --> Sek["Hele Sekretariatet<br/>(Spill, Spillere, Baner, Cup, Formater, …)"]
-  KP -- nei --> PlayerKlub["Spill (egne, m/Opprett spill)<br/>+ Baner (m/Opprett bane)<br/>+ Klubber (#442)"]
+  KP -- nei --> PlayerKlub["Adaptivt spiller-rom (#892):<br/>invitasjon til å arrangere<br/>+ Dine klubber + Det du arrangerer<br/>+ Verktøy (Baner, Spillformater)"]
 ```
 
 **Persistente nav-elementer** (verifisert i `app/layout.tsx` + sidene):
@@ -44,9 +44,11 @@ flowchart TD
 **Vedvarende bunn-nav** (#355, #392): fire faste faner — Hjem, Innboks, Klubbhuset, Profil —
 rendret globalt i `app/layout.tsx`, synlig for alle innloggede på alle flater (også i Klubbhus-
 rommet `/admin`). Skjult kun på hull-skjerm, login og onboarding. «Klubbhuset» er universell:
-fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, vanlige
-spillere ser Spill + Baner med oppretting. **Opprett spill/bane bor inne i Klubbhuset, ikke på
-Hjem.** Hjem er play + discover-navet: dine spill + «Finn turneringer».
+fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, mens spilleren
+møter et **adaptivt rom** (#892): en invitasjon til å arrangere (aldri en blindvei), klubbene sine,
+spillene/cupene de selv har satt opp, og Verktøy (Baner + Spillformater) nederst. **Opprett
+spill/bane bor inne i Klubbhuset, ikke på Hjem.** Hjem er play + discover-navet: dine spill +
+«Finn turneringer».
 
 **Klubber** (#442 + #50, milepæl Klubb-skala): en klubb er en navngitt, styrt container folk og
 turneringer kan høre til. **Opprettelse er admin-gated** (#50): vanlige brukere oppretter ikke
@@ -207,7 +209,7 @@ flowchart LR
 
 ### A4 — Klubbhuset / Sekretariatet (dashboard)
 
-`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). For admin: hilsen + tile-grid (Spill / Spillere / Baner / Resultatprotokoll / Lanseringer / Cuper / Formats) + aktivitets-logg (siste 14 dager). For vanlig spiller: en minimal visning med Spill- og Baner-flatene (oppretting bor her), uten admin-tellinger eller aktivitets-logg.
+`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). For admin: hilsen + tile-grid (Spill / Spillere / Baner / Resultatprotokoll / Lanseringer / Cuper / Formats) + aktivitets-logg (siste 14 dager). For vanlig spiller: et **adaptivt rom** (#892, `PlayerKlubbhus.tsx`) som varierer på to fakta — har du klubber, og har du opprettet noe spill/cup. Seksjoner i rekkefølge: hilsen (umiddelbar) → arrangement-blokk (invitasjon «Sett opp en runde» / «… eller en cup» når 0 opprettet, ellers «+ Ny runde» + capped liste + «Cupene dine (n) →»-rad) → Dine klubber (inline `getMyClubs`-liste, ellers «Ikke med i en klubb ennå →») → Verktøy (Baner + Spillformater). Arrangement + klubber strømmer bak hver sin Suspense; ingen admin-tellinger eller aktivitets-logg.
 
 ---
 
