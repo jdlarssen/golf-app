@@ -17,6 +17,29 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.139.y — Klubbhuset som kommandosentral
+
+Sekretariatet viser nå hva som krever handling og lar deg hoppe rett inn — fra en «Krever handling»-stripe og trykkbare aktivitets-rader.
+
+### [1.139.0] - 2026-06-23 · #864
+
+> Klubbhuset kjente allerede tallene du måtte handle på — uleverte scorekort og scorekort som venter på godkjenning — men du kunne ikke trykke på dem. Nå ligger de i en «Krever handling»-stripe øverst, og hver rad tar deg rett til spillet. Aktivitets-loggen er heller ikke lenger en blindvei: «Bjørn leverte scorekort» tar deg rett til godkjenningen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+
+- `lib/admin/actionItems.ts` (+ `actionItems.test.ts`, 17 tester): ren `computeActionItemCounts(games, players)` som surfacer de to `endGame`-finish-blokkerne (`not_all_submitted` / `not_all_approved`) på tvers av alle aktive spill, via `classifyDeliveryStatus` (én regel, ett hjem). `cache()`-wrappet `getActionItemCounts()` deler én query-runde mellom stripa og en framtidig Spill-tile-badge.
+- `app/[locale]/admin/ActionItemsStripe.tsx`: «Krever handling»-stripe under GreetingCard, egen Suspense-grense, **rendrer ingenting når begge tellinger er 0** (rolige dager forblir rolige). Trykkbare ≥44px-rader → spillets status-side (count==1) eller `/admin/games?status=active`. Sekretariat-stemmen bevart.
+- `messages/*`: `admin.dashboard.actionItems*` (ICU plural).
+
+#### Changed
+
+- `app/[locale]/admin/ActivityLedger.tsx`: ledger-radene er nå trykkbare `SmartLink`-er — `id` lagt til de embeddede selectene (`games(id, name)`); submitted/approved → `/admin/games/[id]/status`, lifecycle → spill-detalj, ny bane → `/admin/courses`. Klubbinvitasjon uten game forblir en ikke-interaktiv `<div>`.
+
+</details>
+
 ## 1.138.y — Nærmeste runde øverst
 
 Planlagte spill på Hjem ligger nå i tee-off-rekkefølge, og den runden som starter snart får en «I dag»/«I morgen»-etikett så du ikke kommer for sent.
