@@ -108,11 +108,7 @@ Alt backlog-arbeid spores i [GitHub Issues](https://github.com/jdlarssen/golf-ap
 
 #### Milestone på alle nye issues (mandatory)
 
-Hver `gh issue create` MÅ gi issuet en milestone — ingen issues skal ligge milestone-løse. Bruk `--milestone "<tittel>"` ved opprettelse (eller `gh api -X PATCH repos/jdlarssen/golf-app/issues/N -F milestone=<num>` etterpå).
-
-- **Velg beste passende milestone** mot flyt-kompasset (se under). Hører issuet til en kjerne-flyt-fase → riktig Tier. Er det epic/klubb-skala → `Klubb-skala (epic)`.
-- **Passer ingen → default `Backlog — uplanlagt / scale-triggered`**, og si fra i meldingen at det havnet i Backlog så det kan re-triages. Aldri la et nytt issue stå uten milestone «til senere».
-- **Mojibake-felle:** Tier 1- og Tier 5-titlene har korrupte tegn lagret (`f√∏rsteinntrykk`, `√Öpen`), så `--milestone "<ø-tittel>"` matcher ikke. Sett da via nummer: `gh api -X PATCH .../issues/N -F milestone=<num>` (hent nummer med `gh api repos/jdlarssen/golf-app/milestones`).
+Hvert `gh issue create` MÅ ha `--milestone` (bash-guard-hooken minner på det). Velg mot flyt-kompasset; passer ingen → default `Backlog — uplanlagt / scale-triggered` og si fra i meldingen. **Mojibake-felle:** Tier 1/Tier 5-titlene har korrupte tegn lagret, så `--milestone "<tittel>"` matcher ikke — sett via nummer: `gh api -X PATCH repos/jdlarssen/golf-app/issues/N -F milestone=<num>` (nummer fra `gh api .../milestones`).
 
 #### Brukerflyt-forankring (mandatory, før alt annet)
 
@@ -126,59 +122,24 @@ Presedens: #318 (sømløs invitasjons-innlogging) ble satt til side fordi fremti
 
 #### Branch + PR-flyt (default post-v1.0)
 
-Etter `v1.0.0` (2026-05-13) går alt arbeid via PR — **ikke direkte push til `main`**. Vercel deployer PR-branchen til preview-URL, gir et sjekkpunkt før prod-merge.
+Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette: `.githooks/pre-push` blokkerer push til main; `.claude/hooks/bash-guard.sh` blokkerer `--no-verify`, `gh pr merge --squash` og `git push --force`; `.githooks/commit-msg` krever `Refs #N` i body.
 
-1. **Branch:** worktree-branchen er normalt ditt arbeidssted. Hvis du starter en ny fra `main`, gi den et beskrivende navn (f.eks. `issue-19-netto-helper-tekst`).
-2. **Commits underveis:** atomiske commits på branchen, alle med `Refs #N` i body. Subagent-prompter må inkludere issue-nummer + Refs-instruks. `Closes #N` i siste commit-body er greit, men det er PR-body-en som er den autoritative auto-close-trigger-en.
-3. **Push + PR-create:**
+1. Jobb på worktree-branchen (eller en beskrivende ny branch fra `main`).
+2. Atomiske commits, alle med `Refs #N` i body. Subagent-prompter må inkludere issue-nr + Refs-instruks.
+3. Push + PR:
    ```bash
    git push origin <branch>
-   gh pr create --base main \
-     --title "<conventional-commit-style tittel>" \
-     --body "Closes #N
+   gh pr create --base main --title "<tittel>" --body "Closes #N
 
-   <tagline fra CHANGELOG-oppføring>"
+   <tagline fra CHANGELOG>"
    ```
-4. **Verifisering på staging (ikke prod):** for bruker-synlige endringer, verifiser den berørte flyten på `torny-staging` FØR merge — kjør appen mot staging og klikk gjennom flyten (se «### Testing — staging, aldri prod»). Dette erstatter den gamle manuelle prod-QA-en. Vercel deployer også PR-branchen til en preview-URL (peker på staging) for visuell spot-sjekk.
-5. **Merge:** `gh pr merge --rebase --delete-branch` — rebase holder linear `main`-historie og bevarer atomic-commit-disiplinen. **Squash brukes ikke** (mister granulær audit-trail per commit).
-6. **Auto-close:** `Closes #N` i PR-body lukker issue-en ved merge. Bekreft med `gh issue view N --json state` hvis usikker.
+   `Closes #N` i PR-body er den autoritative auto-close-triggeren.
+4. Bruker-synlige endringer: verifiser berørt flyt på `torny-staging` FØR merge (se «Testing — staging, aldri prod»).
+5. Merge: `gh pr merge --rebase --delete-branch` (squash brukes ikke — mister granulær audit-trail).
 
-#### /forge:auto-disiplin (kontrakt-først)
+#### Forge-arbeidsflyt (kontrakt-først)
 
-Når brukeren invoker `/forge:auto` uten å spesifisere konkret issue/kontrakt, MÅ hovedchatten følge denne flyten:
-
-1. **Finn åpne issues med eksisterende kontrakt.** To kilder å sjekke:
-   - **Primært:** `gh search issues --repo jdlarssen/golf-app 'is:open is:issue "Forge-kontrakt tilgjengelig" in:comments'` — gjenkjenner kontrakt-kommentar-headeren fra `/forge:contract`-disiplinen.
-   - **Sekundært (sanity-check):** `ls .forge/contracts/` for `<number>-*.md`-filer på nåværende branch, krysset mot åpen-status via `gh issue view N --json state`.
-2. **Hvis funnet:** Hvis det er ett kandidat-issue → kjør `/forge:auto` på den. Hvis flere → vis kort liste med issue-nummer + tittel + branch-navn, spør brukeren hvilken som skal kjøres.
-3. **Hvis ingen funnet:** Kjør `/forge:contract` istedenfor. Spør brukeren hvilket åpent issue kontrakten skal skrives for, eller forslå basert på `gh issue list --state open` (filtrert til ikke-`epic` + ikke-`blocks-club-scale`-tunge kandidater).
-
-Hvorfor: `/forge:auto` er ment for autonom utførelse mot en allerede gjennomtenkt spec. Å starte den uten kontrakt betyr at gray-area-diskusjonen skipps og bygge-løkken kjører på antagelser — det er nettopp dette `/forge:contract` skal forhindre. Kontrakt-først-disiplinen sikrer at hver `/forge:auto`-runde har et reelt sannhets-anker.
-
-Aldri start `/forge:auto`-bygge-løkken uten enten (a) en eksisterende kontrakt-fil, eller (b) en kontrakt-kommentar på et åpent issue. Hvis brukeren eksplisitt spesifiserer et issue uten kontrakt: bekreft at de vil hoppe over `/forge:contract`-diskusjonen før du starter bygging.
-
-#### Kontrakt-kommentar (når /forge:contract lager en)
-
-Når `/forge:contract` produserer en kontrakt i `.forge/contracts/<N>-<slug>.md`, MÅ hovedchatten poste den til korresponderende issue via `gh issue comment N --body-file <path>` i samme runde som kontrakten skrives. Format:
-
-```markdown
-## 📋 Forge-kontrakt tilgjengelig
-
-Det finnes en eksisterende forge-kontrakt for dette issuet på branchen `<branch-navn>`.
-
-<details>
-<summary><strong>Kontrakt: <kontrakt-tittel> — klikk for å vise</strong></summary>
-
-<full markdown-innhold fra .forge/contracts/<N>-<slug>.md>
-
-</details>
-```
-
-Hvorfor: kontrakter lever i branch-spesifikke `.forge/contracts/`-mapper og er usynlige for noen som ser på issue-en i nettleseren. Posting på issue-en gjør at scope og beslutninger er tilgjengelig der konteksten finnes, og at fremtidige sesjoner ikke gjør duplikat-arbeid.
-
-Bruk `<details>`-wrapper så issue-siden ikke drukner i veggen av tekst. Bygg comment-body i en temp-fil og post med `--body-file` (kontrakter er 15–30KB, for store til shell-escaping).
-
-Hvis kontrakten revideres senere i samme sesjon: post oppdatert versjon som ny kommentar — ikke editer den gamle. Audit-trail er viktigere enn ren issue-historikk.
+Kontrakt-først-disiplinen for `/forge:auto` (hva hovedchatten gjør når issue/kontrakt ikke er spesifisert) og hvordan `/forge:contract`-kontrakter postes som issue-kommentar er flyttet til [`docs/forge-workflow.md`](docs/forge-workflow.md). Kjernen: **aldri start `/forge:auto`-løkken uten enten en eksisterende kontrakt-fil eller en kontrakt-kommentar på et åpent issue** — les docs-fila før du kjører `/forge:auto` uten spesifisert issue, eller når `/forge:contract` lager en kontrakt.
 
 #### Closing-kommentar (ALLTID)
 
@@ -207,47 +168,20 @@ Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh i
 
 ### Versjonering / CHANGELOG
 
-**Regel:** Hver commit som endrer bruker-synlig oppførsel MÅ bumpe `package.json` versjonen og legge til oppføring i `CHANGELOG.md` — i samme commit som selve endringen. Footer i appen (`AppVersionFooter.tsx`) henter automatisk versjonen via `next.config.ts` → `NEXT_PUBLIC_APP_VERSION`, så bumpen blir synlig i prod ved neste deploy.
+Hver bruker-synlig commit (`feat`/`fix`/`perf`) MÅ bumpe `package.json`-versjonen + legge til en `CHANGELOG.md`-oppføring i SAMME commit. Footeren (`AppVersionFooter.tsx`) viser versjonen i prod ved neste deploy.
 
-**Hvilken type bump:**
-- **PATCH (`vX.Y.Z+1`)** — bug-fix, copy-justering, perf-forbedring, design-polish. Bruker kan gjøre nøyaktig det samme som før, bare bedre.
-- **MINOR (`vX.Y+1.0`)** — ny bruker-synlig feature shipped til prod (ny side, ny knapp, ny spillmodus, ny innstilling).
-- **MAJOR (`vX+1.0.0`)** — bryter datamodell eller fundamental UX, krever bruker-kommunikasjon. Pre-1.0.0 (`0.x.y`) brukes som alpha — vi er ikke stabil ennå, så minor-bumps kan inneholde mindre brytende endringer.
+**Håndheves av `.githooks/commit-msg`** — den blokkerer feat/fix/perf-commits som mangler bump eller CHANGELOG, OG hvis bump-typen er feil: **feat → minor/major, fix/perf → patch** (major kun ved breaking `!`/`BREAKING CHANGE`).
 
-**Skip bump for:** rene docs-commits (`docs(...)`), refaktorering uten oppførselsendring (`refactor(...)`), test-only-commits, og `chore(...)` som ikke påvirker brukeren. CHANGELOG-oppføring kan også skippes da.
-
-**Hvordan bumpe:**
-- `npm version patch --no-git-tag-version` (eller `minor`/`major`) — oppdaterer `package.json` + `package-lock.json` uten å lage separat tag/commit
-- Eller rediger `package.json` direkte (one-liner)
-- Inkluder bump-en + CHANGELOG-oppdatering i SAMME commit som feature/fix-en
-
-**CHANGELOG-format:** Tre-lags struktur (tema-heading + tagline-blockquote + Teknisk-details), tagline-veiledning, humanizer-skillet på taglines, og minor-serie-wrapping er dokumentert i [`docs/changelog-conventions.md`](docs/changelog-conventions.md) — les FØR ny oppføring. HTML-kommentar øverst i `CHANGELOG.md` peker dit; `.githooks/commit-msg` peker dit også når den blokkerer.
-
-**Håndheving via git commit-msg-hook (`.githooks/commit-msg`):** regelen er ikke valgfri — hooken blokkerer alle `feat(...)`/`fix(...)`/`perf(...)`-commits som ikke samtidig stager `package.json` (med endret version-felt) og `CHANGELOG.md`. Hooken er aktivert automatisk på `npm install` (via `postinstall` som setter `core.hooksPath=.githooks`). Hvis hooken blokkerer:
-
-1. Hvis commiten faktisk er bruker-synlig: kjør `npm version patch --no-git-tag-version` (eller `minor`/`major`), legg til CHANGELOG-oppføring, stage alle tre filer, og commit på nytt med samme melding.
-2. Hvis commiten IKKE er bruker-synlig: bytt prefix til `docs(...)`, `refactor(...)`, `test(...)`, `chore(...)`, `style(...)`, `ci(...)` eller `build(...)`.
-3. Aldri bruk `--no-verify` for å omgå hooken — det bryter disiplinen og gjør at footeren henger etter prod-state.
-
-Skip-typene over (`docs/refactor/test/chore/style/ci/build`) passerer fritt — hooken slår kun ut på bruker-synlige prefikser.
+- **Bump:** `npm version patch|minor|major --no-git-tag-version`, stage `package.json` + `package-lock.json` + `CHANGELOG.md`, commit på nytt med samme melding.
+- **Ikke bruker-synlig?** Bytt prefix til `docs/refactor/test/chore/style/ci/build` — de passerer fritt.
+- **CHANGELOG-format:** [`docs/changelog-conventions.md`](docs/changelog-conventions.md) (les FØR ny oppføring).
+- Aldri `--no-verify` for å omgå hooken (bash-guard blokkerer den uansett).
 
 ### Språk-kvalitet i bruker-rettet copy
 
-Når du legger til eller endrer norske strenger som vises til brukeren — i `.tsx`/`.ts`-filer, mail-templates (`lib/mail/`), feilmeldinger, banner-tekster, knappe-tekster, helper-tekster — kjør `humanizer:humanizer`-skillet (fra `floka-marketplace`) på det du har skrevet før commit. Pre-commit-hooken `.githooks/pre-commit` advarer (men blokkerer ikke) ved kjente AI-tells i nye linjer i `.tsx`/`.ts`-filer. Markdown-filer skannes ikke.
+Ny/endret norsk bruker-copy (i `.tsx`/`.ts`, mail-templates i `lib/mail/`, feilmeldinger, banner-/knapp-/helper-tekster): kjør `humanizer:humanizer`-skillet før commit. `.githooks/pre-commit` advarer (blokkerer ikke) på kjente AI-tells i nye `.tsx`/`.ts`-linjer; full pattern-katalog + `no-nb`-konvertering i [`docs/copy-style.md`](docs/copy-style.md). Markdown-filer skannes ikke.
 
-**Full pattern-katalog + engelsk-konvertering (`no-nb`-skill) + code-switching-eksempler:** [`docs/copy-style.md`](docs/copy-style.md). `.githooks/pre-commit` peker dit når den advarer.
-
-**Hva hooken fanger mekanisk:**
-- «X-spillet»-redundans (`slagspill-spillet` → `slagspillet`, `matchplay-spillet` → `matchen`, `par-stableford-spillet` → `par-stableford-runden`)
-- «Vennligst»-overforbruk
-- «Tap»-anglism (`Tap kort` → `Trykk kort`)
-- Em-dash-kjeder (`X — Y — Z` → splitt med punktum/komma/parens)
-
-**Bevisst bevart (false-positives å ignorere ved hook-advarsel):**
-- Brand-tagline `Tørny — fyr opp golfturneringen` (kanonisk per `### Brand`)
-- Mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser eksakt streng)
-- «Sekretariat»-stemmen i admin-flater
-- Engelske achievement-navn (Turkey/Solid/Snowman — bevisste sportstermer)
+**Bevisst bevart (ignorer hook-advarsel for disse):** brand-taglinen `Tørny — fyr opp golfturneringen` (per `### Brand`), mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser strengen), «Sekretariat»-stemmen i admin-flater, engelske achievement-navn (Turkey/Solid/Snowman).
 
 ### Testing — staging, aldri prod
 
