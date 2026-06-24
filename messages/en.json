@@ -264,7 +264,10 @@
       "colNetto": "Net",
       "resultLink": "View leaderboard",
       "trendHeading": "Scoring trend",
-      "trendSubtitle": "Gross and net per completed 18-hole round, oldest to newest.",
+      "trendWindow": "{count, plural, one {Last round} other {Last # rounds}}",
+      "trendStart": "Start",
+      "trendNow": "Now",
+      "trendBest": "Best",
       "trendAriaLabel": "{count, plural, one {Scoring trend across 1 completed round, oldest to newest.} other {Scoring trend across # completed rounds, oldest to newest.}}"
     },
     "statistikk": {

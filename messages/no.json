@@ -264,7 +264,10 @@
       "colNetto": "Netto",
       "resultLink": "Se resultatliste",
       "trendHeading": "Formkurven din",
-      "trendSubtitle": "Brutto og netto per fullført 18-hulls-runde, fra eldst til nyest.",
+      "trendWindow": "{count, plural, one {Siste runde} other {Siste # runder}}",
+      "trendStart": "Start",
+      "trendNow": "Nå",
+      "trendBest": "Beste",
       "trendAriaLabel": "{count, plural, one {Formkurve over 1 fullført runde, fra eldst til nyest.} other {Formkurve over # fullførte runder, fra eldst til nyest.}}"
     },
     "statistikk": {

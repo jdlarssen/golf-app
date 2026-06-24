@@ -6,11 +6,18 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { formatTeeOffDateLocale } from '@/lib/i18n/format';
+import {
+  formatTeeOffDateLocale,
+  formatShortDayMonthLocale,
+} from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
-import { buildScoringTrend, type TrendRound } from '@/lib/stats/scoringTrend';
+import {
+  buildScoringTrend,
+  summarizeTrendRounds,
+  type TrendRound,
+} from '@/lib/stats/scoringTrend';
 import { ScoringTrendChart } from '@/components/stats/ScoringTrendChart';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
@@ -18,6 +25,9 @@ import type { AppLocale } from '@/i18n/routing';
 
 /** En komplett 18-hulls-runde (alle 18 hull registrert). */
 const COMPLETE_ROUND_HOLES = 18;
+
+/** Formkurve-vinduet: de siste N rundene, som WHS/Golfbox (#949). */
+const MAX_TREND_ROUNDS = 20;
 
 type GameRow = {
   id: string;
@@ -142,14 +152,21 @@ export default async function HistorikkPage() {
 
   const finishedCount = gamesWithStats.length;
 
-  // #936 — scoringstrend: kun komplette 18-hulls-runder (eple-mot-eple, samme
-  // disiplin som «Mine tall»/`playerStats`), sortert eldst→nyest for grafen.
-  // `gamesWithStats` er nyest-først, så vi reverserer det filtrerte settet.
-  const trendRounds: TrendRound[] = gamesWithStats
+  // #936/#949 — formkurve: kun komplette 18-hulls-runder (eple-mot-eple, samme
+  // disiplin som «Mine tall»/`playerStats`), avgrenset til de SISTE 20 (WHS/
+  // Golfbox-vinduet) og sortert eldst→nyest. `gamesWithStats` er nyest-først,
+  // så vi tar de første 20 og reverserer.
+  const trendWindow = gamesWithStats
     .filter((g) => g.holeCount === COMPLETE_ROUND_HOLES && g.bruttoSum != null)
-    .map((g) => ({ brutto: g.bruttoSum as number, netto: g.nettoSum }))
+    .slice(0, MAX_TREND_ROUNDS)
     .reverse();
+  const trendRounds: TrendRound[] = trendWindow.map((g) => ({
+    brutto: g.bruttoSum as number,
+    netto: g.nettoSum,
+  }));
   const trend = buildScoringTrend(trendRounds);
+  const trendSummary = trend ? summarizeTrendRounds(trendRounds) : null;
+  const trendDateRange = trend ? formatTrendDateRange(trendWindow, locale) : '';
 
   return (
     <AppShell>
@@ -165,17 +182,20 @@ export default async function HistorikkPage() {
 
       {/* Formkurve øverst — kun når det finnes minst 2 komplette 18-hulls-runder
           å tegne en linje av. Lista under viser de eksakte tallene per runde. */}
-      {trend && (
+      {trend && trendSummary && (
         <Card className="mb-4">
-          <h2 className="font-serif text-base font-medium text-text">
-            {t('trendHeading')}
-          </h2>
-          <p className="mb-4 font-sans text-sm text-muted">{t('trendSubtitle')}</p>
           <ScoringTrendChart
             geometry={trend}
+            summary={trendSummary}
             ariaLabel={t('trendAriaLabel', { count: trendRounds.length })}
+            heading={t('trendHeading')}
+            windowLabel={t('trendWindow', { count: trendRounds.length })}
+            dateRangeLabel={trendDateRange}
             bruttoLabel={t('colBrutto')}
             nettoLabel={t('colNetto')}
+            startLabel={t('trendStart')}
+            nowLabel={t('trendNow')}
+            bestLabel={t('trendBest')}
           />
         </Card>
       )}
@@ -335,4 +355,29 @@ function GameHistoryCard({
       </div>
     </Card>
   );
+}
+
+/** Effektiv runde-dato (samme fallback som lista/sorteringen). */
+function effectiveDate(g: GameWithStats): Date | null {
+  const iso = g.scheduled_tee_off_at ?? g.ended_at;
+  return iso ? new Date(iso) : null;
+}
+
+/**
+ * Dato-spennet i formkurve-headeren («5. jan – 24. jun»). `windowGames` er
+ * eldst→nyest, så første og siste gir spennet. Faller til ett dato-tall når
+ * de er like, og til tom streng om datoene mangler.
+ */
+function formatTrendDateRange(
+  windowGames: GameWithStats[],
+  locale: AppLocale,
+): string {
+  const first = windowGames[0] ? effectiveDate(windowGames[0]) : null;
+  const last = windowGames.length
+    ? effectiveDate(windowGames[windowGames.length - 1])
+    : null;
+  if (!first || !last) return '';
+  const from = formatShortDayMonthLocale(first, locale);
+  const to = formatShortDayMonthLocale(last, locale);
+  return from === to ? from : `${from} – ${to}`;
 }

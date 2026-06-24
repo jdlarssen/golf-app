@@ -17,6 +17,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.144.y — Formkurven får tall
+
+Formkurven på profilen viser nå hvor du startet, hvor du er nå og din beste runde — for både brutto og netto, over de siste 20 rundene.
+
+### [1.144.0] - 2026-06-24 · #949
+
+> Formkurven din viser nå tallene som betyr noe: hvor du startet, hvor du er nå, og din beste runde — for både brutto og netto, over de siste 20 rundene. Rekorden er markert i gull rett på kurven, så du ser med ett blikk når du var på ditt beste.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- Formkurven på `/profile/historikk` ankret med tall (#949, oppfølging av #936):
+  - **Tidsvindu:** de siste 20 komplette 18-hulls-rundene (WHS/Golfbox-vinduet). Under 20 → vis alle; under 2 → ingen graf. Vi tar ikke etter «de 8 beste» — det er handicap-utregning, ikke en trend.
+  - **Start / Nå / Beste i bokser** for både brutto og netto. «Beste» = laveste verdi i vinduet, markert med en svak gull-tint på boksen og en gull-ring på kurven (både beste brutto og beste netto). Boks-rammen følger linjestilen (brutto heltrukken, netto stiplet) og erstatter en egen tegnforklaring.
+  - **Kompakt header:** tittel, «Siste N runder» og dato-spennet på én linje; vertikale «Brutto»/«Netto»-etiketter langs boksradene sparer høyde på mobil.
+  - Gull bærer aldri tekst (stryker WCAG AA på lys bakgrunn, samme grunn som `/profile/statistikk`) — tallene står i tekstfarge, gullet er tint + ring og er aldri eneste bærer av rekord-info.
+- Ren modul `lib/stats/scoringTrend.ts` utvidet: `bruttoBestPoint`/`nettoBestPoint` (rekord-ringene) + `summarizeTrendRounds` (Start/Nå/Beste). Ny `formatDayMonth`/`formatShortDayMonthLocale` for kompakt dato-spenn. Type A- + Type C-tester oppdatert (24 grønne).
+
+</details>
+
+---
+
 ## 1.143.y — Tallene dine
 
 Profilen begynner å fortelle deg noe: ikke bare snittet, men hvordan scoren har beveget seg runde for runde.

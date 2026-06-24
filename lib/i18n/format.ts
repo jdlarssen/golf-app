@@ -2,6 +2,7 @@ import type { AppLocale } from '@/i18n/routing';
 import {
   formatTeeOffDate as formatTeeOffDateNb,
   formatTeeOffTime as formatTeeOffTimeNb,
+  formatDayMonth as formatDayMonthNb,
 } from '@/lib/format/teeOff';
 import {
   formatShortDateNb as formatShortDateNbLegacy,
@@ -114,6 +115,23 @@ export function formatTeeOffTimeLocale(date: Date, locale: AppLocale): string {
  * English ('en'):   "Tue 12 May" — weekday-abbrev (no dot), day, month-abbrev,
  *                   matching the structure of the Norwegian output.
  */
+/**
+ * Compact day + month, no weekday or year ("5. jan" / "5 Jan") — for tight
+ * labels like the formkurve date span (#949). nb delegates to the hand-rolled
+ * dot-free table; other locales render via Intl. Oslo-pinned.
+ */
+export function formatShortDayMonthLocale(date: Date, locale: AppLocale): string {
+  if (locale === 'no') return formatDayMonthNb(date);
+  const parts = new Intl.DateTimeFormat(intlLocaleTag(locale), {
+    timeZone: OSLO,
+    day: 'numeric',
+    month: 'short',
+  }).formatToParts(date);
+  const day = parts.find((p) => p.type === 'day')?.value ?? '';
+  const month = parts.find((p) => p.type === 'month')?.value ?? '';
+  return `${day} ${month}`;
+}
+
 export function formatTeeOffDateLocale(date: Date, locale: AppLocale): string {
   if (locale === 'no') return formatTeeOffDateNb(date);
   // Locale-driven: weekday short, day numeric, month short, no year. nb-NO

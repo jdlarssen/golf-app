@@ -94,6 +94,13 @@ export function formatTeeOffDate(date: Date): string {
   return `${DAY_NAMES[weekday]} ${day}. ${MONTH_NAMES[month]}`;
 }
 
+/** Compact day + month, no weekday or year ("14. mai") — for tight labels
+ *  like the formkurve date span (#949). Oslo-pinned like the rest. */
+export function formatDayMonth(date: Date): string {
+  const { day, month } = osloParts(date);
+  return `${day}. ${MONTH_NAMES[month]}`;
+}
+
 export function expectedFirstScoreTime(teeOff: Date): string {
   // Add 30 minutes to the absolute instant (this is TZ-safe — Date math
   // is on UTC milliseconds), then read the Oslo wall-clock minute and
