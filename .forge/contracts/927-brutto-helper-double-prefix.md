@@ -43,11 +43,11 @@ Ny fil `lib/games/allowanceCopy.test.ts`. Iterer over **alle** `GameMode`-medlem
 
 ## Suksesskriterier
 
-- [ ] **K1** `bruttoHelperKeyFor` returnerer relativ nøkkel `bruttoHelper.<mode>` (uten `allowance.`-prefiks); returtype + JSDoc oppdatert til å matche.
-- [ ] **K2** Begge call-sites (`GameForm.tsx:615`, `GameWizard.tsx:749`) resolver korrekt — ingen dobbel-prefiks; cast beholdt kun hvis tsc krever det.
-- [ ] **K3** Ny `lib/games/allowanceCopy.test.ts` asserter at nøkkelen resolver mot ekte `messages/no.json`-katalog for alle 22 `GameMode`-medlemmer. Test feiler på den gamle (doble) implementasjonen, passerer på den nye.
-- [ ] **K4** `package.json` patch-bump (1.141.1 → 1.141.2) + `CHANGELOG.md`-oppføring nestet under åpent tema `## 1.141.y`, i samme commit som fiksen (`fix:`-prefiks, håndhevet av commit-msg-hook).
-- [ ] **K5** Closing-kommentar postet på #927 (Teknisk + Funksjonell) ved lukking.
+- [x] **K1** `bruttoHelperKeyFor` returnerer relativ nøkkel `bruttoHelper.<mode>` (uten `allowance.`-prefiks); returtype + JSDoc oppdatert. Evidens: [`lib/games/allowanceCopy.ts:25`](lib/games/allowanceCopy.ts) returnerer `` `bruttoHelper.${mode}` ``, type `` `bruttoHelper.${GameMode}` ``; JSDoc oppdatert (L1-20).
+- [x] **K2** Begge call-sites resolver korrekt; cast fjernet (tsc krevde den ikke). Evidens: `GameForm.tsx:615` + `GameWizard.tsx:749` = `tAllowance(bruttoHelperKeyFor(...))` uten cast; `npx tsc --noEmit` grønn.
+- [x] **K3** Ny `lib/games/allowanceCopy.test.ts` asserter resolusjon mot ekte katalog for alle 22 modi. Evidens: 44/44 cases grønne på ny impl; 44/44 RØDE på gammel impl (verifisert før fiks).
+- [x] **K4** Patch-bump 1.141.1 → 1.141.2 + CHANGELOG under `## 1.141.y`, samme commit. Evidens: commit `e44d47ce` (8 files), commit-msg-hook passerte.
+- [ ] **K5** Closing-kommentar postet på #927 (Teknisk + Funksjonell) ved lukking. — etter PR-merge.
 
 ## Gates
 
