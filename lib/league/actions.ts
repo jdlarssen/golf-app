@@ -11,7 +11,7 @@ import {
 } from '@/lib/admin/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
-import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
+import { isTeeOffInPast, parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { generateRounds } from './generateRounds';
 import { leagueFlightGameConfig, isPointsBasedFormat } from './flightFormat';
@@ -139,6 +139,20 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     return { error: 'players' };
   }
 
+  // #924: block creating a league whose entire season is already over (the last
+  // generated window closed >grace in the past) — every round would be
+  // unplayable (startLeagueRoundFlight → outside_window), almost always a
+  // mistyped year. Mid-season setup (past start, future end) stays legal: only
+  // the last window matters. 'custom' frequency generates no windows → no check
+  // (rounds are added later via the guarded addLeagueRound). Computed before any
+  // insert so the reject leaves nothing to roll back. Reuses the #902 helper +
+  // grace (one home for the rule). The window-close is the "playable-until"
+  // instant. The windows are reused for the round insert below.
+  const windows = generateRounds(seasonStart, seasonEnd, frequency);
+  if (windows.length > 0 && isTeeOffInPast(windows[windows.length - 1].closes_at)) {
+    return { error: 'season_over' };
+  }
+
   const { data: league, error: insErr } = await supabase
     .from('leagues')
     .insert({
@@ -163,7 +177,6 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   if (insErr || !league) return { error: 'insert_failed' };
   const leagueId = (league as { id: string }).id;
 
-  const windows = generateRounds(seasonStart, seasonEnd, frequency);
   if (windows.length > 0) {
     const roundRows = windows.map((w) => ({
       league_id: leagueId,
@@ -290,6 +303,10 @@ export async function addLeagueRound(formData: FormData): Promise<LeagueActionEr
   const opensAt = parseOsloDateTimeLocal(opensAtRaw);
   const closesAt = parseOsloDateTimeLocal(closesAtRaw);
   if (new Date(closesAt).getTime() <= new Date(opensAt).getTime()) return { error: 'window' };
+  // #924: a round whose play window has already closed is unplayable
+  // (startLeagueRoundFlight → outside_window) — block it. The window-close is
+  // the "playable-until" instant; reuse the #902 grace so liga + games agree.
+  if (isTeeOffInPast(closesAt)) return { error: 'round_in_past' };
 
   const { data: league } = await supabase
     .from('leagues')
@@ -344,6 +361,8 @@ export async function overrideRoundWindow(formData: FormData): Promise<LeagueAct
   if (!roundId || !leagueId || !closesAtRaw) return { error: 'missing' };
   const { userId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
+  // #924: intentionally NOT guarded against a past window — this path exists to
+  // reopen/extend a round whose window has already closed (audit fields below).
   // datetime-local is Oslo wall-clock → convert to a real UTC instant (#648).
   const patch: TablesUpdate<'league_rounds'> = {
     closes_at: parseOsloDateTimeLocal(closesAtRaw),

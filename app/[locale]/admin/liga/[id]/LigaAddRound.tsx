@@ -22,10 +22,14 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
   );
 
   const error = state.error
-    ? (['missing', 'window', 'not_found', 'insert_failed'] as const).includes(
-        state.error as 'missing' | 'window' | 'not_found' | 'insert_failed',
+    ? (
+        ['missing', 'window', 'not_found', 'insert_failed', 'round_in_past'] as const
+      ).includes(
+        state.error as 'missing' | 'window' | 'not_found' | 'insert_failed' | 'round_in_past',
       )
-      ? t(`errors.${state.error as 'missing' | 'window' | 'not_found' | 'insert_failed'}`)
+      ? t(
+          `errors.${state.error as 'missing' | 'window' | 'not_found' | 'insert_failed' | 'round_in_past'}`,
+        )
       : t('errors.fallback')
     : null;
 

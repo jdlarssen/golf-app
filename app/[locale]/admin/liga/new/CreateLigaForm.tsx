@@ -85,8 +85,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         name: 1, dates: 1, standings_model: 1, format: 1, course_scope: 1,
         course: 1, penalty: 1, best_n: 1, scoring: 1, players: 1,
         insert_failed: 1, rounds_failed: 1, players_failed: 1, missing: 1,
+        season_over: 1,
       }
-      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'scoring' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing'}`)
+      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'scoring' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing' | 'season_over'}`)
       : t('errors.unexpected', { code: state.error })
     : null;
 

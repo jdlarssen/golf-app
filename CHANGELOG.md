@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Oppsett-skjemaet er kortere og roligere: hver del ligger i et sammenleggbart panel du bretter ut når du trenger det.
 
+### [1.142.1] - 2026-06-24 · #924
+
+> Setter du opp en liga-runde med en frist som alt har vært, eller en hel sesong som allerede er over, stopper appen deg med en gang. Da slipper du å lage en runde ingen får spilt.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- Past-window-vern på liga-runde-opprettelse — liga-symmetrien til #902 (#924). En liga-runde spilles i vinduet `[opens_at, closes_at]`; en runde hvis vindu alt har lukket seg er uspillbar (`startLeagueRoundFlight` → `outside_window`), nesten alltid et feiltastet årstall.
+  - `addLeagueRound`: blokkerer å legge til en runde hvis `closes_at` ligger >5 min i fortiden (`round_in_past`).
+  - `createLeagueDraft`: blokkerer å opprette en liga der hele sesongen alt er over — det siste genererte vinduets `closes_at` ligger i fortiden (`season_over`). Midt-i-sesong-oppsett (start i fortid, slutt i framtid) er fortsatt lovlig: kun det siste vinduet teller. `generateRounds` er flyttet foran insert-en så avvisningen ikke etterlater noe å rulle tilbake.
+- Gjenbruker `isTeeOffInPast` + `TEE_OFF_PAST_GRACE_MS` (5 min) fra `lib/games/gamePayload.ts` — én kilde for regelen (AGENTS.md felle #4). Vindu-lukkingen er «spillbar-til»-tidspunktet.
+- Edit-/reopen-stiene (`updateLeagueRound`, `overrideRoundWindow`) er bevisst ikke vernet — `overrideRoundWindow` finnes nettopp for å gjenåpne lukkede vinduer. Dokumentert med kommentar.
+- Cup ble droppet fra issuet etter kode-lesning: cup-matcher har ingen tee-off-kolonne (verken cup-opprett eller batch-generering setter dato), og den manuelle enkelt-match-stien går via spill-wizarden som alt er #902-vernet. Ingen kodeendring.
+- Enhets-tester (server-guarden, med ekte klokke) + render-tester (feilkode → norsk melding i `LigaAddRound`/`CreateLigaForm`) låser begge ender av kjeden; test-fixturer bruker faste 2020/2099-tidspunkt så de aldri går ut på dato.
+
+</details>
+
 ### [1.142.0] - 2026-06-24 · #909
 
 > Skal du sette opp eller endre et spill, møter du ikke lenger én lang rull. Spillere, spillform, påmelding og innstillinger ligger hver for seg i panel du bretter ut når du vil endre noe. Redigerer du et spill som alt er publisert, ser du spillformen som et lite kort i stedet for hele rutenettet du ikke kan endre likevel. Og den lange lista med sideturnerings-kategorier er pakket bort til du velger «Egendefinert».

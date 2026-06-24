@@ -232,6 +232,105 @@ describe('createLeagueDraft — rollback on league_players failure (#737)', () =
   });
 });
 
+/**
+ * #924: past-window guard, the liga symmetry of #902. A liga round is playable
+ * in [opens_at, closes_at]; a round whose window has already closed is
+ * unplayable (startLeagueRoundFlight → outside_window), almost always a mistyped
+ * year. addLeagueRound blocks adding such a round; createLeagueDraft blocks
+ * creating a league whose entire season is already over. Both reuse the #902
+ * isTeeOffInPast helper (5-min grace). Edit/reopen paths stay unguarded.
+ *
+ * Literal far-past (2020) / far-future (2099) instants keep these drift-proof.
+ */
+describe('addLeagueRound — past close window is blocked (#924)', () => {
+  function roundForm(opensAt: string, closesAt: string): FormData {
+    const fd = new FormData();
+    fd.set('league_id', 'l1');
+    fd.set('opens_at', opensAt);
+    fd.set('closes_at', closesAt);
+    return fd;
+  }
+
+  it('rejects a round whose close window is already in the past, no insert', async () => {
+    // group_id null → requireAdminOrClubAdminOfLeague delegates to requireAdmin.
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole users.single
+    ]);
+    setUser('admin-1');
+
+    const { addLeagueRound } = await import('./actions');
+    // Both bounds in 2020: window order is valid (closes > opens) so the guard,
+    // not the 'window' check, is what rejects it.
+    expect(
+      await addLeagueRound(roundForm('2020-05-01T08:00', '2020-05-01T18:00')),
+    ).toEqual({ error: 'round_in_past' });
+
+    const ins = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'league_rounds' && c.method === 'insert',
+    );
+    expect(ins, 'no league_rounds insert for a past round').toBeUndefined();
+  });
+
+  it('accepts a future round and proceeds to the insert', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { data: { course_scope: 'multi_course', course_id: null, tee_box_id: null } }, // leagues.maybeSingle
+      { data: { sequence: 2 } }, // last round sequence
+      { data: [{ id: 'r9' }], error: null }, // league_rounds.insert().select('id')
+    ]);
+    setUser('admin-1');
+
+    const { addLeagueRound } = await import('./actions');
+    expect(
+      await addLeagueRound(roundForm('2099-05-01T08:00', '2099-05-01T18:00')),
+    ).toEqual({ error: '' });
+
+    const ins = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'league_rounds' && c.method === 'insert',
+    );
+    expect(ins, 'future round reaches the insert').toBeDefined();
+  });
+});
+
+describe('createLeagueDraft — fully-past season is blocked (#924)', () => {
+  function seasonForm(start: string, end: string): FormData {
+    const fd = new FormData();
+    fd.set('name', 'Test-liga');
+    fd.set('season_start', start);
+    fd.set('season_end', end);
+    fd.set('format', 'stroke');
+    fd.set('scoring', 'net');
+    fd.set('standings_model', 'total');
+    fd.set('missed_round_policy', 'penalty');
+    fd.set('penalty_kind', 'worst_plus_one');
+    fd.set('course_scope', 'multi_course');
+    fd.set('frequency', 'monthly');
+    return fd;
+  }
+
+  it('rejects a season already entirely over, no leagues insert', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin
+    ]);
+    setUser('admin-1');
+
+    const { createLeagueDraft } = await import('./actions');
+    // Whole 2020 season is over → last generated window closed long ago.
+    expect(await createLeagueDraft(seasonForm('2020-01-01', '2020-12-31'))).toEqual({
+      error: 'season_over',
+    });
+
+    const ins = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'leagues' && c.method === 'insert',
+    );
+    expect(ins, 'no leagues insert for a fully-past season').toBeUndefined();
+    // The accepted (future-season) path is already locked by the #675/#737
+    // tests above, which use a 2026 season and reach the leagues insert.
+  });
+});
+
 describe('startLeagueRoundFlight — rollback on game_players failure (#737)', () => {
   it('deletes the committed games row when the flight game_players insert fails', async () => {
     supabaseMock = buildSupabaseMock([

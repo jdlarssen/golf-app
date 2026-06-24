@@ -3537,6 +3537,7 @@
         "rounds_failed": "The league was created but some rounds failed. Check the detail page.",
         "players_failed": "The league was created but the participants failed. Check the detail page.",
         "missing": "Some required fields are missing.",
+        "season_over": "The season has already ended. Pick dates in the future.",
         "unexpected": "Unexpected error: {code}"
       },
       "grundinfoHeading": "Basic info",
@@ -3706,6 +3707,7 @@
         "window": "The close date must be after the open date.",
         "not_found": "League not found.",
         "insert_failed": "Could not add the round. Please try again.",
+        "round_in_past": "That close date has already passed. Pick one in the future.",
         "fallback": "Something went wrong."
       }
     },

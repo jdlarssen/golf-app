@@ -3537,6 +3537,7 @@
         "rounds_failed": "Ligaen ble opprettet, men noen runder feilet. Sjekk detalj-siden.",
         "players_failed": "Ligaen ble opprettet, men deltakerne feilet. Sjekk detalj-siden.",
         "missing": "Noen påkrevde felt mangler.",
+        "season_over": "Sesongen er allerede over. Velg datoer fram i tid.",
         "unexpected": "Uventet feil: {code}"
       },
       "grundinfoHeading": "Grunninfo",
@@ -3706,6 +3707,7 @@
         "window": "Fristen må være etter starten.",
         "not_found": "Fant ikke ligaen.",
         "insert_failed": "Klarte ikke å legge til runden. Prøv igjen.",
+        "round_in_past": "Fristen har allerede gått ut. Velg en som ligger fram i tid.",
         "fallback": "Noe gikk galt."
       }
     },
