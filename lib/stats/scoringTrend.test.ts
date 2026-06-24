@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildScoringTrend, type TrendRound } from './scoringTrend';
+import {
+  buildScoringTrend,
+  summarizeTrendRounds,
+  type TrendRound,
+} from './scoringTrend';
 
 /** Brutto-only round helper. */
 const r = (brutto: number, netto: number | null = null): TrendRound => ({
@@ -115,5 +119,53 @@ describe('buildScoringTrend — polyline strings', () => {
     );
     // The compact string never carries full float precision.
     expect(g.bruttoPolyline).not.toContain('8.333');
+  });
+});
+
+describe('buildScoringTrend — best-round markers (#949)', () => {
+  it('points the brutto marker at the lowest brutto round', () => {
+    const g = buildScoringTrend([r(90), r(84), r(88)], SQUARE)!;
+    // 84 is the min → marker sits on the 2nd brutto point.
+    expect(g.bruttoBestPoint).toEqual(g.bruttoPoints[1]);
+  });
+
+  it('breaks brutto ties toward the EARLIEST occurrence (record was set then)', () => {
+    const g = buildScoringTrend([r(84), r(90), r(84)], SQUARE)!;
+    expect(g.bruttoBestPoint).toEqual(g.bruttoPoints[0]);
+  });
+
+  it('points the netto marker at the lowest netto, skipping null rounds', () => {
+    const g = buildScoringTrend([r(90, 74), r(84, null), r(88, 70)], SQUARE)!;
+    // best netto = 70 on round index 2 → marker x matches that round's x.
+    expect(g.nettoBestPoint).not.toBeNull();
+    expect(g.nettoBestPoint!.x).toBe(g.bruttoPoints[2].x);
+  });
+
+  it('has no netto marker when no round carries netto', () => {
+    const g = buildScoringTrend([r(90), r(88)], SQUARE)!;
+    expect(g.nettoBestPoint).toBeNull();
+  });
+});
+
+describe('summarizeTrendRounds (#949)', () => {
+  it('reads brutto start (first), now (last) and best (min)', () => {
+    const s = summarizeTrendRounds([r(99), r(92), r(86), r(90)]);
+    expect(s.brutto).toEqual({ start: 99, now: 90, best: 86 });
+  });
+
+  it('reads netto start/now/best, ignoring null rounds for best', () => {
+    const s = summarizeTrendRounds([r(99, 83), r(92, null), r(86, 70), r(90, 74)]);
+    expect(s.netto).toEqual({ start: 83, now: 74, best: 70 });
+  });
+
+  it('returns null netto fields when no round carries netto', () => {
+    const s = summarizeTrendRounds([r(99), r(86)]);
+    expect(s.netto).toEqual({ start: null, now: null, best: null });
+  });
+
+  it('reports the same value for start/now/best with a single round', () => {
+    const s = summarizeTrendRounds([r(88, 72)]);
+    expect(s.brutto).toEqual({ start: 88, now: 88, best: 88 });
+    expect(s.netto).toEqual({ start: 72, now: 72, best: 72 });
   });
 });

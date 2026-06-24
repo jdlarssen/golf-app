@@ -35,6 +35,32 @@ export type ScoringTrendGeometry = {
   /** Padded y-domene som faktisk ble brukt (verst..best i score-tall). */
   yMin: number;
   yMax: number;
+  /** Punktet for beste (laveste) brutto-runde — koordinat for rekord-ringen
+   *  (#949). Tidligste forekomst ved likhet (rekorden ble satt da). */
+  bruttoBestPoint: TrendPoint;
+  /** Tilsvarende for beste netto, eller `null` når ingen runde har netto. */
+  nettoBestPoint: TrendPoint | null;
+};
+
+/** Start/nå/beste for én metrikk over vinduet (#949). */
+export type TrendStat = {
+  /** Første (eldste) runde i vinduet. */
+  start: number;
+  /** Siste (nyeste) runde i vinduet. */
+  now: number;
+  /** Beste (laveste) verdi i vinduet. */
+  best: number;
+};
+
+/** Sammendrag bak boksene: brutto alltid, netto-felt `null` ved manglende
+ *  banehandicap (#949). */
+export type TrendSummary = {
+  brutto: TrendStat;
+  netto: {
+    start: number | null;
+    now: number | null;
+    best: number | null;
+  };
 };
 
 export type ScoringTrendPadding = {
@@ -127,6 +153,19 @@ export function buildScoringTrend(
     if (r.netto != null) nettoPoints.push({ x: mapX(i), y: mapY(r.netto) });
   });
 
+  // Beste-runder for rekord-ringene (#949). Strict `<` beholder den TIDLIGSTE
+  // forekomsten ved likhet — rekorden ble satt første gang den ble nådd.
+  let bestBruttoIdx = 0;
+  for (let i = 1; i < n; i++) {
+    if (rounds[i].brutto < rounds[bestBruttoIdx].brutto) bestBruttoIdx = i;
+  }
+  let bestNettoIdx = -1;
+  for (let i = 0; i < n; i++) {
+    const v = rounds[i].netto;
+    if (v == null) continue;
+    if (bestNettoIdx < 0 || v < rounds[bestNettoIdx].netto!) bestNettoIdx = i;
+  }
+
   return {
     width,
     height,
@@ -136,5 +175,39 @@ export function buildScoringTrend(
     nettoPolyline: toPolyline(nettoPoints),
     yMin,
     yMax,
+    bruttoBestPoint: bruttoPoints[bestBruttoIdx],
+    nettoBestPoint:
+      bestNettoIdx >= 0
+        ? { x: mapX(bestNettoIdx), y: mapY(rounds[bestNettoIdx].netto!) }
+        : null,
+  };
+}
+
+/**
+ * Start/nå/beste for brutto + netto over vinduet (#949). Ren, I/O-fri.
+ * `start` = første runde, `now` = siste, `best` = laveste. Netto-felt er `null`
+ * når ingen runde i vinduet har netto (alle `best`/`start`/`now` følger med).
+ * Kallstedet garanterer minst én runde (geometrien er allerede `null`-gatet).
+ */
+export function summarizeTrendRounds(rounds: TrendRound[]): TrendSummary {
+  const first = rounds[0];
+  const last = rounds[rounds.length - 1];
+
+  const nettos = rounds
+    .map((r) => r.netto)
+    .filter((v): v is number => v != null);
+  const bestNetto = nettos.length > 0 ? Math.min(...nettos) : null;
+
+  return {
+    brutto: {
+      start: first.brutto,
+      now: last.brutto,
+      best: Math.min(...rounds.map((r) => r.brutto)),
+    },
+    netto: {
+      start: first.netto,
+      now: last.netto,
+      best: bestNetto,
+    },
   };
 }
