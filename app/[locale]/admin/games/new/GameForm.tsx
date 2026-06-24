@@ -500,8 +500,18 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </div>
       ))}
 
-      {/* Section 1: Basics */}
-      <BasicsSection state={state} courses={courses} showName showAdvancedInline />
+      {/* Section 1: Basics. #909: synlighet + sideturnering løftes ut av
+          Grunnoppsett (showAdvancedInline={false}) og ned i «Innstillinger»-
+          panelet via AdvancedSettingsSection includeVisibility — samme path
+          som wizarden. Holder Grunnoppsett-panelet lett (bane/tee/tid/navn)
+          så det kan stå åpent som default uten å dra med seg sideturnering-
+          katalogen. Form-felt-navn er uendret. */}
+      <BasicsSection
+        state={state}
+        courses={courses}
+        showName
+        showAdvancedInline={false}
+      />
 
       {/* Section 2: Players */}
       <PlayersSection state={state} players={players} />
@@ -784,8 +794,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       {/* Section 4/5: Matchplay sides / team grid / flights / per-spiller-tee */}
       <TeamsAssignmentSection state={state} players={players} />
 
-      {/* Section 6: Settings */}
-      <AdvancedSettingsSection state={state} />
+      {/* Section 6: Settings. #909: includeVisibility løfter synlighet- +
+          sideturnering-fieldsetene hit (ut av Grunnoppsett) i tillegg til
+          peer-approval, slik at alle innstillinger samles i ett panel. */}
+      <AdvancedSettingsSection state={state} includeVisibility />
 
       {/* Section 6: Submit */}
       <section className="space-y-3 pt-2">
