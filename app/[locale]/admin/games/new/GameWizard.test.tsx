@@ -389,9 +389,10 @@ describe('GameWizard — escape-hatch til full-form bevarer state', () => {
       screen.getByRole('button', { name: /tilpass alle detaljer/i }),
     );
 
-    expect(
-      screen.getByRole('heading', { name: /^bane og tidspunkt$/i }),
-    ).toBeInTheDocument();
+    // #909: full-view-en (GameForm) rendrer nå seksjonene som Disclosure-
+    // paneler; «Grunnoppsett»-panelet (åpent som default) erstatter den
+    // tidligere «Bane og tidspunkt»-headingen som full-view-markør.
+    expect(screen.getByText('Grunnoppsett')).toBeInTheDocument();
 
     const backLink = screen.getByRole('button', {
       name: /tilbake til hurtig-oppsett/i,

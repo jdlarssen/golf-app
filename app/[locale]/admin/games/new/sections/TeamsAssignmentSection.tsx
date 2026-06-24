@@ -95,6 +95,53 @@ function PlayerGenderToggle({
   );
 }
 
+/**
+ * #909: forteller om TeamsAssignmentSection vil rendre noe innhold for
+ * gjeldende state. GameForm bruker den til å bestemme om «Inndeling»-
+ * Disclosure-panelet skal vises i det hele tatt (et tomt panel ville vært
+ * forvirrende). MÅ speile de fire render-guardene i komponenten under (sider /
+ * lag-grid / flights / tee-per-spiller) — endrer du en guard, oppdater begge.
+ */
+export function teamsAssignmentHasContent(state: GameFormState): boolean {
+  const n = state.selectedPlayerIds.length;
+  // Sider (matchplay)
+  if (state.isMatchplay && n > 0) return true;
+  // Lag-grid
+  if (
+    state.requiresTeams &&
+    (((state.isBestBall ||
+      state.isParStableford ||
+      state.isPatsome ||
+      state.isTeamMatchplay) &&
+      n >= 2) ||
+      ((state.isTexas ||
+        state.isAmbrose ||
+        state.isFlorida ||
+        state.isShamble) &&
+        n >= state.teamSize))
+  ) {
+    return true;
+  }
+  // Flights (best-ball, fullt fordelt)
+  if (state.isBestBall && state.teamsComplete) return true;
+  // Tee-per-spiller
+  if (
+    (state.isSolo ||
+      state.isParStableford ||
+      state.isMatchplay ||
+      state.isTexas ||
+      state.isAmbrose ||
+      state.isFlorida ||
+      state.isShamble ||
+      state.isPatsome ||
+      state.isTeamMatchplay) &&
+    n > 0
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function TeamsAssignmentSection({
   state,
   players,

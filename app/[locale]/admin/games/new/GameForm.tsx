@@ -12,9 +12,14 @@ import { TeamSizeSelector, type TeamSize } from './TeamSizeSelector';
 import { useGameFormState } from './useGameFormState';
 import { BasicsSection } from './sections/BasicsSection';
 import { PlayersSection } from './sections/PlayersSection';
-import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
+import {
+  TeamsAssignmentSection,
+  teamsAssignmentHasContent,
+} from './sections/TeamsAssignmentSection';
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
+import { Disclosure } from '@/components/ui/Disclosure';
+import { LockedFormatSummary } from './LockedFormatSummary';
 import { useTranslations } from 'next-intl';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
@@ -289,6 +294,8 @@ type Props = {
 export function GameForm({ courses, players, mode, initialValues }: Props) {
   const t = useTranslations('wizard.form');
   const tAllowance = useTranslations('allowance');
+  const tModes = useTranslations('modes');
+  const tReg = useTranslations('wizard.sections.registration');
   const state = useGameFormState({ initialValues, players, courses });
   const {
     name,
@@ -348,6 +355,23 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     return null;
   }
   const draftPublishActions = getDraftAndPublishActions();
+
+  // #909: ett-linjes sammendrag vist i kollapset tilstand for hvert panel, så
+  // admin ser hva som ligger inni uten å brette ut.
+  const playersSummary = t('panelPlayersSummary', {
+    count: state.selectedPlayerIds.length,
+  });
+  const formatSummary = lockGameMode
+    ? `${tModes(gameMode)} · ${t('lockedTag')}`
+    : tModes(gameMode);
+  const registrationSummary = tReg(
+    state.registrationMode === 'invite_only'
+      ? 'modeInviteTitle'
+      : state.registrationMode === 'manual_approval'
+        ? 'modeApprovalTitle'
+        : 'modeOpenTitle',
+  );
+  const settingsSummary = t(state.sideEnabled ? 'panelSideOn' : 'panelSideOff');
 
   return (
     <form className="space-y-6">
@@ -506,15 +530,20 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           som wizarden. Holder Grunnoppsett-panelet lett (bane/tee/tid/navn)
           så det kan stå åpent som default uten å dra med seg sideturnering-
           katalogen. Form-felt-navn er uendret. */}
-      <BasicsSection
-        state={state}
-        courses={courses}
-        showName
-        showAdvancedInline={false}
-      />
+      <Disclosure title={t('panelTitleBasics')} defaultOpen>
+        <BasicsSection
+          state={state}
+          courses={courses}
+          showName
+          showAdvancedInline={false}
+          hideHeading
+        />
+      </Disclosure>
 
       {/* Section 2: Players */}
-      <PlayersSection state={state} players={players} />
+      <Disclosure title={t('panelTitlePlayers')} summary={playersSummary}>
+        <PlayersSection state={state} players={players} hideHeading />
+      </Disclosure>
 
       {/* Section 2.5: Modus + lagstørrelse — fyrer mellom spiller-listen og
           lag-tilordnings-grid-en så admin må eksplisitt velge hvordan
@@ -525,23 +554,38 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           TeamSizeSelector skjules for matchplay siden det kun finnes én
           gyldig lagstørrelse (1 spiller per side) — å vise Solo/Par/4-mann
           ville gitt misvisende valg. team_size = 1 sendes uansett via det
-          skjulte hidden-input ved bunnen av form. */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-medium text-text">
-          {t('formatHeading')}
-        </h2>
-        <ModeSelector
-          value={gameMode}
-          onChange={handleModeChange}
-          disabled={lockGameMode}
-        />
-        {!isMatchplay && (
-          <TeamSizeSelector
+          skjulte hidden-input ved bunnen av form.
+
+          #909: når modusen er låst (edit av publisert spill) erstattes den
+          fulle ModeSelector-griden + TeamSizeSelector av et read-only kort.
+          Velgerne emitter ingen skjema-felter (game_mode/team_size går via de
+          skjulte input-ene øverst), så å droppe dem her endrer ikke form-data.
+          Allowance- + setup-feltene under rendres uendret (disabled-tilstanden
+          deres bestemmer hva som sendes — som før). */}
+      <Disclosure title={t('panelTitleFormat')} summary={formatSummary}>
+        <div className="space-y-4">
+        {lockGameMode ? (
+          <LockedFormatSummary
             mode={gameMode}
-            value={teamSize}
-            onChange={handleTeamSizeChange}
-            disabled={lockGameMode}
+            teamSize={teamSize}
+            showTeamSize={teamSize > 1}
           />
+        ) : (
+          <>
+            <ModeSelector
+              value={gameMode}
+              onChange={handleModeChange}
+              disabled={lockGameMode}
+            />
+            {!isMatchplay && (
+              <TeamSizeSelector
+                mode={gameMode}
+                value={teamSize}
+                onChange={handleTeamSizeChange}
+                disabled={lockGameMode}
+              />
+            )}
+          </>
         )}
         {gameMode === 'fourball_matchplay' && (
           <AllowanceField
@@ -779,25 +823,38 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             disabled={lockGameMode}
           />
         )}
-        {lockGameMode && (
-          <p className="text-xs text-muted">
-            <strong>{t('modeLockedNote')}</strong>
-          </p>
-        )}
-      </section>
+        </div>
+      </Disclosure>
 
       {/* Section 3b: Påmelding (#199) — to akser: hvem kan melde seg på, og
           hva man melder på. Defaultes til invite_only + solo så dagens flyt
           er uendret når admin ikke aktivt velger noe annet. */}
-      <RegistrationSection state={state} />
+      <Disclosure
+        title={t('panelTitleRegistration')}
+        summary={registrationSummary}
+      >
+        <RegistrationSection state={state} hideHeading />
+      </Disclosure>
 
-      {/* Section 4/5: Matchplay sides / team grid / flights / per-spiller-tee */}
-      <TeamsAssignmentSection state={state} players={players} />
+      {/* Section 4/5: Matchplay sides / team grid / flights / per-spiller-tee.
+          #909: kun vist når seksjonen faktisk har innhold for gjeldende modus
+          (teamsAssignmentHasContent speiler render-guardene) — ellers ville
+          panelet stått tomt. Numererte interne headings («4. Lag» osv.)
+          beholdes urørt. */}
+      {teamsAssignmentHasContent(state) && (
+        <Disclosure title={t('panelTitleTeams')}>
+          <div className="space-y-4">
+            <TeamsAssignmentSection state={state} players={players} />
+          </div>
+        </Disclosure>
+      )}
 
       {/* Section 6: Settings. #909: includeVisibility løfter synlighet- +
           sideturnering-fieldsetene hit (ut av Grunnoppsett) i tillegg til
           peer-approval, slik at alle innstillinger samles i ett panel. */}
-      <AdvancedSettingsSection state={state} includeVisibility />
+      <Disclosure title={t('panelTitleSettings')} summary={settingsSummary}>
+        <AdvancedSettingsSection state={state} includeVisibility hideHeading />
+      </Disclosure>
 
       {/* Section 6: Submit */}
       <section className="space-y-3 pt-2">

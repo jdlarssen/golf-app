@@ -31,6 +31,11 @@ type Props = {
    * inne i AdvancedSettingsSection.
    */
   showAdvancedInline?: boolean;
+  /**
+   * #909: skjul seksjons-headingen. GameForm wrapper seksjonen i et
+   * Disclosure-panel som allerede bærer tittelen. Default false.
+   */
+  hideHeading?: boolean;
 };
 
 /** Current browser-local wall-clock as a `datetime-local` `min` ('YYYY-MM-DDTHH:mm'). */
@@ -57,6 +62,7 @@ export function BasicsSection({
   courses,
   showName = true,
   showAdvancedInline = true,
+  hideHeading = false,
 }: Props) {
   const t = useTranslations('wizard.sections.basics');
   const {
@@ -98,7 +104,9 @@ export function BasicsSection({
 
   return (
     <section className="space-y-4">
-      <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
+      {!hideHeading && (
+        <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
+      )}
       {showName && (
         <Input
           id="name"

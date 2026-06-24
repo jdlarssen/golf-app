@@ -17,6 +17,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.142.y — Et ryddigere oppsett
+
+Oppsett-skjemaet er kortere og roligere: hver del ligger i et sammenleggbart panel du bretter ut når du trenger det.
+
+### [1.142.0] - 2026-06-24 · #909
+
+> Skal du sette opp eller endre et spill, møter du ikke lenger én lang rull. Spillere, spillform, påmelding og innstillinger ligger hver for seg i panel du bretter ut når du vil endre noe. Redigerer du et spill som alt er publisert, ser du spillformen som et lite kort i stedet for hele rutenettet du ikke kan endre likevel. Og den lange lista med sideturnerings-kategorier er pakket bort til du velger «Egendefinert».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- Den delte `GameForm` (edit + opprett-veiviserens «full view») rendrer nå seksjonene som sammenleggbare paneler i stedet for én lang stacked layout (#909). Ny `Disclosure`-primitiv (`components/ui/Disclosure.tsx`) bygd på native `<details>`/`<summary>` — ingen JS, tastatur-tilgjengelig, reduced-motion-trygg. Grunnoppsett står åpent som default; Spillere, Spillform, Påmelding, Inndeling og Innstillinger starter kollapset med ett-linjes sammendrag.
+- **Form-data-invariant:** refactoren er rent presentasjonell. Et lukket `<details>` beholder feltene i DOM, så de sendes uendret ved submit. Settet av innsendte skjema-felter er identisk per `(modus, lås-tilstand)` før og etter.
+- **Låst spillform → read-only kort.** Ved edit av et publisert/scheduled spill erstatter `LockedFormatSummary` den fulle ModeSelector-griden (13 kort) + TeamSizeSelector med et kompakt kort (format-navn + lagstørrelse + låst-notis). Velgerne emitter ingen skjema-felter (`game_mode`/`team_size` går via hidden inputs øverst), så å droppe dem endrer ikke form-data; allowance- og setup-feltene rendres uendret under.
+- **Sideturnering-katalogen auto-kollapses** bak forhåndsvalgene i `SideCategoriesPicker`; de rundt 40 kategoriene brettes ut først når «Egendefinert» er aktiv. Hidden input-ene (`side_disabled_categories`) rendres uansett synlighet.
+- Synlighet + sideturnering løftet ut av `BasicsSection` (`showAdvancedInline={false}`) og inn i «Innstillinger»-panelet via `AdvancedSettingsSection includeVisibility` — samme path som wizarden. `hideHeading`-prop lagt til `BasicsSection`/`PlayersSection` (default false) så panelene ikke dublerer seksjons-headingen. `TeamsAssignmentSection` beholder sine numererte interne headings; nytt eksportert `teamsAssignmentHasContent`-predikat avgjør om «Inndeling»-panelet vises i det hele tatt.
+
+</details>
+
 ## 1.141.y — Spillerens klubbhus
 
 Klubbhuset møter deg nå som spiller: en invitasjon til å arrangere, klubbene dine og det du selv har satt opp, i stedet for en flis-katalog som var tom hvis du aldri arrangerer.

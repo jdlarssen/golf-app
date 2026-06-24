@@ -22,6 +22,12 @@ type Props = {
    */
   heading?: string;
   /**
+   * #909: skjul seksjons-headingen helt (GameForm wrapper seksjonen i et
+   * Disclosure-panel som allerede bærer tittelen, så headingen ville dublert
+   * den). Spiller-telleren beholdes. Default false.
+   */
+  hideHeading?: boolean;
+  /**
    * #464: begrenser den valgbare checkbox-lista til disse id-ene (picker-kilden
    * per kontekst — venner/klubbmedlemmer). `players` forblir full roster så
    * allerede-valgte chips alltid slås opp. `undefined` = ingen begrensning
@@ -34,6 +40,7 @@ export function PlayersSection({
   state,
   players,
   heading,
+  hideHeading = false,
   selectableIds,
 }: Props) {
   const t = useTranslations('wizard.sections.players');
@@ -86,19 +93,14 @@ export function PlayersSection({
     return base;
   }
 
-  return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-medium text-text">{resolvedHeading}</h2>
-        {/* Counter er mode-aware:
-            - best-ball: «X spillere valgt» med partall-hint (#374 — ikke lenger
-              fast 8-krav; 2/4/6/8 er gyldige antall)
-            - par-stableford: «X spillere valgt» med subtilt hint om
-              partall-krav for å hjelpe admin før publish-feilen treffer
-            - matchplay: «X av 2 spillere valgt» (fast 2-krav) — grønn
-              farge når akkurat 2 er valgt, ellers muted
-            - solo: «X spillere valgt», ingen øvre tak */}
-        {isBestBall ? (
+  // Counter er mode-aware:
+  //   - best-ball: «X spillere valgt» med partall-hint (#374 — ikke lenger
+  //     fast 8-krav; 2/4/6/8 er gyldige antall)
+  //   - par-stableford: «X spillere valgt» med subtilt hint om partall-krav
+  //   - matchplay: «X av 2 spillere valgt» (fast 2-krav) — grønn ved akkurat 2
+  //   - solo: «X spillere valgt», ingen øvre tak
+  const counterEl =
+        isBestBall ? (
           <span
             className={`text-xs font-medium tabular-nums ${count >= 2 && count % 2 === 0 ? 'text-primary' : 'text-muted'}`}
           >
@@ -129,8 +131,18 @@ export function PlayersSection({
               </span>
             )}
           </span>
-        )}
-      </div>
+        );
+
+  return (
+    <section className="space-y-3">
+      {hideHeading ? (
+        <div className="flex justify-end">{counterEl}</div>
+      ) : (
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-medium text-text">{resolvedHeading}</h2>
+          {counterEl}
+        </div>
+      )}
       {players.length === 0 ? (
         <p className="text-sm text-muted">
           {t('noPlayersYet')}

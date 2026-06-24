@@ -57,13 +57,12 @@ describe('GameForm — baseline (pre-fase-4)', () => {
       />,
     );
 
-    // Spiller-seksjons-heading. Bruk role+name for å unngå å matche
-    // generelle «spillere»-strenger i annen UI-prosa.
-    expect(
-      screen.getByRole('heading', { name: /spillere/i }),
-    ).toBeInTheDocument();
+    // #909: seksjonen ligger nå i et Disclosure-panel; tittelen «Spillere» er
+    // panel-tittel (span), ikke lenger en heading. Bekreft at panelet rendres.
+    expect(screen.getByText('Spillere')).toBeInTheDocument();
 
-    // Alle 8 spillere skal vises som checkbox-rader.
+    // Alle 8 spillere skal vises som checkbox-rader (i et lukket panel beholder
+    // jsdom innholdet spørrbart).
     for (const player of EIGHT_PLAYERS) {
       expect(
         screen.getByRole('checkbox', { name: new RegExp(player.name!, 'i') }),
@@ -270,8 +269,8 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
     ).toBe('1');
   });
 
-  it('lock_game_mode disabler både mode- og size-tiles (edit-flyt for publiserte spill)', () => {
-    render(
+  it('lock_game_mode viser read-only format-kort i stedet for ModeSelector-griden (#909)', () => {
+    const { container } = render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS}
@@ -287,10 +286,30 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
       />,
     );
 
+    // Den fulle 13-korts ModeSelector-griden + TeamSizeSelector vises ikke når
+    // modusen er låst — erstattet av et kompakt read-only kort.
     expect(
-      screen.getByRole('radio', { name: /best ball/i }),
-    ).toBeDisabled();
-    expect(screen.getByRole('radio', { name: /par/i })).toBeDisabled();
+      screen.queryByRole('radio', { name: /best ball/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: /velg lagstørrelse/i }),
+    ).not.toBeInTheDocument();
+
+    // Kortet viser format-navnet + låst-notisen.
+    expect(screen.getByText('Best ball')).toBeInTheDocument();
+    expect(
+      screen.getByText(/kan ikke endres etter spill-start/i),
+    ).toBeInTheDocument();
+
+    // Form-data uendret: game_mode/team_size sendes fortsatt via hidden inputs.
+    expect(
+      (container.querySelector(
+        'input[type="hidden"][name="game_mode"]',
+      ) as HTMLInputElement).value,
+    ).toBe('best_ball');
+    expect(
+      container.querySelector('input[type="hidden"][name="team_size"]'),
+    ).not.toBeNull();
   });
 });
 
@@ -1510,5 +1529,83 @@ describe('GameForm — setup-step-seksjoner (fix #322)', () => {
     ) as HTMLInputElement | null;
     expect(netRadio).not.toBeNull();
     expect(netRadio?.checked).toBe(true);
+  });
+});
+
+describe('GameForm — kollapsbare paneler (#909)', () => {
+  it('rendrer seksjonene som Disclosure-paneler', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    // Panel-titlene rendres (Grunnoppsett åpent som default, resten kollapset).
+    for (const title of [
+      'Grunnoppsett',
+      'Spillere',
+      'Spillform',
+      'Påmelding',
+      'Innstillinger',
+    ]) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    }
+  });
+
+  it('form-data-invariant: kollapsede paneler beholder skjema-feltene i DOM', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    // Selv om Spillform/Påmelding/Innstillinger er kollapset som default, må
+    // feltene deres ligge i DOM så de sendes uendret ved submit (lukket
+    // <details> beholder innholdet). Et utvalg sentrale felt-navn:
+    for (const name of [
+      'game_mode',
+      'team_size',
+      'registration_mode',
+      'registration_type',
+      'score_visibility',
+      'side_tournament_enabled',
+      'require_peer_approval',
+    ]) {
+      expect(container.querySelector(`[name="${name}"]`)).not.toBeNull();
+    }
+  });
+
+  it('Inndeling-panelet vises kun når lag-/tee-tilordning har innhold', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    // best_ball uten valgte spillere → ingen lag-/tee-innhold → intet panel.
+    expect(screen.queryByText('Inndeling')).not.toBeInTheDocument();
+
+    // Velg 2 spillere → lag-grid har innhold → «Inndeling»-panelet dukker opp.
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+    expect(screen.getByText('Inndeling')).toBeInTheDocument();
   });
 });

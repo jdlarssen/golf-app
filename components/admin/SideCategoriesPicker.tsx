@@ -311,24 +311,34 @@ export function SideCategoriesPicker({
     () => new Set(defaultDisabledCategories ?? []),
   );
 
+  // #909: full ~40-kategori-katalogen er kollapset bak forhåndsvalgene; den
+  // brettes ut først når «Egendefinert» er aktiv. Initial åpen kun hvis det
+  // lagrede settet allerede er egendefinert (edit-flyt). Hidden-input-ene
+  // rendres uansett synlighet, så form-data er upåvirket av kollaps.
+  const [showCatalog, setShowCatalog] = useState(
+    () => detectPreset(new Set(defaultDisabledCategories ?? [])) === 'custom',
+  );
+
   const activePreset = useMemo(() => detectPreset(disabledSet), [disabledSet]);
+  const catalogOpen = showCatalog || activePreset === 'custom';
 
   function applyKlassisk() {
     setDisabledSet(new Set(CLASSIC_DISABLED_CATEGORIES));
+    setShowCatalog(false);
   }
 
   function applyFullPakke() {
     setDisabledSet(new Set());
+    setShowCatalog(false);
   }
 
   /**
-   * Custom-knappen tar deg ikke ut av valgt sett — den er kun en visuell
-   * indikasjon på at brukeren har plukket manuelt. Den auto-tennes når
-   * disabledSet avviker fra Klassisk og Full pakke. Klikk gjør ingenting,
-   * men knappen finnes så «Custom»-aktiv-staten ikke føles uplassert.
+   * «Egendefinert» bretter ut katalogen så brukeren kan plukke manuelt. Den
+   * endrer ikke selve settet — activePreset auto-tennes til 'custom' så snart
+   * en bryter avviker fra Klassisk/Full pakke.
    */
-  function noopCustom() {
-    /* visuell anker — ingen state-endring */
+  function openCustom() {
+    setShowCatalog(true);
   }
 
   function toggleRow(ids: readonly SideCategoryId[]) {
@@ -383,32 +393,35 @@ export function SideCategoriesPicker({
           <PresetChip
             label="Klassisk"
             description="Som før: netto + hole-win + LD/CTP"
-            active={activePreset === 'klassisk'}
+            active={activePreset === 'klassisk' && !catalogOpen}
             disabled={locked}
             onClick={applyKlassisk}
           />
           <PresetChip
             label="Full pakke"
             description="Alle kategorier på — full innsats"
-            active={activePreset === 'full'}
+            active={activePreset === 'full' && !catalogOpen}
             disabled={locked}
             onClick={applyFullPakke}
           />
           <PresetChip
             label="Egendefinert"
             description="Plukk og miks selv"
-            active={activePreset === 'custom'}
+            active={catalogOpen}
             disabled={locked}
-            onClick={noopCustom}
+            onClick={openCustom}
           />
         </div>
         <p className="text-xs text-muted">
           Velg hvilke kategorier som gjelder for runden. Bytt forhåndsvalg for
-          å komme raskt i gang, så følger bryterne under med.
+          å komme raskt i gang, eller velg «Egendefinert» for å plukke selv.
         </p>
       </div>
 
-      {/* Grupperte togglere */}
+      {/* Grupperte togglere — kollapset bak forhåndsvalgene; brettes ut når
+          «Egendefinert» er aktiv (#909). Hidden input-ene over rendres uansett,
+          så å skjule katalogen rører ikke form-data. */}
+      {catalogOpen && (
       <div className="space-y-4">
         {GROUPS.map((group) => (
           <fieldset
@@ -452,6 +465,7 @@ export function SideCategoriesPicker({
           </fieldset>
         ))}
       </div>
+      )}
 
       {locked && (
         <p className="text-xs text-muted">
