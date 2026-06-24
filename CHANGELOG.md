@@ -17,6 +17,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.143.y — Tallene dine
+
+Profilen begynner å fortelle deg noe: ikke bare snittet, men hvordan scoren har beveget seg runde for runde.
+
+### [1.143.0] - 2026-06-24 · #936
+
+> Øverst i historikken din ligger nå en formkurve — brutto og netto for hver fullførte 18-hulls-runde. Med ett blikk ser du om scoren er på vei opp eller ned, uten å øyemåle hvert kort.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+
+- Personlig scoringstrend øverst på `/profile/historikk` (#936) — en håndrullet SVG-linjegraf over brutto + netto per komplett 18-hulls-runde, over runde-lista.
+  - Ren geometri-bygger `lib/stats/scoringTrend.ts` (Type A, I/O-fri): mapper score-tall til polyline-koordinater med golf-intuitiv y-akse (lavere score = lavere på skjermen, så en fallende linje betyr bedre spill) og et padded domene som tåler en flat linje uten å dele på null. Returnerer `null` under to runder.
+  - Presentasjons-komponent `components/stats/ScoringTrendChart.tsx`: brutto heltrukken (`--color-primary`), netto stiplet (`--color-muted`) — formen skiller linjene, ikke bare fargen (fargeblind-trygt). `role="img"` + norsk `aria-label`, HTML-legende, statisk (ingen animasjon, så `prefers-reduced-motion` er et ikke-tema).
+  - Kun komplette 18-hulls-runder telles (`holeCount === 18`) — eple-mot-eple, samme disiplin som «Mine tall»/`playerStats`. Ingen 9-hulls eller ufullstendige runder blandes inn. Ingen ny datafangst; gjenbruker historikkens eksisterende brutto/netto-aggregering.
+  - Avvik fra issue-design: issuet foreslo `/profile/statistikk`, men den siden er klubb-tavla — grafen hører hjemme på den personlige historikk-flaten. Avklart med eier.
+- Type A-tester (geometrien) + én Type C-render-test (komponent-strukturen) låser begge lag. Nye `trend*`-nøkler i `no`/`en`.
+
+</details>
+
+---
+
 ## 1.142.y — Et ryddigere oppsett
 
 Oppsett-skjemaet er kortere og roligere: hver del ligger i et sammenleggbart panel du bretter ut når du trenger det.

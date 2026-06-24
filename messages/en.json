@@ -262,7 +262,10 @@
       "emptyState": "You have no completed rounds yet. Join a game first.",
       "colBrutto": "Gross",
       "colNetto": "Net",
-      "resultLink": "View leaderboard"
+      "resultLink": "View leaderboard",
+      "trendHeading": "Scoring trend",
+      "trendSubtitle": "Gross and net per completed 18-hole round, oldest to newest.",
+      "trendAriaLabel": "{count, plural, one {Scoring trend across 1 completed round, oldest to newest.} other {Scoring trend across # completed rounds, oldest to newest.}}"
     },
     "statistikk": {
       "kicker": "Leaderboard",

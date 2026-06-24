@@ -10,9 +10,14 @@ import { formatTeeOffDateLocale } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
+import { buildScoringTrend, type TrendRound } from '@/lib/stats/scoringTrend';
+import { ScoringTrendChart } from '@/components/stats/ScoringTrendChart';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
+
+/** En komplett 18-hulls-runde (alle 18 hull registrert). */
+const COMPLETE_ROUND_HOLES = 18;
 
 type GameRow = {
   id: string;
@@ -137,6 +142,15 @@ export default async function HistorikkPage() {
 
   const finishedCount = gamesWithStats.length;
 
+  // #936 — scoringstrend: kun komplette 18-hulls-runder (eple-mot-eple, samme
+  // disiplin som «Mine tall»/`playerStats`), sortert eldst→nyest for grafen.
+  // `gamesWithStats` er nyest-først, så vi reverserer det filtrerte settet.
+  const trendRounds: TrendRound[] = gamesWithStats
+    .filter((g) => g.holeCount === COMPLETE_ROUND_HOLES && g.bruttoSum != null)
+    .map((g) => ({ brutto: g.bruttoSum as number, netto: g.nettoSum }))
+    .reverse();
+  const trend = buildScoringTrend(trendRounds);
+
   return (
     <AppShell>
       <TopBar
@@ -147,6 +161,23 @@ export default async function HistorikkPage() {
 
       {finishedCount > 0 && (
         <p className="mb-4 text-sm text-muted">{t('roundCount', { count: finishedCount })}</p>
+      )}
+
+      {/* Formkurve øverst — kun når det finnes minst 2 komplette 18-hulls-runder
+          å tegne en linje av. Lista under viser de eksakte tallene per runde. */}
+      {trend && (
+        <Card className="mb-4">
+          <h2 className="font-serif text-base font-medium text-text">
+            {t('trendHeading')}
+          </h2>
+          <p className="mb-4 font-sans text-sm text-muted">{t('trendSubtitle')}</p>
+          <ScoringTrendChart
+            geometry={trend}
+            ariaLabel={t('trendAriaLabel', { count: trendRounds.length })}
+            bruttoLabel={t('colBrutto')}
+            nettoLabel={t('colNetto')}
+          />
+        </Card>
       )}
 
       {finishedCount === 0 ? (
