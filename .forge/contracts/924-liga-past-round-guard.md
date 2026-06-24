@@ -96,15 +96,15 @@ behavior, `isTeeOffInPast`'s signature (reuse as-is — renaming would churn #90
 
 ## Success criteria
 
-- [ ] `addLeagueRound`: a round whose `closes_at` is >5 min in the past is blocked server-side with `{ error: 'round_in_past' }` (no `league_rounds` insert issued); a future window passes through to the insert.
-- [ ] `createLeagueDraft`: a fully-past season (last generated window >5 min past) is blocked with `{ error: 'season_over' }` (no `leagues` insert issued). Mid-season (past start, future end) and future seasons still create.
-- [ ] `updateLeagueRound` + `overrideRoundWindow` behavior unchanged (reopening past windows still possible); `overrideRoundWindow` carries a comment documenting the intentional exemption.
-- [ ] Cup: no code — confirmed no tee-off field exists and the manual path is already #902-guarded; documented in the closing comment.
-- [ ] Reuses `isTeeOffInPast` + `TEE_OFF_PAST_GRACE_MS` (no new grace constant, no helper rename).
-- [ ] Unit tests: `addLeagueRound` past-rejected + future-accepted; `createLeagueDraft` past-rejected (accepted path already locked by the existing #675/#737 future-season tests — noted in the test).
-- [ ] `liga.addRound.errors.round_in_past` + `liga.create.errors.season_over` present in `messages/no.json` and `messages/en.json`; both surfacing components recognize the codes (no `fallback`/`unexpected` leak).
-- [ ] Same 5-min grace as #902; now/future accepted.
-- [ ] Patch bump to 1.141.2 + CHANGELOG entry (`· #924`) under the open "1.141.y — Spillerens klubbhus" theme; humanizer-clean tagline.
+- [x] `addLeagueRound`: a round whose `closes_at` is >5 min in the past is blocked server-side with `{ error: 'round_in_past' }` (no `league_rounds` insert issued); a future window passes through to the insert.
+- [x] `createLeagueDraft`: a fully-past season (last generated window >5 min past) is blocked with `{ error: 'season_over' }` (no `leagues` insert issued). Mid-season (past start, future end) and future seasons still create.
+- [x] `updateLeagueRound` + `overrideRoundWindow` behavior unchanged (reopening past windows still possible); `overrideRoundWindow` carries a comment documenting the intentional exemption.
+- [x] Cup: no code — confirmed no tee-off field exists and the manual path is already #902-guarded; documented in the closing comment.
+- [x] Reuses `isTeeOffInPast` + `TEE_OFF_PAST_GRACE_MS` (no new grace constant, no helper rename).
+- [x] Unit tests: `addLeagueRound` past-rejected + future-accepted; `createLeagueDraft` past-rejected (accepted path already locked by the existing #675/#737 future-season tests — noted in the test).
+- [x] `liga.addRound.errors.round_in_past` + `liga.create.errors.season_over` present in `messages/no.json` and `messages/en.json`; both surfacing components recognize the codes (no `fallback`/`unexpected` leak).
+- [x] Same 5-min grace as #902; now/future accepted.
+- [x] Patch bump to 1.141.2 + CHANGELOG entry (`· #924`) under the open "1.141.y — Spillerens klubbhus" theme; humanizer-clean tagline.
 
 ## Gates (scoped to changed files)
 
