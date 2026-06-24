@@ -110,8 +110,10 @@ describe('createLeagueDraft — rollback on insert failure (#675)', () => {
   function leagueForm(): FormData {
     const fd = new FormData();
     fd.set('name', 'Test-liga');
-    fd.set('season_start', '2026-01-01');
-    fd.set('season_end', '2026-12-31');
+    // Far-future season so the #924 season_over guard never trips this
+    // rollback fixture as the wall-clock advances (drift-proof, per #928).
+    fd.set('season_start', '2099-01-01');
+    fd.set('season_end', '2099-12-31');
     fd.set('format', 'stroke');
     fd.set('scoring', 'net');
     fd.set('standings_model', 'total');
@@ -193,8 +195,9 @@ describe('createLeagueDraft — rollback on league_players failure (#737)', () =
   function leagueFormWithPlayers(): FormData {
     const fd = new FormData();
     fd.set('name', 'Test-liga');
-    fd.set('season_start', '2026-01-01');
-    fd.set('season_end', '2026-12-31');
+    // Far-future season (drift-proof vs. the #924 season_over guard, per #928).
+    fd.set('season_start', '2099-01-01');
+    fd.set('season_end', '2099-12-31');
     fd.set('format', 'stroke');
     fd.set('scoring', 'net');
     fd.set('standings_model', 'total');
