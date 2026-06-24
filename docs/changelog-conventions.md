@@ -1,80 +1,70 @@
 # CHANGELOG-konvensjoner
 
-Format-regler for `CHANGELOG.md`. Når-regler (PATCH/MINOR/MAJOR-bump) og hook-håndheving står i [CLAUDE.md](../CLAUDE.md) under «Versjonering / CHANGELOG».
+Format-regler for `CHANGELOG.md`. Når-regler (PATCH/MINOR-bump) og hook-håndheving står i [CLAUDE.md](../CLAUDE.md) under «Versjonering / CHANGELOG».
 
-Trigger: HTML-kommentaren øverst i `CHANGELOG.md` peker hit. `.githooks/commit-msg` peker også hit når den blokkerer. **Les denne fila før du legger til eller flytter en oppføring** — da holder stilen seg selv om det går måneder mellom hver gang.
+Trigger: HTML-kommentaren øverst i `CHANGELOG.md` peker hit. `.githooks/commit-msg` peker også hit. **Les denne fila før du legger til en oppføring.**
+
+## Hva changeloggen er (og ikke er)
+
+Changeloggen er et tynt, lesbart **hva-er-nytt-feed** for deg som eier og for app-brukerne — ikke et utviklerarkiv. Den tekniske historikken (hvilke filer, hvilken approach) bor i **issue-ets closing-kommentar** (`## Teknisk`) og i **commit-meldingene** (`Refs #N`). Ikke dupliser den her — det var nettopp den duplikatet som gjorde fila uleselig (10 000+ linjer). Én linje per endring, det er alt.
 
 ## Strukturen i fila
 
-Alt ligger i én fil, men sterkt sammenfoldet så den er lett å skumme:
+Tre seksjoner, nyeste øverst:
 
-1. **Nyeste minor-serie står åpen** øverst (`## 1.X.y — [tema]` + intro + oppføringer). Det er det eneste du ser uten å klikke — ferske endringer er alltid synlige.
-2. **Alt eldre ligger under `## Tidligere versjoner`**, gruppert i **skuffer** (`<details>`-elementer). Hver skuff samler en epoke. Åpner du en skuff, ser du seriene i den (hver serie er fortsatt sammenfoldet; bare den tekniske detaljen per oppføring er innerst).
+1. **`## Funksjoner`** — én sammenleggbar rad per utgivelse (det `feat`-en som åpnet en minor). Sammendraget er `versjon · tittel`; bretter du ut, ser du brødteksten. Alle foldet som standard.
+2. **`## Feilrettinger`** — alle `fix`/`perf` som korte én-linjere, gruppert i måneds-skuffer (`<details>` per måned), nyeste måned øverst.
+3. **`## Før 1.0 — alfa-historikk`** — 0.x-historikken, bevart i gammelt format, foldet bort. Røres ikke.
 
-Så toppen av fila er nyeste serie + ni skuff-linjer, ikke 80 serier på rad.
+## Funksjon-oppføring (de fire Lanserings-feltene)
 
-## Per-versjon oppføring + kilde-tag (viktig)
-
-Hver versjons-overskrift har formen:
+En funksjon bærer de samme fire feltene som `/admin/lanseringer`-skjemaet (`product_updates`), så den kan limes rett inn og publiseres som en in-app-lansering:
 
 ```
-### [X.Y.Z] - YYYY-MM-DD · <kilde>
+<details>
+<summary><strong>1.142 · Et ryddigere oppsett</strong></summary>
+
+Spill-oppsettet ligger i panel du bretter ut når du trenger dem, og et publisert spill viser spillformen som et lite kort.
+
+↳ /opprett-spill · «Sett opp en runde»
+
+[#909](https://github.com/jdlarssen/golf-app/issues/909)
+</details>
 ```
 
-`<kilde>` forteller **hvor endringen kom fra**, synlig uten å åpne «Teknisk»:
+| Felt | Lansering-felt | Grense | Hentes fra |
+|------|----------------|--------|------------|
+| Tittel (i `<summary>`, etter `versjon ·`) | `title` | ≤120 | utgivelsens tema, kort substantiv-frase |
+| Brødtekst (avsnittet) | `body` | ≤400 (sikt på én setning) | hva du nå kan gjøre, invitérende |
+| `↳ /lenke` | `link` | intern, starter med `/` | valgfri dyplenke til featuren |
+| `«cta»` (etter lenka) | `cta_label` | ≤40, kun med lenke | valgfri knapp-tekst |
 
-- **`#N`** — endringen kom fra et GitHub-issue (typisk nyutvikling). Bare `#N` (GitHub auto-lenker det). Flere issues → komma: `· #357, #367`.
-- **`bug`** — feilretting som kom fra en rapportert bug, ikke et issue.
-- **(ingen tag)** — bevisst tomt for tidlige oppføringer (1.0–1.14, 0.x) som er fra før vi brukte GitHub Issues. Vi gjetter ikke.
+**Lenke + cta er valgfrie** — ta dem med når funksjonen har en naturlig dyplenke å lansere mot. Historiske funksjoner (før denne omleggingen) har kun tittel + brødtekst; de fylles ikke med lenker i etterkant.
 
-Regelen for hvilken som velges: issue navngitt i oppføringen → `#N`. Ellers seriens primær-issue (det første `#N` i serie-introen) → `#N`. Ellers, hvis oppføringen tydelig kun er en feilretting (`#### Fixed`, ingen `#### Added`/`#### Changed`) → `bug`. Ellers ingen tag.
+## Feilrettings-oppføring
 
-## Skuff-inndeling (epic-først, tiere som fallback)
+Én linje under inneværende måneds-skuff:
 
-Skuffene er **sammenhengende versjons-intervaller** navngitt etter det dominerende epic-et i intervallet — eller tema/tiere når det ikke er ett klart epic. Dagens skuffer (nyeste øverst):
+```
+- `1.142.1` · [#924](https://github.com/jdlarssen/golf-app/issues/924) — Liga-runder med en frist som alt har vært stoppes med en gang.
+```
 
-| Skuff | Intervall |
-|-------|-----------|
-| Opprettelse & påmelding (#22, #366, #365) | 1.73–1.76 |
-| Flyt-opprydding, varsler & avslutning (#354–377) | 1.60–1.72 |
-| Format-katalogen: scramble & matchplay (#270) | 1.43–1.59 |
-| Ryder Cup & format-fundament (#47, #270) | 1.38–1.42 |
-| Baner, selvreg & sideturnering (#223 m.fl.) | 1.25–1.37 |
-| Innboks, handicap & hurtig-oppsett | 1.15–1.24 |
-| Spillmodi-grunnmuren & verktøy | 1.5–1.14 |
-| Stabil lansering & tee-bokser | 1.0–1.4 |
-| Pre-stabil historikk | 0.x |
+- `versjon` i backticks (tabulær), så issue-lenke, så `—` og **én kort setning** som beskriver den forbedrede tilstanden («Lange navn dytter ikke lenger …»), ikke «Fikset at …».
+- Issue-løs retting (sjelden, pre-issue-æra): dropp lenka — `- \`1.0.1\` — …`.
+- Ny måned → åpne en ny `<details>`-skuff øverst i `## Feilrettinger` (`<summary><strong>Juli 2026 · N rettinger</strong></summary>`).
 
-Skuff-summary: `<summary><strong>[skuff-navn] — N serier</strong></summary>` — **uten** «klikk for å vise» (overflødig; GitHub viser allerede en pil).
+## Hvem havner hvor
 
-Serie-summary inne i en skuff: `<summary><strong>1.X.y — [tema] (N oppføringer)</strong></summary>` — også uten «klikk for å vise», og uten en intern `## 1.X.y`-overskrift (summary-en er etiketten).
+Versjonsdisiplinen avgjør det nesten alene: `feat` → minor → **Funksjoner**; `fix`/`perf` → patch → **Feilrettinger**. En patch som la til en liten capability (`#### Added` i en `.y`) hører likevel i Feilrettinger — Funksjoner-lista skal være én ren linje per utgivelse. Vil du headline en spesielt stor patch-funksjon, løft den manuelt opp som egen Funksjon-rad.
 
-## Vedlikehold fremover — slik holder stilen seg selv
+## Bare det en bruker ville merke
 
-To situasjoner, og du trenger ikke korrigere noen av dem:
+Skriv kun en oppføring for endringer en bruker faktisk merker. Rene interne fikser (test-only, refactor som shippes som `fix`, åpenbar tooling) får **ingen** linje — bruk `[no-changelog]` i commit-body-en så hooken slipper deg forbi. Sliter du med å skrive linja på Jørgen-språk, er det et tegn på at endringen ikke fortjener en oppføring.
 
-1. **Hver ny endring:** den nye `### [X.Y.Z]`-linja legges øverst i den åpne serien, med kilde-tag (`· #N`/`· bug`) med én gang. Ferske endringer ser du uten å klikke.
-2. **Når en ny minor-serie åpnes** (f.eks. 1.77 → 1.78): den forrige serien lukkes og legges i riktig skuff — epic-skuffen sin hvis den hører til et epic, ellers den nyeste tema-skuffen (eller en ny skuff hvis temaet er nytt). Dette er den eneste gjentakende håndteringen, ~én gang i uka, og den som lager 1.78-oppføringen gjør den.
+## Stemme
 
-Voks-grensen: en skuff trenger ikke balanseres — den vokser bare. Når et nytt epic dukker opp, får det sin egen skuff; ellers utvider nyeste tema-skuff seg.
+Brand-stemme: sporty kompis-energi, action-verb, du-form, presens. Funksjon = «her er hva som er nytt»; retting = «dette er bedre nå». Norske idiomer, «»-anførsel, ingen særskriving, behold Tørny-termene (banehandicap, slagspill, stableford, sideturnering, scorekort). Humanizer-skillet er **ikke** lenger påkrevd på oppføringer — én ren setning trenger det ikke.
 
-## Per-versjon innhold (tagline + Teknisk)
+## Den gamle Teknisk-historikken
 
-Under hver `### [X.Y.Z]`-overskrift:
-
-- **Stakeholder-tagline** på vanlig norsk, satt som blockquote (`> …` — ikke bold, fordi lange bold-avsnitt er tunge å lese). Tagline-en forklarer hva endringen betyr for brukeren, ikke hva som ble endret i koden.
-- **Teknisk historikk** i et `<details><summary>Teknisk</summary>…</details>`-element under tagline-en, med [Keep a Changelog](https://keepachangelog.com/no/)-underseksjoner (`#### Added`, `#### Changed`, `#### Fixed`, `#### Removed`) og prosa-bullet points.
-
-## Tagline-veiledning
-
-Nyeste øverst, norsk på alt brukerrettet. Når du legger til en ny oppføring: skriv tagline-en *først*. Hvis du sliter med å forklare hva som endret seg på Jørgen-språk («Du kan nå …», «Forhindrer at …», «Hvis X skjer, sier appen nå …»), er det et tegn på at endringen kanskje ikke fortjener egen oppføring — sjekk skip-listen i CLAUDE.md.
-
-## Språk-kvalitet på taglines
-
-Når du skriver en ny tagline (`> …`-blockquote) eller serie-/skuff-summary, kjør `humanizer:humanizer`-skillet (fra `floka-marketplace`) på teksten først — særlig norsk-seksjonen om anglisismer (`entry/features/release/by default`), særskriving, em-dash-kjeder, og «X-spillet»-redundans (`slagspill-spillet` → `slagspillet`, `matchplay-spillet` → `matchen`).
-
-Tekniske `<details>`-seksjoner er utvikler-prosa og trenger ikke samme stramming.
-
-Bakgrunn: [PR #170](https://github.com/jdlarssen/golf-app/pull/170) (2026-05-24) ryddet 39 historiske AI-tells; målet er å holde nye oppføringer på samme nivå.
-
-Full pattern-katalog for bruker-rettet copy: [`docs/copy-style.md`](copy-style.md).
+Før denne omleggingen bar hver oppføring en `<details><summary>Teknisk</summary>`-blokk. Den er fjernet fra fila, men ikke tapt: den ligger i git-historikken (commit før omleggingen, [#952](https://github.com/jdlarssen/golf-app/issues/952)) og i issue-enes closing-kommentarer. Trenger du den, `git show` den gamle fila.

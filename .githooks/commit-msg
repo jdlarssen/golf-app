@@ -58,9 +58,12 @@ elif ! git diff --cached package.json | grep -q '^\+  "version":'; then
   errors="${errors}  • package.json er staget, men version-feltet er ikke endret\n"
 fi
 
-if ! printf '%s\n' "$staged" | grep -qx 'CHANGELOG.md'; then
+# CHANGELOG-oppføring kreves for bruker-synlige endringer, men interne fikser
+# (test-only, refactor-shipped-as-fix, tooling) får hoppe med [no-changelog].
+if ! printf '%s\n' "$staged" | grep -qx 'CHANGELOG.md' \
+   && ! printf '%s' "$(cat "$msg_file")" | grep -qF '[no-changelog]'; then
   fail=1
-  errors="${errors}  • CHANGELOG.md er ikke staget — legg til entry for denne releasen\n"
+  errors="${errors}  • CHANGELOG.md er ikke staget — legg til én linje (Funksjoner/Feilrettinger), eller [no-changelog] for interne endringer\n"
 fi
 
 if [ "$fail" -eq 1 ]; then
@@ -76,7 +79,7 @@ if [ "$fail" -eq 1 ]; then
   printf 'CHANGELOG-format: docs/changelog-conventions.md (les FØR ny oppføring).\n\n' >&2
   printf 'For å fortsette:\n' >&2
   printf '  1. %s\n' "$bump" >&2
-  printf '  2. Legg til entry i CHANGELOG.md (## [X.Y.Z] - %s)\n' "$(date +%Y-%m-%d)" >&2
+  printf '  2. Legg til én linje i CHANGELOG.md (Funksjoner/Feilrettinger; se docs/changelog-conventions.md) — eller [no-changelog] i body hvis intern\n' >&2
   printf '  3. git add package.json package-lock.json CHANGELOG.md\n' >&2
   printf '  4. git commit (på nytt med samme melding)\n\n' >&2
   printf 'Hvis commiten IKKE endrer bruker-synlig oppførsel: bytt prefix til\n' >&2

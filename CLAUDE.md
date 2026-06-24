@@ -168,13 +168,13 @@ Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh i
 
 ### Versjonering / CHANGELOG
 
-Hver bruker-synlig commit (`feat`/`fix`/`perf`) MÅ bumpe `package.json`-versjonen + legge til en `CHANGELOG.md`-oppføring i SAMME commit. Footeren (`AppVersionFooter.tsx`) viser versjonen i prod ved neste deploy.
+Hver bruker-synlig commit (`feat`/`fix`/`perf`) MÅ bumpe `package.json`-versjonen. Footeren (`AppVersionFooter.tsx`) viser versjonen i prod ved neste deploy. **Bruker-synlig** endring → også én linje i `CHANGELOG.md` (`feat` → en Funksjon-rad, `fix`/`perf` → en Feilrettinger-linje). **Intern** endring som likevel shippes som `fix` (test-only, refactor, tooling) → ingen CHANGELOG-linje; skriv `[no-changelog]` i commit-body-en.
 
-**Håndheves av `.githooks/commit-msg`** — den blokkerer feat/fix/perf-commits som mangler bump eller CHANGELOG, OG hvis bump-typen er feil: **feat → minor/major, fix/perf → patch** (major kun ved breaking `!`/`BREAKING CHANGE`).
+**Håndheves av `.githooks/commit-msg`** — den blokkerer feat/fix/perf-commits som mangler bump (eller mangler CHANGELOG uten `[no-changelog]`), OG hvis bump-typen er feil: **feat → minor/major, fix/perf → patch** (major kun ved breaking `!`/`BREAKING CHANGE`).
 
-- **Bump:** `npm version patch|minor|major --no-git-tag-version`, stage `package.json` + `package-lock.json` + `CHANGELOG.md`, commit på nytt med samme melding.
+- **Bump:** `npm version patch|minor|major --no-git-tag-version`, stage `package.json` + `package-lock.json` (+ `CHANGELOG.md` hvis bruker-synlig), commit på nytt med samme melding.
 - **Ikke bruker-synlig?** Bytt prefix til `docs/refactor/test/chore/style/ci/build` — de passerer fritt.
-- **CHANGELOG-format:** [`docs/changelog-conventions.md`](docs/changelog-conventions.md) (les FØR ny oppføring).
+- **CHANGELOG-format:** [`docs/changelog-conventions.md`](docs/changelog-conventions.md) (les FØR ny oppføring). Tynt to-seksjons-feed (Funksjoner / Feilrettinger), én linje per endring; ingen Teknisk-blokk (den bor i issue-closing-kommentaren), ingen humanizer påkrevd.
 - Aldri `--no-verify` for å omgå hooken (bash-guard blokkerer den uansett).
 
 ### Språk-kvalitet i bruker-rettet copy
