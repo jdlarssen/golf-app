@@ -612,7 +612,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             legend={t('scoring.legend')}
             description={t('scoring.description')}
             nettoHelperText={t('scoring.nettoHelper')}
-            bruttoHelperText={tAllowance(bruttoHelperKeyFor(gameMode) as Parameters<typeof tAllowance>[0])}
+            bruttoHelperText={tAllowance(bruttoHelperKeyFor(gameMode))}
             value={hcpAllowance}
             onChange={setHcpAllowance}
           />

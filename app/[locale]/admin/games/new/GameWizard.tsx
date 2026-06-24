@@ -746,7 +746,7 @@ export function GameWizard({
                   legend={t('allowanceProps.scoring.legend')}
                   description={t('allowanceProps.scoring.description')}
                   nettoHelperText={t('allowanceProps.scoring.nettoHelper')}
-                  bruttoHelperText={tAllowance(bruttoHelperKeyFor(state.gameMode) as Parameters<typeof tAllowance>[0])}
+                  bruttoHelperText={tAllowance(bruttoHelperKeyFor(state.gameMode))}
                   value={state.hcpAllowance}
                   onChange={state.setHcpAllowance}
                   hideHiddenInput

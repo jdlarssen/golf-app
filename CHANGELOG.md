@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klubbhuset møter deg nå som spiller: en invitasjon til å arrangere, klubbene dine og det du selv har satt opp, i stedet for en flis-katalog som var tom hvis du aldri arrangerer.
 
+### [1.141.2] - 2026-06-24 · #927
+
+> Når du finjusterer handicap-andelen under «Vis avanserte innstillinger», viser hjelpeteksten igjen den riktige forklaringen i stedet for en rå kode som «best_ball». Gjaldt best ball, stableford-spillene, singel-matchplay og solo-slagspill — i veiviseren, hurtig-skjemaet og når du redigerer et spill.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- `bruttoHelperKeyFor` (`lib/games/allowanceCopy.ts`) returnerte en nøkkel med fullt `allowance.`-prefiks, men ble sendt til `tAllowance = useTranslations('allowance')` — som allerede er scopet. Resultatet ble det doble oppslaget `allowance.allowance.bruttoHelper.<mode>`, som ikke finnes. Funksjonen returnerer nå en **relativ** nøkkel (`bruttoHelper.<mode>`); begge call-sites (`GameForm.tsx`, `GameWizard.tsx`) resolver korrekt, og de overflødige `as`-castene er fjernet.
+- Ingen prod-crash: `i18n/request.ts` har ingen `onError`-override (next-intl `defaultOnError` logger bare), og `getMessageFallback` rendret siste nøkkel-segment — dvs. selve mode-slugen som hjelpetekst. Feilen var derfor kosmetisk (feil copy + `console.error`-støy), ikke P1. Dukket opp som dev-overlay som blokkerte hydreringen av `?view=full` under #902-verifisering.
+- Ny ren-logikk-regresjonstest (`lib/games/allowanceCopy.test.ts`) asserter at nøkkelen resolver mot ekte `messages/no.json` under `allowance`-scopet for alle 22 spillformer.
+
+</details>
+
 ### [1.141.1] - 2026-06-24 · #928
 
 > Taster du inn en tee-off som har vært, sier appen fra med en gang ved feltet — ikke først når du trykker publiser. Du blir ikke lenger kasta tilbake til starten av veiviseren, og «Publiser» er gråa ut til du retter tiden. Et spill som ikke er startet kan du fortsatt endre fritt.
