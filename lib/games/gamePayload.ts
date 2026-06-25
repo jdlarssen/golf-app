@@ -356,6 +356,19 @@ function parseScoringToggle(
 }
 
 /**
+ * #937: valgfri kr-verdi per enhet for pengeoppgjør i veddemålsformatene.
+ * Form-feltet `kr_per_unit`. Returnerer udefinert når feltet er tomt, 0,
+ * negativt eller ugyldig (feature av). Klampes til ikke-negativt heltall.
+ */
+function parseKrPerUnit(formData: FormData): number | undefined {
+  const raw = String(formData.get('kr_per_unit') ?? '').trim();
+  if (!raw) return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.floor(n);
+}
+
+/**
  * Leser solo-format-spillere fra `player_${i}_id`-slots (0..slotCount-1) og
  * nullstiller team_number/flight_number — DB-CHECK
  * `game_players_team_flight_consistency` krever begge satt sammen eller begge
@@ -1435,6 +1448,7 @@ function validateWolf(
   mode: PayloadMode,
 ): ModeValidationResult {
   const wolfScoring = parseScoringToggle(formData, 'wolf_scoring');
+  const krPerUnit = parseKrPerUnit(formData);
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
@@ -1486,6 +1500,7 @@ function validateWolf(
       team_size: 1,
       teams_count: players.length,
       wolf_scoring: wolfScoring,
+      ...(krPerUnit !== undefined && { kr_per_unit: krPerUnit }),
     },
   };
 }
@@ -1514,6 +1529,7 @@ function validateNassau(
   mode: PayloadMode,
 ): ModeValidationResult {
   const nassauScoring = parseScoringToggle(formData, 'nassau_scoring');
+  const krPerUnit = parseKrPerUnit(formData);
 
   // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
   // av cap-sjekken under i stedet for å trunkeres stille til 16.
@@ -1539,6 +1555,7 @@ function validateNassau(
       kind: 'nassau',
       team_size: 1,
       nassau_scoring: nassauScoring,
+      ...(krPerUnit !== undefined && { kr_per_unit: krPerUnit }),
     },
   };
 }
@@ -1561,6 +1578,7 @@ function validateSkins(
   mode: PayloadMode,
 ): ModeValidationResult {
   const skinsScoring = parseScoringToggle(formData, 'skins_scoring');
+  const krPerUnit = parseKrPerUnit(formData);
 
   // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
   // av cap-sjekken under i stedet for å trunkeres stille til 16.
@@ -1586,6 +1604,7 @@ function validateSkins(
       kind: 'skins',
       team_size: 1,
       skins_scoring: skinsScoring,
+      ...(krPerUnit !== undefined && { kr_per_unit: krPerUnit }),
     },
   };
 }
@@ -1614,6 +1633,7 @@ function validateAceyDeucey(
   mode: PayloadMode,
 ): ModeValidationResult {
   const aceyDeuceyScoring = parseScoringToggle(formData, 'acey_deucey_scoring');
+  const krPerUnit = parseKrPerUnit(formData);
 
   const playersResult = parseSoloPlayers(formData, 8);
   if (!playersResult.ok) {
@@ -1637,6 +1657,7 @@ function validateAceyDeucey(
       kind: 'acey_deucey',
       team_size: 1,
       acey_deucey_scoring: aceyDeuceyScoring,
+      ...(krPerUnit !== undefined && { kr_per_unit: krPerUnit }),
     },
   };
 }
@@ -1653,6 +1674,7 @@ function validateBingoBangoBongo(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
+  const krPerUnit = parseKrPerUnit(formData);
   // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
   // av cap-sjekken under i stedet for å trunkeres stille til 16.
   const playersResult = parseSoloPlayers(formData, 17);
@@ -1676,6 +1698,7 @@ function validateBingoBangoBongo(
     mode_config: {
       kind: 'bingo_bango_bongo',
       team_size: 1,
+      ...(krPerUnit !== undefined && { kr_per_unit: krPerUnit }),
     },
   };
 }
@@ -1701,6 +1724,7 @@ function validateNines(
 ): ModeValidationResult {
   const ninesVariant = parseNinesVariant(formData);
   const ninesScoring = parseScoringToggle(formData, 'nines_scoring');
+  const krPerUnit = parseKrPerUnit(formData);
 
   const playersResult = parseSoloPlayers(formData, 8);
   if (!playersResult.ok) {
@@ -1725,6 +1749,7 @@ function validateNines(
       team_size: 1,
       nines_variant: ninesVariant,
       nines_scoring: ninesScoring,
+      ...(krPerUnit !== undefined && { kr_per_unit: krPerUnit }),
     },
   };
 }

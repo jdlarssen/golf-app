@@ -477,6 +477,8 @@ export type GameModeConfig =
        * bruker enten full HCP eller ingen.
        */
       wolf_scoring: 'gross' | 'net';
+      /** #937: valgfri kr-verdi per enhet for pengeoppgjør. Udefinert/0 = av. */
+      kr_per_unit?: number;
     }
   | {
       kind: 'nassau';
@@ -487,6 +489,8 @@ export type GameModeConfig =
        * gross-score (HCP ignoreres). Speiler Wolf-mønstret.
        */
       nassau_scoring: 'gross' | 'net';
+      /** #937: valgfri kr-verdi per enhet for pengeoppgjør. Udefinert/0 = av. */
+      kr_per_unit?: number;
     }
   | {
       kind: 'skins';
@@ -497,6 +501,8 @@ export type GameModeConfig =
        * gross-score (HCP ignoreres). Speiler Wolf/Nassau-mønstret.
        */
       skins_scoring: 'gross' | 'net';
+      /** #937: valgfri kr-verdi per enhet for pengeoppgjør. Udefinert/0 = av. */
+      kr_per_unit?: number;
     }
   | {
       /**
@@ -507,6 +513,8 @@ export type GameModeConfig =
        */
       kind: 'bingo_bango_bongo';
       team_size: 1;
+      /** #937: valgfri kr-verdi per enhet for pengeoppgjør. Udefinert/0 = av. */
+      kr_per_unit?: number;
     }
   | {
       /**
@@ -523,6 +531,8 @@ export type GameModeConfig =
       nines_variant: 'nines' | 'split_sixes';
       /** 'net' = gross − strokesForHole(CH, SI). 'gross' = rå gross. Speiler skins_scoring. */
       nines_scoring: 'gross' | 'net';
+      /** #937: valgfri kr-verdi per enhet for pengeoppgjør. Udefinert/0 = av. */
+      kr_per_unit?: number;
     }
   | {
       /**
@@ -556,6 +566,8 @@ export type GameModeConfig =
       kind: 'acey_deucey';
       team_size: 1;
       acey_deucey_scoring: 'gross' | 'net';
+      /** #937: valgfri kr-verdi per enhet for pengeoppgjør. Udefinert/0 = av. */
+      kr_per_unit?: number;
     }
   | {
       /**
