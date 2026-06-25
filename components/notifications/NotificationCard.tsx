@@ -123,22 +123,12 @@ export function NotificationCard({
     </time>
   );
 
-  const archive = onArchive ? (
-    <button
-      type="button"
-      onClick={onArchive}
-      aria-label={t('archiveAria')}
-      className="flex w-11 shrink-0 items-center justify-center text-muted transition-colors hover:bg-surface-2 hover:text-text active:bg-surface-2"
-    >
-      <XIcon />
-    </button>
-  ) : null;
-
-  // Lanseringer (product_update) kan ha lang brødtekst og en CTA-lenke. Det
-  // generiske kortet (2-linjers klamp + helkort-tapp → lenke) gjorde teksten
-  // uleselig og kasta deg ut til lenken før du fikk lest ferdig. Her speiler vi
-  // hjem-banneret: full brødtekst + dedikert CTA-knapp. Kort-tappen markerer
-  // bare som lest (deeplink-en returnerer null for denne kind-en).
+  // Lanseringer (product_update) kan ha lang brødtekst og en CTA-lenke.
+  // Kunngjørings-oppsett: emoji + tittel + tidsstempel på topp-raden, så hele
+  // brødteksten i kolonne-bredde under (ikke klemt inn ved siden av
+  // tidsstempelet, slik det generiske «emoji | innhold | tid»-radoppsettet
+  // gjorde — der ble lang tekst en tynn remse). Dedikert CTA-knapp navigerer;
+  // kort-tappen markerer bare som lest (deeplink-en returnerer null her).
   if (kind === 'product_update') {
     const p = payload as NotificationPayload<'product_update'>;
     const showCta = Boolean(p.link && p.cta_label);
@@ -151,13 +141,18 @@ export function NotificationCard({
             <button
               type="button"
               onClick={onTap}
-              className="block min-h-11 w-full text-left transition-colors"
+              className="block w-full text-left"
             >
-              <p className={titleClassName}>{title}</p>
-              <p className="mt-1 font-sans text-[12px] text-muted">{detail}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className={`min-w-0 ${titleClassName}`}>{title}</p>
+                {timestamp}
+              </div>
+              <p className="mt-1.5 font-sans text-[13px] leading-relaxed text-muted">
+                {detail}
+              </p>
             </button>
             {showCta && (
-              <div className="mt-2">
+              <div className="mt-3">
                 <SmartLink
                   href={p.link!}
                   onClick={onTap}
@@ -168,9 +163,14 @@ export function NotificationCard({
               </div>
             )}
           </div>
-          {timestamp}
         </div>
-        {archive}
+        {onArchive && (
+          <ArchiveButton
+            onArchive={onArchive}
+            label={t('archiveAria')}
+            className="h-11 w-11 self-start"
+          />
+        )}
       </div>
     );
   }
@@ -196,8 +196,41 @@ export function NotificationCard({
         {timestamp}
       </button>
 
-      {archive}
+      {onArchive && (
+        <ArchiveButton
+          onArchive={onArchive}
+          label={t('archiveAria')}
+          className="w-11"
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Arkiv-✕ (#616). Generiske kort lar knappen strekke seg i full korthøyde
+ * (`className="w-11"` + parentens `items-stretch`), så ✕ sentreres vertikalt på
+ * et lavt kort. product_update-kortet er høyt (full brødtekst), så der
+ * top-justeres den (`h-11 w-11 self-start`) i stedet for å flyte midt på.
+ */
+function ArchiveButton({
+  onArchive,
+  label,
+  className,
+}: {
+  onArchive: () => void;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onArchive}
+      aria-label={label}
+      className={`flex shrink-0 items-center justify-center text-muted transition-colors hover:bg-surface-2 hover:text-text active:bg-surface-2 ${className ?? ''}`}
+    >
+      <XIcon />
+    </button>
   );
 }
 
