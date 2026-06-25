@@ -7,6 +7,7 @@ import type {
 } from '@/lib/notifications/types';
 import { formatRelativeLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
+import { SmartLink } from '@/components/ui/SmartLink';
 
 /**
  * Generisk shape for en notifications-rad fra DB. Vi unngår direkte
@@ -64,6 +65,12 @@ const EMOJI: Record<NotificationKind, string> = {
  * ✕-knappen er søsken-knapper — nestede interaktive elementer er ugyldig
  * HTML. Klikk på ✕ trigger derfor ikke kort-tappen. Begge har ≥44px
  * tap-target (hoved: min-h-11, ✕: w-11 + items-stretch).
+ *
+ * `product_update` (lanseringer) får en egen layout: full brødtekst (ingen
+ * 2-linjers klamp) + en dedikert CTA-knapp til lenken, slik at lang tekst kan
+ * leses i innboksen uten at tappen kaster deg ut til lenken. Speiler
+ * ProductUpdateBanner. Deeplink-en returnerer `null` for denne kind-en, så
+ * kort-tappen markerer kun som lest.
  */
 export function NotificationCard({
   notification,
@@ -80,64 +87,116 @@ export function NotificationCard({
   const isUnread = read_at == null;
   const { title, detail } = buildCardContent(kind, payload, t);
 
-  return (
-    <div
-      className={`group relative flex items-stretch overflow-hidden rounded-xl border border-border bg-surface transition-colors ${
-        isUnread ? '' : 'opacity-80'
-      }`}
+  // Delt chrome (rot, ulest-stripe, emoji, tidsstempel, arkiv-knapp) gjenbrukes
+  // av begge layoutene under, så de to grenene kun skiller seg i selve innholdet.
+  const rootClassName = `group relative flex items-stretch overflow-hidden rounded-xl border border-border bg-surface transition-colors ${
+    isUnread ? '' : 'opacity-80'
+  }`;
+  const titleClassName = `font-sans text-[14px] leading-tight text-text ${
+    isUnread ? 'font-medium' : 'font-normal'
+  }`;
+
+  const stripe = isUnread ? (
+    <span
+      data-testid="unread-stripe"
+      aria-hidden
+      className="absolute left-0 top-2 bottom-2 z-10 w-1 rounded-r-full"
+      style={{ background: 'var(--accent)' }}
+    />
+  ) : null;
+
+  const emoji = (
+    <span
+      aria-hidden
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lg leading-none"
     >
-      {isUnread && (
-        <span
-          data-testid="unread-stripe"
-          aria-hidden
-          className="absolute left-0 top-2 bottom-2 z-10 w-1 rounded-r-full"
-          style={{ background: 'var(--accent)' }}
-        />
-      )}
+      {EMOJI[kind]}
+    </span>
+  );
+
+  const timestamp = (
+    <time
+      dateTime={created_at}
+      className="ml-1 shrink-0 self-start whitespace-nowrap pt-0.5 font-sans text-[11px] tabular-nums text-muted"
+    >
+      {formatRelativeLocale(created_at, locale)}
+    </time>
+  );
+
+  const archive = onArchive ? (
+    <button
+      type="button"
+      onClick={onArchive}
+      aria-label={t('archiveAria')}
+      className="flex w-11 shrink-0 items-center justify-center text-muted transition-colors hover:bg-surface-2 hover:text-text active:bg-surface-2"
+    >
+      <XIcon />
+    </button>
+  ) : null;
+
+  // Lanseringer (product_update) kan ha lang brødtekst og en CTA-lenke. Det
+  // generiske kortet (2-linjers klamp + helkort-tapp → lenke) gjorde teksten
+  // uleselig og kasta deg ut til lenken før du fikk lest ferdig. Her speiler vi
+  // hjem-banneret: full brødtekst + dedikert CTA-knapp. Kort-tappen markerer
+  // bare som lest (deeplink-en returnerer null for denne kind-en).
+  if (kind === 'product_update') {
+    const p = payload as NotificationPayload<'product_update'>;
+    const showCta = Boolean(p.link && p.cta_label);
+    return (
+      <div className={rootClassName}>
+        {stripe}
+        <div className="flex min-w-0 flex-1 items-start gap-3 px-3.5 py-3">
+          {emoji}
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={onTap}
+              className="block min-h-11 w-full text-left transition-colors"
+            >
+              <p className={titleClassName}>{title}</p>
+              <p className="mt-1 font-sans text-[12px] text-muted">{detail}</p>
+            </button>
+            {showCta && (
+              <div className="mt-2">
+                <SmartLink
+                  href={p.link!}
+                  onClick={onTap}
+                  className="inline-flex min-h-11 items-center rounded-full bg-primary px-4 py-2 font-sans text-[13px] font-medium text-bg transition-colors hover:bg-primary/90"
+                >
+                  {p.cta_label}
+                </SmartLink>
+              </div>
+            )}
+          </div>
+          {timestamp}
+        </div>
+        {archive}
+      </div>
+    );
+  }
+
+  return (
+    <div className={rootClassName}>
+      {stripe}
 
       <button
         type="button"
         onClick={onTap}
         className="flex min-h-11 min-w-0 flex-1 items-start gap-3 px-3.5 py-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2"
       >
-        <span
-          aria-hidden
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lg leading-none"
-        >
-          {EMOJI[kind]}
-        </span>
+        {emoji}
 
         <div className="min-w-0 flex-1">
-          <p
-            className={`font-sans text-[14px] leading-tight text-text ${
-              isUnread ? 'font-medium' : 'font-normal'
-            }`}
-          >
-            {title}
-          </p>
+          <p className={titleClassName}>{title}</p>
           <p className="mt-1 line-clamp-2 font-sans text-[12px] text-muted">
             {detail}
           </p>
         </div>
 
-        <time
-          dateTime={created_at}
-          className="ml-1 shrink-0 self-start whitespace-nowrap pt-0.5 font-sans text-[11px] tabular-nums text-muted"
-        >
-          {formatRelativeLocale(created_at, locale)}
-        </time>
+        {timestamp}
       </button>
 
-      {onArchive && (
-        <button
-          type="button"
-          onClick={onArchive}
-          aria-label={t('archiveAria')}
-          className="flex w-11 shrink-0 items-center justify-center text-muted transition-colors hover:bg-surface-2 hover:text-text active:bg-surface-2"
-        >
-          <XIcon />
-        </button>
-      )}
+      {archive}
     </div>
   );
 }

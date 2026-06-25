@@ -3,6 +3,25 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationCard, type NotificationRow } from './NotificationCard';
 import type { NotificationPayload } from '@/lib/notifications/types';
 
+// SmartLink rendres som <a> i test-miljø (ingen prefetch/router-avhengighet).
+vi.mock('@/components/ui/SmartLink', () => ({
+  SmartLink: ({
+    href,
+    onClick,
+    children,
+    className,
+  }: {
+    href: string;
+    onClick?: () => void;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
+    <a href={href} onClick={onClick} className={className}>
+      {children}
+    </a>
+  ),
+}));
+
 beforeEach(() => {
   // Pin «nå» så relative tidsstempler er deterministiske i tester.
   // 2026-05-24T14:30:00Z (~16:30 Europe/Oslo sommertid).
@@ -300,6 +319,47 @@ describe('NotificationCard', () => {
       <NotificationCard notification={make({ ...base, requester_name: null })} />,
     );
     expect(screen.getByText('En spiller vil bli med')).toBeInTheDocument();
+  });
+
+  // #937-oppfølger: en lansering med lang brødtekst + CTA viste bare 2 linjer
+  // og helkort-tappen kasta deg ut til lenken før du fikk lest. Innboks-kortet
+  // speiler nå banneret: full brødtekst + dedikert CTA, kort-tappen navigerer ikke.
+  it('rendrer product_update med full brødtekst og dedikert CTA-lenke', () => {
+    const longBody =
+      'Nå kan du gjøre opp penger automatisk i wager-spill. Vi regner ut hvem ' +
+      'som skylder hvem, og viser sluttoppgjøret i leaderboardet når runden er ' +
+      'ferdig — slik at ingen trenger å sitte med kalkulatoren etterpå.';
+    const onTap = vi.fn();
+    render(
+      <NotificationCard
+        notification={{
+          id: 'n-pu',
+          kind: 'product_update',
+          payload: {
+            source_id: '99999999-9999-9999-9999-999999999999',
+            title: 'Pengeoppgjør i wager-spill',
+            body: longBody,
+            link: '/spillformater/wolf',
+            cta_label: 'Se hvordan',
+          },
+          read_at: null,
+          created_at: '2026-05-24T13:30:00Z',
+        }}
+        onTap={onTap}
+      />,
+    );
+
+    // Hele brødteksten vises — ingen 2-linjers klamp som skjuler resten.
+    const body = screen.getByText(longBody);
+    expect(body.className).not.toContain('line-clamp');
+
+    // CTA-en er en dedikert lenke til payload-lenken (ikke helkort-tapp).
+    const cta = screen.getByRole('link', { name: 'Se hvordan' });
+    expect(cta).toHaveAttribute('href', '/spillformater/wolf');
+
+    // CTA-klikk markerer som lest (samme onTap-kontrakt som banneret).
+    fireEvent.click(cta);
+    expect(onTap).toHaveBeenCalledTimes(1);
   });
 
   it('rendrer registration_rejected: reason_code lokaliseres, fritekst-reason verbatim', () => {

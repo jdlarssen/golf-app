@@ -897,8 +897,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juni 2026 · 241 rettinger</strong></summary>
+<summary><strong>Juni 2026 · 242 rettinger</strong></summary>
 
+- `1.145.1` · [#957](https://github.com/jdlarssen/golf-app/issues/957) — Lanseringer med lenke og knapp viser nå hele teksten i innboksen, så du kan lese ferdig før du eventuelt trykker deg videre.
 - `1.142.1` · [#924](https://github.com/jdlarssen/golf-app/issues/924) — Liga-runder med en frist som alt har vært stoppes med en gang.
 - `1.141.2` · [#927](https://github.com/jdlarssen/golf-app/issues/927) — Hjelpeteksten for handicap-andelen viser igjen riktig forklaring i stedet for en rå kode som «best_ball».
 - `1.141.1` · [#928](https://github.com/jdlarssen/golf-app/issues/928) — Taster du inn en tee-off som har vært, sier appen fra med en gang ved feltet, og «Publiser» er gråa ut til du retter tiden.

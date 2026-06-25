@@ -58,7 +58,11 @@ describe('notificationDestination', () => {
     ).toBe(`/klubber/${GROUP}`);
   });
 
-  it('returns the stored link for product_update when present', () => {
+  it('returns null for product_update — its link is reached via the card CTA, not a whole-card tap', () => {
+    // A product_update with a long body used to whole-card-navigate to the
+    // link, so tapping to read more threw you out to the link before you could
+    // finish reading. Navigation now lives on a dedicated CTA button in the
+    // card (mirroring the home banner); the card tap only marks-as-read.
     expect(
       notificationDestination(
         n('product_update', {
@@ -66,9 +70,10 @@ describe('notificationDestination', () => {
           title: 'T',
           body: 'B',
           link: '/spillformater/wolf',
+          cta_label: 'Se Wolf',
         }),
       ),
-    ).toBe('/spillformater/wolf');
+    ).toBeNull();
   });
 
   it('returns null for notifications with no real destination (would self-link to /innboks)', () => {

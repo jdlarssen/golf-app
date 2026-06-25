@@ -19,11 +19,15 @@ export type DeeplinkInput = {
  * `router.push('/innboks')` mens du allerede står på innboksen ga null synlig
  * endring og fikk varselet til å føles ødelagt (#613). Caller skal kun navigere
  * når denne returnerer en non-null sti — mark-as-read skjer uansett.
+ *
+ * `product_update` returnerer ALLTID `null`: en lansering kan ha lang brødtekst,
+ * og helkort-navigering kasta deg ut til lenken før du fikk lest ferdig. Lenken
+ * nås nå via en dedikert CTA-knapp i kortet (samme mønster som hjem-banneret),
+ * slik at selve kort-tappen bare markerer som lest.
  */
 export function notificationDestination(n: DeeplinkInput): string | null {
   if (n.kind === 'product_update') {
-    const p = n.payload as NotificationPayload<'product_update'>;
-    return p.link ?? null;
+    return null;
   }
   switch (n.kind) {
     case 'invite':
