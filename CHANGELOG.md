@@ -17,7 +17,11 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <details>
 <summary><strong>1.145 · Penger på spill</strong></summary>
 
-[#937](https://github.com/jdlarssen/golf-app/issues/937) — Spiller dere veddemålsformatene om penger, setter du en kroneverdi per skin eller poeng, så regner leaderboardet ut oppgjøret og sier hvem som skylder hvem.
+Spiller dere veddemålsformatene om penger, setter du en kroneverdi per skin eller poeng, så regner leaderboardet ut oppgjøret og sier hvem som skylder hvem.
+
+↳ /opprett-spill · «Spill om penger»
+
+[#937](https://github.com/jdlarssen/golf-app/issues/937)
 </details>
 
 <details>
