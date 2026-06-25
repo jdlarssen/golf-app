@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.146 · Snitt og beste per bane</strong></summary>
+
+[#940](https://github.com/jdlarssen/golf-app/issues/940) — Historikken din åpner nå på statistikken: formkurven din og et nytt «Baner»-panel med snitt, beste og antall runder per bane. Den gamle runde-for-runde-lista ligger ett trykk unna under «Runder».
+
+↳ /profile/historikk · «Se tallene dine»
+</details>
+
+<details>
 <summary><strong>1.145 · Penger på spill</strong></summary>
 
 Spiller dere veddemålsformatene om penger, setter du en kroneverdi per skin eller poeng, så regner leaderboardet ut oppgjøret og sier hvem som skylder hvem.

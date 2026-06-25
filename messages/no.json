@@ -268,7 +268,17 @@
       "trendStart": "Start",
       "trendNow": "Nå",
       "trendBest": "Beste",
-      "trendAriaLabel": "{count, plural, one {Formkurve over 1 fullført runde, fra eldst til nyest.} other {Formkurve over # fullførte runder, fra eldst til nyest.}}"
+      "trendAriaLabel": "{count, plural, one {Formkurve over 1 fullført runde, fra eldst til nyest.} other {Formkurve over # fullførte runder, fra eldst til nyest.}}",
+      "tabStats": "Statistikk",
+      "tabRounds": "Runder",
+      "tabsAriaLabel": "Velg visning",
+      "coursesHeading": "Baner",
+      "coursesSubtitle": "Snitt og beste per bane",
+      "coursesColRounds": "Runder",
+      "coursesColAvg": "Snitt",
+      "coursesColBest": "Beste",
+      "coursesEmpty": "Spill en komplett 18-hulls-runde for å se snitt og beste per bane.",
+      "unknownCourse": "Ukjent bane"
     },
     "statistikk": {
       "kicker": "Toppliste",

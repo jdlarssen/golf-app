@@ -268,7 +268,17 @@
       "trendStart": "Start",
       "trendNow": "Now",
       "trendBest": "Best",
-      "trendAriaLabel": "{count, plural, one {Scoring trend across 1 completed round, oldest to newest.} other {Scoring trend across # completed rounds, oldest to newest.}}"
+      "trendAriaLabel": "{count, plural, one {Scoring trend across 1 completed round, oldest to newest.} other {Scoring trend across # completed rounds, oldest to newest.}}",
+      "tabStats": "Statistics",
+      "tabRounds": "Rounds",
+      "tabsAriaLabel": "Choose view",
+      "coursesHeading": "Courses",
+      "coursesSubtitle": "Average and best per course",
+      "coursesColRounds": "Rounds",
+      "coursesColAvg": "Avg",
+      "coursesColBest": "Best",
+      "coursesEmpty": "Play a full 18-hole round to see your average and best per course.",
+      "unknownCourse": "Unknown course"
     },
     "statistikk": {
       "kicker": "Leaderboard",

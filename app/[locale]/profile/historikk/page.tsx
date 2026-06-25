@@ -19,6 +19,12 @@ import {
   type TrendRound,
 } from '@/lib/stats/scoringTrend';
 import { ScoringTrendChart } from '@/components/stats/ScoringTrendChart';
+import { CoursePerformancePanel } from '@/components/stats/CoursePerformancePanel';
+import { HistorikkTabs } from '@/components/stats/HistorikkTabs';
+import {
+  computeCourseStats,
+  type CourseRoundInput,
+} from '@/lib/stats/courseStats';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
@@ -36,6 +42,8 @@ type GameRow = {
   ended_at: string | null;
   game_mode: GameMode;
   mode_config: GameModeConfig;
+  // #940 — grupperingsnøkkel for per-bane-statistikk (banenavn kan kollidere).
+  course_id: string | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
 };
@@ -78,7 +86,7 @@ export default async function HistorikkPage() {
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
     .select(
-      'game_id, course_handicap, result_summary, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, courses(name))',
+      'game_id, course_handicap, result_summary, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, courses(name))',
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished');
@@ -168,22 +176,24 @@ export default async function HistorikkPage() {
   const trendSummary = trend ? summarizeTrendRounds(trendRounds) : null;
   const trendDateRange = trend ? formatTrendDateRange(trendWindow, locale) : '';
 
-  return (
-    <AppShell>
-      <TopBar
-        backHref="/profile"
-        backLabel={t('backLabel')}
-        kicker={t('kicker')}
-      />
+  // #940 — per-bane-rollup: samme komplett-18-disiplin som formkurven/«Mine tall».
+  // 9-hulls/ufullstendige runder gir `completeBrutto = null` og teller ikke.
+  const unknownCourseName = t('unknownCourse');
+  const courseRounds: CourseRoundInput[] = gamesWithStats.map((g) => ({
+    courseId: g.course_id,
+    courseName: g.courses?.name ?? unknownCourseName,
+    completeBrutto:
+      g.holeCount === COMPLETE_ROUND_HOLES && g.bruttoSum != null
+        ? g.bruttoSum
+        : null,
+  }));
+  const courseStats = computeCourseStats(courseRounds);
 
-      {finishedCount > 0 && (
-        <p className="mb-4 text-sm text-muted">{t('roundCount', { count: finishedCount })}</p>
-      )}
-
-      {/* Formkurve øverst — kun når det finnes minst 2 komplette 18-hulls-runder
-          å tegne en linje av. Lista under viser de eksakte tallene per runde. */}
+  // «Statistikk»-fanen (default): formkurve (når ≥2 komplette runder) + per-bane.
+  const statsContent = (
+    <div className="space-y-4">
       {trend && trendSummary && (
-        <Card className="mb-4">
+        <Card>
           <ScoringTrendChart
             geometry={trend}
             summary={trendSummary}
@@ -199,6 +209,65 @@ export default async function HistorikkPage() {
           />
         </Card>
       )}
+      <CoursePerformancePanel
+        courses={courseStats}
+        heading={t('coursesHeading')}
+        subtitle={t('coursesSubtitle')}
+        colRounds={t('coursesColRounds')}
+        colAvg={t('coursesColAvg')}
+        colBest={t('coursesColBest')}
+        emptyLabel={t('coursesEmpty')}
+      />
+    </div>
+  );
+
+  // «Runder»-fanen: den kronologiske per-runde-lista (uendret kort).
+  const roundsContent = (
+    <div className="space-y-3">
+      {gamesWithStats.map((game) => {
+        const formatLabel = tModes(
+          formatDisplayLabelKey(
+            game.game_mode,
+            game.mode_config,
+          ) as Parameters<typeof tModes>[0],
+        );
+        const badge = game.result_summary
+          ? finishedResultBadge(game.result_summary)
+          : null;
+        const resultText = badge
+          ? tFinished(
+              badge.key as Parameters<typeof tFinished>[0],
+              badge.values as Parameters<typeof tFinished>[1],
+            )
+          : null;
+        return (
+          <GameHistoryCard
+            key={game.id}
+            game={game}
+            locale={locale}
+            colBrutto={t('colBrutto')}
+            colNetto={t('colNetto')}
+            resultLink={t('resultLink')}
+            formatLabel={formatLabel}
+            resultText={resultText}
+            resultIsWin={badge?.isWin ?? false}
+          />
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <AppShell>
+      <TopBar
+        backHref="/profile"
+        backLabel={t('backLabel')}
+        kicker={t('kicker')}
+      />
+
+      {finishedCount > 0 && (
+        <p className="mb-4 text-sm text-muted">{t('roundCount', { count: finishedCount })}</p>
+      )}
 
       {finishedCount === 0 ? (
         <Card>
@@ -207,38 +276,7 @@ export default async function HistorikkPage() {
           </p>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {gamesWithStats.map((game) => {
-            const formatLabel = tModes(
-              formatDisplayLabelKey(
-                game.game_mode,
-                game.mode_config,
-              ) as Parameters<typeof tModes>[0],
-            );
-            const badge = game.result_summary
-              ? finishedResultBadge(game.result_summary)
-              : null;
-            const resultText = badge
-              ? tFinished(
-                  badge.key as Parameters<typeof tFinished>[0],
-                  badge.values as Parameters<typeof tFinished>[1],
-                )
-              : null;
-            return (
-              <GameHistoryCard
-                key={game.id}
-                game={game}
-                locale={locale}
-                colBrutto={t('colBrutto')}
-                colNetto={t('colNetto')}
-                resultLink={t('resultLink')}
-                formatLabel={formatLabel}
-                resultText={resultText}
-                resultIsWin={badge?.isWin ?? false}
-              />
-            );
-          })}
-        </div>
+        <HistorikkTabs statsContent={statsContent} roundsContent={roundsContent} />
       )}
     </AppShell>
   );
