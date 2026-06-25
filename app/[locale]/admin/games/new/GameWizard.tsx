@@ -54,6 +54,7 @@ import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
 import { RoundRobinSetup } from './sections/RoundRobinSetup';
 import { AceyDeuceySetup } from './sections/AceyDeuceySetup';
+import { WagerStakeSetup } from './sections/WagerStakeSetup';
 import { ShambleSetup } from './sections/ShambleSetup';
 import { PatsomeSetup } from './sections/PatsomeSetup';
 import { useTranslations } from 'next-intl';
@@ -410,6 +411,7 @@ export function GameWizard({
       wolf_scoring: state.wolfScoring,
       nassau_scoring: state.nassauScoring,
       skins_scoring: state.skinsScoring,
+      kr_per_unit: state.krPerUnit ? Number(state.krPerUnit) : undefined,
       nines_variant: state.ninesVariant,
       nines_scoring: state.ninesScoring,
       acey_deucey_scoring: state.aceyDeuceyScoring,
@@ -635,6 +637,14 @@ export function GameWizard({
                 <AceyDeuceySetup
                   scoring={state.aceyDeuceyScoring}
                   onScoringChange={state.setAceyDeuceyScoring}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isWagerFormat && (
+                <WagerStakeSetup
+                  value={state.krPerUnit}
+                  onChange={state.setKrPerUnit}
+                  unitKey={state.wagerUnitKey}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -965,6 +975,9 @@ function FormDataInputs({
     gruesomeAllowancePct,
     roundRobinAllowancePct,
     wolfScoring,
+    krPerUnit,
+    isWagerFormat,
+    wagerUnitKey,
     nassauScoring,
     skinsScoring,
     ninesVariant,
@@ -1084,6 +1097,9 @@ function FormDataInputs({
       )}
       {isSkins && (
         <input type="hidden" name="skins_scoring" value={skinsScoring} />
+      )}
+      {isWagerFormat && (
+        <input type="hidden" name="kr_per_unit" value={krPerUnit} />
       )}
       {isNines && (
         <>

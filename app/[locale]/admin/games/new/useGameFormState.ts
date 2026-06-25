@@ -443,6 +443,12 @@ export function useGameFormState({
   const [wolfScoring, setWolfScoring] = useState<'gross' | 'net'>(
     initialValues?.wolf_scoring === 'gross' ? 'gross' : 'net',
   );
+  // #937: valgfri kr-verdi per enhet for pengeoppgjør (veddemålsformater).
+  // Holdes som streng for input-feltet; tomt = av. Validatoren (parseKrPerUnit)
+  // tolererer tomt/0/ugyldig som «av».
+  const [krPerUnit, setKrPerUnit] = useState<string>(
+    initialValues?.kr_per_unit != null ? String(initialValues.kr_per_unit) : '',
+  );
   // Nassau (#276): brutto vs netto-toggle. Default 'net' speiler Tørny's
   // ethos. Validatoren (`validateNassau`) leser feltet og faller defensivt
   // tilbake til 'net' ved ugyldig/manglende verdi.
@@ -1683,6 +1689,15 @@ export function useGameFormState({
     setRoundRobinAllowancePct,
     wolfScoring,
     setWolfScoring,
+    // #937: pengeoppgjør for veddemålsformater.
+    krPerUnit,
+    setKrPerUnit,
+    isWagerFormat:
+      isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey,
+    wagerUnitKey: (isSkins ? 'skin' : isNassau ? 'seksjon' : 'poeng') as
+      | 'skin'
+      | 'poeng'
+      | 'seksjon',
     wolfOrder,
     shuffleWolfOrder,
     roundRobinOrder,

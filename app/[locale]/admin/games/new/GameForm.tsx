@@ -189,6 +189,11 @@ export type InitialValues = {
    */
   wolf_scoring?: 'gross' | 'net';
   /**
+   * #937: valgfri kr-verdi per enhet for pengeoppgjør (veddemålsformater).
+   * Pre-fylles fra DB i edit-flyt; udefinert = uten penger.
+   */
+  kr_per_unit?: number;
+  /**
    * Nassau (#276): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB i
    * edit-flyt; nye spill defaulter til 'net' i useGameFormState.
    */

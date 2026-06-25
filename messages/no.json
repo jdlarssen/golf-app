@@ -526,6 +526,18 @@
         "scoringGross": "Brutto",
         "scoringAriaLabel": "Nassau-scoring"
       },
+      "wager": {
+        "legend": "Penger på spill?",
+        "description": "Valgfritt — sett en kroneverdi per {unit}. Da viser leaderboardet oppgjøret («hvem skylder hvem»). La stå tomt for å spille uten penger.",
+        "krLabel": "kr per {unit}",
+        "placeholder": "f.eks. 50",
+        "ariaLabel": "Kroner per enhet",
+        "units": {
+          "skin": "skin",
+          "poeng": "poeng",
+          "seksjon": "seksjon"
+        }
+      },
       "skins": {
         "legend": "Skins-oppsett",
         "scoringLabel": "Scoring",

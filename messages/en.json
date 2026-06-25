@@ -526,6 +526,18 @@
         "scoringGross": "Gross",
         "scoringAriaLabel": "Nassau scoring"
       },
+      "wager": {
+        "legend": "Playing for money?",
+        "description": "Optional — set a kr value per {unit}. The leaderboard then shows the settlement (who owes whom). Leave empty to play without money.",
+        "krLabel": "kr per {unit}",
+        "placeholder": "e.g. 50",
+        "ariaLabel": "Kroner per unit",
+        "units": {
+          "skin": "skin",
+          "poeng": "point",
+          "seksjon": "section"
+        }
+      },
       "skins": {
         "legend": "Skins setup",
         "scoringLabel": "Scoring",
