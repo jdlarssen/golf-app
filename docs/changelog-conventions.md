@@ -24,22 +24,24 @@ En funksjon bærer de samme fire feltene som `/admin/lanseringer`-skjemaet (`pro
 <details>
 <summary><strong>1.142 · Et ryddigere oppsett</strong></summary>
 
-Spill-oppsettet ligger i panel du bretter ut når du trenger dem, og et publisert spill viser spillformen som et lite kort.
+[#909](https://github.com/jdlarssen/golf-app/issues/909) — Spill-oppsettet ligger i panel du bretter ut når du trenger dem, og et publisert spill viser spillformen som et lite kort.
 
 ↳ /opprett-spill · «Sett opp en runde»
-
-[#909](https://github.com/jdlarssen/golf-app/issues/909)
 </details>
 ```
 
 | Felt | Lansering-felt | Grense | Hentes fra |
 |------|----------------|--------|------------|
 | Tittel (i `<summary>`, etter `versjon ·`) | `title` | ≤120 | utgivelsens tema, kort substantiv-frase |
-| Brødtekst (avsnittet) | `body` | ≤400 (sikt på én setning) | hva du nå kan gjøre, invitérende |
-| `↳ /lenke` | `link` | intern, starter med `/` | valgfri dyplenke til featuren |
-| `«cta»` (etter lenka) | `cta_label` | ≤40, kun med lenke | valgfri knapp-tekst |
+| Brødtekst (etter `[#N] —`) | `body` | ≤400 (sikt på én setning) | hva du nå kan gjøre, invitérende |
+| `↳ /lenke` | `link` | intern, starter med `/` | **forventet** — dyplenke dit featuren vises |
+| `«cta»` (etter lenka) | `cta_label` | ≤40, kun med lenke | **forventet** — knapp-tekst, action-verb |
 
-**Lenke + cta er valgfrie** — ta dem med når funksjonen har en naturlig dyplenke å lansere mot. Historiske funksjoner (før denne omleggingen) har kun tittel + brødtekst; de fylles ikke med lenker i etterkant.
+**Ta alltid med `↳ /lenke · «cta»` på en ny funksjon.** Det er det som gjør oppføringen klar til å publiseres som in-app-lansering med ett klikk — uten lenke + cta må du finne dem på nytt når du senere vil lansere featuren. Standard er at hver ny funksjon får `↳`-linja, pekende dit brukeren ser det nye (`/profile/historikk`, `/opprett-spill`, …).
+
+**Unntak (da utelater du `↳`-linja bevisst):** funksjonen har ingen naturlig destinasjon å lenke til — f.eks. en ren visuell eller under-panseret-endring uten egen side. Historiske funksjoner (før omleggingen, #952) har kun tittel + brødtekst og etterfylles ikke.
+
+`[#N] —`-prefikset er kun changelog-proveniens; det blir **ikke** med i Lansering-`body`-en — der limer du inn setningen etter `—`.
 
 ## Feilrettings-oppføring
 
