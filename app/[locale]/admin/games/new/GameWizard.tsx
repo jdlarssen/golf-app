@@ -977,7 +977,6 @@ function FormDataInputs({
     wolfScoring,
     krPerUnit,
     isWagerFormat,
-    wagerUnitKey,
     nassauScoring,
     skinsScoring,
     ninesVariant,

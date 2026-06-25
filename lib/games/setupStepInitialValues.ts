@@ -27,6 +27,8 @@ export type SetupStepInitialValues = {
   shamble_scoring?: 'gross' | 'net';
   /** Shamble team_size — 3 or 4 players per team. */
   team_size?: 3 | 4;
+  /** #937: kr per enhet for veddemålsformatene — må restaureres ved edit. */
+  kr_per_unit?: number;
 };
 
 /**
@@ -44,18 +46,37 @@ export function buildSetupStepInitialValues(
 ): SetupStepInitialValues {
   switch (modeConfig.kind) {
     case 'wolf':
-      return { wolf_scoring: modeConfig.wolf_scoring };
+      return {
+        wolf_scoring: modeConfig.wolf_scoring,
+        kr_per_unit: modeConfig.kr_per_unit,
+      };
 
     case 'nassau':
-      return { nassau_scoring: modeConfig.nassau_scoring };
+      return {
+        nassau_scoring: modeConfig.nassau_scoring,
+        kr_per_unit: modeConfig.kr_per_unit,
+      };
 
     case 'skins':
-      return { skins_scoring: modeConfig.skins_scoring };
+      return {
+        skins_scoring: modeConfig.skins_scoring,
+        kr_per_unit: modeConfig.kr_per_unit,
+      };
+
+    // #937: BBB har ingen scoring-toggle, men nå et kr-felt som må restaureres.
+    case 'bingo_bango_bongo':
+      return { kr_per_unit: modeConfig.kr_per_unit };
+
+    // #937: Acey-Deucey kr-felt må restaureres. (acey_deucey_scoring restaureres
+    // bevisst IKKE — #322-avgjørelse, egen test låser {} uten kr.)
+    case 'acey_deucey':
+      return { kr_per_unit: modeConfig.kr_per_unit };
 
     case 'nines':
       return {
         nines_variant: modeConfig.nines_variant,
         nines_scoring: modeConfig.nines_scoring,
+        kr_per_unit: modeConfig.kr_per_unit,
       };
 
     case 'shamble':

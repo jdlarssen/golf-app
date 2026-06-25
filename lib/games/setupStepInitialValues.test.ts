@@ -117,6 +117,42 @@ describe('buildSetupStepInitialValues', () => {
     });
   });
 
+  // #937: kr_per_unit må overleve edit-round-trip for veddemålsformatene.
+  it('skins: restaurerer kr_per_unit når satt', () => {
+    const config = {
+      kind: 'skins',
+      team_size: 1,
+      skins_scoring: 'net',
+      kr_per_unit: 200,
+    } satisfies GameModeConfig;
+
+    expect(buildSetupStepInitialValues(config)).toEqual({
+      skins_scoring: 'net',
+      kr_per_unit: 200,
+    });
+  });
+
+  it('bingo_bango_bongo: restaurerer kr_per_unit (ingen scoring-toggle)', () => {
+    const config = {
+      kind: 'bingo_bango_bongo',
+      team_size: 1,
+      kr_per_unit: 100,
+    } satisfies GameModeConfig;
+
+    expect(buildSetupStepInitialValues(config)).toEqual({ kr_per_unit: 100 });
+  });
+
+  it('acey_deucey: restaurerer kr_per_unit (scoring bevisst ikke, jf. #322)', () => {
+    const config = {
+      kind: 'acey_deucey',
+      team_size: 1,
+      acey_deucey_scoring: 'gross',
+      kr_per_unit: 50,
+    } satisfies GameModeConfig;
+
+    expect(buildSetupStepInitialValues(config)).toEqual({ kr_per_unit: 50 });
+  });
+
   it('best_ball: returnerer tomt objekt (ingen setup-seksjon)', () => {
     const config = {
       kind: 'best_ball',
