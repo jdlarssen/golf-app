@@ -7,6 +7,8 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { SettlementTable } from './SettlementTable';
+import type { Settlement } from '@/lib/scoring/settlement';
 import type {
   NinesResult,
   NinesHoleRow,
@@ -54,6 +56,8 @@ export interface NinesViewProps {
    * Brukes inne i LeaderboardTabs eller når en parent (podium) wrapper.
    */
   chromeless?: boolean;
+  /** Pengeoppgjør (#937) — null hvis kr_per_unit ikke er satt eller ≤ 0. */
+  settlement?: Settlement | null;
 }
 
 /**
@@ -78,6 +82,7 @@ export function NinesView({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  settlement,
 }: NinesViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const isRevealHidden =
@@ -156,6 +161,13 @@ export function NinesView({
           );
         })}
       </ul>
+
+      {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
+      {settlement && (
+        <div className="px-3.5 pb-3.5">
+          <SettlementTable settlement={settlement} playersById={playersById} />
+        </div>
+      )}
 
       {/* Per-hull-rutenett — sekundær drilldown for poengfordeling. */}
       <section className="px-3.5 pt-2 pb-3.5">

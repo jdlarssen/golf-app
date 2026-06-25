@@ -15,6 +15,12 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.145 · Penger på spill</strong></summary>
+
+[#937](https://github.com/jdlarssen/golf-app/issues/937) — Spiller dere veddemålsformatene om penger, setter du en kroneverdi per skin eller poeng, så regner leaderboardet ut oppgjøret og sier hvem som skylder hvem.
+</details>
+
+<details>
 <summary><strong>1.144 · Formkurven får tall</strong></summary>
 
 [#949](https://github.com/jdlarssen/golf-app/issues/949) — Formkurven viser nå hvor du startet, hvor du er nå og din beste runde — brutto og netto over de siste 20 rundene, med rekorden markert i gull.

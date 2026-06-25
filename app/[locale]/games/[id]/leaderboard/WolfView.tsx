@@ -12,6 +12,8 @@ import {
   wolfOutcomeKey,
   wolfOutcomeClass,
 } from '@/lib/wolf/holeLabels';
+import { SettlementTable } from './SettlementTable';
+import type { Settlement } from '@/lib/scoring/settlement';
 import type { WolfResult, WolfHoleRow } from '@/lib/scoring/modes/types';
 
 /**
@@ -55,6 +57,8 @@ export interface WolfViewProps {
    * Brukes inne i LeaderboardTabs eller når en parent (podium) wrapper.
    */
   chromeless?: boolean;
+  /** Pengeoppgjør (#937) — null hvis kr_per_unit ikke er satt eller ≤ 0. */
+  settlement?: Settlement | null;
 }
 
 /**
@@ -83,6 +87,7 @@ export function WolfView({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  settlement,
 }: WolfViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -164,6 +169,13 @@ export function WolfView({
           );
         })}
       </ul>
+
+      {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
+      {settlement && (
+        <div className="px-3.5 pb-3.5">
+          <SettlementTable settlement={settlement} playersById={playersById} />
+        </div>
+      )}
 
       {/* Per-hull-liste — sekundær drilldown for hvordan poengene ble fordelt. */}
       <section className="px-3.5 pt-2 pb-3.5">

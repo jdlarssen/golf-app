@@ -9,6 +9,7 @@ import { buildBingoBangoBongoContext } from '@/lib/scoring/context/buildBingoBan
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { computeSettlement } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -44,6 +45,7 @@ export async function renderBingoBangoBongo(opts: {
   backHref: string;
 }) {
   const tc = await getTranslations('leaderboard.common');
+  const tSettle = await getTranslations('leaderboard.common.settlement');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Per-hull-prestasjonsdata fra bingo_bango_bongo_holes. Tag-cachet på
@@ -69,6 +71,18 @@ export async function renderBingoBangoBongo(opts: {
   if (result.kind !== 'bingo_bango_bongo') {
     notFound();
   }
+
+  // Pengeoppgjør (#937) — null når kr_per_unit ikke er satt eller ≤ 0.
+  // mode_config er innsnevret til bingo_bango_bongo-varianten etter notFound()-vakten.
+  const krPerUnit =
+    'kr_per_unit' in game.mode_config && typeof game.mode_config.kr_per_unit === 'number'
+      ? game.mode_config.kr_per_unit
+      : 0;
+  const settlement = computeSettlement({
+    units: result.players.map((p) => ({ userId: p.userId, units: p.totalPoints })),
+    krPerUnit,
+    unitLabel: tSettle('units.poeng'),
+  });
 
   const unknownPlayer = tc('unknownPlayer');
   const holesPlayed = maxHolesPlayed(rawScoresRows);
@@ -167,6 +181,7 @@ export async function renderBingoBangoBongo(opts: {
             gameStatus={game.status}
             backHref={backHref}
             chromeless
+            settlement={settlement}
           />
         </>
       );
@@ -196,6 +211,7 @@ export async function renderBingoBangoBongo(opts: {
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
+      settlement={settlement}
     />
   );
 }

@@ -8,6 +8,7 @@ import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildNassauContext } from '@/lib/scoring/context/buildNassauContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { computeSettlement } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -43,6 +44,7 @@ export async function renderNassau(opts: {
 }) {
   const tc = await getTranslations('leaderboard.common');
   const tn = await getTranslations('leaderboard.nassau');
+  const tSettle = await getTranslations('leaderboard.common.settlement');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
@@ -59,6 +61,19 @@ export async function renderNassau(opts: {
   if (result.kind !== 'nassau') {
     notFound();
   }
+
+  // Pengeoppgjør (#937) — null når kr_per_unit ikke er satt eller ≤ 0.
+  // Nassau bruker `units` (antall vunnede seksjoner, 0–3) fra NassauUnitLine.
+  // mode_config er innsnevret til nassau-varianten etter notFound()-vakten over.
+  const krPerUnit =
+    'kr_per_unit' in game.mode_config && typeof game.mode_config.kr_per_unit === 'number'
+      ? game.mode_config.kr_per_unit
+      : 0;
+  const settlement = computeSettlement({
+    units: result.players.map((p) => ({ userId: p.userId, units: p.units })),
+    krPerUnit,
+    unitLabel: tSettle('units.seksjon'),
+  });
 
   const unknownPlayer = tc('unknownPlayer');
   const holesPlayed = maxHolesPlayed(rawScoresRows);
@@ -175,6 +190,7 @@ export async function renderNassau(opts: {
             gameStatus={game.status}
             backHref={backHref}
             chromeless
+            settlement={settlement}
           />
         </>
       );
@@ -204,6 +220,7 @@ export async function renderNassau(opts: {
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
+      settlement={settlement}
     />
   );
 }

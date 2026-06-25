@@ -6,6 +6,8 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { SettlementTable } from './SettlementTable';
+import type { Settlement } from '@/lib/scoring/settlement';
 import type {
   NassauResult,
   NassauSection,
@@ -53,6 +55,8 @@ export interface NassauViewProps {
    * Brukes inne i LeaderboardTabs eller når en parent (podium) wrapper.
    */
   chromeless?: boolean;
+  /** Pengeoppgjør (#937) — null hvis kr_per_unit ikke er satt eller ≤ 0. */
+  settlement?: Settlement | null;
 }
 
 /**
@@ -82,6 +86,7 @@ export function NassauView({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  settlement,
 }: NassauViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -170,6 +175,13 @@ export function NassauView({
           t={t}
         />
       </div>
+
+      {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
+      {settlement && (
+        <div className="px-3.5 pb-3.5">
+          <SettlementTable settlement={settlement} playersById={playersById} />
+        </div>
+      )}
 
       <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
     </LeaderboardShell>

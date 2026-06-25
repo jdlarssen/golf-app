@@ -6,6 +6,7 @@ import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { computeSettlement } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -39,6 +40,7 @@ export async function renderNines(opts: {
   backHref: string;
 }) {
   const tc = await getTranslations('leaderboard.common');
+  const tSettle = await getTranslations('leaderboard.common.settlement');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Bygges via den delte `buildNinesContext`-helperen (epic #496) slik at
@@ -56,6 +58,18 @@ export async function renderNines(opts: {
   if (result.kind !== 'nines') {
     notFound();
   }
+
+  // Pengeoppgjør (#937) — null når kr_per_unit ikke er satt eller ≤ 0.
+  // mode_config er innsnevret til nines-varianten etter notFound()-vakten over.
+  const krPerUnit =
+    'kr_per_unit' in game.mode_config && typeof game.mode_config.kr_per_unit === 'number'
+      ? game.mode_config.kr_per_unit
+      : 0;
+  const settlement = computeSettlement({
+    units: result.players.map((p) => ({ userId: p.userId, units: p.totalPoints })),
+    krPerUnit,
+    unitLabel: tSettle('units.poeng'),
+  });
 
   const unknownPlayer = tc('unknownPlayer');
   const holesPlayed = maxHolesPlayed(rawScoresRows);
@@ -96,6 +110,7 @@ export async function renderNines(opts: {
           gameStatus={game.status}
           backHref={backHref}
           chromeless
+          settlement={settlement}
         />
       </>
     );
@@ -124,6 +139,7 @@ export async function renderNines(opts: {
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
+      settlement={settlement}
     />
   );
 }

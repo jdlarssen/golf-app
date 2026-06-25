@@ -7,6 +7,8 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { SettlementTable } from './SettlementTable';
+import type { Settlement } from '@/lib/scoring/settlement';
 import type {
   AceyDeuceyResult,
   AceyDeuceyHoleRow,
@@ -53,6 +55,8 @@ export interface AceyDeuceyViewProps {
    * Brukes inne i en parent (podium) wrapper.
    */
   chromeless?: boolean;
+  /** Pengeoppgjør (#937) — null hvis kr_per_unit ikke er satt eller ≤ 0. */
+  settlement?: Settlement | null;
 }
 
 /**
@@ -77,6 +81,7 @@ export function AceyDeuceyView({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  settlement,
 }: AceyDeuceyViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const isRevealHidden =
@@ -157,6 +162,13 @@ export function AceyDeuceyView({
           );
         })}
       </ul>
+
+      {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
+      {settlement && (
+        <div className="px-3.5 pb-3.5">
+          <SettlementTable settlement={settlement} playersById={playersById} />
+        </div>
+      )}
 
       {/* Per-hull-tabell — sekundær drilldown for ace/deuce per hull. */}
       <section className="px-3.5 pt-2 pb-3.5">

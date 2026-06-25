@@ -7,6 +7,8 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { SettlementTable } from './SettlementTable';
+import type { Settlement } from '@/lib/scoring/settlement';
 import type {
   SkinsResult,
   SkinsHoleRow,
@@ -54,6 +56,8 @@ export interface SkinsViewProps {
    * Brukes inne i LeaderboardTabs eller når en parent (podium) wrapper.
    */
   chromeless?: boolean;
+  /** Pengeoppgjør (#937) — null hvis kr_per_unit ikke er satt eller ≤ 0. */
+  settlement?: Settlement | null;
 }
 
 /**
@@ -86,6 +90,7 @@ export function SkinsView({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  settlement,
 }: SkinsViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -194,6 +199,13 @@ export function SkinsView({
             </span>{' '}
             {t('skins.unwonNote')}
           </p>
+        </div>
+      )}
+
+      {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
+      {settlement && (
+        <div className="px-3.5 pb-3.5">
+          <SettlementTable settlement={settlement} playersById={playersById} />
         </div>
       )}
 

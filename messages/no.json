@@ -1869,6 +1869,17 @@
   },
   "leaderboard": {
     "common": {
+      "settlement": {
+        "title": "Oppgjør",
+        "stake": "{kr} kr per {unit}",
+        "owes": "{from} → {to}",
+        "empty": "Ingen penger skifter hender.",
+        "units": {
+          "skin": "skin",
+          "poeng": "poeng",
+          "seksjon": "seksjon"
+        }
+      },
       "unknownPlayer": "(ukjent)",
       "teamLabel": "Lag {number}",
       "noPlayers": "(uten spillere)",
