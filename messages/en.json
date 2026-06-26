@@ -278,7 +278,8 @@
       "coursesColAvg": "Avg",
       "coursesColBest": "Best",
       "coursesEmpty": "Play a full 18-hole round to see your average and best per course.",
-      "unknownCourse": "Unknown course"
+      "unknownCourse": "Unknown course",
+      "roundNetto": "{netto} net"
     },
     "statistikk": {
       "kicker": "Leaderboard",

@@ -5,14 +5,10 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
-import { SmartLink } from '@/components/ui/SmartLink';
-import {
-  formatTeeOffDateLocale,
-  formatShortDayMonthLocale,
-} from '@/lib/i18n/format';
-import { localizeGameName } from '@/lib/games/autoGameName';
+import { formatShortDayMonthLocale } from '@/lib/i18n/format';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
+import { GameHistoryRow } from '@/components/stats/GameHistoryRow';
 import {
   buildScoringTrend,
   summarizeTrendRounds,
@@ -221,40 +217,49 @@ export default async function HistorikkPage() {
     </div>
   );
 
-  // «Runder»-fanen: den kronologiske per-runde-lista (uendret kort).
+  // «Runder»-fanen (#962): kronologisk per-runde-liste som tette, trykkbare
+  // rader i ett Card (samme delte-rad-mønster som «Baner»-panelet) — ikke
+  // lenger frittstående kort med egen fot-lenke.
   const roundsContent = (
-    <div className="space-y-3">
-      {gamesWithStats.map((game) => {
-        const formatLabel = tModes(
-          formatDisplayLabelKey(
-            game.game_mode,
-            game.mode_config,
-          ) as Parameters<typeof tModes>[0],
-        );
-        const badge = game.result_summary
-          ? finishedResultBadge(game.result_summary)
-          : null;
-        const resultText = badge
-          ? tFinished(
-              badge.key as Parameters<typeof tFinished>[0],
-              badge.values as Parameters<typeof tFinished>[1],
-            )
-          : null;
-        return (
-          <GameHistoryCard
-            key={game.id}
-            game={game}
-            locale={locale}
-            colBrutto={t('colBrutto')}
-            colNetto={t('colNetto')}
-            resultLink={t('resultLink')}
-            formatLabel={formatLabel}
-            resultText={resultText}
-            resultIsWin={badge?.isWin ?? false}
-          />
-        );
-      })}
-    </div>
+    <Card className="p-0 overflow-hidden">
+      <div className="divide-y divide-border">
+        {gamesWithStats.map((game) => {
+          const formatLabel = tModes(
+            formatDisplayLabelKey(
+              game.game_mode,
+              game.mode_config,
+            ) as Parameters<typeof tModes>[0],
+          );
+          const badge = game.result_summary
+            ? finishedResultBadge(game.result_summary)
+            : null;
+          const resultText = badge
+            ? tFinished(
+                badge.key as Parameters<typeof tFinished>[0],
+                badge.values as Parameters<typeof tFinished>[1],
+              )
+            : null;
+          const dateObj = effectiveDate(game);
+          return (
+            <GameHistoryRow
+              key={game.id}
+              href={`/games/${game.id}/leaderboard?from=/profile/historikk`}
+              dateLabel={dateObj ? formatShortDayMonthLocale(dateObj, locale) : null}
+              courseName={game.courses?.name ?? null}
+              formatLabel={formatLabel}
+              resultText={resultText}
+              resultIsWin={badge?.isWin ?? false}
+              brutto={game.bruttoSum}
+              nettoLabel={
+                game.nettoSum != null
+                  ? t('roundNetto', { netto: game.nettoSum })
+                  : null
+              }
+            />
+          );
+        })}
+      </div>
+    </Card>
   );
 
   return (
@@ -279,119 +284,6 @@ export default async function HistorikkPage() {
         <HistorikkTabs statsContent={statsContent} roundsContent={roundsContent} />
       )}
     </AppShell>
-  );
-}
-
-function GameHistoryCard({
-  game,
-  locale,
-  colBrutto,
-  colNetto,
-  resultLink,
-  formatLabel,
-  resultText,
-  resultIsWin,
-}: {
-  game: GameWithStats;
-  locale: AppLocale;
-  colBrutto: string;
-  colNetto: string;
-  resultLink: string;
-  formatLabel: string;
-  resultText: string | null;
-  resultIsWin: boolean;
-}) {
-  const dateString = game.scheduled_tee_off_at
-    ? formatTeeOffDateLocale(new Date(game.scheduled_tee_off_at), locale)
-    : game.ended_at
-      ? formatTeeOffDateLocale(new Date(game.ended_at), locale)
-      : null;
-
-  return (
-    <Card className="p-0 overflow-hidden">
-      <div className="px-5 py-4">
-        {/* flex-wrap lets the stats cluster drop below the name on narrow
-            screens (~360px) instead of squeezing the game name to one word. */}
-        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-          <div className="min-w-0">
-            <h2 className="font-serif text-base font-medium text-text leading-snug">
-              {localizeGameName(game.name, game.courses?.name ?? null, locale)}
-            </h2>
-            {dateString && (
-              <p className="font-sans text-sm text-muted mt-0.5 capitalize">
-                {dateString}
-              </p>
-            )}
-            {/* #866: spillform-merke + ditt resultat — så «96» får kontekst. */}
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full border border-border bg-bg px-2 py-0.5 font-sans text-[11px] text-muted">
-                {formatLabel}
-              </span>
-              {resultText && (
-                <span
-                  className={`font-sans text-[13px] font-medium ${
-                    resultIsWin ? 'text-accent' : 'text-muted'
-                  }`}
-                >
-                  {resultText}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Stats cluster: brutto + netto (#866 — netto erstatter snitt/hull,
-              det mest meningsfulle tallet for en spiller med handicap). */}
-          <div className="flex shrink-0 gap-4 items-center">
-            <div className="text-right">
-              <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1">
-                {colBrutto}
-              </p>
-              <p className="font-sans tabular-nums text-base font-semibold text-text leading-none">
-                {game.bruttoSum !== null ? game.bruttoSum : '—'}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1">
-                {colNetto}
-              </p>
-              <p className="font-sans tabular-nums text-base font-semibold text-text leading-none">
-                {game.nettoSum !== null ? game.nettoSum : '—'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer link to leaderboard. The ?from=-param signals to the
-          leaderboard page that "Tilbake" should land back in Min historikk
-          rather than the game-home (the default backHref for /games/[id]/leaderboard).
-          See issue #117 — using an explicit query-param instead of document.referrer
-          because the latter is unreliable in iOS PWA standalone mode (cf. v1.8.3/v1.8.4). */}
-      <div className="border-t border-border">
-        <SmartLink
-          href={`/games/${game.id}/leaderboard?from=/profile/historikk`}
-          className="flex items-center justify-between px-5 py-3 font-sans text-[13px] font-medium text-muted hover:text-text hover:bg-bg/50 transition-colors"
-        >
-          <span>{resultLink}</span>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            aria-hidden="true"
-            className="shrink-0"
-          >
-            <path
-              d="M6 3l5 5-5 5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </SmartLink>
-      </div>
-    </Card>
   );
 }
 

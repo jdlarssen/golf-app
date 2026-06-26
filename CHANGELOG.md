@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.147 · Runder på én linje</strong></summary>
+
+[#962](https://github.com/jdlarssen/golf-app/issues/962) — Runder-fanen i historikken er strammet inn: hver runde er nå én trykkbar rad med brutto stort og resultatet ved siden av, så du skanner hele sesongen i stedet for å scrolle gjennom høye kort.
+
+↳ /profile/historikk · «Se rundene dine»
+</details>
+
+<details>
 <summary><strong>1.146 · Snitt og beste per bane</strong></summary>
 
 [#940](https://github.com/jdlarssen/golf-app/issues/940) — Historikken din åpner nå på statistikken: formkurven din og et nytt «Baner»-panel med snitt, beste og antall runder per bane. Den gamle runde-for-runde-lista ligger ett trykk unna under «Runder».

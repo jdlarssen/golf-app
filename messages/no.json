@@ -278,7 +278,8 @@
       "coursesColAvg": "Snitt",
       "coursesColBest": "Beste",
       "coursesEmpty": "Spill en komplett 18-hulls-runde for å se snitt og beste per bane.",
-      "unknownCourse": "Ukjent bane"
+      "unknownCourse": "Ukjent bane",
+      "roundNetto": "{netto} netto"
     },
     "statistikk": {
       "kicker": "Toppliste",
