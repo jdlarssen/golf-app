@@ -27,13 +27,13 @@ import {
   type MyStats,
   type RoundInput,
 } from '@/lib/stats/playerStats';
+import { parForGender } from '@/lib/stats/achievements';
 import {
   COURSE_HOLES_SELECT,
   type CourseHoleRow,
 } from '@/lib/supabase/queryFragments';
+import type { ScoringGender } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
-
-type ScoringGender = 'mens' | 'ladies' | 'juniors';
 
 const EMPTY_STATS: MyStats = {
   roundsPlayed: 0,
@@ -41,17 +41,6 @@ const EMPTY_STATS: MyStats = {
   bestRound: null,
   achievements: { holeInOne: 0, eagle: 0, birdie: 0, turkey: 0, snowman: 0 },
 };
-
-function parForGender(h: CourseHoleRow, gender: ScoringGender | null): number {
-  switch (gender) {
-    case 'ladies':
-      return h.par_ladies;
-    case 'juniors':
-      return h.par_juniors;
-    default:
-      return h.par_mens;
-  }
-}
 
 type SearchParams = Promise<{
   error?: string | string[];

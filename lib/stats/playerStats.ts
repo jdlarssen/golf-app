@@ -8,29 +8,23 @@
  *
  * Kallstedet velger riktig par per hull per spillerens `tee_gender`
  * (`par_mens`/`par_ladies`/`par_juniors`) FØR det sender inn `RoundInput`, så
- * denne modulen er ren og I/O-fri (Type A, jf. `lib/scoring/AGENTS.md`).
+ * denne modulen er ren og I/O-fri (Type A, jf. `lib/scoring/AGENTS.md`). Selve
+ * bragd-tellingen bor i `./achievements` (delt med sesong-recap, #946).
  */
+import {
+  countRoundAchievements,
+  EMPTY_ACHIEVEMENTS,
+  type Achievements,
+  type HoleScore,
+} from './achievements';
 
-/** Ett hull i en runde. `strokes === null` ⇒ uspilt hull. `par` er allerede
- *  kjønns-valgt ved kallstedet. */
-export type HoleScore = {
-  holeNumber: number;
-  strokes: number | null;
-  par: number;
-};
+// Re-eksportert for bakoverkompat — eksisterende kallflater (og tester)
+// importerer disse fra `./playerStats`.
+export type { Achievements, HoleScore };
 
 /** Én ferdig runde (ett ferdig spill spilleren er deltaker i). */
 export type RoundInput = {
   holes: HoleScore[];
-};
-
-/** Livstids-antall per bragd, alle brutto mot kjønns-par. */
-export type Achievements = {
-  holeInOne: number;
-  eagle: number;
-  birdie: number;
-  turkey: number;
-  snowman: number;
 };
 
 export type MyStats = {
@@ -62,63 +56,20 @@ function completeRoundTotal(round: RoundInput): number | null {
   return played.reduce((sum, h) => sum + h.strokes, 0);
 }
 
-/**
- * Antall ikke-overlappende «turkey»-vinduer i én runde: 3 sammenhengende hull
- * (stigende hull-nr, hver birdie-eller-bedre). Uspilt/manglende hull bryter
- * rekka. Teller per runde, aldri over rundegrenser.
- */
-function countTurkeys(round: RoundInput): number {
-  const qualifying = round.holes
-    .filter((h) => isPlayed(h) && h.par > 0 && h.par - h.strokes! >= 1)
-    .map((h) => h.holeNumber)
-    .sort((a, b) => a - b);
-
-  let turkeys = 0;
-  let runLength = 0;
-  let prevHole: number | null = null;
-  for (const holeNumber of qualifying) {
-    if (prevHole != null && holeNumber === prevHole + 1) {
-      runLength += 1;
-    } else {
-      runLength = 1;
-    }
-    prevHole = holeNumber;
-    if (runLength === 3) {
-      turkeys += 1;
-      runLength = 0; // non-overlapping window
-    }
-  }
-  return turkeys;
-}
-
 export function computePlayerStats(rounds: RoundInput[]): MyStats {
-  const achievements: Achievements = {
-    holeInOne: 0,
-    eagle: 0,
-    birdie: 0,
-    turkey: 0,
-    snowman: 0,
-  };
-
+  const achievements: Achievements = { ...EMPTY_ACHIEVEMENTS };
   const completeTotals: number[] = [];
 
   for (const round of rounds) {
     const total = completeRoundTotal(round);
     if (total != null) completeTotals.push(total);
 
-    for (const h of round.holes) {
-      if (!isPlayed(h)) continue;
-      const strokes = h.strokes;
-      if (strokes === 1) achievements.holeInOne += 1;
-      if (strokes === 8) achievements.snowman += 1;
-      if (h.par > 0) {
-        const underPar = h.par - strokes;
-        if (underPar >= 2) achievements.eagle += 1;
-        else if (underPar === 1) achievements.birdie += 1;
-      }
-    }
-
-    achievements.turkey += countTurkeys(round);
+    const a = countRoundAchievements(round.holes);
+    achievements.holeInOne += a.holeInOne;
+    achievements.eagle += a.eagle;
+    achievements.birdie += a.birdie;
+    achievements.turkey += a.turkey;
+    achievements.snowman += a.snowman;
   }
 
   const grossAverage =
