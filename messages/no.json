@@ -279,7 +279,22 @@
       "coursesColBest": "Beste",
       "coursesEmpty": "Spill en komplett 18-hulls-runde for å se snitt og beste per bane.",
       "unknownCourse": "Ukjent bane",
-      "roundNetto": "{netto} netto"
+      "roundNetto": "{netto} netto",
+      "seasonHeading": "Sesongen din",
+      "seasonSubtitle": "Tallene dine år for år",
+      "seasonColRounds": "Runder",
+      "seasonColAvg": "Snitt",
+      "seasonColBest": "Beste",
+      "seasonBragderLabel": "Bragder",
+      "seasonBrag_holeInOne": "Hole-in-one",
+      "seasonBrag_eagle": "Eagle",
+      "seasonBrag_birdie": "Birdie",
+      "seasonBrag_turkey": "Turkey",
+      "seasonSnowman": "{count, plural, one {1 snømann} other {# snømenn}}",
+      "seasonSnowmanCaption": "Dem teller vi ikke som bragder",
+      "seasonVsPrevious": "Sammenlignet med {year}",
+      "seasonEmpty": "Ingen daterte runder ennå.",
+      "seasonYearAriaLabel": "Velg sesong"
     },
     "statistikk": {
       "kicker": "Toppliste",

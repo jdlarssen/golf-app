@@ -21,8 +21,27 @@ import {
   computeCourseStats,
   type CourseRoundInput,
 } from '@/lib/stats/courseStats';
+import { SeasonRecapPanel } from '@/components/stats/SeasonRecapPanel';
+import {
+  computeSeasonStats,
+  type SeasonRoundInput,
+} from '@/lib/stats/seasonStats';
+import {
+  countRoundAchievements,
+  parForGender,
+  type HoleScore,
+} from '@/lib/stats/achievements';
+import {
+  COURSE_HOLES_SELECT,
+  type CourseHoleRow,
+} from '@/lib/supabase/queryFragments';
+import { osloParts } from '@/lib/format/teeOff';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type {
+  GameMode,
+  GameModeConfig,
+  ScoringGender,
+} from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
 
 /** En komplett 18-hulls-runde (alle 18 hull registrert). */
@@ -46,6 +65,7 @@ type GameRow = {
 
 type ScoreRow = {
   game_id: string;
+  hole_number: number;
   strokes: number | null;
 };
 
@@ -82,7 +102,7 @@ export default async function HistorikkPage() {
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
     .select(
-      'game_id, course_handicap, result_summary, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, courses(name))',
+      'game_id, tee_gender, course_handicap, result_summary, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, courses(name))',
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished');
@@ -91,29 +111,62 @@ export default async function HistorikkPage() {
 
   const rows = (gamePlayers ?? []) as unknown as Array<{
     game_id: string;
+    tee_gender: ScoringGender | null;
     course_handicap: number | null;
     result_summary: ResultSummary | null;
     games: GameRow;
   }>;
 
   const gameIds = rows.map((r) => r.game_id);
+  // #946 — course ids for the per-gender par lookup (achievements need par).
+  const courseIds = [
+    ...new Set(
+      rows
+        .map((r) => r.games?.course_id)
+        .filter((c): c is string => c != null),
+    ),
+  ];
+  // #946 — player's tee-gender per game, for choosing par_mens/_ladies/_juniors.
+  const genderByGame = new Map<string, ScoringGender | null>(
+    rows.map((r) => [r.game_id, r.tee_gender]),
+  );
 
-  // Round-trip 2: fetch all user scores for those games in one IN query.
+  // Round-trips 2+3: own scores (now incl. hole_number, #946) + per-gender par
+  // for the involved courses — parallel, they don't depend on each other.
   const scoresByGame: Map<string, ScoreRow[]> = new Map();
+  const holesByCourse = new Map<string, Map<number, CourseHoleRow>>();
   if (gameIds.length > 0) {
-    const { data: scores, error: scoresError } = await supabase
-      .from('scores')
-      .select('game_id, strokes')
-      .eq('user_id', userId) // userId is string — narrowed after redirect guard above
-      .in('game_id', gameIds)
-      .not('strokes', 'is', null);
+    const [scoresRes, holesRes] = await Promise.all([
+      supabase
+        .from('scores')
+        .select('game_id, hole_number, strokes')
+        .eq('user_id', userId) // userId is string — narrowed after redirect guard above
+        .in('game_id', gameIds)
+        .not('strokes', 'is', null),
+      supabase
+        .from('course_holes')
+        .select(`course_id, ${COURSE_HOLES_SELECT}`)
+        .in('course_id', courseIds),
+    ]);
 
-    if (scoresError) throw scoresError;
+    if (scoresRes.error) throw scoresRes.error;
+    if (holesRes.error) throw holesRes.error;
 
-    for (const score of scores ?? []) {
+    for (const score of scoresRes.data ?? []) {
       const existing = scoresByGame.get(score.game_id) ?? [];
       existing.push(score as ScoreRow);
       scoresByGame.set(score.game_id, existing);
+    }
+
+    for (const h of (holesRes.data ?? []) as Array<
+      CourseHoleRow & { course_id: string }
+    >) {
+      let perHole = holesByCourse.get(h.course_id);
+      if (!perHole) {
+        perHole = new Map();
+        holesByCourse.set(h.course_id, perHole);
+      }
+      perHole.set(h.hole_number, h);
     }
   }
 
@@ -185,9 +238,39 @@ export default async function HistorikkPage() {
   }));
   const courseStats = computeCourseStats(courseRounds);
 
-  // «Statistikk»-fanen (default): formkurve (når ≥2 komplette runder) + per-bane.
+  // #946 — sesong-recap: bøtt ferdige runder på Oslo-kalenderår. Bragder regnes
+  // per runde fra rå scorer mot kjønns-par (uavhengig av modus/sideturnering);
+  // snitt/beste følger samme komplett-18-disiplin som resten av huben.
+  const seasonRounds: SeasonRoundInput[] = gamesWithStats.map((game) => {
+    const date = effectiveDate(game);
+    const courseHoles = game.course_id
+      ? holesByCourse.get(game.course_id)
+      : undefined;
+    const gender = genderByGame.get(game.id) ?? null;
+    const holes: HoleScore[] = (scoresByGame.get(game.id) ?? []).map((s) => {
+      const holeRow = courseHoles?.get(s.hole_number);
+      return {
+        holeNumber: s.hole_number,
+        strokes: s.strokes,
+        par: holeRow ? parForGender(holeRow, gender) : 0,
+      };
+    });
+    return {
+      year: date ? osloParts(date).year : null,
+      completeBrutto:
+        game.holeCount === COMPLETE_ROUND_HOLES && game.bruttoSum != null
+          ? game.bruttoSum
+          : null,
+      achievements: countRoundAchievements(holes),
+    };
+  });
+  const seasonStats = computeSeasonStats(seasonRounds);
+
+  // «Statistikk»-fanen (default): sesong-recap + formkurve (når ≥2 komplette
+  // runder) + per-bane.
   const statsContent = (
     <div className="space-y-4">
+      <SeasonRecapPanel seasons={seasonStats} />
       {trend && trendSummary && (
         <Card>
           <ScoringTrendChart

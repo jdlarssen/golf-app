@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.148 · Din sesong i tall</strong></summary>
+
+[#946](https://github.com/jdlarssen/golf-app/issues/946) — Statistikk-fanen i historikken åpner nå med en sesong-oppsummering. Velg år, så ser du runder, snitt, beste runde og bragdene dine for den sesongen, satt opp mot året før. Snømenn teller vi for seg, for de er ingen bragd.
+
+↳ /profile/historikk · «Se sesongen din»
+</details>
+
+<details>
 <summary><strong>1.147 · Runder på én linje</strong></summary>
 
 [#962](https://github.com/jdlarssen/golf-app/issues/962) — Runder-fanen i historikken er strammet inn: hver runde er nå én trykkbar rad med brutto stort og resultatet ved siden av, så du skanner hele sesongen i stedet for å scrolle gjennom høye kort.
