@@ -65,6 +65,10 @@ roster may be empty for open signup).
   drops the rotation preview + "Stokk om"/shuffle button entirely.
 - **Round Robin:** the A/B/C/D slot-preview section (`RoundRobinSetup`) is
   removed. The RR handicap-% field is unaffected (it is rendered separately).
+- A short, always-true info note replaces the removed UI:
+  - Wolf: «Rotasjonen trekkes når runden starter.»
+  - Round Robin: «Lagene trekkes når runden starter.»
+  (No "spillerne melder seg på selv" line — it would be false for invite-only.)
 - With open signup (`open` / `manual_approval`), the players step is optional
   (existing `playersStepOptional` behaviour) — you can publish with just
   yourself or nobody. No "Mangler: N spillere til" gate.
@@ -197,6 +201,11 @@ scoring derives the rotation size from `players.length`, so a stale
 
 ## Out of scope
 
+- The open-signup player cap already works (`soloPlayerCap` + `registerForOpenGame`,
+  shipped as #661): a 6th Wolf joiner is rejected with `game_full` («Spillet er
+  fullt — alle plassene er tatt.»), counting only active (`withdrawn_at IS NULL`)
+  players, so a withdrawal frees a slot. No change here — it is why the start-time
+  guard only needs to handle "too few".
 - Acey Deucey and Nines are solo formats (team_number already null); they have
   no rotation slot and are unaffected.
 - Matchplay family keeps its own `incomplete_sides` start guard.
