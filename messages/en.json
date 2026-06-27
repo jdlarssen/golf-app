@@ -1531,7 +1531,7 @@
       "unknownPlayer": "(unknown)"
     },
     "teeOffCalendar": {
-      "summary": "Golf – {game}",
+      "summary": "Golf: {game}",
       "description": "Tee-off for {game}. Open the round in Tørny: {url}",
       "errors": {
         "notLoggedIn": "You must be signed in.",

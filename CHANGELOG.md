@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.150 · Tee-off rett i kalenderen</strong></summary>
+
+[#945](https://github.com/jdlarssen/golf-app/issues/945) — Har spillet en planlagt tee-off, kan du nå legge den rett i telefonkalenderen. Du får et varsel en time før, så tee-tiden ikke glipper, og «Vis på kart» finner veien til banen.
+
+↳ /games · «Legg til i kalender»
+</details>
+
+<details>
 <summary><strong>1.149 · Lettere å taste med hanske</strong></summary>
 
 [#944](https://github.com/jdlarssen/golf-app/issues/944) — Pluss- og minus-knappene på hull-skjermen er større, så de er lette å treffe med hanske og én hånd. Taster du feil, fjerner «Angre» scoren med ett trykk — ingen omvei innom menyen.

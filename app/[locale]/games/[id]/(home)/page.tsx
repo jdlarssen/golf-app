@@ -527,6 +527,32 @@ export default async function GameHomePage({
             </div>
           </div>
 
+          {/* #945: kalender (.ics) + kart for planlagt tee-off. Lenken til
+              .ics-ruten er en ren <a> (ikke next/link) så Content-Disposition
+              trigger «Legg til i kalender»-arket på iOS framfor klient-nav. */}
+          {(teeOffDate || game.courses?.name) && (
+            <div className="mt-3.5 flex flex-wrap gap-2">
+              {teeOffDate && (
+                <a
+                  href={`/${locale}/games/${id}/calendar`}
+                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium tracking-tight transition-colors"
+                >
+                  {t('addToCalendar')}
+                </a>
+              )}
+              {game.courses?.name && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.courses.name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium tracking-tight transition-colors"
+                >
+                  {t('viewOnMap')}
+                </a>
+              )}
+            </div>
+          )}
+
           <div className="h-px bg-border my-3.5" />
 
           {(() => {
