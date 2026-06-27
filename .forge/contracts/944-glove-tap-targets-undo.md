@@ -29,13 +29,13 @@ På banen tastes det med hanske, i solgløtt, ofte enhåndt. To konkrete friksjo
 
 ## Success-kriterier
 
-- [ ] **K1 — Steppere ≥44×44px.** `+` og `−` i `ScoreCard` rendres med width ≥44 og height ≥44 (var 38×30). Verifiseres med render-test som leser knappenes style.
-- [ ] **K2 — `⋯` ≥44px touch-target.** «Flere»-knappen (`moreBtnStyle`, var h18) har ≥44px tap-høyde og -bredde, glyfen forblir visuelt lett (transparent bg).
-- [ ] **K3 — Angre synlig når score satt.** En «Angre»-kontroll vises i helper-linja **kun** når `score != null` og `!disabled`. Skjult når score er null og når disabled. Vises også i reveal-modus (`hideNetto`) siden score kan være satt der.
-- [ ] **K4 — Ett-trykks nullstilling.** Klikk på Angre kaller en ny `onClear(playerId)`-prop → `writeScore({ strokes: null })` for den spilleren, uten å åpne `⋯`-arket. Kortet går tilbake til ghost (par-placeholder). Klikket bobler ikke til kort-tap (`stopPropagation`).
-- [ ] **K5 — Eksisterende oppførsel uendret.** Tap-kort=par, `+`/`−`-clamp (1–15), `⋯`→ark, disabled-gating — alt uendret. Eksisterende `ScoreCard`-tester grønne.
-- [ ] **K6 — i18n parity.** Nye nøkler (`holes.scoreCard.undoScore` label + `undoScoreAriaLabel`) lagt til i **både** `no.json` og `en.json`. `catalogParity.test.ts` grønn. Norsk copy kjørt mot `humanizer`-tells.
-- [ ] **K7 — Tester.** Nye interaksjonstester i `ScoreCard.test.tsx` dekker Angre vis/skjul/klikk + stepper-størrelse. `HoleClient.test.tsx` fortsatt grønn (oppdater wiring hvis nødvendig).
+- [x] **K1 — Steppere ≥44×44px.** `+` og `−` i `ScoreCard` rendres med width ≥44 og height ≥44 (var 38×30). **Evidence:** `stepperBtnStyle` width:44/height:44 (`ScoreCard.tsx:208–222`); test «+ and − steppers render at ≥44×44px» grønn.
+- [x] **K2 — `⋯` ≥44px touch-target.** «Flere»-knappen (`moreBtnStyle`, var h18) har ≥44px tap-høyde og -bredde, glyfen forblir visuelt lett (transparent bg). **Evidence:** `moreBtnStyle` width:44/height:44/transparent (`ScoreCard.tsx:225–236`); test «⋯ button has a ≥44px touch target» grønn.
+- [x] **K3 — Angre synlig når score satt.** En «Angre»-kontroll vises i helper-linja **kun** når `score != null` og `!disabled`. Skjult når score er null og når disabled. **Evidence:** `{confirmed && !disabled && (<button …Angre…/>)}` (`ScoreCard.tsx`); tester hidden-when-unset / appears-when-set / hidden-when-disabled grønne. (`confirmed` = `score != null`, uavhengig av `hideNetto` → vises i reveal-modus.)
+- [x] **K4 — Ett-trykks nullstilling.** Klikk på Angre kaller `onClear(playerId)` → `clearScoreFor` → `writeScore({ strokes: null })`, uten å åpne `⋯`-arket. `stopPropagation` hindrer kort-tap. **Evidence:** `onUndo` (`ScoreCard.tsx`) + `onClearFromCard`→`clearScoreFor` (`HoleClient.tsx:587–608`); test «Angre link calls onClear and does not also fire card tap» grønn.
+- [x] **K5 — Eksisterende oppførsel uendret.** **Evidence:** alle eksisterende `ScoreCard`-interaksjons-/disabled-tester + `HoleClient.test.tsx` grønne (69 passed totalt).
+- [x] **K6 — i18n parity.** `undoScore` + `undoScoreAriaLabel` lagt til i `no.json` + `en.json`. **Evidence:** `catalogParity.test.ts` grønn; copy «Angre» / «Nullstill scoren for {name}» er idiomatisk (ingen AI-tells).
+- [x] **K7 — Tester.** **Evidence:** `npx vitest run` → 3 files / 69 passed; nye tester i «interaction» + ny «tap targets»-describe + disabled-case.
 
 ## Gates (kjøres scoped til endring)
 
