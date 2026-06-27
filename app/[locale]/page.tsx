@@ -22,6 +22,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
+import { PushNudge } from '@/components/pwa/PushNudge';
 import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
@@ -84,6 +85,7 @@ export default async function Home({
       </div>
 
       <InstallBanner />
+      <PushNudge />
 
       <Suspense fallback={null}>
         <ProductUpdateBanner userId={userId!} />
