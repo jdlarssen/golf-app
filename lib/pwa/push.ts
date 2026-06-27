@@ -56,12 +56,23 @@ export async function enablePush(
   if (permission !== 'granted') return permission === 'denied' ? 'blocked' : 'off';
 
   const reg = await navigator.serviceWorker.ready;
-  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
+  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  // No VAPID key configured → an empty key yields a broken subscription, so
+  // bail out as 'unsupported' rather than registering garbage on the device.
+  if (!key) return 'unsupported';
+
   const sub = await reg.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(key),
   });
-  await save(sub.toJSON(), navigator.userAgent);
+  // Roll the subscription back if the server save fails — otherwise the device
+  // keeps an active push subscription with no server row and forever reports 'on'.
+  try {
+    await save(sub.toJSON(), navigator.userAgent);
+  } catch (e) {
+    await sub.unsubscribe().catch(() => {});
+    throw e;
+  }
   return 'on';
 }
 

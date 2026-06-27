@@ -14,6 +14,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 type UpsertCall = { table: string; row: Record<string, unknown>; onConflict: string };
 const upsertCalls: UpsertCall[] = [];
 
+// Records every `.eq(column, value)` filter applied to a delete() chain.
+const deleteEqCalls: Array<[string, unknown]> = [];
+
 function buildClient(userId: string | null) {
   const selectResult = userId
     ? { data: [{ id: 'row-1' }], error: null }
@@ -36,7 +39,15 @@ function buildClient(userId: string | null) {
         return builder;
       },
       delete: () => ({
-        eq: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        eq: (col: string, val: unknown) => {
+          deleteEqCalls.push([col, val]);
+          return {
+            eq: (col2: string, val2: unknown) => {
+              deleteEqCalls.push([col2, val2]);
+              return Promise.resolve({ error: null });
+            },
+          };
+        },
       }),
     }),
   };
@@ -53,6 +64,7 @@ const mockGetServerClient = vi.mocked(getServerClient);
 beforeEach(() => {
   vi.clearAllMocks();
   upsertCalls.length = 0;
+  deleteEqCalls.length = 0;
 });
 
 const validSub = {
@@ -85,5 +97,29 @@ describe('savePushSubscription', () => {
     const { savePushSubscription } = await import('./pushActions');
     await expect(savePushSubscription(validSub, 'UA')).rejects.toThrow('not_authenticated');
     expect(upsertCalls).toHaveLength(0);
+  });
+});
+
+describe('removePushSubscription', () => {
+  it('scopes the delete by BOTH endpoint and the session user_id', async () => {
+    const SESSION_USER_ID = 'session-user-42';
+    // @ts-expect-error — mock returns a partial client
+    mockGetServerClient.mockResolvedValue(buildClient(SESSION_USER_ID));
+
+    const { removePushSubscription } = await import('./pushActions');
+    await removePushSubscription(validSub.endpoint);
+
+    // Both filters must fire so user A can never delete user B's row.
+    expect(deleteEqCalls).toContainEqual(['endpoint', validSub.endpoint]);
+    expect(deleteEqCalls).toContainEqual(['user_id', SESSION_USER_ID]);
+  });
+
+  it('throws not_authenticated and deletes nothing when there is no session', async () => {
+    // @ts-expect-error — mock returns a partial client
+    mockGetServerClient.mockResolvedValue(buildClient(null));
+
+    const { removePushSubscription } = await import('./pushActions');
+    await expect(removePushSubscription(validSub.endpoint)).rejects.toThrow('not_authenticated');
+    expect(deleteEqCalls).toHaveLength(0);
   });
 });

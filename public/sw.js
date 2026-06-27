@@ -185,9 +185,20 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || '/';
+  // Resolve the relative deeplink against the SW origin so we can compare it to
+  // each open client's absolute URL.
+  const target = new URL(url, self.location.origin).href;
   event.waitUntil(
     (async () => {
       const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      // Prefer a tab already sitting on the target page — just focus it, no reload.
+      for (const client of all) {
+        if (client.url === target && 'focus' in client) {
+          await client.focus();
+          return;
+        }
+      }
+      // Otherwise focus the first open tab and navigate it to the deeplink.
       for (const client of all) {
         if ('focus' in client) {
           await client.focus();
