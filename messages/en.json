@@ -1469,6 +1469,8 @@
       "holeCount": "18 holes",
       "teeOffLabel": "TEE-OFF",
       "teeOffNotSet": "Not set",
+      "addToCalendar": "Add to calendar",
+      "viewOnMap": "Show on map",
       "flightLabel": "YOUR FLIGHT",
       "participantsLabel": "PARTICIPANTS",
       "formatLabel": "FORMAT",
@@ -1527,6 +1529,14 @@
       "incompleteSidesAnd": " and ",
       "unassignedFlightBanner": "{count, plural, one {1 player hasn't been assigned to a flight yet.} other {# players haven't been assigned to flights yet.}} The organiser will assign flights before the start.",
       "unknownPlayer": "(unknown)"
+    },
+    "teeOffCalendar": {
+      "summary": "Golf – {game}",
+      "description": "Tee-off for {game}. Open the round in Tørny: {url}",
+      "errors": {
+        "notLoggedIn": "You must be signed in.",
+        "unavailable": "The calendar isn't available for this game."
+      }
     },
     "waitingRoom": {
       "countdown": {

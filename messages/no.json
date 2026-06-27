@@ -1469,6 +1469,8 @@
       "holeCount": "18 hull",
       "teeOffLabel": "TEE-OFF",
       "teeOffNotSet": "Ikke satt",
+      "addToCalendar": "Legg til i kalender",
+      "viewOnMap": "Vis på kart",
       "flightLabel": "DIN FLIGHT",
       "participantsLabel": "DELTAKERE",
       "formatLabel": "SPILLFORM",
@@ -1527,6 +1529,14 @@
       "incompleteSidesAnd": " og ",
       "unassignedFlightBanner": "{count, plural, one {1 spiller er ikke fordelt i flight ennå.} other {# spillere er ikke fordelt i flighter ennå.}} Arrangøren fordeler flightene før start.",
       "unknownPlayer": "(ukjent)"
+    },
+    "teeOffCalendar": {
+      "summary": "Golf – {game}",
+      "description": "Tee-off for {game}. Åpne runden i Tørny: {url}",
+      "errors": {
+        "notLoggedIn": "Du må være innlogget.",
+        "unavailable": "Kalenderen er ikke tilgjengelig for dette spillet."
+      }
     },
     "waitingRoom": {
       "countdown": {
