@@ -266,11 +266,11 @@ export default async function HistorikkPage() {
   });
   const seasonStats = computeSeasonStats(seasonRounds);
 
-  // «Statistikk»-fanen (default): sesong-recap + formkurve (når ≥2 komplette
-  // runder) + per-bane.
+  // «Statistikk»-fanen (default), komponert etter trajektorie → periode →
+  // nedbrytning: formkurve (når ≥2 komplette runder) → sesong-recap → per-bane.
+  // Faller formkurven bort (<2 komplette runder), leder sesong-recap-en naturlig.
   const statsContent = (
     <div className="space-y-4">
-      <SeasonRecapPanel seasons={seasonStats} />
       {trend && trendSummary && (
         <Card>
           <ScoringTrendChart
@@ -288,6 +288,7 @@ export default async function HistorikkPage() {
           />
         </Card>
       )}
+      <SeasonRecapPanel seasons={seasonStats} />
       <CoursePerformancePanel
         courses={courseStats}
         heading={t('coursesHeading')}
