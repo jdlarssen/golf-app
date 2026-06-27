@@ -2399,11 +2399,12 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
       teams_count: 4,
       wolf_scoring: 'net',
     });
+    // #969: rotation slot is drawn at start, so publish emits null team/flight.
     expect(result.players).toEqual([
-      { user_id: 'a', team_number: 1, flight_number: 1 },
-      { user_id: 'b', team_number: 2, flight_number: 2 },
-      { user_id: 'c', team_number: 3, flight_number: 3 },
-      { user_id: 'd', team_number: 4, flight_number: 4 },
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+      { user_id: 'c', team_number: null, flight_number: null },
+      { user_id: 'd', team_number: null, flight_number: null },
     ]);
   });
 
@@ -2515,10 +2516,7 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     expect(result.players).toHaveLength(5);
   });
 
-  it('#669: 5-spiller wolf → 5. spillers team_number er 5 (DB-constraint 0101)', () => {
-    // Låser at app-laget aksepterer 5 spillere med slot 1-5 og at den 5.
-    // spillerens team_number faktisk er 5 — verifiserer at widened DB-constraint
-    // (migration 0101) og validator er i samsvar.
+  it('#969: 5-spiller wolf publish → alle rader har team/flight null (slot trekkes ved start)', () => {
     const result = buildGameInsertPayload(
       wolfFd({
         slots: [
@@ -2533,11 +2531,11 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     );
     expect(result.errorCode).toBeUndefined();
     expect(result.players).toEqual([
-      { user_id: 'a', team_number: 1, flight_number: 1 },
-      { user_id: 'b', team_number: 2, flight_number: 2 },
-      { user_id: 'c', team_number: 3, flight_number: 3 },
-      { user_id: 'd', team_number: 4, flight_number: 4 },
-      { user_id: 'e', team_number: 5, flight_number: 5 },
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+      { user_id: 'c', team_number: null, flight_number: null },
+      { user_id: 'd', team_number: null, flight_number: null },
+      { user_id: 'e', team_number: null, flight_number: null },
     ]);
   });
 
@@ -2571,65 +2569,30 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     expect(result.errorCode).toBe('too_many_players_for_mode');
   });
 
-  it('publish med duplikat slot 1-1-2-3 → team_balance', () => {
+  it('#969: open-signup (manual_approval) publish med bare 1 spiller → ok (ingen bad_team)', () => {
+    // Kjernen i #969: før kunne ikke et åpent-påmeldings Wolf-spill publiseres
+    // med bare arrangøren. effectiveMode blir 'draft' for self-signup, så
+    // 3-5-grensa hoppes over og rotasjonen trekkes ved start.
     const result = buildGameInsertPayload(
       wolfFd({
-        slots: [
-          { userId: 'a', slot: 1 },
-          { userId: 'b', slot: 1 },
-          { userId: 'c', slot: 2 },
-          { userId: 'd', slot: 3 },
-        ],
+        slots: [{ userId: 'a', slot: 1 }],
+        extras: { registration_mode: 'manual_approval' },
       }),
       'publish',
     );
-    expect(result.errorCode).toBe('team_balance');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: null, flight_number: null },
+    ]);
   });
 
-  it('publish med 4 spillere men slot 1-2-3-5 (hull i rotasjonen) → team_balance (#465)', () => {
-    // Slot 5 er innenfor 1-5, men team_numbers må være sammenhengende 1..n.
+  it('#969: open-signup (open) publish med 0 spillere → ok', () => {
     const result = buildGameInsertPayload(
-      wolfFd({
-        slots: [
-          { userId: 'a', slot: 1 },
-          { userId: 'b', slot: 2 },
-          { userId: 'c', slot: 3 },
-          { userId: 'd', slot: 5 },
-        ],
-      }),
+      wolfFd({ slots: [], extras: { registration_mode: 'open' } }),
       'publish',
     );
-    expect(result.errorCode).toBe('team_balance');
-  });
-
-  it('publish med slot=6 (utenfor 1-5) → bad_team (#465)', () => {
-    const result = buildGameInsertPayload(
-      wolfFd({
-        slots: [
-          { userId: 'a', slot: 1 },
-          { userId: 'b', slot: 2 },
-          { userId: 'c', slot: 3 },
-          { userId: 'd', slot: 6 },
-        ],
-      }),
-      'publish',
-    );
-    expect(result.errorCode).toBe('bad_team');
-  });
-
-  it('publish med slot=0 (under 1) → bad_team', () => {
-    const result = buildGameInsertPayload(
-      wolfFd({
-        slots: [
-          { userId: 'a', slot: 0 },
-          { userId: 'b', slot: 2 },
-          { userId: 'c', slot: 3 },
-          { userId: 'd', slot: 4 },
-        ],
-      }),
-      'publish',
-    );
-    expect(result.errorCode).toBe('bad_team');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(0);
   });
 
   it('publish med duplikat user_id → duplicate_player', () => {
@@ -2667,7 +2630,7 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     expect(result.players).toHaveLength(0);
   });
 
-  it('flight_number speilet til team_number for hver spiller (DB-CHECK)', () => {
+  it('#969: team_number og flight_number er begge null ved publish (begge null = DB-CHECK ok)', () => {
     const result = buildGameInsertPayload(
       wolfFd({
         slots: [
@@ -2681,7 +2644,8 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     );
     expect(result.errorCode).toBeUndefined();
     for (const p of result.players) {
-      expect(p.flight_number).toBe(p.team_number);
+      expect(p.team_number).toBeNull();
+      expect(p.flight_number).toBeNull();
     }
   });
 });
@@ -3153,11 +3117,12 @@ describe('buildGameInsertPayload — round_robin (issue #280)', () => {
       teams_count: 4,
       allowance_pct: 85,
     });
+    // #969: rotation slot is drawn at start, so publish emits null team/flight.
     expect(result.players).toEqual([
-      { user_id: 'a', team_number: 1, flight_number: 1 },
-      { user_id: 'b', team_number: 2, flight_number: 2 },
-      { user_id: 'c', team_number: 3, flight_number: 3 },
-      { user_id: 'd', team_number: 4, flight_number: 4 },
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+      { user_id: 'c', team_number: null, flight_number: null },
+      { user_id: 'd', team_number: null, flight_number: null },
     ]);
   });
 
@@ -3183,43 +3148,30 @@ describe('buildGameInsertPayload — round_robin (issue #280)', () => {
           { userId: 'b', slot: 2 },
           { userId: 'c', slot: 3 },
           { userId: 'd', slot: 4 },
-          { userId: 'e', slot: 4 }, // duplikat slot — feiler på too_many først
+          { userId: 'e', slot: 4 },
         ],
       }),
       'publish',
     );
-    // 5 spillere → too_many before slot-check
     expect(result.errorCode).toBe('too_many_players_for_mode');
   });
 
-  it('publish med 4 spillere men ikke-unike slots → team_balance', () => {
-    const result = buildGameInsertPayload(
-      roundRobinFd({
-        slots: [
-          { userId: 'a', slot: 1 },
-          { userId: 'b', slot: 1 }, // duplikat slot 1
-          { userId: 'c', slot: 3 },
-          { userId: 'd', slot: 4 },
-        ],
-      }),
-      'publish',
-    );
-    expect(result.errorCode).toBe('team_balance');
-  });
-
-  it('publish med ugyldig slot (5) → bad_team', () => {
+  it('#969: open-signup (manual_approval) publish med 2 spillere → ok (rotasjon trekkes ved start)', () => {
     const result = buildGameInsertPayload(
       roundRobinFd({
         slots: [
           { userId: 'a', slot: 1 },
           { userId: 'b', slot: 2 },
-          { userId: 'c', slot: 3 },
-          { userId: 'd', slot: 5 }, // ugyldig slot
         ],
+        extras: { registration_mode: 'manual_approval' },
       }),
       'publish',
     );
-    expect(result.errorCode).toBe('bad_team');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+    ]);
   });
 
   it('publish med bad allowance (101) → bad_allowance', () => {
@@ -3331,14 +3283,15 @@ describe('buildGameInsertPayload — round_robin (issue #280)', () => {
     expect(result.errorCode).toBe('duplicate_player');
   });
 
-  it('flight_number = team_number for round_robin-spillere (DB-CHECK)', () => {
+  it('#969: team_number og flight_number begge null ved publish (begge null = DB-CHECK ok)', () => {
     const result = buildGameInsertPayload(
       roundRobinFd({ slots: fourSlots }),
       'publish',
     );
     expect(result.errorCode).toBeUndefined();
     for (const p of result.players) {
-      expect(p.flight_number).toBe(p.team_number);
+      expect(p.team_number).toBeNull();
+      expect(p.flight_number).toBeNull();
     }
   });
 });

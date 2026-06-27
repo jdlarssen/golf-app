@@ -15,6 +15,8 @@ const STRUCTURAL_BLOCK_REASONS: ReadonlySet<string> = new Set([
   'no_players',
   'tee_missing',
   'tee_missing_rating',
+  // #969: Wolf/Round Robin couldn't draw a rotation — too few/many signed up.
+  'rotation_player_count',
 ]);
 
 export function isStructuralBlockReason(reason: string): boolean {

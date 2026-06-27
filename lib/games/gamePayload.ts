@@ -1426,17 +1426,16 @@ function validateGruesomeMatchplay(
 /**
  * Wolf-validator (issue #274; #465 — 3–5-spiller rotating partner-format).
  *
- * Regler:
- *  - 3-5 spillere ved publish (n = antall spillere)
- *  - team_number sammenhengende 1..n, alle distinct (rotation-slot, ikke lag)
- *  - flight_number = team_number (DB-CHECK game_players_team_flight_consistency)
- *  - draft tolererer partial state (0..5 spillere, ufullstendig slot-fordeling)
+ * Regler (#969 — rotasjon tildeles ved start, ikke ved publish):
+ *  - 3-5 spillere ved invite-only publish (n = antall spillere)
+ *  - team_number/flight_number = null på alle rader (rotation-slotten trekkes
+ *    ved spillstart av assignRotationSlots; begge null tilfredsstiller DB-CHECK
+ *    game_players_team_flight_consistency)
+ *  - draft / open-signup publish tolererer 0..5 spillere
  *
- * Feilkoder ved publish:
+ * Feilkoder ved publish (kun invite-only — open signup kjører som draft):
  *  - 0..2 spillere → `min_players_for_mode`
  *  - 6+ spillere → `too_many_players_for_mode`
- *  - team_number utenfor 1-5 → `bad_team`
- *  - team_numbers ikke sammenhengende 1..n → `team_balance`
  *
  * Scoring-toggle: form-feltet `wolf_scoring` ('gross' | 'net'). Default 'net'
  * når feltet mangler (matcher Tørny-default + design-doc).
@@ -1452,8 +1451,13 @@ function validateWolf(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  // #465: les opptil 6 slots (én over 5-cap) så en 6. spiller fanges som
-  // `too_many` i stedet for å trunkeres stille.
+  // #969: rotation-slot (team_number) is no longer assigned at publish — it is
+  // drawn at game start over the final active roster (see assignRotationSlots /
+  // startScheduledGame). Every row is emitted with team_number/flight_number
+  // null (both null satisfies the game_players_team_flight_consistency CHECK),
+  // so an open-signup Wolf can be published with 0-2 players. #465: read up to
+  // 6 ids (one over the 5-cap) so a 6th invite-only pick is caught as
+  // `too_many` rather than silently truncated.
   for (let i = 0; i < 6; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
@@ -1461,34 +1465,19 @@ function validateWolf(
       return { ok: false, errorCode: 'duplicate_player' };
     }
     seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    // Wolf-slot er en rotation-slot 1-5 (n bestemmes av antall spillere).
-    if (
-      !Number.isInteger(team_number) ||
-      team_number < 1 ||
-      team_number > 5
-    ) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    const flight_number = team_number;
-    players.push({ user_id, team_number, flight_number });
+    players.push({ user_id, team_number: null, flight_number: null });
   }
 
   if (mode === 'publish') {
+    // Invite-only only: open-signup publishes run through here with
+    // effectiveMode 'draft' (set in buildGameInsertPayload) and skip the count
+    // gate — the roster fills via the link, and the 3-5 range is enforced at
+    // start. The start-time guard is the real enforcement for everyone.
     if (players.length < 3) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
     if (players.length > 5) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
-    // 3-5 spillere — team_numbers må være sammenhengende 1..n så rotasjonen
-    // (slot = ((hull-1) % n) + 1) finner en wolf på hvert hull.
-    const sorted = players
-      .map((p) => p.team_number ?? 0)
-      .sort((a, b) => a - b);
-    const contiguous = sorted.every((tn, idx) => tn === idx + 1);
-    if (!contiguous) {
-      return { ok: false, errorCode: 'team_balance' };
     }
   }
 
@@ -1762,11 +1751,11 @@ function validateNines(
  * ved publish (matematisk tvunget, ikke 3-5 som Wolf). Speiler Fourball for allowance:
  * form-feltet `round_robin_allowance_pct` (0..100), default 85 i draft.
  *
- * Regler:
- *  - EKSAKT 4 spillere ved publish; 0–3 → `min_players_for_mode`, 5+ → `too_many_players_for_mode`
- *  - team_number 1-4, alle distinct → ellers `bad_team` / `team_balance`
- *  - flight_number = team_number (DB-CHECK `game_players_team_flight_consistency`)
- *  - draft tolererer partial state (0..4 spillere, ufullstendig slot-fordeling)
+ * Regler (#969 — rotasjon tildeles ved start, ikke ved publish):
+ *  - EKSAKT 4 spillere ved invite-only publish; 0–3 → `min_players_for_mode`, 5+ → `too_many_players_for_mode`
+ *  - team_number/flight_number = null på alle rader (slotten trekkes ved
+ *    spillstart av assignRotationSlots; begge null tilfredsstiller DB-CHECK)
+ *  - draft / open-signup publish tolererer 0..4 spillere
  *
  * Mode_config-output: `{kind, team_size: 1, teams_count: 4, allowance_pct}`.
  */
@@ -1781,6 +1770,9 @@ function validateRoundRobin(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
+  // #969: the rotation slot (team_number) is drawn at game start, not at
+  // publish — see validateWolf. Rows are emitted with team_number/flight_number
+  // null so an open-signup Round Robin can be published before 4 have joined.
   for (let i = 0; i < 8; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
@@ -1788,37 +1780,17 @@ function validateRoundRobin(
       return { ok: false, errorCode: 'duplicate_player' };
     }
     seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    // Round Robin-slot er strengt 1-4 (rotation-slot, ikke lag) — speiler Wolf.
-    if (
-      !Number.isInteger(team_number) ||
-      team_number < 1 ||
-      team_number > 4
-    ) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    // flight_number = team_number for å oppfylle DB-CHECK
-    // game_players_team_flight_consistency (begge satt sammen).
-    const flight_number = team_number;
-    players.push({ user_id, team_number, flight_number });
+    players.push({ user_id, team_number: null, flight_number: null });
   }
 
   if (mode === 'publish') {
+    // Invite-only only: open-signup publishes arrive with effectiveMode 'draft'
+    // and skip this gate. Exactly-4 is enforced at start for everyone.
     if (players.length < 4) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
     if (players.length > 4) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
-    // Nøyaktig 4 spillere — sjekk at team_numbers er unike 1-4 (matematisk
-    // tvunget for Round Robin, ikke 3-5 som Wolf).
-    const slotsSeen = new Set<number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      slotsSeen.add(p.team_number);
-    }
-    if (slotsSeen.size !== 4) {
-      return { ok: false, errorCode: 'team_balance' };
     }
   }
 

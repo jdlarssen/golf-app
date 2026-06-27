@@ -64,6 +64,9 @@ type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
   emails?: string | string[];
+  // #969: format + active count for the rotation_player_count error banner.
+  mode?: string | string[];
+  count?: string | string[];
 }>;
 
 const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
@@ -176,8 +179,18 @@ export default async function GameDetailPage({
       : undefined;
   const errorCode = first(sp.error);
   const emails = first(sp.emails);
+  const errorMode = first(sp.mode);
   function buildErrorMessage(): string | undefined {
     if (!errorCode) return undefined;
+    // #969: rotation_player_count picks a format-specific message and passes
+    // the live active count.
+    if (
+      errorCode === 'rotation_player_count' &&
+      (errorMode === 'wolf' || errorMode === 'round_robin')
+    ) {
+      const count = Number(first(sp.count) ?? '0');
+      return tErrors(`rotation_player_count_${errorMode}`, { count });
+    }
     const key = `${errorCode}` as Parameters<typeof tErrors>[0];
     if (!tErrors.has(key)) return undefined;
     return tErrors(key, { list: emails ? `: ${emails}` : '' });

@@ -396,6 +396,13 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
         })),
         error: null,
       },
+      // #969: 5 rotation-slot updates (one per active player), then 5
+      // course_handicap updates, then the status flip.
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
       { data: null, error: null },
       { data: null, error: null },
       { data: null, error: null },
@@ -430,5 +437,159 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: true, started: false });
+  });
+});
+
+// ─── #969 rotation slot drawn at start (Wolf / Round Robin) ───────────────────
+
+describe('startScheduledGame — rotation slot at start (#969)', () => {
+  function makeRotationGameRow(game_mode: GameMode) {
+    return {
+      id: 'game-id',
+      status: 'scheduled',
+      hcp_allowance_pct: 100,
+      tee_box_id: 'tee-id',
+      game_mode,
+      mode_config: { kind: game_mode, team_size: 1 },
+      tee_boxes: VALID_TEE,
+    };
+  }
+
+  // Active roster row with null slots (the publish-time state for #969).
+  const rot = (userId: string, withdrawn_at: string | null = null) => ({
+    user_id: userId,
+    tee_gender: 'M' as const,
+    team_number: null,
+    flight_number: null,
+    withdrawn_at,
+    users: { hcp_index: 10 },
+  });
+
+  it('wolf med 2 aktive → rotation_player_count (for få), ingen flip', async () => {
+    const roster = [rot('u1'), rot('u2')];
+    const supabase = buildSupabaseMock([
+      { data: makeRotationGameRow('wolf'), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({
+      ok: false,
+      reason: 'rotation_player_count',
+      rotationMode: 'wolf',
+      rotationActiveCount: 2,
+    });
+  });
+
+  it('round_robin med 3 aktive → rotation_player_count (krever nøyaktig 4)', async () => {
+    const roster = [rot('u1'), rot('u2'), rot('u3')];
+    const supabase = buildSupabaseMock([
+      { data: makeRotationGameRow('round_robin'), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({
+      ok: false,
+      reason: 'rotation_player_count',
+      rotationMode: 'round_robin',
+      rotationActiveCount: 3,
+    });
+  });
+
+  it('trukkede spillere teller ikke i rotasjons-grensa', async () => {
+    // 2 aktive + 1 trukket = 2 aktive → for få for Wolf.
+    const roster = [rot('u1'), rot('u2'), rot('u3', '2026-01-01T00:00:00Z')];
+    const supabase = buildSupabaseMock([
+      { data: makeRotationGameRow('wolf'), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({
+      ok: false,
+      reason: 'rotation_player_count',
+      rotationMode: 'wolf',
+      rotationActiveCount: 2,
+    });
+  });
+
+  it('wolf med 3 aktive → tildeler 3 sammenhengende slots og starter', async () => {
+    const roster = [rot('u1'), rot('u2'), rot('u3')];
+    const supabase = buildSupabaseMock([
+      { data: makeRotationGameRow('wolf'), error: null },
+      { data: roster, error: null },
+      {
+        data: roster.map((r) => ({
+          id: r.user_id,
+          email: `${r.user_id}@x.no`,
+          profile_completed_at: '2026-01-01',
+        })),
+        error: null,
+      },
+      // 3 slot updates + 3 course_handicap updates
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      // status flip — won the row
+      { data: [{ id: 'game-id' }], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+
+    // The integration writes the rotation slot per active player: contiguous
+    // 1-3, team_number === flight_number, one per player.
+    const slotWrites = (
+      supabase as unknown as {
+        __fromCalls: Array<{ method: string; args: unknown[] }>;
+      }
+    ).__fromCalls.filter(
+      (c) =>
+        c.method === 'update' &&
+        typeof c.args[0] === 'object' &&
+        c.args[0] !== null &&
+        'team_number' in (c.args[0] as Record<string, unknown>),
+    );
+    expect(slotWrites).toHaveLength(3);
+    const slots = slotWrites
+      .map((c) => (c.args[0] as { team_number: number }).team_number)
+      .sort((a, b) => a - b);
+    expect(slots).toEqual([1, 2, 3]);
+    expect(
+      slotWrites.every((c) => {
+        const p = c.args[0] as { team_number: number; flight_number: number };
+        return p.team_number === p.flight_number;
+      }),
+    ).toBe(true);
+  });
+
+  it('round_robin med 4 aktive → tildeler slot og starter', async () => {
+    const roster = [rot('u1'), rot('u2'), rot('u3'), rot('u4')];
+    const supabase = buildSupabaseMock([
+      { data: makeRotationGameRow('round_robin'), error: null },
+      { data: roster, error: null },
+      {
+        data: roster.map((r) => ({
+          id: r.user_id,
+          email: `${r.user_id}@x.no`,
+          profile_completed_at: '2026-01-01',
+        })),
+        error: null,
+      },
+      // 4 slot updates + 4 course_handicap updates
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      // status flip
+      { data: [{ id: 'game-id' }], error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
   });
 });

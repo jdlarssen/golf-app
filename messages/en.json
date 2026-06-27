@@ -174,6 +174,7 @@
       "no_players": "no players have joined",
       "tee_missing": "the game is missing a tee",
       "tee_missing_rating": "the tee is missing a rating",
+      "rotation_player_count": "too few signed up to draw the rotation",
       "default": "open the game to see what's missing"
     }
   },
@@ -2723,7 +2724,9 @@
         "unassigned_flights": "Players have not yet been assigned to flights. Assign flights before starting the game.",
         "flight_full": "The selected flight is full (maximum 4 players). Choose a different flight.",
         "signups_not_scheduled": "Only scheduled games can have signups closed or reopened.",
-        "bad_flight": "Invalid flight number. Choose a positive flight from the list."
+        "bad_flight": "Invalid flight number. Choose a positive flight from the list.",
+        "rotation_player_count_wolf": "Wolf needs 3–5 players to start. {count} signed up so far.",
+        "rotation_player_count_round_robin": "Round Robin needs exactly 4 players to start. {count} signed up so far."
       },
       "detail": {
         "brassRibbon": "Game · log",

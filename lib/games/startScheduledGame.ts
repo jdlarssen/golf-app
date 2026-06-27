@@ -13,6 +13,11 @@ import {
 } from './teeRating';
 import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
 import { needsFlightAssignment } from './flightScope';
+import {
+  assignRotationSlots,
+  rotationSlotRange,
+  type RotationMode,
+} from './assignRotationSlots';
 
 export type StartScheduledGameResult =
   // `started` = denne calleren vant status-flippen (scheduled → active).
@@ -31,9 +36,14 @@ export type StartScheduledGameResult =
         | 'pending_players'
         | 'incomplete_sides'
         | 'unassigned_flights'
+        | 'rotation_player_count'
         | 'db_players'
         | 'db_game';
       pendingEmails?: string[];
+      // #969: set only for reason 'rotation_player_count' so the caller can
+      // build a format-aware message («Wolf trenger 3–5 spillere — N påmeldt»).
+      rotationMode?: RotationMode;
+      rotationActiveCount?: number;
     };
 
 /**
@@ -143,6 +153,29 @@ export async function startScheduledGame(
     return { ok: false, reason: 'unassigned_flights' };
   }
 
+  // #969: Wolf / Round Robin draw their rotation slot at start, not at publish,
+  // so an open-signup game can be published before anyone joins. Guard the
+  // active (non-withdrawn) roster size first (fail fast, before the profile
+  // check): Wolf 3–5, Round Robin exactly 4. The signup cap already prevents
+  // "too many", so this really catches "too few". The actual slot draw happens
+  // after all guards pass (below). For non-rotation modes `rotationRange` is
+  // null and both blocks are skipped.
+  const rotationRange = rotationSlotRange(game.game_mode);
+  const activeRotationIds = rotationRange
+    ? roster.filter((r) => r.withdrawn_at == null).map((r) => r.user_id)
+    : [];
+  if (rotationRange) {
+    const n = activeRotationIds.length;
+    if (n < rotationRange.min || n > rotationRange.max) {
+      return {
+        ok: false,
+        reason: 'rotation_player_count',
+        rotationMode: game.game_mode as RotationMode,
+        rotationActiveCount: n,
+      };
+    }
+  }
+
   // Defence-in-depth: refuse to start if any roster player is still pending
   // profile completion. Task 6's publish-gate blocks this normally, but this
   // catches direct DB edits or future code paths that bypass that gate.
@@ -161,6 +194,26 @@ export async function startScheduledGame(
       reason: 'pending_players',
       pendingEmails: pending.map((p) => p.email),
     };
+  }
+
+  // #969: all guards passed — draw the Wolf/Round Robin rotation slot now,
+  // over the final active roster. Reassign all active players a fresh
+  // contiguous 1..n (idempotent on retry after a mid-loop crash). All start
+  // callers run as service-role (E1 fallback, cron) or the admin/creator (D5),
+  // so the 0107 immutability trigger lets these slot writes through (it only
+  // blocks a non-admin player editing rows).
+  if (rotationRange) {
+    for (const slot of assignRotationSlots(activeRotationIds)) {
+      const { error: slotError } = await supabase
+        .from('game_players')
+        .update({
+          team_number: slot.team_number,
+          flight_number: slot.flight_number,
+        })
+        .eq('game_id', gameId)
+        .eq('user_id', slot.user_id);
+      if (slotError) return { ok: false, reason: 'db_players' };
+    }
   }
 
   // 3. Compute course_handicap per player using their gender-specific

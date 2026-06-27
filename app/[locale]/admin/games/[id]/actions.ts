@@ -11,6 +11,10 @@ import {
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import {
+  assignRotationSlots,
+  rotationSlotRange,
+} from '@/lib/games/assignRotationSlots';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import {
   getRatingForGender,
@@ -97,6 +101,16 @@ export async function startScheduledGameAction(gameId: string) {
       const qs = new URLSearchParams({
         error: 'pending_players',
         emails: result.pendingEmails.join(', '),
+      });
+      redirect({ href: `${detailPath}?${qs.toString()}`, locale });
+    }
+    if (result.reason === 'rotation_player_count' && result.rotationMode) {
+      // #969: carry format + active count so the banner reads
+      // «Wolf trenger 3–5 spillere — N påmeldt».
+      const qs = new URLSearchParams({
+        error: 'rotation_player_count',
+        mode: result.rotationMode,
+        count: String(result.rotationActiveCount ?? 0),
       });
       redirect({ href: `${detailPath}?${qs.toString()}`, locale });
     }
@@ -228,6 +242,39 @@ export async function startGame(gameId: string) {
     const teamSize = (game!.mode_config as { team_size?: number } | null)?.team_size ?? 1;
     if (!isSideRosterComplete(gamePlayers!, teamSize)) {
       redirect({ href: `${detailPath}?error=incomplete_sides`, locale });
+    }
+  }
+
+  // #969: Wolf / Round Robin draw their rotation slot at start (mirrors
+  // startScheduledGame). Too few/many active players blocks the draft→active
+  // flip; otherwise assign a fresh contiguous 1..n to the active roster.
+  const rotationRange = rotationSlotRange(game!.game_mode);
+  if (rotationRange) {
+    const activeIds = gamePlayers!
+      .filter((r) => r.withdrawn_at == null)
+      .map((r) => r.user_id);
+    const n = activeIds.length;
+    if (n < rotationRange.min || n > rotationRange.max) {
+      const qs = new URLSearchParams({
+        error: 'rotation_player_count',
+        mode: game!.game_mode,
+        count: String(n),
+      });
+      redirect({ href: `${detailPath}?${qs.toString()}`, locale });
+    }
+    for (const slot of assignRotationSlots(activeIds)) {
+      const { error: slotError } = await supabase
+        .from('game_players')
+        .update({
+          team_number: slot.team_number,
+          flight_number: slot.flight_number,
+        })
+        .eq('game_id', gameId)
+        .eq('user_id', slot.user_id);
+      if (slotError) {
+        console.error('[startGame] rotation slot update failed', slotError);
+        redirect({ href: `${detailPath}?error=db_players`, locale });
+      }
     }
   }
 
