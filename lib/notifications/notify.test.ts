@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Admin-client mock — kontrolleres per test via insertMock/userSelectMock.
 const insertMock = vi.fn<(...args: unknown[]) => Promise<{ error: unknown }>>();
 const userSelectMock = vi.fn<
-  (...args: unknown[]) => Promise<{ data: { last_seen_at: string | null } | null }>
+  (...args: unknown[]) => Promise<{ data: { last_seen_at: string | null; locale: string | null } | null }>
 >();
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -29,16 +29,22 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
 
+const sendPushMock = vi.fn().mockResolvedValue(undefined);
+vi.mock('./push/sendPush', () => ({
+  sendPushToUser: (...args: unknown[]) => sendPushMock(...args),
+}));
+
 import { shouldSendMailFallback, OFF_APP_THRESHOLD_MS } from './notify';
 
 beforeEach(() => {
   insertMock.mockReset();
   userSelectMock.mockReset();
   revalidateTagMock.mockReset();
+  sendPushMock.mockClear();
   // Default: fungerende admin-insert + aktiv bruker (fresh last_seen_at).
   insertMock.mockResolvedValue({ error: null });
   userSelectMock.mockResolvedValue({
-    data: { last_seen_at: new Date().toISOString() },
+    data: { last_seen_at: new Date().toISOString(), locale: 'no' },
   });
 });
 
@@ -134,5 +140,32 @@ describe('notify (validation-rekkefølge)', () => {
       expect.objectContaining({ message: 'permission denied' }),
     );
     consoleErr.mockRestore();
+  });
+
+  it('off-app user → sends push AND shouldAlsoSendMail true', async () => {
+    userSelectMock.mockResolvedValueOnce({
+      data: { last_seen_at: null, locale: 'no' }, // null = off-app
+    });
+    const { notify } = await import('./notify');
+
+    const result = await notify({
+      userId: '00000000-0000-0000-0000-000000000001',
+      kind: 'game_finished',
+      payload: { game_id: '00000000-0000-0000-0000-000000000002', game_name: 'Cup' },
+    });
+
+    expect(sendPushMock).toHaveBeenCalledTimes(1);
+    expect(result.shouldAlsoSendMail).toBe(true);
+  });
+
+  it('on-app user → no push', async () => {
+    // default mock = fresh last_seen_at (active)
+    const { notify } = await import('./notify');
+    await notify({
+      userId: '00000000-0000-0000-0000-000000000001',
+      kind: 'game_finished',
+      payload: { game_id: '00000000-0000-0000-0000-000000000002', game_name: 'Cup' },
+    });
+    expect(sendPushMock).not.toHaveBeenCalled();
   });
 });

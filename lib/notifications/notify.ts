@@ -7,6 +7,7 @@ import {
   type NotificationPayload,
 } from './types';
 import { OFF_APP_THRESHOLD_MS } from './thresholds';
+import { sendPushToUser } from './push/sendPush';
 
 // Re-export så eksisterende imports fra notify.ts ikke brekker.
 export { OFF_APP_THRESHOLD_MS };
@@ -46,9 +47,9 @@ export async function notify<K extends NotificationKind>(opts: {
     }),
     admin
       .from('users')
-      .select('last_seen_at')
+      .select('last_seen_at, locale')
       .eq('id', userId)
-      .single<{ last_seen_at: string | null }>(),
+      .single<{ last_seen_at: string | null; locale: string | null }>(),
   ]);
 
   if (insertRes.error) {
@@ -65,9 +66,21 @@ export async function notify<K extends NotificationKind>(opts: {
   // 'max' = aggressiv invalidering på tvers av alle pågående requests.
   revalidateTag(`notifications-${userId}`, 'max');
 
-  return {
-    shouldAlsoSendMail: shouldSendMailFallback(userRes.data?.last_seen_at ?? null),
-  };
+  const offApp = shouldSendMailFallback(userRes.data?.last_seen_at ?? null);
+
+  // Additive Web Push: when the user is off-app, also push to their devices.
+  // Best-effort — sendPushToUser never throws. Email is unchanged (offApp), so a
+  // blocked/failed push never leaves the user dark. (#24, spec §4)
+  if (offApp) {
+    await sendPushToUser({
+      userId,
+      kind,
+      payload,
+      locale: userRes.data?.locale ?? null,
+    });
+  }
+
+  return { shouldAlsoSendMail: offApp };
 }
 
 /**
