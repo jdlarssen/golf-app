@@ -1800,6 +1800,8 @@
       "specificScoreAriaLabel": "Spesifikk score",
       "setScoreToAriaLabel": "Sett score til {value}",
       "clearScoreAriaLabel": "Fjern score",
+      "undoScore": "Angre",
+      "undoScoreAriaLabel": "Nullstill scoren for {name}",
       "specificScoreCaption": "Trykk for å sette. X fjerner."
     },
     "sync": {

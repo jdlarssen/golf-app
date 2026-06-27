@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.149 · Lettere å taste med hanske</strong></summary>
+
+[#944](https://github.com/jdlarssen/golf-app/issues/944) — Pluss- og minus-knappene på hull-skjermen er større, så de er lette å treffe med hanske og én hånd. Taster du feil, fjerner «Angre» scoren med ett trykk — ingen omvei innom menyen.
+
+↳ /games · «Tast en runde»
+</details>
+
+<details>
 <summary><strong>1.148 · Din sesong i tall</strong></summary>
 
 [#946](https://github.com/jdlarssen/golf-app/issues/946) — Statistikk-fanen i historikken åpner nå med en sesong-oppsummering. Velg år, så ser du runder, snitt, beste runde og bragdene dine for den sesongen, satt opp mot året før. Snømenn teller vi for seg, for de er ingen bragd.

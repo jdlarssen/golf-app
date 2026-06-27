@@ -584,19 +584,29 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     setValueSheetFor(null);
   }
 
-  async function onClearScore() {
-    if (valueSheetFor == null) return;
+  async function clearScoreFor(playerId: string) {
     if (disabled) return;
     await writeScore({
       gameId,
-      userId: valueSheetFor,
+      userId: playerId,
       holeNumber: currentHole,
       strokes: null,
       enteredBy: myUserId,
     });
     pulseSync();
     void drainQueue();
+  }
+
+  // ⋯-arkets X-knapp: nullstiller for spilleren arket er åpnet for.
+  async function onClearScore() {
+    if (valueSheetFor == null) return;
+    await clearScoreFor(valueSheetFor);
     setValueSheetFor(null);
+  }
+
+  // «Angre»-lenka på selve kortet: ett trykk nullstiller den spillerens score.
+  function onClearFromCard(playerId: string) {
+    void clearScoreFor(playerId);
   }
 
   const allConfirmed = cards.length > 0 && cards.every((c) => c.score != null);
@@ -814,6 +824,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
               stablefordPoints={stablefordPoints}
               onSetScore={onSetScore}
               onLongPress={onLongPress}
+              onClear={onClearFromCard}
             />
           );
         })}

@@ -11,20 +11,23 @@ const baseProps: ScoreCardProps = {
   par: 4,
   onSetScore: vi.fn(),
   onLongPress: vi.fn(),
+  onClear: vi.fn(),
 };
 
 function setup(overrides: Partial<ScoreCardProps> = {}) {
   const onSetScore = vi.fn();
   const onLongPress = vi.fn();
+  const onClear = vi.fn();
   const props: ScoreCardProps = {
     ...baseProps,
     onSetScore,
     onLongPress,
+    onClear,
     ...overrides,
   };
   const utils = render(<ScoreCard {...props} />);
   const card = utils.container.querySelector('[role="button"]') as HTMLElement;
-  return { ...utils, card, onSetScore, onLongPress };
+  return { ...utils, card, onSetScore, onLongPress, onClear };
 }
 
 describe('ScoreCard — rendering', () => {
@@ -245,6 +248,41 @@ describe('ScoreCard — interaction', () => {
     expect(onLongPress).toHaveBeenCalledWith('p1');
     expect(onSetScore).not.toHaveBeenCalled();
   });
+
+  it('Angre link is hidden when no score is set', () => {
+    setup({ score: null, par: 4 });
+    expect(screen.queryByText('Angre')).toBeNull();
+  });
+
+  it('Angre link appears when a score is set', () => {
+    setup({ score: 6, par: 4 });
+    expect(screen.getByText('Angre')).toBeInTheDocument();
+  });
+
+  it('Angre link calls onClear and does not also fire card tap', () => {
+    const { onClear, onSetScore } = setup({ score: 6, par: 4 });
+    fireEvent.click(screen.getByText('Angre'));
+    expect(onClear).toHaveBeenCalledWith('p1');
+    expect(onSetScore).not.toHaveBeenCalled();
+  });
+});
+
+describe('ScoreCard — tap targets', () => {
+  it('+ and − steppers render at ≥44×44px (glove-friendly, #944)', () => {
+    setup({ score: 5, par: 4 });
+    for (const label of ['+1', '-1']) {
+      const btn = screen.getByLabelText(label);
+      expect(parseInt(btn.style.width, 10)).toBeGreaterThanOrEqual(44);
+      expect(parseInt(btn.style.height, 10)).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it('⋯ button has a ≥44px touch target', () => {
+    setup({ score: 5, par: 4 });
+    const more = screen.getByLabelText('Velg spesifikk score');
+    expect(parseInt(more.style.width, 10)).toBeGreaterThanOrEqual(44);
+    expect(parseInt(more.style.height, 10)).toBeGreaterThanOrEqual(44);
+  });
 });
 
 describe('ScoreCard — disabled', () => {
@@ -269,5 +307,10 @@ describe('ScoreCard — disabled', () => {
     fireEvent.click(screen.getByLabelText('Velg spesifikk score'));
     expect(onSetScore).not.toHaveBeenCalled();
     expect(onLongPress).not.toHaveBeenCalled();
+  });
+
+  it('Angre link is hidden when disabled even if a score is set', () => {
+    setup({ score: 6, par: 4, disabled: true });
+    expect(screen.queryByText('Angre')).toBeNull();
   });
 });

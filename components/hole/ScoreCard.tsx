@@ -31,6 +31,13 @@ export interface ScoreCardProps {
   stablefordPoints?: number | null;
   onSetScore: (playerId: string, next: number) => void;
   onLongPress: (playerId: string) => void;
+  /**
+   * Nullstiller scoren for current spiller i ett trykk (tilbake til
+   * ghost/par-placeholder). Eksponert via «Angre»-lenka i helper-linja som
+   * vises kun når en score er satt — sparer brukeren for ⋯ → ark → X ved en
+   * feiltast på banen (#944).
+   */
+  onClear: (playerId: string) => void;
 }
 
 const MIN_STROKES = 1;
@@ -77,6 +84,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     stablefordPoints = null,
     onSetScore,
     onLongPress,
+    onClear,
   } = props;
 
   const confirmed = score != null;
@@ -115,6 +123,12 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     e.stopPropagation();
     if (disabled) return;
     onLongPress(playerId);
+  }
+
+  function onUndo(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (disabled) return;
+    onClear(playerId);
   }
 
   const borderColor = confirmed ? 'rgba(201,169,97,0.5)' : 'var(--border)';
@@ -204,11 +218,13 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
         : t('nettoLabel', { netto });
   }
 
+  // Glove-vennlige tap-targets: ≥44×44px per appens egen ≥44px-regel
+  // (var 38×30). Tastes med hanske, enhåndt, i bevegelse på banen (#944).
   const stepperBtnStyle: CSSProperties = {
-    width: 38,
-    height: 30,
+    width: 44,
+    height: 44,
     border: '1px solid var(--border)',
-    borderRadius: 9,
+    borderRadius: 11,
     background: 'var(--surface)',
     fontFamily: 'var(--font-sans)',
     fontWeight: 600,
@@ -219,8 +235,10 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     color: 'var(--text)',
   };
 
+  // ⋯ holder en lett glyf, men hele knappen er et fullt ≥44px-mål (var h18).
   const moreBtnStyle: CSSProperties = {
-    height: 18,
+    width: 44,
+    height: 44,
     border: 'none',
     background: 'transparent',
     color: 'var(--text-muted)',
@@ -229,6 +247,26 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+  };
+
+  // «Angre»-lenka: lett understreket tekst, men padding/minHeight gir et
+  // ≥44px tap-mål uten å blåse opp helper-linja.
+  const undoBtnStyle: CSSProperties = {
+    border: 'none',
+    background: 'transparent',
+    color: 'var(--text-muted)',
+    fontFamily: 'var(--font-sans)',
+    fontSize: 12,
+    fontWeight: 600,
+    textDecoration: 'underline',
+    textUnderlineOffset: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    padding: '11px 6px',
+    margin: '-9px 0',
+    minHeight: 44,
+    minWidth: 44,
+    display: 'inline-flex',
+    alignItems: 'center',
   };
 
   return (
@@ -248,8 +286,20 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
             <span style={badgeStyle}>{t('strokesBadge', { n: extraStrokes })}</span>
           )}
         </div>
-        <div data-testid="helper-text" style={helperStyle}>
-          {helperText}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span data-testid="helper-text" style={helperStyle}>
+            {helperText}
+          </span>
+          {confirmed && !disabled && (
+            <button
+              type="button"
+              aria-label={t('undoScoreAriaLabel', { name })}
+              onClick={onUndo}
+              style={undoBtnStyle}
+            >
+              {t('undoScore')}
+            </button>
+          )}
         </div>
       </div>
 

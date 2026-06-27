@@ -1800,6 +1800,8 @@
       "specificScoreAriaLabel": "Specific score",
       "setScoreToAriaLabel": "Set score to {value}",
       "clearScoreAriaLabel": "Clear score",
+      "undoScore": "Undo",
+      "undoScoreAriaLabel": "Reset the score for {name}",
       "specificScoreCaption": "Tap to set. X clears."
     },
     "sync": {
