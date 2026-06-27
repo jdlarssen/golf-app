@@ -41,60 +41,74 @@ export function PushToggle() {
     }
   }
 
+  // Section heading lives inside the component so it never dangles on desktop /
+  // unsupported (where the component returns null above). Matches the other
+  // profile sections' uppercase tracking label.
+  const heading = (
+    <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      {t('sectionHeading')}
+    </p>
+  );
+
   if (state === 'ios-install') {
     return (
-      <div className="rounded-xl border border-border bg-bg-tint p-4">
-        <p className="font-medium text-sm text-text">{t('iosInstallTitle')}</p>
-        <p className="mt-1 text-xs text-text-muted leading-relaxed">{t('iosInstallBody')}</p>
-      </div>
+      <>
+        {heading}
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="font-serif text-base font-medium text-text">{t('iosInstallTitle')}</p>
+          <p className="mt-1 text-xs text-text-muted leading-relaxed">{t('iosInstallBody')}</p>
+        </div>
+      </>
     );
   }
 
   if (state === 'blocked') {
     return (
-      <div className="rounded-xl border border-border bg-bg-tint p-4">
-        <p className="font-medium text-sm text-text">{t('blockedTitle')}</p>
-        <p className="mt-1 text-xs text-text-muted leading-relaxed">{t('blockedIntro')}</p>
-        <ol className="mt-2 space-y-1 text-xs text-text list-decimal list-inside">
-          <li>{t('blockedStep1')}</li>
-          <li>{t('blockedStep2')}</li>
-          <li>{t('blockedStep3')}</li>
-        </ol>
-        <p className="mt-2 text-xs text-text-muted">{t('blockedFootnote')}</p>
-        <p className="mt-2 text-xs text-text-muted">{t('emailBackstop')}</p>
-      </div>
+      <>
+        {heading}
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="font-serif text-base font-medium text-text">{t('blockedTitle')}</p>
+          <p className="mt-1 text-xs text-text-muted leading-relaxed">{t('blockedIntro')}</p>
+          <ol className="mt-2 space-y-1 text-xs text-text list-decimal list-inside">
+            <li>{t('blockedStep1')}</li>
+            <li>{t('blockedStep2')}</li>
+            <li>{t('blockedStep3')}</li>
+          </ol>
+          <p className="mt-2 text-xs text-text-muted">{t('blockedFootnote')}</p>
+          <p className="mt-2 text-xs text-text-muted">{t('emailBackstop')}</p>
+        </div>
+      </>
     );
   }
 
-  // 'off' or 'on'
+  // 'off' or 'on' — one consistent switch control for both states.
+  const on = state === 'on';
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4">
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm text-text">{t('title')}</p>
-        <p className="text-xs text-text-muted">{state === 'on' ? t('on') : t('off')}</p>
-      </div>
-      {state === 'on' ? (
+    <>
+      {heading}
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4">
+        <div className="min-w-0">
+          <p className="font-serif text-base font-medium text-text">{t('title')}</p>
+          <p className="text-xs text-text-muted">{on ? t('on') : t('permissionNote')}</p>
+        </div>
         <button
           type="button"
-          onClick={turnOff}
-          disabled={busy}
           role="switch"
-          aria-checked="true"
+          aria-checked={on}
           aria-label={t('title')}
-          className="relative h-7 w-12 rounded-full bg-primary transition-colors disabled:opacity-50"
-        >
-          <span className="absolute top-[3px] left-[23px] h-[22px] w-[22px] rounded-full bg-white" />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={turnOn}
+          onClick={on ? turnOff : turnOn}
           disabled={busy}
-          className="rounded-full bg-primary text-bg-tint px-4 py-2 text-sm font-medium min-h-11 disabled:opacity-50"
+          className={`flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50 ${
+            on ? 'bg-primary' : 'bg-text/20'
+          }`}
         >
-          {t('enable')}
+          <span
+            className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-150 ${
+              on ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
         </button>
-      )}
-    </div>
+      </div>
+    </>
   );
 }

@@ -4492,8 +4492,8 @@
     "label": "Install app"
   },
   "pushSettings": {
+    "sectionHeading": "Notifications",
     "title": "Notifications on this device",
-    "off": "Off",
     "on": "On · this device",
     "enable": "Turn on notifications",
     "permissionNote": "Your phone will ask for permission once.",

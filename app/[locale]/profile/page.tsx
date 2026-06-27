@@ -253,7 +253,8 @@ export default async function ProfilePage({
           </SettingList>
         </section>
 
-        {/* Varsler */}
+        {/* Varsler — heading renders inside PushToggle so it doesn't dangle on
+            desktop/unsupported where the component returns null. */}
         <section>
           <PushToggle />
         </section>

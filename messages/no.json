@@ -4492,8 +4492,8 @@
     "label": "Installer som app"
   },
   "pushSettings": {
+    "sectionHeading": "Varsler",
     "title": "Varsler på denne enheten",
-    "off": "Av",
     "on": "På · denne enheten",
     "enable": "Slå på varsler",
     "permissionNote": "Telefonen spør deg om lov én gang.",
