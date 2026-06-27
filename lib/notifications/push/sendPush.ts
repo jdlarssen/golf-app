@@ -34,7 +34,14 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
     const t = await getInboxTranslator(opts.locale);
     const { title, detail } = buildNotificationText(opts.kind, opts.payload, t);
     const url = notificationDestination({ kind: opts.kind, payload: opts.payload }) ?? '/';
-    const body = JSON.stringify({ title, body: detail, url, kind: opts.kind });
+    // Cap lengths so admin-authored content (product_update has no max length)
+    // can't overflow the push service's ~4 KB payload limit and silently fail.
+    const body = JSON.stringify({
+      title: clamp(title, 120),
+      body: clamp(detail, 240),
+      url,
+      kind: opts.kind,
+    });
 
     await Promise.allSettled(
       rows.map(async (sub) => {
@@ -61,4 +68,9 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
     // Never let push break the parent flow.
     console.error('[push] sendPushToUser failed', err);
   }
+}
+
+/** Trim a string to `max` chars, adding an ellipsis when it was cut. */
+function clamp(s: string, max: number): string {
+  return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
 }
