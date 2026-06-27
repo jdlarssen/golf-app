@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.151 · Varsler rett på telefonen</strong></summary>
+
+[#24](https://github.com/jdlarssen/golf-app/issues/24) — Slå på varsler i profilen, så plinger telefonen når noen inviterer deg, et kort venter på godkjenning eller resultatet er klart, selv når appen er lukket. Telefonen spør om lov én gang.
+
+↳ /profile · «Slå på varsler»
+</details>
+
+<details>
 <summary><strong>1.150 · Tee-off rett i kalenderen</strong></summary>
 
 [#945](https://github.com/jdlarssen/golf-app/issues/945) — Har spillet en planlagt tee-off, kan du nå legge den rett i telefonkalenderen. Du får et varsel en time før, så tee-tiden ikke glipper, og «Vis på kart» finner veien til banen.
