@@ -17,6 +17,7 @@ import { getIncomingFriendRequestCount } from '@/lib/friends/getIncomingFriendRe
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
+import { PushToggle } from '@/components/pwa/PushToggle';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { formatHcpDisplay } from '@/lib/handicap/sign';
@@ -250,6 +251,11 @@ export default async function ProfilePage({
             </div>
             <InstallButton />
           </SettingList>
+        </section>
+
+        {/* Varsler */}
+        <section>
+          <PushToggle />
         </section>
 
         {/* Konto — eksport og destruktiv slett-handling */}

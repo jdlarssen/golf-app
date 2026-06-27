@@ -4491,6 +4491,27 @@
   "installButton": {
     "label": "Installer som app"
   },
+  "pushSettings": {
+    "title": "Varsler på denne enheten",
+    "off": "Av",
+    "on": "På · denne enheten",
+    "enable": "Slå på varsler",
+    "permissionNote": "Telefonen spør deg om lov én gang.",
+    "blockedTitle": "Varsler er blokkert i telefonen",
+    "blockedIntro": "Du har slått av varsler for Tørny tidligere. Slik slår du dem på igjen:",
+    "blockedStep1": "Åpne Innstillinger på telefonen",
+    "blockedStep2": "Gå til Varsler → Tørny",
+    "blockedStep3": "Slå på Tillat varsler",
+    "blockedFootnote": "Appen får ikke lov å åpne Innstillinger for deg.",
+    "emailBackstop": "Du får fortsatt beskjed på e-post i mellomtiden.",
+    "iosInstallTitle": "Legg Tørny til på hjemskjermen først",
+    "iosInstallBody": "Trykk Del → «Legg til på Hjem-skjerm», så kan du slå på varsler.",
+    "nudgeTitle": "Få beskjed med en gang",
+    "nudgeBody": "Slå på varsler, så sier vi ifra når du blir invitert, et kort skal godkjennes, eller resultatet er klart.",
+    "nudgeLater": "Ikke nå",
+    "nudgeDoneTitle": "Varsler er på",
+    "nudgeDoneBody": "Vi sier ifra med en gang noe skjer."
+  },
   "installBanner": {
     "title": "Installer Tørny som app",
     "body": "Raskere åpning, og du kan registrere slag uten dekning.",

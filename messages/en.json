@@ -4491,6 +4491,27 @@
   "installButton": {
     "label": "Install app"
   },
+  "pushSettings": {
+    "title": "Notifications on this device",
+    "off": "Off",
+    "on": "On · this device",
+    "enable": "Turn on notifications",
+    "permissionNote": "Your phone will ask for permission once.",
+    "blockedTitle": "Notifications are blocked on your phone",
+    "blockedIntro": "You turned off notifications for Tørny earlier. Here's how to turn them back on:",
+    "blockedStep1": "Open Settings on your phone",
+    "blockedStep2": "Go to Notifications → Tørny",
+    "blockedStep3": "Turn on Allow Notifications",
+    "blockedFootnote": "The app isn't allowed to open Settings for you.",
+    "emailBackstop": "You'll still get email notifications in the meantime.",
+    "iosInstallTitle": "Add Tørny to your home screen first",
+    "iosInstallBody": "Tap Share → «Add to Home Screen», then you can turn on notifications.",
+    "nudgeTitle": "Get notified straight away",
+    "nudgeBody": "Turn on notifications and we'll let you know when you're invited, a scorecard needs approving, or results are in.",
+    "nudgeLater": "Not now",
+    "nudgeDoneTitle": "Notifications are on",
+    "nudgeDoneBody": "We'll let you know as soon as something happens."
+  },
   "installBanner": {
     "title": "Install Tørny as an app",
     "body": "Opens faster, and you can enter scores without a connection.",
