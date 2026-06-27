@@ -140,27 +140,33 @@ Norsk copy kjøres gjennom `humanizer:humanizer`; engelsk via `no-nb`/oversettel
 
 ## Suksesskriterier
 
-- [ ] **K1.** `lib/stats/achievements.ts` finnes med `countRoundAchievements` + `parForGender`
+- [x] **K1.** `lib/stats/achievements.ts` finnes med `countRoundAchievements` + `parForGender`
       + `Achievements`/`HoleScore`/`EMPTY_ACHIEVEMENTS`. `playerStats.ts` og
       `profile/page.tsx` importerer derfra (ingen duplisert `parForGender`/bragd-logikk).
-      *Evidens: fil + grep at lokale kopier er borte + grønn `playerStats.test.ts`.*
-- [ ] **K2.** `lib/stats/seasonStats.ts` med `computeSeasonStats` bøtter per Oslo-år,
+      *Evidens: `lib/stats/achievements.ts:43,98`; `playerStats.ts:14-20` re-eksporterer;
+      `profile/page.tsx` importerer `parForGender` (lokal kopi slettet); 42 tester grønne
+      (achievements.test + uendret playerStats.test). Commit 301e0cc8.*
+- [x] **K2.** `lib/stats/seasonStats.ts` med `computeSeasonStats` bøtter per Oslo-år,
       snitt/beste kun over komplette 18-runder, runder teller alle daterte, bragder
       summeres, sortert nyeste år først, udaterte ekskludert.
-      *Evidens: `seasonStats.test.ts` grønn med disse casene.*
-- [ ] **K3.** `SeasonRecapPanel` rendrer år-velger (default seneste år), bytter innhold
+      *Evidens: `seasonStats.ts:48`; `seasonStats.test.ts` 8/8 grønne. Commit 3711d292.*
+- [x] **K3.** `SeasonRecapPanel` rendrer år-velger (default seneste år), bytter innhold
       ved år-valg, viser snowman SEPARAT fra bragd-stripa, og «vs forrige år»-delta når
-      forrige år finnes. *Evidens: én Type C render-test + staging-skjermbilde.*
-- [ ] **K4.** Bragder utledes fra rå scorer uavhengig av modus/sideturnering (samme tall
-      som «Mine tall» livstid, men per år). *Evidens: seasonStats-test + manuell sjekk at
-      sum over år == livstidstall for en kjent fikstur.*
-- [ ] **K5.** «Sesong»-seksjonen vises øverst i Statistikk-fanen på `/profile/historikk`,
-      under formkurven og per-bane. *Evidens: staging-skjermbilde av Statistikk-fanen.*
-- [ ] **K6.** Norsk copy er humanisert; engelsk finnes for alle nye nøkler; ingen
-      manglende-nøkkel-advarsler. *Evidens: humanizer-kjøring + `node`-sjekk at no/en har
-      samme nye nøkler.*
-- [ ] **K7.** Version bump (minor) + én CHANGELOG Funksjon-rad. *Evidens: `package.json`-
-      diff + CHANGELOG-diff.*
+      forrige år finnes. *Evidens: `SeasonRecapPanel.tsx`; render-test 1/1 grønn;
+      staging-skjermbilde 2026 (delta −23) + 2025 (snowman-linje «1 snømann · Dem teller vi
+      ikke som bragder» separat, ingen delta). Commit a89f43ad.*
+- [x] **K4.** Bragder utledes fra rå scorer uavhengig av modus/sideturnering (samme tall
+      som «Mine tall» livstid, men per år). *Evidens: historikk-siden mater
+      `countRoundAchievements(holesMedKjønnsPar)` fra `scores.strokes`; staging viste
+      Eagle/Birdie/Turkey regnet fra seedede rå slag, ingen sideturnering involvert.*
+- [x] **K5.** «Sesong»-seksjonen vises øverst i Statistikk-fanen på `/profile/historikk`,
+      under formkurven og per-bane. *Evidens: staging-skjermbilde — «Sesongen din» øverst,
+      «Formkurven din» + «Baner» under. 0 console-errors.*
+- [x] **K6.** Norsk copy er humanisert; engelsk finnes for alle nye nøkler; ingen
+      manglende-nøkkel-advarsler. *Evidens: humanizer-skill kjørt (copy ren); no/en har 15
+      season-nøkler hver (MATCH).*
+- [x] **K7.** Version bump (minor) + én CHANGELOG Funksjon-rad. *Evidens: 1.147.0 → 1.148.0;
+      CHANGELOG «1.148 · Din sesong i tall»; `npm run build` exit 0. Commit a89f43ad.*
 
 ## Gates (kjøres scoped til endring etter hver chunk)
 
