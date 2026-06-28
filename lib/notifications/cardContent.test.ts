@@ -35,4 +35,28 @@ describe('buildNotificationText', () => {
     );
     expect(out).toEqual({ title: 'Nyhet', detail: 'Tekst' });
   });
+
+  it('achievement_unlocked bundles moments with a neutral title (#947)', () => {
+    const out = buildNotificationText(
+      'achievement_unlocked',
+      {
+        game_id: 'g',
+        game_name: 'Lørdagscup',
+        moments: [
+          { kind: 'hole_in_one', count: 1 },
+          { kind: 'snowman', count: 2 },
+        ],
+      } as NotificationPayload,
+      t,
+    );
+    expect(out.title).toBe('kinds.achievementUnlocked.title');
+    // Single moment → no «×N»; repeated moment → «×N»; joined with «, ».
+    expect(out.detail).toBe(
+      `kinds.achievementUnlocked.detail|${JSON.stringify({
+        moments:
+          'kinds.achievementUnlocked.moments.holeInOne, kinds.achievementUnlocked.moments.snowman ×2',
+        gameName: 'Lørdagscup',
+      })}`,
+    );
+  });
 });

@@ -58,6 +58,18 @@ describe('notificationDestination', () => {
     ).toBe(`/klubber/${GROUP}`);
   });
 
+  it('maps achievement_unlocked to the personal stats hub (badge wall, #947)', () => {
+    expect(
+      notificationDestination(
+        n('achievement_unlocked', {
+          game_id: GAME,
+          game_name: 'X',
+          moments: [{ kind: 'eagle', count: 1 }],
+        }),
+      ),
+    ).toBe('/profile/historikk');
+  });
+
   it('returns null for product_update — its link is reached via the card CTA, not a whole-card tap', () => {
     // A product_update with a long body used to whole-card-navigate to the
     // link, so tapping to read more threw you out to the link before you could

@@ -166,6 +166,16 @@
       "autoStartBlocked": {
         "title": "Runden kom ikke i gang",
         "detail": "{gameName}: {reason}"
+      },
+      "achievementUnlocked": {
+        "title": "Øyeblikk fra runden",
+        "detail": "{moments} i {gameName}",
+        "moments": {
+          "holeInOne": "Hole-in-one",
+          "eagle": "Eagle",
+          "turkey": "Turkey",
+          "snowman": "Snowman"
+        }
       }
     },
     "blockReasons": {

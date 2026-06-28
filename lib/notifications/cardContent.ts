@@ -214,8 +214,35 @@ export function buildNotificationText(
         }),
       };
     }
+    case 'achievement_unlocked': {
+      const p = payload as NotificationPayload<'achievement_unlocked'>;
+      // Neutral umbrella title covers both brags (ace/eagle/turkey) and the
+      // snowman «moment» without congratulating a blunder. Detail lists the
+      // moments + game name; «×N» only when a moment happened more than once.
+      const moments = p.moments
+        .map((m) => {
+          const label = t(`kinds.achievementUnlocked.moments.${MOMENT_KEY[m.kind]}`);
+          return m.count > 1 ? `${label} ×${m.count}` : label;
+        })
+        .join(', ');
+      return {
+        title: t('kinds.achievementUnlocked.title'),
+        detail: t('kinds.achievementUnlocked.detail', {
+          moments,
+          gameName: p.game_name,
+        }),
+      };
+    }
   }
 }
+
+// Maps the payload's snake_case moment kind to its camelCase `inbox` catalog key.
+const MOMENT_KEY: Record<'hole_in_one' | 'eagle' | 'turkey' | 'snowman', string> = {
+  hole_in_one: 'holeInOne',
+  eagle: 'eagle',
+  turkey: 'turkey',
+  snowman: 'snowman',
+};
 
 type BlockReasonKey =
   | 'incomplete_sides'

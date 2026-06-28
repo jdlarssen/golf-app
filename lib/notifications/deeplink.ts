@@ -100,5 +100,8 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       const p = n.payload as NotificationPayload<'auto_start_blocked'>;
       return `/games/${p.game_id}`;
     }
+    case 'achievement_unlocked':
+      // Lander på Statistikk-fanen i historikk der badge-veggen bor (#947).
+      return '/profile/historikk';
   }
 }

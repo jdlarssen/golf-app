@@ -26,7 +26,8 @@ export type NotificationKind =
   | 'friend_accepted'
   | 'player_added'
   | 'game_started'
-  | 'auto_start_blocked';
+  | 'auto_start_blocked'
+  | 'achievement_unlocked';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -229,6 +230,24 @@ const autoStartBlockedSchema = z.object({
   reason: z.string().min(1),
 });
 
+// achievement_unlocked: spilleren låste opp ≥1 notabelt øyeblikk i en runde
+// (#947). Fyres ved spill-avslutning, kun til spilleren selv, og bundlet til
+// ÉTT varsel som oppsummerer alle øyeblikkene (`selectNotableMoments`). `moments`
+// er aldri tom — fire-helperen sender ikke uten minst ett øyeblikk. Birdie er
+// aldri med (for vanlig). Deeplinker til /profile/historikk (badge-veggen).
+const achievementUnlockedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  moments: z
+    .array(
+      z.object({
+        kind: z.enum(['hole_in_one', 'eagle', 'turkey', 'snowman']),
+        count: z.number().int().positive(),
+      }),
+    )
+    .min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -251,6 +270,7 @@ const schemas = {
   player_added: playerAddedSchema,
   game_started: gameStartedSchema,
   auto_start_blocked: autoStartBlockedSchema,
+  achievement_unlocked: achievementUnlockedSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

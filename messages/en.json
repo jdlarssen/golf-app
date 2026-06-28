@@ -166,6 +166,16 @@
       "autoStartBlocked": {
         "title": "The round didn't start",
         "detail": "{gameName}: {reason}"
+      },
+      "achievementUnlocked": {
+        "title": "Moments from the round",
+        "detail": "{moments} in {gameName}",
+        "moments": {
+          "holeInOne": "Hole-in-one",
+          "eagle": "Eagle",
+          "turkey": "Turkey",
+          "snowman": "Snowman"
+        }
       }
     },
     "blockReasons": {

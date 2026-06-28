@@ -218,4 +218,51 @@ describe('parseNotificationPayload', () => {
       ).toThrow();
     });
   });
+
+  describe('achievement_unlocked (#947)', () => {
+    const validUuid = '11111111-1111-1111-1111-111111111111';
+
+    it('aksepterer payload med ≥1 moment', () => {
+      const result = parseNotificationPayload('achievement_unlocked', {
+        game_id: validUuid,
+        game_name: 'Lørdagsturneringen',
+        moments: [
+          { kind: 'hole_in_one', count: 1 },
+          { kind: 'turkey', count: 2 },
+        ],
+      });
+      expect(result.kind).toBe('achievement_unlocked');
+      expect(result.payload.moments).toHaveLength(2);
+    });
+
+    it('avviser tom moments-liste (helperen fyrer aldri uten øyeblikk)', () => {
+      expect(() =>
+        parseNotificationPayload('achievement_unlocked', {
+          game_id: validUuid,
+          game_name: 'X',
+          moments: [],
+        }),
+      ).toThrow();
+    });
+
+    it('avviser ukjent moment-kind (f.eks. birdie — aldri notabelt)', () => {
+      expect(() =>
+        parseNotificationPayload('achievement_unlocked', {
+          game_id: validUuid,
+          game_name: 'X',
+          moments: [{ kind: 'birdie', count: 1 }],
+        }),
+      ).toThrow();
+    });
+
+    it('avviser count ≤ 0', () => {
+      expect(() =>
+        parseNotificationPayload('achievement_unlocked', {
+          game_id: validUuid,
+          game_name: 'X',
+          moments: [{ kind: 'eagle', count: 0 }],
+        }),
+      ).toThrow();
+    });
+  });
 });
