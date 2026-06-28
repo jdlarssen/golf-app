@@ -8,6 +8,7 @@ import {
 } from '@/lib/games/buildShareCardData';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import type { AppLocale } from '@/i18n/routing';
 
 /**
@@ -123,7 +124,11 @@ export async function GET(
   { params }: { params: Promise<{ locale: string; id: string }> },
 ): Promise<Response> {
   const { locale, id } = await params;
-  const sharerId = new URL(request.url).searchParams.get('p');
+  // The sharer is whoever requests the card — read from the session cookie so
+  // the button needs no viewer-id prop. `?p=` is an optional override (testing /
+  // explicit links). A non-participant (or no session) yields the neutral card.
+  const sharerId =
+    new URL(request.url).searchParams.get('p') ?? (await getProxyVerifiedUserId());
 
   const gwp = await getGameWithPlayers(id);
   if (!gwp || gwp.game.status !== 'finished') return notFound();
@@ -337,9 +342,10 @@ export async function GET(
       height: HEIGHT,
       fonts: fonts.length > 0 ? fonts : undefined,
       headers: {
-        // Finished-game data is stable; cache aggressively at the CDN. The `?p`
-        // variant caches per player automatically (query is part of the key).
-        'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+        // Personalized per viewer (session cookie), so cache privately only.
+        // The button prefetches once per leaderboard view; the recipient gets
+        // the shared *file*, never this URL — so no CDN sharing is needed.
+        'Cache-Control': 'private, max-age=300',
       },
     },
   );

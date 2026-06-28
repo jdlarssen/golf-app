@@ -5,6 +5,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { LeaderboardRealtime } from './LeaderboardRealtime';
+import { ShareResultButton } from './ShareResultButton';
 
 export interface LeaderboardShellProps {
   children: ReactNode;
@@ -38,6 +39,8 @@ export function LeaderboardShell({
         <LeaderboardRealtime />
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
+        {/* Self-gating: only renders on finished games (#942). */}
+        <ShareResultButton />
       </div>
     );
   }
@@ -47,6 +50,8 @@ export function LeaderboardShell({
         <LeaderboardRealtime />
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
+        {/* Self-gating: only renders on finished games (#942). */}
+        <ShareResultButton />
       </div>
     </AppShell>
   );

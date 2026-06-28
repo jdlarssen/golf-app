@@ -1917,6 +1917,8 @@
       "backAriaLabel": "Back",
       "replayAriaLabel": "Replay the celebration",
       "downloadCsv": "Download results (CSV)",
+      "shareResult": "Share result",
+      "shareText": "Final result from the round",
       "hullForHullDrillHint": "Tap a team for hole by hole",
       "noTeams": "No teams to show.",
       "leaderboardKicker": "LEADERBOARD",
