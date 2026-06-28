@@ -165,7 +165,10 @@ export async function GET(
   const coursePar = holeRows.reduce((sum, h) => sum + h.par_mens, 0);
   const holeCount = holeRows.length;
   const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null);
-  const gameName = localizeGameName(game.name, courseName, locale as AppLocale);
+  // Satori wraps on spaces but clips a single long unbroken token; cap the
+  // name so pathological/very-long titles never overflow the card edge.
+  const rawName = localizeGameName(game.name, courseName, locale as AppLocale);
+  const gameName = rawName.length > 40 ? `${rawName.slice(0, 39).trimEnd()}…` : rawName;
 
   const nameByUserId = new Map<string, string>();
   for (const p of players) {
