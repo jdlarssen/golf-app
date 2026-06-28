@@ -9,6 +9,7 @@ import {
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { computeSharerSideAwards } from '@/lib/games/computeSharerSideAwards';
 import type { AppLocale } from '@/i18n/routing';
 
 /**
@@ -167,7 +168,7 @@ export async function GET(
   const { game, players } = gwp;
   const admin = getAdminClient();
 
-  const [result, holesRes, courseRes, gameMetaRes, sideWinnersRes] =
+  const [result, holesRes, courseRes, gameMetaRes, sideWinners] =
     await Promise.all([
       buildModeResultForGame(admin, {
         id: game.id,
@@ -178,15 +179,9 @@ export async function GET(
       admin.from('course_holes').select('par_mens').eq('course_id', game.course_id),
       admin.from('courses').select('name').eq('id', game.course_id).single<{ name: string }>(),
       admin.from('games').select('ended_at').eq('id', game.id).single<{ ended_at: string | null }>(),
-      admin
-        .from('game_side_winners')
-        .select('category, position, winner_user_id')
-        .eq('game_id', game.id)
-        .order('category')
-        .order('position')
-        .returns<
-          { category: 'longest_drive' | 'closest_to_pin'; position: number; winner_user_id: string | null }[]
-        >(),
+      // The sharer's actual notable side-tournament wins this round (Turkey,
+      // flest birdier, Konge av par 3, Snowman, LD/CTP …) — varies per round.
+      computeSharerSideAwards(admin, game, sharerId, 3),
     ]);
 
   const courseName = courseRes.data?.name ?? null;
@@ -208,14 +203,6 @@ export async function GET(
       );
     }
   }
-
-  const sideWinners = (sideWinnersRes.data ?? []).map((sw) => ({
-    label:
-      sw.category === 'longest_drive'
-        ? `Lengste drive #${sw.position}`
-        : `Nærmest pinnen #${sw.position}`,
-    winnerUserId: sw.winner_user_id,
-  }));
 
   const { fonts, hasFraunces, hasInter } = await loadFonts();
   const serif = hasFraunces ? 'Fraunces' : 'serif';
@@ -336,7 +323,9 @@ export async function GET(
                   display: 'flex',
                   flexDirection: 'column',
                   flex: 1,
-                  background: WHITE,
+                  // Champagne tint marks the sharer's own achievement; others
+                  // stay neutral white and name whoever took them.
+                  background: s.isSharer ? CHAMP_TINT : WHITE,
                   border: `2px solid ${HAIRLINE}`,
                   borderRadius: 24,
                   paddingTop: 22,
@@ -345,17 +334,18 @@ export async function GET(
                   paddingRight: 28,
                 }}
               >
-                <span style={{ fontSize: 26, color: MUTED }}>{s.label}</span>
                 <span
                   style={{
-                    fontSize: 34,
+                    fontSize: 32,
                     fontWeight: 500,
                     color: s.isSharer ? CHAMP_DARK : FOREST,
-                    marginTop: 6,
                   }}
                 >
-                  {s.winnerName}
+                  {s.label}
                 </span>
+                {!s.isSharer && s.winnerName ? (
+                  <span style={{ fontSize: 26, color: MUTED, marginTop: 6 }}>{s.winnerName}</span>
+                ) : null}
               </div>
             ))}
           </div>

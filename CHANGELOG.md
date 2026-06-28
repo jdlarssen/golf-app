@@ -17,7 +17,7 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <details>
 <summary><strong>1.152 · Del resultatet i gruppechaten</strong></summary>
 
-[#942](https://github.com/jdlarssen/golf-app/issues/942) — Når runden er ferdig kan du nå dele et pent resultatkort rett i WhatsApp eller Messenger. Kortet viser vinneren, topp 3 og din egen plassering — pluss lengste drive og nærmest pinnen om du tok dem. Ett trykk på «Del resultat» på leaderboardet, ingen skjermdump og beskjæring.
+[#942](https://github.com/jdlarssen/golf-app/issues/942) — Når runden er ferdig kan du nå dele et pent resultatkort rett i WhatsApp eller Messenger. Kortet viser vinneren, topp 3 og din egen plassering — pluss dine morsomme sideturnering-seire denne runden (Konge av par 3, flest birdier, Snowman …). Ett trykk på «Del resultat» på leaderboardet, ingen skjermdump og beskjæring.
 
 ↳ /games · «Del resultat»
 </details>
