@@ -9,6 +9,7 @@ import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
+import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
@@ -191,6 +192,10 @@ export async function endGameWithSideWinners(
     mode_config: game!.mode_config,
     course_id: game!.course_id,
   });
+
+  // #941: fryser WHS score-differensial per spiller. Best-effort — se
+  // persistScoreDifferentials for fullstendig begrunnelse.
+  await persistScoreDifferentials(gameId);
 
   await logAdminEvent({
     actorId: user.id,
