@@ -33,7 +33,6 @@ import type { AppLocale } from '@/i18n/routing';
  */
 
 const WIDTH = 1080;
-const HEIGHT = 1500;
 
 // Brand palette — hardcoded hex on purpose: this is a fixed-look image that must
 // NOT invert in dark mode (unlike the app's CSS-variable surfaces).
@@ -45,11 +44,9 @@ const MUTED = '#6B6354';
 const TAUPE = '#4A3F30';
 const CHAMP_TINT = '#F6EDD6';
 const CHAMP_PILL = '#F1E6C9';
-const GREEN_TINT = '#EBF0EA';
 const DISC = '#ECE7DB';
 const WHITE = '#FFFFFF';
 const HAIRLINE = 'rgba(201,169,97,0.40)';
-const GREEN_BORDER = 'rgba(27,67,50,0.18)';
 const ROW_HAIRLINE = 'rgba(27,67,50,0.08)';
 
 const UA =
@@ -121,6 +118,38 @@ function notFound(): Response {
   return new Response('Not found', { status: 404 });
 }
 
+/**
+ * Content-fit card height: a thin result (matchplay, 2-player) becomes a snug
+ * card instead of a tall photo with a blank lower half once shared into a chat.
+ * Estimates are deliberately generous so the card never clips; the footer's
+ * marginTop:auto absorbs any small slack at the bottom.
+ */
+function computeCardHeight(
+  model: ShareCardModel | null,
+  nameLines: number,
+  hasMeta: boolean,
+): number {
+  let h = 72 /* top pad */ + 76 /* header */;
+  h += 36 + nameLines * 80 + (hasMeta ? 16 + 42 : 0); // name + meta
+  h += 42; // divider
+  if (model === null) {
+    h += 160;
+  } else if (model.band === 'matchplay') {
+    h += 8 + 200; // result band
+  } else {
+    h += 8 + 196; // winner block
+    h += Math.max(0, model.podium.length - 1) * 116; // runner rows
+    if (model.sharerStrip) {
+      h += 16 + 116; // sharer row
+      if (model.sharerStrip.rank > model.podium.length + 1) h += 52; // gap marker
+    }
+  }
+  if (model && model.sideTournaments.length > 0) h += 28 + 96; // chips
+  h += 24 + 2 + 104; // footer (divider + two lines)
+  h += 72; // bottom pad
+  return h;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ locale: string; id: string }> },
@@ -166,9 +195,9 @@ export async function GET(
   const holeCount = holeRows.length;
   const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null);
   // Satori wraps on spaces but clips a single long unbroken token; cap the
-  // name so pathological/very-long titles never overflow the card edge.
+  // name so pathological/very-long titles stay ≤2 lines and never overflow.
   const rawName = localizeGameName(game.name, courseName, locale as AppLocale);
-  const gameName = rawName.length > 40 ? `${rawName.slice(0, 39).trimEnd()}…` : rawName;
+  const gameName = rawName.length > 30 ? `${rawName.slice(0, 29).trimEnd()}…` : rawName;
 
   const nameByUserId = new Map<string, string>();
   for (const p of players) {
@@ -207,6 +236,8 @@ export async function GET(
   const metaParts = [dateLabel, courseName, holeCount ? `${holeCount} hull` : null].filter(
     Boolean,
   );
+
+  const cardHeight = computeCardHeight(model, gameName.length > 16 ? 2 : 1, metaParts.length > 0);
 
   return new ImageResponse(
     (
@@ -261,24 +292,26 @@ export async function GET(
           </div>
         </div>
 
-        {/* Game name + meta */}
-        <span
-          style={{
-            fontFamily: serif,
-            fontSize: 80,
-            fontWeight: 600,
-            color: FOREST,
-            marginTop: 40,
-            lineHeight: 1.05,
-          }}
-        >
-          {gameName}
-        </span>
-        {metaParts.length > 0 && (
-          <span style={{ fontSize: 32, color: MUTED, marginTop: 18 }}>
-            {metaParts.join(' · ')}
+        {/* Game name + meta — grouped so Satori reserves the (possibly
+            multi-line) title height before the meta line. */}
+        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 36 }}>
+          <span
+            style={{
+              fontFamily: serif,
+              fontSize: 64,
+              fontWeight: 600,
+              color: FOREST,
+              lineHeight: 1.12,
+            }}
+          >
+            {gameName}
           </span>
-        )}
+          {metaParts.length > 0 && (
+            <span style={{ fontSize: 32, color: MUTED, marginTop: 16 }}>
+              {metaParts.join(' · ')}
+            </span>
+          )}
+        </div>
 
         <div style={{ height: 2, background: HAIRLINE, marginTop: 32, marginBottom: 8 }} />
 
@@ -321,7 +354,7 @@ export async function GET(
                     marginTop: 6,
                   }}
                 >
-                  {s.isSharer ? 'Deg' : s.winnerName}
+                  {s.winnerName}
                 </span>
               </div>
             ))}
@@ -344,7 +377,7 @@ export async function GET(
     ),
     {
       width: WIDTH,
-      height: HEIGHT,
+      height: cardHeight,
       fonts: fonts.length > 0 ? fonts : undefined,
       headers: {
         // Personalized per viewer (session cookie), so cache privately only.
@@ -434,13 +467,13 @@ function PlacementBody({
           <span
             style={{
               fontSize: 40,
-              color: FOREST,
+              color: row.isSharer ? CHAMP_DARK : FOREST,
               fontWeight: row.isSharer ? 500 : 400,
               marginLeft: 28,
               flex: 1,
             }}
           >
-            {row.isSharer ? `${row.name} · Deg` : row.name}
+            {row.name}
           </span>
           {row.scoreLabel ? (
             <span style={{ fontSize: 36, color: MUTED }}>{row.scoreLabel}</span>
@@ -448,34 +481,54 @@ function PlacementBody({
         </div>
       ))}
 
-      {/* Sharer strip (only when sharer finished outside top 3) */}
+      {/* Sharer's own row — shown when the sharer finished outside the top 3.
+          Named + champagne-highlighted so recipients see exactly who it is. A
+          "···" marker signals a jump down the field when ranks are skipped. */}
       {model.sharerStrip && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: GREEN_TINT,
-            border: `2px solid ${GREEN_BORDER}`,
-            borderRadius: 28,
-            paddingTop: 28,
-            paddingBottom: 28,
-            paddingLeft: 36,
-            paddingRight: 36,
-            marginTop: 28,
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 24, color: '#3E6450', letterSpacing: '2px' }}>DIN RUNDE</span>
-            <span style={{ fontSize: 40, fontWeight: 500, color: FOREST, marginTop: 6 }}>
-              {`${model.sharerStrip.rank}. plass${
-                model.sharerStrip.scoreLabel ? ` · ${model.sharerStrip.scoreLabel}` : ''
-              }`}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {model.sharerStrip.rank > model.podium.length + 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 6 }}>
+              <span style={{ fontSize: 36, color: MUTED, letterSpacing: '6px' }}>···</span>
+            </div>
+          )}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: CHAMP_TINT,
+              border: `2px solid ${HAIRLINE}`,
+              borderRadius: 24,
+              paddingTop: 22,
+              paddingBottom: 22,
+              paddingLeft: 24,
+              paddingRight: 32,
+              marginTop: 16,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                background: CHAMP_PILL,
+              }}
+            >
+              <span style={{ fontSize: 32, fontWeight: 500, color: CHAMP_DARK }}>
+                {model.sharerStrip.rank}
+              </span>
+            </div>
+            <span
+              style={{ fontSize: 40, fontWeight: 500, color: CHAMP_DARK, marginLeft: 28, flex: 1 }}
+            >
+              {model.sharerStrip.name}
             </span>
+            {model.sharerStrip.scoreLabel ? (
+              <span style={{ fontSize: 36, color: TAUPE }}>{model.sharerStrip.scoreLabel}</span>
+            ) : null}
           </div>
-          <span style={{ fontFamily: serif, fontSize: 56, fontWeight: 500, color: CHAMP }}>
-            {`${model.sharerStrip.rank}.`}
-          </span>
         </div>
       )}
     </div>
@@ -489,7 +542,7 @@ function MatchplayBody({
   model: ShareCardModel;
   serif: string;
 }) {
-  const headline = model.match?.sharerOutcomeLabel || model.match?.headline || 'Matchplay';
+  const headline = model.match?.headline || model.match?.sharerOutcomeLabel || 'Matchplay';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
       <div

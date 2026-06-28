@@ -304,11 +304,14 @@ function buildPlacementModel(
 
 /**
  * Resolves a team's display name by joining member names with " / ".
- * Falls back to the userId if no name is found (defensive).
+ * Falls back to a neutral "Spiller" when a name is missing — NEVER the raw
+ * userId, which would dump a UUID onto a shared card. (A competitor can be in
+ * the computed result but absent from nameByUserId if the caller's player list
+ * is momentarily out of sync.)
  */
 function resolveTeamName(userIds: string[], nameByUserId: Map<string, string>): string {
   return userIds
-    .map((id) => nameByUserId.get(id) ?? id)
+    .map((id) => nameByUserId.get(id) ?? 'Spiller')
     .join(' / ');
 }
 
@@ -390,7 +393,8 @@ function buildSideTournaments(
     .filter((s): s is { label: string; winnerUserId: string } => s.winnerUserId !== null)
     .map((s) => ({
       label: s.label,
-      winnerName: nameByUserId.get(s.winnerUserId) ?? '',
+      // Never blank on a shared card — same neutral fallback as resolveTeamName.
+      winnerName: nameByUserId.get(s.winnerUserId) ?? 'Spiller',
       isSharer: s.winnerUserId === sharerId,
     }));
 }
