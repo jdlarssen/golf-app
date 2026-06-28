@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.154 · Feir bragdene fra runden</strong></summary>
+
+[#947](https://github.com/jdlarssen/golf-app/issues/947) — Gjør du en hole-in-one, eagle, turkey eller snowman i en runde, får du nå beskjed om det når spillet avsluttes. På profilen har du også fått en bragd-vegg: alle bragdene dine gjennom årene samlet på ett brett. De du har klart lyser i gull, resten venter på tur.
+
+↳ /profile/historikk · «Statistikk»
+</details>
+
+<details>
 <summary><strong>1.153 · Følg handicap-formen din</strong></summary>
 
 [#941](https://github.com/jdlarssen/golf-app/issues/941) — Profilen viser nå en handicap-form-graf: score-differansen for hver runde tegnet over tid, så du ser om formen peker rett vei. Lavere er bedre — en kurve som faller betyr at du spiller bedre mot banens vanskelighet. Differansen fryses når runden avsluttes.

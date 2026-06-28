@@ -23,6 +23,7 @@ import {
   type CourseRoundInput,
 } from '@/lib/stats/courseStats';
 import { SeasonRecapPanel } from '@/components/stats/SeasonRecapPanel';
+import { AchievementWall } from '@/components/stats/AchievementWall';
 import {
   computeSeasonStats,
   type SeasonRoundInput,
@@ -30,6 +31,8 @@ import {
 import {
   countRoundAchievements,
   parForGender,
+  EMPTY_ACHIEVEMENTS,
+  type Achievements,
   type HoleScore,
 } from '@/lib/stats/achievements';
 import {
@@ -309,6 +312,19 @@ export default async function HistorikkPage() {
   });
   const seasonStats = computeSeasonStats(seasonRounds);
 
+  // #947 — livstids-bragder for badge-veggen: summer per-runde-tellingene vi
+  // allerede regnet for sesong-recap-en, så veggen koster ingen ekstra DB-runde.
+  const lifetimeAchievements: Achievements = seasonRounds.reduce<Achievements>(
+    (acc, r) => ({
+      holeInOne: acc.holeInOne + r.achievements.holeInOne,
+      eagle: acc.eagle + r.achievements.eagle,
+      birdie: acc.birdie + r.achievements.birdie,
+      turkey: acc.turkey + r.achievements.turkey,
+      snowman: acc.snowman + r.achievements.snowman,
+    }),
+    { ...EMPTY_ACHIEVEMENTS },
+  );
+
   // «Statistikk»-fanen (default), komponert etter trajektorie → periode →
   // nedbrytning: formkurve (når ≥2 komplette runder) → sesong-recap → per-bane.
   // Faller formkurven bort (<2 komplette runder), leder sesong-recap-en naturlig.
@@ -355,6 +371,18 @@ export default async function HistorikkPage() {
         </Card>
       )}
       <SeasonRecapPanel seasons={seasonStats} />
+      <AchievementWall
+        achievements={lifetimeAchievements}
+        heading={t('achievementsHeading')}
+        subtitle={t('achievementsSubtitle')}
+        labels={{
+          holeInOne: t('achievementsBadge_holeInOne'),
+          eagle: t('achievementsBadge_eagle'),
+          birdie: t('achievementsBadge_birdie'),
+          turkey: t('achievementsBadge_turkey'),
+          snowman: t('achievementsBadge_snowman'),
+        }}
+      />
       <CoursePerformancePanel
         courses={courseStats}
         heading={t('coursesHeading')}

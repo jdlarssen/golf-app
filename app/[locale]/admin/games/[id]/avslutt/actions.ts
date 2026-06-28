@@ -10,6 +10,7 @@ import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotificatio
 import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
 import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
+import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
@@ -196,6 +197,10 @@ export async function endGameWithSideWinners(
   // #941: fryser WHS score-differensial per spiller. Best-effort — se
   // persistScoreDifferentials for fullstendig begrunnelse.
   await persistScoreDifferentials(gameId);
+
+  // #947: best-effort bragd-varsel til spillere som låste opp et øyeblikk
+  // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
+  await notifyAchievementUnlocks(gameId);
 
   await logAdminEvent({
     actorId: user.id,
