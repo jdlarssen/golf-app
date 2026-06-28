@@ -38,6 +38,34 @@ export const EMPTY_ACHIEVEMENTS: Achievements = {
   snowman: 0,
 };
 
+/** En notabel hendelse fra én runde — verdt et eget unlock-varsel (#947). */
+export type NotableMomentKind = 'hole_in_one' | 'eagle' | 'turkey' | 'snowman';
+export type NotableMoment = { kind: NotableMomentKind; count: number };
+
+/**
+ * Plukker ut de notable «øyeblikkene» fra én runde for unlock-varselet (#947):
+ * hole-in-one, eagle, turkey og snowman. Birdie er bevisst UTELATT — den er for
+ * vanlig og ville druknet innboksen.
+ *
+ * Hver ace teller også som eagle i `countRoundAchievements` (underPar ≥ 2), så
+ * vi trekker hole-in-one fra eagle-tallet her — ellers ville et hole-in-one
+ * annonsert «Hole-in-one og Eagle» for ett og samme slag. En ekte ekstra eagle
+ * (f.eks. på par-5) overlever, fordi den teller utover ace-en.
+ *
+ * Returnerer kun øyeblikk med count > 0, i fast rekkefølge
+ * (hole-in-one → eagle → turkey → snowman) så varsel-copy blir forutsigbar.
+ */
+export function selectNotableMoments(a: Achievements): NotableMoment[] {
+  const eagleSansAce = Math.max(0, a.eagle - a.holeInOne);
+  const moments: NotableMoment[] = [
+    { kind: 'hole_in_one', count: a.holeInOne },
+    { kind: 'eagle', count: eagleSansAce },
+    { kind: 'turkey', count: a.turkey },
+    { kind: 'snowman', count: a.snowman },
+  ];
+  return moments.filter((m) => m.count > 0);
+}
+
 /** Kjønns-riktig par for et bane-hull. Default (null/`mens`) → herre-par. */
 export function parForGender(
   hole: CourseHoleRow,

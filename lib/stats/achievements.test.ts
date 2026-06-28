@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   countRoundAchievements,
   parForGender,
+  selectNotableMoments,
   EMPTY_ACHIEVEMENTS,
+  type Achievements,
   type HoleScore,
 } from './achievements';
 import type { CourseHoleRow } from '@/lib/supabase/queryFragments';
@@ -95,5 +97,66 @@ describe('parForGender', () => {
     ['null falls back to mens', null, 4],
   ] as const)('%s', (_label, gender, expected) => {
     expect(parForGender(h, gender)).toBe(expected);
+  });
+});
+
+describe('selectNotableMoments — unlock-notification eligibility (#947)', () => {
+  const ach = (partial: Partial<Achievements>): Achievements => ({
+    ...EMPTY_ACHIEVEMENTS,
+    ...partial,
+  });
+
+  it('returns nothing for an empty round', () => {
+    expect(selectNotableMoments(EMPTY_ACHIEVEMENTS)).toEqual([]);
+  });
+
+  it('never reports a birdie (too common → inbox spam)', () => {
+    expect(selectNotableMoments(ach({ birdie: 5 }))).toEqual([]);
+  });
+
+  it('reports an eagle on its own', () => {
+    expect(selectNotableMoments(ach({ eagle: 1 }))).toEqual([
+      { kind: 'eagle', count: 1 },
+    ]);
+  });
+
+  it('reports a turkey on its own', () => {
+    expect(selectNotableMoments(ach({ turkey: 1 }))).toEqual([
+      { kind: 'turkey', count: 1 },
+    ]);
+  });
+
+  it('reports a snowman on its own (a moment, not a brag)', () => {
+    expect(selectNotableMoments(ach({ snowman: 2 }))).toEqual([
+      { kind: 'snowman', count: 2 },
+    ]);
+  });
+
+  it('collapses the implicit eagle of a pure hole-in-one (every ace is also an eagle)', () => {
+    // countRoundAchievements counts an ace as both holeInOne AND eagle.
+    expect(selectNotableMoments(ach({ holeInOne: 1, eagle: 1 }))).toEqual([
+      { kind: 'hole_in_one', count: 1 },
+    ]);
+  });
+
+  it('keeps a genuine eagle that is not the ace', () => {
+    // One ace (holeInOne:1, contributing 1 to eagle) plus a separate par-5 eagle.
+    expect(selectNotableMoments(ach({ holeInOne: 1, eagle: 2 }))).toEqual([
+      { kind: 'hole_in_one', count: 1 },
+      { kind: 'eagle', count: 1 },
+    ]);
+  });
+
+  it('orders moments hole-in-one → eagle → turkey → snowman and drops birdie', () => {
+    expect(
+      selectNotableMoments(
+        ach({ holeInOne: 1, eagle: 3, birdie: 4, turkey: 1, snowman: 1 }),
+      ),
+    ).toEqual([
+      { kind: 'hole_in_one', count: 1 },
+      { kind: 'eagle', count: 2 }, // 3 eagles − 1 ace
+      { kind: 'turkey', count: 1 },
+      { kind: 'snowman', count: 1 },
+    ]);
   });
 });
