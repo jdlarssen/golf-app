@@ -175,7 +175,7 @@ describe('useGameFormState — initialValues.player_genders vinner ved mount', (
   });
 });
 
-describe('useGameFormState — Wolf 3-5 spillere (#465)', () => {
+describe('useGameFormState — Wolf 3-5 spillere (#465, #969)', () => {
   function setupWolf(count: number) {
     const { result } = renderHook(() =>
       useGameFormState({ players: WOLF_PLAYERS, courses: COURSES }),
@@ -191,11 +191,11 @@ describe('useGameFormState — Wolf 3-5 spillere (#465)', () => {
     return result;
   }
 
-  it.each([3, 4, 5])('%i spillere → gyldig, wolfOrder har %i slots', (count) => {
+  it.each([3, 4, 5])('%i spillere → gyldig, orderedPayload har %i rader', (count) => {
     const result = setupWolf(count);
     expect(result.current.isWolf).toBe(true);
     expect(result.current.playersValidForMode).toBe(true);
-    expect(result.current.wolfOrder).toHaveLength(count);
+    expect(result.current.orderedPayload).toHaveLength(count);
   });
 
   it.each([2, 6])('%i spillere → ugyldig (playersValidForMode false)', (count) => {
@@ -203,21 +203,22 @@ describe('useGameFormState — Wolf 3-5 spillere (#465)', () => {
     expect(result.current.playersValidForMode).toBe(false);
   });
 
-  it('orderedPayload gir sammenhengende team_number 1..n for 5 spillere', () => {
+  it('orderedPayload emitter null team/flight for alle valgte spillere (#969)', () => {
     const result = setupWolf(5);
     expect(result.current.orderedPayload).toHaveLength(5);
-    const teams = result.current.orderedPayload
-      .map((p) => p.team_number)
-      .sort((a, b) => (a ?? 0) - (b ?? 0));
-    expect(teams).toEqual([1, 2, 3, 4, 5]);
+    for (const row of result.current.orderedPayload) {
+      expect(row.team_number).toBeNull();
+      expect(row.flight_number).toBeNull();
+    }
   });
 
-  it('3 spillere gir team_number 1-3 (ingen tomme slots)', () => {
+  it('3 spillere: alle rader har null team/flight', () => {
     const result = setupWolf(3);
-    const teams = result.current.orderedPayload
-      .map((p) => p.team_number)
-      .sort((a, b) => (a ?? 0) - (b ?? 0));
-    expect(teams).toEqual([1, 2, 3]);
+    expect(result.current.orderedPayload).toHaveLength(3);
+    for (const row of result.current.orderedPayload) {
+      expect(row.team_number).toBeNull();
+      expect(row.flight_number).toBeNull();
+    }
   });
 });
 

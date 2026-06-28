@@ -537,13 +537,7 @@
         "scoringNet": "With handicap (net)",
         "scoringGross": "Gross",
         "scoringAriaLabel": "Wolf scoring",
-        "rotationLabel": "Wolf rotation",
-        "shuffleButton": "Shuffle",
-        "rotationHint": "Select 3 to 5 players to draw the rotation.",
-        "rotationEmptyHint": "Select 3 to 5 players to see the rotation.",
-        "hullLabel": "Holes {holes}",
-        "trailingNote": "Holes {from}–18 go to the player with the lowest running score. Decided as you play.",
-        "selectPlayerPlaceholder": "Select a player"
+        "startNote": "The rotation is drawn when the round starts."
       },
       "nassau": {
         "legend": "Nassau setup",
@@ -589,13 +583,7 @@
         "scoringGrossDesc": "Raw strokes"
       },
       "roundRobin": {
-        "legend": "Round Robin setup",
-        "slotsLabel": "Player slots",
-        "slotsDescription": "Partners rotate every 6 holes — you play with and against everyone else. Add 4 players in step 4 and slots A–D are assigned automatically.",
-        "partnerLabel": "With: {p1}·{p2}·{p3}",
-        "rotationSummary": "Holes 1–6 are A+B vs C+D · Holes 7–12 are A+C vs B+D · Holes 13–18 are A+D vs B+C. Best net of the two on your side counts per hole. Most holes won overall wins.",
-        "rotationHeading": "Rotation:",
-        "selectPlayerPlaceholder": "Select a player"
+        "startNote": "The teams are drawn when the round starts."
       },
       "aceyDeucey": {
         "legend": "Acey Deucey setup",

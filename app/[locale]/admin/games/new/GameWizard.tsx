@@ -52,7 +52,6 @@ import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
-import { RoundRobinSetup } from './sections/RoundRobinSetup';
 import { AceyDeuceySetup } from './sections/AceyDeuceySetup';
 import { WagerStakeSetup } from './sections/WagerStakeSetup';
 import { ShambleSetup } from './sections/ShambleSetup';
@@ -595,10 +594,6 @@ export function GameWizard({
                 <WolfSetup
                   scoring={state.wolfScoring}
                   onScoringChange={state.setWolfScoring}
-                  wolfOrder={state.wolfOrder
-                    .map((pid) => players.find((p) => p.id === pid))
-                    .filter((p): p is PlayerOption => p !== undefined)}
-                  onShuffle={state.shuffleWolfOrder}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -626,12 +621,9 @@ export function GameWizard({
                 />
               )}
               {state.isRoundRobin && (
-                <RoundRobinSetup
-                  roundRobinOrder={state.roundRobinOrder
-                    .map((pid) => players.find((p) => p.id === pid))
-                    .filter((p): p is NonNullable<typeof p> => p !== undefined)}
-                  disabled={state.lockGameMode}
-                />
+                <p className="text-xs text-muted/80">
+                  {t('sections.roundRobin.startNote')}
+                </p>
               )}
               {state.isAceyDeucey && (
                 <AceyDeuceySetup

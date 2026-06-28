@@ -100,25 +100,6 @@ export function validateTeamSizeFormat({
   return { teamsBalanced, hasAtLeastOneTeam, handicapPctValid, playersValid };
 }
 
-/**
- * splitmix32 — kort, deterministisk PRNG for Wolf-rotasjon-shuffle.
- *
- * Fisher-Yates over en 4-element array trenger 3 random-uttrekk. Vi vil
- * ha samme rekkefølge ved re-render for samme (seed, players)-input,
- * men annerledes rekkefølge etter neste "Shuffle"-klikk. Native Math.random
- * er ikke seedbar; splitmix32 gir det vi trenger i ~10 linjer.
- */
-function splitmix32(seed: number): () => number {
-  let state = seed | 0;
-  return () => {
-    state = (state + 0x9e3779b9) | 0;
-    let z = state;
-    z = Math.imul(z ^ (z >>> 16), 0x85ebca6b);
-    z = Math.imul(z ^ (z >>> 13), 0xc2b2ae35);
-    z = (z ^ (z >>> 16)) >>> 0;
-    return z / 4294967296;
-  };
-}
 
 // Derive team/flight maps from the optional initialValues.players array so the
 // edit page (D4) can pre-fill these without re-implementing the math. Rows
@@ -499,13 +480,6 @@ export function useGameFormState({
   const [patsomeScoring, setPatsomeScoring] = useState<'gross' | 'net'>(
     initialValues?.patsome_scoring === 'gross' ? 'gross' : 'net',
   );
-  // Wolf-rotasjon: en counter som økes hver gang admin trykker "Shuffle".
-  // wolfOrder (derived under) hasher (selectedPlayerIds, wolfShuffleSeed) for
-  // å produsere en deterministisk-pseudo-random permutasjon. Da kan render-
-  // tester stub-e shuffle ved å passere kjent seed.
-  const [wolfShuffleSeed, setWolfShuffleSeed] = useState<number>(() =>
-    Math.floor(Math.random() * 1_000_000),
-  );
   const [requirePeerApproval, setRequirePeerApproval] = useState(
     initialValues?.require_peer_approval ?? false,
   );
@@ -790,8 +764,8 @@ export function useGameFormState({
   //   i step 2.
   const isNines = gameMode === 'nines';
   // - isRoundRobin: 4-spiller roterende partner-format (4BBB matchplay der
-  //   partnere bytter hvert 6. hull). team_number 1-4 = rotation-slot A/B/C/D.
-  //   team_size=1, ingen lag-grid. Eget RoundRobinSetup-step i step 2.
+  //   partnere bytter hvert 6. hull). team_number 1-4 = rotation-slot A/B/C/D,
+  //   trukket ved spillstart (#969), ikke i veiviseren. team_size=1, ingen lag-grid.
   const isRoundRobin = gameMode === 'round_robin';
   // - isAceyDeucey: solo-format, nøyaktig 4 spillere. Lavest tar +3, høyest
   //   gir −3. Egen AceyDeuceySetup-step i step 2 for scoring-toggle.
@@ -1067,77 +1041,32 @@ export function useGameFormState({
   //   leser opp til 8 slots og ignorerer manglende team/flight-felt for
   //   begge solo-modusene.
   //
-  // Wolf-rotasjon: deterministisk shuffle av selectedPlayerIds basert på
-  // wolfShuffleSeed. Fisher-Yates med splitmix32-PRNG seedet på seed-en.
-  // Reseeding gjør at admin kan "Shuffle" til de er fornøyde, men ellers
-  // er rekkefølgen stabil ved re-render. Tom liste hvis !isWolf eller
-  // <3 valgte (#465: 3-5 spillere). 6+ selected slices til de 5 første
-  // (defensive — wolfPlayersValid gater publish ved >5).
-  const wolfOrder = useMemo<string[]>(() => {
-    if (!isWolf) return [];
-    if (selectedPlayerIds.length < 3) return [];
-    // #465: 3-5 spillere. Cap på 5 (over-cap fanges av wolfPlayersValid).
-    const base = selectedPlayerIds.slice(0, 5);
-    const rng = splitmix32(wolfShuffleSeed);
-    const shuffled = [...base];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }, [isWolf, selectedPlayerIds, wolfShuffleSeed]);
-
-  function shuffleWolfOrder() {
-    setWolfShuffleSeed(Math.floor(Math.random() * 1_000_000));
-  }
-
-  // Round Robin-rotasjon: deterministisk tildeling av de 4 spillerne til
-  // slots 1-4 (A/B/C/D) i valgrekkefølge. Tildeling er kosmetisk — alle
-  // permutasjoner gir identiske totaler (hver spiller partnerer alle andre
-  // uansett rekkefølge). Ingen shuffle-knapp: enklere enn Wolf og bevisst
-  // enklere UI. Tom liste hvis !isRoundRobin eller <4 valgte.
-  const roundRobinOrder = useMemo<string[]>(() => {
-    if (!isRoundRobin) return [];
-    if (selectedPlayerIds.length < 4) return [];
-    return selectedPlayerIds.slice(0, 4);
-  }, [isRoundRobin, selectedPlayerIds]);
-
+  // Wolf og Round Robin (#969): rotation-slots trekkes ved spillstart, ikke
+  // ved publisering. Alle valgte spillere emitteres med team_number = null
+  // og flight_number = null. Validator-en sjekker kun antall spillere ved
+  // invite-only publish; start-guarden trekker og skriver slots over den
+  // aktive rosteren.
   const orderedPayload = useMemo(() => {
     if (isWolf) {
-      // Wolf: emit n rader (#465: 3-5), hver med team_number 1..n i shuffled
-      // rekkefølge. wolfOrder er allerede deterministisk-shuffled basert på
-      // (selectedPlayerIds, wolfShuffleSeed). Hvis <3 valgt: emit slot-frie
-      // rader så draft-state tåler det. Validator-en (`validateWolf`)
-      // håndhever 3-5-spillers-regelen ved publish.
-      if (selectedPlayerIds.length < 3) {
-        return selectedPlayerIds.map((pid) => ({
-          user_id: pid,
-          team_number: null as number | null,
-          flight_number: null as number | null,
-        }));
-      }
-      return wolfOrder.map((pid, idx) => ({
+      // Wolf (#969): emit slot-frie rader for alle valgte spillere.
+      // Rotasjonen trekkes ved spillstart via assignRotationSlots.
+      // Validator-en (`validateWolf`) håndhever 3-5-spillers-regelen
+      // ved invite-only publish; open-signup publish hopper over sjekken.
+      return selectedPlayerIds.map((pid) => ({
         user_id: pid,
-        team_number: idx + 1,
-        flight_number: idx + 1,
+        team_number: null as number | null,
+        flight_number: null as number | null,
       }));
     }
     if (isRoundRobin) {
-      // Round Robin: emit 4 rader, team_number 1-4 = slot A/B/C/D.
-      // roundRobinOrder er deterministisk (valgrekkefølge).
+      // Round Robin (#969): emit slot-frie rader for alle valgte spillere.
+      // Lagene trekkes ved spillstart via assignRotationSlots.
       // Validator-en (`validateRoundRobin`) håndhever 4-spillers-regelen
-      // ved publish. Drafts med <4 spillere emitter slot-frie rader.
-      if (selectedPlayerIds.length < 4) {
-        return selectedPlayerIds.map((pid) => ({
-          user_id: pid,
-          team_number: null as number | null,
-          flight_number: null as number | null,
-        }));
-      }
-      return roundRobinOrder.map((pid, idx) => ({
+      // ved invite-only publish; open-signup publish hopper over sjekken.
+      return selectedPlayerIds.map((pid) => ({
         user_id: pid,
-        team_number: idx + 1,
-        flight_number: idx + 1,
+        team_number: null as number | null,
+        flight_number: null as number | null,
       }));
     }
     if (isMatchplay) {
@@ -1189,7 +1118,7 @@ export function useGameFormState({
       }
     }
     return rows;
-  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, wolfOrder, roundRobinOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isAmbrose, isShamble, isPatsome, isTeamMatchplay]);
+  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isAmbrose, isShamble, isPatsome, isTeamMatchplay]);
 
   const flightsComplete =
     teamsComplete &&
@@ -1297,9 +1226,9 @@ export function useGameFormState({
     matchplaySide1Count === 1 &&
     matchplaySide2Count === 1;
 
-  // Wolf-validitet: 3-5 spillere (#465). Rotation-slot 1..n fordeles
-  // automatisk via wolfOrder (deterministisk shuffle), så admin trenger
-  // ikke å tilordne selv. Speiler `validateWolf` i gamePayload.ts.
+  // Wolf-validitet: 3-5 spillere (#465). Rotation-slot trekkes ved spillstart
+  // (#969) — ingen manuell tilordning nødvendig. Speiler `validateWolf` i
+  // gamePayload.ts.
   const wolfPlayersValid =
     isWolf && selectedPlayerIds.length >= 3 && selectedPlayerIds.length <= 5;
 
@@ -1560,8 +1489,7 @@ export function useGameFormState({
       missingForPublish.push(tMissing('teamHandicapPct'));
     }
   } else if (isWolf) {
-    // Wolf: 3-5 spillere (#465). Rotation-slot fordeles automatisk via
-    // wolfOrder, så ingen lag-tilordning trengs i UI.
+    // Wolf: 3-5 spillere (#465). Rotation-slot trekkes ved spillstart (#969).
     if (selectedPlayerIds.length < 3) {
       const remaining = 3 - selectedPlayerIds.length;
       missingForPublish.push(tMissing('wolfUnderMin', { remaining }));
@@ -1698,9 +1626,6 @@ export function useGameFormState({
       | 'skin'
       | 'poeng'
       | 'seksjon',
-    wolfOrder,
-    shuffleWolfOrder,
-    roundRobinOrder,
     nassauScoring,
     setNassauScoring,
     skinsScoring,

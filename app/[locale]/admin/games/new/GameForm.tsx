@@ -785,10 +785,6 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <WolfSetup
             scoring={state.wolfScoring}
             onScoringChange={state.setWolfScoring}
-            wolfOrder={state.wolfOrder
-              .map((pid) => players.find((p) => p.id === pid))
-              .filter((p): p is PlayerOption => p !== undefined)}
-            onShuffle={state.shuffleWolfOrder}
             disabled={lockGameMode}
           />
         )}

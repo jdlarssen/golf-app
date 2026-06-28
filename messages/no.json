@@ -537,13 +537,7 @@
         "scoringNet": "Med handicap (netto)",
         "scoringGross": "Brutto",
         "scoringAriaLabel": "Wolf-scoring",
-        "rotationLabel": "Wolf-rotasjon",
-        "shuffleButton": "Shuffle",
-        "rotationHint": "Velg 3 til 5 spillere, så trekker du rotasjonen.",
-        "rotationEmptyHint": "Velg 3 til 5 spillere for å se rotasjonen.",
-        "hullLabel": "Hull {holes}",
-        "trailingNote": "Hull {from}–18 går til den som ligger sist på poeng-totalen. Det avgjøres underveis.",
-        "selectPlayerPlaceholder": "Velg en spiller"
+        "startNote": "Rotasjonen trekkes når runden starter."
       },
       "nassau": {
         "legend": "Nassau-oppsett",
@@ -589,13 +583,7 @@
         "scoringGrossDesc": "Rå slag"
       },
       "roundRobin": {
-        "legend": "Round Robin-oppsett",
-        "slotsLabel": "Spillerslotter",
-        "slotsDescription": "Partnere roterer hvert 6. hull — du spiller med og mot alle de andre. Legg til 4 spillere i steg 4, så fordeles slottene A–D automatisk.",
-        "partnerLabel": "Med: {p1}·{p2}·{p3}",
-        "rotationSummary": "Hull 1–6 er A+B vs C+D · Hull 7–12 er A+C vs B+D · Hull 13–18 er A+D vs B+C. Beste netto av de to på din side teller per hull. Flest hullseire totalt vinner.",
-        "rotationHeading": "Rotasjon:",
-        "selectPlayerPlaceholder": "Velg en spiller"
+        "startNote": "Lagene trekkes når runden starter."
       },
       "aceyDeucey": {
         "legend": "Acey Deucey-oppsett",
