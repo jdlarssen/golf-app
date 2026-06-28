@@ -33,13 +33,19 @@ NO DB migration (team_number/flight_number already nullable; CHECK satisfied).
    add info notes, update UI tests, remove dead rotation i18n keys.
 
 ## Success criteria
-- [ ] C1 `assignRotationSlots(activeUserIds, shuffle?)` → contiguous `team_number = flight_number = 1..n`, distinct, covers every id; deterministic under an injected shuffle. Unit-tested.
-- [ ] C2 `validateWolf` emits every row with `team_number: null, flight_number: null`; no per-row `bad_team`; no contiguous `team_balance` check; publish-mode 3–5 count check retained (fires invite-only only). Open-signup (`effectiveMode==='draft'`) publish with <3 players returns `ok`. Covered in `gamePayload.test.ts`.
-- [ ] C3 `validateRoundRobin` same: null slots, no per-row `bad_team`, publish-mode `===4` retained, open-signup publish with <4 returns `ok`. Covered.
-- [ ] C4 `startScheduledGame` returns a new structured failure reason when the active (non-withdrawn) roster is Wolf `<3 || >5` or RR `!==4`; otherwise writes `team_number=flight_number=slot` (both set) to active players via `assignRotationSlots`, idempotent on retry. Withdrawn rows keep null. Covered in `startScheduledGame.test.ts`.
-- [ ] C5 The new reason is surfaced to the admin (autoStartBlocked + "Start runden nå" action + page auto-start fallback) with NO + EN copy, format-aware («Wolf trenger 3–5 spillere …» / «Round Robin trenger nøyaktig 4 spillere …»).
-- [ ] C6 Wizard: WolfSetup keeps the scoring toggle, drops rotation preview + shuffle; `RoundRobinSetup` deleted; `useGameFormState` Wolf/RR `orderedPayload` emit null slots; `wolfOrder`/`wolfShuffleSeed`/`shuffleWolfOrder`/`roundRobinOrder` removed; GameWizard/GameForm updated. Info notes: Wolf «Rotasjonen trekkes når runden starter.», RR «Lagene trekkes når runden starter.»
-- [ ] C7 Open-signup Wolf & RR publish with only the admin succeeds (no `bad_team`) — proven by test, and verified on staging before merge.
+- [x] C1 `assignRotationSlots` → contiguous `team_number = flight_number = 1..n`, distinct, covers every id; deterministic under injected shuffle. Evidence: `lib/games/assignRotationSlots.ts` + `.test.ts` (4 cases green).
+- [x] C2 `validateWolf` emits null team/flight; no per-row `bad_team`/`team_balance`; publish-mode 3–5 gate retained (invite-only); open-signup (`manual_approval`/`open`) publish with <3 returns ok. Evidence: `gamePayload.ts:1453-1487` + new tests `#969: open-signup … 1 spiller → ok`, `… 0 spillere → ok`.
+- [x] C3 `validateRoundRobin` same: null slots, no per-row `bad_team`, publish-mode `===4` retained, open-signup publish with <4 returns ok. Evidence: `gamePayload.ts` RR validator + test `#969: open-signup … 2 spillere → ok`.
+- [x] C4 `startScheduledGame` (+ admin `startGame`) returns `rotation_player_count` when active (non-withdrawn) roster is Wolf `<3||>5` / RR `!==4`; else writes `team=flight=slot` via `assignRotationSlots`, idempotent. Withdrawn excluded. Evidence: `startScheduledGame.ts:155-210` + 5 new tests (too-few blocks w/ mode+count, valid assigns contiguous 1..n, withdrawn excluded).
+- [x] C5 Reason surfaced: `autoStartBlocked` STRUCTURAL set, `startScheduledGameAction` + `startGame` redirect `?error=rotation_player_count&mode&count`, `admin/games/[id]/page.tsx` builds format-aware banner. NO+EN copy (`admin.game.errors.rotation_player_count_{wolf,round_robin}`, `blockReasons.rotation_player_count`).
+- [x] C6 Wizard: WolfSetup keeps scoring toggle, drops rotation+shuffle; `RoundRobinSetup` deleted; orderedPayload Wolf/RR emit null; `wolfOrder`/`wolfShuffleSeed`/`shuffleWolfOrder`/`roundRobinOrder` removed; GameWizard/GameForm updated; info notes added. Evidence: commit `e889651d`, 138 wizard tests green.
+- [x] C7 Open-signup Wolf & RR publish with only the admin succeeds (no `bad_team`) — proven by unit tests (C2/C3). ⏳ staging click-through pending before merge.
+
+## Gate evidence
+- `npx tsc --noEmit` — clean.
+- `npx vitest run` — 323 files, 4160 tests, all green.
+- `npx eslint` (changed files) — 0 errors (pre-existing complexity warnings only).
+- Commits: `eae2a24f` (fix, v1.151.1 + CHANGELOG), `e889651d` (refactor, [no-changelog]).
 
 ## Gates (scoped to changed files)
 - `npx tsc --noEmit` — clean

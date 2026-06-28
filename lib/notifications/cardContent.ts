@@ -217,7 +217,13 @@ export function buildNotificationText(
   }
 }
 
-type BlockReasonKey = 'incomplete_sides' | 'pending_players' | 'no_players' | 'tee_missing' | 'tee_missing_rating';
+type BlockReasonKey =
+  | 'incomplete_sides'
+  | 'pending_players'
+  | 'no_players'
+  | 'tee_missing'
+  | 'tee_missing_rating'
+  | 'rotation_player_count';
 
 const KNOWN_BLOCK_REASONS: ReadonlySet<string> = new Set<BlockReasonKey>([
   'incomplete_sides',
@@ -225,6 +231,8 @@ const KNOWN_BLOCK_REASONS: ReadonlySet<string> = new Set<BlockReasonKey>([
   'no_players',
   'tee_missing',
   'tee_missing_rating',
+  // #969: Wolf/Round Robin couldn't draw a rotation — too few/many signed up.
+  'rotation_player_count',
 ]);
 
 /**

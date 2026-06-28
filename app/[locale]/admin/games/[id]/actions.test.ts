@@ -785,4 +785,142 @@ describe('startGame', () => {
     );
     expect(statusFlip).toBeUndefined();
   });
+
+  // #969: the draft→active path mirrors startScheduledGame's rotation guard.
+  it('wolf utkast med 2 aktive → redirect rotation_player_count, ingen status-flip', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
+      {
+        data: {
+          id: 'game-1',
+          status: 'draft',
+          hcp_allowance_pct: 100,
+          tee_box_id: 'tee-1',
+          game_mode: 'wolf',
+          mode_config: { kind: 'wolf', team_size: 1 },
+        },
+        error: null,
+      }, // games
+      {
+        // 2 active wolf players (null slots) — below the 3-5 range
+        data: [
+          { user_id: 'u1', tee_gender: 'M', team_number: null, withdrawn_at: null, users: { hcp_index: 10 } },
+          { user_id: 'u2', tee_gender: 'M', team_number: null, withdrawn_at: null, users: { hcp_index: 10 } },
+        ],
+        error: null,
+      }, // game_players
+      {
+        data: {
+          slope_mens: 125, course_rating_mens: 71.5, par_total_mens: 72,
+          slope_ladies: 120, course_rating_ladies: 70.0, par_total_ladies: 72,
+          slope_juniors: 115, course_rating_juniors: 69.0, par_total_juniors: 72,
+        },
+        error: null,
+      }, // tee_boxes
+      {
+        data: [
+          { id: 'u1', email: 'a@example.com', profile_completed_at: '2026-01-01T00:00:00Z' },
+          { id: 'u2', email: 'b@example.com', profile_completed_at: '2026-01-01T00:00:00Z' },
+        ],
+        error: null,
+      }, // users (pending check)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { startGame } = await import('./actions');
+
+    await expect(startGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(
+      '/admin/games/game-1?error=rotation_player_count&mode=wolf&count=2',
+    );
+
+    // No slot writes, no status flip.
+    const slotWrite = supabaseMock.__fromCalls.find(
+      (c) =>
+        c.table === 'game_players' &&
+        c.method === 'update' &&
+        typeof c.args[0] === 'object' &&
+        c.args[0] !== null &&
+        'team_number' in (c.args[0] as Record<string, unknown>),
+    );
+    expect(slotWrite).toBeUndefined();
+    const statusFlip = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'update',
+    );
+    expect(statusFlip).toBeUndefined();
+  });
+
+  it('wolf utkast med 3 aktive → tildeler 3 slots og flipper til active', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
+      {
+        data: {
+          id: 'game-1',
+          status: 'draft',
+          hcp_allowance_pct: 100,
+          tee_box_id: 'tee-1',
+          game_mode: 'wolf',
+          mode_config: { kind: 'wolf', team_size: 1 },
+        },
+        error: null,
+      }, // games
+      {
+        data: [
+          { user_id: 'u1', tee_gender: 'M', team_number: null, withdrawn_at: null, users: { hcp_index: 10 } },
+          { user_id: 'u2', tee_gender: 'M', team_number: null, withdrawn_at: null, users: { hcp_index: 10 } },
+          { user_id: 'u3', tee_gender: 'M', team_number: null, withdrawn_at: null, users: { hcp_index: 10 } },
+        ],
+        error: null,
+      }, // game_players
+      {
+        data: {
+          slope_mens: 125, course_rating_mens: 71.5, par_total_mens: 72,
+          slope_ladies: 120, course_rating_ladies: 70.0, par_total_ladies: 72,
+          slope_juniors: 115, course_rating_juniors: 69.0, par_total_juniors: 72,
+        },
+        error: null,
+      }, // tee_boxes
+      {
+        data: [
+          { id: 'u1', email: 'a@example.com', profile_completed_at: '2026-01-01T00:00:00Z' },
+          { id: 'u2', email: 'b@example.com', profile_completed_at: '2026-01-01T00:00:00Z' },
+          { id: 'u3', email: 'c@example.com', profile_completed_at: '2026-01-01T00:00:00Z' },
+        ],
+        error: null,
+      }, // users (pending check)
+      // 3 slot updates + 3 course_handicap updates + 1 status flip
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { startGame } = await import('./actions');
+
+    await expect(startGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=started');
+
+    // 3 contiguous rotation slots written (team === flight).
+    const slotWrites = supabaseMock.__fromCalls.filter(
+      (c) =>
+        c.table === 'game_players' &&
+        c.method === 'update' &&
+        typeof c.args[0] === 'object' &&
+        c.args[0] !== null &&
+        'team_number' in (c.args[0] as Record<string, unknown>),
+    );
+    expect(slotWrites).toHaveLength(3);
+    const slots = slotWrites
+      .map((c) => (c.args[0] as { team_number: number }).team_number)
+      .sort((a, b) => a - b);
+    expect(slots).toEqual([1, 2, 3]);
+  });
 });
