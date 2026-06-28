@@ -20,6 +20,9 @@ export interface ScoringTrendChartProps {
   startLabel: string;
   nowLabel: string;
   bestLabel: string;
+  /** Valgfri verdi-formattering for boksene (f.eks. 1-desimal, locale-komma for
+   *  differensial-trenden). Default: `String(value)` — heltalls-score uendret. */
+  formatValue?: (value: number) => string;
 }
 
 const STROKE_WIDTH = 2.5;
@@ -59,6 +62,7 @@ export function ScoringTrendChart({
   startLabel,
   nowLabel,
   bestLabel,
+  formatValue,
 }: ScoringTrendChartProps): JSX.Element {
   const { width, height, bruttoPoints, nettoPoints } = geometry;
   const hasNetto = nettoPoints.length > 0;
@@ -79,6 +83,7 @@ export function ScoringTrendChart({
       <BoxRow
         label={bruttoLabel}
         variant="brutto"
+        formatValue={formatValue}
         stats={[
           { label: startLabel, value: summary.brutto.start },
           { label: nowLabel, value: summary.brutto.now },
@@ -91,6 +96,7 @@ export function ScoringTrendChart({
           className="mt-2"
           label={nettoLabel}
           variant="netto"
+          formatValue={formatValue}
           stats={[
             { label: startLabel, value: summary.netto.start },
             { label: nowLabel, value: summary.netto.now },
@@ -185,11 +191,13 @@ function BoxRow({
   variant,
   stats,
   className,
+  formatValue,
 }: {
   label: string;
   variant: 'brutto' | 'netto';
   stats: BoxStat[];
   className?: string;
+  formatValue?: (value: number) => string;
 }): JSX.Element {
   const labelColor =
     variant === 'brutto' ? 'text-[color:var(--color-primary)]' : 'text-muted';
@@ -203,7 +211,7 @@ function BoxRow({
       </span>
       <div className="grid flex-1 grid-cols-3 gap-2">
         {stats.map((s) => (
-          <StatBox key={s.label} variant={variant} {...s} />
+          <StatBox key={s.label} variant={variant} formatValue={formatValue} {...s} />
         ))}
       </div>
     </div>
@@ -215,17 +223,23 @@ function StatBox({
   value,
   variant,
   best,
-}: BoxStat & { variant: 'brutto' | 'netto' }): JSX.Element {
+  formatValue,
+}: BoxStat & {
+  variant: 'brutto' | 'netto';
+  formatValue?: (value: number) => string;
+}): JSX.Element {
   // Rammen følger linjestilen — erstatter egen tegnforklaring.
   const border =
     variant === 'brutto'
       ? 'border-[1.5px] border-primary'
       : 'border-[1.5px] border-dashed border-muted';
+  const display =
+    value != null && formatValue ? formatValue(value) : fmt(value);
   return (
     <div className={`rounded-lg px-2 py-2 text-center ${border} ${best ? 'bg-accent/10' : ''}`}>
       <div className="font-sans text-[11px] text-muted">{label}</div>
       <div className="font-serif text-2xl font-medium leading-tight tabular-nums text-text">
-        {fmt(value)}
+        {display}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
-import { formatShortDayMonthLocale } from '@/lib/i18n/format';
+import { formatShortDayMonthLocale, formatNumber } from '@/lib/i18n/format';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
 import { GameHistoryRow } from '@/components/stats/GameHistoryRow';
@@ -345,6 +345,12 @@ export default async function HistorikkPage() {
             startLabel={t('trendStart')}
             nowLabel={t('trendNow')}
             bestLabel={t('trendBest')}
+            formatValue={(v) =>
+              formatNumber(v, locale, {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              })
+            }
           />
         </Card>
       )}
