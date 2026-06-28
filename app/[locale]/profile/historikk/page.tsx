@@ -13,6 +13,7 @@ import {
   buildScoringTrend,
   summarizeTrendRounds,
   type TrendRound,
+  type TrendSummary,
 } from '@/lib/stats/scoringTrend';
 import { ScoringTrendChart } from '@/components/stats/ScoringTrendChart';
 import { CoursePerformancePanel } from '@/components/stats/CoursePerformancePanel';
@@ -36,6 +37,10 @@ import {
   type CourseHoleRow,
 } from '@/lib/supabase/queryFragments';
 import { osloParts } from '@/lib/format/teeOff';
+import { computeScoreDifferential } from '@/lib/scoring/scoreDifferential';
+import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { after } from 'next/server';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import type {
   GameMode,
@@ -59,6 +64,8 @@ type GameRow = {
   mode_config: GameModeConfig;
   // #940 — grupperingsnøkkel for per-bane-statistikk (banenavn kan kollidere).
   course_id: string | null;
+  // #941 — tee for slope/CR-oppslag (live differensial-fallback).
+  tee_box_id: string | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
 };
@@ -75,6 +82,8 @@ type GameWithMeta = GameRow & {
   course_handicap: number | null;
   /** Format-riktig utfall (#572) → resultat-badge. */
   result_summary: ResultSummary | null;
+  /** #941 — frosset WHS-differensial (null = ikke frosset ennå → live-beregnes). */
+  score_differential: number | null;
 };
 
 type GameWithStats = GameWithMeta & {
@@ -102,7 +111,7 @@ export default async function HistorikkPage() {
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
     .select(
-      'game_id, tee_gender, course_handicap, result_summary, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, courses(name))',
+      'game_id, tee_gender, course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, tee_box_id, courses(name))',
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished');
@@ -114,6 +123,7 @@ export default async function HistorikkPage() {
     tee_gender: ScoringGender | null;
     course_handicap: number | null;
     result_summary: ResultSummary | null;
+    score_differential: number | null;
     games: GameRow;
   }>;
 
@@ -126,6 +136,14 @@ export default async function HistorikkPage() {
         .filter((c): c is string => c != null),
     ),
   ];
+  // #941 — tee ids for slope/CR (live differensial-fallback for ufryste runder).
+  const teeBoxIds = [
+    ...new Set(
+      rows
+        .map((r) => r.games?.tee_box_id)
+        .filter((tb): tb is string => tb != null),
+    ),
+  ];
   // #946 — player's tee-gender per game, for choosing par_mens/_ladies/_juniors.
   const genderByGame = new Map<string, ScoringGender | null>(
     rows.map((r) => [r.game_id, r.tee_gender]),
@@ -135,8 +153,10 @@ export default async function HistorikkPage() {
   // for the involved courses — parallel, they don't depend on each other.
   const scoresByGame: Map<string, ScoreRow[]> = new Map();
   const holesByCourse = new Map<string, Map<number, CourseHoleRow>>();
+  // #941 — tee_box_id → kjønns-ratinger, for live differensial-beregning.
+  const teeById = new Map<string, TeeBoxRatings>();
   if (gameIds.length > 0) {
-    const [scoresRes, holesRes] = await Promise.all([
+    const [scoresRes, holesRes, teeRes] = await Promise.all([
       supabase
         .from('scores')
         .select('game_id, hole_number, strokes')
@@ -147,10 +167,22 @@ export default async function HistorikkPage() {
         .from('course_holes')
         .select(`course_id, ${COURSE_HOLES_SELECT}`)
         .in('course_id', courseIds),
+      supabase
+        .from('tee_boxes')
+        .select(
+          'id, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
+        )
+        .in('id', teeBoxIds),
     ]);
 
     if (scoresRes.error) throw scoresRes.error;
     if (holesRes.error) throw holesRes.error;
+    if (teeRes.error) throw teeRes.error;
+
+    for (const tee of teeRes.data ?? []) {
+      const { id, ...ratings } = tee;
+      teeById.set(id, ratings as TeeBoxRatings);
+    }
 
     for (const score of scoresRes.data ?? []) {
       const existing = scoresByGame.get(score.game_id) ?? [];
@@ -177,6 +209,7 @@ export default async function HistorikkPage() {
       ...r.games,
       course_handicap: r.course_handicap,
       result_summary: r.result_summary,
+      score_differential: r.score_differential,
     }))
     .sort((a, b) => {
       const aTime = a.scheduled_tee_off_at
@@ -224,6 +257,16 @@ export default async function HistorikkPage() {
   const trend = buildScoringTrend(trendRounds);
   const trendSummary = trend ? summarizeTrendRounds(trendRounds) : null;
   const trendDateRange = trend ? formatTrendDateRange(trendWindow, locale) : '';
+
+  // #941 — handicap-form: WHS score-differensial-trend (frosset-eller-live, siste
+  // 20 komplette runder). Hele seksjonen bygges i én helper for å holde page-en
+  // lesbar; live-beregnede egne runder lazy-fryses etterpå (best-effort).
+  const diff = buildDifferentialSection(
+    gamesWithStats,
+    { teeById, genderByGame, holesByCourse, scoresByGame },
+    locale,
+  );
+  scheduleDifferentialFreeze(userId, diff.toFreeze);
 
   // #940 — per-bane-rollup: samme komplett-18-disiplin som formkurven/«Mine tall».
   // 9-hulls/ufullstendige runder gir `completeBrutto = null` og teller ikke.
@@ -282,6 +325,23 @@ export default async function HistorikkPage() {
             dateRangeLabel={trendDateRange}
             bruttoLabel={t('colBrutto')}
             nettoLabel={t('colNetto')}
+            startLabel={t('trendStart')}
+            nowLabel={t('trendNow')}
+            bestLabel={t('trendBest')}
+          />
+        </Card>
+      )}
+      {diff.trend && diff.summary && (
+        <Card>
+          <ScoringTrendChart
+            geometry={diff.trend}
+            summary={diff.summary}
+            ariaLabel={t('diffAriaLabel', { count: diff.count })}
+            heading={t('diffHeading')}
+            windowLabel={t('diffWindow', { count: diff.count })}
+            dateRangeLabel={diff.dateRange}
+            bruttoLabel={t('diffSeriesLabel')}
+            nettoLabel={t('diffSeriesLabel')}
             startLabel={t('trendStart')}
             nowLabel={t('trendNow')}
             bestLabel={t('trendBest')}
@@ -375,6 +435,147 @@ export default async function HistorikkPage() {
 function effectiveDate(g: GameWithStats): Date | null {
   const iso = g.scheduled_tee_off_at ?? g.ended_at;
   return iso ? new Date(iso) : null;
+}
+
+/**
+ * #941 — lazy-freeze: skriv live-beregnede differensialer for spillerens egne
+ * runder som ennå er NULL, etter at responsen er sendt (`after`). Service-rolle-
+ * klienten passerer guard_game_players_score_differential; `.is(..., null)` gjør
+ * skrivet idempotent (gjentatte visninger no-op-er). Best-effort — feil logges,
+ * aldri kastet, så render-stien er upåvirket.
+ */
+function scheduleDifferentialFreeze(
+  userId: string,
+  toFreeze: { gameId: string; differential: number }[],
+): void {
+  if (toFreeze.length === 0) return;
+  after(async () => {
+    try {
+      const admin = getAdminClient();
+      await Promise.allSettled(
+        toFreeze.map(({ gameId, differential }) =>
+          admin
+            .from('game_players')
+            .update({ score_differential: differential })
+            .eq('game_id', gameId)
+            .eq('user_id', userId)
+            .is('score_differential', null)
+            .then(({ error }) => {
+              if (error) throw error;
+            }),
+        ),
+      );
+    } catch (err) {
+      console.error('[historikk] lazy-freeze score_differential failed', err);
+    }
+  });
+}
+
+type DifferentialDeps = {
+  teeById: Map<string, TeeBoxRatings>;
+  genderByGame: Map<string, ScoringGender | null>;
+  holesByCourse: Map<string, Map<number, CourseHoleRow>>;
+  scoresByGame: Map<string, ScoreRow[]>;
+};
+
+/**
+ * #941 — WHS score-differensial per komplett 18-hulls-runde. Frosset verdi
+ * (`game_players.score_differential`) vinner; ellers beregnes den live fra rå
+ * runde-data (samme `computeScoreDifferential` som fryse-helperen — formelen bor
+ * ett sted). Runder uten 18 hull, slope/CR eller banehandicap hoppes over.
+ * `toFreeze` lister live-beregnede runder som bør lazy-fryses.
+ */
+function computeDifferentials(
+  games: GameWithStats[],
+  deps: DifferentialDeps,
+): {
+  byGame: Map<string, number>;
+  toFreeze: { gameId: string; differential: number }[];
+} {
+  const byGame = new Map<string, number>();
+  const toFreeze: { gameId: string; differential: number }[] = [];
+  for (const game of games) {
+    if (game.holeCount !== COMPLETE_ROUND_HOLES) continue;
+    if (game.score_differential != null) {
+      byGame.set(game.id, game.score_differential);
+      continue;
+    }
+    const tee =
+      game.tee_box_id != null ? deps.teeById.get(game.tee_box_id) : undefined;
+    const gender = deps.genderByGame.get(game.id) ?? null;
+    const rating = tee ? getRatingForGender(tee, gender ?? 'mens') : null;
+    if (!rating) continue;
+    const perHole = game.course_id
+      ? deps.holesByCourse.get(game.course_id)
+      : undefined;
+    const scoreByHole = new Map(
+      (deps.scoresByGame.get(game.id) ?? []).map((s) => [
+        s.hole_number,
+        s.strokes,
+      ]),
+    );
+    const holes = Array.from({ length: COMPLETE_ROUND_HOLES }, (_, i) => {
+      const holeRow = perHole?.get(i + 1);
+      if (!holeRow) return null;
+      return {
+        strokes: scoreByHole.get(i + 1) ?? null,
+        par: parForGender(holeRow, gender),
+        strokeIndex: holeRow.stroke_index,
+      };
+    });
+    if (holes.some((h) => h === null)) continue;
+    const differential = computeScoreDifferential({
+      holes: holes as {
+        strokes: number | null;
+        par: number;
+        strokeIndex: number;
+      }[],
+      courseHandicap: game.course_handicap,
+      slope: rating.slope,
+      courseRating: rating.courseRating,
+    });
+    if (differential == null) continue;
+    byGame.set(game.id, differential);
+    toFreeze.push({ gameId: game.id, differential });
+  }
+  return { byGame, toFreeze };
+}
+
+/**
+ * #941 — bygg handicap-form-seksjonen: differensial per runde (frosset-eller-live),
+ * så de SISTE 20 komplette rundene MED differensial, eldst→nyest (samme vindu som
+ * formkurven). Differensialen ligger i `brutto`-kanalen, ingen netto-serie.
+ * Returnerer chart-geometrien (null < 2 runder), antall, dato-spenn og lista over
+ * egne runder som bør lazy-fryses.
+ */
+function buildDifferentialSection(
+  games: GameWithStats[],
+  deps: DifferentialDeps,
+  locale: AppLocale,
+): {
+  trend: ReturnType<typeof buildScoringTrend>;
+  summary: TrendSummary | null;
+  dateRange: string;
+  count: number;
+  toFreeze: { gameId: string; differential: number }[];
+} {
+  const { byGame, toFreeze } = computeDifferentials(games, deps);
+  const window = games
+    .filter((g) => g.holeCount === COMPLETE_ROUND_HOLES && byGame.has(g.id))
+    .slice(0, MAX_TREND_ROUNDS)
+    .reverse();
+  const rounds: TrendRound[] = window.map((g) => ({
+    brutto: byGame.get(g.id) as number,
+    netto: null,
+  }));
+  const trend = buildScoringTrend(rounds);
+  return {
+    trend,
+    summary: trend ? summarizeTrendRounds(rounds) : null,
+    dateRange: trend ? formatTrendDateRange(window, locale) : '',
+    count: rounds.length,
+    toFreeze,
+  };
 }
 
 /**
