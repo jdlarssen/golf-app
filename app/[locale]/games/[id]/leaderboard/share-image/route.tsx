@@ -26,9 +26,11 @@ import type { AppLocale } from '@/i18n/routing';
  * image. Uses the admin client (RLS-bypass, like `getGameWithPlayers`); `p`
  * only selects which row to highlight on an already world-readable finished
  * leaderboard, so it exposes no new data.
+ *
+ * No `export const runtime` — the project's `cacheComponents` config forbids
+ * route-segment runtime config; the handler runs on the default Node runtime,
+ * which `ImageResponse` and the admin client both need.
  */
-
-export const runtime = 'nodejs';
 
 const WIDTH = 1080;
 const HEIGHT = 1500;
