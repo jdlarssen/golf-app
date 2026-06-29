@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.158 · Tell puttene dine</strong></summary>
+
+[#939](https://github.com/jdlarssen/golf-app/issues/939) — Du kan nå telle putter per hull i slag- og stablefordspill. Slå på «Registrer putter» på hull-skjermen, før puttene mens du spiller, og se putte-snittet ditt under Historikk.
+
+↳ /games · «Registrer putter»
+</details>
+
+<details>
 <summary><strong>1.157 · Foreslå en idé til Tørny</strong></summary>
 
 [#984](https://github.com/jdlarssen/golf-app/issues/984) — Nå kan du sende inn en idé til Tørny rett fra Klubbhuset. Blir den bygd, får du beskjed: «Vi bygde det du foreslo.»

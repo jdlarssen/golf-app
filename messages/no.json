@@ -297,6 +297,12 @@
       "coursesColAvg": "Snitt",
       "coursesColBest": "Beste",
       "coursesEmpty": "Spill en komplett 18-hulls-runde for å se snitt og beste per bane.",
+      "puttsHeading": "Putte-snitt",
+      "puttsSubtitle": "Snitt putter per komplett runde.",
+      "puttsColRounds": "Runder",
+      "puttsColAvg": "Snitt",
+      "puttsColBest": "Beste",
+      "puttsEmpty": "Før putter på en hel runde for å se snittet ditt.",
       "achievementsHeading": "Bragd-veggen",
       "achievementsSubtitle": "Bragdene dine gjennom årene, på ett brett.",
       "achievementsBadge_holeInOne": "Hole-in-one",
@@ -1827,6 +1833,13 @@
       "undoScore": "Angre",
       "undoScoreAriaLabel": "Nullstill scoren for {name}",
       "specificScoreCaption": "Trykk for å sette. X fjerner."
+    },
+    "putts": {
+      "toggleLabel": "Registrer putter",
+      "fieldLabel": "Putter",
+      "increaseAriaLabel": "Flere putter for {name}",
+      "decreaseAriaLabel": "Færre putter for {name}",
+      "valueAriaLabel": "{count} putter"
     },
     "sync": {
       "sending": "Sender…",

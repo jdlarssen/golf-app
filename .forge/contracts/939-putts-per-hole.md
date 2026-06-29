@@ -57,15 +57,15 @@
 
 ## Success-kriterier (evidens før avhuking)
 
-- [ ] **K1 — Schema:** `0123`-migrasjon lagt til; `putts int CHECK 0..10` finnes på `scores` i staging. *Evidens:* MCP `list_tables`/SQL viser kolonnen + constraint.
-- [ ] **K2 — RPC:** `upsert_score_if_newer` på staging tar `p_putts` (default null) og persisterer `putts`. *Evidens:* SQL-kall mot staging setter putts, `select` bekrefter; gammelt kall uten `p_putts` virker fortsatt.
-- [ ] **K3 — Sync-merge:** `writeScore` bevarer det ikke-oppgitte feltet; slag-skriving nuller ikke putts og omvendt. *Evidens:* `lib/sync/writeScore.test.ts` grønn (merge-cases).
-- [ ] **K4 — Sync-payload:** `syncWorker` sender `p_putts`; `realtime` merger `putts` inn i Dexie. *Evidens:* `tsc` grønn + lest diff; co-located sync-tester grønne.
-- [ ] **K5 — Format-gate:** `formatCapturesPutts` true kun for {solo_strokeplay, stableford, modified_stableford}. *Evidens:* helper-test grønn (true+false-cases via `it.each`).
+- [x] **K1 — Schema:** `0123`-migrasjon lagt til; `putts int CHECK 0..10` finnes på `scores` i staging. *Evidens:* staging SQL → `putts` integer nullable; CHECK `((putts IS NULL) OR (putts >= 0 AND putts <= 10))`. Commit `4cb3d2db`.
+- [x] **K2 — RPC:** `upsert_score_if_newer` på staging tar `p_putts` (default null) og persisterer `putts`. *Evidens:* args = `…, p_putts integer DEFAULT NULL`; 7-arg insert → `{strokes:4, putts:2, was_applied:true}`; 6-arg kall → `{strokes:5, putts:null, was_applied:true}` (default resolver, nuller putts by-design). Testrad ryddet (0 igjen).
+- [x] **K3 — Sync-merge:** `writeScore` bevarer det ikke-oppgitte feltet; slag-skriving nuller ikke putts og omvendt. *Evidens:* `writeScore.test.ts` «strokes/putts merge» 4 cases grønne (preserve/clear/new-row). Commit `a60be8dd`.
+- [x] **K4 — Sync-payload:** `syncWorker` sender `p_putts`; `realtime` + begge hydrerings-stier (`RealtimeMount`, HoleClient-seed, page-query) bærer `putts`; server-wins-overwrite beholder putts. *Evidens:* `tsc` grønn; diff lest.
+- [x] **K5 — Format-gate:** `formatCapturesPutts` true kun for {solo_strokeplay, stableford, modified_stableford}. *Evidens:* `formatCapturesPutts.test.ts` 28 cases grønne (true 3 / false 19 / exhaustive / «exactly three»).
 - [ ] **K6 — Opt-in UI:** «Registrer putter»-bryter vises kun i fangst-formater, default av, persister i `localStorage` per game; putts-felt avsløres når på og skriver via `writeScore`. *Evidens:* preview/staging-klikkrunde + skjermbilde; `tsc`/`lint` grønn.
 - [ ] **K7 — Putte-snitt:** Statistikk-fanen viser putte-snitt fra kvalifiserende runder; tom-tilstand når ingen putts. *Evidens:* `lib/stats/puttsStats.test.ts` grønn + ett render-test for kortet + staging-skjermbilde.
 - [ ] **K8 — Ingen RLS-regresjon:** putts arver `scores` rad-RLS (innsendt scorekort låser putts også); ingen ny kolonne-policy nødvendig. *Evidens:* lest RLS-policies + verifisert at submitted-state blokkerer putts-update mot staging.
-- [ ] **K9 — Bump/CHANGELOG:** `feat` minor-bump + én Funksjon-rad; humanizer kjørt på ny copy. *Evidens:* `package.json`-diff + CHANGELOG-diff.
+- [x] **K9 — Bump/CHANGELOG:** `feat` minor-bump 1.157→1.158 + Funksjon-rad «1.158 · Tell puttene dine»; humanizer kjørt (copy speiler eksisterende `coursesCol*`-stemme, «slag- og stablefordspill» korrekt gruppesammensetning, «under Historikk» verifisert mot faktisk hub-label). *Evidens:* `package.json` 1.158.0 + CHANGELOG-diff.
 - [ ] **K10 — Prod-rollout (CONFIRM-GATED):** `0123` (kolonne + RPC) påført prod ETTER eksplisitt eier-bekreftelse; deretter merge. *Evidens:* eier-godkjenning i tråd + MCP-apply-bekreftelse.
 
 ## Gates (kjør scoped til endring)

@@ -297,6 +297,12 @@
       "coursesColAvg": "Avg",
       "coursesColBest": "Best",
       "coursesEmpty": "Play a full 18-hole round to see your average and best per course.",
+      "puttsHeading": "Putting average",
+      "puttsSubtitle": "Average putts per complete round.",
+      "puttsColRounds": "Rounds",
+      "puttsColAvg": "Avg",
+      "puttsColBest": "Best",
+      "puttsEmpty": "Track putts for a full round to see your average.",
       "achievementsHeading": "The trophy wall",
       "achievementsSubtitle": "Every brag you've collected over the years, all in one place.",
       "achievementsBadge_holeInOne": "Hole-in-one",
@@ -1827,6 +1833,13 @@
       "undoScore": "Undo",
       "undoScoreAriaLabel": "Reset the score for {name}",
       "specificScoreCaption": "Tap to set. X clears."
+    },
+    "putts": {
+      "toggleLabel": "Track putts",
+      "fieldLabel": "Putts",
+      "increaseAriaLabel": "More putts for {name}",
+      "decreaseAriaLabel": "Fewer putts for {name}",
+      "valueAriaLabel": "{count} putts"
     },
     "sync": {
       "sending": "Sending…",

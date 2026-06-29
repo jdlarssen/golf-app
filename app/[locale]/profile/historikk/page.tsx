@@ -28,6 +28,11 @@ import {
   computeSeasonStats,
   type SeasonRoundInput,
 } from '@/lib/stats/seasonStats';
+import { PuttsStatPanel } from '@/components/stats/PuttsStatPanel';
+import {
+  computePuttsStats,
+  type PuttsRoundInput,
+} from '@/lib/stats/puttsStats';
 import {
   countRoundAchievements,
   parForGender,
@@ -77,6 +82,7 @@ type ScoreRow = {
   game_id: string;
   hole_number: number;
   strokes: number | null;
+  putts: number | null;
 };
 
 /** Et avsluttet spill beriket med spillerens egne tall (#866). */
@@ -162,7 +168,7 @@ export default async function HistorikkPage() {
     const [scoresRes, holesRes, teeRes] = await Promise.all([
       supabase
         .from('scores')
-        .select('game_id, hole_number, strokes')
+        .select('game_id, hole_number, strokes, putts')
         .eq('user_id', userId) // userId is string — narrowed after redirect guard above
         .in('game_id', gameIds)
         .not('strokes', 'is', null),
@@ -284,6 +290,23 @@ export default async function HistorikkPage() {
   }));
   const courseStats = computeCourseStats(courseRounds);
 
+  // #939 — putte-snitt: snitt putter per komplett 18-hulls-runde (samme
+  // komplett-18-disiplin som formkurven/per-bane). Kun hull med en putt-verdi
+  // teller; en runde kvalifiserer når alle 18 hull har putter ført.
+  const puttsRounds: PuttsRoundInput[] = gamesWithStats.map((game) => ({
+    recordedPutts: (scoresByGame.get(game.id) ?? [])
+      .map((s) => s.putts)
+      .filter((p): p is number => p != null),
+  }));
+  const puttsStats = computePuttsStats(puttsRounds);
+  const puttsAvgDisplay =
+    puttsStats.avgPuttsPerRound != null
+      ? formatNumber(puttsStats.avgPuttsPerRound, locale, {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        })
+      : '';
+
   // #946 — sesong-recap: bøtt ferdige runder på Oslo-kalenderår. Bragder regnes
   // per runde fra rå scorer mot kjønns-par (uavhengig av modus/sideturnering);
   // snitt/beste følger samme komplett-18-disiplin som resten av huben.
@@ -382,6 +405,16 @@ export default async function HistorikkPage() {
           turkey: t('achievementsBadge_turkey'),
           snowman: t('achievementsBadge_snowman'),
         }}
+      />
+      <PuttsStatPanel
+        stats={puttsStats}
+        heading={t('puttsHeading')}
+        subtitle={t('puttsSubtitle')}
+        avgDisplay={puttsAvgDisplay}
+        avgLabel={t('puttsColAvg')}
+        bestLabel={t('puttsColBest')}
+        roundsLabel={t('puttsColRounds')}
+        emptyLabel={t('puttsEmpty')}
       />
       <CoursePerformancePanel
         courses={courseStats}
