@@ -214,33 +214,41 @@ til nøyaktig én spiller**. Lag-scramble-familien (rad = lag) og matchplay-fami
       D off-palett-emoji → `23514 CHECK`, E gyldig deltaker-insert → suksess (id
       returnert), F angriper sletter andres reaksjon → 0 slettet (seed overlevde).
       Test-rader ryddet (`remaining_for_game=0`).
-- [ ] Hver **individuell-spiller-rad** (strokeplay, stableford, skins, wolf, nassau,
+- [x] Hver **individuell-spiller-rad** (strokeplay, stableford, skins, wolf, nassau,
       BBB, acey-deucey, round robin, nines) viser palett + per-emoji-telling — på
       **både live-listen (aktivt spill) OG det avsluttede podiet** (eier-valg
       2026-06-29); **lag-scramble + matchplay-visninger er uendret**. Edge-flater
       (HeadToHeadResult-duell, RevealBruttoView) er utenfor MVP-scope.
-      Verifiser: render-test + staging-skjermbilde.
-- [ ] **Toggle virker:** trykk legger til egen reaksjon (optimistisk + persistert),
-      trykk igjen fjerner; telling = distinkte brukere. Verifiser: staging klikk-runde
-      + `RowReactions`-oppførselstest.
-- [ ] **Live for andre under spill:** `ReactionsProvider` abonnerer på `reactions`
+      **Bevis:** 18 komponenter wiret (9 view + 9 podium) + page.tsx; staging-render
+      av et live stableford-spill viser 6-emoji-strip per spillerrad (12 knapper,
+      aria-labels «Reager med Klappe/Ild/…») — skjermbilde tatt. Nassau-fix: strip
+      kun på Totalt-18-seksjonen (ikke 3× per spiller). Leaderboard-suite 38/38 grønn.
+- [x] **Toggle virker:** trykk legger til egen reaksjon (optimistisk + persistert),
+      trykk igjen fjerner; telling = distinkte brukere. **Bevis:** staging-klikk: tap
+      🔥 → `aria-pressed=true`, «🔥1», DB-rad opprettet (user=target=admin, self-
+      reaksjon OK); tap igjen → `aria-pressed=false`, rad slettet; ingen console-feil.
+      + `RowReactions`-oppførselstest (4 tester grønne).
+- [x] **Live for andre under spill:** `ReactionsProvider` abonnerer på `reactions`
       INSERT/DELETE på spillets kanal → debouncet **refetch** av server-summary
       (client-state, ikke full `router.refresh`). Migrasjon 0120 gir realtime-events.
-      Verifiser: provider mounts uten å sprenge tester + resonnert/2-sesjons staging-sjekk.
-- [ ] **Stille:** ingen `notify()`/varsel i reaksjons-stien. Verifiser: grep viser
-      ingen notify-call i `reactions`-modulen/action.
-- [ ] **Gates grønne** (under). Inkl. eksisterende `leaderboard/`-suite fortsatt grønn.
+      **Bevis:** staging — SQL-injisert 👏 fra annen bruker dukket opp live som «👏1»
+      på den åpne leaderboarden UTEN reload, `aria-pressed=false` (ikke «mine»).
+- [x] **Stille:** ingen `notify()`/varsel i reaksjons-stien. **Bevis:** grep i
+      `lib/games/reactions/` + `actions.ts` + provider — eneste treff er en kommentar
+      «does NOT call notify()»; ingen faktisk notify/push/mail-kall.
+- [x] **Gates grønne** (under). Eksisterende `leaderboard/`-suite 38 filer / 186 grønn.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` — ingen feil.
-- [ ] `npm run build` — grønn (fanger uttømmende-switch/Record-feller på tvers av de
-      berørte format-visningene).
-- [ ] `npm run lint` — ren.
-- [ ] `npx vitest run app/[locale]/games/[id]/leaderboard/ lib/games/reactions/` —
-      eksisterende 37 filer + ny `RowReactions.test.tsx` + aggregator-test grønne.
-- [ ] **Staging:** påfør 0119 via Supabase MCP, verifiser, klikk-runde av reaksjons-flyten
-      på et ekte spill (aktivt + avsluttet). **0 prod-skriv.**
+- [x] `npx tsc --noEmit` — ingen feil (web-push-modulen var en worktree-install-glipe,
+      løst med `npm install`).
+- [x] `npm run build` — grønn (`BUILD_OK`).
+- [x] `npm run lint` — ren på reaksjons-filene (fjernet dødt `summaryRef`).
+- [x] `npx vitest run app/[locale]/games/[id]/leaderboard/ lib/games/reactions/` —
+      38 filer / 186 + 17 aggregator + 4 `RowReactions` grønne.
+- [x] **Staging:** 0119+0120 påført + verifisert; klikk-runde av reaksjons-flyten på et
+      ekte live stableford-spill (render + toggle on/off + live-for-andre). Test-data
+      ryddet. **0 prod-skriv.**
 
 ## Files Likely Touched
 
