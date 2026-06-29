@@ -6,6 +6,7 @@ type ScoreRowFromDb = {
   user_id: string;
   hole_number: number;
   strokes: number | null;
+  putts: number | null;
   entered_by: string;
   client_updated_at: string;
   updated_at: string;
@@ -27,6 +28,7 @@ async function mergeIncoming(row: ScoreRowFromDb): Promise<void> {
     userId: row.user_id,
     holeNumber: row.hole_number,
     strokes: row.strokes,
+    putts: row.putts ?? null, // #939: coalesce — pre-migration rows lack the field
     enteredBy: row.entered_by,
     clientUpdatedAt: row.client_updated_at,
     serverUpdatedAt: row.updated_at,

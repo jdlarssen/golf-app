@@ -6,6 +6,13 @@ export interface LocalScore {
   userId: string;
   holeNumber: number;
   strokes: number | null;
+  /**
+   * Optional per-hole putt count (#939). Non-indexed, so adding it needs no
+   * Dexie version bump — rows written before this field shipped read back as
+   * `undefined` and are coalesced to null on read/merge. Lives on the same row
+   * as strokes and syncs together via upsert_score_if_newer's p_putts param.
+   */
+  putts: number | null;
   enteredBy: string;
   clientUpdatedAt: string;
   serverUpdatedAt: string | null; // null until first successful sync of this client_updated_at

@@ -141,6 +141,7 @@ async function writeScoreInPage(
         userId: a.userId,
         holeNumber: a.holeNumber,
         strokes: a.strokes,
+        putts: null,
         enteredBy: a.userId,
         clientUpdatedAt,
         serverUpdatedAt: null,

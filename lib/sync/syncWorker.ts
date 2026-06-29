@@ -45,6 +45,10 @@ export async function drainQueue(): Promise<{
         p_strokes: score.strokes as number,
         p_entered_by: score.enteredBy,
         p_client_updated_at: score.clientUpdatedAt,
+        // #939: putts rides the same LWW row. Cast like p_strokes — null/undefined
+        // are both valid (the RPC param defaults to null). Always send the current
+        // value so a stroke-only edit never nulls a stored putt count.
+        p_putts: (score.putts ?? null) as number,
       });
 
       if (error) {
@@ -124,6 +128,9 @@ export async function drainQueue(): Promise<{
 
           await localDb.scores.update(item.scoreId, {
             strokes: row.strokes,
+            // #939: keep putts in sync with the server-wins row so a later
+            // local edit merges the authoritative putt count, not a stale one.
+            putts: row.putts ?? null,
             enteredBy: row.entered_by,
             clientUpdatedAt: row.client_updated_at,
             serverUpdatedAt: row.updated_at,

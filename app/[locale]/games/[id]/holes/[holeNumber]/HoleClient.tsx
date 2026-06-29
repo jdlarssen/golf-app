@@ -51,6 +51,7 @@ export type ClientPlayer = {
   initial: string;
   extraStrokes: number;
   initialStrokes: number | null;
+  initialPutts: number | null;
   initialClientUpdatedAt: string | null;
   initialServerUpdatedAt: string | null;
   submitted: boolean;
@@ -297,6 +298,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             userId: p.userId,
             holeNumber: currentHole,
             strokes: p.initialStrokes,
+            putts: p.initialPutts, // #939
             enteredBy: '',
             clientUpdatedAt: seedClientUpdatedAt,
             serverUpdatedAt: p.initialServerUpdatedAt,

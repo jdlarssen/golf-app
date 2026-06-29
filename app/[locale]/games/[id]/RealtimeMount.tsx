@@ -17,7 +17,7 @@ export function RealtimeMount({ gameId }: { gameId: string }) {
       const { data } = await supabase
         .from('scores')
         .select(
-          'game_id, user_id, hole_number, strokes, entered_by, client_updated_at, updated_at',
+          'game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, updated_at',
         )
         .eq('game_id', gameId);
       if (!data) return;
@@ -31,6 +31,7 @@ export function RealtimeMount({ gameId }: { gameId: string }) {
           userId: row.user_id,
           holeNumber: row.hole_number,
           strokes: row.strokes,
+          putts: row.putts ?? null, // #939
           enteredBy: row.entered_by,
           clientUpdatedAt: row.client_updated_at,
           serverUpdatedAt: row.updated_at,

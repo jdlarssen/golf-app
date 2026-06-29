@@ -4,7 +4,16 @@ interface WriteScoreArgs {
   gameId: string;
   userId: string;
   holeNumber: number;
-  strokes: number | null;
+  /**
+   * Strokes and putts (#939) both live on the same scores row. A write may
+   * carry one or both: an OMITTED field (`undefined`) is preserved from the
+   * existing local row, while an explicit `null` clears it. This lets the
+   * stroke-entry handler and the putt-entry handler each write their own field
+   * without clobbering the other — and guarantees the RPC always receives the
+   * full current (strokes, putts) pair, since LWW is over the whole row.
+   */
+  strokes?: number | null;
+  putts?: number | null;
   enteredBy: string;
 }
 
@@ -12,18 +21,16 @@ interface WriteScoreArgs {
  * Compute a strictly-increasing clientUpdatedAt for this (gameId, userId,
  * holeNumber) triple. The server RPC applies writes only on strict >, so two
  * edits at the same millisecond would cause the second RPC call to be rejected
- * and the syncWorker to overwrite the local strokes with the older server row —
+ * and the syncWorker to overwrite the local row with the older server row —
  * silently discarding the player's latest tap.
  *
- * Fix: read the current Dexie row BEFORE writing. If the wall-clock timestamp
- * is <= the stored one (collision or clock skew), bump to stored + 1 ms. This
- * is a single indexed get on the primary key, so it is cheap.
+ * Takes the already-read existing row (writeScore reads it once for the merge),
+ * so this is pure arithmetic — no extra Dexie get.
  */
-async function strictlyIncreasingTimestamp(
-  id: string,
+function strictlyIncreasingTimestamp(
+  existing: LocalScore | undefined,
   nowIso: string,
-): Promise<string> {
-  const existing = await localDb.scores.get(id);
+): string {
   if (!existing) return nowIso;
   if (nowIso > existing.clientUpdatedAt) return nowIso;
   // nowIso is <= stored → bump stored by 1 ms to guarantee strict >.
@@ -33,14 +40,17 @@ async function strictlyIncreasingTimestamp(
 export async function writeScore(args: WriteScoreArgs): Promise<LocalScore> {
   const id = scoreKey(args.gameId, args.userId, args.holeNumber);
   const nowIso = new Date().toISOString();
-  const clientUpdatedAt = await strictlyIncreasingTimestamp(id, nowIso);
+  const existing = await localDb.scores.get(id);
+  const clientUpdatedAt = strictlyIncreasingTimestamp(existing, nowIso);
 
   const row: LocalScore = {
     id,
     gameId: args.gameId,
     userId: args.userId,
     holeNumber: args.holeNumber,
-    strokes: args.strokes,
+    // Merge: an omitted field keeps the existing value; explicit null clears it.
+    strokes: args.strokes !== undefined ? args.strokes : (existing?.strokes ?? null),
+    putts: args.putts !== undefined ? args.putts : (existing?.putts ?? null),
     enteredBy: args.enteredBy,
     clientUpdatedAt,
     serverUpdatedAt: null,

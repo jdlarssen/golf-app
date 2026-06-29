@@ -299,6 +299,55 @@ export function supportsWithdrawal(mode: GameMode): boolean {
 }
 
 /**
+ * Putt-registrering (#939): hvilke format viser per-hull putts-felt og putte-
+ * snitt. Kun individuelle slag-/stableford-format der spilleren har egen ball
+ * og fører egen score per hull — da er putts en ren personlig ball-striking-
+ * statistikk. Eier-valg 2026-06-29 («individuelle slag/stableford», ikke «alle»).
+ *
+ * IKKE fangst i v1 (bevisst — lett å utvide senere):
+ *  - best ball + scramble-/shamble-/patsome-familien: delt eller lag-aggregert
+ *    ball → ingen ren per-spiller-putt.
+ *  - matchplay-familien: hull-for-hull-duell, ingen total-score-flate å henge
+ *    putte-snittet på.
+ *  - pott-format (wolf/nassau/skins/nines/bbb/round_robin/acey_deucey): egen
+ *    ball, men ikke «slag/stableford» — utelatt per eier-valg.
+ *
+ * Eksplisitt switch med `never`-uttømming: en ny GameMode MÅ klassifiseres her.
+ */
+export function formatCapturesPutts(mode: GameMode): boolean {
+  switch (mode) {
+    case 'solo_strokeplay':
+    case 'stableford':
+    case 'modified_stableford':
+      return true;
+    case 'best_ball':
+    case 'singles_matchplay':
+    case 'fourball_matchplay':
+    case 'foursomes_matchplay':
+    case 'greensome_matchplay':
+    case 'chapman_matchplay':
+    case 'gruesome_matchplay':
+    case 'texas_scramble':
+    case 'ambrose':
+    case 'florida_scramble':
+    case 'shamble':
+    case 'patsome':
+    case 'wolf':
+    case 'nassau':
+    case 'skins':
+    case 'bingo_bango_bongo':
+    case 'nines':
+    case 'round_robin':
+    case 'acey_deucey':
+      return false;
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
  * Mode-spesifikk config som lagres i `games.mode_config` (JSONB).
  * Diskrimineres på `kind` slik at konsumenter narrower trygt.
  *

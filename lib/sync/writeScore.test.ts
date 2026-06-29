@@ -10,6 +10,7 @@ type FakeRow = {
   userId: string;
   holeNumber: number;
   strokes: number | null;
+  putts: number | null;
   enteredBy: string;
   clientUpdatedAt: string;
   serverUpdatedAt: string | null;
@@ -96,6 +97,7 @@ describe('writeScore', () => {
       userId: 'u1',
       holeNumber: 5,
       strokes: 4,
+      putts: null,
       enteredBy: 'u1',
       clientUpdatedAt: frozenTs,
       serverUpdatedAt: null,
@@ -137,6 +139,7 @@ describe('writeScore', () => {
       userId: 'u2',
       holeNumber: 1,
       strokes: 3,
+      putts: null,
       enteredBy: 'u2',
       clientUpdatedAt: farFuture,
       serverUpdatedAt: null,
@@ -171,5 +174,80 @@ describe('writeScore', () => {
     // Should be a normal wall-clock timestamp — between before and after.
     expect(result.clientUpdatedAt >= before).toBe(true);
     expect(result.clientUpdatedAt <= after).toBe(true);
+  });
+
+  // ── Putts merge (#939) ──────────────────────────────────────────────────────
+  // strokes and putts share one row. A write carrying only one field must
+  // preserve the other from the existing row; an explicit null clears.
+  describe('strokes/putts merge', () => {
+    function seed(partial: Partial<FakeRow> & { id: string }) {
+      fakeScores.set(partial.id, {
+        gameId: 'g',
+        userId: 'u',
+        holeNumber: 1,
+        strokes: null,
+        putts: null,
+        enteredBy: 'u',
+        clientUpdatedAt: '2026-06-30T10:00:00.000Z',
+        serverUpdatedAt: null,
+        ...partial,
+      });
+    }
+
+    it('writing strokes only preserves an existing putt count', async () => {
+      const { writeScore } = await import('./writeScore');
+      seed({ id: 'g:u:1', strokes: 5, putts: 2 });
+      const result = await writeScore({
+        gameId: 'g',
+        userId: 'u',
+        holeNumber: 1,
+        strokes: 6,
+        enteredBy: 'u',
+      });
+      expect(result.strokes).toBe(6);
+      expect(result.putts).toBe(2); // preserved
+    });
+
+    it('writing putts only preserves an existing stroke count', async () => {
+      const { writeScore } = await import('./writeScore');
+      seed({ id: 'g:u:1', strokes: 5, putts: null });
+      const result = await writeScore({
+        gameId: 'g',
+        userId: 'u',
+        holeNumber: 1,
+        putts: 2,
+        enteredBy: 'u',
+      });
+      expect(result.strokes).toBe(5); // preserved
+      expect(result.putts).toBe(2);
+    });
+
+    it('an explicit null clears the field; the omitted field is preserved', async () => {
+      const { writeScore } = await import('./writeScore');
+      seed({ id: 'g:u:1', strokes: 5, putts: 2 });
+      // Clear strokes (onClear) — putts must survive.
+      const result = await writeScore({
+        gameId: 'g',
+        userId: 'u',
+        holeNumber: 1,
+        strokes: null,
+        enteredBy: 'u',
+      });
+      expect(result.strokes).toBeNull();
+      expect(result.putts).toBe(2);
+    });
+
+    it('a brand-new row keeps putts null when only strokes are written', async () => {
+      const { writeScore } = await import('./writeScore');
+      const result = await writeScore({
+        gameId: 'g',
+        userId: 'u',
+        holeNumber: 9,
+        strokes: 4,
+        enteredBy: 'u',
+      });
+      expect(result.strokes).toBe(4);
+      expect(result.putts).toBeNull();
+    });
   });
 });

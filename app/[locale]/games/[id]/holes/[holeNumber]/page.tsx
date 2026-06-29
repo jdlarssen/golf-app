@@ -52,6 +52,7 @@ type HoleRow = {
 type ScoreRow = {
   user_id: string;
   strokes: number | null;
+  putts: number | null;
   client_updated_at: string | null;
   updated_at: string | null;
 };
@@ -179,7 +180,7 @@ export default async function HolePage({ params }: { params: Params }) {
         .single<HoleRow>(),
       supabase
         .from('scores')
-        .select('user_id, strokes, client_updated_at, updated_at')
+        .select('user_id, strokes, putts, client_updated_at, updated_at')
         .eq('game_id', id)
         .eq('hole_number', holeNumber)
         .in('user_id', playerIds)
@@ -578,6 +579,7 @@ export default async function HolePage({ params }: { params: Params }) {
         initial: String(teamNum),
         extraStrokes: strokesForHole(teamHCP, hole.stroke_index),
         initialStrokes: captainScoreRow?.strokes ?? null,
+        initialPutts: captainScoreRow?.putts ?? null,
         initialClientUpdatedAt: captainScoreRow?.client_updated_at ?? null,
         initialServerUpdatedAt: captainScoreRow?.updated_at ?? null,
         submitted: anyTeamMemberSubmitted,
@@ -607,6 +609,7 @@ export default async function HolePage({ params }: { params: Params }) {
         initial: nameInitials(name),
         extraStrokes: strokesForHole(ch, hole.stroke_index),
         initialStrokes: scoreRow?.strokes ?? null,
+        initialPutts: scoreRow?.putts ?? null,
         initialClientUpdatedAt: scoreRow?.client_updated_at ?? null,
         initialServerUpdatedAt: scoreRow?.updated_at ?? null,
         submitted: p.submitted_at != null,

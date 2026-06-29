@@ -56,6 +56,7 @@ function makePlayers(n = 4): HoleClientProps['players'] {
     initial: `P`,
     extraStrokes: 0,
     initialStrokes: null,
+    initialPutts: null,
     initialClientUpdatedAt: null,
     initialServerUpdatedAt: null,
     submitted: false,
