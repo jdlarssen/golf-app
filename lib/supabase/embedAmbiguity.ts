@@ -22,10 +22,10 @@
  *   WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'
  *   GROUP BY 1, 2 HAVING count(*) > 1;
  *
- * As of 2026-06-21 (verified against live staging `snwmueecmfqqdurxedxv`), the
- * ONLY multi-FK relationships in the whole public schema are between `users`
- * and the nine tables below — so `users` is the only relation that can be an
- * ambiguous embed.
+ * As of 2026-06-29 (verified against prod `glofubopddkjhymcbaph`), the ONLY
+ * multi-FK relationships in the whole public schema are between `users` and the
+ * ten tables below — so `users` is the only relation that can be an ambiguous
+ * embed.
  */
 
 /**
@@ -43,6 +43,7 @@ export const MULTI_FK_TO_USERS: readonly string[] = [
   'wolf_hole_choices', // wolf_user_id, partner_user_id, entered_by
   'bingo_bango_bongo_holes', // bingo_user_id, bango_user_id, bongo_user_id, entered_by
   'courses', // created_by, updated_by
+  'reactions', // user_id, target_user_id
 ] as const;
 
 const MULTI_FK_SET = new Set(MULTI_FK_TO_USERS);
