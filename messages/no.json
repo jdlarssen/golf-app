@@ -2752,8 +2752,8 @@
       "playerClubsLabel": "Dine klubber",
       "playerNoClub": "Ikke med i en klubb ennå",
       "playerToolsLabel": "Verktøy",
-      "playerForeslaaIde": "Foreslå en idé",
-      "playerForeslaaIdeMeta": "Si hva du ønsker deg av Tørny"
+      "playerForeslaaIde": "Har du en idé?",
+      "playerForeslaaIdeMeta": "Foreslå en funksjon til Tørny"
     },
     "game": {
       "errors": {
