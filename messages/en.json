@@ -2535,6 +2535,29 @@
       "spinnerLabel": "Loading"
     }
   },
+  "foreslaaIde": {
+    "pageTitle": "Suggest a feature",
+    "pageSubtitle": "We build Tørny around what you actually want.",
+    "backLabel": "Club house",
+    "fieldLabel": "What would you like Tørny to do?",
+    "fieldPlaceholder": "Write your idea here …",
+    "fieldHelper": "Max 2000 characters. We read everything.",
+    "submitLabel": "Submit",
+    "submitPending": "Sending …",
+    "successMessage": "Thanks! We've received your idea.",
+    "sentFollowUp": "We'll take a look and let you know when we've built it.",
+    "errorEmpty": "Please write something before submitting."
+  },
+  "adminIdeer": {
+    "pageTitle": "Submitted ideas",
+    "pageSubtitle": "Ideas from your players. Mark one as built and the player gets a heads-up.",
+    "backLabel": "Admin",
+    "empty": "No ideas yet.",
+    "unknownSubmitter": "Unknown player",
+    "markAsBuilt": "Mark as built",
+    "markingBuilt": "Marking …",
+    "statusBuilt": "Built"
+  },
   "courseForm": {
     "errors": {
       "name_required": "The course must have a name.",
@@ -2696,6 +2719,9 @@
       "tilesFormats": "Formats",
       "tilesKlubber": "Clubs",
       "tilesSpillformater": "Game formats",
+      "tilesIdeer": "Submitted ideas",
+      "metaIdeer": "{n, plural, one {# new idea} other {# new ideas}}",
+      "metaIdeerNone": "No unbuilt ideas",
       "metaActive": "{n, plural, one {# active} other {# active}}",
       "metaPlanned": "{n, plural, one {# planned} other {# planned}}",
       "metaActiveAndPlanned": "{active, plural, one {# active} other {# active}} · {planned, plural, one {# planned} other {# planned}}",
@@ -2725,7 +2751,9 @@
       "playerCupRow": "{n, plural, one {Your cup} other {Your cups}} ({n})",
       "playerClubsLabel": "Your clubs",
       "playerNoClub": "Not in a club yet",
-      "playerToolsLabel": "Tools"
+      "playerToolsLabel": "Tools",
+      "playerForeslaaIde": "Suggest a feature",
+      "playerForeslaaIdeMeta": "Tell us what you want from Tørny"
     },
     "game": {
       "errors": {
@@ -4511,6 +4539,27 @@
       "bodyMatchplay": "The round in <g>{game}</g> is over. {res, select, won{You won <r>{result}</r> over <o>{opp}</o>. Congratulations on the win!} lost{You lost <r>{result}</r> to <o>{opp}</o>. Well played. Maybe a rematch next round?} other{The match against <o>{opp}</o> ended all square (<r>AS</r>). A close one. Maybe next time.}}",
       "bodySoloStrokeplay": "The round in <g>{game}</g> is over. You finished in <p>{rank, selectordinal, one{#st} two{#nd} few{#rd} other{#th}} place{total, plural, =0{} other{ out of #}}</p> with <pts>{net} net strokes</pts> ({gross} gross).{kind, select, win{ Congratulations on the win!} solid{ Solid finish!} other{}}",
       "bodyTexasScramble": "The round in <g>{game}</g> is over. The team finished in <p>{rank, selectordinal, one{#st} two{#nd} few{#rd} other{#th}} place{total, plural, =0{} other{ out of # teams}}</p> with <pts>{net} net strokes</pts> ({gross} gross).{kind, select, win{ Congratulations on the win!} solid{ Solid finish!} other{}}{hasPartners, select, yes{ You played with <pa>{partnerList}</pa>.} other{}}"
+    },
+    "ideaSubmitted": {
+      "subject": "New idea from {submitterName}",
+      "heading": "New idea from a player",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "body": "<strong>{submitterName}</strong> has submitted an idea via Suggest a Feature.",
+      "bodyText": "{submitterName} has submitted an idea via Suggest a Feature.",
+      "openAdmin": "View idea in admin",
+      "openAdminText": "View idea in admin: {url}",
+      "footer": "You receive this because you are an admin. Log in at <link>tornygolf.no</link> for a full overview."
+    },
+    "ideaBuilt": {
+      "subject": "We built what you suggested",
+      "heading": "We built it!",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "body": "Your idea is now part of Tørny. Thanks for taking the time to tell us. That's exactly how the app gets better.",
+      "openButton": "See what's new",
+      "openButtonText": "See what's new: {url}",
+      "footer": "You receive this because you submitted an idea. Log in at <link>tornygolf.no</link> to see what's happening."
     }
   },
   "SyncBanner": {

@@ -2535,6 +2535,29 @@
       "spinnerLabel": "Laster"
     }
   },
+  "foreslaaIde": {
+    "pageTitle": "Foreslå en idé",
+    "pageSubtitle": "Vi bygger Tørny etter hva dere ønsker dere.",
+    "backLabel": "Klubbhuset",
+    "fieldLabel": "Hva ønsker du deg av Tørny?",
+    "fieldPlaceholder": "Skriv idéen din her …",
+    "fieldHelper": "Maks 2000 tegn. Vi leser alt.",
+    "submitLabel": "Send inn",
+    "submitPending": "Sender …",
+    "successMessage": "Takk! Vi har fått idéen din.",
+    "sentFollowUp": "Vi ser på det og sier ifra når vi har bygd det.",
+    "errorEmpty": "Du må skrive noe før du sender inn."
+  },
+  "adminIdeer": {
+    "pageTitle": "Innsendte ideer",
+    "pageSubtitle": "Ideer fra spillerne. Marker en som bygd, så får spilleren beskjed.",
+    "backLabel": "Admin",
+    "empty": "Ingen ideer ennå.",
+    "unknownSubmitter": "Ukjent spiller",
+    "markAsBuilt": "Marker som bygd",
+    "markingBuilt": "Markerer …",
+    "statusBuilt": "Bygd"
+  },
   "courseForm": {
     "errors": {
       "name_required": "Banen må ha et navn.",
@@ -2696,6 +2719,9 @@
       "tilesFormats": "Format-styring",
       "tilesKlubber": "Klubber",
       "tilesSpillformater": "Spillformater",
+      "tilesIdeer": "Innsendte ideer",
+      "metaIdeer": "{n, plural, one {# ny idé} other {# nye ideer}}",
+      "metaIdeerNone": "Ingen ubygde ideer",
       "metaActive": "{n, plural, one {# aktiv} other {# aktive}}",
       "metaPlanned": "{n, plural, one {# planlagt} other {# planlagte}}",
       "metaActiveAndPlanned": "{active, plural, one {# aktiv} other {# aktive}} · {planned, plural, one {# planlagt} other {# planlagte}}",
@@ -2725,7 +2751,9 @@
       "playerCupRow": "{n, plural, one {Cupen din} other {Cupene dine}} ({n})",
       "playerClubsLabel": "Dine klubber",
       "playerNoClub": "Ikke med i en klubb ennå",
-      "playerToolsLabel": "Verktøy"
+      "playerToolsLabel": "Verktøy",
+      "playerForeslaaIde": "Foreslå en idé",
+      "playerForeslaaIdeMeta": "Si hva du ønsker deg av Tørny"
     },
     "game": {
       "errors": {
@@ -4511,6 +4539,27 @@
       "bodyMatchplay": "Runden i <g>{game}</g> er ferdig. {res, select, won{Du vant <r>{result}</r> over <o>{opp}</o>. Gratulerer med seieren!} lost{Du tapte <r>{result}</r> mot <o>{opp}</o>. Godt spilt. Kanskje revansje neste runde?} other{Matchen mot <o>{opp}</o> endte uavgjort (<r>AS</r>). En jevn match. Kanskje neste gang.}}",
       "bodySoloStrokeplay": "Runden i <g>{game}</g> er ferdig. Du endte på <p>{rank}. plass{total, plural, =0{} other{ av #}}</p> med <pts>{net} slag netto</pts> ({gross} brutto).{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}",
       "bodyTexasScramble": "Runden i <g>{game}</g> er ferdig. Laget endte på <p>{rank}. plass{total, plural, =0{} other{ av # lag}}</p> med <pts>{net} slag netto</pts> ({gross} brutto).{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}{hasPartners, select, yes{ Du spilte med <pa>{partnerList}</pa>.} other{}}"
+    },
+    "ideaSubmitted": {
+      "subject": "Ny idé fra {submitterName}",
+      "heading": "Ny idé fra en spiller",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "body": "<strong>{submitterName}</strong> har sendt inn en idé via Foreslå en idé.",
+      "bodyText": "{submitterName} har sendt inn en idé via Foreslå en idé.",
+      "openAdmin": "Se idéen i admin",
+      "openAdminText": "Se idéen i admin: {url}",
+      "footer": "Du får denne meldingen fordi du er admin. Logg inn på <link>tornygolf.no</link> for full oversikt."
+    },
+    "ideaBuilt": {
+      "subject": "Vi bygde det du foreslo",
+      "heading": "Vi bygde det!",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "body": "Idéen din er nå en del av Tørny. Takk for at du tok deg tid til å si fra. Det er akkurat slik appen blir bedre.",
+      "openButton": "Se hva som er nytt",
+      "openButtonText": "Se hva som er nytt: {url}",
+      "footer": "Du får denne meldingen fordi du sendte inn en idé. Logg inn på <link>tornygolf.no</link> for å se hva som skjer."
     }
   },
   "SyncBanner": {

@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.157 · Foreslå en idé til Tørny</strong></summary>
+
+[#984](https://github.com/jdlarssen/golf-app/issues/984) — Nå kan du sende inn en idé til Tørny rett fra Klubbhuset. Blir den bygd, får du beskjed: «Vi bygde det du foreslo.»
+
+↳ /foreslaa-ide · «Foreslå en idé»
+</details>
+
+<details>
 <summary><strong>1.156 · Del live-lenke og følg turneringen fra sidelinjen</strong></summary>
 
 [#938](https://github.com/jdlarssen/golf-app/issues/938) — Del en live-lenke så familie og klubbkompiser kan følge turneringen mens den spilles — og se hele feltet på tvers av flights — uten å logge inn. Oppretteren slår funksjonen på i spillet, og lenken virker som en permanent resultatslenke etter at runden er ferdig.

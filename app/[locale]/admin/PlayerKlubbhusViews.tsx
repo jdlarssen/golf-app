@@ -280,6 +280,12 @@ export function ToolsView() {
       meta: t('playerSpillformaterMeta'),
       icon: 'spillformater',
     },
+    {
+      label: t('playerForeslaaIde'),
+      href: '/foreslaa-ide',
+      meta: t('playerForeslaaIdeMeta'),
+      icon: 'sparkle',
+    },
   ];
   return (
     <section>

@@ -28,6 +28,7 @@ export async function TilesGrid() {
     activeCupsRes,
     activeLeaguesRes,
     actionCounts,
+    unbuiltIdeasRes,
   ] = await Promise.all([
     supabase
       .from('games')
@@ -68,6 +69,11 @@ export async function TilesGrid() {
     // #914: Spill-tile badge. cache()-delt med «Krever handling»-stripa (#864),
     // så dette er samme query-runde — ikke en ekstra round-trip.
     getActionItemCounts(),
+    // #984: count of unbuilt idea submissions for the admin badge.
+    supabase
+      .from('idea_submissions')
+      .select('id', { count: 'exact', head: true })
+      .is('status', null),
   ]);
 
   const activeCount = activeGamesRes.count ?? 0;
@@ -83,6 +89,7 @@ export async function TilesGrid() {
   const activeCupCount = activeCupsRes.count ?? 0;
   const activeLeagueCount = activeLeaguesRes.count ?? 0;
   const actionableGames = totalActionableGames(actionCounts);
+  const unbuiltIdeasCount = unbuiltIdeasRes.count ?? 0;
 
   // #914: tier the wall — the everyday core loop keeps full cards; the rest
   // moves to a denser «Mer i Sekretariatet»-section below. Everything stays
@@ -178,6 +185,17 @@ export async function TilesGrid() {
       meta: t('metaSpillformater'),
       icon: 'spillformater',
     },
+    // #984: innsendte ideer fra spillerne.
+    {
+      label: t('tilesIdeer'),
+      href: '/admin/ideer',
+      meta:
+        unbuiltIdeasCount === 0
+          ? t('metaIdeerNone')
+          : t('metaIdeer', { n: unbuiltIdeasCount }),
+      icon: 'sparkle',
+      badge: unbuiltIdeasCount,
+    },
   ];
 
   return (
@@ -210,7 +228,7 @@ export function TilesSkeleton() {
       </div>
       <Skeleton className="mt-6 mb-1.5 ml-1 h-3 w-32" delay={360} />
       <div className="mb-2 grid grid-cols-2 gap-2.5">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 7 }).map((_, i) => (
           <div
             key={i}
             className="flex min-h-[56px] items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2.5"
