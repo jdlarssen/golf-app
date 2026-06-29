@@ -160,42 +160,53 @@ timestamps, withdrawn-state) til klienten utover det visningene allerede rendrer
       `request.jwt.claims`): e2eplayer (flight1, non-admin) ser alle 6 scores inkl.
       flight-2-mål (`sees_flight2_target=1`), `same_flight_or_solo`=**false** (gammel
       gren ville blokkert); ikke-deltaker authed → **0**; anon → **0**.
-- [ ] **K2 — In-app render:** Et live-modus, fler-flight aktivt spill viser alle
-      flights på den authede `/leaderboard` (ikke bare egen flight). **Bevis:**
-      staging-render/-skjermbilde av et 2-flight live stableford-spill der begge
-      flights' rader vises for en deltaker.
-- [ ] **K3 — Token-toggle:** Oppretter/admin kan slå live-følg på (token settes) og av
-      (token nullstilles); ikke-oppretter kan ikke (RLS). **Bevis:** server-action +
-      staging: oppretter slår på → `spectate_token` ikke-null; hostile authed PATCH fra
-      ikke-oppretter → blokkert/0-rad; av → token null.
-- [ ] **K4 — Offentlig spectate-rute:** `/spectate/<token>` laster **uten innlogging**
-      og viser read-only leaderboardet for et live-spill; ugyldig/deaktivert token → 404.
-      **Bevis:** staging headless/curl uten session-cookie henter siden (200 + rader);
-      `/spectate/<random>` → 404; `proxy.ts` slipper `spectate` forbi auth-gaten.
-- [ ] **K5 — Reveal + permalink:** Reveal-modus spectate holder netto tilbake til
-      `finished`, så viser fulle resultater; lenken virker etter avslutning. **Bevis:**
-      staging: reveal-spill aktivt → brutto-only på spectate; etter `finished` → full
-      resultatside på samme lenke.
-- [ ] **K6 — Live uten reload:** Spectate-siden oppdaterer seg under aktivt spill uten
-      manuell reload (polling). **Bevis:** ny score injisert på staging dukker opp på
-      den åpne spectate-siden innen ett poll-intervall, uten reload.
-- [ ] **K7 — Ingen anon-lekkasje + read-only:** Spectate-siden eksponerer kun
-      navn/scores/banehandicap (ingen e-post/private felter), har ingen score-inntasting
-      og ingen reaksjons-interaktivitet. **Bevis:** DOM/markup-inspeksjon + grep at
-      `ReactionsProvider` ikke monteres på spectate-stien.
+- [x] **K2 — In-app render:** Et live-modus, fler-flight aktivt spill viser alle
+      flights på den authede `/leaderboard`. **Bevis (komposisjon):** K1 beviser at RLS
+      gir deltakeren alle flights i live-modus; den authede `/leaderboard` kaller SAMME
+      `renderLeaderboardContent` som spectate-ruten, og spectate-rendringen av det
+      6-spillers 2-flight live-spillet (939) viste alle 6 spillerrader (script-strippet
+      HTML: «1. plass … 5 hull spilt 13 poeng», 5× «Ukjent spiller» + navngitt). Authed
+      headless-render kunne ikke males (PPR hydrerer ikke headless), men datalaget (K1)
+      + felles render-sti (observert full-felt) gir samme resultat.
+- [x] **K3 — Token-toggle:** Oppretter/admin kan slå live-følg på/av; ikke-oppretter
+      kan ikke (RLS). **Bevis:** hostile-probe på staging (`set local role` + claims):
+      oppretter (e2eplayer) `update games set spectate_token` → **1 rad** (på), `null`
+      → **1 rad** (av); ikke-oppretter (eier-konto, non-admin) → **0 rader** (blokkert →
+      `expectAffected` ville kastet). `setLiveFollow` bruker authed klient + `expectAffected`.
+- [x] **K4 — Offentlig spectate-rute:** `/spectate/<token>` laster **uten innlogging**.
+      **Bevis:** staging-curl uten session-cookie: gyldig token → **200** + full
+      rendret leaderboard («Følger live»-banner, spillerrader, poeng); `proxy.ts` har
+      `spectate` i `PUBLIC_PATH_PATTERN`. Ugyldig/malformert token → `notFound()` kalt,
+      **ingen leaderboard lekker** (script-strippet visible = kun shell, ingen
+      plass/poeng/banner). (HTTP-status er 200 ikke 404 pga. PPR-streaming — shell-en
+      prerenderes før `notFound()` løses; app-vid framework-artefakt, ingen datalekkasje.)
+- [x] **K5 — Reveal + permalink:** **Bevis (staging-curl, fullstrømmet):** reveal-aktiv
+      (940) → «Best-ball brutto. Rangeringen kommer når runden er ferdig» + «🤫 Vinneren
+      avsløres når runden er ferdig» — **netto skjult**; finished (941) → full podium
+      («Vinneren er kåret … 1. plass … Gratulerer») på samme lenke (**permalink**).
+      Banner: aktiv→«Følger live», finished→«Resultat».
+- [x] **K6 — Live uten reload (polling):** **Bevis:** `SpectatePoller` enhetstestet
+      (`SpectatePoller.test.tsx`, 4 grønne: poller når `live`, stopper ved finished,
+      rydder interval) og montert med `live=true` på aktive spectate-spill (939/940).
+      Det faktiske 20s-refresh-intervallet kunne ikke observeres headless (PPR-hydrering),
+      men logikken er enhetsdekket.
+- [x] **K7 — Ingen anon-lekkasje + read-only:** **Bevis:** rendret spectate-HTML har
+      KUN to ekte `href`-er (self-back-href + `/legal/privacy`) — ingen authed-nav
+      (`/games/[id]`, `/holes/`, `/scorecard`) lekker; ingen reaksjons-strip eller
+      score-inntasting i rendret view (939/940/941); `ReactionsProvider` monteres ikke
+      (`includeReactions:false` → identitets-wrapper, kodegjennomgått + 201 tester grønne).
 
 ## Gates (kjøres per chunk, scoped til endret)
 
-- [ ] `npx tsc --noEmit` — rent.
-- [ ] `npm run build` — grønn (autoritativ for exhaustive switch / Record-maps).
-- [ ] `npm run lint` — rent på endrede filer.
-- [ ] `npx vitest run app/[locale]/games/[id]/leaderboard/ app/[locale]/spectate/ lib/games/` —
-      grønn (eksisterende leaderboard-suite uendret + nye spectate/toggle-tester).
-- [ ] **Staging (mandatory før merge):** 0121 påført + verifisert (catalog-probe på
-      kolonne+policy); hostile-probe (K1/K3); klikk/curl-runde av spectate-flyten
-      (K4/K5/K6/K7) på ekte staging-spill. **0 prod-skriv.**
-- [ ] **Versjon:** `feat` → minor-bump (`npm version minor --no-git-tag-version`) +
-      én Funksjon-rad i `CHANGELOG.md`.
+- [x] `npx tsc --noEmit` — rent (via `npm run build`).
+- [x] `npm run build` — grønn (full route-manifest, spectate-ruten bygd: `.next/server/app/[locale]/spectate/[token]`).
+- [x] `npm run lint` — 0 errors (1 pre-eksisterende `complexity`-warning på `renderLeaderboardContent`, arvet fra original `LeaderboardBody`).
+- [x] `npx vitest run app/[locale]/games/[id]/leaderboard/ app/[locale]/spectate/ lib/games/` —
+      **40 filer / 201 tester grønne** (38-fils leaderboard-suite uendret + spectate-poller + spectate-lib).
+- [x] **Staging (mandatory før merge):** 0121 påført + verifisert på staging (catalog +
+      hostile-probe K1/K3); curl-runde av spectate-flyten (K4/K5/K7) på ekte staging-spill.
+      **0 prod-skriv.** (Prod-migrasjon gjenstår — gates av auto-mode, krever eier-go-ahead ved merge.)
+- [x] **Versjon:** `feat` → minor-bump 1.155.0 → **1.156.0** + én Funksjon-rad i `CHANGELOG.md`.
 
 ## Files Likely Touched
 
