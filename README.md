@@ -89,9 +89,9 @@ The scoring logic ([`lib/scoring/`](lib/scoring/)) is plain TypeScript with no S
 
 Offline sync ([`lib/sync/`](lib/sync/)) writes to Dexie first and drains the queue against Supabase once the phone has signal again. Last write wins, keyed on `client_updated_at`. The Dexie database is named `'golf-app'` for historical reasons. Don't rename it, or you'll wipe local data for every existing user.
 
-RLS is enforced strictly in Postgres. You see your own scores, your flight's scores during an active game (a game with four or fewer active players counts as one flight regardless of format — matchplay opponents included — and Wolf is always one group, so everyone sees and can score for everyone), and every score once the admin has ended the game. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
+RLS is enforced strictly in Postgres. You see your own scores, all scores from any flight while a game is running in live mode (and your own flight's scores in reveal mode), and every score once the admin has ended the game. Single-flight games — four players or fewer, matchplay, Wolf — expose all scores throughout. A game can also be given a public spectate token; anyone with the URL can follow the leaderboard without logging in, via a dedicated `/spectate/[token]` route that uses the service-role client rather than opening any anon RLS. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
 
-Migrations live in [`supabase/migrations/`](supabase/migrations/) (90+ files, chronological).
+Migrations live in [`supabase/migrations/`](supabase/migrations/) (120+ files, chronological).
 
 ## Where the rest lives
 
