@@ -4537,6 +4537,22 @@
     "nudgeDoneTitle": "Notifications are on",
     "nudgeDoneBody": "We'll let you know as soon as something happens."
   },
+  "spectate": {
+    "liveStatus": "Watching live",
+    "resultStatus": "Result",
+    "bannerAriaLabel": "Spectator banner",
+    "liveFollowLabel": "Share live link",
+    "liveFollowOn": "Live-follow is on",
+    "liveFollowOff": "Live-follow is off",
+    "liveFollowHint": "Anyone with the link can follow the tournament without logging in.",
+    "shareLinkLabel": "Share live link",
+    "shareLinkAriaLabel": "Share live link for this game",
+    "copyLinkLabel": "Copy link",
+    "copyLinkAriaLabel": "Copy live link to clipboard",
+    "enablePending": "Turning on …",
+    "disablePending": "Turning off …",
+    "shareText": "Follow the tournament live in Tørny"
+  },
   "installBanner": {
     "title": "Install Tørny as an app",
     "body": "Opens faster, and you can enter scores without a connection.",

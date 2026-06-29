@@ -4537,6 +4537,22 @@
     "nudgeDoneTitle": "Varsler er på",
     "nudgeDoneBody": "Vi sier ifra med en gang noe skjer."
   },
+  "spectate": {
+    "liveStatus": "Følger live",
+    "resultStatus": "Resultat",
+    "bannerAriaLabel": "Spectator-banner",
+    "liveFollowLabel": "Del live-lenke",
+    "liveFollowOn": "Live-følg er på",
+    "liveFollowOff": "Live-følg er av",
+    "liveFollowHint": "Alle med lenken kan følge turneringen uten å logge inn.",
+    "shareLinkLabel": "Del live-lenke",
+    "shareLinkAriaLabel": "Del live-lenke for dette spillet",
+    "copyLinkLabel": "Kopier lenke",
+    "copyLinkAriaLabel": "Kopier live-lenken til utklippstavlen",
+    "enablePending": "Slår på …",
+    "disablePending": "Slår av …",
+    "shareText": "Følg turneringen live i Tørny"
+  },
   "installBanner": {
     "title": "Installer Tørny som app",
     "body": "Raskere åpning, og du kan registrere slag uten dekning.",
