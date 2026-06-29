@@ -9,7 +9,7 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 
 /**
  * Admin action: marks an idea_submissions row as built, fires the in-app
- * notification, and — if the user is off-app — sends a fallback mail.
+ * notification, and sends a fallback mail when the user is off-app.
  */
 export async function markIdeaBuilt(formData: FormData) {
   const supabase = await getServerClient();
