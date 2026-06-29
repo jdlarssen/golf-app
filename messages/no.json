@@ -2465,6 +2465,18 @@
         }
       }
     },
+    "reactions": {
+      "clap": "Klappe",
+      "fire": "Ild",
+      "laugh": "Latter",
+      "strong": "Sterk",
+      "golf": "Golf",
+      "birdie": "Birdie",
+      "groupLabel": "Reaksjoner",
+      "toggle": "Reager med {emoji}",
+      "toggleActive": "Fjern {emoji}-reaksjon",
+      "errorFailed": "Reaksjonen ble ikke lagret"
+    },
     "export": {
       "title": "Tørny - resultater",
       "gameLabel": "Spill",
