@@ -947,6 +947,41 @@ export type Database = {
           },
         ]
       }
+      idea_submissions: {
+        Row: {
+          built_at: string | null
+          created_at: string
+          id: string
+          status: string | null
+          text: string
+          user_id: string
+        }
+        Insert: {
+          built_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string | null
+          text: string
+          user_id: string
+        }
+        Update: {
+          built_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string | null
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
