@@ -153,11 +153,13 @@ timestamps, withdrawn-state) til klienten utover det visningene allerede rendrer
 
 ## Success Criteria
 
-- [ ] **K1 — In-app cross-flight (RLS):** Migrasjon 0121 utvider `scores`-SELECT så en
+- [x] **K1 — In-app cross-flight (RLS):** Migrasjon 0121 utvider `scores`-SELECT så en
       deltaker i et **live-modus, aktivt** spill ser alle flights. **Bevis:** påført
-      staging; SQL-probe som `set role authenticated` + ulik `request.jwt.claims`:
-      deltaker i flight A leser flight B's score (≥1 rad) i live-modus aktivt; samme
-      probe i reveal-modus uendret; ikke-deltaker authed-bruker → 0 rader; anon → 0 rader.
+      staging (`apply_migration {success:true}`); catalog: kolonne+indeks+`'live'`-gren
+      bekreftet. Hostile-probe (6-spillers 2-flight live game, `set local role` +
+      `request.jwt.claims`): e2eplayer (flight1, non-admin) ser alle 6 scores inkl.
+      flight-2-mål (`sees_flight2_target=1`), `same_flight_or_solo`=**false** (gammel
+      gren ville blokkert); ikke-deltaker authed → **0**; anon → **0**.
 - [ ] **K2 — In-app render:** Et live-modus, fler-flight aktivt spill viser alle
       flights på den authede `/leaderboard` (ikke bare egen flight). **Bevis:**
       staging-render/-skjermbilde av et 2-flight live stableford-spill der begge

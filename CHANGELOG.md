@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.156 · Del live-lenke og følg turneringen fra sidelinjen</strong></summary>
+
+[#938](https://github.com/jdlarssen/golf-app/issues/938) — Del en live-lenke så familie og klubbkompiser kan følge turneringen mens den spilles — og se hele feltet på tvers av flights — uten å logge inn. Oppretteren slår funksjonen på i spillet, og lenken virker som en permanent resultatslenke etter at runden er ferdig.
+
+↳ /games · «Live-følg»
+</details>
+
+<details>
 <summary><strong>1.155 · Heia medspillerne med emoji</strong></summary>
 
 [#943](https://github.com/jdlarssen/golf-app/issues/943) — Nå kan du kaste en emoji — 👏 🔥 😂 💪 ⛳ 🐦 — på hvem som helst sin rad på resultattavla, både mens dere spiller og etter at runden er ferdig, og reaksjonene dukker opp live for alle i spillet.
