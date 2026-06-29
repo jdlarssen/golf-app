@@ -1,4 +1,6 @@
 import { cache } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import type { SideWinnerRow } from './leaderboardTypes';
@@ -14,19 +16,18 @@ export const getLeaderboardContext = cache(async () => {
   return { supabase, userId };
 });
 
-type LeaderboardSupabase = Awaited<
-  ReturnType<typeof getLeaderboardContext>
->['supabase'];
-
 /**
  * Henter LD/CTP-vinnerne for et spill. Trukket ut (#682) så best-ball-finish-
  * stien (`LeaderboardBody`) og `computeSideTournament` deler ETT spørringssted
  * i stedet for to identiske `game_side_winners`-queries. RLS slipper kun
  * spillere gjennom når status=finished, som begge kall-stedene allerede har
  * bekreftet via view-branching.
+ *
+ * Accepts any `SupabaseClient<Database>` — both the cookie-based server client
+ * and the service-role admin client (#938 spectate route) satisfy this type.
  */
 export async function fetchSideWinners(
-  supabase: LeaderboardSupabase,
+  supabase: SupabaseClient<Database>,
   gameId: string,
 ): Promise<SideWinnerRow[]> {
   const sideWinnersRes = await supabase
