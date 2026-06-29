@@ -26,7 +26,7 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
-const mailMock = vi.fn(async () => {});
+const mailMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock('@/lib/mail/ideaSubmittedNotification', () => ({
   sendIdeaSubmittedNotification: (...args: unknown[]) => mailMock(...args),
 }));

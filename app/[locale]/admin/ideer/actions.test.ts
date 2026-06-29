@@ -16,12 +16,16 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 vi.mock('@/lib/admin/auth', () => ({ requireAdmin: vi.fn(async () => {}) }));
 
-const notifyMock = vi.fn(async () => ({ shouldAlsoSendMail: false }));
+const notifyMock = vi.fn(
+  async (..._args: unknown[]): Promise<{ shouldAlsoSendMail: boolean }> => ({
+    shouldAlsoSendMail: false,
+  }),
+);
 vi.mock('@/lib/notifications/notify', () => ({
   notify: (...args: unknown[]) => notifyMock(...args),
 }));
 
-const builtMailMock = vi.fn(async () => {});
+const builtMailMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock('@/lib/mail/ideaBuiltNotification', () => ({
   sendIdeaBuiltNotification: (...args: unknown[]) => builtMailMock(...args),
 }));
