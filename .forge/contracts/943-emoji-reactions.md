@@ -178,6 +178,19 @@ til nøyaktig én spiller**. Lag-scramble-familien (rad = lag) og matchplay-fami
   klubbspill, men reaksjoner er lav-frekvente og 300ms-debouncet. Akseptabelt for MVP;
   en lettere count-only-oppdatering er en bevisst utsatt optimalisering.
 
+**Bygge-tids-avvik (loggført):**
+- **Provider-arkitektur i stedet for prop-threading + `LeaderboardRealtime`-edit.**
+  Leaderboardene er server-rendret med per-format `formats/*`-render-funksjoner og
+  INGEN delt rad-primitiv. En klient-`ReactionsProvider` (server-seedet summary +
+  realtime-refetch) montert rundt hver individuell-format-retur, med en `null`-uten-
+  provider `RowReactionsForPlayer`-connector per rad, gir færre filendringer, lettere
+  runtime (ingen full `router.refresh` per emoji), og holder de ~37 format-testene
+  grønne ved konstruksjon (connector rendrer ingenting uten provider). `RowReactions`
+  ble gjort kontrollert (ren av props) for å unngå stale-`initialData`-remount.
+- **Reaksjoner på både live-view OG avsluttet-podium** (eier-valg 2026-06-29).
+  Leaderboardet bytter flate ved `status='finished'` (liste → podium). Begge får
+  connector. HeadToHeadResult-duell + RevealBruttoView er utenfor MVP.
+
 **Claude's Discretion:**
 - Eksakt plassering av `RowReactions` i hver rad (under kortet vs i kort-foten) —
   velg det som er minst påtrengende og konsistent på tvers av de 9 visningene.
@@ -195,19 +208,25 @@ til nøyaktig én spiller**. Lag-scramble-familien (rad = lag) og matchplay-fami
       `reactions_emoji_palette (c)` + unique + 3 FK, policies
       `insert own [a] / delete own [d] / select if participant [r]` (ingen UPDATE),
       `can_react_in_game` finnes, `rls_enabled=true`.
-- [ ] **Hostile-probe mot staging** (anon/service-role REST): ikke-deltaker avvises,
-      `user_id ≠ self` avvises, mål utenfor spill avvises, emoji utenfor palett avvises.
-      Verifiser: probe-kall returnerer 401/403/CHECK-feil, 0 rader skrevet.
+- [x] **Hostile-probe mot staging** (autentisert via `request.jwt.claims` +
+      `set role authenticated` → ekte RLS). **Bevis:** A ikke-deltaker-insert →
+      `42501 RLS`, B spoofet `user_id` → `42501`, C mål utenfor spill → `42501`,
+      D off-palett-emoji → `23514 CHECK`, E gyldig deltaker-insert → suksess (id
+      returnert), F angriper sletter andres reaksjon → 0 slettet (seed overlevde).
+      Test-rader ryddet (`remaining_for_game=0`).
 - [ ] Hver **individuell-spiller-rad** (strokeplay, stableford, skins, wolf, nassau,
-      BBB, acey-deucey, round robin, nines) viser palett + per-emoji-telling;
-      **lag-scramble + matchplay-visninger er uendret**. Verifiser: render-test +
-      staging-skjermbilde.
+      BBB, acey-deucey, round robin, nines) viser palett + per-emoji-telling — på
+      **både live-listen (aktivt spill) OG det avsluttede podiet** (eier-valg
+      2026-06-29); **lag-scramble + matchplay-visninger er uendret**. Edge-flater
+      (HeadToHeadResult-duell, RevealBruttoView) er utenfor MVP-scope.
+      Verifiser: render-test + staging-skjermbilde.
 - [ ] **Toggle virker:** trykk legger til egen reaksjon (optimistisk + persistert),
       trykk igjen fjerner; telling = distinkte brukere. Verifiser: staging klikk-runde
       + `RowReactions`-oppførselstest.
-- [ ] **Live for andre under spill:** `LeaderboardRealtime` abonnerer på `reactions`
-      INSERT/DELETE på spillets kanal → debouncet refresh. Verifiser: oppførselstest på
-      abonnementet (+ resonnert/2-sesjons staging-sjekk).
+- [ ] **Live for andre under spill:** `ReactionsProvider` abonnerer på `reactions`
+      INSERT/DELETE på spillets kanal → debouncet **refetch** av server-summary
+      (client-state, ikke full `router.refresh`). Migrasjon 0120 gir realtime-events.
+      Verifiser: provider mounts uten å sprenge tester + resonnert/2-sesjons staging-sjekk.
 - [ ] **Stille:** ingen `notify()`/varsel i reaksjons-stien. Verifiser: grep viser
       ingen notify-call i `reactions`-modulen/action.
 - [ ] **Gates grønne** (under). Inkl. eksisterende `leaderboard/`-suite fortsatt grønn.
