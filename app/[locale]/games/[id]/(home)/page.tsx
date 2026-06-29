@@ -193,15 +193,12 @@ export default async function GameHomePage({
       )
       .eq('id', id)
       .single<Pick<GameRow, 'courses' | 'tee_boxes'>>(),
-    // #938: spectate_token is not yet in the generated types (column added in
-    // migration 0121, types regenerated post-deploy). We use the admin client
-    // with an any-cast — only read server-side to feed the creator/admin UI.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (getAdminClient() as any)
+    // #938: live-follow token, read server-side to feed the creator/admin UI.
+    getAdminClient()
       .from('games')
       .select('spectate_token')
       .eq('id', id)
-      .maybeSingle() as Promise<{ data: { spectate_token: string | null } | null; error: unknown }>,
+      .maybeSingle(),
   ]);
 
   if (!gwp) notFound();

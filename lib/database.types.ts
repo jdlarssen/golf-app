@@ -682,6 +682,7 @@ export type Database = {
           side_ld_count: number
           side_tournament_enabled: boolean
           signups_closed_at: string | null
+          spectate_token: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
           tee_box_id: string | null
@@ -716,6 +717,7 @@ export type Database = {
           side_ld_count?: number
           side_tournament_enabled?: boolean
           signups_closed_at?: string | null
+          spectate_token?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           tee_box_id?: string | null
@@ -750,6 +752,7 @@ export type Database = {
           side_ld_count?: number
           side_tournament_enabled?: boolean
           signups_closed_at?: string | null
+          spectate_token?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           tee_box_id?: string | null
@@ -1394,6 +1397,55 @@ export type Database = {
           },
         ]
       }
+      reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          game_id: string
+          id: string
+          target_user_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          game_id: string
+          id?: string
+          target_user_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          game_id?: string
+          id?: string
+          target_user_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reactions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reactions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scores: {
         Row: {
           client_updated_at: string
@@ -1719,6 +1771,7 @@ export type Database = {
         Returns: string
       }
       befriend_inviter: { Args: { p_inviter: string }; Returns: string }
+      can_react_in_game: { Args: { p_game_id: string }; Returns: boolean }
       can_score_for: {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
