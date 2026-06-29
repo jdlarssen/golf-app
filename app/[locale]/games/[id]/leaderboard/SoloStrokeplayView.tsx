@@ -6,6 +6,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for SoloStrokeplayView. En map fra userId → navn + kallenavn.
@@ -111,6 +112,7 @@ export function SoloStrokeplayView({
           return (
             <PlayerRow
               key={player.userId}
+              userId={player.userId}
               rank={player.rank}
               displayName={displayName}
               totalNetStrokes={player.totalNetStrokes}
@@ -130,6 +132,7 @@ export function SoloStrokeplayView({
 }
 
 function PlayerRow({
+  userId,
   rank,
   displayName,
   totalNetStrokes,
@@ -137,6 +140,7 @@ function PlayerRow({
   grossHolesRow,
   slagLabel,
 }: {
+  userId: string;
   rank: number;
   displayName: string;
   totalNetStrokes: number;
@@ -194,6 +198,7 @@ function PlayerRow({
           </span>
         </div>
       </Card>
+      <RowReactionsForPlayer targetUserId={userId} />
     </li>
   );
 }

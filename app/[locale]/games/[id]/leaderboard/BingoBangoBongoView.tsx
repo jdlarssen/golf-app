@@ -9,6 +9,7 @@ import { formatRevealName } from '@/lib/names/formatRevealName';
 import { SettlementTable } from './SettlementTable';
 import type { Settlement } from '@/lib/scoring/settlement';
 import type { BingoBangoBongoResult } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for BingoBangoBongoView. En map fra userId → navn + kallenavn.
@@ -136,6 +137,7 @@ export function BingoBangoBongoView({
           return (
             <PlayerRow
               key={player.userId}
+              userId={player.userId}
               rank={player.rank}
               displayName={displayName}
               bingos={player.bingos}
@@ -162,6 +164,7 @@ export function BingoBangoBongoView({
 }
 
 function PlayerRow({
+  userId,
   rank,
   displayName,
   bingos,
@@ -171,6 +174,7 @@ function PlayerRow({
   tiedWith,
   staggerIndex,
 }: {
+  userId: string;
   rank: number;
   displayName: string;
   bingos: number;
@@ -236,6 +240,7 @@ function PlayerRow({
           </span>
         </div>
       </Card>
+      <RowReactionsForPlayer targetUserId={userId} />
     </li>
   );
 }

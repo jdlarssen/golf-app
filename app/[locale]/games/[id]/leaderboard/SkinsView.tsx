@@ -14,6 +14,7 @@ import type {
   SkinsHoleRow,
   SkinsPlayerLine,
 } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for SkinsView. En map fra userId → navn + kallenavn.
@@ -175,6 +176,7 @@ export function SkinsView({
           return (
             <PlayerRow
               key={player.userId}
+              userId={player.userId}
               rank={player.rank}
               displayName={displayName}
               totalSkins={player.totalSkins}
@@ -235,6 +237,7 @@ export function SkinsView({
 }
 
 function PlayerRow({
+  userId,
   rank,
   displayName,
   totalSkins,
@@ -243,6 +246,7 @@ function PlayerRow({
   staggerIndex,
   t,
 }: {
+  userId: string;
   rank: number;
   displayName: string;
   totalSkins: number;
@@ -293,6 +297,7 @@ function PlayerRow({
           </span>
         </div>
       </Card>
+      <RowReactionsForPlayer targetUserId={userId} />
     </li>
   );
 }

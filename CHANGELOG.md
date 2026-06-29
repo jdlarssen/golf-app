@@ -15,6 +15,12 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.155 · Heia medspillerne med emoji</strong></summary>
+
+[#943](https://github.com/jdlarssen/golf-app/issues/943) — Nå kan du kaste en emoji — 👏 🔥 😂 💪 ⛳ 🐦 — på hvem som helst sin rad på resultattavla, både mens dere spiller og etter at runden er ferdig, og reaksjonene dukker opp live for alle i spillet.
+</details>
+
+<details>
 <summary><strong>1.154 · Feir bragdene fra runden</strong></summary>
 
 [#947](https://github.com/jdlarssen/golf-app/issues/947) — Gjør du en hole-in-one, eagle, turkey eller snowman i en runde, får du nå beskjed om det når spillet avsluttes. På profilen har du også fått en bragd-vegg: alle bragdene dine gjennom årene samlet på ett brett. De du har klart lyser i gull, resten venter på tur.

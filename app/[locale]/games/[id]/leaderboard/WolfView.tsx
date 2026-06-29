@@ -15,6 +15,7 @@ import {
 import { SettlementTable } from './SettlementTable';
 import type { Settlement } from '@/lib/scoring/settlement';
 import type { WolfResult, WolfHoleRow } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for WolfView. En map fra userId → navn + kallenavn.
@@ -158,6 +159,7 @@ export function WolfView({
           return (
             <PlayerRow
               key={player.userId}
+              userId={player.userId}
               rank={player.rank}
               displayName={displayName}
               totalPoints={player.totalPoints}
@@ -204,6 +206,7 @@ export function WolfView({
 }
 
 function PlayerRow({
+  userId,
   rank,
   displayName,
   totalPoints,
@@ -212,6 +215,7 @@ function PlayerRow({
   staggerIndex,
   tWolf,
 }: {
+  userId: string;
   rank: number;
   displayName: string;
   totalPoints: number;
@@ -265,6 +269,7 @@ function PlayerRow({
           </span>
         </div>
       </Card>
+      <RowReactionsForPlayer targetUserId={userId} />
     </li>
   );
 }

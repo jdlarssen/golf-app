@@ -14,6 +14,7 @@ import type {
   NinesHoleRow,
   NinesPlayerLine,
 } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for NinesView. En map fra userId → navn + kallenavn.
@@ -151,6 +152,7 @@ export function NinesView({
           return (
             <PlayerRow
               key={player.userId}
+              userId={player.userId}
               rank={player.rank}
               displayName={displayName}
               totalPoints={player.totalPoints}
@@ -195,6 +197,7 @@ export function NinesView({
 }
 
 function PlayerRow({
+  userId,
   rank,
   displayName,
   totalPoints,
@@ -202,6 +205,7 @@ function PlayerRow({
   tiedWith,
   staggerIndex,
 }: {
+  userId: string;
   rank: number;
   displayName: string;
   totalPoints: number;
@@ -263,6 +267,7 @@ function PlayerRow({
           </span>
         </div>
       </Card>
+      <RowReactionsForPlayer targetUserId={userId} />
     </li>
   );
 }

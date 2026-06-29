@@ -10,6 +10,7 @@ import type { WolfResult, WolfPlayerLine } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { WolfPlayerInfo } from './WolfView';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 // Distinkt sessionStorage-prefiks fra andre podium-er — verifisert ved at det
 // inneholder ordet 'wolf' så vi ikke kolliderer med solo-stableford eller
@@ -128,14 +129,17 @@ export function WolfPodium({
         <div className="grid grid-cols-3 items-end gap-2">
           <div className="col-start-1">
             {second && (
-              <PodiumStep
-                rank={2}
-                player={second}
-                playerInfo={playersById.get(second.userId)}
-                tier="silver"
-                staggerIndex={1}
-                t={t}
-              />
+              <>
+                <PodiumStep
+                  rank={2}
+                  player={second}
+                  playerInfo={playersById.get(second.userId)}
+                  tier="silver"
+                  staggerIndex={1}
+                  t={t}
+                />
+                <RowReactionsForPlayer targetUserId={second.userId} />
+              </>
             )}
           </div>
 
@@ -148,18 +152,22 @@ export function WolfPodium({
               staggerIndex={0}
               t={t}
             />
+            <RowReactionsForPlayer targetUserId={first.userId} />
           </div>
 
           <div className="col-start-3">
             {third && (
-              <PodiumStep
-                rank={3}
-                player={third}
-                playerInfo={playersById.get(third.userId)}
-                tier="bronze"
-                staggerIndex={2}
-                t={t}
-              />
+              <>
+                <PodiumStep
+                  rank={3}
+                  player={third}
+                  playerInfo={playersById.get(third.userId)}
+                  tier="bronze"
+                  staggerIndex={2}
+                  t={t}
+                />
+                <RowReactionsForPlayer targetUserId={third.userId} />
+              </>
             )}
           </div>
         </div>
@@ -198,6 +206,7 @@ export function WolfPodium({
                     </span>
                   </div>
                 </div>
+                <RowReactionsForPlayer targetUserId={player.userId} />
               </li>
             );
           })}

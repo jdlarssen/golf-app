@@ -6,6 +6,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { StablefordSoloResult } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for SoloStablefordView. En map fra userId → navn + kallenavn.
@@ -106,6 +107,7 @@ export function SoloStablefordView({
           return (
             <PlayerRow
               key={player.userId}
+              userId={player.userId}
               rank={player.rank}
               displayName={displayName}
               totalPoints={player.totalPoints}
@@ -124,6 +126,7 @@ export function SoloStablefordView({
 }
 
 function PlayerRow({
+  userId,
   rank,
   displayName,
   totalPoints,
@@ -131,6 +134,7 @@ function PlayerRow({
   holesPlayedLabel,
   poengLabel,
 }: {
+  userId: string;
   rank: number;
   displayName: string;
   totalPoints: number;
@@ -182,6 +186,7 @@ function PlayerRow({
           </span>
         </div>
       </Card>
+      <RowReactionsForPlayer targetUserId={userId} />
     </li>
   );
 }

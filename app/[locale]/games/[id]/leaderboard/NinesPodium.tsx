@@ -10,6 +10,7 @@ import type { NinesResult, NinesPlayerLine } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { NinesPlayerInfo } from './NinesView';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 // Distinkt sessionStorage-prefiks fra andre podium-er.
 const STORAGE_PREFIX = 'torny-nines-podium-confetti-seen-';
@@ -112,13 +113,16 @@ export function NinesPodium({
         <div className="grid grid-cols-3 items-end gap-2">
           <div className="col-start-1">
             {second && (
-              <PodiumStep
-                rank={2}
-                player={second}
-                playerInfo={playersById.get(second.userId)}
-                tier="silver"
-                staggerIndex={1}
-              />
+              <>
+                <PodiumStep
+                  rank={2}
+                  player={second}
+                  playerInfo={playersById.get(second.userId)}
+                  tier="silver"
+                  staggerIndex={1}
+                />
+                <RowReactionsForPlayer targetUserId={second.userId} />
+              </>
             )}
           </div>
 
@@ -130,17 +134,21 @@ export function NinesPodium({
               tier="champagne"
               staggerIndex={0}
             />
+            <RowReactionsForPlayer targetUserId={first.userId} />
           </div>
 
           <div className="col-start-3">
             {third && (
-              <PodiumStep
-                rank={3}
-                player={third}
-                playerInfo={playersById.get(third.userId)}
-                tier="bronze"
-                staggerIndex={2}
-              />
+              <>
+                <PodiumStep
+                  rank={3}
+                  player={third}
+                  playerInfo={playersById.get(third.userId)}
+                  tier="bronze"
+                  staggerIndex={2}
+                />
+                <RowReactionsForPlayer targetUserId={third.userId} />
+              </>
             )}
           </div>
         </div>
@@ -179,6 +187,7 @@ export function NinesPodium({
                     </span>
                   </div>
                 </div>
+                <RowReactionsForPlayer targetUserId={player.userId} />
               </li>
             );
           })}

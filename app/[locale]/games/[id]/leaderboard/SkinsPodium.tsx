@@ -10,6 +10,7 @@ import type { SkinsResult, SkinsPlayerLine } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SkinsPlayerInfo } from './SkinsView';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 // Distinkt sessionStorage-prefiks fra andre podium-er — inneholder ordet
 // 'skins' så vi ikke kolliderer med solo-stableford/solo-strokeplay/wolf/nassau.
@@ -114,14 +115,17 @@ export function SkinsPodium({
         <div className="grid grid-cols-3 items-end gap-2">
           <div className="col-start-1">
             {second && (
-              <PodiumStep
-                rank={2}
-                player={second}
-                playerInfo={playersById.get(second.userId)}
-                tier="silver"
-                staggerIndex={1}
-                t={t}
-              />
+              <>
+                <PodiumStep
+                  rank={2}
+                  player={second}
+                  playerInfo={playersById.get(second.userId)}
+                  tier="silver"
+                  staggerIndex={1}
+                  t={t}
+                />
+                <RowReactionsForPlayer targetUserId={second.userId} />
+              </>
             )}
           </div>
 
@@ -134,18 +138,22 @@ export function SkinsPodium({
               staggerIndex={0}
               t={t}
             />
+            <RowReactionsForPlayer targetUserId={first.userId} />
           </div>
 
           <div className="col-start-3">
             {third && (
-              <PodiumStep
-                rank={3}
-                player={third}
-                playerInfo={playersById.get(third.userId)}
-                tier="bronze"
-                staggerIndex={2}
-                t={t}
-              />
+              <>
+                <PodiumStep
+                  rank={3}
+                  player={third}
+                  playerInfo={playersById.get(third.userId)}
+                  tier="bronze"
+                  staggerIndex={2}
+                  t={t}
+                />
+                <RowReactionsForPlayer targetUserId={third.userId} />
+              </>
             )}
           </div>
         </div>
@@ -184,6 +192,7 @@ export function SkinsPodium({
                     </span>
                   </div>
                 </div>
+                <RowReactionsForPlayer targetUserId={player.userId} />
               </li>
             );
           })}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
@@ -46,6 +47,8 @@ import {
   getLeaderboardContext,
   fetchSideWinners,
 } from './leaderboardContext';
+import { ReactionsProvider } from './ReactionsProvider';
+import { fetchGameReactions } from '@/lib/games/reactions/fetch';
 import { renderStableford } from './formats/stableford';
 import { renderMatchplay } from './formats/matchplay';
 import { renderFourballMatchplay } from './formats/fourballMatchplay';
@@ -224,7 +227,7 @@ async function LeaderboardBody({
   backHref: string;
   returnQuery: string;
 }) {
-  const [tc, { supabase }, locale] = await Promise.all([
+  const [tc, { supabase, userId: bodyUserId }, locale] = await Promise.all([
     getTranslations('leaderboard.common'),
     getLeaderboardContext(),
     getLocale(),
@@ -235,7 +238,10 @@ async function LeaderboardBody({
   // #624 — banenavnet hentes slankt parallelt (ikke via den cachede
   // getGameWithPlayers, som bevisst ikke joiner courses) for å re-lokalisere
   // det auto-genererte spillnavnet ved visning.
-  const [gwp, rawHolesRes, rawScoresRes, courseRes] = await Promise.all([
+  // #943 — reactions fetch runs in parallel; bodyUserId is non-null here
+  // (guarded above by redirect) but may be undefined for team/non-individual
+  // formats; we pass it anyway and the provider handles an empty summary.
+  const [gwp, rawHolesRes, rawScoresRes, courseRes, reactionSummary] = await Promise.all([
     getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
@@ -255,7 +261,18 @@ async function LeaderboardBody({
           .eq('id', gameRow.course_id)
           .maybeSingle<{ name: string }>()
       : Promise.resolve({ data: null as { name: string } | null }),
+    fetchGameReactions(supabase, gameId, bodyUserId ?? ''),
   ]);
+
+  // #943 — wraps the 9 individual-player format returns in ReactionsProvider.
+  // Does NOT wrap team/matchplay/scramble formats (they have no per-player rows
+  // to wire). The provider's `initial` is the server-fetched summary; live
+  // updates are subscribed client-side inside the provider.
+  const withReactions = (node: ReactNode) => (
+    <ReactionsProvider gameId={gameId} initial={reactionSummary}>
+      {node}
+    </ReactionsProvider>
+  );
 
   if (!gwp) notFound();
   if (rawHolesRes.error) throw rawHolesRes.error;
@@ -280,14 +297,14 @@ async function LeaderboardBody({
   // ingen state #3/#3.5/reveal-active for stableford ennå (fase 6 håndterer
   // reveal-flow). Midt-runde og post-finished bruker samme visning.
   if (isStablefordFamily(game.game_mode)) {
-    return renderStableford({
+    return withReactions(await renderStableford({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Matchplay-grenen (epic #45 Phase 3): 1v1 hull-for-hull. MatchplayMatchView
@@ -345,14 +362,14 @@ async function LeaderboardBody({
   // state #3/#3.5-«venterom» — solo-spillere ser hverandre umiddelbart, samme
   // RLS-policy som stableford og matchplay.
   if (game.game_mode === 'solo_strokeplay') {
-    return renderSoloStrokeplay({
+    return withReactions(await renderSoloStrokeplay({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Texas scramble (issue #44) og Ambrose (issue #284): lag-aggregert
@@ -378,14 +395,14 @@ async function LeaderboardBody({
   // pattern, men view-en håndterer reveal-modus internt (skjuler poeng-totaler
   // når score_visibility='reveal' og status='active').
   if (game.game_mode === 'wolf') {
-    return renderWolf({
+    return withReactions(await renderWolf({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Nassau (issue #276): tre stacked strokeplay-rangeringer (Front 9, Back 9,
@@ -393,14 +410,14 @@ async function LeaderboardBody({
   // ingen per-hull-tabell som Wolf. Live-view håndterer reveal-modus internt
   // (skjuler totaler når score_visibility='reveal' og status='active').
   if (game.game_mode === 'nassau') {
-    return renderNassau({
+    return withReactions(await renderNassau({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Skins med carryover (issue #275): hull-basert point-game med akkumulerende
@@ -408,14 +425,14 @@ async function LeaderboardBody({
   // tabell. Live-view håndterer reveal-modus internt (skjuler totaler når
   // score_visibility='reveal' og status='active').
   if (game.game_mode === 'skins') {
-    return renderSkins({
+    return withReactions(await renderSkins({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Bingo Bango Bongo (issue #277): tre prestasjons-poeng per hull (bingo/
@@ -424,14 +441,14 @@ async function LeaderboardBody({
   // Wolf-mønstret. Live-view håndterer reveal-modus internt (skjuler totaler
   // når score_visibility='reveal' og status='active').
   if (game.game_mode === 'bingo_bango_bongo') {
-    return renderBingoBangoBongo({
+    return withReactions(await renderBingoBangoBongo({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Nines / Split Sixes (issue #278): individuelt 3-spiller-format der poeng
@@ -440,14 +457,14 @@ async function LeaderboardBody({
   // reveal-modus internt (skjuler totaler når score_visibility='reveal' og
   // status='active').
   if (game.game_mode === 'nines') {
-    return renderNines({
+    return withReactions(await renderNines({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Round Robin (issue #280): 4-spiller rotating partner-format, 3 segmenter
@@ -456,14 +473,14 @@ async function LeaderboardBody({
   // fra eksisterende scores-tabell. Live-view + finished-podium speiler Wolf-
   // pattern. View-en håndterer reveal-modus internt.
   if (game.game_mode === 'round_robin') {
-    return renderRoundRobin({
+    return withReactions(await renderRoundRobin({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Acey Deucey (issue #279): rent slag-derivert poeng-spill for 4 spillere.
@@ -472,14 +489,14 @@ async function LeaderboardBody({
   // view håndterer reveal-modus internt (skjuler totaler når
   // score_visibility='reveal' og status='active').
   if (game.game_mode === 'acey_deucey') {
-    return renderAceyDeucey({
+    return withReactions(await renderAceyDeucey({
       gameId,
       game,
       gwp,
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
-    });
+    }));
   }
 
   // Shamble / Champagne Scramble (issue #285): lag-format. Delt drive, så

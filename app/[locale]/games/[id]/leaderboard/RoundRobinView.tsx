@@ -12,6 +12,7 @@ import type {
   RoundRobinPlayerLine,
   RoundRobinSegmentLine,
 } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for RoundRobinView. En map fra userId → navn + kallenavn.
@@ -252,6 +253,7 @@ function PlayerRow({
           </span>
         </div>
       </Card>
+      <RowReactionsForPlayer targetUserId={player.userId} />
     </li>
   );
 }

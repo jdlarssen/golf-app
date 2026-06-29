@@ -11,6 +11,7 @@ import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SoloStrokeplayPlayerInfo } from './SoloStrokeplayView';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 // Distinkt sessionStorage-prefix fra solo-stableford-podiet — verifisert via
 // dedikert test. Holdt som modul-konstant slik at test-en kan importere den
@@ -141,16 +142,19 @@ export function SoloStrokeplayPodium({
           {/* 2. plass — venstre */}
           <div className="col-start-1">
             {second && (
-              <PodiumStep
-                rank={2}
-                player={second}
-                playerInfo={playersById.get(second.userId)}
-                tier="silver"
-                staggerIndex={1}
-                slagLabel={t('common.slagLabel')}
-                hullChip={t('common.hullChip', { count: second.holesPlayed })}
-                unknownPlayerLabel={t('common.unknownPlayerFull')}
-              />
+              <>
+                <PodiumStep
+                  rank={2}
+                  player={second}
+                  playerInfo={playersById.get(second.userId)}
+                  tier="silver"
+                  staggerIndex={1}
+                  slagLabel={t('common.slagLabel')}
+                  hullChip={t('common.hullChip', { count: second.holesPlayed })}
+                  unknownPlayerLabel={t('common.unknownPlayerFull')}
+                />
+                <RowReactionsForPlayer targetUserId={second.userId} />
+              </>
             )}
           </div>
 
@@ -166,21 +170,25 @@ export function SoloStrokeplayPodium({
               hullChip={t('common.hullChip', { count: first.holesPlayed })}
               unknownPlayerLabel={t('common.unknownPlayerFull')}
             />
+            <RowReactionsForPlayer targetUserId={first.userId} />
           </div>
 
           {/* 3. plass — høyre */}
           <div className="col-start-3">
             {third && (
-              <PodiumStep
-                rank={3}
-                player={third}
-                playerInfo={playersById.get(third.userId)}
-                tier="bronze"
-                staggerIndex={2}
-                slagLabel={t('common.slagLabel')}
-                hullChip={t('common.hullChip', { count: third.holesPlayed })}
-                unknownPlayerLabel={t('common.unknownPlayerFull')}
-              />
+              <>
+                <PodiumStep
+                  rank={3}
+                  player={third}
+                  playerInfo={playersById.get(third.userId)}
+                  tier="bronze"
+                  staggerIndex={2}
+                  slagLabel={t('common.slagLabel')}
+                  hullChip={t('common.hullChip', { count: third.holesPlayed })}
+                  unknownPlayerLabel={t('common.unknownPlayerFull')}
+                />
+                <RowReactionsForPlayer targetUserId={third.userId} />
+              </>
             )}
           </div>
         </div>
@@ -230,6 +238,7 @@ export function SoloStrokeplayPodium({
                       </span>
                     </div>
                   </Card>
+                  <RowReactionsForPlayer targetUserId={player.userId} />
                 </li>
               );
             })}

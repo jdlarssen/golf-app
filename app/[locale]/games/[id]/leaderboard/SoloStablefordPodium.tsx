@@ -11,6 +11,7 @@ import type { StablefordSoloResult } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SoloStablefordPlayerInfo } from './SoloStablefordView';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 const STORAGE_PREFIX = 'torny-stableford-podium-confetti-seen-';
 
@@ -133,16 +134,19 @@ export function SoloStablefordPodium({
           {/* 2. plass — venstre */}
           <div className="col-start-1">
             {second && (
-              <PodiumStep
-                rank={2}
-                player={second}
-                playerInfo={playersById.get(second.userId)}
-                tier="silver"
-                staggerIndex={1}
-                poengLabel={t('common.poengLabel')}
-                hullChip={t('common.hullChip', { count: second.holesPlayed })}
-                unknownPlayerLabel={t('common.unknownPlayerFull')}
-              />
+              <>
+                <PodiumStep
+                  rank={2}
+                  player={second}
+                  playerInfo={playersById.get(second.userId)}
+                  tier="silver"
+                  staggerIndex={1}
+                  poengLabel={t('common.poengLabel')}
+                  hullChip={t('common.hullChip', { count: second.holesPlayed })}
+                  unknownPlayerLabel={t('common.unknownPlayerFull')}
+                />
+                <RowReactionsForPlayer targetUserId={second.userId} />
+              </>
             )}
           </div>
 
@@ -158,21 +162,25 @@ export function SoloStablefordPodium({
               hullChip={t('common.hullChip', { count: first.holesPlayed })}
               unknownPlayerLabel={t('common.unknownPlayerFull')}
             />
+            <RowReactionsForPlayer targetUserId={first.userId} />
           </div>
 
           {/* 3. plass — høyre */}
           <div className="col-start-3">
             {third && (
-              <PodiumStep
-                rank={3}
-                player={third}
-                playerInfo={playersById.get(third.userId)}
-                tier="bronze"
-                staggerIndex={2}
-                poengLabel={t('common.poengLabel')}
-                hullChip={t('common.hullChip', { count: third.holesPlayed })}
-                unknownPlayerLabel={t('common.unknownPlayerFull')}
-              />
+              <>
+                <PodiumStep
+                  rank={3}
+                  player={third}
+                  playerInfo={playersById.get(third.userId)}
+                  tier="bronze"
+                  staggerIndex={2}
+                  poengLabel={t('common.poengLabel')}
+                  hullChip={t('common.hullChip', { count: third.holesPlayed })}
+                  unknownPlayerLabel={t('common.unknownPlayerFull')}
+                />
+                <RowReactionsForPlayer targetUserId={third.userId} />
+              </>
             )}
           </div>
         </div>
@@ -219,6 +227,7 @@ export function SoloStablefordPodium({
                       </span>
                     </div>
                   </Card>
+                  <RowReactionsForPlayer targetUserId={player.userId} />
                 </li>
               );
             })}

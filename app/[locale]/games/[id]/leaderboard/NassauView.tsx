@@ -13,6 +13,7 @@ import type {
   NassauSection,
   NassauSectionLine,
 } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for NassauView. En map fra userId → navn + kallenavn.
@@ -173,6 +174,9 @@ export function NassauView({
           section={result.sections.total18}
           playersById={playersById}
           t={t}
+          // Reactions live once per player, on the aggregate (Totalt 18) section
+          // only — not repeated under Front 9 / Back 9 (#943).
+          showReactions
         />
       </div>
 
@@ -201,6 +205,7 @@ function SectionBlock({
   section,
   playersById,
   t,
+  showReactions = false,
 }: {
   testId: string;
   heading: string;
@@ -208,6 +213,7 @@ function SectionBlock({
   section: NassauSection;
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
+  showReactions?: boolean;
 }) {
   const tc = useTranslations('leaderboard.common');
   const hasCleanWinner =
@@ -269,6 +275,7 @@ function SectionBlock({
                 isWinnerHighlight={isWinnerHighlight}
                 staggerIndex={i}
                 t={t}
+                showReactions={showReactions}
               />
             );
           })}
@@ -284,12 +291,14 @@ function SectionPlayerRow({
   isWinnerHighlight,
   staggerIndex,
   t,
+  showReactions = false,
 }: {
   line: NassauSectionLine;
   displayName: string;
   isWinnerHighlight: boolean;
   staggerIndex: number;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
+  showReactions?: boolean;
 }) {
   const isTied = line.tiedWith.length > 0;
   const rankLabel = isTied ? `T${line.rank}` : `${line.rank}`;
@@ -340,6 +349,7 @@ function SectionPlayerRow({
           </span>
         </div>
       </Card>
+      {showReactions && <RowReactionsForPlayer targetUserId={line.userId} />}
     </li>
   );
 }

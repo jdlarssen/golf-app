@@ -13,6 +13,7 @@ import type {
   AceyDeuceyResult,
   AceyDeuceyHoleRow,
 } from '@/lib/scoring/modes/types';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /**
  * Spillerinfo for AceyDeuceyView. En map fra userId → navn + kallenavn.
@@ -151,6 +152,7 @@ export function AceyDeuceyView({
           return (
             <PlayerRow
               key={player.userId}
+              userId={player.userId}
               rank={player.rank}
               displayName={displayName}
               aces={player.aces}
@@ -202,6 +204,7 @@ function formatSigned(n: number): string {
 }
 
 function PlayerRow({
+  userId,
   rank,
   displayName,
   aces,
@@ -210,6 +213,7 @@ function PlayerRow({
   tiedWith,
   staggerIndex,
 }: {
+  userId: string;
   rank: number;
   displayName: string;
   aces: number;
@@ -268,6 +272,7 @@ function PlayerRow({
           </span>
         </div>
       </Card>
+      <RowReactionsForPlayer targetUserId={userId} />
     </li>
   );
 }

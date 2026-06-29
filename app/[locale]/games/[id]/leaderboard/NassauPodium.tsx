@@ -10,6 +10,7 @@ import type { NassauResult, NassauUnitLine } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { NassauPlayerInfo } from './NassauView';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 // Distinkt sessionStorage-prefiks fra andre podium-er — inneholder ordet
 // 'nassau' så vi ikke kolliderer med solo-stableford/solo-strokeplay/wolf.
@@ -137,14 +138,17 @@ export function NassauPodium({
         <div className="grid grid-cols-3 items-end gap-2">
           <div className="col-start-1">
             {second && (
-              <PodiumStep
-                rank={2}
-                player={second}
-                playerInfo={playersById.get(second.userId)}
-                tier="silver"
-                staggerIndex={1}
-                t={t}
-              />
+              <>
+                <PodiumStep
+                  rank={2}
+                  player={second}
+                  playerInfo={playersById.get(second.userId)}
+                  tier="silver"
+                  staggerIndex={1}
+                  t={t}
+                />
+                <RowReactionsForPlayer targetUserId={second.userId} />
+              </>
             )}
           </div>
 
@@ -157,18 +161,22 @@ export function NassauPodium({
               staggerIndex={0}
               t={t}
             />
+            <RowReactionsForPlayer targetUserId={first.userId} />
           </div>
 
           <div className="col-start-3">
             {third && (
-              <PodiumStep
-                rank={3}
-                player={third}
-                playerInfo={playersById.get(third.userId)}
-                tier="bronze"
-                staggerIndex={2}
-                t={t}
-              />
+              <>
+                <PodiumStep
+                  rank={3}
+                  player={third}
+                  playerInfo={playersById.get(third.userId)}
+                  tier="bronze"
+                  staggerIndex={2}
+                  t={t}
+                />
+                <RowReactionsForPlayer targetUserId={third.userId} />
+              </>
             )}
           </div>
         </div>
@@ -215,6 +223,7 @@ export function NassauPodium({
                       </span>
                     </div>
                   </div>
+                  <RowReactionsForPlayer targetUserId={player.userId} />
                 </li>
               );
             })}
