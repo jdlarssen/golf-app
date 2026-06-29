@@ -5,7 +5,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -86,10 +85,6 @@ export function ReactionsProvider({
   children: ReactNode;
 }) {
   const [summary, setSummary] = useState<ReactionSummary>(initial);
-  // Keep a live ref so the debounced refetch + error-revert read current state
-  // without re-subscribing the realtime channel on every change.
-  const summaryRef = useRef(summary);
-  summaryRef.current = summary;
 
   const refetch = useCallback(async () => {
     try {
