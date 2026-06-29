@@ -62,6 +62,7 @@ import { DraftTeamsOverview } from './DraftTeamsOverview';
 import { PendingApprovalsBanner } from './PendingApprovalsBanner';
 import { CupStandingsLink } from './CupStandingsLink';
 import { CreatorControls } from './CreatorControls';
+import { LiveFollowControl } from './LiveFollowControl';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 
 type Params = Promise<{ id: string }>;
@@ -183,7 +184,7 @@ export default async function GameHomePage({
   // require cross-game fan-out on course-edits), so they ride a slim
   // direct fetch in parallel. Authorization stays at the call-site via
   // `me = players.find(...)` notFound() below.
-  const [gwp, joinsRes] = await Promise.all([
+  const [gwp, joinsRes, spectateRes] = await Promise.all([
     getGameWithPlayers(id),
     supabase
       .from('games')
@@ -192,12 +193,25 @@ export default async function GameHomePage({
       )
       .eq('id', id)
       .single<Pick<GameRow, 'courses' | 'tee_boxes'>>(),
+    // #938: spectate_token is not yet in the generated types (column added in
+    // migration 0121, types regenerated post-deploy). We use the admin client
+    // with an any-cast — only read server-side to feed the creator/admin UI.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (getAdminClient() as any)
+      .from('games')
+      .select('spectate_token')
+      .eq('id', id)
+      .maybeSingle() as Promise<{ data: { spectate_token: string | null } | null; error: unknown }>,
   ]);
 
   if (!gwp) notFound();
   if (joinsRes.error || !joinsRes.data) notFound();
   const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) notFound();
+
+  // #938: current spectate_token (null = live-follow disabled).
+  const spectateToken: string | null =
+    spectateRes.data?.spectate_token ?? null;
 
   // #427: the game's creator gets an «Avslutt spill»-affordance on game-home
   // (admins finish from Sekretariatet). Read from the immutable created_by on
@@ -985,6 +999,16 @@ export default async function GameHomePage({
               </p>
             </Card>
           </SmartLink>
+        )}
+
+        {/* #938: live-følg — kun for oppretter på aktive spill. Lar oppretteren
+            dele en offentlig live-lenke uten at tilskuere trenger konto. */}
+        {isActive && isCreator && (
+          <LiveFollowControl
+            gameId={id}
+            spectateToken={spectateToken}
+            locale={locale}
+          />
         )}
 
         {/* #428: rediger/slett for oppretter — vises kun ved draft/scheduled
