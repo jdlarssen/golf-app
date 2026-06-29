@@ -4540,7 +4540,7 @@
   "spectate": {
     "liveStatus": "Følger live",
     "resultStatus": "Resultat",
-    "bannerAriaLabel": "Spectator-banner",
+    "bannerAriaLabel": "Live-følg-banner",
     "liveFollowLabel": "Del live-lenke",
     "liveFollowOn": "Live-følg er på",
     "liveFollowOff": "Live-følg er av",
