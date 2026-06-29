@@ -31,6 +31,13 @@ export interface HoleHeroProps {
    * 4. spillerkort under folden. Undefined for modi uten kontekst. #639.
    */
   contextLine?: ReactNode;
+  /**
+   * Valgfri «Registrer putter»-bryter (#939) plassert helt til høyre, rett til
+   * venstre for Par/indeks. Sitter i den ledige høyden i header-raden, så den
+   * tar ingen egen vertikal plass. Kun satt for individuelle slag-/stableford-
+   * format (de eneste som fanger putter, og som aldri har en `contextLine`).
+   */
+  puttsToggle?: ReactNode;
 }
 
 const containerStyle: CSSProperties = {
@@ -96,7 +103,7 @@ const indexStyle: CSSProperties = {
 };
 
 export function HoleHero(props: HoleHeroProps): JSX.Element {
-  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine } = props;
+  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine, puttsToggle } = props;
   const t = useTranslations('holes.entry');
   const ts = useTranslations('scorecard');
   const showAside = parByGender ? hasParDifference(parByGender) : false;
@@ -116,14 +123,17 @@ export function HoleHero(props: HoleHeroProps): JSX.Element {
         <div className="score-num" style={numberStyle}>{holeNumber}</div>
       </div>
       {contextLine && <div style={centerStyle}>{contextLine}</div>}
-      <div style={rightStyle}>
-        <div style={parStyle}>
-          {t('hullPar', { par })}
-          {showAside && (
-            <ParAsideMarker tooltip={tooltip} />
-          )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        {puttsToggle}
+        <div style={rightStyle}>
+          <div style={parStyle}>
+            {t('hullPar', { par })}
+            {showAside && (
+              <ParAsideMarker tooltip={tooltip} />
+            )}
+          </div>
+          <div style={indexStyle}>{t('hullIndex', { si: strokeIndex })}</div>
         </div>
-        <div style={indexStyle}>{t('hullIndex', { si: strokeIndex })}</div>
       </div>
     </div>
   );

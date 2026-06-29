@@ -18,11 +18,14 @@ export interface PuttsFieldProps {
 }
 
 /**
- * Opt-in per-hole putt entry (#939). Rendered just beneath a ScoreCard when the
- * player has turned «Registrer putter» on, for individual stroke/stableford
- * formats only. A compact [−] value [+] stepper: from «—» the first + records 1
- * putt; − at 0 clears back to «—». Strokes and putts are independent — clearing
- * or changing one never touches the other (the merge lives in writeScore).
+ * Opt-in per-hole putt entry (#939). Rendered directly beneath the score number
+ * (in the ScoreCard's score column) when «Registrer putter» is on, for individual
+ * stroke/stableford formats only — it drops into the empty height beside the
+ * three-button stepper, so it adds no card height. A compact [−] value [+]
+ * stepper with a small label: from «—» the first + records 2 putts (regulation,
+ * the common case — one tap), − adjusts down and at 0 clears back to «—».
+ * Strokes and putts are independent — changing one never touches the other
+ * (the merge lives in writeScore).
  */
 export function PuttsField(props: PuttsFieldProps): JSX.Element {
   const t = useTranslations('holes.putts');
@@ -41,46 +44,43 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
   function increase() {
     if (disabled) return;
     if (putts == null) {
-      onSetPutts(playerId, 1); // «—» → first putt
+      onSetPutts(playerId, 2); // «—» → regulation 2-putt (common case, one tap)
       return;
     }
     if (putts >= MAX_PUTTS) return;
     onSetPutts(playerId, putts + 1);
   }
 
-  const rowStyle: CSSProperties = {
+  // Compact column tucked under the score number. Stepper on top, tiny label
+  // below. Buttons are 34×30 — deliberately smaller than the score stepper to
+  // fit the free height beside it; a flagged trade-off against the ≥44px tap
+  // guideline that's how this placement adds zero card height.
+  const columnStyle: CSSProperties = {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    // Tuck under the card it belongs to: pull up over the list gap and indent.
-    margin: '-6px 8px 0',
-    padding: '6px 12px 8px',
-    borderRadius: '0 0 14px 14px',
-    background: 'var(--surface-subtle, var(--surface))',
-    border: '1px solid var(--border)',
-    borderTop: 'none',
+    gap: 3,
     opacity: disabled ? 0.6 : 1,
   };
 
   const labelStyle: CSSProperties = {
     fontFamily: 'var(--font-sans)',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
-    letterSpacing: '0.04em',
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
     color: 'var(--text-muted)',
   };
 
   const btnStyle: CSSProperties = {
-    width: 44,
-    height: 44,
+    width: 34,
+    height: 30,
     border: '1px solid var(--border)',
-    borderRadius: 11,
+    borderRadius: 8,
     background: 'var(--surface)',
     fontFamily: 'var(--font-sans)',
     fontWeight: 600,
-    fontSize: 18,
+    fontSize: 16,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -89,19 +89,18 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
   };
 
   const valueStyle: CSSProperties = {
-    minWidth: 28,
+    minWidth: 18,
     textAlign: 'center',
     fontFamily: 'var(--font-serif)',
     fontVariantNumeric: 'tabular-nums',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 500,
     color: putts == null ? 'var(--score-unset-fg, var(--text-muted))' : 'var(--text)',
   };
 
   return (
-    <div style={rowStyle} data-testid="putts-field">
-      <span style={labelStyle}>{t('fieldLabel')}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={columnStyle} data-testid="putts-field">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <button
           type="button"
           aria-label={t('decreaseAriaLabel', { name })}
@@ -128,6 +127,7 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
           +
         </button>
       </div>
+      <span style={labelStyle}>{t('fieldLabel')}</span>
     </div>
   );
 }

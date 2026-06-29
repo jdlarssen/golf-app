@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, JSX } from 'react';
+import type { CSSProperties, JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
 import { scoreShape, type ScoreShape as ScoreShapeKind } from '@/lib/scoring/scoreShape';
@@ -38,6 +38,15 @@ export interface ScoreCardProps {
    * feiltast på banen (#944).
    */
   onClear: (playerId: string) => void;
+  /**
+   * Optional control rendered directly beneath the score number, inside the
+   * card's score column (#939: the putts stepper). It drops into the empty
+   * height beside the +/−/⋯ stepper, so it adds no card height. Kept as a slot
+   * so the shared card stays format-agnostic — formats that pass nothing render
+   * exactly as before. The slot stops click propagation so its controls don't
+   * trigger the card's tap-to-par.
+   */
+  belowScore?: ReactNode;
 }
 
 const MIN_STROKES = 1;
@@ -85,6 +94,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     onSetScore,
     onLongPress,
     onClear,
+    belowScore,
   } = props;
 
   const confirmed = score != null;
@@ -304,18 +314,30 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
       </div>
 
       <div
-        data-testid="score-shape"
-        style={{ display: 'flex', alignItems: 'center' }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 7,
+        }}
       >
-        <ScoreShape shape={shape} tone={tone} size="lg">
-          <span
-            data-testid="score-number"
-            className="score-num"
-            style={numberStyle}
-          >
-            {displayedNumber}
-          </span>
-        </ScoreShape>
+        <div
+          data-testid="score-shape"
+          style={{ display: 'flex', alignItems: 'center' }}
+        >
+          <ScoreShape shape={shape} tone={tone} size="lg">
+            <span
+              data-testid="score-number"
+              className="score-num"
+              style={numberStyle}
+            >
+              {displayedNumber}
+            </span>
+          </ScoreShape>
+        </div>
+        {belowScore != null && (
+          <div onClick={(e) => e.stopPropagation()}>{belowScore}</div>
+        )}
       </div>
 
       <div

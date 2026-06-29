@@ -1,10 +1,12 @@
 'use client';
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type JSX,
   type ReactNode,
@@ -24,7 +26,7 @@ import { OnboardingBanner } from '@/components/hole/OnboardingBanner';
 import { SyncStatusLine } from '@/components/hole/SyncStatusLine';
 import { BottomActionBar } from '@/components/hole/BottomActionBar';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
-import { PokalIcon } from '@/components/icons';
+import { PokalIcon, PinFlagSm } from '@/components/icons';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
 import {
@@ -534,29 +536,39 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   }
 
   // Putt-registrering opt-in (#939): per-runde-bryter persistert i localStorage,
-  // per game. Lazy-initializer leser synkront (samme mønster som `dismissed`
-  // over) — sparer en paint-flicker mot en mulig én-paint hydration-warning i
-  // dev. Selve putts-dataen ligger i scores.putts; bryteren styrer bare
-  // synligheten av putts-feltet.
+  // per game. useSyncExternalStore holder SSR + første klient-paint enige
+  // (server-snapshot = false), og leser localStorage på nytt etter hydrering —
+  // ingen hydration-mismatch (samme mønster som ThemeSwitcher/InstallBanner).
+  // Selve putts-dataen ligger i scores.putts; bryteren styrer bare synligheten.
   const puttsTrackingKey = `torny:putts:${gameId}`;
-  const [puttsTracking, setPuttsTracking] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(puttsTrackingKey) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const subscribePutts = useCallback((onChange: () => void) => {
+    window.addEventListener('storage', onChange);
+    window.addEventListener('torny:putts-change', onChange);
+    return () => {
+      window.removeEventListener('storage', onChange);
+      window.removeEventListener('torny:putts-change', onChange);
+    };
+  }, []);
+  const puttsTracking = useSyncExternalStore(
+    subscribePutts,
+    () => {
+      try {
+        return localStorage.getItem(puttsTrackingKey) === '1';
+      } catch {
+        return false;
+      }
+    },
+    () => false,
+  );
 
   function togglePuttsTracking() {
-    setPuttsTracking((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(puttsTrackingKey, next ? '1' : '0');
-      } catch {
-        // best effort
-      }
-      return next;
-    });
+    try {
+      const next = localStorage.getItem(puttsTrackingKey) === '1' ? '0' : '1';
+      localStorage.setItem(puttsTrackingKey, next);
+    } catch {
+      // best effort
+    }
+    window.dispatchEvent(new Event('torny:putts-change'));
   }
 
   // Sync pulse — local-only signal "we wrote a score recently".
@@ -734,6 +746,47 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     </HoleContextLine>
   ) : null;
 
+  // Putt-registrering-bryter (#939) som pille, rutet inn i hull-headeren via
+  // HoleHero sin puttsToggle-slot (rett til venstre for Par). Sitter i den ledige
+  // header-høyden, så den tar ingen egen vertikal plass. «På» bruker en myk
+  // primary-tint (champagne er reservert vinnere) + fyllt pille; «av» er en
+  // dempet omriss-pille. Kun fangst-format viser den.
+  const puttsTogglePill: ReactNode = capturesPutts ? (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={puttsTracking}
+      aria-label={t('putts.toggleLabel')}
+      onClick={togglePuttsTracking}
+      disabled={disabled}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '5px 11px',
+        borderRadius: 999,
+        border: `1px solid ${
+          puttsTracking
+            ? 'color-mix(in srgb, var(--primary) 50%, transparent)'
+            : 'var(--border)'
+        }`,
+        background: puttsTracking
+          ? 'color-mix(in srgb, var(--primary) 16%, transparent)'
+          : 'transparent',
+        color: puttsTracking ? 'var(--text)' : 'var(--text-muted)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 12.5,
+        fontWeight: 600,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <PinFlagSm size={13} />
+      <span>{t('putts.fieldLabel')}</span>
+    </button>
+  ) : null;
+
   const bottomDisabled = (!roundComplete && !allConfirmed) || disabled;
 
   return (
@@ -804,6 +857,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         playerGender={playerGender}
         strokeIndex={strokeIndex}
         contextLine={holeContextLine}
+        puttsToggle={puttsTogglePill}
       />
 
       <OnboardingBanner visible={showHint} onDismiss={dismissHint} />
@@ -846,66 +900,6 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         </div>
       )}
 
-      {/* Putt-registrering opt-in (#939): kun individuelle slag-/stableford-
-          format. Skjult som default — holder scorekortet rent for de mange som
-          ikke fører putter. */}
-      {capturesPutts && (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={puttsTracking}
-          onClick={togglePuttsTracking}
-          disabled={disabled}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%',
-            gap: 12,
-            padding: '10px 14px',
-            marginBottom: 12,
-            minHeight: 48,
-            border: '1px solid var(--border)',
-            borderRadius: 14,
-            background: 'var(--surface)',
-            color: 'var(--text)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            opacity: disabled ? 0.6 : 1,
-          }}
-        >
-          <span>{t('putts.toggleLabel')}</span>
-          <span
-            aria-hidden
-            style={{
-              position: 'relative',
-              flexShrink: 0,
-              width: 44,
-              height: 26,
-              borderRadius: 13,
-              background: puttsTracking ? 'var(--primary)' : 'var(--border)',
-              transition: 'background 160ms',
-            }}
-          >
-            <span
-              style={{
-                position: 'absolute',
-                top: 3,
-                left: puttsTracking ? 21 : 3,
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: 'var(--surface)',
-                boxShadow: '0 1px 2px rgba(26,46,31,0.25)',
-                transition: 'left 160ms',
-              }}
-            />
-          </span>
-        </button>
-      )}
-
       <div style={listStyle}>
         {cards.map((c) => {
           // Per-kort stableford-poeng for current hull. Vi regner client-side
@@ -924,31 +918,32 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
           const isMyCard = c.userId === myUserId;
           const cardDisabled = disabled || (withdrawn && isMyCard);
           return (
-            <div key={c.userId}>
-              <ScoreCard
-                playerId={c.userId}
-                name={c.nickname ?? c.name}
-                initial={c.initial}
-                extraStrokes={c.extraStrokes}
-                score={c.score}
-                par={par}
-                disabled={cardDisabled}
-                hideNetto={hideNetto}
-                stablefordPoints={stablefordPoints}
-                onSetScore={onSetScore}
-                onLongPress={onLongPress}
-                onClear={onClearFromCard}
-              />
-              {capturesPutts && puttsTracking && (
-                <PuttsField
-                  playerId={c.userId}
-                  name={c.nickname ?? c.name}
-                  putts={c.putts}
-                  disabled={cardDisabled}
-                  onSetPutts={onSetPutts}
-                />
-              )}
-            </div>
+            <ScoreCard
+              key={c.userId}
+              playerId={c.userId}
+              name={c.nickname ?? c.name}
+              initial={c.initial}
+              extraStrokes={c.extraStrokes}
+              score={c.score}
+              par={par}
+              disabled={cardDisabled}
+              hideNetto={hideNetto}
+              stablefordPoints={stablefordPoints}
+              onSetScore={onSetScore}
+              onLongPress={onLongPress}
+              onClear={onClearFromCard}
+              belowScore={
+                capturesPutts && puttsTracking ? (
+                  <PuttsField
+                    playerId={c.userId}
+                    name={c.nickname ?? c.name}
+                    putts={c.putts}
+                    disabled={cardDisabled}
+                    onSetPutts={onSetPutts}
+                  />
+                ) : undefined
+              }
+            />
           );
         })}
         {(syncing || savedAt.length > 0 || pendingCount > 0) && (

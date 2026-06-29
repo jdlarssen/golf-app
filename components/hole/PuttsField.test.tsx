@@ -31,10 +31,10 @@ describe('PuttsField', () => {
     expect(dec).toBeDisabled();
   });
 
-  it('first + records 1 putt from the unrecorded state', () => {
+  it('first + records a regulation 2-putt from the unrecorded state', () => {
     const { inc, onSetPutts } = setup({ putts: null });
     fireEvent.click(inc);
-    expect(onSetPutts).toHaveBeenCalledWith('p1', 1);
+    expect(onSetPutts).toHaveBeenCalledWith('p1', 2);
   });
 
   it('increments within range', () => {
