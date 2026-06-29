@@ -4547,10 +4547,7 @@
     "liveFollowHint": "Anyone with the link can follow the tournament without logging in.",
     "shareLinkLabel": "Share live link",
     "shareLinkAriaLabel": "Share live link for this game",
-    "copyLinkLabel": "Copy link",
-    "copyLinkAriaLabel": "Copy live link to clipboard",
-    "enablePending": "Turning on …",
-    "disablePending": "Turning off …",
+    "copiedLabel": "Copied!",
     "shareText": "Follow the tournament live in Tørny"
   },
   "installBanner": {

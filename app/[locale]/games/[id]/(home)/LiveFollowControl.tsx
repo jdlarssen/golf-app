@@ -147,7 +147,7 @@ export function LiveFollowControl({
             <path d="M12 3v13" />
             <path d="m7 8 5-5 5 5" />
           </svg>
-          {copied ? t('copyLinkLabel') : t('shareLinkLabel')}
+          {copied ? t('copiedLabel') : t('shareLinkLabel')}
         </button>
       )}
     </div>
