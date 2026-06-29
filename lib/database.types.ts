@@ -1488,6 +1488,7 @@ export type Database = {
           game_id: string
           hole_number: number
           id: string
+          putts: number | null
           strokes: number | null
           updated_at: string
           user_id: string
@@ -1498,6 +1499,7 @@ export type Database = {
           game_id: string
           hole_number: number
           id?: string
+          putts?: number | null
           strokes?: number | null
           updated_at?: string
           user_id: string
@@ -1508,6 +1510,7 @@ export type Database = {
           game_id?: string
           hole_number?: number
           id?: string
+          putts?: number | null
           strokes?: number | null
           updated_at?: string
           user_id?: string
@@ -1897,6 +1900,7 @@ export type Database = {
           p_entered_by: string
           p_game_id: string
           p_hole_number: number
+          p_putts?: number
           p_strokes: number
           p_user_id: string
         }
@@ -1905,6 +1909,7 @@ export type Database = {
           entered_by: string
           game_id: string
           hole_number: number
+          putts: number | null
           strokes: number
           updated_at: string
           user_id: string
