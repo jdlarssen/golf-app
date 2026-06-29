@@ -2545,7 +2545,7 @@
     "submitLabel": "Submit",
     "submitPending": "Sending …",
     "successMessage": "Thanks! We've received your idea.",
-    "sentFollowUp": "We'll take a look and let you know when we've built it.",
+    "sentFollowUp": "We look at every suggestion. If we build yours, you'll hear from us.",
     "errorEmpty": "Please write something before submitting."
   },
   "adminIdeer": {

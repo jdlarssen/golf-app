@@ -2545,7 +2545,7 @@
     "submitLabel": "Send inn",
     "submitPending": "Sender …",
     "successMessage": "Takk! Vi har fått idéen din.",
-    "sentFollowUp": "Vi ser på det og sier ifra når vi har bygd det.",
+    "sentFollowUp": "Vi ser på alle forslag. Bygger vi ditt, får du beskjed.",
     "errorEmpty": "Du må skrive noe før du sender inn."
   },
   "adminIdeer": {
