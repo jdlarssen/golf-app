@@ -233,6 +233,13 @@ export function buildNotificationText(
         }),
       };
     }
+    case 'idea_built':
+      // Generisk delight-kort: «Vi bygde det du foreslo». Payload har bare
+      // submission_id (sporbarhet), ikke noe tekst å vise.
+      return {
+        title: t('kinds.ideaBuilt.title'),
+        detail: t('kinds.ideaBuilt.detail'),
+      };
   }
 }
 

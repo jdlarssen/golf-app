@@ -20,6 +20,11 @@ const cases: Array<{ kind: NotificationKind; payload: NotificationPayload; title
     payload: { game_id: 'g', game_name: 'Sommercup' } as NotificationPayload,
     title: 'kinds.gameFinished.title',
   },
+  {
+    kind: 'idea_built',
+    payload: { submission_id: 's' } as NotificationPayload,
+    title: 'kinds.ideaBuilt.title',
+  },
 ];
 
 describe('buildNotificationText', () => {

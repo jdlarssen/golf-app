@@ -265,4 +265,20 @@ describe('parseNotificationPayload', () => {
       ).toThrow();
     });
   });
+
+  describe('idea_built (#984)', () => {
+    const validUuid = '33333333-3333-3333-3333-333333333333';
+
+    it('aksepterer payload med submission_id', () => {
+      const result = parseNotificationPayload('idea_built', {
+        submission_id: validUuid,
+      });
+      expect(result.kind).toBe('idea_built');
+      expect(result.payload.submission_id).toBe(validUuid);
+    });
+
+    it('avviser manglende submission_id', () => {
+      expect(() => parseNotificationPayload('idea_built', {})).toThrow();
+    });
+  });
 });

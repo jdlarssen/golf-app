@@ -103,5 +103,9 @@ export function notificationDestination(n: DeeplinkInput): string | null {
     case 'achievement_unlocked':
       // Lander på Statistikk-fanen i historikk der badge-veggen bor (#947).
       return '/profile/historikk';
+    case 'idea_built':
+      // «Vi bygde det du foreslo» har ingen egen side — beskjeden leses i
+      // kortet (samme mønster som registration_rejected).
+      return null;
   }
 }

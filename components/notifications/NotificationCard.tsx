@@ -47,6 +47,7 @@ const EMOJI: Record<NotificationKind, string> = {
   game_started: '⛳',
   auto_start_blocked: '⏳',
   achievement_unlocked: '🏅',
+  idea_built: '💡',
 };
 
 /**

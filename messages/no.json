@@ -176,6 +176,10 @@
           "turkey": "Turkey",
           "snowman": "Snowman"
         }
+      },
+      "ideaBuilt": {
+        "title": "Vi bygde det du foreslo",
+        "detail": "Takk for idéen – den er nå en del av Tørny."
       }
     },
     "blockReasons": {

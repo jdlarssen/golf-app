@@ -27,7 +27,8 @@ export type NotificationKind =
   | 'player_added'
   | 'game_started'
   | 'auto_start_blocked'
-  | 'achievement_unlocked';
+  | 'achievement_unlocked'
+  | 'idea_built';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -248,6 +249,14 @@ const achievementUnlockedSchema = z.object({
     .min(1),
 });
 
+// idea_built: innsenderen av en idé (#984) fikk idéen sin bygd. Fyres når admin
+// markerer en `idea_submissions`-rad som bygd. Generisk «Vi bygde det du
+// foreslo»-kort uten payload-avhengig tekst; `submission_id` lagres for
+// sporbarhet (deeplinker ikke — beskjeden ER belønningen).
+const ideaBuiltSchema = z.object({
+  submission_id: uuid,
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -271,6 +280,7 @@ const schemas = {
   game_started: gameStartedSchema,
   auto_start_blocked: autoStartBlockedSchema,
   achievement_unlocked: achievementUnlockedSchema,
+  idea_built: ideaBuiltSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =
