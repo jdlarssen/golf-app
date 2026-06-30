@@ -124,16 +124,14 @@ export async function renderSoloStrokeplay(opts: {
     });
     const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
     return (
-      <>
-        <RevealBruttoView
-          gameId={gameId}
-          gameName={game.name}
-          teams={orderedBrutto}
-          holesPlayed={holesPlayed}
-          backHref={backHref}
-        />
-        {wdSection}
-      </>
+      <RevealBruttoView
+        gameId={gameId}
+        gameName={game.name}
+        teams={orderedBrutto}
+        holesPlayed={holesPlayed}
+        backHref={backHref}
+        footerSlot={wdSection}
+      />
     );
   }
 
@@ -177,7 +175,7 @@ export async function renderSoloStrokeplay(opts: {
     const showSide = game.side_tournament_enabled;
     // mainContent: duell-kort (2 spillere) eller podium (1/3+). Tar `chromeless`
     // så samme reveal kan rendres frittstående ELLER inni sideturnerings-fanen.
-    let mainContent: (chromeless: boolean) => ReactNode;
+    let mainContent: (chromeless: boolean, footerSlot?: ReactNode) => ReactNode;
     if (result.players.length === 2) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
@@ -208,7 +206,7 @@ export async function renderSoloStrokeplay(opts: {
       // deler rank.
       const winnerUserId =
         a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
-      mainContent = (chromeless) => (
+      mainContent = (chromeless, footerSlot) => (
         <HeadToHeadResult
           gameId={gameId}
           gameName={game.name}
@@ -221,10 +219,11 @@ export async function renderSoloStrokeplay(opts: {
           strip={strip}
           backHref={backHref}
           chromeless={chromeless}
+          footerSlot={footerSlot}
         />
       );
     } else {
-      mainContent = (chromeless) => (
+      mainContent = (chromeless, footerSlot) => (
         <SoloStrokeplayPodium
           gameId={gameId}
           gameName={game.name}
@@ -233,6 +232,7 @@ export async function renderSoloStrokeplay(opts: {
           holesPlayed={holesPlayed}
           backHref={backHref}
           chromeless={chromeless}
+          footerSlot={footerSlot}
         />
       );
     }
@@ -253,25 +253,18 @@ export async function renderSoloStrokeplay(opts: {
         </>
       );
     }
-    return (
-      <>
-        {mainContent(false)}
-        {wdSection}
-      </>
-    );
+    return mainContent(false, wdSection);
   }
 
   return (
-    <>
-      <SoloStrokeplayView
-        gameId={gameId}
-        gameName={game.name}
-        result={result}
-        playersById={playersById}
-        holesPlayed={holesPlayed}
-        backHref={backHref}
-      />
-      {wdSection}
-    </>
+    <SoloStrokeplayView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      holesPlayed={holesPlayed}
+      backHref={backHref}
+      footerSlot={wdSection}
+    />
   );
 }

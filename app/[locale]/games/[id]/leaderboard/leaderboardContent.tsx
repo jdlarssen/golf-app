@@ -479,18 +479,16 @@ export async function renderLeaderboardContent({
 
   if (!showSideTournament) {
     return (
-      <>
-        <State4View
-          gameId={gameId}
-          gameName={game.name}
-          teams={orderedLines}
-          mode={mode}
-          coursePar={coursePar}
-          holesPlayed={holesPlayed}
-          backHref={backHref}
-        />
-        <WithdrawnPlayersSection players={bestBallWithdrawn} />
-      </>
+      <State4View
+        gameId={gameId}
+        gameName={game.name}
+        teams={orderedLines}
+        mode={mode}
+        coursePar={coursePar}
+        holesPlayed={holesPlayed}
+        backHref={backHref}
+        footerSlot={<WithdrawnPlayersSection players={bestBallWithdrawn} />}
+      />
     );
   }
 

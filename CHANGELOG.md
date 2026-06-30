@@ -1015,8 +1015,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juni 2026 · 244 rettinger</strong></summary>
+<summary><strong>Juni 2026 · 245 rettinger</strong></summary>
 
+- `1.160.1` · [#990](https://github.com/jdlarssen/golf-app/issues/990) — Trekker en spiller seg fra runden, vises «Trukne spillere» nå riktig under leaderboardet i stedet for å gjemme seg bak menylinja nederst.
 - `1.158.2` · [#987](https://github.com/jdlarssen/golf-app/issues/987) — «Lever ditt scorekort»-knappen på hull-skjermen er nå en avgrenset, avrundet knapp; den grønne flaten flyter ikke lenger ned i skjermkanten på mobil.
 - `1.151.1` · [#969](https://github.com/jdlarssen/golf-app/issues/969) — Wolf og Round Robin kan nå opprettes med åpen påmelding: du kan publisere før spillerne har meldt seg på, og rotasjonen trekkes automatisk når runden starter. Får ikke nok meldt seg på, sier appen fra i stedet for å starte halvveis.
 - `1.145.2` · [#959](https://github.com/jdlarssen/golf-app/issues/959) — Lanseringer i innboksen har fått et ryddigere oppsett: brødteksten bruker hele bredden i stedet for å klemmes inn i en smal stripe ved siden av tidsstempelet.

@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Medallion } from '@/components/ui/Medallion';
@@ -43,6 +43,8 @@ export interface SoloStablefordViewProps {
    * Brukes (fremtidig) inne i LeaderboardTabs ved side-tournament-fane.
    */
   chromeless?: boolean;
+  /** Hale-seksjon rendret inni shell-en, etter hovedinnholdet (#386). */
+  footerSlot?: ReactNode;
 }
 
 /**
@@ -66,6 +68,7 @@ export function SoloStablefordView({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  footerSlot,
 }: SoloStablefordViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
 
@@ -73,7 +76,7 @@ export function SoloStablefordView({
 
   if (result.players.length === 0) {
     return (
-      <LeaderboardShell chromeless={chromeless}>
+      <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
         {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           {t('common.noPlayersToShow')}
@@ -83,7 +86,7 @@ export function SoloStablefordView({
   }
 
   return (
-    <LeaderboardShell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">

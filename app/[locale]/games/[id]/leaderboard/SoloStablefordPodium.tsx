@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type JSX } from 'react';
+import { useEffect, useState, type JSX, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
@@ -37,6 +37,8 @@ export interface SoloStablefordPodiumProps {
    * og er ansvarlig for chrome. Speiler `State4View`-mønsteret.
    */
   chromeless?: boolean;
+  /** Hale-seksjon rendret inni shell-en, etter hovedinnholdet (#386). */
+  footerSlot?: ReactNode;
 }
 
 /**
@@ -65,6 +67,7 @@ export function SoloStablefordPodium({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  footerSlot,
 }: SoloStablefordPodiumProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
@@ -86,7 +89,7 @@ export function SoloStablefordPodium({
 
   if (result.players.length === 0) {
     return (
-      <LeaderboardShell chromeless={chromeless}>
+      <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
         {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           {t('common.noPlayersToShow')}
@@ -103,7 +106,7 @@ export function SoloStablefordPodium({
   const rest = result.players.slice(3);
 
   return (
-    <LeaderboardShell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">

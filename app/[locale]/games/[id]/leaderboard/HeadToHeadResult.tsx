@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type JSX } from 'react';
+import { useEffect, useState, type JSX, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Kicker } from '@/components/ui/Kicker';
@@ -62,6 +62,8 @@ export interface HeadToHeadResultProps {
    * DUELL-kicker + format-label. Default false → frittstående med eget skall.
    */
   chromeless?: boolean;
+  /** Hale-seksjon rendret inni shell-en, etter hovedinnholdet (#386). */
+  footerSlot?: ReactNode;
 }
 
 /**
@@ -85,6 +87,7 @@ export function HeadToHeadResult({
   lowerWins = false,
   backHref = '/',
   chromeless = false,
+  footerSlot,
 }: HeadToHeadResultProps): JSX.Element {
   const t = useTranslations('leaderboard.h2h');
   const [replayKey, setReplayKey] = useState(0);
@@ -156,7 +159,7 @@ export function HeadToHeadResult({
         : t('verdictWin', { winner: winnerName, winnerScore: fmtScore(winnerScore), sep, loserScore: fmtScore(loserScore) });
 
   return (
-    <LeaderboardShell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && (
         <header className="mb-2 flex items-center justify-between gap-4">
           <SmartLink

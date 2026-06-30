@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -18,6 +19,7 @@ type Props = {
   holesPlayed: number;
   /** Back-link href — typically points back to the originating hole. */
   backHref: string;
+  footerSlot?: ReactNode;
 };
 
 /**
@@ -32,6 +34,7 @@ export function RevealBruttoView({
   teams,
   holesPlayed,
   backHref,
+  footerSlot,
 }: Props) {
   const t = useTranslations('leaderboard');
   return (
@@ -70,6 +73,7 @@ export function RevealBruttoView({
       <PullQuote className="px-6 pt-2 pb-4">
         {t('revealBrutto.pullquote')}
       </PullQuote>
+      {footerSlot}
     </AppShell>
   );
 }

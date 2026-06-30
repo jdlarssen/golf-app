@@ -181,16 +181,14 @@ export async function renderStableford(opts: {
     });
     const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
     return (
-      <>
-        <RevealBruttoView
-          gameId={gameId}
-          gameName={game.name}
-          teams={orderedBrutto}
-          holesPlayed={holesPlayed}
-          backHref={backHref}
-        />
-        {wdSection}
-      </>
+      <RevealBruttoView
+        gameId={gameId}
+        gameName={game.name}
+        teams={orderedBrutto}
+        holesPlayed={holesPlayed}
+        backHref={backHref}
+        footerSlot={wdSection}
+      />
     );
   }
 
@@ -199,7 +197,7 @@ export async function renderStableford(opts: {
   // finished → champagne-podium med konfetti, alt annet → flat live-leaderboard.
   if (result.variant === 'team') {
     if (game.status === 'finished') {
-      const podium = (chromeless: boolean) => (
+      const podium = (chromeless: boolean, footerSlot?: ReactNode) => (
         <TeamStablefordPodium
           gameId={gameId}
           gameName={game.name}
@@ -208,10 +206,11 @@ export async function renderStableford(opts: {
           holesPlayed={holesPlayed}
           backHref={backHref}
           chromeless={chromeless}
+          footerSlot={footerSlot}
         />
       );
       if (!showSideTournament) {
-        return <>{podium(false)}{wdSection}</>;
+        return podium(false, wdSection);
       }
       return (
         <>
@@ -230,17 +229,15 @@ export async function renderStableford(opts: {
       );
     }
     return (
-      <>
-        <TeamStablefordView
-          gameId={gameId}
-          gameName={game.name}
-          result={result}
-          playersById={playersById}
-          holesPlayed={holesPlayed}
-          backHref={backHref}
-        />
-        {wdSection}
-      </>
+      <TeamStablefordView
+        gameId={gameId}
+        gameName={game.name}
+        result={result}
+        playersById={playersById}
+        holesPlayed={holesPlayed}
+        backHref={backHref}
+        footerSlot={wdSection}
+      />
     );
   }
 
@@ -253,7 +250,7 @@ export async function renderStableford(opts: {
     // duell-kortet beholdes også med sideturnering på (#589).
     // mainContent tar `chromeless` så samme reveal kan rendres frittstående
     // ELLER inni sideturnerings-fanen.
-    let mainContent: (chromeless: boolean) => ReactNode;
+    let mainContent: (chromeless: boolean, footerSlot?: ReactNode) => ReactNode;
     if (result.players.length === 2) {
       const order = gwp.players.map((p) => p.user_id);
       const [a, b] = [...result.players].sort(
@@ -280,7 +277,7 @@ export async function renderStableford(opts: {
       });
       const winnerUserId =
         a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
-      mainContent = (chromeless) => (
+      mainContent = (chromeless, footerSlot) => (
         <HeadToHeadResult
           gameId={gameId}
           gameName={game.name}
@@ -296,10 +293,11 @@ export async function renderStableford(opts: {
           strip={strip}
           backHref={backHref}
           chromeless={chromeless}
+          footerSlot={footerSlot}
         />
       );
     } else {
-      mainContent = (chromeless) => (
+      mainContent = (chromeless, footerSlot) => (
         <SoloStablefordPodium
           gameId={gameId}
           gameName={game.name}
@@ -308,11 +306,12 @@ export async function renderStableford(opts: {
           holesPlayed={holesPlayed}
           backHref={backHref}
           chromeless={chromeless}
+          footerSlot={footerSlot}
         />
       );
     }
     if (!showSideTournament) {
-      return <>{mainContent(false)}{wdSection}</>;
+      return mainContent(false, wdSection);
     }
     return (
       <>
@@ -332,16 +331,14 @@ export async function renderStableford(opts: {
   }
 
   return (
-    <>
-      <SoloStablefordView
-        gameId={gameId}
-        gameName={game.name}
-        result={result}
-        playersById={playersById}
-        holesPlayed={holesPlayed}
-        backHref={backHref}
-      />
-      {wdSection}
-    </>
+    <SoloStablefordView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      holesPlayed={holesPlayed}
+      backHref={backHref}
+      footerSlot={wdSection}
+    />
   );
 }

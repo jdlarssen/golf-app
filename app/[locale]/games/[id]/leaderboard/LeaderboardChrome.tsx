@@ -15,6 +15,13 @@ export interface LeaderboardShellProps {
    * `false` gir full-side-varianten med `AppShell` + bunn-padding.
    */
   chromeless?: boolean;
+  /**
+   * Valgfri hale-seksjon som rendres ETTER hovedinnholdet, men INNI shell-en
+   * (#386-fiks): «Trukne spillere»-lista lå tidligere som søsken utenfor
+   * `AppShell` og forsvant bak den faste bunn-navet. Ved å rendre den her får
+   * den `AppShell`-ens bunn-padding og samme senterbredde som leaderboardet.
+   */
+  footerSlot?: ReactNode;
 }
 
 /**
@@ -32,6 +39,7 @@ export interface LeaderboardShellProps {
 export function LeaderboardShell({
   children,
   chromeless = false,
+  footerSlot,
 }: LeaderboardShellProps): JSX.Element {
   if (chromeless) {
     return (
@@ -39,6 +47,7 @@ export function LeaderboardShell({
         <LeaderboardRealtime />
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
+        {footerSlot}
         {/* Self-gating: only renders on finished games (#942). */}
         <ShareResultButton />
       </div>
@@ -50,6 +59,7 @@ export function LeaderboardShell({
         <LeaderboardRealtime />
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
+        {footerSlot}
         {/* Self-gating: only renders on finished games (#942). */}
         <ShareResultButton />
       </div>

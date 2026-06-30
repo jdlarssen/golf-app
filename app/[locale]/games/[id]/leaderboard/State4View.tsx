@@ -1,7 +1,7 @@
 'use client';
 
 import { SmartLink } from '@/components/ui/SmartLink';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Laurel, PinFlagSm, ReplayIcon } from '@/components/icons';
 import { Medallion } from '@/components/ui/Medallion';
@@ -36,6 +36,8 @@ type Props = {
    * above the leader card in this mode.
    */
   chromeless?: boolean;
+  /** Hale-seksjon rendret inni shell-en, etter hovedinnholdet (#386). */
+  footerSlot?: ReactNode;
 };
 
 /**
@@ -62,6 +64,7 @@ export function State4View({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  footerSlot,
 }: Props) {
   const tc = useTranslations('leaderboard.common');
   const ts = useTranslations('leaderboard.state4');
@@ -93,7 +96,7 @@ export function State4View({
 
   if (teams.length === 0) {
     return (
-      <LeaderboardShell chromeless={chromeless}>
+      <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
         {!chromeless && (
           <Header gameName={gameName} onReplay={null} backHref={backHref} t={tc} />
         )}
