@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.160 · Engelsk delekort</strong></summary>
+
+[#971](https://github.com/jdlarssen/golf-app/issues/971) — Deler du resultatkortet til gruppechatten mens du er på engelsk, får du nå et engelsk kort — «WINNER», «38 points», engelsk dato og tagline — i stedet for norsk tekst.
+
+↳ /games · «Del resultat»
+</details>
+
+<details>
 <summary><strong>1.159 · Se runderesultatet rett fra Hjem</strong></summary>
 
 [#986](https://github.com/jdlarssen/golf-app/issues/986) — Avsluttede spill på Hjem vises nå som tette runde-rader med brutto og netto, så du ser hvordan du gjorde det uten å åpne hvert spill.

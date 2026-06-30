@@ -1,16 +1,53 @@
 import { ImageResponse } from 'next/og';
+import { hasLocale } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import {
   buildShareCardData,
   type ShareCardModel,
+  type ShareCardScore,
+  type ShareCardMatchHeadline,
 } from '@/lib/games/buildShareCardData';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { computeSharerSideAwards } from '@/lib/games/computeSharerSideAwards';
-import type { AppLocale } from '@/i18n/routing';
+import { routing, type AppLocale } from '@/i18n/routing';
+
+/** The `leaderboard.shareCard` translator, resolved on the request locale (#971). */
+type ShareT = Awaited<ReturnType<typeof getTranslations>>;
+
+/** Renders a structured competitor score for the card, locale-aware (#971). */
+function renderScore(score: ShareCardScore, t: ShareT): string {
+  switch (score.kind) {
+    case 'points':
+      return t('points', { n: score.value });
+    case 'skins':
+      return t('skins', { n: score.value });
+    case 'vsPar':
+      return score.label; // locale-neutral golf notation (−2 / E / +3)
+  }
+}
+
+/** Renders the neutral matchplay headline, locale-aware (#971). */
+function renderMatchHeadline(
+  headline: ShareCardMatchHeadline,
+  t: ShareT,
+): string {
+  switch (headline.kind) {
+    case 'winner':
+      return t('winnerWon', {
+        name: headline.winnerName,
+        margin: headline.margin,
+      });
+    case 'tied':
+      return t('tied');
+    case 'undecided':
+      return t('matchplay');
+  }
+}
 
 /**
  * Shareable result-card PNG for a finished game (#942). Rendered server-side
@@ -102,10 +139,10 @@ async function loadFonts(): Promise<LoadedFonts> {
   };
 }
 
-function osloDate(iso: string | null): string | null {
+function osloDate(iso: string | null, locale: AppLocale): string | null {
   if (!iso) return null;
   try {
-    return new Intl.DateTimeFormat('nb-NO', {
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'nb-NO', {
       timeZone: 'Europe/Oslo',
       day: 'numeric',
       month: 'long',
@@ -156,6 +193,14 @@ export async function GET(
   { params }: { params: Promise<{ locale: string; id: string }> },
 ): Promise<Response> {
   const { locale, id } = await params;
+  const resolvedLocale: AppLocale = hasLocale(routing.locales, locale)
+    ? locale
+    : routing.defaultLocale;
+  const t = await getTranslations({
+    locale: resolvedLocale,
+    namespace: 'leaderboard.shareCard',
+  });
+  const playerFallback = t('playerFallback');
   // The sharer is whoever requests the card — read from the session cookie so
   // the button needs no viewer-id prop. `?p=` is an optional override (testing /
   // explicit links). A non-participant (or no session) yields the neutral card.
@@ -188,10 +233,10 @@ export async function GET(
   const holeRows = holesRes.data ?? [];
   const coursePar = holeRows.reduce((sum, h) => sum + h.par_mens, 0);
   const holeCount = holeRows.length;
-  const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null);
+  const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null, resolvedLocale);
   // Satori wraps on spaces but clips a single long unbroken token; cap the
   // name so pathological/very-long titles stay ≤2 lines and never overflow.
-  const rawName = localizeGameName(game.name, courseName, locale as AppLocale);
+  const rawName = localizeGameName(game.name, courseName, resolvedLocale);
   const gameName = rawName.length > 30 ? `${rawName.slice(0, 29).trimEnd()}…` : rawName;
 
   const nameByUserId = new Map<string, string>();
@@ -199,7 +244,7 @@ export async function GET(
     if (p.users) {
       nameByUserId.set(
         p.user_id,
-        formatRevealName(p.users.name ?? 'Spiller', p.users.nickname),
+        formatRevealName(p.users.name ?? playerFallback, p.users.nickname),
       );
     }
   }
@@ -218,11 +263,14 @@ export async function GET(
           sharerId,
           coursePar,
           sideWinners,
+          playerFallback,
         });
 
-  const metaParts = [dateLabel, courseName, holeCount ? `${holeCount} hull` : null].filter(
-    Boolean,
-  );
+  const metaParts = [
+    dateLabel,
+    courseName,
+    holeCount ? t('holes', { n: holeCount }) : null,
+  ].filter(Boolean);
 
   const cardHeight = computeCardHeight(model, gameName.length > 16 ? 2 : 1, metaParts.length > 0);
 
@@ -275,7 +323,7 @@ export async function GET(
               paddingRight: 28,
             }}
           >
-            <span style={{ fontSize: 28, color: CHAMP_DARK }}>Sluttresultat</span>
+            <span style={{ fontSize: 28, color: CHAMP_DARK }}>{t('finalResult')}</span>
           </div>
         </div>
 
@@ -305,12 +353,12 @@ export async function GET(
         {/* Body */}
         {model === null ? (
           <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontFamily: serif, fontSize: 48, color: TAUPE }}>Spillet er ferdig</span>
+            <span style={{ fontFamily: serif, fontSize: 48, color: TAUPE }}>{t('gameFinished')}</span>
           </div>
         ) : model.band === 'matchplay' ? (
-          <MatchplayBody model={model} serif={serif} />
+          <MatchplayBody model={model} serif={serif} t={t} />
         ) : (
-          <PlacementBody model={model} serif={serif} />
+          <PlacementBody model={model} serif={serif} t={t} />
         )}
 
         {/* Side tournaments */}
@@ -359,7 +407,7 @@ export async function GET(
               tornygolf.no
             </span>
             <span style={{ fontSize: 26, color: '#8C8475', marginTop: 8 }}>
-              Fyr opp golfturneringen på et par minutter
+              {t('tagline')}
             </span>
           </div>
         </div>
@@ -382,9 +430,11 @@ export async function GET(
 function PlacementBody({
   model,
   serif,
+  t,
 }: {
   model: ShareCardModel;
   serif: string;
+  t: ShareT;
 }) {
   const winner = model.winner;
   const rest = model.podium.slice(1); // ranks 2..3
@@ -416,13 +466,13 @@ function PlacementBody({
             <span style={{ fontFamily: serif, fontSize: 60, fontWeight: 600, color: FOREST }}>1</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 32, flex: 1 }}>
-            <span style={{ fontSize: 28, color: CHAMP_DARK, letterSpacing: '2px' }}>VINNER</span>
+            <span style={{ fontSize: 28, color: CHAMP_DARK, letterSpacing: '2px' }}>{t('winner')}</span>
             <span style={{ fontFamily: serif, fontSize: 56, fontWeight: 500, color: FOREST, marginTop: 4 }}>
               {winner.name}
             </span>
-            {winner.scoreLabel ? (
-              <span style={{ fontSize: 36, color: TAUPE, marginTop: 8 }}>{winner.scoreLabel}</span>
-            ) : null}
+            <span style={{ fontSize: 36, color: TAUPE, marginTop: 8 }}>
+              {renderScore(winner.score, t)}
+            </span>
           </div>
         </div>
       )}
@@ -465,9 +515,7 @@ function PlacementBody({
           >
             {row.name}
           </span>
-          {row.scoreLabel ? (
-            <span style={{ fontSize: 36, color: MUTED }}>{row.scoreLabel}</span>
-          ) : null}
+          <span style={{ fontSize: 36, color: MUTED }}>{renderScore(row.score, t)}</span>
         </div>
       ))}
 
@@ -515,9 +563,9 @@ function PlacementBody({
             >
               {model.sharerStrip.name}
             </span>
-            {model.sharerStrip.scoreLabel ? (
-              <span style={{ fontSize: 36, color: TAUPE }}>{model.sharerStrip.scoreLabel}</span>
-            ) : null}
+            <span style={{ fontSize: 36, color: TAUPE }}>
+              {renderScore(model.sharerStrip.score, t)}
+            </span>
           </div>
         </div>
       )}
@@ -528,11 +576,15 @@ function PlacementBody({
 function MatchplayBody({
   model,
   serif,
+  t,
 }: {
   model: ShareCardModel;
   serif: string;
+  t: ShareT;
 }) {
-  const headline = model.match?.headline || model.match?.sharerOutcomeLabel || 'Matchplay';
+  const headline = model.match
+    ? renderMatchHeadline(model.match.headline, t)
+    : t('matchplay');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
       <div
@@ -545,7 +597,7 @@ function MatchplayBody({
           padding: 48,
         }}
       >
-        <span style={{ fontSize: 28, color: CHAMP_DARK, letterSpacing: '2px' }}>MATCHPLAY</span>
+        <span style={{ fontSize: 28, color: CHAMP_DARK, letterSpacing: '2px' }}>{t('matchplay')}</span>
         <span style={{ fontFamily: serif, fontSize: 64, fontWeight: 500, color: FOREST, marginTop: 12 }}>
           {headline}
         </span>

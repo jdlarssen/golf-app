@@ -1933,6 +1933,19 @@
     }
   },
   "leaderboard": {
+    "shareCard": {
+      "finalResult": "Final result",
+      "gameFinished": "Game finished",
+      "winner": "WINNER",
+      "matchplay": "MATCHPLAY",
+      "winnerWon": "{name} won {margin}",
+      "tied": "Halved",
+      "points": "{n} points",
+      "skins": "{n} skins",
+      "holes": "{n} holes",
+      "playerFallback": "Player",
+      "tagline": "Fire up your golf tournament in a couple of minutes"
+    },
     "common": {
       "settlement": {
         "title": "Settlement",

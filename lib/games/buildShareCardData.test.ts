@@ -79,14 +79,14 @@ describe('solo_strokeplay — sharer in top 3', () => {
     expect(card.sharerStrip).toBeNull();
   });
 
-  it('scoreLabels are vs-par (−2, E, +3)', () => {
+  it('scores are vs-par (−2, E, +3)', () => {
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
     // u1: 70 net vs 72 par = −2
-    expect(card.podium[0].scoreLabel).toBe('−2');
+    expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '−2' });
     // u2: 72 net vs 72 par = E
-    expect(card.podium[1].scoreLabel).toBe('E');
+    expect(card.podium[1].score).toEqual({ kind: 'vsPar', label: 'E' });
     // u3: 75 net vs 72 par = +3
-    expect(card.podium[2].scoreLabel).toBe('+3');
+    expect(card.podium[2].score).toEqual({ kind: 'vsPar', label: '+3' });
   });
 
   it('match is null for placement band', () => {
@@ -123,7 +123,7 @@ describe('solo_strokeplay — sharer outside top 3', () => {
     expect(card.sharerStrip!.name).toBe('Dave');
     expect(card.sharerStrip!.isSharer).toBe(true);
     // u4: 80 net vs 72 par = +8
-    expect(card.sharerStrip!.scoreLabel).toBe('+8');
+    expect(card.sharerStrip!.score).toEqual({ kind: 'vsPar', label: '+8' });
   });
 
   it('no podium row has isSharer', () => {
@@ -267,9 +267,9 @@ describe('stableford solo — score labels', () => {
     expect(card.band).toBe('placement');
   });
 
-  it('score labels are "{points} poeng"', () => {
-    expect(card.podium[0].scoreLabel).toBe('38 poeng');
-    expect(card.podium[1].scoreLabel).toBe('34 poeng');
+  it('scores carry the points count', () => {
+    expect(card.podium[0].score).toEqual({ kind: 'points', value: 38 });
+    expect(card.podium[1].score).toEqual({ kind: 'points', value: 34 });
   });
 });
 
@@ -297,18 +297,18 @@ describe('skins — band and score labels', () => {
     expect(card.band).toBe('skins');
   });
 
-  it('score labels are "{n} skins"', () => {
+  it('scores carry the skins count', () => {
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
-    expect(card.podium[0].scoreLabel).toBe('4 skins');
-    expect(card.podium[1].scoreLabel).toBe('2 skins');
-    expect(card.podium[2].scoreLabel).toBe('1 skins');
+    expect(card.podium[0].score).toEqual({ kind: 'skins', value: 4 });
+    expect(card.podium[1].score).toEqual({ kind: 'skins', value: 2 });
+    expect(card.podium[2].score).toEqual({ kind: 'skins', value: 1 });
   });
 
   it('sharerStrip logic same as placement — outside top 3', () => {
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u4', coursePar: 72, sideWinners: [] });
     expect(card.sharerStrip).not.toBeNull();
     expect(card.sharerStrip!.name).toBe('Dave');
-    expect(card.sharerStrip!.scoreLabel).toBe('0 skins');
+    expect(card.sharerStrip!.score).toEqual({ kind: 'skins', value: 0 });
   });
 });
 
@@ -354,14 +354,17 @@ describe('singles_matchplay — sharer wins', () => {
     expect(card.sharerStrip).toBeNull();
   });
 
-  it('match.sharerOutcomeLabel is "Vant 3&2"', () => {
+  it('match.sharerOutcome is won 3&2', () => {
     expect(card.match).not.toBeNull();
-    expect(card.match!.sharerOutcomeLabel).toBe('Vant 3&2');
+    expect(card.match!.sharerOutcome).toEqual({ kind: 'won', margin: '3&2' });
   });
 
-  it('match.headline is non-empty string', () => {
-    expect(typeof card.match!.headline).toBe('string');
-    expect(card.match!.headline.length).toBeGreaterThan(0);
+  it('match.headline names the side-1 winner', () => {
+    expect(card.match!.headline).toEqual({
+      kind: 'winner',
+      winnerName: 'Alice',
+      margin: '3&2',
+    });
   });
 });
 
@@ -390,14 +393,14 @@ describe('singles_matchplay — tie', () => {
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
 
-  it('sharer outcome label is "Uavgjort"', () => {
+  it('sharer outcome is tied', () => {
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u1', coursePar: 72, sideWinners: [] });
-    expect(card.match!.sharerOutcomeLabel).toBe('Uavgjort');
+    expect(card.match!.sharerOutcome).toEqual({ kind: 'tied' });
   });
 
-  it('non-participant sharer → sharerOutcomeLabel is ""', () => {
+  it('non-participant sharer → sharerOutcome is null', () => {
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
-    expect(card.match!.sharerOutcomeLabel).toBe('');
+    expect(card.match!.sharerOutcome).toBeNull();
   });
 });
 
@@ -461,9 +464,9 @@ describe('wolf — score labels', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
   const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
 
-  it('score labels are "{points} poeng"', () => {
-    expect(card.podium[0].scoreLabel).toBe('14 poeng');
-    expect(card.podium[1].scoreLabel).toBe('10 poeng');
+  it('scores carry the points count', () => {
+    expect(card.podium[0].score).toEqual({ kind: 'points', value: 14 });
+    expect(card.podium[1].score).toEqual({ kind: 'points', value: 10 });
   });
 });
 
@@ -495,8 +498,8 @@ describe('texas_scramble — team score labels', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
   const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
 
-  it('scoreLabel is vs-par (−4)', () => {
-    expect(card.podium[0].scoreLabel).toBe('−4');
+  it('score is vs-par (−4)', () => {
+    expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '−4' });
   });
 });
 
@@ -517,9 +520,9 @@ describe('acey_deucey — score labels', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
   const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
 
-  it('score labels use total field', () => {
-    expect(card.podium[0].scoreLabel).toBe('12 poeng');
-    expect(card.podium[1].scoreLabel).toBe('-12 poeng');
+  it('scores use the total field (can be negative)', () => {
+    expect(card.podium[0].score).toEqual({ kind: 'points', value: 12 });
+    expect(card.podium[1].score).toEqual({ kind: 'points', value: -12 });
   });
 });
 
@@ -545,9 +548,9 @@ describe('nassau — score labels', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
   const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
 
-  it('score labels use units field', () => {
-    expect(card.podium[0].scoreLabel).toBe('2 poeng');
-    expect(card.podium[1].scoreLabel).toBe('1 poeng');
+  it('scores use the units field', () => {
+    expect(card.podium[0].score).toEqual({ kind: 'points', value: 2 });
+    expect(card.podium[1].score).toEqual({ kind: 'points', value: 1 });
   });
 });
 
@@ -568,9 +571,9 @@ describe('round_robin — score labels', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
   const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
 
-  it('score labels use totalHoleWins', () => {
-    expect(card.podium[0].scoreLabel).toBe('10 poeng');
-    expect(card.podium[1].scoreLabel).toBe('8 poeng');
+  it('scores use totalHoleWins', () => {
+    expect(card.podium[0].score).toEqual({ kind: 'points', value: 10 });
+    expect(card.podium[1].score).toEqual({ kind: 'points', value: 8 });
   });
 });
 
@@ -590,9 +593,9 @@ describe('bingo_bango_bongo — score labels', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
   const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
 
-  it('score labels use totalPoints', () => {
-    expect(card.podium[0].scoreLabel).toBe('12 poeng');
-    expect(card.podium[1].scoreLabel).toBe('9 poeng');
+  it('scores use totalPoints', () => {
+    expect(card.podium[0].score).toEqual({ kind: 'points', value: 12 });
+    expect(card.podium[1].score).toEqual({ kind: 'points', value: 9 });
   });
 });
 
@@ -614,9 +617,9 @@ describe('nines — score labels', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
   const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
 
-  it('score labels use totalPoints', () => {
-    expect(card.podium[0].scoreLabel).toBe('90 poeng');
-    expect(card.podium[1].scoreLabel).toBe('81 poeng');
+  it('scores use totalPoints', () => {
+    expect(card.podium[0].score).toEqual({ kind: 'points', value: 90 });
+    expect(card.podium[1].score).toEqual({ kind: 'points', value: 81 });
   });
 });
 
@@ -645,13 +648,13 @@ describe('singles_matchplay — sharer loses', () => {
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
 
-  it('loser sharer gets "Tapte 2up"', () => {
+  it('loser sharer gets lost 2up', () => {
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u1', coursePar: 72, sideWinners: [] });
-    expect(card.match!.sharerOutcomeLabel).toBe('Tapte 2up');
+    expect(card.match!.sharerOutcome).toEqual({ kind: 'lost', margin: '2up' });
   });
 
-  it('winner sharer gets "Vant 2up"', () => {
+  it('winner sharer gets won 2up', () => {
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
-    expect(card.match!.sharerOutcomeLabel).toBe('Vant 2up');
+    expect(card.match!.sharerOutcome).toEqual({ kind: 'won', margin: '2up' });
   });
 });

@@ -1933,6 +1933,19 @@
     }
   },
   "leaderboard": {
+    "shareCard": {
+      "finalResult": "Sluttresultat",
+      "gameFinished": "Spillet er ferdig",
+      "winner": "VINNER",
+      "matchplay": "MATCHPLAY",
+      "winnerWon": "{name} vant {margin}",
+      "tied": "Uavgjort",
+      "points": "{n} poeng",
+      "skins": "{n} skins",
+      "holes": "{n} hull",
+      "playerFallback": "Spiller",
+      "tagline": "Fyr opp golfturneringen på et par minutter"
+    },
     "common": {
       "settlement": {
         "title": "Oppgjør",

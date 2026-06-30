@@ -5,8 +5,10 @@
  * without further database access.
  *
  * No I/O. No side effects. Single source of truth for how each mode's score is
- * labelled on the card. Mirrors the band-routing of computeResultSummaries in
- * lib/scoring/resultSummary.ts.
+ * SHAPED on the card — but NOT how it's worded: the model carries structured
+ * values (points/skins counts, vs-par labels, match outcomes), and the route
+ * formats them via next-intl so the card follows the viewer's locale (#971).
+ * Mirrors the band-routing of computeResultSummaries in lib/scoring/resultSummary.ts.
  */
 
 import type { ModeResult } from '@/lib/scoring/modes/types';
@@ -17,17 +19,45 @@ import type { ModeResult } from '@/lib/scoring/modes/types';
 
 export type ShareCardBand = 'placement' | 'skins' | 'matchplay';
 
+/**
+ * A competitor's score, structured so the route can localize it. `vsPar` is
+ * locale-neutral golf notation (U+2212 minus / "E" / "+n") and carries its own
+ * display label; `points`/`skins` carry the raw count for `t('points'|'skins')`.
+ */
+export type ShareCardScore =
+  | { kind: 'points'; value: number }
+  | { kind: 'skins'; value: number }
+  | { kind: 'vsPar'; label: string };
+
 export type ShareCardRow = {
   rank: number;
   /** Display name, already resolved by the caller (formatRevealName applied). */
   name: string;
-  /** Mode-framed score, e.g. "−1", "72 slag", "38 poeng", "4 skins", or "" if none. */
-  scoreLabel: string;
+  /** Mode-framed score, structured for locale-aware rendering in the route. */
+  score: ShareCardScore;
   /** True when this row is the sharer (for podium-row highlight). */
   isSharer: boolean;
 };
 
 export type ShareCardSide = { label: string; winnerName: string; isSharer: boolean };
+
+/** The sharer's own matchplay outcome. `margin` is locale-neutral ("3&2", "2up", "AS"). */
+export type ShareCardMatchOutcome =
+  | { kind: 'won'; margin: string }
+  | { kind: 'lost'; margin: string }
+  | { kind: 'tied' };
+
+/** The neutral matchplay headline. `undecided` when the match has no result yet. */
+export type ShareCardMatchHeadline =
+  | { kind: 'winner'; winnerName: string; margin: string }
+  | { kind: 'tied' }
+  | { kind: 'undecided' };
+
+export type ShareCardMatch = {
+  /** The sharer's outcome, or null when they aren't a participant. */
+  sharerOutcome: ShareCardMatchOutcome | null;
+  headline: ShareCardMatchHeadline;
+};
 
 export type ShareCardModel = {
   band: ShareCardBand;
@@ -38,7 +68,7 @@ export type ShareCardModel = {
   /** Present ONLY when the sharer is a participant AND finished outside the top 3. */
   sharerStrip: ShareCardRow | null;
   /** Matchplay band only; null otherwise. */
-  match: { sharerOutcomeLabel: string; headline: string } | null;
+  match: ShareCardMatch | null;
   /** Resolved side-tournament winners; pass-through with isSharer computed. */
   sideTournaments: ShareCardSide[];
 };
@@ -57,10 +87,29 @@ export function buildShareCardData(opts: {
   coursePar: number;
   /** Resolved side-tournament winners. winnerUserId null => unawarded (skip). */
   sideWinners: { label: string; winnerUserId: string | null }[];
+  /**
+   * Locale-resolved fallback for a competitor whose name is missing from
+   * nameByUserId (caller's player list momentarily out of sync) — NEVER the raw
+   * userId, which would dump a UUID onto a shared card. The route passes
+   * `t('playerFallback')`; defaults to '' for unit tests that always supply names.
+   */
+  playerFallback?: string;
 }): ShareCardModel {
-  const { result, nameByUserId, sharerId, coursePar, sideWinners } = opts;
+  const {
+    result,
+    nameByUserId,
+    sharerId,
+    coursePar,
+    sideWinners,
+    playerFallback = '',
+  } = opts;
 
-  const sideTournaments = buildSideTournaments(sideWinners, nameByUserId, sharerId);
+  const sideTournaments = buildSideTournaments(
+    sideWinners,
+    nameByUserId,
+    sharerId,
+    playerFallback,
+  );
 
   switch (result.kind) {
     // -----------------------------------------------------------------------
@@ -69,21 +118,21 @@ export function buildShareCardData(opts: {
     case 'singles_matchplay': {
       const side1Ids = [result.sides[0].userId];
       const side2Ids = [result.sides[1].userId];
-      const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId);
+      const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId, playerFallback);
       return { band: 'matchplay', podium: [], winner: null, sharerStrip: null, match, sideTournaments };
     }
 
     case 'fourball_matchplay': {
       const side1Ids = result.sides[0].players.map((p) => p.userId);
       const side2Ids = result.sides[1].players.map((p) => p.userId);
-      const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId);
+      const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId, playerFallback);
       return { band: 'matchplay', podium: [], winner: null, sharerStrip: null, match, sideTournaments };
     }
 
     case 'foursomes_matchplay': {
       const side1Ids = result.sides[0].players.map((p) => p.userId);
       const side2Ids = result.sides[1].players.map((p) => p.userId);
-      const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId);
+      const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId, playerFallback);
       return { band: 'matchplay', podium: [], winner: null, sharerStrip: null, match, sideTournaments };
     }
 
@@ -94,30 +143,30 @@ export function buildShareCardData(opts: {
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        scoreLabel: `${p.totalSkins} skins`,
+        score: { kind: 'skins', value: p.totalSkins },
       }));
-      return buildPlacementModel('skins', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('skins', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     // -----------------------------------------------------------------------
-    // Stableford → 'placement' band, "{points} poeng"
+    // Stableford → 'placement' band, points
     // -----------------------------------------------------------------------
     case 'stableford': {
       if (result.variant === 'solo') {
         const rows: IndividualCompetitor[] = result.players.map((p) => ({
           userIds: [p.userId],
           rank: p.rank,
-          scoreLabel: `${p.totalPoints} poeng`,
+          score: { kind: 'points', value: p.totalPoints },
         }));
-        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
       } else {
         // team stableford
         const rows: IndividualCompetitor[] = result.teams.map((t) => ({
           userIds: t.playerIds,
           rank: t.rank,
-          scoreLabel: `${t.totalPoints} poeng`,
+          score: { kind: 'points', value: t.totalPoints },
         }));
-        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
       }
     }
 
@@ -128,9 +177,9 @@ export function buildShareCardData(opts: {
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        scoreLabel: vsParLabel(p.totalNetStrokes, coursePar),
+        score: { kind: 'vsPar', label: vsParLabel(p.totalNetStrokes, coursePar) },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     // -----------------------------------------------------------------------
@@ -141,18 +190,18 @@ export function buildShareCardData(opts: {
         userIds: t.playerIds,
         rank: t.rank,
         // best_ball uses `total` (net total strokes)
-        scoreLabel: vsParLabel(t.total, coursePar),
+        score: { kind: 'vsPar', label: vsParLabel(t.total, coursePar) },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     case 'texas_scramble': {
       const rows: IndividualCompetitor[] = result.teams.map((t) => ({
         userIds: t.members.map((m) => m.userId),
         rank: t.rank,
-        scoreLabel: vsParLabel(t.totalNet, coursePar),
+        score: { kind: 'vsPar', label: vsParLabel(t.totalNet, coursePar) },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     case 'shamble': {
@@ -160,9 +209,9 @@ export function buildShareCardData(opts: {
         userIds: t.members,
         rank: t.rank,
         // shamble uses `totalScore` (net strokes sum)
-        scoreLabel: vsParLabel(t.totalScore, coursePar),
+        score: { kind: 'vsPar', label: vsParLabel(t.totalScore, coursePar) },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     case 'patsome': {
@@ -170,21 +219,21 @@ export function buildShareCardData(opts: {
         userIds: t.playerIds,
         rank: t.rank,
         // patsome uses stableford points
-        scoreLabel: `${t.totalPoints} poeng`,
+        score: { kind: 'points', value: t.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     // -----------------------------------------------------------------------
-    // Point modes → 'placement' band, "{points} poeng"
+    // Point modes → 'placement' band, points
     // -----------------------------------------------------------------------
     case 'wolf': {
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        scoreLabel: `${p.totalPoints} poeng`,
+        score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     case 'nassau': {
@@ -192,27 +241,27 @@ export function buildShareCardData(opts: {
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        scoreLabel: `${p.units} poeng`,
+        score: { kind: 'points', value: p.units },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     case 'bingo_bango_bongo': {
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        scoreLabel: `${p.totalPoints} poeng`,
+        score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     case 'nines': {
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        scoreLabel: `${p.totalPoints} poeng`,
+        score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     case 'round_robin': {
@@ -220,19 +269,19 @@ export function buildShareCardData(opts: {
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        scoreLabel: `${p.totalHoleWins} poeng`,
+        score: { kind: 'points', value: p.totalHoleWins },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     case 'acey_deucey': {
-      // Acey Deucey total can be negative — show as "{total} poeng"
+      // Acey Deucey total can be negative — rendered as "{total} poeng"
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        scoreLabel: `${p.total} poeng`,
+        score: { kind: 'points', value: p.total },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
 
     default: {
@@ -255,7 +304,7 @@ type IndividualCompetitor = {
   /** All userId members for this competitor slot (1 for individual, N for team). */
   userIds: string[];
   rank: number;
-  scoreLabel: string;
+  score: ShareCardScore;
 };
 
 /**
@@ -269,20 +318,21 @@ function buildPlacementModel(
   nameByUserId: Map<string, string>,
   sharerId: string | null,
   sideTournaments: ShareCardSide[],
+  playerFallback: string,
 ): ShareCardModel {
   // Sort: rank ascending, then name ascending for stable tie ordering
   const sorted = [...competitors].sort((a, b) => {
     if (a.rank !== b.rank) return a.rank - b.rank;
-    return resolveTeamName(a.userIds, nameByUserId).localeCompare(
-      resolveTeamName(b.userIds, nameByUserId),
+    return resolveTeamName(a.userIds, nameByUserId, playerFallback).localeCompare(
+      resolveTeamName(b.userIds, nameByUserId, playerFallback),
     );
   });
 
   // Resolve all rows
   const allRows: ShareCardRow[] = sorted.map((c) => ({
     rank: c.rank,
-    name: resolveTeamName(c.userIds, nameByUserId),
-    scoreLabel: c.scoreLabel,
+    name: resolveTeamName(c.userIds, nameByUserId, playerFallback),
+    score: c.score,
     isSharer: sharerId !== null && c.userIds.includes(sharerId),
   }));
 
@@ -304,14 +354,18 @@ function buildPlacementModel(
 
 /**
  * Resolves a team's display name by joining member names with " / ".
- * Falls back to a neutral "Spiller" when a name is missing — NEVER the raw
- * userId, which would dump a UUID onto a shared card. (A competitor can be in
- * the computed result but absent from nameByUserId if the caller's player list
- * is momentarily out of sync.)
+ * Falls back to the caller-supplied `playerFallback` when a name is missing —
+ * NEVER the raw userId, which would dump a UUID onto a shared card. (A
+ * competitor can be in the computed result but absent from nameByUserId if the
+ * caller's player list is momentarily out of sync.)
  */
-function resolveTeamName(userIds: string[], nameByUserId: Map<string, string>): string {
+function resolveTeamName(
+  userIds: string[],
+  nameByUserId: Map<string, string>,
+  playerFallback: string,
+): string {
   return userIds
-    .map((id) => nameByUserId.get(id) ?? 'Spiller')
+    .map((id) => nameByUserId.get(id) ?? playerFallback)
     .join(' / ');
 }
 
@@ -328,10 +382,9 @@ function vsParLabel(netStrokes: number, coursePar: number): string {
 }
 
 /**
- * Builds the matchplay match block.
- * Determines the sharer's outcome (win / loss / tie) from the match result.
- * Returns a non-null match object even when result is null (unresolved match)
- * so the card can show a neutral headline.
+ * Builds the matchplay match block as structured outcome/headline values, which
+ * the route words via next-intl. Returns a non-null match even when the result
+ * is null (unresolved match) so the card can show a neutral 'undecided' headline.
  */
 function buildMatchplayMatch(
   matchResult: { winner: 'side1' | 'side2' | 'tied'; formatted: string } | null,
@@ -339,10 +392,11 @@ function buildMatchplayMatch(
   side2UserIds: ReadonlyArray<string>,
   sharerId: string | null,
   nameByUserId: Map<string, string>,
-): { sharerOutcomeLabel: string; headline: string } {
+  playerFallback: string,
+): ShareCardMatch {
   if (matchResult === null) {
     // Match not yet decided
-    return { sharerOutcomeLabel: '', headline: 'Matchplay' };
+    return { sharerOutcome: null, headline: { kind: 'undecided' } };
   }
 
   const { winner, formatted } = matchResult;
@@ -352,33 +406,32 @@ function buildMatchplayMatch(
   const sharerOnSide2 = sharerId !== null && side2UserIds.includes(sharerId);
   const sharerParticipates = sharerOnSide1 || sharerOnSide2;
 
-  // Compute sharer outcome label
-  let sharerOutcomeLabel = '';
+  // Compute the sharer's outcome (null when they aren't a participant)
+  let sharerOutcome: ShareCardMatchOutcome | null = null;
   if (sharerParticipates) {
     if (winner === 'tied') {
-      sharerOutcomeLabel = 'Uavgjort';
+      sharerOutcome = { kind: 'tied' };
     } else if (
       (winner === 'side1' && sharerOnSide1) ||
       (winner === 'side2' && sharerOnSide2)
     ) {
-      sharerOutcomeLabel = `Vant ${formatted}`;
+      sharerOutcome = { kind: 'won', margin: formatted };
     } else {
-      sharerOutcomeLabel = `Tapte ${formatted}`;
+      sharerOutcome = { kind: 'lost', margin: formatted };
     }
   }
 
-  // Compute neutral headline
-  let headline: string;
+  // Compute the neutral headline
+  let headline: ShareCardMatchHeadline;
   if (winner === 'tied') {
-    headline = 'Uavgjort';
+    headline = { kind: 'tied' };
   } else {
-    // Find winner side name
     const winnerIds = winner === 'side1' ? side1UserIds : side2UserIds;
-    const winnerName = resolveTeamName([...winnerIds], nameByUserId);
-    headline = `${winnerName} vant ${formatted}`;
+    const winnerName = resolveTeamName([...winnerIds], nameByUserId, playerFallback);
+    headline = { kind: 'winner', winnerName, margin: formatted };
   }
 
-  return { sharerOutcomeLabel, headline };
+  return { sharerOutcome, headline };
 }
 
 /**
@@ -388,13 +441,14 @@ function buildSideTournaments(
   sideWinners: { label: string; winnerUserId: string | null }[],
   nameByUserId: Map<string, string>,
   sharerId: string | null,
+  playerFallback: string,
 ): ShareCardSide[] {
   return sideWinners
     .filter((s): s is { label: string; winnerUserId: string } => s.winnerUserId !== null)
     .map((s) => ({
       label: s.label,
       // Never blank on a shared card — same neutral fallback as resolveTeamName.
-      winnerName: nameByUserId.get(s.winnerUserId) ?? 'Spiller',
+      winnerName: nameByUserId.get(s.winnerUserId) ?? playerFallback,
       isSharer: s.winnerUserId === sharerId,
     }));
 }
