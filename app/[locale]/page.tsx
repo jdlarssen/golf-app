@@ -30,7 +30,7 @@ import { formatTeeOffParts } from '@/lib/i18n/format';
 import { teeOffProximity } from '@/lib/format/teeOffProximity';
 import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { FinishedGameCard } from '@/components/games/FinishedGameCard';
+import { FinishedRoundsSection } from '@/components/games/FinishedRoundsSection';
 import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
@@ -481,27 +481,15 @@ async function HomeBody() {
 
         {finishedGames.length > 0 && (
           <Section label={t('sectionFinished')}>
-            {/* #571 + #865: hjem er play + discover-navet, ikke et arkiv. Vis de
-                siste 3 (kompakt, så Toppliste-inngangen ikke gjør Hjem scroll-
-                tung); lenk til /spill-arkiv for resten når det finnes flere. */}
-            {finishedGames.slice(0, 3).map((g) => (
-              <FinishedGameCard key={g.id} game={g} />
-            ))}
-            {finishedGames.length > 3 && (
-              <SmartLink
-                href="/spill-arkiv"
-                className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-              >
-                <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                  <span className="text-base font-medium text-text">
-                    {t('sectionFinishedShowAll')}
-                  </span>
-                  <span aria-hidden className="text-muted">
-                    →
-                  </span>
-                </Card>
-              </SmartLink>
-            )}
+            {/* #571 + #865 + #986: hjem er play + discover-navet, ikke et arkiv.
+                Vis de siste 3 som tette «Runder»-rader (brutto/netto), så du ser
+                hvordan du gjorde det rett fra Hjem; lenk til /spill-arkiv for
+                resten når det finnes flere. */}
+            <FinishedRoundsSection
+              finishedGames={finishedGames}
+              userId={userId!}
+              locale={locale}
+            />
           </Section>
         )}
 

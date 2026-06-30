@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.159 · Se runderesultatet rett fra Hjem</strong></summary>
+
+[#986](https://github.com/jdlarssen/golf-app/issues/986) — Avsluttede spill på Hjem vises nå som tette runde-rader med brutto og netto, så du ser hvordan du gjorde det uten å åpne hvert spill.
+
+↳ / · «Se rundene dine»
+</details>
+
+<details>
 <summary><strong>1.158 · Tell puttene dine</strong></summary>
 
 [#939](https://github.com/jdlarssen/golf-app/issues/939) — Du kan nå telle putter per hull i slag- og stablefordspill. Slå på «Registrer putter» på hull-skjermen, før puttene mens du spiller, og se putte-snittet ditt under Historikk.

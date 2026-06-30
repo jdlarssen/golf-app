@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { formatShortDayMonthLocale, formatNumber } from '@/lib/i18n/format';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
+import { computeRoundScore } from '@/lib/games/roundScore';
 import { GameHistoryRow } from '@/components/stats/GameHistoryRow';
 import {
   buildScoringTrend,
@@ -238,14 +239,10 @@ export default async function HistorikkPage() {
   const gamesWithStats: GameWithStats[] = sortedGames.map((game) => {
     const gameScores = scoresByGame.get(game.id) ?? [];
     const holeCount = gameScores.length;
-    const bruttoSum =
-      holeCount > 0
-        ? gameScores.reduce((acc, s) => acc + (s.strokes ?? 0), 0)
-        : null;
-    const nettoSum =
-      bruttoSum != null && game.course_handicap != null
-        ? bruttoSum - game.course_handicap
-        : null;
+    const { brutto: bruttoSum, netto: nettoSum } = computeRoundScore(
+      gameScores.map((s) => s.strokes),
+      game.course_handicap,
+    );
     return { ...game, bruttoSum, nettoSum, holeCount };
   });
 
