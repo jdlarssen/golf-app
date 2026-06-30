@@ -467,7 +467,6 @@ async function MyStatsCard() {
       ['eagle', stats.achievements.eagle, t('achievementEagle')],
       ['birdie', stats.achievements.birdie, t('achievementBirdie')],
       ['turkey', stats.achievements.turkey, t('achievementTurkey')],
-      ['snowman', stats.achievements.snowman, t('achievementSnowman')],
     ] as const
   ).filter(([, count]) => count > 0);
 

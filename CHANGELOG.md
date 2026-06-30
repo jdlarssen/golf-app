@@ -1017,7 +1017,7 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 <details>
 <summary><strong>Juni 2026 · 246 rettinger</strong></summary>
 
-- `1.160.2` · [#992](https://github.com/jdlarssen/golf-app/issues/992) — Snowman (blow-up-hull) vises ikke lenger som en bragd — verken på Bragd-veggen eller i «Sesongen din». Den var bare negativt ladet.
+- `1.160.3` · [#992](https://github.com/jdlarssen/golf-app/issues/992) — Snowman (blow-up-hull) vises ikke lenger som en bragd noe sted — verken under «Mine tall» på profilen, på Bragd-veggen eller i «Sesongen din». Den var bare negativt ladet.
 - `1.160.1` · [#990](https://github.com/jdlarssen/golf-app/issues/990) — Trekker en spiller seg fra runden, vises «Trukne spillere» nå riktig under leaderboardet i stedet for å gjemme seg bak menylinja nederst.
 - `1.158.2` · [#987](https://github.com/jdlarssen/golf-app/issues/987) — «Lever ditt scorekort»-knappen på hull-skjermen er nå en avgrenset, avrundet knapp; den grønne flaten flyter ikke lenger ned i skjermkanten på mobil.
 - `1.151.1` · [#969](https://github.com/jdlarssen/golf-app/issues/969) — Wolf og Round Robin kan nå opprettes med åpen påmelding: du kan publisere før spillerne har meldt seg på, og rotasjonen trekkes automatisk når runden starter. Får ikke nok meldt seg på, sier appen fra i stedet for å starte halvveis.
