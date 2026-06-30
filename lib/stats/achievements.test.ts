@@ -126,10 +126,8 @@ describe('selectNotableMoments — unlock-notification eligibility (#947)', () =
     ]);
   });
 
-  it('reports a snowman on its own (a moment, not a brag)', () => {
-    expect(selectNotableMoments(ach({ snowman: 2 }))).toEqual([
-      { kind: 'snowman', count: 2 },
-    ]);
+  it('never reports a snowman (negatively charged → surfaced nowhere)', () => {
+    expect(selectNotableMoments(ach({ snowman: 2 }))).toEqual([]);
   });
 
   it('collapses the implicit eagle of a pure hole-in-one (every ace is also an eagle)', () => {
@@ -147,7 +145,7 @@ describe('selectNotableMoments — unlock-notification eligibility (#947)', () =
     ]);
   });
 
-  it('orders moments hole-in-one → eagle → turkey → snowman and drops birdie', () => {
+  it('orders moments hole-in-one → eagle → turkey and drops birdie + snowman', () => {
     expect(
       selectNotableMoments(
         ach({ holeInOne: 1, eagle: 3, birdie: 4, turkey: 1, snowman: 1 }),
@@ -156,7 +154,6 @@ describe('selectNotableMoments — unlock-notification eligibility (#947)', () =
       { kind: 'hole_in_one', count: 1 },
       { kind: 'eagle', count: 2 }, // 3 eagles − 1 ace
       { kind: 'turkey', count: 1 },
-      { kind: 'snowman', count: 1 },
     ]);
   });
 });

@@ -400,7 +400,6 @@ export default async function HistorikkPage() {
           eagle: t('achievementsBadge_eagle'),
           birdie: t('achievementsBadge_birdie'),
           turkey: t('achievementsBadge_turkey'),
-          snowman: t('achievementsBadge_snowman'),
         }}
       />
       <PuttsStatPanel

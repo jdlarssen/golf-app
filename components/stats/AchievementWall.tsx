@@ -1,29 +1,31 @@
 import { Card } from '@/components/ui/Card';
 import type { Achievements } from '@/lib/stats/achievements';
 
-type BadgeKey = keyof Achievements;
+/** Bragd-typer som vises på veggen. Snowman er bevisst UTELATT — en snømann
+ *  (blow-up-hull) er negativt ladet, ikke en bragd, og surfaces ingen steder
+ *  i UI-et (jf. `lib/stats/achievements.ts`). */
+type WallBadgeKey = 'holeInOne' | 'eagle' | 'birdie' | 'turkey';
 
 type Props = {
-  /** Livstids-bragder (alle fem typer) fra `computePlayerStats`. */
+  /** Livstids-bragder fra `computePlayerStats`. */
   achievements: Achievements;
   heading: string;
   subtitle: string;
   /** Label per bragd-type, allerede oversatt ved kallstedet. */
-  labels: Record<BadgeKey, string>;
+  labels: Record<WallBadgeKey, string>;
 };
 
-const ORDER: BadgeKey[] = ['holeInOne', 'eagle', 'birdie', 'turkey', 'snowman'];
+const ORDER: WallBadgeKey[] = ['holeInOne', 'eagle', 'birdie', 'turkey'];
 
-const EMOJI: Record<BadgeKey, string> = {
+const EMOJI: Record<WallBadgeKey, string> = {
   holeInOne: '🎯',
   eagle: '🦅',
   birdie: '🐦',
   turkey: '🦃',
-  snowman: '⛄',
 };
 
 /**
- * «Bragd-veggen» (#947) — en aspirasjonell vegg med alle fem bragd-typene i
+ * «Bragd-veggen» (#947) — en aspirasjonell vegg med de fire bragd-typene i
  * Statistikk-fanen. Opptjente (count > 0) får champagne-gull-aksent (palettens
  * highlight-farge); ikke-opptjente dimmes som en «samling å fullføre», så
  * veggen står på egne ben også for en fersk spiller. Rent presentasjonelt —
@@ -39,7 +41,7 @@ export function AchievementWall({ achievements, heading, subtitle, labels }: Pro
           </h2>
           <p className="font-sans text-sm text-muted mt-0.5">{subtitle}</p>
         </div>
-        <ul className="grid grid-cols-3 gap-3 border-t border-border px-5 py-4 sm:grid-cols-5">
+        <ul className="grid grid-cols-2 gap-3 border-t border-border px-5 py-4 sm:grid-cols-4">
           {ORDER.map((key) => {
             const count = achievements[key];
             const earned = count > 0;

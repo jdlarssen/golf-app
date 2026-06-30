@@ -44,8 +44,9 @@ export type NotableMoment = { kind: NotableMomentKind; count: number };
 
 /**
  * Plukker ut de notable «øyeblikkene» fra én runde for unlock-varselet (#947):
- * hole-in-one, eagle, turkey og snowman. Birdie er bevisst UTELATT — den er for
- * vanlig og ville druknet innboksen.
+ * hole-in-one, eagle og turkey. Birdie er bevisst UTELATT — den er for vanlig og
+ * ville druknet innboksen. Snowman er bevisst UTELATT — en snømann (blow-up-hull)
+ * er negativt ladet, og vi varsler ingen om egne tabber (surfaces ingen steder).
  *
  * Hver ace teller også som eagle i `countRoundAchievements` (underPar ≥ 2), så
  * vi trekker hole-in-one fra eagle-tallet her — ellers ville et hole-in-one
@@ -53,7 +54,7 @@ export type NotableMoment = { kind: NotableMomentKind; count: number };
  * (f.eks. på par-5) overlever, fordi den teller utover ace-en.
  *
  * Returnerer kun øyeblikk med count > 0, i fast rekkefølge
- * (hole-in-one → eagle → turkey → snowman) så varsel-copy blir forutsigbar.
+ * (hole-in-one → eagle → turkey) så varsel-copy blir forutsigbar.
  */
 export function selectNotableMoments(a: Achievements): NotableMoment[] {
   const eagleSansAce = Math.max(0, a.eagle - a.holeInOne);
@@ -61,7 +62,6 @@ export function selectNotableMoments(a: Achievements): NotableMoment[] {
     { kind: 'hole_in_one', count: a.holeInOne },
     { kind: 'eagle', count: eagleSansAce },
     { kind: 'turkey', count: a.turkey },
-    { kind: 'snowman', count: a.snowman },
   ];
   return moments.filter((m) => m.count > 0);
 }

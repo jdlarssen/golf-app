@@ -4,9 +4,9 @@ import { SeasonRecapPanel } from './SeasonRecapPanel';
 import type { SeasonSummary } from '@/lib/stats/seasonStats';
 
 // Type C — én render-test for sesong-recap-en (#946). Verifiserer struktur +
-// interaksjon (default = nyeste år, år-bytte, snowman skilt fra bragder, delta-
-// kontekst), IKKE aggregerings-tallene (de dekkes av seasonStats Type A).
-// Labels resolves fra messages/no.json via vitest.setup-mocken.
+// interaksjon (default = nyeste år, år-bytte, delta-kontekst), IKKE
+// aggregerings-tallene (de dekkes av seasonStats Type A). Labels resolves fra
+// messages/no.json via vitest.setup-mocken.
 
 const season = (
   year: number,
@@ -20,7 +20,7 @@ const season = (
 });
 
 describe('SeasonRecapPanel', () => {
-  it('defaults to the newest year, separates snowman from brags, and switches year', () => {
+  it('defaults to the newest year and switches year', () => {
     const seasons: SeasonSummary[] = [
       season(2026, {
         holeInOne: 0,
@@ -50,25 +50,21 @@ describe('SeasonRecapPanel', () => {
     // Brag stripe shows the positive brags (turkey present for 2026)...
     expect(screen.getByText('Turkey')).toBeInTheDocument();
     expect(screen.getByText('Birdie')).toBeInTheDocument();
-    // ...but snowman is NOT a brag pill — it renders as its own wry line.
+    // ...and snowman is surfaced nowhere (negatively charged, not a brag).
     expect(screen.queryByText('Snowman')).not.toBeInTheDocument();
-    expect(screen.getByText(/snømenn/)).toBeInTheDocument();
-    expect(
-      screen.getByText('Dem teller vi ikke som bragder'),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/snømenn/)).not.toBeInTheDocument();
 
     // Delta context vs the previous year present.
     expect(screen.getByText('Sammenlignet med 2025')).toBeInTheDocument();
 
-    // Switch to 2025: turkey + snowman line gone, and no previous-year context
-    // (2024 absent) so the delta caption disappears too.
+    // Switch to 2025: turkey gone, and no previous-year context (2024 absent)
+    // so the delta caption disappears too.
     fireEvent.click(screen.getByRole('tab', { name: '2025' }));
     expect(screen.getByRole('tab', { name: '2025' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
     expect(screen.queryByText('Turkey')).not.toBeInTheDocument();
-    expect(screen.queryByText(/snømenn/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Sammenlignet med/)).not.toBeInTheDocument();
   });
 });

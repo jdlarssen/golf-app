@@ -309,7 +309,6 @@
       "achievementsBadge_eagle": "Eagle",
       "achievementsBadge_birdie": "Birdie",
       "achievementsBadge_turkey": "Turkey",
-      "achievementsBadge_snowman": "Snowman",
       "unknownCourse": "Unknown course",
       "roundNetto": "{netto} net",
       "seasonHeading": "Your season",
@@ -322,8 +321,6 @@
       "seasonBrag_eagle": "Eagle",
       "seasonBrag_birdie": "Birdie",
       "seasonBrag_turkey": "Turkey",
-      "seasonSnowman": "{count, plural, one {1 snowman} other {# snowmen}}",
-      "seasonSnowmanCaption": "We don't count those as highlights",
       "seasonVsPrevious": "Compared with {year}",
       "seasonEmpty": "No dated rounds yet.",
       "seasonYearAriaLabel": "Choose season"

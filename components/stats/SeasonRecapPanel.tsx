@@ -15,7 +15,8 @@ const BRAG_KEYS = ['holeInOne', 'eagle', 'birdie', 'turkey'] as const;
 /**
  * «Sesongen din» (#946) — sesong-recap øverst i Statistikk-fanen. År-velger +
  * runder/snitt/beste + bragd-stripe, med en «sammenlignet med i fjor»-delta.
- * Snowman vises bevisst SEPARAT fra bragdene (en snømann er ikke en bragd).
+ * Snowman vises IKKE — en snømann (blow-up-hull) er negativt ladet, ikke en
+ * bragd, og surfaces ingen steder i UI-et (jf. `lib/stats/achievements.ts`).
  *
  * Klient-komponent fordi år-velgeren trenger lokal state; tallene er regnet i
  * `computeSeasonStats`, så denne er rent presentasjonell.
@@ -47,8 +48,6 @@ export function SeasonRecapPanel({ seasons }: Props) {
     count: selected.achievements[key],
     label: t(`seasonBrag_${key}` as Parameters<typeof t>[0]),
   })).filter((b) => b.count > 0);
-
-  const snowmen = selected.achievements.snowman;
 
   return (
     <Card className="p-0 overflow-hidden">
@@ -147,13 +146,6 @@ export function SeasonRecapPanel({ seasons }: Props) {
               ))}
             </div>
           </div>
-        )}
-
-        {snowmen > 0 && (
-          <p className="mt-3 font-sans text-xs text-muted">
-            {t('seasonSnowman', { count: snowmen })}{' '}
-            <span className="opacity-80">{t('seasonSnowmanCaption')}</span>
-          </p>
         )}
       </div>
     </Card>

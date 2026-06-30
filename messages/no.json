@@ -309,7 +309,6 @@
       "achievementsBadge_eagle": "Eagle",
       "achievementsBadge_birdie": "Birdie",
       "achievementsBadge_turkey": "Turkey",
-      "achievementsBadge_snowman": "Snowman",
       "unknownCourse": "Ukjent bane",
       "roundNetto": "{netto} netto",
       "seasonHeading": "Sesongen din",
@@ -322,8 +321,6 @@
       "seasonBrag_eagle": "Eagle",
       "seasonBrag_birdie": "Birdie",
       "seasonBrag_turkey": "Turkey",
-      "seasonSnowman": "{count, plural, one {1 snømann} other {# snømenn}}",
-      "seasonSnowmanCaption": "Dem teller vi ikke som bragder",
       "seasonVsPrevious": "Sammenlignet med {year}",
       "seasonEmpty": "Ingen daterte runder ennå.",
       "seasonYearAriaLabel": "Velg sesong"
