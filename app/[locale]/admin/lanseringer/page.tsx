@@ -1,6 +1,7 @@
 import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { Link } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -20,6 +21,8 @@ import type { AppLocale } from '@/i18n/routing';
 type SearchParams = Promise<{
   published?: string | string[];
   recipients?: string | string[];
+  edited?: string | string[];
+  notifs?: string | string[];
   digest?: string | string[];
   updates?: string | string[];
   error?: string | string[];
@@ -47,6 +50,8 @@ export default async function LanseringerPage({
 
   const publishedFlag = first(params.published);
   const publishedCount = first(params.recipients);
+  const editedFlag = first(params.edited);
+  const editedNotifs = first(params.notifs);
   const digestStatus = first(params.digest);
   const digestUpdates = first(params.updates);
   const errorCode = first(params.error);
@@ -54,7 +59,9 @@ export default async function LanseringerPage({
     ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
     : undefined;
 
-  const successMessage = publishedFlag
+  const successMessage = editedFlag
+    ? t('success.edited', { count: Number(editedNotifs ?? '0') })
+    : publishedFlag
     ? t('success.published', { count: Number(publishedCount ?? '0') })
     : digestStatus === 'sent'
       ? t('success.digestSent', {
@@ -263,6 +270,14 @@ async function PreviousUpdatesList() {
                 {u.cta_label ? ` · «${u.cta_label}»` : ''}
               </p>
             )}
+            <div className="mt-3 flex justify-end">
+              <Link
+                href={`/admin/lanseringer/${u.id}/rediger`}
+                className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:underline"
+              >
+                {t('editLabel')}
+              </Link>
+            </div>
           </Card>
         </li>
       ))}

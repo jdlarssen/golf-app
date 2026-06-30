@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.161 · Rett en publisert lansering</strong></summary>
+
+[#993](https://github.com/jdlarssen/golf-app/issues/993) — Har en lansering gått ut med en feil i tittel, tekst eller lenke, kan du nå rette den fra «Lanseringer» i Sekretariatet. Rettingen følger med til varslene som alt er sendt ut — uten å dukke opp på nytt hos dem som har lukket det.
+
+↳ /admin/lanseringer · «Rediger»
+</details>
+
+<details>
 <summary><strong>1.160 · Engelsk delekort</strong></summary>
 
 [#971](https://github.com/jdlarssen/golf-app/issues/971) — Deler du resultatkortet til gruppechatten mens du er på engelsk, får du nå et engelsk kort — «WINNER», «38 points», engelsk dato og tagline — i stedet for norsk tekst.

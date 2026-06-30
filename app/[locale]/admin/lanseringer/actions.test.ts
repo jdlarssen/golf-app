@@ -46,6 +46,11 @@ vi.mock('@/lib/productUpdates/publish', () => ({
   publishProductUpdate: (input: unknown) => publishMock(input),
 }));
 
+const editMock = vi.fn();
+vi.mock('@/lib/productUpdates/edit', () => ({
+  editProductUpdate: (input: unknown) => editMock(input),
+}));
+
 const sendDigestMock = vi.fn();
 vi.mock('@/lib/productUpdates/digest', () => ({
   sendDigestForPeriod: (opts: unknown) => sendDigestMock(opts),
@@ -153,6 +158,70 @@ describe('publishProductUpdateAction', () => {
       createdByUserId: 'admin-1',
     });
     expect(lastRedirect()).toBe('/admin/lanseringer?published=1&recipients=5');
+  });
+});
+
+describe('editProductUpdateAction', () => {
+  it('redirecter til / når bruker ikke er admin', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, email: null, name: null }, error: null },
+    ]);
+    setAdminUser();
+    const { editProductUpdateAction } = await import('./actions');
+
+    await expect(
+      editProductUpdateAction(fd({ id: 'pu-1', title: 'X', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
+    expect(editMock).not.toHaveBeenCalled();
+  });
+
+  it('redirecter med ?error=edit_failed når id mangler', async () => {
+    const { editProductUpdateAction } = await import('./actions');
+
+    await expect(
+      editProductUpdateAction(fd({ title: 'X', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/lanseringer?error=edit_failed');
+    expect(editMock).not.toHaveBeenCalled();
+  });
+
+  it('redirecter tilbake til rediger-siden med validerings-feilkode', async () => {
+    const { editProductUpdateAction } = await import('./actions');
+
+    await expect(
+      editProductUpdateAction(fd({ id: 'pu-1', title: '  ', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(
+      '/admin/lanseringer/pu-1/rediger?error=title_required',
+    );
+    expect(editMock).not.toHaveBeenCalled();
+  });
+
+  it('happy path: kaller editProductUpdate og redirecter med ?edited=1', async () => {
+    editMock.mockResolvedValueOnce({ notificationCount: 17 });
+    const { editProductUpdateAction } = await import('./actions');
+
+    await expect(
+      editProductUpdateAction(
+        fd({
+          id: 'pu-9',
+          title: 'Rettet tittel',
+          body: 'Rettet tekst.',
+          link: '/foreslaa-ide',
+          cta_label: 'Foreslå',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(editMock).toHaveBeenCalledWith({
+      id: 'pu-9',
+      title: 'Rettet tittel',
+      body: 'Rettet tekst.',
+      link: '/foreslaa-ide',
+      cta_label: 'Foreslå',
+    });
+    expect(lastRedirect()).toBe('/admin/lanseringer?edited=1&notifs=17');
   });
 });
 

@@ -3404,13 +3404,15 @@
         "link_must_be_internal": "Link must point to an internal route (must start with «/»).",
         "cta_without_link": "Button text requires a link to be filled in.",
         "publish_failed": "Failed to publish. Please try again in a moment.",
-        "digest_failed": "Failed to send the newsletter. Please try again in a moment."
+        "digest_failed": "Failed to send the newsletter. Please try again in a moment.",
+        "edit_failed": "Failed to save the change. Please try again in a moment."
       },
       "success": {
         "published": "Update live for {count} users.",
         "digestSent": "Digest sent to {count, plural, one {1 recipient} other {# recipients}} with {updates} updates.",
         "digestAlreadySent": "The monthly digest has already been sent for the previous period.",
-        "digestNoUpdates": "No updates to send for the previous month. Skipping."
+        "digestNoUpdates": "No updates to send for the previous month. Skipping.",
+        "edited": "Update saved — {count, plural, one {1 notification} other {# notifications}} corrected."
       },
       "publishSection": "Publish new update",
       "titleLabel": "Title",
@@ -3431,7 +3433,13 @@
       "sendDigestButton": "Send digest now",
       "sendingBusy": "Sending…",
       "previousSection": "Previous updates",
-      "emptyPrevious": "No updates published yet. Use the form above to publish the first one."
+      "emptyPrevious": "No updates published yet. Use the form above to publish the first one.",
+      "editLabel": "Edit",
+      "editTitle": "Edit update",
+      "editSubtitle": "Fix the title, text or link. The change also corrects notifications already sent.",
+      "editPropagationNote": "If you fix the text or link, the notifications already out with users are updated too — without popping back up for anyone who dismissed it.",
+      "editButton": "Save changes",
+      "editingBusy": "Saving…"
     }
   },
   "klubb": {

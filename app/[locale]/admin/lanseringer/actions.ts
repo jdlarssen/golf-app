@@ -6,6 +6,8 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { publishProductUpdate } from '@/lib/productUpdates/publish';
+import { editProductUpdate } from '@/lib/productUpdates/edit';
+import { validateProductUpdateInput } from '@/lib/productUpdates/validateUpdateInput';
 import { sendDigestForPeriod } from '@/lib/productUpdates/digest';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -25,27 +27,20 @@ export async function publishProductUpdateAction(formData: FormData) {
   const locale = (await getLocale()) as AppLocale;
   const { userId } = await loadAdminContext();
 
-  const title = String(formData.get('title') ?? '').trim();
-  const body = String(formData.get('body') ?? '').trim();
-  const linkRaw = String(formData.get('link') ?? '').trim();
-  const ctaRaw = String(formData.get('cta_label') ?? '').trim();
-
-  if (!title) redirect({ href: '/admin/lanseringer?error=title_required', locale });
-  if (!body) redirect({ href: '/admin/lanseringer?error=body_required', locale });
-
-  // Link, if present, must be internal (starts with '/') — same guard
-  // the Zod schema enforces for the notification payload.
-  if (linkRaw && !linkRaw.startsWith('/')) redirect({ href: '/admin/lanseringer?error=link_must_be_internal', locale });
-
-  // cta_label only meaningful with a link
-  if (ctaRaw && !linkRaw) redirect({ href: '/admin/lanseringer?error=cta_without_link', locale });
+  const parsed = validateProductUpdateInput({
+    title: String(formData.get('title') ?? ''),
+    body: String(formData.get('body') ?? ''),
+    link: String(formData.get('link') ?? ''),
+    cta_label: String(formData.get('cta_label') ?? ''),
+  });
+  if (!parsed.ok) {
+    redirect({ href: `/admin/lanseringer?error=${parsed.error}`, locale });
+    throw new Error('unreachable'); // redirect() threw; narrows parsed below.
+  }
 
   try {
     const result = await publishProductUpdate({
-      title,
-      body,
-      link: linkRaw || null,
-      cta_label: ctaRaw || null,
+      ...parsed.value,
       createdByUserId: userId,
     });
 
@@ -61,6 +56,44 @@ export async function publishProductUpdateAction(formData: FormData) {
     }
     console.error('[publishProductUpdateAction]', err);
     redirect({ href: '/admin/lanseringer?error=publish_failed', locale });
+  }
+}
+
+export async function editProductUpdateAction(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
+  await loadAdminContext();
+
+  const id = String(formData.get('id') ?? '').trim();
+  if (!id) {
+    redirect({ href: '/admin/lanseringer?error=edit_failed', locale });
+    throw new Error('unreachable');
+  }
+
+  const parsed = validateProductUpdateInput({
+    title: String(formData.get('title') ?? ''),
+    body: String(formData.get('body') ?? ''),
+    link: String(formData.get('link') ?? ''),
+    cta_label: String(formData.get('cta_label') ?? ''),
+  });
+  if (!parsed.ok) {
+    redirect({ href: `/admin/lanseringer/${id}/rediger?error=${parsed.error}`, locale });
+    throw new Error('unreachable');
+  }
+
+  try {
+    const result = await editProductUpdate({ id, ...parsed.value });
+
+    revalidatePath('/admin/lanseringer');
+    redirect({
+      href: `/admin/lanseringer?edited=1&notifs=${result.notificationCount}`,
+      locale,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('NEXT_REDIRECT')) {
+      throw err;
+    }
+    console.error('[editProductUpdateAction]', err);
+    redirect({ href: `/admin/lanseringer/${id}/rediger?error=edit_failed`, locale });
   }
 }
 

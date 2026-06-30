@@ -1827,6 +1827,16 @@ export type Database = {
         Args: { p_approve: boolean; p_request_id: string }
         Returns: string
       }
+      edit_product_update: {
+        Args: {
+          p_body: string
+          p_cta_label: string | null
+          p_id: string
+          p_link: string | null
+          p_title: string
+        }
+        Returns: number
+      }
       email_is_in_auth_users: {
         Args: { email_to_check: string }
         Returns: boolean
