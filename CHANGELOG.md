@@ -1015,8 +1015,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juni 2026 · 246 rettinger</strong></summary>
+<summary><strong>Juni 2026 · 247 rettinger</strong></summary>
 
+- `1.160.4` · [#991](https://github.com/jdlarssen/golf-app/issues/991) — Velger du Lys eller Mørk på Profil, husker appen valget neste gang du åpner den. Før falt den tilbake til system-temaet selv om bryteren fortsatt viste det du hadde valgt.
 - `1.160.3` · [#992](https://github.com/jdlarssen/golf-app/issues/992) — Snowman (blow-up-hull) vises ikke lenger som en bragd noe sted — verken under «Mine tall» på profilen, på Bragd-veggen eller i «Sesongen din». Den var bare negativt ladet.
 - `1.160.1` · [#990](https://github.com/jdlarssen/golf-app/issues/990) — Trekker en spiller seg fra runden, vises «Trukne spillere» nå riktig under leaderboardet i stedet for å gjemme seg bak menylinja nederst.
 - `1.158.2` · [#987](https://github.com/jdlarssen/golf-app/issues/987) — «Lever ditt scorekort»-knappen på hull-skjermen er nå en avgrenset, avrundet knapp; den grønne flaten flyter ikke lenger ned i skjermkanten på mobil.

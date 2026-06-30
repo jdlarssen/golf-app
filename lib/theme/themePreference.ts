@@ -78,3 +78,20 @@ export function applyThemePreference(preference: ThemePreference): void {
     root.dataset.theme = preference;
   }
 }
+
+/**
+ * Render-blokkerende inline-script som legges i <head> og påfører lagret tema
+ * FØR første paint. Uten den faller appen tilbake til OS-auto på hver load
+ * (CSS-en følger OS når <html> mangler `data-theme`), mens Profil-pillen
+ * fortsatt leser localStorage og viser «Lys»/«Mørk» — nettopp mismatchen i
+ * #991. Speiler {@link readStoredThemePreference} + {@link applyThemePreference},
+ * men må være en ren JS-streng siden den kjører før React hydrerer.
+ *
+ * Bruker {@link THEME_STORAGE_KEY} så nøkkelen har ett hjem. Kun 'light'/'dark'
+ * settes; 'auto' (nøkkel fjernet) og ugyldige verdier lar <html> stå urørt så
+ * OS-media-spørringen bestemmer.
+ */
+export function themeBootstrapScript(): string {
+  const key = JSON.stringify(THEME_STORAGE_KEY);
+  return `(function(){try{var t=localStorage.getItem(${key});if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
+}

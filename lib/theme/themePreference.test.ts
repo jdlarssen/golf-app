@@ -5,6 +5,7 @@ import {
   isThemePreference,
   readStoredThemePreference,
   storeThemePreference,
+  themeBootstrapScript,
 } from './themePreference';
 
 afterEach(() => {
@@ -47,6 +48,36 @@ describe('applyThemePreference (CSS-kontrakt)', () => {
     applyThemePreference('light');
     expect(document.documentElement.dataset.theme).toBe('light');
     applyThemePreference('auto');
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+});
+
+describe('themeBootstrapScript (anti-FOUC, kjører før første paint)', () => {
+  // Kjør den inline scripten slik nettleseren gjør under <head>-parsing.
+  function runBootstrap() {
+    new Function(themeBootstrapScript())();
+  }
+
+  it("restores a persisted 'dark' choice onto <html> on load", () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    runBootstrap();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it("restores a persisted 'light' choice onto <html> on load", () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    runBootstrap();
+    expect(document.documentElement.dataset.theme).toBe('light');
+  });
+
+  it("leaves <html> untouched for 'auto' (no key) so the OS query decides", () => {
+    runBootstrap();
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it('ignores a corrupt stored value (follows OS rather than forcing)', () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'neon');
+    runBootstrap();
     expect(document.documentElement.dataset.theme).toBeUndefined();
   });
 });

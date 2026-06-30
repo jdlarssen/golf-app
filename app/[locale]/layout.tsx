@@ -10,6 +10,7 @@ import { PwaBoot } from "@/components/PwaBoot";
 import { InstallPromptCapture } from "@/components/pwa/InstallPromptCapture";
 import { PerfHud } from "@/components/PerfHud";
 import { BottomNavGate } from "@/components/ui/BottomNavGate";
+import { themeBootstrapScript } from "@/lib/theme/themePreference";
 
 // Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
 const inter = Inter({
@@ -91,9 +92,17 @@ export default async function RootLayout({ children, params }: Props) {
   return (
     <html
       lang={locale}
+      // Tema-bootstrappen under setter `data-theme` på <html> før hydrering;
+      // suppressHydrationWarning hindrer React i å klage på det ene attributtet.
+      suppressHydrationWarning
       className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        {/* Anti-FOUC (#991): påfør lagret Lys/Mørk-valg FØR første paint, ellers
+            faller appen tilbake til OS-auto på hver load mens Profil-pillen
+            fortsatt viser det lagrede valget. Må stå først i <body> og være
+            render-blokkerende (ingen async/defer). */}
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript() }} />
         <NextIntlClientProvider>
           {children}
           <Suspense fallback={null}>
