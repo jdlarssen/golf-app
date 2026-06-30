@@ -9,18 +9,25 @@ export interface BottomActionBarProps {
   disabled?: boolean;
 }
 
-// Knappen ER bunn-baren: full bredde, kant-til-kant, avrundet topp og flush
-// bunn. Knappens egen farge fyller `env(safe-area-inset-bottom)` helt ned til
-// skjermkanten, så det nederste på skjermen er selve knappen — ingen
-// `--surface`-stripe under den. Hull-siden dropper sin `paddingBottom` så
-// baren eier bunn-klareringen alene.
+// En innrammet, avgrenset knapp: fullt avrundet og insett fra skjermkantene med
+// side- og bunn-margin. Page-bakgrunnen (`--bg`) fyller sonen rundt og under
+// knappen, så `env(safe-area-inset-bottom)` (home-indikatoren) ligger på
+// bakgrunnen — ikke på den grønne knappeflaten. `box-sizing: border-box` så
+// paddingen ikke overflyter den insette bredden; `margin: 0 auto` sentrerer
+// blokken (virker likt for både <button> og <a>, der `width: auto` ellers
+// krymper en <button> til innholdet).
 function barStyle(disabled: boolean): CSSProperties {
   return {
     display: 'block',
-    width: '100%',
-    padding: '17px 18px calc(17px + env(safe-area-inset-bottom, 0px))',
+    width: 'calc(100% - 32px)',
+    boxSizing: 'border-box',
+    marginTop: 12,
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    marginBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+    padding: '17px 18px',
     border: 'none',
-    borderRadius: '18px 18px 0 0',
+    borderRadius: 16,
     background: disabled ? 'var(--disabled-bg)' : 'var(--primary)',
     color: disabled ? 'var(--disabled-fg)' : 'var(--bg-tint)',
     fontFamily: 'var(--font-sans)',
