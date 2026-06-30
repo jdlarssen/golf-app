@@ -18,16 +18,16 @@
 
 ## Suksesskriterier
 
-- [ ] **SK1 — Inngang:** Hvert element i «Tidligere lanseringer» (`PreviousUpdatesList`) har en «Rediger»-lenke til `/admin/lanseringer/[id]/rediger`.
-- [ ] **SK2 — Forhåndsutfylt skjema:** Rediger-siden viser tittel/brødtekst/lenke/cta_label forhåndsutfylt med lanseringens nåværende verdier. Ukjent `id` → `notFound()` (404, ikke rå 500).
-- [ ] **SK3 — Oppdaterer kilden:** Lagring oppdaterer `product_updates`-raden (title/body/link/cta_label) — nøyaktig 1 rad påvirket (assert, ikke 0-row-success; AGENTS.md trap #2).
-- [ ] **SK4 — Propagerer til alle varsler:** Lagring oppdaterer **alle** `notifications`-rader der `payload->>'source_id' = id` (kind=`product_update`): title/body settes, link/cta_label **fjernes fra payload når tomme** (speiler publiser sin omit-when-empty), `source_id`/`read_at`/`archived_at` bevares.
-- [ ] **SK5 — Atomisk + stille:** Begge oppdateringer skjer i én transaksjon (RPC); `read_at` nullstilles aldri.
-- [ ] **SK6 — Authz:** Kun site-admin (`is_admin`) når rediger-siden og kjører rediger-action (gjenbruker `requireAdmin`). RPC-en er ikke kjørbar av `authenticated`/`anon` (kun `service_role`), så en fiendtlig direkte PATCH/RPC kan ikke redigere lanseringer (trap #3).
-- [ ] **SK7 — Validering:** Samme regler som publiser (tittel+brødtekst påkrevd, lenke må starte med «/», cta krever lenke) via delt validator — ingen duplisert regel.
-- [ ] **SK8 — i18n:** Alle nye bruker-strenger i `messages/no.json` + `messages/en.json` under `admin.launches` (ingen hardkodet norsk i komponentkode).
-- [ ] **SK9 — Tester:** Logikk-test for `editProductUpdate` (RPC-kall-form + affected-assert), action-test (auth-gate + validering + happy path). Eksisterende suite forblir grønn.
-- [ ] **SK10 — Migrasjon verifisert:** `0124_edit_product_update.sql` påført staging via Supabase MCP og verifisert (RPC finnes, oppdaterer begge tabeller, ikke kjørbar av authenticated). Prod påføres etter merge (0107-mønsteret).
+- [x] **SK1 — Inngang:** Hvert element i «Tidligere lanseringer» (`PreviousUpdatesList`) har en «Rediger»-lenke til `/admin/lanseringer/[id]/rediger`.
+- [x] **SK2 — Forhåndsutfylt skjema:** Rediger-siden viser tittel/brødtekst/lenke/cta_label forhåndsutfylt med lanseringens nåværende verdier. Ukjent `id` → `notFound()` (404, ikke rå 500).
+- [x] **SK3 — Oppdaterer kilden:** Lagring oppdaterer `product_updates`-raden (title/body/link/cta_label) — nøyaktig 1 rad påvirket (assert, ikke 0-row-success; AGENTS.md trap #2).
+- [x] **SK4 — Propagerer til alle varsler:** Lagring oppdaterer **alle** `notifications`-rader der `payload->>'source_id' = id` (kind=`product_update`): title/body settes, link/cta_label **fjernes fra payload når tomme** (speiler publiser sin omit-when-empty), `source_id`/`read_at`/`archived_at` bevares.
+- [x] **SK5 — Atomisk + stille:** Begge oppdateringer skjer i én transaksjon (RPC); `read_at` nullstilles aldri.
+- [x] **SK6 — Authz:** Kun site-admin (`is_admin`) når rediger-siden og kjører rediger-action (gjenbruker `requireAdmin`). RPC-en er ikke kjørbar av `authenticated`/`anon` (kun `service_role`), så en fiendtlig direkte PATCH/RPC kan ikke redigere lanseringer (trap #3).
+- [x] **SK7 — Validering:** Samme regler som publiser (tittel+brødtekst påkrevd, lenke må starte med «/», cta krever lenke) via delt validator — ingen duplisert regel.
+- [x] **SK8 — i18n:** Alle nye bruker-strenger i `messages/no.json` + `messages/en.json` under `admin.launches` (ingen hardkodet norsk i komponentkode).
+- [x] **SK9 — Tester:** Logikk-test for `editProductUpdate` (RPC-kall-form + affected-assert), action-test (auth-gate + validering + happy path). Eksisterende suite forblir grønn.
+- [x] **SK10 — Migrasjon verifisert:** `0124_edit_product_update.sql` påført staging via Supabase MCP og verifisert (RPC finnes, oppdaterer begge tabeller, ikke kjørbar av authenticated). Prod påføres etter merge (0107-mønsteret).
 
 ## Filer som berøres
 
