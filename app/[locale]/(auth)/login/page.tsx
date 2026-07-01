@@ -6,6 +6,8 @@ import { BrandHero } from '@/components/ui/BrandHero';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
+import { PasskeyLoginButton } from '@/components/passkey/PasskeyLoginButton';
+import { resolvePasskeyAccess } from '@/lib/auth/passkeyFlag';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 
 type SearchParams = Promise<{
@@ -62,13 +64,17 @@ export default async function LoginPage({
           )}
 
           {step === 'email' ? (
-            <SendCodeForm
-              defaultEmail={email}
-              next={next}
-              allowSelfRegistration={
-                process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true'
-              }
-            />
+            <>
+              {resolvePasskeyAccess(process.env.NEXT_PUBLIC_PASSKEYS, false)
+                .showLoginButton && <PasskeyLoginButton next={next} />}
+              <SendCodeForm
+                defaultEmail={email}
+                next={next}
+                allowSelfRegistration={
+                  process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true'
+                }
+              />
+            </>
           ) : (
             <VerifyCodeForm
               email={email}

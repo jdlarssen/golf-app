@@ -18,6 +18,8 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
 import { PushToggle } from '@/components/pwa/PushToggle';
+import { PasskeySettings } from '@/components/passkey/PasskeySettings';
+import { getPasskeyEnrollAccess } from '@/lib/auth/passkeyEnrollAccess';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { formatHcpDisplay } from '@/lib/handicap/sign';
@@ -179,6 +181,8 @@ export default async function ProfilePage({
     redirect({ href: '/login', locale });
   }
 
+  const canEnrollPasskey = await getPasskeyEnrollAccess();
+
   const params = await searchParams;
   const errorCode = first(params.error);
   const errorMessage = errorCode && t.has(`errors.${errorCode}` as Parameters<typeof t>[0])
@@ -258,6 +262,15 @@ export default async function ProfilePage({
         <section>
           <PushToggle />
         </section>
+
+        {/* Face ID / passkeys (#63) — only when the rollout flag lets this user
+            enroll; the heading lives inside PasskeySettings so it doesn't dangle
+            when WebAuthn is unsupported (the component returns null). */}
+        {canEnrollPasskey && (
+          <section>
+            <PasskeySettings />
+          </section>
+        )}
 
         {/* Konto — eksport og destruktiv slett-handling */}
         <section>
