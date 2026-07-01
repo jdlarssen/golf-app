@@ -96,23 +96,23 @@ Dashboard → Authentication → Passkeys på **prod** (`glofubopddkjhymcbaph`):
 
 ## Success Criteria
 
-- [ ] `lib/supabase/client.ts` opts inn i passkeys (`auth.experimental.passkey`); server/middleware uendret. Verifikasjon: les fil.
-- [ ] `lib/auth/passkeyFlag.ts` finnes med enhetstestet `resolvePasskeyAccess` som gir riktig `{canEnroll, showLoginButton}` for `off`/`admin`(admin+ikke-admin)/`on`. Verifikasjon: `npm test` på helper-testen.
-- [ ] Login-siden viser «Logg inn med Face ID» når flagg ≠ off + WebAuthn støttet; kaller `signInWithPasskey`; suksess → `window.location.assign(next)`; manglende credential/avbrudd → grasiøs fallback til kode. Verifikasjon: komponent + unit-test (mocket klient) + lest kode.
-- [ ] Hjem-siden viser en dismissbar «Slå på Face ID»-nudge (user-gesture, kun når `canEnroll` + WebAuthn + ingen passkey) som kaller `registerPasskey`. Verifikasjon: komponent + unit-test.
-- [ ] Profil har Passkeys-seksjon: liste (navn + datoer), gi-nytt-navn, slett, og enroll-knapp når tillatt. Verifikasjon: komponent + unit-test.
-- [ ] OTP-innlogging virker uendret som fallback/recovery; ingen endring i `verifyCode`-bivirkninger. Verifikasjon: eksisterende login-tester grønne.
-- [ ] Ny `passkey`-copy i `no.json` + `en.json`, humanizer-ren; eksisterende login-e2e-smoke fortsatt grønn (flagg off → ingen passkey-UI). Verifikasjon: `npm test` + pre-commit-hook.
-- [ ] MINOR-bump i `package.json`. CHANGELOG-announcement er **utsatt til flagget flippes** (dark launch — feature er usynlig til `NEXT_PUBLIC_PASSKEYS` settes; en «Du kan nå …»-linje nå ville vært misvisende). Feat-commit bærer `[no-changelog]`. Verifikasjon: commit-msg-hook passerer.
+- [x] `lib/supabase/client.ts` opts inn i passkeys (`auth.experimental.passkey`); server/middleware uendret. → [lib/supabase/client.ts:8-14]; ingen endring i server.ts/middleware.ts.
+- [x] `lib/auth/passkeyFlag.ts` finnes med enhetstestet `resolvePasskeyAccess` som gir riktig `{canEnroll, showLoginButton}` for `off`/`admin`(admin+ikke-admin)/`on`. → 19 tester grønne i `passkeyFlag.test.ts`.
+- [x] Login-siden viser «Logg inn med Face ID» når flagg ≠ off + WebAuthn støttet; kaller `signInWithPasskey`; suksess → `window.location.assign(next)`; manglende credential/avbrudd → grasiøs fallback til kode. → `PasskeyLoginButton.tsx` + 3 tester (hard-nav, no-credential-fallback, unsupported→null); wiring i login/page.tsx.
+- [x] Hjem-siden viser en dismissbar «Slå på Face ID»-nudge (user-gesture, kun når `canEnroll` + WebAuthn + ingen passkey) som kaller `registerPasskey`. → `PasskeyEnrollmentPrompt.tsx` (+ server-gate `PasskeyEnrollmentNudge.tsx`) + 3 tester; Suspense-mount i page.tsx:88.
+- [x] Profil har Passkeys-seksjon: liste (navn + datoer), gi-nytt-navn, slett, og enroll-knapp når tillatt. → `PasskeySettings.tsx` + 2 tester (list-render, delete-after-confirm); gated mount i profile/page.tsx.
+- [x] OTP-innlogging virker uendret som fallback/recovery; ingen endring i `verifyCode`-bivirkninger. → actions.ts urørt; `login/`-tester (31) grønne; full suite 4393 grønne.
+- [x] Ny `passkey`-copy i `no.json` + `en.json`, humanizer-ren; eksisterende login-e2e-smoke fortsatt grønn (flagg off → ingen passkey-UI). → begge locales, humanizer-pass gjort; i18n-parity-test grønn.
+- [x] MINOR-bump i `package.json` (1.161→1.162.0). CHANGELOG-announcement **utsatt til flagget flippes** (dark launch). Feat-commit bærer `[no-changelog]`. → commit 8b71a99e passerte commit-msg-hook.
 
 ## Gates
 
-- [ ] `npm install` i worktree (mangler node_modules) før noe annet.
-- [ ] `npx tsc --noEmit` passerer (og `npm run build` som siste port).
-- [ ] `npm run lint` passerer.
-- [ ] `npm test` passerer (nye co-located tester + `login/actions.test.ts` + `e2e`-smoke der relevant).
-- [ ] Pre-commit-hook: ingen humanizer-advarsler på ny copy.
-- [ ] **Manuelt (owner-gate før flagg flippes):** Dashboard passkey-config på prod (RP ID `tornygolf.no`) + ekte add-to-home-screen-enhetstest på staging. Kode kan merges med flagg `off`; flippes til `admin` først etter enhetstest.
+- [x] `npm install` i worktree — exit 0.
+- [x] `npx tsc --noEmit` (exit 0) + `npm run build` (grønn, full rute-tre).
+- [x] `npm run lint` — 0 errors (50 pre-eksisterende complexity-warnings i urelaterte filer).
+- [x] `npm test` — 345 filer / 4393 tester grønne.
+- [x] Pre-commit-hook: kun 2 i18n-vakt-advarsler på JSDoc-**kommentarer** (ikke ekte hardkodet copy — all UI-tekst går via `useTranslations`). Ingen ekte funn.
+- [ ] **Manuelt (owner-gate før flagg flippes):** Dashboard passkey-config på prod (RP ID `tornygolf.no`) + ekte add-to-home-screen-enhetstest på staging. Kode merges med flagg `off`; flippes til `admin` først etter enhetstest. — owner-handling, ikke byggbar.
 
 ## Files Likely Touched
 
