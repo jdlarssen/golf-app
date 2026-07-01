@@ -62,7 +62,9 @@ export function PasskeySettings() {
     try {
       const { error: e } = await getBrowserClient().auth.registerPasskey();
       if (e) {
-        setError(e.code === 'webauthn_credential_exists' ? t('enrollExists') : t('enrollError'));
+        if (e.code === 'webauthn_credential_exists') setError(t('enrollExists'));
+        else if (e.code === 'too_many_passkeys') setError(t('enrollTooMany'));
+        else setError(t('enrollError'));
       } else {
         await refresh();
       }

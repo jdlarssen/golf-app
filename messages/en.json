@@ -4646,6 +4646,7 @@
     "enrollButton": "Turn on Face ID",
     "addDevice": "Add another device",
     "enrollExists": "This device already has Face ID.",
+    "enrollTooMany": "You've reached the maximum number of devices. Remove one before adding another.",
     "enrollError": "Couldn't turn on Face ID. Try again.",
     "deleteError": "Couldn't remove it. Try again.",
     "renameError": "Couldn't rename. Try again."

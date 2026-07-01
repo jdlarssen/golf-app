@@ -4646,6 +4646,7 @@
     "enrollButton": "Slå på Face ID",
     "addDevice": "Legg til på en ny enhet",
     "enrollExists": "Denne enheten har allerede Face ID.",
+    "enrollTooMany": "Du har nådd maks antall enheter. Fjern en før du legger til en ny.",
     "enrollError": "Kunne ikke slå på Face ID. Prøv igjen.",
     "deleteError": "Kunne ikke fjerne den. Prøv igjen.",
     "renameError": "Kunne ikke endre navnet. Prøv igjen."
