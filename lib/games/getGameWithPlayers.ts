@@ -72,6 +72,21 @@ export type GameForHole = {
    *  «Avslutt spill»-affordance on game-home. Immutable after creation, so
    *  caching it under the `game-${id}` tag is safe. */
   created_by: string | null;
+  /**
+   * #1007: non-null when this game is a match inside a cup/tournament.
+   * Immutable after creation (cup-matches are never re-parented to a
+   * different tournament), so caching it under the `game-${id}` tag is
+   * safe. Drives the revansje-CTA gate on game-home (cup matches don't get
+   * a standalone "run it back" button — the cup itself owns the rematch).
+   */
+  tournament_id: string | null;
+  /** #1007: non-null when this game is a liga-round. Same immutability +
+   *  gating rationale as `tournament_id` above. */
+  league_round_id: string | null;
+  /** #1007: non-null when this game belongs to a klubb. Immutable after
+   *  creation. Used to derive the revansje-flyten's `initialIntent`
+   *  ('klubb' + this id) instead of re-deriving intent from format tables. */
+  group_id: string | null;
   course_id: string;
   tee_box_id: string;
   score_visibility: ScoreVisibility;
@@ -149,7 +164,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, created_by, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
       .single<GameForHole>(),
@@ -176,7 +191,14 @@ async function fetchGameWithPlayers(
 export async function getGameWithPlayers(
   id: string,
 ): Promise<GameWithPlayers | null> {
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp', id], {
+  // #1007: keyParts bumped to 'gwp2' when tournament_id/league_round_id/
+  // group_id were added to the select. unstable_cache keys on keyParts, not
+  // on the shape of what fetchGameWithPlayers returns — a stale 'gwp' entry
+  // from before this change would silently resolve those three fields as
+  // `undefined`, which the #1007 revansje-CTA gate would misread as "not a
+  // cup/liga game" and show the button on cup/liga matches. Bumping the key
+  // forces a fresh fetch for every existing cache entry exactly once.
+  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp2', id], {
     tags: [`game-${id}`],
     revalidate: 900,
   })();
