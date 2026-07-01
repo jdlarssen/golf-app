@@ -9,6 +9,7 @@ import {
   type PushState,
 } from '@/lib/pwa/push';
 import { savePushSubscription, removePushSubscription } from '@/app/[locale]/profile/pushActions';
+import { Switch } from '@/components/ui/Switch';
 
 export function PushToggle() {
   const t = useTranslations('pushSettings');
@@ -91,23 +92,12 @@ export function PushToggle() {
           <p className="font-serif text-base font-medium text-text">{t('title')}</p>
           <p className="text-xs text-text-muted">{on ? t('on') : t('permissionNote')}</p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on}
-          aria-label={t('title')}
-          onClick={on ? turnOff : turnOn}
+        <Switch
+          checked={on}
+          onToggle={on ? turnOff : turnOn}
+          label={t('title')}
           disabled={busy}
-          className={`flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50 ${
-            on ? 'bg-primary' : 'bg-text/20'
-          }`}
-        >
-          <span
-            className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-150 ${
-              on ? 'translate-x-5' : 'translate-x-0'
-            }`}
-          />
-        </button>
+        />
       </div>
     </>
   );
