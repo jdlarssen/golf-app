@@ -91,6 +91,14 @@ type GameRow = {
   id: string;
   name: string;
   status: GameStatus;
+  /**
+   * #1007: gates the «Revansje?» CTA on the finished branch — cup matches
+   * and liga-rounds don't get a standalone rematch button (the cup/liga
+   * itself owns the rematch). Immutable after creation.
+   */
+  tournament_id: string | null;
+  /** #1007: same gating rationale as `tournament_id` above. */
+  league_round_id: string | null;
   course_id: string;
   tee_box_id: string;
   scheduled_tee_off_at: string | null;
@@ -142,7 +150,7 @@ type GameRow = {
 };
 
 const GAME_SELECT =
-  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, tournament_id, league_round_id, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 /** Locale-aware thousands-separator. 6124 → "6 124" (no) / "6,124" (en). */
 function formatLengthMeters(n: number, locale: AppLocale): string {
@@ -936,6 +944,24 @@ export default async function GameHomePage({
           <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
             {t('gameNotStarted')}
           </div>
+        )}
+
+        {/* #1007: «Revansje?» — dupliserer dette spillet inn i opprett-
+            veiviseren, ferdig utfylt. Synlig for ALLE deltakere (ikke bare
+            arrangøren) — den viktigste veksthendelsen appen har er at en
+            invitert spiller blir arrangør selv. Skjult for cup-matches og
+            liga-runder (`tournament_id`/`league_round_id`) — de eies av
+            cupen/ligaen sin egen rematch-mekanikk, ikke en frittstående
+            knapp her. Rent navigasjons-lenke; ingenting skrives til DB. */}
+        {isFinished && !game.tournament_id && !game.league_round_id && (
+          <LinkButton
+            href={`/opprett-spill?fra=${id}`}
+            variant="secondary"
+            full
+            data-testid="revansje-button"
+          >
+            {t('revansjeButton')}
+          </LinkButton>
         )}
 
         {game.status === 'finished' && (

@@ -9,12 +9,14 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
+import type { InitialValues } from '@/app/[locale]/admin/games/new/GameForm';
 import {
   createGameDraft,
   createAndPublishGame,
 } from '@/app/[locale]/admin/games/new/actions';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { getRoleContext } from '@/lib/admin/auth';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
 import {
@@ -25,6 +27,12 @@ import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
+import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import {
+  buildRevansjeInitialValues,
+  type RevansjeGameRow,
+  type RevansjePlayerRow,
+} from '@/lib/games/buildRevansjeInitialValues';
 
 // Opprett-spill-ruten for ALLE innloggede brukere (#427 — tidligere bare
 // admin/trusted per #198). Gjenbruker GameWizard fra admin-flyten, men kjører
@@ -39,7 +47,118 @@ type SearchParams = Promise<{
   klubb?: string | string[];
   // #892: Klubbhuset kan dyplenke «… eller en cup» med ?intent=cup.
   intent?: string | string[];
+  // #1007: «Revansje?»-knappen på et avsluttet spill dyplenker hit med
+  // kilde-spillets id. Serverside-validert i loadRevansjeContext — en
+  // param som peker på en ugyldig kilde (ikke deltaker, ikke finished,
+  // cup/liga) ignoreres stille og gir en helt vanlig tom veiviser.
+  fra?: string | string[];
 }>;
+
+type RevansjeContext = {
+  initialValues: InitialValues;
+  initialIntent: Intent;
+  sourceName: string;
+};
+
+/**
+ * #1007 — laster prefill-context for «Revansje?»-knappen. Returnerer `null`
+ * (stille ignorert, vanlig tom veiviser) med mindre ALLE gates passerer:
+ * spillet finnes, brukeren er en av deltakerne, status er 'finished', og
+ * spillet er hverken en cup-match (`tournament_id`) eller en liga-runde
+ * (`league_round_id`). Ingenting bygges før authz-sjekken (ingen data-lekkasje
+ * for en gjettet id).
+ */
+async function loadRevansjeContext(
+  fraId: string,
+  currentUserId: string,
+): Promise<RevansjeContext | null> {
+  const gwp = await getGameWithPlayers(fraId);
+  if (!gwp) return null;
+
+  const isParticipant = gwp.players.some((p) => p.user_id === currentUserId);
+  if (!isParticipant) return null;
+
+  const { game } = gwp;
+  if (game.status !== 'finished') return null;
+  if (game.tournament_id !== null || game.league_round_id !== null) return null;
+
+  // Slim direct-fetch (à la loadCupContext/admin/games/new/page.tsx) for the
+  // few EditGameRow fields NOT carried by the game-${id} cache (hcp_allowance_pct,
+  // registration_*, let_friends_skip_gate). Admin client: authz is already
+  // settled above (participant + finished + standalone), same doctrine as the
+  // cached read.
+  const { data: extra, error } = await getAdminClient()
+    .from('games')
+    .select(
+      'hcp_allowance_pct, registration_mode, registration_type, let_friends_skip_gate',
+    )
+    .eq('id', fraId)
+    .single<{
+      hcp_allowance_pct: number;
+      registration_mode: 'invite_only' | 'manual_approval' | 'open';
+      registration_type: 'solo' | 'team' | 'both';
+      let_friends_skip_gate: boolean;
+    }>();
+  if (error || !extra) return null;
+
+  const gameRow: RevansjeGameRow = {
+    id: game.id,
+    name: game.name,
+    courses: null,
+    status: game.status,
+    course_id: game.course_id,
+    tee_box_id: game.tee_box_id,
+    scheduled_tee_off_at: game.scheduled_tee_off_at,
+    hcp_allowance_pct: extra.hcp_allowance_pct,
+    require_peer_approval: game.require_peer_approval,
+    score_visibility: game.score_visibility,
+    side_tournament_enabled: game.side_tournament_enabled,
+    side_ld_count: game.side_ld_count,
+    side_ctp_count: game.side_ctp_count,
+    side_disabled_categories: game.side_disabled_categories ?? [],
+    game_mode: game.game_mode,
+    mode_config: game.mode_config,
+    registration_mode: extra.registration_mode,
+    registration_type: extra.registration_type,
+    let_friends_skip_gate: extra.let_friends_skip_gate,
+  };
+  const playerRows: RevansjePlayerRow[] = gwp.players.map((p) => ({
+    user_id: p.user_id,
+    team_number: p.team_number,
+    flight_number: p.flight_number,
+    tee_gender: p.tee_gender,
+    withdrawn_at: p.withdrawn_at,
+  }));
+
+  const initialValues = buildRevansjeInitialValues(gameRow, playerRows);
+
+  // group_id → klubb-arrangement; ellers derivér fra hvilken intent-katalog
+  // formatet er synlig i (kompis foretrekkes — matcher #892-presedensen der
+  // en eksplisitt signal vinner over gjetting). Cup er aldri et resultat her
+  // siden game.tournament_id === null er allerede verifisert over.
+  let initialIntent: Intent;
+  if (game.group_id !== null) {
+    initialIntent = 'klubb';
+    initialValues.group_id = game.group_id;
+  } else {
+    // getFormatsForIntent er unstable_cache-wrappet (24t revalidate) —
+    // begge kallene er cache-hits i praksis, samme katalog GameFormBody
+    // uansett henter for wizard-en selv.
+    const [kompisFormats, klubbFormats] = await Promise.all([
+      getFormatsForIntent('kompis'),
+      getFormatsForIntent('klubb'),
+    ]);
+    if (kompisFormats.some((f) => f.slug === game.game_mode)) {
+      initialIntent = 'kompis';
+    } else if (klubbFormats.some((f) => f.slug === game.game_mode)) {
+      initialIntent = 'klubb';
+    } else {
+      initialIntent = 'solo';
+    }
+  }
+
+  return { initialValues, initialIntent, sourceName: game.name };
+}
 
 export default async function OpprettSpillPage({
   searchParams,
@@ -74,10 +193,26 @@ export default async function OpprettSpillPage({
 
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
+  // #1007: «Revansje?» — kilde-spillets id fra game-home. Ugyldig/uautorisert
+  // param (ikke deltaker, ikke finished, cup/liga) gir `null` og faller
+  // stille tilbake til en helt vanlig tom veiviser (ingen feilmelding — det
+  // ville lekket informasjon om spillets eksistens til en ikke-deltaker).
+  const fraId = first(sp.fra);
+  const revansje = fraId
+    ? await loadRevansjeContext(fraId, currentUserId)
+    : null;
+  if (revansje) {
+    console.log('[opprett-spill] revansje-prefill', fraId);
+  }
+
   // #892: en eksplisitt ?intent= (f.eks. cup fra Klubbhusets «… eller en cup»)
-  // vinner; ellers er en ?klubb=-dyplenke per definisjon en klubb-arrangement-flyt.
+  // vinner; ellers en ?klubb=-dyplenke gir klubb-intent; revansje-derivert
+  // intent er svakest presedens (den er et forslag, ikke et eksplisitt valg)
+  // men vinner over "ingen signal i det hele tatt".
   const initialIntent: Intent | undefined =
-    parseIntent(first(sp.intent)) ?? (first(sp.klubb) ? 'klubb' : undefined);
+    parseIntent(first(sp.intent)) ??
+    (first(sp.klubb) ? 'klubb' : undefined) ??
+    revansje?.initialIntent;
 
   return (
     <AppShell>
@@ -98,6 +233,14 @@ export default async function OpprettSpillPage({
         </div>
       )}
 
+      {revansje && (
+        <div className="mt-4">
+          <Banner tone="info" testId="revansje-banner">
+            {t('createDoor.revansjeBanner', { name: revansje.sourceName })}
+          </Banner>
+        </div>
+      )}
+
       <Suspense fallback={null}>
         <PlayerShortageBanner />
       </Suspense>
@@ -108,6 +251,8 @@ export default async function OpprettSpillPage({
             <GameFormBody
               defaultGroupId={first(sp.klubb)}
               initialIntent={initialIntent}
+              initialValues={revansje?.initialValues}
+              wizardKey={fraId ?? 'blank'}
               userId={currentUserId}
               isAdmin={isAdmin}
             />
@@ -151,11 +296,18 @@ async function PlayerShortageBanner() {
 async function GameFormBody({
   defaultGroupId,
   initialIntent,
+  initialValues,
+  wizardKey,
   userId,
   isAdmin,
 }: {
   defaultGroupId: string | undefined;
   initialIntent: Intent | undefined;
+  // #1007: prefill fra «Revansje?». Undefined for the ordinary empty-wizard path.
+  initialValues: InitialValues | undefined;
+  // #1007: remounts GameWizard when the `?fra=` source changes — useGameFormState
+  // only reads initialValues once at mount (key-remount-fella, kjent memory-trap).
+  wizardKey: string;
   userId: string;
   isAdmin: boolean;
 }) {
@@ -202,6 +354,7 @@ async function GameFormBody({
   const friendPlayerIds = friendPlayers.map((f) => f.id);
   return (
     <GameWizard
+      key={wizardKey}
       courses={courses}
       players={mergedPlayers}
       mode={{
@@ -209,6 +362,7 @@ async function GameFormBody({
         createDraftAction: createGameDraft,
         createAndPublishAction: createAndPublishGame,
       }}
+      initialValues={initialValues}
       formatsByIntent={{
         kompis: kompisFormats,
         klubb: klubbFormats,
@@ -217,8 +371,9 @@ async function GameFormBody({
       cupEligibleFormats={cupEligibleFormats}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
-      // #892: eksplisitt intent (cup) vinner; en ?klubb=-dyplenke gir klubb-intent
-      // så ClubPicker (kun for klubb-intent) viser den forhåndsvalgte klubben (#50-fix).
+      // #892/#1007: eksplisitt intent (cup) vinner; en ?klubb=-dyplenke eller
+      // revansje-derivert klubb-tilknytning gir klubb-intent så ClubPicker
+      // (kun for klubb-intent) viser den forhåndsvalgte klubben (#50-fix).
       initialIntent={initialIntent}
       friendPlayerIds={friendPlayerIds}
       clubMemberIdsByClub={clubMembers.memberIdsByClub}

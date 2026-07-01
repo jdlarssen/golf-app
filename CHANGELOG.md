@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.163 · Revansje?</strong></summary>
+
+[#1007](https://github.com/jdlarssen/golf-app/issues/1007) — Avsluttet du en runde, får du nå en «Revansje?»-knapp som åpner opprett-veiviseren ferdig utfylt med samme bane, format, sideturnering og spillerliste. Alle deltakere ser knappen, ikke bare arrangøren — bli med i en runde, og du kan sette opp den neste selv.
+
+↳ /opprett-spill · «Revansje?»
+</details>
+
+<details>
 <summary><strong>1.161 · Rett en publisert lansering</strong></summary>
 
 [#993](https://github.com/jdlarssen/golf-app/issues/993) — Har en lansering gått ut med en feil i tittel, tekst eller lenke, kan du nå rette den fra «Lanseringer» i Sekretariatet. Rettingen følger med til varslene som alt er sendt ut — uten å dukke opp på nytt hos dem som har lukket det.
