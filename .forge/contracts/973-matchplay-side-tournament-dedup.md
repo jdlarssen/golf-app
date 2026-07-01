@@ -32,13 +32,13 @@ I `computeSideTournament` bruker per-spiller-netto-loopen `siByHole.get(h) ?? 18
 
 ## Success Criteria
 
-- [ ] **Ny pure helper** `buildCourseArrays(holes: { holeNumber; par; strokeIndex }[])` i `lib/scoring/sideTournamentInput.ts`, returnerer `{ coursePars: number[]; courseStrokeIndices: number[]; siByHole: Map<number, number> }`. JSDoc som forklarer fallback-disiplinen (`?? 4` for par, `?? h` for SI-array).
-- [ ] **Ny pure helper** `mapSideWinners(rows: SideWinnerRow[]): SideWinner[]` i samme fil (filter `position ∈ {1,2}`, map til `{ category, position, winnerUserId }`).
-- [ ] **`buildSideTournamentInput` konsumerer begge helpers** — ingen inline `coursePars`/`courseStrokeIndices`-loop eller `sideWinners`-filter/map igjen i funksjonen.
-- [ ] **`computeSideTournament` konsumerer begge helpers** — mapper `rawHolesRows` → `{ holeNumber, par: par_mens, strokeIndex }` ved kallet; bruker returnert `siByHole` for netto-loopens `?? 18`; ingen inline `coursePars`/`sideWinners`-blokk igjen.
-- [ ] **Ny testfil** `lib/scoring/sideTournamentInput.test.ts` dekker helperne: (a) `buildCourseArrays` — dense 18-hull, sparse (manglende hull → `?? 4`/`?? h`), out-of-order hull-rader, tomt input; (b) `mapSideWinners` — position 0/3/null ekskludert, 1/2 inkludert, felt-mapping korrekt.
-- [ ] **Oppførsel bevart:** `lib/scoring/sideTournament.test.ts` fortsatt grønn (konsumenten urørt); `npx tsc --noEmit` ren; lint ren på de to endrede filene.
-- [ ] **Avvik dokumentert:** closing-kommentaren nevner at issue-ets «én builder»-forslag ble erstattet med sub-helper-ekstraksjon, med begrunnelsen over.
+- [x] **Ny pure helper** `buildCourseArrays(holes: { holeNumber; par; strokeIndex }[])` i `lib/scoring/sideTournamentInput.ts`, returnerer `{ coursePars: number[]; courseStrokeIndices: number[]; siByHole: Map<number, number> }`. JSDoc som forklarer fallback-disiplinen (`?? 4` for par, `?? h` for SI-array). — `sideTournamentInput.ts:12–52` (commit `2ce38ef4`).
+- [x] **Ny pure helper** `mapSideWinners(rows: SideWinnerRow[]): SideWinner[]` i samme fil (filter `position ∈ {1,2}`, map til `{ category, position, winnerUserId }`). — `sideTournamentInput.ts:54–71`.
+- [x] **`buildSideTournamentInput` konsumerer begge helpers** — ingen inline `coursePars`/`courseStrokeIndices`-loop eller `sideWinners`-filter/map igjen i funksjonen. — `sideTournamentInput.ts`: block erstattet av `buildCourseArrays(holes)` + `mapSideWinners(sideWinnerRows)`.
+- [x] **`computeSideTournament` konsumerer begge helpers** — mapper `rawHolesRows` → `{ holeNumber, par: par_mens, strokeIndex }` ved kallet; bruker returnert `siByHole` for netto-loopens `?? 18`; ingen inline `coursePars`/`sideWinners`-blokk igjen. — `sideTournament.tsx` (commit `166fba86`).
+- [x] **Ny testfil** `lib/scoring/sideTournamentInput.test.ts` dekker helperne: (a) `buildCourseArrays` — dense 18-hull, sparse (manglende hull → `?? 4`/`?? h`), out-of-order hull-rader, tomt input; (b) `mapSideWinners` — position 0/3/null ekskludert, 1/2 inkludert, felt-mapping korrekt. — 8 tester grønne.
+- [x] **Oppførsel bevart:** `lib/scoring/sideTournament.test.ts` fortsatt grønn (konsumenten urørt); `npx tsc --noEmit` ren; lint ren på de to endrede filene. — `vitest run lib/scoring` = 1029 pass; leaderboard-view-tester = 186 pass; `tsc --noEmit` exit 0; `eslint` ren på begge filer.
+- [ ] **Avvik dokumentert:** closing-kommentaren nevner at issue-ets «én builder»-forslag ble erstattet med sub-helper-ekstraksjon, med begrunnelsen over. — *(gjøres ved lukking, etter ACCEPT + merge.)*
 
 ## Gates
 
