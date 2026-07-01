@@ -892,7 +892,11 @@ describe('useGameFormState — defensiv publish-guard (AC5)', () => {
     act(() => {
       result.current.setTeeBoxId('tee-c1'); // herre-only
       result.current.togglePlayer('p-mann');
-      result.current.setScheduledTeeOffAt('2026-07-01T10:00');
+      // Relative future tee-off (1 day out) so the form starts publishable —
+      // a hardcoded absolute date time-bombs once it passes (#1000).
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() + 86_400_000)),
+      );
     });
     // p-mann (M) er gyldig på herre-only tee → publiserbart.
     expect(result.current.canPublish).toBe(true);
