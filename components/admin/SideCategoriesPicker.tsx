@@ -41,6 +41,13 @@ type Props = {
    */
   disabledCategories?: readonly SideCategoryId[];
   onDisabledCategoriesChange?: (next: readonly SideCategoryId[]) => void;
+  /**
+   * Når false eier forelderen FormData-serialiseringen (wizard-pathen speiler
+   * feltene i FormDataInputs, #1011) og pickeren dropper sine egne hidden
+   * inputs så hver kategori ikke submittes dobbelt. Default true — GameForm-
+   * pathen har ingen speiling og trenger inputene her.
+   */
+  emitHiddenInputs?: boolean;
 };
 
 /**
@@ -315,6 +322,7 @@ export function SideCategoriesPicker({
   locked = false,
   disabledCategories,
   onDisabledCategoriesChange,
+  emitHiddenInputs = true,
 }: Props) {
   // #1011: controlled-modus når parent gir begge props (GameWizard-pathen).
   // Ellers uncontrolled — set initialized once from props, parent kontrollerer
@@ -406,10 +414,10 @@ export function SideCategoriesPicker({
     <div className="space-y-4">
       {/* Hidden inputs — én per slått-av kategori. FormData.getAll() henter
           alle på server-siden. Tomt sett = ingen inputs rendrer = parser
-          tolker som «Full pakke». I controlled mode eier forelderen
+          tolker som «Full pakke». Med emitHiddenInputs=false eier forelderen
           serialiseringen (FormDataInputs i GameWizard, #1011) — å emitte her
           også ville gi hver kategori dobbelt i FormData. */}
-      {!isControlled &&
+      {emitHiddenInputs &&
         disabledSorted.map((id) => (
           <input
             key={id}

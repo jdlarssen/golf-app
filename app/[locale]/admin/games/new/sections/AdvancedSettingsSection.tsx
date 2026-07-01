@@ -35,12 +35,21 @@ type Props = {
    * dobbel-merking unngås ved å droppe headingen.
    */
   hideHeading?: boolean;
+  /**
+   * Når true eier forelderen serialiseringen av side_*-feltene (wizard-pathen:
+   * FormDataInputs speiler dem uansett disclosure-tilstand, #1011) — denne
+   * seksjonen dropper da name-attributter/hidden inputs så FormData ikke får
+   * duplikat-entries. Default false: GameForm-pathen (edit-flytene + full-form-
+   * escape-hatch) har INGEN speiling og trenger inline-serialiseringen.
+   */
+  serializedExternally?: boolean;
 };
 
 export function AdvancedSettingsSection({
   state,
   includeVisibility = false,
   hideHeading = false,
+  serializedExternally = false,
 }: Props) {
   const tAdv = useTranslations('wizard.sections.advanced');
   const tBasics = useTranslations('wizard.sections.basics');
@@ -151,10 +160,14 @@ export function AdvancedSettingsSection({
             </legend>
             <div className="mt-2 space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
-                {/* Ingen name — FormDataInputs i GameWizard eier serialiseringen
-                    av side_tournament_enabled (#1011). */}
+                {/* I wizard-pathen (serializedExternally) eier FormDataInputs
+                    serialiseringen av side_tournament_enabled (#1011) — name
+                    droppes da så FormData ikke får duplikat. */}
                 <input
                   type="checkbox"
+                  {...(serializedExternally
+                    ? {}
+                    : { name: 'side_tournament_enabled', value: 'true' })}
                   checked={sideEnabled}
                   onChange={(e) => setSideEnabled(e.target.checked)}
                   disabled={lockSideTournament}
@@ -179,6 +192,7 @@ export function AdvancedSettingsSection({
                   <SideCategoriesPicker
                     disabledCategories={sideDisabledCategories}
                     onDisabledCategoriesChange={setSideDisabledCategories}
+                    emitHiddenInputs={!serializedExternally}
                     locked={lockSideTournament}
                   />
 
@@ -191,6 +205,9 @@ export function AdvancedSettingsSection({
                         <label key={n} className="flex items-center gap-1 cursor-pointer">
                           <input
                             type="radio"
+                            {...(serializedExternally
+                              ? {}
+                              : { name: 'side_ld_count', value: String(n) })}
                             checked={sideLdCount === n}
                             onChange={() => setSideLdCount(n as 0 | 1 | 2)}
                             disabled={lockSideTournament}
@@ -211,6 +228,9 @@ export function AdvancedSettingsSection({
                         <label key={n} className="flex items-center gap-1 cursor-pointer">
                           <input
                             type="radio"
+                            {...(serializedExternally
+                              ? {}
+                              : { name: 'side_ctp_count', value: String(n) })}
                             checked={sideCtpCount === n}
                             onChange={() => setSideCtpCount(n as 0 | 1 | 2)}
                             disabled={lockSideTournament}

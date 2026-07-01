@@ -1609,3 +1609,38 @@ describe('GameForm — kollapsbare paneler (#909)', () => {
     expect(screen.getByText('Inndeling')).toBeInTheDocument();
   });
 });
+
+describe('GameForm — #1011 sideturnering serialiseres inline', () => {
+  // GameForm har INGEN FormDataInputs-speiling (den er wizard-only) — edit-
+  // flytene og full-form-escape-hatchen er avhengige av at AdvancedSettings-
+  // Section selv emitter side_*-feltene. Regresjon: name-attributtene ble
+  // droppet ubetinget i første #1011-runde og wipet sideturnering ved lagring.
+  it('FormData fra GameForm har alle side_*-felter når initialValues har sideturnering', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          game_mode: 'stableford',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          side_tournament_enabled: true,
+          side_ld_count: 2,
+          side_ctp_count: 1,
+          side_disabled_categories: ['most_birdies_team'],
+        }}
+      />,
+    );
+
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('side_tournament_enabled')).toEqual(['true']);
+    expect(fd.getAll('side_ld_count')).toEqual(['2']);
+    expect(fd.getAll('side_ctp_count')).toEqual(['1']);
+    expect(fd.getAll('side_disabled_categories')).toEqual(['most_birdies_team']);
+  });
+});

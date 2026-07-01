@@ -375,10 +375,10 @@ export function GameWizard({
 
   // ────────────────────────────────────────────────────────────────────
   // View === 'full': mount GameForm med wizard-state som initialValues.
-  // Uncontrolled-felter (score_visibility, side_ld_count, side_ctp_count,
-  // side_disabled_categories) passeres uendret fra opprinnelig
-  // initialValues — endringer i wizard sin advanced-disclosure går tapt
-  // ved bytte til full-form. Se kontrakt #203 «Edge cases».
+  // score_visibility er fortsatt uncontrolled og passeres uendret fra
+  // opprinnelig initialValues — endring i wizard sin advanced-disclosure
+  // går tapt ved bytte til full-form. Side-feltene er controlled state
+  // (#1011) og følger med her.
   // ────────────────────────────────────────────────────────────────────
   if (view === 'full') {
     const passthrough: InitialValues = {
@@ -390,6 +390,9 @@ export function GameWizard({
       hcp_allowance_pct: String(state.hcpAllowance),
       require_peer_approval: state.requirePeerApproval,
       side_tournament_enabled: state.sideEnabled,
+      side_ld_count: state.sideLdCount,
+      side_ctp_count: state.sideCtpCount,
+      side_disabled_categories: state.sideDisabledCategories,
       player_genders: state.playerGenders,
       players: state.orderedPayload.map((row) => ({
         user_id: row.user_id,

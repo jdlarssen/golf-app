@@ -233,6 +233,7 @@ export function ReadyStep({
               state={state}
               includeVisibility
               hideHeading
+              serializedExternally
             />
           </div>
         )}
