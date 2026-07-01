@@ -575,7 +575,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
         side_tournament_enabled: true,
         side_ld_count: 2,
         side_ctp_count: 1,
-        side_disabled_categories: ['clean_front_9'],
+        side_disabled_categories: ['most_birdies_team'],
       },
     });
 
@@ -604,7 +604,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expect(fd.get('side_tournament_enabled')).toBe('true');
     expect(fd.get('side_ld_count')).toBe('2');
     expect(fd.get('side_ctp_count')).toBe('1');
-    expect(fd.getAll('side_disabled_categories')).toEqual(['clean_front_9']);
+    expect(fd.getAll('side_disabled_categories')).toEqual(['most_birdies_team']);
   });
 
   it('åpen disclosure gir IKKE duplikat-entries (picker/checkbox emitter ikke name i controlled mode)', () => {
@@ -617,7 +617,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
         side_tournament_enabled: true,
         side_ld_count: 2,
         side_ctp_count: 1,
-        side_disabled_categories: ['clean_front_9'],
+        side_disabled_categories: ['most_birdies_team'],
       },
     });
 
@@ -646,7 +646,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expect(fd.getAll('side_tournament_enabled')).toEqual(['true']);
     expect(fd.getAll('side_ld_count')).toEqual(['2']);
     expect(fd.getAll('side_ctp_count')).toEqual(['1']);
-    expect(fd.getAll('side_disabled_categories')).toEqual(['clean_front_9']);
+    expect(fd.getAll('side_disabled_categories')).toEqual(['most_birdies_team']);
   });
 });
 
