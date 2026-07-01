@@ -4644,6 +4644,7 @@
     "deleteConfirm": "Remove Face ID from this device? You can still sign in with a code.",
     "renamePrompt": "New name",
     "enrollButton": "Turn on Face ID",
+    "addDevice": "Add another device",
     "enrollExists": "This device already has Face ID.",
     "enrollError": "Couldn't turn on Face ID. Try again.",
     "deleteError": "Couldn't remove it. Try again.",

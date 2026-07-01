@@ -4644,6 +4644,7 @@
     "deleteConfirm": "Fjerne Face ID fra denne enheten? Du kan fortsatt logge inn med kode.",
     "renamePrompt": "Nytt navn",
     "enrollButton": "Slå på Face ID",
+    "addDevice": "Legg til på en ny enhet",
     "enrollExists": "Denne enheten har allerede Face ID.",
     "enrollError": "Kunne ikke slå på Face ID. Prøv igjen.",
     "deleteError": "Kunne ikke fjerne den. Prøv igjen.",

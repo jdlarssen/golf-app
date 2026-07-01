@@ -171,13 +171,20 @@ export function PasskeySettings() {
             ))}
           </ul>
         )}
+        {/* Once a passkey exists the row above already signals "on", so the
+            action becomes a de-emphasized "add another device" instead of a
+            primary "Slå på Face ID" that reads as if it were still off (#63). */}
         <button
           type="button"
           onClick={enroll}
           disabled={busy}
-          className="mt-3 w-full min-h-11 rounded-full bg-primary px-4 py-2 text-sm font-medium text-bg-tint disabled:opacity-50"
+          className={
+            keys.length > 0
+              ? 'mt-3 w-full min-h-11 rounded-full border border-primary/40 bg-surface px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/5 disabled:opacity-50'
+              : 'mt-3 w-full min-h-11 rounded-full bg-primary px-4 py-2 text-sm font-medium text-bg-tint disabled:opacity-50'
+          }
         >
-          {t('enrollButton')}
+          {keys.length > 0 ? t('addDevice') : t('enrollButton')}
         </button>
         {error && (
           <p role="alert" className="mt-2 text-xs text-danger-deep">

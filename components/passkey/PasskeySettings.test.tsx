@@ -28,6 +28,25 @@ describe('PasskeySettings', () => {
     expect(await screen.findByText('iCloud Keychain')).toBeInTheDocument();
   });
 
+  it('shows "turn on" only when empty, "add another" once a passkey exists', async () => {
+    // Empty: primary enroll CTA.
+    list.mockResolvedValueOnce({ data: [] });
+    const { unmount } = render(<PasskeySettings />);
+    expect(await screen.findByRole('button', { name: 'Slå på Face ID' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Legg til på en ny enhet' })).toBeNull();
+    unmount();
+
+    // Enrolled: action reads as "add another", not "turn on".
+    list.mockResolvedValueOnce({
+      data: [{ id: 'p1', friendly_name: 'iCloud Keychain', created_at: '2026-06-01T00:00:00Z' }],
+    });
+    render(<PasskeySettings />);
+    expect(
+      await screen.findByRole('button', { name: 'Legg til på en ny enhet' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Slå på Face ID' })).toBeNull();
+  });
+
   it('deletes a passkey after confirmation', async () => {
     list
       .mockResolvedValueOnce({
