@@ -8,8 +8,8 @@ import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
   calculateSideTournament,
   type SideTournamentInput,
-  type SideWinner,
 } from '@/lib/scoring/sideTournament';
+import { buildCourseArrays, mapSideWinners } from '@/lib/scoring/sideTournamentInput';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import { LeaderboardTabs } from './LeaderboardTabs';
 import {
@@ -48,23 +48,18 @@ export async function computeSideTournament(opts: {
 
   const sideWinnerRows: SideWinnerRow[] = await fetchSideWinners(supabase, gameId);
 
-  // coursePars: 18-element par-array indexed by hole-1 (coursePars[0] = par
-  // for hull 1). Bruker hull-nummer-oppslag for å unngå å forskyve pars ved
-  // sparse course-data — fallback til 4 kun for hull som genuint mangler.
-  const parByHole = new Map<number, number>();
-  const siByHole = new Map<number, number>();
-  for (const h of rawHolesRows) {
-    parByHole.set(h.hole_number, h.par_mens);
-    siByHole.set(h.hole_number, h.stroke_index);
-  }
-  const coursePars: number[] = [];
-  const courseStrokeIndices: number[] = [];
-  for (let h = 1; h <= 18; h++) {
-    coursePars.push(parByHole.get(h) ?? 4);
-    // SI-fallback: bruk hull-nummer hvis raden mangler — hardest_hole_winner
-    // gater på løst SI=1, så en sparse-course-fallback er trygg.
-    courseStrokeIndices.push(siByHole.get(h) ?? h);
-  }
+  // coursePars / courseStrokeIndices + siByHole: bygget av den delte
+  // buildCourseArrays (samme fallback-disiplin som leaderboard-siden og
+  // delekortet). siByHole gjenbrukes i netto-loopen under — men MED en annen
+  // fallback (`?? 18`) enn courseStrokeIndices-arrayet (`?? h`), så vi tar imot
+  // det rå map-et her.
+  const { coursePars, courseStrokeIndices, siByHole } = buildCourseArrays(
+    rawHolesRows.map((h) => ({
+      holeNumber: h.hole_number,
+      par: h.par_mens,
+      strokeIndex: h.stroke_index,
+    })),
+  );
 
   // Per-spiller perHoleGross + perHoleNetto. Henter rå-scores siden
   // sideturneringen krever brutto OG netto per hull — stableford-result-en
@@ -163,16 +158,7 @@ export async function computeSideTournament(opts: {
     return { teamId: tg.teamId, perHoleNetto };
   });
 
-  const sideWinnersForInput: SideWinner[] = sideWinnerRows
-    .filter(
-      (w): w is SideWinnerRow & { position: 1 | 2 } =>
-        w.position === 1 || w.position === 2,
-    )
-    .map((w) => ({
-      category: w.category,
-      position: w.position,
-      winnerUserId: w.winner_user_id,
-    }));
+  const sideWinnersForInput = mapSideWinners(sideWinnerRows);
 
   const ldCount = game.side_ld_count as 0 | 1 | 2;
   const ctpCount = game.side_ctp_count as 0 | 1 | 2;
