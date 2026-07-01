@@ -101,14 +101,14 @@ Speil sideturnerings-feltene i `FormDataInputs` slik at de submittes uavhengig a
 
 ## Success Criteria
 
-- [ ] **K0 (#1011):** Sideturnering satt på steg 5 overlever lukket disclosure: GameWizard-test asserter side-felter i FormData med lukket seksjon; manuell staging-repro bekrefter config lagres.
-- [ ] **K1:** Deltaker (ikke-arrangør) på avsluttet frittstående spill ser `data-testid="revansje-button"` på game-home; klikk lander på `/opprett-spill?fra=<id>` med bane, tee, format, sideturnering og spillerliste prefilt, dato tom, navn tomt (auto-navngiving intakt). *Bevis: staging-klikkrunde + fil:linje.*
-- [ ] **K2:** Knappen finnes IKKE på cup-spill (`tournament_id`), liga-spill (`league_round_id`) eller aktive/utkast-spill; `?fra=` mot slike kilder (og som ikke-deltaker) gir vanlig tom veiviser. *Bevis: kode-gate fil:linje + staging-sjekk av én cup-/liga-instans.*
-- [ ] **K3:** Ingenting skrives til DB før vanlig publiseringssteg; publish av revansje-spill går gjennom `createGameInternal` uendret og nytt spill får `created_by` = klikkeren. *Bevis: ingen nye server-actions/endpoints i diffen; staging-publish.*
-- [ ] **K4:** Wolf/Round Robin-revansje prefiller spillere uten team/flight; withdrawn deltakere er ikke med. *Bevis: co-lokert test på `buildRevansjeInitialValues`.*
-- [ ] **K5:** Copy finnes i no+en (catalogParity grønn), norsk copy humanizer-sjekket; ingenting revansje-relatert rendres på `/spectate/[token]`. *Bevis: vitest + grep/staging.*
-- [ ] **K6:** `docs/flows/05-kjor-og-avslutt-spill-fremtid.svg` + PNG oppdatert med avslutt→revansje-kanten i samme PR. *Bevis: diff.*
-- [ ] **K7:** Versjonering: #1011-commit PATCH + Feilrettinger-linje; feature-commits MINOR + Funksjoner-rad m/ ↳; alle commits `Refs #1007`/`Refs #1011`. *Bevis: git log + hooks grønne.*
+- [x] **K0 (#1011):** Sideturnering overlever lukket disclosure. *Bevis: `GameWizard.test.tsx` («overlever lukket disclosure» + «åpen disclosure gir IKKE duplikat-entries») + `GameForm.test.tsx` («serialiseres inline» — edit-/full-form-pathene); staging-repro 2026-07-02: publisert via prefill med panelet lukket → DB-rad fikk `enabled=true, ld=2, ctp=1, categories=['most_birdies_team']` (nøyaktig én entry).*
+- [x] **K1:** Staging-klikkrunde 2026-07-02 (e2e-admin): `data-testid="revansje-button"` (46px, href `/opprett-spill?fra=<id>`) på avsluttet frittstående spill → banner «Forhåndsutfylt fra QA Revansje 1007 A — alt kan endres.», intent kompis, stableford + solo-variant valgt, bane/tee prefilt, dato TOM, begge spillere som chips, auto-navn «Byneset North 9. juli» (kilde-navn ikke arvet) → publish OK. Kode: `(home)/page.tsx` finished-gren + `opprett-spill/page.tsx` `loadRevansjeContext`.
+- [x] **K2:** Staging: cup-spill viste ingen knapp; `?fra=<cup-id>` ga tom veiviser uten banner/prefill. Kode-gates: `isFinished && !tournament_id && !league_round_id` (game-home) + loader-validering (opprett-spill). Ikke-deltaker-/ikke-finished-avvisning verifisert på kodenivå av uavhengig evaluator (authz før bygging).
+- [x] **K3:** Ingen nye server-actions/endpoints i diffen; staging-publish gikk gjennom `createGameInternal` uendret, nytt spill fikk `created_by` = klikkeren, status `scheduled`, deltakere via vanlig invitasjonsmekanisme.
+- [x] **K4:** `lib/games/buildRevansjeInitialValues.test.ts` — 8 tester inkl. `it.each` wolf/round_robin-nulling og withdrawn-filtrering. Grønn.
+- [x] **K5:** `messages/catalogParity.test.ts` grønn (nøkler i no+en); humanizer-sjekket copy; grep bekrefter null revansje-referanser i `spectate/`/`leaderboard/`.
+- [x] **K6:** `docs/flows/05-kjor-og-avslutt-spill-fremtid.svg` + regenerert PNG i commit 7d2793fa (avsluttet → «Revansje?» → opprett-flyt-kant).
+- [x] **K7:** Versjonskjede 1.162.3 (PATCH, Feilrettinger-linje, c6c70622) → 1.163.0 (MINOR, Funksjoner-rad m/ ↳, 7d2793fa) → 1.163.1/1.163.2 (PATCH, `[no-changelog]`, 89482f79/427e6f85); alle commits har `Refs #1007`/`Refs #1011`; commit-msg-hook grønn hele veien. Full suite: 4413/4413 (exit 0), `npm run build` exit 0 på HEAD.
 
 ## Gates
 
