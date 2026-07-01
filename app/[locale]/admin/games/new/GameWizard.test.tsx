@@ -606,6 +606,48 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expect(fd.get('side_ctp_count')).toBe('1');
     expect(fd.getAll('side_disabled_categories')).toEqual(['clean_front_9']);
   });
+
+  it('åpen disclosure gir IKKE duplikat-entries (picker/checkbox emitter ikke name i controlled mode)', () => {
+    const { container } = renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      initialValues: {
+        game_mode: 'stableford',
+        course_id: 'course-1',
+        tee_box_id: 'tee-1',
+        side_tournament_enabled: true,
+        side_ld_count: 2,
+        side_ctp_count: 1,
+        side_disabled_categories: ['clean_front_9'],
+      },
+    });
+
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    clickNext();
+    expectStep(5);
+
+    // Åpne disclosure-en så AdvancedSettingsSection + SideCategoriesPicker
+    // faktisk er montert samtidig med FormDataInputs-speilingen.
+    fireEvent.click(screen.getByText('Vis avanserte innstillinger'));
+    expect(
+      screen.getByRole('checkbox', { name: /sideturnering/i }),
+    ).toBeChecked();
+
+    const form = container.querySelector('form');
+    const fd = new FormData(form!);
+
+    // Nøyaktig ÉN kilde per felt — hidden-speilingen i FormDataInputs.
+    expect(fd.getAll('side_tournament_enabled')).toEqual(['true']);
+    expect(fd.getAll('side_ld_count')).toEqual(['2']);
+    expect(fd.getAll('side_ctp_count')).toEqual(['1']);
+    expect(fd.getAll('side_disabled_categories')).toEqual(['clean_front_9']);
+  });
 });
 
 describe('GameWizard — Cup-intent flow', () => {

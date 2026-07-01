@@ -151,10 +151,10 @@ export function AdvancedSettingsSection({
             </legend>
             <div className="mt-2 space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
+                {/* Ingen name — FormDataInputs i GameWizard eier serialiseringen
+                    av side_tournament_enabled (#1011). */}
                 <input
                   type="checkbox"
-                  name="side_tournament_enabled"
-                  value="true"
                   checked={sideEnabled}
                   onChange={(e) => setSideEnabled(e.target.checked)}
                   disabled={lockSideTournament}

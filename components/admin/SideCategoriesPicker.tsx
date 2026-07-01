@@ -406,15 +406,18 @@ export function SideCategoriesPicker({
     <div className="space-y-4">
       {/* Hidden inputs — én per slått-av kategori. FormData.getAll() henter
           alle på server-siden. Tomt sett = ingen inputs rendrer = parser
-          tolker som «Full pakke». */}
-      {disabledSorted.map((id) => (
-        <input
-          key={id}
-          type="hidden"
-          name="side_disabled_categories"
-          value={id}
-        />
-      ))}
+          tolker som «Full pakke». I controlled mode eier forelderen
+          serialiseringen (FormDataInputs i GameWizard, #1011) — å emitte her
+          også ville gi hver kategori dobbelt i FormData. */}
+      {!isControlled &&
+        disabledSorted.map((id) => (
+          <input
+            key={id}
+            type="hidden"
+            name="side_disabled_categories"
+            value={id}
+          />
+        ))}
 
       {/* Presets — fungerer som radio-style chips. Klikk setter hele sette på
           en gang. Custom auto-tennes når valg avviker fra de andre to. */}
