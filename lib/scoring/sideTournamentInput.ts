@@ -10,6 +10,61 @@ import type { SideTournamentInput, SideWinner } from './sideTournament';
 import type { SideWinnerRow } from '@/app/[locale]/games/[id]/leaderboard/leaderboardTypes';
 
 /**
+ * Builds the 18-element par + stroke-index arrays a {@link SideTournamentInput}
+ * needs, resolved by hole-number so sparse course data (missing rows) leaves
+ * predictable fallbacks rather than silently shifting values onto the wrong hole.
+ *
+ * Fallback discipline — kept identical across every side-tournament call site:
+ *  - `coursePars`  → `?? 4`, keeping the array dense for the `!= null` checks in
+ *    {@link calculateSideTournament}.
+ *  - `courseStrokeIndices` → `?? h` (the hole's own number); `hardest_hole_winner`
+ *    gates on the resolved SI=1 hole, so a self-position fallback is safe.
+ *
+ * The raw `siByHole` map is returned too: the `computeSideTournament` netto loop
+ * needs it for a DIFFERENT fallback (`?? 18`) than the `courseStrokeIndices`
+ * array uses — the two must not be conflated, so the map is handed back unbaked.
+ */
+export function buildCourseArrays(
+  holes: { holeNumber: number; par: number; strokeIndex: number }[],
+): {
+  coursePars: number[];
+  courseStrokeIndices: number[];
+  siByHole: Map<number, number>;
+} {
+  const parByHole = new Map<number, number>();
+  const siByHole = new Map<number, number>();
+  for (const h of holes) {
+    parByHole.set(h.holeNumber, h.par);
+    siByHole.set(h.holeNumber, h.strokeIndex);
+  }
+  const coursePars: number[] = [];
+  const courseStrokeIndices: number[] = [];
+  for (let h = 1; h <= 18; h++) {
+    coursePars.push(parByHole.get(h) ?? 4);
+    courseStrokeIndices.push(siByHole.get(h) ?? h);
+  }
+  return { coursePars, courseStrokeIndices, siByHole };
+}
+
+/**
+ * Maps `game_side_winners` rows to the engine's {@link SideWinner}[] shape. Only
+ * the two selectable LD/CTP slots (position 1 | 2) qualify; any other position
+ * is dropped. `winner_user_id` (snake_case, DB) becomes `winnerUserId` (camel).
+ */
+export function mapSideWinners(rows: SideWinnerRow[]): SideWinner[] {
+  return rows
+    .filter(
+      (w): w is SideWinnerRow & { position: 1 | 2 } =>
+        w.position === 1 || w.position === 2,
+    )
+    .map((w) => ({
+      category: w.category,
+      position: w.position,
+      winnerUserId: w.winner_user_id,
+    }));
+}
+
+/**
  * Builds a {@link SideTournamentInput} from the netto leaderboard output and
  * course-hole metadata.
  *
@@ -41,28 +96,9 @@ export function buildSideTournamentInput(args: {
     (a, b) => a.teamNumber - b.teamNumber,
   );
 
-  // coursePars: 18-element par-array indexed by hole-1 (i.e. coursePars[0] is
-  // hole 1's par). Resolved by hole-number rather than array position so a sparse
-  // course (missing rows) leaves `undefined` slots for sideTournament.ts to skip —
-  // never silently shifts pars onto the wrong hole.
-  const parByHole = new Map<number, number>();
-  const siByHole = new Map<number, number>();
-  for (const h of holes) {
-    parByHole.set(h.holeNumber, h.par);
-    siByHole.set(h.holeNumber, h.strokeIndex);
-  }
-  const coursePars: number[] = [];
-  const courseStrokeIndices: number[] = [];
-  for (let h = 1; h <= 18; h++) {
-    const par = parByHole.get(h);
-    // Fall back to 4 only when the row genuinely doesn't exist — keeps the
-    // array dense for the `coursePars[h] != null` checks downstream.
-    coursePars.push(par ?? 4);
-    // Same fallback discipline for stroke-index; hardest_hole_winner gates on
-    // the resolved SI=1 hole, so a missing row falling back to its own position
-    // is fine.
-    courseStrokeIndices.push(siByHole.get(h) ?? h);
-  }
+  // coursePars / courseStrokeIndices: 18-element arrays indexed by hole-1,
+  // resolved by hole-number (see buildCourseArrays for the fallback discipline).
+  const { coursePars, courseStrokeIndices } = buildCourseArrays(holes);
 
   // playerScoresPerHole: per-player 18-element brutto + netto arrays. Source of
   // truth is `sortedNettoLines` — `computeLeaderboard` already ran in netto mode,
@@ -99,17 +135,7 @@ export function buildSideTournamentInput(args: {
   }
   const playerScoresPerHole = Array.from(playerAccum.values());
 
-  // Map SideWinnerRow[] to SideWinner[] — only position 1 | 2 rows qualify.
-  const sideWinners: SideWinner[] = sideWinnerRows
-    .filter(
-      (w): w is SideWinnerRow & { position: 1 | 2 } =>
-        w.position === 1 || w.position === 2,
-    )
-    .map((w) => ({
-      category: w.category,
-      position: w.position,
-      winnerUserId: w.winner_user_id,
-    }));
+  const sideWinners = mapSideWinners(sideWinnerRows);
 
   return {
     config: {
