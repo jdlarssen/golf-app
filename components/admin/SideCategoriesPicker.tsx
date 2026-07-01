@@ -21,7 +21,8 @@ import {
 type Props = {
   /**
    * Initial-set fra DB. Tomt array = Full pakke. `CLASSIC_DISABLED_CATEGORIES`
-   * = Klassisk. Custom = noe annet. Settes én gang ved mount.
+   * = Klassisk. Custom = noe annet. Settes én gang ved mount (kun brukt når
+   * `disabledCategories`/`onDisabledCategoriesChange` IKKE er gitt).
    */
   defaultDisabledCategories?: readonly SideCategoryId[];
   /**
@@ -30,6 +31,16 @@ type Props = {
    * og lock_side_tournament i GameForm).
    */
   locked?: boolean;
+  /**
+   * #1011: controlled-modus. Når begge er gitt, eier parent settet (typisk
+   * `useGameFormState`) i stedet for lokal state — nødvendig for at
+   * GameWizard sin FormDataInputs (montert på alle steg) kan speile valget
+   * uavhengig av om denne komponenten selv er montert (advanced-disclosure
+   * kan være lukket). Uten disse to props faller komponenten tilbake til sin
+   * egen interne state (GameForm-pathen, som alltid holder seksjonen montert).
+   */
+  disabledCategories?: readonly SideCategoryId[];
+  onDisabledCategoriesChange?: (next: readonly SideCategoryId[]) => void;
 };
 
 /**
@@ -302,14 +313,36 @@ function detectPreset(disabled: Set<SideCategoryId>): ActivePreset {
 export function SideCategoriesPicker({
   defaultDisabledCategories,
   locked = false,
+  disabledCategories,
+  onDisabledCategoriesChange,
 }: Props) {
-  // Set initialized once from props — parent kontrollerer ikke videre, så vi
-  // unngår onChange-ekko og holder dette som ren intern state. Edit-flyten
+  // #1011: controlled-modus når parent gir begge props (GameWizard-pathen).
+  // Ellers uncontrolled — set initialized once from props, parent kontrollerer
+  // ikke videre (GameForm-pathen, seksjonen er alltid montert der). Edit-flyten
   // remounter via key hvis nødvendig (ikke nødvendig i dagens flyt — siden
   // edit-page laster initial fra DB ved hver request).
-  const [disabledSet, setDisabledSet] = useState<Set<SideCategoryId>>(
-    () => new Set(defaultDisabledCategories ?? []),
+  const isControlled =
+    disabledCategories !== undefined && onDisabledCategoriesChange !== undefined;
+  const [internalDisabledSet, setInternalDisabledSet] = useState<
+    Set<SideCategoryId>
+  >(() => new Set(defaultDisabledCategories ?? []));
+  // Memoized so downstream useMemo/useEffect dependencies on `disabledSet`
+  // don't see a new Set identity on every render while controlled (a fresh
+  // `new Set(disabledCategories)` would otherwise be created each render).
+  const disabledSet = useMemo(
+    () => (isControlled ? new Set(disabledCategories) : internalDisabledSet),
+    [isControlled, disabledCategories, internalDisabledSet],
   );
+  const setDisabledSet = (
+    updater: Set<SideCategoryId> | ((prev: Set<SideCategoryId>) => Set<SideCategoryId>),
+  ) => {
+    const next = typeof updater === 'function' ? updater(disabledSet) : updater;
+    if (isControlled) {
+      onDisabledCategoriesChange!(Array.from(next));
+    } else {
+      setInternalDisabledSet(next);
+    }
+  };
 
   // #909: full ~40-kategori-katalogen er kollapset bak forhåndsvalgene; den
   // brettes ut først når «Egendefinert» er aktiv. Initial åpen kun hvis det

@@ -8,6 +8,13 @@
  * sideturnering-fieldset (som ellers lever i BasicsSection). All
  * allowance-UI (HCP-allowance, Texas-lag-handicap, fourball-allowance)
  * bor i Section 3 (Format) som `AllowanceField`-toggles — flyttet i #266.
+ *
+ * #1011: LD-/CTP-count og disabled-categories er controlled state eid av
+ * `useGameFormState` (ikke uncontrolled defaultChecked/lokal state). Denne
+ * seksjonen monteres kun mens ReadyStep sin advanced-disclosure er åpen —
+ * GameWizard sin FormDataInputs (montert på alle steg) speiler samme state
+ * som hidden inputs, så et lukket panel ikke lenger dropper sideturnering-
+ * config ved publish.
  */
 
 import { useTranslations } from 'next-intl';
@@ -45,11 +52,14 @@ export function AdvancedSettingsSection({
     lockScoreVisibility,
     sideEnabled,
     setSideEnabled,
+    sideLdCount,
+    setSideLdCount,
+    sideCtpCount,
+    setSideCtpCount,
+    sideDisabledCategories,
+    setSideDisabledCategories,
     sideTournamentSupported,
     lockSideTournament,
-    initialDisabledCategories,
-    initialLdCount,
-    initialCtpCount,
   } = state;
 
   return (
@@ -167,7 +177,8 @@ export function AdvancedSettingsSection({
                   </p>
 
                   <SideCategoriesPicker
-                    defaultDisabledCategories={initialDisabledCategories}
+                    disabledCategories={sideDisabledCategories}
+                    onDisabledCategoriesChange={setSideDisabledCategories}
                     locked={lockSideTournament}
                   />
 
@@ -180,9 +191,8 @@ export function AdvancedSettingsSection({
                         <label key={n} className="flex items-center gap-1 cursor-pointer">
                           <input
                             type="radio"
-                            name="side_ld_count"
-                            value={n}
-                            defaultChecked={initialLdCount === n}
+                            checked={sideLdCount === n}
+                            onChange={() => setSideLdCount(n as 0 | 1 | 2)}
                             disabled={lockSideTournament}
                             className="accent-primary"
                           />
@@ -201,9 +211,8 @@ export function AdvancedSettingsSection({
                         <label key={n} className="flex items-center gap-1 cursor-pointer">
                           <input
                             type="radio"
-                            name="side_ctp_count"
-                            value={n}
-                            defaultChecked={initialCtpCount === n}
+                            checked={sideCtpCount === n}
+                            onChange={() => setSideCtpCount(n as 0 | 1 | 2)}
                             disabled={lockSideTournament}
                             className="accent-primary"
                           />

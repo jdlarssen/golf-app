@@ -1023,6 +1023,12 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
+<summary><strong>Juli 2026 · 1 retting</strong></summary>
+
+- `1.162.3` · [#1011](https://github.com/jdlarssen/golf-app/issues/1011) — Setter du opp sideturnering på siste steg og lar «Vis avanserte innstillinger» stå lukket, blir valget nå med ved publisering i stedet for å forsvinne stille.
+</details>
+
+<details>
 <summary><strong>Juni 2026 · 247 rettinger</strong></summary>
 
 - `1.160.4` · [#991](https://github.com/jdlarssen/golf-app/issues/991) — Velger du Lys eller Mørk på Profil, husker appen valget neste gang du åpner den. Før falt den tilbake til system-temaet selv om bryteren fortsatt viste det du hadde valgt.

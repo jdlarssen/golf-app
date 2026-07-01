@@ -505,6 +505,21 @@ export function useGameFormState({
     initialValues?.side_disabled_categories ?? CLASSIC_DISABLED_CATEGORIES;
 
   const [sideEnabled, setSideEnabled] = useState<boolean>(initialSideEnabled);
+  // #1011: LD-/CTP-count og disabled-categories var uncontrolled (defaultChecked/
+  // defaultDisabledCategories) i AdvancedSettingsSection/SideCategoriesPicker, som
+  // kun rendres mens ReadyStep sin advanced-disclosure er åpen. FormDataInputs
+  // (montert på alle steg) kan derfor ikke speile dem uten controlled state her —
+  // uten det forsvant sideturnering-config stille når disclosure var lukket ved
+  // publish.
+  const [sideLdCount, setSideLdCount] = useState<0 | 1 | 2>(
+    initialLdCount as 0 | 1 | 2,
+  );
+  const [sideCtpCount, setSideCtpCount] = useState<0 | 1 | 2>(
+    initialCtpCount as 0 | 1 | 2,
+  );
+  const [sideDisabledCategories, setSideDisabledCategories] = useState<
+    readonly SideCategoryId[]
+  >(initialDisabledCategories);
 
   // Modus + lagstørrelse — wired av epic #41 fase 4. Default-modus er
   // `'best_ball'` for å speile pre-multi-mode-flyten; auto-fix av
@@ -1648,6 +1663,12 @@ export function useGameFormState({
     setRequirePeerApproval,
     sideEnabled,
     setSideEnabled,
+    sideLdCount,
+    setSideLdCount,
+    sideCtpCount,
+    setSideCtpCount,
+    sideDisabledCategories,
+    setSideDisabledCategories,
     sideTournamentSupported,
     gameMode,
     teamSize,
