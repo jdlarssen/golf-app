@@ -126,6 +126,15 @@ export type GameForHole = {
   // tee_gender flag. Not nullable — games always have a tee assigned at
   // publish time.
   tee_box: TeeBoxRatings & { name: string };
+  /**
+   * #1008: AI-generated match report ("Fra pressetribunen"), written once by
+   * `generateAndPersistRoundReport` inside the two finish actions. NULL until
+   * the game is finished, and stays NULL if generation was skipped (no
+   * `ANTHROPIC_API_KEY`, thin data, or an SDK failure) or after `reopenGame`
+   * clears it. Rendered by `RoundReportCard` in every format renderer's
+   * finished branch.
+   */
+  round_report: string | null;
 };
 
 export type PlayerForHole = {
@@ -164,7 +173,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
       .single<GameForHole>(),
@@ -198,7 +207,13 @@ export async function getGameWithPlayers(
   // `undefined`, which the #1007 revansje-CTA gate would misread as "not a
   // cup/liga game" and show the button on cup/liga matches. Bumping the key
   // forces a fresh fetch for every existing cache entry exactly once.
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp2', id], {
+  //
+  // #1008: bumped again to 'gwp3' when `round_report` was added to the
+  // select. Same trap: a stale 'gwp2' entry would resolve `round_report` as
+  // `undefined` rather than the real (possibly non-null) value, so a
+  // just-finished game's report could silently fail to appear on the
+  // leaderboard/spectate views until the 15-min `revalidate` window expired.
+  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp3', id], {
     tags: [`game-${id}`],
     revalidate: 900,
   })();

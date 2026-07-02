@@ -34,6 +34,7 @@ const baseGame: Omit<GameForHole, 'game_mode' | 'mode_config'> = {
   side_disabled_categories: null,
   foursomes_side1_tee_starter_user_id: null,
   foursomes_side2_tee_starter_user_id: null,
+  round_report: null,
   tee_box: {
     name: 'Hvit',
     slope_mens: 130,
