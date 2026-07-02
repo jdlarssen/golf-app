@@ -1833,9 +1833,9 @@ export type Database = {
       edit_product_update: {
         Args: {
           p_body: string
-          p_cta_label: string | null
+          p_cta_label: string
           p_id: string
-          p_link: string | null
+          p_link: string
           p_title: string
         }
         Returns: number
@@ -1922,7 +1922,7 @@ export type Database = {
           entered_by: string
           game_id: string
           hole_number: number
-          putts: number | null
+          putts: number
           strokes: number
           updated_at: string
           user_id: string

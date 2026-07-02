@@ -33,12 +33,18 @@ export async function editProductUpdate(
 ): Promise<EditProductUpdateResult> {
   const admin = getAdminClient();
 
+  // gen:types emits plain `text` RPC args as non-null `string`, but the RPC
+  // body explicitly branches on `p_link is not null` / `p_cta_label is not
+  // null` — SQL null is a valid, meaning-bearing input (clears the field in
+  // the notification payload). The casts preserve that runtime contract
+  // without hand-widening the generated types (drift gate #673 diffs them
+  // against gen:types output verbatim).
   const { data, error } = await admin.rpc('edit_product_update', {
     p_id: input.id,
     p_title: input.title,
     p_body: input.body,
-    p_link: input.link,
-    p_cta_label: input.cta_label,
+    p_link: input.link as string,
+    p_cta_label: input.cta_label as string,
   });
 
   if (error) {
