@@ -19,13 +19,17 @@ import {
   adminApproveScorecard,
 } from '@/app/[locale]/admin/games/[id]/actions';
 import { removePlayerFromGame, cancelGameInvitation } from './actions';
+import { sendGuestResult } from '@/app/[locale]/games/guestPlayerActions';
+import { isGuestPlaceholderEmail } from '@/lib/games/createGuestPlayer';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ status?: string; error?: string }>;
+type SearchParams = Promise<{ status?: string; error?: string; email?: string }>;
 
 const BEST_BALL_MAX_PLAYERS = 8;
 
@@ -38,6 +42,7 @@ const STATUS_KEYS = new Set([
   'admin_approved',
   'invite_cancelled',
   'guest_added',
+  'guest_claim_sent',
 ]);
 
 const ERROR_KEYS = new Set([
@@ -60,6 +65,12 @@ const ERROR_KEYS = new Set([
   'guest_auth_create_failed',
   'guest_profile_update_failed',
   'guest_roster_insert_failed',
+  'guest_claim_not_finished',
+  'guest_claim_invalid_email',
+  'guest_claim_not_guest',
+  'guest_email_taken',
+  'guest_claim_failed',
+  'guest_claim_mail_failed',
 ]);
 
 function playerName(p: Pick<PlayerForHole, 'users'>): string {
@@ -89,7 +100,11 @@ export default async function CreatorSpillerePage({
   searchParams: SearchParams;
 }) {
   const { id: gameId } = await params;
-  const { status: statusParam, error: errorParam } = await searchParams;
+  const {
+    status: statusParam,
+    error: errorParam,
+    email: emailParam,
+  } = await searchParams;
   const detailPath = `/games/${gameId}`;
 
   const t = await getTranslations('game.players');
@@ -121,6 +136,27 @@ export default async function CreatorSpillerePage({
   //  - pendingInvites: request-scoped (creator sees their own via RLS 0072,
   //    admin sees all). Only meaningful before the round starts.
   //  - candidates: co-player network, minus whoever's already on the roster.
+  // #1009 claim: på avsluttede spill listes gjestene med et «Send resultatet»-
+  // skjema. E-postene hentes målrettet via service-role (de holdes bevisst ute
+  // av getGameWithPlayers-payloaden, #435-disiplinen) — siden er gated bak
+  // requireAdminOrCreator over.
+  const isFinished = status === 'finished';
+  const guestPlayers = isFinished
+    ? players.filter((p) => p.users?.is_guest)
+    : [];
+  let guestEmailById = new Map<string, string>();
+  if (guestPlayers.length > 0) {
+    const { data: guestRows } = await getAdminClient()
+      .from('users')
+      .select('id, email')
+      .in(
+        'id',
+        guestPlayers.map((p) => p.user_id),
+      )
+      .returns<{ id: string; email: string }[]>();
+    guestEmailById = new Map((guestRows ?? []).map((r) => [r.id, r.email]));
+  }
+
   let pendingInvites: { id: string; email: string }[] = [];
   let candidates: { id: string; name: string | null; nickname: string | null; email: string }[] = [];
   if (isPreStart) {
@@ -140,10 +176,25 @@ export default async function CreatorSpillerePage({
   }
 
   const banner = statusParam && STATUS_KEYS.has(statusParam) ? (
-    <Banner tone="success">{t(`statusMessages.${statusParam}` as Parameters<typeof t>[0])}</Banner>
+    <Banner tone="success">
+      {t(`statusMessages.${statusParam}` as Parameters<typeof t>[0], {
+        email: emailParam ?? '',
+      })}
+    </Banner>
   ) : errorParam && ERROR_KEYS.has(errorParam) ? (
-    <Banner tone={errorParam === 'mail_failed' ? 'warning' : errorParam === 'game_full' ? 'info' : 'error'}>
-      {t(`errorMessages.${errorParam}` as Parameters<typeof t>[0], { max: BEST_BALL_MAX_PLAYERS })}
+    <Banner
+      tone={
+        errorParam === 'mail_failed' || errorParam === 'guest_claim_mail_failed'
+          ? 'warning'
+          : errorParam === 'game_full'
+            ? 'info'
+            : 'error'
+      }
+    >
+      {t(`errorMessages.${errorParam}` as Parameters<typeof t>[0], {
+        max: BEST_BALL_MAX_PLAYERS,
+        email: emailParam ?? '',
+      })}
     </Banner>
   ) : null;
 
@@ -240,6 +291,64 @@ export default async function CreatorSpillerePage({
             </ul>
           )}
         </section>
+
+        {/* ── Send resultatet til gjesten (finished, #1009) ─────────── */}
+        {guestPlayers.length > 0 && (
+          <section>
+            <MiniRibbon>{t('guestClaim.section')}</MiniRibbon>
+            <p className="mb-2 px-1 text-sm text-muted">{t('guestClaim.hint')}</p>
+            <ul className="space-y-2">
+              {guestPlayers.map((p) => {
+                const guestEmail = guestEmailById.get(p.user_id) ?? '';
+                const claimedTo =
+                  guestEmail && !isGuestPlaceholderEmail(guestEmail)
+                    ? guestEmail
+                    : null;
+                return (
+                  <li
+                    key={p.user_id}
+                    className="rounded-xl border border-border bg-surface px-3.5 py-3"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="truncate text-sm font-medium text-text">
+                        {playerName(p)}
+                      </p>
+                      <GuestBadge className="shrink-0" />
+                    </div>
+                    {claimedTo && (
+                      <p className="mt-1 text-xs text-muted">
+                        {t('guestClaim.sentTo', { email: claimedTo })}
+                      </p>
+                    )}
+                    <form
+                      action={sendGuestResult.bind(null, gameId)}
+                      className="mt-2 flex flex-col gap-2 sm:flex-row"
+                    >
+                      <input type="hidden" name="guest_user_id" value={p.user_id} />
+                      <input
+                        type="email"
+                        name="guest_email"
+                        required
+                        defaultValue={claimedTo ?? undefined}
+                        placeholder={t('guestClaim.emailPlaceholder')}
+                        aria-label={t('guestClaim.emailAriaLabel')}
+                        className="flex-1 rounded-xl border border-border bg-bg px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
+                      />
+                      <SubmitButton
+                        pendingLabel={t('guestClaim.sendPending')}
+                        className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+                      >
+                        {claimedTo
+                          ? t('guestClaim.resendButton')
+                          : t('guestClaim.sendButton')}
+                      </SubmitButton>
+                    </form>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
 
         {/* ── Pending approvals (active + peer approval) ───────────── */}
         {awaitingApproval.length > 0 && (

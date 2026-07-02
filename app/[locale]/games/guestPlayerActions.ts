@@ -3,8 +3,11 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
+import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import {
   parseGuestProfile,
   createGuestPlayer,
@@ -13,6 +16,12 @@ import {
   guestTeeToLevel,
   type GuestTee,
 } from '@/lib/games/createGuestPlayer';
+import {
+  claimGuestEmail,
+  normalizeClaimEmail,
+} from '@/lib/games/claimGuestResult';
+import { sendGuestClaimNotification } from '@/lib/mail/guestClaimNotification';
+import { firstName } from '@/lib/firstName';
 
 const BEST_BALL_MAX_PLAYERS = 8;
 
@@ -144,4 +153,101 @@ export async function createGuestForWizard(
     },
     tee: parsed.profile.tee,
   };
+}
+
+/**
+ * «Send resultatet til gjesten» (#1009, kontrakt-beslutning 7): på et
+ * AVSLUTTET spill flipper arrangøren skygge-brukerens e-post til gjestens
+ * ekte adresse (claimGuestEmail — auth + public.users, kompensert), legger
+ * en invitations-rad (best-effort, audit + venne-kobling ved innlogging) og
+ * sender claim-mailen (best-effort — feiler den beholdes flippen, arrangøren
+ * kan sende på nytt). Gjesten logger inn med vanlig OTP → verifyCode nuller
+ * is_guest → kontoen med historikken er deres. Ingen rad-flytting.
+ */
+export async function sendGuestResult(
+  gameId: string,
+  formData: FormData,
+): Promise<void> {
+  const locale = await getLocale();
+  const supabase = await getServerClient();
+  const ctx = await requireAdminOrCreator(supabase, gameId);
+  // Claim-seksjonen bor på spillere-cockpiten for begge roller.
+  const detailPath = `/games/${gameId}/spillere`;
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('id, name, status')
+    .eq('id', gameId)
+    .single<{ id: string; name: string; status: string }>();
+  if (!game) {
+    redirect({ href: `${detailPath}?error=not_found`, locale });
+  }
+  if (game!.status !== 'finished') {
+    redirect({ href: `${detailPath}?error=guest_claim_not_finished`, locale });
+  }
+
+  const guestUserId = String(formData.get('guest_user_id') ?? '').trim();
+  const email = normalizeClaimEmail(formData.get('guest_email'));
+  if (!guestUserId || !email) {
+    redirect({ href: `${detailPath}?error=guest_claim_invalid_email`, locale });
+  }
+
+  // Samme disposable-guard som e-post-invitasjoner (#422): admin er unntatt
+  // (kurator-modellen), vanlige arrangører blokkeres.
+  if (!ctx.isAdmin && isDisposableEmailDomain(email!)) {
+    redirect({ href: `${detailPath}?error=disposable_email`, locale });
+  }
+
+  const claimed = await claimGuestEmail({
+    gameId,
+    guestUserId,
+    email: email!,
+  });
+  if (!claimed.ok) {
+    redirect({ href: `${detailPath}?error=${claimed.error}`, locale });
+  }
+  const claim = claimed as Extract<typeof claimed, { ok: true }>;
+
+  // Invitations-rad (best-effort): gir claim-en et spor i invitasjonslista og
+  // lar verifyCode-reconciliation koble venne-forholdet ved første innlogging.
+  // Duplikater/feil svelges — raden er ikke nødvendig for selve innloggingen
+  // (auth-brukeren finnes, signInWithOtp sender kode uansett).
+  try {
+    const admin = getAdminClient();
+    await admin.from('invitations').insert({
+      email: email!,
+      token: randomUUID(),
+      invited_by: ctx.userId,
+      game_id: gameId,
+      expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+  } catch (err) {
+    console.error('[sendGuestResult] invitations insert failed (best-effort)', err);
+  }
+
+  const invitedByName =
+    ctx.name?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør');
+  try {
+    await sendGuestClaimNotification({
+      to: email!,
+      guestFirstName: firstName(claim.guestName),
+      invitedByName,
+      gameName: game!.name,
+    });
+  } catch (err) {
+    // E-post-flippen beholdes (kontrakt-beslutning 7): gjesten kan logge inn
+    // likevel, og arrangøren kan sende mailen på nytt fra samme skjema.
+    console.error('[sendGuestResult] claim mail failed (flip kept)', err);
+    revalidateTag(`game-${gameId}`, 'max');
+    redirect({
+      href: `${detailPath}?error=guest_claim_mail_failed&email=${encodeURIComponent(email!)}`,
+      locale,
+    });
+  }
+
+  revalidateTag(`game-${gameId}`, 'max');
+  redirect({
+    href: `${detailPath}?status=guest_claim_sent&email=${encodeURIComponent(email!)}`,
+    locale,
+  });
 }

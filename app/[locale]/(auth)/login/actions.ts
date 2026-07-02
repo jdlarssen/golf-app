@@ -222,6 +222,27 @@ export async function verifyCode(formData: FormData) {
     console.error('[login/verifyCode] locale-persist threw', err);
   }
 
+  // #1009: en gjest som logger inn har bevist eierskap til den claimede
+  // adressen (OTP-koden — plassholder-domenet uten MX kan aldri motta en).
+  // Nulles via service-role: guard_users_self_update (0127) sperrer selv-
+  // endring av is_guest for request-klienten. `.eq('is_guest', true)` gjør
+  // dette til en no-op 0-raders update for alle vanlige innlogginger.
+  // Best-effort — må aldri blokkere login.
+  try {
+    const {
+      data: { user: guestCheckUser },
+    } = await supabase.auth.getUser();
+    if (guestCheckUser) {
+      await getAdminClient()
+        .from('users')
+        .update({ is_guest: false })
+        .eq('id', guestCheckUser.id)
+        .eq('is_guest', true);
+    }
+  } catch (err) {
+    console.error('[login/verifyCode] guest-clear threw', err);
+  }
+
   // Mark any pending invitation rows for this email as accepted, and pick
   // opp game-scoped invitations som ble opprettet via /admin/games/[id]
   // -invite-card-en. For hver game-scoped invitasjon: insert i game_players

@@ -1736,7 +1736,8 @@
         "player_reinstated": "Player is back in the game.",
         "admin_approved": "Scorecard approved.",
         "invite_cancelled": "Invitation cancelled.",
-        "guest_added": "The guest has been added to the game."
+        "guest_added": "The guest has been added to the game.",
+        "guest_claim_sent": "The result has been sent to {email}. The guest logs in with that address and takes over the account."
       },
       "errorMessages": {
         "disposable_email": "That email address looks like a disposable address. Please ask for a regular email.",
@@ -1757,7 +1758,13 @@
         "guest_invalid_tee": "Pick a tee category for the guest.",
         "guest_auth_create_failed": "Couldn't create the guest. Try again.",
         "guest_profile_update_failed": "Something went wrong while saving the guest. Try again.",
-        "guest_roster_insert_failed": "The guest wasn't added to the game. Try again."
+        "guest_roster_insert_failed": "The guest wasn't added to the game. Try again.",
+        "guest_claim_not_finished": "The result can only be sent once the game is finished.",
+        "guest_claim_invalid_email": "Enter a valid email address for the guest.",
+        "guest_claim_not_guest": "This player isn't a guest in this game.",
+        "guest_email_taken": "That email already has a Tørny account. The result can't be moved there.",
+        "guest_claim_failed": "Something went wrong while sending. Try again.",
+        "guest_claim_mail_failed": "The account is ready, but the email didn't go out. The guest can still log in with {email}, or you can send again."
       },
       "rosterSearch": "Add from players you know",
       "rosterSearchPlaceholder": "Search co-players…",
@@ -1785,6 +1792,16 @@
         "teeJuniors": "Junior",
         "submitButton": "Add guest",
         "submitPending": "Adding …"
+      },
+      "guestClaim": {
+        "section": "Send the result to the guest",
+        "hint": "Enter the guest's email address and we'll send the result. The guest logs in and takes over the account with the round in place.",
+        "sentTo": "Sent to {email}. The guest hasn't logged in yet.",
+        "emailPlaceholder": "guest@email.com",
+        "emailAriaLabel": "The guest's email address",
+        "sendButton": "Send the result",
+        "resendButton": "Send again",
+        "sendPending": "Sending …"
       }
     }
   },
@@ -4632,6 +4649,17 @@
       "openButton": "See what's new",
       "openButtonText": "See what's new: {url}",
       "footer": "You receive this because you submitted an idea. Log in at <link>tornygolf.no</link> to see what's happening."
+    },
+    "guestClaim": {
+      "subject": "Your result from {gameName}",
+      "heading": "The round is in the books",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "body": "<strong>{inviterName}</strong> added you as a guest in <strong>{gameName}</strong>. The round is finished, and your scorecard is waiting on a Tørny account of your own.",
+      "bodyText": "{inviterName} added you as a guest in {gameName}. The round is finished, and your scorecard is waiting on a Tørny account of your own.",
+      "claimLine": "Log in with this email address and the account is yours. You'll get a one-time code by email instead of a password.",
+      "loginButtonText": "Log in: {url}",
+      "footer": "You're getting this because {inviterName} added you as a guest for a round on Tørny. If this isn't you, you can ignore it."
     }
   },
   "SyncBanner": {

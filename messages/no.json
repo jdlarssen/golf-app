@@ -1736,7 +1736,8 @@
         "player_reinstated": "Spilleren er med igjen.",
         "admin_approved": "Scorekortet er godkjent.",
         "invite_cancelled": "Invitasjonen er trukket tilbake.",
-        "guest_added": "Gjesten er lagt til i spillet."
+        "guest_added": "Gjesten er lagt til i spillet.",
+        "guest_claim_sent": "Resultatet er sendt til {email}. Gjesten logger inn med den adressen og tar over kontoen."
       },
       "errorMessages": {
         "disposable_email": "Den e-postadressen ser ut som en engangsadresse. Be om en vanlig e-post.",
@@ -1757,7 +1758,13 @@
         "guest_invalid_tee": "Velg tee-kategori for gjesten.",
         "guest_auth_create_failed": "Klarte ikke å opprette gjesten. Prøv igjen.",
         "guest_profile_update_failed": "Noe gikk galt da gjesten ble lagret. Prøv igjen.",
-        "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen."
+        "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen.",
+        "guest_claim_not_finished": "Resultatet kan først sendes når spillet er avsluttet.",
+        "guest_claim_invalid_email": "Skriv inn en gyldig e-postadresse for gjesten.",
+        "guest_claim_not_guest": "Denne spilleren er ikke en gjest i dette spillet.",
+        "guest_email_taken": "E-posten har allerede en Tørny-konto. Resultatet kan ikke flyttes dit.",
+        "guest_claim_failed": "Noe gikk galt med sendingen. Prøv igjen.",
+        "guest_claim_mail_failed": "Kontoen er klar, men mailen kom ikke ut. Gjesten kan logge inn med {email} likevel, eller du kan sende på nytt."
       },
       "rosterSearch": "Legg til fra spillere du kjenner",
       "rosterSearchPlaceholder": "Søk blant medspillere…",
@@ -1785,6 +1792,16 @@
         "teeJuniors": "Junior",
         "submitButton": "Legg til gjest",
         "submitPending": "Legger til …"
+      },
+      "guestClaim": {
+        "section": "Send resultatet til gjesten",
+        "hint": "Skriv inn gjestens e-postadresse, så sender vi resultatet. Gjesten logger inn og tar over kontoen med runden på plass.",
+        "sentTo": "Sendt til {email}. Gjesten har ikke logget inn ennå.",
+        "emailPlaceholder": "gjestens@epost.no",
+        "emailAriaLabel": "Gjestens e-postadresse",
+        "sendButton": "Send resultatet",
+        "resendButton": "Send på nytt",
+        "sendPending": "Sender …"
       }
     }
   },
@@ -4632,6 +4649,17 @@
       "openButton": "Se hva som er nytt",
       "openButtonText": "Se hva som er nytt: {url}",
       "footer": "Du får denne meldingen fordi du sendte inn en idé. Logg inn på <link>tornygolf.no</link> for å se hva som skjer."
+    },
+    "guestClaim": {
+      "subject": "Resultatet ditt fra {gameName}",
+      "heading": "Runden er i boks",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "body": "<strong>{inviterName}</strong> la deg inn som gjest i <strong>{gameName}</strong>. Runden er ferdig, og scorekortet ditt ligger klart på en egen Tørny-konto.",
+      "bodyText": "{inviterName} la deg inn som gjest i {gameName}. Runden er ferdig, og scorekortet ditt ligger klart på en egen Tørny-konto.",
+      "claimLine": "Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på mail i stedet for passord.",
+      "loginButtonText": "Logg inn: {url}",
+      "footer": "Du får denne mailen fordi {inviterName} la deg til som gjest i en runde på Tørny. Er ikke dette deg, kan du se bort fra den."
     }
   },
   "SyncBanner": {

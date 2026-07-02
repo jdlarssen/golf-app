@@ -205,6 +205,20 @@ const senders = [
       });
     },
   },
+  {
+    name: 'sendGuestClaimNotification',
+    invoke: async () => {
+      const { sendGuestClaimNotification } = await import(
+        '../guestClaimNotification'
+      );
+      return sendGuestClaimNotification({
+        to: 'kari@example.com',
+        guestFirstName: 'Kari',
+        invitedByName: 'Jørgen',
+        gameName: 'Sommercup 2026',
+      });
+    },
+  },
 ] as const;
 
 describe('Resend-kontrakt — alle aktive mail-sendere', () => {
