@@ -674,6 +674,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["registration_mode"]
           registration_type: Database["public"]["Enums"]["registration_type"]
           require_peer_approval: boolean
+          round_report: string | null
           scheduled_tee_off_at: string | null
           score_visibility: string
           short_id: string
@@ -709,6 +710,7 @@ export type Database = {
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
           require_peer_approval?: boolean
+          round_report?: string | null
           scheduled_tee_off_at?: string | null
           score_visibility?: string
           short_id?: string
@@ -744,6 +746,7 @@ export type Database = {
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
           require_peer_approval?: boolean
+          round_report?: string | null
           scheduled_tee_off_at?: string | null
           score_visibility?: string
           short_id?: string
