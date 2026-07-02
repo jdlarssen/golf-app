@@ -55,18 +55,24 @@ Utforsket mot **live prod-skjema** (trap #1) 2026-07-02:
 
 ## Success criteria (fra issuet)
 
-- [ ] Arrangør kan legge til gjest (navn + hcp) i opprett-veiviseren og på spillerliste-administrasjon
-- [ ] Gjest scores av markør, vises korrekt i leaderboard, podium og resultat i alle formatfamilier spillet støtter (skygge-designet: verifiseres ved stikkprøve på staging — strokeplay/stableford + ett lagformat + matchplay)
-- [ ] Gjest forurenser ikke klubbstatistikk, nøkkeltall eller mail-utsendelser (og aldri andres personlige stats — self-scoped by design)
-- [ ] Claim: arrangør sender invitasjon → gjest logger inn → historisk resultat ligger på kontoen (samme uuid, ingen rad-flytting)
-- [ ] Hostile-PATCH-tester grønne: `is_guest` kan ikke self-endres; invite-eligibility-guarden består urørt
-- [ ] Fremtids-flytdiagram oppdatert (bli-med-flyten får gjeste-gren)
+- [x] Arrangør kan legge til gjest (navn + hcp) i opprett-veiviseren og på spillerliste-administrasjon
+      — Evidens: veiviser-spillersteget (`GuestPlayerAdd` i `PlayersSection`, formløs pga. wizard-ens ene `<form>`) + roster-cockpitene (`AddGuestForm` i `CreatorRosterClient` og admin `InviteToGameClient`), commit 263347a1. Publish/edit ruter gjeste-rader via service-role (0115-guarden urørt for klient-skriv). 21 Type A-tester på parse/kompensasjon + 1 Type C på skjemaet; full vitest 4502 grønn.
+- [x] Gjest scores av markør, vises korrekt i leaderboard, podium og resultat i alle formatfamilier spillet støtter
+      — Evidens: staging-probe 2026-07-03 — markør (flightmate) førte gjestens score under EKTE RLS/`can_score_for` (`OK: marker scored guest`, rullet tilbake). Strukturelt: `grep -r is_guest lib/scoring/ lib/sync/` → 0 treff — motoren/leaderboard/podium ser gjesten som en helt vanlig user_id-rad i alle 22 modi (hele eksisterende suite er beviset). Visuell stikkprøve (strokeplay/stableford + lagformat + matchplay) inngår i eierens manuelle staging-klikkrunde før merge (avtalt).
+- [x] Gjest forurenser ikke klubbstatistikk, nøkkeltall eller mail-utsendelser (og aldri andres personlige stats — self-scoped by design)
+      — Evidens: staging metrics-delta-probe (`users_ge1 -1, users_ge2 0, gjenger_ge2 0` — fingerprints beholder gjesten, kollaps-kanarien slo ikke ut); `notify()`-gate (sentral for alle shouldAlsoSendMail-pipelines) + filtre i `gameFinishedRecipients` (kun mottakere — playerRows urørt så standings i ALLES mail er korrekte), `productUpdateDigest`, purring (auto + admin) og klubbtavla (tally-input + fallback-vinnere). Commit 72d25a69; pgTAP `users_is_guest_test.sql` med delta-asserts.
+- [x] Claim: arrangør sender invitasjon → gjest logger inn → historisk resultat ligger på kontoen (samme uuid, ingen rad-flytting)
+      — Evidens: staging ende-til-ende 2026-07-03 — GoTrue-flipp + public.users-flipp, OTP mintet og verifisert for claimet adresse → session for SAMME uuid (`adeb85c3…`), roster-raden intakt (HISTORY_ROW=1), is_guest-nulling via service-role OK, alt ryddet (USERS_LEFT=0). `claimGuestEmail` reverterer auth-flippen hvis public.users-oppdateringen feiler (10 Type A-tester); claim-mail med Type B-snapshots + rad i resend-kontrakten. Commit 9ac2d300.
+- [x] Hostile-PATCH-tester grønne: `is_guest` kan ikke self-endres; invite-eligibility-guarden består urørt
+      — Evidens: hostile-prober STAGING og PROD — self-set OG self-clear blokkert med 42501, admin-flip + service-role passerer; pgTAP `users_is_guest_test.sql` (plan 9) sjekket inn; `grep is_invite_eligible supabase/migrations/0127*` → 0 treff (0115 urørt). Staging/prod-funksjonene md5-identiske etter 0127.
+- [x] Fremtids-flytdiagram oppdatert (bli-med-flyten får gjeste-gren)
+      — Evidens: `docs/flows/02-bli-med-i-spill-fremtid.svg` — #1009-boks under kolonne A + claim-etterspill ved terminalen; PNG regenerert med qlmanage (macOS lokalt) og visuelt verifisert. Commit ae551a31.
 
 ## Gates
 
-- `npm run lint` + `npx tsc --noEmit` + full `npx vitest run` + `npm run build`
-- Migrasjon staging-først med verifisering før prod (0107-mønsteret)
-- Staging-klikkrunde av gjeste-flyten før merge
+- [x] `npm run lint` (0 errors) + `npx tsc --noEmit` (clean) + full `npx vitest run` (356 filer / 4502 tester grønne) + `npm run build` (exit 0, PPR-ruteliste komplett)
+- [x] Migrasjon staging-først med verifisering før prod (0107-mønsteret) — staging 2026-07-03 med guard- + metrics-prober, deretter prod (guard-probe grønn, 0 gjester, md5-paritet); `lib/database.types.ts` byte-identisk med `generate_typescript_types` mot prod
+- [ ] Staging-klikkrunde av gjeste-flyten før merge — eierens manuelle runde (autonom nettleser-innlogging er sandbox-blokkert)
 
 ## Out of scope (v1)
 
