@@ -47,9 +47,13 @@ export async function notify<K extends NotificationKind>(opts: {
     }),
     admin
       .from('users')
-      .select('last_seen_at, locale')
+      .select('last_seen_at, locale, is_guest')
       .eq('id', userId)
-      .single<{ last_seen_at: string | null; locale: string | null }>(),
+      .single<{
+        last_seen_at: string | null;
+        locale: string | null;
+        is_guest: boolean;
+      }>(),
   ]);
 
   if (insertRes.error) {
@@ -65,6 +69,16 @@ export async function notify<K extends NotificationKind>(opts: {
   // Invalider innboks-cache for brukeren. Next.js 16 krever to-arg-form;
   // 'max' = aggressiv invalidering på tvers av alle pågående requests.
   revalidateTag(`notifications-${userId}`, 'max');
+
+  // #1009: gjester (skygge-brukere) er per definisjon «off-app» for alltid
+  // (last_seen_at null) og ville fått mail fra HVER notify-drevet utsendelse —
+  // men plassholder-adressen deres kan ikke motta noe. Dette er den sentrale
+  // gaten for alle shouldAlsoSendMail-konsumenter (gameFinished, cup,
+  // påmelding, purring m.fl.); push hoppes over av samme grunn. Selve
+  // varsel-raden beholdes — den er gjestens egen historikk etter claim.
+  if (userRes.data?.is_guest) {
+    return { shouldAlsoSendMail: false };
+  }
 
   const offApp = shouldSendMailFallback(userRes.data?.last_seen_at ?? null);
 

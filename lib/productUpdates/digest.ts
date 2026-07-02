@@ -115,12 +115,15 @@ export async function sendDigestForPeriod(
     cta_label: u.cta_label,
   }));
 
-  // Opted-in recipients with email.
+  // Opted-in recipients with email. #1009: gjester (skygge-brukere) utelates —
+  // dette er den ene blanket-alle-brukere-utsendelsen, og plassholder-
+  // adressene deres ville bouncet på hver eneste digest.
   const { data: recipients } = await admin
     .from('users')
     .select('id, name, email, locale')
     .is('product_updates_unsubscribed_at', null)
     .not('email', 'is', null)
+    .eq('is_guest', false)
     .returns<{ id: string; name: string | null; email: string; locale: string | null }[]>();
 
   const settled = await Promise.allSettled(

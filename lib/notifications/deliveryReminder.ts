@@ -100,9 +100,18 @@ export async function maybeSendDeliveryReminder(opts: {
 
     const { data: u } = await admin
       .from('users')
-      .select('email, name, locale')
+      .select('email, name, locale, is_guest')
       .eq('id', userId)
-      .maybeSingle<{ email: string | null; name: string | null; locale: string | null }>();
+      .maybeSingle<{
+        email: string | null;
+        name: string | null;
+        locale: string | null;
+        is_guest: boolean;
+      }>();
+
+    // #1009: en gjest med fullt scorekort skal ikke purres — plassholder-
+    // adressen kan ikke motta mail, og gjesten leverer via markøren uansett.
+    if (u?.is_guest) return;
 
     await sendDeliveryReminder({
       player: { userId, email: u?.email ?? null, name: u?.name ?? null, locale: u?.locale ?? null },

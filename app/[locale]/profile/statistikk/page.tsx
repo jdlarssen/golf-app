@@ -35,6 +35,7 @@ type GamePlayerRow = {
   result_summary: ResultSummary | null;
   users: {
     name: string | null;
+    is_guest: boolean;
   } | null;
 };
 
@@ -134,12 +135,21 @@ const getClubStatsAggregate = unstable_cache(
     const { data: playersRaw, error: playersError } = await supabase
       .from('game_players')
       .select(
-        'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name)',
+        'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, is_guest)',
       )
       .in('game_id', gameIds)
       .returns<GamePlayerRow[]>();
     if (playersError) throw playersError;
-    const allPlayers = playersRaw ?? [];
+    // #1009: gjester (skygge-brukere) teller ikke på klubbtavla — verken i
+    // seiers- eller deltakelseslistene. Trygt å kutte dem fra tally-inputen
+    // her: fallback-motoren under henter sine egne data fra DB, så andres
+    // resultater påvirkes ikke. Gjeste-uids trengs likevel for å rense
+    // fallback-VINNERNE (en gjest kan ha vunnet spillet).
+    const allPlayersRaw = playersRaw ?? [];
+    const guestUserIds = new Set(
+      allPlayersRaw.filter((p) => p.users?.is_guest).map((p) => p.user_id),
+    );
+    const allPlayers = allPlayersRaw.filter((p) => !p.users?.is_guest);
 
     const playersByGame = groupBy(allPlayers, (p) => p.game_id);
 
@@ -187,7 +197,10 @@ const getClubStatsAggregate = unstable_cache(
           const summaries = computeResultSummaries(result);
           const winners: string[] = [];
           for (const [uid, summary] of summaries) {
-            if (isWinningSummary(summary)) winners.push(uid);
+            // #1009: en gjest kan vinne runden, men skal ikke på klubbtavla.
+            if (isWinningSummary(summary) && !guestUserIds.has(uid)) {
+              winners.push(uid);
+            }
           }
           fallbackWinnersByGameId.set(id, winners);
         }),

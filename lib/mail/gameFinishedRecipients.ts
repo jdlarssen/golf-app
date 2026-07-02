@@ -70,10 +70,10 @@ export async function buildGameFinishedRecipients(
   // Gjelder begge moduser, så vi gjør den én gang. `team_number` brukes kun
   // av team-stableford-grenen (for partner-name-lookup), men har null cost å
   // ta med — kolonnen står på alle game_players-rader (NOT NULL siden 0030).
-  const { data: playerRows, error: playerErr } = await supabase
+  const { data: playerRowsRaw, error: playerErr } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, tee_gender, course_handicap, users!game_players_user_id_fkey(email, name, locale)',
+      'user_id, team_number, tee_gender, course_handicap, users!game_players_user_id_fkey(email, name, locale, is_guest)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -82,10 +82,15 @@ export async function buildGameFinishedRecipients(
         team_number: number | null;
         tee_gender: ScoringGender;
         course_handicap: number | null;
-        users: { email: string | null; name: string | null; locale: string | null } | null;
+        users: {
+          email: string | null;
+          name: string | null;
+          locale: string | null;
+          is_guest: boolean;
+        } | null;
       }[]
     >();
-  if (playerErr || !playerRows) {
+  if (playerErr || !playerRowsRaw) {
     // Defensiv: returner tom liste i stedet for å kaste. Mail-blasten er
     // best-effort, og en feil her skal ikke blokkere selve avslutt-flyten.
     console.error(
@@ -94,6 +99,21 @@ export async function buildGameFinishedRecipients(
     );
     return [];
   }
+  // #1009: gjester får aldri resultat-mail — plassholder-adressen deres kan
+  // ikke motta noe. VIKTIG: `playerRows` beholdes UFILTRERT — grenene under
+  // mater den inn i computeLeaderboard og makker-navn-oppslag, så et tidlig
+  // kutt ville forvrengt standings/partner-copy i ALLES mail. Gjestene
+  // filtreres i stedet ut av selve mottaker-resultatet rett før retur.
+  const playerRows = playerRowsRaw;
+  const guestUserIds = new Set(
+    playerRows.filter((r) => r.users?.is_guest).map((r) => r.user_id),
+  );
+  const withoutGuests = (
+    recipients: FinishedMailRecipient[],
+  ): FinishedMailRecipient[] =>
+    guestUserIds.size === 0
+      ? recipients
+      : recipients.filter((r) => !guestUserIds.has(r.userId));
 
   // Singles matchplay (epic #45): bygg per-spiller payload med motspillerens
   // navn + match-resultat sett FRA mottakerens perspektiv. Speilet pattern
@@ -110,7 +130,9 @@ export async function buildGameFinishedRecipients(
   // gitt at endGame validerer alle scorekort er levert), faller vi tilbake
   // til best-ball-default for å unngå halvferdig copy.
   if (game.game_mode === 'singles_matchplay') {
-    return buildMatchplayRecipients(supabase, gameId, game, playerRows);
+    return withoutGuests(
+      await buildMatchplayRecipients(supabase, gameId, game, playerRows),
+    );
   }
 
   // Solo strokeplay (epic #46): bygg per-spiller payload med rank +
@@ -119,7 +141,9 @@ export async function buildGameFinishedRecipients(
   // `SoloStrokeplayResult.players`. Hvis mode-router returnerer noe uventet,
   // faller vi tilbake til nøytral best-ball-default copy.
   if (game.game_mode === 'solo_strokeplay') {
-    return buildSoloStrokeplayRecipients(supabase, gameId, game, playerRows);
+    return withoutGuests(
+      await buildSoloStrokeplayRecipients(supabase, gameId, game, playerRows),
+    );
   }
 
   // Texas scramble (issue #44) og Ambrose (issue #284): bygg per-spiller payload
@@ -128,21 +152,25 @@ export async function buildGameFinishedRecipients(
   // `kind: 'texas_scramble'` og mail-body-en er format-agnostisk («Laget endte
   // på X. plass …»). Ingen ny mail-variant eller snapshot.
   if (isScrambleFamily(game.game_mode)) {
-    return buildTexasScrambleRecipients(supabase, gameId, game, playerRows);
+    return withoutGuests(
+      await buildTexasScrambleRecipients(supabase, gameId, game, playerRows),
+    );
   }
 
   // Best-ball-netto: ingen per-spiller-mode, returner kun userId+email+name+locale.
   if (!isStablefordFamily(game.game_mode)) {
-    return playerRows
-      .map((row) => ({
-        userId: row.user_id,
-        email: row.users?.email ?? null,
-        name: row.users?.name ?? null,
-        locale: row.users?.locale ?? null,
-      }))
-      .filter((r): r is FinishedMailRecipient => {
-        return typeof r.email === 'string' && r.email.length > 0;
-      });
+    return withoutGuests(
+      playerRows
+        .map((row) => ({
+          userId: row.user_id,
+          email: row.users?.email ?? null,
+          name: row.users?.name ?? null,
+          locale: row.users?.locale ?? null,
+        }))
+        .filter((r): r is FinishedMailRecipient => {
+          return typeof r.email === 'string' && r.email.length > 0;
+        }),
+    );
   }
 
   // Stableford-grenen: hent scores + course_holes for å kunne kjøre
@@ -208,16 +236,18 @@ export async function buildGameFinishedRecipients(
 
   if (result.kind !== 'stableford') {
     // Defensive: mode-router gav noe uventet. Fall til best-ball-copy.
-    return playerRows
-      .map((row) => ({
-        userId: row.user_id,
-        email: row.users?.email ?? null,
-        name: row.users?.name ?? null,
-        locale: row.users?.locale ?? null,
-      }))
-      .filter((r): r is FinishedMailRecipient => {
-        return typeof r.email === 'string' && r.email.length > 0;
-      });
+    return withoutGuests(
+      playerRows
+        .map((row) => ({
+          userId: row.user_id,
+          email: row.users?.email ?? null,
+          name: row.users?.name ?? null,
+          locale: row.users?.locale ?? null,
+        }))
+        .filter((r): r is FinishedMailRecipient => {
+          return typeof r.email === 'string' && r.email.length > 0;
+        }),
+    );
   }
 
   // Solo-stableford: én rad per spiller, rank/poeng per-spiller direkte
@@ -248,7 +278,7 @@ export async function buildGameFinishedRecipients(
         mode,
       });
     }
-    return recipients;
+    return withoutGuests(recipients);
   }
 
   // Team-stableford (par-stableford / 4BBB): én rad per LAG, hver spiller
@@ -311,7 +341,7 @@ export async function buildGameFinishedRecipients(
       mode,
     });
   }
-  return recipients;
+  return withoutGuests(recipients);
 }
 
 /**

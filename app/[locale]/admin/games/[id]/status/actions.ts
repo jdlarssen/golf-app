@@ -14,7 +14,12 @@ type PlayerRow = {
   user_id: string;
   submitted_at: string | null;
   withdrawn_at: string | null;
-  users: { email: string | null; name: string | null; locale: string | null } | null;
+  users: {
+    email: string | null;
+    name: string | null;
+    locale: string | null;
+    is_guest: boolean;
+  } | null;
 };
 
 /**
@@ -48,7 +53,7 @@ export async function remindUnsubmittedPlayers(gameId: string) {
     supabase
       .from('game_players')
       .select(
-        'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(email, name, locale)',
+        'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',
       )
       .eq('game_id', gameId)
       .returns<PlayerRow[]>(),
@@ -65,10 +70,13 @@ export async function remindUnsubmittedPlayers(gameId: string) {
     filledByUser.set(r.user_id, (filledByUser.get(r.user_id) ?? 0) + 1);
   }
 
+  // #1009: gjester purres ikke — plassholder-adressen kan ikke motta mail,
+  // og gjesten leverer via markøren uansett.
   const targets = (playersRes.data ?? []).filter(
     (p) =>
       !p.submitted_at &&
       !p.withdrawn_at &&
+      !p.users?.is_guest &&
       (filledByUser.get(p.user_id) ?? 0) >= TOTAL_HOLES,
   );
 
