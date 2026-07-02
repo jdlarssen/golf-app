@@ -11,6 +11,7 @@ import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
 import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
 import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
+import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
@@ -202,6 +203,12 @@ export async function endGameWithSideWinners(
   // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
   await notifyAchievementUnlocks(gameId);
 
+  // #1008: best-effort AI-rundereferat («Pressetribunen»). Må kjøre FØR
+  // mail-blasten lenger ned slik at teksten kan bli med i «Resultatet er
+  // klart»-mailen — feiler den (manglende nøkkel, tynn data, SDK-feil)
+  // fortsetter avslutningen som i dag, bare uten referat.
+  const { report: roundReport } = await generateAndPersistRoundReport(gameId);
+
   await logAdminEvent({
     actorId: user.id,
     actorName,
@@ -249,6 +256,7 @@ export async function endGameWithSideWinners(
           gameId,
           mode: r.mode,
           locale: r.locale,
+          roundReport,
         }),
       ),
     );

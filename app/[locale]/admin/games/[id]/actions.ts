@@ -26,6 +26,7 @@ import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
 import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
 import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
+import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
@@ -534,6 +535,12 @@ export async function endGame(gameId: string, allowMissing = false) {
   // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
   await notifyAchievementUnlocks(gameId);
 
+  // #1008: best-effort AI-rundereferat («Pressetribunen»). Må kjøre FØR
+  // mail-blasten lenger ned slik at teksten kan bli med i «Resultatet er
+  // klart»-mailen — feiler den (manglende nøkkel, tynn data, SDK-feil)
+  // fortsetter avslutningen som i dag, bare uten referat.
+  const { report: roundReport } = await generateAndPersistRoundReport(gameId);
+
   await logAdminEvent({
     actorId: user.id,
     actorName,
@@ -579,6 +586,7 @@ export async function endGame(gameId: string, allowMissing = false) {
           gameId,
           mode: r.mode,
           locale: r.locale,
+          roundReport,
         }),
       ),
     );
@@ -770,7 +778,10 @@ export async function reopenGame(gameId: string) {
 
   const { error } = await supabase
     .from('games')
-    .update({ status: 'active', ended_at: null })
+    // #1008: nuller AI-rundereferatet — en re-finish kan skippe regenerering
+    // (manglende ANTHROPIC_API_KEY, tynn data), så et gammelt referat med
+    // tall fra FØR reopen må ikke overleve og villede spillerne.
+    .update({ status: 'active', ended_at: null, round_report: null })
     .eq('id', gameId);
   if (error) {
     console.error('[reopenGame] status flip to active failed', error);

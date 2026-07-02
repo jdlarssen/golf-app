@@ -17,6 +17,17 @@ const PLAYER_FALLBACK = 'Ukjent spiller';
 export type RoundReportStatus = 'generated' | 'skipped' | 'failed';
 
 /**
+ * Return shape of `generateAndPersistRoundReport`. `report` carries the
+ * sanitized text when `status === 'generated'` so callers (the two
+ * end-actions) can thread it straight into the game-finished mail blast
+ * without re-fetching `games.round_report` — `null` for every other status.
+ */
+export type RoundReportResult = {
+  status: RoundReportStatus;
+  report: string | null;
+};
+
+/**
  * Generates a short Norwegian AI round-report from a (nettopp) avsluttet
  * spill's final leaderboard facts, and persists it to `games.round_report`
  * (#1008 — Pressetribunen v1). Mirrors `persistResultSummaries`'s shape:
@@ -47,9 +58,9 @@ export type RoundReportStatus = 'generated' | 'skipped' | 'failed';
  *
  * Every failure mode (missing key, thin data, SDK error, sanitizer
  * rejection, 0-row write) is logged with the `[generateRoundReport]` prefix
- * and returns `'failed'` — a report failure must NEVER block the finish
- * flow. Callers (the two end-actions) treat the return value as
- * informational only.
+ * and returns `{ status: 'failed', report: null }` — a report failure must
+ * NEVER block the finish flow. Callers (the two end-actions) treat the
+ * return value as informational only.
  *
  * Called by both end-actions (chunk 3, not this module):
  *   - `endGame`                (`app/[locale]/admin/games/[id]/actions.ts`)
@@ -57,15 +68,15 @@ export type RoundReportStatus = 'generated' | 'skipped' | 'failed';
  */
 export async function generateAndPersistRoundReport(
   gameId: string,
-): Promise<RoundReportStatus> {
+): Promise<RoundReportResult> {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return 'skipped';
+    if (!apiKey) return { status: 'skipped', report: null };
 
     const gwp = await getGameWithPlayers(gameId);
     if (!gwp) {
       console.error('[generateRoundReport] game not found', { gameId });
-      return 'failed';
+      return { status: 'failed', report: null };
     }
     const { game, players } = gwp;
 
@@ -77,7 +88,7 @@ export async function generateAndPersistRoundReport(
       mode_config: game.mode_config,
       course_id: game.course_id,
     });
-    if (result === null) return 'skipped';
+    if (result === null) return { status: 'skipped', report: null };
 
     // WD-spillere er ute av rankingen (samme filtrering som
     // notifyAchievementUnlocks) — de skal aldri dukke opp i referatet.
@@ -111,7 +122,7 @@ export async function generateAndPersistRoundReport(
       coursePar,
     });
 
-    if (facts.scoredHoles < MIN_SCORED_HOLES) return 'skipped';
+    if (facts.scoredHoles < MIN_SCORED_HOLES) return { status: 'skipped', report: null };
 
     const { system, user } = buildRoundReportPrompt(facts);
 
@@ -134,7 +145,7 @@ export async function generateAndPersistRoundReport(
         gameId,
         rawLength: rawText.length,
       });
-      return 'failed';
+      return { status: 'failed', report: null };
     }
 
     const updateRes = await admin
@@ -145,18 +156,18 @@ export async function generateAndPersistRoundReport(
 
     if (updateRes.error) {
       console.error('[generateRoundReport] persist failed', { gameId, error: updateRes.error });
-      return 'failed';
+      return { status: 'failed', report: null };
     }
     // PostgREST 0-row trap (lib/supabase/AGENTS.md #2): error === null on a
     // write that matched nothing. Treat as failure, not silent success.
     if (!updateRes.data || updateRes.data.length === 0) {
       console.error('[generateRoundReport] update affected 0 rows', { gameId });
-      return 'failed';
+      return { status: 'failed', report: null };
     }
 
-    return 'generated';
+    return { status: 'generated', report: sanitized };
   } catch (err) {
     console.error('[generateRoundReport] failed', { gameId, err });
-    return 'failed';
+    return { status: 'failed', report: null };
   }
 }

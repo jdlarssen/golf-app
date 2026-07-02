@@ -133,9 +133,9 @@ describe('generateAndPersistRoundReport', () => {
   it("returns 'skipped' without constructing the SDK client when ANTHROPIC_API_KEY is missing", async () => {
     delete process.env.ANTHROPIC_API_KEY;
 
-    const status = await generateAndPersistRoundReport(GAME_ID);
+    const result = await generateAndPersistRoundReport(GAME_ID);
 
-    expect(status).toBe('skipped');
+    expect(result).toEqual({ status: 'skipped', report: null });
     expect(anthropicConstructorMock).not.toHaveBeenCalled();
     expect(getGameWithPlayersMock).not.toHaveBeenCalled();
   });
@@ -143,9 +143,9 @@ describe('generateAndPersistRoundReport', () => {
   it("returns 'skipped' when buildModeResultForGame returns null", async () => {
     buildModeResultForGameMock.mockResolvedValue(null);
 
-    const status = await generateAndPersistRoundReport(GAME_ID);
+    const result = await generateAndPersistRoundReport(GAME_ID);
 
-    expect(status).toBe('skipped');
+    expect(result).toEqual({ status: 'skipped', report: null });
     expect(messagesCreateMock).not.toHaveBeenCalled();
     expect(updateSpy).not.toHaveBeenCalled();
   });
@@ -153,9 +153,9 @@ describe('generateAndPersistRoundReport', () => {
   it("returns 'skipped' when fewer than 6 holes have a recorded score", async () => {
     buildModeResultForGameMock.mockResolvedValue(makeSoloStrokeplayResult(5));
 
-    const status = await generateAndPersistRoundReport(GAME_ID);
+    const result = await generateAndPersistRoundReport(GAME_ID);
 
-    expect(status).toBe('skipped');
+    expect(result).toEqual({ status: 'skipped', report: null });
     expect(messagesCreateMock).not.toHaveBeenCalled();
   });
 
@@ -163,9 +163,9 @@ describe('generateAndPersistRoundReport', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     messagesCreateMock.mockRejectedValue(new Error('anthropic down'));
 
-    const status = await generateAndPersistRoundReport(GAME_ID);
+    const result = await generateAndPersistRoundReport(GAME_ID);
 
-    expect(status).toBe('failed');
+    expect(result).toEqual({ status: 'failed', report: null });
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       '[generateRoundReport] failed',
       expect.objectContaining({ gameId: GAME_ID }),
@@ -181,9 +181,9 @@ describe('generateAndPersistRoundReport', () => {
       content: [{ type: 'text', text: 'a'.repeat(1501) }],
     });
 
-    const status = await generateAndPersistRoundReport(GAME_ID);
+    const result = await generateAndPersistRoundReport(GAME_ID);
 
-    expect(status).toBe('failed');
+    expect(result).toEqual({ status: 'failed', report: null });
     expect(updateSpy).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalled();
 
@@ -194,16 +194,16 @@ describe('generateAndPersistRoundReport', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     fixtures['games:update'] = { data: [], error: null };
 
-    const status = await generateAndPersistRoundReport(GAME_ID);
+    const result = await generateAndPersistRoundReport(GAME_ID);
 
-    expect(status).toBe('failed');
+    expect(result).toEqual({ status: 'failed', report: null });
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     consoleErrorSpy.mockRestore();
   });
 
-  it("happy path: constructs the SDK client with the documented options, calls messages.create once, persists the sanitized text, returns 'generated'", async () => {
-    const status = await generateAndPersistRoundReport(GAME_ID);
+  it("happy path: constructs the SDK client with the documented options, calls messages.create once, persists the sanitized text, returns 'generated' + the report text", async () => {
+    const result = await generateAndPersistRoundReport(GAME_ID);
 
     expect(anthropicConstructorMock).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: 'test-key', timeout: 20_000, maxRetries: 1 }),
@@ -222,7 +222,10 @@ describe('generateAndPersistRoundReport', () => {
       'games',
       { round_report: 'Alice vant Lørdagscup med solid margin foran Bob.' },
     );
-    expect(status).toBe('generated');
+    expect(result).toEqual({
+      status: 'generated',
+      report: 'Alice vant Lørdagscup med solid margin foran Bob.',
+    });
   });
 
   it('excludes withdrawn players from the name map (never appear as a userId leak)', async () => {
