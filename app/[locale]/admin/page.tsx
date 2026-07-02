@@ -14,6 +14,7 @@ import { TilesGrid, TilesSkeleton } from './TilesGrid';
 import { PlayerKlubbhus } from './PlayerKlubbhus';
 import { ActivityLedger, LedgerSkeleton } from './ActivityLedger';
 import { ActionItemsStripe } from './ActionItemsStripe';
+import { KeyMetricsCard } from './KeyMetricsCard';
 
 // Page — shell. Each data-bearing section sits behind a Suspense boundary
 // so the shell paints immediately and each section streams in as its query
@@ -73,6 +74,12 @@ export default async function KlubbhusetPage() {
 
       <Suspense fallback={<TilesSkeleton />}>
         <TilesGrid />
+      </Suspense>
+
+      {/* «Nøkkeltall»-kort (#1010): epicens suksessmål. Egen Suspense-grense;
+          rendrer ingenting hvis RPC-en feiler. */}
+      <Suspense fallback={null}>
+        <KeyMetricsCard />
       </Suspense>
 
       <p className="mt-6 mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">

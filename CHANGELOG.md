@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.165 · Nøkkeltall i Sekretariatet</strong></summary>
+
+[#1010](https://github.com/jdlarssen/golf-app/issues/1010) — Klubbhuset viser nå et «Nøkkeltall»-kort med hvor mange spillere og gjenger som har tatt runde nummer to, og hvor mange runder som fullføres per uke — så du ser om rundene sår nye runder.
+
+↳ /admin · «Se tallene»
+</details>
+
+<details>
 <summary><strong>1.163 · Revansje?</strong></summary>
 
 [#1007](https://github.com/jdlarssen/golf-app/issues/1007) — Avsluttet du en runde, får du nå en «Revansje?»-knapp som åpner opprett-veiviseren ferdig utfylt med samme bane, format, sideturnering og spillerliste. Alle deltakere ser knappen, ikke bare arrangøren — bli med i en runde, og du kan sette opp den neste selv.
