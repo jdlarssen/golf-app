@@ -6,6 +6,8 @@ import {
   addExistingPlayerToGame,
   inviteEmailToGame,
 } from './inviteToGameActions';
+import { addGuestToGame } from '@/app/[locale]/games/guestPlayerActions';
+import { AddGuestForm } from '@/components/games/AddGuestForm';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import {
   filterRosterCandidates,
@@ -38,6 +40,7 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
 
   const addAction = addExistingPlayerToGame.bind(null, gameId);
   const inviteAction = inviteEmailToGame.bind(null, gameId);
+  const guestAction = addGuestToGame.bind(null, gameId);
 
   return (
     <div className="space-y-5">
@@ -124,6 +127,17 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
           </SubmitButton>
         </form>
       </div>
+
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" />
+        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted">
+          {t('orSeparator')}
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      {/* #1009: gjest uten konto — navn + hcp + tee, ingen e-post. */}
+      <AddGuestForm action={guestAction} disabled={disabled} />
     </div>
   );
 }

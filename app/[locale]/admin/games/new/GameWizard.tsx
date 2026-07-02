@@ -217,7 +217,15 @@ export function GameWizard({
   );
   // Id-settet brukes til å skjære ned PlayersSection sin valgbare liste; full
   // `players` beholdes der (chips/lag-oppslag på allerede-valgte).
-  const pickIds = useMemo(() => new Set(pickList.map((p) => p.id)), [pickList]);
+  // #1009: økt-gjester er alltid valgbare — de er utenfor venne-/klubb-kilden,
+  // men arrangøren opprettet dem selv, og uten dette ville en av-valgt gjest
+  // forsvinne fra lista (eneste vei tilbake ville vært å opprette en ny
+  // skygge-bruker).
+  const pickIds = useMemo(() => {
+    const ids = new Set(pickList.map((p) => p.id));
+    for (const g of state.extraPlayers) ids.add(g.id);
+    return ids;
+  }, [pickList, state.extraPlayers]);
   const pickListOthers = pickList.filter((p) => p.id !== currentUserId).length;
 
   // Når bruker går fram/tilbake via browser, oppdateres `searchParams`. Vi
@@ -399,6 +407,9 @@ export function GameWizard({
         team_number: row.team_number,
         flight_number: row.flight_number,
       })),
+      // #1009: økt-gjester må overleve visnings-byttet — GameForm sin egen
+      // hook-instans seeder extraPlayers fra denne.
+      extra_players: state.extraPlayers,
       game_mode: state.gameMode,
       team_size: state.teamSize,
       texas_team_handicap_pct: String(state.texasHandicapPct),
@@ -871,7 +882,7 @@ export function GameWizard({
           )}
           <PlayersSection
             state={state}
-            players={players}
+            players={state.allPlayers}
             selectableIds={pickIds}
             heading={t('sections.players.headingWizard')}
           />
@@ -880,7 +891,7 @@ export function GameWizard({
               flights / per-spiller-tee) basert på state-flags. */}
           <TeamsAssignmentSection
             state={state}
-            players={players}
+            players={state.allPlayers}
             hideNumbering
           />
         </div>

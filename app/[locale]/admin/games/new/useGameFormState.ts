@@ -284,8 +284,26 @@ export function useGameFormState({
   const [teeBoxId, setTeeBoxIdRaw] = useState<string>(
     initialValues?.tee_box_id ?? '',
   );
+  // #1009: gjester lagt til i denne økta (skygge-brukere fra
+  // createGuestForWizard). De finnes ikke i den pre-fetchede `players`-lista;
+  // `allPlayers` under er den sammenslåtte lista ALT internt oppslag bruker.
+  // Seedes fra initialValues.extra_players så full-form-byttet (GameWizard →
+  // GameForm) ikke mister dem.
+  const [extraPlayers, setExtraPlayers] = useState<PlayerOption[]>(
+    () => initialValues?.extra_players ?? [],
+  );
+  const allPlayers = useMemo(
+    () => (extraPlayers.length === 0 ? players : [...players, ...extraPlayers]),
+    [players, extraPlayers],
+  );
   const [playerGenders, setPlayerGenders] = useState<Record<string, 'M' | 'D' | 'J'>>(
-    () => initialValues?.player_genders ?? deriveDefaultGenders(players),
+    () =>
+      initialValues?.player_genders ??
+      deriveDefaultGenders(
+        initialValues?.extra_players
+          ? [...players, ...initialValues.extra_players]
+          : players,
+      ),
   );
   // Required for "Lagre og publiser"; drives the button's disabled state via
   // `canPublish` below. Drafts may omit it. Empty string === "not set".
@@ -623,7 +641,7 @@ export function useGameFormState({
   function setCourseId(next: string) {
     setCourseIdRaw(next);
     setTeeBoxIdRaw(''); // ingen klem ved tee-nullstilling — ingen tee valgt ennå
-    setPlayerGenders(deriveDefaultGenders(players));
+    setPlayerGenders(deriveDefaultGenders(allPlayers));
   }
 
   // Tee-bytte: sett ny tee OG klem alle spillere til en tilgjengelig kategori
@@ -822,13 +840,13 @@ export function useGameFormState({
   const filteredPlayers = useMemo(() => {
     const query = playerSearch.trim().toLowerCase();
     const selectedSet = new Set(selectedPlayerIds);
-    return players.filter((p) => {
+    return allPlayers.filter((p) => {
       if (selectedSet.has(p.id)) return false;
       if (query === '') return true;
       const haystacks = [p.name ?? '', p.nickname ?? '', p.email ?? ''];
       return haystacks.some((h) => h.toLowerCase().includes(query));
     });
-  }, [players, playerSearch, selectedPlayerIds]);
+  }, [allPlayers, playerSearch, selectedPlayerIds]);
 
   const availableTees = selectedCourse?.tee_boxes ?? [];
 
@@ -918,6 +936,19 @@ export function useGameFormState({
       }
       return [...prev, playerId];
     });
+  }
+
+  // #1009: gjest lagt til fra spillersteget — skygge-brukeren er allerede
+  // opprettet server-side (createGuestForWizard), så her registreres bare
+  // PlayerOption-en, tee-valget og auto-seleksjonen. Idempotent på id.
+  function addGuestPlayer(player: PlayerOption, tee: 'M' | 'D' | 'J') {
+    setExtraPlayers((prev) =>
+      prev.some((p) => p.id === player.id) ? prev : [...prev, player],
+    );
+    setPlayerGenders((prev) => ({ ...prev, [player.id]: tee }));
+    setSelectedPlayerIds((prev) =>
+      prev.includes(player.id) ? prev : [...prev, player.id],
+    );
   }
 
   function drawRandomTeams() {
@@ -1723,6 +1754,10 @@ export function useGameFormState({
     teeOffInPast,
     // Memoiserte derivasjoner
     selectedCourse,
+    // #1009: sammenslått spillerliste (pre-fetchede + økt-gjester). Seksjonene
+    // skal bruke denne — ikke rå `players`-prop — til chips/lag-oppslag.
+    allPlayers,
+    extraPlayers,
     filteredPlayers,
     availableTees,
     teeGenderAvailability,
@@ -1749,6 +1784,7 @@ export function useGameFormState({
     missingForPublish,
     // Handlers
     togglePlayer,
+    addGuestPlayer,
     handleModeChange,
     handleTeamSizeChange,
     drawRandomTeams,
@@ -1768,7 +1804,7 @@ export function useGameFormState({
         ...unassigned,
       ]);
       return Array.from(ids)
-        .map((pid) => players.find((p) => p.id === pid))
+        .map((pid) => allPlayers.find((p) => p.id === pid))
         .filter((p): p is PlayerOption => p !== undefined);
     },
     // Default-flight per lag (1+2 → flight 1, 3+4 → flight 2). Eksponeres

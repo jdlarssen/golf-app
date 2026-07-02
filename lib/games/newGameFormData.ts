@@ -42,6 +42,7 @@ type UserRow = {
   profile_completed_at: string | null;
   gender: 'mens' | 'ladies' | null;
   level: 'junior' | 'normal' | 'senior';
+  is_guest: boolean;
 };
 
 /**
@@ -64,8 +65,8 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
     data: { user },
   } = await supabase.auth.getUser();
   const userColumns = includeEmail
-    ? 'id, name, nickname, hcp_index, email, profile_completed_at, gender, level'
-    : 'id, name, nickname, hcp_index, profile_completed_at, gender, level';
+    ? 'id, name, nickname, hcp_index, email, profile_completed_at, gender, level, is_guest'
+    : 'id, name, nickname, hcp_index, profile_completed_at, gender, level, is_guest';
   const [coursesResult, usersResult, clubsResult] = await Promise.all([
     supabase
       .from('courses')
@@ -127,6 +128,9 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
       pending: u.profile_completed_at === null,
       gender: u.gender,
       level: u.level,
+      // #1009: «Gjest»-chip i spiller-velgeren så en skygge-bruker fra et
+      // tidligere spill ikke forveksles med en registrert bruker.
+      isGuest: u.is_guest,
     };
     // Spread the e-post in only when requested, so the e-post-fri variant
     // omits the key entirely (not `email: undefined`) — nothing for a

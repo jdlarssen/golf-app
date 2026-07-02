@@ -3,6 +3,8 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { findGuestIds } from '@/lib/games/createGuestPlayer';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
@@ -235,6 +237,13 @@ async function createGameInternal(
     redirect({ href: `${errorBase}?error=db_game`, locale });
   }
 
+  // #1009: gjeste-rader (skygge-brukere fra veiviserens «Legg til gjest») må
+  // inn via service-role — invite-eligibility-guarden (0115) blokkerer en
+  // ikke-admin-arrangørs klient-insert av en gjest (verken venn, medspiller
+  // eller klubbmedlem). Vanlige rader beholder request-klienten så RLS-
+  // dekningen er uendret; kompensasjonen (delete game) dekker begge inserts.
+  const guestIds = await findGuestIds(payload.players.map((p) => p.user_id));
+
   const rowAcceptedAt = new Date().toISOString();
   const rows = payload.players.map((p) => {
     const playerGenderUi = String(formData.get(`player_${p.user_id}_gender`) ?? 'M');
@@ -249,10 +258,22 @@ async function createGameInternal(
       course_handicap: null,
       // #463: oppretters egen rad bekreftes nå; andre spillere arrangøren
       // legger til er «Ikke bekreftet» til de selv bekrefter / blir aktive.
-      accepted_at: acceptedAtForActor(userId, p.user_id, rowAcceptedAt),
+      // #1009-unntak: en gjest kan aldri selv bekrefte (ingen innlogging) —
+      // arrangøren har avklart deltakelsen, så raden bekreftes ved insert.
+      accepted_at: guestIds.has(p.user_id)
+        ? rowAcceptedAt
+        : acceptedAtForActor(userId, p.user_id, rowAcceptedAt),
     };
   });
-  const { error: gpError } = await supabase.from('game_players').insert(rows);
+  const regularRows = rows.filter((r) => !guestIds.has(r.user_id));
+  const guestRows = rows.filter((r) => guestIds.has(r.user_id));
+  // Tom regularRows-insert beholdes (PostgREST no-op) så flyten er identisk
+  // med før-#1009 når ingen gjester finnes.
+  let { error: gpError } = await supabase.from('game_players').insert(regularRows);
+  if (!gpError && guestRows.length > 0) {
+    const res = await getAdminClient().from('game_players').insert(guestRows);
+    gpError = res.error;
+  }
   if (gpError) {
     // #737: rull tilbake den committede games-raden. Uten dette etterlater en
     // feilet spiller-insert en foreldreløs game uten spillere — skaperen ser en
@@ -269,9 +290,11 @@ async function createGameInternal(
   // feilet notify ikke ruller back game-creation. notifyInvitedToGame
   // swallow-er sine egne feil, men vi wrapper inn allSettled for defence-
   // in-depth ved eventuelle endringer i helperen.
+  // #1009: gjester varsles ikke — de har ingen innboks å lese varselet i, og
+  // plassholder-adressen skal aldri få mail.
   const newPlayerIds = rows
     .map((r) => r.user_id)
-    .filter((id) => id !== userId);
+    .filter((id) => id !== userId && !guestIds.has(id));
   if (newPlayerIds.length > 0) {
     await Promise.allSettled(
       newPlayerIds.map((recipientUserId) =>

@@ -12,6 +12,8 @@ import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { StatusChip } from '@/components/ui/StatusChip';
+import { GuestBadge } from '@/components/ui/GuestBadge';
+import { GuestPlayerAdd } from './GuestPlayerAdd';
 
 type Props = {
   state: GameFormState;
@@ -172,6 +174,7 @@ export function PlayersSection({
                       <span className="max-w-[14ch] truncate">
                         {shortName(p)}
                       </span>
+                      {p.isGuest && <GuestBadge className="shrink-0" />}
                       <span aria-hidden="true" className="text-base leading-none text-muted">
                         ×
                       </span>
@@ -237,6 +240,7 @@ export function PlayersSection({
                       {p.pending && (
                         <StatusChip tone="påmelding" label={t('waitingChip')} className="shrink-0" />
                       )}
+                      {p.isGuest && <GuestBadge className="shrink-0" />}
                     </label>
                   </li>
                 );
@@ -245,6 +249,14 @@ export function PlayersSection({
           )}
         </>
       )}
+
+      {/* #1009: gjest uten konto — tilgjengelig også når kandidatlista er tom
+          (players.length === 0-grenen over gjelder kun registrerte). Cap-en
+          speiler checkbox-radene: matchplay 2, lag-modi 8. */}
+      <GuestPlayerAdd
+        state={state}
+        disabled={isMatchplay ? count >= 2 : requiresTeams && count >= 8}
+      />
     </section>
   );
 }

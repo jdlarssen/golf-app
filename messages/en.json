@@ -1,6 +1,7 @@
 {
   "common": {
-    "appName": "Tørny"
+    "appName": "Tørny",
+    "guestBadge": "Guest"
   },
   "notFound": {
     "heading": "This page doesn't exist",
@@ -1734,7 +1735,8 @@
         "player_withdrawn": "Player withdrawn from game.",
         "player_reinstated": "Player is back in the game.",
         "admin_approved": "Scorecard approved.",
-        "invite_cancelled": "Invitation cancelled."
+        "invite_cancelled": "Invitation cancelled.",
+        "guest_added": "The guest has been added to the game."
       },
       "errorMessages": {
         "disposable_email": "That email address looks like a disposable address. Please ask for a regular email.",
@@ -1749,7 +1751,13 @@
         "invite_failed": "The invitation could not be sent. Please try again.",
         "mail_failed": "The invitation was saved but the email didn't go through.",
         "cancel_failed": "Could not cancel the invitation.",
-        "not_found": "Game not found."
+        "not_found": "Game not found.",
+        "guest_invalid_name": "The guest needs a name (max 80 characters).",
+        "guest_invalid_hcp": "The handicap must be a number between 0 and 54. Enter plus handicaps with a leading +.",
+        "guest_invalid_tee": "Pick a tee category for the guest.",
+        "guest_auth_create_failed": "Couldn't create the guest. Try again.",
+        "guest_profile_update_failed": "Something went wrong while saving the guest. Try again.",
+        "guest_roster_insert_failed": "The guest wasn't added to the game. Try again."
       },
       "rosterSearch": "Add from players you know",
       "rosterSearchPlaceholder": "Search co-players…",
@@ -1763,7 +1771,21 @@
       "inviteEmailAriaLabel": "Email",
       "inviteButton": "Send invitation",
       "invitePending": "Sending …",
-      "inviteHint": "The person will receive an invitation by email and join when they log in."
+      "inviteHint": "The person will receive an invitation by email and join when they log in.",
+      "guestForm": {
+        "sectionHeading": "Add a guest",
+        "hint": "No account needed. Enter a name and handicap, and the marker in the flight keeps their score.",
+        "nameLabel": "Name",
+        "namePlaceholder": "Guest's name",
+        "hcpLabel": "Handicap",
+        "hcpPlaceholder": "E.g. 18.4 (+2 for plus handicap)",
+        "teeLabel": "Tee category",
+        "teeMens": "Men's",
+        "teeLadies": "Women's",
+        "teeJuniors": "Junior",
+        "submitButton": "Add guest",
+        "submitPending": "Adding …"
+      }
     }
   },
   "scorecard": {
@@ -2813,7 +2835,13 @@
         "signups_not_scheduled": "Only scheduled games can have signups closed or reopened.",
         "bad_flight": "Invalid flight number. Choose a positive flight from the list.",
         "rotation_player_count_wolf": "Wolf needs 3–5 players to start. {count} signed up so far.",
-        "rotation_player_count_round_robin": "Round Robin needs exactly 4 players to start. {count} signed up so far."
+        "rotation_player_count_round_robin": "Round Robin needs exactly 4 players to start. {count} signed up so far.",
+        "guest_invalid_name": "The guest needs a name (max 80 characters).",
+        "guest_invalid_hcp": "The handicap must be a number between 0 and 54. Enter plus handicaps with a leading +.",
+        "guest_invalid_tee": "Pick a tee category for the guest.",
+        "guest_auth_create_failed": "Couldn't create the guest. Try again.",
+        "guest_profile_update_failed": "Something went wrong while saving the guest. Try again.",
+        "guest_roster_insert_failed": "The guest wasn't added to the game. Try again."
       },
       "detail": {
         "brassRibbon": "Game · log",
@@ -2869,7 +2897,8 @@
         "flight_suggested": "✓ Flight assignment proposed and saved.",
         "flight_updated": "✓ Player's flight updated.",
         "signups_closed": "✓ Signups closed. New requests will be declined.",
-        "signups_reopened": "✓ Signups reopened."
+        "signups_reopened": "✓ Signups reopened.",
+        "guest_added": "The guest has been added to the game."
       },
       "sections": {
         "overview": "Overview",

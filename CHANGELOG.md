@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.166 · Gjestespiller</strong></summary>
+
+[#1009](https://github.com/jdlarssen/golf-app/issues/1009) — Ta med en kompis uten konto: legg til gjest med navn og handicap i veiviseren eller på spillerlista, markøren fører scoren underveis, og etter runden sender du resultatet til gjestens e-post så kontoen blir deres.
+
+↳ /opprett-spill · «Legg til gjest»
+</details>
+
+<details>
 <summary><strong>1.165 · Nøkkeltall i Sekretariatet</strong></summary>
 
 [#1010](https://github.com/jdlarssen/golf-app/issues/1010) — Klubbhuset viser nå et «Nøkkeltall»-kort med hvor mange spillere og gjenger som har tatt runde nummer to, og hvor mange runder som fullføres per uke — så du ser om rundene sår nye runder.

@@ -53,6 +53,10 @@ export type PlayerOption = {
   pending: boolean;          // derived from profile_completed_at IS NULL
   gender: 'mens' | 'ladies' | null;  // null = not answered yet → soft-prompt on /profile
   level: 'junior' | 'normal' | 'senior';
+  // #1009: true = skygge-bruker (users.is_guest). Driver «Gjest»-chipen i
+  // spiller-velgeren. Optional så eldre call-sites (edit-roster, liga) slipper
+  // å thread'e flagget før de trenger det.
+  isGuest?: boolean;
 };
 
 export type InitialValues = {
@@ -90,6 +94,13 @@ export type InitialValues = {
   lock_side_tournament?: boolean;
   /** Per-player tee selection. Missing key defaults to 'M' in the form state. */
   player_genders?: Record<string, 'M' | 'D' | 'J'>;
+  /**
+   * #1009: gjester lagt til i veiviser-økta (skygge-brukere opprettet via
+   * createGuestForWizard). De ligger ikke i den pre-fetchede `players`-lista,
+   * så de må følge med når wizard-en bytter til full-form-visningen — ellers
+   * mister chips/lag-oppslag navnene deres.
+   */
+  extra_players?: PlayerOption[];
   players?: Array<{
     user_id: string;
     // Widened to `number | null` ved prop-grensen siden 0030 gjorde
@@ -547,7 +558,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
 
       {/* Section 2: Players */}
       <Disclosure title={t('panelTitlePlayers')} summary={playersSummary}>
-        <PlayersSection state={state} players={players} hideHeading />
+        <PlayersSection state={state} players={state.allPlayers} hideHeading />
       </Disclosure>
 
       {/* Section 2.5: Modus + lagstørrelse — fyrer mellom spiller-listen og
@@ -845,7 +856,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       {teamsAssignmentHasContent(state) && (
         <Disclosure title={t('panelTitleTeams')}>
           <div className="space-y-4">
-            <TeamsAssignmentSection state={state} players={players} />
+            <TeamsAssignmentSection state={state} players={state.allPlayers} />
           </div>
         </Disclosure>
       )}

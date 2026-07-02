@@ -71,7 +71,7 @@ function player(
     rejection_reason: null,
     withdrawn_at: null,
     accepted_at: null,
-    users: { name: user_id, nickname: null },
+    users: { name: user_id, nickname: null, is_guest: false },
     tee_gender: 'mens',
     ...opts,
   };
@@ -206,10 +206,10 @@ describe('resolveScorecardLayout', () => {
         mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       };
       const me = player('me', 1, {
-        users: { name: 'Jens Hansen', nickname: null },
+        users: { name: 'Jens Hansen', nickname: null, is_guest: false },
       });
       const partner = player('p', 1, {
-        users: { name: 'Henrik Olsen', nickname: null },
+        users: { name: 'Henrik Olsen', nickname: null, is_guest: false },
       });
       const otherTeam = player('o', 2);
       const layout = resolveScorecardLayout(

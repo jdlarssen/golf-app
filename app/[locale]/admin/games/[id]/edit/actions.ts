@@ -4,7 +4,9 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { findGuestIds } from '@/lib/games/createGuestPlayer';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
@@ -249,6 +251,12 @@ async function updateGameInternal(
     redirect({ href: `${editBase}?error=db_players`, locale });
   }
 
+  // #1009: gjeste-rader (skygge-brukere) må re-inserters via service-role —
+  // invite-eligibility-guarden (0115) blokkerer en ikke-admin-arrangørs
+  // klient-insert av en gjest. Vanlige rader beholder request-klienten så
+  // RLS-dekningen er uendret.
+  const guestIds = await findGuestIds(payload.players.map((p) => p.user_id));
+
   if (payload.players.length > 0) {
     const rows = payload.players.map((p) => {
       const playerGenderUi = String(formData.get(`player_${p.user_id}_gender`) ?? 'M');
@@ -261,11 +269,24 @@ async function updateGameInternal(
         // Same rule as the publish path: handicaps are frozen at D5
         // (Start runden nå), not at edit-time.
         course_handicap: null,
+        // #1009: en gjest kan aldri selv bekrefte — bekreftes ved insert så
+        // roster-swappen ikke etterlater en evig «Ikke bekreftet»-gjest.
+        ...(guestIds.has(p.user_id)
+          ? { accepted_at: new Date().toISOString() }
+          : {}),
       };
     });
-    const { error: insertError } = await supabase
+    const regularRows = rows.filter((r) => !guestIds.has(r.user_id));
+    const guestRows = rows.filter((r) => guestIds.has(r.user_id));
+    // Tom regularRows-insert beholdes (PostgREST no-op) så flyten er identisk
+    // med før-#1009 når hele rosteret er gjester.
+    let { error: insertError } = await supabase
       .from('game_players')
-      .insert(rows);
+      .insert(regularRows);
+    if (!insertError && guestRows.length > 0) {
+      const res = await getAdminClient().from('game_players').insert(guestRows);
+      insertError = res.error;
+    }
     if (insertError) {
       console.error('[updateGameInternal] roster insert failed', insertError);
       // #907: delete-en over har allerede tømt rosteret, og games.update har
@@ -274,8 +295,11 @@ async function updateGameInternal(
       // gjenopprettes til før-edit-tilstanden. Dobbel-feil (også rollbacken
       // feiler) logges — vi har gjort det vi kan; arrangøren ser db_players og
       // kan prøve på nytt. Speiler den kompenserende rollbacken i #737.
+      // #1009: rollbacken går via service-role — snapshotet kan inneholde
+      // gjeste-rader som 0115-guarden ville avvist på request-klienten, og en
+      // gjenoppretting av FØR-tilstanden skal aldri strande halvveis på den.
       if (priorRosterRows.length > 0) {
-        const { error: rollbackError } = await supabase
+        const { error: rollbackError } = await getAdminClient()
           .from('game_players')
           .insert(priorRosterRows);
         if (rollbackError) {
@@ -294,9 +318,10 @@ async function updateGameInternal(
   // spillere som beholdes får ingen ny varsel — den fyrte allerede da de
   // ble lagt til første gang. Promise.allSettled gjør at én feilet notify
   // ikke påvirker action-redirecten.
+  // #1009: gjester varsles ikke (ingen innboks å lese i, aldri mail).
   const newPlayerIds = payload.players
     .map((p) => p.user_id)
-    .filter((id) => !priorRosterIds.has(id) && id !== userId);
+    .filter((id) => !priorRosterIds.has(id) && id !== userId && !guestIds.has(id));
   if (newPlayerIds.length > 0) {
     await Promise.allSettled(
       newPlayerIds.map((recipientUserId) =>

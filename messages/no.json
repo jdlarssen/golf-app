@@ -1,6 +1,7 @@
 {
   "common": {
-    "appName": "Tørny"
+    "appName": "Tørny",
+    "guestBadge": "Gjest"
   },
   "notFound": {
     "heading": "Denne siden finnes ikke",
@@ -1734,7 +1735,8 @@
         "player_withdrawn": "Spilleren er trukket fra spillet.",
         "player_reinstated": "Spilleren er med igjen.",
         "admin_approved": "Scorekortet er godkjent.",
-        "invite_cancelled": "Invitasjonen er trukket tilbake."
+        "invite_cancelled": "Invitasjonen er trukket tilbake.",
+        "guest_added": "Gjesten er lagt til i spillet."
       },
       "errorMessages": {
         "disposable_email": "Den e-postadressen ser ut som en engangsadresse. Be om en vanlig e-post.",
@@ -1749,7 +1751,13 @@
         "invite_failed": "Invitasjonen kunne ikke sendes. Prøv igjen.",
         "mail_failed": "Invitasjonen ble lagret, men e-posten kom ikke fram.",
         "cancel_failed": "Kunne ikke trekke invitasjonen.",
-        "not_found": "Fant ikke spillet."
+        "not_found": "Fant ikke spillet.",
+        "guest_invalid_name": "Gjesten trenger et navn (maks 80 tegn).",
+        "guest_invalid_hcp": "Handicapet må være et tall mellom 0 og 54. Plusshandicap tastes med + foran.",
+        "guest_invalid_tee": "Velg tee-kategori for gjesten.",
+        "guest_auth_create_failed": "Klarte ikke å opprette gjesten. Prøv igjen.",
+        "guest_profile_update_failed": "Noe gikk galt da gjesten ble lagret. Prøv igjen.",
+        "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen."
       },
       "rosterSearch": "Legg til fra spillere du kjenner",
       "rosterSearchPlaceholder": "Søk blant medspillere…",
@@ -1763,7 +1771,21 @@
       "inviteEmailAriaLabel": "E-post",
       "inviteButton": "Send invitasjon",
       "invitePending": "Sender …",
-      "inviteHint": "Personen får en invitasjon på e-post og blir med når de logger inn."
+      "inviteHint": "Personen får en invitasjon på e-post og blir med når de logger inn.",
+      "guestForm": {
+        "sectionHeading": "Legg til gjest",
+        "hint": "Gjesten trenger ikke konto. Du oppgir navn og handicap, og markøren i flighten fører scoren.",
+        "nameLabel": "Navn",
+        "namePlaceholder": "Navn på gjesten",
+        "hcpLabel": "Handicap",
+        "hcpPlaceholder": "F.eks. 18,4 (+2 for plusshandicap)",
+        "teeLabel": "Tee-kategori",
+        "teeMens": "Herre",
+        "teeLadies": "Dame",
+        "teeJuniors": "Junior",
+        "submitButton": "Legg til gjest",
+        "submitPending": "Legger til …"
+      }
     }
   },
   "scorecard": {
@@ -2813,7 +2835,13 @@
         "signups_not_scheduled": "Kun planlagte spill kan stenge eller gjenåpne påmeldingen.",
         "bad_flight": "Ugyldig flight-nummer. Velg en positiv flight fra listen.",
         "rotation_player_count_wolf": "Wolf trenger 3–5 spillere for å starte. Nå er {count} påmeldt.",
-        "rotation_player_count_round_robin": "Round Robin trenger nøyaktig 4 spillere for å starte. Nå er {count} påmeldt."
+        "rotation_player_count_round_robin": "Round Robin trenger nøyaktig 4 spillere for å starte. Nå er {count} påmeldt.",
+        "guest_invalid_name": "Gjesten trenger et navn (maks 80 tegn).",
+        "guest_invalid_hcp": "Handicapet må være et tall mellom 0 og 54. Plusshandicap tastes med + foran.",
+        "guest_invalid_tee": "Velg tee-kategori for gjesten.",
+        "guest_auth_create_failed": "Klarte ikke å opprette gjesten. Prøv igjen.",
+        "guest_profile_update_failed": "Noe gikk galt da gjesten ble lagret. Prøv igjen.",
+        "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen."
       },
       "detail": {
         "brassRibbon": "Spill · protokoll",
@@ -2869,7 +2897,8 @@
         "flight_suggested": "✓ Inndeling er foreslått og lagret.",
         "flight_updated": "✓ Spillerens flight er oppdatert.",
         "signups_closed": "✓ Påmeldingen er stengt. Nye søknader avvises.",
-        "signups_reopened": "✓ Påmeldingen er gjenåpnet."
+        "signups_reopened": "✓ Påmeldingen er gjenåpnet.",
+        "guest_added": "Gjesten er lagt til i spillet."
       },
       "sections": {
         "overview": "Oversikt",

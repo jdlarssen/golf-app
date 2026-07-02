@@ -9,6 +9,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
+import { GuestBadge } from '@/components/ui/GuestBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { ApprovePlayerButton } from '@/app/[locale]/admin/games/[id]/ApprovePlayerButton';
@@ -36,6 +37,7 @@ const STATUS_KEYS = new Set([
   'player_reinstated',
   'admin_approved',
   'invite_cancelled',
+  'guest_added',
 ]);
 
 const ERROR_KEYS = new Set([
@@ -52,6 +54,12 @@ const ERROR_KEYS = new Set([
   'mail_failed',
   'cancel_failed',
   'not_found',
+  'guest_invalid_name',
+  'guest_invalid_hcp',
+  'guest_invalid_tee',
+  'guest_auth_create_failed',
+  'guest_profile_update_failed',
+  'guest_roster_insert_failed',
 ]);
 
 function playerName(p: Pick<PlayerForHole, 'users'>): string {
@@ -182,9 +190,12 @@ export default async function CreatorSpillerePage({
                     className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3.5 py-3"
                   >
                     <div className="min-w-0">
-                      <p className={`truncate text-sm font-medium ${wd ? 'text-muted line-through' : 'text-text'}`}>
-                        {playerName(p)}
-                      </p>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p className={`truncate text-sm font-medium ${wd ? 'text-muted line-through' : 'text-text'}`}>
+                          {playerName(p)}
+                        </p>
+                        {p.users?.is_guest && <GuestBadge className="shrink-0" />}
+                      </div>
                       {stateLabel && (
                         <p className="mt-0.5 text-xs text-muted">{stateLabel}</p>
                       )}

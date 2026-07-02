@@ -7,6 +7,8 @@ import {
   addExistingPlayerToGame,
   inviteEmailToGame,
 } from '@/app/[locale]/admin/games/[id]/inviteToGameActions';
+import { addGuestToGame } from '@/app/[locale]/games/guestPlayerActions';
+import { AddGuestForm } from '@/components/games/AddGuestForm';
 import {
   filterRosterCandidates,
   rosterDisplayName,
@@ -38,6 +40,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
 
   const addAction = addExistingPlayerToGame.bind(null, gameId);
   const inviteAction = inviteEmailToGame.bind(null, gameId);
+  const guestAction = addGuestToGame.bind(null, gameId);
 
   return (
     <div className="space-y-5">
@@ -119,6 +122,22 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
         <p className="mt-2 text-xs text-muted">
           {t('inviteHint')}
         </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" />
+        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted">
+          {t('rosterOr')}
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      {/* #1009: gjest uten konto — navn + hcp + tee, ingen e-post. */}
+      <div>
+        <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+          {t('guestForm.sectionHeading')}
+        </h3>
+        <AddGuestForm action={guestAction} disabled={disabled} />
       </div>
     </div>
   );

@@ -55,6 +55,13 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #1009: publish-stien slår opp gjeste-ids (service-role) for å rute
+// gjeste-rader forbi 0115-guarden. Ingen gjester i disse fixturene → tomt
+// sett, så hele rosteren går request-klient-veien som før.
+vi.mock('@/lib/games/createGuestPlayer', () => ({
+  findGuestIds: vi.fn(async () => new Set<string>()),
+}));
+
 // F2 (#272): server-action kaller isValidActiveGameMode før insert. Mocker
 // til true så happy-path-testene fortsatt slipper gjennom; egne tester for
 // validerings-stien er i lib/formats/validateGameMode.test.ts.

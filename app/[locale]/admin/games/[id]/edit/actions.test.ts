@@ -60,6 +60,20 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #1009: edit-stien slår opp gjeste-ids (service-role) for å rute gjeste-
+// rader forbi 0115-guarden. Ingen gjester i disse fixturene → tomt sett, så
+// hele rosteret går request-klient-veien som før.
+vi.mock('@/lib/games/createGuestPlayer', () => ({
+  findGuestIds: vi.fn(async () => new Set<string>()),
+}));
+
+// #1009: rollback-re-insertet går via service-role (snapshotet kan inneholde
+// gjeste-rader som 0115-guarden ville avvist på request-klienten). Testene
+// deler mock-klient så insert-kallene fortsatt telles i __fromCalls.
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => supabaseMock,
+}));
+
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
 }

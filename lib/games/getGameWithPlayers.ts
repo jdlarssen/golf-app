@@ -155,7 +155,11 @@ export type PlayerForHole = {
   // Hole entry only renders when status is 'active' or 'finished'; pending
   // invitees can't reach those states per Task 7's publish-gate. Typed
   // nullable to match the DB column.
-  users: { name: string | null; nickname: string | null } | null;
+  // #1009: is_guest driver «Gjest»-chipen på arrangør-flatene og gater
+  // claim-seksjonen på spillere-siden. E-post holdes bevisst UTE av denne
+  // delte payloaden (#435-disiplinen) — claim-UI-et gjør sin egen målrettede
+  // e-post-oppslag bak requireAdminOrCreator.
+  users: { name: string | null; nickname: string | null; is_guest: boolean } | null;
   // Which rating-set on the game's tee applies to this player.
   tee_gender: TeeGender;
 };
@@ -180,7 +184,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, withdrawn_at, accepted_at, tee_gender, users!game_players_user_id_fkey(name, nickname)',
+        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, withdrawn_at, accepted_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)',
       )
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),
@@ -213,7 +217,11 @@ export async function getGameWithPlayers(
   // `undefined` rather than the real (possibly non-null) value, so a
   // just-finished game's report could silently fail to appear on the
   // leaderboard/spectate views until the 15-min `revalidate` window expired.
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp3', id], {
+  //
+  // #1009: bumped to 'gwp4' when `users.is_guest` joined the players-select —
+  // a stale entry would resolve it as `undefined` and the «Gjest»-chip +
+  // claim-seksjonen on the spillere page would silently not render.
+  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp4', id], {
     tags: [`game-${id}`],
     revalidate: 900,
   })();
