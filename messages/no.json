@@ -4566,6 +4566,7 @@
       "footerText": "Du får denne meldingen fordi du var med i runden. Logg inn på tornygolf.no for full oversikt.",
       "opponentFallback": "motstanderen",
       "listConjunction": "og",
+      "reportHeading": "Fra pressetribunen",
       "bodyBestBall": "Runden i <g>{game}</g> er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.",
       "bodyStablefordSolo": "Runden i <g>{game}</g> er ferdig. Du endte på <p>{rank}. plass{total, plural, =0{} other{ av #}}</p> med <pts>{points} poeng</pts>.{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}",
       "bodyStablefordTeam": "Runden i <g>{game}</g> er ferdig. Laget endte på <p>{rank}. plass{total, plural, =0{} other{ av # lag}}</p> med <pts>{points} poeng</pts>.{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}{hasPartner, select, yes{ Du og <pa>{partnerName}</pa> satt sammen på lag.} other{}}",

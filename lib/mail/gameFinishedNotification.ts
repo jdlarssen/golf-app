@@ -156,6 +156,16 @@ export type GameFinishedNotificationParams = {
   mode?: GameFinishedNotificationMode;
   /** Mottakerens locale (#594). Default `no`. */
   locale?: string | null;
+  /**
+   * AI-generert norsk rundereferat (#1008 — Pressetribunen v1), lagret på
+   * `games.round_report`. Game-scoped — identisk for alle mottakere, derfor
+   * hentet én gang per end-action og sendt inn her i stedet for å høre
+   * hjemme i `buildGameFinishedRecipients`. Rendres AS-IS for alle locales
+   * (decision 1: én lagret streng, ingen per-locale generering) — kun
+   * overskriften er katalog-nøkkelert. `undefined`/`null`/tom streng →
+   * blokken droppes helt.
+   */
+  roundReport?: string | null;
 };
 
 type MailTranslator = Awaited<ReturnType<typeof getMailTranslator>>;
@@ -277,7 +287,7 @@ function buildBodyLine(
 export async function sendGameFinishedNotification(
   params: GameFinishedNotificationParams,
 ): Promise<void> {
-  const { to, playerFirstName, gameName, gameId, mode, locale } = params;
+  const { to, playerFirstName, gameName, gameId, mode, locale, roundReport } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
 
@@ -289,6 +299,22 @@ export async function sendGameFinishedNotification(
 
   const bodyLine = buildBodyLine(t, mode, gameName, true);
   const bodyLineText = buildBodyLine(t, mode, gameName, false);
+
+  // #1008: valgfri AI-rundereferat-blokk, rendret AS-IS (ingen ICU-markup —
+  // teksten er allerede ferdig norsk prosa). Blockquote-stylingen mimer
+  // registrationRejected.ts sin reason-blockquote (champagne-gull venstre-
+  // kant, linen-bakgrunn), men med en EGEN margin-fingerprint
+  // (`margin:24px 0`) slik at en test-extractor kan matche denne blokken
+  // uten å kollidere med body-line-paragrafens `margin:0 0 24px`-regex.
+  const reportHtml = roundReport
+    ? `<p style="font-size:13px;font-weight:600;color:#4A3F30;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.02em;">
+              ${escapeHtml(t('gameFinished.reportHeading'))}
+            </p>
+            <blockquote style="margin:24px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A1813;">${escapeHtml(roundReport)}</blockquote>`
+    : '';
+  const reportText = roundReport
+    ? `${t('gameFinished.reportHeading')}\n${roundReport}\n\n`
+    : '';
 
   const footerHtml = t.markup('gameFinished.footerHtml', {
     link: (chunks) =>
@@ -322,6 +348,7 @@ export async function sendGameFinishedNotification(
             <p style="font-size:16px;line-height:1.5;margin:0 0 24px;">
               ${bodyLine}
             </p>
+            ${reportHtml}
             <div style="margin:32px 0;">
               <a href="${leaderboardUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
                 ${t('gameFinished.viewLeaderboard')}
@@ -342,6 +369,7 @@ export async function sendGameFinishedNotification(
     `${subject}\n\n` +
     `${salutation}\n\n` +
     `${bodyLineText}\n\n` +
+    `${reportText}` +
     `${t('gameFinished.viewLeaderboard')}: ${leaderboardUrl}\n\n` +
     `${t('common.footerTagline')}\n`;
 

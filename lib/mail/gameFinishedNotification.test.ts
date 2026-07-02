@@ -53,6 +53,18 @@ function bodyLineHtml(html: string): string {
   return m[1].trim();
 }
 
+// #1008: rundereferat-blokkens blockquote har sin egen margin-fingerprint
+// (`margin:24px 0`) — det skiller den fra body-line-paragrafens
+// `margin:0 0 24px` over, så extractoren kan matche kun rundereferat-
+// blokken uten å plukke opp naboparagrafen. `null` når blokken er droppet
+// (roundReport ikke satt) — brukes til å bekrefte fravær uten regex-krasj.
+function roundReportBlockHtml(html: string): string | null {
+  const m = html.match(
+    /<blockquote style="margin:24px 0;[^"]*">([\s\S]*?)<\/blockquote>/,
+  );
+  return m ? m[1].trim() : null;
+}
+
 const baseParams = {
   to: 'spiller@example.com',
   playerFirstName: 'Ada',
@@ -687,6 +699,35 @@ describe('sendGameFinishedNotification', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────
+  // #1008 — valgfritt AI-rundereferat («Pressetribunen»). Kun ÉN present-
+  // case: eksisterende `baseParams`-caser over (uten roundReport) låser
+  // fraværet allerede via sine egne bodyLineHtml/text-snapshots.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('med roundReport: referat-blokk med overskrift, escaped og rendret AS-IS', async () => {
+    const payload = await send({
+      ...baseParams,
+      roundReport: 'Ada dominerte fra hull 1 & holdt unna hele runden.',
+    });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Resultatet er klart — Vinter-cup
+
+      Hei Ada!
+
+      Runden i Vinter-cup er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.
+
+      Fra pressetribunen
+      Ada dominerte fra hull 1 & holdt unna hele runden.
+
+      Se leaderboard: https://tornygolf.no/games/game-1/leaderboard
+
+      Tørny — fyr opp golfturneringen på et par minutter.
+      "
+    `);
+    expect(roundReportBlockHtml(payload.html)).toMatchInlineSnapshot(`"Ada dominerte fra hull 1 &amp; holdt unna hele runden."`);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
   // HTML chrome — låses ÉN gang. Hvis chrome-mal-en endres må snapshot-en
   // oppdateres bevisst (kjør `vitest -u` og review).
   // ─────────────────────────────────────────────────────────────────────
@@ -721,6 +762,7 @@ describe('sendGameFinishedNotification', () => {
                   <p style="font-size:16px;line-height:1.5;margin:0 0 24px;">
                     Runden i <strong>Vinter-cup</strong> er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.
                   </p>
+                  
                   <div style="margin:32px 0;">
                     <a href="https://tornygolf.no/games/game-1/leaderboard" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
                       Se leaderboard
