@@ -178,10 +178,11 @@ create or replace function torny_rls.seed_active_game() returns void
       values (torny_rls.tee_box_id(), torny_rls.course_id(), 'White', 113, 70.0, 72);
 
     -- game_mode is NOT NULL since 0030; the score-write RLS policies don't read
-    -- it, so any mode works — strokeplay keeps the fixture minimal.
+    -- it, so any mode works — solo_strokeplay keeps the fixture minimal (it must
+    -- be a slug the 0111 games_game_mode_check accepts; plain 'strokeplay' is not).
     insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by, started_at)
       values (torny_rls.game_id(), 'RLS Test Game', torny_rls.course_id(),
-              torny_rls.tee_box_id(), 'active', 'strokeplay', torny_rls.admin_id(), now());
+              torny_rls.tee_box_id(), 'active', 'solo_strokeplay', torny_rls.admin_id(), now());
 
     -- All in flight 1 so same_flight() relates them.
     insert into public.game_players (game_id, user_id, team_number, flight_number, submitted_at, withdrawn_at) values
@@ -398,6 +399,24 @@ create or replace function torny_rls.try_set_is_admin(p_target uuid, p_val boole
     return v_rows > 0;
   exception
     when insufficient_privilege then return false;  -- 0107 trigger 42501 or RLS reject
+  end;
+  $$;
+
+-- ── users.is_guest probe (#1009 / 0127: guest flag is service/admin-only) ─────
+-- try_set_is_guest(target, val): the current impersonated user UPDATEs target's
+-- is_guest flag. On a non-admin self-row the 0127 guard blocks it (both setting
+-- and clearing — flipping it would move the user in/out of the stats- and
+-- mail-exclusions); an admin (or the service role) may flip it.
+create or replace function torny_rls.try_set_is_guest(p_target uuid, p_val boolean) returns boolean
+  language plpgsql
+  as $$
+  declare v_rows int;
+  begin
+    update public.users set is_guest = p_val where id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- 0127 trigger 42501 or RLS reject
   end;
   $$;
 

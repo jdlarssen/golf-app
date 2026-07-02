@@ -1686,6 +1686,7 @@ export type Database = {
           hcp_index: number
           id: string
           is_admin: boolean
+          is_guest: boolean
           last_seen_at: string | null
           level: Database["public"]["Enums"]["player_level"]
           locale: string | null
@@ -1703,6 +1704,7 @@ export type Database = {
           hcp_index?: number
           id: string
           is_admin?: boolean
+          is_guest?: boolean
           last_seen_at?: string | null
           level?: Database["public"]["Enums"]["player_level"]
           locale?: string | null
@@ -1720,6 +1722,7 @@ export type Database = {
           hcp_index?: number
           id?: string
           is_admin?: boolean
+          is_guest?: boolean
           last_seen_at?: string | null
           level?: Database["public"]["Enums"]["player_level"]
           locale?: string | null
