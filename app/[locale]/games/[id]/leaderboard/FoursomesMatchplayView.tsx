@@ -66,6 +66,12 @@ export interface FoursomesMatchplayViewProps {
    * kompakt under duell-resultatet. `undefined` når ikke `finished` + på.
    */
   sideTournamentSection?: ReactNode;
+  /**
+   * AI-rundereferat (#1008) — bygd server-side, rendret rett under duellkortet
+   * og FØR sideturnerings-seksjonen. `undefined` når ikke `finished` eller
+   * ingen report finnes.
+   */
+  roundReportSection?: ReactNode;
 }
 
 /**
@@ -97,6 +103,7 @@ export function FoursomesMatchplayView({
   gameStatus: _gameStatus,
   backHref = '/',
   sideTournamentSection,
+  roundReportSection,
 }: FoursomesMatchplayViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -157,6 +164,9 @@ export function FoursomesMatchplayView({
           matchResult={result.result}
         />
       </div>
+
+      {/* AI-rundereferat (#1008) — rett under duellkortet, kun på finished */}
+      {roundReportSection}
 
       {/* Sideturnering (#585) — kompakt under duell-resultatet, kun når på */}
       {sideTournamentSection}

@@ -26,6 +26,7 @@ import {
   WithdrawnPlayersSection,
   type WithdrawnPlayer,
 } from './WithdrawnPlayersSection';
+import { RoundReportCard } from './RoundReportCard';
 import {
   calculateSideTournament,
   type SideTournamentInput,
@@ -477,6 +478,14 @@ export async function renderLeaderboardContent({
 
   const showSideTournament = game.side_tournament_enabled;
 
+  // #1008: AI-rundereferat, komponert FØR WithdrawnPlayersSection i footerSlot-
+  // kjeden. This fallthrough (view 'full' or 'reveal-finished') is only ever
+  // reached when the game is finished, so gating on the field alone is
+  // sufficient — mirrors the stableford.tsx renderer's `wdSection` pattern.
+  const reportSection = game.round_report ? (
+    <RoundReportCard text={game.round_report} />
+  ) : null;
+
   if (!showSideTournament) {
     return (
       <State4View
@@ -487,7 +496,12 @@ export async function renderLeaderboardContent({
         coursePar={coursePar}
         holesPlayed={holesPlayed}
         backHref={backHref}
-        footerSlot={<WithdrawnPlayersSection players={bestBallWithdrawn} />}
+        footerSlot={
+          <>
+            {reportSection}
+            <WithdrawnPlayersSection players={bestBallWithdrawn} />
+          </>
+        }
       />
     );
   }
@@ -547,6 +561,7 @@ export async function renderLeaderboardContent({
               backHref={backHref}
               chromeless
             />
+            {reportSection}
             <WithdrawnPlayersSection players={bestBallWithdrawn} />
           </>
         }

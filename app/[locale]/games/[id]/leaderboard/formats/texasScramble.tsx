@@ -8,6 +8,7 @@ import { TexasScramblePodium } from '../TexasScramblePodium';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { RoundReportCard } from '../RoundReportCard';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
@@ -172,6 +173,11 @@ export async function renderTexasScramble(opts: {
   // som chromeless mainContent i en LeaderboardTabs-veksler med side-fanen.
   // Lag-format → 'byTeamNumber' så lag-aggregerte sidekategorier gjelder.
   if (game.status === 'finished') {
+    // #1008: AI-rundereferat, komponert i footerSlot (ingen wdSection her —
+    // Texas scramble sporer ikke trukne spillere separat i denne grenen).
+    const reportSection = game.round_report ? (
+      <RoundReportCard text={game.round_report} />
+    ) : null;
     const podium = (chromeless: boolean) => (
       <TexasScramblePodium
         gameId={gameId}
@@ -182,19 +188,25 @@ export async function renderTexasScramble(opts: {
         backHref={backHref}
         formatLabel={formatLabel}
         chromeless={chromeless}
+        footerSlot={chromeless ? undefined : reportSection}
       />
     );
     if (game.side_tournament_enabled) {
-      return renderSideTournamentTabs({
-        gameId,
-        game,
-        gwp,
-        rawHolesRows,
-        rawScoresRows,
-        backHref,
-        mainContent: podium(true),
-        teamGrouping: 'byTeamNumber',
-      });
+      return (
+        <>
+          {await renderSideTournamentTabs({
+            gameId,
+            game,
+            gwp,
+            rawHolesRows,
+            rawScoresRows,
+            backHref,
+            mainContent: podium(true),
+            teamGrouping: 'byTeamNumber',
+          })}
+          {reportSection}
+        </>
+      );
     }
     return podium(false);
   }

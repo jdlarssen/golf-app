@@ -13,6 +13,7 @@ import {
   WithdrawnPlayersSection,
   type WithdrawnPlayer,
 } from '../WithdrawnPlayersSection';
+import { RoundReportCard } from '../RoundReportCard';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
@@ -121,6 +122,13 @@ export async function renderStableford(opts: {
   // return path. Renders nothing when stablefordWithdrawn is empty.
   const wdSection = <WithdrawnPlayersSection players={stablefordWithdrawn} />;
 
+  // #1008: AI-rundereferat, komponert FØR wdSection i footerSlot-kjeden. Only
+  // ever non-null when the game is finished (round_report is written by the
+  // finish actions), so gating on the field alone is sufficient here.
+  const reportSection = game.round_report ? (
+    <RoundReportCard text={game.round_report} />
+  ) : null;
+
   // Reveal-modus (issue #801): mens spillet er aktivt og score_visibility='reveal'
   // skjules netto-rangeringen — kun brutto-slag vises. RevealBruttoView bruker
   // computeLeaderboard fra lib/leaderboard med mode:'brutto'. For solo-stableford
@@ -210,7 +218,13 @@ export async function renderStableford(opts: {
         />
       );
       if (!showSideTournament) {
-        return podium(false, wdSection);
+        return podium(
+          false,
+          <>
+            {reportSection}
+            {wdSection}
+          </>,
+        );
       }
       return (
         <>
@@ -224,6 +238,7 @@ export async function renderStableford(opts: {
             mainContent: podium(true),
             teamGrouping: 'byTeamNumber',
           })}
+          {reportSection}
           {wdSection}
         </>
       );
@@ -311,7 +326,13 @@ export async function renderStableford(opts: {
       );
     }
     if (!showSideTournament) {
-      return mainContent(false, wdSection);
+      return mainContent(
+        false,
+        <>
+          {reportSection}
+          {wdSection}
+        </>,
+      );
     }
     return (
       <>
@@ -325,6 +346,7 @@ export async function renderStableford(opts: {
           mainContent: mainContent(true),
           teamGrouping: 'solo',
         })}
+        {reportSection}
         {wdSection}
       </>
     );

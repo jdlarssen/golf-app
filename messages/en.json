@@ -2037,6 +2037,9 @@
       "sectionTitle": "Withdrawn players",
       "badge": "Withdrawn"
     },
+    "roundReport": {
+      "heading": "From the press box"
+    },
     "duel": {
       "holesWon": "holes won",
       "halved": "halved",

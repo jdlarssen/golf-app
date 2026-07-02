@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type JSX } from 'react';
+import { useEffect, useState, type JSX, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
@@ -44,6 +44,12 @@ export interface TexasScramblePodiumProps {
    * og er ansvarlig for chrome. Speiler `SoloStablefordPodium`-mønsteret.
    */
   chromeless?: boolean;
+  /**
+   * Valgfri hale-seksjon rendret ETTER hovedinnholdet, men INNI shell-en
+   * (#386/#1008-mønster). Brukes av `renderTexasScramble` til å komponere
+   * AI-rundereferat + «Trukne spillere» under podiet.
+   */
+  footerSlot?: ReactNode;
 }
 
 /**
@@ -66,6 +72,7 @@ export function TexasScramblePodium({
   backHref = '/',
   formatLabel = 'Texas scramble',
   chromeless = false,
+  footerSlot,
 }: TexasScramblePodiumProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
@@ -84,7 +91,7 @@ export function TexasScramblePodium({
 
   if (result.teams.length === 0) {
     return (
-      <LeaderboardShell chromeless={chromeless}>
+      <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
         {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           {t('common.noTeams')}
@@ -102,7 +109,7 @@ export function TexasScramblePodium({
   const rest = sortedTeams.slice(3);
 
   return (
-    <LeaderboardShell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">

@@ -65,6 +65,14 @@ export interface MatchplayMatchViewProps {
    * → view-en er byte-identisk med før.
    */
   sideTournamentSection?: ReactNode;
+  /**
+   * AI-rundereferat (#1008) — bygd server-side av render-funksjonen, rendret
+   * rett under duellkortet og FØR sideturnerings-seksjonen. Settes kun når
+   * spillet er `finished` og en report finnes; `undefined` ellers → view-en
+   * er byte-identisk med før. Caller (renderMatchplay) gater på gameStatus
+   * så referatet aldri kan vises midt i en pågående match.
+   */
+  roundReportSection?: ReactNode;
 }
 
 /**
@@ -95,6 +103,7 @@ export function MatchplayMatchView({
   gameStatus: _gameStatus,
   backHref = '/',
   sideTournamentSection,
+  roundReportSection,
 }: MatchplayMatchViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -170,6 +179,9 @@ export function MatchplayMatchView({
           matchResult={result.result}
         />
       </div>
+
+      {/* AI-rundereferat (#1008) — rett under duellkortet, kun på finished */}
+      {roundReportSection}
 
       {/* Sideturnering (#585) — kompakt under duell-resultatet, kun når på */}
       {sideTournamentSection}

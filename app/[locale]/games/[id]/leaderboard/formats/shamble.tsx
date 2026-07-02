@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ShambleView, type ShamblePlayerInfo } from '../ShambleView';
@@ -5,6 +6,7 @@ import { ShamblePodium } from '../ShamblePodium';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { RoundReportCard } from '../RoundReportCard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -109,7 +111,13 @@ export async function renderShamble(opts: {
   // veksler med side-fanen ('byTeamNumber' — lag-format). Active/scheduled →
   // ShambleView alene.
   if (game.status === 'finished') {
-    const finishedView = (podiumChromeless: boolean) => (
+    // #1008: AI-rundereferat, komponert i footerSlot på den avsluttende
+    // (chromeless) ShambleView. Ved sideturnering rendres referatet utenfor
+    // tab-widgeten (samme mønster som #386 wdSection).
+    const reportSection = game.round_report ? (
+      <RoundReportCard text={game.round_report} />
+    ) : null;
+    const finishedView = (podiumChromeless: boolean, footerSlot?: ReactNode) => (
       <>
         <ShamblePodium
           gameId={gameId}
@@ -130,22 +138,28 @@ export async function renderShamble(opts: {
           gameStatus={game.status}
           backHref={backHref}
           chromeless
+          footerSlot={footerSlot}
         />
       </>
     );
     if (game.side_tournament_enabled) {
-      return renderSideTournamentTabs({
-        gameId,
-        game,
-        gwp,
-        rawHolesRows,
-        rawScoresRows,
-        backHref,
-        mainContent: finishedView(true),
-        teamGrouping: 'byTeamNumber',
-      });
+      return (
+        <>
+          {await renderSideTournamentTabs({
+            gameId,
+            game,
+            gwp,
+            rawHolesRows,
+            rawScoresRows,
+            backHref,
+            mainContent: finishedView(true),
+            teamGrouping: 'byTeamNumber',
+          })}
+          {reportSection}
+        </>
+      );
     }
-    return finishedView(false);
+    return finishedView(false, reportSection);
   }
 
   return (

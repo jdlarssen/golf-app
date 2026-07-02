@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Medallion } from '@/components/ui/Medallion';
@@ -51,6 +51,13 @@ export interface BingoBangoBongoViewProps {
    * Brukes inne i en parent (podium) wrapper.
    */
   chromeless?: boolean;
+  /**
+   * Valgfri hale-seksjon rendret ETTER hovedinnholdet, men INNI shell-en
+   * (#386/#1008-mønster). Kun rendret i hoved-visningen (finished + fylte
+   * data) — tomme/reveal-hidden-grenene har ingen leaderboard å knytte
+   * referatet til.
+   */
+  footerSlot?: ReactNode;
   /** Pengeoppgjør (#937) — null hvis kr_per_unit ikke er satt eller ≤ 0. */
   settlement?: Settlement | null;
 }
@@ -72,6 +79,7 @@ export function BingoBangoBongoView({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  footerSlot,
   settlement,
 }: BingoBangoBongoViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
@@ -112,7 +120,7 @@ export function BingoBangoBongoView({
   const statusLabel = gameStatus === 'finished' ? t('common.afterNHoles', { holes: holesPlayed }) : t('common.live');
 
   return (
-    <LeaderboardShell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">

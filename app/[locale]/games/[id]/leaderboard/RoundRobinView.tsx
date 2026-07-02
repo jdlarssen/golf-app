@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Medallion } from '@/components/ui/Medallion';
@@ -54,6 +54,13 @@ export interface RoundRobinViewProps {
    * Brukes inne i en parent (podium) wrapper.
    */
   chromeless?: boolean;
+  /**
+   * Valgfri hale-seksjon rendret ETTER hovedinnholdet, men INNI shell-en
+   * (#386/#1008-mønster). Kun rendret i hoved-visningen (finished + fylte
+   * data) — tomme/reveal-hidden-grenene har ingen leaderboard å knytte
+   * referatet til.
+   */
+  footerSlot?: ReactNode;
 }
 
 const SLOT_LABEL: Record<number, string> = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
@@ -91,6 +98,7 @@ export function RoundRobinView({
   holesPlayed,
   backHref = '/',
   chromeless = false,
+  footerSlot,
 }: RoundRobinViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const isRevealHidden =
@@ -130,7 +138,7 @@ export function RoundRobinView({
   const statusLabel = gameStatus === 'finished' ? t('common.afterNHoles', { holes: holesPlayed }) : t('common.live');
 
   return (
-    <LeaderboardShell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">

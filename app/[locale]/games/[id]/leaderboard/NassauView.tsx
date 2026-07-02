@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Medallion } from '@/components/ui/Medallion';
@@ -58,6 +58,13 @@ export interface NassauViewProps {
   chromeless?: boolean;
   /** Pengeoppgjør (#937) — null hvis kr_per_unit ikke er satt eller ≤ 0. */
   settlement?: Settlement | null;
+  /**
+   * Valgfri hale-seksjon rendret ETTER hovedinnholdet, men INNI shell-en
+   * (#386/#1008-mønster). Kun rendret i hoved-visningen (finished + fylte
+   * data) — tomme/reveal-hidden-grenene har ingen leaderboard å knytte
+   * referatet til.
+   */
+  footerSlot?: ReactNode;
 }
 
 /**
@@ -88,6 +95,7 @@ export function NassauView({
   backHref = '/',
   chromeless = false,
   settlement,
+  footerSlot,
 }: NassauViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -135,7 +143,7 @@ export function NassauView({
   ];
 
   return (
-    <LeaderboardShell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">

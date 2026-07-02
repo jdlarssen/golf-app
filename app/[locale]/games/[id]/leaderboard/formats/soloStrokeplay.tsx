@@ -11,6 +11,7 @@ import {
   WithdrawnPlayersSection,
   type WithdrawnPlayer,
 } from '../WithdrawnPlayersSection';
+import { RoundReportCard } from '../RoundReportCard';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
@@ -173,6 +174,12 @@ export async function renderSoloStrokeplay(opts: {
   // på (#589).
   if (game.status === 'finished') {
     const showSide = game.side_tournament_enabled;
+    // #1008: AI-rundereferat, komponert FØR wdSection i footerSlot-kjeden.
+    // `undefined` (ikke tomt fragment) når ingen report finnes, slik at
+    // viewene forblir byte-identiske med før-#1008.
+    const reportSection = game.round_report ? (
+      <RoundReportCard text={game.round_report} />
+    ) : null;
     // mainContent: duell-kort (2 spillere) eller podium (1/3+). Tar `chromeless`
     // så samme reveal kan rendres frittstående ELLER inni sideturnerings-fanen.
     let mainContent: (chromeless: boolean, footerSlot?: ReactNode) => ReactNode;
@@ -249,11 +256,18 @@ export async function renderSoloStrokeplay(opts: {
             mainContent: mainContent(true),
             teamGrouping: 'solo',
           })}
+          {reportSection}
           {wdSection}
         </>
       );
     }
-    return mainContent(false, wdSection);
+    return mainContent(
+      false,
+      <>
+        {reportSection}
+        {wdSection}
+      </>,
+    );
   }
 
   return (

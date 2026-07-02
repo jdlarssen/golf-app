@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { WolfView, type WolfPlayerInfo } from '../WolfView';
@@ -7,6 +8,7 @@ import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { RoundReportCard } from '../RoundReportCard';
 import { computeSettlement } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -105,7 +107,15 @@ export async function renderWolf(opts: {
   // chromeless mainContent i en LeaderboardTabs-veksler med side-fanen.
   // Active/scheduled → WolfView alene.
   if (game.status === 'finished') {
-    const finishedView = (podiumChromeless: boolean) => (
+    // #1008: AI-rundereferat, komponert i footerSlot på den avsluttende
+    // (chromeless) WolfView — ingen wdSection i denne grenen i dag. Ved
+    // sideturnering rendres referatet utenfor tab-widgeten (samme mønster
+    // som #386 wdSection i nassau/skins/bbb) i stedet for inni mainContent-
+    // fanen, slik at det ikke gjentas eller forsvinner bak side-fanen.
+    const reportSection = game.round_report ? (
+      <RoundReportCard text={game.round_report} />
+    ) : null;
+    const finishedView = (podiumChromeless: boolean, footerSlot?: ReactNode) => (
       <>
         <WolfPodium
           gameId={gameId}
@@ -126,22 +136,28 @@ export async function renderWolf(opts: {
           backHref={backHref}
           chromeless
           settlement={settlement}
+          footerSlot={footerSlot}
         />
       </>
     );
     if (game.side_tournament_enabled) {
-      return renderSideTournamentTabs({
-        gameId,
-        game,
-        gwp,
-        rawHolesRows,
-        rawScoresRows,
-        backHref,
-        mainContent: finishedView(true),
-        teamGrouping: 'solo',
-      });
+      return (
+        <>
+          {await renderSideTournamentTabs({
+            gameId,
+            game,
+            gwp,
+            rawHolesRows,
+            rawScoresRows,
+            backHref,
+            mainContent: finishedView(true),
+            teamGrouping: 'solo',
+          })}
+          {reportSection}
+        </>
+      );
     }
-    return finishedView(false);
+    return finishedView(false, reportSection);
   }
 
   return (

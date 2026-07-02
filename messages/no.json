@@ -2037,6 +2037,9 @@
       "sectionTitle": "Trukne spillere",
       "badge": "Trukket"
     },
+    "roundReport": {
+      "heading": "Fra pressetribunen"
+    },
     "duel": {
       "holesWon": "hull vunnet",
       "halved": "delt",

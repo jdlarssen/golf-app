@@ -7,6 +7,7 @@ import {
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { getLeaderboardContext } from '../leaderboardContext';
 import { renderMatchplaySideSection } from '../sideTournament';
+import { RoundReportCard } from '../RoundReportCard';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
@@ -176,6 +177,13 @@ export async function renderFourballMatchplay(opts: {
     rawScoresRows,
   });
 
+  // #1008: report only ever exists once the game is finished, but gate on
+  // status explicitly too — the report must never show mid-match.
+  const roundReportSection =
+    game.status === 'finished' && game.round_report ? (
+      <RoundReportCard text={game.round_report} />
+    ) : null;
+
   return (
     <FourballMatchplayView
       gameId={gameId}
@@ -187,6 +195,7 @@ export async function renderFourballMatchplay(opts: {
       gameStatus={game.status}
       backHref={backHref}
       sideTournamentSection={sideTournamentSection}
+      roundReportSection={roundReportSection}
     />
   );
 }

@@ -9,6 +9,7 @@ import { buildBingoBangoBongoContext } from '@/lib/scoring/context/buildBingoBan
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 import { renderSideTournamentTabs } from '../sideTournament';
+import { RoundReportCard } from '../RoundReportCard';
 import { computeSettlement } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -108,10 +109,14 @@ export async function renderBingoBangoBongo(opts: {
   // sideturnering på (#589). Active/scheduled → BingoBangoBongoView alene.
   if (game.status === 'finished') {
     const showSide = game.side_tournament_enabled;
+    // #1008: AI-rundereferat, komponert i footerSlot-kjeden.
+    const reportSection = game.round_report ? (
+      <RoundReportCard text={game.round_report} />
+    ) : null;
     // mainContent: duell-kort (2 spillere) eller podium (3+), alltid med
     // BingoBangoBongoView under. Tar `chromeless` så samme reveal kan rendres
     // frittstående ELLER inni sideturnerings-fanen.
-    let mainContent: (chromeless: boolean) => ReactNode;
+    let mainContent: (chromeless: boolean, footerSlot?: ReactNode) => ReactNode;
     if (result.players.length === 2) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
@@ -146,7 +151,7 @@ export async function renderBingoBangoBongo(opts: {
       // Ved 2 spillere sier duellkortet alt (vinner, totaler, fordeling,
       // 18-hulls-strip) — den fulle BingoBangoBongoView under ville gjenta
       // nøyaktig samme tall (#600). Vis kun kortet, som Stableford/Slagspill.
-      mainContent = (chromeless) => (
+      mainContent = (chromeless, footerSlot) => (
         <HeadToHeadResult
           gameId={gameId}
           gameName={game.name}
@@ -158,10 +163,11 @@ export async function renderBingoBangoBongo(opts: {
           strip={strip}
           backHref={backHref}
           chromeless={chromeless}
+          footerSlot={footerSlot}
         />
       );
     } else {
-      mainContent = (chromeless) => (
+      mainContent = (chromeless, footerSlot) => (
         <>
           <BingoBangoBongoPodium
             gameId={gameId}
@@ -182,23 +188,29 @@ export async function renderBingoBangoBongo(opts: {
             backHref={backHref}
             chromeless
             settlement={settlement}
+            footerSlot={footerSlot}
           />
         </>
       );
     }
     if (showSide) {
-      return renderSideTournamentTabs({
-        gameId,
-        game,
-        gwp,
-        rawHolesRows,
-        rawScoresRows,
-        backHref,
-        mainContent: mainContent(true),
-        teamGrouping: 'solo',
-      });
+      return (
+        <>
+          {await renderSideTournamentTabs({
+            gameId,
+            game,
+            gwp,
+            rawHolesRows,
+            rawScoresRows,
+            backHref,
+            mainContent: mainContent(true),
+            teamGrouping: 'solo',
+          })}
+          {reportSection}
+        </>
+      );
     }
-    return mainContent(false);
+    return mainContent(false, reportSection);
   }
 
   return (
