@@ -1811,6 +1811,7 @@ export type Database = {
         }
         Returns: string
       }
+      admin_key_metrics: { Args: never; Returns: Json }
       befriend_inviter: { Args: { p_inviter: string }; Returns: string }
       can_react_in_game: { Args: { p_game_id: string }; Returns: boolean }
       can_score_for: {
