@@ -20,6 +20,7 @@
     "dup:html": "npx --yes jscpd@5 app lib components --reporters html --output ./.jscpd-report"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.109.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "dexie": "^4.4.2",
