@@ -38,6 +38,11 @@
   <text x="92" y="342" font-size="14" fill="#213029">Arrangør legger deg til</text>
   <text x="92" y="364" font-size="12" fill="#6B7770">du får varsel + evt. mail</text>
   <text x="92" y="386" font-size="12" fill="#6B7770">spillet er på Hjem</text>
+  <line x1="210" y1="404" x2="210" y2="428" stroke="#5E6B63" stroke-width="1.4" marker-end="url(#a)"/>
+  <rect x="70" y="430" width="280" height="64" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.6"/>
+  <rect x="290" y="436" width="52" height="20" rx="10" fill="#C9A961"/><text x="316" y="450" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1009</text>
+  <text x="92" y="458" font-size="13" font-weight="600" fill="#7A5E13">Gjest uten konto?</text>
+  <text x="92" y="479" font-size="11.5" fill="#6B5526">navn + handicap holder — markøren fører</text>
 
   <!-- ===== B (NY): persistent discovery ===== -->
   <rect x="370" y="312" width="270" height="92" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.6"/>
@@ -70,8 +75,8 @@
   <text x="972" y="462" font-size="13" fill="#6B5526">«Bli med på lag»</text>
   <text x="972" y="482" font-size="11.5" fill="#6B5526">tydelig hva som skjer</text>
 
-  <!-- A merge arrow straight down -->
-  <line x1="210" y1="404" x2="210" y2="540" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <!-- A merge arrow straight down (fra gjeste-boksen, #1009) -->
+  <line x1="210" y1="494" x2="210" y2="540" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
 
   <!-- merge B/C/D + A to terminal -->
   <path d="M495,494 V520 H620 V540" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
@@ -83,6 +88,14 @@
   <rect x="410" y="542" width="420" height="74" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
   <text x="620" y="574" text-anchor="middle" font-size="17" font-weight="700" fill="#8A6D27">✓  Du er med i spillet</text>
   <text x="620" y="598" text-anchor="middle" font-size="12.5" fill="#9C8552">venter på at runden starter</text>
+
+  <!-- claim-etterspill for gjester (#1009) -->
+  <line x1="830" y1="579" x2="858" y2="579" stroke="#5E6B63" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <rect x="860" y="542" width="310" height="74" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.6"/>
+  <rect x="1112" y="548" width="52" height="20" rx="10" fill="#C9A961"/><text x="1138" y="562" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1009</text>
+  <text x="882" y="570" font-size="13" font-weight="600" fill="#7A5E13">Gjest: etter runden</text>
+  <text x="882" y="590" font-size="11.5" fill="#6B5526">arrangøren sender resultatet på e-post</text>
+  <text x="882" y="607" font-size="11.5" fill="#6B5526">logg inn → kontoen er din</text>
 
   <!-- KEY CHANGE band: visibility = registration mode -->
   <rect x="110" y="660" width="1020" height="96" rx="16" fill="#EAF1F7" stroke="#6B9AD1" stroke-width="1.5"/>
