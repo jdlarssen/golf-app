@@ -44,15 +44,15 @@ When a game is finished, generate one short Norwegian match report (3–6 senten
 
 ## Success criteria (from issue + derived)
 
-- [ ] Finished game with full scoring gets a report on the result page, in the mail, and on the spectator link (staging-verified; see verification note)
-- [ ] Report failure (API down, missing key, thin data) does not affect the finish flow — game finishes exactly as today (unit-proven + staging degrade-path verified, since staging has no key by default)
-- [ ] The report never states numbers contradicting the leaderboard: prompt receives deterministic fact JSON (Type A tests assert fact JSON == ModeResult numbers and that the prompt embeds them); LLM never aggregates raw scores
-- [ ] Type B snapshot test on the mail integration: one chrome lock (untouched), report block as extracted body, subject snapshots unchanged («Resultatet er klart — …» is locked)
-- [ ] No API call on read — generation happens only inside the two end-actions (grep-provable: SDK imported only from `lib/games/generateRoundReport.ts`)
-- [ ] All 22 modes produce facts (band coverage in Type A tests); `null` result / <6 scored holes → skip
-- [ ] `reopenGame` clears the stored report
-- [ ] Gates green: `npm run lint`, `npm run build` (includes tsc), `npx vitest run` (full suite), catalogParity
-- [ ] Version bump (minor, feat) + CHANGELOG Funksjoner line
+- [x] Finished game with full scoring gets a report on the result page, in the mail, and on the spectator link — staging-verified 2026-07-02 on game `fab70b1a` (stableford duel): result page renders `data-testid="round-report"` with «FRA PRESSETRIBUNEN» callout under the duel card (screenshot in session); anonymous `curl /spectate/393c6166-…` returns the block server-side; mail block locked by new Type B snapshot case in `gameFinishedNotification.test.ts`
+- [x] Report failure (API down, missing key, thin data) does not affect the finish flow — unit-proven in `generateRoundReport.test.ts` (missing key → 'skipped' without SDK construction; SDK reject → 'failed', no throw) + staging degrade-path verified e2e: avslutt-flyt on `fab70b1a` with no ANTHROPIC_API_KEY finished normally, redirect `?status=finished`, zero `[generateRoundReport]` log lines
+- [x] The report never states numbers contradicting the leaderboard — facts built exclusively from `buildShareCardData` (same shaper as leaderboard/share card), Type A tests in `roundReportFacts.test.ts` (27 tests) assert facts == ModeResult numbers; `roundReportPrompt.test.ts` asserts the user prompt embeds the fact JSON verbatim; LLM never sees raw scores
+- [x] Type B snapshot test on the mail integration — one new `roundReportBlockHtml()` extractor + one present-case; `git diff` after `-u` was purely additive (42+/0−); chrome lock and subject snapshots untouched
+- [x] No API call on read — `grep -rn "@anthropic-ai/sdk" app/ lib/ components/` (non-test) hits only `lib/games/generateRoundReport.ts:2`; the module is called only from the two end-actions
+- [x] All 22 modes produce facts — exhaustive `switch` on `ModeResult.kind` in `computeScoredHoles` (never-check), band coverage in Type A tests; `null` result and <6 scored holes → 'skipped' (tested)
+- [x] `reopenGame` clears the stored report — `round_report: null` on the status-flip update (commit b606d3bc)
+- [x] Gates green — `npx tsc --noEmit` clean, `eslint .` 0 errors, full `npx vitest run` 4462 tests / 351 files green, `npm run build` exit 0, catalogParity green (chunk-5 final gate run)
+- [x] Version bump minor 1.163.2 → 1.164.0 on the feat commit (afd8e46a); `[no-changelog]` with announcement deferred to the key-flip per the passkey dark-launch precedent (3f41810f)
 
 **Verification note (no ANTHROPIC_API_KEY on staging):** generation is verified by unit tests with the SDK mocked at the module boundary + (if a usable key exists in the build environment) one live smoke call. Display surfaces are verified on staging by writing a report string to a finished staging game via service role and checking all three surfaces render it; the finish flow is verified on staging in degrade mode (no key → finishes as today, no block rendered).
 
