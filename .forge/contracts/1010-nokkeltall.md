@@ -28,13 +28,13 @@ Admin-flaten («Sekretariatet», `/admin`) får et «Nøkkeltall»-kort som vise
 
 ## Success criteria
 
-- [ ] Admin ser kortet med de tre tallene + 8-ukers trend på `/admin`
-- [ ] Ikke-admin får ikke dataene: RPC med spiller-JWT feiler med `not_authorized` (staging-probet, ikke bare skjult UI); anon har ikke EXECUTE
-- [ ] Tallene stemmer mot manuell SQL-kontroll på staging (dokumentert i evaluering)
-- [ ] Oslo-uker: ukegrensene beregnes i `Europe/Oslo` (DST-trygg `AT TIME ZONE`-trunkering)
-- [ ] Maks én Type C-rendertest; ingen nye skriveveier; ingen ny tracking
-- [ ] Gates grønne: lint, build, full vitest; drift-gate grønn (Functions-typene matcher gen:types)
-- [ ] Versjon + evt. CHANGELOG per beslutning 7
+- [x] Admin ser kortet med de tre tallene + 8-ukers trend på `/admin` — RPC kjørt på staging med ekte admin-JWT-claims (samme GUC-miljø som PostgREST): korrekt payload `{users_ge1: 2, users_ge2: 0, gjenger_ge2: 0, weeks: 8 × {week_start, finished}}`; payload-formen matcher `parseMetrics`-kontrakten i `KeyMetricsCard.tsx`; Type C-rendertest grønn + `npm run build` grønn. **Avvik:** browser-klikkrunden på staging ble ikke kjørt i denne sesjonen — sandbox-policyen nektet autonom staging-innlogging (passord-/cookie-mint). Wiring-mønsteret (Suspense-child + getAdminContext) er identisk med ActionItemsStripe. Eieren bør åpne `/admin` på staging/prod som visuell sisteverifisering.
+- [x] Ikke-admin får ikke dataene — staging-probet: spiller-JWT (`sub` = ikke-admin) → `P0001 not_authorized`; tom claims (anon-ekvivalent auth.uid()=null) → `not_authorized`; `has_function_privilege('anon', …)` = false; ingen PUBLIC-grant; SECURITY DEFINER + `search_path` bekreftet i katalogen. pgTAP-fil `supabase/tests/admin_key_metrics_gate_test.sql` låser tilstanden.
+- [x] Tallene stemmer mot manuell SQL-kontroll på staging — uavhengig formulert kontroll-SQL ga eksakt match (users_ge1=2, users_ge2=0, gjenger_ge2=0, inneværende uke=1, 0 finished-spill uten ended_at). ≥2-grenene bekreftet med syntetisk probe (klonet det fullførte spillet i en transaksjon som alltid ruller tilbake via raise): users_ge2=2, gjenger_ge2=1, uke-telling 2 — null residue etterpå.
+- [x] Oslo-uker — `date_trunc('week', … at time zone 'Europe/Oslo')` i RPC-en; staging-payload ga korrekt mandagsstart 2026-06-29 for inneværende uke (2026-07-02).
+- [x] Maks én Type C-rendertest (én `it` i `KeyMetricsView.test.tsx`, kun data-testid/tall); ingen nye skriveveier (RPC-en er ren SELECT/STABLE); ingen ny tracking.
+- [x] Gates grønne — `npx tsc --noEmit` clean, `npx eslint .` 0 errors, full `npx vitest run` 352 filer / 4463 tester grønne, `npm run build` exit 0. Drift-gate: migrasjonen påført staging → verifisert → prod; håndskrevet Functions-oppføring diffet byte-identisk mot friskt genererte prod-typer.
+- [x] Versjon 1.164.0 → 1.165.0 (minor) på feat-commiten + CHANGELOG Funksjoner-rad med `↳ /admin · «Se tallene»` (presedens: 1.161, admin-synlig funksjon får rad).
 
 ## Out of scope
 
