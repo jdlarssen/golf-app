@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.169 · Offentlige banesider</strong></summary>
+
+[#1023](https://github.com/jdlarssen/golf-app/issues/1023) — Banene i Tørny har fått egne offentlige sider med slope, rating og hull for hull — Google finner dem, og «Arranger runde her» tar deg rett inn i veiviseren med banen valgt.
+
+↳ /baner · «Se banene»
+</details>
+
+<details>
 <summary><strong>1.168 · Offentlig påmeldingsside med plakat</strong></summary>
 
 [#1022](https://github.com/jdlarssen/golf-app/issues/1022) — Påmeldingslenken viser nå en offentlig side med bane, tid og hvem som er med, gir et delebilde i chatten når du deler den, og har en print-klar plakat med QR-kode til oppslagstavla.

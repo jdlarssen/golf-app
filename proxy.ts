@@ -20,7 +20,7 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // exclusions; they moved into code when the matcher had to start matching
 // all pages for the i18n rewrite.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate)(\/|$)/;
+  /^\/(login|register)$|^\/(legal|signup|spectate|baner)(\/|$)/;
 
 /** Split '/en/venner' -> { locale: 'en', pathname: '/venner' }. */
 function splitLocalePrefix(pathname: string): {
@@ -164,10 +164,14 @@ export const config = {
   //     evaluate them for install): sw.js, manifest.webmanifest, icon,
   //     icon0, apple-icon
   //   - favicon.ico, *.svg/png/jpg/jpeg/gif/webp/ico (static assets)
-  // Public PAGES (login/register/legal/signup) are no longer excluded here:
-  // they need the i18n rewrite to resolve at all, so the proxy matches them
-  // and skips auth in code via PUBLIC_PATH_PATTERN instead.
+  //   - sitemap.xml, robots.txt (#1023): root-level metadata routes
+  //     (app/sitemap.ts, app/robots.ts) live OUTSIDE app/[locale]/, so the
+  //     i18n rewrite would 404 them — and crawlers are anonymous, so the
+  //     auth-gate would redirect them to /login. Excluded entirely.
+  // Public PAGES (login/register/legal/signup/baner) are no longer excluded
+  // here: they need the i18n rewrite to resolve at all, so the proxy matches
+  // them and skips auth in code via PUBLIC_PATH_PATTERN instead.
   matcher: [
-    '/((?!_next/static|_next/image|api/|sw\\.js|manifest\\.webmanifest|icon|icon0|apple-icon|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|api/|sw\\.js|manifest\\.webmanifest|sitemap\\.xml|robots\\.txt|icon|icon0|apple-icon|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
