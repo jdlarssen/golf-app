@@ -131,7 +131,9 @@ export default async function AvsluttPage({
             ))}
           </ul>
           <p className="mt-2 text-text">
-            {t('missingBody')}
+            {t.rich('missingBody', {
+              bold: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
         </div>
       )}

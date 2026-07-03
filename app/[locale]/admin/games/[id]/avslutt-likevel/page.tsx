@@ -163,7 +163,14 @@ export default async function AvsluttLikevelPage({
         </div>
 
         <p className="text-sm text-muted">
-          {allowWd ? t('bodyWithWd') : t('bodyNoWd')}
+          {allowWd
+            ? t.rich('bodyWithWd', {
+                notDelivered: (chunks) => <strong>{chunks}</strong>,
+                withdrawn: (chunks) => <strong>{chunks}</strong>,
+              })
+            : t.rich('bodyNoWd', {
+                notDelivered: (chunks) => <strong>{chunks}</strong>,
+              })}
         </p>
 
         <form action={endAnywayAction}>
