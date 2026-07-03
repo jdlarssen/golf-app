@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { Fraunces, Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
@@ -114,6 +115,12 @@ export default async function RootLayout({ children, params }: Props) {
               bak Suspense for ikke å blokkere det statiske skallet (#538). */}
           <Suspense fallback={null}>
             <PerfHud />
+          </Suspense>
+          {/* Cookieless besøksstatistikk (#1036). Sporer route-endringer via
+              usePathname → samme Suspense-krav som PerfHud. No-op utenfor
+              Vercel-deploy. */}
+          <Suspense fallback={null}>
+            <Analytics />
           </Suspense>
         </NextIntlClientProvider>
       </body>

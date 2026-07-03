@@ -4503,6 +4503,8 @@
       "s1Item5": "Invitasjoner du har sendt eller mottatt",
       "s2Heading": "Hvor lagres dataene?",
       "s2Body": "Dataene lagres hos <supabase>Supabase</supabase> i EU-regionen. Serverne befinner seg i Frankfurt, Tyskland, og er underlagt EUs personvernregler (GDPR).",
+      "analyticsHeading": "Besøksstatistikk",
+      "analyticsBody": "Tørny bruker Vercel Web Analytics til anonym besøksstatistikk. Målingen setter ingen informasjonskapsler og lagrer ingen personopplysninger. Vi ser hvor mange som besøker sidene, ikke hvem.",
       "s3Heading": "Hvem ser dataene dine?",
       "s3Para1": "Andre spillere i samme turnering ser navn, kallenavn, handicap-indeks og spillresultatene dine.",
       "s3Para2": "Administrator ser i tillegg e-postadressen din og kan slette deg fra appen.",

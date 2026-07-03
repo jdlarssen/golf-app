@@ -23,6 +23,7 @@
     "@anthropic-ai/sdk": "^0.109.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
+    "@vercel/analytics": "^2.0.1",
     "dexie": "^4.4.2",
     "dexie-react-hooks": "^4.4.0",
     "next": "16.2.6",

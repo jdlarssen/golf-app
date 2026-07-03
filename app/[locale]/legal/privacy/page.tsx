@@ -63,6 +63,14 @@ export default async function PrivacyPage() {
           </p>
         </section>
 
+        {/* Besøksstatistikk (#1036) — cookieless Vercel Web Analytics */}
+        <section>
+          <h2 className="font-serif text-xl font-medium text-text mb-3">
+            {t('analyticsHeading')}
+          </h2>
+          <p className="text-text-muted">{t('analyticsBody')}</p>
+        </section>
+
         {/* Section 3 */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
