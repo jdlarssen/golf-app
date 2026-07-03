@@ -466,6 +466,7 @@ export type Database = {
           rejection_reason: string | null
           result_summary: Json | null
           score_differential: number | null
+          signup_source: string | null
           submitted_at: string | null
           team_number: number | null
           tee_gender: Database["public"]["Enums"]["player_tee_gender"]
@@ -484,6 +485,7 @@ export type Database = {
           rejection_reason?: string | null
           result_summary?: Json | null
           score_differential?: number | null
+          signup_source?: string | null
           submitted_at?: string | null
           team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
@@ -502,6 +504,7 @@ export type Database = {
           rejection_reason?: string | null
           result_summary?: Json | null
           score_differential?: number | null
+          signup_source?: string | null
           submitted_at?: string | null
           team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
