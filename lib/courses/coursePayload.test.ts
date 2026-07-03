@@ -13,9 +13,9 @@ describe('parseGenderRating', () => {
   it.each<[string, string, number | null, number | null]>([
     // [slopeStr, crStr, expectedSlope, expectedCr]
     ['55', '50', 55, 50], // lower edges inside
-    ['155', '80', 155, 80], // upper edges inside
+    ['165', '90', 165, 90], // upper edges inside (relaxed in 0132)
     ['54', '49.9', null, null], // just below → null per field
-    ['156', '80.1', null, null], // just above → null per field
+    ['166', '90.1', null, null], // just above → null per field
     ['113', '72.5', 113, 72.5], // typical: integer slope, fractional CR (finite ok)
     ['100.5', '65', null, 65], // non-integer slope → null, CR ok
     ['', '', null, null], // empty → null

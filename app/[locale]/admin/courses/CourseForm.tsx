@@ -907,7 +907,7 @@ function GenderRatingBlock({
           type="number"
           inputMode="numeric"
           min={55}
-          max={155}
+          max={165}
           step={1}
           label={slopeLabel}
           placeholder={slopePlaceholder}
@@ -923,7 +923,7 @@ function GenderRatingBlock({
           type="number"
           inputMode="decimal"
           min={50}
-          max={80}
+          max={90}
           step={0.1}
           label={crLabel}
           placeholder={crPlaceholder}

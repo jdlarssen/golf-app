@@ -14,12 +14,15 @@ export type GenderRating = {
   course_rating: number | null;
 };
 
-// Ranges mirror the DB CHECK constraints so we surface a friendly error instead
-// of tripping a Postgres constraint.
+// Ranges mirror the DB CHECK constraints (0132) so we surface a friendly error
+// instead of tripping a Postgres constraint. These are sanity bounds against
+// typos, not WHS-conformance gates: the WHS slope ceiling is 155, but some
+// courses publish older, un-capped ratings just above (Miklagard: 157), and
+// course rating has no WHS upper cap at all (ladies from long tees exceed 80).
 const SLOPE_MIN = 55;
-const SLOPE_MAX = 155;
+const SLOPE_MAX = 165;
 const CR_MIN = 50;
-const CR_MAX = 80;
+const CR_MAX = 90;
 const PAR_MIN = 3;
 const PAR_MAX = 6;
 const SI_MIN = 1;
@@ -30,7 +33,7 @@ const LENGTH_MAX = 12000;
 /**
  * Parse + clamp a per-gender rating from raw form strings. Empty or
  * out-of-range values become `null` per field — slope must be an integer in
- * 55–155, course rating a finite number in 50–80.
+ * 55–165, course rating a finite number in 50–90.
  */
 export function parseGenderRating(slopeStr: string, crStr: string): GenderRating {
   const s = slopeStr.trim();
