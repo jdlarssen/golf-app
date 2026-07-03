@@ -78,6 +78,8 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
     supabase
       .from('users')
       .select(userColumns)
+      // #1012: anonymiserte kontoer skal ikke være valgbare i spiller-velgeren.
+      .is('deleted_at', null)
       .order('profile_completed_at', { ascending: true, nullsFirst: false })
       .order('name', { ascending: true, nullsFirst: true })
       .returns<UserRow[]>(),

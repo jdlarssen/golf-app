@@ -3,8 +3,11 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
+import {
+  deleteOrAnonymizeUser,
+  getDeleteBlockReason,
+} from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
 
 export async function deleteUser(formData: FormData) {
@@ -32,33 +35,21 @@ export async function deleteUser(formData: FormData) {
   if (!target) redirect({ href: '/admin/spillere?error=unknown', locale });
   const targetName = target!.name?.trim() || target!.email;
 
-  // Block hvis spilleren har spilt
-  const { count: gpCount } = await supabase
-    .from('game_players')
-    .select('game_id', { count: 'exact', head: true })
-    .eq('user_id', id);
-  if ((gpCount ?? 0) > 0) {
-    redirect({ href: `/admin/spillere/${id}?error=still_has_games`, locale });
+  // #1012: delt blokk-regel med selv-slett — deltakelse i eller arrangering av
+  // noe pågående blokkerer (erstatter den gamle still_has_games-blokken;
+  // spillhistorikk blokkerer ikke lenger, den anonymiseres).
+  const blockReason = await getDeleteBlockReason(id);
+  if (blockReason === 'admin_account') {
+    redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
+  }
+  if (blockReason === 'active_engagements') {
+    redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
   }
 
-  // Slett via service-role. auth.users → public.users cascades (FK i 0001),
-  // så public.users-raden fjernes automatisk.
-  //
-  // NB: Andre FK-er peker inn til public.users(id) uten cascade
-  // (scores.entered_by, invitations.invited_by, courses.created_by,
-  // games.created_by, game_players.approved_by_user_id). I dagens
-  // admin-modell er disse trygt dekket: de peker enten til admin-brukere
-  // (self-protected) eller forutsetter game_players-rad (covered av
-  // has-played-sjekken over). Når arrangør-rolle lander må block-sjekken
-  // utvides til å dekke disse FK-ene eksplisitt — ellers vil sletting
-  // feile med generisk FK-violation som auth_delete_failed-banneret
-  // peker på.
-  try {
-    const admin = getAdminClient();
-    const { error } = await admin.auth.admin.deleteUser(id);
-    if (error) throw error;
-  } catch (err) {
-    console.error('[admin/spillere] deleteUser failed', { id, err });
+  // Aldri spilt → hard delete (kaskaden rydder alt); har historikk →
+  // anonymisering via anonymize_user()-RPC + GoTrue soft delete (#1012).
+  const result = await deleteOrAnonymizeUser(id, '[admin/spillere]');
+  if (!result.ok) {
     redirect({ href: `/admin/spillere/${id}?error=auth_delete_failed`, locale });
   }
 

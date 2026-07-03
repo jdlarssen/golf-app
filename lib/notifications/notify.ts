@@ -47,12 +47,13 @@ export async function notify<K extends NotificationKind>(opts: {
     }),
     admin
       .from('users')
-      .select('last_seen_at, locale, is_guest')
+      .select('last_seen_at, locale, is_guest, deleted_at')
       .eq('id', userId)
       .single<{
         last_seen_at: string | null;
         locale: string | null;
         is_guest: boolean;
+        deleted_at: string | null;
       }>(),
   ]);
 
@@ -76,7 +77,9 @@ export async function notify<K extends NotificationKind>(opts: {
   // gaten for alle shouldAlsoSendMail-konsumenter (gameFinished, cup,
   // påmelding, purring m.fl.); push hoppes over av samme grunn. Selve
   // varsel-raden beholdes — den er gjestens egen historikk etter claim.
-  if (userRes.data?.is_guest) {
+  // #1012: anonymiserte kontoer gates av samme grunn — den randomiserte
+  // adressen kan aldri motta noe, og push-abonnementene er slettet.
+  if (userRes.data?.is_guest || userRes.data?.deleted_at) {
     return { shouldAlsoSendMail: false };
   }
 

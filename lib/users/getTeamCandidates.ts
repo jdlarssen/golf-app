@@ -38,12 +38,14 @@ export async function getTeamCandidates(
   if (candidateIds.length === 0) return [];
 
   // Hent visningsdata. Bare fullførte profiler (har e-post) er meningsfulle
-  // som autocomplete-treff.
+  // som autocomplete-treff. Slettede kontoer (#1012) filtreres: co-player-id-ene
+  // deres består (game_players-radene beholdes ved anonymisering).
   const admin = getAdminClient();
   const { data: users, error } = await admin
     .from('users')
     .select('id, name, nickname, email')
     .in('id', candidateIds)
+    .is('deleted_at', null)
     .returns<TeamCandidate[]>();
   if (error || !users) {
     if (error) {

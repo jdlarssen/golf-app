@@ -51,6 +51,8 @@ export async function InviteToGameSection({
     .from('users')
     .select('id, name, nickname, email, hcp_index')
     .not('profile_completed_at', 'is', null)
+    // #1012: anonymiserte kontoer skal ikke dukke opp som invitér-kandidater.
+    .is('deleted_at', null)
     .order('name', { ascending: true })
     .limit(200)
     .returns<CandidateRow[]>();

@@ -28,6 +28,9 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
     .from('users')
     .select('id, name, nickname, email, hcp_index, is_admin, created_at')
     .not('profile_completed_at', 'is', null)
+    // #1012: anonymiserte husk-rader er ikke spillere lenger — de skjules her
+    // (og i tellingen på sida).
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .returns<User[]>();
 

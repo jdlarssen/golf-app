@@ -9,6 +9,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { getDeleteBlockReason } from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
 import { deleteUser } from './actions';
 
@@ -39,14 +40,22 @@ export default async function DeletePlayerPage({
     redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
   }
 
+  // #1012: spillhistorikk blokkerer ikke lenger (den anonymiseres), men
+  // deltakelse i / arrangering av noe pågående gjør det — delt regel med
+  // selv-slett-flyten.
+  const blockReason = await getDeleteBlockReason(id);
+  if (blockReason === 'admin_account') {
+    redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
+  }
+  if (blockReason === 'active_engagements') {
+    redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
+  }
+
   const { count: gamePlayerCount } = await supabase
     .from('game_players')
     .select('game_id', { count: 'exact', head: true })
     .eq('user_id', id);
-
-  if ((gamePlayerCount ?? 0) > 0) {
-    redirect({ href: `/admin/spillere/${id}?error=still_has_games`, locale });
-  }
+  const hasPlayed = (gamePlayerCount ?? 0) > 0;
 
   const displayName = target!.name?.trim() || target!.email;
   const firstName = target!.name?.trim().split(/\s+/)[0] || 'Spilleren';
@@ -67,7 +76,9 @@ export default async function DeletePlayerPage({
           {tDelete('heading', { name: displayName })}
         </h1>
         <p className="font-sans text-[14px] leading-relaxed text-text">
-          {tDelete('body', { email: target!.email, firstName })}
+          {hasPlayed
+            ? tDelete('bodyPlayed', { email: target!.email, firstName })
+            : tDelete('body', { email: target!.email, firstName })}
         </p>
         <p className="mt-2 font-sans text-[13px] leading-relaxed text-muted">
           {tDelete('cannotUndo')}

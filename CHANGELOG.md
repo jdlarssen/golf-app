@@ -1071,8 +1071,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 4 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 5 rettinger</strong></summary>
 
+- `1.170.1` · [#1012](https://github.com/jdlarssen/golf-app/issues/1012) — «Slett konto» virker nå også når du har fullførte runder: profilen anonymiseres og e-posten frigjøres, mens resultatene står igjen i turneringene som «Slettet bruker». Før feilet slettingen stille.
 - `1.169.1` · [#1018](https://github.com/jdlarssen/golf-app/issues/1018) — «Avslutt likevel»-siden forklarer igjen hva som skjer med spillere som ikke har levert, i stedet for å vise en kryptisk kodenøkkel.
 - `1.169.1` · [#1030](https://github.com/jdlarssen/golf-app/issues/1030) — Vinnervalg-siden for sideturneringer viser igjen forklaringen om manglende leveringer, ikke en rå kodenøkkel.
 - `1.168.2` · [#1020](https://github.com/jdlarssen/golf-app/issues/1020) — «Revansje?» ligger nå også nederst på leaderboardet når runden er ferdig, rett ved «Del resultat». Før bodde knappen bare på spillsiden, som du hopper over når du går rett fra Hjem til resultatet.

@@ -124,6 +124,9 @@ export async function sendDigestForPeriod(
     .is('product_updates_unsubscribed_at', null)
     .not('email', 'is', null)
     .eq('is_guest', false)
+    // #1012: anonymiserte kontoer utelates (belte-og-seler — anonymize_user
+    // setter også product_updates_unsubscribed_at).
+    .is('deleted_at', null)
     .returns<{ id: string; name: string | null; email: string; locale: string | null }[]>();
 
   const settled = await Promise.allSettled(

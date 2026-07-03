@@ -68,6 +68,8 @@ export default async function LeggTilPage({
     .from('users')
     .select('id, name, nickname, email')
     .eq('friend_code', code)
+    // #1012: anonymiserte kontoer kan ikke legges til som venn.
+    .is('deleted_at', null)
     .maybeSingle<Owner>();
 
   if (!owner) notFound();

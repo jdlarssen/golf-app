@@ -29,7 +29,9 @@ const getCounts = cache(async () => {
     supabase
       .from('users')
       .select('id', { count: 'exact', head: true })
-      .not('profile_completed_at', 'is', null),
+      .not('profile_completed_at', 'is', null)
+      // #1012: anonymiserte husk-rader telles ikke som spillere.
+      .is('deleted_at', null),
     supabase
       .from('invitations')
       .select('id', { count: 'exact', head: true })

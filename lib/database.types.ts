@@ -1688,6 +1688,7 @@ export type Database = {
       users: {
         Row: {
           created_at: string
+          deleted_at: string | null
           email: string
           friend_code: string
           gender: Database["public"]["Enums"]["user_gender"] | null
@@ -1706,6 +1707,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           email: string
           friend_code?: string
           gender?: Database["public"]["Enums"]["user_gender"] | null
@@ -1724,6 +1726,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           email?: string
           friend_code?: string
           gender?: Database["public"]["Enums"]["user_gender"] | null
@@ -1824,6 +1827,7 @@ export type Database = {
         Returns: string
       }
       admin_key_metrics: { Args: never; Returns: Json }
+      anonymize_user: { Args: { p_user_id: string }; Returns: undefined }
       befriend_inviter: { Args: { p_inviter: string }; Returns: string }
       can_react_in_game: { Args: { p_game_id: string }; Returns: boolean }
       can_score_for: {

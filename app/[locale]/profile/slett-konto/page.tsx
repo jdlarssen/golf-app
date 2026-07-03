@@ -9,6 +9,7 @@ import { Banner } from '@/components/ui/Banner';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { deleteOwnAccount } from './actions';
+import { getDeleteBlockReason } from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -31,14 +32,12 @@ export default async function SlettKontoPage({
     ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
     : errorCode ? t('errors.delete_failed') : undefined;
 
-  // Check if the user is in any active/scheduled game
-  const { data: activeGames } = await supabase
-    .from('game_players')
-    .select('game_id, games!inner(status, name)')
-    .eq('user_id', userId)
-    .in('games.status', ['active', 'scheduled']);
-
-  const isBlocked = (activeGames ?? []).length > 0;
+  // #1012: delt blokk-regel med admin-flyten — deltakelse i ELLER arrangering
+  // av noe pågående (spill, cup, liga) blokkerer; admin-kontoen alltid.
+  const blockReason = await getDeleteBlockReason(userId);
+  const isBlocked = blockReason !== null;
+  const blockedText =
+    blockReason === 'admin_account' ? t('adminBanner') : t('blockedBanner');
 
   // Get the user's name for display
   const { data: userProfile } = await supabase
@@ -66,7 +65,7 @@ export default async function SlettKontoPage({
       {isBlocked ? (
         <div className="space-y-4">
           <Banner tone="error">
-            {t('blockedBanner')}
+            {blockedText}
           </Banner>
           <SmartLink
             href="/profile"

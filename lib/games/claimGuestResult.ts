@@ -50,13 +50,14 @@ export async function claimGuestEmail(opts: {
   const [userRes, memberRes] = await Promise.all([
     admin
       .from('users')
-      .select('id, name, email, is_guest')
+      .select('id, name, email, is_guest, deleted_at')
       .eq('id', guestUserId)
       .maybeSingle<{
         id: string;
         name: string | null;
         email: string;
         is_guest: boolean;
+        deleted_at: string | null;
       }>(),
     admin
       .from('game_players')
@@ -67,7 +68,9 @@ export async function claimGuestEmail(opts: {
   ]);
 
   const guest = userRes.data;
-  if (!guest || !guest.is_guest || !memberRes.data) {
+  // #1012: en anonymisert gjest kan ikke claimes — noen ville ellers kunne
+  // overta husk-raden (og historikken) til en slettet konto.
+  if (!guest || !guest.is_guest || guest.deleted_at || !memberRes.data) {
     return { ok: false, error: 'guest_claim_not_guest' };
   }
 

@@ -3,7 +3,10 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
+import {
+  deleteOrAnonymizeUser,
+  getDeleteBlockReason,
+} from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
 
 export async function deleteOwnAccount() {
@@ -18,24 +21,21 @@ export async function deleteOwnAccount() {
     return; // unreachable — i18n redirect throws but isn't typed `never`
   }
 
-  // Block if the user is in any active or scheduled game
-  const { data: activeGames } = await supabase
-    .from('game_players')
-    .select('game_id, games!inner(status)')
-    .eq('user_id', user.id)
-    .in('games.status', ['active', 'scheduled']);
-
-  if (activeGames && activeGames.length > 0) {
+  // #1012: admin-kontoen kan ikke slette seg selv; deltakelse i eller
+  // arrangering av noe pågående blokkerer (delt regel med admin-flyten).
+  const blockReason = await getDeleteBlockReason(user.id);
+  if (blockReason === 'admin_account') {
+    redirect({ href: '/profile/slett-konto?error=admin_account', locale });
+  }
+  if (blockReason === 'active_engagements') {
     redirect({ href: '/profile/slett-konto?error=active_games', locale });
   }
 
-  // Delete via service-role. auth.users → public.users cascades via FK.
-  try {
-    const admin = getAdminClient();
-    const { error } = await admin.auth.admin.deleteUser(user.id);
-    if (error) throw error;
-  } catch (err) {
-    console.error('[profile/slett-konto] deleteOwnAccount failed', { userId: user.id, err });
+  // Aldri spilt → hard delete; ellers anonymisering (#1012): spillhistorikken
+  // beholdes som «Slettet bruker», auth-raden soft-slettes (e-post frigjøres,
+  // alle sesjoner trekkes av GoTrue).
+  const result = await deleteOrAnonymizeUser(user.id, '[profile/slett-konto]');
+  if (!result.ok) {
     redirect({ href: '/profile/slett-konto?error=delete_failed', locale });
   }
 

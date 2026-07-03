@@ -19,7 +19,8 @@ vi.mock('@/lib/supabase/admin', () => ({
       select: () => ({
         in: (...args: unknown[]) => {
           inArg(...args);
-          return { returns: () => Promise.resolve(usersRows()) };
+          // #1012: .is('deleted_at', null)-leddet i kjeden
+          return { is: () => ({ returns: () => Promise.resolve(usersRows()) }) };
         },
       }),
     }),

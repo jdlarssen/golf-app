@@ -420,6 +420,24 @@ create or replace function torny_rls.try_set_is_guest(p_target uuid, p_val boole
   end;
   $$;
 
+-- ── users.deleted_at probe (#1012 / 0131: tombstone flag is service-only) ─────
+-- try_set_deleted_at(target): the current impersonated user UPDATEs target's
+-- deleted_at. The 0131 guard blocks every non-admin change (both setting and
+-- clearing — the flag gates picker-/mail-exclusions and the delete-flow retry
+-- shortcircuit); only admins and the service role pass.
+create or replace function torny_rls.try_set_deleted_at(p_target uuid) returns boolean
+  language plpgsql
+  as $$
+  declare v_rows int;
+  begin
+    update public.users set deleted_at = now() where id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- 0131 trigger 42501 or RLS reject
+  end;
+  $$;
+
 -- ── invitations probes (#0107: invitee may flip only accepted_at) ─────────────
 -- try_invitation_accept_only(): the legit accept path — set accepted_at only.
 create or replace function torny_rls.try_invitation_accept_only() returns boolean

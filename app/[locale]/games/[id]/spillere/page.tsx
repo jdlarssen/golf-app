@@ -141,11 +141,13 @@ export default async function CreatorSpillerePage({
   // av getGameWithPlayers-payloaden, #435-disiplinen) — siden er gated bak
   // requireAdminOrCreator over.
   const isFinished = status === 'finished';
-  const guestPlayers = isFinished
+  let guestPlayers = isFinished
     ? players.filter((p) => p.users?.is_guest)
     : [];
   let guestEmailById = new Map<string, string>();
   if (guestPlayers.length > 0) {
+    // #1012: anonymiserte gjester (deleted_at satt) er ikke claimbare og
+    // filtreres ut av claim-seksjonen — claimGuestEmail avviser dem uansett.
     const { data: guestRows } = await getAdminClient()
       .from('users')
       .select('id, email')
@@ -153,8 +155,10 @@ export default async function CreatorSpillerePage({
         'id',
         guestPlayers.map((p) => p.user_id),
       )
+      .is('deleted_at', null)
       .returns<{ id: string; email: string }[]>();
     guestEmailById = new Map((guestRows ?? []).map((r) => [r.id, r.email]));
+    guestPlayers = guestPlayers.filter((p) => guestEmailById.has(p.user_id));
   }
 
   let pendingInvites: { id: string; email: string }[] = [];

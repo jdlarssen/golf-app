@@ -39,6 +39,8 @@ vi.mock('@/lib/supabase/server', () => ({
         },
         order: () => builder,
         eq: () => builder,
+        // #1012: .is('deleted_at', null)-leddet i users-kjeden
+        is: () => builder,
         returns: () => builder,
         // The query builder is awaited inside Promise.all, so it must be a
         // thenable resolving to a PostgREST-shaped { data, error }.
