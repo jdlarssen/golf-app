@@ -23,6 +23,18 @@ export interface LeaderboardShellProps {
    * den `AppShell`-ens bunn-padding og samme senterbredde som leaderboardet.
    */
   footerSlot?: ReactNode;
+  /**
+   * Når `false`, monteres IKKE de spill-koblede sidemontasjene
+   * (`LeaderboardRealtime` + `ShareResultButton` + `RevansjeCta`). Default
+   * `true` beholder dagens oppførsel for alle ekte spill-leaderboards.
+   *
+   * Prøvespill-demoen (#1042) setter `live={false}`: den har ingen bakenfor
+   * liggende spill-rad, så realtime-abonnementet ville uansett vært inert
+   * (`gameIdFromPath('/demo')` → `null`), men å la være å montere det gjør
+   * demoens «null server-berøring»-garanti eksplisitt i stedet for å hvile på
+   * at path-parsingen tilfeldigvis returnerer null.
+   */
+  live?: boolean;
 }
 
 /**
@@ -41,32 +53,40 @@ export function LeaderboardShell({
   children,
   chromeless = false,
   footerSlot,
+  live = true,
 }: LeaderboardShellProps): JSX.Element {
+  // Spill-koblede sidemontasjer — droppes helt når `live={false}` (demoen).
+  // `LeaderboardRealtime` er den eneste som kan åpne et nettverkskall; de to
+  // andre self-gater alt, men holdes under samme flagg siden ingen av dem gir
+  // mening uten et ekte spill bak seg.
+  const floatingCtas = live ? (
+    <>
+      {/* Self-gating: only renders on finished games (#942). */}
+      <ShareResultButton />
+      {/* Renders only when the authed page mounts RevansjeCtaProvider (#1020). */}
+      <RevansjeCta />
+    </>
+  ) : null;
+
   if (chromeless) {
     return (
       <div className="relative isolate">
-        <LeaderboardRealtime />
+        {live && <LeaderboardRealtime />}
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
         {footerSlot}
-        {/* Self-gating: only renders on finished games (#942). */}
-        <ShareResultButton />
-        {/* Renders only when the authed page mounts RevansjeCtaProvider (#1020). */}
-        <RevansjeCta />
+        {floatingCtas}
       </div>
     );
   }
   return (
     <AppShell>
       <div className="relative isolate pb-12">
-        <LeaderboardRealtime />
+        {live && <LeaderboardRealtime />}
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
         {footerSlot}
-        {/* Self-gating: only renders on finished games (#942). */}
-        <ShareResultButton />
-        {/* Renders only when the authed page mounts RevansjeCtaProvider (#1020). */}
-        <RevansjeCta />
+        {floatingCtas}
       </div>
     </AppShell>
   );

@@ -146,6 +146,7 @@ export function DemoGame(): JSX.Element {
           holesPlayed={leaderHolesPlayed}
           highlightUserId={DEMO_YOU_ID}
           chromeless
+          live={false}
         />
       </section>
 

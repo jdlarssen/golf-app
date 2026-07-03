@@ -51,6 +51,11 @@ export interface SoloStablefordViewProps {
    * udefinert: ekte spill-leaderboards rendres uendret.
    */
   highlightUserId?: string;
+  /**
+   * Sendes videre til `LeaderboardShell`. Default `true`. Demoen (#1042) setter
+   * `false` for å droppe de spill-koblede sidemontasjene (realtime m.fl.).
+   */
+  live?: boolean;
 }
 
 /**
@@ -76,6 +81,7 @@ export function SoloStablefordView({
   chromeless = false,
   footerSlot,
   highlightUserId,
+  live = true,
 }: SoloStablefordViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
 
@@ -83,7 +89,7 @@ export function SoloStablefordView({
 
   if (result.players.length === 0) {
     return (
-      <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
+      <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot} live={live}>
         {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           {t('common.noPlayersToShow')}
@@ -93,7 +99,7 @@ export function SoloStablefordView({
   }
 
   return (
-    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot} live={live}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
