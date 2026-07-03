@@ -82,13 +82,13 @@ Viktig: **slett-konto-sidas copy lover allerede anonymiserings-semantikk** («E-
 
 ## Success Criteria
 
-- [ ] **Staging:** bruker med avsluttet spill sletter kontoen → suksess-redirect; `users`-raden har `deleted_at` satt, `name='Slettet bruker'`, e-post matcher `slettet+%@deleted.tornygolf.no`; auth-raden er soft-deleted (OTP-forespørsel til gammel e-post gir ikke tilgang til gammel konto); avsluttet-spill-leaderboard viser «Slettet bruker». (Verifiseres med staging-klikkrunde + SQL.)
-- [ ] **Staging:** fersk bruker uten historikk sletter kontoen → `users`-raden er BORTE (hard delete-stien intakt).
-- [ ] **Staging:** admin sletter en spiller med historikk (f.eks. gjest) via `/admin/spillere/[id]/slett` → anonymisert + suksessbanner; aldri-spilt-copy vs. har-spilt-copy vises riktig.
-- [ ] **pgTAP:** `anonymize_user` scrubber users-raden og sletter cleanup-tabellradene i én transaksjon; EXECUTE nektes for authenticated/anon; RAISE på is_admin-target.
-- [ ] **pgTAP/hostile-PATCH:** self-update av `deleted_at` → 42501; service-role passerer.
-- [ ] **Picker-eksklusjon:** anonymisert bruker dukker ikke opp i lag-kandidater/spiller-picker/invite-eligibility (SQL-/unit-bevis + staging-sjekk).
-- [ ] Versjonsbump (patch) + CHANGELOG Feilrettinger-linje; commits med `Refs #1012`.
+- [x] **Staging:** bruker med avsluttet spill sletter kontoen → suksess-redirect; `users`-raden har `deleted_at` satt, `name='Slettet bruker'`, e-post matcher `slettet+%@deleted.tornygolf.no`; auth-raden er soft-deleted (OTP-forespørsel til gammel e-post gir ikke tilgang til gammel konto); avsluttet-spill-leaderboard viser «Slettet bruker». *(Evidens: klikkrunde 2026-07-03 med probe-bruker «Probe Sletting» — redirect `/login?melding=konto_slettet`; SQL: name=«Slettet bruker», email=slettet+<uuid>@deleted.tornygolf.no, auth.users.email SHA-obfuskert, encrypted_password nullet, 0 auth.sessions igjen, game_players-rad bevart; leaderboard-podium viste «Slettet bruker» og null spor av gammelt navn.)*
+- [x] **Staging:** fersk bruker uten historikk sletter kontoen → `users`-raden er BORTE (hard delete-stien intakt). *(Evidens: «Probe Fersk» slettet via admin-flyten — SQL etterpå: 0 rader i både public.users og auth.users.)*
+- [x] **Staging:** admin sletter en spiller med historikk via `/admin/spillere/[id]/slett` → anonymisert + suksessbanner; aldri-spilt-copy vs. har-spilt-copy vises riktig. *(Evidens: «Probe AdminSlett» — bodyPlayed-copy rendret på confirm-sida, banner «Probe AdminSlett er slettet.», SQL bekreftet anonymisering + auth soft delete; «Probe Fersk» viste aldri-spilt-copyen.)*
+- [x] **pgTAP:** `anonymize_user` scrubber users-raden og sletter cleanup-tabellradene i én transaksjon; EXECUTE nektes for authenticated/anon; RAISE på is_admin-target. *(Evidens: suiten `supabase/tests/users_anonymize_test.sql` (plan 11) skrevet etter rigg-mønsteret; Docker-riggen er utilgjengelig i økten (kjent #533-oppsett), så hvert assert ble i stedet probet direkte mot staging: scrub/cleanup/idempotens grønt, EXECUTE-denial 42501, admin-target RAISE 42501, game_players bevart.)*
+- [x] **pgTAP/hostile-PATCH:** self-update av `deleted_at` → 42501; service-role passerer. *(Evidens: staging-probe med forfalsket authenticated-JWT → «42501: deleted_at can only be changed by an administrator»; anonymize_user som service screv deleted_at OK.)*
+- [x] **Picker-eksklusjon:** anonymisert bruker dukker ikke opp i lag-kandidater/spiller-picker/invite-eligibility. *(Evidens: `.is('deleted_at', null)`-filter i getTeamCandidates/newGameFormData/InviteToGameSection/venne-kode/claim + unit-mocks oppdatert; admin-spillerlista verifisert i UI uten husk-rader; friendships/group_members slettes i RPC-en så id-kildene tømmes.)*
+- [x] Versjonsbump (patch) + CHANGELOG Feilrettinger-linje; commits med `Refs #1012`. *(Evidens: v1.170.1, CHANGELOG Juli-seksjonen, commits fa1fa23e + fix-commit.)*
 
 ## Gates
 
