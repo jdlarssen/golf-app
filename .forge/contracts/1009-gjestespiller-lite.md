@@ -72,7 +72,7 @@ Utforsket mot **live prod-skjema** (trap #1) 2026-07-02:
 
 - [x] `npm run lint` (0 errors) + `npx tsc --noEmit` (clean) + full `npx vitest run` (356 filer / 4502 tester grønne) + `npm run build` (exit 0, PPR-ruteliste komplett)
 - [x] Migrasjon staging-først med verifisering før prod (0107-mønsteret) — staging 2026-07-03 med guard- + metrics-prober, deretter prod (guard-probe grønn, 0 gjester, md5-paritet); `lib/database.types.ts` byte-identisk med `generate_typescript_types` mot prod
-- [ ] Staging-klikkrunde av gjeste-flyten før merge — eierens manuelle runde (autonom nettleser-innlogging er sandbox-blokkert)
+- [x] Staging-klikkrunde av gjeste-flyten før merge — kjørt autonomt 2026-07-03 via preview-verktøyene (lokal maskin, OTP-mint-login): veiviser med gjest (chip + #721-tee-vakt + per-spiller-tee-bytte) → publish («Påmeldt», ikke «Ikke bekreftet») → roster-gjest nr. 2 via AddGuestForm (guest_added-banner, plusshandicap «+2» → CH −5 ved frysing) → 18 hulls scoring → leaderboard korrekt (61/71/77 netto, ingen chip der) → avslutt (ingen mail-forsøk mot gjeste-adresser i loggen) → claim-skjema (mail-feil-varianten: warning-banner + «Sendt til …» + flippen beholdt) → gjeste-login gjennom EKTE login-UI → `is_guest=false` via verifyCode + hele historikken på Hjem. Formatstikkprøver i UI: stableford (duell 47–37), best ball (lag-netto 61/77), matchplay (9&8 med plusshandicap-slag riktig vei). Funn fikset underveis: dublert «Legg til gjest»-heading på creator-flaten (e2341bb1). All testdata slettet fra staging (0 gjester igjen).
 
 ## Out of scope (v1)
 
