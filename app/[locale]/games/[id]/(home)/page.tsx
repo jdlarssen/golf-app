@@ -1031,6 +1031,7 @@ export default async function GameHomePage({
             gameId={id}
             spectateToken={spectateToken}
             locale={locale}
+            gameName={localizeGameName(game.name, game.courses?.name ?? null, locale)}
           />
         )}
 

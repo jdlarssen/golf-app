@@ -1170,6 +1170,7 @@ export type Database = {
           scoring: string
           season_end: string
           season_start: string
+          spectate_token: string | null
           standings_model: string
           started_at: string | null
           status: string
@@ -1192,6 +1193,7 @@ export type Database = {
           scoring?: string
           season_end: string
           season_start: string
+          spectate_token?: string | null
           standings_model: string
           started_at?: string | null
           status?: string
@@ -1214,6 +1216,7 @@ export type Database = {
           scoring?: string
           season_end?: string
           season_start?: string
+          spectate_token?: string | null
           standings_model?: string
           started_at?: string | null
           status?: string

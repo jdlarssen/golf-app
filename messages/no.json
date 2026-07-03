@@ -4066,6 +4066,15 @@
       "penalisedTitle": "Straffescore (ikke spilt)",
       "flaggedTitle": "Levert etter opprinnelig vindu",
       "flaggedAriaLabel": "Levert utenfor vindu"
+    },
+    "embed": {
+      "heading": "Tavle til klubbsiden",
+      "label": "Tavle til klubbsiden",
+      "on": "Tavla er på",
+      "off": "Tavla er av",
+      "hint": "Lim tavla inn på klubbens nettside eller infoskjerm. Alle med lenken kan se den uten å logge inn.",
+      "copySnippet": "Kopier koden til nettsiden",
+      "copied": "Kopiert!"
     }
   },
   "cup": {
@@ -4750,7 +4759,8 @@
     "shareLinkLabel": "Del live-lenke",
     "shareLinkAriaLabel": "Del live-lenke for dette spillet",
     "copiedLabel": "Kopiert!",
-    "shareText": "Følg turneringen live i Tørny"
+    "shareText": "Følg turneringen live i Tørny",
+    "copyEmbedLabel": "Kopier koden til nettsiden"
   },
   "installBanner": {
     "title": "Installer Tørny som app",
@@ -4802,5 +4812,12 @@
       "ctaHeading": "Klar for en runde?",
       "ctaButton": "Arranger runde her"
     }
+  },
+  "embed": {
+    "followOnTorny": "Følg med på Tørny",
+    "liveStatus": "Direkte",
+    "resultStatus": "Sluttresultat",
+    "seasonRunning": "Sesongen er i gang",
+    "seasonDone": "Sesongen er ferdig"
   }
 }

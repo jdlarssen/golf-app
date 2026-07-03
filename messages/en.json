@@ -4066,6 +4066,15 @@
       "penalisedTitle": "Penalty score (not played)",
       "flaggedTitle": "Submitted after the original play window",
       "flaggedAriaLabel": "Submitted outside play window"
+    },
+    "embed": {
+      "heading": "Board for the club website",
+      "label": "Board for the club website",
+      "on": "The board is on",
+      "off": "The board is off",
+      "hint": "Paste the table into your club's website or info screen. Anyone with the link can see it — no login needed.",
+      "copySnippet": "Copy code for your website",
+      "copied": "Copied!"
     }
   },
   "cup": {
@@ -4750,7 +4759,8 @@
     "shareLinkLabel": "Share live link",
     "shareLinkAriaLabel": "Share live link for this game",
     "copiedLabel": "Copied!",
-    "shareText": "Follow the tournament live in Tørny"
+    "shareText": "Follow the tournament live in Tørny",
+    "copyEmbedLabel": "Copy code for your website"
   },
   "installBanner": {
     "title": "Install Tørny as an app",
@@ -4802,5 +4812,12 @@
       "ctaHeading": "Ready for a round?",
       "ctaButton": "Set up a round here"
     }
+  },
+  "embed": {
+    "followOnTorny": "Follow along on Tørny",
+    "liveStatus": "Live",
+    "resultStatus": "Final result",
+    "seasonRunning": "Season in progress",
+    "seasonDone": "Season finished"
   }
 }

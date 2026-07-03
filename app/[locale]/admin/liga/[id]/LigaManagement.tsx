@@ -17,6 +17,7 @@ import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 import { formatShortDateLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { LigaRoundRow } from './LigaRoundRow';
+import { LigaEmbedControl } from './LigaEmbedControl';
 import { LigaAddRound } from './LigaAddRound';
 import { LigaAddPlayers } from './LigaAddPlayers';
 import { LigaRemovePlayer } from './LigaRemovePlayer';
@@ -280,6 +281,19 @@ export async function LigaManagement({
             </>
           )}
         </Card>
+      </section>
+
+      {/* Embed på klubbsiden (#1024) */}
+      <section className="mb-5">
+        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+          {t('embed.heading')}
+        </h2>
+        <LigaEmbedControl
+          leagueId={leagueId}
+          spectateToken={league.spectate_token}
+          locale={locale}
+          leagueName={league.name}
+        />
       </section>
 
       {/* Slett-lenke */}

@@ -13,7 +13,14 @@ import { useRouter } from '@/i18n/navigation';
  * `postgres_changes` (RLS blocks JWT-less WebSocket connections), so polling
  * is the robust MVP for this read-only public surface (#938).
  */
-export function SpectatePoller({ live }: { live: boolean }) {
+export function SpectatePoller({
+  live,
+  intervalMs = 20_000,
+}: {
+  live: boolean;
+  /** #1024: liga-embedden poller roligere (60 s) — sesongtabellen endres sjelden. */
+  intervalMs?: number;
+}) {
   const router = useRouter();
 
   useEffect(() => {
@@ -21,10 +28,10 @@ export function SpectatePoller({ live }: { live: boolean }) {
 
     const id = setInterval(() => {
       router.refresh();
-    }, 20_000);
+    }, intervalMs);
 
     return () => clearInterval(id);
-  }, [live, router]);
+  }, [live, intervalMs, router]);
 
   // Renders nothing — purely a side-effect island.
   return null;

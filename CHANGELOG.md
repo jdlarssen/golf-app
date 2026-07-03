@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.170 · Liga-tavla på klubbens nettside</strong></summary>
+
+[#1024](https://github.com/jdlarssen/golf-app/issues/1024) — Slå på «Tavle til klubbsiden» og lim liga-tabellen eller live-leaderboardet inn på klubbens nettside eller infoskjerm — tavla oppdaterer seg selv og lenker tilbake til Tørny.
+
+↳ /admin/liga · «Se ligaene dine»
+</details>
+
+<details>
 <summary><strong>1.169 · Offentlige banesider</strong></summary>
 
 [#1023](https://github.com/jdlarssen/golf-app/issues/1023) — Banene i Tørny har fått egne offentlige sider med slope, rating og hull for hull — Google finner dem, og «Arranger runde her» tar deg rett inn i veiviseren med banen valgt.

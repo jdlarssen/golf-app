@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { setLiveFollow } from '@/lib/games/spectate';
+import { buildEmbedSnippet } from '@/lib/embed/snippet';
+import { routing } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 
@@ -19,21 +21,33 @@ export function LiveFollowControl({
   gameId,
   spectateToken: initialToken,
   locale,
+  gameName,
 }: {
   gameId: string;
   spectateToken: string | null;
   locale: string;
+  /** #1024: brukes i embed-snuttens iframe-title. */
+  gameName: string;
 }) {
   const t = useTranslations('spectate');
   const [token, setToken] = useState<string | null>(initialToken);
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
 
   const enabled = token !== null;
 
   const spectateUrl =
     typeof window !== 'undefined' && token
       ? `${window.location.origin}/${locale}/spectate/${token}`
+      : null;
+
+  // #1024: default-locale er uprefikset (localePrefix: 'as-needed') — og
+  // header-regelen som tillater framing matcher /embed/..., ikke /no/embed/...
+  const embedPrefix = locale === routing.defaultLocale ? '' : `/${locale}`;
+  const embedUrl =
+    typeof window !== 'undefined' && token
+      ? `${window.location.origin}${embedPrefix}/embed/spill/${token}`
       : null;
 
   function handleToggle() {
@@ -148,6 +162,33 @@ export function LiveFollowControl({
             <path d="m7 8 5-5 5 5" />
           </svg>
           {copied ? t('copiedLabel') : t('shareLinkLabel')}
+        </button>
+      )}
+
+      {/* #1024: kopier-lim-klar iframe-snutt for klubbside/infoskjerm */}
+      {enabled && embedUrl && (
+        <button
+          type="button"
+          onClick={async () => {
+            const snippet = buildEmbedSnippet(embedUrl, {
+              height: 700,
+              title: `Tørny – ${gameName}`,
+            });
+            try {
+              await navigator.clipboard.writeText(snippet);
+              setEmbedCopied(true);
+              setTimeout(() => setEmbedCopied(false), 2000);
+            } catch {
+              // Clipboard write failed — silently ignore (same as share above).
+            }
+          }}
+          className={[
+            'mt-2 flex w-full min-h-[44px] items-center justify-center gap-2',
+            'rounded-2xl border border-border bg-transparent px-4',
+            'text-sm font-medium text-text transition-colors hover:bg-primary-soft',
+          ].join(' ')}
+        >
+          {embedCopied ? t('copiedLabel') : t('copyEmbedLabel')}
         </button>
       )}
     </div>

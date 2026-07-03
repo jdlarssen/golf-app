@@ -85,6 +85,8 @@ export type LeagueRow = {
   finished_at: string | null;
   /** #480: klubb-tilknytning. null = frittstående liga. */
   group_id: string | null;
+  /** #1024: embed-token. null = embed av. */
+  spectate_token: string | null;
 };
 
 export type LeagueSnapshot = {
@@ -105,7 +107,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   const { data: leagueRow, error: lErr } = await supabase
     .from('leagues')
     .select(
-      'id, name, season_start, season_end, format, scoring, standings_model, missed_round_policy, penalty_kind, penalty_fixed_over_par, best_n_count, course_scope, course_id, tee_box_id, status, created_by, created_at, started_at, finished_at, group_id',
+      'id, name, season_start, season_end, format, scoring, standings_model, missed_round_policy, penalty_kind, penalty_fixed_over_par, best_n_count, course_scope, course_id, tee_box_id, status, created_by, created_at, started_at, finished_at, group_id, spectate_token',
     )
     .eq('id', leagueId)
     .maybeSingle();
