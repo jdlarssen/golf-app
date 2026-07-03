@@ -2575,6 +2575,8 @@
     }
   },
   "auth": {
+    "tryDemoDivider": "eller",
+    "tryDemo": "Prøv Tørny på 60 sekunder",
     "errors": {
       "rate_limited": "Vent litt før du prøver igjen.",
       "user_not_found": "Denne mailen er ikke registrert. Be admin om en invitasjon.",
@@ -4817,6 +4819,21 @@
       "ctaHeading": "Klar for en runde?",
       "ctaButton": "Arranger runde her"
     }
+  },
+  "demo": {
+    "pageTitle": "Prøvespill",
+    "gameName": "Prøvespill",
+    "banner": "Dette er et prøvespill. Ingenting du taster blir lagret.",
+    "intro": "Tast inn slagene dine på de tre hullene og se deg selv klatre på tavla.",
+    "holeKicker": "Hull {number} av {total}",
+    "parLabel": "Par {par}",
+    "prevHole": "Forrige",
+    "nextHole": "Neste hull",
+    "finishedHint": "Alle hull tastet. Se hvor du havnet.",
+    "ctaHeading": "Klar for en ekte runde?",
+    "ctaBody": "Lag din egen turnering på et par minutter.",
+    "ctaButton": "Kom i gang",
+    "reset": "Spill på nytt"
   },
   "embed": {
     "followOnTorny": "Følg med på Tørny",

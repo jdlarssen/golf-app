@@ -2575,6 +2575,8 @@
     }
   },
   "auth": {
+    "tryDemoDivider": "or",
+    "tryDemo": "Try Tørny in 60 seconds",
     "errors": {
       "rate_limited": "Slow down — try again in a moment.",
       "user_not_found": "This email isn't registered. Ask an admin for an invitation.",
@@ -4817,6 +4819,21 @@
       "ctaHeading": "Ready for a round?",
       "ctaButton": "Set up a round here"
     }
+  },
+  "demo": {
+    "pageTitle": "Try it out",
+    "gameName": "Demo round",
+    "banner": "This is a demo round. Nothing you enter is saved.",
+    "intro": "Enter your strokes on the three holes and watch yourself climb the board.",
+    "holeKicker": "Hole {number} of {total}",
+    "parLabel": "Par {par}",
+    "prevHole": "Back",
+    "nextHole": "Next hole",
+    "finishedHint": "All holes entered. See where you landed.",
+    "ctaHeading": "Ready for a real round?",
+    "ctaBody": "Set up your own tournament in a couple of minutes.",
+    "ctaButton": "Get started",
+    "reset": "Play again"
   },
   "embed": {
     "followOnTorny": "Follow along on Tørny",

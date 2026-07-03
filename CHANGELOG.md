@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.171 · Prøvespill uten innlogging</strong></summary>
+
+[#1042](https://github.com/jdlarssen/golf-app/issues/1042) — Nå kan hvem som helst prøve Tørny uten å logge inn: åpne prøvespillet, tast noen slag og se deg selv klatre på tavla mot tre motspillere — ingenting lagres, og «Kom i gang» tar deg rett til å lage din egen turnering.
+
+↳ /demo · «Prøv Tørny»
+</details>
+
+<details>
 <summary><strong>1.170 · Liga-tavla på klubbens nettside</strong></summary>
 
 [#1024](https://github.com/jdlarssen/golf-app/issues/1024) — Slå på «Tavle til klubbsiden» og lim liga-tabellen eller live-leaderboardet inn på klubbens nettside eller infoskjerm — tavla oppdaterer seg selv og lenker tilbake til Tørny.

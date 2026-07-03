@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { BrandHero } from '@/components/ui/BrandHero';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
 import { PasskeyLoginButton } from '@/components/passkey/PasskeyLoginButton';
@@ -74,6 +75,20 @@ export default async function LoginPage({
                   process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true'
                 }
               />
+              <div className="mt-6 flex items-center gap-3" aria-hidden="true">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
+                  {t('tryDemoDivider')}
+                </span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <SmartLink
+                href="/demo"
+                data-testid="try-demo-link"
+                className="mt-4 flex items-center justify-center gap-1.5 text-sm font-medium text-primary"
+              >
+                {t('tryDemo')} <span aria-hidden="true">→</span>
+              </SmartLink>
             </>
           ) : (
             <VerifyCodeForm

@@ -20,7 +20,7 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // exclusions; they moved into code when the matcher had to start matching
 // all pages for the i18n rewrite.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed)(\/|$)/;
+  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo)(\/|$)/;
 
 /** Split '/en/venner' -> { locale: 'en', pathname: '/venner' }. */
 function splitLocalePrefix(pathname: string): {

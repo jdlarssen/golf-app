@@ -45,6 +45,12 @@ export interface SoloStablefordViewProps {
   chromeless?: boolean;
   /** Hale-seksjon rendret inni shell-en, etter hovedinnholdet (#386). */
   footerSlot?: ReactNode;
+  /**
+   * Valgfri userId som skal fremheves med en diskret forest-grønn ring —
+   * «det er DEG»-markøren i prøvespill-demoen (#1042). Additiv og default
+   * udefinert: ekte spill-leaderboards rendres uendret.
+   */
+  highlightUserId?: string;
 }
 
 /**
@@ -69,6 +75,7 @@ export function SoloStablefordView({
   backHref = '/',
   chromeless = false,
   footerSlot,
+  highlightUserId,
 }: SoloStablefordViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
 
@@ -116,6 +123,7 @@ export function SoloStablefordView({
               totalPoints={player.totalPoints}
               holesPlayed={player.holesPlayed}
               staggerIndex={i}
+              isYou={highlightUserId != null && player.userId === highlightUserId}
               holesPlayedLabel={t('common.holesPlayedCount', { count: player.holesPlayed })}
               poengLabel={t('common.poengLabel')}
             />
@@ -134,6 +142,7 @@ function PlayerRow({
   displayName,
   totalPoints,
   staggerIndex,
+  isYou = false,
   holesPlayedLabel,
   poengLabel,
 }: {
@@ -143,6 +152,7 @@ function PlayerRow({
   totalPoints: number;
   holesPlayed: number;
   staggerIndex: number;
+  isYou?: boolean;
   holesPlayedLabel: string;
   poengLabel: string;
 }) {
@@ -150,10 +160,16 @@ function PlayerRow({
   // Champagne-tinted Card for vinneren, helt diskret accent for 2-3, og
   // helt nøytral for 4+. Mer subtilt enn State4View sin LeaderCard-hero
   // siden denne view-en brukes både midt-runde og post-finished.
-  const cardClass =
+  // «Deg»-raden (#1042) får en forest-grønn ring oppå — distinkt fra gull-
+  // vinnerkortet, så besøkeren ser seg selv uansett plassering.
+  const cardClass = [
     rank === 1
       ? 'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]'
-      : '';
+      : '',
+    isYou ? 'ring-2 ring-primary/30' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <li
