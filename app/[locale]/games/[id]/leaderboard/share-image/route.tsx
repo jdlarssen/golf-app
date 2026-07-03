@@ -15,6 +15,21 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { computeSharerSideAwards } from '@/lib/games/computeSharerSideAwards';
 import { routing, type AppLocale } from '@/i18n/routing';
+import { loadFonts } from '@/lib/og/fonts';
+import {
+  FOREST,
+  CHAMP,
+  CHAMP_DARK,
+  LINEN,
+  MUTED,
+  TAUPE,
+  CHAMP_TINT,
+  CHAMP_PILL,
+  DISC,
+  WHITE,
+  HAIRLINE,
+  ROW_HAIRLINE,
+} from '@/lib/og/palette';
 
 /** The `leaderboard.shareCard` translator, resolved on the request locale (#971). */
 type ShareT = Awaited<ReturnType<typeof getTranslations>>;
@@ -71,73 +86,6 @@ function renderMatchHeadline(
  */
 
 const WIDTH = 1080;
-
-// Brand palette — hardcoded hex on purpose: this is a fixed-look image that must
-// NOT invert in dark mode (unlike the app's CSS-variable surfaces).
-const FOREST = '#1B4332';
-const CHAMP = '#C9A961';
-const CHAMP_DARK = '#8A6F2E';
-const LINEN = '#F8F6F0';
-const MUTED = '#6B6354';
-const TAUPE = '#4A3F30';
-const CHAMP_TINT = '#F6EDD6';
-const CHAMP_PILL = '#F1E6C9';
-const DISC = '#ECE7DB';
-const WHITE = '#FFFFFF';
-const HAIRLINE = 'rgba(201,169,97,0.40)';
-const ROW_HAIRLINE = 'rgba(27,67,50,0.08)';
-
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36';
-
-/**
- * Fetch one Google-font weight as a ttf ArrayBuffer (or null on any failure),
- * mirroring `app/icon.tsx`. Spoofs a desktop UA so the css2 endpoint returns a
- * ttf URL we can parse. Graceful: a null just means Satori uses its default.
- */
-async function fetchGoogleFont(
-  family: string,
-  weight: number,
-): Promise<ArrayBuffer | null> {
-  const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
-    family,
-  )}:wght@${weight}&display=swap`;
-  try {
-    const css = await fetch(cssUrl, { headers: { 'User-Agent': UA } }).then(
-      (r) => (r.ok ? r.text() : ''),
-    );
-    const m = css.match(/url\((https:\/\/[^)]+\.ttf)\)/);
-    if (!m) return null;
-    return await fetch(m[1]).then((r) => (r.ok ? r.arrayBuffer() : null));
-  } catch {
-    return null;
-  }
-}
-
-type LoadedFonts = {
-  fonts: { name: string; data: ArrayBuffer; weight: 400 | 500 | 600; style: 'normal' }[];
-  hasFraunces: boolean;
-  hasInter: boolean;
-};
-
-async function loadFonts(): Promise<LoadedFonts> {
-  const [fr500, fr600, in400, in500] = await Promise.all([
-    fetchGoogleFont('Fraunces', 500),
-    fetchGoogleFont('Fraunces', 600),
-    fetchGoogleFont('Inter', 400),
-    fetchGoogleFont('Inter', 500),
-  ]);
-  const fonts: LoadedFonts['fonts'] = [];
-  if (fr500) fonts.push({ name: 'Fraunces', data: fr500, weight: 500, style: 'normal' });
-  if (fr600) fonts.push({ name: 'Fraunces', data: fr600, weight: 600, style: 'normal' });
-  if (in400) fonts.push({ name: 'Inter', data: in400, weight: 400, style: 'normal' });
-  if (in500) fonts.push({ name: 'Inter', data: in500, weight: 500, style: 'normal' });
-  return {
-    fonts,
-    hasFraunces: Boolean(fr500 || fr600),
-    hasInter: Boolean(in400 || in500),
-  };
-}
 
 function osloDate(iso: string | null, locale: AppLocale): string | null {
   if (!iso) return null;
