@@ -7,7 +7,7 @@ import { getGameWithPlayers } from './getGameWithPlayers';
 import { buildRoundReportFacts } from './roundReportFacts';
 import { buildRoundReportPrompt, sanitizeRoundReport } from './roundReportPrompt';
 
-const MODEL = 'claude-haiku-4-5';
+const MODEL = 'claude-sonnet-5';
 const MAX_TOKENS = 800;
 const TIMEOUT_MS = 20_000;
 const MAX_RETRIES = 1;

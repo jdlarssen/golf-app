@@ -211,7 +211,7 @@ describe('generateAndPersistRoundReport', () => {
     expect(messagesCreateMock).toHaveBeenCalledTimes(1);
     const callArgs = messagesCreateMock.mock.calls[0][0];
     expect(callArgs).toMatchObject({
-      model: 'claude-haiku-4-5',
+      model: 'claude-sonnet-5',
       max_tokens: 800,
     });
     expect(callArgs).not.toHaveProperty('temperature');
