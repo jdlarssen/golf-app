@@ -14,6 +14,7 @@ import {
   getLeaderboardContext,
 } from './leaderboardContext';
 import { renderLeaderboardContent } from './leaderboardContent';
+import { RevansjeCtaProvider } from './RevansjeCta';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -145,7 +146,7 @@ export default async function LeaderboardPage({
   // No inner Suspense boundary here: the route-level loading.tsx
   // (LeaderboardSkeleton) covers the whole wait. An inner boundary would
   // only swap one skeleton for another mid-wait (#539).
-  return renderLeaderboardContent({
+  const content = await renderLeaderboardContent({
     gameId: id,
     game,
     mode,
@@ -155,4 +156,22 @@ export default async function LeaderboardPage({
     includeReactions: true,
     viewerUserId: userId,
   });
+
+  // #1020: «Revansje?» in the leaderboard footer area. Same gate as the
+  // game-home button (#1007) — finished, standalone (not cup/liga) — plus a
+  // participant requirement: the `?fra=` loader ignores the param for
+  // non-participants, so the CTA must never promise them a prefill. The
+  // spectate route renders the same content without this provider, so the
+  // CTA cannot leak there.
+  const showRevansje =
+    game.status === 'finished' &&
+    !game.tournament_id &&
+    !game.league_round_id &&
+    gwp.players.some((p) => p.user_id === userId);
+  if (!showRevansje) return content;
+  return (
+    <RevansjeCtaProvider href={`/opprett-spill?fra=${id}`}>
+      {content}
+    </RevansjeCtaProvider>
+  );
 }

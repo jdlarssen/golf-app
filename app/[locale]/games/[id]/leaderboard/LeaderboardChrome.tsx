@@ -6,6 +6,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { LeaderboardRealtime } from './LeaderboardRealtime';
 import { ShareResultButton } from './ShareResultButton';
+import { RevansjeCta } from './RevansjeCta';
 
 export interface LeaderboardShellProps {
   children: ReactNode;
@@ -50,6 +51,8 @@ export function LeaderboardShell({
         {footerSlot}
         {/* Self-gating: only renders on finished games (#942). */}
         <ShareResultButton />
+        {/* Renders only when the authed page mounts RevansjeCtaProvider (#1020). */}
+        <RevansjeCta />
       </div>
     );
   }
@@ -62,6 +65,8 @@ export function LeaderboardShell({
         {footerSlot}
         {/* Self-gating: only renders on finished games (#942). */}
         <ShareResultButton />
+        {/* Renders only when the authed page mounts RevansjeCtaProvider (#1020). */}
+        <RevansjeCta />
       </div>
     </AppShell>
   );

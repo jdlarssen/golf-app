@@ -1055,8 +1055,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 1 retting</strong></summary>
+<summary><strong>Juli 2026 · 2 rettinger</strong></summary>
 
+- `1.168.2` · [#1020](https://github.com/jdlarssen/golf-app/issues/1020) — «Revansje?» ligger nå også nederst på leaderboardet når runden er ferdig, rett ved «Del resultat». Før bodde knappen bare på spillsiden, som du hopper over når du går rett fra Hjem til resultatet.
 - `1.162.3` · [#1011](https://github.com/jdlarssen/golf-app/issues/1011) — Setter du opp sideturnering på siste steg og lar «Vis avanserte innstillinger» stå lukket, blir valget nå med ved publisering i stedet for å forsvinne stille.
 </details>
 
