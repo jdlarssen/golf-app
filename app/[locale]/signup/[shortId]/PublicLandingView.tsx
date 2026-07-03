@@ -5,6 +5,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { PaymentInfo } from '@/components/PaymentInfo';
 import type { PublicSignupRoster } from '@/lib/games/getPublicSignupRoster';
 
 /**
@@ -21,6 +22,8 @@ export function PublicLandingView({
   roster,
   joinHref,
   posterHref,
+  entryFeeKr,
+  paymentLink,
 }: {
   gameName: string;
   modeLabel: string;
@@ -29,6 +32,8 @@ export function PublicLandingView({
   roster: PublicSignupRoster;
   joinHref: string;
   posterHref: string;
+  entryFeeKr: number;
+  paymentLink: string | null;
 }) {
   const t = useTranslations('signup.public');
 
@@ -62,6 +67,12 @@ export function PublicLandingView({
               </div>
             )}
           </dl>
+
+          <PaymentInfo
+            entryFeeKr={entryFeeKr}
+            paymentLink={paymentLink}
+            className="mt-4"
+          />
 
           <div className="mt-4" data-testid="public-landing-roster">
             {roster.count === 0 ? (

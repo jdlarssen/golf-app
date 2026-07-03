@@ -22,6 +22,7 @@ import {
   signupSourceFromParam,
 } from '@/lib/games/publicSignupVisibility';
 import { getPublicSignupRoster } from '@/lib/games/getPublicSignupRoster';
+import { PaymentInfo } from '@/components/PaymentInfo';
 import { PublicLandingView } from './PublicLandingView';
 import { RegistrationForm, type MatchplaySideData } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
@@ -135,6 +136,8 @@ export default async function PåmeldingPage({
           roster={roster}
           joinHref={`/login?next=${encodeURIComponent(`/signup/${shortId}${srcSuffix}`)}`}
           posterHref={`/signup/${shortId}/plakat`}
+          entryFeeKr={game.entry_fee_kr}
+          paymentLink={game.payment_link}
         />
       );
     }
@@ -320,6 +323,11 @@ export default async function PåmeldingPage({
             </p>
           )}
         </header>
+
+        <PaymentInfo
+          entryFeeKr={game.entry_fee_kr}
+          paymentLink={game.payment_link}
+        />
 
         <Card>
           {renderBody({

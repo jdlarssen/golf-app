@@ -135,6 +135,13 @@ export type GameForHole = {
    * finished branch.
    */
   round_report: string | null;
+  /**
+   * #1049: startkontingent (kr) per spiller + betalingsmåte (Vipps-nr/lenke).
+   * 0 = ingen kontingent. Drives betal-oppfordringen (`PaymentInfo`) på
+   * spill-hjem til spillerens `paid_at` er satt.
+   */
+  entry_fee_kr: number;
+  payment_link: string | null;
 };
 
 export type PlayerForHole = {
@@ -152,6 +159,12 @@ export type PlayerForHole = {
    * bekreftet ennå («Ikke bekreftet»-badge). Ikke en sperre — scorene teller.
    */
   accepted_at: string | null;
+  /**
+   * #1049: non-null = arrangøren har huket av at spilleren har betalt
+   * startkontingenten. null = ikke betalt. Skjuler betal-oppfordringen på
+   * spill-hjem når satt. Kun arrangør (admin/creator) kan sette den.
+   */
+  paid_at: string | null;
   // Hole entry only renders when status is 'active' or 'finished'; pending
   // invitees can't reach those states per Task 7's publish-gate. Typed
   // nullable to match the DB column.
@@ -177,14 +190,14 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
       .single<GameForHole>(),
     supabase
       .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, withdrawn_at, accepted_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)',
+        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, withdrawn_at, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)',
       )
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),
@@ -221,7 +234,12 @@ export async function getGameWithPlayers(
   // #1009: bumped to 'gwp4' when `users.is_guest` joined the players-select —
   // a stale entry would resolve it as `undefined` and the «Gjest»-chip +
   // claim-seksjonen on the spillere page would silently not render.
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp4', id], {
+  //
+  // #1049: bumped to 'gwp5' when `entry_fee_kr`/`payment_link` (game) and
+  // `paid_at` (players) joined the select — a stale 'gwp4' entry would resolve
+  // them as `undefined`, so the betal-oppfordringen (`PaymentInfo`) on
+  // spill-hjem could silently fail to render on games with a fee.
+  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp5', id], {
     tags: [`game-${id}`],
     revalidate: 900,
   })();

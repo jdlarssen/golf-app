@@ -10,6 +10,7 @@ import { after } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AppShell } from '@/components/ui/AppShell';
+import { PaymentInfo } from '@/components/PaymentInfo';
 import { BackLink } from '@/components/ui/BackLink';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -764,6 +765,15 @@ export default async function GameHomePage({
           label={tGameStatus(game.status)}
         />
       </div>
+
+      {/* #1049: startkontingent-oppfordring — vises til arrangøren huker av
+          spilleren som betalt. Self-hider når spillet ikke har kontingent. */}
+      <PaymentInfo
+        entryFeeKr={gwp.game.entry_fee_kr}
+        paymentLink={gwp.game.payment_link}
+        paid={me.paid_at != null}
+        className="mb-4"
+      />
 
       {isDraft && (
         <div className="mb-4">

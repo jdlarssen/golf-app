@@ -35,6 +35,8 @@ const baseGame: Omit<GameForHole, 'game_mode' | 'mode_config'> = {
   foursomes_side1_tee_starter_user_id: null,
   foursomes_side2_tee_starter_user_id: null,
   round_report: null,
+  entry_fee_kr: 0,
+  payment_link: null,
   tee_box: {
     name: 'Hvit',
     slope_mens: 130,
@@ -71,6 +73,7 @@ function player(
     rejection_reason: null,
     withdrawn_at: null,
     accepted_at: null,
+    paid_at: null,
     users: { name: user_id, nickname: null, is_guest: false },
     tee_gender: 'mens',
     ...opts,

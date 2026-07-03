@@ -18,6 +18,8 @@ describe('PublicLandingView (#1022)', () => {
         roster={{ count: 14, names: ['Kari H.', 'Ola N.'], overflow: 12 }}
         joinHref="/login?next=%2Fsignup%2Fabc123xy%3Fsrc%3Dpublic"
         posterHref="/signup/abc123xy/plakat"
+        entryFeeKr={0}
+        paymentLink={null}
       />,
     );
 

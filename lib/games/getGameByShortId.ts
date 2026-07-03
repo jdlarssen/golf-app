@@ -36,6 +36,10 @@ export type ShortIdGame = {
   let_friends_skip_gate: boolean;
   // #543: arrangøren kan stenge påmeldingen manuelt.
   signups_closed_at: string | null;
+  // #1049: startkontingent + betalingsmåte — vises i påmeldingsflyten så folk
+  // vet kostnaden før de melder seg på. Trygge å eksponere uten autentisering.
+  entry_fee_kr: number;
+  payment_link: string | null;
 };
 
 // React.cache: generateMetadata + page (#1022) slår begge opp samme shortId i
@@ -54,7 +58,7 @@ export const getGameByShortId = cache(async function getGameByShortId(
   const { data, error } = await admin
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at, entry_fee_kr, payment_link',
     )
     .eq('short_id', shortId)
     .maybeSingle<ShortIdGame>();

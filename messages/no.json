@@ -433,6 +433,15 @@
     "active": "Pågående",
     "finished": "Avsluttet"
   },
+  "payment": {
+    "label": "Startkontingent",
+    "payVia": "Betal her",
+    "vippsTo": "Vipps til {number}",
+    "copy": "Kopier",
+    "copied": "Kopiert",
+    "arrangeWithHost": "Avtal betaling med arrangøren.",
+    "paidBadge": "Startkontingent betalt"
+  },
   "wizard": {
     "intent": {
       "legend": "Hva slags arrangement?",

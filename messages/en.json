@@ -433,6 +433,15 @@
     "active": "In progress",
     "finished": "Finished"
   },
+  "payment": {
+    "label": "Entry fee",
+    "payVia": "Pay here",
+    "vippsTo": "Vipps to {number}",
+    "copy": "Copy",
+    "copied": "Copied",
+    "arrangeWithHost": "Arrange payment with the organiser.",
+    "paidBadge": "Entry fee paid"
+  },
   "wizard": {
     "intent": {
       "legend": "What kind of event?",
