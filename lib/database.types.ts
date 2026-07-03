@@ -466,6 +466,7 @@ export type Database = {
           deliver_reminder_sent_at: string | null
           flight_number: number | null
           game_id: string
+          paid_at: string | null
           rejection_reason: string | null
           result_summary: Json | null
           score_differential: number | null
@@ -485,6 +486,7 @@ export type Database = {
           deliver_reminder_sent_at?: string | null
           flight_number?: number | null
           game_id: string
+          paid_at?: string | null
           rejection_reason?: string | null
           result_summary?: Json | null
           score_differential?: number | null
@@ -504,6 +506,7 @@ export type Database = {
           deliver_reminder_sent_at?: string | null
           flight_number?: number | null
           game_id?: string
+          paid_at?: string | null
           rejection_reason?: string | null
           result_summary?: Json | null
           score_differential?: number | null
@@ -667,6 +670,7 @@ export type Database = {
           created_by: string | null
           delivered_outside_window: boolean
           ended_at: string | null
+          entry_fee_kr: number
           foursomes_side1_tee_starter_user_id: string | null
           foursomes_side2_tee_starter_user_id: string | null
           game_mode: string
@@ -677,6 +681,7 @@ export type Database = {
           let_friends_skip_gate: boolean
           mode_config: Json
           name: string
+          payment_link: string | null
           registration_mode: Database["public"]["Enums"]["registration_mode"]
           registration_type: Database["public"]["Enums"]["registration_type"]
           require_peer_approval: boolean
@@ -703,6 +708,7 @@ export type Database = {
           created_by?: string | null
           delivered_outside_window?: boolean
           ended_at?: string | null
+          entry_fee_kr?: number
           foursomes_side1_tee_starter_user_id?: string | null
           foursomes_side2_tee_starter_user_id?: string | null
           game_mode: string
@@ -713,6 +719,7 @@ export type Database = {
           let_friends_skip_gate?: boolean
           mode_config?: Json
           name: string
+          payment_link?: string | null
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
           require_peer_approval?: boolean
@@ -739,6 +746,7 @@ export type Database = {
           created_by?: string | null
           delivered_outside_window?: boolean
           ended_at?: string | null
+          entry_fee_kr?: number
           foursomes_side1_tee_starter_user_id?: string | null
           foursomes_side2_tee_starter_user_id?: string | null
           game_mode?: string
@@ -749,6 +757,7 @@ export type Database = {
           let_friends_skip_gate?: boolean
           mode_config?: Json
           name?: string
+          payment_link?: string | null
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
           require_peer_approval?: boolean
