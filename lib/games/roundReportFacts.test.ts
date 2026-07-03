@@ -143,6 +143,98 @@ describe('solo_strokeplay — placement band + checkpoints', () => {
 });
 
 // ---------------------------------------------------------------------------
+// #1029 — raw-score tie at the top: the final checkpoint must agree with the
+// engine's tiebreak ranking, and the tie itself becomes an explicit fact.
+// Mirrors the «Byneset North 21. juni»-case (stableford, 33–33) in miniature.
+// ---------------------------------------------------------------------------
+describe('#1029 — final checkpoint agrees with standings at a raw-score tie', () => {
+  /** 7 holes: Karl (u1) leads 12–10 after 6; Jørgen (u2) draws level 14–14 on
+   * hole 7 and takes rank 1 on the engine's tiebreak cascade. */
+  function tieHole(
+    holeNumber: number,
+    u1Points: number,
+    u2Points: number,
+  ): Extract<StablefordResult, { variant: 'solo' }>['holes'][number] {
+    const best =
+      u1Points === u2Points ? ['u1', 'u2'] : u1Points > u2Points ? ['u1'] : ['u2'];
+    return {
+      holeNumber,
+      par: 4,
+      strokeIndex: holeNumber,
+      perPlayer: [
+        { userId: 'u1', gross: 4, points: u1Points, par: 4 },
+        { userId: 'u2', gross: 4, points: u2Points, par: 4 },
+      ],
+      bestUserIds: best,
+    };
+  }
+
+  const result: StablefordResult = {
+    kind: 'stableford',
+    variant: 'solo',
+    holes: [
+      tieHole(1, 2, 2),
+      tieHole(2, 2, 2),
+      tieHole(3, 2, 2),
+      tieHole(4, 2, 2),
+      tieHole(5, 2, 1),
+      tieHole(6, 2, 1),
+      tieHole(7, 2, 4),
+    ],
+    players: [
+      { userId: 'u2', totalPoints: 14, rank: 1, holesPlayed: 7, tiedWith: [] },
+      { userId: 'u1', totalPoints: 14, rank: 2, holesPlayed: 7, tiedWith: [] },
+    ],
+  };
+  const nameByUserId = names(['u1', 'Karl'], ['u2', 'Jørgen']);
+
+  function build() {
+    return buildRoundReportFacts({
+      result,
+      nameByUserId,
+      gameMode: 'stableford',
+      ...BASE,
+    });
+  }
+
+  it('final checkpoint names the tiebreak winner, not the raw-sum leader', () => {
+    const facts = build();
+    expect(facts.winnerName).toBe('Jørgen');
+    const last = facts.checkpoints?.at(-1);
+    expect(last).toEqual({ afterHole: 7, leaderName: 'Jørgen' });
+  });
+
+  it('mid-round checkpoints keep the raw running leader', () => {
+    const facts = build();
+    expect(facts.checkpoints?.[0]).toEqual({ afterHole: 6, leaderName: 'Karl' });
+  });
+
+  it('sets decidedByTiebreak when the top two share the same score label', () => {
+    const facts = build();
+    expect(facts.standings[0].scoreLabel).toBe(facts.standings[1].scoreLabel);
+    expect(facts.decidedByTiebreak).toBe(true);
+  });
+
+  it('omits decidedByTiebreak when the winner is clear on raw score', () => {
+    const clearResult: StablefordResult = {
+      ...result,
+      holes: [tieHole(1, 4, 2)],
+      players: [
+        { userId: 'u1', totalPoints: 4, rank: 1, holesPlayed: 1, tiedWith: [] },
+        { userId: 'u2', totalPoints: 2, rank: 2, holesPlayed: 1, tiedWith: [] },
+      ],
+    };
+    const facts = buildRoundReportFacts({
+      result: clearResult,
+      nameByUserId,
+      gameMode: 'stableford',
+      ...BASE,
+    });
+    expect(facts.decidedByTiebreak).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Placement band — team format (best_ball) — standings + margin only, no checkpoints
 // ---------------------------------------------------------------------------
 describe('best_ball — team placement, no checkpoints field', () => {

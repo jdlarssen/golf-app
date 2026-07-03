@@ -41,6 +41,12 @@ export type RoundReportStandingRow = {
 
 export type RoundReportCheckpoint = {
   afterHole: number;
+  /**
+   * Running raw-score leader at this marker. At the FINAL scored hole the
+   * leader is the standings winner (tiebreak included), never the raw-sum
+   * leader — otherwise a raw tie makes the facts contradict `winnerName`
+   * (#1029). Ties at mid-round markers keep first-encountered raw leader.
+   */
   leaderName: string;
 };
 
@@ -84,6 +90,12 @@ export type RoundReportFacts = {
   scoredHoles: number;
   /** Only present for solo strokeplay/stableford — leader after holes 6/12/18. */
   checkpoints?: RoundReportCheckpoint[];
+  /**
+   * Present (true) when the top two placement rows carry the same score label
+   * — the raw scores tied and the winner was separated only by the tiebreak
+   * cascade. Lets the report say «avgjort på tiebreak» with cover (#1029).
+   */
+  decidedByTiebreak?: true;
   /** Only present when band === 'placement' AND a margin was cheaply derivable. */
   margin?: string;
   /** Only present when band === 'matchplay'. */
@@ -145,8 +157,15 @@ export function buildRoundReportFacts(
   } else if (card.band === 'skins' && result.kind === 'skins') {
     facts.skins = buildSkinsFacts(result, nameByUserId);
   } else if (card.band === 'placement') {
-    const checkpoints = buildCheckpoints(result, nameByUserId);
+    const checkpoints = buildCheckpoints(result, nameByUserId, facts.winnerName);
     if (checkpoints) facts.checkpoints = checkpoints;
+    if (
+      standings.length >= 2 &&
+      standings[0].rank !== standings[1].rank &&
+      standings[0].scoreLabel === standings[1].scoreLabel
+    ) {
+      facts.decidedByTiebreak = true;
+    }
   }
 
   return facts;
@@ -385,6 +404,7 @@ function buildSkinsFacts(
 function buildCheckpoints(
   result: ModeResult,
   nameByUserId: Map<string, string>,
+  finalLeaderName: string | null,
 ): RoundReportCheckpoint[] | null {
   if (result.kind === 'solo_strokeplay') {
     return checkpointsFromCumulative(
@@ -395,6 +415,7 @@ function buildCheckpoints(
       nameByUserId,
       // Lower cumulative net strokes = leading.
       (a, b) => a - b,
+      finalLeaderName,
     );
   }
 
@@ -407,6 +428,7 @@ function buildCheckpoints(
       nameByUserId,
       // Higher cumulative points = leading.
       (a, b) => b - a,
+      finalLeaderName,
     );
   }
 
@@ -419,11 +441,18 @@ function buildCheckpoints(
  * (by `compare`) after hole 6, hole 12, and the final scored hole. A hole
  * with a null value for a player doesn't change that player's running total
  * (mirrors "hole not played yet" — pick-up holes stay excluded).
+ *
+ * The LAST checkpoint always sits at the final scored hole, i.e. it describes
+ * the finished round — so its leader is `finalLeaderName` (the standings
+ * winner, tiebreak included), never the raw-sum leader. A raw tie otherwise
+ * produces facts where «ledet etter siste hull» contradicts `winnerName`
+ * (#1029).
  */
 function checkpointsFromCumulative(
   holes: Array<{ holeNumber: number; perPlayer: Array<{ userId: string; value: number | null }> }>,
   nameByUserId: Map<string, string>,
   compare: (a: number, b: number) => number,
+  finalLeaderName: string | null,
 ): RoundReportCheckpoint[] | null {
   const sorted = [...holes].sort((a, b) => a.holeNumber - b.holeNumber);
   const cumulative = new Map<string, number>();
@@ -449,6 +478,11 @@ function checkpointsFromCumulative(
   if (lastScoredHole !== null && !markers.has(lastScoredHole) && cumulative.size > 0) {
     const leaderName = leaderFromCumulative(cumulative, nameByUserId, compare);
     if (leaderName) checkpoints.push({ afterHole: lastScoredHole, leaderName });
+  }
+
+  if (checkpoints.length > 0 && finalLeaderName !== null) {
+    const last = checkpoints[checkpoints.length - 1];
+    checkpoints[checkpoints.length - 1] = { ...last, leaderName: finalLeaderName };
   }
 
   return checkpoints.length > 0 ? checkpoints : null;
