@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidateTag } from 'next/cache';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
@@ -92,6 +93,10 @@ export async function updateCourse(courseId: string, formData: FormData) {
     redirect({ href: `${editPath}?error=db_course`, locale });
   }
 
+  // #1045: rename/holes/tees all feed isPubliclyEligible → an edit can (un)qualify
+  // a course or change its /baner card. Invalidate before redirect.
+  revalidateTag('public-courses', 'max');
+
   redirect({ href: `/admin/courses?status=updated&name=${encodeURIComponent(name)}`, locale });
 }
 
@@ -149,6 +154,11 @@ export async function restoreTee(
   revalidatePath('/admin/courses');
   revalidatePath('/admin/games/new');
 
+  // #1045: un-archiving a tee raises the active-tee count and can flip a course
+  // from ineligible → eligible (0 → 1 rated active tee), so the public `/baner`
+  // cache must invalidate too.
+  revalidateTag('public-courses', 'max');
+
   redirect({ href: `${editPath}?status=restored`, locale });
 }
 
@@ -179,6 +189,10 @@ export async function deleteCourse(courseId: string) {
   if (deleteError) {
     redirect({ href: '/admin/courses?error=delete_failed', locale });
   }
+
+  // #1045: a deleted course must drop off `/baner` immediately, not after the
+  // 24t revalidate. Before redirect.
+  revalidateTag('public-courses', 'max');
 
   redirect({ href: '/admin/courses?status=deleted', locale });
 }

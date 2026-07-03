@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidateTag } from 'next/cache';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -81,6 +82,11 @@ export async function createCourse(formData: FormData) {
     console.error('[createCourse] create_course_with_layout failed', rpcError);
     return fail('db_course');
   }
+
+  // #1045: a new admin course may be publicly eligible → invalidate the
+  // `/baner` cache so it appears on next visit, not after the 24t revalidate.
+  // Before redirect() (which throws NEXT_REDIRECT and would skip this).
+  revalidateTag('public-courses', 'max');
 
   redirect({
     href: appendQuery(successRedirect, 'name', encodeURIComponent(name)),

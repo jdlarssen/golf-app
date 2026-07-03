@@ -1,5 +1,5 @@
 import 'server-only';
-import { cacheLife } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getRatingForGender } from '@/lib/games/teeRating';
@@ -100,13 +100,15 @@ export type PublicCourseSummary = {
 
 /**
  * List all publicly eligible courses (id, name, slug, hole/tee counts) for
- * `/baner`. Cached for days — course rosters change ~never (contract:
- * "banedata er kvasi-statisk; revalidateTag-nett … ikke verdt kompleksiteten
- * i v1").
+ * `/baner`. Cached for days — course rosters change ~never — but tagged
+ * `public-courses` (#1045) so a bane-mutasjon invalidates it immediately
+ * instead of leaving `/baner` stale for up to 24t. `cacheLife` stays as the
+ * time-based stale ceiling; the tag adds explicit invalidation on top.
  */
 export async function listPublicCourses(): Promise<PublicCourseSummary[]> {
   'use cache';
   cacheLife('days');
+  cacheTag('public-courses');
 
   const anon = getPublicAnonClient();
   const { data, error } = await anon
@@ -177,6 +179,7 @@ export async function getPublicCourseBySlug(
 ): Promise<PublicCourseDetail | null> {
   'use cache';
   cacheLife('days');
+  cacheTag('public-courses');
 
   const anon = getPublicAnonClient();
   const { data, error } = await anon

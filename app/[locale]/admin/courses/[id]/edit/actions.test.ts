@@ -25,8 +25,12 @@ vi.mock('next-intl/server', () => ({
 }));
 
 const revalidatePathMock = vi.fn();
+// #1045: course mutations invalidate the public `/baner` cache tag.
+const revalidateTagMock = vi.fn();
 vi.mock('next/cache', () => ({
   revalidatePath: (path: string) => revalidatePathMock(path),
+  revalidateTag: (tag: string, profile?: string) =>
+    revalidateTagMock(tag, profile),
 }));
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
@@ -107,6 +111,10 @@ describe('restoreTee', () => {
     );
     expect(revalidatePathMock).toHaveBeenCalledWith('/admin/courses');
     expect(revalidatePathMock).toHaveBeenCalledWith('/admin/games/new');
+
+    // #1045: un-archiving a tee can flip eligibility / change the tee count on
+    // the /baner card → the public cache tag must invalidate.
+    expect(revalidateTagMock).toHaveBeenCalledWith('public-courses', 'max');
 
     const updateCalls = supabaseMock.__fromCalls.filter(
       (c) => c.method === 'update',
@@ -305,6 +313,9 @@ describe('restoreTee', () => {
     expect(params.p_holes).toHaveLength(18);
     expect(params.p_tee_inserts).toHaveLength(1);
     expect(params.p_tee_updates).toHaveLength(0);
+
+    // #1045: an edit can (un)qualify a course → invalidate the /baner cache tag.
+    expect(revalidateTagMock).toHaveBeenCalledWith('public-courses', 'max');
   });
 
   it('#846 chaos: a failed updateCourse RPC shows a localized error and leaks no per-table write', async () => {
@@ -411,6 +422,9 @@ describe('deleteCourse — admin path', () => {
       (c) => c.method === 'delete' && c.table === 'courses',
     );
     expect(deleteCalls).toHaveLength(1);
+
+    // #1045: a deleted course drops off /baner immediately via the cache tag.
+    expect(revalidateTagMock).toHaveBeenCalledWith('public-courses', 'max');
   });
 
   it('admin blocked by in_use guard: redirects, no delete', async () => {
@@ -430,6 +444,9 @@ describe('deleteCourse — admin path', () => {
       (c) => c.method === 'delete',
     );
     expect(deleteCalls).toHaveLength(0);
+
+    // #1045: blocked delete changed nothing → no /baner cache invalidation.
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });
 

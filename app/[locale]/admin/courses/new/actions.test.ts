@@ -32,6 +32,13 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #1045: createCourse invalidates the public `/baner` cache tag on success.
+const revalidateTagMock = vi.fn();
+vi.mock('next/cache', () => ({
+  revalidateTag: (tag: string, profile?: string) =>
+    revalidateTagMock(tag, profile),
+}));
+
 const regularUserId = 'd7aa1db4-3ce0-4a2e-8375-c02a88076363';
 
 function setAuth(user: { id: string } | null) {
@@ -125,6 +132,9 @@ describe('createCourse — #366 gate + RLS-write', () => {
     expect(lastRedirect()).toBe(
       '/admin/courses?status=created&name=Testbanen',
     );
+    // #1045: a new (possibly eligible) course busts the /baner cache tag so it
+    // shows up immediately, not after the 24t revalidate.
+    expect(revalidateTagMock).toHaveBeenCalledWith('public-courses', 'max');
   });
 
   it('honors success_redirect + redirect_base for the non-admin /opprett-bane route', async () => {
@@ -167,6 +177,8 @@ describe('createCourse — #366 gate + RLS-write', () => {
     // The RPC was attempted, and the failure bounced to a localized error.
     expect(rpcCall('create_course_with_layout')).toBeDefined();
     expect(lastRedirect()).toBe('/admin/courses/new?error=db_course');
+    // #1045: a failed create must NOT invalidate the /baner cache (nothing changed).
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('bounces validation errors to redirect_base (non-admin route)', async () => {

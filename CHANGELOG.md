@@ -1079,8 +1079,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 6 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 7 rettinger</strong></summary>
 
+- `1.171.1` · [#1045](https://github.com/jdlarssen/golf-app/issues/1045) — Nye baner dukker nå opp på baneoversikten med en gang du har lagret dem, ikke først etter et døgn. Samme når du endrer eller sletter en bane.
 - `1.170.3` · [#1043](https://github.com/jdlarssen/golf-app/issues/1043) — Legger du inn en bane, godtar skjemaet nå de høye slope- og rating-tallene fra baneguiden, som Miklagards 157 og 81,9. Før stoppet det deg på 155 og 80.
 - `1.170.1` · [#1012](https://github.com/jdlarssen/golf-app/issues/1012) — «Slett konto» virker nå også når du har fullførte runder: profilen anonymiseres og e-posten frigjøres, mens resultatene står igjen i turneringene som «Slettet bruker». Før feilet slettingen stille.
 - `1.169.1` · [#1018](https://github.com/jdlarssen/golf-app/issues/1018) — «Avslutt likevel»-siden forklarer igjen hva som skjer med spillere som ikke har levert, i stedet for å vise en kryptisk kodenøkkel.
