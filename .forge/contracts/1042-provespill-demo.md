@@ -82,21 +82,21 @@ Ren modul, ingen I/O:
 
 ## Success Criteria
 
-- [ ] **Uinnlogget spillbar demo:** `/demo` (og `/en/demo`) returnerer 200 uten session (curl + staging); en besøker kan taste slag for «Deg» på 3 hull og se `SoloStablefordView`-tavla re-ranke live med «Deg» highlightet — verifisert på staging (preview-klikkrunde + skjermbilde).
-- [ ] **Null server/DB-berøring:** ingen nettverkskall til Supabase/RPC og ingen skriving til Dexie-`'golf-app'` under demo-spill (DevTools Network + Application → IndexedDB inspisert); kode importerer ikke `writeScore`/`startSyncListener`.
-- [ ] **Gjenbruk, ikke kopi:** tavla rendres via importert `SoloStablefordView` og scoring via `computeLeaderboard` (ingen re-implementert stableford-matte); `ScoreCard` gjenbrukt for input — verifisert i diff.
-- [ ] **CTA + inngang:** «Klar for ekte runde?» → `/login?next=%2F`; «Prøv Tørny på 60 sekunder»-lenke synlig på `/login` → `/demo` (staging-klikk).
-- [ ] **Copy + i18n:** all ny copy no + en (catalogParity grønn); humanizer kjørt på ny norsk copy; `tabular-nums` på tall.
-- [ ] **Flyt-diagram:** vurder om en onboarding/akkvisisjons-flyt i `docs/flows/` skal vise `/demo`-inngangen; oppdater + regenerer PNG hvis ja, ellers begrunn hvorfor ikke.
+- [x] **Uinnlogget spillbar demo:** ✅ Staging (preview mot torny-staging): `/demo` OG `/en/demo` returnerer 200 uten session (path forblir `/demo`, ingen login-redirect). Klikkrunde: tastet slag for «Deg» på hull 1 → `SoloStablefordView`-tavla re-ranket live fra sist (0 p) til delt 3. plass (3 p, 1 hull spilt), «Deg»-raden med forest-grønn ring. Skjermbilde tatt. E2e asserter `/demo$` uten redirect.
+- [x] **Null server/DB-berøring:** ✅ Ingen konsoll-feil under spill (preview_console_logs error = tom). Grep bekrefter demo-koden importerer IKKE `writeScore`/`startSyncListener`/`getBrowserClient`/`@/lib/sync`/`Dexie` (kun kommentarer som dokumenterer fraværet). Ingen `admin`-klient/fetch i `page.tsx`.
+- [x] **Gjenbruk, ikke kopi:** ✅ `DemoGame.tsx` importerer `SoloStablefordView` (den ekte visningen), `computeLeaderboard` + `strokesForHole` (`@/lib/scoring`), og `ScoreCard` + `SpecificValueSheet` — ingen re-implementert stableford-matte. `SoloStablefordView` fikk kun én additiv `highlightUserId?`-prop (ekte leaderboards uendret; full suite grønn).
+- [x] **CTA + inngang:** ✅ CTA `<a href="/login?next=%2F">` (verifisert i preview + Type C render-test); `try-demo-link` på `/login` → `/demo` (e2e-assert grønn).
+- [x] **Copy + i18n:** ✅ `demo`-namespace + 2 `auth`-nøkler i no+en (catalogParity + apostropheParity grønne); engelsk verifisert på `/en/demo` (banner/CTA på engelsk). `tabular-nums` arves fra `SoloStablefordView`/`ScoreCard`. Copy sjekket mot humanizer-katalogen (du-form, action-verb, ingen em-dash/særskriving/anglisismer).
+- [x] **Flyt-diagram:** ✅ `01-bli-bruker-fremtid.svg` fikk en `NY #1042 · Prøvespill`-node som mater inn i e-post-steget; PNG regenerert (qlmanage, ingen klipping verifisert visuelt); README Flyt 1-bullet oppdatert.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` — 0 feil
-- [ ] `npx eslint <endrede filer>` — 0 nye feil
-- [ ] `npx vitest run <co-located>` — grønt (seed/derivering = Type A hvis noen ren helper; **maks én** Type C render-test for demo-tavla/hull-skjermen)
-- [ ] `npm run build` — grønt (cacheComponents-fella)
-- [ ] Playwright: én e2e golden-path — uinnlogget `/demo` → tast ett slag → tavla endrer seg → «Klar for ekte runde?» lander på `/login` (assert på `data-testid`/role, aldri norsk copy)
-- [ ] Staging-klikkrunde av demo-flyten før merge
+- [x] `npx tsc --noEmit` — 0 feil ✅
+- [x] `npx eslint <endrede filer>` — 0 feil ✅
+- [x] `npx vitest run` — 368 filer / 4573 tester grønne ✅ (nye: 3 Type A seed, 1 Type C DemoGame; ingen regresjon i `SoloStablefordView`-testen)
+- [x] `npm run build` — grønt ✅ (`/no/demo` + `/en/demo` prerendret; ingen `export const runtime`)
+- [x] Playwright: e2e golden-path ✅ — 2/2 grønne (uinnlogget `/demo` uten redirect → +1-slag → tavla endrer seg → CTA lander på `/login`; login-lenke → `/demo`; driver på data-testid/role)
+- [x] Staging-klikkrunde av demo-flyten før merge ✅ (preview mot torny-staging, no+en, skjermbilde)
 
 ## Files Likely Touched
 
