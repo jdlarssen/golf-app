@@ -205,6 +205,15 @@ export type InitialValues = {
    */
   kr_per_unit?: number;
   /**
+   * #1049: startkontingent i hele kr per spiller. Pre-fylles fra DB i edit-flyt;
+   * udefinert / 0 = ingen kontingent.
+   */
+  entry_fee_kr?: number;
+  /**
+   * #1049: Vipps-nummer eller betalingslenke. Pre-fylles fra DB i edit-flyt.
+   */
+  payment_link?: string;
+  /**
    * Nassau (#276): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB i
    * edit-flyt; nye spill defaulter til 'net' i useGameFormState.
    */

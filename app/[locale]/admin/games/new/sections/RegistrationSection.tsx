@@ -66,7 +66,16 @@ export function RegistrationSection({
     lockGameMode,
     letFriendsSkipGate,
     setLetFriendsSkipGate,
+    entryFeeKr,
+    setEntryFeeKr,
+    paymentLink,
+    setPaymentLink,
   } = state;
+
+  // #1049: Vipps-feltet avdekkes først når det er satt et beløp — et betalings-
+  // felt uten en kontingent er meningsløst. Parsen tvinger uansett payment_link
+  // til null når beløpet er 0, så en stale lenke aldri lekker.
+  const hasEntryFee = Number(entryFeeKr) > 0;
 
   // Disable team/both når modus ikke støtter lag. Lock-flagget (edit-flyt på
   // publisert spill) deaktiverer hele seksjonen — payloaden er allerede
@@ -216,6 +225,52 @@ export function RegistrationSection({
           {t('selfSignupNote')}
         </p>
       )}
+
+      {/* #1049: startkontingent (valgfritt). Vises for alle formater og også for
+          klubbspill — en klubbkveld kan ha avgift på toppen av medlemskap. Ikke
+          disabled ved lockGameMode: beløpet er informativt, ikke strukturelt. */}
+      <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
+        <legend className="px-1 text-sm font-semibold text-foreground">
+          {t('paymentLegend')}
+        </legend>
+        <p className="text-xs text-muted/80">{t('paymentHint')}</p>
+        <label className="block">
+          <span className="text-xs font-medium text-muted">
+            {t('entryFeeLabel')}
+          </span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={entryFeeKr}
+            onChange={(e) => setEntryFeeKr(e.target.value)}
+            placeholder={t('entryFeePlaceholder')}
+            aria-label={t('entryFeeLabel')}
+            className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
+          />
+        </label>
+        {hasEntryFee && (
+          <label className="block">
+            <span className="text-xs font-medium text-muted">
+              {t('paymentLinkLabel')}
+            </span>
+            <input
+              type="text"
+              inputMode="text"
+              value={paymentLink}
+              onChange={(e) => setPaymentLink(e.target.value)}
+              placeholder={t('paymentLinkPlaceholder')}
+              aria-label={t('paymentLinkLabel')}
+              maxLength={200}
+              className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+            <span className="mt-1 block text-xs text-muted/80">
+              {t('paymentLinkHint')}
+            </span>
+          </label>
+        )}
+      </fieldset>
     </section>
   );
 }

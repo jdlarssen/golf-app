@@ -448,6 +448,17 @@ export function useGameFormState({
   const [krPerUnit, setKrPerUnit] = useState<string>(
     initialValues?.kr_per_unit != null ? String(initialValues.kr_per_unit) : '',
   );
+  // #1049: startkontingent (kr) + betalingsmåte (Vipps-nr eller lenke). Holdes
+  // som strenger for input-feltene; tomt beløp = ingen kontingent (feature av).
+  // Validatorene (parseEntryFeeKr/parsePaymentLink) tolererer tomt/0 som «av».
+  const [entryFeeKr, setEntryFeeKr] = useState<string>(
+    initialValues?.entry_fee_kr != null && initialValues.entry_fee_kr > 0
+      ? String(initialValues.entry_fee_kr)
+      : '',
+  );
+  const [paymentLink, setPaymentLink] = useState<string>(
+    initialValues?.payment_link ?? '',
+  );
   // Nassau (#276): brutto vs netto-toggle. Default 'net' speiler Tørny's
   // ethos. Validatoren (`validateNassau`) leser feltet og faller defensivt
   // tilbake til 'net' ved ugyldig/manglende verdi.
@@ -1666,6 +1677,11 @@ export function useGameFormState({
     // #937: pengeoppgjør for veddemålsformater.
     krPerUnit,
     setKrPerUnit,
+    // #1049: startkontingent + betalingsmåte (gjelder alle formater).
+    entryFeeKr,
+    setEntryFeeKr,
+    paymentLink,
+    setPaymentLink,
     isWagerFormat:
       isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey,
     wagerUnitKey: (isSkins ? 'skin' : isNassau ? 'seksjon' : 'poeng') as

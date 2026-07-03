@@ -198,6 +198,10 @@ export type ParsedPayload = {
   require_peer_approval: boolean;
   /** 'live' = netto visible from hole 1. 'reveal' = netto hidden until status='finished'. */
   score_visibility: 'live' | 'reveal';
+  /** #1049: startkontingent i hele kr per spiller. 0 = ingen kontingent (feature av). */
+  entry_fee_kr: number;
+  /** #1049: Vipps-nr eller betalingslenke (fritekst). null når entry_fee_kr = 0 eller tomt. */
+  payment_link: string | null;
   players: GamePlayerInput[];
   /**
    * Discriminator for spillmodus. Speilar `games.game_mode`-kolonnen
@@ -270,6 +274,11 @@ function parseBase(formData: FormData): ParsedBase {
   const score_visibility: 'live' | 'reveal' =
     rawVisibility === 'reveal' ? 'reveal' : 'live';
 
+  // #1049: startkontingent + betalingsmåte. payment_link tvinges til null når
+  // det ikke er noen kontingent, så en stale lenke ikke lekker uten et beløp.
+  const entry_fee_kr = parseEntryFeeKr(formData);
+  const payment_link = parsePaymentLink(formData, entry_fee_kr);
+
   return {
     name,
     course_id: rawCourse || null,
@@ -277,7 +286,39 @@ function parseBase(formData: FormData): ParsedBase {
     hcp_allowance_pct,
     require_peer_approval,
     score_visibility,
+    entry_fee_kr,
+    payment_link,
   };
+}
+
+/**
+ * #1049: startkontingent i hele kr per spiller. Form-feltet `entry_fee_kr`.
+ * Tomt/0/negativ/ugyldig → 0 (feature av). Klampes til ikke-negativt heltall
+ * ≤ 100 000 (samme øvre grense som DB-CHECK, så tampering ikke bryter INSERT).
+ */
+function parseEntryFeeKr(formData: FormData): number {
+  const raw = String(formData.get('entry_fee_kr') ?? '').trim();
+  if (!raw) return 0;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(Math.floor(n), 100000);
+}
+
+/**
+ * #1049: Vipps-nummer eller betalingslenke (fritekst). Kun relevant når det
+ * finnes en kontingent — returnerer null når `entryFeeKr <= 0` så en stale
+ * lenke ikke persisteres uten et beløp. Trimmes og kappes til 200 tegn.
+ * URL-vs-Vipps-nr-tolkningen skjer ved visning (PaymentInfo), ikke her.
+ */
+function parsePaymentLink(
+  formData: FormData,
+  entryFeeKr: number,
+): string | null {
+  if (entryFeeKr <= 0) return null;
+  const raw = String(formData.get('payment_link') ?? '')
+    .trim()
+    .slice(0, 200);
+  return raw || null;
 }
 
 /**

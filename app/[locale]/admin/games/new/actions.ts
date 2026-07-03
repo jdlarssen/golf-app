@@ -212,6 +212,10 @@ async function createGameInternal(
       // #369: kun satt til true når registration_mode = 'manual_approval' +
       // checkbox er avhuket — gamePayload.ts force-false ellers.
       let_friends_skip_gate: payload.let_friends_skip_gate,
+      // #1049: startkontingent + betalingsmåte. entry_fee_kr = 0 (default) betyr
+      // ingen kontingent; payment_link er null når det ikke er noe beløp.
+      entry_fee_kr: payload.entry_fee_kr,
+      payment_link: payload.payment_link,
       side_tournament_enabled: sideEnabled,
       side_ld_count: sideLdCount,
       side_ctp_count: sideCtpCount,

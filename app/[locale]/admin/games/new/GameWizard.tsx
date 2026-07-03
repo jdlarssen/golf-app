@@ -983,6 +983,8 @@ function FormDataInputs({
     wolfScoring,
     krPerUnit,
     isWagerFormat,
+    entryFeeKr,
+    paymentLink,
     nassauScoring,
     skinsScoring,
     ninesVariant,
@@ -1136,6 +1138,10 @@ function FormDataInputs({
       {isWagerFormat && (
         <input type="hidden" name="kr_per_unit" value={krPerUnit} />
       )}
+      {/* #1049: startkontingent + betalingsmåte — gjelder alle formater, så
+          alltid serialisert (tom = ingen kontingent). */}
+      <input type="hidden" name="entry_fee_kr" value={entryFeeKr} />
+      <input type="hidden" name="payment_link" value={paymentLink} />
       {isNines && (
         <>
           <input type="hidden" name="nines_variant" value={ninesVariant} />

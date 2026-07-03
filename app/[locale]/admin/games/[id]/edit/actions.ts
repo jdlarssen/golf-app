@@ -189,6 +189,10 @@ async function updateGameInternal(
       // #369: kun satt til true når registration_mode = 'manual_approval' +
       // checkbox er avhuket — gamePayload.ts force-false ellers.
       let_friends_skip_gate: payload.let_friends_skip_gate,
+      // #1049: startkontingent + betalingsmåte. Informativ — samme draft/
+      // scheduled-gating som feltene over (optimistic-lock på status nedenfor).
+      entry_fee_kr: payload.entry_fee_kr,
+      payment_link: payload.payment_link,
       // score_visibility is implicitly gated by the .eq('status', allowedFromStatus)
       // filter below — it only writes when the row is still draft/scheduled.
       // If status flipped to active/finished between form-render and submit,

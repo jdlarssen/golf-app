@@ -712,7 +712,14 @@
         "selfSignupNote": "You can also let players sign up themselves. You'll get the link after the game is created.",
         "badgeDiscoverable": "Discoverable",
         "badgePrivate": "Private",
-        "teamModeDisabledReason": "The selected game mode does not support team registration."
+        "teamModeDisabledReason": "The selected game mode does not support team registration.",
+        "paymentLegend": "Entry fee",
+        "paymentHint": "Optional. If you charge an entry fee, players see the amount and how to pay when they sign up.",
+        "entryFeeLabel": "Amount per player (kr)",
+        "entryFeePlaceholder": "0",
+        "paymentLinkLabel": "Vipps number or payment link",
+        "paymentLinkPlaceholder": "Vipps number, e.g. 12345",
+        "paymentLinkHint": "Add your Vipps number, or paste a payment link."
       },
       "players": {
         "headingDefault": "2. Players",

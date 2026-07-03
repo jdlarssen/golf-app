@@ -47,6 +47,12 @@ export type EditGameRow = {
   registration_type: 'solo' | 'team' | 'both';
   // #369 — venn-skip-gate for manual_approval.
   let_friends_skip_gate: boolean;
+  // #1049 — startkontingent + betalingsmåte (egne kolonner, ikke mode_config).
+  // Valgfrie: edit-flytene selekterer dem (pre-fyller), men revansje-flyten
+  // (buildRevansjeInitialValues) utelater dem bevisst — en rematch skal ikke
+  // dra med seg penge-oppsettet automatisk, arrangøren bestemmer på nytt.
+  entry_fee_kr?: number;
+  payment_link?: string | null;
 };
 
 export type EditGamePlayerRow = {
@@ -184,5 +190,9 @@ export function buildEditInitialValues(
     registration_type: game.registration_type,
     // #369: pre-fyller venn-skip-gate-checkbox i edit-flyten.
     let_friends_skip_gate: game.let_friends_skip_gate,
+    // #1049: pre-fyller startkontingent + betalingsmåte. 0/utelatt → undefined
+    // så feltet vises tomt (av) i stedet for «0» (og revansje ikke drar det med).
+    entry_fee_kr: (game.entry_fee_kr ?? 0) > 0 ? game.entry_fee_kr : undefined,
+    payment_link: game.payment_link ?? undefined,
   };
 }

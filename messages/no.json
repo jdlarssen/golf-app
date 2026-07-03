@@ -712,7 +712,14 @@
         "selfSignupNote": "Du kan også la spillerne melde seg på selv. Lenken får du etter at spillet er opprettet.",
         "badgeDiscoverable": "Oppdagbar",
         "badgePrivate": "Privat",
-        "teamModeDisabledReason": "Valgt spillmodus støtter ikke lag-påmelding."
+        "teamModeDisabledReason": "Valgt spillmodus støtter ikke lag-påmelding.",
+        "paymentLegend": "Startkontingent",
+        "paymentHint": "Valgfritt. Tar du en kontingent, ser spillerne beløpet og betalingsmåten når de melder seg på.",
+        "entryFeeLabel": "Beløp per spiller (kr)",
+        "entryFeePlaceholder": "0",
+        "paymentLinkLabel": "Vipps-nummer eller betalingslenke",
+        "paymentLinkPlaceholder": "Vipps-nummer, f.eks. 12345",
+        "paymentLinkHint": "Legg inn Vipps-nummeret ditt, eller lim inn en betalingslenke."
       },
       "players": {
         "headingDefault": "2. Spillere",

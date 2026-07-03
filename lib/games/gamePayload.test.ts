@@ -189,6 +189,63 @@ describe('buildGameInsertPayload (draft mode)', () => {
   });
 });
 
+describe('buildGameInsertPayload — startkontingent / payment_link (#1049)', () => {
+  it('defaults to no entry fee (0) and null payment link when unset', () => {
+    const result = buildGameInsertPayload(fd({ name: 'Test' }), 'draft');
+    expect(result.entry_fee_kr).toBe(0);
+    expect(result.payment_link).toBeNull();
+  });
+
+  it('parses a positive entry fee and its payment link', () => {
+    const result = buildGameInsertPayload(
+      fd({ name: 'Test', entry_fee_kr: '200', payment_link: '12345' }),
+      'draft',
+    );
+    expect(result.entry_fee_kr).toBe(200);
+    expect(result.payment_link).toBe('12345');
+  });
+
+  it('forces payment_link to null when there is no fee (stale link cannot leak)', () => {
+    const result = buildGameInsertPayload(
+      fd({ name: 'Test', entry_fee_kr: '0', payment_link: 'https://vipps.no/x' }),
+      'draft',
+    );
+    expect(result.entry_fee_kr).toBe(0);
+    expect(result.payment_link).toBeNull();
+  });
+
+  it('clamps a negative or non-numeric fee to 0 (feature off)', () => {
+    expect(
+      buildGameInsertPayload(fd({ name: 'T', entry_fee_kr: '-50' }), 'draft')
+        .entry_fee_kr,
+    ).toBe(0);
+    expect(
+      buildGameInsertPayload(fd({ name: 'T', entry_fee_kr: 'gratis' }), 'draft')
+        .entry_fee_kr,
+    ).toBe(0);
+  });
+
+  it('floors decimals and caps the fee at 100 000 (matches DB CHECK)', () => {
+    expect(
+      buildGameInsertPayload(fd({ name: 'T', entry_fee_kr: '199.9' }), 'draft')
+        .entry_fee_kr,
+    ).toBe(199);
+    expect(
+      buildGameInsertPayload(fd({ name: 'T', entry_fee_kr: '9999999' }), 'draft')
+        .entry_fee_kr,
+    ).toBe(100000);
+  });
+
+  it('trims the payment link and caps it at 200 chars', () => {
+    const long = 'x'.repeat(300);
+    const result = buildGameInsertPayload(
+      fd({ name: 'T', entry_fee_kr: '100', payment_link: `  ${long}  ` }),
+      'draft',
+    );
+    expect(result.payment_link).toHaveLength(200);
+  });
+});
+
 describe('buildGameInsertPayload (publish mode)', () => {
   it('requires course', () => {
     const result = buildGameInsertPayload(fd({ name: 'Test' }), 'publish');
