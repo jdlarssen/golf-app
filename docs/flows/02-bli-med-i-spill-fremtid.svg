@@ -54,11 +54,12 @@
   <text x="392" y="458" font-size="13.5" fill="#213029">«Meld meg på» / «Be om»</text>
   <text x="392" y="479" font-size="12" fill="#6B7770">rett fra kortet</text>
 
-  <!-- ===== C ===== -->
-  <rect x="660" y="312" width="270" height="92" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
-  <text x="682" y="340" font-size="14" fill="#213029">Åpne delt lenke</text>
-  <text x="682" y="361" font-size="12" fill="#6B7770">/signup/…</text>
-  <text x="682" y="381" font-size="12" fill="#6B7770">(arrangør kopierer + sender)</text>
+  <!-- ===== C (NY #1022): offentlig landingsside + plakat ===== -->
+  <rect x="660" y="312" width="270" height="92" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.6"/>
+  <rect x="874" y="318" width="52" height="20" rx="10" fill="#C9A961"/><text x="900" y="332" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1022</text>
+  <text x="682" y="340" font-size="13.5" font-weight="600" fill="#7A5E13">Delt lenke eller plakat-QR</text>
+  <text x="682" y="361" font-size="11.5" fill="#6B5526">offentlig side uten innlogging:</text>
+  <text x="682" y="381" font-size="11.5" fill="#6B5526">bane, tid, hvem som er med → «Bli med»</text>
   <line x1="795" y1="404" x2="795" y2="428" stroke="#5E6B63" stroke-width="1.4" marker-end="url(#a)"/>
   <rect x="660" y="430" width="270" height="64" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
   <text x="682" y="458" font-size="13.5" fill="#213029">«Meld meg på» / «Be om»</text>
