@@ -293,11 +293,13 @@ export default async function GameDetailPage({
         <PlayersSections gameId={id} game={game} locale={locale} />
       </Suspense>
 
-      <p className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
+      {/* div, ikke p: Suspense-fallbacken (Skeleton) er en <div>, og <div> i <p>
+          gir hydreringsfeil (#1019). */}
+      <div className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
         <Suspense fallback={<Skeleton className="inline-block h-3 w-32" />}>
           <CreatedAtFooter createdAt={game.created_at} />
         </Suspense>
-      </p>
+      </div>
 
       {/* Danger zone — permanent delete */}
       <section className="mt-6">
