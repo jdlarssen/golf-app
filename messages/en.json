@@ -3050,6 +3050,26 @@
         "viewAllSignups": "View all signups →",
         "posterLink": "Print poster"
       },
+      "betaling": {
+        "sectionLabel": "Payment",
+        "feeLabel": "Entry fee",
+        "paidLabel": "Paid",
+        "viewAll": "See payment status →",
+        "kicker": "Payment",
+        "heading": "Who has paid?",
+        "summaryLabel": "Entry fee {amount}",
+        "summaryCount": "{paid} of {total} paid",
+        "summaryMissing": "{count} still owing",
+        "rosterLabel": "Players",
+        "noFee": "This game has no entry fee.",
+        "emptyRoster": "No players yet.",
+        "unknownPlayer": "Unknown player",
+        "paid": "Paid",
+        "unpaid": "Owing",
+        "withdrawn": "withdrawn",
+        "markPaidAria": "Mark {name} as paid",
+        "toggleError": "Couldn't save. Please try again."
+      },
       "flights": {
         "sectionLabel": "Flights",
         "unassignedLabel": "Without flight ({n})",

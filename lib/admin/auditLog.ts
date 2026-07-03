@@ -19,7 +19,10 @@ export type AdminAuditEventType =
   | 'format_mapping_change'
   // #386: admin trekker eller gjeninnsetter en spiller (WD / angre-WD).
   | 'game.player_withdrawn'
-  | 'game.player_reinstated';
+  | 'game.player_reinstated'
+  // #1049: arrangøren huker av / fjerner betalt-status på en spiller.
+  | 'game.player_marked_paid'
+  | 'game.player_marked_unpaid';
 
 /**
  * Record an admin action to the audit log. Best-effort: insert failures are

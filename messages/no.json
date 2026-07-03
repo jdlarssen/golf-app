@@ -3050,6 +3050,26 @@
         "viewAllSignups": "Vis alle påmeldinger →",
         "posterLink": "Skriv ut plakat"
       },
+      "betaling": {
+        "sectionLabel": "Betaling",
+        "feeLabel": "Startkontingent",
+        "paidLabel": "Betalt",
+        "viewAll": "Se betalingsstatus →",
+        "kicker": "Betaling",
+        "heading": "Hvem har betalt?",
+        "summaryLabel": "Startkontingent {amount}",
+        "summaryCount": "{paid} av {total} betalt",
+        "summaryMissing": "{count} mangler fortsatt",
+        "rosterLabel": "Spillere",
+        "noFee": "Dette spillet har ingen startkontingent.",
+        "emptyRoster": "Ingen spillere ennå.",
+        "unknownPlayer": "Ukjent spiller",
+        "paid": "Betalt",
+        "unpaid": "Mangler",
+        "withdrawn": "trukket",
+        "markPaidAria": "Marker {name} som betalt",
+        "toggleError": "Kunne ikke lagre. Prøv igjen."
+      },
       "flights": {
         "sectionLabel": "Flighter",
         "unassignedLabel": "Uten flight ({n})",

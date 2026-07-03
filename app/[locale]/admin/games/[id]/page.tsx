@@ -35,6 +35,7 @@ import { ApprovePlayerButton } from './ApprovePlayerButton';
 import { ReopenScorecardButton } from './ReopenScorecardButton';
 import { ReopenGameButton } from './ReopenGameButton';
 import { RegistrationOverviewSection } from './RegistrationOverviewSection';
+import { BetalingOverviewSection } from './BetalingOverviewSection';
 import {
   startGame,
   startScheduledGameAction,
@@ -104,6 +105,8 @@ type GameRow = {
   short_id: string;
   // #543: arrangøren kan stenge påmeldingen manuelt.
   signups_closed_at: string | null;
+  // #1049: startkontingent — driver betaling-telle-kortet (vises kun når > 0).
+  entry_fee_kr: number;
   courses: { name: string } | null;
   tee_boxes: (TeeBoxRatings & { name: string }) | null;
 };
@@ -117,6 +120,8 @@ type GamePlayerRow = {
   approved_at: string | null;
   withdrawn_at: string | null;
   accepted_at: string | null;
+  // #1049: betalt-tidsstempel — non-null = arrangøren har huket av betalt.
+  paid_at: string | null;
   users: {
     // name is null until the invitee completes their profile — see
     // migration 0014. Pre-created placeholder rows can still appear on a
@@ -209,7 +214,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -379,7 +384,7 @@ async function PlayersSections({
   const playersPromise = supabase
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, accepted_at, paid_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
     )
     .eq('game_id', gameId)
     .returns<GamePlayerRow[]>();
@@ -571,6 +576,20 @@ async function PlayersSections({
         shortId={game.short_id}
         selfRegisteredCount={players.length}
       />
+
+      {/* #1049: betaling-telle-kort — kun når spillet har en startkontingent.
+          Tellingen ekskluderer withdrawn, som betaling-undersiden. */}
+      {game.entry_fee_kr > 0 && (
+        <BetalingOverviewSection
+          gameId={gameId}
+          entryFeeKr={game.entry_fee_kr}
+          paidCount={
+            players.filter((p) => p.withdrawn_at == null && p.paid_at != null)
+              .length
+          }
+          totalCount={players.filter((p) => p.withdrawn_at == null).length}
+        />
+      )}
 
       {/* #543: Steng påmelding — kun scheduled + open/manual_approval. */}
       {game.status === 'scheduled' &&
