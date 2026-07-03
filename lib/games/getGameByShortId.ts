@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { RegistrationMode, RegistrationType } from './registration';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
@@ -37,7 +38,9 @@ export type ShortIdGame = {
   signups_closed_at: string | null;
 };
 
-export async function getGameByShortId(
+// React.cache: generateMetadata + page (#1022) slår begge opp samme shortId i
+// samme request — dedupliseres til én DB-runde. No-op utenfor render (actions).
+export const getGameByShortId = cache(async function getGameByShortId(
   shortId: string,
 ): Promise<ShortIdGame | null> {
   // Defensiv lengde-/charset-sjekk før DB-call. CHECK-constraint i migrasjon
@@ -61,4 +64,4 @@ export async function getGameByShortId(
     return null;
   }
   return data;
-}
+});
