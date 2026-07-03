@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="880" viewBox="0 0 1180 880" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="920" viewBox="0 0 1180 920" font-family="-apple-system, Helvetica, Arial, sans-serif">
   <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8A6D27"/></marker></defs>
-  <rect width="1180" height="880" fill="#F8F6F0"/>
+  <rect width="1180" height="920" fill="#F8F6F0"/>
   <text x="120" y="58" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#8A6D27">6 · Liga — sesong over flere runder</text>
   <text x="121" y="88" font-size="15" fill="#6B7770">Arrangøren setter opp en liga. Spillerne spiller hver runde i sitt eget vindu, og sesong-tabellen oppdaterer seg.</text>
   <g font-size="13">
@@ -74,9 +74,16 @@
   <text x="782" y="637" font-size="13" fill="#46604F">• Medlemmer kan melde seg på</text>
   <text x="782" y="656" font-size="13" fill="#46604F">  selv før ligaen starter (#452)</text>
 
-  <!-- player parallel -->
-  <text x="120" y="730" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever</text>
-  <text x="120" y="756" font-size="13" fill="#46524B">Åpne liga-siden → se runder + tabell · «Spill denne runden» når vinduet er åpent · velg medspiller(e) → spill → tabellen rykker.</text>
+  <!-- embed exit from standings (#1024) -->
+  <path d="M680,568 L710,568 L710,744 L692,744" fill="none" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="120" y="706" width="560" height="76" rx="14" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.4"/>
+  <rect x="142" y="718" width="170" height="20" rx="10" fill="#C9A961"/><text x="227" y="732" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">NY · klubbside-embed #1024</text>
+  <text x="142" y="754" font-size="12.5" fill="#46604F">Arrangør kopierer embed-koden → liga-tavla ligger på klubbens nettside/infoskjerm</text>
+  <text x="142" y="772" font-size="12.5" fill="#46604F">oppdaterer seg selv · uten innlogging · lenker tilbake til Tørny</text>
 
-  <text x="120" y="812" font-size="12.5" fill="#9A937F">Kjernen: én liga binder mange runder til én sesong-tabell — spillerne styrer når, så lenge de er to og innenfor vinduet.</text>
+  <!-- player parallel -->
+  <text x="120" y="812" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever</text>
+  <text x="120" y="838" font-size="13" fill="#46524B">Åpne liga-siden → se runder + tabell · «Spill denne runden» når vinduet er åpent · velg medspiller(e) → spill → tabellen rykker.</text>
+
+  <text x="120" y="884" font-size="12.5" fill="#9A937F">Kjernen: én liga binder mange runder til én sesong-tabell — spillerne styrer når, så lenge de er to og innenfor vinduet.</text>
 </svg>

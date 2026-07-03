@@ -39,7 +39,7 @@ To embed-flater under nytt offentlig segment `/embed`, begge chrome-løse, selv-
 ### 2. Spill-embed — `/embed/spill/[token]`
 
 - Rir DIREKTE på `games.spectate_token` — ingen ny kolonne. Live-følg på = embed mulig; av = begge dør (404). Det ER «samme data som offentlig live-lenke»-garantien.
-- **Kompakt visning** (issue-regel «kompakt tabell uten app-chrome», IKKE full format-visning): bygg radene fra `buildShareCardData` (én-beregningsvei-prinsippet fra #1008): placement/skins-band → tabell rank/navn/scoreLabel (`tabular-nums`); matchplay-band → duell-headline (vinner/margin/status) i stedet for tabell.
+- **Visning (REVIDERT under bygging):** kontrakten foreslo kompakt tabell fra `buildShareCardData`, men `podium` er topp-3-only — for tynt for en tavle. I stedet gjenbrukes hele `renderLeaderboardContent`-stien (identisk med spectate-siden): full data, reveal-aware, alle 20+ formater gratis, og «verken mer eller mindre»-kriteriet oppfylles bokstavelig. «Uten app-chrome» = ingen AppShell/nav/banner (som spectate); leaderboard-visningene er mobile-first og passer en 480px-iframe.
 - **Polling:** `SpectatePoller` 20 s mens `status='active'`, stopp ved finished (identisk med spectate).
 - Draft/scheduled → `notFound()` (som spectate).
 - Attribusjon for spill-embed lenker til **spectate-siden** (full leaderboard, mer verdi enn forsiden); liga-embed lenker til **tornygolf.no-forsiden** (akkvisisjon).
