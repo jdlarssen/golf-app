@@ -9,6 +9,7 @@ import {
 } from '@/app/[locale]/admin/games/[id]/inviteToGameActions';
 import { addGuestToGame } from '@/app/[locale]/games/guestPlayerActions';
 import { AddGuestForm } from '@/components/games/AddGuestForm';
+import { GuestBadge } from '@/components/ui/GuestBadge';
 import {
   filterRosterCandidates,
   rosterDisplayName,
@@ -67,9 +68,12 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
                   key={c.id}
                   className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg px-3 py-2.5"
                 >
-                  <p className="min-w-0 truncate text-sm font-medium text-text">
-                    {rosterDisplayName(c)}
-                  </p>
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="truncate text-sm font-medium text-text">
+                      {rosterDisplayName(c)}
+                    </p>
+                    {c.isGuest && <GuestBadge className="shrink-0" />}
+                  </div>
                   <form action={addAction}>
                     <input type="hidden" name="recipient_user_id" value={c.id} />
                     <SubmitButton

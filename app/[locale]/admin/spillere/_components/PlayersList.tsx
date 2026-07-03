@@ -13,6 +13,7 @@ type User = {
   email: string;
   hcp_index: number;
   is_admin: boolean;
+  is_guest: boolean;
   created_at: string;
 };
 
@@ -26,7 +27,7 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
   // the pending-invitations list. Picker handles the in-between state.
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, nickname, email, hcp_index, is_admin, created_at')
+    .select('id, name, nickname, email, hcp_index, is_admin, is_guest, created_at')
     .not('profile_completed_at', 'is', null)
     // #1012: anonymiserte husk-rader er ikke spillere lenger — de skjules her
     // (og i tellingen på sida).

@@ -8,7 +8,11 @@ export type TeamCandidate = {
   name: string | null;
   nickname: string | null;
   email: string;
+  /** #1017: true = skygge-bruker (`users.is_guest`) → «Gjest»-chip i lista. */
+  isGuest?: boolean;
 };
+
+type TeamCandidateRow = Omit<TeamCandidate, 'isGuest'> & { is_guest: boolean };
 
 /**
  * Kandidat-kilden for autocomplete i lag-påmelding (#362). Returnerer
@@ -43,10 +47,10 @@ export async function getTeamCandidates(
   const admin = getAdminClient();
   const { data: users, error } = await admin
     .from('users')
-    .select('id, name, nickname, email')
+    .select('id, name, nickname, email, is_guest')
     .in('id', candidateIds)
     .is('deleted_at', null)
-    .returns<TeamCandidate[]>();
+    .returns<TeamCandidateRow[]>();
   if (error || !users) {
     if (error) {
       console.error('[getTeamCandidates] user lookup failed', error);
@@ -58,5 +62,6 @@ export async function getTeamCandidates(
     .filter((u) => u.email)
     .sort((a, b) =>
       (a.name ?? a.email).localeCompare(b.name ?? b.email, 'nb'),
-    );
+    )
+    .map(({ is_guest, ...rest }) => ({ ...rest, isGuest: is_guest }));
 }

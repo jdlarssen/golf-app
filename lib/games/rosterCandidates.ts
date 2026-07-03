@@ -13,6 +13,12 @@ export type RosterCandidate = {
   name: string | null;
   nickname: string | null;
   email: string;
+  /**
+   * #1017: true = skygge-bruker (`users.is_guest`). Driver «Gjest»-chipen på
+   * kandidat-listene. Valgfri (matcher wizard-ens `PlayerOption.isGuest?`) —
+   * kilder som ikke tråder den, viser ingen chip.
+   */
+  isGuest?: boolean;
 };
 
 /** «Navn «kallenavn»», eller e-post som fallback når navnet mangler. */

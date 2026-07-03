@@ -4,6 +4,7 @@ import { useMemo, useTransition } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { GuestBadge } from '@/components/ui/GuestBadge';
 import { formatHcpDisplay } from '@/lib/handicap/sign';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -14,6 +15,7 @@ export type PlayerRow = {
   email: string;
   hcp_index: number;
   is_admin: boolean;
+  is_guest: boolean;
   created_at: string;
 };
 
@@ -123,6 +125,7 @@ export function PlayersListClient({
                       ({u.nickname})
                     </span>
                   )}
+                  {u.is_guest && <GuestBadge className="ml-1.5 align-middle" />}
                 </p>
                 <p className="mt-0.5 truncate font-sans text-[11.5px] text-muted">
                   {u.email}

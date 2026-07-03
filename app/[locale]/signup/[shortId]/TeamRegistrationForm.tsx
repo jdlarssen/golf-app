@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
+import { GuestBadge } from '@/components/ui/GuestBadge';
 import { maskEmail } from '@/lib/users/maskEmail';
 import type { TeamCandidate } from '@/lib/users/getTeamCandidates';
 import {
@@ -409,8 +410,11 @@ export function TeamRegistrationForm({
                             }}
                             className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-primary-soft"
                           >
-                            <span className="min-w-0 truncate font-sans text-sm text-text">
-                              {candidateLabel(c)}
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="truncate font-sans text-sm text-text">
+                                {candidateLabel(c)}
+                              </span>
+                              {c.isGuest && <GuestBadge className="shrink-0" />}
                             </span>
                             <span className="shrink-0 font-sans text-xs text-muted">
                               {maskEmail(c.email)}

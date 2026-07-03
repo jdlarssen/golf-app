@@ -13,6 +13,7 @@ type CandidateRow = {
   nickname: string | null;
   email: string;
   hcp_index: number | string;
+  is_guest: boolean;
 };
 
 type Props = {
@@ -49,7 +50,7 @@ export async function InviteToGameSection({
   // (#199 self-registrering) kan trenge bedre paginering senere.
   const { data: rawCandidates, error } = await supabase
     .from('users')
-    .select('id, name, nickname, email, hcp_index')
+    .select('id, name, nickname, email, hcp_index, is_guest')
     .not('profile_completed_at', 'is', null)
     // #1012: anonymiserte kontoer skal ikke dukke opp som invitér-kandidater.
     .is('deleted_at', null)
@@ -91,6 +92,7 @@ export async function InviteToGameSection({
               nickname: c.nickname,
               email: c.email,
               hcpIndex: Number(c.hcp_index),
+              isGuest: c.is_guest,
             }))}
             disabled={isFull}
           />

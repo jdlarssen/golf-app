@@ -8,6 +8,7 @@ import {
 } from './inviteToGameActions';
 import { addGuestToGame } from '@/app/[locale]/games/guestPlayerActions';
 import { AddGuestForm } from '@/components/games/AddGuestForm';
+import { GuestBadge } from '@/components/ui/GuestBadge';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import {
   filterRosterCandidates,
@@ -73,9 +74,12 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
                 className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg px-3 py-2.5"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-text">
-                    {rosterDisplayName(c)}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium text-text">
+                      {rosterDisplayName(c)}
+                    </p>
+                    {c.isGuest && <GuestBadge className="shrink-0" />}
+                  </div>
                   <p className="mt-0.5 text-xs tabular-nums text-muted">
                     HCP {c.hcpIndex.toFixed(1)}
                   </p>
