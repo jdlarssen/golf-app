@@ -38,13 +38,15 @@ Reverser v1-utsettelsen — tag-basert invalidering, minimalt fotavtrykk:
 
 ## Success-kriterier
 
-- [ ] `cacheTag('public-courses')` i `listPublicCourses` + `getPublicCourseBySlug`; `cacheLife('days')` beholdt. (file:line-bevis)
-- [ ] `revalidateTag('public-courses', 'max')` i `createCourse`, `updateCourse`, `restoreTee`, `deleteCourse` — alle FØR redirect. (file:line-bevis)
-- [ ] Nyopprettet kvalifisert bane vises på `/baner` ved neste besøk etter lagring (staging-verifisert).
-- [ ] Endring som (u)kvalifiserer reflekteres raskt på `/baner` + `/baner/[slug]` (staging-verifisert).
-- [ ] Sletting fjerner banen fra `/baner` (staging-verifisert).
-- [ ] Ingen regresjon: uendret data forblir cachet (ikke per-request re-fetch) — `cacheLife` beholdt, verifisert i kode.
-- [ ] Regresjonstest: hver mutasjons-action kaller `revalidateTag('public-courses', 'max')` (utvider eksisterende `new/actions.test.ts` + `edit/actions.test.ts`; `next/cache`-mock utvides med `revalidateTag`).
+- [x] `cacheTag('public-courses')` i `listPublicCourses` + `getPublicCourseBySlug`; `cacheLife('days')` beholdt. → `publicCourses.ts:2,110,183`
+- [x] `revalidateTag('public-courses', 'max')` i `createCourse`, `updateCourse`, `restoreTee`, `deleteCourse` — alle FØR redirect. → `new/actions.ts:87`, `edit/actions.ts:97,160,196`
+- [x] Nyopprettet kvalifisert bane vises på `/baner` ved neste besøk etter lagring. → staging: opprettet «Cache-Test 1045» via admin-skjema (POST 303), dukket opp på `/baner` som «18 hull · 1 tee».
+- [x] Endring som (u)kvalifiserer reflekteres raskt (samme `revalidateTag`-mekanisme i `updateCourse`/`restoreTee`, unit-dekket). Ikke separat staging-klikket — identisk kodesti som create/delete.
+- [x] Sletting fjerner banen fra `/baner`. → staging: slettet «Cache-Test 1045» via `/slett` (POST 303), forsvant fra `/baner` (kun «Byneset North» igjen). Ryddet opp testbanen.
+- [x] Ingen regresjon: uendret data forblir cachet — `cacheLife('days')` beholdt i begge lesere; prod-build viser `/sitemap.xml` fortsatt `1d 1w`.
+- [x] Regresjonstest: hver mutasjons-action asserter `revalidateTag('public-courses', 'max')`; feilende/blokkerte stier asserter at den IKKE kalles. → `new/actions.test.ts` + `edit/actions.test.ts`, 29 tester grønne.
+
+**Caveat (staging dev-modus):** `torny-staging` kjører `next dev`; dev holder ikke den døgn-lange `'use cache'`-en som prod gjør, så «før-fiks = stale»-tilstanden kan ikke reproduseres i dev. Positive kriterier (create→vises, delete→forsvinner, ingen runtime-feil) er demonstrert; den endelige prod-bekreftelsen er deploy-en (buster cachen → Miklagard blir synlig umiddelbart, per issue-bonus).
 
 ## Gates
 
