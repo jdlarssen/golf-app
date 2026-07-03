@@ -6,6 +6,19 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { logAdminEvent } from '@/lib/admin/auditLog';
+import { sendPaymentReminder } from '@/lib/notifications/paymentReminder';
+
+type UnpaidPlayerRow = {
+  user_id: string;
+  paid_at: string | null;
+  withdrawn_at: string | null;
+  users: {
+    email: string | null;
+    name: string | null;
+    locale: string | null;
+    is_guest: boolean;
+  } | null;
+};
 
 /**
  * #1049: arrangøren huker av / fjerner betalt-status på en spiller.
@@ -46,4 +59,68 @@ export async function togglePlayerPaid(
   // getGameWithPlayers (cache-tag `game-${id}`). Bust begge.
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}/betaling`);
+}
+
+/**
+ * #1049: purr alle spillere som mangler å betale startkontingenten — in-app
+ * varsel + mail-if-off-app. Best-effort (Promise.allSettled): én feil stopper
+ * ikke resten, og action-en aborterer aldri. Ingen idempotens-stamp — arrangøren
+ * kan purre på nytt ved behov (samme mønster som remindUnconfirmedPlayers).
+ * Gjester purres ikke (plassholder-adresse). Returnerer antall purret så knappen
+ * kan vise en bekreftelse uten en redirect.
+ */
+export async function remindUnpaidPlayers(
+  gameId: string,
+): Promise<{ count: number }> {
+  const supabase = await getServerClient();
+  await requireAdmin(supabase);
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('id, name, status, entry_fee_kr, payment_link')
+    .eq('id', gameId)
+    .single<{
+      id: string;
+      name: string;
+      status: string;
+      entry_fee_kr: number;
+      payment_link: string | null;
+    }>();
+
+  // Ingen kontingent → ingenting å purre for.
+  if (!game || game.entry_fee_kr <= 0) return { count: 0 };
+
+  const { data: players } = await supabase
+    .from('game_players')
+    .select(
+      'user_id, paid_at, withdrawn_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',
+    )
+    .eq('game_id', gameId)
+    .returns<UnpaidPlayerRow[]>();
+
+  const targets = (players ?? []).filter(
+    (p) => !p.paid_at && !p.withdrawn_at && !p.users?.is_guest,
+  );
+
+  await Promise.allSettled(
+    targets.map((p) =>
+      sendPaymentReminder({
+        player: {
+          userId: p.user_id,
+          email: p.users?.email ?? null,
+          name: p.users?.name ?? null,
+          locale: p.users?.locale ?? null,
+        },
+        game: {
+          id: game.id,
+          name: game.name,
+          entryFeeKr: game.entry_fee_kr,
+          paymentLink: game.payment_link,
+        },
+        logPrefix: 'remindUnpaidPlayers',
+      }),
+    ),
+  );
+
+  return { count: targets.length };
 }

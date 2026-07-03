@@ -48,6 +48,7 @@ const EMOJI: Record<NotificationKind, string> = {
   auto_start_blocked: '⏳',
   achievement_unlocked: '🏅',
   idea_built: '💡',
+  payment_reminder: '💸',
 };
 
 /**

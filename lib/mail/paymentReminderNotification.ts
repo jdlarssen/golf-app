@@ -1,0 +1,172 @@
+// Sends a "Husk startkontingenten"-mail to a player who has not yet been marked
+// as paid by the organiser (#1049).
+//
+// Triggered from the admin betaling-purring (remindUnpaidPlayers), but ONLY for
+// off-app players (notify() returns shouldAlsoSendMail) — active players get the
+// in-app varsel alone. Best-effort: callers wrap Promise.allSettled() so one
+// failure never blocks the rest, and the parent flow never aborts on mail errors.
+//
+// Locale-aware: user-visible text comes from the `mail` catalog for the
+// recipient's locale. The amount is formatted with formatKr; the payment method
+// line is XSS-guarded via isPaymentUrl — only http(s) links become a clickable
+// «Betal her», everything else renders as a plain Vipps-number line.
+
+import { Resend } from 'resend';
+import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { formatKr } from '@/lib/format/formatKr';
+import { isPaymentUrl } from '@/lib/payment/paymentLink';
+
+function resolveFromEmail(): string {
+  const raw = process.env.RESEND_FROM_EMAIL?.trim();
+  if (!raw) return 'Tørny <noreply@tornygolf.no>';
+  if (raw.includes('<') && raw.includes('>')) return raw;
+  return `Tørny <${raw}>`;
+}
+
+function getClient(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    throw new Error('RESEND_API_KEY is not set');
+  }
+  return new Resend(key);
+}
+
+export type PaymentReminderNotificationParams = {
+  to: string;
+  /** First name of the player, for "Hei <name>!" salutation. Null if unknown. */
+  playerFirstName: string | null;
+  /** The game's display name, used in subject + body. */
+  gameName: string;
+  /** Game id — used to build the game-home URL. */
+  gameId: string;
+  /** Startkontingent i hele kr, formatert med formatKr i mailen. */
+  entryFeeKr: number;
+  /** Vipps-nummer eller betalingslenke (fritekst). Null = ingen oppgitt måte. */
+  paymentLink: string | null;
+  /** Mottakerens locale. Normalt udefinert → norsk. */
+  locale?: string | null;
+};
+
+export async function sendPaymentReminderNotification(
+  params: PaymentReminderNotificationParams,
+): Promise<void> {
+  const { to, playerFirstName, gameName, gameId, entryFeeKr, paymentLink, locale } =
+    params;
+  const loc = resolveMailLocale(locale);
+  const t = await getMailTranslator(locale);
+
+  const amount = formatKr(entryFeeKr);
+  const subject = t('paymentReminder.subject', { gameName });
+  const gameUrl = mailUrl(locale, `/games/${gameId}`);
+  const homeUrl = mailUrl(locale, '');
+
+  const salutation = playerFirstName
+    ? t('paymentReminder.salutationNamed', { name: playerFirstName })
+    : t('paymentReminder.salutationGeneric');
+
+  const bodyHtml = t.markup('paymentReminder.body', {
+    gameName: escapeHtml(gameName),
+    amount: escapeHtml(amount),
+    strong: (c) => `<strong>${c}</strong>`,
+  });
+  const bodyText = t('paymentReminder.bodyText', { gameName, amount });
+
+  // Betalingsmåte-linje. isPaymentUrl gater XSS: kun http(s) blir en href.
+  const link = paymentLink?.trim() || null;
+  let methodHtml: string;
+  let methodText: string;
+  if (link && isPaymentUrl(link)) {
+    const safe = escapeHtml(link);
+    methodHtml = `<a href="${safe}" style="color:#1B4332;text-decoration:underline;">${t('paymentReminder.payHere')}</a>`;
+    methodText = t('paymentReminder.payHereText', { url: link });
+  } else if (link) {
+    methodHtml = escapeHtml(t('paymentReminder.vippsLine', { number: link }));
+    methodText = t('paymentReminder.vippsLine', { number: link });
+  } else {
+    methodHtml = escapeHtml(t('paymentReminder.arrangeLine'));
+    methodText = t('paymentReminder.arrangeLine');
+  }
+
+  const footerHtml = t.markup('paymentReminder.footer', {
+    link: (c) =>
+      `<a href="${homeUrl}" style="color:#1B4332;text-decoration:underline;">${c}</a>`,
+  });
+
+  const html = `<!DOCTYPE html><html lang="${loc}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A1813;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F8F6F0;">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:32px;">
+          <tr><td>
+            <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.1;margin:0 0 8px;color:#1B4332;letter-spacing:-0.01em;">
+              Tørny<span style="color:#C9A961;">.</span>
+            </h1>
+            <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
+              ${t('common.tagline')}
+            </p>
+            <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
+              ${t('paymentReminder.heading')}
+            </h2>
+            <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+              ${escapeHtml(salutation)}
+            </p>
+            <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+              ${bodyHtml}
+            </p>
+            <p style="font-size:16px;line-height:1.5;margin:0 0 24px;">
+              ${methodHtml}
+            </p>
+            <div style="margin:32px 0;">
+              <a href="${gameUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                ${t('paymentReminder.openButton')}
+              </a>
+            </div>
+            <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
+              ${footerHtml}
+            </p>
+          </td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text =
+    `${subject}\n\n` +
+    `${salutation}\n\n` +
+    `${bodyText}\n\n` +
+    `${methodText}\n\n` +
+    `${t('paymentReminder.openButtonText', { url: gameUrl })}\n\n` +
+    `${t('common.footerTagline')}\n`;
+
+  const resend = getClient();
+  const result = await resend.emails.send({
+    from: resolveFromEmail(),
+    to,
+    subject,
+    html,
+    text,
+  });
+
+  if (result.error) {
+    throw new Error(
+      `Resend send failed: ${result.error.message ?? JSON.stringify(result.error)}`,
+    );
+  }
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}

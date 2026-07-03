@@ -107,5 +107,10 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       // «Vi bygde det du foreslo» har ingen egen side — beskjeden leses i
       // kortet (samme mønster som registration_rejected).
       return null;
+    case 'payment_reminder': {
+      // Spill-hjem der PaymentInfo viser beløp + betalingsmåte (#1049).
+      const p = n.payload as NotificationPayload<'payment_reminder'>;
+      return `/games/${p.game_id}`;
+    }
   }
 }

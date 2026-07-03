@@ -1,4 +1,5 @@
 import type { NotificationKind, NotificationPayload } from './types';
+import { formatKr } from '@/lib/format/formatKr';
 
 /**
  * Minimal translator shape shared by client `useTranslations('inbox')` and the
@@ -240,6 +241,16 @@ export function buildNotificationText(
         title: t('kinds.ideaBuilt.title'),
         detail: t('kinds.ideaBuilt.detail'),
       };
+    case 'payment_reminder': {
+      const p = payload as NotificationPayload<'payment_reminder'>;
+      return {
+        title: t('kinds.paymentReminder.title'),
+        detail: t('kinds.paymentReminder.detail', {
+          gameName: p.game_name,
+          amount: formatKr(p.entry_fee_kr),
+        }),
+      };
+    }
   }
 }
 

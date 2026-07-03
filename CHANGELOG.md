@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.172 · Startkontingent med Vipps</strong></summary>
+
+[#1049](https://github.com/jdlarssen/golf-app/issues/1049) — Ta betalt for runden: sett en startkontingent og legg inn Vipps-nummeret ditt, så ser spillerne beløpet når de melder seg på. Underveis huker du av hvem som har betalt, ser «17 av 24 betalt», og purrer de som mangler med ett trykk.
+
+↳ /admin/games · «Se spillene dine»
+</details>
+
+<details>
 <summary><strong>1.171 · Prøvespill uten innlogging</strong></summary>
 
 [#1042](https://github.com/jdlarssen/golf-app/issues/1042) — Nå kan hvem som helst prøve Tørny uten å logge inn: åpne prøvespillet, tast noen slag og se deg selv klatre på tavla mot tre motspillere — ingenting lagres, og «Kom i gang» tar deg rett til å lage din egen turnering.

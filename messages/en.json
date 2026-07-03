@@ -130,6 +130,10 @@
         "title": "Remember to submit your scorecard",
         "detail": "You''re done in {gameName}"
       },
+      "paymentReminder": {
+        "title": "Pay the entry fee",
+        "detail": "You owe {amount} for {gameName}"
+      },
       "cupFinished": {
         "title": "The cup has finished",
         "detail": "{tournamentName}"
@@ -3068,7 +3072,9 @@
         "unpaid": "Owing",
         "withdrawn": "withdrawn",
         "markPaidAria": "Mark {name} as paid",
-        "toggleError": "Couldn't save. Please try again."
+        "toggleError": "Couldn't save. Please try again.",
+        "remindButton": "Remind those who owe ({count})",
+        "remindDone": "Reminded {count, plural, one {# player} other {# players}}."
       },
       "flights": {
         "sectionLabel": "Flights",
@@ -4634,6 +4640,21 @@
       "submitButton": "Submit scorecard",
       "submitButtonText": "Submit scorecard: {url}",
       "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit."
+    },
+    "paymentReminder": {
+      "subject": "Entry fee — {gameName}",
+      "heading": "Don't forget the entry fee",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "body": "You still owe the <strong>{amount}</strong> entry fee for {gameName}.",
+      "bodyText": "You still owe the {amount} entry fee for {gameName}.",
+      "vippsLine": "Pay with Vipps to {number}.",
+      "payHere": "Pay here",
+      "payHereText": "Pay here: {url}",
+      "arrangeLine": "Arrange payment with the organiser.",
+      "openButton": "Open the game",
+      "openButtonText": "Open the game: {url}",
+      "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link>."
     },
     "cupStarted": {
       "subject": "The cup has started — {tournamentName}",

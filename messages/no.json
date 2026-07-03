@@ -130,6 +130,10 @@
         "title": "Husk å levere scorekortet",
         "detail": "Du er ferdig i {gameName}"
       },
+      "paymentReminder": {
+        "title": "Betal startkontingenten",
+        "detail": "Du mangler {amount} i {gameName}"
+      },
       "cupFinished": {
         "title": "Cupen er ferdigspilt",
         "detail": "{tournamentName}"
@@ -3068,7 +3072,9 @@
         "unpaid": "Mangler",
         "withdrawn": "trukket",
         "markPaidAria": "Marker {name} som betalt",
-        "toggleError": "Kunne ikke lagre. Prøv igjen."
+        "toggleError": "Kunne ikke lagre. Prøv igjen.",
+        "remindButton": "Purr de som mangler ({count})",
+        "remindDone": "Purret {count, plural, one {# spiller} other {# spillere}}."
       },
       "flights": {
         "sectionLabel": "Flighter",
@@ -4634,6 +4640,21 @@
       "submitButton": "Lever scorekortet",
       "submitButtonText": "Lever scorekortet: {url}",
       "footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere."
+    },
+    "paymentReminder": {
+      "subject": "Startkontingent — {gameName}",
+      "heading": "Husk startkontingenten",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "body": "Du mangler å betale startkontingenten på <strong>{amount}</strong> for {gameName}.",
+      "bodyText": "Du mangler å betale startkontingenten på {amount} for {gameName}.",
+      "vippsLine": "Betal med Vipps til {number}.",
+      "payHere": "Betal her",
+      "payHereText": "Betal her: {url}",
+      "arrangeLine": "Avtal betaling med arrangøren.",
+      "openButton": "Åpne spillet",
+      "openButtonText": "Åpne spillet: {url}",
+      "footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link>."
     },
     "cupStarted": {
       "subject": "Cup-en har startet — {tournamentName}",

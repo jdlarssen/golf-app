@@ -28,7 +28,8 @@ export type NotificationKind =
   | 'game_started'
   | 'auto_start_blocked'
   | 'achievement_unlocked'
-  | 'idea_built';
+  | 'idea_built'
+  | 'payment_reminder';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -257,6 +258,19 @@ const ideaBuiltSchema = z.object({
   submission_id: uuid,
 });
 
+// payment_reminder: arrangøren purrer en spiller som mangler å betale
+// startkontingenten (#1049). Fyres manuelt fra betaling-cockpiten
+// (remindUnpaidPlayers) — in-app + mail-if-off-app. Deeplinker til
+// /games/[game_id] der PaymentInfo viser beløp + betalingsmåte. Payload bærer
+// beløp + lenke så kort/mail kan vise dem uten et ekstra oppslag; payment_link
+// er nullable (kontingent uten oppgitt lenke er lov).
+const paymentReminderSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  entry_fee_kr: z.number().int().nonnegative(),
+  payment_link: z.string().min(1).nullable().optional(),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -281,6 +295,7 @@ const schemas = {
   auto_start_blocked: autoStartBlockedSchema,
   achievement_unlocked: achievementUnlockedSchema,
   idea_built: ideaBuiltSchema,
+  payment_reminder: paymentReminderSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

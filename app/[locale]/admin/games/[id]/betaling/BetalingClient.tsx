@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { GuestBadge } from '@/components/ui/GuestBadge';
-import { togglePlayerPaid } from './actions';
+import { togglePlayerPaid, remindUnpaidPlayers } from './actions';
 
 export type BetalingPlayer = {
   userId: string;
@@ -30,11 +30,29 @@ export function BetalingClient({
 }) {
   const t = useTranslations('admin.game.betaling');
   const [pending, startTransition] = useTransition();
+  const [reminding, startReminding] = useTransition();
   const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});
   const [error, setError] = useState(false);
+  const [remindedCount, setRemindedCount] = useState<number | null>(null);
 
   function isPaid(p: BetalingPlayer): boolean {
     return optimistic[p.userId] ?? p.paid;
+  }
+
+  const unpaidCount = players.filter((p) => !p.withdrawn && !isPaid(p)).length;
+
+  function purre() {
+    setRemindedCount(null);
+    setError(false);
+    startReminding(async () => {
+      try {
+        const r = await remindUnpaidPlayers(gameId);
+        setRemindedCount(r.count);
+      } catch (err) {
+        console.error('[BetalingClient] purre failed', err);
+        setError(true);
+      }
+    });
   }
 
   function toggle(p: BetalingPlayer) {
@@ -63,6 +81,25 @@ export function BetalingClient({
           {t('toggleError')}
         </p>
       )}
+
+      {unpaidCount > 0 && (
+        <div className="space-y-1.5">
+          <button
+            type="button"
+            onClick={purre}
+            disabled={reminding}
+            className="min-h-[44px] w-full rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft disabled:opacity-60"
+          >
+            {t('remindButton', { count: unpaidCount })}
+          </button>
+          {remindedCount !== null && (
+            <p className="text-center text-xs text-success" role="status">
+              {t('remindDone', { count: remindedCount })}
+            </p>
+          )}
+        </div>
+      )}
+
       <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
         {players.map((p) => {
           const paid = isPaid(p);
