@@ -34,7 +34,28 @@ export async function getInviteEligibleIds(
     getCoPlayerIds(creatorUserId),
     groupId ? getGroupMemberIds(groupId) : Promise.resolve<string[]>([]),
   ]);
-  return new Set([...friendIds, ...coPlayerIds, ...clubMemberIds]);
+  const union = [...new Set([...friendIds, ...coPlayerIds, ...clubMemberIds])];
+  if (union.length === 0) return new Set();
+
+  // #1012: anonymiserte kontoer er aldri kvalifiserte. Venne-/klubb-bena tømmes
+  // av anonymize_user(), men co-player-benet leser game_players — som bevares
+  // ved anonymisering. Uten dette kunne en creator poste en slettet brukers id
+  // direkte (pickerne viser dem aldri). Best-effort samme vei som komponent-
+  // reads: feiler oppslaget krymper settet til tomt (fail-safe, avviser).
+  const admin = getAdminClient();
+  const { data, error } = await admin
+    .from('users')
+    .select('id')
+    .in('id', union)
+    .is('deleted_at', null)
+    .returns<{ id: string }[]>();
+  if (error || !data) {
+    if (error) {
+      console.error('[getInviteEligibleIds] deleted-filter lookup failed', error);
+    }
+    return new Set();
+  }
+  return new Set(data.map((r) => r.id));
 }
 
 /**
