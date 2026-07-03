@@ -132,13 +132,9 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
         <span className="h-px flex-1 bg-border" />
       </div>
 
-      {/* #1009: gjest uten konto — navn + hcp + tee, ingen e-post. */}
-      <div>
-        <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-          {t('guestForm.sectionHeading')}
-        </h3>
-        <AddGuestForm action={guestAction} disabled={disabled} />
-      </div>
+      {/* #1009: gjest uten konto — navn + hcp + tee, ingen e-post.
+          AddGuestForm bærer sin egen seksjons-heading. */}
+      <AddGuestForm action={guestAction} disabled={disabled} />
     </div>
   );
 }
