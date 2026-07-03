@@ -52,6 +52,10 @@ type SearchParams = Promise<{
   // param som peker på en ugyldig kilde (ikke deltaker, ikke finished,
   // cup/liga) ignoreres stille og gir en helt vanlig tom veiviser.
   fra?: string | string[];
+  // #1023: «Arranger runde her» på de offentlige banesidene dyplenker hit
+  // med banens id. Serverside-validert i loadBaneCourseId; ugyldig/ukjent id
+  // ignoreres stille. `?fra=` vinner når begge er satt (revansje er rikere).
+  bane?: string | string[];
 }>;
 
 type RevansjeContext = {
@@ -160,6 +164,26 @@ async function loadRevansjeContext(
   return { initialValues, initialIntent, sourceName: game.name };
 }
 
+/**
+ * #1023 — validates the `?bane=` deep-link from the public course pages.
+ * Returns the course id when the course exists (RLS: courses are
+ * world-readable, so any authed user resolves it), otherwise `null` and the
+ * wizard opens empty. A malformed value (not a UUID) makes PostgREST error;
+ * that is swallowed into the same silent-ignore path.
+ */
+async function loadBaneCourseId(
+  baneId: string,
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('id', baneId)
+    .maybeSingle<{ id: string }>();
+  if (error || !data) return null;
+  return data.id;
+}
+
 export default async function OpprettSpillPage({
   searchParams,
 }: {
@@ -204,6 +228,15 @@ export default async function OpprettSpillPage({
   if (revansje) {
     console.log('[opprett-spill] revansje-prefill', fraId);
   }
+
+  // #1023: `?bane=` fra de offentlige banesidene — kun course_id prefilles
+  // (tee/spillere tar wizardens egne defaults). Revansje vinner når begge
+  // paramene gir treff; en ugyldig bane-id faller stille til tom veiviser.
+  const baneParam = first(sp.bane);
+  const baneCourseId =
+    !revansje && baneParam
+      ? await loadBaneCourseId(baneParam, supabase)
+      : null;
 
   // #892: en eksplisitt ?intent= (f.eks. cup fra Klubbhusets «… eller en cup»)
   // vinner; ellers en ?klubb=-dyplenke gir klubb-intent; revansje-derivert
@@ -251,8 +284,13 @@ export default async function OpprettSpillPage({
             <GameFormBody
               defaultGroupId={first(sp.klubb)}
               initialIntent={initialIntent}
-              initialValues={revansje?.initialValues}
-              wizardKey={fraId ?? 'blank'}
+              initialValues={
+                revansje?.initialValues ??
+                (baneCourseId ? { course_id: baneCourseId } : undefined)
+              }
+              // #1007/#1023: remount når prefill-kilden endres (useGameFormState
+              // leser initialValues kun ved mount — key-remount-fella).
+              wizardKey={fraId ?? baneCourseId ?? 'blank'}
               userId={currentUserId}
               isAdmin={isAdmin}
             />
