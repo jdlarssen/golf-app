@@ -4770,5 +4770,37 @@
     "closeAria": "Lukk",
     "iosStep1Pre": "Trykk på del-ikonet",
     "iosStep1Post": "nederst på skjermen."
+  },
+  "publicCourses": {
+    "index": {
+      "metaTitle": "Golfbaner – slope, rating og baneinfo – Tørny",
+      "metaDescription": "Slope, course rating og hulloversikt for norske golfbaner. Finn banen din og arranger en runde på et par minutter.",
+      "kicker": "Golfbaner",
+      "heading": "Golfbaner i Tørny",
+      "intro": "Baner Tørny dekker, med slope, rating og hulloversikt.",
+      "holesLabel": "{count} hull",
+      "teesLabel": "{count} {count, plural, one {tee} other {teer}}",
+      "emptyState": "Ingen baner er lagt inn ennå."
+    },
+    "detail": {
+      "metaTitle": "{name} – slope, rating og baneinfo – Tørny",
+      "metaDescription": "Slope, course rating, par og hulloversikt for {name}.",
+      "kicker": "Golfbane",
+      "backLabel": "Alle baner",
+      "holesHeading": "Hull for hull",
+      "colHole": "Hull",
+      "colPar": "Par",
+      "colIndex": "Indeks",
+      "genderMens": "Herrer",
+      "genderLadies": "Damer",
+      "genderJuniors": "Junior",
+      "teesHeading": "Tee-er",
+      "lengthLabel": "{meters} meter",
+      "slopeLabel": "Slope {value}",
+      "ratingLabel": "CR {value}",
+      "parLabel": "Par {value}",
+      "ctaHeading": "Klar for en runde?",
+      "ctaButton": "Arranger runde her"
+    }
   }
 }

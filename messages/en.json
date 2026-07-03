@@ -4770,5 +4770,37 @@
     "closeAria": "Close",
     "iosStep1Pre": "Tap the share icon",
     "iosStep1Post": "at the bottom of the screen."
+  },
+  "publicCourses": {
+    "index": {
+      "metaTitle": "Golf courses – slope, rating and course info – Tørny",
+      "metaDescription": "Slope, course rating and hole-by-hole info for Norwegian golf courses. Find your course and set up a round in a couple of minutes.",
+      "kicker": "Golf courses",
+      "heading": "Golf courses in Tørny",
+      "intro": "Courses covered by Tørny, with slope, rating and hole-by-hole info.",
+      "holesLabel": "{count} holes",
+      "teesLabel": "{count} {count, plural, one {tee} other {tees}}",
+      "emptyState": "No courses have been added yet."
+    },
+    "detail": {
+      "metaTitle": "{name} – slope, rating and course info – Tørny",
+      "metaDescription": "Slope, course rating, par and hole-by-hole info for {name}.",
+      "kicker": "Golf course",
+      "backLabel": "All courses",
+      "holesHeading": "Hole by hole",
+      "colHole": "Hole",
+      "colPar": "Par",
+      "colIndex": "Index",
+      "genderMens": "Men's",
+      "genderLadies": "Ladies'",
+      "genderJuniors": "Junior",
+      "teesHeading": "Tees",
+      "lengthLabel": "{meters} meters",
+      "slopeLabel": "Slope {value}",
+      "ratingLabel": "CR {value}",
+      "parLabel": "Par {value}",
+      "ctaHeading": "Ready for a round?",
+      "ctaButton": "Set up a round here"
+    }
   }
 }
