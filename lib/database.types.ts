@@ -1904,6 +1904,7 @@ export type Database = {
         }
         Returns: string
       }
+      slugify_course_name: { Args: { input: string }; Returns: string }
       update_course_with_layout: {
         Args: {
           p_course_id: string
