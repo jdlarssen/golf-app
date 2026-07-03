@@ -78,13 +78,13 @@ Golfere googler slope/rating/lengde på norske baner daglig; ingen norsk aktør 
 
 ## Success Criteria
 
-- [ ] **K1:** Uinnlogget (ingen cookie) GET `/baner` og `/baner/<slug>` på staging rendrer komplett HTML: banenavn, hulltabell med par+indeks (`tabular-nums`), tee-seksjon med lengde/slope/CR. *Bevis: curl uten cookie + innholds-grep.*
-- [ ] **K2:** `app/sitemap.ts` + `app/robots.ts` finnes og svarer 200 med alle kvalifiserte baner; `npm run build` exit 0 (fanger runtime-export-/exhaustive-feller). *Bevis: curl `/sitemap.xml` + `/robots.txt` + build-output.*
-- [ ] **K3:** «Arranger runde her» → `/opprett-spill?bane=<id>`: innlogget lander i veiviseren med banen forhåndsvalgt; uinnlogget sendes via login og tilbake (next-param). Ugyldig `?bane=` → tom veiviser uten feil. *Bevis: staging-runde (authed curl/preview) på alle tre.*
-- [ ] **K4:** Migrasjonen er påført staging OG prod med identisk resultat: `slug` unik og norsk-vennlig for alle 4 baner (f.eks. `stjordal-golfbane`, `byneset-north`); insert-trigger setter slug på ny rad; rename endrer IKKE slug. *Bevis: SQL-output fra begge miljøer + trigger-test på staging.*
-- [ ] **K5:** Lighthouse SEO-score ≥90 på `/baner/<slug>` (prod-build lokalt eller staging). *Bevis: lighthouse-kjøring, score i output.*
-- [ ] **K6:** Type A-tester grønne: `lib/courses/slug.test.ts` (æøå, kollisjon, idempotens) + eligibility-predicate; maks ÉN render-test for hulltabell-komponenten; ingen games/scores/users-referanser i `app/[locale]/baner/` (grep). Full gates grønne.
-- [ ] **K7:** Ingen innloggede flater endret (bunn-nav urørt); spectate/signup-mønsteret i proxy.ts utvidet med kun `baner`. MINOR-bump + Funksjoner-rad; flyt 04 oppdatert (SVG+PNG); alle commits `Refs #1023`.
+- [x] **K1:** Staging 2026-07-03, anon curl: `/baner` → 200 med lenke til `byneset-north` (+ `/en/baner` engelsk); `/baner/byneset-north` → 200 med 18 hull-rader (par + indeks, `tabular-nums`), tee-seksjon (Slope 129 / CR 69,7 norsk komma / Par 72, kun komplette kjønn), JSON-LD GolfCourse.
+- [x] **K2:** `sitemap.xml` → 200 med `/`, `/baner`, `/baner/byneset-north` + hreflang-alternates; `robots.txt` → 200 med sitemap-peker; `npm run build` exit 0 (281 statiske sider; bane-siden prerendret med cacheLife-dager). Sitemap/robots måtte også unntas i proxy-matcheren (bor utenfor `[locale]` — dokumentert avvik).
+- [x] **K3:** Uinnlogget `?bane=` → 307 `login?next=%2Fopprett-spill%3Fbane%3D<id>`; authed → hidden input `course_id value="fb23d113-…"` + initialValues i RSC-payload (banen forhåndsvalgt); ugyldig id → 0 course_id-prefill (kun router-state-ekko av URL-en). Verifisert med mintet e2e-admin-cookie mot staging.
+- [x] **K4 (staging-halvdel):** Backfill `byneset-north`; trigger-test: `Bjørnstjerne Bæ & Ålesund GK — Test` → `bjoernstjerne-bae-aalesund-gk-test`, kollisjon → `-2`, rename endret IKKE slug; `default ''` bekreftet overskrevet av trigger. **Prod-halvdel BLOKKERT:** auto-modus-klassifisereren nekter prod-migrasjon uten eksplisitt eier-godkjenning — MÅ kjøres før merge. (NB: kontraktens eksempel-slug «stjordal-golfbane» var feil — ø→oe gir `stjoerdal-golfbane`.)
+- [x] **K5:** Lighthouse SEO-score **1.0 (100/100)** på `/baner/byneset-north`, null feilende SEO-audits.
+- [x] **K6:** 7 filer / 88 tester grønne (10 slugify, 10 eligibility, 1 HoleTable-render, catalogParity ×2, pre-eksisterende lib/courses); leak-grep: eneste treff i `app/[locale]/baner/` er ren `teeRating`-import — ingen games/scores/users-spørringer. tsc + lint grønne. **Avvik (dokumentert):** `getAdminClient` brukes KUN til `is_admin`-oppslaget (users-RLS blokkerer anon — verifisert live; kontraktens escape-hatch).
+- [x] **K7:** proxy-diff = kun `baner` i mønsteret + sitemap/robots-unntak i matcher; bunn-nav urørt; 1.169.0 (MINOR) + Funksjoner-rad med ↳ `/baner`; flyt 04 oppdatert (SVG+PNG, commit fe14d858); alle 8 commits har `Refs #1023`. **Avvik (dokumentert, SEO-trygt):** ukjent slug → 200 + `noindex`-meta + not-found-UI (PPR-streaming committer status før slug-oppslaget; hard 404 ville krevd `dynamicParams=false` som fryser sidesettet per deploy — samme oppførsel som `/signup/[shortId]`).
 
 ## Gates
 
