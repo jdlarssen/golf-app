@@ -97,7 +97,16 @@ export async function RegistrationOverviewSection({
           {/* invite_only er privat — ikke nudge arrangøren til å kringkaste
               lenken. Forespørsel-veien (#368) tjener folk som alt har den. */}
           {registrationMode !== 'invite_only' && (
-            <CopyShareLinkButton shareUrl={shareUrl} />
+            <>
+              <CopyShareLinkButton shareUrl={shareUrl} />
+              <SmartLink
+                href={`/signup/${shortId}/plakat`}
+                className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+                data-testid="poster-link"
+              >
+                {t('posterLink')}
+              </SmartLink>
+            </>
           )}
 
           <SmartLink

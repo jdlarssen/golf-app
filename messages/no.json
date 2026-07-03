@@ -2825,7 +2825,8 @@
       "playerNoClub": "Ikke med i en klubb ennå",
       "playerToolsLabel": "Verktøy",
       "playerForeslaaIde": "Har du en idé?",
-      "playerForeslaaIdeMeta": "Foreslå en funksjon til Tørny"
+      "playerForeslaaIdeMeta": "Foreslå en funksjon til Tørny",
+      "keyMetricsPublicSignups": "Påmeldt via offentlig side"
     },
     "game": {
       "errors": {
@@ -3025,7 +3026,8 @@
         "copyButton": "Kopier lenke",
         "copiedButton": "✓ Kopiert",
         "copyFailure": "Klarte ikke å kopiere automatisk. Marker lenken over og kopier manuelt.",
-        "viewAllSignups": "Vis alle påmeldinger →"
+        "viewAllSignups": "Vis alle påmeldinger →",
+        "posterLink": "Skriv ut plakat"
       },
       "flights": {
         "sectionLabel": "Flighter",
@@ -4457,6 +4459,22 @@
       "teamDashGameLocked": "Spillet er startet — endringer er ikke tillatt lenger.",
       "teamDashSignupClosed": "Påmeldingen er stengt. Arrangøren gjør de siste justeringene.",
       "teamDashDbError": "Klarte ikke å fullføre handlingen. Prøv igjen om litt."
+    },
+    "public": {
+      "courseLabel": "Bane:",
+      "teeOffLabel": "Tee-off:",
+      "emptyRoster": "Ingen har meldt seg på ennå. Bli den første.",
+      "registeredCount": "{count, plural, one {# påmeldt} other {# påmeldte}}",
+      "registeredOverflow": "og {count} til",
+      "joinButton": "Bli med",
+      "joinHint": "Du logger inn med engangskode på e-post. Det tar under et minutt.",
+      "ogCta": "Bli med på runden",
+      "ogDescription": "Se hvem som er påmeldt, og bli med selv på under et minutt.",
+      "posterLink": "Skriv ut plakat",
+      "posterMetaTitle": "Turneringsplakat – Tørny",
+      "posterPrintButton": "Skriv ut",
+      "posterScanHint": "Skann koden og bli med på runden",
+      "posterFooter": "Tørny — fyr opp golfturneringen på et par minutter"
     }
   },
   "legal": {

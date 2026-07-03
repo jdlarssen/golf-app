@@ -2825,7 +2825,8 @@
       "playerNoClub": "Not in a club yet",
       "playerToolsLabel": "Tools",
       "playerForeslaaIde": "Got an idea?",
-      "playerForeslaaIdeMeta": "Suggest a feature for Tørny"
+      "playerForeslaaIdeMeta": "Suggest a feature for Tørny",
+      "keyMetricsPublicSignups": "Signed up via public page"
     },
     "game": {
       "errors": {
@@ -3025,7 +3026,8 @@
         "copyButton": "Copy link",
         "copiedButton": "✓ Copied",
         "copyFailure": "Could not copy automatically. Select the link above and copy manually.",
-        "viewAllSignups": "View all signups →"
+        "viewAllSignups": "View all signups →",
+        "posterLink": "Print poster"
       },
       "flights": {
         "sectionLabel": "Flights",
@@ -4457,6 +4459,22 @@
       "teamDashGameLocked": "The game has started — no further changes are allowed.",
       "teamDashSignupClosed": "Sign-up is closed. The organiser is making final adjustments.",
       "teamDashDbError": "Couldn't complete the action. Please try again in a moment."
+    },
+    "public": {
+      "courseLabel": "Course:",
+      "teeOffLabel": "Tee-off:",
+      "emptyRoster": "No one has signed up yet. Be the first.",
+      "registeredCount": "{count, plural, one {# signed up} other {# signed up}}",
+      "registeredOverflow": "and {count} more",
+      "joinButton": "Join",
+      "joinHint": "You sign in with a one-time code by email. It takes less than a minute.",
+      "ogCta": "Join the round",
+      "ogDescription": "See who's signed up and join in under a minute.",
+      "posterLink": "Print poster",
+      "posterMetaTitle": "Tournament poster – Tørny",
+      "posterPrintButton": "Print",
+      "posterScanHint": "Scan the code and join the round",
+      "posterFooter": "Tørny — fire up your golf tournament in a couple of minutes"
     }
   },
   "legal": {

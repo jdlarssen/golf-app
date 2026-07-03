@@ -25,6 +25,7 @@ const METRICS: KeyMetrics = {
   usersGe1: 30,
   usersGe2: 12,
   gjengerGe2: 3,
+  publicSignups: 5,
   weeks: WEEK_STARTS.map((weekStart, i) => ({ weekStart, finished: i })),
 };
 
@@ -36,6 +37,7 @@ describe('KeyMetricsView (#1010)', () => {
     // 12 of 30 → 40 — share is derived in the view, so it is asserted here.
     expect(screen.getByTestId('key-metrics-users-share')).toHaveTextContent('40');
     expect(screen.getByTestId('key-metrics-gjenger-ge2')).toHaveTextContent('3');
+    expect(screen.getByTestId('key-metrics-public-signups')).toHaveTextContent('5');
 
     const weeks = screen.getAllByTestId('key-metrics-week');
     expect(weeks).toHaveLength(8);

@@ -38,6 +38,7 @@ function parseMetrics(data: unknown): KeyMetrics | null {
     typeof d.users_ge1 !== 'number' ||
     typeof d.users_ge2 !== 'number' ||
     typeof d.gjenger_ge2 !== 'number' ||
+    typeof d.public_signups !== 'number' ||
     !Array.isArray(d.weeks)
   ) {
     return null;
@@ -55,6 +56,7 @@ function parseMetrics(data: unknown): KeyMetrics | null {
     usersGe1: d.users_ge1,
     usersGe2: d.users_ge2,
     gjengerGe2: d.gjenger_ge2,
+    publicSignups: d.public_signups,
     weeks,
   };
 }

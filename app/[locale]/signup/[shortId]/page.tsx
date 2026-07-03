@@ -17,14 +17,41 @@ import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
 import { resolveRegistrationTypeView } from './registrationTypeView';
 import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
+import {
+  isPubliclyViewable,
+  signupSourceFromParam,
+} from '@/lib/games/publicSignupVisibility';
+import { getPublicSignupRoster } from '@/lib/games/getPublicSignupRoster';
+import { PublicLandingView } from './PublicLandingView';
 import { RegistrationForm, type MatchplaySideData } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
 
 type Params = Promise<{ shortId: string; locale: string }>;
+type SearchParams = Promise<{ src?: string | string[] }>;
 
 export async function generateMetadata({ params }: { params: Params }) {
-  const { locale } = await params;
+  const { locale, shortId } = await params;
   const t = await getTranslations({ locale: locale as AppLocale, namespace: 'signup' });
+
+  // #1022: for offentlig synlige spill får link-previews spillnavnet og en
+  // invitasjon som og:title/description (og:image kommer fra filkonvensjonen
+  // opengraph-image.tsx). Fane-tittelen for innloggede beholdes uendret.
+  const game = await getGameByShortId(shortId);
+  if (game && isPubliclyViewable(game)) {
+    const gameName = localizeGameName(
+      game.name,
+      game.courses?.name ?? null,
+      locale as AppLocale,
+    );
+    return {
+      title: t('metaTitle'),
+      description: t('public.ogDescription'),
+      openGraph: {
+        title: gameName,
+        description: t('public.ogDescription'),
+      },
+    };
+  }
   return { title: t('metaTitle') };
 }
 
@@ -37,8 +64,12 @@ export async function generateMetadata({ params }: { params: Params }) {
  * `next=/signup/[shortId]` så de havner tilbake etter OTP-verify.
  *
  * Branch-logikken kjører serverside i prioritetsrekkefølge:
- *   1. Ikke logget inn → redirect /login med next-param (FØR spill-oppslaget,
- *      #559 — ellers 404-er en ugyldig lenke i stedet for å gate til login).
+ *   1. Ikke logget inn + offentlig synlig spill (#1022: scheduled + open/
+ *      manual_approval + påmelding ikke stengt) → offentlig landingsside med
+ *      «Bli med»-CTA inn i login-flyten. Alle andre uinnloggede → redirect
+ *      /login med next-param (#559 — en ugyldig lenke skal gate til login,
+ *      ikke 404). `?src=`-parameteren (plakat/offentlig side) følger med
+ *      next-parameteren rundt OTP-runden for kilde-attribusjon.
  *   2. Ugyldig/manglende short_id → notFound().
  *   3. Mangler profil_completed_at → redirect /complete-profile.
  *   4. Allerede påmeldt (game_players-rad finnes) → "du er med"-melding.
@@ -50,31 +81,72 @@ export async function generateMetadata({ params }: { params: Params }) {
  *   9. registration_mode = 'open' → "Meld meg på"-form.
  *   10. registration_mode = 'manual_approval' → "Be om å bli med"-form.
  */
-export default async function PåmeldingPage({ params }: { params: Params }) {
+export default async function PåmeldingPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { shortId } = await params;
+  const { src } = await searchParams;
   const locale = await getLocale();
   const t = await getTranslations('signup');
   const tModes = await getTranslations('modes');
 
-  // #559: auth-sjekk FØR spill-oppslaget. /signup ligger i PUBLIC_PATH_PATTERN
-  // (proxy.ts slipper alle gjennom), så vi gater selv her. Uautentiserte sendes
-  // til /login med next-param uansett om shortId-en finnes — ellers ville en
-  // ugyldig lenke gitt 404 i stedet for å lande brukeren på innlogging.
+  // #1022: allowlist-validert rå `?src=`-verdi (public|plakat) — beholdes
+  // gjennom login-runden og ender som game_players.signup_source ved insert.
+  const srcRaw =
+    typeof src === 'string' && signupSourceFromParam(src) != null ? src : null;
+
+  // /signup ligger i PUBLIC_PATH_PATTERN (proxy.ts slipper alle gjennom), så
+  // vi gater selv her. Spill-oppslaget skjer FØR auth-grenen fordi offentlig
+  // synlige spill (#1022) skal rendre landingsside for uinnloggede — men
+  // #559-regelen står: uinnloggede med ugyldig ELLER ikke-synlig lenke sendes
+  // til /login med next-param, aldri 404.
+  const game = await getGameByShortId(shortId);
+
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
+    // Kilde-attribusjon (#1022): validert `?src=` beholdes i next-parameteren
+    // så den overlever OTP-runden og når påmeldings-skjemaet.
+    const srcSuffix = srcRaw ? `?src=${srcRaw}` : '';
+
+    if (game && isPubliclyViewable(game)) {
+      const roster = await getPublicSignupRoster(game.id);
+      return (
+        <PublicLandingView
+          gameName={localizeGameName(
+            game.name,
+            game.courses?.name ?? null,
+            locale as AppLocale,
+          )}
+          modeLabel={tModes(game.game_mode as Parameters<typeof tModes>[0])}
+          courseName={game.courses?.name ?? null}
+          teeOff={
+            game.scheduled_tee_off_at
+              ? formatTeeOff(game.scheduled_tee_off_at, locale as AppLocale)
+              : null
+          }
+          roster={roster}
+          joinHref={`/login?next=${encodeURIComponent(`/signup/${shortId}${srcSuffix}`)}`}
+          posterHref={`/signup/${shortId}/plakat`}
+        />
+      );
+    }
+
     // next-param URL-encodes per the proxy.ts auth-gate convention
     // (`?next=${encodeURIComponent(...)}`) so /login round-trips it cleanly.
     redirect({
-      href: `/login?next=${encodeURIComponent(`/signup/${shortId}`)}`,
+      href: `/login?next=${encodeURIComponent(`/signup/${shortId}${srcSuffix}`)}`,
       locale: locale as AppLocale,
     });
   }
 
-  const game = await getGameByShortId(shortId);
   if (!game) {
     notFound();
   }
@@ -264,6 +336,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
             teamCandidates,
             captainEmail: profile!.email,
             matchplaySideData,
+            src: srcRaw,
           })}
         </Card>
       </div>
@@ -285,6 +358,7 @@ function renderBody({
   teamCandidates,
   captainEmail,
   matchplaySideData,
+  src,
 }: {
   t: ReturnType<typeof getTranslations<'signup'>> extends Promise<infer R> ? R : never;
   tModes: ReturnType<typeof getTranslations<'modes'>> extends Promise<infer R> ? R : never;
@@ -299,6 +373,7 @@ function renderBody({
   teamCandidates: TeamCandidate[];
   captainEmail: string | null;
   matchplaySideData: MatchplaySideData | null;
+  src: string | null;
 }) {
   if (isAlreadyRegistered) {
     return (
@@ -352,6 +427,7 @@ function renderBody({
           mode="open"
           shortId={game.short_id}
           sideData={matchplaySideData}
+          src={src}
         />
       </div>
     );
@@ -374,6 +450,7 @@ function renderBody({
           mode="open"
           shortId={game.short_id}
           sideData={matchplaySideData}
+          src={src}
         />
       </div>
     );
@@ -482,6 +559,7 @@ function renderBody({
         mode={mode}
         shortId={game.short_id}
         sideData={mode === 'open' ? matchplaySideData : null}
+        src={src}
       />
     </div>
   );

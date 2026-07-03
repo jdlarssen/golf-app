@@ -8,6 +8,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { signupSourceFromParam } from '@/lib/games/publicSignupVisibility';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { soloPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
@@ -262,6 +263,12 @@ export async function registerForOpenGame(
   // uten å bli avhengig av at server-action cookie-handoff er konfigurert
   // riktig på edge runtime. Authz over (registration_mode + status) er
   // allerede sjekket på rad-nivå i koden.
+  // #1022: kanal-attribusjon fra offentlig flate. Allowlist-validert — ukjente
+  // verdier blir null og blokkerer aldri påmeldingen.
+  const signupSource = signupSourceFromParam(
+    String(formData.get('src') ?? '') || undefined,
+  );
+
   const { error: insertError } = await admin.from('game_players').insert({
     game_id: game.id,
     user_id: userId,
@@ -270,6 +277,7 @@ export async function registerForOpenGame(
     course_handicap: null,
     // #463: selv-påmelding → bekreftet med en gang.
     accepted_at: new Date().toISOString(),
+    signup_source: signupSource,
   });
 
   // Deterministisk race guard: etter insert, hent alle aktive spillere på

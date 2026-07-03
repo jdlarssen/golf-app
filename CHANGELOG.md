@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.168 · Offentlig påmeldingsside med plakat</strong></summary>
+
+[#1022](https://github.com/jdlarssen/golf-app/issues/1022) — Påmeldingslenken viser nå en offentlig side med bane, tid og hvem som er med, gir et delebilde i chatten når du deler den, og har en print-klar plakat med QR-kode til oppslagstavla.
+
+↳ /admin · «Skriv ut plakat»
+</details>
+
+<details>
 <summary><strong>1.166 · Gjestespiller</strong></summary>
 
 [#1009](https://github.com/jdlarssen/golf-app/issues/1009) — Ta med en kompis uten konto: legg til gjest med navn og handicap i veiviseren eller på spillerlista, markøren fører scoren underveis, og etter runden sender du resultatet til gjestens e-post så kontoen blir deres.

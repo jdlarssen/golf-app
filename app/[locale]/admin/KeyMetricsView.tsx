@@ -14,6 +14,8 @@ export type KeyMetrics = {
   usersGe2: number;
   /** Crews (exact non-withdrawn player sets) with ≥2 finished games. */
   gjengerGe2: number;
+  /** Signups attributed to a public surface (landing page / poster) — #1022. */
+  publicSignups: number;
   /** Finished games per Oslo week, oldest first, current week last. */
   weeks: { weekStart: string; finished: number }[];
 };
@@ -74,6 +76,17 @@ export function KeyMetricsView({ metrics }: { metrics: KeyMetrics }) {
               data-testid="key-metrics-gjenger-ge2"
             >
               {metrics.gjengerGe2}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="font-sans text-[13px] text-text">
+              {t('keyMetricsPublicSignups')}
+            </dt>
+            <dd
+              className="font-serif text-lg font-medium tabular-nums text-text"
+              data-testid="key-metrics-public-signups"
+            >
+              {metrics.publicSignups}
             </dd>
           </div>
         </dl>

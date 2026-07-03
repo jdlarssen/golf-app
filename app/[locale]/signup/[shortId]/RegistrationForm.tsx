@@ -26,10 +26,13 @@ export function RegistrationForm({
   mode,
   shortId,
   sideData = null,
+  src = null,
 }: {
   mode: Mode;
   shortId: string;
   sideData?: MatchplaySideData | null;
+  /** #1022: rå `?src=`-verdi fra offentlig flate — sendes videre til action-en. */
+  src?: string | null;
 }) {
   const t = useTranslations('signup');
   const [isPending, startTransition] = useTransition();
@@ -54,6 +57,9 @@ export function RegistrationForm({
   const handleSubmit = (form: HTMLFormElement) => {
     const data = new FormData(form);
     data.set('shortId', shortId);
+    if (src) {
+      data.set('src', src);
+    }
     if (sideData && mode === 'open' && activeSide) {
       data.set('side', String(activeSide));
     }
