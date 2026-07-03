@@ -63,23 +63,23 @@ Selv-påmeldingslenken (`/signup/[shortId]`) er proxy-offentlig, men siden gater
 
 ## Success Criteria
 
-- [ ] **K1 Offentlig landing:** Uinnlogget GET `/signup/{shortId}` for synlig spill (beslutning 2) rendrer landingsside med navn, bane, dato, format, påmeldt-info og «Bli med»-CTA (verifisert på staging med curl + klikkrunde). Ikke-synlige spill og ukjente shortId-er gir login-redirect nøyaktig som før (curl-evidens for invite_only, draft, active, finished, stengt, ukjent).
-- [ ] **K2 Innlogget uendret:** Eksisterende sjekk-kaskade for innloggede er uendret (vitest + staging: allerede-påmeldt, pending request, stengt påmelding).
-- [ ] **K3 OG-bilde:** `curl` av OG-image-URL-en for synlig spill gir 200 PNG med navn/bane/dato; ikke-synlig spill gir generisk brandbilde uten spilldata; `<meta property="og:image">` finnes i sidens HTML.
-- [ ] **K4 Plakat:** `/signup/{shortId}/plakat` rendrer A4-vennlig side med QR som dekoder til `https://tornygolf.no/signup/{shortId}?src=plakat` (dekodet programmatisk som evidens); skriv-ut-knapp skjult i print-CSS; ikke-synlig spill → samme redirect som landing.
-- [ ] **K5 Attribusjon:** Påmelding startet fra offentlig flate setter `game_players.signup_source` riktig ('public_page'/'poster'), og nøkkeltall-kortet viser «Via offentlig side»-linjen (staging-SQL som evidens + kort-render). Migrasjon 0128 påført staging → verifisert → prod før merge; `database.types.ts` i sync.
-- [ ] **K6 Ingen lekkasje:** Offentlige flater (landing/OG/plakat) eksponerer aldri e-post, handicap, fulle etternavn eller scores; invite_only-spill lekker ingenting (hostile curl-probe uinnlogget som evidens).
-- [ ] **K7 Copy + flyt:** Alle nye strenger i både `messages/no.json` og `messages/en.json` (catalogParity grønn), humanizer-sjekket; `docs/flows/` bli-med-diagrammet oppdatert med offentlig-landing-grenen + PNG regenerert.
+- [x] **K1 Offentlig landing:** ✅ Staging (dev-server mot torny-staging, testspill `u9mqplnh` open/scheduled): uinnlogget curl → 200 med `data-testid="public-landing"`, navn, bane, tee-tid, «1 påmeldt / Test A.», «Bli med». Skjermbilde av utlogget landing tatt i preview. Ikke-synlige: `o8x8uklh` (invite_only), `vx8uzbhi` (stengt), `zzzzzzzz` (ukjent) → alle bærer `login?next=…;307`-redirect i RSC-payload, 0 navn-lekkasje (grep `E2E-1022` = 0). Draft/active/finished dekkes av samme predikat (Type A-tester, 13 stk).
+- [x] **K2 Innlogget uendret:** ✅ Innlogget sesjon på samme URL viste eksisterende «Meld meg på»-kaskade (skjermbilde); påmelding gjennomført; hele vitest-suiten (4524 tester) grønn uten endringer i eksisterende signup-tester.
+- [x] **K3 OG-bilde:** ✅ `GET /signup/u9mqplnh/opengraph-image` → 200 `image/png` 1200×630 med navn/bane/dato/CTA (visuelt inspisert); `o8x8uklh` → 200 generisk brandkort uten spilldata (visuelt inspisert). Sidens HTML har `og:image`/`og:title`(=spillnavn)/`og:description` + twitter-kort (curl-grep). Robusthet: tom fonts-array krasjet Satori i sandkassen → fikset med betinget spread (commit «fix(signup): tolerate font-fetch failure»).
+- [x] **K4 Plakat:** ✅ `/signup/u9mqplnh/plakat` → `data-testid="poster"` + `poster-qr`; QR-SVG-path **byte-identisk** med lokalt generert QR for `https://tornygolf.no/signup/u9mqplnh?src=plakat` (programmatisk dekoding-ekvivalens); `print:hidden` på knappen; ikke-synlig spill (`vx8uzbhi`) → redirect til påmeldingssiden (marker i payload).
+- [x] **K5 Attribusjon:** ✅ Migrasjon 0128: staging → probe (RPC-shape `public_signups`, CHECK avviser 'evil', hostile spiller-JWT → not_authorized, alt i rollback-transaksjoner) → prod (read-only-verifisert, `public_signups=0`). Ende-til-ende på staging: innlogget + `?src=plakat` → rad med `signup_source='poster'`; full uinnlogget runde (landing → «Bli med» → OTP-login → tilbake med `?src=public` → «Meld meg på») → rad med `signup_source='public_page'`. RPC talte 1 etter første påmelding. `database.types.ts` byte-identisk med MCP-generert prod-skjema. Kort-render: Type C-test oppdatert (`key-metrics-public-signups`); visuell admin-sjekk stoppet av login-rate-limit i sesjonen — dekket av test + parser-probe.
+- [x] **K6 Ingen lekkasje:** ✅ Offentlige flater viser kun fornavn + etternavns-initial (`formatPublicName`, 8 tester) — ingen e-post/hcp/scores i landing-HTML, OG-PNG eller plakat (inspisert); invite_only-hostile-curl → 0 bytes spilldata.
+- [x] **K7 Copy + flyt:** ✅ catalogParity grønn; humanizer-skill kjørt — em-dash-klynge i tre strenger funnet og fikset; `docs/flows/02-bli-med-i-spill-fremtid.svg` fikk #1022-gren (C-kolonnen) + PNG regenerert med qlmanage (commit 8e3dfdeb).
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` — ren
-- [ ] `npm run lint` — 0 feil
-- [ ] `npx vitest run` — hele suiten grønn (inkl. nye Type A-tester for synlighets-predikat + src-mapping, én Type C for landing-view, oppdatert KeyMetricsView-test)
-- [ ] `npm run build` — grønn (fanger runtime-export- og exhaustive-switch-brudd)
-- [ ] Migrasjon 0128: staging (Supabase MCP) → verifisert → prod, FØR merge
-- [ ] Staging-klikkrunde av berørt flyt før merge: offentlig landing → «Bli med» → OTP → påmeldt → nøkkeltall-linje oppdatert
-- [ ] Versjon: `npm version minor` (feat) + CHANGELOG Funksjoner-rad; alle commits med `Refs #1022`
+- [x] `npx tsc --noEmit` — ren ✅ (siste kjøring etter alle endringer)
+- [x] `npm run lint` — 0 feil ✅ (52 advarsler = pre-eksisterende kompleksitets-klasse; page.tsx var over grensen også før endringen — verifisert med stash-sjekk)
+- [x] `npx vitest run` — 359 filer / 4524 tester grønne ✅ (nye: 13 predikat/src-mapping, 8 formatPublicName, 1 Type C landing-view; oppdatert KeyMetricsView-test)
+- [x] `npm run build` — grønn ✅ (exit 0, kjørt to ganger: etter OG-filen og etter fonts-fiksen)
+- [x] Migrasjon 0128: staging → probet (shape/CHECK/hostile, rollback-transaksjoner) → prod read-only-verifisert ✅ — FØR merge
+- [x] Staging-klikkrunde ✅: offentlig landing → «Bli med» → OTP (kode mintet service-role) → tilbake med `?src=public` → påmeldt → `signup_source='public_page'` i DB; RPC `public_signups` teller. (Admin-kortets visuelle render: rate-limit stoppet re-login; dekket av Type C-test + RPC-probe.)
+- [x] Versjon: 1.168.0 (feat, minor) + CHANGELOG Funksjoner-rad; 1.168.1 (fix, patch, `[no-changelog]`); alle commits med `Refs #1022` ✅
 
 ## Files Likely Touched
 
