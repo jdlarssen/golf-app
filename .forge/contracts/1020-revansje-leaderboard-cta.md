@@ -59,12 +59,12 @@ Ingen eksterne biblioteker — alt bygger på interne, verifiserte mønstre:
 
 ## Success Criteria
 
-- [ ] **K1:** Staging: avsluttet frittstående spill → Hjem-kort → leaderboard viser «Revansje?»-pill nederst (etter Del resultat) med href `/opprett-spill?fra=<id>`; klikk lander i prefilt veiviser med banner. *Bevis: staging-klikkrunde.*
-- [ ] **K2:** Cup-/liga-spill og aktive spill viser ingen CTA på leaderboardet. *Bevis: kode-gate (page.tsx) + staging-sjekk på minst én av dem.*
-- [ ] **K3:** `/spectate/[token]` for et avsluttet spill rendrer null revansje-referanser. *Bevis: grep i spectate-ruta + staging-fetch av spectate-HTML uten `revansje`.*
-- [ ] **K4:** Én fokusert komponent-test (`RevansjeCta.test.tsx`): med provider → lenke med href; uten provider → ingenting. Grønn. Ingen andre nye tester; null churn i format-visnings-tester.
-- [ ] **K5:** `catalogParity`-testen grønn (nøkkel i no+en); game-home-knappen uendret (git diff rører ikke `(home)/page.tsx`).
-- [ ] **K6:** PATCH-bump + CHANGELOG Feilrettinger-linje; alle commits har `Refs #1020`.
+- [x] **K1:** Staging 2026-07-03 (e2e-admin, spill `fab70b1a` «TEST-GoldenPath-…», stableford finished): autentisert render av `/games/<id>/leaderboard` inneholder nøyaktig én `data-testid="revansje-button"` med `href="/opprett-spill?fra=fab70b1a-…"` og tekst «Revansje?»; klikk-målet `/opprett-spill?fra=<id>` rendrer banner «Forhåndsutfylt fra TEST-GoldenPath-… — alt kan endres.». *Merk: headless-preview stopper på den kjente streaming-swap-fella (kontrollside game-home stopper identisk uten denne endringen) — verifisert via server-HTML per etablert staging-QA-praksis.*
+- [x] **K2:** Staging: aktivt frittstående spill (`d989957f`) og aktivt cup-spill (`7896502d`) → 0 forekomster av `revansje-button`/`opprett-spill?fra` i autentisert HTML. Finished-cup finnes ikke på staging; dekkes av kode-gaten `!tournament_id && !league_round_id` i page.tsx.
+- [x] **K3:** Staging: offentlig `/spectate/393c6166-…` (samme finished spill) → 0 `revansje-button`, 0 provider-referanser; kun i18n-katalog-strenger i den vanlige messages-blobben. Spectate-ruta importerer ingenting revansje-relatert (grep).
+- [x] **K4:** `RevansjeCta.test.tsx` — 2 tester (med/uten provider) grønne; hele leaderboard-suiten 41 filer / 191 tester grønn uten snapshot-churn.
+- [x] **K5:** `catalogParity` grønn i samme kjøring; `git diff HEAD~1 --name-only` rører ikke `(home)/page.tsx`.
+- [x] **K6:** 1.168.2 (PATCH) + Feilrettinger-linje under Juli 2026 i commit b5ae16e5; begge commits har `Refs #1020`. Gates: tsc OK, lint 0 feil, `npm run build` exit 0.
 
 ## Gates
 
