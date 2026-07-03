@@ -194,6 +194,9 @@ export default async function OpengraphImage({
         </div>
       </div>
     ),
-    { ...size, fonts },
+    // Tom fonts-array krasjer Satori («No fonts are loaded»); utelatt option
+    // faller tilbake til next/og sin innebygde default-font. Font-fetch er
+    // best-effort (Google Fonts kan være utilgjengelig).
+    { ...size, ...(fonts.length > 0 ? { fonts } : {}) },
   );
 }
