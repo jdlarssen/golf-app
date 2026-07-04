@@ -39,7 +39,12 @@ export function BetalingClient({
     return optimistic[p.userId] ?? p.paid;
   }
 
-  const unpaidCount = players.filter((p) => !p.withdrawn && !isPaid(p)).length;
+  // Gjester purres ikke (plassholder-adresse, jf. remindUnpaidPlayers), så de
+  // holdes utenfor knappe-tellingen — ellers viser knappen ett høyere tall enn
+  // «Purret N». De vises fortsatt i lista og kan hukes av manuelt.
+  const unpaidCount = players.filter(
+    (p) => !p.withdrawn && !p.isGuest && !isPaid(p),
+  ).length;
 
   function purre() {
     setRemindedCount(null);
