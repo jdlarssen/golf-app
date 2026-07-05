@@ -1866,14 +1866,15 @@
       "hullAriaLabel": "Hull {n}",
       "hullIndex": "indeks {si}",
       "hullPar": "Par {par}",
-      "confirmAllScores": "Bekreft alle scorer",
+      "enterYourScore": "Tast inn scoren din",
       "nextHole": "Neste hull · {next}",
       "submitScorecard": "Lever scorekort",
       "submitScorecardSolo": "Lever ditt scorekort",
       "submitScorecardTeam": "Lever lagets scorekort",
       "backAriaLabel": "Tilbake til turneringen",
       "leaderboardAriaLabel": "Vis leaderboard",
-      "playerFallback": "Spiller"
+      "playerFallback": "Spiller",
+      "missingFlightScores": "{count, plural, one {1 score mangler på hullet} other {# scorer mangler på hullet}}"
     },
     "scoreCard": {
       "tapInstruction": "Trykk kort = par. Bruk − / +.",

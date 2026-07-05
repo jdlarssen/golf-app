@@ -4,8 +4,8 @@ import { BottomActionBar } from './BottomActionBar';
 
 describe('BottomActionBar', () => {
   it('disabled renders a <button> with disabled attribute', () => {
-    render(<BottomActionBar label="Bekreft alle scorer" disabled={true} />);
-    const btn = screen.getByRole('button', { name: 'Bekreft alle scorer' });
+    render(<BottomActionBar label="Tast inn scoren din" disabled={true} />);
+    const btn = screen.getByRole('button', { name: 'Tast inn scoren din' });
     expect(btn.tagName).toBe('BUTTON');
     expect((btn as HTMLButtonElement).disabled).toBe(true);
     expect((btn as HTMLButtonElement).style.background).toBe('var(--disabled-bg)');

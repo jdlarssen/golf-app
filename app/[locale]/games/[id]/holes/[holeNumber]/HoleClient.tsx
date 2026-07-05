@@ -32,6 +32,7 @@ import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedSta
 import {
   isStablefordFamily,
   isScrambleFamily,
+  isAlternateShotMatchplay,
   formatCapturesPutts,
 } from '@/lib/scoring/modes/types';
 import type {
@@ -62,6 +63,15 @@ export type ClientPlayer = {
   initialClientUpdatedAt: string | null;
   initialServerUpdatedAt: string | null;
   submitted: boolean;
+  /**
+   * Laget kortet representerer (kun satt for team-collapsed moduser — Texas-
+   * familien og alternate-shot-matchplay-familien — der server bygger ETT
+   * kort per lag, keyed på lag-kapteinens userId). Brukes sammen med
+   * `myTeamNumber` til å finne "mitt kort" når `myUserId` ikke matcher
+   * kort-userId-en (jeg er ikke kapteinen). Null/undefined for
+   * per-spiller-moduser der `userId` alltid er meg selv. #1058.
+   */
+  teamNumber?: number | null;
 };
 
 export interface HoleClientProps {
@@ -98,6 +108,14 @@ export interface HoleClientProps {
   playerGender?: ScoringGender;
   strokeIndex: number;
   myUserId: string;
+  /**
+   * Innlogget spillers `game_players.team_number` (fra `me.team_number`
+   * server-side). Kun relevant for team-collapsed moduser — brukes til å
+   * finne "mitt kort" blant lag-kortene når jeg ikke er lag-kapteinen (og
+   * derfor ikke matcher noe kort-userId direkte). Null/undefined for
+   * per-spiller-moduser og for spillere uten lag. #1058.
+   */
+  myTeamNumber?: number | null;
   /**
    * How many of the player's 18 holes already have a score recorded
    * (server-side snapshot at render). When this is 18, the bottom CTA
@@ -250,6 +268,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     playerGender,
     strokeIndex,
     myUserId,
+    myTeamNumber = null,
     myCompletedHoles,
     myStablefordTotal = null,
     myStablefordForCurrentHole = null,
@@ -280,6 +299,15 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // Florida Scramble (#283): step-aside-regelen vises som påminnelse på hull-flaten.
   // Kun for florida — ikke for texas eller ambrose.
   const isFlorida = gameMode === 'florida_scramble';
+  const isPatsome = gameMode === 'patsome';
+  // Team-collapsed moduser (#1058): server bygger ETT kort per lag i stedet
+  // for ett per spiller — speiler eksakt samme gruppering som page.tsx sin
+  // `playersForClient`-forgrening (Texas-familien, alternate-shot-matchplay-
+  // familien, og Patsome fra og med foursomes-segmentet på hull 7). "Mitt
+  // kort" kan da ikke slås opp via `userId === myUserId` (jeg er ikke
+  // nødvendigvis lag-kapteinen) — se `myCard` under.
+  const isTeamCollapsedMode =
+    isTexas || isAlternateShotMatchplay(gameMode) || (isPatsome && currentHole >= 7);
   // Putt-registrering (#939): kun individuelle slag-/stableford-format viser
   // opt-in-bryteren + putts-feltet.
   const capturesPutts = formatCapturesPutts(gameMode);
@@ -600,10 +628,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // Defensive disable — server already redirects on submitted, but keep a
   // safety net for non-active states reached via stale client state.
   const gameInactive = gameStatus !== 'active';
-  // For Texas: players har én entry per lag (lag-kapteinen), så lookup
-  // via myUserId feiler for non-captain-medlemmer. Fall tilbake til
-  // lag-kortet — submit-state er lag-nivå for Texas.
-  const me = isTexas ? players[0] : players.find((p) => p.userId === myUserId);
+  // Team-collapsed moduser: players har én entry per lag (lag-kapteinen), så
+  // lookup via myUserId feiler for non-captain-medlemmer. Match på
+  // teamNumber i stedet — players[0]-fallback var korrekt kun når rosteret
+  // aldri spenner over mer enn ETT lag (dvs. ikke singleFlight med 2 lag),
+  // så den falt til feil lag for en 4-spiller Texas/foursomes-runde (#1058).
+  const me = isTeamCollapsedMode
+    ? (players.find((p) => p.teamNumber === myTeamNumber) ?? players[0])
+    : players.find((p) => p.userId === myUserId);
   const submitted = me?.submitted ?? false;
   const disabled = gameInactive || submitted;
 
@@ -673,7 +705,21 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     void clearScoreFor(playerId);
   }
 
-  const allConfirmed = cards.length > 0 && cards.every((c) => c.score != null);
+  // #1058: the CTA gates on MY OWN score (or my team's shared card in
+  // team-collapsed modes), not on every card in the flight. Flight-mates who
+  // haven't tapped in yet no longer block me from moving on — that's what
+  // used to force a passive player's card to get filled by whoever else was
+  // active. The "everyone still needs to enter something" signal moves to a
+  // passive hint below instead of gating the button.
+  const myCard = isTeamCollapsedMode
+    ? (cards.find((c) => c.teamNumber === myTeamNumber) ?? cards[0])
+    : cards.find((c) => c.userId === myUserId);
+  const myScoreEntered = myCard?.score != null;
+  // Missing count excludes my own card — that state already has its own
+  // affordance (the disabled/no-score CTA state below).
+  const missingFlightScoreCount = cards.filter(
+    (c) => c.userId !== myCard?.userId && c.score == null,
+  ).length;
   const next = currentHole + 1;
   const isLastHole = currentHole === 18;
   // Once the player has a score on every hole, the natural next action is
@@ -694,15 +740,15 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       : t('entry.submitScorecard');
   const bottomLabel = roundComplete
     ? submitLabel
-    : !allConfirmed
-      ? t('entry.confirmAllScores')
+    : !myScoreEntered
+      ? t('entry.enterYourScore')
       : isLastHole
         ? submitLabel
         : t('entry.nextHole', { next });
 
   const bottomHref = roundComplete
     ? `/games/${gameId}/submit`
-    : !allConfirmed
+    : !myScoreEntered
       ? undefined
       : isLastHole
         ? `/games/${gameId}/submit`
@@ -787,7 +833,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     </button>
   ) : null;
 
-  const bottomDisabled = (!roundComplete && !allConfirmed) || disabled;
+  const bottomDisabled = (!roundComplete && !myScoreEntered) || disabled;
 
   return (
     <>
@@ -981,6 +1027,28 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             });
           }}
         />
+      )}
+
+      {/* #1058: passiv påminnelse om at flight-kamerater ikke har tastet
+          scoren sin på dette hullet — CTA-en gater ikke lenger på dette (kun
+          på mitt eget/lagets kort), så dette er den eneste nudge-en som er
+          igjen for å fylle inn for en passiv medspiller. Vises i alle
+          moduser med flere kort, inkl. matchplay/skins/wolf der en manglende
+          motstander-score lar hullet stå uavgjort på leaderboardet. */}
+      {missingFlightScoreCount > 0 && (
+        <div
+          data-testid="missing-flight-scores-hint"
+          style={{
+            textAlign: 'center',
+            marginTop: -4,
+            marginBottom: 6,
+            fontFamily: 'var(--font-sans)',
+            fontSize: 11.5,
+            color: 'var(--text-muted)',
+          }}
+        >
+          {t('entry.missingFlightScores', { count: missingFlightScoreCount })}
+        </div>
       )}
 
       <BottomActionBar

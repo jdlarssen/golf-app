@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.175 · Videre til neste hull uten å vente på flighten</strong></summary>
+
+[#1058](https://github.com/jdlarssen/golf-app/issues/1058) — Har du tastet din egen score, er «Neste hull» klar med ett tapp — du venter ikke lenger på at medspillernes tall skal komme inn. En liten linje under kortene viser hvor mange scorer som mangler på hullet.
+
+↳ /games · «Åpne spillet»
+</details>
+
+<details>
 <summary><strong>1.174 · Tee-en velger seg selv når banen bare har én</strong></summary>
 
 [#1059](https://github.com/jdlarssen/golf-app/issues/1059) — Velger du en bane med bare én tee i veiviseren, står tee-en klar med en gang — rett på Neste uten å åpne nedtrekkslista.

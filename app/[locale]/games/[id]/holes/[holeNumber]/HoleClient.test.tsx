@@ -39,6 +39,19 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ prefetch: vi.fn() }),
 }));
 
+// Wolf/BBB subscribe helpers open a real Supabase realtime channel, which
+// throws in jsdom without env vars. HoleClient only calls them when
+// gameMode is wolf/bingo_bango_bongo (#1058 needs wolf coverage for the
+// missing-scores hint) — stub both so those modes render without a live
+// Supabase client.
+vi.mock('@/lib/wolf/subscribeWolfChoices', () => ({
+  subscribeWolfChoices: vi.fn(() => () => {}),
+}));
+
+vi.mock('@/lib/bbb/subscribeBingoBangoBongo', () => ({
+  subscribeBingoBangoBongo: vi.fn(() => () => {}),
+}));
+
 import { useLiveQuery } from 'dexie-react-hooks';
 import { writeScore } from '@/lib/sync/writeScore';
 import { drainQueue } from '@/lib/sync/syncWorker';
@@ -95,6 +108,21 @@ function defaultUseLiveQueryImpl() {
   };
 }
 
+// Same 3-call contract as defaultUseLiveQueryImpl, but lets a test control
+// exactly what localRows (1st call) resolves to — e.g. "my" card has a score
+// while flight-mates' cards don't yet.
+function useLiveQueryImplWithLocalRows(
+  localRows: Array<{ strokes?: number | null; putts?: number | null } | undefined>,
+) {
+  let callCount = 0;
+  return () => {
+    callCount++;
+    if (callCount === 1) return localRows;
+    if (callCount === 3) return [];
+    return undefined;
+  };
+}
+
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
@@ -138,35 +166,93 @@ describe('HoleClient — rendering', () => {
 });
 
 describe('HoleClient — bottom CTA', () => {
-  it('shows "Bekreft alle scorer" and is disabled when no cards confirmed', () => {
+  it('shows "Tast inn scoren din" and is disabled when MY OWN score is missing (#1058)', () => {
+    // No scores at all — including mine (u1, cards[0]).
     render(<HoleClient {...baseProps()} />);
-    const btn = screen.getByRole('button', { name: 'Bekreft alle scorer' });
+    const btn = screen.getByRole('button', { name: 'Tast inn scoren din' });
     expect(btn.tagName).toBe('BUTTON');
     expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('shows "Neste hull · {N+1}" when all confirmed and not last hole', () => {
-    useLiveQueryMock.mockReturnValue([
-      { strokes: 4 },
-      { strokes: 5 },
-      { strokes: 3 },
-      { strokes: 4 },
-    ]);
+  it('shows "Neste hull · {N+1}" as soon as MY OWN score is entered, even if flight-mates are missing (#1058)', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 }, // u1 = myUserId — only mine is entered
+        undefined,
+        undefined,
+        undefined,
+      ]),
+    );
     render(<HoleClient {...baseProps({ currentHole: 7 })} />);
     const link = screen.getByRole('link', { name: 'Neste hull · 8' });
     expect(link.getAttribute('href')).toBe('/games/g1/holes/8');
   });
 
-  it('shows "Lever scorekort" on hole 18 when all confirmed', () => {
-    useLiveQueryMock.mockReturnValue([
-      { strokes: 4 },
-      { strokes: 5 },
-      { strokes: 3 },
-      { strokes: 4 },
-    ]);
+  it('shows "Lever scorekort" on hole 18 as soon as MY OWN score is entered (#1058)', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 }, // u1 = myUserId
+        undefined,
+        undefined,
+        undefined,
+      ]),
+    );
     render(<HoleClient {...baseProps({ currentHole: 18 })} />);
     const link = screen.getByRole('link', { name: 'Lever scorekort' });
     expect(link.getAttribute('href')).toBe('/games/g1/submit');
+  });
+
+  it('still activates the CTA when literally everyone has entered a score', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 },
+        { strokes: 5 },
+        { strokes: 3 },
+        { strokes: 4 },
+      ]),
+    );
+    render(<HoleClient {...baseProps({ currentHole: 7 })} />);
+    const link = screen.getByRole('link', { name: 'Neste hull · 8' });
+    expect(link.getAttribute('href')).toBe('/games/g1/holes/8');
+  });
+});
+
+describe('HoleClient — missing flight-mate scores hint (#1058)', () => {
+  it('shows no hint when nobody else is missing a score', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 },
+        { strokes: 5 },
+        { strokes: 3 },
+        { strokes: 4 },
+      ]),
+    );
+    render(<HoleClient {...baseProps()} />);
+    expect(
+      screen.queryByTestId('missing-flight-scores-hint'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows a passive hint naming how many flight scores are missing on this hole', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 }, // mine — entered
+        undefined,
+        undefined,
+        { strokes: 5 },
+      ]),
+    );
+    render(<HoleClient {...baseProps()} />);
+    const hint = screen.getByTestId('missing-flight-scores-hint');
+    expect(hint.textContent).toContain('2');
+  });
+
+  it('does not count my own missing score in the hint (that is the CTA disabled-state job)', () => {
+    // Nobody has entered anything, including me — hint should count only
+    // the OTHER 3 cards, not all 4.
+    render(<HoleClient {...baseProps()} />);
+    const hint = screen.getByTestId('missing-flight-scores-hint');
+    expect(hint.textContent).toContain('3');
   });
 });
 
@@ -373,4 +459,126 @@ describe('HoleClient — sync status line (#744)', () => {
     render(<HoleClient {...baseProps()} />);
     expect(screen.queryByTestId('sync-dot')).not.toBeInTheDocument();
   });
+});
+
+describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
+  // Texas scramble: server collapses each team to ONE card, keyed on the
+  // captain's userId. myUserId may not equal that captain's userId for
+  // non-captain team members — "my card" must resolve via teamNumber, not
+  // via cards[0].
+  function makeTeamPlayers(): HoleClientProps['players'] {
+    return [
+      {
+        userId: 'captain-team-1',
+        name: 'Lag 1 · Ola, Kari',
+        nickname: null,
+        initial: '1',
+        extraStrokes: 0,
+        initialStrokes: null,
+        initialPutts: null,
+        initialClientUpdatedAt: null,
+        initialServerUpdatedAt: null,
+        submitted: false,
+        teamNumber: 1,
+      },
+      {
+        userId: 'captain-team-2',
+        name: 'Lag 2 · Per, Anne',
+        nickname: null,
+        initial: '2',
+        extraStrokes: 0,
+        initialStrokes: null,
+        initialPutts: null,
+        initialClientUpdatedAt: null,
+        initialServerUpdatedAt: null,
+        submitted: false,
+        teamNumber: 2,
+      },
+    ];
+  }
+
+  it('gates on MY team card (via teamNumber), not cards[0], for texas_scramble', () => {
+    // I am a non-captain member of team 2 — my userId never appears as a
+    // card userId, only teamNumber ties me to "Lag 2 · Per, Anne".
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        undefined, // team 1 card — not entered
+        { strokes: 5 }, // team 2 card (mine) — entered
+      ]),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode: 'texas_scramble',
+          players: makeTeamPlayers(),
+          myUserId: 'im-not-the-captain',
+          myTeamNumber: 2,
+        })}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Neste hull · 2' });
+    expect(link).toBeInTheDocument();
+  });
+
+  it('gates on MY team card for foursomes_matchplay (alternate-shot family)', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        undefined, // team 1 — not entered
+        { strokes: 5 }, // team 2 (mine) — entered
+      ]),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode: 'foursomes_matchplay',
+          players: makeTeamPlayers(),
+          myUserId: 'im-not-the-captain',
+          myTeamNumber: 2,
+        })}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Neste hull · 2' });
+    expect(link).toBeInTheDocument();
+  });
+
+  it('stays disabled when MY team card has no score yet, even if the other team is done', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 }, // team 1 — entered
+        undefined, // team 2 (mine) — not entered
+      ]),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode: 'texas_scramble',
+          players: makeTeamPlayers(),
+          myUserId: 'im-not-the-captain',
+          myTeamNumber: 2,
+        })}
+      />,
+    );
+    const btn = screen.getByRole('button', { name: 'Tast inn scoren din' });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('HoleClient — missing-score hint renders in team/pot formats (#1058)', () => {
+  it.each(['singles_matchplay', 'skins', 'wolf'] as const)(
+    'shows the hint for %s when a flight-mate score is missing',
+    (gameMode) => {
+      useLiveQueryMock.mockImplementation(
+        useLiveQueryImplWithLocalRows([
+          { strokes: 4 }, // mine
+          undefined,
+          undefined,
+          undefined,
+        ]),
+      );
+      render(<HoleClient {...baseProps({ gameMode })} />);
+      expect(
+        screen.getByTestId('missing-flight-scores-hint'),
+      ).toBeInTheDocument();
+    },
+  );
 });

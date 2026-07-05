@@ -583,6 +583,9 @@ export default async function HolePage({ params }: { params: Params }) {
         initialClientUpdatedAt: captainScoreRow?.client_updated_at ?? null,
         initialServerUpdatedAt: captainScoreRow?.updated_at ?? null,
         submitted: anyTeamMemberSubmitted,
+        // #1058: lar HoleClient finne "mitt kort" via me.team_number når jeg
+        // ikke er lag-kapteinen (userId over er captain.user_id, ikke meg).
+        teamNumber: teamNum,
       };
     });
   } else {
@@ -749,6 +752,7 @@ export default async function HolePage({ params }: { params: Params }) {
         playerGender={me.tee_gender}
         strokeIndex={hole.stroke_index}
         myUserId={userId}
+        myTeamNumber={me.team_number}
         myCompletedHoles={myCompletedHoles}
         myStablefordTotal={myStablefordTotal}
         myStablefordForCurrentHole={myStablefordForCurrent}

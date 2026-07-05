@@ -1866,14 +1866,15 @@
       "hullAriaLabel": "Hole {n}",
       "hullIndex": "index {si}",
       "hullPar": "Par {par}",
-      "confirmAllScores": "Confirm all scores",
+      "enterYourScore": "Enter your score",
       "nextHole": "Next hole · {next}",
       "submitScorecard": "Submit scorecard",
       "submitScorecardSolo": "Submit your scorecard",
       "submitScorecardTeam": "Submit team scorecard",
       "backAriaLabel": "Back to tournament",
       "leaderboardAriaLabel": "View leaderboard",
-      "playerFallback": "Player"
+      "playerFallback": "Player",
+      "missingFlightScores": "{count, plural, one {1 score missing on this hole} other {# scores missing on this hole}}"
     },
     "scoreCard": {
       "tapInstruction": "Tap to set par. Use − / +.",
