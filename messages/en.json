@@ -435,7 +435,8 @@
     "copy": "Copy",
     "copied": "Copied",
     "arrangeWithHost": "Arrange payment with the organiser.",
-    "paidBadge": "Entry fee paid"
+    "paidBadge": "Entry fee paid",
+    "compactLine": "Unpaid entry fee: {amount}"
   },
   "wizard": {
     "intent": {

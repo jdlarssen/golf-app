@@ -395,7 +395,10 @@ export default async function GameHomePage({
   }
 
   // Mode content from the message catalog (i18n Fase D, #592). One read shared
-  // by both ModeGuideCard call sites in scheduled + active branches below.
+  // by both ModeGuideCard call sites below (scheduled branch + draft/finished
+  // branch — #1068 dropped the active-branch card, see the isActive ? … split
+  // further down). modeLabel is also used directly by the active branch's
+  // merged course card.
   const modeTeamSize =
     (gwp.game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
   const tFormatContent = await getTranslations('formatGuide');
@@ -511,6 +514,16 @@ export default async function GameHomePage({
               : t('scorecardOpensWhenOrganizerStarts')}
           </h1>
         </section>
+
+        {/* #1068: startkontingent-oppfordring flyttet hit — venterommet er
+            der spillere faktisk venter og har konteksten (#1049 rendret den
+            tidligere kun i aktiv/draft/finished-grenen, aldri her). */}
+        <PaymentInfo
+          entryFeeKr={gwp.game.entry_fee_kr}
+          paymentLink={gwp.game.payment_link}
+          paid={me.paid_at != null}
+          className="mx-4 mb-4"
+        />
 
         {/* Course card */}
         <Card className="mx-4 p-[18px]">
@@ -766,14 +779,20 @@ export default async function GameHomePage({
         />
       </div>
 
-      {/* #1049: startkontingent-oppfordring — vises til arrangøren huker av
-          spilleren som betalt. Self-hider når spillet ikke har kontingent. */}
-      <PaymentInfo
-        entryFeeKr={gwp.game.entry_fee_kr}
-        paymentLink={gwp.game.payment_link}
-        paid={me.paid_at != null}
-        className="mb-4"
-      />
+      {/* #1049/#1068: startkontingent-oppfordring — vises til arrangøren huker
+          av spilleren som betalt. Self-hider når spillet ikke har kontingent.
+          Kun draft + finished her — venterommet (scheduled) har sin egen
+          fulle boks lenger opp i den grenen, og aktiv-runden viser i stedet en
+          kompakt ubetalt-kun linje rett ved CTA-en (se lenger ned) slik at
+          «Fortsett runden» ikke konkurrerer med betalingsboksen midt i runden. */}
+      {!isActive && (
+        <PaymentInfo
+          entryFeeKr={gwp.game.entry_fee_kr}
+          paymentLink={gwp.game.payment_link}
+          paid={me.paid_at != null}
+          className="mb-4"
+        />
+      )}
 
       {isDraft && (
         <div className="mb-4">
@@ -809,151 +828,213 @@ export default async function GameHomePage({
       </Suspense>
 
       <div className="space-y-4">
-        {game.courses?.name && (
-          <Card>
-            <Kicker tone="muted" className="mb-2">
-              {t('courseLabel')}
-            </Kicker>
-            <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
-              {game.courses.name}
-            </p>
-            {game.tee_boxes && (
-              <p className="text-xs text-muted mt-1.5 tabular-nums">
-                {t('teeInfo', { teeName: game.tee_boxes.name })}
-                {playerRating
-                  ? ` · Slope ${playerRating.slope} · CR ${playerRating.courseRating.toFixed(1)} · Par ${playerRating.par}`
-                  : ''}
-              </p>
-            )}
-          </Card>
-        )}
-
-        {/* Spillform — modus-forklaring tilgjengelig fra spill-siden (#299). */}
-        <div>
-          <Kicker tone="muted" className="mb-2">
-            {t('formatLabel')}
-          </Kicker>
-          <ModeGuideCard
-            label={modeLabel}
-            summary={mergedModeContent.summary}
-            points={mergedModeContent.points}
-            detailHref={modeDetailHref}
-          />
-        </div>
-
-        {isDraft && (
-          <Card>
-            <Kicker tone="muted" className="mb-2">
-              {t('draftTeeOffLabel')}
-            </Kicker>
-            {draftTeeOffDate ? (
-              <p className="text-sm text-text tabular-nums">
-                {t('draftTeeOffPlanned')}{' '}
-                <span className="font-medium">
-                  {formatTeeOffDateLocale(draftTeeOffDate, locale)} {t('draftTeeOffDateAt')}{' '}
-                  {formatTeeOffTimeLocale(draftTeeOffDate, locale)}
-                </span>
-              </p>
-            ) : (
-              <p className="text-sm text-muted">
-                {t('draftTeeOffUnknown')}
-              </p>
-            )}
-          </Card>
-        )}
-
-        {isDraft ? (
-          <Card>
-            <Kicker tone="muted" className="mb-2">
-              {t('draftTeamsLabel')}
-            </Kicker>
-            <Suspense
-              fallback={
-                <p className="text-sm text-muted text-center py-4">
-                  {t('draftTeamsLoading')}
+        {isActive ? (
+          <>
+            {/* #1068: primær-CTA først i aktiv-grenen, over kortene — «Fortsett
+                runden» skal være første interaktive element uten scroll
+                (fremtids-flyt 3: «Åpne spillet → Start runden» som ett tapp). */}
+            {me.withdrawn_at ? (
+              // WD — viser angre-banner i stedet for scorekort-CTA (#386).
+              <div className="rounded-2xl border border-danger/40 bg-danger/5 px-4 py-4">
+                <p className="mb-3 font-sans text-[14px] font-medium text-text">
+                  {t('withdrawnHeading')}
                 </p>
-              }
-            >
-              <DraftTeamsOverview gameId={id} currentUserId={userId} />
-            </Suspense>
-          </Card>
+                <p className="mb-4 font-sans text-[12px] leading-relaxed text-muted">
+                  {t('withdrawnBody')}
+                </p>
+                <form action={submitUndoWithdraw}>
+                  <input type="hidden" name="gameId" value={id} />
+                  <SubmitButton className="w-full" pendingLabel={t('undoWithdrawPending')}>
+                    {t('undoWithdraw')}
+                  </SubmitButton>
+                </form>
+              </div>
+            ) : (
+              <Suspense fallback={<PrimaryCtaSkeleton />}>
+                <PrimaryCtaSection
+                  gameId={id}
+                  currentUserId={userId}
+                  submittedAt={me.submitted_at}
+                  approvedAt={me.approved_at}
+                  requirePeerApproval={game.require_peer_approval}
+                />
+              </Suspense>
+            )}
+
+            {/* #1068: kompakt betalingslinje — kun for ubetalte, aldri for
+                spillere med paid_at satt (de ser ingenting under runden).
+                Løser payment_reminder-deeplinken (lib/notifications/deeplink.ts)
+                som peker hit uansett status: uten denne linja landet en
+                purring midt i runden på en blind side. */}
+            {me.paid_at == null && (
+              <PaymentInfo
+                entryFeeKr={gwp.game.entry_fee_kr}
+                paymentLink={gwp.game.payment_link}
+                compact
+              />
+            )}
+
+            {/* #1068: bane-kort + «DIN INFO» slått sammen til ett kort, flyttet
+                under CTA-en. Lag/Flight-radene for lag-formater følger med inn
+                (ikke bare CH). CH-gating uendret: krever courses + tee_boxes. */}
+            {game.courses?.name && (
+              <Card>
+                <Kicker tone="muted" className="mb-2">
+                  {t('courseLabel')}
+                </Kicker>
+                <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
+                  {game.courses.name}
+                </p>
+                {game.tee_boxes && (
+                  <p className="text-xs text-muted mt-1.5 tabular-nums">
+                    {t('teeInfo', { teeName: game.tee_boxes.name })}
+                    {playerRating
+                      ? ` · Slope ${playerRating.slope} · CR ${playerRating.courseRating.toFixed(1)} · Par ${playerRating.par}`
+                      : ''}
+                    {` · ${t('courseHandicap')} ${displayedCourseHandicap ?? '—'}`}
+                  </p>
+                )}
+                {!isSoloFormat(game.game_mode, modeTeamSize) && (
+                  <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-3 pt-3 border-t border-border">
+                    <dt className="text-muted">{t('teamLabel')}</dt>
+                    <dd className="text-text text-right">
+                      {t('teamValue', { number: me.team_number })}
+                    </dd>
+                    <dt className="text-muted">{t('flightValueLabel')}</dt>
+                    <dd className="text-text text-right">
+                      {t('flightValue', { number: me.flight_number })}
+                    </dd>
+                  </dl>
+                )}
+              </Card>
+            )}
+          </>
         ) : (
-          <Card>
-            <Kicker tone="muted" className="mb-2">
-              {t('infoLabel')}
-            </Kicker>
-            {isSoloFormat(game.game_mode, modeTeamSize) ? (
-              // Solo-modus har ingen lag- eller flight-tilordning, så den
-              // klassiske dl-listen leser tomt («Lag —, Flight —»). Vi
-              // erstatter med en kort modus-undertittel + CH-only-rad slik
-              // at brukeren skjønner formatet med ett blikk. Gjelder hele
-              // solo-familien (stableford solo, Wolf, Nassau, Skins, BBB,
-              // Nines, Round Robin, Acey Deucey, solo slagspill).
-              <>
-                <p className="text-sm text-text font-serif">{modeLabel}</p>
-                <p className="text-xs text-muted mt-1">
-                  {t('soloIndividual')}
+          <>
+            {game.courses?.name && (
+              <Card>
+                <Kicker tone="muted" className="mb-2">
+                  {t('courseLabel')}
+                </Kicker>
+                <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
+                  {game.courses.name}
                 </p>
-                <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
-                  <dt className="text-muted">{t('courseHandicap')}</dt>
-                  <dd className="score-num text-text text-right">
-                    {displayedCourseHandicap ?? '—'}
-                  </dd>
-                </dl>
-              </>
-            ) : (
-              <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
-                <dt className="text-muted">{t('teamLabel')}</dt>
-                <dd className="text-text text-right">
-                  {t('teamValue', { number: me.team_number })}
-                </dd>
-                <dt className="text-muted">{t('flightValueLabel')}</dt>
-                <dd className="text-text text-right">
-                  {t('flightValue', { number: me.flight_number })}
-                </dd>
-                <dt className="text-muted">{t('courseHandicap')}</dt>
-                <dd className="score-num text-text text-right">
-                  {displayedCourseHandicap ?? '—'}
-                </dd>
-              </dl>
+                {game.tee_boxes && (
+                  <p className="text-xs text-muted mt-1.5 tabular-nums">
+                    {t('teeInfo', { teeName: game.tee_boxes.name })}
+                    {playerRating
+                      ? ` · Slope ${playerRating.slope} · CR ${playerRating.courseRating.toFixed(1)} · Par ${playerRating.par}`
+                      : ''}
+                  </p>
+                )}
+              </Card>
             )}
-          </Card>
-        )}
 
-        {isActive && me.withdrawn_at ? (
-          // WD — viser angre-banner i stedet for scorekort-CTA (#386).
-          <div className="rounded-2xl border border-danger/40 bg-danger/5 px-4 py-4">
-            <p className="mb-3 font-sans text-[14px] font-medium text-text">
-              {t('withdrawnHeading')}
-            </p>
-            <p className="mb-4 font-sans text-[12px] leading-relaxed text-muted">
-              {t('withdrawnBody')}
-            </p>
-            <form action={submitUndoWithdraw}>
-              <input type="hidden" name="gameId" value={id} />
-              <SubmitButton className="w-full" pendingLabel={t('undoWithdrawPending')}>
-                {t('undoWithdraw')}
-              </SubmitButton>
-            </form>
-          </div>
-        ) : isActive ? (
-          <Suspense fallback={<PrimaryCtaSkeleton />}>
-            <PrimaryCtaSection
-              gameId={id}
-              currentUserId={userId}
-              submittedAt={me.submitted_at}
-              approvedAt={me.approved_at}
-              requirePeerApproval={game.require_peer_approval}
-            />
-          </Suspense>
-        ) : isFinished ? (
-          <LinkButton href={`/games/${id}/leaderboard`} full>
-            {t('leaderboardButton')}
-          </LinkButton>
-        ) : isDraft ? null : (
-          <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-            {t('gameNotStarted')}
-          </div>
+            {/* Spillform — modus-forklaring tilgjengelig fra spill-siden (#299).
+                Kun draft/finished — aktiv-grenen dropper dette kortet (#1068):
+                for solo-formater dupliserte det modeLabel som DIN INFO-kortet
+                viste rett under. */}
+            <div>
+              <Kicker tone="muted" className="mb-2">
+                {t('formatLabel')}
+              </Kicker>
+              <ModeGuideCard
+                label={modeLabel}
+                summary={mergedModeContent.summary}
+                points={mergedModeContent.points}
+                detailHref={modeDetailHref}
+              />
+            </div>
+
+            {isDraft && (
+              <Card>
+                <Kicker tone="muted" className="mb-2">
+                  {t('draftTeeOffLabel')}
+                </Kicker>
+                {draftTeeOffDate ? (
+                  <p className="text-sm text-text tabular-nums">
+                    {t('draftTeeOffPlanned')}{' '}
+                    <span className="font-medium">
+                      {formatTeeOffDateLocale(draftTeeOffDate, locale)} {t('draftTeeOffDateAt')}{' '}
+                      {formatTeeOffTimeLocale(draftTeeOffDate, locale)}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted">
+                    {t('draftTeeOffUnknown')}
+                  </p>
+                )}
+              </Card>
+            )}
+
+            {isDraft ? (
+              <Card>
+                <Kicker tone="muted" className="mb-2">
+                  {t('draftTeamsLabel')}
+                </Kicker>
+                <Suspense
+                  fallback={
+                    <p className="text-sm text-muted text-center py-4">
+                      {t('draftTeamsLoading')}
+                    </p>
+                  }
+                >
+                  <DraftTeamsOverview gameId={id} currentUserId={userId} />
+                </Suspense>
+              </Card>
+            ) : (
+              <Card>
+                <Kicker tone="muted" className="mb-2">
+                  {t('infoLabel')}
+                </Kicker>
+                {isSoloFormat(game.game_mode, modeTeamSize) ? (
+                  // Solo-modus har ingen lag- eller flight-tilordning, så den
+                  // klassiske dl-listen leser tomt («Lag —, Flight —»). Vi
+                  // erstatter med en kort modus-undertittel + CH-only-rad slik
+                  // at brukeren skjønner formatet med ett blikk. Gjelder hele
+                  // solo-familien (stableford solo, Wolf, Nassau, Skins, BBB,
+                  // Nines, Round Robin, Acey Deucey, solo slagspill).
+                  <>
+                    <p className="text-sm text-text font-serif">{modeLabel}</p>
+                    <p className="text-xs text-muted mt-1">
+                      {t('soloIndividual')}
+                    </p>
+                    <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
+                      <dt className="text-muted">{t('courseHandicap')}</dt>
+                      <dd className="score-num text-text text-right">
+                        {displayedCourseHandicap ?? '—'}
+                      </dd>
+                    </dl>
+                  </>
+                ) : (
+                  <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
+                    <dt className="text-muted">{t('teamLabel')}</dt>
+                    <dd className="text-text text-right">
+                      {t('teamValue', { number: me.team_number })}
+                    </dd>
+                    <dt className="text-muted">{t('flightValueLabel')}</dt>
+                    <dd className="text-text text-right">
+                      {t('flightValue', { number: me.flight_number })}
+                    </dd>
+                    <dt className="text-muted">{t('courseHandicap')}</dt>
+                    <dd className="score-num text-text text-right">
+                      {displayedCourseHandicap ?? '—'}
+                    </dd>
+                  </dl>
+                )}
+              </Card>
+            )}
+
+            {isFinished ? (
+              <LinkButton href={`/games/${id}/leaderboard`} full>
+                {t('leaderboardButton')}
+              </LinkButton>
+            ) : isDraft ? null : (
+              <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
+                {t('gameNotStarted')}
+              </div>
+            )}
+          </>
         )}
 
         {/* #1007: «Revansje?» — dupliserer dette spillet inn i opprett-

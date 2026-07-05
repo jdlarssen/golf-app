@@ -272,10 +272,13 @@ const ideaBuiltSchema = z.object({
 
 // payment_reminder: arrangøren purrer en spiller som mangler å betale
 // startkontingenten (#1049). Fyres manuelt fra betaling-cockpiten
-// (remindUnpaidPlayers) — in-app + mail-if-off-app. Deeplinker til
-// /games/[game_id] der PaymentInfo viser beløp + betalingsmåte. Payload bærer
-// beløp + lenke så kort/mail kan vise dem uten et ekstra oppslag; payment_link
-// er nullable (kontingent uten oppgitt lenke er lov).
+// (remindUnpaidPlayers) — in-app + mail-if-off-app. IKKE status-gatet: kan
+// sendes uansett spillstatus (draft/scheduled/active/finished). Deeplinker
+// til /games/[game_id] der PaymentInfo viser beløp + betalingsmåte i alle
+// statuser (#1068: full boks i scheduled/draft/finished, kompakt
+// ubetalt-kun linje i active), så landingen er alltid meningsfull. Payload
+// bærer beløp + lenke så kort/mail kan vise dem uten et ekstra oppslag;
+// payment_link er nullable (kontingent uten oppgitt lenke er lov).
 const paymentReminderSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),

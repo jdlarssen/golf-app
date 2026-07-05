@@ -13,11 +13,18 @@ import { isPaymentUrl } from '@/lib/payment/paymentLink';
  * en klikkbar «Betal her»-lenke; alt annet behandles som et Vipps-nummer med
  * kopier-knapp. Er lenken tom, vises kun beløpet + «avtal med arrangøren».
  * Returnerer null når det ikke er noen kontingent (entryFeeKr ≤ 0).
+ *
+ * #1068: `compact` gir en énlinjes variant for aktiv-runde-visning, der den
+ * fulle boksen ville konkurrert med «Fortsett runden»-CTA-en. Kun ment for
+ * ubetalte spillere — call-siten selv-gater på `paid` FØR rendring (paid
+ * spillere skal se ingenting under runden), så `compact` håndterer ikke
+ * `paid`-grenen i det hele tatt.
  */
 export function PaymentInfo({
   entryFeeKr,
   paymentLink,
   paid = false,
+  compact = false,
   className,
 }: {
   entryFeeKr: number;
@@ -28,6 +35,12 @@ export function PaymentInfo({
    * På påmeldingssidene er `paid` alltid false (ingen betalt-status der ennå).
    */
   paid?: boolean;
+  /**
+   * #1068: kompakt énlinjes variant (beløp + betal-affordance, ingen kicker/
+   * kort-chrome) for aktiv-runde-visningen. Call-siten er ansvarlig for å
+   * kun rendre denne varianten til ubetalte spillere.
+   */
+  compact?: boolean;
   className?: string;
 }) {
   const t = useTranslations('payment');
@@ -59,6 +72,36 @@ export function PaymentInfo({
     } catch (err) {
       console.error('[PaymentInfo] copy failed', err);
     }
+  }
+
+  if (compact) {
+    return (
+      <div
+        className={`flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-2 px-4 py-2.5 ${className ?? ''}`}
+      >
+        <span className="font-sans text-sm text-text">
+          {t('compactLine', { amount: formatKr(entryFeeKr) })}
+        </span>
+        {linkIsUrl && link ? (
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[36px] shrink-0 items-center justify-center rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover dark:text-bg"
+          >
+            {t('payVia')}
+          </a>
+        ) : link ? (
+          <button
+            type="button"
+            onClick={copy}
+            className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-surface-2"
+          >
+            {copied ? t('copied') : t('copy')}
+          </button>
+        ) : null}
+      </div>
+    );
   }
 
   return (

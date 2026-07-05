@@ -435,7 +435,8 @@
     "copy": "Kopier",
     "copied": "Kopiert",
     "arrangeWithHost": "Avtal betaling med arrangøren.",
-    "paidBadge": "Startkontingent betalt"
+    "paidBadge": "Startkontingent betalt",
+    "compactLine": "Ubetalt startkontingent: {amount}"
   },
   "wizard": {
     "intent": {

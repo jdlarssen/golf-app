@@ -114,6 +114,11 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       return null;
     case 'payment_reminder': {
       // Spill-hjem der PaymentInfo viser beløp + betalingsmåte (#1049).
+      // `remindUnpaidPlayers` er ikke status-gatet — purringen kan sendes
+      // uansett spillstatus. #1068: spill-hjem viser PaymentInfo i alle
+      // statuser (full boks i scheduled/draft/finished, en kompakt
+      // ubetalt-kun linje i active), så deeplinken lander alltid på noe
+      // meningsfullt.
       const p = n.payload as NotificationPayload<'payment_reminder'>;
       return `/games/${p.game_id}`;
     }
