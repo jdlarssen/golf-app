@@ -6,21 +6,7 @@ import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
-import {
-  calculateCourseHandicap,
-  applyAllowance,
-} from '@/lib/scoring/courseHandicap';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
-import {
-  assignRotationSlots,
-  rotationSlotRange,
-} from '@/lib/games/assignRotationSlots';
-import { findPendingPlayers } from '@/lib/games/pendingPlayers';
-import {
-  getRatingForGender,
-  type TeeBoxRatings,
-  type TeeGender,
-} from '@/lib/games/teeRating';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
@@ -38,10 +24,6 @@ import {
   notifyPlayersGameStarted,
 } from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
-import {
-  isMatchplayMode,
-  isSideRosterComplete,
-} from '@/lib/games/matchplaySides';
 
 /**
  * Self-gate + load action context for the game-detail actions. Wraps the
@@ -153,168 +135,6 @@ export async function startScheduledGameAction(gameId: string) {
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
-  redirect({ href: `${detailPath}?status=started`, locale });
-}
-
-export async function startGame(gameId: string) {
-  // Starting is "begin now" — a planned tee-off that has since passed is irrelevant
-  // once the game goes active. No guard against past scheduled_tee_off_at (#928 decision).
-  const locale = await getLocale();
-  const { supabase } = await loadAdminContext();
-  const detailPath = `/admin/games/${gameId}`;
-
-  // Load the game (status + allowance + tee id + mode for the incomplete_sides
-  // guard). Refuse to start anything that isn't currently a draft.
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select('id, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config')
-    .eq('id', gameId)
-    .single<{
-      id: string;
-      status: string;
-      hcp_allowance_pct: number;
-      tee_box_id: string;
-      game_mode: GameMode;
-      mode_config: { team_size?: number } | null;
-    }>();
-  if (gameError || !game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  if (game!.status !== 'draft') redirect({ href: `${detailPath}?error=not_draft`, locale });
-
-  // team_number + withdrawn_at are fetched alongside hcp fields for the
-  // incomplete_sides guard below (mirrors startScheduledGame.ts:91-92).
-  const { data: gamePlayers, error: gpError } = await supabase
-    .from('game_players')
-    // FK hint required: game_players has 3 FKs to users (#798).
-    .select(
-      'user_id, tee_gender, team_number, withdrawn_at, users!game_players_user_id_fkey(hcp_index)',
-    )
-    .eq('game_id', gameId)
-    .returns<
-      {
-        user_id: string;
-        tee_gender: TeeGender;
-        team_number: number | null;
-        withdrawn_at: string | null;
-        users: { hcp_index: number | string } | null;
-      }[]
-    >();
-  if (gpError || !gamePlayers) {
-    console.error('[startGame] game_players read failed', gpError);
-    redirect({ href: `${detailPath}?error=db_roster`, locale });
-  }
-
-  // The game has one tee with up to three rating-sets. Each player picks
-  // which set applies via their tee_gender flag.
-  const { data: tee, error: teeError } = await supabase
-    .from('tee_boxes')
-    .select(
-      'slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
-    )
-    .eq('id', game!.tee_box_id)
-    .single<TeeBoxRatings>();
-  if (teeError || !tee) {
-    console.error('[startGame] tee read failed', teeError);
-    redirect({ href: `${detailPath}?error=db_tee`, locale });
-  }
-
-  // Defence-in-depth: refuse to flip a draft to active if any roster player
-  // is still pending profile completion. Mirrors the gate in
-  // `startScheduledGame` so both start-paths behave identically.
-  const rosterIds = gamePlayers!.map((row) => row.user_id);
-  const { data: rosterUsers, error: rosterUsersError } = await supabase
-    .from('users')
-    .select('id, email, profile_completed_at')
-    .in('id', rosterIds);
-  if (rosterUsersError || !rosterUsers) {
-    console.error('[startGame] roster users read failed', rosterUsersError);
-    redirect({ href: `${detailPath}?error=db_roster`, locale });
-  }
-  const pending = findPendingPlayers(rosterUsers!);
-  if (pending.length > 0) {
-    const qs = new URLSearchParams({
-      error: 'pending_players',
-      emails: pending.map((p) => p.email).join(', '),
-    });
-    redirect({ href: `${detailPath}?${qs.toString()}`, locale });
-  }
-
-  // Guard: matchplay-familien krever eksakt team_size aktive spillere per
-  // side (team_number ∈ {1, 2}) — spiller uten side gir tomt scoring-skall.
-  // Mirrors startScheduledGame.ts:111-117 so both start paths behave alike.
-  if (isMatchplayMode(game!.game_mode)) {
-    const teamSize = (game!.mode_config as { team_size?: number } | null)?.team_size ?? 1;
-    if (!isSideRosterComplete(gamePlayers!, teamSize)) {
-      redirect({ href: `${detailPath}?error=incomplete_sides`, locale });
-    }
-  }
-
-  // #969: Wolf / Round Robin draw their rotation slot at start (mirrors
-  // startScheduledGame). Too few/many active players blocks the draft→active
-  // flip; otherwise assign a fresh contiguous 1..n to the active roster.
-  const rotationRange = rotationSlotRange(game!.game_mode);
-  if (rotationRange) {
-    const activeIds = gamePlayers!
-      .filter((r) => r.withdrawn_at == null)
-      .map((r) => r.user_id);
-    const n = activeIds.length;
-    if (n < rotationRange.min || n > rotationRange.max) {
-      const qs = new URLSearchParams({
-        error: 'rotation_player_count',
-        mode: game!.game_mode,
-        count: String(n),
-      });
-      redirect({ href: `${detailPath}?${qs.toString()}`, locale });
-    }
-    for (const slot of assignRotationSlots(activeIds)) {
-      const { error: slotError } = await supabase
-        .from('game_players')
-        .update({
-          team_number: slot.team_number,
-          flight_number: slot.flight_number,
-        })
-        .eq('game_id', gameId)
-        .eq('user_id', slot.user_id);
-      if (slotError) {
-        console.error('[startGame] rotation slot update failed', slotError);
-        redirect({ href: `${detailPath}?error=db_players`, locale });
-      }
-    }
-  }
-
-  // Freeze a course handicap per player using their gender-specific
-  // rating-set on the game's tee.
-  for (const row of gamePlayers!) {
-    if (!row.users) continue;
-    const rating = getRatingForGender(tee!, row.tee_gender);
-    if (!rating) redirect({ href: `${detailPath}?error=tee_missing_rating`, locale });
-    const raw = calculateCourseHandicap({
-      hcpIndex: Number(row.users.hcp_index),
-      slope: rating!.slope,
-      courseRating: rating!.courseRating,
-      par: rating!.par,
-    });
-    const allowed = applyAllowance(raw, game!.hcp_allowance_pct);
-    const { error: updateError } = await supabase
-      .from('game_players')
-      .update({ course_handicap: allowed })
-      .eq('game_id', gameId)
-      .eq('user_id', row.user_id);
-    if (updateError) {
-      console.error('[startGame] course-handicap update failed', updateError);
-      redirect({ href: `${detailPath}?error=db_players`, locale });
-    }
-  }
-
-  const { error: statusError } = await supabase
-    .from('games')
-    .update({ status: 'active', started_at: new Date().toISOString() })
-    .eq('id', gameId);
-  if (statusError) {
-    console.error('[startGame] status flip to active failed', statusError);
-    redirect({ href: `${detailPath}?error=db_game`, locale });
-  }
-
-  revalidateTag(`game-${gameId}`, 'max');
   redirect({ href: `${detailPath}?status=started`, locale });
 }
 

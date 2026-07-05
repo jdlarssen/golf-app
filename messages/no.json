@@ -3000,9 +3000,6 @@
         "gameFullBanner": "Spillet er fullt ({current} av {max}). Fjern noen for å invitere flere."
       },
       "buttons": {
-        "startGame": "Start spillet",
-        "startingGame": "Starter …",
-        "startGameConfirm": "Start spillet «{name}»? Banehandicap blir låst for hver spiller når spillet starter.",
         "startRoundNow": "Start runden nå",
         "startRoundConfirm": "Starter du runden nå? Spillere kan begynne å taste slag. Redigering låses.",
         "endGame": "Avslutt spillet",

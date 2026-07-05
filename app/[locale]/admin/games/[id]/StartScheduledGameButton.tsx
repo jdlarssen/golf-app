@@ -20,7 +20,7 @@ export function StartScheduledGameButton({ startAction }: Props) {
       action={startAction}
       onSubmit={(e) => {
         // onSubmit is more robust than onClick — catches keyboard Enter
-        // and programmatic submit, matching the sibling StartGameButton.
+        // and programmatic submit.
         if (!confirm(t('startRoundConfirm'))) {
           e.preventDefault();
         }

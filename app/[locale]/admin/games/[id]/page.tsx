@@ -27,7 +27,6 @@ import {
   type GameModeConfig,
 } from '@/lib/scoring';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
-import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { EndGameButton } from './EndGameButton';
@@ -37,7 +36,6 @@ import { ReopenGameButton } from './ReopenGameButton';
 import { RegistrationOverviewSection } from './RegistrationOverviewSection';
 import { BetalingOverviewSection } from './BetalingOverviewSection';
 import {
-  startGame,
   startScheduledGameAction,
   adminApproveScorecard,
   endGame,
@@ -500,7 +498,6 @@ async function PlayersSections({
     return p.users.nickname ? `${name} «${p.users.nickname}»` : name;
   }
 
-  const startAction = startGame.bind(null, gameId);
   const startScheduledAction = startScheduledGameAction.bind(null, gameId);
   const endAction = endGame.bind(null, gameId);
   const reopenGameAction = reopenGame.bind(null, gameId);
@@ -1040,28 +1037,19 @@ async function PlayersSections({
       {/* Status-specific CTA cards ─────────────────────────────────────── */}
 
       {game.status === 'draft' && (
-        <>
-          <SectionCard ribbon={tSections('continuePlanning')}>
-            <div className="px-3.5 pb-3.5 pt-3">
-              <p className="mb-3 text-sm text-muted">
-                {tCta('draftBody')}
-              </p>
-              <SmartLink
-                href={`/admin/games/${gameId}/edit`}
-                className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
-              >
-                {tCta('draftEditButton')}
-              </SmartLink>
-            </div>
-          </SectionCard>
-
-          <div className="mt-4">
-            <StartGameButton
-              startAction={startAction}
-              gameName={localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
-            />
+        <SectionCard ribbon={tSections('continuePlanning')}>
+          <div className="px-3.5 pb-3.5 pt-3">
+            <p className="mb-3 text-sm text-muted">
+              {tCta('draftBody')}
+            </p>
+            <SmartLink
+              href={`/admin/games/${gameId}/edit`}
+              className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+            >
+              {tCta('draftEditButton')}
+            </SmartLink>
           </div>
-        </>
+        </SectionCard>
       )}
 
       {game.status === 'scheduled' && (

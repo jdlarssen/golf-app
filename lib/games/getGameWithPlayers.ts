@@ -45,8 +45,9 @@ import type { ScoreVisibility } from './visibility';
  *
  *  - `app/games/[id]/submit/actions.ts` — submitScorecard
  *  - `app/games/[id]/approve/actions.ts` — approveScorecard, rejectScorecard
- *  - `app/admin/games/[id]/actions.ts` — startScheduledGameAction, startGame,
- *    adminApproveScorecard, endGame, reopenScorecard, reopenGame
+ *  - `app/admin/games/[id]/actions.ts` — startScheduledGameAction,
+ *    adminApproveScorecard, endGame, reopenScorecard, reopenGame,
+ *    adminWithdrawPlayer, adminUndoWithdraw
  *  - `app/admin/games/[id]/avslutt/actions.ts` — endGameWithSideWinners
  *  - `app/admin/games/[id]/edit/actions.ts` — saveDraft, publishFromDraft,
  *    updateScheduled (these all touch `games` + replace the `game_players`

@@ -3000,9 +3000,6 @@
         "gameFullBanner": "The game is full ({current} of {max}). Remove some players to invite more."
       },
       "buttons": {
-        "startGame": "Start game",
-        "startingGame": "Starting…",
-        "startGameConfirm": "Start game «{name}»? Course handicap will be locked for each player when the game starts.",
         "startRoundNow": "Start round now",
         "startRoundConfirm": "Start the round now? Players can begin entering strokes. Editing will be locked.",
         "endGame": "End game",
