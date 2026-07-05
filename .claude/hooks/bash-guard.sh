@@ -41,6 +41,7 @@ cmd_stripped="$(printf '%s' "$cmd" | tr '\n' ' ' | sed -E "s/'[^']*'//g; s/\"[^\
 prefix="$(printf '%s' "$cmd" | tr '\n' ' ' | sed -E \
   -e 's#://[^@[:space:]]+@#://***@#g' \
   -e 's/((apikey|Apikey|APIKEY|authorization|Authorization|AUTHORIZATION|password|Password|PASSWORD|token|Token|TOKEN)[=: ]+)[^[:space:]"]+/\1***/g' \
+  -e 's/((bearer|Bearer|BEARER)[ ]+)[^[:space:]"]+/\1***/g' \
   -e 's/eyJ[A-Za-z0-9._-]+/***/g')"
 prefix="$(printf '%.80s' "$prefix")"
 

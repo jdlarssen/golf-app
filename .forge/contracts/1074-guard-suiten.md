@@ -92,12 +92,12 @@ Logikk (PROD_REF=`glofubopddkjhymcbaph`):
 
 ## Success Criteria
 
-- [ ] `bash tests/hooks/guard.test.sh` grønn: 100 % DENY på prod-skriv-fixtures, 0 falske DENY på legitime fixtures — verifiseres ved å kjøre kommandoen.
-- [ ] Regresjonsfixtures for defekt (a) og (b) består (kommando-output).
-- [ ] Testkjøring produserer beviselig JSONL-linjer, og skrivebeskyttet loggkatalog endrer ikke beslutningen (non-blocking-bevis i runner).
-- [ ] `.claude/settings.json` har MCP-matcher-entry; `jq . .claude/settings.json` validerer.
-- [ ] `.gitignore` dekker `.claude/logs/` og `.claude/approve-prod` (`git status` viser ikke loggfiler etter testkjøring i repo-rot).
-- [ ] CI-steget finnes i ci.yml og er grønt på PR-en.
+- [x] `bash tests/hooks/guard.test.sh` grønn: 100 % DENY på prod-skriv-fixtures, 0 falske DENY på legitime fixtures — **38 bestått, 0 feilet** (verifisert av begge evaluator-rundene med fersk kontekst).
+- [x] Regresjonsfixtures for defekt (a) og (b) består — inkl. flerlinje-varianten som ble funnet live under bygging (`od -c`-verifisert ekte newline i fixture).
+- [x] Testkjøring produserer JSONL-linjer (26 stk i temp-logg), skrivebeskyttet loggkatalog endrer ikke beslutningen, og fixture-hemmeligheter (`hemmeligpw123`/`eyJhemmeligkey456`) når aldri loggen (redaksjons-assert).
+- [x] `.claude/settings.json` har MCP-matcher-entry; `jq .` validerer; matcher testet mot både UUID- og navne-baserte server-segmenter.
+- [x] `.gitignore` dekker begge stier — `git check-ignore` bekrefter, og `git status` er ren med live logg til stede.
+- [x] CI-steget finnes i ci.yml («Guard hooks (blocking)») — grønt på PR verifiseres ved push (evaluator: PENDING PUSH).
 
 ## Gates
 
