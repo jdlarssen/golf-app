@@ -46,6 +46,11 @@ jobs:
       - name: Lint (blocking)
         run: npm run lint
 
+      # Guard-hook fixtures (#1074): the prod firewall + bash-guard rules are
+      # plain bash/jq, so vitest never exercises them — this is their only gate.
+      - name: Guard hooks (blocking)
+        run: bash tests/hooks/guard.test.sh
+
   # Authenticated e2e gate (#674): the golden-path scoring loop + cup/liga
   # lifecycle smoke — the flows where #641/#642/#647 lived. These run against the
   # torny-staging Supabase (testing moved OFF prod — #717/PR #719 repointed the
