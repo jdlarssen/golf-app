@@ -109,7 +109,8 @@ export async function sendInviteNotification(
   const hasGame = typeof gameName === 'string' && gameName.length > 0;
   const modeHint = resolveModeHint(hasGame, gameMode, messages);
 
-  const loginUrl = mailUrl(locale, '/login');
+  const loginQs = new URLSearchParams({ email: to });
+  const loginUrl = `${mailUrl(locale, '/login')}?${loginQs.toString()}`;
   const formatsUrl = mailUrl(locale, '/spillformater');
 
   // Modus-hint (#309): kort callout med navn + sammendrag + lenke. Distinkt

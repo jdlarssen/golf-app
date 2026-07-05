@@ -15,6 +15,12 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.173 · Ferdig utfylt e-post fra invitasjonsmailen</strong></summary>
+
+[#1056](https://github.com/jdlarssen/golf-app/issues/1056) — Tapper du login-lenken i en invitasjonsmail, står e-postadressen allerede utfylt — bare trykk «Send meg kode».
+</details>
+
+<details>
 <summary><strong>1.172 · Startkontingent med Vipps</strong></summary>
 
 [#1049](https://github.com/jdlarssen/golf-app/issues/1049) — Ta betalt for runden: sett en startkontingent og legg inn Vipps-nummeret ditt, så ser spillerne beløpet når de melder seg på. Underveis huker du av hvem som har betalt, ser «17 av 24 betalt», og purrer de som mangler med ett trykk.

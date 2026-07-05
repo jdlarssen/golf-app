@@ -69,7 +69,7 @@ describe('sendTeamInvitationMail', () => {
 
       Gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen.
 
-      Bli med: https://tornygolf.no/login?next=%2Fsignup%2Fabc12345%2Fteam
+      Bli med: https://tornygolf.no/login?email=venn%40example.com&next=%2Fsignup%2Fabc12345%2Fteam
 
       Kjenner du ikke Jørgen? Ignorer denne meldingen.
 
@@ -118,7 +118,7 @@ describe('sendTeamInvitationMail', () => {
 
       Go to Tørny, enter this email address, and log in with the code we send you. After logging in you land straight on the team page where you can confirm your spot.
 
-      Join: https://tornygolf.no/en/login?next=%2Fsignup%2Fabc12345%2Fteam
+      Join: https://tornygolf.no/en/login?email=venn%40example.com&next=%2Fsignup%2Fabc12345%2Fteam
 
       Don't know Jørgen? Just ignore this message.
 
@@ -135,7 +135,7 @@ describe('sendTeamInvitationMail', () => {
     `);
     // next-param must remain locale-agnostic (just a path, not translated)
     expect(payload.html).toContain(
-      'https://tornygolf.no/en/login?next=%2Fsignup%2Fabc12345%2Fteam',
+      'https://tornygolf.no/en/login?email=venn%40example.com&next=%2Fsignup%2Fabc12345%2Fteam',
     );
   });
 
@@ -174,7 +174,7 @@ describe('sendTeamInvitationMail', () => {
                     For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/login?next=%2Fsignup%2Fabc12345%2Fteam" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/login?email=venn%40example.com&next=%2Fsignup%2Fabc12345%2Fteam" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
                       Bli med på laget
                     </a>
                   </div>
@@ -196,14 +196,14 @@ describe('sendTeamInvitationMail', () => {
   // + Resend.
   // ─────────────────────────────────────────────────────────────────────
 
-  it('CTA-lenke bruker URL-encoded next=/signup/[shortId]/team', async () => {
+  it('CTA-lenke bruker URL-encoded email + next=/signup/[shortId]/team (#1056)', async () => {
     const payload = await send(baseParams);
-    // encodeURIComponent('/signup/abc12345/team') === '%2Fsignup%2Fabc12345%2Fteam'
+    // URLSearchParams encoder email + next('/signup/abc12345/team' → '%2Fsignup%2Fabc12345%2Fteam')
     expect(payload.html).toContain(
-      'https://tornygolf.no/login?next=%2Fsignup%2Fabc12345%2Fteam',
+      'https://tornygolf.no/login?email=venn%40example.com&next=%2Fsignup%2Fabc12345%2Fteam',
     );
     expect(payload.text).toContain(
-      'https://tornygolf.no/login?next=%2Fsignup%2Fabc12345%2Fteam',
+      'https://tornygolf.no/login?email=venn%40example.com&next=%2Fsignup%2Fabc12345%2Fteam',
     );
   });
 

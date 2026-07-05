@@ -4,7 +4,7 @@
 // er opprettet med game_id satt. Alltid-send (recipient har ikke konto,
 // så last_seen_at-terskelen gir ingen mening).
 //
-// Brukeren går: mail → /login (legger inn samme e-post) → kode → fullfør
+// Brukeren går: mail → /login (e-post forhåndsutfylt, #1056) → kode → fullfør
 // profil → /signup/[shortId]/team → klikker «Bli med på lag» (per
 // teamActions.attachToCaptainTeam).
 //
@@ -53,12 +53,16 @@ export async function sendTeamInvitationMail(
   const name = captainName ?? t('common.somePlayerFallback');
   const subject = t('teamInvitation.subject', { teamName, gameName });
 
-  // Vi sender brukeren til /login med next-param som tar dem til
-  // påmeldings-siden etter OTP-verify + profil-fullføring.
+  // Vi sender brukeren til /login med email (forhåndsutfylt, #1056) + next-param
+  // som tar dem til påmeldings-siden etter OTP-verify + profil-fullføring.
   // mailUrl bygger locale-korrekt base-URL; next-verdien er en path og
-  // endres ikke — bare base-URLen får locale-prefix.
-  const next = encodeURIComponent(`/signup/${gameShortId}/team`);
-  const loginUrl = `${mailUrl(locale, '/login')}?next=${next}`;
+  // endres ikke — bare base-URLen får locale-prefix. URLSearchParams
+  // håndterer encoding av begge param-ene (inkl. `+` i plus-adresser).
+  const loginQs = new URLSearchParams({
+    email: to,
+    next: `/signup/${gameShortId}/team`,
+  });
+  const loginUrl = `${mailUrl(locale, '/login')}?${loginQs.toString()}`;
 
   const introHtml = t.markup('teamInvitation.intro', {
     captainName: escapeHtml(name),

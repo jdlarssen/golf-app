@@ -72,7 +72,7 @@ describe('sendInviteNotification', () => {
 
       Jørgen har invitert deg til en golf-turnering i Tørny.
 
-      Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+      Gå til https://tornygolf.no/login?email=venn%40example.com, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -91,7 +91,7 @@ describe('sendInviteNotification', () => {
 
       Jørgen har invitert deg til spillet Stiklestad 25. mai på Tørny.
 
-      Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+      Gå til https://tornygolf.no/login?email=venn%40example.com, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -113,7 +113,7 @@ describe('sendInviteNotification', () => {
       Spillformat: Best ball — Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.
       Les mer om spillformatene: https://tornygolf.no/spillformater
 
-      Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+      Gå til https://tornygolf.no/login?email=venn%40example.com, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -154,7 +154,7 @@ describe('sendInviteNotification', () => {
 
       Jørgen har invitert deg til spillet <script>alert("x")</script> på Tørny.
 
-      Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+      Gå til https://tornygolf.no/login?email=venn%40example.com, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -175,7 +175,7 @@ describe('sendInviteNotification', () => {
 
       Jørgen has invited you to a golf tournament on Tørny.
 
-      Go to https://tornygolf.no/en/login, enter this email address, and log in with the code we send you.
+      Go to https://tornygolf.no/en/login?email=venn%40example.com, enter this email address, and log in with the code we send you.
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
@@ -195,7 +195,7 @@ describe('sendInviteNotification', () => {
 
       Jørgen has invited you to Stiklestad 25. mai on Tørny.
 
-      Go to https://tornygolf.no/en/login, enter this email address, and log in with the code we send you.
+      Go to https://tornygolf.no/en/login?email=venn%40example.com, enter this email address, and log in with the code we send you.
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
@@ -218,7 +218,7 @@ describe('sendInviteNotification', () => {
       Game format: Best ball — You play as a pair, and on each hole only the better net score of the two of you counts.
       Learn more about the formats: https://tornygolf.no/en/spillformater
 
-      Go to https://tornygolf.no/en/login, enter this email address, and log in with the code we send you.
+      Go to https://tornygolf.no/en/login?email=venn%40example.com, enter this email address, and log in with the code we send you.
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
@@ -262,10 +262,10 @@ describe('sendInviteNotification', () => {
                     <strong>Jørgen</strong> har invitert deg til en golf-turnering i Tørny.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 32px;">
-                    For å komme i gang: gå til <a href="https://tornygolf.no/login" style="color:#1B4332;font-weight:600;text-decoration:underline;">tornygolf.no</a>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+                    For å komme i gang: gå til <a href="https://tornygolf.no/login?email=venn%40example.com" style="color:#1B4332;font-weight:600;text-decoration:underline;">tornygolf.no</a>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/login" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/login?email=venn%40example.com" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
                       Åpne Tørny
                     </a>
                   </div>
