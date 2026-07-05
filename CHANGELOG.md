@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.177 · Du står allerede på spillerlista</strong></summary>
+
+[#1066](https://github.com/jdlarssen/golf-app/issues/1066) — Setter du opp en kompisrunde, står du allerede avhaket som spiller når du kommer til spillervalget — ett tapp mindre for alle som spiller selv, ett tapp å fjerne seg for de få som bare arrangerer.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
 <summary><strong>1.176 · Onboarding på to felt</strong></summary>
 
 [#1064](https://github.com/jdlarssen/golf-app/issues/1064) — Ny i Tørny? Nå er det bare navn og handicap som skal til før du er klar til å spille — kjønn, spillerklasse og kallenavn kan du sette senere på profilen.

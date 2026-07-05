@@ -548,6 +548,113 @@ describe('useGameFormState — klubb-turnering låser registreringsmodus (#643)'
   });
 });
 
+describe('useGameFormState — forhåndsvelg arrangøren som spiller ved kompis-intent (#1066)', () => {
+  it('setIntent("kompis") preselecter currentUserId når selection er tom', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+      }),
+    );
+
+    expect(result.current.selectedPlayerIds).toEqual([]);
+
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+
+    expect(result.current.selectedPlayerIds).toEqual(['p-mann']);
+  });
+
+  it('setIntent("klubb") preselecter IKKE arrangøren (sekretariat-caset — organizer spiller ikke alltid)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+      }),
+    );
+
+    act(() => {
+      result.current.setIntent('klubb');
+    });
+
+    expect(result.current.selectedPlayerIds).toEqual([]);
+  });
+
+  it('initialValues.players (revansje/cup-prefill) overstyres IKKE av kompis-seedingen', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+        initialValues: {
+          players: [
+            { user_id: 'p-dame', team_number: null, flight_number: null },
+            { user_id: 'p-junior', team_number: null, flight_number: null },
+          ],
+        },
+      }),
+    );
+
+    expect(result.current.selectedPlayerIds).toEqual(['p-dame', 'p-junior']);
+
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+
+    // Eksisterende (ikke-tom) seleksjon skal aldri overskrives av seedingen —
+    // hverken organizer lagt til eller de eksisterende fjernet.
+    expect(result.current.selectedPlayerIds).toEqual(['p-dame', 'p-junior']);
+  });
+
+  it('fjerner arrangøren manuelt, bytter til cup og tilbake til kompis → seeder IKKE på nytt (seeder kun når selection er tom idet kompis velges)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+      }),
+    );
+
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+    expect(result.current.selectedPlayerIds).toEqual(['p-mann']);
+
+    // Arrangøren fjerner seg selv — "ett tapp for å fjerne" for mindretallet.
+    act(() => {
+      result.current.togglePlayer('p-mann');
+    });
+    expect(result.current.selectedPlayerIds).toEqual([]);
+
+    // Bytter til cup og tilbake til kompis. Selection er tom idet vi lander
+    // på kompis igjen, så seeding-regelen (seed kun når tom) trigger på nytt —
+    // dette er en bevisst konsekvens av den enkle "kun-når-tom"-regelen, ikke
+    // et forsøk på å huske et eksplisitt fravalg.
+    act(() => {
+      result.current.setIntent('cup');
+    });
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+    expect(result.current.selectedPlayerIds).toEqual(['p-mann']);
+  });
+
+  it('ingen currentUserId (tomt fallback) → ingen seeding, ingen krasj', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+
+    expect(result.current.selectedPlayerIds).toEqual([]);
+  });
+});
+
 // ─── AC3 — clampGenderToTee (ren helper) ─────────────────────────────────────
 
 describe('clampGenderToTee — AC3', () => {

@@ -185,7 +185,16 @@ export function GameWizard({
     !!initialValues?.name && initialValues.name.trim() !== '',
   );
 
-  const state = useGameFormState({ initialValues, players, courses, initialIntent, defaultGroupId });
+  const state = useGameFormState({
+    initialValues,
+    players,
+    courses,
+    initialIntent,
+    defaultGroupId,
+    // #1066: seeder arrangøren som spiller ved kompis-intent (se setIntent i
+    // useGameFormState). Samme prop #464 allerede bruker for selectablePlayers.
+    currentUserId,
+  });
 
   // #464: picker-kilden følger konteksten (kompis/cup → venner, klubb m/ valgt
   // klubb → klubbmedlemmer, ellers venner, solo → uendret). Filtrerer innenfor

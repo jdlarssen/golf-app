@@ -252,6 +252,14 @@ type UseGameFormStateInput = {
   // #442: forhåndsvalgt klubb-id (fra ?klubb= search-param eller
   // initialValues.group_id). Tom streng = ingen klubb valgt.
   defaultGroupId?: string;
+  // #1066: innlogget brukers id (samme prop som GameWizard sender videre til
+  // selectablePlayers/#464). Brukes KUN til å forhåndsvelge arrangøren som
+  // spiller når kompis-intent velges (setIntent-handleren under) — en
+  // kompis-runde spilles nesten alltid av arrangøren selv, i motsetning til
+  // klubb-intent der arrangøren er sekretariatet. Tom/undefined = ingen
+  // seeding (GameForm sender ikke denne propen — edit-only bruk der intent
+  // uansett aldri settes via IntentSelector).
+  currentUserId?: string;
 };
 
 /**
@@ -267,6 +275,7 @@ export function useGameFormState({
   courses,
   initialIntent,
   defaultGroupId,
+  currentUserId,
 }: UseGameFormStateInput) {
   const tMissing = useTranslations('wizard.form.missing');
 
@@ -607,10 +616,35 @@ export function useGameFormState({
   // en annen arrangement-type (kompis/solo/cup), nullstiller vi group_id så et
   // stale valg fra et tidligere klubb-besøk ikke scoper spillet i skjul. ClubPicker
   // vises kun for klubb-intent (GameWizard), og dette holder staten samkjørt.
-  const setIntent = useCallback((next: Intent | undefined) => {
-    setIntentRaw(next);
-    if (next !== 'klubb') setGroupId('');
-  }, []);
+  //
+  // #1066: forhåndsvelg arrangøren som spiller når kompis-intent velges — en
+  // kompis-runde spilles nesten alltid av arrangøren selv, så step 4 (Spillere)
+  // starter i dag tom og krever at admin finner og krysser av seg selv. Klubb
+  // er bevisst IKKE inkludert: der er arrangøren sekretariatet og deltar ikke
+  // alltid selv. Cup/solo rører vi ikke — cup har egen spiller-flyt via
+  // matchplay-sider, og solo er alltid nøyaktig arrangøren allerede.
+  //
+  // Regel: seed KUN når `selectedPlayerIds` er tom idet kompis velges. Dette
+  // dekker prefill-gjennomgangen defensivt (revansje/cup-initialValues har
+  // allerede en ikke-tom seleksjon ved mount og skal aldri overskrives), og gir
+  // «ett tapp for å fjerne» for arrangøren som ikke skal spille selv — uten at
+  // et bevisst fravalg blir husket på tvers av intent-bytter. Bytter admin
+  // kompis → cup → kompis etter å ha fjernet seg selv, seedes de på nytt siden
+  // seleksjonen igjen er tom — en akseptert konsekvens av den enkle regelen,
+  // valgt fremfor å tracke et eksplisitt "ikke seed meg"-flagg for et edge-case
+  // som er sjeldent nok til at re-seeding ikke er plagsomt.
+  const setIntent = useCallback(
+    (next: Intent | undefined) => {
+      setIntentRaw(next);
+      if (next !== 'klubb') setGroupId('');
+      if (next === 'kompis' && currentUserId) {
+        setSelectedPlayerIds((prev) =>
+          prev.length === 0 ? [currentUserId] : prev,
+        );
+      }
+    },
+    [currentUserId],
+  );
 
   // #643: en klubb-turnering er medlemskaps-styrt — medlemmer ser og melder seg
   // på via discovery uansett registration_mode (by-design, jf. getDiscoverableGames
