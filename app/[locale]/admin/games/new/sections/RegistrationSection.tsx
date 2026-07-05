@@ -12,6 +12,12 @@
  * hooken (`useGameFormState`) force-reseter dessuten registrationType til
  * 'solo' når admin bytter til en slik modus, så payloaden alltid er
  * konsistent uten å avhenge av at admin klikker en gyldig kombinasjon manuelt.
+ *
+ * #1065: GameWizard (steg 5/ReadyStep) mounter seksjonen i to deler —
+ * `onlyModeChoice` alene i klartekst (utenfor «Vis avanserte innstillinger»,
+ * #367-mandatet: registrerings-VALGET skal alltid være synlig), og
+ * `hideModeChoice` for resten (type + kontingent) inne i disclosuren.
+ * GameForm (edit-flyten) fortsetter å mounte hele seksjonen samlet ett sted.
  */
 
 import { useTranslations } from 'next-intl';
@@ -37,6 +43,15 @@ type Props = {
    * ikke for medlemmer). Type-valget (solo/lag) beholdes — det gjelder fortsatt.
    */
   hideModeChoice?: boolean;
+  /**
+   * #1065: rendrer KUN «Hvem kan melde seg på?»-fieldsetet — ingen heading,
+   * ingen type-valg (solo/lag/begge), ingen kontingent-fieldset. Wizard-en
+   * bruker denne for den synlige registrerings-kontrollen på steg 5 (#367-
+   * mandatet: valget skal stå i klartekst, ikke gjemt i «Vis avanserte
+   * innstillinger»-disclosuren). Resten av seksjonen (type + kontingent)
+   * rendres separat inne i disclosuren via `hideModeChoice`.
+   */
+  onlyModeChoice?: boolean;
 };
 
 const REGISTRATION_MODES: readonly RegistrationMode[] = [
@@ -55,6 +70,7 @@ export function RegistrationSection({
   state,
   hideHeading = false,
   hideModeChoice = false,
+  onlyModeChoice = false,
 }: Props) {
   const t = useTranslations('wizard.sections.registration');
   const {
@@ -104,76 +120,93 @@ export function RegistrationSection({
     return t('typeBothTitle');
   }
 
+  const modeChoiceFieldset = !hideModeChoice && (
+    <fieldset>
+      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        {t('whoLegend')}
+      </legend>
+      <div className="mt-2 space-y-3">
+        {REGISTRATION_MODES.map((mode) => {
+          const discoverable = isDiscoverableRegistrationMode(mode);
+          return (
+            <div key={mode}>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="registration_mode_input"
+                  value={mode}
+                  checked={registrationMode === mode}
+                  onChange={() => setRegistrationMode(mode)}
+                  disabled={lockGameMode}
+                  className="mt-1 h-5 w-5 accent-primary"
+                />
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-serif text-base text-text">
+                      {modeTitle(mode)}
+                    </span>
+                    <VisibilityBadge
+                      discoverable={discoverable}
+                      labelDiscoverable={t('badgeDiscoverable')}
+                      labelPrivate={t('badgePrivate')}
+                    />
+                  </div>
+                  <div className="text-xs text-muted">{modeHint(mode)}</div>
+                </div>
+              </label>
+              {mode === 'manual_approval' &&
+                registrationMode === 'manual_approval' && (
+                  <div className="mt-2 ml-8">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={letFriendsSkipGate}
+                        onChange={(e) =>
+                          setLetFriendsSkipGate(e.target.checked)
+                        }
+                        disabled={lockGameMode}
+                        className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
+                      />
+                      <div>
+                        <span className="font-sans text-sm text-text">
+                          {t('friendsSkipTitle')}
+                        </span>
+                        <p className="mt-0.5 text-xs text-muted">
+                          {t('friendsSkipHint')}
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+            </div>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+
+  // #1065: wizard-en trenger kun «Hvem kan melde seg på?»-valget synlig i
+  // klartekst på steg 5 (utenfor «Vis avanserte innstillinger»-disclosuren,
+  // #367-mandatet). Resten av seksjonen (type + kontingent) rendres separat
+  // med `hideModeChoice` inne i disclosuren.
+  if (onlyModeChoice) {
+    return (
+      <section className="space-y-4">
+        {!hideHeading && (
+          <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
+        )}
+        {modeChoiceFieldset}
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       {!hideHeading && (
         <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
       )}
 
-      {!hideModeChoice && (
-      <fieldset>
-        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          {t('whoLegend')}
-        </legend>
-        <div className="mt-2 space-y-3">
-          {REGISTRATION_MODES.map((mode) => {
-            const discoverable = isDiscoverableRegistrationMode(mode);
-            return (
-              <div key={mode}>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="registration_mode_input"
-                    value={mode}
-                    checked={registrationMode === mode}
-                    onChange={() => setRegistrationMode(mode)}
-                    disabled={lockGameMode}
-                    className="mt-1 h-5 w-5 accent-primary"
-                  />
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-serif text-base text-text">
-                        {modeTitle(mode)}
-                      </span>
-                      <VisibilityBadge
-                        discoverable={discoverable}
-                        labelDiscoverable={t('badgeDiscoverable')}
-                        labelPrivate={t('badgePrivate')}
-                      />
-                    </div>
-                    <div className="text-xs text-muted">{modeHint(mode)}</div>
-                  </div>
-                </label>
-                {mode === 'manual_approval' &&
-                  registrationMode === 'manual_approval' && (
-                    <div className="mt-2 ml-8">
-                      <label className="flex items-start gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={letFriendsSkipGate}
-                          onChange={(e) =>
-                            setLetFriendsSkipGate(e.target.checked)
-                          }
-                          disabled={lockGameMode}
-                          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
-                        />
-                        <div>
-                          <span className="font-sans text-sm text-text">
-                            {t('friendsSkipTitle')}
-                          </span>
-                          <p className="mt-0.5 text-xs text-muted">
-                            {t('friendsSkipHint')}
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                  )}
-              </div>
-            );
-          })}
-        </div>
-      </fieldset>
-      )}
+      {modeChoiceFieldset}
 
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">

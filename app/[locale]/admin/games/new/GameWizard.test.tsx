@@ -185,9 +185,11 @@ describe('GameWizard — happy-path solo stableford', () => {
     });
     clickNext();
 
-    // Steg 4 (Spillere).
+    // Steg 4 (Spillere). #1065: tomt roster er nå en gyldig fremover-
+    // passering (registreringsvalget kommer på steg 5, ikke tatt ennå) — så
+    // «Neste» er aktivert allerede før noen spillere er valgt.
     expectStep(4);
-    expect(screen.getByRole('button', { name: /^neste$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^neste$/i })).not.toBeDisabled();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     expect(screen.getByRole('button', { name: /^neste$/i })).not.toBeDisabled();
     clickNext();
@@ -364,14 +366,71 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
   });
 });
 
-describe('GameWizard — Påmelding-felter (#199)', () => {
-  it('rendrer Påmelding-radioene med defaults invite_only + solo på steg 2 etter format', () => {
+// #1065: Påmelding (registrering + startkontingent + allowance) flyttet fra
+// steg 2 til steg 5 (ReadyStep). «Hvem kan melde seg på?» står i klartekst på
+// steg 5 (#367-mandatet); «Hva melder man på?» + kontingent bor inne i «Vis
+// avanserte innstillinger»-disclosuren.
+function goToReadyStep() {
+  pickKompisIntent(); // steg 1 → 2
+  pickBestBallFormat();
+  clickNext(); // steg 2 → 3
+  fireEvent.change(screen.getByLabelText(/^bane$/i), {
+    target: { value: 'course-1' },
+  });
+  fireEvent.change(screen.getByLabelText(/^tee$/i), {
+    target: { value: 'tee-1' },
+  });
+  fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+    target: { value: FUTURE_TEE_OFF },
+  });
+  clickNext(); // steg 3 → 4
+  clickNext(); // steg 4 → 5 (tomt roster er nå en gyldig fremover-passering, #1065)
+  expectStep(5);
+}
+
+function openAdvanced() {
+  fireEvent.click(screen.getByText('Vis avanserte innstillinger'));
+}
+
+describe('GameWizard — steg 2 rendrer ikke lenger Påmelding/allowance (#1065)', () => {
+  it('steg 2 har ingen Påmelding-radioer eller allowance-felt etter format er valgt', () => {
     renderWizard();
     pickKompisIntent();
     pickBestBallFormat();
+
+    expect(
+      screen.queryByRole('radio', { name: /bare de jeg inviterer/i }),
+    ).toBeNull();
+    expect(screen.queryByRole('radio', { name: /^individuelt$/i })).toBeNull();
+    expect(screen.queryByText(/startkontingent/i)).toBeNull();
+  });
+
+  it('steg 2 har ingen HCP-allowance-felt for stableford', () => {
+    renderWizard();
+    pickKompisIntent();
+    pickStablefordFormat();
+
+    expect(screen.queryByText(/hcp-andel/i)).toBeNull();
+  });
+});
+
+describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)', () => {
+  it('rendrer «Hvem kan melde seg på?» synlig på steg 5 (utenfor disclosure) med default invite_only', () => {
+    renderWizard();
+    goToReadyStep();
+
+    // Synlig UTEN å åpne «Vis avanserte innstillinger».
     expect(
       screen.getByRole('radio', { name: /bare de jeg inviterer/i }),
     ).toBeChecked();
+  });
+
+  it('«Hva melder man på?» (individuelt/lag/begge) ligger inne i disclosuren', () => {
+    renderWizard();
+    goToReadyStep();
+
+    expect(screen.queryByRole('radio', { name: /^individuelt$/i })).toBeNull();
+    openAdvanced();
     expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
   });
 
@@ -379,6 +438,21 @@ describe('GameWizard — Påmelding-felter (#199)', () => {
     renderWizard();
     pickKompisIntent();
     pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    clickNext();
+    expectStep(5);
+    openAdvanced();
+
     expect(screen.getByRole('radio', { name: /^lag$/i })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /^begge$/i })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
@@ -386,29 +460,18 @@ describe('GameWizard — Påmelding-felter (#199)', () => {
 
   it('lar "lag" velges når modus er best_ball', () => {
     renderWizard();
-    pickKompisIntent();
-    pickBestBallFormat();
+    goToReadyStep();
+    openAdvanced();
+
     const teamRadio = screen.getByRole('radio', { name: /^lag$/i });
     expect(teamRadio).not.toBeDisabled();
     fireEvent.click(teamRadio);
     expect(teamRadio).toBeChecked();
   });
 
-  it('force-reseter registration_type til solo når admin bytter til en mode uten lag', () => {
-    renderWizard();
-    pickKompisIntent();
-    pickBestBallFormat();
-    fireEvent.click(screen.getByRole('radio', { name: /^lag$/i }));
-    expect(screen.getByRole('radio', { name: /^lag$/i })).toBeChecked();
-    pickStablefordFormat();
-    expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
-    expect(screen.getByRole('radio', { name: /^lag$/i })).toBeDisabled();
-  });
-
   it('inkluderer registration_mode + registration_type i FormData', () => {
     const { container } = renderWizard();
-    pickKompisIntent();
-    pickBestBallFormat();
+    goToReadyStep();
 
     let fd = new FormData(container.querySelector('form')!);
     expect(fd.get('registration_mode')).toBe('invite_only');
@@ -418,25 +481,93 @@ describe('GameWizard — Påmelding-felter (#199)', () => {
     fd = new FormData(container.querySelector('form')!);
     expect(fd.get('registration_mode')).toBe('open');
   });
+});
 
-  it('viser at "Spillere" er valgfri når påmelding ikke er invite_only', () => {
+describe('GameWizard — #1065 steg-4-gate: registreringsvalg ikke tatt ennå', () => {
+  it('steg 4 «Neste» er aktivert med tomt roster (registreringsvalget kommer på steg 5)', () => {
     renderWizard();
     pickKompisIntent();
     pickBestBallFormat();
-    fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
-    clickNext(); // → steg 3 (Bane)
+    clickNext(); // → steg 3
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
     });
     fireEvent.change(screen.getByLabelText(/^tee$/i), {
       target: { value: 'tee-1' },
     });
-    clickNext(); // → steg 4 (Spillere)
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext(); // → steg 4
+    expectStep(4);
+
+    // Tomt roster: «Neste» er IKKE disabled (#1065 — gaten slipper på tomt
+    // roster i stedet for et registreringsvalg som ikke er tatt ennå).
+    expect(screen.getByRole('button', { name: /^neste$/i })).not.toBeDisabled();
     expect(
-      screen.getByText(/du kan også la spillerne melde seg på selv/i),
+      screen.getByText(/du bestemmer på neste steg/i),
     ).toBeInTheDocument();
-    const nextButton = screen.getByRole('button', { name: /^neste$/i });
-    expect(nextButton).not.toBeDisabled();
+  });
+
+  it('steg 4 «Neste» blokkeres av en PÅBEGYNT men ugyldig seleksjon (guardrail beholdt)', () => {
+    renderWizard();
+    pickKompisIntent();
+    pickBestBallFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    expectStep(4);
+
+    // Best ball krever partall (2/4/6/8) fordelt 2 per lag — velg ÉN spiller
+    // (ugyldig for modusen) og bekreft at Neste blokkeres.
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: /spiller 1/i }),
+    );
+    expect(screen.getByRole('button', { name: /^neste$/i })).toBeDisabled();
+  });
+
+  it('publiserer med invite_only (default) og tomt roster: canPublish er false, med lenke tilbake til steg 4', () => {
+    renderWizard();
+    goToReadyStep();
+
+    const publishBtn = screen.getByRole('button', {
+      name: /lagre og publiser/i,
+    });
+    expect(publishBtn).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /gå til spillere/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('«Gå til spillere»-lenken navigerer faktisk tilbake til steg 4', () => {
+    renderWizard();
+    goToReadyStep();
+
+    fireEvent.click(screen.getByRole('button', { name: /gå til spillere/i }));
+    expectStep(4);
+  });
+
+  it('publish-håndhevingen er uendret: valg av åpen påmelding på steg 5 gjør canPublish true selv med tomt roster', () => {
+    renderWizard();
+    goToReadyStep();
+
+    fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
+
+    const publishBtn = screen.getByRole('button', {
+      name: /lagre og publiser/i,
+    });
+    expect(publishBtn).not.toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: /gå til spillere/i }),
+    ).toBeNull();
   });
 });
 
@@ -604,6 +735,56 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expect(fd.getAll('side_ld_count')).toEqual(['2']);
     expect(fd.getAll('side_ctp_count')).toEqual(['1']);
     expect(fd.getAll('side_disabled_categories')).toEqual(['most_birdies_team']);
+  });
+});
+
+describe('GameWizard — #1065 allowance + kontingent overlever flytting til steg 5', () => {
+  it('hcp_allowance_pct + entry_fee_kr + payment_link speiles i FormData uansett disclosure-tilstand, uten duplikater', () => {
+    const { container } = renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+
+    pickKompisIntent();
+    pickStablefordFormat(); // → hcp_allowance_pct-feltet vises (stableford-familien)
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    clickNext();
+    expectStep(5);
+
+    // Disclosure lukket: default-verdier (100 % allowance, ingen kontingent)
+    // skal likevel være i FormData — samme garanti #1011 ga sideturnering.
+    let form = container.querySelector('form');
+    let fd = new FormData(form!);
+    expect(fd.get('hcp_allowance_pct')).toBe('100');
+    expect(fd.get('entry_fee_kr')).toBe('');
+    expect(fd.get('payment_link')).toBe('');
+
+    // Åpne disclosuren og sett en kontingent — feltene er nå faktisk montert
+    // (AllowanceField + RegistrationSection sin betalings-fieldset).
+    openAdvanced();
+    fireEvent.change(screen.getByLabelText(/beløp per spiller/i), {
+      target: { value: '150' },
+    });
+    fireEvent.change(screen.getByLabelText(/vipps-nummer/i), {
+      target: { value: '12345' },
+    });
+
+    form = container.querySelector('form');
+    fd = new FormData(form!);
+    // Nøyaktig ÉN verdi per felt — AllowanceField sin hideHiddenInput og
+    // RegistrationSection sine controlled inputs unngår duplikat-entries;
+    // FormDataInputs er eneste kilde.
+    expect(fd.getAll('hcp_allowance_pct')).toEqual(['100']);
+    expect(fd.getAll('entry_fee_kr')).toEqual(['150']);
+    expect(fd.getAll('payment_link')).toEqual(['12345']);
   });
 });
 

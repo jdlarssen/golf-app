@@ -792,6 +792,7 @@
       "publishButton": "Save and publish",
       "draftButton": "Save draft",
       "missingPrefix": "Missing: {items}",
+      "missingGoToPlayers": "Go to players (step 4)",
       "playersSolo": "{count} player",
       "playersPlural": "{count} players",
       "playersUnassigned": "{playerWord} (not assigned)",
@@ -998,7 +999,7 @@
       "next": "Next"
     },
     "step4": {
-      "selfSignupHint": "You can also let players sign up themselves. You will get the link once the game is created.",
+      "emptyRosterHint": "You'll decide on the next step whether to add players here, or let them sign up themselves.",
       "expectedCountHint": "You have {count} players. Add exactly that many for the best experience."
     },
     "pickerSource": {

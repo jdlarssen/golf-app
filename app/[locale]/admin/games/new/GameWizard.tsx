@@ -5,11 +5,21 @@
  *
  * Orchestrert som:
  *   Steg 1 (Arrangement) → IntentSelector (Kompis/Klubb/Cup/Solo)
- *   Steg 2 (Format)      → FormatGrid (Kompis/Klubb/Solo) eller CupSetup
- *                          (Cup, kort-circuit til 2-step cup-creation-flyt)
+ *   Steg 2 (Format)      → teller (kun kompis) + FormatGrid (Kompis/Klubb/
+ *                          Solo) eller CupSetup (Cup, kort-circuit til
+ *                          2-step cup-creation-flyt) + mode-spesifikk setup
+ *                          (Wolf/Nassau/Skins/.../TeamSizeSelector)
  *   Steg 3 (Bane)        → BasicsSection minus spillnavn + advanced
  *   Steg 4 (Spillere)    → PlayersSection + TeamsAssignmentSection inline
- *   Steg 5 (Klar)        → ReadyStep (summary + avanserte + publish/draft)
+ *   Steg 5 (Klar)        → ReadyStep (summary + påmelding/allowance/
+ *                          kontingent + avanserte + publish/draft)
+ *
+ * #1065: allowance-feltene og hele RegistrationSection (påmelding +
+ * startkontingent) flyttet fra steg 2 til steg 5 — steg 2 er nå kun teller +
+ * format-grid + mode-spesifikk setup (~1 skjermhøyde). Steg 4 sin
+ * «Neste»-gate slipper samtidig på tomt roster (se `canAdvance()` under)
+ * siden registreringsvalget (som tidligere gjorde spillerlisten valgfri) nå
+ * tas EFTER steg 4, ikke før.
  *
  * URL-state: `?step=2..5`. Browser back fra steg N tilbake til N-1; back
  * fra steg 1 går ut av wizard-en.
@@ -45,7 +55,6 @@ import { BasicsSection } from './sections/BasicsSection';
 import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { ReadyStep } from './sections/ReadyStep';
-import { RegistrationSection } from './sections/RegistrationSection';
 import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
@@ -55,8 +64,6 @@ import { WagerStakeSetup } from './sections/WagerStakeSetup';
 import { ShambleSetup } from './sections/ShambleSetup';
 import { PatsomeSetup } from './sections/PatsomeSetup';
 import { useTranslations } from 'next-intl';
-import { AllowanceField } from '@/components/admin/AllowanceField';
-import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
 import type {
   CourseOption,
   PlayerOption,
@@ -155,7 +162,6 @@ export function GameWizard({
   formatGuide = [],
 }: Props) {
   const t = useTranslations('wizard');
-  const tAllowance = useTranslations('allowance');
   const tModes = useTranslations('modes');
   const locale = useLocale();
   const router = useRouter();
@@ -338,10 +344,17 @@ export function GameWizard({
     }
     if (step === 3) return state.courseId !== '' && state.teeBoxId !== '' && !state.teeOffInPast;
     // Steg 4: vanligvis krever vi en gyldig spiller-fordeling per modus.
-    // #199: når selv-påmelding er på (open / manual_approval) er spiller-
-    // listen valgfri — admin kan publisere et tomt spill og la spillerne
-    // melde seg på via lenken.
-    if (step === 4) return state.playersStepOptional || state.playersValidForMode;
+    // #1065: registreringsvalget (hvem kan melde seg på) er flyttet til
+    // steg 5 — vi kan derfor IKKE lenger gate på `playersStepOptional`
+    // (valget er ikke tatt ennå når admin står på steg 4 på en fremover-
+    // passering; den flagget ville nesten alltid vært 'invite_only'-default
+    // og dermed false, altså ingen reell bypass). I stedet slipper vi gaten
+    // når rosteret er tomt/urørt — det dekker admin som har tenkt å bruke
+    // selv-påmelding (velges på steg 5) uten å late som steg 4 er ferdig
+    // utfylt, samtidig som en PÅBEGYNT men ugyldig seleksjon (feil antall,
+    // manglende lag-fordeling) fortsatt blokkerer — samme guardrail som før
+    // for admin som faktisk plukker spillere her.
+    if (step === 4) return state.selectedPlayerIds.length === 0 || state.playersValidForMode;
     return false; // steg 5 har ikke neste-knapp
   }
 
@@ -358,10 +371,13 @@ export function GameWizard({
       if (state.teeOffInPast) return t('disabledHint.step3TeeOffPast');
     }
     if (step === 4) {
-      // playersValidForMode false → ta første mangel fra liste-en. Filtrer
-      // bort bane/tee-off-mangler siden de håndteres i steg 3.
+      // playersValidForMode false OG rosteret ikke tomt → påbegynt men ugyldig
+      // seleksjon. Ta første spiller-relaterte mangel fra liste-en, klassifisert
+      // via den locale-uavhengige kode-listen (parallell til missingForPublish)
+      // — aldri via oversatt display-tekst. Bane/tee/tee-off ('course'/
+      // 'tee_box'/'tee_off') håndteres i steg 3, allowance på steg 5.
       const relevant = state.missingForPublish.filter(
-        (m) => m !== 'bane' && m !== 'tee-boks' && m !== 'tee-off-tid',
+        (_, i) => state.missingForPublishCodes[i] === 'players',
       );
       if (relevant.length > 0) return t('disabledHint.step4Prefix', { item: relevant[0] });
     }
@@ -591,166 +607,11 @@ export function GameWizard({
                   disabled={state.lockGameMode}
                 />
               )}
-              {state.gameMode === 'fourball_matchplay' && (
-                <AllowanceField
-                  fieldName="fourball_allowance_pct"
-                  defaultPct={85}
-                  legend={t('allowanceProps.fourball.legend')}
-                  description={t('allowanceProps.fourball.description')}
-                  nettoHelperText={t('allowanceProps.fourball.nettoHelper')}
-                  bruttoHelperText={t('allowanceProps.fourball.bruttoHelper')}
-                  value={state.fourballAllowancePct}
-                  onChange={state.setFourballAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {state.gameMode === 'foursomes_matchplay' && (
-                <AllowanceField
-                  fieldName="foursomes_allowance_pct"
-                  defaultPct={50}
-                  legend={t('allowanceProps.foursomes.legend')}
-                  description={t('allowanceProps.foursomes.description')}
-                  nettoHelperText={t('allowanceProps.foursomes.nettoHelper')}
-                  bruttoHelperText={t('allowanceProps.foursomes.bruttoHelper')}
-                  value={state.foursomesAllowancePct}
-                  onChange={state.setFoursomesAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {state.gameMode === 'greensome_matchplay' && (
-                <AllowanceField
-                  fieldName="greensome_allowance_pct"
-                  defaultPct={100}
-                  legend={t('allowanceProps.greensome.legend')}
-                  description={t('allowanceProps.greensome.description')}
-                  nettoHelperText={t('allowanceProps.greensome.nettoHelper')}
-                  bruttoHelperText={t('allowanceProps.greensome.bruttoHelper')}
-                  value={state.greensomeAllowancePct}
-                  onChange={state.setGreensomeAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {state.gameMode === 'chapman_matchplay' && (
-                <AllowanceField
-                  fieldName="chapman_allowance_pct"
-                  defaultPct={100}
-                  legend={t('allowanceProps.chapman.legend')}
-                  description={t('allowanceProps.chapman.description')}
-                  nettoHelperText={t('allowanceProps.chapman.nettoHelper')}
-                  bruttoHelperText={t('allowanceProps.chapman.bruttoHelper')}
-                  value={state.chapmanAllowancePct}
-                  onChange={state.setChapmanAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {state.gameMode === 'gruesome_matchplay' && (
-                <AllowanceField
-                  fieldName="gruesome_allowance_pct"
-                  defaultPct={50}
-                  legend={t('allowanceProps.gruesome.legend')}
-                  description={t('allowanceProps.gruesome.description')}
-                  nettoHelperText={t('allowanceProps.gruesome.nettoHelper')}
-                  bruttoHelperText={t('allowanceProps.gruesome.bruttoHelper')}
-                  value={state.gruesomeAllowancePct}
-                  onChange={state.setGruesomeAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {state.isRoundRobin && (
-                <AllowanceField
-                  fieldName="round_robin_allowance_pct"
-                  defaultPct={85}
-                  legend={t('allowanceProps.roundRobin.legend')}
-                  description={t('allowanceProps.roundRobin.description')}
-                  nettoHelperText={t('allowanceProps.roundRobin.nettoHelper')}
-                  bruttoHelperText={t('allowanceProps.roundRobin.bruttoHelper')}
-                  value={state.roundRobinAllowancePct}
-                  onChange={state.setRoundRobinAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {(state.gameMode === 'best_ball' ||
-                isStablefordFamily(state.gameMode) ||
-                state.gameMode === 'singles_matchplay' ||
-                state.gameMode === 'solo_strokeplay') && (
-                <AllowanceField
-                  fieldName="hcp_allowance_pct"
-                  defaultPct={100}
-                  legend={t('allowanceProps.scoring.legend')}
-                  description={t('allowanceProps.scoring.description')}
-                  nettoHelperText={t('allowanceProps.scoring.nettoHelper')}
-                  bruttoHelperText={tAllowance(bruttoHelperKeyFor(state.gameMode))}
-                  value={state.hcpAllowance}
-                  onChange={state.setHcpAllowance}
-                  hideHiddenInput
-                />
-              )}
-              {state.isTexas && (
-                <AllowanceField
-                  key={state.teamSize}
-                  fieldName="texas_team_handicap_pct"
-                  defaultPct={state.texasHandicapPct}
-                  legend={t('allowanceProps.texas.legend')}
-                  description={t('allowanceProps.texas.description')}
-                  nettoHelperText={
-                    state.teamSize === 2
-                      ? t('allowanceProps.texas.nettoHelper2')
-                      : t('allowanceProps.texas.nettoHelper4')
-                  }
-                  bruttoHelperText={t('allowanceProps.texas.bruttoHelper')}
-                  inputLabel={t('allowanceProps.texas.inputLabel')}
-                  value={state.texasHandicapPct}
-                  onChange={state.setTexasHandicapPct}
-                  hideHiddenInput
-                />
-              )}
-              {/* Ambrose (#284): lag-handicap per standard Ambrose-formel.
-                  `key={teamSize}` forser remount ved lagstørrelse-bytte. */}
-              {state.isAmbrose && (
-                <AllowanceField
-                  key={state.teamSize}
-                  fieldName="ambrose_team_handicap_pct"
-                  defaultPct={state.ambroseHandicapPct}
-                  legend={t('allowanceProps.ambrose.legend')}
-                  description={t('allowanceProps.ambrose.description')}
-                  nettoHelperText={
-                    state.teamSize === 2
-                      ? t('allowanceProps.ambrose.nettoHelper2')
-                      : t('allowanceProps.ambrose.nettoHelper4')
-                  }
-                  bruttoHelperText={t('allowanceProps.ambrose.bruttoHelper')}
-                  inputLabel={t('allowanceProps.ambrose.inputLabel')}
-                  value={state.ambroseHandicapPct}
-                  onChange={state.setAmbroseHandicapPct}
-                  hideHiddenInput
-                />
-              )}
-              {/* Florida Scramble (#283): lag-handicap per NGF-fasttabell.
-                  `key={teamSize}` forser remount ved lagstørrelse-bytte. */}
-              {state.isFlorida && (
-                <AllowanceField
-                  key={state.teamSize}
-                  fieldName="florida_team_handicap_pct"
-                  defaultPct={state.floridaHandicapPct}
-                  legend={t('allowanceProps.florida.legend')}
-                  description={t('allowanceProps.florida.description')}
-                  nettoHelperText={
-                    state.teamSize === 3
-                      ? t('allowanceProps.florida.nettoHelper3')
-                      : t('allowanceProps.florida.nettoHelper4')
-                  }
-                  bruttoHelperText={t('allowanceProps.florida.bruttoHelper')}
-                  inputLabel={t('allowanceProps.florida.inputLabel')}
-                  value={state.floridaHandicapPct}
-                  onChange={state.setFloridaHandicapPct}
-                  hideHiddenInput
-                />
-              )}
-              <RegistrationSection
-                state={state}
-                hideHeading
-                hideModeChoice={state.isClubScoped}
-              />
+              {/* #1065: allowance-feltene (HCP-allowance, lag-handicap for
+                  scramble-familien, matchplay-allowance) og hele Påmelding-
+                  seksjonen (inkl. kontingent) er flyttet til steg 5/ReadyStep
+                  — steg 2 er nå kun teller + format-grid + mode-spesifikk
+                  setup. Se ReadyStep.tsx for hvor de nå mountes. */}
               {/* «For hvilken klubb?» hører kun til klubb-arrangement (#50-fix):
                   en kompis-/solo-runde scopes ikke til en klubb. */}
               {state.intent === 'klubb' && clubs.length > 0 && (
@@ -776,13 +637,21 @@ export function GameWizard({
 
       {step === 4 && (
         <div className="space-y-6">
-          {state.playersStepOptional && (
+          {/* #1065: registreringsvalget (hvem kan melde seg på) flyttet til
+              steg 5 — vi vet derfor ikke ENNÅ om spillerlisten er valgfri når
+              admin står her. Hintet under gjelder kun et tomt utvalg (admin
+              har ikke rukket å velge noen ennå) og informerer om at det er en
+              gyldig vei videre (self-påmelding-valget kommer på steg 5), i
+              stedet for det gamle `selfSignupHint`-hintet som forutsatte at
+              valget allerede var tatt (nå død kode — modus er alltid
+              invite_only-default her på en fremover-passering). */}
+          {state.selectedPlayerIds.length === 0 && (
             <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-              {t('step4.selfSignupHint')}
+              {t('step4.emptyRosterHint')}
             </p>
           )}
           {/* #373: hint om antall spillere valgt i steg 2 */}
-          {!state.playersStepOptional &&
+          {state.selectedPlayerIds.length > 0 &&
             state.intent === 'kompis' &&
             state.expectedPlayerCount !== undefined && (
               <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
@@ -817,6 +686,7 @@ export function GameWizard({
           state={state}
           mode={mode}
           onNameTouched={() => setNameTouched(true)}
+          onGoToPlayersStep={() => setStep(4)}
         />
       )}
 

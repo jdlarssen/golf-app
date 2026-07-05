@@ -263,6 +263,26 @@ type UseGameFormStateInput = {
 };
 
 /**
+ * #1065: locale-uavhengig kategori-kode for hvert element i
+ * `missingForPublish`. Display-strengene er oversatt per locale (via
+ * `wizard.form.missing`), så konsumenter som må KLASSIFISERE et mangel-punkt
+ * (GameWizard sitt steg-4-hint-filter, ReadyStep sin «Gå til spillere»-lenke)
+ * leser den parallelle `missingForPublishCodes`-listen i stedet for å matche
+ * på oversatt tekst — tekst-matching brakk i engelsk locale.
+ *
+ * - 'course' / 'tee_box' / 'tee_off' → hører til steg 3 (Bane)
+ * - 'players' → spiller-/lag-relatert, hører til steg 4 (Spillere)
+ * - 'allowance' → konfig-verdi, hører til steg 5 (allowance-feltene i
+ *   ReadyStep sin disclosure)
+ */
+export type MissingForPublishCode =
+  | 'course'
+  | 'tee_box'
+  | 'tee_off'
+  | 'players'
+  | 'allowance';
+
+/**
  * State + handlers + memoiserte derived values for `GameForm` og den kommende
  * `GameWizard`. Hooken er den enkleste måten å holde scoring-/validerings-
  * reglene samkjørte på tvers av de to presentasjons-strategiene (stacked
@@ -1490,16 +1510,25 @@ export function useGameFormState({
   // og solo-stien melder bare manglende spiller(e). Rekkefølgen speiler
   // form-seksjonene så meldingen scanner top-to-bottom.
   const missingForPublish: string[] = [];
-  if (courseId === '') missingForPublish.push(tMissing('course'));
-  if (teeBoxId === '') missingForPublish.push(tMissing('teeBox'));
-  if (!hasTeeOff) missingForPublish.push(tMissing('teeOffTime'));
+  // #1065: parallell kode-liste — ALLTID samme lengde/rekkefølge som
+  // missingForPublish (garantert av pushMissing-helperen; push aldri direkte).
+  // Konsumenter klassifiserer mangel-punkter via kodene, aldri via oversatt
+  // display-tekst (tekst-matching brakk i engelsk locale).
+  const missingForPublishCodes: MissingForPublishCode[] = [];
+  const pushMissing = (code: MissingForPublishCode, message: string) => {
+    missingForPublish.push(message);
+    missingForPublishCodes.push(code);
+  };
+  if (courseId === '') pushMissing('course', tMissing('course'));
+  if (teeBoxId === '') pushMissing('tee_box', tMissing('teeBox'));
+  if (!hasTeeOff) pushMissing('tee_off', tMissing('teeOffTime'));
   // A past tee-off is invalid, not "missing", so it does NOT go in missingForPublish
   // (would read "Mangler: tee-off-tid i fortiden"). canPublish already excludes it via
   // `!teeOffInPast`, and BasicsSection shows the inline error at the field (#928).
   // #721: backstop — kategori uten tee-rating bør aldri nå hit takket være
   // klem-ved-tee-bytte, men pre-eksisterende edit-data kan ha ugyldig tilstand.
   if (playersWithUnratedCategory.length > 0)
-    missingForPublish.push(tMissing('categoryMissingRating'));
+    pushMissing('players', tMissing('categoryMissingRating'));
   // Når selv-påmelding er på er spillerlisten valgfri ved publish; vi
   // hopper over per-modus completeness-meldingene helt. hcp_allowance-
   // sjekken nederst gjelder fortsatt fordi den er en konfig-verdi, ikke
@@ -1508,180 +1537,180 @@ export function useGameFormState({
     // intentionally skip player-list-related missing messages
   } else if (isMatchplay) {
     if (selectedPlayerIds.length === 0) {
-      missingForPublish.push(tMissing('twoPlayers'));
+      pushMissing('players', tMissing('twoPlayers'));
     } else if (selectedPlayerIds.length === 1) {
-      missingForPublish.push(tMissing('oneMorePlayer'));
+      pushMissing('players', tMissing('oneMorePlayer'));
     } else if (selectedPlayerIds.length > 2) {
       // Eksplisitt copy som speiler `too_many_players_for_mode`-feilkoden
       // fra server-action. Matchplay er strengt 1v1 — admin må fjerne
       // overflødige før publish.
-      missingForPublish.push(tMissing('tooManyMatchplay'));
+      pushMissing('players', tMissing('tooManyMatchplay'));
     } else if (!matchplayPlayersValid) {
       // 2 spillere valgt, men ikke fordelt 1+1 på sidene. Den eneste
       // gjenstående muligheten er at begge står på samme side eller
       // mangler side-tilordning.
-      missingForPublish.push(tMissing('onePerSide'));
+      pushMissing('players', tMissing('onePerSide'));
     }
   } else if (isBestBall) {
     if (selectedPlayerIds.length < 2) {
-      missingForPublish.push(tMissing('bestBallMin'));
+      pushMissing('players', tMissing('bestBallMin'));
     } else if (selectedPlayerIds.length % 2 !== 0) {
-      missingForPublish.push(tMissing('bestBallOdd'));
+      pushMissing('players', tMissing('bestBallOdd'));
     } else if (!teamsComplete) {
-      missingForPublish.push(tMissing('bestBallAssign'));
+      pushMissing('players', tMissing('bestBallAssign'));
     } else if (!flightsComplete) {
-      missingForPublish.push(tMissing('flightAssign'));
+      pushMissing('players', tMissing('flightAssign'));
     }
   } else if (isParStableford) {
     if (selectedPlayerIds.length < 2) {
-      missingForPublish.push(tMissing('min2players'));
+      pushMissing('players', tMissing('min2players'));
     } else if (selectedPlayerIds.length % 2 !== 0) {
-      missingForPublish.push(tMissing('evenCount'));
+      pushMissing('players', tMissing('evenCount'));
     } else if (!parStablefordPlayersValid) {
       // Spillere er valgt og partall, men ikke alle er tilordnet et lag
       // eller noen lag har 1 spiller. Én melding dekker begge tilfellene
       // for å holde mangel-listen kort.
-      missingForPublish.push(tMissing('parAssign'));
+      pushMissing('players', tMissing('parAssign'));
     }
   } else if (isTexas) {
     // Texas: lagstørrelse 2 eller 4. Trenger minst teamSize spillere
     // fordelt på minst ett fullt lag. Mangler-meldingene speiler
     // `validateTexasScramble`-feilene fra payload-laget.
     if (selectedPlayerIds.length < teamSize) {
-      missingForPublish.push(tMissing('minCountPlayers', { count: teamSize }));
+      pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
-      missingForPublish.push(teamSize === 2 ? tMissing('teamOdd2') : tMissing('teamOdd4'));
+      pushMissing('players', teamSize === 2 ? tMissing('teamOdd2') : tMissing('teamOdd4'));
     } else if (!texasPlayersValid) {
-      missingForPublish.push(teamSize === 2 ? tMissing('teamAssign2') : tMissing('teamAssign4'));
+      pushMissing('players', teamSize === 2 ? tMissing('teamAssign2') : tMissing('teamAssign4'));
     }
     if (!texasHandicapPctValid) {
-      missingForPublish.push(tMissing('teamHandicapPct'));
+      pushMissing('allowance', tMissing('teamHandicapPct'));
     }
   } else if (isAmbrose) {
     // Ambrose (#284): lagstørrelse 2 eller 4. Speiler Texas-mangler-meldingene.
     if (selectedPlayerIds.length < teamSize) {
-      missingForPublish.push(tMissing('minCountPlayers', { count: teamSize }));
+      pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
-      missingForPublish.push(teamSize === 2 ? tMissing('teamOdd2') : tMissing('teamOdd4'));
+      pushMissing('players', teamSize === 2 ? tMissing('teamOdd2') : tMissing('teamOdd4'));
     } else if (!ambrosePlayersValid) {
-      missingForPublish.push(teamSize === 2 ? tMissing('teamAssign2') : tMissing('teamAssign4'));
+      pushMissing('players', teamSize === 2 ? tMissing('teamAssign2') : tMissing('teamAssign4'));
     }
     if (!ambroseHandicapPctValid) {
-      missingForPublish.push(tMissing('teamHandicapPct'));
+      pushMissing('allowance', tMissing('teamHandicapPct'));
     }
   } else if (isShamble) {
     // Shamble: lagstørrelse 3 eller 4. Trenger minst teamSize spillere
     // fordelt på minst ett fullt lag. Mangler-meldingene speiler
     // `validateShamble`-feilene fra payload-laget.
     if (selectedPlayerIds.length < teamSize) {
-      missingForPublish.push(tMissing('minCountPlayers', { count: teamSize }));
+      pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
-      missingForPublish.push(teamSize === 3 ? tMissing('teamOdd3') : tMissing('teamOdd4'));
+      pushMissing('players', teamSize === 3 ? tMissing('teamOdd3') : tMissing('teamOdd4'));
     } else if (!shamblePlayersValid) {
-      missingForPublish.push(teamSize === 3 ? tMissing('teamAssign3') : tMissing('teamAssign4'));
+      pushMissing('players', teamSize === 3 ? tMissing('teamAssign3') : tMissing('teamAssign4'));
     }
   } else if (isFlorida) {
     // Florida Scramble (#283): lagstørrelse 3 eller 4. Speiler Texas-/Ambrose-
     // mangler-meldingene.
     if (selectedPlayerIds.length < teamSize) {
-      missingForPublish.push(tMissing('minCountPlayers', { count: teamSize }));
+      pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
-      missingForPublish.push(teamSize === 3 ? tMissing('teamOdd3') : tMissing('teamOdd4'));
+      pushMissing('players', teamSize === 3 ? tMissing('teamOdd3') : tMissing('teamOdd4'));
     } else if (!floridaPlayersValid) {
-      missingForPublish.push(teamSize === 3 ? tMissing('teamAssign3') : tMissing('teamAssign4'));
+      pushMissing('players', teamSize === 3 ? tMissing('teamAssign3') : tMissing('teamAssign4'));
     }
     if (!floridaHandicapPctValid) {
-      missingForPublish.push(tMissing('teamHandicapPct'));
+      pushMissing('allowance', tMissing('teamHandicapPct'));
     }
   } else if (isWolf) {
     // Wolf: 3-5 spillere (#465). Rotation-slot trekkes ved spillstart (#969).
     if (selectedPlayerIds.length < 3) {
       const remaining = 3 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('wolfUnderMin', { remaining }));
+      pushMissing('players', tMissing('wolfUnderMin', { remaining }));
     } else if (selectedPlayerIds.length > 5) {
-      missingForPublish.push(tMissing('wolfTooMany'));
+      pushMissing('players', tMissing('wolfTooMany'));
     }
   } else if (isNassau) {
     // Nassau: 2-16 spillere (#460), solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 2) {
       const remaining = 2 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('nassauMin', { remaining }));
+      pushMissing('players', tMissing('nassauMin', { remaining }));
     } else if (selectedPlayerIds.length > 16) {
-      missingForPublish.push(tMissing('nassauTooMany'));
+      pushMissing('players', tMissing('nassauTooMany'));
     }
   } else if (isSkins) {
     // Skins: 2-16 spillere (#460), solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 2) {
       const remaining = 2 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('nassauMin', { remaining }));
+      pushMissing('players', tMissing('nassauMin', { remaining }));
     } else if (selectedPlayerIds.length > 16) {
-      missingForPublish.push(tMissing('skinsTooMany'));
+      pushMissing('players', tMissing('skinsTooMany'));
     }
   } else if (isBingoBangoBongo) {
     // Bingo Bango Bongo: 2-16 spillere (#460), solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 2) {
       const remaining = 2 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('nassauMin', { remaining }));
+      pushMissing('players', tMissing('nassauMin', { remaining }));
     } else if (selectedPlayerIds.length > 16) {
-      missingForPublish.push(tMissing('bbbTooMany'));
+      pushMissing('players', tMissing('bbbTooMany'));
     }
   } else if (isNines) {
     // Nines: nøyaktig 3 spillere, solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 3) {
       const remaining = 3 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('ninesUnderMin', { remaining }));
+      pushMissing('players', tMissing('ninesUnderMin', { remaining }));
     } else if (selectedPlayerIds.length > 3) {
-      missingForPublish.push(tMissing('ninesTooMany'));
+      pushMissing('players', tMissing('ninesTooMany'));
     }
   } else if (isRoundRobin) {
     // Round Robin: nøyaktig 4 spillere. Rotation-slot fordeles automatisk.
     if (selectedPlayerIds.length < 4) {
       const remaining = 4 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('rrUnderMin', { remaining }));
+      pushMissing('players', tMissing('rrUnderMin', { remaining }));
     } else if (selectedPlayerIds.length > 4) {
-      missingForPublish.push(tMissing('rrTooMany'));
+      pushMissing('players', tMissing('rrTooMany'));
     }
     if (!roundRobinAllowancePctValid) {
-      missingForPublish.push(tMissing('rrHandicap'));
+      pushMissing('allowance', tMissing('rrHandicap'));
     }
   } else if (isAceyDeucey) {
     // Acey Deucey: nøyaktig 4 spillere, solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 4) {
       const remaining = 4 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('ninesUnderMin', { remaining }));
+      pushMissing('players', tMissing('ninesUnderMin', { remaining }));
     } else if (selectedPlayerIds.length > 4) {
-      missingForPublish.push(tMissing('aceyTooMany'));
+      pushMissing('players', tMissing('aceyTooMany'));
     }
   } else if (isPatsome) {
     // Patsome: minst 4 spillere, partall, fordelt 2 per lag.
     if (selectedPlayerIds.length < 4) {
       const remaining = 4 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('patsomeUnderMin', { remaining }));
+      pushMissing('players', tMissing('patsomeUnderMin', { remaining }));
     } else if (selectedPlayerIds.length % 2 !== 0) {
-      missingForPublish.push(tMissing('patsomeOdd'));
+      pushMissing('players', tMissing('patsomeOdd'));
     } else if (!patsomePlayersValid) {
-      missingForPublish.push(tMissing('patsomeAssign'));
+      pushMissing('players', tMissing('patsomeAssign'));
     }
   } else if (isTeamMatchplay) {
     // Lag-matchplay: eksakt 4 spillere, fordelt 2 per side (2v2).
     if (selectedPlayerIds.length < 4) {
       const remaining = 4 - selectedPlayerIds.length;
-      missingForPublish.push(tMissing('teamMatchplayUnderMin', { remaining }));
+      pushMissing('players', tMissing('teamMatchplayUnderMin', { remaining }));
     } else if (selectedPlayerIds.length > 4) {
-      missingForPublish.push(tMissing('teamMatchplayTooMany'));
+      pushMissing('players', tMissing('teamMatchplayTooMany'));
     } else if (!teamMatchplayPlayersValid) {
-      missingForPublish.push(tMissing('teamMatchplayAssign'));
+      pushMissing('players', tMissing('teamMatchplayAssign'));
     }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
-    missingForPublish.push(tMissing('soloMin'));
+    pushMissing('players', tMissing('soloMin'));
   }
   // hcp_allowance_pct gjelder ikke for Texas, Ambrose, Shamble, Wolf, Nassau,
   // Skins, Bingo Bango Bongo, Nines, Round Robin eller Acey Deucey — disse
   // modusene har sin egen scoring-konfig i mode_config. Hopper over allowance-
   // sjekken så admin ikke får mismatch mellom UI-skjult-felt og publish-feilmelding.
   if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isBingoBangoBongo && !isNines && !isRoundRobin && !isAceyDeucey && !isPatsome && !isTeamMatchplay && !allowanceValid)
-    missingForPublish.push(tMissing('invalidAllowance'));
+    pushMissing('allowance', tMissing('invalidAllowance'));
 
   return {
     // Raw state
@@ -1846,6 +1875,7 @@ export function useGameFormState({
     playersValidForMode,
     canPublish,
     missingForPublish,
+    missingForPublishCodes,
     // Handlers
     togglePlayer,
     addGuestPlayer,

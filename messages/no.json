@@ -792,6 +792,7 @@
       "publishButton": "Lagre og publiser",
       "draftButton": "Lagre utkast",
       "missingPrefix": "Mangler: {items}",
+      "missingGoToPlayers": "Gå til spillere (steg 4)",
       "playersSolo": "{count} spiller",
       "playersPlural": "{count} spillere",
       "playersUnassigned": "{playerWord} (ikke fordelt)",
@@ -998,7 +999,7 @@
       "next": "Neste"
     },
     "step4": {
-      "selfSignupHint": "Du kan også la spillerne melde seg på selv. Lenken får du etter at spillet er opprettet.",
+      "emptyRosterHint": "Du bestemmer på neste steg om du vil legge til spillere her, eller la dem melde seg på selv.",
       "expectedCountHint": "Dere er {count} spillere. Legg til nøyaktig så mange for best mulig spill."
     },
     "pickerSource": {

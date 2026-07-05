@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.179 · Et lettere steg 2 i veiviseren</strong></summary>
+
+[#1065](https://github.com/jdlarssen/golf-app/issues/1065) — Steg 2 er nå bare antall og spillform. Påmeldingsvalget ligger i klartekst på Klar-steget, og handicap-justering og startkontingent bor under «Vis avanserte innstillinger» samme sted — en vanlig kompisrunde settes opp uten å se noen av dem.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
 <summary><strong>1.178 · Godkjenn scorekort i ett tapp</strong></summary>
 
 [#1067](https://github.com/jdlarssen/golf-app/issues/1067) — Godkjenning av leverte scorekort er nå ett tapp per spiller: bekreft-dialogen er borte, og etter hver godkjenning lander du rett tilbake på scorekort-lista i stedet for øverst på siden.

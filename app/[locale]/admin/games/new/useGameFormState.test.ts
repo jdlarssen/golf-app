@@ -1151,3 +1151,97 @@ describe('useGameFormState — teeOffInPast blocks canPublish (#928)', () => {
     expect(result.current.canPublish).toBe(true);
   });
 });
+
+// ─── #1065 — missingForPublishCodes: locale-uavhengige mangel-koder ──────────
+//
+// `missingForPublish` er oversatte display-strenger (locale-avhengige).
+// Konsumentene som trenger å KLASSIFISERE et mangel-punkt (GameWizard sitt
+// steg-4-hint-filter og ReadyStep sin «Gå til spillere»-lenke) leser den
+// parallelle `missingForPublishCodes`-listen — samme lengde/rekkefølge, men
+// stabile koder som ikke brekker når locale er engelsk.
+
+describe('useGameFormState — missingForPublishCodes (#1065)', () => {
+  it('speiler missingForPublish 1:1 og koder course/tee_box/tee_off/players ved tom form', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('stableford');
+    });
+
+    // Tom form med invite_only-default: bane, tee, tee-off OG spillere mangler.
+    expect(result.current.missingForPublishCodes).toEqual([
+      'course',
+      'tee_box',
+      'tee_off',
+      'players',
+    ]);
+    expect(result.current.missingForPublishCodes).toHaveLength(
+      result.current.missingForPublish.length,
+    );
+  });
+
+  it('koder en ugyldig allowance som "allowance" — aldri "players"', () => {
+    // Fullt publiserbar solo-stableford, så ugyldig allowance som ENESTE mangel.
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setCourseId('course-a');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-a1');
+      result.current.togglePlayer('p-mann');
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() + 86_400_000)),
+      );
+    });
+    expect(result.current.canPublish).toBe(true);
+
+    act(() => {
+      result.current.setHcpAllowance(150); // utenfor 0–100
+    });
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toEqual(['allowance']);
+  });
+
+  it('utelater players-koden når selv-påmelding er på (playersStepOptional)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setRegistrationMode('open');
+    });
+    expect(result.current.missingForPublishCodes).not.toContain('players');
+  });
+});
+
+// ─── #199 — registration_type force-reset ved bytte til mode uten lag ─────────
+//
+// Dekket tidligere av en GameWizard-render-test som forsvant da påmeldings-
+// radioene flyttet til steg 5 (#1065); logikken bor i handleModeChange
+// (useGameFormState) og pinnes her på hook-nivå i stedet.
+
+describe('useGameFormState — force-reset av registrationType ved mode uten lag (#199)', () => {
+  it('resetter registrationType til solo når admin bytter fra best_ball (lag) til stableford (solo)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('best_ball');
+    });
+    act(() => {
+      result.current.setRegistrationType('team');
+    });
+    expect(result.current.registrationType).toBe('team');
+    expect(result.current.registrationModeSupportsTeams).toBe(true);
+
+    act(() => {
+      result.current.handleModeChange('stableford');
+    });
+    expect(result.current.registrationType).toBe('solo');
+    expect(result.current.registrationModeSupportsTeams).toBe(false);
+  });
+});
