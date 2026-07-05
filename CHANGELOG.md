@@ -1087,8 +1087,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 9 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 10 rettinger</strong></summary>
 
+- `1.172.2` · [#1054](https://github.com/jdlarssen/golf-app/issues/1054) — Spillermangel-banneret sier nå at best ball trenger et partall spillere (minst 2), ikke den gamle 8-låsen.
 - `1.172.1` · [#1053](https://github.com/jdlarssen/golf-app/issues/1053) — Damer får nå dametee når appen setter opp cup-matcher og ligarunder automatisk. Før ble alle satt på herretee, som gir feil banehandicap.
 - `1.171.2` · [#1017](https://github.com/jdlarssen/golf-app/issues/1017) — Gamle gjestespillere er nå merket med «Gjest»-chip også i invitér-lista, medspiller-nettverket og spillerlista, ikke bare på spillersida — så du kjenner dem igjen uansett hvor de dukker opp.
 - `1.171.1` · [#1045](https://github.com/jdlarssen/golf-app/issues/1045) — Nye baner dukker nå opp på baneoversikten med en gang du har lagret dem, ikke først etter et døgn. Samme når du endrer eller sletter en bane.

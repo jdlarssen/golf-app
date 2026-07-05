@@ -1130,7 +1130,7 @@
       "brassRibbon": "New game",
       "shortageBannerZero": "You have no registered players.",
       "shortageBannerSome": "You only have {count} registered player{plural}.",
-      "shortageBannerNote": "Best ball needs 8, stableford works with 1. Invite more from the",
+      "shortageBannerNote": "Best ball needs an even number of players (at least 2), stableford works with 1. Invite more from the",
       "shortageBannerLink": "Players",
       "shortageBannerSuffix": "page.",
       "cupBanner": {
@@ -1149,7 +1149,7 @@
       "subtitle": "Course, players, teams and settings",
       "shortageBannerZero": "You have no registered players.",
       "shortageBannerSome": "You only have {count} registered player{plural}.",
-      "shortageBannerNote": "Best ball needs 8, stableford works with 1. Ask an admin to invite more from the",
+      "shortageBannerNote": "Best ball needs an even number of players (at least 2), stableford works with 1. Ask an admin to invite more from the",
       "shortageBannerLink": "home page",
       "shortageBannerSuffix": ".",
       "revansjeBanner": "Prefilled from {name} — you can change anything."
@@ -3091,7 +3091,7 @@
         "subtitle": "Change course, players, teams or settings",
         "bannerDraft": "The game is still a draft — only you can see it. Fill in the missing details and publish when you are ready.",
         "bannerScheduled": "The game is in the scheduled phase. Players will see changes the next time they open the app.",
-        "playerShortageBanner": "You need 8 registered players for best ball. Invite more from the <link>Players</link> page."
+        "playerShortageBanner": "You need an even number of registered players (at least 2) for best ball. Invite more from the <link>Players</link> page."
       },
       "delete": {
         "kicker": "Confirm deletion",

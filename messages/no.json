@@ -1130,7 +1130,7 @@
       "brassRibbon": "Nytt spill",
       "shortageBannerZero": "Du har ingen registrerte spillere.",
       "shortageBannerSome": "Du har bare {count} registrert{suffix} spiller{plural}.",
-      "shortageBannerNote": "Best ball trenger 8, stableford holder med 1. Inviter flere fra",
+      "shortageBannerNote": "Best ball trenger et partall spillere (minst 2), stableford holder med 1. Inviter flere fra",
       "shortageBannerLink": "Spillere",
       "shortageBannerSuffix": "-siden.",
       "cupBanner": {
@@ -1149,7 +1149,7 @@
       "subtitle": "Bane, spillere, lag og innstillinger",
       "shortageBannerZero": "Du har ingen registrerte spillere.",
       "shortageBannerSome": "Du har bare {count} registrert{suffix} spiller{plural}.",
-      "shortageBannerNote": "Best ball trenger 8, stableford holder med 1. Be admin invitere flere fra",
+      "shortageBannerNote": "Best ball trenger et partall spillere (minst 2), stableford holder med 1. Be admin invitere flere fra",
       "shortageBannerLink": "forsiden",
       "shortageBannerSuffix": ".",
       "revansjeBanner": "Forhåndsutfylt fra {name} — alt kan endres."
@@ -3091,7 +3091,7 @@
         "subtitle": "Endre bane, spillere, lag eller innstillinger",
         "bannerDraft": "Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.",
         "bannerScheduled": "Spillet er i planlagt-fasen. Spillerne ser endringene neste gang de åpner appen.",
-        "playerShortageBanner": "Du trenger 8 registrerte spillere for best ball. Inviter flere fra <link>Spillere</link>-siden."
+        "playerShortageBanner": "Du trenger et partall registrerte spillere (minst 2) for best ball. Inviter flere fra <link>Spillere</link>-siden."
       },
       "delete": {
         "kicker": "Bekreft sletting",
