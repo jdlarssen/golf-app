@@ -7,7 +7,7 @@
  * bane + tee + tee-off, antall spillere + lag-fordeling), spillnavn med
  * inline-rediger, en sammenleggbar «Vis avanserte innstillinger»-disclosure
  * som mounter AdvancedSettingsSection med score-visibility + sideturnering,
- * og publish/draft-knappene + escape-hatch-tekstlenken.
+ * og publish/draft-knappene.
  *
  * Filen lever som komponent, men er IKKE wired i GameForm. GameWizard
  * mounter den i wizard-stegtreet.
@@ -30,11 +30,6 @@ type Props = {
   state: GameFormState;
   mode: GameFormMode;
   /**
-   * Bryter til full-form-view («Tilpass alle detaljer»-lenken). Wizard-en
-   * sender en handler som setter `view = 'full'` i orkestratoren.
-   */
-  onOpenFullForm: () => void;
-  /**
    * Kalles første gang admin redigerer navnet manuelt. Wizard-en setter
    * `nameTouched = true` slik at auto-name fra bane/tee-off ikke
    * overstyrer det redigerte navnet.
@@ -45,7 +40,6 @@ type Props = {
 export function ReadyStep({
   state,
   mode,
-  onOpenFullForm,
   onNameTouched,
 }: Props) {
   const t = useTranslations('wizard.ready');
@@ -273,13 +267,6 @@ export function ReadyStep({
           >
             {t('draftButton')}
           </Button>
-          <button
-            type="button"
-            onClick={onOpenFullForm}
-            className="block w-full text-center text-xs text-muted underline underline-offset-2 hover:text-text"
-          >
-            {t('fullFormLink')}
-          </button>
         </div>
       )}
     </section>

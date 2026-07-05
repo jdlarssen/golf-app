@@ -799,7 +799,6 @@
       "advancedToggle": "Show advanced settings",
       "publishButton": "Save and publish",
       "draftButton": "Save draft",
-      "fullFormLink": "Customise all details",
       "missingPrefix": "Missing: {items}",
       "playersSolo": "{count} player",
       "playersPlural": "{count} players",
@@ -987,7 +986,6 @@
       "step3TeeOffPast": "Fix the tee-off time. It can't be in the past.",
       "step4Prefix": "Missing: {item}"
     },
-    "backToQuickSetup": "← Back to quick setup",
     "playerCount": {
       "legend": "How many players?",
       "lessAriaLabel": "Fewer players",

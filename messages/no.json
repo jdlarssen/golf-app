@@ -799,7 +799,6 @@
       "advancedToggle": "Vis avanserte innstillinger",
       "publishButton": "Lagre og publiser",
       "draftButton": "Lagre utkast",
-      "fullFormLink": "Tilpass alle detaljer",
       "missingPrefix": "Mangler: {items}",
       "playersSolo": "{count} spiller",
       "playersPlural": "{count} spillere",
@@ -987,7 +986,6 @@
       "step3TeeOffPast": "Rett tee-off-tiden. Den kan ikke være i fortiden.",
       "step4Prefix": "Mangler: {item}"
     },
-    "backToQuickSetup": "← Tilbake til hurtig-oppsett",
     "playerCount": {
       "legend": "Hvor mange er dere?",
       "lessAriaLabel": "Færre spillere",

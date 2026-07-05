@@ -16,13 +16,13 @@ const FUTURE_TEE_OFF = (() => {
 })();
 
 // Tester GameWizard-orchestratoren etter F2-redesign (#272): 5-stegs
-// navigasjons-flyt med intent-først, per-steg-validering, escape-hatch til
-// full-form, auto-name basert på bane/tee-off, og bekreftelse på at FormData
-// som sendes til server-actions matcher dagens GameForm-payload.
+// navigasjons-flyt med intent-først, per-steg-validering, auto-name basert
+// på bane/tee-off, og bekreftelse på at FormData som sendes til
+// server-actions matcher dagens GameForm-payload.
 //
 // next/navigation er auto-stubbet globalt i vitest.setup.ts. Wizard-en
-// faller derfor tilbake til default-step=1 og default-view='wizard'
-// uavhengig av URL — tilstrekkelig for behaviour-testene her.
+// faller derfor tilbake til default-step=1 uavhengig av URL —
+// tilstrekkelig for behaviour-testene her.
 
 const COURSES: CourseOption[] = [
   {
@@ -361,49 +361,6 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
     fireEvent.click(screen.getByRole('button', { name: /vis alle/i }));
     expect(screen.getByRole('radio', { name: /^best ball$/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /^nines \/ split sixes$/i })).toBeInTheDocument();
-  });
-});
-
-describe('GameWizard — escape-hatch til full-form bevarer state', () => {
-  it('bytter til full-form med wizard-state pre-fylt og tilbake-knapp restaurer', () => {
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
-
-    pickKompisIntent();
-    pickStablefordFormat();
-    clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
-    clickNext();
-    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
-    clickNext();
-
-    // Steg 5: klikk «Tilpass alle detaljer».
-    fireEvent.click(
-      screen.getByRole('button', { name: /tilpass alle detaljer/i }),
-    );
-
-    // #909: full-view-en (GameForm) rendrer nå seksjonene som Disclosure-
-    // paneler; «Grunnoppsett»-panelet (åpent som default) erstatter den
-    // tidligere «Bane og tidspunkt»-headingen som full-view-markør.
-    expect(screen.getByText('Grunnoppsett')).toBeInTheDocument();
-
-    const backLink = screen.getByRole('button', {
-      name: /tilbake til hurtig-oppsett/i,
-    });
-    expect(backLink).toBeInTheDocument();
-    expect(
-      (screen.getByLabelText(/^bane$/i) as HTMLSelectElement).value,
-    ).toBe('course-1');
-
-    fireEvent.click(backLink);
-    expectStep(5);
   });
 });
 

@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * GameWizard — 5-stegs hurtig-oppsett av nye spill (F2 #272), med escape-
- * hatch til full-form for power-users.
+ * GameWizard — 5-stegs hurtig-oppsett av nye spill (F2 #272).
  *
  * Orchestrert som:
  *   Steg 1 (Arrangement) → IntentSelector (Kompis/Klubb/Cup/Solo)
@@ -12,14 +11,14 @@
  *   Steg 4 (Spillere)    → PlayersSection + TeamsAssignmentSection inline
  *   Steg 5 (Klar)        → ReadyStep (summary + avanserte + publish/draft)
  *
- * URL-state: `?step=2..5` og `?view=full`. Browser back fra steg N tilbake
- * til N-1; back fra steg 1 går ut av wizard-en.
+ * URL-state: `?step=2..5`. Browser back fra steg N tilbake til N-1; back
+ * fra steg 1 går ut av wizard-en.
  *
- * `view='full'` bytter til en sticky tilbake-lenke + standard GameForm med
- * wizard-state pre-fylt som initialValues. Uncontrolled-felter
- * (score_visibility, side_ld_count, etc.) passeres uendret fra
- * `initialValues` — endringer i wizard sin advanced-disclosure propagerer
- * ikke til full-form (det er en kjent edge case, se kontrakt #203).
+ * #1061: escape-hatchen til full-form (GameForm) er fjernet — wizard-en
+ * dekker alt GameForm dekket ved opprettelse. Power-users som vil redigere
+ * detaljer utover wizard-en lagrer utkast og bruker rediger-siden
+ * (`app/[locale]/admin/games/[id]/edit`), som fortsatt mounter GameForm
+ * direkte.
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -58,12 +57,11 @@ import { PatsomeSetup } from './sections/PatsomeSetup';
 import { useTranslations } from 'next-intl';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
-import {
-  GameForm,
-  type CourseOption,
-  type PlayerOption,
-  type GameFormMode,
-  type InitialValues,
+import type {
+  CourseOption,
+  PlayerOption,
+  GameFormMode,
+  InitialValues,
 } from './GameForm';
 import type { ClubOption } from '@/lib/games/newGameFormData';
 import { suggestGameName } from '@/lib/games/autoGameName';
@@ -139,10 +137,6 @@ function parseStepFromSearch(sp: URLSearchParams): Step {
   return 1;
 }
 
-function parseViewFromSearch(sp: URLSearchParams): 'wizard' | 'full' {
-  return sp.get('view') === 'full' ? 'full' : 'wizard';
-}
-
 export function GameWizard({
   courses,
   players,
@@ -179,13 +173,10 @@ export function GameWizard({
     setGuideOpen(true);
   };
 
-  // Initial step + view leses fra URL ved mount. Senere browser-nav (back/
-  // forward) reconcileres via useEffect under.
+  // Initial step leses fra URL ved mount. Senere browser-nav (back/forward)
+  // reconcileres via useEffect under.
   const [step, setStep] = useState<Step>(() =>
     parseStepFromSearch(new URLSearchParams(searchParams.toString())),
-  );
-  const [view, setView] = useState<'wizard' | 'full'>(() =>
-    parseViewFromSearch(new URLSearchParams(searchParams.toString())),
   );
 
   // Auto-name: hvis admin skrev navn manuelt, slutter wizard-en å overstyre
@@ -237,26 +228,22 @@ export function GameWizard({
   useEffect(() => {
     const sp = new URLSearchParams(searchParamsString);
     const urlStep = parseStepFromSearch(sp);
-    const urlView = parseViewFromSearch(sp);
     // setState inne i en effect ER nødvendig her: vi synker EKSTERN tilstand
     // (URL fra browser-back/forward-nav) inn til React-state. React 19 sin
     // strenge linter advarer mot pattern-en generelt — for vårt URL-sync-
     // tilfelle er den korrekt, så vi disabler regelen lokalt.
     /* eslint-disable react-hooks/set-state-in-effect */
     if (urlStep !== step) setStep(urlStep);
-    if (urlView !== view) setView(urlView);
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParamsString]);
 
-  // Speil step+view til URL. Bruker router.replace så history-stacken får
+  // Speil step til URL. Bruker router.replace så history-stacken får
   // én entry per steg-overgang (browser back fungerer som forventet).
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     if (step === 1) params.delete('step');
     else params.set('step', String(step));
-    if (view === 'wizard') params.delete('view');
-    else params.set('view', 'full');
     const qs = params.toString();
     const nextUrl = qs ? `${pathname}?${qs}` : pathname;
     // Bare push hvis URL faktisk endres — unngår onødvendige history-entries.
@@ -266,7 +253,7 @@ export function GameWizard({
       router.replace(nextUrl, { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, view]);
+  }, [step]);
 
   // Auto-name: når bane/tee-off endres OG admin ikke har redigert navnet
   // manuelt, oppdaterer vi forslaget. `state.selectedCourse.name` kan være
@@ -378,83 +365,6 @@ export function GameWizard({
 
   function goPrev() {
     setStep((s) => (Math.max(1, s - 1) as Step));
-  }
-
-  // ────────────────────────────────────────────────────────────────────
-  // View === 'full': mount GameForm med wizard-state som initialValues.
-  // score_visibility er fortsatt uncontrolled og passeres uendret fra
-  // opprinnelig initialValues — endring i wizard sin advanced-disclosure
-  // går tapt ved bytte til full-form. Side-feltene er controlled state
-  // (#1011) og følger med her.
-  // ────────────────────────────────────────────────────────────────────
-  if (view === 'full') {
-    const passthrough: InitialValues = {
-      ...(initialValues ?? {}),
-      name: state.name,
-      course_id: state.courseId,
-      tee_box_id: state.teeBoxId,
-      scheduled_tee_off_at: state.scheduledTeeOffAt,
-      hcp_allowance_pct: String(state.hcpAllowance),
-      require_peer_approval: state.requirePeerApproval,
-      side_tournament_enabled: state.sideEnabled,
-      side_ld_count: state.sideLdCount,
-      side_ctp_count: state.sideCtpCount,
-      side_disabled_categories: state.sideDisabledCategories,
-      player_genders: state.playerGenders,
-      players: state.orderedPayload.map((row) => ({
-        user_id: row.user_id,
-        team_number: row.team_number,
-        flight_number: row.flight_number,
-      })),
-      // #1009: økt-gjester må overleve visnings-byttet — GameForm sin egen
-      // hook-instans seeder extraPlayers fra denne.
-      extra_players: state.extraPlayers,
-      game_mode: state.gameMode,
-      team_size: state.teamSize,
-      texas_team_handicap_pct: String(state.texasHandicapPct),
-      ambrose_team_handicap_pct: String(state.ambroseHandicapPct),
-      florida_team_handicap_pct: String(state.floridaHandicapPct),
-      fourball_allowance_pct: state.fourballAllowancePct,
-      foursomes_allowance_pct: state.foursomesAllowancePct,
-      greensome_allowance_pct: state.greensomeAllowancePct,
-      chapman_allowance_pct: state.chapmanAllowancePct,
-      gruesome_allowance_pct: state.gruesomeAllowancePct,
-      round_robin_allowance_pct: state.roundRobinAllowancePct,
-      wolf_scoring: state.wolfScoring,
-      nassau_scoring: state.nassauScoring,
-      skins_scoring: state.skinsScoring,
-      kr_per_unit: state.krPerUnit ? Number(state.krPerUnit) : undefined,
-      nines_variant: state.ninesVariant,
-      nines_scoring: state.ninesScoring,
-      acey_deucey_scoring: state.aceyDeuceyScoring,
-      shamble_variant: state.shambleVariant,
-      shamble_count: state.shambleCount,
-      shamble_scoring: state.shambleScoring,
-      patsome_scoring: state.patsomeScoring,
-      tournament_id: initialValues?.tournament_id,
-      tournament_match_label: initialValues?.tournament_match_label,
-      registration_mode: state.registrationMode,
-      registration_type: state.registrationType,
-      let_friends_skip_gate: state.letFriendsSkipGate,
-      group_id: state.groupId,
-    };
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setView('wizard')}
-          className="block text-sm text-muted underline underline-offset-2 hover:text-text"
-        >
-          {t('backToQuickSetup')}
-        </button>
-        <GameForm
-          courses={courses}
-          players={players}
-          mode={mode}
-          initialValues={passthrough}
-        />
-      </div>
-    );
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -897,7 +807,6 @@ export function GameWizard({
         <ReadyStep
           state={state}
           mode={mode}
-          onOpenFullForm={() => setView('full')}
           onNameTouched={() => setNameTouched(true)}
         />
       )}
