@@ -108,9 +108,6 @@ function FormBody({
       <Button type="submit" className="w-full mt-2">
         {t('submitButton')}
       </Button>
-      <p className="text-xs text-muted mt-6 text-center">
-        {t('footerNote')}
-      </p>
     </>
   );
 }

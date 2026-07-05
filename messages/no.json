@@ -2611,8 +2611,7 @@
       "pending": "Sender kode til",
       "emailLabel": "E-post",
       "selfRegHelper": "Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.",
-      "submitButton": "Send meg kode",
-      "footerNote": "Vi sender deg en kode på mail."
+      "submitButton": "Send meg kode"
     },
     "verifyCode": {
       "pending": "Logger inn …",

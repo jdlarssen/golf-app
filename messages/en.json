@@ -2611,8 +2611,7 @@
       "pending": "Sending code to",
       "emailLabel": "Email",
       "selfRegHelper": "Enter your email. New here? We'll create an account for you.",
-      "submitButton": "Send me a code",
-      "footerNote": "We'll send a code to your inbox."
+      "submitButton": "Send me a code"
     },
     "verifyCode": {
       "pending": "Logging in …",
