@@ -195,7 +195,7 @@ export async function adminApproveScorecard(
     }
     // Idempotent: scorecard already approved → treat as success without re-notifying.
     revalidateTag(`game-${gameId}`, 'max');
-    redirect({ href: `${detailPath}?status=admin_approved`, locale });
+    redirect({ href: `${detailPath}?status=admin_approved#leverte-scorekort`, locale });
   }
 
   await logAdminEvent({
@@ -234,7 +234,13 @@ export async function adminApproveScorecard(
   }
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect({ href: `${detailPath}?status=admin_approved`, locale });
+  // #1067: the `#leverte-scorekort` hash is a best-effort UX nicety — Next.js
+  // strips URL fragments when replaying a server-action redirect on the
+  // client (see ScrollToAnchorOnStatus for the evidence + the client-side
+  // fallback that actually performs the scroll). Kept here anyway so a
+  // hard/MPA navigation (no-JS, or the RSC redirect falling back to a plain
+  // Location header) still lands on the anchor.
+  redirect({ href: `${detailPath}?status=admin_approved#leverte-scorekort`, locale });
 }
 
 /**

@@ -286,7 +286,10 @@ describe('adminApproveScorecard', () => {
     const { adminApproveScorecard } = await import('./actions');
 
     await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved');
+    // #1067: hash-anchors the redirect so a hard/MPA nav lands back on
+    // «Leverte scorekort» instead of page top (client-side fallback covers
+    // the common case where a server-action redirect drops the fragment).
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved#leverte-scorekort');
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-a', kind: 'scorecard_approved' }),
     );
@@ -308,7 +311,9 @@ describe('adminApproveScorecard', () => {
     const { adminApproveScorecard } = await import('./actions');
 
     await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/games/game-1/spillere?status=admin_approved');
+    // #1067: creator surface (`/games/[id]/spillere`) got its own
+    // `#leverte-scorekort` anchor so the same hash works for both roles.
+    expect(lastRedirect()).toBe('/games/game-1/spillere?status=admin_approved#leverte-scorekort');
   });
 
   it('admin: 0-row update (already approved) → idempotent success, no re-notify', async () => {
@@ -327,7 +332,7 @@ describe('adminApproveScorecard', () => {
     const { adminApproveScorecard } = await import('./actions');
 
     await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved');
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved#leverte-scorekort');
     expect(notifyMock).not.toHaveBeenCalled();
     expect(logAdminEventMock).not.toHaveBeenCalled();
   });

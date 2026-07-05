@@ -8,6 +8,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
+import { ScrollToAnchorOnStatus } from '@/components/ui/ScrollToAnchorOnStatus';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
@@ -179,7 +180,11 @@ export default async function CreatorSpillerePage({
     candidates = network.filter((c) => !rosterIds.has(c.id));
   }
 
-  const banner = statusParam && STATUS_KEYS.has(statusParam) ? (
+  // #1067: admin_approved skips the top banner — the redirect now lands (or,
+  // via ScrollToAnchorOnStatus, scrolls) straight to the pending-approvals
+  // section further down, and a banner up here would force a scroll back to
+  // page top, undoing the whole point of the anchor jump.
+  const banner = statusParam && statusParam !== 'admin_approved' && STATUS_KEYS.has(statusParam) ? (
     <Banner tone="success">
       {t(`statusMessages.${statusParam}` as Parameters<typeof t>[0], {
         email: emailParam ?? '',
@@ -210,6 +215,14 @@ export default async function CreatorSpillerePage({
 
   return (
     <AppShell>
+      {/* #1067: server-action redirects drop URL hash fragments, so this
+          fallback scrolls to the pending-approvals section client-side
+          whenever the admin_approved redirect lands here. */}
+      <ScrollToAnchorOnStatus
+        status={statusParam}
+        matchStatus="admin_approved"
+        anchorId="leverte-scorekort"
+      />
       <TopBar backHref={detailPath} kicker={t('kicker')} userId={role.userId} />
       <PageHeader
         title={t('heading')}
@@ -355,8 +368,11 @@ export default async function CreatorSpillerePage({
         )}
 
         {/* ── Pending approvals (active + peer approval) ───────────── */}
+        {/* id="leverte-scorekort" (#1067): shared anchor name with the admin
+            Sekretariatet page's equivalent section, so the post-approve
+            redirect can scroll straight back here instead of to page top. */}
         {awaitingApproval.length > 0 && (
-          <section>
+          <section id="leverte-scorekort">
             <MiniRibbon>{t('approvalSection')}</MiniRibbon>
             <p className="mb-2 px-1 text-sm text-muted">
               {t('approvalHint')}
@@ -372,7 +388,6 @@ export default async function CreatorSpillerePage({
                   </p>
                   <ApprovePlayerButton
                     approveAction={adminApproveScorecard.bind(null, gameId, p.user_id)}
-                    playerName={playerName(p)}
                   />
                 </li>
               ))}

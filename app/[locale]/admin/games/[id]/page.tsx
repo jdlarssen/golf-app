@@ -12,6 +12,7 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
+import { ScrollToAnchorOnStatus } from '@/components/ui/ScrollToAnchorOnStatus';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { ModeChip } from '@/components/ui/ModeChip';
@@ -176,8 +177,14 @@ export default async function GameDetailPage({
   const tBanners = await getTranslations('admin.game.banners');
   const tDetail = await getTranslations('admin.game.detail');
   const statusCode = first(sp.status) ?? '';
+  // #1067: admin_approved skips the top banner. The redirect now lands (or,
+  // via ScrollToAnchorOnStatus, scrolls) straight to «Leverte scorekort»
+  // further down the page — a banner up here would force a scroll-to-top
+  // that undoes the whole point of the anchor jump.
   const statusBanner =
-    statusCode && tBanners.has(statusCode as Parameters<typeof tBanners>[0])
+    statusCode &&
+    statusCode !== 'admin_approved' &&
+    tBanners.has(statusCode as Parameters<typeof tBanners>[0])
       ? tBanners(statusCode as Parameters<typeof tBanners>[0])
       : undefined;
   const errorCode = first(sp.error);
@@ -261,6 +268,14 @@ export default async function GameDetailPage({
 
   return (
     <AdminShell>
+      {/* #1067: server-action redirects drop URL hash fragments, so this
+          fallback scrolls to «Leverte scorekort» client-side whenever the
+          admin_approved redirect lands here. */}
+      <ScrollToAnchorOnStatus
+        status={statusCode || undefined}
+        matchStatus="admin_approved"
+        anchorId="leverte-scorekort"
+      />
       <TopBar
         backHref="/admin/games"
         kicker={tDetail('brassRibbon')}
@@ -1031,10 +1046,7 @@ async function PlayersSections({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {needsApproval && (
-                          <ApprovePlayerButton
-                            approveAction={approve}
-                            playerName={displayName(p)}
-                          />
+                          <ApprovePlayerButton approveAction={approve} />
                         )}
                         <ReopenScorecardButton
                           reopenAction={reopen}

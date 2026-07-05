@@ -3003,8 +3003,7 @@
         "reopeningScorecardBusy": "Reopening…",
         "reopenScorecardConfirm": "Open {name}''s scorecard for editing? Any approval will be removed and the player must resubmit.",
         "approveOnBehalf": "Approve on behalf of flight",
-        "approvingBusy": "Approving…",
-        "approveConfirm": "Approve {name}''s scorecard on behalf of the flight?"
+        "approvingBusy": "Approving…"
       },
       "invite": {
         "sectionLabel": "Invite players",

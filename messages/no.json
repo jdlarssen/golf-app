@@ -3003,8 +3003,7 @@
         "reopeningScorecardBusy": "Gjenåpner …",
         "reopenScorecardConfirm": "Åpne scorekortet til {name} for redigering? Eventuell godkjenning fjernes, og spilleren må levere på nytt.",
         "approveOnBehalf": "Godkjenn på vegne av flight",
-        "approvingBusy": "Godkjenner …",
-        "approveConfirm": "Godkjenne scorekortet til {name} på vegne av flighten?"
+        "approvingBusy": "Godkjenner …"
       },
       "invite": {
         "sectionLabel": "Inviter spillere",
