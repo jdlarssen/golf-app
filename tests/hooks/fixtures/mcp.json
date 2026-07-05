@@ -1,0 +1,74 @@
+[
+  {
+    "name": "execute_sql INSERT mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "INSERT INTO games (name) VALUES ('x')" } }
+  },
+  {
+    "name": "execute_sql DDL mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__36be25a6-2d72-41c3-a675-2352133ed510__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
+  },
+  {
+    "name": "execute_sql multi-statement mot prod → deny (selv med ledende SELECT)",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "SELECT 1; DROP TABLE games" } }
+  },
+  {
+    "name": "execute_sql uten query mot prod → deny (fail-closed)",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph" } }
+  },
+  {
+    "name": "execute_sql CTE-skriv mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "WITH gone AS (DELETE FROM scores RETURNING *) SELECT count(*) FROM gone" } }
+  },
+  {
+    "name": "dokumentert fail-closed: skrive-nøkkelord i string-literal → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "SELECT * FROM games WHERE name = 'drop it like its hot'" } }
+  },
+  {
+    "name": "execute_sql read-only SELECT mot prod → none (pass-through, logges)",
+    "expect": "none",
+    "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "select count(*) from games where status = 'finished'" } }
+  },
+  {
+    "name": "execute_sql WITH-lesing mot prod → none",
+    "expect": "none",
+    "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "WITH t AS (SELECT id FROM games) SELECT count(*) FROM t" } }
+  },
+  {
+    "name": "execute_sql DDL mot staging → none (staging er sanksjonert)",
+    "expect": "none",
+    "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "snwmueecmfqqdurxedxv", "query": "DROP TABLE IF EXISTS tmp_e2e" } }
+  },
+  {
+    "name": "apply_migration mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__apply_migration", "tool_input": { "project_id": "glofubopddkjhymcbaph", "name": "add_sponsor", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
+  },
+  {
+    "name": "apply_migration mot staging → none",
+    "expect": "none",
+    "payload": { "tool_name": "mcp__supabase__apply_migration", "tool_input": { "project_id": "snwmueecmfqqdurxedxv", "name": "add_sponsor", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
+  },
+  {
+    "name": "deploy_edge_function mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__deploy_edge_function", "tool_input": { "project_id": "glofubopddkjhymcbaph", "name": "fn", "files": [] } }
+  },
+  {
+    "name": "merge_branch → deny uansett args (merger til prod)",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__merge_branch", "tool_input": { "branch_id": "some-branch-uuid" } }
+  },
+  {
+    "name": "sentinel-luke: apply_migration mot prod med fersk approve-prod → none + konsumert",
+    "expect": "none",
+    "setup": "approve-prod",
+    "assert_sentinel_consumed": true,
+    "payload": { "tool_name": "mcp__supabase__apply_migration", "tool_input": { "project_id": "glofubopddkjhymcbaph", "name": "godkjent_0108", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
+  }
+]

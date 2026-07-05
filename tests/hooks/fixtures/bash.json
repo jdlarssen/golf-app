@@ -1,0 +1,90 @@
+[
+  {
+    "name": "no-verify ekte commit-flagg → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "git commit --no-verify -m \"fix: x\"" } }
+  },
+  {
+    "name": "regresjon defekt a: --no-verify kun nevnt i quotet body → pr-create-remind, IKKE deny",
+    "expect": "context",
+    "payload": { "tool_input": { "command": "gh pr create --title \"t\" --body \"Closes #5 — merk: aldri bruk --no-verify her\"" } }
+  },
+  {
+    "name": "regresjon defekt a: --no-verify i FLERLINJET quotet commit-body → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "git commit -m \"chore: docs\n\nforklarer hvorfor --no-verify er forbudt\nog hva gatene fanger\n\nRefs #1074\"" } }
+  },
+  {
+    "name": "gh pr merge --squash → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "gh pr merge 5 --squash --delete-branch" } }
+  },
+  {
+    "name": "git push --force → ask",
+    "expect": "ask",
+    "payload": { "tool_input": { "command": "git push --force origin claude/x" } }
+  },
+  {
+    "name": "git push --force-with-lease → none (rebase-flyten)",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "git push --force-with-lease origin claude/x" } }
+  },
+  {
+    "name": "regresjon defekt b: sammensatt kommando før gh pr create → context",
+    "expect": "context",
+    "payload": { "tool_input": { "command": "cd /tmp/x && gh pr create --title \"t\" --body \"Closes #5\"" } }
+  },
+  {
+    "name": "gh issue create uten milestone → context",
+    "expect": "context",
+    "payload": { "tool_input": { "command": "gh issue create --title \"x\" --body \"y\"" } }
+  },
+  {
+    "name": "gh issue create med milestone → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "gh issue create --title \"x\" --body \"y\" --milestone \"Backlog\"" } }
+  },
+  {
+    "name": "psql med prod-connstring → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "psql \"postgresql://postgres:pw@db.glofubopddkjhymcbaph.supabase.co:5432/postgres\" -c \"select 1\"" } }
+  },
+  {
+    "name": "curl skriv mot prod-REST → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "curl -X POST \"https://glofubopddkjhymcbaph.supabase.co/rest/v1/games\" -d '{}'" } }
+  },
+  {
+    "name": "supabase db push mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "supabase db push --project-id glofubopddkjhymcbaph" } }
+  },
+  {
+    "name": "supabase gen types mot prod (read-only) → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "supabase gen types typescript --project-id glofubopddkjhymcbaph --schema public > lib/database.types.ts" } }
+  },
+  {
+    "name": "npm run gen:types → none (ref ligger i package.json, ikke kommandoen)",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "npm run gen:types" } }
+  },
+  {
+    "name": "ren ref-omtale uten DB-kontekst → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "echo glofubopddkjhymcbaph" } }
+  },
+  {
+    "name": "sentinel-luke: prod-connstring med fersk approve-prod → none + konsumert",
+    "expect": "none",
+    "setup": "approve-prod",
+    "assert_sentinel_consumed": true,
+    "payload": { "tool_input": { "command": "psql \"postgresql://postgres:pw@db.glofubopddkjhymcbaph.supabase.co:5432/postgres\" -f godkjent.sql" } }
+  },
+  {
+    "name": "stale sentinel (>10 min) ignoreres → deny",
+    "expect": "deny",
+    "setup": "approve-prod-stale",
+    "payload": { "tool_input": { "command": "psql \"postgresql://postgres:pw@db.glofubopddkjhymcbaph.supabase.co:5432/postgres\" -f x.sql" } }
+  }
+]
