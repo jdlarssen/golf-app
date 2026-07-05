@@ -569,9 +569,6 @@
       "gruesomeAllowanceNettoHelper": "The share of the difference between the teams' combined handicaps that the higher team receives as strokes. The standard for gruesome match play is 50.",
       "gruesomeAllowanceBruttoHelper": "No handicaps — the team's gross score per hole decides, no extra strokes."
     },
-    "sideTournaments": {
-      "banner": "Side competitions (longest drive, closest-to-pin) can be added in the Ready step."
-    },
     "sections": {
       "wolf": {
         "legend": "Wolf setup",

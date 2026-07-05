@@ -40,7 +40,6 @@ import { FormatGuideSheet } from '@/components/FormatGuideSheet';
 import type { FormatGuideEntry } from '@/components/FormatGuideList';
 import { CupSetup } from './CupSetup';
 import { MAX_PERSONAL_CUP_MATCHES } from '@/lib/cup/limits';
-import { SideTournamentsBanner } from './SideTournamentsBanner';
 import { TeamSizeSelector } from './TeamSizeSelector';
 import { useGameFormState, PLAYER_COUNT_DEFAULT } from './useGameFormState';
 import { BasicsSection } from './sections/BasicsSection';
@@ -492,7 +491,6 @@ export function GameWizard({
               cupEligibleFormats={cupEligibleFormats}
               matchCap={isAdmin ? undefined : MAX_PERSONAL_CUP_MATCHES}
             />
-            <SideTournamentsBanner />
           </section>
         )}
 
@@ -845,8 +843,6 @@ export function GameWizard({
               )}
             </div>
           )}
-
-          <SideTournamentsBanner />
         </section>
       )}
 

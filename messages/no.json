@@ -569,9 +569,6 @@
       "gruesomeAllowanceNettoHelper": "Andel av differansen i lagenes summerte handicap som høyeste lag får som slag. Standard for gruesome matchplay er 50.",
       "gruesomeAllowanceBruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
     },
-    "sideTournaments": {
-      "banner": "Sideturneringer (longest drive, closest-to-pin) kan legges på i Klar-steget."
-    },
     "sections": {
       "wolf": {
         "legend": "Wolf-oppsett",
