@@ -122,6 +122,10 @@
           "team_removed": "The captain removed you from the team."
         }
       },
+      "registrationExpired": {
+        "title": "You didn''t get a spot in {gameName}",
+        "detail": "The round started before the organizer got to your request."
+      },
       "teamMemberWithdrew": {
         "title": "{withdrawnPlayerName} withdrew",
         "detail": "{teamName} in {gameName}"

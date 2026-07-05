@@ -35,6 +35,7 @@ const EMOJI: Record<NotificationKind, string> = {
   registration_request: '📩',
   registration_approved: '🎉',
   registration_rejected: '🚫',
+  registration_expired: '⏱️',
   team_member_withdrew: '👋',
   deliver_reminder: '📤',
   cup_finished: '🏁',

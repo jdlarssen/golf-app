@@ -59,6 +59,11 @@ export function notificationDestination(n: DeeplinkInput): string | null {
     case 'registration_rejected':
       // Avslaget har ingen egen side; søkeren leser bare beskjeden i kortet.
       return null;
+    case 'registration_expired':
+      // Søkeren står ikke i game_players (aldri godkjent), så /games/[id]
+      // ville bare gitt en 404 (samme roster-gate som player_added/game_started
+      // bruker). Samme mønster som registration_rejected: ingen egen side.
+      return null;
     case 'team_member_withdrew': {
       const p = n.payload as NotificationPayload<'team_member_withdrew'>;
       return `/signup/${p.game_short_id}/team`;

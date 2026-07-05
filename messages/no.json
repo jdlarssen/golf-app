@@ -122,6 +122,10 @@
           "team_removed": "Kapteinen fjernet deg fra laget."
         }
       },
+      "registrationExpired": {
+        "title": "Du kom ikke med i {gameName}",
+        "detail": "Runden startet før arrangøren rakk å svare på forespørselen din."
+      },
       "teamMemberWithdrew": {
         "title": "{withdrawnPlayerName} trakk seg",
         "detail": "{teamName} i {gameName}"

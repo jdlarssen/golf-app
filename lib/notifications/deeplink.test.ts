@@ -101,5 +101,12 @@ describe('notificationDestination', () => {
         n('registration_rejected', { game_id: GAME, game_name: 'X' }),
       ),
     ).toBeNull();
+    // registration_expired (#1055): applicant never joined game_players, so
+    // /games/[id] would 404 for them — no real destination either.
+    expect(
+      notificationDestination(
+        n('registration_expired', { game_id: GAME, game_name: 'X' }),
+      ),
+    ).toBeNull();
   });
 });

@@ -16,6 +16,7 @@ export type NotificationKind =
   | 'registration_request'
   | 'registration_approved'
   | 'registration_rejected'
+  | 'registration_expired'
   | 'team_member_withdrew'
   | 'deliver_reminder'
   | 'cup_finished'
@@ -126,6 +127,17 @@ const registrationRejectedSchema = z.object({
   // reason_code = app-generated reason, localised at render time (#583).
   reason: z.string().optional(),
   reason_code: z.enum(['team_removed']).optional(),
+});
+
+// registration_expired: spillet startet før admin fikk avgjort forespørselen
+// (#1055). Fyres fra startScheduledGame — ALLE fortsatt-pending requests for
+// spillet flippes til 'rejected' og hver søker får dette varselet i stedet
+// for registration_rejected (som impliserer en aktiv admin-avgjørelse). Slank
+// payload som registration_approved — ingen reason, siden "runden startet"
+// ER grunnen.
+const registrationExpiredSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
 });
 
 // team_member_withdrew: medspiller trakk seg pre-start. Til kaptein.
@@ -282,6 +294,7 @@ const schemas = {
   registration_request: registrationRequestSchema,
   registration_approved: registrationApprovedSchema,
   registration_rejected: registrationRejectedSchema,
+  registration_expired: registrationExpiredSchema,
   team_member_withdrew: teamMemberWithdrewSchema,
   deliver_reminder: deliverReminderSchema,
   cup_finished: cupFinishedSchema,

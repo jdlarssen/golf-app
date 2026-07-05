@@ -1,12 +1,28 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
 import { startScheduledGame } from './startScheduledGame';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
+/**
+ * `notify()` mocket ut for hele filen (#1055 — auto-reject av ventende
+ * påmeldingsforespørsler ved spillstart). De fleste eksisterende tester bryr
+ * seg ikke om notify-fan-out — de bare trenger at kallet ikke kaster. Testene
+ * i «auto-reject pending signups» -describe-en asserter faktisk på mocken.
+ */
+const notifyMock = vi.fn<
+  (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
+>(async () => ({ shouldAlsoSendMail: false }));
+vi.mock('@/lib/notifications/notify', () => ({
+  notify: (...args: unknown[]) => notifyMock(...args),
+}));
+
+beforeEach(() => {
+  notifyMock.mockClear();
+});
 
 /**
  * Unit-tester for startScheduledGame (#544 — incomplete_sides-vakt,
- * #502 — started-flagg).
+ * #502 — started-flagg, #1055 — auto-reject av ventende påmeldinger).
  *
  * Fokus: verifiser at alle 6 matchplay-modi blokkeres med `incomplete_sides`
  * når sidene er ufullstendige, og at komplette sider passerer til vanlig
@@ -15,6 +31,14 @@ import type { GameMode } from '@/lib/scoring/modes/types';
  *
  * #502: `started` skiller calleren som vant status-flippen (skal fan-oute
  * game_started-varsler) fra no-op-tapere i kappløp (cron vs. E1 vs. admin).
+ *
+ * #1055: når denne calleren vinner flippen (started: true), avslår
+ * startScheduledGame automatisk alle fortsatt-pending
+ * game_registration_requests for spillet og fyrer ett
+ * registration_expired-varsel per søker. Alle eksisterende
+ * `{ok: true, started: true}`-tester under må derfor ha to ekstra
+ * kø-innslag på slutten: (a) SELECT av pending-requests → tom liste (ingen
+ * ventende forespørsler i disse fixturene), og notify() kalles aldri.
  */
 
 // Gyldige tee-box-rader (alle tre ratingssett). Brukes i success-path der
@@ -269,6 +293,158 @@ describe('startScheduledGame — started-flagg', () => {
 
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: true, started: false });
+  });
+});
+
+// ─── auto-reject pending signup requests (#1055) ─────────────────────────────
+
+describe('startScheduledGame — auto-reject pending signup requests (#1055)', () => {
+  const SOLO_GAME = {
+    id: 'game-id',
+    name: 'Lørdagsrunden',
+    status: 'scheduled',
+    hcp_allowance_pct: 100,
+    tee_box_id: 'tee-id',
+    game_mode: 'stableford',
+    mode_config: { kind: 'stableford', team_size: 1 },
+    tee_boxes: VALID_TEE,
+  };
+  const SOLO_ROSTER = [
+    {
+      user_id: 'user-1',
+      tee_gender: 'M',
+      team_number: null,
+      withdrawn_at: null,
+      users: { hcp_index: 10 },
+    },
+  ];
+  const SOLO_USERS = [
+    { id: 'user-1', email: 'a@x.no', profile_completed_at: '2026-01-01' },
+  ];
+
+  it('vinneren av flippen avslår ventende forespørsler og varsler hver søker', async () => {
+    const pendingRequests = [
+      { id: 'req-1', user_id: 'applicant-1' },
+      { id: 'req-2', user_id: 'applicant-2' },
+    ];
+
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      // course_handicap update
+      { data: null, error: null },
+      // status flip — denne calleren vant
+      { data: [{ id: 'game-id' }], error: null },
+      // #1055: SELECT pending game_registration_requests
+      { data: pendingRequests, error: null },
+      // #1055: UPDATE → rejected
+      { data: pendingRequests.map((r) => ({ id: r.id })), error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+
+    // UPDATE-kallet mot game_registration_requests skal sette status: 'rejected'.
+    const fromCalls = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls;
+    const rejectUpdate = fromCalls.find(
+      (c) => c.table === 'game_registration_requests' && c.method === 'update',
+    );
+    expect(rejectUpdate?.args[0]).toMatchObject({ status: 'rejected' });
+
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'applicant-1',
+      kind: 'registration_expired',
+      payload: { game_id: 'game-id', game_name: 'Lørdagsrunden' },
+    });
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'applicant-2',
+      kind: 'registration_expired',
+      payload: { game_id: 'game-id', game_name: 'Lørdagsrunden' },
+    });
+  });
+
+  it('ingen ventende forespørsler → ingen UPDATE, ingen notify', async () => {
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      { data: null, error: null },
+      { data: [{ id: 'game-id' }], error: null },
+      // #1055: SELECT pending → tom liste
+      { data: [], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+    expect(notifyMock).not.toHaveBeenCalled();
+
+    const fromCalls = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls;
+    expect(
+      fromCalls.some((c) => c.table === 'game_registration_requests'),
+    ).toBe(true);
+    // Ingen UPDATE mot game_registration_requests siden queryen ikke fant noe.
+    expect(
+      fromCalls.filter(
+        (c) => c.table === 'game_registration_requests' && c.method === 'update',
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('taper av flippen (started: false) → ingen auto-reject, ingen notify', async () => {
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      { data: null, error: null },
+      // status flip — en annen caller vant (0 rader)
+      { data: [], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: false });
+    expect(notifyMock).not.toHaveBeenCalled();
+
+    const fromCalls = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls;
+    expect(
+      fromCalls.some((c) => c.table === 'game_registration_requests'),
+    ).toBe(false);
+  });
+
+  it('notify-feil for én søker stopper ikke resten, og starten forblir ok', async () => {
+    const pendingRequests = [
+      { id: 'req-1', user_id: 'applicant-1' },
+      { id: 'req-2', user_id: 'applicant-2' },
+    ];
+
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      { data: null, error: null },
+      { data: [{ id: 'game-id' }], error: null },
+      { data: pendingRequests, error: null },
+      { data: pendingRequests.map((r) => ({ id: r.id })), error: null },
+    ]);
+
+    notifyMock.mockRejectedValueOnce(new Error('insert failed'));
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+    expect(notifyMock).toHaveBeenCalledTimes(2);
   });
 });
 

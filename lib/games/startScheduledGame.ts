@@ -5,6 +5,7 @@ import {
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
 import { findPendingPlayers } from './pendingPlayers';
+import { notify } from '@/lib/notifications/notify';
 import type { GameStatus } from './status';
 import {
   getRatingForGender,
@@ -77,11 +78,12 @@ export async function startScheduledGame(
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', gameId)
     .single<{
       id: string;
+      name: string;
       status: GameStatus;
       hcp_allowance_pct: number;
       tee_box_id: string | null;
@@ -251,5 +253,95 @@ export async function startScheduledGame(
     .select('id');
   if (flipError) return { ok: false, reason: 'db_game' };
 
-  return { ok: true, started: (flipped?.length ?? 0) > 0 };
+  const started = (flipped?.length ?? 0) > 0;
+
+  // 5. #1055: only the flip winner owns this — auto-reject any signup requests
+  // still 'pending' for this game. Manual approval never caught up before
+  // tee-off, so the roster is final now: leaving them pending would freeze
+  // them invisibly (no game_locked redirect explains why, per the admin
+  // signups actions). Reuses the existing 'rejected' status (the enum has no
+  // dedicated "expired" value and the applicant-facing distinction lives in
+  // the notification kind, not the DB status) so every other reader of
+  // game_registration_requests.status keeps working unchanged.
+  if (started) {
+    await autoRejectPendingSignups(supabase, gameId, game.name);
+  }
+
+  return { ok: true, started };
+}
+
+/**
+ * Best-effort: flip every still-`pending` game_registration_requests row for
+ * `gameId` to `rejected` and fire one `registration_expired` notification per
+ * affected applicant (#1055). Called once, only by the caller that won the
+ * scheduled→active flip (mirrors the `game_started` fan-out contract).
+ *
+ * The status UPDATE itself is not best-effort — a DB error is logged loudly
+ * so it surfaces in Vercel logs — but it never throws: the round has already
+ * started at this point, and rolling back the start over a notification
+ * side-effect would be worse than leaving a few requests pending for a retry.
+ * Same reasoning as `notifyAchievementUnlocks` (best-effort, wrapped, never
+ * throws) and the Resend mail helpers.
+ */
+async function autoRejectPendingSignups(
+  supabase: SupabaseClient<Database>,
+  gameId: string,
+  gameName: string,
+): Promise<void> {
+  try {
+    const { data: pending, error: pendingError } = await supabase
+      .from('game_registration_requests')
+      .select('id, user_id')
+      .eq('game_id', gameId)
+      .eq('status', 'pending')
+      .returns<{ id: string; user_id: string }[]>();
+    if (pendingError) {
+      console.error(
+        '[startScheduledGame] pending signup-requests fetch failed',
+        { gameId, error: pendingError },
+      );
+      return;
+    }
+    if (!pending || pending.length === 0) return;
+
+    const decidedAt = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('game_registration_requests')
+      .update({ status: 'rejected', decided_at: decidedAt })
+      .in(
+        'id',
+        pending.map((r) => r.id),
+      )
+      .eq('status', 'pending');
+    if (updateError) {
+      console.error(
+        '[startScheduledGame] auto-reject signup-requests update failed',
+        { gameId, error: updateError },
+      );
+      return;
+    }
+
+    const results = await Promise.allSettled(
+      pending.map((r) =>
+        notify({
+          userId: r.user_id,
+          kind: 'registration_expired',
+          payload: { game_id: gameId, game_name: gameName },
+        }),
+      ),
+    );
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.error(
+          '[startScheduledGame] registration_expired notify failed',
+          { gameId, error: r.reason },
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[startScheduledGame] autoRejectPendingSignups failed', {
+      gameId,
+      err,
+    });
+  }
 }

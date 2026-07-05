@@ -117,6 +117,13 @@ export function buildNotificationText(
             : t('kinds.registrationRejected.defaultReason')),
       };
     }
+    case 'registration_expired': {
+      const p = payload as NotificationPayload<'registration_expired'>;
+      return {
+        title: t('kinds.registrationExpired.title', { gameName: p.game_name }),
+        detail: t('kinds.registrationExpired.detail'),
+      };
+    }
     case 'team_member_withdrew': {
       const p = payload as NotificationPayload<'team_member_withdrew'>;
       return {
