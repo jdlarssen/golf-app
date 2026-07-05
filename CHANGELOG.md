@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.176 · Onboarding på to felt</strong></summary>
+
+[#1064](https://github.com/jdlarssen/golf-app/issues/1064) — Ny i Tørny? Nå er det bare navn og handicap som skal til før du er klar til å spille — kjønn, spillerklasse og kallenavn kan du sette senere på profilen.
+
+↳ /profile · «Åpne profilen»
+</details>
+
+<details>
 <summary><strong>1.175 · Videre til neste hull uten å vente på flighten</strong></summary>
 
 [#1058](https://github.com/jdlarssen/golf-app/issues/1058) — Har du tastet din egen score, er «Neste hull» klar med ett tapp — du venter ikke lenger på at medspillernes tall skal komme inn. En liten linje under kortene viser hvor mange scorer som mangler på hullet.

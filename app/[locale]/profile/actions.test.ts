@@ -73,3 +73,67 @@ describe('updateProfile — trap #2: 0-row UPDATE treated as failure', () => {
     expect(lastRedirect()).toBe('/profile?error=unknown');
   });
 });
+
+describe('updateProfile — #1064 empty gender preserves the existing value', () => {
+  it('omits gender from the update payload when the form submits it empty', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [{ id: 'user-1' }], error: null }]);
+    supabaseMock.auth.getUser = vi.fn(async () => ({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    }));
+
+    const { updateProfile } = await import('./actions');
+    const form = fd({
+      name: 'Ola Nordmann',
+      nickname: '',
+      hcp_index: '12.4',
+      gender: '',
+      level: 'normal',
+    });
+
+    await expect(updateProfile(form)).rejects.toBeInstanceOf(RedirectError);
+
+    const updateCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'users' && c.method === 'update',
+    );
+    expect(updateCall).toBeDefined();
+    expect(updateCall!.args[0]).not.toHaveProperty('gender');
+  });
+
+  it('still rejects a present-but-invalid gender value', async () => {
+    supabaseMock = buildSupabaseMock([]);
+    supabaseMock.auth.getUser = vi.fn(async () => ({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    }));
+
+    const { updateProfile } = await import('./actions');
+    const form = fd({
+      name: 'Ola Nordmann',
+      nickname: '',
+      hcp_index: '12.4',
+      gender: 'bogus',
+      level: 'normal',
+    });
+
+    await expect(updateProfile(form)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/profile?error=gender_required');
+  });
+
+  it('still saves a valid gender value when the form provides one', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [{ id: 'user-1' }], error: null }]);
+    supabaseMock.auth.getUser = vi.fn(async () => ({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    }));
+
+    const { updateProfile } = await import('./actions');
+
+    await expect(updateProfile(validForm)).rejects.toBeInstanceOf(RedirectError);
+
+    const updateCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'users' && c.method === 'update',
+    );
+    expect(updateCall!.args[0]).toMatchObject({ gender: 'mens' });
+  });
+});

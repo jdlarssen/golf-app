@@ -47,10 +47,19 @@ export async function updateProfile(formData: FormData) {
     redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`, locale });
   }
 
-  if (!GENDERS.includes(genderRaw as Gender)) {
-    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=gender_required`, locale });
+  // #1064: gender is no longer collected during onboarding, so a user whose
+  // /profile form somehow submits without it (e.g. a stale cached page from
+  // before this change) must not have their already-set gender nulled out.
+  // An empty value means "leave it alone" — the column is simply omitted
+  // from the update payload below. A present-but-invalid value is still a
+  // hard validation error.
+  let gender: Gender | undefined;
+  if (genderRaw !== '') {
+    if (!GENDERS.includes(genderRaw as Gender)) {
+      redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=gender_required`, locale });
+    }
+    gender = genderRaw as Gender;
   }
-  const gender = genderRaw as Gender;
 
   if (!LEVELS.includes(levelRaw as Level)) {
     redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=level_invalid`, locale });
@@ -92,7 +101,9 @@ export async function updateProfile(formData: FormData) {
           hcp_index: hcpParsed,
           handicap_updated_at: now,
           profile_completed_at: now,
-          gender,
+          // Omit `gender` entirely when the form submitted it empty, so an
+          // already-set value on the row is preserved rather than nulled.
+          ...(gender !== undefined ? { gender } : {}),
           level,
         })
         .eq('id', user.id)

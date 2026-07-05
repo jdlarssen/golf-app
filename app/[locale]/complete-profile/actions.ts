@@ -7,21 +7,12 @@ import { toSignedHcp } from '@/lib/handicap/sign';
 const HCP_MIN = -10;
 const HCP_MAX = 54.0;
 
-const GENDERS = ['mens', 'ladies'] as const;
-const LEVELS = ['junior', 'normal', 'senior'] as const;
-type Gender = (typeof GENDERS)[number];
-type Level = (typeof LEVELS)[number];
-
 export async function completeProfile(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
-  const nicknameRaw = String(formData.get('nickname') ?? '').trim();
-  const nickname = nicknameRaw === '' ? null : nicknameRaw;
   // Magnitude + plus-flagg (spilleren slipper å taste fortegn på mobil);
   // plusshandicap lagres internt negativt.
   const hcpRaw = String(formData.get('hcp_index') ?? '').trim();
   const hcpPlus = formData.get('hcp_plus') === 'on';
-  const genderRaw = String(formData.get('gender') ?? '').trim();
-  const levelRaw = String(formData.get('level') ?? 'normal').trim();
 
   // #356: post-onboarding destination carried from the login flow (e.g. a
   // game-scoped invitee's `/games/[id]`). Default home for everyone else.
@@ -35,10 +26,8 @@ export async function completeProfile(formData: FormData) {
     const qs = new URLSearchParams({ error: code });
     if (next !== '/') qs.set('next', next);
     if (name) qs.set('name', name);
-    if (nicknameRaw) qs.set('nickname', nicknameRaw);
     if (hcpRaw) qs.set('hcp_index', hcpRaw);
     if (hcpPlus) qs.set('hcp_plus', 'on');
-    if (genderRaw) qs.set('gender', genderRaw);
     redirect(`/complete-profile?${qs.toString()}`);
   };
 
@@ -56,15 +45,11 @@ export async function completeProfile(formData: FormData) {
     fail('hcp_invalid');
   }
 
-  if (!GENDERS.includes(genderRaw as Gender)) {
-    fail('gender_required');
-  }
-  const gender = genderRaw as Gender;
-
-  if (!LEVELS.includes(levelRaw as Level)) {
-    fail('level_invalid');
-  }
-  const level = levelRaw as Level;
+  // #1064: gender and level are no longer collected during onboarding.
+  // gender stays NULL (GenderSoftPrompt on /profile picks it up later);
+  // level falls to its DB default ('normal') by simply omitting it below.
+  // nickname is likewise no longer collected here — it's optional and
+  // already editable on /profile.
 
   const supabase = await getServerClient();
   const {
@@ -83,12 +68,9 @@ export async function completeProfile(formData: FormData) {
     .from('users')
     .update({
       name,
-      nickname,
       hcp_index: hcpParsed,
       handicap_updated_at: now,
       profile_completed_at: now,
-      gender,
-      level,
     })
     .eq('id', user.id);
 

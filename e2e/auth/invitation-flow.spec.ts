@@ -180,17 +180,12 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
     });
 
     await test.step('Phase 6: Invitee fyller ut profil-skjema', async () => {
-      // exact:true is required: 'Kallenavn' is a substring match for 'Navn'
-      // (case-insensitive), so getByLabel('Navn') without exact resolves to 2
-      // elements and throws a strict-mode violation. (#698)
+      // #1064: onboarding er ned til to felt (navn + handicap) — kallenavn,
+      // kjønn og spillerklasse er fjernet fra dette skjemaet (kjønn forblir
+      // NULL til soft-prompten på /profile, spillerklasse faller til
+      // DB-default 'normal').
       await inviteePage.getByLabel('Navn', { exact: true }).fill('E2E Test Spiller');
-      // Kallenavn er valgfritt — droppes for å verifisere at NULL-pathen
-      // i completeProfile-actionen håndteres riktig.
       await inviteePage.getByLabel('Handicap-index', { exact: true }).fill('18.5');
-      // Gender is a required radio (complete-profile/page.tsx) — completeProfile
-      // returns fail('gender_required') and stays on /complete-profile without it.
-      // 'Herre' = onboarding.genderMale. (#698)
-      await inviteePage.getByRole('radio', { name: 'Herre' }).check();
 
       // Norwegian submit button is 'Sett i gang' (onboarding.submitButton in no.json).
       await inviteePage

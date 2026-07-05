@@ -34,11 +34,12 @@ function fd(entries: Record<string, string>): FormData {
   return data;
 }
 
+// #1064: onboarding collects only name + handicap now — gender/level/
+// nickname are no longer form fields (gender stays NULL until the
+// /profile soft-prompt, level falls to the DB default).
 const VALID = {
   name: 'Kari Nordmann',
   hcp_index: '12,5',
-  gender: 'mens',
-  level: 'normal',
 };
 
 function lastRedirect(): string | undefined {
@@ -95,7 +96,29 @@ describe('completeProfile — #356 next round-trip', () => {
 
     expect(updateEqMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toBe(
-      '/complete-profile?error=name_required&next=%2Fgames%2Fabc&hcp_index=12%2C5&gender=mens',
+      '/complete-profile?error=name_required&next=%2Fgames%2Fabc&hcp_index=12%2C5',
     );
+  });
+
+  it('does not send gender or level in the update payload (#1064)', async () => {
+    const { completeProfile } = await import('./actions');
+    await expect(completeProfile(fd(VALID))).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    const payload = updateMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty('gender');
+    expect(payload).not.toHaveProperty('level');
+    expect(payload).not.toHaveProperty('nickname');
+  });
+
+  it('succeeds without a gender field, leaving it NULL for the /profile soft-prompt (#1064)', async () => {
+    const { completeProfile } = await import('./actions');
+    await expect(
+      completeProfile(fd({ ...VALID, gender: 'ignored-if-present' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    // Regardless of stray form data, completeProfile never validates or
+    // forwards a gender value — there's no field for it anymore.
+    expect(lastRedirect()).toBe('/');
   });
 });

@@ -16,10 +16,8 @@ type SearchParams = Promise<{
   error?: string | string[];
   next?: string | string[];
   name?: string | string[];
-  nickname?: string | string[];
   hcp_index?: string | string[];
   hcp_plus?: string | string[];
-  gender?: string | string[];
 }>;
 
 /** Only accept same-origin relative paths as a post-onboarding destination. */
@@ -33,8 +31,6 @@ function safeNext(value: string | undefined): string {
 const KNOWN_ERROR_CODES = new Set([
   'name_required',
   'hcp_invalid',
-  'gender_required',
-  'level_invalid',
   'unknown',
 ] as const);
 
@@ -59,10 +55,8 @@ export default async function CompleteProfile({
   // #748: echo submitted values back into the form after a validation bounce
   // so the user doesn't have to retype everything.
   const echoName = first(params.name) ?? '';
-  const echoNickname = first(params.nickname) ?? '';
   const echoHcpIndex = first(params.hcp_index) ?? '';
   const echoHcpPlus = first(params.hcp_plus) === 'on';
-  const echoGender = first(params.gender) ?? '';
 
   // If the user has already completed their profile, send them on. The trigger
   // pre-creates a placeholder row with profile_completed_at = NULL, so the row
@@ -113,59 +107,7 @@ export default async function CompleteProfile({
             required
           />
 
-          <Input
-            id="nickname"
-            name="nickname"
-            type="text"
-            label={t('nicknameLabel')}
-            hint={t('nicknameHint')}
-            autoComplete="nickname"
-            defaultValue={echoNickname}
-          />
-
           <OnboardingHcpField initialMagnitude={echoHcpIndex} initialPlus={echoHcpPlus} />
-
-          <fieldset>
-            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {t('genderLegend')}
-            </legend>
-            <div className="mt-2 flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="gender" value="mens" required defaultChecked={echoGender === 'mens'} className="accent-primary" />
-                <span className="font-serif text-base text-text">{t('genderMale')}</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="gender" value="ladies" required defaultChecked={echoGender === 'ladies'} className="accent-primary" />
-                <span className="font-serif text-base text-text">{t('genderFemale')}</span>
-              </label>
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              {t('genderHint')}
-            </p>
-          </fieldset>
-
-          <fieldset>
-            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {t('levelLegend')}
-            </legend>
-            <div className="mt-2 flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="level" value="junior" className="accent-primary" />
-                <span className="font-serif text-base text-text">{t('levelJunior')}</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="level" value="normal" defaultChecked className="accent-primary" />
-                <span className="font-serif text-base text-text">{t('levelAdult')}</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="level" value="senior" className="accent-primary" />
-                <span className="font-serif text-base text-text">{t('levelSenior')}</span>
-              </label>
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              {t('levelHint')}
-            </p>
-          </fieldset>
 
           <SubmitButton className="w-full mt-2" pendingLabel={t('submitPending')}>
             {t('submitButton')}
