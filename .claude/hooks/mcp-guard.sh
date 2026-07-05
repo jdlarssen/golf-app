@@ -65,12 +65,17 @@ short="${tool##*__}"
 
 DENY_TEXT="Prod-brannmur (#1074): skrivende Supabase-kall mot prod-prosjektet er blokkert. DB-endringer går staging først (snwmueecmfqqdurxedxv), verifiseres, DERETTER prod — og prod-steget krever eksplisitt eier-godkjenning i økten. Etter godkjenning: kjør 'touch .claude/approve-prod' og gjenta kallet (engangs, 10 min gyldighet)."
 
-# merge_branch merger TIL prod per definisjon — args inneholder ikke prod-ref,
-# så den vurderes FØR prod-ref-porten under.
-if [ "$short" = "merge_branch" ]; then
-  approved && { log_event "prod-merge-branch" "allow-prod-approved" "$short"; exit 0; }
-  emit_deny "prod-merge-branch" "$DENY_TEXT merge_branch skriver til prod uansett argumenter." "$short"
-fi
+# Alltid-nekt-klassen: verktøy hvis mål ikke kan knyttes til en prosjekt-ref i
+# argumentene, så prod-ref-porten under aldri ser dem — merge_branch merger TIL
+# prod per definisjon, create_project oppretter nytt (koster penger, org-nivå).
+# Vurderes FØR prod-ref-porten. Branch-livssyklus (reset/rebase/delete_branch)
+# opererer på egne dev-brancher og er sanksjonert — de passerer porten under.
+case "$short" in
+  merge_branch|create_project)
+    approved && { log_event "prod-$short" "allow-prod-approved" "$short"; exit 0; }
+    emit_deny "prod-$short" "$DENY_TEXT $short kan ikke knyttes til en prosjekt-ref i argumentene og nektes derfor alltid uten godkjenning." "$short"
+    ;;
+esac
 
 # Gjelder ikke prod → slipp gjennom (staging- og branch-prosjekter er sanksjonert).
 case "$input" in

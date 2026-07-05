@@ -35,7 +35,14 @@ cmd="$(jq -r '.tool_input.command // empty' 2>/dev/null)"
 # Innholds-sjekker (Closes #, --milestone) og prod-reglene bruker fortsatt $cmd.
 cmd_stripped="$(printf '%s' "$cmd" | tr '\n' ' ' | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")"
 
-prefix="$(printf '%.80s' "$cmd")"
+# Logg-prefiks: 80 tegn, med hemmeligheter redaktert FØR trunkering —
+# userinfo i URL-er (postgres://user:pw@ → ://***@), verdier etter
+# apikey/authorization/password/token, og JWT-lignende eyJ…-strenger.
+prefix="$(printf '%s' "$cmd" | tr '\n' ' ' | sed -E \
+  -e 's#://[^@[:space:]]+@#://***@#g' \
+  -e 's/((apikey|Apikey|APIKEY|authorization|Authorization|AUTHORIZATION|password|Password|PASSWORD|token|Token|TOKEN)[=: ]+)[^[:space:]"]+/\1***/g' \
+  -e 's/eyJ[A-Za-z0-9._-]+/***/g')"
+prefix="$(printf '%.80s' "$prefix")"
 
 log_event() { # rule decision
   local dir="${CLAUDE_PROJECT_DIR:-.}/.claude/logs"

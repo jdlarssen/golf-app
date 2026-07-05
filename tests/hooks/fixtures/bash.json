@@ -45,14 +45,14 @@
     "payload": { "tool_input": { "command": "gh issue create --title \"x\" --body \"y\" --milestone \"Backlog\"" } }
   },
   {
-    "name": "psql med prod-connstring → deny",
+    "name": "psql med prod-connstring → deny (passordet skal redakteres i loggen)",
     "expect": "deny",
-    "payload": { "tool_input": { "command": "psql \"postgresql://postgres:pw@db.glofubopddkjhymcbaph.supabase.co:5432/postgres\" -c \"select 1\"" } }
+    "payload": { "tool_input": { "command": "psql \"postgresql://postgres:hemmeligpw123@db.glofubopddkjhymcbaph.supabase.co:5432/postgres\" -c \"select 1\"" } }
   },
   {
-    "name": "curl skriv mot prod-REST → deny",
+    "name": "curl skriv mot prod-REST → deny (apikey skal redakteres i loggen)",
     "expect": "deny",
-    "payload": { "tool_input": { "command": "curl -X POST \"https://glofubopddkjhymcbaph.supabase.co/rest/v1/games\" -d '{}'" } }
+    "payload": { "tool_input": { "command": "curl -X POST -H \"apikey: eyJhemmeligkey456\" \"https://glofubopddkjhymcbaph.supabase.co/rest/v1/games\" -d '{}'" } }
   },
   {
     "name": "supabase db push mot prod → deny",

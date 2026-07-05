@@ -94,6 +94,16 @@ else
   echo "FAIL  vaktloggen mangler, er tom eller har ugyldig JSON"
 fi
 
+# Redaksjons-bevis: fixture-hemmelighetene (connstring-passord, apikey-verdi)
+# skal ALDRI nå loggen — prefiksen redakteres før trunkering.
+if grep -q "hemmeligpw123\|hemmeligkey456" "$LOG"; then
+  fail=$((fail + 1))
+  echo "FAIL  hemmelighet fra fixture lekket til vaktloggen"
+else
+  pass=$((pass + 1))
+  echo "PASS  fixture-hemmeligheter er redaktert bort fra loggen"
+fi
+
 # Non-blocking-bevis: gjør loggkatalogen skrivebeskyttet og gjenta en kjent
 # deny-fixture — beslutningen skal være uendret selv om logging feiler.
 chmod 555 "$TMP/.claude/logs"

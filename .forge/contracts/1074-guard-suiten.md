@@ -35,7 +35,9 @@ Logikk (PROD_REF=`glofubopddkjhymcbaph`):
 1. **Første forsvarslinje før jq:** rå stdin greps for PROD_REF; finnes den ikke → exit 0 (staging og branch-prosjekter passerer alltid; ingen klassifisering nødvendig).
 2. **Prod-targeting:**
    - `execute_sql`: tillat kun beviselig read-only query — etter uppercase/trim må den starte med `SELECT`/`WITH`/`EXPLAIN`/`SHOW`, IKKE inneholde skrive-nøkkelord (`INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|TRUNCATE|GRANT|REVOKE|COPY|CALL|DO |MERGE|VACUUM|REINDEX|CLUSTER|COMMENT|POLICY|REFRESH|SECURITY`), og IKKE ha flere statements (semikolon etterfulgt av mer tekst). Read-only → `allow` + loggkode `allow-prod-readonly`. Alt annet (inkl. tom/manglende query eller feilet parsing) → **DENY, fail-closed**.
-   - `apply_migration`, `deploy_edge_function`, `merge_branch` (merger TIL prod), `reset_branch`, `rebase_branch`, `create/delete_branch`, `pause/restore/create_project` → **DENY**.
+   - `apply_migration`, `deploy_edge_function`, `pause_project`, `restore_project` (prod-ref i args) → **DENY**.
+   - **Alltid-nekt-klassen** (mål kan ikke knyttes til prosjekt-ref i args, vurderes FØR ref-porten): `merge_branch` (merger TIL prod per definisjon) og `create_project` (org-nivå, koster penger) → **DENY** uansett argumenter.
+   - Branch-livssyklus på egne dev-brancher (`reset/rebase/delete_branch` med branch-id, ingen prod-ref) passerer ref-porten — sanksjonert dev-flyt. *(Presisert under bygging etter evaluator-funn: create_project gled ellers stille forbi ref-porten.)*
 3. **Eskaleringsluke (engangs):** fil `$CLAUDE_PROJECT_DIR/.claude/approve-prod` som er < 10 min gammel → allow ÉN gang (hooken sletter filen, logger `allow-prod-approved`). I tillegg honoreres `APPROVE_PROD=1` hvis den finnes i hook-prosessens env (eier-startede terminal-økter). Deny-teksten (norsk) forklarer luken: kun etter eksplisitt eier-godkjenning i økten, `touch .claude/approve-prod`, gjenta kallet.
 
 ### 2. bash-guard.sh: defekt-fikser + prod-connstring-regler
@@ -56,7 +58,7 @@ Logikk (PROD_REF=`glofubopddkjhymcbaph`):
 ```
 
 - Logger deny/ask/remind + `allow-prod-readonly`/`allow-prod-approved`. Rene pass-throughs logges IKKE (støyfritt).
-- `prefix` = første 80 tegn av kommandoen (bash) eller `tool_name + project_id` (mcp) — **aldri full kommandolinje/SQL** (secrets).
+- `prefix` = første 80 tegn av kommandoen (bash) eller `tool_name + project_id` (mcp) — **aldri full kommandolinje/SQL** (secrets). Bash-prefiksen redakteres FØR trunkering: userinfo i URL-er (`://user:pw@` → `://***@`), verdier etter apikey/authorization/password/token, og JWT-lignende `eyJ…`-strenger. Harnesset beviser at fixture-hemmeligheter aldri når loggen. *(Skjerpet under bygging etter evaluator-funn: 80-tegns-vinduet kunne ellers fange connstring-passord.)*
 - Beviselig non-blocking: `mkdir -p` + append med `|| true`, stderr til /dev/null. Logging-feil skal aldri blokkere et verktøykall.
 - `.gitignore`: nye linjer `.claude/logs/` og `.claude/approve-prod`.
 

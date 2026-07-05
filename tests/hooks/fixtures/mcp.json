@@ -65,6 +65,26 @@
     "payload": { "tool_name": "mcp__supabase__merge_branch", "tool_input": { "branch_id": "some-branch-uuid" } }
   },
   {
+    "name": "create_project → deny uansett args (ingen ref å klassifisere på)",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__create_project", "tool_input": { "name": "nytt-prosjekt", "organization_id": "org-abc", "region": "eu-north-1" } }
+  },
+  {
+    "name": "pause_project mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__pause_project", "tool_input": { "project_id": "glofubopddkjhymcbaph" } }
+  },
+  {
+    "name": "restore_project mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__supabase__restore_project", "tool_input": { "project_id": "glofubopddkjhymcbaph" } }
+  },
+  {
+    "name": "delete_branch på dev-branch (ingen prod-ref) → none (sanksjonert branch-flyt)",
+    "expect": "none",
+    "payload": { "tool_name": "mcp__supabase__delete_branch", "tool_input": { "branch_id": "some-branch-uuid" } }
+  },
+  {
     "name": "sentinel-luke: apply_migration mot prod med fersk approve-prod → none + konsumert",
     "expect": "none",
     "setup": "approve-prod",
