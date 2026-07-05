@@ -6,7 +6,7 @@
  * app/[locale]/admin/cup/[id]/generer/actions.ts.
  */
 
-/** Profile gender → tee_gender. NULL / 'male' → 'mens', 'female' → 'ladies'. */
+/** Profile gender → tee_gender. NULL / 'mens' → 'mens', 'ladies' → 'ladies'. */
 export function teeGenderOf(gender: string | null): 'mens' | 'ladies' {
-  return gender === 'female' ? 'ladies' : 'mens';
+  return gender === 'ladies' ? 'ladies' : 'mens';
 }
