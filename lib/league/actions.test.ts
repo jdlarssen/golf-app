@@ -69,7 +69,7 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
       // 4. games (prior finished flights → none)
       { data: [] },
       // 5. users (tee_gender roster)
-      { data: [{ id: 'u1', gender: 'male' }, { id: 'u2', gender: 'female' }] },
+      { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
       // 6. games.insert(...).select('id').single
       { data: { id: 'g1' }, error: null },
       // 7. game_players.insert (the payload under test)
@@ -95,6 +95,10 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
     const coPlayer = rows.find((r) => r.user_id === 'u2')!;
     expect(typeof actor.accepted_at).toBe('string');
     expect(coPlayer.accepted_at).toBeNull();
+    // #1053: u2 is the ladies fixture — teeGenderOf compared against 'female'
+    // (a value user_gender never had) and silently mapped everyone to 'mens'.
+    expect(actor.tee_gender).toBe('mens');
+    expect(coPlayer.tee_gender).toBe('ladies');
   });
 });
 
@@ -356,7 +360,7 @@ describe('startLeagueRoundFlight — rollback on game_players failure (#737)', (
       // 4. prior finished flights → none
       { data: [] },
       // 5. tee_gender roster
-      { data: [{ id: 'u1', gender: 'male' }, { id: 'u2', gender: 'female' }] },
+      { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
       // 6. games.insert(...).select('id').single
       { data: { id: 'g1' }, error: null },
       // 7. game_players.insert FAILS

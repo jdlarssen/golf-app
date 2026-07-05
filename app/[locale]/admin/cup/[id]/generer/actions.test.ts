@@ -191,12 +191,12 @@ describe('createCupMatchesFromPlan — happy path', () => {
       { data: draftCup, error: null },
       {
         data: [
-          { id: 'A1', gender: 'male' },
-          { id: 'A2', gender: 'male' },
-          { id: 'A3', gender: 'female' },
-          { id: 'B1', gender: 'male' },
-          { id: 'B2', gender: 'male' },
-          { id: 'B3', gender: 'male' },
+          { id: 'A1', gender: 'mens' },
+          { id: 'A2', gender: 'mens' },
+          { id: 'A3', gender: 'ladies' },
+          { id: 'B1', gender: 'mens' },
+          { id: 'B2', gender: 'mens' },
+          { id: 'B3', gender: 'mens' },
         ],
         error: null,
       },
@@ -302,17 +302,24 @@ describe('createCupMatchesFromPlan — happy path', () => {
     expect(a1.tee_gender).toBe('mens');
     const b1IsTeam2 = firstPlayers.find((r) => r.user_id === 'B1')!;
     expect(b1IsTeam2.team_number).toBe(2);
+    // #1053: the ladies-fixture player (A3, match 2) must get the ladies tee —
+    // teeGenderOf compared against 'female' (a value user_gender never had)
+    // and silently mapped every player to 'mens'.
+    const allPlayers = supabaseMock.__fromCalls
+      .filter((c) => c.table === 'game_players' && c.method === 'insert')
+      .flatMap((c) => c.args[0] as Array<Record<string, unknown>>);
+    expect(allPlayers.find((r) => r.user_id === 'A3')?.tee_gender).toBe('ladies');
   });
 });
 
 describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
   const genderRows = [
-    { id: 'A1', gender: 'male' },
-    { id: 'A2', gender: 'male' },
-    { id: 'A3', gender: 'female' },
-    { id: 'B1', gender: 'male' },
-    { id: 'B2', gender: 'male' },
-    { id: 'B3', gender: 'male' },
+    { id: 'A1', gender: 'mens' },
+    { id: 'A2', gender: 'mens' },
+    { id: 'A3', gender: 'ladies' },
+    { id: 'B1', gender: 'mens' },
+    { id: 'B2', gender: 'mens' },
+    { id: 'B3', gender: 'mens' },
   ];
 
   it('club cup, all players members: games get group_id + redirects to klubb-route', async () => {
@@ -363,12 +370,12 @@ describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
 
 describe('createCupMatchesFromPlan — rollback on mid-loop failure (#675)', () => {
   const genderRows = [
-    { id: 'A1', gender: 'male' },
-    { id: 'A2', gender: 'male' },
-    { id: 'A3', gender: 'female' },
-    { id: 'B1', gender: 'male' },
-    { id: 'B2', gender: 'male' },
-    { id: 'B3', gender: 'male' },
+    { id: 'A1', gender: 'mens' },
+    { id: 'A2', gender: 'mens' },
+    { id: 'A3', gender: 'ladies' },
+    { id: 'B1', gender: 'mens' },
+    { id: 'B2', gender: 'mens' },
+    { id: 'B3', gender: 'mens' },
   ];
 
   it('game_players insert fails on match 2: deletes ALL accumulated games, returns insert_failed', async () => {
