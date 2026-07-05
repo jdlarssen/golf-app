@@ -34,6 +34,15 @@ const COURSES: CourseOption[] = [
       { id: 'tee-d1', name: 'Blå', has_mens: true, has_ladies: true, has_juniors: false },
     ],
   },
+  // To tee-bokser — brukt av #1059 (auto-velg skal IKKE trigge her)
+  {
+    id: 'course-e',
+    name: 'Bane E',
+    tee_boxes: [
+      { id: 'tee-e1', name: 'Gul', has_mens: true, has_ladies: true, has_juniors: true },
+      { id: 'tee-e2', name: 'Rød', has_mens: true, has_ladies: true, has_juniors: false },
+    ],
+  },
 ];
 
 function makePlayer(
@@ -106,18 +115,21 @@ describe('useGameFormState — playerGenders ved bane-bytte (regresjon fra #92)'
       'p-junior': 'J',
     });
 
-    // Bytt til bane B — defaultene skal IKKE kollapse til 'M' (regresjon-test).
+    // Bytt til bane B — D-defaulten skal IKKE kollapse til 'M' (regresjon-test
+    // fra #92). Bane B sin tee støtter ikke junior (#1059 auto-velger den
+    // eneste tee-en og klemmer J → M via samme regel som setTeeBoxId), så det
+    // er kun D-verdien denne testen kan verifisere her.
     act(() => {
       result.current.setCourseId('course-b');
     });
     expect(result.current.playerGenders).toEqual({
       'p-mann': 'M',
       'p-dame': 'D',
-      'p-junior': 'J',
+      'p-junior': 'M',
     });
   });
 
-  it('nullstiller tee_box_id ved bane-bytte (uendret oppførsel)', () => {
+  it('bytter tee_box_id til banens eneste tee ved bane-bytte (#1059)', () => {
     const { result } = renderHook(() =>
       useGameFormState({ players: PLAYERS, courses: COURSES }),
     );
@@ -128,10 +140,12 @@ describe('useGameFormState — playerGenders ved bane-bytte (regresjon fra #92)'
     });
     expect(result.current.teeBoxId).toBe('tee-a1');
 
+    // Bane B har også bare én tee — auto-velg overstyrer det tidligere
+    // valget i stedet for å nullstille det (#1059).
     act(() => {
       result.current.setCourseId('course-b');
     });
-    expect(result.current.teeBoxId).toBe('');
+    expect(result.current.teeBoxId).toBe('tee-b1');
   });
 
   it('re-deriver også når banen deselectes (tomt course-id)', () => {
@@ -147,6 +161,58 @@ describe('useGameFormState — playerGenders ved bane-bytte (regresjon fra #92)'
       'p-mann': 'M',
       'p-dame': 'D',
       'p-junior': 'J',
+    });
+  });
+});
+
+describe('useGameFormState — auto-velg tee-boks når banen bare har én (#1059)', () => {
+  it('velger banens eneste tee automatisk når banen har nøyaktig én tee', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+
+    act(() => {
+      result.current.setCourseId('course-a');
+    });
+
+    expect(result.current.teeBoxId).toBe('tee-a1');
+    // Steg 3-gaten (GameWizard canAdvance) er nå tilfredsstillbar uten at
+    // brukeren rører tee-select-en.
+    expect(result.current.courseId !== '' && result.current.teeBoxId !== '').toBe(true);
+  });
+
+  it('nullstiller tee_box_id ved bane-bytte til en bane med FLERE tees (uendret oppførsel)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+
+    act(() => {
+      result.current.setCourseId('course-a');
+    });
+    expect(result.current.teeBoxId).toBe('tee-a1');
+
+    act(() => {
+      result.current.setCourseId('course-e');
+    });
+    expect(result.current.teeBoxId).toBe('');
+  });
+
+  it('klemmer kjønn til tilgjengelige kategorier på den auto-valgte tee-en', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+
+    // Bane C har en herre-only tee — junior-spilleren skal klemmes til 'M'
+    // akkurat som ved et manuelt setTeeBoxId-kall.
+    act(() => {
+      result.current.setCourseId('course-c');
+    });
+
+    expect(result.current.teeBoxId).toBe('tee-c1');
+    expect(result.current.playerGenders).toEqual({
+      'p-mann': 'M',
+      'p-dame': 'M',
+      'p-junior': 'M',
     });
   });
 });
@@ -542,7 +608,9 @@ describe('useGameFormState — teeGenderAvailability (AC1)', () => {
       result.current.setTeeBoxId('tee-c1');
     });
     act(() => {
-      result.current.setCourseId('course-a'); // nullstiller teeBoxId til ''
+      // course-e har flere tees, så bane-byttet nullstiller teeBoxId til ''
+      // (single-tee-baner auto-velger nå sin eneste tee, #1059)
+      result.current.setCourseId('course-e');
     });
     expect(result.current.teeGenderAvailability).toEqual({ M: true, D: true, J: true });
   });

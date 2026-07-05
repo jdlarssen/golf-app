@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.174 · Tee-en velger seg selv når banen bare har én</strong></summary>
+
+[#1059](https://github.com/jdlarssen/golf-app/issues/1059) — Velger du en bane med bare én tee i veiviseren, står tee-en klar med en gang — rett på Neste uten å åpne nedtrekkslista.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
 <summary><strong>1.173 · Ferdig utfylt e-post fra invitasjonsmailen</strong></summary>
 
 [#1056](https://github.com/jdlarssen/golf-app/issues/1056) — Tapper du login-lenken i en invitasjonsmail, står e-postadressen allerede utfylt — bare trykk «Send meg kode».

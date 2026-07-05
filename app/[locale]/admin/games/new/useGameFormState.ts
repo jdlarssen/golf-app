@@ -649,10 +649,24 @@ export function useGameFormState({
   // Bane-bytte: nullstill tee-boks (tee-id er bane-spesifikk) og re-derive
   // M/D/J-defaultene fra profilen. `playerGenders` er ikke tee-spesifikt —
   // re-derive holder D/J-merkene istedenfor å kollapse alle til 'M'.
+  // #1059: har banen bare ÉN tee, er det ikke noe reelt valg — auto-velg den
+  // via den EKSISTERENDE setTeeBoxId-wrapperen (ikke setTeeBoxIdRaw) slik at
+  // kjønns-klemmen fortsatt kjører. Kalles ETTER setPlayerGenders nedenfor:
+  // begge er functional/direkte state-oppdateringer i samme batch, og React
+  // flusher dem i kall-rekkefølge — setTeeBoxId sin `setPlayerGenders(prev =>
+  // ...)`-updater leser da de nettopp deriverte kategoriene, ikke de gamle.
+  // Baner med flere tees nullstilles som før (ingen entydig auto-valg mulig).
   function setCourseId(next: string) {
     setCourseIdRaw(next);
-    setTeeBoxIdRaw(''); // ingen klem ved tee-nullstilling — ingen tee valgt ennå
+    const newCourse = courses.find((c) => c.id === next);
+    const onlyTee =
+      newCourse?.tee_boxes.length === 1 ? newCourse.tee_boxes[0] : undefined;
     setPlayerGenders(deriveDefaultGenders(allPlayers));
+    if (onlyTee) {
+      setTeeBoxId(onlyTee.id);
+    } else {
+      setTeeBoxIdRaw(''); // ingen klem ved tee-nullstilling — ingen tee valgt ennå
+    }
   }
 
   // Tee-bytte: sett ny tee OG klem alle spillere til en tilgjengelig kategori
