@@ -47,5 +47,9 @@ next-env.d.ts
 .claude/settings.local.json
 .claude/worktrees/
 
+# guard-hooks (#1074): lokal vaktlogg + engangs prod-godkjenningssentinel
+.claude/logs/
+.claude/approve-prod
+
 # jscpd on-demand duplication report (npm run dup:html)
 .jscpd-report/
