@@ -1109,8 +1109,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 14 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 15 rettinger</strong></summary>
 
+- `1.175.3` · [#1060](https://github.com/jdlarssen/golf-app/issues/1060) — Under og etter runden viser admin-spillsiden de operative seksjonene øverst — påmeldingskortet med de døde dele- og godkjenn-knappene er byttet ut med en liten «Se påmeldingene»-lenke.
 - `1.175.2` · [#1062](https://github.com/jdlarssen/golf-app/issues/1062) — Utkast har fått én vei til start: publiser spillet, så starter du derfra. «Start spillet»-snarveien kunne starte runder uten spillere eller flighter og er fjernet.
 - `1.175.1` · [#1061](https://github.com/jdlarssen/golf-app/issues/1061) — «Tilpass alle detaljer»-lenken på Klar-steget er borte — veiviseren dekker alt, og trenger du fullskjemaet, lagrer du utkast og åpner Rediger spill.
 - `1.172.4` · [#1063](https://github.com/jdlarssen/golf-app/issues/1063) — Steg 2 i veiviseren er kvitt hint-boksen om sideturneringer — de dukker fortsatt opp i Klar-steget som før.

@@ -3044,7 +3044,8 @@
         "copiedButton": "✓ Kopiert",
         "copyFailure": "Klarte ikke å kopiere automatisk. Marker lenken over og kopier manuelt.",
         "viewAllSignups": "Vis alle påmeldinger →",
-        "posterLink": "Skriv ut plakat"
+        "posterLink": "Skriv ut plakat",
+        "viewSignupsLink": "Se påmeldingene"
       },
       "betaling": {
         "sectionLabel": "Betaling",

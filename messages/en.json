@@ -3044,7 +3044,8 @@
         "copiedButton": "✓ Copied",
         "copyFailure": "Could not copy automatically. Select the link above and copy manually.",
         "viewAllSignups": "View all signups →",
-        "posterLink": "Print poster"
+        "posterLink": "Print poster",
+        "viewSignupsLink": "View signups"
       },
       "betaling": {
         "sectionLabel": "Payment",

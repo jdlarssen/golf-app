@@ -376,6 +376,7 @@ async function PlayersSections({
   const tRows = await getTranslations('admin.game.rows');
   const tCta = await getTranslations('admin.game.cta');
   const tModes = await getTranslations('modes');
+  const tRegistration = await getTranslations('admin.game.registration');
 
   // game_players has two FKs to users (user_id and approved_by_user_id), so
   // we must disambiguate via the named constraint.
@@ -565,14 +566,29 @@ async function PlayersSections({
         )}
       </SectionCard>
 
-      {/* Påmelding-oversikt (#199, utvidet #368) — vises for alle modi;
-          invite_only tar nå imot «be om å bli med»-forespørsler. */}
-      <RegistrationOverviewSection
-        gameId={gameId}
-        registrationMode={game.registration_mode}
-        shortId={game.short_id}
-        selfRegisteredCount={players.length}
-      />
+      {/* Påmelding-oversikt (#199, utvidet #368) — vises for draft/scheduled.
+          Etter start (#1060) er kortets tre handlinger blindveier: godkjenn/
+          avslå er hard-låst (signups/actions.ts), og den offentlige
+          påmeldingssiden viser «stengt». Kortet erstattes da av en liten
+          tekstlenke til historikken, som fortsatt er eneste vei til frosne
+          pending-forespørsler på finished. */}
+      {!isPlayPhase ? (
+        <RegistrationOverviewSection
+          gameId={gameId}
+          registrationMode={game.registration_mode}
+          shortId={game.short_id}
+          selfRegisteredCount={players.length}
+        />
+      ) : (
+        <div className="mt-1.5 px-1 text-center">
+          <SmartLink
+            href={`/admin/games/${gameId}/signups`}
+            className="font-sans text-[13px] font-medium text-muted underline underline-offset-2 decoration-muted/30 hover:decoration-muted"
+          >
+            {tRegistration('viewSignupsLink')}
+          </SmartLink>
+        </div>
+      )}
 
       {/* #1049: betaling-telle-kort — kun når spillet har en startkontingent.
           Tellingen ekskluderer withdrawn, som betaling-undersiden. */}
