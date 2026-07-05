@@ -60,14 +60,12 @@ emit_ask()  { log_event "$1" "ask";  jq -cn --arg r "$2" '{hookSpecificOutput:{h
 emit_ctx()  { log_event "$1" "remind"; jq -cn --arg c "$2" '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:$c}}'; exit 0; }
 
 # Engangs-godkjenning for prod (speiler mcp-guard.sh): sentinel < 10 min eller env.
+# find -mmin har lik semantikk på BSD/macOS og GNU; stat-flaggene divergerer.
 approved() {
   [ "${APPROVE_PROD:-}" = "1" ] && return 0
   local f="${CLAUDE_PROJECT_DIR:-.}/.claude/approve-prod"
   [ -f "$f" ] || return 1
-  local now mtime
-  now=$(date +%s)
-  mtime=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo 0)
-  if [ $((now - mtime)) -le 600 ]; then
+  if [ -n "$(find "$f" -mmin -10 2>/dev/null)" ]; then
     rm -f "$f"
     return 0
   fi

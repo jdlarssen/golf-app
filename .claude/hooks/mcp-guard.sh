@@ -46,14 +46,13 @@ emit_deny() { # rule reason prefix
 }
 
 # Engangs-godkjenning: sentinel-fil < 10 min gammel (slettes ved bruk) eller env.
+# Alders-sjekken bruker find -mmin, som har LIK semantikk på BSD/macOS og GNU —
+# stat-flaggene divergerer (GNU -f = filsystem-status, ikke mtime).
 approved() {
   [ "${APPROVE_PROD:-}" = "1" ] && return 0
   local f="${CLAUDE_PROJECT_DIR:-.}/.claude/approve-prod"
   [ -f "$f" ] || return 1
-  local now mtime
-  now=$(date +%s)
-  mtime=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo 0)
-  if [ $((now - mtime)) -le 600 ]; then
+  if [ -n "$(find "$f" -mmin -10 2>/dev/null)" ]; then
     rm -f "$f"
     return 0
   fi
