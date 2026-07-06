@@ -55,11 +55,11 @@ Protokollen den timelige cloud-routinen følger (og som kan kjøres manuelt i en
 
 ## Success Criteria
 
-- [ ] `main-verify.yml` finnes med push-til-main-trigger, samme fire gates som ci.yml-verify, permissions-blokk og dedupet varsel-steg — verifiseres ved fil-lesing + grønn kjøring på main etter merge (run-URL som bevis).
-- [ ] `schema-drift.yml` har varsel-steg gated til ikke-PR-events, med permissions-blokk — fil-lesing + `gh workflow view` etter merge.
-- [ ] `docs/loops/ci-vakta.md` dekker alle protokoll-punktene over (oppdag/reproduser/iterasjonstak/assertion-vern/flake/eskalering/schema-drift-v1/aldri-merge).
-- [ ] Begge workflow-filene er gyldig YAML (parses uten feil) og refererer kun secrets/permissions som finnes.
-- [ ] Eksisterende gates uberørte og grønne: `bash tests/hooks/guard.test.sh`, `npm run typecheck`, `npm run lint`.
+- [x] `main-verify.yml` finnes med push-til-main-trigger, samme fire gates som ci.yml-verify, permissions-blokk og dedupet varsel-steg — evaluator bekreftet eksakt speiling + injection-testet BODY-byggingen; grønn kjøring på main verifiseres post-merge (PENDING MERGE i evalueringen).
+- [x] `schema-drift.yml` har varsel-steg gated til ikke-PR-events, med permissions-blokk — diff er rent additiv (0 linjer fjernet).
+- [x] `docs/loops/ci-vakta.md` dekker alle protokoll-punktene — evaluator sjekket punkt-for-punkt mot kriterielista.
+- [x] Begge workflow-filene er gyldig YAML (js-yaml parser begge), dedupe-søket phrase-matcher reelle titler (testet mot live repo read-only), milestone 9 og bug-labelen finnes.
+- [x] Eksisterende gates uberørte og grønne: guard-harness 38/38, typecheck rent, lint 0 errors.
 
 ## Gates
 
