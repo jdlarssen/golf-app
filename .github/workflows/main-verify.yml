@@ -1,0 +1,69 @@
+# Re-gates main after every merge (#1075). CI runs on pull_request only, and
+# without branch protection (free tier) two individually-green rebase-merges
+# can compose a red main that nobody sees. This mirrors ci.yml's verify job and
+# raises a deduped alert issue if main goes red — a red scheduled/push run must
+# never die silently in the Actions tab (fail-closed, epic #1073).
+name: Main verify
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: main-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (blocking — schema drift fails here)
+        run: npm run typecheck
+
+      - name: Test (blocking)
+        run: npm test
+
+      - name: Lint (blocking)
+        run: npm run lint
+
+      - name: Guard hooks (blocking)
+        run: bash tests/hooks/guard.test.sh
+
+      # Alert on red main: open a deduped issue so the hourly CI-vakt routine
+      # (and the owner) sees it without watching the Actions tab. continue-on-
+      # error so an alert hiccup never masks the real failure.
+      - name: Open alert issue on failure
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          TITLE="CI-vakt: main-verify rød"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Main er rød etter push av `%s`.\n\nKjøring: %s\n\nFix-protokoll: `docs/loops/ci-vakta.md` — reproduser i klone først, maks 3 iterasjoner, aldri merge. Dette issuet lukkes når main-verify er grønn igjen.' "$SHA" "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -F milestone=9
