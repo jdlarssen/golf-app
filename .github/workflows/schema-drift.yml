@@ -20,6 +20,10 @@ on:
     paths:
       - 'supabase/migrations/**'
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   drift:
     runs-on: ubuntu-latest
@@ -55,3 +59,26 @@ jobs:
             exit 1
           fi
           echo "lib/database.types.ts is in sync with the live schema."
+
+      # Alert on red cron/dispatch runs (#1075) — PR failures are visible on the
+      # PR itself, but a red scheduled run used to die silently in the Actions
+      # tab. Deduped against an already-open alert issue.
+      - name: Open alert issue on failure
+        if: failure() && github.event_name != 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="CI-vakt: schema-drift rød"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Schema-drift-sjekken feilet — lib/database.types.ts er ute av sync med prod-skjemaet, eller selve kjøringen røk.\n\nKjøring: %s\n\nFix-protokoll: `docs/loops/ci-vakta.md` (schema-drift-seksjonen). Dette issuet lukkes når drift-sjekken er grønn igjen.' "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -F milestone=9
