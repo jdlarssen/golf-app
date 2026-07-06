@@ -4,6 +4,8 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+Agent discipline: event-trigger table + invariants in `docs/agent-discipline/core.md` — Claude loads it automatically via CLAUDE.md; other agents read it first, then follow its pointers.
+
 # Before you build: known traps
 
 Most recent prod bugs (#641, #642, #647, #648, #666–#704) came from builders who were confident
