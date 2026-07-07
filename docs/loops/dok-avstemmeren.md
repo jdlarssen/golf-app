@@ -64,12 +64,19 @@ utvides når nye målbare claims dukker opp i styringsdokumentene.
 | C5 | schema-ground-truth.md: generert seksjon < 15 dager gammel | dato i seksjons-headeren vs `date -u` | 2026-07-07 |
 | C6 | docs/test-discipline.md-terskler vs pre-commit-hook: kjent tre-tall-avvik (3/5/10) er ENTEN uendret ELLER løst per eierbeslutning | grep toContain i begge filer | 2026-07-07 (issue filet) |
 
-## Steg 3 — Memory-drift-flagg
+## Steg 3 — Memory-drift-flagg (best effort — kun lokale kjøringer)
 
-Grep agent-memory (`~/.claude/projects/-Users-jdl-Dokumenter-GitHub-golf-app/memory/`)
-for «out of date», «stale», «utdatert», «drift». Hvert treff som peker på et
-repo-dokument → verifiser og ta fiksen med i docs-PR-en. Memory-filene selv
-røres ikke av loopen.
+Agent-memoryen ligger på eierens maskin
+(`~/.claude/projects/-Users-jdl-Dokumenter-GitHub-golf-app/memory/`) og finnes
+IKKE i sky-kloner. **Dokumentert SKIP-utfall (#1115):** finnes ikke katalogen,
+noter «steg 3 hoppet over (cloud — memory er lokal)» i heartbeaten og gå
+videre — det er forventet, ikke en feil. Memory-drift dekkes da av interaktive
+økter og consolidate-memory-skillet; funn derfra mates inn i claims-manifestet
+som alt annet.
+
+Når katalogen finnes (lokal kjøring): grep for «out of date», «stale»,
+«utdatert», «drift». Hvert treff som peker på et repo-dokument → verifiser og
+ta fiksen med i docs-PR-en. Memory-filene selv røres ikke av loopen.
 
 ## Steg 4 — Lever
 
