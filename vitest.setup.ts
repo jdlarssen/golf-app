@@ -3,6 +3,15 @@ import { vi } from 'vitest';
 import { createTranslator } from 'use-intl/core';
 import noMessages from './messages/no.json';
 
+// Unit tests must exercise the real code paths regardless of ambient runtime
+// toggles. RESEND_STUB_SEND and SELFREG_RATE_LIMIT_DISABLED are set in e2e/CI
+// and cloud-routine environments (staging safety) but short-circuit the mail
+// senders and the selfreg rate limiter — leaking them into vitest turned 24
+// tests falsely red and nearly cancelled a night run (#1113). Tests that want
+// the stub paths set the variable themselves (none do today).
+delete process.env.RESEND_STUB_SEND;
+delete process.env.SELFREG_RATE_LIMIT_DISABLED;
+
 // Stub next/navigation so components that call useRouter / usePathname /
 // useSearchParams (e.g. SmartLink) don't throw "invariant: app router not
 // mounted" during unit tests.
