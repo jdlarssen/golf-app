@@ -9,7 +9,7 @@ Flyttet ut av `CLAUDE.md` for å holde den lett (uendret innhold). Gjelder `/for
 Når brukeren invoker `/forge:auto` uten å spesifisere konkret issue/kontrakt, MÅ hovedchatten følge denne flyten:
 
 1. **Finn åpne issues med eksisterende kontrakt.** To kilder å sjekke:
-   - **Primært:** `gh search issues --repo jdlarssen/golf-app 'is:open is:issue "Forge-kontrakt tilgjengelig" in:comments'` — gjenkjenner kontrakt-kommentar-headeren fra `/forge:contract`-disiplinen.
+   - **Primært:** iterér åpne issues og sjekk kommentarene per issue: `gh issue list --state open --json number --jq '.[].number'` → per N: `gh api repos/jdlarssen/golf-app/issues/N/comments --jq '.[].body'` og se etter headeren «Forge-kontrakt tilgjengelig». (`gh search issues … in:comments` returnerer tomt for kommentar-innhold og skal IKKE brukes — verifisert 2026-07-07, jf. dok-avstemmeren C4.)
    - **Sekundært (sanity-check):** `ls .forge/contracts/` for `<number>-*.md`-filer på nåværende branch, krysset mot åpen-status via `gh issue view N --json state`.
 2. **Hvis funnet:** Hvis det er ett kandidat-issue → kjør `/forge:auto` på den. Hvis flere → vis kort liste med issue-nummer + tittel + branch-navn, spør brukeren hvilken som skal kjøres.
 3. **Hvis ingen funnet:** Kjør `/forge:contract` istedenfor. Spør brukeren hvilket åpent issue kontrakten skal skrives for, eller forslå basert på `gh issue list --state open` (filtrert til ikke-`epic` + ikke-`blocks-club-scale`-tunge kandidater).

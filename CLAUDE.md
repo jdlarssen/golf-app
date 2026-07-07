@@ -51,7 +51,7 @@ Denne arbeidsdelingen har vist seg å fungere bra. Hold deg til den.
 - **All kode:** Edit/Write/Bash for filendringer, npm-kommandoer
 - **Git:** stage, commit (med atomic-disiplin), push til main — Vercel deployer automatisk
 - **DNS-diagnostikk:** dig/curl via Bash for å sjekke propagering
-- **SQL-skriving:** lager migrasjonsfiler i `supabase/migrations/`, men EKSEKVERER aldri SQL direkte mot Supabase (du har ikke tilgang)
+- **SQL og migrasjoner:** lager migrasjonsfiler i `supabase/migrations/` og påfører dem selv via Supabase MCP — staging først, verifiser, deretter prod KUN etter eksplisitt eier-godkjenning i økten (prod-brannmuren #1074 håndhever engangs-luken `touch .claude/approve-prod`). Read-only SELECT mot prod er sanksjonert.
 - **Diagnostikk:** legger til console.logs eller inline-debug i koden, leser server-side errors fra Vercel via brukerens skjermbilder
 - **Plan, design, brainstorming:** med skills som `superpowers:brainstorming`, `superpowers:writing-plans`, etc.
 - **Subagent-koordinering:** dispatcher implementer/reviewer-subagenter for store endringer
@@ -272,14 +272,14 @@ Ved tvil: hvis oppgaven kan beskrives ferdig i én prompt og forventes å produs
 
 ### Datamodell
 
-8 tabeller i `public`:
+34 tabeller i `public` (målt 2026-07-07 — vedlikeholdes av dok-avstemmeren #1078). Kjernen:
 - `users` (utvider auth.users)
 - `courses` + `course_holes` + `tee_boxes`
 - `games` + `game_players`
 - `scores`
 - `invitations`
 
-Migrasjoner: `supabase/migrations/0001`–`0007`.
+Resten dekker klubb/grupper, liga, cup, vennskap, notifikasjoner, reaksjoner, sideturneringer og spillmodus-spesifikke tabeller. Full RLS-/CHECK-/trigger-oversikt: generert seksjon i `docs/schema-ground-truth.md`. Migrasjoner: `supabase/migrations/` (løpenummerert; live DB er fasit, jf. AGENTS.md trap 1).
 
 ### Scoring-logikk
 
@@ -289,7 +289,7 @@ Ren TypeScript i `lib/scoring/`:
 - `bestBall.ts` — netto + best-ball + lag-total
 - `tiebreaker.ts` — 5-tiers cascade
 
-40 unit-tester, alle grønne. TDD-disiplin var streng her — endring krever ny test først.
+Assertion-rik unit-suite, alle grønne (fasit: `npx vitest run lib/scoring` — 1029 tester per 2026-07-07). TDD-disiplin var streng her — endring krever ny test først.
 
 ### Auth-flyt
 
@@ -336,7 +336,7 @@ Alle game-side-konsumenter leser fra cachen (hull-page, scorecard, submit, appro
 
 Discoverable kataloger (`ls components/ui/`, `ls lib/`, etc.) er ikke listet her — kun ikke-åpenbare feller eller konvensjoner som forsvinner uten påminning:
 
-- `lib/scoring/` — scoring-bibliotek (40 unit-tester; ikke rør uten ny test først, per Scoring-logikk)
+- `lib/scoring/` — scoring-bibliotek (assertion-rik unit-suite; ikke rør uten ny test først, per Scoring-logikk)
 - `lib/sync/` — Dexie-DB heter `'golf-app'` historisk; **rename = sletter brukernes lokale data**
 - `proxy.ts` (ikke `middleware.ts`) — Next.js 16-konvensjonen for middleware
 - `app/legal/privacy/page.tsx` — offentlig side; bypass auth-gate via egen `proxy.ts`-matcher
