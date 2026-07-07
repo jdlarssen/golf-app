@@ -54,5 +54,6 @@ Ingenting å melde i en gruppe → utelat gruppa. Alle tre tomme → tom-natt-li
 ## Månedlig arkivering
 
 Første brief i ny måned: flytt forrige måneds kommentarer til
-`docs/loops/logg/<år>-<måned>.md` via docs-PR og rydd #1110 (rediger bort
-arkiverte kommentarer er ikke mulig — lenk til arkivfila i briefen i stedet).
+`docs/loops/logg/<år>-<måned>.md` via docs-PR — som alle loop-leveranser en
+draft-PR eieren merger, ALDRI selvmerget. Arkiverte kommentarer kan ikke
+redigeres bort fra #1110; lenk til arkivfila i briefen i stedet.
