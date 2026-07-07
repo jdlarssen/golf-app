@@ -1080,7 +1080,6 @@
       "course_required": "Velg en bane.",
       "tee_required": "Velg en tee-boks.",
       "bad_allowance": "HCP-andelen må være et helt tall mellom 0 og 100.",
-      "players_required": "Du må velge nøyaktig 8 spillere.",
       "duplicate_player": "Samme spiller kan ikke velges flere ganger.",
       "bad_team": "Hver spiller må tilhøre et lag (1–4).",
       "bad_flight": "Hver spiller må tilhøre en flight (1–4).",

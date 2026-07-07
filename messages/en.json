@@ -1080,7 +1080,6 @@
       "course_required": "Choose a course.",
       "tee_required": "Choose a tee box.",
       "bad_allowance": "HCP allowance must be a whole number between 0 and 100.",
-      "players_required": "You must select exactly 8 players.",
       "duplicate_player": "The same player cannot be selected more than once.",
       "bad_team": "Each player must belong to a team (1–4).",
       "bad_flight": "Each player must belong to a flight (1–4).",

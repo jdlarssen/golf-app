@@ -155,7 +155,6 @@ export type GameValidationErrorCode =
   | 'course_required'
   | 'tee_required'
   | 'bad_allowance'
-  | 'players_required'
   | 'duplicate_player'
   | 'bad_team'
   | 'bad_flight'
