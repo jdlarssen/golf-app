@@ -78,19 +78,19 @@ Et avsluttet spill i et hvilket som helst av disse formatene, med premier lagt i
 - Nøyaktig linjenr. (kan ha driftet siden scout) — match på `finishedView(false, reportSection)` / `mainContent(false, reportSection)` / `podium(false)` og `{reportSection}`-siblingen, ikke på tall.
 
 ## Success Criteria
-- [ ] Alle 10 renderene (`texasScramble`, `wolf`, `nassau`, `skins`, `bingoBangoBongo`, `nines`, `roundRobin`, `aceyDeucey`, `shamble`, `patsome`) tar `prizeAwardsNode?: ReactNode` i opts, destrukturerer den, og prepender den i BEGGE finished-grener (ikke-side + side). Verifiser: `grep -c prizeAwardsNode` > 0 i hver av de 10 filene.
-- [ ] `leaderboardContent.tsx` sender `prizeAwardsNode` inn i alle 10 `renderX(...)`-kallene (grep: 10 nye passeringspunkter i tillegg til stableford/solo/best-ball).
-- [ ] Matchplay-renderene og `stableford.tsx` er URØRT (ingen `prizeAwardsNode` lagt til matchplay; #1126 ikke fikset her).
-- [ ] `npm run build` grønn (tsc + Next) — fanger opts-type-drift og manglende import av `ReactNode`.
-- [ ] Staging (representativt): avsluttet **Texas scramble** + **Skins** med premier viser «Premieutdeling» under podiet, koblet til rett vinner (snapshot-assertion på `data-testid`, ikke norsk copy).
+- [x] Alle 10 renderene (`texasScramble`, `wolf`, `nassau`, `skins`, `bingoBangoBongo`, `nines`, `roundRobin`, `aceyDeucey`, `shamble`, `patsome`) tar `prizeAwardsNode?: ReactNode` i opts, destrukturerer den, og prepender den i BEGGE finished-grener (ikke-side + side). **Bevis:** `grep -c prizeAwardsNode` = 4 i hver av de 10 filene (opts + destructure + non-side + side).
+- [x] `leaderboardContent.tsx` sender `prizeAwardsNode` inn i alle 10 `renderX(...)`-kallene. **Bevis:** grep gikk fra 5 → 15 passeringspunkter (10 nye), commit `fc21d84d`.
+- [x] Matchplay-renderene og `stableford.tsx` er URØRT. **Bevis:** `grep -c prizeAwardsNode` = 0 i matchplay/fourballMatchplay/foursomesMatchplay; `git diff stableford.tsx` tom.
+- [x] `npm run build` grønn (tsc + Next). **Bevis:** BUILD_EXIT=0 («✓ Compiled successfully», «Finished TypeScript in 14.4s»); første feil var env-mangel (`.env.local`), ikke koden.
+- [ ] Staging (representativt): avsluttet **Texas scramble** + **Skins** med premier viser «Premieutdeling» under podiet, koblet til rett vinner (snapshot-assertion på `data-testid`, ikke norsk copy). **Utsatt til stagingbevis-porten på PR-en (#1076).**
 
 ## Gates
-- [ ] `npm run build` — exit 0 (tsc + Next build).
-- [ ] `npx vitest run` for berørte filer — grønt (ingen nye tester; regresjonssjekk at eksisterende `prizeAwards`/leaderboard-tester står).
-- [ ] `npm run lint` — 0 nye errors.
-- [ ] Ingen ny bruker-copy → `humanizer` ikke påkrevd (kortet + strengene er alt shippet i #1051; bekreft at ingen nye strenger legges til).
-- [ ] **Stagingbevis-porten FØR merge:** kjør `.claude/skills/staging-verify/SKILL.md` mot PR-en (torny-staging, OTP-mint, tre orakler: `data-testid`-snapshot + tom console/network + SELECT som bekrefter `result_summary`/`game_side_winners`). Representativt utvalg: Texas scramble + Skins. Sett `staging-verified`-label. Dette er #1076s første ekte kjøring.
-- [ ] `package.json` minor-bump (feat) + én Funksjon-linje i `CHANGELOG.md`.
+- [x] `npm run build` — exit 0 (tsc + Next build). **Bevis:** BUILD_EXIT=0.
+- [x] `npx vitest run` for berørte filer — grønt. **Bevis:** `lib/games/prizeAwards.test.ts` 12/12 passed; ingen nye tester lagt til.
+- [x] `npm run lint` — 0 errors. **Bevis:** «54 problems (0 errors, 54 warnings)» — kun pre-eksisterende complexity-warnings i urørte filer.
+- [x] Ingen ny bruker-copy → `humanizer` ikke påkrevd. **Bevis:** ingen nye UI-strenger; kun CHANGELOG-linja (konvensjon: humanizer ikke påkrevd på oppføringer).
+- [ ] **Stagingbevis-porten FØR merge:** kjør `.claude/skills/staging-verify/SKILL.md` mot PR-en (torny-staging, OTP-mint, tre orakler). Representativt utvalg: Texas scramble + Skins. Sett `staging-verified`-label. Dette er #1076s første ekte kjøring. **Neste steg etter PR.**
+- [x] `package.json` minor-bump (feat) + én Funksjon-linje i `CHANGELOG.md`. **Bevis:** 1.182.0 → 1.183.0; Funksjon-rad «1.183 · Premieutdeling på alle spillformer», commit `fc21d84d`.
 
 ## Files Likely Touched
 - `app/[locale]/games/[id]/leaderboard/formats/texasScramble.tsx` — opts + destructure + closure/ternær + side-sibling
