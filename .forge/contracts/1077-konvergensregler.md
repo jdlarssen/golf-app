@@ -26,13 +26,13 @@ forge:auto har to autonomi-feilmoduser uten vern i dag: løkka kan spinne på id
 
 ## Success Criteria
 
-- [ ] `docs/forge-workflow.md` har Konvergensregler-seksjon som dekker: runde-historikk-fil, finding-signatur, no-progress-definisjon, strategibytte-mekanisme, begge takene, og aldri-stille-exit-regelen (fil-lesing mot denne lista).
-- [ ] `.forge/templates/eskalering.md` finnes med alle fire mal-delene inkl. A/B-spørsmålet.
+- [x] `docs/forge-workflow.md` har Konvergensregler-seksjon som dekker: runde-historikk-fil, finding-signatur, no-progress-definisjon, strategibytte-mekanisme, begge takene, og aldri-stille-exit-regelen (fil-lesing mot denne lista).
+- [x] `.forge/templates/eskalering.md` finnes med alle fire mal-delene inkl. A/B-spørsmålet.
 - [ ] Neste forge:auto-kjøring skriver runde-historikk: PENDING FIRST USE (aktiveringskriterium).
 
 ## Gates
 
-- [ ] Docs-only-endring: `git diff --stat` viser kun .md-filer; commit-msg-hook (Refs #1077) passerer.
+- [x] Docs-only-endring: `git diff --stat` viser kun .md-filer; commit-msg-hook (Refs #1077) passerer.
 
 ## Files Likely Touched
 
