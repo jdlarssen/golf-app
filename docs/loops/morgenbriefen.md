@@ -55,6 +55,11 @@ Ingenting å melde i en gruppe → utelat gruppa. Alle tre tomme → tom-natt-li
   issue med samme tittel.
 - CI-vakta poster ikke heartbeat i v1 (24/døgn er støy) — dens helse måles
   indirekte: åpne `CI-vakt:`-issues eldre enn 24 t uten aktivitet flagges.
+- **Prod-vakta (Actions-cron, ikke routine):** Loop-helse-linja skal oppgi
+  siste kjøring og utfall (`gh run list --workflow prod-vakt.yml --limit 1`).
+  Siste kjøring eldre enn 48 timer → varsellinje øverst («⚠️ Prod-vakta har
+  ikke kjørt på X timer — sjekk Actions»). Stillhet fra en cron er aldri bevis
+  på at den lever («grønn kan bety kjørte aldri»-klassen).
 
 ## Discord-speiling (utgående varsel)
 

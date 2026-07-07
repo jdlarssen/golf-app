@@ -95,6 +95,15 @@ docs/loops/prod-vakta.md) er del av oppdagelsen i steg 1. Håndtering:
   hva som er sjekket i koden og hva en interaktiv økt må hente — issuet blir
   stående åpent som handoff.
 
+## 8. Discord-ping ved handling (best effort)
+
+Finnes `DISCORD_WEBHOOK_URL` i miljøet: post én kort melding når kjøringen
+ÅPNER en fiks-PR («🔧 CI-vakta la fiks-PR #N — <lenke>») eller ESKALERER
+(«⚠️ CI-vakta trenger deg på #N — <lenke>»). Ikke ping «alt grønt»-kjøringer
+(det er støy — briefen dekker digest). Mangler variabelen: hopp stille over.
+(Krever at routinen får et minimalt miljø med kun webhook-variabelen og
+`discord.com` i domenelista — ALDRI staging-/prod-nøkler i CI-vaktas miljø.)
+
 ## Routine-oppsett (ops, post-merge)
 
 - Cloud routine, timelig (minimumsintervallet), prompt: «Følg
