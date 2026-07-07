@@ -23,17 +23,17 @@ Styringsdokumentene drifter fra virkeligheten uten at noen merker det: CLAUDE.md
 
 ## Success Criteria
 
-- [ ] Protokollfilen dekker: kanonisk spørring, begge miljøer, radtellings-assertions, idempotens-krav, claims-manifest, memory-steg, normativ-regel-vernet, utfalls-reglene og fail-closed.
-- [ ] schema-ground-truth.md har markør-avgrenset generert seksjon med dagens målte tall (34/83/14/43) og staging-avviket notert.
-- [ ] De fire+ verifiserte fakta-avvikene er fikset i CLAUDE.md/forge-workflow.md; ingen normative regler endret.
-- [ ] Begge issues (toContain-beslutning, rls_auto_enable-avvik) opprettet med milestone.
-- [ ] Docs-only-diff (git diff --stat kun .md); commit-bodies siterer bevis-spørring/kommando der fakta endres.
-- [ ] Runde-historikk per #1077-konvergensreglene skrives for denne forge:auto-kjøringen (aktiverer #1077).
+- [x] Protokollfilen dekker: kanonisk spørring, begge miljøer, radtellings-assertions, idempotens-krav, claims-manifest, memory-steg, normativ-regel-vernet, utfalls-reglene og fail-closed.
+- [x] schema-ground-truth.md har markør-avgrenset generert seksjon med dagens målte tall (34/83/14/43) og staging-avviket notert.
+- [x] De fire+ verifiserte fakta-avvikene er fikset i CLAUDE.md/forge-workflow.md; ingen normative regler endret.
+- [x] Begge issues (toContain-beslutning, rls_auto_enable-avvik) opprettet med milestone.
+- [x] Docs-only-diff (git diff --stat kun .md); commit-bodies siterer bevis-spørring/kommando der fakta endres.
+- [x] Runde-historikk per #1077-konvergensreglene skrives for denne forge:auto-kjøringen (aktiverer #1077).
 
 ## Gates
 
-- [ ] `git -C <worktree> diff --stat origin/main..HEAD` viser kun .md-filer
-- [ ] `cd <worktree> && npx vitest run lib/scoring` grønn (fasit-kommandoen som erstatter 40-tester-claimen)
+- [x] `git -C <worktree> diff --stat origin/main..HEAD` viser kun .md-filer
+- [x] `cd <worktree> && npx vitest run lib/scoring` grønn (fasit-kommandoen som erstatter 40-tester-claimen)
 
 ## Files Likely Touched
 

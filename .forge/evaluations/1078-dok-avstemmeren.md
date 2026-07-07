@@ -1,6 +1,6 @@
 # Evaluation: #1078 Dok-avstemmeren
 
-**Verdict: NEEDS WORK**
+**Verdict: ACCEPT (round 2)**
 
 ## Verdict
 
@@ -125,3 +125,37 @@ mechanically, not optionally.
 - No other blocking findings. All numeric claims I re-derived from prod matched the PR's
   numbers exactly; I found zero factual errors in the generated section or the claim
   fixes.
+
+## Runde 2
+
+Fresh-context re-evaluation, narrow scope: verify the round-1 gap fix only, not
+re-derive the round-1 factual work (already independently verified in round 1 with
+zero discrepancies).
+
+- **Round-history file exists and is committed.** `.forge/evaluations/1078-dok-avstemmeren-runder.md`
+  was added in commit `1e74282e` with `Refs #1078` in the body — satisfies
+  §Konvergensregler point 1 ("Fila committes med `Refs #N`").
+- **Format matches §Konvergensregler.** Read `docs/forge-workflow.md` §Konvergensregler
+  (point 1–2) directly: requires "runde-nummer, verdikt (ACCEPT/NEEDS WORK) og
+  finding-signaturene", each finding normalized to `fil + kriterium`. The file has
+  exactly that: a `Runde | Verdikt | Finding-signaturer` table, row 1 = `1 | NEEDS WORK |
+  .forge/evaluations/1078-dok-avstemmeren-runder.md + kriterium-6-runde-historikk-mangler`.
+  The signature legitimately references the round-history file itself as the "fil",
+  since the missing artifact *was* the finding — correct self-reference, not a format
+  violation.
+- **Round 1's entry accurately reflects round 1's verdict/finding.** Cross-checked the
+  `Runde 1-notat` prose against the round-1 report above: "alle fakta-kriterier bestått
+  (evaluator re-deriverte samtlige tall mot live prod — null avvik); eneste funn var at
+  denne fila ikke fantes" matches the round-1 report's own language ("every checkable
+  number... matched exactly", "one explicit success criterion is not met... no
+  `-runder.md`... exists"). No embellishment, no dropped nuance.
+- **Diff is still docs-only.** `git diff --stat origin/main..HEAD` on the worktree:
+  7 files, all `.md` (`.forge/contracts/1078-dok-avstemmeren.md`,
+  `.forge/evaluations/1078-dok-avstemmeren-runder.md`,
+  `.forge/evaluations/1078-dok-avstemmeren.md`, `CLAUDE.md`, `docs/forge-workflow.md`,
+  `docs/loops/dok-avstemmeren.md`, `docs/schema-ground-truth.md`). No code/config.
+- **Nothing else changed since round 1.** `git diff --name-only 8b41bf85 1e74282e`
+  (round-1-evaluated commit → tip) touches exactly the two evaluation files added by
+  the fix commit. Working tree clean, no uncommitted changes.
+
+All four checks pass. Criterion 6 is now met; no new gaps found. **ACCEPT.**

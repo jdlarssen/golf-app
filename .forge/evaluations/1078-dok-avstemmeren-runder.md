@@ -11,3 +11,8 @@ finding-signaturer er normalisert `fil + kriterium`.
 mot live prod — null avvik); eneste funn var at denne fila ikke fantes. Fiks =
 opprett fila (meta-fiksen du leser nå). Ingen strategibytte nødvendig — signatur-settet
 er nytt, ikke gjentatt.
+| 2 | ACCEPT | *(ingen)* |
+
+**Runde 2-notat:** smal re-evaluering av kriterium 6 — runde-fila finnes, committet med
+Refs, format per §Konvergensregler, diff fortsatt docs-only. Ingen nye funn. Konvergert
+på 2 runder uten strategibytte.
