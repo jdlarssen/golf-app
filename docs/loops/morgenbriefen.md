@@ -56,6 +56,16 @@ Ingenting å melde i en gruppe → utelat gruppa. Alle tre tomme → tom-natt-li
 - CI-vakta poster ikke heartbeat i v1 (24/døgn er støy) — dens helse måles
   indirekte: åpne `CI-vakt:`-issues eldre enn 24 t uten aktivitet flagges.
 
+## Discord-speiling (utgående varsel)
+
+Finnes `DISCORD_WEBHOOK_URL` i miljøet: POST hele briefen (eller en forkortet
+utgave hvis > 1800 tegn, med lenke til #1110-kommentaren) som `content` til
+webhooken ETTER at kommentaren på #1110 er postet. GitHub varsler aldri eieren
+om aktivitet under hans egen identitet — Discord-speilet ER derfor eierens
+varslingskanal. Feiler Discord-postingen: noter det i neste briefs Loop-helse
+(«Discord-speiling feilet i går»), aldri la det stoppe briefen. Mangler
+variabelen: hopp stille over (speilet er tillegg, #1110 er primærartefakten).
+
 ## Månedlig arkivering
 
 Første brief i ny måned: flytt forrige måneds kommentarer til
