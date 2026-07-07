@@ -20,6 +20,11 @@
     "payload": { "tool_input": { "command": "gh pr merge 5 --squash --delete-branch" } }
   },
   {
+    "name": "gh pr merge --rebase → context (stagingbevis-påminnelse #1076)",
+    "expect": "context",
+    "payload": { "tool_input": { "command": "gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
     "name": "git push --force → ask",
     "expect": "ask",
     "payload": { "tool_input": { "command": "git push --force origin claude/x" } }

@@ -103,11 +103,12 @@ case "$cmd_stripped" in
     emit_deny "no-verify" "CLAUDE.md forbyr --no-verify: det omgår commit-msg/pre-commit/pre-push-gatene (versjonering, Refs #N, Dexie-vakt, typecheck/lint/test). Fiks årsaken i stedet. Ekte nødssituasjon? La eier kjøre den manuelt." ;;
 esac
 
-# ── DENY: gh pr merge --squash (rebase-only) ──
+# ── gh pr merge: DENY squash (rebase-only), ellers REMIND stagingbevis-porten (#1076) ──
 case "$cmd_stripped" in
   *"gh pr merge"*)
     case "$cmd_stripped" in
       *--squash*) emit_deny "squash-merge" "Squash brukes ikke i Tørny (mister granulær audit-trail per commit). Bruk: gh pr merge --rebase --delete-branch. Se CLAUDE.md → «Branch + PR-flyt»." ;;
+      *) emit_ctx "pr-merge-staging" "Stagingbevis-porten (#1076): er PR-en bruker-synlig (feat/fix)? Da skal labelen staging-verified være satt før merge — hvis ikke, kjør staging-verify-skillet på PR-nummeret først (eller sett needs-manual-qa med begrunnelse i en kommentar). Docs/chore/refactor/test-PR-er passerer fritt." ;;
     esac ;;
 esac
 
