@@ -62,6 +62,11 @@ via PR når tilliten er etablert).
 - **Konvergert (ACCEPT):** DRAFT-PR med `Closes #<issuenr>` i body,
   `autonomy:review`-label, norsk PR-kommentar: hva som er bygget, hvilke
   kriterier som er bevist (med kommando-utfall), hva som evt. gjenstår manuelt.
+- **Closing-kommentar ved levering:** post samtidig CLAUDE.md-konvensjonens
+  Teknisk/Funksjonell-kommentar på ISSUET, innledet med «Lukkes automatisk når
+  eieren merger PR #<M>». Auto-close ved merge skriver ingen kommentar selv,
+  og eieren skal slippe — kommentaren må derfor stå klar FØR merge (hull
+  funnet ved første kjøring: #1099 lukket kommentar-løst).
 - **Ikke konvergert:** push delarbeidet som draft-PR, post utfylt
   `.forge/templates/eskalering.md` som issue-kommentar (runde-tabell + ETT
   A/B-spørsmål), sett `autonomy:blocked`, fjern `autonomy:ready`.
