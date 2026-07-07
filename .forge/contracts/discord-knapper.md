@@ -47,9 +47,9 @@ Eieren får nå varsler og brief i Discord (utgående, #1117/PR #1118), men svar
 
 ## Success Criteria
 
-- [ ] Unit-tester (Type A) for signaturverifisering (gyldig/ugyldig/utløpt) og custom_id-parsing/handler-valg med mocket GitHub-klient — `npx vitest run lib/loops app/api/discord`.
-- [ ] PING→PONG og ikke-eier-avvisning verifisert i test.
-- [ ] `npm run build` grønn (fanger runtime-export-fella) + full gates.
+- [x] Unit-tester (Type A) for signaturverifisering (gyldig/ugyldig/utløpt) og custom_id-parsing/handler-valg med mocket GitHub-klient — `npx vitest run lib/loops app/api/discord`.
+- [x] PING→PONG og ikke-eier-avvisning verifisert i test.
+- [x] `npm run build` grønn (fanger runtime-export-fella) + full gates.
 - [ ] Stagingbevis-porten (#1076) kjørt på PR-en: signert test-interaction mot staging-deploy utfører label-handling på et test-issue og svarer riktig — DETTE AKTIVERER OG LUKKER #1076.
 - [ ] Ende-til-ende med eieren: ekte knappetrykk fra Discord-appen merger en ekte (ufarlig) PR — aktiveringskriterium, lukker issuet.
 

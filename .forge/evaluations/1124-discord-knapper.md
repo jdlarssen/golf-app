@@ -74,3 +74,79 @@ All EXPECT predictions matched actual output exactly.
 - No path was found where an unverified/unsigned request can reach the GitHub client — every code path to `githubClient()`/`executeAction()` sits behind both the signature+freshness gate and the owner-ID check.
 - Version bump: 1.181.0 → 1.182.0, correct minor bump for a `feat` commit per repo convention. `CHANGELOG.md` untouched with `[no-changelog]` present in the commit body — defensible, since this ships no user-visible surface yet (no button exists to press) — though it's worth noting to the owner that this is a `feat`-prefixed commit riding the internal-change escape hatch; reasonable given the phased rollout, not a rule violation.
 - `proxy.ts` matcher confirmed to exclude all of `api/` from the auth gate, matching the contract's stated assumption — this route is public by design, not by accident.
+
+## Runde 2
+
+**Commit reviewed:** 9168cc08 (docs-only fix on top of 2c30105b) · **Branch:** claude/1124-discord-knapper
+
+**Verdict: ACCEPT.** The single gap from round 1 — Design item 3, the
+sender side that actually produces a button to press — is now closed.
+
+**Scope check.** `git show --stat 9168cc08` touches exactly three files:
+`docs/loops/morgenbriefen.md`, `.forge/evaluations/1124-discord-knapper.md`,
+`.forge/evaluations/1124-discord-knapper-runder.md`. No `app/` or `lib/` path
+appears in the diff — this is a docs-and-evaluations-only commit, as
+expected for a spec-completeness fix. No code changed, so the round-1 code
+review (security walkthrough, mutation-testing, gate results) still stands
+unmodified.
+
+**Custom_id contract cross-check (character-by-character).** The new
+"Discord-speiling (utgående varsel + knapper)" section in
+`docs/loops/morgenbriefen.md` (lines 64–87) declares three button mappings.
+Checked each against `lib/loops/discordActions.ts`'s `parseCustomId`
+regexes:
+
+| Doc text | Regex | Match |
+|---|---|---|
+| `custom_id: merge_pr:<N>` | `/^merge_pr:(\d+)$/` | exact — literal prefix + digits |
+| `custom_id: answer:<issue>:<A\|B>` | `/^answer:(\d+):(A\|B)$/` | exact — literal prefix + digits + `:` + `A\|B` |
+| `custom_id: ready_issue:<N>` | `/^ready_issue:(\d+)$/` | exact — literal prefix + digits |
+
+All three are fully anchored in the regex (`^...$`) and the doc promises
+nothing the parser can't accept — no phantom button, no format drift (e.g.
+no accidental hyphen vs. colon, no extra segment). Doc lists the three in
+merge/answer/ready order while the code comment in `discordActions.ts` lists
+merge/ready/answer — cosmetic ordering only, not a contract mismatch.
+
+**Other Design-item-3 sub-requirements, verified present in the new text:**
+- Bot-API posting path with both env vars: line 72–73, `DISCORD_BOT_TOKEN` +
+  `DISCORD_CHANNEL_ID`, `POST /api/v10/channels/{DISCORD_CHANNEL_ID}/messages`
+  with `Authorization: Bot …` — matches the contract's Design item 3 and item
+  4 env-var list verbatim (`.forge/contracts/discord-knapper.md` line 30).
+- 5-per-row limit: line 82, attributed correctly to Discord's own button-row
+  cap, with an explicit overflow strategy (more rows/messages).
+- 1800-char shortening rule: line 83, shorten + link back to the #1110
+  comment — consistent with the existing webhook-fallback shortening
+  behavior described earlier in the same file (line 44 area), so the two
+  size-limit rules don't contradict each other.
+- Webhook-text fallback: line 85–86, `DISCORD_WEBHOOK_URL`-only case falls
+  back to the pre-existing plain-text mirror ("som før") — correctly
+  reflects that regular webhooks can't send components, matching the
+  contract's stated Discord-constraint (contract line 13).
+- Missing-both silent skip: line 86–87, "Mangler begge: hopp stille over" —
+  present, matches the original heartbeat-vakta section's established
+  silent-skip convention for missing optional env vars.
+
+**Round-history file.** `.forge/evaluations/1124-discord-knapper-runder.md`
+exists, is committed in 9168cc08, and its round-1 row/note accurately
+reflects this file's round-1 verdict (ACCEPT partial), the finding signature
+(sender-side missing), and the correct PENDING ACTIVATION framing for
+criteria 4–5 — no rewriting of history, no score inflation.
+
+**Cross-check for contradictions.** Read the full new section against
+`route.ts` and `discordActions.ts` line by line: no button/custom_id is
+promised that the endpoint can't parse, no env var is named that the route
+doesn't also check (`route.ts` checks `DISCORD_PUBLIC_KEY` /
+`DISCORD_OWNER_ID` / `GITHUB_LOOP_PAT` for receiving; the doc's new bot-API
+path uses the disjoint sender-side pair `DISCORD_BOT_TOKEN` /
+`DISCORD_CHANNEL_ID`, correctly not conflated with the receiving-side vars).
+No inconsistency found.
+
+**Remaining PENDING ACTIVATION items (unchanged from round 1, not blocking):**
+Design item 4 (owner setup recipe posted to the issue) and criteria 4–5
+(real staging button press, real merge) still require the owner's manual
+Discord Developer Portal setup — this is infrastructure that cannot be
+verified in-repo and was already correctly scoped as PENDING ACTIVATION in
+round 1. The docs-only fix in this round doesn't change that scoping; it
+closes the one code-adjacent gap (the protocol text that makes the sender
+side buildable/operable) that was actually reviewable from the tree.

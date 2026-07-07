@@ -15,3 +15,10 @@ Kriterium 4-substitusjonen (Discords egen PING-validering + ekte knappetrykk i
 stedet for syntetisk signert staging-test, siden ekte public key ligger på
 begge Vercel-miljøer) vurdert som holdbar av evaluator. Kriterium 5 = PENDING
 ACTIVATION (ekte knappetrykk etter deploy + endpoint-registrering).
+
+| 2 | ACCEPT | *(ingen)* |
+
+**Runde 2-notat:** smal re-evaluering av design-punkt 3 — custom_id-mappingene i
+protokollen kryssjekket tegn-for-tegn mot parseCustomId-regexene; docs-only-diff
+bekreftet. Konvergert på 2 runder uten strategibytte. Kriterium 4/5 = PENDING
+ACTIVATION (deploy → endpoint-registrering → ekte knappetrykk).
