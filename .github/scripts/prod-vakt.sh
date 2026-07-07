@@ -18,18 +18,20 @@ BASELINE="docs/loops/prod-vakta-baseline.txt"
 REPO="${GITHUB_REPOSITORY:?}"
 
 open_or_note_issue() { # title body — dedupet: hopper over hvis åpent issue med samme tittel finnes
-  local title="$1" body="$2" existing
+  local title="$1" body="$2" existing issue_url
   existing=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number --jq 'length')
   if [ "$existing" -gt 0 ]; then
     echo "Åpent issue «$title» finnes allerede — hopper over."
     return 0
   fi
-  gh api "repos/$REPO/issues" \
+  issue_url=$(gh api "repos/$REPO/issues" \
     -f title="$title" \
     -f body="$body" \
     -f "labels[]=bug" \
     -f "labels[]=prod-vakt" \
-    -F milestone=9
+    -F milestone=9 --jq '.html_url')
+  echo "Opprettet: $issue_url"
+  bash .github/scripts/discord-notify.sh "🚨 **$title** — $issue_url"
 }
 
 fail_closed() { # reason
@@ -45,6 +47,10 @@ Uten lesing er prod i praksis uovervåket — dette issuet skal behandles som et
 # ── 1. Security-advisors mot baseline ──
 ADV=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$API/advisors/security") \
   || fail_closed "advisors-endepunktet svarte ikke (curl-feil mot $API/advisors/security)"
+# Formvalidering (fail-closed, symmetrisk med tellings-stien): en omformet
+# API-respons skal aldri stille degradere til «ingen nye advisories».
+printf '%s' "$ADV" | jq -e '.lints | type == "array"' >/dev/null 2>&1 \
+  || fail_closed "uventet svarform fra advisors-endepunktet (.lints er ikke en liste)"
 NEW_ADV=$(printf '%s' "$ADV" | jq -r '.lints[].cache_key' | grep -vxF -f <(grep -v '^#' "$BASELINE" | grep -v '^$') || true)
 
 # ── 2. Postgres-feil (ERROR/FATAL/PANIC) siste 24 t — kun telling ──
