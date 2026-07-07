@@ -8,7 +8,7 @@ Related: `docs/schema-ground-truth.md` (live-schema snapshot) · `lib/supabase/A
 
 ## 1. The live DB is the source of truth — not the types file, not memory
 
-**Wrong turn:** building against an imagined schema. `course_holes.par` (#666), `game_players.status` (#641/#647), `team_number "1..4"` (#669) — all compiled green and failed only in prod.
+**Wrong turn:** building against an imagined schema. `course_holes.par` (#642), `game_players.status` (#641/#647), `team_number "1..4"` (#669) — all compiled green and failed only in prod.
 
 **Why:** hand-recalled or stale schema produces zero type-check errors and blows up at runtime.
 
