@@ -1,0 +1,12 @@
+# Prod-vakta baseline: aksepterte security-advisory-nøkler (cache_key), én per linje.
+# Nøkler her er BEVISSTE valg — endres kun via PR med begrunnelse i commit-body.
+# Se docs/loops/prod-vakta.md. Første kjøringer kan foreslå flere nøkler (filet
+# som prod-vakt-issue); aksepterte flyttes hit via PR.
+#
+# RLS på uten policies = tilsiktet service-role-lockdown (jf. generert seksjon
+# i docs/schema-ground-truth.md — de fem ⛔-tabellene):
+rls_enabled_no_policy_public_admin_action_rate_limit
+rls_enabled_no_policy_public_admin_audit_log
+rls_enabled_no_policy_public_agent_findings
+rls_enabled_no_policy_public_agent_runs
+rls_enabled_no_policy_public_product_update_digests

@@ -77,6 +77,24 @@ regenererte typer). **Auto-fiks (regenerer typer → PR) er fase 2** og krever
 ikke er satt i repo-secrets. Grønn drift-kjøring beviser altså ikke sync med
 mindre steget faktisk kjørte — sjekk kjøringsloggen ved tvil.
 
+## 7. Prod-vakt-issues (runtime-signaler fra prod)
+
+Åpne issues med label `prod-vakt` (filet av prod-vakt-workflowen, se
+docs/loops/prod-vakta.md) er del av oppdagelsen i steg 1. Håndtering:
+
+- Les tellingene/advisory-nøklene i issuet. **Detaljer som krever
+  Supabase-tilgang** (loggutdrag, spørringer) kan bare hentes i interaktive
+  økter — sky-kjøringer diagnostiserer fra koden alene (grep etter sannsynlige
+  feilkilder, les berørte moduler).
+- **Bug med klar rotårsak og lite omfang:** fiks direkte (stående
+  bug-fullmakt, jf. CLAUDE.md «Direct bug-fix execution») → PR med
+  `Refs #<prod-vakt-issue>`. Aldri merge, aldri prod-skriv.
+- **Ny advisory som er et bevisst valg:** foreslå baseline-tillegg som PR med
+  begrunnelse — aldri stille aksept, aldri rediger baseline uten PR.
+- **Uklart, stort, eller trenger loggdetaljer:** norsk kommentar på issuet med
+  hva som er sjekket i koden og hva en interaktiv økt må hente — issuet blir
+  stående åpent som handoff.
+
 ## Routine-oppsett (ops, post-merge)
 
 - Cloud routine, timelig (minimumsintervallet), prompt: «Følg
