@@ -88,6 +88,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # #1095: npm ci intermittently drops (or corrupts) the platform-specific
+      # Turbopack/SWC native binding — the npm optional-dependency lottery. The
+      # lockfile lists all 8 @next/swc-* platforms, so this is a runtime install
+      # flake, not a missing lockfile entry. Next 16 runs `next dev` on Turbopack
+      # by default, which HARD-requires this binding: absent → the dev server
+      # refuses to boot ("native bindings are not available … only WASM"), so
+      # every spec dies with ERR_CONNECTION_REFUSED; partial/corrupt → the slow
+      # WASM path blows 5s toBeVisible timeouts across unrelated specs.
+      # `require()` is the exact call Next uses to pick native-vs-WASM (the
+      # package's main IS the .node addon), so its success is the precise gate.
+      # Reinstall once if the lottery dropped it, then fail loudly if that fails
+      # — a named, fast failure beats a 2-minute mystery boot-nekt.
+      # Binding name is tied to the linux/x64/glibc `ubuntu-latest` runner above.
+      - name: "Ensure Turbopack native binding (npm optional-dep guard, #1095)"
+        run: |
+          BINDING=@next/swc-linux-x64-gnu
+          if node -e "require('$BINDING')" 2>/dev/null; then
+            echo "$BINDING loads — Turbopack will boot on native bindings."
+            exit 0
+          fi
+          echo "::warning::$BINDING missing/corrupt after npm ci — reinstalling (see #1095)"
+          npm install --no-save --force "$BINDING@$(node -p "require('next/package.json').version")"
+          node -e "require('$BINDING')"
+
       - name: Install Playwright (chromium)
         run: npx playwright install --with-deps chromium
 
