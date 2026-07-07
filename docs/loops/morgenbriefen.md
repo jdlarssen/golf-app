@@ -11,6 +11,11 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   åpent/lukket (`gh issue view --json state`), label faktisk satt. En påstand
   som ikke lar seg verifisere rapporteres som **loop-feil** i briefen — aldri
   som suksess.
+- **Beslutningspunkter krever fersk kommentar-sjekk.** Før et «Svar A/B på
+  #N»-punkt listes: les issuets NYESTE kommentarer. Finnes et eier-svar eller
+  en kontrakt med beslutningen innbakt (f.eks. «Eierbeslutning tatt: A»), er
+  punktet foreldet — utelat det, eller vis neste steg i stedet. (Lærdom fra
+  første brief: #1104 ble listet som ubesvart 30 min etter at eieren svarte A.)
 - **Delta, ikke dump:** finn forrige brief-kommentar på #1110 (nyeste kommentar
   som starter med `☀️ Morgenbrief`); rapporter kun endringer etter dens
   tidsstempel. Første brief noensinne: siste 24 timer.
