@@ -682,6 +682,7 @@ export type Database = {
           mode_config: Json
           name: string
           payment_link: string | null
+          prizes: Json
           registration_mode: Database["public"]["Enums"]["registration_mode"]
           registration_type: Database["public"]["Enums"]["registration_type"]
           require_peer_approval: boolean
@@ -720,6 +721,7 @@ export type Database = {
           mode_config?: Json
           name: string
           payment_link?: string | null
+          prizes?: Json
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
           require_peer_approval?: boolean
@@ -758,6 +760,7 @@ export type Database = {
           mode_config?: Json
           name?: string
           payment_link?: string | null
+          prizes?: Json
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
           require_peer_approval?: boolean
