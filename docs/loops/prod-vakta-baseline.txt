@@ -10,3 +10,71 @@ rls_enabled_no_policy_public_admin_audit_log
 rls_enabled_no_policy_public_agent_findings
 rls_enabled_no_policy_public_agent_runs
 rls_enabled_no_policy_public_product_update_digests
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# #1121 — sikkerhetsherding fra prod-vaktas første kjøring (migrasjon 0137).
+# Live katalog-gjennomgang per funksjon (staging + prod read-only, 2026-07-07),
+# mot faktiske kall-steder, RLS-policies og login-flyten. De aktivt fiksede
+# funksjonene (search_path-lås + anon/PUBLIC-revokes) er BORTE fra advisoren og
+# står IKKE her — kun de bevisst-beholdte flatene under. IKKE en blind
+# revoke-sweep (feilklassen fra #641). Se docs/loops/prod-vakta.md + kontrakt
+# .forge/contracts/1121-prod-vakt-sikkerhetsherding.md.
+#
+# Auth-config: OTP-only innlogging — ingen brukerpassord finnes, så
+# leaked-password-vern er ikke anvendbart (eier-beslutning 2026-07-07). Flippes
+# hvis passord-auth noen gang innføres.
+auth_leaked_password_protection
+#
+# anon-EXECUTE beholdt: SECURITY DEFINER-helpere referert av {public}-policies.
+# anon har fulle tabell-grants (RLS er porten); revoke ville gitt «permission
+# denied for function» på anon-spørringer FØR RLS rekker å nekte.
+# email_is_invited er pre-login shouldCreateUser-gaten (anon MÅ beholde).
+anon_security_definer_function_executable_public_email_is_invited_check_email text
+anon_security_definer_function_executable_public_is_admin_
+anon_security_definer_function_executable_public_is_in_game_p_game_id uuid
+anon_security_definer_function_executable_public_is_game_creator_or_admin_p_game_id uuid
+anon_security_definer_function_executable_public_can_score_for_p_game_id uuid, p_other_user uuid
+anon_security_definer_function_executable_public_same_flight_or_solo_p_game_id uuid, p_other_user uuid
+#
+# authenticated-EXECUTE beholdt: signed-in brukere kaller disse legitimt. Hver
+# håndhever egen authz internt (auth.uid()/is_admin-sjekk) eller er en RLS-helper
+# som evalueres av authenticated-rollen under policy-sjekk. Å revoke ville brutt
+# RLS eller innloggede bruker-flyter.
+#   — RLS-helper-booleans (evalueres i policy-uttrykk):
+authenticated_security_definer_function_executable_public_is_admin_
+authenticated_security_definer_function_executable_public_is_game_creator_or_admin_p_game_id uuid
+authenticated_security_definer_function_executable_public_is_group_admin_p_group_id uuid
+authenticated_security_definer_function_executable_public_is_group_member_p_group_id uuid
+authenticated_security_definer_function_executable_public_is_in_game_p_game_id uuid
+authenticated_security_definer_function_executable_public_is_invite_eligible_p_creator uuid, p_recipient uuid, p_group_id uuid
+authenticated_security_definer_function_executable_public_can_react_in_game_p_game_id uuid
+authenticated_security_definer_function_executable_public_can_score_for_p_game_id uuid, p_other_user uuid
+authenticated_security_definer_function_executable_public_same_flight_p_game_id uuid, p_other_user uuid
+authenticated_security_definer_function_executable_public_same_flight_or_solo_p_game_id uuid, p_other_user uuid
+authenticated_security_definer_function_executable_public_league_group_id_p_league_id uuid
+#   — auth-oracle-helpere bak authenticated-ruter (invite/admin/login):
+authenticated_security_definer_function_executable_public_email_is_invited_check_email text
+authenticated_security_definer_function_executable_public_email_is_in_auth_users_email_to_check text
+authenticated_security_definer_function_executable_public_email_is_registered_p_email text
+#   — rate-limiter kalt av admin-invite via innlogget admin-klient
+#     (lib/admin/rateLimit.ts ← admin/spillere/actions.ts); login/self-reg
+#     bruker service-role. Follow-up: rut admin-limiteren via service-role, så
+#     kan authenticated revokes også.
+authenticated_security_definer_function_executable_public_consume_admin_rate_limit_p_bucket text, p_max integer, p_window_seconds integer
+#   — bruker-RPC-er (authenticated server-actions, intern authz):
+authenticated_security_definer_function_executable_public_accept_club_invitations_
+authenticated_security_definer_function_executable_public_add_club_member_by_email_p_group_id uuid, p_email text
+authenticated_security_definer_function_executable_public_admin_create_club_p_name text, p_owner_email text, p_member_cap integer, p_valid_until timestamp with time zone
+authenticated_security_definer_function_executable_public_admin_key_metrics_
+authenticated_security_definer_function_executable_public_befriend_inviter_p_inviter uuid
+authenticated_security_definer_function_executable_public_connect_via_friend_code_p_code text
+authenticated_security_definer_function_executable_public_create_course_with_layout_p_name text, p_holes jsonb, p_tees jsonb
+authenticated_security_definer_function_executable_public_decide_join_request_p_request_id uuid, p_approve boolean
+authenticated_security_definer_function_executable_public_incomplete_profiles_for_ids_p_user_ids uuid[]
+authenticated_security_definer_function_executable_public_join_club_league_p_league_id uuid
+authenticated_security_definer_function_executable_public_leave_club_league_p_league_id uuid
+authenticated_security_definer_function_executable_public_remove_friend_p_other uuid
+authenticated_security_definer_function_executable_public_respond_friend_request_p_request_id uuid, p_accept boolean
+authenticated_security_definer_function_executable_public_send_friend_request_p_addressee uuid
+authenticated_security_definer_function_executable_public_send_friend_request_by_email_p_email text
+authenticated_security_definer_function_executable_public_set_club_member_role_p_group_id uuid, p_user_id uuid, p_role public.group_role
