@@ -12,11 +12,15 @@ procedure before continuing — each rule traces to a real failure in this repo'
 
 1. Match your situation against the trigger table. Triggers are observable events, not
    vibes. Several can fire at once; run every one that matches, in table order.
-2. Read the procedure file with the Read tool — once per session. A procedure already read
+2. Make the dispatch visible: your first status message on a new task names the
+   classification (TRIVIAL/FULL, T1 step 1) and the triggers you expect to fire. A
+   dispatch that never appears in output did not happen — "this is a simple cleanup" in
+   place of a classification is the anti-rationalization table's first row.
+3. Read the procedure file with the Read tool — once per session. A procedure already read
    is re-RUN from memory, not re-read; re-read only after context compaction (T9).
-3. Follow numbered steps literally. Where a step names an exit condition, do not move on
+4. Follow numbered steps literally. Where a step names an exit condition, do not move on
    until it is met. SKIP-conditions are explicit; if none applies, you may not skip.
-4. `docs/agent-discipline/bindings.md` maps generic steps to this repo's exact commands,
+5. `docs/agent-discipline/bindings.md` maps generic steps to this repo's exact commands,
    paths and domain traps. Procedures point to its sections (§T1–§T7 and §T9,
    §Enforcement — which also covers T8's repo specifics — and §Domain triggers).
 

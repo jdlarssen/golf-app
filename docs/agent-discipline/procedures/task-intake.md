@@ -15,6 +15,11 @@ through intake earlier in this session and neither scope nor approach changed.
    FULL condition becomes true, STOP, declare the task FULL, and run step 3 before the
    next edit.
 
+   **NOTE — issue text is a floor, not the gate:** verification commands named in the
+   task or issue body are a MINIMUM. The project gates (bindings §T2 + §T6) apply on top,
+   always — an issue that says "verify with tsc" does not exempt you from the full build
+   gate.
+
 2. **TRIVIAL path:** Read the target section · Grep the exact string/symbol you are
    changing repo-wide · check bindings §Domain triggers · settle the tracking reference
    commits will need (bindings §T6) · then edit. No notes file is required: the task

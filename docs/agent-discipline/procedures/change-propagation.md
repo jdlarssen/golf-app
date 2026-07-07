@@ -39,8 +39,8 @@ user-visible strings, DB columns, i18n message keys — or you just fixed a bug 
    Exit condition: candidate list with per-file verdicts in the notes file; the checked
    sites are later named in the PR description.
 
-4. **Union/enum extension:** the compiler is your checklist ONLY if you run it on
-   everything. Run the project's full build gate (bindings §T2) — not a type-check
+4. **Union/enum extension or removal:** the compiler is your checklist ONLY if you run it
+   on everything. Run the project's full build gate (bindings §T2) — not a type-check
    filtered to the files you touched. Fix every new error. Never label an error
    "pre-existing" without proof: `git stash` → rerun → compare → `git stash pop`.
 
