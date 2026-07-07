@@ -58,10 +58,12 @@ export async function renderStableford(opts: {
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
+  /** #1051: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
+  prizeAwardsNode?: ReactNode;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const th2h = await getTranslations('leaderboard.h2h');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
 
   // Stableford-grenen dekker både 'stableford' og 'modified_stableford'.
   // game.game_mode er en GameMode-union; vi narrower til de to stableford-
@@ -221,6 +223,7 @@ export async function renderStableford(opts: {
         return podium(
           false,
           <>
+            {prizeAwardsNode}
             {reportSection}
             {wdSection}
           </>,
@@ -238,6 +241,7 @@ export async function renderStableford(opts: {
             mainContent: podium(true),
             teamGrouping: 'byTeamNumber',
           })}
+          {prizeAwardsNode}
           {reportSection}
           {wdSection}
         </>
@@ -329,6 +333,7 @@ export async function renderStableford(opts: {
       return mainContent(
         false,
         <>
+          {prizeAwardsNode}
           {reportSection}
           {wdSection}
         </>,

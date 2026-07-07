@@ -58,10 +58,12 @@ export async function renderSoloStrokeplay(opts: {
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
+  /** #1051: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
+  prizeAwardsNode?: ReactNode;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const th2h = await getTranslations('leaderboard.h2h');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
 
   // WD (#386): build withdrawn list for the display section. The ctx-builder
   // does its own WD-filtering of players + scores, so we only need the list
@@ -256,6 +258,7 @@ export async function renderSoloStrokeplay(opts: {
             mainContent: mainContent(true),
             teamGrouping: 'solo',
           })}
+          {prizeAwardsNode}
           {reportSection}
           {wdSection}
         </>
@@ -264,6 +267,7 @@ export async function renderSoloStrokeplay(opts: {
     return mainContent(
       false,
       <>
+        {prizeAwardsNode}
         {reportSection}
         {wdSection}
       </>,

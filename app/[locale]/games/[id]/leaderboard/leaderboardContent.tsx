@@ -168,6 +168,19 @@ export async function renderLeaderboardContent({
     ),
   };
 
+  // #1051: Premieutdeling — kobler premiebordet til vinnerne på et avsluttet
+  // spill, rendret rett under podiet via footerSlot i format-renderene. Regnes
+  // ut ÉN gang her (buildPrizeAwards no-op-er billig når spillet ikke har
+  // premier), og tres inn i best-ball-, stableford- og solo-strokeplay-podiene.
+  // Null når spillet ikke har premier eller ingen premie fikk vinner.
+  const prizeAwardsNode =
+    game.status === 'finished'
+      ? await (async () => {
+          const awards = await buildPrizeAwards(supabase, gameId, game.prizes);
+          return awards.length > 0 ? <PrizeAwardsCard awards={awards} /> : null;
+        })()
+      : null;
+
   // Stableford-grenen
   if (isStablefordFamily(game.game_mode)) {
     return withReactions(await renderStableford({
@@ -177,6 +190,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -225,6 +239,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -486,19 +501,6 @@ export async function renderLeaderboardContent({
   const reportSection = game.round_report ? (
     <RoundReportCard text={game.round_report} />
   ) : null;
-
-  // #1051: Premieutdeling — kobler premiebordet til vinnerne på et avsluttet
-  // spill, rett under podiet. Ett integrasjonspunkt i leaderboard-innholdet
-  // (best-ball/strokeplay-podiet); den delte buildPrizeAwards-helperen gjør det
-  // billig å utvide til andre placement-format-renderere senere. Null når
-  // spillet ikke har premier eller ingen premie fikk vinner.
-  const prizeAwardsNode =
-    game.status === 'finished'
-      ? await (async () => {
-          const awards = await buildPrizeAwards(supabase, gameId, game.prizes);
-          return awards.length > 0 ? <PrizeAwardsCard awards={awards} /> : null;
-        })()
-      : null;
 
   if (!showSideTournament) {
     return (
