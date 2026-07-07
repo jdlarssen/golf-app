@@ -82,5 +82,7 @@ mindre steget faktisk kjørte — sjekk kjøringsloggen ved tvil.
 - Cloud routine, timelig (minimumsintervallet), prompt: «Følg
   docs/loops/ci-vakta.md i jdlarssen/golf-app fra topp til bunn.»
 - Nettverks-allowlist trenger kun GitHub/npm (default Trusted) i v1.
-- Heartbeat: når Morgenbriefen (#1080) finnes, avslutter hver kjøring med
-  heartbeat-kommentar der; inntil da er `gh run list` sporet.
+- Heartbeat: CI-vakta poster IKKE heartbeat på Loop-drift-issuet #1110 i v1
+  (24 kommentarer/døgn er støy). Liveness sees på claude.ai/code/routines;
+  Morgenbriefen (#1080) flagger i stedet `CI-vakt:`-issues eldre enn 24 t uten
+  aktivitet.

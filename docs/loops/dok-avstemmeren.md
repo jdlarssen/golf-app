@@ -77,5 +77,8 @@ røres ikke av loopen.
    seksjon. Bevis-kommando i hver commit-body.
 2. Issues for: skjema-avvik prod↔staging, regel-avvik (eierbeslutning),
    uverifiserbare claims. Alltid med milestone (9 = Backlog hvis ingen passer).
-3. Ingen funn → én linje i kjøringsloggen («alt avstemt») — det er suksess.
-   Når Morgenbriefen (#1080) finnes: heartbeat-kommentar der.
+3. Ingen funn → én linje («alt avstemt») — det er suksess.
+4. **Heartbeat (ALLTID):** avslutt hver kjøring med én kommentar på det pinnede
+   Loop-drift-issuet **#1110**: `📋 Dok-avstemmeren <dato>: <utfall>` (docs-PR
+   åpnet / alt avstemt / fikk ikke verifisert). Morgenbriefen bruker den som
+   liveness-signal.
