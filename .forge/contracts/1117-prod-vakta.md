@@ -30,16 +30,16 @@ Loopene spiser i dag kun fra repoet — prod-runtime-feil og nye security-adviso
 
 ## Success Criteria
 
-- [ ] Workflow + skript finnes; YAML og bash parser (`bash -n`); token-guard, failure-steg, dedupe og milestone-via-nummer på plass (fil-lesing).
-- [ ] Skriptets issue-tekster inneholder aldri rå loggdata (kun tellinger/nøkler) — verifisert ved lesing av alle BODY-konstruksjoner.
-- [ ] Baseline seedet med dagens faktiske advisory-nøkler (fra dagens MCP-kjøring), med kommentar-header som forklarer regelen.
-- [ ] prod-vakta.md dekker arkitektur/kilder/personvern/utfallstabell/v2; ci-vakta.md §7 dekker diagnose-stigen.
-- [ ] Første reelle kjøring (dispatch etter merge): grønn med «alt stille» ELLER korrekt filet signal-issue — aktiveringskriterium, verifiseres post-merge.
+- [x] Workflow + skript finnes; YAML og bash parser (`bash -n`); token-guard, failure-steg, dedupe og milestone-via-nummer på plass — evaluator PASS med bevis; formvaliderings-funn fikset i samme PR.
+- [x] Skriptets issue-tekster inneholder aldri rå loggdata (kun tellinger/nøkler) — evaluator leste alle BODY-konstruksjoner.
+- [x] Baseline seedet med de fem sikre nøklene (bevisste service-role-lockdowns) + dokumentert issue→PR-flyt for påfyll fra første kjøringer.
+- [x] prod-vakta.md dekker arkitektur/kilder/personvern/utfallstabell/v2; ci-vakta.md §7 dekker diagnose-stigen — evaluator verifiserte seksjonsrekkefølgen.
+- [ ] Første reelle kjøring (dispatch etter merge): grønn med «alt stille» ELLER korrekt filet signal-issue — PENDING MERGE+DISPATCH.
 
 ## Gates
 
-- [ ] `bash -n .github/scripts/prod-vakt.sh` + YAML-parse av workflowen
-- [ ] `bash tests/hooks/guard.test.sh` (uendret grønn)
+- [x] `bash -n .github/scripts/prod-vakt.sh` + YAML-parse av alle tre berørte workflows
+- [x] `bash tests/hooks/guard.test.sh` (39 bestått, 0 feilet)
 
 ## Out of Scope
 
