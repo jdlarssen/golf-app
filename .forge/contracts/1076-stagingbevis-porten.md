@@ -58,11 +58,11 @@ I eksisterende merge-case: `--squash` → deny (uendret); ellers → `additional
 
 ## Success Criteria
 
-- [ ] `.claude/skills/staging-verify/SKILL.md` finnes og dekker alle stegene 0–7 inkl. tre-orakel-kravet, prod-vakta, iterasjonstaket og begge utfallene (verifisert ved fil-lesing mot denne lista).
-- [ ] bash-guard: plain `gh pr merge` gir REMIND med regel-ID `pr-merge-staging`, `--squash` gir fortsatt DENY — bevist med fixtures.
-- [ ] `bash tests/hooks/guard.test.sh` grønn (alle eksisterende + nye fixtures).
-- [ ] `npm run typecheck` og `npm run lint` uendret grønne.
-- [ ] Første reelle kjøring mot en ekte feat/fix-PR: PENDING — issuet holdes åpent til skillet er bevist på neste bruker-synlige PR (aktiveringskriterium, ikke PR-kriterium).
+- [x] `.claude/skills/staging-verify/SKILL.md` dekker alle stegene 0–7 — evaluator gikk linje-for-linje mot Design-lista (inkl. 0-rader-formuleringen og A/B-hypotese-kravet).
+- [x] bash-guard: plain merge → REMIND `pr-merge-staging` (manuelt verifisert regel-ID + loggføring), `--squash` → fortsatt DENY; case-strukturen garanterer deny-presedens. Fixtures består.
+- [x] `bash tests/hooks/guard.test.sh` grønn — 39 bestått, 0 feilet.
+- [x] `npm run typecheck` og `npm run lint` uendret grønne (kjørt i worktreen med Node 22).
+- [ ] Første reelle kjøring mot en ekte feat/fix-PR: PENDING FIRST USE — issuet holdes åpent til skillet er bevist på neste bruker-synlige PR. Labels `staging-verified`/`needs-manual-qa` opprettet 2026-07-07 (evaluator-funn: måtte finnes før første bruk).
 
 ## Gates
 
