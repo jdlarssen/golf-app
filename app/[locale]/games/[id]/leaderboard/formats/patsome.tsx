@@ -25,9 +25,11 @@ export async function renderPatsome(opts: {
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
+  /** #1051/#1119: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
+  prizeAwardsNode?: ReactNode;
 }) {
   const tc = await getTranslations('leaderboard.common');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
 
   const ctx = {
     game: {
@@ -129,11 +131,12 @@ export async function renderPatsome(opts: {
             mainContent: finishedView(true),
             teamGrouping: 'byTeamNumber',
           })}
+          {prizeAwardsNode}
           {reportSection}
         </>
       );
     }
-    return finishedView(false, reportSection);
+    return finishedView(false, <>{prizeAwardsNode}{reportSection}</>);
   }
 
   return (

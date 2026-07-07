@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import {
@@ -56,9 +57,11 @@ export async function renderTexasScramble(opts: {
   backHref: string;
   /** Format-label for sub-tittel i view + podium. Gjennomgis fra MODE_LABELS[game.game_mode]. */
   formatLabel?: string;
+  /** #1051/#1119: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
+  prizeAwardsNode?: ReactNode;
 }) {
   const tc = await getTranslations('leaderboard.common');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, formatLabel } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, formatLabel, prizeAwardsNode } = opts;
 
   // Reveal-modus (issue #801): mens spillet er aktivt og score_visibility='reveal'
   // skjules netto-rangeringen — kun brutto-slag per lag vises. Texas scramble
@@ -188,7 +191,7 @@ export async function renderTexasScramble(opts: {
         backHref={backHref}
         formatLabel={formatLabel}
         chromeless={chromeless}
-        footerSlot={chromeless ? undefined : reportSection}
+        footerSlot={chromeless ? undefined : <>{prizeAwardsNode}{reportSection}</>}
       />
     );
     if (game.side_tournament_enabled) {
@@ -204,6 +207,7 @@ export async function renderTexasScramble(opts: {
             mainContent: podium(true),
             teamGrouping: 'byTeamNumber',
           })}
+          {prizeAwardsNode}
           {reportSection}
         </>
       );

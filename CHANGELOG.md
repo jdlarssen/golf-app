@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.183 · Premieutdeling på alle spillformer</strong></summary>
+
+[#1119](https://github.com/jdlarssen/golf-app/issues/1119) — Premieutdelingen ved rundeslutt — premie koblet til vinner — dukker nå opp på alle spillformene, ikke bare slagspill, stableford og best ball: også scramble, shamble, Wolf, Nassau, Skins, Nines og resten av gjengen.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
 <summary><strong>1.181 · Premiebord og sponsorer</strong></summary>
 
 [#1051](https://github.com/jdlarssen/golf-app/issues/1051) — Du kan nå legge inn et premiebord på spillet: premie og eventuell sponsor for 1.–3. plass og for lengste drive og nærmest flagget. Spillerne ser bordet før start på spill-hjem og påmeldingssiden, sponsorene får en tekststripe på tavla, tilskuerlenken og embed-en, og når runden er ferdig kobles premiene til vinnerne i en egen premieutdeling under podiet (slagspill, stableford og best ball).

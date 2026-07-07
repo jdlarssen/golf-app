@@ -42,11 +42,13 @@ export async function renderNassau(opts: {
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
+  /** #1051/#1119: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
+  prizeAwardsNode?: ReactNode;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const tn = await getTranslations('leaderboard.nassau');
   const tSettle = await getTranslations('leaderboard.common.settlement');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
   // (NassauHolesBody), så map-logikken ikke dupliseres.
@@ -215,11 +217,12 @@ export async function renderNassau(opts: {
             mainContent: mainContent(true),
             teamGrouping: 'solo',
           })}
+          {prizeAwardsNode}
           {reportSection}
         </>
       );
     }
-    return mainContent(false, reportSection);
+    return mainContent(false, <>{prizeAwardsNode}{reportSection}</>);
   }
 
   return (

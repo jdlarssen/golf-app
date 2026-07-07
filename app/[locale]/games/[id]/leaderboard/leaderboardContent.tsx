@@ -252,6 +252,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
       formatLabel: MODE_LABELS[game.game_mode],
     });
   }
@@ -265,6 +266,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -277,6 +279,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -289,6 +292,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -301,6 +305,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -313,6 +318,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -325,6 +331,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -337,6 +344,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     }));
   }
 
@@ -349,6 +357,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     });
   }
 
@@ -361,6 +370,7 @@ export async function renderLeaderboardContent({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      prizeAwardsNode,
     });
   }
 
