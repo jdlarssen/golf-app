@@ -69,8 +69,10 @@ export async function buildPrizeAwards(
 
   const [playersRes, sideWinners] = await Promise.all([
     supabase
+      // #798: game_players har >1 FK til users → eksplisitt FK-hint kreves
+      // (ellers PGRST201 i runtime). Håndhevet av embedAmbiguity.test.ts.
       .from('game_players')
-      .select('user_id, result_summary, users(name, nickname)')
+      .select('user_id, result_summary, users!game_players_user_id_fkey(name, nickname)')
       .eq('game_id', gameId),
     fetchSideWinners(supabase, gameId),
   ]);
