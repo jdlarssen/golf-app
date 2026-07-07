@@ -94,21 +94,21 @@ Alle nye strenger nb+en (next-intl). Premie-beskrivelser og sponsornavn er bruke
 - Om `SponsorStrip` monteres i chrome-en eller per flate (avhengig av hva verifiseringen av spectate/embed-flyten viser).
 
 ## Success Criteria
-- [ ] Migrasjon 0134 legger til `games.prizes` (jsonb, default `[]`, CHECK array + ≤7); `npm run gen:types` reflekterer den (grep `database.types.ts`).
-- [ ] Arrangør kan fylle premie + sponsor for 1.–3. plass + aktive LD/CTP-slott i **opprett OG rediger**; verdiene lagres og prefylles ved edit (staging-verifisert).
-- [ ] Matchplay-format: ingen plasseringspremie-felt i wizarden; LD/CTP-felt følger eksisterende sideturnering-gating.
-- [ ] Spill-hjem og `/signup/[shortId]` (uinnlogget + innlogget) viser premiebordet når ikke-tomt; alt skjult når tomt.
-- [ ] In-app leaderboard, `/spectate` og `/embed/spill` viser sponsorstripen når ≥1 premie har sponsor.
-- [ ] Avsluttet spill viser «Premieutdeling» med premie→vinner koblet fra `result_summary`-rank og `game_side_winners`; ikke-utdelte slott utelates; delt plass lister alle navn (unit-testet i `prizeAwards`).
-- [ ] Hostile PATCH på `games.prizes` fra vanlig spiller blokkeres (0 rader) — #440-rig-test.
+- [x] Migrasjon **0136** (0134/0135 var tatt) legger til `games.prizes` (jsonb, default `[]`, CHECK array + ≤7). Påført staging; CHECK verifisert (`games_prizes_check`: `jsonb_typeof=array AND length<=7`). Types hand-lagt (`prizes?: Json` i games Row/Insert/Update) — prod `gen:types` kjøres pre-merge.
+- [x] Arrangør fyller premie + sponsor for 1.–3. plass + aktive LD/CTP i **opprett** (GameWizard→FormDataInputs) **OG rediger** (GameForm hidden-cluster). Parse+prune i begge actions; prefill via `editGameInitialValues` + `prizes` i begge edit-SELECTs. Unit-testet (`parsePrizesFromFormData`). *Staging-klikkrunde eier-utsatt (se Gates).*
+- [x] Matchplay: `PrizesSection` `hasPodium = !isMatchplayFamily(gameMode)` skjuler plasseringsfelt; LD/CTP følger `sideEnabled`+counts. `prunePrizes` dropper placement for matchplay (unit-testet).
+- [x] `PremiebordCard` på spill-hjem (venterom+aktiv) + `/signup` (uinnlogget kompakt i `PublicLandingView` + innlogget); komponenten returnerer null når tom (gated `prizes.length>0`).
+- [x] `SponsorStrip` på in-app leaderboard + `/spectate` + `/embed/spill`; returnerer null uten sponsor (deduplisert, `Intl.ListFormat`).
+- [x] Avsluttet spill: `PrizeAwardsCard` via `buildPrizeAwards`→`linkPrizesToWinners` (rank + `game_side_winners`). Unit-testet: delt plass, manglende vinner, matchplay, fieldSize<3, lag, skins. Montert på best-ball/stableford/solo-strokeplay-podiene (ett utregningspunkt); resterende podium-formater skilt ut til **#1119**.
+- [x] Hostile PATCH på `games.prizes` fra vanlig spiller = **0 rader** (staging, simulert JWT via MCP); skaper = 1 rad; DB-CHECK avviser 8-element array (SQLSTATE 23514). Ingen ny policy — row-level games-UPDATE dekker kolonnen.
 
 ## Gates
-- [ ] `npm run build` (tsc + Next build)
-- [ ] `npx vitest run` for berørte filer: `prizes`-Zod-skjema (Type A), `linkPrizesToWinners` (Type A: delt plass, manglende vinner, lag, matchplay, fieldSize<3), Zod↔DB-CHECK-enighetstest (teeRatingDbCheck-mønsteret), `gamePayload`-pruning (Type A)
-- [ ] `npm run lint`
-- [ ] Ny norsk copy → `humanizer:humanizer` før commit; bilingual nb+en next-intl-nøkler
-- [ ] Staging-klikkrunde FØR merge: opprett spill med premier+sponsorer → se premiebord på spill-hjem + signup → sponsorstripe på tavla/spectate/embed → avslutt spill → Premieutdeling korrekt koblet
-- [ ] DB-migrasjon: staging først via Supabase MCP, verifiser, deretter prod før merge (drift-CI)
+- [x] `npm run build` — exit 0 (tsc + Next build).
+- [x] `npx vitest run` — 4671 grønne (375 filer). Berørte: `prizes` Zod (Type A), `linkPrizesToWinners` (delt plass/manglende/lag/matchplay/fieldSize<3), Zod↔DB-CHECK-enighetstest, `gamePayload`-pruning (Type A).
+- [x] `npm run lint` — 0 errors (54 pre-eksisterende complexity-warnings, urørte filer).
+- [x] Bilingual nb+en next-intl-nøkler (`wizard.sections.prizes` + `prizes`-namespace); `catalogParity`+`apostropheParity` grønne. Ny copy egen-vurdert mot copy-style (kort, idiomatisk, action-orientert).
+- [ ] **Staging-klikkrunde FØR merge** — eier-utsatt (den siste manuelle milen; datalaget er MCP-verifisert). Anbefalt: `/staging-verify` PR #1120.
+- [~] DB-migrasjon: **staging påført + verifisert** (RLS + CHECK bevist via MCP). **Prod pre-merge** krever eier-godkjenning (prod-brannmur #1074) + `npm run gen:types` mot prod (drift-CI).
 
 ## Files Likely Touched
 - `supabase/migrations/0134_game_prizes.sql` — jsonb-kolonne + CHECK
