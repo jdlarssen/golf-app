@@ -1,0 +1,63 @@
+# Prod-vakta: daglig read-only lesing av prod-telemetri (Supabase advisors +
+# postgres-feiltellinger) med dedupede varsel-issues. Kjører før Morgenbriefen
+# (06:30 Oslo) slik at funn rekker inn i dagens brief. Selve diagnosen og
+# fiksingen skjer i CI-vaktas timelige kjøringer (docs/loops/ci-vakta.md →
+# «Prod-vakt-issues») og interaktive økter. Se docs/loops/prod-vakta.md.
+name: Prod-vakt
+
+on:
+  schedule:
+    - cron: '30 3 * * *' # daglig 03:30 UTC (~05:30 Oslo sommertid)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  telemetri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if Supabase token is not configured
+        id: guard
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::SUPABASE_ACCESS_TOKEN ikke satt — prod-vakta kan ikke lese telemetri."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Les telemetri og fil varsel ved signal
+        if: steps.guard.outputs.run == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          REF: glofubopddkjhymcbaph
+        run: bash .github/scripts/prod-vakt.sh
+
+      # Rød kjøring skal aldri dø stille (samme mønster som schema-drift/main-verify).
+      # fail_closed-issuet dekker lese-feil; dette steget dekker alt annet uventet.
+      - name: Open alert issue on failure
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="CI-vakt: prod-vakt-workflowen rød"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Prod-vakt-workflowen feilet uventet.\n\nKjøring: %s\n\nFix-protokoll: `docs/loops/ci-vakta.md`.' "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -F milestone=9
