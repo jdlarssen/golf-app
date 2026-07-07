@@ -38,6 +38,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           GH_TOKEN: ${{ github.token }}
           REF: glofubopddkjhymcbaph
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: bash .github/scripts/prod-vakt.sh
 
       # Rød kjøring skal aldri dø stille (samme mønster som schema-drift/main-verify).

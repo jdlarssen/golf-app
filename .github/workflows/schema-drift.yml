@@ -69,8 +69,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           TITLE="CI-vakt: schema-drift rød"
+          bash .github/scripts/discord-notify.sh "🔴 **Schema-drift rød** — $RUN_URL"
           EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
           if [ "$EXISTING" -gt 0 ]; then
             echo "Åpent varsel-issue finnes allerede — hopper over."
