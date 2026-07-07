@@ -36,7 +36,7 @@ export function PrizeAwardsCard({ awards }: { awards: PrizeAward[] }) {
 
   return (
     <Card className="mx-4">
-      <div className="space-y-4">
+      <div className="space-y-4" data-testid="prize-awards-card">
         <h3 className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
           {t('awardsTitle')}
         </h3>

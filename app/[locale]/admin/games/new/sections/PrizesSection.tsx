@@ -63,7 +63,10 @@ export function PrizesSection({ state }: Props) {
   if (slots.length === 0) return null;
 
   return (
-    <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
+    <fieldset
+      data-testid="prizes-section"
+      className="space-y-3 rounded-md border border-border bg-surface px-4 py-4"
+    >
       <legend className="px-1 text-sm font-semibold text-foreground">
         {t('legend')}
       </legend>
@@ -78,6 +81,7 @@ export function PrizesSection({ state }: Props) {
             <input
               type="text"
               inputMode="text"
+              data-testid={`prize-${slot.key}-desc`}
               value={prizeDraft[slot.key].description}
               onChange={(e) =>
                 setPrizeField(slot.key, 'description', e.target.value)
@@ -90,6 +94,7 @@ export function PrizesSection({ state }: Props) {
             <input
               type="text"
               inputMode="text"
+              data-testid={`prize-${slot.key}-sponsor`}
               value={prizeDraft[slot.key].sponsor}
               onChange={(e) =>
                 setPrizeField(slot.key, 'sponsor', e.target.value)

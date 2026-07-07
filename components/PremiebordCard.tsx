@@ -46,7 +46,7 @@ export function PremiebordCard({
   }
 
   const body = (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="premiebord-card">
       <h3
         className={
           variant === 'compact'

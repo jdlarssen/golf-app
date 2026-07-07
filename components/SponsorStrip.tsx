@@ -36,6 +36,7 @@ export function SponsorStrip({
 
   return (
     <p
+      data-testid="sponsor-strip"
       className={`px-4 py-2 text-center text-[11px] text-muted ${className ?? ''}`}
     >
       {t('sponsorStrip', { sponsors: list })}
