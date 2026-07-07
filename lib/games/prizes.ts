@@ -120,3 +120,71 @@ export function prunePrizes(
     return p.position >= 1 && p.position <= shape.ctpCount;
   });
 }
+
+// ── Wizard-slott-katalog (delt: state ↔ hidden inputs ↔ payload-parsing) ───────
+
+export type PrizeSlotKey =
+  | 'placement_1'
+  | 'placement_2'
+  | 'placement_3'
+  | 'ld_1'
+  | 'ld_2'
+  | 'ctp_1'
+  | 'ctp_2';
+
+export type PrizeSlot = {
+  key: PrizeSlotKey;
+  category: PrizeCategory;
+  position: number;
+};
+
+/** De faste premie-slottene, i visnings-/serialiserings-rekkefølge. Én kilde
+ *  for wizard-rendering, hidden-input-navn og payload-parsing (ingen dynamisk
+ *  indeksering — faste slott, jf. bruker-vedtak). */
+export const PRIZE_SLOTS: readonly PrizeSlot[] = [
+  { key: 'placement_1', category: 'placement', position: 1 },
+  { key: 'placement_2', category: 'placement', position: 2 },
+  { key: 'placement_3', category: 'placement', position: 3 },
+  { key: 'ld_1', category: 'longest_drive', position: 1 },
+  { key: 'ld_2', category: 'longest_drive', position: 2 },
+  { key: 'ctp_1', category: 'closest_to_pin', position: 1 },
+  { key: 'ctp_2', category: 'closest_to_pin', position: 2 },
+] as const;
+
+/** Hidden-input-/form-felt-navn for et slott. Delt mellom GameWizard (skriver)
+ *  og gamePayload (leser) så navnesettet aldri drifter. */
+export function prizeFieldName(
+  key: PrizeSlotKey,
+  field: 'desc' | 'sponsor',
+): string {
+  return `prize_${key}_${field}`;
+}
+
+/** Wizard-utkast: rå fritekst per slott (tomt premie-felt = slottet av). */
+export type PrizeDraft = Record<
+  PrizeSlotKey,
+  { description: string; sponsor: string }
+>;
+
+export function emptyPrizeDraft(): PrizeDraft {
+  return PRIZE_SLOTS.reduce((acc, s) => {
+    acc[s.key] = { description: '', sponsor: '' };
+    return acc;
+  }, {} as PrizeDraft);
+}
+
+/** Fyll et utkast fra en lagret premie-liste (edit-prefill). */
+export function prizeDraftFromList(
+  prizes: readonly GamePrize[] | undefined,
+): PrizeDraft {
+  const draft = emptyPrizeDraft();
+  for (const p of prizes ?? []) {
+    const slot = PRIZE_SLOTS.find(
+      (s) => s.category === p.category && s.position === p.position,
+    );
+    if (slot) {
+      draft[slot.key] = { description: p.description, sponsor: p.sponsor ?? '' };
+    }
+  }
+  return draft;
+}

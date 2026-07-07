@@ -19,6 +19,15 @@ import {
   type RegistrationMode,
   type RegistrationType,
 } from './registration';
+import {
+  PRIZE_SLOTS,
+  PRIZE_DESCRIPTION_MAX,
+  PRIZE_SPONSOR_MAX,
+  prizeFieldName,
+  prunePrizes,
+  type GamePrize,
+  type PrizeGameShape,
+} from './prizes';
 
 /**
  * Parse a 'YYYY-MM-DDTHH:mm' string (as emitted by <input type="datetime-local">)
@@ -318,6 +327,39 @@ function parsePaymentLink(
     .trim()
     .slice(0, 200);
   return raw || null;
+}
+
+/**
+ * #1051: bygger premiebordet fra wizardens faste hidden inputs og beskjærer det
+ * til gyldige slott for modusen + side-counts (`shape`). Tomt premie-felt =
+ * slottet droppes; sponsor uten premie ignoreres; lengder klampes (så tampering
+ * ikke kan bryte Zod/DB-CHECK). Pruning-regelen bor i prunePrizes (prizes.ts) —
+ * ett hjem — så et format-bytte i edit aldri lar foreldreløse premier stå igjen.
+ */
+export function parsePrizesFromFormData(
+  formData: FormData,
+  shape: PrizeGameShape,
+): GamePrize[] {
+  const raw: GamePrize[] = [];
+  for (const slot of PRIZE_SLOTS) {
+    const description = String(
+      formData.get(prizeFieldName(slot.key, 'desc')) ?? '',
+    )
+      .trim()
+      .slice(0, PRIZE_DESCRIPTION_MAX);
+    if (!description) continue; // tomt premie-felt = slottet lagres ikke
+    const sponsor =
+      String(formData.get(prizeFieldName(slot.key, 'sponsor')) ?? '')
+        .trim()
+        .slice(0, PRIZE_SPONSOR_MAX) || null;
+    raw.push({
+      category: slot.category,
+      position: slot.position,
+      description,
+      sponsor,
+    });
+  }
+  return prunePrizes(raw, shape);
 }
 
 /**

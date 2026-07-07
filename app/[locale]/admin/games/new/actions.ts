@@ -9,8 +9,10 @@ import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
   isTeeOffInPast,
+  parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
+import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
@@ -127,6 +129,14 @@ async function createGameInternal(
     disabledCategories: sideDisabledCategories,
   } = sidePayload;
 
+  // #1051: premiebord. Beskjæres til gyldige slott for modusen (matchplay har
+  // intet podium → ingen plasseringspremier) + de valgte LD/CTP-countene.
+  const prizes = parsePrizesFromFormData(formData, {
+    hasPodium: !isMatchplayFamily(payload.game_mode),
+    ldCount: sideLdCount,
+    ctpCount: sideCtpCount,
+  });
+
   if (mode === 'publish') {
     // Block publishing a game whose roster still has not-yet-onboarded players
     // (profile_completed_at IS NULL). Under request-scoped RLS a non-admin
@@ -216,6 +226,8 @@ async function createGameInternal(
       // ingen kontingent; payment_link er null når det ikke er noe beløp.
       entry_fee_kr: payload.entry_fee_kr,
       payment_link: payload.payment_link,
+      // #1051: premiebord (jsonb). Tomt array = ingen premier (feature av).
+      prizes,
       side_tournament_enabled: sideEnabled,
       side_ld_count: sideLdCount,
       side_ctp_count: sideCtpCount,

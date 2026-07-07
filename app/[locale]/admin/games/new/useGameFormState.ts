@@ -18,6 +18,11 @@ import {
 } from '@/lib/games/registration';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
+import {
+  prizeDraftFromList,
+  type PrizeDraft,
+  type PrizeSlotKey,
+} from '@/lib/games/prizes';
 
 // Lag-numre er en bevisst smal union — andre tall (5, 6, …) er ikke meningsfulle
 // i Tørny per d.d. og blir narrower'ed via `isTeamNumber`-guarden under.
@@ -487,6 +492,21 @@ export function useGameFormState({
   );
   const [paymentLink, setPaymentLink] = useState<string>(
     initialValues?.payment_link ?? '',
+  );
+  // #1051: premiebord-utkast — fritekst per fast slott (tomt premie-felt = av).
+  // Pre-fylles fra initialValues.prizes i edit-flyt; serialiseres til faste
+  // hidden inputs (GameWizard) og beskjæres/valideres ved lagring (gamePayload).
+  const [prizeDraft, setPrizeDraft] = useState<PrizeDraft>(() =>
+    prizeDraftFromList(initialValues?.prizes),
+  );
+  const setPrizeField = useCallback(
+    (key: PrizeSlotKey, field: 'description' | 'sponsor', value: string) => {
+      setPrizeDraft((prev) => ({
+        ...prev,
+        [key]: { ...prev[key], [field]: value },
+      }));
+    },
+    [],
   );
   // Nassau (#276): brutto vs netto-toggle. Default 'net' speiler Tørny's
   // ethos. Validatoren (`validateNassau`) leser feltet og faller defensivt
@@ -1759,6 +1779,9 @@ export function useGameFormState({
     setEntryFeeKr,
     paymentLink,
     setPaymentLink,
+    // #1051: premiebord-utkast + per-slott-setter.
+    prizeDraft,
+    setPrizeField,
     isWagerFormat:
       isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey,
     wagerUnitKey: (isSkins ? 'skin' : isNassau ? 'seksjon' : 'poeng') as

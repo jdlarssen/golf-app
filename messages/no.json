@@ -438,6 +438,15 @@
     "paidBadge": "Startkontingent betalt",
     "compactLine": "Ubetalt startkontingent: {amount}"
   },
+  "prizes": {
+    "boardTitle": "Premiebord",
+    "awardsTitle": "Premieutdeling",
+    "placementLabel": "{position}. plass",
+    "ldLabel": "Lengste drive",
+    "ctpLabel": "Nærmest flagget",
+    "sponsoredBy": "Sponset av {sponsor}",
+    "sponsorStrip": "Premier sponset av {sponsors}"
+  },
   "wizard": {
     "intent": {
       "legend": "Hva slags arrangement?",
@@ -775,6 +784,17 @@
         "heading": "6. Innstillinger",
         "peerApprovalTitle": "Krev peer-godkjenning",
         "peerApprovalDesc": "Hvis på, må en annen i flighten godkjenne scorekortet før innsending."
+      },
+      "prizes": {
+        "legend": "Premiebord (valgfritt)",
+        "hint": "Legg inn premie og eventuell sponsor per plass. Spillerne ser premiebordet før start, og ved rundeslutt kobles premiene til vinnerne.",
+        "placementLabel": "{position}. plass",
+        "ldLabel": "Lengste drive",
+        "ctpLabel": "Nærmest flagget",
+        "prizePlaceholder": "Premie, f.eks. middag for to",
+        "sponsorPlaceholder": "Sponsor (valgfritt)",
+        "prizeAriaLabel": "Premie for {slot}",
+        "sponsorAriaLabel": "Sponsor for {slot}"
       }
     },
     "ready": {

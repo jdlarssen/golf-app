@@ -11,8 +11,10 @@ import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
   isTeeOffInPast,
+  parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
+import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import type { Tables } from '@/lib/database.types';
 
@@ -112,6 +114,14 @@ async function updateGameInternal(
     disabledCategories: sideDisabledCategories,
   } = sidePayload;
 
+  // #1051: premiebord. Beskjæres til gyldige slott for modusen + LD/CTP-counts
+  // — et format-bytte i edit (draft) dropper foreldreløse plasseringspremier.
+  const prizes = parsePrizesFromFormData(formData, {
+    hasPodium: !isMatchplayFamily(payload.game_mode),
+    ldCount: sideLdCount,
+    ctpCount: sideCtpCount,
+  });
+
   if (mode === 'publish' || mode === 'update_scheduled') {
     // Pending-profile gate via SECURITY DEFINER RPC (migration 0071), not a
     // direct users-read: under request-scoped RLS a non-admin creator can't see
@@ -193,6 +203,9 @@ async function updateGameInternal(
       // scheduled-gating som feltene over (optimistic-lock på status nedenfor).
       entry_fee_kr: payload.entry_fee_kr,
       payment_link: payload.payment_link,
+      // #1051: premiebord (jsonb) — samme draft/scheduled-gating (optimistic-
+      // lock på status under). Beskjært til gyldige slott for modus + counts.
+      prizes,
       // score_visibility is implicitly gated by the .eq('status', allowedFromStatus)
       // filter below — it only writes when the row is still draft/scheduled.
       // If status flipped to active/finished between form-render and submit,

@@ -6,6 +6,7 @@ import {
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { safeParsePrizes } from '@/lib/games/prizes';
 
 /**
  * Shared by both edit flows: admin's `/admin/games/[id]/edit` (Sekretariatet)
@@ -53,6 +54,10 @@ export type EditGameRow = {
   // dra med seg penge-oppsettet automatisk, arrangøren bestemmer på nytt.
   entry_fee_kr?: number;
   payment_link?: string | null;
+  // #1051 — premiebord (jsonb). Valgfri på row-typen; edit-flytene selekterer
+  // den (pre-fyller), revansje-flyten utelater den (samme prinsipp som
+  // entry_fee — en rematch skal ikke dra premiebordet med automatisk).
+  prizes?: unknown;
 };
 
 export type EditGamePlayerRow = {
@@ -194,5 +199,8 @@ export function buildEditInitialValues(
     // så feltet vises tomt (av) i stedet for «0» (og revansje ikke drar det med).
     entry_fee_kr: (game.entry_fee_kr ?? 0) > 0 ? game.entry_fee_kr : undefined,
     payment_link: game.payment_link ?? undefined,
+    // #1051: pre-fyller premiebordet. safeParsePrizes → [] når ingen/ugyldig,
+    // så draften starter tom. Revansje utelater game.prizes → tom draft.
+    prizes: safeParsePrizes(game.prizes),
   };
 }

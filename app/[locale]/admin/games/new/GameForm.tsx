@@ -1,8 +1,10 @@
 'use client';
 
+import { Fragment } from 'react';
 import { Button } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { PRIZE_SLOTS, prizeFieldName, type GamePrize } from '@/lib/games/prizes';
 import type {
   RegistrationMode,
   RegistrationType,
@@ -213,6 +215,12 @@ export type InitialValues = {
    * #1049: Vipps-nummer eller betalingslenke. Pre-fylles fra DB i edit-flyt.
    */
   payment_link?: string;
+  /**
+   * #1051: premiebord (premie + valgfri sponsor per slott). Pre-fylles fra DB
+   * i edit-flyt; udefinert / tomt = ingen premier. Beskjæres til gyldige slott
+   * for modusen + side-counts ved lagring (gamePayload).
+   */
+  prizes?: GamePrize[];
   /**
    * Nassau (#276): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB i
    * edit-flyt; nye spill defaulter til 'net' i useGameFormState.
@@ -526,6 +534,25 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           value={String(greensomeAllowancePct)}
         />
       )}
+
+      {/* #1051: premiebord — alle faste slott alltid serialisert (edit-pathen
+          har ingen FormDataInputs-mirror; denne clusteren er alltid montert, så
+          verdiene overlever selv om «Innstillinger»-disclosuren er lukket).
+          Serveren beskjærer til gyldige slott for modus + side-counts. */}
+      {PRIZE_SLOTS.map((slot) => (
+        <Fragment key={slot.key}>
+          <input
+            type="hidden"
+            name={prizeFieldName(slot.key, 'desc')}
+            value={state.prizeDraft[slot.key].description}
+          />
+          <input
+            type="hidden"
+            name={prizeFieldName(slot.key, 'sponsor')}
+            value={state.prizeDraft[slot.key].sponsor}
+          />
+        </Fragment>
+      ))}
 
       {/* Hidden inputs that carry the structured assignment payload. The server
           action only ever sees the FormData; keeping the names server-known

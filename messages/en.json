@@ -438,6 +438,15 @@
     "paidBadge": "Entry fee paid",
     "compactLine": "Unpaid entry fee: {amount}"
   },
+  "prizes": {
+    "boardTitle": "Prize table",
+    "awardsTitle": "Prize ceremony",
+    "placementLabel": "{position}. place",
+    "ldLabel": "Longest drive",
+    "ctpLabel": "Closest to the pin",
+    "sponsoredBy": "Sponsored by {sponsor}",
+    "sponsorStrip": "Prizes sponsored by {sponsors}"
+  },
   "wizard": {
     "intent": {
       "legend": "What kind of event?",
@@ -775,6 +784,17 @@
         "heading": "6. Settings",
         "peerApprovalTitle": "Require peer approval",
         "peerApprovalDesc": "If on, another player in the flight must approve the scorecard before submission."
+      },
+      "prizes": {
+        "legend": "Prize table (optional)",
+        "hint": "Add a prize and optional sponsor per place. Players see the prize table before the round, and winners are matched to prizes when it ends.",
+        "placementLabel": "{position}. place",
+        "ldLabel": "Longest drive",
+        "ctpLabel": "Closest to the pin",
+        "prizePlaceholder": "Prize, e.g. dinner for two",
+        "sponsorPlaceholder": "Sponsor (optional)",
+        "prizeAriaLabel": "Prize for {slot}",
+        "sponsorAriaLabel": "Sponsor for {slot}"
       }
     },
     "ready": {

@@ -47,7 +47,7 @@ type SearchParams = Promise<{
 }>;
 
 const GAME_SELECT =
-  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, entry_fee_kr, payment_link';
+  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, entry_fee_kr, payment_link, prizes';
 
 export default async function CreatorEditGamePage({
   params,

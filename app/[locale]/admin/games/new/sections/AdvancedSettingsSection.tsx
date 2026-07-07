@@ -20,6 +20,7 @@
 import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
 import { SideCategoriesPicker } from '@/components/admin/SideCategoriesPicker';
+import { PrizesSection } from './PrizesSection';
 
 type Props = {
   state: GameFormState;
@@ -252,6 +253,11 @@ export function AdvancedSettingsSection({
             </div>
           </fieldset>
           )}
+
+          {/* #1051: premiebord — rett etter sideturnering-konfig. Egen visnings-
+              gating (podium + side-counts); serialiseres av den alltid-monterte
+              forelderen (FormDataInputs / GameForm-cluster), ikke her. */}
+          <PrizesSection state={state} />
         </>
       )}
     </section>

@@ -31,7 +31,7 @@
  * direkte.
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import { useLocale } from 'next-intl';
@@ -43,6 +43,7 @@ import type {
   CupEligibleFormat,
 } from '@/lib/formats/getFormatsForIntent';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { PRIZE_SLOTS, prizeFieldName } from '@/lib/games/prizes';
 import { IntentSelector } from './IntentSelector';
 import { FormatGrid } from './FormatGrid';
 import { FormatGuideSheet } from '@/components/FormatGuideSheet';
@@ -769,6 +770,7 @@ function FormDataInputs({
     isWagerFormat,
     entryFeeKr,
     paymentLink,
+    prizeDraft,
     nassauScoring,
     skinsScoring,
     ninesVariant,
@@ -926,6 +928,24 @@ function FormDataInputs({
           alltid serialisert (tom = ingen kontingent). */}
       <input type="hidden" name="entry_fee_kr" value={entryFeeKr} />
       <input type="hidden" name="payment_link" value={paymentLink} />
+      {/* #1051: premiebord — alle faste slott alltid serialisert (tomt = av).
+          Serveren beskjærer til gyldige slott for modus + side-counts
+          (parsePrizesFromFormData), så en stale placement-verdi etter et
+          format-bytte lekker aldri inn. */}
+      {PRIZE_SLOTS.map((slot) => (
+        <Fragment key={slot.key}>
+          <input
+            type="hidden"
+            name={prizeFieldName(slot.key, 'desc')}
+            value={prizeDraft[slot.key].description}
+          />
+          <input
+            type="hidden"
+            name={prizeFieldName(slot.key, 'sponsor')}
+            value={prizeDraft[slot.key].sponsor}
+          />
+        </Fragment>
+      ))}
       {isNines && (
         <>
           <input type="hidden" name="nines_variant" value={ninesVariant} />
