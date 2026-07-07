@@ -61,15 +61,30 @@ Ingenting å melde i en gruppe → utelat gruppa. Alle tre tomme → tom-natt-li
   ikke kjørt på X timer — sjekk Actions»). Stillhet fra en cron er aldri bevis
   på at den lever («grønn kan bety kjørte aldri»-klassen).
 
-## Discord-speiling (utgående varsel)
+## Discord-speiling (utgående varsel + knapper)
 
-Finnes `DISCORD_WEBHOOK_URL` i miljøet: POST hele briefen (eller en forkortet
-utgave hvis > 1800 tegn, med lenke til #1110-kommentaren) som `content` til
-webhooken ETTER at kommentaren på #1110 er postet. GitHub varsler aldri eieren
-om aktivitet under hans egen identitet — Discord-speilet ER derfor eierens
-varslingskanal. Feiler Discord-postingen: noter det i neste briefs Loop-helse
-(«Discord-speiling feilet i går»), aldri la det stoppe briefen. Mangler
-variabelen: hopp stille over (speilet er tillegg, #1110 er primærartefakten).
+GitHub varsler aldri eieren om aktivitet under hans egen identitet — Discord
+ER derfor eierens varslings- og svarkanal. Speilingen skjer ETTER at
+kommentaren på #1110 er postet (den er alltid primærartefakten), og feil i
+Discord-postingen noteres i neste briefs Loop-helse — aldri la det stoppe
+briefen.
+
+**Med bot-identitet (`DISCORD_BOT_TOKEN` + `DISCORD_CHANNEL_ID` i miljøet):**
+post briefen via `POST /api/v10/channels/{DISCORD_CHANNEL_ID}/messages`
+(`Authorization: Bot …`) med **knapper** (`components`, button style 1/2) på
+handlingslinjene i «Trenger deg nå» — custom_id-kontrakten er
+`app/api/discord/interactions/route.ts` sin (#1124):
+
+- Godkjenn-linje for PR → knapp «✅ Merge PR #N» med `custom_id: merge_pr:<N>`
+- A/B-beslutningslinje → to knapper «A»/«B» med `custom_id: answer:<issue>:<A|B>`
+- Natt-kø-kandidat med kontrakt → knapp «🌙 Klarer for natta» med `custom_id: ready_issue:<N>`
+
+Maks 5 knapper per rad (Discords grense); flere handlinger → flere rader/meldinger.
+Innhold over 1800 tegn: forkort og lenk til #1110-kommentaren.
+
+**Kun webhook (`DISCORD_WEBHOOK_URL`):** fall tilbake til ren tekst-speiling
+som før (vanlige webhooks kan ikke sende komponenter). Mangler begge: hopp
+stille over.
 
 ## Månedlig arkivering
 
