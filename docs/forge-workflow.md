@@ -40,3 +40,13 @@ Hvorfor: kontrakter lever i branch-spesifikke `.forge/contracts/`-mapper og er u
 Bruk `<details>`-wrapper så issue-siden ikke drukner i veggen av tekst. Bygg comment-body i en temp-fil og post med `--body-file` (kontrakter er 15–30KB, for store til shell-escaping).
 
 Hvis kontrakten revideres senere i samme sesjon: post oppdatert versjon som ny kommentar — ikke editer den gamle. Audit-trail er viktigere enn ren issue-historikk.
+
+#### Konvergensregler (#1077)
+
+Reglene under gjelder hver `/forge:auto`-kjøring og stopper de to verste autonomi-feilmodusene: å spinne på identiske avvisninger, og å gi opp uten artefakt.
+
+1. **Runde-historikk.** Etter hver evaluate-runde: appender én linje til `.forge/evaluations/<kontrakt-slug>-runder.md` med runde-nummer, verdikt (ACCEPT/NEEDS WORK) og finding-signaturene. Fila committes med `Refs #N` — evalueringssignaler skal overleve kontekstvinduet.
+2. **Finding-signatur.** Hvert funn normaliseres til `fil + kriterium` (f.eks. `bash-guard.sh + logg-lekkasje`), ikke fritekst. Fremgang måles mekanisk: signatur-settet i runde k sammenlignes med runde k−1.
+3. **No-progress → tvunget strategibytte.** To påfølgende runder med identisk signatur-sett = ingen fremgang. Da er blind retry forbudt — bytt strategi: dispatch en fresh-context fix-subagent som KUN får evalueringsrapporten som spec (aldri den forrige agentens kontekst eller antagelser).
+4. **Harde tak.** Maks 5 evaluate-runder totalt per kontrakt; maks 2 no-progress-runder etter strategibytte. Taket nås → gå til punkt 5, aldri «én runde til».
+5. **Ikke-konvergens har alltid artefakt.** Aldri kast delarbeid, aldri reset, aldri stille exit: push delarbeidet som draft-PR og post `.forge/templates/eskalering.md` (utfylt) som kommentar på issuet — inkludert ETT konkret A/B-spørsmål eieren kan besvare uten å lese kode.
