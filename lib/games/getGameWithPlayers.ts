@@ -143,6 +143,14 @@ export type GameForHole = {
    */
   entry_fee_kr: number;
   payment_link: string | null;
+  /**
+   * #1051: premiebord (jsonb). Rå-verdi — konsumenter kaller `safeParsePrizes`
+   * for å få en typet `GamePrize[]`. Driver PremiebordCard (spill-hjem/signup),
+   * SponsorStrip (tavle-flatene) og PrizeAwardsCard (avsluttet spill). Valgfri så
+   * literal-konstruktører (f.eks. demoen #1042) ikke må sette den — safeParse
+   * tolererer undefined → [].
+   */
+  prizes?: unknown;
 };
 
 export type PlayerForHole = {
@@ -191,7 +199,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
       .single<GameForHole>(),
@@ -240,7 +248,11 @@ export async function getGameWithPlayers(
   // `paid_at` (players) joined the select — a stale 'gwp4' entry would resolve
   // them as `undefined`, so the betal-oppfordringen (`PaymentInfo`) on
   // spill-hjem could silently fail to render on games with a fee.
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp5', id], {
+  //
+  // #1051: bumped to 'gwp6' when `prizes` (game) joined the select — a stale
+  // 'gwp5' entry would resolve it as `undefined`, so the premiebord + sponsor-
+  // stripe + premieutdeling would silently not render on games with prizes.
+  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp6', id], {
     tags: [`game-${id}`],
     revalidate: 900,
   })();

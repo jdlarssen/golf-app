@@ -11,6 +11,8 @@ import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AppShell } from '@/components/ui/AppShell';
 import { PaymentInfo } from '@/components/PaymentInfo';
+import { PremiebordCard } from '@/components/PremiebordCard';
+import { safeParsePrizes } from '@/lib/games/prizes';
 import { BackLink } from '@/components/ui/BackLink';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -224,6 +226,10 @@ export default async function GameHomePage({
   // the cached game row so it survives the auto-start refetch below, which uses
   // a slimmer GAME_SELECT without created_by.
   const isCreator = gwp.game.created_by === userId;
+
+  // #1051: premiebordet (self-hider når tomt). Vises før (venterom) og under
+  // (aktiv) runden. safeParse så en malformert blob aldri krasjer spill-hjem.
+  const prizes = safeParsePrizes(gwp.game.prizes);
 
   // Mark related inbox notifications as read on visit. Best-effort: helperen
   // svelger feil internt, så vi blokkerer aldri sida på dette. Vi markerer
@@ -524,6 +530,13 @@ export default async function GameHomePage({
           paid={me.paid_at != null}
           className="mx-4 mb-4"
         />
+
+        {/* #1051: premiebord i venterommet — spillerne ser hva som står på spill. */}
+        {prizes.length > 0 && (
+          <div className="mx-4 mb-4">
+            <PremiebordCard prizes={prizes} />
+          </div>
+        )}
 
         {/* Course card */}
         <Card className="mx-4 p-[18px]">
@@ -872,6 +885,13 @@ export default async function GameHomePage({
                 paymentLink={gwp.game.payment_link}
                 compact
               />
+            )}
+
+            {/* #1051: premiebord under runden — hva spillerne kjemper om. */}
+            {prizes.length > 0 && (
+              <div className="mb-4">
+                <PremiebordCard prizes={prizes} />
+              </div>
             )}
 
             {/* #1068: bane-kort + «DIN INFO» slått sammen til ett kort, flyttet

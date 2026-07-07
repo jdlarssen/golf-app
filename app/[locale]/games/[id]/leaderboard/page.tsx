@@ -15,6 +15,8 @@ import {
 } from './leaderboardContext';
 import { renderLeaderboardContent } from './leaderboardContent';
 import { RevansjeCtaProvider } from './RevansjeCta';
+import { SponsorStrip } from '@/components/SponsorStrip';
+import { safeParsePrizes } from '@/lib/games/prizes';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -168,10 +170,18 @@ export default async function LeaderboardPage({
     !game.tournament_id &&
     !game.league_round_id &&
     gwp.players.some((p) => p.user_id === userId);
-  if (!showRevansje) return content;
+
+  // #1051: sponsorstripe på live-tavla (self-hider uten sponsor).
+  const withSponsors = (
+    <>
+      <SponsorStrip prizes={safeParsePrizes(game.prizes)} />
+      {content}
+    </>
+  );
+  if (!showRevansje) return withSponsors;
   return (
     <RevansjeCtaProvider href={`/opprett-spill?fra=${id}`}>
-      {content}
+      {withSponsors}
     </RevansjeCtaProvider>
   );
 }

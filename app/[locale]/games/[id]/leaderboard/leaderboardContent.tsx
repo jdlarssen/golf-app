@@ -42,7 +42,8 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay } from '@/lib/scoring';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
-import { fetchSideWinners } from './leaderboardContext';
+import { fetchSideWinners, buildPrizeAwards } from './leaderboardContext';
+import { PrizeAwardsCard } from '@/components/PrizeAwardsCard';
 import { ReactionsProvider } from './ReactionsProvider';
 import { fetchGameReactions } from '@/lib/games/reactions/fetch';
 import { renderStableford } from './formats/stableford';
@@ -486,6 +487,19 @@ export async function renderLeaderboardContent({
     <RoundReportCard text={game.round_report} />
   ) : null;
 
+  // #1051: Premieutdeling — kobler premiebordet til vinnerne på et avsluttet
+  // spill, rett under podiet. Ett integrasjonspunkt i leaderboard-innholdet
+  // (best-ball/strokeplay-podiet); den delte buildPrizeAwards-helperen gjør det
+  // billig å utvide til andre placement-format-renderere senere. Null når
+  // spillet ikke har premier eller ingen premie fikk vinner.
+  const prizeAwardsNode =
+    game.status === 'finished'
+      ? await (async () => {
+          const awards = await buildPrizeAwards(supabase, gameId, game.prizes);
+          return awards.length > 0 ? <PrizeAwardsCard awards={awards} /> : null;
+        })()
+      : null;
+
   if (!showSideTournament) {
     return (
       <State4View
@@ -498,6 +512,7 @@ export async function renderLeaderboardContent({
         backHref={backHref}
         footerSlot={
           <>
+            {prizeAwardsNode}
             {reportSection}
             <WithdrawnPlayersSection players={bestBallWithdrawn} />
           </>
@@ -561,6 +576,7 @@ export async function renderLeaderboardContent({
               backHref={backHref}
               chromeless
             />
+            {prizeAwardsNode}
             {reportSection}
             <WithdrawnPlayersSection players={bestBallWithdrawn} />
           </>

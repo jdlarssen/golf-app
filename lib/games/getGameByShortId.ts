@@ -40,6 +40,10 @@ export type ShortIdGame = {
   // vet kostnaden før de melder seg på. Trygge å eksponere uten autentisering.
   entry_fee_kr: number;
   payment_link: string | null;
+  // #1051: premiebordet vises i påmeldingsflyten (før innlogging). Rå jsonb —
+  // konsumenten kaller safeParsePrizes. Trygt å eksponere uten autentisering.
+  // Valgfri så literal-konstruktører/tester ikke må sette den (safeParse → []).
+  prizes?: unknown;
 };
 
 // React.cache: generateMetadata + page (#1022) slår begge opp samme shortId i
@@ -58,7 +62,7 @@ export const getGameByShortId = cache(async function getGameByShortId(
   const { data, error } = await admin
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at, entry_fee_kr, payment_link',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at, entry_fee_kr, payment_link, prizes',
     )
     .eq('short_id', shortId)
     .maybeSingle<ShortIdGame>();

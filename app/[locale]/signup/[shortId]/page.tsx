@@ -24,6 +24,8 @@ import {
 import { getPublicSignupRoster } from '@/lib/games/getPublicSignupRoster';
 import { PaymentInfo } from '@/components/PaymentInfo';
 import { PublicLandingView } from './PublicLandingView';
+import { PremiebordCard } from '@/components/PremiebordCard';
+import { safeParsePrizes } from '@/lib/games/prizes';
 import { RegistrationForm, type MatchplaySideData } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
 
@@ -138,6 +140,7 @@ export default async function PåmeldingPage({
           posterHref={`/signup/${shortId}/plakat`}
           entryFeeKr={game.entry_fee_kr}
           paymentLink={game.payment_link}
+          prizes={safeParsePrizes(game.prizes)}
         />
       );
     }
@@ -328,6 +331,11 @@ export default async function PåmeldingPage({
           entryFeeKr={game.entry_fee_kr}
           paymentLink={game.payment_link}
         />
+
+        {(() => {
+          const prizes = safeParsePrizes(game.prizes);
+          return prizes.length > 0 ? <PremiebordCard prizes={prizes} /> : null;
+        })()}
 
         <Card>
           {renderBody({

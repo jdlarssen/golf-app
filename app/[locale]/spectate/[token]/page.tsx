@@ -6,6 +6,8 @@ import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { renderLeaderboardContent } from '../../games/[id]/leaderboard/leaderboardContent';
 import { SpectatePoller } from './SpectatePoller';
+import { SponsorStrip } from '@/components/SponsorStrip';
+import { safeParsePrizes } from '@/lib/games/prizes';
 
 type Params = Promise<{ token: string }>;
 type SearchParams = Promise<{ mode?: string | string[] }>;
@@ -107,6 +109,9 @@ export default async function SpectatePage({
         )}
         <span>{statusLabel}</span>
       </div>
+
+      {/* #1051: sponsorstripe — vises når ≥1 premie har sponsor. */}
+      <SponsorStrip prizes={safeParsePrizes(game.prizes)} />
 
       {leaderboardNode}
 

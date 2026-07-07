@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { PaymentInfo } from '@/components/PaymentInfo';
+import { PremiebordCard } from '@/components/PremiebordCard';
+import type { GamePrize } from '@/lib/games/prizes';
 import type { PublicSignupRoster } from '@/lib/games/getPublicSignupRoster';
 
 /**
@@ -24,6 +26,7 @@ export function PublicLandingView({
   posterHref,
   entryFeeKr,
   paymentLink,
+  prizes = [],
 }: {
   gameName: string;
   modeLabel: string;
@@ -34,6 +37,7 @@ export function PublicLandingView({
   posterHref: string;
   entryFeeKr: number;
   paymentLink: string | null;
+  prizes?: GamePrize[];
 }) {
   const t = useTranslations('signup.public');
 
@@ -73,6 +77,12 @@ export function PublicLandingView({
             paymentLink={paymentLink}
             className="mt-4"
           />
+
+          {prizes.length > 0 && (
+            <div className="mt-4">
+              <PremiebordCard prizes={prizes} variant="compact" />
+            </div>
+          )}
 
           <div className="mt-4" data-testid="public-landing-roster">
             {roster.count === 0 ? (

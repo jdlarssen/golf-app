@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.180 · Premiebord og sponsorer</strong></summary>
+
+[#1051](https://github.com/jdlarssen/golf-app/issues/1051) — Du kan nå legge inn et premiebord på spillet: premie og eventuell sponsor for 1.–3. plass og for lengste drive og nærmest flagget. Spillerne ser bordet før start på spill-hjem og påmeldingssiden, sponsorene får en tekststripe på tavla, tilskuerlenken og embed-en, og når runden er ferdig kobles premiene til vinnerne i en egen premieutdeling under podiet.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
 <summary><strong>1.179 · Et lettere steg 2 i veiviseren</strong></summary>
 
 [#1065](https://github.com/jdlarssen/golf-app/issues/1065) — Steg 2 er nå bare antall og spillform. Påmeldingsvalget ligger i klartekst på Klar-steget, og handicap-justering og startkontingent bor under «Vis avanserte innstillinger» samme sted — en vanlig kompisrunde settes opp uten å se noen av dem.

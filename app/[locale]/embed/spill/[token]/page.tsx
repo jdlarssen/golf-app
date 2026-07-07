@@ -8,6 +8,8 @@ import { first } from '@/lib/url/searchParams';
 import { renderLeaderboardContent } from '@/app/[locale]/games/[id]/leaderboard/leaderboardContent';
 import { SpectatePoller } from '@/app/[locale]/spectate/[token]/SpectatePoller';
 import { EmbedFooter } from '../../EmbedFooter';
+import { SponsorStrip } from '@/components/SponsorStrip';
+import { safeParsePrizes } from '@/lib/games/prizes';
 import { EmbedThemeScript, parseEmbedTheme } from '../../EmbedThemeScript';
 
 type Params = Promise<{ token: string }>;
@@ -78,6 +80,8 @@ export default async function EmbedGamePage({
     <>
       <EmbedThemeScript theme={theme} />
       {leaderboardNode}
+      {/* #1051: sponsorstripe over embed-footeren (self-hider uten sponsor). */}
+      <SponsorStrip prizes={safeParsePrizes(game.prizes)} />
       <EmbedFooter
         href={`/${locale}/spectate/${token}`}
         live={live}
