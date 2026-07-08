@@ -20,8 +20,12 @@ worktree-tilstand å skade.
 plukk det ELDSTE. Tom kø → heartbeat «ingen kø» på #1110 og avslutt. Det er
 suksess, ikke tomgang.
 
-**Budsjett v1: maks 1 issue per natt.** Økes kun av eieren (endre dette tallet
-via PR når tilliten er etablert).
+**Budsjett: maks 2 issues per natt** (hevet fra 1 den 2026-07-09 — Discord-kortet
++ skjermbilde (#1159) gjorde review-loopen rask nok til å håndtere to leveranser).
+Bygg det ELDSTE ready-issuet gjennom steg 2–5, og **gjenta steg 2–5 for
+neste-eldste** til 2 er levert ELLER køen er tom. Grønn-main-sjekken (steg 2.2)
+kjøres kun ÉN gang ved start: draft-PR-er merges ikke, så main endres ikke mellom
+byggene. Økes videre kun av eieren via PR når tilliten er etablert.
 
 ## Steg 2 — Per-issue preflight (fail-closed)
 
@@ -29,7 +33,9 @@ via PR når tilliten er etablert).
    (header «Forge-kontrakt tilgjengelig», jf. docs/forge-workflow.md). Mangler
    den → sett `autonomy:blocked` + norsk kommentar («mangler kontrakt — kjør
    /forge:contract i en interaktiv økt»), fjern `autonomy:ready`, og plukk
-   NESTE fra køen (maks ett ekstra forsøk per natt — deretter avslutt).
+   NESTE fra køen. Blokkerte issues teller IKKE mot bygg-budsjettet, men se på
+   maks **4 issues totalt** per natt (leverte + blokkerte) — deretter avslutt, så
+   en natt aldri drukner i skip.
 2. **Grønn-main-sjekk:** `npm ci` + `npm run typecheck && npm test && npm run lint
    && bash tests/hooks/guard.test.sh` på fersk main FØR bygging. Rød →
    avbryt hele natten: verifiser at CI-vakt-varselissue finnes (opprett hvis
