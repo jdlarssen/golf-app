@@ -34,6 +34,9 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 - Godkjenn PR #M — <issue-tittel>; evaluate ACCEPT, gates grønne[, e2e grønn / needs-manual-qa: <flyt>] → <lenke>
 - Svar A/B på #N — <én setning om spørsmålet> → <lenke>
 
+**Klar for natt-kø (ett tapp = køet):**
+- #N — <issue-tittel>; forge-kontrakt klar, ikke merket enda → <lenke>
+
 **Skjedde i natt/i går:**
 - <merget PR / lukket issue / CI-vakt-fiks — kun verifiserte fakta, med lenke>
 
@@ -41,7 +44,23 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 - Nattkjøreren: <heartbeat-status> · Dok-avstemmeren: <heartbeat-status hvis due> · CI-vakta: <antall CI-vakt-issues åpne; liveness sees på routines-siden>
 ```
 
-Ingenting å melde i en gruppe → utelat gruppa. Alle tre tomme → tom-natt-linja.
+Ingenting å melde i en gruppe → utelat gruppa. Alle fire tomme → tom-natt-linja.
+
+## Kø-kandidater (finn dem — ikke bare vis knappen)
+
+«Klar for natt-kø»-gruppa lister åpne issues som er kontrakt-klare men ikke enda
+køet, så eieren kan merke dem `autonomy:ready` med ett tapp. Et issue kvalifiserer
+kun når ALT stemmer:
+
+- forge-kontrakt finnes: `.forge/contracts/<n>-*.md` på main ELLER en kommentar
+  med header «📋 Forge-kontrakt tilgjengelig», OG
+- IKKE labelet `autonomy:ready` (ikke allerede i køen), OG
+- IKKE labelet `autonomy:blocked`.
+
+Eldste kontrakt først, maks 5 i briefen; flere → «+N til, se #1110». Hver kandidat
+får den eksisterende `ready_issue:<N>`-knappen i Discord-speilingen («🌙 Klarer for
+natta», button style 1) — samme knapp som mappes i Discord-seksjonen under. Ingen
+kandidater → utelat gruppa (ikke en loop-feil; tom kandidat-liste er normalt).
 
 ## Heartbeat-vakta
 
