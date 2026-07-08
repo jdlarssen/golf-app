@@ -73,10 +73,17 @@ Er du i tvil om det er mekanisk eller gråsone: behandle som gråsone (fail-clos
 ## Steg 4 — Cap + throttle (hold deg bak eieren)
 
 - **Cap:** maks **5 kontrakter per kjøring**.
-- **Throttle:** tell issues som allerede har auto-skrevet kontrakt men verken
-  `autonomy:ready` eller `autonomy:blocked` (eierens uåpnede godkjenn-kø). Er den
-  ≥ **8**, skriv INGEN nye denne kjøringen — heartbeat «throttlet: N venter på
-  godkjenning». Ellers overhaler smeden eieren og fyller briefen med støy.
+- **Throttle:** tell **alle** åpne issues med forge-kontrakt — uansett forfatter,
+  #1147-batchen og smedens egne 🤖-kontrakter teller likt — som verken er
+  `autonomy:ready` eller `autonomy:blocked`. Det er eierens totale uåpnede
+  godkjenn-kø. Er den ≥ **8**, skriv INGEN nye denne kjøringen — heartbeat
+  «throttlet: N venter på godkjenning». Ellers overhaler smeden eieren og fyller
+  briefen med støy.
+  - ⚠️ **Ikke** tell kun smedens egne 🤖-kontrakter: på en kjøring der smeden ikke
+    har skrevet noe ennå ville tallet vært 0, throttlen sluppet gjennom, og smeden
+    dumpet 5 nye oppå en allerede full stabel — nettopp firehosen throttlen finnes
+    for å stoppe. En guardrail som bare holder på den snille lesningen er ingen
+    guardrail (bekreftet ved første kjøring 2026-07-08: 22 ventende → korrekt throttle).
 
 ## Steg 5 — Heartbeat (ALLTID)
 
