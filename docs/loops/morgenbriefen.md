@@ -55,7 +55,11 @@ kun når ALT stemmer:
 - forge-kontrakt finnes: `.forge/contracts/<n>-*.md` på main ELLER en kommentar
   med header «📋 Forge-kontrakt tilgjengelig», OG
 - IKKE labelet `autonomy:ready` (ikke allerede i køen), OG
-- IKKE labelet `autonomy:blocked`.
+- IKKE labelet `autonomy:blocked`, OG
+- IKKE issue **#1110 selv** — den levende Loop-drift-tavla skal aldri bygges
+  (nattkjøreren leverer med «Closes #N», så en merge ville lukket tavla).
+  #1147 la en kontrakt på #1110 for arkiv-arbeidet; det hører egentlig hjemme i
+  et eget issue, men inntil da er #1110 hardt ekskludert her.
 
 Eldste kontrakt først, maks 5 i briefen; flere → «+N til, se #1110». Hver kandidat
 får den eksisterende `ready_issue:<N>`-knappen i Discord-speilingen («🌙 Klarer for
@@ -107,8 +111,14 @@ Maks 5 knapper per rad (Discords grense); flere handlinger → flere rader/meldi
 Innhold over 1800 tegn: forkort og lenk til #1110-kommentaren.
 
 **Kun webhook (`DISCORD_WEBHOOK_URL`):** fall tilbake til ren tekst-speiling
-som før (vanlige webhooks kan ikke sende komponenter). Mangler begge: hopp
-stille over.
+som før (vanlige webhooks kan ikke sende komponenter).
+
+**Mangler begge variablene, ELLER feiler Discord-postingen** (token utløpt/rotert,
+API nede): dette er IKKE en stille skip — Discord er eierens kontroll-kanal, og en
+manglende speiling betyr at han mister knappene uten å vite hvorfor. Rapporter det
+som en linje i **Loop-helse**: «⚠️ Discord-speiling feilet: \<grunn\> — sjekk
+`DISCORD_BOT_TOKEN`/`DISCORD_CHANNEL_ID`». Brief-kommentaren på #1110 er uansett
+postet (primærartefakten), så eieren kan lese den der.
 
 ## Månedlig arkivering
 
