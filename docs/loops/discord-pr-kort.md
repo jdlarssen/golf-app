@@ -16,9 +16,10 @@ uendret.
 
 Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
 
-1. **Trigger:** `check_suite: completed` (fyrer per suite som fullfører) +
-   `workflow_dispatch` (manuell test/re-post mot ett PR-nummer). Checker ut
-   PR-head-koden så skjermbildene viser koden under review.
+1. **Trigger:** `workflow_run` når **CI**-workflowen fullfører (+ `workflow_dispatch`
+   for manuell test mot ett PR-nummer). Checker ut PR-head-koden så skjermbildene
+   viser koden under review. (Vi bruker `workflow_run`, ikke `check_suite`:
+   check_suite fyrer ikke for GitHub-Actions-suiter, så CI trigget aldri kortet.)
 2. **`decide-pr-card.ts` — gate + visuell-diff:** åpen · alle check-runs grønne
    (`classifyChecks`) · ikke allerede kortet. Avgjør om diffen rører en visuell
    flate (`isVisualChange`). Skriver `pr-card-plan.json` + `should_card`/`is_gui`.
@@ -54,11 +55,11 @@ appen bootes mot torny-staging, login via service-role OTP-mint).
 
 ## Dedup & race
 
-`discord:merge-kort`-labelen sikrer ett kort per PR: senere `check_suite`-fyringer
-ser labelen og hopper over. `concurrency`-gruppa (per head-SHA,
-`cancel-in-progress`) serialiserer samtidige suite-fullføringer. Restrisiko: to
-suiter som blir grønne i samme øyeblikk kan i sjeldne tilfeller gi to kort —
-akseptert for v1 (mildt) fremfor å risikere et stille tapt kort.
+`discord:merge-kort`-labelen sikrer ett kort per PR: en senere `workflow_run`-fyring
+(f.eks. re-kjørt CI) ser labelen og hopper over. `concurrency`-gruppa (per head-SHA,
+`cancel-in-progress`) serialiserer samtidige fyringer. Restrisiko: to fyringer i
+samme øyeblikk kan i sjeldne tilfeller gi to kort — akseptert for v1 (mildt) fremfor
+å risikere et stille tapt kort.
 
 ## Eier-oppsett (engangs) — Actions-secrets
 

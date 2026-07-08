@@ -7,9 +7,12 @@
 name: Discord PR-kort
 
 on:
-  # Fyrer per check-suite som fullfører. decide-steget re-spør ALLE check-runs og
-  # gater — tidlige, ufullstendige fyringer blir ufarlige no-ops.
-  check_suite:
+  # Fyrer når CI-workflowen fullfører (pass ELLER fail). decide-steget re-spør ALLE
+  # check-runs og gater, så en fail blir en ufarlig no-op. Vi bruker workflow_run
+  # (ikke check_suite): check_suite fyrer IKKE for GitHub-Actions-suiter (anti-
+  # rekursjon), så CI-en vår trigget aldri kortet — bekreftet på #1162.
+  workflow_run:
+    workflows: [CI]
     types: [completed]
   # Manuell testing / re-post mot en spesifikk PR (aktiveringssteget).
   workflow_dispatch:
@@ -19,9 +22,9 @@ on:
         required: true
         type: string
 
-# Serialiser per head-SHA så samtidige suite-fullføringer ikke gir dobbelt kort.
+# Serialiser per head-SHA så samtidige fullføringer ikke gir dobbelt kort.
 concurrency:
-  group: discord-pr-card-${{ github.event.check_suite.head_sha || inputs.pr }}
+  group: discord-pr-card-${{ github.event.workflow_run.head_sha || inputs.pr }}
   cancel-in-progress: true
 
 permissions:
@@ -47,13 +50,13 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # PR-head-koden (check_suite: head_sha; workflow_dispatch: PR-ens head-ref)
+      # PR-head-koden (workflow_run: head_sha; workflow_dispatch: PR-ens head-ref)
       # så skjermbildene viser koden under review.
       - name: Checkout (PR-head)
         if: steps.guard.outputs.run == 'true'
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.check_suite.head_sha || format('refs/pull/{0}/head', inputs.pr) }}
+          ref: ${{ github.event.workflow_run.head_sha || format('refs/pull/{0}/head', inputs.pr) }}
 
       - name: Setup Node 22
         if: steps.guard.outputs.run == 'true'

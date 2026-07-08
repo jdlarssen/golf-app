@@ -7,7 +7,7 @@
 // Skriver `should_card`/`is_gui` til $GITHUB_OUTPUT så workflowen kan gate stegene.
 
 import { appendFileSync } from 'node:fs';
-import { candidatePrNumber, ghClient } from './ghClient';
+import { candidatePrNumber, eventHeadSha, ghClient } from './ghClient';
 import { CARD_LABEL, classifyChecks, extractPrSummary, type CheckRun } from '../../lib/loops/prCard';
 import { isVisualChange } from '../../lib/loops/prScreenshots';
 import { writePlan, type CardPlan } from './cardPlan';
@@ -39,6 +39,15 @@ type PrPayload = {
   labels: Array<{ name: string }>;
 };
 
+// Slår opp PR-en for en head-SHA når eventet ikke ga et PR-nummer direkte
+// (workflow_run.pull_requests kan være tom). Foretrekker en åpen PR.
+async function prForSha(gh: ReturnType<typeof ghClient>, sha: string): Promise<number | null> {
+  const res = await gh.rest('GET', `/repos/${REPO}/commits/${sha}/pulls`);
+  if (res.status !== 200) return null;
+  const prs = (res.json as Array<{ number: number; state: string }>) ?? [];
+  return (prs.find((p) => p.state === 'open') ?? prs[0])?.number ?? null;
+}
+
 async function fetchChangedFiles(
   gh: ReturnType<typeof ghClient>,
   n: number,
@@ -61,12 +70,17 @@ async function main(): Promise<void> {
     return;
   }
   const gh = ghClient(TOKEN, REPO);
-  const n = candidatePrNumber();
   const noCard = (reason: string) => {
     console.log(`${LOG} ${reason} — ingen kort.`);
     emit(NO_CARD);
   };
 
+  // PR-nummer direkte fra eventet/PR_NUMBER; ellers via head-SHA → API-oppslag.
+  let n = candidatePrNumber();
+  if (n === null) {
+    const sha = eventHeadSha();
+    if (sha) n = await prForSha(gh, sha);
+  }
   if (n === null) return noCard('ingen kandidat-PR i eventet');
 
   const prRes = await gh.rest('GET', `/repos/${REPO}/pulls/${n}`);
