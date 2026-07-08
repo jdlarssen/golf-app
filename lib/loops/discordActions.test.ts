@@ -111,11 +111,9 @@ const greenPr = {
   state: 'open',
   head: { sha: 'abc123' },
 };
-const greenChecks = {
-  check_runs: [
-    { name: 'verify', status: 'completed', conclusion: 'success' },
-    { name: 'e2e', status: 'completed', conclusion: 'skipped' },
-  ],
+// CI-porten leser nå Actions-workflow-kjøringen for ci.yml (ikke check-runs).
+const greenCi = {
+  workflow_runs: [{ id: 1, status: 'completed', conclusion: 'success' }],
 };
 
 describe('executeAction: ready_issue', () => {
@@ -154,7 +152,7 @@ describe('executeAction: merge_pr', () => {
   it('grønn ikke-draft PR: henter PR, sjekker CI, rebase-merger', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: greenPr },
-      { status: 200, json: greenChecks },
+      { status: 200, json: greenCi },
       { status: 200, json: { merged: true } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
@@ -169,7 +167,7 @@ describe('executeAction: merge_pr', () => {
   it('draft-PR tas ut av draft via GraphQL før merge', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: { ...greenPr, draft: true } },
-      { status: 200, json: greenChecks },
+      { status: 200, json: greenCi },
       { status: 200, json: { data: {} } },
       { status: 200, json: { merged: true } },
     ]);
@@ -178,31 +176,52 @@ describe('executeAction: merge_pr', () => {
     expect(msg).toContain('rebase-merget');
   });
 
-  it('rød CI → nekter å merge, navngir sjekken', async () => {
+  it('rød CI → nekter å merge, navngir konklusjonen', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: greenPr },
-      {
-        status: 200,
-        json: { check_runs: [{ name: 'verify', status: 'completed', conclusion: 'failure' }] },
-      },
+      { status: 200, json: { workflow_runs: [{ id: 1, status: 'completed', conclusion: 'failure' }] } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
     expect(calls).toHaveLength(2);
     expect(msg).toContain('ikke grønn');
-    expect(msg).toContain('verify');
+    expect(msg).toContain('failure');
+  });
+
+  it('velger nyeste CI-kjøring (høyeste id) ved re-kjøring', async () => {
+    const { gh } = mockGh([
+      { status: 200, json: greenPr },
+      {
+        status: 200,
+        json: {
+          workflow_runs: [
+            { id: 1, status: 'completed', conclusion: 'failure' }, // gammel
+            { id: 2, status: 'completed', conclusion: 'success' }, // nyeste
+          ],
+        },
+      },
+      { status: 200, json: { merged: true } },
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(msg).toContain('rebase-merget');
   });
 
   it('CI fortsatt i gang → vent-melding, ingen merge', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: greenPr },
-      {
-        status: 200,
-        json: { check_runs: [{ name: 'e2e', status: 'in_progress', conclusion: null }] },
-      },
+      { status: 200, json: { workflow_runs: [{ id: 1, status: 'in_progress', conclusion: null }] } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
     expect(calls).toHaveLength(2);
     expect(msg).toContain('kjører fortsatt');
+  });
+
+  it('ingen CI-kjøring enda → vent-melding, ingen merge', async () => {
+    const { gh } = mockGh([
+      { status: 200, json: greenPr },
+      { status: 200, json: { workflow_runs: [] } },
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(msg).toContain('Fant ingen CI-kjøring');
   });
 
   it('lukket PR → ingenting å merge', async () => {
@@ -214,7 +233,7 @@ describe('executeAction: merge_pr', () => {
   it('merge-feil fra GitHub videreformidles med grunn', async () => {
     const { gh } = mockGh([
       { status: 200, json: greenPr },
-      { status: 200, json: greenChecks },
+      { status: 200, json: greenCi },
       { status: 405, json: { message: 'Base branch was modified' } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);

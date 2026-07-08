@@ -74,10 +74,16 @@ export interface GitHubClient {
   graphql(query: string, variables: Record<string, unknown>): Promise<{ status: number; json: unknown }>;
 }
 
-const BAD_CONCLUSIONS = new Set(['failure', 'cancelled', 'timed_out', 'action_required']);
+// CI-porten leser Actions-workflow-kjøringen for denne fila (ci.yml på main) —
+// IKKE check-runs: fine-grained PAT-er kan ikke gis Checks-lesetilgang (det
+// finnes ikke som PAT-permission), men «Actions: Read» dekker workflow-runs.
+// Endres CI-filnavnet, oppdater her.
+const CI_WORKFLOW_FILE = 'ci.yml';
 
 type PrInfo = { node_id: string; draft: boolean; state: string; head: { sha: string } };
-type CheckRuns = { check_runs: Array<{ name: string; status: string; conclusion: string | null }> };
+type WorkflowRuns = {
+  workflow_runs: Array<{ id: number; status: string; conclusion: string | null }>;
+};
 
 // Utfører handlingen og returnerer meldingen eieren ser i Discord. Feil fra
 // GitHub blir ærlige svar («fikk ikke …: <grunn>») — aldri stille.
@@ -107,19 +113,21 @@ export async function executeAction(action: DiscordAction, gh: GitHubClient): Pr
       const pr = prRes.json as PrInfo;
       if (pr.state !== 'open') return `PR #${action.pr} er ikke åpen (${pr.state}) — ingenting å merge.`;
 
-      const checksRes = await gh.rest(
+      const ciRes = await gh.rest(
         'GET',
-        `/repos/${LOOP_REPO}/commits/${pr.head.sha}/check-runs`,
+        `/repos/${LOOP_REPO}/actions/workflows/${CI_WORKFLOW_FILE}/runs?head_sha=${pr.head.sha}&per_page=20`,
       );
-      if (checksRes.status !== 200)
-        return `Fikk ikke lest CI-status for PR #${action.pr} (HTTP ${checksRes.status}) — ikke merget.`;
-      const runs = (checksRes.json as CheckRuns).check_runs;
-      const pending = runs.filter((r) => r.status !== 'completed');
-      if (pending.length > 0)
-        return `⏳ CI kjører fortsatt på PR #${action.pr} (${pending[0].name}) — prøv igjen om litt.`;
-      const red = runs.filter((r) => r.conclusion !== null && BAD_CONCLUSIONS.has(r.conclusion));
-      if (red.length > 0)
-        return `🔴 CI er ikke grønn på PR #${action.pr} (${red[0].name}: ${red[0].conclusion}) — ikke merget.`;
+      if (ciRes.status !== 200)
+        return `Fikk ikke lest CI-status for PR #${action.pr} (HTTP ${ciRes.status}) — ikke merget.`;
+      const ciRuns = (ciRes.json as WorkflowRuns).workflow_runs ?? [];
+      if (ciRuns.length === 0)
+        return `Fant ingen CI-kjøring for PR #${action.pr} enda — prøv igjen når CI har startet.`;
+      // Nyeste kjøring (høyeste id) er fasit for head-SHA-en; re-kjøringer gir flere.
+      const latest = ciRuns.reduce((a, b) => (b.id > a.id ? b : a));
+      if (latest.status !== 'completed')
+        return `⏳ CI kjører fortsatt på PR #${action.pr} (${latest.status}) — prøv igjen om litt.`;
+      if (latest.conclusion !== 'success')
+        return `🔴 CI er ikke grønn på PR #${action.pr} (CI: ${latest.conclusion ?? 'ukjent'}) — ikke merget.`;
 
       if (pr.draft) {
         const ready = await gh.graphql(

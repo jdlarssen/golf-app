@@ -23,7 +23,10 @@ import {
 //
 // Miljø (Vercel env): DISCORD_PUBLIC_KEY (hex fra Developer Portal),
 // DISCORD_OWNER_ID (eierens bruker-ID), GITHUB_LOOP_PAT (fine-grained,
-// kun dette repoet, Issues RW + Pull requests RW). Tokens logges aldri.
+// kun dette repoet, Issues RW + Pull requests RW + Actions RO). Actions RO
+// trengs for å lese CI-status (merge-knappen sjekker ci.yml-workflow-runen) —
+// Checks finnes IKKE som fine-grained-permission, så check-runs kan ikke leses.
+// Tokens logges aldri.
 
 export const maxDuration = 60;
 
