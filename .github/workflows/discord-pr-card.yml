@@ -1,0 +1,89 @@
+# Discord merge-kort (#1159, Del A): poster ett kort med merge-knapp til Discord
+# når en åpen PR blir CI-grønn — uansett opphav (natt-runner, CI-vakt,
+# dok-avstemmer, interaktiv økt). Eieren merger fra mobilen; menneske-porten
+# står (ingen auto-merge). Mottaker-siden er #1124-endepunktet. Se
+# docs/loops/discord-pr-kort.md.
+name: Discord PR-kort
+
+on:
+  # Fyrer per check-suite som fullfører. Runneren re-spør ALLE check-runs på
+  # PR-head og poster kun når alt er grønt (ellers no-op) — så tidlige,
+  # ufullstendige fyringer er ufarlige.
+  check_suite:
+    types: [completed]
+  # Manuell testing / re-post mot en spesifikk PR (aktiveringssteget).
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR-nummer å poste kort for'
+        required: true
+        type: string
+
+# Serialiser per head-SHA så samtidige suite-fullføringer ikke gir dobbelt kort.
+concurrency:
+  group: discord-pr-card-${{ github.event.check_suite.head_sha || inputs.pr }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write # legge dedup-label på PR-en
+  issues: write # dedup-label (labels går via issues-API) + failure-alarm
+  checks: read
+
+jobs:
+  post-card:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip if Discord bot is not configured
+        id: guard
+        env:
+          BOT: ${{ secrets.DISCORD_BOT_TOKEN }}
+          CHANNEL: ${{ secrets.DISCORD_CHANNEL_ID }}
+        run: |
+          if [ -z "$BOT" ] || [ -z "$CHANNEL" ]; then
+            echo "::notice::DISCORD_BOT_TOKEN/DISCORD_CHANNEL_ID ikke satt — PR-kort kan ikke postes."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.guard.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        if: steps.guard.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Post merge-kort
+        if: steps.guard.outputs.run == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr }}
+        run: npx --yes tsx scripts/loops/post-pr-card.ts
+
+      # Rød kjøring skal aldri dø stille (samme mønster som prod-vakt/schema-drift).
+      - name: Open alert issue on failure
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="CI-vakt: discord-pr-kort-workflowen rød"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Discord-PR-kort-workflowen feilet uventet.\n\nKjøring: %s\n\nFix-protokoll: `docs/loops/discord-pr-kort.md`.' "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -F milestone=9
