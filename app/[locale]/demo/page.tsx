@@ -4,6 +4,9 @@ import { AppShell } from '@/components/ui/AppShell';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { DemoGame } from './DemoGame';
 
+// smoke-test #1159: trigger Discord PR-kort (workflow_run + skjermbilde av /demo).
+// Fjernes etter verifisering.
+
 /**
  * Prøvespill — spillbar demoturnering uten innlogging (#1042, epic #1021-
  * oppfølger). Whitelisted i proxy.ts (PUBLIC_PATH_PATTERN) så uinnloggede når
