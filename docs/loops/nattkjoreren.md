@@ -57,6 +57,29 @@ via PR når tilliten er etablert).
   flyt som må klikkes gjennom (stagingbevis-porten #1076 tar den i en
   interaktiv økt). Dette er et eksplisitt utfall — aldri hopp stille over.
 
+## Steg 4.5 — Kryss-modell-gate (annen modell enn byggeren)
+
+Byggeren og forges egen evaluator kjører på samme modell, så de deler blindsoner —
+en plausibel-men-feil build kan bli ACCEPT-et av sitt eget hode (#1073-fragiliteten,
+verifisert på #1152: `forge/evaluate.md` setter ingen modell, arver orkestratoren).
+Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før levering.
+
+- Spawn en general-purpose Task-agent med `model` eksplisitt satt til en annen
+  modell enn bygget kjørte på (bygg Opus → gate **Sonnet**). Gi den KUN kontrakten,
+  diffen (`git diff origin/main`) og forges evalueringsrapport — fersk kontekst,
+  ingen bygg-historikk.
+- Prompt: prøv å **motbevise** at kontraktens Success Criteria er oppfylt. Finn én
+  konkret, etterprøvbar defekt (feil fil, uoppfylt kriterium, manglende edge-case).
+  I tvil: REJECT (fail-closed).
+- **CONFIRMS** (ingen substansiell defekt) → noter «kryss-modell-gate: Sonnet
+  CONFIRM» i PR-kommentaren, gå til Steg 5.
+- **REJECTS** med substansielt funn → behandle som én konvergensrunde til: fiks
+  innenfor #1077-taket (maks 5 evaluate-runder TOTALT, gaten teller med), kjør
+  gaten på nytt. Tak nådd eller gaten avviser fortsatt → IKKE lever som review-klar;
+  eskalér per Steg 5 «Ikke konvergert».
+- Kan du ikke spawne en annen modell (utilgjengelig) → behandl som ikke-bestått
+  gate og eskalér. Aldri lever ubekreftet fordi kryss-sjekken ikke lot seg kjøre.
+
 ## Steg 5 — Lever
 
 - **Konvergert (ACCEPT):** DRAFT-PR med `Closes #<issuenr>` i body,
