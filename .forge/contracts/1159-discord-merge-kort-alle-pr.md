@@ -105,25 +105,27 @@ opphav (natt-runner, CI-vakt, dok-avstemmer, interaktiv økt).
 
 ## Success Criteria
 
-- [ ] **A1** `lib/loops/prCard.ts` finnes med `extractPrSummary`, `classifyChecks`,
-  `buildCardPayload`, `CARD_LABEL`.
-- [ ] **A2** Type A-tester (`lib/loops/prCard.test.ts`) dekker: tagline-uttrekk
+- [x] **A1** `lib/loops/prCard.ts` finnes med `extractPrSummary`, `classifyChecks`,
+  `buildCardPayload`, `CARD_LABEL`. (commit a3f5b4d8)
+- [x] **A2** Type A-tester (`lib/loops/prCard.test.ts`) dekker: tagline-uttrekk
   (tagline / kun-Closes / null / Refs-linjer hoppes over), `classifyChecks`
   (pending/red/green/tom), og `buildCardPayload` (riktig `merge_pr:<N>`-custom_id +
-  knapp-struktur + draft-badge). `npx vitest run lib/loops/prCard` grønn.
-- [ ] **A3** `scripts/loops/post-pr-card.ts` finnes; `DRY_RUN=1` mot en ekte åpen PR
-  (#1158) logger et gyldig kort-payload uten å poste — verifisert lokalt.
-- [ ] **A4** `.github/workflows/discord-pr-card.yml` finnes med check_suite+dispatch-
-  trigger, secret-guard, og failure-alarm; gyldig YAML.
-- [ ] **A5** Fulle gates grønne (typecheck · test · lint · build · guard.test.sh).
-- [ ] **A6** `docs/loops/discord-pr-kort.md` + eier-oppsett-oppskrift (secrets) skrevet.
+  knapp-struktur + draft-badge). **`npx vitest run lib/loops/prCard` → 17 passed.**
+- [x] **A3** `scripts/loops/post-pr-card.ts` finnes; `DRY_RUN=1 PR_NUMBER=1158` logget
+  et gyldig payload med `custom_id: merge_pr:1158`, 📝 Draft-badge og taglinen trukket
+  ut av #1158-body-en — **verifisert lokalt mot ekte GitHub-data.**
+- [x] **A4** `.github/workflows/discord-pr-card.yml` finnes med check_suite+dispatch-
+  trigger, secret-guard, concurrency-per-SHA og failure-alarm; **YAML parset OK (node).**
+- [x] **A5** Fulle gates grønne: **typecheck (0 feil) · test (4720 passed) · lint (0 errors)
+  · build (success) · guard.test.sh (39/0).**
+- [x] **A6** `docs/loops/discord-pr-kort.md` + eier-oppsett-oppskrift (secrets) skrevet.
 - [ ] **A7 (eier-aktivering, post-merge — ikke blokkerende for ACCEPT):** eier legger
   `DISCORD_BOT_TOKEN` + `DISCORD_CHANNEL_ID` som Actions-secrets; en `workflow_dispatch`
   mot en ekte grønn PR poster ett kort med fungerende merge-knapp i Discord.
 
 ## Gates
 
-- [ ] `npm run typecheck` · `npm test` · `npm run lint` · `npm run build` · `bash tests/hooks/guard.test.sh`
+- [x] `npm run typecheck` (0) · `npm test` (4720) · `npm run lint` (0 err) · `npm run build` (ok) · `bash tests/hooks/guard.test.sh` (39/0)
 
 ## Out of Scope
 
