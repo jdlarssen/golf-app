@@ -62,6 +62,11 @@ får den eksisterende `ready_issue:<N>`-knappen i Discord-speilingen («🌙 Kla
 natta», button style 1) — samme knapp som mappes i Discord-seksjonen under. Ingen
 kandidater → utelat gruppa (ikke en loop-feil; tom kandidat-liste er normalt).
 
+Er kontrakten **auto-skrevet av kontrakt-smeden** (kommentaren starter med «🤖
+Auto-skrevet …», jf. docs/loops/kontrakt-smeden.md), merk kandidaten med 🤖 og
+teksten «les kontrakten før du køer» — eieren skal scrutinere en maskin-skrevet
+kontrakt før ett-tapp-godkjenning, ikke tappe på autopilot.
+
 ## Heartbeat-vakta
 
 - **Forventning:** Nattkjøreren skal ha postet heartbeat på #1110 siden forrige
