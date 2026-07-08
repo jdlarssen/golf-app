@@ -89,6 +89,7 @@ for f in $test_files; do
   [ -z "$added" ] && continue
 
   # Type B-signal: mange nye .toContain()-kall i én commit → vurder approval-snapshot
+  # Commit-nivå i toContain-trappa (docs/test-discipline.md § Type B → toContain-trappa)
   tc_count=$(printf '%s\n' "$added" | grep -cE '\.toContain\(' || true)
   if [ "$tc_count" -gt 10 ]; then
     printf '⚠️  test-disiplin: %s — %d nye `.toContain()`-kall i én commit.\n' "$f" "$tc_count" >&2

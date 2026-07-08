@@ -41,9 +41,21 @@ Disse er gjensidig utelukkende. **Hvis en test prøver å svare på to spørsmå
 
 - **Hvor:** `lib/mail/`, framtidige PDF/CSV-generatorer, alt som produserer en streng/dokument-output til en bruker eller ekstern mottaker.
 - **Stil:** `toMatchInlineSnapshot()` på det brukeren faktisk leser — `subject` + `text` + en `bodyXxxHtml`-extractor for den personliggjorte HTML-delen. ÉN full-HTML-chrome-lås per template (ikke per case).
-- **Forbudt:** Mer enn 3 `toContain`-kall på samme variabel i én test. Hvis det er fristende — bruk snapshot. Duplikat mock-oppsett på tvers av filer (Resend-mock, Supabase-mock) — lag shared helper i `__tests__/_helpers.ts` heller enn copy-paste.
+- **Forbudt:** Mer enn 3 `toContain`-kall på samme variabel i én test (se toContain-trappa under). Hvis det er fristende — bruk snapshot. Duplikat mock-oppsett på tvers av filer (Resend-mock, Supabase-mock) — lag shared helper i `__tests__/_helpers.ts` heller enn copy-paste.
 - **Strukturelle kontrakter** (RFC-headere, URL-encoding, error-propagation, to/from): hører hjemme i ÉN delt fil per familie, aldri duplisert per modul. Eksempel-mønster: `lib/mail/__tests__/resend-contract.test.ts` med parametrisert tabell over alle sendere.
 - **Eksempel som passer:** `lib/mail/gameFinishedNotification.test.ts` etter [PR #260](https://github.com/jdlarssen/golf-app/pull/260). 24 tester, 48 snapshots, ÉN chrome-lås, 2 strukturelle assertions.
+
+#### toContain-trappa — ett hjem, tre nivåer
+
+`toContain` har tre terskler på tre forskjellige scope — strengest på det minste. Det er én bevisst trapp, ikke tre løsrevne regler:
+
+| Nivå | Scope | Terskel | Håndhevelse |
+|---|---|---|---|
+| Test | `toContain`-kall på samme variabel i ÉN test | maks **3** | Hard regel (denne seksjonen) — over grensen: bruk snapshot (Type B) i stedet |
+| Fil | `toContain`-kall på samme variabel i ÉN fil | **>5** | Review-signal (§ Hvor reglene håndheves) — vurder konvertering til Type B approval-snapshot |
+| Commit | Nye `.toContain()`-kall i ÉN commit | **>10** | Pre-commit-warn, ikke-blokkerende — se `.githooks/pre-commit` |
+
+Eierbeslutning 2026-07-07 (#1104): behold alle tre nivåer — de fanger ulike ting (per-test er en skrive-tids-regel, per-fil er et code-review-signal, per-commit er en mekanisk vakt som ikke kan se på tvers av filer). CLAUDE.md § «Test-disiplin» har kortversjonen (maks 3 per test); denne tabellen er den fulle forklaringen.
 
 ### Type C — Data-rendering UI
 
@@ -152,7 +164,7 @@ Konkrete eksempler fra tidligere arbeid:
 
 **Pre-commit-hooken** advarer mot (men blokkerer ikke):
 
-- Test-fil med >5 `toContain` på samme variabel → vurder Type B approval-snapshot
+- Test-fil med >5 `toContain` på samme variabel → vurder Type B approval-snapshot (fil-nivå i toContain-trappa, § Type B)
 - Test-fil med duplikat `vi.mock('resend', ...)`- eller `vi.mock('@/lib/supabase/...')`-oppsett → vurder shared helper
 - Playwright-spec med norske string-literals i `toContain`/`toHaveText`/`getByText` → bruk `data-testid` i stedet
 
@@ -176,7 +188,7 @@ Eksisterende test-suite er ikke i samsvar med disse reglene. Kandidater for clea
 1. **PR #261** — re-evaluer mot Type B-regelen. De 12 strukturelle Resend-kontrakt-testene som ble lagt til på tvers av 6 filer er kandidater for konsolidering til én shared `resend-contract.test.ts`, eller fjerning hvis ikke verdt det.
 2. **Leaderboard-klyngen** — 8 filer, ~104 tester under `app/games/[id]/leaderboard/`. Bør evalueres mot Type C-regelen. Sterk hypotese om at flertallet er kandidater for sletting fordi de re-asserter `lib/scoring/`-output via DOM.
 3. **Admin-form-trioen** — `CourseForm.test.tsx` (54), `GameForm.test.tsx` (38), `CoursesLedgerClient.test.tsx` (38). Split per Type — Type A for validering (ekstrahert til pure funksjon), Type C for render, Type D for én happy-path E2E.
-4. **Andre `toContain`-tunge tester** — alle filer med >5 `toContain` på samme variabel.
+4. **Andre `toContain`-tunge tester** — alle filer over fil-nivået i toContain-trappa (§ Type B).
 5. **Mail-test-familien** — vurder konsolidering av Resend-kontrakt-tester til én delt fil hvis PR #261 ikke gjør det.
 
 Sekvens og prioritering tas i et eget cleanup-issue. **Inntil det issue-et er åpnet og prioritert, gjelder disse reglene kun nye endringer.**
