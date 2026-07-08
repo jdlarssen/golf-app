@@ -98,25 +98,28 @@ Failure-alarm beholdes.
 **Claude's Discretion:** fil-/funksjonsnavn, viewport-tall, component-map-innhold, boot-wait-detaljer.
 
 ## Success Criteria
-- [ ] **B1** `lib/loops/prScreenshots.ts` + Type A-tester: `isVisualChange`,
+- [x] **B1** `lib/loops/prScreenshots.ts` + Type A-tester (17): `isVisualChange`,
   page→route-derivasjon (statisk, dynamisk m/fikstur, admin-auth, dropp uten fikstur),
-  komponent-map, cap 3, forsiden-fallback. `npx vitest run lib/loops/prScreenshots` grønn.
-- [ ] **B2** `decide-pr-card.ts` mot ekte PR (dry): skriver `pr-card-plan.json` med
-  riktig `isGui` + targets — verifisert lokalt mot en ekte PR.
-- [ ] **B3** `screenshot-routes.ts` kjørt LOKALT mot staging (Node 22, `.env.staging.local`):
-  booter/logger inn/navigerer/skriver minst ett ekte `pr-shots/*.png`. (Bevis-artefakt.)
-- [ ] **B4** `post-pr-card.ts` multipart-sti bygget + enhets-/dry-verifisert (payload_json
-  + files); JSON-stien uendret når ingen PNG-er.
-- [ ] **B5** `.github/workflows/discord-pr-card.yml` utvidet (decide→betinget screenshot→post);
-  gyldig YAML.
-- [ ] **B6** Fulle gates grønne (typecheck · test · lint · build · guard.test.sh).
-- [ ] **B7** Docs (`docs/loops/discord-pr-kort.md`) oppdatert med Del B.
+  komponent-map, cap 3, forsiden-fallback. **`npx vitest run lib/loops/prScreenshots` → 17 passed.**
+- [x] **B2** `decide-pr-card.ts` mot ekte PR #1160: skrev `pr-card-plan.json` med
+  `isGui=false` + 7 filer — **verifisert lokalt.**
+- [x] **B3** `screenshot-routes.ts` kjørt LOKALT mot staging (Node 22, `.env.staging.local`,
+  ref bekreftet `snwmueecmfqqdurxedxv`): seedet spill → **2 ekte PNG-er** — forsiden
+  (uinnlogget) + seedet spill-leaderboard (spiller innlogget via OTP-mint), begge
+  visuelt bekreftet som ekte render. Seedet spill ryddet.
+- [x] **B4** `post-pr-card.ts` multipart-sti dry-verifisert (payload_json + files[n]);
+  JSON-stien uendret når ingen PNG-er (begge dry-run-bevist).
+- [x] **B5** `.github/workflows/discord-pr-card.yml` utvidet (decide→betinget screenshot→post);
+  **YAML parset OK**, checkout PR-head, continue-on-error på skjermbilde-steget.
+- [x] **B6** Fulle gates grønne: **typecheck (0) · test (4737 passed) · lint (0 err)
+  · build (ok) · guard.test.sh (39/0).**
+- [x] **B7** Docs (`docs/loops/discord-pr-kort.md`) oppdatert med Del B.
 - [ ] **B8 (CI-aktivering, post-merge — ikke blokkerende for ACCEPT):** en ekte GUI-PR
   utløser skjermbilder festet på Discord-kortet. Full Playwright-i-CI-sti bevises først
   når workflowen ligger på main + staging-secrets (finnes alt fra e2e-jobben).
 
 ## Gates
-- [ ] `npm run typecheck` · `npm test` · `npm run lint` · `npm run build` · `bash tests/hooks/guard.test.sh`
+- [x] `npm run typecheck` (0) · `npm test` (4737) · `npm run lint` (0 err) · `npm run build` (ok) · `bash tests/hooks/guard.test.sh` (39/0)
 
 ## Out of Scope
 - Auto-merge (uendret — menneske-porten står).
