@@ -1,9 +1,11 @@
-# Discord PR-kort — merge-knapp for ALLE grønne PR-er (#1159, Del A)
+# Discord PR-kort — merge-knapp + GUI-skjermbilder for ALLE grønne PR-er (#1159)
 
 Hendelses-drevet GitHub Action som poster ett Discord-kort med merge-knapp hver
 gang en åpen PR blir CI-grønn — uansett opphav (natt-runner, CI-vakt,
-dok-avstemmer ELLER interaktiv økt). Målet: eieren merger enhver klar PR fra
-mobilen, uten å måtte inn i GitHub (#1073, «styr fra mobilen»).
+dok-avstemmer ELLER interaktiv økt). Rører PR-en en visuell flate, festes
+staging-skjermbilder av de berørte rutene på kortet (Del B). Målet: eieren
+merger enhver klar PR fra mobilen, og ser GUI-endringen før han trykker
+(#1073, «styr fra mobilen»).
 
 Dette er **sender-siden**. Mottaker-siden (selve mergen når du trykker) er det
 eksisterende interactions-endepunktet fra #1124
@@ -12,24 +14,43 @@ uendret.
 
 ## Hva Action-en gjør
 
-Fil: `.github/workflows/discord-pr-card.yml` → `scripts/loops/post-pr-card.ts`
-(ren logikk i `lib/loops/prCard.ts`, unit-testet).
+Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
 
 1. **Trigger:** `check_suite: completed` (fyrer per suite som fullfører) +
-   `workflow_dispatch` (manuell test/re-post mot ett PR-nummer).
-2. **Gate per kandidat-PR:** åpen · alle check-runs på PR-head grønne
-   (`classifyChecks`) · ikke allerede kortet. Tidlige fyringer der ikke alt er
-   grønt er ufarlige no-ops.
-3. **Kort:** PR-tittel (+ 📝 Draft-merkelapp for draft) · norsk oppsummering
-   (taglinen trukket ut av PR-body-en — repoets `Closes #N\n\n<tagline>`-mal) ·
-   PR-lenke · grønn **✅ Merge**-knapp (`custom_id: merge_pr:<N>`) + lenke-knapp.
-4. **Post → label:** posterer kortet via bot-API-et, legger så dedup-labelen
-   `discord:merge-kort` på PR-en. Poster FØRST, labler etterpå — et tapt kort er
+   `workflow_dispatch` (manuell test/re-post mot ett PR-nummer). Checker ut
+   PR-head-koden så skjermbildene viser koden under review.
+2. **`decide-pr-card.ts` — gate + visuell-diff:** åpen · alle check-runs grønne
+   (`classifyChecks`) · ikke allerede kortet. Avgjør om diffen rører en visuell
+   flate (`isVisualChange`). Skriver `pr-card-plan.json` + `should_card`/`is_gui`.
+   Tidlige, ufullstendige fyringer er ufarlige no-ops. (Ingen npm ci.)
+3. **`screenshot-routes.ts` — kun visuell diff:** booter appen mot staging,
+   kartlegger endrede filer til ruter (`lib/loops/prScreenshots`), logger inn via
+   OTP-mint og tar mobil-skjermbilder. Best-effort — feil her feller ikke kortet.
+4. **`post-pr-card.ts` — post → label:** PR-tittel (+ 📝 Draft) · norsk
+   oppsummering (tagline fra body) · PR-lenke · grønn **✅ Merge**-knapp
+   (`custom_id: merge_pr:<N>`) + lenke-knapp; fester skjermbilder via multipart.
+   Poster FØRST, legger så dedup-labelen `discord:merge-kort` — et tapt kort er
    verre enn en sjelden dobbel.
 
 **Menneske-porten står:** kortet gir deg knappen; det er ingen auto-merge. Når
 du trykker, verifiserer #1124-endepunktet CI grønn på nytt, av-drafter og
 rebase-merger.
+
+## Del B — skjermbilder av GUI-endringer
+
+Rører diffen `app/[locale]/**/*.tsx` eller `components/**` (ekskl. tester), tar
+Action-en skjermbilder mot **staging** (aldri prod — samme rigg som `e2e:gate`:
+appen bootes mot torny-staging, login via service-role OTP-mint).
+
+- **Rute-oppslag** (`lib/loops/prScreenshots.ts`, unit-testet): page-endringer →
+  rute fra stien med fikstur-substitusjon (`[id]`→seedet spill, `[slug]`→bane,
+  osv.); kuraterte komponent-familier (leaderboard/scorecard/hull/podium) → seedet
+  spill-rute; alt uoppløst → forsiden. Dedup + **cap 3** skjermbilder.
+- **Fiksturer** resolveres mot staging (seeder ett spill, henter course/klubb
+  (`groups`)/liga (`leagues`)/cup (`tournaments`)/spiller). Alt best-effort:
+  manglende fikstur dropper bare den ruten. Seedet spill ryddes etterpå.
+- **Mobil-viewport** (390×844) — appens primærcase.
+- Ikke-visuell PR (backend/docs) → `is_gui=false` → hopper booten, poster kort uten bilder.
 
 ## Dedup & race
 
@@ -70,6 +91,10 @@ Går workflowen rød, åpner den (dedupet) et `CI-vakt:`-issue. Diagnose:
   — sjekk `issues: write`-tilgang.
 - **Kort for PR uten grønn CI:** skal ikke skje (`classifyChecks` gater); rapportér
   i så fall, det er en logikk-bug i `lib/loops/prCard.ts`.
+- **Skjermbilder mangler på en GUI-PR:** les `Skjermbilder av GUI-ruter`-loggen
+  (steget er `continue-on-error`, så det feller aldri jobben). Vanligst: dev-serveren
+  booter ikke i tide, OTP-login feiler, eller en fikstur mangler på staging → ruten
+  droppes. Kortet postes uansett uten bildene.
 
 Discord-feil er best-effort (logges, gir ikke rød kjøring) — morgenbriefens
 «Discord-speiling feilet»-helselinje er backstop for «kortene sluttet å komme».
@@ -82,7 +107,9 @@ komplementært: det dekker **alle** grønne PR-er hendelses-drevet, ikke bare de
 briefen surfacer. Overlapp (en PR som både briefes og kortes) er ufarlig —
 begge peker på samme `merge_pr:<N>`-knapp.
 
-## Avgrenset ut (Del B, neste PR)
+## Avgrenset ut
 
-Skjermbilder av GUI-endringer (Playwright mot staging festet på kortet) er **Del
-B** av #1159 og bygges separat.
+- **Auto-merge:** aldri — menneske-porten står.
+- **Vercel-preview-lenke på kortet:** til Vercel Preview er wiret mot staging
+  («Fase 2») screenshotter vi den bootede appen, ikke previewen (som kan backe prod).
+- **Diff-region-annotering / visuell regresjon:** kun rå skjermbilder i v1.

@@ -1,14 +1,14 @@
-# Discord merge-kort (#1159, Del A): poster ett kort med merge-knapp til Discord
-# når en åpen PR blir CI-grønn — uansett opphav (natt-runner, CI-vakt,
-# dok-avstemmer, interaktiv økt). Eieren merger fra mobilen; menneske-porten
-# står (ingen auto-merge). Mottaker-siden er #1124-endepunktet. Se
+# Discord PR-kort (#1159): poster ett kort med merge-knapp til Discord når en
+# åpen PR blir CI-grønn — uansett opphav (natt-runner, CI-vakt, dok-avstemmer,
+# interaktiv økt). Del B: rører diffen en visuell flate, festes staging-
+# skjermbilder på kortet. Eieren merger fra mobilen; menneske-porten står
+# (ingen auto-merge). Mottaker-siden er #1124-endepunktet. Se
 # docs/loops/discord-pr-kort.md.
 name: Discord PR-kort
 
 on:
-  # Fyrer per check-suite som fullfører. Runneren re-spør ALLE check-runs på
-  # PR-head og poster kun når alt er grønt (ellers no-op) — så tidlige,
-  # ufullstendige fyringer er ufarlige.
+  # Fyrer per check-suite som fullfører. decide-steget re-spør ALLE check-runs og
+  # gater — tidlige, ufullstendige fyringer blir ufarlige no-ops.
   check_suite:
     types: [completed]
   # Manuell testing / re-post mot en spesifikk PR (aktiveringssteget).
@@ -26,7 +26,7 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write # legge dedup-label på PR-en
+  pull-requests: write # dedup-label + lese endrede filer
   issues: write # dedup-label (labels går via issues-API) + failure-alarm
   checks: read
 
@@ -47,9 +47,13 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Checkout
+      # PR-head-koden (check_suite: head_sha; workflow_dispatch: PR-ens head-ref)
+      # så skjermbildene viser koden under review.
+      - name: Checkout (PR-head)
         if: steps.guard.outputs.run == 'true'
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.check_suite.head_sha || format('refs/pull/{0}/head', inputs.pr) }}
 
       - name: Setup Node 22
         if: steps.guard.outputs.run == 'true'
@@ -57,14 +61,57 @@ jobs:
         with:
           node-version: 22
 
-      - name: Post merge-kort
+      # Steg 1 — AVGJØR: gate + visuell-diff-deteksjon (ingen npm ci).
+      - name: Decide
+        id: decide
         if: steps.guard.outputs.run == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr }}
+        run: npx --yes tsx scripts/loops/decide-pr-card.ts
+
+      # Steg 2 — SKJERMBILDER (kun visuell diff): booter appen mot staging og
+      # skjermbilder berørte ruter. Best-effort — feil her feller ikke kortet.
+      - name: Skjermbilder av GUI-ruter (staging)
+        if: steps.guard.outputs.run == 'true' && steps.decide.outputs.should_card == 'true' && steps.decide.outputs.is_gui == 'true'
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_PLAYER_EMAIL: ${{ secrets.E2E_PLAYER_EMAIL }}
+          RESEND_STUB_SEND: 'true'
+          SELFREG_RATE_LIMIT_DISABLED: 'true'
+        run: |
+          npm ci
+          # Turbopack native binding-guard (#1095) — dev-serveren nekter å boote uten.
+          BINDING=@next/swc-linux-x64-gnu
+          if ! node -e "require('$BINDING')" 2>/dev/null; then
+            echo "::warning::$BINDING mangler etter npm ci — reinstallerer (#1095)"
+            npm install --no-save --force "$BINDING@$(node -p "require('next/package.json').version")"
+          fi
+          npx playwright install --with-deps chromium
+          # Boot dev-serveren mot staging i bakgrunnen, vent på :3000.
+          npm run dev > /tmp/dev.log 2>&1 &
+          DEV_PID=$!
+          for i in $(seq 1 60); do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:3000/ || true)
+            if [ "$CODE" != "000" ] && [ -n "$CODE" ]; then echo "dev up (HTTP $CODE)"; break; fi
+            sleep 3
+          done
+          npx --yes tsx scripts/loops/screenshot-routes.ts || echo "::warning::skjermbilder feilet (best-effort)"
+          kill "$DEV_PID" 2>/dev/null || true
+
+      # Steg 3 — POST: bygg kortet og fest evt. skjermbilder (multipart).
+      - name: Post merge-kort
+        if: steps.guard.outputs.run == 'true' && steps.decide.outputs.should_card == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ inputs.pr }}
         run: npx --yes tsx scripts/loops/post-pr-card.ts
 
       # Rød kjøring skal aldri dø stille (samme mønster som prod-vakt/schema-drift).
