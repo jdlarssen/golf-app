@@ -53,3 +53,7 @@ next-env.d.ts
 
 # jscpd on-demand duplication report (npm run dup:html)
 .jscpd-report/
+
+# Python bytecode (dok-skjema Actions scripts, #1122)
+__pycache__/
+*.pyc

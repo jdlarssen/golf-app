@@ -20,8 +20,35 @@ en planlagt cloud-routine, eller manuelt («kjør dok-avstemmeren»).
 
 ## Steg 1 — Skjema-snapshot (prod + staging)
 
-Kjør den kanoniske spørringen mot BEGGE miljøer (prod `glofubopddkjhymcbaph`,
-staging `snwmueecmfqqdurxedxv`) via Supabase MCP `execute_sql`:
+Skjema-snapshotet krever pg_catalog-tilgang mot prod+staging. Den finnes bare via
+Supabase MCP (interaktivt) eller Management-API med `SUPABASE_ACCESS_TOKEN` — en
+token som **aldri skal inn i routine-miljøer**. Derfor er selve spørringen +
+regenereringen flyttet til en ukentlig Actions-jobb (#1122), og hvem som gjør hva
+avhenger av hvor du kjører:
+
+- **Sky-routine (Nattkjøreren/Dok-avstemmeren har ikke tokenen):** IKKE spør
+  databasene. Les i stedet siste kjøring av dok-skjema-jobben og verifiser
+  ferskhet — regenereringen skjer der:
+
+  ```bash
+  gh run list --workflow dok-skjema.yml --limit 1 \
+    --json conclusion,updatedAt,url --jq '.[0]'
+  ```
+
+  Ferskhet: siste vellykkede kjøring **< 8 dager** gammel → steget er dekket,
+  noter «skjema-snapshot dekket av dok-skjema-jobben (<dato>)» i heartbeaten.
+  Eldre enn 8 dager, eller siste kjøring rød → varsel-issue «Dok-avstemmeren:
+  skjema-snapshot er utdatert» (milestone 9), aldri stille grønn. Selve
+  regenererings-diffen kommer som en egen docs-PR fra jobben (`claude/dok-skjema-*`)
+  som eieren merger — ikke bland den inn i dok-avstemmerens egen docs-PR.
+
+- **Interaktiv økt (du har MCP):** kjør den kanoniske spørringen selv mot BEGGE
+  miljøer (prod `glofubopddkjhymcbaph`, staging `snwmueecmfqqdurxedxv`) via
+  Supabase MCP `execute_sql`, med assertions og regenerering som før. Dette er
+  fortsatt sannheten som Actions-jobben automatiserer.
+
+Den kanoniske spørringen (delt mellom MCP og `.github/scripts/dok-skjema.sh` —
+hold dem byte-identiske):
 
 ```sql
 select json_build_object(
@@ -37,18 +64,21 @@ select json_build_object(
 ) as snapshot;
 ```
 
-**Assertions (rød = hele kjøringen eskalerer, aldri «tomt = OK»):**
+**Assertions (rød = hele kjøringen eskalerer, aldri «tomt = OK» — håndheves både
+av Actions-jobben og i interaktiv kjøring):**
 
 - Kjernetabellene `games`, `scores`, `users`, `game_players` finnes, har
   `rls=true` og `policies > 0`.
 - Tabell-antall ≥ 30 (guard mot å ha truffet feil skjema/prosjekt).
-- **Idempotens:** kjør spørringen to ganger mot prod — byte-identisk JSON
-  (fanger at spørringen selv er deterministisk).
+- **Idempotens:** kjør spørringen to ganger mot prod — data-identisk (kanonisk,
+  nøkkel-sortert; `json_object_agg` er uordnet, så byte-rekkefølge sammenlignes ikke).
 
 Regenerer så den markør-avgrensede seksjonen i `docs/schema-ground-truth.md`
-(mellom `GENERERT-SEKSJON-START/-SLUTT`) fra prod-resultatet, i formatet som
-står der. Prod↔staging-avvik → eget issue per avvik (ikke docs-fiks — skjema-
-avvik er DB-arbeid).
+(mellom `GENERERT-SEKSJON-START/-SLUTT`) fra prod-resultatet. Actions-jobben gjør
+dette deterministisk (sortert, flate lister) og åpner en docs-PR ved diff;
+interaktive økter kan regenerere manuelt i samme format. Prod↔staging-avvik →
+eget issue per avvik (ikke docs-fiks — skjema-avvik er DB-arbeid); Actions-jobben
+filer et dedupet issue automatisk for avvik utover det kjente (`rls_auto_enable`).
 
 ## Steg 2 — Claims-manifest
 

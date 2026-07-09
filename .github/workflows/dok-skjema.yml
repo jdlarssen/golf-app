@@ -1,0 +1,73 @@
+# Dok-skjema: ukentlig regenerering av den GENERERTE seksjonen i
+# docs/schema-ground-truth.md fra live prod-skjemaet. Kjøres i Actions fordi
+# jobben har SUPABASE_ACCESS_TOKEN — sky-routinen (Dok-avstemmeren/Nattkjøreren)
+# har den ikke og leser i stedet denne jobbens siste kjøring for ferskhet.
+# Se docs/loops/dok-avstemmeren.md steg 1 og issue #1122.
+#
+# Ops-forutsetning: «Allow GitHub Actions to create and approve pull requests»
+# må være på (Settings → Actions → General → Workflow permissions) for at
+# jobben skal kunne åpne docs-PR-en. Uten det feiler gh pr create → fail-closed-issue.
+name: Dok-skjema
+
+on:
+  schedule:
+    - cron: '0 4 * * 0' # ukentlig, søndag 04:00 UTC — før sky-routinen kjører
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  regenerer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip if Supabase token is not configured
+        id: guard
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::SUPABASE_ACCESS_TOKEN ikke satt — dok-skjema kan ikke lese skjemaet. Legg til i Settings → Secrets and variables → Actions."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Regenerer skjema-snapshot og åpne docs-PR ved diff
+        if: steps.guard.outputs.run == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: bash .github/scripts/dok-skjema.sh
+
+      # Rød kjøring skal aldri dø stille (samme mønster som prod-vakt/schema-drift).
+      # Skriptets egen fail_closed dekker lese-/valideringsfeil; dette steget
+      # fanger alt annet uventet i workflowen.
+      - name: Open alert issue on failure
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          TITLE="CI-vakt: dok-skjema-workflowen rød"
+          bash .github/scripts/discord-notify.sh "🔴 **Dok-skjema rød** — $RUN_URL"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Dok-skjema-workflowen feilet uventet.\n\nKjøring: %s\n\nFix-protokoll: `docs/loops/dok-avstemmeren.md` (steg 1).' "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -F milestone=9
