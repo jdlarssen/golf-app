@@ -5,7 +5,15 @@ Nattkjøreren 2026-07-09. Bygg på Opus, kryss-modell-gate på Sonnet (Steg 4.5)
 | Runde | Type | Verdikt | Funn (signatur) | Handling |
 |---|---|---|---|---|
 | 1 | Kryss-modell-gate (Sonnet) | REJECT | awk-seksjons-erstatning no-op'er stille hvis markørene i `schema-ground-truth.md` mangler/omdøpes/dupliseres → steg 5 rapporterer «allerede fersk» = falsk grønn (bryter fail-closed). Sekundært: `mv "$DOC.tmp"` uverifisert; ingen post-sjekk på 1/1 markør. | La inn marker-integritetssjekk FØR awk (nøyaktig 1 START + 1 SLUTT, ellers fail_closed), post-sjekk på 1/1 etter erstatning, og `\|\| fail_closed` på `mv`. Verifisert: good→proceed, omdøpt/duplisert markør→fail-closed. |
-| 2 | Kryss-modell-gate (Sonnet) | (pågår) | — | — |
+| 2 | Kryss-modell-gate (Sonnet) | CONFIRM | Ingen substansiell defekt. | Konvergert — leveres som review-klar draft-PR. |
+
+## Detaljer runde 2
+
+Sonnet reproduserte drift-scenariet (omdøpt SLUTT-markør) → guarden rapporterer
+`START=1 SLUTT=0` og fail-closer i stedet for stille no-op. Bekreftet: `grep -c`
+gir 1 for den to-linjers START-kommentaren (token på én linje); `set -u` uten
+`set -e` gir ingen exit-code-felle; render.py re-emitterer nøyaktig 1/1 markør, så
+post-sjekken holder på legitime kjøringer. Ingen ny defekt introdusert.
 
 ## Detaljer runde 1
 
