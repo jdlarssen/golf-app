@@ -58,6 +58,15 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || format('refs/pull/{0}/head', inputs.pr) }}
 
+      # Automasjons-skriptene (scripts/loops, lib/loops) hentes alltid fra main —
+      # en PR-branch kan være forket før disse filene fantes, og da feiler
+      # `tsx`-stegene under med ERR_MODULE_NOT_FOUND (#1181).
+      - name: Bruk main sin versjon av loop-skriptene
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          git fetch --depth=1 origin main
+          git checkout FETCH_HEAD -- scripts/loops lib/loops
+
       - name: Setup Node 22
         if: steps.guard.outputs.run == 'true'
         uses: actions/setup-node@v4
