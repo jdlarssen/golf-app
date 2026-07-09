@@ -134,12 +134,28 @@ python3 .github/scripts/dok-skjema-render.py "$PROD_A" "$STAGING" "$DIFFREPORT" 
 [ -s "$SECTION" ] || fail_closed "generert seksjon ble tom"
 
 # ── 4. Skriv seksjonen inn mellom markørene (erstatter START..SLUTT inklusiv) ──
+# Marker-integritet FØR erstatning: nøyaktig én START og én SLUTT må finnes.
+# Mangler/duplisert/omdøpt markør → awk ville stille no-op'e (kopiere fila
+# uendret via !skip), og steg 5 ville se «ingen diff» og rapportere «allerede
+# fersk» — en falsk grønn som permanent slår av regenereringen. Fail-closed i stedet.
+start_n=$(grep -c 'GENERERT-SEKSJON-START' "$DOC")
+slutt_n=$(grep -c 'GENERERT-SEKSJON-SLUTT' "$DOC")
+if [ "$start_n" != 1 ] || [ "$slutt_n" != 1 ]; then
+  fail_closed "markør-integritet i $DOC feilet (START=$start_n, SLUTT=$slutt_n; forventet 1/1) — regenerering ville stille no-op'e"
+fi
 awk -v nf="$SECTION" '
   index($0, "GENERERT-SEKSJON-START") { while ((getline l < nf) > 0) print l; skip=1; next }
   index($0, "GENERERT-SEKSJON-SLUTT") { skip=0; next }
   !skip { print }
-' "$DOC" > "$DOC.tmp" || fail_closed "klarte ikke skrive ny seksjon inn i $DOC"
-mv "$DOC.tmp" "$DOC"
+' "$DOC" > "$DOC.tmp" || fail_closed "awk-erstatning i $DOC feilet"
+# Etter erstatning bærer den nye seksjonen selv markørene → nøyaktig 1/1 skal stå igjen.
+new_start=$(grep -c 'GENERERT-SEKSJON-START' "$DOC.tmp")
+new_slutt=$(grep -c 'GENERERT-SEKSJON-SLUTT' "$DOC.tmp")
+if [ "$new_start" != 1 ] || [ "$new_slutt" != 1 ]; then
+  rm -f "$DOC.tmp"
+  fail_closed "markør-antall etter erstatning avvek (START=$new_start, SLUTT=$new_slutt; forventet 1/1)"
+fi
+mv "$DOC.tmp" "$DOC" || fail_closed "mv av regenerert $DOC feilet"
 
 # ── 5. Diff-guard: KUN docs/schema-ground-truth.md skal ha endret seg ──
 CHANGED=$(git diff --name-only)
