@@ -351,6 +351,7 @@ export async function renderStableford(opts: {
           mainContent: mainContent(true),
           teamGrouping: 'solo',
         })}
+        {prizeAwardsNode}
         {reportSection}
         {wdSection}
       </>
