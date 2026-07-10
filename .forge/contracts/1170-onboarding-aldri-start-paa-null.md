@@ -92,9 +92,13 @@ ordlyd på steg-labels (post-humanizer), CHANGELOG-tagline.
 - [x] Ny norsk copy er kjørt gjennom humanizer-skillet før commit.
       *Bevis: `humanizer:humanizer` kjørt på alle sju strengene — idiomatisk bokmål, ingen AI-tells,
       «aktivt steg»/«1 av 3 fullført» matcher appens eksisterende «Steg»-terminologi. Ingen endringer.*
-- [ ] Staging-klikkrunde på torny-staging: fersk/nullstilt testbruker lander på `/complete-profile`
+- [x] Staging-klikkrunde på torny-staging: fersk/nullstilt testbruker lander på `/complete-profile`
       og ser indikatoren (staging-skriv er sanksjonert: nullstill `profile_completed_at` på en
       dedikert testbruker ved behov). Skjermbilde på PR-en.
+      *Bevis: `staging-verify`-skillet kjørt på PR #1215. Fersk `E2E`-bruker (profile_completed_at=NULL)
+      minta via service-role OTP → landet på `/complete-profile`. Struktur-orakel: 3 steg, states
+      `['done','active','upcoming']`, steg 1 check-svg. `/en` viste engelsk. Console error-fri; alle
+      Supabase-kall mot staging-ref. Proof-kommentar + `staging-verified`-label på PR-en; testbruker slettet.*
 
 ## Gates
 
