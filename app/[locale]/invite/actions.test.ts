@@ -133,9 +133,13 @@ describe('sendFriendInvite — shared dedup (#348)', () => {
       (c) => c.method === 'insert',
     );
     expect(insertCalls).toHaveLength(1);
+    // #1169: mailen skal bære nøyaktig samme token som invitations-raden —
+    // det er den lenken /login slår opp kontekstkortet med.
+    const insertedToken = (insertCalls[0].args[0] as { token: string }).token;
     expect(sendInviteNotificationMock).toHaveBeenCalledWith({
       to: 'new@example.com',
       invitedByName: 'Tester',
+      inviteToken: insertedToken,
     });
   });
 });

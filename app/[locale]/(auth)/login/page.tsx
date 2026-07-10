@@ -1,4 +1,6 @@
-import { getTranslations } from 'next-intl/server';
+import type { ReactNode } from 'react';
+import { getLocale, getTranslations } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
@@ -7,8 +9,15 @@ import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
+import { InviteContextCard } from './_components/InviteContextCard';
 import { PasskeyLoginButton } from '@/components/passkey/PasskeyLoginButton';
 import { resolvePasskeyAccess } from '@/lib/auth/passkeyFlag';
+import {
+  getInviteLoginContext,
+  isInviteToken,
+} from '@/lib/auth/getInviteLoginContext';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import { formatDate, formatTime } from '@/lib/i18n/format';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 
 type SearchParams = Promise<{
@@ -16,6 +25,7 @@ type SearchParams = Promise<{
   email?: string | string[];
   error?: string | string[];
   next?: string | string[];
+  invite?: string | string[];
 }>;
 
 // The set of valid error codes that map to a catalog key.
@@ -45,9 +55,39 @@ export default async function LoginPage({
   const errorCode = resolveErrorCode(first(params.error), KNOWN_ERROR_CODES, 'unknown');
   const errorMessage = errorCode ? t(`errors.${errorCode}`) : undefined;
 
+  // #1169: game-scoped invitasjonsmail lenker hit med ?invite=<token>.
+  // Gyldig token → kontekstkort over kodeskjemaet. Alt annet (ugyldig,
+  // utløpt, akseptert, game-løs) → null, og siden er nøyaktig som uten param.
+  const inviteRaw = first(params.invite) ?? '';
+  const invite = isInviteToken(inviteRaw) ? inviteRaw : '';
+  const inviteCtx = invite ? await getInviteLoginContext(invite) : null;
+
+  let inviteCard: ReactNode = null;
+  if (inviteCtx) {
+    const locale = (await getLocale()) as AppLocale;
+    const tModes = await getTranslations('modes');
+    const modeKey = inviteCtx.gameMode as Parameters<typeof tModes>[0];
+    inviteCard = (
+      <InviteContextCard
+        inviterName={inviteCtx.inviterName}
+        gameName={localizeGameName(
+          inviteCtx.gameName,
+          inviteCtx.courseName,
+          locale,
+        )}
+        modeLabel={tModes.has(modeKey) ? tModes(modeKey) : null}
+        courseName={inviteCtx.courseName}
+        teeOff={
+          inviteCtx.teeOffAt ? formatTeeOff(inviteCtx.teeOffAt, locale) : null
+        }
+      />
+    );
+  }
+
   const resendQs = new URLSearchParams();
   if (email) resendQs.set('email', email);
   if (next) resendQs.set('next', next);
+  if (invite) resendQs.set('invite', invite);
   const resendHref = `/login${resendQs.toString() ? '?' + resendQs.toString() : ''}`;
 
   return (
@@ -57,6 +97,7 @@ export default async function LoginPage({
         <div className="flex justify-center mb-4">
           <LocaleSwitcher />
         </div>
+        {inviteCard}
         <Card>
           {errorMessage && (
             <div role="alert" className="mb-4">
@@ -71,6 +112,7 @@ export default async function LoginPage({
               <SendCodeForm
                 defaultEmail={email}
                 next={next}
+                invite={invite}
                 allowSelfRegistration={
                   process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true'
                 }
@@ -94,6 +136,7 @@ export default async function LoginPage({
             <VerifyCodeForm
               email={email}
               next={next}
+              invite={invite}
               resendHref={resendHref}
             />
           )}
@@ -101,4 +144,26 @@ export default async function LoginPage({
       </div>
     </AppShell>
   );
+}
+
+/**
+ * Format ISO-timestamp som «8. mai 2026, 14:30» i aktiv locale, med europeisk
+ * 24-timers klokke — samme mønster som `/signup/[shortId]`. Faller tilbake til
+ * rå-strengen hvis Intl kaster (skal aldri skje for gyldige ISO-strenger).
+ */
+function formatTeeOff(iso: string, locale: AppLocale): string {
+  try {
+    const datePart = formatDate(iso, locale, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const timePart = formatTime(iso, locale, {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${datePart}, ${timePart}`;
+  } catch {
+    return iso;
+  }
 }

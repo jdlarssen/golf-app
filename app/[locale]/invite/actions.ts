@@ -109,9 +109,10 @@ export async function sendFriendInvite(formData: FormData) {
   // just to satisfy the column. The actual OTP code is sent by Supabase
   // when the invitee reaches /login and asks for one.
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const inviteToken = randomUUID();
   const { error: insertError } = await supabase.from('invitations').insert({
     email,
-    token: randomUUID(),
+    token: inviteToken,
     invited_by: user.id,
     game_id: null,
     expires_at: expiresAt,
@@ -125,7 +126,11 @@ export async function sendFriendInvite(formData: FormData) {
   // sent later by Supabase when the invitee reaches /login. Best-effort:
   // a mail failure doesn't roll back the invitation.
   try {
-    await sendInviteNotification({ to: email, invitedByName: inviterName });
+    await sendInviteNotification({
+      to: email,
+      invitedByName: inviterName,
+      inviteToken,
+    });
   } catch (err) {
     console.error('[invite] notification mail failed', err);
   }

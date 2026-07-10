@@ -80,16 +80,17 @@ export async function sendInvitation(formData: FormData) {
   }
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const inviteToken = randomUUID();
   const { error: insertError } = await supabase.from('invitations').insert({
     email,
-    token: randomUUID(),
+    token: inviteToken,
     invited_by: profile.id,
     expires_at: expiresAt,
   });
   if (insertError) redirect({ href: '/admin/spillere?error=log_failed', locale });
 
   try {
-    await sendInviteNotification({ to: email, invitedByName });
+    await sendInviteNotification({ to: email, invitedByName, inviteToken });
   } catch (err) {
     console.error('[admin/spillere] notification mail failed', err);
     const qs = new URLSearchParams({ error: 'mail_failed', email });
@@ -119,14 +120,18 @@ export async function resendInvitation(formData: FormData) {
 
   const { data: inv, error } = await supabase
     .from('invitations')
-    .select('email, accepted_at')
+    .select('email, accepted_at, token')
     .eq('id', id)
     .single();
   if (error || !inv) redirect({ href: '/admin/spillere?error=resend_failed', locale });
   if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=resend_failed', locale });
 
   try {
-    await sendInviteNotification({ to: inv!.email, invitedByName });
+    await sendInviteNotification({
+      to: inv!.email,
+      invitedByName,
+      inviteToken: inv!.token,
+    });
   } catch (err) {
     console.error('[admin/spillere] resend mail failed', err);
     const qs = new URLSearchParams({ error: 'mail_failed', email: inv!.email });

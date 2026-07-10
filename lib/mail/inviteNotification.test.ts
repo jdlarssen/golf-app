@@ -81,9 +81,12 @@ describe('sendInviteNotification', () => {
   });
 
   it('med gameName: subject + body har spill-konteksten', async () => {
+    // #1169: game-scoped invitasjoner sender alltid med invitations.token —
+    // login-lenken skal få &invite=<token> så /login viser kontekstkortet.
     const payload = await send({
       ...baseParams,
       gameName: 'Stiklestad 25. mai',
+      inviteToken: '11111111-2222-3333-4444-555555555555',
     });
     expect(payload.subject).toMatchInlineSnapshot(`"Du er invitert til Stiklestad 25. mai på Tørny"`);
     expect(payload.text).toMatchInlineSnapshot(`
@@ -91,7 +94,7 @@ describe('sendInviteNotification', () => {
 
       Jørgen har invitert deg til spillet Stiklestad 25. mai på Tørny.
 
-      Gå til https://tornygolf.no/login?email=venn%40example.com, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+      Gå til https://tornygolf.no/login?email=venn%40example.com&invite=11111111-2222-3333-4444-555555555555, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -188,6 +191,7 @@ describe('sendInviteNotification', () => {
       ...baseParams,
       locale: 'en',
       gameName: 'Stiklestad 25. mai',
+      inviteToken: '11111111-2222-3333-4444-555555555555',
     });
     expect(payload.subject).toMatchInlineSnapshot(`"You're invited to Stiklestad 25. mai on Tørny"`);
     expect(payload.text).toMatchInlineSnapshot(`
@@ -195,7 +199,7 @@ describe('sendInviteNotification', () => {
 
       Jørgen has invited you to Stiklestad 25. mai on Tørny.
 
-      Go to https://tornygolf.no/en/login?email=venn%40example.com, enter this email address, and log in with the code we send you.
+      Go to https://tornygolf.no/en/login?email=venn%40example.com&invite=11111111-2222-3333-4444-555555555555, enter this email address, and log in with the code we send you.
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "

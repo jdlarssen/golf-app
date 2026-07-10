@@ -63,6 +63,13 @@ export type InviteNotificationParams = {
    * udefinert → norsk. Beholdt som param for symmetri med øvrige mail-sendere.
    */
   locale?: string | null;
+  /**
+   * `invitations.token` for raden invitasjonen gjelder (#1169). Satt →
+   * login-lenken får `&invite=<token>` så `/login` kan slå opp og vise
+   * turneringskonteksten (kun visning — token logger ingen inn). Kalleren
+   * har token-en i hånden ved insert/resend; udefinert → lenke som før.
+   */
+  inviteToken?: string;
 };
 
 /**
@@ -101,7 +108,7 @@ export async function sendInviteNotification(
     return;
   }
 
-  const { to, invitedByName, gameName, gameMode, locale } = params;
+  const { to, invitedByName, gameName, gameMode, locale, inviteToken } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
   const messages = await getMailMessages(locale);
@@ -110,6 +117,7 @@ export async function sendInviteNotification(
   const modeHint = resolveModeHint(hasGame, gameMode, messages);
 
   const loginQs = new URLSearchParams({ email: to });
+  if (inviteToken) loginQs.set('invite', inviteToken);
   const loginUrl = `${mailUrl(locale, '/login')}?${loginQs.toString()}`;
   const formatsUrl = mailUrl(locale, '/spillformater');
 
