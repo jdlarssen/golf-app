@@ -54,6 +54,7 @@ av samme grunn — poler ikke en flate ingen står på.
 | **Herding** | Kjernesløyfa skal aldri ødelegge en lørdag: stagingbevis-porten, staging/prod-paritet, rate-limit-tetting, natt-miljøets e2e | #1076, #1130, #1131, #1183 (+ flake-datapunktene #1132, #1168) |
 | **Vekstsløyfa (Tier 1)** | Invitert spiller blir neste arrangør: onboarding uten vegger, kontekst før kode-veggen, kom-i-gang-sjekkliste | #1169, #1170, #1173, #1176, #1177 |
 | **Sesongstyrt** | Kavalkaden — golfåret som delbar fortelling. Bygges mot sesongslutt; start dekomponering tidligst september | #1040 |
+| **Eier-pull: avstand til green** | Crowdsourcet green-pinning + «~X m til green» på hullskjermen (v1 «ren pinning, én avstand»). Pull: eier + medspiller ba om det på en runde (§5); eier-utvalgt i board-møte 2026-07-10. Design: `docs/superpowers/specs/2026-07-10-avstand-til-green-design.md` | #1210 |
 
 Når en bane tømmes, beslutter eieren neste — dokumentet oppdateres i samme PR.
 
