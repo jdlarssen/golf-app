@@ -40,10 +40,12 @@ export async function OnboardingProgress() {
   return (
     <div className="mb-6">
       <p className="mb-3 text-xs font-medium text-muted">{t('summary')}</p>
-      <ol className="flex items-start gap-2">
+      <ol className="flex items-start gap-2" data-testid="onboarding-progress">
         {STEPS.map(({ key, state }, index) => (
           <li
             key={key}
+            data-testid="onboarding-step"
+            data-state={state}
             className="flex flex-1 flex-col items-center gap-1.5 text-center"
           >
             <span
