@@ -14,6 +14,14 @@ export default defineConfig({
     // server engelsk til specs som asserter norsk copy. Specs som tester
     // negotiation lager egne kontekster med eksplisitt locale.
     locale: 'nb-NO',
+    // Routine-/nattkjører-miljøet har en pre-installert chromium hvis build ikke
+    // matcher pinnet Playwright (1194 vs. 1223), så det bundlede registry-oppslaget
+    // feiler med «Executable doesn't exist» før noen test kjører (#1183). Peker
+    // PW_CHROMIUM_EXECUTABLE_PATH på binæren, brukes den direkte og oppslaget skjer
+    // aldri. Usatt (CI, lokal utvikling) → dagens oppførsel, uendret.
+    launchOptions: process.env.PW_CHROMIUM_EXECUTABLE_PATH
+      ? { executablePath: process.env.PW_CHROMIUM_EXECUTABLE_PATH }
+      : {},
   },
   webServer: {
     command: 'npm run dev',

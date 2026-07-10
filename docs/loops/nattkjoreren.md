@@ -58,6 +58,10 @@ byggene. Økes videre kun av eieren via PR når tilliten er etablert.
 - Finnes staging-env i routine-miljøet (`NEXT_PUBLIC_SUPABASE_URL` peker på
   staging-ref `snwmueecmfqqdurxedxv`): kjør `npm run e2e:gate`. Grønn → noter
   i PR-kommentaren.
+- Matcher ikke miljøets pre-installerte browser-build pinnet Playwright (feiler
+  med «Executable doesn't exist»): eksportér
+  `PW_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` før `npm run e2e:gate`
+  — da brukes binæren direkte i stedet for det bundlede registry-oppslaget (#1183).
 - Mangler env, eller e2e dekker ikke den berørte flyten: sett
   `needs-manual-qa`-label på PR-en og skriv i PR-kommentaren nøyaktig hvilken
   flyt som må klikkes gjennom (stagingbevis-porten #1076 tar den i en
