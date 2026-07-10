@@ -4,12 +4,12 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Kicker } from '@/components/ui/Kicker';
 import { completeProfile } from './actions';
 import { OnboardingHcpField } from './OnboardingHcpField';
+import { OnboardingNameField } from './OnboardingNameField';
 import { OnboardingProgress } from './OnboardingProgress';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 
@@ -100,15 +100,7 @@ export default async function CompleteProfile({
 
         <form action={completeProfile} className="space-y-5">
           <input type="hidden" name="next" value={next} />
-          <Input
-            id="name"
-            name="name"
-            type="text"
-            label={t('nameLabel')}
-            autoComplete="name"
-            defaultValue={echoName}
-            required
-          />
+          <OnboardingNameField initialName={echoName} />
 
           <OnboardingHcpField initialMagnitude={echoHcpIndex} initialPlus={echoHcpPlus} />
 

@@ -12,6 +12,7 @@ import { computeLeaderboard, strokesForHole } from '@/lib/scoring';
 import type { StablefordSoloResult } from '@/lib/scoring/modes/types';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { BrandMark } from '@/components/ui/BrandMark';
+import { Input } from '@/components/ui/Input';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import {
   DEMO_HOLES,
@@ -20,6 +21,7 @@ import {
   buildDemoContext,
   type DemoYouScores,
 } from '@/lib/demo/seed';
+import { DEMO_NAME_STORAGE_KEY } from '@/lib/demo/handoff';
 
 /**
  * Prøvespill-demoen (#1042). 100 % klient-side: motstanderne har ferdigfylte
@@ -33,8 +35,12 @@ export function DemoGame(): JSX.Element {
   const [youScores, setYouScores] = useState<DemoYouScores>({});
   const [holeIndex, setHoleIndex] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [youName, setYouName] = useState('');
 
   const youPlayer = DEMO_PLAYERS.find((p) => p.isYou)!;
+  // Eierskaps-effekt (#1173): besøkeren kan sette navnet sitt på spillerkortet og
+  // tavla før kode-veggen. Tomt felt faller tilbake til seed-navnet («Deg»).
+  const displayName = youName.trim() || youPlayer.name;
   const hole = DEMO_HOLES[holeIndex];
   const extraStrokes = strokesForHole(youPlayer.courseHandicap, hole.strokeIndex);
   const currentScore = youScores[hole.number] ?? null;
@@ -53,10 +59,14 @@ export function DemoGame(): JSX.Element {
   const playersById = useMemo(() => {
     const map = new Map<string, SoloStablefordPlayerInfo>();
     for (const p of DEMO_PLAYERS) {
-      map.set(p.userId, { name: p.name, nickname: p.nickname, teeGender: p.teeGender });
+      map.set(p.userId, {
+        name: p.isYou ? displayName : p.name,
+        nickname: p.nickname,
+        teeGender: p.teeGender,
+      });
     }
     return map;
-  }, []);
+  }, [displayName]);
 
   const leaderHolesPlayed = result.players[0]?.holesPlayed ?? 0;
   const isLastHole = holeIndex === DEMO_HOLES.length - 1;
@@ -77,6 +87,21 @@ export function DemoGame(): JSX.Element {
     setHoleIndex(0);
     setSheetOpen(false);
   }
+  function handleNameChange(value: string) {
+    setYouName(value);
+    const trimmed = value.trim();
+    try {
+      // Bær navnet til registreringen (#1173). Skriv aldri default-navnet, ellers
+      // prefylles profilen med «Deg»; tomt/whitespace fjerner nøkkelen igjen.
+      if (trimmed && trimmed !== youPlayer.name) {
+        window.localStorage.setItem(DEMO_NAME_STORAGE_KEY, trimmed);
+      } else {
+        window.localStorage.removeItem(DEMO_NAME_STORAGE_KEY);
+      }
+    } catch {
+      // localStorage utilgjengelig (privat modus) — demoen fungerer likevel.
+    }
+  }
 
   return (
     <div className="relative">
@@ -94,6 +119,20 @@ export function DemoGame(): JSX.Element {
 
       <p className="mt-4 text-sm text-muted">{t('intro')}</p>
 
+      <div className="mt-4">
+        <Input
+          id="demo-name"
+          type="text"
+          label={t('nameLabel')}
+          placeholder={youPlayer.name}
+          maxLength={40}
+          autoComplete="name"
+          value={youName}
+          onChange={(e) => handleNameChange(e.target.value)}
+          data-testid="demo-name-input"
+        />
+      </div>
+
       <section className="mt-5">
         <div className="mb-2 flex items-baseline justify-between">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
@@ -106,8 +145,8 @@ export function DemoGame(): JSX.Element {
 
         <ScoreCard
           playerId={DEMO_YOU_ID}
-          name={youPlayer.name}
-          initial={youPlayer.name.charAt(0)}
+          name={displayName}
+          initial={displayName.charAt(0)}
           extraStrokes={extraStrokes}
           score={currentScore}
           par={hole.par}

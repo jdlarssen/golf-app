@@ -1,4 +1,4 @@
-import { InputHTMLAttributes } from 'react';
+import { InputHTMLAttributes, Ref } from 'react';
 
 export function Input({
   label,
@@ -8,6 +8,7 @@ export function Input({
   error,
   id,
   inputClassName,
+  ref,
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & {
   label: string;
@@ -17,6 +18,8 @@ export function Input({
   warning?: string | null;
   error?: string;
   inputClassName?: string;
+  /** Forwarded to the underlying `<input>` (React 19 ref-as-prop). */
+  ref?: Ref<HTMLInputElement>;
 }) {
   return (
     <div>
@@ -30,6 +33,7 @@ export function Input({
       </label>
       <input
         id={id}
+        ref={ref}
         {...props}
         className={`w-full rounded-xl border px-3.5 py-3 bg-surface text-text placeholder-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 ${error ? 'border-danger' : 'border-border'} ${inputClassName ?? ''}`}
       />
