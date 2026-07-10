@@ -4916,6 +4916,7 @@
     "gameName": "Demo round",
     "banner": "This is a demo round. Nothing you enter is saved.",
     "intro": "Enter your strokes on the three holes and watch yourself climb the board.",
+    "nameLabel": "What's your name?",
     "holeKicker": "Hole {number} of {total}",
     "parLabel": "Par {par}",
     "prevHole": "Back",
@@ -4923,7 +4924,7 @@
     "finishedHint": "All holes entered. See where you landed.",
     "ctaHeading": "Ready for a real round?",
     "ctaBody": "Set up your own tournament in a couple of minutes.",
-    "ctaButton": "Get started",
+    "ctaButton": "Continue",
     "reset": "Play again"
   },
   "embed": {

@@ -4916,6 +4916,7 @@
     "gameName": "Prøvespill",
     "banner": "Dette er et prøvespill. Ingenting du taster blir lagret.",
     "intro": "Tast inn slagene dine på de tre hullene og se deg selv klatre på tavla.",
+    "nameLabel": "Hva heter du?",
     "holeKicker": "Hull {number} av {total}",
     "parLabel": "Par {par}",
     "prevHole": "Forrige",
@@ -4923,7 +4924,7 @@
     "finishedHint": "Alle hull tastet. Se hvor du havnet.",
     "ctaHeading": "Klar for en ekte runde?",
     "ctaBody": "Lag din egen turnering på et par minutter.",
-    "ctaButton": "Kom i gang",
+    "ctaButton": "Fortsett",
     "reset": "Spill på nytt"
   },
   "embed": {

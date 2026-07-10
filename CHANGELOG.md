@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.189 · Sett navnet ditt før du logger inn</strong></summary>
+
+[#1173](https://github.com/jdlarssen/golf-app/issues/1173) — I prøvespillet kan du nå skrive navnet ditt og se det på ditt eget spillerkort og øverst på tavla. Går du videre for å lage konto, ligger navnet allerede klart i skjemaet — du fortsetter der du slapp.
+
+↳ /demo · «Fortsett»
+</details>
+
+<details>
 <summary><strong>1.188 · Onboardingen starter aldri på null</strong></summary>
 
 [#1170](https://github.com/jdlarssen/golf-app/issues/1170) — Når du skal fullføre profilen ser du nå en liten fremdriftsrad med tre steg: «Konto opprettet» er allerede huket av, så du har to steg igjen. Du starter med driv i stedet for blanke ark.
