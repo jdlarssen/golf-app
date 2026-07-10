@@ -2603,6 +2603,13 @@
     }
   },
   "auth": {
+    "inviteCard": {
+      "invitedBy": "{name} has invited you",
+      "invitedByFallback": "You're invited",
+      "formatLabel": "Format:",
+      "courseLabel": "Course:",
+      "teeOffLabel": "Tee-off:"
+    },
     "tryDemoDivider": "or",
     "tryDemo": "Try Tørny in 60 seconds",
     "errors": {

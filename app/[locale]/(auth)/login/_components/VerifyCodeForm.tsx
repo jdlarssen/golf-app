@@ -18,9 +18,15 @@ const OTP_LENGTH = 8;
 export function VerifyCodeForm({
   email,
   next,
+  invite = '',
 }: {
   email: string;
   next: string;
+  /**
+   * Invitasjons-token fra `?invite=` (#1169) — følger resend-formen så en
+   * «Send ny kode» beholder kontekstkortet gjennom sendCode-redirecten.
+   */
+  invite?: string;
   /** @deprecated No longer used — resend is now an inline form action. */
   resendHref?: string;
 }) {
@@ -37,6 +43,7 @@ export function VerifyCodeForm({
       <form action={sendCode} className="text-center">
         <input type="hidden" name="email" value={email} />
         <input type="hidden" name="next" value={next} />
+        <input type="hidden" name="invite" value={invite} />
         <ResendFooter />
       </form>
     </div>

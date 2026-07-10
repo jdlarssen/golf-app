@@ -17,10 +17,17 @@ import { sendCode } from '../actions';
 export function SendCodeForm({
   defaultEmail,
   next,
+  invite = '',
   allowSelfRegistration = false,
 }: {
   defaultEmail: string;
   next: string;
+  /**
+   * Invitasjons-token fra `?invite=` (#1169) — always-mounted hidden input
+   * så sendCode kan videreføre den til verify-steget og kontekstkortet blir
+   * stående. Tom streng → feltet sendes tomt og ignoreres server-side.
+   */
+  invite?: string;
   /**
    * Server-resolved value of NEXT_PUBLIC_ALLOW_SELF_REGISTRATION. Controls
    * whether the helper sub-text invites new visitors to create an account.
@@ -33,6 +40,7 @@ export function SendCodeForm({
   return (
     <form action={sendCode} className="space-y-4">
       <input type="hidden" name="next" value={next} />
+      <input type="hidden" name="invite" value={invite} />
       {/*
         Honeypot: hidden from real users (display:none + aria-hidden +
         tabIndex=-1), not autofillable (autoComplete=off). Server-side

@@ -9,6 +9,7 @@ import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { distinctInviterIds } from '@/lib/friends/friendGraph';
+import { isInviteToken } from '@/lib/auth/getInviteLoginContext';
 import { routing, type AppLocale } from '@/i18n/routing';
 
 // Step 1 of two-step OTP login. Verifies the email is either registered
@@ -23,6 +24,13 @@ export async function sendCode(formData: FormData) {
   const next =
     nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '';
 
+  // #1169: invitasjons-token fra kontekstkort-flyten — videreføres til
+  // verify-steget så kortet blir stående. Kun visning; alt annet enn en
+  // UUID-formet verdi droppes. Error-redirects mister den (pre-eksisterende
+  // mønster for alle params, akseptert i kontrakten).
+  const inviteRaw = String(formData.get('invite') ?? '').trim();
+  const invite = isInviteToken(inviteRaw) ? inviteRaw : '';
+
   // Honeypot — the `website` field is hidden via CSS/tabindex/aria so real
   // users never see it. Form-filling bots typically populate every input that
   // looks plausibly relevant, including hidden ones. If we see a value, we
@@ -34,6 +42,7 @@ export async function sendCode(formData: FormData) {
     console.warn('[honeypot] silent reject', { route: 'login' });
     const qs = new URLSearchParams({ step: 'verify', email });
     if (next) qs.set('next', next);
+    if (invite) qs.set('invite', invite);
     redirect(`/login?${qs.toString()}`);
   }
 
@@ -158,6 +167,7 @@ export async function sendCode(formData: FormData) {
 
   const qs = new URLSearchParams({ step: 'verify', email });
   if (next) qs.set('next', next);
+  if (invite) qs.set('invite', invite);
   redirect(`/login?${qs.toString()}`);
 }
 

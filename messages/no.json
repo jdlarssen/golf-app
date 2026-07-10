@@ -2603,6 +2603,13 @@
     }
   },
   "auth": {
+    "inviteCard": {
+      "invitedBy": "{name} har invitert deg",
+      "invitedByFallback": "Du er invitert",
+      "formatLabel": "Spillformat:",
+      "courseLabel": "Bane:",
+      "teeOffLabel": "Tee-off:"
+    },
     "tryDemoDivider": "eller",
     "tryDemo": "Prøv Tørny på 60 sekunder",
     "errors": {

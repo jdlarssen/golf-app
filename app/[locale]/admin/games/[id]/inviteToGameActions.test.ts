@@ -431,11 +431,18 @@ describe('inviteEmailToGame', () => {
       inviteEmailToGame(GAME_ID, formData({ email: 'NyKompis@Example.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
+    // #1169: mailen bærer samme token som invitations-raden — lenken /login
+    // slår opp kontekstkortet med.
+    const insertCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'invitations' && c.method === 'insert',
+    );
+    const insertedToken = (insertCall?.args[0] as { token: string }).token;
     expect(sendInviteNotificationMock).toHaveBeenCalledWith({
       to: 'nykompis@example.com',
       invitedByName: 'Jørgen',
       gameName: 'Stiklestad',
       gameMode: 'stableford',
+      inviteToken: insertedToken,
     });
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toContain('status=invite_sent');
@@ -452,7 +459,10 @@ describe('inviteEmailToGame', () => {
       // users.select.ilike.maybeSingle — ingen treff
       { data: null, error: null },
       // invitations.select.ilike.eq.is.maybeSingle — pending finnes
-      { data: { id: 'invitation-1' }, error: null },
+      {
+        data: { id: 'invitation-1', token: 'eeeeeeee-1111-2222-3333-444444444444' },
+        error: null,
+      },
     ]);
     authedAsAdmin();
 
@@ -469,6 +479,7 @@ describe('inviteEmailToGame', () => {
       invitedByName: 'Jørgen',
       gameName: 'Stiklestad',
       gameMode: 'stableford',
+      inviteToken: 'eeeeeeee-1111-2222-3333-444444444444',
     });
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toContain('status=invite_sent');
@@ -555,11 +566,16 @@ describe('inviteEmailToGame', () => {
       inviteEmailToGame(GAME_ID, formData({ email: 'ny@example.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
+    const insertCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'invitations' && c.method === 'insert',
+    );
+    const insertedToken = (insertCall?.args[0] as { token: string }).token;
     expect(sendInviteNotificationMock).toHaveBeenCalledWith({
       to: 'ny@example.com',
       invitedByName: 'Kari',
       gameName: 'Lørdagsrunde',
       gameMode: 'stableford',
+      inviteToken: insertedToken,
     });
     expect(lastRedirect()).toContain(`/games/${GAME_ID}/spillere?status=invite_sent`);
   });

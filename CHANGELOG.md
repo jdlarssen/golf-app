@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.186 · Invitasjonen viser hva du blir med på</strong></summary>
+
+[#1169](https://github.com/jdlarssen/golf-app/issues/1169) — En invitert spiller ser nå turneringen på innloggingssiden — hvem som inviterte, spillnavn, spillformat, bane og tee-off — før de taster e-posten sin, i stedet for å møte kode-veggen blindt.
+
+↳ /login · «Logg inn»
+</details>
+
+<details>
 <summary><strong>1.184 · Trakta fra invitasjon til første slag</strong></summary>
 
 [#1192](https://github.com/jdlarssen/golf-app/issues/1192) — Nøkkeltall-kortet i Sekretariatet viser nå hvor mange inviterte som ba om kode, logget inn, fullførte profilen og tastet sitt første slag — så du ser hvor nye spillere faller fra på veien inn.
