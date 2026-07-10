@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.187 · Se spillet før du fyller ut profilen</strong></summary>
+
+[#1176](https://github.com/jdlarssen/golf-app/issues/1176) — En invitert spiller lander nå rett på spillet, ikke på profilskjemaet. Du ser leaderboardet og hvem som er med med en gang; navn og handicap fyller du inn når du skal taste ditt første slag.
+
+↳ /games · «Se spillet»
+</details>
+
+<details>
 <summary><strong>1.186 · Invitasjonen viser hva du blir med på</strong></summary>
 
 [#1169](https://github.com/jdlarssen/golf-app/issues/1169) — En invitert spiller ser nå turneringen på innloggingssiden — hvem som inviterte, spillnavn, spillformat, bane og tee-off — før de taster e-posten sin, i stedet for å møte kode-veggen blindt.

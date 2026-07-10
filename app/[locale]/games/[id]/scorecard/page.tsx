@@ -8,6 +8,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { isProfileIncomplete } from '@/lib/auth/profileGate';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -107,6 +108,17 @@ export default async function ScorecardPage({ params }: { params: Params }) {
 
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
+
+  // #1176: hard profil-gate — en profil-løs spiller kan se spillet, men å
+  // levere eller redigere scorekortet krever navn + handicap. userId er non-null
+  // her (guardet av `if (!userId) redirect` over).
+  const { supabase: gateClient } = await getScorecardContext();
+  if (await isProfileIncomplete(gateClient, userId!)) {
+    redirect({
+      href: `/complete-profile?next=${encodeURIComponent(`/games/${id}/scorecard`)}`,
+      locale,
+    });
+  }
 
   // Withdrawn (#387): bounce a trukket spiller to game-home (which shows the
   // «Du har trukket deg»-banner + Angre) rather than their now-frozen card.

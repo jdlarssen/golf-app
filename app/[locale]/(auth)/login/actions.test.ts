@@ -490,11 +490,10 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
       gameId: '00000000-0000-0000-0000-0000000000aa',
       inviterUserId: '00000000-0000-0000-0000-0000000000bb',
     });
-    // #356: a fresh invitee (no profile yet) is routed via /complete-profile
-    // carrying the game as `next`, so they land on it after onboarding.
-    expect(lastRedirect()).toBe(
-      '/complete-profile?next=%2Fgames%2F00000000-0000-0000-0000-0000000000aa',
-    );
+    // #1176: a fresh invitee (no profile yet) now lands DIRECTLY on the game.
+    // The profile form is a soft stripe on game-home + a hard gate at scoring,
+    // no longer a /complete-profile detour before they get to see the game.
+    expect(lastRedirect()).toBe('/games/00000000-0000-0000-0000-0000000000aa');
   });
 
   it('#356: ferdig profil + ett solo-spill → lander rett på /games/[id]', async () => {
@@ -682,7 +681,7 @@ describe('verifyCode — #676 both-game email-invite co-player', () => {
     expect(lastRedirect()).toBe('/signup/xyz98765/team');
   });
 
-  it("'both' game with incomplete profile: routes via /complete-profile carrying the team attach page as next", async () => {
+  it("'both' game with incomplete profile: #1176 lands directly on the team attach page (soft gate, no detour)", async () => {
     verifyOtpMock.mockResolvedValue({ error: null });
     pendingInvitations = [
       {
@@ -702,9 +701,9 @@ describe('verifyCode — #676 both-game email-invite co-player', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
-    expect(lastRedirect()).toBe(
-      '/complete-profile?next=%2Fsignup%2Fxyz98765%2Fteam',
-    );
+    // #1176: no more /complete-profile detour — the invitee lands on the team
+    // attach page and completes their profile at scoring time.
+    expect(lastRedirect()).toBe('/signup/xyz98765/team');
   });
 
   it("'both' game with explicit next: skips team-attach routing, honors the explicit next", async () => {
