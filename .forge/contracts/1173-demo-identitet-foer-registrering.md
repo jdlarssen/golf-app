@@ -85,26 +85,44 @@ complete-profile er en wrapper rundt `Input` eller en effekt-komponent, CHANGELO
 
 ## Success Criteria
 
-- [ ] `/demo` har et navnefelt; å skrive «Jørgen» oppdaterer navnet på ScoreCard OG tavle-raden
+- [x] `/demo` har et navnefelt; å skrive «Jørgen» oppdaterer navnet på ScoreCard OG tavle-raden
       live; tomt felt viser «Deg» begge steder.
-- [ ] Etter å ha satt navn i demoen: fersk/nullstilt bruker som lander på `/complete-profile`
+      → `DemoGame.tsx:43` `displayName = youName.trim() || youPlayer.name`, brukt i ScoreCard
+      (`name`/`initial`, :148-149) og `playersById`-you-raden (:63). Navnefelt `demo-name-input`
+      (:120-133). Render-testen (`DemoGame.test.tsx`) asserter «Jørgen» inn → tavla viser
+      «Jørgen», «Deg» borte. vitest 10/10 grønn.
+- [x] Etter å ha satt navn i demoen: fersk/nullstilt bruker som lander på `/complete-profile`
       (samme nettleser) ser navnet prefylt i navn-feltet, kan endre det, og nøkkelen
       `torny-demo-name` er fjernet etter prefill.
-- [ ] Demo-CTA-knappen leser som «Fortsett»-semantikk (ikke «Kom i gang») på no + en; href
+      → `OnboardingNameField.tsx`: ukontrollert `Input` + ref; effekt leser `torny-demo-name`
+      ved mount (kun når `initialName` tom — #748-echo vinner), skriver til DOM, sletter nøkkel.
+      Kode-verifisert; ende-til-ende bekreftes i staging-klikkrunden (siste kriterium).
+- [x] Demo-CTA-knappen leser som «Fortsett»-semantikk (ikke «Kom i gang») på no + en; href
       fortsatt `/login?next=%2F`.
-- [ ] Grep-guard fra #1042 holder: demo-koden importerer fortsatt IKKE
+      → `messages/no.json` `demo.ctaButton = "Fortsett"`, `en.json = "Continue"`; CTA-href
+      `/login?next=%2F` uendret (`DemoGame.tsx:198`). Render-test asserter href-en.
+- [x] Grep-guard fra #1042 holder: demo-koden importerer fortsatt IKKE
       `writeScore`/`startSyncListener`/`getBrowserClient`/`@/lib/sync`/Dexie.
-- [ ] `npx vitest run "app/[locale]/demo" "app/[locale]/complete-profile" messages/catalogParity.test.ts`
+      → `grep -rnE "^import|from '" app/[locale]/demo lib/demo | grep -E "writeScore|…"` → tom.
+- [x] `npx vitest run "app/[locale]/demo" "app/[locale]/complete-profile" messages/catalogParity.test.ts`
       grønn — fortsatt maks ÉN render-test per komponent.
+      → 3 filer / 10 tester grønn. Utvidet den ENE DemoGame-render-testen, ingen ny Type C-fil.
 - [ ] Ny norsk copy humanizer-kjørt; staging-klikkrunde på torny-staging FØR merge: demo →
       sett navn → CTA → login; prefill verifiseres med nullstilt testbruker
       (`profile_completed_at = null` — staging-skriv er sanksjonert). Skjermbilde på PR-en.
+      → Copy («Hva heter du?», «Fortsett») passerte pre-commit AI-tell-scan. Staging-klikkrunden
+      gjenstår som pre-merge-steg (utføres etter PR åpnes).
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` grønn · `npm run lint` grønn · `npm run build` grønn
+- [x] `npx tsc --noEmit` grønn · `npm run lint` grønn · `npm run build` grønn
+      → tsc exit 0; lint 0 errors (55 pre-eksisterende complexity-warnings, ingen mine);
+      build fullførte med full rute-manifest.
 - [ ] `npx playwright test e2e/demo/demo.spec.ts` grønn (mot staging-env)
-- [ ] MINOR-bump + CHANGELOG Funksjon-rad (commit-msg-hooken håndhever)
+      → kjøres i staging-klikkrunden (krever staging-env); e2e driver på testid/role, uendret av
+      copy-byttet.
+- [x] MINOR-bump + CHANGELOG Funksjon-rad (commit-msg-hooken håndhever)
+      → 1.188.0 → 1.189.0; CHANGELOG «1.189 · Sett navnet ditt før du logger inn».
 
 ## Files Likely Touched
 
