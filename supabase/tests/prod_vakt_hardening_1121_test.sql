@@ -95,9 +95,10 @@ select ok(not has_function_privilege('anon', 'public.can_react_in_game(uuid)', '
 select ok(not has_function_privilege('anon', 'public.league_group_id(uuid)', 'EXECUTE')
       and has_function_privilege('authenticated', 'public.league_group_id(uuid)', 'EXECUTE'),
   '#1121: league_group_id anon-revoked, authenticated kept');
-select ok(not has_function_privilege('anon', 'public.same_flight(uuid,uuid)', 'EXECUTE')
-      and has_function_privilege('authenticated', 'public.same_flight(uuid,uuid)', 'EXECUTE'),
-  '#1121: same_flight anon-revoked, authenticated kept');
+-- same_flight(uuid,uuid) was dropped in 0139 (#1129) — dead helper, superseded
+-- by same_flight_or_solo/can_score_for. Assert it is gone rather than gating it.
+select hasnt_function('public', 'same_flight', array['uuid','uuid'],
+  '#1129: same_flight dropped — dead helper, superseded by same_flight_or_solo');
 
 -- ── Part 2d: anon-reachable RLS helpers must KEEP anon EXECUTE ─────────────────
 -- These are referenced by {public} policies; revoking anon would break anon
