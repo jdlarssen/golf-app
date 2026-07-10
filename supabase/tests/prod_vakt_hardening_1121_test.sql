@@ -72,15 +72,16 @@ select ok(not has_function_privilege('anon', 'public.handle_new_auth_user()', 'E
       and not has_function_privilege('authenticated', 'public.handle_new_auth_user()', 'EXECUTE'),
   '#1121: handle_new_auth_user not client-executable');
 
--- ── Part 2b: consume_admin_rate_limit — anon revoked; authenticated + service_role kept ─
--- Login/self-reg limiters call it via service-role; the admin-invite limiter
--- (lib/admin/rateLimit.ts) calls it via the signed-in admin's own client, so
--- authenticated must keep EXECUTE. anon is never a caller.
+-- ── Part 2b: consume_admin_rate_limit — anon + authenticated revoked; service_role kept ─
+-- All three limiters (login, self-reg, admin-invite) now call it via
+-- service-role. #1131 routed the admin-invite limiter through getAdminClient,
+-- so authenticated no longer needs EXECUTE and 0140 revokes it. anon is never
+-- a caller.
 select ok(not has_function_privilege('anon', 'public.consume_admin_rate_limit(text,integer,integer)', 'EXECUTE')
-      and has_function_privilege('authenticated', 'public.consume_admin_rate_limit(text,integer,integer)', 'EXECUTE'),
-  '#1121: consume_admin_rate_limit anon-revoked, authenticated kept (admin-invite limiter)');
+      and not has_function_privilege('authenticated', 'public.consume_admin_rate_limit(text,integer,integer)', 'EXECUTE'),
+  '#1131: consume_admin_rate_limit anon+authenticated revoked (admin-invite limiter now service-role)');
 select ok(has_function_privilege('service_role', 'public.consume_admin_rate_limit(text,integer,integer)', 'EXECUTE'),
-  '#1121: consume_admin_rate_limit STILL executable by service_role (login/registration limiter)');
+  '#1121: consume_admin_rate_limit STILL executable by service_role (all three limiters)');
 
 -- ── Part 2c: authenticated-only RPCs/helpers — anon revoked, authenticated kept ─
 select ok(not has_function_privilege('anon', 'public.create_course_with_layout(text,jsonb,jsonb)', 'EXECUTE')

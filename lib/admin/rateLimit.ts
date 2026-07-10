@@ -1,7 +1,6 @@
 import 'server-only';
 import { headers } from 'next/headers';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/lib/database.types';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 /**
  * Fixed-window rate-limit check for an admin invitation attempt.
@@ -12,6 +11,13 @@ import type { Database } from '@/lib/database.types';
  * returns whether the post-increment count is within budget; on a fresh
  * window (last increment older than the configured seconds), the count
  * resets to 1 before the comparison.
+ *
+ * Why a service-role client: the RPC is owned by `service_role`. Routing this
+ * limiter through service-role (like the login and self-reg limiters already
+ * do) lets us revoke `authenticated`-EXECUTE on the RPC entirely — otherwise
+ * any signed-in user could call it with an arbitrary `p_bucket` and grief
+ * another user's bucket (#1131). Safe from a server action: the bucket key is
+ * the only attacker-influenced input and is treated as opaque text by the RPC.
  *
  * Defaults are tuned for spam-burst protection — a human inviting a tournament
  * roster of 30 in one sitting fits within both limits; an automated script
@@ -24,7 +30,6 @@ import type { Database } from '@/lib/database.types';
  * out of their own invite flow.
  */
 export async function consumeAdminInviteRateLimit(opts: {
-  supabase: SupabaseClient<Database>;
   adminId: string;
   ip: string;
   /** Max attempts per admin per window. Default 20. */
@@ -35,7 +40,6 @@ export async function consumeAdminInviteRateLimit(opts: {
   windowSeconds?: number;
 }): Promise<boolean> {
   const {
-    supabase,
     adminId,
     ip,
     adminMax = 20,
@@ -43,14 +47,16 @@ export async function consumeAdminInviteRateLimit(opts: {
     windowSeconds = 60,
   } = opts;
 
+  const admin = getAdminClient();
+
   try {
     const [adminRes, ipRes] = await Promise.all([
-      supabase.rpc('consume_admin_rate_limit', {
+      admin.rpc('consume_admin_rate_limit', {
         p_bucket: `invite-admin:${adminId}`,
         p_max: adminMax,
         p_window_seconds: windowSeconds,
       }),
-      supabase.rpc('consume_admin_rate_limit', {
+      admin.rpc('consume_admin_rate_limit', {
         p_bucket: `invite-ip:${ip}`,
         p_max: ipMax,
         p_window_seconds: windowSeconds,

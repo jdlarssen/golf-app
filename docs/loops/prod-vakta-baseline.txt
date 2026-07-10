@@ -56,11 +56,9 @@ authenticated_security_definer_function_executable_public_league_group_id_p_leag
 authenticated_security_definer_function_executable_public_email_is_invited_check_email text
 authenticated_security_definer_function_executable_public_email_is_in_auth_users_email_to_check text
 authenticated_security_definer_function_executable_public_email_is_registered_p_email text
-#   — rate-limiter kalt av admin-invite via innlogget admin-klient
-#     (lib/admin/rateLimit.ts ← admin/spillere/actions.ts); login/self-reg
-#     bruker service-role. Follow-up: rut admin-limiteren via service-role, så
-#     kan authenticated revokes også.
-authenticated_security_definer_function_executable_public_consume_admin_rate_limit_p_bucket text, p_max integer, p_window_seconds integer
+#   — (fjernet #1131) consume_admin_rate_limit: admin-invite-limiteren er nå
+#     service-role-rutet (lib/admin/rateLimit.ts, som login/self-reg), og
+#     authenticated-EXECUTE er revoked i 0140. Ikke lenger et beholdt unntak.
 #   — bruker-RPC-er (authenticated server-actions, intern authz):
 authenticated_security_definer_function_executable_public_accept_club_invitations_
 authenticated_security_definer_function_executable_public_add_club_member_by_email_p_group_id uuid, p_email text

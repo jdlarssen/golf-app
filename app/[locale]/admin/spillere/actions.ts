@@ -56,7 +56,6 @@ export async function sendInvitation(formData: FormData) {
 
   const ip = await getClientIp();
   const allowed = await consumeAdminInviteRateLimit({
-    supabase,
     adminId: profile.id,
     ip,
   });
@@ -111,7 +110,6 @@ export async function resendInvitation(formData: FormData) {
 
   const ip = await getClientIp();
   const allowed = await consumeAdminInviteRateLimit({
-    supabase,
     adminId: profile.id,
     ip,
   });
