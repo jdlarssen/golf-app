@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.188 · Onboardingen starter aldri på null</strong></summary>
+
+[#1170](https://github.com/jdlarssen/golf-app/issues/1170) — Når du skal fullføre profilen ser du nå en liten fremdriftsrad med tre steg: «Konto opprettet» er allerede huket av, så du har to steg igjen. Du starter med driv i stedet for blanke ark.
+
+↳ /complete-profile · «Fullfør profilen»
+</details>
+
+<details>
 <summary><strong>1.187 · Se spillet før du fyller ut profilen</strong></summary>
 
 [#1176](https://github.com/jdlarssen/golf-app/issues/1176) — En invitert spiller lander nå rett på spillet, ikke på profilskjemaet. Du ser leaderboardet og hvem som er med med en gang; navn og handicap fyller du inn når du skal taste ditt første slag.

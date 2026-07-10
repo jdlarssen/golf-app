@@ -33,7 +33,18 @@
     "hcpPlusLabel": "Plus handicap",
     "hcpGolfboxHelper": "The number you have in Golfbox right now",
     "hcpSavedAs": "Saved as",
-    "hcpPlusshandicap": "plus handicap"
+    "hcpPlusshandicap": "plus handicap",
+    "progress": {
+      "summary": "1 of 3 done",
+      "step1": "Account created",
+      "step2": "Complete your profile",
+      "step3": "Play your first round",
+      "status": {
+        "done": "done",
+        "active": "current step",
+        "upcoming": "up next"
+      }
+    }
   },
   "nav": {
     "ariaLabel": "Main navigation",
