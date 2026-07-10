@@ -75,7 +75,9 @@ kontrakt før ett-tapp-godkjenning, ikke tappe på autopilot.
 
 - **Forventning:** Nattkjøreren skal ha postet heartbeat på #1110 siden forrige
   brief (den poster ALLTID, også «ingen kø»). Dok-avstemmeren: kun i uker der
-  den var due.
+  den var due. Utroperen (docs/loops/utroperen.md): skal ha postet på
+  lanserings-tavla #1208 hver torsdag (forslag eller tom-uke-melding) —
+  sjekkes i fredagens brief; samme mangler-én/mangler-to-eskalering som under.
 - **Mangler én kjøring:** varsellinje øverst i briefen («⚠️ Nattkjøreren la
   ikke heartbeat i natt — sjekk claude.ai/code/routines»).
 - **Mangler to på rad:** i tillegg opprett infra-issue («Loop X har ikke kjørt
@@ -107,6 +109,9 @@ handlingslinjene i «Trenger deg nå» — custom_id-kontrakten er
 - A/B-beslutningslinje → to knapper «A»/«B» med `custom_id: answer:<issue>:<A|B>`
 - Natt-kø-kandidat med kontrakt → knapp «🌙 Klarer for natta» med `custom_id: ready_issue:<N>`
 
+(Utroperen sender i tillegg `publish_lansering:<kommentar-id>` fra sin egen
+torsdags-melding — se docs/loops/utroperen.md; briefen sender aldri den knappen.)
+
 Maks 5 knapper per rad (Discords grense); flere handlinger → flere rader/meldinger.
 Innhold over 1800 tegn: forkort og lenk til #1110-kommentaren.
 
@@ -125,4 +130,6 @@ postet (primærartefakten), så eieren kan lese den der.
 Første brief i ny måned: flytt forrige måneds kommentarer til
 `docs/loops/logg/<år>-<måned>.md` via docs-PR — som alle loop-leveranser en
 draft-PR eieren merger, ALDRI selvmerget. Arkiverte kommentarer kan ikke
-redigeres bort fra #1110; lenk til arkivfila i briefen i stedet.
+redigeres bort fra #1110; lenk til arkivfila i briefen i stedet. Samme runde
+arkiverer lanserings-tavla #1208 (Utroperens forslag + ✅-markører) til samme
+fil.
