@@ -15,6 +15,15 @@
         "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && set -a && source .env.staging.local && set +a && exec npm run dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "torny-staging-prod",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && set -a && source .env.staging.local && set +a && exec npx next start -p 3000"
+      ],
+      "port": 3000
     }
   ]
 }
