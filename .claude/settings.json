@@ -1,4 +1,20 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Grep",
+      "Glob",
+      "Edit",
+      "Write",
+      "Task",
+      "Agent",
+      "mcp__github__*",
+      "mcp__Supabase__execute_sql",
+      "mcp__Supabase__apply_migration",
+      "mcp__Supabase__list_projects"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
