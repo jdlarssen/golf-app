@@ -8,6 +8,12 @@ name: Main verify
 on:
   push:
     branches: [main]
+    # Quota trim (#1195): docs-/contract-only merges can't compose a red main
+    # (md/docs/.forge never reach the build) — skip the full suite for them.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.forge/**'
   workflow_dispatch:
 
 permissions:

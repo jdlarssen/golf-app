@@ -14,6 +14,13 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    # Quota trim (#1195): docs-/contract-only PRs run no jobs — the local
+    # pre-push hook already gated them, and md/docs/.forge files can't break
+    # the build or the e2e flows.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.forge/**'
   # Manual trigger so the full gate can run against staging on demand — e.g. to
   # verify main directly after several PRs land. CI otherwise only runs on
   # pull_request, so main itself is never re-gated post-merge.
@@ -112,6 +119,17 @@ jobs:
           npm install --no-save --force "$BINDING@$(node -p "require('next/package.json').version")"
           node -e "require('$BINDING')"
 
+      # Quota trim (#1195): the chromium download is ~150MB per run — cache it
+      # keyed on the lockfile; `playwright install` below no-ops on a hit and
+      # tops up after a Playwright version bump (restore-keys fallback).
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            pw-${{ runner.os }}-
+
       - name: Install Playwright (chromium)
         run: npx playwright install --with-deps chromium
 
@@ -136,7 +154,11 @@ jobs:
       # staging — too much failure surface to gate every merge on. continue-on-
       # error keeps a flake from blocking a PR while still surfacing a real
       # regression in the cup match-generation write path.
-      - name: Authenticated e2e — lifecycle (non-blocking)
+      # Quota trim (#1195): on-demand only (workflow_dispatch). It was a
+      # non-blocking informational lane on every PR and the single biggest
+      # minute consumer; the night runner covers these flows locally per #1183.
+      - name: Authenticated e2e — lifecycle (on-demand only, non-blocking)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
         run: npm run e2e:lifecycle
         env:
