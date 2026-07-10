@@ -89,21 +89,37 @@ gyldighets-predikatet eller kun Type C på kortet; CHANGELOG-tagline.
 
 ## Success Criteria
 
-- [ ] Game-scoped invite-mail har login-lenke med `invite=<token>` — snapshot-diff reviewd
-      visuelt, `npx vitest run lib/mail` grønn etter `npx vitest -u`.
-- [ ] `/login?invite=<gyldig token>` viser kortet (inviterer, spillnavn, modus, bane, tee-off)
-      over kodeskjemaet — verifisert med staging-klikkrunde (send invitasjon → åpne lenke).
-- [ ] Kortet står på både `step=email` og `step=verify` (param følger sendCode-redirecten).
-- [ ] Ugyldig/utløpt/akseptert/manglende token → siden identisk med i dag (ingen kort, 200 OK).
-- [ ] Ingen roster/premie/e-post/hcp-data i kort-HTML-en (review + Type C-test på props).
-- [ ] Copy i `messages/no.json` + `en.json` (catalogParity grønn); norsk copy humanizer-kjørt.
+- [x] Game-scoped invite-mail har login-lenke med `invite=<token>` — snapshot-diff reviewd
+      visuelt (`&invite=1111…5555` i både no- og en-tekstsnapshot), `npx vitest run lib/mail`
+      143/143 grønn etter `npx vitest -u`. Testene asserterer at mail-token === DB-insertet
+      token i alle tre dørene (invite/actions.test.ts:141, inviteToGameActions.test.ts:441+575).
+- [x] `/login?invite=<gyldig token>` viser kortet — staging-klikkrunde mot prod-bygg
+      (`next start` + staging-env): invitations-rad m/ token `deadbeef-1169-…0001` på spill
+      «Kontekstkort-verifisering 1169» → kortet viste «TEST ADMIN HAR INVITERT DEG», spillnavn,
+      Spillformat: Stableford, Bane: Byneset North, Tee-off: 16. juli 2026, 14:30 (screenshot).
+      Avvik: invitasjonen ble insertert direkte i staging-DB (mail-URL-byggingen er bevist av
+      snapshot-testene); admin-UI-runden ble ikke kjørt.
+- [x] Kortet står på både `step=email` og `step=verify` — screenshots av begge steg på staging;
+      hidden `invite`-input bekreftet i DOM i både send- og resend-form; POST sendCode → 303.
+- [x] Ugyldig/utløpt/akseptert/manglende token → siden identisk (ingen kort, HTTP 200) —
+      verifisert på staging for alle fire: `not-a-valid-token-format` (hasCard=false),
+      utløpt token `…0002` (200, card_count=0), akseptert `…0001` etter OTP-login
+      (hasCard=false), og manglende param (vanlig /login).
+- [x] Ingen roster/premie/e-post/hcp-data i kort-HTML-en — props-settet er whitelisten
+      (5 strenger), Type C-test `InviteContextCard.test.tsx` grønn, screenshot-review.
+- [x] Copy i `messages/no.json` + `en.json` — catalogParity + apostropheParity grønne;
+      norsk copy humanizer-kjørt (alle 5 strenger gjenbruker etablerte formuleringer).
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` grønn · `npm run lint` grønn · `npm run build` grønn
-- [ ] Co-located vitest for endrede filer grønn (inkl. oppdaterte mail-snapshots)
-- [ ] Staging-klikkrunde av invitasjons-flyten (mail-lenke → kort → OTP-login) FØR merge
-- [ ] feat-commit: MINOR-bump + CHANGELOG Funksjon-rad; alle commits `Refs #1169`
+- [x] `npx tsc --noEmit` grønn (exit 0) · `npm run lint` grønn (0 errors, 54 pre-eksisterende
+      warnings) · `npm run build` grønn (×2: prod-env og staging-env)
+- [x] Co-located vitest grønn: login-suiten + mail (42), invite-dørene (27), lib/mail (143)
+- [x] Staging-klikkrunde FØR merge: kort på begge steg → OTP mintet via service-role →
+      innlogging landet på `/complete-profile?next=/games/2fea92d8-…`; invitations.accepted_at
+      satt + game_players-rad insertert (SQL-verifisert). Testdata ryddet (spill, invitasjoner,
+      game_players, auth-bruker slettet).
+- [x] feat-commit 869428d6: MINOR-bump 1.184.0 → 1.185.0 + CHANGELOG Funksjon-rad, `Refs #1169`
 
 ## Files Likely Touched
 
