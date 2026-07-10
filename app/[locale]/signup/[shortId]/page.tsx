@@ -74,7 +74,8 @@ export async function generateMetadata({ params }: { params: Params }) {
  *      ikke 404). `?src=`-parameteren (plakat/offentlig side) følger med
  *      next-parameteren rundt OTP-runden for kilde-attribusjon.
  *   2. Ugyldig/manglende short_id → notFound().
- *   3. Mangler profil_completed_at → redirect /complete-profile.
+ *   3. (#1176) Profil-løse ser siden — påmeldingen (mutasjonen) gater profil,
+ *      ikke visningen. Se registerForOpenGame/attach-actionene.
  *   4. Allerede påmeldt (game_players-rad finnes) → "du er med"-melding.
  *   5. Pending request finnes → "venter på godkjenning"-melding.
  *   6. game.status er active/finished → "påmelding stengt".
@@ -163,18 +164,16 @@ export default async function PåmeldingPage({
   // gated på admin/membership; brukeren er ikke nødvendigvis et medlem ennå).
   const admin = getAdminClient();
 
+  // #1176: vi henter fortsatt profil-raden (email brukes i invite_only-sjekken
+  // + kaptein-visningen nedenfor), men gater IKKE visningen på
+  // profile_completed_at lenger — en profil-løs, invitert spiller skal se hva
+  // de er invitert til. Selve påmeldingen (registerForOpenGame / lag-attach)
+  // beholder sin egen profil-gate, siden en påmelding eksponerer navnet ditt.
   const { data: profile } = await admin
     .from('users')
     .select('profile_completed_at, email')
     .eq('id', user!.id)
     .maybeSingle<{ profile_completed_at: string | null; email: string }>();
-
-  if (!profile?.profile_completed_at) {
-    redirect({
-      href: `/complete-profile?next=${encodeURIComponent(`/signup/${shortId}`)}`,
-      locale: locale as AppLocale,
-    });
-  }
 
   const { data: existingPlayer } = await admin
     .from('game_players')

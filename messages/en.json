@@ -1508,6 +1508,11 @@
   "game": {
     "home": {
       "backHome": "← Home",
+      "profileGate": {
+        "heading": "Finish your profile to enter scores",
+        "body": "We still need your name and handicap. Look around in the meantime, but they need to be in place before you can enter scores.",
+        "cta": "Finish your profile"
+      },
       "registered": "YOU'RE IN",
       "scorecardOpensAtTeeOff": "Your scorecard opens at tee-off.",
       "scorecardOpensWhenOrganizerStarts": "Your scorecard opens when the organiser starts the match.",

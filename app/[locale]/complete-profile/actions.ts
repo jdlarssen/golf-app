@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { toSignedHcp } from '@/lib/handicap/sign';
+import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 
 const HCP_MIN = -10;
 const HCP_MAX = 54.0;
@@ -76,6 +77,16 @@ export async function completeProfile(formData: FormData) {
 
   if (error) {
     fail('unknown');
+  }
+
+  // #1176: the soft profile gate lets an invitee reach a game before their HCP
+  // is set. If they finish onboarding after the game already froze course
+  // handicaps, the frozen value used a placeholder hcp_index — recompute it so
+  // their net scoring is correct. Best-effort: never block the redirect.
+  try {
+    await recomputeCourseHandicapForUser(user.id, hcpParsed);
+  } catch (err) {
+    console.error('[completeProfile] course-handicap recompute threw', err);
   }
 
   redirect(next);

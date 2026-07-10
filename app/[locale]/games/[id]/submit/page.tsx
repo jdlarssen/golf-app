@@ -7,6 +7,7 @@ import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { isProfileIncomplete } from '@/lib/auth/profileGate';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -100,6 +101,15 @@ export default async function SubmitPage({
 
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
+
+  // #1176: hard profil-gate — en profil-løs spiller kan se spillet, men å
+  // levere scorekortet krever navn + handicap.
+  if (await isProfileIncomplete(supabase, userId)) {
+    redirect({
+      href: `/complete-profile?next=${encodeURIComponent(`/games/${id}/submit`)}`,
+      locale,
+    });
+  }
 
   // Withdrawn (#387): a trukket spiller can't deliver. Bounce to game-home,
   // which renders the «Du har trukket deg»-banner + Angre. Defense-in-depth —

@@ -64,6 +64,7 @@ import { FlightRoster, FlightRosterSkeleton } from './FlightRoster';
 import { DraftTeamsOverview } from './DraftTeamsOverview';
 import { PendingApprovalsBanner } from './PendingApprovalsBanner';
 import { CupStandingsLink } from './CupStandingsLink';
+import { ProfileGateStripe } from './ProfileGateStripe';
 import { CreatorControls } from './CreatorControls';
 import { LiveFollowControl } from './LiveFollowControl';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
@@ -195,7 +196,7 @@ export default async function GameHomePage({
   // require cross-game fan-out on course-edits), so they ride a slim
   // direct fetch in parallel. Authorization stays at the call-site via
   // `me = players.find(...)` notFound() below.
-  const [gwp, joinsRes, spectateRes] = await Promise.all([
+  const [gwp, joinsRes, spectateRes, ownProfileRes] = await Promise.all([
     getGameWithPlayers(id),
     supabase
       .from('games')
@@ -210,12 +211,26 @@ export default async function GameHomePage({
       .select('spectate_token')
       .eq('id', id)
       .maybeSingle(),
+    // #1176: slim egen-profil-sjekk for den myke profil-stripa. Ligger utenfor
+    // getGameWithPlayers (som bevisst dropper profile_completed_at) — egen rad,
+    // RLS tillater lesing.
+    supabase
+      .from('users')
+      .select('profile_completed_at')
+      .eq('id', userId)
+      .maybeSingle<{ profile_completed_at: string | null }>(),
   ]);
 
   if (!gwp) notFound();
   if (joinsRes.error || !joinsRes.data) notFound();
   const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) notFound();
+
+  // #1176: den myke profil-stripa vises for et medlem som ikke har fullført
+  // profilen (gjester unntas — de fyller ikke ut profilskjemaet). Finished-
+  // unntaket gjøres per render-gren (da er det ingen slag å taste).
+  const profileIncomplete = !ownProfileRes.data?.profile_completed_at;
+  const meIsGuest = me.users?.is_guest === true;
 
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =
@@ -499,6 +514,10 @@ export default async function GameHomePage({
           </Kicker>
           <span className="w-12" aria-hidden />
         </header>
+
+        {profileIncomplete && !meIsGuest && (
+          <ProfileGateStripe gameId={id} />
+        )}
 
         {showHandicapCard && meUser && (
           <HandicapConfirmCard
@@ -791,6 +810,10 @@ export default async function GameHomePage({
           label={tGameStatus(game.status)}
         />
       </div>
+
+      {profileIncomplete && !meIsGuest && !isFinished && (
+        <ProfileGateStripe gameId={id} />
+      )}
 
       {/* #1049/#1068: startkontingent-oppfordring — vises til arrangøren huker
           av spilleren som betalt. Self-hider når spillet ikke har kontingent.

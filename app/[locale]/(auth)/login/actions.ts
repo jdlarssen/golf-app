@@ -265,10 +265,9 @@ export async function verifyCode(formData: FormData) {
   // tilgjengelig via cookie-klienten i denne action-en (auth-state
   // propagerer asynkront); admin-client har uansett tilgang.
   //
-  // #356: gameDest/profileIncomplete settes inne i blokken, men brukes til
-  // redirect ETTER den (se note ved redirect-en under).
+  // #356: gameDest settes inne i blokken, men brukes til redirect ETTER den
+  // (se note ved redirect-en under).
   let gameDest: string | null = null;
-  let profileIncomplete = false;
 
   try {
     const admin = getAdminClient();
@@ -334,9 +333,9 @@ export async function verifyCode(formData: FormData) {
     if (gameScoped.length > 0) {
       const { data: userRow } = await admin
         .from('users')
-        .select('id, profile_completed_at')
+        .select('id')
         .ilike('email', email)
-        .maybeSingle<{ id: string; profile_completed_at: string | null }>();
+        .maybeSingle<{ id: string }>();
 
       if (userRow?.id) {
         await Promise.allSettled(
@@ -416,13 +415,11 @@ export async function verifyCode(formData: FormData) {
         if (!hasExplicitNext) {
           if (soloInvites.length === 1 && teamScopedInvites.length === 0) {
             gameDest = `/games/${soloInvites[0].inv.game_id}`;
-            profileIncomplete = userRow.profile_completed_at == null;
           } else if (
             teamScopedInvites.length === 1 &&
             soloInvites.length === 0
           ) {
             gameDest = `/signup/${teamScopedInvites[0].shortId}/team`;
-            profileIncomplete = userRow.profile_completed_at == null;
           }
         }
       }
@@ -447,14 +444,12 @@ export async function verifyCode(formData: FormData) {
     console.warn('[login/verifyCode] club-invite-accept side-effect threw', err);
   }
 
-  // #356: redirect skjer UTENFOR try/catch-en over — redirect() kaster
-  // NEXT_REDIRECT, som ville blitt slukt av catch-en og aldri navigert. Mangler
-  // profilen, sender vi via /complete-profile?next=… så den fullføres først, så
-  // lander brukeren på spillet.
+  // #356/#1176: redirect skjer UTENFOR try/catch-en over — redirect() kaster
+  // NEXT_REDIRECT, som ville blitt slukt av catch-en og aldri navigert.
+  // #1176: invitéen sendes RETT til spillet (ikke lenger en /complete-profile-
+  // detour). Profilporten er nå en myk stripe på spill-hjem + en hard gate ved
+  // scoring, så spilleren ser hva de er invitert til før de fyller ut navn/HCP.
   if (gameDest) {
-    if (profileIncomplete) {
-      redirect(`/complete-profile?next=${encodeURIComponent(gameDest)}`);
-    }
     redirect(gameDest);
   }
 

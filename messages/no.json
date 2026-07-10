@@ -1508,6 +1508,11 @@
   "game": {
     "home": {
       "backHome": "← Hjem",
+      "profileGate": {
+        "heading": "Fullfør profilen for å taste slag",
+        "body": "Vi mangler navnet og handicapet ditt. Se deg gjerne rundt i mellomtiden, men det må på plass før du kan taste inn score.",
+        "cta": "Fullfør profilen"
+      },
       "registered": "DU ER PÅMELDT",
       "scorecardOpensAtTeeOff": "Scorekortet åpner ved tee-off.",
       "scorecardOpensWhenOrganizerStarts": "Scorekortet åpner når arrangøren starter kampen.",

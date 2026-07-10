@@ -5,6 +5,7 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { isProfileIncomplete } from '@/lib/auth/profileGate';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
@@ -75,6 +76,21 @@ export default async function HolePage({ params }: { params: Params }) {
   const userIdOrNull = await getProxyVerifiedUserId();
   if (!userIdOrNull) redirect({ href: '/login', locale });
   const userId = userIdOrNull as string;
+
+  // #1176: hard profil-gate ved scoring. Den myke stripa på spill-hjem lar en
+  // fersk invitert spiller SE spillet uten profil, men å taste slag krever navn
+  // + handicap (course handicap må låses før netto-scoring). Slim egen-query
+  // først (før de tunge fetchene under) — lukker også scoring via en direkte
+  // hull-URL med plassholder-handicap.
+  const supabase = await getServerClient();
+  if (await isProfileIncomplete(supabase, userId)) {
+    redirect({
+      href: `/complete-profile?next=${encodeURIComponent(
+        `/games/${id}/holes/${holeNumber}`,
+      )}`,
+      locale,
+    });
+  }
 
   // games + game_players come from the tag-cached helper (see
   // lib/games/getGameWithPlayers.ts). These rows don't change during a
@@ -152,8 +168,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // brukerens scorer slik at server-en kan summere stableford-poeng for
   // «Dine poeng»-headeren og per-hull-poeng-chip-en. Best-ball-modus dropper
   // disse to ekstra queryene (de er null) for å holde latency lik dagens.
-  const supabase = await getServerClient();
-
+  // supabase-klienten er allerede opprettet for profil-gaten øverst.
   const courseNameRes = game.course_id
     ? await supabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
     : { data: null as { name: string } | null };
