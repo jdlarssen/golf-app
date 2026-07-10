@@ -2,11 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import crypto from 'node:crypto';
 import {
   executeAction,
+  extractLanseringProposal,
   isTimestampFresh,
   parseCustomId,
   verifyDiscordSignature,
   LOOP_REPO,
   type GitHubClient,
+  type LanseringDeps,
 } from './discordActions';
 
 // Ekte ed25519-nøkkelpar per test-kjøring — verifiseringen testes mot ekte
@@ -69,6 +71,7 @@ describe('parseCustomId', () => {
     ['ready_issue:1122', { kind: 'ready_issue', issue: 1122 }],
     ['answer:1104:A', { kind: 'answer', issue: 1104, choice: 'A' }],
     ['answer:1104:B', { kind: 'answer', issue: 1104, choice: 'B' }],
+    ['publish_lansering:4938711829', { kind: 'publish_lansering', commentId: 4938711829 }],
   ])('parser %s', (id, expected) => {
     expect(parseCustomId(id)).toEqual(expected);
   });
@@ -78,9 +81,50 @@ describe('parseCustomId', () => {
     'answer:12:C',
     'delete_repo:1',
     'merge_pr:12;ready_issue:13',
+    'publish_lansering:abc',
+    'publish_lansering:',
     '',
   ])('avviser %s', (id) => {
     expect(parseCustomId(id)).toBeNull();
+  });
+});
+
+describe('extractLanseringProposal', () => {
+  const block = (json: string) => `📣 Ukens lansering\n\n\`\`\`json\n${json}\n\`\`\`\n`;
+
+  it('parser komplett forslag med lenke og knappetekst', () => {
+    const result = extractLanseringProposal(
+      block('{"title":"Premiebord og sponsorer","body":"Legg inn et premiebord.","link":"/opprett-spill","cta_label":"Sett opp en runde"}'),
+    );
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        title: 'Premiebord og sponsorer',
+        body: 'Legg inn et premiebord.',
+        link: '/opprett-spill',
+        cta_label: 'Sett opp en runde',
+      },
+    });
+  });
+
+  it('parser forslag uten lenke/knappetekst (null-felter)', () => {
+    const result = extractLanseringProposal(
+      block('{"title":"Tittel","body":"Brødtekst.","link":null,"cta_label":null}'),
+    );
+    expect(result).toEqual({
+      ok: true,
+      value: { title: 'Tittel', body: 'Brødtekst.', link: null, cta_label: null },
+    });
+  });
+
+  it.each([
+    ['ingen json-blokk', 'bare vanlig tekst', 'no_block'],
+    ['ugyldig JSON', '```json\n{ikke json}\n```', 'bad_json'],
+    ['title er ikke string', '```json\n{"title":42,"body":"x"}\n```', 'bad_json'],
+    ['tom title', '```json\n{"title":"  ","body":"x"}\n```', 'title_required'],
+    ['ekstern lenke', '```json\n{"title":"T","body":"B","link":"https://evil.example"}\n```', 'link_must_be_internal'],
+  ])('%s → %s', (_navn, body, reason) => {
+    expect(extractLanseringProposal(body)).toEqual({ ok: false, reason });
   });
 });
 
@@ -238,5 +282,136 @@ describe('executeAction: merge_pr', () => {
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
     expect(msg).toContain('Base branch was modified');
+  });
+});
+
+// ── publish_lansering (#1207) ────────────────────────────────────────────────
+
+const PROPOSAL_JSON =
+  '{"title":"Premiebord og sponsorer","body":"Legg inn et premiebord på runden.","link":"/opprett-spill","cta_label":"Sett opp en runde"}';
+
+const tavleComment = {
+  body: `📣 Ukens lansering\n\n\`\`\`json\n${PROPOSAL_JSON}\n\`\`\`\n`,
+  issue_url: 'https://api.github.com/repos/jdlarssen/golf-app/issues/1206',
+};
+
+function mockDeps(overrides: Partial<LanseringDeps> = {}): LanseringDeps {
+  return {
+    findPublisherUserId: vi.fn(async () => 'admin-uuid'),
+    wasRecentlyPublished: vi.fn(async () => false),
+    publish: vi.fn(async () => ({ recipientCount: 18 })),
+    countPublishedThisMonth: vi.fn(async () => 2),
+    monthLabel: () => 'juli 2026',
+    ...overrides,
+  };
+}
+
+const publishAction = { kind: 'publish_lansering', commentId: 4938711829 } as const;
+
+describe('executeAction: publish_lansering', () => {
+  it('uten deps → ærlig melding, ingen GitHub-kall', async () => {
+    const { gh, calls } = mockGh([{ status: 200 }]);
+    const msg = await executeAction(publishAction, gh);
+    expect(msg).toContain('publiser manuelt');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('happy path: henter kommentar, publiserer, markerer tavla, teller måned', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: tavleComment },
+      { status: 201 }, // ✅-markør
+    ]);
+    const deps = mockDeps();
+    const msg = await executeAction(publishAction, gh, deps);
+
+    expect(calls[0]).toMatchObject({
+      method: 'GET',
+      path: `/repos/${LOOP_REPO}/issues/comments/4938711829`,
+    });
+    expect(deps.publish).toHaveBeenCalledWith({
+      title: 'Premiebord og sponsorer',
+      body: 'Legg inn et premiebord på runden.',
+      link: '/opprett-spill',
+      cta_label: 'Sett opp en runde',
+      createdByUserId: 'admin-uuid',
+    });
+    expect(calls[1]).toMatchObject({
+      method: 'POST',
+      path: `/repos/${LOOP_REPO}/issues/1206/comments`,
+    });
+    expect((calls[1].body as { body: string }).body).toContain('✅ Publisert: Premiebord og sponsorer');
+    expect(msg).toContain('18 brukere');
+    expect(msg).toContain('nr. 2 i juli 2026');
+  });
+
+  it('slettet kommentar (404) → ærlig melding, ingen publisering', async () => {
+    const { gh } = mockGh([{ status: 404 }]);
+    const deps = mockDeps();
+    const msg = await executeAction(publishAction, gh, deps);
+    expect(msg).toContain('404');
+    expect(deps.publish).not.toHaveBeenCalled();
+  });
+
+  it('kommentar uten forslags-blokk → ærlig melding, ingen publisering', async () => {
+    const { gh } = mockGh([{ status: 200, json: { body: 'bare tekst', issue_url: tavleComment.issue_url } }]);
+    const deps = mockDeps();
+    const msg = await executeAction(publishAction, gh, deps);
+    expect(msg).toContain('publiser manuelt');
+    expect(deps.publish).not.toHaveBeenCalled();
+  });
+
+  it('forslag som ikke validerer (ekstern lenke) → navngir feilen, ingen publisering', async () => {
+    const badComment = {
+      ...tavleComment,
+      body: '```json\n{"title":"T","body":"B","link":"https://evil.example"}\n```',
+    };
+    const { gh } = mockGh([{ status: 200, json: badComment }]);
+    const deps = mockDeps();
+    const msg = await executeAction(publishAction, gh, deps);
+    expect(msg).toContain('link_must_be_internal');
+    expect(deps.publish).not.toHaveBeenCalled();
+  });
+
+  it('dobbel-tapp: allerede publisert → varsel, publish IKKE kalt', async () => {
+    const { gh } = mockGh([{ status: 200, json: tavleComment }]);
+    const deps = mockDeps({ wasRecentlyPublished: vi.fn(async () => true) });
+    const msg = await executeAction(publishAction, gh, deps);
+    expect(msg).toContain('allerede publisert');
+    expect(deps.publish).not.toHaveBeenCalled();
+  });
+
+  it('ingen admin-bruker → ærlig melding, publish IKKE kalt', async () => {
+    const { gh } = mockGh([{ status: 200, json: tavleComment }]);
+    const deps = mockDeps({ findPublisherUserId: vi.fn(async () => null) });
+    const msg = await executeAction(publishAction, gh, deps);
+    expect(msg).toContain('admin');
+    expect(deps.publish).not.toHaveBeenCalled();
+  });
+
+  it('markør-post feiler ETTER publisering → suksessmelding med caveat', async () => {
+    const { gh } = mockGh([
+      { status: 200, json: tavleComment },
+      { status: 500 },
+    ]);
+    const deps = mockDeps();
+    const msg = await executeAction(publishAction, gh, deps);
+    expect(deps.publish).toHaveBeenCalled();
+    expect(msg).toContain('Publisert');
+    expect(msg).toContain('fikk ikke markert tavla');
+  });
+
+  it('månedstelling feiler → publisering rapporteres likevel, uten tall', async () => {
+    const { gh } = mockGh([
+      { status: 200, json: tavleComment },
+      { status: 201 },
+    ]);
+    const deps = mockDeps({
+      countPublishedThisMonth: vi.fn(async () => {
+        throw new Error('db nede');
+      }),
+    });
+    const msg = await executeAction(publishAction, gh, deps);
+    expect(msg).toContain('18 brukere');
+    expect(msg).not.toContain('nr.');
   });
 });

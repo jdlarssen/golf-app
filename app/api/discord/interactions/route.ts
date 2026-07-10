@@ -6,7 +6,11 @@ import {
   parseCustomId,
   verifyDiscordSignature,
   type GitHubClient,
+  type LanseringDeps,
 } from '@/lib/loops/discordActions';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { publishProductUpdate } from '@/lib/productUpdates/publish';
+import { formatMonthLongNb } from '@/lib/format/date';
 
 // Discord-knappene (#1124): interactions-endepunktet for toveis loop-styring.
 //
@@ -27,6 +31,10 @@ import {
 // leser CI-status (merge-knappen sjekker ci.yml-workflow-runen; Checks finnes
 // IKKE som fine-grained-permission, så check-runs kan ikke leses). Contents RW
 // trengs for selve mergen (skriver til base-branchen). Tokens logges aldri.
+//
+// publish_lansering (#1207) trenger ingen nye env-variabler: tavle-kommentaren
+// hentes med samme PAT (Issues RW), og publiseringen bruker appens eksisterende
+// Supabase service-role via getAdminClient.
 
 export const maxDuration = 60;
 
@@ -48,6 +56,70 @@ type Interaction = {
   member?: { user?: { id?: string } };
   user?: { id?: string };
 };
+
+// Dedupe-vindu for dobbel-tapp på 📣 Publiser: identisk tittel innenfor
+// vinduet regnes som allerede publisert.
+const DEDUPE_WINDOW_DAYS = 45;
+
+// Inneværende måneds start i Europe/Oslo (samme Intl-mønster som
+// previousMonthPeriod i lib/productUpdates/digest.ts — Vercel kjører UTC, så
+// lokale Date-gettere er forbudt for Oslo-vinduer). Som i digest-en brukes
+// UTC-midnatt for datogrensen; ±2 timers DST-fuzz på månedsskiftet er
+// akseptert for en kvitterings-telling.
+function osloCurrentMonth(nowMs = Date.now()): { startIso: string; label: string } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Oslo',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(new Date(nowMs));
+  const year = Number(parts.find((p) => p.type === 'year')!.value);
+  const month = Number(parts.find((p) => p.type === 'month')!.value);
+  return {
+    startIso: `${year}-${String(month).padStart(2, '0')}-01T00:00:00.000Z`,
+    label: formatMonthLongNb(new Date(Date.UTC(year, month - 1, 15))),
+  };
+}
+
+// DB-avhengighetene for publish_lansering (#1207) — konstrueres kun når den
+// knappen faktisk trykkes, så merge-/svar-knappene aldri rører Supabase.
+function lanseringDeps(): LanseringDeps {
+  const admin = getAdminClient();
+  const month = osloCurrentMonth();
+  return {
+    async findPublisherUserId() {
+      const { data } = await admin
+        .from('users')
+        .select('id')
+        .eq('is_admin', true)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle<{ id: string }>();
+      return data?.id ?? null;
+    },
+    async wasRecentlyPublished(title) {
+      const since = new Date(Date.now() - DEDUPE_WINDOW_DAYS * 86_400_000).toISOString();
+      const { data } = await admin
+        .from('product_updates')
+        .select('id')
+        .eq('title', title)
+        .gte('created_at', since)
+        .limit(1);
+      return (data ?? []).length > 0;
+    },
+    async publish(input) {
+      return publishProductUpdate(input);
+    },
+    async countPublishedThisMonth() {
+      const { count } = await admin
+        .from('product_updates')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', month.startIso);
+      return count ?? 0;
+    },
+    monthLabel: () => month.label,
+  };
+}
 
 function githubClient(pat: string): GitHubClient {
   const headers = {
@@ -139,7 +211,8 @@ export async function POST(request: NextRequest) {
   after(async () => {
     let content: string;
     try {
-      content = await executeAction(action, gh);
+      const deps = action.kind === 'publish_lansering' ? lanseringDeps() : undefined;
+      content = await executeAction(action, gh, deps);
     } catch (err) {
       console.error(`[${LOG_PREFIX}] handling feilet`, err);
       content = 'Noe gikk galt under utføringen — sjekk Vercel-loggene (api/discord/interactions).';
