@@ -95,19 +95,25 @@ recompute-implementasjonens plassering (helper i `lib/games/`).
       `/complete-profile`-mellomstopp). **Kode:** verifyCode dropper detouren
       ([login/actions.ts](app/[locale]/(auth)/login/actions.ts) — `if (gameDest) redirect(gameDest)`).
       **Test:** login/actions.test.ts asserter `/games/<aa>` (solo) + `/signup/xyz98765/team`
-      (lag) — 37 grønne. ⧗ Stripe-visning på spill-hjem verifiseres i staging-klikkrunden (pre-merge).
-- [x] Profil-løs på `/games/[id]/holes/1` → redirect `/complete-profile?next=…`. **Kode:**
-      hard gate via `isProfileIncomplete` i [holes](app/[locale]/games/[id]/holes/[holeNumber]/page.tsx)
-      + scorecard + submit (før tunge fetches). ⧗ Klikk tilbake-og-taste verifiseres i staging.
+      (lag) — 37 grønne. **Staging (live):** profil-løst medlem på spill-hjem ser kontekst +
+      stripe (skjermbilde tatt).
+- [x] Profil-løs på `/games/[id]/holes/1` → redirect `/complete-profile?next=…` → fullfør →
+      tilbake på hullet. **Kode:** hard gate via `isProfileIncomplete` i
+      [holes](app/[locale]/games/[id]/holes/[holeNumber]/page.tsx) + scorecard + submit.
+      **Staging (live):** `/holes/1` → `/complete-profile?next=%2Fgames%2F…%2Fholes%2F1`;
+      etter «Sett i gang» landet tilbake på `/holes/1`.
 - [x] Stripe kun for profil-løse medlemmer (gjest + finished unntatt); `/` urørt. **Kode:**
       `{profileIncomplete && !meIsGuest && !isFinished && <ProfileGateStripe/>}` i
       [(home)/page.tsx](app/[locale]/games/[id]/(home)/page.tsx); `/`-redirect ikke rørt.
+      **Staging (live):** fullført profil → stripe borte; profil-løs → stripe synlig.
 - [x] CH-recompute: Type A-test (aktiv oppdateres; finished/scheduled/draft/NULL/manglende
       tee urørt; NaN-guard). 13 grønne i
       [recomputeCourseHandicap.test.ts](lib/games/recomputeCourseHandicap.test.ts). Writes med
       `.select('game_id')` + row-count-telling; admin-klient (0107-trigger bypass).
-- [~] Roster + leaderboard fallback for profil-løs: getGameWithPlayers gir `name=null`;
-      leaderboard har `unknownPlayer`-fallback (pre-eksisterende). ⧗ Visuelt bekreftes i staging.
+      **Staging (live):** fullførte profil med hcp 24 → `game_players.course_handicap` gikk
+      18→**25** (= round(24·129/113 − 2,3)), bekreftet i DB.
+- [x] Roster + leaderboard fallback for profil-løs: getGameWithPlayers gir `name=null`;
+      leaderboard har `unknownPlayer`-fallback (pre-eksisterende, urørt).
 - [x] Eksisterende gates uendret: signup/team/submit action-tester grønne UENDRET (64 grønne);
       venne-invite-gate + `/`-/`/profile`-redirect ikke rørt.
 
@@ -117,8 +123,9 @@ recompute-implementasjonens plassering (helper i `lib/games/`).
       complexity-warnings på allerede-store funksjoner) · `npm run build` grønn (exit 0)
 - [x] Co-located vitest grønn: login/actions.test (37) + recompute (13) + catalog/apostrophe-
       paritet + signup/team/submit actions (64) = alle grønne
-- [ ] ⧗ Staging-klikkrunde av hele invitert-spiller-flyten FØR merge (kriterium 1–2) —
-      via `staging-verify`-skillet (pre-merge-porten #1076)
+- [x] Staging-klikkrunde kjørt live (E2E-player på TEST-GoldenPath): stripe vises/skjules,
+      hard gate redirecter, round-trip tilbake til hull, CH 18→25. Data restaurert etterpå.
+      (Formell pre-merge `staging-verify` + bevis-label #1076 kjøres på PR-en.)
 - [x] Ny norsk copy humanizer-kjørt; `messages/no.json`+`en.json` i paritet (catalogParity grønn)
 - [x] feat-commit: MINOR-bump 1.186.0→1.187.0 + CHANGELOG Funksjon-rad; commits `Refs/Closes #1176`
 
