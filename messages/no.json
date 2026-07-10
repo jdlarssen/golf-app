@@ -33,7 +33,18 @@
     "hcpPlusLabel": "Plusshandicap",
     "hcpGolfboxHelper": "Tallet du har i Golfbox akkurat nå",
     "hcpSavedAs": "Lagres som",
-    "hcpPlusshandicap": "plusshandicap"
+    "hcpPlusshandicap": "plusshandicap",
+    "progress": {
+      "summary": "1 av 3 fullført",
+      "step1": "Konto opprettet",
+      "step2": "Fullfør profilen",
+      "step3": "Spill din første runde",
+      "status": {
+        "done": "fullført",
+        "active": "aktivt steg",
+        "upcoming": "gjenstår"
+      }
+    }
   },
   "nav": {
     "ariaLabel": "Hovednavigasjon",

@@ -10,6 +10,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Kicker } from '@/components/ui/Kicker';
 import { completeProfile } from './actions';
 import { OnboardingHcpField } from './OnboardingHcpField';
+import { OnboardingProgress } from './OnboardingProgress';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 
 type SearchParams = Promise<{
@@ -87,6 +88,8 @@ export default async function CompleteProfile({
           {t('subheading')}
         </p>
       </header>
+
+      <OnboardingProgress />
 
       <Card>
         {errorMessage && (
