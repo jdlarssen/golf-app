@@ -65,20 +65,30 @@ kommentaren i konfigen skal peke på #1183.
 
 ## Success Criteria
 
-- [ ] Uten env: `npx playwright test e2e/games/scoring-golden-path.spec.ts --grep @gate`
+- [x] Uten env: `npx playwright test e2e/games/scoring-golden-path.spec.ts --grep @gate`
       kjører som i dag (bundlet browser) — lokal kjøring grønn.
-- [ ] Med `PW_CHROMIUM_EXECUTABLE_PATH` pekende på en gyldig lokal chromium-binær:
+      → Bevist med throwaway-probe mot config: env UNSET → browser launcher (bundlet
+      chromium-1223), `1 passed (756ms)`. `launchOptions: {}` er bit-for-bit no-op.
+- [x] Med `PW_CHROMIUM_EXECUTABLE_PATH` pekende på en gyldig lokal chromium-binær:
       samme spec bruker den oppgitte binæren (bevis: kjøringen starter uten
       «Executable doesn't exist»-feilen).
-- [ ] `docs/loops/nattkjoreren.md` steg 4 dokumenterer variabelen.
+      → env = lokal chromium-1223-binær → `1 passed (3.8s)`, ingen registry-feil. OG
+      env = ikke-eksisterende sti → `browserType.launch: Failed to launch chromium
+      because executable doesn't exist at /opt/pw-browsers/chromium-DOES-NOT-EXIST-1183/chrome`
+      — beviser at config faktisk trer env-en inn i `launchOptions.executablePath`
+      (ellers ville den falt tilbake til bundlet og passert).
+- [x] `docs/loops/nattkjoreren.md` steg 4 dokumenterer variabelen.
+      → Steg 4 har nå et kulepunkt med `PW_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
 - [ ] Første natt-kjøring etter merge logger et reelt `e2e:gate`-forsøk i stedet for
       insta-fail (VERIFICATION GAP til den kjøringen har skjedd — noter i PR-kommentar).
+      → VERIFICATION GAP: kan kun bekreftes i routine-Linux-miljøet (build 1194); noteres i PR.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` grønn (konfigen er TS).
-- [ ] `npm run lint` grønn.
-- [ ] Ingen endring under `.github/`.
+- [x] `npx tsc --noEmit` grønn (konfigen er TS). → exit 0 (etter `npm install` i worktree).
+- [x] `npm run lint` grønn. → `54 problems (0 errors, 54 warnings)`, exit 0; alle warnings
+      er pre-eksisterende i urelaterte filer, config-en produserer ingen.
+- [x] Ingen endring under `.github/`. → `git diff --stat` = kun 2 filer, ingen under `.github/`.
 
 ## Files Likely Touched
 
