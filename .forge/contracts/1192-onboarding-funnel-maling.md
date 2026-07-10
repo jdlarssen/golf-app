@@ -102,24 +102,44 @@ funnel: { invited, opened, accepted, profile_completed, first_score }  // rene a
 
 ## Success Criteria
 
-- [ ] RPC-en returnerer `funnel: { invited, opened, accepted, profile_completed, first_score }`
+- [x] RPC-en returnerer `funnel: { invited, opened, accepted, profile_completed, first_score }`
       som rene antall — verifisert mot manuell kontroll-SQL på staging (og hostile probe:
       spiller-JWT → `not_authorized`).
-- [ ] `/admin` viser en drop-off-seksjon med de fem stegene under Nøkkeltall — `tabular-nums`,
+      *Bevis: staging-seed med dublett-/case-avvik-invitasjoner → RPC == kontroll-SQL
+      ({invited:3, opened:2, accepted:1, profile_completed:1, first_score:1}); spiller-JWT →
+      `P0001: not_authorized`; `has_function_privilege('anon', …)` = false. Seed ryddet.*
+- [x] `/admin` viser en drop-off-seksjon med de fem stegene under Nøkkeltall — `tabular-nums`,
       `data-testid`, ingen persondata i HTML-en (grep: 0 e-post/navn).
-- [ ] Ikke-admin får ikke funnel-dataene (DB-gate, ikke bare UI).
-- [ ] `parseMetrics` narrower `funnel` og rendrer `null` ved shape-drift (uendret disiplin).
-- [ ] Maks én Type C-rendertest oppdatert (aldri norsk copy); ingen ny tracking / ingen skriv.
-- [ ] Copy i `no.json` + `en.json` (catalogParity grønn), norsk humanizer-kjørt.
+      *Bevis: staging-klikkrunde (admin-OTP-login) — alle 5 `key-metrics-funnel-*`-testids
+      rendrer baseline-tallene (1/0/0/0/0), `outerHTML.includes('@') === false`, skjermbilde tatt.*
+- [x] Ikke-admin får ikke funnel-dataene (DB-gate, ikke bare UI).
+      *Bevis: hostile probe over — gaten er `is_admin()` i funksjonskroppen (0141).*
+- [x] `parseMetrics` narrower `funnel` og rendrer `null` ved shape-drift (uendret disiplin).
+      *Bevis: KeyMetricsCard.tsx — objekt-sjekk + 5 feltvise number-sjekker, null ellers.*
+- [x] Maks én Type C-rendertest oppdatert (aldri norsk copy); ingen ny tracking / ingen skriv.
+      *Bevis: eksisterende enkelt-test i KeyMetricsView.test.tsx utvidet (testid-asserts only);
+      migrasjonen er ren `create or replace` av read-only-RPC.*
+- [x] Copy i `no.json` + `en.json` (catalogParity grønn), norsk humanizer-kjørt.
+      *Bevis: catalogParity + apostropheParity grønne; humanizer-skill kjørt — copy bestod uendret.*
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` grønn · `npm run lint` grønn · `npm run build` grønn.
-- [ ] Co-located vitest for endrede filer grønn (`KeyMetricsView.test.tsx`).
+- [x] `npx tsc --noEmit` grønn · `npm run lint` grønn · `npm run build` grønn.
+      *Bevis: tsc 0 feil; lint 0 errors (54 baseline-warnings); build grønn etter
+      .env.local-kopi til worktreen (miljø-felle, ikke kode).*
+- [x] Co-located vitest for endrede filer grønn (`KeyMetricsView.test.tsx`).
+      *Bevis: 3 filer / 5 tester grønne (KeyMetricsView + 2 paritetstester).*
 - [ ] Migrasjon påført staging → verifisert (manuell SQL + hostile probe) → prod (0107); drift-gate:
       håndskrevet Functions-oppføring diffet mot friske prod-typer.
-- [ ] Bruker/admin-synlig → staging-klikkrunde av `/admin` før merge.
-- [ ] `feat` → MINOR-bump + CHANGELOG Funksjoner-rad; alle commits `Refs #1192`.
+      *Staging: påført + verifisert. Prod: VENTER på eier-luka (`touch .claude/approve-prod`) —
+      må skje FØR merge (strict parseMetrics skjuler ellers hele kortet i prod til migrasjonen
+      lander). Drift-gate: `Functions`-oppføringen er `{ Args: never; Returns: Json }` — uendret
+      av utvidet jsonb-payload.*
+- [x] Bruker/admin-synlig → staging-klikkrunde av `/admin` før merge.
+      *Bevis: klikkrunde utført (se kriterium 2), 0 console-errors, v1.184.0 i footer.*
+- [x] `feat` → MINOR-bump + CHANGELOG Funksjoner-rad; alle commits `Refs #1192`.
+      *Bevis: commit f632b875 — 1.183.1 → 1.184.0 + Funksjoner-rad «Trakta fra invitasjon
+      til første slag», `Refs #1192` i body.*
 
 ## Files Likely Touched
 
