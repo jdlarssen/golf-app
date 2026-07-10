@@ -74,25 +74,35 @@ ordlyd på steg-labels (post-humanizer), CHANGELOG-tagline.
 
 ## Success Criteria
 
-- [ ] `/complete-profile` viser en fremdriftsindikator med tre steg der steg 1 («Konto opprettet»)
+- [x] `/complete-profile` viser en fremdriftsindikator med tre steg der steg 1 («Konto opprettet»)
       er markert fullført ved ankomst — indikatoren står aldri på null.
-- [ ] Steg 2 («Fullfør profilen») er markert som aktivt; steg 3 («Spill din første runde») som kommende.
-- [ ] Ingen nye Supabase-queries i `complete-profile/page.tsx` (diff-verifiserbart: `Promise`-/
+      *Bevis: `OnboardingProgress.tsx` `STEPS`-array `step1:done` (✓-glyph, `bg-accent`); montert i
+      `page.tsx:92`. Staging-skjermbilde: se PR.*
+- [x] Steg 2 («Fullfør profilen») er markert som aktivt; steg 3 («Spill din første runde») som kommende.
+      *Bevis: `STEPS` `step2:active` (`bg-primary`, tall «2»), `step3:upcoming` (`border-border`, tall «3»).*
+- [x] Ingen nye Supabase-queries i `complete-profile/page.tsx` (diff-verifiserbart: `Promise`-/
       `.from(`-kall uendret) og ingen migrasjoner.
-- [ ] Nye nøkler finnes i BÅDE `messages/no.json` og `messages/en.json`;
+      *Bevis: `git show HEAD -- page.tsx` = kun import + `<OnboardingProgress />`-montering; eneste
+      `.from(`-kall er den preeksisterende `profile_completed_at`-porten (page.tsx:65-66). Ingen fil i
+      `supabase/migrations/` rørt.*
+- [x] Nye nøkler finnes i BÅDE `messages/no.json` og `messages/en.json`;
       `npx vitest run messages/catalogParity.test.ts` grønn; `/en/complete-profile` viser engelsk.
-- [ ] Ny norsk copy er kjørt gjennom humanizer-skillet før commit.
+      *Bevis: `onboarding.progress.{summary,step1,step2,step3,status.{done,active,upcoming}}` i begge
+      kataloger; catalogParity + complete-profile = 9/9 grønn. `/en`-visning: se PR-skjermbilde.*
+- [x] Ny norsk copy er kjørt gjennom humanizer-skillet før commit.
+      *Bevis: `humanizer:humanizer` kjørt på alle sju strengene — idiomatisk bokmål, ingen AI-tells,
+      «aktivt steg»/«1 av 3 fullført» matcher appens eksisterende «Steg»-terminologi. Ingen endringer.*
 - [ ] Staging-klikkrunde på torny-staging: fersk/nullstilt testbruker lander på `/complete-profile`
       og ser indikatoren (staging-skriv er sanksjonert: nullstill `profile_completed_at` på en
       dedikert testbruker ved behov). Skjermbilde på PR-en.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` grønn
-- [ ] `npm run lint` grønn
-- [ ] `npx vitest run "app/[locale]/complete-profile" messages/catalogParity.test.ts` grønn
-- [ ] `npm run build` grønn (cacheComponents-fella: ingen `export const runtime`)
-- [ ] MINOR-bump + CHANGELOG Funksjon-rad (commit-msg-hooken håndhever)
+- [x] `npx tsc --noEmit` grønn *(TSC_EXIT_OK, ingen feil)*
+- [x] `npm run lint` grønn *(0 errors; 55 preeksisterende complexity-warnings i urørte filer)*
+- [x] `npx vitest run "app/[locale]/complete-profile" messages/catalogParity.test.ts` grønn *(2 filer, 9/9)*
+- [x] `npm run build` grønn (cacheComponents-fella: ingen `export const runtime`) *(bygde ferdig, ingen feil)*
+- [x] MINOR-bump + CHANGELOG Funksjon-rad (commit-msg-hooken håndhever) *(1.187.0 → 1.188.0, Funksjon-rad lagt til; commit passerte hooken)*
 
 ## Files Likely Touched
 
