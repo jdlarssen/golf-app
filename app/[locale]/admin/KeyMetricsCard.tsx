@@ -52,11 +52,31 @@ function parseMetrics(data: unknown): KeyMetrics | null {
     }
     weeks.push({ weekStart: w.week_start, finished: w.finished });
   }
+  if (typeof d.funnel !== 'object' || d.funnel === null || Array.isArray(d.funnel)) {
+    return null;
+  }
+  const f = d.funnel as Record<string, unknown>;
+  if (
+    typeof f.invited !== 'number' ||
+    typeof f.opened !== 'number' ||
+    typeof f.accepted !== 'number' ||
+    typeof f.profile_completed !== 'number' ||
+    typeof f.first_score !== 'number'
+  ) {
+    return null;
+  }
   return {
     usersGe1: d.users_ge1,
     usersGe2: d.users_ge2,
     gjengerGe2: d.gjenger_ge2,
     publicSignups: d.public_signups,
     weeks,
+    funnel: {
+      invited: f.invited,
+      opened: f.opened,
+      accepted: f.accepted,
+      profileCompleted: f.profile_completed,
+      firstScore: f.first_score,
+    },
   };
 }

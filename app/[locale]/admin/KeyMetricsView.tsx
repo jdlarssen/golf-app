@@ -18,6 +18,18 @@ export type KeyMetrics = {
   publicSignups: number;
   /** Finished games per Oslo week, oldest first, current week last. */
   weeks: { weekStart: string; finished: number }[];
+  /**
+   * Onboarding funnel (#1192): distinct invited emails per step, all-time.
+   * Steps 4–5 match invitees to active non-guest users by email, so they are
+   * not guaranteed monotone against steps 1–3 (signup under another email).
+   */
+  funnel: {
+    invited: number;
+    opened: number;
+    accepted: number;
+    profileCompleted: number;
+    firstScore: number;
+  };
 };
 
 /**
@@ -108,7 +120,77 @@ export function KeyMetricsView({ metrics }: { metrics: KeyMetrics }) {
             ))}
           </div>
         </div>
+
+        <FunnelSection funnel={metrics.funnel} />
       </Card>
     </section>
+  );
+}
+
+/**
+ * Onboarding drop-off (#1192): the five funnel steps as aggregate counts, with
+ * each later step's share of the invited cohort (derived here, like `share`
+ * above). Aggregates only — never a name or an email.
+ */
+function FunnelSection({ funnel }: { funnel: KeyMetrics['funnel'] }) {
+  const t = useTranslations('admin.dashboard');
+  const steps = [
+    { id: 'invited', label: t('keyMetricsFunnelInvited'), value: funnel.invited },
+    { id: 'opened', label: t('keyMetricsFunnelOpened'), value: funnel.opened },
+    {
+      id: 'accepted',
+      label: t('keyMetricsFunnelAccepted'),
+      value: funnel.accepted,
+    },
+    {
+      id: 'profile-completed',
+      label: t('keyMetricsFunnelProfile'),
+      value: funnel.profileCompleted,
+    },
+    {
+      id: 'first-score',
+      label: t('keyMetricsFunnelFirstScore'),
+      value: funnel.firstScore,
+    },
+  ];
+
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <p className="font-sans text-[13px] text-text">
+        {t('keyMetricsFunnelLabel')}
+      </p>
+      <dl className="mt-2 space-y-1.5">
+        {steps.map((step, i) => {
+          const share =
+            i > 0 && funnel.invited > 0
+              ? Math.round((step.value / funnel.invited) * 100)
+              : null;
+          return (
+            <div
+              key={step.id}
+              className="flex items-baseline justify-between gap-3"
+            >
+              <dt className="font-sans text-[13px] text-text">{step.label}</dt>
+              <dd className="flex items-baseline gap-2">
+                {share !== null && (
+                  <span
+                    className="font-sans text-xs tabular-nums text-muted"
+                    data-testid={`key-metrics-funnel-${step.id}-share`}
+                  >
+                    {t('keyMetricsFunnelShare', { share })}
+                  </span>
+                )}
+                <span
+                  className="font-serif text-sm font-medium tabular-nums text-text"
+                  data-testid={`key-metrics-funnel-${step.id}`}
+                >
+                  {step.value}
+                </span>
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
   );
 }

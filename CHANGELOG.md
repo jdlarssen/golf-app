@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.184 · Trakta fra invitasjon til første slag</strong></summary>
+
+[#1192](https://github.com/jdlarssen/golf-app/issues/1192) — Nøkkeltall-kortet i Sekretariatet viser nå hvor mange inviterte som ba om kode, logget inn, fullførte profilen og tastet sitt første slag — så du ser hvor nye spillere faller fra på veien inn.
+
+↳ /admin · «Se nøkkeltallene»
+</details>
+
+<details>
 <summary><strong>1.183 · Premieutdeling på alle spillformer</strong></summary>
 
 [#1119](https://github.com/jdlarssen/golf-app/issues/1119) — Premieutdelingen ved rundeslutt — premie koblet til vinner — dukker nå opp på alle spillformene, ikke bare slagspill, stableford og best ball: også scramble, shamble, Wolf, Nassau, Skins, Nines og resten av gjengen.

@@ -27,10 +27,17 @@ const METRICS: KeyMetrics = {
   gjengerGe2: 3,
   publicSignups: 5,
   weeks: WEEK_STARTS.map((weekStart, i) => ({ weekStart, finished: i })),
+  funnel: {
+    invited: 20,
+    opened: 15,
+    accepted: 10,
+    profileCompleted: 8,
+    firstScore: 6,
+  },
 };
 
 describe('KeyMetricsView (#1010)', () => {
-  it('renders the two activation counts, the share line and the 8-week trend', () => {
+  it('renders the two activation counts, the share line, the 8-week trend and the funnel', () => {
     render(<KeyMetricsView metrics={METRICS} />);
 
     expect(screen.getByTestId('key-metrics-users-ge2')).toHaveTextContent('12');
@@ -43,5 +50,21 @@ describe('KeyMetricsView (#1010)', () => {
     expect(weeks).toHaveLength(8);
     expect(weeks[0]).toHaveTextContent('0');
     expect(weeks[7]).toHaveTextContent('7');
+
+    // Funnel (#1192): counts render per step; the invited row has no share,
+    // later steps derive share-of-invited in the view (6 of 20 → 30).
+    expect(screen.getByTestId('key-metrics-funnel-invited')).toHaveTextContent('20');
+    expect(
+      screen.queryByTestId('key-metrics-funnel-invited-share'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('key-metrics-funnel-opened')).toHaveTextContent('15');
+    expect(screen.getByTestId('key-metrics-funnel-accepted')).toHaveTextContent('10');
+    expect(
+      screen.getByTestId('key-metrics-funnel-profile-completed'),
+    ).toHaveTextContent('8');
+    expect(screen.getByTestId('key-metrics-funnel-first-score')).toHaveTextContent('6');
+    expect(
+      screen.getByTestId('key-metrics-funnel-first-score-share'),
+    ).toHaveTextContent('30');
   });
 });
