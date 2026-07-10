@@ -51,10 +51,10 @@ import {
  * Env-gated to staging; never touches prod.
  */
 
-// ANON_KEY is public — used to build the unauthenticated supabase client.
-const ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  '<staging-anon-key-redacted>';
+// ANON_KEY is public by design (it ships to every browser), but keep the
+// literal out of the repo — read from env like SUPABASE_URL; the staging
+// value lives in .env.staging.local (#1197).
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 /**
  * Build an unauthenticated anon supabase-js client. No session — exactly what a
@@ -62,6 +62,7 @@ const ANON_KEY =
  */
 function anonClient() {
   if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
+  if (!ANON_KEY) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
   return createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -74,6 +75,7 @@ function anonClient() {
  */
 async function signedInClient(email: string) {
   if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
+  if (!ANON_KEY) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
   const client = createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
