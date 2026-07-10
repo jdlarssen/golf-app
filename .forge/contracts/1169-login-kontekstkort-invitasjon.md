@@ -119,7 +119,7 @@ gyldighets-predikatet eller kun Type C på kortet; CHANGELOG-tagline.
       innlogging landet på `/complete-profile?next=/games/2fea92d8-…`; invitations.accepted_at
       satt + game_players-rad insertert (SQL-verifisert). Testdata ryddet (spill, invitasjoner,
       game_players, auth-bruker slettet).
-- [x] feat-commit 869428d6: MINOR-bump 1.184.0 → 1.185.0 + CHANGELOG Funksjon-rad, `Refs #1169`
+- [x] feat-commit 108a6b07 (opprinnelig 869428d6, rebaset på main): MINOR-bump → 1.186.0 (omnummerert fra 1.185.0 etter versjons-kollisjon med main under rebase) + CHANGELOG Funksjon-rad, `Refs #1169`
 
 ## Files Likely Touched
 
