@@ -26,5 +26,12 @@ describe('DemoGame', () => {
     const before = board.textContent;
     fireEvent.click(screen.getByRole('button', { name: '+1' }));
     expect(board.textContent).not.toBe(before);
+
+    // Eierskaps-effekt (#1173): å sette et navn bytter «Deg» på tavla til navnet.
+    fireEvent.change(screen.getByTestId('demo-name-input'), {
+      target: { value: 'Jørgen' },
+    });
+    expect(within(board).getByText('Jørgen')).toBeInTheDocument();
+    expect(within(board).queryByText('Deg')).not.toBeInTheDocument();
   });
 });
