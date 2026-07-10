@@ -400,6 +400,19 @@ describe('executeAction: publish_lansering', () => {
     expect(msg).toContain('fikk ikke markert tavla');
   });
 
+  it('markør-post KASTER (nettverksfeil) etter publisering → suksessmelding med caveat', async () => {
+    const rest = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 200, json: tavleComment })
+      .mockRejectedValueOnce(new Error('fetch failed'));
+    const gh: GitHubClient = { rest, graphql: vi.fn() };
+    const deps = mockDeps();
+    const msg = await executeAction(publishAction, gh, deps);
+    expect(deps.publish).toHaveBeenCalled();
+    expect(msg).toContain('Publisert');
+    expect(msg).toContain('fikk ikke markert tavla');
+  });
+
   it('månedstelling feiler → publisering rapporteres likevel, uten tall', async () => {
     const { gh } = mockGh([
       { status: 200, json: tavleComment },

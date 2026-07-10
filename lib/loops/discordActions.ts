@@ -259,13 +259,19 @@ export async function executeAction(
       const issueMatch = /\/issues\/(\d+)$/.exec(comment.issue_url ?? '');
       let markerNote = '';
       if (issueMatch) {
-        const marker = await gh.rest(
-          'POST',
-          `/repos/${LOOP_REPO}/issues/${issueMatch[1]}/comments`,
-          { body: `✅ Publisert: ${value.title} — ${new Date().toISOString().slice(0, 10)}` },
-        );
-        if (marker.status !== 201)
-          markerNote = ` (fikk ikke markert tavla: HTTP ${marker.status})`;
+        try {
+          const marker = await gh.rest(
+            'POST',
+            `/repos/${LOOP_REPO}/issues/${issueMatch[1]}/comments`,
+            { body: `✅ Publisert: ${value.title} — ${new Date().toISOString().slice(0, 10)}` },
+          );
+          if (marker.status !== 201)
+            markerNote = ` (fikk ikke markert tavla: HTTP ${marker.status})`;
+        } catch {
+          // Nettverksfeil mot GitHub etter at lanseringen er ute — kvitteringen
+          // må fortsatt melde suksess, bare med caveat.
+          markerNote = ' (fikk ikke markert tavla: nettverksfeil)';
+        }
       } else {
         markerNote = ' (fant ikke tavle-issuet å markere)';
       }
