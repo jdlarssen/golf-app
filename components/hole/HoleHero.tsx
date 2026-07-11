@@ -38,6 +38,14 @@ export interface HoleHeroProps {
    * format (de eneste som fanger putter, og som aldri har en `contextLine`).
    */
   puttsToggle?: ReactNode;
+  /**
+   * Valgfritt totalt antall hull i runden. Når satt vises en liten, muted
+   * «av {total}»-suffiks rett etter det store hull-tallet — synlig fremdrift i
+   * runden (goal-gradient, #1172). Tucket inn i venstre-kolonnens baseline så
+   * indikatoren ikke tar en egen full-bredde rad (respekterer #639/#939-
+   * plasskampen). `TOTAL_HOLES` (18) er single source of truth for verdien.
+   */
+  totalHoles?: number;
 }
 
 const containerStyle: CSSProperties = {
@@ -80,6 +88,22 @@ const numberStyle: CSSProperties = {
   color: 'var(--text)',
 };
 
+// Grupperer hull-tallet + «av {total}»-suffikset (#1172) med en tettere gap enn
+// leftStyle-en, så suffikset legger seg tett på grunnlinja rett etter tallet.
+const numberGroupStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 5,
+};
+
+const totalSuffixStyle: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 15,
+  fontWeight: 500,
+  color: 'var(--text-muted)',
+  fontVariantNumeric: 'tabular-nums',
+};
+
 const rightStyle: CSSProperties = {
   textAlign: 'right',
   lineHeight: 1.4,
@@ -103,7 +127,7 @@ const indexStyle: CSSProperties = {
 };
 
 export function HoleHero(props: HoleHeroProps): JSX.Element {
-  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine, puttsToggle } = props;
+  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine, puttsToggle, totalHoles } = props;
   const t = useTranslations('holes.entry');
   const ts = useTranslations('scorecard');
   const showAside = parByGender ? hasParDifference(parByGender) : false;
@@ -120,7 +144,12 @@ export function HoleHero(props: HoleHeroProps): JSX.Element {
     <div style={containerStyle}>
       <div style={leftStyle}>
         <div style={kickerStyle}>{t('hullKicker')}</div>
-        <div className="score-num" style={numberStyle}>{holeNumber}</div>
+        <div style={numberGroupStyle}>
+          <div className="score-num" style={numberStyle}>{holeNumber}</div>
+          {totalHoles != null && (
+            <div style={totalSuffixStyle}>{t('hullTotalSuffix', { total: totalHoles })}</div>
+          )}
+        </div>
       </div>
       {contextLine && <div style={centerStyle}>{contextLine}</div>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>

@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.192 · Se hvor langt du er i runden</strong></summary>
+
+[#1172](https://github.com/jdlarssen/golf-app/issues/1172) — Øverst på hull-siden står det nå «av 18» rett etter hull-nummeret, så du ser med ett blikk hvor langt du er kommet i runden.
+
+↳ /games · «Tast en runde»
+</details>
+
+<details>
 <summary><strong>1.191 · Kom i gang som arrangør, uten blanke ark</strong></summary>
 
 [#1177](https://github.com/jdlarssen/golf-app/issues/1177) — Som ny arrangør ser du nå en kom-i-gang-liste i Sekretariatet: «Konto opprettet» er allerede huket av, så du har tre steg igjen: lag en bane, opprett første spill og inviter spillere. Lista fyller seg opp etter hvert, og forsvinner når du er i gang.
