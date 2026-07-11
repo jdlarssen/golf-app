@@ -169,3 +169,21 @@ jobs:
           E2E_PLAYER_EMAIL: ${{ secrets.E2E_PLAYER_EMAIL }}
           RESEND_STUB_SEND: 'true'
           SELFREG_RATE_LIMIT_DISABLED: 'true'
+
+      # #1132: when a @gate run goes red the flake could only be guessed at from
+      # the text log — no trace, no screenshot. Upload the Playwright HTML report
+      # + traces/screenshots so the next red run is inspectable (the real
+      # root-cause hunt per #1073). `!cancelled()` runs this even after the gate
+      # step fails (the case we care about) and after the continue-on-error
+      # lifecycle lane; `if-no-files-found: ignore` keeps a green run (no traces)
+      # from failing here.
+      - name: Upload Playwright report + traces (#1132)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
