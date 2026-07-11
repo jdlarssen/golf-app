@@ -17,6 +17,8 @@ import { getAdminClient } from '@/lib/supabase/admin';
  */
 
 export type InviteLoginContext = {
+  /** Spill-id for aggregert sosialt bevis (#1193). Aldri navn til anonyme. */
+  gameId: string;
   inviterName: string | null;
   gameName: string;
   gameMode: string;
@@ -30,6 +32,7 @@ type InviteContextRow = {
   expires_at: string;
   inviter: { name: string | null; nickname: string | null } | null;
   games: {
+    id: string;
     name: string;
     game_mode: string;
     scheduled_tee_off_at: string | null;
@@ -59,7 +62,7 @@ export async function getInviteLoginContext(
     const { data, error } = await admin
       .from('invitations')
       .select(
-        'expires_at, inviter:users!invitations_invited_by_fkey(name, nickname), games:game_id(name, game_mode, scheduled_tee_off_at, courses(name))',
+        'expires_at, inviter:users!invitations_invited_by_fkey(name, nickname), games:game_id(id, name, game_mode, scheduled_tee_off_at, courses(name))',
       )
       .eq('token', token)
       .is('accepted_at', null)
@@ -77,6 +80,7 @@ export async function getInviteLoginContext(
       data.inviter?.name?.trim() || data.inviter?.nickname?.trim() || null;
 
     return {
+      gameId: data.games.id,
       inviterName,
       gameName: data.games.name,
       gameMode: data.games.game_mode,

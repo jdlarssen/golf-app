@@ -38,6 +38,7 @@ import { FinishedRoundsSection } from '@/components/games/FinishedRoundsSection'
 import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
+import { getGamesSocialProof } from '@/lib/games/getGameSocialProof';
 import {
   getActiveGameCardData,
   type ActiveCardExtras,
@@ -174,6 +175,18 @@ async function HomeBody() {
       getUserStreak(supabase, userId!).catch(() => null),
     ]);
 
+  // #1193: sosialt bevis per funn-kort — ett samlet roster- + venne-oppslag for
+  // alle listede spill (klubb/venner/åpne). Lagt etter funn-fetchen fordi det
+  // trenger spill-idene derfra; batches så det blir to spørringer, ikke N.
+  const discoverySocialProof = await getGamesSocialProof(
+    [
+      ...discoveryData.clubGames,
+      ...discoveryData.friendGames,
+      ...discoveryData.openGames,
+    ].map((g) => g.id),
+    userId!,
+  );
+
   const { data: profile, error: profileError } = profileRes;
 
   // Old logic was: "no row" means not yet onboarded — but the auth.users trigger
@@ -307,7 +320,10 @@ async function HomeBody() {
         </section>
 
         {hasDiscoveryContent && (
-          <HomeDiscoverySection data={discoveryData} />
+          <HomeDiscoverySection
+            data={discoveryData}
+            socialProof={discoverySocialProof}
+          />
         )}
       </>
     );
@@ -474,7 +490,11 @@ async function HomeBody() {
             + egne forespørsler) + «Se alle»-hale. Uten: ett lenkekort som
             persistent inngang. Ingen create-dører her (#392). */}
         {hasDiscoveryContent ? (
-          <HomeDiscoverySection data={discoveryData} preview />
+          <HomeDiscoverySection
+            data={discoveryData}
+            socialProof={discoverySocialProof}
+            preview
+          />
         ) : (
           <Section label={t('sectionFindTournaments')}>
             <SmartLink

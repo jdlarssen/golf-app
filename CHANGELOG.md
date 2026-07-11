@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.199 · Se hvem du kjenner som er med</strong></summary>
+
+[#1193](https://github.com/jdlarssen/golf-app/issues/1193) — Før du melder deg på en runde, ser du hvem som alt er med: kjenner du noen av dem, står de med navn — «Jonas og 2 andre du kjenner er med» — ellers et ærlig antall, som «3 har blitt med».
+
+↳ /finn-turneringer · «Finn turneringer»
+</details>
+
+<details>
 <summary><strong>1.198 · Serien din vokser uke for uke</strong></summary>
 
 [#1194](https://github.com/jdlarssen/golf-app/issues/1194) — Spiller du runder flere uker på rad, teller Tørny nå serien din. Den vises i Statistikk-fanen, som en liten 🔥-chip på hjem-siden mens den er i gang, og du får en vennlig gratulasjon når en ny runde forlenger den. Hopper du over en uke, nullstilles den stille, uten mas eller nedtelling.

@@ -1,6 +1,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { SocialProofLine } from '@/components/games/SocialProofLine';
 import { formatTeeOffParts } from '@/lib/i18n/format';
 import type {
   DiscoverableClubGame,
@@ -8,6 +9,7 @@ import type {
   DiscoverableOpenGame,
   PendingRequest,
 } from '@/lib/games/getDiscoverableGames';
+import type { GameSocialProof } from '@/lib/games/socialProof';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 
@@ -24,6 +26,7 @@ const PREVIEW_CAP = 3;
 
 export function HomeDiscoverySection({
   data,
+  socialProof = {},
   preview = false,
 }: {
   data: {
@@ -32,6 +35,12 @@ export function HomeDiscoverySection({
     friendGames: DiscoverableFriendGame[];
     pendingRequests: PendingRequest[];
   };
+  /**
+   * #1193: sosialt bevis per funn-kort, `gameId → GameSocialProof`. Kalleren
+   * batcher ett roster- + ett venne-oppslag for hele lista. Spill uten treff
+   * mangler bare fra kartet — kortet rendrer da ingen linje.
+   */
+  socialProof?: Record<string, GameSocialProof>;
   /**
    * Hjems fylt-tilstand-forhåndsvisning (#879): kapp de passive listene
    * (klubb/venner/åpne) til `PREVIEW_CAP` og legg på en «Se alle»-hale til
@@ -70,7 +79,12 @@ export function HomeDiscoverySection({
           <ul className="flex list-none flex-col gap-3 p-0">
             {clubGames.map((game) => (
               <li key={game.id}>
-                <ClubGameCard game={game} t={t} locale={locale} />
+                <ClubGameCard
+                  game={game}
+                  proof={socialProof[game.id]}
+                  t={t}
+                  locale={locale}
+                />
               </li>
             ))}
           </ul>
@@ -85,7 +99,12 @@ export function HomeDiscoverySection({
           <ul className="flex list-none flex-col gap-3 p-0">
             {friendGames.map((game) => (
               <li key={game.id}>
-                <FriendGameCard game={game} t={t} locale={locale} />
+                <FriendGameCard
+                  game={game}
+                  proof={socialProof[game.id]}
+                  t={t}
+                  locale={locale}
+                />
               </li>
             ))}
           </ul>
@@ -100,7 +119,12 @@ export function HomeDiscoverySection({
           <ul className="flex list-none flex-col gap-3 p-0">
             {openGames.map((game) => (
               <li key={game.id}>
-                <OpenGameCard game={game} t={t} locale={locale} />
+                <OpenGameCard
+                  game={game}
+                  proof={socialProof[game.id]}
+                  t={t}
+                  locale={locale}
+                />
               </li>
             ))}
           </ul>
@@ -154,10 +178,12 @@ function formatTeeOffLine(
 
 function ClubGameCard({
   game,
+  proof,
   t,
   locale,
 }: {
   game: DiscoverableClubGame;
+  proof?: GameSocialProof;
   t: T;
   locale: AppLocale;
 }) {
@@ -187,6 +213,7 @@ function ClubGameCard({
               </>
             )}
           </p>
+          {proof && <SocialProofLine {...proof} className="mt-1.5 text-[12px]" />}
         </div>
       </div>
       <div className="mt-3.5">
@@ -200,10 +227,12 @@ function ClubGameCard({
 
 function FriendGameCard({
   game,
+  proof,
   t,
   locale,
 }: {
   game: DiscoverableFriendGame;
+  proof?: GameSocialProof;
   t: T;
   locale: AppLocale;
 }) {
@@ -231,6 +260,7 @@ function FriendGameCard({
               </>
             )}
           </p>
+          {proof && <SocialProofLine {...proof} className="mt-1.5 text-[12px]" />}
         </div>
       </div>
       <div className="mt-3.5">
@@ -244,10 +274,12 @@ function FriendGameCard({
 
 function OpenGameCard({
   game,
+  proof,
   t,
   locale,
 }: {
   game: DiscoverableOpenGame;
+  proof?: GameSocialProof;
   t: T;
   locale: AppLocale;
 }) {
@@ -279,6 +311,7 @@ function OpenGameCard({
               </>
             )}
           </p>
+          {proof && <SocialProofLine {...proof} className="mt-1.5 text-[12px]" />}
         </div>
       </div>
       <div className="mt-3.5">

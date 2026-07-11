@@ -4382,6 +4382,12 @@
     "pendingApprovalCaptain": "Lag «{teamName}» (kaptein) — venter på godkjenning",
     "pendingApprovalMember": "Lag «{teamName}» — venter på godkjenning"
   },
+  "socialProof": {
+    "friendsOne": "{name} er med",
+    "friendsTwo": "{name1} og {name2} er med",
+    "friendsOverflow": "{name} og {count, plural, one {# annen} other {# andre}} du kjenner er med",
+    "count": "{count} har blitt med"
+  },
   "finishedCard": {
     "result": {
       "youWon": "🥇 Du vant",

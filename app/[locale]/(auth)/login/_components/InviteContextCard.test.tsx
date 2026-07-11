@@ -10,7 +10,7 @@ import { InviteContextCard } from './InviteContextCard';
 // has no roster/prize/email/handicap props, so it can never leak them.
 
 describe('InviteContextCard (#1169)', () => {
-  it('renders inviter, game name, mode, course, tee-off and expiry from props', () => {
+  it('renders inviter, game name, mode, course, tee-off, expiry and join count', () => {
     render(
       <InviteContextCard
         inviterName="Jørgen"
@@ -19,6 +19,7 @@ describe('InviteContextCard (#1169)', () => {
         courseName="Fana GK"
         teeOff="8. mai 2026, 14:30"
         expiresLine="Invitasjonen din utløper om 3 dager"
+        joinedCount={5}
       />,
     );
 
@@ -37,5 +38,8 @@ describe('InviteContextCard (#1169)', () => {
     expect(screen.getByTestId('invite-expiry')).toHaveTextContent(
       'Invitasjonen din utløper om 3 dager',
     );
+    // #1193: the aggregate join count renders (the number is interpolated, not
+    // copy). The anon card can only ever show a count — never friend names.
+    expect(screen.getByTestId('social-proof-line')).toHaveTextContent('5');
   });
 });

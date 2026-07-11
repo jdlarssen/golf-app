@@ -16,6 +16,7 @@ import {
   getInviteLoginContext,
   isInviteToken,
 } from '@/lib/auth/getInviteLoginContext';
+import { getGameSocialProof } from '@/lib/games/getGameSocialProof';
 import { inviteExpiryTier } from '@/lib/auth/inviteExpiry';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { formatDate, formatTime } from '@/lib/i18n/format';
@@ -81,6 +82,9 @@ export default async function LoginPage({
           : expiryTier.kind === 'tomorrow'
             ? tCard('expiresTomorrow')
             : tCard('expiresInDays', { n: expiryTier.days });
+    // #1193: aggregert sosialt bevis på kortet. Den besøkende er anonym
+    // (viewerUserId = null) → helperen gir kun et ekte antall, aldri venne-navn.
+    const { joinedCount } = await getGameSocialProof(inviteCtx.gameId, null);
     inviteCard = (
       <InviteContextCard
         inviterName={inviteCtx.inviterName}
@@ -95,6 +99,7 @@ export default async function LoginPage({
           inviteCtx.teeOffAt ? formatTeeOff(inviteCtx.teeOffAt, locale) : null
         }
         expiresLine={expiresLine}
+        joinedCount={joinedCount}
       />
     );
   }
