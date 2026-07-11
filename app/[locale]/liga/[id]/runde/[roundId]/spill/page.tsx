@@ -81,7 +81,6 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
         backHref={`/liga/${leagueId}`}
         backLabel={league.name}
         kicker={t('kicker')}
-        userId={currentUserId}
       />
 
       <header className="mb-6">

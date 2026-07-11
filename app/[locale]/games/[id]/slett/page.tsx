@@ -60,7 +60,9 @@ export default async function CreatorDeleteGamePage({
   const errorMessage = errorCode ? t(`errors.${errorCode}` as Parameters<typeof t>[0]) : undefined;
 
   const supabase = await getServerClient();
-  const role = await requireAdminOrCreator(supabase, id);
+  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter); returverdien
+  // ble tidligere kun brukt til TopBar-bjella (#1133), så bindingen droppes.
+  await requireAdminOrCreator(supabase, id);
 
   const { data: game } = await supabase
     .from('games')
@@ -109,7 +111,7 @@ export default async function CreatorDeleteGamePage({
 
   return (
     <AppShell>
-      <TopBar backHref={`/games/${id}`} kicker={t('kicker')} userId={role.userId} />
+      <TopBar backHref={`/games/${id}`} kicker={t('kicker')} />
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">

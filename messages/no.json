@@ -54,8 +54,6 @@
     "profile": "Profil"
   },
   "inbox": {
-    "bellAriaLabel": "Innboks",
-    "bellUnreadAria": "Innboks, {count} {count, plural, one {ulest varsel} other {uleste varsler}}",
     "kicker": "Innboks",
     "backLabel": "Tilbake til hjem",
     "emptyHeading": "Ingen nye varsler.",
