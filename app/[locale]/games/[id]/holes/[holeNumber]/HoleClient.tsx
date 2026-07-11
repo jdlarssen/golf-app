@@ -43,6 +43,7 @@ import type {
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import type { HoleParByGender } from '@/lib/games/parDisplay';
+import { TOTAL_HOLES } from '@/lib/games/deliveryStatus';
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
 import { subscribeBingoBangoBongo } from '@/lib/bbb/subscribeBingoBangoBongo';
 import { WolfChoiceModal } from './WolfChoiceModal';
@@ -898,6 +899,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       <HoleStrip gameId={gameId} currentHole={currentHole} />
       <HoleHero
         holeNumber={currentHole}
+        totalHoles={TOTAL_HOLES}
         par={par}
         parByGender={parByGender}
         playerGender={playerGender}

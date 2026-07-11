@@ -1890,6 +1890,7 @@
       "hullAriaLabel": "Hole {n}",
       "hullIndex": "index {si}",
       "hullPar": "Par {par}",
+      "hullTotalSuffix": "of {total}",
       "enterYourScore": "Enter your score",
       "nextHole": "Next hole · {next}",
       "submitScorecard": "Submit scorecard",

@@ -1890,6 +1890,7 @@
       "hullAriaLabel": "Hull {n}",
       "hullIndex": "indeks {si}",
       "hullPar": "Par {par}",
+      "hullTotalSuffix": "av {total}",
       "enterYourScore": "Tast inn scoren din",
       "nextHole": "Neste hull · {next}",
       "submitScorecard": "Lever scorekort",
