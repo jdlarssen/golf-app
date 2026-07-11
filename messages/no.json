@@ -3843,6 +3843,7 @@
         "season_over": "Sesongen er allerede over. Velg datoer fram i tid.",
         "unexpected": "Uventet feil: {code}"
       },
+      "sectionProgress": "Del {current} av {total}",
       "grundinfoHeading": "Grunninfo",
       "nameLabel": "Navn på ligaen",
       "namePlaceholder": "Månedsligaen 2026",

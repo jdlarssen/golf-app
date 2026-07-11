@@ -3843,6 +3843,7 @@
         "season_over": "The season has already ended. Pick dates in the future.",
         "unexpected": "Unexpected error: {code}"
       },
+      "sectionProgress": "Part {current} of {total}",
       "grundinfoHeading": "Basic info",
       "nameLabel": "League name",
       "namePlaceholder": "Monthly League 2026",
