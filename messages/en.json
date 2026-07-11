@@ -2802,6 +2802,15 @@
       }
     },
     "dashboard": {
+      "gettingStarted": {
+        "heading": "Get started",
+        "progress": "{done} of {total} done",
+        "stepAccount": "Account created",
+        "stepCourse": "Add a course",
+        "stepGame": "Create your first game",
+        "stepInvite": "Invite players",
+        "done": "Done"
+      },
       "sectionLabel": "Recent activity",
       "moreInSecretariat": "More in the Secretariat",
       "actionItemsHeading": "Needs action",

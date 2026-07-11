@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.191 · Kom i gang som arrangør, uten blanke ark</strong></summary>
+
+[#1177](https://github.com/jdlarssen/golf-app/issues/1177) — Som ny arrangør ser du nå en kom-i-gang-liste i Sekretariatet: «Konto opprettet» er allerede huket av, så du har tre steg igjen: lag en bane, opprett første spill og inviter spillere. Lista fyller seg opp etter hvert, og forsvinner når du er i gang.
+
+↳ /admin · «Kom i gang»
+</details>
+
+<details>
 <summary><strong>1.190 · Ryddigere innboks</strong></summary>
 
 [#1133](https://github.com/jdlarssen/golf-app/issues/1133) — Innboksen har nå én rydde-knapp i stedet for to. Har du uleste varsler sier den «Marker alle som lest»; er alt lest bytter den til «Tøm leste» — ingen to-tapp-rekkefølge å tenke på. Varsel-bjella i toppen er borte; innboks-fanen nederst viser den samme prikken.
