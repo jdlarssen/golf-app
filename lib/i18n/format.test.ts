@@ -20,6 +20,7 @@ import {
   formatShortUTCDayMonthLocale,
   formatShortOsloDayMonthLocale,
   formatShortOsloDateWithYearLocale,
+  formatLongDateOsloLocale,
   formatMonthLongLocale,
   formatHHMMOslo,
 } from './format';
@@ -105,6 +106,29 @@ describe('N-locale safety (probe locale beyond no/en)', () => {
     expect(formatRelativeLocale(fiveMinAgo, SV, now)).not.toBe(
       formatRelativeLocale(fiveMinAgo, 'en', now),
     );
+  });
+});
+
+describe('formatLongDateOsloLocale (#1179)', () => {
+  // 2099-07-24 10:00Z → Oslo (summer, +02) stays on the 24th.
+  const SUMMER = '2099-07-24T10:00:00.000Z';
+
+  it('renders «24. juli 2099» for nb', () => {
+    expect(formatLongDateOsloLocale(SUMMER, 'no')).toBe('24. juli 2099');
+  });
+
+  it('renders «24 July 2099» for en (en-GB European order, not US)', () => {
+    expect(formatLongDateOsloLocale(SUMMER, 'en')).toBe('24 July 2099');
+  });
+
+  it('pins to Europe/Oslo so a near-midnight UTC instant keeps its Oslo date', () => {
+    // 2099-07-24 23:30Z is already 2099-07-25 01:30 in Oslo (summer +02).
+    const nearMidnight = '2099-07-24T23:30:00.000Z';
+    expect(formatLongDateOsloLocale(nearMidnight, 'no')).toBe('25. juli 2099');
+  });
+
+  it('accepts a Date instance as well as an ISO string', () => {
+    expect(formatLongDateOsloLocale(new Date(SUMMER), 'no')).toBe('24. juli 2099');
   });
 });
 

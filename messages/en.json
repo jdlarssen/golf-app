@@ -2624,7 +2624,10 @@
       "invitedByFallback": "You're invited",
       "formatLabel": "Format:",
       "courseLabel": "Course:",
-      "teeOffLabel": "Tee-off:"
+      "teeOffLabel": "Tee-off:",
+      "expiresToday": "Your invitation expires today.",
+      "expiresTomorrow": "Your invitation expires tomorrow.",
+      "expiresInDays": "Your invitation expires in {n} days."
     },
     "tryDemoDivider": "or",
     "tryDemo": "Try Tørny in 60 seconds",
@@ -4625,7 +4628,8 @@
       "formatReadMore": "Learn more about the formats",
       "footerDisclaimer": "Don't have a golf buddy named {name}? Just ignore this message.",
       "getStartedHtml": "To get started: go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you.",
-      "getStartedText": "Go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you."
+      "getStartedText": "Go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you.",
+      "expiresLine": "Your invitation is open until {date}."
     },
     "clubInvite": {
       "subject": "You're invited to {clubName} on Tørny",

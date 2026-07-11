@@ -15,12 +15,19 @@ export function InviteContextCard({
   modeLabel,
   courseName,
   teeOff,
+  expiresLine,
 }: {
   inviterName: string | null;
   gameName: string;
   modeLabel: string | null;
   courseName: string | null;
   teeOff: string | null;
+  /**
+   * Ferdig-formulert frist-linje (#1179 — mild tap-aversjon), f.eks.
+   * «Invitasjonen din utløper om 3 dager». Page-en velger tier og copy;
+   * kortet er ren presentasjon, så `null` → ingen linje.
+   */
+  expiresLine: string | null;
 }) {
   const t = useTranslations('auth.inviteCard');
 
@@ -55,6 +62,14 @@ export function InviteContextCard({
             </div>
           )}
         </dl>
+        {expiresLine && (
+          <p
+            className="mt-3 font-sans text-sm text-muted"
+            data-testid="invite-expiry"
+          >
+            {expiresLine}
+          </p>
+        )}
       </Card>
     </div>
   );

@@ -10,7 +10,7 @@ import { InviteContextCard } from './InviteContextCard';
 // has no roster/prize/email/handicap props, so it can never leak them.
 
 describe('InviteContextCard (#1169)', () => {
-  it('renders inviter, game name, mode, course and tee-off from props', () => {
+  it('renders inviter, game name, mode, course, tee-off and expiry from props', () => {
     render(
       <InviteContextCard
         inviterName="Jørgen"
@@ -18,6 +18,7 @@ describe('InviteContextCard (#1169)', () => {
         modeLabel="Stableford"
         courseName="Fana GK"
         teeOff="8. mai 2026, 14:30"
+        expiresLine="Invitasjonen din utløper om 3 dager"
       />,
     );
 
@@ -30,5 +31,11 @@ describe('InviteContextCard (#1169)', () => {
     expect(card).toHaveTextContent('Stableford');
     expect(card).toHaveTextContent('Fana GK');
     expect(card).toHaveTextContent('8. mai 2026, 14:30');
+    // #1179: the pre-formatted expiry line is rendered when provided; `null`
+    // (the field-whitelist default) renders nothing — the presence toggle is
+    // the only card-owned logic worth asserting here.
+    expect(screen.getByTestId('invite-expiry')).toHaveTextContent(
+      'Invitasjonen din utløper om 3 dager',
+    );
   });
 });

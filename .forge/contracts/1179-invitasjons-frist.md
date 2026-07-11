@@ -83,24 +83,32 @@ dato-formatteren bor i `lib/mail/i18n.ts` eller egen helper; CHANGELOG-tagline.
 
 ## Success Criteria
 
-- [ ] Game-scoped invite-mail viser frist-linje med lokalisert dato (14-dagers-datoen) i
+- [x] Game-scoped invite-mail viser frist-linje med lokalisert dato (14-dagers-datoen) i
       både html og text — snapshot-diff reviewd visuelt, `npx vitest run lib/mail` grønn.
-- [ ] Åpen venne-/admin-invitasjon viser 7-dagers-datoen (samme mekanisme).
-- [ ] Uten `expiresAt`, eller med dato i fortid (resend av utløpt) → mal uendret/linje
-      utelatt (approval-case beviser det).
-- [ ] Hvis #1169s kort finnes: kortet viser vennlig frist (staging-klikkrunde av
-      invitasjons-flyten); ellers er Del B dokumentert som utestående i closing-kommentaren.
-- [ ] Copy no+en i paritet (catalogParity grønn); norsk copy humanizer-kjørt før commit.
+      **Bevis:** `inviteNotification.test.ts` case «expiresAt i fremtiden» → «Invitasjonen din
+      gjelder til 24. juli 2099.» i html + text; 14/14 grønn.
+- [x] Åpen venne-/admin-invitasjon viser 7-dagers-datoen (samme mekanisme). **Bevis:** alle
+      tre kallerne (`invite/actions.ts`, `admin/spillere/actions.ts`,
+      `inviteToGameActions.ts` fresh+retry) sender nå `expiresAt`.
+- [x] Uten `expiresAt`, eller med dato i fortid (resend av utløpt) → mal uendret/linje
+      utelatt. **Bevis:** approval-cases «expiresAt i fortid» + «uten expiresAt» →
+      `expiresLineHtml(...)` er `null`; base-chrome-snapshot uendret.
+- [x] Hvis #1169s kort finnes: kortet viser vennlig frist. **#1169 er MERGET** (PR #1211/#1214),
+      så Del B er bygget: `InviteContextCard` viser relativ nedtelling via `inviteExpiryTier`.
+      Staging-klikkrunde av /login?invite=<token> gjenstår FØR merge.
+- [x] Copy no+en i paritet (catalogParity grønn); norsk copy humanizer-kjørt før commit.
+      **Bevis:** `catalogParity.test.ts` grønn; humanizer-pass → ingen endringer (ren copy).
 - [ ] Staging: send invitasjon fra admin → verifiser frist-linjen i faktisk mail
-      (Resend-dashboard/mottak) FØR merge.
+      (Resend-dashboard/mottak) FØR merge. **Utestående — gjøres før merge.**
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` grønn · `npm run lint` grønn
-- [ ] Co-located vitest for endrede filer grønn (mail-snapshots refreshet + reviewd —
-      ALDRI nye testfiler for copy-endringer)
-- [ ] Staging-verifisering av mail (og kort, hvis Del B) FØR merge
-- [ ] feat-commit: MINOR-bump + CHANGELOG Funksjon-rad; alle commits `Refs #1179`
+- [x] `npx tsc --noEmit` grønn · `npm run lint` grønn (0 errors; kun pre-eksisterende
+      complexity-warnings i urørte filer)
+- [x] Co-located vitest for endrede filer grønn (177 grønn: mail + format + inviteExpiry +
+      InviteContextCard + catalogParity + apostropheParity)
+- [ ] Staging-verifisering av mail + kort FØR merge — **utestående**
+- [x] feat-commit: MINOR-bump (1.191→1.192) + CHANGELOG Funksjon-rad; alle commits `Refs #1179`
 
 ## Files Likely Touched
 

@@ -16,6 +16,7 @@ import {
   getInviteLoginContext,
   isInviteToken,
 } from '@/lib/auth/getInviteLoginContext';
+import { inviteExpiryTier } from '@/lib/auth/inviteExpiry';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { formatDate, formatTime } from '@/lib/i18n/format';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
@@ -66,7 +67,20 @@ export default async function LoginPage({
   if (inviteCtx) {
     const locale = (await getLocale()) as AppLocale;
     const tModes = await getTranslations('modes');
+    const tCard = await getTranslations('auth.inviteCard');
     const modeKey = inviteCtx.gameMode as Parameters<typeof tModes>[0];
+    // #1179: vennlig, forward-pekende frist. Kortet rendres per request, så en
+    // relativ nedtelling holder seg fersk. getInviteLoginContext viser bare
+    // ikke-utløpte invitasjoner, så tier er alltid i dag/i morgen/om N dager.
+    const expiryTier = inviteExpiryTier(inviteCtx.expiresAt);
+    const expiresLine =
+      expiryTier === null
+        ? null
+        : expiryTier.kind === 'today'
+          ? tCard('expiresToday')
+          : expiryTier.kind === 'tomorrow'
+            ? tCard('expiresTomorrow')
+            : tCard('expiresInDays', { n: expiryTier.days });
     inviteCard = (
       <InviteContextCard
         inviterName={inviteCtx.inviterName}
@@ -80,6 +94,7 @@ export default async function LoginPage({
         teeOff={
           inviteCtx.teeOffAt ? formatTeeOff(inviteCtx.teeOffAt, locale) : null
         }
+        expiresLine={expiresLine}
       />
     );
   }

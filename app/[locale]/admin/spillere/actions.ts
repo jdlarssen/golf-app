@@ -90,7 +90,7 @@ export async function sendInvitation(formData: FormData) {
   if (insertError) redirect({ href: '/admin/spillere?error=log_failed', locale });
 
   try {
-    await sendInviteNotification({ to: email, invitedByName, inviteToken });
+    await sendInviteNotification({ to: email, invitedByName, inviteToken, expiresAt });
   } catch (err) {
     console.error('[admin/spillere] notification mail failed', err);
     const qs = new URLSearchParams({ error: 'mail_failed', email });
@@ -120,7 +120,7 @@ export async function resendInvitation(formData: FormData) {
 
   const { data: inv, error } = await supabase
     .from('invitations')
-    .select('email, accepted_at, token')
+    .select('email, accepted_at, token, expires_at')
     .eq('id', id)
     .single();
   if (error || !inv) redirect({ href: '/admin/spillere?error=resend_failed', locale });
@@ -131,6 +131,9 @@ export async function resendInvitation(formData: FormData) {
       to: inv!.email,
       invitedByName,
       inviteToken: inv!.token,
+      // Resend forlenger ikke fristen (#1179 out-of-scope): en utløpt-men-ikke-
+      // akseptert rad har expires_at i fortid → mailen utelater frist-linjen.
+      expiresAt: inv!.expires_at,
     });
   } catch (err) {
     console.error('[admin/spillere] resend mail failed', err);
