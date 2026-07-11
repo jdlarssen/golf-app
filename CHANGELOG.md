@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.194 · Installer-tipset venter til du er varm</strong></summary>
+
+[#1186](https://github.com/jdlarssen/golf-app/issues/1186) — Installer-tipset på Hjem popper ikke lenger opp med det samme du logger inn første gang. Det venter til ditt andre besøk, så du får kjent litt på appen før den ber deg legge den til på hjemskjermen. Har du alt lukket tipset, eller kjører appen installert, er alt som før.
+
+↳ / · «Legg til på hjemskjerm»
+</details>
+
+<details>
 <summary><strong>1.193 · Liga-oppsett med utfylte datoer og tydelige deler</strong></summary>
 
 [#1178](https://github.com/jdlarssen/golf-app/issues/1178) — Når du setter opp en liga er sesong-datoene fylt ut på forhånd, med i dag som start og en fornuftig sesongslutt, så rundeoversikten dukker opp med en gang. De seks delene er nummererte «Del 1 av 6» til «Del 6 av 6», så du ser hvor mye som gjenstår. Du endrer alt fritt.
