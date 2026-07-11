@@ -38,3 +38,14 @@ userId-prop; catalog-parity holder; BottomNav-prikken urørt; ingen død kode
 
 **Staging-verify:** inbox-flyten er IKKE dekket av e2e `@gate`-specene →
 `needs-manual-qa` settes på PR-en (stagingbevis-porten #1076, interaktiv økt).
+
+## Runde 2 — kryss-modell-gate (Sonnet): CONFIRM
+
+Uavhengig Sonnet-gjennomsyn (annen modell enn Opus-bygget), fersk kontekst.
+Ingen substansiell defekt. Verifiserte selv: adaptiv knapp prioriterer uleste
+(both-read-and-unread edge case dekket); alle 7 TopBar-call-sites oppdatert;
+`role`-bindingen droppet kun på de 3 sidene der `role.userId` var eneste bruk,
+beholdt på spillere (linje 177 bruker den fortsatt); catalog-parity grønn med
+nøyaktig to fjernede nøkler; BottomNav uendret (`bottomnav-innboks-dot` intakt);
+tsc rent; de to lint-warningsene (spillere/liga complexity) pre-eksisterer
+identisk på main. → CONFIRM, lever som review-klar (steg 5).
