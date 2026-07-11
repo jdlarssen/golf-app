@@ -32,6 +32,7 @@ import {
   type GameForHole,
 } from '@/lib/games/getGameWithPlayers';
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
+import { getRoundStreakGrowth } from '@/lib/stats/getUserStreak';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import {
   formatDisplayLabelKey,
@@ -225,6 +226,20 @@ export default async function GameHomePage({
   if (joinsRes.error || !joinsRes.data) notFound();
   const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) notFound();
+
+  // #1194 — etter-runde-feiring: sjekk om NETTOPP denne runden fikk den ukentlige
+  // streaken til å vokse. Hentes KUN på finished-visningen (finished auto-starter
+  // aldri, så gwp.game.status er fasit her), så den vanlige aktiv-runde-stien er
+  // upåvirket. Best-effort — en streak-lesing skal aldri velte spill-hjem.
+  const streakGrowth =
+    gwp.game.status === 'finished'
+      ? await getRoundStreakGrowth(
+          supabase,
+          userId,
+          id,
+          new Date(nowMs),
+        ).catch(() => null)
+      : null;
 
   // #1176: den myke profil-stripa vises for et medlem som ikke har fullført
   // profilen (gjester unntas — de fyller ikke ut profilskjemaet). Finished-
@@ -828,6 +843,27 @@ export default async function GameHomePage({
           paid={me.paid_at != null}
           className="mb-4"
         />
+      )}
+
+      {/* #1194: etter-runde-feiring — KUN når nettopp denne runden fikk den
+          ukentlige streaken til å vokse. Ren anerkjennelse; ingen nedtelling,
+          ingen «ikke bryt den»-press (guardrail). Skjuler seg selv ellers. */}
+      {isFinished && streakGrowth?.grew && (
+        <Card className="mb-4 border-accent/40 bg-accent/5">
+          <div className="flex items-center gap-3" data-testid="streak-celebration">
+            <span aria-hidden className="text-2xl leading-none">
+              🔥
+            </span>
+            <div>
+              <p className="font-serif text-base font-medium text-text">
+                {t('streakGrewTitle', { count: streakGrowth.weeklyStreak })}
+              </p>
+              <p className="mt-0.5 font-sans text-sm text-muted">
+                {t('streakGrewBody')}
+              </p>
+            </div>
+          </div>
+        </Card>
       )}
 
       {isDraft && (
