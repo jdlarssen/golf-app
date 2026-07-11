@@ -5,6 +5,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getActionItemCounts, totalActionableGames } from '@/lib/admin/actionItems';
 import { getAdminContext } from './_dashboardContext';
 import { TileGridView, CompactTileGrid, type Tile } from './TilesView';
+import { GettingStartedChecklist } from './GettingStartedChecklist';
 
 // ─── Admin dashboard tile grid (data-fetching) ─────────────────────────────
 
@@ -90,6 +91,13 @@ export async function TilesGrid() {
   const activeLeagueCount = activeLeaguesRes.count ?? 0;
   const actionableGames = totalActionableGames(actionCounts);
   const unbuiltIdeasCount = unbuiltIdeasRes.count ?? 0;
+
+  // #1177: goal-gradient onboarding — derive the three setup signals from the
+  // counts already fetched above (no extra query). «Konto opprettet» is step 1,
+  // pre-checked; the checklist auto-hides once all three are true.
+  const hasCourse = courseCount >= 1;
+  const hasGame = activeCount + plannedCount >= 1 || lastFinishedAt != null;
+  const hasInvited = pendingInvites >= 1 || userCount >= 2;
 
   // #914: tier the wall — the everyday core loop keeps full cards; the rest
   // moves to a denser «Mer i Sekretariatet»-section below. Everything stays
@@ -200,6 +208,11 @@ export async function TilesGrid() {
 
   return (
     <>
+      <GettingStartedChecklist
+        hasCourse={hasCourse}
+        hasGame={hasGame}
+        hasInvited={hasInvited}
+      />
       <TileGridView tiles={coreTiles} />
       <p className="mt-6 mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         {t('moreInSecretariat')}

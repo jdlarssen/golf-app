@@ -2802,6 +2802,15 @@
       }
     },
     "dashboard": {
+      "gettingStarted": {
+        "heading": "Kom i gang",
+        "progress": "{done} av {total} fullført",
+        "stepAccount": "Konto opprettet",
+        "stepCourse": "Lag en bane",
+        "stepGame": "Opprett ditt første spill",
+        "stepInvite": "Inviter spillere",
+        "done": "Fullført"
+      },
       "sectionLabel": "Siste hendelser",
       "moreInSecretariat": "Mer i Sekretariatet",
       "actionItemsHeading": "Krever handling",
