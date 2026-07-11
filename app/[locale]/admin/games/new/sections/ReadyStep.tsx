@@ -196,6 +196,20 @@ export function ReadyStep({
   // tilbake til steg 4.
   const hasPlayerRelatedMiss = missingForPublishCodes.includes('players');
 
+  // #1171: verdi-preview på publiser-knappen — «Publiser — N spillere ·
+  // <format> · <bane>». Vises kun når nok er valgt (roster ≥ 1 OG bane),
+  // ellers faller den pent tilbake til den nøytrale labelen. All data finnes
+  // allerede i steg-5-scope; ingen ny komponent. `modeSummaryLabel` er samme
+  // locale-aware format-tekst summary-kortet over bruker.
+  const publishLabel =
+    selectedPlayerIds.length >= 1 && selectedCourse
+      ? t('publishButtonWithSummary', {
+          count: selectedPlayerIds.length,
+          mode: modeSummaryLabel(gameMode),
+          course: selectedCourse.name,
+        })
+      : t('publishButton');
+
   return (
     <section className="space-y-4">
       {/* Summary-kort — viser alle valg i rad-format. Hver rad har muted
@@ -474,7 +488,7 @@ export function ReadyStep({
                 : undefined
             }
           >
-            {t('publishButton')}
+            {publishLabel}
           </Button>
           {!canPublish && missingForPublish.length > 0 && (
             <p

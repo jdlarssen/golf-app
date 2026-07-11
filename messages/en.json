@@ -819,6 +819,7 @@
       "gameNamePlaceholder": "Tap to set name",
       "advancedToggle": "Show advanced settings",
       "publishButton": "Save and publish",
+      "publishButtonWithSummary": "Publish — {count, plural, one {# player} other {# players}} · {mode} · {course}",
       "draftButton": "Save draft",
       "missingPrefix": "Missing: {items}",
       "missingGoToPlayers": "Go to players (step 4)",
