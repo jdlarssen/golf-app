@@ -436,13 +436,17 @@ describe('inviteEmailToGame', () => {
     const insertCall = supabaseMock.__fromCalls.find(
       (c) => c.table === 'invitations' && c.method === 'insert',
     );
-    const insertedToken = (insertCall?.args[0] as { token: string }).token;
+    const insertedRow = insertCall?.args[0] as {
+      token: string;
+      expires_at: string;
+    };
     expect(sendInviteNotificationMock).toHaveBeenCalledWith({
       to: 'nykompis@example.com',
       invitedByName: 'Jørgen',
       gameName: 'Stiklestad',
       gameMode: 'stableford',
-      inviteToken: insertedToken,
+      inviteToken: insertedRow.token,
+      expiresAt: insertedRow.expires_at,
     });
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toContain('status=invite_sent');
@@ -569,13 +573,17 @@ describe('inviteEmailToGame', () => {
     const insertCall = supabaseMock.__fromCalls.find(
       (c) => c.table === 'invitations' && c.method === 'insert',
     );
-    const insertedToken = (insertCall?.args[0] as { token: string }).token;
+    const insertedRow = insertCall?.args[0] as {
+      token: string;
+      expires_at: string;
+    };
     expect(sendInviteNotificationMock).toHaveBeenCalledWith({
       to: 'ny@example.com',
       invitedByName: 'Kari',
       gameName: 'Lørdagsrunde',
       gameMode: 'stableford',
-      inviteToken: insertedToken,
+      inviteToken: insertedRow.token,
+      expiresAt: insertedRow.expires_at,
     });
     expect(lastRedirect()).toContain(`/games/${GAME_ID}/spillere?status=invite_sent`);
   });
