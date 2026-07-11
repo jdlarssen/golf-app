@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.196 · Publiser-knappen viser hva du lager</strong></summary>
+
+[#1171](https://github.com/jdlarssen/golf-app/issues/1171) — På siste steg i oppsettet oppsummerer publiser-knappen spillet ditt rett på knappen: «Publiser — 4 spillere · Best ball · Byneset». Du ser hva som blir opprettet før du trykker.
+
+↳ /admin/games/new · «Opprett spill»
+</details>
+
+<details>
 <summary><strong>1.195 · Tee-off er fylt ut på forhånd</strong></summary>
 
 [#1171](https://github.com/jdlarssen/golf-app/issues/1171) — Når du oppretter et nytt spill, står tee-off allerede på førstkommende lørdag klokka 09:00. Passer det ikke, endrer du det på ett tapp — men du slipper å taste dato og tid fra blanke felt.

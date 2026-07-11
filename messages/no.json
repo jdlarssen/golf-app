@@ -819,6 +819,7 @@
       "gameNamePlaceholder": "Trykk for å sette navn",
       "advancedToggle": "Vis avanserte innstillinger",
       "publishButton": "Lagre og publiser",
+      "publishButtonWithSummary": "Publiser — {count, plural, one {# spiller} other {# spillere}} · {mode} · {course}",
       "draftButton": "Lagre utkast",
       "missingPrefix": "Mangler: {items}",
       "missingGoToPlayers": "Gå til spillere (steg 4)",

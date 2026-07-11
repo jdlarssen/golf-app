@@ -196,8 +196,11 @@ describe('GameWizard — happy-path solo stableford', () => {
 
     // Steg 5 (Klar): publiser-knappen skal være enabled.
     expectStep(5);
+    // #1171: med roster ≥ 1 + bane valgt bærer knappen nå en verdi-oppsummering
+    // («Publiser — 1 spiller · …»), så vi matcher på det stabile «publiser»-
+    // fragmentet i stedet for den nøytrale full-labelen.
     const publishBtn = screen.getByRole('button', {
-      name: /lagre og publiser/i,
+      name: /publiser/i,
     });
     expect(publishBtn).not.toBeDisabled();
   });
