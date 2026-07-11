@@ -171,7 +171,7 @@ export default async function LigaPublicPage({
 
   return (
     <AppShell>
-      <TopBar backHref="/" back="history" kicker={t('kicker')} userId={currentUserId} />
+      <TopBar backHref="/" back="history" kicker={t('kicker')} />
 
       {/* Header */}
       <header className="mb-6">

@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.190 · Ryddigere innboks</strong></summary>
+
+[#1133](https://github.com/jdlarssen/golf-app/issues/1133) — Innboksen har nå én rydde-knapp i stedet for to. Har du uleste varsler sier den «Marker alle som lest»; er alt lest bytter den til «Tøm leste» — ingen to-tapp-rekkefølge å tenke på. Varsel-bjella i toppen er borte; innboks-fanen nederst viser den samme prikken.
+
+↳ /innboks · «Innboks»
+</details>
+
+<details>
 <summary><strong>1.189 · Sett navnet ditt før du logger inn</strong></summary>
 
 [#1173](https://github.com/jdlarssen/golf-app/issues/1173) — I prøvespillet kan du nå skrive navnet ditt og se det på ditt eget spillerkort og øverst på tavla. Går du videre for å lage konto, ligger navnet allerede klart i skjemaet — du fortsetter der du slapp.

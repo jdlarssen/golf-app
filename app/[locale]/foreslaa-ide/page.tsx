@@ -41,7 +41,7 @@ export default async function ForeslaaIdePage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" backLabel={t('backLabel')} userId={user.id} />
+      <TopBar backHref="/admin" backLabel={t('backLabel')} />
       <PageHeader title={t('pageTitle')} subtitle={t('pageSubtitle')} />
 
       {sent && (

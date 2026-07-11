@@ -223,7 +223,7 @@ export default async function CreatorSpillerePage({
         matchStatus="admin_approved"
         anchorId="leverte-scorekort"
       />
-      <TopBar backHref={detailPath} kicker={t('kicker')} userId={role.userId} />
+      <TopBar backHref={detailPath} kicker={t('kicker')} />
       <PageHeader
         title={t('heading')}
         subtitle={t('subtitle', { name: localizeGameName(game.name, courseName, locale) })}

@@ -73,7 +73,9 @@ export default async function CreatorEditGamePage({
   const errorMessage = buildErrorMessage();
 
   const supabase = await getServerClient();
-  const role = await requireAdminOrCreator(supabase, id);
+  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter); returverdien
+  // ble tidligere kun brukt til TopBar-bjella (#1133), så bindingen droppes.
+  await requireAdminOrCreator(supabase, id);
 
   const { data: maybeGame, error: gameError } = await supabase
     .from('games')
@@ -95,7 +97,7 @@ export default async function CreatorEditGamePage({
 
   return (
     <AppShell>
-      <TopBar backHref={`/games/${id}`} kicker={t('kicker')} userId={role.userId} />
+      <TopBar backHref={`/games/${id}`} kicker={t('kicker')} />
       <PageHeader
         title={localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
         subtitle={t('subtitle')}

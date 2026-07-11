@@ -243,18 +243,19 @@ describe('InboxClient', () => {
     expect(routerPushMock).not.toHaveBeenCalled();
   });
 
-  it('viser «Tøm leste» og arkiverer alle leste, beholder uleste', () => {
+  it('viser «Tøm leste» og arkiverer alle leste når alt er lest', () => {
+    // Den adaptive knappen viser «Tøm leste» kun når det ikke finnes uleste
+    // (uleste prioriterer «Marker alle som lest»), så fixturen er kun-lest.
     render(
       <InboxClient
-        initialNotifications={[makeInvite('read', true), makeInvite('unread')]}
+        initialNotifications={[makeInvite('a', true), makeInvite('b', true)]}
       />,
     );
     const clearBtn = screen.getByRole('button', { name: /Tøm leste/i });
     fireEvent.click(clearBtn);
     expect(clearReadMock).toHaveBeenCalledTimes(1);
-    // Begge er invite-kort med samme tittel; etter rydding skal kun det
-    // uleste (1 stk) stå igjen.
-    expect(screen.getAllByText(/Per inviterte deg/)).toHaveLength(1);
+    // Alle leste fjernes optimistisk → lista er tom.
+    expect(screen.queryByText(/Per inviterte deg/)).not.toBeInTheDocument();
   });
 
   it('viser IKKE «Tøm leste» når alt er ulest', () => {

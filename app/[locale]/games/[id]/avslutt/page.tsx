@@ -57,7 +57,9 @@ export default async function CreatorAvsluttPage({
   const detailPath = `/games/${gameId}`;
 
   const supabase = await getServerClient();
-  const role = await requireAdminOrCreator(supabase, gameId);
+  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter); returverdien
+  // ble tidligere kun brukt til TopBar-bjella (#1133), så bindingen droppes.
+  await requireAdminOrCreator(supabase, gameId);
 
   const { data: game } = await supabase
     .from('games')
@@ -253,7 +255,7 @@ export default async function CreatorAvsluttPage({
 
   return (
     <AppShell>
-      <TopBar backHref={detailPath} kicker={t('kicker')} userId={role.userId} />
+      <TopBar backHref={detailPath} kicker={t('kicker')} />
       <PageHeader
         title={t('heading')}
         subtitle={

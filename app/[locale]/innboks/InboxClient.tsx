@@ -123,21 +123,13 @@ export function InboxClient({
 
   return (
     <div>
+      {/* Én tilstands-adaptiv rydde-knapp (#1133): uleste prioriteres, så
+          knappen viser «Marker alle som lest» så lenge det finnes uleste, og
+          morfer til «Tøm leste» først når alt er lest. Fjerner rekkefølge-
+          tvangen fra de gamle to samsynlige pillene uten å arkivere uleste. */}
       {(hasUnread || hasRead) && (
-        <div className="mb-3 flex justify-end gap-2">
-          {hasRead && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleClearRead}
-              pending={clearReadPending}
-              pendingLabel={t('clearingPending')}
-              className="min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
-            >
-              {t('clearRead')}
-            </Button>
-          )}
-          {hasUnread && (
+        <div className="mb-3 flex justify-end">
+          {hasUnread ? (
             <Button
               type="button"
               variant="ghost"
@@ -147,6 +139,17 @@ export function InboxClient({
               className="min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
             >
               {t('markAllAsRead')}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleClearRead}
+              pending={clearReadPending}
+              pendingLabel={t('clearingPending')}
+              className="min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
+            >
+              {t('clearRead')}
             </Button>
           )}
         </div>
