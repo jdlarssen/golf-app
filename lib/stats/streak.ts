@@ -17,6 +17,14 @@ import { osloIsoWeek } from '@/lib/format/osloCalendar';
 
 const WEEK_MS = 604_800_000; // 7 × 24 × 3600 × 1000
 
+/**
+ * Terskelen for når en ukentlig streak vises som «pågående» i UI-et (hjem-chip,
+ * StreakPanel, etter-runde-feiring). Én uke er «du spilte denne uka», ikke en
+ * serie — først ved 2 sammenhengende uker er det en streak verdt å feire. Én
+ * kilde så flatene ikke driver fra hverandre.
+ */
+export const MIN_STREAK_WEEKS = 2;
+
 export type StreakInput = {
   /** Effektive datoer for ferdige runder (rekkefølge er likegyldig). */
   dates: Date[];
