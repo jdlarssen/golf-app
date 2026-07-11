@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.195 · Tee-off er fylt ut på forhånd</strong></summary>
+
+[#1171](https://github.com/jdlarssen/golf-app/issues/1171) — Når du oppretter et nytt spill, står tee-off allerede på førstkommende lørdag klokka 09:00. Passer det ikke, endrer du det på ett tapp — men du slipper å taste dato og tid fra blanke felt.
+
+↳ /admin/games/new · «Opprett spill»
+</details>
+
+<details>
 <summary><strong>1.194 · Installer-tipset venter til du er varm</strong></summary>
 
 [#1186](https://github.com/jdlarssen/golf-app/issues/1186) — Installer-tipset på Hjem popper ikke lenger opp med det samme du logger inn første gang. Det venter til ditt andre besøk, så du får kjent litt på appen før den ber deg legge den til på hjemskjermen. Har du alt lukket tipset, eller kjører appen installert, er alt som før.
