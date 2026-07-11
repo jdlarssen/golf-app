@@ -14,7 +14,15 @@ import { CreateLigaForm } from './CreateLigaForm';
 
 describe('CreateLigaForm — #924 season_over message', () => {
   it('renders the season-over message when the action returns season_over', async () => {
-    render(<CreateLigaForm courses={[]} players={[]} meId={null} />);
+    render(
+      <CreateLigaForm
+        courses={[]}
+        players={[]}
+        meId={null}
+        defaultSeasonStart=""
+        defaultSeasonEnd=""
+      />,
+    );
     fireEvent.submit(screen.getByTestId('liga-create-form'));
     expect(
       await screen.findByText(

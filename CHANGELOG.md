@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.193 · Liga-oppsett med utfylte datoer og tydelige deler</strong></summary>
+
+[#1178](https://github.com/jdlarssen/golf-app/issues/1178) — Når du setter opp en liga er sesong-datoene fylt ut på forhånd, med i dag som start og en fornuftig sesongslutt, så rundeoversikten dukker opp med en gang. De seks delene er nummererte «Del 1 av 6» til «Del 6 av 6», så du ser hvor mye som gjenstår. Du endrer alt fritt.
+
+↳ /admin/liga · «Sett opp liga»
+</details>
+
+<details>
 <summary><strong>1.192 · Se hvor langt du er i runden</strong></summary>
 
 [#1172](https://github.com/jdlarssen/golf-app/issues/1172) — Øverst på hull-siden står det nå «av 18» rett etter hull-nummeret, så du ser med ett blikk hvor langt du er kommet i runden.

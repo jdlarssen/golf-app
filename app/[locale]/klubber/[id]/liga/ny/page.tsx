@@ -6,6 +6,7 @@ import { requireAdminOrClubAdmin } from '@/lib/admin/auth';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
+import { defaultSeasonDates } from '@/lib/league/defaultSeason';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -49,6 +50,9 @@ export default async function NewKlubbLigaPage({ params }: { params: Params }) {
     ...members.filter((p) => p.id !== userId),
   ];
 
+  // #1178: same server-computed season default as the standalone liga page.
+  const { start: defaultSeasonStart, end: defaultSeasonEnd } = defaultSeasonDates(new Date());
+
   return (
     <AppShell>
       <TopBar backHref={`/klubber/${id}`} kicker={detail.club.name} />
@@ -62,6 +66,8 @@ export default async function NewKlubbLigaPage({ params }: { params: Params }) {
         courses={courses}
         players={invitable}
         meId={me?.id ?? null}
+        defaultSeasonStart={defaultSeasonStart}
+        defaultSeasonEnd={defaultSeasonEnd}
         groupId={id}
         clubName={detail.club.name}
       />

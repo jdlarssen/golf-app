@@ -19,11 +19,23 @@ type Props = {
   players: PlayerOption[];
   /** The creator's own id — pre-selected so they play in their own league. */
   meId: string | null;
+  /** #1178: server-computed default season start (ISO `YYYY-MM-DD`). */
+  defaultSeasonStart: string;
+  /** #1178: server-computed default season end (ISO `YYYY-MM-DD`). */
+  defaultSeasonEnd: string;
   /** Klubb-liga (#480): klubbens id. Tomt/undefined = frittstående liga. */
   groupId?: string;
   /** Klubb-liga: klubbens navn, vist i kontekst-banneret. */
   clubName?: string;
 };
+
+// #1178: total number of sections, used for the "Del N av 6" progress prefixes.
+const SECTION_COUNT = 6;
+
+// Section heading (eyebrow) style, shared by all six cards so the numbered
+// "Del N av 6" prefixes stay visually consistent.
+const SECTION_HEADING_CLASS =
+  'font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4';
 
 type CourseScope = 'single_course_single_tee' | 'single_course' | 'multi_course';
 type Format = 'stroke' | 'stableford' | 'modified_stableford';
@@ -39,7 +51,15 @@ function preferredName(p: PlayerOption, unknownLabel: string): string {
 
 const INITIAL_STATE: LeagueActionError = { error: '' };
 
-export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Props) {
+export function CreateLigaForm({
+  courses,
+  players,
+  meId,
+  defaultSeasonStart,
+  defaultSeasonEnd,
+  groupId,
+  clubName,
+}: Props) {
   const isClubLeague = Boolean(groupId);
   const t = useTranslations('liga.create');
   const locale = useLocale() as AppLocale;
@@ -61,8 +81,10 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(
     () => new Set(meId ? [meId] : []),
   );
-  const [seasonStart, setSeasonStart] = useState('');
-  const [seasonEnd, setSeasonEnd] = useState('');
+  // #1178: seed from server-computed defaults (deterministic props → SSR and
+  // client render the same value, no hydration mismatch). Admin edits freely.
+  const [seasonStart, setSeasonStart] = useState(defaultSeasonStart);
+  const [seasonEnd, setSeasonEnd] = useState(defaultSeasonEnd);
   const [frequency, setFrequency] = useState<Frequency>('monthly');
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
@@ -100,6 +122,20 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
     });
   }
 
+  // #1178: numbered section eyebrow ("Del N av 6 · <label>"). Lightweight
+  // progress feel — no wizard steps, no navigation, just a visible counter.
+  function sectionHeading(part: number, label: string) {
+    return (
+      <h2 className={SECTION_HEADING_CLASS}>
+        <span className="text-primary/70">
+          {t('sectionProgress', { current: part, total: SECTION_COUNT })}
+        </span>
+        {' · '}
+        {label}
+      </h2>
+    );
+  }
+
   return (
     <form action={formAction} data-testid="liga-create-form" className="space-y-6">
       {/* Hidden fixed fields */}
@@ -115,11 +151,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         </Banner>
       )}
 
-      {/* 1. Grunninfo */}
+      {/* Del 1 av 6 — Grunninfo */}
       <Card>
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          {t('grundinfoHeading')}
-        </h2>
+        {sectionHeading(1, t('grundinfoHeading'))}
         <div className="space-y-4">
           <div>
             <label
@@ -178,11 +212,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         </div>
       </Card>
 
-      {/* 2. Spillform */}
+      {/* Del 2 av 6 — Spillform */}
       <Card>
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          {t('formatHeading')}
-        </h2>
+        {sectionHeading(2, t('formatHeading'))}
         <fieldset className="space-y-2">
           <legend className="sr-only">{t('formatLegend')}</legend>
           {(
@@ -233,11 +265,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         </fieldset>
       </Card>
 
-      {/* 3. Bane-omfang */}
+      {/* Del 3 av 6 — Bane-omfang */}
       <Card>
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          {t('courseScopeHeading')}
-        </h2>
+        {sectionHeading(3, t('courseScopeHeading'))}
         <input type="hidden" name="course_scope" value={courseScope} />
 
         <fieldset className="space-y-2">
@@ -357,11 +387,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         )}
       </Card>
 
-      {/* 3. Oppsett */}
+      {/* Del 4 av 6 — Oppsett */}
       <Card>
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          {t('setupHeading')}
-        </h2>
+        {sectionHeading(4, t('setupHeading'))}
         <input type="hidden" name="standings_model" value={standingsModel} />
         <input
           type="hidden"
@@ -626,11 +654,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         )}
       </Card>
 
-      {/* 4. Frekvens */}
+      {/* Del 5 av 6 — Frekvens */}
       <Card>
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          {t('frequencyHeading')}
-        </h2>
+        {sectionHeading(5, t('frequencyHeading'))}
         <fieldset className="grid grid-cols-2 gap-2">
           <legend className="sr-only">{t('frequencyLegend')}</legend>
           {(
@@ -685,11 +711,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         )}
       </Card>
 
-      {/* 5. Deltakere */}
+      {/* Del 6 av 6 — Deltakere */}
       <Card>
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          {t('participantsHeading')}
-        </h2>
+        {sectionHeading(6, t('participantsHeading'))}
         {/* Hidden JSON field */}
         <input
           type="hidden"

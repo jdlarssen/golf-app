@@ -7,6 +7,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
+import { defaultSeasonDates } from '@/lib/league/defaultSeason';
 import { CreateLigaForm } from './CreateLigaForm';
 
 export default async function NewLigaPage() {
@@ -25,6 +26,11 @@ export default async function NewLigaPage() {
   const me = allPlayers.find((p) => p.id === userId) ?? null;
   const invitable = [...(me ? [me] : []), ...friends.filter((f) => f.id !== userId)];
 
+  // #1178: pre-fill the season window with a sensible, editable default.
+  // Computed on the server (Oslo time) and passed as props so SSR and client
+  // hydrate the same input value — no `new Date()` in the client render (#928).
+  const { start: defaultSeasonStart, end: defaultSeasonEnd } = defaultSeasonDates(new Date());
+
   return (
     <AdminShell>
       <TopBar backHref="/admin/liga" kicker={t('kicker')} />
@@ -34,7 +40,13 @@ export default async function NewLigaPage() {
         subtitle={t('pageSubtitle')}
       />
 
-      <CreateLigaForm courses={courses} players={invitable} meId={me?.id ?? null} />
+      <CreateLigaForm
+        courses={courses}
+        players={invitable}
+        meId={me?.id ?? null}
+        defaultSeasonStart={defaultSeasonStart}
+        defaultSeasonEnd={defaultSeasonEnd}
+      />
     </AdminShell>
   );
 }
