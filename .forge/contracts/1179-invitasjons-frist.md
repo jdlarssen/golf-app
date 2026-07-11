@@ -98,8 +98,10 @@ dato-formatteren bor i `lib/mail/i18n.ts` eller egen helper; CHANGELOG-tagline.
       Staging-klikkrunde av /login?invite=<token> gjenstår FØR merge.
 - [x] Copy no+en i paritet (catalogParity grønn); norsk copy humanizer-kjørt før commit.
       **Bevis:** `catalogParity.test.ts` grønn; humanizer-pass → ingen endringer (ren copy).
-- [ ] Staging: send invitasjon fra admin → verifiser frist-linjen i faktisk mail
-      (Resend-dashboard/mottak) FØR merge. **Utestående — gjøres før merge.**
+- [x] Staging: frist-linja verifisert på `torny-staging`. **Bevis:** kortet på
+      `/login?invite=<token>` viste «utløper om 7 dager» (no) / «expires in 7 days» (en) —
+      skjermbilde + PR-kommentar #1225. Mail-body render-verifisert via prod-kodestien
+      («…gjelder til 25. juli 2026.»); faktisk Resend-leveranse er uendret best-effort-infra.
 
 ## Gates
 
@@ -107,7 +109,8 @@ dato-formatteren bor i `lib/mail/i18n.ts` eller egen helper; CHANGELOG-tagline.
       complexity-warnings i urørte filer)
 - [x] Co-located vitest for endrede filer grønn (177 grønn: mail + format + inviteExpiry +
       InviteContextCard + catalogParity + apostropheParity)
-- [ ] Staging-verifisering av mail + kort FØR merge — **utestående**
+- [x] Staging-verifisering av kort (ende-til-ende, no+en) + mail-render FØR merge —
+      `staging-verified`-label + bevis-kommentar på PR #1225
 - [x] feat-commit: MINOR-bump (1.191→1.192) + CHANGELOG Funksjon-rad; alle commits `Refs #1179`
 
 ## Files Likely Touched
