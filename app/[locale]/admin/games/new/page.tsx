@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { GameWizard } from './GameWizard';
 import { createGameDraft, createAndPublishGame } from './actions';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
+import { defaultTeeOffAt } from '@/lib/games/defaultTeeOff';
 import { getServerClient } from '@/lib/supabase/server';
 import { getRoleContext } from '@/lib/admin/auth';
 import { redirect } from '@/i18n/navigation';
@@ -361,9 +362,16 @@ async function GameFormBody({
         createDraftAction: createGameDraft,
         createAndPublishAction: createAndPublishGame,
       }}
-      initialValues={
-        cupContext ? buildCupInitialValues(cupContext) : undefined
-      }
+      // #1171: smart default — fersk create pre-fyller tee-off til
+      // førstkommende lørdag 09:00 (Oslo). Server-beregnet og tredd inn som
+      // prop (ikke render/effekt) → ingen hydration-mismatch, ingen
+      // set-state-in-effect. Cup-prefyllen legges på toppen og beholdes; den
+      // setter aldri scheduled_tee_off_at selv, så defaulten overlever.
+      // Edit/utkast er egen rute (GameForm) og røres ikke.
+      initialValues={{
+        scheduled_tee_off_at: defaultTeeOffAt(new Date()),
+        ...(cupContext ? buildCupInitialValues(cupContext) : {}),
+      }}
       initialIntent={initialIntent}
       formatsByIntent={{
         kompis: kompisFormats,
