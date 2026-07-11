@@ -2624,7 +2624,10 @@
       "invitedByFallback": "Du er invitert",
       "formatLabel": "Spillformat:",
       "courseLabel": "Bane:",
-      "teeOffLabel": "Tee-off:"
+      "teeOffLabel": "Tee-off:",
+      "expiresToday": "Invitasjonen din utløper i dag.",
+      "expiresTomorrow": "Invitasjonen din utløper i morgen.",
+      "expiresInDays": "Invitasjonen din utløper om {n} dager."
     },
     "tryDemoDivider": "eller",
     "tryDemo": "Prøv Tørny på 60 sekunder",
@@ -4625,7 +4628,8 @@
       "formatReadMore": "Les mer om spillformatene",
       "footerDisclaimer": "Har du ikke en golfvenn ved navn {name}? Ignorer denne meldingen.",
       "getStartedHtml": "For å komme i gang: gå til <link>tornygolf.no</link>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.",
-      "getStartedText": "Gå til <link>tornygolf.no</link>, skriv inn denne e-posten, og logg inn med koden du får tilsendt."
+      "getStartedText": "Gå til <link>tornygolf.no</link>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.",
+      "expiresLine": "Invitasjonen din gjelder til {date}."
     },
     "clubInvite": {
       "subject": "Du er invitert til {clubName} på Tørny",

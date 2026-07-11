@@ -15,6 +15,7 @@
 
 import { Resend } from 'resend';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
+import { formatLongDateOsloLocale } from '@/lib/i18n/format';
 import {
   getMailTranslator,
   getMailMessages,
@@ -70,6 +71,14 @@ export type InviteNotificationParams = {
    * har token-en i hånden ved insert/resend; udefinert → lenke som før.
    */
   inviteToken?: string;
+  /**
+   * `invitations.expires_at` (ISO) for raden (#1179 — mild tap-aversjon). Satt
+   * OG i fremtiden → mailen viser en vennlig frist-linje med lokalisert,
+   * Oslo-tidssatt dato. Manglende/ugyldig/utløpt (resend av utløpt rad) →
+   * linjen utelates og malen er bit-for-bit som før (defensivt). Absolutt dato,
+   * ikke relativ: mailen leses ofte dager etter at den kom.
+   */
+  expiresAt?: string;
 };
 
 /**
@@ -108,7 +117,8 @@ export async function sendInviteNotification(
     return;
   }
 
-  const { to, invitedByName, gameName, gameMode, locale, inviteToken } = params;
+  const { to, invitedByName, gameName, gameMode, locale, inviteToken, expiresAt } =
+    params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
   const messages = await getMailMessages(locale);
@@ -172,6 +182,28 @@ export async function sendInviteNotification(
     link: () => loginUrl,
   });
 
+  // Frist-linje (#1179 — mild tap-aversjon): vennlig, absolutt dato. Vises kun
+  // når expires_at er satt OG i fremtiden — resend av en utløpt rad (dato i
+  // fortid) utelater linjen så mailen aldri sier «gjaldt til i går». Datoen
+  // formateres via mail-translatoren, som allerede er pinnet til Europe/Oslo.
+  const expiresDate = expiresAt ? new Date(expiresAt) : null;
+  const showExpiry =
+    expiresDate !== null &&
+    !Number.isNaN(expiresDate.getTime()) &&
+    expiresDate.getTime() > Date.now();
+  const expiresLine = showExpiry
+    ? t('invite.expiresLine', {
+        date: formatLongDateOsloLocale(expiresDate!, loc),
+      })
+    : '';
+  const expiresLineHtml = showExpiry
+    ? `<p style="font-size:15px;line-height:1.5;margin:24px 0 0;color:#5C5347;">
+              ${expiresLine}
+            </p>
+            `
+    : '';
+  const expiresLineText = showExpiry ? `${expiresLine}\n\n` : '';
+
   const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
   <meta charset="utf-8">
@@ -204,7 +236,7 @@ export async function sendInviteNotification(
                 ${t('common.openButton')}
               </a>
             </div>
-            <p style="font-size:13px;color:#5C5347;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
+            ${expiresLineHtml}<p style="font-size:13px;color:#5C5347;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
               ${t('invite.footerDisclaimer', { name: escapeHtml(invitedByName) })}
             </p>
           </td></tr>
@@ -220,6 +252,7 @@ export async function sendInviteNotification(
     `${introLineText}\n\n` +
     modeHintText +
     `${getStartedText}\n\n` +
+    expiresLineText +
     `${t('common.footerTagline')}\n`;
 
   const resend = getClient();

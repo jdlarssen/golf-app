@@ -478,6 +478,27 @@ export function formatShortOsloDateWithYearLocale(
 }
 
 /**
+ * Locale-aware long date in Europe/Oslo wall-clock: «24. juli 2026» (nb) /
+ * «24 July 2026» (en-GB). Oslo-pinned so a `now + N days` expiry timestamp near
+ * midnight renders the correct calendar date on a UTC server. Uses the full
+ * month name (unlike the short-month siblings) for friendly prose — the invite
+ * deadline line in the invite mail (#1179). Long month names are correct in
+ * nb-NO Intl (no trailing-dot / abbreviation quirks — those only affect SHORT
+ * month), so `.format()` is safe here without the formatToParts dance.
+ */
+export function formatLongDateOsloLocale(
+  input: DateInput,
+  locale: AppLocale,
+): string {
+  return new Intl.DateTimeFormat(intlLocaleTag(locale), {
+    timeZone: OSLO,
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(toDate(input));
+}
+
+/**
  * 24-hour «HH:MM» in Europe/Oslo wall-clock (#646). Locale-independent — the
  * 24-hour clock renders identically for 'no' and 'en' — but pinned to Oslo so
  * the Klubbhuset activity log shows the time the action actually happened in

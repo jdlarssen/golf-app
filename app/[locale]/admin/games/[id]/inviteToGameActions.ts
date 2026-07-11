@@ -215,11 +215,11 @@ export async function inviteEmailToGame(
   // Ukjent e-post: idempotent insert i invitations.
   const { data: existingInvite } = await supabase
     .from('invitations')
-    .select('id, token')
+    .select('id, token, expires_at')
     .ilike('email', rawEmail)
     .eq('game_id', gameId)
     .is('accepted_at', null)
-    .maybeSingle<{ id: string; token: string }>();
+    .maybeSingle<{ id: string; token: string; expires_at: string }>();
 
   if (existingInvite) {
     // Re-send the notification mail best-effort so a retry by the organiser
@@ -236,6 +236,7 @@ export async function inviteEmailToGame(
         gameName: game.name,
         gameMode: game.game_mode,
         inviteToken: existingInvite.token,
+        expiresAt: existingInvite.expires_at,
       });
     } catch (retryErr) {
       console.error('[inviteToGame/inviteEmail] retry mail failed (best-effort)', retryErr);
@@ -271,6 +272,7 @@ export async function inviteEmailToGame(
       gameName: game.name,
       gameMode: game.game_mode,
       inviteToken,
+      expiresAt,
     });
   } catch (err) {
     console.error('[inviteToGame/inviteEmail] mail failed', err);

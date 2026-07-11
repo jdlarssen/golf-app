@@ -58,6 +58,19 @@ function modeHintHtml(html: string): string {
   return m[1].trim();
 }
 
+// Frist-linjen (#1179) har unik 15px `<p>`-styling — ingen kollisjon med intro
+// (16px) eller modus-hint (14px). Returnerer null når linjen ikke er rendret.
+function expiresLineHtml(html: string): string | null {
+  const m = html.match(
+    /<p style="font-size:15px;line-height:1\.5;margin:24px 0 0;color:#5C5347;">\s*([\s\S]*?)\s*<\/p>/,
+  );
+  return m ? m[1].trim() : null;
+}
+
+// Fast fjern-fremtidig dato → deterministisk snapshot uavhengig av testens
+// kjøretidspunkt. 2099-07-24 10:00Z → Oslo (sommer, +02) → 24. juli 2099.
+const FUTURE_EXPIRY = '2099-07-24T10:00:00.000Z';
+
 const baseParams = {
   to: 'venn@example.com',
   invitedByName: 'Jørgen',
@@ -232,6 +245,53 @@ describe('sendInviteNotification', () => {
                     You play as a pair, and on each hole only the better net score of the two of you counts.<br>
                     <a href="https://tornygolf.no/en/spillformater" style="color:#1B4332;font-weight:600;text-decoration:underline;">Learn more about the formats</a>"
     `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Frist-linje (#1179 — mild tap-aversjon). expiresAt satt + i fremtiden →
+  // vennlig absolutt dato i html + text. Fortid/mangler → linjen utelates.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('expiresAt i fremtiden: viser frist-linje med lokalisert dato', async () => {
+    const payload = await send({
+      ...baseParams,
+      gameName: 'Stiklestad 25. mai',
+      inviteToken: '11111111-2222-3333-4444-555555555555',
+      expiresAt: FUTURE_EXPIRY,
+    });
+    expect(expiresLineHtml(payload.html)).toMatchInlineSnapshot(
+      `"Invitasjonen din gjelder til 24. juli 2099."`,
+    );
+    expect(payload.text).toContain('Invitasjonen din gjelder til 24. juli 2099.');
+  });
+
+  it('expiresAt i fortid (resend av utløpt): ingen frist-linje', async () => {
+    const payload = await send({
+      ...baseParams,
+      gameName: 'Stiklestad 25. mai',
+      expiresAt: '2020-01-01T00:00:00.000Z',
+    });
+    expect(expiresLineHtml(payload.html)).toBeNull();
+    expect(payload.text).not.toContain('gjelder til');
+  });
+
+  it('uten expiresAt: ingen frist-linje (defensivt)', async () => {
+    const payload = await send({ ...baseParams, gameName: 'Stiklestad 25. mai' });
+    expect(expiresLineHtml(payload.html)).toBeNull();
+    expect(payload.text).not.toContain('gjelder til');
+  });
+
+  it('locale en, expiresAt i fremtiden: engelsk frist-linje', async () => {
+    const payload = await send({
+      ...baseParams,
+      locale: 'en',
+      gameName: 'Stiklestad 25. mai',
+      expiresAt: FUTURE_EXPIRY,
+    });
+    expect(expiresLineHtml(payload.html)).toMatchInlineSnapshot(
+      `"Your invitation is open until 24 July 2099."`,
+    );
+    expect(payload.text).toContain('Your invitation is open until 24 July 2099.');
   });
 
   // ─────────────────────────────────────────────────────────────────────

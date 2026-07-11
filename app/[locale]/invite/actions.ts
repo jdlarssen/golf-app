@@ -130,6 +130,7 @@ export async function sendFriendInvite(formData: FormData) {
       to: email,
       invitedByName: inviterName,
       inviteToken,
+      expiresAt,
     });
   } catch (err) {
     console.error('[invite] notification mail failed', err);

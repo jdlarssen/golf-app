@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.197 · Se når invitasjonen går ut</strong></summary>
+
+[#1179](https://github.com/jdlarssen/golf-app/issues/1179) — Blir du invitert til en runde, ser du nå hvor lenge invitasjonen gjelder: en dato i invitasjons-e-posten, og en vennlig nedtelling på innloggingssiden, som «Invitasjonen din utløper om 3 dager».
+
+↳ /login · «Logg inn»
+</details>
+
+<details>
 <summary><strong>1.196 · Publiser-knappen viser hva du lager</strong></summary>
 
 [#1171](https://github.com/jdlarssen/golf-app/issues/1171) — På siste steg i oppsettet oppsummerer publiser-knappen spillet ditt rett på knappen: «Publiser — 4 spillere · Best ball · Byneset». Du ser hva som blir opprettet før du trykker.
