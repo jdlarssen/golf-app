@@ -330,7 +330,12 @@
       "seasonBrag_turkey": "Turkey",
       "seasonVsPrevious": "Sammenlignet med {year}",
       "seasonEmpty": "Ingen daterte runder ennå.",
-      "seasonYearAriaLabel": "Velg sesong"
+      "seasonYearAriaLabel": "Velg sesong",
+      "streakHeading": "Serien din",
+      "streakSubtitle": "Spill jevnlig, så vokser den uke for uke.",
+      "streakWeeksLabel": "uker på rad",
+      "streakDormant": "Serien starter neste gang du spiller.",
+      "streakSeason": "{count, plural, one {# runde} other {# runder}} i {year}"
     },
     "statistikk": {
       "kicker": "Toppliste",
@@ -1518,6 +1523,8 @@
   "game": {
     "home": {
       "backHome": "← Hjem",
+      "streakGrewTitle": "{count} uker på rad!",
+      "streakGrewBody": "Nok en uke i boks. Serien din vokser.",
       "profileGate": {
         "heading": "Fullfør profilen for å taste slag",
         "body": "Vi mangler navnet og handicapet ditt. Se deg gjerne rundt i mellomtiden, men det må på plass før du kan taste inn score.",
@@ -4389,6 +4396,7 @@
     }
   },
   "home": {
+    "streakChipAria": "{count} uker på rad. Trykk for å se serien.",
     "profileUpdatedBanner": "✓ Profilen din er oppdatert.",
     "gameDeletedBanner": "✓ «{name}» er slettet.",
     "emptyKicker": "KLAR FOR FØRSTE RUNDE",

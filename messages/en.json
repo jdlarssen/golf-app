@@ -330,7 +330,12 @@
       "seasonBrag_turkey": "Turkey",
       "seasonVsPrevious": "Compared with {year}",
       "seasonEmpty": "No dated rounds yet.",
-      "seasonYearAriaLabel": "Choose season"
+      "seasonYearAriaLabel": "Choose season",
+      "streakHeading": "Your streak",
+      "streakSubtitle": "Play regularly and it grows, week by week.",
+      "streakWeeksLabel": "weeks in a row",
+      "streakDormant": "Your streak starts the next time you play.",
+      "streakSeason": "{count, plural, one {# round} other {# rounds}} in {year}"
     },
     "statistikk": {
       "kicker": "Leaderboard",
@@ -1518,6 +1523,8 @@
   "game": {
     "home": {
       "backHome": "← Home",
+      "streakGrewTitle": "{count} weeks in a row!",
+      "streakGrewBody": "Another week in the bag. Your streak is growing.",
       "profileGate": {
         "heading": "Finish your profile to enter scores",
         "body": "We still need your name and handicap. Look around in the meantime, but they need to be in place before you can enter scores.",
@@ -4389,6 +4396,7 @@
     }
   },
   "home": {
+    "streakChipAria": "{count} weeks in a row. Tap to see your streak.",
     "profileUpdatedBanner": "✓ Your profile has been updated.",
     "gameDeletedBanner": "✓ \"{name}\" has been deleted.",
     "emptyKicker": "READY FOR YOUR FIRST ROUND",

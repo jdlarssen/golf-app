@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.198 · Serien din vokser uke for uke</strong></summary>
+
+[#1194](https://github.com/jdlarssen/golf-app/issues/1194) — Spiller du runder flere uker på rad, teller Tørny nå serien din. Den vises i Statistikk-fanen, som en liten 🔥-chip på hjem-siden mens den er i gang, og du får en vennlig gratulasjon når en ny runde forlenger den. Hopper du over en uke, nullstilles den stille, uten mas eller nedtelling.
+
+↳ /profile/historikk · «Statistikk»
+</details>
+
+<details>
 <summary><strong>1.197 · Se når invitasjonen går ut</strong></summary>
 
 [#1179](https://github.com/jdlarssen/golf-app/issues/1179) — Blir du invitert til en runde, ser du nå hvor lenge invitasjonen gjelder: en dato i invitasjons-e-posten, og en vennlig nedtelling på innloggingssiden, som «Invitasjonen din utløper om 3 dager».

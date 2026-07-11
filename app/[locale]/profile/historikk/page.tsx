@@ -25,10 +25,12 @@ import {
 } from '@/lib/stats/courseStats';
 import { SeasonRecapPanel } from '@/components/stats/SeasonRecapPanel';
 import { AchievementWall } from '@/components/stats/AchievementWall';
+import { StreakPanel } from '@/components/stats/StreakPanel';
 import {
   computeSeasonStats,
   type SeasonRoundInput,
 } from '@/lib/stats/seasonStats';
+import { computeStreak } from '@/lib/stats/streak';
 import { PuttsStatPanel } from '@/components/stats/PuttsStatPanel';
 import {
   computePuttsStats,
@@ -332,6 +334,17 @@ export default async function HistorikkPage() {
   });
   const seasonStats = computeSeasonStats(seasonRounds);
 
+  // #1194 — streak/konsistens: avled ukentlig streak + sesong-teller fra de SAMME
+  // ferdige runde-datoene (effectiveDate) sesong-recap-en bruker — ingen nytt
+  // DB-kall her. Positiv ramme: et brudd gir bare `weeklyStreakActive === false`.
+  const now = new Date();
+  const streak = computeStreak({
+    dates: gamesWithStats
+      .map(effectiveDate)
+      .filter((date): date is Date => date != null),
+    now,
+  });
+
   // #947 — livstids-bragder for badge-veggen: summer per-runde-tellingene vi
   // allerede regnet for sesong-recap-en, så veggen koster ingen ekstra DB-runde.
   const lifetimeAchievements: Achievements = seasonRounds.reduce<Achievements>(
@@ -391,6 +404,17 @@ export default async function HistorikkPage() {
         </Card>
       )}
       <SeasonRecapPanel seasons={seasonStats} />
+      <StreakPanel
+        summary={streak}
+        heading={t('streakHeading')}
+        subtitle={t('streakSubtitle')}
+        weeksLabel={t('streakWeeksLabel')}
+        dormantLine={t('streakDormant')}
+        seasonText={t('streakSeason', {
+          count: streak.roundsThisSeason,
+          year: String(osloParts(now).year),
+        })}
+      />
       <AchievementWall
         achievements={lifetimeAchievements}
         heading={t('achievementsHeading')}

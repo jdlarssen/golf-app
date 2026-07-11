@@ -26,6 +26,9 @@ import { PushNudge } from '@/components/pwa/PushNudge';
 import { PasskeyEnrollmentNudge } from '@/components/passkey/PasskeyEnrollmentNudge';
 import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
+import { StreakChip } from '@/components/stats/StreakChip';
+import { getUserStreak } from '@/lib/stats/getUserStreak';
+import { MIN_STREAK_WEEKS } from '@/lib/stats/streak';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffParts } from '@/lib/i18n/format';
 import { teeOffProximity } from '@/lib/format/teeOffProximity';
@@ -148,7 +151,7 @@ async function HomeBody() {
 
   // Parallel-fetch profile, active games, finished games — they don't depend
   // on each other and roughly triple-tripled the latency when run serially.
-  const [profileRes, rawActiveRes, finishedGames, discoveryData] =
+  const [profileRes, rawActiveRes, finishedGames, discoveryData, streakSummary] =
     await Promise.all([
       supabase
         .from('users')
@@ -164,6 +167,11 @@ async function HomeBody() {
       // #879: funn-feeden hentes for ALLE innloggede (ikke lenger gated på tom-
       // tilstand) og parallelt her, så den ikke legger til seriell latens.
       getDiscoverableGames(userId!),
+      // #1194: ukentlig streak for hjem-chippen — samme «runde»-definisjon som
+      // historikk. Best-effort: en dekorativ chip skal aldri velte hjem-siden,
+      // så en feil degraderer til «ingen chip» (jf. #877 — men det gjaldt den
+      // KRITISKE spill-fetchen, ikke denne).
+      getUserStreak(supabase, userId!).catch(() => null),
     ]);
 
   const { data: profile, error: profileError } = profileRes;
@@ -235,6 +243,26 @@ async function HomeBody() {
         handicapUpdatedAt={profile.handicap_updated_at}
         nextPath="/"
       />
+    ) : null;
+  // #1194: vis streak-chippen kun for en PÅGÅENDE streak på ≥ MIN_STREAK_WEEKS —
+  // en enkelt uke er ikke en serie, og en hvilende streak vises aldri som tap.
+  const streakChip =
+    streakSummary &&
+    streakSummary.weeklyStreakActive &&
+    streakSummary.weeklyStreak >= MIN_STREAK_WEEKS ? (
+      <StreakChip
+        weeks={streakSummary.weeklyStreak}
+        ariaLabel={t('streakChipAria', { count: streakSummary.weeklyStreak })}
+      />
+    ) : null;
+  // Monter chippene varsomt: handicap (primær refleksjon) først, streak som en
+  // liten highlight ved siden. Ingen av dem → ingen action.
+  const headerAction =
+    handicapChip || streakChip ? (
+      <div className="flex items-center gap-2">
+        {handicapChip}
+        {streakChip}
+      </div>
     ) : null;
   // #392: arrangering bor i Klubbhuset nå (Spill/Baner-seksjonene inne i
   // /admin), nådd via den universelle bunn-nav-fanen. Hjem bærer ingen create-
@@ -421,7 +449,7 @@ async function HomeBody() {
     <>
       <PageHeader
         title={t('greeting', { name: firstNameValue })}
-        action={handicapChip}
+        action={headerAction}
       />
 
       {/* #882: not a nav landmark — these are links to data, not site/app
