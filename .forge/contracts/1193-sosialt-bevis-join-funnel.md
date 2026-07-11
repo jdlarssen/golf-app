@@ -115,23 +115,32 @@ når navn finnes, ellers aggregert antall, ellers `null`. `tabular-nums` på tal
 
 ## Success Criteria
 
-- [ ] Innlogget besøkende med ≥1 gjensidig venn påmeldt et spill ser venn-navngitt linje
+- [~] Innlogget besøkende med ≥1 gjensidig venn påmeldt et spill ser venn-navngitt linje
       («Jonas …») på påmeldings-flaten og i Finn turneringer — staging-klikkrunde.
-- [ ] Innlogget uten relasjon / anonym ser kun aggregert antall; **ved 0 påmeldte vises
+      → `SocialProofLine` på signup-header ([page.tsx](app/[locale]/signup/[shortId]/page.tsx)) +
+      per funn-kort ([HomeDiscoverySection.tsx](app/[locale]/HomeDiscoverySection.tsx)); **staging-klikkrunde utestående (kjøres før merge).**
+- [x] Innlogget uten relasjon / anonym ser kun aggregert antall; **ved 0 påmeldte vises
       ingenting** (verifisert på plakat + påmeldings-flate).
-- [ ] Tallene er ekte (roster-count ekskl. seg selv); venner er kun `accepted` gjensidige;
+      → anon `viewerUserId=null` → `buildSocialProof` gir tom navneliste; `joinedCount===0` → `SocialProofLine`
+      returnerer `null`; plakat 0-tilstand rendrer ingenting ([PublicLandingView.tsx](app/[locale]/signup/[shortId]/PublicLandingView.tsx)). Type A + Type C-dekket.
+- [x] Tallene er ekte (roster-count ekskl. seg selv); venner er kun `accepted` gjensidige;
       pending teller aldri — Type A-dekket.
-- [ ] Klienten mottar aldri rå venneliste — kun resolverte antall + capped navn (diff-review).
-- [ ] Maks én Type C-rendertest på `SocialProofLine` (venn / aggregert / null-grener); ingen
+      → 12 Type A-cases i [socialProof.test.ts](lib/games/socialProof.test.ts) (self-eksklusjon, dedup, skjæring, anon).
+- [x] Klienten mottar aldri rå venneliste — kun resolverte antall + capped navn (diff-review).
+      → `getGameSocialProof` returnerer kun `{joinedCount, knownFriendNames, knownFriendOverflow}`; `user_id`
+      + venneliste brukes bare serverside til skjæring ([getGameSocialProof.ts](lib/games/getGameSocialProof.ts)). Login-kortet får kun `joinedCount` (strukturelt navn-fritt).
+- [x] Maks én Type C-rendertest på `SocialProofLine` (venn / aggregert / null-grener); ingen
       norsk copy i test.
-- [ ] Copy i `no.json` + `en.json` (catalogParity grønn), norsk humanizer-kjørt.
+      → [SocialProofLine.test.tsx](components/games/SocialProofLine.test.tsx) — 3 grener, asserter på testid + interpolerte tall/navn.
+- [x] Copy i `no.json` + `en.json` (catalogParity grønn), norsk humanizer-kjørt.
+      → ny `socialProof`-ns i begge kataloger; catalogParity grønn; humanizer-skillet kjørt (ingen tells).
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` grønn · `npm run lint` grønn · `npm run build` grønn.
-- [ ] `npx vitest run lib/games` (ny helper + Type A-kjerne) grønn.
-- [ ] Bruker-synlig → staging-klikkrunde av flyt 2 (påmeldings-flate + Finn turneringer) før merge.
-- [ ] `feat` → MINOR-bump + CHANGELOG Funksjoner-rad; alle commits `Refs #1193`.
+- [x] `npx tsc --noEmit` grønn · `npm run lint` grønn (0 errors) · `npm run build` grønn.
+- [x] `npx vitest run lib/games` (ny helper + Type A-kjerne) grønn.
+- [~] Bruker-synlig → staging-klikkrunde av flyt 2 (påmeldings-flate + Finn turneringer) før merge. **(utestående)**
+- [x] `feat` → MINOR-bump (1.197→1.198) + CHANGELOG Funksjoner-rad; alle commits `Refs #1193`.
 
 ## Files Likely Touched
 
