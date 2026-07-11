@@ -1213,8 +1213,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 18 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 19 rettinger</strong></summary>
 
+- `1.191.1` · [#1174](https://github.com/jdlarssen/golf-app/issues/1174) — Påminnelsen om å levere scorekortet sier nå rett ut at slagene dine ikke teller før du leverer, i stedet for den gamle nøytrale ordlyden. Samme dytt i innboksen.
 - `1.183.1` · [#1126](https://github.com/jdlarssen/golf-app/issues/1126) — Avslutter du en solo-stableford med sideturnering og premiebord, dukker premieutdelingen nå opp under podiet som på de andre formatene. Før manglet den akkurat i den grenen.
 - `1.178.1` · [#1068](https://github.com/jdlarssen/golf-app/issues/1068) — Under aktiv runde ligger «Fortsett runden» nå øverst på spillsiden, og kontingent-boksen bor i venterommet — ubetalte ser bare en liten betalingslinje mens runden pågår.
 - `1.175.4` · [#1055](https://github.com/jdlarssen/golf-app/issues/1055) — Har du bedt om plass i en runde og den starter før arrangøren rekker å svare, får du nå beskjed i innboksen i stedet for evig venting.
