@@ -84,28 +84,25 @@ export function PublicLandingView({
             </div>
           )}
 
-          <div className="mt-4" data-testid="public-landing-roster">
-            {roster.count === 0 ? (
-              <p className="font-sans text-sm leading-relaxed text-muted">
-                {t('emptyRoster')}
+          {/* #1193: 0 påmeldte → ingenting (negativt sosialt bevis er verre
+              enn stillhet). Den anonyme plakaten viser bare et ekte antall +
+              offentlig-formaterte navn når noen faktisk har meldt seg på. */}
+          {roster.count > 0 && (
+            <div className="mt-4" data-testid="public-landing-roster">
+              <p className="font-sans text-sm text-muted">
+                {t('registeredCount', { count: roster.count })}
               </p>
-            ) : (
-              <>
-                <p className="font-sans text-sm text-muted">
-                  {t('registeredCount', { count: roster.count })}
-                </p>
-                <p className="mt-1 font-sans text-sm leading-relaxed text-text">
-                  {roster.names.join(', ')}
-                  {roster.overflow > 0 && (
-                    <span className="text-muted">
-                      {' '}
-                      {t('registeredOverflow', { count: roster.overflow })}
-                    </span>
-                  )}
-                </p>
-              </>
-            )}
-          </div>
+              <p className="mt-1 font-sans text-sm leading-relaxed text-text">
+                {roster.names.join(', ')}
+                {roster.overflow > 0 && (
+                  <span className="text-muted">
+                    {' '}
+                    {t('registeredOverflow', { count: roster.overflow })}
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
 
           <div className="mt-6">
             <LinkButton href={joinHref} full data-testid="public-landing-join">

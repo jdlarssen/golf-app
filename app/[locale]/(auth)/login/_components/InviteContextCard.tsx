@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
+import { SocialProofLine } from '@/components/games/SocialProofLine';
 
 /**
  * Kontekstkort over kodeskjemaet på `/login?invite=<token>` (#1169):
@@ -8,6 +9,10 @@ import { Card } from '@/components/ui/Card';
  * komponent: all data kommer ferdig formatert som props, så Type C-testen
  * slipper Supabase/route-mocks. Props-settet ER felt-whitelisten — kortet
  * kan aldri vise roster, premier, e-poster eller handicap.
+ *
+ * #1193: den besøkende er UAUTENTISERT her, så kortet får kun et aggregert
+ * `joinedCount` — aldri venne-navn (samme grense som antallet den offentlige
+ * plakaten alt viser). Navn-signalet er forbeholdt innloggede flater.
  */
 export function InviteContextCard({
   inviterName,
@@ -16,6 +21,7 @@ export function InviteContextCard({
   courseName,
   teeOff,
   expiresLine,
+  joinedCount,
 }: {
   inviterName: string | null;
   gameName: string;
@@ -28,6 +34,12 @@ export function InviteContextCard({
    * kortet er ren presentasjon, så `null` → ingen linje.
    */
   expiresLine: string | null;
+  /**
+   * #1193: aggregert antall påmeldte (ekskl. ingen — den besøkende er ikke
+   * påmeldt ennå). Kun et tall, aldri navn, siden besøkeren er anonym. `null`
+   * eller 0 → ingen sosialt-bevis-linje.
+   */
+  joinedCount: number | null;
 }) {
   const t = useTranslations('auth.inviteCard');
 
@@ -70,6 +82,14 @@ export function InviteContextCard({
             {expiresLine}
           </p>
         )}
+        {/* #1193: aggregert-bare sosialt bevis — anonym besøkende får aldri
+            venne-navn (tom navneliste sikrer det strukturelt); 0 → ingenting. */}
+        <SocialProofLine
+          joinedCount={joinedCount ?? 0}
+          knownFriendNames={[]}
+          knownFriendOverflow={0}
+          className="mt-3"
+        />
       </Card>
     </div>
   );

@@ -22,6 +22,8 @@ import {
   signupSourceFromParam,
 } from '@/lib/games/publicSignupVisibility';
 import { getPublicSignupRoster } from '@/lib/games/getPublicSignupRoster';
+import { getGameSocialProof } from '@/lib/games/getGameSocialProof';
+import { SocialProofLine } from '@/components/games/SocialProofLine';
 import { PaymentInfo } from '@/components/PaymentInfo';
 import { PublicLandingView } from './PublicLandingView';
 import { PremiebordCard } from '@/components/PremiebordCard';
@@ -304,6 +306,11 @@ export default async function PåmeldingPage({
     };
   }
 
+  // #1193: sosialt bevis over påmeldings-skjemaet — venne-navn for gjensidige
+  // venner som er påmeldt, ellers et ekte antall, ingenting ved 0 (ekskludert
+  // deg selv). Ett roster- + ett venne-oppslag; navnene resolveres serverside.
+  const socialProof = await getGameSocialProof(game.id, user!.id);
+
   return (
     <AppShell>
       <TopBar backHref="/" back="history" kicker={t('kicker')} />
@@ -324,6 +331,7 @@ export default async function PåmeldingPage({
               </time>
             </p>
           )}
+          <SocialProofLine {...socialProof} className="mt-2" />
         </header>
 
         <PaymentInfo

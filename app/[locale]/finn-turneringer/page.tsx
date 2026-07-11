@@ -12,6 +12,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
+import { getGamesSocialProof } from '@/lib/games/getGameSocialProof';
 import { HomeDiscoverySection } from '../HomeDiscoverySection';
 import { routing, type AppLocale } from '@/i18n/routing';
 
@@ -54,6 +55,14 @@ export default async function FinnTurneringerPage() {
   }
 
   const data = await getDiscoverableGames(userId);
+  // #1193: sosialt bevis per funn-kort — ett samlet roster- + venne-oppslag for
+  // hele lista (klubb/venner/åpne), batchet så det ikke blir per-kort-spørringer.
+  const socialProof = await getGamesSocialProof(
+    [...data.clubGames, ...data.friendGames, ...data.openGames].map(
+      (g) => g.id,
+    ),
+    userId,
+  );
   const isEmpty =
     data.clubGames.length === 0 &&
     data.openGames.length === 0 &&
@@ -94,7 +103,7 @@ export default async function FinnTurneringerPage() {
             title={t('pageTitle')}
             subtitle={t('pageSubtitle')}
           />
-          <HomeDiscoverySection data={data} />
+          <HomeDiscoverySection data={data} socialProof={socialProof} />
         </>
       )}
     </AppShell>

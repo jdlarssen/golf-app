@@ -4382,6 +4382,12 @@
     "pendingApprovalCaptain": "Team \"{teamName}\" (captain) — waiting for approval",
     "pendingApprovalMember": "Team \"{teamName}\" — waiting for approval"
   },
+  "socialProof": {
+    "friendsOne": "{name} is in",
+    "friendsTwo": "{name1} and {name2} are in",
+    "friendsOverflow": "{name} and {count, plural, one {# other} other {# others}} you know are in",
+    "count": "{count, plural, one {# has joined} other {# have joined}}"
+  },
   "finishedCard": {
     "result": {
       "youWon": "🥇 You won",
