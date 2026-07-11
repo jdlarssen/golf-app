@@ -128,7 +128,7 @@
       },
       "deliverReminder": {
         "title": "Husk å levere scorekortet",
-        "detail": "Du er ferdig i {gameName}"
+        "detail": "Slagene i {gameName} teller ikke før du leverer"
       },
       "paymentReminder": {
         "title": "Betal startkontingenten",
@@ -4676,8 +4676,8 @@
       "heading": "Lever scorekortet",
       "salutationNamed": "Hei {name}!",
       "salutationGeneric": "Hei!",
-      "body": "Du spilte ferdig <strong>{gameName}</strong>, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet.",
-      "bodyText": "Du spilte ferdig {gameName}, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet.",
+      "body": "Du spilte ferdig <strong>{gameName}</strong>, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder.",
+      "bodyText": "Du spilte ferdig {gameName}, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder.",
       "submitButton": "Lever scorekortet",
       "submitButtonText": "Lever scorekortet: {url}",
       "footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere."

@@ -62,7 +62,7 @@ describe('sendDeliverReminderNotification', () => {
 
       Hei Per!
 
-      Du spilte ferdig Sommercup 2026, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet.
+      Du spilte ferdig Sommercup 2026, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder.
 
       Lever scorekortet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/submit
 
@@ -70,7 +70,7 @@ describe('sendDeliverReminderNotification', () => {
       "
     `);
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(
-      `"Du spilte ferdig <strong>Sommercup 2026</strong>, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet."`,
+      `"Du spilte ferdig <strong>Sommercup 2026</strong>, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder."`,
     );
   });
 
@@ -81,7 +81,7 @@ describe('sendDeliverReminderNotification', () => {
 
       Hei!
 
-      Du spilte ferdig Sommercup 2026, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet.
+      Du spilte ferdig Sommercup 2026, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder.
 
       Lever scorekortet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/submit
 
@@ -99,7 +99,7 @@ describe('sendDeliverReminderNotification', () => {
       `"Lever scorekortet i Cup "2026" <b>"`,
     );
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(
-      `"Du spilte ferdig <strong>Cup &quot;2026&quot; &lt;b&gt;</strong>, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet."`,
+      `"Du spilte ferdig <strong>Cup &quot;2026&quot; &lt;b&gt;</strong>, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder."`,
     );
   });
 
@@ -133,7 +133,7 @@ describe('sendDeliverReminderNotification', () => {
                     Hei Per!
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 24px;">
-                    Du spilte ferdig <strong>Sommercup 2026</strong>, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet.
+                    Du spilte ferdig <strong>Sommercup 2026</strong>, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder.
                   </p>
                   <div style="margin:32px 0;">
                     <a href="https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/submit" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
@@ -165,13 +165,13 @@ describe('sendDeliverReminderNotification', () => {
 
       Hi Per!
 
-      You've finished playing Sommercup 2026 but haven't submitted your scorecard yet. Submit it to be included in the results.
+      You've finished playing Sommercup 2026 but haven't submitted your scorecard yet. Your strokes don't count until you submit — it only takes a few seconds.
 
       Submit scorecard: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111/submit
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"You've finished playing <strong>Sommercup 2026</strong> but haven't submitted your scorecard yet. Submit it to be included in the results."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"You've finished playing <strong>Sommercup 2026</strong> but haven't submitted your scorecard yet. Your strokes don't count until you submit — it only takes a few seconds."`);
   });
 });

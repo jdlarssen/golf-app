@@ -128,7 +128,7 @@
       },
       "deliverReminder": {
         "title": "Remember to submit your scorecard",
-        "detail": "You''re done in {gameName}"
+        "detail": "Your strokes in {gameName} don't count until you submit"
       },
       "paymentReminder": {
         "title": "Pay the entry fee",
@@ -4676,8 +4676,8 @@
       "heading": "Submit your scorecard",
       "salutationNamed": "Hi {name}!",
       "salutationGeneric": "Hi!",
-      "body": "You've finished playing <strong>{gameName}</strong> but haven't submitted your scorecard yet. Submit it to be included in the results.",
-      "bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Submit it to be included in the results.",
+      "body": "You've finished playing <strong>{gameName}</strong> but haven't submitted your scorecard yet. Your strokes don't count until you submit — it only takes a few seconds.",
+      "bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Your strokes don't count until you submit — it only takes a few seconds.",
       "submitButton": "Submit scorecard",
       "submitButtonText": "Submit scorecard: {url}",
       "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit."
