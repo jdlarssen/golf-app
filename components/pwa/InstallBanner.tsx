@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { InstallInstructionsModal } from './InstallInstructionsModal';
 
 const DISMISS_KEY = 'torny-install-banner-dismissed';
 const DISMISS_EVENT = 'torny-install-banner-change';
+
+// #1186 — value-first timing (contract trigger (a)): give value before you ask.
+// A pure client-side counter of logged-in Home visits, no server plumbing.
+// The banner stays hidden on the very first Home visit and only appears from
+// the 2nd visit on, mirroring PushNudge's "ask after value" philosophy. This is
+// an additive AND gate — the standalone/dismiss/anti-flash logic is unchanged.
+const VISITS_KEY = 'torny-home-visits';
+const BANNER_MIN_VISIT = 2; // first shown on the 2nd logged-in Home visit
 
 const subscribe = (cb: () => void) => {
   window.addEventListener(DISMISS_EVENT, cb);
@@ -23,6 +31,24 @@ const getSnapshot = () => {
 // before localStorage is read. After hydration React switches to getSnapshot.
 const getServerSnapshot = () => true;
 
+// Visit store (#1186). Read the Home-visit count the same reactive way as the
+// dismiss flag so the reveal survives the increment below without setState.
+const VISITS_EVENT = 'torny-home-visits-change';
+const visitSubscribe = (cb: () => void) => {
+  window.addEventListener(VISITS_EVENT, cb);
+  return () => window.removeEventListener(VISITS_EVENT, cb);
+};
+const getVisitSnapshot = () => {
+  try {
+    return (Number(localStorage.getItem(VISITS_KEY)) || 0) >= BANNER_MIN_VISIT;
+  } catch {
+    return true; // storage blocked (private mode) — fail open, show as before
+  }
+};
+// SSR + first hydration render return `false` (hidden) so the banner never
+// flashes before the client-side visit count is read.
+const getVisitServerSnapshot = () => false;
+
 export function InstallBanner() {
   const t = useTranslations('installBanner');
   const { status, install } = useInstallPrompt();
@@ -31,10 +57,35 @@ export function InstallBanner() {
     getSnapshot,
     getServerSnapshot,
   );
+  // Visit gate (#1186). Read the count reactively so the banner reveals after
+  // the increment effect below fires, with no SSR flash.
+  const passedVisitGate = useSyncExternalStore(
+    visitSubscribe,
+    getVisitSnapshot,
+    getVisitServerSnapshot,
+  );
   const [modalOpen, setModalOpen] = useState(false);
+  const countedRef = useRef(false);
+
+  useEffect(() => {
+    // Count this mount as one Home visit. Guard against React StrictMode's
+    // double-invoked effect (dev/staging run `next dev`) so a single mount is
+    // exactly one visit. Only touches localStorage + notifies the visit store —
+    // no setState here; the store read above drives the reveal.
+    if (countedRef.current) return;
+    countedRef.current = true;
+    try {
+      const priorVisits = Number(localStorage.getItem(VISITS_KEY)) || 0;
+      localStorage.setItem(VISITS_KEY, String(priorVisits + 1));
+    } catch {
+      // Storage unavailable (private mode) — getVisitSnapshot fails open instead.
+    }
+    window.dispatchEvent(new Event(VISITS_EVENT));
+  }, []);
 
   if (status === 'loading' || status === 'standalone') return null;
   if (dismissed) return null;
+  if (!passedVisitGate) return null; // #1186 value-first gate (additive AND)
 
   function dismiss() {
     try {
