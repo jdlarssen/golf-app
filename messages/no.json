@@ -4381,7 +4381,14 @@
     "requestToJoin": "Be om å bli med",
     "pendingApproval": "Venter på godkjenning",
     "pendingApprovalCaptain": "Lag «{teamName}» (kaptein) — venter på godkjenning",
-    "pendingApprovalMember": "Lag «{teamName}» — venter på godkjenning"
+    "pendingApprovalMember": "Lag «{teamName}» — venter på godkjenning",
+    "anon": {
+      "listHeading": "Åpne turneringer",
+      "loginCta": "Logg inn for å bli med",
+      "loginHint": "Trykk på en turnering for å se den nærmere.",
+      "emptyHeading": "Ingen åpne turneringer nå",
+      "emptyBody": "Ingen har åpnet en turnering ennå. Logg inn, så er du klar den dagen noen gjør det."
+    }
   },
   "socialProof": {
     "friendsOne": "{name} er med",

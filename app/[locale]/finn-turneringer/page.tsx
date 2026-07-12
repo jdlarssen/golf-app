@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { redirect } from '@/i18n/navigation';
-import { getLocale } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
+import { BrandHero } from '@/components/ui/BrandHero';
+import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { LinkButton } from '@/components/ui/Button';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { Kicker } from '@/components/ui/Kicker';
@@ -12,8 +12,10 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
+import { getPublicDiscoverableGames } from '@/lib/games/getPublicDiscoverableGames';
 import { getGamesSocialProof } from '@/lib/games/getGameSocialProof';
 import { HomeDiscoverySection } from '../HomeDiscoverySection';
+import { AnonDiscoverySection } from './AnonDiscoverySection';
 import { routing, type AppLocale } from '@/i18n/routing';
 
 // getDiscoverableGames bruker admin-client (service role) ved request-tid.
@@ -45,13 +47,55 @@ export async function generateMetadata({
  * invite_only ekskluderes allerede i `getDiscoverableGames`.
  */
 export default async function FinnTurneringerPage() {
-  const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('discover');
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
-    redirect({ href: '/login?next=/finn-turneringer', locale });
-    return;
+    // #1185: uinnloggede redirectes ikke lenger — de får en anonym visning av
+    // åpne turneringer (isPubliclyViewable) med login-vinklet CTA. Gi verdi
+    // før du ber (flyt 2, resiprositet). Innlogget gren under er uendret.
+    const anonGames = await getPublicDiscoverableGames();
+    return (
+      <AppShell>
+        <div className="mt-10">
+          <BrandHero className="mb-8" />
+          <div className="mb-8 flex justify-center">
+            <LocaleSwitcher />
+          </div>
+
+          {anonGames.length > 0 ? (
+            <section>
+              <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                {t('anon.listHeading')}
+              </h2>
+              <AnonDiscoverySection games={anonGames} />
+              <div className="mt-8">
+                <LinkButton href="/login?next=/finn-turneringer" full>
+                  {t('anon.loginCta')}
+                </LinkButton>
+                <p className="mt-3 text-center font-sans text-xs leading-relaxed text-muted">
+                  {t('anon.loginHint')}
+                </p>
+              </div>
+            </section>
+          ) : (
+            <section className="flex flex-col items-center text-center">
+              <h2 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
+                {t('anon.emptyHeading')}
+              </h2>
+              <p className="mt-3 max-w-[280px] font-sans text-sm leading-relaxed text-muted">
+                {t('anon.emptyBody')}
+              </p>
+              <div className="mt-8 w-full max-w-[280px]">
+                <LinkButton href="/login?next=/finn-turneringer" full>
+                  {t('anon.loginCta')}
+                </LinkButton>
+              </div>
+            </section>
+          )}
+        </div>
+      </AppShell>
+    );
   }
 
   const data = await getDiscoverableGames(userId);
