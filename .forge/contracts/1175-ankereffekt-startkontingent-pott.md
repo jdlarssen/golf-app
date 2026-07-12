@@ -52,19 +52,19 @@ UX Peak-prinsippet **kontrast-/ankereffekten**: en pris i isolasjon vurderes abs
 - Nøyaktig terskel (`>= entryFeeKr` vs. `> entryFeeKr` for ≥ 2 betalende).
 
 ## Success Criteria
-- [ ] `computePaidPotKr` summerer kun betalte, ikke-trukne spillere × `entry_fee_kr`; Type A-test dekker 0 betalt, N betalt, trukket-men-betalt (ekskludert), `entry_fee_kr = 0`.
-- [ ] Spill-hjem viser «Startkontingent X kr — potten er nå Y kr» når ≥ 1 har betalt, uten ekstra DB-query (gjenbruker `gwp.players`).
-- [ ] Signup/offentlig plakat viser samme anker når ≥ 1 har betalt; per-spiller `paid_at` eksponeres aldri til klienten (kun aggregert `potKr`).
-- [ ] Pott = 0 → ingen ankerlinje noe sted (kontingenten vises isolert som før).
-- [ ] Pott-tallet matcher admin-sidens «X av Y betalt»-telling (samme withdrawn-eksklusjon — ingen divergens).
+- [x] `computePaidPotKr` summerer kun betalte, ikke-trukne spillere × `entry_fee_kr`; Type A-test dekker 0 betalt, N betalt, trukket-men-betalt (ekskludert), `entry_fee_kr = 0`. → `lib/games/paidPot.ts` + `paidPot.test.ts` (8 grønne).
+- [x] Spill-hjem viser «Startkontingent X kr — potten er nå Y kr» når ≥ 1 har betalt, uten ekstra DB-query (gjenbruker `gwp.players`). → staging: `/games/461e1da3…` viste `data-testid=payment-pot-anchor` = «Potten er oppe i 100 kr» (potKr = `computePaidPotKr(gwp.players, fee)`, ingen ekstra query).
+- [x] Signup/offentlig plakat viser samme anker når ≥ 1 har betalt; per-spiller `paid_at` eksponeres aldri til klienten (kun aggregert `potKr`). → staging: `/signup/e2epot01` viste anker «Potten er oppe i 200 kr»; `getPaidPotKr` returnerer kun ett `count`-tall.
+- [x] Pott = 0 → ingen ankerlinje noe sted (kontingenten vises isolert som før). → staging: etter `paid_at=null` viste `/signup/e2epot01` kontingent-kortet uten anker (`anchorPresent=false`).
+- [x] Pott-tallet matcher admin-sidens «X av Y betalt»-telling (samme withdrawn-eksklusjon — ingen divergens). → identisk predikat `paid_at is not null and withdrawn_at is null`; staging SQL-orakel: 2 betalende, 1 trukket-betalt ekskludert → 200 kr.
 
 ## Gates
-- [ ] `npx tsc --noEmit` grønn
-- [ ] `npm run lint` grønn
-- [ ] `npx vitest run` for berørte co-located tester: `paidPot` (ny, Type A) + evt. én render-test på `PaymentInfo` kun hvis ingen finnes fra før (maks én)
-- [ ] Ny norsk copy → `humanizer:humanizer`; nb+en next-intl-nøkler (`payment.potLine`, `catalogParity` grønn)
-- [ ] Bruker-synlig → `feat`, **minor** bump + CHANGELOG-linje (Funksjoner)
-- [ ] Staging-klikkrunde: sett `entry_fee_kr` > 0, huk av 2 spillere som betalt → anker viser potten på både spill-hjem og signup; huk av ingen → intet anker. Bevis på PR.
+- [x] `npx tsc --noEmit` grønn → exit 0.
+- [x] `npm run lint` grønn → 0 errors (kun 2 eksisterende complexity-advarsler på de store side-funksjonene).
+- [x] `npx vitest run` for berørte co-located tester: `paidPot` (ny, Type A) + evt. én render-test på `PaymentInfo` kun hvis ingen finnes fra før (maks én) → 16 grønne (paidPot 8, PaymentInfo-anker 3, PublicLandingView 1, i18n-parity 2×).
+- [x] Ny norsk copy → `humanizer:humanizer`; nb+en next-intl-nøkler (`payment.potLine`, `catalogParity` grønn) → «Potten er oppe i {pot}» / «The pot is now {pot}»; catalogParity grønn.
+- [x] Bruker-synlig → `feat`, **minor** bump + CHANGELOG-linje (Funksjoner) → 1.199.0 → 1.200.0, CHANGELOG «1.200 · Se hvor stor potten er blitt».
+- [x] Staging-klikkrunde: sett `entry_fee_kr` > 0, huk av 2 spillere som betalt → anker viser potten på både spill-hjem og signup; huk av ingen → intet anker. Bevis på PR. → verifisert på PR #1232 (spill-hjem + signup viste anker; pott=0 skjulte det); bevis-kommentar postet.
 
 ## Files Likely Touched
 - `lib/games/paidPot.ts` (+ `.test.ts`) — ren pott-summering
