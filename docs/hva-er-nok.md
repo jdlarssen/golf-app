@@ -51,12 +51,17 @@ av samme grunn — poler ikke en flate ingen står på.
 
 | Bane | Hva | Issues |
 |---|---|---|
-| **Herding** | Kjernesløyfa skal aldri ødelegge en lørdag: stagingbevis-porten, staging/prod-paritet, rate-limit-tetting, natt-miljøets e2e | #1076, #1130, #1131, #1183 (+ flake-datapunktene #1132, #1168) |
-| **Vekstsløyfa (Tier 1)** | Invitert spiller blir neste arrangør: onboarding uten vegger, kontekst før kode-veggen, kom-i-gang-sjekkliste | #1169, #1170, #1173, #1176, #1177 |
+| **Herding** | Kjernesløyfa skal aldri ødelegge en lørdag: stagingbevis-porten, staging/prod-paritet, natt-miljøets e2e | #1076 (+ flake-datapunktet #1168) |
 | **Sesongstyrt** | Kavalkaden — golfåret som delbar fortelling. Bygges mot sesongslutt; start dekomponering tidligst september | #1040 |
 | **Eier-pull: avstand til green** | Crowdsourcet green-pinning + «~X m til green» på hullskjermen (v1 «ren pinning, én avstand»). Pull: eier + medspiller ba om det på en runde (§5); eier-utvalgt i board-møte 2026-07-10. Design: `docs/superpowers/specs/2026-07-10-avstand-til-green-design.md` | #1210 |
 
 Når en bane tømmes, beslutter eieren neste — dokumentet oppdateres i samme PR.
+
+**Tømt 2026-07-12 — Vekstsløyfa (Tier 1):** alle fem (#1169, #1170, #1173, #1176, #1177)
+er bygget og i prod, sammen med forutsetningene #1183 (natt-e2e) og #1192 (funnel-måling).
+Eieren åpnet samtidig adferdspsykologi-pulja (se §4-noten) — begge kjørt kontrakt-først
+via `.forge/contracts/`. Neste bane besluttes av eieren; gjenværende er Herding,
+Sesongstyrt og avstand-til-green.
 
 ## 4. Parkert — med vekke-trigger
 
@@ -66,14 +71,18 @@ Når en bane tømmes, beslutter eieren neste — dokumentet oppdateres i samme P
 | Flere språk | #61, #455 | Ekte ikke-norskspråklige brukere i prod |
 | Resend Pro / nytt mail-domene | #54, #55 | >100 mail/dag (som issuene selv sier) |
 | Booking-integrasjon | #51 | En klubb ber om det |
-| Adferdspsykologi-bølgen (resiprositet, tap-aversjon, anker, smart defaults m.m.) | #1171, #1172, #1174, #1175, #1178, #1179, #1185, #1186 | En ekte bruker etterspør tilsvarende — eller Tier 1-banen er tom og eieren åpner neste pulje |
 | Emoji-reaksjoner på lag/matchplay | #977 | Målt bruk av reaksjoner i solo-formater |
 | Null-bruk-opprydding cup/liga/betaling | #1142–#1145 | Ekte bruk av flaten (da poleres den), eller eier-beslutning om rydding |
 | Restfunn subtraksjonsrevisjonen | #1069 | Eier-triage |
 
-Worth-do-forenklingene fra subtraksjonsrevisjonen (#1133–#1141) er subtraksjon på
-brukte flater og går fri av grensen — de kan tas når kapasitet finnes.
+Worth-do-forenklingene fra subtraksjonsrevisjonen (#1134–#1141; #1133 er tatt) er
+subtraksjon på brukte flater og går fri av grensen — de kan tas når kapasitet finnes.
 Beslutnings-issues (f.eks. #1146) venter på eier-svar og er verken parkert eller tillatt.
+
+**Bygget 2026-07-10 → 12 — adferdspsykologi-bølgen:** bølgen sto parkert her med trigger
+«Tier 1 tom + eieren åpner pulja» — begge slo til: #1171, #1172, #1174, #1175, #1178,
+#1179, #1185, #1186 pluss de brainstormede #1193 (sosialt bevis) og #1194 (streak) er
+alle bygget kontrakt-først og i prod. Effekten måles i onboarding-funnelen fra #1192.
 
 ## 5. Hva teller som «pull» (vekke-kriterier)
 
