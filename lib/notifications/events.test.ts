@@ -3,8 +3,34 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const notifyMock = vi.fn<
   (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
 >();
-vi.mock('./notify', () => ({
-  notify: (...args: unknown[]) => notifyMock(...args),
+// Behold den ekte `shouldSendMailFallback` (+ terskel) så off-app-partisjonen i
+// events.ts måles med samme logikk som prod; kun `notify` erstattes med spionen.
+vi.mock('./notify', async (importActual) => {
+  const actual = await importActual<typeof import('./notify')>();
+  return {
+    ...actual,
+    notify: (...args: unknown[]) => notifyMock(...args),
+  };
+});
+
+// Admin-client mock for `notifyPlayersGameStarted`s last_seen_at-oppslag.
+// Kjeden er `from('users').select(...).in(...).returns()`.
+const usersReturnsMock = vi.fn<
+  (...args: unknown[]) => Promise<{ data: unknown; error: unknown }>
+>();
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => ({
+    from: (table: string) => {
+      if (table === 'users') {
+        return {
+          select: () => ({
+            in: () => ({ returns: usersReturnsMock }),
+          }),
+        };
+      }
+      throw new Error(`unexpected from(${table}) call`);
+    },
+  }),
 }));
 
 import {
@@ -13,9 +39,19 @@ import {
   notifyParticipantsCupFinished,
   notifyParticipantsCupStarted,
 } from './events';
+import { OFF_APP_THRESHOLD_MS } from './notify';
+
+// Ferske/gamle last_seen_at-verdier relativt til off-app-terskelen (5 min).
+const FRESH = new Date(Date.now() - 60 * 1000).toISOString(); // 1 min → on-app
+const STALE = new Date(
+  Date.now() - OFF_APP_THRESHOLD_MS - 60 * 1000,
+).toISOString(); // > terskel → off-app
 
 beforeEach(() => {
   notifyMock.mockReset();
+  usersReturnsMock.mockReset();
+  // Default: alle spillere off-app (behold raden) med mindre testen sier annet.
+  usersReturnsMock.mockResolvedValue({ data: [], error: null });
 });
 
 describe('notifyPlayersGameFinished', () => {
@@ -240,9 +276,16 @@ describe('notifyParticipantsCupStarted', () => {
   });
 });
 
-describe('notifyPlayersGameStarted (#502)', () => {
-  it('sender game_started til alle oppgitte spillere', async () => {
+describe('notifyPlayersGameStarted (#502, #1134)', () => {
+  it('sender game_started til off-app-spillere', async () => {
     notifyMock.mockResolvedValue({ shouldAlsoSendMail: true });
+    usersReturnsMock.mockResolvedValue({
+      data: [
+        { id: 'a', last_seen_at: STALE },
+        { id: 'b', last_seen_at: null },
+      ],
+      error: null,
+    });
 
     await notifyPlayersGameStarted(
       [{ user_id: 'a' }, { user_id: 'b' }],
@@ -258,8 +301,108 @@ describe('notifyPlayersGameStarted (#502)', () => {
     });
   });
 
+  it('#1134: dropper raden for on-app-spiller, beholder for off-app', async () => {
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: true });
+    usersReturnsMock.mockResolvedValue({
+      data: [
+        { id: 'a', last_seen_at: FRESH }, // on-app → ingen rad
+        { id: 'b', last_seen_at: STALE }, // off-app → rad
+      ],
+      error: null,
+    });
+
+    await notifyPlayersGameStarted(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'game-1', name: 'X' },
+      'cron/start-scheduled-games',
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'b', kind: 'game_started' }),
+    );
+  });
+
+  it('#1134: alle on-app → ingen notify-call', async () => {
+    usersReturnsMock.mockResolvedValue({
+      data: [
+        { id: 'a', last_seen_at: FRESH },
+        { id: 'b', last_seen_at: FRESH },
+      ],
+      error: null,
+    });
+
+    await notifyPlayersGameStarted(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'game-1', name: 'X' },
+      'cron/start-scheduled-games',
+    );
+
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('#1134: fail-open ved users-query-error → alle varsles', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: true });
+    usersReturnsMock.mockResolvedValue({
+      data: null,
+      error: { message: 'timeout' },
+    });
+
+    await notifyPlayersGameStarted(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'game-1', name: 'X' },
+      'cron/start-scheduled-games',
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    expect(consoleErr).toHaveBeenCalledWith(
+      '[cron/start-scheduled-games] game_started last_seen_at lookup failed',
+      expect.objectContaining({ message: 'timeout' }),
+    );
+    consoleErr.mockRestore();
+  });
+
+  it('#1134: fail-open for spiller uten users-rad → varslet', async () => {
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: true });
+    usersReturnsMock.mockResolvedValue({
+      // 'b' mangler helt fra resultatet → behandles off-app (fail-open).
+      data: [{ id: 'a', last_seen_at: FRESH }],
+      error: null,
+    });
+
+    await notifyPlayersGameStarted(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'game-1', name: 'X' },
+      'cron/start-scheduled-games',
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'b' }),
+    );
+  });
+
+  it('tom spillerliste → ingen notify, ingen users-oppslag (tidlig retur)', async () => {
+    await notifyPlayersGameStarted(
+      [],
+      { id: 'game-1', name: 'X' },
+      'cron/start-scheduled-games',
+    );
+
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(usersReturnsMock).not.toHaveBeenCalled();
+  });
+
   it('logger notify-rejection uten å kaste (best-effort)', async () => {
     const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    usersReturnsMock.mockResolvedValue({
+      data: [
+        { id: 'a', last_seen_at: STALE },
+        { id: 'b', last_seen_at: STALE },
+      ],
+      error: null,
+    });
     notifyMock
       .mockResolvedValueOnce({ shouldAlsoSendMail: false })
       .mockRejectedValueOnce(new Error('insert failed'));
