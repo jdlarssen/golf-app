@@ -373,15 +373,20 @@ export default async function KlubbDetailPage({
         </section>
       )}
 
-      {/* Admin controls — hidden when the club is frozen (no new members). */}
+      {/* Admin controls — hidden when the club is frozen (no new members).
+          #1135: the add-by-email and share-link cards are merged into one
+          invite section, split by a divider, since both do the same job. */}
       {isAdmin && !frozen && (
-        <>
-          {/* Add member by email */}
-          <section className="mb-8">
-            <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              {t('addMemberHeading')}
-            </h2>
-            <Card>
+        <section className="mb-8">
+          <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            {t('inviteHeading')}
+          </h2>
+          <Card className="space-y-4">
+            {/* Add member by email */}
+            <div className="space-y-3">
+              <h3 className="font-sans text-[13px] font-semibold text-text">
+                {t('addMemberHeading')}
+              </h3>
               <form action={addMember} className="space-y-4">
                 <input type="hidden" name="groupId" value={club.id} />
                 <Input
@@ -398,22 +403,20 @@ export default async function KlubbDetailPage({
                   {t('addMemberButton')}
                 </SubmitButton>
               </form>
-            </Card>
-          </section>
+            </div>
 
-          {/* Join link */}
-          <section className="mb-8">
-            <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              {t('joinLinkHeading')}
-            </h2>
-            <Card className="space-y-2">
+            {/* Join link */}
+            <div className="space-y-2 border-t border-border pt-4">
+              <h3 className="font-sans text-[13px] font-semibold text-text">
+                {t('joinLinkHeading')}
+              </h3>
               <p className="font-sans text-sm text-muted">
                 {t('joinLinkDescription')}
               </p>
               <CopyJoinLinkButton joinUrl={joinUrl} />
-            </Card>
-          </section>
-        </>
+            </div>
+          </Card>
+        </section>
       )}
 
       {/* Leave club */}

@@ -36,6 +36,11 @@ export function ClubCupsSection({
   const t = useTranslations('klubb.cups');
   const tCup = useTranslations('cup.status');
 
+  // #1135: samme som ClubLeaguesSection — skjul den døde overskriften for
+  // vanlige medlemmer i en klubb uten cuper. Admin (ikke frossen) beholder
+  // tomtekst + «Ny cup».
+  if (cups.length === 0 && !canCreate) return null;
+
   return (
     <section className="mb-8">
       <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">

@@ -54,8 +54,20 @@ describe('ClubLeaguesSection (#480)', () => {
     expect(screen.queryByRole('link', { name: 'Styr' })).toBeNull();
   });
 
-  it('renders an empty-state hint when the club has no leagues', () => {
-    render(<ClubLeaguesSection leagues={[]} clubId="c1" canCreate={false} canManage={false} />);
+  it('#1135: hides entirely for a plain member when the club has no leagues, but keeps the empty-state + «Ny liga» for a creator', () => {
+    // Plain member, no leagues → nothing rendered (no dead heading).
+    const { container, rerender } = render(
+      <ClubLeaguesSection leagues={[]} clubId="c1" canCreate={false} canManage={false} />,
+    );
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByText('Ingen ligaer i klubben ennå.')).toBeNull();
+
+    // A creator (owner/admin, not frozen) still sees the empty hint + create door.
+    rerender(<ClubLeaguesSection leagues={[]} clubId="c1" canCreate={true} canManage={false} />);
     expect(screen.getByText('Ingen ligaer i klubben ennå.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ny liga' })).toHaveAttribute(
+      'href',
+      '/klubber/c1/liga/ny',
+    );
   });
 });

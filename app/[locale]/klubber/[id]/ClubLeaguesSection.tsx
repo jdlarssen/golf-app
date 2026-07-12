@@ -32,6 +32,11 @@ export function ClubLeaguesSection({
 }) {
   const t = useTranslations('klubb.leagues');
 
+  // #1135: skjul den døde overskriften for vanlige medlemmer i en klubb uten
+  // ligaer. En som verken kan opprette (canCreate) eller se noen liste har
+  // ingenting å hente her. Admin (ikke frossen) beholder tomtekst + «Ny liga».
+  if (leagues.length === 0 && !canCreate) return null;
+
   return (
     <section className="mb-8">
       <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
