@@ -11,4 +11,10 @@ Konvergens-signal: gates grønne på første runde, ingen no-progress-loop.
 
 ## Kryss-modell-gate (Steg 4.5)
 
-(noteres etter Sonnet-kjøring)
+**Sonnet — VERDICT: CONFIRM.** Uavhengig reviewer (fersk kontekst, kun kontrakt
++ diff + eval-rapport) verifiserte predikatet `length === 0 && !canCreate` i
+begge seksjonene (ikke `!canManage`/`!isAdmin`), at det sammenslåtte kortet
+inneholder både e-post-skjema og kopier-lenke under én overskrift gated på
+`isAdmin && !frozen`, `inviteHeading`-paritet i begge kataloger (3985 identiske
+leaf-keys), justerte tomtilstand-tester uten nye Type C-tester, og at
+DB/RLS/data-henting er urørt. Ingen defekt funnet.
