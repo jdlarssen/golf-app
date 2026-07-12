@@ -115,10 +115,11 @@ når navn finnes, ellers aggregert antall, ellers `null`. `tabular-nums` på tal
 
 ## Success Criteria
 
-- [~] Innlogget besøkende med ≥1 gjensidig venn påmeldt et spill ser venn-navngitt linje
+- [x] Innlogget besøkende med ≥1 gjensidig venn påmeldt et spill ser venn-navngitt linje
       («Jonas …») på påmeldings-flaten og i Finn turneringer — staging-klikkrunde.
       → `SocialProofLine` på signup-header ([page.tsx](app/[locale]/signup/[shortId]/page.tsx)) +
-      per funn-kort ([HomeDiscoverySection.tsx](app/[locale]/HomeDiscoverySection.tsx)); **staging-klikkrunde utestående (kjøres før merge).**
+      per funn-kort ([HomeDiscoverySection.tsx](app/[locale]/HomeDiscoverySection.tsx)); staging-verifisert:
+      «Bjørn B. er med» på både `/signup/<id>` og hjem-discovery (PR #1227-kommentar).
 - [x] Innlogget uten relasjon / anonym ser kun aggregert antall; **ved 0 påmeldte vises
       ingenting** (verifisert på plakat + påmeldings-flate).
       → anon `viewerUserId=null` → `buildSocialProof` gir tom navneliste; `joinedCount===0` → `SocialProofLine`
@@ -139,7 +140,7 @@ når navn finnes, ellers aggregert antall, ellers `null`. `tabular-nums` på tal
 
 - [x] `npx tsc --noEmit` grønn · `npm run lint` grønn (0 errors) · `npm run build` grønn.
 - [x] `npx vitest run lib/games` (ny helper + Type A-kjerne) grønn.
-- [~] Bruker-synlig → staging-klikkrunde av flyt 2 (påmeldings-flate + Finn turneringer) før merge. **(utestående)**
+- [x] Bruker-synlig → staging-klikkrunde av flyt 2 (påmeldings-flate + Finn turneringer + plakat + kontekstkort) — staging-verifisert (PR #1227-kommentar).
 - [x] `feat` → MINOR-bump (1.197→1.198) + CHANGELOG Funksjoner-rad; alle commits `Refs #1193`.
 
 ## Files Likely Touched
