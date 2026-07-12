@@ -7,4 +7,12 @@ Bygger: Opus 4.8 (nattkjøreren) · Branch: `claude/natt-1134-game-started-on-ap
 |---|---|---|---|
 | 1 | ACCEPT | (ingen) | Bygg mot kontrakt. Gates grønne: tsc, eslint (events.ts/test), vitest (events+notify, 28), `npm run build`. Off-app-gate lagt i `events.ts`-fan-out, `notify()` urørt. Fail-open verifisert i test (query-error + manglende rad → varslet). |
 
-Konvergens-signal: gates grønne på første runde, ingen no-progress-loop. Kryss-modell-gate (Sonnet, Steg 4.5) noteres under.
+Konvergens-signal: gates grønne på første runde, ingen no-progress-loop.
+
+## Kryss-modell-gate (Steg 4.5)
+
+**Sonnet — VERDICT: CONFIRM.** Uavhengig reviewer (fersk kontekst, kun kontrakt
++ diff + eval-rapport) rekjørte tsc, vitest (28/28) og eslint grønt, verifiserte
+enkelt-produsent av `game_started` + alle tre call-sites gjennom helperen,
+fail-open (tom map → alle varsles), `notify.ts` urørt, og push uendret for
+off-app. Ingen substansiell defekt funnet.
