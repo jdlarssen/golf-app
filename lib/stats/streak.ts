@@ -142,9 +142,10 @@ export type StreakGrowth = {
 
 /**
  * Om en nettopp avsluttet runde fikk den ukentlige streaken til å vokse: sammenlign
- * streaken med og uten runden. Feirer bare når resultatet er et pågående løp på ≥2
- * uker som er lengre enn før — så en ny 1-ukes «streak», en ekstra runde samme uke,
- * og en restart etter et brudd alle forblir stille (positiv ramme).
+ * streaken med og uten runden. Feirer bare når resultatet er et pågående løp på
+ * ≥ {@link MIN_STREAK_WEEKS} uker som er lengre enn før — så en ny 1-ukes «streak»,
+ * en ekstra runde samme uke, og en restart etter et brudd forblir alle stille
+ * (positiv ramme). Samme terskel som chip/panel, så flatene ikke driver fra hverandre.
  */
 export function roundStreakGrowth(input: {
   datesWithout: Date[];
@@ -158,7 +159,7 @@ export function roundStreakGrowth(input: {
   });
   const grew =
     withThis.weeklyStreakActive &&
-    withThis.weeklyStreak >= 2 &&
+    withThis.weeklyStreak >= MIN_STREAK_WEEKS &&
     withThis.weeklyStreak > without.weeklyStreak;
   return {
     grew,
