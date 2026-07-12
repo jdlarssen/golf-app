@@ -57,7 +57,7 @@ export default async function FinnTurneringerPage() {
     const anonGames = await getPublicDiscoverableGames();
     return (
       <AppShell>
-        <div className="mt-10">
+        <div className="mt-10" data-testid="anon-finn-turneringer">
           <BrandHero className="mb-8" />
           <div className="mb-8 flex justify-center">
             <LocaleSwitcher />
@@ -70,7 +70,11 @@ export default async function FinnTurneringerPage() {
               </h2>
               <AnonDiscoverySection games={anonGames} />
               <div className="mt-8">
-                <LinkButton href="/login?next=/finn-turneringer" full>
+                <LinkButton
+                  href="/login?next=/finn-turneringer"
+                  full
+                  data-testid="anon-login-cta"
+                >
                   {t('anon.loginCta')}
                 </LinkButton>
                 <p className="mt-3 text-center font-sans text-xs leading-relaxed text-muted">
@@ -87,7 +91,11 @@ export default async function FinnTurneringerPage() {
                 {t('anon.emptyBody')}
               </p>
               <div className="mt-8 w-full max-w-[280px]">
-                <LinkButton href="/login?next=/finn-turneringer" full>
+                <LinkButton
+                  href="/login?next=/finn-turneringer"
+                  full
+                  data-testid="anon-login-cta"
+                >
                   {t('anon.loginCta')}
                 </LinkButton>
               </div>
