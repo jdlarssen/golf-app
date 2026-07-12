@@ -22,6 +22,7 @@ import {
   signupSourceFromParam,
 } from '@/lib/games/publicSignupVisibility';
 import { getPublicSignupRoster } from '@/lib/games/getPublicSignupRoster';
+import { getPaidPotKr } from '@/lib/games/getPaidPotKr';
 import { getGameSocialProof } from '@/lib/games/getGameSocialProof';
 import { SocialProofLine } from '@/components/games/SocialProofLine';
 import { PaymentInfo } from '@/components/PaymentInfo';
@@ -123,7 +124,13 @@ export default async function PåmeldingPage({
     const srcSuffix = srcRaw ? `?src=${srcRaw}` : '';
 
     if (game && isPubliclyViewable(game)) {
-      const roster = await getPublicSignupRoster(game.id);
+      // #1175: roster + innbetalt pott parallelt (to slanke admin-count/-select).
+      // getPaidPotKr returnerer kun ETT aggregert tall — per-spiller paid_at
+      // forlater aldri serveren mot en uinnlogget besøkende.
+      const [roster, potKr] = await Promise.all([
+        getPublicSignupRoster(game.id),
+        getPaidPotKr(game.id, game.entry_fee_kr),
+      ]);
       return (
         <PublicLandingView
           gameName={localizeGameName(
@@ -143,6 +150,7 @@ export default async function PåmeldingPage({
           posterHref={`/signup/${shortId}/plakat`}
           entryFeeKr={game.entry_fee_kr}
           paymentLink={game.payment_link}
+          potKr={potKr}
           prizes={safeParsePrizes(game.prizes)}
         />
       );
@@ -309,7 +317,12 @@ export default async function PåmeldingPage({
   // #1193: sosialt bevis over påmeldings-skjemaet — venne-navn for gjensidige
   // venner som er påmeldt, ellers et ekte antall, ingenting ved 0 (ekskludert
   // deg selv). Ett roster- + ett venne-oppslag; navnene resolveres serverside.
-  const socialProof = await getGameSocialProof(game.id, user!.id);
+  // #1175: hentes parallelt med den innbetalte potten (aggregert count) som
+  // ankerlinjen i PaymentInfo nedenfor bruker.
+  const [socialProof, potKr] = await Promise.all([
+    getGameSocialProof(game.id, user!.id),
+    getPaidPotKr(game.id, game.entry_fee_kr),
+  ]);
 
   return (
     <AppShell>
@@ -337,6 +350,7 @@ export default async function PåmeldingPage({
         <PaymentInfo
           entryFeeKr={game.entry_fee_kr}
           paymentLink={game.payment_link}
+          potKr={potKr}
         />
 
         {(() => {

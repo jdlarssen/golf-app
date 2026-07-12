@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.200 · Se hvor stor potten er blitt</strong></summary>
+
+[#1175](https://github.com/jdlarssen/golf-app/issues/1175) — Har runden en startkontingent, ser du nå den innbetalte potten rett ved siden av prisen — «Potten er oppe i 800 kr» — så du ser hva som står på spill, ikke bare hva det koster å bli med.
+
+↳ /finn-turneringer · «Finn turneringer»
+</details>
+
+<details>
 <summary><strong>1.199 · Se hvem du kjenner som er med</strong></summary>
 
 [#1193](https://github.com/jdlarssen/golf-app/issues/1193) — Før du melder deg på en runde, ser du hvem som alt er med: kjenner du noen av dem, står de med navn — «Jonas og 2 andre du kjenner er med» — ellers et ærlig antall, som «3 har blitt med».

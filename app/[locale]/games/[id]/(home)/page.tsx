@@ -13,6 +13,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { PaymentInfo } from '@/components/PaymentInfo';
 import { PremiebordCard } from '@/components/PremiebordCard';
 import { safeParsePrizes } from '@/lib/games/prizes';
+import { computePaidPotKr } from '@/lib/games/paidPot';
 import { BackLink } from '@/components/ui/BackLink';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -260,6 +261,13 @@ export default async function GameHomePage({
   // #1051: premiebordet (self-hider når tomt). Vises før (venterom) og under
   // (aktiv) runden. safeParse så en malformert blob aldri krasjer spill-hjem.
   const prizes = safeParsePrizes(gwp.game.prizes);
+
+  // #1175: innbetalt pott — ankerlinje ved siden av startkontingenten. Regnes
+  // fra den allerede lastede `gwp.players`-listen (paid_at + withdrawn_at er
+  // med i selecten) → null ekstra DB-runde. Gis videre til full-variant
+  // PaymentInfo-kallene (venterom + draft/finished); compact-linjen under
+  // runden holdes ren.
+  const potKr = computePaidPotKr(gwp.players, gwp.game.entry_fee_kr);
 
   // Mark related inbox notifications as read on visit. Best-effort: helperen
   // svelger feil internt, så vi blokkerer aldri sida på dette. Vi markerer
@@ -562,6 +570,7 @@ export default async function GameHomePage({
           entryFeeKr={gwp.game.entry_fee_kr}
           paymentLink={gwp.game.payment_link}
           paid={me.paid_at != null}
+          potKr={potKr}
           className="mx-4 mb-4"
         />
 
@@ -841,6 +850,7 @@ export default async function GameHomePage({
           entryFeeKr={gwp.game.entry_fee_kr}
           paymentLink={gwp.game.payment_link}
           paid={me.paid_at != null}
+          potKr={potKr}
           className="mb-4"
         />
       )}

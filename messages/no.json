@@ -450,7 +450,8 @@
     "copied": "Kopiert",
     "arrangeWithHost": "Avtal betaling med arrangøren.",
     "paidBadge": "Startkontingent betalt",
-    "compactLine": "Ubetalt startkontingent: {amount}"
+    "compactLine": "Ubetalt startkontingent: {amount}",
+    "potLine": "Potten er oppe i {pot}"
   },
   "prizes": {
     "boardTitle": "Premiebord",
