@@ -20,7 +20,15 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // exclusions; they moved into code when the matcher had to start matching
 // all pages for the i18n rewrite.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo|finn-turneringer)(\/|$)/;
+  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo)(\/|$)/;
+
+// #1185: auth-optional routes. The proxy STILL resolves the user here (so a
+// logged-in visitor keeps their verified-user header — and thus their
+// personalized page and the persistent bottom nav), but an anonymous visitor
+// is NOT redirected to /login: the page renders an anonymous view instead.
+// Distinct from PUBLIC_PATH_PATTERN, which skips auth entirely (for
+// externally-shared or chromeless pages like /signup and /embed).
+const AUTH_OPTIONAL_PATH_PATTERN = /^\/finn-turneringer(\/|$)/;
 
 /** Split '/en/venner' -> { locale: 'en', pathname: '/venner' }. */
 function splitLocalePrefix(pathname: string): {
@@ -59,6 +67,14 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    // #1185: auth-optional routes render an anonymous view instead of gating
+    // to /login. Strip any client-sent header (same guard as the public
+    // branch) and hand off to i18n routing; the page's null-user branch takes
+    // over. All other routes still redirect to /login below.
+    if (AUTH_OPTIONAL_PATH_PATTERN.test(barePathname)) {
+      request.headers.delete('x-torny-user-id');
+      return handleI18nRouting(request);
+    }
     const url = request.nextUrl.clone();
     const currentPath =
       request.nextUrl.pathname + (request.nextUrl.search || '');
