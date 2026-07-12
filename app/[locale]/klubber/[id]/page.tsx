@@ -377,7 +377,7 @@ export default async function KlubbDetailPage({
           #1135: the add-by-email and share-link cards are merged into one
           invite section, split by a divider, since both do the same job. */}
       {isAdmin && !frozen && (
-        <section className="mb-8">
+        <section className="mb-8" data-testid="club-invite-section">
           <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
             {t('inviteHeading')}
           </h2>

@@ -38,7 +38,7 @@ export function ClubLeaguesSection({
   if (leagues.length === 0 && !canCreate) return null;
 
   return (
-    <section className="mb-8">
+    <section className="mb-8" data-testid="club-leagues-section">
       <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
         {t('heading')}
       </h2>
