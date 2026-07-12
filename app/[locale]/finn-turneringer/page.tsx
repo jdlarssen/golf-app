@@ -10,7 +10,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { PinFlag } from '@/components/icons/PinFlag';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { getServerClient } from '@/lib/supabase/server';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 import { getPublicDiscoverableGames } from '@/lib/games/getPublicDiscoverableGames';
 import { getGamesSocialProof } from '@/lib/games/getGameSocialProof';
@@ -49,7 +49,17 @@ export async function generateMetadata({
 export default async function FinnTurneringerPage() {
   const t = await getTranslations('discover');
 
-  const userId = await getProxyVerifiedUserId();
+  // #1185: /finn-turneringer ligger nå i proxy.ts PUBLIC_PATH_PATTERN, så
+  // proxyen hopper over auth-arbeidet og setter IKKE x-torny-user-id-headeren.
+  // Vi må derfor lese brukeren via server-klienten (cookies) her — akkurat som
+  // /signup/[shortId] — ellers ville getProxyVerifiedUserId() alltid gitt null
+  // og innloggede fått anon-visningen. Bruk IKKE getProxyVerifiedUserId på
+  // offentlige ruter.
+  const supabase = await getServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id ?? null;
   if (!userId) {
     // #1185: uinnloggede redirectes ikke lenger — de får en anonym visning av
     // åpne turneringer (isPubliclyViewable) med login-vinklet CTA. Gi verdi
