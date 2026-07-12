@@ -4381,7 +4381,14 @@
     "requestToJoin": "Request to join",
     "pendingApproval": "Waiting for approval",
     "pendingApprovalCaptain": "Team \"{teamName}\" (captain) — waiting for approval",
-    "pendingApprovalMember": "Team \"{teamName}\" — waiting for approval"
+    "pendingApprovalMember": "Team \"{teamName}\" — waiting for approval",
+    "anon": {
+      "listHeading": "Open tournaments",
+      "loginCta": "Log in to join",
+      "loginHint": "Tap a tournament to take a closer look.",
+      "emptyHeading": "No open tournaments right now",
+      "emptyBody": "No one's opened a tournament yet. Log in, and you'll be ready the day someone does."
+    }
   },
   "socialProof": {
     "friendsOne": "{name} is in",

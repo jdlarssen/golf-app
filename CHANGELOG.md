@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.201 · Bla i åpne turneringer før du logger inn</strong></summary>
+
+[#1185](https://github.com/jdlarssen/golf-app/issues/1185) — Nå trenger du ikke konto for å se hva som er på gang. Kommer du til Tørny uinnlogget, møter du en liste over åpne turneringer du kan bli med i. Trykk deg inn på en for å se den nærmere, og logg inn når du vil melde deg på.
+
+↳ /finn-turneringer · «Finn turneringer»
+</details>
+
+<details>
 <summary><strong>1.200 · Se hvor stor potten er blitt</strong></summary>
 
 [#1175](https://github.com/jdlarssen/golf-app/issues/1175) — Har runden en startkontingent, ser du nå den innbetalte potten rett ved siden av prisen — «Potten er oppe i 800 kr» — så du ser hva som står på spill, ikke bare hva det koster å bli med.
