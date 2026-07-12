@@ -97,24 +97,24 @@ Innlogget gren er UENDRET (dagens `getDiscoverableGames` + `HomeDiscoverySection
 
 ## Success Criteria
 
-- [ ] Uinnlogget `GET /finn-turneringer` → 200 (ikke login-redirect), viser liste av åpne turneringer — staging.
-- [ ] Anon-lista = KUN `isPubliclyViewable`-spill; `invite_only`/`draft`/`active`/stengt vises ALDRI —
-      verifisert mot #1022-fixturene (open/scheduled vises, invite_only/stengt ikke).
-- [ ] Anon-HTML lekker INGEN persondata (0 navn/e-post/hcp) — grep.
-- [ ] Kort lenker til `/signup/{short_id}`; global «Logg inn»-CTA → `/login?next=/finn-turneringer`;
-      tom liste → login-vinklet tom-tilstand.
-- [ ] Innlogget `/finn-turneringer` uendret (ingen regresjon) — staging-klikkrunde.
-- [ ] INGEN ny RLS-policy/RPC/DB-migrasjon (admin-client + felt-whitelist er grensen) — bekreftet i diff.
+- [ ] Uinnlogget `GET /finn-turneringer` → 200 (ikke login-redirect), viser liste av åpne turneringer — staging. *(pending staging)*
+- [x] Anon-lista = KUN `isPubliclyViewable`-spill; `invite_only`/`draft`/`active`/stengt vises ALDRI —
+      verifisert mot #1022-fixturene (open/scheduled vises, invite_only/stengt ikke). → `lib/games/getPublicDiscoverableGames.test.ts` «predikat-gate dropper alt som ikke er isPubliclyViewable» (mock lekker invite_only/draft/active/closed, kun open+manual overlever).
+- [ ] Anon-HTML lekker INGEN persondata (0 navn/e-post/hcp) — grep. *(pending staging grep)*
+- [x] Kort lenker til `/signup/{short_id}`; global «Logg inn»-CTA → `/login?next=/finn-turneringer`;
+      tom liste → login-vinklet tom-tilstand. → `AnonDiscoverySection.tsx` (SmartLink→/signup/[shortId]), `page.tsx:73/90` loginCta + `page.tsx:81-95` login-vinklet tom-tilstand.
+- [ ] Innlogget `/finn-turneringer` uendret (ingen regresjon) — staging-klikkrunde. *(pending staging)*
+- [x] INGEN ny RLS-policy/RPC/DB-migrasjon (admin-client + felt-whitelist er grensen) — bekreftet i diff. → `git show --stat` rører ingen `supabase/`; helper bruker `getAdminClient()`.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` + `npm run lint` grønn (endrede filer).
-- [ ] `npx vitest run lib/games` (ny anon-helper + evt. predikat-test) grønn.
-- [ ] `npm run build` grønn (ruta bygger, proxy-regex gyldig).
-- [ ] catalogParity grønn (ny anon-copy no + en); humanizer kjørt.
-- [ ] Bruker-synlig → staging-klikkrunde av flyt 2 (anonym browse → plakat → login) før merge.
-- [ ] E2E som rører flyten: assert på `data-testid`/role, ALDRI norsk copy.
-- [ ] `feat` → MINOR-bump + CHANGELOG Funksjoner-linje.
+- [x] `npx tsc --noEmit` + `npm run lint` grønn (endrede filer). → tsc exit 0; eslint exit 0.
+- [x] `npx vitest run lib/games` (ny anon-helper + evt. predikat-test) grønn. → 5/5 nye + getDiscoverableGames grønn.
+- [x] `npm run build` grønn (ruta bygger, proxy-regex gyldig). → build printet full rute-tre + Proxy (Middleware), ingen feil.
+- [x] catalogParity grønn (ny anon-copy no + en); humanizer kjørt. → catalogParity + apostropheParity grønn (26 tester); humanizer-skill kjørt på anon-copy.
+- [ ] Bruker-synlig → staging-klikkrunde av flyt 2 (anonym browse → plakat → login) før merge. *(pending staging)*
+- [ ] E2E som rører flyten: assert på `data-testid`/role, ALDRI norsk copy. *(vurderes etter staging)*
+- [x] `feat` → MINOR-bump + CHANGELOG Funksjoner-linje. → 1.199.0 → 1.200.0; CHANGELOG «1.200 · Bla i åpne turneringer før du logger inn».
 
 ## Files Likely Touched
 
