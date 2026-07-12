@@ -97,13 +97,13 @@ Innlogget gren er UENDRET (dagens `getDiscoverableGames` + `HomeDiscoverySection
 
 ## Success Criteria
 
-- [ ] Uinnlogget `GET /finn-turneringer` → 200 (ikke login-redirect), viser liste av åpne turneringer — staging. *(pending staging)*
+- [x] Uinnlogget `GET /finn-turneringer` → 200 (ikke login-redirect), viser liste av åpne turneringer — staging. → staging (v1.200.1): anon `curl` + rendered view viser BrandHero + «Åpne turneringer» + kort «ANON-QA-1185 Testturnering · Byneset North». Ingen login-redirect.
 - [x] Anon-lista = KUN `isPubliclyViewable`-spill; `invite_only`/`draft`/`active`/stengt vises ALDRI —
       verifisert mot #1022-fixturene (open/scheduled vises, invite_only/stengt ikke). → `lib/games/getPublicDiscoverableGames.test.ts` «predikat-gate dropper alt som ikke er isPubliclyViewable» (mock lekker invite_only/draft/active/closed, kun open+manual overlever).
-- [ ] Anon-HTML lekker INGEN persondata (0 navn/e-post/hcp) — grep. *(pending staging grep)*
+- [x] Anon-HTML lekker INGEN persondata (0 navn/e-post/hcp) — grep. → staging: seedet offentlig spill med 2 ekte spillere («Test Admin», «Test Spiller»). `grep` mot anon /finn-turneringer-HTML: begge navn = 0 treff. Plakaten `/signup/tpc5xxxa` viser derimot «Test A»/«Test S» — anon-lista er strengere enn plakaten, som designet.
 - [x] Kort lenker til `/signup/{short_id}`; global «Logg inn»-CTA → `/login?next=/finn-turneringer`;
       tom liste → login-vinklet tom-tilstand. → `AnonDiscoverySection.tsx` (SmartLink→/signup/[shortId]), `page.tsx:73/90` loginCta + `page.tsx:81-95` login-vinklet tom-tilstand.
-- [ ] Innlogget `/finn-turneringer` uendret (ingen regresjon) — staging-klikkrunde. *(pending staging)*
+- [x] Innlogget `/finn-turneringer` uendret (ingen regresjon) — staging-klikkrunde. → staging: innlogget admin (OTP) ser BackLink + «FINN TURNERINGER»-kicker + PageHeader + HomeDiscoverySection med action-CTA («Be om å bli med»). ⚠️ AVVIK: proxy-whitelistingen fjernet `x-torny-user-id`-headeren, så `getProxyVerifiedUserId()` ga null og innloggede fikk anon-visningen. Fanget i denne klikkrunden, fikset (commit `bcba26e1`): leser nå bruker via server-klient (cookies), som `/signup/[shortId]`.
 - [x] INGEN ny RLS-policy/RPC/DB-migrasjon (admin-client + felt-whitelist er grensen) — bekreftet i diff. → `git show --stat` rører ingen `supabase/`; helper bruker `getAdminClient()`.
 
 ## Gates
@@ -112,8 +112,8 @@ Innlogget gren er UENDRET (dagens `getDiscoverableGames` + `HomeDiscoverySection
 - [x] `npx vitest run lib/games` (ny anon-helper + evt. predikat-test) grønn. → 5/5 nye + getDiscoverableGames grønn.
 - [x] `npm run build` grønn (ruta bygger, proxy-regex gyldig). → build printet full rute-tre + Proxy (Middleware), ingen feil.
 - [x] catalogParity grønn (ny anon-copy no + en); humanizer kjørt. → catalogParity + apostropheParity grønn (26 tester); humanizer-skill kjørt på anon-copy.
-- [ ] Bruker-synlig → staging-klikkrunde av flyt 2 (anonym browse → plakat → login) før merge. *(pending staging)*
-- [ ] E2E som rører flyten: assert på `data-testid`/role, ALDRI norsk copy. *(vurderes etter staging)*
+- [x] Bruker-synlig → staging-klikkrunde av flyt 2 (anonym browse → plakat → login) før merge. → anon-lista rendret; kort → plakat `/signup/tpc5xxxa` (public-landing rendret); plakatens «Bli med» → `/login?next=`. Innlogget regresjon fanget + fikset (se over).
+- [x] E2E som rører flyten: assert på `data-testid`/role, ALDRI norsk copy. → `e2e/discover/anon-finn-turneringer.spec.ts` (1 passed): uinnlogget /finn-turneringer ingen login-redirect, `anon-finn-turneringer`-wrapper + `anon-login-cta`→/login. Driver på data-testid.
 - [x] `feat` → MINOR-bump + CHANGELOG Funksjoner-linje. → 1.199.0 → 1.200.0; CHANGELOG «1.200 · Bla i åpne turneringer før du logger inn».
 
 ## Files Likely Touched
