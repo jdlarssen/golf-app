@@ -450,7 +450,8 @@
     "copied": "Copied",
     "arrangeWithHost": "Arrange payment with the organiser.",
     "paidBadge": "Entry fee paid",
-    "compactLine": "Unpaid entry fee: {amount}"
+    "compactLine": "Unpaid entry fee: {amount}",
+    "potLine": "The pot is now {pot}"
   },
   "prizes": {
     "boardTitle": "Prize table",

@@ -26,6 +26,7 @@ export function PublicLandingView({
   posterHref,
   entryFeeKr,
   paymentLink,
+  potKr,
   prizes = [],
 }: {
   gameName: string;
@@ -37,6 +38,8 @@ export function PublicLandingView({
   posterHref: string;
   entryFeeKr: number;
   paymentLink: string | null;
+  /** #1175: aggregert innbetalt pott (kr) → ankerlinjen i PaymentInfo. */
+  potKr?: number;
   prizes?: GamePrize[];
 }) {
   const t = useTranslations('signup.public');
@@ -75,6 +78,7 @@ export function PublicLandingView({
           <PaymentInfo
             entryFeeKr={entryFeeKr}
             paymentLink={paymentLink}
+            potKr={potKr}
             className="mt-4"
           />
 

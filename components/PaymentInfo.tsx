@@ -25,6 +25,7 @@ export function PaymentInfo({
   paymentLink,
   paid = false,
   compact = false,
+  potKr,
   className,
 }: {
   entryFeeKr: number;
@@ -41,6 +42,16 @@ export function PaymentInfo({
    * kun rendre denne varianten til ubetalte spillere.
    */
   compact?: boolean;
+  /**
+   * #1175: den innbetalte potten (kr), ferdig aggregert server-side. Når satt
+   * og over terskel (`potKr >= entryFeeKr`, dvs. minst én betalende), viser
+   * full-varianten en ankerlinje «Potten er nå {pot}» rett under kontingenten,
+   * så prisen leses relativt (ankereffekt) i stedet for isolert. Terskelen gjør
+   * at pott = 0 aldri vises som anti-anker. Komponenten regner ALDRI potten
+   * selv — den mottar ferdig tall (RLS-trygt, per-spiller-status forlater aldri
+   * serveren). Kun full-varianten (ikke compact/paid) rendrer ankeret.
+   */
+  potKr?: number;
   className?: string;
 }) {
   const t = useTranslations('payment');
@@ -116,6 +127,18 @@ export function PaymentInfo({
           {formatKr(entryFeeKr)}
         </span>
       </div>
+
+      {/* #1175: ankerlinje — kontingenten lest relativt mot den innbetalte
+          potten. Kun over terskel (≥ 1 betalende) så pott = 0 aldri blir et
+          anti-anker. */}
+      {potKr != null && potKr >= entryFeeKr && (
+        <p
+          className="mt-1 font-sans text-sm text-muted"
+          data-testid="payment-pot-anchor"
+        >
+          {t('potLine', { pot: formatKr(potKr) })}
+        </p>
+      )}
 
       {linkIsUrl && link ? (
         <a
