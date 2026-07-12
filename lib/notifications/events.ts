@@ -1,5 +1,33 @@
 import 'server-only';
-import { notify } from './notify';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { notify, shouldSendMailFallback } from './notify';
+
+/**
+ * Partisjonér spillere i off-app (skal ha varselet) og on-app (kan droppe det)
+ * ut fra deres `last_seen_at`, målt med samme terskel som push/mail-gaten
+ * (`shouldSendMailFallback`) — så «on-app» aldri drifter fra push-definisjonen.
+ *
+ * Fail-open (#1134): en spiller som mangler rad i `lastSeenById` (ukjent
+ * `last_seen_at`) regnes som off-app. Et varsel droppes ALDRI på usikkerhet —
+ * den eneste aksepterte feilretningen er «en redundant rad for mye», aldri
+ * «en manglende rad for en off-app-spiller».
+ */
+export function partitionByAppPresence<T extends { user_id: string }>(
+  players: T[],
+  lastSeenById: Map<string, string | null>,
+): { offApp: T[]; onApp: T[] } {
+  const offApp: T[] = [];
+  const onApp: T[] = [];
+  for (const p of players) {
+    // Manglende rad → `?? null` → shouldSendMailFallback(null) = true = off-app.
+    if (shouldSendMailFallback(lastSeenById.get(p.user_id) ?? null)) {
+      offApp.push(p);
+    } else {
+      onApp.push(p);
+    }
+  }
+  return { offApp, onApp };
+}
 
 /**
  * Best-effort `game_finished`-varsel til alle spillere i ett spill.
@@ -54,14 +82,47 @@ export async function notifyPlayersGameFinished(
  *    (flip-vinneren) — ellers dobles varslene i kappløp cron/E1/admin
  *  - filtrer bort trukkede spillere og evt. aktøren som selv utløste
  *    starten før kallet
+ *
+ * #1134: en spiller som allerede er i appen når spillet flippes, får INGEN
+ * in-app-rad — venterommet refresher via realtime og spilleren ser starten
+ * uansett. Kun off-app-spillere (målt på `last_seen_at`, samme terskel som
+ * push) beholder raden, så de får varselet ved retur. Gaten ligger her, i den
+ * ene fan-out-helperen alle tre start-veier kaller, ikke i den hot-path-delte
+ * `notify()`-primitiven.
  */
 export async function notifyPlayersGameStarted(
   players: Array<{ user_id: string }>,
   game: { id: string; name: string },
   logPrefix: string,
 ): Promise<void> {
+  if (players.length === 0) return;
+
+  const admin = getAdminClient();
+  const { data, error } = await admin
+    .from('users')
+    .select('id, last_seen_at')
+    .in(
+      'id',
+      players.map((p) => p.user_id),
+    )
+    .returns<{ id: string; last_seen_at: string | null }[]>();
+
+  const lastSeenById = new Map<string, string | null>();
+  if (error) {
+    // Fail-open: uten last_seen_at kan vi ikke skille on- fra off-app, så vi
+    // beholder raden for ALLE (tom map → alle regnes off-app). En redundant
+    // rad er akseptabelt; en tapt rad for en off-app-spiller er ikke.
+    console.error(`[${logPrefix}] game_started last_seen_at lookup failed`, error);
+  } else {
+    for (const row of data ?? []) {
+      lastSeenById.set(row.id, row.last_seen_at);
+    }
+  }
+
+  const { offApp } = partitionByAppPresence(players, lastSeenById);
+
   const results = await Promise.allSettled(
-    players.map((p) =>
+    offApp.map((p) =>
       notify({
         userId: p.user_id,
         kind: 'game_started',
