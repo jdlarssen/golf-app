@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import {
   MAX_PIN_ACCURACY_M,
   MAX_DISPLAY_DISTANCE_M,
@@ -55,6 +57,38 @@ describe('isAcceptablePinAccuracy — the 30 m pin quality cap', () => {
   ])('%s → %s', (_label, accuracyM, expected) => {
     expect(isAcceptablePinAccuracy(accuracyM as number | null | undefined)).toBe(
       expected,
+    );
+  });
+});
+
+/**
+ * Trap #4 agreement test (cf. lib/courses/teeRatingDbCheck.test.ts): the gate
+ * constants live in TWO homes — pinRules.ts (app layer) and the plpgsql
+ * constants inside `green_pins_gate` in 0142 (the outer guard against hostile
+ * mass-insert). A change to one without the other must fail loudly here.
+ */
+describe('pin gate constants: TS ↔ DB trigger parity (trap #4)', () => {
+  const MIGRATION_FILE = path.resolve(
+    __dirname,
+    '../../supabase/migrations/0142_green_pins.sql',
+  );
+
+  function extractTriggerConstant(name: string): number {
+    const content = fs.readFileSync(MIGRATION_FILE, 'utf-8');
+    const m = content.match(
+      new RegExp(`${name}\\s+constant\\s+int\\s*:=\\s*(\\d+)`, 'i'),
+    );
+    if (!m) throw new Error(`Could not parse ${name} in 0142_green_pins.sql`);
+    return Number(m[1]);
+  }
+
+  it('PIN_GATE_MAX_PINS matches the trigger', () => {
+    expect(extractTriggerConstant('pin_gate_max_pins')).toBe(PIN_GATE_MAX_PINS);
+  });
+
+  it('PIN_GATE_WINDOW_DAYS matches the trigger', () => {
+    expect(extractTriggerConstant('pin_gate_window_days')).toBe(
+      PIN_GATE_WINDOW_DAYS,
     );
   });
 });

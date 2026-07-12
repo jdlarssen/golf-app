@@ -839,6 +839,56 @@ export type Database = {
           },
         ]
       }
+      // TODO: regen after prod apply of 0142 (hand-extended from staging —
+      // npm run gen:types reads PROD, which doesn't have green_pins yet).
+      green_pins: {
+        Row: {
+          accuracy_m: number | null
+          course_id: string
+          created_at: string
+          hole_number: number
+          id: string
+          lat: number
+          lng: number
+          user_id: string | null
+        }
+        Insert: {
+          accuracy_m?: number | null
+          course_id: string
+          created_at?: string
+          hole_number: number
+          id?: string
+          lat: number
+          lng: number
+          user_id?: string | null
+        }
+        Update: {
+          accuracy_m?: number | null
+          course_id?: string
+          created_at?: string
+          hole_number?: number
+          id?: string
+          lat?: number
+          lng?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "green_pins_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "green_pins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_join_requests: {
         Row: {
           created_at: string
