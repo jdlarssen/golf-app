@@ -46,6 +46,14 @@ export interface HoleHeroProps {
    * plasskampen). `TOTAL_HOLES` (18) er single source of truth for verdien.
    */
   totalHoles?: number;
+  /**
+   * Valgfri avstandslinje («~X m til green», #1210) plassert i høyre kolonne
+   * rett under indeks-linja. Egen slot — IKKE contextLine (den er opptatt av
+   * modus-bannere i Wolf/Skins/RR/Florida, og avstanden er format-uavhengig).
+   * Sitter i høyre-kolonnens eksisterende høyde, så den tar null ny vertikal
+   * plass (#639/#939-plasskampen).
+   */
+  distanceLine?: ReactNode;
 }
 
 const containerStyle: CSSProperties = {
@@ -127,7 +135,7 @@ const indexStyle: CSSProperties = {
 };
 
 export function HoleHero(props: HoleHeroProps): JSX.Element {
-  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine, puttsToggle, totalHoles } = props;
+  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine, puttsToggle, totalHoles, distanceLine } = props;
   const t = useTranslations('holes.entry');
   const ts = useTranslations('scorecard');
   const showAside = parByGender ? hasParDifference(parByGender) : false;
@@ -162,6 +170,7 @@ export function HoleHero(props: HoleHeroProps): JSX.Element {
             )}
           </div>
           <div style={indexStyle}>{t('hullIndex', { si: strokeIndex })}</div>
+          {distanceLine}
         </div>
       </div>
     </div>

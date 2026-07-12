@@ -1938,6 +1938,19 @@
       "savedRecently": "Saved recently",
       "waitingForNetwork": "Saved on your phone · sends when you're back online"
     },
+    "distance": {
+      "line": "~{m} m to the green",
+      "showButton": "Show distance",
+      "deniedHint": "No GPS access"
+    },
+    "greenPin": {
+      "prompt": "Standing by the green? Save the spot",
+      "saving": "Saving…",
+      "thanks": "Spot saved — thanks!",
+      "weakGps": "The GPS signal is too weak right now",
+      "denied": "Couldn't access your location",
+      "failed": "Couldn't save the spot — try again"
+    },
     "onboarding": {
       "prefix": "Try this:",
       "text": "Tap the top card to set par. Use + and − to adjust.",
