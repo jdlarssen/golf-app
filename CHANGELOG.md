@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.202 · Avstand til green på hullskjermen</strong></summary>
+
+[#1210](https://github.com/jdlarssen/golf-app/issues/1210) — Hullskjermen viser nå «~X m til green» fra din egen GPS-posisjon. Avstanden bygger på punkter dere samler inn selv: etter at du har tastet score ved greenen, lagrer du posisjonen med ett trykk — jo flere som pinner, jo bedre treffer tallet.
+
+↳ /games · «Se avstanden»
+</details>
+
+<details>
 <summary><strong>1.201 · Bla i åpne turneringer før du logger inn</strong></summary>
 
 [#1185](https://github.com/jdlarssen/golf-app/issues/1185) — Nå trenger du ikke konto for å se hva som er på gang. Kommer du til Tørny uinnlogget, møter du en liste over åpne turneringer du kan bli med i. Trykk deg inn på en for å se den nærmere, og logg inn når du vil melde deg på.

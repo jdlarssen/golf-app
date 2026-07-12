@@ -26,6 +26,9 @@ import type {
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
+import { computeGreenCenter } from '@/lib/geo/greenCenter';
+import { PIN_GATE_MAX_PINS, PIN_GATE_WINDOW_DAYS } from '@/lib/geo/pinRules';
+import type { LatLng } from '@/lib/geo/distance';
 import { HoleClient, type ClientPlayer } from './HoleClient';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -186,6 +189,7 @@ export default async function HolePage({ params }: { params: Params }) {
     skinsAllHolesRes,
     bbbHolesData,
     patsomeTeeStarterRes,
+    greenPinsRes,
   ] = await Promise.all([
       supabase
         .from('course_holes')
@@ -265,11 +269,48 @@ export default async function HolePage({ params }: { params: Params }) {
             .eq('team_number', me.team_number)
             .maybeSingle<{ tee_starter_user_id: string }>()
         : Promise.resolve({ data: null, error: null }),
+      // #1210: hullets green-pins. Course-data, holdt UTENFOR game-${id}-
+      // cachen (samme begrunnelse som courses/tee_boxes-joinen). Eksplisitt
+      // kolonneliste — user_id er ikke klient-lesbar (kolonne-privilegium,
+      // 0142), så en select * ville feilet.
+      game.course_id
+        ? supabase
+            .from('green_pins')
+            .select('lat, lng, created_at')
+            .eq('course_id', game.course_id)
+            .eq('hole_number', holeNumber)
+            .returns<{ lat: number; lng: number; created_at: string }[]>()
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
   const { data: hole, error: holeError } = holeRes;
   if (holeError || !hole) notFound();
   if (scoresRes.error) throw scoresRes.error;
+
+  // #1210: green-senter (per-akse-median) + fresh pin-count for chip-gaten.
+  // Fail-soft: en feil her (f.eks. miljø der 0142 ikke er påført ennå) skjuler
+  // featuren i stedet for å felle hull-siden — senter null (ingen linje) og
+  // gate stengt (ingen chip).
+  let greenCenter: LatLng | null = null;
+  let freshPinCount = PIN_GATE_MAX_PINS;
+  if (greenPinsRes.error) {
+    console.error('[holes] green_pins fetch failed — distance feature hidden', {
+      gameId: id,
+      holeNumber,
+      error: greenPinsRes.error,
+    });
+  } else if (greenPinsRes.data) {
+    greenCenter = computeGreenCenter(
+      greenPinsRes.data.map((p) => ({ lat: p.lat, lng: p.lng })),
+    );
+    // Snapshot "now" once per request — same purity-lint carve-out as game-home
+    // (this is a server component; the snapshot is a server-side now()).
+    // eslint-disable-next-line react-hooks/purity
+    const windowCutoffMs = Date.now() - PIN_GATE_WINDOW_DAYS * 86_400_000;
+    freshPinCount = greenPinsRes.data.filter(
+      (p) => new Date(p.created_at).getTime() > windowCutoffMs,
+    ).length;
+  }
 
   const scoresByUser: Record<string, ScoreRow> = {};
   for (const s of scoresRes.data ?? []) scoresByUser[s.user_id] = s;
@@ -769,6 +810,9 @@ export default async function HolePage({ params }: { params: Params }) {
         myUserId={userId}
         myTeamNumber={me.team_number}
         myCompletedHoles={myCompletedHoles}
+        courseId={game.course_id}
+        greenCenter={greenCenter}
+        freshPinCount={freshPinCount}
         myStablefordTotal={myStablefordTotal}
         myStablefordForCurrentHole={myStablefordForCurrent}
         hideNetto={hideNetto}

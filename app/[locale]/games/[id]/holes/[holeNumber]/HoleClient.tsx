@@ -22,6 +22,10 @@ import { ScoreCard } from '@/components/hole/ScoreCard';
 import { PuttsField } from '@/components/hole/PuttsField';
 import { HoleStrip } from '@/components/hole/HoleStrip';
 import { HoleHero } from '@/components/hole/HoleHero';
+import { DistanceToGreen } from '@/components/hole/DistanceToGreen';
+import { GreenPinChip } from '@/components/hole/GreenPinChip';
+import { PIN_GATE_MAX_PINS } from '@/lib/geo/pinRules';
+import type { LatLng } from '@/lib/geo/distance';
 import { OnboardingBanner } from '@/components/hole/OnboardingBanner';
 import { SyncStatusLine } from '@/components/hole/SyncStatusLine';
 import { BottomActionBar } from '@/components/hole/BottomActionBar';
@@ -124,6 +128,24 @@ export interface HoleClientProps {
    * navigate back to hole 18 to find the submit action.
    */
   myCompletedHoles: number;
+  /**
+   * Banens course_id (#1210) — trengs av green-pin-chippen for insert.
+   * Null når spillet mangler bane (chip og avstandslinje skjules da).
+   */
+  courseId?: string | null;
+  /**
+   * Crowdsourcet green-senter for hullet (#1210): per-akse-median av
+   * green_pins, ferdigregnet server-side i page.tsx (lib/geo/greenCenter.ts).
+   * Null når hullet ikke har pins — da vises ingen avstandslinje.
+   */
+  greenCenter?: LatLng | null;
+  /**
+   * Antall pins nyere enn PIN_GATE_WINDOW_DAYS for hullet, server-talt ved
+   * page-load (#1210). Chip-gaten: vises kun når < PIN_GATE_MAX_PINS. Stale
+   * i løpet av runden er akseptert (verste fall pin #4 — DB-triggeren
+   * green_pins_gate er ytre vakt).
+   */
+  freshPinCount?: number;
   /**
    * Stableford-totalen til brukeren server-side ved render (summen av
    * stableford-poeng over alle ferdig-tastede hull). Null for best-ball.
@@ -271,6 +293,9 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     myUserId,
     myTeamNumber = null,
     myCompletedHoles,
+    courseId = null,
+    greenCenter = null,
+    freshPinCount = 0,
     myStablefordTotal = null,
     myStablefordForCurrentHole = null,
     hideNetto = false,
@@ -640,6 +665,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const submitted = me?.submitted ?? false;
   const disabled = gameInactive || submitted;
 
+  // #1210: chip-triggeren er TASTINGS-ØKTEN — minst ett onSetScore-kall på
+  // hullet, uansett hvilket kort det gjelder (alle kall tastes av brukeren
+  // selv, enteredBy = myUserId). Bevisst IKKE playerId === myUserId: i
+  // team-collapsed-modi er kortets playerId lag-representantens, så et
+  // eierskaps-vilkår ville ekskludert ikke-kapteiner (#1058-fella).
+  // onSetPutts holdes utenfor (putter tastes gjerne i etterkant).
+  const [scoredThisSession, setScoredThisSession] = useState(false);
+
   async function onSetScore(playerId: string, value: number) {
     if (disabled) return;
     await writeScore({
@@ -649,6 +682,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       strokes: value,
       enteredBy: myUserId,
     });
+    setScoredThisSession(true);
     pulseSync();
     void drainQueue();
     if (showHint) dismissHint();
@@ -906,6 +940,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         strokeIndex={strokeIndex}
         contextLine={holeContextLine}
         puttsToggle={puttsTogglePill}
+        distanceLine={<DistanceToGreen center={greenCenter} />}
       />
 
       <OnboardingBanner visible={showHint} onDismiss={dismissHint} />
@@ -1001,6 +1036,17 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             pendingCount={pendingCount}
           />
         )}
+        {/* #1210: green-pin-chip ved SyncStatusLine-plassen. Gates: tastings-
+            økten (se scoredThisSession), fresh pin-gate (server-talt) og
+            aktivt spill; online-sjekken eier chippen selv. */}
+        {courseId != null &&
+          scoredThisSession &&
+          freshPinCount < PIN_GATE_MAX_PINS &&
+          !gameInactive && (
+            <div style={{ marginTop: 8 }}>
+              <GreenPinChip courseId={courseId} holeNumber={currentHole} />
+            </div>
+          )}
       </div>
 
       {/* Bingo Bango Bongo — additiv seksjon under slag-padden, speiler

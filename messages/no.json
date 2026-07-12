@@ -1938,6 +1938,19 @@
       "savedRecently": "Lagret nylig",
       "waitingForNetwork": "Lagret på telefonen · sendes når nettet er tilbake"
     },
+    "distance": {
+      "line": "~{m} m til green",
+      "showButton": "Vis avstand",
+      "deniedHint": "Ingen GPS-tilgang"
+    },
+    "greenPin": {
+      "prompt": "Står du ved greenen? Lagre punkt",
+      "saving": "Lagrer…",
+      "thanks": "Punkt lagret — takk!",
+      "weakGps": "GPS-signalet er for svakt akkurat nå",
+      "denied": "Fikk ikke tilgang til posisjonen din",
+      "failed": "Kunne ikke lagre punktet — prøv igjen"
+    },
     "onboarding": {
       "prefix": "Prøv dette:",
       "text": "Trykk på det øverste kortet for å sette par. Bruk + og − for å justere.",
