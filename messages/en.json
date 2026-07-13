@@ -3657,9 +3657,6 @@
       "ownerEmailLabel": "Owner's email",
       "ownerEmailPlaceholder": "owner@example.com",
       "ownerEmailHint": "The person must already have a Tørny account.",
-      "memberCapLabel": "Member cap (optional)",
-      "memberCapPlaceholder": "E.g. 150",
-      "memberCapHint": "Leave empty for unlimited.",
       "submitButton": "Create club",
       "submitPending": "Creating…",
       "errors": {
@@ -3667,7 +3664,6 @@
         "name_req": "Please enter a club name.",
         "too_long": "The club name cannot be longer than 60 characters.",
         "email_req": "Please enter the owner's email address.",
-        "cap_invalid": "The member cap must be at least 1.",
         "owner_not_found": "No Tørny user found with the email {email}. Ask them to create an account first.",
         "owner_not_found_generic": "No Tørny user found with that email address. Ask them to create an account first.",
         "unknown": "Something went wrong. Please try again."

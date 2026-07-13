@@ -10,16 +10,12 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
-import { VarighetField } from '../VarighetField';
 import { createClubForAdmin } from './actions';
 
 type SearchParams = Promise<{
   error?: string | string[];
   email?: string | string[];
   name?: string | string[];
-  member_cap?: string | string[];
-  varighet_mode?: string | string[];
-  sluttdato?: string | string[];
 }>;
 
 const requireAdminContext = cache(async () => {
@@ -30,8 +26,9 @@ const requireAdminContext = cache(async () => {
 /**
  * /admin/klubber/ny — admin create-club form.
  *
- * Admin-only. Creates a club with a named owner (who must already have a
- * Tørny account), optional member cap, and optional valid_until date.
+ * Admin-only. Creates a club with just a name + a named owner (who must already
+ * have a Tørny account). Member cap and duration are set afterwards on the club's
+ * detail page, so the create form stays down to the two required fields.
  *
  * Part of #50 (Klubb-eierskap, delegering & tilgangsstyring).
  */
@@ -48,9 +45,6 @@ export default async function NyKlubbPage({
   // #645: re-populate the form from the values echoed by the action on a
   // validation-error redirect, so only the offending field needs fixing.
   const prevName = first(sp.name) ?? '';
-  const prevMemberCap = first(sp.member_cap) ?? '';
-  const prevVarighetMode = first(sp.varighet_mode) === 'dato' ? 'dato' : 'uendelig';
-  const prevSluttdato = first(sp.sluttdato) ?? '';
 
   const t = await getTranslations('klubb');
 
@@ -94,18 +88,6 @@ export default async function NyKlubbPage({
             hint={t('create.ownerEmailHint')}
             required
           />
-          <Input
-            id="member_cap"
-            name="member_cap"
-            type="number"
-            label={t('create.memberCapLabel')}
-            placeholder={t('create.memberCapPlaceholder')}
-            defaultValue={prevMemberCap}
-            min={1}
-            hint={t('create.memberCapHint')}
-          />
-
-          <VarighetField defaultMode={prevVarighetMode} defaultDate={prevSluttdato} />
 
           <SubmitButton className="w-full" pendingLabel={t('create.submitPending')}>
             {t('create.submitButton')}

@@ -3657,9 +3657,6 @@
       "ownerEmailLabel": "Eierens e-post",
       "ownerEmailPlaceholder": "eier@eksempel.no",
       "ownerEmailHint": "Personen må ha Tørny-konto fra før.",
-      "memberCapLabel": "Medlemstak (valgfritt)",
-      "memberCapPlaceholder": "F.eks. 150",
-      "memberCapHint": "La stå tom for ubegrenset.",
       "submitButton": "Opprett klubb",
       "submitPending": "Oppretter …",
       "errors": {
@@ -3667,7 +3664,6 @@
         "name_req": "Fyll inn et klubbnavn.",
         "too_long": "Klubbnavnet kan ikke være lengre enn 60 tegn.",
         "email_req": "Fyll inn eierens e-postadresse.",
-        "cap_invalid": "Medlemstaket må være minst 1.",
         "owner_not_found": "Fant ingen Tørny-bruker med e-posten {email}. Be dem opprette konto først.",
         "owner_not_found_generic": "Fant ingen Tørny-bruker med den e-posten. Be dem opprette konto først.",
         "unknown": "Noe gikk galt. Prøv igjen."
