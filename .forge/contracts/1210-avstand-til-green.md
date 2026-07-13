@@ -136,25 +136,46 @@ om `watchPosition` også pauses ved `blur`; avrunding (hel meter vs. nærmeste 5
 
 ## Success Criteria
 
-1. `green_pins` finnes på staging med RLS-settet over; ny `supabase/tests/green_pins_rls_test.sql`
+1. ✅ `green_pins` finnes på staging med RLS-settet over; ny `supabase/tests/green_pins_rls_test.sql`
    asserter: SELECT ok (uten `user_id`-kolonnen — kolonne-privilegiet testes), INSERT m/
    forfalsket `user_id` blokkeres, INSERT m/ `user_id` NULL blokkeres, anon-rollen har null
    tilgang, UPDATE blokkeres totalt, DELETE av andres pin blokkeres, og insert nr. 4 innenfor
    vinduet avvises av `green_pins_gate` (`npm run test:rls`; CLI-SKIP → `VERIFICATION GAP:
    test:rls not run`).
-2. `lib/geo/distance.test.ts` + `greenCenter.test.ts` + `pinRules.test.ts` dekker designdok-
+   **Bevis:** 0142 påført staging via MCP `apply_migration`; introspeksjon bekreftet 8 kolonner,
+   3 policies (ingen UPDATE), RLS på, authenticated SELECT-kolonner = alle unntatt `user_id`,
+   anon 0 grants, trigger + SECURITY DEFINER, `anonymize_user` rører green_pins. Gate-trip på
+   pin #4 + lat-CHECK verifisert med DO-blokk-probe på staging (opprydda etterpå). pgTAP-fila
+   skrevet (18 asserts). `VERIFICATION GAP: test:rls not run` — CLI finnes, men ingen lokal
+   Postgres-stack (port 54322 refused).
+2. ✅ `lib/geo/distance.test.ts` + `greenCenter.test.ts` + `pinRules.test.ts` dekker designdok-
    edge-tabellen (`it.each`), inkl. `shouldShowDistance`-terskelen (≤/> 1 km) og paritetstesten
    gate-konstanter TS ↔ DB-trigger — alle grønne.
-3. Hull med ≥ 1 pin viser «~X m til green» når posisjon finnes og avstand ≤ 1 km; hull uten
-   pins viser ingen linje; nøyaktig ÉN Type C-rendertest låser vises/skjules på senter-prop
-   (terskellogikken er Type A-testet i `shouldShowDistance`, ikke i rendertesten).
-4. Pinning ende-til-ende på staging: score tastet → chip → trykk → rad i `green_pins` m/
+   **Bevis:** `npx vitest run lib/geo` → 34/34 grønne (rød-før-grønn: 3 filer feilet før
+   implementasjon). Paritetstesten regex-leser 0142 og matcher `PIN_GATE_MAX_PINS`/`_WINDOW_DAYS`.
+3. ✅ Hull med ≥ 1 pin viser «~X m til green» når posisjon finnes og avstand ≤ 1 km; hull uten
+   pins viser ingen linje; nøyaktig ÉN Type C-rendertest låser vises/skjules på senter-prop.
+   **Bevis:** Playwright-drive på staging (hull 3, seedet pin 150 m unna): «~150 m til green»
+   eksakt; > 1 km (setGeolocation 2 km) → linja forsvant; hull 2 uten pins → ingen linje;
+   auto-start ved revisit (granted husket). Type C-test: `components/hole/DistanceToGreen.test.tsx`
+   (én it, null-senter → tomt, senter → «Vis avstand»).
+4. ✅ Pinning ende-til-ende på staging: score tastet → chip → trykk → rad i `green_pins` m/
    riktig `course_id`/`hole_number`/`user_id` (SELECT-verifisert); accuracy > 30 m avvises;
-   offline → chip vises ikke. Verifiser OGSÅ at chippen vises i ett team-collapsed-spill
-   (f.eks. Texas scramble) etter tasting — triggeren er tastings-økten, ikke `playerId`.
-5. `anonymize_user` på staging nuller `green_pins.user_id`; pin-raden består (SELECT før/etter).
-6. `catalogParity` grønn (no+en), norsk copy humanizer-kjørt; MINOR-bump + CHANGELOG
+   offline → chip vises ikke. Chippen vises også i team-collapsed-spill etter tasting.
+   **Bevis:** Playwright-drive 13/13 sjekker. SELECT etter drive: rad (hull 2, accuracy 8,
+   `user_id` = e2e-spiller, riktig course). Accuracy 65 → weakGps-avvisning klient-side, INGEN
+   rad for hull 4. `setOffline(true)` → chip borte; online igjen → tilbake. Seedet
+   texas_scramble-spill (2 lag-kort): chip etter +1-tasting ✓. Skjermbilder:
+   1210-distance-line/chip/thanks/texas-chip.png.
+5. ✅ `anonymize_user` på staging nuller `green_pins.user_id`; pin-raden består (SELECT før/etter).
+   **Bevis:** DO-blokk på staging: engangs-bruker + pin → `anonymize_user` → user_id NULL,
+   raden består — proben raiser ved avvik og passerte; alt opprydda.
+6. ✅ `catalogParity` grønn (no+en), norsk copy humanizer-kjørt; MINOR-bump + CHANGELOG
    Funksjon-rad; alle commits `Refs #1210`.
+   **Bevis:** `npx vitest run messages/catalogParity.test.ts` → 2/2. Humanizer-skill kjørt på de
+   9 nye strengene (designdok-låst copy beholdt). Bump 1.201.4 → 1.202.0 (minor) + CHANGELOG-
+   oppføring «1.202 · Avstand til green på hullskjermen» m/ `↳ /games · «Se avstanden»`.
+   Full suite 4894/4894, `npm run build` exit 0, lint 0 errors.
 
 ## Gates
 
