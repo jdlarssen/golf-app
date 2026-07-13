@@ -139,7 +139,12 @@ export function GreenPinChip({
         setState('idle');
         setErrorKey(err.code === err.PERMISSION_DENIED ? 'denied' : 'failed');
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      // maximumAge 15 s: spilleren står stille ved greenen, så et nylig fix
+      // (typisk fra DistanceToGreen-watchen som allerede kjører) er like
+      // gyldig som et ferskt — og accuracy-verdien følger med uansett.
+      // maximumAge: 0 fikk dessuten emulert geolocation (Playwright/CDP) til
+      // å time ut konsekvent, så 0 er også utestbart.
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 },
     );
   }
 
