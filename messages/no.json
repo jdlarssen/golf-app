@@ -3774,9 +3774,6 @@
       "goToClubButton": "Gå til klubben",
       "subtitle": "Be om å bli med. Eieren godkjenner deg eller avslår.",
       "sentBanner": "Forespørselen er sendt. Eieren må godkjenne den før du er med.",
-      "messageLabel": "Hilsen (valgfritt)",
-      "messagePlaceholder": "Kort beskjed til eieren (hvem er du?)",
-      "messageHint": "Maks 200 tegn.",
       "submitButton": "Be om å bli med",
       "submitPending": "Sender forespørsel …",
       "errors": {

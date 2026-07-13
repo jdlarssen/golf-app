@@ -28,7 +28,7 @@ type SearchParams = Promise<{
  *   - Club not found → 404
  *   - Already a member → confirmation card with link to club
  *   - Pending request exists (sent=1) → «Forespørselen er sendt» banner
- *   - Otherwise → club name + «Be om å bli med» form with optional message
+ *   - Otherwise → club name + «Be om å bli med» form
  *
  * Part of #442 (Opprett klubb — eierskap + klubb-scoped oppdagbarhet).
  */
@@ -141,23 +141,6 @@ export default async function BliMedPage({
         <Card>
           <form action={requestToJoin} className="space-y-4">
             <input type="hidden" name="shortId" value={shortId} />
-            <div>
-              <label
-                htmlFor="join-message"
-                className="mb-1.5 block font-sans text-[13px] font-medium text-muted"
-              >
-                {t('messageLabel')}
-              </label>
-              <textarea
-                id="join-message"
-                name="message"
-                rows={3}
-                maxLength={200}
-                placeholder={t('messagePlaceholder')}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 font-sans text-[15px] text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-              />
-              <p className="mt-1 font-sans text-xs text-muted">{t('messageHint')}</p>
-            </div>
             <SubmitButton className="w-full" pendingLabel={t('submitPending')}>
               {t('submitButton')}
             </SubmitButton>

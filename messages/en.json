@@ -3774,9 +3774,6 @@
       "goToClubButton": "Go to club",
       "subtitle": "Request to join. The owner will approve or decline.",
       "sentBanner": "Request sent. The owner must approve it before you join.",
-      "messageLabel": "Message (optional)",
-      "messagePlaceholder": "A short note to the owner (who are you?)",
-      "messageHint": "Max 200 characters.",
       "submitButton": "Request to join",
       "submitPending": "Sending request…",
       "errors": {
