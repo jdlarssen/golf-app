@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.203 · Opprett klubb på to felt</strong></summary>
+
+[#1137](https://github.com/jdlarssen/golf-app/issues/1137) — Å opprette en klubb spør nå bare om navn og eierens e-post. Medlemstak og varighet setter du på klubbsiden etterpå, når klubben først er oppe.
+
+↳ /admin/klubber/ny · «Opprett klubb»
+</details>
+
+<details>
 <summary><strong>1.202 · Avstand til green på hullskjermen</strong></summary>
 
 [#1210](https://github.com/jdlarssen/golf-app/issues/1210) — Hullskjermen viser nå «~X m til green» fra din egen GPS-posisjon. Avstanden bygger på punkter dere samler inn selv: etter at du har tastet score ved greenen, lagrer du posisjonen med ett trykk — jo flere som pinner, jo bedre treffer tallet.
