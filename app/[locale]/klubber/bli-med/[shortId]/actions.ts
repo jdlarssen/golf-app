@@ -6,8 +6,6 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 
-const MESSAGE_MAX = 200;
-
 /**
  * Sjekk om PG-error er UNIQUE-violation (23505) eller inneholder "duplicate"
  * i meldingen. Speiler signup/[shortId]/actions.ts-mønsteret.
@@ -58,10 +56,6 @@ async function getRequesterName(userId: string): Promise<string> {
  */
 export async function requestToJoin(formData: FormData) {
   const shortId = String(formData.get('shortId') ?? '').trim();
-  const rawMessage = String(formData.get('message') ?? '').trim();
-  const message = rawMessage.length > 0 && rawMessage.length <= MESSAGE_MAX
-    ? rawMessage
-    : null;
 
   const locale = await getLocale();
 
@@ -106,7 +100,6 @@ export async function requestToJoin(formData: FormData) {
       group_id: group!.id,
       user_id: user!.id,
       status: 'pending',
-      message,
     });
 
   if (insertError) {

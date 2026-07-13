@@ -1301,8 +1301,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 21 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 22 rettinger</strong></summary>
 
+- `1.201.5` · [#1136](https://github.com/jdlarssen/golf-app/issues/1136) — Å be om å bli med i en klubb via lenke er ett trykk unna: det valgfrie hilsen-feltet er borte, så du bare trykker «Be om å bli med».
 - `1.201.4` · [#1135](https://github.com/jdlarssen/golf-app/issues/1135) — Klubbsiden er ryddigere: «Legg til på e-post» og «Del klubb-lenke» bor nå i samme invitér-kort, og tomme liga- og cup-seksjoner er borte for vanlige medlemmer, så du slipper døde overskrifter mellom medlemslista og «Sett opp runde».
 - `1.197.1` · [#1134](https://github.com/jdlarssen/golf-app/issues/1134) — Sitter du i appen når en planlagt runde går live, slipper du nå den overflødige «runden er i gang»-meldingen i innboksen. Den går bare til dem som er ute av appen, så de fanger den opp når de kommer tilbake.
 - `1.191.1` · [#1174](https://github.com/jdlarssen/golf-app/issues/1174) — Påminnelsen om å levere scorekortet sier nå rett ut at slagene dine ikke teller før du leverer, i stedet for den gamle nøytrale ordlyden. Samme dytt i innboksen.
