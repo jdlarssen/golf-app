@@ -86,10 +86,10 @@ export type InitialValues = {
   /** Antall CTP-vinnere (0/1/2). Krever side_tournament_enabled=true. */
   side_ctp_count?: number;
   /**
-   * v1.2.0 — kategorier som er slått av for dette spillet. Tomt array = Full
-   * pakke (alle på). For NYE spill defaultes denne til `CLASSIC_DISABLED_CATEGORIES`
-   * av GameForm hvis ikke satt — dvs. spill-opprett-flyten starter på Klassisk
-   * (matcher v1.1.x-oppførsel for spill opprettet før v1.2.0).
+   * Kategorier som er slått av for dette spillet. Tomt array = Full pakke
+   * (alle på). Kategori-config-UI-en er fjernet (#1139): nye spill får alltid
+   * Full pakke. Feltet lastes fortsatt for eldre spill (lese-siden leser
+   * `games.side_disabled_categories`), men konsumeres ikke lenger av noen picker.
    */
   side_disabled_categories?: readonly SideCategoryId[];
   /** Lås feltene (når status er active/finished). */

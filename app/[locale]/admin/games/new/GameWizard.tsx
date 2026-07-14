@@ -795,7 +795,6 @@ function FormDataInputs({
     sideEnabled,
     sideLdCount,
     sideCtpCount,
-    sideDisabledCategories,
   } = state;
 
   // Alle controlled state-verdier serialiseres som hidden inputs UANSETT
@@ -806,13 +805,12 @@ function FormDataInputs({
   // rekkefølge. Dette gir et enkelt mental-modell: server-action mottar
   // FULL state uavhengig av hvilket steg admin publiserer fra.
   //
-  // #1011: side_tournament_enabled, side_ld_count, side_ctp_count og
-  // side_disabled_categories er nå controlled state (useGameFormState) og
-  // speiles her akkurat som resten — dermed overlever de selv om ReadyStep
-  // sin advanced-disclosure er lukket ved publish/draft. AdvancedSettings-
-  // Section rendrer de samme feltene UTEN `name`-attributt (kun controlled
-  // UI) mens disclosure er åpen, så FormData ikke får duplikat-navn med
-  // avvikende verdier.
+  // #1011: side_tournament_enabled, side_ld_count og side_ctp_count er nå
+  // controlled state (useGameFormState) og speiles her akkurat som resten —
+  // dermed overlever de selv om ReadyStep sin advanced-disclosure er lukket
+  // ved publish/draft. AdvancedSettingsSection rendrer de samme feltene UTEN
+  // `name`-attributt (kun controlled UI) mens disclosure er åpen, så FormData
+  // ikke får duplikat-navn med avvikende verdier.
   //
   // score_visibility-radioene er fortsatt uncontrolled og kun synlige inne
   // i disclosure-en — utenfor scope for #1011 (ikke en datatap-bug: default
@@ -828,14 +826,6 @@ function FormDataInputs({
         <>
           <input type="hidden" name="side_ld_count" value={String(sideLdCount)} />
           <input type="hidden" name="side_ctp_count" value={String(sideCtpCount)} />
-          {sideDisabledCategories.map((id) => (
-            <input
-              key={id}
-              type="hidden"
-              name="side_disabled_categories"
-              value={id}
-            />
-          ))}
         </>
       )}
       <input type="hidden" name="game_mode" value={gameMode} />

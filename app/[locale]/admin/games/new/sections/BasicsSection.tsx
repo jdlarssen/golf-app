@@ -15,7 +15,6 @@ import type { CourseOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { SideCategoriesPicker } from '@/components/admin/SideCategoriesPicker';
 
 type Props = {
   state: GameFormState;
@@ -83,7 +82,6 @@ export function BasicsSection({
     setSideEnabled,
     sideTournamentSupported,
     lockSideTournament,
-    initialDisabledCategories,
     initialLdCount,
     initialCtpCount,
   } = state;
@@ -287,14 +285,6 @@ export function BasicsSection({
                   <p className="text-xs text-muted">
                     {t('sideTournamentPointsHint')}
                   </p>
-
-                  {/* v1.2.0: kategori-velger. Lever sin egne hidden inputs for
-                      `side_disabled_categories`; LD/CTP-tellerne under er
-                      separate fordi de styrer antall-slots, ikke ja/nei. */}
-                  <SideCategoriesPicker
-                    defaultDisabledCategories={initialDisabledCategories}
-                    locked={lockSideTournament}
-                  />
 
                   <fieldset>
                     <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
