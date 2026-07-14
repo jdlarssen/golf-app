@@ -19,7 +19,6 @@
 
 import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
-import { SideCategoriesPicker } from '@/components/admin/SideCategoriesPicker';
 import { PrizesSection } from './PrizesSection';
 
 type Props = {
@@ -66,8 +65,6 @@ export function AdvancedSettingsSection({
     setSideLdCount,
     sideCtpCount,
     setSideCtpCount,
-    sideDisabledCategories,
-    setSideDisabledCategories,
     sideTournamentSupported,
     lockSideTournament,
   } = state;
@@ -189,13 +186,6 @@ export function AdvancedSettingsSection({
                   <p className="text-xs text-muted">
                     {tBasics('sideTournamentPointsHint')}
                   </p>
-
-                  <SideCategoriesPicker
-                    disabledCategories={sideDisabledCategories}
-                    onDisabledCategoriesChange={setSideDisabledCategories}
-                    emitHiddenInputs={!serializedExternally}
-                    locked={lockSideTournament}
-                  />
 
                   <fieldset>
                     <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">

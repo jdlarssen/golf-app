@@ -1632,7 +1632,6 @@ describe('GameForm — #1011 sideturnering serialiseres inline', () => {
           side_tournament_enabled: true,
           side_ld_count: 2,
           side_ctp_count: 1,
-          side_disabled_categories: ['most_birdies_team'],
         }}
       />,
     );
@@ -1641,6 +1640,5 @@ describe('GameForm — #1011 sideturnering serialiseres inline', () => {
     expect(fd.getAll('side_tournament_enabled')).toEqual(['true']);
     expect(fd.getAll('side_ld_count')).toEqual(['2']);
     expect(fd.getAll('side_ctp_count')).toEqual(['1']);
-    expect(fd.getAll('side_disabled_categories')).toEqual(['most_birdies_team']);
   });
 });

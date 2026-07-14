@@ -3,9 +3,9 @@ import { parseSideTournamentFromFormData } from './sideTournamentPayload';
 import { ALL_CATEGORY_IDS } from '@/lib/scoring/sideTournamentConfig';
 
 /**
- * Test helper. Mirrors `fd` in `gamePayload.test.ts` but uses `append`
- * (not `set`) for the disabled-categories array, since checkbox arrays
- * submit one entry per selection under the same name.
+ * Test helper. Uses `append` (not `set`) for the disabled-categories array so a
+ * hostile POST can submit one entry per selection under the same name — the
+ * shape the parser must now ignore.
  */
 function fd(
   entries: Record<string, string>,
@@ -17,7 +17,7 @@ function fd(
   return data;
 }
 
-describe('parseSideTournamentFromFormData — disabledCategories', () => {
+describe('parseSideTournamentFromFormData — disabledCategories alltid tom (#1139)', () => {
   it('returns empty disabledCategories when sideturneringen is off', () => {
     const result = parseSideTournamentFromFormData(
       fd({ side_tournament_enabled: 'false' }),
@@ -29,18 +29,7 @@ describe('parseSideTournamentFromFormData — disabledCategories', () => {
     }
   });
 
-  it('ignores submitted disabled-categories when sideturneringen is off', () => {
-    // Even if a stale checkbox were submitted, off → empty array.
-    const result = parseSideTournamentFromFormData(
-      fd({ side_tournament_enabled: 'false' }, ['most_birdies_team']),
-    );
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.payload.disabledCategories).toEqual([]);
-    }
-  });
-
-  it('returns empty disabledCategories when enabled and no checkboxes submitted (Full pakke)', () => {
+  it('returns empty disabledCategories when enabled (Full pakke er eneste oppførsel)', () => {
     const result = parseSideTournamentFromFormData(
       fd({
         side_tournament_enabled: 'true',
@@ -55,7 +44,10 @@ describe('parseSideTournamentFromFormData — disabledCategories', () => {
     }
   });
 
-  it('parses a subset of disabled categories', () => {
+  it('ignores any submitted side_disabled_categories (hostile-POST guard)', () => {
+    // Kategori-config-UI-en er fjernet (#1139). En håndlaget POST kan fortsatt
+    // sende side_disabled_categories — inkludert ugyldige verdier — men parseren
+    // hardkoder tom liste, så ingen kategori kan slås av via serveren.
     const result = parseSideTournamentFromFormData(
       fd(
         {
@@ -63,78 +55,16 @@ describe('parseSideTournamentFromFormData — disabledCategories', () => {
           side_ld_count: '0',
           side_ctp_count: '0',
         },
-        ['most_birdies_team', 'snowman'],
+        [...ALL_CATEGORY_IDS, 'invalid_category'],
       ),
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.payload.disabledCategories).toEqual([
-        'most_birdies_team',
-        'snowman',
-      ]);
+      expect(result.payload.disabledCategories).toEqual([]);
     }
   });
 
-  it('parses all 27 category IDs without rejecting any', () => {
-    // ALL_CATEGORY_IDS is exhaustive per `sideTournamentConfig.ts`. If a new
-    // ID is added there, the parser must accept it without code change here —
-    // this guards that round-trip.
-    const result = parseSideTournamentFromFormData(
-      fd(
-        {
-          side_tournament_enabled: 'true',
-          side_ld_count: '0',
-          side_ctp_count: '0',
-        },
-        [...ALL_CATEGORY_IDS],
-      ),
-    );
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.payload.disabledCategories).toEqual([...ALL_CATEGORY_IDS]);
-      // Sanity check: confirm the public ID list is the size we expect after
-      // v1.19.0 expansion (27 + 18 new bonus-categories from issue #169 = 45).
-      // If this number drifts, the test that asserts "all new category IDs can
-      // be parsed" no longer holds — bump intentionally.
-      expect(ALL_CATEGORY_IDS.length).toBe(45);
-    }
-  });
-
-  it('rejects an unknown category id', () => {
-    const result = parseSideTournamentFromFormData(
-      fd(
-        {
-          side_tournament_enabled: 'true',
-          side_ld_count: '0',
-          side_ctp_count: '0',
-        },
-        ['invalid_category'],
-      ),
-    );
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.errorCode).toBe('bad_side_disabled_categories');
-    }
-  });
-
-  it('rejects when one of several categories is invalid', () => {
-    const result = parseSideTournamentFromFormData(
-      fd(
-        {
-          side_tournament_enabled: 'true',
-          side_ld_count: '0',
-          side_ctp_count: '0',
-        },
-        ['most_birdies_team', 'nope', 'snowman'],
-      ),
-    );
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.errorCode).toBe('bad_side_disabled_categories');
-    }
-  });
-
-  it('combines LD/CTP counts with disabledCategories correctly', () => {
+  it('combines LD/CTP counts, disabledCategories still empty', () => {
     const result = parseSideTournamentFromFormData(
       fd(
         {
@@ -150,21 +80,17 @@ describe('parseSideTournamentFromFormData — disabledCategories', () => {
       expect(result.payload.enabled).toBe(true);
       expect(result.payload.ldCount).toBe(2);
       expect(result.payload.ctpCount).toBe(1);
-      expect(result.payload.disabledCategories).toEqual(['turkey', 'solid']);
+      expect(result.payload.disabledCategories).toEqual([]);
     }
   });
 
-  it('still rejects bad LD count even when disabledCategories are valid', () => {
-    // Ensures count-validation isn't bypassed by the new field.
+  it('still rejects a bad LD count', () => {
     const result = parseSideTournamentFromFormData(
-      fd(
-        {
-          side_tournament_enabled: 'true',
-          side_ld_count: '5',
-          side_ctp_count: '0',
-        },
-        ['turkey'],
-      ),
+      fd({
+        side_tournament_enabled: 'true',
+        side_ld_count: '5',
+        side_ctp_count: '0',
+      }),
     );
     expect(result.ok).toBe(false);
     if (!result.ok) {

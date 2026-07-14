@@ -170,23 +170,3 @@ export const ALL_CATEGORY_IDS: readonly SideCategoryId[] = [
   'worst_single_hole_brutto',
   'most_double_bogeys_individual',
 ] as const;
-
-/**
- * «Klassisk»-preset: kun de seks eksisterende kategoriene fra v1.1.x.
- * Matcher dagens default-oppførsel for spill opprettet før v1.2.0.
- */
-export const CLASSIC_ENABLED_CATEGORIES: readonly SideCategoryId[] = [
-  'best_netto_18',
-  'best_netto_f9',
-  'best_netto_b9',
-  'hole_win',
-  'longest_drive',
-  'closest_to_pin',
-] as const;
-
-/**
- * Avledet: alle kategorier som IKKE er i Klassisk. Lagres i
- * `games.side_disabled_categories` når brukeren velger Klassisk-preset.
- */
-export const CLASSIC_DISABLED_CATEGORIES: readonly SideCategoryId[] =
-  ALL_CATEGORY_IDS.filter((id) => !CLASSIC_ENABLED_CATEGORIES.includes(id));

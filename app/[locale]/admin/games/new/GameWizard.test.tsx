@@ -666,7 +666,6 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
         side_tournament_enabled: true,
         side_ld_count: 2,
         side_ctp_count: 1,
-        side_disabled_categories: ['most_birdies_team'],
       },
     });
 
@@ -682,8 +681,8 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expectStep(5);
 
     // Disclosure ("Vis avanserte innstillinger") aldri åpnet på steg 5 —
-    // AdvancedSettingsSection (og dermed SideCategoriesPicker/LD/CTP-radioene)
-    // er derfor ikke montert i det hele tatt.
+    // AdvancedSettingsSection (og dermed LD/CTP-radioene) er derfor ikke
+    // montert i det hele tatt.
     expect(
       screen.queryByText('Vis avanserte innstillinger'),
     ).toBeInTheDocument();
@@ -695,10 +694,9 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expect(fd.get('side_tournament_enabled')).toBe('true');
     expect(fd.get('side_ld_count')).toBe('2');
     expect(fd.get('side_ctp_count')).toBe('1');
-    expect(fd.getAll('side_disabled_categories')).toEqual(['most_birdies_team']);
   });
 
-  it('åpen disclosure gir IKKE duplikat-entries (picker/checkbox emitter ikke name i controlled mode)', () => {
+  it('åpen disclosure gir IKKE duplikat-entries (LD/CTP-feltene emitter ikke name i controlled mode)', () => {
     const { container } = renderWizard({
       players: EIGHT_PLAYERS.slice(0, 2),
       initialValues: {
@@ -708,7 +706,6 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
         side_tournament_enabled: true,
         side_ld_count: 2,
         side_ctp_count: 1,
-        side_disabled_categories: ['most_birdies_team'],
       },
     });
 
@@ -723,8 +720,8 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     clickNext();
     expectStep(5);
 
-    // Åpne disclosure-en så AdvancedSettingsSection + SideCategoriesPicker
-    // faktisk er montert samtidig med FormDataInputs-speilingen.
+    // Åpne disclosure-en så AdvancedSettingsSection faktisk er montert
+    // samtidig med FormDataInputs-speilingen.
     fireEvent.click(screen.getByText('Vis avanserte innstillinger'));
     expect(
       screen.getByRole('checkbox', { name: /sideturnering/i }),
@@ -737,7 +734,6 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expect(fd.getAll('side_tournament_enabled')).toEqual(['true']);
     expect(fd.getAll('side_ld_count')).toEqual(['2']);
     expect(fd.getAll('side_ctp_count')).toEqual(['1']);
-    expect(fd.getAll('side_disabled_categories')).toEqual(['most_birdies_team']);
   });
 });
 

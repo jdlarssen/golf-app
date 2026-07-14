@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.204 · Enklere sideturnering-oppsett</strong></summary>
+
+[#1139](https://github.com/jdlarssen/golf-app/issues/1139) — Sideturneringen kjører nå alltid full pakke. Forhåndsvalg-menyen og den lange kategori-lista er borte, så du er raskere ferdig med oppsettet.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
 <summary><strong>1.203 · Opprett klubb på to felt</strong></summary>
 
 [#1137](https://github.com/jdlarssen/golf-app/issues/1137) — Å opprette en klubb spør nå bare om navn og eierens e-post. Medlemstak og varighet setter du på klubbsiden etterpå, når klubben først er oppe.
