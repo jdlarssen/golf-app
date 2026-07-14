@@ -122,7 +122,7 @@ export default async function BliMedPage({
       />
 
       {showSentState && (
-        <div className="mb-6">
+        <div className="mb-6" data-testid="join-sent-banner">
           <Banner tone="success">
             {t('sentBanner')}
           </Banner>
@@ -139,7 +139,7 @@ export default async function BliMedPage({
 
       {!showSentState && (
         <Card>
-          <form action={requestToJoin} className="space-y-4">
+          <form action={requestToJoin} className="space-y-4" data-testid="join-request-form">
             <input type="hidden" name="shortId" value={shortId} />
             <SubmitButton className="w-full" pendingLabel={t('submitPending')}>
               {t('submitButton')}
