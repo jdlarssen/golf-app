@@ -70,7 +70,6 @@ export function DemoGame(): JSX.Element {
 
   const leaderHolesPlayed = result.players[0]?.holesPlayed ?? 0;
   const isLastHole = holeIndex === DEMO_HOLES.length - 1;
-  const allEntered = DEMO_HOLES.every((h) => youScores[h.number] != null);
 
   function setScore(_playerId: string, next: number) {
     setYouScores((prev) => ({ ...prev, [hole.number]: next }));
@@ -116,8 +115,6 @@ export function DemoGame(): JSX.Element {
       >
         <p className="text-[13px] text-text">{t('banner')}</p>
       </div>
-
-      <p className="mt-4 text-sm text-muted">{t('intro')}</p>
 
       <div className="mt-4">
         <Input
@@ -171,9 +168,6 @@ export function DemoGame(): JSX.Element {
             {t('nextHole')}
           </Button>
         </div>
-        {allEntered && (
-          <p className="mt-2 text-center text-[12px] text-muted">{t('finishedHint')}</p>
-        )}
       </section>
 
       <section className="mt-7">
