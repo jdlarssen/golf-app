@@ -839,8 +839,6 @@ export type Database = {
           },
         ]
       }
-      // TODO: regen after prod apply of 0142 (hand-extended from staging —
-      // npm run gen:types reads PROD, which doesn't have green_pins yet).
       green_pins: {
         Row: {
           accuracy_m: number | null
