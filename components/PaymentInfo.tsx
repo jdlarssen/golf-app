@@ -88,6 +88,7 @@ export function PaymentInfo({
   if (compact) {
     return (
       <div
+        data-testid="payment-compact"
         className={`flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-2 px-4 py-2.5 ${className ?? ''}`}
       >
         <span className="font-sans text-sm text-text">

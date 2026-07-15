@@ -87,7 +87,7 @@ export default async function BetalingPage({ params }: { params: Params }) {
     <AdminShell>
       <TopBar backHref={`/admin/games/${id}`} kicker={t('kicker')} />
 
-      <div className="space-y-5">
+      <div className="space-y-5" data-testid="betaling-content">
         <header className="px-1">
           <h1 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
             {t('heading')}
