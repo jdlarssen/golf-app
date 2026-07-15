@@ -5,7 +5,7 @@
   <text x="121" y="88" font-size="15" fill="#6B7770">Arrangøren setter opp en liga. Spillerne spiller hver runde i sitt eget vindu, og sesong-tabellen oppdaterer seg.</text>
   <g font-size="13">
     <rect x="118" y="104" width="124" height="20" rx="10" fill="#C9A961"/><text x="180" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">NY · hele flyten #453</text>
-    <text x="250" y="119" fill="#6B7770">Frittstående eller klubb-liga. Slagspill eller stableford, netto/brutto, fire sesong-modeller.</text>
+    <text x="250" y="119" fill="#6B7770">Frittstående eller klubb-liga. Slagspill eller stableford, alltid netto, fire sesong-modeller.</text>
   </g>
 
   <!-- 1 opprett liga -->

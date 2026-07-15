@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.206 · Enklere liga-oppsett</strong></summary>
+
+[#1144](https://github.com/jdlarssen/golf-app/issues/1144) — Ligaen kjører nå alltid netto, som resten av appen. Valget mellom netto og brutto er borte, så du blir raskere ferdig med oppsettet.
+
+↳ /admin/liga/new · «Sett opp en liga»
+</details>
+
+<details>
 <summary><strong>1.205 · Sponsorlogo på premiebordet</strong></summary>
 
 [#1052](https://github.com/jdlarssen/golf-app/issues/1052) — Last opp sponsorens logo per premie, så vises den på premiebordet, tavla og tilskuerlenken i stedet for bare navnet.

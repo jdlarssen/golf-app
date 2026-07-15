@@ -49,7 +49,7 @@ export type LeagueActionError = { error: string };
  *
  * Returns `{ error }` on validation/DB failure; redirects to the detail page on
  * success. Field contract (the create wizard posts these):
- *  name, season_start, season_end (YYYY-MM-DD), scoring, standings_model,
+ *  name, season_start, season_end (YYYY-MM-DD), standings_model,
  *  missed_round_policy, penalty_kind, penalty_fixed_over_par, course_scope,
  *  course_id, tee_box_id, frequency, player_ids (JSON array of user ids),
  *  group_id (optional club UUID).
@@ -71,9 +71,10 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   const seasonStart = str(formData, 'season_start');
   const seasonEnd = str(formData, 'season_end');
   const format = (str(formData, 'format') || 'stroke') as LeagueFormat;
-  // Poeng-baserte formater (stableford) rangeres netto-only — tving det her som
-  // andre forsvarslinje (wizard låser allerede valget). DB-CHECK (0087) er siste.
-  const scoring = isPointsBasedFormat(format) ? 'net' : str(formData, 'scoring') || 'net';
+  // Ligaer rangeres alltid netto (WHS, som resten av appen) — #1144 fjernet
+  // netto/brutto/begge-valget fra wizarden. Hardkodet her, ikke lest fra
+  // formData, så en håndlaget POST heller ikke kan sette brutto.
+  const scoring = 'net';
   const standingsModel = (str(formData, 'standings_model') || 'total') as StandingsModel;
   const missedPolicy = (str(formData, 'missed_round_policy') || 'penalty') as MissedRoundPolicy;
   // Poeng-ligaer bruker ikke straffescore-type (uteblitt = 0 poeng), så lås den
@@ -104,7 +105,6 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   if (format !== 'stroke' && format !== 'stableford' && format !== 'modified_stableford') {
     return { error: 'format' };
   }
-  if (scoring !== 'net' && scoring !== 'gross' && scoring !== 'both') return { error: 'scoring' };
   if (missedPolicy !== 'penalty' && missedPolicy !== 'must_play_all') return { error: 'missed_round_policy' };
   if (penaltyKind !== 'worst_plus_one' && penaltyKind !== 'fixed') return { error: 'penalty_kind' };
   if (

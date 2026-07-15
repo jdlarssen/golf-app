@@ -3826,7 +3826,6 @@
         "course": "Course and tee must be selected for this course scope.",
         "penalty": "Penalty strokes over par must be a number.",
         "best_n": "Number of best rounds must be a whole number of at least 1.",
-        "scoring": "Choose what the standings are ranked by.",
         "players": "The participant list is invalid.",
         "insert_failed": "Could not create the league. Please try again.",
         "rounds_failed": "The league was created but some rounds failed. Check the detail page.",
@@ -3863,14 +3862,6 @@
       "teePlaceholder": "Select tee …",
       "multiCourseHint": "Course and tee are chosen per round afterwards.",
       "setupHeading": "Settings",
-      "standingsLabel": "Standings",
-      "stablefordStandingsLocked": "Stableford is ranked by net score. Highest combined total wins.",
-      "scoringNetLabel": "Net",
-      "scoringNetDesc": "Net against par (handicap-adjusted).",
-      "scoringGrossLabel": "Gross",
-      "scoringGrossDesc": "Gross against par (no handicap).",
-      "scoringBothLabel": "Both",
-      "scoringBothDesc": "Both tables, with a Net/Gross toggle.",
       "standingsModelLabel": "Season model",
       "standingsModelTotalLabel": "Total",
       "standingsModelTotalDescStroke": "Sum against par across all rounds.",
@@ -3935,11 +3926,6 @@
         "best_n": "Best N rounds",
         "points": "Points per placing"
       },
-      "scoringLabel": {
-        "net": "Net",
-        "gross": "Gross",
-        "both": "Net and gross"
-      },
       "formatLabel": {
         "stroke": "Stroke play",
         "stableford": "Stableford",
@@ -3952,7 +3938,6 @@
       "brassRibbonClub": "Club league · {status}",
       "brassRibbonStandalone": "League · {status}",
       "infoFormat": "Format",
-      "infoScoring": "Standings",
       "infoStandingsModel": "Season model",
       "infoStandingsModelSuffix": " ({unit} total)",
       "infoStandingsUnitPar": "against par",
