@@ -1128,7 +1128,6 @@
       "cup_team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
       "cup_team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
       "cup_team_dup": "Lagene må ha forskjellige navn.",
-      "cup_points": "Poengmålet må være et positivt tall (typisk 4,5 for 8 matcher).",
       "cup_allowance": "Handicap-andelen må være mellom 0 og 100.",
       "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen om litt.",
       "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres."
@@ -4315,7 +4314,6 @@
         "cup_team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
         "cup_team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
         "cup_team_dup": "Lagene må ha forskjellige navn.",
-        "cup_points": "Poengmålet må være et positivt tall.",
         "cup_allowance": "Sjekk handicap-andelen for fourball.",
         "cup_foursomes_allowance": "Sjekk handicap-andelen for foursomes.",
         "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen."

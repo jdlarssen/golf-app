@@ -126,8 +126,8 @@ I `app/[locale]/admin/cup/[id]/generer/GenerateMatchesWizard.tsx`:
 ## Gates
 
 - [x] `npm run build` — grønt (eneste gate som fanger Next 16 `'use server'`-regelen; se Avvik 4).
-- [x] `npm run lint` — 0 errors (4 pre-eksisterende warnings, bl.a. `getCupSnapshot` complexity 40 — ikke rørt av dette issuet).
-- [x] `npx vitest run lib/cup ...` — 125 passed (10 filer, inkl. CupSetup/GameWizard-render-testene).
+- [x] `npm run lint` — 0 errors. **Korrigert etter evaluator-funn F3:** repoet har 56 warnings totalt (ikke 4 — det var bare antallet i filene jeg lintet). Av mine berørte filer: `CupManagement` 30→32 (fila lå allerede over taket på 25; warning-only, ingen gate feiler), `GameWizard` 61→60 (bedret), `getCupSnapshot` 40 (uendret). `cup/[id]/page.tsx` fikk først en NY warning (27) av to separate null-conditionals — omskrevet til én conditional + ternary, nå under taket igjen.
+- [x] `npx vitest run` (HELE suiten, ikke path-scopet) — 399 filer, 4912 passed. **Evaluator-funn B1:** den opprinnelige scopede gate-kommandoen traff ikke `GenerateMatchesWizard.test.tsx` — co-located-testen til komponenten del 3 endret mest. Den var rød på «steg N av 5». Fikset; gaten er nå hele suiten.
 - [x] Migrasjon påført staging + verifiserings-SELECT (`is_nullable = YES`). **Prod: venter på eier-godkjenning.**
 - [x] cup-e2e grønn mot staging (kjørt på egen port — se Avvik 3).
 - [x] staging-verify: opprett cup → generer matcher (fire steg) → start → «Først til 1,5 point vinner» bekreftet.
@@ -143,6 +143,8 @@ I `app/[locale]/admin/cup/[id]/generer/GenerateMatchesWizard.tsx`:
 7. **`step5Heading` → `step4RecapHeading`** i begge kataloger — det gamle navnet ville vært en løgn inne i steg 4.
 8. **`gen:types` ikke brukt.** Scriptet leser prod, som ennå ikke er migrert. Typene er hentet fra staging via MCP og hånd-flettet til KUN `points_to_win`-linjene — staging-generert output inneholdt også en urelatert `same_flight`-fjerning (staging/prod-drift fra 0139, egen sak).
 9. **e2e-tittel** «5-step wizard» → «4-step wizard».
+10. **`derivePointsToWin` flyttet til egen modul** (`lib/cup/pointsToWin.ts`) etter evaluator-funn F5: formelen — selve domene-regelen — hadde ingen automatisk dekning, kun min manuelle staging-runde. Egen modul omgår `'use server'`-begrensningen (avvik 4) og gir regelen ett testbart hjem (`pointsToWin.test.ts`, 6 cases).
+11. **Fire foreldreløse `cup_points`-nøkler fjernet** (evaluator-funn F4): `wizard.errors.cup_points` + `cup.create.errors.cup_points` i begge kataloger. Commit `cb545d75` fjernet den eneste produsenten (`redirect(\`${errBase}cup_points\`)`). `catalogParity` fanger dem ikke — de var i BEGGE kataloger, så pariteten var grønn. Den norske teksten dokumenterte til og med regelen dette issuet sletter («typisk 4,5 for 8 matcher»).
 
 **VERIFICATION GAP:** cup-startet-mailens `pointsToWin`-verdi er ikke observert live — staging har ugyldig Resend-nøkkel, og sendingen er best-effort by design. Verdien er compiler-garantert `number` (aldri null) på call-site.
 
