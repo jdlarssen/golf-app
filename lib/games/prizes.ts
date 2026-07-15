@@ -31,6 +31,10 @@ export const SIDE_MAX_POSITION = 2; // LD1/LD2, CTP1/CTP2
 /** Tegn-grenser for brukerdata (premie-beskrivelse + sponsornavn). */
 export const PRIZE_DESCRIPTION_MAX = 120;
 export const PRIZE_SPONSOR_MAX = 60;
+/** Maks lengde på storage-object-key for sponsorlogo (#1052). Reelle paths er
+ *  «{auth.uid}/{uuid}.webp» ≈ 80 tegn; taket er en tampering-guard, ikke en
+ *  format-regel. */
+export const PRIZE_LOGO_PATH_MAX = 200;
 
 export type GamePrize = {
   category: PrizeCategory;
@@ -40,6 +44,9 @@ export type GamePrize = {
   description: string;
   /** Sponsornavn ≤60 tegn, eller null når slottet ikke har sponsor. */
   sponsor: string | null;
+  /** Storage-object-key i sponsor-logos-bucketen (#1052), null = ingen logo.
+   *  Path, ikke full URL — URL bygges ved visning (sponsorLogoUrl). */
+  sponsorLogoPath: string | null;
 };
 
 const prizeSchema = z
@@ -48,6 +55,16 @@ const prizeSchema = z
     position: z.number().int().positive(),
     description: z.string().trim().min(1).max(PRIZE_DESCRIPTION_MAX),
     sponsor: z.string().trim().min(1).max(PRIZE_SPONSOR_MAX).nullable(),
+    // default(null): prizes-blobs skrevet før #1052 mangler nøkkelen — et
+    // påkrevd felt ville fått safeParsePrizes til å returnere [] og visket
+    // ut premiebordet på alle eksisterende spill (legacy-fikstur-test).
+    sponsorLogoPath: z
+      .string()
+      .trim()
+      .min(1)
+      .max(PRIZE_LOGO_PATH_MAX)
+      .nullable()
+      .default(null),
   })
   .refine(
     (p) =>
@@ -155,20 +172,21 @@ export const PRIZE_SLOTS: readonly PrizeSlot[] = [
  *  og gamePayload (leser) så navnesettet aldri drifter. */
 export function prizeFieldName(
   key: PrizeSlotKey,
-  field: 'desc' | 'sponsor',
+  field: 'desc' | 'sponsor' | 'logo',
 ): string {
   return `prize_${key}_${field}`;
 }
 
-/** Wizard-utkast: rå fritekst per slott (tomt premie-felt = slottet av). */
+/** Wizard-utkast: rå fritekst per slott (tomt premie-felt = slottet av).
+ *  sponsorLogoPath: '' = ingen logo (speiler hidden-input-serialiseringen). */
 export type PrizeDraft = Record<
   PrizeSlotKey,
-  { description: string; sponsor: string }
+  { description: string; sponsor: string; sponsorLogoPath: string }
 >;
 
 export function emptyPrizeDraft(): PrizeDraft {
   return PRIZE_SLOTS.reduce((acc, s) => {
-    acc[s.key] = { description: '', sponsor: '' };
+    acc[s.key] = { description: '', sponsor: '', sponsorLogoPath: '' };
     return acc;
   }, {} as PrizeDraft);
 }
@@ -183,7 +201,11 @@ export function prizeDraftFromList(
       (s) => s.category === p.category && s.position === p.position,
     );
     if (slot) {
-      draft[slot.key] = { description: p.description, sponsor: p.sponsor ?? '' };
+      draft[slot.key] = {
+        description: p.description,
+        sponsor: p.sponsor ?? '',
+        sponsorLogoPath: p.sponsorLogoPath ?? '',
+      };
     }
   }
   return draft;

@@ -23,6 +23,7 @@ import {
   PRIZE_SLOTS,
   PRIZE_DESCRIPTION_MAX,
   PRIZE_SPONSOR_MAX,
+  PRIZE_LOGO_PATH_MAX,
   prizeFieldName,
   prunePrizes,
   type GamePrize,
@@ -352,11 +353,19 @@ export function parsePrizesFromFormData(
       String(formData.get(prizeFieldName(slot.key, 'sponsor')) ?? '')
         .trim()
         .slice(0, PRIZE_SPONSOR_MAX) || null;
+    // #1052: en tuklet over-lang path droppes til null (ikke klampes — en
+    // avkuttet path er en brukket bilde-URL); slottet selv overlever.
+    const logoRaw = String(
+      formData.get(prizeFieldName(slot.key, 'logo')) ?? '',
+    ).trim();
+    const sponsorLogoPath =
+      logoRaw && logoRaw.length <= PRIZE_LOGO_PATH_MAX ? logoRaw : null;
     raw.push({
       category: slot.category,
       position: slot.position,
       description,
       sponsor,
+      sponsorLogoPath,
     });
   }
   return prunePrizes(raw, shape);

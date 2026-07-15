@@ -20,6 +20,7 @@ function placementPrize(position: number, over: Partial<GamePrize> = {}): GamePr
     position,
     description: `${position}. plass-premie`,
     sponsor: null,
+    sponsorLogoPath: null,
     ...over,
   };
 }
@@ -30,6 +31,7 @@ function ldPrize(position: number): GamePrize {
     position,
     description: 'Lengste drive-premie',
     sponsor: null,
+    sponsorLogoPath: null,
   };
 }
 
@@ -39,6 +41,7 @@ function ctpPrize(position: number): GamePrize {
     position,
     description: 'Nærmest flagget-premie',
     sponsor: null,
+    sponsorLogoPath: null,
   };
 }
 
