@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.205 · Sponsorlogo på premiebordet</strong></summary>
+
+[#1052](https://github.com/jdlarssen/golf-app/issues/1052) — Last opp sponsorens logo per premie, så vises den på premiebordet, tavla og tilskuerlenken i stedet for bare navnet.
+
+↳ /opprett-spill · «Sett opp premiebordet»
+</details>
+
+<details>
 <summary><strong>1.204 · Enklere sideturnering-oppsett</strong></summary>
 
 [#1139](https://github.com/jdlarssen/golf-app/issues/1139) — Sideturneringen kjører nå alltid full pakke. Forhåndsvalg-menyen og den lange kategori-lista er borte, så du er raskere ferdig med oppsettet.
