@@ -106,23 +106,45 @@ I `app/[locale]/admin/cup/[id]/generer/GenerateMatchesWizard.tsx`:
 
 ## Success Criteria
 
-- [ ] `CupSetup.tsx` viser hverken de fem allowance-feltene eller poengmål-feltet; cup-opprettelse fungerer og lagrer en draft med WHS-allowance i kolonnene.
-- [ ] `tournaments.points_to_win` er nullable på staging (og prod etter godkjenning); `lib/database.types.ts` regenerert til `number | null`.
-- [ ] En draft-cup har `points_to_win = NULL`; etter `startTournament` er den satt til `matchCount/2 + 0.5`.
-- [ ] `computeCupLeaderboard` returnerer `winner === null` når `points_to_win` er null, uansett poengstilling.
-- [ ] Ingen visnings-flate (`cup/[id]`, `CupManagement`, `admin/cup`-lista) krasjer eller viser «0»/«null» som poengmål i draft-tilstand.
-- [ ] Generer-wizarden har fire steg; steg 4 viser redigerbar oppstilling + bane·tee-recap + generer-knapp; steg 5 finnes ikke.
-- [ ] `e2e/cup/cup-lifecycle.spec.ts` oppdatert til fire steg og grønn mot staging.
-- [ ] `messages/no.json` + `messages/en.json` har identiske leaf-nøkler (parity-test grønn) etter nøkkel-fjerning.
+- [x] `CupSetup.tsx` viser hverken de fem allowance-feltene eller poengmål-feltet; cup-opprettelse fungerer og lagrer en draft med WHS-allowance i kolonnene.
+      *Bevis:* staging-klikkrunde opprettet cup via ekte form → draft-rad hadde `fourball=85, foursomes=50, greensome=100, chapman=100, gruesome=50`. Feltene assert-et borte i DOM.
+- [x] `tournaments.points_to_win` er nullable på staging (og prod etter godkjenning); `lib/database.types.ts` regenerert til `number | null`.
+      *Bevis:* staging `SELECT is_nullable` → `YES` (0144 påført via MCP). Typer: `lib/database.types.ts:1686,1705,1724`. **Prod: IKKE påført — venter på eier-godkjenning (blokkerer merge, se PR).**
+- [x] En draft-cup har `points_to_win = NULL`; etter `startTournament` er den satt til `matchCount/2 + 0.5`.
+      *Bevis:* staging-klikkrunde: draft → NULL, fortsatt NULL etter generering, etter «Start cup» → `1.5` (2 matcher → 2/2+0,5).
+- [x] `computeCupLeaderboard` returnerer `winner === null` når `points_to_win` er null, uansett poengstilling.
+      *Bevis:* `lib/cup/computeCupLeaderboard.test.ts` — ny case «kårer ingen vinner når poengmålet ennå ikke er satt (#1142)» (3-0-ledelse → `winner === null`).
+- [x] Ingen visnings-flate (`cup/[id]`, `CupManagement`, `admin/cup`-lista) krasjer eller viser «0»/«null» som poengmål i draft-tilstand.
+      *Bevis:* staging: admin-detalj viste «poengmål klart ved start», offentlig side «Poengmålet er klart når cupen starter»; assert-et 0 treff på /først til null/ og /først til 0 poeng/.
+- [x] Generer-wizarden har fire steg; steg 4 viser redigerbar oppstilling + bane·tee-recap + generer-knapp; steg 5 finnes ikke.
+      *Bevis:* staging: «steg 4 av 4» synlig, `cup-wizard-next` count 0 på steg 4, `cup-wizard-prev` synlig, `cup-wizard-generate` klikket → 2 matcher skrevet.
+- [x] `e2e/cup/cup-lifecycle.spec.ts` oppdatert til fire steg og grønn mot staging.
+      *Bevis:* `npx playwright test e2e/cup/cup-lifecycle.spec.ts` → 2 passed (@gate-smoke + @lifecycle-wizard).
+- [x] `messages/no.json` + `messages/en.json` har identiske leaf-nøkler (parity-test grønn) etter nøkkel-fjerning.
+      *Bevis:* `npx vitest run messages/catalogParity.test.ts` → 2 passed.
 
 ## Gates
 
-- [ ] `npm run build`
-- [ ] `npm run lint`
-- [ ] `npx vitest run lib/cup/computeCupLeaderboard.test.ts lib/cup/getCupSnapshot.test.ts messages/catalogParity.test.ts`
-- [ ] Migrasjon påført staging + verifiserings-SELECT (`is_nullable = YES`); prod bak `touch .claude/approve-prod`.
-- [ ] `npm run e2e:gate` (cup-smoke) grønn mot staging.
-- [ ] staging-verify: opprett cup → generer matcher (fire steg) → start → bekreft «Først til X point» viser riktig utledet mål; post bevis på PR-en.
+- [x] `npm run build` — grønt (eneste gate som fanger Next 16 `'use server'`-regelen; se Avvik 4).
+- [x] `npm run lint` — 0 errors (4 pre-eksisterende warnings, bl.a. `getCupSnapshot` complexity 40 — ikke rørt av dette issuet).
+- [x] `npx vitest run lib/cup ...` — 125 passed (10 filer, inkl. CupSetup/GameWizard-render-testene).
+- [x] Migrasjon påført staging + verifiserings-SELECT (`is_nullable = YES`). **Prod: venter på eier-godkjenning.**
+- [x] cup-e2e grønn mot staging (kjørt på egen port — se Avvik 3).
+- [x] staging-verify: opprett cup → generer matcher (fire steg) → start → «Først til 1,5 point vinner» bekreftet.
+
+## Avvik fra kontrakten (bygger-notater)
+
+1. **Migrasjonsnummer 0138 → 0144.** `origin/main` var på 0143; 0138 var opptatt.
+2. **`updateTournament` finnes ikke.** Kontrakten antok den lå i `lib/cup/actions.ts:187` som dead code. Den er allerede borte, så `parsePointsToWin` ble ekte foreldreløs og er slettet (ikke bare gjort ubrukt).
+3. **`points_to_win`-CHECK-en.** Kontrakten nevnte den ikke: `tournaments_points_to_win_check CHECK (points_to_win > 0)` lever fortsatt. Postgres lar en CHECK passere når den evaluerer til NULL, så DROP NOT NULL var nok. Verifisert empirisk på staging (rullet tilbake): `null_accepted=t zero_still_rejected=t`.
+4. **`derivePointsToWin` er lokal, ikke eksportert.** `lib/cup/actions.ts` er `'use server'` — kun async exports er lov, så en eksportert sync-helper hadde knekt bygget.
+5. **`matchCap` fjernet helt fra `CupSetup`** (kontrakten åpnet for begge deler). Propen fôret kun poengmål-defaulten; taket håndheves fortsatt i generer-wizarden, `lib/cup/limits.ts` og serverens `too_many_matches`. Den nå-foreldreløse importen i `GameWizard.tsx` er fjernet.
+6. **Tester kontrakten ikke nevnte:** `CupSetup.test.tsx` (poengmål-assert + hele matchCap-testen) og `GameWizard.test.tsx` (poengmål-assert) hadde blitt røde. Assertene er snudd til «feltet er borte»; matchCap-testen er slettet (testet oppførsel som ikke finnes).
+7. **`step5Heading` → `step4RecapHeading`** i begge kataloger — det gamle navnet ville vært en løgn inne i steg 4.
+8. **`gen:types` ikke brukt.** Scriptet leser prod, som ennå ikke er migrert. Typene er hentet fra staging via MCP og hånd-flettet til KUN `points_to_win`-linjene — staging-generert output inneholdt også en urelatert `same_flight`-fjerning (staging/prod-drift fra 0139, egen sak).
+9. **e2e-tittel** «5-step wizard» → «4-step wizard».
+
+**VERIFICATION GAP:** cup-startet-mailens `pointsToWin`-verdi er ikke observert live — staging har ugyldig Resend-nøkkel, og sendingen er best-effort by design. Verdien er compiler-garantert `number` (aldri null) på call-site.
 
 ## Files Likely Touched
 
