@@ -51,11 +51,6 @@ vi.mock('@/lib/productUpdates/edit', () => ({
   editProductUpdate: (input: unknown) => editMock(input),
 }));
 
-const sendDigestMock = vi.fn();
-vi.mock('@/lib/productUpdates/digest', () => ({
-  sendDigestForPeriod: (opts: unknown) => sendDigestMock(opts),
-}));
-
 function fd(entries: Record<string, string>): FormData {
   const data = new FormData();
   for (const [k, v] of Object.entries(entries)) data.set(k, v);
@@ -222,62 +217,5 @@ describe('editProductUpdateAction', () => {
       cta_label: 'Foreslå',
     });
     expect(lastRedirect()).toBe('/admin/lanseringer?edited=1&notifs=17');
-  });
-});
-
-describe('sendDigestNowAction', () => {
-  it('redirecter til / når bruker ikke er admin', async () => {
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: false, email: null, name: null }, error: null },
-    ]);
-    setAdminUser();
-    const { sendDigestNowAction } = await import('./actions');
-
-    await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/');
-  });
-
-  it('redirecter med ?digest=already_sent når perioden allerede er sendt', async () => {
-    sendDigestMock.mockResolvedValueOnce({
-      kind: 'already_sent',
-      periodStart: '2026-04-01',
-      periodEnd: '2026-04-30',
-      periodLabel: 'april 2026',
-    });
-    const { sendDigestNowAction } = await import('./actions');
-
-    await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/admin/lanseringer?digest=already_sent');
-  });
-
-  it('redirecter med ?digest=no_updates når ingen oppdateringer i periode', async () => {
-    sendDigestMock.mockResolvedValueOnce({
-      kind: 'no_updates',
-      periodStart: '2026-04-01',
-      periodEnd: '2026-04-30',
-      periodLabel: 'april 2026',
-    });
-    const { sendDigestNowAction } = await import('./actions');
-
-    await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/admin/lanseringer?digest=no_updates');
-  });
-
-  it('happy path: sendt → redirecter med recipients + updates-counters', async () => {
-    sendDigestMock.mockResolvedValueOnce({
-      kind: 'sent',
-      periodStart: '2026-04-01',
-      periodEnd: '2026-04-30',
-      periodLabel: 'april 2026',
-      recipientCount: 12,
-      updateCount: 3,
-    });
-    const { sendDigestNowAction } = await import('./actions');
-
-    await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);
-    expect(sendDigestMock).toHaveBeenCalledWith({ sentByUserId: 'admin-1' });
-    expect(lastRedirect()).toBe(
-      '/admin/lanseringer?digest=sent&recipients=12&updates=3',
-    );
   });
 });

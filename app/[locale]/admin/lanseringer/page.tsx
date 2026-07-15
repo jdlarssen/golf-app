@@ -14,8 +14,7 @@ import { Input } from '@/components/ui/Input';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
-import { previousMonthPeriod } from '@/lib/productUpdates/digest';
-import { publishProductUpdateAction, sendDigestNowAction } from './actions';
+import { publishProductUpdateAction } from './actions';
 import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
@@ -23,8 +22,6 @@ type SearchParams = Promise<{
   recipients?: string | string[];
   edited?: string | string[];
   notifs?: string | string[];
-  digest?: string | string[];
-  updates?: string | string[];
   error?: string | string[];
 }>;
 
@@ -52,8 +49,6 @@ export default async function LanseringerPage({
   const publishedCount = first(params.recipients);
   const editedFlag = first(params.edited);
   const editedNotifs = first(params.notifs);
-  const digestStatus = first(params.digest);
-  const digestUpdates = first(params.updates);
   const errorCode = first(params.error);
   const errorMessage = errorCode
     ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
@@ -63,16 +58,7 @@ export default async function LanseringerPage({
     ? t('success.edited', { count: Number(editedNotifs ?? '0') })
     : publishedFlag
     ? t('success.published', { count: Number(publishedCount ?? '0') })
-    : digestStatus === 'sent'
-      ? t('success.digestSent', {
-          count: Number(publishedCount ?? '0'),
-          updates: Number(digestUpdates ?? '0'),
-        })
-      : digestStatus === 'already_sent'
-        ? t('success.digestAlreadySent')
-        : digestStatus === 'no_updates'
-          ? t('success.digestNoUpdates')
-          : undefined;
+    : undefined;
 
   return (
     <AdminShell>
@@ -152,67 +138,12 @@ export default async function LanseringerPage({
       </section>
 
       <section className="mt-6">
-        <MiniRibbon>{t('digestSection')}</MiniRibbon>
-        <Suspense fallback={<DigestSkeleton />}>
-          <DigestCard />
-        </Suspense>
-      </section>
-
-      <section className="mt-6">
         <MiniRibbon>{t('previousSection')}</MiniRibbon>
         <Suspense fallback={<ListSkeleton />}>
           <PreviousUpdatesList />
         </Suspense>
       </section>
     </AdminShell>
-  );
-}
-
-async function DigestCard() {
-  const admin = getAdminClient();
-  const t = await getTranslations('admin.launches');
-  const locale = (await getLocale()) as AppLocale;
-  const { periodStart, periodEnd, periodLabel } = previousMonthPeriod();
-
-  const { data: existing } = await admin
-    .from('product_update_digests')
-    .select('sent_at, recipient_count')
-    .eq('period_start', periodStart)
-    .eq('period_end', periodEnd)
-    .maybeSingle<{ sent_at: string; recipient_count: number }>();
-
-  return (
-    <Card>
-      <p className="font-serif text-base font-medium text-text">
-        {t('digestHeading', { periodLabel })}
-      </p>
-      {existing ? (
-        <p className="mt-1 font-sans text-sm text-muted">
-          {t('digestSentLine', {
-            date: formatShortDateWithYearLocale(existing.sent_at, locale),
-            count: existing.recipient_count,
-          })}
-        </p>
-      ) : (
-        <p className="mt-1 font-sans text-sm text-muted">
-          {t('digestNotSentYet')}
-        </p>
-      )}
-      {!existing && (
-        <form action={sendDigestNowAction} className="mt-4">
-          <SubmitButton pendingLabel={t('sendingBusy')}>{t('sendDigestButton')}</SubmitButton>
-        </form>
-      )}
-    </Card>
-  );
-}
-
-function DigestSkeleton() {
-  return (
-    <Card>
-      <Skeleton className="h-5 w-2/3" />
-      <Skeleton className="mt-2 h-3.5 w-1/2" />
-    </Card>
   );
 }
 

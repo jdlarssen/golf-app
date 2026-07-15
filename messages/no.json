@@ -3578,14 +3578,10 @@
         "link_must_be_internal": "Lenke må peke til en intern rute (starte med «/»).",
         "cta_without_link": "Knappe-tekst krever at du også fyller inn en lenke.",
         "publish_failed": "Klarte ikke å publisere. Prøv igjen om litt.",
-        "digest_failed": "Klarte ikke å sende månedsbrev. Prøv igjen om litt.",
         "edit_failed": "Klarte ikke å lagre endringen. Prøv igjen om litt."
       },
       "success": {
         "published": "Lanseringen er ute hos {count} brukere.",
-        "digestSent": "Månedsbrevet gikk ut til {count} mottakere med {updates} oppdateringer.",
-        "digestAlreadySent": "Månedsbrevet er allerede sendt for forrige periode.",
-        "digestNoUpdates": "Ingen lanseringer å sende ut for forrige måned. Hopper over.",
         "edited": "Lanseringen er oppdatert — {count, plural, one {1 varsel} other {# varsler}} rettet."
       },
       "publishSection": "Publiser ny lansering",
@@ -3600,12 +3596,6 @@
       "ctaHint": "Vises kun når lenke er fylt inn. F.eks. «Prøv det», «Se mer».",
       "publishButton": "Publiser",
       "publishingBusy": "Publiserer …",
-      "digestSection": "Månedsbrev",
-      "digestHeading": "Månedsbrev for {periodLabel}",
-      "digestSentLine": "Sendt {date} til {count, plural, one {1 mottaker} other {# mottakere}}.",
-      "digestNotSentYet": "Ikke sendt ennå. Cron sender automatisk 1. i hver måned, men du kan sende manuelt nå hvis du vil.",
-      "sendDigestButton": "Send månedsbrev nå",
-      "sendingBusy": "Sender …",
       "previousSection": "Tidligere lanseringer",
       "emptyPrevious": "Ingen lanseringer publisert ennå. Bruk skjemaet over for å publisere den første.",
       "editLabel": "Rediger",
