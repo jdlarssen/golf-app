@@ -45,18 +45,18 @@ I `app/[locale]/games/[id]/(home)/page.tsx:882`, endre guarden fra
 **Claude's Discretion:** commit-granularitet (én samlet `fix` vs. to atomiske), eksakt CHANGELOG-ordlyd (kjør `humanizer:humanizer` på de norske linjene), og om `game.status`-typefeltet (page.tsx:18) fortsatt trengs etter opprydding (behold hvis `game` fortsatt typet via `GameRow`).
 
 ## Success Criteria
-- [ ] `/betaling` viser ikke lenger «Startkontingent {beløp}» / «{paid} av {total} betalt»-kortet — kun heading, spillnavn og roster (med purre-knapp).
-- [ ] `formatKr`-import og `active`/`paidCount`/`totalCount`/`missingCount` er borte fra `betaling/page.tsx` uten gjenværende referanser.
-- [ ] `summaryLabel`/`summaryCount`/`summaryMissing` under `admin.game.betaling` er fjernet fra både `no.json` og `en.json`; øvrige `summaryLabel`-nøkler urørt.
-- [ ] En trukket, ubetalt spiller ser IKKE den kompakte betalingslinja på spill-hjem under aktiv runde (kun angre-banneret).
-- [ ] En ikke-trukket, ubetalt spiller ser fortsatt betalingslinja som før (ingen regresjon på #1068).
-- [ ] `package.json` bumpet (patch) og CHANGELOG har Feilrettinger-linje(r) for de bruker-synlige endringene.
+- [x] `/betaling` viser ikke lenger «Startkontingent {beløp}» / «{paid} av {total} betalt»-kortet — kun heading, spillnavn og roster (med purre-knapp). — EVIDENS: kortet slettet i a0dcdd74; staging-render mot `torny-staging` gir `[data-testid="betaling-content"].childElementCount = 3` (`header,div,div`) og 0 `bg-surface-2`-kort direkte under content, med `entry_fee_kr = 200` (dvs. kontingent-grenen rendret faktisk).
+- [x] `formatKr`-import og `active`/`paidCount`/`totalCount`/`missingCount` er borte fra `betaling/page.tsx` uten gjenværende referanser. — EVIDENS: `grep -n "formatKr\|paidCount\|totalCount\|missingCount\|const active"` på fila → 0 treff; `npm run build` exit 0.
+- [x] `summaryLabel`/`summaryCount`/`summaryMissing` under `admin.game.betaling` er fjernet fra både `no.json` og `en.json`; øvrige `summaryLabel`-nøkler urørt. — EVIDENS: JSON-path-sjekk (node require) → `admin.game.betaling` 20 → 17 nøkler i BEGGE kataloger, `summary*` = [], parity true; `grep -c summaryLabel` = 3 i hver katalog (courses/archived tees, formats/auditLog, liga/addRound) — uendret.
+- [x] En trukket, ubetalt spiller ser IKKE den kompakte betalingslinja på spill-hjem under aktiv runde (kun angre-banneret). — EVIDENS: staging, spill `E2E-1145-withdrawn` (aktiv, 200 kr, `withdrawn_at` satt, `paid_at` null): `[data-testid="payment-compact"]` → 0 treff, angre-banner → 1.
+- [x] En ikke-trukket, ubetalt spiller ser fortsatt betalingslinja som før (ingen regresjon på #1068). — EVIDENS: staging, spill `E2E-1145-betaling` (samme spiller, samme kontingent, `withdrawn_at` null): `[data-testid="payment-compact"]` → 1 treff, angre-banner → 0. A/B-en skiller kun på `withdrawn_at`, så orakelet er beviselig i stand til å både slå ut og la være.
+- [x] `package.json` bumpet (patch) og CHANGELOG har Feilrettinger-linje(r) for de bruker-synlige endringene. — EVIDENS: 1.205.1 → 1.205.2 (withdrawn-gate) → 1.205.3 (kort-fjerning); to linjer under «Juli 2026»-skuffen, teller 23 → 25. commit-msg-hooken godtok begge.
 
 ## Gates
-- [ ] `npm run build` (fanger foreldreløs `formatKr`/variabel-bruk og manglende i18n-nøkler)
-- [ ] `npm run lint`
-- [ ] `npx vitest run messages/catalogParity.test.ts` (grønn = katalogene fortsatt i balanse)
-- [ ] Staging-verify: (a) admin `/admin/games/[id]/betaling` uten summary-kort, (b) trukket ubetalt spiller på spill-hjem uten betalingslinje, (c) ikke-trukket ubetalt spiller MED betalingslinje. Post bevis på PR-en.
+- [x] `npm run build` (fanger foreldreløs `formatKr`/variabel-bruk og manglende i18n-nøkler) — exit 0, 0 failure-markører, full rute-tabell.
+- [x] `npm run lint` — exit 0, 0 errors (56 warnings). KORRIGERT (evaluator-funn): warningene ligger i ~50 filer, ikke bare `lib/scoring`/`lib/wizard`, og ÉN av dem — `app/[locale]/games/[id]/(home)/page.tsx:166` — er berørt av denne PR-en. `GameHomePage`-kompleksiteten går 123 → 124 fordi guarden får ett `&&` til. Fortsatt kun warning (taket er 25; main lå allerede ~5× over), lint exit 0 → ikke blokkerende, men påstanden «urørte filer» var feil.
+- [x] `npx vitest run messages/catalogParity.test.ts` (grønn = katalogene fortsatt i balanse) — 1 fil, 2 tester, grønn.
+- [x] Staging-verify: (a) admin `/admin/games/[id]/betaling` uten summary-kort, (b) trukket ubetalt spiller på spill-hjem uten betalingslinje, (c) ikke-trukket ubetalt spiller MED betalingslinje. Post bevis på PR-en. — EVIDENS: alle tre grønne, 0 console errors, 0 kall mot prod-ref. Bevis-kommentar + `staging-verified`-label på PR #1254; testdata (`E2E-1145-*`) slettet og bekreftet med frisk SELECT.
 
 ## Files Likely Touched
 - `app/[locale]/admin/games/[id]/betaling/page.tsx` — fjern summary-kort + foreldreløs utregning + formatKr-import
