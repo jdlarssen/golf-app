@@ -15,9 +15,12 @@ import {
   parsePrizes,
   safeParsePrizes,
   prunePrizes,
+  prizeFieldName,
+  prizeDraftFromList,
   PRIZE_MAX_SLOTS,
   PRIZE_DESCRIPTION_MAX,
   PRIZE_SPONSOR_MAX,
+  PRIZE_LOGO_PATH_MAX,
   type GamePrize,
 } from './prizes';
 
@@ -32,6 +35,7 @@ function prize(overrides: Partial<GamePrize> = {}): GamePrize {
     position: 1,
     description: 'Middag for to',
     sponsor: null,
+    sponsorLogoPath: null,
     ...overrides,
   };
 }
@@ -122,6 +126,66 @@ describe('parsePrizes — rejects invalid input', () => {
 
   it('rejects an unknown category', () => {
     expect(() => parsePrizes([{ ...prize(), category: 'skins' }])).toThrow();
+  });
+});
+
+describe('sponsorLogoPath (#1052)', () => {
+  it('parses a legacy blob WITHOUT the sponsorLogoPath key (existing games)', () => {
+    // Literal pre-#1052 element shape from DB. MUST parse — a required key
+    // would make safeParsePrizes return [] and wipe the premiebord on every
+    // existing game.
+    const legacy = [
+      {
+        category: 'placement',
+        position: 1,
+        description: 'Middag for to',
+        sponsor: 'Klubbshoppen',
+      },
+    ];
+    const parsed = parsePrizes(legacy);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].sponsorLogoPath).toBeNull();
+    expect(safeParsePrizes(legacy)).toHaveLength(1);
+  });
+
+  it('keeps a logo path string and a null', () => {
+    const parsed = parsePrizes([
+      prize({ position: 1, sponsorLogoPath: 'uid-123/logo.webp' }),
+      prize({ position: 2, sponsorLogoPath: null }),
+    ]);
+    expect(parsed[0].sponsorLogoPath).toBe('uid-123/logo.webp');
+    expect(parsed[1].sponsorLogoPath).toBeNull();
+  });
+
+  it('rejects an empty-string logo path', () => {
+    expect(() => parsePrizes([prize({ sponsorLogoPath: '' })])).toThrow();
+  });
+
+  it('rejects a logo path over the max length', () => {
+    expect(() =>
+      parsePrizes([prize({ sponsorLogoPath: 'x'.repeat(PRIZE_LOGO_PATH_MAX + 1) })]),
+    ).toThrow();
+  });
+});
+
+describe('prizeFieldName — delt navnekilde (state ↔ hidden inputs ↔ payload)', () => {
+  it('emits the logo field name for a slot', () => {
+    expect(prizeFieldName('placement_1', 'logo')).toBe('prize_placement_1_logo');
+  });
+});
+
+describe('prizeDraftFromList — logo prefill (#1052)', () => {
+  it('prefills sponsorLogoPath and defaults untouched slots to empty string', () => {
+    const draft = prizeDraftFromList([
+      prize({ sponsorLogoPath: 'uid-123/a.webp' }),
+    ]);
+    expect(draft.placement_1.sponsorLogoPath).toBe('uid-123/a.webp');
+    expect(draft.placement_2.sponsorLogoPath).toBe('');
+  });
+
+  it('maps a null path to empty string (edit-prefill of a logo-free slot)', () => {
+    const draft = prizeDraftFromList([prize({ sponsorLogoPath: null })]);
+    expect(draft.placement_1.sponsorLogoPath).toBe('');
   });
 });
 

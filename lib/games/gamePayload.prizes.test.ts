@@ -13,11 +13,14 @@ import {
   prizeFieldName,
   PRIZE_DESCRIPTION_MAX,
   PRIZE_SPONSOR_MAX,
+  PRIZE_LOGO_PATH_MAX,
   type PrizeSlotKey,
 } from './prizes';
 
 function form(
-  cells: Partial<Record<PrizeSlotKey, { description?: string; sponsor?: string }>>,
+  cells: Partial<
+    Record<PrizeSlotKey, { description?: string; sponsor?: string; logo?: string }>
+  >,
 ): FormData {
   const fd = new FormData();
   for (const [key, cell] of Object.entries(cells)) {
@@ -26,6 +29,9 @@ function form(
     }
     if (cell?.sponsor != null) {
       fd.set(prizeFieldName(key as PrizeSlotKey, 'sponsor'), cell.sponsor);
+    }
+    if (cell?.logo != null) {
+      fd.set(prizeFieldName(key as PrizeSlotKey, 'logo'), cell.logo);
     }
   }
   return fd;
@@ -42,8 +48,20 @@ describe('parsePrizesFromFormData', () => {
     });
     const prizes = parsePrizesFromFormData(fd, FULL_SHAPE);
     expect(prizes).toEqual([
-      { category: 'placement', position: 1, description: 'Middag for to', sponsor: 'Klubbshoppen' },
-      { category: 'longest_drive', position: 1, description: 'Ny driver', sponsor: null },
+      {
+        category: 'placement',
+        position: 1,
+        description: 'Middag for to',
+        sponsor: 'Klubbshoppen',
+        sponsorLogoPath: null,
+      },
+      {
+        category: 'longest_drive',
+        position: 1,
+        description: 'Ny driver',
+        sponsor: null,
+        sponsorLogoPath: null,
+      },
     ]);
   });
 
@@ -56,7 +74,39 @@ describe('parsePrizesFromFormData', () => {
       position: 1,
       description: 'Gavekort',
       sponsor: null,
+      sponsorLogoPath: null,
     });
+  });
+
+  it('reads a logo path and converts empty/whitespace to null (#1052)', () => {
+    const fd = form({
+      placement_1: { description: 'Gavekort', logo: 'uid-123/logo.webp' },
+      placement_2: { description: 'Ball-pakke', logo: '   ' },
+    });
+    const prizes = parsePrizesFromFormData(fd, FULL_SHAPE);
+    expect(prizes[0].sponsorLogoPath).toBe('uid-123/logo.webp');
+    expect(prizes[1].sponsorLogoPath).toBeNull();
+  });
+
+  it('drops a tampered over-long logo path to null instead of clamping (#1052)', () => {
+    // Slicing a path would produce a broken image URL — an invalid path
+    // means "no logo", the slot itself survives.
+    const fd = form({
+      placement_1: {
+        description: 'Gavekort',
+        logo: 'x'.repeat(PRIZE_LOGO_PATH_MAX + 1),
+      },
+    });
+    const prize = parsePrizesFromFormData(fd, FULL_SHAPE)[0];
+    expect(prize.description).toBe('Gavekort');
+    expect(prize.sponsorLogoPath).toBeNull();
+  });
+
+  it('ignores a logo on an empty-description slot (slot off = everything off)', () => {
+    const fd = form({
+      placement_1: { description: '', logo: 'uid-123/logo.webp' },
+    });
+    expect(parsePrizesFromFormData(fd, FULL_SHAPE)).toEqual([]);
   });
 
   it('clamps over-long description and sponsor to their max lengths', () => {
