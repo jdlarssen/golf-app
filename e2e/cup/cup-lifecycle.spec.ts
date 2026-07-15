@@ -205,7 +205,7 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
     await deleteEphemeralPlayers(ephemerals.map((e) => e.id));
   });
 
-  test('admin drives the 5-step wizard → real createCupMatchesFromPlan → valid rows + leaderboard @lifecycle', async ({
+  test('admin drives the 4-step wizard → real createCupMatchesFromPlan → valid rows + leaderboard @lifecycle', async ({
     page,
   }) => {
     const admin = adminClient();
