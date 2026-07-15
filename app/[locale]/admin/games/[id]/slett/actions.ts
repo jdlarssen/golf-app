@@ -4,7 +4,10 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { safeParsePrizes } from '@/lib/games/prizes';
+import { SPONSOR_LOGO_BUCKET } from '@/lib/storage/sponsorLogoUrl';
 import type { GameStatus } from '@/lib/games/status';
 
 export async function deleteGame(formData: FormData) {
@@ -24,9 +27,14 @@ export async function deleteGame(formData: FormData) {
   // were never submitted, which makes the normal endGame path unreachable).
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status')
+    .select('id, name, status, prizes')
     .eq('id', gameId)
-    .maybeSingle<{ id: string; name: string; status: GameStatus }>();
+    .maybeSingle<{
+      id: string;
+      name: string;
+      status: GameStatus;
+      prizes: unknown;
+    }>();
 
   // Only reachable for an admin — a non-admin whose game doesn't exist was
   // already bounced to `/` by the gate above.
@@ -55,6 +63,32 @@ export async function deleteGame(formData: FormData) {
         : `/games/${gameId}/slett?error=delete_failed`,
       locale,
     });
+  }
+
+  // #1052: rydd sponsorlogo-objects best-effort ETTER vellykket slett (feil
+  // her skal aldri blokkere flyten — Resend-mønsteret). Service-role-klienten
+  // er nødvendig: en admin som sletter andres spill eier ikke objektene, så
+  // eier-scopet DELETE-RLS ville matchet 0 rader.
+  const logoPaths = safeParsePrizes(game!.prizes)
+    .map((p) => p.sponsorLogoPath)
+    .filter((p): p is string => p != null);
+  if (logoPaths.length > 0) {
+    try {
+      const { error: removeError } = await getAdminClient()
+        .storage.from(SPONSOR_LOGO_BUCKET)
+        .remove(logoPaths);
+      if (removeError) {
+        console.error('[games] deleteGame logo cleanup failed', {
+          gameId,
+          removeError,
+        });
+      }
+    } catch (cleanupErr) {
+      console.error('[games] deleteGame logo cleanup failed', {
+        gameId,
+        cleanupErr,
+      });
+    }
   }
 
   revalidateTag(`game-${gameId}`, 'max');

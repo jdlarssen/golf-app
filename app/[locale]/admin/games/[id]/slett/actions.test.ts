@@ -16,8 +16,11 @@ import {
  *   1. auth.getUser                       // loadRole
  *   2. users.select(is_admin,email,name)  // loadRole
  *   3. games.select(created_by)           // requireAdminOrCreator — ONLY when not admin
- *   4. games.select(id, name, status)     // deleteGame
+ *   4. games.select(id,name,status,prizes) // deleteGame
  *   5. games.delete                        // only if allowed
+ *
+ * #1052: etter vellykket delete ryddes sponsorlogo-objects best-effort via
+ * service-role-klienten (admin eier ikke andres objects) — mocket under.
  */
 
 const redirectMock = makeRedirectMock();
@@ -42,6 +45,13 @@ vi.mock('next/cache', () => ({
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
+}));
+
+const storageRemoveMock = vi.fn();
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => ({
+    storage: { from: () => ({ remove: storageRemoveMock }) },
+  }),
 }));
 
 function lastRedirect(): string | undefined {
@@ -90,6 +100,59 @@ describe('deleteGame — admin', () => {
     );
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
     expect(deleteCalls()).toHaveLength(1);
+    // Ingen logo-paths i prizes → ingen storage-opprydding.
+    expect(storageRemoveMock).not.toHaveBeenCalled();
+  });
+
+  it('rydder sponsorlogo-objects best-effort etter vellykket delete (#1052)', async () => {
+    storageRemoveMock.mockResolvedValue({ data: null, error: null });
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      {
+        data: {
+          id: 'game-1',
+          name: 'Vinter-cup',
+          status: 'finished',
+          prizes: [
+            {
+              category: 'placement',
+              position: 1,
+              description: 'Gavekort',
+              sponsor: 'Klubbshoppen',
+              sponsorLogoPath: 'uid/a.webp',
+            },
+            {
+              category: 'longest_drive',
+              position: 1,
+              description: 'Driver',
+              sponsor: null,
+              sponsorLogoPath: 'uid/b.webp',
+            },
+            {
+              category: 'closest_to_pin',
+              position: 1,
+              description: 'Baller',
+              sponsor: 'Baren',
+              sponsorLogoPath: null,
+            },
+          ],
+        },
+        error: null,
+      }, // games.select(id,name,status,prizes)
+      { data: null, error: null }, // games.delete
+    ]);
+    signIn('admin-1');
+
+    const { deleteGame } = await import('./actions');
+    await expect(deleteGame(fd('game-1'))).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(storageRemoveMock).toHaveBeenCalledExactlyOnceWith([
+      'uid/a.webp',
+      'uid/b.webp',
+    ]);
+    expect(lastRedirect()).toBe('/admin/games?status=deleted&name=Vinter-cup');
   });
 });
 
