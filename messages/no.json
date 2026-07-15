@@ -564,27 +564,7 @@
       "allowedFormatsLegend": "Tillatte match-formater",
       "allowedFormatsHint": "Velg hvilke spillformater som er lov i matchene. Du legger til de enkelte matchene etter cupen er opprettet.",
       "atLeastOneFormatError": "Velg minst ett match-format.",
-      "fourballAllowanceLegend": "Scoring for fourball-matcher",
-      "fourballAllowanceDescription": "Styrer handicap for fourball-matcher. Netto bruker en andel av hver spillers handicap, brutto teller laveste bruttoscore per hull per side.",
-      "fourballAllowanceNettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
-      "fourballAllowanceBruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side vinner. Vanlig format på ekte Ryder Cup.",
-      "foursomesAllowanceLegend": "Scoring for foursomes-matcher",
-      "foursomesAllowanceDescription": "Styrer handicap for foursomes-matcher (vekselslag). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets bruttoslag uten handicap-andel.",
-      "foursomesAllowanceNettoHelper": "Andel av differansen i lagenes summerte handicap som høyeste lag får som slag. WHS-standard for foursomes matchplay er 50.",
-      "foursomesAllowanceBruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag.",
-      "submitButton": "Opprett cup",
-      "greensomeAllowanceLegend": "Scoring for greensome-matcher",
-      "greensomeAllowanceDescription": "Styrer handicap for greensome-matcher. Begge spiller første slag, velger det beste og alternerer deretter.",
-      "greensomeAllowanceNettoHelper": "Andel av differansen i lagenes summerte handicap som høyeste lag får som slag. Standard for greensome matchplay er 100.",
-      "greensomeAllowanceBruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag.",
-      "chapmanAllowanceLegend": "Scoring for chapman-matcher",
-      "chapmanAllowanceDescription": "Styrer handicap for chapman-matcher (pinehurst). Begge spiller første slag, bytter, velger så det beste og alternerer.",
-      "chapmanAllowanceNettoHelper": "Andel av differansen i lagenes summerte handicap som høyeste lag får som slag. Standard for chapman matchplay er 100.",
-      "chapmanAllowanceBruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag.",
-      "gruesomeAllowanceLegend": "Scoring for gruesome-matcher",
-      "gruesomeAllowanceDescription": "Styrer handicap for gruesome-matcher. Begge spiller første slag, men motstanderlaget velger hvilken ball som fortsetter — krevende variant av greensome.",
-      "gruesomeAllowanceNettoHelper": "Andel av differansen i lagenes summerte handicap som høyeste lag får som slag. Standard for gruesome matchplay er 50.",
-      "gruesomeAllowanceBruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
+      "submitButton": "Opprett cup"
     },
     "sections": {
       "wolf": {
