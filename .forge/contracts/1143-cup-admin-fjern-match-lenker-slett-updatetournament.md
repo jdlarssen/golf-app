@@ -42,18 +42,18 @@ Prod har **0 cuper**, så ingen aktiv flyt brytes. Dette er ren opprydding + clu
 **Claude's Discretion:** eksakt commit-oppdeling; ordlyden i den omskrevne docstringen og de to justerte «see updateTournament»-kommentarene; om error-/status-opprydding og i18n-slett samles i én commit eller to.
 
 ## Success Criteria
-- [ ] `updateTournament` finnes ikke lenger i `lib/cup/actions.ts`; `grep -rn updateTournament` treffer ingen funksjonsdefinisjon/kall (kun evt. omskrevne kommentarer uten funksjonsnavnet).
-- [ ] Den manuelle +match-grid-en (`CupManagement.tsx:248-269`) er fjernet; generer-knapp og matches-liste er urørt.
-- [ ] Docstringen (`CupManagement.tsx:42-46`) beskriver ikke lenger «+ match»-lenkene som en variant-forskjell.
-- [ ] `errorMessageMap`/`statusMessageMap` inneholder ingen av de foreldreløse kodene (`name`, `team_1`, `team_2`, `team_dup`, `points`, `update_failed`, `updated`).
-- [ ] `messages/no.json` og `messages/en.json` har fjernet `cup.manage.addSingles..addGruesome` + de orphaned error/status-nøklene, og har identisk `cup.manage`-nøkkelsett.
-- [ ] Cup-admin-siden (`/admin/cup/[id]` i draft) rendrer uten grid-en, uten runtime-feil; klubb-varianten er uendret.
-- [ ] Ingen foreldreløse imports i `lib/cup/actions.ts` eller `CupManagement.tsx`.
+- [x] `updateTournament` finnes ikke lenger i `lib/cup/actions.ts`; `grep -rn updateTournament` treffer ingen funksjonsdefinisjon/kall (kun evt. omskrevne kommentarer uten funksjonsnavnet). — EVIDENS: repo-wide grep (--include *.ts/*.tsx) exit 1 (null treff); begge #727-kommentarene omskrevet til «bug-prevention #2» (commit f181f04a).
+- [x] Den manuelle +match-grid-en (`CupManagement.tsx:248-269`) er fjernet; generer-knapp og matches-liste er urørt. — EVIDENS: diff af7dea7c fjerner kun kommentar + `{!isClub && (…)}`-blokken; generer-knappen (nå :227-240) og matches-lista uendret i diff.
+- [x] Docstringen (`CupManagement.tsx:42-46`) beskriver ikke lenger «+ match»-lenkene som en variant-forskjell. — EVIDENS: omskrevet til shell/href-forskjeller + admin SmartLink-drill-down vs klubb info-kort (CupManagement.tsx:43-45).
+- [x] `errorMessageMap`/`statusMessageMap` inneholder ingen av de foreldreløse kodene (`name`, `team_1`, `team_2`, `team_dup`, `points`, `update_failed`, `updated`). — EVIDENS: maps nå :78-84 (5 error-koder) og :85-90 (4 status-koder); grep bekrefter.
+- [x] `messages/no.json` og `messages/en.json` har fjernet `cup.manage.addSingles..addGruesome` + de orphaned error/status-nøklene, og har identisk `cup.manage`-nøkkelsett. — EVIDENS: python-flatten av begge cup.manage-trær → parity: True, orphans gone: True; `grep '"addSingles"\|"addGruesome"' messages/` exit 1.
+- [x] Cup-admin-siden (`/admin/cup/[id]` i draft) rendrer uten grid-en, uten runtime-feil; klubb-varianten er uendret. — EVIDENS: `npm run build` exit 0 (ingen MISSING_MESSAGE, ruten prerendret OK); klubb-varianten rendret aldri grid-en (`!isClub`-gate) og dens kodesti er uendret i diff. Staging-render-sjekk: se Gates.
+- [x] Ingen foreldreløse imports i `lib/cup/actions.ts` eller `CupManagement.tsx`. — EVIDENS: grep viser gjenbruk av alle (NAME_RE/TEAM_NAME_RE/parsePointsToWin/parseAllowancePct/ALLOWANCE_DEFAULTS i createTournamentDraft; requireAdminOrClubAdminOfCup/cupRedirectBase/expectAffected i start/finish; Link i generer-knappen :233); lint 0 errors.
 
 ## Gates
-- [ ] `npm run build` (fanger MISSING_MESSAGE + ubrukt/ødelagt import + exhaustive-switch)
-- [ ] `npm run lint`
-- [ ] `npx vitest run lib/cup app/[locale]/admin/cup` (cup-suiten + generer-wizard-testene grønne — bekrefter at fjerningen ikke rørte generer-flyten)
+- [x] `npm run build` (fanger MISSING_MESSAGE + ubrukt/ødelagt import + exhaustive-switch) — exit 0
+- [x] `npm run lint` — exit 0, 0 errors (56 pre-eksisterende warnings)
+- [x] `npx vitest run lib/cup app/[locale]/admin/cup` — 9 filer, 110 tester, alle grønne
 - [ ] Lett staging-render-sjekk (valgfri, builder-skjønn): `/admin/cup/[id]` for en draft-cup rendrer uten grid; ingen full flyt-verify kreves (refactor-label, 0 prod-cuper)
 
 ## Files Likely Touched
