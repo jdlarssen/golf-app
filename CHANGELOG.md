@@ -1325,8 +1325,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 23 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 24 rettinger</strong></summary>
 
+- `1.205.2` · [#1145](https://github.com/jdlarssen/golf-app/issues/1145) — Trekker du deg fra en runde som pågår, ber ikke appen deg lenger om å betale startkontingenten. Betalingslinja er borte når du er ute.
 - `1.205.1` · [#1141](https://github.com/jdlarssen/golf-app/issues/1141) — Sponsor-feltet og logo-opplasteren i premiebordet dukker nå først opp når du har fylt inn premien over dem, så en sponsor du legger inn uten premie ikke lenger forsvinner stille når du lagrer.
 - `1.201.5` · [#1136](https://github.com/jdlarssen/golf-app/issues/1136) — Å be om å bli med i en klubb via lenke er ett trykk unna: det valgfrie hilsen-feltet er borte, så du bare trykker «Be om å bli med».
 - `1.201.4` · [#1135](https://github.com/jdlarssen/golf-app/issues/1135) — Klubbsiden er ryddigere: «Legg til på e-post» og «Del klubb-lenke» bor nå i samme invitér-kort, og tomme liga- og cup-seksjoner er borte for vanlige medlemmer, så du slipper døde overskrifter mellom medlemslista og «Sett opp runde».
