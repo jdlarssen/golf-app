@@ -80,48 +80,63 @@ export function PrizesSection({ state }: Props) {
       <p className="text-xs text-muted/80">{t('hint')}</p>
 
       <div className="space-y-4">
-        {slots.map((slot) => (
-          <div key={slot.key} className="space-y-1.5">
-            <span className="block font-serif text-base text-text">
-              {slot.label}
-            </span>
-            <input
-              type="text"
-              inputMode="text"
-              data-testid={`prize-${slot.key}-desc`}
-              value={prizeDraft[slot.key].description}
-              onChange={(e) =>
-                setPrizeField(slot.key, 'description', e.target.value)
-              }
-              placeholder={t('prizePlaceholder')}
-              aria-label={t('prizeAriaLabel', { slot: slot.label })}
-              maxLength={PRIZE_DESCRIPTION_MAX}
-              className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
-            />
-            <input
-              type="text"
-              inputMode="text"
-              data-testid={`prize-${slot.key}-sponsor`}
-              value={prizeDraft[slot.key].sponsor}
-              onChange={(e) =>
-                setPrizeField(slot.key, 'sponsor', e.target.value)
-              }
-              placeholder={t('sponsorPlaceholder')}
-              aria-label={t('sponsorAriaLabel', { slot: slot.label })}
-              maxLength={PRIZE_SPONSOR_MAX}
-              className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-muted focus:border-primary focus:outline-none"
-            />
-            <SponsorLogoField
-              slotKey={slot.key}
-              slotLabel={slot.label}
-              sponsorName={prizeDraft[slot.key].sponsor}
-              path={prizeDraft[slot.key].sponsorLogoPath}
-              onChange={(path) =>
-                setPrizeField(slot.key, 'sponsorLogoPath', path)
-              }
-            />
-          </div>
-        ))}
+        {slots.map((slot) => {
+          // #1141: vis sponsor-feltene (navn + logo) først når slotet har en
+          // premie-beskrivelse. Serveren (parsePrizesFromFormData/prunePrizes)
+          // dropper hele slotet uten beskrivelse, så et tomt slot skal ikke
+          // tilby felt som stille kastes ved lagring. Samme disclosure-mønster
+          // som Vipps-feltet (RegistrationSection hasEntryFee). Ingen state
+          // nulles ved skjuling — forelderen serialiserer feltene uansett
+          // (#1011), så verdiene overlever at beskrivelsen tømmes og refylles.
+          const hasDescription =
+            prizeDraft[slot.key].description.trim().length > 0;
+          return (
+            <div key={slot.key} className="space-y-1.5">
+              <span className="block font-serif text-base text-text">
+                {slot.label}
+              </span>
+              <input
+                type="text"
+                inputMode="text"
+                data-testid={`prize-${slot.key}-desc`}
+                value={prizeDraft[slot.key].description}
+                onChange={(e) =>
+                  setPrizeField(slot.key, 'description', e.target.value)
+                }
+                placeholder={t('prizePlaceholder')}
+                aria-label={t('prizeAriaLabel', { slot: slot.label })}
+                maxLength={PRIZE_DESCRIPTION_MAX}
+                className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+              />
+              {hasDescription && (
+                <>
+                  <input
+                    type="text"
+                    inputMode="text"
+                    data-testid={`prize-${slot.key}-sponsor`}
+                    value={prizeDraft[slot.key].sponsor}
+                    onChange={(e) =>
+                      setPrizeField(slot.key, 'sponsor', e.target.value)
+                    }
+                    placeholder={t('sponsorPlaceholder')}
+                    aria-label={t('sponsorAriaLabel', { slot: slot.label })}
+                    maxLength={PRIZE_SPONSOR_MAX}
+                    className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-muted focus:border-primary focus:outline-none"
+                  />
+                  <SponsorLogoField
+                    slotKey={slot.key}
+                    slotLabel={slot.label}
+                    sponsorName={prizeDraft[slot.key].sponsor}
+                    path={prizeDraft[slot.key].sponsorLogoPath}
+                    onChange={(path) =>
+                      setPrizeField(slot.key, 'sponsorLogoPath', path)
+                    }
+                  />
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     </fieldset>
   );
