@@ -184,83 +184,6 @@ export async function createTournamentDraft(formData: FormData) {
   );
 }
 
-export async function updateTournament(formData: FormData) {
-  const id = String(formData.get('id') ?? '');
-  if (!id) redirect('/admin/cup?error=not_found');
-
-  const supabase = await getServerClient();
-  // #524: klubb-cup styres av klubb-admin (eller global admin); frittstående av
-  // global admin. group_id avgjør også hvor feil/suksess redirecter.
-  await requireAdminOrClubAdminOfCup(supabase, id);
-  const base = await cupRedirectBase(supabase, id);
-
-  const name = String(formData.get('name') ?? '').trim();
-  const team1 = String(formData.get('team_1_name') ?? '').trim();
-  const team2 = String(formData.get('team_2_name') ?? '').trim();
-  const pointsRaw = String(formData.get('points_to_win') ?? '');
-  const allowanceRaw = String(formData.get('fourball_allowance_pct') ?? '');
-  const foursomesAllowanceRaw = String(
-    formData.get('foursomes_allowance_pct') ?? '',
-  );
-  const greensomeAllowanceRaw = String(formData.get('greensome_allowance_pct') ?? '');
-  const chapmanAllowanceRaw = String(formData.get('chapman_allowance_pct') ?? '');
-  const gruesomeAllowanceRaw = String(formData.get('gruesome_allowance_pct') ?? '');
-
-  if (!NAME_RE.test(name)) redirect(`${base.path}?error=name`);
-  if (!TEAM_NAME_RE.test(team1)) redirect(`${base.path}?error=team_1`);
-  if (!TEAM_NAME_RE.test(team2)) redirect(`${base.path}?error=team_2`);
-  if (team1.toLowerCase() === team2.toLowerCase())
-    redirect(`${base.path}?error=team_dup`);
-  const points = parsePointsToWin(pointsRaw);
-  if (points === null) redirect(`${base.path}?error=points`);
-  const fourballAllowance = parseAllowancePct(allowanceRaw, ALLOWANCE_DEFAULTS.fourball);
-  if (fourballAllowance === null) redirect(`${base.path}?error=allowance`);
-  const foursomesAllowance = parseAllowancePct(foursomesAllowanceRaw, ALLOWANCE_DEFAULTS.foursomes);
-  if (foursomesAllowance === null)
-    redirect(`${base.path}?error=foursomes_allowance`);
-  const greensomeAllowance = parseAllowancePct(greensomeAllowanceRaw, ALLOWANCE_DEFAULTS.greensome);
-  if (greensomeAllowance === null)
-    redirect(`${base.path}?error=greensome_allowance`);
-  const chapmanAllowance = parseAllowancePct(chapmanAllowanceRaw, ALLOWANCE_DEFAULTS.chapman);
-  if (chapmanAllowance === null)
-    redirect(`${base.path}?error=chapman_allowance`);
-  const gruesomeAllowance = parseAllowancePct(gruesomeAllowanceRaw, ALLOWANCE_DEFAULTS.gruesome);
-  if (gruesomeAllowance === null)
-    redirect(`${base.path}?error=gruesome_allowance`);
-
-  // #727: assert the update touched a row — a silent 0-row no-op (id vanished
-  // between the auth/redirect-base fetch and this write) should hit the error
-  // path, not fall through to a "updated" redirect (bug-prevention #2).
-  try {
-    expectAffected(
-      await supabase
-        .from('tournaments')
-        .update({
-          name,
-          team_1_name: team1,
-          team_2_name: team2,
-          points_to_win: points as number,
-          fourball_allowance_pct: fourballAllowance as number,
-          foursomes_allowance_pct: foursomesAllowance as number,
-          greensome_allowance_pct: greensomeAllowance as number,
-          chapman_allowance_pct: chapmanAllowance as number,
-          gruesome_allowance_pct: gruesomeAllowance as number,
-        })
-        .eq('id', id)
-        .select('id'),
-      'updateTournament',
-    );
-  } catch (err) {
-    console.error('[cup] updateTournament failed', { id, err });
-    redirect(`${base.path}?error=update_failed`);
-  }
-
-  revalidateTag(`tournament-${id}`, 'max');
-  base.revalidate();
-  revalidatePath(`/cup/${id}`);
-  redirect(`${base.path}?status=updated`);
-}
-
 export async function startTournament(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   if (!id) redirect('/admin/cup?error=not_found');
@@ -288,7 +211,7 @@ export async function startTournament(formData: FormData) {
     redirect(`${base.path}?error=wrong_status`);
   }
 
-  // #727: assert the status flip touched a row (see updateTournament).
+  // #727: assert the status flip touched a row (bug-prevention #2).
   try {
     expectAffected(
       await supabase
@@ -376,7 +299,7 @@ export async function finishTournament(formData: FormData) {
     winnerTeam = 2;
   }
 
-  // #727: assert the finish update touched a row (see updateTournament).
+  // #727: assert the finish update touched a row (bug-prevention #2).
   try {
     expectAffected(
       await supabase
