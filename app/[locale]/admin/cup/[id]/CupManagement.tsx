@@ -124,11 +124,18 @@ export async function CupManagement({
       <BrassRibbon kicker={ribbonKicker} />
       <PageHeader
         title={tournament.name}
-        subtitle={t('manage.headerSubtitle', {
-          team1: tournament.team_1_name,
-          team2: tournament.team_2_name,
-          points: formatPoints(tournament.points_to_win),
-        })}
+        subtitle={
+          tournament.points_to_win === null
+            ? t('manage.headerSubtitlePending', {
+                team1: tournament.team_1_name,
+                team2: tournament.team_2_name,
+              })
+            : t('manage.headerSubtitle', {
+                team1: tournament.team_1_name,
+                team2: tournament.team_2_name,
+                points: formatPoints(tournament.points_to_win),
+              })
+        }
         action={<StatusChip tone={chipTone} label={statusLabel} />}
       />
 
@@ -164,11 +171,16 @@ export async function CupManagement({
           </div>
         </div>
         <p className="text-center text-xs text-muted mt-3">
-          {t('manage.matchesSummary', {
-            points: formatPoints(tournament.points_to_win),
-            finished: leaderboard.finishedMatches,
-            total: leaderboard.matches.length,
-          })}
+          {tournament.points_to_win === null
+            ? t('manage.matchesSummaryPending', {
+                finished: leaderboard.finishedMatches,
+                total: leaderboard.matches.length,
+              })
+            : t('manage.matchesSummary', {
+                points: formatPoints(tournament.points_to_win),
+                finished: leaderboard.finishedMatches,
+                total: leaderboard.matches.length,
+              })}
         </p>
         <div className="mt-3 text-center">
           <SmartLink

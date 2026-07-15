@@ -94,6 +94,21 @@ describe('computeCupLeaderboard', () => {
     expect(result.winner).toBe(1);
   });
 
+  it('kårer ingen vinner når poengmålet ennå ikke er satt (#1142)', () => {
+    // En draft-cup bærer points_to_win = NULL fram til startTournament utleder
+    // målet fra det reelle match-antallet. Uten et mål kan ingen stilling —
+    // heller ikke en klar ledelse — kåre en vinner.
+    const matches: CupMatchInput[] = [
+      match({ gameId: 'g1', result: { winnerSide: 1, formatted: '3&2' } }),
+      match({ gameId: 'g2', result: { winnerSide: 1, formatted: '4&3' } }),
+      match({ gameId: 'g3', result: { winnerSide: 1, formatted: '2up' } }),
+    ];
+    const result = computeCupLeaderboard(cup({ points_to_win: null }), matches);
+    expect(result.team1Points).toBe(3);
+    expect(result.winner).toBeNull();
+    expect(result.pointsToWin).toBeNull();
+  });
+
   it('respekterer eksplisitt winner_team fra cup-raden (finished cup)', () => {
     const matches: CupMatchInput[] = [
       match({ gameId: 'g1', result: { winnerSide: 1, formatted: '3&2' } }),

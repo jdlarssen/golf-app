@@ -61,7 +61,8 @@ export default async function CupListPage({
     status: 'draft' | 'active' | 'finished';
     team_1_name: string;
     team_2_name: string;
-    points_to_win: number;
+    // NULL fram til cupen starter (#1142).
+    points_to_win: number | null;
     created_at: string;
   }>;
 
@@ -112,11 +113,16 @@ export default async function CupListPage({
                         {cup.name}
                       </p>
                       <p className="text-xs text-muted mt-1">
-                        {t('ledger.rowSubtitle', {
-                          team1: cup.team_1_name,
-                          team2: cup.team_2_name,
-                          points: String(cup.points_to_win).replace('.', ','),
-                        })}
+                        {cup.points_to_win === null
+                          ? t('ledger.rowSubtitlePending', {
+                              team1: cup.team_1_name,
+                              team2: cup.team_2_name,
+                            })
+                          : t('ledger.rowSubtitle', {
+                              team1: cup.team_1_name,
+                              team2: cup.team_2_name,
+                              points: String(cup.points_to_win).replace('.', ','),
+                            })}
                       </p>
                     </div>
                     <StatusChip

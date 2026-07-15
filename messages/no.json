@@ -558,9 +558,6 @@
       "team1Placeholder": "Team Skog",
       "team2Label": "Lag 2",
       "team2Placeholder": "Team Sjø",
-      "pointsToWinLabel": "Poengmål",
-      "pointsHintDefault": "Vanlig regel: halvparten av tilgjengelige poeng + 0,5. Med 8 matcher blir det 4,5.",
-      "pointsHintCapped": "Vanlig regel: halvparten av tilgjengelige poeng + 0,5. Med {matchCap} matcher blir det {pointsDefault}.",
       "allowedFormatsLegend": "Tillatte match-formater",
       "allowedFormatsHint": "Velg hvilke spillformater som er lov i matchene. Du legger til de enkelte matchene etter cupen er opprettet.",
       "atLeastOneFormatError": "Velg minst ett match-format.",
@@ -4190,7 +4187,8 @@
       "emptyText": "Du har ingen cuper ennå.",
       "emptyLink": "Sett opp en cup",
       "rowSubtitle": "{team1} mot {team2} · først til {points} poeng",
-      "emptyBody": "Du har ingen cuper ennå. <a>Sett opp en cup</a> for å komme i gang."
+      "emptyBody": "Du har ingen cuper ennå. <a>Sett opp en cup</a> for å komme i gang.",
+      "rowSubtitlePending": "{team1} mot {team2} · poengmål klart ved start"
     },
     "manage": {
       "brassRibbonAdmin": "Cup · {status}",
@@ -4226,7 +4224,9 @@
         "finished": "Cupen er avsluttet. Resultatet er sendt til alle deltakere.",
         "matches_generated": "Matchene er opprettet. Se gjennom listen under."
       },
-      "deletedMessage": "Cupen «{name}» er slettet."
+      "deletedMessage": "Cupen «{name}» er slettet.",
+      "headerSubtitlePending": "{team1} mot {team2} · poengmål klart ved start",
+      "matchesSummaryPending": "Poengmål klart ved start · {finished} av {total} matcher spilt"
     },
     "generate": {
       "pageTitle": "Generer matcher",

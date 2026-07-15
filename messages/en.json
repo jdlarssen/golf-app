@@ -558,9 +558,6 @@
       "team1Placeholder": "Team Forest",
       "team2Label": "Team 2",
       "team2Placeholder": "Team Lake",
-      "pointsToWinLabel": "Points target",
-      "pointsHintDefault": "Standard rule: half of available points + 0.5. With 8 matches that is 4.5.",
-      "pointsHintCapped": "Standard rule: half of available points + 0.5. With {matchCap} matches that is {pointsDefault}.",
       "allowedFormatsLegend": "Allowed match formats",
       "allowedFormatsHint": "Choose which game formats are permitted in the matches. You add the individual matches after the cup is created.",
       "atLeastOneFormatError": "Choose at least one match format.",
@@ -4190,7 +4187,8 @@
       "emptyText": "You have no cups yet.",
       "emptyLink": "Set up a cup",
       "rowSubtitle": "{team1} vs {team2} · first to {points} points",
-      "emptyBody": "You have no cups yet. <a>Set up a cup</a> to get started."
+      "emptyBody": "You have no cups yet. <a>Set up a cup</a> to get started.",
+      "rowSubtitlePending": "{team1} vs {team2} · points target set at start"
     },
     "manage": {
       "brassRibbonAdmin": "Cup · {status}",
@@ -4226,7 +4224,9 @@
         "finished": "Cup finished. Results have been sent to all participants.",
         "matches_generated": "Matches created. Review the list below."
       },
-      "deletedMessage": "The cup «{name}» has been deleted."
+      "deletedMessage": "The cup «{name}» has been deleted.",
+      "headerSubtitlePending": "{team1} vs {team2} · points target set at start",
+      "matchesSummaryPending": "Points target set at start · {finished} of {total} matches played"
     },
     "generate": {
       "pageTitle": "Generate matches",
