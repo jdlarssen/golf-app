@@ -138,7 +138,6 @@ export function CreateLigaForm({
     <form action={formAction} data-testid="liga-create-form" className="space-y-6">
       {/* Hidden fixed fields */}
       <input type="hidden" name="format" value={format} />
-      {/* Poeng-ligaer er netto-only — lås tabell-verdien uansett radio-state. */}
       <input type="hidden" name="group_id" value={groupId ?? ''} />
 
       {/* Klubb-kontekst (#480): ligaen settes opp for en bestemt klubb. */}
