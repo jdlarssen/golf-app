@@ -13,6 +13,8 @@
  * Tomt premie-felt = slottet lagres ikke (beskjæres server-side).
  */
 
+import { useRef, useState } from 'react';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import {
@@ -20,6 +22,11 @@ import {
   PRIZE_SPONSOR_MAX,
   type PrizeSlotKey,
 } from '@/lib/games/prizes';
+import {
+  processAndUploadSponsorLogo,
+  removeSponsorLogo,
+} from '@/lib/storage/sponsorLogos';
+import { sponsorLogoUrl } from '@/lib/storage/sponsorLogoUrl';
 import type { GameFormState } from '../useGameFormState';
 
 type Props = {
@@ -104,9 +111,128 @@ export function PrizesSection({ state }: Props) {
               maxLength={PRIZE_SPONSOR_MAX}
               className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-muted focus:border-primary focus:outline-none"
             />
+            <SponsorLogoField
+              slotKey={slot.key}
+              slotLabel={slot.label}
+              sponsorName={prizeDraft[slot.key].sponsor}
+              path={prizeDraft[slot.key].sponsorLogoPath}
+              onChange={(path) =>
+                setPrizeField(slot.key, 'sponsorLogoPath', path)
+              }
+            />
           </div>
         ))}
       </div>
     </fieldset>
+  );
+}
+
+/** Feilkode fra upload-pipelinen → i18n-nøkkel (wizard.sections.prizes). */
+const LOGO_ERROR_KEY = {
+  too_large: 'logoErrorTooLarge',
+  decode_failed: 'logoErrorDecode',
+  upload_failed: 'logoErrorUpload',
+} as const;
+
+/**
+ * #1052: sponsorlogo per slott. Fila lastes opp UMIDDELBART ved valg (klient-
+ * pipeline: rasteriser/nedskaler → bucket) — kun object-pathen går inn i
+ * prizeDraft og serialiseres via forelderens hidden input (#1011-mønsteret;
+ * selve fila kan ikke leve i FormData siden opprett-INSERT-en er atomisk).
+ * Bytte av logo rydder forrige object best-effort.
+ */
+function SponsorLogoField({
+  slotKey,
+  slotLabel,
+  sponsorName,
+  path,
+  onChange,
+}: {
+  slotKey: PrizeSlotKey;
+  slotLabel: string;
+  sponsorName: string;
+  path: string;
+  onChange: (path: string) => void;
+}) {
+  const t = useTranslations('wizard.sections.prizes');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<keyof typeof LOGO_ERROR_KEY | null>(null);
+
+  async function handleFileChosen(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    const result = await processAndUploadSponsorLogo(file);
+    setUploading(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    if (path) void removeSponsorLogo(path);
+    onChange(result.path);
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,.svg"
+        className="hidden"
+        data-testid={`prize-${slotKey}-logo-file`}
+        aria-label={t('logoUploadAria', { slot: slotLabel })}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          // Nullstill så samme fil kan velges på nytt etter en feil.
+          e.target.value = '';
+          void handleFileChosen(file);
+        }}
+      />
+      {path ? (
+        <div className="flex min-h-11 items-center gap-3">
+          <Image
+            src={sponsorLogoUrl(path)}
+            alt={sponsorName.trim() || t('logoAlt')}
+            width={80}
+            height={40}
+            unoptimized
+            className="h-10 w-auto max-w-[10rem] rounded-sm bg-surface-2 object-contain px-1"
+            data-testid={`prize-${slotKey}-logo-thumb`}
+          />
+          <button
+            type="button"
+            data-testid={`prize-${slotKey}-logo-remove`}
+            aria-label={t('logoRemoveAria', { slot: slotLabel })}
+            onClick={() => {
+              void removeSponsorLogo(path);
+              onChange('');
+              setError(null);
+            }}
+            className="min-h-11 rounded-md px-3 text-sm text-muted underline-offset-2 hover:underline"
+          >
+            {t('logoRemove')}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          data-testid={`prize-${slotKey}-logo-upload`}
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+          className="min-h-11 w-full rounded-md border border-dashed border-border bg-surface-2 px-3 py-2 text-left text-sm text-muted hover:border-primary disabled:opacity-60"
+        >
+          {uploading ? t('logoUploading') : t('logoUpload')}
+        </button>
+      )}
+      {error && (
+        <p
+          className="text-xs text-danger"
+          data-testid={`prize-${slotKey}-logo-error`}
+        >
+          {t(LOGO_ERROR_KEY[error])}
+        </p>
+      )}
+    </div>
   );
 }

@@ -934,6 +934,11 @@ function FormDataInputs({
             name={prizeFieldName(slot.key, 'sponsor')}
             value={prizeDraft[slot.key].sponsor}
           />
+          <input
+            type="hidden"
+            name={prizeFieldName(slot.key, 'logo')}
+            value={prizeDraft[slot.key].sponsorLogoPath}
+          />
         </Fragment>
       ))}
       {isNines && (

@@ -809,7 +809,16 @@
         "prizePlaceholder": "Premie, f.eks. middag for to",
         "sponsorPlaceholder": "Sponsor (valgfritt)",
         "prizeAriaLabel": "Premie for {slot}",
-        "sponsorAriaLabel": "Sponsor for {slot}"
+        "sponsorAriaLabel": "Sponsor for {slot}",
+        "logoUpload": "Last opp sponsorlogo",
+        "logoUploadAria": "Sponsorlogo for {slot}",
+        "logoUploading": "Laster opp …",
+        "logoRemove": "Fjern logo",
+        "logoRemoveAria": "Fjern sponsorlogo for {slot}",
+        "logoAlt": "Sponsorlogo",
+        "logoErrorTooLarge": "Filen er for stor. Maks 5 MB.",
+        "logoErrorDecode": "Vi fikk ikke lest filen som bilde. Prøv PNG, JPG, WEBP eller SVG.",
+        "logoErrorUpload": "Opplastingen feilet. Sjekk nettet og prøv igjen."
       }
     },
     "ready": {
