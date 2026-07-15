@@ -44,8 +44,13 @@ fortsetter som før.
 Cup, liga og betaling (startkontingent/premiebord) er komplette, men hadde per
 2026-07-07 null reell bruk i prod (0 cuper, 0 ligaer, 0 spill med kontingent).
 Ingen videre investering utover sikkerhet og bugfiks før ekte bruk oppstår.
-Oppryddings-issuene for disse flatene (#1142, #1143, #1144, #1145) ligger parkert
-av samme grunn — poler ikke en flate ingen står på.
+Oppryddings-issuene for disse flatene (#1142–#1145) lå parkert av samme grunn;
+eieren vekket dem 2026-07-14 (se §4-noten).
+
+**Unntak 2026-07-15 — #1052 (sponsorlogo på premiebordet):** bygget på den frosne
+betaling-flaten etter eier-pull — en eksplisitt eier-bestilling overstyrer grensen
+(jf. «Eieren overstyrer alltid» over). Flaten er fortsatt fryst; unntaket gjaldt
+det ene issuet.
 
 ## 3. Tillatte baner nå (per juli 2026)
 
@@ -53,15 +58,19 @@ av samme grunn — poler ikke en flate ingen står på.
 |---|---|---|
 | **Herding** | Kjernesløyfa skal aldri ødelegge en lørdag: stagingbevis-porten, staging/prod-paritet, natt-miljøets e2e | #1076 (+ flake-datapunktet #1168) |
 | **Sesongstyrt** | Kavalkaden — golfåret som delbar fortelling. Bygges mot sesongslutt; start dekomponering tidligst september | #1040 |
-| **Eier-pull: avstand til green** | Crowdsourcet green-pinning + «~X m til green» på hullskjermen (v1 «ren pinning, én avstand»). Pull: eier + medspiller ba om det på en runde (§5); eier-utvalgt i board-møte 2026-07-10. Design: `docs/superpowers/specs/2026-07-10-avstand-til-green-design.md` | #1210 |
 
 Når en bane tømmes, beslutter eieren neste — dokumentet oppdateres i samme PR.
 
 **Tømt 2026-07-12 — Vekstsløyfa (Tier 1):** alle fem (#1169, #1170, #1173, #1176, #1177)
 er bygget og i prod, sammen med forutsetningene #1183 (natt-e2e) og #1192 (funnel-måling).
 Eieren åpnet samtidig adferdspsykologi-pulja (se §4-noten) — begge kjørt kontrakt-først
-via `.forge/contracts/`. Neste bane besluttes av eieren; gjenværende er Herding,
-Sesongstyrt og avstand-til-green.
+via `.forge/contracts/`.
+
+**Tømt 2026-07-13 — avstand til green:** #1210 (crowdsourcet green-pinning + «~X m til
+green» på hullskjermen) er levert og live i prod. Banen sto her som eier-pull etter
+board-møtet 2026-07-10; design-dokumentet ligger i
+`docs/superpowers/specs/2026-07-10-avstand-til-green-design.md`. Gjenværende baner er
+Herding og Sesongstyrt — neste bane besluttes av eieren.
 
 ## 4. Parkert — med vekke-trigger
 
@@ -72,12 +81,18 @@ Sesongstyrt og avstand-til-green.
 | Resend Pro / nytt mail-domene | #54, #55 | >100 mail/dag (som issuene selv sier) |
 | Booking-integrasjon | #51 | En klubb ber om det |
 | Emoji-reaksjoner på lag/matchplay | #977 | Målt bruk av reaksjoner i solo-formater |
-| Null-bruk-opprydding cup/liga/betaling | #1142–#1145 | Ekte bruk av flaten (da poleres den), eller eier-beslutning om rydding |
 | Restfunn subtraksjonsrevisjonen | #1069 | Eier-triage |
 
-Worth-do-forenklingene fra subtraksjonsrevisjonen (#1134–#1141; #1133 er tatt) er
-subtraksjon på brukte flater og går fri av grensen — de kan tas når kapasitet finnes.
-Beslutnings-issues (f.eks. #1146) venter på eier-svar og er verken parkert eller tillatt.
+Worth-do-forenklingene fra subtraksjonsrevisjonen (#1133–#1141) er alle tatt —
+siste lukket 2026-07-15. Beslutnings-issues (f.eks. #1146) venter på eier-svar og
+er verken parkert eller tillatt.
+
+**Vekket 2026-07-14 — null-bruk-oppryddingen cup/liga/betaling (#1142–#1145):**
+raden sto parkert med trigger «ekte bruk av flaten, eller eier-beslutning om
+rydding» — eieren besluttet rydding. #1143 er bygget (lukket 2026-07-15);
+#1142, #1144 og #1145 er merket `autonomy:ready` med kontrakter og går via
+natt-køen. Merk: dette er rydding/subtraksjon, ikke ny investering — §2-frysen
+for nye features på flatene står.
 
 **Bygget 2026-07-10 → 12 — adferdspsykologi-bølgen:** bølgen sto parkert her med trigger
 «Tier 1 tom + eieren åpner pulja» — begge slo til: #1171, #1172, #1174, #1175, #1178,
