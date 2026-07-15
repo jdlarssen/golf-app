@@ -22,6 +22,20 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
     NEXT_PUBLIC_APP_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7),
   },
+  // #1052: sponsorlogoer serveres fra Supabase Storage sin public-CDN-sti.
+  // Wildcard-hostname dekker både prod- og staging-ref. Dagens visninger
+  // bruker `unoptimized` (blobene er alt nedskalert klient-side, og Hobby-
+  // tierens optimaliseringskvote spares), men mønsteret ligger klart den
+  // dagen en flate vil optimalisere.
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
   // #1024: clickjacking-vern via CSP frame-ancestors. Bevisst KUN CSP (ikke
   // X-Frame-Options): XFO kan ikke overstyres per rute, og nettlesere med
   // CSP2-støtte lar frame-ancestors vinne over XFO uansett. Regel-rekkefølgen

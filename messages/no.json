@@ -459,6 +459,7 @@
     "placementLabel": "{position}. plass",
     "ldLabel": "Lengste drive",
     "ctpLabel": "Nærmest flagget",
+    "logoAlt": "Sponsorlogo",
     "sponsoredBy": "Sponset av {sponsor}",
     "sponsorStrip": "Premier sponset av {sponsors}"
   },
