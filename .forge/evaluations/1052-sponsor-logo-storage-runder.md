@@ -1,0 +1,1 @@
+Runde 1 — 2026-07-15: self-eval ACCEPT (alle 7 kriterier m/ bevis; SVG-rasterisering + slett-opprydding bevist live på staging) + Opus-evaluator ACCEPT, 0 funn (gates re-kjørt uavhengig: tsc/eslint/vitest 69 grønne/build/hostile-e2e 5-5; bucket+policies read-only-verifisert mot staging).
