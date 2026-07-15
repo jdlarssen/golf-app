@@ -3826,7 +3826,6 @@
         "course": "Bane og tee må velges for dette bane-omfanget.",
         "penalty": "Straffe-slag over par må være et tall.",
         "best_n": "Antall beste runder må være et helt tall på minst 1.",
-        "scoring": "Velg hva tabellen skal rangeres på.",
         "players": "Deltakerlisten er ugyldig.",
         "insert_failed": "Klarte ikke å opprette ligaen. Prøv igjen.",
         "rounds_failed": "Ligaen ble opprettet, men noen runder feilet. Sjekk detalj-siden.",
@@ -3863,14 +3862,6 @@
       "teePlaceholder": "Velg tee …",
       "multiCourseHint": "Bane og tee velges per runde etterpå.",
       "setupHeading": "Oppsett",
-      "standingsLabel": "Tabell",
-      "stablefordStandingsLocked": "Stableford rangeres på netto. Høyest sammenlagt vinner.",
-      "scoringNetLabel": "Netto",
-      "scoringNetDesc": "Netto mot par (handicap-justert).",
-      "scoringGrossLabel": "Brutto",
-      "scoringGrossDesc": "Brutto mot par (uten handicap).",
-      "scoringBothLabel": "Begge",
-      "scoringBothDesc": "Begge tabeller, med en Netto/Brutto-bryter.",
       "standingsModelLabel": "Sesong-modell",
       "standingsModelTotalLabel": "Total",
       "standingsModelTotalDescStroke": "Sum mot par over alle runder.",
@@ -3935,11 +3926,6 @@
         "best_n": "Beste N runder",
         "points": "Poeng per plassering"
       },
-      "scoringLabel": {
-        "net": "Netto",
-        "gross": "Brutto",
-        "both": "Netto og brutto"
-      },
       "formatLabel": {
         "stroke": "Slagspill",
         "stableford": "Stableford",
@@ -3952,7 +3938,6 @@
       "brassRibbonClub": "Klubb-liga · {status}",
       "brassRibbonStandalone": "Liga · {status}",
       "infoFormat": "Spillform",
-      "infoScoring": "Tabell",
       "infoStandingsModel": "Sesong-modell",
       "infoStandingsModelSuffix": " (sum {unit})",
       "infoStandingsUnitPar": "mot par",

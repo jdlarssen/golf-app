@@ -158,12 +158,6 @@ export async function LigaManagement({
             </dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-muted">{t('manage.infoScoring')}</dt>
-            <dd className="text-text font-medium">
-              {t(`manage.scoringLabel.${league.scoring}` as `manage.scoringLabel.${'net' | 'gross' | 'both'}`) ?? league.scoring}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-2">
             <dt className="text-muted">{t('manage.infoStandingsModel')}</dt>
             <dd className="text-text font-medium">{standingsModelText}</dd>
           </div>

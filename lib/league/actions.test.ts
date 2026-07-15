@@ -154,6 +154,46 @@ describe('createLeagueDraft — rollback on insert failure (#675)', () => {
 });
 
 /**
+ * #1144: liga is always ranked net (WHS) — the netto/brutto/begge choice is gone
+ * from the wizard, and the action hardcodes `scoring: 'net'` rather than reading
+ * the field. Locks the server side of that: a hand-rolled POST claiming
+ * `scoring=gross` must still land a net league (trap 3 — RLS/TS guards don't see
+ * a raw PostgREST insert, so the action is the layer that has to hold).
+ */
+describe('createLeagueDraft — scoring is always net (#1144)', () => {
+  it('inserts scoring: net even when the form posts gross', async () => {
+    const fd = new FormData();
+    fd.set('name', 'Brutto-forsøk');
+    fd.set('season_start', '2099-01-01');
+    fd.set('season_end', '2099-12-31');
+    fd.set('format', 'stroke'); // the only format that ever offered a choice
+    fd.set('scoring', 'gross'); // hostile: the field the wizard no longer posts
+    fd.set('standings_model', 'total');
+    fd.set('missed_round_policy', 'penalty');
+    fd.set('penalty_kind', 'worst_plus_one');
+    fd.set('course_scope', 'multi_course');
+    fd.set('frequency', 'monthly');
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin (loadRole)
+      { data: { id: 'L9' }, error: null }, // leagues.insert().select('id').single
+      { error: null }, // league_rounds.insert (no player_ids → no league_players)
+    ]);
+    setUser('admin-1');
+    const { createLeagueDraft } = await import('./actions');
+
+    // Success path ends in redirect() → the mock throws instead of returning.
+    await expect(createLeagueDraft(fd)).rejects.toBeInstanceOf(RedirectError);
+
+    const insert = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'leagues' && c.method === 'insert',
+    );
+    expect(insert, 'leagues.insert issued').toBeDefined();
+    expect(insert!.args[0]).toMatchObject({ scoring: 'net' });
+  });
+});
+
+/**
  * #727: the cup/liga UPDATE-by-id paths now route their write through
  * expectAffected, so a silent 0-row no-op (id vanished after the pre-flight
  * fetch) surfaces as the action's error code instead of a false success. One

@@ -39,7 +39,6 @@ const SECTION_HEADING_CLASS =
 
 type CourseScope = 'single_course_single_tee' | 'single_course' | 'multi_course';
 type Format = 'stroke' | 'stableford' | 'modified_stableford';
-type Scoring = 'net' | 'gross' | 'both';
 type StandingsModel = 'total' | 'average' | 'best_n' | 'points';
 type MissedRoundPolicy = 'penalty' | 'must_play_all';
 type PenaltyKind = 'worst_plus_one' | 'fixed';
@@ -74,7 +73,6 @@ export function CreateLigaForm({
   const [courseScope, setCourseScope] = useState<CourseScope>('single_course_single_tee');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [format, setFormat] = useState<Format>('stroke');
-  const [scoring, setScoring] = useState<Scoring>('net');
   const [standingsModel, setStandingsModel] = useState<StandingsModel>('total');
   const [missedPolicy, setMissedPolicy] = useState<MissedRoundPolicy>('penalty');
   const [penaltyKind, setPenaltyKind] = useState<PenaltyKind>('worst_plus_one');
@@ -105,11 +103,11 @@ export function CreateLigaForm({
   const errorMessage = state.error
     ? state.error in {
         name: 1, dates: 1, standings_model: 1, format: 1, course_scope: 1,
-        course: 1, penalty: 1, best_n: 1, scoring: 1, players: 1,
+        course: 1, penalty: 1, best_n: 1, players: 1,
         insert_failed: 1, rounds_failed: 1, players_failed: 1, missing: 1,
         season_over: 1,
       }
-      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'scoring' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing' | 'season_over'}`)
+      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing' | 'season_over'}`)
       : t('errors.unexpected', { code: state.error })
     : null;
 
@@ -141,7 +139,6 @@ export function CreateLigaForm({
       {/* Hidden fixed fields */}
       <input type="hidden" name="format" value={format} />
       {/* Poeng-ligaer er netto-only — lås tabell-verdien uansett radio-state. */}
-      <input type="hidden" name="scoring" value={pointsBased ? 'net' : scoring} />
       <input type="hidden" name="group_id" value={groupId ?? ''} />
 
       {/* Klubb-kontekst (#480): ligaen settes opp for en bestemt klubb. */}
@@ -397,52 +394,6 @@ export function CreateLigaForm({
           value={standingsModel === 'best_n' ? 'penalty' : missedPolicy}
         />
         <input type="hidden" name="penalty_kind" value={penaltyKind} />
-
-        {/* Scoring — netto / brutto / begge. Stableford er netto-only. */}
-        <div className="space-y-2 mb-4">
-          <p className="font-sans text-[12px] font-medium text-text mb-1.5">
-            {t('standingsLabel')}
-          </p>
-          {pointsBased ? (
-            <p className="rounded-xl border border-border bg-surface px-4 py-3 font-sans text-[12px] text-muted">
-              {t('stablefordStandingsLocked')}
-            </p>
-          ) : (
-            (
-              [
-                { value: 'net' as Scoring, label: t('scoringNetLabel'), desc: t('scoringNetDesc') },
-                { value: 'gross' as Scoring, label: t('scoringGrossLabel'), desc: t('scoringGrossDesc') },
-                { value: 'both' as Scoring, label: t('scoringBothLabel'), desc: t('scoringBothDesc') },
-              ] as const
-            ).map((opt) => (
-              <label
-                key={opt.value}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                  scoring === opt.value
-                    ? 'border-primary/50 bg-primary-soft'
-                    : 'border-border bg-surface hover:border-primary/30'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="_scoring_radio"
-                  value={opt.value}
-                  checked={scoring === opt.value}
-                  onChange={() => setScoring(opt.value)}
-                  className="mt-0.5 accent-primary"
-                />
-                <span>
-                  <span className="block font-sans text-[14px] font-medium text-text">
-                    {opt.label}
-                  </span>
-                  <span className="block font-sans text-[12px] text-muted mt-0.5">
-                    {opt.desc}
-                  </span>
-                </span>
-              </label>
-            ))
-          )}
-        </div>
 
         {/* Sesong-modell */}
         <div className="space-y-2 mb-4">
