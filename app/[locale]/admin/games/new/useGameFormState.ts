@@ -496,7 +496,11 @@ export function useGameFormState({
     prizeDraftFromList(initialValues?.prizes),
   );
   const setPrizeField = useCallback(
-    (key: PrizeSlotKey, field: 'description' | 'sponsor', value: string) => {
+    (
+      key: PrizeSlotKey,
+      field: 'description' | 'sponsor' | 'sponsorLogoPath',
+      value: string,
+    ) => {
       setPrizeDraft((prev) => ({
         ...prev,
         [key]: { ...prev[key], [field]: value },

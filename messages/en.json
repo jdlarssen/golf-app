@@ -809,7 +809,16 @@
         "prizePlaceholder": "Prize, e.g. dinner for two",
         "sponsorPlaceholder": "Sponsor (optional)",
         "prizeAriaLabel": "Prize for {slot}",
-        "sponsorAriaLabel": "Sponsor for {slot}"
+        "sponsorAriaLabel": "Sponsor for {slot}",
+        "logoUpload": "Upload sponsor logo",
+        "logoUploadAria": "Sponsor logo for {slot}",
+        "logoUploading": "Uploading …",
+        "logoRemove": "Remove logo",
+        "logoRemoveAria": "Remove sponsor logo for {slot}",
+        "logoAlt": "Sponsor logo",
+        "logoErrorTooLarge": "The file is too large — 5 MB max.",
+        "logoErrorDecode": "Couldn't read the file as an image. Try PNG, JPG, WEBP or SVG.",
+        "logoErrorUpload": "The upload failed. Check your connection and try again."
       }
     },
     "ready": {

@@ -551,6 +551,11 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             name={prizeFieldName(slot.key, 'sponsor')}
             value={state.prizeDraft[slot.key].sponsor}
           />
+          <input
+            type="hidden"
+            name={prizeFieldName(slot.key, 'logo')}
+            value={state.prizeDraft[slot.key].sponsorLogoPath}
+          />
         </Fragment>
       ))}
 
