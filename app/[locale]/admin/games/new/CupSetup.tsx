@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { AllowanceField } from '@/components/admin/AllowanceField';
 import type { CupEligibleFormat } from '@/lib/formats/getFormatsForIntent';
 import { formatIconFor } from '@/lib/formats/icons';
 import { createTournamentDraft } from '@/lib/cup/actions';
@@ -140,51 +139,6 @@ export function CupSetup({
         pattern="[0-9]+([,.][0-9]+)?"
         defaultValue={pointsDefault}
         hint={pointsHint}
-      />
-
-      <AllowanceField
-        fieldName="fourball_allowance_pct"
-        defaultPct={85}
-        legend={t('fourballAllowanceLegend')}
-        description={t('fourballAllowanceDescription')}
-        nettoHelperText={t('fourballAllowanceNettoHelper')}
-        bruttoHelperText={t('fourballAllowanceBruttoHelper')}
-      />
-
-      <AllowanceField
-        fieldName="foursomes_allowance_pct"
-        defaultPct={50}
-        legend={t('foursomesAllowanceLegend')}
-        description={t('foursomesAllowanceDescription')}
-        nettoHelperText={t('foursomesAllowanceNettoHelper')}
-        bruttoHelperText={t('foursomesAllowanceBruttoHelper')}
-      />
-
-      <AllowanceField
-        fieldName="greensome_allowance_pct"
-        defaultPct={100}
-        legend={t('greensomeAllowanceLegend')}
-        description={t('greensomeAllowanceDescription')}
-        nettoHelperText={t('greensomeAllowanceNettoHelper')}
-        bruttoHelperText={t('greensomeAllowanceBruttoHelper')}
-      />
-
-      <AllowanceField
-        fieldName="chapman_allowance_pct"
-        defaultPct={100}
-        legend={t('chapmanAllowanceLegend')}
-        description={t('chapmanAllowanceDescription')}
-        nettoHelperText={t('chapmanAllowanceNettoHelper')}
-        bruttoHelperText={t('chapmanAllowanceBruttoHelper')}
-      />
-
-      <AllowanceField
-        fieldName="gruesome_allowance_pct"
-        defaultPct={50}
-        legend={t('gruesomeAllowanceLegend')}
-        description={t('gruesomeAllowanceDescription')}
-        nettoHelperText={t('gruesomeAllowanceNettoHelper')}
-        bruttoHelperText={t('gruesomeAllowanceBruttoHelper')}
       />
 
       <fieldset>
