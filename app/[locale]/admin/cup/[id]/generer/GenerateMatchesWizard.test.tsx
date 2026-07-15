@@ -41,7 +41,7 @@ describe('GenerateMatchesWizard', () => {
     );
 
     // Step indicator
-    expect(screen.getByText(/steg 1 av 5/i)).toBeInTheDocument();
+    expect(screen.getByText(/steg 1 av 4/i)).toBeInTheDocument();
 
     // Both team names should appear in the roster toggle labels
     const teamLabels = screen.getAllByText('Ørnen');
@@ -102,7 +102,7 @@ describe('GenerateMatchesWizard', () => {
 
     // Steg 3: oppsettet (5 matcher) overstiger taket på 4 → varsel + låst «Neste».
     fireEvent.click(screen.getByRole('button', { name: /neste/i }));
-    expect(screen.getByText(/steg 3 av 5/i)).toBeInTheDocument();
+    expect(screen.getByText(/steg 3 av 4/i)).toBeInTheDocument();
     expect(screen.getByText(/oppsettet gir 5 matcher/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /neste/i })).toBeDisabled();
   });
