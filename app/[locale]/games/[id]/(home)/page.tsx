@@ -947,8 +947,10 @@ export default async function GameHomePage({
                 spillere med paid_at satt (de ser ingenting under runden).
                 Løser payment_reminder-deeplinken (lib/notifications/deeplink.ts)
                 som peker hit uansett status: uten denne linja landet en
-                purring midt i runden på en blind side. */}
-            {me.paid_at == null && (
+                purring midt i runden på en blind side.
+                #1145: trukne spillere er unntatt — de ser angre-banneret over,
+                og skal ikke bes betale for en runde de er ute av. */}
+            {me.paid_at == null && me.withdrawn_at == null && (
               <PaymentInfo
                 entryFeeKr={gwp.game.entry_fee_kr}
                 paymentLink={gwp.game.payment_link}
