@@ -4262,7 +4262,6 @@
       "step4Heading": "Preview matches",
       "regenerateButton": "Regenerate",
       "mot": "vs",
-      "step5Heading": "Summary",
       "courseTeeLabel": "Course / tee",
       "matchesLabel": "Matches",
       "matchesTotalLabel": "{count} matches total",
@@ -4285,7 +4284,8 @@
       "emptyStatePlayers": "No players are ready yet. Invite players and they will appear here.",
       "emptyStatePlayersLink": "Open the player list",
       "emptyStateCourses": "You need at least one course with active tees to generate matches.",
-      "emptyStateCoursesLink": "Add a course"
+      "emptyStateCoursesLink": "Add a course",
+      "step4RecapHeading": "Summary"
     },
     "delete": {
       "brassRibbon": "Confirm deletion",

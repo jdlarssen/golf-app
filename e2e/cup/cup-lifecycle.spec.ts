@@ -279,12 +279,9 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
     await page.getByTestId('cup-wizard-strategy-handicap').check();
     await page.getByTestId('cup-wizard-next').click();
 
-    // Step 4: preview the generated matches.
+    // Step 4 (terminal): preview the generated matches, then confirm from the
+    // same step → real createCupMatchesFromPlan → redirect to cup detail.
     await expect(page.getByTestId('cup-wizard-step4')).toBeVisible();
-    await page.getByTestId('cup-wizard-next').click();
-
-    // Step 5: confirm → real createCupMatchesFromPlan → redirect to cup detail.
-    await expect(page.getByTestId('cup-wizard-step5')).toBeVisible();
     await page.getByTestId('cup-wizard-generate').click();
     // Success redirects OFF /generer to the cup detail. An action error keeps us
     // on /generer with an error banner — so wait to LEAVE /generer.
