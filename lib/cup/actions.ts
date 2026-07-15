@@ -12,6 +12,7 @@ import {
 } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
 import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
+import { derivePointsToWin } from './pointsToWin';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
 import {
@@ -24,14 +25,6 @@ import {
 
 const NAME_RE = /^.{1,80}$/;
 const TEAM_NAME_RE = /^.{1,40}$/;
-
-// Poengmålet for en cup: halvparten av de tilgjengelige poengene + 0,5, dvs.
-// det laveste antallet motstanderen ikke kan møte. Utledes ved start (#1142)
-// fordi match-antallet ikke finnes før matchene er generert i /generer.
-// Lokal (ikke eksportert): 'use server' tillater kun async exports.
-function derivePointsToWin(matchCount: number): number {
-  return matchCount / 2 + 0.5;
-}
 
 // Allowance parsers are consolidated in ./allowance.ts (#809).
 // Use parseAllowancePct(raw, ALLOWANCE_DEFAULTS.<format>) at call-sites.

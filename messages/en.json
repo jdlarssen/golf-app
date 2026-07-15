@@ -1128,7 +1128,6 @@
       "cup_team_1": "Team 1 name must be between 1 and 40 characters.",
       "cup_team_2": "Team 2 name must be between 1 and 40 characters.",
       "cup_team_dup": "The teams must have different names.",
-      "cup_points": "The points target must be a positive number (typically 4.5 for 8 matches).",
       "cup_allowance": "Allowance must be between 0 and 100.",
       "cup_insert_failed": "Failed to create the cup. Please try again in a moment.",
       "pending_players": "These players have not completed registration yet{list}. They must log in and fill in their name and handicap before the game can be published."
@@ -4312,7 +4311,6 @@
         "cup_team_1": "Team 1 name must be between 1 and 40 characters.",
         "cup_team_2": "Team 2 name must be between 1 and 40 characters.",
         "cup_team_dup": "Teams must have different names.",
-        "cup_points": "The points target must be a positive number.",
         "cup_allowance": "Check the handicap allowance for four-ball.",
         "cup_foursomes_allowance": "Check the handicap allowance for foursomes.",
         "cup_insert_failed": "Failed to create the cup. Please try again."

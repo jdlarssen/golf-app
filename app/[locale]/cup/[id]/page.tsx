@@ -83,14 +83,11 @@ export default async function PublicCupPage({ params }: { params: Params }) {
         {tournament.status === 'finished' && !winnerName && (
           <p className="mt-2 text-sm text-muted">Uavgjort</p>
         )}
-        {tournament.status !== 'finished' && tournament.points_to_win !== null && (
+        {tournament.status !== 'finished' && (
           <p className="mt-2 text-sm text-muted">
-            Først til {formatPoints(tournament.points_to_win)} point vinner
-          </p>
-        )}
-        {tournament.status !== 'finished' && tournament.points_to_win === null && (
-          <p className="mt-2 text-sm text-muted">
-            Poengmålet er klart når cupen starter
+            {tournament.points_to_win === null
+              ? 'Poengmålet er klart når cupen starter'
+              : `Først til ${formatPoints(tournament.points_to_win)} point vinner`}
           </p>
         )}
       </header>
