@@ -459,6 +459,7 @@
     "placementLabel": "{position}. place",
     "ldLabel": "Longest drive",
     "ctpLabel": "Closest to the pin",
+    "logoAlt": "Sponsor logo",
     "sponsoredBy": "Sponsored by {sponsor}",
     "sponsorStrip": "Prizes sponsored by {sponsors}"
   },
@@ -816,7 +817,7 @@
         "logoRemove": "Remove logo",
         "logoRemoveAria": "Remove sponsor logo for {slot}",
         "logoAlt": "Sponsor logo",
-        "logoErrorTooLarge": "The file is too large — 5 MB max.",
+        "logoErrorTooLarge": "The file is too large. 5 MB max.",
         "logoErrorDecode": "Couldn't read the file as an image. Try PNG, JPG, WEBP or SVG.",
         "logoErrorUpload": "The upload failed. Check your connection and try again."
       }

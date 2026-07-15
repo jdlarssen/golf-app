@@ -2,13 +2,15 @@
 
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
+import { SponsorCredit } from '@/components/SponsorCredit';
 import type { GamePrize } from '@/lib/games/prizes';
 
 /**
  * #1051: viser premiebordet til spillerne før (og under) runden — på spill-hjem
  * og i påmeldingsflyten. Gruppert: plasseringer (🥇/🥈/🥉) først, deretter
- * sideturneringer (LD/CTP). Sponsor vises diskret som «Sponset av {navn}» per
- * linje. Returnerer null når det ikke finnes premier (feature av).
+ * sideturneringer (LD/CTP). Sponsor vises diskret per linje via SponsorCredit
+ * (logo når slottet har en, ellers «Sponset av {navn}» — #1052). Returnerer
+ * null når det ikke finnes premier (feature av).
  *
  * `variant='full'` (default) pakkes i et eget Card; `variant='compact'` er en
  * rammeløs seksjon ment for innmontering inne i et eksisterende Card (signup).
@@ -66,9 +68,7 @@ export function PremiebordCard({
               </span>
               <PrizeLine
                 label={t('placementLabel', { position: p.position })}
-                description={p.description}
-                sponsor={p.sponsor}
-                sponsoredBy={(name) => t('sponsoredBy', { sponsor: name })}
+                prize={p}
               />
             </li>
           ))}
@@ -81,9 +81,7 @@ export function PremiebordCard({
             <li key={`ld-${p.position}`}>
               <PrizeLine
                 label={sideLabel(t('ldLabel'), p.position, longestDrive.length)}
-                description={p.description}
-                sponsor={p.sponsor}
-                sponsoredBy={(name) => t('sponsoredBy', { sponsor: name })}
+                prize={p}
               />
             </li>
           ))}
@@ -91,9 +89,7 @@ export function PremiebordCard({
             <li key={`ctp-${p.position}`}>
               <PrizeLine
                 label={sideLabel(t('ctpLabel'), p.position, closestToPin.length)}
-                description={p.description}
-                sponsor={p.sponsor}
-                sponsoredBy={(name) => t('sponsoredBy', { sponsor: name })}
+                prize={p}
               />
             </li>
           ))}
@@ -112,27 +108,18 @@ export function PremiebordCard({
   return <Card>{body}</Card>;
 }
 
-function PrizeLine({
-  label,
-  description,
-  sponsor,
-  sponsoredBy,
-}: {
-  label: string;
-  description: string;
-  sponsor: string | null;
-  sponsoredBy: (name: string) => string;
-}) {
+function PrizeLine({ label, prize }: { label: string; prize: GamePrize }) {
   return (
     <div className="min-w-0">
       <p className="text-sm text-text">
         <span className="font-medium">{label}</span>
         <span className="text-muted"> · </span>
-        <span className="font-serif">{description}</span>
+        <span className="font-serif">{prize.description}</span>
       </p>
-      {sponsor && (
-        <p className="mt-0.5 text-xs text-muted">{sponsoredBy(sponsor)}</p>
-      )}
+      <SponsorCredit
+        sponsor={prize.sponsor}
+        sponsorLogoPath={prize.sponsorLogoPath}
+      />
     </div>
   );
 }

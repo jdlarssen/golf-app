@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
+import { SponsorCredit } from '@/components/SponsorCredit';
 import type { PrizeAward } from '@/lib/games/prizeAwards';
 
 /**
@@ -51,7 +52,6 @@ export function PrizeAwardsCard({ awards }: { awards: PrizeAward[] }) {
                 <AwardLine
                   award={a}
                   label={t('placementLabel', { position: a.prize.position })}
-                  sponsoredBy={(name) => t('sponsoredBy', { sponsor: name })}
                 />
               </li>
             ))}
@@ -65,7 +65,6 @@ export function PrizeAwardsCard({ awards }: { awards: PrizeAward[] }) {
                 <AwardLine
                   award={a}
                   label={sideLabel(t('ldLabel'), a.prize.position, longestDrive.length)}
-                  sponsoredBy={(name) => t('sponsoredBy', { sponsor: name })}
                 />
               </li>
             ))}
@@ -74,7 +73,6 @@ export function PrizeAwardsCard({ awards }: { awards: PrizeAward[] }) {
                 <AwardLine
                   award={a}
                   label={sideLabel(t('ctpLabel'), a.prize.position, closestToPin.length)}
-                  sponsoredBy={(name) => t('sponsoredBy', { sponsor: name })}
                 />
               </li>
             ))}
@@ -85,15 +83,7 @@ export function PrizeAwardsCard({ awards }: { awards: PrizeAward[] }) {
   );
 }
 
-function AwardLine({
-  award,
-  label,
-  sponsoredBy,
-}: {
-  award: PrizeAward;
-  label: string;
-  sponsoredBy: (name: string) => string;
-}) {
+function AwardLine({ award, label }: { award: PrizeAward; label: string }) {
   return (
     <div className="min-w-0">
       <p className="text-sm text-text">
@@ -104,11 +94,10 @@ function AwardLine({
       <p className="mt-0.5 font-serif text-base text-text">
         {award.winners.join(' · ')}
       </p>
-      {award.prize.sponsor && (
-        <p className="mt-0.5 text-xs text-muted">
-          {sponsoredBy(award.prize.sponsor)}
-        </p>
-      )}
+      <SponsorCredit
+        sponsor={award.prize.sponsor}
+        sponsorLogoPath={award.prize.sponsorLogoPath}
+      />
     </div>
   );
 }
