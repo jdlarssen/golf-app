@@ -8,7 +8,6 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { publishProductUpdate } from '@/lib/productUpdates/publish';
 import { editProductUpdate } from '@/lib/productUpdates/edit';
 import { validateProductUpdateInput } from '@/lib/productUpdates/validateUpdateInput';
-import { sendDigestForPeriod } from '@/lib/productUpdates/digest';
 import type { AppLocale } from '@/i18n/routing';
 
 /**
@@ -94,35 +93,5 @@ export async function editProductUpdateAction(formData: FormData) {
     }
     console.error('[editProductUpdateAction]', err);
     redirect({ href: `/admin/lanseringer/${id}/rediger?error=edit_failed`, locale });
-  }
-}
-
-export async function sendDigestNowAction() {
-  const locale = (await getLocale()) as AppLocale;
-  const { userId } = await loadAdminContext();
-
-  try {
-    const result = await sendDigestForPeriod({ sentByUserId: userId });
-    revalidatePath('/admin/lanseringer');
-
-    if (result.kind === 'already_sent') {
-      redirect({ href: '/admin/lanseringer?digest=already_sent', locale });
-    }
-    if (result.kind === 'no_updates') {
-      redirect({ href: '/admin/lanseringer?digest=no_updates', locale });
-    }
-    // TypeScript cannot narrow past next-intl redirect (not declared `never`);
-    // assert the `sent` branch explicitly after the two guard redirects above.
-    const sent = result as Extract<typeof result, { kind: 'sent' }>;
-    redirect({
-      href: `/admin/lanseringer?digest=sent&recipients=${sent.recipientCount}&updates=${sent.updateCount}`,
-      locale,
-    });
-  } catch (err) {
-    if (err instanceof Error && err.message.includes('NEXT_REDIRECT')) {
-      throw err;
-    }
-    console.error('[sendDigestNowAction]', err);
-    redirect({ href: '/admin/lanseringer?error=digest_failed', locale });
   }
 }

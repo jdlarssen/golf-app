@@ -3588,14 +3588,10 @@
         "link_must_be_internal": "Link must point to an internal route (must start with «/»).",
         "cta_without_link": "Button text requires a link to be filled in.",
         "publish_failed": "Failed to publish. Please try again in a moment.",
-        "digest_failed": "Failed to send the newsletter. Please try again in a moment.",
         "edit_failed": "Failed to save the change. Please try again in a moment."
       },
       "success": {
         "published": "Update live for {count} users.",
-        "digestSent": "Digest sent to {count, plural, one {1 recipient} other {# recipients}} with {updates} updates.",
-        "digestAlreadySent": "The monthly digest has already been sent for the previous period.",
-        "digestNoUpdates": "No updates to send for the previous month. Skipping.",
         "edited": "Update saved — {count, plural, one {1 notification} other {# notifications}} corrected."
       },
       "publishSection": "Publish new update",
@@ -3610,12 +3606,6 @@
       "ctaHint": "Shown only when a link is filled in. E.g. «Try it», «See more».",
       "publishButton": "Publish",
       "publishingBusy": "Publishing…",
-      "digestSection": "Monthly digest",
-      "digestHeading": "Digest for {periodLabel}",
-      "digestSentLine": "Sent {date} to {count, plural, one {1 recipient} other {# recipients}}.",
-      "digestNotSentYet": "Not sent yet. The cron job sends automatically on the 1st of each month, but you can send manually now if you like.",
-      "sendDigestButton": "Send digest now",
-      "sendingBusy": "Sending…",
       "previousSection": "Previous updates",
       "emptyPrevious": "No updates published yet. Use the form above to publish the first one.",
       "editLabel": "Edit",
