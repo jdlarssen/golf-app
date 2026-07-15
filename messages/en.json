@@ -4229,12 +4229,6 @@
       "matchTied": "Halved (AS)",
       "mot": "vs",
       "unknownPlayer": "Unknown player",
-      "addSingles": "+ Singles match",
-      "addFourball": "+ Four-ball match",
-      "addFoursomes": "+ Foursomes match",
-      "addGreensome": "+ Greensome match",
-      "addChapman": "+ Chapman match",
-      "addGruesome": "+ Gruesome match",
       "startButton": "Start cup",
       "startPending": "Starting…",
       "finishButton": "Finish cup",
@@ -4242,12 +4236,6 @@
       "deleteLink": "Delete cup",
       "startHint": "You need at least 2 matches before you can start the cup.",
       "errors": {
-        "name": "Cup name must be between 1 and 80 characters.",
-        "team_1": "Team 1 name must be between 1 and 40 characters.",
-        "team_2": "Team 2 name must be between 1 and 40 characters.",
-        "team_dup": "Teams must have different names.",
-        "points": "The points target must be a positive number.",
-        "update_failed": "Failed to update the cup.",
         "start_failed": "Failed to start the cup.",
         "finish_failed": "Failed to finish the cup.",
         "too_few_matches": "You need at least 2 matches before you can start the cup.",
@@ -4257,7 +4245,6 @@
       },
       "statusMessages": {
         "created": "Cup created. Add matches below to get started.",
-        "updated": "Cup updated.",
         "started": "Cup started. Players will be notified.",
         "finished": "Cup finished. Results have been sent to all participants.",
         "matches_generated": "Matches created. Review the list below."

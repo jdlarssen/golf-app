@@ -40,9 +40,9 @@ const CUP_MATCH_MODES = new Set([
  * `/klubber/[id]/cup/[cupId]`) rendrer denne. Gaten gjøres i ruten; komponenten
  * henter snapshot + chrome.
  *
- * Variant-forskjeller: shell (Admin/App), back-href, generer/slett-href, og at
- * club-varianten skjuler de manuelle «+ match»-lenkene (de peker til
- * /admin/games-wizarden = admin-chrome) — klubb legger til kamper via generer.
+ * Variant-forskjeller: shell (Admin/App), back/generer/slett-href, og at
+ * admin kan bore ned i hver match (SmartLink til /admin/games/[id]) mens
+ * club-varianten viser matchene som rene info-kort.
  */
 export async function CupManagement({
   tournamentId,
@@ -76,12 +76,6 @@ export async function CupManagement({
   }
 
   const errorMessageMap: Record<string, string> = {
-    name: t('manage.errors.name'),
-    team_1: t('manage.errors.team_1'),
-    team_2: t('manage.errors.team_2'),
-    team_dup: t('manage.errors.team_dup'),
-    points: t('manage.errors.points'),
-    update_failed: t('manage.errors.update_failed'),
     start_failed: t('manage.errors.start_failed'),
     finish_failed: t('manage.errors.finish_failed'),
     too_few_matches: t('manage.errors.too_few_matches'),
@@ -90,7 +84,6 @@ export async function CupManagement({
   };
   const statusMessageMap: Record<string, string> = {
     created: t('manage.statusMessages.created'),
-    updated: t('manage.statusMessages.updated'),
     started: t('manage.statusMessages.started'),
     finished: t('manage.statusMessages.finished'),
     matches_generated: t('manage.statusMessages.matches_generated'),
@@ -243,28 +236,6 @@ export async function CupManagement({
             >
               {t('manage.generateButton')}
             </Link>
-          </div>
-        )}
-        {/* De manuelle per-match-lenkene går til /admin/games-wizarden (admin-
-            chrome) — vises bare i admin-varianten. Klubb legger til via generer. */}
-        {!isClub && (
-          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {[
-              ['singles_matchplay', t('manage.addSingles')],
-              ['fourball_matchplay', t('manage.addFourball')],
-              ['foursomes_matchplay', t('manage.addFoursomes')],
-              ['greensome_matchplay', t('manage.addGreensome')],
-              ['chapman_matchplay', t('manage.addChapman')],
-              ['gruesome_matchplay', t('manage.addGruesome')],
-            ].map(([mode, label]) => (
-              <Link
-                key={mode}
-                href={`/admin/games/new?intent=cup&tournament_id=${tournamentId}&game_mode=${mode}`}
-                className="rounded-md border border-border bg-surface px-3 py-2 text-center text-xs font-medium text-primary hover:border-primary/40"
-              >
-                {label}
-              </Link>
-            ))}
           </div>
         )}
         {leaderboard.matches.length === 0 ? (

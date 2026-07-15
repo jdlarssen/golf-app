@@ -4229,12 +4229,6 @@
       "matchTied": "Halvert (AS)",
       "mot": "mot",
       "unknownPlayer": "Ukjent spiller",
-      "addSingles": "+ Singles match",
-      "addFourball": "+ Fourball match",
-      "addFoursomes": "+ Foursomes match",
-      "addGreensome": "+ Greensome match",
-      "addChapman": "+ Chapman match",
-      "addGruesome": "+ Gruesome match",
       "startButton": "Start cupen",
       "startPending": "Starter …",
       "finishButton": "Avslutt cupen",
@@ -4242,12 +4236,6 @@
       "deleteLink": "Slett cupen",
       "startHint": "Du må opprette minst 2 matcher før du kan starte cupen.",
       "errors": {
-        "name": "Cup-navnet må være mellom 1 og 80 tegn.",
-        "team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
-        "team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
-        "team_dup": "Lagene må ha forskjellige navn.",
-        "points": "Poengmålet må være et positivt tall.",
-        "update_failed": "Klarte ikke å oppdatere cupen.",
         "start_failed": "Klarte ikke å starte cupen.",
         "finish_failed": "Klarte ikke å avslutte cupen.",
         "too_few_matches": "Du må opprette minst 2 matcher før du kan starte cupen.",
@@ -4257,7 +4245,6 @@
       },
       "statusMessages": {
         "created": "Cupen er opprettet. Legg til matcher under for å komme i gang.",
-        "updated": "Cupen er oppdatert.",
         "started": "Cupen er startet. Spillerne får varsel.",
         "finished": "Cupen er avsluttet. Resultatet er sendt til alle deltakere.",
         "matches_generated": "Matchene er opprettet. Se gjennom listen under."
