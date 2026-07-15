@@ -44,7 +44,7 @@ type WizardProps = {
   matchCap?: number;
 };
 
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -603,9 +603,13 @@ function Step4Preview({
   );
 }
 
-// ─── Step 5: Confirm ──────────────────────────────────────────────────────────
+// ─── Step 4: Confirm (recap + generate) ───────────────────────────────────────
+//
+// #1142: dette var et eget steg 5. Det hadde ingen input — bare bane·tee-recap
+// og generer-knappen — så det bor nå nederst på steg 4, under den redigerbare
+// oppstillingen.
 
-function Step5Confirm({
+function Step4Confirm({
   matches,
   courseId,
   teeBoxId,
@@ -665,9 +669,9 @@ function Step5Confirm({
   }
 
   return (
-    <div className="space-y-5" data-testid="cup-wizard-step5">
+    <div className="space-y-5">
       <div>
-        <SectionHeading>{t('generate.step5Heading')}</SectionHeading>
+        <SectionHeading>{t('generate.step4RecapHeading')}</SectionHeading>
         <Card>
           <div className="space-y-3">
             <div>
@@ -718,7 +722,7 @@ export function GenerateMatchesWizard({
   matchCap,
 }: WizardProps) {
   const t = useTranslations('cup');
-  const TOTAL_STEPS = 5;
+  const TOTAL_STEPS = 4;
 
   // Step
   const [step, setStep] = useState<Step>(1);
@@ -744,7 +748,7 @@ export function GenerateMatchesWizard({
   // Step 4: generated matches
   const [matches, setMatches] = useState<PlannedMatch[]>([]);
 
-  // Step 5: error
+  // Feil fra createCupMatchesFromPlan (steg 4)
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Derived
@@ -805,7 +809,7 @@ export function GenerateMatchesWizard({
       }
       return true;
     }
-    if (step === 4) return matches.length > 0;
+    // Steg 4 er terminalt (ingen «Neste»), så det trenger ingen gate her.
     return true;
   }
 
@@ -915,49 +919,50 @@ export function GenerateMatchesWizard({
           />
         )}
         {step === 4 && (
-          <Step4Preview
-            matches={matches}
-            team1Players={team1Players}
-            team2Players={team2Players}
-            team1Name={team1Name}
-            team2Name={team2Name}
-            onRegenerate={runGenerate}
-            onMatchChange={handleMatchChange}
-            t={t}
-          />
-        )}
-        {step === 5 && (
-          <Step5Confirm
-            matches={matches}
-            courseId={courseId}
-            teeBoxId={teeBoxId}
-            courses={courses}
-            tournamentId={tournamentId}
-            onError={setErrorMsg}
-            t={t}
-          />
+          <div className="space-y-6">
+            <Step4Preview
+              matches={matches}
+              team1Players={team1Players}
+              team2Players={team2Players}
+              team1Name={team1Name}
+              team2Name={team2Name}
+              onRegenerate={runGenerate}
+              onMatchChange={handleMatchChange}
+              t={t}
+            />
+            <Step4Confirm
+              matches={matches}
+              courseId={courseId}
+              teeBoxId={teeBoxId}
+              courses={courses}
+              tournamentId={tournamentId}
+              onError={setErrorMsg}
+              t={t}
+            />
+          </div>
         )}
 
-        {/* Navigation */}
-        {step < 5 && (
-          <div className="mt-6 space-y-3">
-            {step1ValidationMsg && (
-              <p className="text-xs text-warning text-center">{step1ValidationMsg}</p>
-            )}
-            {step3ValidationMsg && (
-              <p className="text-xs text-warning text-center">{step3ValidationMsg}</p>
-            )}
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                className="flex-1"
-                data-testid="cup-wizard-prev"
-                onClick={handleBack}
-                disabled={step === 1}
-              >
-                {t('generate.prevButton')}
-              </Button>
+        {/* Navigation. Steg 4 er terminalt — generer-knappen i Step4Confirm er
+            primær-handlingen der, så bare «Tilbake» blir med videre. */}
+        <div className="mt-6 space-y-3">
+          {step1ValidationMsg && (
+            <p className="text-xs text-warning text-center">{step1ValidationMsg}</p>
+          )}
+          {step3ValidationMsg && (
+            <p className="text-xs text-warning text-center">{step3ValidationMsg}</p>
+          )}
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              data-testid="cup-wizard-prev"
+              onClick={handleBack}
+              disabled={step === 1}
+            >
+              {t('generate.prevButton')}
+            </Button>
+            {step < 4 && (
               <Button
                 type="button"
                 className="flex-1"
@@ -967,9 +972,9 @@ export function GenerateMatchesWizard({
               >
                 {t('generate.nextButton')}
               </Button>
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </Card>
     </div>
   );

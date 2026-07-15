@@ -4259,7 +4259,6 @@
       "step4Heading": "Forhåndsvis matcher",
       "regenerateButton": "Generer på nytt",
       "mot": "mot",
-      "step5Heading": "Oppsummering",
       "courseTeeLabel": "Bane / tee",
       "matchesLabel": "Matcher",
       "matchesTotalLabel": "{count} matcher totalt",
@@ -4282,7 +4281,8 @@
       "emptyStatePlayers": "Ingen spillere er klare ennå. Inviter spillere, så dukker de opp her.",
       "emptyStatePlayersLink": "Åpne spillerlisten",
       "emptyStateCourses": "Du trenger minst én bane med aktive teer for å generere matcher.",
-      "emptyStateCoursesLink": "Legg inn en bane"
+      "emptyStateCoursesLink": "Legg inn en bane",
+      "step4RecapHeading": "Oppsummering"
     },
     "delete": {
       "brassRibbon": "Bekreft sletting",
