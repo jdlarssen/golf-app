@@ -4,11 +4,13 @@ import { CupSetup } from './CupSetup';
 import type { CupEligibleFormat } from '@/lib/formats/getFormatsForIntent';
 
 // Type C render-tester per docs/test-discipline.md — verifiserer DOM-strukturen
-// CupSetup rendrer: lag-navn-felt, points-to-win, og multi-select for de
-// passerte cup-eligible formats (default-grenen), pluss den capped personlige
-// cup-grenen (#526/#530: matchCap → lavere point-mål-default). Cap-logikken selv
-// er Type A i lib/cup/limits.test. Form action submits via createTournamentDraft
-// (server-action) — vi sjekker DOM-struktur, ikke submit-flyt.
+// CupSetup rendrer: lag-navn-felt og multi-select for de passerte cup-eligible
+// formats. Form action submits via createTournamentDraft (server-action) — vi
+// sjekker DOM-struktur, ikke submit-flyt.
+//
+// #1142: poengmål-feltet og de fem allowance-feltene er fjernet. Poengmålet
+// utledes ved cup-start fra det reelle match-antallet, og allowance-feltene
+// skrev bare WHS-defaultene serveren uansett bruker.
 //
 // #689: format-valget (checkboxene) er ikke persistert og har ingen
 // runtime-effekt — den tidligere disabled-sperra er fjernet. Submit-knappen
@@ -26,13 +28,14 @@ const CUP_ELIGIBLE: CupEligibleFormat[] = [
 ];
 
 describe('CupSetup', () => {
-  it('viser lag-navn + points + multi-select med default-all valgt', () => {
+  it('viser lag-navn + multi-select med default-all valgt', () => {
     render(<CupSetup cupEligibleFormats={CUP_ELIGIBLE} />);
 
     expect(screen.getByLabelText(/cup-navn/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^lag 1$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^lag 2$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/poengmål/i)).toBeInTheDocument();
+    // #1142: poengmål spørres ikke lenger om ved opprettelse.
+    expect(screen.queryByLabelText(/poengmål/i)).not.toBeInTheDocument();
 
     // Multi-select: begge default-valgt. Henter via id for å unngå
     // /matchplay/-regex som matcher to checkboxer.
@@ -55,14 +58,5 @@ describe('CupSetup', () => {
     expect(singles).not.toBeChecked();
     expect(fourball).not.toBeChecked();
     expect(screen.getByRole('button', { name: /opprett cup/i })).not.toBeDisabled();
-  });
-
-  it('senker point-mål-default til 2,5 og forklarer taket for en capped personlig cup', () => {
-    render(<CupSetup cupEligibleFormats={CUP_ELIGIBLE} matchCap={4} />);
-
-    // Point-mål-default følger taket: 4 / 2 + 0,5 = 2,5 (mot admin/klubb-cupens 4,5).
-    expect((screen.getByLabelText(/poengmål/i) as HTMLInputElement).value).toBe('2,5');
-    // Hinten forklarer regelen mot det personlige taket på 4 matcher.
-    expect(screen.getByText(/med 4 matcher blir det 2,5/i)).toBeInTheDocument();
   });
 });

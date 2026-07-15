@@ -42,7 +42,8 @@ export type CupMatchInput = {
 export type TournamentInput = {
   team_1_name: string;
   team_2_name: string;
-  points_to_win: number;
+  // NULL fram til cupen starter — målet utledes av match-antallet (#1142).
+  points_to_win: number | null;
   status: 'draft' | 'active' | 'finished';
   winner_team: 1 | 2 | null;
 };
@@ -57,7 +58,7 @@ export type CupLeaderboardResult = {
   team2Name: string;
   team1Points: number;
   team2Points: number;
-  pointsToWin: number;
+  pointsToWin: number | null;
   winner: 1 | 2 | null;
   matches: CupMatchSummary[];
   finishedMatches: number;
@@ -95,9 +96,13 @@ export function computeCupLeaderboard(
   team1Points = Math.round(team1Points * 10) / 10;
   team2Points = Math.round(team2Points * 10) / 10;
 
+  // Et poengmål på null betyr «ikke bestemt ennå» (cupen har ikke startet), og
+  // kan aldri kåre en vinner — uansett stilling (#1142).
   let winner: 1 | 2 | null = null;
   if (tournament.status === 'finished') {
     winner = tournament.winner_team;
+  } else if (tournament.points_to_win === null) {
+    winner = null;
   } else if (team1Points >= tournament.points_to_win) {
     winner = 1;
   } else if (team2Points >= tournament.points_to_win) {

@@ -43,7 +43,8 @@ export type CupSnapshot = {
     name: string;
     team_1_name: string;
     team_2_name: string;
-    points_to_win: number;
+    // NULL fram til cupen starter (#1142).
+    points_to_win: number | null;
     status: 'draft' | 'active' | 'finished';
     winner_team: 1 | 2 | null;
     created_by: string;

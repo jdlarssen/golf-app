@@ -25,13 +25,12 @@ import {
 const NAME_RE = /^.{1,80}$/;
 const TEAM_NAME_RE = /^.{1,40}$/;
 
-function parsePointsToWin(raw: string): number | null {
-  // Norske form-er kan komme med komma. Aksepter både.
-  const cleaned = raw.replace(',', '.').trim();
-  if (cleaned === '') return null;
-  const n = Number(cleaned);
-  if (!Number.isFinite(n) || n <= 0 || n > 100) return null;
-  return Math.round(n * 10) / 10;
+// Poengmålet for en cup: halvparten av de tilgjengelige poengene + 0,5, dvs.
+// det laveste antallet motstanderen ikke kan møte. Utledes ved start (#1142)
+// fordi match-antallet ikke finnes før matchene er generert i /generer.
+// Lokal (ikke eksportert): 'use server' tillater kun async exports.
+function derivePointsToWin(matchCount: number): number {
+  return matchCount / 2 + 0.5;
 }
 
 // Allowance parsers are consolidated in ./allowance.ts (#809).
@@ -116,7 +115,6 @@ export async function createTournamentDraft(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const team1 = String(formData.get('team_1_name') ?? '').trim();
   const team2 = String(formData.get('team_2_name') ?? '').trim();
-  const pointsRaw = String(formData.get('points_to_win') ?? '');
   const allowanceRaw = String(formData.get('fourball_allowance_pct') ?? '');
   const foursomesAllowanceRaw = String(
     formData.get('foursomes_allowance_pct') ?? '',
@@ -130,8 +128,6 @@ export async function createTournamentDraft(formData: FormData) {
   if (!TEAM_NAME_RE.test(team2)) redirect(`${errBase}cup_team_2`);
   if (team1.toLowerCase() === team2.toLowerCase())
     redirect(`${errBase}cup_team_dup`);
-  const points = parsePointsToWin(pointsRaw);
-  if (points === null) redirect(`${errBase}cup_points`);
   const fourballAllowance = parseAllowancePct(allowanceRaw, ALLOWANCE_DEFAULTS.fourball);
   if (fourballAllowance === null) redirect(`${errBase}cup_allowance`);
   const foursomesAllowance = parseAllowancePct(foursomesAllowanceRaw, ALLOWANCE_DEFAULTS.foursomes);
@@ -158,7 +154,8 @@ export async function createTournamentDraft(formData: FormData) {
       name,
       team_1_name: team1,
       team_2_name: team2,
-      points_to_win: points as number,
+      // points_to_win utelates med vilje: en draft vet ikke hvor mange matcher
+      // den får ennå. startTournament utleder målet fra det reelle antallet.
       fourball_allowance_pct: fourballAllowance as number,
       foursomes_allowance_pct: foursomesAllowance as number,
       greensome_allowance_pct: greensomeAllowance as number,
@@ -201,9 +198,14 @@ export async function startTournament(formData: FormData) {
     redirect(`${base.path}?error=too_few_matches`);
   }
 
+  // #1142: dette er første punktet der det ekte match-antallet finnes — matcher
+  // genereres i /generer mens status='draft', og start er siste gate før cupen
+  // blir aktiv. Draft-raden bar NULL fram til nå.
+  const pointsToWin = derivePointsToWin(count ?? 0);
+
   const { data: current } = await supabase
     .from('tournaments')
-    .select('id, name, status, team_1_name, team_2_name, points_to_win')
+    .select('id, name, status, team_1_name, team_2_name')
     .eq('id', id)
     .maybeSingle();
   if (!current) redirect(`/admin/cup?error=not_found`);
@@ -216,7 +218,11 @@ export async function startTournament(formData: FormData) {
     expectAffected(
       await supabase
         .from('tournaments')
-        .update({ status: 'active', started_at: new Date().toISOString() })
+        .update({
+          status: 'active',
+          started_at: new Date().toISOString(),
+          points_to_win: pointsToWin,
+        })
         .eq('id', id)
         .select('id'),
       'startTournament',
@@ -255,7 +261,9 @@ export async function startTournament(formData: FormData) {
           tournamentId: id,
           team1Name: current.team_1_name,
           team2Name: current.team_2_name,
-          pointsToWin: current.points_to_win,
+          // Den nettopp utledede verdien — `current` ble lest før update-en og
+          // bærer fortsatt NULL.
+          pointsToWin,
           locale: r.locale,
         }),
       ),

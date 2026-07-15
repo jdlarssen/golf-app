@@ -1683,7 +1683,7 @@ export type Database = {
           gruesome_allowance_pct: number
           id: string
           name: string
-          points_to_win: number
+          points_to_win: number | null
           started_at: string | null
           status: string
           team_1_name: string
@@ -1702,7 +1702,7 @@ export type Database = {
           gruesome_allowance_pct?: number
           id?: string
           name: string
-          points_to_win: number
+          points_to_win?: number | null
           started_at?: string | null
           status?: string
           team_1_name: string
@@ -1721,7 +1721,7 @@ export type Database = {
           gruesome_allowance_pct?: number
           id?: string
           name?: string
-          points_to_win?: number
+          points_to_win?: number | null
           started_at?: string | null
           status?: string
           team_1_name?: string

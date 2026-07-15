@@ -788,7 +788,7 @@ describe('GameWizard — #1065 allowance + kontingent overlever flytting til ste
 });
 
 describe('GameWizard — Cup-intent flow', () => {
-  it('rendrer CupSetup (lag-navn + points + multi-select) på steg 2 med intent=cup', () => {
+  it('rendrer CupSetup (lag-navn + multi-select) på steg 2 med intent=cup', () => {
     renderWizard();
     fireEvent.click(screen.getByRole('radio', { name: /^cup$/i }));
     clickNext();
@@ -798,7 +798,6 @@ describe('GameWizard — Cup-intent flow', () => {
     expect(screen.getByLabelText(/cup-navn/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/lag 1/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/lag 2/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/poengmål/i)).toBeInTheDocument();
     // Multi-select for cup-eligible formats. Henter ved id-attributt fordi
     // /matchplay/-regex matcher to checkboxer (Matchplay + Fourball matchplay).
     const singlesCheckbox = document.getElementById(

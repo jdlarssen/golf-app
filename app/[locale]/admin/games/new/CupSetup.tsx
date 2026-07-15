@@ -15,10 +15,6 @@ type Props = {
   // (default) = frittstående cup, uendret admin-flyt.
   groupId?: string;
   clubName?: string;
-  // #526: maks antall matcher for en personlig cup (ikke-admin). Når satt
-  // justeres point-mål-default + hint til den mindre cupen. undefined =
-  // uncapped (admin/klubb).
-  matchCap?: number;
 };
 
 /**
@@ -37,22 +33,10 @@ export function CupSetup({
   cupEligibleFormats,
   groupId,
   clubName,
-  matchCap,
 }: Props) {
   const t = useTranslations('wizard.cupSetup');
   const tModes = useTranslations('modes');
   const tContent = useTranslations('formatGuide');
-  // Point-mål: vanlig regel = halvparten av tilgjengelige point + 0,5. For en
-  // capped personlig cup (maks `matchCap` matcher) blir det en lavere default
-  // enn admin/klubb-cupens 8-match-antagelse.
-  const pointsDefault =
-    matchCap !== undefined
-      ? String(matchCap / 2 + 0.5).replace('.', ',')
-      : '4,5';
-  const pointsHint =
-    matchCap !== undefined
-      ? t('pointsHintCapped', { matchCap, pointsDefault })
-      : t('pointsHintDefault');
   // Multi-select state — initialiserer med alle cup-eligible formats valgt
   // (default-all) så admin ikke trenger å klikke for å bekrefte standard-
   // oppsettet. Endring av valgene har ingen runtime-effekt i F2 (se docstring).
@@ -128,18 +112,6 @@ export function CupSetup({
           />
         </div>
       </fieldset>
-
-      <Input
-        label={t('pointsToWinLabel')}
-        id="points_to_win"
-        name="points_to_win"
-        required
-        type="text"
-        inputMode="decimal"
-        pattern="[0-9]+([,.][0-9]+)?"
-        defaultValue={pointsDefault}
-        hint={pointsHint}
-      />
 
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
