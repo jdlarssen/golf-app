@@ -1953,10 +1953,6 @@ export type Database = {
         Args: { p_accept: boolean; p_request_id: string }
         Returns: string
       }
-      same_flight: {
-        Args: { p_game_id: string; p_other_user: string }
-        Returns: boolean
-      }
       same_flight_or_solo: {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
