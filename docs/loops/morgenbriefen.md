@@ -12,10 +12,13 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   som ikke lar seg verifisere rapporteres som **loop-feil** i briefen — aldri
   som suksess.
 - **Beslutningspunkter krever fersk kommentar-sjekk.** Før et «Svar A/B på
-  #N»-punkt listes: les issuets NYESTE kommentarer. Finnes et eier-svar eller
-  en kontrakt med beslutningen innbakt (f.eks. «Eierbeslutning tatt: A»), er
-  punktet foreldet — utelat det, eller vis neste steg i stedet. (Lærdom fra
-  første brief: #1104 ble listet som ubesvart 30 min etter at eieren svarte A.)
+  #N»-punkt listes: les issuets NYESTE kommentarer. Finnes et eier-svar (den
+  kanoniske strengen «Eierbeslutning via Discord: **A**» — samme streng som
+  A/B-knappen poster) eller en kontrakt med beslutningen innbakt, er punktet
+  foreldet — utelat det, eller vis neste steg i stedet. Det samme gjelder
+  droppede/parkerte punkter: issue lukket eller `parked`-label satt → utelat.
+  (Lærdom fra første brief: #1104 ble listet som ubesvart 30 min etter at
+  eieren svarte A.)
 - **Delta, ikke dump:** finn forrige brief-kommentar på #1110 (nyeste kommentar
   som starter med `☀️ Morgenbrief`); rapporter kun endringer etter dens
   tidsstempel. Første brief noensinne: siste 24 timer.
@@ -33,6 +36,7 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 **Trenger deg nå:**
 - Godkjenn PR #M — <issue-tittel>; evaluate ACCEPT, gates grønne[, e2e grønn / needs-manual-qa: <flyt>] → <lenke>
 - Svar A/B på #N — <én setning om spørsmålet> → <lenke>
+- 🛠 #N trenger kontrakt-økt — kjør `/forge:contract` på #N → <lenke>
 
 **Klar for natt-kø (ett tapp = køet):**
 - #N — <issue-tittel>; forge-kontrakt klar, ikke merket enda → <lenke>
@@ -71,6 +75,23 @@ Auto-skrevet …», jf. docs/loops/kontrakt-smeden.md), merk kandidaten med 🤖
 teksten «les kontrakten før du køer» — eieren skal scrutinere en maskin-skrevet
 kontrakt før ett-tapp-godkjenning, ikke tappe på autopilot.
 
+## Gråsone-punkter (smedens ruting, #1151)
+
+Smeden ruter gråsoner til eieren med to labels; briefen løfter begge under
+«Trenger deg nå»:
+
+- **`autonomy:needs-decision`** — smeden har postet ett binært spørsmål
+  (kommentar med header «🅰️🅱️ Eierbeslutning trengs»). Linje: «Svar A/B på
+  #N — <spørsmålet i én setning>». Hent setningen fra smedens kommentar, ikke
+  issue-tittelen.
+- **`autonomy:needs-contract-session`** — smeden har postet kontrakt-forarbeid
+  (header «🛠 Kontrakt-forarbeid (gråsone)»). Linje: «🛠 #N trenger
+  kontrakt-økt — kjør `/forge:contract` på #N» (kopier-lim-klar kommando).
+
+Ferskhets-sjekken over gjelder begge: eier-svar postet, issue lukket eller
+`parked` satt → utelat linja. Labelen alene er ikke bevis på at punktet
+fortsatt er åpent.
+
 ## Heartbeat-vakta
 
 - **Forventning:** Nattkjøreren skal ha postet heartbeat på #1110 siden forrige
@@ -106,7 +127,13 @@ handlingslinjene i «Trenger deg nå» — custom_id-kontrakten er
 `app/api/discord/interactions/route.ts` sin (#1124):
 
 - Godkjenn-linje for PR → knapp «✅ Merge PR #N» med `custom_id: merge_pr:<N>`
-- A/B-beslutningslinje → to knapper «A»/«B» med `custom_id: answer:<issue>:<A|B>`
+- A/B-beslutningslinje → fire knapper «A»/«B»/«🗑 Dropp»/«⏸ Ikke nå» med
+  `custom_id: answer:<issue>:<A|B>`, `drop_issue:<issue>`, `snooze_issue:<issue>`
+  (🗑 lukker som «not planned», ⏸ setter `parked` — begge poster
+  beslutnings-kommentar på issuet)
+- Kontrakt-økt-linje (`autonomy:needs-contract-session`) → to knapper
+  «🗑 Dropp»/«⏸ Ikke nå» med `custom_id: drop_issue:<issue>`, `snooze_issue:<issue>`
+  (selve kontrakt-økten krever tastatur — kommandoen står i linjeteksten)
 - Natt-kø-kandidat med kontrakt → knapp «🌙 Klarer for natta» med `custom_id: ready_issue:<N>`
 
 (Utroperen sender i tillegg `publish_lansering:<kommentar-id>` fra sin egen

@@ -13,8 +13,8 @@ stående kostnad.
 ## Harde rammer (brudd er aldri OK)
 
 - **Aldri gjett på gråsoner.** Er et valg uklart, skriv IKKE en kontrakt på
-  gjetning — hopp over issuet (v1) eller rut til eier (#1151 når det finnes). En
-  kontrakt bygd på en gjetning fanges først ved eierens merge.
+  gjetning — rut til eieren per steg 2 (#1151). En kontrakt bygd på en gjetning
+  fanges først ved eierens merge.
 - **Aldri merge, aldri prod.** Smeden POSTER kun kommentarer og heartbeat. Ingen
   kode-endring, ingen PR, ingen skriv mot prod (brannmuren #1074 gjelder i skyen).
 - **Fail-closed.** gh/MCP nede, tomt resultat, uklar tilstand → hopp + heartbeat
@@ -28,7 +28,8 @@ stående kostnad.
 
 - **ingen kontrakt:** ingen kommentar med header «📋 Forge-kontrakt tilgjengelig»
   OG ingen `.forge/contracts/<n>-*.md` på main, OG
-- **ikke `autonomy:blocked`**, OG
+- **ikke `autonomy:blocked` og ikke `parked`** (parkert = eieren har sagt
+  «ikke nå» — via ⏸-knappen eller manuelt), OG
 - **positivt buildbar-signal:** label `enhancement` eller `bug`, OG en milestone
   som IKKE er «Backlog — uplanlagt / scale-triggered» (#9). Eierens handling — å
   milestone-e et issue inn i en ekte tier — ER signalet «dette er reelt arbeid».
@@ -38,17 +39,45 @@ stående kostnad.
 
 Ingen kandidater → heartbeat «ingen nye» og avslutt. Suksess, ikke tomgang.
 
-## Steg 2 — Vurder egen tvil («spør, ikke anta» på agenten selv)
+## Steg 2 — Vurder egen tvil og rut gråsoner («spør, ikke anta» på agenten selv)
 
 Per kandidat, klassifiser:
 
 - **Mekanisk / høy tillit:** klar cleanup, bug med tydelig repro, veldefinert
   endring med ett åpenbart designvalg → steg 3.
-- **Gråsone / lav tillit:** åpen feature, uklart omfang, flere sammenvevde
-  designvalg, epic uten enkelt leveranse → **hopp i v1** (rør ikke issuet). #1151
-  legger til A/B-Discord-ruting (1 valg) og økt-eskalering (flere valg).
+- **Epic:** label `epic` → hopp alltid. En epic er aldri én kontrakt; deler
+  brytes ut som egne issues av eieren.
+- **Gråsone med NØYAKTIG ETT binært valg:** post en kommentar på issuet med
+  header `## 🅰️🅱️ Eierbeslutning trengs` — A og B forklart + din anbefaling
+  + hvorfor — og sett label `autonomy:needs-decision`. Morgenbriefen løfter
+  den med A/B/🗑/⏸-knapper (docs/loops/morgenbriefen.md).
+- **Gråsone med flere valg / uklart omfang:** IKKE drypp-mat enkeltspørsmål.
+  Post kontrakt-forarbeid med header `## 🛠 Kontrakt-forarbeid (gråsone)` —
+  scoped kontekst, filer, åpne spørsmål listet, anbefalt retning (ikke
+  spekulativ full-kontrakt) — og sett label `autonomy:needs-contract-session`.
+  Morgenbriefen løfter den med kopier-lim-klar `/forge:contract`-kommando +
+  🗑/⏸-knapper.
 
-Er du i tvil om det er mekanisk eller gråsone: behandle som gråsone (fail-closed).
+I tvil om mekanisk vs. gråsone: behandle som gråsone. I tvil om ett vs. flere
+valg: behandle som flere (fail-closed begge veier).
+
+**Re-run-semantikk (kjøringer etter ruting):**
+
+- Kandidat med `autonomy:needs-decision`: let etter en issue-kommentar som
+  matcher `^Eierbeslutning via Discord: \*\*(A|B)\*\*` postet ETTER din
+  spørsmålskommentar. Funnet → fjern labelen og skriv kontrakten (steg 3) med
+  valget som Key Decision. Ikke funnet → hopp (å vente er ikke en ny handling).
+  Dropp-/utsett-kvitteringene («droppet 🗑» / «utsatt ⏸») matcher aldri
+  regexen — de bærer ikke fet A/B (test-låst i lib/loops/discordActions.test.ts).
+- Kandidat med `autonomy:needs-contract-session`: hopp — eierens trekk er å
+  kjøre `/forge:contract` i en interaktiv økt, eller tappe 🗑/⏸.
+- **Dedupe:** label til stede = allerede rutet. Aldri re-post spørsmålet.
+
+**Ruting-cap:** ruting-handlinger teller mot 5-handlinger-per-kjøring-capen
+(steg 4). I tillegg: er ≥5 åpne issues allerede merket `autonomy:needs-decision`
+eller `autonomy:needs-contract-session`, rut ingen nye denne kjøringen —
+heartbeat «venter på eier: N ubesvarte». Samme prinsipp som kontrakt-throttlen:
+aldri overhal eieren.
 
 ## Steg 3 — Skriv kontrakt (kun høy tillit)
 
@@ -72,7 +101,8 @@ Er du i tvil om det er mekanisk eller gråsone: behandle som gråsone (fail-clos
 
 ## Steg 4 — Cap + throttle (hold deg bak eieren)
 
-- **Cap:** maks **5 kontrakter per kjøring**.
+- **Cap:** maks **5 handlinger per kjøring** — kontrakter og gråsone-rutinger
+  (steg 2) teller likt.
 - **Throttle:** tell **alle** åpne issues med forge-kontrakt — uansett forfatter,
   #1147-batchen og smedens egne 🤖-kontrakter teller likt — som verken er
   `autonomy:ready` eller `autonomy:blocked`. Det er eierens totale uåpnede
@@ -88,8 +118,10 @@ Er du i tvil om det er mekanisk eller gråsone: behandle som gråsone (fail-clos
 ## Steg 5 — Heartbeat (ALLTID)
 
 Én kommentar på #1110: `🔨 Kontrakt-smeden <dato>: <utfall>` der utfall er ett av:
-`skrev N kontrakter (#a, #b …)` / `ingen nye` / `throttlet: N venter` / `kunne
-ikke kjøre — <grunn>`. Morgenbriefen bruker den som liveness-signal.
+`skrev N kontrakter (#a, #b …)` / `rutet N til eier (#a …)` / `ingen nye` /
+`throttlet: N venter` / `venter på eier: N ubesvarte` / `kunne ikke kjøre —
+<grunn>` — eller en kombinasjon («skrev 1 kontrakt (#a), rutet 2 til eier
+(#b, #c)»). Morgenbriefen bruker den som liveness-signal.
 
 ## Routine-oppsett (ops, post-merge)
 
@@ -102,6 +134,7 @@ ikke kjøre — <grunn>`. Morgenbriefen bruker den som liveness-signal.
 
 ## v1-avgrensning
 
-- Kun mekaniske høy-tillit-kontrakter skrives; gråsoner hoppes (rutes i #1151).
+- Kun mekaniske høy-tillit-kontrakter skrives selv; gråsoner rutes til eieren
+  per steg 2 (#1151).
 - Kontrakter er kommentar-only (ingen `.forge/`-fil, ingen PR) for å unngå en PR
   per kontrakt. Surfaceren (#1149) og nattkjøreren leser begge kommentar-headeren.
