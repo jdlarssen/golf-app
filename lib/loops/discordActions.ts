@@ -52,11 +52,14 @@ export type DiscordAction =
   | { kind: 'merge_pr'; pr: number }
   | { kind: 'ready_issue'; issue: number }
   | { kind: 'answer'; issue: number; choice: 'A' | 'B' }
-  | { kind: 'publish_lansering'; commentId: number };
+  | { kind: 'publish_lansering'; commentId: number }
+  | { kind: 'drop_issue'; issue: number }
+  | { kind: 'snooze_issue'; issue: number };
 
 // custom_id-format (satt av sender-siden, se docs/loops/morgenbriefen.md og
 // docs/loops/utroperen.md):
 //   merge_pr:<n>  ·  ready_issue:<n>  ·  answer:<n>:<A|B>  ·  publish_lansering:<kommentar-id>
+//   drop_issue:<n>  ·  snooze_issue:<n>
 export function parseCustomId(customId: string): DiscordAction | null {
   const merge = /^merge_pr:(\d+)$/.exec(customId);
   if (merge) return { kind: 'merge_pr', pr: Number(merge[1]) };
@@ -70,6 +73,12 @@ export function parseCustomId(customId: string): DiscordAction | null {
 
   const publish = /^publish_lansering:(\d+)$/.exec(customId);
   if (publish) return { kind: 'publish_lansering', commentId: Number(publish[1]) };
+
+  const drop = /^drop_issue:(\d+)$/.exec(customId);
+  if (drop) return { kind: 'drop_issue', issue: Number(drop[1]) };
+
+  const snooze = /^snooze_issue:(\d+)$/.exec(customId);
+  if (snooze) return { kind: 'snooze_issue', issue: Number(snooze[1]) };
 
   return null;
 }
@@ -130,7 +139,7 @@ export function extractLanseringProposal(
 // relative til https://api.github.com; `graphql` er eget kall.
 export interface GitHubClient {
   rest(
-    method: 'GET' | 'POST' | 'PUT',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     body?: unknown,
   ): Promise<{ status: number; json: unknown }>;
@@ -174,6 +183,58 @@ export async function executeAction(
       if (res.status !== 201)
         return `Fikk ikke postet svaret på #${action.issue} (HTTP ${res.status}).`;
       return `✅ Svaret «${action.choice}» er postet på #${action.issue}.`;
+    }
+
+    // 🗑-knappen (#1151): flyt-forankrings-avvisning som ett tapp. Kommentaren
+    // postes FØR lukkingen — ingen tilstandsendring uten audit-trail. Ordlyden
+    // deler prefiks med answer-kommentaren, men uten fet A/B, slik at smedens
+    // deteksjons-regex aldri leser et dropp som et svar (test-låst).
+    case 'drop_issue': {
+      const comment = await gh.rest(
+        'POST',
+        `/repos/${LOOP_REPO}/issues/${action.issue}/comments`,
+        { body: 'Eierbeslutning via Discord: droppet 🗑' },
+      );
+      if (comment.status !== 201)
+        return `Fikk ikke postet dropp-kommentaren på #${action.issue} (HTTP ${comment.status}) — issuet er IKKE lukket.`;
+
+      const close = await gh.rest('PATCH', `/repos/${LOOP_REPO}/issues/${action.issue}`, {
+        state: 'closed',
+        state_reason: 'not_planned',
+      });
+      if (close.status !== 200)
+        return `Dropp-kommentaren står på #${action.issue}, men lukkingen feilet (HTTP ${close.status}) — lukk manuelt på GitHub.`;
+      return `🗑 #${action.issue} er droppet — lukket som «not planned».`;
+    }
+
+    // ⏸-knappen (#1151): parkér bak eierens egen trigger. parked-labelen er
+    // eksisterende vokabular («ikke bygg ennå»); smeden ekskluderer den i
+    // steg 1. 404 på label-fjerning betyr bare at labelen ikke var der
+    // (dobbel-tapp) — det er suksess, ikke feil.
+    case 'snooze_issue': {
+      const comment = await gh.rest(
+        'POST',
+        `/repos/${LOOP_REPO}/issues/${action.issue}/comments`,
+        { body: 'Eierbeslutning via Discord: utsatt ⏸ — parkert til eieren fjerner parked-labelen.' },
+      );
+      if (comment.status !== 201)
+        return `Fikk ikke postet utsett-kommentaren på #${action.issue} (HTTP ${comment.status}) — ingenting er endret.`;
+
+      const park = await gh.rest('POST', `/repos/${LOOP_REPO}/issues/${action.issue}/labels`, {
+        labels: ['parked'],
+      });
+      if (park.status !== 200)
+        return `Utsett-kommentaren står på #${action.issue}, men parked-labelen feilet (HTTP ${park.status}) — sett den manuelt.`;
+
+      for (const label of ['autonomy:needs-decision', 'autonomy:needs-contract-session']) {
+        const removed = await gh.rest(
+          'DELETE',
+          `/repos/${LOOP_REPO}/issues/${action.issue}/labels/${encodeURIComponent(label)}`,
+        );
+        if (removed.status !== 200 && removed.status !== 404)
+          return `#${action.issue} er parkert, men fikk ikke fjernet ${label} (HTTP ${removed.status}) — fjern den manuelt.`;
+      }
+      return `⏸ #${action.issue} er parkert — fjern parked-labelen når den blir aktuell igjen.`;
     }
 
     case 'merge_pr': {

@@ -72,6 +72,8 @@ describe('parseCustomId', () => {
     ['answer:1104:A', { kind: 'answer', issue: 1104, choice: 'A' }],
     ['answer:1104:B', { kind: 'answer', issue: 1104, choice: 'B' }],
     ['publish_lansering:4938711829', { kind: 'publish_lansering', commentId: 4938711829 }],
+    ['drop_issue:1229', { kind: 'drop_issue', issue: 1229 }],
+    ['snooze_issue:1229', { kind: 'snooze_issue', issue: 1229 }],
   ])('parser %s', (id, expected) => {
     expect(parseCustomId(id)).toEqual(expected);
   });
@@ -83,6 +85,8 @@ describe('parseCustomId', () => {
     'merge_pr:12;ready_issue:13',
     'publish_lansering:abc',
     'publish_lansering:',
+    'drop_issue:abc',
+    'snooze_issue:',
     '',
   ])('avviser %s', (id) => {
     expect(parseCustomId(id)).toBeNull();
@@ -189,6 +193,134 @@ describe('executeAction: answer', () => {
     });
     expect((calls[0].body as { body: string }).body).toContain('**A**');
     expect(msg).toContain('«A»');
+  });
+});
+
+describe('executeAction: drop_issue', () => {
+  it('poster dropp-kommentar FØR lukking, lukker som not_planned', async () => {
+    const { gh, calls } = mockGh([{ status: 201 }, { status: 200 }]);
+    const msg = await executeAction({ kind: 'drop_issue', issue: 1229 }, gh);
+    expect(calls[0]).toMatchObject({
+      method: 'POST',
+      path: `/repos/${LOOP_REPO}/issues/1229/comments`,
+    });
+    expect(calls[1]).toMatchObject({
+      method: 'PATCH',
+      path: `/repos/${LOOP_REPO}/issues/1229`,
+      body: { state: 'closed', state_reason: 'not_planned' },
+    });
+    expect(msg).toContain('droppet');
+  });
+
+  it('kommentar-feil → ærlig melding, issuet lukkes IKKE', async () => {
+    const { gh, calls } = mockGh([{ status: 502 }]);
+    const msg = await executeAction({ kind: 'drop_issue', issue: 1229 }, gh);
+    expect(calls).toHaveLength(1);
+    expect(msg).toContain('502');
+    expect(msg).toContain('IKKE lukket');
+  });
+
+  it('lukke-feil ETTER kommentar → melding navngir at kommentaren står', async () => {
+    const { gh, calls } = mockGh([{ status: 201 }, { status: 403 }]);
+    const msg = await executeAction({ kind: 'drop_issue', issue: 1229 }, gh);
+    expect(calls).toHaveLength(2);
+    expect(msg).toContain('403');
+    expect(msg).toContain('lukk manuelt');
+  });
+});
+
+describe('executeAction: snooze_issue', () => {
+  it('poster utsett-kommentar, setter parked, fjerner begge needs-labels', async () => {
+    const { gh, calls } = mockGh([
+      { status: 201 },
+      { status: 200 },
+      { status: 200 },
+      { status: 200 },
+    ]);
+    const msg = await executeAction({ kind: 'snooze_issue', issue: 1229 }, gh);
+    expect(calls[0]).toMatchObject({
+      method: 'POST',
+      path: `/repos/${LOOP_REPO}/issues/1229/comments`,
+    });
+    expect(calls[1]).toMatchObject({
+      method: 'POST',
+      path: `/repos/${LOOP_REPO}/issues/1229/labels`,
+      body: { labels: ['parked'] },
+    });
+    expect(calls[2]).toMatchObject({
+      method: 'DELETE',
+      path: `/repos/${LOOP_REPO}/issues/1229/labels/${encodeURIComponent('autonomy:needs-decision')}`,
+    });
+    expect(calls[3]).toMatchObject({
+      method: 'DELETE',
+      path: `/repos/${LOOP_REPO}/issues/1229/labels/${encodeURIComponent('autonomy:needs-contract-session')}`,
+    });
+    expect(msg).toContain('parkert');
+  });
+
+  it('404 på label-fjerning tolereres (dobbel-tapp-idempotens)', async () => {
+    const { gh } = mockGh([
+      { status: 201 },
+      { status: 200 },
+      { status: 404 },
+      { status: 404 },
+    ]);
+    const msg = await executeAction({ kind: 'snooze_issue', issue: 1229 }, gh);
+    expect(msg).toContain('parkert');
+    expect(msg).not.toContain('404');
+  });
+
+  it('parked-label feiler → ærlig melding om manuell oppfølging', async () => {
+    const { gh, calls } = mockGh([{ status: 201 }, { status: 502 }]);
+    const msg = await executeAction({ kind: 'snooze_issue', issue: 1229 }, gh);
+    expect(calls).toHaveLength(2);
+    expect(msg).toContain('502');
+    expect(msg).toContain('manuelt');
+  });
+
+  it('kommentar-feil → ærlig melding, ingen label-endringer', async () => {
+    const { gh, calls } = mockGh([{ status: 502 }]);
+    const msg = await executeAction({ kind: 'snooze_issue', issue: 1229 }, gh);
+    expect(calls).toHaveLength(1);
+    expect(msg).toContain('502');
+  });
+
+  it('annen feil enn 404 på label-fjerning → ærlig melding', async () => {
+    const { gh } = mockGh([
+      { status: 201 },
+      { status: 200 },
+      { status: 500 },
+    ]);
+    const msg = await executeAction({ kind: 'snooze_issue', issue: 1229 }, gh);
+    expect(msg).toContain('500');
+    expect(msg).toContain('manuelt');
+  });
+});
+
+// Smedens deteksjons-regex (docs/loops/kontrakt-smeden.md) skal fange eier-svar
+// og ALDRI dropp-/utsett-kvitteringene — én kanonisk streng, test-låst her.
+describe('svar-streng-kontrakten (smedens deteksjons-regex)', () => {
+  const DETECTION_RE = /^Eierbeslutning via Discord: \*\*(A|B)\*\*/;
+
+  async function emittedCommentBody(action: Parameters<typeof executeAction>[0]) {
+    const { gh, calls } = mockGh([{ status: 201 }, { status: 200 }, { status: 200 }, { status: 200 }]);
+    await executeAction(action, gh);
+    return (calls[0].body as { body: string }).body;
+  }
+
+  it('answer-kommentaren matcher regexen', async () => {
+    const body = await emittedCommentBody({ kind: 'answer', issue: 1104, choice: 'A' });
+    expect(body).toMatch(DETECTION_RE);
+  });
+
+  it('dropp-kommentaren matcher IKKE (ingen falsk A/B-parse)', async () => {
+    const body = await emittedCommentBody({ kind: 'drop_issue', issue: 1229 });
+    expect(body).not.toMatch(DETECTION_RE);
+  });
+
+  it('utsett-kommentaren matcher IKKE (ingen falsk A/B-parse)', async () => {
+    const body = await emittedCommentBody({ kind: 'snooze_issue', issue: 1229 });
+    expect(body).not.toMatch(DETECTION_RE);
   });
 });
 
