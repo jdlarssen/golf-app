@@ -49,17 +49,54 @@ manglet. Aldri fortsett på antagelser om miljøet.
 `preview_network`: assert at samtlige Supabase-kall går mot
 `snwmueecmfqqdurxedxv`. Ser du prod-ref → **hard stopp**: avbryt alt, opprett
 security-issue (label `security`, milestone 9) med det du så, kommenter PR-en.
-Ikke fortsett uansett.
+Ikke fortsett uansett. (Punkter som drives med Playwright-driveren dekker denne
+vakten i scriptet — se steg 4.)
 
 ## Steg 4 — Verifiser hvert akseptansepunkt med tre uavhengige orakler
 
-Driv flyten med `preview_click`/`preview_fill`. Per punkt kreves ALLE tre:
+**Klassifiser hvert punkt først — to kjørefelt (#1219):**
 
-1. **Struktur-orakel:** `preview_snapshot`-assertion på `data-testid`/rolle som
-   beviser effekten (aldri tekst-matching på norsk copy). Mangler appen en
-   testid for å kunne asserte → legg den til i PR-branchen (legitim iterasjon).
-2. **Feillogg-orakel:** `preview_console_logs` (level=error) tom og
-   `preview_network` (filter=failed) tom for flytens requests.
+- **Statisk/ukontrollert:** render, lenker, mount-effekter, og server-action-
+  skjemaer som leser FormData (f.eks. login). Driv med `preview_click`/
+  `preview_fill` som før.
+- **Interaktivt (React onChange/state-drevet UI):** preview-MCP kan IKKE fyre
+  React-events — DOM-verdien settes, men appen re-renderer aldri (verifisert
+  #1173/#1219, gjelder også kjent-gode knapper). IKKE bruk budsjett på å prøve;
+  driv punktet med en **Playwright-driver via Bash** (ekte browser-events):
+
+  - Engangs-script (`.mjs`) i scratchpad, kjørt fra worktree-ROTA:
+    `node --input-type=module --eval "$(cat <scratchpad>/driver.mjs)"`
+    (playwright + chromium ligger klare i repoet).
+  - Driv `http://localhost:<port>` — ALDRI `127.0.0.1` (Next 16 blokkerer
+    cross-origin dev-ressurser; hydreringen dør stille og alle klikk er døde).
+  - **FØR du stoler på noe resultat:** bekreft at serveren på porten er DENNE
+    worktreen (`lsof -ti:<port>` → `lsof -a -p <pid> -d cwd`) — falsk-grønt-
+    fella #1259 (en søster-worktrees server svarer ellers stille).
+  - Login i scriptet: gå rett til `/login?step=verify&email=…&next=<målside>`,
+    `waitForLoadState('networkidle')` FØR utfylling (hydrerings-race), så
+    `pressSequentially(<OTP>)` — 8-sifret kode auto-submitter, IKKE klikk
+    submit etterpå; fallback `press('Enter')` i catch. Ikke vent på action-
+    redirecten (kan henge i minutter): vent på login-POST-ens 303, deretter
+    `page.goto(<målside>)` direkte.
+  - På app-sider: `domcontentloaded` + eksplisitt `waitForSelector` — aldri
+    `networkidle` (realtime holder forbindelser åpne, den settler aldri).
+  - Etter et skriv: ikke vent på redirect — poll DB-en via service-role til
+    beviset er der (skriv + revalidering skjer FØR redirecten i action-ene).
+  - **Oraklene bor i scriptet:** `page.on('console')` (errors) +
+    `page.on('requestfailed')` (feillogg-orakel), `page.on('request')` som
+    prod-vakt (assert HVERT Supabase-kall mot staging-ref — steg 3 for dette
+    feltet), `locator('[data-testid=…]')`-assertions (struktur-orakel).
+    Skriv resultatet som JSON, én rad per steg.
+
+Per punkt kreves ALLE tre orakler, uansett kjørefelt:
+
+1. **Struktur-orakel:** assertion på `data-testid`/rolle som beviser effekten
+   (`preview_snapshot` eller Playwright-locator; aldri tekst-matching på norsk
+   copy). Mangler appen en testid for å kunne asserte → legg den til i
+   PR-branchen (legitim iterasjon).
+2. **Feillogg-orakel:** console-errors tomme og failed requests tomme for
+   flytens requests (`preview_console_logs`/`preview_network`, eller
+   `page.on`-fangsten i driveren).
 3. **SQL-orakel:** SELECT mot staging-DB (Supabase MCP) som bekrefter at
    skrivingen faktisk traff — antall rader og nøkkelverdier. Husk 0-rader-fella:
    tomt resultat der du forventet rader er FEIL, aldri suksess.
