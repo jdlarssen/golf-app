@@ -22,7 +22,7 @@
  *  - flaggstang med vimpel forankret mot høyre kanten — peker oppover som
  *    en stille hyllest til vinnerens runde
  *  - hele scenen sitter nederst i container-en (preserveAspectRatio
- *    `xMidYEnd meet`) så toppen av SVG-en aldri konkurrerer med leader-
+ *    `xMidYMax meet`) så toppen av SVG-en aldri konkurrerer med leader-
  *    cardet, og horisonten "lander" trygt under rad-listen
  *
  * Posisjonering: caller setter `position: absolute` med `inset-0` og
@@ -48,7 +48,7 @@ export function LeaderboardBackdrop({ className }: Props) {
     >
       <svg
         viewBox="0 0 400 600"
-        preserveAspectRatio="xMidYEnd meet"
+        preserveAspectRatio="xMidYMax meet"
         className="h-full w-full"
         fill="none"
       >
