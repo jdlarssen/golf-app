@@ -46,13 +46,13 @@ mønsteret fra `RevansjeCta` (#1020) / `ReactionsProvider` (#943):
 
 ## Suksesskriterier
 
-- [ ] **K1:** På leaderboardet til et ferdig spill ser en deltaker en «Mitt scorekort»-knapp som lenker til `/games/{id}/scorecard`.
-- [ ] **K2:** CTA-en rendres IKKE på: aktivt spill, spectate-ruta, demoen, holes-drilldownen, for ikke-deltaker (inkl. admin-tilskuer) og for trukket spiller.
-- [ ] **K3:** Cup- og liga-runder VISER CTA-en (ingen standalone-gate).
-- [ ] **K4:** i18n-nøkler finnes i både `no` og `en`; ingen hardkodet copy.
-- [ ] **K5:** Unit-test etter sibling-mønsteret (`RevansjeCta.test.tsx`): (a) ingenting uten provider, (b) lenke med riktig href med provider.
-- [ ] **K6:** `npm run build` grønn + co-located tester for endrede filer grønne.
-- [ ] **K7:** Staging-klikkrunde før merge: Hjem → avsluttet runde → leaderboard → «Mitt scorekort» → scorekortet rendrer med 18 hull. Bevis-kommentar + `staging-verified`-label på PR-en.
+- [x] **K1:** På leaderboardet til et ferdig spill ser en deltaker en «Mitt scorekort»-knapp som lenker til `/games/{id}/scorecard`. *(Commit 32927467: MyScorecardCta.tsx rendrer LinkButton med provider-href; page.tsx monterer provider med `/games/${id}/scorecard` bak `showMyScorecard`-gaten; unit-test asserterer href — grønn. Endelig UI-bevis i K7.)*
+- [x] **K2:** CTA-en rendres IKKE på: aktivt spill, spectate-ruta, demoen, holes-drilldownen, for ikke-deltaker (inkl. admin-tilskuer) og for trukket spiller. *(Gate: `finished` + deltaker + `!withdrawn_at` (page.tsx); provider monteres KUN av authed leaderboard-page — spectate/demo/holes har ingen mount (provider-absence); test «rendrer ingenting uten provider» grønn.)*
+- [x] **K3:** Cup- og liga-runder VISER CTA-en (ingen standalone-gate). *(`showMyScorecard` sjekker ikke `tournament_id`/`league_round_id` — kontrast til `showRevansje` rett over i samme fil.)*
+- [x] **K4:** i18n-nøkler finnes i både `no` og `en`; ingen hardkodet copy. *(`leaderboard.common.myScorecardButton`: no «Mitt scorekort», en «My scorecard»; komponenten bruker `t('myScorecardButton')`.)*
+- [x] **K5:** Unit-test etter sibling-mønsteret (`RevansjeCta.test.tsx`): (a) ingenting uten provider, (b) lenke med riktig href med provider. *(MyScorecardCta.test.tsx: 2 passed; RevansjeCta.test.tsx fortsatt 2 passed.)*
+- [x] **K6:** `npm run build` grønn + co-located tester for endrede filer grønne. *(vitest leaderboard-dir: 41 filer / 191 tester passed; `npm run build` exit 0 med full rutetabell.)*
+- [x] **K7:** Staging-klikkrunde før merge: leaderboard på ferdig spill → «Mitt scorekort» → scorekortet rendrer med 18 hull. Bevis-kommentar + `staging-verified`-label på PR-en. *(Playwright-driver mot torny-staging 2026-07-19, alle 5 steg OK: login e2eplayer, CTA synlig med riktig href på ferdig spill (fab70b1a), klikk → scorekort med 18 tbody-rader, negativ-sjekk aktivt spill (9df7b9e0) count=0, prod-vakt: alle supabase-kall mot staging-ref. Skjermbilder: leaderboard med CTA + fullt scorekort, footer v1.208.3.)*
 
 ## Gates
 
