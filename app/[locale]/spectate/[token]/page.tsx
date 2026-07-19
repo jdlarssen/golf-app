@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
+import { routing, type AppLocale } from '@/i18n/routing';
 import { parseMode } from '@/lib/leaderboard';
 import { getGameBySpectateToken } from '@/lib/games/spectate';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
@@ -11,6 +13,24 @@ import { safeParsePrizes } from '@/lib/games/prizes';
 
 type Params = Promise<{ token: string }>;
 type SearchParams = Promise<{ mode?: string | string[] }>;
+
+// #1264: secret spectate-token URLs must never be indexed (the embed page
+// already carries this pattern). noindex + nofollow keeps them out of Google.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; token: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale: AppLocale = routing.locales.includes(rawLocale as AppLocale)
+    ? (rawLocale as AppLocale)
+    : routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: 'spectate' });
+  return {
+    title: t('metaTitle'),
+    robots: { index: false, follow: false },
+  };
+}
 
 /**
  * Public read-only live-follow page (#938). No authentication required —

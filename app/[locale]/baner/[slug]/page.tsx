@@ -5,6 +5,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
+import { canonicalPath } from '@/lib/seo/canonical';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { formatNumber } from '@/lib/i18n/format';
 import { getRatingForGender, type TeeGender } from '@/lib/games/teeRating';
@@ -49,6 +50,7 @@ export async function generateMetadata({
   return {
     title: t('metaTitle', { name: course.name }),
     description: t('metaDescription', { name: course.name }),
+    alternates: { canonical: canonicalPath(locale, `/baner/${slug}`) },
   };
 }
 

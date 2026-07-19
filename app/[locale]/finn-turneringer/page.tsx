@@ -16,6 +16,7 @@ import { getPublicDiscoverableGames } from '@/lib/games/getPublicDiscoverableGam
 import { getGamesSocialProof } from '@/lib/games/getGameSocialProof';
 import { HomeDiscoverySection } from '../HomeDiscoverySection';
 import { AnonDiscoverySection } from './AnonDiscoverySection';
+import { canonicalPath } from '@/lib/seo/canonical';
 import { routing, type AppLocale } from '@/i18n/routing';
 
 // getDiscoverableGames bruker admin-client (service role) ved request-tid.
@@ -37,6 +38,8 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: 'discover' });
   return {
     title: t('metaTitle'),
+    description: t('metaDescription'),
+    alternates: { canonical: canonicalPath(locale, '/finn-turneringer') },
   };
 }
 

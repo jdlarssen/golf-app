@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { canonicalPath } from '@/lib/seo/canonical';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { DemoGame } from './DemoGame';
 
@@ -24,7 +25,11 @@ export async function generateMetadata({
     ? (rawLocale as AppLocale)
     : routing.defaultLocale;
   const t = await getTranslations({ locale, namespace: 'demo' });
-  return { title: t('pageTitle') };
+  return {
+    title: t('pageTitle'),
+    description: t('metaDescription'),
+    alternates: { canonical: canonicalPath(locale, '/demo') },
+  };
 }
 
 export default function DemoPage() {

@@ -54,8 +54,15 @@ export async function generateMetadata({
     : routing.defaultLocale;
   const t = await getTranslations({ locale: resolved, namespace: "common" });
   return {
-    title: t("appName"),
-    description: "Turneringsapp for golf — for kompiser og klubber",
+    // #1264: apex is the canonical host — every URL-based metadata field
+    // (canonical, hreflang, og:image) composes against this, so relative
+    // paths in child pages resolve to https://tornygolf.no/... regardless of
+    // whether the request came in on apex or www.
+    metadataBase: new URL("https://tornygolf.no"),
+    // Default title for segments that set none; child pages get "%s – Tørny".
+    title: { default: t("appName"), template: "%s – Tørny" },
+    // Localized so /en no longer leaks the Norwegian description (#1264).
+    description: t("metaDescription"),
     applicationName: t("appName"),
     appleWebApp: {
       capable: true,
@@ -64,6 +71,11 @@ export async function generateMetadata({
     },
     formatDetection: {
       telephone: false,
+    },
+    openGraph: {
+      siteName: "Tørny",
+      type: "website",
+      locale: resolved === "en" ? "en_GB" : "nb_NO",
     },
   };
 }

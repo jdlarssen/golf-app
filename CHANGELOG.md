@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.207 · Spillformater åpne for alle</strong></summary>
+
+[#1264](https://github.com/jdlarssen/golf-app/issues/1264) — Formatguiden er nå åpen uten innlogging, så du kan dele reglene for Texas scramble, Wolf eller stableford med hvem som helst. Delte lenker viser dessuten et pent forhåndsvisningskort.
+
+↳ /spillformater · «Se spillformatene»
+</details>
+
+<details>
 <summary><strong>1.206 · Enklere liga-oppsett</strong></summary>
 
 [#1144](https://github.com/jdlarssen/golf-app/issues/1144) — Ligaen kjører nå alltid netto, som resten av appen. Valget mellom netto og brutto er borte, så du blir raskere ferdig med oppsettet.

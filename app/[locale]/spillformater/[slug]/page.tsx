@@ -6,6 +6,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
+import { canonicalPath } from '@/lib/seo/canonical';
 import { routing, type AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ slug: string; locale: string }>;
@@ -24,7 +25,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   if (!VALID_MODES.has(slug)) return { title: tFg('detailFallbackMeta') };
   const mode = slug as GameMode;
   const tModes = await getTranslations({ locale, namespace: 'modes' });
-  return { title: tModes(mode as Parameters<typeof tModes>[0]) ?? slug };
+  // Description reuses the format's own summary from the catalog — always in
+  // sync with the page body, no separate copy to maintain (#1264).
+  const content = tFg.raw(
+    `content.${mode}` as Parameters<typeof tFg.raw>[0],
+  ) as { summary?: string } | undefined;
+  return {
+    title: tModes(mode as Parameters<typeof tModes>[0]) ?? slug,
+    description: content?.summary,
+    alternates: { canonical: canonicalPath(locale, `/spillformater/${slug}`) },
+  };
 }
 
 /**

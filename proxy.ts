@@ -19,8 +19,13 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // pathname (so /en/login is public too). These USED to be matcher
 // exclusions; they moved into code when the matcher had to start matching
 // all pages for the i18n rewrite.
+//
+// #1264: /spillformater joins the public set. The format guide is a pure
+// learning resource with no per-user data (getFormatGuideEntries reads the
+// message catalog, no session/DB), so anonymous visitors — and Google — reach
+// it without a login round-trip, same as /baner and /demo.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo)(\/|$)/;
+  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo|spillformater)(\/|$)/;
 
 // #1185: auth-optional routes. The proxy STILL resolves the user here (so a
 // logged-in visitor keeps their verified-user header — and thus their

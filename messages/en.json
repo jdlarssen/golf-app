@@ -1,7 +1,8 @@
 {
   "common": {
     "appName": "Tørny",
-    "guestBadge": "Guest"
+    "guestBadge": "Guest",
+    "metaDescription": "Run golf tournaments for friends and clubs. Tørny keeps track of strokes, handicaps and results, so you can fire up the tournament in a couple of minutes."
   },
   "notFound": {
     "heading": "This page doesn't exist",
@@ -1170,6 +1171,7 @@
     "sheetSubtitle": "How they work. Tap to read more.",
     "closeButton": "Close",
     "listMetaTitle": "Game formats",
+    "listMetaDescription": "How Texas scramble, Wolf, matchplay, stableford and 20+ other golf formats work. Simple rules and examples, so you can join whatever gets set up.",
     "listBackLabel": "← Home",
     "listKicker": "GAME FORMATS",
     "listPageTitle": "Game formats",
@@ -2626,6 +2628,8 @@
     }
   },
   "auth": {
+    "loginMetaTitle": "Log in",
+    "loginMetaDescription": "Log in to Tørny to run or join golf tournaments. Strokes, handicaps and results in one place.",
     "inviteCard": {
       "invitedBy": "{name} has invited you",
       "invitedByFallback": "You're invited",
@@ -4317,6 +4321,7 @@
   "discover": {
     "pageTitle": "Find tournaments",
     "metaTitle": "Find tournaments",
+    "metaDescription": "Find open golf tournaments you can join. See who's playing and sign up in a couple of taps.",
     "backLabel": "← Home",
     "kicker": "FIND TOURNAMENTS",
     "emptyHeading": "Find tournaments",
@@ -4404,7 +4409,7 @@
     "archiveNoDate": "No date"
   },
   "signup": {
-    "metaTitle": "Sign up – Tørny",
+    "metaTitle": "Sign up",
     "kicker": "Sign up",
     "teeOffLabel": "Tee-off:",
     "alreadyRegisteredBanner": "You're already signed up for this game.",
@@ -4469,7 +4474,7 @@
     "notFoundHeading": "This link is no longer valid",
     "notFoundBody": "The game no longer exists or the sign-up link has expired. Ask the organiser for a new link.",
     "notFoundButton": "Back to home",
-    "teamDashMetaTitle": "My team – Tørny",
+    "teamDashMetaTitle": "My team",
     "teamDashKicker": "Team",
     "teamDashNoTeamBanner": "You don't have a team in this game. Ask the captain to add you, or sign up your own team from the sign-up page.",
     "teamDashInvitedHeading": "You''ve been invited to a team in \"{gameName}\"",
@@ -4551,7 +4556,7 @@
       "ogCta": "Join the round",
       "ogDescription": "See who's signed up and join in under a minute.",
       "posterLink": "Print poster",
-      "posterMetaTitle": "Tournament poster – Tørny",
+      "posterMetaTitle": "Tournament poster",
       "posterPrintButton": "Print",
       "posterScanHint": "Scan the code and join the round",
       "posterFooter": "Tørny — fire up your golf tournament in a couple of minutes"
@@ -4559,7 +4564,7 @@
   },
   "legal": {
     "privacy": {
-      "metaTitle": "Privacy – Tørny",
+      "metaTitle": "Privacy",
       "backLabel": "Back",
       "kicker": "Privacy",
       "s1Heading": "What data does Tørny store about you?",
@@ -4837,6 +4842,7 @@
     "renameError": "Couldn't rename. Try again."
   },
   "spectate": {
+    "metaTitle": "Follow the tournament live",
     "liveStatus": "Watching live",
     "resultStatus": "Result",
     "bannerAriaLabel": "Spectator banner",
@@ -4871,7 +4877,7 @@
   },
   "publicCourses": {
     "index": {
-      "metaTitle": "Golf courses – slope, rating and course info – Tørny",
+      "metaTitle": "Golf courses – slope, rating and course info",
       "metaDescription": "Slope, course rating and hole-by-hole info for Norwegian golf courses. Find your course and set up a round in a couple of minutes.",
       "kicker": "Golf courses",
       "heading": "Golf courses in Tørny",
@@ -4881,7 +4887,7 @@
       "emptyState": "No courses have been added yet."
     },
     "detail": {
-      "metaTitle": "{name} – slope, rating and course info – Tørny",
+      "metaTitle": "{name} – slope, rating and course info",
       "metaDescription": "Slope, course rating, par and hole-by-hole info for {name}.",
       "kicker": "Golf course",
       "backLabel": "All courses",
@@ -4903,6 +4909,7 @@
   },
   "demo": {
     "pageTitle": "Try it out",
+    "metaDescription": "Try Tørny without logging in. Play a demo tournament, enter your strokes and watch yourself climb the leaderboard.",
     "gameName": "Demo round",
     "banner": "Enter your strokes and watch yourself climb the board. Nothing is saved.",
     "nameLabel": "What's your name?",

@@ -6,6 +6,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { FormatGuideList } from '@/components/FormatGuideList';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
+import { canonicalPath } from '@/lib/seo/canonical';
 import { routing, type AppLocale } from '@/i18n/routing';
 // Content comes from the message catalog via getFormatGuideEntries (i18n Fase
 // D, #592) — no DB read, fully bilingual.
@@ -24,6 +25,8 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: 'formatGuide' });
   return {
     title: t('listMetaTitle'),
+    description: t('listMetaDescription'),
+    alternates: { canonical: canonicalPath(locale, '/spillformater') },
   };
 }
 
