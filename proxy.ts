@@ -18,12 +18,9 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // Pages reachable while logged out. Checked against the locale-stripped
 // pathname (so /en/login is public too). These USED to be matcher
 // exclusions; they moved into code when the matcher had to start matching
-// all pages for the i18n rewrite. `spillformater` joined the list in #1264
-// (SEO-pakken) — the format guide is a pure learning resource with no
-// per-user data, so it's PUBLIC rather than auth-optional (no getUser() cost
-// for a page that has nothing to personalize).
+// all pages for the i18n rewrite.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo|spillformater)(\/|$)/;
+  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo)(\/|$)/;
 
 // #1185: auth-optional routes. The proxy STILL resolves the user here (so a
 // logged-in visitor keeps their verified-user header — and thus their
@@ -31,7 +28,12 @@ const PUBLIC_PATH_PATTERN =
 // is NOT redirected to /login: the page renders an anonymous view instead.
 // Distinct from PUBLIC_PATH_PATTERN, which skips auth entirely (for
 // externally-shared or chromeless pages like /signup and /embed).
-const AUTH_OPTIONAL_PATH_PATTERN = /^\/finn-turneringer(\/|$)/;
+// `spillformater` joined in #1264 (SEO-pakken): anonymous visitors (and
+// crawlers) render the format guide without a login redirect, while
+// logged-in visitors keep their verified-user header — and thus the
+// persistent bottom nav (#355). PUBLIC would strip the header and cost
+// logged-in users the nav (the exact trap #1185 documented).
+const AUTH_OPTIONAL_PATH_PATTERN = /^\/(finn-turneringer|spillformater)(\/|$)/;
 
 /** Split '/en/venner' -> { locale: 'en', pathname: '/venner' }. */
 function splitLocalePrefix(pathname: string): {
