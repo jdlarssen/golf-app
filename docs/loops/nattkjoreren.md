@@ -20,6 +20,13 @@ worktree-tilstand å skade.
 plukk det ELDSTE. Tom kø → heartbeat «ingen kø» på #1110 og avslutt. Det er
 suksess, ikke tomgang.
 
+**PR-vakt før bygging (#1307):** har det plukkede issuet allerede en åpen PR med
+`Closes #<issuenr>` i body (`gh pr list --state open --search "Closes #<n>"`),
+IKKE bygg på nytt — det er en rest-tilstand (levert før Steg 5 fjernet labelen,
+eller en umerget natt-PR). Fjern `autonomy:ready`, noter i heartbeaten, og gå
+til neste i køen. Re-kø etter en PR som lukkes ubygd er et eier-tapp, aldri
+automatikk.
+
 **Budsjett: maks 2 issues per natt** (hevet fra 1 den 2026-07-09 — Discord-kortet
 + skjermbilde (#1159) gjorde review-loopen rask nok til å håndtere to leveranser).
 Bygg det ELDSTE ready-issuet gjennom steg 2–5, og **gjenta steg 2–5 for
@@ -95,6 +102,9 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
 - **Konvergert (ACCEPT):** DRAFT-PR med `Closes #<issuenr>` i body,
   `autonomy:review`-label, norsk PR-kommentar: hva som er bygget, hvilke
   kriterier som er bevist (med kommando-utfall), hva som evt. gjenstår manuelt.
+  **Fjern deretter `autonomy:ready` fra issuet (#1307)** — PR-en bærer mandatet
+  videre, og labelen skal aldri overleve leveringen (ellers re-plukkes issuet
+  neste natt og bygges som duplikat, jf. #1253-varselet 2026-07-18).
 - **Closing-kommentar ved levering:** post samtidig CLAUDE.md-konvensjonens
   Teknisk/Funksjonell-kommentar på ISSUET, innledet med «Lukkes automatisk når
   eieren merger PR #<M>». Auto-close ved merge skriver ingen kommentar selv,
