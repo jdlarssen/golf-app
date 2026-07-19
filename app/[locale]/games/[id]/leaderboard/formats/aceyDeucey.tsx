@@ -127,22 +127,22 @@ export async function renderAceyDeucey(opts: {
       </>
     );
     if (game.side_tournament_enabled) {
-      return (
-        <>
-          {await renderSideTournamentTabs({
-            gameId,
-            game,
-            gwp,
-            rawHolesRows,
-            rawScoresRows,
-            backHref,
-            mainContent: finishedView(true),
-            teamGrouping: 'solo',
-          })}
-          {prizeAwardsNode}
-          {reportSection}
-        </>
-      );
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(
+          true,
+          <>
+            {prizeAwardsNode}
+            {reportSection}
+          </>,
+        ),
+        teamGrouping: 'solo',
+      });
     }
     return finishedView(false, <>{prizeAwardsNode}{reportSection}</>);
   }

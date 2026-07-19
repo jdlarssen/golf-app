@@ -189,22 +189,22 @@ export async function renderSkins(opts: {
       );
     }
     if (showSide) {
-      return (
-        <>
-          {await renderSideTournamentTabs({
-            gameId,
-            game,
-            gwp,
-            rawHolesRows,
-            rawScoresRows,
-            backHref,
-            mainContent: mainContent(true),
-            teamGrouping: 'solo',
-          })}
-          {prizeAwardsNode}
-          {reportSection}
-        </>
-      );
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: mainContent(
+          true,
+          <>
+            {prizeAwardsNode}
+            {reportSection}
+          </>,
+        ),
+        teamGrouping: 'solo',
+      });
     }
     return mainContent(false, <>{prizeAwardsNode}{reportSection}</>);
   }

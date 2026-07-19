@@ -191,26 +191,20 @@ export async function renderTexasScramble(opts: {
         backHref={backHref}
         formatLabel={formatLabel}
         chromeless={chromeless}
-        footerSlot={chromeless ? undefined : <>{prizeAwardsNode}{reportSection}</>}
+        footerSlot={<>{prizeAwardsNode}{reportSection}</>}
       />
     );
     if (game.side_tournament_enabled) {
-      return (
-        <>
-          {await renderSideTournamentTabs({
-            gameId,
-            game,
-            gwp,
-            rawHolesRows,
-            rawScoresRows,
-            backHref,
-            mainContent: podium(true),
-            teamGrouping: 'byTeamNumber',
-          })}
-          {prizeAwardsNode}
-          {reportSection}
-        </>
-      );
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: podium(true),
+        teamGrouping: 'byTeamNumber',
+      });
     }
     return podium(false);
   }

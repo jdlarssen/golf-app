@@ -119,22 +119,22 @@ export async function renderPatsome(opts: {
       </>
     );
     if (game.side_tournament_enabled) {
-      return (
-        <>
-          {await renderSideTournamentTabs({
-            gameId,
-            game,
-            gwp,
-            rawHolesRows,
-            rawScoresRows,
-            backHref,
-            mainContent: finishedView(true),
-            teamGrouping: 'byTeamNumber',
-          })}
-          {prizeAwardsNode}
-          {reportSection}
-        </>
-      );
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(
+          true,
+          <>
+            {prizeAwardsNode}
+            {reportSection}
+          </>,
+        ),
+        teamGrouping: 'byTeamNumber',
+      });
     }
     return finishedView(false, <>{prizeAwardsNode}{reportSection}</>);
   }

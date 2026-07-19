@@ -229,23 +229,23 @@ export async function renderStableford(opts: {
           </>,
         );
       }
-      return (
-        <>
-          {await renderSideTournamentTabs({
-            gameId,
-            game,
-            gwp,
-            rawHolesRows,
-            rawScoresRows,
-            backHref,
-            mainContent: podium(true),
-            teamGrouping: 'byTeamNumber',
-          })}
-          {prizeAwardsNode}
-          {reportSection}
-          {wdSection}
-        </>
-      );
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: podium(
+          true,
+          <>
+            {prizeAwardsNode}
+            {reportSection}
+            {wdSection}
+          </>,
+        ),
+        teamGrouping: 'byTeamNumber',
+      });
     }
     return (
       <TeamStablefordView
@@ -339,23 +339,23 @@ export async function renderStableford(opts: {
         </>,
       );
     }
-    return (
-      <>
-        {await renderSideTournamentTabs({
-          gameId,
-          game,
-          gwp,
-          rawHolesRows,
-          rawScoresRows,
-          backHref,
-          mainContent: mainContent(true),
-          teamGrouping: 'solo',
-        })}
-        {prizeAwardsNode}
-        {reportSection}
-        {wdSection}
-      </>
-    );
+    return renderSideTournamentTabs({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows,
+      rawScoresRows,
+      backHref,
+      mainContent: mainContent(
+        true,
+        <>
+          {prizeAwardsNode}
+          {reportSection}
+          {wdSection}
+        </>,
+      ),
+      teamGrouping: 'solo',
+    });
   }
 
   return (

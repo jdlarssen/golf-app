@@ -246,23 +246,23 @@ export async function renderSoloStrokeplay(opts: {
       );
     }
     if (showSide) {
-      return (
-        <>
-          {await renderSideTournamentTabs({
-            gameId,
-            game,
-            gwp,
-            rawHolesRows,
-            rawScoresRows,
-            backHref,
-            mainContent: mainContent(true),
-            teamGrouping: 'solo',
-          })}
-          {prizeAwardsNode}
-          {reportSection}
-          {wdSection}
-        </>
-      );
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: mainContent(
+          true,
+          <>
+            {prizeAwardsNode}
+            {reportSection}
+            {wdSection}
+          </>,
+        ),
+        teamGrouping: 'solo',
+      });
     }
     return mainContent(
       false,
