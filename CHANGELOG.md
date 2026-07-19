@@ -1341,8 +1341,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 28 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 29 rettinger</strong></summary>
 
+- `1.208.6` · [#1304](https://github.com/jdlarssen/golf-app/issues/1304) — Planlagte spill starter av seg selv til oppsatt tid igjen — auto-starten fulgte ikke med da nettadressen byttet hovedform.
 - `1.208.4` · [#1292](https://github.com/jdlarssen/golf-app/issues/1292) — Rundereferatet og premietavla holder seg nå innenfor sideramma på resultattavler med sideturnering, så hele teksten kan scrolles fram.
 - `1.208.3` · [#1289](https://github.com/jdlarssen/golf-app/issues/1289) — Resultattavla på ferdige runder har fått en «Mitt scorekort»-knapp, så du finner hull-for-hull-slagene dine igjen — for eksempel når du skal føre runden inn i Golfbox.
 - `1.207.1` · [#1253](https://github.com/jdlarssen/golf-app/issues/1253) — Bakgrunnstegningen på resultattavla sitter nå nederst i ruta slik den skulle, i stedet for midtstilt.
