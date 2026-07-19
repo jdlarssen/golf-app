@@ -24,8 +24,16 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // learning resource with no per-user data (getFormatGuideEntries reads the
 // message catalog, no session/DB), so anonymous visitors — and Google — reach
 // it without a login round-trip, same as /baner and /demo.
+//
+// #1264: /opengraph-image is the root brand share image
+// (app/[locale]/opengraph-image.tsx). OG scrapers (Facebook/WhatsApp) are
+// anonymous, so the route must skip auth — otherwise every shared public link
+// previews the login redirect instead of the brand card. It is locale-nested
+// (needs the i18n rewrite), so it belongs here rather than in the matcher's
+// root-level asset exclusions. Per-segment OG images under already-public
+// prefixes (/signup, /embed, /spectate) are covered by their own entries.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo|spillformater)(\/|$)/;
+  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo|spillformater|opengraph-image)(\/|$)/;
 
 // #1185: auth-optional routes. The proxy STILL resolves the user here (so a
 // logged-in visitor keeps their verified-user header — and thus their
