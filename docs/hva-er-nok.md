@@ -58,6 +58,7 @@ det ene issuet.
 |---|---|---|
 | **Herding** | Kjernesløyfa skal aldri ødelegge en lørdag: stagingbevis-porten, staging/prod-paritet, natt-miljøets e2e | #1076 (+ flake-datapunktet #1168) |
 | **Sesongstyrt** | Kavalkaden — golfåret som delbar fortelling. Bygges mot sesongslutt; start dekomponering tidligst september | #1040 |
+| **Native app** | Tørny i Google Play (TWA via Bubblewrap) og App Store (Capacitor 8-skall). Eier-bestilt 2026-07-17 | Epic #1276 (del-issues #1277–#1284) |
 
 Når en bane tømmes, beslutter eieren neste — dokumentet oppdateres i samme PR.
 
@@ -76,7 +77,6 @@ Herding og Sesongstyrt — neste bane besluttes av eieren.
 
 | Hva | Issues | Vekkes av |
 |---|---|---|
-| Native app / App Store | #52, #53 | Klubb-skala med betalende klubb + eier-beslutning. PWA-en ER appen inntil da |
 | Flere språk | #61, #455 | Ekte ikke-norskspråklige brukere i prod |
 | Resend Pro / nytt mail-domene | #54, #55 | >100 mail/dag (som issuene selv sier) |
 | Booking-integrasjon | #51 | En klubb ber om det |
@@ -98,6 +98,13 @@ for nye features på flatene står.
 «Tier 1 tom + eieren åpner pulja» — begge slo til: #1171, #1172, #1174, #1175, #1178,
 #1179, #1185, #1186 pluss de brainstormede #1193 (sosialt bevis) og #1194 (streak) er
 alle bygget kontrakt-først og i prod. Effekten måles i onboarding-funnelen fra #1192.
+
+**Vekket 2026-07-17 — native app / App Store (#52/#53):** raden sto parkert med trigger
+«klubb-skala med betalende klubb + eier-beslutning». Eieren bestilte banen direkte
+2026-07-17 — klubb-skala-delen er ikke nådd, men en eksplisitt eier-bestilling
+overstyrer alltid grensen. #52 (React Native-premisset, forkastet i researchen) og #53
+er lukket som superseded; arbeidet spores i epic #1276 (del-issues #1277–#1284), og
+banen står nå i §3.
 
 ## 5. Hva teller som «pull» (vekke-kriterier)
 
