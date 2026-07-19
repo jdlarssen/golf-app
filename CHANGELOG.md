@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.208 · Spillformatene er åpne for alle</strong></summary>
+
+[#1264](https://github.com/jdlarssen/golf-app/issues/1264) — Guiden med alle spillformene kan nå leses uten innlogging, så du kan dele den med hvem som helst. Tørny-lenker får også et skikkelig delingsbilde i meldinger og sosiale medier.
+
+↳ /spillformater · «Se spillformene»
+</details>
+
+<details>
 <summary><strong>1.206 · Enklere liga-oppsett</strong></summary>
 
 [#1144](https://github.com/jdlarssen/golf-app/issues/1144) — Ligaen kjører nå alltid netto, som resten av appen. Valget mellom netto og brutto er borte, så du blir raskere ferdig med oppsettet.

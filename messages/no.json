@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Tørny",
+    "metaDescription": "Gratis turneringsapp for golf. Sett opp scramble, stableford eller matchplay på et par minutter, med live leaderboard og WHS-handicap. Over 20 spillformer.",
     "guestBadge": "Gjest"
   },
   "notFound": {
@@ -1170,6 +1171,7 @@
     "sheetSubtitle": "Slik funker de. Trykk for å lese mer.",
     "closeButton": "Lukk",
     "listMetaTitle": "Spillformater",
+    "listMetaDescription": "Regler og poengberegning for over 20 spillformer i golf: scramble, stableford, matchplay, wolf, skins og flere til. Med eksempler og netto handicap.",
     "listBackLabel": "← Hjem",
     "listKicker": "SPILLFORMATER",
     "listPageTitle": "Spillformater",
@@ -2626,6 +2628,8 @@
     }
   },
   "auth": {
+    "metaTitle": "Logg inn",
+    "metaDescription": "Logg inn i Tørny, turneringsappen for golf. Ingen passord, du får en kode på e-post.",
     "inviteCard": {
       "invitedBy": "{name} har invitert deg",
       "invitedByFallback": "Du er invitert",
@@ -4317,6 +4321,7 @@
   "discover": {
     "pageTitle": "Finn turneringer",
     "metaTitle": "Finn turneringer",
+    "metaDescription": "Åpne golfturneringer du kan bli med på. Se hva som er på gang, eller logg inn og lag din egen.",
     "backLabel": "← Hjem",
     "kicker": "FINN TURNERINGER",
     "emptyHeading": "Finn turneringer",
@@ -4404,7 +4409,7 @@
     "archiveNoDate": "Uten dato"
   },
   "signup": {
-    "metaTitle": "Påmelding – Tørny",
+    "metaTitle": "Påmelding",
     "kicker": "Påmelding",
     "teeOffLabel": "Tee-off:",
     "alreadyRegisteredBanner": "Du er allerede påmeldt dette spillet.",
@@ -4469,7 +4474,7 @@
     "notFoundHeading": "Denne lenken gjelder ikke lenger",
     "notFoundBody": "Spillet finnes ikke lenger, eller påmeldingslenken er utløpt. Be arrangøren om en ny lenke.",
     "notFoundButton": "Til forsiden",
-    "teamDashMetaTitle": "Mitt lag – Tørny",
+    "teamDashMetaTitle": "Mitt lag",
     "teamDashKicker": "Lag",
     "teamDashNoTeamBanner": "Du har ikke et lag på dette spillet. Be kapteinen om å legge deg til, eller meld på et eget lag fra påmeldings-siden.",
     "teamDashInvitedHeading": "Du er invitert til et lag i «{gameName}»",
@@ -4551,7 +4556,7 @@
       "ogCta": "Bli med på runden",
       "ogDescription": "Se hvem som er påmeldt, og bli med selv på under et minutt.",
       "posterLink": "Skriv ut plakat",
-      "posterMetaTitle": "Turneringsplakat – Tørny",
+      "posterMetaTitle": "Turneringsplakat",
       "posterPrintButton": "Skriv ut",
       "posterScanHint": "Skann koden og bli med på runden",
       "posterFooter": "Tørny — fyr opp golfturneringen på et par minutter"
@@ -4559,7 +4564,7 @@
   },
   "legal": {
     "privacy": {
-      "metaTitle": "Personvern – Tørny",
+      "metaTitle": "Personvern",
       "backLabel": "Tilbake",
       "kicker": "Personvern",
       "s1Heading": "Hvilke data lagrer Tørny om deg?",
@@ -4837,6 +4842,7 @@
     "renameError": "Kunne ikke endre navnet. Prøv igjen."
   },
   "spectate": {
+    "metaTitle": "Følg spillet",
     "liveStatus": "Følger live",
     "resultStatus": "Resultat",
     "bannerAriaLabel": "Live-følg-banner",
@@ -4871,7 +4877,7 @@
   },
   "publicCourses": {
     "index": {
-      "metaTitle": "Golfbaner – slope, rating og baneinfo – Tørny",
+      "metaTitle": "Golfbaner – slope, rating og baneinfo",
       "metaDescription": "Slope, course rating og hulloversikt for norske golfbaner. Finn banen din og arranger en runde på et par minutter.",
       "kicker": "Golfbaner",
       "heading": "Golfbaner i Tørny",
@@ -4881,7 +4887,7 @@
       "emptyState": "Ingen baner er lagt inn ennå."
     },
     "detail": {
-      "metaTitle": "{name} – slope, rating og baneinfo – Tørny",
+      "metaTitle": "{name} – slope, rating og baneinfo",
       "metaDescription": "Slope, course rating, par og hulloversikt for {name}.",
       "kicker": "Golfbane",
       "backLabel": "Alle baner",
@@ -4903,6 +4909,7 @@
   },
   "demo": {
     "pageTitle": "Prøvespill",
+    "metaDescription": "Prøv Tørny uten innlogging. Tast slag i en ferdig oppsatt turnering og se leaderboardet oppdatere seg.",
     "gameName": "Prøvespill",
     "banner": "Tast inn slagene dine og se deg klatre på tavla. Ingenting blir lagret.",
     "nameLabel": "Hva heter du?",

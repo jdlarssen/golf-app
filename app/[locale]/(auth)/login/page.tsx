@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
-import type { AppLocale } from '@/i18n/routing';
+import { routing, type AppLocale } from '@/i18n/routing';
+import { canonicalPath } from '@/lib/seo/canonical';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
@@ -42,6 +44,29 @@ const KNOWN_ERROR_CODES = new Set([
   'link_expired',
   'unknown',
 ] as const);
+
+type Params = Promise<{ locale: string }>;
+
+// #1264: noindex — the soft-404 fix. Every `/login?next=…`/`?invite=…`
+// variant is otherwise indexable under its own querystring, which is pure
+// crawl noise for a page that's never the intended landing target.
+export async function generateMetadata({
+  params,
+}: {
+  params: Params;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale: AppLocale = routing.locales.includes(rawLocale as AppLocale)
+    ? (rawLocale as AppLocale)
+    : routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: 'auth' });
+  return {
+    title: t('metaTitle'),
+    description: t('metaDescription'),
+    robots: { index: false, follow: false },
+    alternates: { canonical: canonicalPath(locale, '/login') },
+  };
+}
 
 export default async function LoginPage({
   searchParams,

@@ -45,6 +45,13 @@ type Props = {
 
 // App name comes from the message catalog — proves catalog loading is wired
 // end-to-end (#475 Fase 0) while output stays byte-identical to before.
+//
+// #1264 (teknisk SEO-pakke): `metadataBase` anchors every relative
+// `alternates.canonical`/OG URL in the app to the apex host — without it,
+// a relative canonical is a build error (Next 16 docs). `title.template`
+// applies to every descendant page's plain-string `title`; any catalog
+// string that already ended in "– Tørny" was stripped in the same commit to
+// avoid doubling.
 export async function generateMetadata({
   params,
 }: Pick<Props, "params">): Promise<Metadata> {
@@ -54,8 +61,9 @@ export async function generateMetadata({
     : routing.defaultLocale;
   const t = await getTranslations({ locale: resolved, namespace: "common" });
   return {
-    title: t("appName"),
-    description: "Turneringsapp for golf — for kompiser og klubber",
+    metadataBase: new URL("https://tornygolf.no"),
+    title: { default: t("appName"), template: "%s – Tørny" },
+    description: t("metaDescription"),
     applicationName: t("appName"),
     appleWebApp: {
       capable: true,
@@ -64,6 +72,11 @@ export async function generateMetadata({
     },
     formatDetection: {
       telephone: false,
+    },
+    openGraph: {
+      siteName: "Tørny",
+      type: "website",
+      locale: resolved,
     },
   };
 }

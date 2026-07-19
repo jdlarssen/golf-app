@@ -5,6 +5,7 @@ import { BrandMark } from '@/components/ui/BrandMark';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { routing, type AppLocale } from '@/i18n/routing';
+import { canonicalPath } from '@/lib/seo/canonical';
 import { listPublicCourses } from '@/lib/courses/publicCourses';
 
 /**
@@ -33,6 +34,7 @@ export async function generateMetadata({
   return {
     title: t('metaTitle'),
     description: t('metaDescription'),
+    alternates: { canonical: canonicalPath(locale, '/baner') },
   };
 }
 

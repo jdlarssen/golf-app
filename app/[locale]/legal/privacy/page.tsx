@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { routing, type AppLocale } from '@/i18n/routing';
+import { canonicalPath } from '@/lib/seo/canonical';
 
 type Params = Promise<{ locale: string }>;
 
@@ -18,6 +19,7 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: 'legal.privacy' });
   return {
     title: t('metaTitle'),
+    alternates: { canonical: canonicalPath(locale, '/legal/privacy') },
   };
 }
 

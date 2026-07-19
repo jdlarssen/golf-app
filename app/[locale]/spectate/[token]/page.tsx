@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { parseMode } from '@/lib/leaderboard';
@@ -11,6 +12,18 @@ import { safeParsePrizes } from '@/lib/games/prizes';
 
 type Params = Promise<{ token: string }>;
 type SearchParams = Promise<{ mode?: string | string[] }>;
+
+// #1264: metadata reads ONLY the locale + message catalog — deliberately not
+// the token. Token pages must never leak game data (name, scores) into
+// metadata, so this must not grow a DB lookup. Noindex is the point (token
+// URLs should never surface in search). Spectate branding is #1268.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('spectate');
+  return {
+    title: t('metaTitle'),
+    robots: { index: false, follow: false },
+  };
+}
 
 /**
  * Public read-only live-follow page (#938). No authentication required —

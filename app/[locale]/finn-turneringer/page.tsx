@@ -17,6 +17,7 @@ import { getGamesSocialProof } from '@/lib/games/getGameSocialProof';
 import { HomeDiscoverySection } from '../HomeDiscoverySection';
 import { AnonDiscoverySection } from './AnonDiscoverySection';
 import { routing, type AppLocale } from '@/i18n/routing';
+import { canonicalPath } from '@/lib/seo/canonical';
 
 // getDiscoverableGames bruker admin-client (service role) ved request-tid.
 // Under cacheComponents (#538) prerendres aldri uncachet IO, så ruta trenger
@@ -37,6 +38,8 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: 'discover' });
   return {
     title: t('metaTitle'),
+    description: t('metaDescription'),
+    alternates: { canonical: canonicalPath(locale, '/finn-turneringer') },
   };
 }
 
