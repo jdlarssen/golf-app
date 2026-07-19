@@ -63,6 +63,15 @@ samme øyeblikk kan i sjeldne tilfeller gi to kort — akseptert for v1 (mildt) 
 
 ## Eier-oppsett (engangs) — Actions-secrets
 
+**Steg 0 — Interactions Endpoint URL (mottakerens av/på-bryter):** knappene
+virker KUN når Discord-appen (Developer Portal → *Tørny-loopene* → **General
+Information**) har **Interactions Endpoint URL** satt til
+`https://tornygolf.no/api/discord/interactions`. Uten den leveres trykk til
+gateway-en der ingen lytter, og hvert trykk ender som «svarte ikke i tide» —
+env-ene i Vercel var på plass fra #1124, men dette feltet sto tomt til
+2026-07-19 (#1297). Discord PING-validerer URL-en ved lagring; blir lagringen
+avvist, er `DISCORD_PUBLIC_KEY` i Vercel feil.
+
 Selve mottaker-env-en (`DISCORD_PUBLIC_KEY`, `DISCORD_OWNER_ID`,
 `GITHUB_LOOP_PAT`) ligger allerede i Vercel fra #1124. Action-en trenger i tillegg
 bot-token + kanal som **GitHub Actions-secrets** (ikke bare i routine-env-en):
