@@ -27,6 +27,7 @@ import {
   envReady,
   PLAYER_EMAIL,
   seedActiveStablefordGame,
+  seedFinishedModeGame,
   signInViaOtp,
   skipReason,
 } from '../../e2e/_helpers/games';
@@ -64,12 +65,54 @@ async function resolveFixtures(): Promise<{ fixtures: Fixtures; cleanup: () => P
   fixtures.clubId = await first('groups', 'id'); // klubber = groups-tabellen
   fixtures.ligaId = await first('leagues', 'id');
   fixtures.cupId = await first('tournaments', 'id');
-  if (PLAYER_EMAIL) {
+
+  const userIdByEmail = async (email: string): Promise<string | undefined> => {
     try {
-      const { data } = await admin.from('users').select('id').ilike('email', PLAYER_EMAIL).maybeSingle();
-      fixtures.playerId = (data as { id: string } | null)?.id;
+      const { data } = await admin.from('users').select('id').ilike('email', email).maybeSingle();
+      return (data as { id: string } | null)?.id;
     } catch {
-      /* best-effort */
+      return undefined;
+    }
+  };
+  if (PLAYER_EMAIL) fixtures.playerId = await userIdByEmail(PLAYER_EMAIL);
+
+  // #1295: ferdig spill med sideturnering + referat — leaderboard-/podium-
+  // familiene skyter dette (fikser i den klassen synes kun i finished-tilstand).
+  // Best-effort: feiler seeden, faller familien tilbake til det aktive spillet.
+  let finishedGameId: string | undefined;
+  const adminId = ADMIN_EMAIL ? await userIdByEmail(ADMIN_EMAIL) : undefined;
+  if (adminId && fixtures.playerId) {
+    try {
+      const scoresByHole: Record<number, Record<string, number>> = {};
+      for (let hole = 1; hole <= 18; hole++) {
+        scoresByHole[hole] = { [adminId]: 4, [fixtures.playerId]: 5 };
+      }
+      const fg = await seedFinishedModeGame({
+        nameSuffix: 'shots-finished',
+        gameMode: 'stableford',
+        modeConfig: { kind: 'stableford', team_size: 1 },
+        players: [
+          { userId: adminId, courseHandicap: 10 },
+          { userId: fixtures.playerId, courseHandicap: 18 },
+        ],
+        scoresByHole,
+      });
+      finishedGameId = fg.id;
+      fixtures.finishedGameId = fg.id;
+      const deco = await admin
+        .from('games')
+        .update({
+          side_tournament_enabled: true,
+          round_report:
+            'E2E-testreferat (finnes kun i staging): fire jevne timer på banen, én vinner, og et leaderboard som endelig viser hele historien.',
+        })
+        .eq('id', fg.id)
+        .select('id');
+      if (deco.error || !deco.data?.length) {
+        console.error(`${LOG} pynt av finished-spill feilet (skuddet tas uten tabs/referat)`, deco.error);
+      }
+    } catch (err) {
+      console.error(`${LOG} seed av finished-spill feilet — leaderboard-familien bruker aktivt spill`, err);
     }
   }
 
@@ -77,6 +120,7 @@ async function resolveFixtures(): Promise<{ fixtures: Fixtures; cleanup: () => P
     fixtures,
     cleanup: async () => {
       if (seededGameId) await cleanupTestGame(seededGameId);
+      if (finishedGameId) await cleanupTestGame(finishedGameId);
     },
   };
 }
@@ -131,6 +175,14 @@ async function main(): Promise<void> {
         const page = await ctx.newPage();
         await page.goto(t.path, { waitUntil: 'networkidle', timeout: 30_000 });
         await page.waitForTimeout(800); // la layout/animasjon sette seg
+        // #1295: login-vakt — endte navigasjonen på login-skjermen (auth-glipp),
+        // er bildet verdiløst for verifisering. Dropp det, aldri post det.
+        const landedPath = new URL(page.url()).pathname;
+        if (landedPath.includes('/login') && !t.path.startsWith('/login')) {
+          console.error(`${LOG} ✗ ${t.path} (${t.auth}) — endte på ${landedPath}; dropper login-skjermbildet.`);
+          await page.close();
+          continue;
+        }
         const file = join(SHOTS_DIR, `${String(i + 1).padStart(2, '0')}-${sanitize(t.label)}.png`);
         await page.screenshot({ path: file });
         await page.close();

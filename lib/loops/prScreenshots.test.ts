@@ -8,6 +8,7 @@ import {
 
 const FX: Fixtures = {
   gameId: 'game-1',
+  finishedGameId: 'finished-1',
   courseSlug: 'miklagard',
   clubId: 'club-1',
   cupId: 'cup-1',
@@ -75,48 +76,69 @@ describe('deriveTargetsFromChangedFiles — page-ruter', () => {
     expect(t[0]).toMatchObject({ path: '/admin/spillere', auth: 'admin' });
   });
 
-  it('dropper rute uten fikstur (baner/[slug] uten courseSlug)', () => {
+  it('dropper rute uten fikstur helt (baner/[slug] uten courseSlug) — ingen fallback', () => {
     const t = deriveTargetsFromChangedFiles(['app/[locale]/baner/[slug]/page.tsx'], {});
-    // Ingen page-rute (mangler slug) og ingen visuell komponent → forsiden-fallback.
-    expect(t).toEqual([{ path: '/', auth: 'none', label: 'forsiden (fallback)' }]);
+    // #1295: intetsigende forsiden-fallback fjernet — heller null bilder enn feil bilde.
+    expect(t).toEqual([]);
   });
 
-  it('dropper ukjent [id]-kontekst (lanseringer)', () => {
+  it('dropper ukjent [id]-kontekst (lanseringer) — ingen fallback', () => {
     const t = deriveTargetsFromChangedFiles(
       ['app/[locale]/admin/lanseringer/[id]/rediger/page.tsx'],
       FX,
     );
-    expect(t).toEqual([{ path: '/', auth: 'none', label: 'forsiden (fallback)' }]);
+    expect(t).toEqual([]);
   });
 });
 
-describe('deriveTargetsFromChangedFiles — komponenter', () => {
-  it('mapper leaderboard-komponent til game-leaderboard', () => {
+describe('deriveTargetsFromChangedFiles — komponent-familier', () => {
+  it('mapper leaderboard-komponent til FERDIG spill (finishedGameId)', () => {
     const t = deriveTargetsFromChangedFiles(['components/illustrations/LeaderboardBackdrop.tsx'], FX);
-    expect(t[0]).toMatchObject({ path: '/games/game-1/leaderboard', auth: 'player' });
+    expect(t[0]).toMatchObject({ path: '/games/finished-1/leaderboard', auth: 'player' });
   });
 
-  it('mapper hull-komponent til holes/1', () => {
-    const t = deriveTargetsFromChangedFiles(['components/hole/HoleHero.tsx'], FX);
-    expect(t[0].path).toBe('/games/game-1/holes/1');
+  it('mapper samlokalisert leaderboard-tsx under app/[locale] (#1295 — formats-fila fra PR #1294)', () => {
+    const t = deriveTargetsFromChangedFiles(
+      ['app/[locale]/games/[id]/leaderboard/formats/stableford.tsx'],
+      FX,
+    );
+    expect(t[0]).toMatchObject({ path: '/games/finished-1/leaderboard', auth: 'player' });
   });
 
-  it('komponent uten gameId-fikstur → forsiden-fallback', () => {
+  it('faller tilbake til aktivt spill når finishedGameId mangler', () => {
+    const { finishedGameId: _omitted, ...withoutFinished } = FX;
+    const t = deriveTargetsFromChangedFiles(
+      ['components/illustrations/LeaderboardBackdrop.tsx'],
+      withoutFinished,
+    );
+    expect(t[0].path).toBe('/games/game-1/leaderboard');
+  });
+
+  it('scorecard- og hull-familiene bruker fortsatt AKTIVT spill', () => {
+    expect(
+      deriveTargetsFromChangedFiles(['components/scorecard/ScorecardGrid.tsx'], FX)[0].path,
+    ).toBe('/games/game-1/scorecard');
+    expect(deriveTargetsFromChangedFiles(['components/hole/HoleHero.tsx'], FX)[0].path).toBe(
+      '/games/game-1/holes/1',
+    );
+  });
+
+  it('komponent uten game-fiksturer → ingen targets (ingen fallback)', () => {
     const t = deriveTargetsFromChangedFiles(['components/hole/HoleHero.tsx'], {});
-    expect(t).toEqual([{ path: '/', auth: 'none', label: 'forsiden (fallback)' }]);
+    expect(t).toEqual([]);
   });
 });
 
-describe('deriveTargetsFromChangedFiles — dedupe, cap, fallback', () => {
+describe('deriveTargetsFromChangedFiles — dedupe, cap, ingen fallback', () => {
   it('dedupliserer sammenfallende ruter', () => {
     const t = deriveTargetsFromChangedFiles(
       [
         'components/illustrations/LeaderboardBackdrop.tsx',
-        'components/podium/Podium.tsx', // begge → /games/game-1/leaderboard
+        'components/podium/Podium.tsx', // begge → /games/finished-1/leaderboard
       ],
       FX,
     );
-    expect(t.filter((x) => x.path === '/games/game-1/leaderboard')).toHaveLength(1);
+    expect(t.filter((x) => x.path === '/games/finished-1/leaderboard')).toHaveLength(1);
   });
 
   it(`capper til ${MAX_SHOTS}`, () => {
@@ -129,11 +151,12 @@ describe('deriveTargetsFromChangedFiles — dedupe, cap, fallback', () => {
     expect(deriveTargetsFromChangedFiles(files, FX)).toHaveLength(MAX_SHOTS);
   });
 
-  it('prioriterer page-ruter foran forsiden-fallback', () => {
+  it('page-ruter består når en komponent-fil ikke resolverer til noen familie', () => {
     const t = deriveTargetsFromChangedFiles(
       ['app/[locale]/demo/page.tsx', 'components/layout/Weird.tsx'],
       FX,
     );
+    expect(t).toHaveLength(1);
     expect(t[0].path).toBe('/demo');
   });
 

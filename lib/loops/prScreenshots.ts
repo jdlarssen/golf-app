@@ -6,7 +6,13 @@
 // Fikstur-verdier resolvert mot staging på kjøretid; her injisert så funksjonene
 // er rene. Mangler en verdi → ruter som trenger den droppes (best-effort).
 export type Fixtures = {
+  /** Aktivt spill — scorecard-/hull-familiene (føring pågår). */
   gameId?: string;
+  /**
+   * Ferdig spill (sideturnering + round_report seedet) — leaderboard-/podium-
+   * familiene, der fikser typisk bare synes i finished-tilstanden (#1295).
+   */
+  finishedGameId?: string;
   courseSlug?: string;
   clubId?: string;
   cupId?: string;
@@ -103,20 +109,32 @@ function buildRoute(segs: string[], fx: Fixtures): string | null {
 }
 
 // Kuratert komponent → rute-map (nøkkelord i filstien, robust mot mappe-navn).
-// Kun høyverdi-familier; alt annet faller til forsiden via fallback-en.
+// Leaderboard/podium skyter det FERDIGE fikstur-spillet (fallback aktivt) —
+// #1292-klassen av fikser synes bare der; scorecard/hull trenger aktivt spill.
 const COMPONENT_ROUTE_MAP: Array<{
   key: RegExp;
   route: (fx: Fixtures) => string | null;
   label: string;
 }> = [
-  { key: /leaderboard/i, route: (fx) => (fx.gameId ? `/games/${fx.gameId}/leaderboard` : null), label: 'leaderboard' },
-  { key: /podium/i, route: (fx) => (fx.gameId ? `/games/${fx.gameId}/leaderboard` : null), label: 'podium' },
+  { key: /leaderboard/i, route: (fx) => finishedOrActiveLeaderboard(fx), label: 'leaderboard' },
+  { key: /podium/i, route: (fx) => finishedOrActiveLeaderboard(fx), label: 'podium' },
   { key: /scorecard/i, route: (fx) => (fx.gameId ? `/games/${fx.gameId}/scorecard` : null), label: 'scorecard' },
   { key: /(hole|hull)/i, route: (fx) => (fx.gameId ? `/games/${fx.gameId}/holes/1` : null), label: 'hull' },
 ];
 
-function mapComponentFile(file: string, fx: Fixtures): RouteTarget | null {
-  if (!/^components\/.*\.tsx$/.test(file) || /\.test\.tsx$/.test(file)) return null;
+function finishedOrActiveLeaderboard(fx: Fixtures): string | null {
+  const id = fx.finishedGameId ?? fx.gameId;
+  return id ? `/games/${id}/leaderboard` : null;
+}
+
+// Familie-kartet gjelder components/ OG samlokaliserte ikke-page-.tsx under
+// app/[locale] (#1295): PR #1294 endret kun leaderboard/formats/*.tsx og falt
+// utenfor både page-utledningen og components-kravet → login-skjermbilde.
+function mapFamilyFile(file: string, fx: Fixtures): RouteTarget | null {
+  if (/\.test\.tsx$/.test(file)) return null;
+  const isComponent = /^components\/.*\.tsx$/.test(file);
+  const isColocated = /^app\/\[locale\]\/.*\.tsx$/.test(file) && !file.endsWith('/page.tsx');
+  if (!isComponent && !isColocated) return null;
   for (const entry of COMPONENT_ROUTE_MAP) {
     if (entry.key.test(file)) {
       const path = entry.route(fx);
@@ -129,8 +147,8 @@ function mapComponentFile(file: string, fx: Fixtures): RouteTarget | null {
 /**
  * Kartlegger endrede filer til staging-ruter som skal skjermbildes. Page-endringer
  * prioriteres (rute utledet fra stien + fikstur-substitusjon), deretter kuraterte
- * komponent-familier. Deduplisert på path, cappet til {@link MAX_SHOTS}. Ingen rute
- * resolvert men diffen er visuell → forsiden som fallback.
+ * komponent-familier (components/ + samlokaliserte app/[locale]-tsx). Deduplisert
+ * på path, cappet til {@link MAX_SHOTS}. Uoppløst → tom liste, aldri fallback (#1295).
  */
 export function deriveTargetsFromChangedFiles(files: string[], fx: Fixtures): RouteTarget[] {
   const targets: RouteTarget[] = [];
@@ -148,11 +166,10 @@ export function deriveTargetsFromChangedFiles(files: string[], fx: Fixtures): Ro
     if (route) push({ path: route, auth: authForPath(route), label: f });
   }
   for (const f of files) {
-    const mapped = mapComponentFile(f, fx);
+    const mapped = mapFamilyFile(f, fx);
     if (mapped) push(mapped);
   }
-  if (targets.length === 0 && isVisualChange(files)) {
-    push({ path: '/', auth: 'none', label: 'forsiden (fallback)' });
-  }
+  // #1295: ingen forsiden-fallback — en uoppløst visuell diff gir heller null
+  // bilder enn et intetsigende anonym-skudd (som ender som login-skjermen).
   return targets.slice(0, MAX_SHOTS);
 }
