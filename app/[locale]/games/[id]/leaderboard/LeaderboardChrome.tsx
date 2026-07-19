@@ -6,6 +6,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { LeaderboardRealtime } from './LeaderboardRealtime';
 import { ShareResultButton } from './ShareResultButton';
+import { MyScorecardCta } from './MyScorecardCta';
 import { RevansjeCta } from './RevansjeCta';
 
 export interface LeaderboardShellProps {
@@ -63,6 +64,8 @@ export function LeaderboardShell({
     <>
       {/* Self-gating: only renders on finished games (#942). */}
       <ShareResultButton />
+      {/* Renders only when the authed page mounts MyScorecardCtaProvider (#1289). */}
+      <MyScorecardCta />
       {/* Renders only when the authed page mounts RevansjeCtaProvider (#1020). */}
       <RevansjeCta />
     </>

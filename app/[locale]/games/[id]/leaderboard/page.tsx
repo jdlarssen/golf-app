@@ -15,6 +15,7 @@ import {
 } from './leaderboardContext';
 import { renderLeaderboardContent } from './leaderboardContent';
 import { RevansjeCtaProvider } from './RevansjeCta';
+import { MyScorecardCtaProvider } from './MyScorecardCta';
 import { SponsorStrip } from '@/components/SponsorStrip';
 import { safeParsePrizes } from '@/lib/games/prizes';
 
@@ -171,6 +172,16 @@ export default async function LeaderboardPage({
     !game.league_round_id &&
     gwp.players.some((p) => p.user_id === userId);
 
+  // #1289: «Mitt scorekort» — every finished-game entry point (Hjem,
+  // Spill-arkiv, Historikk) lands on this leaderboard, so it must offer the
+  // path onward to the viewer's own scorecard (e.g. hole-by-hole strokes for
+  // Golfbox). Unlike Revansje there is NO standalone gate — cup/liga rounds
+  // have scorecards too. Withdrawn viewers are excluded: the scorecard page
+  // bounces them to game-home anyway (#387).
+  const showMyScorecard =
+    game.status === 'finished' &&
+    gwp.players.some((p) => p.user_id === userId && !p.withdrawn_at);
+
   // #1051: sponsorstripe på live-tavla (self-hider uten sponsor).
   const withSponsors = (
     <>
@@ -178,10 +189,17 @@ export default async function LeaderboardPage({
       {content}
     </>
   );
-  if (!showRevansje) return withSponsors;
+  const withScorecardCta = showMyScorecard ? (
+    <MyScorecardCtaProvider href={`/games/${id}/scorecard`}>
+      {withSponsors}
+    </MyScorecardCtaProvider>
+  ) : (
+    withSponsors
+  );
+  if (!showRevansje) return withScorecardCta;
   return (
     <RevansjeCtaProvider href={`/opprett-spill?fra=${id}`}>
-      {withSponsors}
+      {withScorecardCta}
     </RevansjeCtaProvider>
   );
 }
