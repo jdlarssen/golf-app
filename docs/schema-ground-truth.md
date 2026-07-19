@@ -117,70 +117,78 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 
 ## Generert snapshot — RLS / CHECK / triggere / SECURITY DEFINER
 
-**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-07-07.** Staging matcher på alt
-under, med ETT avvik: funksjonen `rls_auto_enable` finnes kun i prod (eget issue).
+**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-07-19.** Staging matcher prod på alt under.
 
-**Totaler:** 34 tabeller · 83 CHECK-constraints · 14 triggere · 43 SECURITY DEFINER-funksjoner.
+**Totaler:** 35 tabeller · 88 CHECK-constraints · 15 triggere · 43 SECURITY DEFINER-funksjoner.
 
-### RLS og policy-antall per tabell (alle 34 har RLS på)
+### RLS og policy-antall per tabell (alle 35 har RLS på)
 
-| Tabell | Policies | | Tabell | Policies |
-|---|---|---|---|---|
-| admin_action_rate_limit | 0 ⛔ | | league_players | 4 |
-| admin_audit_log | 0 ⛔ | | league_rounds | 4 |
-| agent_findings | 0 ⛔ | | leagues | 4 |
-| agent_runs | 0 ⛔ | | notifications | 2 |
-| bingo_bango_bongo_holes | 2 | | patsome_tee_starters | 4 |
-| club_invitations | 3 | | product_update_digests | 0 ⛔ |
-| course_holes | 5 | | product_updates | 1 |
-| courses | 5 | | push_subscriptions | 4 |
-| format_intent_mapping | 4 | | reactions | 3 |
-| formats | 4 | | scores | 3 |
-| friendships | 1 | | tee_boxes | 5 |
-| game_players | 9 | | tournaments | 4 |
-| game_registration_requests | 3 | | users | 4 |
-| game_side_winners | 5 | | wolf_hole_choices | 4 |
-| games | 8 | | groups | 4 |
-| group_join_requests | 3 | | idea_submissions | 4 |
-| group_members | 3 | | invitations | 7 |
+| Tabell | Policies |
+|---|---|
+| admin_action_rate_limit | 0 ⛔ |
+| admin_audit_log | 0 ⛔ |
+| agent_findings | 0 ⛔ |
+| agent_runs | 0 ⛔ |
+| bingo_bango_bongo_holes | 2 |
+| club_invitations | 3 |
+| course_holes | 5 |
+| courses | 5 |
+| format_intent_mapping | 4 |
+| formats | 4 |
+| friendships | 1 |
+| game_players | 9 |
+| game_registration_requests | 3 |
+| game_side_winners | 5 |
+| games | 8 |
+| green_pins | 3 |
+| group_join_requests | 3 |
+| group_members | 3 |
+| groups | 4 |
+| idea_submissions | 4 |
+| invitations | 7 |
+| league_players | 4 |
+| league_rounds | 4 |
+| leagues | 4 |
+| notifications | 2 |
+| patsome_tee_starters | 4 |
+| product_update_digests | 0 ⛔ |
+| product_updates | 1 |
+| push_subscriptions | 4 |
+| reactions | 3 |
+| scores | 3 |
+| tee_boxes | 5 |
+| tournaments | 4 |
+| users | 4 |
+| wolf_hole_choices | 4 |
 
-⛔ = RLS på uten policies → deny-all for anon/authenticated; kun service-role når
-tabellen (bevisst lockdown for admin-/agent-tabeller).
+⛔ = RLS på uten policies → deny-all for anon/authenticated; kun service-role
+når tabellen (bevisst lockdown for admin-/agent-tabeller). ⚠️ RLS AV = RLS ikke
+aktivert (skal aldri skje på public-tabeller — undersøkes umiddelbart).
 
-### CHECK-constraints per tabell (83 totalt)
+### CHECK-constraints per tabell (88 totalt)
 
-agent_findings 3 · agent_runs 1 · bingo_bango_bongo_holes 1 · course_holes 5 ·
-format_intent_mapping 2 · friendships 2 · game_players 4 · game_registration_requests 3 ·
-game_side_winners 2 · games 9 · group_join_requests 1 · groups 2 · idea_submissions 2 ·
-league_rounds 1 · leagues 13 · notifications 1 · patsome_tee_starters 1 · reactions 1 ·
-scores 3 · tee_boxes 11 · tournaments 11 · users 1 · wolf_hole_choices 3
+agent_findings 3 · agent_runs 1 · bingo_bango_bongo_holes 1 · course_holes 5 · format_intent_mapping 2 · friendships 2 · game_players 4 · game_registration_requests 3 · game_side_winners 2 · games 10 · green_pins 4 · group_join_requests 1 · groups 2 · idea_submissions 2 · league_rounds 1 · leagues 13 · notifications 1 · patsome_tee_starters 1 · reactions 1 · scores 3 · tee_boxes 11 · tournaments 11 · users 1 · wolf_hole_choices 3
 
 Fulle definisjoner: kjør den kanoniske spørringen (docs/loops/dok-avstemmeren.md).
-De domene-viktige CHECK-ene er beskrevet narrativt i seksjonene over.
 
-### Triggere (14, ingen interne)
+### Triggere (15, ingen interne)
 
-set_updated_at-familien: bingo_bango_bongo_holes, format_intent_mapping, formats,
-patsome_tee_starters, wolf_hole_choices. courses_set_slug (INSERT). Guard-triggere
-(kolonnenivå-vern, jf. 0107): game_players ×3 (invite_eligibility, score_differential,
-self_update), group_join_requests, group_members (last_owner_delete), invitations,
-scores, users.
+- `bingo_bango_bongo_holes`: bingo_bango_bongo_holes_set_updated_at
+- `courses`: courses_set_slug
+- `format_intent_mapping`: format_intent_mapping_set_updated_at
+- `formats`: formats_set_updated_at
+- `game_players`: guard_game_players_invite_eligibility, guard_game_players_score_differential, guard_game_players_self_update
+- `green_pins`: green_pins_gate
+- `group_join_requests`: guard_group_join_requests_self_update
+- `group_members`: guard_group_members_last_owner_delete
+- `invitations`: guard_invitations_self_update
+- `patsome_tee_starters`: patsome_tee_starters_set_updated_at
+- `scores`: guard_scores_self_update
+- `users`: guard_users_self_update
+- `wolf_hole_choices`: wolf_hole_choices_set_updated_at
 
 ### SECURITY DEFINER-funksjoner (43)
 
-accept_club_invitations · add_club_member_by_email · admin_create_club ·
-admin_key_metrics · anonymize_user · befriend_inviter · can_react_in_game ·
-can_score_for · connect_via_friend_code · consume_admin_rate_limit ·
-create_course_with_layout · decide_join_request · edit_product_update ·
-email_is_in_auth_users · email_is_invited · email_is_registered ·
-guard_game_players_invite_eligibility · guard_game_players_score_differential ·
-guard_game_players_self_update · guard_group_join_requests_self_update ·
-guard_group_members_last_owner_delete · guard_invitations_self_update ·
-guard_scores_self_update · guard_users_self_update · handle_new_auth_user ·
-incomplete_profiles_for_ids · is_admin · is_game_creator_or_admin · is_group_admin ·
-is_group_member · is_in_game · is_invite_eligible · join_club_league ·
-league_group_id · leave_club_league · remove_friend · respond_friend_request ·
-rls_auto_enable (kun prod) · same_flight · same_flight_or_solo · send_friend_request ·
-send_friend_request_by_email · set_club_member_role
+accept_club_invitations · add_club_member_by_email · admin_create_club · admin_key_metrics · anonymize_user · befriend_inviter · can_react_in_game · can_score_for · connect_via_friend_code · consume_admin_rate_limit · create_course_with_layout · decide_join_request · edit_product_update · email_is_in_auth_users · email_is_invited · email_is_registered · green_pins_gate · guard_game_players_invite_eligibility · guard_game_players_score_differential · guard_game_players_self_update · guard_group_join_requests_self_update · guard_group_members_last_owner_delete · guard_invitations_self_update · guard_scores_self_update · guard_users_self_update · handle_new_auth_user · incomplete_profiles_for_ids · is_admin · is_game_creator_or_admin · is_group_admin · is_group_member · is_in_game · is_invite_eligible · join_club_league · league_group_id · leave_club_league · remove_friend · respond_friend_request · rls_auto_enable · same_flight_or_solo · send_friend_request · send_friend_request_by_email · set_club_member_role
 
 <!-- GENERERT-SEKSJON-SLUTT -->
