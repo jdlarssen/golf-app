@@ -18,9 +18,12 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // Pages reachable while logged out. Checked against the locale-stripped
 // pathname (so /en/login is public too). These USED to be matcher
 // exclusions; they moved into code when the matcher had to start matching
-// all pages for the i18n rewrite.
+// all pages for the i18n rewrite. `spillformater` joined the list in #1264
+// (SEO-pakken) — the format guide is a pure learning resource with no
+// per-user data, so it's PUBLIC rather than auth-optional (no getUser() cost
+// for a page that has nothing to personalize).
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo)(\/|$)/;
+  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo|spillformater)(\/|$)/;
 
 // #1185: auth-optional routes. The proxy STILL resolves the user here (so a
 // logged-in visitor keeps their verified-user header — and thus their

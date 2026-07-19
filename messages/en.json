@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Tørny",
+    "metaDescription": "Free golf tournament app. Set up scramble, stableford or match play in minutes, with a live leaderboard and WHS handicaps. 20+ game formats.",
     "guestBadge": "Guest"
   },
   "notFound": {
@@ -1170,6 +1171,7 @@
     "sheetSubtitle": "How they work. Tap to read more.",
     "closeButton": "Close",
     "listMetaTitle": "Game formats",
+    "listMetaDescription": "Rules and scoring for 20+ golf game formats: scramble, stableford, match play, wolf, skins and more. With examples and net handicaps.",
     "listBackLabel": "← Home",
     "listKicker": "GAME FORMATS",
     "listPageTitle": "Game formats",
@@ -2626,6 +2628,8 @@
     }
   },
   "auth": {
+    "metaTitle": "Log in",
+    "metaDescription": "Log in to Tørny, the golf tournament app. No password, you'll get a code by email.",
     "inviteCard": {
       "invitedBy": "{name} has invited you",
       "invitedByFallback": "You're invited",
@@ -4317,6 +4321,7 @@
   "discover": {
     "pageTitle": "Find tournaments",
     "metaTitle": "Find tournaments",
+    "metaDescription": "Open golf tournaments you can join. See what's on, or log in and set up your own.",
     "backLabel": "← Home",
     "kicker": "FIND TOURNAMENTS",
     "emptyHeading": "Find tournaments",
@@ -4404,7 +4409,7 @@
     "archiveNoDate": "No date"
   },
   "signup": {
-    "metaTitle": "Sign up – Tørny",
+    "metaTitle": "Sign up",
     "kicker": "Sign up",
     "teeOffLabel": "Tee-off:",
     "alreadyRegisteredBanner": "You're already signed up for this game.",
@@ -4469,7 +4474,7 @@
     "notFoundHeading": "This link is no longer valid",
     "notFoundBody": "The game no longer exists or the sign-up link has expired. Ask the organiser for a new link.",
     "notFoundButton": "Back to home",
-    "teamDashMetaTitle": "My team – Tørny",
+    "teamDashMetaTitle": "My team",
     "teamDashKicker": "Team",
     "teamDashNoTeamBanner": "You don't have a team in this game. Ask the captain to add you, or sign up your own team from the sign-up page.",
     "teamDashInvitedHeading": "You''ve been invited to a team in \"{gameName}\"",
@@ -4551,7 +4556,7 @@
       "ogCta": "Join the round",
       "ogDescription": "See who's signed up and join in under a minute.",
       "posterLink": "Print poster",
-      "posterMetaTitle": "Tournament poster – Tørny",
+      "posterMetaTitle": "Tournament poster",
       "posterPrintButton": "Print",
       "posterScanHint": "Scan the code and join the round",
       "posterFooter": "Tørny — fire up your golf tournament in a couple of minutes"
@@ -4559,7 +4564,7 @@
   },
   "legal": {
     "privacy": {
-      "metaTitle": "Privacy – Tørny",
+      "metaTitle": "Privacy",
       "backLabel": "Back",
       "kicker": "Privacy",
       "s1Heading": "What data does Tørny store about you?",
@@ -4837,6 +4842,7 @@
     "renameError": "Couldn't rename. Try again."
   },
   "spectate": {
+    "metaTitle": "Follow the game",
     "liveStatus": "Watching live",
     "resultStatus": "Result",
     "bannerAriaLabel": "Spectator banner",
@@ -4871,7 +4877,7 @@
   },
   "publicCourses": {
     "index": {
-      "metaTitle": "Golf courses – slope, rating and course info – Tørny",
+      "metaTitle": "Golf courses – slope, rating and course info",
       "metaDescription": "Slope, course rating and hole-by-hole info for Norwegian golf courses. Find your course and set up a round in a couple of minutes.",
       "kicker": "Golf courses",
       "heading": "Golf courses in Tørny",
@@ -4881,7 +4887,7 @@
       "emptyState": "No courses have been added yet."
     },
     "detail": {
-      "metaTitle": "{name} – slope, rating and course info – Tørny",
+      "metaTitle": "{name} – slope, rating and course info",
       "metaDescription": "Slope, course rating, par and hole-by-hole info for {name}.",
       "kicker": "Golf course",
       "backLabel": "All courses",
@@ -4903,6 +4909,7 @@
   },
   "demo": {
     "pageTitle": "Try it out",
+    "metaDescription": "Try Tørny without logging in. Enter strokes in a ready-made tournament and watch the leaderboard update.",
     "gameName": "Demo round",
     "banner": "Enter your strokes and watch yourself climb the board. Nothing is saved.",
     "nameLabel": "What's your name?",
