@@ -18,9 +18,12 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // Pages reachable while logged out. Checked against the locale-stripped
 // pathname (so /en/login is public too). These USED to be matcher
 // exclusions; they moved into code when the matcher had to start matching
-// all pages for the i18n rewrite.
+// all pages for the i18n rewrite. `opengraph-image` (#1264) is the root
+// OG-image route (app/[locale]/opengraph-image.tsx) — served extensionless,
+// so the matcher's asset exclusions miss it, and social scrapers fetch it
+// anonymously.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo)(\/|$)/;
+  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo|opengraph-image)(\/|$)/;
 
 // #1185: auth-optional routes. The proxy STILL resolves the user here (so a
 // logged-in visitor keeps their verified-user header — and thus their
