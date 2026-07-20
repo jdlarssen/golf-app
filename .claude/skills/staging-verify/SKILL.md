@@ -69,9 +69,12 @@ vakten i scriptet — se steg 4.)
     (playwright + chromium ligger klare i repoet).
   - Driv `http://localhost:<port>` — ALDRI `127.0.0.1` (Next 16 blokkerer
     cross-origin dev-ressurser; hydreringen dør stille og alle klikk er døde).
-  - **FØR du stoler på noe resultat:** bekreft at serveren på porten er DENNE
-    worktreen (`lsof -ti:<port>` → `lsof -a -p <pid> -d cwd`) — falsk-grønt-
-    fella #1259 (en søster-worktrees server svarer ellers stille).
+  - **Kjør worktree-isolert med unik port** som PRIMÆR isolasjon mot
+    falsk-grønt-fella #1259 (`PLAYWRIGHT_PORT=<unik port>` for e2e-kjøringer /
+    egen port for Playwright-driveren over) — så `reuseExistingServer` aldri
+    gjenbruker en søster-worktrees server. **Verifiser likevel** at serveren på
+    porten er DENNE worktreen (`lsof -ti:<port>` → `lsof -a -p <pid> -d cwd`)
+    før du stoler på et resultat — en fremmed server svarer ellers stille.
   - Login i scriptet: gå rett til `/login?step=verify&email=…&next=<målside>`,
     `waitForLoadState('networkidle')` FØR utfylling (hydrerings-race), så
     `pressSequentially(<OTP>)` — 8-sifret kode auto-submitter, IKKE klikk
