@@ -18,6 +18,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+  actions: write # dispatch av discord-pr-card.yml etter docs-PR-opprettelse (#1301)
 
 jobs:
   regenerer:
