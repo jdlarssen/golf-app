@@ -3,18 +3,26 @@
 // neste stegene leser. Kjøres via `npx --yes tsx` UTEN npm ci (kun global fetch
 // + rene lib-importer).
 //
-// Env: GITHUB_TOKEN, GH_REPO, PR_NUMBER (eller GITHUB_EVENT_PATH), CARD_PLAN_PATH.
+// Env: GITHUB_TOKEN, GH_REPO, PR_NUMBER (eller GITHUB_EVENT_PATH), CARD_PLAN_PATH,
+// WAIT_FOR_CHECKS ('true' ved workflow_dispatch — vent på at checkene lander, #1301).
 // Skriver `should_card`/`is_gui` til $GITHUB_OUTPUT så workflowen kan gate stegene.
 
 import { appendFileSync } from 'node:fs';
 import { candidatePrNumber, eventHeadSha, ghClient } from './ghClient';
-import { CARD_LABEL, classifyChecks, extractPrSummary, type CheckRun } from '../../lib/loops/prCard';
+import {
+  CARD_LABEL,
+  classifyChecks,
+  extractPrSummary,
+  waitForChecksToSettle,
+  type CheckRun,
+} from '../../lib/loops/prCard';
 import { isVisualChange } from '../../lib/loops/prScreenshots';
 import { writePlan, type CardPlan } from './cardPlan';
 
 const LOG = '[decide-pr-card]';
 const REPO = process.env.GH_REPO || 'jdlarssen/golf-app';
 const TOKEN = process.env.GITHUB_TOKEN;
+const WAIT_FOR_CHECKS = process.env.WAIT_FOR_CHECKS === 'true';
 
 function ghOutput(key: string, value: string): void {
   const f = process.env.GITHUB_OUTPUT;
@@ -90,10 +98,32 @@ async function main(): Promise<void> {
   if (pr.state !== 'open') return noCard(`PR #${n} ikke åpen (${pr.state})`);
   if ((pr.labels ?? []).some((l) => l.name === CARD_LABEL)) return noCard(`PR #${n} allerede kortet`);
 
-  const checksRes = await gh.rest('GET', `/repos/${REPO}/commits/${pr.head.sha}/check-runs?per_page=100`);
-  if (checksRes.status !== 200) return noCard(`PR #${n}: check-runs HTTP ${checksRes.status}`);
-  const runs = (checksRes.json as { check_runs?: CheckRun[] }).check_runs ?? [];
-  const state = classifyChecks(runs.map((r) => ({ status: r.status, conclusion: r.conclusion })));
+  const fetchCheckRuns = async (): Promise<CheckRun[] | null> => {
+    const res = await gh.rest('GET', `/repos/${REPO}/commits/${pr.head.sha}/check-runs?per_page=100`);
+    if (res.status !== 200) {
+      console.log(`${LOG} PR #${n}: check-runs HTTP ${res.status}`);
+      return null;
+    }
+    const runs = (res.json as { check_runs?: CheckRun[] }).check_runs ?? [];
+    return runs.map((r) => ({ status: r.status, conclusion: r.conclusion }));
+  };
+
+  let state: 'pending' | 'red' | 'green';
+  if (WAIT_FOR_CHECKS) {
+    // Dispatch-trigget (docs-only-PR-er, #1301): i dispatch-øyeblikket er checkene
+    // typisk uregistrerte eller uferdige — vent til de lander (30 s × 21 ≈ 10 min).
+    // HTTP-feil underveis behandles som pending og prøves igjen.
+    state = await waitForChecksToSettle({
+      fetchRuns: async () => (await fetchCheckRuns()) ?? [],
+      maxAttempts: 21,
+      sleep: () => new Promise((resolve) => setTimeout(resolve, 30_000)),
+      log: (msg) => console.log(`${LOG} PR #${n}: ${msg}`),
+    });
+  } else {
+    const runs = await fetchCheckRuns();
+    if (runs === null) return noCard(`PR #${n}: check-runs-oppslag feilet`);
+    state = classifyChecks(runs);
+  }
   if (state !== 'green') return noCard(`PR #${n}: CI ${state}`);
 
   const changedFiles = await fetchChangedFiles(gh, n);
