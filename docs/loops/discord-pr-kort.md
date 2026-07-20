@@ -16,10 +16,13 @@ uendret.
 
 Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
 
-1. **Trigger:** `workflow_run` når **CI**-workflowen fullfører (+ `workflow_dispatch`
-   for manuell test mot ett PR-nummer). Checker ut PR-head-koden så skjermbildene
-   viser koden under review. (Vi bruker `workflow_run`, ikke `check_suite`:
-   check_suite fyrer ikke for GitHub-Actions-suiter, så CI trigget aldri kortet.)
+1. **Trigger:** `workflow_run` når **CI**-workflowen fullfører, ELLER
+   `workflow_dispatch` mot ett PR-nummer (manuell test/re-post, og produsent-dispatch
+   for docs-only-PR-er — se egen seksjon). Ved dispatch VENTER decide-steget på at
+   checkene lander (30 s-poll, maks ~10 min) i stedet for å gi opp på pending (#1301).
+   Checker ut PR-head-koden så skjermbildene viser koden under review. (Vi bruker
+   `workflow_run`, ikke `check_suite`: check_suite fyrer ikke for
+   GitHub-Actions-suiter, så CI trigget aldri kortet.)
 2. **`decide-pr-card.ts` — gate + visuell-diff:** åpen · alle check-runs grønne
    (`classifyChecks`) · ikke allerede kortet. Avgjør om diffen rører en visuell
    flate (`isVisualChange`). Skriver `pr-card-plan.json` + `should_card`/`is_gui`.
@@ -60,6 +63,25 @@ appen bootes mot torny-staging, login via service-role OTP-mint).
 `cancel-in-progress`) serialiserer samtidige fyringer. Restrisiko: to fyringer i
 samme øyeblikk kan i sjeldne tilfeller gi to kort — akseptert for v1 (mildt) fremfor
 å risikere et stille tapt kort.
+
+## Docs-only-PR-er — produsenten dispatcher kortet selv (#1301)
+
+Docs-only-PR-er kjører ingen CI (kvote-trimmen #1195: `paths-ignore` på `**.md`,
+`docs/**`, `.forge/**` i `ci.yml`), så `workflow_run` fyrer aldri og kortet kom
+aldri. Konvensjon: **produsenter av docs-only-PR-er dispatcher kortet selv rett
+etter PR-opprettelse:**
+
+```bash
+gh workflow run discord-pr-card.yml -f pr="$PR_NUMBER"
+```
+
+Kort-workflowen venter selv på at checkene (typisk kun Vercel) lander før den
+gater — dispatchen kan altså skje umiddelbart, uten egen venting hos produsenten.
+Dispatch-kallet er best-effort: feiler det, er morgenbriefen backstop for kortet.
+
+Produsenter i dag: `.github/scripts/dok-skjema.sh` (ukentlig skjema-PR) og
+morgenbriefens månedlige arkiv-PR (se `docs/loops/morgenbriefen.md`). Nye
+loop-produsenter av docs-PR-er skal følge samme konvensjon.
 
 ## Eier-oppsett (engangs) — Actions-secrets
 
