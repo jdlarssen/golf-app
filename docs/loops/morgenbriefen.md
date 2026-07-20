@@ -160,3 +160,8 @@ draft-PR eieren merger, ALDRI selvmerget. Arkiverte kommentarer kan ikke
 redigeres bort fra #1110; lenk til arkivfila i briefen i stedet. Samme runde
 arkiverer lanserings-tavla #1208 (Utroperens forslag + ✅-markører) til samme
 fil.
+
+Rett etter at arkiv-PR-en er åpnet: dispatch Discord-kortet — docs-only-PR-er
+trigger det ikke selv (#1301, konvensjonen står i `docs/loops/discord-pr-kort.md`):
+`gh workflow run discord-pr-card.yml -f pr=<PR-nummer>`. Best-effort; feiler
+dispatchen er neste morgenbrief backstop.
