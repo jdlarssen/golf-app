@@ -28,10 +28,13 @@
 
 # ── Vakt: aldri direkte push til main (CLAUDE.md → "Branch + PR-flyt"). ──
 # Etter v1.0.0 går alt arbeid via PR. Git gir oss linjer på stdin på formen
-# "<local-ref> <local-sha> <remote-ref> <remote-sha>" — vi blokkerer hvis noen
-# av dem peker på refs/heads/main. Ekte vedlikeholds-unntak: kjør pushen med
+# "<local-ref> <local-sha> <remote-ref> <remote-sha>" — vi leser dem ÉN gang
+# (både main-vakten og slette-unntaket under trenger dem) og blokkerer hvis
+# noen peker på refs/heads/main. Ekte vedlikeholds-unntak: kjør pushen med
 # ALLOW_MAIN_PUSH=1 foran. Kjøres FØRST (billigst, og skal blokkere uansett
 # node_modules-status).
+PUSH_REFS="$(cat)"
+
 if [ "${ALLOW_MAIN_PUSH:-0}" != "1" ]; then
   while read -r _localref _localsha remoteref _remotesha; do
     case "$remoteref" in
@@ -44,7 +47,29 @@ if [ "${ALLOW_MAIN_PUSH:-0}" != "1" ]; then
         exit 1
         ;;
     esac
-  done
+  done <<EOF
+$PUSH_REFS
+EOF
+fi
+
+# ── Slette-unntak (#1313): en ren delete-push har null-SHA som local-sha på ──
+# alle refs — ingenting forlater maskinen, så verify-gaten har ingenting å
+# gate. Kjøres den likevel, står push-forbindelsen åpen i minuttene gaten
+# bruker, og trege proxyer (sky-økter) kutter den: «the remote end hung up».
+ZERO_SHA=0000000000000000000000000000000000000000
+if [ -n "$PUSH_REFS" ]; then
+  ONLY_DELETES=1
+  while read -r _localref localsha _remoteref _remotesha; do
+    if [ -n "$localsha" ] && [ "$localsha" != "$ZERO_SHA" ]; then
+      ONLY_DELETES=0
+    fi
+  done <<EOF
+$PUSH_REFS
+EOF
+  if [ "$ONLY_DELETES" = "1" ]; then
+    printf '✓ pre-push: kun ref-slettinger — verify-gaten har ingenting å gate.\n' >&2
+    exit 0
+  fi
 fi
 
 # Uten avhengigheter kan vi ikke kjøre gaten. Bedre å slippe pushen gjennom enn
