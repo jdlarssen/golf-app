@@ -9,6 +9,7 @@ import {
   skipReason,
   type CreatedGame,
 } from '../_helpers/games';
+import { rootUrlPattern } from '../_helpers/url';
 
 /**
  * E2E for self-withdraw fra `open`-modus spill (#199 chunk 14).
@@ -40,6 +41,7 @@ test.describe('Påmelding · self-withdraw (full flow) @gate', () => {
 
   test('spiller melder seg på, trekker seg, og er ute av game_players', async ({
     page,
+    baseURL,
   }) => {
     expect(game).not.toBeNull();
 
@@ -79,8 +81,9 @@ test.describe('Påmelding · self-withdraw (full flow) @gate', () => {
       await page
         .getByRole('button', { name: 'Trekk meg fra spillet' })
         .click();
-      // Submit-actionen redirecter til '/' ved suksess.
-      await expect(page).toHaveURL(/^http:\/\/localhost:3000\/?(\?.*)?$/, {
+      // Submit-actionen redirecter til '/' ved suksess. Absolutt mønster
+      // derivert fra baseURL (port-styrt via PLAYWRIGHT_PORT, #1259; #698).
+      await expect(page).toHaveURL(rootUrlPattern(baseURL), {
         timeout: 15_000,
       });
     });
