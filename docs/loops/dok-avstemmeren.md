@@ -87,12 +87,12 @@ utvides når nye målbare claims dukker opp i styringsdokumentene.
 
 | # | Påstand (hjem) | Bevis-kommando | Sist verifisert |
 |---|---|---|---|
-| C1 | CLAUDE.md → Datamodell: tabell-antall og peker til generert seksjon | Steg 1-spørringen (`tables_total`) | 2026-07-07 (34) |
-| C2 | CLAUDE.md → Scoring: tall-løs formulering + fasit-kommando | `npx vitest run lib/scoring` | 2026-07-07 |
-| C3 | CLAUDE.md → Samarbeidsmodell: SQL-tilgang beskriver MCP + staging-først + prod-luke | grep «Supabase MCP» CLAUDE.md; `.claude/hooks/mcp-guard.sh` finnes | 2026-07-07 |
-| C4 | forge-workflow.md: primær kontrakt-søkemetode er per-issue-iterasjon | `gh search issues ... in:comments` returnerer tomt (kjent); per-issue `gh api .../comments` virker | 2026-07-07 |
-| C5 | schema-ground-truth.md: generert seksjon < 15 dager gammel | dato i seksjons-headeren vs `date -u` | 2026-07-07 |
-| C6 | docs/test-discipline.md-terskler vs pre-commit-hook: kjent tre-tall-avvik (3/5/10) er ENTEN uendret ELLER løst per eierbeslutning | grep toContain i begge filer | 2026-07-07 (issue filet) |
+| C1 | CLAUDE.md → Datamodell: tabell-antall og peker til generert seksjon | Steg 1-spørringen (`tables_total`) | 2026-07-20 (35) |
+| C2 | CLAUDE.md → Scoring: tall-løs formulering + fasit-kommando | `npx vitest run lib/scoring` | 2026-07-20 (1029) |
+| C3 | CLAUDE.md → Samarbeidsmodell: SQL-tilgang beskriver MCP + staging-først + prod-luke | grep «Supabase MCP» CLAUDE.md; `.claude/hooks/mcp-guard.sh` finnes | 2026-07-20 |
+| C4 | forge-workflow.md: primær kontrakt-søkemetode er per-issue-iterasjon | `gh search issues ... in:comments` returnerer tomt (kjent); per-issue `gh api .../comments` virker | 2026-07-20 (doc-innhold; gh-quirk ikke re-testbar fra sky) |
+| C5 | schema-ground-truth.md: generert seksjon < 15 dager gammel | dato i seksjons-headeren vs `date -u` | 2026-07-20 |
+| C6 | docs/test-discipline.md-terskler vs pre-commit-hook: kjent tre-tall-avvik (3/5/10) er ENTEN uendret ELLER løst per eierbeslutning | grep toContain i begge filer | 2026-07-20 (3/5/10-trapp konsistent) |
 
 ## Steg 3 — Memory-drift-flagg (best effort — kun lokale kjøringer)
 
