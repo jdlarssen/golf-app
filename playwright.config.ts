@@ -1,5 +1,23 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// #1259: én kilde for e2e-porten. Lokalt gjenbruker Playwright enhver
+// dev-server som allerede lytter på porten (reuseExistingServer) — også en
+// fremmed worktrees, som gir falskt grønt/rødt. Å styre porten med
+// PLAYWRIGHT_PORT lar hver worktree kjøre isolert uten å redigere denne fila.
+// Usatt → 3000 som før; CI setter den aldri, så CI-oppførselen er uendret.
+// NB: `??` fanger ikke tom streng — PLAYWRIGHT_PORT='' gir Number('') = 0 —
+// så vakten avviser alt utenfor 1–65535, ikke bare NaN.
+const PLAYWRIGHT_PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3000);
+if (
+  !Number.isInteger(PLAYWRIGHT_PORT) ||
+  PLAYWRIGHT_PORT < 1 ||
+  PLAYWRIGHT_PORT > 65535
+) {
+  throw new Error(
+    `PLAYWRIGHT_PORT må være et heltall i 1–65535, fikk «${process.env.PLAYWRIGHT_PORT}».`,
+  );
+}
+
 export default defineConfig({
   testDir: './e2e',
   // On CI: serialize (workers: 1) so authenticated specs don't cluster logins
@@ -21,7 +39,7 @@ export default defineConfig({
     // Traces/screenshots land in test-results/, collected as a CI artifact.
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    baseURL: 'http://localhost:3000',
+    baseURL: `http://localhost:${PLAYWRIGHT_PORT}`,
     // Baseline = norsk enhet. Uten denne arver kontekstene runnerens
     // OS-locale (typisk en-US), og locale-forhandlingen fra i18n Fase 0/1
     // server engelsk til specs som asserter norsk copy. Specs som tester
@@ -37,8 +55,10 @@ export default defineConfig({
       : {},
   },
   webServer: {
-    command: 'npm run dev',
-    port: 3000,
+    // -p binder dev-serveren til SAMME port som baseURL. Eksplisitt flagg
+    // framfor `env: { PORT }`, som ville erstatte process.env-arven (#1259).
+    command: `npm run dev -- -p ${PLAYWRIGHT_PORT}`,
+    port: PLAYWRIGHT_PORT,
     reuseExistingServer: !process.env.CI,
     // #1132: cold-start headroom. Default is 60s for the dev server to answer on
     // the port; a cold/contended Turbopack boot on a shared Actions runner can

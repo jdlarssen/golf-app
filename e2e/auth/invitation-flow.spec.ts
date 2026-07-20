@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { adminClient, signInViaOtp } from '../_helpers/games';
+import { rootUrlPattern } from '../_helpers/url';
 
 /**
  * Full invitation flow e2e — covers issue #30.
@@ -106,6 +107,7 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
 
   test('admin inviterer → invitee logger inn → fullfører profil → spiller første hull', async ({
     browser,
+    baseURL,
   }) => {
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
@@ -193,9 +195,11 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
         .click();
 
       // completeProfile redirecter til '/' ved suksess. toHaveURL matcher mot
-      // hele URL-en, så regexen må inkludere host (jf. self-withdraw.spec.ts) —
-      // en path-only regex matcher aldri 'http://localhost:3000/'. (#698)
-      await expect(inviteePage).toHaveURL(/^http:\/\/localhost:3000\/?(\?.*)?$/, {
+      // hele URL-en, så mønsteret må være absolutt (jf. self-withdraw.spec.ts)
+      // — en path-only regex matcher aldri en rot-URL med host. (#698)
+      // Host + port deriveres fra baseURL slik at #1259-port-isolasjonen
+      // (PLAYWRIGHT_PORT) holder mønsteret riktig uansett port.
+      await expect(inviteePage).toHaveURL(rootUrlPattern(baseURL), {
         timeout: 15_000,
       });
     });
