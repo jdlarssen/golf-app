@@ -70,6 +70,7 @@ Eierbeslutning 2026-07-07 (#1104): behold alle tre nivåer — de fanger ulike t
 - **Stil:** Én test per kritisk bruker-flyt. Golden path først, deretter de 1–2 edge-cases-ene som faktisk har brutt før.
 - **Forbudt:** `getByText('Du er invitert')`. Bruk `data-testid` eller role-baserte locators. **Hvorfor:** norske strenger endres oftere enn data-testid; E2E som låser copy er en av de mest brittle test-typene som finnes.
 - **Forbudt:** Vente-på-timing-hack-er. Bruk `await expect(locator).toBeVisible()` med default-timeout.
+- **Worktree-isolasjon (lokalt):** `reuseExistingServer` gjør at Playwright lokalt gjenbruker enhver dev-server som lytter på porten — også en fremmed worktrees — som gir falskt grønt/rødt (flyten passerer uten at branchens egen kode kjørte). Kjør worktree-isolert med `PLAYWRIGHT_PORT=<unik port>` (default 3000), og verifiser eierskap før du stoler på et resultat: `lsof -ti:<port>` → `lsof -a -p <pid> -d cwd` (#1259). CI er trygg (`reuseExistingServer: false`).
 
 ---
 
