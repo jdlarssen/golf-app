@@ -4,6 +4,7 @@ import {
   CARD_LABEL,
   classifyChecks,
   extractPrSummary,
+  waitForChecksToSettle,
   type CheckRun,
 } from './prCard';
 
@@ -80,6 +81,57 @@ describe('classifyChecks', () => {
     expect(classifyChecks([green(), run('completed', 'skipped'), run('completed', 'neutral')])).toBe(
       'green',
     );
+  });
+});
+
+describe('waitForChecksToSettle', () => {
+  const green: CheckRun[] = [{ status: 'completed', conclusion: 'success' }];
+  const pending: CheckRun[] = [{ status: 'in_progress', conclusion: null }];
+  const red: CheckRun[] = [{ status: 'completed', conclusion: 'failure' }];
+
+  // Fake fetcher/sleep: leverer sekvensen én og én, teller kall.
+  function harness(sequence: CheckRun[][]) {
+    let fetches = 0;
+    let sleeps = 0;
+    return {
+      fetchRuns: async () => sequence[Math.min(fetches++, sequence.length - 1)],
+      sleep: async () => {
+        sleeps++;
+      },
+      counts: () => ({ fetches, sleeps }),
+    };
+  }
+
+  it('returnerer green uten å sove når første henting er grønn', async () => {
+    const h = harness([green]);
+    await expect(
+      waitForChecksToSettle({ fetchRuns: h.fetchRuns, maxAttempts: 5, sleep: h.sleep }),
+    ).resolves.toBe('green');
+    expect(h.counts()).toEqual({ fetches: 1, sleeps: 0 });
+  });
+
+  it('poller forbi tom liste og pending til sjekkene lander grønt', async () => {
+    const h = harness([[], pending, green]);
+    await expect(
+      waitForChecksToSettle({ fetchRuns: h.fetchRuns, maxAttempts: 5, sleep: h.sleep }),
+    ).resolves.toBe('green');
+    expect(h.counts()).toEqual({ fetches: 3, sleeps: 2 });
+  });
+
+  it('returnerer red straks en fullført sjekk er rød', async () => {
+    const h = harness([pending, red]);
+    await expect(
+      waitForChecksToSettle({ fetchRuns: h.fetchRuns, maxAttempts: 5, sleep: h.sleep }),
+    ).resolves.toBe('red');
+    expect(h.counts()).toEqual({ fetches: 2, sleeps: 1 });
+  });
+
+  it('gir opp som pending når forsøkene er brukt opp', async () => {
+    const h = harness([pending]);
+    await expect(
+      waitForChecksToSettle({ fetchRuns: h.fetchRuns, maxAttempts: 3, sleep: h.sleep }),
+    ).resolves.toBe('pending');
+    expect(h.counts()).toEqual({ fetches: 3, sleeps: 2 });
   });
 });
 

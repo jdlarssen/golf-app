@@ -65,6 +65,39 @@ export function classifyChecks(runs: CheckRun[]): 'pending' | 'red' | 'green' {
   return 'green';
 }
 
+export type ChecksSettleOpts = {
+  /** Henter ferske check-runs for PR-head-en (systemgrensen — injiseres). */
+  fetchRuns: () => Promise<CheckRun[]>;
+  /** Antall klassifiseringsforsøk før vi gir opp som `pending`. */
+  maxAttempts: number;
+  /** Pause mellom forsøk (injiseres så tester slipper ekte klokke). */
+  sleep: () => Promise<void>;
+  log?: (msg: string) => void;
+};
+
+/**
+ * Poller `classifyChecks` til utfallet ikke lenger er `pending`, eller
+ * forsøkene er brukt opp. Trengs for dispatch-trigget kort på docs-only-PR-er
+ * (#1301): der finnes ingen CI-kjøring å vente på (ci.yml paths-ignore), så
+ * dispatch skjer rett etter PR-opprettelse — mens Vercel-sjekkene fortsatt er
+ * uregistrerte eller uferdige. Engangs-klassifisering ville alltid gitt
+ * `pending` og aldri noe kort.
+ */
+export async function waitForChecksToSettle({
+  fetchRuns,
+  maxAttempts,
+  sleep,
+  log,
+}: ChecksSettleOpts): Promise<'pending' | 'red' | 'green'> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (attempt > 1) await sleep();
+    const state = classifyChecks(await fetchRuns());
+    if (state !== 'pending') return state;
+    log?.(`checks pending (forsøk ${attempt}/${maxAttempts})`);
+  }
+  return 'pending';
+}
+
 export type PrForCard = {
   number: number;
   title: string;

@@ -14,7 +14,10 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-  # Manuell testing / re-post mot en spesifikk PR (aktiveringssteget).
+  # Manuell testing / re-post mot en spesifikk PR — OG produsent-dispatch for
+  # docs-only-PR-er (#1301): de kjører ingen CI (ci.yml paths-ignore), så ingen
+  # workflow_run fyrer. Produsenten dispatcher i stedet rett etter PR-opprettelse,
+  # og decide-steget VENTER da på at checkene lander (se WAIT_FOR_CHECKS under).
   workflow_dispatch:
     inputs:
       pr:
@@ -73,14 +76,18 @@ jobs:
         with:
           node-version: 22
 
-      # Steg 1 — AVGJØR: gate + visuell-diff-deteksjon (ingen npm ci).
+      # Steg 1 — AVGJØR: gate + visuell-diff-deteksjon (ingen npm ci). Ved
+      # dispatch venter steget på at checkene lander (maks ~10 min, #1301) —
+      # timeout-minutes rommer ventingen med god margin.
       - name: Decide
         id: decide
         if: steps.guard.outputs.run == 'true'
+        timeout-minutes: 15
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ inputs.pr }}
+          WAIT_FOR_CHECKS: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: npx --yes tsx scripts/loops/decide-pr-card.ts
 
       # Steg 2 — SKJERMBILDER (kun visuell diff): booter appen mot staging og
