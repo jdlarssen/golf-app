@@ -76,6 +76,27 @@ jobs:
           rmdir supabase/migrations
           mv /tmp/torny_migrations supabase/migrations
 
+      # Hosted-parity default privileges (#1320, measured 2026-07-21): hosted
+      # projects ship ALTER DEFAULT PRIVILEGES for role postgres in schema
+      # public granting ALL on tables/sequences/functions to the API roles —
+      # the CLI image's bootstrap does not (its postgres-defacl carries only
+      # D/x/t on tables and no EXECUTE on functions; see run 29831991187's
+      # dump). Setting the hosted shape BEFORE the apply means every CREATE
+      # gets hosted-like grants and later hardening revokes (0142, 0140,
+      # 0137…) land on top in prod chronology. A blanket re-grant AFTER the
+      # apply would clobber exactly those revokes — do not "simplify" to that.
+      - name: Normalize default privileges to hosted shape (#1320)
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -v ON_ERROR_STOP=1 <<'SQL'
+          alter default privileges for role postgres in schema public
+            grant all on tables to anon, authenticated, service_role;
+          alter default privileges for role postgres in schema public
+            grant all on sequences to anon, authenticated, service_role;
+          alter default privileges for role postgres in schema public
+            grant all on functions to anon, authenticated, service_role;
+          SQL
+
       # Prod-parity apply: every migration in filename order, as postgres,
       # ON_ERROR_STOP so the first failing statement reds the job with the
       # file name in the log. Connection values from supabase/config.toml
