@@ -1,0 +1,30 @@
+# Gitleaks config — extends the default ruleset with allowlists for this
+# repo's known false-positive shapes. Baseline: a full-history scan (2 889
+# commits, 2026-07-21) found ZERO real leaks; every hit was one of the
+# patterns below. One-off historical findings that don't generalize live in
+# .gitleaksignore (fingerprints), not here — keep this file to patterns that
+# recur by construction.
+#
+# CI: .github/workflows/secret-scan.yml. Local run:
+#   gitleaks detect --source . --redact
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known non-secrets that trip generic rules"
+regexTarget = "line"
+regexes = [
+  # i18n/points *label* keys in UI config maps (SideTournamentView.tsx etc.):
+  # `individualPointsKey: 'kingPar3Individual'` — the generic-api-key rule
+  # sees "…Key: '<string>'" and fires. These are message-catalog names,
+  # never credentials.
+  '''(?i)(i18n|points)key\s*[:=]''',
+  # Canonical dummy UUID used as a token fixture in unit tests
+  # (lib/games/spectate.test.ts).
+  '''a1b2c3d4-e5f6-7890-abcd-ef1234567890''',
+  # Fake credentials in .forge/evaluations/1074-guard-suiten.md — the doc
+  # DEMONSTRATES the log scrubber, so it intentionally contains fake
+  # secret-shaped strings ("hemmelig" = the tell that they're fixtures).
+  '''eyJhemmeligkey456|hemmeligpw123''',
+]
