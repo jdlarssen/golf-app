@@ -1,0 +1,57 @@
+# Migrations gate (#1318). schema-drift.yml COMPARES generated types against
+# prod, but nothing in CI ever APPLIES the migrations — a migration with a
+# syntax error, a broken ordering dependency, or an RLS regression used to
+# surface only at the manual staging apply. This job boots a real local
+# Postgres, applies every migration in supabase/migrations/ in order (a boot
+# failure = red job), then runs the pgTAP suites in supabase/tests/ — the
+# hostile-request RLS rig from #440 that npm's test:rls self-skips without a
+# local stack, so this is the suites' only automated gate.
+#
+# Unblocked by #533 (duplicate number prefixes renumbered): `supabase start`
+# + `supabase test db` now work out of the box per supabase/tests/README.md.
+#
+# Quota (#1195): path-filtered to migration/test changes only — ordinary code
+# PRs never run this. The workflow file itself is in the paths list so the PR
+# that introduces or edits the gate exercises it for real.
+name: Migrations gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/migrations-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrations-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # Backstop against a hung container pull/boot — the whole run normally
+    # finishes in a few minutes.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Boots the local stack and applies ALL migrations in filename order —
+      # any failing migration fails the boot, which is exactly the signal.
+      # Plain `supabase start` (no service exclusions): it's the command
+      # supabase/tests/README.md documents as verified, and -x service names
+      # drift between CLI versions. No stop step — the runner VM is ephemeral.
+      - name: Boot local stack + apply all migrations
+        run: supabase start
+
+      - name: Run pgTAP suites (supabase/tests/)
+        run: supabase test db
