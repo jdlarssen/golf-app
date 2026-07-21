@@ -1,14 +1,22 @@
-# Migrations gate (#1318). schema-drift.yml COMPARES generated types against
-# prod, but nothing in CI ever APPLIES the migrations — a migration with a
-# syntax error, a broken ordering dependency, or an RLS regression used to
-# surface only at the manual staging apply. This job boots a real local
-# Postgres, applies every migration in supabase/migrations/ in order (a boot
-# failure = red job), then runs the pgTAP suites in supabase/tests/ — the
-# hostile-request RLS rig from #440 that npm's test:rls self-skips without a
-# local stack, so this is the suites' only automated gate.
+# Migrations gate (#1318, hardened via #1320). schema-drift.yml COMPARES
+# generated types against prod, but nothing in CI ever APPLIES the migrations —
+# a migration with a syntax error, a broken ordering dependency, or an RLS
+# regression used to surface only at the manual staging apply. This job boots a
+# real local Postgres, applies every migration in supabase/migrations/ in
+# order (any failure = red job), then runs the pgTAP suites in supabase/tests/
+# — the hostile-request RLS rig from #440 that npm's test:rls self-skips
+# without a local stack, so this is the suites' only automated gate.
 #
-# Unblocked by #533 (duplicate number prefixes renumbered): `supabase start`
-# + `supabase test db` now work out of the box per supabase/tests/README.md.
+# WHY migrations are applied with psql AS postgres and not by `supabase start`
+# (#1320): hosted projects apply migrations as the `postgres` role
+# (dashboard/MCP), and Supabase's default privileges are configured FOR ROLE
+# postgres — tables created that way get the platform's ALL-grants for
+# anon/authenticated/service_role, which later hardening migrations (e.g.
+# 0142) selectively revoke. The CLI's own apply runs as supabase_admin, so
+# those default grants never materialize and 12/17 suites failed with 42501.
+# The psql-as-postgres path is the one #440 verified green (19/19) — see
+# supabase/tests/README.md path B. The stack is booted with the migrations
+# dir temporarily empty to keep the CLI from applying them first.
 #
 # Quota (#1195): path-filtered to migration/test changes only — ordinary code
 # PRs never run this. The workflow file itself is in the paths list so the PR
@@ -47,20 +55,38 @@ jobs:
         with:
           version: latest
 
-      # Boots the local stack and applies ALL migrations in filename order —
-      # any failing migration fails the boot, which is exactly the signal.
-      # Plain `supabase start` (no service exclusions): it's the command
-      # supabase/tests/README.md documents as verified, and -x service names
-      # drift between CLI versions. No stop step — the runner VM is ephemeral.
-      - name: Boot local stack + apply all migrations
-        run: supabase start
+      # The CLI's schema_migrations bookkeeping keys on the number prefix, so
+      # duplicates break `supabase db` flows (#533). The psql apply below
+      # wouldn't catch a duplicate — keep the invariant guarded here.
+      - name: Guard unique migration number prefixes (#533)
+        run: |
+          dups=$(ls supabase/migrations/*.sql | xargs -n1 basename | sed 's/_.*//' | sort | uniq -d)
+          if [ -n "$dups" ]; then
+            echo "::error::Duplicate migration number prefixes: $dups"
+            exit 1
+          fi
 
-      # NON-BLOCKING until #1320: the suites' first-ever automated run showed
-      # prod's table/function GRANT baseline isn't reproduced by migrations
-      # alone (42501s for `authenticated`), so 12/17 files are red against a
-      # migration-built DB. A permanently red gate trains everyone to ignore
-      # it (#1272). Migration APPLY above stays blocking — that part is green.
-      # Remove continue-on-error when #1320 lands.
-      - name: Run pgTAP suites (supabase/tests/ — informational until #1320)
-        continue-on-error: true
+      # Boot the stack on an EMPTY migrations dir (see header — the CLI would
+      # apply them as supabase_admin, which skews grants vs prod).
+      - name: Boot bare local stack
+        run: |
+          mv supabase/migrations /tmp/torny_migrations
+          mkdir supabase/migrations
+          supabase start
+          rmdir supabase/migrations
+          mv /tmp/torny_migrations supabase/migrations
+
+      # Prod-parity apply: every migration in filename order, as postgres,
+      # ON_ERROR_STOP so the first failing statement reds the job with the
+      # file name in the log. Connection values from supabase/config.toml
+      # ([db] port 54322) + supabase/tests/README.md.
+      - name: Apply all migrations as postgres (prod-parity grants, #1320)
+        run: |
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            echo "== $f"
+            PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+              -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      - name: Run pgTAP suites (supabase/tests/)
         run: supabase test db
