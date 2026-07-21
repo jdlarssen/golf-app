@@ -29,7 +29,9 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+-- 11 asserts below — the plan said 12 since the file's first commit, which
+-- made every full-suite run end "Bad plan" even with all asserts green.
+select plan(11);
 
 \ir fixtures/rls_helpers.psql
 
