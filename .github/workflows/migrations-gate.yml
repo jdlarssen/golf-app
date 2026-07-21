@@ -33,7 +33,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  # Distinct job name on purpose — ci.yml already exposes a check called
+  # "verify", and two identical names in the PR check list are unreadable.
+  migrations:
     runs-on: ubuntu-latest
     # Backstop against a hung container pull/boot — the whole run normally
     # finishes in a few minutes.
