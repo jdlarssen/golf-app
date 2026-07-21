@@ -1,0 +1,5 @@
+# One-off historical findings accepted by fingerprint (commit:file:rule:line).
+# Recurring false-positive PATTERNS belong in .gitleaks.toml, not here.
+# Verified false positive 2026-07-21: prose about i18n keys in a contract doc
+# ("keys, section/empty/banner extraction") — not a credential.
+252f0812631d89f711a0780383433a3f479ac763:.forge/contracts/581-i18n-fase-2f-offentlig-referanse.md:generic-api-key:323
