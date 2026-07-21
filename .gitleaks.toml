@@ -13,6 +13,15 @@ useDefault = true
 
 [allowlist]
 description = "Known non-secrets that trip generic rules"
+# The gitleaks config files themselves contain secret-SHAPED strings by
+# design (fingerprint lines with 40-char hex SHAs, allowlist regex examples)
+# and tripped the very first PR run of the gate. Path-based, not
+# fingerprint-based: the repo rebase-merges, so branch-commit fingerprints
+# die at merge when the SHAs are rewritten.
+paths = [
+  '''\.gitleaksignore$''',
+  '''\.gitleaks\.toml$''',
+]
 regexTarget = "line"
 regexes = [
   # i18n/points *label* keys in UI config maps (SideTournamentView.tsx etc.):
