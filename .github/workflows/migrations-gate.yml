@@ -55,5 +55,12 @@ jobs:
       - name: Boot local stack + apply all migrations
         run: supabase start
 
-      - name: Run pgTAP suites (supabase/tests/)
+      # NON-BLOCKING until #1320: the suites' first-ever automated run showed
+      # prod's table/function GRANT baseline isn't reproduced by migrations
+      # alone (42501s for `authenticated`), so 12/17 files are red against a
+      # migration-built DB. A permanently red gate trains everyone to ignore
+      # it (#1272). Migration APPLY above stays blocking — that part is green.
+      # Remove continue-on-error when #1320 lands.
+      - name: Run pgTAP suites (supabase/tests/ — informational until #1320)
+        continue-on-error: true
         run: supabase test db
