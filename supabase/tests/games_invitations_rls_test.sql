@@ -50,7 +50,7 @@ select set_config('role', 'postgres', true);
 insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by, registration_mode)
   values ('00000000-0000-4000-a000-0000000000a1', 'RLS Open Draft',
           torny_rls.course_id(), torny_rls.tee_box_id(),
-          'draft', 'strokeplay', torny_rls.outsider_id(), 'open');
+          'draft', 'solo_strokeplay', torny_rls.outsider_id(), 'open');
 
 -- An open DRAFT game created by the ADMIN. Used for: (a) a non-creator/non-admin
 -- (the active player, a participant of the *other* game but not of this one and
@@ -60,7 +60,7 @@ insert into public.games (id, name, course_id, tee_box_id, status, game_mode, cr
 insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by, registration_mode)
   values ('00000000-0000-4000-a000-0000000000a4', 'RLS Admin Open Draft',
           torny_rls.course_id(), torny_rls.tee_box_id(),
-          'draft', 'strokeplay', torny_rls.admin_id(), 'open');
+          'draft', 'solo_strokeplay', torny_rls.admin_id(), 'open');
 
 insert into public.invitations (email, token, invited_by, expires_at, game_id)
   values
