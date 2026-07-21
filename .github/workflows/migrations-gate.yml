@@ -112,9 +112,10 @@ jobs:
       - name: Run pgTAP suites (supabase/tests/)
         run: supabase test db
 
-      # TEMP diagnostics for #1320 — dumps the ACL ground truth when the
-      # suites fail, so the grants gap can be diagnosed from the log instead
-      # of guessed at. Remove once the suites gate green.
+      # Post-mortem aid (#1320): on a red suite run, dump the ACL ground truth
+      # so a grants-shaped failure can be diagnosed from the log instead of
+      # guessed at — the 42501 cluster in #1320 took two blind attempts before
+      # this dump pinpointed the default-privileges gap in one.
       - name: Dump grants diagnostics (#1320)
         if: failure()
         run: |
