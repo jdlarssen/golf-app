@@ -4855,7 +4855,9 @@
     "shareLinkAriaLabel": "Share live link for this game",
     "copiedLabel": "Copied!",
     "shareText": "Follow the tournament live in Tørny",
-    "copyEmbedLabel": "Copy code for your website"
+    "copyEmbedLabel": "Copy code for your website",
+    "ctaLabel": "Create your own tournament for free",
+    "ogDescription": "Follow the leaderboard live on Tørny"
   },
   "installBanner": {
     "title": "Install Tørny as an app",

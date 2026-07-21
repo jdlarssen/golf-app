@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.209 · Delte turneringslenker som selger seg selv</strong></summary>
+
+[#1268](https://github.com/jdlarssen/golf-app/issues/1268) — Deler du live-lenken til en turnering, viser den nå turneringsnavnet i meldinger og sosiale medier, bærer en diskret Tørny-logo, og gir gjester en «lag din egen»-knapp rett under resultatene.
+
+↳ /login · «Lag din egen turnering gratis»
+</details>
+
+<details>
 <summary><strong>1.208 · Spillformatene er åpne for alle</strong></summary>
 
 [#1264](https://github.com/jdlarssen/golf-app/issues/1264) — Guiden med alle spillformene kan nå leses uten innlogging, så du kan dele den med hvem som helst. Tørny-lenker får også et skikkelig delingsbilde i meldinger og sosiale medier.
