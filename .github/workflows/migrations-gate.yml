@@ -90,3 +90,25 @@ jobs:
 
       - name: Run pgTAP suites (supabase/tests/)
         run: supabase test db
+
+      # TEMP diagnostics for #1320 — dumps the ACL ground truth when the
+      # suites fail, so the grants gap can be diagnosed from the log instead
+      # of guessed at. Remove once the suites gate green.
+      - name: Dump grants diagnostics (#1320)
+        if: failure()
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres <<'SQL'
+          select relname, pg_get_userbyid(relowner) as owner, relacl
+            from pg_class c join pg_namespace n on n.oid = c.relnamespace
+           where n.nspname = 'public' and relkind = 'r'
+             and relname in ('scores','game_players','games','group_members','green_pins','users','invitations');
+          select pg_get_userbyid(defaclrole) as defacl_for_role, defaclnamespace::regnamespace as in_schema,
+                 defaclobjtype, defaclacl
+            from pg_default_acl;
+          select r.rolname as role, m.rolname as member
+            from pg_auth_members am
+            join pg_roles r on r.oid = am.roleid
+            join pg_roles m on m.oid = am.member
+           where r.rolname in ('anon','authenticated','service_role')
+           order by 1, 2;
+          SQL
