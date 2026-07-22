@@ -46,9 +46,20 @@ Spiller:   [1 Bli bruker] ─► [2 Bli med] ─► [3 Spille en runde]
 Hver flyt ble grunnet i faktisk kode før konklusjon. Det avdekket at auditen overdrev på flyt 3 (to av tre «funn» var alt løst), og at flere «mangler» egentlig var skrudd-av-funksjoner (selvregistrering) eller historiske låser (best ball = 8). Lærdom: verifiser mot koden før du bygger.
 
 ## Oppdatere diagrammene
-SVG-ene er kilden. Etter endring, regenerer PNG-ene:
+SVG-ene er kilden. Etter endring, regenerer PNG-ene fra repo-rota:
 
 ```bash
-cd docs/flows
-for f in *.svg; do qlmanage -t -s 2000 -o . "$f" && mv -f "$f.png" "${f%.svg}.png"; done
+node docs/flows/regen-png.mjs
+```
+
+Scriptet leser hver SVGs `viewBox` og rendrer med Playwright chromium ved bredde
+2000, med høyden bestemt av aspektforholdet — så diagrammene blir aspekt-riktige.
+Den gamle macOS-oppskriften rendret en fast 2000×2000-boks som beskar bredere-
+enn-høye diagrammer og ikke kjørte på Linux (jf. #1260).
+
+Matcher ikke miljøets pre-installerte chromium den pinnede Playwright-versjonen
+(«Executable doesn't exist», jf. #1183), pek på binæren direkte:
+
+```bash
+PW_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium-<ver>/chrome-linux/chrome node docs/flows/regen-png.mjs
 ```
