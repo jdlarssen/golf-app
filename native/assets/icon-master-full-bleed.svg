@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <title>Tørny icon — full-bleed</title>
+  <!-- Full-bleed variant of docs/design/realized/brand-foundations/assets/brand-mark-icon-only.svg:
+       same motif, but no rx rounding baked in — stores/OS apply their own corner
+       mask (App Store 1024, purpose:any). -->
+  <rect width="80" height="80" fill="#1B4332"/>
+  <text x="18" y="56" font-family="Fraunces, Georgia, serif" font-size="52" font-weight="500" fill="#F8F6F0" letter-spacing="-0.02em">T</text>
+  <circle cx="60" cy="30" r="6" fill="#C9A961"/>
+</svg>
