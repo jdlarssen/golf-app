@@ -15,6 +15,12 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.210 · Appikonet tilpasser seg Androids maskering</strong></summary>
+
+[#1278](https://github.com/jdlarssen/golf-app/issues/1278) — Appikonet tilpasser seg nå Androids ikon-maskering, så det ikke lenger blir beskåret eller får svarte kanter når du installerer Tørny på hjemskjermen.
+</details>
+
+<details>
 <summary><strong>1.209 · Delte turneringslenker som selger seg selv</strong></summary>
 
 [#1268](https://github.com/jdlarssen/golf-app/issues/1268) — Deler du live-lenken til en turnering, viser den nå turneringsnavnet i meldinger og sosiale medier, bærer en diskret Tørny-logo, og gir gjester en «lag din egen»-knapp rett under resultatene.

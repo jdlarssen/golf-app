@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <title>Tørny icon — safe-zone motif</title>
+  <!-- Motif-only variant (no background rect, transparent) of the same brand
+       mark, scaled 0.7x about the canvas centre so the T+dot group sits
+       comfortably inside Android's adaptive-icon safe zone (~66% diameter)
+       AND the maskable-icon safe zone (80% diameter) — the smaller of the
+       two bounds is honoured so one master serves both consumers. Used for:
+       android-foreground-432, the maskable-192/512 motif layer, and
+       ios-splash-logo. -->
+  <g transform="translate(40 40) scale(0.7) translate(-40 -40)">
+    <text x="18" y="56" font-family="Fraunces, Georgia, serif" font-size="52" font-weight="500" fill="#F8F6F0" letter-spacing="-0.02em">T</text>
+    <circle cx="60" cy="30" r="6" fill="#C9A961"/>
+  </g>
+</svg>

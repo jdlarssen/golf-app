@@ -34,6 +34,20 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '180x180',
         type: 'image/png',
       },
+      {
+        // native/assets/generate-icons.mjs (#1278) — static maskable icons for
+        // Android's adaptive-icon masking (circle/squircle/rounded-square).
+        src: '/icons/maskable-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/icons/maskable-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
     ],
   };
 }
