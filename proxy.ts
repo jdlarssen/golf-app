@@ -53,6 +53,23 @@ function splitLocalePrefix(pathname: string): {
 }
 
 export async function proxy(request: NextRequest) {
+  // Host canonicalization (#1277): www → apex with a 308. Done here in the
+  // proxy — NOT as a Vercel-edge domain redirect — because the matcher below
+  // excludes `.well-known/` and `api/`, so the proxy never runs for those
+  // paths and www can serve them 200 directly (Apple's CDN and Google's
+  // verifier don't follow redirects for the .well-known files; this also stops
+  // www `api/cron/` URLs from being redirected away, #1304). Hardcoded host
+  // compare, not env: Vercel previews (*.vercel.app) and localhost are
+  // untouched. Requires flipping the www domain in the Vercel dashboard from
+  // "Redirect to apex" to "serve production" so this rule owns the redirect.
+  if (request.headers.get('host') === 'www.tornygolf.no') {
+    const url = request.nextUrl.clone();
+    url.protocol = 'https';
+    url.hostname = 'tornygolf.no';
+    url.port = ''; // never carry a port into the canonical apex URL
+    return NextResponse.redirect(url, 308);
+  }
+
   const { locale: pathLocale, pathname: barePathname } = splitLocalePrefix(
     request.nextUrl.pathname,
   );
@@ -192,10 +209,15 @@ export const config = {
   //     (app/sitemap.ts, app/robots.ts) live OUTSIDE app/[locale]/, so the
   //     i18n rewrite would 404 them — and crawlers are anonymous, so the
   //     auth-gate would redirect them to /login. Excluded entirely.
+  //   - .well-known (#1277): app/.well-known/* route handlers (assetlinks.json,
+  //     apple-app-site-association) live OUTSIDE app/[locale]/ and are fetched
+  //     anonymously by Google/Apple, which don't follow redirects — same reason
+  //     as sitemap/robots. Excluding it here also keeps the www→apex
+  //     canonicalization above from ever touching these paths.
   // Public PAGES (login/register/legal/signup/baner) are no longer excluded
   // here: they need the i18n rewrite to resolve at all, so the proxy matches
   // them and skips auth in code via PUBLIC_PATH_PATTERN instead.
   matcher: [
-    '/((?!_next/static|_next/image|api/|sw\\.js|manifest\\.webmanifest|sitemap\\.xml|robots\\.txt|icon|icon0|apple-icon|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|api/|sw\\.js|manifest\\.webmanifest|sitemap\\.xml|robots\\.txt|\\.well-known|icon|icon0|apple-icon|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
