@@ -80,8 +80,6 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.202 · Avstand til green på hullskjermen</strong></summary>
 
 [#1210](https://github.com/jdlarssen/golf-app/issues/1210) — Hullskjermen viser nå «~X m til green» fra din egen GPS-posisjon. Avstanden bygger på punkter dere samler inn selv: etter at du har tastet score ved greenen, lagrer du posisjonen med ett trykk — jo flere som pinner, jo bedre treffer tallet.
-
-↳ /games · «Se avstanden»
 </details>
 
 <details>
@@ -160,8 +158,6 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.192 · Se hvor langt du er i runden</strong></summary>
 
 [#1172](https://github.com/jdlarssen/golf-app/issues/1172) — Øverst på hull-siden står det nå «av 18» rett etter hull-nummeret, så du ser med ett blikk hvor langt du er kommet i runden.
-
-↳ /games · «Tast en runde»
 </details>
 
 <details>
@@ -200,8 +196,6 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.187 · Se spillet før du fyller ut profilen</strong></summary>
 
 [#1176](https://github.com/jdlarssen/golf-app/issues/1176) — En invitert spiller lander nå rett på spillet, ikke på profilskjemaet. Du ser leaderboardet og hvem som er med med en gang; navn og handicap fyller du inn når du skal taste ditt første slag.
-
-↳ /games · «Se spillet»
 </details>
 
 <details>
@@ -272,8 +266,6 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.175 · Videre til neste hull uten å vente på flighten</strong></summary>
 
 [#1058](https://github.com/jdlarssen/golf-app/issues/1058) — Har du tastet din egen score, er «Neste hull» klar med ett tapp — du venter ikke lenger på at medspillernes tall skal komme inn. En liten linje under kortene viser hvor mange scorer som mangler på hullet.
-
-↳ /games · «Åpne spillet»
 </details>
 
 <details>
@@ -366,8 +358,6 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.160 · Engelsk delekort</strong></summary>
 
 [#971](https://github.com/jdlarssen/golf-app/issues/971) — Deler du resultatkortet til gruppechatten mens du er på engelsk, får du nå et engelsk kort — «WINNER», «38 points», engelsk dato og tagline — i stedet for norsk tekst.
-
-↳ /games · «Del resultat»
 </details>
 
 <details>
@@ -382,8 +372,6 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.158 · Tell puttene dine</strong></summary>
 
 [#939](https://github.com/jdlarssen/golf-app/issues/939) — Du kan nå telle putter per hull i slag- og stablefordspill. Slå på «Registrer putter» på hull-skjermen, før puttene mens du spiller, og se putte-snittet ditt under Historikk.
-
-↳ /games · «Registrer putter»
 </details>
 
 <details>
@@ -398,8 +386,6 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.156 · Del live-lenke og følg turneringen fra sidelinjen</strong></summary>
 
 [#938](https://github.com/jdlarssen/golf-app/issues/938) — Del en live-lenke så familie og klubbkompiser kan følge turneringen mens den spilles — og se hele feltet på tvers av flights — uten å logge inn. Oppretteren slår funksjonen på i spillet, og lenken virker som en permanent resultatslenke etter at runden er ferdig.
-
-↳ /games · «Live-følg»
 </details>
 
 <details>
@@ -428,8 +414,6 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.152 · Del resultatet i gruppechaten</strong></summary>
 
 [#942](https://github.com/jdlarssen/golf-app/issues/942) — Når runden er ferdig kan du nå dele et pent resultatkort rett i WhatsApp eller Messenger. Kortet viser vinneren, topp 3 og din egen plassering — pluss dine morsomme sideturnering-seire denne runden (Konge av par 3, flest birdier, Snowman …). Ett trykk på «Del resultat» på leaderboardet, ingen skjermdump og beskjæring.
-
-↳ /games · «Del resultat»
 </details>
 
 <details>
@@ -444,16 +428,12 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 <summary><strong>1.150 · Tee-off rett i kalenderen</strong></summary>
 
 [#945](https://github.com/jdlarssen/golf-app/issues/945) — Har spillet en planlagt tee-off, kan du nå legge den rett i telefonkalenderen. Du får et varsel en time før, så tee-tiden ikke glipper, og «Vis på kart» finner veien til banen.
-
-↳ /games · «Legg til i kalender»
 </details>
 
 <details>
 <summary><strong>1.149 · Lettere å taste med hanske</strong></summary>
 
 [#944](https://github.com/jdlarssen/golf-app/issues/944) — Pluss- og minus-knappene på hull-skjermen er større, så de er lette å treffe med hanske og én hånd. Taster du feil, fjerner «Angre» scoren med ett trykk — ingen omvei innom menyen.
-
-↳ /games · «Tast en runde»
 </details>
 
 <details>
