@@ -758,10 +758,51 @@ export async function deleteEphemeralPlayers(ids: string[]): Promise<void> {
 }
 
 /**
+ * Rydder gamle `notifications`-rader for de to e2e-brukerne (#1272).
+ *
+ * `notifications` har INGEN FK til `games` (recipient-ref lever i payload-JSON),
+ * så de kaskade-slettes ALDRI når et test-spill fjernes — de akkumulerte til 900+
+ * uleste rader per e2e-bruker og dro notifikasjonsarbeid over hver innlogget
+ * sidelast (AbortError-støyen i @gate-flaken). Dette er den varige, versjonerte
+ * ryddemekanismen (ingen pg_cron): kalt fra `cleanupTestGame` løper den på hvert
+ * spec-`afterAll`.
+ *
+ * **Scoping (games.ts:13-17-regelen):** staging-DB-en deles på tvers av worktree-
+ * økter, så vi sletter ALDRI blankt — kun rader eldre enn 1 time OG kun for de to
+ * pre-seedede e2e-brukernes id-er. 1-times-vinduet lar en samtidig kjørende spec
+ * beholde sine ferske notifikasjoner. Best-effort: svelger alle feil (som resten
+ * av cleanup-en) så den aldri kan felle en kjøring.
+ */
+export async function cleanupE2eNotifications(): Promise<void> {
+  if (!ADMIN_EMAIL || !PLAYER_EMAIL) return;
+  try {
+    const admin = adminClient();
+    const { data: rows } = await admin
+      .from('users')
+      .select('id')
+      .or(`email.ilike.${ADMIN_EMAIL},email.ilike.${PLAYER_EMAIL}`);
+    const userIds = (rows ?? []).map((r) => (r as { id: string }).id);
+    if (userIds.length === 0) return;
+
+    const cutoffIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    await admin
+      .from('notifications')
+      .delete()
+      .in('user_id', userIds)
+      .lt('created_at', cutoffIso);
+  } catch (err) {
+    console.error('[cleanupE2eNotifications] swallow error', err);
+  }
+}
+
+/**
  * Sletter test-spillet. Cascade på `games.id` rydder `game_players`,
  * `game_registration_requests`, `notifications` (de som har payload-ref til
  * spillet — disse er soft-ref, men vi tar dem manuelt under). Idempotent —
  * trygt å kalle selv om raden allerede er borte.
+ *
+ * Rydder også gamle e2e-notifikasjoner (#1272) som ikke kaskade-slettes — best-
+ * effort, scoped til e2e-brukerne + eldre enn 1 time (se `cleanupE2eNotifications`).
  */
 export async function cleanupTestGame(gameId: string): Promise<void> {
   if (!gameId) return;
@@ -771,4 +812,5 @@ export async function cleanupTestGame(gameId: string): Promise<void> {
   } catch (err) {
     console.error('[cleanupTestGame] swallow error', err);
   }
+  await cleanupE2eNotifications();
 }
