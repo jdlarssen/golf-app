@@ -22,6 +22,14 @@
   <!-- arrow: demo CTA «Klar for ekte runde?» -> email step -->
   <path d="M344,183 H360" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
+  <!-- OPTIONAL PRE-ENTRY: public front page for anonymous visitors (NY #1265) -->
+  <rect x="856" y="146" width="234" height="74" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="1036" y="156" width="48" height="20" rx="10" fill="#C9A961"/><text x="1060" y="170" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">#1265</text>
+  <text x="872" y="182" font-size="15.5" font-weight="600" fill="#7A5E13">Offentlig forside</text>
+  <text x="872" y="204" font-size="12" fill="#6B5526">/ — les hva Tørny er uten å logge inn</text>
+  <!-- arrow: front-page «Lag turnering / Logg inn» -> email step -->
+  <path d="M856,183 H840" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
   <!-- STEP 1: enter email -->
   <rect x="360" y="146" width="480" height="74" rx="16" fill="#1B4332"/>
   <text x="600" y="180" text-anchor="middle" font-size="17" font-weight="700" fill="#FFFFFF">✉️  Skriv e-posten din</text>
@@ -106,5 +114,5 @@
   <text x="134" y="986" font-size="14.5" font-weight="700" fill="#9A4A2F">Hvis noe er galt — vennlige norske meldinger</text>
   <text x="134" y="1008" font-size="13" fill="#9A6B5A">utløpt invitasjon, ugyldig lenke → klar beskjed med vei videre, ikke en kryptisk feil</text>
 
-  <text x="120" y="1064" font-size="12.5" fill="#9A937F">Rekkefølge: #365 (vern) → #364 (skru på) → #356 + #361 + #357 polerer flyten.</text>
+  <text x="120" y="1064" font-size="12.5" fill="#9A937F">Rekkefølge: #365 (vern) → #364 (skru på) → #356 + #361 + #357 polerer flyten. #1265 åpner den offentlige forsiden som anonym inngang.</text>
 </svg>
