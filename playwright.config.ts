@@ -25,6 +25,11 @@ export default defineConfig({
   // transient prod-DB/network blip. Locally these stay at Playwright defaults.
   workers: process.env.CI ? 1 : undefined,
   retries: process.env.CI ? 1 : 0,
+  // #1272: on CI give each `expect` web-assertion 10s (local keeps the 5s
+  // default). A cold/contended Turbopack compile on the shared Actions runner
+  // routinely pushes a first paint past 5s, which tripped toBeVisible/enabled
+  // waits across unrelated @gate specs — extra headroom, no behavior change.
+  expect: { timeout: process.env.CI ? 10_000 : 5_000 },
   // #1132: when the @gate serie goes red the rig captured nothing — no trace,
   // no screenshot, no artifact — so a red→green-without-change flake could only
   // be guessed at from the text log. `list` keeps console output; `html` writes
