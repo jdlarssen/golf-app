@@ -36,7 +36,14 @@ const PUBLIC_PATH_PATTERN =
 // logged-in visitors keep their verified-user header — and thus the
 // persistent bottom nav (#355). PUBLIC would strip the header and cost
 // logged-in users the nav (the exact trap #1185 documented).
-const AUTH_OPTIONAL_PATH_PATTERN = /^\/(finn-turneringer|spillformater)(\/|$)/;
+// Bare root `/` joined in #1265 (offentlig forside): an anonymous visitor
+// renders the marketing landing (app/[locale]/AnonLanding.tsx) instead of a
+// login redirect, while a logged-in visitor keeps their personalized home +
+// bottom nav. `splitLocalePrefix` maps both `/` and `/en` to '/', so the one
+// `^\/$` alternation covers both locales. PUBLIC is tested first and never
+// matches `/`, so there is no collision.
+const AUTH_OPTIONAL_PATH_PATTERN =
+  /^\/$|^\/(finn-turneringer|spillformater)(\/|$)/;
 
 /** Split '/en/venner' -> { locale: 'en', pathname: '/venner' }. */
 function splitLocalePrefix(pathname: string): {

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { first } from '@/lib/url/searchParams';
 import { Suspense, cache, Children, isValidElement } from 'react';
 import {
@@ -8,6 +9,8 @@ import type { Database } from '@/lib/database.types';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { redirect } from '@/i18n/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { AnonLanding } from './AnonLanding';
+import { canonicalPath } from '@/lib/seo/canonical';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -46,7 +49,7 @@ import {
 import type { ActiveCardState } from '@/lib/games/activeCardState';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { GameStatus } from '@/lib/games/status';
-import type { AppLocale } from '@/i18n/routing';
+import { routing, type AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
   profile?: string | string[];
@@ -64,6 +67,30 @@ const getHomeContext = cache(async () => {
   return { supabase, userId };
 });
 
+// #1265: metadata for `/` — the SAME rute serves both the anonymous public
+// landing and the logged-in home, so one metadata covers both audiences. Only
+// `params` is read (never headers/cookies) so the route keeps its static shell
+// under cacheComponents. Known trade-off: a logged-in visitor's tab title
+// becomes the SEO title instead of the plain «Tørny» — accepted per contract.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale: AppLocale = routing.locales.includes(rawLocale as AppLocale)
+    ? (rawLocale as AppLocale)
+    : routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: 'landing' });
+  return {
+    // Absolute (not the «%s – Tørny» template): the front page is navigation
+    // search's landing surface — the template form would hide the brand name.
+    title: { absolute: t('metaTitle') },
+    description: t('metaDescription'),
+    alternates: { canonical: canonicalPath(locale, '/') },
+  };
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -71,8 +98,13 @@ export default async function Home({
 }) {
   const locale = (await getLocale()) as AppLocale;
   const { userId } = await getHomeContext();
+  // #1265: anonymous visitors get the public landing (proxy.ts makes `/`
+  // auth-optional). Return BEFORE the Suspense/HomeBody block below so the
+  // logged-in skeleton never flashes for an anon. The logged-in path is
+  // otherwise byte-identical — every userId-dependent piece stays behind this
+  // guard.
   if (!userId) {
-    redirect({ href: '/login', locale });
+    return <AnonLanding locale={locale} />;
   }
 
   const params = await searchParams;
