@@ -84,6 +84,19 @@ jobs:
   e2e:
     if: ${{ vars.RUN_E2E == 'true' }}
     runs-on: ubuntu-latest
+    # #1272: serialize e2e across ALL PRs. The @gate suite runs against the
+    # shared torny-staging DB with the SAME two test users (E2E_ADMIN_EMAIL /
+    # E2E_PLAYER_EMAIL). Two PRs running e2e at once collided on those users and
+    # flaked (near-proof: PR #1254 + #1257 both red ~22:00, both green on
+    # sequential re-run). A fixed group name (NOT github.ref) forces one e2e run
+    # at a time across every branch; cancel-in-progress: false lets the running
+    # one finish rather than being killed mid-flight. Tradeoff: GitHub keeps at
+    # most ONE pending run per group — with 3+ concurrent PRs a queued slot can
+    # be dropped and need a manual re-run. Accepted for solo-dev PR volume;
+    # per-run unique users is the scale-triggered escalation if this bites.
+    concurrency:
+      group: e2e-staging
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
