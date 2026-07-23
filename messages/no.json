@@ -4931,5 +4931,107 @@
     "resultStatus": "Sluttresultat",
     "seasonRunning": "Sesongen er i gang",
     "seasonDone": "Sesongen er ferdig"
+  },
+  "landing": {
+    "metaTitle": "Tørny — arranger golfturnering gratis i nettleseren",
+    "metaDescription": "Gratis turneringsapp for golf. Sett opp scramble, stableford eller matchplay med venner eller firmaet. Tørny regner handicap og holder tavla live.",
+    "loginCta": "Logg inn",
+    "hero": {
+      "h1": "Arranger golfturnering på et par minutter",
+      "sub": "Velg spillform, del en lenke med gjengen, og tavla regner netto handicap mens dere spiller. Du trenger verken klubb eller komité.",
+      "primaryCta": "Prøv Tørny på 60 sekunder",
+      "secondaryCta": "Lag din egen turnering",
+      "trust": "Gratis. Ingen app å laste ned."
+    },
+    "how": {
+      "heading": "Slik arrangerer du en golfturnering",
+      "step1Title": "Sett opp runden",
+      "step1Body": "Velg bane og spillform. Resten fyller Tørny ut for deg.",
+      "step1LinkLabel": "Se banene",
+      "step2Title": "Inviter gjengen",
+      "step2Body": "Del én lenke. Alle får en engangskode på e-post, uten app og uten passord.",
+      "step2LinkLabel": "Logg inn og inviter",
+      "step3Title": "Spill",
+      "step3Body": "Alle taster egne slag på mobilen, og tavla oppdaterer seg mens dere går."
+    },
+    "board": {
+      "heading": "Tavla lever mens dere spiller",
+      "colPlayer": "Spiller",
+      "colPoints": "Poeng",
+      "rows": [
+        { "name": "Ida", "points": "39" },
+        { "name": "Jonas", "points": "37" },
+        { "name": "Mette", "points": "35" },
+        { "name": "Ola", "points": "34" },
+        { "name": "Kari", "points": "32" }
+      ],
+      "linkLabel": "Prøv den selv i demoen"
+    },
+    "formats": {
+      "heading": "Over 20 spillformer: scramble, stableford, matchplay og flere til",
+      "linkLabel": "Se alle spillformatene"
+    },
+    "audience": {
+      "heading": "Golfturnering med venner, i firmaet eller for hele klubben",
+      "intro": "Klubbturneringen har sitt system. Kompisrunden har Tørny — du er komiteen.",
+      "friendsTitle": "Kompisrunden",
+      "friendsBody": "Fire spillere og en runde Wolf eller Skins. Tørny holder styr på hvem som skylder pilsen.",
+      "companyTitle": "Firmagolfen",
+      "companyBody": "Del en åpen påmeldingslenke med kontoret. Ingen forventer at du kan golf-administrasjon.",
+      "clubTitle": "Klubbkvelden",
+      "clubBody": "Opptil rundt 150 spillere, delt i flighter, med godkjenning av scorekortene."
+    },
+    "courses": {
+      "heading": "Norske golfbaner ligger klare",
+      "body": "Slope, course rating og hulloversikt for norske golfbaner. Velg banen, så regner Tørny banehandicap etter WHS for hver spiller.",
+      "linkLabel": "Se banene"
+    },
+    "openGames": {
+      "heading": "Åpne turneringer du kan bli med i",
+      "linkLabel": "Se alle åpne turneringer"
+    },
+    "faqHeading": "Lurer du på noe?",
+    "faq": [
+      {
+        "q": "Hvordan arrangerer jeg en golfturnering med venner?",
+        "a": "Lag en turnering i Tørny, velg bane og spillform, og del lenken med gjengen. De blir med på under et minutt, og du trenger verken klubb eller komité."
+      },
+      {
+        "q": "Hva koster Tørny?",
+        "a": "Ingenting. Tørny er gratis å bruke, både for deg som arrangerer og for spillerne."
+      },
+      {
+        "q": "Må vi laste ned en app?",
+        "a": "Nei. Tørny kjører i nettleseren. Vil du ha den på hjemskjermen, legger du den til med ett trykk."
+      },
+      {
+        "q": "Må vi være medlem av en klubb?",
+        "a": "Nei. Tørny er for runden du setter opp selv, med venner eller kolleger. Ingen klubb eller medlemskap kreves."
+      },
+      {
+        "q": "Hvordan logger spillerne inn?",
+        "a": "Du logger inn med engangskode på e-post. Det tar under et minutt, og er du ny, lager vi en konto til deg."
+      },
+      {
+        "q": "Hvordan regnes handicapet?",
+        "a": "Tørny regner netto etter WHS. Velger du bane og tee, bruker vi slope og course rating til å gi hver spiller riktig banehandicap."
+      }
+    ],
+    "endCta": {
+      "headingPre": "Fyr opp golfturneringen på et ",
+      "headingGold": "par",
+      "headingPost": " minutter",
+      "body": "Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.",
+      "primaryCta": "Lag turnering",
+      "secondaryCta": "… eller prøv demoen først"
+    },
+    "footer": {
+      "formats": "Spillformer",
+      "courses": "Baner",
+      "demo": "Prøvespill",
+      "openGames": "Åpne turneringer",
+      "login": "Logg inn",
+      "privacy": "Personvern"
+    }
   }
 }

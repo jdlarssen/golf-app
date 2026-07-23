@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.211 · En forside som forteller hva Tørny er</strong></summary>
+
+[#1265](https://github.com/jdlarssen/golf-app/issues/1265) — Åpner du Tørny uten å være logget inn, møter du nå en forside som forteller hva appen er, viser spillformene og en levende tavle, og lar deg prøve demoen eller lage din egen turnering med en gang.
+
+↳ / · «Prøv Tørny»
+</details>
+
+<details>
 <summary><strong>1.210 · Appikonet tilpasser seg Androids maskering</strong></summary>
 
 [#1278](https://github.com/jdlarssen/golf-app/issues/1278) — Appikonet tilpasser seg nå Androids ikon-maskering, så det ikke lenger blir beskåret eller får svarte kanter når du installerer Tørny på hjemskjermen.

@@ -4931,5 +4931,107 @@
     "resultStatus": "Final result",
     "seasonRunning": "Season in progress",
     "seasonDone": "Season finished"
+  },
+  "landing": {
+    "metaTitle": "Tørny — run a golf tournament free in your browser",
+    "metaDescription": "Free golf tournament app. Set up scramble, stableford or matchplay with friends or your company. Tørny handles the handicaps and keeps the board live.",
+    "loginCta": "Log in",
+    "hero": {
+      "h1": "Run a golf tournament in a couple of minutes",
+      "sub": "Pick a format, share a link with your group, and the board tallies net handicap while you play. No club or committee required.",
+      "primaryCta": "Try Tørny in 60 seconds",
+      "secondaryCta": "Set up your own tournament",
+      "trust": "Free. No app to download."
+    },
+    "how": {
+      "heading": "How to run a golf tournament",
+      "step1Title": "Set up the round",
+      "step1Body": "Pick a course and a format. Tørny fills in the rest.",
+      "step1LinkLabel": "Browse courses",
+      "step2Title": "Invite the group",
+      "step2Body": "Share one link. Everyone gets a one-time code by email, no app and no password.",
+      "step2LinkLabel": "Log in and invite",
+      "step3Title": "Play",
+      "step3Body": "Everyone taps in their own strokes on their phone, and the board updates as you go."
+    },
+    "board": {
+      "heading": "The board is live while you play",
+      "colPlayer": "Player",
+      "colPoints": "Points",
+      "rows": [
+        { "name": "Ida", "points": "39" },
+        { "name": "Jonas", "points": "37" },
+        { "name": "Mette", "points": "35" },
+        { "name": "Ola", "points": "34" },
+        { "name": "Kari", "points": "32" }
+      ],
+      "linkLabel": "Try it yourself in the demo"
+    },
+    "formats": {
+      "heading": "Over 20 formats: scramble, stableford, matchplay and more",
+      "linkLabel": "See every format"
+    },
+    "audience": {
+      "heading": "A golf tournament with friends, at work or for the whole club",
+      "intro": "The club championship has its system. Your weekend round has Tørny — you are the committee.",
+      "friendsTitle": "The friends' round",
+      "friendsBody": "Four players and a round of Wolf or Skins. Tørny keeps track of who owes the beer.",
+      "companyTitle": "The company outing",
+      "companyBody": "Share an open sign-up link with the office. Nobody expects you to know golf administration.",
+      "clubTitle": "The club evening",
+      "clubBody": "Up to around 150 players, split into flights, with scorecard approval."
+    },
+    "courses": {
+      "heading": "Norwegian golf courses are ready to go",
+      "body": "Slope, course rating and a hole-by-hole overview for Norwegian golf courses. Pick a course and Tørny works out each player's course handicap by WHS.",
+      "linkLabel": "Browse courses"
+    },
+    "openGames": {
+      "heading": "Open tournaments you can join",
+      "linkLabel": "See all open tournaments"
+    },
+    "faqHeading": "Got a question?",
+    "faq": [
+      {
+        "q": "How do I run a golf tournament with friends?",
+        "a": "Create a tournament in Tørny, pick a course and a format, and share the link with your group. They join in under a minute, and you need neither a club nor a committee."
+      },
+      {
+        "q": "What does Tørny cost?",
+        "a": "Nothing. Tørny is free to use, both for you as the organiser and for the players."
+      },
+      {
+        "q": "Do we have to download an app?",
+        "a": "No. Tørny runs in the browser. If you want it on your home screen, you can add it with one tap."
+      },
+      {
+        "q": "Do we have to be members of a club?",
+        "a": "No. Tørny is for the round you set up yourself, with friends or colleagues. No club or membership required."
+      },
+      {
+        "q": "How do players log in?",
+        "a": "You log in with a one-time code sent by email. It takes under a minute, and if you are new, we create an account for you."
+      },
+      {
+        "q": "How is the handicap worked out?",
+        "a": "Tørny calculates net scores by WHS. Pick a course and tee, and we use the slope and course rating to give each player the right course handicap."
+      }
+    ],
+    "endCta": {
+      "headingPre": "Fire up your golf tournament in a couple of ",
+      "headingGold": "",
+      "headingPost": "minutes",
+      "body": "Enter your email. If you are new here, we will make you an account.",
+      "primaryCta": "Create a tournament",
+      "secondaryCta": "… or try the demo first"
+    },
+    "footer": {
+      "formats": "Formats",
+      "courses": "Courses",
+      "demo": "Demo",
+      "openGames": "Open tournaments",
+      "login": "Log in",
+      "privacy": "Privacy"
+    }
   }
 }
