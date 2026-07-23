@@ -30,7 +30,7 @@ Spiller:   [1 Bli bruker] ─► [2 Bli med] ─► [3 Spille en runde]
 
 ## Forbedringer per flyt (sporet som GitHub-issues)
 
-- **Flyt 1 — Bli bruker:** #364 (aktiver selvregistrering), #365 (ekstra vern), #356 (land rett i spillet), #361 (vennlige feil), #366 (bruker-baner), #1042 ✓ (prøvespill før konto — /demo, test uten innlogging).
+- **Flyt 1 — Bli bruker:** #364 (aktiver selvregistrering), #365 (ekstra vern), #356 (land rett i spillet), #361 (vennlige feil), #366 (bruker-baner), #1042 ✓ (prøvespill før konto — /demo, test uten innlogging), #1265 ✓ (offentlig forside på `/` — anonym inngang som forteller hva Tørny er).
 - **Flyt 2 — Bli med:** #357 (vedvarende «Finn turneringer»), #367 (tydelig påmeldingsvalg = synlighet), #368 (invite_only-blindvei), #362 (lag-klarhet), #369 ✓ (venner + åpen-for-venner — bygget).
 - **Flyt 3 — Spille en runde:** #360 (peer-godkjenning kan ikke låse seg). #358 (live leaderboard) + #359 (lagret-merke) var **allerede løst** — lukket etter kode-verifisering.
 - **Flyt 4 — Opprett spill:** #373 (antall før format), #374 (best ball uten 8-lås), #371 (peer-godkjenning av som default), #367 (tydelig påmelding), #372 (copy-bug env-var). Parkert større: #22 (alle kan opprette), #366 (bruker-baner). #370 lukket (beholder «kun invitasjon» som default).

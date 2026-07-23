@@ -17,11 +17,17 @@ teknisk-kobling per steg, og en prioritert brukervennlighets-vurdering.
 
 `proxy.ts` gater alt unntatt `/login`, `/legal/*`, `/signup/*`, og PWA-assets.
 Uinnlogget → `/login?next=<path>`. Innlogget uten fullført profil → `/complete-profile`.
+**Unntak — auth-valgfrie ruter** (#1185, #1264, #1265): `/`, `/finn-turneringer` og
+`/spillformater/*` redirecter IKKE anonyme. `/` rendrer den offentlige forsiden
+(`AnonLanding`) som forteller hva Tørny er og lenker til /demo + /login; innloggede
+får sitt personlige Hjem uendret (proxyen beholder verified-user-headeren, så bunn-nav-en
+består).
 
 ```mermaid
 flowchart TD
   Req[Forespørsel] --> P{proxy.ts:<br/>innlogget?}
-  P -- nei --> L["/login?next=…"]
+  P -- "nei · auth-valgfri /" --> Anon["Offentlig forside<br/>(AnonLanding → /demo · /login)"]
+  P -- "nei · gated rute" --> L["/login?next=…"]
   P -- ja --> Prof{profile_completed_at?}
   Prof -- nei --> CP["/complete-profile"]
   Prof -- ja --> Home["/ (Hjem)"]
