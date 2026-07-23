@@ -62,22 +62,38 @@ test.describe('Scoring golden path (solo stableford)', () => {
       // Les visningen før +1 og assert at den ENDRES — score-number viser par som
       // spøkelse i utgangspunktet, så «≠ —» ville vært tomt. Endring beviser at
       // +1 faktisk registrerte et slag.
+      // #1272: vent på at score-visningen er montert (toBeVisible) og at +1-
+      // knappen er interaktiv (toBeEnabled) FØR vi leser tekst / klikker. På en
+      // kald-kompilert rute er hull-siden ikke øyeblikkelig klar, og et rått klikk
+      // på en enda-disabled knapp var en av @gate-flakene.
       await playerPage.goto(`/games/${gameId}/holes/1`);
       const score1 = playerPage.locator('[data-testid="score-number"]').first();
+      await expect(score1).toBeVisible();
+      const plus1Hole1 = playerPage.getByRole('button', { name: '+1' }).first();
+      await expect(plus1Hole1).toBeEnabled();
       const before1 = (await score1.textContent()) ?? '';
-      await playerPage.getByRole('button', { name: '+1' }).first().click();
+      await plus1Hole1.click();
       await expect(score1).not.toHaveText(before1);
 
       await playerPage.goto(`/games/${gameId}/holes/2`);
       const score2 = playerPage.locator('[data-testid="score-number"]').first();
+      await expect(score2).toBeVisible();
+      const plus1Hole2 = playerPage.getByRole('button', { name: '+1' }).first();
+      await expect(plus1Hole2).toBeEnabled();
       const before2 = (await score2.textContent()) ?? '';
-      await playerPage.getByRole('button', { name: '+1' }).first().click();
+      await plus1Hole2.click();
       await expect(score2).not.toHaveText(before2);
     });
 
     await test.step('Player submits the scorecard (submitted_at set)', async () => {
       await playerPage.goto(`/games/${gameId}/submit`);
-      await playerPage.getByTestId('submit-scorecard').click();
+      // #1272: submit-knappen er disabled til sync-køen er drenert (score-
+      // upsertene må ha landet). Rått klikk før den er enabled var den «not
+      // enabled»-@gate-flaken. Romslig 30s-timeout dekker sync-drain på en
+      // treg/kald staging-rute.
+      const submitBtn = playerPage.getByTestId('submit-scorecard');
+      await expect(submitBtn).toBeEnabled({ timeout: 30_000 });
+      await submitBtn.click();
       await expect(playerPage).not.toHaveURL(/\/submit\b/, { timeout: 15_000 });
 
       const admin = adminClient();

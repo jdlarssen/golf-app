@@ -6,6 +6,7 @@ import {
   ADMIN_EMAIL,
   PLAYER_EMAIL,
   signInViaOtp,
+  cleanupE2eNotifications,
 } from '../_helpers/games';
 
 /**
@@ -137,6 +138,9 @@ test.describe('Liga — finished-flight standings (#647 read-path)', () => {
     const admin = adminClient();
     if (flightGameId) await admin.from('games').delete().eq('id', flightGameId);
     if (leagueId) await admin.from('leagues').delete().eq('id', leagueId);
+    // #1272: rydd gamle e2e-notifikasjoner (denne spec-en kaller ikke
+    // cleanupTestGame, så den varige purgen wires inn her). Best-effort.
+    await cleanupE2eNotifications();
   });
 
   test('a delivered finished flight makes the standings table render numbers @gate', async ({
@@ -319,6 +323,9 @@ test.describe('Liga — real flight generator via UI (#736)', () => {
     const admin = adminClient();
     if (flightGameId) await admin.from('games').delete().eq('id', flightGameId);
     if (leagueId) await admin.from('leagues').delete().eq('id', leagueId);
+    // #1272: rydd gamle e2e-notifikasjoner (denne spec-en kaller ikke
+    // cleanupTestGame, så den varige purgen wires inn her). Best-effort.
+    await cleanupE2eNotifications();
   });
 
   test('admin drives RoundStartClient → real startLeagueRoundFlight → valid flight + standings render @gate', async ({
@@ -399,7 +406,15 @@ test.describe('Liga — real flight generator via UI (#736)', () => {
     await signInViaOtp(page, ADMIN_EMAIL!);
     await page.goto(`/liga/${leagueId}/runde/${roundId}/spill`);
 
-    await page.getByTestId(`liga-round-start-player-${playerUser!.id}`).click();
+    // #1272: kald Turbopack-kompilering av round-start-ruta kan alene spise
+    // titalls sekunder, så knappen er ikke montert ved goto. Vent eksplisitt på
+    // synlighet (30s headroom) før klikk — et rått klikk her var @gate-flaken på
+    // liga:402.
+    const startPlayerBtn = page.getByTestId(
+      `liga-round-start-player-${playerUser!.id}`,
+    );
+    await expect(startPlayerBtn).toBeVisible({ timeout: 30_000 });
+    await startPlayerBtn.click();
     await page.getByTestId('liga-round-start-submit').click();
 
     // Real startLeagueRoundFlight redirects to /games/{flightId} on success.
