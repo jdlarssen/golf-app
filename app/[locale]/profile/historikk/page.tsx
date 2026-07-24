@@ -35,6 +35,7 @@ import { PuttsStatPanel } from '@/components/stats/PuttsStatPanel';
 import {
   computePuttsStats,
   type PuttsRoundInput,
+  type PuttsStats,
 } from '@/lib/stats/puttsStats';
 import {
   countRoundAchievements,
@@ -289,22 +290,29 @@ export default async function HistorikkPage() {
   }));
   const courseStats = computeCourseStats(courseRounds);
 
-  // #939 — putte-snitt: snitt putter per komplett 18-hulls-runde (samme
-  // komplett-18-disiplin som formkurven/per-bane). Kun hull med en putt-verdi
-  // teller; en runde kvalifiserer når alle 18 hull har putter ført.
+  // #939/#1290 — putte-statistikk. PPH (putter per hull) er gate-fri og teller
+  // alle førte hull; snitt/beste/runder holder komplett-18-disiplinen (samme
+  // som formkurven/per-bane). `playedHoles` = hull med slag ført (holeCount),
+  // slik at en delvis ført runde kan telles som «nesten».
   const puttsRounds: PuttsRoundInput[] = gamesWithStats.map((game) => ({
     recordedPutts: (scoresByGame.get(game.id) ?? [])
       .map((s) => s.putts)
       .filter((p): p is number => p != null),
+    playedHoles: game.holeCount,
   }));
   const puttsStats = computePuttsStats(puttsRounds);
-  const puttsAvgDisplay =
-    puttsStats.avgPuttsPerRound != null
-      ? formatNumber(puttsStats.avgPuttsPerRound, locale, {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
+  const { pphDisplay: puttsPphDisplay, avgDisplay: puttsAvgDisplay } =
+    formatPuttsDisplays(puttsStats, locale);
+  // Statuslinja under cellene (vist av panelet kun når ingen komplett runde
+  // kvalifiserer): «nesten» med tall når det finnes delvis førte runder, ellers
+  // den generiske tom-teksten (f.eks. bare korte runder ført).
+  const puttsStatusLabel =
+    puttsStats.nearMiss.partialRounds > 0
+      ? t('puttsNearMiss', {
+          missingHoles: puttsStats.nearMiss.missingHoles,
+          partialRounds: puttsStats.nearMiss.partialRounds,
         })
-      : '';
+      : t('puttsEmpty');
 
   // #946 — sesong-recap: bøtt ferdige runder på Oslo-kalenderår. Bragder regnes
   // per runde fra rå scorer mot kjønns-par (uavhengig av modus/sideturnering);
@@ -426,15 +434,19 @@ export default async function HistorikkPage() {
           turkey: t('achievementsBadge_turkey'),
         }}
       />
+      {/* #1290: panelet skjuler seg selv (returnerer null) for spillere som
+          aldri har ført en putt — se PuttsStatPanel. */}
       <PuttsStatPanel
         stats={puttsStats}
         heading={t('puttsHeading')}
         subtitle={t('puttsSubtitle')}
+        pphDisplay={puttsPphDisplay}
+        pphLabel={t('puttsColPph')}
         avgDisplay={puttsAvgDisplay}
         avgLabel={t('puttsColAvg')}
         bestLabel={t('puttsColBest')}
         roundsLabel={t('puttsColRounds')}
-        emptyLabel={t('puttsEmpty')}
+        statusLabel={puttsStatusLabel}
       />
       <CoursePerformancePanel
         courses={courseStats}
@@ -516,6 +528,26 @@ export default async function HistorikkPage() {
       )}
     </AppShell>
   );
+}
+
+/**
+ * Locale-formaterte putt-tall til panelet (#1290). Én desimal; tom streng når
+ * verdien mangler (PPH før første putt / snitt før en komplett runde). Holdt
+ * utenfor komponenten så side-funksjonens kompleksitet ikke vokser.
+ */
+function formatPuttsDisplays(
+  stats: PuttsStats,
+  locale: AppLocale,
+): { pphDisplay: string; avgDisplay: string } {
+  const fmt = (value: number) =>
+    formatNumber(value, locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+  return {
+    pphDisplay: stats.pph != null ? fmt(stats.pph) : '',
+    avgDisplay: stats.avgPuttsPerRound != null ? fmt(stats.avgPuttsPerRound) : '',
+  };
 }
 
 /** Effektiv runde-dato (samme fallback som lista/sorteringen). */
