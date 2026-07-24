@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.212 · Putte-panelet gir utbytte fra første putt</strong></summary>
+
+[#1290](https://github.com/jdlarssen/golf-app/issues/1290) — Putte-panelet viser nå putter per hull fra første hull du fører, og sier tydelig hvor mange hull som mangler før snittet ditt teller. Har du aldri ført en putt, dukker panelet ikke opp.
+
+↳ /profile/historikk · «Se putte-statistikken»
+</details>
+
+<details>
 <summary><strong>1.211 · En forside som forteller hva Tørny er</strong></summary>
 
 [#1265](https://github.com/jdlarssen/golf-app/issues/1265) — Åpner du Tørny uten å være logget inn, møter du nå en forside som forteller hva appen er, viser spillformene og en levende tavle, og lar deg prøve demoen eller lage din egen turnering med en gang.
