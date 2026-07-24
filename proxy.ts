@@ -7,6 +7,7 @@ import { routing } from '@/i18n/routing';
 import { resolveLocale } from '@/lib/i18n/resolveLocale';
 import { createMiddlewareClient } from '@/lib/supabase/middleware';
 import { OFF_APP_THRESHOLD_MS } from '@/lib/notifications/thresholds';
+import { MODE_LABELS } from '@/lib/scoring/modes/types';
 
 // Handles locale detection, the as-needed rewrite (/x -> /no/x internally)
 // and /en/... prefix routing. Runs for EVERY page — public ones included —
@@ -45,6 +46,19 @@ const PUBLIC_PATH_PATTERN =
 const AUTH_OPTIONAL_PATH_PATTERN =
   /^\/$|^\/(finn-turneringer|spillformater)(\/|$)/;
 
+// #1286: gyldige spillformat-detalj-slugs = MODE_LABELS-nøklene. SAMME kilde
+// som detaljsiden (`app/[locale]/spillformater/[slug]/page.tsx:17`), så guarden
+// og siden aldri driver ut av synk — en ny GameMode blir gyldig begge steder
+// samtidig (trap 4: én hjemme-regel). MODE_LABELS er en ren TS-konstant uten
+// klient-avhengigheter, trygg å importere i proxy-konteksten.
+const VALID_SPILLFORMAT_SLUGS = new Set<string>(Object.keys(MODE_LABELS));
+
+// Matcher NØYAKTIG /spillformater/<slug> (ett segment, ingen trailing slash,
+// ingen nesting): `[^/]+` krever minst ett ikke-slash-tegn og `$` anker, så
+// liste-siden /spillformater og /spillformater/ (tom slug) faller utenfor og
+// røres ikke. Kjøres på locale-strippet sti, så /en/spillformater/… dekkes.
+const SPILLFORMAT_SLUG_PATTERN = /^\/spillformater\/([^/]+)$/;
+
 /** Split '/en/venner' -> { locale: 'en', pathname: '/venner' }. */
 function splitLocalePrefix(pathname: string): {
   locale: string | null;
@@ -57,6 +71,48 @@ function splitLocalePrefix(pathname: string): {
     }
   }
   return { locale: null, pathname };
+}
+
+/**
+ * #1286: minimal, brandet 404-respons for ukjente spillformat-slugs. Svares
+ * direkte fra proxyen (ikke rewrite til not-found.tsx): under `cacheComponents`
+ * ville en rewrite re-streame den statiske 200-shellen og statuskoden kunne
+ * ikke lenger settes til 404 (docs: «it is not possible to change the status
+ * code after streaming started»). En egen minimal side har ingen app-shell/nav
+ * — bevisst: den lekker ingen innlogget chrome og trenger ingen auth-kontekst
+ * (crawlere er hovedpublikum). `Cache-Control: no-store` så en slug som senere
+ * blir en gyldig GameMode ikke sitter fast som cachet 404.
+ */
+function spillformatNotFoundResponse(): NextResponse {
+  const html = `<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fant ikke spillformen · Tørny</title>
+<style>
+:root{color-scheme:light dark}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;background:#F8F6F0;color:#1B4332;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{margin:0;font-size:1.5rem;font-weight:600}
+p{margin:0;max-width:22rem;color:#4b5a52;line-height:1.5}
+a{display:inline-block;margin-top:.5rem;padding:.65rem 1.25rem;border-radius:9999px;background:#1B4332;color:#F8F6F0;text-decoration:none;font-weight:500}
+@media(prefers-color-scheme:dark){body{background:#12211a;color:#F8F6F0}p{color:#b7c4bc}a{background:#C9A961;color:#12211a}}
+</style>
+</head>
+<body>
+<h1>Fant ikke denne spillformen</h1>
+<p>Spillformen finnes ikke. Se hele oversikten over formatene Tørny støtter.</p>
+<a href="/spillformater">Til spillformene</a>
+</body>
+</html>`;
+  return new NextResponse(html, {
+    status: 404,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+    },
+  });
 }
 
 export async function proxy(request: NextRequest) {
@@ -80,6 +136,20 @@ export async function proxy(request: NextRequest) {
   const { locale: pathLocale, pathname: barePathname } = splitLocalePrefix(
     request.nextUrl.pathname,
   );
+
+  // #1286: ekte 404 for ugyldige spillformat-slugs. Under `cacheComponents`/PPR
+  // sendes den statiske shellen (og dermed statuskoden 200) FØR den dynamiske
+  // delen når `notFound()` — så sidens korrekte notFound()-kode kan ikke rette
+  // statusen etter at streamingen er startet. Next-docs
+  // (`loading.md:117`, `proxy.md` §Producing a response) anbefaler å avgjøre
+  // 404 i proxyen: vi svarer 404 her, FØR auth-/i18n-grenene, så crawlere aldri
+  // ser soft-404 for vilkårlige slugs under /spillformater/. Guarden ligger før
+  // og uavhengig av auth-grenen, så AUTH_OPTIONAL-semantikken (anonym visning
+  // av gyldige formater) er uendret.
+  const spillformatSlug = SPILLFORMAT_SLUG_PATTERN.exec(barePathname)?.[1];
+  if (spillformatSlug !== undefined && !VALID_SPILLFORMAT_SLUGS.has(spillformatSlug)) {
+    return spillformatNotFoundResponse();
+  }
 
   // Public pages: no session work (same as the old matcher exclusions),
   // locale routing only. Strip any client-sent x-torny-user-id so the
