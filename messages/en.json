@@ -2601,7 +2601,9 @@
       "birdie": "Birdie",
       "groupLabel": "Reactions",
       "toggle": "React with {emoji}",
-      "toggleActive": "Remove {emoji} reaction"
+      "toggleActive": "Remove {emoji} reaction",
+      "open": "Add reaction",
+      "close": "Close reactions"
     },
     "export": {
       "title": "Tørny - results",

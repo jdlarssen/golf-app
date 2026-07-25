@@ -1343,8 +1343,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 30 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 31 rettinger</strong></summary>
 
+- `1.211.2` · [#1293](https://github.com/jdlarssen/golf-app/issues/1293) — Reaksjonene på resultattavla tar mindre plass: bare reaksjonene som er gitt vises som små brikker, og hele emoji-paletten ligger nå bak én «reager»-knapp. Et smalt tre-spiller-podium fylles ikke lenger av seks store emoji-knapper per spiller.
 - `1.209.1` · [#1321](https://github.com/jdlarssen/golf-app/issues/1321) — Databasen stopper igjen forsøk på å endre egen trekking eller eget lag/flight utenom appen — vaktene fra tidligere rettinger står på plass.
 - `1.208.6` · [#1304](https://github.com/jdlarssen/golf-app/issues/1304) — Planlagte spill starter av seg selv til oppsatt tid igjen — auto-starten fulgte ikke med da nettadressen byttet hovedform.
 - `1.208.4` · [#1292](https://github.com/jdlarssen/golf-app/issues/1292) — Rundereferatet og premietavla holder seg nå innenfor sideramma på resultattavler med sideturnering, så hele teksten kan scrolles fram.
