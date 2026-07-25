@@ -88,27 +88,60 @@ aldri overhal eieren.
   agent som verifiserer kontrakten mot faktiske filer/linjer. Finner den PROBLEM
   (feil fil, umulig antakelse, manglende dekning) → fiks, eller nedgrader til
   gråsone og hopp. Ingen uverifisert kontrakt postes.
-- **Post som issue-kommentar** (ikke fil, ingen PR — smeden er headless og skal
-  ikke åpne en PR per kontrakt). Kommentaren starter med:
+- **Klassifiser kontrakten (#1302):** eieren kan ikke lese kontrakter, så hver
+  kontrakt bærer et maskinlesbart felt rett under headeren som ruter godkjenn-køen:
 
+  ```json
+  { "kontraktKlasse": "teknisk", "funksjonell": "<én norsk setning i CHANGELOG-tone>" }
   ```
+
+  - `teknisk` = **ingen** bruker-synlig effekt (test/infra/tooling/refactor — ville
+    vært `[no-changelog]`). `bruker-synlig` = spillere eller eier ser noe endre seg
+    (ville fått en CHANGELOG-linje). **Klassifiserings-regelen ER CHANGELOG-regelen**
+    — samme hook-håndhevede grense, ett hjem, ingen ny gråsone.
+  - `funksjonell` er **obligatorisk for begge klasser** («Fikser at …», «Spillerne
+    får nå …»), humanizer-tone — det er den eieren godkjenner på, ikke kontrakt-teksten.
+  - **Tvil → `bruker-synlig`** (fail-closed: eieren ser mer, aldri mindre). En
+    feilklassifisert `teknisk` fanges av (a) denne fail-closed-regelen, (b)
+    morgenbriefens revisjonsspor, (c) merge-porten (mennesket merger alltid).
+- **Post som issue-kommentar** (ikke fil, ingen PR — smeden er headless og skal
+  ikke åpne en PR per kontrakt). Kommentaren starter med (4-backtick-fence her kun
+  for å vise den indre ```json-blokken bokstavelig):
+
+  ````
   ## 📋 Forge-kontrakt tilgjengelig
-  🤖 Auto-skrevet av kontrakt-smeden — LES før du køer.
+  🤖 Auto-skrevet av kontrakt-smeden.
+
+  ```json
+  { "kontraktKlasse": "teknisk", "funksjonell": "Fikser at …" }
   ```
+  ````
 
   Full kontrakt-tekst under i en `<details>` (som #1147). Kommentaren er den
   autoritative kilden; `.forge/`-fila lages ved behov under selve bygget.
+- **Auto-kø rene `teknisk`-kontrakter (#1302):** har kontrakten `kontraktKlasse:
+  teknisk`, sett `autonomy:ready` selv rett etter postering (smeden HAR
+  GitHub-tilgang). Veto-vinduet er hele dagen: smeden kjører før morgenbriefen,
+  som samme morgen surfacer den auto-køede saken med ⏸-knapp — nattkjøringen er
+  først PÅFØLGENDE natt, så eieren rekker å stoppe den. `bruker-synlig`-kontrakter
+  merkes IKKE ready av smeden; de venter på eierens 🌙-tapp i briefen (nå på
+  `funksjonell`-setningen, ikke et lese-krav).
+  - Smeden har ikke Discord-tilgang (kun GitHub) — all Discord-formidling eies av
+    morgenbriefen (docs/loops/morgenbriefen.md). Smeden setter labelen; briefen er
+    budbringeren.
 
 ## Steg 4 — Cap + throttle (hold deg bak eieren)
 
 - **Cap:** maks **5 handlinger per kjøring** — kontrakter og gråsone-rutinger
   (steg 2) teller likt.
-- **Throttle:** tell **alle** åpne issues med forge-kontrakt — uansett forfatter,
+- **Throttle:** tell åpne issues med forge-kontrakt — uansett forfatter,
   #1147-batchen og smedens egne 🤖-kontrakter teller likt — som verken er
-  `autonomy:ready` eller `autonomy:blocked`. Det er eierens totale uåpnede
-  godkjenn-kø. Er den ≥ **8**, skriv INGEN nye denne kjøringen — heartbeat
-  «throttlet: N venter på godkjenning». Ellers overhaler smeden eieren og fyller
-  briefen med støy.
+  `autonomy:ready` eller `autonomy:blocked`. **Etter #1302 teller kun
+  `bruker-synlig`-kontrakter** (de som faktisk venter på eierens 🌙-tapp):
+  `teknisk`-kontrakter auto-køes av smeden selv og venter aldri på eieren, så de
+  skal ikke kvele smed-kapasiteten. Det er eierens totale uåpnede godkjenn-kø. Er
+  den ≥ **8**, skriv INGEN nye denne kjøringen — heartbeat «throttlet: N venter på
+  godkjenning». Ellers overhaler smeden eieren og fyller briefen med støy.
   - ⚠️ **Ikke** tell kun smedens egne 🤖-kontrakter: på en kjøring der smeden ikke
     har skrevet noe ennå ville tallet vært 0, throttlen sluppet gjennom, og smeden
     dumpet 5 nye oppå en allerede full stabel — nettopp firehosen throttlen finnes
