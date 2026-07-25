@@ -204,6 +204,16 @@ export async function executeAction(
       });
       if (close.status !== 200)
         return `Dropp-kommentaren står på #${action.issue}, men lukkingen feilet (HTTP ${close.status}) — lukk manuelt på GitHub.`;
+
+      // Et dropp skal aldri etterlate en byggbar kø-markering (#1302): fjern
+      // autonomy:ready så en senere gjenåpning ikke re-plukkes av nattkjøreren.
+      // 404 = labelen var der ikke — suksess, samme mønster som snooze.
+      const unready = await gh.rest(
+        'DELETE',
+        `/repos/${LOOP_REPO}/issues/${action.issue}/labels/${encodeURIComponent('autonomy:ready')}`,
+      );
+      if (unready.status !== 200 && unready.status !== 404)
+        return `🗑 #${action.issue} er droppet og lukket, men fikk ikke fjernet autonomy:ready (HTTP ${unready.status}) — fjern den manuelt.`;
       return `🗑 #${action.issue} er droppet — lukket som «not planned».`;
     }
 
@@ -211,6 +221,8 @@ export async function executeAction(
     // eksisterende vokabular («ikke bygg ennå»); smeden ekskluderer den i
     // steg 1. 404 på label-fjerning betyr bare at labelen ikke var der
     // (dobbel-tapp) — det er suksess, ikke feil.
+    // autonomy:ready fjernes også (#1302): en auto-køet sak som utsettes skal
+    // ikke bygges av nattkjøreren likevel — snooze må rydde kø-markeringen.
     case 'snooze_issue': {
       const comment = await gh.rest(
         'POST',
@@ -226,7 +238,7 @@ export async function executeAction(
       if (park.status !== 200)
         return `Utsett-kommentaren står på #${action.issue}, men parked-labelen feilet (HTTP ${park.status}) — sett den manuelt.`;
 
-      for (const label of ['autonomy:needs-decision', 'autonomy:needs-contract-session']) {
+      for (const label of ['autonomy:needs-decision', 'autonomy:needs-contract-session', 'autonomy:ready']) {
         const removed = await gh.rest(
           'DELETE',
           `/repos/${LOOP_REPO}/issues/${action.issue}/labels/${encodeURIComponent(label)}`,
