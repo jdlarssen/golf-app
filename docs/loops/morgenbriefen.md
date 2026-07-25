@@ -39,16 +39,20 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 - 🛠 #N trenger kontrakt-økt — kjør `/forge:contract` på #N → <lenke>
 
 **Klar for natt-kø (ett tapp = køet):**
-- #N — <issue-tittel>; forge-kontrakt klar, ikke merket enda → <lenke>
+- #N — <funksjonell-setning fra kontrakten>; forge-kontrakt klar, ikke merket enda → 🌙 <lenke>
+
+**Auto-køet (bygges i natt — tapp ⏸ for å stoppe):**
+- 🔧 #N — <funksjonell-setning> → <lenke>
 
 **Skjedde i natt/i går:**
 - <merget PR / lukket issue / CI-vakt-fiks — kun verifiserte fakta, med lenke>
+- 🔧 #N — <funksjonell> (auto-køet ren-teknikk bygget i natt; revisjonsspor #1302)
 
 **Loop-helse:**
 - Nattkjøreren: <heartbeat-status> · Dok-avstemmeren: <heartbeat-status hvis due> · CI-vakta: <antall CI-vakt-issues åpne; liveness sees på routines-siden>
 ```
 
-Ingenting å melde i en gruppe → utelat gruppa. Alle fire tomme → tom-natt-linja.
+Ingenting å melde i en gruppe → utelat gruppa. Alle fem tomme → tom-natt-linja.
 
 ## Kø-kandidater (finn dem — ikke bare vis knappen)
 
@@ -71,9 +75,36 @@ natta», button style 1) — samme knapp som mappes i Discord-seksjonen under. I
 kandidater → utelat gruppa (ikke en loop-feil; tom kandidat-liste er normalt).
 
 Er kontrakten **auto-skrevet av kontrakt-smeden** (kommentaren starter med «🤖
-Auto-skrevet …», jf. docs/loops/kontrakt-smeden.md), merk kandidaten med 🤖 og
-teksten «les kontrakten før du køer» — eieren skal scrutinere en maskin-skrevet
-kontrakt før ett-tapp-godkjenning, ikke tappe på autopilot.
+Auto-skrevet …», jf. docs/loops/kontrakt-smeden.md), behold 🤖 som opphavs-markør,
+men vis kø-linja på **`funksjonell`-setningen fra kontraktens json-blokk** — ikke
+et krav om å lese kontrakten: «#N — <funksjonell> → 🌙». Eieren kan ikke lese
+kontrakter (#1302), så han godkjenner på den norske oppsummeringen, ikke
+kontrakt-teksten.
+
+Kun **`bruker-synlig`**-kontrakter havner her: `teknisk`-kontrakter har smeden
+allerede auto-køet (`autonomy:ready` satt, jf. steg 3 i smed-docen), så de er
+ekskludert fra denne gruppa (som før krever «IKKE `autonomy:ready`») og vises i
+stedet under **«Auto-køet»** (se innholdsmalen) med ⏸-veto.
+
+**Fallback (eldre kontrakter uten json-blokk):** mangler kommentaren
+`kontraktKlasse`/`funksjonell`-feltet, fall tilbake til dagens format — issue-tittel
++ 🤖-markør — og noter «json-blokk mangler på #N» i Loop-helse (aldri stille anta en
+klasse). Ugyldig JSON i blokken behandles likt: tittel-linje + Loop-helse-flagg.
+
+## Auto-køet — smedens ren-teknikk (#1302)
+
+`teknisk`-kontrakter setter smeden `autonomy:ready` på selv; briefen er
+veto-budbringeren (smeden har ingen Discord-tilgang). Finn åpne issues der ALT
+stemmer, og list dem i «Auto-køet»-gruppa:
+
+- forge-kontrakt-kommentar med `kontraktKlasse: teknisk` i json-blokken, OG
+- `autonomy:ready` satt (av smeden), OG merket 🤖 (smed-skrevet), OG
+- IKKE `autonomy:blocked`, IKKE `parked`, IKKE #1110.
+
+Linje: «🔧 #N — <funksjonell> → <lenke>» med **⏸-knappen** (`snooze_issue:<N>`) —
+ett tapp stopper bygget (⏸ setter `parked` OG fjerner `autonomy:ready`, #1302).
+Vetovinduet er hele dagen: smeden kjører før briefen, nattkjøringen er først
+påfølgende natt. Ingen auto-køede → utelat gruppa (normalt, ikke en loop-feil).
 
 ## Gråsone-punkter (smedens ruting, #1151)
 
@@ -135,6 +166,8 @@ handlingslinjene i «Trenger deg nå» — custom_id-kontrakten er
   «🗑 Dropp»/«⏸ Ikke nå» med `custom_id: drop_issue:<issue>`, `snooze_issue:<issue>`
   (selve kontrakt-økten krever tastatur — kommandoen står i linjeteksten)
 - Natt-kø-kandidat med kontrakt → knapp «🌙 Klarer for natta» med `custom_id: ready_issue:<N>`
+- Auto-køet ren-teknikk-sak (#1302) → knapp «⏸ Ikke nå» med `custom_id: snooze_issue:<N>`
+  (stopper natt-bygget: ⏸ setter `parked` OG fjerner `autonomy:ready`)
 
 (Utroperen sender i tillegg `publish_lansering:<kommentar-id>` fra sin egen
 torsdags-melding — se docs/loops/utroperen.md; briefen sender aldri den knappen.)
