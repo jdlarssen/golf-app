@@ -197,8 +197,8 @@ describe('executeAction: answer', () => {
 });
 
 describe('executeAction: drop_issue', () => {
-  it('poster dropp-kommentar FØR lukking, lukker som not_planned', async () => {
-    const { gh, calls } = mockGh([{ status: 201 }, { status: 200 }]);
+  it('poster dropp-kommentar FØR lukking, lukker som not_planned, rydder autonomy:ready', async () => {
+    const { gh, calls } = mockGh([{ status: 201 }, { status: 200 }, { status: 200 }]);
     const msg = await executeAction({ kind: 'drop_issue', issue: 1229 }, gh);
     expect(calls[0]).toMatchObject({
       method: 'POST',
@@ -209,7 +209,28 @@ describe('executeAction: drop_issue', () => {
       path: `/repos/${LOOP_REPO}/issues/1229`,
       body: { state: 'closed', state_reason: 'not_planned' },
     });
+    // #1302: dropp skal aldri etterlate en byggbar kø-markering.
+    expect(calls[2]).toMatchObject({
+      method: 'DELETE',
+      path: `/repos/${LOOP_REPO}/issues/1229/labels/${encodeURIComponent('autonomy:ready')}`,
+    });
+    expect(calls).toHaveLength(3);
     expect(msg).toContain('droppet');
+  });
+
+  it('404 på autonomy:ready-fjerning ved dropp tolereres (labelen var ikke satt)', async () => {
+    const { gh, calls } = mockGh([{ status: 201 }, { status: 200 }, { status: 404 }]);
+    const msg = await executeAction({ kind: 'drop_issue', issue: 1229 }, gh);
+    expect(calls).toHaveLength(3);
+    expect(msg).toContain('droppet');
+    expect(msg).not.toContain('404');
+  });
+
+  it('annen feil enn 404 på autonomy:ready-fjerning ved dropp → ærlig melding (issuet er lukket)', async () => {
+    const { gh } = mockGh([{ status: 201 }, { status: 200 }, { status: 500 }]);
+    const msg = await executeAction({ kind: 'drop_issue', issue: 1229 }, gh);
+    expect(msg).toContain('500');
+    expect(msg).toContain('manuelt');
   });
 
   it('kommentar-feil → ærlig melding, issuet lukkes IKKE', async () => {
@@ -230,9 +251,10 @@ describe('executeAction: drop_issue', () => {
 });
 
 describe('executeAction: snooze_issue', () => {
-  it('poster utsett-kommentar, setter parked, fjerner begge needs-labels', async () => {
+  it('poster utsett-kommentar, setter parked, fjerner begge needs-labels + autonomy:ready', async () => {
     const { gh, calls } = mockGh([
       { status: 201 },
+      { status: 200 },
       { status: 200 },
       { status: 200 },
       { status: 200 },
@@ -255,17 +277,25 @@ describe('executeAction: snooze_issue', () => {
       method: 'DELETE',
       path: `/repos/${LOOP_REPO}/issues/1229/labels/${encodeURIComponent('autonomy:needs-contract-session')}`,
     });
+    // #1302: en auto-køet sak som utsettes må også miste kø-markeringen.
+    expect(calls[4]).toMatchObject({
+      method: 'DELETE',
+      path: `/repos/${LOOP_REPO}/issues/1229/labels/${encodeURIComponent('autonomy:ready')}`,
+    });
+    expect(calls).toHaveLength(5);
     expect(msg).toContain('parkert');
   });
 
   it('404 på label-fjerning tolereres (dobbel-tapp-idempotens)', async () => {
-    const { gh } = mockGh([
+    const { gh, calls } = mockGh([
       { status: 201 },
       { status: 200 },
       { status: 404 },
       { status: 404 },
+      { status: 404 }, // autonomy:ready var ikke satt (ikke auto-køet) — også OK
     ]);
     const msg = await executeAction({ kind: 'snooze_issue', issue: 1229 }, gh);
+    expect(calls).toHaveLength(5);
     expect(msg).toContain('parkert');
     expect(msg).not.toContain('404');
   });
