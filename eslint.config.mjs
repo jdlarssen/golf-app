@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // e2e/test artifacts (#1334): `npm run e2e:gate` writes minified bundles
+    // into playwright-report/ and test-results/ — both gitignored, but eslint
+    // scanned them and failed pre-push with hundreds of no-this-alias errors
+    // right after any local e2e run. coverage/ is the vitest sibling.
+    "playwright-report/**",
+    "test-results/**",
+    "coverage/**",
     // Design-handoff prototypes — they're reference JSX inside design/ for
     // pattern-matching, not part of the app source. Linting them creates
     // noise (e.g. they assume a global `React`).
