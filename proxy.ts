@@ -8,6 +8,7 @@ import { resolveLocale } from '@/lib/i18n/resolveLocale';
 import { createMiddlewareClient } from '@/lib/supabase/middleware';
 import { OFF_APP_THRESHOLD_MS } from '@/lib/notifications/thresholds';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
+import { courseSlugGuard } from '@/lib/courses/slugGuard';
 
 // Handles locale detection, the as-needed rewrite (/x -> /no/x internally)
 // and /en/... prefix routing. Runs for EVERY page — public ones included —
@@ -59,6 +60,11 @@ const VALID_SPILLFORMAT_SLUGS = new Set<string>(Object.keys(MODE_LABELS));
 // røres ikke. Kjøres på locale-strippet sti, så /en/spillformater/… dekkes.
 const SPILLFORMAT_SLUG_PATTERN = /^\/spillformater\/([^/]+)$/;
 
+// #1329 (del 2 av #1286): samme mønster som spillformater, for /baner/<slug>.
+// Gyldigheten sjekkes IKKE mot en importert konstant (bane-slugs er
+// DB-drevne) — se `lib/courses/slugGuard.ts` for hvorfor og hvordan.
+const BANER_SLUG_PATTERN = /^\/baner\/([^/]+)$/;
+
 /** Split '/en/venner' -> { locale: 'en', pathname: '/venner' }. */
 function splitLocalePrefix(pathname: string): {
   locale: string | null;
@@ -74,23 +80,34 @@ function splitLocalePrefix(pathname: string): {
 }
 
 /**
- * #1286: minimal, brandet 404-respons for ukjente spillformat-slugs. Svares
- * direkte fra proxyen (ikke rewrite til not-found.tsx): under `cacheComponents`
- * ville en rewrite re-streame den statiske 200-shellen og statuskoden kunne
- * ikke lenger settes til 404 (docs: «it is not possible to change the status
- * code after streaming started»). En egen minimal side har ingen app-shell/nav
- * — bevisst: den lekker ingen innlogget chrome og trenger ingen auth-kontekst
+ * #1286: minimal, brandet 404-respons for ukjente slugs under offentlige
+ * detalj-sider (spillformater, baner). Svares direkte fra proxyen (ikke
+ * rewrite til not-found.tsx): under `cacheComponents` ville en rewrite
+ * re-streame den statiske 200-shellen og statuskoden kunne ikke lenger settes
+ * til 404 (docs: «it is not possible to change the status code after
+ * streaming started»). En egen minimal side har ingen app-shell/nav —
+ * bevisst: den lekker ingen innlogget chrome og trenger ingen auth-kontekst
  * (crawlere er hovedpublikum). `Cache-Control: no-store` så en slug som senere
- * blir en gyldig GameMode ikke sitter fast som cachet 404.
+ * blir gyldig ikke sitter fast som cachet 404.
+ *
+ * ⚠️ Ingen HTML-escaping: kallere MÅ sende statiske literaler, aldri
+ * request-avledede strenger (en slug-ekko à la «Fant ikke banen 'x'» ville
+ * vært en XSS-sink, og `backHref` en `javascript:`-vektor).
  */
-function spillformatNotFoundResponse(): NextResponse {
+function notFoundHtmlResponse(copy: {
+  title: string;
+  heading: string;
+  body: string;
+  backHref: string;
+  backLabel: string;
+}): NextResponse {
   const html = `<!doctype html>
 <html lang="nb">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Fant ikke spillformen · Tørny</title>
+<title>${copy.title}</title>
 <style>
 :root{color-scheme:light dark}
 body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;background:#F8F6F0;color:#1B4332;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -101,9 +118,9 @@ a{display:inline-block;margin-top:.5rem;padding:.65rem 1.25rem;border-radius:999
 </style>
 </head>
 <body>
-<h1>Fant ikke denne spillformen</h1>
-<p>Spillformen finnes ikke. Se hele oversikten over formatene Tørny støtter.</p>
-<a href="/spillformater">Til spillformene</a>
+<h1>${copy.heading}</h1>
+<p>${copy.body}</p>
+<a href="${copy.backHref}">${copy.backLabel}</a>
 </body>
 </html>`;
   return new NextResponse(html, {
@@ -112,6 +129,31 @@ a{display:inline-block;margin-top:.5rem;padding:.65rem 1.25rem;border-radius:999
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',
     },
+  });
+}
+
+function spillformatNotFoundResponse(): NextResponse {
+  return notFoundHtmlResponse({
+    title: 'Fant ikke spillformen · Tørny',
+    heading: 'Fant ikke denne spillformen',
+    body: 'Spillformen finnes ikke. Se hele oversikten over formatene Tørny støtter.',
+    backHref: '/spillformater',
+    backLabel: 'Til spillformene',
+  });
+}
+
+/**
+ * #1329: samme mønster for ukjente bane-slugs. Teksten skiller mellom
+ * «finnes ikke» og «ikke lenger tilgjengelig» siden en avpublisert bane
+ * (guardens fail-open/TTL-vindu) kan dukke opp her etter at den var gyldig.
+ */
+function courseNotFoundResponse(): NextResponse {
+  return notFoundHtmlResponse({
+    title: 'Fant ikke banen · Tørny',
+    heading: 'Fant ikke denne banen',
+    body: 'Banen finnes ikke, eller er ikke lenger tilgjengelig. Se hele baneoversikten.',
+    backHref: '/baner',
+    backLabel: 'Til baneoversikten',
   });
 }
 
@@ -149,6 +191,23 @@ export async function proxy(request: NextRequest) {
   const spillformatSlug = SPILLFORMAT_SLUG_PATTERN.exec(barePathname)?.[1];
   if (spillformatSlug !== undefined && !VALID_SPILLFORMAT_SLUGS.has(spillformatSlug)) {
     return spillformatNotFoundResponse();
+  }
+
+  // #1329: samme idé for /baner/<slug>, men bane-slugs er DB-drevne så det
+  // gyldige settet ikke kan være en importert konstant som over — se
+  // `lib/courses/slugGuard.ts` for cache-/fail-open-designet. Guarden
+  // returnerer `false` (aldri blokker) på enhver fetch-feil, så en nede-DB
+  // eller treg manifest-hent aldri hindrer en ekte besøkende i å se en
+  // gyldig bane.
+  const baneSlug = BANER_SLUG_PATTERN.exec(barePathname)?.[1];
+  if (baneSlug !== undefined) {
+    const blocked = await courseSlugGuard.shouldBlock(
+      baneSlug,
+      request.nextUrl.origin,
+    );
+    if (blocked) {
+      return courseNotFoundResponse();
+    }
   }
 
   // Public pages: no session work (same as the old matcher exclusions),
