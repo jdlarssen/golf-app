@@ -18,6 +18,16 @@ import { test, expect } from '@playwright/test';
  * regredierer og igjen slipper ugyldige bane-slugs gjennom som 200.
  */
 test.describe('bane-slugs: ekte 404 (public, no login)', () => {
+  test.beforeAll(async ({ playwright, baseURL }) => {
+    // Varm opp manifest-ruta: i dev/CI kompileres /api-ruta ved første treff,
+    // og guardens fetch-timeout (1,5 s) kan da faile åpent — 200 i stedet for
+    // 404 på aller første request. Én GET her gjør status-testene under
+    // deterministiske i stedet for retry-avhengige.
+    const ctx = await playwright.request.newContext({ baseURL });
+    await ctx.get('/api/public-course-slugs').catch(() => {});
+    await ctx.dispose();
+  });
+
   test('ukjent slug svarer 404 @gate', async ({ request }) => {
     const res = await request.get('/baner/denne-banen-finnes-ikke', {
       maxRedirects: 0,
