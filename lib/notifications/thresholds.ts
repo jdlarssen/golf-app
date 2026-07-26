@@ -10,7 +10,12 @@
  *
  * Refleksjonen er beskrevet nærmere i design-doc-en til issue #25.
  *
- * Egen fil framfor å bo i notify.ts fordi proxy.ts kjører på edge runtime
- * og kan ikke importere fra moduler som har `import 'server-only'`.
+ * Egen fil framfor å bo i notify.ts: historisk fordi middleware-laget den
+ * gang kjørte på edge-runtime og ikke kunne importere `server-only`-moduler.
+ * Premisset er utdatert — i Next 16 kjører proxy.ts på Node.js-runtimen, og
+ * edge kan ikke lenger konfigureres for proxy (proxy.md §Runtime: «Setting
+ * the runtime config option in Proxy will throw an error»). Splitten består
+ * som ren stil: proxy-bundelen slipper å dra inn hele notify-modulen for én
+ * konstant. (#1336)
  */
 export const OFF_APP_THRESHOLD_MS = 5 * 60 * 1000;
