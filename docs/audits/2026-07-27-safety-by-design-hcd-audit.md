@@ -863,16 +863,70 @@ rekkefølge er et eierskapsvalg. Forslag, sortert etter effekt per innsats:
    veiviseren (F39–F44) før onboarding-detaljene (F1–F8) — lag-funnene (F1, F2, F5)
    kan vente til lag-påmelding får reell bruk (jf. #1069-parkeringen).
 
-**Ikke gjort i denne økten, med vilje:** ingen GitHub-issues er opprettet og ingen
-kode er endret. Per arbeidsflyt-regelen («Nye funn underveis») er det eierens valg
-hvilke funn som blir issues nå og hvilke som bare noteres — denne rapporten er
-beslutningsgrunnlaget. Alle 53 funn står med fil:linje og konkret forslag, så de kan
-konverteres til issues (med milestone) ord for ord.
+**Issues (oppdatert 2026-07-27, etter eier-beslutning i økten):** Alle funn er filet som GitHub-issues — **#1343–#1394** (52 stk., milestone «Backlog — uplanlagt / scale-triggered», labels `bug`/`enhancement` + `area:*`). F5 fikk ingen egen issue: den spores allerede i #1069 (kommentar med de ferske linjereferansene er lagt der). Se issue-indeksen nederst. Ingen kode er endret i denne PR-en.
 
 **VERIFICATION GAP:** Funnene er verifisert mot koden (to uavhengige lesninger per
 funn), men ikke klikket gjennom på staging i denne økten. Kontrastmålingene (F33,
 F45, F47) er beregnet fra fargekodene i `globals.css`, ikke målt på skjerm. Hver
 fiks som tas videre skal gjennom vanlig staging-verifisering før merge.
+
+## Issue-indeks (F# → issue)
+
+| Funn | Issue | Alvor | Tittel |
+|---|---|---|---|
+| F1 | #1343 | P2 | Lag-invitert kobles til nyeste lag i spillet — ikke laget som faktisk inviterte dem |
+| F2 | #1344 | P2 | Profilporten mister /team-konteksten — ny medspiller havner i «registrer nytt lag»-skjemaet |
+| F3 | #1345 | P2 | Feil-redirects i login-flyten mister next, e-post og invite — bruker kastes til start uten kontekst |
+| F4 | #1346 | P2 | Ingen vei tilbake for å rette feilskrevet e-post på kodesteget |
+| F5 | #1069 (eksisterende) | P3 | «Både solo og lag»-spill viser kun lag-skjema — solo-påmelding er umulig i UI-et |
+| F6 | #1347 | P3 | Rate-limit-meldingen er ikke handlingsrettet — sier ikke hvor lenge man må vente |
+| F7 | #1348 | P3 | Utløpt invitasjon håndheves ulikt: blokkerer kode-bestilling, men konsumeres ved innlogging |
+| F8 | #1349 | P3 | «Send ny kode» har treffflate langt under 44px-kravet |
+| F9 | #1350 | P1 | Offline er appen en blindvei ved hull-bytte og app-restart |
+| F10 | #1351 | P2 | Avsluttet spill gir låst hull-side uten forklaring |
+| F11 | #1352 | P2 | Hull-stripa viser «fullført» basert på posisjon, ikke på faktiske scorer |
+| F12 | #1353 | P2 | Treffflatene i hull-stripa er 26 px brede — under appens egen 44 px-regel på samme skjerm |
+| F13 | #1354 | P2 | Høye scorer (7–15 slag) mangler effektiv inntasting — arket dekker bare par±2 |
+| F14 | #1355 | P3 | SyncBanner er halvveis oversatt — kø- og feilmeldingene hardkodet på norsk |
+| F15 | #1356 | P3 | Treffflater under 44 px: putts-stepper (34×30) og onboarding-lukking (32×32) |
+| F16 | #1357 | P3 | Score-arket flytter ikke fokus og mangler fokus-felle |
+| F17 | #1358 | P1 | Avvist scorekort: appen lover «Spilleren blir varslet», men ingen varsel sendes |
+| F18 | #1359 | P1 | /approve filtrerer på flight_number og skjuler kort du er attestant for — singles matchplay med peer-godkjenning kan aldri godkjennes av spillerne |
+| F19 | #1360 | P2 | Arrangør-blindvei: «venter på godkjenning»-sperren på /avslutt peker ikke til godkjennings-overriden som finnes på /spillere |
+| F20 | #1361 | P2 | Avslutnings-feil for oppretter forsvinner stille: ?error-redirects lander på /games/[id] som aldri rendrer error-parameteren |
+| F21 | #1362 | P2 | Levert (og godkjent) scorekort kan ikke gjenåpnes av noen i creator-spill — copy sier «kan ikke angres uten admin» |
+| F22 | #1363 | P3 | Gjenåpning av spill eller scorekort varsler ingen — spillere må selv oppdage at leveringen deres er nullstilt |
+| F23 | #1364 | P3 | Norsk hardkodet i server-fallbacks: «Ingen grunn oppgitt» m.fl. vises uoversatt i engelsk locale |
+| F24 | #1365 | P3 | «Godkjenn ✓» er ett tapp med scorekortet skjult bak sammenslått <details> — attestering uten å se det man attesterer |
+| F25 | #1366 | P2 | Realtime dør stille etter token-utløp eller kanalfeil — ingen resubscribe, fallback eller ferskhetsindikator; leaderboard og medspiller-tall fryser |
+| F26 | #1367 | P2 | Sync-motoren startes bare fra hull-siden — køen blir liggende urørt på iOS |
+| F27 | #1368 | P2 | LWW-overskriving av score du tastet for en medspiller varsles aldri |
+| F28 | #1369 | P2 | «Kunne ikke lagre N slag» — evig, ikke-avvisbar alarm uten hull-nummer eller handlingsvei |
+| F29 | #1370 | P3 | Kø-status og submit-sperre teller slag på tvers av spill |
+| F30 | #1371 | P3 | «Innloggingen er utløpt — logg inn på nytt» uten vei til innlogging |
+| F31 | #1372 | P2 | Delt førsteplass framstilles som vinner + taper: podium og reveal hardkoder plassering etter listeindeks, ikke rank |
+| F32 | #1373 | P2 | Spectate-siden viser lenker inn i innloggings-vegg: hull-for-hull-drilldown og CSV-eksport er blindveier for tilskuere |
+| F33 | #1374 | P2 | Champagne-gull brukes som meningsbærende tekstfarge på lyse flater — målt ~2:1, verst i sollys på banen |
+| F34 | #1375 | P3 | Låst back 9-copy lover åpning ved «levert og godkjent», men tavla åpner først når admin avslutter spillet |
+| F35 | #1376 | P3 | Spectate lover «Følger live» med pulserende dot, men polling feiler stille og ingenting viser når tallene sist ble oppdatert |
+| F36 | #1377 | P3 | Cup-siden: hardkodet norsk copy utenfor i18n, inkludert skrivefeilen «point» for «poeng» |
+| F37 | #1378 | P3 | Liga-tabellen gjemmer sesong-totalen bakerst i horisontal scroll og forklarer aldri «–»-radene |
+| F38 | #1379 | P1 | Server-feil ved publisering kaster arrangøren tilbake til en tom veiviser — all inndata tapt |
+| F39 | #1380 | P2 | Tilbake-gest eller app-eviction midt i veiviseren sletter alt — history-oppførselen motsier egen dokumentasjon |
+| F40 | #1381 | P2 | «Send på nytt» på utløpt invitasjon er en blindvei for mottakeren — og ventelisten skjuler utløpsstatus |
+| F41 | #1382 | P2 | Runden starter seg selv ved tee-off, men admin-flaten sier det motsatte |
+| F42 | #1383 | P3 | Reload midt i veiviseren gjenopptar på ?step=N med stille default-verdier |
+| F43 | #1384 | P3 | «Lagre utkast»-knappen deaktiveres uten forklaring når navnet er tomt |
+| F44 | #1385 | P3 | Utkast lages i veiviseren, men gjenopptas i et helt annet og tettere skjema-UI |
+| F45 | #1386 | P1 | Fokusindikatoren er nesten usynlig (1.3:1) og native outline er fjernet app-vidt |
+| F46 | #1387 | P2 | ScoreCard (kjerneflaten for slag-tasting) er ikke tastatur-operabel og har ugyldig ARIA-struktur |
+| F47 | #1388 | P2 | Advarselstekst i warning-amber måler 2.1–2.4:1 på sine egne bakgrunner |
+| F48 | #1389 | P3 | Uleste-varsel i bunn-nav er kun en farge-prikk og er skjult for skjermlesere |
+| F49 | #1390 | P3 | Utstrakt 8–10px mikrotypografi (295 forekomster) som ikke skalerer med tekst-innstillinger |
+| F50 | #1391 | P2 | Ventende og tapte slag er usynlige utenfor spill-sidene — SyncBanner er bare montert i games/[id]-layouten |
+| F51 | #1392 | P2 | Innboksen svelger databasefeil og viser «Ingen nye varsler»-tomtilstanden i stedet |
+| F52 | #1393 | P2 | Fantom-prikk i bunn-nav: skjulte stale påmeldings-varsler forblir uleste og kan aldri ryddes fra UI |
+| F53 | #1394 | P3 | Optimistiske innboks-handlinger og månedsbrev-bryteren feiler stille — UI viser suksess selv når lagringen aldri skjedde |
 
 ## Kilder
 
