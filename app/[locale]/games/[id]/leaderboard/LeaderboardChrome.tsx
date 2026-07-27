@@ -7,6 +7,7 @@ import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackd
 import { LeaderboardRealtime } from './LeaderboardRealtime';
 import { ShareResultButton } from './ShareResultButton';
 import { MyScorecardCta } from './MyScorecardCta';
+import { PuttsBackfillCta } from './PuttsBackfillCta';
 import { RevansjeCta } from './RevansjeCta';
 
 export interface LeaderboardShellProps {
@@ -66,6 +67,8 @@ export function LeaderboardShell({
       <ShareResultButton />
       {/* Renders only when the authed page mounts MyScorecardCtaProvider (#1289). */}
       <MyScorecardCta />
+      {/* Renders only when the authed page mounts PuttsBackfillCtaProvider (#1290). */}
+      <PuttsBackfillCta />
       {/* Renders only when the authed page mounts RevansjeCtaProvider (#1020). */}
       <RevansjeCta />
     </>

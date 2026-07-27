@@ -16,6 +16,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { submitScorecard } from './actions';
 import { SubmitForm } from './SubmitForm';
+import { PuttsSubmitPrompt } from './PuttsSubmitPrompt';
 import { ParAsideInline } from '../_components/ParAsideInline';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
@@ -49,6 +50,7 @@ type HoleRow = {
 type ScoreRow = {
   hole_number: number;
   strokes: number | null;
+  putts: number | null;
   entered_by: string | null;
 };
 
@@ -211,7 +213,7 @@ async function ReviewBody({
       .returns<HoleRow[]>(),
     supabase
       .from('scores')
-      .select('hole_number, strokes, entered_by')
+      .select('hole_number, strokes, putts, entered_by')
       .eq('game_id', gameId)
       .eq('user_id', currentUserId)
       .returns<ScoreRow[]>(),
@@ -262,6 +264,7 @@ async function ReviewBody({
       par: parForPlayer(parByGender, meTeeGender),
       parByGender,
       strokes,
+      putts: s?.putts ?? null,
       enteredByName,
     };
   });
@@ -272,6 +275,16 @@ async function ReviewBody({
     (sum, r) => sum + (r.strokes ?? 0),
     0,
   );
+
+  // #1290 del B: catch a forgotten putt while the memory is fresh. Only when the
+  // player opted into putt-keeping this round (≥1 recorded) but left some played
+  // holes blank — never a nag for someone who never tracks putts. The game is
+  // still active here, so chips write through the live `writeScore` path.
+  const puttedCount = playedHoles.filter((r) => r.putts != null).length;
+  const missingPuttHoles = playedHoles
+    .filter((r) => r.putts == null)
+    .map((r) => ({ holeNumber: r.hole_number, par: r.par, strokes: r.strokes as number }));
+  const showPuttsPrompt = puttedCount >= 1 && missingPuttHoles.length > 0;
 
   return (
     <>
@@ -348,6 +361,16 @@ async function ReviewBody({
           <span className="inline-num">/18</span>
         </p>
       </Card>
+
+      {showPuttsPrompt && (
+        <PuttsSubmitPrompt
+          gameId={gameId}
+          userId={currentUserId}
+          puttedCount={puttedCount}
+          playedCount={playedHoles.length}
+          holes={missingPuttHoles}
+        />
+      )}
 
       {missingHoles > 0 && (
         <Banner tone="info">
