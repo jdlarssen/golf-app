@@ -16,6 +16,7 @@ import {
 import { renderLeaderboardContent } from './leaderboardContent';
 import { RevansjeCtaProvider } from './RevansjeCta';
 import { MyScorecardCtaProvider } from './MyScorecardCta';
+import { PuttsBackfillCtaProvider } from './PuttsBackfillCta';
 import { SponsorStrip } from '@/components/SponsorStrip';
 import { safeParsePrizes } from '@/lib/games/prizes';
 
@@ -182,6 +183,24 @@ export default async function LeaderboardPage({
     game.status === 'finished' &&
     gwp.players.some((p) => p.user_id === userId && !p.withdrawn_at);
 
+  // #1290 del B: «Putte-statistikken venter på N hull» — only when the viewer
+  // opted into putt-keeping this round (≥1 putt recorded) but left some played
+  // holes blank. A player who never recorded a putt is never nagged. Gated on
+  // showMyScorecard so the extra query only runs for a finished-game
+  // participant, and mounted via a provider so it can't leak to spectate/demo.
+  let puttsBackfillMissing = 0;
+  if (showMyScorecard) {
+    const { data: myScores } = await supabase
+      .from('scores')
+      .select('strokes, putts')
+      .eq('game_id', id)
+      .eq('user_id', userId)
+      .returns<{ strokes: number | null; putts: number | null }[]>();
+    const played = (myScores ?? []).filter((s) => s.strokes != null).length;
+    const putted = (myScores ?? []).filter((s) => s.putts != null).length;
+    if (putted >= 1 && putted < played) puttsBackfillMissing = played - putted;
+  }
+
   // #1051: sponsorstripe på live-tavla (self-hider uten sponsor).
   const withSponsors = (
     <>
@@ -189,12 +208,23 @@ export default async function LeaderboardPage({
       {content}
     </>
   );
+  const withBackfillCta =
+    puttsBackfillMissing > 0 ? (
+      <PuttsBackfillCtaProvider
+        href={`/games/${id}/putter`}
+        missingCount={puttsBackfillMissing}
+      >
+        {withSponsors}
+      </PuttsBackfillCtaProvider>
+    ) : (
+      withSponsors
+    );
   const withScorecardCta = showMyScorecard ? (
     <MyScorecardCtaProvider href={`/games/${id}/scorecard`}>
-      {withSponsors}
+      {withBackfillCta}
     </MyScorecardCtaProvider>
   ) : (
-    withSponsors
+    withBackfillCta
   );
   if (!showRevansje) return withScorecardCta;
   return (

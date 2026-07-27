@@ -1651,7 +1651,32 @@
       "syncingPending": "Saving strokes …",
       "confirmBase": "Submit the scorecard? This cannot be undone without admin.",
       "confirmMissing": "{count, plural, one {1 hole is missing and will be saved as not played.} other {# holes are missing and will be saved as not played.}}",
-      "unknownPlayer": "(unknown player)"
+      "unknownPlayer": "(unknown player)",
+      "puttsPrompt": {
+        "heading": "Putts logged on {done} of {total} holes. Fill in the rest?",
+        "allDone": "Every hole has putts now. Nice!",
+        "dismiss": "Not now",
+        "holeName": "Hole {hole}",
+        "holeAnchor": "Hole {hole} (par {par}) — you took {strokes} strokes"
+      }
+    },
+    "putter": {
+      "kicker": "Putts",
+      "title": "Add your putts",
+      "intro": "You're missing putts on {count, plural, one {# hole} other {# holes}}. Fill them in here.",
+      "introComplete": "Every hole has putts. Change one if it's off.",
+      "noHoles": "No scored holes to add putts to yet.",
+      "holeName": "Hole {hole}",
+      "holeAnchor": "Par {par} · {strokes} strokes",
+      "saveButton": "Save {count, plural, one {# hole} other {# holes}}",
+      "saving": "Saving …",
+      "saved": "Putts saved on {count, plural, one {# hole} other {# holes}}.",
+      "errors": {
+        "unauthenticated": "You need to be signed in to log putts.",
+        "not_finished": "The round isn't finished yet.",
+        "invalid": "Couldn't save the putts. Check the holes and try again.",
+        "db": "Couldn't save. Try again."
+      }
     },
     "approve": {
       "kicker": "Approval",
@@ -1922,6 +1947,14 @@
       "decreaseAriaLabel": "Fewer putts for {name}",
       "valueAriaLabel": "{count} putts"
     },
+    "puttsChips": {
+      "chipAriaLabel": "{count} putts on {name}",
+      "plusLabel": "5+",
+      "plusAriaLabel": "Five or more putts on {name}",
+      "decreaseAriaLabel": "Fewer putts on {name}",
+      "increaseAriaLabel": "More putts on {name}",
+      "valueAriaLabel": "{count} putts"
+    },
     "sync": {
       "sending": "Sending…",
       "savedAt": "Saved · {time}",
@@ -2027,6 +2060,10 @@
     }
   },
   "leaderboard": {
+    "puttsBackfill": {
+      "waiting": "Putt stats are waiting on {count, plural, one {# hole} other {# holes}}.",
+      "cta": "Add putts"
+    },
     "shareCard": {
       "finalResult": "Final result",
       "gameFinished": "Game finished",

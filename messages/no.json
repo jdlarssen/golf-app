@@ -1651,7 +1651,32 @@
       "syncingPending": "Lagrer slag …",
       "confirmBase": "Levere scorekortet? Dette kan ikke angres uten admin.",
       "confirmMissing": "{count, plural, one {1 hull mangler og blir lagret som ikke spilt.} other {# hull mangler og blir lagret som ikke spilt.}}",
-      "unknownPlayer": "(ukjent spiller)"
+      "unknownPlayer": "(ukjent spiller)",
+      "puttsPrompt": {
+        "heading": "Putter ført på {done} av {total} hull. Fyll inn resten?",
+        "allDone": "Nå har alle hull putter. Bra jobba!",
+        "dismiss": "Ikke nå",
+        "holeName": "Hull {hole}",
+        "holeAnchor": "Hull {hole} (par {par}) — du brukte {strokes} slag"
+      }
+    },
+    "putter": {
+      "kicker": "Putter",
+      "title": "Før inn putter",
+      "intro": "Du mangler putter på {count, plural, one {# hull} other {# hull}}. Fyll dem inn her.",
+      "introComplete": "Alle hull har putter. Endre om noe ble feil.",
+      "noHoles": "Ingen førte hull å legge putter på ennå.",
+      "holeName": "Hull {hole}",
+      "holeAnchor": "Par {par} · {strokes} slag",
+      "saveButton": "Lagre {count, plural, one {# hull} other {# hull}}",
+      "saving": "Lagrer …",
+      "saved": "Putter lagret på {count, plural, one {# hull} other {# hull}}.",
+      "errors": {
+        "unauthenticated": "Du må være innlogget for å føre putter.",
+        "not_finished": "Runden er ikke avsluttet ennå.",
+        "invalid": "Klarte ikke å lagre puttene. Sjekk hullene og prøv igjen.",
+        "db": "Klarte ikke å lagre. Prøv igjen."
+      }
     },
     "approve": {
       "kicker": "Godkjenning",
@@ -1922,6 +1947,14 @@
       "decreaseAriaLabel": "Færre putter for {name}",
       "valueAriaLabel": "{count} putter"
     },
+    "puttsChips": {
+      "chipAriaLabel": "{count} putter på {name}",
+      "plusLabel": "5+",
+      "plusAriaLabel": "Fem eller flere putter på {name}",
+      "decreaseAriaLabel": "Færre putter på {name}",
+      "increaseAriaLabel": "Flere putter på {name}",
+      "valueAriaLabel": "{count} putter"
+    },
     "sync": {
       "sending": "Sender…",
       "savedAt": "Lagret · {time}",
@@ -2027,6 +2060,10 @@
     }
   },
   "leaderboard": {
+    "puttsBackfill": {
+      "waiting": "Putte-statistikken venter på {count, plural, one {# hull} other {# hull}}.",
+      "cta": "Før putter"
+    },
     "shareCard": {
       "finalResult": "Sluttresultat",
       "gameFinished": "Spillet er ferdig",
