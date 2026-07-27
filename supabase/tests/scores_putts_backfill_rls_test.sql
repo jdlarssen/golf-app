@@ -73,11 +73,18 @@ create or replace function torny_rls.try_backfill_putts(p_target uuid, p_hole in
 $$;
 
 -- try_change_strokes(target, hole): current user changes strokes on target's row.
+-- Re-stamps entered_by like the shared try_update_score() helper
+-- (fixtures/rls_helpers.psql) does — required to satisfy the base "scores
+-- update by flight" policy's WITH CHECK (entered_by = auth.uid() or is_admin())
+-- when the actor differs from the row's current entered_by (e.g. a flight-mate
+-- write, or the service-role ops-bypass case).
 create or replace function torny_rls.try_change_strokes(p_target uuid, p_hole int) returns boolean
   language plpgsql as $$
-  declare v_rows int;
+  declare
+    v_actor uuid := nullif(current_setting('request.jwt.claims', true), '')::json ->> 'sub';
+    v_rows int;
   begin
-    update public.scores set strokes = 9
+    update public.scores set strokes = 9, entered_by = coalesce(v_actor, p_target)
      where game_id = torny_rls.game_id() and user_id = p_target and hole_number = p_hole;
     get diagnostics v_rows = row_count;
     return v_rows > 0;
