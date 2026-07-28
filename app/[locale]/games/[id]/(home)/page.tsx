@@ -271,8 +271,10 @@ export default async function GameHomePage({
 
   // Mark related inbox notifications as read on visit. Best-effort: helperen
   // svelger feil internt, så vi blokkerer aldri sida på dette. Vi markerer
-  // både `invite`- og `scorecard_approved`-varsler for dette spillet siden
-  // begge kindene deeplinker hit. (Phase 3 — wires Task 3.1 + 3.4.)
+  // `invite`-, `scorecard_approved`- og `scorecard_rejected`-varsler for dette
+  // spillet siden alle tre kindene deeplinker hit. (Phase 3 — wires Task 3.1 +
+  // 3.4; scorecard_rejected lagt til i #1358 så bjelle-badgen ikke blir
+  // hengende etter at spilleren har lest rejection-banneret her.)
   //
   // Wrap i `after()` så DB-mutasjon + revalidateTag deferes til etter render.
   // Direkte-call inni render-fasen ville kastet på `revalidateTag` (Next.js 16
@@ -284,6 +286,11 @@ export default async function GameHomePage({
       markNotificationsRead({
         userId,
         kind: 'scorecard_approved',
+        entityId: id,
+      }),
+      markNotificationsRead({
+        userId,
+        kind: 'scorecard_rejected',
         entityId: id,
       }),
       // #463: å åpne spillet er en aktivitet = implisitt bekreftelse. Rydder

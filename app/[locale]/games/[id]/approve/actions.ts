@@ -179,8 +179,13 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
 
 /**
  * Reject a flight-mate's scorecard. Clears submitted_at / approved_at and
- * stores the reason on game_players so the affected player sees it on the
- * game home page next time they open the app.
+ * stores the reason on game_players so the game home page can show it. Fires a
+ * best-effort `scorecard_rejected` notification (in-app + push when the player
+ * is off-app) so the player learns the round has stalled without having to
+ * reopen the game — the /approve banner promises exactly this (#1358).
+ *
+ * Admin rejection runs through this same action (loadAndAuthorize lets admins
+ * straight through), so peer and admin rejection are covered by one call site.
  */
 export async function rejectScorecard(gameId: string, formData: FormData) {
   const locale = await getLocale();
@@ -191,7 +196,7 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   }
   const reason = reasonRaw.length > 0 ? reasonRaw.slice(0, 500) : 'Ingen grunn oppgitt';
 
-  const { supabase, authz } = await loadAndAuthorize(gameId, playerUserId);
+  const { supabase, user, authz } = await loadAndAuthorize(gameId, playerUserId);
   if (!authz.ok) redirect({ href: '/', locale });
 
   const { data: updated, error } = await supabase
@@ -217,6 +222,48 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   // den eksisterende `db`-feilkoden i stedet for en ny i18n-nøkkel.
   if (!updated || updated.length === 0) {
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
+  }
+
+  // #1358: best-effort in-app varsel til spilleren om at kortet ble avvist.
+  // Speiler approveScorecard: notify() skal ALDRI blokkere selve avvisningen —
+  // raden er allerede skrevet her, og /approve-banneret lover at spilleren
+  // varsles. Plasseringen etter 0-rads-guarden er kritisk (I3): en RLS-blokkert
+  // avvisning (0 rader, error == null — #704-fella) må ikke varsle om en
+  // skriving som aldri skjedde. redirect() står UTENFOR try-en — den kaster
+  // NEXT_REDIRECT og må ikke svelges av catch-en.
+  //
+  // DEPLOY-REKKEFØLGE: migrasjon 0149 må være påført før dette kjører i prod.
+  // Uten den avviser notifications_kind_check inserten og notify() svelger
+  // feilen (console.error '[notifications] insert failed') — grønt UI, ingen
+  // varsel. Verifiser med en SELECT mot notifications etter staging-runden.
+  try {
+    const [gameRes, rejecterRes] = await Promise.all([
+      supabase
+        .from('games')
+        .select('name')
+        .eq('id', gameId)
+        .single<{ name: string }>(),
+      supabase
+        .from('users')
+        .select('name')
+        .eq('id', user.id)
+        .maybeSingle<{ name: string | null }>(),
+    ]);
+    await notify({
+      userId: playerUserId,
+      kind: 'scorecard_rejected',
+      payload: {
+        game_id: gameId,
+        game_name: gameRes.data?.name ?? '(ukjent spill)',
+        rejecter_name: rejecterRes.data?.name?.trim() || null,
+        // Utelat feltet helt når attestanten ikke skrev noe, så kortet kan vise
+        // en lokalisert defaultReason. DB-raden beholder sin egen
+        // 'Ingen grunn oppgitt'-tekst — den styrer spill-hjem-banneret.
+        ...(reasonRaw.length > 0 ? { reason } : {}),
+      },
+    });
+  } catch (err) {
+    console.error('[rejectScorecard] scorecard_rejected notify failed', err);
   }
 
   revalidateTag(`game-${gameId}`, 'max');

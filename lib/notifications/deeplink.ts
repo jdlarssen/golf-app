@@ -32,6 +32,10 @@ export function notificationDestination(n: DeeplinkInput): string | null {
   switch (n.kind) {
     case 'invite':
     case 'scorecard_approved':
+    // #1358: spill-hjem er der rejection_reason-banneret står, med begrunnelsen
+    // og «Rediger hullene og lever på nytt». /submit ble forkastet — spilleren
+    // må rette hull FØR levering, og banneret finnes ikke der.
+    case 'scorecard_rejected':
     case 'registration_approved': {
       const p = n.payload as NotificationPayload<'invite'>;
       return `/games/${p.game_id}`;

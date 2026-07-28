@@ -29,6 +29,9 @@ const EMOJI: Record<NotificationKind, string> = {
   peer_approval_request: '✋',
   scorecard_submitted: '📋',
   scorecard_approved: '✅',
+  // «sendt i retur» — bevisst ikke 🚫, som er tatt av registration_rejected
+  // og betyr «du kom ikke med», et annet budskap.
+  scorecard_rejected: '↩️',
   game_finished: '🏆',
   product_update: '✨',
   team_invite: '🤝',

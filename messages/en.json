@@ -90,6 +90,11 @@
         "title": "Scorecard approved",
         "detail": "{approverName} approved the scorecard in {gameName}"
       },
+      "scorecardRejected": {
+        "title": "Scorecard needs fixing",
+        "detail": "{rejecterName} rejected the scorecard in {gameName}: {reason}",
+        "defaultReason": "no reason given"
+      },
       "gameFinished": {
         "title": "Results are in",
         "detail": "{gameName}"
