@@ -7,8 +7,10 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 // Shared between Button and LinkButton so the pill shape, tap target, and
 // hover-lift stay synchronised. Variant-specific colors live in VARIANTS.
+// Keyboard focus is NOT declared here — the global `:focus-visible` rule in
+// app/globals.css owns it for every interactive element (#1386).
 const BASE_CLASSES =
-  'inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full font-medium tracking-tight transition-[background-color,transform,opacity] duration-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40';
+  'inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full font-medium tracking-tight transition-[background-color,transform,opacity] duration-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0';
 
 const VARIANTS: Record<Variant, string> = {
   primary:
