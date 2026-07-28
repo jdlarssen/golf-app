@@ -116,6 +116,11 @@
    * the linen page, not just a warning-pill. */
   --danger-deep: #a04040;
 
+  /* Tastaturfokus-ring. Deep forest i dagslys: målt 8.41:1 i verste fall
+   * (mot --border) av de flatene et fokuserbart element faktisk sitter på.
+   * WCAG 1.4.11 krever 3:1. Låst av app/__tests__/focus-ring-contrast.test.ts. */
+  --focus-ring: #1b4332;
+
   /* Emphasized surface — always deep forest, even in dark mode. Used for
    * brand-emphasis cards/headers where the foreground is bg-tint/accent
    * (linen / gold). Cannot use --primary directly because dark --primary
@@ -158,7 +163,9 @@
     --warning: #e5b26f;
     --player-a: #6fa3bd;     /* lifted petrol for dark bg (#496) */
     --player-b: #db8a66;     /* lifted terracotta for dark bg */
-    --focus-ring: rgba(212, 184, 112, 0.45);
+    /* Solid, ikke gjennomsiktig: 0.45-alfaen målte 2.2–2.8:1 mot de mørke
+     * flatene. Champagne-gløden er beholdt — 5.20:1 i verste fall. */
+    --focus-ring: #d4b870;
 
     /* Score tones — readable on warm forest surfaces. */
     --score-under-fg: #7daa8a;
@@ -246,7 +253,7 @@
   --warning: #e5b26f;
   --player-a: #6fa3bd;     /* lifted petrol for dark bg (#496) */
   --player-b: #db8a66;     /* lifted terracotta for dark bg */
-  --focus-ring: rgba(212, 184, 112, 0.45);
+  --focus-ring: #d4b870;   /* solid — se kommentaren i media-blokken over */
 
   --score-under-fg: #7daa8a;
   --score-under-bg: rgba(125, 170, 138, 0.18);
@@ -340,6 +347,54 @@ body {
    * CSS Fonts L4, font-weight overrides font-variation-settings for the
    * wght axis unless wght is explicitly set here (it's not). */
   font-variation-settings: 'opsz' 14;
+}
+
+/* -----------------------------------------------------------------------------
+ * Global tastaturfokus-indikator (#1386).
+ *
+ * BEVISST ULAGET. Tailwind v4 emitterer `@layer theme, base, components,
+ * utilities`, og lag-rekkefølge slår spesifisitet. Denne regelen MÅ ligge
+ * utenfor alle @layer-blokker for å vinne over de ~97 `focus:outline-none`-
+ * utilitiene som bor i `@layer utilities`. Flytt den inn i @layer base og den
+ * slutter å virke — uten at noe feiler synlig.
+ *
+ * `outline`, ikke `box-shadow`/`ring`: outline overlever forced-colors-modus
+ * (Windows High Contrast), der box-shadow droppes helt. `:where()` holder
+ * spesifisiteten på 0 så komponenter kan overstyre offset ved behov.
+ *
+ * `outline-offset` er positiv, så ringen tegnes på FORELDRE-flaten og ikke på
+ * elementets egen fyll — derfor holder én farge per modus. Kontrast målt mot
+ * hver foreldre-flate: verste tilfelle 8.41:1 (lys, mot --border) og 5.20:1
+ * (mørk, mot --leader-fill-top). Får appen en gang fotobakgrunner eller
+ * vilkårlige gradienter bak knapper, er riktig oppgradering `outline` pluss en
+ * kontrasterende halo via Tailwinds ring-system (`--tw-ring-offset-shadow`
+ * komponerer med `--tw-shadow`, så den stomper ikke `shadow-sm`).
+ *
+ * `[tabindex]:not([tabindex='-1'])`: SegmentedField bruker roving tabindex, og
+ * containere som fokuseres programmatisk står på -1. De skal ikke ha ring.
+ * ---------------------------------------------------------------------------*/
+:where(
+  a[href],
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role='button'],
+  [role='radio'],
+  [role='switch'],
+  [role='tab'],
+  [tabindex]:not([tabindex='-1'])
+):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Segmenterte pill-grupper klipper barna sine (`overflow-hidden` på wrapperen),
+ * så en positiv offset ville blitt kuttet bort i sin helhet og etterlatt NULL
+ * fokusmarkering. Tegn outlinen på innsiden i stedet. */
+:where([data-focus-inset]) :where(a[href], button):focus-visible {
+  outline-offset: -2px;
 }
 
 /* iOS Safari: a long-press on any button/link surfaces the system "Open in

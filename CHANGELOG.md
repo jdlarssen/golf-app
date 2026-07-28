@@ -1359,8 +1359,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 36 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 37 rettinger</strong></summary>
 
+- `1.213.6` · [#1386](https://github.com/jdlarssen/golf-app/issues/1386) — Styrer du appen med tastatur, ser du nå tydelig hvor du står: en ramme i skogsgrønt om dagen og champagne i mørk modus, rundt knappen eller feltet som har fokus. Den gamle markeringen var så blek at den i praksis var borte. Spiller du med fingeren på telefonen merker du ingen forskjell.
 - `1.213.5` · [#1379](https://github.com/jdlarssen/golf-app/issues/1379) — Er «Lagre endringer» grå når du redigerer en planlagt runde, står det nå rett under knappen hva som mangler — for eksempel en spiller som ikke har fullført profilen sin. Før var knappen bare død, uten et ord om hvorfor.
 - `1.213.4` · [#1379](https://github.com/jdlarssen/golf-app/issues/1379) — Går noe galt når du publiserer en runde, står veiviseren der du forlot den: bane, tidspunkt, format, spillere og lag er intakt, og feilen står rett over Publiser-knappen. Har du valgt en spiller som ikke har fullført profilen sin, sier veiviseren fra allerede på siste steg i stedet for etter innsending.
 - `1.213.3` · [#1358](https://github.com/jdlarssen/golf-app/issues/1358) — Blir scorekortet ditt avvist, får du beskjed med en gang i stedet for å oppdage det neste gang du åpner runden. Varselet sier hvem som avviste og hvorfor, og tar deg rett til runden så du kan rette og levere på nytt.

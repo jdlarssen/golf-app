@@ -41,7 +41,12 @@ export function LocaleSwitcher() {
     <form action={setLocale} data-testid="locale-switcher">
       <input type="hidden" name="pathname" value={pathname} />
       <input type="hidden" name="search" value={search} />
-      <div className="inline-flex overflow-hidden rounded-full border border-border bg-surface shadow-sm">
+      {/* data-focus-inset: `overflow-hidden` klipper en outline med positiv
+          offset helt bort, så fokusringen tegnes på innsiden (#1386). */}
+      <div
+        data-focus-inset
+        className="inline-flex overflow-hidden rounded-full border border-border bg-surface shadow-sm"
+      >
         {routing.locales.map((locale) => {
           const isActive = locale === currentLocale;
           return (
@@ -52,7 +57,7 @@ export function LocaleSwitcher() {
               value={locale}
               data-testid={`locale-option-${locale}`}
               aria-pressed={isActive}
-              className={`flex min-h-[44px] min-w-[72px] items-center justify-center px-4 font-sans text-sm font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 first:rounded-l-full last:rounded-r-full ${
+              className={`flex min-h-[44px] min-w-[72px] items-center justify-center px-4 font-sans text-sm font-medium transition-colors duration-150 first:rounded-l-full last:rounded-r-full ${
                 isActive
                   ? 'bg-primary text-bg'
                   : 'text-muted hover:bg-primary-soft/60 hover:text-text'

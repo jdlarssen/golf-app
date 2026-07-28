@@ -63,6 +63,9 @@ export function ThemeSwitcher() {
       role="radiogroup"
       aria-label={t('groupLabel')}
       data-testid="theme-switcher"
+      // `overflow-hidden` klipper en outline med positiv offset helt bort —
+      // attributtet ber den globale fokusregelen tegne den på innsiden (#1386).
+      data-focus-inset
       className="inline-flex overflow-hidden rounded-full border border-border bg-surface shadow-sm"
     >
       {THEME_PREFERENCES.map((option) => {
@@ -75,7 +78,7 @@ export function ThemeSwitcher() {
             aria-checked={isActive}
             data-testid={`theme-option-${option}`}
             onClick={() => select(option)}
-            className={`flex min-h-[44px] min-w-[56px] items-center justify-center px-3 font-sans text-sm font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 first:rounded-l-full last:rounded-r-full ${
+            className={`flex min-h-[44px] min-w-[56px] items-center justify-center px-3 font-sans text-sm font-medium transition-colors duration-150 first:rounded-l-full last:rounded-r-full ${
               isActive
                 ? 'bg-primary text-bg'
                 : 'text-muted hover:bg-primary-soft/60 hover:text-text'

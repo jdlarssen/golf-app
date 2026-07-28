@@ -35,7 +35,9 @@ export function Input({
         id={id}
         ref={ref}
         {...props}
-        className={`w-full rounded-xl border px-3.5 py-3 bg-surface text-text placeholder-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 ${error ? 'border-danger' : 'border-border'} ${inputClassName ?? ''}`}
+        // Fokusringen kommer fra den globale `:focus-visible`-regelen (#1386);
+        // `focus:border-accent` blir stående som supplerende fargeskift.
+        className={`w-full rounded-xl border px-3.5 py-3 bg-surface text-text placeholder-muted/70 focus:border-accent transition-[border-color,box-shadow] duration-150 ${error ? 'border-danger' : 'border-border'} ${inputClassName ?? ''}`}
       />
       {error && <p className="text-xs text-danger mt-1.5">{error}</p>}
       {!error && warning && (
