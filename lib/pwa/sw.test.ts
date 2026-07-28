@@ -190,6 +190,18 @@ describe('sw.js — navigation routing', () => {
     expect(sw.put).not.toHaveBeenCalled();
   });
 
+  it.each(['/finn-turneringer', '/spillformater', '/en/finn-turneringer'])(
+    'does not cache %s — auth-optional routes render signed-in chrome (#1265 class)',
+    async (path) => {
+      const sw = bootSw();
+      sw.online('auth-optional-html');
+
+      await sw.navigate(path);
+
+      expect(sw.put).not.toHaveBeenCalled();
+    },
+  );
+
   it('precaches both offline documents on install', async () => {
     const sw = bootSw();
 
