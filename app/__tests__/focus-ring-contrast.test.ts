@@ -36,9 +36,17 @@ function block(selector: string): string {
   throw new Error(`Blokken «${selector}» lukkes aldri`);
 }
 
+/**
+ * Verdien til `--name` i `scope`. Ett tokens verdi kan peke på et annet i
+ * samme blokk (`--focus-ring-strong: var(--bg-tint)`) — da følges pekeren, slik
+ * nettleseren gjør, så tokenet beholder ett hjem (AGENTS.md felle 4).
+ */
 function readVar(scope: string, name: string): string | null {
   const hit = new RegExp(`--${name}:\\s*([^;]+);`).exec(scope);
-  return hit ? hit[1].trim() : null;
+  if (!hit) return null;
+  const value = hit[1].trim();
+  const ref = /^var\(\s*--([\w-]+)\s*\)$/.exec(value);
+  return ref ? readVar(scope, ref[1]) : value;
 }
 
 type Rgba = { r: number; g: number; b: number; a: number };
@@ -95,10 +103,13 @@ const DARK_MEDIA = block(":root:not([data-theme='light']) {");
 const DARK_ATTR = block("[data-theme='klubbhus-natt'] {");
 
 /**
- * Hver flate et fokuserbart element faktisk kan sitte på. `--primary` /
- * `--surface-strong` står bevisst ikke i lista: ingen fokuserbare elementer
- * ligger på en slik container (verifisert #1386), og med positiv outline-offset
- * er elementets egen fyll uansett irrelevant.
+ * Hver flate hovedringen kan bli tegnet på. `--primary` står ikke i lista:
+ * deep forest opptrer bare som elementets EGEN fyll (knapper, accent-tiles), og
+ * med positiv outline-offset havner ringen utenfor det fyllet, på flaten under.
+ *
+ * `--surface-strong` er derimot en container-flate med fokuserbare barn
+ * (OnboardingBanner har lukkeknappen sin oppå den), og den er bit-identisk med
+ * lys-modus-ringen. Den har derfor sin egen ring — se STRONG-testen under.
  */
 const SURFACES = [
   'bg',
@@ -114,34 +125,52 @@ const SURFACES = [
   'skel-base',
 ] as const;
 
+/** Brace-dybden på posisjon `at`: 0 = toppnivå, 1 = inne i én regelblokk. */
+function depthAt(at: number): number {
+  let depth = 0;
+  for (let i = 0; i < at; i++) {
+    if (CSS[i] === '{') depth++;
+    else if (CSS[i] === '}') depth--;
+  }
+  return depth;
+}
+
+/**
+ * Deklarasjonene som faktisk tegner eller justerer ringen. Lag-rekkefølge slår
+ * spesifisitet: havner en av dem inne i en @layer, taper den mot Tailwinds
+ * `focus:outline-none`-utilities i `@layer utilities` — og fiksen ser riktig ut
+ * i diffen uten å virke. Dybde 1 = deklarasjonen står i en ulaget toppnivå-regel.
+ *
+ * Vakten er scopet til disse tre, ikke til enhver `:focus-visible` i fila: en
+ * framtidig `@media (forced-colors: active)`-gjennomgang skal kunne neste sine
+ * egne regler uten å gjøre testen rød.
+ */
+const RING_DECLARATIONS = [
+  'outline: 2px solid var(--focus-ring);',
+  'outline-offset: -2px;',
+  '--focus-ring: var(--focus-ring-strong);',
+] as const;
+
 describe('fokus-ring (#1386)', () => {
-  it('er definert i :root, ikke bare i dark-blokkene', () => {
-    expect(readVar(ROOT, 'focus-ring')).not.toBeNull();
+  describe.each(['focus-ring', 'focus-ring-strong'])('--%s', (token) => {
+    it('er definert i :root, ikke bare i dark-blokkene', () => {
+      expect(readVar(ROOT, token)).not.toBeNull();
+    });
+
+    it('har identisk verdi i begge dark-blokkene', () => {
+      const media = readVar(DARK_MEDIA, token);
+      expect(media).not.toBeNull();
+      expect(readVar(DARK_ATTR, token)).toBe(media);
+    });
   });
 
-  it('har identisk verdi i begge dark-blokkene', () => {
-    const media = readVar(DARK_MEDIA, 'focus-ring');
-    expect(media).not.toBeNull();
-    expect(readVar(DARK_ATTR, 'focus-ring')).toBe(media);
-  });
-
-  // Lag-rekkefølge slår spesifisitet: havner :focus-visible-regelen inne i en
-  // @layer, taper den mot Tailwinds focus:outline-none-utilities i
-  // @layer utilities — og fiksen ser riktig ut i diffen uten å virke.
-  it('tegnes av regler som ligger ulaget på toppnivå', () => {
-    const found: number[] = [];
-    for (let at = CSS.indexOf(':focus-visible'); at !== -1; ) {
-      found.push(at);
-      at = CSS.indexOf(':focus-visible', at + 1);
-    }
-    expect(found.length).toBeGreaterThan(0);
-    for (const at of found) {
-      const depth = [...CSS.slice(0, at)].reduce(
-        (d, c) => (c === '{' ? d + 1 : c === '}' ? d - 1 : d),
-        0,
-      );
-      expect(depth).toBe(0);
-    }
+  it.each(RING_DECLARATIONS)('«%s» står ulaget på toppnivå', (decl) => {
+    const at = CSS.indexOf(decl);
+    expect(at, `fant ikke «${decl}» i globals.css`).toBeGreaterThan(-1);
+    expect(CSS.indexOf(decl, at + 1), 'deklarasjonen står flere steder').toBe(
+      -1,
+    );
+    expect(depthAt(at)).toBe(1);
   });
 
   describe.each([
@@ -153,6 +182,17 @@ describe('fokus-ring (#1386)', () => {
       expect(ring, '--focus-ring mangler i blokken').not.toBeNull();
       const value = readVar(tokens, surface);
       expect(value, `--${surface} mangler i blokken`).not.toBeNull();
+
+      expect(contrast(ring as string, value as string)).toBeGreaterThanOrEqual(
+        3,
+      );
+    });
+
+    it('holder 3:1 mot --surface-strong med sin egen ring', () => {
+      const ring = readVar(tokens, 'focus-ring-strong');
+      expect(ring, '--focus-ring-strong mangler i blokken').not.toBeNull();
+      const value = readVar(tokens, 'surface-strong');
+      expect(value, '--surface-strong mangler i blokken').not.toBeNull();
 
       expect(contrast(ring as string, value as string)).toBeGreaterThanOrEqual(
         3,
