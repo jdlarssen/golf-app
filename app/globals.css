@@ -121,6 +121,13 @@
    * WCAG 1.4.11 krever 3:1. Låst av app/__tests__/focus-ring-contrast.test.ts. */
   --focus-ring: #1b4332;
 
+  /* Ringen for elementer som sitter PÅ en deep-forest-container
+   * (--surface-strong). Hovedringen er bit-identisk med den flaten i dagslys —
+   * 1.00:1, altså ingen ring i det hele tatt — og OnboardingBanner har en ekte
+   * lukkeknapp der. Linen er samme farge som teksten på slike flater: 9.47:1.
+   * Bindes via [data-focus-surface='strong'] lenger ned. */
+  --focus-ring-strong: var(--bg-tint);
+
   /* Emphasized surface — always deep forest, even in dark mode. Used for
    * brand-emphasis cards/headers where the foreground is bg-tint/accent
    * (linen / gold). Cannot use --primary directly because dark --primary
@@ -166,6 +173,10 @@
     /* Solid, ikke gjennomsiktig: 0.45-alfaen målte 2.2–2.8:1 mot de mørke
      * flatene. Champagne-gløden er beholdt — 5.20:1 i verste fall. */
     --focus-ring: #d4b870;
+    /* Ringen på deep-forest-containere — se :root. Mørk --surface-strong er
+     * lysere enn dagslys-forest, men linen holder 9.71:1 og gir samme regel
+     * for begge modi. */
+    --focus-ring-strong: var(--bg-tint);
 
     /* Score tones — readable on warm forest surfaces. */
     --score-under-fg: #7daa8a;
@@ -254,6 +265,7 @@
   --player-a: #6fa3bd;     /* lifted petrol for dark bg (#496) */
   --player-b: #db8a66;     /* lifted terracotta for dark bg */
   --focus-ring: #d4b870;   /* solid — se kommentaren i media-blokken over */
+  --focus-ring-strong: var(--bg-tint);  /* se media-blokken over */
 
   --score-under-fg: #7daa8a;
   --score-under-bg: rgba(125, 170, 138, 0.18);
@@ -370,8 +382,12 @@ body {
  * kontrasterende halo via Tailwinds ring-system (`--tw-ring-offset-shadow`
  * komponerer med `--tw-shadow`, så den stomper ikke `shadow-sm`).
  *
- * `[tabindex]:not([tabindex='-1'])`: SegmentedField bruker roving tabindex, og
- * containere som fokuseres programmatisk står på -1. De skal ikke ha ring.
+ * `[tabindex]:not([tabindex='-1'])`: den grenen fanger elementer som er
+ * fokuserbare KUN fordi de har tabindex, og holder containere som fokuseres
+ * programmatisk (`tabindex="-1"`) ringløse. `:not()` begrenser bare sin egen
+ * gren: en <button> med roving tabindex="-1" (SegmentedField) matcher
+ * `button`-grenen og får ring når den faktisk er tastaturfokusert — som er
+ * meningen.
  * ---------------------------------------------------------------------------*/
 :where(
   a[href],
@@ -395,6 +411,21 @@ body {
  * fokusmarkering. Tegn outlinen på innsiden i stedet. */
 :where([data-focus-inset]) :where(a[href], button):focus-visible {
   outline-offset: -2px;
+}
+
+/* Deep-forest-containere: --surface-strong er i dagslys bit-identisk med
+ * --focus-ring (begge #1b4332), så en ring tegnet mot den flaten måler 1.00:1 —
+ * den forsvinner. Containeren som maler flaten UNDER et fokuserbart element
+ * merker seg med `data-focus-surface="strong"` og bytter ringen til linen for
+ * hele subtreet sitt. Custom properties arves, så byttet virker uavhengig av
+ * lag-rekkefølge.
+ *
+ * Gjelder kun containere. Er forest-flaten elementets EGEN fyll (accent-tiles
+ * i TilesView, bg-primary-knapper, forest-avataren i ScoreCard), tegner den
+ * positive offseten ringen utenfor fyllet, på flaten under — der holder
+ * hovedringen allerede 3:1. */
+:where([data-focus-surface='strong']) {
+  --focus-ring: var(--focus-ring-strong);
 }
 
 /* iOS Safari: a long-press on any button/link surfaces the system "Open in

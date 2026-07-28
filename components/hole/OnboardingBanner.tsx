@@ -69,7 +69,13 @@ export function OnboardingBanner(
   const t = useTranslations('holes.onboarding');
   if (!visible) return null;
   return (
-    <div style={bannerStyle}>
+    // data-focus-surface="strong": banner-flaten er --surface-strong, som i lys
+    // modus er samme farge som fokusringen. Attributtet bytter ringen til linen
+    // for lukkeknappen under. Se app/globals.css. Knappens hit-area stikker
+    // bevisst litt over banner-kanten (top: -6), så øverste ringstrek treffer
+    // side-bakgrunnen — de tre andre sidene ligger på forest og bærer
+    // markeringen.
+    <div style={bannerStyle} data-focus-surface="strong">
       <div style={chipStyle} aria-hidden="true">
         ↓
       </div>
