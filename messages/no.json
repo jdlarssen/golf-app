@@ -1140,10 +1140,11 @@
       "cup_allowance": "Handicap-andelen må være mellom 0 og 100.",
       "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen om litt.",
       "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.",
+      "pending_players_generic": "Noen på spillerlista har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.",
       "bad_registration_mode": "Valget for hvem som kan melde seg på er ugyldig. Sett det på nytt under «Hvem kan melde seg på?».",
       "bad_registration_type": "Typen påmelding er ugyldig. Velg solo, lag eller begge deler.",
       "team_registration_unsupported_mode": "Lag-påmelding funker ikke med dette formatet. Velg solo-påmelding, eller bytt til et format som spilles i lag.",
-      "unexpected": "Klarte ikke å lagre spillet ({code}). Alt du har fylt ut står her fortsatt, så prøv en gang til."
+      "unexpected": "Klarte ikke å lagre spillet ({code}). Bane, tid, format og spillere står som du satte dem, så prøv en gang til."
     },
     "page": {
       "kicker": "Spill · protokoll",

@@ -1140,10 +1140,11 @@
       "cup_allowance": "Allowance must be between 0 and 100.",
       "cup_insert_failed": "Failed to create the cup. Please try again in a moment.",
       "pending_players": "These players have not completed registration yet{list}. They must log in and fill in their name and handicap before the game can be published.",
+      "pending_players_generic": "Someone on the player list has not completed registration yet. They must log in and fill in their name and handicap before the game can be published.",
       "bad_registration_mode": "The sign-up setting is invalid. Set it again under \"Who can sign up?\".",
       "bad_registration_type": "The sign-up type is invalid. Choose solo, team or both.",
       "team_registration_unsupported_mode": "Team sign-up doesn't work with this format. Switch to solo sign-up, or pick a format played in teams.",
-      "unexpected": "Couldn't save the game ({code}). Everything you filled in is still here, so give it another go."
+      "unexpected": "Couldn't save the game ({code}). The course, time, format and players are still as you set them, so give it another go."
     },
     "page": {
       "kicker": "Games · records",

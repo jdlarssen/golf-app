@@ -1644,3 +1644,46 @@ describe('GameForm — #1011 sideturnering serialiseres inline', () => {
     expect(fd.getAll('side_ctp_count')).toEqual(['1']);
   });
 });
+
+describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
+  // Regresjon: `canPublish` deaktiverer også «Lagre endringer», men «Mangler:
+  // …»-teksten lå inne i publiser/utkast-grenen. Et scheduled spill med en
+  // spiller som ikke har fullført profilen sin ga da en død knapp uten ett
+  // eneste hint om hvorfor — arrangøren kunne ikke engang flytte tee-off.
+  const NO_OP_UPDATE = async () => {};
+
+  it('lenker den deaktiverte lagre-knappen til mangel-teksten', () => {
+    const pendingPlayer: PlayerOption = {
+      ...makePlayer('u-pending', 'Ny Spiller'),
+      pending: true,
+    };
+
+    render(
+      <GameForm
+        courses={COURSES}
+        players={[pendingPlayer]}
+        initialValues={{
+          name: 'Torsdagsrunden',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+          game_mode: 'stableford',
+          team_size: 1,
+          players: [
+            { user_id: 'u-pending', team_number: null, flight_number: null },
+          ],
+        }}
+        mode={{
+          kind: 'edit-scheduled',
+          gameId: 'game-1',
+          updateAction: NO_OP_UPDATE,
+        }}
+      />,
+    );
+
+    const saveBtn = screen.getByRole('button', { name: /lagre endringer/i });
+    expect(saveBtn).toBeDisabled();
+    expect(saveBtn).toHaveAttribute('aria-describedby', 'publish-missing');
+    expect(document.getElementById('publish-missing')).toBeInTheDocument();
+  });
+});
