@@ -22,6 +22,13 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 - **Delta, ikke dump:** finn forrige brief-kommentar på #1110 (nyeste kommentar
   som starter med `☀️ Morgenbrief`); rapporter kun endringer etter dens
   tidsstempel. Første brief noensinne: siste 24 timer.
+- **Titler er ikke nok (eierbeslutning 2026-07-28, #1408):** hver sak i gruppene
+  «Trenger deg nå», «Klar for natt-kø», «Auto-køet» og «Skjedde i natt» følges av
+  en innrykket `↳`-detaljlinje på 1–3 setninger produktspråk: hva saken betyr i
+  appen, og for handlingslinjer hva som skjer ved tapp. Hent teksten fra
+  funksjonell-setninger (kontrakt-json, closing-kommentarer, CHANGELOG) der de
+  finnes; skriv den ellers selv i samme tone («Du kan nå …»). Aldri filnavn,
+  branch-navn eller CI-sjargong i ↳-linja. «Loop-helse» er unntatt (telemetri).
 - **Tom natt gir én linje** («ingen aktivitet — heartbeats OK»), aldri
   ingenting. Stillhet fra briefen selv skal bety at briefen feilet; da er
   claude.ai/code/routines-siden eierens fallback.
@@ -35,17 +42,23 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 
 **Trenger deg nå:**
 - Godkjenn PR #M — <issue-tittel>; evaluate ACCEPT, gates grønne[, e2e grønn / needs-manual-qa: <flyt>] → <lenke>
+  ↳ <1–3 setninger produktspråk: hva endringen gjør i appen, og hva som skjer når du godkjenner>
 - Svar A/B på #N — <én setning om spørsmålet> → <lenke>
+  ↳ <1–3 setninger: hva A og hva B betyr i bruk — forskjellen eieren faktisk merker>
 - 🛠 #N trenger kontrakt-økt — kjør `/forge:contract` på #N → <lenke>
+  ↳ <1–2 setninger: hva saken gjelder og hvorfor den trenger en økt med deg>
 
 **Klar for natt-kø (ett tapp = køet):**
 - #N — <funksjonell-setning fra kontrakten>; forge-kontrakt klar, ikke merket enda → 🌙 <lenke>
+  ↳ <1–2 setninger: hva du/spillerne kan gjøre i appen når den er bygget>
 
 **Auto-køet (bygges i natt — tapp ⏸ for å stoppe):**
 - 🔧 #N — <funksjonell-setning> → <lenke>
+  ↳ <1–2 setninger: hva som blir annerledes, og hvorfor den er trygg å bygge uten deg>
 
 **Skjedde i natt/i går:**
 - <merget PR / lukket issue / CI-vakt-fiks — kun verifiserte fakta, med lenke>
+  ↳ <1–2 setninger: hva som er annerledes i appen nå — «Du kan nå …» / «Når X skjer, …»; ingen synlig endring → si det ærlig («ingen synlig endring — <hva som ble ryddet, i produktspråk>»)>
 - 🔧 #N — <funksjonell> (auto-køet ren-teknikk bygget i natt; revisjonsspor #1302)
 
 **Loop-helse:**
@@ -173,7 +186,10 @@ handlingslinjene i «Trenger deg nå» — custom_id-kontrakten er
 torsdags-melding — se docs/loops/utroperen.md; briefen sender aldri den knappen.)
 
 Maks 5 knapper per rad (Discords grense); flere handlinger → flere rader/meldinger.
-Innhold over 1800 tegn: forkort og lenk til #1110-kommentaren.
+Innhold over 1800 tegn: del briefen gruppe-vis i flere meldinger (knappene festes
+på meldingen med sine handlingslinjer) — ↳-detaljlinjene kuttes ikke (#1408).
+Sprenger én enkelt gruppe grensa alene: forkort ↳-linjene i den gruppa og lenk
+til #1110-kommentaren for resten.
 
 **Kun webhook (`DISCORD_WEBHOOK_URL`):** fall tilbake til ren tekst-speiling
 som før (vanlige webhooks kan ikke sende komponenter).
