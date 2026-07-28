@@ -9,6 +9,7 @@ import type {
   RegistrationMode,
   RegistrationType,
 } from '@/lib/games/registration';
+import type { CreateGameResult } from './actions';
 import { ModeSelector } from './ModeSelector';
 import { TeamSizeSelector, type TeamSize } from './TeamSizeSelector';
 import { useGameFormState } from './useGameFormState';
@@ -292,9 +293,13 @@ export type InitialValues = {
  */
 export type GameFormMode =
   | {
+      // #1379: create-actionene RETURNERER feilkoder (redirecter kun ved
+      // suksess), så veiviseren kan vise feilen uten å miste state-en sin.
+      // Edit-grenene under redirecter fortsatt selv ved feil — der eier
+      // serveren tilstanden og re-henter den fra DB.
       kind: 'create';
-      createDraftAction: (formData: FormData) => Promise<void>;
-      createAndPublishAction: (formData: FormData) => Promise<void>;
+      createDraftAction: (formData: FormData) => Promise<CreateGameResult>;
+      createAndPublishAction: (formData: FormData) => Promise<CreateGameResult>;
     }
   | {
       kind: 'edit-draft';
@@ -374,9 +379,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       }
     | null {
     if (mode.kind === 'create') {
+      // #1379: create-actionene returnerer nå en feilkode i stedet for å
+      // redirecte. Denne stacked-varianten har ingen flate å vise den på —
+      // og ingen rute mounter den i create-modus lenger (veiviseren eide
+      // opprett-flyten fra #1061). Normaliser til void så `formAction`-typen
+      // holder; ReadyStep er den som faktisk leser resultatet.
+      const { createAndPublishAction, createDraftAction } = mode;
       return {
-        publish: mode.createAndPublishAction,
-        draft: mode.createDraftAction,
+        publish: async (formData: FormData) => {
+          await createAndPublishAction(formData);
+        },
+        draft: async (formData: FormData) => {
+          await createDraftAction(formData);
+        },
       };
     }
     if (mode.kind === 'edit-draft') {

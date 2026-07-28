@@ -14,11 +14,17 @@ import {
  * the loose draft subset.
  *
  * #427: creation is open to ANY logged-in user. The action authenticates
- * FIRST (so it knows `isAdmin`, which decides where errors bounce and where
- * success lands), then validates. There is no service-role bypass anymore —
- * creator-owned RLS (migration 0071) covers a non-admin's writes on the
- * request-scoped client, and the publish pending-gate uses a SECURITY DEFINER
- * RPC (`incomplete_profiles_for_ids`) instead of a service-role roster read.
+ * FIRST (so it knows `isAdmin`, which decides where success lands), then
+ * validates. There is no service-role bypass anymore — creator-owned RLS
+ * (migration 0071) covers a non-admin's writes on the request-scoped client,
+ * and the publish pending-gate uses a SECURITY DEFINER RPC
+ * (`incomplete_profiles_for_ids`) instead of a service-role roster read.
+ *
+ * #1379: validation and DB failures are RETURNED as `{ error: <code> }`, never
+ * redirected. The wizard keeps its whole state client-side, so a redirect back
+ * to the create route remounted the form and wiped course, tee-off, format,
+ * players and teams. Only success (and the dead-session auth gate) redirects —
+ * a returned value therefore always means something went wrong.
  *
  * Sequence for the publish-mode happy path:
  *   1. auth.getUser  → redirect /login if absent
@@ -137,32 +143,33 @@ describe('createGameDraft', () => {
     expect(redirectMock).toHaveBeenCalledWith('/login');
   });
 
-  it('validation (admin): redirects to /admin/games/new?error=name_required', async () => {
+  it('validation (admin): returns { error: name_required } without navigating', async () => {
     // Gate runs first (reads is_admin), THEN buildGameInsertPayload rejects the
-    // empty name. Admin → errors bounce to /admin/games/new.
+    // empty name. #1379: the code comes back as a return value — no redirect,
+    // so the wizard stays mounted with everything the organiser filled in.
     supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
     signIn('admin-1');
 
     const { createGameDraft } = await import('./actions');
 
-    await expect(createGameDraft(fd({ name: '   ' }))).rejects.toBeInstanceOf(
-      RedirectError,
-    );
-    expect(lastRedirect()).toBe('/admin/games/new?error=name_required');
+    const res = await createGameDraft(fd({ name: '   ' }));
+    expect(res).toEqual({ error: 'name_required' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   // F2 (#272): isValidActiveGameMode gating før insert.
-  it('validation (admin): redirects to ?error=invalid_game_mode when slug not in formats table', async () => {
+  it('validation (admin): returns { error: invalid_game_mode } when slug not in formats table', async () => {
     supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
     validateGameModeMock.mockResolvedValueOnce(false);
     signIn('admin-1');
 
     const { createGameDraft } = await import('./actions');
 
-    await expect(
-      createGameDraft(fd({ name: 'Tester', side_tournament_enabled: 'false' })),
-    ).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/admin/games/new?error=invalid_game_mode');
+    const res = await createGameDraft(
+      fd({ name: 'Tester', side_tournament_enabled: 'false' }),
+    );
+    expect(res).toEqual({ error: 'invalid_game_mode' });
+    expect(redirectMock).not.toHaveBeenCalled();
     expect(validateGameModeMock).toHaveBeenCalled();
   });
 
@@ -221,19 +228,22 @@ describe('createGameInternal — open to any logged-in user (#427)', () => {
     );
   });
 
-  it('regular non-admin: validation errors bounce back to /opprett-spill (not /admin/*)', async () => {
+  it('regular non-admin: validation errors come back as a code, not a navigation', async () => {
+    // Pre-#1379 this asserted WHERE the error bounced (/opprett-spill vs
+    // /admin/games/new). There is no bounce anymore — the same code reaches
+    // both routes as a return value, so the question is now "right code, no
+    // navigation".
     supabaseMock = buildSupabaseMock([{ data: { is_admin: false }, error: null }]);
     signIn('reg-1', 'random@example.com');
 
     const { createGameDraft } = await import('./actions');
 
-    await expect(createGameDraft(fd({ name: '   ' }))).rejects.toBeInstanceOf(
-      RedirectError,
-    );
-    expect(lastRedirect()).toBe('/opprett-spill?error=name_required');
+    const res = await createGameDraft(fd({ name: '   ' }));
+    expect(res).toEqual({ error: 'name_required' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it('regular non-admin publish: pending player bounces to /opprett-spill?error=pending_players', async () => {
+  it('regular non-admin publish: pending player returns { error: pending_players }', async () => {
     supabaseMock = buildSupabaseMock(
       [{ data: { is_admin: false }, error: null }], // gate only — RPC blocks before insert
       { incomplete_profiles_for_ids: [{ id: 'u1', email: 'u1@example.com' }] },
@@ -242,32 +252,30 @@ describe('createGameInternal — open to any logged-in user (#427)', () => {
 
     const { createAndPublishGame } = await import('./actions');
 
-    await expect(
-      createAndPublishGame(fullPublishFormData()),
-    ).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/opprett-spill?error=pending_players');
+    const res = await createAndPublishGame(fullPublishFormData());
+    expect(res).toEqual({ error: 'pending_players' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });
 
 describe('createAndPublishGame', () => {
-  it('validation (admin): redirects with ?error=course_required when course is missing on publish', async () => {
+  it('validation (admin): returns { error: course_required } when course is missing on publish', async () => {
     supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
     signIn('admin-1');
 
     const { createAndPublishGame } = await import('./actions');
 
-    await expect(
-      createAndPublishGame(
-        fullPublishFormData({ course_id: '' }), // drop course
-      ),
-    ).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/admin/games/new?error=course_required');
+    const res = await createAndPublishGame(
+      fullPublishFormData({ course_id: '' }), // drop course
+    );
+    expect(res).toEqual({ error: 'course_required' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it('edge case (publish guard): redirects with ?error=pending_players when a roster player has no completed profile', async () => {
+  it('edge case (publish guard): returns { error: pending_players } when a roster player has no completed profile', async () => {
     // The publish path calls the incomplete_profiles_for_ids RPC, which returns
     // ONLY the rows that still lack a completed profile. A non-empty result
-    // blocks the publish — the action redirects before the games.insert call.
+    // blocks the publish — the action returns before the games.insert call.
     supabaseMock = buildSupabaseMock(
       [{ data: { is_admin: true }, error: null }], // gate
       {
@@ -280,10 +288,9 @@ describe('createAndPublishGame', () => {
 
     const { createAndPublishGame } = await import('./actions');
 
-    await expect(
-      createAndPublishGame(fullPublishFormData()),
-    ).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/admin/games/new?error=pending_players');
+    const res = await createAndPublishGame(fullPublishFormData());
+    expect(res).toEqual({ error: 'pending_players' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it('happy path (publish): inserts scheduled game, redirects with ?status=scheduled', async () => {
@@ -361,7 +368,7 @@ describe('createAndPublishGame', () => {
     });
   });
 
-  it('fourball publish uten allowance: redirects med ?error=bad_allowance', async () => {
+  it('fourball publish uten allowance: returnerer { error: bad_allowance }', async () => {
     // Validator-en (`validateFourballMatchplay`) krever eksplisitt
     // `fourball_allowance_pct` ved publish. Tom/manglende verdi → bad_allowance.
     supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
@@ -369,37 +376,36 @@ describe('createAndPublishGame', () => {
 
     const { createAndPublishGame } = await import('./actions');
 
-    await expect(
-      createAndPublishGame(
-        fd({
-          name: 'Fourball uten allowance',
-          course_id: 'course-1',
-          tee_box_id: 'tee-1',
-          hcp_allowance_pct: '100',
-          scheduled_tee_off_at: FUTURE_TEE_OFF,
-          side_tournament_enabled: 'false',
-          game_mode: 'fourball_matchplay',
-          // Bevisst dropper fourball_allowance_pct
-          player_0_id: 'u0',
-          player_0_team: '1',
-          player_0_flight: '1',
-          player_1_id: 'u1',
-          player_1_team: '1',
-          player_1_flight: '1',
-          player_2_id: 'u2',
-          player_2_team: '2',
-          player_2_flight: '2',
-          player_3_id: 'u3',
-          player_3_team: '2',
-          player_3_flight: '2',
-        }),
-      ),
-    ).rejects.toBeInstanceOf(RedirectError);
+    const res = await createAndPublishGame(
+      fd({
+        name: 'Fourball uten allowance',
+        course_id: 'course-1',
+        tee_box_id: 'tee-1',
+        hcp_allowance_pct: '100',
+        scheduled_tee_off_at: FUTURE_TEE_OFF,
+        side_tournament_enabled: 'false',
+        game_mode: 'fourball_matchplay',
+        // Bevisst dropper fourball_allowance_pct
+        player_0_id: 'u0',
+        player_0_team: '1',
+        player_0_flight: '1',
+        player_1_id: 'u1',
+        player_1_team: '1',
+        player_1_flight: '1',
+        player_2_id: 'u2',
+        player_2_team: '2',
+        player_2_flight: '2',
+        player_3_id: 'u3',
+        player_3_team: '2',
+        player_3_flight: '2',
+      }),
+    );
 
-    expect(lastRedirect()).toBe('/admin/games/new?error=bad_allowance');
+    expect(res).toEqual({ error: 'bad_allowance' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it('publish med tee-off i fortid: redirects med ?error=tee_off_in_past (#902)', async () => {
+  it('publish med tee-off i fortid: returnerer { error: tee_off_in_past } (#902)', async () => {
     // The guard fires after the tee-off parse, before the pending-gate RPC and
     // the games.insert — so only the is_admin gate row is consumed, and no write
     // should happen.
@@ -408,13 +414,12 @@ describe('createAndPublishGame', () => {
 
     const { createAndPublishGame } = await import('./actions');
 
-    await expect(
-      createAndPublishGame(
-        fullPublishFormData({ scheduled_tee_off_at: '2020-01-01T09:00' }),
-      ),
-    ).rejects.toBeInstanceOf(RedirectError);
+    const res = await createAndPublishGame(
+      fullPublishFormData({ scheduled_tee_off_at: '2020-01-01T09:00' }),
+    );
 
-    expect(lastRedirect()).toBe('/admin/games/new?error=tee_off_in_past');
+    expect(res).toEqual({ error: 'tee_off_in_past' });
+    expect(redirectMock).not.toHaveBeenCalled();
     expect(
       supabaseMock.__fromCalls.find(
         (c) => c.table === 'games' && c.method === 'insert',
@@ -589,9 +594,9 @@ describe('createGameInternal — rollback on player-insert failure (#737)', () =
     signIn('admin-1');
 
     const { createGameDraft } = await import('./actions');
-    await expect(
-      createGameDraft(fd({ name: 'Orphan-test', side_tournament_enabled: 'false' })),
-    ).rejects.toBeInstanceOf(RedirectError);
+    const res = await createGameDraft(
+      fd({ name: 'Orphan-test', side_tournament_enabled: 'false' }),
+    );
 
     // The committed game row is rolled back — no half-built game is left behind.
     const del = supabaseMock.__fromCalls.find(
@@ -602,7 +607,9 @@ describe('createGameInternal — rollback on player-insert failure (#737)', () =
       (c) => c.table === 'games' && c.method === 'eq',
     );
     expect(eqCall!.args).toEqual(['id', 'g-orphan']);
-    // A localized error surfaces (never a silent orphan).
-    expect(lastRedirect()).toBe('/admin/games/new?error=db_players');
+    // A localized error surfaces (never a silent orphan) — as a return value,
+    // so the wizard can show it without losing what the organiser typed.
+    expect(res).toEqual({ error: 'db_players' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });

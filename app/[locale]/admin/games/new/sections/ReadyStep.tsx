@@ -16,12 +16,14 @@
  * mounter den i wizard-stegtreet.
  */
 
-import { useState } from 'react';
+import { useActionState, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatTeeOffLineLocale } from '@/lib/i18n/format';
 import type { GameFormMode } from '../GameForm';
+import type { CreateGameResult } from '../actions';
 import type { GameFormState } from '../useGameFormState';
+import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
@@ -31,6 +33,9 @@ import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import type { TeamSize } from '../TeamSizeSelector';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
+
+/** «Ingen feil»-formen; delt så useActionState-initen er referanse-stabil. */
+const NO_ERROR: CreateGameResult = { error: '' };
 
 type Props = {
   state: GameFormState;
@@ -181,6 +186,46 @@ export function ReadyStep({
     return null;
   }
   const actions = resolveActions();
+
+  // #1379: publiser/utkast går gjennom useActionState i stedet for en rå
+  // server-action, slik at en serverfeil returneres som state til en fortsatt
+  // montert veiviser — i stedet for en redirect som monterte den på nytt og
+  // slettet alt arrangøren hadde fylt ut. Samme mønster som CreateLigaForm.
+  // Hookene kalles ubetinget (resolveActions kan gi null for edit-scheduled),
+  // så guarden ligger inne i closuren.
+  const [publishResult, publishAction] = useActionState(
+    async (
+      _prev: CreateGameResult,
+      formData: FormData,
+    ): Promise<CreateGameResult> => {
+      // edit-draft-actionene returnerer void og redirecter selv ved feil —
+      // normaliser til «ingen feil» så state-formen er lik for begge modi.
+      return (await actions?.publish(formData)) ?? NO_ERROR;
+    },
+    NO_ERROR,
+  );
+  const [draftResult, draftAction] = useActionState(
+    async (
+      _prev: CreateGameResult,
+      formData: FormData,
+    ): Promise<CreateGameResult> => {
+      return (await actions?.draft(formData)) ?? NO_ERROR;
+    },
+    NO_ERROR,
+  );
+
+  // Kode → melding. Samme oppslags-figur som opprett-sidenes ?error=-banner,
+  // men med eksplisitt fallback i stedet for stille ingenting: en ukjent kode
+  // skal aldri gi tom skjerm.
+  const submitErrorCode = publishResult.error || draftResult.error;
+  const submitErrorMessage = (() => {
+    if (!submitErrorCode) return null;
+    const key = `errors.${submitErrorCode}` as Parameters<typeof tWizard>[0];
+    // `list` brukes kun av pending_players; ekstra verdier ignoreres ellers.
+    return tWizard.has(key)
+      ? tWizard(key, { list: '' })
+      : tWizard('errors.unexpected', { code: submitErrorCode });
+  })();
 
   // MODE_SUMMARY_LABELS — deliberately different wording from lib's MODE_LABELS.
   // Look up via catalog key so values are locale-aware.
@@ -477,9 +522,17 @@ export function ReadyStep({
       {/* Publish + draft knapper — speiler GameForm submit-seksjonen. */}
       {actions && (
         <div className="space-y-3 pt-1">
+          {/* #1379: serverfeilen står rett over knappen som utløste den —
+              veiviseren er fortsatt montert, så alt arrangøren fylte ut er
+              der. testId så e2e slipper å låse norsk copy. */}
+          {submitErrorMessage && (
+            <Banner tone="error" testId="wizard-submit-error">
+              {submitErrorMessage}
+            </Banner>
+          )}
           <Button
             type="submit"
-            formAction={actions.publish}
+            formAction={publishAction}
             className="w-full"
             disabled={!canPublish}
             aria-describedby={
@@ -521,7 +574,7 @@ export function ReadyStep({
           <Button
             type="submit"
             variant="secondary"
-            formAction={actions.draft}
+            formAction={draftAction}
             formNoValidate
             className="w-full"
             disabled={name.trim() === ''}

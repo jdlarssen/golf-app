@@ -11,6 +11,7 @@ import {
   isTeeOffInPast,
   parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
+import type { GameValidationErrorCode } from '@/lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
@@ -26,23 +27,51 @@ function uiGenderToDb(ui: string): 'mens' | 'ladies' | 'juniors' {
   return ui === 'D' ? 'ladies' : ui === 'J' ? 'juniors' : 'mens';
 }
 
-export async function createGameDraft(formData: FormData) {
-  await createGameInternal(formData, 'draft');
+/**
+ * Feilkoder opprett-actionene kan returnere. Alle har en nøkkel under
+ * `wizard.errors.*` i messages/{no,en}.json.
+ */
+export type CreateGameErrorCode =
+  | GameValidationErrorCode
+  | 'invalid_game_mode'
+  | 'tee_off_required'
+  | 'tee_off_in_past'
+  | 'bad_side_ld_count'
+  | 'bad_side_ctp_count'
+  | 'db_roster'
+  | 'pending_players'
+  | 'db_game'
+  | 'db_players';
+
+/**
+ * #1379: feil RETURNERES i stedet for å redirecte. Veiviseren holder all
+ * tilstand klient-side, så en redirect tilbake til opprett-ruta monterte
+ * skjemaet på nytt og slettet bane, tidspunkt, format, spillere og lag.
+ * Suksess redirecter fortsatt (kaster NEXT_REDIRECT), så en returnert
+ * verdi betyr alltid at noe gikk galt.
+ */
+export type CreateGameResult = { error: CreateGameErrorCode | '' };
+
+export async function createGameDraft(
+  formData: FormData,
+): Promise<CreateGameResult> {
+  return createGameInternal(formData, 'draft');
 }
 
-export async function createAndPublishGame(formData: FormData) {
-  await createGameInternal(formData, 'publish');
+export async function createAndPublishGame(
+  formData: FormData,
+): Promise<CreateGameResult> {
+  return createGameInternal(formData, 'publish');
 }
 
 async function createGameInternal(
   formData: FormData,
   mode: 'draft' | 'publish',
-) {
+): Promise<CreateGameResult> {
   // #427: any logged-in user may create their own game (was admin/trusted-only).
-  // Gate first so we know `isAdmin` — it decides both where errors bounce back
-  // to (admins use /admin/games/new, everyone else /opprett-spill) and the
-  // success destination. created_by = the user; creator-owned RLS (migration
-  // 0071) covers the writes, so there's no service-role bypass anymore.
+  // Gate first so we know `isAdmin` — it decides the success destination.
+  // created_by = the user; creator-owned RLS (migration 0071) covers the
+  // writes, so there's no service-role bypass anymore.
   const locale = await getLocale();
   const supabase = await getServerClient();
   const {
@@ -56,12 +85,11 @@ async function createGameInternal(
     .eq('id', userId)
     .single();
   const isAdmin = gateProfile?.is_admin === true;
-  const errorBase = isAdmin ? '/admin/games/new' : '/opprett-spill';
 
   const payload = buildGameInsertPayload(formData, mode);
 
   if (payload.errorCode) {
-    redirect({ href: `${errorBase}?error=${payload.errorCode}`, locale });
+    return { error: payload.errorCode };
   }
 
   // F2 (#272): valider game_mode-slug mot formats-tabellen. Erstatter den
@@ -71,11 +99,11 @@ async function createGameInternal(
   // opprette ugyldige games.
   const modeValid = await isValidActiveGameMode(payload.game_mode);
   if (!modeValid) {
-    redirect({ href: `${errorBase}?error=invalid_game_mode`, locale });
+    return { error: 'invalid_game_mode' };
   }
 
   // Tee-off handling:
-  // - Publish: required. Empty or malformed input redirects with an error.
+  // - Publish: required. Empty or malformed input returns an error code.
   // - Draft: optional. Empty or malformed input silently persists as NULL,
   //   so an admin can save a draft without committing to a tee-off yet,
   //   and a valid value carries forward when the draft is later published.
@@ -90,12 +118,12 @@ async function createGameInternal(
       // formats). Publish surfaces this as a validation error; draft
       // tolerates it as "no tee-off provided".
       if (mode === 'publish') {
-        redirect({ href: `${errorBase}?error=tee_off_required`, locale });
+        return { error: 'tee_off_required' };
       }
       scheduledTeeOffAt = null;
     }
   } else if (mode === 'publish') {
-    redirect({ href: `${errorBase}?error=tee_off_required`, locale });
+    return { error: 'tee_off_required' };
   }
 
   // #902: block publishing a game whose tee-off is in the past. A past tee-off
@@ -110,18 +138,16 @@ async function createGameInternal(
     scheduledTeeOffAt &&
     isTeeOffInPast(scheduledTeeOffAt)
   ) {
-    redirect({ href: `${errorBase}?error=tee_off_in_past`, locale });
+    return { error: 'tee_off_in_past' };
   }
 
   // Side-tournament config. Master toggle gates the LD/CTP counts; when off,
   // both counts persist as 0 (matches the DB CHECK in 0024_side_tournament).
   const sideResult = parseSideTournamentFromFormData(formData);
   if (!sideResult.ok) {
-    redirect({ href: `${errorBase}?error=${sideResult.errorCode}`, locale });
+    return { error: sideResult.errorCode };
   }
-  // TypeScript cannot narrow past next-intl redirect (not declared `never` at
-  // call-site); assert ok branch explicitly.
-  const sidePayload = (sideResult as Extract<typeof sideResult, { ok: true }>).payload;
+  const sidePayload = sideResult.payload;
   const {
     enabled: sideEnabled,
     ldCount: sideLdCount,
@@ -151,11 +177,15 @@ async function createGameInternal(
 
     if (rosterErr) {
       console.error('[createGameInternal] roster check failed', rosterErr);
-      redirect({ href: `${errorBase}?error=db_roster`, locale });
+      return { error: 'db_roster' };
     }
 
+    // Personvern (#435): ingen e-postliste i returverdien — opprett-ruta er
+    // åpen for alle innloggede (#427), og medspilleres adresser skal ikke
+    // lekke til en ikke-admin arrangør. Klient-gaten i useGameFormState
+    // fanger tilfellet på steg 5 uansett; denne er backstop.
     if ((incomplete ?? []).length > 0) {
-      redirect({ href: `${errorBase}?error=pending_players`, locale });
+      return { error: 'pending_players' };
     }
   }
 
@@ -250,7 +280,7 @@ async function createGameInternal(
 
   if (gameError || !game) {
     console.error('[createGameInternal] game insert failed', gameError);
-    redirect({ href: `${errorBase}?error=db_game`, locale });
+    return { error: 'db_game' };
   }
 
   // #1009: gjeste-rader (skygge-brukere fra veiviserens «Legg til gjest») må
@@ -264,7 +294,7 @@ async function createGameInternal(
   const rows = payload.players.map((p) => {
     const playerGenderUi = String(formData.get(`player_${p.user_id}_gender`) ?? 'M');
     return {
-      game_id: game!.id,
+      game_id: game.id,
       user_id: p.user_id,
       team_number: p.team_number,
       flight_number: p.flight_number,
@@ -296,9 +326,9 @@ async function createGameInternal(
     // tom, ødelagt runde i listene sine, og ingen kan rydde den. Skaperen har
     // DELETE-RLS på egne games (0071), så request-klienten kan slette her;
     // game_players cascade-ryddes av FK (0001). Speiler #675-rollbacken i cup/liga.
-    await supabase.from('games').delete().eq('id', game!.id);
+    await supabase.from('games').delete().eq('id', game.id);
     console.error('[createGameInternal] game_players insert failed', gpError);
-    redirect({ href: `${errorBase}?error=db_players`, locale });
+    return { error: 'db_players' };
   }
 
   // Best-effort `invite`-varsler for hver tilkommet spiller (skip inviter
@@ -316,7 +346,7 @@ async function createGameInternal(
       newPlayerIds.map((recipientUserId) =>
         notifyInvitedToGame({
           recipientUserId,
-          gameId: game!.id,
+          gameId: game.id,
           inviterUserId: userId,
         }),
       ),
@@ -339,12 +369,17 @@ async function createGameInternal(
 
   if (isAdmin) {
     redirect({
-      href: `/admin/games/${game!.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
+      href: `/admin/games/${game.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
       locale,
     });
   }
   // Trusted-non-admin creator (#198): admin-layouten ville bounce-et dem fra
   // /admin/* til `/`, så de aldri så spillet sitt. Send dem rett til game-home
   // (spiller-visningen) i stedet for blindveien (#363).
-  redirect({ href: `/games/${game!.id}`, locale });
+  redirect({ href: `/games/${game.id}`, locale });
+
+  // Uåtkommelig: redirect() over kaster NEXT_REDIRECT. TS kan ikke bruke den
+  // til control-flow (destrukturert const fra createNavigation mangler
+  // eksplisitt type-annotasjon), så vi trenger en formell retur.
+  return { error: '' };
 }
