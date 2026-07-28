@@ -24,6 +24,15 @@ describe('notificationDestination', () => {
     ).toBe(`/games/${GAME}`);
     expect(
       notificationDestination(
+        n('scorecard_rejected', {
+          game_id: GAME,
+          game_name: 'X',
+          rejecter_name: 'Per',
+        }),
+      ),
+    ).toBe(`/games/${GAME}`);
+    expect(
+      notificationDestination(
         n('game_finished', { game_id: GAME, game_name: 'X' }),
       ),
     ).toBe(`/games/${GAME}/leaderboard`);

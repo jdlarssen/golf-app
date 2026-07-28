@@ -59,6 +59,19 @@ export function buildNotificationText(
         }),
       };
     }
+    case 'scorecard_rejected': {
+      const p = payload as NotificationPayload<'scorecard_rejected'>;
+      return {
+        title: t('kinds.scorecardRejected.title'),
+        detail: t('kinds.scorecardRejected.detail', {
+          rejecterName: p.rejecter_name ?? t('somePlayerFallback'),
+          gameName: p.game_name,
+          // Utelatt reason = attestanten skrev ingenting; vis en lokalisert
+          // tekst i stedet for DB-radens norske plassholder (#1358).
+          reason: p.reason ?? t('kinds.scorecardRejected.defaultReason'),
+        }),
+      };
+    }
     case 'game_finished': {
       const p = payload as NotificationPayload<'game_finished'>;
       return {

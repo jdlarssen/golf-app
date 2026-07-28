@@ -90,6 +90,11 @@
         "title": "Scorekortet er godkjent",
         "detail": "{approverName} godkjente kortet i {gameName}"
       },
+      "scorecardRejected": {
+        "title": "Scorekortet må rettes",
+        "detail": "{rejecterName} avviste kortet i {gameName}: {reason}",
+        "defaultReason": "ingen grunn oppgitt"
+      },
       "gameFinished": {
         "title": "Resultatet er klart",
         "detail": "{gameName}"

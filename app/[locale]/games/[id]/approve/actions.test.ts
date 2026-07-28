@@ -49,6 +49,13 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+const notifyMock = vi.fn<
+  (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
+>(async () => ({ shouldAlsoSendMail: false }));
+vi.mock('@/lib/notifications/notify', () => ({
+  notify: (...args: unknown[]) => notifyMock(...args),
+}));
+
 function lastRedirect(): string | undefined {
   const arg = redirectMock.mock.calls.at(-1)?.[0];
   if (!arg) return undefined;
@@ -294,5 +301,72 @@ describe('rejectScorecard', () => {
     ).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/games/game-1/approve?error=db');
     expect(revalidateTagMock).not.toHaveBeenCalled();
+    // I3: a 0-row write must not announce something that never happened.
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('#1358: notifies the player with scorecard_rejected when the card is rejected', async () => {
+    // The /approve banner promises «Spilleren blir varslet», but the action
+    // only cleared submitted_at — the player found out next time they opened
+    // the game, if ever.
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games (loadAndAuthorize)
+      { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: [{ user_id: 'player-2' }], error: null }, // game_players.update → 1 row
+      { data: { name: 'Sommercup' }, error: null }, // games.name (notify block)
+      { data: { name: 'Kari' }, error: null }, // users.name (the rejecter)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { rejectScorecard } = await import('./actions');
+
+    await expect(
+      rejectScorecard('game-1', makeFormData('player-2')),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'player-2',
+      kind: 'scorecard_rejected',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Sommercup',
+        rejecter_name: 'Kari',
+        reason: 'Feil sum',
+      },
+    });
+  });
+
+  it('#1358: omits reason from the payload when the rejecter wrote nothing', async () => {
+    // The DB row keeps its own «Ingen grunn oppgitt» placeholder, but the
+    // notification leaves `reason` out so the card can render a localised
+    // default instead of a hardcoded Norwegian string.
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: [{ user_id: 'player-2' }], error: null }, // game_players.update → 1 row
+      { data: { name: 'Sommercup' }, error: null }, // games.name
+      { data: { name: null }, error: null }, // users.name — rejecter has no name
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { rejectScorecard } = await import('./actions');
+
+    await expect(
+      rejectScorecard('game-1', makeFormData('player-2', '   ')),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'player-2',
+      kind: 'scorecard_rejected',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Sommercup',
+        rejecter_name: null,
+      },
+    });
   });
 });

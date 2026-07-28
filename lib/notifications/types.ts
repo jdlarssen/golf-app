@@ -10,6 +10,7 @@ export type NotificationKind =
   | 'peer_approval_request'
   | 'scorecard_submitted'
   | 'scorecard_approved'
+  | 'scorecard_rejected'
   | 'game_finished'
   | 'product_update'
   | 'team_invite'
@@ -62,6 +63,21 @@ const scorecardApprovedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
   approver_name: z.string().min(1),
+});
+
+// scorecard_rejected: en attestant (medspiller, oppretter eller admin) avviste
+// scorekortet (#1358). Til den som leverte. UPDATE-en nullstiller submitted_at,
+// så spilleren MÅ rette og levere på nytt før spillet kan avsluttes — dette er
+// et handlingsvarsel, ikke bare en beskjed. Deeplinker til /games/[game_id] der
+// rejection-banneret allerede står med begrunnelse og veien videre.
+// rejecter_name nullable: NotificationCard fyller locale-fallbacken ved render
+// (#583). `reason` utelates når attestanten ikke skrev noe — kortet viser da en
+// lokalisert defaultReason i stedet for DB-radens norske plassholdertekst.
+const scorecardRejectedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  rejecter_name: z.string().min(1).nullable().optional(),
+  reason: z.string().optional(),
 });
 
 const gameFinishedSchema = z.object({
@@ -291,6 +307,7 @@ const schemas = {
   peer_approval_request: peerApprovalRequestSchema,
   scorecard_submitted: scorecardSubmittedSchema,
   scorecard_approved: scorecardApprovedSchema,
+  scorecard_rejected: scorecardRejectedSchema,
   game_finished: gameFinishedSchema,
   product_update: productUpdateSchema,
   team_invite: teamInviteSchema,
