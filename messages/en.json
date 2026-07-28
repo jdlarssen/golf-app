@@ -975,7 +975,8 @@
         "teamMatchplayAssign": "side assignment (2 per side)",
         "soloMin": "at least one player",
         "invalidAllowance": "valid HCP allowance",
-        "categoryMissingRating": "one or more players have a category the tee does not rate"
+        "categoryMissingRating": "one or more players have a category the tee does not rate",
+        "pendingProfiles": "{count, plural, one {1 player who hasn't finished their profile} other {# players who haven't finished their profiles}}"
       }
     },
     "steps": {
@@ -1138,7 +1139,11 @@
       "cup_team_dup": "The teams must have different names.",
       "cup_allowance": "Allowance must be between 0 and 100.",
       "cup_insert_failed": "Failed to create the cup. Please try again in a moment.",
-      "pending_players": "These players have not completed registration yet{list}. They must log in and fill in their name and handicap before the game can be published."
+      "pending_players": "These players have not completed registration yet{list}. They must log in and fill in their name and handicap before the game can be published.",
+      "bad_registration_mode": "The sign-up setting is invalid. Set it again under \"Who can sign up?\".",
+      "bad_registration_type": "The sign-up type is invalid. Choose solo, team or both.",
+      "team_registration_unsupported_mode": "Team sign-up doesn't work with this format. Switch to solo sign-up, or pick a format played in teams.",
+      "unexpected": "Couldn't save the game ({code}). Everything you filled in is still here, so give it another go."
     },
     "page": {
       "kicker": "Games · records",

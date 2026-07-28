@@ -1504,6 +1504,17 @@ export function useGameFormState({
     (pid) => !teeGenderAvailability[playerGenders[pid] ?? 'M'],
   );
 
+  // #1379: profil-gaten som til nå bare fantes server-side (opprett:
+  // incomplete_profiles_for_ids-RPC i actions.ts; edit: samme RPC i
+  // updateGameInternal). Server-gaten avviste først ETTER innsending, og
+  // arrangøren måtte gjette hvem som manglet. Nå ligger regelen der den kan
+  // handles på. Gjester teller ALDRI: createGuestForWizard setter
+  // profile_completed_at og returnerer pending=false. En id som ikke finnes i
+  // allPlayers behandles som ikke-pending — server-backstoppen tar den.
+  const pendingProfileCount = selectedPlayerIds.filter(
+    (pid) => allPlayers.find((p) => p.id === pid)?.pending === true,
+  ).length;
+
   const canPublish =
     courseId !== '' &&
     teeBoxId !== '' &&
@@ -1513,7 +1524,8 @@ export function useGameFormState({
       : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey || isPatsome || isTeamMatchplay || allowanceValid) &&
     hasTeeOff &&
     !teeOffInPast &&
-    playersWithUnratedCategory.length === 0;
+    playersWithUnratedCategory.length === 0 &&
+    pendingProfileCount === 0;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
   // best-ball-stien teller opp til 8 spillere + lag-/flight-fordeling,
@@ -1541,6 +1553,12 @@ export function useGameFormState({
   // klem-ved-tee-bytte, men pre-eksisterende edit-data kan ha ugyldig tilstand.
   if (playersWithUnratedCategory.length > 0)
     pushMissing('players', tMissing('categoryMissingRating'));
+  // #1379: utenfor playersStepOptional-grenen — server-gaten kjører på den
+  // innsendte rosteren uansett registration_mode. Koden 'players' gir «Gå til
+  // spillere»-lenken gratis. Ingen navn i teksten: en pending bruker har
+  // users.name = null, og fallbacken er e-post som ikke-admins ikke får (#435).
+  if (pendingProfileCount > 0)
+    pushMissing('players', tMissing('pendingProfiles', { count: pendingProfileCount }));
   // Når selv-påmelding er på er spillerlisten valgfri ved publish; vi
   // hopper over per-modus completeness-meldingene helt. hcp_allowance-
   // sjekken nederst gjelder fortsatt fordi den er en konfig-verdi, ikke

@@ -41,7 +41,9 @@ const EIGHT_PLAYERS: PlayerOption[] = Array.from({ length: 8 }, (_, i) =>
   makePlayer(`u${i}`, `Spiller ${i + 1}`),
 );
 
-const NO_OP = async () => {};
+// #1379: create-actionene returnerer et resultat i stedet for å redirecte
+// ved feil. `{ error: '' }` er «alt gikk bra»-formen.
+const NO_OP = async () => ({ error: '' }) as const;
 
 describe('GameForm — baseline (pre-fase-4)', () => {
   it('rendrer spillere-seksjonen med spiller-checkbox-liste når availablePlayers har spillere', () => {

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GameWizard } from './GameWizard';
 import type { CourseOption, PlayerOption } from './GameForm';
+import type { CreateGameResult } from './actions';
 import type {
   FormatForIntent,
   CupEligibleFormat,
@@ -97,7 +98,9 @@ const CUP_ELIGIBLE: CupEligibleFormat[] = [
   { slug: 'fourball_matchplay', icon_key: 'fourball_matchplay' },
 ];
 
-const NO_OP = async () => {};
+// #1379: opprett-actionene returnerer nå et resultat i stedet for å redirecte
+// ved feil. `{ error: '' }` er «alt gikk bra»-formen.
+const NO_OP = async (): Promise<CreateGameResult> => ({ error: '' });
 
 function renderWizard({
   players = EIGHT_PLAYERS,
@@ -110,8 +113,8 @@ function renderWizard({
 }: {
   players?: PlayerOption[];
   friendPlayerIds?: string[];
-  createDraftAction?: (fd: FormData) => Promise<void>;
-  createAndPublishAction?: (fd: FormData) => Promise<void>;
+  createDraftAction?: (fd: FormData) => Promise<CreateGameResult>;
+  createAndPublishAction?: (fd: FormData) => Promise<CreateGameResult>;
   initialValues?: Parameters<typeof GameWizard>[0]['initialValues'];
 } = {}) {
   return render(
@@ -203,6 +206,45 @@ describe('GameWizard — happy-path solo stableford', () => {
       name: /publiser/i,
     });
     expect(publishBtn).not.toBeDisabled();
+  });
+
+  // #1379: en serverfeil ved publisering skal IKKE kaste arrangøren ut av
+  // veiviseren. Før fiksen redirectet actionen til `?error=…`, veiviseren ble
+  // montert på nytt og bane/format/spillere var borte. Testen spør kun om det
+  // ene: overlever valgene feilen, og ser arrangøren den?
+  it('serverfeil ved publisering beholder steg 5 og valgene, og viser banner', async () => {
+    const failingPublish = vi.fn(
+      async (): Promise<CreateGameResult> => ({ error: 'db_game' }),
+    );
+    renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      createAndPublishAction: failingPublish,
+    });
+
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    clickNext();
+    expectStep(5);
+
+    fireEvent.click(screen.getByRole('button', { name: /publiser/i }));
+
+    expect(await screen.findByTestId('wizard-submit-error')).toBeInTheDocument();
+    expect(failingPublish).toHaveBeenCalled();
+    // Fortsatt på steg 5, med banen fra steg 3 i summary-kortet.
+    expectStep(5);
+    expect(screen.getByText('Stiklestad GK')).toBeInTheDocument();
   });
 
   it('Forrige-knappen er disabled på steg 1', () => {
@@ -576,7 +618,7 @@ describe('GameWizard — #1065 steg-4-gate: registreringsvalg ikke tatt ennå', 
 
 describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
   it('publiserer med samme FormData-keys som GameForm ville sendt', async () => {
-    const publishSpy = vi.fn(async () => {});
+    const publishSpy = vi.fn(async (): Promise<CreateGameResult> => ({ error: '' }));
     const { container } = renderWizard({
       players: EIGHT_PLAYERS.slice(0, 2),
       createAndPublishAction: publishSpy,
