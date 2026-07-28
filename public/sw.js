@@ -32,12 +32,6 @@ const PUBLIC_NAV_PREFIXES = [
   // Legal / info pages — no personal data, no auth gate.
   '/legal/',
   ...LOCALES.map((l) => `/${l}/legal/`),
-  // Format catalogue — publicly browsable, no auth.
-  '/spillformater',
-  ...LOCALES.map((l) => `/${l}/spillformater`),
-  // Discover-tournaments page — publicly browsable, no auth.
-  '/finn-turneringer',
-  ...LOCALES.map((l) => `/${l}/finn-turneringer`),
   // Login page — no personal data, needed for offline UX shell.
   '/login',
   ...LOCALES.map((l) => `/${l}/login`),
@@ -54,6 +48,18 @@ const PUBLIC_NAV_PREFIXES = [
 // what an offline relaunch got served. No navigation is exact-matched any
 // more; the offline documents are precached explicitly in the install handler
 // instead.
+//
+// `/spillformater` and `/finn-turneringer` came off the list for the SAME
+// reason. "Publicly browsable" is not the test — "renders nothing personal" is.
+// Both are auth-OPTIONAL (#1185, #1264, #1265): anonymous visitors are not
+// redirected, but a signed-in visitor gets the bottom nav and, on
+// /finn-turneringer, their friends' and clubs' rounds. That HTML is personal,
+// so it must never reach the cache. Dropping them costs no offline UX: they
+// are still handled by the fetch handler (shouldCache) and now fall through to
+// the neutral offline document like every other non-allowlisted route.
+//
+// The rule for anyone editing this list: a route belongs here only if its HTML
+// is byte-identical for an anonymous visitor and a signed-in one.
 
 // Precached, user-data-free offline documents (#1350). Plain static files in
 // public/ — deliberately NOT Next routes: the SW serves the document on the
