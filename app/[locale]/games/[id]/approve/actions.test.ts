@@ -13,7 +13,7 @@ import {
  *   2. games.select(status, game_mode).single
  *   3. users.select(is_admin).single
  *   4. (if not admin) game_players.select(user_id, flight_number, withdrawn_at)
- *      for entire game (peersForApproval — #543)
+ *      for entire game (canApproveScorecardFor — #543)
  *
  * Then on the action itself:
  *   5. game_players.update(...).eq.eq.not.is.select  (resolves to affected rows)
@@ -127,7 +127,7 @@ describe('approveScorecard', () => {
           { user_id: 'side2', flight_number: 2, withdrawn_at: null },
         ],
         error: null,
-      }, // game_players for peersForApproval
+      }, // game_players for attestant-regelen
       { data: [], error: null }, // game_players.update → 0 rows (RLS blocked)
       { data: { approved_at: null }, error: null }, // follow-up read: still not approved
     ]);
@@ -158,7 +158,7 @@ describe('approveScorecard', () => {
           { user_id: 'side2', flight_number: 2, withdrawn_at: null },
         ],
         error: null,
-      }, // game_players for peersForApproval
+      }, // game_players for attestant-regelen
       { data: [], error: null }, // game_players.update → 0 rows (already approved)
       { data: { approved_at: '2026-06-17T10:00:00Z' }, error: null }, // follow-up read: already approved
     ]);
@@ -280,7 +280,7 @@ describe('rejectScorecard', () => {
           { user_id: 'side2', flight_number: 2, withdrawn_at: null },
         ],
         error: null,
-      }, // game_players for peersForApproval
+      }, // game_players for attestant-regelen
       { data: [], error: null }, // game_players.update → 0 rows (RLS blocked)
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({

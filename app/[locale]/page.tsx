@@ -371,7 +371,6 @@ async function HomeBody() {
           inProgressGames.map((g) => ({
             id: g.id,
             game_mode: g.game_mode,
-            flightNumber: g.flightNumber,
             require_peer_approval: g.require_peer_approval,
             submitted_at: g.submitted_at,
             withdrawn_at: g.withdrawn_at,

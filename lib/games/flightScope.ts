@@ -120,19 +120,61 @@ export function peersForApproval(
   gameMode: GameMode,
   userId: string,
 ): string[] {
-  const active = activePlayers(players);
-  if (isSingleFlightGame(gameMode, players)) {
-    // Én-flight: alle andre aktive spillere er attestanter.
-    return active
-      .filter((p) => p.user_id !== userId)
-      .map((p) => p.user_id);
-  }
-  // >4-spill med assigned flights: kun samme flight.
-  const me = active.find((p) => p.user_id === userId);
-  if (!me || me.flight_number == null) return [];
-  return active
-    .filter((p) => p.user_id !== userId && p.flight_number === me.flight_number)
+  return activePlayers(players)
+    .filter((p) => canApproveScorecardFor(players, gameMode, p.user_id, userId))
     .map((p) => p.user_id);
+}
+
+/**
+ * True når `approverUserId` kan attestere `ownerUserId`s scorekort i dette
+ * spillet. TS-tvillingen til SQL-funksjonen `can_score_for` (migrasjon 0095) —
+ * hold dem i synk: RLS er den ekte porten, dette er UI-/action-speilet.
+ *
+ * Krever at BEGGE er aktive (`can_score_for` krever `withdrawn_at is null` på
+ * begge sider). Én-flight-spill (≤4 aktive eller wolf) → på tvers av
+ * sider/lag; ellers samme tildelte flight.
+ *
+ * Dette er det ene hjemmet for attestant-regelen: `peersForApproval`
+ * (varsling + authz) og `pendingApprovalsFor` (alle tellere og lister) er
+ * derivert herfra, så flatene ikke kan divergere (AGENTS.md trap 4).
+ */
+export function canApproveScorecardFor(
+  players: FlightPlayer[],
+  gameMode: GameMode,
+  approverUserId: string,
+  ownerUserId: string,
+): boolean {
+  // Ingen selv-godkjenning (speiler trigger-vakta i 0103).
+  if (approverUserId === ownerUserId) return false;
+  const approver = players.find((p) => p.user_id === approverUserId);
+  const owner = players.find((p) => p.user_id === ownerUserId);
+  if (!approver || !owner) return false;
+  if (approver.withdrawn_at != null || owner.withdrawn_at != null) return false;
+  if (isSingleFlightGame(gameMode, players)) return true;
+  return (
+    approver.flight_number != null &&
+    approver.flight_number === owner.flight_number
+  );
+}
+
+/**
+ * Scorekortene `approverUserId` faktisk kan godkjenne nå: levert, ikke
+ * godkjent ennå, og innenfor attestant-regelen. Delt av /approve-siden,
+ * spill-hjem-banneret og hjem-kortene så teller og liste aldri kan si ulike
+ * ting.
+ */
+export function pendingApprovalsFor<
+  T extends FlightPlayer & {
+    submitted_at: string | null;
+    approved_at: string | null;
+  },
+>(players: T[], gameMode: GameMode, approverUserId: string): T[] {
+  return players.filter(
+    (p) =>
+      p.submitted_at != null &&
+      p.approved_at == null &&
+      canApproveScorecardFor(players, gameMode, approverUserId, p.user_id),
+  );
 }
 
 /**

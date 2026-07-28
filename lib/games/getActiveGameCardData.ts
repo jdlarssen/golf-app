@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { isSingleFlightGame } from './flightScope';
+import { pendingApprovalsFor } from './flightScope';
 import { resolveActiveCardState, type ActiveCardState } from './activeCardState';
 
 const HOLE_COUNT = 18;
@@ -10,7 +10,6 @@ const HOLE_COUNT = 18;
 export type ActiveGameForCard = {
   id: string;
   game_mode: GameMode;
-  flightNumber: number | null;
   require_peer_approval: boolean;
   submitted_at: string | null;
   withdrawn_at: string | null;
@@ -119,29 +118,13 @@ export async function getActiveGameCardData(
 
     let pendingApprovalsForMe = 0;
     if (g.require_peer_approval) {
-      const all = matesByGame.get(g.id) ?? [];
-      // #543 single-flight rule: ≤4 active players (or wolf) → everyone attests.
-      const singleFlight = isSingleFlightGame(
+      // #543/#1359: the attestation rule has one home — the same selector the
+      // /approve page renders from, so this badge can't promise a card the
+      // page won't show.
+      pendingApprovalsForMe = pendingApprovalsFor(
+        matesByGame.get(g.id) ?? [],
         g.game_mode,
-        all.map((m) => ({
-          user_id: m.user_id,
-          flight_number: m.flight_number,
-          withdrawn_at: m.withdrawn_at,
-        })),
-      );
-      // Mirror PendingApprovalsBanner exactly: outside single-flight, only
-      // same-flight peers attest, and a null viewer flight matches no one.
-      const mates = singleFlight
-        ? all
-        : all.filter(
-            (m) =>
-              g.flightNumber != null && m.flight_number === g.flightNumber,
-          );
-      pendingApprovalsForMe = mates.filter(
-        (m) =>
-          m.user_id !== userId &&
-          m.submitted_at != null &&
-          m.approved_at == null,
+        userId,
       ).length;
     }
 

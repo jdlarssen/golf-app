@@ -1689,7 +1689,7 @@
         "approved": "✓ Scorecard approved.",
         "rejected": "Scorecard rejected. The player has been notified."
       },
-      "noPending": "No scorecards are waiting for approval in your flight.",
+      "noPending": "No scorecards are waiting for your approval.",
       "brutto": "Gross:",
       "playedHoles": "Holes played:",
       "showCard": "Show 18-hole card",

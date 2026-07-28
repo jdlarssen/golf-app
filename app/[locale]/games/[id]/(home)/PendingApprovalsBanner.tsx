@@ -1,28 +1,27 @@
 import { getTranslations } from 'next-intl/server';
 import { Banner } from '@/components/ui/Banner';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { isSingleFlightGame } from '@/lib/games/flightScope';
+import { pendingApprovalsFor } from '@/lib/games/flightScope';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { getGameContext } from './gameContext';
 
 type FlightMatePlayerRow = {
   user_id: string;
-  flight_number: number;
+  flight_number: number | null;
   submitted_at: string | null;
   approved_at: string | null;
+  withdrawn_at: string | null;
 };
 
 export async function PendingApprovalsBanner({
   gameId,
   gameMode,
-  flightNumber,
   currentUserId,
   requirePeerApproval,
   isActive,
 }: {
   gameId: string;
   gameMode: GameMode;
-  flightNumber: number | null;
   currentUserId: string;
   requirePeerApproval: boolean;
   isActive: boolean;
@@ -30,34 +29,19 @@ export async function PendingApprovalsBanner({
   if (!requirePeerApproval || !isActive) return null;
 
   const { supabase } = await getGameContext();
-  // Hent alle aktive spillere for å avgjøre singleFlight.
+  // Hele rosteret — attestant-regelen trenger både flight og withdrawn_at.
   const { data: allMates } = await supabase
     .from('game_players')
     .select('user_id, flight_number, submitted_at, approved_at, withdrawn_at')
     .eq('game_id', gameId)
-    .returns<(FlightMatePlayerRow & { withdrawn_at: string | null })[]>();
+    .returns<FlightMatePlayerRow[]>();
 
-  // #543: én-flight-regelen — alle i spillet er attestanter.
-  const singleFlight = isSingleFlightGame(
+  // #543/#1359: samme selektor som /approve-siden bruker, så telleren i
+  // banneret og lista på siden aldri kan si ulike ting.
+  const pendingApprovalsForMe = pendingApprovalsFor(
+    allMates ?? [],
     gameMode,
-    (allMates ?? []).map((m) => ({
-      user_id: m.user_id,
-      flight_number: m.flight_number,
-      withdrawn_at: m.withdrawn_at,
-    })),
-  );
-  const mates = singleFlight
-    ? (allMates ?? [])
-    : (allMates ?? []).filter(
-        (m) =>
-          flightNumber != null && m.flight_number === flightNumber,
-      );
-
-  const pendingApprovalsForMe = (mates ?? []).filter(
-    (m) =>
-      m.user_id !== currentUserId &&
-      m.submitted_at != null &&
-      m.approved_at == null,
+    currentUserId,
   ).length;
 
   if (pendingApprovalsForMe === 0) return null;

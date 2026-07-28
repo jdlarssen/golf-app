@@ -902,7 +902,6 @@ export default async function GameHomePage({
         <PendingApprovalsBanner
           gameId={id}
           gameMode={game.game_mode}
-          flightNumber={me.flight_number}
           currentUserId={userId}
           requirePeerApproval={game.require_peer_approval}
           isActive={isActive}

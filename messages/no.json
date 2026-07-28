@@ -1689,7 +1689,7 @@
         "approved": "✓ Scorekort godkjent.",
         "rejected": "Scorekortet ble avvist. Spilleren blir varslet."
       },
-      "noPending": "Ingen scorekort venter på godkjenning i flighten din.",
+      "noPending": "Ingen scorekort venter på godkjenning fra deg.",
       "brutto": "Brutto:",
       "playedHoles": "Spilte hull:",
       "showCard": "Vis 18-hulls-kort",
