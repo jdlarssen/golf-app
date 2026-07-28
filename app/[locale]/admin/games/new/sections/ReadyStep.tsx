@@ -16,7 +16,7 @@
  * mounter den i wizard-stegtreet.
  */
 
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatTeeOffLineLocale } from '@/lib/i18n/format';
@@ -36,6 +36,14 @@ import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
 
 /** «Ingen feil»-formen; delt så useActionState-initen er referanse-stabil. */
 const NO_ERROR: CreateGameResult = { error: '' };
+
+/**
+ * Server-svaret pluss en stempel-teller. Publiser og «Lagre utkast» har hver
+ * sin useActionState, og uten en felles teller vet ikke banneret hvilket av de
+ * to svarene som er det ferskeste.
+ */
+type SubmitState = CreateGameResult & { seq: number };
+const NO_SUBMIT: SubmitState = { error: '', seq: 0 };
 
 type Props = {
   state: GameFormState;
@@ -193,37 +201,46 @@ export function ReadyStep({
   // slettet alt arrangøren hadde fylt ut. Samme mønster som CreateLigaForm.
   // Hookene kalles ubetinget (resolveActions kan gi null for edit-scheduled),
   // så guarden ligger inne i closuren.
+  // Stempel-teller delt av begge hookene: hvert svar som kommer i mål får et
+  // høyere tall enn det forrige, så banneret kan vise det ferskeste. Uten den
+  // låste en publiser-feil banneret for godt — et påfølgende «Lagre utkast»
+  // som feilet med en ANNEN kode viste fortsatt publiser-teksten.
+  const resultSeq = useRef(0);
   const [publishResult, publishAction] = useActionState(
-    async (
-      _prev: CreateGameResult,
-      formData: FormData,
-    ): Promise<CreateGameResult> => {
+    async (_prev: SubmitState, formData: FormData): Promise<SubmitState> => {
       // edit-draft-actionene returnerer void og redirecter selv ved feil —
       // normaliser til «ingen feil» så state-formen er lik for begge modi.
-      return (await actions?.publish(formData)) ?? NO_ERROR;
+      const result = (await actions?.publish(formData)) ?? NO_ERROR;
+      return { ...result, seq: ++resultSeq.current };
     },
-    NO_ERROR,
+    NO_SUBMIT,
   );
   const [draftResult, draftAction] = useActionState(
-    async (
-      _prev: CreateGameResult,
-      formData: FormData,
-    ): Promise<CreateGameResult> => {
-      return (await actions?.draft(formData)) ?? NO_ERROR;
+    async (_prev: SubmitState, formData: FormData): Promise<SubmitState> => {
+      const result = (await actions?.draft(formData)) ?? NO_ERROR;
+      return { ...result, seq: ++resultSeq.current };
     },
-    NO_ERROR,
+    NO_SUBMIT,
   );
 
   // Kode → melding. Samme oppslags-figur som opprett-sidenes ?error=-banner,
   // men med eksplisitt fallback i stedet for stille ingenting: en ukjent kode
   // skal aldri gi tom skjerm.
-  const submitErrorCode = publishResult.error || draftResult.error;
+  const submitErrorCode =
+    draftResult.seq > publishResult.seq ? draftResult.error : publishResult.error;
   const submitErrorMessage = (() => {
     if (!submitErrorCode) return null;
-    const key = `errors.${submitErrorCode}` as Parameters<typeof tWizard>[0];
-    // `list` brukes kun av pending_players; ekstra verdier ignoreres ellers.
+    // `pending_players`-teksten peker på en liste med e-poster som bare
+    // edit-flyten har («Disse spillerne …{list}»). Opprett-actionen sender
+    // ingen liste — den ville uansett lekket e-poster til ikke-admins (#435)
+    // — så her brukes varianten som står på egne ben uten liste.
+    const key = (
+      submitErrorCode === 'pending_players'
+        ? 'errors.pending_players_generic'
+        : `errors.${submitErrorCode}`
+    ) as Parameters<typeof tWizard>[0];
     return tWizard.has(key)
-      ? tWizard(key, { list: '' })
+      ? tWizard(key)
       : tWizard('errors.unexpected', { code: submitErrorCode });
   })();
 

@@ -404,6 +404,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   }
   const draftPublishActions = getDraftAndPublishActions();
 
+  // #1379: «Mangler: …» hører til HVER knapp `canPublish` deaktiverer, ikke
+  // bare publiser-knappen. edit-scheduled deler nøyaktig samme gate (inkludert
+  // den nye pending-profil-regelen), så da teksten bare lå i publiser/utkast-
+  // grenen ble «Lagre endringer» en død knapp uten forklaring — arrangøren
+  // kunne ikke engang flytte tee-off. Grenene er gjensidig utelukkende
+  // (`draftPublishActions` er null for edit-scheduled), så id-en er unik.
+  const missingHint =
+    !canPublish && missingForPublish.length > 0 ? (
+      <p id="publish-missing" className="text-xs text-muted text-center">
+        {t('missingPrefix', { items: missingForPublish.join(', ') })}
+      </p>
+    ) : null;
+
   // #909: ett-linjes sammendrag vist i kollapset tilstand for hvert panel, så
   // admin ser hva som ligger inni uten å brette ut.
   const playersSummary = t('panelPlayersSummary', {
@@ -931,14 +944,18 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           // split — just a single save button. Tee-off is required (same
           // gate as publish) since you can't un-set a tee-off on a scheduled
           // game.
-          <Button
-            type="submit"
-            formAction={mode.updateAction.bind(null, mode.gameId)}
-            className="w-full"
-            disabled={!canPublish}
-          >
-            {t('saveChangesButton')}
-          </Button>
+          <>
+            <Button
+              type="submit"
+              formAction={mode.updateAction.bind(null, mode.gameId)}
+              className="w-full"
+              disabled={!canPublish}
+              aria-describedby={missingHint ? 'publish-missing' : undefined}
+            >
+              {t('saveChangesButton')}
+            </Button>
+            {missingHint}
+          </>
         )}
 
         {draftPublishActions && (
@@ -951,22 +968,11 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               formAction={draftPublishActions.publish}
               className="w-full"
               disabled={!canPublish}
-              aria-describedby={
-                !canPublish && missingForPublish.length > 0
-                  ? 'publish-missing'
-                  : undefined
-              }
+              aria-describedby={missingHint ? 'publish-missing' : undefined}
             >
               {t('publishButton')}
             </Button>
-            {!canPublish && missingForPublish.length > 0 && (
-              <p
-                id="publish-missing"
-                className="text-xs text-muted text-center"
-              >
-                {t('missingPrefix', { items: missingForPublish.join(', ') })}
-              </p>
-            )}
+            {missingHint}
             <Button
               type="submit"
               variant="secondary"
