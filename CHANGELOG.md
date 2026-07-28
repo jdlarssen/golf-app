@@ -1359,9 +1359,10 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 32 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 33 rettinger</strong></summary>
 
-- `1.213.1` · [#1359](https://github.com/jdlarssen/golf-app/issues/1359) — Scorekortene du skal attestere dukker opp på Godkjenn-siden igjen. I singelmatch og lagformater havnet du før på en tom side selv om varselet sa at makkeren ventet på deg — og runden kunne ikke avsluttes.
+- `1.213.2` · [#1359](https://github.com/jdlarssen/golf-app/issues/1359) — Varselet om scorekort til godkjenning sier nå at de venter på deg, i stedet for å påstå at spilleren er i flighten din — i singelmatch og lagformater attesterer du for motstanderen.
+- `1.213.1` · [#1359](https://github.com/jdlarssen/golf-app/issues/1359) — Godkjenn-siden viser scorekortene du faktisk skal attestere: i singelmatch og lagformater sto du på en tom side selv om varselet sa at makkeren ventet på deg, og runden kunne ikke avsluttes.
 - `1.211.2` · [#1293](https://github.com/jdlarssen/golf-app/issues/1293) — Reaksjonene på resultattavla tar mindre plass: bare reaksjonene som er gitt vises som små brikker, og hele emoji-paletten ligger nå bak én «reager»-knapp. Et smalt tre-spiller-podium fylles ikke lenger av seks store emoji-knapper per spiller.
 - `1.209.1` · [#1321](https://github.com/jdlarssen/golf-app/issues/1321) — Databasen stopper igjen forsøk på å endre egen trekking eller eget lag/flight utenom appen — vaktene fra tidligere rettinger står på plass.
 - `1.208.6` · [#1304](https://github.com/jdlarssen/golf-app/issues/1304) — Planlagte spill starter av seg selv til oppsatt tid igjen — auto-starten fulgte ikke med da nettadressen byttet hovedform.
