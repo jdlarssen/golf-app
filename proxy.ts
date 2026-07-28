@@ -340,6 +340,11 @@ export const config = {
   //   - PWA assets (must be reachable while logged out so the browser can
   //     evaluate them for install): sw.js, manifest.webmanifest, icon,
   //     icon0, apple-icon
+  //   - offline.html, offline-en.html (#1350): the SW's precached offline
+  //     fallback documents. Plain files in public/, so the i18n rewrite would
+  //     send /offline.html to /no/offline.html and miss them — and the SW
+  //     precaches them on install, before anyone is logged in. Same mechanism
+  //     and same reason as sw.js above.
   //   - favicon.ico, *.svg/png/jpg/jpeg/gif/webp/ico (static assets)
   //   - sitemap.xml, robots.txt (#1023): root-level metadata routes
   //     (app/sitemap.ts, app/robots.ts) live OUTSIDE app/[locale]/, so the
@@ -354,6 +359,6 @@ export const config = {
   // here: they need the i18n rewrite to resolve at all, so the proxy matches
   // them and skips auth in code via PUBLIC_PATH_PATTERN instead.
   matcher: [
-    '/((?!_next/static|_next/image|api/|sw\\.js|manifest\\.webmanifest|sitemap\\.xml|robots\\.txt|\\.well-known|icon|icon0|apple-icon|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|api/|sw\\.js|offline\\.html|offline-en\\.html|manifest\\.webmanifest|sitemap\\.xml|robots\\.txt|\\.well-known|icon|icon0|apple-icon|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };

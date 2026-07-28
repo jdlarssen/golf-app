@@ -2,7 +2,9 @@
 //
 // Strategy:
 //   * Runtime caching only — we do NOT precache hashed Next.js chunks because
-//     they change every build. The first navigation seeds the cache.
+//     they change every build. The first navigation seeds the cache. The one
+//     exception is the offline fallback document (#1350), which must be there
+//     before the network is gone.
 //   * Network-first for HTML navigations so online users see fresh content.
 //   * Cache-first for /_next/* static assets (immutable, content-hashed).
 //   * Pass-through for cross-origin (e.g. Supabase) and /auth/* and /api/*.
@@ -16,7 +18,8 @@
 // Bump CACHE_VERSION when SW logic changes so old clients get the new SW
 // and stale entries (including any authed HTML cached by the old v1 SW)
 // are evicted during activate.
-const CACHE_VERSION = 'v3';
+// v4 (#1350): precached offline document + `/` removed from the allowlist.
+const CACHE_VERSION = 'v4';
 const RUNTIME_CACHE = `golf-app-runtime-${CACHE_VERSION}`;
 
 // Locale prefixes that next-intl injects (keep in sync with i18n config).
@@ -38,14 +41,54 @@ const PUBLIC_NAV_PREFIXES = [
   // Login page — no personal data, needed for offline UX shell.
   '/login',
   ...LOCALES.map((l) => `/${l}/login`),
+  // The offline fallback documents (#1350) — plain static files, no user data.
+  // Precached on install; listed here so a direct online visit refreshes them.
+  '/offline.html',
+  '/offline-en.html',
 ];
 
-// Exact paths whose HTML is safe to cache (home / app shell).
-const PUBLIC_NAV_EXACT = ['/', ...LOCALES.map((l) => `/${l}`)];
+// `/` used to sit on an exact-match allowlist here. Since #1265 the root route
+// renders the PERSONALIZED signed-in home page (first name, active games,
+// streak) — caching it breaks the invariant at the top of this file (#819),
+// and because the manifest's start_url is `/`, that cached copy was exactly
+// what an offline relaunch got served. No navigation is exact-matched any
+// more; the offline documents are precached explicitly in the install handler
+// instead.
 
-self.addEventListener('install', () => {
-  // Take over as soon as the new SW is installed; we have no precache to wait on.
-  self.skipWaiting();
+// Precached, user-data-free offline documents (#1350). Plain static files in
+// public/ — deliberately NOT Next routes: the SW serves the document on the
+// FAILING url (e.g. /games/<id>/holes/6), and a React/App-Router document that
+// hydrates against a different route than window.location has no defined
+// behavior. A framework-free page has no such coupling, and needs no cached
+// /_next chunk to be readable.
+// NB: bump CACHE_VERSION when the contents of these files change — they are
+// only re-fetched when a new SW installs.
+const OFFLINE_DOC_NO = '/offline.html';
+const OFFLINE_DOC_EN = '/offline-en.html';
+
+// Only the non-default locale carries a url prefix (i18n/routing.ts:
+// localePrefix 'as-needed'), so anything that is not /en/... is Norwegian.
+function offlineDocFor(pathname) {
+  return pathname === '/en' || pathname.startsWith('/en/')
+    ? OFFLINE_DOC_EN
+    : OFFLINE_DOC_NO;
+}
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const cache = await caches.open(RUNTIME_CACHE);
+        await cache.addAll([OFFLINE_DOC_NO, OFFLINE_DOC_EN]);
+      } catch {
+        // Best effort: a failed precache must NEVER fail the install — that
+        // would leave the old SW in place. The fetch handler copes with a
+        // missing fallback.
+      }
+      // Take over as soon as the new SW is installed.
+      await self.skipWaiting();
+    })(),
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -76,9 +119,7 @@ function shouldCache(url) {
 // Authenticated routes (profile, admin, games, cup, liga, innboks, …)
 // return false and their HTML is never written to the cache.
 function isPublicNavigation(url) {
-  const { pathname } = url;
-  if (PUBLIC_NAV_EXACT.includes(pathname)) return true;
-  return PUBLIC_NAV_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  return PUBLIC_NAV_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
 }
 
 self.addEventListener('fetch', (event) => {
@@ -105,18 +146,19 @@ self.addEventListener('fetch', (event) => {
           }
           return fresh;
         } catch {
-          // Offline fallback: serve cached public shell if available.
+          const cache = await caches.open(RUNTIME_CACHE);
+          // Offline: the exact public shell we hit, if we have it.
           if (cacheAllowed) {
-            const cache = await caches.open(RUNTIME_CACHE);
             const cached = await cache.match(request);
             if (cached) return cached;
           }
-          // Fall back to the cached home/app-shell regardless of route —
-          // showing a generic shell is safe; showing another user's authed
-          // HTML is not.
-          const cache = await caches.open(RUNTIME_CACHE);
-          const shell = await cache.match('/');
-          if (shell) return shell;
+          // Otherwise the neutral offline document. It holds no user data, so
+          // it is safe for ANY route — unlike the cached `/` shell this used
+          // to serve, which since #1265 is a personalized home page (#819).
+          // It is delivered on the ORIGINAL url, so "Prøv igjen"
+          // (<a href="">) retries exactly the route the user was heading for.
+          const fallback = await cache.match(offlineDocFor(url.pathname));
+          if (fallback) return fallback;
           return Response.error();
         }
       })(),

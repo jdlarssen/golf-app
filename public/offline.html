@@ -1,0 +1,57 @@
+<!doctype html>
+<!--
+  Offline fallback document (#1350). Served by public/sw.js on ANY navigation
+  that fails while offline, on the URL the user was heading for.
+
+  Deliberately framework-free and fully self-contained: no /_next chunk, no
+  React, no external CSS. Hashed chunks change every build and are unlikely to
+  be in the cache exactly when this page is needed. Do NOT "improve" this into
+  a Next route — an App Router document hydrating against a router state for
+  /offline while window.location says /games/<id>/holes/6 has no defined
+  behavior, and combined with the nav-failure handler a reload loop is a real
+  outcome.
+
+  Palette mirrors app/globals.css (forest + champagne + linen), same precedent
+  as the hand-written 404 response in proxy.ts.
+  NB: bump CACHE_VERSION in public/sw.js when this file changes — it is only
+  re-fetched when a new service worker installs.
+-->
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Uten nett · Tørny</title>
+<style>
+:root{color-scheme:light dark}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;background:#F8F6F0;color:#1B4332;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{margin:0;font-size:1.5rem;font-weight:600}
+p{margin:0;max-width:22rem;color:#4b5a52;line-height:1.5}
+.actions{display:flex;flex-direction:column;gap:.75rem;margin-top:.5rem;width:100%;max-width:18rem}
+a,button{display:flex;align-items:center;justify-content:center;min-height:44px;padding:.65rem 1.25rem;border-radius:9999px;font:inherit;font-weight:500;text-decoration:none;cursor:pointer}
+a{background:#1B4332;color:#F8F6F0;border:none}
+button{background:transparent;color:#1B4332;border:1px solid #1B4332}
+button[hidden]{display:none}
+@media(prefers-color-scheme:dark){body{background:#12211a;color:#F8F6F0}p{color:#b7c4bc}a{background:#C9A961;color:#12211a}button{color:#F8F6F0;border-color:#F8F6F0}}
+</style>
+</head>
+<body data-testid="offline-fallback">
+<h1>Du er uten nett</h1>
+<p>Slagene du har tastet ligger på telefonen. De sendes så snart nettet er tilbake.</p>
+<div class="actions">
+  <!-- href="" = this document's own URL. The SW serves the page on the failing
+       route, so this is a plain, JS-free retry of exactly that navigation. -->
+  <a href="" data-testid="offline-retry">Prøv igjen</a>
+  <button type="button" id="back" data-testid="offline-back" hidden>Tilbake</button>
+</div>
+<script>
+  // Inline (no chunk to load offline). Only offer "Tilbake" when there is
+  // history to go back to.
+  var b = document.getElementById('back');
+  if (history.length > 1) {
+    b.hidden = false;
+    b.addEventListener('click', function () { history.back(); });
+  }
+</script>
+</body>
+</html>
