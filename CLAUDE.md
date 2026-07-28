@@ -136,7 +136,24 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
    ```
    `Closes #N` i PR-body er den autoritative auto-close-triggeren.
 4. Bruker-synlige endringer: verifiser berørt flyt på `torny-staging` FØR merge (se «Testing — staging, aldri prod»).
-5. Merge: `gh pr merge --rebase --delete-branch` (squash brukes ikke — mister granulær audit-trail).
+5. Merge — **auto-merge-policyen** (eierbeslutning 2026-07-28, #1406): når portene er
+   grønne (CI + steg 4-staging-verifisering der den kreves) og PR-en ikke inneholder noe
+   produktvalg, merger økten selv med `gh pr merge --rebase --delete-branch` — ikke vent
+   på eieren. (Squash brukes ikke — mister granulær audit-trail; remote-økter uten `gh`
+   bruker GitHub-MCP-merge med `merge_method: rebase`.)
+   - **Produktvalg** = to fornuftige løsninger finnes OG forskjellen merkes av
+     eier/spillere i bruk (UX, tekst, oppførsel). Da venter PR-en: Alternativ A er bygget
+     og testbart på staging; B/C beskrives med fordeler/ulemper på norsk (i PR/Discord);
+     velger eieren noe annet enn A, bygges det om på samme branch før merge. Rene
+     tekniske valg (implementasjonsdetaljer) er aldri et produktvalg — de avgjøres i
+     økten og eskaleres ikke.
+   - **Aldri auto-merge:** prod-DB-migrasjoner (prod-brannmuren #1074 står), destruktive
+     flyter (sletting av data/kontoer), auth-/sikkerhetsendringer, noe som koster penger.
+     Disse venter alltid på eksplisitt eier-godkjenning.
+   - Eieren orienteres i etterkant i produktspråk (aldri teknisk, jf. #1302): morgen-
+     briefens «Skjedde i natt» + CHANGELOG. Ingen egen merge-melding kreves.
+   - Discord-PR-kortets merge-knapp (docs/loops/discord-pr-kort.md) følger samme policy
+     når #1406 er levert; til da består knappen for loop-PR-er.
 
 #### Forge-arbeidsflyt (kontrakt-først)
 
