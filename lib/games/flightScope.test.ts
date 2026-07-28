@@ -7,6 +7,8 @@ import {
   suggestFlightSplit,
   flightBuckets,
   peersForApproval,
+  canApproveScorecardFor,
+  pendingApprovalsFor,
   eligibleForFlightAssignment,
   type FlightPlayer,
 } from './flightScope';
@@ -321,6 +323,204 @@ describe('peersForApproval', () => {
     const players = [p('me', 1), p('other', 2)];
     const peers = peersForApproval(players, singles, 'me');
     expect(peers).not.toContain('me');
+  });
+});
+
+// ─── canApproveScorecardFor ──────────────────────────────────────────────────
+
+describe('canApproveScorecardFor', () => {
+  const singles: GameMode = 'singles_matchplay';
+  const foursomes: GameMode = 'foursomes_matchplay';
+  const stableford: GameMode = 'stableford';
+  const skins: GameMode = 'skins';
+  const wolf: GameMode = 'wolf';
+
+  // 6 spillere med tildelte flighter: 1 = a,b,c,d — 2 = e,f
+  const splitSix: FlightPlayer[] = [
+    p('a', 1), p('b', 1), p('c', 1), p('d', 1),
+    p('e', 2), p('f', 2),
+  ];
+
+  it.each<[string, GameMode, FlightPlayer[], string, string, boolean]>([
+    [
+      'singles matchplay: motstander på side 2 kan attestere side 1 (#543)',
+      singles,
+      [p('alice', 1), p('bob', 2)],
+      'bob',
+      'alice',
+      true,
+    ],
+    [
+      'singles matchplay: og motsatt vei',
+      singles,
+      [p('alice', 1), p('bob', 2)],
+      'alice',
+      'bob',
+      true,
+    ],
+    [
+      'foursomes: kryss-lag attestering (4 aktive → én flight)',
+      foursomes,
+      [p('a', 1), p('b', 1), p('c', 2), p('d', 2)],
+      'a',
+      'c',
+      true,
+    ],
+    [
+      'wolf med 5 flight-løse: alle attesterer alle',
+      wolf,
+      Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`, null)),
+      'u1',
+      'u5',
+      true,
+    ],
+    ['>4 med flighter: samme flight → true', skins, splitSix, 'a', 'b', true],
+    ['>4 med flighter: kryss-flight → false', skins, splitSix, 'a', 'e', false],
+    [
+      '>4 uten flight: ingen kan attestere',
+      stableford,
+      Array.from({ length: 6 }, (_, i) => p(`u${i + 1}`, null)),
+      'u1',
+      'u2',
+      false,
+    ],
+    [
+      'selv-godkjenning → false',
+      singles,
+      [p('alice', 1), p('bob', 2)],
+      'alice',
+      'alice',
+      false,
+    ],
+    [
+      'trukket attestant → false',
+      singles,
+      [p('alice', 1), withdrawn('bob', 2)],
+      'bob',
+      'alice',
+      false,
+    ],
+    [
+      'trukket eier → false',
+      singles,
+      [withdrawn('alice', 1), p('bob', 2)],
+      'bob',
+      'alice',
+      false,
+    ],
+    [
+      'ukjent attestant → false',
+      singles,
+      [p('alice', 1), p('bob', 2)],
+      'ghost',
+      'alice',
+      false,
+    ],
+    [
+      'ukjent eier → false',
+      singles,
+      [p('alice', 1), p('bob', 2)],
+      'alice',
+      'ghost',
+      false,
+    ],
+  ])('%s', (_, mode, players, approver, owner, expected) => {
+    expect(canApproveScorecardFor(players, mode, approver, owner)).toBe(
+      expected,
+    );
+  });
+
+  it('er enig med peersForApproval for alle oppsett (regelen har ett hjem)', () => {
+    const setups: [GameMode, FlightPlayer[]][] = [
+      [singles, [p('alice', 1), p('bob', 2)]],
+      [foursomes, [p('a', 1), p('b', 1), p('c', 2), p('d', 2)]],
+      [wolf, Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`, null))],
+      [skins, splitSix],
+      [stableford, Array.from({ length: 6 }, (_, i) => p(`u${i + 1}`, null))],
+      [singles, [p('a', 1), p('b', 2), p('c', null), withdrawn('wd')]],
+    ];
+    for (const [mode, players] of setups) {
+      for (const approver of players) {
+        for (const owner of players) {
+          expect(
+            peersForApproval(players, mode, owner.user_id).includes(
+              approver.user_id,
+            ),
+          ).toBe(
+            canApproveScorecardFor(
+              players,
+              mode,
+              approver.user_id,
+              owner.user_id,
+            ),
+          );
+        }
+      }
+    }
+  });
+});
+
+// ─── pendingApprovalsFor ─────────────────────────────────────────────────────
+
+describe('pendingApprovalsFor', () => {
+  const singles: GameMode = 'singles_matchplay';
+  const skins: GameMode = 'skins';
+
+  // Helper: spiller-rad med innleverings-status
+  function card(
+    user_id: string,
+    flight_number: number | null,
+    submitted_at: string | null,
+    approved_at: string | null = null,
+    withdrawn_at: string | null = null,
+  ) {
+    return { user_id, flight_number, withdrawn_at, submitted_at, approved_at };
+  }
+
+  const SUBMITTED = '2026-07-28T10:00:00Z';
+
+  it('singles matchplay: motstanderens leverte kort venter på meg', () => {
+    const players = [
+      card('alice', 1, SUBMITTED),
+      card('bob', 2, null),
+    ];
+    expect(
+      pendingApprovalsFor(players, singles, 'bob').map((x) => x.user_id),
+    ).toEqual(['alice']);
+  });
+
+  it('ekskluderer eget kort, ikke-levert og allerede godkjent', () => {
+    const players = [
+      card('me', 1, SUBMITTED), // eget kort
+      card('submitted', 1, SUBMITTED), // venter → med
+      card('notSubmitted', 2, null),
+      card('alreadyApproved', 2, SUBMITTED, '2026-07-28T11:00:00Z'),
+    ];
+    expect(
+      pendingApprovalsFor(players, singles, 'me').map((x) => x.user_id),
+    ).toEqual(['submitted']);
+  });
+
+  it('>4 med flighter: kun egen flight teller', () => {
+    const players = [
+      card('a', 1, null),
+      card('b', 1, SUBMITTED),
+      card('c', 1, null),
+      card('d', 1, null),
+      card('e', 2, SUBMITTED),
+      card('f', 2, SUBMITTED),
+    ];
+    expect(pendingApprovalsFor(players, skins, 'a').map((x) => x.user_id)).toEqual(
+      ['b'],
+    );
+  });
+
+  it('trukket eier faller ut (can_score_for krever to aktive)', () => {
+    const players = [
+      card('alice', 1, SUBMITTED, null, '2026-07-28T09:00:00Z'),
+      card('bob', 2, null),
+    ];
+    expect(pendingApprovalsFor(players, singles, 'bob')).toEqual([]);
   });
 });
 

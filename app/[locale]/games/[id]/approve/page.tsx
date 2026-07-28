@@ -22,6 +22,7 @@ import {
   getGameWithPlayers,
   type PlayerForHole,
 } from '@/lib/games/getGameWithPlayers';
+import { pendingApprovalsFor } from '@/lib/games/flightScope';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import type { AppLocale } from '@/i18n/routing';
@@ -131,7 +132,6 @@ export default async function ApprovePage({
             gameId={id}
             courseId={game.course_id}
             currentUserId={userId}
-            flightNumber={me.flight_number}
           />
         </Suspense>
       </div>
@@ -143,17 +143,15 @@ async function PendingApprovals({
   gameId,
   courseId,
   currentUserId,
-  flightNumber,
 }: {
   gameId: string;
   courseId: string;
   currentUserId: string;
-  flightNumber: number;
 }) {
   const t = await getTranslations('game.approve');
   const { supabase } = await getApproveContext();
 
-  // Flight-mates come from the tag-cached helper (already warm from the
+  // The roster comes from the tag-cached helper (already warm from the
   // outer page render — typically a ~1ms cache hit). Course holes (static)
   // stay a direct fetch.
   const [gwp, holesRes] = await Promise.all([
@@ -169,16 +167,18 @@ async function PendingApprovals({
   if (!gwp) notFound();
   if (holesRes.error) throw holesRes.error;
 
-  const pending = gwp.players.filter(
-    (m) =>
-      m.flight_number === flightNumber &&
-      m.user_id !== currentUserId &&
-      m.submitted_at != null &&
-      m.approved_at == null,
+  // #1359: the attestation rule lives in flightScope, not here. Raw flight
+  // equality hid the ONLY approver in singles matchplay (sides get flight 1 vs
+  // 2), so the deep link from the peer-approval notification landed on an empty
+  // page and the game could never be finished.
+  const pending = pendingApprovalsFor(
+    gwp.players,
+    gwp.game.game_mode,
+    currentUserId,
   );
 
-  // For each pending mate, fetch their 18 scores so we can show the table
-  // inline. With at most 3 flight-mates and 18 rows each this is tiny.
+  // For each pending card, fetch their 18 scores so we can show the table
+  // inline. With at most 3 approvable cards and 18 rows each this is tiny.
   const pendingIds = pending.map((p) => p.user_id);
   const { data: scoresData, error: scoresError } = pendingIds.length
     ? await supabase

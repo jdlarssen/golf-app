@@ -6,7 +6,7 @@ import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { notify } from '@/lib/notifications/notify';
-import { peersForApproval } from '@/lib/games/flightScope';
+import { canApproveScorecardFor } from '@/lib/games/flightScope';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 type AuthorizationResult = {
@@ -17,9 +17,9 @@ type AuthorizationResult = {
 /**
  * Returns the supabase client, the current user, and whether the user is
  * authorised to act on `playerUserId`'s scorecard in `gameId`. Authorisation
- * means same-flight OR admin OR single-flight game (#543). This is defence in
- * depth on top of the RLS `game_players self submit` policy (which allows a
- * player to update their own row only).
+ * means admin, or `canApproveScorecardFor` — the shared attestation rule
+ * (#543/#1359), which the /approve page renders from too, so the page and the
+ * action can never disagree. Defence in depth on top of the RLS policies.
  */
 async function loadAndAuthorize(gameId: string, playerUserId: string) {
   const locale = await getLocale();
@@ -59,7 +59,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
     };
   }
 
-  // #543: bruk peersForApproval — tillat når spillet er én-flight (≤4 aktive
+  // #543: attestant-regelen — tillat når spillet er én-flight (≤4 aktive
   // spillere eller wolf) ELLER spillerne er i samme tildelte flight.
   const { data: allPlayers } = await supabase
     .from('game_players')
@@ -69,12 +69,12 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
       { user_id: string; flight_number: number | null; withdrawn_at: string | null }[]
     >();
 
-  const peers = peersForApproval(
+  const canApprove = canApproveScorecardFor(
     allPlayers ?? [],
     game.game_mode as GameMode,
     user.id,
+    playerUserId,
   );
-  const canApprove = peers.includes(playerUserId);
   return {
     supabase,
     user,
