@@ -1293,7 +1293,7 @@
         "sections": [
           {
             "heading": "Reglene i best ball",
-            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere netto-scorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Fire lag eller førti lag spiller det like greit, siden alle går sin egen runde."
+            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere netto-scorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Formatet skalerer fint siden alle går sin egen runde — i Tørny setter du opp inntil fire par i samme runde."
           },
           {
             "heading": "Best ball, fourball og fireball",
@@ -1339,7 +1339,7 @@
         "sections": [
           {
             "heading": "Reglene i texas scramble",
-            "body": "Texas scramble spilles med lag på to til fire. Alle slår ut fra tee, dere går fram sammen og blir enige om hvilket slag som ligger best. Der markerer dere stedet, og alle spiller sitt neste slag derfra, innenfor én køllelengde og ikke nærmere hullet. Slik jobber dere dere innover: velg beste slag, alle slår på nytt, velg igjen. Ligger den valgte ballen i bunker, legger dere ned i bunkeren, og på green plasserer dere ballen nøyaktig der den valgte putten lå. Laget fører én score per hull, og det er den scoren som havner på scorekortet. Ingen teller sine egne slag, og ingen kan ødelegge et hull alene."
+            "body": "Texas scramble spilles med lag på to eller fire. Alle slår ut fra tee, dere går fram sammen og blir enige om hvilket slag som ligger best. Der markerer dere stedet, og alle spiller sitt neste slag derfra, innenfor én køllelengde og ikke nærmere hullet. Slik jobber dere dere innover: velg beste slag, alle slår på nytt, velg igjen. Ligger den valgte ballen i bunker, legger dere ned i bunkeren, og på green plasserer dere ballen nøyaktig der den valgte putten lå. Laget fører én score per hull, og det er den scoren som havner på scorekortet. Ingen teller sine egne slag, og ingen kan ødelegge et hull alene."
           },
           {
             "heading": "Slik velger dere det beste slaget",
@@ -1347,7 +1347,7 @@
           },
           {
             "heading": "Handicap i texas scramble",
-            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter blandes spillerne etter den andelen arrangøren har satt. WHS anbefaler fallende vekting for firemannslag: 25 prosent av det laveste banehandicapet, 20 prosent av det nest laveste, 15 prosent av det tredje og 10 prosent av det høyeste. For lag på to er 35 prosent av det laveste pluss 15 prosent av det høyeste vanlig. Summen trekkes fra lagets bruttototal. Grunnen til at andelen er så lav, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. I Tørny setter den som lager runden prosenten selv."
+            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter legges banehandicapet til alle på laget sammen, og laget får en prosent av summen. Tørny foreslår NGF-satsene når du lager runden: 25 prosent for lag på to og 10 prosent for lag på fire, og arrangøren kan justere tallet før start. Grunnen til at andelen er så lav, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Lag-handicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
           },
           {
             "heading": "Vanlige husregler",
@@ -1358,7 +1358,7 @@
         "faq": [
           {
             "q": "Hvor mange er det på et texas scramble-lag?",
-            "a": "To til fire. Fire er det vanligste på selskapsrunder og bedriftsturneringer, og laget spiller da 18 hull med én felles score per hull."
+            "a": "To eller fire. Fire er det vanligste på selskapsrunder og bedriftsturneringer, og laget spiller da 18 hull med én felles score per hull."
           },
           {
             "q": "Må alle på laget bidra med utslag?",
@@ -1366,7 +1366,7 @@
           },
           {
             "q": "Hvordan regnes lag-handicapet i texas scramble?",
-            "a": "Som en vektet andel av spillernes banehandicap. WHS anbefaler 25, 20, 15 og 10 prosent for firemannslag, og 35 pluss 15 prosent for par. Arrangøren setter andelen når runden opprettes."
+            "a": "Tørny legger sammen banehandicapet til alle på laget og gir laget en prosent av summen. Forslaget følger NGF: 25 prosent for lag på to, 10 prosent for lag på fire. Arrangøren kan justere prosenten når runden opprettes."
           },
           {
             "q": "Kan vi legge ballen bedre der vi velger å spille fra?",
