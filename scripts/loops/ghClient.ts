@@ -8,7 +8,7 @@ export type GhResponse = { status: number; json: unknown };
 
 export function ghClient(token: string, repo: string) {
   async function rest(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     body?: unknown,
   ): Promise<GhResponse> {
@@ -23,7 +23,23 @@ export function ghClient(token: string, repo: string) {
     });
     return { status: res.status, json: await res.json().catch(() => null) };
   }
-  return { repo, rest };
+  // GraphQL for markPullRequestReadyForReview (av-draft før auto-merge, #1406).
+  async function graphql(
+    query: string,
+    variables: Record<string, unknown>,
+  ): Promise<GhResponse> {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+    return { status: res.status, json: await res.json().catch(() => null) };
+  }
+  return { repo, rest, graphql };
 }
 
 type WorkflowEvent = {

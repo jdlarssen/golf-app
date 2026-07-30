@@ -12,9 +12,17 @@ export type CardPlanPr = {
   summary: string | null;
 };
 
+// Tre-utfall (#1406): 'noop' (ingen kort — som dagens shouldCard=false), 'card'
+// (dagens knapp-kort) eller 'auto-merge' (kortet merger selv, poster kvittering).
+export type CardOutcome = 'auto-merge' | 'card' | 'noop';
+
 export type CardPlan = {
-  shouldCard: boolean;
+  outcome: CardOutcome;
   isGui: boolean;
+  /** PR-head-SHA-en decide gatet mot — merge-guarden (`sha`-param) og re-sjekk bruker den. */
+  headSha: string | null;
+  /** Hvilken port som degraderte auto-merge → card (kun logging/observability). */
+  demotedReason?: string | null;
   pr: CardPlanPr | null;
   changedFiles: string[];
 };
