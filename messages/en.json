@@ -1293,7 +1293,7 @@
         "sections": [
           {
             "heading": "The rules of best ball",
-            "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. Four teams or forty teams play it equally well, since everyone walks their own round."
+            "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. The format scales nicely since everyone walks their own round — in Tørny you can set up as many as four pairs in the same round."
           },
           {
             "heading": "Best ball, fourball and fourball better ball",
@@ -1339,7 +1339,7 @@
         "sections": [
           {
             "heading": "The rules of Texas scramble",
-            "body": "Texas scramble is played in teams of two to four. Everyone tees off, you walk up together and agree on which shot sits best. Mark that spot, and everyone plays their next shot from there, within one club length and no nearer the hole. You work your way in like that: pick the best shot, everyone plays again, pick again. If the chosen ball is in a bunker, you drop in the bunker, and on the green you place your ball exactly where the chosen putt lay. The team records one score per hole, and that is the score that goes on the card. Nobody counts their own strokes, and nobody can wreck a hole on their own."
+            "body": "Texas scramble is played in teams of two or four. Everyone tees off, you walk up together and agree on which shot sits best. Mark that spot, and everyone plays their next shot from there, within one club length and no nearer the hole. You work your way in like that: pick the best shot, everyone plays again, pick again. If the chosen ball is in a bunker, you drop in the bunker, and on the green you place your ball exactly where the chosen putt lay. The team records one score per hole, and that is the score that goes on the card. Nobody counts their own strokes, and nobody can wreck a hole on their own."
           },
           {
             "heading": "Choosing the best shot",
@@ -1347,7 +1347,7 @@
           },
           {
             "heading": "Handicap in Texas scramble",
-            "body": "Scramble is a team format, so the handicap is worked out for the team, not for each player. Tørny first finds your course handicap from your handicap index, the slope and the course rating of the tee you play from. The players are then blended using the allowance the organiser has set. WHS recommends a descending weighting for four-player teams: 25 per cent of the lowest course handicap, 20 per cent of the next, 15 per cent of the third and 10 per cent of the highest. For pairs, 35 per cent of the lower plus 15 per cent of the higher is the norm. The total is deducted from the team gross. The reason the allowance is so low is simple: four players picking the best ball score far better than any of them does alone, so a full handicap would massively overcompensate. In Tørny whoever creates the round sets the percentage."
+            "body": "Scramble is a team format, so the handicap is worked out for the team, not for each player. Tørny first finds your course handicap from your handicap index, the slope and the course rating of the tee you play from. The course handicaps of everyone on the team are then added up, and the team gets a percentage of that sum. Tørny suggests the Norwegian federation rates when you create the round: 25 per cent for teams of two and 10 per cent for teams of four, and the organiser can adjust the number before the start. The reason the allowance is so low is simple: four players picking the best ball score far better than any of them does alone, so a full handicap would massively overcompensate. The team handicap is spread across the holes by stroke index and deducted from the team gross."
           },
           {
             "heading": "Common house rules",
@@ -1358,7 +1358,7 @@
         "faq": [
           {
             "q": "How many players are on a Texas scramble team?",
-            "a": "Two to four. Four is the most common on social rounds and corporate days, and the team then plays 18 holes with one shared score per hole."
+            "a": "Two or four. Four is the most common on social rounds and corporate days, and the team then plays 18 holes with one shared score per hole."
           },
           {
             "q": "Does everyone on the team have to contribute drives?",
@@ -1366,7 +1366,7 @@
           },
           {
             "q": "How is the team handicap worked out in Texas scramble?",
-            "a": "As a weighted share of the players course handicaps. WHS recommends 25, 20, 15 and 10 per cent for four-player teams, and 35 plus 15 per cent for pairs. The organiser sets the allowance when the round is created."
+            "a": "Tørny adds up the course handicaps of everyone on the team and gives the team a percentage of that sum. The suggested default follows the Norwegian federation: 25 per cent for teams of two, 10 per cent for teams of four. The organiser can adjust the percentage when the round is created."
           },
           {
             "q": "Can we improve the lie where we choose to play from?",
