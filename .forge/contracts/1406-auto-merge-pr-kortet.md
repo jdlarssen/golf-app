@@ -105,20 +105,20 @@ Workflow-endringer i `discord-pr-card.yml`: `permissions` utvides med `contents:
 
 ## Success Criteria
 
-1. [ ] `npx vitest run lib/loops` grønn med nye tester som låser: aldri-liste-globs (minst én fixture per punktliste-rad i §3 → `card`), valg-markør-regexen (`## Alternativ B`/`## Produktvalg`-treff; «Alternativer vurdert»-prosa uten heading = IKKE treff), `isUserVisibleByCommits` (feat/fix/perf ± `[no-changelog]`), `linkedIssueNumbers`, `classifyAutoMerge`-portrekkefølgen, kvitterings-payload (ingen `merge_pr`-knapp), og merge-helperen med mocket klient (suksess → kvittering; 409/405/un-draft-feil → knapp-kort-fallback).
-2. [ ] `decide-pr-card.ts` skriver `outcome` + `headSha` i planen og `outcome`/`is_gui` til `$GITHUB_OUTPUT`; alle dagens `noop`-stier består (verifiserbart i fil + én DRY_RUN-aktig lokal kjøring med fabrikert event).
-3. [ ] `post-pr-card.ts` med fabrikert plan (`outcome: 'auto-merge'`) og `DRY_RUN=1` logger tiltenkt merge + kvittering uten noen skriv (kommando-output som bevis).
-4. [ ] `discord-pr-card.yml`: `contents: write` + `actions: write` lagt til; steg-gating på `outcome`; main-fra-checkout-steget (#1181) urørt (fil-review, `file:line`).
-5. [ ] Docs-endringene i §5 er gjort i samme PR (alle tre filene), inkl. valg-markør-konvensjonen i CLAUDE.md.
-6. [ ] `npm run typecheck`, `npm run lint` og `npm run build` grønne.
+1. [x] `npx vitest run lib/loops` grønn med nye tester som låser: aldri-liste-globs (minst én fixture per punktliste-rad i §3 → `card`), valg-markør-regexen (`## Alternativ B`/`## Produktvalg`-treff; «Alternativer vurdert»-prosa uten heading = IKKE treff), `isUserVisibleByCommits` (feat/fix/perf ± `[no-changelog]`), `linkedIssueNumbers`, `classifyAutoMerge`-portrekkefølgen, kvitterings-payload (ingen `merge_pr`-knapp), og merge-helperen med mocket klient (suksess → kvittering; 409/405/un-draft-feil → knapp-kort-fallback). — BEVIS: `npx vitest run lib/loops` → 164 passed (4 files); nye tester i `lib/loops/autoMerge.test.ts` + `lib/loops/prCard.test.ts` (buildReceiptPayload).
+2. [x] `decide-pr-card.ts` skriver `outcome` + `headSha` i planen og `outcome`/`is_gui` til `$GITHUB_OUTPUT`; alle dagens `noop`-stier består (verifiserbart i fil + én DRY_RUN-aktig lokal kjøring med fabrikert event). — BEVIS: lokal kjøring uten GITHUB_TOKEN → `$GITHUB_OUTPUT` fikk `outcome=noop`/`is_gui=false`, planfila fikk `outcome:"noop"`, `headSha:null`; wiring i `decide-pr-card.ts:emit()` + `classifyAutoMerge`-kallet.
+3. [x] `post-pr-card.ts` med fabrikert plan (`outcome: 'auto-merge'`) og `DRY_RUN=1` logger tiltenkt merge + kvittering uten noen skriv (kommando-output som bevis). — BEVIS: `DRY_RUN=1` mot fabrikert auto-merge-plan → «ville rebase-merget mot headSha … (sha-guard), postet kvittering og dispatchet main-verify. Ingen skriv.» + kvitterings-JSON (kun lenke-knapp); docs-only-variant → «uten main-verify-dispatch (docs-only)».
+4. [x] `discord-pr-card.yml`: `contents: write` + `actions: write` lagt til; steg-gating på `outcome`; main-fra-checkout-steget (#1181) urørt (fil-review, `file:line`). — BEVIS: `.github/workflows/discord-pr-card.yml:35-36` (contents/actions: write), `:98` + `:131` (`outcome != 'noop'`); «Bruk main sin versjon av loop-skriptene» på `:69` urørt, concurrency `:30`, guard `:46`, failure-alarm `:140` urørt.
+5. [x] Docs-endringene i §5 er gjort i samme PR (alle tre filene), inkl. valg-markør-konvensjonen i CLAUDE.md. — BEVIS: commit `fb0f7515` — `docs/loops/discord-pr-kort.md` (tre-utfall + fix-protokoll), `docs/loops/morgenbriefen.md` (knapp-kort-linjer + arkiv-PR-regel), `CLAUDE.md` steg 5 (kryssref + `## Produktvalg`/`## Alternativ A/B`-markør).
+6. [x] `npm run typecheck`, `npm run lint` og `npm run build` grønne. — BEVIS: `tsc --noEmit` ren; `npm run lint` 0 errors (kun pre-eksisterende warnings, ingen i berørte filer); `npm run build` EXIT 0 (etter kopiering av worktree-`.env.local`, jf. worktree-env-note).
 7. [ ] PENDING FIRST USE (blokkerer ikke ACCEPT; issuet holdes åpent til bevist): første reelle kandidat — dispatch mot en grønn docs-only-PR → auto-merget + kvitteringskort i Discord; første bruker-synlige PR uten `staging-verified` → knapp-kort med `demotedReason` i loggen.
 
 ## Gates
 
-- [ ] `npm run typecheck`
-- [ ] `npm run lint`
-- [ ] `npx vitest run lib/loops`
-- [ ] `npm run build`
+- [x] `npm run typecheck`
+- [x] `npm run lint`
+- [x] `npx vitest run lib/loops`
+- [x] `npm run build`
 
 ## Files Likely Touched
 
