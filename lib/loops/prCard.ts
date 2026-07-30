@@ -166,3 +166,40 @@ export function buildCardPayload({
     ],
   };
 }
+
+/**
+ * Bygger kvitteringskortet (#1406): når kortet har auto-merget PR-en, poster vi
+ * ikke en knapp — bare beskjed om at den er merget + funksjonell-setning + PR-lenke,
+ * og KUN lenke-knappen «Åpne PR» (ingen `merge_pr`-knapp; det er ingenting å merge).
+ * Funksjonell-setningen faller tilbake til tittelen når body-en ikke ga en tagline.
+ */
+export function buildReceiptPayload({
+  pr,
+  summary,
+}: {
+  pr: PrForCard;
+  summary: string | null;
+}): DiscordMessage {
+  const lines = [`✅ **Merget** — PR #${pr.number}: ${pr.title}`, summary ?? pr.title, pr.html_url];
+  let content = lines.join('\n');
+  if (content.length > DISCORD_CONTENT_MAX) {
+    content = `${content.slice(0, DISCORD_CONTENT_MAX - 1)}…`;
+  }
+
+  return {
+    content,
+    components: [
+      {
+        type: ACTION_ROW,
+        components: [
+          {
+            type: BUTTON,
+            style: BUTTON_STYLE_LINK,
+            label: 'Åpne PR',
+            url: pr.html_url,
+          },
+        ],
+      },
+    ],
+  };
+}
