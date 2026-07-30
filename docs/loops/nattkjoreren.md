@@ -108,11 +108,14 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
   `autonomy:review`-label, norsk PR-kommentar: hva som er bygget, hvilke
   kriterier som er bevist (med kommando-utfall), hva som evt. gjenstår manuelt.
   - **Produktvalg i kontrakten** (`## Alternativer (produktvalg)`-seksjon eller
-    `"produktvalg": true` i json-blokken): gjengi alternativene i
-    PR-kommentaren på norsk — A (bygget), B/C med fordeler/ulemper — og
-    inviter eieren til å svare «alternativ B» direkte i PR-en; ombygging skjer
-    da på samme branch (#1406). Produktvalg-PR-er auto-merges aldri av noen
-    økt før eieren har valgt.
+    `"produktvalg": true` i json-blokken): gjengi HELE seksjonen i
+    PR-kommentaren på norsk, i kontraktens faste form — anbefaling først,
+    deretter 2–3 fordeler og 2–3 ulemper per alternativ (også A, som er
+    bygget), ombyggingskostnad per ikke-valgt alternativ og reversibilitet.
+    Avslutt med svar-instruksen: «alternativ B» direkte i PR-en → ombygging
+    på samme branch (#1406), og «ingen hast — PR-en venter til du svarer
+    eller merger». Produktvalg-PR-er auto-merges aldri av noen økt før eieren
+    har valgt.
   **Fjern deretter `autonomy:ready` fra issuet (#1307)** — PR-en bærer mandatet
   videre, og labelen skal aldri overleve leveringen (ellers re-plukkes issuet
   neste natt og bygges som duplikat, jf. #1253-varselet 2026-07-18).
