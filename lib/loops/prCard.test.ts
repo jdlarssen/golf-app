@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildCardPayload,
+  buildReceiptPayload,
   CARD_LABEL,
   classifyChecks,
   extractPrSummary,
@@ -181,6 +182,40 @@ describe('buildCardPayload', () => {
     const msg = buildCardPayload({ pr: basePr, summary: null });
     // Kun tittel-linje + lenke-linje.
     expect(msg.content.split('\n')).toHaveLength(2);
+  });
+});
+
+describe('buildReceiptPayload', () => {
+  const basePr = {
+    number: 1406,
+    title: 'Auto-merge PR-kortet',
+    html_url: 'https://github.com/jdlarssen/golf-app/pull/1406',
+    draft: false,
+  };
+
+  it('har KUN lenke-knappen — ingen merge_pr-knapp', () => {
+    const msg = buildReceiptPayload({ pr: basePr, summary: 'En oppsummering.' });
+    const row = msg.components[0];
+    expect(row.components).toHaveLength(1);
+    const btn = row.components[0];
+    expect(btn).toMatchObject({ type: 2, style: 5, label: 'Åpne PR', url: basePr.html_url });
+    expect(JSON.stringify(msg)).not.toContain('merge_pr');
+  });
+
+  it('melder «Merget» + tittel + oppsummering + lenke', () => {
+    const msg = buildReceiptPayload({ pr: basePr, summary: 'Du kan nå merge fra Discord.' });
+    expect(msg.content).toContain('✅ **Merget**');
+    expect(msg.content).toContain('PR #1406');
+    expect(msg.content).toContain(basePr.title);
+    expect(msg.content).toContain('Du kan nå merge fra Discord.');
+    expect(msg.content).toContain(basePr.html_url);
+  });
+
+  it('faller tilbake til tittelen som funksjonell-setning når summary er null', () => {
+    const msg = buildReceiptPayload({ pr: basePr, summary: null });
+    const lines = msg.content.split('\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toBe(basePr.title);
   });
 });
 
