@@ -29,6 +29,14 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   funksjonell-setninger (kontrakt-json, closing-kommentarer, CHANGELOG) der de
   finnes; skriv den ellers selv i samme tone («Du kan nå …»). Aldri filnavn,
   branch-navn eller CI-sjargong i ↳-linja. «Loop-helse» er unntatt (telemetri).
+- **Auto-mergede PR-er er ikke gjøremål (#1406).** PR-kortet
+  (`docs/loops/discord-pr-kort.md`) merger selv grønne PR-er uten produktvalg. En
+  «Godkjenn PR #M»-linje under «Trenger deg nå» gjelder derfor KUN PR-er som
+  fortsatt har et knapp-kort — altså der kortet degraderte til `card`: produktvalg
+  (`## Produktvalg`/`## Alternativ`-heading eller lenket `autonomy:needs-decision`),
+  aldri-liste-fil, eller bruker-synlig uten `staging-verified`. En PR som allerede
+  er auto-merget rapporteres under «Skjedde i natt» (verifisert merge), aldri som
+  et åpent gjøremål.
 - **Tom natt gir én linje** («ingen aktivitet — heartbeats OK»), aldri
   ingenting. Stillhet fra briefen selv skal bety at briefen feilet; da er
   claude.ai/code/routines-siden eierens fallback.
@@ -41,7 +49,7 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 ☀️ Morgenbrief <dato>
 
 **Trenger deg nå:**
-- Godkjenn PR #M — <issue-tittel>; evaluate ACCEPT, gates grønne[, e2e grønn / needs-manual-qa: <flyt>] → <lenke>
+- Godkjenn PR #M — <issue-tittel>; kun knapp-kort-PR-er (produktvalg / aldri-liste / mangler staging-bevis), gates grønne[, e2e grønn / needs-manual-qa: <flyt>] → <lenke>
   ↳ <1–3 setninger produktspråk: hva endringen gjør i appen, og hva som skjer når du godkjenner>
 - Svar A/B på #N — <én setning om spørsmålet> → <lenke>
   ↳ <1–3 setninger: hva A og hva B betyr i bruk — forskjellen eieren faktisk merker>
@@ -211,8 +219,7 @@ postet (primærartefakten), så eieren kan lese den der.
 ## Månedlig arkivering
 
 Første brief i ny måned: flytt forrige måneds kommentarer til
-`docs/loops/logg/<år>-<måned>.md` via docs-PR — som alle loop-leveranser en
-draft-PR eieren merger, ALDRI selvmerget. Arkiverte kommentarer kan ikke
+`docs/loops/logg/<år>-<måned>.md` via docs-PR. Arkiverte kommentarer kan ikke
 redigeres bort fra #1110; lenk til arkivfila i briefen i stedet. Samme runde
 arkiverer lanserings-tavla #1208 (Utroperens forslag + ✅-markører) til samme
 fil.
@@ -221,3 +228,10 @@ Rett etter at arkiv-PR-en er åpnet: dispatch Discord-kortet — docs-only-PR-er
 trigger det ikke selv (#1301, konvensjonen står i `docs/loops/discord-pr-kort.md`):
 `gh workflow run discord-pr-card.yml -f pr=<PR-nummer>`. Best-effort; feiler
 dispatchen er neste morgenbrief backstop.
+
+Arkiv-PR-en er docs-only og har ikke noe produktvalg, så etter #1406 auto-merger
+PR-kortet den selv når Vercel-checkene er grønne (kvitteringsutfall — forventet og
+riktig; ingen `main-verify`-dispatch siden diffen kun rører `docs/**`). Den gamle
+«ALDRI selvmerget»-regelen gjaldt eieren; nå lander arkiv-PR-en selv via kortet.
+Briefen skal derfor IKKE vente på eier-merge av arkiv-PR-en — den dispatches og
+lander på egen hånd.

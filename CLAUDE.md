@@ -171,8 +171,12 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
      Disse venter alltid på eksplisitt eier-godkjenning.
    - Eieren orienteres i etterkant i produktspråk (aldri teknisk, jf. #1302): morgen-
      briefens «Skjedde i natt» + CHANGELOG. Ingen egen merge-melding kreves.
-   - Discord-PR-kortets merge-knapp (docs/loops/discord-pr-kort.md) følger samme policy
-     når #1406 er levert; til da består knappen for loop-PR-er.
+   - Discord-PR-kortet (docs/loops/discord-pr-kort.md) håndhever samme policy på
+     loop-siden (#1406): grønne PR-er uten produktvalg auto-merges av kortet selv,
+     resten beholder merge-knappen. Maskin-markøren kortet leser for «produktvalg»:
+     **økter som presenterer et produktvalg MÅ ha en `## Produktvalg`- eller
+     `## Alternativ A/B`-heading i PR-body-en** — uten den leser kortet PR-en som
+     valgfri og merger den.
 
 #### Forge-arbeidsflyt (kontrakt-først)
 

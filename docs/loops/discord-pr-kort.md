@@ -1,16 +1,21 @@
-# Discord PR-kort — merge-knapp + GUI-skjermbilder for ALLE grønne PR-er (#1159)
+# Discord PR-kort — auto-merge + kvittering, eller knapp der du trengs (#1159 + #1406)
 
-Hendelses-drevet GitHub Action som poster ett Discord-kort med merge-knapp hver
-gang en åpen PR blir CI-grønn — uansett opphav (natt-runner, CI-vakt,
-dok-avstemmer ELLER interaktiv økt). Rører PR-en en visuell flate, festes
-staging-skjermbilder av de berørte rutene på kortet (Del B). Målet: eieren
-merger enhver klar PR fra mobilen, og ser GUI-endringen før han trykker
-(#1073, «styr fra mobilen»).
+Hendelses-drevet GitHub Action som reagerer hver gang en åpen PR blir CI-grønn —
+uansett opphav (natt-runner, CI-vakt, dok-avstemmer ELLER interaktiv økt). Siden
+eierbeslutningen 2026-07-28 (#1406) er kortet et **kvitteringskort**, ikke et
+godkjenningskort: er PR-en kvalifisert og fri for produktvalg, merger kortet den
+selv og poster en kvittering; trengs eieren (produktvalg, aldri-liste, manglende
+staging-bevis), beholder kortet merge-knappen. Rører PR-en en visuell flate,
+festes staging-skjermbilder av de berørte rutene på kortet (Del B) — for begge
+kort-typene. Målet: eieren styrer fra mobilen, men slipper å trykke der det ikke
+finnes et valg (#1073, «styr fra mobilen»).
 
-Dette er **sender-siden**. Mottaker-siden (selve mergen når du trykker) er det
-eksisterende interactions-endepunktet fra #1124
-(`app/api/discord/interactions/route.ts`) — kortet gjenbruker `merge_pr:<N>`
-uendret.
+Dette er **sender-siden**. Mottaker-siden (selve mergen når du trykker knappen)
+er det eksisterende interactions-endepunktet fra #1124
+(`app/api/discord/interactions/route.ts`) — knapp-kortet gjenbruker `merge_pr:<N>`
+uendret. Auto-mergen bruker en egen helper (`lib/loops/autoMerge.ts`), ikke
+mottakeren: mottakerens CI-port leser kun `ci.yml`-runs og ville avvist
+docs-only-PR-er som bare har Vercel-checks.
 
 ## Hva Action-en gjør
 
@@ -23,22 +28,59 @@ Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
    Checker ut PR-head-koden så skjermbildene viser koden under review. (Vi bruker
    `workflow_run`, ikke `check_suite`: check_suite fyrer ikke for
    GitHub-Actions-suiter, så CI trigget aldri kortet.)
-2. **`decide-pr-card.ts` — gate + visuell-diff:** åpen · alle check-runs grønne
-   (`classifyChecks`) · ikke allerede kortet. Avgjør om diffen rører en visuell
-   flate (`isVisualChange`). Skriver `pr-card-plan.json` + `should_card`/`is_gui`.
-   Tidlige, ufullstendige fyringer er ufarlige no-ops. (Ingen npm ci.)
+2. **`decide-pr-card.ts` — gate + tre-utfalls-klassifisering:** åpen · alle
+   check-runs grønne (`classifyChecks`) · ikke allerede kortet → ellers `noop`.
+   Klassifiserer så utfallet (`classifyAutoMerge`, se «Tre utfall» under) og avgjør
+   om diffen rører en visuell flate (`isVisualChange`). Skriver `pr-card-plan.json`
+   + `outcome`/`is_gui`. Tidlige, ufullstendige fyringer er ufarlige no-ops. (Ingen npm ci.)
 3. **`screenshot-routes.ts` — kun visuell diff:** booter appen mot staging,
    kartlegger endrede filer til ruter (`lib/loops/prScreenshots`), logger inn via
    OTP-mint og tar mobil-skjermbilder. Best-effort — feil her feller ikke kortet.
-4. **`post-pr-card.ts` — post → label:** PR-tittel (+ 📝 Draft) · norsk
-   oppsummering (tagline fra body) · PR-lenke · grønn **✅ Merge**-knapp
-   (`custom_id: merge_pr:<N>`) + lenke-knapp; fester skjermbilder via multipart.
-   Poster FØRST, legger så dedup-labelen `discord:merge-kort` — et tapt kort er
-   verre enn en sjelden dobbel.
+   Tas for BEGGE kort-typene (auto-merge OG knapp) når `is_gui`.
+4. **`post-pr-card.ts` — merge/post → dispatch → label:**
+   - `outcome: 'card'` → dagens knapp-kort: PR-tittel (+ 📝 Draft) · norsk
+     oppsummering · PR-lenke · grønn **✅ Merge**-knapp (`custom_id: merge_pr:<N>`)
+     + lenke-knapp. Poster FØRST, legger så dedup-labelen `discord:merge-kort`.
+   - `outcome: 'auto-merge'` → `mergePullRequest` (re-verifiser åpen + CI grønn mot
+     `headSha`, av-draft, `PUT …/merge` rebase + `sha`-guard). Suksess → **kvitteringskort**
+     (✅ Merget + funksjonell-setning + lenke, KUN lenke-knapp) → main-verify-dispatch
+     → dedup-label. Enhver merge-feil → fall tilbake til knapp-kortet i samme kjøring.
 
-**Menneske-porten står:** kortet gir deg knappen; det er ingen auto-merge. Når
-du trykker, verifiserer #1124-endepunktet CI grønn på nytt, av-drafter og
-rebase-merger.
+**Kvitteringskort, ikke godkjenningskort:** kvalifiserte PR-er merges av kortet
+selv; knappen står bare igjen der eieren faktisk trengs. Trykker eieren en
+gjenværende merge-knapp, verifiserer #1124-endepunktet CI grønn på nytt,
+av-drafter og rebase-merger (uendret).
+
+## Tre utfall (decide-steget, #1406)
+
+`classifyAutoMerge` (`lib/loops/autoMerge.ts`, unit-testet) avgjør — første treff
+vinner:
+
+1. **`noop`** som før: ingen kandidat-PR · ikke åpen · allerede kortet · CI ikke grønn.
+2. **`card`** (knapp-kort) når NOEN treffer:
+   - base-branch ≠ `main`, eller tittelen inneholder ordet `WIP` (case-insensitivt).
+   - **Aldri-lista** (`NEVER_AUTO_MERGE_GLOBS`): minst én endret fil rører
+     `supabase/**`, `**/slett/**`, `**/slett-konto/**`, `proxy.ts`, `lib/auth/**`,
+     `lib/supabase/**`, `app/api/**`, `app/[locale]/(auth)/**`, `**/betaling/**`,
+     `lib/payment/**`, `.github/**`, `.githooks/**` eller `.claude/**`. Migrasjoner,
+     destruktive flyter, auth/sikkerhet, penger og enforcement-flater beholder
+     menneske-porten (fail-closed, bredere enn issue-ets liste).
+   - **Valg-markør:** PR-body har en markdown-heading `## Produktvalg` eller
+     `## Alternativ A/B` (a–e), ELLER et lenket issue (`closes|fixes|resolves|refs|part of #N`)
+     har labelen `autonomy:needs-decision`. Headingen er maskin-markøren økter MÅ
+     sette når de presenterer et valg (CLAUDE.md steg 5).
+   - **Staging-porten:** PR-en er bruker-synlig (≥1 commit med `feat|fix|perf`-prefiks
+     uten `[no-changelog]`, §T7) OG mangler `staging-verified`-labelen (#1076).
+3. **`auto-merge`** ellers.
+
+Hver degradering fra auto-merge til knapp-kort logges med `demotedReason` — ingen
+stille tak.
+
+**main-verify-dispatch:** en GITHUB_TOKEN-merge trigger ALDRI `main-verify.yml`
+(#1075-nettet) via push (anti-rekursjon), så post-steget dispatcher det eksplisitt
+etter en vellykket merge — MED MINDRE alle endrede filer matcher main-verifys egne
+ignore-globs (`**.md`, `docs/**`, `.forge/**`; en slik merge kan ikke komponere rød
+main). Dispatch-feil ETTER en merge gir exit 1 → failure-alarmen åpner CI-vakt-issue.
 
 ## Del B — skjermbilder av GUI-endringer
 
@@ -127,6 +169,15 @@ Går workflowen rød, åpner den (dedupet) et `CI-vakt:`-issue. Diagnose:
   (steget er `continue-on-error`, så det feller aldri jobben). Vanligst: dev-serveren
   booter ikke i tide, OTP-login feiler, eller en fikstur mangler på staging → ruten
   droppes. Kortet postes uansett uten bildene.
+- **Auto-merge falt tilbake til knapp-kort:** forventet fail-closed — en åpen/CI-race
+  (409 sha-mismatch), rebase-konflikt (405) eller av-draft-feil gjør at kortet poster
+  knappen i stedet. Grunnen står i `Post merge-kort`-loggen (`demotedReason` /
+  `falt tilbake til knapp-kort — <grunn>`); dette er ikke en bug, bare menneske-porten.
+- **main-verify-dispatch feilet (dette issuet):** mergen er gjennomført, men
+  #1075-nettet ble ikke dispatchet (post-steget ga exit 1). Kjør main-verify manuelt:
+  GitHub → Actions → **Main verify → Run workflow** (ref `main`) — eller sjekk om main
+  allerede er verifisert grønn av en senere push. Rot-årsak i loggen (HTTP-status fra
+  dispatch-kallet; typisk manglende `actions: write`).
 
 Discord-feil er best-effort (logges, gir ikke rød kjøring) — morgenbriefens
 «Discord-speiling feilet»-helselinje er backstop for «kortene sluttet å komme».
@@ -141,7 +192,10 @@ begge peker på samme `merge_pr:<N>`-knapp.
 
 ## Avgrenset ut
 
-- **Auto-merge:** aldri — menneske-porten står.
+- **GitHubs innebygde auto-merge / branch protection** (Pro-gated): vi merger selv
+  fra post-steget, ikke via GitHub-funksjonen.
+- **Retroaktiv behandling** av allerede-åpne PR-er/kort: klassifiseringen kjører kun
+  på nye events; dedup-labelen gater eksisterende kort uansett.
 - **Vercel-preview-lenke på kortet:** til Vercel Preview er wiret mot staging
   («Fase 2») screenshotter vi den bootede appen, ikke previewen (som kan backe prod).
 - **Diff-region-annotering / visuell regresjon:** kun rå skjermbilder i v1.
