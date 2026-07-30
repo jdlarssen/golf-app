@@ -70,7 +70,8 @@ dette steget først, hver natt.
       gjett hva B er. Post en norsk kommentar om at alternativet ikke lot seg
       slå opp, og la PR-en stå.
    4. **Bygg om på SAMME branch** — aldri ny branch, aldri ny PR; svaret gjelder
-      denne PR-en. Steg 3 mot det valgte alternativet, deretter Steg 4 og Steg
+      denne PR-en. Steg 3 mot det valgte alternativet (hopp over «Ny
+      branch»-punktet — PR-ens branch beholdes), deretter Steg 4 og Steg
       4.5 i sin helhet på nytt. Kryss-modell-gaten kjøres om igjen: en
       ombygging er en ny leveranse, ikke en rettelse.
    5. **Oppdater PR-kommentaren** med en ny 🤖-kommentar per Steg 5: nytt bevis
@@ -128,7 +129,8 @@ videre kun av eieren via PR når tilliten er etablert.
   **Fable** som orkestrator; selve implementasjonsarbeidet dispatches til
   subagenter med `model` eksplisitt satt til **Opus**. Fable organiserer (kø,
   preflight, gates, leveranse), Opus bygger.
-- Ny branch `claude/natt-<issuenr>-<slug>`.
+- Ny branch `claude/natt-<issuenr>-<slug>` (unntak: Steg 0-ombygginger beholder
+  PR-ens eksisterende branch).
 - Bygg mot kontrakten: implementer → kjør gates → evaluer skeptisk i fersk
   kontekst → fiks. **#1077-konvergensreglene gjelder** (docs/forge-workflow.md
   → Konvergensregler): runde-historikk i `.forge/evaluations/<slug>-runder.md`
