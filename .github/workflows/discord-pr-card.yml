@@ -1,8 +1,9 @@
-# Discord PR-kort (#1159): poster ett kort med merge-knapp til Discord når en
-# åpen PR blir CI-grønn — uansett opphav (natt-runner, CI-vakt, dok-avstemmer,
-# interaktiv økt). Del B: rører diffen en visuell flate, festes staging-
-# skjermbilder på kortet. Eieren merger fra mobilen; menneske-porten står
-# (ingen auto-merge). Mottaker-siden er #1124-endepunktet. Se
+# Discord PR-kort (#1159 + #1406): reagerer når en åpen PR blir CI-grønn —
+# uansett opphav (natt-runner, CI-vakt, dok-avstemmer, interaktiv økt). Tre utfall
+# (decide-steget): kvalifisert PR uten produktvalg → auto-merge + kvitteringskort;
+# produktvalg/aldri-liste/manglende staging-bevis → knapp-kort (menneske-porten);
+# ellers no-op. Del B: rører diffen en visuell flate, festes staging-skjermbilder
+# på kortet. Mottaker-siden (knappen) er #1124-endepunktet. Se
 # docs/loops/discord-pr-kort.md.
 name: Discord PR-kort
 
@@ -31,8 +32,9 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
-  pull-requests: write # dedup-label + lese endrede filer
+  contents: write # auto-merge PR-en (#1406)
+  actions: write # main-verify-dispatch etter auto-merge (#1406)
+  pull-requests: write # dedup-label + lese endrede filer + merge
   issues: write # dedup-label (labels går via issues-API) + failure-alarm
   checks: read
 
@@ -93,7 +95,7 @@ jobs:
       # Steg 2 — SKJERMBILDER (kun visuell diff): booter appen mot staging og
       # skjermbilder berørte ruter. Best-effort — feil her feller ikke kortet.
       - name: Skjermbilder av GUI-ruter (staging)
-        if: steps.guard.outputs.run == 'true' && steps.decide.outputs.should_card == 'true' && steps.decide.outputs.is_gui == 'true'
+        if: steps.guard.outputs.run == 'true' && steps.decide.outputs.outcome != 'noop' && steps.decide.outputs.is_gui == 'true'
         continue-on-error: true
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -123,9 +125,10 @@ jobs:
           npx --yes tsx scripts/loops/screenshot-routes.ts || echo "::warning::skjermbilder feilet (best-effort)"
           kill "$DEV_PID" 2>/dev/null || true
 
-      # Steg 3 — POST: bygg kortet og fest evt. skjermbilder (multipart).
+      # Steg 3 — POST: auto-merge + kvittering ELLER knapp-kort (etter outcome),
+      # fest evt. skjermbilder (multipart).
       - name: Post merge-kort
-        if: steps.guard.outputs.run == 'true' && steps.decide.outputs.should_card == 'true'
+        if: steps.guard.outputs.run == 'true' && steps.decide.outputs.outcome != 'noop'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
