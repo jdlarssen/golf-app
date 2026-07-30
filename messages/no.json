@@ -1195,6 +1195,9 @@
     "detailHowItWorks": "Slik fungerer det",
     "detailExample": "Konkret eksempel",
     "detailFaqHeading": "Spørsmål som går igjen",
+    "detailCtaHeading": "Tørny regner dette ut for deg",
+    "detailCtaBody": "Velg bane og tee, så fordeler appen slagene etter stroke index og fører stillingen mens dere spiller. Prøv en demo-runde uten å logge inn.",
+    "detailCtaButton": "Prøv demoen",
     "cardShowRules": "Vis regler",
     "cardHideRules": "Skjul regler",
     "cardReadMore": "Les mer →",
@@ -1211,8 +1214,43 @@
           "Slagene du får på handikap regnes med før poengene settes.",
           "Høyest poengsum til slutt vinner."
         ],
-        "long": "Du samler stableford-poeng på hvert hull basert på scoren din mot par etter at handikap-slagene er trukket fra. To poeng er normalen — ett for å fullføre hullet med ett slag over par (bogey), tre for å gjøre birdie. Scorer du dobbeltbogey eller verre, gir du opp hullet og tar ett poeng. Høyest poengsum etter 18 hull vinner.",
-        "example": "Hull 3, par 4, SI 5: du har CH 12 og får ett ekstraslag. Du scorer 5 brutto (netto 4) → par → 2 poeng. Hull 15, par 3, SI 17: du scorer 3 brutto (netto 3) → par → 2 poeng. Hull 10, par 5, SI 3: du scorer 5 brutto (netto 4) → birdie → 3 poeng."
+        "sections": [
+          {
+            "heading": "Poengtabellen i stableford",
+            "body": "Stableford gir poeng per hull i stedet for å telle slag. Netto par gir 2 poeng, netto bogey 1, netto birdie 3, netto eagle 4 og netto albatross 5. Netto dobbeltbogey eller verre gir 0, og da er hullet ferdig for deg. Poengene legges sammen, og høyest total etter 18 hull vinner. 36 poeng svarer omtrent til å spille til handicapet ditt. Fordi et katastrofehull koster deg maks to poeng og ikke seks slag, er stableford formatet der en trippelbogey på hull 4 ikke ødelegger hele runden. Det er også derfor de fleste klubbturneringer bruker det."
+          },
+          {
+            "heading": "Handicap og tildelte slag",
+            "body": "Alt i stableford avgjøres av netto, så handicapet er selve motoren. Tørny regner først banehandicapet ditt: hcp-indeksen ganget med slope delt på 113, pluss forskjellen mellom course rating og par på teen du spiller fra. Deretter fordeles slagene etter stroke index på scorekortet. Har du 12 i banehandicap, får du ett ekstra slag på de tolv hullene med lavest stroke index. Har du 22, får du ett slag på alle 18 hull og et ekstra på de fire vanskeligste. WHS anbefaler 95 prosent av banehandicapet i store individuelle stableford-turneringer, og den som setter opp runden i Tørny velger andelen selv. Bytter du tee, endrer banehandicapet seg, og det er nettopp det slope er til for."
+          },
+          {
+            "heading": "Når skal du plukke opp ballen",
+            "body": "Har du brukt opp sjansen til å score på hullet, plukker du opp ballen og går videre. Står du på et par 4 med ett tildelt slag og har brukt seks slag uten å være i hull, kan du ikke få poeng lenger uansett hva som skjer. Det er ikke å gi opp, det er reglene, og det er hovedgrunnen til at stableford-runder går raskere enn slagspill. Hullet gir null poeng, og du er klar på neste tee mens de andre fortsatt putter. På fulle baner er dette den enkleste måten å holde tempoet oppe på."
+          },
+          {
+            "heading": "Varianter av stableford",
+            "body": "Modifisert stableford snur skalaen og premierer risiko: birdie og eagle gir mye mer, mens bogey og dobbeltbogey trekker fra. Fireball stableford, ofte kalt 4BBB, spilles i par der bare den beste poengsummen per hull teller for laget, og WHS anbefaler 85 prosent av banehandicapet der. Par-stableford er en tredje variant der du får pluss, minus eller null mot par på hvert hull i stedet for poeng. Alle tre bruker samme fordeling av tildelte slag etter stroke index, så du trenger ikke lære et nytt regnestykke."
+          }
+        ],
+        "example": "Hull 3, par 4, SI 5: du har CH 12 og får ett ekstraslag. Du scorer 5 brutto (netto 4) → par → 2 poeng. Hull 15, par 3, SI 17: du scorer 3 brutto (netto 3) → par → 2 poeng. Hull 10, par 5, SI 3: du scorer 5 brutto (netto 4) → birdie → 3 poeng.",
+        "faq": [
+          {
+            "q": "Hvor mange stableford-poeng er en god runde?",
+            "a": "36 poeng svarer omtrent til å spille til handicapet ditt. Over 36 er en god dag, og over 40 er en dag du snakker om resten av sesongen."
+          },
+          {
+            "q": "Hvor mange poeng gir en dobbeltbogey?",
+            "a": "Null, når det er netto dobbeltbogey. Da har hullet ingen verdi lenger, og du kan plukke opp ballen og gå videre."
+          },
+          {
+            "q": "Hvordan regnes tildelte slag i stableford?",
+            "a": "Etter stroke index. Banehandicapet ditt sier hvor mange slag du får, og de legges på hullene med lavest stroke index først."
+          },
+          {
+            "q": "Kan man spille stableford i lag?",
+            "a": "Ja. Fireball stableford setter to spillere sammen, og bare den beste poengsummen per hull teller for laget."
+          }
+        ]
       },
       "stableford-4bbb": {
         "summary": "Dere er to på lag. På hvert hull teller den beste poengsummen av dere to.",
@@ -1252,8 +1290,43 @@
           "Netto er antall slag minus slagene du får på hullet.",
           "Lavest lagtotal vinner."
         ],
-        "long": "Dere er to på lag, og begge spiller hvert hull med sin egen ball. På hvert hull teller bare den laveste netto-scoren av dere to — partneren med den beste scoren «bidrar» og drar laget fremover. Netto regnes ved å trekke fra slagene du får på hullet fra bruttoscoren din. Lavest sum av bidragende netto-scorer etter alle 18 hull vinner.",
-        "example": "Hull 7, par 4: du scorer 5 (netto 4 etter ett slag på SI 8), makker scorer 4 (netto 4 uten ekstraslag). Begge er netto 4 — laget tar 4. Hull 12, par 5: du scorer 7 (netto 6), makker scorer 6 (netto 5). Makker bidrar, laget tar 5."
+        "sections": [
+          {
+            "heading": "Reglene i best ball",
+            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere netto-scorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Fire lag eller førti lag spiller det like greit, siden alle går sin egen runde."
+          },
+          {
+            "heading": "Best ball, fourball og fireball",
+            "body": "De tre navnene brukes om hverandre og betyr stort sett det samme: to spillere, hver sin ball, beste score teller. Fourball er navnet regelboka bruker, fireball er det klubbene sier, og best ball er det gjengen sier på første tee. Formatet forveksles ofte med foursomes, som er noe helt annet, for der deler paret én ball og slår annenhver gang. I scramble slår alle, men laget spiller videre fra det beste slaget med én ball. I best ball spiller du alltid din egen ball til den er i hull, eller til du ser at du ikke kan bidra."
+          },
+          {
+            "heading": "Handicap i best ball",
+            "body": "Best ball er formatet der handicap-andelen betyr aller mest, fordi to spillere som plukker beste netto scorer klart bedre enn hver av dem gjør alene. WHS anbefaler derfor 85 prosent. Tørny regner banehandicapet ditt fra hcp-indeks, slope og course rating, tar den andelen arrangøren har satt, og fordeler slagene etter stroke index. Har du 20 i banehandicap, spiller du med 17 når andelen er 85 prosent. Slagene ligger på hullene med lavest stroke index, så du kan godt få et slag på et hull der makkeren ikke får noe, og det er ofte der laget henter poengene sine. Full andel gjør at paret med størst handicap-spenn får en tydelig fordel, så det er verdt å tenke over før dere setter opp turneringen."
+          },
+          {
+            "heading": "Slik spiller paret sammen",
+            "body": "Del rollene på hver tee. Den som slår først legger seg trygt på fairway, den andre kan gå på. Ligger makkeren i trøbbel, sikter du mot midten av green og sikrer laget en score. Er makkeren alt inne på fem meter, går du for flagget. Se over hvor de tildelte slagene ligger før dere går ut: på hull der bare én av dere får et slag, er det den spilleren som skal ta sjansene. Og gi opp hullet med en gang du ser at du ikke kan bidra, det holder tempoet oppe for hele feltet."
+          }
+        ],
+        "example": "Hull 7, par 4: du scorer 5 (netto 4 etter ett slag på SI 8), makker scorer 4 (netto 4 uten ekstraslag). Begge er netto 4 — laget tar 4. Hull 12, par 5: du scorer 7 (netto 6), makker scorer 6 (netto 5). Makker bidrar, laget tar 5.",
+        "faq": [
+          {
+            "q": "Hva er forskjellen på best ball og scramble?",
+            "a": "I best ball spiller begge sin egen ball hele hullet, og laget tar den beste netto-scoren. I scramble slår alle, dere velger det beste slaget og spiller videre derfra med én ball."
+          },
+          {
+            "q": "Hvor mye handicap får man i best ball?",
+            "a": "WHS anbefaler 85 prosent av banehandicapet for hver spiller. Arrangøren kan sette andelen selv når runden opprettes."
+          },
+          {
+            "q": "Teller begge scorene i best ball?",
+            "a": "Nei, bare den laveste netto-scoren per hull. Den andre noteres ikke for laget."
+          },
+          {
+            "q": "Er fourball og best ball det samme?",
+            "a": "I praksis ja. Fourball er regelbokas navn, mens best ball og fireball er hverdagsnavnene på det samme formatet."
+          }
+        ]
       },
       "texas_scramble": {
         "shortDescription": "Lag à 4. Alle slår, beste velges.",
@@ -1263,8 +1336,43 @@
           "Laget får et felles handikap som trekkes fra.",
           "Lavest lagtotal vinner."
         ],
-        "long": "Alle på laget slår fra tee, dere samler inn ballene og velger det beste utslaget. Alle legger ned sine baller på det stedet og slår sitt neste slag derfra. Slik fortsetter dere til ballen er i hullet. Laget teller én score per hull, og lag-handicapet (vanligvis 10–25 % av sum-CH) trekkes fra totalen.",
-        "example": "Hull 2, par 4: A slår 200 m rett frem, B slår 185 m i ruff, C slår 220 m på fairway — dere velger C sitt utslagsted. Alle legger ned til 220 m og slår. Beste andreslag ender 4 m fra hullet. Alle legger ned og putter, og den korteste putter inn på 2 putter. Lagets score: 4 (2 slag + 2 putter)."
+        "sections": [
+          {
+            "heading": "Reglene i texas scramble",
+            "body": "Texas scramble spilles med lag på to til fire. Alle slår ut fra tee, dere går fram sammen og blir enige om hvilket slag som ligger best. Der markerer dere stedet, og alle spiller sitt neste slag derfra, innenfor én køllelengde og ikke nærmere hullet. Slik jobber dere dere innover: velg beste slag, alle slår på nytt, velg igjen. Ligger den valgte ballen i bunker, legger dere ned i bunkeren, og på green plasserer dere ballen nøyaktig der den valgte putten lå. Laget fører én score per hull, og det er den scoren som havner på scorekortet. Ingen teller sine egne slag, og ingen kan ødelegge et hull alene."
+          },
+          {
+            "heading": "Slik velger dere det beste slaget",
+            "body": "Det beste slaget er ikke alltid det lengste. Et utslag som ligger 190 meter midt i fairway er som regel bedre enn et på 230 meter bak et tre. Se på underlaget, vinkelen inn mot flagget og hvor mye trøbbel som ligger foran. Rundt green teller innspillsvinkelen mer enn avstanden. På green velger dere den linja flest klarer å lese, ikke bare den korteste putten. Et godt lag sender den lengstslående sist på tee, så resten kan slå fritt. Ligger ballen alt trygt, kan de som slår etterpå gamble så mye de vil, og det er hele sjarmen med scramble."
+          },
+          {
+            "heading": "Handicap i texas scramble",
+            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter blandes spillerne etter den andelen arrangøren har satt. WHS anbefaler fallende vekting for firemannslag: 25 prosent av det laveste banehandicapet, 20 prosent av det nest laveste, 15 prosent av det tredje og 10 prosent av det høyeste. For lag på to er 35 prosent av det laveste pluss 15 prosent av det høyeste vanlig. Summen trekkes fra lagets bruttototal. Grunnen til at andelen er så lav, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. I Tørny setter den som lager runden prosenten selv."
+          },
+          {
+            "heading": "Vanlige husregler",
+            "body": "De fleste selskapsrunder legger på et minstekrav om at hver spiller må bidra med et visst antall utslag, typisk tre eller fire på 18 hull. Det hindrer at laget bare bruker den lengste, og gjør at alle får være med. Noen legger til at kortslag inn mot green må komme fra ulike spillere. Ambrose er samme idé med et annet handicap-regnestykke, og florida scramble tar den som eide den valgte ballen ut av spill på neste slag. Bli enige om reglene på første tee, ikke på hull 14."
+          }
+        ],
+        "example": "Hull 2, par 4: A slår 200 m rett frem, B slår 185 m i ruff, C slår 220 m på fairway — dere velger C sitt utslagsted. Alle legger ned til 220 m og slår. Beste andreslag ender 4 m fra hullet. Alle legger ned og putter, og den korteste putter inn på 2 putter. Lagets score: 4 (2 slag + 2 putter).",
+        "faq": [
+          {
+            "q": "Hvor mange er det på et texas scramble-lag?",
+            "a": "To til fire. Fire er det vanligste på selskapsrunder og bedriftsturneringer, og laget spiller da 18 hull med én felles score per hull."
+          },
+          {
+            "q": "Må alle på laget bidra med utslag?",
+            "a": "Ikke etter regelboka, men de fleste turneringer krever tre eller fire utslag per spiller på 18 hull. Avtal det før dere går ut, så slipper dere diskusjonen på siste hull."
+          },
+          {
+            "q": "Hvordan regnes lag-handicapet i texas scramble?",
+            "a": "Som en vektet andel av spillernes banehandicap. WHS anbefaler 25, 20, 15 og 10 prosent for firemannslag, og 35 pluss 15 prosent for par. Arrangøren setter andelen når runden opprettes."
+          },
+          {
+            "q": "Kan vi legge ballen bedre der vi velger å spille fra?",
+            "a": "Du legger ballen innenfor én køllelengde fra merket og ikke nærmere hullet. I bunker legger du den i bunkeren, og på green plasserer du den nøyaktig der den valgte ballen lå."
+          }
+        ]
       },
       "ambrose": {
         "shortDescription": "Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene.",
@@ -1329,8 +1437,43 @@
           "Laget med lavest score vinner hullet — hull teller, ikke total.",
           "Laget som leder med flere hull enn det er igjen, har vunnet."
         ],
-        "long": "To mot to, og begge slår fra tee på hvert hull. Paret velger det beste av de to utslagene, og derfra spiller dere annenhver gang inn til hullet. Partneren til den som eier den valgte ballen, slår andreslaget. Lag-handicap beregnes som 60 % av laveste CH pluss 40 % av høyeste. Det laget med lavest score vinner hullet.",
-        "example": "Hull 6, par 4: A slår 210 m til fairway, B slår 195 m i ruff. Dere velger A sitt utslag. B (partneren) slår neste, 160 m til green. A putter til 1 m, B putter inn. Lagets score: 4. Motstanderlaget velger sitt beste utslag, spiller seg inn og fullfører på 5. Dere vinner hullet."
+        "sections": [
+          {
+            "heading": "Reglene i greensome",
+            "body": "Greensome er alternate shot med en vri. Begge i paret slår ut på hvert hull, dere velger det beste av de to utslagene, og derfra spiller dere annenhver gang med den ene ballen inn til hull. Den som ikke eide det valgte utslaget, slår andreslaget. Så bytter dere hele veien inn, også på green. Utslaget som ikke ble valgt, plukkes opp. Fordelen mot rent foursomes er at ingen enkelt tee kan ødelegge hullet for laget, for dere har alltid to sjanser fra tee. Det gjør greensome til det mildeste av alternate shot-formatene, og det som tåler et blandet par best."
+          },
+          {
+            "heading": "Slik avgjøres matchen",
+            "body": "Greensome matchplay går hull for hull. Laget med lavest lagscore vinner hullet, likt hull deles, og stillingen føres i antall hull opp. Matchen er over når et lag leder med flere hull enn det er igjen å spille, så 3/2 betyr tre hull opp med to igjen. Totalt antall slag betyr ingenting: et hull dere mister med fire slag koster nøyaktig like mye som et dere mister med ett. Derfor kan dere skrive av et hull tidlig, plukke opp og gå videre uten å ha tapt annet enn det ene hullet. Det holder tempoet oppe og humøret med."
+          },
+          {
+            "heading": "Handicap i greensome",
+            "body": "Greensome bruker en 60/40-blanding: 60 prosent av det laveste banehandicapet i paret pluss 40 prosent av det høyeste. Tørny regner begge banehandicapene fra hcp-indeks, slope og course rating, blander dem og runder av til lag-handicapet. Har dere 8 og 18, blir regnestykket 0,6 ganger 8 pluss 0,4 ganger 18, altså 12. I matchplay er det differansen mellom de to lagenes handicap som gis, fordelt etter stroke index nedover fra det vanskeligste hullet. Vektingen er skjev med vilje: siden dere alltid kan velge det beste utslaget, blir det oftest den beste spilleren i paret som legger grunnlaget, og da skal laget ligge nærmere det laveste handicapet enn snittet."
+          },
+          {
+            "heading": "Greensome, foursomes og chapman",
+            "body": "I foursomes slår bare én av dere ut, dere bytter på annenhvert hull, og lag-handicapet er 50 prosent av summen. Chapman, også kalt pinehurst, går et steg lenger: begge slår ut, begge slår andreslaget med den andres ball, og så velger dere én ball å spille alternate med inn til hull. Gruesome er versjonen der motstanderen bestemmer hvilket av utslagene deres dere må spille videre med, og den er like ubarmhjertig som navnet lover. Alle fire er i familie, men handicap-regnestykket er ulikt, så sjekk hvilket dere faktisk spiller før dere går ut."
+          }
+        ],
+        "example": "Hull 6, par 4: A slår 210 m til fairway, B slår 195 m i ruff. Dere velger A sitt utslag. B (partneren) slår neste, 160 m til green. A putter til 1 m, B putter inn. Lagets score: 4. Motstanderlaget velger sitt beste utslag, spiller seg inn og fullfører på 5. Dere vinner hullet.",
+        "faq": [
+          {
+            "q": "Hva er forskjellen på greensome og foursomes?",
+            "a": "I greensome slår begge ut, og dere velger det beste utslaget. I foursomes slår bare én ut, og dere bytter på hvem det er annenhvert hull."
+          },
+          {
+            "q": "Hvordan regnes handicap i greensome?",
+            "a": "60 prosent av det laveste banehandicapet i paret pluss 40 prosent av det høyeste. Tørny gjør regnestykket når runden starter."
+          },
+          {
+            "q": "Hvem slår andreslaget i greensome?",
+            "a": "Den som ikke slo utslaget dere valgte. Deretter bytter dere annenhver gang inn til ballen er i hull."
+          },
+          {
+            "q": "Hva betyr 3/2 i en greensome matchplay?",
+            "a": "Laget vant med tre hull opp og to hull igjen å spille. Matchen var da avgjort før hull 18."
+          }
+        ]
       },
       "chapman_matchplay": {
         "shortDescription": "Vekselslag: begge slår ut, bytt ball, velg beste, spill inn vekselvis. Også kjent som Pinehurst.",
@@ -1362,8 +1505,43 @@
           "Dere bytter på å være ulv gjennom runden.",
           "Flest poeng til slutt vinner."
         ],
-        "long": "Fire spillere, og rollen som «ulv» roterer gjennom runden: hull 1 er spiller 1 ulv, hull 2 er spiller 2, og så videre. Ulven ser de tre andres utslag og velger underveis hvem som skal bli partner, eller går alene mot de tre andre. Går ulven alene og vinner, gir det dobbelt så mye.",
-        "example": "Hull 4: Petter er ulv. Etter at alle har slått ser han at Lars slo best. Petter peker på Lars som partner. Petter og Lars (2v2) slår best netto 4, motstanderne slår best netto 5. Wolf-side vinner → Petter og Lars får 2 poeng hver, de to andre betaler. Hull 7: Per går lone wolf. Per vinner hullet med netto 3 mot de andres 4 → Per tar 4 poeng, de tre andre betaler 1 hver."
+        "sections": [
+          {
+            "heading": "Reglene i wolf",
+            "body": "Wolf spilles med tre til fem spillere, og rollen som ulv går på rundgang. Rekkefølgen settes før start: på hull 1 er den første spilleren ulv, på hull 2 den neste, og så videre rundt gjengen. Ulven slår sist på tee og ser dermed alle de andre slå. Etter hvert utslag må ulven bestemme seg med en gang: vil den ha den spilleren som partner, eller går den videre til neste? Sier ulven nei til alle, står den alene mot resten av hullet. Hullet spilles ferdig, sidene sammenlignes på beste score, og poengene deles ut. Så roterer ulven, og dere starter på nytt. Er dere fire, roterer det jevnt over de 16 første hullene, og de to siste går til den som ligger sist."
+          },
+          {
+            "heading": "Alene eller med partner",
+            "body": "Det ligger et lite veddemål i hvert eneste utslag. Tar du den første som treffer fairway, er du trygg, men da har du ikke sett de to andre slå. Venter du, kan du ende opp med den som drev ut av banen. Går du alene og vinner, henter du mest, og en lone wolf på et kort par 3 er ofte bedre butikk enn på et langt par 5. Erklærer du blind wolf før noen har slått, betaler det enda bedre. Ligger du bakpå med fire hull igjen, er det der du henter det inn. Ligger du foran, tar du partner hver gang og lar de andre ta sjansene."
+          },
+          {
+            "heading": "Handicap i wolf",
+            "body": "Wolf kan spilles brutto eller netto, og valget tas når runden settes opp. Spiller dere netto, regner Tørny banehandicapet ditt fra hcp-indeks, slope og course rating, og fordeler slagene etter stroke index: har du 12 i banehandicap, får du ett ekstra slag på de tolv hullene med lavest stroke index. Hele banehandicapet brukes, uten avkortning. Grunnen er at wolf er et hull-for-hull-spill der lagene byttes fra hull til hull, så det finnes ingen fast motstander å regne differanse mot. Netto er nesten alltid riktig når spennet i gjengen er stort, ellers vinner den beste spilleren de fleste hullene uansett hvem som er ulv. Spiller dere omtrent likt, blir brutto renere."
+          },
+          {
+            "heading": "Poeng og oppgjør",
+            "body": "Grunninnsatsen er ett poeng per hull. Vinner ulven sammen med partneren sin, får begge to poeng, og de to andre betaler. Går ulven alene og tar hullet, henter den like mange poeng som det er spillere i gruppa. Taper den alene, får hver motstander ett poeng. Blind wolf betaler mer enn vanlig lone wolf, begge veier. Blir hullet delt, deles ingen poeng ut, men innsatsen på neste hull øker med ett, og en rekke delte hull gjør de siste hullene dyre. Flest poeng etter 18 hull vinner."
+          }
+        ],
+        "example": "Hull 4: Petter er ulv. Etter at alle har slått ser han at Lars slo best. Petter peker på Lars som partner. Petter og Lars (2v2) slår best netto 4, motstanderne slår best netto 5. Wolf-side vinner → Petter og Lars får 2 poeng hver, de to andre betaler. Hull 7: Per går lone wolf. Per vinner hullet med netto 3 mot de andres 4 → Per tar 4 poeng, de tre andre betaler 1 hver.",
+        "faq": [
+          {
+            "q": "Hvor mange spillere trengs for å spille wolf?",
+            "a": "Tre til fem. Fire er klassikeren, for da roterer ulven jevnt over de 16 første hullene, og de to siste går til spilleren som ligger sist."
+          },
+          {
+            "q": "Når må ulven velge partner?",
+            "a": "Med en gang, rett etter hvert utslag. Sier du nei til den som nettopp slo, kan du ikke ombestemme deg senere på hullet."
+          },
+          {
+            "q": "Hva er lone wolf og blind wolf?",
+            "a": "Lone wolf er at du takker nei til alle og spiller alene mot resten. Blind wolf erklærer du før noen har slått ut, uten å se et eneste slag. Begge betaler mer enn å spille med partner, og blind mest."
+          },
+          {
+            "q": "Kan vi spille wolf med handicap?",
+            "a": "Ja. Velg netto når du setter opp runden, så trekker Tørny fra tildelte slag hull for hull etter stroke index. Med jevne spillere fungerer brutto like godt."
+          }
+        ]
       },
       "nassau": {
         "shortDescription": "Tre konkurranser i én: front 9, back 9, total 18.",
@@ -1373,8 +1551,43 @@
           "Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt.",
           "Vinner du alle tre, har du gjort rent bord."
         ],
-        "long": "Nassau deler runden i tre separate oppgjør: front nine (hull 1–9), back nine (hull 10–18) og hele 18 hull samlet. Hvert av de tre oppgjørene avgjøres uavhengig av hverandre, slik at du kan tape de første ni og likevel ta de siste ni og sammenlagt. Du kan spille brutto eller netto med handikap, alt etter hva som er avtalt.",
-        "example": "Etter hull 9: du er nede 2 hull på front nine og taper den delen. Hull 10–18: du spiller sterk tilbake og vinner 3 hull mer enn motstanderen, du vinner back nine. Totalscoren: du har 88 netto mot motstanderens 89 netto over 18 hull — du vinner helhetsdelen. Sluttresultat: 1–2 i nassau, du vant to av tre oppgjør."
+        "sections": [
+          {
+            "heading": "Reglene i nassau",
+            "body": "Nassau er tre oppgjør i én runde. De første ni hullene er ett oppgjør, de siste ni er det andre, og alle 18 samlet er det tredje. Hvert oppgjør avgjøres for seg, så du kan ryke på front nine og fortsatt hente to av tre. Formatet kalles ofte 2-2-2 eller 5-5-5 etter innsatsen, altså samme beløp på hver av de tre delene. Nassau spilles både som matchplay mellom to spillere eller to par, og som slagspill i en gruppe. I Tørny rangeres hver seksjon på laveste sum, akkurat som en vanlig runde, bare delt i tre."
+          },
+          {
+            "heading": "Enheter, push og sweep",
+            "body": "Hvert oppgjør er verdt én enhet. Vinner du en seksjon alene, tar du enheten. Ender seksjonen delt, blir den en push, og ingen får noe. Det er den klassiske nassau-regelen, og den gjør at et delt oppgjør aldri koster noen noe. Tar du alle tre, har du gjort en sweep og henter tre enheter. Regnestykket gjør at runden aldri dør: taper du front nine tidlig, har du fortsatt to oppgjør igjen, og de siste ni hullene betyr like mye som de første. Det er grunnen til at nassau holder flest folk med helt inn til hull 18."
+          },
+          {
+            "heading": "Handicap i nassau",
+            "body": "Nassau kan spilles brutto eller netto, og valget tas når runden settes opp. Med netto regner Tørny banehandicapet ditt fra hcp-indeks, slope og course rating, og fordeler tildelte slag etter stroke index, hull for hull, ikke som ett fradrag til slutt. Nettopp det er viktig i nassau: fordi slagene ligger spredt etter stroke index, får du sjelden nøyaktig halvparten på hver ni. Ligger de vanskeligste hullene på banen bak, kommer flere av slagene dine på back nine, og da er front nine et tøffere oppgjør for deg enn totalen. Sjekk stroke index på scorekortet før dere avtaler innsats på hver seksjon. Spiller dere matchplay mot hverandre, er WHS-standarden full differanse mellom banehandicapene."
+          },
+          {
+            "heading": "Press og slektninger",
+            "body": "Ligger du to hull nede i en seksjon, kan du be om en press, altså et nytt sideveddemål på hullene som er igjen. Godtar motstanderen, spilles det parallelt med det opprinnelige, og en runde kan ende med front, back, total og to presses på toppen. Automatisk press ved to nede er også vanlig. Tørny regner de tre hovedoppgjørene, og presses holder dere styr på selv. Round robin er en slektning der partnerne bytter hver sjette hull, så alle spiller med alle."
+          }
+        ],
+        "example": "Etter hull 9: du er nede 2 hull på front nine og taper den delen. Hull 10–18: du spiller sterk tilbake og vinner 3 hull mer enn motstanderen, du vinner back nine. Totalscoren: du har 88 netto mot motstanderens 89 netto over 18 hull — du vinner helhetsdelen. Sluttresultat: 1–2 i nassau, du vant to av tre oppgjør.",
+        "faq": [
+          {
+            "q": "Hva betyr 2-2-2 i nassau?",
+            "a": "Det er innsatsen: to enheter på front nine, to på back nine og to på totalen. 5-5-5 er samme oppsett med høyere innsats."
+          },
+          {
+            "q": "Hva skjer når en seksjon ender likt?",
+            "a": "Det blir en push. Ingen vinner enheten, og de to andre oppgjørene avgjøres som vanlig."
+          },
+          {
+            "q": "Hva er en press i nassau?",
+            "a": "Et nytt veddemål på hullene som gjenstår, som regel bedt om når du ligger to hull nede. Det spilles ved siden av det opprinnelige oppgjøret."
+          },
+          {
+            "q": "Kan tre eller flere spille nassau?",
+            "a": "Ja. Da rangeres hver seksjon på laveste sum, og den som vinner en seksjon alene tar enheten. Deles den, står den."
+          }
+        ]
       },
       "skins": {
         "shortDescription": "Hull for hull: lavest vinner skinnet. Delt hull ruller potten videre.",
@@ -1384,8 +1597,43 @@
           "Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt.",
           "Flest skins til slutt vinner."
         ],
-        "long": "Hvert hull er verdt ett skin. Den spilleren som har lavest score på hullet helt alene — ingen andre deler den scoren — vinner skinnet. Deler to eller flere spillere den laveste scoren, går skinnet ikke til noen, men ruller over til neste hull. Det neste hullet er da verdt to skins. Kjeden kan fortsette, og det kan samle seg store gevinster på et enkelt hull.",
-        "example": "Hull 1: A scorer 3, B scorer 4, C scorer 4, D scorer 5. A vinner alene → A tar skinnet (verdi 1). Hull 2: A scorer 4, B scorer 3, C scorer 3, D scorer 5. B og C deler lavest → ingen vinner, skinnet ruller over. Hull 3 er nå verdt 2 skins. Hull 3: A scorer 4, B scorer 5, C scorer 4, D scorer 3. D vinner alene → D tar 2 skins."
+        "sections": [
+          {
+            "heading": "Reglene i skins",
+            "body": "Hvert hull er verdt ett skin. Den som har den laveste scoren på hullet helt alene, tar skinnet. Deler to eller flere spillere den laveste scoren, vinner ingen. Alle spiller sin egen ball hele veien, og et skin du har vunnet kan du ikke tape igjen. Det gjør skins til formatet der en dårlig start ikke betyr noe: du kan ligge ti slag bak sammenlagt og likevel gå hjem med mest, så lenge du treffer på de riktige hullene. Tre til fem spillere fungerer best. Med flere blir det sjelden at noen står alene på laveste score."
+          },
+          {
+            "heading": "Når potten ruller videre",
+            "body": "Carryover er hele motoren i spillet. Blir et hull delt, legges skinnet til neste hull, som dermed er verdt to. Blir det delt igjen, er det tredje hullet verdt tre, og kjeden fortsetter til noen vinner alene og tar hele potten. Det er derfor skins bygger spenning bakover i runden: en rekke delte hull midtveis kan gjøre hull 17 verdt seks skins, og da er det ingen som prater i innspillet. Blir det siste hullet delt, henger potten igjen uten vinner. De fleste lar den bare stå, mens andre avgjør den med nærmest hullet eller et ekstra hull."
+          },
+          {
+            "heading": "Handicap i skins",
+            "body": "Skins kan spilles brutto eller netto, og du velger når runden settes opp. Netto er det som gjør at hele gjengen kan være med: Tørny regner banehandicapet fra hcp-indeksen din, slope og course rating på teen du spiller fra, og deler slagene ut etter stroke index. Har du 9 i banehandicap, får du ett slag på de ni hullene med lavest stroke index. Hele handicapet brukes, uten avkortning. Én ting er verdt å vite før dere velger: netto skins gir høyhandicapere mange flere alene-seire, fordi et tildelt slag på et vanskelig hull ofte er nok til å stå igjen alene på laveste score. Er spennet stort, er netto riktig. Spiller dere fire som ligger nær hverandre, blir brutto et renere oppgjør."
+          },
+          {
+            "heading": "Innsats og husregler",
+            "body": "Vanlig oppgjør er en fast sum per skin, eller en flaske til den som tar flest. Noen spiller med validering, der du må vinne to hull på rad for å få betalt for det første, og det gjør formatet betydelig hardere. Andre kjører halv verdi på par 3-hullene, eller dobbel verdi på de tre siste. Uansett hva dere lander på, avtal det på første tee. Skins tåler godt å ligge på toppen av en vanlig stableford-runde som en sideturnering, så dere har to konkurranser i gang samtidig."
+          }
+        ],
+        "example": "Hull 1: A scorer 3, B scorer 4, C scorer 4, D scorer 5. A vinner alene → A tar skinnet (verdi 1). Hull 2: A scorer 4, B scorer 3, C scorer 3, D scorer 5. B og C deler lavest → ingen vinner, skinnet ruller over. Hull 3 er nå verdt 2 skins. Hull 3: A scorer 4, B scorer 5, C scorer 4, D scorer 3. D vinner alene → D tar 2 skins.",
+        "faq": [
+          {
+            "q": "Hva skjer når to spillere deler laveste score i skins?",
+            "a": "Da vinner ingen hullet. Skinnet ruller videre og legges til neste hull, som dermed er verdt to."
+          },
+          {
+            "q": "Hvor mange kan spille skins?",
+            "a": "Tre til fem fungerer best. Med flere spillere blir det sjeldnere at noen står alene på laveste score, og pottene vokser fort."
+          },
+          {
+            "q": "Skal skins spilles brutto eller netto?",
+            "a": "Netto når spennet i handicap er stort, brutto når dere spiller omtrent likt. Du velger det når du setter opp runden i Tørny."
+          },
+          {
+            "q": "Hva gjør vi med potten hvis siste hull blir delt?",
+            "a": "Standarden er at den blir stående uvunnet. Vil dere kåre en vinner, avgjør dere den med et ekstra hull eller nærmest flagget på 18."
+          }
+        ]
       },
       "bingo_bango_bongo": {
         "shortDescription": "2–4 spillere. Tre poeng per hull: først på green, nærmest, først i hull.",
@@ -1395,8 +1643,43 @@
           "Du spiller for deg selv, og alle tre poengene på et hull kan gå til én og samme spiller.",
           "Flest poeng etter 18 hull vinner."
         ],
-        "long": "Tre poeng er i spill på hvert hull, og de tildeles i rekkefølge. «Bingo» går til den som treffer green først (uansett antall slag). «Bango» går til den som ligger nærmest hullet når alle er på green. «Bongo» går til den som går i hull først. Slagspill-rekkefølgen gjelder: den som ligger lengst fra hullet, slår alltid neste slag. Alle tre poengene kan gå til samme spiller.",
-        "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff og D er i bunkeren — ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte — bongo til C."
+        "sections": [
+          {
+            "heading": "Reglene i bingo bango bongo",
+            "body": "Tre poeng deles ut på hvert hull, og de har ingenting med antall slag å gjøre. Bingo går til den som først får ballen på green. Bango går til den som ligger nærmest hullet når alle er på green. Bongo går til den som først får ballen i hull. Alle tre kan gå til samme spiller, men som regel spres de utover. 54 poeng er i spill over 18 hull, og flest poeng vinner. Formatet er laget for grupper med stort spenn: den som slår kortest kan godt ta bingo, nettopp fordi hun er lengst fra hullet og dermed slår først."
+          },
+          {
+            "heading": "Rekkefølgen er hele spillet",
+            "body": "Regelen om at den som ligger lengst fra hullet slår først, er ikke en høflighetsregel her, den er selve motoren. De fleste kjører husregel om at du mister poenget hvis du slår ut av tur. Ligger du kort og trygt etter to slag på et par 5, er du først framme og tar bingo mens de lange fortsatt roter i ruffen. Bango belønner det stille håndverket: er du først på green, må du putte først, og da er det vanskelig å bli liggende nærmest. Bongo krever at du faktisk setter putten. Til sammen flytter det oppmerksomheten fra lengde til presisjon, og runden går fort."
+          },
+          {
+            "heading": "Handicap i bingo bango bongo",
+            "body": "Dette er det ene formatet i Tørny der banehandicapet ikke gjør noe. Poengene kommer fra rekkefølge og presisjon, ikke fra score, så det finnes ingen slag å trekke fra. Spillet jevner seg ut på egen hånd: den som slår kortest kommer først til ballen sin og får flest sjanser til bingo, mens den som slår langt får flere korte innspill og dermed flere bango-poeng. Vil dere likevel jevne ut mer, er tee-valget verktøyet, så la spillerne med høyest hcp-indeks slå fra en kortere tee. Fører dere slagene i Tørny i tillegg, får dere en helt vanlig netto-score på siden uten at den rører bingo bango bongo-poengene."
+          },
+          {
+            "heading": "Innsats og gruppestørrelse",
+            "body": "To til fire spillere fungerer, og fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
+          }
+        ],
+        "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff og D er i bunkeren — ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte — bongo til C.",
+        "faq": [
+          {
+            "q": "Hva betyr bingo, bango og bongo?",
+            "a": "Bingo er første ball på green, bango er nærmest hullet når alle er på green, og bongo er første ball i hull. Ett poeng for hver."
+          },
+          {
+            "q": "Hvor mange poeng er i spill i en runde?",
+            "a": "54 over 18 hull, altså tre per hull. Alle tre kan gå til samme spiller på ett og samme hull."
+          },
+          {
+            "q": "Teller handicap i bingo bango bongo?",
+            "a": "Nei. Poengene kommer fra rekkefølge og presisjon, ikke fra antall slag, så det trekkes ikke fra noen slag."
+          },
+          {
+            "q": "Hvor mange bør spille?",
+            "a": "To til fire. Med fire blir kampen om bango skarpest, og runden går fortsatt raskt."
+          }
+        ]
       },
       "nines": {
         "shortDescription": "3 spillere, poeng per hull: lavest tar mest. Velg Nines (5-3-1) eller Split Sixes (4-2-0).",
