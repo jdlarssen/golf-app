@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
+import { LinkButton } from '@/components/ui/Button';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
@@ -201,6 +202,22 @@ export default async function SpillformDetailPage({ params }: { params: Params }
           </dl>
         </div>
       )}
+
+      {/* Demo CTA — on every format page; /demo is public (proxy.ts), so an
+          anonymous reader who lands here from search can try it straight away. */}
+      <div className="mt-8 rounded-2xl border border-border bg-surface px-4 py-5 text-center">
+        <h2 className="font-serif text-[18px] font-medium tracking-[-0.01em] text-text">
+          {tFg('detailCtaHeading')}
+        </h2>
+        <p className="mt-2 text-[14px] text-muted leading-relaxed">
+          {tFg('detailCtaBody')}
+        </p>
+        <div className="mt-4">
+          <LinkButton href="/demo" full data-testid="format-demo-cta">
+            {tFg('detailCtaButton')}
+          </LinkButton>
+        </div>
+      </div>
     </AppShell>
   );
 }

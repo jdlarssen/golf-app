@@ -1195,6 +1195,9 @@
     "detailHowItWorks": "How it works",
     "detailExample": "An example",
     "detailFaqHeading": "Questions that keep coming up",
+    "detailCtaHeading": "Tørny does this maths for you",
+    "detailCtaBody": "Pick a course and a tee, and the app spreads the strokes by stroke index and keeps the board while you play. Try a demo round without logging in.",
+    "detailCtaButton": "Try the demo",
     "cardShowRules": "Show rules",
     "cardHideRules": "Hide rules",
     "cardReadMore": "Read more →",
@@ -1211,8 +1214,43 @@
           "The strokes you get from your handicap are applied before the points are counted.",
           "Highest total at the end wins."
         ],
-        "long": "You collect Stableford points on each hole based on your score against par after your handicap strokes are deducted. Two points is the norm — one for finishing the hole one over par (bogey), three for a birdie. Score a double bogey or worse and you pick up, taking one point. Highest total after 18 holes wins.",
-        "example": "Hole 3, par 4, SI 5: you have CH 12 and get one extra stroke. You score 5 gross (net 4) → par → 2 points. Hole 15, par 3, SI 17: you score 3 gross (net 3) → par → 2 points. Hole 10, par 5, SI 3: you score 5 gross (net 4) → birdie → 3 points."
+        "sections": [
+          {
+            "heading": "The Stableford points table",
+            "body": "Stableford awards points per hole instead of counting strokes. A net par is worth 2 points, a net bogey 1, a net birdie 3, a net eagle 4 and a net albatross 5. A net double bogey or worse is 0, and at that point the hole is finished for you. The points are added up and the highest total after 18 holes wins. 36 points is roughly what playing to your handicap looks like. Because a disaster hole costs you two points rather than six strokes, Stableford is the format where a triple bogey on the 4th does not wreck the whole round. That is also why most club competitions use it."
+          },
+          {
+            "heading": "Handicap and strokes received",
+            "body": "Everything in Stableford is decided on net, so the handicap is the engine. Tørny first works out your course handicap: your handicap index multiplied by the slope divided by 113, plus the difference between the course rating and par on the tee you play from. The strokes are then spread by the stroke index on the card. With a course handicap of 12 you get one extra stroke on the twelve holes with the lowest stroke index. With 22 you get a stroke on all 18 holes and a second one on the four hardest. WHS recommends 95 per cent of the course handicap for large individual Stableford competitions, and whoever sets up the round in Tørny chooses the allowance. Change tee and your course handicap changes, which is exactly what the slope is there for."
+          },
+          {
+            "heading": "When to pick up",
+            "body": "Once you have used up your chance of scoring on the hole, you pick up and move on. Standing on a par 4 with one stroke received and six shots gone without holing out, you cannot score a point whatever happens next. That is not giving up, it is the rules, and it is the main reason Stableford rounds move faster than stroke play. The hole is worth nothing, and you are ready on the next tee while the others are still putting. On a busy course this is the simplest way there is to keep the pace up."
+          },
+          {
+            "heading": "Variants of Stableford",
+            "body": "Modified Stableford flips the scale and rewards risk: birdies and eagles are worth far more, while bogeys and double bogeys take points off. Fourball Stableford, often called 4BBB, is played in pairs where only the better points score per hole counts for the team, and WHS recommends 85 per cent of the course handicap there. Par Stableford is a third variant where each hole gives you a plus, a minus or a half against par instead of points. All three use the same distribution of strokes by stroke index, so there is no new sum to learn."
+          }
+        ],
+        "example": "Hole 3, par 4, SI 5: you have CH 12 and get one extra stroke. You score 5 gross (net 4) → par → 2 points. Hole 15, par 3, SI 17: you score 3 gross (net 3) → par → 2 points. Hole 10, par 5, SI 3: you score 5 gross (net 4) → birdie → 3 points.",
+        "faq": [
+          {
+            "q": "How many Stableford points is a good round?",
+            "a": "36 points is roughly what playing to your handicap looks like. Above 36 is a good day, and above 40 is a day you talk about for the rest of the season."
+          },
+          {
+            "q": "How many points does a double bogey score?",
+            "a": "None, when it is a net double bogey. The hole has no value left, so you can pick up and move on."
+          },
+          {
+            "q": "How are strokes received worked out in Stableford?",
+            "a": "By stroke index. Your course handicap says how many strokes you get, and they go on the holes with the lowest stroke index first."
+          },
+          {
+            "q": "Can Stableford be played in teams?",
+            "a": "Yes. Fourball Stableford pairs two players up, and only the better points score per hole counts for the team."
+          }
+        ]
       },
       "stableford-4bbb": {
         "summary": "You play as a pair. On each hole the better of your two point scores counts.",
@@ -1252,8 +1290,43 @@
           "Net is your strokes minus the strokes you get on the hole.",
           "Lowest team total wins."
         ],
-        "long": "You play as a pair, and both of you play each hole with your own ball. On each hole only the lower net score of the two counts — the partner with the better score \"contributes\" and carries the team forward. Net is your gross score minus the strokes you get on the hole. Lowest total of contributing net scores after all 18 holes wins.",
-        "example": "Hole 7, par 4: you score 5 (net 4 after one stroke on SI 8), your partner scores 4 (net 4 with no extra stroke). Both are net 4 — the team takes 4. Hole 12, par 5: you score 7 (net 6), your partner scores 6 (net 5). Your partner contributes, the team takes 5."
+        "sections": [
+          {
+            "heading": "The rules of best ball",
+            "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. Four teams or forty teams play it equally well, since everyone walks their own round."
+          },
+          {
+            "heading": "Best ball, fourball and fourball better ball",
+            "body": "The names are used interchangeably and broadly mean the same thing: two players, a ball each, the better score counts. Fourball is the name the rule book uses, better ball is what the clubs say, and best ball is what the group says on the first tee. The format is often confused with foursomes, which is something else entirely, because there the pair shares one ball and plays alternate shots. In a scramble everyone hits, but the team plays on from the best shot with one ball. In best ball you always play your own ball until it is holed, or until you can see you cannot contribute."
+          },
+          {
+            "heading": "Handicap in best ball",
+            "body": "Best ball is the format where the handicap allowance matters most, because two players picking the better net score far outperform either of them alone. WHS therefore recommends 85 per cent. Tørny works out your course handicap from your handicap index, the slope and the course rating, applies the allowance the organiser has set, and spreads the strokes by stroke index. With a course handicap of 20 you play off 17 at an 85 per cent allowance. The strokes sit on the holes with the lowest stroke index, so you may well get a stroke on a hole where your partner gets none, and that is often where the team picks up its shots. A full allowance gives the pair with the widest handicap spread a clear edge, so it is worth a thought before you set the competition up."
+          },
+          {
+            "heading": "Playing as a pair",
+            "body": "Split the roles on every tee. Whoever hits first puts one safely on the fairway, the other can take it on. If your partner is in trouble, aim for the middle of the green and secure the team a score. If your partner is already inside five metres, go at the flag. Look over where the strokes received sit before you go out: on holes where only one of you gets a stroke, that is the player who should take the risk. And pick up as soon as you can see you cannot contribute, because it keeps the pace up for the whole field."
+          }
+        ],
+        "example": "Hole 7, par 4: you score 5 (net 4 after one stroke on SI 8), your partner scores 4 (net 4 with no extra stroke). Both are net 4 — the team takes 4. Hole 12, par 5: you score 7 (net 6), your partner scores 6 (net 5). Your partner contributes, the team takes 5.",
+        "faq": [
+          {
+            "q": "What is the difference between best ball and a scramble?",
+            "a": "In best ball both players play their own ball for the whole hole and the team takes the better net score. In a scramble everyone hits, you choose the best shot and play on from there with one ball."
+          },
+          {
+            "q": "How much handicap do you get in best ball?",
+            "a": "WHS recommends 85 per cent of the course handicap for each player. The organiser can set the allowance when the round is created."
+          },
+          {
+            "q": "Do both scores count in best ball?",
+            "a": "No, only the lower net score per hole. The other one is not recorded for the team."
+          },
+          {
+            "q": "Are fourball and best ball the same thing?",
+            "a": "In practice yes. Fourball is the rule book name, while best ball and better ball are the everyday names for the same format."
+          }
+        ]
       },
       "texas_scramble": {
         "shortDescription": "Teams of 4. Everyone tees off, the best is chosen.",
@@ -1263,8 +1336,43 @@
           "The team gets a combined handicap that is deducted.",
           "Lowest team total wins."
         ],
-        "long": "Everyone on the team tees off, you gather the balls and choose the best drive. Everyone places their ball at that spot and plays their next shot from there. You carry on like this until the ball is holed. The team counts one score per hole, and the team handicap (usually 10–25% of the combined CH) is deducted from the total.",
-        "example": "Hole 2, par 4: A hits 200 m straight, B hits 185 m into the rough, C hits 220 m down the fairway — you choose C's spot. Everyone drops at 220 m and plays. The best second shot finishes 4 m from the hole. Everyone drops and putts, and the closest holes it in 2 putts. Team score: 4 (2 shots + 2 putts)."
+        "sections": [
+          {
+            "heading": "The rules of Texas scramble",
+            "body": "Texas scramble is played in teams of two to four. Everyone tees off, you walk up together and agree on which shot sits best. Mark that spot, and everyone plays their next shot from there, within one club length and no nearer the hole. You work your way in like that: pick the best shot, everyone plays again, pick again. If the chosen ball is in a bunker, you drop in the bunker, and on the green you place your ball exactly where the chosen putt lay. The team records one score per hole, and that is the score that goes on the card. Nobody counts their own strokes, and nobody can wreck a hole on their own."
+          },
+          {
+            "heading": "Choosing the best shot",
+            "body": "The best shot is not always the longest one. A drive sitting 190 metres down the middle usually beats one at 230 metres behind a tree. Look at the lie, the angle into the flag and how much trouble sits in front. Around the green the angle of approach matters more than the distance. On the green, pick the line most of you can read, not simply the shortest putt. A good team sends the longest hitter last off the tee so the rest can swing freely. If the ball is already safe, whoever plays after can take on anything, and that is the whole charm of a scramble."
+          },
+          {
+            "heading": "Handicap in Texas scramble",
+            "body": "Scramble is a team format, so the handicap is worked out for the team, not for each player. Tørny first finds your course handicap from your handicap index, the slope and the course rating of the tee you play from. The players are then blended using the allowance the organiser has set. WHS recommends a descending weighting for four-player teams: 25 per cent of the lowest course handicap, 20 per cent of the next, 15 per cent of the third and 10 per cent of the highest. For pairs, 35 per cent of the lower plus 15 per cent of the higher is the norm. The total is deducted from the team gross. The reason the allowance is so low is simple: four players picking the best ball score far better than any of them does alone, so a full handicap would massively overcompensate. In Tørny whoever creates the round sets the percentage."
+          },
+          {
+            "heading": "Common house rules",
+            "body": "Most social rounds add a minimum requirement that each player must contribute a certain number of drives, typically three or four over 18 holes. It stops the team leaning on the longest hitter and keeps everyone involved. Some add a rule that approach shots into the green must come from different players. Ambrose is the same idea with a different handicap sum, and Florida scramble takes the owner of the chosen ball out of play for the next shot. Agree the rules on the first tee, not on the 14th."
+          }
+        ],
+        "example": "Hole 2, par 4: A hits 200 m straight, B hits 185 m into the rough, C hits 220 m down the fairway — you choose C's spot. Everyone drops at 220 m and plays. The best second shot finishes 4 m from the hole. Everyone drops and putts, and the closest holes it in 2 putts. Team score: 4 (2 shots + 2 putts).",
+        "faq": [
+          {
+            "q": "How many players are on a Texas scramble team?",
+            "a": "Two to four. Four is the most common on social rounds and corporate days, and the team then plays 18 holes with one shared score per hole."
+          },
+          {
+            "q": "Does everyone on the team have to contribute drives?",
+            "a": "Not under the rule book, but most competitions require three or four drives per player over 18 holes. Agree it before you go out and you avoid the argument on the last hole."
+          },
+          {
+            "q": "How is the team handicap worked out in Texas scramble?",
+            "a": "As a weighted share of the players course handicaps. WHS recommends 25, 20, 15 and 10 per cent for four-player teams, and 35 plus 15 per cent for pairs. The organiser sets the allowance when the round is created."
+          },
+          {
+            "q": "Can we improve the lie where we choose to play from?",
+            "a": "You place the ball within one club length of the mark and no nearer the hole. In a bunker you place it in the bunker, and on the green you put it exactly where the chosen ball lay."
+          }
+        ]
       },
       "ambrose": {
         "shortDescription": "Teams of 2 or 4. Everyone tees off, the best ball is chosen. A team handicap evens out the differences between teams.",
@@ -1329,8 +1437,43 @@
           "The team with the lowest score wins the hole — holes count, not total.",
           "The team that leads by more holes than are left has won."
         ],
-        "long": "Two against two, and both tee off on each hole. The pair chooses the better of the two drives, and from there you alternate shots in to the hole. The partner of whoever owns the chosen ball plays the second shot. The team handicap is worked out as 60% of the lower CH plus 40% of the higher. The team with the lowest score wins the hole.",
-        "example": "Hole 6, par 4: A hits 210 m to the fairway, B hits 195 m into the rough. You choose A's drive. B (the partner) plays next, 160 m to the green. A putts to 1 m, B holes it. Team score: 4. The opposing team chooses their best drive, plays in and finishes on 5. You win the hole."
+        "sections": [
+          {
+            "heading": "The rules of greensomes",
+            "body": "Greensomes is alternate shot with a twist. Both of you tee off on every hole, you choose the better of the two drives, and from there you alternate shots with that one ball in to the hole. Whoever did not own the chosen drive plays the second shot. Then you swap all the way in, including on the green. The drive that was not chosen is picked up. The advantage over straight foursomes is that no single tee shot can wreck the hole for the team, because you always get two goes off the tee. That makes greensomes the gentlest of the alternate shot formats, and the one that handles a mismatched pair best."
+          },
+          {
+            "heading": "How the match is settled",
+            "body": "Greensomes match play runs hole by hole. The team with the lower team score wins the hole, a tied hole is halved, and the state of the match is kept in holes up. The match is over when a team leads by more holes than are left to play, so 3 and 2 means three holes up with two to play. The total number of strokes counts for nothing: a hole you lose by four shots costs exactly the same as one you lose by one. So you can write a hole off early, pick up and move on having lost nothing but that one hole. It keeps the pace up and the mood with it."
+          },
+          {
+            "heading": "Handicap in greensomes",
+            "body": "Greensomes uses a 60/40 blend: 60 per cent of the lower course handicap in the pair plus 40 per cent of the higher. Tørny works out both course handicaps from the handicap index, the slope and the course rating, blends them and rounds to the team handicap. With 8 and 18 the sum is 0.6 times 8 plus 0.4 times 18, which is 12. In match play it is the difference between the two team handicaps that is given, spread by stroke index down from the hardest hole. The weighting is deliberately skewed: since you can always choose the better drive, it is usually the stronger player in the pair who sets up the hole, so the team should sit closer to the lower handicap than to the average."
+          },
+          {
+            "heading": "Greensomes, foursomes and Chapman",
+            "body": "In foursomes only one of you tees off, you swap that duty every other hole, and the team handicap is 50 per cent of the combined figure. Chapman, also called Pinehurst, goes a step further: both tee off, both play a second shot with the other ball, and then you choose one ball to play alternate with in to the hole. Gruesome is the version where your opponents decide which of your drives you have to play on with, and it is as unforgiving as the name suggests. All four are related, but the handicap sum differs, so check which one you are actually playing before you go out."
+          }
+        ],
+        "example": "Hole 6, par 4: A hits 210 m to the fairway, B hits 195 m into the rough. You choose A's drive. B (the partner) plays next, 160 m to the green. A putts to 1 m, B holes it. Team score: 4. The opposing team chooses their best drive, plays in and finishes on 5. You win the hole.",
+        "faq": [
+          {
+            "q": "What is the difference between greensomes and foursomes?",
+            "a": "In greensomes both players tee off and you choose the better drive. In foursomes only one player tees off, and you swap that duty every other hole."
+          },
+          {
+            "q": "How is the handicap worked out in greensomes?",
+            "a": "60 per cent of the lower course handicap in the pair plus 40 per cent of the higher. Tørny does the sum when the round starts."
+          },
+          {
+            "q": "Who plays the second shot in greensomes?",
+            "a": "The player who did not hit the drive you chose. After that you alternate shots until the ball is holed."
+          },
+          {
+            "q": "What does 3 and 2 mean in a greensomes match?",
+            "a": "The team won by three holes up with two holes left to play. The match was settled before the 18th."
+          }
+        ]
       },
       "chapman_matchplay": {
         "shortDescription": "Alternate shot. Both tee off, swap balls, choose the best, play in alternately. Also known as Pinehurst.",
@@ -1362,8 +1505,43 @@
           "You take turns being the wolf through the round.",
           "Most points at the end wins."
         ],
-        "long": "Four players, and the role of \"wolf\" rotates through the round: on hole 1 player 1 is the wolf, on hole 2 player 2, and so on. The wolf watches the other three tee off and chooses along the way who to take as a partner, or goes alone against the other three. If the wolf goes alone and wins, it scores double.",
-        "example": "Hole 4: Petter is the wolf. After everyone has hit, he sees that Lars drove best. Petter points to Lars as his partner. Petter and Lars (2v2) post the best net of 4, the opponents post a best net of 5. The wolf side wins → Petter and Lars get 2 points each, the other two pay. Hole 7: Per goes lone wolf. Per wins the hole with net 3 against the others' 4 → Per takes 4 points, the other three pay 1 each."
+        "sections": [
+          {
+            "heading": "The rules of Wolf",
+            "body": "Wolf is played with three to five players, and the role of the wolf rotates. The order is set before you start: on hole 1 the first player is the wolf, on hole 2 the next, and so on around the group. The wolf tees off last and therefore watches everyone else hit. After each drive the wolf has to decide immediately: take that player as a partner, or move on to the next? Say no to all of them and the wolf stands alone against the rest for that hole. The hole is played out, the sides are compared on their best score, and the points are handed out. Then the wolf rotates and you start again. With four players it rotates evenly over the first 16 holes, and the last two go to whoever is trailing."
+          },
+          {
+            "heading": "Alone or with a partner",
+            "body": "There is a small bet riding on every single drive. Take the first player who finds the fairway and you are safe, but you have not seen the other two hit. Wait, and you can end up with the one who went out of bounds. Go alone and win and you take the most, and a lone wolf on a short par 3 is often better business than on a long par 5. Declare a blind wolf before anyone has hit and it pays better still. If you are behind with four holes left, that is where you get it back. If you are ahead, take a partner every time and let the others take the risks."
+          },
+          {
+            "heading": "Handicap in Wolf",
+            "body": "Wolf can be played gross or net, and the choice is made when the round is set up. Playing net, Tørny works out your course handicap from your handicap index, the slope and the course rating, and spreads the strokes by stroke index: with a course handicap of 12 you get one extra stroke on the twelve holes with the lowest stroke index. The full course handicap is used, with no allowance cut. The reason is that Wolf is a hole-by-hole game where the sides change from hole to hole, so there is no fixed opponent to work a difference against. Net is almost always right when the spread in the group is wide, otherwise the best player wins most holes regardless of who is the wolf. If you all play to a similar level, gross gives a cleaner contest."
+          },
+          {
+            "heading": "Points and settling up",
+            "body": "The base stake is one point per hole. If the wolf wins with a partner, both get two points and the other two pay. If the wolf goes alone and takes the hole, it collects as many points as there are players in the group. Lose alone, and each opponent gets one point. A blind wolf pays more than an ordinary lone wolf, in both directions. If the hole is halved no points are handed out, but the stake on the next hole goes up by one, and a run of halved holes makes the closing holes expensive. Most points after 18 holes wins."
+          }
+        ],
+        "example": "Hole 4: Petter is the wolf. After everyone has hit, he sees that Lars drove best. Petter points to Lars as his partner. Petter and Lars (2v2) post the best net of 4, the opponents post a best net of 5. The wolf side wins → Petter and Lars get 2 points each, the other two pay. Hole 7: Per goes lone wolf. Per wins the hole with net 3 against the others' 4 → Per takes 4 points, the other three pay 1 each.",
+        "faq": [
+          {
+            "q": "How many players do you need for Wolf?",
+            "a": "Three to five. Four is the classic, because the wolf then rotates evenly over the first 16 holes and the last two go to the player who is trailing."
+          },
+          {
+            "q": "When does the wolf have to pick a partner?",
+            "a": "Straight away, right after each drive. Say no to the player who just hit and you cannot change your mind later on the hole."
+          },
+          {
+            "q": "What are lone wolf and blind wolf?",
+            "a": "Lone wolf means you turn everyone down and play alone against the rest. Blind wolf is declared before anyone has teed off, without seeing a single shot. Both pay more than playing with a partner, and blind pays most."
+          },
+          {
+            "q": "Can we play Wolf with handicaps?",
+            "a": "Yes. Choose net when you set up the round and Tørny deducts the strokes hole by hole using the stroke index. With an even group, gross works just as well."
+          }
+        ]
       },
       "nassau": {
         "shortDescription": "Three contests in one: front 9, back 9, total 18.",
@@ -1373,8 +1551,43 @@
           "You can play it gross or net with handicap, depending on what is chosen.",
           "Win all three and you have swept the board."
         ],
-        "long": "Nassau splits the round into three separate contests: the front nine (holes 1–9), the back nine (holes 10–18) and all 18 holes combined. Each of the three is decided independently of the others, so you can lose the first nine and still take the last nine and the overall. You can play gross or net with handicap, depending on what is agreed.",
-        "example": "After hole 9: you are 2 holes down on the front nine and lose that one. Holes 10–18: you play strongly back and win 3 more holes than your opponent, taking the back nine. The total score: you have 88 net against your opponent's 89 net over 18 holes — you win the overall. Final result: 1–2 in the Nassau, you won two of the three contests."
+        "sections": [
+          {
+            "heading": "The rules of Nassau",
+            "body": "Nassau is three contests in one round. The first nine holes are one contest, the last nine are the second, and all 18 together are the third. Each is settled on its own, so you can lose the front nine and still take two out of three. The format is often called 2-2-2 or 5-5-5 after the stake, meaning the same amount on each of the three parts. Nassau is played both as match play between two players or two pairs, and as stroke play in a group. In Tørny each section is ranked on the lowest total, exactly like an ordinary round, only split in three."
+          },
+          {
+            "heading": "Units, pushes and sweeps",
+            "body": "Each contest is worth one unit. Win a section outright and you take the unit. If the section is tied it becomes a push and nobody gets anything, which is the classic Nassau rule and means a shared contest never costs anyone. Take all three and you have made a sweep, worth three units. The arithmetic means the round never dies: lose the front nine early and you still have two contests left, and the closing nine matters just as much as the opening one. That is why Nassau keeps more people engaged all the way to the 18th."
+          },
+          {
+            "heading": "Handicap in Nassau",
+            "body": "Nassau can be played gross or net, and the choice is made when the round is set up. Playing net, Tørny works out your course handicap from your handicap index, the slope and the course rating, and spreads your strokes by stroke index, hole by hole, not as one deduction at the end. That matters in Nassau: because the strokes sit where the stroke index puts them, you rarely get exactly half of them on each nine. If the hardest holes on the course are on the way home, more of your strokes land on the back nine, which makes the front nine a tougher contest for you than the overall. Check the stroke index on the card before you agree stakes on each section. Playing match play against each other, the WHS standard is the full difference between the course handicaps."
+          },
+          {
+            "heading": "Presses and relatives",
+            "body": "If you are two holes down in a section you can call a press, a new side bet on the holes that remain. If your opponent accepts it runs alongside the original, and a round can end up with the front, the back, the overall and two presses on top. Automatic presses at two down are common too. Tørny settles the three main contests, and you keep track of the presses yourselves. Round robin is a relative where the partners swap every sixth hole, so everyone plays with everyone."
+          }
+        ],
+        "example": "After hole 9: you are 2 holes down on the front nine and lose that one. Holes 10–18: you play strongly back and win 3 more holes than your opponent, taking the back nine. The total score: you have 88 net against your opponent's 89 net over 18 holes — you win the overall. Final result: 1–2 in the Nassau, you won two of the three contests.",
+        "faq": [
+          {
+            "q": "What does 2-2-2 mean in Nassau?",
+            "a": "It is the stake: two units on the front nine, two on the back nine and two on the overall. 5-5-5 is the same set-up with a bigger stake."
+          },
+          {
+            "q": "What happens when a section is tied?",
+            "a": "It becomes a push. Nobody wins that unit, and the other two contests are settled as normal."
+          },
+          {
+            "q": "What is a press in Nassau?",
+            "a": "A new bet on the holes that remain, usually called when you are two holes down. It runs alongside the original contest."
+          },
+          {
+            "q": "Can three or more people play Nassau?",
+            "a": "Yes. Each section is then ranked on the lowest total, and whoever wins a section outright takes the unit. Share it and it stands."
+          }
+        ]
       },
       "skins": {
         "shortDescription": "Hole by hole: the lowest wins the skin. A halved hole rolls the pot on.",
@@ -1384,8 +1597,43 @@
           "You can play it gross or net with handicap, depending on what is chosen.",
           "Most skins at the end wins."
         ],
-        "long": "Each hole is worth one skin. The player with the lowest score on the hole outright — no one else sharing that score — wins the skin. If two or more players share the lowest score, the skin goes to no one but rolls over to the next hole. The next hole is then worth two skins. The chain can continue, and big winnings can build up on a single hole.",
-        "example": "Hole 1: A scores 3, B scores 4, C scores 4, D scores 5. A wins outright → A takes the skin (worth 1). Hole 2: A scores 4, B scores 3, C scores 3, D scores 5. B and C share the lowest → no one wins, the skin rolls over. Hole 3 is now worth 2 skins. Hole 3: A scores 4, B scores 5, C scores 4, D scores 3. D wins outright → D takes 2 skins."
+        "sections": [
+          {
+            "heading": "The rules of skins",
+            "body": "Each hole is worth one skin. Whoever has the lowest score on the hole outright takes the skin. If two or more players share the lowest score, nobody wins. Everyone plays their own ball all the way, and a skin you have won can never be taken off you. That makes skins the format where a bad start does not matter: you can be ten shots behind overall and still go home with the most, as long as you land the right holes. Three to five players works best. With more than that it is rare for anyone to stand alone on the lowest score."
+          },
+          {
+            "heading": "When the pot rolls on",
+            "body": "The carryover is the engine of the whole game. If a hole is halved, the skin is added to the next hole, which is then worth two. Halve that one too and the third hole is worth three, and the chain runs on until someone wins outright and scoops the lot. That is why skins builds tension towards the end of the round: a run of halved holes in the middle can leave the 17th worth six skins, and nobody talks during that approach. If the final hole is halved, the pot is left hanging with no winner. Most groups simply leave it, while others settle it with a nearest-the-pin or an extra hole."
+          },
+          {
+            "heading": "Handicap in skins",
+            "body": "Skins can be played gross or net, and you choose when the round is set up. Net is what lets the whole group take part: Tørny works out your course handicap from your handicap index, the slope and the course rating of the tee you play from, and hands out the strokes by stroke index. With a course handicap of 9 you get one stroke on the nine holes with the lowest stroke index. The full handicap is used, with no allowance cut. One thing is worth knowing before you choose: net skins give higher handicaps a lot more outright wins, because a stroke on a hard hole is often enough to stand alone on the lowest score. If the spread is wide, net is right. If four of you play to a similar level, gross is the cleaner contest."
+          },
+          {
+            "heading": "Stakes and house rules",
+            "body": "The usual settlement is a fixed amount per skin, or a bottle to whoever takes the most. Some play with validation, where you have to win two holes in a row to get paid for the first, which makes the format considerably harder. Others halve the value on the par 3s, or double it on the closing three. Whatever you land on, agree it on the first tee. Skins sits happily on top of an ordinary Stableford round as a side competition, so you have two contests running at once."
+          }
+        ],
+        "example": "Hole 1: A scores 3, B scores 4, C scores 4, D scores 5. A wins outright → A takes the skin (worth 1). Hole 2: A scores 4, B scores 3, C scores 3, D scores 5. B and C share the lowest → no one wins, the skin rolls over. Hole 3 is now worth 2 skins. Hole 3: A scores 4, B scores 5, C scores 4, D scores 3. D wins outright → D takes 2 skins.",
+        "faq": [
+          {
+            "q": "What happens when two players share the lowest score in skins?",
+            "a": "Nobody wins the hole. The skin rolls on and is added to the next hole, which is then worth two."
+          },
+          {
+            "q": "How many people can play skins?",
+            "a": "Three to five works best. With more players it becomes rarer for anyone to stand alone on the lowest score, and the pots build up fast."
+          },
+          {
+            "q": "Should skins be played gross or net?",
+            "a": "Net when the handicap spread is wide, gross when you all play to a similar level. You choose it when you set up the round in Tørny."
+          },
+          {
+            "q": "What do we do with the pot if the last hole is halved?",
+            "a": "The standard is to leave it unwon. If you want a winner, settle it with an extra hole or nearest the pin on 18."
+          }
+        ]
       },
       "bingo_bango_bongo": {
         "shortDescription": "2–4 players. Three points per hole: first on the green, closest, first in the hole.",
@@ -1395,8 +1643,43 @@
           "You play for yourself, and all three points on a hole can go to one and the same player.",
           "Most points after 18 holes wins."
         ],
-        "long": "Three points are in play on each hole, and they are awarded in order. \"Bingo\" goes to whoever reaches the green first (regardless of the number of shots). \"Bango\" goes to whoever is closest to the hole once everyone is on the green. \"Bongo\" goes to whoever holes out first. Stroke-play order applies: whoever is farthest from the hole always plays the next shot. All three points can go to the same player.",
-        "example": "Hole 5, par 4: A chips onto the green with the second shot (bingo). B and C are in the rough and D is in the bunker — none of them are on the green yet. Everyone reaches the green eventually. C is 60 cm from the hole, B 1.5 m, D 2 m, A 3 m. C takes bango. Putting order: A putts first (farthest away), then D and B. C putts last and holes it straight away — bongo to C."
+        "sections": [
+          {
+            "heading": "The rules of bingo bango bongo",
+            "body": "Three points are handed out on every hole, and they have nothing to do with how many strokes you take. Bingo goes to the first player to get a ball on the green. Bango goes to whoever is closest to the hole once everyone is on the green. Bongo goes to the first player to hole out. All three can go to the same player, but they usually spread around. 54 points are in play over 18 holes, and most points wins. The format is built for groups with a wide spread: the shortest hitter can happily take bingo, precisely because she is furthest from the hole and therefore plays first."
+          },
+          {
+            "heading": "Order of play is the whole game",
+            "body": "The rule that whoever is furthest from the hole plays first is not a matter of courtesy here, it is the engine of the game. Most groups add a house rule that you lose the point if you play out of turn. If you are short and safe after two shots on a par 5, you are there first and take bingo while the long hitters are still rooting around in the rough. Bango rewards quiet craft: get on the green first and you have to putt first, and it is hard to stay closest after that. Bongo means actually holing the putt. Together it shifts the attention from length to precision, and the round moves quickly."
+          },
+          {
+            "heading": "Handicap in bingo bango bongo",
+            "body": "This is the one format in Tørny where your course handicap does nothing at all. The points come from order and precision rather than from score, so there are no strokes to deduct. The game levels itself: the shortest hitter reaches her ball first and gets the most chances at bingo, while the long hitter has more short approaches and therefore more bango points. If you want to even things out further, tee choice is the tool, so let the players with the highest handicap index play from a shorter tee. Record your strokes in Tørny as well and you get an ordinary net score alongside, without it touching the bingo bango bongo points."
+          },
+          {
+            "heading": "Stakes and group size",
+            "body": "Two to four players works, and four is best, because that is when the fight for bango really means something. The usual settlement is a fixed amount per point, or the pot to whoever finishes with most. Some add a fourth category for the longest drive on the fairway. The round moves fast, because nobody is standing around counting strokes on a hole they have already lost. Run it alongside an ordinary Stableford round and you have two competitions going at once for no extra work."
+          }
+        ],
+        "example": "Hole 5, par 4: A chips onto the green with the second shot (bingo). B and C are in the rough and D is in the bunker — none of them are on the green yet. Everyone reaches the green eventually. C is 60 cm from the hole, B 1.5 m, D 2 m, A 3 m. C takes bango. Putting order: A putts first (farthest away), then D and B. C putts last and holes it straight away — bongo to C.",
+        "faq": [
+          {
+            "q": "What do bingo, bango and bongo mean?",
+            "a": "Bingo is the first ball on the green, bango is closest to the hole once everyone is on the green, and bongo is the first ball in the hole. One point for each."
+          },
+          {
+            "q": "How many points are in play over a round?",
+            "a": "54 over 18 holes, three per hole. All three can go to the same player on a single hole."
+          },
+          {
+            "q": "Does handicap count in bingo bango bongo?",
+            "a": "No. The points come from order and precision rather than from the number of strokes, so nothing is deducted."
+          },
+          {
+            "q": "How many people should play?",
+            "a": "Two to four. With four the fight for bango is sharpest, and the round still moves quickly."
+          }
+        ]
       },
       "nines": {
         "shortDescription": "3 players, points per hole: the lowest takes the most. Choose Nines (5-3-1) or Split Sixes (4-2-0).",

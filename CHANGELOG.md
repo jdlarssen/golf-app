@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.214 · Åtte spillformer forklart helt ut</strong></summary>
+
+[#1266](https://github.com/jdlarssen/golf-app/issues/1266) — Texas scramble, wolf, skins, nassau, stableford, best ball, greensome og bingo bango bongo har nå fulle regelsider med mellomtitler, en egen bolk om hvordan handicapet regnes, og svar på spørsmålene som går igjen.
+
+↳ /spillformater · «Les reglene»
+</details>
+
+<details>
 <summary><strong>1.213 · Glemte putter? Fyll dem inn etterpå</strong></summary>
 
 [#1290](https://github.com/jdlarssen/golf-app/issues/1290) — Har du ført putter på nesten hele runden, kan du nå fylle inn hullene du glemte — både på leveringssiden mens runden pågår, og fra resultatlista etter at spillet er avsluttet. Ett trykk per hull, så teller runden i putte-snittet ditt.
