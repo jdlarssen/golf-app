@@ -51,6 +51,10 @@ byggene. Økes videre kun av eieren via PR når tilliten er etablert.
 
 ## Steg 3 — Bygg (forge:auto-disiplin)
 
+- **Modell-ruting (eierbeslutning 2026-07-30, #1413):** routinen kjører på
+  **Fable** som orkestrator; selve implementasjonsarbeidet dispatches til
+  subagenter med `model` eksplisitt satt til **Opus**. Fable organiserer (kø,
+  preflight, gates, leveranse), Opus bygger.
 - Ny branch `claude/natt-<issuenr>-<slug>`.
 - Bygg mot kontrakten: implementer → kjør gates → evaluer skeptisk i fersk
   kontekst → fiks. **#1077-konvergensreglene gjelder** (docs/forge-workflow.md
@@ -82,7 +86,8 @@ verifisert på #1152: `forge/evaluate.md` setter ingen modell, arver orkestrator
 Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før levering.
 
 - Spawn en general-purpose Task-agent med `model` eksplisitt satt til en annen
-  modell enn bygget kjørte på (bygg Opus → gate **Sonnet**). Gi den KUN kontrakten,
+  modell enn BYGGEREN (bygg-subagentene kjører Opus, jf. Steg 3 → gate
+  **Sonnet**). Gi den KUN kontrakten,
   diffen (`git diff origin/main`) og forges evalueringsrapport — fersk kontekst,
   ingen bygg-historikk.
 - Prompt: prøv å **motbevise** at kontraktens Success Criteria er oppfylt. Finn én
@@ -102,6 +107,12 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
 - **Konvergert (ACCEPT):** DRAFT-PR med `Closes #<issuenr>` i body,
   `autonomy:review`-label, norsk PR-kommentar: hva som er bygget, hvilke
   kriterier som er bevist (med kommando-utfall), hva som evt. gjenstår manuelt.
+  - **Produktvalg i kontrakten** (`## Alternativer (produktvalg)`-seksjon eller
+    `"produktvalg": true` i json-blokken): gjengi alternativene i
+    PR-kommentaren på norsk — A (bygget), B/C med fordeler/ulemper — og
+    inviter eieren til å svare «alternativ B» direkte i PR-en; ombygging skjer
+    da på samme branch (#1406). Produktvalg-PR-er auto-merges aldri av noen
+    økt før eieren har valgt.
   **Fjern deretter `autonomy:ready` fra issuet (#1307)** — PR-en bærer mandatet
   videre, og labelen skal aldri overleve leveringen (ellers re-plukkes issuet
   neste natt og bygges som duplikat, jf. #1253-varselet 2026-07-18).
