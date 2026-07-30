@@ -59,7 +59,7 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 **Skjedde i natt/i går:**
 - <merget PR / lukket issue / CI-vakt-fiks — kun verifiserte fakta, med lenke>
   ↳ <1–2 setninger: hva som er annerledes i appen nå — «Du kan nå …» / «Når X skjer, …»; ingen synlig endring → si det ærlig («ingen synlig endring — <hva som ble ryddet, i produktspråk>»)>
-- 🔧 #N — <funksjonell> (auto-køet ren-teknikk bygget i natt; revisjonsspor #1302)
+- 🔧 #N — <funksjonell> (auto-køet sak bygget i natt; revisjonsspor #1302/#1413)
 
 **Loop-helse:**
 - Nattkjøreren: <heartbeat-status> · Dok-avstemmeren: <heartbeat-status hvis due> · CI-vakta: <antall CI-vakt-issues åpne; liveness sees på routines-siden>
@@ -94,8 +94,9 @@ et krav om å lese kontrakten: «#N — <funksjonell> → 🌙». Eieren kan ikk
 kontrakter (#1302), så han godkjenner på den norske oppsummeringen, ikke
 kontrakt-teksten.
 
-Kun **`bruker-synlig`**-kontrakter havner her: `teknisk`-kontrakter har smeden
-allerede auto-køet (`autonomy:ready` satt, jf. steg 3 i smed-docen), så de er
+Kun **aldri-auto-kategoriene** (auth-/sikkerhetsendringer, destruktive flyter,
+alt som koster penger — jf. steg 3 i smed-docen) havner her etter #1413: alle
+andre kontrakter auto-køer smeden selv (`autonomy:ready` satt), så de er
 ekskludert fra denne gruppa (som før krever «IKKE `autonomy:ready`») og vises i
 stedet under **«Auto-køet»** (se innholdsmalen) med ⏸-veto.
 
@@ -104,30 +105,36 @@ stedet under **«Auto-køet»** (se innholdsmalen) med ⏸-veto.
 + 🤖-markør — og noter «json-blokk mangler på #N» i Loop-helse (aldri stille anta en
 klasse). Ugyldig JSON i blokken behandles likt: tittel-linje + Loop-helse-flagg.
 
-## Auto-køet — smedens ren-teknikk (#1302)
+## Auto-køet — smedens auto-køede kontrakter (#1302, utvidet av #1413)
 
-`teknisk`-kontrakter setter smeden `autonomy:ready` på selv; briefen er
-veto-budbringeren (smeden har ingen Discord-tilgang). Finn åpne issues der ALT
-stemmer, og list dem i «Auto-køet»-gruppa:
+Smeden setter `autonomy:ready` selv på alle kontrakter unntatt
+aldri-auto-kategoriene; briefen er veto-budbringeren (smeden har ingen
+Discord-tilgang). Finn åpne issues der ALT stemmer, og list dem i
+«Auto-køet»-gruppa:
 
-- forge-kontrakt-kommentar med `kontraktKlasse: teknisk` i json-blokken, OG
-- `autonomy:ready` satt (av smeden), OG merket 🤖 (smed-skrevet), OG
+- forge-kontrakt-kommentar (🤖 smed-skrevet, `teknisk` eller `bruker-synlig`), OG
+- `autonomy:ready` satt (av smeden), OG
 - IKKE `autonomy:blocked`, IKKE `parked`, IKKE #1110.
+
+Har kontrakten `"produktvalg": true` i json-blokken: merk linja
+«(produktvalg — alternativene kommer i PR-en)» så eieren vet at valget hans
+kommer som PR-svar, ikke som ⏸-avgjørelse nå.
 
 Linje: «🔧 #N — <funksjonell> → <lenke>» med **⏸-knappen** (`snooze_issue:<N>`) —
 ett tapp stopper bygget (⏸ setter `parked` OG fjerner `autonomy:ready`, #1302).
 Vetovinduet er hele dagen: smeden kjører før briefen, nattkjøringen er først
 påfølgende natt. Ingen auto-køede → utelat gruppa (normalt, ikke en loop-feil).
 
-## Gråsone-punkter (smedens ruting, #1151)
+## Gråsone-punkter (smedens ruting, #1151 — innsnevret av #1413)
 
-Smeden ruter gråsoner til eieren med to labels; briefen løfter begge under
-«Trenger deg nå»:
+Smeden ruter nå kun uskopbare kandidater til eieren; produktvalg lever som
+alternativer i kontrakt/PR i stedet. Briefen løfter fortsatt begge labels under
+«Trenger deg nå» til de gamle er tømt:
 
-- **`autonomy:needs-decision`** — smeden har postet ett binært spørsmål
-  (kommentar med header «🅰️🅱️ Eierbeslutning trengs»). Linje: «Svar A/B på
-  #N — <spørsmålet i én setning>». Hent setningen fra smedens kommentar, ikke
-  issue-tittelen.
+- **`autonomy:needs-decision`** (legacy — smeden poster ingen nye etter #1413)
+  — smeden har postet ett binært spørsmål (kommentar med header «🅰️🅱️
+  Eierbeslutning trengs»). Linje: «Svar A/B på #N — <spørsmålet i én
+  setning>». Hent setningen fra smedens kommentar, ikke issue-tittelen.
 - **`autonomy:needs-contract-session`** — smeden har postet kontrakt-forarbeid
   (header «🛠 Kontrakt-forarbeid (gråsone)»). Linje: «🛠 #N trenger
   kontrakt-økt — kjør `/forge:contract` på #N» (kopier-lim-klar kommando).
