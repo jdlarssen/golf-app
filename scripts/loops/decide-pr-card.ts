@@ -5,7 +5,8 @@
 //
 // Env: GITHUB_TOKEN, GH_REPO, PR_NUMBER (eller GITHUB_EVENT_PATH), CARD_PLAN_PATH,
 // WAIT_FOR_CHECKS ('true' ved workflow_dispatch — vent på at checkene lander, #1301).
-// Skriver `should_card`/`is_gui` til $GITHUB_OUTPUT så workflowen kan gate stegene.
+// Skriver `outcome` ('auto-merge'|'card'|'noop') + `is_gui` til $GITHUB_OUTPUT så
+// workflowen kan gate stegene (#1406).
 
 import { appendFileSync } from 'node:fs';
 import { candidatePrNumber, eventHeadSha, ghClient } from './ghClient';
@@ -16,6 +17,11 @@ import {
   waitForChecksToSettle,
   type CheckRun,
 } from '../../lib/loops/prCard';
+import {
+  classifyAutoMerge,
+  linkedIssueNumbers,
+  NEEDS_DECISION_LABEL,
+} from '../../lib/loops/autoMerge';
 import { isVisualChange } from '../../lib/loops/prScreenshots';
 import { writePlan, type CardPlan } from './cardPlan';
 
@@ -31,11 +37,17 @@ function ghOutput(key: string, value: string): void {
 
 function emit(plan: CardPlan): void {
   writePlan(plan);
-  ghOutput('should_card', plan.shouldCard ? 'true' : 'false');
+  ghOutput('outcome', plan.outcome);
   ghOutput('is_gui', plan.isGui ? 'true' : 'false');
 }
 
-const NO_CARD: CardPlan = { shouldCard: false, isGui: false, pr: null, changedFiles: [] };
+const NO_CARD: CardPlan = {
+  outcome: 'noop',
+  isGui: false,
+  headSha: null,
+  pr: null,
+  changedFiles: [],
+};
 
 type PrPayload = {
   state: string;
@@ -43,6 +55,7 @@ type PrPayload = {
   title: string;
   html_url: string;
   body: string | null;
+  base: { ref: string };
   head: { sha: string };
   labels: Array<{ name: string }>;
 };
@@ -69,6 +82,40 @@ async function fetchChangedFiles(
     if (batch.length < 100) break;
   }
   return files;
+}
+
+// Commit-meldingene på PR-en (samme paginering som fetchChangedFiles) — auto-merge-
+// klassifiseringen leser dem for bruker-synlig-porten (feat|fix|perf uten
+// [no-changelog], §T7). Feiler oppslaget, behandles PR-en som ikke-bruker-synlig.
+async function fetchCommitMessages(
+  gh: ReturnType<typeof ghClient>,
+  n: number,
+): Promise<string[]> {
+  const messages: string[] = [];
+  for (let page = 1; page <= 3; page++) {
+    const res = await gh.rest('GET', `/repos/${REPO}/pulls/${n}/commits?per_page=100&page=${page}`);
+    if (res.status !== 200) break;
+    const batch = (res.json as Array<{ commit?: { message?: string } }>) ?? [];
+    for (const c of batch) if (c.commit?.message) messages.push(c.commit.message);
+    if (batch.length < 100) break;
+  }
+  return messages;
+}
+
+// Slår opp om ett av de lenkede issue-ene har autonomy:needs-decision — den andre
+// valg-markøren (ved siden av body-headingen). Fail-open: klarer vi ikke lese
+// labelene, stoler vi på body-headingen (maskin-markøren sesjonene MÅ sette).
+async function anyLinkedIssueNeedsDecision(
+  gh: ReturnType<typeof ghClient>,
+  body: string | null,
+): Promise<boolean> {
+  for (const issue of linkedIssueNumbers(body)) {
+    const res = await gh.rest('GET', `/repos/${REPO}/issues/${issue}`);
+    if (res.status !== 200) continue;
+    const labels = ((res.json as { labels?: Array<{ name: string }> }).labels ?? []).map((l) => l.name);
+    if (labels.includes(NEEDS_DECISION_LABEL)) return true;
+  }
+  return false;
 }
 
 async function main(): Promise<void> {
@@ -128,9 +175,26 @@ async function main(): Promise<void> {
 
   const changedFiles = await fetchChangedFiles(gh, n);
   const isGui = isVisualChange(changedFiles);
+
+  // Tre-utfalls-klassifisering (#1406): ren PR mot main uten produktvalg/aldri-liste/
+  // manglende staging-bevis → auto-merge; ellers knapp-kort som før.
+  const commitMessages = await fetchCommitMessages(gh, n);
+  const needsDecisionIssue = await anyLinkedIssueNeedsDecision(gh, pr.body);
+  const { outcome, demotedReason } = classifyAutoMerge({
+    baseRef: pr.base.ref,
+    title: pr.title,
+    body: pr.body,
+    changedFiles,
+    commitMessages,
+    prLabels: (pr.labels ?? []).map((l) => l.name),
+    needsDecisionIssue,
+  });
+
   const plan: CardPlan = {
-    shouldCard: true,
+    outcome,
     isGui,
+    headSha: pr.head.sha,
+    demotedReason,
     pr: {
       number: n,
       title: pr.title,
@@ -141,7 +205,9 @@ async function main(): Promise<void> {
     changedFiles,
   };
   emit(plan);
-  console.log(`${LOG} PR #${n}: shouldCard=true, isGui=${isGui} (${changedFiles.length} filer).`);
+  console.log(
+    `${LOG} PR #${n}: outcome=${outcome}${demotedReason ? ` (${demotedReason})` : ''}, isGui=${isGui} (${changedFiles.length} filer).`,
+  );
 }
 
 main().catch((err) => {
