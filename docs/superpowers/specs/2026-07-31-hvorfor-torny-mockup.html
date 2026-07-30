@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock-up v3 — /hvorfor-torny</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f6f0;
+    --surface: #ffffff;
+    --surface-2: #f0ede5;
+    --border: #e5e0d3;
+    --text: #1a2e1f;
+    --muted: #4a3f30;
+    --primary: #1b4332;
+    --primary-soft: #e8efe8;
+    --accent: #c9a961;
+    --accent-deep: #b89446;
+    --success: #4a7c59;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #e9e5da;
+    font-family: var(--sans);
+    color: var(--text);
+    padding: 24px 12px 48px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .mock-label {
+    font-size: 12px; color: #7a7264; margin-bottom: 14px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .phone {
+    width: 100%; max-width: 400px;
+    background: var(--bg);
+    border: 1px solid #d8d2c2; border-radius: 28px;
+    padding: 28px 20px 36px;
+    box-shadow: 0 12px 40px rgba(26, 46, 31, 0.10);
+  }
+  section { margin-top: 48px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; flex-direction: column; }
+  .brand-name { font-family: var(--serif); font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-deep); font-weight: 600; margin-top: 1px; }
+  .login-link { font-size: 14px; font-weight: 500; color: var(--text); text-decoration: none; }
+
+  .hero { text-align: center; margin-top: 36px; }
+  h1 { font-family: var(--serif); font-size: 33px; font-weight: 500; line-height: 1.12; letter-spacing: -0.02em; }
+  .hero p { max-width: 320px; margin: 14px auto 0; font-size: 15px; line-height: 1.55; color: var(--muted); }
+  .cta-stack { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+  .btn {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 48px; border-radius: 14px; font-size: 15px; font-weight: 600;
+    text-decoration: none;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+
+  h2 { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: -0.015em; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+  .stat-tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 20px 16px 18px; text-align: center;
+  }
+  .stat-value {
+    font-family: var(--serif); font-size: 44px; font-weight: 500;
+    line-height: 1; letter-spacing: -0.02em; color: var(--primary);
+  }
+  .stat-value .unit { font-size: 22px; }
+  .stat-tile.gold .stat-value { color: var(--accent-deep); }
+  .stat-label { font-size: 12.5px; line-height: 1.4; color: var(--muted); margin-top: 8px; }
+
+  .matrix {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; overflow: hidden; margin-top: 18px;
+  }
+  .matrix-head {
+    display: grid; grid-template-columns: 1fr 74px 96px;
+    background: var(--surface-2);
+    padding: 12px 16px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .matrix-head .h-torny { text-align: center; color: var(--primary); }
+  .matrix-head .h-other { text-align: center; color: var(--muted); opacity: 0.7; }
+  .matrix-row {
+    display: grid; grid-template-columns: 1fr 74px 96px;
+    align-items: center;
+    padding: 13px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .matrix-feature { font-size: 13.5px; font-weight: 500; line-height: 1.35; padding-right: 8px; }
+  .matrix-yes { text-align: center; }
+  .matrix-yes .check {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--primary-soft); color: var(--success);
+    font-size: 14px; font-weight: 700;
+  }
+  .matrix-other {
+    text-align: center; font-size: 11.5px; line-height: 1.3;
+    color: var(--muted); opacity: 0.75;
+  }
+
+  .board-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 18px; margin-top: 18px;
+  }
+  .board-title { display: flex; justify-content: space-between; align-items: baseline; }
+  .board-title .name { font-family: var(--serif); font-size: 16px; font-weight: 500; }
+  .live-dot {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--success);
+  }
+  .live-dot::before {
+    content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--success); margin-right: 5px;
+  }
+  .board-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-top: 1px solid var(--border);
+    font-family: var(--serif); font-size: 16px;
+  }
+  .board-row:first-of-type { border-top: 0; margin-top: 10px; }
+  .board-row .pts { font-variant-numeric: tabular-nums; }
+  .board-row.leader { color: var(--accent-deep); }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip {
+    font-size: 12px; font-weight: 600; color: var(--primary);
+    background: var(--primary-soft); border-radius: 999px;
+    padding: 7px 12px;
+  }
+
+  .icon-points { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+  .icon-point {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 14px 16px;
+  }
+  .icon-bubble {
+    flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%;
+    background: var(--primary-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .icon-text { font-size: 14px; font-weight: 600; line-height: 1.35; }
+  .icon-text small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+  .pull-quote {
+    margin-top: 22px; padding: 22px 20px;
+    background: var(--primary); border-radius: 18px;
+    font-family: var(--serif); font-size: 18px; line-height: 1.45;
+    color: #f0ede5; text-align: center; letter-spacing: -0.01em;
+  }
+  .pull-quote .gold { color: var(--accent); }
+
+  .faq-item { margin-top: 18px; }
+  .faq-q { font-size: 15px; font-weight: 600; }
+  .faq-a { font-size: 14px; line-height: 1.55; color: var(--muted); margin-top: 5px; }
+
+  .end-cta { text-align: center; }
+  .end-cta h2 { font-size: 26px; }
+  .end-cta p { max-width: 300px; margin: 12px auto 0; font-size: 14px; line-height: 1.55; color: var(--muted); }
+  .text-link { color: var(--primary); font-size: 14px; font-weight: 500; text-decoration: none; }
+
+  .footer-nav {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 10px 20px; border-top: 1px solid var(--border);
+    padding-top: 28px; margin-top: 48px; font-size: 13px;
+  }
+  .footer-nav a { color: var(--muted); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="mock-label">Mock-up v3 · tornygolf.no/hvorfor-torny · mobil</div>
+
+<div class="phone">
+
+  <!-- 1 · Topprad -->
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-name">Tørny</span>
+      <span class="brand-sub">Turnering</span>
+    </div>
+    <a class="login-link" href="#">Logg inn</a>
+  </div>
+
+  <!-- 2 · Hero -->
+  <section class="hero">
+    <h1>Dette får du<br>i Tørny</h1>
+    <p>Laget for én ting: turneringen deres.</p>
+  </section>
+
+  <!-- 3 · Tall-fliser -->
+  <section>
+    <div class="stat-grid">
+      <div class="stat-tile gold">
+        <div class="stat-value">0<span class="unit"> kr</span></div>
+        <div class="stat-label">Uten abonnement.<br>Uten reklame.</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">20<span class="unit">+</span></div>
+        <div class="stat-label">spillformater<br>å velge mellom</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">2<span class="unit"> min</span></div>
+        <div class="stat-label">fra idé til<br>invitasjonene er sendt</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">150</div>
+        <div class="stat-label">deltakere når<br>hele klubben skal med</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Hake-matrisen -->
+  <section>
+    <h2>Tørny mot resten</h2>
+    <div class="matrix">
+      <div class="matrix-head">
+        <span></span>
+        <span class="h-torny">Tørny</span>
+        <span class="h-other">Andre apper</span>
+      </div>
+      <div class="matrix-row">
+        <span class="matrix-feature">Turnering med alle spillformater</span>
+        <span class="matrix-yes"><span class="check">✓</span></span>
+        <span class="matrix-other">Krever abonnement</span>
+      </div>
+      <div class="matrix-row">
+        <span class="matrix-feature">Bli med rett fra nettleseren</span>
+        <span class="matrix-yes"><span class="check">✓</span></span>
+        <span class="matrix-other">Alle må ha appen</span>
+      </div>
+      <div class="matrix-row">
+        <span class="matrix-feature">Norsk hele veien</span>
+        <span class="matrix-yes"><span class="check">✓</span></span>
+        <span class="matrix-other">Engelsk først</span>
+      </div>
+      <div class="matrix-row">
+        <span class="matrix-feature">Reklamefritt</span>
+        <span class="matrix-yes"><span class="check">✓</span></span>
+        <span class="matrix-other">Reklame i gratisversjonen</span>
+      </div>
+      <div class="matrix-row">
+        <span class="matrix-feature">Cup, liga og sideturneringer</span>
+        <span class="matrix-yes"><span class="check">✓</span></span>
+        <span class="matrix-other">Varierer</span>
+      </div>
+      <div class="matrix-row">
+        <span class="matrix-feature">Premiepott med Vipps</span>
+        <span class="matrix-yes"><span class="check">✓</span></span>
+        <span class="matrix-other">Må ordnes utenom</span>
+      </div>
+      <div class="matrix-row">
+        <span class="matrix-feature">Scoring uten dekning</span>
+        <span class="matrix-yes"><span class="check">✓</span></span>
+        <span class="matrix-other">Krever nett</span>
+      </div>
+      <div class="matrix-row">
+        <span class="matrix-feature">WHS-handicap regnes automatisk</span>
+        <span class="matrix-yes"><span class="check">✓</span></span>
+        <span class="matrix-other">Varierer</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Spenningen er innebygd -->
+  <section>
+    <h2>Spenningen er innebygd</h2>
+    <div class="board-card">
+      <div class="board-title">
+        <span class="name">Fredagsgolfen · Runde 3</span>
+        <span class="live-dot">Live</span>
+      </div>
+      <div class="board-row leader"><span>🏆 Kristian</span><span class="pts">38 p</span></div>
+      <div class="board-row"><span>Marte</span><span class="pts">36 p</span></div>
+      <div class="board-row"><span>Jonas</span><span class="pts">33 p</span></div>
+      <div class="chip-row">
+        <span class="chip">⛳ Nærmest pinnen</span>
+        <span class="chip">🚀 Lengste drive</span>
+        <span class="chip">💰 Premiepott</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Tre ikon-punkter -->
+  <section>
+    <h2>Spisset for turneringen</h2>
+    <div class="icon-points">
+      <div class="icon-point">
+        <span class="icon-bubble">🎛️</span>
+        <span class="icon-text">Arrangøren har kontroll
+          <small>Godkjenn scorekort, start automatisk til avtalt tid, og få resultatet på e-post.</small>
+        </span>
+      </div>
+      <div class="icon-point">
+        <span class="icon-bubble">📨</span>
+        <span class="icon-text">Alle er med på et minutt
+          <small>Invitasjon på e-post, engangskode, og spillet er i gang.</small>
+        </span>
+      </div>
+      <div class="icon-point">
+        <span class="icon-bubble">🏆</span>
+        <span class="icon-text">Premieseremonien følger med
+          <small>Podium, vinnere og premiebord når siste putt er i hull.</small>
+        </span>
+      </div>
+    </div>
+    <div class="pull-quote">Tørny er det dere fyrer opp når dere spiller <span class="gold">mot hverandre</span>.</div>
+  </section>
+
+  <!-- 7 · FAQ -->
+  <section>
+    <h2>Spørsmål og svar</h2>
+    <div class="faq-item">
+      <div class="faq-q">Er Tørny virkelig gratis?</div>
+      <div class="faq-a">Ja. Alt du ser over, uten abonnement og uten reklame.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Må deltakerne installere noe?</div>
+      <div class="faq-a">Nei, ingen må. Alle kan bli med rett fra nettleseren. Vil du ha Tørny som app, legger du den på hjemskjermen.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Hva med banen vår?</div>
+      <div class="faq-a">Ligger den ikke inne allerede, legger du den inn selv på et par minutter.</div>
+    </div>
+  </section>
+
+  <!-- 8 · Slutt-CTA -->
+  <section class="end-cta">
+    <h2>Klar for å fyre opp <span style="color: var(--accent-deep)">turneringen</span>?</h2>
+    <p>Prøv demoen uten å logge inn. Det tar under et minutt.</p>
+    <div class="cta-stack">
+      <a class="btn btn-primary" href="#">Prøv demoen</a>
+      <a class="text-link" href="#">Eller kom i gang på ordentlig →</a>
+    </div>
+  </section>
+
+  <!-- 9 · Bunnlenker -->
+  <nav class="footer-nav">
+    <a href="#">Spillformater</a>
+    <a href="#">Baner</a>
+    <a href="#">Demo</a>
+    <a href="#">Logg inn</a>
+    <a href="#">Personvern</a>
+  </nav>
+
+</div>
+
+</body>
+</html>
