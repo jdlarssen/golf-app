@@ -135,6 +135,25 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
    <tagline fra CHANGELOG>"
    ```
    `Closes #N` i PR-body er den autoritative auto-close-triggeren.
+
+   **PR-presentasjon (fast form, alle aktører — eierbestilling 2026-07-30, #1413).**
+   Dette er formens ene hjem; loop-dokumentene (kontrakt-smeden, nattkjøreren)
+   peker hit.
+   - **Alle feat/fix/perf-PR-er** har en kort «Fordeler/ulemper»-blokk i body eller
+     første kommentar: 2–3 fordeler og 2–3 ulemper ved valgt løsning, i eierens
+     produktspråk — også når det bare finnes ett fornuftig alternativ.
+     docs/chore/refactor/test-PR-er: kun når det fantes et reelt valg.
+   - **Finnes reelle alternativer** (produktvalg per definisjonen i steg 5): full
+     seksjon `## Alternativer (produktvalg)`:
+     1. **Anbefaling** øverst: én setning — hvilket alternativ og hvorfor.
+     2. **Per alternativ (A, B, evt. C):** 2–3 fordeler og 2–3 ulemper som
+        punktliste — også for bygget A; eieren skal kunne veie, ikke bare godta.
+     3. **Ombyggingskostnad** per ikke-valgt alternativ: liten/middels/stor + én
+        frase (f.eks. «liten — samme data, annen visning»).
+     4. **Reversibilitet:** kan valget snus senere uten datatap, eller er det
+        vanskelig å angre?
+     Avslutt med svar-instruksen («svar 'alternativ B' her, så bygges det om på
+     samme branch») og «ingen hast — PR-en venter til du svarer eller merger».
 4. Bruker-synlige endringer: verifiser berørt flyt på `torny-staging` FØR merge (se «Testing — staging, aldri prod»).
 5. Merge — **auto-merge-policyen** (eierbeslutning 2026-07-28, #1406): når portene er
    grønne (CI + steg 4-staging-verifisering der den kreves) og PR-en ikke inneholder noe

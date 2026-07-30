@@ -61,17 +61,12 @@ Per kandidat, klassifiser:
   avviklet (eierbeslutning 2026-07-30, #1413; PR-alternativ-modellen #1406 tok
   over jobben). Velg det beste alternativet selv (A) og skriv kontrakten
   (steg 3) med en egen seksjon `## Alternativer (produktvalg)` i eierens
-  produktspråk, med fast form (eierbestilling 2026-07-30):
-  1. **Anbefaling** øverst: én setning — hvilket alternativ og hvorfor.
-  2. **Per alternativ (A, B, evt. C):** 2–3 fordeler og 2–3 ulemper som
-     punktliste — også for A. Eieren skal kunne veie, ikke bare godta.
-  3. **Ombyggingskostnad** per ikke-valgt alternativ: liten/middels/stor +
-     én frase (f.eks. «liten — samme data, annen visning»).
-  4. **Reversibilitet:** kan valget snus senere uten datatap, eller er det
-     vanskelig å angre?
-  Nattkjøreren løfter seksjonen inn i PR-kommentaren; eieren svarer
-  «alternativ B» i PR-en hvis A ikke er riktig, og ombygging skjer på samme
-  branch. Sett `"produktvalg": true` i kontraktens json-blokk.
+  produktspråk, i den faste formen fra CLAUDE.md §«PR-presentasjon» (formens
+  ene hjem, gjelder alle aktører): anbefaling øverst, fordeler/ulemper per
+  alternativ (også A), ombyggingskostnad, reversibilitet. Nattkjøreren løfter
+  seksjonen inn i PR-kommentaren; eieren svarer «alternativ B» i PR-en hvis A
+  ikke er riktig, og ombygging skjer på samme branch. Sett
+  `"produktvalg": true` i kontraktens json-blokk.
 - **Uskopbar (kan ikke formulere Success Criteria):** eneste gjenværende
   ruting. Post kontrakt-forarbeid med header `## 🛠 Kontrakt-forarbeid
   (gråsone)` — scoped kontekst, filer, åpne spørsmål listet, anbefalt retning

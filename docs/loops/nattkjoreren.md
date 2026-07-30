@@ -109,13 +109,14 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
   kriterier som er bevist (med kommando-utfall), hva som evt. gjenstår manuelt.
   - **Produktvalg i kontrakten** (`## Alternativer (produktvalg)`-seksjon eller
     `"produktvalg": true` i json-blokken): gjengi HELE seksjonen i
-    PR-kommentaren på norsk, i kontraktens faste form — anbefaling først,
-    deretter 2–3 fordeler og 2–3 ulemper per alternativ (også A, som er
-    bygget), ombyggingskostnad per ikke-valgt alternativ og reversibilitet.
-    Avslutt med svar-instruksen: «alternativ B» direkte i PR-en → ombygging
-    på samme branch (#1406), og «ingen hast — PR-en venter til du svarer
-    eller merger». Produktvalg-PR-er auto-merges aldri av noen økt før eieren
-    har valgt.
+    PR-kommentaren på norsk, i den faste formen fra CLAUDE.md
+    §«PR-presentasjon» (formens ene hjem) — anbefaling først, fordeler/ulemper
+    per alternativ (også bygget A), ombyggingskostnad, reversibilitet, og
+    avslutningen med svar-instruks + «ingen hast». Produktvalg-PR-er
+    auto-merges aldri av noen økt før eieren har valgt.
+  - **Uten produktvalg:** feat/fix/perf-leveranser får likevel en kort
+    «Fordeler/ulemper»-blokk for valgt løsning i PR-kommentaren (2–3 hver,
+    produktspråk — CLAUDE.md §«PR-presentasjon»).
   **Fjern deretter `autonomy:ready` fra issuet (#1307)** — PR-en bærer mandatet
   videre, og labelen skal aldri overleve leveringen (ellers re-plukkes issuet
   neste natt og bygges som duplikat, jf. #1253-varselet 2026-07-18).
