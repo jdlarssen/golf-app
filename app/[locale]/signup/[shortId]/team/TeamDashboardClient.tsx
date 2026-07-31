@@ -70,6 +70,13 @@ type Props =
       shortId: string;
       invitationId: string;
       joinEffect: JoinEffect;
+      /**
+       * Laget + kapteinen invitasjonen kom fra. Settes KUN når serveren vet
+       * sikkert hvilket lag det er (inviteren er kaptein i spillet, #1343) —
+       * ved fallback-gjetting står de tomme og teksten holdes generisk.
+       */
+      teamName?: string;
+      captainName?: string;
     };
 
 /**
@@ -137,10 +144,20 @@ export function TeamDashboardClient(props: Props) {
       props.joinEffect === 'instant'
         ? t('teamDashAttachInstant')
         : t('teamDashAttachApproval');
+    const invitedBy =
+      props.teamName && props.captainName
+        ? t('teamDashInvitedByCaptain', {
+            teamName: props.teamName,
+            captainName: props.captainName,
+          })
+        : null;
     return (
       <div className="space-y-3">
         {error && <Banner tone="error">{error}</Banner>}
         {success && <Banner tone="success">{success}</Banner>}
+        {invitedBy && (
+          <p className="font-sans text-sm font-medium text-text">{invitedBy}</p>
+        )}
         <p className="font-sans text-sm text-text">{nextStep}</p>
         <Button
           pending={pendingKey === 'attach'}

@@ -696,3 +696,123 @@ describe('#1344: profil-porten beholder /team-konteksten', () => {
     );
   });
 });
+
+describe('#1343: attachToCaptainTeam kobler invitéen til kapteinen som inviterte', () => {
+  const INVITEE_ID = '66666666-6666-6666-6666-666666666666';
+  const INVITEE_EMAIL = 'ny.spiller@example.com';
+  const INVITING_CAPTAIN_ID = '77777777-7777-7777-7777-777777777777';
+  const INVITING_REQUEST_ID = '88888888-8888-8888-8888-888888888888';
+  const NEWEST_CAPTAIN_ID = '99999999-9999-9999-9999-999999999999';
+  const NEWEST_REQUEST_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+  beforeEach(() => {
+    serverMock = buildSupabaseMock([
+      { data: { profile_completed_at: '2026-01-01T00:00:00Z' }, error: null },
+    ]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: INVITEE_ID, email: INVITEE_EMAIL } },
+    });
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ registration_mode: 'manual_approval' }),
+    );
+  });
+
+  it('velger invited_by-kapteinens lag selv når et annet lag er nyere', async () => {
+    adminMock = buildSupabaseMock([
+      // 1) invitations-raden — invited_by peker på kapteinen som inviterte.
+      {
+        data: {
+          id: 'inv-1',
+          email: INVITEE_EMAIL,
+          game_id: GAME_ID,
+          invited_by: INVITING_CAPTAIN_ID,
+        },
+        error: null,
+      },
+      // 2) e-post-eierskap
+      { data: { email: INVITEE_EMAIL }, error: null },
+      // 3) kaptein-rader, nyest først — inviterens lag er det ELDSTE.
+      {
+        data: [
+          {
+            id: NEWEST_REQUEST_ID,
+            user_id: NEWEST_CAPTAIN_ID,
+            team_name: 'Lag Sist',
+            status: 'pending',
+          },
+          {
+            id: INVITING_REQUEST_ID,
+            user_id: INVITING_CAPTAIN_ID,
+            team_name: 'Lag Først',
+            status: 'pending',
+          },
+        ],
+        error: null,
+      },
+      // 4) child-insert
+      { data: { id: 'child-1' }, error: null },
+      // 5) invitations-update (accepted_at)
+      { data: null, error: null },
+    ]);
+
+    const { attachToCaptainTeam } = await import('./teamActions');
+    const result = await attachToCaptainTeam('inv-1', SHORT_ID);
+
+    expect(result).toEqual({ ok: true });
+    const insertCall = adminMock.__fromCalls.find(
+      (c) => c.method === 'insert' && c.table === 'game_registration_requests',
+    );
+    expect(insertCall?.args[0]).toMatchObject({
+      user_id: INVITEE_ID,
+      team_request_id: INVITING_REQUEST_ID,
+      team_name: 'Lag Først',
+      is_team_captain: false,
+    });
+  });
+
+  it('faller tilbake til nyeste lag når inviteren ikke er kaptein', async () => {
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: 'inv-1',
+          email: INVITEE_EMAIL,
+          game_id: GAME_ID,
+          // Arrangøren inviterte — sier ingenting om hvilket lag.
+          invited_by: ADMIN_USER_ID,
+        },
+        error: null,
+      },
+      { data: { email: INVITEE_EMAIL }, error: null },
+      {
+        data: [
+          {
+            id: NEWEST_REQUEST_ID,
+            user_id: NEWEST_CAPTAIN_ID,
+            team_name: 'Lag Sist',
+            status: 'pending',
+          },
+          {
+            id: INVITING_REQUEST_ID,
+            user_id: INVITING_CAPTAIN_ID,
+            team_name: 'Lag Først',
+            status: 'pending',
+          },
+        ],
+        error: null,
+      },
+      { data: { id: 'child-1' }, error: null },
+      { data: null, error: null },
+    ]);
+
+    const { attachToCaptainTeam } = await import('./teamActions');
+    const result = await attachToCaptainTeam('inv-1', SHORT_ID);
+
+    expect(result).toEqual({ ok: true });
+    const insertCall = adminMock.__fromCalls.find(
+      (c) => c.method === 'insert' && c.table === 'game_registration_requests',
+    );
+    expect(insertCall?.args[0]).toMatchObject({
+      team_request_id: NEWEST_REQUEST_ID,
+    });
+  });
+});

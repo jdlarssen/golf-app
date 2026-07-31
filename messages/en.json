@@ -4915,6 +4915,7 @@
     "teamDashPendingInviteIntro": "The captain has invited you. Would you like to join?",
     "teamDashPendingInstant": "If you say yes, you're in the game straight away.",
     "teamDashPendingApproval": "If you say yes, the organiser will need to approve the team before you're signed up. You'll be notified when it's confirmed.",
+    "teamDashInvitedByCaptain": "{captainName} wants you on team {teamName}.",
     "teamDashAttachInstant": "You'll join the game straight away and receive your scorecard when the round starts.",
     "teamDashAttachApproval": "The organiser will need to approve the team before you're signed up. You'll be notified when it's confirmed.",
     "teamDashJoinButton": "Join the team",

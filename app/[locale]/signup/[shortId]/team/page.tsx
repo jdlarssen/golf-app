@@ -11,6 +11,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { TeamDashboardClient } from './TeamDashboardClient';
+import { getCaptainDisplayName, pickCaptainRequest } from './captainLookup';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 
@@ -27,6 +28,19 @@ type TeamMemberRow = {
   is_team_captain: boolean;
   team_name: string | null;
   team_request_id: string | null;
+};
+
+type PendingInvitation = {
+  id: string;
+  email: string;
+  invited_by: string | null;
+};
+
+type CaptainRequestRow = {
+  id: string;
+  user_id: string;
+  team_name: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
 };
 
 /**
@@ -83,7 +97,7 @@ export default async function TeamDashboardPage({
 
   // Hvis brukeren ikke har noen request-rad, sjekk om de har en åpen
   // invitations-rad for spillet — da kan vi tilby attach-knapp.
-  let pendingInvitation: { id: string; email: string } | null = null;
+  let pendingInvitation: PendingInvitation | null = null;
   if (!myRow) {
     const { data: userRow } = await admin
       .from('users')
@@ -91,14 +105,19 @@ export default async function TeamDashboardPage({
       .eq('id', user!.id)
       .maybeSingle<{ email: string }>();
     if (userRow?.email) {
-      const { data: inv } = await admin
+      // Ingen unique på (email, game_id): både arrangøren og en kaptein kan ha
+      // invitert samme e-post. `.maybeSingle()` ville feilet med PGRST116 og
+      // sendt brukeren i en blindvei — vi tar nyeste invitasjon i stedet (#1343).
+      const { data: invitations } = await admin
         .from('invitations')
-        .select('id, email')
+        .select('id, email, invited_by')
         .ilike('email', userRow.email)
         .eq('game_id', game.id)
         .is('accepted_at', null)
-        .maybeSingle<{ id: string; email: string }>();
-      pendingInvitation = inv;
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .returns<PendingInvitation[]>();
+      pendingInvitation = invitations?.[0] ?? null;
     }
   }
 
@@ -119,6 +138,28 @@ export default async function TeamDashboardPage({
   // rendrer vi attach-flyt. Disse landed her via mail-link-en kaptein
   // sendte da brukeren var ukjent.
   if (!myRow && pendingInvitation) {
+    // Navngi laget kun når vi VET hvilket det er: inviteren må selv være
+    // kaptein i spillet. Traff vi bare fallback-heuristikken, holder vi
+    // teksten generisk — å love feil lag er verre enn å si ingenting (#1343).
+    const { data: captainRows } = await admin
+      .from('game_registration_requests')
+      .select('id, user_id, team_name, status')
+      .eq('game_id', game.id)
+      .eq('is_team_captain', true)
+      .in('status', ['pending', 'approved'])
+      .order('created_at', { ascending: false })
+      .returns<CaptainRequestRow[]>();
+    const picked = pickCaptainRequest(
+      captainRows ?? [],
+      pendingInvitation.invited_by,
+    );
+    const captainName =
+      picked?.source === 'invited_by'
+        ? await getCaptainDisplayName(picked.row.user_id)
+        : null;
+    const invitedTeamName =
+      picked?.source === 'invited_by' ? picked.row.team_name : null;
+
     return (
       <AppShell>
         <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
@@ -132,6 +173,8 @@ export default async function TeamDashboardPage({
               shortId={shortId}
               invitationId={pendingInvitation.id}
               joinEffect={joinEffect}
+              teamName={invitedTeamName ?? undefined}
+              captainName={captainName ?? undefined}
             />
           </div>
         </Card>
