@@ -16,22 +16,28 @@ vi.mock('../teamActions', () => ({
 const SHORT_ID = 'abc12345';
 
 describe('TeamDashboardClient — mode-aware «bli med»-copy', () => {
-  it('invited_unknown + instant forklarer at du blir med med en gang', () => {
+  it('invited_unknown + instant navngir laget og kapteinen når serveren vet hvem som inviterte', () => {
     render(
       <TeamDashboardClient
         mode="invited_unknown"
         shortId={SHORT_ID}
         invitationId="inv-1"
         joinEffect="instant"
+        teamName="Birdie-jegerne"
+        captainName="Kaptein Sabeltann"
       />,
     );
+    // #1343: sikkert treff på invited_by → laget og kapteinen navngis.
+    expect(
+      screen.getByText(/Kaptein Sabeltann vil ha deg med på laget Birdie-jegerne/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/med i spillet med en gang/i)).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Bli med på lag/i }),
     ).toBeInTheDocument();
   });
 
-  it('invited_unknown + approval forklarer at arrangøren må godkjenne', () => {
+  it('invited_unknown + approval uten sikkert lag-treff holder teksten generisk', () => {
     render(
       <TeamDashboardClient
         mode="invited_unknown"
@@ -43,6 +49,8 @@ describe('TeamDashboardClient — mode-aware «bli med»-copy', () => {
     expect(
       screen.getByText(/Arrangøren må godkjenne laget/i),
     ).toBeInTheDocument();
+    // #1343: ingen props → ingen lag-navngiving (vi gjetter aldri).
+    expect(screen.queryByText(/vil ha deg med på laget/i)).toBeNull();
   });
 
   it('member pending + approval sier at laget må godkjennes før påmelding', () => {

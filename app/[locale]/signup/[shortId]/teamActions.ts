@@ -17,7 +17,10 @@ import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
 import { expectAffected } from '@/lib/supabase/affectedRows';
-import { getCaptainDisplayName } from './team/captainLookup';
+import {
+  getCaptainDisplayName,
+  pickCaptainRequest,
+} from './team/captainLookup';
 
 /**
  * Lag-formasjons-actions for selv-påmelding (#199 chunks 8+9).
@@ -891,10 +894,10 @@ export async function removeTeamMember(
  *
  * Denne action-en finner kapteinen for spillet (det laget brukerens
  * e-post er knyttet til via mail-invitasjonen) og oppretter request-raden
- * retrospektivt. Hvis det er flere kapteiner med ledig plass, plukker vi
- * den nyeste — eller bare den som faktisk har en åpen slot. Edge-case
- * (flere kapteiner inviterte samme person) er sjelden nok at vi tar
- * den nyeste; admin kan fikse manuelt hvis det blir et problem.
+ * retrospektivt. Kapteinen velges av `pickCaptainRequest`: er inviteren
+ * (`invitations.invited_by`) kaptein i spillet, er det laget invitéen ble
+ * invitert til. Er inviteren arrangøren — som ikke sier noe om lag — faller
+ * vi tilbake på nyeste lag, og UI-et navngir da ikke laget (#1343).
  *
  * Hvorfor ikke gjøre dette i verifyCode-hook-en? `invitations`-tabellen
  * har ikke `team_request_id`-felt — vi vet at e-posten ble invitert til
@@ -951,7 +954,9 @@ export async function attachToCaptainTeam(
     return { ok: false, error: 'not_found' };
   }
 
-  // Finn nyeste kaptein-request for dette spillet (heuristikk for ambiguity).
+  // Alle aktive kaptein-requests for spillet, nyest først. Selve valget
+  // skjer i pickCaptainRequest: inviteren vinner hvis hen er kaptein,
+  // ellers nyeste lag (#1343).
   const { data: captains } = await admin
     .from('game_registration_requests')
     .select('id, user_id, team_name, status')
@@ -959,7 +964,6 @@ export async function attachToCaptainTeam(
     .eq('is_team_captain', true)
     .in('status', ['pending', 'approved'])
     .order('created_at', { ascending: false })
-    .limit(1)
     .returns<
       {
         id: string;
@@ -968,10 +972,11 @@ export async function attachToCaptainTeam(
         status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
       }[]
     >();
-  const captain = captains?.[0];
-  if (!captain) {
+  const picked = pickCaptainRequest(captains ?? [], invitation.invited_by);
+  if (!picked) {
     return { ok: false, error: 'not_found' };
   }
+  const captain = picked.row;
 
   // Match kapteinens status — open-modus betyr approved (vi er straks med),
   // manual_approval betyr pending (vi venter på admin med resten av laget).
