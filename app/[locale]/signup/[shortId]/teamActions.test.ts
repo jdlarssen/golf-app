@@ -641,3 +641,58 @@ describe('#543: stengt påmelding — accept/attach-guards', () => {
     expect(result).toEqual({ ok: false, error: 'signup_closed' });
   });
 });
+
+describe('#1344: profil-porten beholder /team-konteksten', () => {
+  // attachToCaptainTeam er stien en e-post-invitert ny bruker treffer fra
+  // lag-dashboardet. requireAuthedUser kjører FØR game-oppslaget, så ingen av
+  // disse testene trenger en game-mock.
+  const TEAM_NEXT = `/signup/${SHORT_ID}/team`;
+
+  it('uinnlogget → /login beholder /team i next', async () => {
+    serverMock = buildSupabaseMock([]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: null },
+    });
+
+    const { attachToCaptainTeam } = await import('./teamActions');
+    await expect(attachToCaptainTeam('inv-1', SHORT_ID)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/login?next=${TEAM_NEXT}` }),
+    );
+  });
+
+  it('innlogget uten fullført profil → /complete-profile beholder /team i next', async () => {
+    authedAsCaptain(false);
+
+    const { attachToCaptainTeam } = await import('./teamActions');
+    await expect(attachToCaptainTeam('inv-1', SHORT_ID)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/complete-profile?next=${TEAM_NEXT}` }),
+    );
+  });
+
+  it('kaptein-skjemaet på base-siden beholder base-stien', async () => {
+    // Motprøve: submitTeamRegistration kalles fra TeamRegistrationForm på
+    // /signup/[shortId] — der er base-stien riktig retur, og default-en står.
+    serverMock = buildSupabaseMock([]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: null },
+    });
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    await expect(
+      submitTeamRegistration({
+        shortId: SHORT_ID,
+        teamName: 'Lag A',
+        slots: [{ mode: 'email', value: 'a@x' }],
+      }),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/login?next=/signup/${SHORT_ID}` }),
+    );
+  });
+});

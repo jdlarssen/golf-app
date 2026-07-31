@@ -4765,6 +4765,8 @@
     "inviteNotInvitedIntro": "Du er ikke invitert ennå, men du kan be arrangøren om plass.",
     "teamUnsupportedModeBanner": "Spillmodusen «{mode}» har ikke lag-konsept. Be arrangøren bytte til solo-påmelding.",
     "badTeamSizeBanner": "Lag-størrelsen er ikke riktig satt opp. Be arrangøren sjekke innstillingene.",
+    "teamInvitePointerBanner": "Du er invitert til et lag i dette spillet. Gå til laget ditt for å bli med, eller meld på et eget lag under.",
+    "goToTeamButton": "Gå til laget",
     "teamFormIntro": "Du melder på et helt lag som kaptein. Fyll inn lag-navn og medspillere — kjente Tørny-brukere får varsel i appen, ukjente får mail-invitasjon.",
     "soloOpenIntro": "Trykk «Meld meg på» for å bli med i spillet med en gang.",
     "soloManualIntro": "Send en forespørsel til arrangøren. Du får varsel når den er godkjent.",
