@@ -1367,8 +1367,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>Juli 2026 · 39 rettinger</strong></summary>
+<summary><strong>Juli 2026 · 40 rettinger</strong></summary>
 
+- `1.214.2` · [#1344](https://github.com/jdlarssen/golf-app/issues/1344) — Er du invitert til et lag og må fullføre profilen underveis, kommer du tilbake til laget ditt i stedet for å havne i skjemaet der man melder på et nytt lag. Skulle du likevel komme innom det skjemaet, står det nå en peker øverst som tar deg til laget du er invitert til.
 - `1.213.9` · [#1350](https://github.com/jdlarssen/golf-app/issues/1350) — Sidene «Finn turneringer» og «Spillformater» lagres ikke lenger lokalt på telefonen. De viser innholdet ditt når du er innlogget, og da hører de ikke hjemme i et mellomlager som kan overleve til neste person som låner enheten.
 - `1.213.8` · [#1350](https://github.com/jdlarssen/golf-app/issues/1350) — Ryker dekningen midt i runden, får du nå en side som sier at du er uten nett og at slagene ligger på telefonen — med «Prøv igjen» som tar deg rett til hullet du var på vei til. Før havnet du på en gammel forside som så ut som om runden var borte.
 - `1.213.6` · [#1386](https://github.com/jdlarssen/golf-app/issues/1386) — Styrer du appen med tastatur, ser du nå tydelig hvor du står: en ramme i skogsgrønt om dagen og champagne i mørk modus, rundt knappen eller feltet som har fokus. Den gamle markeringen var så blek at den i praksis var borte. Spiller du med fingeren på telefonen merker du ingen forskjell.

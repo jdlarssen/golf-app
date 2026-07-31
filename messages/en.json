@@ -4765,6 +4765,8 @@
     "inviteNotInvitedIntro": "You haven't been invited yet, but you can ask the organiser for a spot.",
     "teamUnsupportedModeBanner": "The game mode \"{mode}\" doesn''t support teams. Ask the organiser to switch to individual sign-up.",
     "badTeamSizeBanner": "The team size isn't set up correctly. Ask the organiser to check the settings.",
+    "teamInvitePointerBanner": "You've been invited to a team in this game. Go to your team to join, or sign up a team of your own below.",
+    "goToTeamButton": "Go to your team",
     "teamFormIntro": "You're signing up a whole team as captain. Fill in the team name and your playing partners. Anyone already on Tørny gets a notification in the app, and anyone new gets an email invitation.",
     "soloOpenIntro": "Tap \"Sign me up\" to join the game straight away.",
     "soloManualIntro": "Send a request to the organiser. You'll be notified once it's been approved.",

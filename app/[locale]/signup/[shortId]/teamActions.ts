@@ -124,16 +124,31 @@ function isDuplicateError(err: { code?: string; message?: string } | null): bool
     .includes('duplicate');
 }
 
+/**
+ * Auth- + profil-port for lag-actionene.
+ *
+ * `next` er stien brukeren skal tilbake til når porten sender dem via /login
+ * eller /complete-profile. Default er base-signup-siden, som er riktig for
+ * kaptein-skjemaet (`submitTeamRegistration`) — det er der den flyten startet.
+ * Actionene på lag-dashboardet sender `/signup/${shortId}/team` eksplisitt:
+ * uten det mistet en invitert spiller /team-konteksten i profil-runden og
+ * landet på «Registrer laget»-skjemaet, ett trykk unna et duplikat-lag (#1344).
+ *
+ * Verdien settes alltid som en hardkodet konstant på call-site, aldri fra
+ * bruker-input — ingen open-redirect-flate.
+ */
 async function requireAuthedUser(
   shortId: string,
+  options: { next?: string } = {},
 ): Promise<{ id: string; email: string | null }> {
+  const next = options.next ?? `/signup/${shortId}`;
   const locale = (await getLocale()) as AppLocale;
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect({ href: `/login?next=/signup/${shortId}`, locale });
+    redirect({ href: `/login?next=${next}`, locale });
   }
   const { data: profile } = await supabase
     .from('users')
@@ -141,9 +156,14 @@ async function requireAuthedUser(
     .eq('id', user!.id)
     .maybeSingle<{ profile_completed_at: string | null }>();
   if (!profile?.profile_completed_at) {
-    redirect({ href: `/complete-profile?next=/signup/${shortId}`, locale });
+    redirect({ href: `/complete-profile?next=${next}`, locale });
   }
   return { id: user!.id, email: user!.email ?? null };
+}
+
+/** Retursti for actionene som kalles fra lag-dashboardet (#1344). */
+function teamPagePath(shortId: string): string {
+  return `/signup/${shortId}/team`;
 }
 
 async function getCaptainDisplayName(userId: string): Promise<string | null> {
@@ -583,7 +603,7 @@ export async function acceptTeamInvite(
   if (!/^[0-9a-z]{8}$/.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
-  const user = await requireAuthedUser(shortId);
+  const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
   const admin = getAdminClient();
 
   const { data: req, error: reqError } = await admin
@@ -707,7 +727,7 @@ export async function declineTeamInvite(
   if (!/^[0-9a-z]{8}$/.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
-  const user = await requireAuthedUser(shortId);
+  const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
   const admin = getAdminClient();
 
   const { data: req } = await admin
@@ -809,7 +829,7 @@ export async function removeTeamMember(
   if (!/^[0-9a-z]{8}$/.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
-  const user = await requireAuthedUser(shortId);
+  const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
   const admin = getAdminClient();
 
   const { data: child } = await admin
@@ -905,7 +925,7 @@ export async function attachToCaptainTeam(
   if (!/^[0-9a-z]{8}$/.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
-  const user = await requireAuthedUser(shortId);
+  const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
   const admin = getAdminClient();
 
   const game = await getGameByShortId(shortId);
@@ -1083,7 +1103,7 @@ export async function resendTeamInvite(
   if (!/^[0-9a-z]{8}$/.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
-  const user = await requireAuthedUser(shortId);
+  const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
   const admin = getAdminClient();
 
   const { data: child } = await admin

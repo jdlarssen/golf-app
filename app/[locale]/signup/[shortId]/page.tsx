@@ -16,6 +16,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
 import { resolveRegistrationTypeView } from './registrationTypeView';
+import { shouldShowTeamInvitePointer } from './teamInvitePointer';
 import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
 import {
   isPubliclyViewable,
@@ -213,11 +214,16 @@ export default async function PåmeldingPage({
     isClubMember = clubMembership != null;
   }
 
-  // For invite_only: sjekk om brukeren har en pending invitation-rad
-  // (matchende email + game_id). Det gir oss fallback-melding "du har en
-  // invitasjon" i stedet for generisk "krever invitasjon".
+  // Har brukeren en ventende invitation-rad (matchende email + game_id)?
+  // To grener trenger svaret, så oppslaget kjører for alle påmeldingsmåter:
+  //  - invite_only: fallback-melding «du har en invitasjon» i stedet for den
+  //    generiske «krever invitasjon».
+  //  - lag-skjemaet (#1344): en spiller som allerede er invitert til et lag
+  //    får en peker til laget sitt, så de ikke oppretter et duplikat-lag.
+  // Ren SELECT via admin-client, ingen sideeffekter; `users.email` er NOT NULL
+  // så oppslaget for alle modi gir ingen ny null-flate.
   let hasPendingInvitation = false;
-  if (game.registration_mode === 'invite_only' && profile!.email) {
+  if (profile!.email) {
     const { data: invitation } = await admin
       .from('invitations')
       .select('id')
@@ -565,6 +571,27 @@ function renderBody({
     }
     return (
       <div className="space-y-4">
+        {/* #1344: er du allerede invitert til et lag, ligger «Bli med på lag»
+            på /team — ikke i skjemaet under. Pekeren står over skjemaet, men
+            stenger det ikke: invitasjonen kan være foreldet, og du kan
+            legitimt ville stille med eget lag. */}
+        {shouldShowTeamInvitePointer({
+          typeViewKind: typeView.kind,
+          hasPendingInvitation,
+        }) && (
+          <div className="space-y-3">
+            <Banner tone="info" testId="team-invite-pointer">
+              {t('teamInvitePointerBanner')}
+            </Banner>
+            <LinkButton
+              href={`/signup/${game.short_id}/team`}
+              full
+              variant="secondary"
+            >
+              {t('goToTeamButton')}
+            </LinkButton>
+          </div>
+        )}
         <p className="font-sans text-sm leading-relaxed text-text">
           {t('teamFormIntro')}
         </p>
