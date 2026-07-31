@@ -17,6 +17,7 @@ import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { getCaptainDisplayName } from './team/captainLookup';
 
 /**
  * Lag-formasjons-actions for selv-påmelding (#199 chunks 8+9).
@@ -164,24 +165,6 @@ async function requireAuthedUser(
 /** Retursti for actionene som kalles fra lag-dashboardet (#1344). */
 function teamPagePath(shortId: string): string {
   return `/signup/${shortId}/team`;
-}
-
-async function getCaptainDisplayName(userId: string): Promise<string | null> {
-  const admin = getAdminClient();
-  const { data } = await admin
-    .from('users')
-    .select('name, nickname, email')
-    .eq('id', userId)
-    .maybeSingle<{
-      name: string | null;
-      nickname: string | null;
-      email: string;
-    }>();
-  // Return null when the user row is missing — NotificationCard fills the
-  // locale-correct fallback at render time so payloads stay locale-agnostic (#583).
-  if (!data) return null;
-  const base = data.name?.trim() || data.email;
-  return data.nickname ? `${base} «${data.nickname}»` : base;
 }
 
 /**
