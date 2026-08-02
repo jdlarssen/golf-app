@@ -770,7 +770,8 @@ describe('#1343: attachToCaptainTeam kobler invitéen til kapteinen som invitert
     });
   });
 
-  it('faller tilbake til nyeste lag når inviteren ikke er kaptein', async () => {
+  it('stopper med team_unknown når inviteren ikke er kaptein — ingen gjetting', async () => {
+    // Køen stopper etter kaptein-oppslaget: actionen returnerer før insert.
     adminMock = buildSupabaseMock([
       {
         data: {
@@ -800,19 +801,15 @@ describe('#1343: attachToCaptainTeam kobler invitéen til kapteinen som invitert
         ],
         error: null,
       },
-      { data: { id: 'child-1' }, error: null },
-      { data: null, error: null },
     ]);
 
     const { attachToCaptainTeam } = await import('./teamActions');
     const result = await attachToCaptainTeam('inv-1', SHORT_ID);
 
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: false, error: 'team_unknown' });
     const insertCall = adminMock.__fromCalls.find(
       (c) => c.method === 'insert' && c.table === 'game_registration_requests',
     );
-    expect(insertCall?.args[0]).toMatchObject({
-      team_request_id: NEWEST_REQUEST_ID,
-    });
+    expect(insertCall).toBeUndefined();
   });
 });

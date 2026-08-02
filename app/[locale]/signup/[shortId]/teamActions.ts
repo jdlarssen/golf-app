@@ -582,6 +582,16 @@ export type AcceptDeclineResult =
         | 'db_error';
     };
 
+/**
+ * `attachToCaptainTeam` har én utgang de andre lag-actionene ikke har:
+ * `team_unknown` — invitasjonen er ekte, men vi kan ikke se hvilket lag den
+ * gjelder. Egen type i stedet for et nytt medlem i `AcceptDeclineResult`, så
+ * de fire andre actionene ikke arver en kode de aldri returnerer (#1343).
+ */
+export type AttachTeamResult =
+  | AcceptDeclineResult
+  | { ok: false; error: 'team_unknown' };
+
 export async function acceptTeamInvite(
   requestId: string,
   shortId: string,
@@ -896,8 +906,8 @@ export async function removeTeamMember(
  * e-post er knyttet til via mail-invitasjonen) og oppretter request-raden
  * retrospektivt. Kapteinen velges av `pickCaptainRequest`: er inviteren
  * (`invitations.invited_by`) kaptein i spillet, er det laget invitéen ble
- * invitert til. Er inviteren arrangøren — som ikke sier noe om lag — faller
- * vi tilbake på nyeste lag, og UI-et navngir da ikke laget (#1343).
+ * invitert til. Er inviteren arrangøren — som ikke sier noe om lag — vet vi
+ * ikke hvilket lag det er, og da kobler vi ingen på: `team_unknown` (#1343).
  *
  * Hvorfor ikke gjøre dette i verifyCode-hook-en? `invitations`-tabellen
  * har ikke `team_request_id`-felt — vi vet at e-posten ble invitert til
@@ -907,7 +917,7 @@ export async function removeTeamMember(
 export async function attachToCaptainTeam(
   invitationId: string,
   shortId: string,
-): Promise<AcceptDeclineResult> {
+): Promise<AttachTeamResult> {
   if (!/^[0-9a-z]{8}$/.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
@@ -956,7 +966,8 @@ export async function attachToCaptainTeam(
 
   // Alle aktive kaptein-requests for spillet, nyest først. Selve valget
   // skjer i pickCaptainRequest: inviteren vinner hvis hen er kaptein,
-  // ellers nyeste lag (#1343).
+  // ellers har vi bare en gjetning (`source: 'fallback'`) — og da stopper
+  // vi under (#1343).
   const { data: captains } = await admin
     .from('game_registration_requests')
     .select('id, user_id, team_name, status')
@@ -975,6 +986,14 @@ export async function attachToCaptainTeam(
   const picked = pickCaptainRequest(captains ?? [], invitation.invited_by);
   if (!picked) {
     return { ok: false, error: 'not_found' };
+  }
+  // Fallback = vi gjetter hvilket lag invitéen hører til. Feil lag er verre
+  // enn ingen kobling: spilleren står plutselig på fremmedes lag, og
+  // kapteinen må rydde. Vi stopper og ber dem hente en laginvitasjon eller
+  // registrere eget lag. Siden viser samme beskjed, men guarden står her
+  // også — en gammel fane kan poste action-en uansett hva siden viste (#1343).
+  if (picked.source !== 'invited_by') {
+    return { ok: false, error: 'team_unknown' };
   }
   const captain = picked.row;
 

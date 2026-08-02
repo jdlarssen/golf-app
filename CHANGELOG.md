@@ -1393,7 +1393,7 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 <details>
 <summary><strong>August 2026 · 14 rettinger</strong></summary>
 
-- `1.218.2` · [#1343](https://github.com/jdlarssen/golf-app/issues/1343) — Blir du invitert til et lag på e-post, kobles du nå til laget som faktisk inviterte deg — ikke det siste laget som meldte seg på. Lag-siden sier hvem som vil ha deg med, før du trykker «Bli med på lag».
+- `1.218.3` · [#1343](https://github.com/jdlarssen/golf-app/issues/1343) — Blir du invitert til et lag på e-post, kobles du nå til laget som faktisk inviterte deg, og lag-siden sier hvem som vil ha deg med før du trykker «Bli med på lag». Er invitasjonen så vag at appen ikke kan vite hvilket lag det er, gjetter den ikke lenger — den sier fra og lar deg spørre kapteinen eller registrere eget lag.
 - `1.216.11` · [#1348](https://github.com/jdlarssen/golf-app/issues/1348) — En invitasjon som har gått ut på dato melder deg ikke lenger inn i spillet når du logger inn. Be arrangøren om en ny invitasjon, så er du med igjen.
 - `1.216.10` · [#1347](https://github.com/jdlarssen/golf-app/issues/1347) — Du kan be om fem koder per kvarter i stedet for tre, og må du vente, sier appen nå hvor lenge: ett minutt hvis du var litt kjapp, et kvarter hvis du har bedt om mange på rad.
 - `1.216.8` · [#1454](https://github.com/jdlarssen/golf-app/issues/1454) — Også den åpne cup-siden sier nå «Delt (AS)» — teksten var hardkodet og fulgte ikke med forrige retting.

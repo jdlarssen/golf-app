@@ -4916,6 +4916,8 @@
     "teamDashPendingInstant": "Sier du ja, er du med i spillet med en gang.",
     "teamDashPendingApproval": "Sier du ja, må arrangøren godkjenne laget før dere er påmeldt. Du får varsel når det er klart.",
     "teamDashInvitedByCaptain": "{captainName} vil ha deg med på laget {teamName}.",
+    "teamDashTeamUnknownBanner": "Vi fant ikke laget ditt — spør kapteinen om en laginvitasjon, eller registrer eget lag.",
+    "teamDashRegisterOwnTeamButton": "Registrer eget lag",
     "teamDashAttachInstant": "Du blir med i spillet med en gang, og får scorekortet når runden starter.",
     "teamDashAttachApproval": "Arrangøren må godkjenne laget før dere er påmeldt. Du får varsel når det er klart.",
     "teamDashJoinButton": "Bli med på lag",
@@ -4973,6 +4975,7 @@
       "teamDashNotFound": "Fant ikke laget eller medspilleren.",
       "teamDashGameLocked": "Spillet er startet — endringer er ikke tillatt lenger.",
       "teamDashSignupClosed": "Påmeldingen er stengt. Arrangøren gjør de siste justeringene.",
+      "teamDashTeamUnknown": "Vi fant ikke laget ditt — spør kapteinen om en laginvitasjon, eller registrer eget lag.",
       "teamDashDbError": "Klarte ikke å fullføre handlingen. Prøv igjen om litt."
     },
     "public": {

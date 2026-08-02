@@ -4916,6 +4916,8 @@
     "teamDashPendingInstant": "If you say yes, you're in the game straight away.",
     "teamDashPendingApproval": "If you say yes, the organiser will need to approve the team before you're signed up. You'll be notified when it's confirmed.",
     "teamDashInvitedByCaptain": "{captainName} wants you on team {teamName}.",
+    "teamDashTeamUnknownBanner": "We couldn't find your team — ask the captain for a team invitation, or register a team of your own.",
+    "teamDashRegisterOwnTeamButton": "Register your own team",
     "teamDashAttachInstant": "You'll join the game straight away and receive your scorecard when the round starts.",
     "teamDashAttachApproval": "The organiser will need to approve the team before you're signed up. You'll be notified when it's confirmed.",
     "teamDashJoinButton": "Join the team",
@@ -4973,6 +4975,7 @@
       "teamDashNotFound": "Team or playing partner not found.",
       "teamDashGameLocked": "The game has started — no further changes are allowed.",
       "teamDashSignupClosed": "Sign-up is closed. The organiser is making final adjustments.",
+      "teamDashTeamUnknown": "We couldn't find your team — ask the captain for a team invitation, or register a team of your own.",
       "teamDashDbError": "Couldn't complete the action. Please try again in a moment."
     },
     "public": {

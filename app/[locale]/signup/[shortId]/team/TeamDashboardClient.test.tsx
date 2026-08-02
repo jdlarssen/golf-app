@@ -37,7 +37,10 @@ describe('TeamDashboardClient — mode-aware «bli med»-copy', () => {
     ).toBeInTheDocument();
   });
 
-  it('invited_unknown + approval uten sikkert lag-treff holder teksten generisk', () => {
+  // #1343: er serveren usikker på hvilket lag invitasjonen gjelder, rendres
+  // ikke denne modusen i det hele tatt — siden stopper med «Vi fant ikke laget
+  // ditt». Modusen uten lag-navn står igjen for laget som mangler navn.
+  it('invited_unknown uten lagnavn holder teksten generisk', () => {
     render(
       <TeamDashboardClient
         mode="invited_unknown"
@@ -49,7 +52,7 @@ describe('TeamDashboardClient — mode-aware «bli med»-copy', () => {
     expect(
       screen.getByText(/Arrangøren må godkjenne laget/i),
     ).toBeInTheDocument();
-    // #1343: ingen props → ingen lag-navngiving (vi gjetter aldri).
+    // Ingen props → ingen lag-navngiving (vi gjetter aldri).
     expect(screen.queryByText(/vil ha deg med på laget/i)).toBeNull();
   });
 
