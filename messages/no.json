@@ -5459,7 +5459,116 @@
       "demo": "Prøvespill",
       "openGames": "Åpne turneringer",
       "login": "Logg inn",
-      "privacy": "Personvern"
+      "privacy": "Personvern",
+      "guide": "Arranger turnering"
     }
+  },
+  "arrangeGuide": {
+    "metaTitle": "Arranger golfturnering: guide for firma og vennegjeng",
+    "metaDescription": "Slik arrangerer du en golfturnering uten klubbkomité. Sjekkliste for bane, påmelding, spillform, handicap og premier, pluss hvilket format som passer gjengen din.",
+    "kicker": "Guide",
+    "backLabel": "Til forsiden",
+    "pageTitle": "Slik arrangerer du en golfturnering",
+    "pageSubtitle": "For deg som skal fikse firmagolfen, kompisturneringen eller klubbkvelden uten å være turneringskomité.",
+    "intro": "De fleste guidene om å arrangere golfturnering er skrevet for turneringskomiteen i en klubb: terminliste, NGF-bestemmelser, startkontingent og resultatservice. Skal du samle tolv kolleger på en runde etter jobb, er det som å lese sikkerhetsmanualen for et fly før du tar bussen.\n\nDenne guiden er den andre halvdelen. Her står det du faktisk trenger for å få en golfturnering opp å stå på egen hånd: hva du må bestemme, i hvilken rekkefølge, og hvor du kan la appen ta jobben. Ingen komité, ingen klubbavtale, ingen erfaring fra turneringsadministrasjon.\n\nVi tar sjekklista først, så de tre typiske turneringene (firma, vennegjeng, klubbkveld), og til slutt hvor grensa går mot klubbsystemene. Regn med ti minutter lesing og et par minutter oppsett.",
+    "tocHeading": "Hopp til",
+    "sections": [
+      {
+        "id": "sjekklista",
+        "heading": "Sjekklista: fem ting du må bestemme",
+        "body": "En golfturnering koker ned til fem beslutninger. Får du dem på plass, går resten nesten av seg selv.\n\n1. Bane og tee. Hvor spiller dere, og fra hvilken tee?\n2. Påmelding. Hvem er med, og hvordan sier de ja?\n3. Spillform. Stableford, slagspill, scramble eller matchplay?\n4. Handicap. Spiller dere netto, brutto eller begge deler?\n5. Premier. Hva står på spill, og hvem deler ut?\n\nAlt det andre følger av disse fem. Starttider, flighter, scorekort og resultatliste er konsekvenser, ikke egne avgjørelser. Ta dem i rekkefølge, så slipper du å gjøre om noe underveis. Er dere under tjue spillere, tar hele oppsettet under ti minutter når banen er avtalt."
+      },
+      {
+        "id": "bane",
+        "heading": "1. Bane og tee",
+        "body": "Ring klubben, ikke book enkeltvis på nett. De fleste norske klubber setter av en blokk med starttider når du sier hvor mange dere er og når dere vil ut. Spør samtidig om greenfee for gjester, om dere kan spise i klubbhuset etterpå, og om dere kan få shotgun-start. Shotgun betyr at alle flightene starter samtidig på hvert sitt hull, så dere begynner og blir ferdige sammen. Det er verdt å be om når dere er over tolv spillere.\n\nTee er avgjørelsen folk hopper over. Ulike tee har ulik slope og course rating, og det er nettopp de tallene som gjør at en spiller med handicap 28 og en med 9 kan konkurrere på ekte. Velg tee-boks for hele feltet, og sett rett tee-kjønn på hver spiller. Herre-, dame- og juniorrating på samme tee-boks har ulik slope og course rating, og gir dermed ulikt banehandicap. I Tørny velger du bane og tee når du oppretter turneringen, og banehandicapet regnes ut for hver spiller med det samme.\n\nEr gjengen fersk, vurder ni hull i stedet for atten. En runde på tre timer blir fullført. En runde på fem timer renner ut i sanden på hull 13, og da mister du både resultatlista og stemningen."
+      },
+      {
+        "id": "pamelding",
+        "heading": "2. Påmelding og invitasjon",
+        "body": "Du har to veier inn. Enten inviterer du hver enkelt fordi du vet nøyaktig hvem som skal spille, eller du deler en åpen påmeldingslenke og lar folk melde seg på selv. Firmagolf og klubbkveld går nesten alltid best med åpen lenke: du legger den i en kanal eller en e-post, og påmeldingslista fyller seg selv mens du gjør noe annet.\n\nBe om to ting ved påmelding: navn og handicap. Har spilleren ikke offisielt handicap, sett et anslag. Et anslag er langt bedre enn ingenting, for uten handicap blir nettolista meningsløs og de ferskeste får ingen sjanse.\n\nSett en frist noen dager før runden, og si tydelig hva som skjer etter fristen. Da vet du antall flighter, og klubben vet hvor mange starttider de skal holde av. I Tørny får hver spiller en engangskode på e-post ved første innlogging, så ingen trenger å huske et passord for å taste inn slagene sine. Ingen app å laste ned heller, noe som betyr mye når halve feltet skal med for første gang."
+      },
+      {
+        "id": "spillform",
+        "heading": "3. Spillform: velg etter gjengen, ikke etter tradisjon",
+        "body": "Spillformen bestemmer hvordan dagen føles, mer enn banen gjør. Tre spørsmål avgjør valget.\n\nHvor mye spriker nivået? Er avstanden fra beste til svakeste spiller stor, velg et lagformat. I Texas scramble slår alle på laget, dere plukker det beste slaget og går videre derfra. Nybegynneren bidrar med det ene gode slaget sitt i stedet for å lete etter ball mens tre andre venter.\n\nHvor lang tid har dere? Stableford stopper hullet når poengene er borte, og holder tempoet oppe. I slagspill kan ett katastrofehull ødelegge både runden og rytmen for hele flighten.\n\nHva slags stemning vil du ha? Skins og Wolf gir spenning hull for hull og kjeft i bilen hjem. Matchplay gir dueller mann mot mann. Stableford gir en ryddig resultatliste alle forstår med én gang.\n\nEr du i tvil, velg stableford med netto handicap. Det er formatet som fungerer for flest gjenger, på flest baner, med flest nivåer i samme runde."
+      },
+      {
+        "id": "handicap",
+        "heading": "4. Handicap: WHS og netto, forklart for arrangøren",
+        "body": "Skal spillere på ulikt nivå konkurrere på ordentlig, må dere spille netto. Her er hele mekanikken uten stammespråk.\n\nBrutto er antall slag du faktisk brukte. Netto er brutto minus slagene handicapet ditt gir deg.\n\nHandicapindeks er tallet spilleren bærer med seg, uavhengig av bane. Banehandicap er hvor mange slag den spilleren får på nettopp denne banen, fra nettopp denne teen. Det regnes ut fra slope, som sier hvor krevende banen er for en middels spiller, og course rating, som sier hvor mange slag en scratch-spiller bruker. En hard bane gir flere slag enn en snill bane, og det er hele poenget.\n\nSlagene deles ikke jevnt utover. Hvert hull har en stroke-indeks fra 1 til 18, der 1 er det vanskeligste. Får du elleve slag, får du ett ekstra slag på de elleve vanskeligste hullene.\n\nDette er WHS, verdenshandicapsystemet, som norske klubber bruker. Du trenger ikke regne på noe av det. Tørny gjør utregningen når du har valgt bane, tee og spillere, og viser hvor mange slag hver spiller får på hvert hull.\n\nVil du ha to vinnere, kår både brutto og netto. Brutto belønner den som spiller best golf. Netto belønner den som spiller best i forhold til seg selv, og det er den premien som får folk til å komme tilbake neste år."
+      },
+      {
+        "id": "premier",
+        "heading": "5. Premier og sideturneringer",
+        "body": "Premien trenger ikke være stor. Den trenger å være bestemt på forhånd. Si hva som deles ut og hvordan det betales før første utslag, så slipper du diskusjonen på 18. green.\n\nTre premier holder for de fleste turneringer: nettovinner, bruttovinner og nærmest flagget. Legg gjerne til longest drive på et åpent hull. Sideturneringer koster ingenting å arrangere og gir spillerne som er ute av tetstriden noe å gå for hele runden.\n\nEr dere på firmatur, sjekk hva bedriften kan dekke, og hold premiene like for alle nivåer. Er dere en vennegjeng, er potten gjerne en runde i klubbhuset eller at taperen spanderer. Poenget er det samme: noe å strekke seg etter.\n\nBestem også hvordan lik score skiller seg. Vanlig praksis er å telle siste ni hull, så siste seks, så siste tre. Tørny bruker den samme trappa automatisk, så du slipper å avgjøre det med mynt og krone foran hele feltet."
+      },
+      {
+        "id": "turneringsdagen",
+        "heading": "Turneringsdagen: flighter, tempo og scorekort",
+        "body": "Sett flightene på forhånd, ikke på parkeringsplassen. Er dere over rundt seksti spillere, gjør du det kvelden før. Tre eller fire spillere per flight. Bland nivåene hvis du vil ha en sosial runde, del dem etter nivå hvis du vil ha jevn kamp innad i flighten.\n\nSi tre ting på første tee: når dere spiser, hva premiene er, og hvem som fører score. I Tørny fører hver spiller sine egne slag på mobilen, og resultatlista oppdaterer seg mens dere går. Hele papirjobben forsvinner, og alle ser hvor de ligger på veien inn.\n\nDårlig dekning er ikke noe problem. Appen lagrer slagene lokalt på telefonen og synker når nettet er tilbake, så et hull i skogen uten mobildekning ødelegger ingenting.\n\nEtter runden leverer hver spiller scorekortet sitt, markøren godkjenner, og resultatet er klart. Ingen skal sitte i klubbhuset og summere kolonner mens ølen blir varm."
+      },
+      {
+        "id": "firmagolf",
+        "heading": "Firmagolf: turneringen der halve feltet er ferskinger",
+        "body": "Firmagolfen har ett særtrekk som styrer alt annet: nivået spriker voldsomt. Salgssjefen med handicap 6 og praktikanten som har vært på range to ganger skal ha en fin dag på samme runde.\n\nVelg scramble. Texas scramble eller Ambrose gjør at laget alltid spiller videre fra det beste slaget, og ferskingen slipper å lete i skogen mens tre kolleger venter. Sett lag på tvers av avdelinger med én god spiller på hvert lag, så blir det både jevnt og sosialt.\n\nÅpne påmeldingen bredt og vær tydelig på at man ikke trenger å kunne golf. Sjekk om klubben leier ut utstyr, og si fra om det i invitasjonen. Legg inn en pause med noe å spise, og hold premieutdelingen kort og hyggelig.\n\nNi hull er ofte riktig for firmagolf. Da rekker dere runde, mat og premieutdeling innenfor en ettermiddag, og ingen sitter og sniktitter på klokka på hull 14. Skal dere ha hele dagen, legg opp til atten hull med shotgun-start og felles lunsj etterpå."
+      },
+      {
+        "id": "vennegjeng",
+        "heading": "Vennegjengen: turneringen som skal ha en vinner å erte",
+        "body": "Kompisrunden trenger ikke struktur. Den trenger innsats. Formatet skal lage historier, ikke en pen resultatliste.\n\nSkins gir en pott per hull, og potten vokser når hullet deles. Ett hull kan avgjøre hele dagen. Wolf roterer på hvem som velger makker fra tee, og gir en ny liten forhandling på hvert hull. Nassau deler runden i tre veddemål, første ni, siste ni og hele runden, så den som ligger under aldri er helt ute av det.\n\nSkal dere spille flere runder gjennom sesongen, sett opp en liga. Da samles poengene fra hver runde i én tabell, og vinteren har et regnskap å krangle om.\n\nSpill netto her også. Ingenting dreper en kompisturnering raskere enn at den samme spilleren vinner hver gang fordi ingen justerer for nivå. Med netto handicap blir det spennende helt inn, og den som har trent siden sist får faktisk betalt for det."
+      },
+      {
+        "id": "klubbkveld",
+        "heading": "Klubbkvelden: opptil 150 spillere uten papirarbeid",
+        "body": "Er du kaptein for en gruppe i klubben, en dameforening eller en seniorgjeng, ligner oppgaven mer på ekte turneringsadministrasjon. Feltet er større, spillerne kan reglene, og resultatlista skal stemme.\n\nDa trenger du fire ting: et flightoppsett, en spillform som skalerer, netto handicap for alle, og godkjenning av scorekortene. Stableford er standardvalget. Vil dere spille i lag, er best ball det som skalerer best, fordi hver spiller fortsatt spiller sin egen ball.\n\nTørny håndterer felt opp mot 150 spillere delt i flighter. Scorekortene leveres digitalt og godkjennes av markør før de teller, så resultatet er kontrollert og ikke bare innrapportert. Resultatlista er live gjennom hele runden, så de som er ferdige kan følge med mens de siste kommer inn.\n\nSkal serien gå over flere kvelder, sett opp en liga eller en cup. Da bærer resultatene seg videre fra runde til runde uten at du fører noe manuelt mellom kveldene."
+      },
+      {
+        "id": "golfbox",
+        "heading": "Når du ikke skal bruke Tørny",
+        "body": "Her er den ærlige grensedragningen, så du ikke bruker kvelden på feil verktøy.\n\nSkal du arrangere en terminfestet klubbturnering som teller for handicapet, må du bruke klubbens system. I Norge er det GolfBox. Der ligger medlemsregisteret, de offisielle handicapindeksene, startlister mot terminlista og rapporteringen til forbundet. Ingen app utenfor det systemet kan levere handicaptellende runder, og Tørny prøver ikke å late som noe annet.\n\nAlt det andre er Tørnys område: firmagolfen, kompisturneringen, klubbkvelden som ikke er terminfestet, kundeturneringen, utdrikningslaget og hyttegolfen. Runder der du er komiteen, og der poenget er at oppsettet skal ta minutter, ikke en ettermiddag.\n\nBruker spillerne offisielle handicap fra GolfBox, skriver dere dem bare inn i Tørny som utgangspunkt. Regnestykket for banehandicap gjør appen selv, etter den samme WHS-formelen klubben bruker, så tallene på resultatlista kjennes igjen."
+      },
+      {
+        "id": "etterpaa",
+        "heading": "Etter runden: resultat, deling og neste gang",
+        "body": "Avslutt turneringen når siste scorekort er godkjent. Da låses resultatlista, alle ser hele feltet, og alle får resultatet på e-post uten at du sender noe.\n\nDel lenka. En offentlig resultatlenke er den enkleste måten å få folk med neste gang, og den ser ryddig ut når den limes inn i en kanal på jobben eller i gruppechatten.\n\nSkriv ned to ting mens du husker dem: hva som tok lengst tid, og hva folk snakket mest om etterpå. Det første fikser du til neste gang, det andre gjentar du.\n\nNeste turnering setter du opp på et par minutter, fordi banen, gjengen og formatet allerede ligger der. Det er da dette begynner å bli gøy å arrangere."
+      }
+    ],
+    "formats": {
+      "heading": "Hvilken spillform passer turneringen din?",
+      "intro": "Seks formater dekker nesten alle turneringer folk setter opp selv. Trykk deg inn for reglene, et konkret eksempel og hvordan handicapet regnes i hver av dem.",
+      "linkLabel": "Se alle spillformene"
+    },
+    "faqHeading": "Spørsmål arrangører stiller",
+    "faq": [
+      {
+        "q": "Hvordan arrangerer jeg en golfturnering for firmaet?",
+        "a": "Book en blokk med starttider hos klubben, del en åpen påmeldingslenke med kontoret, og velg et scrambleformat så ferskingene henger med. Sett lag på tvers av avdelinger, hold det til ni hull hvis dere skal rekke mat etterpå, og bestem premiene før første utslag."
+      },
+      {
+        "q": "Hvor mange spillere trenger man for å arrangere en golfturnering?",
+        "a": "Fire holder. Med fire spillere har du én flight og kan spille nesten alt: stableford, skins, scramble og best ball. Over tolv spillere lønner det seg å be klubben om shotgun-start, og over rundt seksti bør du sette flightene dagen før."
+      },
+      {
+        "q": "Hvilken spillform passer når nivået spriker?",
+        "a": "Texas scramble hvis dere spiller i lag, stableford med netto handicap hvis dere spiller hver for dere. Begge lar en med handicap 30 og en med handicap 8 konkurrere på ekte, uten at noen føler seg som en bremsekloss."
+      },
+      {
+        "q": "Må spillerne ha offisielt handicap?",
+        "a": "Nei. Har spilleren offisielt handicap fra klubben, skriver du det inn. Har hun det ikke, setter du et anslag. Runden teller ikke for handicapet uansett, så et anslag er godt nok til å gjøre nettolista rettferdig."
+      },
+      {
+        "q": "Hva koster det å arrangere en golfturnering?",
+        "a": "Greenfee er den store posten, og den avtaler du med klubben. Selve turneringsoppsettet i Tørny er gratis, både for deg og spillerne, så budsjettet går til bane, mat og premier."
+      },
+      {
+        "q": "Kan jeg bruke Tørny til en terminfestet klubbturnering?",
+        "a": "Nei. Turneringer som teller for handicapet må gå gjennom klubbens system, som i Norge er GolfBox. Tørny er for alt det andre: firmagolfen, kompisturneringen og klubbkvelden som ikke er terminfestet."
+      }
+    ],
+    "ctaHeading": "Klar til å sette opp turneringen?",
+    "ctaBody": "Prøv demoen hvis du vil se hvordan det ser ut med en gang, eller lag turneringen din direkte. Begge deler tar under et minutt.",
+    "ctaPrimary": "Prøv demoen",
+    "ctaSecondary": "Lag turneringen din"
   }
 }

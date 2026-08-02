@@ -44,8 +44,12 @@ const PUBLIC_PATH_PATTERN =
 // bottom nav. `splitLocalePrefix` maps both `/` and `/en` to '/', so the one
 // `^\/$` alternation covers both locales. PUBLIC is tested first and never
 // matches `/`, so there is no collision.
+// `arranger-golfturnering` joined in #1267 (pilarsiden «Arranger golfturnering»):
+// same reasoning as `spillformater` — an anonymous reader (or a crawler) must
+// see the whole guide with no login redirect, while a logged-in visitor keeps
+// the verified-user header and thus the bottom nav. PUBLIC would strip it.
 const AUTH_OPTIONAL_PATH_PATTERN =
-  /^\/$|^\/(finn-turneringer|spillformater)(\/|$)/;
+  /^\/$|^\/(finn-turneringer|spillformater|arranger-golfturnering)(\/|$)/;
 
 // #1286: gyldige spillformat-detalj-slugs = MODE_LABELS-nøklene. SAMME kilde
 // som detaljsiden (`app/[locale]/spillformater/[slug]/page.tsx:17`), så guarden

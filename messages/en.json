@@ -5459,7 +5459,116 @@
       "demo": "Demo",
       "openGames": "Open tournaments",
       "login": "Log in",
-      "privacy": "Privacy"
+      "privacy": "Privacy",
+      "guide": "Organiser guide"
     }
+  },
+  "arrangeGuide": {
+    "metaTitle": "How to run a golf tournament: a guide for work and friends",
+    "metaDescription": "How to run a golf tournament without a club committee. A checklist for course, sign-up, format, handicaps and prizes, plus which format suits your group.",
+    "kicker": "Guide",
+    "backLabel": "Back to the front page",
+    "pageTitle": "How to run a golf tournament",
+    "pageSubtitle": "For anyone sorting out the company outing, the friends' tournament or the club evening without being a tournament committee.",
+    "intro": "Most guides on running a golf tournament are written for a club committee: fixture lists, national federation rules, entry fees and results services. If all you want is twelve colleagues out on a round after work, that reads like a flight safety manual before catching the bus.\n\nThis guide is the other half. It covers what you actually need to get a golf tournament off the ground on your own: what to decide, in what order, and where you can let the app do the work. No committee, no club agreement, no experience of tournament administration.\n\nWe start with the checklist, move through the three typical tournaments (work, friends, club evening), and finish with where the line runs against the club systems. Budget ten minutes of reading and a couple of minutes of setup.",
+    "tocHeading": "Jump to",
+    "sections": [
+      {
+        "id": "checklist",
+        "heading": "The checklist: five things to decide",
+        "body": "A golf tournament boils down to five decisions. Get those in place and the rest almost sorts itself out.\n\n1. Course and tee. Where are you playing, and from which tee?\n2. Sign-up. Who is in, and how do they say yes?\n3. Format. Stableford, strokeplay, scramble or matchplay?\n4. Handicaps. Are you playing net, gross or both?\n5. Prizes. What is at stake, and who hands it out?\n\nEverything else follows from those five. Tee times, flights, scorecards and the leaderboard are consequences, not separate decisions. Take them in order and you never have to redo anything halfway through. Under twenty players, the whole setup takes less than ten minutes once the course is booked."
+      },
+      {
+        "id": "course",
+        "heading": "1. Course and tee",
+        "body": "Call the club, do not book slots one by one online. Most clubs will set aside a block of tee times once you tell them how many you are and when you want to go out. Ask about green fees for visitors, whether you can eat in the clubhouse afterwards, and whether you can have a shotgun start. Shotgun means every flight starts at the same time on a different hole, so you begin and finish together. Worth asking for once you are over twelve players.\n\nThe tee is the decision people skip. Different tees carry different slope and course rating, and those two numbers are exactly what let a 28-handicapper and a 9-handicapper compete for real. Pick one tee box for the field, then set the right tee gender for each player. The men's, ladies' and juniors' ratings on the same tee box carry different slope and course rating, so the course handicap differs too. In Tørny you pick course and tee when you create the tournament, and each player's course handicap is worked out straight away.\n\nIf the group is new to golf, consider nine holes instead of eighteen. A three-hour round gets finished. A five-hour round falls apart on the 13th, and you lose both the leaderboard and the mood."
+      },
+      {
+        "id": "signup",
+        "heading": "2. Sign-up and invitations",
+        "body": "There are two ways in. Either you invite people one by one because you know exactly who is playing, or you share an open sign-up link and let people add themselves. Company outings and club evenings almost always work better with an open link: drop it in a channel or an email, and the entry list fills up while you do something else.\n\nAsk for two things at sign-up: name and handicap. If someone has no official handicap, put in an estimate. An estimate beats nothing, because without a handicap the net leaderboard is meaningless and the newest players never stand a chance.\n\nSet a deadline a few days before the round, and say clearly what happens after it. Then you know how many flights you need, and the club knows how many tee times to hold. In Tørny every player gets a one-time code by email the first time they log in, so nobody has to remember a password to tap in their strokes. No app to download either, which matters when half the field is joining for the first time."
+      },
+      {
+        "id": "format",
+        "heading": "3. Format: pick for your group, not for tradition",
+        "body": "The format shapes how the day feels more than the course does. Three questions settle it.\n\nHow wide is the spread in ability? If the gap from best to weakest is large, pick a team format. In a Texas scramble everyone plays, you take the best shot and carry on from there. The beginner contributes with their one good shot instead of hunting for a ball while three people wait.\n\nHow long have you got? Stableford closes the hole once the points are gone, which keeps the pace up. In strokeplay a single disaster hole can wreck both the round and the rhythm of the whole flight.\n\nWhat mood do you want? Skins and Wolf bring tension hole by hole and an argument in the car home. Matchplay gives you duels. Stableford gives you a tidy leaderboard everyone understands at a glance.\n\nWhen in doubt, pick stableford with net handicaps. It is the format that works for the most groups, on the most courses, with the widest range of abilities in one round."
+      },
+      {
+        "id": "handicap",
+        "heading": "4. Handicaps: WHS and net, explained for the organiser",
+        "body": "If players of different standards are going to compete properly, you play net. Here is the whole mechanism without the jargon.\n\nGross is the number of strokes you actually took. Net is gross minus the strokes your handicap gives you.\n\nHandicap index is the number a player carries around, independent of any course. Course handicap is how many strokes that player gets on this particular course, from this particular tee. It comes from slope, which says how demanding the course is for an average player, and course rating, which says how many strokes a scratch player needs. A hard course gives more strokes than a gentle one, and that is the entire point.\n\nThe strokes are not spread evenly. Every hole has a stroke index from 1 to 18, where 1 is the hardest. If you get eleven strokes, you get one extra shot on the eleven hardest holes.\n\nThis is WHS, the World Handicap System, and it is what clubs use. You never have to do the arithmetic. Tørny works it out once you have picked course, tee and players, and shows how many strokes each player gets on each hole.\n\nWant two winners? Award both gross and net. Gross rewards the person who played the best golf. Net rewards the person who played best relative to themselves, and that is the prize that brings people back next year."
+      },
+      {
+        "id": "prizes",
+        "heading": "5. Prizes and side competitions",
+        "body": "The prize does not have to be big. It has to be decided in advance. Say what is being handed out and how it is paid for before the first tee shot, and you avoid the argument on the 18th green.\n\nThree prizes cover most tournaments: net winner, gross winner and nearest the pin. Add longest drive on an open hole if you like. Side competitions cost nothing to run and give the players who are out of contention something to chase all the way round.\n\nOn a company trip, check what the business can cover, and keep the prizes even across abilities. With friends, the pot is usually a round in the clubhouse or the loser paying. Either way the point is the same: something to reach for.\n\nDecide how ties are broken as well. Common practice is to count the last nine holes, then the last six, then the last three. Tørny applies the same ladder automatically, so you never have to settle it with a coin toss in front of the whole field."
+      },
+      {
+        "id": "tournament-day",
+        "heading": "Tournament day: flights, pace and scorecards",
+        "body": "Set the flights in advance, not in the car park. Above about sixty players, do it the night before. Three or four players per flight. Mix abilities if you want a sociable round, split by ability if you want a close contest inside each flight.\n\nSay three things on the first tee: when you are eating, what the prizes are, and who is keeping score. In Tørny every player taps in their own strokes on their phone, and the leaderboard updates as you go. The paperwork disappears, and everyone can see where they stand on the way in.\n\nPatchy coverage is not a problem. The app stores strokes locally on the phone and syncs when the signal comes back, so a hole in the woods with no reception breaks nothing.\n\nAfter the round each player submits their scorecard, the marker approves it, and the result is ready. Nobody has to sit in the clubhouse adding up columns while the beer goes warm."
+      },
+      {
+        "id": "company",
+        "heading": "The company outing: half the field are beginners",
+        "body": "The company outing has one defining feature that drives everything else: the spread in ability is enormous. The sales director off 6 and the intern who has been to the range twice both need a good day on the same round.\n\nPick a scramble. Texas scramble or Ambrose means the team always plays on from the best shot, and the beginner is not searching the trees while three colleagues wait. Build teams across departments with one strong player each, and you get a contest that is both even and sociable.\n\nOpen the sign-up wide and be explicit that nobody needs to know golf. Check whether the club rents out clubs, and say so in the invitation. Build in a break with something to eat, and keep the prize-giving short and warm.\n\nNine holes is often right for a company outing. Round, food and prizes then fit inside an afternoon, and nobody is glancing at their watch on the 14th. If you have the whole day, go for eighteen with a shotgun start and lunch afterwards."
+      },
+      {
+        "id": "friends",
+        "heading": "The friends' tournament: someone has to be teased",
+        "body": "The friends' round does not need structure. It needs stakes. The format is there to produce stories, not a neat leaderboard.\n\nSkins puts a pot on every hole, and the pot grows when a hole is halved. One hole can decide the whole day. Wolf rotates who picks a partner off the tee, giving you a fresh little negotiation on every hole. Nassau splits the round into three bets, the front nine, the back nine and the whole round, so whoever is behind is never quite out of it.\n\nIf you are playing several rounds through the season, set up a league. Points from each round collect in one table, and the winter has a ledger to argue over.\n\nPlay net here too. Nothing kills a friends' tournament faster than the same player winning every time because nobody adjusts for ability. With net handicaps it stays tight to the end, and whoever has actually been practising gets paid for it."
+      },
+      {
+        "id": "club-evening",
+        "heading": "The club evening: up to 150 players, no paperwork",
+        "body": "If you captain a section at the club, a ladies' group or a seniors' group, the job looks more like real tournament administration. The field is bigger, the players know the rules, and the leaderboard has to be right.\n\nYou need four things: a flight plan, a format that scales, net handicaps for everyone, and scorecard approval. Stableford is the default choice. If you want teams, best ball scales best, because every player still plays their own ball.\n\nTørny handles fields of up to around 150 players split into flights. Scorecards are submitted digitally and approved by a marker before they count, so the result is checked rather than merely reported. The leaderboard is live throughout, so the players who have finished can follow along while the last groups come in.\n\nIf the series runs over several evenings, set up a league or a cup. Results then carry from round to round without you keeping anything by hand in between."
+      },
+      {
+        "id": "golfbox",
+        "heading": "When not to use Tørny",
+        "body": "Here is the honest boundary, so you do not spend an evening on the wrong tool.\n\nIf you are running an official club tournament that counts towards handicaps, you have to use the club's system. In Norway that is GolfBox. It holds the membership register, the official handicap indexes, start lists against the fixture calendar and the reporting to the federation. No app outside that system can deliver handicap-qualifying rounds, and Tørny does not pretend otherwise.\n\nEverything else is Tørny's ground: the company outing, the friends' tournament, the club evening that is not on the fixture list, the customer day, the stag round and the cabin-trip golf. Rounds where you are the committee, and where the setup should take minutes rather than an afternoon.\n\nIf your players have official handicaps from GolfBox, you simply type them in as the starting point. The app does the course handicap arithmetic itself, using the same WHS formula the club uses, so the numbers on the leaderboard look familiar."
+      },
+      {
+        "id": "afterwards",
+        "heading": "After the round: results, sharing and next time",
+        "body": "Finish the tournament once the last scorecard is approved. The leaderboard locks, everyone sees the whole field, and everyone gets the result by email without you sending anything.\n\nShare the link. A public results link is the easiest way to get people along next time, and it looks tidy pasted into a work channel or the group chat.\n\nWrite down two things while you still remember them: what took the longest, and what people talked about most afterwards. Fix the first for next time, repeat the second.\n\nThe next tournament takes a couple of minutes to set up, because the course, the group and the format are already there. That is the point where running these starts being fun."
+      }
+    ],
+    "formats": {
+      "heading": "Which format suits your tournament?",
+      "intro": "Six formats cover almost every tournament people set up themselves. Tap through for the rules, a worked example and how handicaps are applied in each one.",
+      "linkLabel": "See every format"
+    },
+    "faqHeading": "Questions organisers ask",
+    "faq": [
+      {
+        "q": "How do I run a golf tournament for my company?",
+        "a": "Book a block of tee times with the club, share an open sign-up link with the office, and pick a scramble format so the beginners keep up. Build teams across departments, keep it to nine holes if you want food afterwards, and settle the prizes before the first tee shot."
+      },
+      {
+        "q": "How many players do you need to run a golf tournament?",
+        "a": "Four is enough. With four players you have one flight and can play nearly every format: stableford, skins, scramble and best ball. Above twelve it pays to ask the club for a shotgun start, and above about sixty you should set the flights the day before."
+      },
+      {
+        "q": "Which format works when abilities vary a lot?",
+        "a": "Texas scramble if you are playing in teams, stableford with net handicaps if everyone plays their own ball. Both let a 30-handicapper and an 8-handicapper compete for real, without anyone feeling like a drag on the group."
+      },
+      {
+        "q": "Do players need an official handicap?",
+        "a": "No. If a player has an official handicap from a club, type it in. If not, put in an estimate. The round does not count towards handicaps anyway, so an estimate is good enough to make the net leaderboard fair."
+      },
+      {
+        "q": "What does it cost to run a golf tournament?",
+        "a": "Green fees are the big item, and you agree those with the club. The tournament setup in Tørny is free, both for you and for the players, so your budget goes to the course, the food and the prizes."
+      },
+      {
+        "q": "Can I use Tørny for an official club tournament?",
+        "a": "No. Tournaments that count towards handicaps have to go through the club's system, which in Norway is GolfBox. Tørny is for everything else: the company outing, the friends' tournament and the club evening that is not on the fixture list."
+      }
+    ],
+    "ctaHeading": "Ready to set your tournament up?",
+    "ctaBody": "Try the demo if you want to see how it looks first, or create your tournament straight away. Either takes under a minute.",
+    "ctaPrimary": "Try the demo",
+    "ctaSecondary": "Create your tournament"
   }
 }
