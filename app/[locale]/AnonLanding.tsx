@@ -7,6 +7,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
+import { FEATURED_FORMAT_KEYS } from '@/lib/formats/featuredFormats';
 import { getPublicDiscoverableGames } from '@/lib/games/getPublicDiscoverableGames';
 import { AnonDiscoverySection } from './finn-turneringer/AnonDiscoverySection';
 import type { AppLocale } from '@/i18n/routing';
@@ -27,18 +28,6 @@ import type { AppLocale } from '@/i18n/routing';
 
 const ORIGIN = 'https://tornygolf.no';
 
-// De seks formatkortene: én per katalogseksjon, spennet fra kompis (Skins,
-// Wolf) til klubb (best ball, matchplay). Keys = GameMode-verdier (verifisert
-// mot lib/formats/buildFormatGuide CATALOG), så detalj-lenken er `/spillformater/<mode>`.
-const FORMAT_KEYS = [
-  'stableford',
-  'texas_scramble',
-  'best_ball',
-  'singles_matchplay',
-  'skins',
-  'wolf',
-] as const;
-
 type FaqEntry = { q: string; a: string };
 type BoardRow = { name: string; points: string };
 
@@ -46,7 +35,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
   const t = await getTranslations('landing');
   const formatEntries = await getFormatGuideEntries();
   const byKey = new Map(formatEntries.map((entry) => [entry.key, entry]));
-  const formatCards = FORMAT_KEYS.map((key) => byKey.get(key)).filter(
+  const formatCards = FEATURED_FORMAT_KEYS.map((key) => byKey.get(key)).filter(
     (entry): entry is NonNullable<typeof entry> => Boolean(entry),
   );
 
