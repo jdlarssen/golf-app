@@ -9,9 +9,14 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
+import { LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { TeamDashboardClient } from './TeamDashboardClient';
-import { getCaptainDisplayName, pickCaptainRequest } from './captainLookup';
+import {
+  getCaptainDisplayName,
+  pickCaptainRequest,
+  pickPendingInvitation,
+} from './captainLookup';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 
@@ -98,6 +103,7 @@ export default async function TeamDashboardPage({
   // Hvis brukeren ikke har noen request-rad, sjekk om de har en åpen
   // invitations-rad for spillet — da kan vi tilby attach-knapp.
   let pendingInvitation: PendingInvitation | null = null;
+  let captainRows: CaptainRequestRow[] = [];
   if (!myRow) {
     const { data: userRow } = await admin
       .from('users')
@@ -107,7 +113,8 @@ export default async function TeamDashboardPage({
     if (userRow?.email) {
       // Ingen unique på (email, game_id): både arrangøren og en kaptein kan ha
       // invitert samme e-post. `.maybeSingle()` ville feilet med PGRST116 og
-      // sendt brukeren i en blindvei — vi tar nyeste invitasjon i stedet (#1343).
+      // sendt brukeren i en blindvei — vi henter alle åpne og lar
+      // `pickPendingInvitation` velge (#1343).
       const { data: invitations } = await admin
         .from('invitations')
         .select('id, email, invited_by')
@@ -115,9 +122,25 @@ export default async function TeamDashboardPage({
         .eq('game_id', game.id)
         .is('accepted_at', null)
         .order('created_at', { ascending: false })
-        .limit(1)
         .returns<PendingInvitation[]>();
-      pendingInvitation = invitations?.[0] ?? null;
+      if (invitations && invitations.length > 0) {
+        // Kaptein-radene hentes FØR vi velger invitasjon: det er de som avgjør
+        // hvilken invitasjon som gir et sikkert lag-treff. Tar vi bare den
+        // nyeste, skygger arrangørens invitasjon for kapteinens (#1343).
+        const { data: captains } = await admin
+          .from('game_registration_requests')
+          .select('id, user_id, team_name, status')
+          .eq('game_id', game.id)
+          .eq('is_team_captain', true)
+          .in('status', ['pending', 'approved'])
+          .order('created_at', { ascending: false })
+          .returns<CaptainRequestRow[]>();
+        captainRows = captains ?? [];
+        pendingInvitation = pickPendingInvitation(
+          invitations,
+          captainRows.map((r) => r.user_id),
+        );
+      }
     }
   }
 
@@ -138,27 +161,38 @@ export default async function TeamDashboardPage({
   // rendrer vi attach-flyt. Disse landed her via mail-link-en kaptein
   // sendte da brukeren var ukjent.
   if (!myRow && pendingInvitation) {
-    // Navngi laget kun når vi VET hvilket det er: inviteren må selv være
-    // kaptein i spillet. Traff vi bare fallback-heuristikken, holder vi
-    // teksten generisk — å love feil lag er verre enn å si ingenting (#1343).
-    const { data: captainRows } = await admin
-      .from('game_registration_requests')
-      .select('id, user_id, team_name, status')
-      .eq('game_id', game.id)
-      .eq('is_team_captain', true)
-      .in('status', ['pending', 'approved'])
-      .order('created_at', { ascending: false })
-      .returns<CaptainRequestRow[]>();
+    // Vi kobler kun på når vi VET hvilket lag det er: inviteren må selv være
+    // kaptein i spillet. Traff vi bare fallback-heuristikken, stopper vi og
+    // sier fra — å sette noen på feil lag er verre enn å be dem spørre
+    // kapteinen (#1343). `captainRows` er alt hentet over.
     const picked = pickCaptainRequest(
-      captainRows ?? [],
+      captainRows,
       pendingInvitation.invited_by,
     );
-    const captainName =
-      picked?.source === 'invited_by'
-        ? await getCaptainDisplayName(picked.row.user_id)
-        : null;
-    const invitedTeamName =
-      picked?.source === 'invited_by' ? picked.row.team_name : null;
+    if (picked?.source !== 'invited_by') {
+      return (
+        <AppShell>
+          <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
+          <Card>
+            <div className="space-y-4">
+              <Banner tone="info">
+                {t('teamDashTeamUnknownBanner')}
+              </Banner>
+              <LinkButton
+                href={`/signup/${shortId}`}
+                full
+                variant="secondary"
+              >
+                {t('teamDashRegisterOwnTeamButton')}
+              </LinkButton>
+            </div>
+          </Card>
+        </AppShell>
+      );
+    }
+
+    const captainName = await getCaptainDisplayName(picked.row.user_id);
+    const invitedTeamName = picked.row.team_name;
 
     return (
       <AppShell>

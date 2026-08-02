@@ -43,6 +43,35 @@ export function pickCaptainRequest<T extends CaptainCandidate>(
   return { row: rows[0], source: 'fallback' };
 }
 
+/** Minimum en invitasjons-rad må bære for at invitasjons-pickeren skal virke. */
+type InvitationCandidate = { invited_by: string | null };
+
+/**
+ * Velg hvilken åpen invitasjon vi skal gå videre med for en e-post.
+ *
+ * Det finnes ingen unique på (email, game_id): både arrangøren og en kaptein
+ * kan ha invitert samme e-post til samme spill. Tar vi bare den nyeste, kan
+ * arrangørens invitasjon skygge for kapteinens — og da havner invitéen i
+ * stopp-skjermen selv om laget er sikkert kjent. Derfor: en invitasjon sendt
+ * av en kaptein i spillet vinner (sikkert treff), ellers nyeste rad (#1343).
+ *
+ * Ren funksjon: `invitations` forventes sortert nyest først
+ * (`order created_at desc`), så fallback er `invitations[0]`.
+ */
+export function pickPendingInvitation<T extends InvitationCandidate>(
+  invitations: T[],
+  captainUserIds: ReadonlySet<string> | string[],
+): T | null {
+  if (invitations.length === 0) return null;
+  const captains = Array.isArray(captainUserIds)
+    ? new Set(captainUserIds)
+    : captainUserIds;
+  const fromCaptain = invitations.find(
+    (i) => i.invited_by != null && captains.has(i.invited_by),
+  );
+  return fromCaptain ?? invitations[0];
+}
+
 /**
  * Visningsnavn for en kaptein: navn (eller e-post hvis navnet mangler), med
  * kallenavn i «» når det finnes.

@@ -71,9 +71,10 @@ type Props =
       invitationId: string;
       joinEffect: JoinEffect;
       /**
-       * Laget + kapteinen invitasjonen kom fra. Settes KUN når serveren vet
-       * sikkert hvilket lag det er (inviteren er kaptein i spillet, #1343) —
-       * ved fallback-gjetting står de tomme og teksten holdes generisk.
+       * Laget + kapteinen invitasjonen kom fra. Siden rendrer denne modusen
+       * kun når den vet sikkert hvilket lag det er (inviteren er kaptein i
+       * spillet, #1343); er den usikker, stopper den før knappen. Feltene kan
+       * likevel mangle — et lag uten navn — og da holdes teksten generisk.
        */
       teamName?: string;
       captainName?: string;
@@ -133,6 +134,11 @@ export function TeamDashboardClient(props: Props) {
         return t('errors.teamDashGameLocked');
       case 'signup_closed':
         return t('errors.teamDashSignupClosed');
+      // #1343: attach-action-en stoppet fordi den ikke fant laget. Siden viser
+      // normalt samme beskjed i stedet for knappen — vi havner her kun hvis
+      // fanen sto åpen fra før.
+      case 'team_unknown':
+        return t('errors.teamDashTeamUnknown');
       case 'db_error':
       default:
         return t('errors.teamDashDbError');
