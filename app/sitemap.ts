@@ -8,7 +8,8 @@ import { MODE_LABELS } from '@/lib/scoring/modes/types';
  * page, the course index + every eligible course page, the format guide
  * index + one page per `GameMode` (derived from `MODE_LABELS` — the same
  * source as the detail page's `VALID_MODES`, so a new mode gets a sitemap
- * entry automatically), `/demo`, `/finn-turneringer` and `/legal/privacy`.
+ * entry automatically), the organiser pillar page `/arranger-golfturnering`
+ * (#1267), `/demo`, `/finn-turneringer` and `/legal/privacy`.
  * English variants ride along as hreflang alternates (routing: default
  * locale unprefixed, en under /en). Every entry also declares a self- and
  * x-default-reference — Google's hreflang rules require bidirectionality,
@@ -41,6 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...slugs.map((slug) => entry(`/baner/${slug}`)),
     entry('/spillformater'),
     ...modes.map((mode) => entry(`/spillformater/${mode}`)),
+    entry('/arranger-golfturnering'),
     entry('/demo'),
     entry('/finn-turneringer'),
     entry('/legal/privacy'),

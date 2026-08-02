@@ -43,12 +43,13 @@ describe('sitemap', () => {
     }
   });
 
-  it('includes /demo, /finn-turneringer, /legal/privacy and /baner/test-bane', async () => {
+  it('includes the flat public pages and the seeded course page', async () => {
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
     expect(urls).toContain(`${BASE}/demo`);
     expect(urls).toContain(`${BASE}/finn-turneringer`);
     expect(urls).toContain(`${BASE}/legal/privacy`);
     expect(urls).toContain(`${BASE}/baner/test-bane`);
+    expect(urls).toContain(`${BASE}/arranger-golfturnering`);
   });
 });

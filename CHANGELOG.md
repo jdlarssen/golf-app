@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.217 · Hele oppskriften på å arrangere golfturnering</strong></summary>
+
+[#1267](https://github.com/jdlarssen/golf-app/issues/1267) — En ny guide tar deg gjennom bane, påmelding, spillform, handicap og premier, med egne bolker for firmagolfen, vennegjengen og klubbkvelden. Den sier også rett ut når du heller bør bruke klubbens eget system.
+
+↳ /arranger-golfturnering · «Les guiden»
+</details>
+
+<details>
 <summary><strong>1.216 · Splittet cup-dag: 9 + 9 med greensome og best ball</strong></summary>
 
 [#1441](https://github.com/jdlarssen/golf-app/issues/1441) — Sett opp en splittet cup-dag: greensome ute, best ball og to singler inne blir fire cup-konkurranser i én runde. Du vekter poengene selv, legger på sidepoeng for nærmest hullet og lengste drive, og resultatet holdes hemmelig til du avslutter runden.
