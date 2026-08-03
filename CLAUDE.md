@@ -312,7 +312,7 @@ Ved tvil: hvis oppgaven kan beskrives ferdig i én prompt og forventes å produs
 
 ### Datamodell
 
-35 tabeller i `public` (målt 2026-07-19 — vedlikeholdes av dok-avstemmeren #1078). Kjernen:
+35 tabeller i `public` (målt 2026-08-03 — vedlikeholdes av dok-avstemmeren #1078). Kjernen:
 - `users` (utvider auth.users)
 - `courses` + `course_holes` + `tee_boxes`
 - `games` + `game_players`
@@ -329,7 +329,7 @@ Ren TypeScript i `lib/scoring/`:
 - `bestBall.ts` — netto + best-ball + lag-total
 - `tiebreaker.ts` — 5-tiers cascade
 
-Assertion-rik unit-suite, alle grønne (fasit: `npx vitest run lib/scoring` — 1029 tester per 2026-07-07). TDD-disiplin var streng her — endring krever ny test først.
+Assertion-rik unit-suite, alle grønne (fasit: `npx vitest run lib/scoring` — 1029 tester per 2026-08-03). TDD-disiplin var streng her — endring krever ny test først.
 
 ### Auth-flyt
 
@@ -379,10 +379,10 @@ Discoverable kataloger (`ls components/ui/`, `ls lib/`, etc.) er ikke listet her
 - `lib/scoring/` — scoring-bibliotek (assertion-rik unit-suite; ikke rør uten ny test først, per Scoring-logikk)
 - `lib/sync/` — Dexie-DB heter `'golf-app'` historisk; **rename = sletter brukernes lokale data**
 - `proxy.ts` (ikke `middleware.ts`) — Next.js 16-konvensjonen for middleware
-- `app/legal/privacy/page.tsx` — offentlig side; bypass auth-gate via egen `proxy.ts`-matcher
+- `app/[locale]/legal/privacy/page.tsx` — offentlig side; auth-gaten hoppes over i kode via `PUBLIC_PATH_PATTERN` i `proxy.ts` (matcher-eksklusjonen er borte — matcheren må treffe ruta for locale-redirect og OG-bilde)
 - `lib/games/getGameWithPlayers.ts` — `unstable_cache` med tag `game-${id}`; se «Server-actions og caching»
 - `lib/mail/inviteNotification.ts` + `gameFinishedNotification.ts` + `scorecardSubmittedNotification.ts` — tre Resend-helpers, alle best-effort med `Promise.allSettled`
-- `app/admin/games/[id]/slett/` + `app/admin/spillere/[id]/slett/` + `app/profile/slett-konto/` — destruktive flyter har dedikerte konfirmasjons-sider; aldri inline-toggle eller `<details>`-popout
+- `app/[locale]/admin/games/[id]/slett/` + `app/[locale]/admin/spillere/[id]/slett/` + `app/[locale]/profile/slett-konto/` — destruktive flyter har dedikerte konfirmasjons-sider; aldri inline-toggle eller `<details>`-popout
 - `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` (single source of truth for status-tekster)
 
 [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) er backlog. `docs/launch-checklist.md` er admin-sjekkliste. `docs/email-templates.md` har Supabase Auth-malene. `docs/test-discipline.md` er full referanse for test-typer. `docs/changelog-conventions.md` er CHANGELOG-format. `docs/copy-style.md` er pattern-katalog for bruker-rettet copy. `docs/agent-discipline/` er event-triggede agent-prosedyrer (core.md lastes automatisk øverst i denne fila; prosedyrene leses ved trigger).
