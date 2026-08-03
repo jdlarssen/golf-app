@@ -9,6 +9,7 @@ import { createMiddlewareClient } from '@/lib/supabase/middleware';
 import { OFF_APP_THRESHOLD_MS } from '@/lib/notifications/thresholds';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { courseSlugGuard } from '@/lib/courses/slugGuard';
+import { ARRANGE_AUDIENCES } from '@/lib/seo/arrangeAudiences';
 
 // Handles locale detection, the as-needed rewrite (/x -> /no/x internally)
 // and /en/... prefix routing. Runs for EVERY page — public ones included —
@@ -68,6 +69,20 @@ const SPILLFORMAT_SLUG_PATTERN = /^\/spillformater\/([^/]+)$/;
 // Gyldigheten sjekkes IKKE mot en importert konstant (bane-slugs er
 // DB-drevne) — se `lib/courses/slugGuard.ts` for hvorfor og hvordan.
 const BANER_SLUG_PATTERN = /^\/baner\/([^/]+)$/;
+
+// #1267 (samme mønster som #1286): gyldige målgruppe-slugs under pilarsiden.
+// SAMME kilde som undersiden (`lib/seo/arrangeAudiences.ts`, lest av
+// `app/[locale]/arranger-golfturnering/[audience]/page.tsx`), så guarden og
+// siden aldri driver ut av synk — en ny målgruppe blir gyldig begge steder
+// samtidig (trap 4: én hjemme-regel). Ren TS-konstant uten klient-avhengigheter,
+// trygg å importere i proxy-konteksten.
+const VALID_ARRANGE_AUDIENCES = new Set<string>(ARRANGE_AUDIENCES);
+
+// Matcher NØYAKTIG /arranger-golfturnering/<slug> (ett segment, ingen trailing
+// slash, ingen nesting), så selve hub-en /arranger-golfturnering faller utenfor
+// og røres ikke. Kjøres på locale-strippet sti, så /en/arranger-golfturnering/…
+// dekkes.
+const ARRANGE_AUDIENCE_SLUG_PATTERN = /^\/arranger-golfturnering\/([^/]+)$/;
 
 /** Split '/en/venner' -> { locale: 'en', pathname: '/venner' }. */
 function splitLocalePrefix(pathname: string): {
@@ -147,6 +162,20 @@ function spillformatNotFoundResponse(): NextResponse {
 }
 
 /**
+ * #1267: samme mønster for ukjente målgruppe-slugs under pilarsiden. Peker
+ * tilbake til hub-en, som er der leseren finner de gyldige undersidene.
+ */
+function arrangeAudienceNotFoundResponse(): NextResponse {
+  return notFoundHtmlResponse({
+    title: 'Fant ikke siden · Tørny',
+    heading: 'Fant ikke denne siden',
+    body: 'Siden finnes ikke. Gå til guiden for å arrangere golfturnering, og velg hvem du arrangerer for.',
+    backHref: '/arranger-golfturnering',
+    backLabel: 'Til guiden',
+  });
+}
+
+/**
  * #1329: samme mønster for ukjente bane-slugs. Teksten skiller mellom
  * «finnes ikke» og «ikke lenger tilgjengelig» siden en avpublisert bane
  * (guardens fail-open/TTL-vindu) kan dukke opp her etter at den var gyldig.
@@ -195,6 +224,20 @@ export async function proxy(request: NextRequest) {
   const spillformatSlug = SPILLFORMAT_SLUG_PATTERN.exec(barePathname)?.[1];
   if (spillformatSlug !== undefined && !VALID_SPILLFORMAT_SLUGS.has(spillformatSlug)) {
     return spillformatNotFoundResponse();
+  }
+
+  // #1267: samme idé for målgruppe-undersidene under pilarsiden. Ruta er PPR
+  // (◐ i build-output, som /spillformater/[slug]), så sidens egen `notFound()`
+  // rekker ikke å sette statusen før shellen er streamet — uten denne guarden
+  // svarer /arranger-golfturnering/tullball 200 med not-found-innhold, akkurat
+  // hullet #1286 tettet. Ligger her, før auth-/i18n-grenene, av samme grunn.
+  const arrangeAudienceSlug =
+    ARRANGE_AUDIENCE_SLUG_PATTERN.exec(barePathname)?.[1];
+  if (
+    arrangeAudienceSlug !== undefined &&
+    !VALID_ARRANGE_AUDIENCES.has(arrangeAudienceSlug)
+  ) {
+    return arrangeAudienceNotFoundResponse();
   }
 
   // #1329: samme idé for /baner/<slug>, men bane-slugs er DB-drevne så det
