@@ -131,8 +131,9 @@ export async function withFreshOtpRetry<T>(
  * stien (`verifyOtp` → cookie) kjøres fortsatt.
  *
  * Forutsetter at caller har navigert til `/login?next=<beskyttet>` — vi leser
- * `next` ÉN gang før løkka og re-bruker den på hvert forsøk (et feilet forsøk lander
- * på `/login?...&error=...` uten `next`).
+ * `next` ÉN gang før løkka og re-bruker den på hvert forsøk. (Siden #1345 bærer
+ * feil-redirecten `next` videre selv, men vi bygger URL-en eksplisitt uansett så
+ * hjelperen ikke avhenger av redirect-formen.)
  */
 export async function signInViaOtpWith(
   page: Page,

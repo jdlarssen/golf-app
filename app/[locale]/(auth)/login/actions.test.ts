@@ -331,7 +331,9 @@ describe('sendCode — disposable email block (#365)', () => {
       sendCode(fd({ email: 'throwaway@mailinator.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/login?error=disposable_email');
+    expect(lastRedirect()).toBe(
+      '/login?email=throwaway%40mailinator.com&error=disposable_email',
+    );
     // Short-circuits before the email_is_invited RPC and Supabase OTP, so we
     // never pay quota on a known-bad domain.
     expect(rpcMock).not.toHaveBeenCalled();
@@ -351,7 +353,9 @@ describe('sendCode — disposable email block (#365)', () => {
       sendCode(fd({ email: 'invited@guerrillamail.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/login?error=disposable_email');
+    expect(lastRedirect()).toBe(
+      '/login?email=invited%40guerrillamail.com&error=disposable_email',
+    );
     expect(signInWithOtpMock).not.toHaveBeenCalled();
   });
 
@@ -382,7 +386,9 @@ describe('sendCode — rate-limit', () => {
       sendCode(fd({ email: 'spam@example.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/login?error=rate_limited');
+    expect(lastRedirect()).toBe(
+      '/login?email=spam%40example.com&error=rate_limited',
+    );
     // Critical: Supabase OTP is NOT called when rate-limit denies.
     expect(signInWithOtpMock).not.toHaveBeenCalled();
     expect(rpcMock).not.toHaveBeenCalled();
@@ -397,7 +403,9 @@ describe('sendCode — rate-limit', () => {
       sendCode(fd({ email: 'anyone@example.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/login?error=rate_limited');
+    expect(lastRedirect()).toBe(
+      '/login?email=anyone%40example.com&error=rate_limited',
+    );
   });
 
   it('calls consumeLoginRateLimit with the trimmed/lowercased email and resolved IP', async () => {
@@ -431,7 +439,9 @@ describe('sendCode — #361 lapsed invitation', () => {
       sendCode(fd({ email: 'lapsed@example.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/login?error=invite_expired');
+    expect(lastRedirect()).toBe(
+      '/login?email=lapsed%40example.com&error=invite_expired',
+    );
   });
 
   it('keeps user_not_found when no lapsed invitation exists', async () => {
@@ -447,7 +457,123 @@ describe('sendCode — #361 lapsed invitation', () => {
       sendCode(fd({ email: 'stranger@example.com' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/login?error=user_not_found');
+    expect(lastRedirect()).toBe(
+      '/login?email=stranger%40example.com&error=user_not_found',
+    );
+  });
+});
+
+describe('error redirects keep the login context (#1345)', () => {
+  const INVITE = '11111111-2222-3333-4444-555555555555';
+
+  it('sendCode: an error redirect carries email, next and invite', async () => {
+    consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'email' });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(
+        fd({
+          email: 'kompis@example.com',
+          next: '/signup/abc12345',
+          invite: INVITE,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      `/login?email=kompis%40example.com&error=rate_limited&next=%2Fsignup%2Fabc12345&invite=${INVITE}`,
+    );
+  });
+
+  it('sendCode: «Send ny kode» (from=verify) keeps the user on the verify step', async () => {
+    consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'email' });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(
+        fd({
+          email: 'kompis@example.com',
+          next: '/signup/abc12345',
+          invite: INVITE,
+          from: 'verify',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Step 1 would blank the email field while a valid code is in transit.
+    expect(lastRedirect()).toBe(
+      `/login?step=verify&email=kompis%40example.com&error=rate_limited&next=%2Fsignup%2Fabc12345&invite=${INVITE}`,
+    );
+  });
+
+  it('sendCode: an empty email never lands on the verify step, but keeps next/invite', async () => {
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: '', next: '/spill', invite: INVITE, from: 'verify' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // step=verify without an email is a blind alley — there is nothing to
+    // verify against, so the user goes back to the email field.
+    expect(lastRedirect()).toBe(
+      `/login?error=unknown&next=%2Fspill&invite=${INVITE}`,
+    );
+  });
+
+  it('sendCode: an open-redirect next and a non-UUID invite are dropped', async () => {
+    consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'ip' });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(
+        fd({
+          email: 'kompis@example.com',
+          next: '//evil.example.com',
+          invite: 'not-a-uuid',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      '/login?email=kompis%40example.com&error=rate_limited',
+    );
+  });
+
+  it('verifyCode: a wrong code keeps step, email, next and invite', async () => {
+    verifyOtpMock.mockResolvedValue({ error: { message: 'Invalid token' } });
+
+    const { verifyCode } = await import('./actions');
+
+    await expect(
+      verifyCode(
+        fd({
+          email: 'kompis@example.com',
+          token: '00000000',
+          next: '/signup/abc12345',
+          invite: INVITE,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      `/login?step=verify&email=kompis%40example.com&error=code_invalid&next=%2Fsignup%2Fabc12345&invite=${INVITE}`,
+    );
+  });
+
+  it('verifyCode: a missing email falls back to step 1 with next/invite intact', async () => {
+    const { verifyCode } = await import('./actions');
+
+    await expect(
+      verifyCode(fd({ email: '', token: '12345678', next: '/spill', invite: INVITE })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      `/login?error=code_invalid&next=%2Fspill&invite=${INVITE}`,
+    );
+    expect(verifyOtpMock).not.toHaveBeenCalled();
   });
 });
 

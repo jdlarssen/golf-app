@@ -23,12 +23,11 @@ export function VerifyCodeForm({
   email: string;
   next: string;
   /**
-   * Invitasjons-token fra `?invite=` (#1169) — følger resend-formen så en
-   * «Send ny kode» beholder kontekstkortet gjennom sendCode-redirecten.
+   * Invitasjons-token fra `?invite=` (#1169) — følger begge formene så både
+   * «Send ny kode» og en feiltastet kode beholder kontekstkortet gjennom
+   * redirecten (#1345).
    */
   invite?: string;
-  /** @deprecated No longer used — resend is now an inline form action. */
-  resendHref?: string;
 }) {
   return (
     // Resend-knappen er i et separat <form> UNDER verify-skjemaet for å unngå
@@ -38,12 +37,20 @@ export function VerifyCodeForm({
       <form action={verifyCode} className="space-y-4">
         <input type="hidden" name="email" value={email} />
         <input type="hidden" name="next" value={next} />
+        <input type="hidden" name="invite" value={invite} />
         <FormBody email={email} />
       </form>
       <form action={sendCode} className="text-center">
         <input type="hidden" name="email" value={email} />
         <input type="hidden" name="next" value={next} />
         <input type="hidden" name="invite" value={invite} />
+        {/*
+          #1345: forteller sendCode at forespørselen kom FRA verify-steget, så
+          en feil (typisk Supabase-throttle innen 60 sek) lar brukeren stå igjen
+          ved kodefeltet med feilmeldingen — ikke på et tomt steg 1 mens koden
+          er på vei. Kun formData; aldri en URL-param.
+        */}
+        <input type="hidden" name="from" value="verify" />
         <ResendFooter />
       </form>
     </div>
