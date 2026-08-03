@@ -9,6 +9,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { FEATURED_FORMAT_KEYS } from '@/lib/formats/featuredFormats';
 import { routing, type AppLocale } from '@/i18n/routing';
+import { ARRANGE_AUDIENCES } from '@/lib/seo/arrangeAudiences';
 import { canonicalPath } from '@/lib/seo/canonical';
 
 type Params = Promise<{ locale: string }>;
@@ -17,6 +18,8 @@ type Params = Promise<{ locale: string }>;
 type GuideSection = { id: string; heading: string; body: string };
 /** One FAQ pair. Same shape as `landing.faq` (AnonLanding), deliberately. */
 type FaqEntry = { q: string; a: string };
+/** The two catalog fields an audience card shows — the subpage's own headline. */
+type AudienceCard = { pageTitle: string; pageSubtitle: string };
 
 export async function generateMetadata({
   params,
@@ -40,11 +43,14 @@ export async function generateMetadata({
 /**
  * Pilarside «Arranger golfturnering» (#1267, epic #1021 «Vindu ut»).
  *
- * Den offentlige how-to-siden. En fremmed (eller Googlebot) leser hele
- * oppskriften på å arrangere en golfturnering for firmaet, vennegjengen eller
- * klubbkvelden UTEN å logge inn. Forsiden tar verktøy-intensjonen («golfturnering
- * app»); denne siden tar how-to-intensjonen, så metadataene her målretter
- * bevisst andre fraser enn `landing.metaTitle` (ingen kannibalisering).
+ * Den offentlige how-to-siden, og hub for de tre målgruppe-undersidene. En
+ * fremmed (eller Googlebot) leser hele den generelle oppskriften på å arrangere
+ * en golfturnering UTEN å logge inn, og velger deretter kort inn i sin egen
+ * variant: firmagolf, vennegjeng eller klubbkveld (`[audience]/page.tsx`).
+ * Forsiden tar verktøy-intensjonen («golfturnering app»); denne siden tar den
+ * generelle how-to-intensjonen, og hver underside sitt eget long-tail-søk — så
+ * metadataene her målretter bevisst andre fraser enn `landing.metaTitle` og enn
+ * undersidene (ingen kannibalisering).
  *
  * Auth-valgfri via `AUTH_OPTIONAL_PATH_PATTERN` i proxy.ts — IKKE PUBLIC, som
  * ville strippet verified-user-headeren og kostet innloggede bunn-nav-en
@@ -108,6 +114,38 @@ export default async function ArrangerGolfturneringPage() {
             {t('intro')}
           </div>
         </div>
+
+        {/* Målgruppe-kort — hub-ens viktigste veivalg, derfor over ankermenyen.
+            Titler og ingresser leses fra undersidenes egne katalog-felt, så
+            kortet og siden det peker på aldri kan si to ulike ting. */}
+        <section>
+          <h2 className="font-serif text-[20px] font-medium leading-snug tracking-[-0.015em] text-text">
+            {t('audiencesHeading')}
+          </h2>
+          <p className="mt-3 font-sans text-[15px] leading-relaxed text-muted">
+            {t('audiencesIntro')}
+          </p>
+          <div className="mt-5 grid gap-3">
+            {ARRANGE_AUDIENCES.map((audience) => {
+              const card = t.raw(`audiences.${audience}`) as AudienceCard;
+              return (
+                <SmartLink
+                  key={audience}
+                  href={`/arranger-golfturnering/${audience}`}
+                  data-testid="arrange-guide-audience-card"
+                  className="flex min-h-[44px] flex-col gap-1.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                >
+                  <span className="font-serif text-[17px] leading-tight text-text">
+                    {card.pageTitle}
+                  </span>
+                  <span className="font-sans text-[13px] leading-snug text-muted">
+                    {card.pageSubtitle}
+                  </span>
+                </SmartLink>
+              );
+            })}
+          </div>
+        </section>
 
         {/* Ankermeny — siden er lang, så leseren skal kunne hoppe. Vanlig <a>,
             ikke SmartLink: en ren fragment-href har ingen rute å prefetche. */}

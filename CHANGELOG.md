@@ -15,9 +15,9 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
-<summary><strong>1.217 · Hele oppskriften på å arrangere golfturnering</strong></summary>
+<summary><strong>1.218 · Hele oppskriften på å arrangere golfturnering</strong></summary>
 
-[#1267](https://github.com/jdlarssen/golf-app/issues/1267) — En ny guide tar deg gjennom bane, påmelding, spillform, handicap og premier, med egne bolker for firmagolfen, vennegjengen og klubbkvelden. Den sier også rett ut når du heller bør bruke klubbens eget system.
+[#1267](https://github.com/jdlarssen/golf-app/issues/1267) — En ny guide tar deg gjennom bane, påmelding, spillform, handicap og premier, og herfra går du videre til en egen side for firmagolfen, vennegjengen eller klubbkvelden med opplegget som passer akkurat din gjeng. Guiden sier også rett ut når du heller bør bruke klubbens eget system.
 
 ↳ /arranger-golfturnering · «Les guiden»
 </details>

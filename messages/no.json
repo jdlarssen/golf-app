@@ -5470,7 +5470,136 @@
     "backLabel": "Til forsiden",
     "pageTitle": "Slik arrangerer du en golfturnering",
     "pageSubtitle": "For deg som skal fikse firmagolfen, kompisturneringen eller klubbkvelden uten å være turneringskomité.",
-    "intro": "De fleste guidene om å arrangere golfturnering er skrevet for turneringskomiteen i en klubb: terminliste, NGF-bestemmelser, startkontingent og resultatservice. Skal du samle tolv kolleger på en runde etter jobb, er det som å lese sikkerhetsmanualen for et fly før du tar bussen.\n\nDenne guiden er den andre halvdelen. Her står det du faktisk trenger for å få en golfturnering opp å stå på egen hånd: hva du må bestemme, i hvilken rekkefølge, og hvor du kan la appen ta jobben. Ingen komité, ingen klubbavtale, ingen erfaring fra turneringsadministrasjon.\n\nVi tar sjekklista først, så de tre typiske turneringene (firma, vennegjeng, klubbkveld), og til slutt hvor grensa går mot klubbsystemene. Regn med ti minutter lesing og et par minutter oppsett.",
+    "intro": "De fleste guidene om å arrangere golfturnering er skrevet for turneringskomiteen i en klubb: terminliste, NGF-bestemmelser, startkontingent og resultatservice. Skal du samle tolv kolleger på en runde etter jobb, er det som å lese sikkerhetsmanualen for et fly før du tar bussen.\n\nDenne guiden er den andre halvdelen. Her står det du faktisk trenger for å få en golfturnering opp å stå på egen hånd: hva du må bestemme, i hvilken rekkefølge, og hvor du kan la appen ta jobben. Ingen komité, ingen klubbavtale, ingen erfaring fra turneringsadministrasjon.\n\nVi tar sjekklista først, går gjennom de fem beslutningene i rekkefølge, og avslutter med hvor grensa går mot klubbsystemene. Arrangerer du for firmaet, vennegjengen eller klubbkvelden, har hver av dem sin egen side med opplegget som passer. Regn med ti minutter lesing og et par minutter oppsett.",
+    "audiencesHeading": "Hvem arrangerer du for?",
+    "audiencesIntro": "Tre turneringer går igjen, og de trenger ulike opplegg. Hver av dem har sin egen side med format, påmelding og gjennomføring tilpasset gjengen.",
+    "audienceBackLabel": "Til guiden",
+    "audiences": {
+      "firmagolf": {
+        "metaTitle": "Golfturnering for firmaet: slik arrangerer du firmagolfen",
+        "metaDescription": "Firmagolf der nivået spriker: velg scramble, sett lag på tvers av avdelinger, og få både ferskinger og lavhandicappere gjennom en runde de husker.",
+        "pageTitle": "Golfturnering for firmaet",
+        "pageSubtitle": "Firmagolfen der halve feltet aldri har holdt i en kølle før.",
+        "intro": "Firmagolf er den turneringen flest arrangerer og færrest har gjort før. Du er verken turneringskomité eller proff, men du har fått ansvaret for at et kontor skal ha en fin ettermiddag på en golfbane.\n\nHer er opplegget som funker: hva du bestemmer først, hvilket format som holder ferskingene med, og hvordan du får runde, mat og premieutdeling til å gå opp i tid.",
+        "sections": [
+          {
+            "id": "nivaa",
+            "heading": "Nivåspriket styrer alt annet",
+            "body": "Firmagolfen har ett særtrekk som styrer alt annet: nivået spriker voldsomt. Salgssjefen med handicap 6 og praktikanten som har vært på range to ganger skal ha en fin dag på samme runde.\n\nDet betyr at du ikke kan planlegge som om dette var en vanlig turnering. En vanlig turnering går ut fra at alle kommer seg rundt banen på egen hånd. På firmagolfen er det som regel noen som ikke gjør det, og som kommer til å kjenne på det hele runden hvis du velger feil format.\n\nStart derfor med å telle. Hvor mange har spilt før, hvor mange har spilt litt, og hvor mange har aldri vært på en golfbane? Er den siste gruppa mer enn en håndfull, er det den som bestemmer format, lengde og tempo. Resten lar seg justere etterpå."
+          },
+          {
+            "id": "format",
+            "heading": "Velg scramble, og sett lag på tvers av avdelinger",
+            "body": "Velg scramble. Texas scramble eller Ambrose gjør at laget alltid spiller videre fra det beste slaget, og ferskingen slipper å lete i skogen mens tre kolleger venter. Sett lag på tvers av avdelinger med én god spiller på hvert lag, så blir det både jevnt og sosialt.\n\nScramble løser to ting på én gang. Tempoet holder seg oppe fordi laget spiller én ball inn mot hullet, og den som er usikker får bidra uten å måtte prestere på hvert eneste slag. Ett godt putt fra en fersking kan avgjøre hullet, og det er den historien folk tar med seg tilbake på jobb.\n\nVil dere heller at alle spiller sin egen ball, er stableford med netto handicap alternativet. Da stopper hullet når poengene er borte, så ingen hakker seg gjennom et hull mens flighten bak venter. Spill netto uansett hvilken av de to du velger. Brutto alene gjør firmagolfen til en oppvisning for de tre beste."
+          },
+          {
+            "id": "pamelding",
+            "heading": "Påmelding, utstyr og de som aldri har spilt",
+            "body": "Åpne påmeldingen bredt og vær tydelig på at man ikke trenger å kunne golf. Sjekk om klubben leier ut utstyr, og si fra om det i invitasjonen. Legg inn en pause med noe å spise, og hold premieutdelingen kort og hyggelig.\n\nSkriv invitasjonen for den som er mest usikker. At ingen forkunnskaper trengs, at utstyr kan lånes på klubben, og at du spiller på lag, fjerner mer motstand enn noen påmeldingsfrist gjør. Del en åpen påmeldingslenke i kanalen eller e-posten, så fyller lista seg selv mens du gjør noe annet.\n\nBe om navn og handicap ved påmelding. Har spilleren ikke offisielt handicap, setter du et anslag. Uten handicap blir nettolista meningsløs, og da forsvinner nettopp den premien de ferskeste kan kjempe om."
+          },
+          {
+            "id": "dagen",
+            "heading": "Ni eller atten hull? Legg dagen etter tiden dere har",
+            "body": "Ni hull er ofte riktig for firmagolf. Da rekker dere runde, mat og premieutdeling innenfor en ettermiddag, og ingen sitter og sniktitter på klokka på hull 14. Skal dere ha hele dagen, legg opp til atten hull med shotgun-start og felles lunsj etterpå. Shotgun betyr at alle flightene starter samtidig på hvert sitt hull, så dere begynner og blir ferdige sammen.\n\nSett av mer tid enn du tror. Et felt med mange ferske spillere bruker lengre tid per hull, og en runde som ryker på tida ender med at folk går inn før siste hull. Da mister du både resultatlista og avslutningen.\n\nBestem premiene før første utslag, og hold dem like for alle nivåer. Nærmest flagget og longest drive koster ingenting å arrangere og gir alle noe å gå for, også de som ikke er i nærheten av tetstriden. Sjekk samtidig hva bedriften kan dekke, så slipper du diskusjonen om hvem som betaler når regninga kommer."
+          }
+        ],
+        "faq": [
+          {
+            "q": "Hvordan arrangerer jeg en golfturnering for firmaet?",
+            "a": "Book en blokk med starttider hos klubben, del en åpen påmeldingslenke med kontoret, og velg et scrambleformat så ferskingene henger med. Sett lag på tvers av avdelinger, hold det til ni hull hvis dere skal rekke mat etterpå, og bestem premiene før første utslag."
+          },
+          {
+            "q": "Hva gjør vi med kolleger som aldri har spilt golf?",
+            "a": "Sett dem på lag i et scrambleformat, der det beste slaget på laget teller uansett hvem som slo det. Sjekk om klubben leier ut utstyr, og skriv i invitasjonen at ingen forkunnskaper trengs. Da melder folk seg på i stedet for å lete etter en unnskyldning."
+          },
+          {
+            "q": "Bør firmagolfen gå over ni eller atten hull?",
+            "a": "Ni hull hvis dere skal rekke runde, mat og premieutdeling på en ettermiddag. Atten hull hvis dere har hele dagen, og da er shotgun-start verdt å be klubben om, så hele feltet blir ferdig samtidig."
+          }
+        ]
+      },
+      "vennegjeng": {
+        "metaTitle": "Golfturnering med vennegjengen: format som gir en vinner",
+        "metaDescription": "Kompisturnering som faktisk blir spennende: skins, wolf og nassau forklart, netto handicap så alle har en sjanse, og liga hvis dere spiller flere runder i sesongen.",
+        "pageTitle": "Golfturnering med vennegjengen",
+        "pageSubtitle": "Kompisturneringen som skal ha en vinner å erte resten av sesongen.",
+        "intro": "Kompisrunden trenger ikke struktur. Den trenger innsats. Formatet skal lage historier, ikke en pen resultatliste.\n\nHer er formatene som gir spenning helt inn, hvorfor netto handicap er det som holder det jevnt, og hvordan du binder sesongen sammen hvis dere spiller flere runder.",
+        "sections": [
+          {
+            "id": "format",
+            "heading": "Velg format etter kranglingen, ikke etter tradisjonen",
+            "body": "Skins gir en pott per hull, og potten vokser når hullet deles. Ett hull kan avgjøre hele dagen, og den som har ligget bakerst i fem hull kan plutselig ta alt.\n\nWolf roterer på hvem som velger makker fra tee, og gir en ny liten forhandling på hvert hull. Skal du ta sjansen alene, eller sikre deg den beste makkeren før du har sett slaget hans?\n\nNassau deler runden i tre veddemål: første ni, siste ni og hele runden. Den som ligger under er aldri helt ute av det, for det står alltid noe igjen å spille om.\n\nVil dere ha en ryddig resultatliste å se på etterpå, er stableford med netto handicap ryggraden. Legg gjerne skins eller nærmest flagget oppå som sideturnering, så har dere begge deler på samme runde."
+          },
+          {
+            "id": "netto",
+            "heading": "Netto handicap er det som holder det spennende",
+            "body": "Spill netto. Ingenting dreper en kompisturnering raskere enn at den samme spilleren vinner hver gang fordi ingen justerer for nivå. Med netto handicap blir det spennende helt inn, og den som har trent siden sist får faktisk betalt for det.\n\nNetto betyr at slagene handicapet ditt gir deg trekkes fra brutto. Spillehandicapet regnes ut fra banen og teen dere spiller, og slagene fordeles på de vanskeligste hullene. Det er den samme mekanikken klubbene bruker, og du trenger ikke regne på noe av det selv.\n\nHar noen i gjengen ikke offisielt handicap, setter du et anslag og justerer til neste runde. Det er bedre å starte med et anslag som er litt feil enn å droppe netto helt. Er dere uenige om nivået, er det som regel et tegn på at dere burde spille noen runder og la tallene avgjøre."
+          },
+          {
+            "id": "liga",
+            "heading": "Flere runder i sesongen? Sett opp en liga",
+            "body": "Skal dere spille flere runder gjennom sesongen, sett opp en liga. Da samles poengene fra hver runde i én tabell, og vinteren har et regnskap å krangle om.\n\nEn liga gjør to ting med en kompisgjeng. Den gir en grunn til å møte opp på runden midt i juli som ellers ville blitt avlyst, og den gjør at én dårlig dag ikke avslutter sesongen. Vil dere heller ha utslagsrunder, setter du opp en cup i stedet, med dueller mellom to og to.\n\nAvtal på forhånd hvor mange runder som teller, og hva vinneren får. En vandrepokal, en middag betalt av resten, eller retten til å bestemme banen neste år. Premien betyr mindre enn at den er bestemt før dere begynner."
+          }
+        ],
+        "faq": [
+          {
+            "q": "Hvilken spillform passer best for en kompisturnering?",
+            "a": "Skins hvis dere vil ha spenning hull for hull, wolf hvis dere vil ha forhandling og makkerbytte, nassau hvis dere vil ha tre veddemål på samme runde. Skal resultatlista være enkel å lese for alle, er stableford med netto handicap det trygge valget."
+          },
+          {
+            "q": "Hvordan fungerer skins?",
+            "a": "Hvert hull har en pott. Vinner du hullet alene, tar du potten. Deles hullet, legges potten til neste hull, og den vokser til noen vinner et hull rent. Derfor kan ett hull sent i runden avgjøre hele dagen."
+          },
+          {
+            "q": "Hvordan holder vi orden på flere runder gjennom sesongen?",
+            "a": "Sett opp en liga, så samles poengene fra hver runde i én tabell som oppdaterer seg selv. Vil dere heller ha utslagsrunder mellom to og to, setter du opp en cup."
+          }
+        ]
+      },
+      "klubbkveld": {
+        "metaTitle": "Klubbkveld med golfturnering: opplegg for store felt",
+        "metaDescription": "Slik kjører du klubbkvelden: stableford eller best ball, netto handicap for alle, digitale scorekort med markørgodkjenning og live resultatliste gjennom hele runden.",
+        "pageTitle": "Klubbkveld med golfturnering",
+        "pageSubtitle": "Større felt, spillere som kan reglene, og en resultatliste som skal stemme.",
+        "intro": "Er du kaptein for en gruppe i klubben, en dameforening eller en seniorgjeng, ligner oppgaven mer på ekte turneringsadministrasjon. Feltet er større, spillerne kan reglene, og resultatlista skal stemme.\n\nHer er opplegget for klubbkvelden: hvilken spillform som skalerer, hvordan scorekortene godkjennes, og hvordan du binder kveldene sammen til en serie.",
+        "sections": [
+          {
+            "id": "opplegget",
+            "heading": "Fire ting klubbkvelden trenger",
+            "body": "Klubbkvelden krever fire ting: et flightoppsett, en spillform som skalerer, netto handicap for alle, og godkjenning av scorekortene. Får du de fire på plass, går kvelden nesten av seg selv.\n\nFlightene setter du på forhånd, ikke på parkeringsplassen. Tre eller fire spillere per flight. Bland nivåene hvis kvelden skal være sosial, del dem etter nivå hvis du vil ha jevn kamp innad i flighten.\n\nAvtal starttidene med klubben i god tid. Skal hele feltet være ferdig samtidig, spør om shotgun-start, der alle flightene begynner på hvert sitt hull. Da kan du planlegge både servering og premieutdeling til et klokkeslett som holder."
+          },
+          {
+            "id": "spillform",
+            "heading": "Spillform som skalerer: stableford eller best ball",
+            "body": "Stableford er standardvalget. Hullet stopper når poengene er borte, tempoet holder seg oppe i et stort felt, og resultatlista er lett å lese for alle.\n\nVil dere spille i lag, er best ball det som skalerer best, fordi hver spiller fortsatt spiller sin egen ball. Da får du lagkonkurranse uten at noen mister sin egen runde, og den individuelle lista kan gå parallelt.\n\nSpill netto. I et klubbfelt spriker handicapene fra ensifret til godt over tjue, og uten netto er kvelden avgjort før første utslag. Vil du ha to vinnere, kår både brutto og netto, så får både den som spiller best golf og den som spiller best i forhold til seg selv noe å hente."
+          },
+          {
+            "id": "scorekort",
+            "heading": "Scorekort, godkjenning og live resultatliste",
+            "body": "Tørny håndterer felt opp mot 150 spillere delt i flighter. Scorekortene leveres digitalt og godkjennes av markør før de teller, så resultatet er kontrollert og ikke bare innrapportert.\n\nDet er den godkjenningen som gjør at du slipper å ettergå kort i klubbhuset. Spilleren fører sine egne slag på mobilen, leverer når runden er ferdig, og markøren i flighten bekrefter. Er noe feil, sendes kortet tilbake før det teller.\n\nResultatlista er live gjennom hele runden, så de som er ferdige kan følge med mens de siste kommer inn. Dårlig dekning på banen er ikke noe problem: slagene lagres lokalt på telefonen og synker når nettet er tilbake.\n\nNår siste kort er godkjent, avslutter du turneringen. Da låses lista, alle ser hele feltet, og alle får resultatet på e-post uten at du sender noe."
+          },
+          {
+            "id": "serie",
+            "heading": "Serie over flere kvelder: liga eller cup",
+            "body": "Skal serien gå over flere kvelder, sett opp en liga eller en cup. Da bærer resultatene seg videre fra runde til runde uten at du fører noe manuelt mellom kveldene.\n\nEn liga passer når alle spiller de samme kveldene og poengene skal summeres. En cup passer når dere vil ha utslagsrunder mellom spillere eller lag. Bestem på forhånd hvor mange kvelder som teller, og om de svakeste rundene kan strykes, så slipper du diskusjonen i august.\n\nEr klubbkvelden terminfestet og skal telle for handicapet, må den gå gjennom klubbens eget system. Tørny er for kveldene som ikke er det, og de er som regel de fleste."
+          }
+        ],
+        "faq": [
+          {
+            "q": "Hvor mange spillere kan være med på en klubbkveld?",
+            "a": "Tørny håndterer felt opp mot 150 spillere fordelt på flighter. Du setter flightene på forhånd, og hver spiller fører sine egne slag, så antall spillere gjør ikke jobben din større."
+          },
+          {
+            "q": "Hvordan vet vi at resultatlista stemmer?",
+            "a": "Hver spiller leverer scorekortet sitt digitalt, og markøren i flighten godkjenner det før det teller. Er noe feil, sendes kortet tilbake. Resultatet er dermed kontrollert, ikke bare innrapportert."
+          },
+          {
+            "q": "Kan vi kjøre klubbkvelden som en serie gjennom sesongen?",
+            "a": "Ja. Sett opp en liga hvis poengene skal summeres over flere kvelder, eller en cup hvis dere vil ha utslagsrunder. Resultatene bæres videre fra runde til runde uten manuell føring."
+          }
+        ]
+      }
+    },
     "tocHeading": "Hopp til",
     "sections": [
       {
@@ -5509,21 +5638,6 @@
         "body": "Sett flightene på forhånd, ikke på parkeringsplassen. Er dere over rundt seksti spillere, gjør du det kvelden før. Tre eller fire spillere per flight. Bland nivåene hvis du vil ha en sosial runde, del dem etter nivå hvis du vil ha jevn kamp innad i flighten.\n\nSi tre ting på første tee: når dere spiser, hva premiene er, og hvem som fører score. I Tørny fører hver spiller sine egne slag på mobilen, og resultatlista oppdaterer seg mens dere går. Hele papirjobben forsvinner, og alle ser hvor de ligger på veien inn.\n\nDårlig dekning er ikke noe problem. Appen lagrer slagene lokalt på telefonen og synker når nettet er tilbake, så et hull i skogen uten mobildekning ødelegger ingenting.\n\nEtter runden leverer hver spiller scorekortet sitt, markøren godkjenner, og resultatet er klart. Ingen skal sitte i klubbhuset og summere kolonner mens ølen blir varm."
       },
       {
-        "id": "firmagolf",
-        "heading": "Firmagolf: turneringen der halve feltet er ferskinger",
-        "body": "Firmagolfen har ett særtrekk som styrer alt annet: nivået spriker voldsomt. Salgssjefen med handicap 6 og praktikanten som har vært på range to ganger skal ha en fin dag på samme runde.\n\nVelg scramble. Texas scramble eller Ambrose gjør at laget alltid spiller videre fra det beste slaget, og ferskingen slipper å lete i skogen mens tre kolleger venter. Sett lag på tvers av avdelinger med én god spiller på hvert lag, så blir det både jevnt og sosialt.\n\nÅpne påmeldingen bredt og vær tydelig på at man ikke trenger å kunne golf. Sjekk om klubben leier ut utstyr, og si fra om det i invitasjonen. Legg inn en pause med noe å spise, og hold premieutdelingen kort og hyggelig.\n\nNi hull er ofte riktig for firmagolf. Da rekker dere runde, mat og premieutdeling innenfor en ettermiddag, og ingen sitter og sniktitter på klokka på hull 14. Skal dere ha hele dagen, legg opp til atten hull med shotgun-start og felles lunsj etterpå."
-      },
-      {
-        "id": "vennegjeng",
-        "heading": "Vennegjengen: turneringen som skal ha en vinner å erte",
-        "body": "Kompisrunden trenger ikke struktur. Den trenger innsats. Formatet skal lage historier, ikke en pen resultatliste.\n\nSkins gir en pott per hull, og potten vokser når hullet deles. Ett hull kan avgjøre hele dagen. Wolf roterer på hvem som velger makker fra tee, og gir en ny liten forhandling på hvert hull. Nassau deler runden i tre veddemål, første ni, siste ni og hele runden, så den som ligger under aldri er helt ute av det.\n\nSkal dere spille flere runder gjennom sesongen, sett opp en liga. Da samles poengene fra hver runde i én tabell, og vinteren har et regnskap å krangle om.\n\nSpill netto her også. Ingenting dreper en kompisturnering raskere enn at den samme spilleren vinner hver gang fordi ingen justerer for nivå. Med netto handicap blir det spennende helt inn, og den som har trent siden sist får faktisk betalt for det."
-      },
-      {
-        "id": "klubbkveld",
-        "heading": "Klubbkvelden: opptil 150 spillere uten papirarbeid",
-        "body": "Er du kaptein for en gruppe i klubben, en dameforening eller en seniorgjeng, ligner oppgaven mer på ekte turneringsadministrasjon. Feltet er større, spillerne kan reglene, og resultatlista skal stemme.\n\nDa trenger du fire ting: et flightoppsett, en spillform som skalerer, netto handicap for alle, og godkjenning av scorekortene. Stableford er standardvalget. Vil dere spille i lag, er best ball det som skalerer best, fordi hver spiller fortsatt spiller sin egen ball.\n\nTørny håndterer felt opp mot 150 spillere delt i flighter. Scorekortene leveres digitalt og godkjennes av markør før de teller, så resultatet er kontrollert og ikke bare innrapportert. Resultatlista er live gjennom hele runden, så de som er ferdige kan følge med mens de siste kommer inn.\n\nSkal serien gå over flere kvelder, sett opp en liga eller en cup. Da bærer resultatene seg videre fra runde til runde uten at du fører noe manuelt mellom kveldene."
-      },
-      {
         "id": "golfbox",
         "heading": "Når du ikke skal bruke Tørny",
         "body": "Her er den ærlige grensedragningen, så du ikke bruker kvelden på feil verktøy.\n\nSkal du arrangere en terminfestet klubbturnering som teller for handicapet, må du bruke klubbens system. I Norge er det GolfBox. Der ligger medlemsregisteret, de offisielle handicapindeksene, startlister mot terminlista og rapporteringen til forbundet. Ingen app utenfor det systemet kan levere handicaptellende runder, og Tørny prøver ikke å late som noe annet.\n\nAlt det andre er Tørnys område: firmagolfen, kompisturneringen, klubbkvelden som ikke er terminfestet, kundeturneringen, utdrikningslaget og hyttegolfen. Runder der du er komiteen, og der poenget er at oppsettet skal ta minutter, ikke en ettermiddag.\n\nBruker spillerne offisielle handicap fra GolfBox, skriver dere dem bare inn i Tørny som utgangspunkt. Regnestykket for banehandicap gjør appen selv, etter den samme WHS-formelen klubben bruker, så tallene på resultatlista kjennes igjen."
@@ -5541,10 +5655,6 @@
     },
     "faqHeading": "Spørsmål arrangører stiller",
     "faq": [
-      {
-        "q": "Hvordan arrangerer jeg en golfturnering for firmaet?",
-        "a": "Book en blokk med starttider hos klubben, del en åpen påmeldingslenke med kontoret, og velg et scrambleformat så ferskingene henger med. Sett lag på tvers av avdelinger, hold det til ni hull hvis dere skal rekke mat etterpå, og bestem premiene før første utslag."
-      },
       {
         "q": "Hvor mange spillere trenger man for å arrangere en golfturnering?",
         "a": "Fire holder. Med fire spillere har du én flight og kan spille nesten alt: stableford, skins, scramble og best ball. Over tolv spillere lønner det seg å be klubben om shotgun-start, og over rundt seksti bør du sette flightene dagen før."

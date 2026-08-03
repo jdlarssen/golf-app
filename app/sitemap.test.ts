@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
+import { ARRANGE_AUDIENCES } from '@/lib/seo/arrangeAudiences';
 import sitemap from './sitemap';
 
 /**
@@ -21,6 +22,15 @@ describe('sitemap', () => {
       const entries = await sitemap();
       const urls = entries.map((entry) => entry.url);
       expect(urls).toContain(`${BASE}/spillformater/${mode}`);
+    },
+  );
+
+  it.each(ARRANGE_AUDIENCES)(
+    'includes an /arranger-golfturnering/%s entry',
+    async (audience) => {
+      const entries = await sitemap();
+      const urls = entries.map((entry) => entry.url);
+      expect(urls).toContain(`${BASE}/arranger-golfturnering/${audience}`);
     },
   );
 
