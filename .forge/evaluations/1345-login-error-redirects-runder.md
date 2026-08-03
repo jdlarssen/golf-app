@@ -3,3 +3,4 @@
 | Runde | Verdikt | Finding-signaturer |
 |---|---|---|
 | 1 (fersk kontekst, f2d4f46) | ACCEPT | (ingen) — alle kontraktkrav re-verifisert uavhengig: én helper, from=verify-steg-bevaring, blindvei-vakt (aldri step=verify uten email), open-redirect-/invite-vakter, honeypot byte-identisk mot main, kun de seks navngitte assertions endret (fortsatt toBe), gates grønne inkl. full vitest + build |
+| 2 (kryss-modell, Sonnet) | CONFIRM | (ingen) — SC1–SC3 + design-forpliktelser uavhengig re-verifisert: honeypot/suksess-stier byte-identiske, resendHref bevist død på main, nøyaktig 6 assertions byttet, blindvei-/open-redirect-/invite-vakter sporet i koden, full vitest + build grønne |
