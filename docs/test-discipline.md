@@ -59,7 +59,7 @@ Eierbeslutning 2026-07-07 (#1104): behold alle tre nivåer — de fanger ulike t
 
 ### Type C — Data-rendering UI
 
-- **Hvor:** `app/games/[id]/leaderboard/*View|Podium.test.tsx`, score-display-komponenter, podium-komponenter, alt som tar pure data og rendrer det.
+- **Hvor:** `app/[locale]/games/[id]/leaderboard/*View|Podium.test.tsx`, score-display-komponenter, podium-komponenter, alt som tar pure data og rendrer det.
 - **Stil:** **Maks én render-test per komponent.** Verifiserer kun struktur/layout, ikke konkrete tall (de er allerede dekket av Type A på beregningen).
 - **Forbudt:** `toHaveTextContent('Du endte på 3. plass av 12')` — det er Type A på avveie. Det riktige er å teste at `formatPosition(...)` returnerer den strengen (Type A), og at komponenten rendrer det formatPosition returnerer (Type C, generisk).
 - **Default ved upassende eksisterende tester:** Foreslå **sletting** etter *Happy to Delete*-mønsteret, ikke konvertering til snapshot. Krever eksplisitt go-ahead fra brukeren før sletting.
@@ -187,7 +187,7 @@ Warns bygger vane uten å skape friksjon. Block-nivå reserveres for ting som ha
 Eksisterende test-suite er ikke i samsvar med disse reglene. Kandidater for cleanup (eget GitHub issue når det opprettes):
 
 1. **PR #261** — re-evaluer mot Type B-regelen. De 12 strukturelle Resend-kontrakt-testene som ble lagt til på tvers av 6 filer er kandidater for konsolidering til én shared `resend-contract.test.ts`, eller fjerning hvis ikke verdt det.
-2. **Leaderboard-klyngen** — 8 filer, ~104 tester under `app/games/[id]/leaderboard/`. Bør evalueres mot Type C-regelen. Sterk hypotese om at flertallet er kandidater for sletting fordi de re-asserter `lib/scoring/`-output via DOM.
+2. **Leaderboard-klyngen** — 8 filer, ~104 tester under `app/[locale]/games/[id]/leaderboard/`. Bør evalueres mot Type C-regelen. Sterk hypotese om at flertallet er kandidater for sletting fordi de re-asserter `lib/scoring/`-output via DOM.
 3. **Admin-form-trioen** — `CourseForm.test.tsx` (54), `GameForm.test.tsx` (38), `CoursesLedgerClient.test.tsx` (38). Split per Type — Type A for validering (ekstrahert til pure funksjon), Type C for render, Type D for én happy-path E2E.
 4. **Andre `toContain`-tunge tester** — alle filer over fil-nivået i toContain-trappa (§ Type B).
 5. **Mail-test-familien** — vurder konsolidering av Resend-kontrakt-tester til én delt fil hvis PR #261 ikke gjør det.

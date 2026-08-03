@@ -43,12 +43,12 @@ flowchart TD
   KP -- nei --> PlayerKlub["Adaptivt spiller-rom (#892):<br/>invitasjon til å arrangere<br/>+ Dine klubber + Det du arrangerer<br/>+ Verktøy (Baner, Spillformater)"]
 ```
 
-**Persistente nav-elementer** (verifisert i `app/layout.tsx` + sidene):
+**Persistente nav-elementer** (verifisert i `app/[locale]/layout.tsx` + sidene):
 `BrandMark` (logo, ikke klikkbar) · `InstallBanner` (PWA) · `ProductUpdateBanner` ·
 `TopBar` (tilbake-pil + tittel, på indre sider) · `AppVersionFooter` (versjon + Personvern).
 
 **Vedvarende bunn-nav** (#355, #392): fire faste faner — Hjem, Innboks, Klubbhuset, Profil —
-rendret globalt i `app/layout.tsx`, synlig for alle innloggede på alle flater (også i Klubbhus-
+rendret globalt i `app/[locale]/layout.tsx`, synlig for alle innloggede på alle flater (også i Klubbhus-
 rommet `/admin`). Skjult kun på hull-skjerm, login og onboarding. «Klubbhuset» er universell:
 fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, mens spilleren
 møter et **adaptivt rom** (#892): en invitasjon til å arrangere (aldri en blindvei), klubbene sine,
@@ -107,10 +107,10 @@ flowchart LR
 
 | Steg | Rute / fil | Teknisk |
 |---|---|---|
-| Be om kode | `app/(auth)/login/page.tsx`, `actions.ts` → `sendCode` | `email_is_invited` RPC gater `shouldCreateUser`; `signInWithOtp`. Kode-mail via **Supabase Auth**. Honeypot-felt `website`. |
+| Be om kode | `app/[locale]/(auth)/login/page.tsx`, `actions.ts` → `sendCode` | `email_is_invited` RPC gater `shouldCreateUser`; `signInWithOtp`. Kode-mail via **Supabase Auth**. Honeypot-felt `website`. |
 | Verifiser | `verifyCode` | `verifyOtp({type:'email'})`. Marker `invitations.accepted_at` (RLS 0012). Spill-scoped invitasjon → auto-insert i `game_players` + `notifyInvitedToGame`. |
 | Endre adresse | `_components/VerifyCodeForm.tsx` → `changeEmailHref` | Retur-kant til steg 1 (#1346): GET til `/login` med `email`, `next` og `invite` beholdt, så feltet prefylles og kontekstkortet (#1169) overlever. Utveien når adressen er feiltastet — «Send ny kode» treffer bare samme feil adresse. |
-| Fullfør profil | `app/complete-profile/page.tsx`, `actions.ts` | Setter `users.profile_completed_at` + navn/nickname/`hcp_index`/gender/level. |
+| Fullfør profil | `app/[locale]/complete-profile/page.tsx`, `actions.ts` | Setter `users.profile_completed_at` + navn/nickname/`hcp_index`/gender/level. |
 
 **To mailer per invitasjon:** Resend-notifikasjon (`lib/mail/inviteNotification.ts`) når noen inviterer, så kode-mail når invitéen ber om kode på `/login`.
 
@@ -147,27 +147,27 @@ flowchart LR
 
 | Steg | Rute / fil | Teknisk |
 |---|---|---|
-| Spill-hjem | `app/games/[id]/page.tsx` | Auto-start: `scheduled→active` når tee-off passert (`startScheduledGame` + `after(revalidateTag)`). CTA: «Start runden» → «Fortsett» → «Gjennomgå og lever». Cachet `getGameWithPlayers` (tag `game-${id}`). |
-| Taste slag | `app/games/[id]/holes/[holeNumber]/page.tsx` + `HoleClient.tsx` | `writeScore()` → Dexie → sync-kø → `upsert_score_if_newer` RPC. Sync-worker drainer på online/focus/30s + service worker bakgrunns-sync. Realtime-merge per flight. RLS: eget + samme-flight under `active`. |
-| Gjennomgå | `app/games/[id]/scorecard/page.tsx` | `resolveScorecardLayout` (solo 1 kolonne / lag fler-kolonne). Netto skjult under `reveal`-aktiv. |
-| Lever | `app/games/[id]/submit/page.tsx` + `actions.ts` → `submitScorecard` | Setter `game_players.submitted_at`. Idempotent (`.is('submitted_at', null)`). Varsler peers + admin (`scorecardSubmittedNotification` Resend kun til off-app-admin). |
-| Godkjenn (peer) | `app/games/[id]/approve/page.tsx` + `actions.ts` | `approveScorecard` / `rejectScorecard(reason)` (avvis nullstiller `submitted_at` for re-levering). |
+| Spill-hjem | `app/[locale]/games/[id]/(home)/page.tsx` | Auto-start: `scheduled→active` når tee-off passert (`startScheduledGame` + `after(revalidateTag)`). CTA: «Start runden» → «Fortsett» → «Gjennomgå og lever». Cachet `getGameWithPlayers` (tag `game-${id}`). |
+| Taste slag | `app/[locale]/games/[id]/holes/[holeNumber]/page.tsx` + `HoleClient.tsx` | `writeScore()` → Dexie → sync-kø → `upsert_score_if_newer` RPC. Sync-worker drainer på online/focus/30s + service worker bakgrunns-sync. Realtime-merge per flight. RLS: eget + samme-flight under `active`. |
+| Gjennomgå | `app/[locale]/games/[id]/scorecard/page.tsx` | `resolveScorecardLayout` (solo 1 kolonne / lag fler-kolonne). Netto skjult under `reveal`-aktiv. |
+| Lever | `app/[locale]/games/[id]/submit/page.tsx` + `actions.ts` → `submitScorecard` | Setter `game_players.submitted_at`. Idempotent (`.is('submitted_at', null)`). Varsler peers + admin (`scorecardSubmittedNotification` Resend kun til off-app-admin). |
+| Godkjenn (peer) | `app/[locale]/games/[id]/approve/page.tsx` + `actions.ts` | `approveScorecard` / `rejectScorecard(reason)` (avvis nullstiller `submitted_at` for re-levering). |
 
 ### P4 — Leaderboard
 
-`app/games/[id]/leaderboard/page.tsx` — mode-router (Stableford/Best ball/Wolf/Skins/Nassau/Matchplay/…). Live under `active` (med reveal-/front-nine-gating), full + podium etter `finished`. **Ikke realtime** — krever refresh. Eksport: `app/games/[id]/leaderboard/export/route.ts`.
+`app/[locale]/games/[id]/leaderboard/page.tsx` — mode-router (Stableford/Best ball/Wolf/Skins/Nassau/Matchplay/…). Live under `active` (med reveal-/front-nine-gating), full + podium etter `finished`. **Ikke realtime** — krever refresh. Eksport: `app/[locale]/games/[id]/leaderboard/export/route.ts`.
 
 ### P5 — Profil, historikk & konto
 
 | Flyt | Rute | Teknisk |
 |---|---|---|
-| Rediger profil | `app/profile/page.tsx` + `actions.ts` | navn, nickname, `hcp_index`, gender, level. `handicap_updated_at` stemples ved lagring. |
-| Inviter venn | inline på `/profile` (`app/invite/actions.ts`) | `sendFriendInvite` — kvote + rate-limit, `invitations` (game_id null) + Resend. |
+| Rediger profil | `app/[locale]/profile/page.tsx` + `actions.ts` | navn, nickname, `hcp_index`, gender, level. `handicap_updated_at` stemples ved lagring. |
+| Inviter venn | inline på `/profile` (`app/[locale]/invite/actions.ts`) | `sendFriendInvite` — kvote + rate-limit, `invitations` (game_id null) + Resend. |
 | Venner | `/profile/venner` + `actions.ts` (#369) | Legg til (forslag/e-post/lenke), godta/avslå, fjern. RPCer `send_friend_request`/`*_by_email`/`respond_friend_request`/`remove_friend`/`connect_via_friend_code`; `getFriendData` for siden. Delt lenke landes på `/venner/legg-til/[code]`. |
 | Historikk / statistikk | `/profile/historikk`, `/profile/statistikk` | |
-| GDPR-eksport | `app/profile/export/route.ts` | Last ned egne data. |
-| Slett konto | `app/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis i aktivt/planlagt spill. `admin.deleteUser`. |
-| Varsler | `app/innboks/page.tsx` | Via `NotificationBell`. Mark-as-read. |
+| GDPR-eksport | `app/[locale]/profile/export/route.ts` | Last ned egne data. |
+| Slett konto | `app/[locale]/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis i aktivt/planlagt spill. `admin.deleteUser`. |
+| Varsler | `app/[locale]/innboks/page.tsx` | Via `NotificationBell`. Mark-as-read. |
 
 ---
 
