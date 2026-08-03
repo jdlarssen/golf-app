@@ -11,3 +11,4 @@ Eier valgte alternativ B i PR #1426 (2026-08-02) — ombygging natt til 2026-08-
 | Runde | Verdikt | Finding-signaturer |
 |---|---|---|
 | 4 (fersk kontekst, alt B på 28d0fd9) | NEEDS WORK | proxy.ts + manglende slug-guard for /arranger-golfturnering/<audience> → soft-404 (HTTP 200) under PPR, pre-#1286-hullet gjentatt; fikset på 2ff6bd5 (guard etter #1286-mønsteret + status-spec) |
+| 5 (kryss-modell, Sonnet) | CONFIRM | (ingen) — SC2–SC8 + guard-plassering/one-home/metaTitle-unikhet/JSON-LD-identitet uavhengig re-verifisert, inkl. fersk build ×2 og full vitest |
