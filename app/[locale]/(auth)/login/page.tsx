@@ -129,12 +129,6 @@ export default async function LoginPage({
     );
   }
 
-  const resendQs = new URLSearchParams();
-  if (email) resendQs.set('email', email);
-  if (next) resendQs.set('next', next);
-  if (invite) resendQs.set('invite', invite);
-  const resendHref = `/login${resendQs.toString() ? '?' + resendQs.toString() : ''}`;
-
   return (
     <AppShell>
       <div className="mt-10">
@@ -178,12 +172,7 @@ export default async function LoginPage({
               </SmartLink>
             </>
           ) : (
-            <VerifyCodeForm
-              email={email}
-              next={next}
-              invite={invite}
-              resendHref={resendHref}
-            />
+            <VerifyCodeForm email={email} next={next} invite={invite} />
           )}
         </Card>
       </div>

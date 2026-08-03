@@ -12,6 +12,31 @@ import { distinctInviterIds } from '@/lib/friends/friendGraph';
 import { isInviteToken } from '@/lib/auth/getInviteLoginContext';
 import { routing, type AppLocale } from '@/i18n/routing';
 
+/**
+ * #1345: ett hjem for alle feil-redirects i login-flyten. Hver feilsti tar med
+ * seg konteksten brukeren allerede har gitt oss — e-post, `next` og `invite` —
+ * så en feiltastet kode eller en for rask «Send ny kode» ikke kaster dem
+ * tilbake til et tomt steg 1 og mister målsiden + invitasjonskortet.
+ *
+ * `step: 'verify'` settes KUN når vi har en e-post å verifisere mot; ellers er
+ * verify-steget en blindvei (kodefelt uten adresse).
+ *
+ * Param-rekkefølgen er bevisst deterministisk (step, email, error, next,
+ * invite) — unit-testene låser eksakte URL-strenger.
+ */
+function loginErrorRedirect(
+  code: string,
+  ctx: { email?: string; next?: string; invite?: string; step?: 'verify' },
+): never {
+  const qs = new URLSearchParams();
+  if (ctx.step && ctx.email) qs.set('step', ctx.step);
+  if (ctx.email) qs.set('email', ctx.email);
+  qs.set('error', code);
+  if (ctx.next) qs.set('next', ctx.next);
+  if (ctx.invite) qs.set('invite', ctx.invite);
+  redirect(`/login?${qs.toString()}`);
+}
+
 // Step 1 of two-step OTP login. Verifies the email is either registered
 // (existing user) or has an open invitation, then asks Supabase to send a
 // 6-digit code. Existing users are detected implicitly: shouldCreateUser
@@ -26,10 +51,21 @@ export async function sendCode(formData: FormData) {
 
   // #1169: invitasjons-token fra kontekstkort-flyten — videreføres til
   // verify-steget så kortet blir stående. Kun visning; alt annet enn en
-  // UUID-formet verdi droppes. Error-redirects mister den (pre-eksisterende
-  // mønster for alle params, akseptert i kontrakten).
+  // UUID-formet verdi droppes. #1345: også feil-redirects tar den med seg.
   const inviteRaw = String(formData.get('invite') ?? '').trim();
   const invite = isInviteToken(inviteRaw) ? inviteRaw : '';
+
+  // #1345: «Send ny kode» på verify-steget poster hit med from=verify. Da skal
+  // en feil (typisk Supabase-throttle innen 60 sek) sende brukeren tilbake til
+  // kodefeltet — ikke til et tomt steg 1 mens en gyldig kode er på vei.
+  // Kun formData, aldri en URL-param.
+  const fromVerify = String(formData.get('from') ?? '').trim() === 'verify';
+  const errorCtx = {
+    email,
+    next,
+    invite,
+    step: fromVerify ? ('verify' as const) : undefined,
+  };
 
   // Honeypot — the `website` field is hidden via CSS/tabindex/aria so real
   // users never see it. Form-filling bots typically populate every input that
@@ -47,7 +83,7 @@ export async function sendCode(formData: FormData) {
   }
 
   if (!email) {
-    redirect('/login?error=unknown');
+    loginErrorRedirect('unknown', errorCtx);
   }
 
   // Defense-in-depth on top of Supabase's built-in OTP throttle: a per-email
@@ -59,7 +95,7 @@ export async function sendCode(formData: FormData) {
   const ip = await getClientIp();
   const rl = await consumeLoginRateLimit({ email, ip });
   if (!rl.ok) {
-    redirect('/login?error=rate_limited');
+    loginErrorRedirect('rate_limited', errorCtx);
   }
 
   // Self-registration is gated by an env flag so we can ramp it carefully
@@ -81,7 +117,7 @@ export async function sendCode(formData: FormData) {
   // known-bad domain). Off-flag behaviour is unchanged.
   if (allowSelfReg && isDisposableEmailDomain(email)) {
     console.warn('[login/sendCode] disposable email rejected');
-    redirect('/login?error=disposable_email');
+    loginErrorRedirect('disposable_email', errorCtx);
   }
 
   const supabase = await getServerClient();
@@ -144,7 +180,7 @@ export async function sendCode(formData: FormData) {
       }
     }
 
-    redirect(`/login?error=${code}`);
+    loginErrorRedirect(code, errorCtx);
   }
 
   // Best-effort: stamp opened_at on the matching pending invitation row so
@@ -183,13 +219,21 @@ export async function verifyCode(formData: FormData) {
     nextRaw.startsWith('/') && !nextRaw.startsWith('//');
   const next = hasExplicitNext ? nextRaw : '/';
 
+  // #1345: konteksten som skal overleve en feiltastet kode. `next` tas bare med
+  // når den var eksplisitt satt (default-en '/' hører ikke hjemme i en URL), og
+  // `invite` gates på UUID-formen som ellers i flyten (#1169) så kontekstkortet
+  // blir stående gjennom feil-redirecten.
+  const inviteRaw = String(formData.get('invite') ?? '').trim();
+  const invite = isInviteToken(inviteRaw) ? inviteRaw : '';
+  const errorCtx = {
+    email,
+    next: hasExplicitNext ? nextRaw : '',
+    invite,
+    step: 'verify' as const,
+  };
+
   if (!email || !token) {
-    const qs = new URLSearchParams({
-      step: 'verify',
-      email,
-      error: 'code_invalid',
-    });
-    redirect(`/login?${qs.toString()}`);
+    loginErrorRedirect('code_invalid', errorCtx);
   }
 
   const supabase = await getServerClient();
@@ -202,8 +246,7 @@ export async function verifyCode(formData: FormData) {
   if (error) {
     const msg = error.message?.toLowerCase() ?? '';
     const code = msg.includes('expired') ? 'code_expired' : 'code_invalid';
-    const qs = new URLSearchParams({ step: 'verify', email, error: code });
-    redirect(`/login?${qs.toString()}`);
+    loginErrorRedirect(code, errorCtx);
   }
 
   // i18n: persist the cookie-resolved locale to users.locale when it is NULL.

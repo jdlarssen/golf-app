@@ -1367,6 +1367,12 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
+<summary><strong>August 2026 · 1 retting</strong></summary>
+
+- `1.214.3` · [#1345](https://github.com/jdlarssen/golf-app/issues/1345) — Taster du feil kode, eller ber om en ny litt for kjapt, står du fortsatt på kodesteget med e-posten din i feltet. Invitasjonen du kom fra og siden du var på vei til følger med hele veien.
+</details>
+
+<details>
 <summary><strong>Juli 2026 · 40 rettinger</strong></summary>
 
 - `1.214.2` · [#1344](https://github.com/jdlarssen/golf-app/issues/1344) — Er du invitert til et lag og må fullføre profilen underveis, kommer du tilbake til laget ditt i stedet for å havne i skjemaet der man melder på et nytt lag. Skulle du likevel komme innom det skjemaet, står det nå en peker øverst som tar deg til laget du er invitert til.
