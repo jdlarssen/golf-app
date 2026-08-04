@@ -2999,7 +2999,8 @@
     "tryDemoDivider": "eller",
     "tryDemo": "Prøv Tørny på 60 sekunder",
     "errors": {
-      "rate_limited": "Vent litt før du prøver igjen.",
+      "rate_limited": "Du har bedt om mange koder på kort tid. Vent et kvarter og prøv igjen.",
+      "rate_limited_minute": "Du kan be om ny kode om ett minutt.",
       "user_not_found": "Denne mailen er ikke registrert. Be admin om en invitasjon.",
       "invite_expired": "Invitasjonen din er utløpt. Be arrangøren om å sende en ny.",
       "disposable_email": "Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.",

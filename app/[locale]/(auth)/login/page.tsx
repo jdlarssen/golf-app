@@ -36,6 +36,9 @@ type SearchParams = Promise<{
 // An unrecognised ?error= value falls back to 'unknown'.
 const KNOWN_ERROR_CODES = new Set([
   'rate_limited',
+  // #1347: our own 15-minute bucket vs Supabase's 60-second OTP throttle —
+  // two very different waits, so they carry two codes and two messages.
+  'rate_limited_minute',
   'user_not_found',
   'invite_expired',
   'disposable_email',
