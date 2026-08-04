@@ -1,0 +1,6 @@
+# Evalueringsrunder — #1346 «Feil adresse?»-lenke på kodesteget
+
+| Runde | Verdikt | Finding-signaturer |
+|---|---|---|
+| 1 (fersk kontekst, b7a9411) | ACCEPT | (ingen blokkerende) — alle fire Success Criteria re-verifisert uavhengig: lenke kun på verify-steget med min-h-[44px], locale-bevisst Link fra @/i18n/navigation med URLSearchParams-bygd href (email/next/invite bevart, step droppet), søsken-plassering utenfor begge forms, catalogParity/apostropheParity grønne, full vitest 413 filer / 5161 tester grønn. Noter til closing-kommentar: prop-rename ble re-add (resendHref alt slettet av 7a30bbd); visuelt register matcher ResendFooter (kontraktens guardrail overstyrte text-primary); test-verdi begrenset (tautologisk utover nested-form-vakta); changeEmailHref beregnes unødig på email-steget (dødt compute, 4 linjer) |
+| 2 (kryss-modell, Sonnet) | CONFIRM | (ingen) — SC1–SC4 uavhengig re-verifisert: href-bygging med URLSearchParams sporet ende-til-ende (page.tsx → SendCodeForm defaultValue), søsken-plassering bekreftet i JSX + test, i18n-nøkkel på samme sti i begge kataloger, locale-prefiks via localePrefix 'as-needed' bekreftet, CHANGELOG-konvensjon + minor-bump + Refs-fotnote riktig; tsc 0 feil, lint 0 errors, målrettet vitest 6 filer / 39 tester grønn |
