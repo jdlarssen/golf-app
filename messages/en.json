@@ -2999,7 +2999,8 @@
     "tryDemoDivider": "or",
     "tryDemo": "Try Tørny in 60 seconds",
     "errors": {
-      "rate_limited": "Slow down — try again in a moment.",
+      "rate_limited": "You have requested a lot of codes in a short time. Wait fifteen minutes and try again.",
+      "rate_limited_minute": "You can request a new code in a minute.",
       "user_not_found": "This email isn't registered. Ask an admin for an invitation.",
       "invite_expired": "Your invitation has expired. Ask the organizer to send a new one.",
       "disposable_email": "Disposable emails don't work here. Use a regular address and you're good to go.",

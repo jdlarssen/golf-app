@@ -408,6 +408,28 @@ describe('sendCode — rate-limit', () => {
     );
   });
 
+  it('maps the Supabase 60-second throttle to rate_limited_minute and keeps the user on the verify step (#1347)', async () => {
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    signInWithOtpMock.mockResolvedValue({
+      error: {
+        message:
+          'For security purposes, you can only request this after 60 seconds.',
+      },
+    });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'kompis@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Distinct from the own-bucket `rate_limited` (15 minutes), and the code
+    // field stays visible — a valid code is already in the inbox.
+    expect(lastRedirect()).toBe(
+      '/login?step=verify&email=kompis%40example.com&error=rate_limited_minute',
+    );
+  });
+
   it('calls consumeLoginRateLimit with the trimmed/lowercased email and resolved IP', async () => {
     rpcMock.mockResolvedValue({ data: false, error: null });
     signInWithOtpMock.mockResolvedValue({ error: null });

@@ -135,7 +135,7 @@ export async function sendCode(formData: FormData) {
   if (error) {
     const msg = error.message?.toLowerCase() ?? '';
     let code:
-      | 'rate_limited'
+      | 'rate_limited_minute'
       | 'user_not_found'
       | 'invite_expired'
       | 'unknown' = 'unknown';
@@ -144,7 +144,10 @@ export async function sendCode(formData: FormData) {
       msg.includes('too many') ||
       msg.includes('security purposes')
     ) {
-      code = 'rate_limited';
+      // #1347: Supabase's own OTP throttle is a 60-second gap between mails —
+      // a different wait from our 15-minute bucket above, which trips before
+      // this call. Separate code so the copy can name the actual wait.
+      code = 'rate_limited_minute';
     } else if (
       msg.includes('not found') ||
       msg.includes('signups not allowed') ||
@@ -178,6 +181,15 @@ export async function sendCode(formData: FormData) {
       } catch (err) {
         console.error('[login/sendCode] expired-invite lookup failed', err);
       }
+    }
+
+    // #1347: the 60-second throttle only fires when a code for this address
+    // is already in the user's inbox, so the honest place to land is the code
+    // field — regardless of whether the request came from step 1 or from
+    // «Send ny kode». The copy («be om ny kode om ett minutt») is only true
+    // there. `email` is non-empty here; the guard above redirects otherwise.
+    if (code === 'rate_limited_minute') {
+      loginErrorRedirect(code, { ...errorCtx, step: 'verify' });
     }
 
     loginErrorRedirect(code, errorCtx);
