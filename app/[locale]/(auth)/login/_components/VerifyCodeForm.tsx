@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { sendCode, verifyCode } from '../actions';
@@ -19,6 +20,7 @@ export function VerifyCodeForm({
   email,
   next,
   invite = '',
+  changeEmailHref,
 }: {
   email: string;
   next: string;
@@ -28,6 +30,12 @@ export function VerifyCodeForm({
    * redirecten (#1345).
    */
   invite?: string;
+  /**
+   * Step-1-URL med `email`, `next` og `invite` beholdt (#1346) — utveien når
+   * adressen er feiltastet. E-posten prefyller feltet på steg 1, og `invite`
+   * holder kontekstkortet (#1169) i live på veien tilbake.
+   */
+  changeEmailHref: string;
 }) {
   return (
     // Resend-knappen er i et separat <form> UNDER verify-skjemaet for å unngå
@@ -53,6 +61,27 @@ export function VerifyCodeForm({
         <input type="hidden" name="from" value="verify" />
         <ResendFooter />
       </form>
+      {/*
+        #1346: søsken til begge skjemaene, aldri nøstet inni dem. En ren GET
+        tilbake til steg 1 er utveien for en feiltastet adresse — «Send ny kode»
+        sender bare til samme feil adresse på nytt.
+      */}
+      <ChangeEmailLink href={changeEmailHref} />
+    </div>
+  );
+}
+
+function ChangeEmailLink({ href }: { href: string }) {
+  const t = useTranslations('auth.verifyCode');
+  return (
+    <div className="text-center">
+      <Link
+        href={href}
+        data-testid="change-email-link"
+        className="inline-flex min-h-[44px] items-center justify-center px-3 text-xs text-muted underline"
+      >
+        {t('changeEmail')}
+      </Link>
     </div>
   );
 }

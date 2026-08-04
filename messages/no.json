@@ -3003,6 +3003,7 @@
       "submitButton": "Logg inn",
       "resendPrompt": "Fikk du ikke koden?",
       "resendLink": "Send ny kode",
+      "changeEmail": "Feil adresse? Endre e-post",
       "spamHint": "Kommer den ikke? Sjekk søppelposten. Koden kan ta et par minutter.",
       "spinnerLabel": "Laster"
     }

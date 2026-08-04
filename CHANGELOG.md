@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.215 · Feiltastet e-post? Rett den på stedet</strong></summary>
+
+[#1346](https://github.com/jdlarssen/golf-app/issues/1346) — Venter du på en kode som aldri kommer, tar «Feil adresse? Endre e-post» deg rett tilbake til e-postfeltet med adressen klar til retting — også i appen på telefonen, der det ikke finnes noen tilbake-knapp.
+
+↳ /login · «Endre e-post»
+</details>
+
+<details>
 <summary><strong>1.214 · Åtte spillformer forklart helt ut</strong></summary>
 
 [#1266](https://github.com/jdlarssen/golf-app/issues/1266) — Texas scramble, wolf, skins, nassau, stableford, best ball, greensome og bingo bango bongo har nå fulle regelsider med mellomtitler, en egen bolk om hvordan handicapet regnes, og svar på spørsmålene som går igjen.
