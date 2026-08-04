@@ -96,6 +96,7 @@ flowchart LR
   B --> C{email_is_invited RPC}
   C -- ok --> D[signInWithOtp<br/>kode-mail via Supabase Auth]
   D --> E["/login?step=verify<br/>skriv 6–8-sifret kode"]
+  E -- feil adresse --> B
   E --> F[verifyOtp]
   F --> G[Marker invitations.accepted_at<br/>+ auto-insert game_players<br/>hvis spill-scoped invitasjon]
   G --> H{profil fullført?}
@@ -108,6 +109,7 @@ flowchart LR
 |---|---|---|
 | Be om kode | `app/(auth)/login/page.tsx`, `actions.ts` → `sendCode` | `email_is_invited` RPC gater `shouldCreateUser`; `signInWithOtp`. Kode-mail via **Supabase Auth**. Honeypot-felt `website`. |
 | Verifiser | `verifyCode` | `verifyOtp({type:'email'})`. Marker `invitations.accepted_at` (RLS 0012). Spill-scoped invitasjon → auto-insert i `game_players` + `notifyInvitedToGame`. |
+| Endre adresse | `_components/VerifyCodeForm.tsx` → `changeEmailHref` | Retur-kant til steg 1 (#1346): GET til `/login` med `email`, `next` og `invite` beholdt, så feltet prefylles og kontekstkortet (#1169) overlever. Utveien når adressen er feiltastet — «Send ny kode» treffer bare samme feil adresse. |
 | Fullfør profil | `app/complete-profile/page.tsx`, `actions.ts` | Setter `users.profile_completed_at` + navn/nickname/`hcp_index`/gender/level. |
 
 **To mailer per invitasjon:** Resend-notifikasjon (`lib/mail/inviteNotification.ts`) når noen inviterer, så kode-mail når invitéen ber om kode på `/login`.

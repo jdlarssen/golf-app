@@ -129,6 +129,18 @@ export default async function LoginPage({
     );
   }
 
+  // #1346: veien tilbake til steg 1 fra verify-steget. `email` prefyller
+  // feltet, `next` og `invite` overlever turen (invite holder kontekstkortet
+  // #1169 i live). URLSearchParams gjør encodingen — aldri streng-konkatenering,
+  // e-poster kan inneholde `+`.
+  const changeEmailQs = new URLSearchParams();
+  if (email) changeEmailQs.set('email', email);
+  if (next) changeEmailQs.set('next', next);
+  if (invite) changeEmailQs.set('invite', invite);
+  const changeEmailHref = `/login${
+    changeEmailQs.toString() ? `?${changeEmailQs.toString()}` : ''
+  }`;
+
   return (
     <AppShell>
       <div className="mt-10">
@@ -172,7 +184,12 @@ export default async function LoginPage({
               </SmartLink>
             </>
           ) : (
-            <VerifyCodeForm email={email} next={next} invite={invite} />
+            <VerifyCodeForm
+              email={email}
+              next={next}
+              invite={invite}
+              changeEmailHref={changeEmailHref}
+            />
           )}
         </Card>
       </div>
