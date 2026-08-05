@@ -122,17 +122,22 @@ function FormBody({ email }: { email: string }) {
 function ResendFooter() {
   const { pending } = useFormStatus();
   const t = useTranslations('auth.verifyCode');
+  // Prompten står på egen linje over knappen, slik at knappen får full
+  // 44px-høyde (#1349) uten å sprenge linjeboksen i en tekstparagraf.
+  // Samme boks-geometri (44px-linje) som ChangeEmailLink under, men bevisst
+  // ULIK vekt: resend er handlingen (text-primary, #1349), change-email er
+  // dempet utvei (text-muted). Ikke harmoniser fargene.
   return (
-    <p className="text-xs text-muted mt-2">
-      {t('resendPrompt')}{' '}
+    <>
+      <p className="text-xs text-muted">{t('resendPrompt')}</p>
       <button
         type="submit"
         disabled={pending}
-        className="underline text-xs text-muted disabled:opacity-50"
+        className="inline-flex min-h-[44px] items-center justify-center px-3 text-sm font-medium text-primary underline underline-offset-2 disabled:opacity-50"
       >
         {t('resendLink')}
       </button>
-    </p>
+    </>
   );
 }
 
