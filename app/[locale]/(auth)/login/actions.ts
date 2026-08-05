@@ -326,11 +326,19 @@ export async function verifyCode(formData: FormData) {
 
   try {
     const admin = getAdminClient();
+    // #1348: utløpsregelen har to hjem — `email_is_invited`-RPC-en (0100) som
+    // gater sendCode, og dette oppslaget. De MÅ være enige: uten
+    // `expires_at`-filteret her ble en utløpt invitasjon konsumert ved
+    // innlogging (accepted_at flippet, game_players insertet, varsel fyrt),
+    // selv om sendCode-laget regnet den som død. Samme figur som
+    // `lib/auth/getInviteLoginContext.ts`. Kolonnen er NOT NULL, så ingen
+    // null-case å bevare.
     const { data: pendingInvites } = await admin
       .from('invitations')
       .select('id, game_id, invited_by')
       .ilike('email', email)
       .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
       .returns<
         { id: string; game_id: string | null; invited_by: string | null }[]
       >();

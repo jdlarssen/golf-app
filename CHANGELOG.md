@@ -1383,8 +1383,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 12 rettinger</strong></summary>
+<summary><strong>August 2026 · 13 rettinger</strong></summary>
 
+- `1.216.11` · [#1348](https://github.com/jdlarssen/golf-app/issues/1348) — En invitasjon som har gått ut på dato melder deg ikke lenger inn i spillet når du logger inn. Be arrangøren om en ny invitasjon, så er du med igjen.
 - `1.216.10` · [#1347](https://github.com/jdlarssen/golf-app/issues/1347) — Du kan be om fem koder per kvarter i stedet for tre, og må du vente, sier appen nå hvor lenge: ett minutt hvis du var litt kjapp, et kvarter hvis du har bedt om mange på rad.
 - `1.216.8` · [#1454](https://github.com/jdlarssen/golf-app/issues/1454) — Også den åpne cup-siden sier nå «Delt (AS)» — teksten var hardkodet og fulgte ikke med forrige retting.
 - `1.216.7` · [#1447](https://github.com/jdlarssen/golf-app/issues/1447) — Slag-prikkene vises nå også på hemmelig cup-dag — tildelingen er handicap-info, ikke stilling.

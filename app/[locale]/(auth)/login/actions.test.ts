@@ -57,7 +57,16 @@ let pendingInvitations: Array<{
   id: string;
   game_id: string | null;
   invited_by: string | null;
+  /**
+   * #1348: verifyCode filtrerer nå på utløp i selve queryen, så fiksturene må
+   * bære en frist. Alt annet enn de eksplisitt utløpte casene får en frist
+   * langt fram i tid, så eksisterende tester beholder semantikken sin.
+   */
+  expires_at: string;
 }> = [];
+
+/** Frist langt inn i framtida — «denne invitasjonen er fortsatt gyldig». */
+const FUTURE_EXPIRY = '2100-01-01T00:00:00.000Z';
 let adminUserLookup: {
   id: string;
   profile_completed_at?: string | null;
@@ -103,18 +112,31 @@ vi.mock('@/lib/supabase/admin', () => ({
             return makeAdminBuilder();
           },
           // Chainable select brukt av to call-sites:
-          //  - verifyCode pending-pickup: .ilike().is().returns()
+          //  - verifyCode pending-pickup: .ilike().is().gt().returns()
           //      → pendingInvitations
           //  - sendCode #361 expired-invite:
           //      .ilike().is().not().lte().limit().maybeSingle()
           //      → expiredInviteLookup
           select: () => {
             const builder: Record<string, unknown> = {};
+            let expiryCutoff: string | null = null;
             for (const m of ['ilike', 'is', 'not', 'lte', 'limit']) {
               builder[m] = () => builder;
             }
+            // #1348: emulerer PostgREST-filteret verifyCode legger på
+            // (.gt('expires_at', now)) så mock-en returnerer de samme radene
+            // databasen ville gitt. ISO-strenger sammenlignes leksikalsk.
+            builder.gt = (column: string, value: string) => {
+              if (column === 'expires_at') expiryCutoff = value;
+              return builder;
+            };
             builder.returns = async () => ({
-              data: pendingInvitations,
+              data:
+                expiryCutoff === null
+                  ? pendingInvitations
+                  : pendingInvitations.filter(
+                      (inv) => inv.expires_at > expiryCutoff!,
+                    ),
               error: null,
             });
             builder.maybeSingle = async () => ({
@@ -609,8 +631,14 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
         id: 'inv-1',
         game_id: '00000000-0000-0000-0000-0000000000aa',
         invited_by: '00000000-0000-0000-0000-0000000000bb',
+        expires_at: FUTURE_EXPIRY,
       },
-      { id: 'inv-2', game_id: null, invited_by: 'admin-x' },
+      {
+        id: 'inv-2',
+        game_id: null,
+        invited_by: 'admin-x',
+        expires_at: FUTURE_EXPIRY,
+      },
     ];
     adminUserLookup = { id: 'new-user-1' };
 
@@ -651,6 +679,7 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
         id: 'inv-1',
         game_id: '00000000-0000-0000-0000-0000000000aa',
         invited_by: '00000000-0000-0000-0000-0000000000bb',
+        expires_at: FUTURE_EXPIRY,
       },
     ];
     adminUserLookup = {
@@ -676,6 +705,7 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
         id: 'inv-1',
         game_id: '00000000-0000-0000-0000-0000000000aa',
         invited_by: '00000000-0000-0000-0000-0000000000bb',
+        expires_at: FUTURE_EXPIRY,
       },
     ];
     adminUserLookup = {
@@ -701,7 +731,12 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
   it('kun game-løse invitasjoner: ingen insert / notify, login lykkes uansett', async () => {
     verifyOtpMock.mockResolvedValue({ error: null });
     pendingInvitations = [
-      { id: 'inv-friend', game_id: null, invited_by: 'admin-x' },
+      {
+        id: 'inv-friend',
+        game_id: null,
+        invited_by: 'admin-x',
+        expires_at: FUTURE_EXPIRY,
+      },
     ];
     adminUserLookup = { id: 'user-x' };
 
@@ -724,6 +759,7 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
         id: 'inv-1',
         game_id: '00000000-0000-0000-0000-0000000000aa',
         invited_by: '00000000-0000-0000-0000-0000000000bb',
+        expires_at: FUTURE_EXPIRY,
       },
     ];
     adminUserLookup = { id: 'new-user-1' };
@@ -765,6 +801,7 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
         id: 'inv-team-1',
         game_id: '00000000-0000-0000-0000-0000000000aa',
         invited_by: '00000000-0000-0000-0000-0000000000bb',
+        expires_at: FUTURE_EXPIRY,
       },
     ];
     adminUserLookup = {
@@ -796,6 +833,7 @@ describe('verifyCode — #676 both-game email-invite co-player', () => {
         id: 'inv-both-1',
         game_id: '00000000-0000-0000-0000-0000000000cc',
         invited_by: '00000000-0000-0000-0000-0000000000dd',
+        expires_at: FUTURE_EXPIRY,
       },
     ];
     adminUserLookup = {
@@ -836,6 +874,7 @@ describe('verifyCode — #676 both-game email-invite co-player', () => {
         id: 'inv-both-2',
         game_id: '00000000-0000-0000-0000-0000000000cc',
         invited_by: '00000000-0000-0000-0000-0000000000dd',
+        expires_at: FUTURE_EXPIRY,
       },
     ];
     // profile_completed_at is null → incomplete profile.
@@ -861,6 +900,7 @@ describe('verifyCode — #676 both-game email-invite co-player', () => {
         id: 'inv-both-3',
         game_id: '00000000-0000-0000-0000-0000000000cc',
         invited_by: '00000000-0000-0000-0000-0000000000dd',
+        expires_at: FUTURE_EXPIRY,
       },
     ];
     adminUserLookup = { id: 'co-player-3', profile_completed_at: '2026-01-01T00:00:00.000Z' };
@@ -880,5 +920,92 @@ describe('verifyCode — #676 both-game email-invite co-player', () => {
 
     // Explicit next takes precedence — gameDest is not set.
     expect(lastRedirect()).toBe('/signup/xyz98765/team');
+  });
+});
+
+describe('verifyCode — #1348 utløpt invitasjon', () => {
+  const PAST_EXPIRY = '2020-01-01T00:00:00.000Z';
+
+  /** Invitations-update-kall på cookie-klienten = accepted_at-flippen. */
+  function invitationUpdateCalls() {
+    return supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'invitations' && c.method === 'update',
+    );
+  }
+
+  it('utløpt game-scoped invitasjon: ingen accepted_at-flip, ingen game_players-insert, ingen notify, ingen spill-landing', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-expired',
+        game_id: '00000000-0000-0000-0000-0000000000ee',
+        invited_by: '00000000-0000-0000-0000-0000000000ff',
+        expires_at: PAST_EXPIRY,
+      },
+    ];
+    adminUserLookup = { id: 'late-user' };
+    // Ingen kø-elementer: en utløpt invitasjon skal ikke gi noen skriving.
+    supabaseMock = buildSupabaseMock([]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'forsent@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(invitationUpdateCalls()).toHaveLength(0);
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    // Innloggingen lykkes fortsatt — den utløpte invitasjonen gir bare ingen
+    // spill-landing.
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('utløpt + gyldig invitasjon: kun den gyldige konsumeres og styrer redirecten', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-expired',
+        game_id: '00000000-0000-0000-0000-0000000000ee',
+        invited_by: '00000000-0000-0000-0000-0000000000ff',
+        expires_at: PAST_EXPIRY,
+      },
+      {
+        id: 'inv-valid',
+        game_id: '00000000-0000-0000-0000-0000000000aa',
+        invited_by: '00000000-0000-0000-0000-0000000000bb',
+        expires_at: FUTURE_EXPIRY,
+      },
+    ];
+    adminUserLookup = { id: 'mixed-user' };
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'blanding@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Kun den gyldige raden flippes til accepted.
+    expect(invitationUpdateCalls()).toHaveLength(1);
+    expect(
+      supabaseMock.__fromCalls.find(
+        (c) => c.table === 'invitations' && c.method === 'in',
+      )?.args,
+    ).toEqual(['id', ['inv-valid']]);
+
+    expect(adminGamePlayersInsertMock).toHaveBeenCalledTimes(1);
+    expect(adminGamePlayersInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        game_id: '00000000-0000-0000-0000-0000000000aa',
+        user_id: 'mixed-user',
+      }),
+    );
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
+    expect(notifyInvitedToGameMock).toHaveBeenCalledWith({
+      recipientUserId: 'mixed-user',
+      gameId: '00000000-0000-0000-0000-0000000000aa',
+      inviterUserId: '00000000-0000-0000-0000-0000000000bb',
+    });
+    // Én gyldig solo-invitasjon igjen → entydig spill-landing.
+    expect(lastRedirect()).toBe('/games/00000000-0000-0000-0000-0000000000aa');
   });
 });
