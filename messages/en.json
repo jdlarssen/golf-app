@@ -4917,6 +4917,7 @@
     "teamDashPendingApproval": "If you say yes, the organiser will need to approve the team before you're signed up. You'll be notified when it's confirmed.",
     "teamDashInvitedByCaptain": "{captainName} wants you on team {teamName}.",
     "teamDashTeamUnknownBanner": "We couldn't find your team — ask the captain for a team invitation, or register a team of your own.",
+    "teamDashNoCaptainBanner": "The team you were invited to is no longer in this game. Register a team of your own and you're in.",
     "teamDashRegisterOwnTeamButton": "Register your own team",
     "teamDashAttachInstant": "You'll join the game straight away and receive your scorecard when the round starts.",
     "teamDashAttachApproval": "The organiser will need to approve the team before you're signed up. You'll be notified when it's confirmed.",

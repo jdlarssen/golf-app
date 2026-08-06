@@ -170,13 +170,25 @@ export default async function TeamDashboardPage({
       pendingInvitation.invited_by,
     );
     if (picked?.source !== 'invited_by') {
+      // Eierbeslutning på #1343: to stopp-varianter. `picked === null` betyr
+      // at spillet ikke har noen aktiv kaptein i det hele tatt — da finnes
+      // det ingen å spørre om laginvitasjon, og teksten peker rett på eget
+      // lag i stedet.
+      const noCaptain = picked === null;
       return (
         <AppShell>
           <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
           <Card>
-            <div className="space-y-4">
+            <div
+              className="space-y-4"
+              data-testid={
+                noCaptain ? 'team-stop-no-captain' : 'team-stop-unknown-team'
+              }
+            >
               <Banner tone="info">
-                {t('teamDashTeamUnknownBanner')}
+                {noCaptain
+                  ? t('teamDashNoCaptainBanner')
+                  : t('teamDashTeamUnknownBanner')}
               </Banner>
               <LinkButton
                 href={`/signup/${shortId}`}
