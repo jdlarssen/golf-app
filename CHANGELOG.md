@@ -1385,7 +1385,7 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 <details>
 <summary><strong>August 2026 · 12 rettinger</strong></summary>
 
-- `1.216.9` · [#1347](https://github.com/jdlarssen/golf-app/issues/1347) — Må du vente på ny kode, sier appen nå hvor lenge: ett minutt hvis du var litt kjapp, et kvarter hvis du har bedt om mange på rad.
+- `1.216.10` · [#1347](https://github.com/jdlarssen/golf-app/issues/1347) — Du kan be om fem koder per kvarter i stedet for tre, og må du vente, sier appen nå hvor lenge: ett minutt hvis du var litt kjapp, et kvarter hvis du har bedt om mange på rad.
 - `1.216.8` · [#1454](https://github.com/jdlarssen/golf-app/issues/1454) — Også den åpne cup-siden sier nå «Delt (AS)» — teksten var hardkodet og fulgte ikke med forrige retting.
 - `1.216.7` · [#1447](https://github.com/jdlarssen/golf-app/issues/1447) — Slag-prikkene vises nå også på hemmelig cup-dag — tildelingen er handicap-info, ikke stilling.
 - `1.216.6` · [#1457](https://github.com/jdlarssen/golf-app/issues/1457) — Tapper du raskt opp en score mens forrige lagring er underveis, kommer sluttverdien nå alltid fram til serveren — ingen slag forsvinner i farta.

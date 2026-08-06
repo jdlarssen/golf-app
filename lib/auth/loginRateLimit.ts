@@ -32,7 +32,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 export async function consumeLoginRateLimit(opts: {
   email: string;
   ip: string;
-  /** Max sendCode attempts per email per window. Default 3. */
+  /** Max sendCode attempts per email per window. Default 5. */
   emailMax?: number;
   /** Max sendCode attempts per IP per window. Default 10. */
   ipMax?: number;
@@ -42,7 +42,7 @@ export async function consumeLoginRateLimit(opts: {
   const {
     email,
     ip,
-    emailMax = 3,
+    emailMax = 5,
     ipMax = 10,
     windowSeconds = 15 * 60,
   } = opts;
