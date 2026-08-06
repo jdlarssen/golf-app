@@ -4653,8 +4653,9 @@
       "teamStrokesPrefillHint": "Suggested: 60/40 split of playing handicap (60% to the lower one). Overwrite if your team uses a different split.",
       "spillehandicapShort": "CH {n}",
       "hcpIndexShort": "HCP {n}",
-      "swapSinglesButton": "Swap pairing",
-      "singlesReadsFromBestBall": "Reads the best ball scores — no scoring of its own."
+      "pendingBadge": "Awaiting profile",
+      "pendingHelper": "Missing handicap",
+      "draftRestoredHint": "Your choices from last time are back."
     },
     "delete": {
       "brassRibbon": "Confirm deletion",
