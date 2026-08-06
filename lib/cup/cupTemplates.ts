@@ -52,6 +52,23 @@ export const CUP_PRESETS: CupPreset[] = [
     sessions: ['singles_matchplay'],
     minPerTeam: 1,
   },
+  {
+    id: 'splittet-cup-dag',
+    /**
+     * #1441 (D4): denne presetens matcher genereres IKKE via `buildSessions` +
+     * `generateCupPlan` som de tre over. Bunt-strukturen (greensome front9 +
+     * best_ball back9-host + 2 avledede singles back9 per flight, samme fire
+     * fysiske spillere hele runden) har ingen sesjons-på-tvers-av-hele-laget-
+     * form — `generateSplitDayPlan` (cupPairing.ts) bygger den direkte per
+     * flight i stedet. `sessions` her er ren dokumentasjon av hvilke
+     * CupSessionFormat-medlemmer bunten inneholder (best_ball er bevisst
+     * UTELATT — det er ikke medlem av CupSessionFormat, se
+     * `PlannedBundleMatch`-kommentaren i cupPairing.ts for hvorfor). IKKE mat
+     * denne inn i `buildSessions` — den ville produsert en meningsløs plan.
+     */
+    sessions: ['greensome_matchplay', 'singles_matchplay'],
+    minPerTeam: 2,
+  },
 ];
 
 /**
