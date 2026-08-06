@@ -180,3 +180,42 @@ export function splitDayFlightCount(team1Size: number, team2Size: number): numbe
 export function splitDayTotalMatches(team1Size: number, team2Size: number): number {
   return splitDayFlightCount(team1Size, team2Size) * 4;
 }
+
+/**
+ * Minutter mellom hver flights tee-off (#1441 owner-QA-runde, F3d): «første
+ * flight er "cup-start". Så blir alle flightene etter satt til 10 min
+ * etter, om det trengs» — eierbeslutning, ikke en konfigurerbar innstilling.
+ */
+export const FLIGHT_TEE_OFF_STAGGER_MINUTES = 10;
+
+/**
+ * Utleder `games.scheduled_tee_off_at` for ÉN generert match fra wizardens
+ * ene «cup-start»-felt (#1441 owner-QA-runde, F3d).
+ *
+ * `cupStartIso` er flight 1 sin tee-off (ISO, allerede Oslo→UTC-konvertert
+ * av kalleren via `parseOsloDateTimeLocal` — se GenerateMatchesWizard.tsx).
+ * `flightIndex` er `PlannedBundleMatch.flightIndex` for splittet-cup-dagens
+ * bunt-matcher, `undefined` for de tre eldre presetenes `PlannedMatch` (de
+ * har ikke et flight-konsept).
+ *
+ * Tre tilfeller, alle dekket av samme formel:
+ *  - Feltet stod tomt (`cupStartIso` er `undefined`) → `null` — dagens
+ *    oppførsel, organisatoren starter rundene manuelt (uendret for alle
+ *    presetene).
+ *  - Match uten flight (de tre eldre presetene, eller splittet-cup-dagens
+ *    flight 1) → `cupStartIso` uendret — INGEN flight-forsinkelse gjelder
+ *    når det ikke finnes et flight-konsept å forsinke etter, så alle
+ *    matchene i de presetene deler nøyaktig samme tee-off.
+ *  - Match i flight N (N ≥ 2) → `cupStartIso` + `(N-1) × 10 min`. Alle fire
+ *    matchene i én flight (greensome, best_ball, 2× singles) deler
+ *    flightens tid — kalleren sender samme `flightIndex` for alle fire.
+ */
+export function resolveScheduledTeeOffAt(
+  cupStartIso: string | undefined,
+  flightIndex: number | undefined,
+): string | null {
+  if (!cupStartIso) return null;
+  if (!flightIndex || flightIndex <= 1) return cupStartIso;
+  const offsetMs = (flightIndex - 1) * FLIGHT_TEE_OFF_STAGGER_MINUTES * 60 * 1000;
+  return new Date(new Date(cupStartIso).getTime() + offsetMs).toISOString();
+}

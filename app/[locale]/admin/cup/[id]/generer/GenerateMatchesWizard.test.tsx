@@ -135,8 +135,9 @@ describe('GenerateMatchesWizard', () => {
     fireEvent.click(toTeam2[2]);
     fireEvent.click(toTeam2[3]);
 
-    // Steg 2: bane + tee.
+    // Steg 2: bane + tee + (valgfritt) tee-off-felt (#1441 owner-QA, F3d).
     fireEvent.click(screen.getByRole('button', { name: /neste/i }));
+    expect(screen.getByTestId('cup-wizard-teeoff')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/velg bane/i), {
       target: { value: 'course-1' },
     });

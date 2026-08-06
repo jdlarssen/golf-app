@@ -749,6 +749,135 @@ describe('createCupMatchesFromPlan — team_strokes_override-validering (#1441, 
   });
 });
 
+describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 owner-QA, F3d)', () => {
+  const flightGenderRows = [
+    { id: 'p1', gender: 'mens' },
+    { id: 'p2', gender: 'mens' },
+    { id: 'p3', gender: 'mens' },
+    { id: 'p4', gender: 'mens' },
+  ];
+
+  it('satt: kolonnen settes på BÅDE host- og avledet-pass, samme flight deler tidspunkt', async () => {
+    const bundle = generateSplitDayPlan({
+      team1: [
+        { userId: 'p1', name: 'P1', hcpIndex: 5 },
+        { userId: 'p2', name: 'P2', hcpIndex: 10 },
+      ],
+      team2: [
+        { userId: 'p3', name: 'P3', hcpIndex: 6 },
+        { userId: 'p4', name: 'P4', hcpIndex: 11 },
+      ],
+      strategy: 'handicap',
+    });
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin
+      { data: draftCup, error: null }, // tournament gate
+      { data: flightGenderRows, error: null }, // tee_gender roster
+      { data: { id: 'game-greensome' }, error: null }, // pass 1: greensome host
+      { data: null, error: null },
+      { data: { id: 'game-bestball' }, error: null }, // pass 1: best_ball host
+      { data: null, error: null },
+      { data: { id: 'game-singles1' }, error: null }, // pass 2: derived singles 1
+      { data: null, error: null },
+      { data: { id: 'game-singles2' }, error: null }, // pass 2: derived singles 2
+      { data: null, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    await expect(
+      createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: bundle,
+        scheduledTeeOffAt: '2099-06-01T07:00:00.000Z',
+      }),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const rows = supabaseMock.__fromCalls
+      .filter((c) => c.table === 'games' && c.method === 'insert')
+      .map((c) => c.args[0] as Record<string, unknown>);
+    expect(rows).toHaveLength(4); // greensome host + best_ball host + 2 derived singles
+    // Alle fire matchene sitter i flight 1 — cup-starten selv, INGEN
+    // forsinkelse. Selve forskyvnings-matematikken for flight ≥2 er dekket
+    // av lib/cup/splitDayLineup.test.ts (`resolveScheduledTeeOffAt`) — dette
+    // beviset er ren WIRING: begge insert-pass setter kolonnen.
+    for (const row of rows) {
+      expect(row.scheduled_tee_off_at).toBe('2099-06-01T07:00:00.000Z');
+    }
+  });
+
+  it('ikke satt: kolonnen er null på alle innsatte matcher (dagens oppførsel)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      {
+        data: [
+          { id: 'A1', gender: 'mens' },
+          { id: 'A2', gender: 'mens' },
+          { id: 'A3', gender: 'ladies' },
+          { id: 'B1', gender: 'mens' },
+          { id: 'B2', gender: 'mens' },
+          { id: 'B3', gender: 'mens' },
+        ],
+        error: null,
+      },
+      { data: { id: 'game-1' }, error: null },
+      { data: null, error: null },
+      { data: { id: 'game-2' }, error: null },
+      { data: null, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    await expect(createCupMatchesFromPlan(baseInput())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    const rows = supabaseMock.__fromCalls
+      .filter((c) => c.table === 'games' && c.method === 'insert')
+      .map((c) => c.args[0] as Record<string, unknown>);
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.scheduled_tee_off_at).toBeNull();
+    }
+  });
+
+  it('ugyldig dato: invalid_tee_off FØR noe insertes', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    expect(
+      await createCupMatchesFromPlan({
+        ...baseInput(),
+        scheduledTeeOffAt: 'not-a-real-date',
+      }),
+    ).toEqual({ error: 'invalid_tee_off' });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'tournaments'),
+    ).toBe(false);
+  });
+
+  it('dato i fortiden: tee_off_in_past FØR noe insertes', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    expect(
+      await createCupMatchesFromPlan({
+        ...baseInput(),
+        scheduledTeeOffAt: '2020-01-01T10:00:00.000Z',
+      }),
+    ).toEqual({ error: 'tee_off_in_past' });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'tournaments'),
+    ).toBe(false);
+  });
+});
+
 describe('createCupMatchesFromPlan — ugyldig sourceId (#1441, D3)', () => {
   it('sourceId matcher ingen host-match i planen: invalid_source_match FØR noe insertes', async () => {
     supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);

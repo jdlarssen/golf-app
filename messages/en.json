@@ -4591,6 +4591,9 @@
       "step2TeeHeading": "Tee",
       "step2TeeLabel": "Select tee",
       "step2TeePlaceholder": "— select tee —",
+      "step2TeeOffHeading": "Tee-off",
+      "teeOffLabel": "Cup start (optional)",
+      "teeOffHint": "Flight 1 starts at the time you pick, flight 2 ten minutes later, flight 3 twenty — and so on. Leave it blank to start the rounds yourself.",
       "step3FormatHeading": "Format setup",
       "step3StrategyHeading": "Pairing strategy",
       "overCapWarning": "This setup produces {totalMatches} matches. A personal cup allows at most {matchCap}. Choose fewer sessions, or create a club cup for more.",
@@ -4621,7 +4624,9 @@
         "no_matches": "No matches to create.",
         "insert_failed": "Failed to create the matches. Please try again.",
         "too_many_matches": "A personal cup allows at most {max} matches. For more, create a club cup.",
-        "too_many_players": "A personal cup allows at most {max} players. For more, create a club cup."
+        "too_many_players": "A personal cup allows at most {max} players. For more, create a club cup.",
+        "invalid_tee_off": "The tee-off time is invalid.",
+        "tee_off_in_past": "The tee-off time can't be in the past. Pick a time from now on."
       },
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",

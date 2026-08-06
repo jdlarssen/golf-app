@@ -4591,6 +4591,9 @@
       "step2TeeHeading": "Tee",
       "step2TeeLabel": "Velg tee",
       "step2TeePlaceholder": "— velg tee —",
+      "step2TeeOffHeading": "Tee-off",
+      "teeOffLabel": "Cup-start (valgfritt)",
+      "teeOffHint": "Flight 1 starter på valgt tidspunkt, flight 2 ti minutter etter, flight 3 tjue — og så videre. La stå tom for å starte rundene manuelt selv.",
       "step3FormatHeading": "Format-oppsett",
       "step3StrategyHeading": "Paring-strategi",
       "overCapWarning": "Oppsettet gir {totalMatches} matcher. En personlig cup tar maks {matchCap}. Velg færre sesjoner, eller lag en klubb-cup for flere.",
@@ -4621,7 +4624,9 @@
         "no_matches": "Ingen matcher å opprette.",
         "insert_failed": "Klarte ikke å opprette matchene. Prøv igjen.",
         "too_many_matches": "En personlig cup tar maks {max} matcher. Vil du ha flere, lag en klubb-cup.",
-        "too_many_players": "En personlig cup tar maks {max} spillere. Vil du ha flere, lag en klubb-cup."
+        "too_many_players": "En personlig cup tar maks {max} spillere. Vil du ha flere, lag en klubb-cup.",
+        "invalid_tee_off": "Tee-off-tidspunktet er ugyldig.",
+        "tee_off_in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av."
       },
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",
