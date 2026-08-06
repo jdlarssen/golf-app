@@ -25,6 +25,8 @@ import {
 import { pendingApprovalsFor } from '@/lib/games/flightScope';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
+import { isHoleInSegment } from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 
@@ -132,6 +134,7 @@ export default async function ApprovePage({
             gameId={id}
             courseId={game.course_id}
             currentUserId={userId}
+            holeSegment={game.hole_segment}
           />
         </Suspense>
       </div>
@@ -143,10 +146,12 @@ async function PendingApprovals({
   gameId,
   courseId,
   currentUserId,
+  holeSegment,
 }: {
   gameId: string;
   courseId: string;
   currentUserId: string;
+  holeSegment: HoleSegment;
 }) {
   const t = await getTranslations('game.approve');
   const { supabase } = await getApproveContext();
@@ -190,7 +195,12 @@ async function PendingApprovals({
     : { data: [] as ScoreRow[], error: null };
   if (scoresError) throw scoresError;
 
-  const holes = holesRes.data ?? [];
+  // #1441: front9/back9-spill viser kun sitt segments hull i godkjennings-
+  // kortet — ellers ville brutto/hull-tellingen og /18-badgen ta med de 9
+  // hullene som aldri spilles på dette spillet.
+  const holes = (holesRes.data ?? []).filter((h) =>
+    isHoleInSegment(h.hole_number, holeSegment),
+  );
   const scoresByUserHole = new Map<string, Map<number, number | null>>();
   for (const s of scoresData ?? []) {
     let inner = scoresByUserHole.get(s.user_id);
@@ -242,7 +252,7 @@ async function PendingApprovals({
                   {t('brutto')} <span className="score-num">{total}</span> ·{' '}
                   {t('playedHoles')}{' '}
                   <span className="score-num">{played.length}</span>
-                  <span className="inline-num">/18</span>
+                  <span className="inline-num">/{holes.length}</span>
                 </p>
               </div>
             </div>
