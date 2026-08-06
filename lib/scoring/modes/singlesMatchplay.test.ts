@@ -109,6 +109,76 @@ describe('computeMatchResult', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// #1441 — segment-aware totalHoles. computeMatchResult tar en 4. parameter
+// (default 18) slik at 9-hulls-matcher (front9/back9) får riktig «AS»/mat-em/
+// «Nup»-grense i stedet for å alltid regne mot 18.
+// ---------------------------------------------------------------------------
+
+describe('computeMatchResult — totalHoles-parameter (#1441, 9-hulls-scope)', () => {
+  it('default (ingen totalHoles-argument) er uendret 18-hulls-oppførsel', () => {
+    expect(computeMatchResult(2, 18, 0)).toEqual({
+      winner: 'side1',
+      marginUp: 2,
+      decidedAtHole: 18,
+      remainingAtDecision: 0,
+      formatted: '2up',
+    });
+  });
+
+  it('«AS» etter 9 hull spilt med totalHoles=9', () => {
+    const r = computeMatchResult(0, 9, 0, 9);
+    expect(r).toEqual({
+      winner: 'tied',
+      marginUp: 0,
+      decidedAtHole: 9,
+      remainingAtDecision: 0,
+      formatted: 'AS',
+    });
+  });
+
+  it('«2up» som sluttresultat etter 9 hull (avgjort på siste hull, ikke tidligere)', () => {
+    const r = computeMatchResult(2, 9, 0, 9);
+    expect(r).toEqual({
+      winner: 'side1',
+      marginUp: 2,
+      decidedAtHole: 9,
+      remainingAtDecision: 0,
+      formatted: '2up',
+    });
+  });
+
+  it('maks margin over 9 hull er «5&4» (vinner alle 5 første, 4 igjen)', () => {
+    const r = computeMatchResult(5, 5, 4, 9);
+    expect(r).toEqual({
+      winner: 'side1',
+      marginUp: 5,
+      decidedAtHole: 5,
+      remainingAtDecision: 4,
+      formatted: '5&4',
+    });
+  });
+
+  it('mat-em «3&2» over 9 hull (7 spilt, 2 igjen, 3 up)', () => {
+    const r = computeMatchResult(-3, 7, 2, 9);
+    expect(r).toEqual({
+      winner: 'side2',
+      marginUp: 3,
+      decidedAtHole: 7,
+      remainingAtDecision: 2,
+      formatted: '3&2',
+    });
+  });
+
+  it('live midt i en 9-hulls-match (ikke mat-em) → null', () => {
+    expect(computeMatchResult(1, 5, 4, 9)).toBeNull();
+  });
+
+  it('grensetilfelle over 9: |holesUp| === holesRemaining er ikke mat-em', () => {
+    expect(computeMatchResult(2, 7, 2, 9)).toBeNull();
+  });
+});
+
 describe('compute — singles matchplay basis', () => {
   it('side 1 vinner 4&3: leder 4 up etter hull 15, 3 hull igjen', () => {
     // Side 1 vinner 4 hull (1, 2, 3, 4), 11 hull tied. Etter hull 15:
@@ -445,6 +515,192 @@ describe('compute — lukk-ute-form når alle 18 hull er spilt men matchen var a
     expect(r.result!.winner).toBe('side1');
     expect(r.result!.marginUp).toBe(3);
     expect(r.result!.remainingAtDecision).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1441 — segment-aware compute(). ctx.holes er antall hull i scope (front9/
+// back9/full) — compute() skal ikke hardkode 18 noe sted i denne banen.
+// ---------------------------------------------------------------------------
+
+describe('compute — 9-hulls-scope (#1441)', () => {
+  it('«AS» etter 9 hull: hver side vinner like mange, ingen mat-em', () => {
+    // Hull 1-8 delt likt (4-4), hull 9 tied → 4-4-1(tied) = AS.
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 8; h++) {
+      if (h % 2 === 1) {
+        scores.push({ userId: 'a', holeNumber: h, gross: 3 });
+        scores.push({ userId: 'b', holeNumber: h, gross: 4 });
+      } else {
+        scores.push({ userId: 'a', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'b', holeNumber: h, gross: 3 });
+      }
+    }
+    scores.push({ userId: 'a', holeNumber: 9, gross: 4 });
+    scores.push({ userId: 'b', holeNumber: 9, gross: 4 });
+
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: par4Holes(9),
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holesUp).toBe(0);
+    expect(r.holesPlayed).toBe(9);
+    expect(r.holesRemaining).toBe(0);
+    expect(r.result).toEqual({
+      winner: 'tied',
+      marginUp: 0,
+      decidedAtHole: 9,
+      remainingAtDecision: 0,
+      formatted: 'AS',
+    });
+  });
+
+  it('«2up» som sluttresultat etter 9 hull — avgjort på siste hull, ikke tidligere (regresjon: ikke «2&0»)', () => {
+    // Side 1 vinner kun hull 9; hull 1-8 tied. Aldri mat-em underveis
+    // (|holesUp| overstiger aldri holesRemaining før siste hull).
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 9; h++) {
+      if (h === 9) {
+        scores.push({ userId: 'a', holeNumber: h, gross: 3 });
+        scores.push({ userId: 'b', holeNumber: h, gross: 5 });
+      } else {
+        scores.push({ userId: 'a', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'b', holeNumber: h, gross: 4 });
+      }
+    }
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: par4Holes(9),
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(9);
+    expect(r.holesUp).toBe(1);
+    expect(r.result).toEqual({
+      winner: 'side1',
+      marginUp: 1,
+      decidedAtHole: 9,
+      remainingAtDecision: 0,
+      formatted: '1up',
+    });
+  });
+
+  it('«5&4» — maks mat-em-margin over 9 hull: side 1 vinner hull 1-5', () => {
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 5; h++) {
+      scores.push({ userId: 'a', holeNumber: h, gross: 3 });
+      scores.push({ userId: 'b', holeNumber: h, gross: 5 });
+    }
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: par4Holes(9),
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(5);
+    expect(r.holesUp).toBe(5);
+    expect(r.holesRemaining).toBe(4);
+    expect(r.result).toEqual({
+      winner: 'side1',
+      marginUp: 5,
+      decidedAtHole: 5,
+      remainingAtDecision: 4,
+      formatted: '5&4',
+    });
+  });
+
+  it('back9: hull-numre 10-18, men remaining/decided telles på antall spilte hull, ikke hull-nummer', () => {
+    // Kun hull 10-12 (av back9-scopet 10-18) er tastet inn så langt; side 1
+    // vinner alle tre. holesRemaining skal telle "6 hull igjen av scopet"
+    // (9 totalt − 3 spilt), ikke noe avledet fra at hull-nummeret er 12 av 18.
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 10; h <= 12; h++) {
+      scores.push({ userId: 'a', holeNumber: h, gross: 3 });
+      scores.push({ userId: 'b', holeNumber: h, gross: 5 });
+    }
+    const back9Holes: ScoringHole[] = Array.from({ length: 9 }, (_, i) => ({
+      number: i + 10,
+      par: 4,
+      strokeIndex: i + 1,
+    }));
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: back9Holes,
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holes.map((h) => h.holeNumber)).toEqual([10, 11, 12, 13, 14, 15, 16, 17, 18]);
+    expect(r.holesPlayed).toBe(3);
+    expect(r.holesUp).toBe(3);
+    expect(r.holesRemaining).toBe(6);
+    expect(r.result).toBeNull(); // 3 up med 6 igjen — ikke mat-em ennå
+  });
+
+  it('back9 mat-em: side 1 vinner hull 10-14 (5 av 9) → «5&4», ikke forvekslet med hull-nummer 14', () => {
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 10; h <= 14; h++) {
+      scores.push({ userId: 'a', holeNumber: h, gross: 3 });
+      scores.push({ userId: 'b', holeNumber: h, gross: 5 });
+    }
+    const back9Holes: ScoringHole[] = Array.from({ length: 9 }, (_, i) => ({
+      number: i + 10,
+      par: 4,
+      strokeIndex: i + 1,
+    }));
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: back9Holes,
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(5);
+    expect(r.holesRemaining).toBe(4);
+    expect(r.result?.formatted).toBe('5&4');
+    expect(r.result?.decidedAtHole).toBe(5); // antall spilte hull, ikke hull-nummer 14
+  });
+
+  it('score på hull utenfor scope (hull 3 i en back9-match) ignoreres og påvirker ikke resultatet', () => {
+    const back9Holes: ScoringHole[] = Array.from({ length: 9 }, (_, i) => ({
+      number: i + 10,
+      par: 4,
+      strokeIndex: i + 1,
+    }));
+    // Legitime back9-scores: side 1 vinner hull 10, resten tied.
+    const scores: ScoringHoleScore[] = [
+      { userId: 'a', holeNumber: 10, gross: 3 },
+      { userId: 'b', holeNumber: 10, gross: 5 },
+    ];
+    for (let h = 11; h <= 18; h++) {
+      scores.push({ userId: 'a', holeNumber: h, gross: 4 });
+      scores.push({ userId: 'b', holeNumber: h, gross: 4 });
+    }
+    // Fiendtlig/støy-rad på hull 3 — utenfor scope for denne back9-matchen.
+    // Side 2 "vinner" den stort, men den skal ikke telle.
+    scores.push({ userId: 'a', holeNumber: 3, gross: 10 });
+    scores.push({ userId: 'b', holeNumber: 3, gross: 2 });
+
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: back9Holes,
+      scores,
+    });
+    const r = compute(ctx);
+    expect(r.holes).toHaveLength(9); // ikke 10 — hull 3 er ikke en del av result-rekka
+    expect(r.holesPlayed).toBe(9);
+    expect(r.holesUp).toBe(1); // kun hull 10 avgjør — hull 3 uteblir helt
+    expect(r.result?.formatted).toBe('1up');
+  });
+
+  it('emptyShell (feil sider) reflekterer scope-lengden, ikke hardkodet 18: 9 hull inn → holesRemaining=9', () => {
+    const ctx = makeCtx({
+      players: [{ userId: 'a', teamNumber: 1, flightNumber: 1, courseHandicap: 0 }],
+      holes: par4Holes(9),
+      scores: [],
+    });
+    const r = compute(ctx);
+    expect(r.holesRemaining).toBe(9);
   });
 });
 

@@ -27,15 +27,22 @@ import type {
  * to sider. Validatoren i `lib/games/gamePayload.ts` håndhever 2-sider-
  * regelen ved publish, men scoring-laget må fortsatt være trygt for
  * call-sites som leser draft-state eller halvferdige rader.
+ *
+ * `totalHoles` (#1441) er antall hull i scope (`ctx.holes.length` — 18 for
+ * `full`, 9 for `front9`/`back9`) slik at `holesRemaining` er riktig selv i
+ * denne defensive stien. Default 18 for bakoverkompatibilitet.
  */
-function emptyShell(sides: [MatchplaySide, MatchplaySide]): SinglesMatchplayResult {
+function emptyShell(
+  sides: [MatchplaySide, MatchplaySide],
+  totalHoles: number = 18,
+): SinglesMatchplayResult {
   return {
     kind: 'singles_matchplay',
     sides,
     holes: [],
     holesUp: 0,
     holesPlayed: 0,
-    holesRemaining: 18,
+    holesRemaining: totalHoles,
     result: null,
   };
 }
@@ -54,35 +61,41 @@ function placeholderSides(): [MatchplaySide, MatchplaySide] {
 
 /**
  * Avgjør match-resultatet basert på løpende status. Returnerer `null`
- * mens matchen er live (ikke 18 hull spilt og ikke mat-em).
+ * mens matchen er live (ikke alle hull i scope spilt og ikke mat-em).
+ *
+ * `totalHoles` (#1441) er antall hull i scope — 18 for et fullt spill, 9 for
+ * en front9/back9-match (se `holesForSegment`). Default 18 for
+ * bakoverkompatibilitet med eksisterende 3-argument-kall.
  *
  * Regler (golf-standard):
- *  - Mat-em (decided before 18): `|holesUp| > holesRemaining` —
+ *  - Mat-em (decided before scope er ferdig spilt): `|holesUp| > holesRemaining` —
  *    matematisk umulig for tapende side å innhente.
- *    Format: `${marginUp}&${remainingAtDecision}` (f.eks. «3&2»).
- *  - Spilt ferdig 18 hull + holesUp != 0:
+ *    Format: `${marginUp}&${remainingAtDecision}` (f.eks. «3&2», maks «5&4» over 9 hull).
+ *  - Spilt ferdig alle hull i scope + holesUp != 0:
  *    Format: `${marginUp}up` (f.eks. «2up»).
- *  - Spilt ferdig 18 hull + holesUp === 0:
+ *  - Spilt ferdig alle hull i scope + holesUp === 0:
  *    Format: `'AS'` (all square).
  *  - Ellers (live midt i runden): `null`.
  *
- * OBS — lukk-ute etter alle 18 hull (#800): Denne funksjonen kan ikke
+ * OBS — lukk-ute etter alle hull i scope (#800): Denne funksjonen kan ikke
  * rekonstruere mat-em-punktet fra aggregerte verdier alene. `compute()` fangar
  * opp dette hull-for-hull og kaller `computeMatchResult` med verdiane frå da
- * matchen faktisk vart avgjort (ikkje frå dei endelege 18-hols-verdiane).
- * Kall med `holesPlayed < 18` er dermed primærbrukstilfellet for mat-em-banen;
- * holesPlayed=18-grenen returnerer alltid «Nup» eller «AS».
+ * matchen faktisk vart avgjort (ikkje frå dei endelege verdiane etter siste
+ * hull i scope). Kall med `holesPlayed < totalHoles` er dermed
+ * primærbrukstilfellet for mat-em-banen; `holesPlayed === totalHoles`-grenen
+ * returnerer alltid «Nup» eller «AS».
  */
 export function computeMatchResult(
   holesUp: number,
   holesPlayed: number,
   holesRemaining: number,
+  totalHoles: number = 18,
 ): MatchplayMatchResult | null {
   const absUp = Math.abs(holesUp);
 
   // Mat-em: ledende side har flere hull foran enn det er igjen.
-  // Kun relevant hvis matchen ikke allerede er ferdig spilt (holesPlayed < 18).
-  if (holesPlayed < 18 && absUp > holesRemaining) {
+  // Kun relevant hvis matchen ikke allerede er ferdig spilt (holesPlayed < totalHoles).
+  if (holesPlayed < totalHoles && absUp > holesRemaining) {
     const winner: 'side1' | 'side2' = holesUp > 0 ? 'side1' : 'side2';
     return {
       winner,
@@ -93,13 +106,13 @@ export function computeMatchResult(
     };
   }
 
-  // Ferdig spilt 18 hull.
-  if (holesPlayed === 18) {
+  // Ferdig spilt alle hull i scope.
+  if (holesPlayed === totalHoles) {
     if (holesUp === 0) {
       return {
         winner: 'tied',
         marginUp: 0,
-        decidedAtHole: 18,
+        decidedAtHole: totalHoles,
         remainingAtDecision: 0,
         formatted: 'AS',
       };
@@ -108,7 +121,7 @@ export function computeMatchResult(
     return {
       winner,
       marginUp: absUp,
-      decidedAtHole: 18,
+      decidedAtHole: totalHoles,
       remainingAtDecision: 0,
       formatted: `${absUp}up`,
     };
@@ -157,15 +170,15 @@ export interface MatchplayRunningSide {
 
 /**
  * Løpende match-status: hull side1 har foran, hull spilt (= begge har gross),
- * og hull igjen (= 18 − holesPlayed). Identisk semantikk som tilsvarende
- * felter på `SinglesMatchplayResult`.
+ * og hull igjen (= antall hull i `holes` − holesPlayed). Identisk semantikk
+ * som tilsvarende felter på `SinglesMatchplayResult`.
  */
 export interface MatchplayRunningStatus {
   /** side1Wins − side2Wins. Positiv = side1 up, negativ = side2 up, 0 = AS. */
   holesUp: number;
   /** Antall hull der begge sider har gross (inklusiv tied). */
   holesPlayed: number;
-  /** `max(0, 18 − holesPlayed)`. */
+  /** `max(0, holes.length − holesPlayed)` (#1441 — ikke hardkodet 18). */
   holesRemaining: number;
 }
 
@@ -221,7 +234,9 @@ export function computeMatchplayRunningStatus(
   return {
     holesUp: side1Wins - side2Wins,
     holesPlayed,
-    holesRemaining: Math.max(0, 18 - holesPlayed),
+    // #1441: hull-i-scope er `holes.length` (caller segment-filtrerer via
+    // `holesForSegment` før kall) — ikke hardkodet 18.
+    holesRemaining: Math.max(0, holes.length - holesPlayed),
   };
 }
 
@@ -241,7 +256,7 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
 
   // Defensiv fallback: matchplay krever nøyaktig én spiller per side.
   if (side1Players.length !== 1 || side2Players.length !== 1) {
-    return emptyShell(placeholderSides());
+    return emptyShell(placeholderSides(), ctx.holes.length);
   }
 
   const side1Player = side1Players[0];
@@ -263,6 +278,10 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
   ];
 
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
+  // #1441: antall hull i scope. Caller segment-filtrerer ctx.holes (front9/
+  // back9/full) via `holesForSegment` før kall — 18 hull inn er identisk med
+  // dagens oppførsel, 9 hull inn skalerer AS/mat-em/Nup-grensene til scopet.
+  const totalHoles = holesSorted.length;
   const grossByKey = new Map<string, number | null>();
   for (const s of ctx.scores) {
     grossByKey.set(`${s.userId}#${s.holeNumber}`, s.gross);
@@ -273,7 +292,8 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
   let holesPlayed = 0;
   // Snapshot av mat-em-tidspunktet (første hull der |holesUp| > holesRemaining).
   // Fanget hull-for-hull slik at vi kan vise golf-lovlig «X&Y» lukk-ute-form
-  // også når alle 18 hull er tastet inn etter at matchen alt er avgjort (#800).
+  // også når alle hull i scope er tastet inn etter at matchen alt er avgjort
+  // (#800).
   let matEmResult: MatchplayMatchResult | null = null;
 
   const holes: MatchplayHoleRow[] = holesSorted.map((hole) => {
@@ -303,11 +323,14 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
 
     // Oppdager mat-em-punktet ved første hull der |holesUp| > holesRemaining
     // (#800). Lagrer berre det første treffet — seinare hull endrar ikkje
-    // det golf-lovlege lukk-ute-tidspunktet.
-    if (matEmResult === null) {
+    // det golf-lovlege lukk-ute-tidspunktet. Guard `holesPlayed < totalHoles`
+    // (#1441): uten den ville det siste hullet i scope alltid "trigge" som
+    // mat-em (remainingSoFar=0, absUpSoFar>0 for enhver ikke-uavgjort match),
+    // og produsere feil «X&0»-format der golf-standarden er «Xup».
+    if (matEmResult === null && holesPlayed < totalHoles) {
       const holesUpSoFar = side1Wins - side2Wins;
       const absUpSoFar = Math.abs(holesUpSoFar);
-      const remainingSoFar = Math.max(0, 18 - holesPlayed);
+      const remainingSoFar = Math.max(0, totalHoles - holesPlayed);
       if (absUpSoFar > remainingSoFar) {
         const winner: 'side1' | 'side2' = holesUpSoFar > 0 ? 'side1' : 'side2';
         matEmResult = {
@@ -343,15 +366,17 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
   });
 
   const holesUp = side1Wins - side2Wins;
-  // holesRemaining = 18 − holesPlayed: hullene som faktisk kan bidra til
-  // match-utfallet. Hull der bare én side har spilt teller IKKE som spilt
-  // (matchplay krever begge), men de "blokkerer" heller ikke matematisk —
-  // de telles fortsatt som remaining inntil begge har levert.
-  const holesRemaining = Math.max(0, 18 - holesPlayed);
+  // holesRemaining = totalHoles − holesPlayed: hullene som faktisk kan bidra
+  // til match-utfallet. Hull der bare én side har spilt teller IKKE som
+  // spilt (matchplay krever begge), men de "blokkerer" heller ikke
+  // matematisk — de telles fortsatt som remaining inntil begge har levert.
+  const holesRemaining = Math.max(0, totalHoles - holesPlayed);
   // Bruker mat-em-snapshot hvis matchen vart avgjort undervegs — dette sikrar
-  // golf-lovleg «X&Y»-form også når alle 18 hull er tastet inn i etterkant
-  // (#800). Elles: standard computeMatchResult for live / 18-hols-«Nup» / AS.
-  const result = matEmResult ?? computeMatchResult(holesUp, holesPlayed, holesRemaining);
+  // golf-lovleg «X&Y»-form også når alle hull i scope er tastet inn i
+  // etterkant (#800). Elles: standard computeMatchResult for live /
+  // ferdig-scope-«Nup» / AS.
+  const result =
+    matEmResult ?? computeMatchResult(holesUp, holesPlayed, holesRemaining, totalHoles);
 
   return {
     kind: 'singles_matchplay',
