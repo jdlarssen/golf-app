@@ -182,6 +182,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
             courseId={game.course_id}
             layout={layout}
             submittedAt={me.submitted_at}
+            gameFinished={game.status === 'finished'}
             revealState={state}
             myTeeGender={me.tee_gender}
             pointsFn={stablefordPointsFn}
@@ -197,6 +198,7 @@ async function ScorecardTable({
   courseId,
   layout,
   submittedAt,
+  gameFinished,
   revealState: state,
   myTeeGender,
   pointsFn,
@@ -205,6 +207,9 @@ async function ScorecardTable({
   courseId: string;
   layout: ScorecardLayout;
   submittedAt: string | null;
+  /** #1351: entry is closed once the game is finished — the «tilbake til hull N»
+   *  CTA would bounce straight back here via the hole page's finished-redirect. */
+  gameFinished: boolean;
   revealState: RevealState;
   myTeeGender: ScoringGender;
   pointsFn: StablefordPointsFn;
@@ -279,7 +284,7 @@ async function ScorecardTable({
         />
       )}
 
-      {submittedAt ? (
+      {submittedAt || gameFinished ? (
         <LinkButton href={`/games/${gameId}`} full variant="secondary">
           {t('backToGame')}
         </LinkButton>

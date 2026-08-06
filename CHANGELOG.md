@@ -1375,8 +1375,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 2 rettinger</strong></summary>
+<summary><strong>August 2026 · 3 rettinger</strong></summary>
 
+- `1.215.2` · [#1351](https://github.com/jdlarssen/golf-app/issues/1351) — Blir runden avsluttet før du rakk å levere scorekortet, havner du på spillsiden med resultatet i stedet for et hull-skjema der ingenting lar seg taste.
 - `1.215.1` · [#1349](https://github.com/jdlarssen/golf-app/issues/1349) — Knappen for å be om en ny kode er blitt stor nok til å treffe med tommelen — også med hansker — og har fått farge så du ser hvor den er.
 - `1.214.3` · [#1345](https://github.com/jdlarssen/golf-app/issues/1345) — Taster du feil kode, eller ber om en ny litt for kjapt, står du fortsatt på kodesteget med e-posten din i feltet. Invitasjonen du kom fra og siden du var på vei til følger med hele veien.
 </details>
