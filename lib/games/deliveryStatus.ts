@@ -6,8 +6,12 @@
  * status-badgen på spillerstatus-sida og purre-mål-utvelgelsen (kun
  * `ready_not_delivered` purres — de er ferdige men har ikke levert).
  *
- * Appen er 18-hull (`scores.hole_number between 1 and 18`), så «ferdig»
- * betyr 18 hull med registrert slag.
+ * Appen er normalt 18-hull (`scores.hole_number between 1 and 18`), så
+ * «ferdig» betyr som regel 18 hull med registrert slag. #1441 (splittet
+ * cup-dag) introduserte front9/back9-spill som kun spiller 9 av de 18 —
+ * `classifyDeliveryStatus` tar derfor et valgfritt `expectedHoles`
+ * (default `TOTAL_HOLES`) som callers med et segment-spill sender inn via
+ * `holeCountForSegment(game.hole_segment)` (lib/games/holeScope.ts).
  */
 
 export const TOTAL_HOLES = 18;
@@ -26,6 +30,11 @@ export function classifyDeliveryStatus(opts: {
   approvedAt: string | null;
   withdrawnAt: string | null;
   requirePeerApproval: boolean;
+  /**
+   * Antall hull som skal til for «ferdig» (#1441). Default `TOTAL_HOLES`
+   * (18) — segment-spill (front9/back9) sender inn 9.
+   */
+  expectedHoles?: number;
 }): DeliveryStatus {
   const {
     holesFilled,
@@ -33,6 +42,7 @@ export function classifyDeliveryStatus(opts: {
     approvedAt,
     withdrawnAt,
     requirePeerApproval,
+    expectedHoles = TOTAL_HOLES,
   } = opts;
 
   // Trekk har forrang over alt annet — en trukket spiller skal ikke purres
@@ -45,7 +55,7 @@ export function classifyDeliveryStatus(opts: {
   }
 
   // Ikke levert:
-  if (holesFilled >= TOTAL_HOLES) return 'ready_not_delivered';
+  if (holesFilled >= expectedHoles) return 'ready_not_delivered';
   if (holesFilled > 0) return 'playing';
   return 'not_started';
 }

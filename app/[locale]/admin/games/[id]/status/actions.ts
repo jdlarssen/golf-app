@@ -8,7 +8,8 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { sendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
 import { notify } from '@/lib/notifications/notify';
-import { TOTAL_HOLES } from '@/lib/games/deliveryStatus';
+import { holeCountForSegment } from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 
 type PlayerRow = {
   user_id: string;
@@ -41,13 +42,16 @@ export async function remindUnsubmittedPlayers(gameId: string) {
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status')
+    .select('id, name, status, hole_segment')
     .eq('id', gameId)
-    .single<{ id: string; name: string; status: string }>();
+    .single<{ id: string; name: string; status: string; hole_segment: HoleSegment }>();
 
   if (!game || game.status !== 'active') {
     redirect({ href: `${statusPath}?error=not_active`, locale });
   }
+
+  // #1441: front9/back9-spill er «ferdig» ved 9 hull, ikke 18.
+  const expectedHoles = holeCountForSegment(game!.hole_segment);
 
   const [playersRes, scoresRes] = await Promise.all([
     supabase
@@ -77,7 +81,7 @@ export async function remindUnsubmittedPlayers(gameId: string) {
       !p.submitted_at &&
       !p.withdrawn_at &&
       !p.users?.is_guest &&
-      (filledByUser.get(p.user_id) ?? 0) >= TOTAL_HOLES,
+      (filledByUser.get(p.user_id) ?? 0) >= expectedHoles,
   );
 
   await Promise.allSettled(
