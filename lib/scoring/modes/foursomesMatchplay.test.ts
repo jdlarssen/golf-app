@@ -444,6 +444,117 @@ describe('compute — kaptein-valg (lex-min) og deterministisk sortering', () =>
 // Empty-shell defensive returns
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// #1441 — segment-aware compute(). ctx.holes er antall hull i scope (front9/
+// back9/full) — compute() skal ikke hardkode 18 noe sted i denne banen.
+// Foursomes leser kun kaptein-radene (a1 for side 1, b1 for side 2 — begge
+// lex-min av fourSides()), og med CH=0 begge sider er diff=0 → ingen extra
+// strokes uansett allowance_pct, så gross=net direkte.
+// ---------------------------------------------------------------------------
+
+describe('compute — 9-hulls-scope (#1441)', () => {
+  it('«AS» etter 9 hull: 4 hull hver, siste hull tied', () => {
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 4; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 3 });
+      scores.push({ userId: 'b1', holeNumber: h, gross: 5 });
+    }
+    for (let h = 5; h <= 8; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 5 });
+      scores.push({ userId: 'b1', holeNumber: h, gross: 3 });
+    }
+    scores.push({ userId: 'a1', holeNumber: 9, gross: 4 });
+    scores.push({ userId: 'b1', holeNumber: 9, gross: 4 });
+
+    const ctx = makeCtx({ players: fourSides(), holes: par4Holes(9), scores });
+    const r = compute(ctx);
+    expect(r.holesUp).toBe(0);
+    expect(r.holesPlayed).toBe(9);
+    expect(r.holesRemaining).toBe(0);
+    expect(r.result).toEqual({
+      winner: 'tied',
+      marginUp: 0,
+      decidedAtHole: 9,
+      remainingAtDecision: 0,
+      formatted: 'AS',
+    });
+  });
+
+  it('«2up» som sluttresultat etter 9 hull — avgjort på siste hull, ikke tidligere', () => {
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 8; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 4 });
+      scores.push({ userId: 'b1', holeNumber: h, gross: 4 });
+    }
+    scores.push({ userId: 'a1', holeNumber: 9, gross: 3 });
+    scores.push({ userId: 'b1', holeNumber: 9, gross: 5 });
+
+    const ctx = makeCtx({ players: fourSides(), holes: par4Holes(9), scores });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(9);
+    expect(r.holesUp).toBe(1);
+    expect(r.result).toEqual({
+      winner: 'side1',
+      marginUp: 1,
+      decidedAtHole: 9,
+      remainingAtDecision: 0,
+      formatted: '1up',
+    });
+  });
+
+  it('«5&4» — maks mat-em-margin over 9 hull: side 1 vinner hull 1-5', () => {
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 5; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 3 });
+      scores.push({ userId: 'b1', holeNumber: h, gross: 5 });
+    }
+    const ctx = makeCtx({ players: fourSides(), holes: par4Holes(9), scores });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(5);
+    expect(r.holesUp).toBe(5);
+    expect(r.holesRemaining).toBe(4);
+    expect(r.result).toEqual({
+      winner: 'side1',
+      marginUp: 5,
+      decidedAtHole: 5,
+      remainingAtDecision: 4,
+      formatted: '5&4',
+    });
+  });
+
+  it('back9: hull-numre 10-18, men remaining telles på antall spilte hull, ikke hull-nummer', () => {
+    const back9Holes: ScoringHole[] = Array.from({ length: 9 }, (_, i) => ({
+      number: i + 10,
+      par: 4,
+      strokeIndex: i + 1,
+    }));
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 10; h <= 12; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 3 });
+      scores.push({ userId: 'b1', holeNumber: h, gross: 5 });
+    }
+    const ctx = makeCtx({ players: fourSides(), holes: back9Holes, scores });
+    const r = compute(ctx);
+    expect(r.holes.map((h) => h.holeNumber)).toEqual([10, 11, 12, 13, 14, 15, 16, 17, 18]);
+    expect(r.holesPlayed).toBe(3);
+    expect(r.holesUp).toBe(3);
+    expect(r.holesRemaining).toBe(6);
+    expect(r.result).toBeNull();
+  });
+
+  it('emptyShell (feil spiller-fordeling) reflekterer scope-lengden: 9 hull inn → holesRemaining=9', () => {
+    const ctx = makeCtx({
+      players: [
+        { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+      ],
+      holes: par4Holes(9),
+      scores: [],
+    });
+    const r = compute(ctx);
+    expect(r.holesRemaining).toBe(9);
+  });
+});
+
 describe('compute — empty-shell ved feil spiller-fordeling', () => {
   it('0 spillere → empty shell, ingen kast', () => {
     const ctx = makeCtx({
