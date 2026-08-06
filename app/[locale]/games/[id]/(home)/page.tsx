@@ -27,6 +27,7 @@ import { type GameStatus } from '@/lib/games/status';
 import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import { startDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
 import { notifyPlayersGameStarted } from '@/lib/notifications/events';
 import {
   getGameWithPlayers,
@@ -372,6 +373,14 @@ export default async function GameHomePage({
       after(() => {
         revalidateTag(`game-${id}`, { expire: 0 });
       });
+      // #1441 (D3): this visit won the flip → start every derived game too.
+      // Best-effort, see startDerivedGames. In practice cup-generated games
+      // never carry a scheduled_tee_off_at, so this branch doesn't fire for
+      // them today — kept for defensiveness/parity with the other two start
+      // paths (admin button, cron sweep), which both fan out the same way.
+      if (result.started) {
+        await startDerivedGames(getAdminClient(), id);
+      }
       // #502: this visit won the flip → tell the other players the round is
       // live. The visitor is excluded (they're looking at it), withdrawn
       // players too. Inside after() because notify() calls revalidateTag,

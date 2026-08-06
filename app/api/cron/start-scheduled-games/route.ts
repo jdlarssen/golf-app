@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import { startDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
 import { notifyPlayersGameStarted } from '@/lib/notifications/events';
 import {
   isStructuralBlockReason,
@@ -88,6 +89,10 @@ export async function POST(request: NextRequest) {
         // Same invalidation as the other start paths so cached game pages
         // stop serving the pre-flip 'scheduled' snapshot.
         revalidateTag(`game-${game.id}`, 'max');
+
+        // #1441 (D3): this sweep won the flip → start every derived game
+        // too. Best-effort, see startDerivedGames.
+        await startDerivedGames(admin, game.id);
 
         // game_started to every active player — nobody triggered this start,
         // so there's no actor to exclude. Best-effort: a notify failure must

@@ -12,6 +12,7 @@ import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
 import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
 import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
 import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
+import { finishDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
@@ -177,14 +178,18 @@ export async function endGameWithSideWinners(
   }
 
   // Flip game to finished.
+  const endedAt = new Date().toISOString();
   const { error: statusErr } = await supabase
     .from('games')
-    .update({ status: 'finished', ended_at: new Date().toISOString() })
+    .update({ status: 'finished', ended_at: endedAt })
     .eq('id', gameId);
   if (statusErr) {
     console.error('[endGameWithSideWinners] finish status update failed', statusErr);
     redirect({ href: `${detailPath}?error=db_finish`, locale });
   }
+
+  // #1441 (D3): see endGame's identical fan-out for the full rationale.
+  await finishDerivedGames(supabase, gameId, endedAt);
 
   // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
   // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).
