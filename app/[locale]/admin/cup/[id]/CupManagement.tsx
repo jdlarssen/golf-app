@@ -13,6 +13,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
+import { isTeamMatchGameMode } from '@/lib/cup/computeCupLeaderboard';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
 import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
 
@@ -77,14 +78,6 @@ function cupMatchesSummary(
     total: leaderboard.matches.length,
   });
 }
-
-const CUP_MATCH_MODES = new Set([
-  'fourball_matchplay',
-  'foursomes_matchplay',
-  'greensome_matchplay',
-  'chapman_matchplay',
-  'gruesome_matchplay',
-]);
 
 /**
  * Delt cup-styringsflate (#524). Begge ruter (`/admin/cup/[id]` og
@@ -323,7 +316,7 @@ export async function CupManagement({
         ) : (
           <ul className="space-y-2">
             {leaderboard.matches.map((m) => {
-              const isTeamFormat = m.gameMode != null && CUP_MATCH_MODES.has(m.gameMode);
+              const isTeamFormat = isTeamMatchGameMode(m.gameMode);
               const card = (
                 <Card>
                   <div className="flex items-start justify-between gap-3">

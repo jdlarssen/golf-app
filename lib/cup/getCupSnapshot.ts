@@ -369,25 +369,14 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     const team1Label = formatSideLabel(side1Players);
     const team2Label = formatSideLabel(side2Players);
 
-    // Bevart for backward-compat: typesikker fallback hvis future game_mode
-    // skulle vises i en cup. Per d.d. er singles_matchplay, fourball_matchplay,
-    // foursomes_matchplay, greensome_matchplay, chapman_matchplay og
-    // gruesome_matchplay gyldige. `best_ball` (D4-hosten) er bevisst UTENFOR
-    // dette unionet — `CupMatchInput.gameMode` (computeCupLeaderboard, F3a)
-    // har ingen best_ball-medlem (den displayer player-vs-team-stil-valget
-    // for matchplay-formatert resultattekst, ikke best-balls
-    // lagtotal-format) — `undefined` faller UI-en tilbake til singles-stil
-    // rendering (F4s jobb å gi best-ball sin egen visning).
-    const matchGameMode:
-      | 'singles_matchplay'
-      | 'fourball_matchplay'
-      | 'foursomes_matchplay'
-      | 'greensome_matchplay'
-      | 'chapman_matchplay'
-      | 'gruesome_matchplay'
-      | undefined =
+    // Typesikker fallback hvis en future game_mode skulle vises i en cup.
+    // `best_ball` (D4-hostens back9-match) er lag-formatert på lik linje med
+    // fourball/foursomes/greensome/chapman/gruesome — `CupMatchInput.gameMode`
+    // (computeCupLeaderboard) har et eget `best_ball`-medlem, og
+    // `isTeamMatchGameMode` styrer spiller- vs. lag-navn i UI-en (#1441, F5).
+    const matchGameMode: NonNullable<CupMatchInput['gameMode']> =
       game.game_mode === 'best_ball'
-        ? undefined
+        ? 'best_ball'
         : game.game_mode === 'fourball_matchplay'
           ? 'fourball_matchplay'
           : game.game_mode === 'foursomes_matchplay'
