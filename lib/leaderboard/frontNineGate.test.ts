@@ -113,4 +113,24 @@ describe('isFrontNineOpen', () => {
     const scores = scoresFor('solo', FRONT_9);
     expect(isFrontNineOpen({ players: soloTeam, scores })).toBe(true);
   });
+
+  // --- #1441 segment gate (gateHoles override) ---
+
+  it('opens on a custom gateHoles list (e.g. a back9 game, first half 10-14)', () => {
+    const backNineFirstHalf = [10, 11, 12, 13, 14];
+    const scores = [
+      ...scoresFor('p1', backNineFirstHalf),
+      ...scoresFor('p2', backNineFirstHalf),
+    ];
+    expect(
+      isFrontNineOpen({ players: allPlayers, scores, gateHoles: backNineFirstHalf }),
+    ).toBe(true);
+  });
+
+  it('does not open on the default front-9 scores when gateHoles is a back9 list', () => {
+    const scores = [...scoresFor('p1', FRONT_9), ...scoresFor('p2', FRONT_9)];
+    expect(
+      isFrontNineOpen({ players: allPlayers, scores, gateHoles: [10, 11, 12, 13, 14] }),
+    ).toBe(false);
+  });
 });
