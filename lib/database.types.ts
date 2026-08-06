@@ -1,3 +1,6 @@
+// TODO(#1441): games.hole_segment + games.source_game_id are hand-added from
+// migration 0151 (applied to staging only). Re-run `npm run gen:types` after
+// the prod migration lands, which will overwrite this file and this marker.
 export type Json =
   | string
   | number
@@ -676,6 +679,7 @@ export type Database = {
           game_mode: string
           group_id: string | null
           hcp_allowance_pct: number
+          hole_segment: string
           id: string
           league_round_id: string | null
           let_friends_skip_gate: boolean
@@ -695,6 +699,7 @@ export type Database = {
           side_ld_count: number
           side_tournament_enabled: boolean
           signups_closed_at: string | null
+          source_game_id: string | null
           spectate_token: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
@@ -715,6 +720,7 @@ export type Database = {
           game_mode: string
           group_id?: string | null
           hcp_allowance_pct?: number
+          hole_segment?: string
           id?: string
           league_round_id?: string | null
           let_friends_skip_gate?: boolean
@@ -734,6 +740,7 @@ export type Database = {
           side_ld_count?: number
           side_tournament_enabled?: boolean
           signups_closed_at?: string | null
+          source_game_id?: string | null
           spectate_token?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
@@ -754,6 +761,7 @@ export type Database = {
           game_mode?: string
           group_id?: string | null
           hcp_allowance_pct?: number
+          hole_segment?: string
           id?: string
           league_round_id?: string | null
           let_friends_skip_gate?: boolean
@@ -773,6 +781,7 @@ export type Database = {
           side_ld_count?: number
           side_tournament_enabled?: boolean
           signups_closed_at?: string | null
+          source_game_id?: string | null
           spectate_token?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
@@ -821,6 +830,13 @@ export type Database = {
             columns: ["league_round_id"]
             isOneToOne: false
             referencedRelation: "league_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_source_game_id_fkey"
+            columns: ["source_game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
             referencedColumns: ["id"]
           },
           {
