@@ -18,6 +18,16 @@ export type RoundScoreInputs = {
  * viewer's `game_players` row. Returns an entry for every requested id (empty
  * strokes / null handicap when the player has none), so callers can map without
  * null-checking the map.
+ *
+ * #1441: a DERIVED game (e.g. a back9 singles match) has no own scores rows
+ * — without a redirect, its entry would fall back to `strokes: []` and the
+ * row would render brutto/netto as "—" (computeRoundScore's null-safe empty
+ * case, not a crash — but a needlessly blank number when the real strokes
+ * are one query away). Resolves each requested id's `source_game_id` first
+ * and fetches scores from the host instead; `course_handicap` stays scoped
+ * to the requested game's own `game_players` row (netto must use THAT
+ * match's handicap, e.g. a 100%-allowance derived singles match, not the
+ * host's 85%-allowance best-ball handicap).
  */
 export async function getRoundScoresForGames(
   supabase: SupabaseClient<Database>,
@@ -30,12 +40,26 @@ export async function getRoundScoresForGames(
   }
   if (gameIds.length === 0) return result;
 
+  const { data: gamesRows, error: gamesError } = await supabase
+    .from('games')
+    .select('id, source_game_id')
+    .in('id', gameIds);
+  if (gamesError) throw gamesError;
+
+  // requestedId → the game_id scores actually live under (itself, unless derived).
+  const scoresGameIdFor = new Map<string, string>();
+  for (const id of gameIds) scoresGameIdFor.set(id, id);
+  for (const g of gamesRows ?? []) {
+    scoresGameIdFor.set(g.id, g.source_game_id ?? g.id);
+  }
+  const scoresGameIds = [...new Set(scoresGameIdFor.values())];
+
   const [scoresRes, playersRes] = await Promise.all([
     supabase
       .from('scores')
       .select('game_id, strokes')
       .eq('user_id', userId)
-      .in('game_id', gameIds)
+      .in('game_id', scoresGameIds)
       .not('strokes', 'is', null),
     supabase
       .from('game_players')
@@ -51,9 +75,20 @@ export async function getRoundScoresForGames(
     const entry = result.get(p.game_id);
     if (entry) entry.courseHandicap = p.course_handicap;
   }
+
+  // Fan each fetched score row back out to every requested id whose
+  // scores redirect points at that row's game_id (usually just itself).
+  const requestersByScoresGameId = new Map<string, string[]>();
+  for (const [requestedId, redirectId] of scoresGameIdFor) {
+    const arr = requestersByScoresGameId.get(redirectId) ?? [];
+    arr.push(requestedId);
+    requestersByScoresGameId.set(redirectId, arr);
+  }
   for (const s of scoresRes.data ?? []) {
-    const entry = result.get(s.game_id);
-    if (entry) entry.strokes.push(s.strokes);
+    for (const requestedId of requestersByScoresGameId.get(s.game_id) ?? []) {
+      const entry = result.get(requestedId);
+      if (entry) entry.strokes.push(s.strokes);
+    }
   }
   return result;
 }
