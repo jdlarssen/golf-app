@@ -12,7 +12,11 @@ import {
 } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
 import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
-import { derivePointsToWin } from './pointsToWin';
+import {
+  derivePointsToWinWeighted,
+  parseTiePoints,
+  parseWinPoints,
+} from './pointsToWin';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
 import {
@@ -26,8 +30,17 @@ import {
 const NAME_RE = /^.{1,80}$/;
 const TEAM_NAME_RE = /^.{1,40}$/;
 
-// Allowance parsers are consolidated in ./allowance.ts (#809).
+// Allowance parsers er konsolidert i ./allowance.ts (#809).
 // Use parseAllowancePct(raw, ALLOWANCE_DEFAULTS.<format>) at call-sites.
+
+// #1441 (D8) — samme 1/0,5-default som computeCupLeaderboard/pointsToWin.ts
+// faller tilbake til. Egen konstant her av samme grunn de filene er
+// uavhengige: ingen av dem importerer fra hverandre.
+const DEFAULT_WIN_POINTS = 1;
+const DEFAULT_TIE_POINTS = 0.5;
+
+// Weighted-points parsers (win_points > 0, tie_points >= 0) er konsolidert i
+// ./pointsToWin.ts (#1441, D8) — samme mønster som allowance.ts over.
 
 async function loadTournamentParticipantEmails(
   supabase: Awaited<ReturnType<typeof getServerClient>>,
@@ -115,6 +128,10 @@ export async function createTournamentDraft(formData: FormData) {
   const greensomeAllowanceRaw = String(formData.get('greensome_allowance_pct') ?? '');
   const chapmanAllowanceRaw = String(formData.get('chapman_allowance_pct') ?? '');
   const gruesomeAllowanceRaw = String(formData.get('gruesome_allowance_pct') ?? '');
+  // #1441 (D8): valgfrie vektede cup-poeng. Tomt felt (dagens skjema,
+  // ordinære cuper) → utelates fra inserten, DB-default 1/0,5 gjelder.
+  const winPointsRaw = String(formData.get('win_points') ?? '');
+  const tiePointsRaw = String(formData.get('tie_points') ?? '');
 
   if (!NAME_RE.test(name)) redirect(`${errBase}cup_name`);
   if (!TEAM_NAME_RE.test(team1)) redirect(`${errBase}cup_team_1`);
@@ -131,6 +148,11 @@ export async function createTournamentDraft(formData: FormData) {
   if (chapmanAllowance === null) redirect(`${errBase}cup_chapman_allowance`);
   const gruesomeAllowance = parseAllowancePct(gruesomeAllowanceRaw, ALLOWANCE_DEFAULTS.gruesome);
   if (gruesomeAllowance === null) redirect(`${errBase}cup_gruesome_allowance`);
+  // #1441 (D8): win_points > 0, tie_points >= 0 (migrasjon 0153 CHECK-ene).
+  const winPoints = parseWinPoints(winPointsRaw);
+  if (winPoints === null) redirect(`${errBase}cup_win_points`);
+  const tiePoints = parseTiePoints(tiePointsRaw);
+  if (tiePoints === null) redirect(`${errBase}cup_tie_points`);
 
   const supabase = await getServerClient();
   // Klubb-cup: klubb-eier/-admin (eller global admin) oppretter. Personlig
@@ -156,6 +178,10 @@ export async function createTournamentDraft(formData: FormData) {
       gruesome_allowance_pct: gruesomeAllowance as number,
       created_by: userId,
       group_id: groupId,
+      // #1441 (D8): utelates når feltet var tomt — DB-default 1/0,5 (migrasjon
+      // 0153) gjelder da, bit for bit dagens oppførsel for ordinære cuper.
+      ...(winPoints !== undefined ? { win_points: winPoints } : {}),
+      ...(tiePoints !== undefined ? { tie_points: tiePoints } : {}),
     })
     .select('id')
     .single();
@@ -191,20 +217,30 @@ export async function startTournament(formData: FormData) {
     redirect(`${base.path}?error=too_few_matches`);
   }
 
-  // #1142: dette er første punktet der det ekte match-antallet finnes — matcher
-  // genereres i /generer mens status='draft', og start er siste gate før cupen
-  // blir aktiv. Draft-raden bar NULL fram til nå.
-  const pointsToWin = derivePointsToWin(count ?? 0);
-
   const { data: current } = await supabase
     .from('tournaments')
-    .select('id, name, status, team_1_name, team_2_name')
+    .select('id, name, status, team_1_name, team_2_name, win_points, tie_points')
     .eq('id', id)
     .maybeSingle();
   if (!current) redirect(`/admin/cup?error=not_found`);
   if (current.status !== 'draft') {
     redirect(`${base.path}?error=wrong_status`);
   }
+
+  // #1142: dette er første punktet der det ekte match-antallet finnes — matcher
+  // genereres i /generer mens status='draft', og start er siste gate før cupen
+  // blir aktiv. Draft-raden bar NULL fram til nå.
+  //
+  // #1441 (D8): vektbar variant — når cupens win_points/tie_points avviker
+  // fra default 1/0,5, settes points_to_win til NULL i stedet («først til
+  // X»-UI-en skjules; vinneren avgjøres ved finishTournament, som allerede
+  // takler NULL, #1142). Med default-vektene er dette bit for bit
+  // `derivePointsToWin(count)` som før.
+  const pointsToWin = derivePointsToWinWeighted(
+    count ?? 0,
+    (current.win_points as number | null) ?? DEFAULT_WIN_POINTS,
+    (current.tie_points as number | null) ?? DEFAULT_TIE_POINTS,
+  );
 
   // #727: assert the status flip touched a row (bug-prevention #2).
   try {
@@ -241,33 +277,46 @@ export async function startTournament(formData: FormData) {
 
   // Mail går KUN til off-app-deltakere (shouldAlsoSendMail === true). Aktive
   // deltakere ble nettopp varslet in-app og trenger ingen mail.
-  try {
-    const mailRecipients = recipients.filter(
-      (r) => sendMailByUserId.get(r.user_id) === true,
-    );
-    const results = await Promise.allSettled(
-      mailRecipients.map((r) =>
-        sendCupStartedNotification({
-          to: r.email,
-          playerFirstName: r.name?.split(' ')[0] ?? null,
-          tournamentName: current.name,
-          tournamentId: id,
-          team1Name: current.team_1_name,
-          team2Name: current.team_2_name,
-          // Den nettopp utledede verdien — `current` ble lest før update-en og
-          // bærer fortsatt NULL.
-          pointsToWin,
-          locale: r.locale,
-        }),
-      ),
-    );
-    for (const r of results) {
-      if (r.status === 'rejected') {
-        console.error('[cup] cupStartedNotification failed', r.reason);
+  //
+  // #1441 (D8) ASSUMPTION/kjent hull: `cupStartedNotification.ts`s mal-tekst
+  // (messages/*.json, utenfor F3b sitt scope) hardkoder «Først til {points}
+  // poeng vinner» og krever et konkret tall. Med egendefinerte vekter er
+  // `pointsToWin` NULL MED VILJE (D8 — «halvparten av totalen» gir ikke
+  // mening som mål når delt betaler mindre enn seier) — det finnes ingen
+  // ærlig verdi å sende malen i det tilfellet. Off-app-STARTET-mailen hoppes
+  // derfor over for vektede cuper inntil malteksten får en egen variant
+  // (anbefalt egen issue, F5-polish); in-app-varselet over
+  // (`notifyParticipantsCupStarted`) fyrer UENDRET for alle deltakere
+  // uansett — kun off-app-e-posten er berørt.
+  if (pointsToWin !== null) {
+    try {
+      const mailRecipients = recipients.filter(
+        (r) => sendMailByUserId.get(r.user_id) === true,
+      );
+      const results = await Promise.allSettled(
+        mailRecipients.map((r) =>
+          sendCupStartedNotification({
+            to: r.email,
+            playerFirstName: r.name?.split(' ')[0] ?? null,
+            tournamentName: current.name,
+            tournamentId: id,
+            team1Name: current.team_1_name,
+            team2Name: current.team_2_name,
+            // Den nettopp utledede verdien — `current` ble lest før update-en
+            // og bærer fortsatt NULL.
+            pointsToWin,
+            locale: r.locale,
+          }),
+        ),
+      );
+      for (const r of results) {
+        if (r.status === 'rejected') {
+          console.error('[cup] cupStartedNotification failed', r.reason);
+        }
       }
+    } catch (e) {
+      console.error('[cup] startTournament mail-fan-out failed', e);
     }
-  } catch (e) {
-    console.error('[cup] startTournament mail-fan-out failed', e);
   }
 
   revalidateTag(`tournament-${id}`, 'max');
