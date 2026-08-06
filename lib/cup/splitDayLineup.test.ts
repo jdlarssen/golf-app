@@ -6,6 +6,8 @@ import {
   swapFlightPlayer,
   splitDayFlightCount,
   splitDayTotalMatches,
+  resolveScheduledTeeOffAt,
+  FLIGHT_TEE_OFF_STAGGER_MINUTES,
 } from './splitDayLineup';
 
 function team(prefix: string, hcps: number[]): CupPlayer[] {
@@ -175,6 +177,32 @@ describe('swapFlightPlayer', () => {
   it('no-op when the target flight does not exist', () => {
     const plan = twoFlightPlan();
     expect(swapFlightPlayer(plan, 99, 'side1', 0, 'N2')).toEqual(plan);
+  });
+});
+
+describe('resolveScheduledTeeOffAt', () => {
+  const cupStart = '2026-08-15T07:00:00.000Z';
+
+  it('absent cup-start → NULL regardless of flight', () => {
+    expect(resolveScheduledTeeOffAt(undefined, 1)).toBeNull();
+    expect(resolveScheduledTeeOffAt(undefined, 3)).toBeNull();
+    expect(resolveScheduledTeeOffAt(undefined, undefined)).toBeNull();
+  });
+
+  it('no flight concept (three older presets) → shared, unstaggered cup-start', () => {
+    expect(resolveScheduledTeeOffAt(cupStart, undefined)).toBe(cupStart);
+  });
+
+  it.each([
+    [1, cupStart],
+    [2, '2026-08-15T07:10:00.000Z'],
+    [3, '2026-08-15T07:20:00.000Z'],
+  ])('flight %i → %s', (flightIndex, expected) => {
+    expect(resolveScheduledTeeOffAt(cupStart, flightIndex)).toBe(expected);
+  });
+
+  it('stagger constant is 10 minutes (owner decision)', () => {
+    expect(FLIGHT_TEE_OFF_STAGGER_MINUTES).toBe(10);
   });
 });
 

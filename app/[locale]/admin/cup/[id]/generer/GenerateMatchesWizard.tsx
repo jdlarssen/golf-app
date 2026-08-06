@@ -44,6 +44,7 @@ import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
+import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import type { WizardPlayer, WizardCourse, WizardTeeBox } from './GenerateMatches';
 
 // #1441 (F3c): matchen wizarden holder i steg 4 er enten en av de tre eldre
@@ -301,6 +302,8 @@ function Step2Course({
   teeBoxId,
   onCourseChange,
   onTeeChange,
+  teeOffAt,
+  onTeeOffChange,
   t,
 }: {
   courses: WizardCourse[];
@@ -308,6 +311,12 @@ function Step2Course({
   teeBoxId: string;
   onCourseChange: (id: string) => void;
   onTeeChange: (id: string) => void;
+  // #1441 (owner-QA, F3d): «cup-start» — flight 1 sin tee-off. Rå
+  // datetime-local-streng (browser wall-clock-format), tolket som Oslo-tid
+  // og konvertert til ISO av kalleren (`resolveCupStartIso`) først ved
+  // innsending — se `Step2Course`s docstring-kommentar over feltet.
+  teeOffAt: string;
+  onTeeOffChange: (value: string) => void;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
   const selectedCourse = courses.find((c) => c.id === courseId);
@@ -357,6 +366,28 @@ function Step2Course({
           </select>
         </div>
       )}
+
+      {/* #1441 (owner-QA): «det er ingen steder å legge inn tee-off. det
+          mangler i cup-veiviseren.» Ett felt for HELE batchen — kun
+          flight 1 sin (cup-start) tee-off; senere flights forskyves 10 min
+          per flight av `resolveScheduledTeeOffAt` (lib/cup/splitDayLineup.ts)
+          ved innsending. Valgfritt: tom verdi betyr fortsatt dagens
+          oppførsel (organisatoren starter rundene manuelt). */}
+      <div>
+        <SectionHeading>{t('generate.step2TeeOffHeading')}</SectionHeading>
+        <label htmlFor="generer-teeoff" className="block text-sm font-medium text-text mb-1.5">
+          {t('generate.teeOffLabel')}
+        </label>
+        <input
+          id="generer-teeoff"
+          data-testid="cup-wizard-teeoff"
+          type="datetime-local"
+          value={teeOffAt}
+          onChange={(e) => onTeeOffChange(e.target.value)}
+          className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+        />
+        <p className="font-sans text-xs text-muted mt-1.5">{t('generate.teeOffHint')}</p>
+      </div>
     </div>
   );
 }
@@ -789,6 +820,7 @@ function Step4Confirm({
   courses,
   tournamentId,
   bestBallAllowancePct,
+  scheduledTeeOffAt,
   onError,
   t,
 }: {
@@ -801,6 +833,11 @@ function Step4Confirm({
   // fraværet til cupens fourball-allowance (bestBall-gjenbruket, se
   // cupMatchModeConfig sin JSDoc i ./actions.ts).
   bestBallAllowancePct?: number;
+  // #1441 (owner-QA, F3d): cup-start (flight 1 sin tee-off) — ISO, allerede
+  // Oslo→UTC-konvertert (`resolveCupStartIso` i hovedkomponenten). `undefined`
+  // når feltet stod tomt — actions.ts setter da NULL på alle matchene
+  // (dagens oppførsel, uendret).
+  scheduledTeeOffAt?: string;
   onError: (msg: string) => void;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
@@ -826,6 +863,7 @@ function Step4Confirm({
         teeBoxId,
         matches,
         bestBallAllowancePct,
+        scheduledTeeOffAt,
       });
       if (result?.error) {
         const errorMap: Record<string, string> = {
@@ -835,6 +873,8 @@ function Step4Confirm({
           insert_failed: t('generate.errors.insert_failed'),
           too_many_matches: t('generate.errors.too_many_matches', { max: MAX_PERSONAL_CUP_MATCHES }),
           too_many_players: t('generate.errors.too_many_players', { max: MAX_PERSONAL_CUP_PLAYERS }),
+          invalid_tee_off: t('generate.errors.invalid_tee_off'),
+          tee_off_in_past: t('generate.errors.tee_off_in_past'),
         };
         onError(errorMap[result.error] ?? t('generate.errors.insert_failed'));
       }
@@ -1217,6 +1257,11 @@ export function GenerateMatchesWizard({
   // Step 2: course + tee
   const [courseId, setCourseId] = useState('');
   const [teeBoxId, setTeeBoxId] = useState('');
+  // #1441 (owner-QA, F3d): «cup-start» — flight 1 sin tee-off. Rå
+  // datetime-local-verdi (browser wall-clock, ikke ISO ennå); konverteres
+  // til Oslo-ISO av `resolveCupStartIso` først ved innsending. Tom streng =
+  // dagens oppførsel (NULL på alle matcher, organisatoren starter manuelt).
+  const [teeOffAt, setTeeOffAt] = useState('');
 
   // Step 3: preset + strategy
   const [presetId, setPresetId] = useState<string>('klassisk');
@@ -1322,6 +1367,24 @@ export function GenerateMatchesWizard({
       const team2 = effectiveStrokes(raw?.team2, default2);
       return { ...m, teamStrokesOverride: { team1, team2 } };
     });
+  }
+
+  /**
+   * Konverterer «cup-start»-feltet (Step2Course, rå datetime-local wall-
+   * clock) til Oslo-ISO for innsending (#1441 owner-QA, F3d). Tom verdi →
+   * `undefined` (dagens oppførsel: NULL på alle matcher). `parseOsloDateTimeLocal`
+   * kan i teorien kaste på malformed input (samme try/catch-mønster som
+   * opprett-spill-actionen, lib/games/gamePayload.ts) — feltet er valgfritt
+   * her (aldri «publish»-required som der), så en uparsbar verdi faller
+   * bare tilbake til «ikke satt» i stedet for å blokkere veiviseren.
+   */
+  function resolveCupStartIso(): string | undefined {
+    if (!teeOffAt.trim()) return undefined;
+    try {
+      return parseOsloDateTimeLocal(teeOffAt);
+    } catch {
+      return undefined;
+    }
   }
 
   // Validation per step
@@ -1469,6 +1532,8 @@ export function GenerateMatchesWizard({
             teeBoxId={teeBoxId}
             onCourseChange={handleCourseChange}
             onTeeChange={setTeeBoxId}
+            teeOffAt={teeOffAt}
+            onTeeOffChange={setTeeOffAt}
             t={t}
           />
         )}
@@ -1524,6 +1589,7 @@ export function GenerateMatchesWizard({
               courses={courses}
               tournamentId={tournamentId}
               bestBallAllowancePct={isSplitDay ? bestBallAllowancePct : undefined}
+              scheduledTeeOffAt={resolveCupStartIso()}
               t={t}
               onError={setErrorMsg}
             />

@@ -13,6 +13,8 @@ import {
 } from '@/lib/cup/limits';
 import { ALLOWANCE_DEFAULTS } from '@/lib/cup/allowance';
 import { teeGenderOf } from '@/lib/games/teeGender';
+import { isTeeOffInPast } from '@/lib/games/gamePayload';
+import { resolveScheduledTeeOffAt } from '@/lib/cup/splitDayLineup';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import type { CupBundleFormat, PlannedBundleMatch, PlannedMatch } from '@/lib/cup/cupPairing';
 
@@ -147,6 +149,17 @@ export type CupBatchInput = {
    * «ingen bunt i denne batchen, eller organisatoren lot standarden stå».
    */
   bestBallAllowancePct?: number;
+  /**
+   * #1441 (owner-QA, F3d): «det er ingen steder å legge inn tee-off. det
+   * mangler i cup-veiviseren.» Cup-STARTEN — flight 1 sin tee-off, ISO (Oslo→
+   * UTC allerede konvertert av wizarden via `parseOsloDateTimeLocal`).
+   * `resolveScheduledTeeOffAt` (lib/cup/splitDayLineup.ts) sprer den ut per
+   * match: samme tidspunkt for alle matcher i de tre eldre presetene (som
+   * ikke har noe flight-konsept), forskjøvet 10 min per flight for
+   * splittet-cup-dagens bunt. `undefined` = feltet stod tomt → NULL på alle
+   * matchene (dagens oppførsel, organisatoren starter rundene manuelt).
+   */
+  scheduledTeeOffAt?: string;
 };
 
 export type CupBatchError = { error: string };
@@ -172,7 +185,8 @@ function isNonNegativeInteger(n: unknown): n is number {
 export async function createCupMatchesFromPlan(
   input: CupBatchInput,
 ): Promise<CupBatchError> {
-  const { tournamentId, courseId, teeBoxId, matches, bestBallAllowancePct } = input;
+  const { tournamentId, courseId, teeBoxId, matches, bestBallAllowancePct, scheduledTeeOffAt } =
+    input;
 
   const supabase = await getServerClient();
   // #524/#526: klubb-cup styres av klubb-admin (eller global admin); personlig
@@ -206,6 +220,19 @@ export async function createCupMatchesFromPlan(
     (!Number.isInteger(bestBallAllowancePct) || bestBallAllowancePct < 0 || bestBallAllowancePct > 100)
   ) {
     return { error: 'invalid_best_ball_allowance' };
+  }
+
+  // #1441 (owner-QA, F3d): cup-start tee-off — samme «parses + ikke i
+  // fortiden»-kontrakt som opprett-spill-actionen (lib/games/gamePayload.ts),
+  // men her er feltet ALLTID valgfritt (aldri «publish»-required) — en tom
+  // verdi er gyldig og betyr NULL på alle matchene lenger nede.
+  if (scheduledTeeOffAt !== undefined) {
+    if (Number.isNaN(new Date(scheduledTeeOffAt).getTime())) {
+      return { error: 'invalid_tee_off' };
+    }
+    if (isTeeOffInPast(scheduledTeeOffAt)) {
+      return { error: 'tee_off_in_past' };
+    }
   }
 
   // #1441 (D3): to-pass — host-matcher (uten `sourceId`) må finnes i DB før
@@ -381,6 +408,12 @@ export async function createCupMatchesFromPlan(
         ...(bundle ? { score_visibility: 'reveal' } : {}),
         // #1441 (D3): kun avledede matcher peker på en host.
         ...(sourceGameId ? { source_game_id: sourceGameId } : {}),
+        // #1441 (owner-QA, F3d): NULL når cup-start-feltet stod tomt (dagens
+        // oppførsel — organisatoren starter manuelt). Satt på BÅDE host- og
+        // avledede matcher (begge pass) slik at auto-start-maskineriet (E1-
+        // fallback + cron-sweeten) faktisk fyrer for splittet-cup-dagens
+        // bunt — se `resolveScheduledTeeOffAt`s docstring for forskyvningen.
+        scheduled_tee_off_at: resolveScheduledTeeOffAt(scheduledTeeOffAt, match.flightIndex),
       })
       .select('id')
       .single();
