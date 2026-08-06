@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { derivePointsToWin, derivePointsToWinWeighted } from './pointsToWin';
+import {
+  derivePointsToWin,
+  derivePointsToWinWeighted,
+  parseTiePoints,
+  parseWinPoints,
+} from './pointsToWin';
 
 // Type A per docs/test-discipline.md — ren regel-logikk (#1142).
 describe('derivePointsToWin', () => {
@@ -50,5 +55,45 @@ describe('derivePointsToWinWeighted', () => {
 
   it('avvik i KUN tie_points → null', () => {
     expect(derivePointsToWinWeighted(8, 1, 1)).toBeNull();
+  });
+});
+
+// #1441 (D8): form-parsere for createTournamentDraft — F3b sitt ansvar (se
+// derivePointsToWinWeighted-blokkens kommentar over).
+describe('parseWinPoints', () => {
+  it('tomt felt → undefined (DB-default 1 gjelder)', () => {
+    expect(parseWinPoints('')).toBeUndefined();
+    expect(parseWinPoints('   ')).toBeUndefined();
+  });
+
+  it.each([
+    ['5', 5],
+    ['0.5', 0.5],
+    ['1', 1],
+  ])('gyldig verdi %s → %f', (raw, expected) => {
+    expect(parseWinPoints(raw)).toBe(expected);
+  });
+
+  it.each(['0', '-1', 'abc', 'NaN'])('ugyldig verdi %s (win_points må være > 0) → null', (raw) => {
+    expect(parseWinPoints(raw)).toBeNull();
+  });
+});
+
+describe('parseTiePoints', () => {
+  it('tomt felt → undefined (DB-default 0,5 gjelder)', () => {
+    expect(parseTiePoints('')).toBeUndefined();
+    expect(parseTiePoints('   ')).toBeUndefined();
+  });
+
+  it.each([
+    ['0', 0], // delt match kan lovlig gi null poeng — ulikt parseWinPoints
+    ['2', 2],
+    ['0.5', 0.5],
+  ])('gyldig verdi %s → %f', (raw, expected) => {
+    expect(parseTiePoints(raw)).toBe(expected);
+  });
+
+  it.each(['-1', 'abc', 'NaN'])('ugyldig verdi %s (tie_points må være >= 0) → null', (raw) => {
+    expect(parseTiePoints(raw)).toBeNull();
   });
 });
