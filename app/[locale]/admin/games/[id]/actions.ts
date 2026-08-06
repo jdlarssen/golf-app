@@ -22,6 +22,7 @@ import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 import { notify } from '@/lib/notifications/notify';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import {
@@ -285,10 +286,13 @@ export async function endGame(gameId: string, allowMissing = false) {
 
   // Verify game is active. Inkluderer game_mode + mode_config + course_id
   // slik at vi kan bygge mode-aware completion-mail uten å re-fetche game.
+  // #1441: hole_segment også — persistResultSummaries trenger den for at et
+  // segment-HOST-spills (front9/back9) eget resultatsammendrag skal regnes
+  // over de riktige 9 hullene, ikke alle 18.
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, course_id, game_mode, mode_config',
+      'id, name, status, require_peer_approval, course_id, game_mode, mode_config, hole_segment',
     )
     .eq('id', gameId)
     .single<{
@@ -299,6 +303,7 @@ export async function endGame(gameId: string, allowMissing = false) {
       course_id: string;
       game_mode: GameMode;
       mode_config: GameModeConfig;
+      hole_segment: HoleSegment;
     }>();
   if (!game || game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
@@ -366,11 +371,14 @@ export async function endGame(gameId: string, allowMissing = false) {
 
   // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
   // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).
+  // #1441: hole_segment sendes med slik at et segment-HOST-spill (front9/
+  // back9) får sitt eget resultat regnet over sine 9 hull, ikke alle 18.
   await persistResultSummaries({
     id: gameId,
     game_mode: game!.game_mode,
     mode_config: game!.mode_config,
     course_id: game!.course_id,
+    hole_segment: game!.hole_segment,
   });
 
   // #941: fryser WHS score-differensial per spiller. Best-effort — se

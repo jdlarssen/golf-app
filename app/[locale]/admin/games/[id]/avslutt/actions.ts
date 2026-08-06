@@ -17,6 +17,7 @@ import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 import { notifyPlayersGameFinished } from '@/lib/notifications/events';
 
 /**
@@ -64,11 +65,11 @@ export async function endGameWithSideWinners(
 
   // Inkluderer course_id + game_mode + mode_config slik at den mode-aware
   // completion-mail-blasten (via buildGameFinishedRecipients) ikke trenger
-  // en re-fetch av game-raden.
+  // en re-fetch av game-raden. #1441: hole_segment også — se endGame.
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, course_id, game_mode, mode_config',
+      'id, name, status, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, course_id, game_mode, mode_config, hole_segment',
     )
     .eq('id', gameId)
     .single<{
@@ -82,6 +83,7 @@ export async function endGameWithSideWinners(
       course_id: string;
       game_mode: GameMode;
       mode_config: GameModeConfig;
+      hole_segment: HoleSegment;
     }>();
 
   if (!game || game.status !== 'active') {
@@ -193,11 +195,13 @@ export async function endGameWithSideWinners(
 
   // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
   // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).
+  // #1441: hole_segment sendes med, se endGame.
   await persistResultSummaries({
     id: gameId,
     game_mode: game!.game_mode,
     mode_config: game!.mode_config,
     course_id: game!.course_id,
+    hole_segment: game!.hole_segment,
   });
 
   // #941: fryser WHS score-differensial per spiller. Best-effort — se
