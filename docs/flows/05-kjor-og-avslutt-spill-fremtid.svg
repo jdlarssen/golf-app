@@ -80,6 +80,16 @@
   <text x="782" y="530" font-size="12" fill="#6B7770">Epic: «Runden sår den neste»</text>
   <text x="782" y="547" font-size="12" fill="#6B7770">(#1006).</text>
 
+  <!-- split cup-day: blind reveal at organizer-finish (NY #1441) -->
+  <rect x="760" y="566" width="320" height="150" rx="16" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
+  <rect x="782" y="580" width="60" height="20" rx="10" fill="#C9A961"/><text x="812" y="594" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1441</text>
+  <text x="920" y="596" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">Splittet cup-dag</text>
+  <text x="782" y="622" font-size="13" fill="#46604F">✓ Bunten (greensome ute +</text>
+  <text x="782" y="641" font-size="13" fill="#46604F">  best ball inne + 2 avledede</text>
+  <text x="782" y="660" font-size="13" fill="#46604F">  singler) er blind — steg 3</text>
+  <text x="782" y="679" font-size="13" fill="#46604F">  «Avslutt spillet» avslører</text>
+  <text x="782" y="698" font-size="13" fill="#46604F">  vektede poeng + sidepoeng</text>
+
   <!-- player parallel -->
   <text x="120" y="912" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
   <text x="120" y="938" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt» · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>

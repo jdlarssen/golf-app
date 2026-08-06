@@ -34,7 +34,7 @@ Spiller:   [1 Bli bruker] ─► [2 Bli med] ─► [3 Spille en runde]
 - **Flyt 2 — Bli med:** #357 (vedvarende «Finn turneringer»), #367 (tydelig påmeldingsvalg = synlighet), #368 (invite_only-blindvei), #362 (lag-klarhet), #369 ✓ (venner + åpen-for-venner — bygget).
 - **Flyt 3 — Spille en runde:** #360 (peer-godkjenning kan ikke låse seg). #358 (live leaderboard) + #359 (lagret-merke) var **allerede løst** — lukket etter kode-verifisering.
 - **Flyt 4 — Opprett spill:** #373 (antall før format), #374 (best ball uten 8-lås), #371 (peer-godkjenning av som default), #367 (tydelig påmelding), #372 (copy-bug env-var). Parkert større: #22 (alle kan opprette), #366 (bruker-baner). #370 lukket (beholder «kun invitasjon» som default).
-- **Flyt 5 — Kjør og avslutt:** #375 (avslutt-likevel — aldri permanent låst), #376 (auto-varsel når spilleren er ferdig + admin-purring), #377 (avslutnings-varsel via samme in-app-først-logikk, ingen egen avslutningsmail).
+- **Flyt 5 — Kjør og avslutt:** #375 (avslutt-likevel — aldri permanent låst), #376 (auto-varsel når spilleren er ferdig + admin-purring), #377 (avslutnings-varsel via samme in-app-først-logikk, ingen egen avslutningsmail), #1441 ✓ (splittet cup-dag — bunten med greensome/best ball/avledede singler holdes blind til arrangøren avslutter host-spillet, som avslører vektede poeng + sidepoeng).
 - **Flyt 6 — Liga:** #453 ✓ (bygget) — ny sesong-konkurranse over flere runder. Epic [#452](https://github.com/jdlarssen/golf-app/issues/452). Fase 1: frittstående slagspill netto. Fase 2: brutto + sesong-modeller (beste-N, poeng). Fase 3: klubb-liga (#480) + medlemmer melder seg på selv. Flere modi senere. Kun fremtids-diagram (flyten fantes ikke før).
 
 ## Tegn-forklaring
