@@ -20,15 +20,6 @@ const PLAYERS: WizardPlayer[] = [
   { id: 'p4', displayName: 'Ida Dahl', hcpIndex: 24.0 },
 ];
 
-/** Matcher for a singles-pairing `<p>` whose text is split across text nodes
- * and a nested `<span>` («mot») — `getByText`'s default matcher only matches
- * a single node's own text, not text broken up by sibling elements. */
-function singlesRowText(text: string) {
-  return (_: string, element: Element | null) =>
-    element?.tagName.toLowerCase() === 'p' &&
-    (element.textContent ?? '').replace(/\s+/g, ' ').trim() === text;
-}
-
 const COURSES: WizardCourse[] = [
   {
     id: 'course-1',
@@ -116,7 +107,7 @@ describe('GenerateMatchesWizard', () => {
     expect(screen.getByRole('button', { name: /neste/i })).toBeDisabled();
   });
 
-  it('splittet-cup-dag: genererer flight-bunt med lag-slag-felt og singel-bytte (#1441, F3c)', () => {
+  it('splittet-cup-dag: genererer flight-bunt med lag-slag-felt og matchup-rader (#1441, F3e)', () => {
     render(
       <GenerateMatchesWizard
         tournamentId="t-1"
@@ -164,21 +155,27 @@ describe('GenerateMatchesWizard', () => {
     expect(strokesFields).toHaveLength(2);
     expect(strokesFields[0]).toHaveValue(14);
     expect(strokesFields[1]).toHaveValue(15);
-    // Singel-bytte er begrenset til flightens egne fire spillere (én knapp).
-    expect(screen.getByTestId('cup-wizard-swap-singles-1')).toBeInTheDocument();
 
-    // Oppstillings-editoren (#1441 owner-QA): «hvem som skal være i flight»
-    // — fire selects, ett per spiller-slot. Default: Kari/Ola (Ørnen),
-    // Lars/Ida (Falken) → singel 1 er Kari mot Lars, singel 2 Ola mot Ida.
-    expect(screen.getByText(singlesRowText('Kari Nordmann mot Lars Berg'))).toBeInTheDocument();
-    expect(screen.getByText(singlesRowText('Ola Hansen mot Ida Dahl'))).toBeInTheDocument();
+    // Matchup-radene (#1441 owner-QA rebuild, F3e): to rader, fire selects —
+    // venstre kolonne lag 1, høyre lag 2, samme rad = singles-motstandere.
+    // Default: Kari/Ola (Ørnen), Lars/Ida (Falken) → rad 0 Kari mot Lars,
+    // rad 1 Ola mot Ida. Ingen egen «bytt paring»-knapp lenger.
+    expect(screen.queryByTestId('cup-wizard-swap-singles-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('cup-wizard-lineup-1-side1-0')).toHaveValue('p1');
+    expect(screen.getByTestId('cup-wizard-lineup-1-side2-0')).toHaveValue('p3');
+    expect(screen.getByTestId('cup-wizard-lineup-1-side1-1')).toHaveValue('p2');
+    expect(screen.getByTestId('cup-wizard-lineup-1-side2-1')).toHaveValue('p4');
 
-    // Bytt Ørnens slot 0 (Kari) med Ørnens slot 1 (Ola) — samme flight, så
-    // greensome-paret er uendret, men singel-paringen følger spilleren.
+    // Velg Ola (p2, i dag rad 1) i rad 0s lag-1-dropdown — en lagkamerat-bytte
+    // i samme flight, som owner-QA-en ba om: å velge fra den ANDRE raden ER
+    // «bytt paring». Greensome-paret er uendret (samme to spillere), men
+    // singles-paringen følger nå spilleren til sin nye rad.
     fireEvent.change(screen.getByTestId('cup-wizard-lineup-1-side1-0'), {
       target: { value: 'p2' },
     });
-    expect(screen.getByText(singlesRowText('Ola Hansen mot Lars Berg'))).toBeInTheDocument();
-    expect(screen.getByText(singlesRowText('Kari Nordmann mot Ida Dahl'))).toBeInTheDocument();
+    expect(screen.getByTestId('cup-wizard-lineup-1-side1-0')).toHaveValue('p2');
+    expect(screen.getByTestId('cup-wizard-lineup-1-side2-0')).toHaveValue('p3');
+    expect(screen.getByTestId('cup-wizard-lineup-1-side1-1')).toHaveValue('p1');
+    expect(screen.getByTestId('cup-wizard-lineup-1-side2-1')).toHaveValue('p4');
   });
 });
