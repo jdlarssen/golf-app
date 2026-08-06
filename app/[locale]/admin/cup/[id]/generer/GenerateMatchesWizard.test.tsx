@@ -106,4 +106,48 @@ describe('GenerateMatchesWizard', () => {
     expect(screen.getByText(/oppsettet gir 5 matcher/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /neste/i })).toBeDisabled();
   });
+
+  it('splittet-cup-dag: genererer flight-bunt med lag-slag-felt og singel-bytte (#1441, F3c)', () => {
+    render(
+      <GenerateMatchesWizard
+        tournamentId="t-1"
+        team1Name="Ørnen"
+        team2Name="Falken"
+        players={PLAYERS}
+        courses={COURSES}
+      />,
+    );
+
+    // Steg 1: 2 på Ørnen, 2 på Falken.
+    const toTeam1 = screen.getAllByRole('button', { name: 'Ørnen' });
+    fireEvent.click(toTeam1[0]);
+    fireEvent.click(toTeam1[1]);
+    const toTeam2 = screen.getAllByRole('button', { name: 'Falken' });
+    fireEvent.click(toTeam2[2]);
+    fireEvent.click(toTeam2[3]);
+
+    // Steg 2: bane + tee.
+    fireEvent.click(screen.getByRole('button', { name: /neste/i }));
+    fireEvent.change(screen.getByLabelText(/velg bane/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/velg tee/i), {
+      target: { value: 'tee-1' },
+    });
+
+    // Steg 3: velg splittet-cup-dag-presetet.
+    fireEvent.click(screen.getByRole('button', { name: /neste/i }));
+    fireEvent.click(screen.getByTestId('cup-wizard-preset-splittet-cup-dag'));
+    expect(screen.getByTestId('cup-wizard-splitday-setup')).toBeInTheDocument();
+    expect(screen.getByLabelText(/handicap best ball/i)).toHaveValue(85);
+
+    // Steg 4: bunt-preview — én flight (4 matcher: greensome + best ball + 2 singler).
+    fireEvent.click(screen.getByRole('button', { name: /neste/i }));
+    expect(screen.getByTestId('cup-wizard-step4-bundle')).toBeInTheDocument();
+    expect(screen.getByText(/flight 1/i)).toBeInTheDocument();
+    // Greensomens manuelle lag-slag-felt, ett per lag.
+    expect(screen.getAllByLabelText(/slag lag/i)).toHaveLength(2);
+    // Singel-bytte er begrenset til flightens egne fire spillere (én knapp).
+    expect(screen.getByTestId('cup-wizard-swap-singles-1')).toBeInTheDocument();
+  });
 });
