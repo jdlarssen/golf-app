@@ -6,6 +6,7 @@ import { formatRevealName } from '@/lib/names/formatRevealName';
 import { getGameWithPlayers } from './getGameWithPlayers';
 import { buildRoundReportFacts } from './roundReportFacts';
 import { buildRoundReportPrompt, sanitizeRoundReport } from './roundReportPrompt';
+import { holeCountForSegment, isHoleInSegment } from './holeScope';
 
 const MODEL = 'claude-sonnet-5';
 const MAX_TOKENS = 800;
@@ -80,6 +81,16 @@ export async function generateAndPersistRoundReport(
     }
     const { game, players } = gwp;
 
+    // #1441 (D3): a derived game (e.g. a back9 singles match) is never its
+    // own report subject — the AI referat is generated for the HOST only
+    // (endGame/endGameWithSideWinners call this with the host's id; the
+    // derived-game fan-out in finishDerivedGames deliberately does not call
+    // this at all). Guard defensively in case some future call-site ever
+    // passes a derived game's id directly.
+    if (game.source_game_id) {
+      return { status: 'skipped', report: null };
+    }
+
     const admin = getAdminClient();
 
     const result = await buildModeResultForGame(admin, {
@@ -87,6 +98,7 @@ export async function generateAndPersistRoundReport(
       game_mode: game.game_mode,
       mode_config: game.mode_config,
       course_id: game.course_id,
+      hole_segment: game.hole_segment,
     });
     if (result === null) return { status: 'skipped', report: null };
 
@@ -100,10 +112,22 @@ export async function generateAndPersistRoundReport(
 
     const [courseRes, holesRes] = await Promise.all([
       admin.from('courses').select('name').eq('id', game.course_id).single<{ name: string }>(),
-      admin.from('course_holes').select('par_mens').eq('course_id', game.course_id).returns<{ par_mens: number }[]>(),
+      admin
+        .from('course_holes')
+        .select('hole_number, par_mens')
+        .eq('course_id', game.course_id)
+        .returns<{ hole_number: number; par_mens: number }[]>(),
     ]);
     const courseName = courseRes.data?.name ?? null;
-    const coursePar = holesRes.data ? holesRes.data.reduce((sum, h) => sum + h.par_mens, 0) : null;
+    // #1441: sum only the holes in the game's segment — a segment host's
+    // coursePar should read as ~36 (its own 9 holes), not the full 72.
+    const scopedHoles = (holesRes.data ?? []).filter((h) =>
+      isHoleInSegment(h.hole_number, game.hole_segment),
+    );
+    const coursePar =
+      scopedHoles.length > 0
+        ? scopedHoles.reduce((sum, h) => sum + h.par_mens, 0)
+        : null;
 
     const gameMetaRes = await admin
       .from('games')
@@ -120,6 +144,7 @@ export async function generateAndPersistRoundReport(
       endedAt,
       gameMode: game.game_mode,
       coursePar,
+      totalHoles: holeCountForSegment(game.hole_segment),
     });
 
     if (facts.scoredHoles < MIN_SCORED_HOLES) return { status: 'skipped', report: null };

@@ -113,6 +113,17 @@ export type BuildRoundReportFactsOpts = {
   endedAt: string | null;
   gameMode: GameMode;
   coursePar: number | null;
+  /**
+   * #1441: holes in scope for this game — drives the matchplay band's
+   * "went the distance" check (`decidedAtHole === totalHoles` reads as no
+   * mat-em finish). Optional, defaulting to 18 for callers that omit it
+   * (byte-identical to pre-#1441 behavior — every existing caller/fixture
+   * is a full 18-hole game). Deliberately NOT derived from
+   * `result.holes.length`: real ModeResult output always has one row per
+   * hole-in-scope, but hand-built test fixtures don't always populate the
+   * full array, so relying on it would make facts silently wrong.
+   */
+  totalHoles?: number;
 };
 
 const PLAYER_FALLBACK = 'Ukjent spiller';
@@ -125,6 +136,7 @@ export function buildRoundReportFacts(
   opts: BuildRoundReportFactsOpts,
 ): RoundReportFacts {
   const { result, nameByUserId, gameName, courseName, endedAt, gameMode, coursePar } = opts;
+  const totalHoles = opts.totalHoles ?? 18;
 
   const card = buildShareCardData({
     result,
@@ -153,7 +165,7 @@ export function buildRoundReportFacts(
   };
 
   if (card.band === 'matchplay') {
-    facts.matchplay = buildMatchplayFacts(result, nameByUserId);
+    facts.matchplay = buildMatchplayFacts(result, nameByUserId, totalHoles);
   } else if (card.band === 'skins' && result.kind === 'skins') {
     facts.skins = buildSkinsFacts(result, nameByUserId);
   } else if (card.band === 'placement') {
@@ -300,6 +312,7 @@ function countScoredHolesAcrossTeams<T extends { holeNumber: number }>(
 function buildMatchplayFacts(
   result: ModeResult,
   nameByUserId: Map<string, string>,
+  totalHoles: number,
 ): RoundReportMatchplayFacts {
   if (
     result.kind !== 'singles_matchplay' &&
@@ -322,11 +335,16 @@ function buildMatchplayFacts(
   const running = runningMatchStatus(holeResults).filter((v): v is number => v !== null);
   const { leadChanges, biggestLeadSide1, biggestLeadSide2 } = computeMomentum(running);
 
+  // #1441: compare against holes-in-scope (passed in by the caller, default
+  // 18), not a hardcoded 18. Without this, a front9/back9 match that goes
+  // the distance (decidedAtHole === totalHoles === 9) would read `9 < 18`
+  // as true and wrongly report a mat-em finish instead of "gikk hele veien".
   return {
     undecided: false,
     winnerName,
     margin: result.result.formatted,
-    decidedAtHole: result.result.decidedAtHole < 18 ? result.result.decidedAtHole : null,
+    decidedAtHole:
+      result.result.decidedAtHole < totalHoles ? result.result.decidedAtHole : null,
     leadChanges,
     biggestLeadSide1,
     biggestLeadSide2,
