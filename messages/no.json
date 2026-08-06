@@ -4658,6 +4658,37 @@
     "public": {
       "matchesSummary": "{finished} av {total} matcher spilt",
       "noMatches": "Ingen matcher er opprettet ennå."
+    },
+    "sideAwards": {
+      "heading": "Closest & longest",
+      "hint": "Sidepoeng for nærmest hullet / lengst drive. Poenget legges på vinnerens lag i cup-totalen når du registrerer vinneren etter runden.",
+      "empty": "Ingen sidepoeng lagt til ennå.",
+      "kindCtp": "Nærmest hullet",
+      "kindLd": "Lengst drive",
+      "kindLabel": "Type",
+      "holeLabel": "Hull",
+      "holeShort": "hull {n}",
+      "pointsLabel": "Poeng",
+      "removeRow": "Fjern raden",
+      "addRow": "+ Legg til sidepoeng",
+      "saveButton": "Lagre sidepoeng",
+      "savingPending": "Lagrer …",
+      "saved": "Sidepoengene er lagret.",
+      "winnersHeading": "Etter runden",
+      "winnerLabel": "Vinner",
+      "winnerPlaceholder": "— velg vinner —",
+      "registerButton": "Registrer",
+      "registeringPending": "Lagrer …",
+      "registered": "Vinneren er registrert.",
+      "errors": {
+        "invalid": "Sjekk type, hull (1–18) og poeng (over 0) på alle rader.",
+        "duplicate": "Du kan ikke ha to rader med samme type og hull.",
+        "notFound": "Fant ikke cupen.",
+        "cupFinished": "Cupen er avsluttet — sidepoeng kan ikke endres lenger.",
+        "winnersRegistered": "Du har allerede registrert en vinner. Sidepoengene kan ikke redigeres etter det.",
+        "notParticipant": "Spilleren er ikke med i cupens spillerliste.",
+        "saveFailed": "Klarte ikke å lagre. Prøv igjen om litt."
+      }
     }
   },
   "klubbhuset": {

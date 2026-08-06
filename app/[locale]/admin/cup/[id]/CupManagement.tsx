@@ -14,6 +14,7 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
+import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
 
 export type CupManagementVariant = 'admin' | 'club';
 
@@ -102,6 +103,19 @@ export async function CupManagement({
   function preferredName(p: CupRosterPlayer): string {
     return p.nickname?.trim() || p.name?.trim() || t('manage.unknownPlayer');
   }
+
+  // #1441 (D9): vinner-dropdownen i SideAwardsPanel trenger navn merket med
+  // lag, så arrangøren ser hvem som er hvem uten å bla mellom seksjonene.
+  const rosterOptions: SideAwardRosterOption[] = [
+    ...roster.team1.map((p) => ({
+      userId: p.userId,
+      label: `${preferredName(p)} (${tournament.team_1_name})`,
+    })),
+    ...roster.team2.map((p) => ({
+      userId: p.userId,
+      label: `${preferredName(p)} (${tournament.team_2_name})`,
+    })),
+  ];
 
   const Shell = isClub ? AppShell : AdminShell;
   const backHref = isClub && groupId ? `/klubber/${groupId}` : '/admin/cup';
@@ -232,6 +246,19 @@ export async function CupManagement({
           </Card>
         </div>
       </section>
+
+      {/* Sidepoeng: closest/longest-oppsett + vinner-registrering (#1441, D9) */}
+      <SideAwardsPanel
+        tournamentId={tournamentId}
+        initialAwards={snapshot.sideAwards}
+        rosterOptions={rosterOptions}
+        configEditable={
+          tournament.status === 'draft' ||
+          (tournament.status === 'active' &&
+            !snapshot.sideAwards.some((a) => a.winnerUserId !== null))
+        }
+        showWinnerRegistration={tournament.status === 'active' || tournament.status === 'finished'}
+      />
 
       {/* Matches-liste */}
       <section className="mb-5">
