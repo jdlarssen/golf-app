@@ -18,14 +18,31 @@ import { getRoleContext } from '@/lib/admin/auth';
 import { MAX_PERSONAL_CUP_MATCHES } from '@/lib/cup/limits';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
 
+// #1441 (F3c): rating-feltene under (slope/course_rating/par_total × mens/
+// ladies/juniors) er kun brukt av splittet-cup-dag-bunten, for å vise hver
+// spillers spillehandicap som regnehjelp ved greensomens manuelle lag-slag
+// (D10). Optional i WizardTeeBox (ikke required) — de tre eldre presetene
+// bryr seg ikke, og eksisterende test-fixtures (GenerateMatchesWizard.test)
+// bygger `{id, name}` uten dem.
+type TeeBoxRow = {
+  id: string;
+  name: string;
+  archived_at: string | null;
+  slope_mens: number | null;
+  course_rating_mens: number | null;
+  par_total_mens: number | null;
+  slope_ladies: number | null;
+  course_rating_ladies: number | null;
+  par_total_ladies: number | null;
+  slope_juniors: number | null;
+  course_rating_juniors: number | null;
+  par_total_juniors: number | null;
+};
+
 type CourseRow = {
   id: string;
   name: string;
-  tee_boxes: {
-    id: string;
-    name: string;
-    archived_at: string | null;
-  }[];
+  tee_boxes: TeeBoxRow[];
 };
 
 type UserRow = {
@@ -34,17 +51,30 @@ type UserRow = {
   nickname: string | null;
   hcp_index: number | string;
   profile_completed_at: string | null;
+  gender: 'mens' | 'ladies' | null;
 };
 
 export type WizardPlayer = {
   id: string;
   displayName: string;
   hcpIndex: number;
+  // #1441 (F3c) — se TeeBoxRow-kommentaren over. Optional: kun satt når
+  // kilde-queriet valgte kolonnen (alle tre spiller-kilder gjør det nå).
+  gender?: 'mens' | 'ladies' | null;
 };
 
 export type WizardTeeBox = {
   id: string;
   name: string;
+  slope_mens?: number | null;
+  course_rating_mens?: number | null;
+  par_total_mens?: number | null;
+  slope_ladies?: number | null;
+  course_rating_ladies?: number | null;
+  par_total_ladies?: number | null;
+  slope_juniors?: number | null;
+  course_rating_juniors?: number | null;
+  par_total_juniors?: number | null;
 };
 
 export type WizardCourse = {
@@ -99,7 +129,9 @@ export async function GenerateMatches({
 
   const coursesResult = await supabase
     .from('courses')
-    .select('id, name, tee_boxes(id, name, archived_at)')
+    .select(
+      'id, name, tee_boxes(id, name, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+    )
     .order('name', { ascending: true })
     .returns<CourseRow[]>();
   if (coursesResult.error) throw coursesResult.error;
@@ -110,7 +142,19 @@ export async function GenerateMatches({
       name: c.name,
       teeBoxes: (c.tee_boxes ?? [])
         .filter((t) => t.archived_at === null)
-        .map((t) => ({ id: t.id, name: t.name }))
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          slope_mens: t.slope_mens,
+          course_rating_mens: t.course_rating_mens,
+          par_total_mens: t.par_total_mens,
+          slope_ladies: t.slope_ladies,
+          course_rating_ladies: t.course_rating_ladies,
+          par_total_ladies: t.par_total_ladies,
+          slope_juniors: t.slope_juniors,
+          course_rating_juniors: t.course_rating_juniors,
+          par_total_juniors: t.par_total_juniors,
+        }))
         .sort((a, b) => a.name.localeCompare(b.name, 'no')),
     }))
     .filter((c) => c.teeBoxes.length > 0);
@@ -126,13 +170,14 @@ export async function GenerateMatches({
         id: m.id,
         displayName: m.nickname?.trim() || m.name?.trim() || 'Ukjent spiller',
         hcpIndex: m.hcp_index,
+        gender: m.gender,
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName, 'no'));
   } else if (isAdmin) {
     // Personlig cup, global admin → alle profil-fullførte brukere.
     const usersResult = await supabase
       .from('users')
-      .select('id, name, nickname, hcp_index, profile_completed_at')
+      .select('id, name, nickname, hcp_index, profile_completed_at, gender')
       .order('name', { ascending: true, nullsFirst: true })
       .returns<UserRow[]>();
     if (usersResult.error) throw usersResult.error;
@@ -142,6 +187,7 @@ export async function GenerateMatches({
         id: u.id,
         displayName: u.nickname?.trim() || u.name?.trim() || 'Ukjent spiller',
         hcpIndex: Number(u.hcp_index),
+        gender: u.gender,
       }));
   } else {
     // Personlig cup, vanlig skaper → skaperens venner + skaperen selv (#464).
@@ -151,7 +197,7 @@ export async function GenerateMatches({
       getFriendPlayerOptions(userId),
       supabase
         .from('users')
-        .select('id, name, nickname, hcp_index, profile_completed_at')
+        .select('id, name, nickname, hcp_index, profile_completed_at, gender')
         .eq('id', userId)
         .maybeSingle<UserRow>(),
     ]);
@@ -163,6 +209,7 @@ export async function GenerateMatches({
         displayName:
           self.nickname?.trim() || self.name?.trim() || 'Ukjent spiller',
         hcpIndex: Number(self.hcp_index),
+        gender: self.gender,
       });
     }
     for (const f of friends) {
@@ -171,6 +218,7 @@ export async function GenerateMatches({
         id: f.id,
         displayName: f.nickname?.trim() || f.name?.trim() || 'Ukjent spiller',
         hcpIndex: f.hcp_index,
+        gender: f.gender,
       });
     }
     players = [...byId.values()].sort((a, b) =>
