@@ -222,6 +222,19 @@ export interface HoleClientProps {
    * Kun satt når gameMode === 'round_robin'.
    */
   roundRobinPlayers?: RoundRobinConstellationPlayer[];
+  /**
+   * #1441 (owner-QA finding B): server-resolved bridge to the OTHER half of
+   * a split-day cup round (front9 ⇄ back9), only ever set at the segment's
+   * boundary hole (front9's hole 9, back9's hole 10) — see
+   * `findSegmentSibling`. Null everywhere else, including 'full'-segment
+   * games. Renders a secondary link below the primary CTA; never replaces
+   * this game's own submit/completeness flow.
+   */
+  segmentSibling?: {
+    gameId: string;
+    holeNumber: number;
+    gameMode: GameMode;
+  } | null;
   players: ClientPlayer[];
 }
 
@@ -280,6 +293,20 @@ const titleStyle: CSSProperties = {
   margin: '0 auto',
 };
 
+// #1441 (owner-QA finding B): subtle secondary link below the primary CTA —
+// never competing with the submit flow's primary-colored button above it.
+const segmentBridgeLinkStyle: CSSProperties = {
+  display: 'block',
+  textAlign: 'center',
+  marginTop: -6,
+  marginBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: 'var(--primary)',
+  textDecoration: 'none',
+};
+
 const listStyle: CSSProperties = {
   padding: 14,
   display: 'flex',
@@ -292,6 +319,7 @@ const listStyle: CSSProperties = {
 export function HoleClient(props: HoleClientProps): JSX.Element {
   const locale = useLocale();
   const t = useTranslations('holes');
+  const tModes = useTranslations('modes');
   const {
     gameId,
     gameName,
@@ -320,6 +348,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     skinsCarriedIn,
     bingoBangoBongoHoles: bingoBangoBongoHolesInitial,
     roundRobinPlayers,
+    segmentSibling = null,
     players,
   } = props;
 
@@ -1137,6 +1166,32 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         href={bottomHref}
         disabled={bottomDisabled}
       />
+
+      {/* #1441 (owner-QA finding B): seamless bridge to the OTHER half of a
+          split-day cup round. Only ever set at the segment's boundary hole
+          (server-resolved — see `findSegmentSibling`). Purely additive
+          navigation: this game's own submit/completeness CTA above is
+          unchanged either way. */}
+      {segmentSibling && (
+        <SmartLink
+          href={`/games/${segmentSibling.gameId}/holes/${segmentSibling.holeNumber}`}
+          style={segmentBridgeLinkStyle}
+        >
+          {holeSegment === 'front9'
+            ? t('entry.continueToSibling', {
+                hole: segmentSibling.holeNumber,
+                format: tModes(
+                  segmentSibling.gameMode as Parameters<typeof tModes>[0],
+                ),
+              })
+            : t('entry.backToSibling', {
+                hole: segmentSibling.holeNumber,
+                format: tModes(
+                  segmentSibling.gameMode as Parameters<typeof tModes>[0],
+                ),
+              })}
+        </SmartLink>
+      )}
 
       <SpecificValueSheet
         open={valueSheetFor !== null}

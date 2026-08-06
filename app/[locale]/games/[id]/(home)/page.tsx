@@ -1021,6 +1021,7 @@ export default async function GameHomePage({
                   approvedAt={me.approved_at}
                   requirePeerApproval={game.require_peer_approval}
                   holeSegment={game.hole_segment}
+                  tournamentId={game.tournament_id}
                 />
               </Suspense>
             )}
