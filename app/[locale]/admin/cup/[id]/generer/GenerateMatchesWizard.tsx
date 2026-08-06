@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -163,6 +163,91 @@ type WizardProps = {
 };
 
 type Step = 1 | 2 | 3 | 4;
+
+// ─── Wizard draft persistence (localStorage) ───────────────────────────────────
+//
+// #1441 (owner-QA, F3g): «arrangøren skal ha mulighet til å sette opp cupen
+// uten å legge til alle til hvert sitt lag … Så alt annet er satt opp utenom
+// fordelingen av spillerne.» Persisterer wizardens IKKE-roster-valg
+// (bane/tee/preset/strategi/best-ball-andel/tee-off/lag-slag) per cup-id, så
+// organisatoren kan fylle dem ut tidlig og komme tilbake senere for KUN å
+// fordele spillere. Roster (steg 1, `assignments`) er BEVISST utelatt —
+// spillerlisten kommer fra live data hver gang, en gammel lagring ville vist
+// et utdatert bilde av hvem som faktisk er tilgjengelig.
+//
+// `localStorage`, ikke serverside — ingen ny DB-kolonne, og valgene er rene
+// UI-bekvemmeligheter (organisatoren kan alltids taste dem på nytt). Nøkkelen
+// er scoped på `tournamentId` slik at ulike cuper ikke lekker inn i hverandre.
+
+type CupWizardDraft = {
+  courseId: string;
+  teeBoxId: string;
+  teeOffAt: string;
+  presetId: string;
+  customSessions: CustomSession[];
+  strategy: PairingStrategy;
+  bestBallAllowancePct: number;
+  teamStrokesInputs: Record<string, { team1?: string; team2?: string }>;
+};
+
+function draftStorageKey(tournamentId: string): string {
+  return `cup-wizard-draft-${tournamentId}`;
+}
+
+/** Best-effort lesing — `null` for SSR (ingen `window`), manglende lagring,
+ * eller korrupt/gammelt JSON-innhold (stille frisk start, aldri en kastet
+ * feil brukeren ser). Formen valideres felt-for-felt av kalleren (restore-
+ * effekten i `GenerateMatchesWizard`) — denne funksjonen garanterer kun
+ * gyldig JSON. */
+function loadDraft(tournamentId: string): Partial<CupWizardDraft> | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey(tournamentId));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed as Partial<CupWizardDraft>;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(tournamentId: string, draft: CupWizardDraft): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(draftStorageKey(tournamentId), JSON.stringify(draft));
+  } catch {
+    // Best-effort — f.eks. privat nettlesing eller full lagringskvote.
+  }
+}
+
+function clearDraft(tournamentId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(draftStorageKey(tournamentId));
+  } catch {
+    // Best-effort, se saveDraft.
+  }
+}
+
+/** Duck-typer Next.js' redirect-signal (`redirect()` i en server-action, kalt
+ * fra en klient-komponent via `await`, avviser Promise-en med et objekt som
+ * har et `digest`-felt som starter på `NEXT_REDIRECT` — se
+ * next/dist/client/components/router-reducer/reducers/server-action-reducer.js).
+ * Offentlig, stabil form (samme duck-type-mønster brukt i community-kode) —
+ * ikke en dyp import av Next-internals. Brukt til å skille «vellykket
+ * generering (redirecter bort)» fra en ekte feil i `handleConfirm` under, KUN
+ * for å vite når draften skal ryddes — selve navigeringen er urørt, feilen
+ * kastes videre uansett. */
+function isNextRedirectSignal(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'digest' in err &&
+    typeof (err as { digest: unknown }).digest === 'string' &&
+    (err as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+  );
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -887,28 +972,42 @@ function Step4Confirm({
 
   function handleConfirm() {
     startTransition(async () => {
-      const result = await createCupMatchesFromPlan({
-        tournamentId,
-        courseId,
-        teeBoxId,
-        matches,
-        bestBallAllowancePct,
-        scheduledTeeOffAt,
-      });
-      if (result?.error) {
-        const errorMap: Record<string, string> = {
-          not_draft: t('generate.errors.not_draft'),
-          missing_course: t('generate.errors.missing_course'),
-          no_matches: t('generate.errors.no_matches'),
-          insert_failed: t('generate.errors.insert_failed'),
-          too_many_matches: t('generate.errors.too_many_matches', { max: MAX_PERSONAL_CUP_MATCHES }),
-          too_many_players: t('generate.errors.too_many_players', { max: MAX_PERSONAL_CUP_PLAYERS }),
-          invalid_tee_off: t('generate.errors.invalid_tee_off'),
-          tee_off_in_past: t('generate.errors.tee_off_in_past'),
-        };
-        onError(errorMap[result.error] ?? t('generate.errors.insert_failed'));
+      try {
+        const result = await createCupMatchesFromPlan({
+          tournamentId,
+          courseId,
+          teeBoxId,
+          matches,
+          bestBallAllowancePct,
+          scheduledTeeOffAt,
+        });
+        if (result?.error) {
+          const errorMap: Record<string, string> = {
+            not_draft: t('generate.errors.not_draft'),
+            missing_course: t('generate.errors.missing_course'),
+            no_matches: t('generate.errors.no_matches'),
+            insert_failed: t('generate.errors.insert_failed'),
+            too_many_matches: t('generate.errors.too_many_matches', { max: MAX_PERSONAL_CUP_MATCHES }),
+            too_many_players: t('generate.errors.too_many_players', { max: MAX_PERSONAL_CUP_PLAYERS }),
+            invalid_tee_off: t('generate.errors.invalid_tee_off'),
+            tee_off_in_past: t('generate.errors.tee_off_in_past'),
+          };
+          onError(errorMap[result.error] ?? t('generate.errors.insert_failed'));
+        }
+        // On success, the action redirects automatically (NEXT_REDIRECT) —
+        // handled in the catch below (the redirect surfaces as a rejected
+        // Promise here, see isNextRedirectSignal's docstring), so this line
+        // is unreachable on the success path.
+      } catch (err) {
+        // #1441 (owner-QA, F3g): draft-lagringen (bane/tee/preset/…) skal
+        // ryddes etter VELLYKKET generering, aldri etter en feilet en (da
+        // trenger organisatoren valgene sine igjen for å prøve på nytt).
+        // `result?.error` over dekker feil actionen RETURNERER; en faktisk
+        // redirect (suksess) kastes i stedet — det er eneste signalet vi får
+        // om suksess her, siden actionen aldri returnerer normalt da.
+        if (isNextRedirectSignal(err)) clearDraft(tournamentId);
+        throw err;
       }
-      // On success, the action redirects automatically (NEXT_REDIRECT)
     });
   }
 
@@ -1301,6 +1400,99 @@ export function GenerateMatchesWizard({
   // Feil fra createCupMatchesFromPlan (steg 4)
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // #1441 (owner-QA, F3g): draft-gjenoppretting fra localStorage.
+  // `hydrated` gater LAGrings-effekten under til ETTER at gjenopprettings-
+  // effekten har kjørt sitt `setState`-batch ferdig — uten den ville
+  // lagrings-effekten kjørt på FØRSTE render (med de blanke default-verdiene,
+  // før gjenopprettingen slår inn) og straks overskrevet en ekte lagret draft
+  // med tomme felter. `useState` (ikke en ref) er bevisst: en ref-flagg satt
+  // synkront på slutten av restore-effekten ville vært `true` allerede når
+  // lagrings-effekten kjører i SAMME commit-pass, mens closure-verdiene for
+  // course/tee/osv. fortsatt er blanke (state fra `setState`-kall er ikke
+  // synkront tilgjengelig i samme pass) — reactive state unngår denne fella
+  // fordi lagrings-effekten da først kjører i et NYTT render, med de
+  // gjenopprettede verdiene allerede i scope.
+  const [hydrated, setHydrated] = useState(false);
+  // Vist som en liten hint-linje ved steg-indikatoren (kun når noe faktisk
+  // ble gjenopprettet — ikke for en helt fersk cup uten lagret draft).
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // setState inne i en effect ER nødvendig her: vi synker EKSTERN tilstand
+  // (localStorage, et browser-API React ikke kjenner til) inn i React-state
+  // — samme begrunnelse som URL→state-syncen i GameWizard.tsx. Regelen
+  // advarer mot pattern-en generelt (kaskaderende renders fra intern
+  // state-avledning); for en engangs-hydrering fra en ekstern kilde ved
+  // mount er den ikke treffende, så vi disabler den lokalt for blokken.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const draft = loadDraft(tournamentId);
+    let appliedAny = false;
+    if (draft) {
+      if (typeof draft.courseId === 'string') {
+        setCourseId(draft.courseId);
+        appliedAny = true;
+      }
+      if (typeof draft.teeBoxId === 'string') {
+        setTeeBoxId(draft.teeBoxId);
+        appliedAny = true;
+      }
+      if (typeof draft.teeOffAt === 'string') {
+        setTeeOffAt(draft.teeOffAt);
+        appliedAny = true;
+      }
+      if (typeof draft.presetId === 'string') {
+        setPresetId(draft.presetId);
+        appliedAny = true;
+      }
+      if (Array.isArray(draft.customSessions)) {
+        setCustomSessions(draft.customSessions);
+        appliedAny = true;
+      }
+      if (draft.strategy === 'handicap' || draft.strategy === 'random') {
+        setStrategy(draft.strategy);
+        appliedAny = true;
+      }
+      if (typeof draft.bestBallAllowancePct === 'number') {
+        setBestBallAllowancePct(draft.bestBallAllowancePct);
+        appliedAny = true;
+      }
+      if (draft.teamStrokesInputs && typeof draft.teamStrokesInputs === 'object') {
+        setTeamStrokesInputs(draft.teamStrokesInputs);
+        appliedAny = true;
+      }
+    }
+    if (appliedAny) setDraftRestored(true);
+    setHydrated(true);
+    // Kun ved mount (og hvis tournamentId endres, i teorien) — setter-
+    // funksjonene fra useState er stabile referanser, trenger ikke listes.
+  }, [tournamentId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveDraft(tournamentId, {
+      courseId,
+      teeBoxId,
+      teeOffAt,
+      presetId,
+      customSessions,
+      strategy,
+      bestBallAllowancePct,
+      teamStrokesInputs,
+    });
+  }, [
+    hydrated,
+    tournamentId,
+    courseId,
+    teeBoxId,
+    teeOffAt,
+    presetId,
+    customSessions,
+    strategy,
+    bestBallAllowancePct,
+    teamStrokesInputs,
+  ]);
+
   const isSplitDay = presetId === 'splittet-cup-dag';
 
   // Derived
@@ -1520,6 +1712,11 @@ export function GenerateMatchesWizard({
 
       <Card>
         <StepIndicator current={step} total={TOTAL_STEPS} t={t} />
+        {draftRestored && (
+          <p className="font-sans text-xs text-muted mb-6">
+            {t('generate.draftRestoredHint')}
+          </p>
+        )}
 
         {step === 1 && (
           <Step1Roster
