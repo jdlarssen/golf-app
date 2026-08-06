@@ -50,6 +50,7 @@ import type { HoleParByGender } from '@/lib/games/parDisplay';
 import {
   holeNumbersForSegment,
   lastHoleForSegment,
+  positionInSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
@@ -774,6 +775,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // complete at 9 holes filled (holes 10-18) even though its holes are
   // numbered up to 18.
   const totalHoles = holeNumbersForSegment(holeSegment).length;
+  // #1441 (F5 polish): a front9/back9 game's real hole number (e.g. 12) and
+  // its segment hole COUNT (9) live on different scales — HoleHero's plain
+  // "{holeNumber} av {totalHoles}" suffix read as "hull 12 av 9" for those
+  // games. Only set for segment games; 'full' keeps the unchanged suffix.
+  const heroSegmentPosition =
+    holeSegment === 'full'
+      ? undefined
+      : { position: positionInSegment(currentHole, holeSegment), total: totalHoles };
   const isLastHole = currentHole === lastHoleForSegment(holeSegment);
   // Once the player has a score on every hole, the natural next action is
   // to submit — regardless of which hole they're currently editing. Skip
@@ -957,6 +966,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       <HoleHero
         holeNumber={currentHole}
         totalHoles={totalHoles}
+        segmentPosition={heroSegmentPosition}
         par={par}
         parByGender={parByGender}
         playerGender={playerGender}

@@ -2220,6 +2220,7 @@
       "hullIndex": "index {si}",
       "hullPar": "Par {par}",
       "hullTotalSuffix": "of {total}",
+      "hullSegmentPosition": "hole {position} of {total}",
       "enterYourScore": "Enter your score",
       "nextHole": "Next hole · {next}",
       "submitScorecard": "Submit scorecard",

@@ -43,9 +43,20 @@ export interface HoleHeroProps {
    * «av {total}»-suffiks rett etter det store hull-tallet — synlig fremdrift i
    * runden (goal-gradient, #1172). Tucket inn i venstre-kolonnens baseline så
    * indikatoren ikke tar en egen full-bredde rad (respekterer #639/#939-
-   * plasskampen). `TOTAL_HOLES` (18) er single source of truth for verdien.
+   * plasskampen). `TOTAL_HOLES` (18) er single source of truth for verdien
+   * for et full-18-spill. Ignorert når `segmentPosition` er satt (se under).
    */
   totalHoles?: number;
+  /**
+   * Posisjon-i-segment for splittet cup-dag (#1441, F5 polish). Et back9-spill
+   * har ekte hull-nummer 10-18 men et 9-hulls scope — å pare dem direkte i
+   * `totalHoles`-suffikset ga «hull 12 av 9» (ekte tall vs. segment-antall,
+   * ingen sammenheng). Når satt vises i stedet en egen subtitle under HULL-
+   * kickeren («3. hull av 9», posisjon i segmentet) og det store hull-tallet
+   * ({@link holeNumber}) forblir uendret (12) — suffikset fra `totalHoles`
+   * undertrykkes. Undefined for full-18-spill: uendret oppførsel.
+   */
+  segmentPosition?: { position: number; total: number };
   /**
    * Valgfri avstandslinje («~X m til green», #1210) plassert i høyre kolonne
    * rett under indeks-linja. Egen slot — IKKE contextLine (den er opptatt av
@@ -87,6 +98,21 @@ const kickerStyle: CSSProperties = {
   letterSpacing: '0.20em',
   textTransform: 'uppercase',
   color: 'var(--accent)',
+};
+
+// Stabler HULL-kickeren og segment-subtitlen (#1441) i egen kolonne, som
+// leftStyle sin baseline-rad plasserer til venstre for det store hull-tallet.
+const kickerColumnStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
+};
+
+const segmentSubtitleStyle: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 11,
+  color: 'var(--text-muted)',
+  fontVariantNumeric: 'tabular-nums',
 };
 
 const numberStyle: CSSProperties = {
@@ -135,7 +161,7 @@ const indexStyle: CSSProperties = {
 };
 
 export function HoleHero(props: HoleHeroProps): JSX.Element {
-  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine, puttsToggle, totalHoles, distanceLine } = props;
+  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine, puttsToggle, totalHoles, segmentPosition, distanceLine } = props;
   const t = useTranslations('holes.entry');
   const ts = useTranslations('scorecard');
   const showAside = parByGender ? hasParDifference(parByGender) : false;
@@ -151,10 +177,20 @@ export function HoleHero(props: HoleHeroProps): JSX.Element {
   return (
     <div style={containerStyle}>
       <div style={leftStyle}>
-        <div style={kickerStyle}>{t('hullKicker')}</div>
+        <div style={kickerColumnStyle}>
+          <div style={kickerStyle}>{t('hullKicker')}</div>
+          {segmentPosition && (
+            <div style={segmentSubtitleStyle}>
+              {t('hullSegmentPosition', {
+                position: segmentPosition.position,
+                total: segmentPosition.total,
+              })}
+            </div>
+          )}
+        </div>
         <div style={numberGroupStyle}>
           <div className="score-num" style={numberStyle}>{holeNumber}</div>
-          {totalHoles != null && (
+          {totalHoles != null && !segmentPosition && (
             <div style={totalSuffixStyle}>{t('hullTotalSuffix', { total: totalHoles })}</div>
           )}
         </div>
