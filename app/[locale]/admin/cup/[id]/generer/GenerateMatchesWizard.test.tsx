@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
 import type { WizardPlayer, WizardCourse } from './GenerateMatches';
 
@@ -177,5 +177,42 @@ describe('GenerateMatchesWizard', () => {
     expect(screen.getByTestId('cup-wizard-lineup-1-side2-0')).toHaveValue('p3');
     expect(screen.getByTestId('cup-wizard-lineup-1-side1-1')).toHaveValue('p1');
     expect(screen.getByTestId('cup-wizard-lineup-1-side2-1')).toHaveValue('p4');
+  });
+
+  it('steg 1: en pending venn (venter på profil) vises som ikke-valgbar rad (#1441, F3f)', () => {
+    const withPending: WizardPlayer[] = [
+      ...PLAYERS,
+      { id: 'p5', displayName: 'Ukjent spiller', hcpIndex: 54.0, pending: true },
+    ];
+
+    render(
+      <GenerateMatchesWizard
+        tournamentId="t-1"
+        team1Name="Ørnen"
+        team2Name="Falken"
+        players={withPending}
+        courses={COURSES}
+      />,
+    );
+
+    const pendingRow = screen.getByTestId('cup-wizard-pending-p5');
+    expect(within(pendingRow).getByText('Venter på profil')).toBeInTheDocument();
+    expect(within(pendingRow).getByText('Mangler handicap')).toBeInTheDocument();
+    // Ingen lag-toggle for den pending raden.
+    expect(screen.queryByTestId('cup-wizard-assign-p5-team1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cup-wizard-assign-p5-team2')).not.toBeInTheDocument();
+
+    // Kun de 4 ordinære spillerne har en lag-toggle å klikke på.
+    expect(screen.getAllByRole('button', { name: 'Ørnen' })).toHaveLength(4);
+
+    // Pending spilleren kan ikke telle med i lagstørrelsen: å tildele de 4
+    // ordinære spillerne 2/2 er nok til å komme videre fra steg 1.
+    const toTeam1 = screen.getAllByRole('button', { name: 'Ørnen' });
+    fireEvent.click(toTeam1[0]);
+    fireEvent.click(toTeam1[1]);
+    const toTeam2 = screen.getAllByRole('button', { name: 'Falken' });
+    fireEvent.click(toTeam2[2]);
+    fireEvent.click(toTeam2[3]);
+    expect(screen.getByRole('button', { name: /neste/i })).not.toBeDisabled();
   });
 });
