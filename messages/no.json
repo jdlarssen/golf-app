@@ -4550,7 +4550,7 @@
       "generateButton": "Generer matcher",
       "openLeaderboard": "Åpne offentlig leaderboard →",
       "matchesSummary": "Først til {points} poeng · {finished} av {total} matcher spilt",
-      "matchTied": "Halvert (AS)",
+      "matchTied": "Delt (AS)",
       "mot": "mot",
       "unknownPlayer": "Ukjent spiller",
       "startButton": "Start cupen",
