@@ -7,7 +7,7 @@ import {
   type CourseHoleRow,
   type ScoreRow,
 } from '@/lib/supabase/queryFragments';
-import { computeLeaderboard } from '@/lib/scoring';
+import { computeLeaderboard, holesForSegment, type HoleSegment } from '@/lib/scoring';
 import type {
   ModeResult,
   ScoringContext,
@@ -36,6 +36,20 @@ export interface GameForScoring {
   game_mode: GameMode;
   mode_config: GameModeConfig;
   course_id: string;
+  /**
+   * #1441 (splittet cup-dag): the game's own hole scope. Optional — omitting
+   * it defaults to 'full' (every hole 1-18), byte-identical to pre-#1441
+   * callers. A front9/back9 HOST game (not just a derived one) needs this
+   * too: without it, its result summary would compute over all 18 holes
+   * even though its players only ever wrote scores for their 9.
+   */
+  hole_segment?: HoleSegment;
+  /**
+   * #1441: non-null when this game is DERIVED from another game (no own
+   * scores — every score read redirects to the host). Optional — omitting
+   * it defaults to null (no redirect), byte-identical to pre-#1441 callers.
+   */
+  source_game_id?: string | null;
 }
 
 interface GamePlayerRow {
@@ -81,6 +95,10 @@ export async function buildModeResultForGame(
   client: SupabaseClient<Database>,
   game: GameForScoring,
 ): Promise<ModeResult | null> {
+  // #1441 (D3): a derived game owns no scores of its own — read the host's.
+  // `?? game.id` is a no-op for every non-derived game (source_game_id null).
+  const scoresGameId = game.source_game_id ?? game.id;
+
   const [playersRes, holesRes, scoresRes] = await Promise.all([
     client
       .from('game_players')
@@ -100,7 +118,7 @@ export async function buildModeResultForGame(
     client
       .from('scores')
       .select(SCORES_SELECT)
-      .eq('game_id', game.id)
+      .eq('game_id', scoresGameId)
       .returns<ScoreRow[]>(),
   ]);
 
@@ -147,10 +165,24 @@ export function buildModeResultFromData(
     team_number: p.team_number ?? 0,
   }));
 
-  // Ingen hull eller spillere → ikke noe meningsfullt resultat å lagre.
-  if (holesRows.length === 0 || players.length === 0) return null;
+  // #1441: scope course_holes down to the game's hole_segment before it
+  // reaches any per-mode context builder. 'full' (the default for callers
+  // that don't pass hole_segment) is a no-op — every hole 1-18, wrapped/
+  // unwrapped through holesForSegment to reuse its canonical 1-9/10-18
+  // boundary rather than duplicating it here.
+  const scopedHolesRows = holesForSegment(
+    holesRows.map((row) => ({ row, number: row.hole_number })),
+    game.hole_segment ?? 'full',
+  ).map((wrapped) => wrapped.row);
+  const scopedHoleNumbers = new Set(scopedHolesRows.map((h) => h.hole_number));
+  const scopedScoresRows = scoresRows.filter((s) =>
+    scopedHoleNumbers.has(s.hole_number),
+  );
 
-  const ctx = buildContext(game, players, holesRows, scoresRows, extras);
+  // Ingen hull eller spillere → ikke noe meningsfullt resultat å lagre.
+  if (scopedHolesRows.length === 0 || players.length === 0) return null;
+
+  const ctx = buildContext(game, players, scopedHolesRows, scopedScoresRows, extras);
   if (ctx === null) return null;
 
   return computeLeaderboard(ctx);
