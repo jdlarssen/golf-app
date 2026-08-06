@@ -644,6 +644,21 @@ function LayoutBTable({
 
   const secondaryLabel = isStableford ? 'P' : 'N';
 
+  // #1452 (D12): showNetto === false ⟺ reveal-aktiv. Da er matchstatus og
+  // total-sammenligning på tvers av lagene stillinger som ikke skal vises før
+  // arrangøren avslutter — footeren begrenses til eget lags kolonner og
+  // status-linja skjules. Per-hull-cellene står: føreren må kunne kontrollere
+  // begge lags baller etter co-scoring.
+  const hideStandings = !showNetto;
+  const footerEntries = columns
+    .map((c, idx) => ({ c, pt: playerTotals[idx] }))
+    .filter(
+      ({ c }) =>
+        !hideStandings ||
+        meTeamNumber === null ||
+        c.teamNumber === meTeamNumber,
+    );
+
   return (
     <Card className="p-0 overflow-hidden">
       <table className="w-full text-sm">
@@ -720,26 +735,23 @@ function LayoutBTable({
             >
               <div className="flex flex-col gap-1.5">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  {columns.map((c, idx) => {
-                    const pt = playerTotals[idx];
-                    return (
-                      <span key={c.userId}>
-                        {c.isCurrentUser ? t('footerYou') : c.displayName}:{' '}
-                        <span className="score-num text-text">{pt.brutto}</span>
-                        {showNetto && (
-                          <>
-                            {' / '}
-                            <span className="score-num text-text">
-                              {isStableford ? pt.points : pt.netto}
-                              <span className="text-muted ml-0.5 text-[10.5px]">
-                                {secondaryLabel}
-                              </span>
+                  {footerEntries.map(({ c, pt }) => (
+                    <span key={c.userId}>
+                      {c.isCurrentUser ? t('footerYou') : c.displayName}:{' '}
+                      <span className="score-num text-text">{pt.brutto}</span>
+                      {showNetto && (
+                        <>
+                          {' / '}
+                          <span className="score-num text-text">
+                            {isStableford ? pt.points : pt.netto}
+                            <span className="text-muted ml-0.5 text-[10.5px]">
+                              {secondaryLabel}
                             </span>
-                          </>
-                        )}
-                      </span>
-                    );
-                  })}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  ))}
                 </div>
                 {showNetto && !isMatchplay && (
                   <div className="text-text">
@@ -752,7 +764,7 @@ function LayoutBTable({
                     </span>
                   </div>
                 )}
-                {isMatchplay && matchStatus && (
+                {isMatchplay && matchStatus && !hideStandings && (
                   <div className="text-text font-medium">{matchStatus}</div>
                 )}
               </div>
