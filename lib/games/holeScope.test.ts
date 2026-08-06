@@ -7,6 +7,7 @@ import {
   lastHoleForSegment,
   isHoleInSegment,
   firstHalfHoleNumbersForSegment,
+  positionInSegment,
 } from './holeScope';
 
 describe('holeNumbersForSegment', () => {
@@ -51,6 +52,20 @@ describe('isHoleInSegment', () => {
     { segment: 'back9', holeNumber: 18, expected: true },
   ])('$segment / hole $holeNumber → $expected', ({ segment, holeNumber, expected }) => {
     expect(isHoleInSegment(holeNumber, segment)).toBe(expected);
+  });
+});
+
+describe('positionInSegment', () => {
+  it.each<{ segment: HoleSegment; holeNumber: number; expected: number }>([
+    { segment: 'full', holeNumber: 1, expected: 1 },
+    { segment: 'full', holeNumber: 18, expected: 18 },
+    { segment: 'front9', holeNumber: 1, expected: 1 },
+    { segment: 'front9', holeNumber: 9, expected: 9 },
+    { segment: 'back9', holeNumber: 10, expected: 1 },
+    { segment: 'back9', holeNumber: 12, expected: 3 },
+    { segment: 'back9', holeNumber: 18, expected: 9 },
+  ])('$segment / hole $holeNumber → position $expected', ({ segment, holeNumber, expected }) => {
+    expect(positionInSegment(holeNumber, segment)).toBe(expected);
   });
 });
 

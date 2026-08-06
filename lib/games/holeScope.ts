@@ -41,6 +41,20 @@ export function isHoleInSegment(holeNumber: number, segment: HoleSegment): boole
 }
 
 /**
+ * 1-based position of `holeNumber` within `segment`'s own scope (#1441, F5
+ * polish). For 'full' this is always `holeNumber` itself (1→1, 18→18). For a
+ * 'back9' game the real hole number (10-18) and the segment's hole COUNT (9)
+ * live on different scales — pairing them directly reads as nonsense («hull
+ * 12 av 9»). This gives the caller the other half of that sentence: hole 12
+ * is position 3 of 9. Falls back to `holeNumber` itself if it is outside the
+ * segment (defensive; callers only ever pass in-scope numbers).
+ */
+export function positionInSegment(holeNumber: number, segment: HoleSegment): number {
+  const index = holeNumbersForSegment(segment).indexOf(holeNumber);
+  return index === -1 ? holeNumber : index + 1;
+}
+
+/**
  * First half of `segment`'s hole numbers — the "front nine" gate that
  * `lib/leaderboard/frontNineGate.ts` opens state #3.5 on, generalized for
  * segment games (#1441). 'full' → [1..9] (9 of 18, byte-identical to the
