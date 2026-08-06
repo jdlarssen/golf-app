@@ -1,5 +1,7 @@
 import { cache } from 'react';
 import { classifyDeliveryStatus } from '@/lib/games/deliveryStatus';
+import { holeCountForSegment } from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -8,6 +10,14 @@ export interface ActiveGameInput {
   id: string;
   name: string;
   requirePeerApproval: boolean;
+  /**
+   * Antall hull som skal til for «ferdig» for DENNE spilleren (#1441). Uten
+   * feltet defaulter `classifyDeliveryStatus` til 18 — samme etablerte
+   * mønster som `app/[locale]/admin/games/[id]/status/page.tsx` bruker
+   * (`holeCountForSegment(game.hole_segment)`). Uten dette leser et komplett
+   * 9-hulls segment-spill aldri som «klart» i Sekretariatets action-items.
+   */
+  expectedHoles?: number;
 }
 
 /** One non-withdrawn player row from game_players. */
@@ -72,6 +82,7 @@ export function computeActionItemCounts(
         approvedAt: p.approvedAt,
         withdrawnAt: p.withdrawnAt,
         requirePeerApproval: game.requirePeerApproval,
+        expectedHoles: game.expectedHoles,
       });
 
       if (status === 'ready_not_delivered') hasUnsubmitted = true;
@@ -106,7 +117,7 @@ export const getActionItemCounts = cache(async (): Promise<ActionItemCounts> => 
   // 1. Fetch all active games.
   const { data: gamesData } = await supabase
     .from('games')
-    .select('id, name, require_peer_approval')
+    .select('id, name, require_peer_approval, hole_segment')
     .eq('status', 'active');
 
   if (!gamesData || gamesData.length === 0) {
@@ -140,6 +151,8 @@ export const getActionItemCounts = cache(async (): Promise<ActionItemCounts> => 
     id: g.id,
     name: g.name,
     requirePeerApproval: g.require_peer_approval ?? false,
+    // #1441 — front9/back9-spill er «ferdig» ved 9 hull, ikke 18.
+    expectedHoles: holeCountForSegment(g.hole_segment as HoleSegment),
   }));
 
   const players: ActivePlayerInput[] = (playersData ?? []).map((p) => ({
