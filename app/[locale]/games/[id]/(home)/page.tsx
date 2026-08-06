@@ -40,6 +40,8 @@ import {
   resolveFormatContentKey,
 } from '@/lib/games/formatLabel';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
+import { holeCountForSegment } from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
@@ -153,10 +155,21 @@ type GameRow = {
   tee_boxes:
     | (TeeBoxRatings & { name: string; length_meters: number | null })
     | null;
+  /** #1441: limits the game to holes 1-9/10-18 — drives the holeCount copy
+   *  + the segment-aware CTA thread further down. */
+  hole_segment: HoleSegment;
+  /**
+   * #1441: non-null when this game is DERIVED from another game in the same
+   * cup bundle (e.g. a back9 singles match derived from the back9 best-ball
+   * host). Gates the active branch to a minimal, read-only «Slagene føres i
+   * …»-notice instead of the normal score-entry CTA — a derived game never
+   * has its own scores.
+   */
+  source_game_id: string | null;
 };
 
 const GAME_SELECT =
-  'id, name, status, tournament_id, league_round_id, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, tournament_id, league_round_id, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors), hole_segment, source_game_id';
 
 /** Locale-aware thousands-separator. 6124 → "6 124" (no) / "6,124" (en). */
 function formatLengthMeters(n: number, locale: AppLocale): string {
@@ -390,18 +403,26 @@ export default async function GameHomePage({
     }
   }
 
-  // Auto-nudge (#376): har spilleren registrert alle 18 hull uten å levere,
-  // fyr én «husk å levere»-påminnelse. Pre-gate billig her (aktivt spill +
-  // ikke levert + ikke trukket); maybeSendDeliveryReminder self-gater på
-  // hull-telling + atomisk idempotens-guard, så den er trygg på hvert besøk.
-  // Wrap i `after()` fordi notify() kaller revalidateTag som kaster i
+  // Auto-nudge (#376): har spilleren registrert alle hullene sine uten å
+  // levere, fyr én «husk å levere»-påminnelse. Pre-gate billig her (aktivt
+  // spill + ikke levert + ikke trukket + ikke et avledet spill —
+  // et avledet spill (#1441) har aldri egne scores, så reminderen ville
+  // bare vært et gratis no-op-oppslag); maybeSendDeliveryReminder self-gater
+  // på hull-telling + atomisk idempotens-guard, så den er trygg på hvert
+  // besøk. Wrap i `after()` fordi notify() kaller revalidateTag som kaster i
   // render-fasen (samme mønster som markNotificationsRead + auto-start over).
-  if (game.status === 'active' && !me.submitted_at && !me.withdrawn_at) {
+  if (
+    game.status === 'active' &&
+    !me.submitted_at &&
+    !me.withdrawn_at &&
+    !game.source_game_id
+  ) {
     after(() =>
       maybeSendDeliveryReminder({
         gameId: id,
         userId,
         gameName: game.name,
+        expectedHoles: holeCountForSegment(game.hole_segment),
       }),
     );
   }
@@ -598,7 +619,7 @@ export default async function GameHomePage({
               </p>
               {teeBox && (
                 <p className="mt-1 text-xs text-muted">
-                  {t('holeCount')}
+                  {t('holeCount', { count: holeCountForSegment(game.hole_segment) })}
                   {playerRating ? ` · Par ${playerRating.par}` : ''}
                   {teeBox.length_meters
                     ? ` · ${formatLengthMeters(teeBox.length_meters, locale)} m`
@@ -826,6 +847,25 @@ export default async function GameHomePage({
       ? new Date(game.scheduled_tee_off_at)
       : null;
 
+  // #1441: a derived game (avledet spill) never has its own scores — the
+  // active branch below swaps the score-entry CTA for a minimal, read-only
+  // notice linking to the host game instead. Only fetched when actually
+  // needed (active + derived) so every other status/game keeps zero extra
+  // cost. Request-scoped client is fine here: the current player is always
+  // also a player in the host game (design D3 — same physical foursome),
+  // so RLS already grants read access.
+  let hostGameName: string | null = null;
+  if (isActive && game.source_game_id) {
+    const { data: hostGame } = await supabase
+      .from('games')
+      .select('name, courses(name)')
+      .eq('id', game.source_game_id)
+      .maybeSingle<{ name: string; courses: { name: string } | null }>();
+    hostGameName = hostGame
+      ? localizeGameName(hostGame.name, hostGame.courses?.name ?? null, locale)
+      : null;
+  }
+
   return (
     <AppShell>
       <TopBar
@@ -921,7 +961,29 @@ export default async function GameHomePage({
             {/* #1068: primær-CTA først i aktiv-grenen, over kortene — «Fortsett
                 runden» skal være første interaktive element uten scroll
                 (fremtids-flyt 3: «Åpne spillet → Start runden» som ett tapp). */}
-            {me.withdrawn_at ? (
+            {game.source_game_id ? (
+              // #1441: avledet spill — ingen score-entry-UI. Minimal,
+              // read-only lenke til host-spillet der slagene faktisk føres.
+              <div className="rounded-2xl border border-border bg-surface px-4 py-4">
+                <p className="mb-1 font-sans text-[14px] font-medium text-text">
+                  {t('derivedNoticeHeading')}
+                </p>
+                <p className="mb-3 font-sans text-[12px] leading-relaxed text-muted">
+                  {t('derivedNoticeBody', {
+                    hostName: hostGameName ?? t('derivedNoticeUnknownHost'),
+                  })}
+                </p>
+                <LinkButton
+                  href={`/games/${game.source_game_id}`}
+                  variant="secondary"
+                  full
+                >
+                  {t('derivedNoticeLink', {
+                    hostName: hostGameName ?? t('derivedNoticeUnknownHost'),
+                  })}
+                </LinkButton>
+              </div>
+            ) : me.withdrawn_at ? (
               // WD — viser angre-banner i stedet for scorekort-CTA (#386).
               <div className="rounded-2xl border border-danger/40 bg-danger/5 px-4 py-4">
                 <p className="mb-3 font-sans text-[14px] font-medium text-text">
@@ -945,6 +1007,7 @@ export default async function GameHomePage({
                   submittedAt={me.submitted_at}
                   approvedAt={me.approved_at}
                   requirePeerApproval={game.require_peer_approval}
+                  holeSegment={game.hole_segment}
                 />
               </Suspense>
             )}

@@ -53,11 +53,12 @@ export async function sendDeliveryReminder(opts: {
 
 /**
  * Auto-nudge: fyr én leverings-påminnelse til spilleren hvis hen har registrert
- * alle 18 hull men ikke levert. Kalt fra game-home-render via `after()` (notify
- * kaller revalidateTag som kaster i render-fasen). Self-gater på hull-telling +
- * en atomisk idempotens-guard, så den er trygg å kalle på hvert besøk:
+ * alle hullene sine (18, eller 9 på et front9/back9-segment, #1441) men ikke
+ * levert. Kalt fra game-home-render via `after()` (notify kaller revalidateTag
+ * som kaster i render-fasen). Self-gater på hull-telling + en atomisk
+ * idempotens-guard, så den er trygg å kalle på hvert besøk:
  *
- *   1. Tell hull med registrert slag for spilleren. < 18 → return.
+ *   1. Tell hull med registrert slag for spilleren. < expectedHoles → return.
  *   2. Atomisk «vinn raden»-update: sett deliver_reminder_sent_at = now() KUN
  *      hvis den er null + ikke levert + ikke trukket. Ingen rad tilbake →
  *      tapte race / allerede purret / levert / trukket → return.
@@ -71,8 +72,10 @@ export async function maybeSendDeliveryReminder(opts: {
   gameId: string;
   userId: string;
   gameName: string;
+  /** Hull som skal til for «ferdig» (#1441). Default `TOTAL_HOLES` (18). */
+  expectedHoles?: number;
 }): Promise<void> {
-  const { gameId, userId, gameName } = opts;
+  const { gameId, userId, gameName, expectedHoles = TOTAL_HOLES } = opts;
   const admin = getAdminClient();
 
   try {
@@ -83,7 +86,7 @@ export async function maybeSendDeliveryReminder(opts: {
       .eq('user_id', userId)
       .not('strokes', 'is', null);
 
-    if (countErr || (count ?? 0) < TOTAL_HOLES) return;
+    if (countErr || (count ?? 0) < expectedHoles) return;
 
     const { data: won, error: updErr } = await admin
       .from('game_players')

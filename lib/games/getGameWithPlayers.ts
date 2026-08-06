@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 import type { GameStatus } from './status';
 import type { TeeBoxRatings, TeeGender } from './teeRating';
 import type { ScoreVisibility } from './visibility';
@@ -151,6 +152,23 @@ export type GameForHole = {
    * tolererer undefined → [].
    */
   prizes?: unknown;
+  /**
+   * #1441 (splittet cup-dag): limits the game to holes 1-9 ('front9'), 10-18
+   * ('back9'), or the full round (default 'full'). DB-CHECK (migration 0151,
+   * widened by 0152) constrains the column to this exact union — cast trusted
+   * on input-side like `game_mode` above, since Supabase's generated types
+   * project CHECK-constrained columns as plain `string`.
+   */
+  hole_segment: HoleSegment;
+  /**
+   * #1441: non-null when this game is DERIVED from another game in the same
+   * cup bundle (e.g. a back9 singles match derived from the back9 best-ball
+   * host). A derived game has its own `game_players` but NO own scores —
+   * every score-reading consumer must fetch from `source_game_id ?? id`
+   * instead. The app layer (not the DB) guards against score-entry on a
+   * derived game — see the hole/scorecard/submit routes.
+   */
+  source_game_id: string | null;
 };
 
 export type PlayerForHole = {
@@ -199,7 +217,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
       .single<GameForHole>(),
@@ -252,7 +270,13 @@ export async function getGameWithPlayers(
   // #1051: bumped to 'gwp6' when `prizes` (game) joined the select — a stale
   // 'gwp5' entry would resolve it as `undefined`, so the premiebord + sponsor-
   // stripe + premieutdeling would silently not render on games with prizes.
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp6', id], {
+  //
+  // #1441: bumped to 'gwp7' when `hole_segment`/`source_game_id` (game) joined
+  // the select — a stale 'gwp6' entry would resolve them as `undefined`, so a
+  // front9/back9 game would silently be treated as a full 18-hole round (wrong
+  // "all holes scored" math) and a derived game's score-entry guard would
+  // silently fail to fire (source_game_id read as falsy).
+  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp7', id], {
     tags: [`game-${id}`],
     revalidate: 900,
   })();

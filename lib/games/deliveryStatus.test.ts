@@ -94,6 +94,39 @@ describe('classifyDeliveryStatus', () => {
     expect(classifyDeliveryStatus(opts)).toBe(expected);
   });
 
+  it.each<{
+    name: string;
+    opts: Parameters<typeof classifyDeliveryStatus>[0];
+    expected: DeliveryStatus;
+  }>([
+    {
+      name: '#1441: 9/9 hull på et front9/back9-segment → ready_not_delivered',
+      opts: {
+        holesFilled: 9,
+        submittedAt: null,
+        approvedAt: null,
+        withdrawnAt: null,
+        requirePeerApproval: false,
+        expectedHoles: 9,
+      },
+      expected: 'ready_not_delivered',
+    },
+    {
+      name: '#1441: 8/9 hull på et segment-spill → playing (ikke prematurt ferdig)',
+      opts: {
+        holesFilled: 8,
+        submittedAt: null,
+        approvedAt: null,
+        withdrawnAt: null,
+        requirePeerApproval: false,
+        expectedHoles: 9,
+      },
+      expected: 'playing',
+    },
+  ])('$name', ({ opts, expected }) => {
+    expect(classifyDeliveryStatus(opts)).toBe(expected);
+  });
+
   it('teller kun ready_not_delivered som purre-mål', () => {
     const all: DeliveryStatus[] = [
       'withdrawn',

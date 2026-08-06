@@ -582,3 +582,44 @@ describe('HoleClient — missing-score hint renders in team/pot formats (#1058)'
     },
   );
 });
+
+describe('HoleClient — hole-segment scope (#1441)', () => {
+  it('front9 game: hole 9 is the last hole, so the CTA offers "Lever scorekort" once my score is entered', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([{ strokes: 4 }, undefined, undefined, undefined]),
+    );
+    render(
+      <HoleClient {...baseProps({ currentHole: 9, holeSegment: 'front9' })} />,
+    );
+    const link = screen.getByRole('link', { name: 'Lever scorekort' });
+    expect(link.getAttribute('href')).toBe('/games/g1/submit');
+  });
+
+  it('back9 game: hole 12 is NOT the last hole (18 is) — still shows "Neste hull"', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([{ strokes: 4 }, undefined, undefined, undefined]),
+    );
+    render(
+      <HoleClient {...baseProps({ currentHole: 12, holeSegment: 'back9' })} />,
+    );
+    const link = screen.getByRole('link', { name: 'Neste hull · 13' });
+    expect(link.getAttribute('href')).toBe('/games/g1/holes/13');
+  });
+
+  it('back9 game: round is complete once 9 holes are filled (not 18) — CTA becomes submit even mid-round', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([{ strokes: 4 }, undefined, undefined, undefined]),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          currentHole: 12,
+          holeSegment: 'back9',
+          myCompletedHoles: 9,
+        })}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Lever scorekort' });
+    expect(link.getAttribute('href')).toBe('/games/g1/submit');
+  });
+});
