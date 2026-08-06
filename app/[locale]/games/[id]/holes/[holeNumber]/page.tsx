@@ -10,6 +10,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
 import { isStablefordFamily, isScrambleFamily } from '@/lib/scoring/modes/types';
+import { readTeamStrokesOverride } from '@/lib/scoring/modes/greensomeMatchplay';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { nameInitials } from '@/lib/names/initials';
@@ -612,6 +613,11 @@ export default async function HolePage({ params }: { params: Params }) {
     const isSixtyForty = isGreensome || isChapman;
     const isDiffFormat = isFoursomes || isGreensome || isChapman || isGruesome;
 
+    // #1447: manuelt tastede lag-slag (D10) må styre prikkene her identisk med
+    // motoren — override erstatter formel-CH per side FØR diff × allowance.
+    // Kun greensome_matchplay har feltet; undefined = formelen under.
+    const teamStrokesOverride = readTeamStrokesOverride(game.mode_config);
+
     function sideHandicap(players: typeof flight): number {
       if (isSixtyForty) {
         const chs = players.map((p) => p.course_handicap ?? 0);
@@ -635,8 +641,18 @@ export default async function HolePage({ params }: { params: Params }) {
             p.team_number !== null &&
             p.withdrawn_at == null,
         );
-        const thisSideCH = isSixtyForty ? sideHandicap(teamPlayers) : combinedCH;
-        const oppCH = sideHandicap(oppPlayers);
+        const thisSideCH = teamStrokesOverride
+          ? teamNum === 1
+            ? teamStrokesOverride.side1
+            : teamStrokesOverride.side2
+          : isSixtyForty
+            ? sideHandicap(teamPlayers)
+            : combinedCH;
+        const oppCH = teamStrokesOverride
+          ? teamNum === 1
+            ? teamStrokesOverride.side2
+            : teamStrokesOverride.side1
+          : sideHandicap(oppPlayers);
         const allowancePct =
           game.mode_config.kind === 'foursomes_matchplay'
             ? game.mode_config.allowance_pct

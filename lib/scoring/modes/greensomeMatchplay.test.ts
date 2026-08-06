@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { compute, greensomeTeamHandicap } from './greensomeMatchplay';
+import {
+  compute,
+  greensomeTeamHandicap,
+  readTeamStrokesOverride,
+} from './greensomeMatchplay';
 import type {
   GameModeConfig,
   ScoringContext,
@@ -350,5 +354,39 @@ describe('compute — greensome matchplay basis', () => {
     expect(r.kind).toBe('foursomes_matchplay');
     expect(r.holes).toEqual([]);
     expect(r.result).toBeNull();
+  });
+});
+
+// #1447: føringsflaten (hull-siden) leser samme override som motoren via den
+// eksporterte readTeamStrokesOverride — testene pinner mappingen slik at
+// display og motor ikke kan drifte hver sin vei igjen.
+describe('readTeamStrokesOverride — delt med føringsflaten (#1447)', () => {
+  it('mapper team1/team2 → side1/side2 når feltet er satt', () => {
+    expect(
+      readTeamStrokesOverride({
+        kind: 'greensome_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 100,
+        team_strokes_override: { team1: 8, team2: 3 },
+      }),
+    ).toEqual({ side1: 8, side2: 3 });
+  });
+
+  it('undefined når feltet mangler (dagens 60/40-oppførsel)', () => {
+    expect(
+      readTeamStrokesOverride({
+        kind: 'greensome_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 100,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('undefined for andre mode_config-kinds', () => {
+    expect(
+      readTeamStrokesOverride({ kind: 'best_ball', team_size: 2, teams_count: 2 }),
+    ).toBeUndefined();
   });
 });

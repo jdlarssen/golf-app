@@ -15,7 +15,11 @@
 
 import { computeFoursomesCore } from './foursomesMatchplay';
 import type { SideHandicapOverride } from './foursomesMatchplay';
-import type { ScoringContext, FoursomesMatchplayResult } from './types';
+import type {
+  GameModeConfig,
+  ScoringContext,
+  FoursomesMatchplayResult,
+} from './types';
 
 /**
  * Greensome lag-handicap: 60 % av laveste + 40 % av høyeste course-handicap,
@@ -44,12 +48,16 @@ function readAllowancePct(ctx: ScoringContext): number {
  * `{team1, team2}` til `{side1, side2}` (#1441, D10) — `team1`/`team2` matcher
  * `game_players.team_number`, som ellers i familien er identisk med
  * `sideNumber`. `undefined` når feltet ikke er satt (dagens 60/40-oppførsel).
+ *
+ * Eksportert (#1447) fordi føringsflaten (hull-sidens slag-prikker) må lese
+ * NØYAKTIG samme override som motoren — to private kopier var slik display og
+ * matchresultat driftet fra hverandre.
  */
-function readTeamStrokesOverride(ctx: ScoringContext): SideHandicapOverride | undefined {
-  const config = ctx.game.mode_config;
+export function readTeamStrokesOverride(
+  config: GameModeConfig,
+): SideHandicapOverride | undefined {
   if (config.kind !== 'greensome_matchplay') return undefined;
-  const raw = (config as { team_strokes_override?: { team1: number; team2: number } })
-    .team_strokes_override;
+  const raw = config.team_strokes_override;
   if (!raw) return undefined;
   return { side1: raw.team1, side2: raw.team2 };
 }
@@ -64,6 +72,6 @@ export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
     ctx,
     readAllowancePct(ctx),
     greensomeTeamHandicap,
-    readTeamStrokesOverride(ctx),
+    readTeamStrokesOverride(ctx.game.mode_config),
   );
 }
