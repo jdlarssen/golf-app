@@ -210,7 +210,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
                         {m.result && (
                           <p className="text-xs text-muted mt-1">
                             {m.result.winnerSide === 'tied'
-                              ? 'Halvert (AS)'
+                              ? 'Delt (AS)'
                               : m.result.winnerSide === 1
                                 ? `${m.result.formatted} til ${
                                     isTeamMatchGameMode(m.gameMode)
