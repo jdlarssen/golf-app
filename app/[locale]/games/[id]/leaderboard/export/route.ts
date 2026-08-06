@@ -6,6 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { holeNumbersForSegment } from '@/lib/games/holeScope';
 import {
   computeLeaderboard,
   teamMembersLabel,
@@ -107,6 +108,11 @@ export async function GET(
     return NextResponse.json({ error: t('errors.noAccess') }, { status: 404 });
   }
 
+  // #1441 (D3): a derived game (source_game_id set) owns no scores of its
+  // own — read from the host game instead. Same `?? id` no-op as the
+  // leaderboard-page fetch for host games (source_game_id null).
+  const scoresGameId = game.source_game_id ?? id;
+
   const [rawHolesRes, rawScoresRes] = await Promise.all([
     supabase
       .from('course_holes')
@@ -117,7 +123,7 @@ export async function GET(
     supabase
       .from('scores')
       .select(SCORES_SELECT)
-      .eq('game_id', id)
+      .eq('game_id', scoresGameId)
       .returns<ScoreRow[]>(),
   ]);
 
@@ -145,7 +151,19 @@ export async function GET(
       teeGender: p.tee_gender,
     }));
 
-  const holes: LbHole[] = (rawHolesRes.data ?? []).map((h) => ({
+  // #1441 (D1/D2): scope both rows down to the game's hole_segment before
+  // computing anything — 'full' is a no-op (every hole 1-18, byte-identical
+  // to pre-#1441 exports), front9/back9 narrow to their 9 hole numbers so
+  // coursePar/totalHoles below sum the segment, not the whole round.
+  const scopedHoleNumbers = new Set(holeNumbersForSegment(game.hole_segment));
+  const scopedHolesRows = (rawHolesRes.data ?? []).filter((h) =>
+    scopedHoleNumbers.has(h.hole_number),
+  );
+  const scopedScoresRows = (rawScoresRes.data ?? []).filter((s) =>
+    scopedHoleNumbers.has(s.hole_number),
+  );
+
+  const holes: LbHole[] = scopedHolesRows.map((h) => ({
     holeNumber: h.hole_number,
     par: h.par_mens,
     parByGender: {
@@ -156,7 +174,7 @@ export async function GET(
     strokeIndex: h.stroke_index,
   }));
 
-  const scores: LbScore[] = (rawScoresRes.data ?? []).map((s) => ({
+  const scores: LbScore[] = scopedScoresRows.map((s) => ({
     userId: s.user_id,
     holeNumber: s.hole_number,
     strokes: s.strokes,
