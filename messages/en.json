@@ -569,6 +569,10 @@
       "allowedFormatsLegend": "Allowed match formats",
       "allowedFormatsHint": "Choose which game formats are permitted in the matches. You add the individual matches after the cup is created.",
       "atLeastOneFormatError": "Choose at least one match format.",
+      "pointsWeightLegend": "Points weighting",
+      "pointsWeightHint": "Optional. Change from the standard 1 point for a win / 0.5 for a tie and the \"first to X\" banner is hidden — the winner is decided instead when the cup finishes.",
+      "winPointsLabel": "Points for a win",
+      "tiePointsLabel": "Points for a tie",
       "submitButton": "Create cup"
     },
     "sections": {
@@ -1138,6 +1142,8 @@
       "cup_team_2": "Team 2 name must be between 1 and 40 characters.",
       "cup_team_dup": "The teams must have different names.",
       "cup_allowance": "Allowance must be between 0 and 100.",
+      "cup_win_points": "Points for a win must be a number above 0.",
+      "cup_tie_points": "Points for a tie can't be negative.",
       "cup_insert_failed": "Failed to create the cup. Please try again in a moment.",
       "pending_players": "These players have not completed registration yet{list}. They must log in and fill in their name and handicap before the game can be published.",
       "pending_players_generic": "Someone on the player list has not completed registration yet. They must log in and fill in their name and handicap before the game can be published.",
@@ -4644,6 +4650,8 @@
         "cup_team_dup": "Teams must have different names.",
         "cup_allowance": "Check the handicap allowance for four-ball.",
         "cup_foursomes_allowance": "Check the handicap allowance for foursomes.",
+        "cup_win_points": "Points for a win must be a number above 0.",
+        "cup_tie_points": "Points for a tie can't be negative.",
         "cup_insert_failed": "Failed to create the cup. Please try again."
       }
     },
