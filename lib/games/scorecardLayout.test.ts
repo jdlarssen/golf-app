@@ -37,6 +37,8 @@ const baseGame: Omit<GameForHole, 'game_mode' | 'mode_config'> = {
   round_report: null,
   entry_fee_kr: 0,
   payment_link: null,
+  hole_segment: 'full',
+  source_game_id: null,
   tee_box: {
     name: 'Hvit',
     slope_mens: 130,
