@@ -115,6 +115,35 @@ export function CupSetup({
 
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+          {t('pointsWeightLegend')}
+        </legend>
+        <p className="text-xs text-muted mb-3">{t('pointsWeightHint')}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label={t('winPointsLabel')}
+            id="win_points"
+            name="win_points"
+            type="number"
+            step="0.5"
+            min="0.5"
+            inputMode="decimal"
+            placeholder="1"
+          />
+          <Input
+            label={t('tiePointsLabel')}
+            id="tie_points"
+            name="tie_points"
+            type="number"
+            step="0.5"
+            min="0"
+            inputMode="decimal"
+            placeholder="0,5"
+          />
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
           {t('allowedFormatsLegend')}
         </legend>
         <p className="text-xs text-muted mb-3">

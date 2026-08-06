@@ -569,6 +569,10 @@
       "allowedFormatsLegend": "Tillatte match-formater",
       "allowedFormatsHint": "Velg hvilke spillformater som er lov i matchene. Du legger til de enkelte matchene etter cupen er opprettet.",
       "atLeastOneFormatError": "Velg minst ett match-format.",
+      "pointsWeightLegend": "Poeng-vekting",
+      "pointsWeightHint": "Valgfritt. Endrer du fra standard 1 poeng for seier / 0,5 for delt, skjules «først til X»-varslet — vinneren avgjøres i stedet når cupen avsluttes.",
+      "winPointsLabel": "Poeng for seier",
+      "tiePointsLabel": "Poeng ved delt",
       "submitButton": "Opprett cup"
     },
     "sections": {
@@ -1138,6 +1142,8 @@
       "cup_team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
       "cup_team_dup": "Lagene må ha forskjellige navn.",
       "cup_allowance": "Handicap-andelen må være mellom 0 og 100.",
+      "cup_win_points": "Poeng for seier må være et tall over 0.",
+      "cup_tie_points": "Poeng ved delt kan ikke være negativt.",
       "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen om litt.",
       "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.",
       "pending_players_generic": "Noen på spillerlista har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.",
@@ -4644,6 +4650,8 @@
         "cup_team_dup": "Lagene må ha forskjellige navn.",
         "cup_allowance": "Sjekk handicap-andelen for fourball.",
         "cup_foursomes_allowance": "Sjekk handicap-andelen for foursomes.",
+        "cup_win_points": "Poeng for seier må være et tall over 0.",
+        "cup_tie_points": "Poeng ved delt kan ikke være negativt.",
         "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen."
       }
     },
