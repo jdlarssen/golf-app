@@ -5,12 +5,17 @@
  * «1 helg»-størrelse Ryder Cup. Global admin er uncapped (sekretariatet kjører
  * klubb-skala). Klubb-cuper (#480/#524) har egne, uncappede regler.
  *
- * Match-taket er i praksis det bindende: 4 matcher à maks 4 spillere = ≤16
- * distinkte deltakere, godt under spiller-taket. Begge er med for robusthet.
+ * Match-taket ble hevet 4 → 16 (#1441): splittet-cup-dag-bunten er 4 matcher
+ * per flight (greensome + best ball + 2 singles), så en ikke-admin som setter
+ * opp en hel cup-dag selv (3 flights × 4 matcher = 12, opp mot 16 med litt
+ * slingringsmonn) trenger et tak som faktisk får plass til formatet. Spiller-
+ * taket (24, uendret) er nå det reelt bindende for en full 6v6-dag — 4
+ * matcher à maks 2 spillere/side ville tidligere vært det bindende taket, men
+ * er det ikke lenger ved 16.
  */
 
 /** Maks antall matcher i en personlig cup (ikke-admin). */
-export const MAX_PERSONAL_CUP_MATCHES = 4;
+export const MAX_PERSONAL_CUP_MATCHES = 16;
 
 /** Maks antall distinkte deltakere i en personlig cup (ikke-admin). Samme
  * offentlige tak som Kompis-runder (#525). */
