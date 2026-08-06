@@ -1383,8 +1383,10 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
+- `1.216.5` · [#1454](https://github.com/jdlarssen/golf-app/issues/1454) — En delt cup-match står nå som «Delt (AS)», ikke «Halvert».
+- `1.216.4` · [#1453](https://github.com/jdlarssen/golf-app/issues/1453) — I greensome og andre lagball-former holder det at én på laget leverer scorekortet — hele laget markeres som levert.
 - `1.216.3` · [#1452](https://github.com/jdlarssen/golf-app/issues/1452) — På en hemmelig cup-dag holder scorekortet også tett: matchstatus og motstanderlagets totaler kommer først når arrangøren avslutter.
-<summary><strong>August 2026 · 6 rettinger</strong></summary>
+<summary><strong>August 2026 · 8 rettinger</strong></summary>
 
 - `1.216.2` · [#1448](https://github.com/jdlarssen/golf-app/issues/1448) — På en hemmelig cup-dag holder også hull-for-hull-visningen tett: lagstillinger vises først når arrangøren avslutter, og 9-hulls-spill viser bare sine egne hull.
 - `1.216.1` · [#1447](https://github.com/jdlarssen/golf-app/issues/1447) — Skriver arrangøren egne lag-slag i greensome, viser slag-prikkene på føringssiden nå de tastede slagene — samme tall som avgjør matchen.

@@ -5,11 +5,16 @@ import { redirect } from '@/i18n/navigation';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { sendScorecardSubmittedNotification } from '@/lib/mail/scorecardSubmittedNotification';
 import { firstName } from '@/lib/firstName';
 import { notify } from '@/lib/notifications/notify';
 import { peersForApproval } from '@/lib/games/flightScope';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import {
+  isScrambleFamily,
+  isAlternateShotMatchplay,
+  type GameMode,
+} from '@/lib/scoring/modes/types';
 
 /**
  * Mark the current user's scorecard as submitted.
@@ -60,26 +65,60 @@ export async function submitScorecard(gameId: string) {
   // in-depth. Bounce to game-home, which renders the «Du har trukket deg»-banner.
   const { data: meRow } = await supabase
     .from('game_players')
-    .select('withdrawn_at')
+    .select('withdrawn_at, submitted_at, team_number')
     .eq('game_id', gameId)
     .eq('user_id', user.id)
-    .maybeSingle<{ withdrawn_at: string | null }>();
+    .maybeSingle<{
+      withdrawn_at: string | null;
+      submitted_at: string | null;
+      team_number: number | null;
+    }>();
 
   if (meRow?.withdrawn_at) {
     redirect({ href: `/games/${gameId}` as string, locale });
   }
 
-  const { data: updated, error } = await supabase
-    .from('game_players')
-    .update({
-      submitted_at: new Date().toISOString(),
-      // A previous rejection clears once the player re-submits.
-      rejection_reason: null,
-    })
-    .eq('game_id', gameId)
-    .eq('user_id', user.id)
-    .is('submitted_at', null)
-    .select('user_id');
+  // #1453: har innsenderen alt levert er hele kallet idempotent — hopp over
+  // oppdatering og side-effekter (samme UX som 0-rads-grenen under). Uten
+  // denne kunne et re-klikk i lag-modusene re-fyre varsler for en lagkamerat
+  // som ennå ikke sto som levert.
+  if (meRow?.submitted_at) {
+    revalidateTag(`game-${gameId}`, 'max');
+    revalidatePath(`/games/${gameId}`);
+    redirect({ href: `/games/${gameId}?status=submitted` as string, locale });
+  }
+
+  // #1453: én-ball-lagformat (scramble-familien + alternate-shot-matchplay) —
+  // laget fører én felles ball, så én levering markerer HELE lagets aktive,
+  // uleverte rader. Cascaden går via admin-client: RLS-flightmate-policyen
+  // (can_score_for) dekker ikke alle flight-konfigurasjoner, og authz er alt
+  // verifisert her (innsenderen er aktiv spiller i spillet). Patsome er
+  // bevisst utenfor — bytter mellom individuell og lag-føring midtveis.
+  const mode = game!.game_mode as GameMode;
+  const teamSubmit =
+    (isScrambleFamily(mode) || isAlternateShotMatchplay(mode)) &&
+    meRow?.team_number != null;
+  const submitPatch = {
+    submitted_at: new Date().toISOString(),
+    // A previous rejection clears once the player re-submits.
+    rejection_reason: null,
+  };
+  const { data: updated, error } = teamSubmit
+    ? await getAdminClient()
+        .from('game_players')
+        .update(submitPatch)
+        .eq('game_id', gameId)
+        .eq('team_number', meRow!.team_number!)
+        .is('withdrawn_at', null)
+        .is('submitted_at', null)
+        .select('user_id')
+    : await supabase
+        .from('game_players')
+        .update(submitPatch)
+        .eq('game_id', gameId)
+        .eq('user_id', user.id)
+        .is('submitted_at', null)
+        .select('user_id');
 
   if (error) {
     redirect({ href: `/games/${gameId}/submit?error=db` as string, locale });
