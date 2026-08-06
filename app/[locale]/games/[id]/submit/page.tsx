@@ -92,7 +92,7 @@ export default async function SubmitPage({
         'courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
-      .single<CourseTeeRow>(),
+      .maybeSingle<CourseTeeRow>(),
   ]);
 
   if (!result) notFound();
@@ -134,7 +134,10 @@ export default async function SubmitPage({
     redirect({ href: `/games/${id}` as string, locale });
   }
 
-  if (courseTeeRes.error || !courseTeeRes.data) notFound();
+  // Error ≠ absence (#1441): throw on query failure (error boundary), 404
+  // only when the row is genuinely gone.
+  if (courseTeeRes.error) throw courseTeeRes.error;
+  if (!courseTeeRes.data) notFound();
   const courseTee = courseTeeRes.data;
   const playerRating = courseTee.tee_boxes
     ? getRatingForGender(courseTee.tee_boxes, me.tee_gender)

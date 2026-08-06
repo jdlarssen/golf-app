@@ -220,7 +220,7 @@ export default async function GameHomePage({
         'courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
-      .single<Pick<GameRow, 'courses' | 'tee_boxes'>>(),
+      .maybeSingle<Pick<GameRow, 'courses' | 'tee_boxes'>>(),
     // #938: live-follow token, read server-side to feed the creator/admin UI.
     getAdminClient()
       .from('games')
@@ -238,7 +238,11 @@ export default async function GameHomePage({
   ]);
 
   if (!gwp) notFound();
-  if (joinsRes.error || !joinsRes.data) notFound();
+  // Error ≠ absence (#1441): a transient query failure must surface via the
+  // error boundary, not masquerade as a 404. Only a genuine 0-row result
+  // (game gone) falls through to notFound().
+  if (joinsRes.error) throw joinsRes.error;
+  if (!joinsRes.data) notFound();
   const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
