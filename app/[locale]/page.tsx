@@ -48,6 +48,7 @@ import {
 } from '@/lib/games/getActiveGameCardData';
 import type { ActiveCardState } from '@/lib/games/activeCardState';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 import type { GameStatus } from '@/lib/games/status';
 import { routing, type AppLocale } from '@/i18n/routing';
 
@@ -166,7 +167,7 @@ const activeGamesQuery = (
   supabase
     .from('game_players')
     .select(
-      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name))',
+      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, require_peer_approval, game_mode, hole_segment, courses(name))',
     )
     .eq('user_id', userId)
     .in('games.status', ['draft', 'scheduled', 'active']);
@@ -244,6 +245,8 @@ async function HomeBody() {
     // works in the narrower GameMode union. The query never broadens it at
     // runtime, so bridge the type here (honest cast at the data boundary).
     game_mode: row.games.game_mode as GameMode,
+    // Same widen-to-string trap as game_mode above (#1441).
+    hole_segment: row.games.hole_segment as HoleSegment,
     // The query filters status to draft/scheduled/active, so a finished game
     // never reaches the StatusPill — narrow the type to match the runtime
     // invariant (and to keep the pill's prop type free of the dead branch).
@@ -375,6 +378,7 @@ async function HomeBody() {
             submitted_at: g.submitted_at,
             withdrawn_at: g.withdrawn_at,
             approved_at: g.approved_at,
+            hole_segment: g.hole_segment,
           })),
         )
       : new Map();

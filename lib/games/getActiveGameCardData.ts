@@ -1,10 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
+import { holeNumbersForSegment } from './holeScope';
 import { pendingApprovalsFor } from './flightScope';
 import { resolveActiveCardState, type ActiveCardState } from './activeCardState';
-
-const HOLE_COUNT = 18;
 
 /** The active-game fields the Home card needs to resolve state, route, and count approvals. */
 export type ActiveGameForCard = {
@@ -14,6 +14,12 @@ export type ActiveGameForCard = {
   submitted_at: string | null;
   withdrawn_at: string | null;
   approved_at: string | null;
+  /**
+   * #1441: limits «all holes filled» to the game's segment (9 for
+   * front9/back9, 18 for 'full') so a completed 9-hole round links to
+   * /submit instead of an out-of-scope hole.
+   */
+  hole_segment: HoleSegment;
 };
 
 export type ActiveCardExtras = {
@@ -102,11 +108,12 @@ export async function getActiveGameCardData(
     let href = `/games/${g.id}`;
     if (state === 'continue') {
       const filled = filledByGame.get(g.id) ?? new Set<number>();
-      if (filled.size >= HOLE_COUNT) {
+      const holeNumbers = holeNumbersForSegment(g.hole_segment);
+      if (filled.size >= holeNumbers.length) {
         href = `/games/${g.id}/submit`;
       } else {
-        let nextHole = 1;
-        for (let h = 1; h <= HOLE_COUNT; h++) {
+        let nextHole = holeNumbers[0];
+        for (const h of holeNumbers) {
           if (!filled.has(h)) {
             nextHole = h;
             break;
