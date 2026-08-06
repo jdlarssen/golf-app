@@ -41,6 +41,8 @@ describe('getCupSnapshot — course_holes par-select (#642)', () => {
           started_at: null,
           finished_at: null,
           group_id: null,
+          win_points: 1,
+          tie_points: 0.5,
         },
       },
       // 2. games (≥1 → triggers the course_holes fetch that used to crash)
@@ -56,10 +58,15 @@ describe('getCupSnapshot — course_holes par-select (#642)', () => {
             course_id: 'c1',
             tee_box_id: 'tb1',
             created_at: '2026-06-15T10:05:00Z',
+            hole_segment: 'full',
+            source_game_id: null,
+            score_visibility: 'live',
           },
         ],
       },
-      // 3. Promise.all → game_players, scores, course_holes (in array order)
+      // 3. tournament_side_awards (#1441, D9) — none configured for this cup.
+      { data: [] },
+      // 4. Promise.all → game_players, scores, course_holes (in array order)
       {
         data: [
           { game_id: 'g1', user_id: 'u1', team_number: 1, course_handicap: 0, users: { name: 'Spiller 1', nickname: null } },
@@ -88,5 +95,185 @@ describe('getCupSnapshot — course_holes par-select (#642)', () => {
     expect(cols).toContain('par_juniors');
     // No standalone `par` token — that would re-introduce the 42703 crash.
     expect(cols).not.toMatch(/(^|[\s,])par($|[\s,])/);
+  });
+});
+
+/**
+ * #1441 (F3b): splittet-cup-dag-bunten i getCupSnapshot — best-ball-host
+ * scoret på netto lagtotal (ikke matchplay-dispatch), avledet singles som
+ * leser host-ens scores filtrert på sitt eget segment, D12 blind-gating
+ * (reveal + ikke-finished skjuler ellers avgjørbare resultater; 'live'
+ * beholder dagens oppførsel), D8 vektede poeng og D9 sidepoeng.
+ *
+ * Én flight-lignende fixture (3 games under samme cup) dekker alt i én
+ * kjøring — se inline-kommentarer per game for hva hver rad beviser.
+ */
+describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function player(id: string, team: 1 | 2) {
+    return { user_id: id, team_number: team, course_handicap: 0, users: { name: id, nickname: null } };
+  }
+
+  it('best-ball host (netto lagtotal), avledet singles (source_game_id + segment), D12 blind-gating, D8-vekter, D9-sidepoeng', async () => {
+    supabaseMock = buildSupabaseMock([
+      // 1. tournaments — win_points/tie_points 5/2 (D8, denne dagens vekter).
+      {
+        data: {
+          id: 't1',
+          name: 'Splittet cup-dag',
+          team_1_name: 'Nord',
+          team_2_name: 'Sør',
+          points_to_win: null,
+          status: 'active',
+          winner_team: null,
+          created_by: 'admin',
+          created_at: '2026-08-06T08:00:00Z',
+          started_at: '2026-08-06T09:00:00Z',
+          finished_at: null,
+          group_id: null,
+          win_points: 5,
+          tie_points: 2,
+        },
+      },
+      // 2. games: g1 = best-ball host (back9, reveal, finished — resultatet
+      //    SKAL vises + telle poeng). g2 = avledet singles (back9,
+      //    source_game_id=g1, reveal, STILL active — D12 skal skjule et
+      //    ellers avgjørbart resultat). g3 = greensome host (front9, LIVE
+      //    default, active — dagens oppførsel: avgjort resultat vises selv
+      //    om spillet ikke er finished; poengene teller uansett ikke før
+      //    finished).
+      {
+        data: [
+          {
+            id: 'g1',
+            name: 'Splittet cup-dag – Best ball 1',
+            status: 'finished',
+            game_mode: 'best_ball',
+            mode_config: { kind: 'best_ball', team_size: 2, teams_count: 2, allowance_pct: 85 },
+            tournament_match_label: 'Best ball 1',
+            course_id: 'c1',
+            tee_box_id: 'tb1',
+            created_at: '2026-08-06T09:00:00Z',
+            hole_segment: 'back9',
+            source_game_id: null,
+            score_visibility: 'reveal',
+          },
+          {
+            id: 'g2',
+            name: 'Splittet cup-dag – Singel 1',
+            status: 'active',
+            game_mode: 'singles_matchplay',
+            mode_config: null,
+            tournament_match_label: 'Singel 1',
+            course_id: 'c1',
+            tee_box_id: 'tb1',
+            created_at: '2026-08-06T09:00:01Z',
+            hole_segment: 'back9',
+            source_game_id: 'g1',
+            score_visibility: 'reveal',
+          },
+          {
+            id: 'g3',
+            name: 'Splittet cup-dag – Greensome 1',
+            status: 'active',
+            game_mode: 'greensome_matchplay',
+            mode_config: null,
+            tournament_match_label: 'Greensome 1',
+            course_id: 'c1',
+            tee_box_id: 'tb1',
+            created_at: '2026-08-06T09:00:02Z',
+            hole_segment: 'front9',
+            source_game_id: null,
+            score_visibility: 'live',
+          },
+        ],
+      },
+      // 3. tournament_side_awards (D9): ld-poeng vunnet av p6 (Nord/team1).
+      {
+        data: [
+          { id: 'sa1', kind: 'ld', hole_number: 6, points: 3, winner_user_id: 'p6' },
+        ],
+      },
+      // 4. Promise.all → game_players, scores, course_holes.
+      {
+        data: [
+          { game_id: 'g1', ...player('p1', 1) },
+          { game_id: 'g1', ...player('p2', 1) },
+          { game_id: 'g1', ...player('p3', 2) },
+          { game_id: 'g1', ...player('p4', 2) },
+          { game_id: 'g2', ...player('p1', 1) },
+          { game_id: 'g2', ...player('p3', 2) },
+          { game_id: 'g3', ...player('p5', 1) },
+          { game_id: 'g3', ...player('p6', 1) },
+          { game_id: 'g3', ...player('p7', 2) },
+          { game_id: 'g3', ...player('p8', 2) },
+        ],
+      },
+      {
+        // g2 (avledet) har INGEN egne rader — leses fra g1 via source_game_id.
+        // g3 (greensome/alternate-shot) bærer scoren kun på lagets
+        // lex-min-userId («kaptein»), samme mønster som
+        // computeCupMatchResult.test.ts.
+        data: [
+          { game_id: 'g1', user_id: 'p1', hole_number: 10, strokes: 4 },
+          { game_id: 'g1', user_id: 'p2', hole_number: 10, strokes: 6 },
+          { game_id: 'g1', user_id: 'p3', hole_number: 10, strokes: 5 },
+          { game_id: 'g1', user_id: 'p4', hole_number: 10, strokes: 5 },
+          { game_id: 'g3', user_id: 'p5', hole_number: 1, strokes: 4 },
+          { game_id: 'g3', user_id: 'p7', hole_number: 1, strokes: 5 },
+        ],
+      },
+      {
+        data: [
+          { course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 5, par_juniors: 4, stroke_index: 1 },
+          { course_id: 'c1', hole_number: 10, par_mens: 4, par_ladies: 5, par_juniors: 4, stroke_index: 1 },
+        ],
+      },
+    ]);
+
+    const { getCupSnapshot } = await import('@/lib/cup/getCupSnapshot');
+    const snap = await getCupSnapshot('t1');
+    expect(snap).not.toBeNull();
+
+    const byId = (id: string) => snap!.leaderboard.matches.find((m) => m.gameId === id)!;
+
+    // g1 — best-ball host: netto lagtotal (side1 4 < side2 5), finished →
+    // resultat vises OG teller D8-vektede poeng (win_points 5, ikke default 1).
+    const g1 = byId('g1');
+    expect(g1.result).toEqual({ winnerSide: 1, formatted: '4–5' });
+    expect(g1.pointsTeam1).toBe(5);
+    expect(g1.pointsTeam2).toBe(0);
+
+    // g2 — avledet singles: leser g1s scores (source_game_id) filtrert til
+    // back9 (hull 10 finnes, hull 1 er utenfor scope). Scorene AVGJØR
+    // matchen (p1 slår p3 på hull 10) — men reveal + active (ikke finished)
+    // → D12 skjuler resultatet uansett avgjørbarhet.
+    const g2 = byId('g2');
+    expect(g2.result).toBeNull();
+    expect(g2.pointsTeam1).toBe(0);
+    expect(g2.pointsTeam2).toBe(0);
+
+    // g3 — greensome host, 'live' (ikke reveal): dagens oppførsel bevart —
+    // et avgjort resultat vises FØR finished. Poengene teller likevel ikke
+    // (status !== 'finished') — points-gatingen var allerede riktig.
+    const g3 = byId('g3');
+    expect(g3.result).not.toBeNull();
+    expect(g3.result?.winnerSide).toBe(1);
+    expect(g3.pointsTeam1).toBe(0);
+    expect(g3.pointsTeam2).toBe(0);
+
+    // D9 — sidepoeng: p6 er team1 (Nord) via rosteret bygget fra g3s
+    // game_players → winnerTeam utledes riktig, poengene legges til team1s
+    // totalsum ovenpå match-poengene.
+    expect(snap!.sideAwards).toEqual([
+      { id: 'sa1', kind: 'ld', holeNumber: 6, points: 3, winnerUserId: 'p6', winnerTeam: 1 },
+    ]);
+    expect(snap!.leaderboard.sideAwardPoints).toEqual({ team1: 3, team2: 0 });
+    // Total = g1s 5 (best-ball-seier) + 3 (sidepoeng) — g2/g3 bidrar 0.
+    expect(snap!.leaderboard.team1Points).toBe(8);
+    expect(snap!.leaderboard.team2Points).toBe(0);
   });
 });

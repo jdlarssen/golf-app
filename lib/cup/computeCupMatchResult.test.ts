@@ -151,4 +151,69 @@ describe('computeCupMatchResult — dispatch over alle seks matchplay-modi', () 
     expect(computeCupMatchResult(highVsScratch(100))?.winnerSide).toBe(1);
     expect(computeCupMatchResult(highVsScratch(0))?.winnerSide).toBe('tied');
   });
+
+  // #1441 (D10, F3b): greensomes manuelle lag-slag må forwardes til compute()
+  // (greensomeMatchplay.ts leser feltet fra ctx.game.mode_config selv) — uten
+  // forwarding ville splittet-cup-dagens arrangør-tastede lag-slag stille bli
+  // ignorert til fordel for 60/40-formelen.
+  describe('team_strokes_override (D10) forwarding', () => {
+    it('greensome: team_strokes_override overstyrer 60/40-formelen', () => {
+      // side1 course_handicap 0 (60/40 → 0 lag-CH uten override → ingen slag).
+      // Med override team1: 10 får side1 slag på topp-10-SI-hullene — nok til
+      // å snu et ellers jevnt (AS) 18-hulls oppgjør til side1-seier.
+      const input: CupMatchScoringInput = {
+        gameMode: 'greensome_matchplay',
+        modeConfig: { team_strokes_override: { team1: 10, team2: 0 } },
+        side1: [
+          { userId: 'a1', courseHandicap: 0 },
+          { userId: 'a2', courseHandicap: 0 },
+        ],
+        side2: [
+          { userId: 'b1', courseHandicap: 0 },
+          { userId: 'b2', courseHandicap: 0 },
+        ],
+        holes: par4Holes(N),
+        scores: captainScores(4, 4, N),
+      };
+      expect(computeCupMatchResult(input)?.winnerSide).toBe(1);
+    });
+
+    it('greensome uten team_strokes_override: 0-CH begge sider forblir uavgjort (regresjonskontroll)', () => {
+      const input: CupMatchScoringInput = {
+        gameMode: 'greensome_matchplay',
+        modeConfig: null,
+        side1: [
+          { userId: 'a1', courseHandicap: 0 },
+          { userId: 'a2', courseHandicap: 0 },
+        ],
+        side2: [
+          { userId: 'b1', courseHandicap: 0 },
+          { userId: 'b2', courseHandicap: 0 },
+        ],
+        holes: par4Holes(N),
+        scores: captainScores(4, 4, N),
+      };
+      expect(computeCupMatchResult(input)?.winnerSide).toBe('tied');
+    });
+
+    it('ikke-greensome modus: team_strokes_override ignoreres (feltet betyr ingenting utenfor greensome)', () => {
+      const input: CupMatchScoringInput = {
+        gameMode: 'foursomes_matchplay',
+        modeConfig: { team_strokes_override: { team1: 10, team2: 0 } },
+        side1: [
+          { userId: 'a1', courseHandicap: 0 },
+          { userId: 'a2', courseHandicap: 0 },
+        ],
+        side2: [
+          { userId: 'b1', courseHandicap: 0 },
+          { userId: 'b2', courseHandicap: 0 },
+        ],
+        holes: par4Holes(N),
+        scores: captainScores(4, 4, N),
+      };
+      // Foursomes bruker sum-CH (0+0=0) uansett — override-feltet skal ikke
+      // smitte over fra greensome-caset og gi side1 slag den ikke skal ha.
+      expect(computeCupMatchResult(input)?.winnerSide).toBe('tied');
+    });
+  });
 });
