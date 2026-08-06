@@ -61,6 +61,13 @@ export type WizardPlayer = {
   // #1441 (F3c) — se TeeBoxRow-kommentaren over. Optional: kun satt når
   // kilde-queriet valgte kolonnen (alle tre spiller-kilder gjør det nå).
   gender?: 'mens' | 'ladies' | null;
+  // #1441 (owner-QA, F3f): true for venner uten fullført profil
+  // (`profile_completed_at IS NULL`) — rendres som en IKKE-valgbar rad i
+  // Step1Roster, aldri tildelbar til et lag (se `getFriendPlayerOptions`s
+  // `pending`-felt). Alltid `false`/`undefined` for klubb-medlem- og
+  // admin-spillerlistene — de filtrerer pending bort før wizarden i det
+  // hele tatt ser dem (uendret, kun venne-kilden fikk denne synligheten).
+  pending?: boolean;
 };
 
 export type WizardTeeBox = {
@@ -213,12 +220,19 @@ export async function GenerateMatches({
       });
     }
     for (const f of friends) {
-      if (f.pending || byId.has(f.id)) continue;
+      if (byId.has(f.id)) continue;
+      // #1441 (owner-QA, F3f): pending venner (profil ikke fullført) er ikke
+      // lenger filtrert bort — de vises som en ikke-valgbar rad i
+      // Step1Roster (`pending: true`) i stedet, så organisatoren ser hvem
+      // som må dyttes på. `hcp_index` på en pending rad er schema-default
+      // (54.0, se getFriendPlayerOptions), aldri en ekte verdi — UI-en viser
+      // derfor «mangler handicap» i stedet for tallet for disse radene.
       byId.set(f.id, {
         id: f.id,
         displayName: f.nickname?.trim() || f.name?.trim() || 'Ukjent spiller',
         hcpIndex: f.hcp_index,
         gender: f.gender,
+        pending: f.pending,
       });
     }
     players = [...byId.values()].sort((a, b) =>
