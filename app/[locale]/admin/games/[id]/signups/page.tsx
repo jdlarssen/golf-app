@@ -91,8 +91,11 @@ export default async function PåmeldingerPage({
       'id, name, short_id, status, registration_mode, registration_type, game_mode, courses(name)',
     )
     .eq('id', id)
-    .single<GameRow>();
-  if (gameError || !game) notFound();
+    .maybeSingle<GameRow>();
+  // Error ≠ absence (#1441): throw on query failure (error boundary), 404
+  // only when the game is genuinely gone.
+  if (gameError) throw gameError;
+  if (!game) notFound();
 
   const TABS: { key: TabKey; label: string; status: RequestStatus }[] = [
     { key: 'pending', label: t('tabs.pending'), status: 'pending' },

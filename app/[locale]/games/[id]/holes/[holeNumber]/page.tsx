@@ -223,7 +223,7 @@ export default async function HolePage({ params }: { params: Params }) {
         .select(COURSE_HOLES_SELECT)
         .eq('course_id', game.course_id)
         .eq('hole_number', holeNumber)
-        .single<HoleRow>(),
+        .maybeSingle<HoleRow>(),
       supabase
         .from('scores')
         .select('user_id, strokes, putts, client_updated_at, updated_at')
@@ -311,7 +311,10 @@ export default async function HolePage({ params }: { params: Params }) {
     ]);
 
   const { data: hole, error: holeError } = holeRes;
-  if (holeError || !hole) notFound();
+  // Error ≠ absence (#1441): throw on query failure (error boundary), 404
+  // only when the hole row is genuinely missing.
+  if (holeError) throw holeError;
+  if (!hole) notFound();
   if (scoresRes.error) throw scoresRes.error;
 
   // #1210: green-senter (per-akse-median) + fresh pin-count for chip-gaten.
