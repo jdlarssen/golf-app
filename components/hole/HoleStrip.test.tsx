@@ -51,4 +51,18 @@ describe('HoleStrip', () => {
     expect(links[8].getAttribute('aria-current')).toBe('page');
     expect(links[0].getAttribute('aria-current')).toBeNull();
   });
+
+  it('#1441: a back9 game with a `holes` prop renders only 10-18, and does not mark 1-9 as completed', () => {
+    const back9 = Array.from({ length: 9 }, (_, i) => 10 + i);
+    const { container } = render(
+      <HoleStrip gameId="g1" currentHole={12} holes={back9} />,
+    );
+    const links = container.querySelectorAll('a');
+    expect(links.length).toBe(9);
+    expect(links[0].getAttribute('href')).toBe('/games/g1/holes/10');
+    expect(links[8].getAttribute('href')).toBe('/games/g1/holes/18');
+    for (let n = 1; n <= 9; n++) {
+      expect(screen.queryByText(String(n))).not.toBeInTheDocument();
+    }
+  });
 });

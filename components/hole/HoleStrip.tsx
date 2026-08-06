@@ -7,9 +7,18 @@ import { useTranslations } from 'next-intl';
 export interface HoleStripProps {
   gameId: string;
   currentHole: number;
+  /**
+   * Hull-numrene i spillets omfang (#1441 splittet cup-dag) — [1..18] for
+   * hele runden, [1..9]/[10..18] for front9/back9-segment. Styrer HVILKE
+   * celler som rendres OG "completed"-merkingen (n < currentHole): uten
+   * dette filteret ville en back9-runde (currentHole 10-18) merket hull
+   * 1-9 som fullført selv om de aldri spilles på det spillet. Default hele
+   * runden for eldre callsites.
+   */
+  holes?: number[];
 }
 
-const HOLES = Array.from({ length: 18 }, (_, i) => i + 1);
+const DEFAULT_HOLES = Array.from({ length: 18 }, (_, i) => i + 1);
 
 const containerStyle: CSSProperties = {
   padding: '6px 14px 8px',
@@ -71,12 +80,12 @@ function cellStyle(state: 'current' | 'completed' | 'future'): CSSProperties {
 }
 
 export function HoleStrip(props: HoleStripProps): JSX.Element {
-  const { gameId, currentHole } = props;
+  const { gameId, currentHole, holes = DEFAULT_HOLES } = props;
   const t = useTranslations('holes.entry');
   return (
     <div style={containerStyle}>
       <div style={innerStyle}>
-        {HOLES.map((n) => {
+        {holes.map((n) => {
           const state =
             n === currentHole
               ? 'current'

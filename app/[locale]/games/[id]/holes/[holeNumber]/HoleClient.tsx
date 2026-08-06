@@ -47,7 +47,11 @@ import type {
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import type { HoleParByGender } from '@/lib/games/parDisplay';
-import { TOTAL_HOLES } from '@/lib/games/deliveryStatus';
+import {
+  holeNumbersForSegment,
+  lastHoleForSegment,
+} from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
 import { subscribeBingoBangoBongo } from '@/lib/bbb/subscribeBingoBangoBongo';
 import { WolfChoiceModal } from './WolfChoiceModal';
@@ -98,6 +102,14 @@ export interface HoleClientProps {
    * de oppdateres.
    */
   gameMode?: GameMode;
+  /**
+   * #1441 (splittet cup-dag): begrenser spillet til hull 1-9 ('front9'),
+   * 10-18 ('back9'), eller hele runden (default 'full'). Styrer
+   * isLastHole/roundComplete-grensa, HoleStrip sitt hull-utvalg og
+   * HoleHero sin «hull N av total»-tekst. Default 'full' holder eldre
+   * callsites bakoverkompatible inntil de oppdateres.
+   */
+  holeSegment?: HoleSegment;
   currentHole: number;
   par: number;
   /**
@@ -284,6 +296,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     gameName,
     gameStatus,
     gameMode = 'best_ball',
+    holeSegment = 'full',
     withdrawn = false,
     currentHole,
     par,
@@ -756,13 +769,19 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     (c) => c.userId !== myCard?.userId && c.score == null,
   ).length;
   const next = currentHole + 1;
-  const isLastHole = currentHole === 18;
+  // #1441: last hole + completion threshold are the SEGMENT's, not always
+  // 18 — a front9 game's last hole is 9, and a back9 game's round is
+  // complete at 9 holes filled (holes 10-18) even though its holes are
+  // numbered up to 18.
+  const totalHoles = holeNumbersForSegment(holeSegment).length;
+  const isLastHole = currentHole === lastHoleForSegment(holeSegment);
   // Once the player has a score on every hole, the natural next action is
   // to submit — regardless of which hole they're currently editing. Skip
   // the 'Neste hull' chain and offer the submit CTA on every screen. Union
   // the server snapshot with the live local count (#668) so offline-entered
   // holes still surface the CTA.
-  const roundComplete = Math.max(myCompletedHoles, localCompletedHoles ?? 0) >= 18;
+  const roundComplete =
+    Math.max(myCompletedHoles, localCompletedHoles ?? 0) >= totalHoles;
 
   // Stableford = solo-modus, så det er kun «ditt» scorekort, ikke et lag-kort.
   // Texas = ett delt lag-scorekort — «lagets». Best-ball-kopien
@@ -930,10 +949,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         </div>
       )}
 
-      <HoleStrip gameId={gameId} currentHole={currentHole} />
+      <HoleStrip
+        gameId={gameId}
+        currentHole={currentHole}
+        holes={holeNumbersForSegment(holeSegment)}
+      />
       <HoleHero
         holeNumber={currentHole}
-        totalHoles={TOTAL_HOLES}
+        totalHoles={totalHoles}
         par={par}
         parByGender={parByGender}
         playerGender={playerGender}
