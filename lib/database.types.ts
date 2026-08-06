@@ -1,6 +1,8 @@
-// TODO(#1441): games.hole_segment + games.source_game_id are hand-added from
-// migration 0151 (applied to staging only). Re-run `npm run gen:types` after
-// the prod migration lands, which will overwrite this file and this marker.
+// TODO(#1441): games.hole_segment + games.source_game_id (0151),
+// tournaments.win_points/tie_points (0153) and tournament_side_awards (0154)
+// are hand-added from migrations applied to staging only. Re-run
+// `npm run gen:types` after the prod migrations land, which will overwrite
+// this file and this marker.
 export type Json =
   | string
   | number
@@ -1686,6 +1688,51 @@ export type Database = {
           },
         ]
       }
+      tournament_side_awards: {
+        Row: {
+          created_at: string
+          hole_number: number
+          id: string
+          kind: string
+          points: number
+          tournament_id: string
+          winner_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          hole_number: number
+          id?: string
+          kind: string
+          points: number
+          tournament_id: string
+          winner_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          hole_number?: number
+          id?: string
+          kind?: string
+          points?: number
+          tournament_id?: string
+          winner_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_side_awards_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_side_awards_winner_user_id_fkey"
+            columns: ["winner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournaments: {
         Row: {
           chapman_allowance_pct: number
@@ -1704,6 +1751,8 @@ export type Database = {
           status: string
           team_1_name: string
           team_2_name: string
+          tie_points: number
+          win_points: number
           winner_team: number | null
         }
         Insert: {
@@ -1723,6 +1772,8 @@ export type Database = {
           status?: string
           team_1_name: string
           team_2_name: string
+          tie_points?: number
+          win_points?: number
           winner_team?: number | null
         }
         Update: {
@@ -1742,6 +1793,8 @@ export type Database = {
           status?: string
           team_1_name?: string
           team_2_name?: string
+          tie_points?: number
+          win_points?: number
           winner_team?: number | null
         }
         Relationships: [
