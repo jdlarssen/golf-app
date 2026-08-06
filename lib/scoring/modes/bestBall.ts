@@ -164,17 +164,40 @@ export function compute(ctx: ScoringContext): BestBallResult {
     };
   });
 
-  // Bygg 18-lange poeng-arrays for ranking. Et lag som har spilt minst ett
-  // hull teller manglende hull som 0 (flagges via missingHoles for UI-warning).
-  // Et lag uten ETT eneste registrert hull paddes med UNPLAYED_PADDING på alle
-  // hull — ellers ville sum 0 tolkes som beste netto og laget kåret som vinner (#635).
+  // Bygg 18-lange poeng-arrays for ranking. `rankTeams`s tie-break-cascade
+  // (back9/back6/back3/hull18) forutsetter at array-POSISJON i speiler
+  // hull-nummer i+1 (denne antakelsen holder for et fullt 18-hulls-spill
+  // fordi holesSorted da alltid dekker hull 1-18 i rekkefølge). For et
+  // segment-spill (front9/back9, #1441/D11) dekker `holesSorted` bare 9 hull
+  // — å fylle arrayet SEKVENSIELT ville forskjøvet et back9-spills reelle
+  // data til posisjon 0-8 (feiltolket som "front9" av cascaden) og latt
+  // posisjon 9-17 (cascadens back9/back6/back3/hull18-tiers) stå igjen som
+  // konstant 0 for alle lag — tie-break ville aldri klare å skille lag.
+  // Ved i stedet å indeksere på FAKTISK hull-nummer (holeNumber − 1) havner
+  // et back9-spills hull 10-18 riktig på posisjon 9-17, og cascaden leser
+  // ekte data. Hull utenfor scope (som for et back9-spill er posisjon 0-8)
+  // er ikke «manglende» for laget — de er ikke en del av denne matchen — og
+  // fylles alltid med nøytral 0, uavhengig av teamPlayedAny.
+  //
+  // Et lag som har spilt minst ett hull I SCOPE teller manglende hull-i-scope
+  // som 0 (flagges via missingHoles for UI-warning). Et lag uten ETT eneste
+  // registrert hull i scope paddes med UNPLAYED_PADDING på alle hull-i-scope
+  // — ellers ville sum 0 tolkes som beste netto og laget kåret som vinner (#635).
   const ranked = rankTeams(
     baseLines.map((l) => {
       const teamPlayedAny = l.holes.some((h) => h?.teamNet != null);
+      const teamNetByHoleNumber = new Map(l.holes.map((h) => [h.holeNumber, h.teamNet]));
       const arr: number[] = [];
       for (let i = 0; i < 18; i++) {
-        const h = l.holes[i];
-        arr.push(h?.teamNet ?? (teamPlayedAny ? 0 : UNPLAYED_PADDING));
+        const holeNumber = i + 1;
+        if (!teamNetByHoleNumber.has(holeNumber)) {
+          // Hull utenfor matchens scope (front9/back9-segment) — nøytral,
+          // teller aldri som «uspilt» for #635-padding-sjekken.
+          arr.push(0);
+          continue;
+        }
+        const teamNet = teamNetByHoleNumber.get(holeNumber);
+        arr.push(teamNet ?? (teamPlayedAny ? 0 : UNPLAYED_PADDING));
       }
       return { id: l.teamNumber, holes: arr };
     }),
