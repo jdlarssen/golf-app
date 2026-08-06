@@ -56,6 +56,12 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #1453: lag-leverings-cascaden gaar via admin-client - egen FIFO-mock.
+let adminSupabaseMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => adminSupabaseMock,
+}));
+
 function lastRedirect(): string | undefined {
   const arg = redirectMock.mock.calls.at(-1)?.[0];
   if (!arg) return undefined;
@@ -319,5 +325,99 @@ describe('submitScorecard', () => {
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+  });
+});
+
+// #1453: én-ball-lagformat (greensome m.fl.) — én levering per LAG. Cascaden
+// går via admin-client (RLS-flightmate-policyen dekker ikke alle
+// flight-konfigurasjoner), authz verifiseres på call-site.
+describe('submitScorecard — lag-levering (#1453)', () => {
+  it('greensome: én levering markerer hele lagets rader via admin-client', async () => {
+    supabaseMock = buildSupabaseMock([
+      {
+        data: {
+          name: 'Cup-dag',
+          status: 'active',
+          require_peer_approval: false,
+          game_mode: 'greensome_matchplay',
+        },
+        error: null,
+      },
+      {
+        data: { withdrawn_at: null, submitted_at: null, team_number: 1 },
+        error: null,
+      },
+      { data: { name: 'Anders Berg' }, error: null }, // submitter name
+      { data: [], error: null }, // admins-liste (tom — ingen mail/varsel)
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      // Team-oppdateringen matcher begge lagets rader.
+      { data: [{ user_id: 'user-1' }, { user_id: 'mate-2' }], error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+    const calls = adminSupabaseMock.__fromCalls;
+    expect(
+      calls.some((c) => c.table === 'game_players' && c.method === 'update'),
+    ).toBe(true);
+    expect(
+      calls.some(
+        (c) =>
+          c.method === 'eq' &&
+          c.args[0] === 'team_number' &&
+          c.args[1] === 1,
+      ),
+    ).toBe(true);
+    // Trukne og alt-leverte lagkamerater skal ikke røres.
+    expect(
+      calls.some((c) => c.method === 'is' && c.args[0] === 'withdrawn_at'),
+    ).toBe(true);
+    expect(
+      calls.some((c) => c.method === 'is' && c.args[0] === 'submitted_at'),
+    ).toBe(true);
+  });
+
+  it('idempotens: innsenderen har alt levert → ingen oppdatering, ingen varsler', async () => {
+    supabaseMock = buildSupabaseMock([
+      {
+        data: {
+          name: 'Cup-dag',
+          status: 'active',
+          require_peer_approval: false,
+          game_mode: 'greensome_matchplay',
+        },
+        error: null,
+      },
+      {
+        data: {
+          withdrawn_at: null,
+          submitted_at: '2026-08-06T10:00:00Z',
+          team_number: 1,
+        },
+        error: null,
+      },
+    ]);
+    adminSupabaseMock = buildSupabaseMock([]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+    expect(adminSupabaseMock.__fromCalls.length).toBe(0);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
   });
 });
