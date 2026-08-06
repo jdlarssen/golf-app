@@ -8,6 +8,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { firstName } from '@/lib/firstName';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { isFrontNineOpen } from '@/lib/leaderboard/frontNineGate';
+import { holeNumbersForSegment, firstHalfHoleNumbersForSegment } from '@/lib/games/holeScope';
 import {
   computeLeaderboard,
   type LbHole,
@@ -119,6 +120,12 @@ export async function renderLeaderboardContent({
     ? fetchGameReactions(supabase, gameId, viewerUserId)
     : Promise.resolve({} as Awaited<ReturnType<typeof fetchGameReactions>>);
 
+  // #1441 (D3): a DERIVED game (source_game_id set) owns no scores of its
+  // own — every score read redirects to the host game. A host game's own
+  // `source_game_id` is null, so `?? gameId` is a no-op for it (today's
+  // behavior, byte-identical).
+  const scoresGameId = gameRow.source_game_id ?? gameId;
+
   const [gwp, rawHolesRes, rawScoresRes, courseRes, reactionSummary] = await Promise.all([
     getGameWithPlayers(gameId),
     supabase
@@ -130,7 +137,7 @@ export async function renderLeaderboardContent({
     supabase
       .from('scores')
       .select(SCORES_SELECT)
-      .eq('game_id', gameId)
+      .eq('game_id', scoresGameId)
       .returns<ScoreRow[]>(),
     gameRow.course_id
       ? supabase
@@ -168,6 +175,21 @@ export async function renderLeaderboardContent({
     ),
   };
 
+  // #1441 (D1/D2): filter the shared course-holes + scores rows down to the
+  // game's `hole_segment` scope ONCE, here, before they reach any format
+  // consumer below. 'full' (today's default) resolves to every hole number
+  // 1-18 — a no-op filter, byte-identical to pre-#1441 behavior. 'front9'/
+  // 'back9' narrow both arrays to their 9 hole numbers, which every format
+  // branch (matchplay/fourball/foursomes included — D2's "caller passes
+  // segment-filtered holes" contract) then treats as the game's full scope.
+  const scopedHoleNumbers = new Set(holeNumbersForSegment(game.hole_segment));
+  const scopedHolesRows = (rawHolesRes.data ?? []).filter((h) =>
+    scopedHoleNumbers.has(h.hole_number),
+  );
+  const scopedScoresRows = (rawScoresRes.data ?? []).filter((s) =>
+    scopedHoleNumbers.has(s.hole_number),
+  );
+
   // #1051: Premieutdeling — kobler premiebordet til vinnerne på et avsluttet
   // spill, rendret rett under podiet via footerSlot i format-renderene. Regnes
   // ut ÉN gang her (buildPrizeAwards no-op-er billig når spillet ikke har
@@ -187,8 +209,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -200,8 +222,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
     });
   }
@@ -212,8 +234,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
     });
   }
@@ -224,8 +246,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
     });
   }
@@ -236,8 +258,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -249,8 +271,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
       formatLabel: MODE_LABELS[game.game_mode],
@@ -263,8 +285,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -276,8 +298,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -289,8 +311,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -302,8 +324,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -315,8 +337,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -328,8 +350,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -341,8 +363,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     }));
@@ -354,8 +376,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     });
@@ -367,8 +389,8 @@ export async function renderLeaderboardContent({
       gameId,
       game,
       gwp,
-      rawHolesRows: rawHolesRes.data ?? [],
-      rawScoresRows: rawScoresRes.data ?? [],
+      rawHolesRows: scopedHolesRows,
+      rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
     });
@@ -397,7 +419,7 @@ export async function renderLeaderboardContent({
       teeGender: p.tee_gender,
     }));
 
-  const holes: LbHole[] = (rawHolesRes.data ?? []).map((h) => ({
+  const holes: LbHole[] = (scopedHolesRows).map((h) => ({
     holeNumber: h.hole_number,
     par: h.par_mens,
     parByGender: {
@@ -408,7 +430,7 @@ export async function renderLeaderboardContent({
     strokeIndex: h.stroke_index,
   }));
 
-  const scores: LbScore[] = (rawScoresRes.data ?? [])
+  const scores: LbScore[] = (scopedScoresRows)
     .filter((s) => !bestBallWithdrawnIds.has(s.user_id))
     .map((s) => ({
       userId: s.user_id,
@@ -426,11 +448,14 @@ export async function renderLeaderboardContent({
       user_id: p.user_id,
       team_number: p.team_number,
     })),
-    scores: (rawScoresRes.data ?? []).map((s) => ({
+    scores: (scopedScoresRows).map((s) => ({
       user_id: s.user_id,
       hole_number: s.hole_number,
       strokes: s.strokes,
     })),
+    // #1441: 'full' resolves to [1..9] — byte-identical to the pre-#1441
+    // hardcoded default. front9/back9 games get their own first-half gate.
+    gateHoles: firstHalfHoleNumbersForSegment(game.hole_segment),
   });
 
   type View =
