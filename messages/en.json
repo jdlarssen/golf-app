@@ -4658,6 +4658,37 @@
     "public": {
       "matchesSummary": "{finished} of {total} matches played",
       "noMatches": "No matches have been created yet."
+    },
+    "sideAwards": {
+      "heading": "Closest & longest",
+      "hint": "Side points for closest-to-pin / longest drive. The point is added to the winner's team in the cup total once you register the winner after the round.",
+      "empty": "No side awards added yet.",
+      "kindCtp": "Closest to pin",
+      "kindLd": "Longest drive",
+      "kindLabel": "Type",
+      "holeLabel": "Hole",
+      "holeShort": "hole {n}",
+      "pointsLabel": "Points",
+      "removeRow": "Remove row",
+      "addRow": "+ Add side award",
+      "saveButton": "Save side awards",
+      "savingPending": "Saving …",
+      "saved": "Side awards saved.",
+      "winnersHeading": "After the round",
+      "winnerLabel": "Winner",
+      "winnerPlaceholder": "— choose winner —",
+      "registerButton": "Register",
+      "registeringPending": "Saving …",
+      "registered": "Winner registered.",
+      "errors": {
+        "invalid": "Check the type, hole (1–18) and points (above 0) on every row.",
+        "duplicate": "You can't have two rows with the same type and hole.",
+        "notFound": "Couldn't find the cup.",
+        "cupFinished": "The cup is finished — side awards can no longer be changed.",
+        "winnersRegistered": "You've already registered a winner. Side awards can't be edited after that.",
+        "notParticipant": "That player isn't on the cup's roster.",
+        "saveFailed": "Couldn't save. Please try again in a moment."
+      }
     }
   },
   "klubbhuset": {
