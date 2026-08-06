@@ -47,9 +47,9 @@ describe('ScoreCard — rendering', () => {
     expect(screen.queryByText(/SLAG/)).not.toBeInTheDocument();
   });
 
-  it('omits +N SLAG badge when hideNetto is true even with extraStrokes > 0', () => {
+  it('renders +N SLAG badge also when hideNetto is true (#1447: static handicap info, not standing)', () => {
     setup({ extraStrokes: 2, hideNetto: true });
-    expect(screen.queryByText(/SLAG/)).not.toBeInTheDocument();
+    expect(screen.getByText('+2 SLAG')).toBeInTheDocument();
   });
 
   it('renders +N SLAG badge when hideNetto is false and extraStrokes > 0', () => {

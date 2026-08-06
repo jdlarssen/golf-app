@@ -292,7 +292,12 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline' }}>
           <span style={nameStyle}>{name}</span>
-          {!hideNetto && extraStrokes > 0 && (
+          {/* #1447-etterprøving (eier-krav fra generalprøven): badgen er
+              statisk slag-tildeling (handicap), ikke stilling — den vises
+              også på blind cup-dag (hideNetto), slik at flighten ser hvor
+              arrangørens tastede lag-slag faller. Netto-TALLENE er fortsatt
+              gatet på hideNetto. */}
+          {extraStrokes > 0 && (
             <span style={badgeStyle}>{t('strokesBadge', { n: extraStrokes })}</span>
           )}
         </div>
