@@ -83,63 +83,90 @@ export async function drainQueue(): Promise<{
       const row = Array.isArray(data) ? data[0] : data;
       const wasApplied = row?.was_applied ?? false;
 
-      if (wasApplied) {
-        await localDb.scores.update(item.scoreId, {
-          serverUpdatedAt: row.updated_at,
-        });
-        pushed++;
-      } else {
-        // Server had a newer-or-equal entry. Resolve via LWW timestamp
-        // comparison to decide what to do:
-        //
-        // - 'server-wins': overwrite local with the server row (genuine LWW).
-        // - 'equal': impossible post-#688 (writeScore now guarantees strictly
-        //   increasing timestamps) but kept defensive — treat as keep-local to
-        //   avoid a silent drop on any edge that bypasses writeScore.
-        // - 'local-wins': should not happen (RPC rejects only when server >=
-        //   local), but if it somehow does, keep local.
-        //
-        // When server genuinely wins AND the local score was entered by the
-        // current user AND strokes actually differ, write a ConflictRecord so
-        // SyncBanner can surface the silent overwrite (#688 Part 2).
-        const resolution = resolveConflict({
-          localClientUpdatedAt: score.clientUpdatedAt,
-          serverClientUpdatedAt: row.client_updated_at,
-        });
-
-        if (resolution === 'server-wins') {
-          // Surface the overwrite as a ConflictRecord when the local score was
-          // entered by the owner of this device AND strokes actually changed.
-          // `score` is the local row read above — no extra DB call needed.
-          const strokesChanged = score.strokes !== row.strokes;
-          const enteredByCurrentUser = score.enteredBy === score.userId;
-
-          if (strokesChanged && enteredByCurrentUser) {
-            await localDb.conflicts.put({
-              id: item.scoreId,
-              gameId: score.gameId,
-              userId: score.userId,
-              holeNumber: score.holeNumber,
-              localStrokes: score.strokes,
-              serverStrokes: row.strokes,
-              resolvedAt: new Date().toISOString(),
-            });
+      // #1457: alt etter RPC-en skjer i én transaksjon MED ferskhets-sjekk.
+      // Spilleren kan ha tastet videre på samme felt mens RPC-en var i lufta —
+      // da har writeScore re-putt kø-elementet (samme id) for den NYERE
+      // verdien. Uten sjekken slettet dequeue-en det nye elementet ubetinget,
+      // køen så tom ut, og databasen beholdt mellomverdien til neste tasting.
+      // Endret rad → rør ingenting; neste drain laster opp sluttverdien.
+      const outcome = await localDb.transaction(
+        'rw',
+        localDb.scores,
+        localDb.syncQueue,
+        localDb.conflicts,
+        async () => {
+          const current = await localDb.scores.get(item.scoreId);
+          if (!current || current.clientUpdatedAt !== score.clientUpdatedAt) {
+            return 'edited-mid-flight' as const;
           }
 
-          await localDb.scores.update(item.scoreId, {
-            strokes: row.strokes,
-            // #939: keep putts in sync with the server-wins row so a later
-            // local edit merges the authoritative putt count, not a stale one.
-            putts: row.putts ?? null,
-            enteredBy: row.entered_by,
-            clientUpdatedAt: row.client_updated_at,
-            serverUpdatedAt: row.updated_at,
+          if (wasApplied) {
+            await localDb.scores.update(item.scoreId, {
+              serverUpdatedAt: row.updated_at,
+            });
+            await localDb.syncQueue.delete(item.id);
+            return 'applied' as const;
+          }
+
+          // Server had a newer-or-equal entry. Resolve via LWW timestamp
+          // comparison to decide what to do:
+          //
+          // - 'server-wins': overwrite local with the server row (genuine LWW).
+          // - 'equal': impossible post-#688 (writeScore now guarantees strictly
+          //   increasing timestamps) but kept defensive — treat as keep-local to
+          //   avoid a silent drop on any edge that bypasses writeScore.
+          // - 'local-wins': should not happen (RPC rejects only when server >=
+          //   local), but if it somehow does, keep local.
+          //
+          // When server genuinely wins AND the local score was entered by the
+          // current user AND strokes actually differ, write a ConflictRecord so
+          // SyncBanner can surface the silent overwrite (#688 Part 2).
+          const resolution = resolveConflict({
+            localClientUpdatedAt: score.clientUpdatedAt,
+            serverClientUpdatedAt: row.client_updated_at,
           });
-          rejected++;
-        }
-        // 'equal' or 'local-wins': keep local data as-is, just remove from queue.
-      }
-      await localDb.syncQueue.delete(item.id);
+
+          if (resolution === 'server-wins') {
+            // Surface the overwrite as a ConflictRecord when the local score was
+            // entered by the owner of this device AND strokes actually changed.
+            // `score` is the local row read above — no extra DB call needed.
+            const strokesChanged = score.strokes !== row.strokes;
+            const enteredByCurrentUser = score.enteredBy === score.userId;
+
+            if (strokesChanged && enteredByCurrentUser) {
+              await localDb.conflicts.put({
+                id: item.scoreId,
+                gameId: score.gameId,
+                userId: score.userId,
+                holeNumber: score.holeNumber,
+                localStrokes: score.strokes,
+                serverStrokes: row.strokes,
+                resolvedAt: new Date().toISOString(),
+              });
+            }
+
+            await localDb.scores.update(item.scoreId, {
+              strokes: row.strokes,
+              // #939: keep putts in sync with the server-wins row so a later
+              // local edit merges the authoritative putt count, not a stale one.
+              putts: row.putts ?? null,
+              enteredBy: row.entered_by,
+              clientUpdatedAt: row.client_updated_at,
+              serverUpdatedAt: row.updated_at,
+            });
+            await localDb.syncQueue.delete(item.id);
+            return 'server-wins' as const;
+          }
+
+          // 'equal' or 'local-wins': keep local data as-is, just dequeue.
+          await localDb.syncQueue.delete(item.id);
+          return 'kept-local' as const;
+        },
+      );
+
+      if (outcome === 'edited-mid-flight') continue;
+      if (outcome === 'applied') pushed++;
+      else if (outcome === 'server-wins') rejected++;
     }
 
     return { pushed, rejected, errored, abandoned };
