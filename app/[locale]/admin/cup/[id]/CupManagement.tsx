@@ -236,7 +236,10 @@ export async function CupManagement({
         </div>
       </Card>
 
-      {/* Lag-roster */}
+      {/* Lag-roster. Skjules helt til minst én match har gitt lagene spillere —
+          to tomme «Ingen spillere»-kort før generering er bare støy
+          (eier-tilbakemelding fra staging-runden, #1441). */}
+      {(roster.team1.length > 0 || roster.team2.length > 0) && (
       <section className="mb-5">
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
           {t('manage.rosterHeading')}
@@ -276,6 +279,7 @@ export async function CupManagement({
           </Card>
         </div>
       </section>
+      )}
 
       {/* Sidepoeng: closest/longest-oppsett + vinner-registrering (#1441, D9) */}
       <SideAwardsPanel
