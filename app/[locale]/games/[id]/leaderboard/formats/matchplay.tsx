@@ -7,8 +7,7 @@ import {
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { renderMatchplaySideSection } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
-import { RevealBruttoView } from '../RevealBruttoView';
-import { computeLeaderboard } from '@/lib/leaderboard';
+import { RevealHiddenView } from '../RevealHiddenView';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -26,9 +25,11 @@ import type { TeeGender } from '@/lib/games/teeRating';
  * (Record) i stedet for en Map — matchplay-view-en aksesserer på userId
  * direkte og to spillere er liten skala nok at det er trivielt å bygge.
  *
- * Reveal-modus (issue #801): når score_visibility='reveal' og spillet er aktivt,
- * vises RevealBruttoView i stedet for live match-status. Dette er konsekvent med
- * de andre formatene og hindrer at spillerne ser hvem som leder hull-for-hull.
+ * Reveal-modus (issue #801, tightened for #1441 D12): når score_visibility=
+ * 'reveal' og spillet er aktivt, vises `RevealHiddenView` (ingen match-status,
+ * ingen brutto-totaler) i stedet for live match-status — den blinde cup-dagen
+ * krever at «ingenting avsløres» før arrangøren avslutter, strengere enn
+ * solo-/lagslag-formatenes brutto-forhåndsvisning.
  */
 export async function renderMatchplay(opts: {
   gameId: string;
@@ -49,55 +50,9 @@ export async function renderMatchplay(opts: {
   const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
-  // Reveal-modus (issue #801): konsistent reveal-gate for matchplay-grenen.
-  // Matchplay lekker ikke netto-poeng (viser hull-status), men for konsistens
-  // og for å hindre at spillere ser hvem som leder, vises RevealBruttoView.
-  // Spillere tilhører side 1 eller 2 via team_number — disse brukes direkte.
   const revSt = revealState(game.score_visibility, game.status);
   if (shouldHideNetto(revSt)) {
-    const unknownPlayerForReveal = tc('unknownPlayer');
-    const bruttoPlayers = gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        name: p.users!.name ?? unknownPlayerForReveal,
-        nickname: p.users!.nickname ?? null,
-        teamNumber: p.team_number ?? 0,
-        courseHandicap: p.course_handicap ?? 0,
-        teeGender: p.tee_gender,
-      }));
-    const bruttoHoles = rawHolesRows.map((h) => ({
-      holeNumber: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    }));
-    const bruttoScores = rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      strokes: s.strokes,
-    }));
-    const bruttoLines = computeLeaderboard({
-      mode: 'brutto',
-      players: bruttoPlayers,
-      holes: bruttoHoles,
-      scores: bruttoScores,
-    });
-    const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
-    const holesPlayedForReveal = new Set(rawScoresRows.map((s) => s.hole_number)).size;
-    return (
-      <RevealBruttoView
-        gameId={gameId}
-        gameName={game.name}
-        teams={orderedBrutto}
-        holesPlayed={holesPlayedForReveal}
-        backHref={backHref}
-      />
-    );
+    return <RevealHiddenView gameName={game.name} backHref={backHref} />;
   }
 
   const ctx = {

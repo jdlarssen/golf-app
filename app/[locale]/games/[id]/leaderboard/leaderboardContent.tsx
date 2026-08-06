@@ -17,7 +17,7 @@ import {
   type LeaderboardMode,
 } from '@/lib/leaderboard';
 import { State4View } from './State4View';
-import { RevealBruttoView } from './RevealBruttoView';
+import { RevealHiddenView } from './RevealHiddenView';
 import { LeaderboardTabs } from './LeaderboardTabs';
 import {
   SideTournamentView,
@@ -500,24 +500,13 @@ export async function renderLeaderboardContent({
     });
   }
 
+  // #1441 D12: this branch is only ever reached by best_ball (every other
+  // mode has an early return above with its own reveal handling — matchplay/
+  // fourball/foursomes use the same RevealHiddenView, solo/stroke formats
+  // keep RevealBruttoView). Blind cup-day requires "ingenting avsløres" —
+  // stricter than RevealBruttoView's brutto-totals preview.
   if (view === 'reveal-active') {
-    const bruttoLines = computeLeaderboard({
-      mode: 'brutto',
-      players,
-      holes,
-      scores,
-    });
-    const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
-    const holesPlayed = new Set(scores.map((s) => s.holeNumber)).size;
-    return (
-      <RevealBruttoView
-        gameId={gameId}
-        gameName={game.name}
-        teams={orderedBrutto}
-        holesPlayed={holesPlayed}
-        backHref={backHref}
-      />
-    );
+    return <RevealHiddenView gameName={game.name} backHref={backHref} />;
   }
 
   const lines = computeLeaderboard({ mode, players, holes, scores });
