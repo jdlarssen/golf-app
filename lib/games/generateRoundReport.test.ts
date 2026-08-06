@@ -64,6 +64,10 @@ const GAME_ROW = {
     mode_config: { kind: 'solo_strokeplay' as const, team_size: 1 as const },
     course_id: 'course-1',
     name: 'Lørdagscup',
+    // #1441: every GameForHole carries these two now — a host (the only
+    // kind generateAndPersistRoundReport ever runs on) is 'full'/null.
+    hole_segment: 'full' as const,
+    source_game_id: null as string | null,
   },
   players: [
     {
@@ -114,7 +118,10 @@ beforeEach(() => {
     courses: { data: { name: 'Oslo GK' }, error: null },
     games: { data: { ended_at: '2026-07-01T18:00:00.000Z' }, error: null },
     'games:update': { data: [{ id: GAME_ID }], error: null },
-    course_holes: { data: makeHoleRows(18).map((h) => ({ par_mens: h.par })), error: null },
+    course_holes: {
+      data: makeHoleRows(18).map((h) => ({ hole_number: h.holeNumber, par_mens: h.par })),
+      error: null,
+    },
   };
 
   getGameWithPlayersMock.mockResolvedValue(GAME_ROW);
@@ -138,6 +145,33 @@ describe('generateAndPersistRoundReport', () => {
     expect(result).toEqual({ status: 'skipped', report: null });
     expect(anthropicConstructorMock).not.toHaveBeenCalled();
     expect(getGameWithPlayersMock).not.toHaveBeenCalled();
+  });
+
+  it("#1441: returns 'skipped' without ever calling buildModeResultForGame for a derived game", async () => {
+    getGameWithPlayersMock.mockResolvedValue({
+      game: { ...GAME_ROW.game, source_game_id: 'host-1' },
+      players: GAME_ROW.players,
+    });
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(result).toEqual({ status: 'skipped', report: null });
+    expect(buildModeResultForGameMock).not.toHaveBeenCalled();
+    expect(messagesCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('#1441: threads hole_segment through to buildModeResultForGame', async () => {
+    getGameWithPlayersMock.mockResolvedValue({
+      game: { ...GAME_ROW.game, hole_segment: 'back9' },
+      players: GAME_ROW.players,
+    });
+
+    await generateAndPersistRoundReport(GAME_ID);
+
+    expect(buildModeResultForGameMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ hole_segment: 'back9' }),
+    );
   });
 
   it("returns 'skipped' when buildModeResultForGame returns null", async () => {

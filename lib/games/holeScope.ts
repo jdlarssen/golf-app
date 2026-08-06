@@ -39,3 +39,18 @@ export function lastHoleForSegment(segment: HoleSegment): number {
 export function isHoleInSegment(holeNumber: number, segment: HoleSegment): boolean {
   return holeNumbersForSegment(segment).includes(holeNumber);
 }
+
+/**
+ * First half of `segment`'s hole numbers — the "front nine" gate that
+ * `lib/leaderboard/frontNineGate.ts` opens state #3.5 on, generalized for
+ * segment games (#1441). 'full' → [1..9] (9 of 18, byte-identical to the
+ * pre-#1441 hardcoded FRONT_9). 'front9' → [1..5] (first half of its own
+ * 9 holes). 'back9' → [10..14]. Odd counts round up (`Math.ceil`), so a
+ * 9-hole segment's "half" is 5 holes, not 4 — matching how a 9-hole match
+ * has no true midpoint and the gate should lean toward opening sooner
+ * rather than later.
+ */
+export function firstHalfHoleNumbersForSegment(segment: HoleSegment): number[] {
+  const nums = holeNumbersForSegment(segment);
+  return nums.slice(0, Math.ceil(nums.length / 2));
+}

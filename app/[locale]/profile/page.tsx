@@ -92,11 +92,18 @@ const getMyStats = cache(async (): Promise<MyStats> => {
   if (!userId) return EMPTY_STATS;
 
   // Round-trip 1: own player-rows in finished games (+ tee-gender + course).
+  // #1441: excludes DERIVED games (games.source_game_id IS NOT NULL) — a
+  // derived game (e.g. a back9 singles match) has no own scores, so it
+  // would otherwise surface here as a phantom 0-hole round and inflate
+  // roundsPlayed for a physical day that's already counted via its host.
+  // Segment HOST games (front9/back9, source_game_id IS NULL) still count —
+  // each host has its own real scores and is a legitimately separate game.
   const { data: gpRows, error: gpError } = await supabase
     .from('game_players')
-    .select('game_id, tee_gender, games!inner(id, course_id, status)')
+    .select('game_id, tee_gender, games!inner(id, course_id, status, source_game_id)')
     .eq('user_id', userId)
     .eq('games.status', 'finished')
+    .is('games.source_game_id', null)
     .returns<GpStatRow[]>();
   if (gpError) throw gpError;
   const rows = gpRows ?? [];

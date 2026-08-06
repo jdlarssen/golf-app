@@ -6,6 +6,7 @@ import {
   firstHoleForSegment,
   lastHoleForSegment,
   isHoleInSegment,
+  firstHalfHoleNumbersForSegment,
 } from './holeScope';
 
 describe('holeNumbersForSegment', () => {
@@ -50,5 +51,18 @@ describe('isHoleInSegment', () => {
     { segment: 'back9', holeNumber: 18, expected: true },
   ])('$segment / hole $holeNumber → $expected', ({ segment, holeNumber, expected }) => {
     expect(isHoleInSegment(holeNumber, segment)).toBe(expected);
+  });
+});
+
+describe('firstHalfHoleNumbersForSegment', () => {
+  it.each<{ segment: HoleSegment; expected: number[] }>([
+    // 'full' must stay byte-identical to the pre-#1441 hardcoded FRONT_9
+    // gate (lib/leaderboard/frontNineGate.ts) — the front 9 of 18.
+    { segment: 'full', expected: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
+    // 9-hole segments round their "half" up to 5, not down to 4.
+    { segment: 'front9', expected: [1, 2, 3, 4, 5] },
+    { segment: 'back9', expected: [10, 11, 12, 13, 14] },
+  ])('$segment → $expected', ({ segment, expected }) => {
+    expect(firstHalfHoleNumbersForSegment(segment)).toEqual(expected);
   });
 });

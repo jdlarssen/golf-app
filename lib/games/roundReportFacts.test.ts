@@ -395,6 +395,108 @@ describe('singles_matchplay — undecided (result null)', () => {
   });
 });
 
+// #1441: a front9/back9 segment match's totalHoles is 9, not 18 — the
+// "went the distance" check must compare decidedAtHole against the real
+// scope, not a hardcoded 18.
+describe('singles_matchplay — #1441 segment match (totalHoles: 9)', () => {
+  const nameByUserId = names(['u1', 'Alice'], ['u2', 'Bob']);
+
+  it('decided on the last hole of a 9-hole segment reads as "went the distance" (decidedAtHole null)', () => {
+    const result: SinglesMatchplayResult = {
+      kind: 'singles_matchplay',
+      sides: [
+        { sideNumber: 1, userId: 'u1', courseHandicap: 5 },
+        { sideNumber: 2, userId: 'u2', courseHandicap: 8 },
+      ],
+      holes: [],
+      holesUp: 2,
+      holesPlayed: 9,
+      holesRemaining: 0,
+      result: {
+        winner: 'side1',
+        marginUp: 2,
+        decidedAtHole: 9,
+        remainingAtDecision: 0,
+        formatted: '2up',
+      },
+    };
+
+    const facts = buildRoundReportFacts({
+      result,
+      nameByUserId,
+      gameMode: 'singles_matchplay',
+      totalHoles: 9,
+      ...BASE,
+    });
+
+    // Without the #1441 fix this would wrongly be 9 (read as `9 < 18`).
+    expect(decided(facts.matchplay).decidedAtHole).toBeNull();
+    expect(decided(facts.matchplay).margin).toBe('2up');
+  });
+
+  it('a genuine mat-em finish inside the 9-hole scope still reports decidedAtHole', () => {
+    const result: SinglesMatchplayResult = {
+      kind: 'singles_matchplay',
+      sides: [
+        { sideNumber: 1, userId: 'u1', courseHandicap: 5 },
+        { sideNumber: 2, userId: 'u2', courseHandicap: 8 },
+      ],
+      holes: [],
+      holesUp: 3,
+      holesPlayed: 7,
+      holesRemaining: 2,
+      result: {
+        winner: 'side1',
+        marginUp: 3,
+        decidedAtHole: 7,
+        remainingAtDecision: 2,
+        formatted: '3&2',
+      },
+    };
+
+    const facts = buildRoundReportFacts({
+      result,
+      nameByUserId,
+      gameMode: 'singles_matchplay',
+      totalHoles: 9,
+      ...BASE,
+    });
+
+    expect(decided(facts.matchplay).decidedAtHole).toBe(7);
+    expect(decided(facts.matchplay).margin).toBe('3&2');
+  });
+
+  it('omitting totalHoles defaults to 18 (byte-identical to pre-#1441 callers)', () => {
+    const result: SinglesMatchplayResult = {
+      kind: 'singles_matchplay',
+      sides: [
+        { sideNumber: 1, userId: 'u1', courseHandicap: 5 },
+        { sideNumber: 2, userId: 'u2', courseHandicap: 8 },
+      ],
+      holes: [],
+      holesUp: 2,
+      holesPlayed: 18,
+      holesRemaining: 0,
+      result: {
+        winner: 'side1',
+        marginUp: 2,
+        decidedAtHole: 18,
+        remainingAtDecision: 0,
+        formatted: '2up',
+      },
+    };
+
+    const facts = buildRoundReportFacts({
+      result,
+      nameByUserId,
+      gameMode: 'singles_matchplay',
+      ...BASE,
+    });
+
+    expect(decided(facts.matchplay).decidedAtHole).toBeNull();
+  });
+});
+
 describe('fourball_matchplay — reuses matchplay band via buildShareCardData headline', () => {
   const result: FourballMatchplayResult = {
     kind: 'fourball_matchplay',
