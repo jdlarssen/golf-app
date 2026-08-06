@@ -24,7 +24,9 @@ export type CupMatchInput = {
   /**
    * Game-mode for matchen. Brukes av cup-UI for å velge mellom spiller-fokusert
    * («3&2 til Per») og lag-fokusert («3&2 til Lag Skog») result-tekst. Singles
-   * bruker spiller-navn; fourball (#217) og foursomes (#218) bruker lag-navn.
+   * bruker spiller-navn; fourball (#217), foursomes (#218), greensome/chapman/
+   * gruesome og best_ball (#1441, back9-hosten i splittet cup-dag) bruker
+   * lag-navn — se `TEAM_MATCH_GAME_MODES`/`isTeamMatchGameMode` under.
    * Optional for backward-compat med pre-#217-call-sites; UI defaulter til
    * singles-stil rendering når feltet er undefined.
    */
@@ -34,10 +36,30 @@ export type CupMatchInput = {
     | 'foursomes_matchplay'
     | 'greensome_matchplay'
     | 'chapman_matchplay'
-    | 'gruesome_matchplay';
+    | 'gruesome_matchplay'
+    | 'best_ball';
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   result: { winnerSide: 1 | 2 | 'tied'; formatted: string } | null;
 };
+
+/**
+ * Lag-formaterte game-modes: result-teksten viser lagnavn (`tournament.team_N_name`)
+ * i stedet for spillernavn (#1441). Ett hjem for sjekken — konsumeres av
+ * `CupManagement.tsx` og den offentlige `/cup/[id]`-siden, som tidligere
+ * dupliserte listen (og manglet `best_ball`, trap #4).
+ */
+export const TEAM_MATCH_GAME_MODES = new Set<NonNullable<CupMatchInput['gameMode']>>([
+  'fourball_matchplay',
+  'foursomes_matchplay',
+  'greensome_matchplay',
+  'chapman_matchplay',
+  'gruesome_matchplay',
+  'best_ball',
+]);
+
+export function isTeamMatchGameMode(gameMode: CupMatchInput['gameMode']): boolean {
+  return gameMode != null && TEAM_MATCH_GAME_MODES.has(gameMode);
+}
 
 export type TournamentInput = {
   team_1_name: string;

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getServerClient } from '@/lib/supabase/server';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
+import { isTeamMatchGameMode } from '@/lib/cup/computeCupLeaderboard';
 
 type Params = Promise<{ id: string }>;
 
@@ -212,20 +213,12 @@ export default async function PublicCupPage({ params }: { params: Params }) {
                               ? 'Halvert (AS)'
                               : m.result.winnerSide === 1
                                 ? `${m.result.formatted} til ${
-                                    m.gameMode === 'fourball_matchplay' ||
-                                    m.gameMode === 'foursomes_matchplay' ||
-                                    m.gameMode === 'greensome_matchplay' ||
-                                    m.gameMode === 'chapman_matchplay' ||
-                                    m.gameMode === 'gruesome_matchplay'
+                                    isTeamMatchGameMode(m.gameMode)
                                       ? tournament.team_1_name
                                       : m.team1PlayerName
                                   }`
                                 : `${m.result.formatted} til ${
-                                    m.gameMode === 'fourball_matchplay' ||
-                                    m.gameMode === 'foursomes_matchplay' ||
-                                    m.gameMode === 'greensome_matchplay' ||
-                                    m.gameMode === 'chapman_matchplay' ||
-                                    m.gameMode === 'gruesome_matchplay'
+                                    isTeamMatchGameMode(m.gameMode)
                                       ? tournament.team_2_name
                                       : m.team2PlayerName
                                   }`}
