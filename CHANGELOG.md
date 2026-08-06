@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.216 · Splittet cup-dag: 9 + 9 med greensome og best ball</strong></summary>
+
+[#1441](https://github.com/jdlarssen/golf-app/issues/1441) — Sett opp en splittet cup-dag: greensome ute, best ball og to singler inne blir fire cup-konkurranser i én runde. Du vekter poengene selv, legger på sidepoeng for nærmest hullet og lengste drive, og resultatet holdes hemmelig til du avslutter runden.
+
+↳ /opprett-spill · «Sett opp en cup-dag»
+</details>
+
+<details>
 <summary><strong>1.215 · Feiltastet e-post? Rett den på stedet</strong></summary>
 
 [#1346](https://github.com/jdlarssen/golf-app/issues/1346) — Venter du på en kode som aldri kommer, tar «Feil adresse? Endre e-post» deg rett tilbake til e-postfeltet med adressen klar til retting — også i appen på telefonen, der det ikke finnes noen tilbake-knapp.
