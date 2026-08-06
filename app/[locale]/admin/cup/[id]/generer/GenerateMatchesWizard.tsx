@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
+import { StatusChip } from '@/components/ui/StatusChip';
 import {
   CUP_PRESETS,
   buildSessions,
@@ -238,6 +239,35 @@ function Step1Roster({
       )}
       <div className="space-y-2">
         {players.map((p) => {
+          // #1441 (owner-QA, F3f): venner uten fullført profil rendres som en
+          // IKKE-valgbar rad — ingen lag-toggle, kun et varsel om at de venter.
+          // De havner aldri i `assignments` (ingen knapp å klikke), så de
+          // teller aldri med i team1Count/team2Count under.
+          if (p.pending) {
+            return (
+              <Card
+                key={p.id}
+                className="!p-3 opacity-70"
+                data-testid={`cup-wizard-pending-${p.id}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-sans text-sm font-medium text-text truncate">
+                      {p.displayName}
+                    </p>
+                    <p className="font-sans text-xs text-muted">
+                      {t('generate.pendingHelper')}
+                    </p>
+                  </div>
+                  <StatusChip
+                    tone="påmelding"
+                    label={t('generate.pendingBadge')}
+                    className="shrink-0"
+                  />
+                </div>
+              </Card>
+            );
+          }
           const val = assignments[p.id] ?? 'unassigned';
           return (
             <Card key={p.id} className="!p-3">
