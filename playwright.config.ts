@@ -60,16 +60,32 @@ export default defineConfig({
       : {},
   },
   webServer: {
-    // -p binder dev-serveren til SAMME port som baseURL. Eksplisitt flagg
+    // #1441: on CI, run the PRODUCTION server (`next build && next start`).
+    // Next dev's cacheComponents machinery (renderWithRestartOnCacheMissInDev)
+    // aborts in-flight fetches on cache-miss restarts under load; supabase-js
+    // swallows the AbortError into `res.error`, which surfaced as clean 404s
+    // (error/absence conflation, now fixed) and error-boundary renders across
+    // the @gate suite. A prod server has no compile/restart machinery, so that
+    // transient window doesn't exist — and it matches what staging/prod
+    // actually run. Locally: keep `next dev` + reuse for fast iteration.
+    // -p binder serveren til SAMME port som baseURL. Eksplisitt flagg
     // framfor `env: { PORT }`, som ville erstatte process.env-arven (#1259).
-    command: `npm run dev -- -p ${PLAYWRIGHT_PORT}`,
+    command: process.env.CI
+      ? `npm run build && npx next start -p ${PLAYWRIGHT_PORT}`
+      : `npm run dev -- -p ${PLAYWRIGHT_PORT}`,
     port: PLAYWRIGHT_PORT,
     reuseExistingServer: !process.env.CI,
-    // #1132: cold-start headroom. Default is 60s for the dev server to answer on
-    // the port; a cold/contended Turbopack boot on a shared Actions runner can
-    // exceed that and nuke the whole job before the server is reachable. 120s is
-    // near-zero-risk and directly guards the leading flake hypothesis.
-    timeout: 120_000,
+    // #1441: pipe the server's stdout into the job log (stderr pipes by
+    // default, stdout was ignored). The request log with statuses + timing
+    // breakdowns lives on stdout — without it a red run shows only the
+    // client-side symptom, and the server-side cause has to be guessed.
+    stdout: 'pipe',
+    stderr: 'pipe',
+    // CI: headroom for `next build` on a contended shared runner + prod-server
+    // boot. Local keeps the #1132 cold-dev-boot headroom (default was 60s; a
+    // cold/contended Turbopack boot can exceed it and nuke the run before the
+    // server is reachable).
+    timeout: process.env.CI ? 600_000 : 120_000,
   },
   projects: [
     {
