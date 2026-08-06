@@ -23,8 +23,8 @@ import {
 } from '@/lib/cup/cupPairing';
 import {
   groupBundleMatchesByFlight,
-  swapFlightSinglesPairing,
   swapFlightPlayer,
+  getFlightMatchupRows,
   splitDayFlightCount,
   splitDayTotalMatches,
   type FlightTeamSide,
@@ -938,9 +938,20 @@ function Step4Confirm({
 // modell (flight-grupperte kort, singles-bytte begrenset til flightens egne
 // fire spillere, greensomens manuelle lag-slag) enn den frie per-slot-
 // dropdownen `Step4Preview` tilbyr på tvers av HELE laget. Gjenbruker
-// `groupBundleMatchesByFlight`/`swapFlightSinglesPairing` (lib/cup/
-// splitDayLineup.ts) for gruppering/bytte — «extend, don't rebuild» gjelder
-// disse rene hjelperne, ikke UI-komponenten selv (som IKKE fantes før F3c).
+// `groupBundleMatchesByFlight`/`getFlightMatchupRows`/`swapFlightPlayer`
+// (lib/cup/splitDayLineup.ts) for gruppering/bytte — «extend, don't rebuild»
+// gjelder disse rene hjelperne, ikke UI-komponenten selv (som IKKE fantes
+// før F3c).
+//
+// #1441 (owner-QA rebuild, F3e): flight-kortet var TO separate ting fram til
+// dette — en fri firfelts-oppstillings-editor øverst («hvem er i flighten»)
+// og en singel-rad med egen «Bytt paring»-knapp under (`swapFlightSinglesPairing`,
+// nå fjernet). Eieren ba om ETT kort med to MATCHUP-RADER: venstre kolonne
+// er lag 1s par (stablet), høyre er lag 2s par, «mot» mellom — og de to
+// spillerne på SAMME rad ER singles-motstanderne. Alle fire dropdownene er
+// samme `onSwapPlayer`/`swapFlightPlayer`-bytte som før; det som endret seg
+// er UTELUKKENDE layouten (radene ER paringen, ingen egen bytte-knapp
+// trengs — å velge lagkameraten i den andre raden ER «bytt paring»).
 
 function playerLookup(team1Players: WizardPlayer[], team2Players: WizardPlayer[]) {
   const byId = new Map<string, WizardPlayer>();
@@ -1055,7 +1066,6 @@ function Step4BundlePreview({
   selectedTee,
   teamStrokesInputs,
   onTeamStrokesChange,
-  onSwapSingles,
   onSwapPlayer,
   onRegenerate,
   t,
@@ -1068,8 +1078,8 @@ function Step4BundlePreview({
   selectedTee: WizardTeeBox | undefined;
   teamStrokesInputs: Record<string, { team1?: string; team2?: string }>;
   onTeamStrokesChange: (matchId: string, side: 'team1' | 'team2', value: string) => void;
-  onSwapSingles: (flightIndex: number) => void;
-  // #1441 (owner-QA): «hvem som skal være i flight» — se
+  // #1441 (owner-QA rebuild, F3e): «hvem som skal være i flight» OG «hvem
+  // møter hvem i singles» — begge uttrykt via det SAMME slot-valget nå, se
   // `swapFlightPlayer`s docstring (lib/cup/splitDayLineup.ts) for
   // bytte-semantikken.
   onSwapPlayer: (
@@ -1099,11 +1109,7 @@ function Step4BundlePreview({
 
       <div className="space-y-5">
         {flights.map((flight) => {
-          const [singles1, singles2] = flight.singles;
-          const singles1Player1 = players(singles1.side1[0]);
-          const singles1Player2 = players(singles1.side2[0]);
-          const singles2Player1 = players(singles2.side1[0]);
-          const singles2Player2 = players(singles2.side2[0]);
+          const rows = getFlightMatchupRows(flight);
           const bestBallSide1 = flight.bestBall.side1.map(players).filter((p): p is WizardPlayer => Boolean(p));
           const bestBallSide2 = flight.bestBall.side2.map(players).filter((p): p is WizardPlayer => Boolean(p));
 
@@ -1113,61 +1119,64 @@ function Step4BundlePreview({
                 {t('generate.flightHeading', { n: flight.flightIndex })}
               </p>
               <div className="space-y-3">
+                {/* #1441 (owner-QA rebuild, F3e): to matchup-rader — venstre
+                    kolonne lag 1s par, høyre lag 2s par, «mot» mellom. De to
+                    spillerne på SAMME rad er singles-motstanderne, så å velge
+                    lagkameraten fra den ANDRE raden i en av de fire
+                    dropdownene ER «bytt paring» — ingen egen knapp trengs. */}
                 <Card className="!p-4" data-testid={`cup-wizard-lineup-${flight.flightIndex}`}>
-                  <p className="font-sans text-xs font-semibold text-muted mb-2">
+                  <p className="font-sans text-xs font-semibold text-muted mb-1">
                     {t('generate.lineupHeading')}
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {team1Name}
-                      </p>
-                      {([0, 1] as const).map((slotIndex) => {
-                        const playerId = flight.greensome.side1[slotIndex];
-                        return (
-                          <select
-                            key={slotIndex}
-                            data-testid={`cup-wizard-lineup-${flight.flightIndex}-side1-${slotIndex}`}
-                            value={playerId ?? ''}
-                            onChange={(e) =>
-                              onSwapPlayer(flight.flightIndex, 'side1', slotIndex, e.target.value)
-                            }
-                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
-                          >
-                            {team1Players.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.displayName}
-                              </option>
-                            ))}
-                          </select>
-                        );
-                      })}
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {team2Name}
-                      </p>
-                      {([0, 1] as const).map((slotIndex) => {
-                        const playerId = flight.greensome.side2[slotIndex];
-                        return (
-                          <select
-                            key={slotIndex}
-                            data-testid={`cup-wizard-lineup-${flight.flightIndex}-side2-${slotIndex}`}
-                            value={playerId ?? ''}
-                            onChange={(e) =>
-                              onSwapPlayer(flight.flightIndex, 'side2', slotIndex, e.target.value)
-                            }
-                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
-                          >
-                            {team2Players.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.displayName}
-                              </option>
-                            ))}
-                          </select>
-                        );
-                      })}
-                    </div>
+                  <div className="grid grid-cols-[1fr_auto_1fr] gap-2 mb-1.5">
+                    <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                      {team1Name}
+                    </p>
+                    <span />
+                    <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted text-right">
+                      {team2Name}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {rows.map((row) => (
+                      <div
+                        key={row.slotIndex}
+                        data-testid={`cup-wizard-lineup-${flight.flightIndex}-row-${row.slotIndex}`}
+                        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2"
+                      >
+                        <select
+                          data-testid={`cup-wizard-lineup-${flight.flightIndex}-side1-${row.slotIndex}`}
+                          value={row.side1PlayerId ?? ''}
+                          onChange={(e) =>
+                            onSwapPlayer(flight.flightIndex, 'side1', row.slotIndex, e.target.value)
+                          }
+                          className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                        >
+                          {team1Players.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.displayName}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="font-sans text-xs font-bold text-muted">
+                          {t('generate.mot')}
+                        </span>
+                        <select
+                          data-testid={`cup-wizard-lineup-${flight.flightIndex}-side2-${row.slotIndex}`}
+                          value={row.side2PlayerId ?? ''}
+                          onChange={(e) =>
+                            onSwapPlayer(flight.flightIndex, 'side2', row.slotIndex, e.target.value)
+                          }
+                          className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                        >
+                          {team2Players.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.displayName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
                   </div>
                   <p className="text-[11px] text-muted mt-2">{t('generate.lineupHint')}</p>
                 </Card>
@@ -1191,35 +1200,6 @@ function Step4BundlePreview({
                     {bestBallSide1.map((p) => p.displayName).join(' / ')}{' '}
                     <span className="text-muted">{t('generate.mot')}</span>{' '}
                     {bestBallSide2.map((p) => p.displayName).join(' / ')}
-                  </p>
-                </Card>
-
-                <Card className="!p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-sans text-xs font-semibold text-muted">
-                      {t('generate.formatSingles')} · {t('generate.segmentBack9')}
-                    </p>
-                    <button
-                      type="button"
-                      data-testid={`cup-wizard-swap-singles-${flight.flightIndex}`}
-                      onClick={() => onSwapSingles(flight.flightIndex)}
-                      className="font-sans text-xs text-primary underline-offset-2 hover:underline min-h-[36px] px-1"
-                    >
-                      {t('generate.swapSinglesButton')}
-                    </button>
-                  </div>
-                  <p className="font-serif text-sm text-text">
-                    {singles1Player1?.displayName ?? '—'}{' '}
-                    <span className="text-muted">{t('generate.mot')}</span>{' '}
-                    {singles1Player2?.displayName ?? '—'}
-                  </p>
-                  <p className="font-serif text-sm text-text mt-1">
-                    {singles2Player1?.displayName ?? '—'}{' '}
-                    <span className="text-muted">{t('generate.mot')}</span>{' '}
-                    {singles2Player2?.displayName ?? '—'}
-                  </p>
-                  <p className="text-[11px] text-muted mt-2">
-                    {t('generate.singlesReadsFromBestBall')}
                   </p>
                 </Card>
               </div>
@@ -1454,16 +1434,12 @@ export function GenerateMatchesWizard({
     );
   }
 
-  // #1441 (D4): bytter singles-paringen innad i én flight (rank1-vs-rank2 i
-  // stedet for rank1-vs-rank1) — se swapFlightSinglesPairing sin docstring
-  // for hvorfor det er et fast bytte og ikke en fri spiller-velger.
-  function handleSwapSingles(flightIndex: number) {
-    setMatches((prev) => swapFlightSinglesPairing(prev as PlannedBundleMatch[], flightIndex));
-  }
-
-  // #1441 (owner-QA): «hvem som skal være i flight» — fri spiller-velger per
-  // slot, se `swapFlightPlayer`s docstring (lib/cup/splitDayLineup.ts) for
-  // bytte-semantikken (kryss-flight vs. innad-i-paret).
+  // #1441 (owner-QA rebuild, F3e): «hvem som skal være i flight» OG «hvem
+  // møter hvem i singles» — samme frie spiller-velger per slot dekker begge
+  // nå (radene ER paringen), se `swapFlightPlayer`s docstring (lib/cup/
+  // splitDayLineup.ts) for bytte-semantikken (kryss-flight vs. innad-i-paret).
+  // Den tidligere `handleSwapSingles`/`swapFlightSinglesPairing`-knappen ble
+  // fjernet — å velge lagkameraten fra den andre raden gir samme resultat.
   function handleSwapPlayer(
     flightIndex: number,
     side: FlightTeamSide,
@@ -1565,7 +1541,6 @@ export function GenerateMatchesWizard({
                 selectedTee={selectedTee}
                 teamStrokesInputs={teamStrokesInputs}
                 onTeamStrokesChange={handleTeamStrokesChange}
-                onSwapSingles={handleSwapSingles}
                 onSwapPlayer={handleSwapPlayer}
                 onRegenerate={runGenerate}
                 t={t}

@@ -1884,6 +1884,7 @@
       "ctaHolesFilled": "{count} av {total} hull tastet inn",
       "ctaSubmittedPendingApproval": "Scorekort levert — venter på godkjenning fra en medspiller.",
       "ctaSubmittedApproved": "Scorekort levert og godkjent. Venter på at admin avslutter spillet.",
+      "ctaContinueToSibling": "Videre til hull {hole} · {format} →",
       "draftTeamsLabel": "LAG",
       "draftTeeOffLabel": "TEE-OFF",
       "draftTeeOffPlanned": "Tee-off planlagt:",
@@ -2223,6 +2224,8 @@
       "hullSegmentPosition": "{position}. hull av {total}",
       "enterYourScore": "Tast inn scoren din",
       "nextHole": "Neste hull · {next}",
+      "continueToSibling": "Videre til hull {hole} · {format}",
+      "backToSibling": "Tilbake til hull {hole} · {format}",
       "submitScorecard": "Lever scorekort",
       "submitScorecardSolo": "Lever ditt scorekort",
       "submitScorecardTeam": "Lever lagets scorekort",
@@ -4659,7 +4662,8 @@
       "permanentHeading": "Slettes permanent",
       "cupEntry": "Cupen «{name}»",
       "rosterEntry": "Spillerliste og master-leaderboard",
-      "matchesNote": "{count} {count, plural, one {match} other {matcher}} forblir som frittstående spill (cup-koblingen fjernes).",
+      "neverPlayedNote": "{count} {count, plural, one {genererte match som ikke er spilt} other {genererte matcher som ikke er spilt}} slettes for alltid.",
+      "matchesNote": "{count} spilte {count, plural, one {match} other {matcher}} forblir som frittstående spill (cup-koblingen fjernes).",
       "irreversibleNote": "Handlingen kan ikke angres.",
       "deleteButton": "Slett cupen for alltid",
       "deletePending": "Sletter …",
@@ -4668,7 +4672,8 @@
         "delete_failed": "Slettingen feilet. Prøv igjen om litt."
       },
       "warnings": {
-        "active": "Cupen pågår nå. Sletting fjerner cup-en for alltid, men selve matchene forblir som frittstående spill.",
+        "draft": "Cupen er ikke startet ennå. Genererte matcher som ikke er spilt, slettes for alltid sammen med cupen.",
+        "active": "Cupen pågår nå. Sletting fjerner cupen for alltid. Spilte matcher forblir som frittstående spill — matcher som ikke er spilt, slettes for alltid.",
         "finished": "Cupen er avsluttet. Resultatet forsvinner fra leaderboardet, men selve matchene forblir som frittstående spill."
       }
     },

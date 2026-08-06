@@ -1884,6 +1884,7 @@
       "ctaHolesFilled": "{count} of {total} holes entered",
       "ctaSubmittedPendingApproval": "Scorecard submitted — waiting for approval from another player.",
       "ctaSubmittedApproved": "Scorecard submitted and approved. Waiting for admin to finish the game.",
+      "ctaContinueToSibling": "Continue to hole {hole} · {format} →",
       "draftTeamsLabel": "TEAMS",
       "draftTeeOffLabel": "TEE-OFF",
       "draftTeeOffPlanned": "Tee-off planned:",
@@ -2223,6 +2224,8 @@
       "hullSegmentPosition": "hole {position} of {total}",
       "enterYourScore": "Enter your score",
       "nextHole": "Next hole · {next}",
+      "continueToSibling": "Continue to hole {hole} · {format}",
+      "backToSibling": "Back to hole {hole} · {format}",
       "submitScorecard": "Submit scorecard",
       "submitScorecardSolo": "Submit your scorecard",
       "submitScorecardTeam": "Submit team scorecard",
@@ -4659,7 +4662,8 @@
       "permanentHeading": "Permanently deleted",
       "cupEntry": "The cup «{name}»",
       "rosterEntry": "Team roster and master leaderboard",
-      "matchesNote": "{count} {count, plural, one {match} other {matches}} will remain as standalone games (the cup link is removed).",
+      "neverPlayedNote": "{count} generated {count, plural, one {match} other {matches}} that were never played will be permanently deleted.",
+      "matchesNote": "{count} played {count, plural, one {match} other {matches}} will remain as standalone games (the cup link is removed).",
       "irreversibleNote": "This action cannot be undone.",
       "deleteButton": "Delete cup permanently",
       "deletePending": "Deleting…",
@@ -4668,7 +4672,8 @@
         "delete_failed": "Deletion failed. Please try again in a moment."
       },
       "warnings": {
-        "active": "The cup is currently active. Deleting it removes the cup permanently, but the individual matches remain as standalone games.",
+        "draft": "The cup hasn't started yet. Generated matches that were never played will be permanently deleted along with the cup.",
+        "active": "The cup is currently active. Deleting it removes the cup permanently. Played matches remain as standalone games — matches that were never played will be permanently deleted.",
         "finished": "The cup has finished. The result will be removed from the leaderboard, but the individual matches remain as standalone games."
       }
     },
