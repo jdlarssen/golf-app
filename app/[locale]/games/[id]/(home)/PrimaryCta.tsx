@@ -1,6 +1,8 @@
 import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { LinkButton } from '@/components/ui/Button';
+import { holeNumbersForSegment } from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 import { getGameContext } from './gameContext';
 
 type UiState =
@@ -12,11 +14,12 @@ type UiState =
 
 function computeState(opts: {
   strokesCount: number;
+  totalHoles: number;
   submittedAt: string | null;
   approvedAt: string | null;
   requirePeerApproval: boolean;
 }): UiState {
-  const { strokesCount, submittedAt, approvedAt, requirePeerApproval } = opts;
+  const { strokesCount, totalHoles, submittedAt, approvedAt, requirePeerApproval } = opts;
   if (submittedAt) {
     if (requirePeerApproval && !approvedAt) {
       return 'submitted_pending_approval';
@@ -24,7 +27,7 @@ function computeState(opts: {
     return 'submitted_approved';
   }
   if (strokesCount === 0) return 'not_started';
-  if (strokesCount >= 18) return 'ready_to_submit';
+  if (strokesCount >= totalHoles) return 'ready_to_submit';
   return 'in_progress';
 }
 
@@ -34,12 +37,15 @@ export async function PrimaryCtaSection({
   submittedAt,
   approvedAt,
   requirePeerApproval,
+  holeSegment,
 }: {
   gameId: string;
   currentUserId: string;
   submittedAt: string | null;
   approvedAt: string | null;
   requirePeerApproval: boolean;
+  /** #1441: limits «all holes filled» + the next-hole scan to the game's segment. */
+  holeSegment: HoleSegment;
 }) {
   const { supabase } = await getGameContext();
 
@@ -53,12 +59,15 @@ export async function PrimaryCtaSection({
   const strokesCount = filledHoles.length;
 
   // Issue #164: «Fortsett runden»-knappen skal peke på første tomme hull,
-  // ikke hardkodet hull 1. Sekvensiell scan 1→18 returnerer det første hullet
-  // uten score; ved full runde havner vi i ready_to_submit-state og denne
-  // verdien brukes ikke (CTA-en routes til /submit i stedet).
+  // ikke hardkodet hull 1. #1441: scanner segmentets hull-numre i stedet for
+  // en hardkodet 1..18-løkke — på et back9-spill ville 1..18 startet på hull
+  // 1, som ligger utenfor spillets scope. Ved full runde havner vi i
+  // ready_to_submit-state og denne verdien brukes ikke (CTA-en routes til
+  // /submit i stedet).
+  const segmentHoles = holeNumbersForSegment(holeSegment);
   const filledSet = new Set(filledHoles);
-  let nextHole = 1;
-  for (let h = 1; h <= 18; h++) {
+  let nextHole = segmentHoles[0];
+  for (const h of segmentHoles) {
     if (!filledSet.has(h)) {
       nextHole = h;
       break;
@@ -67,6 +76,7 @@ export async function PrimaryCtaSection({
 
   const state = computeState({
     strokesCount,
+    totalHoles: segmentHoles.length,
     submittedAt,
     approvedAt,
     requirePeerApproval,
@@ -77,6 +87,7 @@ export async function PrimaryCtaSection({
       gameId={gameId}
       state={state}
       strokesCount={strokesCount}
+      totalHoles={segmentHoles.length}
       nextHole={nextHole}
     />
   );
@@ -90,17 +101,20 @@ function PrimaryCta({
   gameId,
   state,
   strokesCount,
+  totalHoles,
   nextHole,
 }: {
   gameId: string;
   state: UiState;
   strokesCount: number;
+  /** #1441: holes in the game's scope — 9 for front9/back9, 18 for 'full'. */
+  totalHoles: number;
   nextHole: number;
 }) {
   const t = useTranslations('game.home');
   const subtext =
     state === 'in_progress' || state === 'ready_to_submit'
-      ? t('ctaHolesFilled', { count: strokesCount })
+      ? t('ctaHolesFilled', { count: strokesCount, total: totalHoles })
       : null;
 
   if (state === 'not_started') {
