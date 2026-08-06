@@ -4,6 +4,7 @@ import {
   isScrambleFamily,
   isAlternateShotMatchplay,
   isMatchplayFamily,
+  supportsHoleSegment,
 } from './types';
 import type { GameMode } from './types';
 
@@ -160,5 +161,40 @@ describe('isMatchplayFamily', () => {
     for (const mode of ALT_SHOT_TRUE) {
       expect(isMatchplayFamily(mode)).toBe(true);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// supportsHoleSegment (#1441, D11)
+// ---------------------------------------------------------------------------
+
+// Matchplay family + best_ball (back9-host for the derived singles matches).
+const SEGMENT_TRUE: GameMode[] = [...MATCHPLAY_TRUE, 'best_ball'];
+const SEGMENT_FALSE: GameMode[] = ALL_MODES.filter((m) => !SEGMENT_TRUE.includes(m));
+
+describe('supportsHoleSegment', () => {
+  it.each(SEGMENT_TRUE)('returns true for segment-eligible mode: %s', (mode) => {
+    expect(supportsHoleSegment(mode)).toBe(true);
+  });
+
+  it.each(SEGMENT_FALSE)('returns false for non-segment-eligible mode: %s', (mode) => {
+    expect(supportsHoleSegment(mode)).toBe(false);
+  });
+
+  it('classifies every GameMode (exhaustive coverage)', () => {
+    for (const mode of ALL_MODES) {
+      expect(typeof supportsHoleSegment(mode)).toBe('boolean');
+    }
+  });
+
+  it('includes all of isMatchplayFamily (supportsHoleSegment ⊇ isMatchplayFamily)', () => {
+    for (const mode of MATCHPLAY_TRUE) {
+      expect(supportsHoleSegment(mode)).toBe(true);
+    }
+  });
+
+  it('additionally includes best_ball (the D11 revision over isMatchplayFamily)', () => {
+    expect(supportsHoleSegment('best_ball')).toBe(true);
+    expect(isMatchplayFamily('best_ball')).toBe(false);
   });
 });
