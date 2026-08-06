@@ -168,6 +168,42 @@ export function swapFlightPlayer(
   });
 }
 
+/** Én matchup-rad i flight-kortet (#1441, owner-QA rebuild F3e): venstre
+ * side1-spilleren og høyre side2-spilleren på SAMME rad er singles-
+ * motstanderne — nedtrekkslistene i UI-en er bundet direkte til dette. */
+export type FlightMatchupRow = {
+  slotIndex: 0 | 1;
+  side1PlayerId: string | undefined;
+  side2PlayerId: string | undefined;
+  singlesMatchId: string;
+};
+
+/**
+ * Utleder de to matchup-radene et flight-kort rendrer (#1441, owner-QA
+ * rebuild F3e — «de som skal spille mot hverandre i match skal være på
+ * samme linje»). Rad `slotIndex` parer `side1[slotIndex]` mot
+ * `side2[slotIndex]` — SAMME slot-indeks singles-matchen på den posisjonen
+ * ble generert fra (`generateSplitDayPlan`), et samsvar `swapFlightPlayer`s
+ * identitets-bytte bevarer uansett hvor mange bytter som er gjort (se dens
+ * docstring — et bytte speiles i ALLE matcher i berørt(e) flight(er),
+ * greensome/best-ball OG singles, så slot-indeksen holder seg i synk).
+ * Leser derfor direkte fra `flight.greensome.side{1,2}` i stedet for å
+ * duplisere spiller-id-ene fra `flight.singles` — én kilde til sannhet for
+ * radens INNHOLD, `flight.singles[slotIndex].id` er kun med for å gi UI-en
+ * en stabil React-key/match-referanse.
+ */
+export function getFlightMatchupRows(
+  flight: SplitDayFlight,
+): [FlightMatchupRow, FlightMatchupRow] {
+  const rows = ([0, 1] as const).map((slotIndex) => ({
+    slotIndex,
+    side1PlayerId: flight.greensome.side1[slotIndex],
+    side2PlayerId: flight.greensome.side2[slotIndex],
+    singlesMatchId: flight.singles[slotIndex].id,
+  }));
+  return [rows[0], rows[1]];
+}
+
 /** Antall flights et splittet-cup-dag-oppsett gir for gitte lagstørrelser —
  * speiler klampingen i `generateSplitDayPlan` (2 spillere per side per
  * flight; overskytende spillere blir bye). */
