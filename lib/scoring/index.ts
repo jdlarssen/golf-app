@@ -98,7 +98,7 @@ export { holesForSegment } from './holeSegment';
 export type { HoleSegment } from './holeSegment';
 export { computeStablefordPoints } from './modes/stableford';
 export { computeModifiedStablefordPoints } from './modes/modifiedStableford';
-export { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay, isMatchplayFamily, isSoloFormat, supportsWithdrawal } from './modes/types';
+export { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay, isMatchplayFamily, isSoloFormat, supportsWithdrawal, supportsHoleSegment } from './modes/types';
 export { ambroseDefaultPct } from './modes/ambrose';
 export { defaultFloridaHandicapPct } from './modes/floridaScramble';
 export { computeMatchResult } from './modes/singlesMatchplay';

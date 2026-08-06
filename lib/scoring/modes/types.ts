@@ -131,6 +131,30 @@ export function isMatchplayFamily(mode: GameMode): boolean {
 }
 
 /**
+ * True for formater der `games.hole_segment` kan settes til noe annet enn
+ * `'full'` (#1441, D11) — front9/back9-splitt. TS-motparten til
+ * `games_hole_segment_matchplay_only`-CHECK-en (opprinnelig 0151, revidert i
+ * 0152); layer-agreement-testen i `holeSegmentDbCheck.test.ts` leser 0152 som
+ * fasit og forventer at denne funksjonen er enig for hver `game_mode`.
+ *
+ * = hele matchplay-familien (duell-hull-for-hull, D2: motoren regner mot
+ * antall hull i `ctx.holes` i stedet for hardkodet 18) PLUSS `best_ball`.
+ * Best ball er tatt inn fordi splittet cup-dags back9-host er nettopp et
+ * best ball-spill (individuell føring, netto lagtotal på 85 % allowance) —
+ * singles-matchene på back9 avleder scores derfra via `source_game_id`
+ * (D3/D11). Øvrige strokeplay-formater (stableford, texas/ambrose/florida,
+ * shamble, patsome, wolf/nassau/skins/nines/bbb/round_robin/acey_deucey)
+ * forblir strukturelt 18-hulls — de har ikke fått en segment-aware motor.
+ *
+ * Eksplisitt sammensetning (ikke egen switch): arver `isMatchplayFamily` og
+ * legger kun `best_ball` på toppen, slik at de to predikatene ikke kan drive
+ * fra hverandre uten en eksplisitt kodeendring her.
+ */
+export function supportsHoleSegment(mode: GameMode): boolean {
+  return isMatchplayFamily(mode) || mode === 'best_ball';
+}
+
+/**
  * True for individuelle formater uten lag-/flight-gruppering — spilleren er en
  * flat deltaker, ikke del av et lag eller en side. Single source of truth for
  * når UI skal skjule «Lag»/«Flight»-rader, vise hele deltaker-lista i stedet
