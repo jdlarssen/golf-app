@@ -14,6 +14,7 @@
 // mønsteret, #284). WHS-default allowance = 100 % for greensome.
 
 import { computeFoursomesCore } from './foursomesMatchplay';
+import type { SideHandicapOverride } from './foursomesMatchplay';
 import type { ScoringContext, FoursomesMatchplayResult } from './types';
 
 /**
@@ -39,9 +40,30 @@ function readAllowancePct(ctx: ScoringContext): number {
 }
 
 /**
+ * Trekker `team_strokes_override` ut av mode_config og oversetter
+ * `{team1, team2}` til `{side1, side2}` (#1441, D10) — `team1`/`team2` matcher
+ * `game_players.team_number`, som ellers i familien er identisk med
+ * `sideNumber`. `undefined` når feltet ikke er satt (dagens 60/40-oppførsel).
+ */
+function readTeamStrokesOverride(ctx: ScoringContext): SideHandicapOverride | undefined {
+  const config = ctx.game.mode_config;
+  if (config.kind !== 'greensome_matchplay') return undefined;
+  const raw = (config as { team_strokes_override?: { team1: number; team2: number } })
+    .team_strokes_override;
+  if (!raw) return undefined;
+  return { side1: raw.team1, side2: raw.team2 };
+}
+
+/**
  * Beregner Greensome-matchplay-leaderboard. Delegerer til den delte foursomes-
- * kjernen med 60/40-side-handicap. Returnerer `kind: 'foursomes_matchplay'`.
+ * kjernen med 60/40-side-handicap, overstyrbar via `team_strokes_override`
+ * (D10). Returnerer `kind: 'foursomes_matchplay'`.
  */
 export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
-  return computeFoursomesCore(ctx, readAllowancePct(ctx), greensomeTeamHandicap);
+  return computeFoursomesCore(
+    ctx,
+    readAllowancePct(ctx),
+    greensomeTeamHandicap,
+    readTeamStrokesOverride(ctx),
+  );
 }

@@ -496,11 +496,23 @@ export type GameModeConfig =
        * Lag-handicap: 0,6×laveste + 0,4×høyeste (WHS-greensome-blanding).
        * Allowance: WHS-default 100 % (full differanse — ett blandet enkelt-tall
        * per side sammenliknes som individuelle spillere). Justerbar 0..100.
+       *
+       * `team_strokes_override` (#1441, D10 — splittet cup-dag): valgfritt
+       * `{team1, team2}`-par som ERSTATTER `greensomeTeamHandicap(ch1, ch2)`
+       * for hver side når feltet er satt. Løsning på at arrangørformelen
+       * (40 % av høyeste spillers spillehandicap) ikke lar seg uttrykke via
+       * allowance-% på 60/40-formelen. Kun det 60/40-beregnede lag-CH-steget
+       * byttes ut — resten av rørledningen (diff × allowance_pct/100 →
+       * high-side får differansen via SI, lavsiden 0) kjører uendret på
+       * override-tallene som om de var beregnet lag-CH. `team1`/`team2` matcher
+       * `game_players.team_number` (→ `sideNumber` 1/2, som ellers i familien).
+       * Fravær av feltet = dagens 60/40+allowance-oppførsel, bit for bit.
        */
       kind: 'greensome_matchplay';
       team_size: 2;
       teams_count: 2;
       allowance_pct: number;
+      team_strokes_override?: { team1: number; team2: number };
     }
   | {
       kind: 'chapman_matchplay';

@@ -24,12 +24,14 @@ function makeCtx(opts: {
   holes: ScoringHole[];
   scores: ScoringHoleScore[];
   allowancePct?: number;
+  teamStrokesOverride?: { team1: number; team2: number };
 }): ScoringContext {
   const config: GameModeConfig = {
     kind: 'greensome_matchplay',
     team_size: 2,
     teams_count: 2,
     allowance_pct: opts.allowancePct ?? 100,
+    ...(opts.teamStrokesOverride ? { team_strokes_override: opts.teamStrokesOverride } : {}),
   };
   return {
     game: {
@@ -242,6 +244,96 @@ describe('compute — greensome matchplay basis', () => {
     const r = compute(ctx);
     expect(r.sides[0].captainUserId).toBe('alpha');
     expect(r.sides[1].captainUserId).toBe('bravo');
+  });
+
+  // ---------------------------------------------------------------------------
+  // team_strokes_override (#1441, D10). Arrangørens Irish-greensome-formel
+  // (40 % av høyeste spillers spillehandicap) kan ikke uttrykkes via
+  // allowance-% på 60/40-formelen. Når `mode_config.team_strokes_override`
+  // er satt, bruker motoren tallene DIREKTE i stedet for
+  // `greensomeTeamHandicap(ch1, ch2)` — resten av rørledningen (diff ×
+  // allowance_pct/100 → high-side → per-hull SI-allokering) er uendret. Se
+  // ASSUMPTION-doc-kommentaren i greensomeMatchplay.ts for det fulle
+  // resonnementet bak dette valget.
+  // ---------------------------------------------------------------------------
+
+  describe('team_strokes_override (D10) — manuelle lag-slag', () => {
+    it('override present: erstatter 60/40-beregnet lag-CH, diff × allowance_pct kjører som normalt', () => {
+      // Spillernes faktiske CH ville gitt et helt annet 60/40-resultat
+      // (18,18 → 18 og 0,0 → 0) — override MÅ overstyre, ikke supplere.
+      const players: ScoringPlayer[] = [
+        { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 18 },
+        { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 18 },
+        { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+        { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      ];
+      const ctx = makeCtx({
+        players,
+        holes: par4Holes(18),
+        scores: [],
+        allowancePct: 100,
+        teamStrokesOverride: { team1: 8, team2: 3 },
+      });
+      const r = compute(ctx);
+      // Overstyrte tall vises som lagets "combinedCourseHandicap" (ikke 18/0).
+      expect(r.sides[0].combinedCourseHandicap).toBe(8);
+      expect(r.sides[1].combinedCourseHandicap).toBe(3);
+      // diff = |8-3| = 5, allowance 100 % → 5 slag til høylaget (team1, 8 > 3).
+      expect(r.sides[0].effectiveExtraHandicap).toBe(5);
+      expect(r.sides[1].effectiveExtraHandicap).toBe(0);
+      // SI 1-5 → +1 slag til side 1; SI 6-18 → 0.
+      for (const hole of r.holes) {
+        const expected = hole.strokeIndex <= 5 ? 1 : 0;
+        expect(hole.side1Extra).toBe(expected);
+        expect(hole.side2Extra).toBe(0);
+      }
+    });
+
+    it('override fraværende: uendret 60/40-formel + allowance-rørledning (bit for bit som i dag)', () => {
+      const players: ScoringPlayer[] = [
+        { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 8 },
+        { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 18 },
+        { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+        { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      ];
+      // Ingen teamStrokesOverride i opts → mode_config har ikke feltet.
+      const ctx = makeCtx({ players, holes: par4Holes(18), scores: [], allowancePct: 100 });
+      const r = compute(ctx);
+      // Samme forventning som «high side får diff-strokes»-testen over: 60/40 på
+      // (8,18) → 12, på (0,0) → 0.
+      expect(r.sides[0].combinedCourseHandicap).toBe(12);
+      expect(r.sides[1].combinedCourseHandicap).toBe(0);
+      expect(r.sides[0].effectiveExtraHandicap).toBe(12);
+      expect(r.sides[1].effectiveExtraHandicap).toBe(0);
+    });
+
+    it('override + 9-hulls front9-segment: strokes allokeres kun over hull-i-scope (#1441/D2)', () => {
+      // Front9 (hull 1-9), SI 1-9. team1=8, team2=3 override, allowance 100 %
+      // → diff 5 → side1 får slag på SI 1-5 (alle innenfor front9-scope her).
+      const holes = par4Holes(9); // number 1-9, strokeIndex 1-9
+      const players: ScoringPlayer[] = [
+        { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 5 },
+        { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 5 },
+        { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 20 },
+        { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 20 },
+      ];
+      const ctx = makeCtx({
+        players,
+        holes,
+        scores: [],
+        allowancePct: 100,
+        teamStrokesOverride: { team1: 8, team2: 3 },
+      });
+      const r = compute(ctx);
+      expect(r.holes).toHaveLength(9);
+      expect(r.holesRemaining).toBe(9); // #1441: hull-i-scope, ikke hardkodet 18
+      expect(r.sides[0].effectiveExtraHandicap).toBe(5);
+      expect(r.sides[1].effectiveExtraHandicap).toBe(0);
+      for (const hole of r.holes) {
+        const expected = hole.strokeIndex <= 5 ? 1 : 0;
+        expect(hole.side1Extra).toBe(expected);
+      }
+    });
   });
 
   it('empty shell ved 3 spillere', () => {
