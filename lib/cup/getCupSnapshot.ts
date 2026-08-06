@@ -2,11 +2,14 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { computeCupMatchResult } from './computeCupMatchResult';
+import { computeCupBestBallAward } from './computeCupBestBallAward';
+import { holesForSegment, type HoleSegment } from '@/lib/scoring/holeSegment';
 import type { GameStatus } from '@/lib/games/status';
 import {
   computeCupLeaderboard,
   type CupLeaderboardResult,
   type CupMatchInput,
+  type CupSideAwardInput,
   type TournamentInput,
 } from './computeCupLeaderboard';
 
@@ -37,6 +40,22 @@ export type CupRosterPlayer = {
   nickname: string | null;
 };
 
+/**
+ * Ett sidepoeng-innslag (#1441, D9) klart for visning: `winnerTeam` er
+ * allerede utledet fra `winner_user_id` via rosteret (samme mapping som mates
+ * inn i `computeCupLeaderboard`) — konsumenter slipper å gjøre oppslaget selv.
+ * `null` (både `winnerUserId` og `winnerTeam`) inntil arrangøren taster
+ * vinneren etter runden.
+ */
+export type CupSideAwardSnapshot = {
+  id: string;
+  kind: 'ctp' | 'ld';
+  holeNumber: number;
+  points: number;
+  winnerUserId: string | null;
+  winnerTeam: 1 | 2 | null;
+};
+
 export type CupSnapshot = {
   tournament: {
     id: string;
@@ -52,9 +71,15 @@ export type CupSnapshot = {
     started_at: string | null;
     finished_at: string | null;
     group_id: string | null;
+    // Vektbare cup-poeng (#1441, D8) — default 1/0,5 ved DB-nivå, alltid
+    // konkrete tall her (aldri null/undefined).
+    win_points: number;
+    tie_points: number;
   };
   leaderboard: CupLeaderboardResult;
   roster: CupRoster;
+  /** Cupens sidepoeng-oppsett (#1441, D9) — tom liste for cuper uten. */
+  sideAwards: CupSideAwardSnapshot[];
 };
 
 type GameRow = {
@@ -64,6 +89,21 @@ type GameRow = {
   game_mode: string;
   mode_config: unknown;
   tournament_match_label: string | null;
+  // #1441 (D1/D3/D12): segment/avledet-kilde/blind-flagg for splittet cup-dag.
+  // `hole_segment` er `NOT NULL DEFAULT 'full'` i DB — alltid en streng her,
+  // men lest defensivt (`?? 'full'`) ved bruk under, samme mønster som
+  // `mode_config` over.
+  hole_segment: string;
+  source_game_id: string | null;
+  score_visibility: string;
+};
+
+type SideAwardRow = {
+  id: string;
+  kind: string;
+  hole_number: number;
+  points: number;
+  winner_user_id: string | null;
 };
 
 type UserRel = { name: string | null; nickname: string | null };
@@ -113,7 +153,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
   const { data: tournament, error: tErr } = await supabase
     .from('tournaments')
     .select(
-      'id, name, team_1_name, team_2_name, points_to_win, status, winner_team, created_by, created_at, started_at, finished_at, group_id',
+      'id, name, team_1_name, team_2_name, points_to_win, status, winner_team, created_by, created_at, started_at, finished_at, group_id, win_points, tie_points',
     )
     .eq('id', tournamentId)
     .maybeSingle();
@@ -127,7 +167,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
   const { data: gameRows, error: gErr } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, tournament_match_label, course_id, tee_box_id, created_at',
+      'id, name, status, game_mode, mode_config, tournament_match_label, course_id, tee_box_id, created_at, hole_segment, source_game_id, score_visibility',
     )
     .eq('tournament_id', tournamentId)
     .order('created_at', { ascending: true });
@@ -137,6 +177,15 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     GameRow & { course_id: string | null; tee_box_id: string | null; created_at: string }
   >;
   const gameIds = games.map((g) => g.id);
+
+  // #1441 (D9): sidepoeng-konfigurasjonen er tournament-scoped (ingen
+  // games-avhengighet) — egen sekventiell fetch, ikke bundlet i Promise.all-
+  // gruppen under (den er game-avhengig: venter på `gameIds`).
+  const { data: sideAwardRows, error: saErr } = await supabase
+    .from('tournament_side_awards')
+    .select('id, kind, hole_number, points, winner_user_id')
+    .eq('tournament_id', tournamentId);
+  if (saErr) throw saErr;
 
   const [playersRes, scoresRes, holesByCourseRes] = await Promise.all([
     gameIds.length === 0
@@ -216,11 +265,22 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
 
   for (const game of games) {
     const gPlayers = playersByGame.get(game.id) ?? [];
-    const gScores = scoresByGame.get(game.id) ?? [];
-    const holes = (game.course_id && holesByCourse.get(game.course_id)) || [];
+
+    // #1441 (D3): en avledet match (singles på back9) eier ALDRI egne scores
+    // — alle lese-stier henter fra `source_game_id ?? id`. Host og avledet
+    // deler ALLTID samme `tournament_id` (bunten genereres samlet under én
+    // cup, #1441 D4), så host-en er alltid blant `games`/`gameIds` over —
+    // ingen defensiv fetch-by-id-union utenfor `scoresByGame` trengs.
+    const sourceId = game.source_game_id ?? game.id;
+    const gScores = scoresByGame.get(sourceId) ?? [];
+    // #1441 (D1/D2): hull-i-scope for matchen — 'full' (dagens oppførsel) med
+    // mindre bunt-genereringen satte front9/back9.
+    const segment = (game.hole_segment as HoleSegment | undefined) ?? 'full';
+    const courseHoles = (game.course_id && holesByCourse.get(game.course_id)) || [];
+    const holes = holesForSegment(courseHoles, segment);
 
     // Per side: alle spillere med team_number 1 eller 2. Singles har 1 per side,
-    // lag-format (fourball/foursomes/greensome/chapman/gruesome) har 2.
+    // lag-format (fourball/foursomes/greensome/chapman/gruesome/best_ball) har 2.
     const side1Players = gPlayers.filter((p) => p.team_number === 1);
     const side2Players = gPlayers.filter((p) => p.team_number === 2);
 
@@ -236,61 +296,109 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       if (p.team_number === 2 && !team2Map.has(p.user_id)) team2Map.set(p.user_id, entry);
     }
 
-    // Match-scoring via tabell-drevet dispatcher (#331). Dekker alle seks
-    // matchplay-modi (singles/fourball/foursomes/greensome/chapman/gruesome) med
-    // riktig compute-fn + allowance-default per modus. Returnerer null når
-    // game_mode ikke er matchplay, side-størrelsen ikke matcher, eller matchen
-    // ikke er avgjort ennå. allowance_pct leses fra mode_config (helperen
-    // defaulter per modus når feltet mangler).
-    const modeConfig = (game.mode_config ?? null) as { allowance_pct?: number } | null;
-    const result = computeCupMatchResult({
-      gameId: game.id,
-      gameMode: game.game_mode,
-      modeConfig,
-      side1: side1Players.map((p) => ({
-        userId: p.user_id,
-        courseHandicap: p.course_handicap ?? 0,
-      })),
-      side2: side2Players.map((p) => ({
-        userId: p.user_id,
-        courseHandicap: p.course_handicap ?? 0,
-      })),
-      holes,
-      scores: gScores.map((s) => ({
-        userId: s.user_id,
-        holeNumber: s.hole_number,
-        gross: s.strokes,
-      })),
-    });
+    // `mode_config` — `allowance_pct` for lag-format, `team_strokes_override`
+    // KUN meningsfullt for greensome (D10). Best-ball-hosten (D4/D11) lagrer
+    // OGSÅ `allowance_pct` (85%-default) selv om standard `best_ball`-modusen
+    // ikke har feltet i sin `GameModeConfig` — cup-laget legger det på selv
+    // (se `createCupMatchesFromPlan`/`cupMatchModeConfig`) fordi
+    // `computeCupBestBallAward` (under) trenger det, ikke matchplay-dispatchen.
+    const modeConfig = (game.mode_config ?? null) as {
+      allowance_pct?: number;
+      team_strokes_override?: { team1: number; team2: number };
+    } | null;
+
+    const scoresInput = gScores.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    }));
+    const side1Input = side1Players.map((p) => ({
+      userId: p.user_id,
+      courseHandicap: p.course_handicap ?? 0,
+    }));
+    const side2Input = side2Players.map((p) => ({
+      userId: p.user_id,
+      courseHandicap: p.course_handicap ?? 0,
+    }));
+
+    let result: CupMatchInput['result'];
+    if (game.game_mode === 'best_ball') {
+      // #1441 (D4/D11): back9-hosten poengsettes på netto LAGTOTAL, ikke
+      // hull-for-hull matchplay — `computeCupMatchResult`s
+      // `MATCHPLAY_CONFIG` har ingen `best_ball`-rad (og skal ikke ha, det
+      // er en fundamentalt annen sammenligning).
+      result = computeCupBestBallAward({
+        side1: side1Input,
+        side2: side2Input,
+        holes: holes.map((h) => ({ number: h.number, strokeIndex: h.strokeIndex })),
+        scores: scoresInput,
+        allowancePct: modeConfig?.allowance_pct,
+      });
+    } else {
+      // Match-scoring via tabell-drevet dispatcher (#331). Dekker alle seks
+      // matchplay-modi (singles/fourball/foursomes/greensome/chapman/gruesome)
+      // med riktig compute-fn + allowance-default per modus. Returnerer null
+      // når game_mode ikke er matchplay, side-størrelsen ikke matcher, eller
+      // matchen ikke er avgjort ennå. allowance_pct leses fra mode_config
+      // (helperen defaulter per modus når feltet mangler).
+      result = computeCupMatchResult({
+        gameId: game.id,
+        gameMode: game.game_mode,
+        modeConfig,
+        side1: side1Input,
+        side2: side2Input,
+        holes,
+        scores: scoresInput,
+      });
+    }
+
+    // Blind cup-dag (#1441, D12): en bunt-match (`score_visibility='reveal'`)
+    // eksponerer INGEN resultat før arrangøren avslutter den — uansett om
+    // scorene alt gjør utfallet avgjørbart. Poeng var (og forblir) allerede
+    // kun tildelt ferdige spill (`computeCupLeaderboard.pointsForMatch` gater
+    // på `status !== 'finished'`); dette gater kun det VISTE resultatet.
+    // Non-reveal-spill (dagens 'live'-default) beholder dagens oppførsel: et
+    // avgjort resultat vises så snart scorene avgjør det, uavhengig av status.
+    if (game.score_visibility === 'reveal' && game.status !== 'finished') {
+      result = null;
+    }
 
     // Navn-label per side: singles bruker enkelt-navn, lag-format (fourball/
-    // foursomes/greensome/chapman/gruesome) joiner med «/». Defensiv: tom side
-    // rendres som «Ukjent spiller» via preferredName.
+    // foursomes/greensome/chapman/gruesome/best_ball) joiner med «/». Defensiv:
+    // tom side rendres som «Ukjent spiller» via preferredName.
     const team1Label = formatSideLabel(side1Players);
     const team2Label = formatSideLabel(side2Players);
 
     // Bevart for backward-compat: typesikker fallback hvis future game_mode
     // skulle vises i en cup. Per d.d. er singles_matchplay, fourball_matchplay,
     // foursomes_matchplay, greensome_matchplay, chapman_matchplay og
-    // gruesome_matchplay gyldige.
+    // gruesome_matchplay gyldige. `best_ball` (D4-hosten) er bevisst UTENFOR
+    // dette unionet — `CupMatchInput.gameMode` (computeCupLeaderboard, F3a)
+    // har ingen best_ball-medlem (den displayer player-vs-team-stil-valget
+    // for matchplay-formatert resultattekst, ikke best-balls
+    // lagtotal-format) — `undefined` faller UI-en tilbake til singles-stil
+    // rendering (F4s jobb å gi best-ball sin egen visning).
     const matchGameMode:
       | 'singles_matchplay'
       | 'fourball_matchplay'
       | 'foursomes_matchplay'
       | 'greensome_matchplay'
       | 'chapman_matchplay'
-      | 'gruesome_matchplay' =
-      game.game_mode === 'fourball_matchplay'
-        ? 'fourball_matchplay'
-        : game.game_mode === 'foursomes_matchplay'
-          ? 'foursomes_matchplay'
-          : game.game_mode === 'greensome_matchplay'
-            ? 'greensome_matchplay'
-            : game.game_mode === 'chapman_matchplay'
-              ? 'chapman_matchplay'
-              : game.game_mode === 'gruesome_matchplay'
-                ? 'gruesome_matchplay'
-                : 'singles_matchplay';
+      | 'gruesome_matchplay'
+      | undefined =
+      game.game_mode === 'best_ball'
+        ? undefined
+        : game.game_mode === 'fourball_matchplay'
+          ? 'fourball_matchplay'
+          : game.game_mode === 'foursomes_matchplay'
+            ? 'foursomes_matchplay'
+            : game.game_mode === 'greensome_matchplay'
+              ? 'greensome_matchplay'
+              : game.game_mode === 'chapman_matchplay'
+                ? 'chapman_matchplay'
+                : game.game_mode === 'gruesome_matchplay'
+                  ? 'gruesome_matchplay'
+                  : 'singles_matchplay';
 
     matchInputs.push({
       gameId: game.id,
@@ -303,19 +411,50 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     });
   }
 
+  // #1441 (D9): map sidepoeng-innslagenes `winner_user_id` til hvilket LAG
+  // spilleren tilhører via rosteret bygget over — `winnerTeam: null` for
+  // uregistrert vinner (arrangøren har ikke tastet ennå) OG for en vinner som
+  // ikke finnes i rosteret (defensivt — kan ikke skje via
+  // `registerSideAwardWinner`s egen roster-validering, men laget her tar ikke
+  // det for gitt).
+  const sideAwardsForLeaderboard: CupSideAwardInput[] = [];
+  const sideAwards: CupSideAwardSnapshot[] = [];
+  for (const row of (sideAwardRows ?? []) as SideAwardRow[]) {
+    const kind: 'ctp' | 'ld' = row.kind === 'ld' ? 'ld' : 'ctp';
+    const winnerTeam: 1 | 2 | null = !row.winner_user_id
+      ? null
+      : team1Map.has(row.winner_user_id)
+        ? 1
+        : team2Map.has(row.winner_user_id)
+          ? 2
+          : null;
+    sideAwardsForLeaderboard.push({ kind, holeNumber: row.hole_number, points: row.points, winnerTeam });
+    sideAwards.push({
+      id: row.id,
+      kind,
+      holeNumber: row.hole_number,
+      points: row.points,
+      winnerUserId: row.winner_user_id,
+      winnerTeam,
+    });
+  }
+
   const tournamentInput: TournamentInput = {
     team_1_name: t.team_1_name,
     team_2_name: t.team_2_name,
     points_to_win: t.points_to_win,
     status: t.status,
     winner_team: t.winner_team,
+    win_points: t.win_points,
+    tie_points: t.tie_points,
   };
 
-  const leaderboard = computeCupLeaderboard(tournamentInput, matchInputs);
+  const leaderboard = computeCupLeaderboard(tournamentInput, matchInputs, sideAwardsForLeaderboard);
 
   return {
     tournament: t,
     leaderboard,
+    sideAwards,
     roster: {
       team1: Array.from(team1Map.values()),
       team2: Array.from(team2Map.values()),
