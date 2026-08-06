@@ -2644,6 +2644,11 @@
       "description": "Best-ball brutto. Rangeringen kommer når runden er ferdig.",
       "pullquote": "🤫 Vinneren avsløres når runden er ferdig"
     },
+    "revealHidden": {
+      "kicker": "SKJULT",
+      "heading": "Avsløres til slutt",
+      "description": "Stillingen holdes hemmelig til arrangøren avslutter spillet."
+    },
     "holes": {
       "unknownPlayer": "(ukjent spiller)",
       "backAriaLabel": "Tilbake til leaderboard",

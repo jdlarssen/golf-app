@@ -2644,6 +2644,11 @@
       "description": "Best-ball gross. The final standings are revealed when the round is finished.",
       "pullquote": "🤫 The winner is revealed when the round is done"
     },
+    "revealHidden": {
+      "kicker": "HIDDEN",
+      "heading": "Revealed at the end",
+      "description": "The standings stay hidden until the organizer ends the game."
+    },
     "holes": {
       "unknownPlayer": "(unknown player)",
       "backAriaLabel": "Back to leaderboard",
