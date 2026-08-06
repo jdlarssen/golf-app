@@ -94,6 +94,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
 export { calculateCourseHandicap, applyAllowance } from './courseHandicap';
 export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
 export { rankTeams } from './tiebreaker';
+export { holesForSegment } from './holeSegment';
+export type { HoleSegment } from './holeSegment';
 export { computeStablefordPoints } from './modes/stableford';
 export { computeModifiedStablefordPoints } from './modes/modifiedStableford';
 export { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay, isMatchplayFamily, isSoloFormat, supportsWithdrawal } from './modes/types';
