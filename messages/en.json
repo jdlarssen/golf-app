@@ -4514,6 +4514,10 @@
       "singler": {
         "name": "Singles only",
         "description": "Everyone faces one opponent. Works with any team size."
+      },
+      "splittet-cup-dag": {
+        "name": "Split cup day (9 + 9)",
+        "description": "One round, four competitions: greensome out, best ball and two singles in. Same four players in each flight the whole round."
       }
     },
     "ledger": {
@@ -4616,12 +4620,24 @@
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",
       "formatGruesome": "Gruesome",
+      "formatBestBall": "Best ball",
       "step3ZeroMatchesMsg": "The selected format requires at least 2 players per team.",
       "emptyStatePlayers": "No players are ready yet. Invite players and they will appear here.",
       "emptyStatePlayersLink": "Open the player list",
       "emptyStateCourses": "You need at least one course with active tees to generate matches.",
       "emptyStateCoursesLink": "Add a course",
-      "step4RecapHeading": "Summary"
+      "step4RecapHeading": "Summary",
+      "splitDayPlanSummary": "{flights} {flights, plural, one {flight} other {flights}} · {total} matches total",
+      "bestBallAllowanceLabel": "Best ball handicap (%)",
+      "bestBallAllowanceHint": "The share of course handicap that applies on the best ball holes (10-18). Default is 85%.",
+      "segmentFront9": "Holes 1-9",
+      "segmentBack9": "Holes 10-18",
+      "flightHeading": "Flight {n}",
+      "teamStrokesLabel": "Strokes team {team}",
+      "spillehandicapShort": "CH {n}",
+      "hcpIndexShort": "HCP {n}",
+      "swapSinglesButton": "Swap pairing",
+      "singlesReadsFromBestBall": "Reads the best ball scores — no scoring of its own."
     },
     "delete": {
       "brassRibbon": "Confirm deletion",

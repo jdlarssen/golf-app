@@ -4514,6 +4514,10 @@
       "singler": {
         "name": "Bare singler",
         "description": "Alle møter én motspiller. Funker uansett hvor mange dere er."
+      },
+      "splittet-cup-dag": {
+        "name": "Splittet cup-dag (9 + 9)",
+        "description": "Én runde, fire konkurranser: greensome ute, best ball og to singler inne. Samme fire spillere i hver flight hele runden."
       }
     },
     "ledger": {
@@ -4616,12 +4620,24 @@
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",
       "formatGruesome": "Gruesome",
+      "formatBestBall": "Best ball",
       "step3ZeroMatchesMsg": "Valgt format krever minst 2 spillere per lag.",
       "emptyStatePlayers": "Ingen spillere er klare ennå. Inviter spillere, så dukker de opp her.",
       "emptyStatePlayersLink": "Åpne spillerlisten",
       "emptyStateCourses": "Du trenger minst én bane med aktive teer for å generere matcher.",
       "emptyStateCoursesLink": "Legg inn en bane",
-      "step4RecapHeading": "Oppsummering"
+      "step4RecapHeading": "Oppsummering",
+      "splitDayPlanSummary": "{flights} {flights, plural, one {flight} other {flighter}} · {total} matcher totalt",
+      "bestBallAllowanceLabel": "Handicap best ball (%)",
+      "bestBallAllowanceHint": "Andelen av spillehandicapet som gjelder på best ball-hullene (10–18). Standard er 85 %.",
+      "segmentFront9": "Hull 1–9",
+      "segmentBack9": "Hull 10–18",
+      "flightHeading": "Flight {n}",
+      "teamStrokesLabel": "Slag lag {team}",
+      "spillehandicapShort": "SH {n}",
+      "hcpIndexShort": "HCP {n}",
+      "swapSinglesButton": "Bytt paring",
+      "singlesReadsFromBestBall": "Leser best ball-scorene — ingen egen føring."
     },
     "delete": {
       "brassRibbon": "Bekreft sletting",
