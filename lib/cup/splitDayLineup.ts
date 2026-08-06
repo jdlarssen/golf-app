@@ -1,16 +1,22 @@
 /**
- * Ren visnings-/redigerings-logikk for splittet-cup-dag-bunten (#1441, F3c).
+ * Ren visnings-/redigerings-logikk for splittet-cup-dag-bunten (#1441, F3c,
+ * F3d owner-QA-runde).
  *
  * `generateSplitDayPlan` (cupPairing.ts) produserer en flat liste av
  * `PlannedBundleMatch[]` (4 per flight: greensome, best_ball, 2× singles).
  * Oppstillings-editoren i wizarden trenger dem gruppert per flight for
- * visning, og en måte å bytte hvem-møter-hvem i singles-parene UTEN å røre
+ * visning, en måte å bytte hvem-møter-hvem i singles-parene UTEN å røre
  * greensome/best-ball-paret eller hente inn spillere fra andre flights (de
  * fire spillerne i en flight er et fysisk krav — samme fire spiller hele
- * runden, D4).
+ * runden, D4) — og (F3d) en måte å bytte HVEM som sitter i en gitt
+ * flight-posisjon, på tvers av eller innad i flights.
  */
 
 import type { PlannedBundleMatch } from './cupPairing';
+
+/** Hvilket lag en flight-posisjon tilhører — speiler `PlannedBundleMatch`s
+ * `side1`/`side2`-felt (lag 1 / lag 2), ikke cupens `team1`/`team2`-navn. */
+export type FlightTeamSide = 'side1' | 'side2';
 
 export type SplitDayFlight = {
   flightIndex: number;
@@ -75,6 +81,90 @@ export function swapFlightSinglesPairing(
     if (m.id === a.id) return { ...m, side2: b.side2 };
     if (m.id === b.id) return { ...m, side2: a.side2 };
     return m;
+  });
+}
+
+/**
+ * Bytter HVEM som sitter i en gitt flight-posisjon (lag, flight, slot 0/1) —
+ * owner-QA-funn på #1441: «Det er ikke mulig å velge hvem som skal være i
+ * flight … Det må det være.» Kalleren identifiserer posisjonen med
+ * (`flightIndex`, `side`, `slotIndex`); `playerId` er spilleren organisatoren
+ * VALGTE i den posisjonens dropdown.
+ *
+ * To case, begge håndtert av SAMME identitets-baserte bytte (ingen egen
+ * gren nødvendig):
+ *
+ *  - `playerId` sitter i en ANNEN flight → de to spillerne bytter plass:
+ *    greensome/best-ball-paret i BEGGE flights oppdateres (samme array-
+ *    innhold speilet på begge matcher, som ved generering), og singles-
+ *    matchen(e) som pekte på hver spiller følger dem til sin nye flight.
+ *  - `playerId` er LAGKAMERATEN i SAMME flight (den andre slotten) → et
+ *    internt bytte. Greensome/best-ball-PARET er semantisk uendret (paret
+ *    ER flightens to spillere på det laget, uansett rekkefølge — se
+ *    `swapFlightSinglesPairing`s docstring), men fordi singles-parene er
+ *    keyet på indeks (`side{team}Pair[0]` mot `side{team}Pair[1]`, se
+ *    `generateSplitDayPlan`), bytter dette HVEM som møter hvem i singles —
+ *    samme synlige effekt som `swapFlightSinglesPairing`, bare via
+ *    spiller-valg i stedet for en fast «bytt paring»-knapp.
+ *
+ * Implementasjon: finn spilleren som STÅR i target-slotten
+ * (`currentPlayerId`) og spilleren som BLE VALGT (`playerId`), og bytt dem
+ * om — BY IDENTITY, ikke by index — i alle matcher i de(n) berørte
+ * flighten(e) sitt `side`-felt. Identitets-bytte (fremfor indeks-bytte) er
+ * bevisst: singles-matchenes `side{team}`-array kan allerede være reordnet
+ * av en tidligere `swapFlightSinglesPairing`-kall (som KUN bytter `side2`
+ * mellom de to singles-matchene, uavhengig av greensome/best-ball-paret) —
+ * å bytte by identity følger spilleren uansett hvilken singles-match som for
+ * øyeblikket har dem, og holder seg derfor korrekt uansett tidligere bytter.
+ *
+ * No-op (returnerer `matches` uendret) i tre defensive tilfeller:
+ *  - `playerId` er allerede den som står i target-slotten (organisatoren
+ *    valgte samme spiller på nytt).
+ *  - Flighten/formatet finnes ikke i `matches` (malformed input).
+ *  - `playerId` er ikke funnet i NOEN flight sitt `side`-felt — dette skjer
+ *    for en spiller som er valgt til laget (Step1Roster) men IKKE fikk plass
+ *    i en flight pga. ulik lagstørrelse («bye», se `splitDayFlightCount`s
+ *    klamping). Å hente en bye-spiller INN i en flight ville krevd å sende
+ *    den fortrengte spilleren til en bye-«pool» som ikke finnes i
+ *    `PlannedBundleMatch[]`s form — utenfor scope for denne runden (ASSUMPTION,
+ *    se GenerateMatchesWizard.tsx sin oppstillings-editor for UI-siden av
+ *    dette valget).
+ */
+export function swapFlightPlayer(
+  matches: PlannedBundleMatch[],
+  flightIndex: number,
+  side: FlightTeamSide,
+  slotIndex: 0 | 1,
+  playerId: string,
+): PlannedBundleMatch[] {
+  const greensome = matches.find(
+    (m) => m.flightIndex === flightIndex && m.format === 'greensome_matchplay',
+  );
+  if (!greensome) return matches;
+
+  const currentPlayerId = greensome[side][slotIndex];
+  if (currentPlayerId === undefined || currentPlayerId === playerId) return matches;
+
+  let otherFlightIndex: number | undefined;
+  for (const m of matches) {
+    if (m.format !== 'greensome_matchplay') continue;
+    if (m[side][0] === playerId || m[side][1] === playerId) {
+      otherFlightIndex = m.flightIndex;
+      break;
+    }
+  }
+  if (otherFlightIndex === undefined) return matches;
+
+  return matches.map((m) => {
+    if (m.flightIndex !== flightIndex && m.flightIndex !== otherFlightIndex) return m;
+    const arr = m[side];
+    if (!arr.includes(currentPlayerId) && !arr.includes(playerId)) return m;
+    const nextArr = arr.map((id) => {
+      if (id === currentPlayerId) return playerId;
+      if (id === playerId) return currentPlayerId;
+      return id;
+    });
+    return { ...m, [side]: nextArr };
   });
 }
 

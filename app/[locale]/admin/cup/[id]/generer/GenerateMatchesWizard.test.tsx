@@ -20,6 +20,15 @@ const PLAYERS: WizardPlayer[] = [
   { id: 'p4', displayName: 'Ida Dahl', hcpIndex: 24.0 },
 ];
 
+/** Matcher for a singles-pairing `<p>` whose text is split across text nodes
+ * and a nested `<span>` («mot») — `getByText`'s default matcher only matches
+ * a single node's own text, not text broken up by sibling elements. */
+function singlesRowText(text: string) {
+  return (_: string, element: Element | null) =>
+    element?.tagName.toLowerCase() === 'p' &&
+    (element.textContent ?? '').replace(/\s+/g, ' ').trim() === text;
+}
+
 const COURSES: WizardCourse[] = [
   {
     id: 'course-1',
@@ -145,9 +154,30 @@ describe('GenerateMatchesWizard', () => {
     fireEvent.click(screen.getByRole('button', { name: /neste/i }));
     expect(screen.getByTestId('cup-wizard-step4-bundle')).toBeInTheDocument();
     expect(screen.getByText(/flight 1/i)).toBeInTheDocument();
-    // Greensomens manuelle lag-slag-felt, ett per lag.
-    expect(screen.getAllByLabelText(/slag til lag/i)).toHaveLength(2);
+    // Greensomens manuelle lag-slag-felt, ett per lag — FORHÅNDSUTFYLT med
+    // 60/40-forslaget (#1441 owner-QA, D10): tee-1 mangler ratingsett, så
+    // fallback er rå HCP-indeks. Ørnen: greensomeTeamHandicap(12.0, 18.0) =
+    // round(0.6×12 + 0.4×18) = 14. Falken: greensomeTeamHandicap(8.5, 24.0)
+    // = round(0.6×8.5 + 0.4×24) = 15.
+    const strokesFields = screen.getAllByLabelText(/slag til lag/i);
+    expect(strokesFields).toHaveLength(2);
+    expect(strokesFields[0]).toHaveValue(14);
+    expect(strokesFields[1]).toHaveValue(15);
     // Singel-bytte er begrenset til flightens egne fire spillere (én knapp).
     expect(screen.getByTestId('cup-wizard-swap-singles-1')).toBeInTheDocument();
+
+    // Oppstillings-editoren (#1441 owner-QA): «hvem som skal være i flight»
+    // — fire selects, ett per spiller-slot. Default: Kari/Ola (Ørnen),
+    // Lars/Ida (Falken) → singel 1 er Kari mot Lars, singel 2 Ola mot Ida.
+    expect(screen.getByText(singlesRowText('Kari Nordmann mot Lars Berg'))).toBeInTheDocument();
+    expect(screen.getByText(singlesRowText('Ola Hansen mot Ida Dahl'))).toBeInTheDocument();
+
+    // Bytt Ørnens slot 0 (Kari) med Ørnens slot 1 (Ola) — samme flight, så
+    // greensome-paret er uendret, men singel-paringen følger spilleren.
+    fireEvent.change(screen.getByTestId('cup-wizard-lineup-1-side1-0'), {
+      target: { value: 'p2' },
+    });
+    expect(screen.getByText(singlesRowText('Ola Hansen mot Lars Berg'))).toBeInTheDocument();
+    expect(screen.getByText(singlesRowText('Kari Nordmann mot Ida Dahl'))).toBeInTheDocument();
   });
 });

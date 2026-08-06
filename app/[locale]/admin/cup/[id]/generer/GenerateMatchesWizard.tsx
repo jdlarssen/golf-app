@@ -24,8 +24,10 @@ import {
 import {
   groupBundleMatchesByFlight,
   swapFlightSinglesPairing,
+  swapFlightPlayer,
   splitDayFlightCount,
   splitDayTotalMatches,
+  type FlightTeamSide,
 } from '@/lib/cup/splitDayLineup';
 import { createCupMatchesFromPlan, type CupBatchMatch } from './actions';
 import {
@@ -34,11 +36,14 @@ import {
 } from '@/lib/cup/limits';
 // #1441 (F3c): regnehjelp for greensomens manuelle lag-slag (D10) — samme
 // rating-oppslag + CH-formel som resten av appen bruker, ikke en ny formel.
-// Ren lesing (ingen skriving) fra to lib/games/-filer utenfor F3c sitt
-// skrive-forbud (lib/games/** er off-limits å ENDRE, ikke å importere fra).
+// Ren lesing (ingen skriving) fra lib/games/- og lib/scoring/-filer utenfor
+// F3c sitt skrive-forbud (begge er off-limits å ENDRE, ikke å importere
+// fra). `greensomeTeamHandicap` (owner-QA-runde, F3d) er selve 60/40-
+// motor-formelen — gjenbrukt EKSAKT for prefill-forslaget, ikke reimplementert.
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
+import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import type { WizardPlayer, WizardCourse, WizardTeeBox } from './GenerateMatches';
 
 // #1441 (F3c): matchen wizarden holder i steg 4 er enten en av de tre eldre
@@ -85,6 +90,55 @@ function computeSpillehandicap(player: WizardPlayer, tee: WizardTeeBox | undefin
     courseRating: rating.courseRating,
     par: rating.par,
   });
+}
+
+/**
+ * Standardforslag for greensomens manuelle lag-slag (#1441 owner-QA: «bør
+ * være ferdigplottet inn hvor mange slag de ulike har. Ikke at de står
+ * tomme.»). Samme 60/40-formel motoren selv bruker for greensome
+ * (`greensomeTeamHandicap`, lib/scoring/modes/greensomeMatchplay.ts) —
+ * KALT VIDERE her, aldri reimplementert (avrunding inkludert). Hver spillers
+ * verdi er spillehandicapet på valgt tee, eller rå HCP-indeks som fallback
+ * når tee mangler ratingsett for spillerens kjønn (samme fallback som
+ * `computeSpillehandicap`/`regnehjelpText` allerede bruker under feltet).
+ *
+ * KUN et forslag: feltet i UI-en forblir fritt redigerbart, og en
+ * arrangørs egen formel (f.eks. 40 % av høyeste) skriver rett over denne
+ * verdien uten noen ekstra bekreftelse (D10 — «manual strokes override»).
+ */
+function greensomeTeamStrokesDefault(
+  playerA: WizardPlayer,
+  playerB: WizardPlayer,
+  tee: WizardTeeBox | undefined,
+): number {
+  const a = computeSpillehandicap(playerA, tee) ?? playerA.hcpIndex;
+  const b = computeSpillehandicap(playerB, tee) ?? playerB.hcpIndex;
+  return greensomeTeamHandicap(a, b);
+}
+
+/** Defensivt fallback (0) når paret ikke har nøyaktig to spillere — kan ikke
+ * skje med gyldig bunt-output (`generateSplitDayPlan` gir alltid par av 2),
+ * men holder komponenten fra å krasje på malformed data. */
+function greensomeDefaultOrFallback(pair: WizardPlayer[], tee: WizardTeeBox | undefined): number {
+  if (pair.length !== 2) return 0;
+  return greensomeTeamStrokesDefault(pair[0], pair[1], tee);
+}
+
+/**
+ * Effektiv verdi for ETT lags manuelle lag-slag-felt (#1441 owner-QA, D10):
+ * `raw === undefined` betyr feltet aldri er rørt av organisatoren → viser
+ * (og sender) det live-utledede forslaget fra `greensomeDefaultOrFallback`,
+ * som oppdaterer seg selv når spillerne i flighten endres (oppstillings-
+ * editoren, `swapFlightPlayer`). Tomt eller ugyldig innhold ETTER at feltet
+ * ER rørt faller ALLEREDE tilbake til samme forslag — «what you see is what
+ * the engine uses» skal aldri kunne divergere fra hva som faktisk sendes inn.
+ */
+function effectiveStrokes(raw: string | undefined, fallback: number): number {
+  if (raw === undefined) return fallback;
+  const trimmed = raw.trim();
+  if (trimmed === '') return fallback;
+  const n = Number(trimmed);
+  return Number.isInteger(n) && n >= 0 ? n : fallback;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -882,13 +936,20 @@ function GreensomeCard({
   team2Name: string;
   players: (userId: string) => WizardPlayer | undefined;
   selectedTee: WizardTeeBox | undefined;
-  teamStrokesInputs: Record<string, { team1: string; team2: string }>;
+  teamStrokesInputs: Record<string, { team1?: string; team2?: string }>;
   onTeamStrokesChange: (matchId: string, side: 'team1' | 'team2', value: string) => void;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
-  const raw = teamStrokesInputs[match.id] ?? { team1: '', team2: '' };
+  const raw = teamStrokesInputs[match.id];
   const side1Players = match.side1.map(players).filter((p): p is WizardPlayer => Boolean(p));
   const side2Players = match.side2.map(players).filter((p): p is WizardPlayer => Boolean(p));
+  // #1441 (owner-QA, D10): live-utledet forslag — oppdaterer seg selv når
+  // spillerne i flighten endres via oppstillings-editoren (`swapFlightPlayer`)
+  // SÅ LENGE organisatoren ikke selv har tastet noe i feltet (`raw === undefined`).
+  const team1Default = greensomeDefaultOrFallback(side1Players, selectedTee);
+  const team2Default = greensomeDefaultOrFallback(side2Players, selectedTee);
+  const team1Value = raw?.team1 ?? String(team1Default);
+  const team2Value = raw?.team2 ?? String(team2Default);
 
   return (
     <Card className="!p-4">
@@ -912,7 +973,7 @@ function GreensomeCard({
             id={`strokes-${match.id}-team1`}
             type="number"
             min={0}
-            value={raw.team1}
+            value={team1Value}
             onChange={(e) => onTeamStrokesChange(match.id, 'team1', e.target.value)}
             className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
           />
@@ -931,7 +992,7 @@ function GreensomeCard({
             id={`strokes-${match.id}-team2`}
             type="number"
             min={0}
-            value={raw.team2}
+            value={team2Value}
             onChange={(e) => onTeamStrokesChange(match.id, 'team2', e.target.value)}
             className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
           />
@@ -940,6 +1001,7 @@ function GreensomeCard({
           </p>
         </div>
       </div>
+      <p className="text-[11px] text-muted mt-2">{t('generate.teamStrokesPrefillHint')}</p>
     </Card>
   );
 }
@@ -954,6 +1016,7 @@ function Step4BundlePreview({
   teamStrokesInputs,
   onTeamStrokesChange,
   onSwapSingles,
+  onSwapPlayer,
   onRegenerate,
   t,
 }: {
@@ -963,9 +1026,18 @@ function Step4BundlePreview({
   team1Name: string;
   team2Name: string;
   selectedTee: WizardTeeBox | undefined;
-  teamStrokesInputs: Record<string, { team1: string; team2: string }>;
+  teamStrokesInputs: Record<string, { team1?: string; team2?: string }>;
   onTeamStrokesChange: (matchId: string, side: 'team1' | 'team2', value: string) => void;
   onSwapSingles: (flightIndex: number) => void;
+  // #1441 (owner-QA): «hvem som skal være i flight» — se
+  // `swapFlightPlayer`s docstring (lib/cup/splitDayLineup.ts) for
+  // bytte-semantikken.
+  onSwapPlayer: (
+    flightIndex: number,
+    side: FlightTeamSide,
+    slotIndex: 0 | 1,
+    playerId: string,
+  ) => void;
   onRegenerate: () => void;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
@@ -1001,6 +1073,65 @@ function Step4BundlePreview({
                 {t('generate.flightHeading', { n: flight.flightIndex })}
               </p>
               <div className="space-y-3">
+                <Card className="!p-4" data-testid={`cup-wizard-lineup-${flight.flightIndex}`}>
+                  <p className="font-sans text-xs font-semibold text-muted mb-2">
+                    {t('generate.lineupHeading')}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                        {team1Name}
+                      </p>
+                      {([0, 1] as const).map((slotIndex) => {
+                        const playerId = flight.greensome.side1[slotIndex];
+                        return (
+                          <select
+                            key={slotIndex}
+                            data-testid={`cup-wizard-lineup-${flight.flightIndex}-side1-${slotIndex}`}
+                            value={playerId ?? ''}
+                            onChange={(e) =>
+                              onSwapPlayer(flight.flightIndex, 'side1', slotIndex, e.target.value)
+                            }
+                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          >
+                            {team1Players.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.displayName}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })}
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                        {team2Name}
+                      </p>
+                      {([0, 1] as const).map((slotIndex) => {
+                        const playerId = flight.greensome.side2[slotIndex];
+                        return (
+                          <select
+                            key={slotIndex}
+                            data-testid={`cup-wizard-lineup-${flight.flightIndex}-side2-${slotIndex}`}
+                            value={playerId ?? ''}
+                            onChange={(e) =>
+                              onSwapPlayer(flight.flightIndex, 'side2', slotIndex, e.target.value)
+                            }
+                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          >
+                            {team2Players.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.displayName}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted mt-2">{t('generate.lineupHint')}</p>
+                </Card>
+
                 <GreensomeCard
                   match={flight.greensome}
                   team1Name={team1Name}
@@ -1099,15 +1230,17 @@ export function GenerateMatchesWizard({
 
   // Step 4: generated matches
   const [matches, setMatches] = useState<WizardMatch[]>([]);
-  // #1441 (D10): greensomens manuelle lag-slag holdes som RÅ tekst-input per
-  // match-id, adskilt fra `matches` — inputfeltene tillater at organisatoren
-  // fyller ut ett felt om gangen uten at en halvferdig verdi (kun team1 satt)
-  // noensinne havner i `CupBatchMatch`-formen actions.ts forventer («begge
-  // felt satt eller ingen», jf. `createCupMatchesFromPlan`s egen validering).
-  // Slås sammen til `teamStrokesOverride` først ved innsending
-  // (`buildSubmissionMatches`).
+  // #1441 (D10, owner-QA F3d): greensomens manuelle lag-slag holdes som RÅ
+  // tekst-input per match-id OG per lag, adskilt fra `matches`. Et felt som
+  // aldri er rørt av organisatoren mangler helt fra kartet/objektet
+  // (`undefined`, IKKE `''`) — det skillet er det som lar `GreensomeCard`
+  // vise et LIVE-utledet 60/40-forslag (`greensomeTeamStrokesDefault`) helt
+  // til organisatoren faktisk taster noe, i stedet for å fryse forslaget ved
+  // generering (som ville blitt stående feil etter et oppstillings-bytte,
+  // `swapFlightPlayer`). Effektiv verdi (vist OG sendt inn) via
+  // `effectiveStrokes` — «what you see is what the engine uses», D10.
   const [teamStrokesInputs, setTeamStrokesInputs] = useState<
-    Record<string, { team1: string; team2: string }>
+    Record<string, { team1?: string; team2?: string }>
   >({});
 
   // Feil fra createCupMatchesFromPlan (steg 4)
@@ -1166,32 +1299,28 @@ export function GenerateMatchesWizard({
   }
 
   /**
-   * Bygger den faktiske innsendings-payload-en (#1441, D10): matchene fra
-   * `matches` (rene struktur — side1/side2/segment/sourceId) pluss
-   * `teamStrokesOverride` slått sammen inn på greensome-matchene FRA
-   * `teamStrokesInputs`, kun når BEGGE felt er gyldige ikke-negative heltall
-   * (speiler `createCupMatchesFromPlan`s egen «begge eller ingen»-validering
-   * — en ufullstendig rad sendes uten override, ikke med en halv én).
+   * Bygger den faktiske innsendings-payload-en (#1441, D10 + owner-QA F3d):
+   * matchene fra `matches` (rene struktur — side1/side2/segment/sourceId)
+   * pluss `teamStrokesOverride` på hver greensome-match — ALLTID satt nå
+   * (D10-oppdatering): «what you see is what the engine uses» betyr feltet
+   * sender akkurat den effektive verdien `GreensomeCard` viste (typet
+   * forslag ELLER organisatorens eget tall — `effectiveStrokes` er samme
+   * logikk begge steder, se dens docstring), aldri lenger «ingen override,
+   * la motoren regne selv ved runde-start».
    */
   function buildSubmissionMatches(): CupBatchMatch[] {
     if (!isSplitDay) return matches as CupBatchMatch[];
+    const players = playerLookup(team1Players, team2Players);
     return (matches as PlannedBundleMatch[]).map((m) => {
       if (m.format !== 'greensome_matchplay') return m;
+      const side1Players = m.side1.map(players).filter((p): p is WizardPlayer => Boolean(p));
+      const side2Players = m.side2.map(players).filter((p): p is WizardPlayer => Boolean(p));
+      const default1 = greensomeDefaultOrFallback(side1Players, selectedTee);
+      const default2 = greensomeDefaultOrFallback(side2Players, selectedTee);
       const raw = teamStrokesInputs[m.id];
-      if (!raw) return m;
-      const n1 = Number(raw.team1);
-      const n2 = Number(raw.team2);
-      if (
-        raw.team1.trim() === '' ||
-        raw.team2.trim() === '' ||
-        !Number.isInteger(n1) ||
-        !Number.isInteger(n2) ||
-        n1 < 0 ||
-        n2 < 0
-      ) {
-        return m;
-      }
-      return { ...m, teamStrokesOverride: { team1: n1, team2: n2 } };
+      const team1 = effectiveStrokes(raw?.team1, default1);
+      const team2 = effectiveStrokes(raw?.team2, default2);
+      return { ...m, teamStrokesOverride: { team1, team2 } };
     });
   }
 
@@ -1269,10 +1398,24 @@ export function GenerateMatchesWizard({
     setMatches((prev) => swapFlightSinglesPairing(prev as PlannedBundleMatch[], flightIndex));
   }
 
+  // #1441 (owner-QA): «hvem som skal være i flight» — fri spiller-velger per
+  // slot, se `swapFlightPlayer`s docstring (lib/cup/splitDayLineup.ts) for
+  // bytte-semantikken (kryss-flight vs. innad-i-paret).
+  function handleSwapPlayer(
+    flightIndex: number,
+    side: FlightTeamSide,
+    slotIndex: 0 | 1,
+    playerId: string,
+  ) {
+    setMatches((prev) =>
+      swapFlightPlayer(prev as PlannedBundleMatch[], flightIndex, side, slotIndex, playerId),
+    );
+  }
+
   function handleTeamStrokesChange(matchId: string, side: 'team1' | 'team2', value: string) {
     setTeamStrokesInputs((prev) => ({
       ...prev,
-      [matchId]: { team1: prev[matchId]?.team1 ?? '', team2: prev[matchId]?.team2 ?? '', [side]: value },
+      [matchId]: { ...prev[matchId], [side]: value },
     }));
   }
 
@@ -1358,6 +1501,7 @@ export function GenerateMatchesWizard({
                 teamStrokesInputs={teamStrokesInputs}
                 onTeamStrokesChange={handleTeamStrokesChange}
                 onSwapSingles={handleSwapSingles}
+                onSwapPlayer={handleSwapPlayer}
                 onRegenerate={runGenerate}
                 t={t}
               />
