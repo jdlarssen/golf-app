@@ -28,6 +28,56 @@ function formatPoints(n: number): string {
   return String(n).replace('.', ',');
 }
 
+type CupTournamentForCopy = {
+  points_to_win: number | null;
+  status: 'draft' | 'active' | 'finished';
+  team_1_name: string;
+  team_2_name: string;
+};
+
+/**
+ * Header-subtitle + matches-summary-copy (#1441, D8) — trukket ut av
+ * `CupManagement` for å holde komponentens cyclomatic complexity nede; disse
+ * grenene hører uansett sammen (samme points_to_win/status-beslutning).
+ */
+function cupHeaderSubtitle(
+  tournament: CupTournamentForCopy,
+  t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+): string {
+  if (tournament.points_to_win !== null) {
+    return t('manage.headerSubtitle', {
+      team1: tournament.team_1_name,
+      team2: tournament.team_2_name,
+      points: formatPoints(tournament.points_to_win),
+    });
+  }
+  // #1441 (D8): egendefinerte poeng-vekter holder points_to_win NULL gjennom
+  // hele aktiv-fasen (ikke bare før start) — «poengmål klart ved start» ville
+  // da vært misvisende etter start.
+  return t(tournament.status === 'draft' ? 'manage.headerSubtitlePending' : 'manage.headerSubtitlePendingActive', {
+    team1: tournament.team_1_name,
+    team2: tournament.team_2_name,
+  });
+}
+
+function cupMatchesSummary(
+  tournament: CupTournamentForCopy,
+  leaderboard: { finishedMatches: number; matches: unknown[] },
+  t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+): string {
+  if (tournament.points_to_win !== null) {
+    return t('manage.matchesSummary', {
+      points: formatPoints(tournament.points_to_win),
+      finished: leaderboard.finishedMatches,
+      total: leaderboard.matches.length,
+    });
+  }
+  return t(tournament.status === 'draft' ? 'manage.matchesSummaryPending' : 'manage.matchesSummaryPendingActive', {
+    finished: leaderboard.finishedMatches,
+    total: leaderboard.matches.length,
+  });
+}
+
 const CUP_MATCH_MODES = new Set([
   'fourball_matchplay',
   'foursomes_matchplay',
@@ -138,26 +188,7 @@ export async function CupManagement({
       <BrassRibbon kicker={ribbonKicker} />
       <PageHeader
         title={tournament.name}
-        subtitle={
-          tournament.points_to_win !== null
-            ? t('manage.headerSubtitle', {
-                team1: tournament.team_1_name,
-                team2: tournament.team_2_name,
-                points: formatPoints(tournament.points_to_win),
-              })
-            : // #1441 (D8): egendefinerte poeng-vekter holder points_to_win NULL
-              // gjennom hele aktiv-fasen (ikke bare før start) — «poengmål klart
-              // ved start» ville da vært misvisende etter start.
-              t(
-                tournament.status === 'draft'
-                  ? 'manage.headerSubtitlePending'
-                  : 'manage.headerSubtitlePendingActive',
-                {
-                  team1: tournament.team_1_name,
-                  team2: tournament.team_2_name,
-                },
-              )
-        }
+        subtitle={cupHeaderSubtitle(tournament, t)}
         action={<StatusChip tone={chipTone} label={statusLabel} />}
       />
 
@@ -193,21 +224,7 @@ export async function CupManagement({
           </div>
         </div>
         <p className="text-center text-xs text-muted mt-3">
-          {tournament.points_to_win !== null
-            ? t('manage.matchesSummary', {
-                points: formatPoints(tournament.points_to_win),
-                finished: leaderboard.finishedMatches,
-                total: leaderboard.matches.length,
-              })
-            : t(
-                tournament.status === 'draft'
-                  ? 'manage.matchesSummaryPending'
-                  : 'manage.matchesSummaryPendingActive',
-                {
-                  finished: leaderboard.finishedMatches,
-                  total: leaderboard.matches.length,
-                },
-              )}
+          {cupMatchesSummary(tournament, leaderboard, t)}
         </p>
         {snapshot.sideAwards.length > 0 && (
           <p className="text-center text-xs text-muted mt-1 tabular-nums">

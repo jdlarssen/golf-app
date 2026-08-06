@@ -13,6 +13,21 @@ function formatPoints(n: number): string {
   return String(n).replace('.', ',');
 }
 
+/**
+ * Header-copyen for poengmålet (#1441, D8) — egen funksjon (ikke inline i
+ * komponenten) for å holde `PublicCupPage`s cyclomatic complexity nede; disse
+ * tre grenene tilhører logisk sammen uansett.
+ */
+function pointsHeaderCopy(
+  tournament: { points_to_win: number | null; status: 'draft' | 'active' | 'finished' },
+  t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+): string {
+  if (tournament.points_to_win !== null) {
+    return t('public.firstTo', { points: formatPoints(tournament.points_to_win) });
+  }
+  return tournament.status === 'active' ? t('public.pointsPendingActive') : t('public.pointsPendingDraft');
+}
+
 export default async function PublicCupPage({ params }: { params: Params }) {
   const { id } = await params;
   const [userId, t] = await Promise.all([
@@ -84,13 +99,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
           <p className="mt-2 text-sm text-muted">Uavgjort</p>
         )}
         {tournament.status !== 'finished' && (
-          <p className="mt-2 text-sm text-muted">
-            {tournament.points_to_win !== null
-              ? t('public.firstTo', { points: formatPoints(tournament.points_to_win) })
-              : tournament.status === 'active'
-                ? t('public.pointsPendingActive')
-                : t('public.pointsPendingDraft')}
-          </p>
+          <p className="mt-2 text-sm text-muted">{pointsHeaderCopy(tournament, t)}</p>
         )}
       </header>
 
