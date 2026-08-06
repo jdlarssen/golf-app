@@ -54,12 +54,14 @@ type CupAllowancePcts = {
    * `best_ball_allowance_pct`-kolonne (ingen migrasjon la til én — 0153/0154
    * dekker kun win/tie-poeng + sidepoeng) — og best_ball ER fourball spilt
    * som slagspill, med samme WHS-default (85 %, `ALLOWANCE_DEFAULTS.fourball
-   * === ALLOWANCE_DEFAULTS.bestBall`). Kall-siden setter derfor denne til
-   * cupens `fourball_allowance_pct`-override (default 85 når cupen ikke har
-   * satt en). Splittet-cup-dag-bunten bruker ALDRI `fourball_matchplay` som
-   * eget sesjonsformat (bunten er greensome+best_ball+singles, se
-   * `cupTemplates.ts`), så gjenbruket kolliderer aldri med en faktisk
-   * fourball-matches egen allowance i samme cup.
+   * === ALLOWANCE_DEFAULTS.bestBall`). Kilde, i prioritert rekkefølge (F3c):
+   * `CupBatchInput.bestBallAllowancePct` (splittet-cup-dag-wizardens eget
+   * felt, default 85 der) → cupens `fourball_allowance_pct`-override (default
+   * 85 når cupen ikke har satt en). Splittet-cup-dag-bunten bruker ALDRI
+   * `fourball_matchplay` som eget sesjonsformat (bunten er
+   * greensome+best_ball+singles, se `cupTemplates.ts`), så gjenbruket
+   * kolliderer aldri med en faktisk fourball-matches egen allowance i samme
+   * cup.
    */
   bestBall: number;
 };
@@ -135,6 +137,16 @@ export type CupBatchInput = {
   courseId: string;
   teeBoxId: string;
   matches: CupBatchMatch[];
+  /**
+   * #1441 (F3c, D4/D11): «Handicap best ball (%)» fra splittet-cup-dag-
+   * wizarden, cup-dag-bredt (ikke per match). Når satt overstyrer den
+   * `allowances.bestBall` under i stedet for å gjenbruke cupens lagrede
+   * `fourball_allowance_pct` (se `CupAllowancePcts.bestBall`s JSDoc for
+   * hvorfor det gjenbruket eksisterer) — de tre eldre presetene sender aldri
+   * dette feltet (deres wizard-steg viser det ikke), så `undefined` betyr
+   * «ingen bunt i denne batchen, eller organisatoren lot standarden stå».
+   */
+  bestBallAllowancePct?: number;
 };
 
 export type CupBatchError = { error: string };
@@ -160,7 +172,7 @@ function isNonNegativeInteger(n: unknown): n is number {
 export async function createCupMatchesFromPlan(
   input: CupBatchInput,
 ): Promise<CupBatchError> {
-  const { tournamentId, courseId, teeBoxId, matches } = input;
+  const { tournamentId, courseId, teeBoxId, matches, bestBallAllowancePct } = input;
 
   const supabase = await getServerClient();
   // #524/#526: klubb-cup styres av klubb-admin (eller global admin); personlig
@@ -183,6 +195,17 @@ export async function createCupMatchesFromPlan(
     if (!isNonNegativeInteger(team1) || !isNonNegativeInteger(team2)) {
       return { error: 'invalid_team_strokes_override' };
     }
+  }
+
+  // #1441 (F3c): «Handicap best ball (%)» — samme 0..100-heltalls-kontrakt
+  // som de fem allowance-feltene i createTournamentDraft (parseAllowancePct),
+  // men her er inputen allerede et tall (client-side wizard-state, ikke en
+  // form-streng) — valider direkte i stedet for å gå via parseren.
+  if (
+    bestBallAllowancePct !== undefined &&
+    (!Number.isInteger(bestBallAllowancePct) || bestBallAllowancePct < 0 || bestBallAllowancePct > 100)
+  ) {
+    return { error: 'invalid_best_ball_allowance' };
   }
 
   // #1441 (D3): to-pass — host-matcher (uten `sourceId`) må finnes i DB før
@@ -280,10 +303,11 @@ export async function createCupMatchesFromPlan(
     greensome: greensomePct,
     chapman: chapmanPct,
     gruesome: gruesomePct,
-    // #1441 (D4/D11): se `CupAllowancePcts.bestBall`s JSDoc — gjenbruker
-    // cupens fourball-override (bunten bruker aldri `fourball_matchplay`
-    // som eget sesjonsformat, så ingen kollisjon).
-    bestBall: fourballPct,
+    // #1441 (D4/D11, F3c): splittet-cup-dag-wizardens «Handicap best ball
+    // (%)»-felt vinner når satt; ellers gjenbrukes cupens fourball-override
+    // (se `CupAllowancePcts.bestBall`s JSDoc — bunten bruker aldri
+    // `fourball_matchplay` som eget sesjonsformat, så ingen kollisjon).
+    bestBall: bestBallAllowancePct ?? fourballPct,
   };
 
   // Resolve tee_gender per player from their profile in one round-trip.
