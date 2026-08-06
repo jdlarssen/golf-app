@@ -46,6 +46,29 @@ export type TournamentInput = {
   points_to_win: number | null;
   status: 'draft' | 'active' | 'finished';
   winner_team: 1 | 2 | null;
+  /**
+   * Vektbare cup-poeng (#1441, D8 — `tournaments.win_points`/`tie_points`,
+   * migrasjon 0153). Optional med default 1/0,5 (dagens hardkodede oppførsel)
+   * når feltet mangler — eksisterende callers (getCupSnapshot.ts) og tester
+   * som ikke sender disse feltene forblir uendret.
+   */
+  win_points?: number;
+  tie_points?: number;
+};
+
+/**
+ * Manuelt sidepoeng-innslag (#1441, D9 — `tournament_side_awards`, migrasjon
+ * 0154): closest-to-pin eller longest-drive på et gitt hull. `winnerTeam` er
+ * `null` inntil arrangøren taster vinneren etter runden — inntil da bidrar
+ * innslaget med 0 poeng til begge lag. Mapping fra `winner_user_id` til
+ * hvilket LAG spilleren tilhører (via roster) skjer i F3b (getCupSnapshot) —
+ * denne rene laget tar `winnerTeam` direkte som input.
+ */
+export type CupSideAwardInput = {
+  kind: 'ctp' | 'ld';
+  holeNumber: number;
+  points: number;
+  winnerTeam: 1 | 2 | null;
 };
 
 export type CupMatchSummary = CupMatchInput & {
@@ -63,32 +86,64 @@ export type CupLeaderboardResult = {
   matches: CupMatchSummary[];
   finishedMatches: number;
   remainingMatches: number;
+  /**
+   * Sidepoeng-bidraget som ligger inne i `team1Points`/`team2Points` over
+   * (#1441, D9) — brutt ut separat slik at UI kan vise «+7 sidepoeng» uten å
+   * regne det ut selv fra rå `sideAwards`-input på nytt.
+   */
+  sideAwardPoints: { team1: number; team2: number };
 };
 
-function pointsForMatch(input: CupMatchInput): { team1: number; team2: number } {
+// Dagens 1/½-default (#1441, D8) — speiler DEFAULT_WIN_POINTS/DEFAULT_TIE_POINTS
+// i pointsToWin.ts (egen konstant her: computeCupLeaderboard og
+// derivePointsToWinWeighted er bevisst uavhengige rene moduler, ingen av dem
+// importerer fra hverandre).
+const DEFAULT_WIN_POINTS = 1;
+const DEFAULT_TIE_POINTS = 0.5;
+
+function pointsForMatch(
+  input: CupMatchInput,
+  winPoints: number,
+  tiePoints: number,
+): { team1: number; team2: number } {
   if (input.status !== 'finished' || input.result === null) {
     return { team1: 0, team2: 0 };
   }
-  if (input.result.winnerSide === 1) return { team1: 1, team2: 0 };
-  if (input.result.winnerSide === 2) return { team1: 0, team2: 1 };
-  return { team1: 0.5, team2: 0.5 };
+  if (input.result.winnerSide === 1) return { team1: winPoints, team2: 0 };
+  if (input.result.winnerSide === 2) return { team1: 0, team2: winPoints };
+  return { team1: tiePoints, team2: tiePoints };
 }
 
 export function computeCupLeaderboard(
   tournament: TournamentInput,
   matches: CupMatchInput[],
+  sideAwards: CupSideAwardInput[] = [],
 ): CupLeaderboardResult {
+  const winPoints = tournament.win_points ?? DEFAULT_WIN_POINTS;
+  const tiePoints = tournament.tie_points ?? DEFAULT_TIE_POINTS;
+
   let team1Points = 0;
   let team2Points = 0;
   let finished = 0;
 
   const summarized: CupMatchSummary[] = matches.map((m) => {
-    const pts = pointsForMatch(m);
+    const pts = pointsForMatch(m, winPoints, tiePoints);
     team1Points += pts.team1;
     team2Points += pts.team2;
     if (m.status === 'finished') finished += 1;
     return { ...m, pointsTeam1: pts.team1, pointsTeam2: pts.team2 };
   });
+
+  // Sidepoeng (#1441, D9): legges OVENPÅ match-poengene i totalen. Et innslag
+  // uten registrert vinner (winnerTeam null) bidrar med 0 til begge lag.
+  let sideAwardTeam1 = 0;
+  let sideAwardTeam2 = 0;
+  for (const award of sideAwards) {
+    if (award.winnerTeam === 1) sideAwardTeam1 += award.points;
+    else if (award.winnerTeam === 2) sideAwardTeam2 += award.points;
+  }
+  team1Points += sideAwardTeam1;
+  team2Points += sideAwardTeam2;
 
   // Avrunde til nærmeste 0,1 for å unngå flyt-presisjons-rusk (0,5 + 0,5
   // kan teoretisk gi 0,9999...). Halv-poenger er den minste granulariteten
@@ -119,5 +174,6 @@ export function computeCupLeaderboard(
     matches: summarized,
     finishedMatches: finished,
     remainingMatches: matches.length - finished,
+    sideAwardPoints: { team1: sideAwardTeam1, team2: sideAwardTeam2 },
   };
 }
