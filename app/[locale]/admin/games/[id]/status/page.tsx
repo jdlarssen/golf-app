@@ -14,9 +14,10 @@ import type { AppLocale } from '@/i18n/routing';
 import {
   classifyDeliveryStatus,
   isDeliveryReminderTarget,
-  TOTAL_HOLES,
   type DeliveryStatus,
 } from '@/lib/games/deliveryStatus';
+import { holeCountForSegment } from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 import { remindUnsubmittedPlayers, remindUnconfirmedPlayers } from './actions';
 import { RemindButton } from './RemindButton';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
@@ -35,6 +36,8 @@ type GameRow = {
   require_peer_approval: boolean;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
+  // #1441 — front9/back9-spill er «ferdig» ved 9 hull, ikke 18.
+  hole_segment: HoleSegment;
 };
 
 type PlayerRow = {
@@ -77,10 +80,13 @@ export default async function GameStatusPage({
 
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('id, name, status, require_peer_approval, courses(name)')
+    .select('id, name, status, require_peer_approval, courses(name), hole_segment')
     .eq('id', id)
     .single<GameRow>();
   if (gameError || !game) notFound();
+
+  // #1441: front9/back9-spill er «ferdig» ved 9 hull, ikke 18.
+  const expectedHoles = holeCountForSegment(game.hole_segment);
 
   const [playersRes, scoresRes] = await Promise.all([
     supabase
@@ -125,6 +131,7 @@ export default async function GameStatusPage({
         approvedAt: p.approved_at,
         withdrawnAt: p.withdrawn_at,
         requirePeerApproval: game.require_peer_approval,
+        expectedHoles,
       });
       const fullName = p.users?.name ?? p.users?.email ?? tDetail('unknownPlayer');
       return {
@@ -234,7 +241,7 @@ export default async function GameStatusPage({
               </>
             ) : (
               <p className="font-sans text-[13px] leading-relaxed text-muted">
-                {t('remindNone', { totalHoles: TOTAL_HOLES })}
+                {t('remindNone', { totalHoles: expectedHoles })}
               </p>
             )}
           </div>
@@ -302,7 +309,7 @@ export default async function GameStatusPage({
                       {meta.label}
                     </p>
                     <p className="mt-0.5 font-sans text-[11px] tabular-nums text-muted">
-                      {t('hullCount', { filled: r.holesFilled, total: TOTAL_HOLES })}
+                      {t('hullCount', { filled: r.holesFilled, total: expectedHoles })}
                     </p>
                   </div>
                 </li>
