@@ -4653,8 +4653,9 @@
       "teamStrokesPrefillHint": "Forslag: 60/40-fordeling av spillehandicap (60 % til laveste). Skriv over hvis dere bruker en annen fordeling.",
       "spillehandicapShort": "SH {n}",
       "hcpIndexShort": "HCP {n}",
-      "swapSinglesButton": "Bytt paring",
-      "singlesReadsFromBestBall": "Leser best ball-scorene — ingen egen føring."
+      "pendingBadge": "Venter på profil",
+      "pendingHelper": "Mangler handicap",
+      "draftRestoredHint": "Valgene dine fra sist er hentet frem."
     },
     "delete": {
       "brassRibbon": "Bekreft sletting",
