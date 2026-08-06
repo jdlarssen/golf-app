@@ -4,7 +4,8 @@ import {
   makeRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
-import type { PlannedMatch } from '@/lib/cup/cupPairing';
+import { generateSplitDayPlan, type PlannedMatch } from '@/lib/cup/cupPairing';
+import type { CupBatchMatch } from './actions';
 
 /**
  * Unit tests for createCupMatchesFromPlan — the batch cup-match creator (#219).
@@ -43,8 +44,14 @@ vi.mock('@/lib/supabase/server', () => ({
 // #524: the gate (requireAdminOrClubAdminOfCup) + member-guardrail use the admin
 // client. Default group_id=null → frittstående (gate falls to requireAdmin on the
 // request-scoped mock, unchanged). Set adminCupGroupId to exercise the club path.
+// #1441: adminCupCreatedBy supports requireAdminOrTournamentCreator's
+// created_by check — needed to reach the non-admin personal-cup cap-check
+// branch in createCupMatchesFromPlan (default null keeps the existing
+// non-admin-redirects-to-/ tests unchanged: created_by null never matches a
+// real userId).
 let adminCupGroupId: string | null = null;
 let adminMemberIds: string[] = [];
+let adminCupCreatedBy: string | null = null;
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => {
@@ -58,12 +65,18 @@ vi.mock('@/lib/supabase/admin', () => ({
           }),
         };
       }
-      // tournaments group_id lookup (gate)
+      // tournaments group_id/created_by lookup (gate). #1441: the personal-
+      // cup cap-check's admin-client `games`/`game_players` count queries
+      // (no `.maybeSingle()`) also land in this generic branch — they await
+      // a non-thenable `{maybeSingle}` object, which resolves to itself; the
+      // destructured `data` is then `undefined` and the cap-check code falls
+      // back to `[]` via `?? []`. That's fine for a cap test that trips the
+      // cap on NEW matches alone (no simulated pre-existing games).
       return {
         select: () => ({
           eq: () => ({
             maybeSingle: async () => ({
-              data: { group_id: adminCupGroupId },
+              data: { group_id: adminCupGroupId, created_by: adminCupCreatedBy },
               error: null,
             }),
           }),
@@ -120,6 +133,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   adminCupGroupId = null;
   adminMemberIds = [];
+  adminCupCreatedBy = null;
 });
 
 describe('createCupMatchesFromPlan — authz', () => {
@@ -406,5 +420,401 @@ describe('createCupMatchesFromPlan — rollback on mid-loop failure (#675)', () 
       (c) => c.table === 'games' && c.method === 'in',
     );
     expect(inCall!.args).toEqual(['id', ['game-1', 'game-2']]);
+  });
+});
+
+// #1441 (F3b): splittet-cup-dag-bunten — to-pass insert (host FØR avledet),
+// segment/reveal/source-kolonner, best_ball-mode_config, og
+// team_strokes_override-forwarding for greensome.
+describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)', () => {
+  const flightGenderRows = [
+    { id: 'p1', gender: 'mens' },
+    { id: 'p2', gender: 'mens' },
+    { id: 'p3', gender: 'mens' },
+    { id: 'p4', gender: 'mens' },
+  ];
+
+  it('host-pass (greensome+best_ball) fullfører før avledet-pass (2 singles); source_game_id mapper til det INNSATTE host-id-et, ikke plan-id-en', async () => {
+    // Ekte plan fra F3a-generatoren (#1441, D4) — kryssjekker F3a↔F3b-
+    // kontrakten i stedet for en håndbygd fixture. 'handicap'-strategien er
+    // deterministisk (ingen rng nødvendig).
+    const bundle = generateSplitDayPlan({
+      team1: [
+        { userId: 'p1', name: 'P1', hcpIndex: 5 },
+        { userId: 'p2', name: 'P2', hcpIndex: 10 },
+      ],
+      team2: [
+        { userId: 'p3', name: 'P3', hcpIndex: 6 },
+        { userId: 'p4', name: 'P4', hcpIndex: 11 },
+      ],
+      strategy: 'handicap',
+    });
+    expect(bundle.map((m) => m.id)).toEqual([
+      'greensome_matchplay-1',
+      'best_ball-1',
+      'singles_matchplay-1',
+      'singles_matchplay-2',
+    ]);
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin
+      { data: draftCup, error: null }, // tournament gate (fourball 85, greensome unset → default 100)
+      { data: flightGenderRows, error: null }, // tee_gender roster
+      { data: { id: 'game-greensome' }, error: null }, // pass 1: greensome host insert
+      { data: null, error: null }, // greensome game_players OK
+      { data: { id: 'game-bestball' }, error: null }, // pass 1: best_ball host insert
+      { data: null, error: null }, // best_ball game_players OK
+      { data: { id: 'game-singles1' }, error: null }, // pass 2: derived singles 1 insert
+      { data: null, error: null }, // singles1 game_players OK
+      { data: { id: 'game-singles2' }, error: null }, // pass 2: derived singles 2 insert
+      { data: null, error: null }, // singles2 game_players OK
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    await expect(
+      createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: bundle,
+      }),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const gameInserts = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    expect(gameInserts).toHaveLength(4);
+
+    // Pass-rekkefølge: begge host-ene (uten sourceId) FØR begge avledede.
+    const rows = gameInserts.map((c) => c.args[0] as Record<string, unknown>);
+    const [greensomeRow, bestBallRow, singles1Row, singles2Row] = rows;
+
+    expect(greensomeRow.hole_segment).toBe('front9');
+    expect(greensomeRow.score_visibility).toBe('reveal');
+    expect(greensomeRow.source_game_id).toBeUndefined();
+    expect(greensomeRow.mode_config).toEqual({
+      kind: 'greensome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100, // ALLOWANCE_DEFAULTS.greensome — draftCup fixture has no override
+    });
+
+    expect(bestBallRow.hole_segment).toBe('back9');
+    expect(bestBallRow.score_visibility).toBe('reveal');
+    expect(bestBallRow.source_game_id).toBeUndefined();
+    expect(bestBallRow.mode_config).toEqual({
+      kind: 'best_ball',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 85, // reuses draftCup's fourball_allowance_pct (D4/D11 ASSUMPTION)
+    });
+
+    // #1441 (D3): kjernebeviset — source_game_id peker på det VIRKELIG
+    // innsatte host-id-et ('game-bestball'), ikke plan-lokale 'best_ball-1'.
+    expect(singles1Row.hole_segment).toBe('back9');
+    expect(singles1Row.score_visibility).toBe('reveal');
+    expect(singles1Row.source_game_id).toBe('game-bestball');
+    expect(singles1Row.mode_config).toEqual({ kind: 'singles_matchplay', team_size: 1 });
+
+    expect(singles2Row.source_game_id).toBe('game-bestball');
+  });
+
+  it('greensome med teamStrokesOverride: forwardes til mode_config.team_strokes_override', async () => {
+    const match: CupBatchMatch = {
+      id: 'greensome_matchplay-1',
+      format: 'greensome_matchplay',
+      label: 'Greensome 1',
+      side1: ['p1', 'p2'],
+      side2: ['p3', 'p4'],
+      segment: 'front9',
+      flightIndex: 1,
+      teamStrokesOverride: { team1: 5, team2: 0 },
+    };
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      { data: flightGenderRows, error: null },
+      { data: { id: 'game-greensome' }, error: null },
+      { data: null, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    await expect(
+      createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: [match],
+      }),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const row = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    )!.args[0] as Record<string, unknown>;
+    expect(row.mode_config).toEqual({
+      kind: 'greensome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100,
+      team_strokes_override: { team1: 5, team2: 0 },
+    });
+  });
+});
+
+describe('createCupMatchesFromPlan — ordinære preset-matcher beholder dagens kolonner (#1441 regresjon)', () => {
+  it('hole_segment eksplisitt "full"; score_visibility UTELATES (arver DB-default \'live\')', async () => {
+    const genderRows = [
+      { id: 'A1', gender: 'mens' },
+      { id: 'A2', gender: 'mens' },
+      { id: 'B1', gender: 'mens' },
+      { id: 'B2', gender: 'mens' },
+    ];
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      { data: genderRows, error: null },
+      { data: { id: 'game-1' }, error: null },
+      { data: null, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    const match: PlannedMatch = {
+      id: 'fourball_matchplay-1',
+      format: 'fourball_matchplay',
+      label: 'Four-ball 1',
+      side1: ['A1', 'A2'],
+      side2: ['B1', 'B2'],
+    };
+
+    await expect(
+      createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: [match],
+      }),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const row = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    )!.args[0] as Record<string, unknown>;
+    expect(row.hole_segment).toBe('full');
+    expect('score_visibility' in row).toBe(false);
+    expect('source_game_id' in row).toBe(false);
+  });
+});
+
+describe('createCupMatchesFromPlan — team_strokes_override-validering (#1441, D10)', () => {
+  it('negativt tall: invalid_team_strokes_override FØR noe insertes', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    const match: CupBatchMatch = {
+      id: 'greensome_matchplay-1',
+      format: 'greensome_matchplay',
+      label: 'Greensome 1',
+      side1: ['A1', 'A2'],
+      side2: ['B1', 'B2'],
+      teamStrokesOverride: { team1: -1, team2: 0 },
+    };
+
+    expect(
+      await createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: [match],
+      }),
+    ).toEqual({ error: 'invalid_team_strokes_override' });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'tournaments'),
+    ).toBe(false);
+  });
+
+  it('kun team1 satt (team2 mangler): invalid_team_strokes_override — «begge eller ingen»', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    const match = {
+      id: 'greensome_matchplay-1',
+      format: 'greensome_matchplay',
+      label: 'Greensome 1',
+      side1: ['A1', 'A2'],
+      side2: ['B1', 'B2'],
+      teamStrokesOverride: { team1: 5 },
+    } as unknown as CupBatchMatch;
+
+    expect(
+      await createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: [match],
+      }),
+    ).toEqual({ error: 'invalid_team_strokes_override' });
+  });
+
+  it('ikke-heltall (2.5): invalid_team_strokes_override', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    const match: CupBatchMatch = {
+      id: 'greensome_matchplay-1',
+      format: 'greensome_matchplay',
+      label: 'Greensome 1',
+      side1: ['A1', 'A2'],
+      side2: ['B1', 'B2'],
+      teamStrokesOverride: { team1: 2.5, team2: 0 },
+    };
+
+    expect(
+      await createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: [match],
+      }),
+    ).toEqual({ error: 'invalid_team_strokes_override' });
+  });
+});
+
+describe('createCupMatchesFromPlan — ugyldig sourceId (#1441, D3)', () => {
+  it('sourceId matcher ingen host-match i planen: invalid_source_match FØR noe insertes', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    const match: PlannedMatch = {
+      id: 'singles_matchplay-1',
+      format: 'singles_matchplay',
+      label: 'Singel 1',
+      side1: ['A1'],
+      side2: ['B1'],
+      sourceId: 'does-not-exist',
+    };
+
+    expect(
+      await createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: [match],
+      }),
+    ).toEqual({ error: 'invalid_source_match' });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'tournaments'),
+    ).toBe(false);
+  });
+});
+
+describe('createCupMatchesFromPlan — rollback dekker pass 2 (#1441, D3/#675)', () => {
+  it('avledet match sin game_players-insert feiler: ruller tilbake BÅDE host- og avledet-spillet', async () => {
+    const genderRows = [
+      { id: 'p1', gender: 'mens' },
+      { id: 'p3', gender: 'mens' },
+    ];
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin
+      { data: draftCup, error: null }, // tournament gate
+      { data: genderRows, error: null }, // tee_gender roster
+      { data: { id: 'game-host' }, error: null }, // host insert OK
+      { data: null, error: null }, // host game_players OK
+      { data: { id: 'game-derived' }, error: null }, // derived insert OK
+      { data: null, error: { message: 'boom' } }, // derived game_players FAILS
+      { data: null, error: null }, // rollback: games.delete().in(...)
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    const matches: CupBatchMatch[] = [
+      {
+        id: 'best_ball-1',
+        format: 'best_ball',
+        label: 'Best ball 1',
+        side1: ['p1'],
+        side2: ['p3'],
+        segment: 'back9',
+        flightIndex: 1,
+      },
+      {
+        id: 'singles_matchplay-1',
+        format: 'singles_matchplay',
+        label: 'Singel 1',
+        side1: ['p1'],
+        side2: ['p3'],
+        segment: 'back9',
+        sourceId: 'best_ball-1',
+      },
+    ];
+
+    expect(
+      await createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches,
+      }),
+    ).toEqual({ error: 'insert_failed' });
+
+    const inCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'in',
+    );
+    // Begge — host OG avledet — sendes til rollback-sletting (#675-mønsteret
+    // dekker nå pass 2, ikke bare pass 1).
+    expect(inCall!.args).toEqual(['id', ['game-host', 'game-derived']]);
+  });
+});
+
+describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede matcher (#1441, D5)', () => {
+  it('6 host + 12 avledet (18 matcher totalt) alene overskrider taket (16): too_many_matches, ingen insert', async () => {
+    adminCupCreatedBy = 'user-1'; // ikke-admin passerer som cupens egen skaper
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // requireAdmin (loadRole)
+      { data: draftCup, error: null }, // tournament gate (group_id mangler → frittstående)
+    ]);
+    setUser('user-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    const hosts: CupBatchMatch[] = Array.from({ length: 6 }, (_, i) => ({
+      id: `best_ball-${i + 1}`,
+      format: 'best_ball',
+      label: `Best ball ${i + 1}`,
+      side1: [`A${i}1`, `A${i}2`],
+      side2: [`B${i}1`, `B${i}2`],
+      segment: 'back9',
+      flightIndex: i + 1,
+    }));
+    const derived: CupBatchMatch[] = hosts.flatMap((h, i) => [
+      {
+        id: `singles_matchplay-${i * 2 + 1}`,
+        format: 'singles_matchplay' as const,
+        label: `Singel ${i * 2 + 1}`,
+        side1: [`A${i}1`],
+        side2: [`B${i}1`],
+        sourceId: h.id,
+      },
+      {
+        id: `singles_matchplay-${i * 2 + 2}`,
+        format: 'singles_matchplay' as const,
+        label: `Singel ${i * 2 + 2}`,
+        side1: [`A${i}2`],
+        side2: [`B${i}2`],
+        sourceId: h.id,
+      },
+    ]);
+    const matches = [...hosts, ...derived];
+    expect(matches).toHaveLength(18); // 6 host + 12 avledet — kun host-ene (6) ville vært under taket
+
+    expect(
+      await createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches,
+      }),
+    ).toEqual({ error: 'too_many_matches' });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert'),
+    ).toBe(false);
   });
 });
