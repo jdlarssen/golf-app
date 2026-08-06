@@ -25,8 +25,10 @@ import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { isHoleInSegment, firstHoleForSegment } from '@/lib/games/holeScope';
 import type { AppLocale } from '@/i18n/routing';
 import { isStablefordFamily, type ScoringGender } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -95,6 +97,13 @@ export default async function SubmitPage({
 
   if (!result) notFound();
   const { game, players } = result;
+
+  // #1441: a derived game (singles avledet fra best-ball-hosten) never has
+  // its own scores — there is nothing to review/submit here. Bounce home,
+  // which shows the read-only «Slagene føres i …»-notice instead.
+  if (game.source_game_id) {
+    redirect({ href: `/games/${id}` as string, locale });
+  }
 
   // Only active games can be submitted to. Anything else: bounce home.
   if (game.status !== 'active') {
@@ -180,6 +189,7 @@ export default async function SubmitPage({
             courseId={game.course_id}
             currentUserId={userId}
             meTeeGender={me.tee_gender}
+            holeSegment={game.hole_segment}
             submitAction={submitAction}
           />
         </Suspense>
@@ -193,12 +203,14 @@ async function ReviewBody({
   courseId,
   currentUserId,
   meTeeGender,
+  holeSegment,
   submitAction,
 }: {
   gameId: string;
   courseId: string;
   currentUserId: string;
   meTeeGender: ScoringGender;
+  holeSegment: HoleSegment;
   submitAction: () => void | Promise<void>;
 }) {
   const t = await getTranslations('game.submit');
@@ -221,6 +233,13 @@ async function ReviewBody({
 
   if (holesRes.error) throw holesRes.error;
   if (scoresRes.error) throw scoresRes.error;
+
+  // #1441: front9/back9-spill reviewer kun sitt segments hull — uten filteret
+  // ville missingHoles-regnestykket alltid inkludere de 9 hullene som aldri
+  // skal spilles på dette spillet.
+  const holesInScope = (holesRes.data ?? []).filter((h) =>
+    isHoleInSegment(h.hole_number, holeSegment),
+  );
 
   const scoreByHole = new Map<number, ScoreRow>();
   for (const s of scoresRes.data ?? []) scoreByHole.set(s.hole_number, s);
@@ -250,7 +269,7 @@ async function ReviewBody({
     }
   }
 
-  const rows = (holesRes.data ?? []).map((h) => {
+  const rows = holesInScope.map((h) => {
     const s = scoreByHole.get(h.hole_number);
     const strokes = s?.strokes ?? null;
     const enteredByName = s?.entered_by ? namesById.get(s.entered_by) : null;
@@ -358,7 +377,7 @@ async function ReviewBody({
           {' · '}
           {t('summaryHoles')}{' '}
           <span className="score-num text-text">{playedHoles.length}</span>
-          <span className="inline-num">/18</span>
+          <span className="inline-num">/{rows.length}</span>
         </p>
       </Card>
 
@@ -380,7 +399,7 @@ async function ReviewBody({
 
       <div className="grid grid-cols-2 gap-3">
         <SmartLink
-          href={`/games/${gameId}/holes/1`}
+          href={`/games/${gameId}/holes/${firstHoleForSegment(holeSegment)}`}
           className="inline-flex items-center justify-center min-h-[44px] rounded-full border border-border px-[18px] py-2.5 text-sm font-medium text-text hover:bg-primary-soft transition-colors"
         >
           {t('editButton')}
