@@ -23,6 +23,15 @@ export const ALLOWANCE_DEFAULTS = {
   chapman: 100,
   /** WHS default for gruesome matchplay: 50% (opponent picks ball, like foursomes). */
   gruesome: 50,
+  /**
+   * WHS default for best ball (fourball, strokeplay-scored): each player 85%
+   * of handicap. Used by splittet-cup-dag's back9 host match (#1441, D4/D11) —
+   * the standard `best_ball` game mode has no `allowance_pct` field of its own
+   * (`compute()` in lib/scoring/modes/bestBall.ts uses raw courseHandicap), so
+   * the cup layer applies this allowance itself before feeding effective
+   * handicaps into the best-ball award calculation.
+   */
+  bestBall: 85,
 } as const;
 
 export type AllowanceFormat = keyof typeof ALLOWANCE_DEFAULTS;

@@ -17,6 +17,9 @@ describe('ALLOWANCE_DEFAULTS', () => {
   it('gruesome default is 50 (WHS)', () => {
     expect(ALLOWANCE_DEFAULTS.gruesome).toBe(50);
   });
+  it('bestBall default is 85 (WHS, #1441 split-day back9 host match)', () => {
+    expect(ALLOWANCE_DEFAULTS.bestBall).toBe(85);
+  });
 });
 
 describe('parseAllowancePct', () => {
@@ -35,6 +38,9 @@ describe('parseAllowancePct', () => {
   });
   it('empty string returns the given defaultPct (gruesome=50)', () => {
     expect(parseAllowancePct('', ALLOWANCE_DEFAULTS.gruesome)).toBe(50);
+  });
+  it('empty string returns the given defaultPct (bestBall=85)', () => {
+    expect(parseAllowancePct('', ALLOWANCE_DEFAULTS.bestBall)).toBe(85);
   });
 
   // Whitespace-only → treated as empty
