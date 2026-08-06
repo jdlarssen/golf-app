@@ -112,6 +112,13 @@ export default async function HolePage({ params }: { params: Params }) {
     // Round hasn't started; state #2 venterom lives on the game home page.
     redirect({ href: `/games/${id}` as string, locale });
   }
+  if (game.status === 'finished') {
+    // #1351: the round is over — entry is closed for everyone, submitted or
+    // not. Without this branch the page rendered fully disabled with no
+    // explanation. Game-home has its own finished state (results + scorecard),
+    // and never redirects back here, so there is no bounce loop.
+    redirect({ href: `/games/${id}` as string, locale });
+  }
 
   const me = allPlayers.find((p) => p.user_id === userId);
   if (!me) notFound();
