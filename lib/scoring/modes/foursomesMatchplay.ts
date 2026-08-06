@@ -130,15 +130,32 @@ export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
 }
 
 /**
+ * Manuell overstyring av en sides lag-CH (#1441, D10 — greensomes
+ * `team_strokes_override`). Når satt, ERSTATTER `side1`/`side2` den
+ * `sideHcp(...)`-beregnede kombinerte CH-en for hhv. side 1 og 2 — resten av
+ * kjernen (diff × allowancePct/100 → high-side får differansen via SI) kjører
+ * uendret på disse tallene. Kun greensome bruker feltet i dag; foursomes/
+ * chapman/gruesome kaller `computeFoursomesCore` uten override (fjerde
+ * argument utelatt = `undefined`), så deres oppførsel er upåvirket.
+ */
+export interface SideHandicapOverride {
+  side1: number;
+  side2: number;
+}
+
+/**
  * Delt matchplay-kjerne for alternate-shot-familien. `allowancePct` styrer hvor
  * mye av lag-HCP-differansen høylaget får; `sideHcp` styrer hvordan en sides
- * lag-handicap regnes (sum for foursomes, 60/40 for Chapman). Returnerer alltid
+ * lag-handicap regnes (sum for foursomes, 60/40 for Chapman). `override`
+ * (D10) bytter ut det `sideHcp`-beregnede tallet direkte når satt — se
+ * `SideHandicapOverride`-doc-kommentaren. Returnerer alltid
  * `kind: 'foursomes_matchplay'` slik at alle view-/mail-konsumenter deles.
  */
 export function computeFoursomesCore(
   ctx: ScoringContext,
   allowancePct: number,
   sideHcp: SideHandicapFn,
+  override?: SideHandicapOverride,
 ): FoursomesMatchplayResult {
   const side1Players = ctx.players
     .filter((p) => p.teamNumber === 1)
@@ -157,15 +174,14 @@ export function computeFoursomesCore(
   const side1CaptainId = pickTeamCaptain(side1Players.map((p) => p.userId));
   const side2CaptainId = pickTeamCaptain(side2Players.map((p) => p.userId));
 
-  // Lag-handicap per side via strategi (sum for foursomes, 60/40 for Chapman).
-  const side1Combined = sideHcp(
-    side1Players[0].courseHandicap,
-    side1Players[1].courseHandicap,
-  );
-  const side2Combined = sideHcp(
-    side2Players[0].courseHandicap,
-    side2Players[1].courseHandicap,
-  );
+  // Lag-handicap per side via strategi (sum for foursomes, 60/40 for Chapman)
+  // — eller `override` (D10) direkte når satt, se `SideHandicapOverride`.
+  const side1Combined =
+    override?.side1 ??
+    sideHcp(side1Players[0].courseHandicap, side1Players[1].courseHandicap);
+  const side2Combined =
+    override?.side2 ??
+    sideHcp(side2Players[0].courseHandicap, side2Players[1].courseHandicap);
 
   // WHS-diff-formel: høylaget får (diff × allowance_pct/100) strokes via SI.
   // Lavlaget får 0. Ved tie i lag-HCP får begge 0 — gross-only matchplay.
