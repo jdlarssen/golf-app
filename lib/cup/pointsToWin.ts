@@ -43,3 +43,36 @@ export function derivePointsToWinWeighted(
   if (winPoints !== DEFAULT_WIN_POINTS || tiePoints !== DEFAULT_TIE_POINTS) return null;
   return derivePointsToWin(matchCount);
 }
+
+/**
+ * Parser `tournaments.win_points` fra et form-felt (#1441, D8 — F3b sitt
+ * ansvar, se `derivePointsToWinWeighted`s JSDoc). Tom streng → `undefined`
+ * (kalleren utelater feltet fra inserten; DB-default 1 fra migrasjon 0153
+ * gjelder da). Et tall som ikke tilfredsstiller CHECK-en (`win_points > 0`)
+ * → `null` (valideringsfeil — kalleren redirecter til en feilkode).
+ *
+ * Speiler `parseAllowancePct` (./allowance.ts) sin tom/gyldig/ugyldig-
+ * kontrakt, men uten en `defaultPct`-parameter: tomt felt her betyr «bruk
+ * DB-default», ikke «bruk en konkret verdi appen fyller inn selv».
+ */
+export function parseWinPoints(raw: string): number | null | undefined {
+  const cleaned = raw.trim();
+  if (cleaned === '') return undefined;
+  const n = Number(cleaned);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+/**
+ * Parser `tournaments.tie_points` (#1441, D8). Samme
+ * tom/gyldig/ugyldig-kontrakt som `parseWinPoints`, men CHECK-en er
+ * `tie_points >= 0` (en delt match kan lovlig gi null poeng, i motsetning
+ * til en seier).
+ */
+export function parseTiePoints(raw: string): number | null | undefined {
+  const cleaned = raw.trim();
+  if (cleaned === '') return undefined;
+  const n = Number(cleaned);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
