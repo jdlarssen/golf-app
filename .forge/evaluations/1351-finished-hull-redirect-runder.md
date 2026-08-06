@@ -1,0 +1,5 @@
+# Evalueringsrunder — #1351 avsluttet spill på hull-side → redirect til spill-hjem
+
+| Runde | Verdikt | Finding-signaturer |
+|---|---|---|
+| 1 (fersk kontekst, 80f59f05) | ACCEPT | (ingen blokkerende) — diff-scope eksakt kontrakt (5 filer, 18+/5−), redirect-gren riktig plassert (etter scheduled, før me-oppslag) med @/i18n/navigation-form, GameStatus-union lukket (kun active faller gjennom), ferskhet verifisert (endGame + endGameWithSideWinners revaliderer game-taggen, reopenGame åpner igjen), scorecard-gate additiv (state-matrise: kun finished+unsubmitted endret), bounce-loop-forutsetning verifisert (game-home har ingen hull-lenke i finished-gren), alle 9 hull-lenke-byggere sjekket (ingen ny blindvei), CHANGELOG 3 rettinger = 3 kulepunkter, patch-bump korrekt. NOTE: NB-1 non-participant får redirect+notFound-hopp (ingen lekkasje), NB-2 profil-gate før status-grenene (pre-eksisterende mønster), NB-3 continueHref beregnes unødig ved finished (kosmetisk), NB-4 gameInactive-disable bevart med vilje (mid-session flip), NB-5 to idiomer for samme gate (kontraktsvalgt) |
