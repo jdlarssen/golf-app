@@ -55,8 +55,17 @@ export type CupMatchSidePlayer = { userId: string; courseHandicap: number };
 export type CupMatchScoringInput = {
   gameId?: string;
   gameMode: string;
-  /** `games.mode_config` — kun `allowance_pct` leses her. */
-  modeConfig: { allowance_pct?: number } | null;
+  /**
+   * `games.mode_config` — `allowance_pct` leses for alle lag-format.
+   * `team_strokes_override` (#1441, D10 — splittet cup-dagens manuelle
+   * greensome-lag-slag) leses KUN videre når `gameMode ===
+   * 'greensome_matchplay'`; feltet ignoreres for øvrige moduser (samme
+   * bevisste smalhet som `allowance_pct` alt hadde).
+   */
+  modeConfig: {
+    allowance_pct?: number;
+    team_strokes_override?: { team1: number; team2: number };
+  } | null;
   side1: CupMatchSidePlayer[];
   side2: CupMatchSidePlayer[];
   holes: Array<{ number: number; par: number; strokeIndex: number }>;
@@ -80,10 +89,23 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
         ? input.modeConfig.allowance_pct
         : cfg.defaultAllowance;
 
+  // #1441 (D10): greensome's manuelle lag-slag-overstyring følger med til
+  // `compute()` — `greensomeMatchplay.ts` leser `team_strokes_override` selv
+  // fra `ctx.game.mode_config`. Andre moduser får aldri feltet forwardet
+  // (`team_strokes_override` betyr ingenting for dem).
+  const teamStrokesOverride =
+    input.gameMode === 'greensome_matchplay' ? input.modeConfig?.team_strokes_override : undefined;
+
   const modeConfig: GameModeConfig = (
     cfg.sideSize === 1
       ? { kind: input.gameMode, team_size: 1, teams_count: 2 }
-      : { kind: input.gameMode, team_size: 2, teams_count: 2, allowance_pct: allowancePct }
+      : {
+          kind: input.gameMode,
+          team_size: 2,
+          teams_count: 2,
+          allowance_pct: allowancePct,
+          ...(teamStrokesOverride ? { team_strokes_override: teamStrokesOverride } : {}),
+        }
   ) as GameModeConfig;
 
   const ctx: ScoringContext = {
