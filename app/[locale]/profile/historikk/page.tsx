@@ -121,13 +121,19 @@ export default async function HistorikkPage() {
   // outcome (`result_summary`, #572) for netto + result badge.
   // No SQL `.order()` here: supabase-js foreignTable-order is a no-op on a
   // to-one `games!inner` embed (#569) — the JS sort below is authoritative.
+  // #1441: excludes DERIVED games (games.source_game_id IS NOT NULL) — same
+  // rationale as getMyStats (app/[locale]/profile/page.tsx): a derived game
+  // (e.g. a back9 singles match) has no own scores, so its bruttoSum/
+  // nettoSum here would show as an empty/0 round for a physical day that's
+  // already represented via its host. Segment HOST games still count.
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
     .select(
-      'game_id, tee_gender, course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, tee_box_id, courses(name))',
+      'game_id, tee_gender, course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, tee_box_id, source_game_id, courses(name))',
     )
     .eq('user_id', userId)
-    .eq('games.status', 'finished');
+    .eq('games.status', 'finished')
+    .is('games.source_game_id', null);
 
   if (gpError) throw gpError;
 
