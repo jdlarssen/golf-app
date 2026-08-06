@@ -109,6 +109,24 @@ describe('consumeLoginRateLimit', () => {
     });
   });
 
+  it('defaults the email bucket to 5 attempts per window when no emailMax is given (#1347)', async () => {
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    const { consumeLoginRateLimit } = await import('./loginRateLimit');
+
+    // The /login sendCode action calls this with only { email, ip }, so the
+    // default IS the production limit — locking it here keeps a silent edit
+    // from tightening the login flow unnoticed.
+    await consumeLoginRateLimit({
+      email: 'a@example.com',
+      ip: '1.2.3.4',
+    });
+
+    const emailCall = rpcMock.mock.calls.find(
+      (c) => (c[1] as { p_bucket: string }).p_bucket.startsWith('login:email:'),
+    );
+    expect(emailCall?.[1]).toMatchObject({ p_max: 5 });
+  });
+
   it('fails open when the RPC returns an error so a DB outage does not lock everyone out', async () => {
     rpcMock.mockResolvedValue({
       data: null,
