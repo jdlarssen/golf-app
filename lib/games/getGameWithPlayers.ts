@@ -220,7 +220,7 @@ async function fetchGameWithPlayers(
         'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
-      .single<GameForHole>(),
+      .maybeSingle<GameForHole>(),
     supabase
       .from('game_players')
       .select(
@@ -229,7 +229,14 @@ async function fetchGameWithPlayers(
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),
   ]);
-  if (gameRes.error || !gameRes.data) return null;
+  // Error ≠ absence (#1441 e2e post-mortem): a transient query failure (e.g.
+  // a fetch aborted by Next's dev render-restart, or a network blip) must
+  // THROW — returning null here would let unstable_cache store the null under
+  // `game-${id}` and serve a clean 404 to every consumer for up to 15 min.
+  // Thrown errors are never cached. Only a genuine 0-row result (maybeSingle:
+  // data null, error null) means "game does not exist" → null → notFound().
+  if (gameRes.error) throw gameRes.error;
+  if (!gameRes.data) return null;
   if (playersRes.error) throw playersRes.error;
   return { game: gameRes.data, players: playersRes.data ?? [] };
 }
@@ -237,9 +244,11 @@ async function fetchGameWithPlayers(
 /**
  * Fetch `{ game, players }` for a given game id from the tag-cached layer.
  *
- * Returns `null` if the game does not exist (call-sites should `notFound()`).
- * Throws on unexpected DB errors fetching `game_players` so the page error
- * boundary can render — falling back silently would hide real outages.
+ * Returns `null` ONLY if the game genuinely does not exist — 0 rows, no
+ * error (call-sites should `notFound()`). Throws on any query error (games
+ * or game_players) so the page error boundary can render — falling back
+ * silently would hide real outages, and a null returned on a transient
+ * error would be CACHED under the game tag and 404 every consumer.
  */
 export async function getGameWithPlayers(
   id: string,
