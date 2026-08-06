@@ -1,8 +1,3 @@
-// TODO(#1441): games.hole_segment + games.source_game_id (0151),
-// tournaments.win_points/tie_points (0153) and tournament_side_awards (0154)
-// are hand-added from migrations applied to staging only. Re-run
-// `npm run gen:types` after the prod migrations land, which will overwrite
-// this file and this marker.
 export type Json =
   | string
   | number
