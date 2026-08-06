@@ -139,14 +139,14 @@ describe('GenerateMatchesWizard', () => {
     fireEvent.click(screen.getByRole('button', { name: /neste/i }));
     fireEvent.click(screen.getByTestId('cup-wizard-preset-splittet-cup-dag'));
     expect(screen.getByTestId('cup-wizard-splitday-setup')).toBeInTheDocument();
-    expect(screen.getByLabelText(/handicap best ball/i)).toHaveValue(85);
+    expect(screen.getByLabelText(/handicap-andel best ball/i)).toHaveValue(85);
 
     // Steg 4: bunt-preview — én flight (4 matcher: greensome + best ball + 2 singler).
     fireEvent.click(screen.getByRole('button', { name: /neste/i }));
     expect(screen.getByTestId('cup-wizard-step4-bundle')).toBeInTheDocument();
     expect(screen.getByText(/flight 1/i)).toBeInTheDocument();
     // Greensomens manuelle lag-slag-felt, ett per lag.
-    expect(screen.getAllByLabelText(/slag lag/i)).toHaveLength(2);
+    expect(screen.getAllByLabelText(/slag til lag/i)).toHaveLength(2);
     // Singel-bytte er begrenset til flightens egne fire spillere (én knapp).
     expect(screen.getByTestId('cup-wizard-swap-singles-1')).toBeInTheDocument();
   });
