@@ -1,7 +1,9 @@
 import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { LinkButton } from '@/components/ui/Button';
-import { holeNumbersForSegment } from '@/lib/games/holeScope';
+import { firstHoleForSegment, holeNumbersForSegment } from '@/lib/games/holeScope';
+import { findSegmentSibling } from '@/lib/games/segmentSibling';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { getGameContext } from './gameContext';
 
@@ -38,6 +40,7 @@ export async function PrimaryCtaSection({
   approvedAt,
   requirePeerApproval,
   holeSegment,
+  tournamentId,
 }: {
   gameId: string;
   currentUserId: string;
@@ -46,6 +49,15 @@ export async function PrimaryCtaSection({
   requirePeerApproval: boolean;
   /** #1441: limits «all holes filled» + the next-hole scan to the game's segment. */
   holeSegment: HoleSegment;
+  /**
+   * #1441 (owner-QA finding B): non-null only for cup matches. Only used to
+   * look up the front9 ⇄ back9 sibling so a finished front9 host's CTA can
+   * continue into hole 10 instead of dead-ending on the static "submitted"
+   * message. Callers only ever render this section for HOST games (the
+   * derived-game branch on game-home is a separate, earlier branch), so no
+   * extra `sourceGameId` check is needed here.
+   */
+  tournamentId: string | null;
 }) {
   const { supabase } = await getGameContext();
 
@@ -82,6 +94,31 @@ export async function PrimaryCtaSection({
     requirePeerApproval,
   });
 
+  // #1441 (owner-QA finding B): a submitted front9 host otherwise dead-ends
+  // here (static "waiting for approval" / "approved" message, no link
+  // forward). When the player has a back9 sibling, resolve it so the CTA can
+  // offer a way to continue into hole 10 instead. Scoped tight: only the
+  // front9→back9 direction (a finished back9 is genuinely the end of the
+  // round — no further segment to bridge to), and only once submitted (the
+  // 'ready_to_submit' state keeps its own required submit step untouched).
+  const siblingMatch =
+    tournamentId != null &&
+    holeSegment === 'front9' &&
+    (state === 'submitted_pending_approval' || state === 'submitted_approved')
+      ? await findSegmentSibling(currentUserId, {
+          holeSegment,
+          sourceGameId: null,
+          tournamentId,
+        })
+      : null;
+  const sibling = siblingMatch
+    ? {
+        gameId: siblingMatch.gameId,
+        gameMode: siblingMatch.gameMode,
+        holeNumber: firstHoleForSegment('back9'),
+      }
+    : null;
+
   return (
     <PrimaryCta
       gameId={gameId}
@@ -89,6 +126,7 @@ export async function PrimaryCtaSection({
       strokesCount={strokesCount}
       totalHoles={segmentHoles.length}
       nextHole={nextHole}
+      sibling={sibling}
     />
   );
 }
@@ -103,6 +141,7 @@ function PrimaryCta({
   strokesCount,
   totalHoles,
   nextHole,
+  sibling,
 }: {
   gameId: string;
   state: UiState;
@@ -110,8 +149,12 @@ function PrimaryCta({
   /** #1441: holes in the game's scope — 9 for front9/back9, 18 for 'full'. */
   totalHoles: number;
   nextHole: number;
+  /** #1441 (owner-QA finding B): resolved back9 sibling, only ever set for a
+   *  submitted front9 host. Null everywhere else — see `PrimaryCtaSection`. */
+  sibling: { gameId: string; gameMode: GameMode; holeNumber: number } | null;
 }) {
   const t = useTranslations('game.home');
+  const tModes = useTranslations('modes');
   const subtext =
     state === 'in_progress' || state === 'ready_to_submit'
       ? t('ctaHolesFilled', { count: strokesCount, total: totalHoles })
@@ -157,16 +200,44 @@ function PrimaryCta({
 
   if (state === 'submitted_pending_approval') {
     return (
-      <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-        {t('ctaSubmittedPendingApproval')}
+      <div className="space-y-1.5">
+        <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
+          {t('ctaSubmittedPendingApproval')}
+        </div>
+        {sibling && (
+          <LinkButton
+            href={`/games/${sibling.gameId}/holes/${sibling.holeNumber}`}
+            variant="secondary"
+            full
+          >
+            {t('ctaContinueToSibling', {
+              hole: sibling.holeNumber,
+              format: tModes(sibling.gameMode as Parameters<typeof tModes>[0]),
+            })}
+          </LinkButton>
+        )}
       </div>
     );
   }
 
   // submitted_approved
   return (
-    <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-      {t('ctaSubmittedApproved')}
+    <div className="space-y-1.5">
+      <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
+        {t('ctaSubmittedApproved')}
+      </div>
+      {sibling && (
+        <LinkButton
+          href={`/games/${sibling.gameId}/holes/${sibling.holeNumber}`}
+          variant="secondary"
+          full
+        >
+          {t('ctaContinueToSibling', {
+            hole: sibling.holeNumber,
+            format: tModes(sibling.gameMode as Parameters<typeof tModes>[0]),
+          })}
+        </LinkButton>
+      )}
     </div>
   );
 }

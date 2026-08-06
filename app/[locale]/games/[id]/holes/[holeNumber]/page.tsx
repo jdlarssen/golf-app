@@ -26,7 +26,12 @@ import type {
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
-import { holeNumbersForSegment } from '@/lib/games/holeScope';
+import {
+  firstHoleForSegment,
+  holeNumbersForSegment,
+  lastHoleForSegment,
+} from '@/lib/games/holeScope';
+import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { computeGreenCenter } from '@/lib/geo/greenCenter';
 import { PIN_GATE_MAX_PINS, PIN_GATE_WINDOW_DAYS } from '@/lib/geo/pinRules';
 import type { LatLng } from '@/lib/geo/distance';
@@ -148,6 +153,33 @@ export default async function HolePage({ params }: { params: Params }) {
   if (me.submitted_at) {
     redirect({ href: `/games/${id}` as string, locale });
   }
+
+  // #1441 (owner-QA finding B): the front9 ⇄ back9 bridge only ever renders
+  // at the segment's boundary hole — front9's last hole (9) or back9's first
+  // hole (10) — so the lookup only runs there. Everywhere else this stays
+  // null without an extra query.
+  const isSegmentBoundaryHole =
+    (game.hole_segment === 'front9' &&
+      holeNumber === lastHoleForSegment('front9')) ||
+    (game.hole_segment === 'back9' &&
+      holeNumber === firstHoleForSegment('back9'));
+  const siblingMatch = isSegmentBoundaryHole
+    ? await findSegmentSibling(userId, {
+        holeSegment: game.hole_segment,
+        sourceGameId: game.source_game_id,
+        tournamentId: game.tournament_id,
+      })
+    : null;
+  const segmentSibling = siblingMatch
+    ? {
+        gameId: siblingMatch.gameId,
+        gameMode: siblingMatch.gameMode,
+        holeNumber:
+          siblingMatch.holeSegment === 'back9'
+            ? firstHoleForSegment('back9')
+            : lastHoleForSegment('front9'),
+      }
+    : null;
 
   // #543: én-flight-regelen — alle aktive spillere er i samme gruppe når
   // spillet har ≤4 aktive spillere ELLER formatet er wolf.
@@ -854,6 +886,7 @@ export default async function HolePage({ params }: { params: Params }) {
         skinsCarriedIn={skinsCarriedIn}
         bingoBangoBongoHoles={isBBB ? (bbbHolesData as BingoBangoBongoHoleInput[]) : undefined}
         roundRobinPlayers={roundRobinPlayersForClient}
+        segmentSibling={segmentSibling}
         players={playersForClient}
       />
     </div>

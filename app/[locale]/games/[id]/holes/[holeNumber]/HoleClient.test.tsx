@@ -622,4 +622,39 @@ describe('HoleClient — hole-segment scope (#1441)', () => {
     const link = screen.getByRole('link', { name: 'Lever scorekort' });
     expect(link.getAttribute('href')).toBe('/games/g1/submit');
   });
+
+  it('front9 hole 9 with a resolved sibling: shows a secondary "Videre til hull 10" bridge link alongside the primary CTA (#1441 finding B)', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([{ strokes: 4 }, undefined, undefined, undefined]),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          currentHole: 9,
+          holeSegment: 'front9',
+          segmentSibling: { gameId: 'back9-game', holeNumber: 10, gameMode: 'best_ball' },
+        })}
+      />,
+    );
+    // Primary CTA is untouched — still routes to this game's own submit flow.
+    const submitLink = screen.getByRole('link', { name: 'Lever scorekort' });
+    expect(submitLink.getAttribute('href')).toBe('/games/g1/submit');
+    // Secondary bridge link navigates straight into the sibling's hole 10.
+    const bridgeLink = screen.getByRole('link', {
+      name: 'Videre til hull 10 · Best ball',
+    });
+    expect(bridgeLink.getAttribute('href')).toBe('/games/back9-game/holes/10');
+  });
+
+  it('front9 hole 9 with no sibling resolved: no bridge link renders', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([{ strokes: 4 }, undefined, undefined, undefined]),
+    );
+    render(
+      <HoleClient
+        {...baseProps({ currentHole: 9, holeSegment: 'front9', segmentSibling: null })}
+      />,
+    );
+    expect(screen.queryByText(/Videre til hull/)).toBeNull();
+  });
 });
