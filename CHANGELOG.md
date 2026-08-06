@@ -1383,8 +1383,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 4 rettinger</strong></summary>
+<summary><strong>August 2026 · 5 rettinger</strong></summary>
 
+- `1.216.2` · [#1448](https://github.com/jdlarssen/golf-app/issues/1448) — På en hemmelig cup-dag holder også hull-for-hull-visningen tett: lagstillinger vises først når arrangøren avslutter, og 9-hulls-spill viser bare sine egne hull.
 - `1.216.1` · [#1447](https://github.com/jdlarssen/golf-app/issues/1447) — Skriver arrangøren egne lag-slag i greensome, viser slag-prikkene på føringssiden nå de tastede slagene — samme tall som avgjør matchen.
 - `1.215.2` · [#1351](https://github.com/jdlarssen/golf-app/issues/1351) — Blir runden avsluttet før du rakk å levere scorekortet, havner du på spillsiden med resultatet i stedet for et hull-skjema der ingenting lar seg taste.
 - `1.215.1` · [#1349](https://github.com/jdlarssen/golf-app/issues/1349) — Knappen for å be om en ny kode er blitt stor nok til å treffe med tommelen — også med hansker — og har fått farge så du ser hvor den er.
