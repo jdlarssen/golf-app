@@ -151,6 +151,32 @@ describe('computeActionItemCounts', () => {
     );
     expect(result.unsubmitted[0]).toEqual({ gameId: 'abc-123', name: 'Cupfinale' });
   });
+
+  // #1441 (F5 polish): a segment game (front9/back9) is "ready" at 9 holes,
+  // not 18 — without expectedHoles a finished split-day round never surfaced.
+  it('counts a finished 9-hole segment game (expectedHoles=9) as ready_not_delivered at 9 holes', () => {
+    const result = computeActionItemCounts(
+      [makeGame({ expectedHoles: 9 })],
+      [makePlayer('g1', { holesFilled: 9 })],
+    );
+    expect(result.unsubmitted).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde' }]);
+  });
+
+  it('does not count a 9-hole segment game as ready at 17 holes (still 18-hole thinking without expectedHoles)', () => {
+    const result = computeActionItemCounts(
+      [makeGame({ expectedHoles: 9 })],
+      [makePlayer('g1', { holesFilled: 8 })],
+    );
+    expect(result.unsubmitted).toEqual([]);
+  });
+
+  it('defaults to 18 expected holes when expectedHoles is omitted (full-18 games unchanged)', () => {
+    const result = computeActionItemCounts(
+      [makeGame()],
+      [makePlayer('g1', { holesFilled: 9 })],
+    );
+    expect(result.unsubmitted).toEqual([]);
+  });
 });
 
 describe('totalActionableGames', () => {
