@@ -561,6 +561,75 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       team_strokes_override: { team1: 5, team2: 0 },
     });
   });
+
+  it('bestBallAllowancePct: overstyrer best_ball mode_config.allowance_pct i stedet for cupens fourball-default (#1441, F3c)', async () => {
+    const match: CupBatchMatch = {
+      id: 'best_ball-1',
+      format: 'best_ball',
+      label: 'Best ball 1',
+      side1: ['p1', 'p2'],
+      side2: ['p3', 'p4'],
+      segment: 'back9',
+      flightIndex: 1,
+    };
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null }, // fourball_allowance_pct: 85 — skal IKKE brukes her
+      { data: flightGenderRows, error: null },
+      { data: { id: 'game-bestball' }, error: null },
+      { data: null, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    await expect(
+      createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: [match],
+        bestBallAllowancePct: 70,
+      }),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const row = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    )!.args[0] as Record<string, unknown>;
+    expect(row.mode_config).toEqual({
+      kind: 'best_ball',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 70,
+    });
+  });
+
+  it('bestBallAllowancePct utenfor 0..100 eller ikke-heltall: invalid_best_ball_allowance FØR noe insertes', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    const match: CupBatchMatch = {
+      id: 'best_ball-1',
+      format: 'best_ball',
+      label: 'Best ball 1',
+      side1: ['p1', 'p2'],
+      side2: ['p3', 'p4'],
+      segment: 'back9',
+      flightIndex: 1,
+    };
+
+    expect(
+      await createCupMatchesFromPlan({
+        tournamentId: 'cup-1',
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        matches: [match],
+        bestBallAllowancePct: 150,
+      }),
+    ).toEqual({ error: 'invalid_best_ball_allowance' });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'tournaments'),
+    ).toBe(false);
+  });
 });
 
 describe('createCupMatchesFromPlan — ordinære preset-matcher beholder dagens kolonner (#1441 regresjon)', () => {
