@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeCupLeaderboard } from './computeCupLeaderboard';
-import type { CupMatchInput, TournamentInput } from './computeCupLeaderboard';
+import type { CupMatchInput, CupSideAwardInput, TournamentInput } from './computeCupLeaderboard';
 
 function cup(overrides: Partial<TournamentInput> = {}): TournamentInput {
   return {
@@ -165,5 +165,116 @@ describe('computeCupLeaderboard', () => {
     const result = computeCupLeaderboard(cup(), matches);
     expect(result.team1Points).toBe(1.5);
     expect(result.team2Points).toBe(1.5);
+  });
+});
+
+// #1441 (D8): vektbare cup-poeng — win_points/tie_points fra cup-raden i
+// stedet for hardkodet 1/½. Default (fraværende felt) = dagens oppførsel.
+describe('computeCupLeaderboard — vektede poeng (#1441, D8)', () => {
+  it('bruker win_points/tie_points fra cup-raden i stedet for hardkodet 1/½', () => {
+    const matches: CupMatchInput[] = [
+      match({ gameId: 'g1', result: { winnerSide: 1, formatted: '3&2' } }),
+    ];
+    const result = computeCupLeaderboard(cup({ win_points: 5, tie_points: 2 }), matches);
+    expect(result.team1Points).toBe(5);
+    expect(result.team2Points).toBe(0);
+    expect(result.matches[0].pointsTeam1).toBe(5);
+  });
+
+  it('delt match betaler tie_points til BEGGE lag (5/2-vekting: 2 + 2, ikke 0,5 + 0,5)', () => {
+    const matches: CupMatchInput[] = [
+      match({ gameId: 'g1', result: { winnerSide: 'tied', formatted: 'AS' } }),
+    ];
+    const result = computeCupLeaderboard(cup({ win_points: 5, tie_points: 2 }), matches);
+    expect(result.team1Points).toBe(2);
+    expect(result.team2Points).toBe(2);
+  });
+
+  it('5/2-eksempelet fra designet: 12 matcher vunnet av lag 1 → maks 60 poeng', () => {
+    const matches: CupMatchInput[] = Array.from({ length: 12 }, (_, i) =>
+      match({ gameId: `g${i + 1}`, result: { winnerSide: 1, formatted: '3&2' } }),
+    );
+    const result = computeCupLeaderboard(
+      cup({ win_points: 5, tie_points: 2, points_to_win: null }),
+      matches,
+    );
+    expect(result.team1Points).toBe(60);
+    expect(result.team2Points).toBe(0);
+  });
+
+  it('default win_points/tie_points (felt fraværende) = dagens 1/½-oppførsel', () => {
+    const matches: CupMatchInput[] = [
+      match({ gameId: 'g1', result: { winnerSide: 1, formatted: '3&2' } }),
+      match({ gameId: 'g2', result: { winnerSide: 'tied', formatted: 'AS' } }),
+    ];
+    const cupWithoutWeights: TournamentInput = {
+      team_1_name: 'Lag Skog',
+      team_2_name: 'Lag Sjø',
+      points_to_win: 4.5,
+      status: 'active',
+      winner_team: null,
+    };
+    const result = computeCupLeaderboard(cupWithoutWeights, matches);
+    expect(result.team1Points).toBe(1.5); // 1 (win) + 0.5 (tie)
+    expect(result.team2Points).toBe(0.5);
+  });
+});
+
+// #1441 (D9): manuelle sidepoeng (closest to pin / longest drive). Vinnerens
+// lag (fra roster, mappet i F3b) får poengene lagt til cup-totalen direkte.
+describe('computeCupLeaderboard — sidepoeng (#1441, D9)', () => {
+  it('legger sidepoeng til vinnerens lag-total', () => {
+    const awards: CupSideAwardInput[] = [
+      { kind: 'ctp', holeNumber: 4, points: 2, winnerTeam: 1 },
+    ];
+    const result = computeCupLeaderboard(cup({ points_to_win: 4.5 }), [], awards);
+    expect(result.team1Points).toBe(2);
+    expect(result.team2Points).toBe(0);
+  });
+
+  it('sidepoeng til hvert lag akkumuleres uavhengig (ctp 4 + ctp 11 til lag 1, ld 6 til lag 2)', () => {
+    const awards: CupSideAwardInput[] = [
+      { kind: 'ctp', holeNumber: 4, points: 2, winnerTeam: 1 },
+      { kind: 'ctp', holeNumber: 11, points: 2, winnerTeam: 1 },
+      { kind: 'ld', holeNumber: 6, points: 3, winnerTeam: 2 },
+    ];
+    const result = computeCupLeaderboard(cup({ points_to_win: 4.5 }), [], awards);
+    expect(result.team1Points).toBe(4);
+    expect(result.team2Points).toBe(3);
+  });
+
+  it('vinner=null bidrar med 0 til begge lag (arrangør har ikke tastet ennå)', () => {
+    const awards: CupSideAwardInput[] = [
+      { kind: 'ctp', holeNumber: 4, points: 2, winnerTeam: null },
+    ];
+    const result = computeCupLeaderboard(cup({ points_to_win: 4.5 }), [], awards);
+    expect(result.team1Points).toBe(0);
+    expect(result.team2Points).toBe(0);
+  });
+
+  it('sidepoeng legges OVENPÅ match-poeng i totalen (5/2-eksempelet: 12 matcher = 60 + 7 sidepoeng)', () => {
+    const matches: CupMatchInput[] = Array.from({ length: 12 }, (_, i) =>
+      match({ gameId: `g${i + 1}`, result: { winnerSide: 1, formatted: '3&2' } }),
+    );
+    const awards: CupSideAwardInput[] = [
+      { kind: 'ctp', holeNumber: 4, points: 2, winnerTeam: 1 },
+      { kind: 'ctp', holeNumber: 11, points: 2, winnerTeam: 1 },
+      { kind: 'ld', holeNumber: 6, points: 3, winnerTeam: 1 },
+    ];
+    const result = computeCupLeaderboard(
+      cup({ win_points: 5, tie_points: 2, points_to_win: null }),
+      matches,
+      awards,
+    );
+    expect(result.team1Points).toBe(67); // 60 match-poeng + 2 + 2 + 3 sidepoeng
+    expect(result.team2Points).toBe(0);
+  });
+
+  it('ingen sidepoeng-argument (bakoverkompatibelt) → oppfører seg som tom liste', () => {
+    const matches: CupMatchInput[] = [
+      match({ gameId: 'g1', result: { winnerSide: 1, formatted: '3&2' } }),
+    ];
+    const result = computeCupLeaderboard(cup(), matches);
+    expect(result.team1Points).toBe(1);
   });
 });
