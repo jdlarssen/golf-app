@@ -4562,7 +4562,10 @@
       },
       "deletedMessage": "The cup «{name}» has been deleted.",
       "headerSubtitlePending": "{team1} vs {team2} · points target set at start",
-      "matchesSummaryPending": "Points target set at start · {finished} of {total} matches played"
+      "matchesSummaryPending": "Points target set at start · {finished} of {total} matches played",
+      "headerSubtitlePendingActive": "{team1} vs {team2} · the winner is decided when the cup finishes",
+      "matchesSummaryPendingActive": "Winner decided at finish · {finished} of {total} matches played",
+      "sideAwardPoints": "Side points: {points}"
     },
     "generate": {
       "pageTitle": "Generate matches",
@@ -4657,7 +4660,13 @@
     },
     "public": {
       "matchesSummary": "{finished} of {total} matches played",
-      "noMatches": "No matches have been created yet."
+      "noMatches": "No matches have been created yet.",
+      "firstTo": "First to {points} points wins",
+      "pointsPendingDraft": "Points target is set once the cup starts",
+      "pointsPendingActive": "Points are weighted — the winner is decided when the cup finishes",
+      "sideAwardPoints": "Side points: {points}",
+      "matchInProgress": "In progress",
+      "matchDraft": "Draft"
     },
     "sideAwards": {
       "heading": "Closest & longest",

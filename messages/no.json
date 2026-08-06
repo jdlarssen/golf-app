@@ -4562,7 +4562,10 @@
       },
       "deletedMessage": "Cupen «{name}» er slettet.",
       "headerSubtitlePending": "{team1} mot {team2} · poengmål klart ved start",
-      "matchesSummaryPending": "Poengmål klart ved start · {finished} av {total} matcher spilt"
+      "matchesSummaryPending": "Poengmål klart ved start · {finished} av {total} matcher spilt",
+      "headerSubtitlePendingActive": "{team1} mot {team2} · vinneren avgjøres ved avslutning",
+      "matchesSummaryPendingActive": "Vinneren avgjøres ved avslutning · {finished} av {total} matcher spilt",
+      "sideAwardPoints": "Sidepoeng: {points}"
     },
     "generate": {
       "pageTitle": "Generer matcher",
@@ -4657,7 +4660,13 @@
     },
     "public": {
       "matchesSummary": "{finished} av {total} matcher spilt",
-      "noMatches": "Ingen matcher er opprettet ennå."
+      "noMatches": "Ingen matcher er opprettet ennå.",
+      "firstTo": "Først til {points} poeng vinner",
+      "pointsPendingDraft": "Poengmålet er klart når cupen starter",
+      "pointsPendingActive": "Poeng er vektet — vinneren avgjøres når cupen avsluttes",
+      "sideAwardPoints": "Sidepoeng: {points}",
+      "matchInProgress": "Pågår",
+      "matchDraft": "Utkast"
     },
     "sideAwards": {
       "heading": "Closest & longest",

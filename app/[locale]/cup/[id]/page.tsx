@@ -22,7 +22,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
   const snapshot = await getCupSnapshot(id);
   if (!snapshot) notFound();
 
-  const { tournament, leaderboard, roster } = snapshot;
+  const { tournament, leaderboard, roster, sideAwards } = snapshot;
 
   // #524: en klubb-scopet cup er kun synlig for klubbens medlemmer, deltakerne
   // og global admin. Snapshot-en bruker admin-client (RLS-bypass), så denne
@@ -85,9 +85,11 @@ export default async function PublicCupPage({ params }: { params: Params }) {
         )}
         {tournament.status !== 'finished' && (
           <p className="mt-2 text-sm text-muted">
-            {tournament.points_to_win === null
-              ? 'Poengmålet er klart når cupen starter'
-              : `Først til ${formatPoints(tournament.points_to_win)} point vinner`}
+            {tournament.points_to_win !== null
+              ? t('public.firstTo', { points: formatPoints(tournament.points_to_win) })
+              : tournament.status === 'active'
+                ? t('public.pointsPendingActive')
+                : t('public.pointsPendingDraft')}
           </p>
         )}
       </header>
@@ -152,6 +154,13 @@ export default async function PublicCupPage({ params }: { params: Params }) {
             total: leaderboard.matches.length,
           })}
         </p>
+        {sideAwards.length > 0 && (
+          <p className="text-center text-xs text-muted mt-1 tabular-nums">
+            {t('public.sideAwardPoints', {
+              points: `${formatPoints(leaderboard.sideAwardPoints.team1)}–${formatPoints(leaderboard.sideAwardPoints.team2)}`,
+            })}
+          </p>
+        )}
       </section>
 
       {/* Matches-liste */}
@@ -173,8 +182,8 @@ export default async function PublicCupPage({ params }: { params: Params }) {
               const scoreLabel = isFinished
                 ? `${formatPoints(m.pointsTeam1)}–${formatPoints(m.pointsTeam2)}`
                 : isActive
-                  ? 'Spilles'
-                  : 'Utkast';
+                  ? t('public.matchInProgress')
+                  : t('public.matchDraft');
               return (
                 <li key={m.gameId}>
                   <Card>

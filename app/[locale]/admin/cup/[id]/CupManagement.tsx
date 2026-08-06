@@ -139,16 +139,24 @@ export async function CupManagement({
       <PageHeader
         title={tournament.name}
         subtitle={
-          tournament.points_to_win === null
-            ? t('manage.headerSubtitlePending', {
-                team1: tournament.team_1_name,
-                team2: tournament.team_2_name,
-              })
-            : t('manage.headerSubtitle', {
+          tournament.points_to_win !== null
+            ? t('manage.headerSubtitle', {
                 team1: tournament.team_1_name,
                 team2: tournament.team_2_name,
                 points: formatPoints(tournament.points_to_win),
               })
+            : // #1441 (D8): egendefinerte poeng-vekter holder points_to_win NULL
+              // gjennom hele aktiv-fasen (ikke bare før start) — «poengmål klart
+              // ved start» ville da vært misvisende etter start.
+              t(
+                tournament.status === 'draft'
+                  ? 'manage.headerSubtitlePending'
+                  : 'manage.headerSubtitlePendingActive',
+                {
+                  team1: tournament.team_1_name,
+                  team2: tournament.team_2_name,
+                },
+              )
         }
         action={<StatusChip tone={chipTone} label={statusLabel} />}
       />
@@ -185,17 +193,29 @@ export async function CupManagement({
           </div>
         </div>
         <p className="text-center text-xs text-muted mt-3">
-          {tournament.points_to_win === null
-            ? t('manage.matchesSummaryPending', {
-                finished: leaderboard.finishedMatches,
-                total: leaderboard.matches.length,
-              })
-            : t('manage.matchesSummary', {
+          {tournament.points_to_win !== null
+            ? t('manage.matchesSummary', {
                 points: formatPoints(tournament.points_to_win),
                 finished: leaderboard.finishedMatches,
                 total: leaderboard.matches.length,
-              })}
+              })
+            : t(
+                tournament.status === 'draft'
+                  ? 'manage.matchesSummaryPending'
+                  : 'manage.matchesSummaryPendingActive',
+                {
+                  finished: leaderboard.finishedMatches,
+                  total: leaderboard.matches.length,
+                },
+              )}
         </p>
+        {snapshot.sideAwards.length > 0 && (
+          <p className="text-center text-xs text-muted mt-1 tabular-nums">
+            {t('manage.sideAwardPoints', {
+              points: `${formatPoints(leaderboard.sideAwardPoints.team1)}–${formatPoints(leaderboard.sideAwardPoints.team2)}`,
+            })}
+          </p>
+        )}
         <div className="mt-3 text-center">
           <SmartLink
             href={`/cup/${tournamentId}`}
