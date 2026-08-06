@@ -40,6 +40,12 @@ import { nameInitials } from '@/lib/names/initials';
 import { firstName } from '@/lib/firstName';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
+import {
+  isHoleInSegment,
+  firstHoleForSegment,
+  lastHoleForSegment,
+} from '@/lib/games/holeScope';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 
@@ -98,6 +104,13 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   if (!userId) redirect({ href: '/login', locale });
   if (!result) notFound();
   const { game, players } = result;
+
+  // #1441: a derived game's scores live on the host game — there is no
+  // scorecard to show here. Bounce home, which shows the read-only
+  // «Slagene føres i …»-notice with a link to the host instead.
+  if (game.source_game_id) {
+    redirect({ href: `/games/${id}` as string, locale });
+  }
 
   if (game.status === 'draft') {
     redirect({ href: '/', locale });
@@ -186,6 +199,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
             revealState={state}
             myTeeGender={me.tee_gender}
             pointsFn={stablefordPointsFn}
+            holeSegment={game.hole_segment}
           />
         </Suspense>
       </div>
@@ -202,6 +216,7 @@ async function ScorecardTable({
   revealState: state,
   myTeeGender,
   pointsFn,
+  holeSegment,
 }: {
   gameId: string;
   courseId: string;
@@ -213,6 +228,8 @@ async function ScorecardTable({
   revealState: RevealState;
   myTeeGender: ScoringGender;
   pointsFn: StablefordPointsFn;
+  /** #1441: front9/back9-spill viser og navigerer kun sitt segments hull. */
+  holeSegment: HoleSegment;
 }) {
   const t = await getTranslations('scorecard');
   const showHandicapTotal = state !== 'reveal-active';
@@ -249,12 +266,19 @@ async function ScorecardTable({
     scoresByUserHole.set(`${s.user_id}#${s.hole_number}`, s.strokes);
   }
 
-  const holes = holesRes.data ?? [];
+  // #1441: front9/back9-spill viser/navigerer kun sitt segments hull —
+  // uten filteret ville tabellen tatt med de 9 hullene som aldri spilles
+  // på dette spillet, og nextHole() ville kunne foreslå et hull utenfor
+  // scope.
+  const holes = (holesRes.data ?? []).filter((h) =>
+    isHoleInSegment(h.hole_number, holeSegment),
+  );
 
   const continueHref = `/games/${gameId}/holes/${nextHole(
     holes,
     scoresByUserHole,
     layout.primaryUserId,
+    holeSegment,
   )}`;
 
   return (
@@ -312,12 +336,18 @@ function nextHole(
   holes: HoleRow[],
   scoresByUserHole: Map<string, number | null>,
   userId: string,
+  holeSegment: HoleSegment,
 ): number {
   const playedHoles = holes
     .filter((h) => scoresByUserHole.get(`${userId}#${h.hole_number}`) != null)
     .map((h) => h.hole_number);
-  const lastWithScore = playedHoles.length ? Math.max(...playedHoles) : 1;
-  return Math.min(18, lastWithScore);
+  // #1441: unplayed defaults to the segment's FIRST hole (10 on a back9
+  // game, not 1 — hole 1 is out of scope there), and the clamp uses the
+  // segment's LAST hole (still 18 on back9; 9 on front9).
+  const lastWithScore = playedHoles.length
+    ? Math.max(...playedHoles)
+    : firstHoleForSegment(holeSegment);
+  return Math.min(lastHoleForSegment(holeSegment), lastWithScore);
 }
 
 function extractHoleFromHref(href: string): number {
@@ -450,7 +480,7 @@ function LayoutATable({
                 <span>
                   {t('footerPlayedHoles')}{' '}
                   <span className="inline-num">
-                    {playedHoles.length}/18
+                    {playedHoles.length}/{holes.length}
                   </span>
                 </span>
                 <span>
@@ -718,7 +748,7 @@ function LayoutBTable({
                       {isStableford ? teamTotalPoints : teamTotalNetto}
                     </span>
                     <span className="text-muted ml-2">
-                      ({playedTeamHoles}/18 hull)
+                      ({playedTeamHoles}/{holes.length} hull)
                     </span>
                   </div>
                 )}

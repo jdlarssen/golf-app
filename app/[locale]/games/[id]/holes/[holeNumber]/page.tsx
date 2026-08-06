@@ -26,6 +26,7 @@ import type {
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
+import { holeNumbersForSegment } from '@/lib/games/holeScope';
 import { computeGreenCenter } from '@/lib/geo/greenCenter';
 import { PIN_GATE_MAX_PINS, PIN_GATE_WINDOW_DAYS } from '@/lib/geo/pinRules';
 import type { LatLng } from '@/lib/geo/distance';
@@ -104,6 +105,25 @@ export default async function HolePage({ params }: { params: Params }) {
   const result = await getGameWithPlayers(id);
   if (!result) notFound();
   const { game, players: allPlayers } = result;
+
+  // #1441: a derived game (singles avledet fra best-ball-hosten) never
+  // renders score entry — its scores live on the host game. Bounce home,
+  // which shows the read-only «Slagene føres i …»-notice instead.
+  if (game.source_game_id) {
+    redirect({ href: `/games/${id}` as string, locale });
+  }
+
+  // #1441: front9/back9-spill har kun hull i sitt segment tilgjengelig for
+  // scoring. En URL utenfor segmentet (f.eks. hull 12 på et front9-spill)
+  // sender spilleren til segmentets første hull i stedet for et 404 —
+  // matcher den øvrige statusbaserte redirect-praksisen i denne filen.
+  const segmentHoles = holeNumbersForSegment(game.hole_segment);
+  if (!segmentHoles.includes(holeNumber)) {
+    redirect({
+      href: `/games/${id}/holes/${segmentHoles[0]}` as string,
+      locale,
+    });
+  }
 
   if (game.status === 'draft') {
     redirect({ href: '/', locale });
@@ -792,6 +812,7 @@ export default async function HolePage({ params }: { params: Params }) {
         gameName={localizeGameName(game.name, courseName, locale as AppLocale)}
         gameStatus={game.status}
         gameMode={game.game_mode}
+        holeSegment={game.hole_segment}
         withdrawn={me.withdrawn_at != null}
         currentHole={holeNumber}
         par={parFor(
