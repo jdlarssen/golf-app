@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { generateSplitDayPlan, type CupPlayer } from './cupPairing';
+import { generateSplitDayPlan, type CupPlayer, type PlannedBundleMatch } from './cupPairing';
 import {
   groupBundleMatchesByFlight,
   swapFlightSinglesPairing,
+  swapFlightPlayer,
   splitDayFlightCount,
   splitDayTotalMatches,
 } from './splitDayLineup';
@@ -96,6 +97,84 @@ describe('swapFlightSinglesPairing', () => {
     const plan = generateSplitDayPlan({ team1: t1, team2: t2, strategy: 'handicap' });
 
     expect(swapFlightSinglesPairing(plan, 99)).toEqual(plan);
+  });
+});
+
+describe('swapFlightPlayer', () => {
+  // team('N', [5,10,15,20]) sorted by handicap is already N1..N4 in order,
+  // same for S — so pickSide's [rank_i, rank_(len-1-i)] pairing gives:
+  //   flight1: side1=[N1,N4] side2=[S1,S4] — singles1 N1×S1, singles2 N4×S4
+  //   flight2: side1=[N2,N3] side2=[S2,S3] — singles1 N2×S2, singles2 N3×S3
+  function twoFlightPlan(): PlannedBundleMatch[] {
+    const t1 = team('N', [5, 10, 15, 20]);
+    const t2 = team('S', [6, 11, 16, 21]);
+    return generateSplitDayPlan({ team1: t1, team2: t2, strategy: 'handicap' });
+  }
+
+  it('swap across flights: exchanges the two players and follows them into singles', () => {
+    const plan = twoFlightPlan();
+
+    // N2 (flight2, side1 slot0) picked for flight1's side1 slot0 (currently N1).
+    const swapped = swapFlightPlayer(plan, 1, 'side1', 0, 'N2');
+    const flights = groupBundleMatchesByFlight(swapped);
+    const f1 = flights.find((f) => f.flightIndex === 1)!;
+    const f2 = flights.find((f) => f.flightIndex === 2)!;
+
+    expect(f1.greensome.side1).toEqual(['N2', 'N4']);
+    expect(f1.bestBall.side1).toEqual(['N2', 'N4']);
+    expect(f2.greensome.side1).toEqual(['N1', 'N3']);
+    expect(f2.bestBall.side1).toEqual(['N1', 'N3']);
+
+    // side2 (the other team) is completely untouched.
+    expect(f1.greensome.side2).toEqual(['S1', 'S4']);
+    expect(f2.greensome.side2).toEqual(['S2', 'S3']);
+
+    // Singles pairings follow the swapped players by identity, not index.
+    expect(f1.singles[0].side1).toEqual(['N2']);
+    expect(f1.singles[0].side2).toEqual(['S1']);
+    expect(f1.singles[1].side1).toEqual(['N4']); // untouched slot
+    expect(f2.singles[0].side1).toEqual(['N1']);
+    expect(f2.singles[1].side1).toEqual(['N3']); // untouched slot
+
+    // ids/labels are stable — only side1/side2 content changed.
+    expect(f1.greensome.id).toBe('greensome_matchplay-1');
+    expect(f1.singles[0].label).toBe('Singel 1');
+  });
+
+  it('swap within a flight: swaps the pair order, only affects that flight\'s singles pairing', () => {
+    const plan = twoFlightPlan();
+
+    // S4 (flight1, side2 slot1) picked for flight1's side2 slot0 (currently S1).
+    const swapped = swapFlightPlayer(plan, 1, 'side2', 0, 'S4');
+    const flights = groupBundleMatchesByFlight(swapped);
+    const f1 = flights.find((f) => f.flightIndex === 1)!;
+    const f2 = flights.find((f) => f.flightIndex === 2)!;
+
+    expect(f1.greensome.side2).toEqual(['S4', 'S1']);
+    expect(f1.bestBall.side2).toEqual(['S4', 'S1']);
+    // The pair itself is semantically unchanged (same two players) — only
+    // the singles pairing that keys off slot index shifts.
+    expect(f1.singles[0].side2).toEqual(['S4']);
+    expect(f1.singles[1].side2).toEqual(['S1']);
+    expect(f1.singles[0].side1).toEqual(['N1']); // side1 untouched
+
+    // Other flight untouched entirely.
+    expect(f2).toEqual(groupBundleMatchesByFlight(plan).find((f) => f.flightIndex === 2));
+  });
+
+  it('no-op when picking the player already in the slot', () => {
+    const plan = twoFlightPlan();
+    expect(swapFlightPlayer(plan, 1, 'side1', 0, 'N1')).toEqual(plan);
+  });
+
+  it('no-op when the picked player is not flighted (bye / unknown id)', () => {
+    const plan = twoFlightPlan();
+    expect(swapFlightPlayer(plan, 1, 'side1', 0, 'N-bye')).toEqual(plan);
+  });
+
+  it('no-op when the target flight does not exist', () => {
+    const plan = twoFlightPlan();
+    expect(swapFlightPlayer(plan, 99, 'side1', 0, 'N2')).toEqual(plan);
   });
 });
 
