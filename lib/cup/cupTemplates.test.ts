@@ -32,14 +32,22 @@ describe('sessionMatchCount', () => {
 });
 
 describe('CUP_PRESETS', () => {
-  it('ships the three documented presets with stable ids and sessions', () => {
+  it('ships the four documented presets with stable ids and sessions', () => {
     const ids = CUP_PRESETS.map((p) => p.id);
-    expect(ids).toEqual(['klassisk', 'fourball-singler', 'singler']);
+    expect(ids).toEqual(['klassisk', 'fourball-singler', 'singler', 'splittet-cup-dag']);
     for (const p of CUP_PRESETS) {
       expect(p.id.length).toBeGreaterThan(0);
       expect(p.sessions.length).toBeGreaterThan(0);
       expect(p.minPerTeam).toBeGreaterThan(0);
     }
+  });
+
+  // #1441: preset exists for wizard discovery, but generation routes through
+  // generateSplitDayPlan (cupPairing.ts), not buildSessions/generateCupPlan —
+  // see the preset's own doc comment in cupTemplates.ts.
+  it('splittet-cup-dag: minPerTeam 2 (needs 2 per side per flight)', () => {
+    const splitDay = CUP_PRESETS.find((p) => p.id === 'splittet-cup-dag')!;
+    expect(splitDay.minPerTeam).toBe(2);
   });
 
   it('klassisk = foursomes → four-ball → singler, minPerTeam 2', () => {
