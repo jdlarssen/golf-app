@@ -56,14 +56,19 @@ function placeholderSides(): [FourballSide, FourballSide] {
   ];
 }
 
-function emptyShell(): FourballMatchplayResult {
+/**
+ * `totalHoles` (#1441) er antall hull i scope (`ctx.holes.length` — 18 for
+ * `full`, 9 for `front9`/`back9`) slik at `holesRemaining` er riktig selv i
+ * denne defensive stien. Default 18 for bakoverkompatibilitet.
+ */
+function emptyShell(totalHoles: number = 18): FourballMatchplayResult {
   return {
     kind: 'fourball_matchplay',
     sides: placeholderSides(),
     holes: [],
     holesUp: 0,
     holesPlayed: 0,
-    holesRemaining: 18,
+    holesRemaining: totalHoles,
     result: null,
   };
 }
@@ -114,7 +119,7 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
 
   // Fourball krever EKSAKT 2 spillere per side. Avvik → defensiv empty shell.
   if (side1Players.length !== 2 || side2Players.length !== 2) {
-    return emptyShell();
+    return emptyShell(ctx.holes.length);
   }
 
   const allowancePct = readAllowancePct(ctx);
@@ -130,6 +135,9 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
   for (const sp of sides[1].players) effectiveByUser.set(sp.userId, sp.effectiveHandicap);
 
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
+  // #1441: antall hull i scope. Caller segment-filtrerer ctx.holes (front9/
+  // back9/full) via `holesForSegment` før kall.
+  const totalHoles = holesSorted.length;
   const grossByKey = new Map<string, number | null>();
   for (const s of ctx.scores) {
     grossByKey.set(`${s.userId}#${s.holeNumber}`, s.gross);
@@ -216,8 +224,8 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
   });
 
   const holesUp = side1Wins - side2Wins;
-  const holesRemaining = Math.max(0, 18 - holesPlayed);
-  const matchResult = computeMatchResult(holesUp, holesPlayed, holesRemaining);
+  const holesRemaining = Math.max(0, totalHoles - holesPlayed);
+  const matchResult = computeMatchResult(holesUp, holesPlayed, holesRemaining, totalHoles);
 
   return {
     kind: 'fourball_matchplay',
