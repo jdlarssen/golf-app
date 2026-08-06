@@ -20,6 +20,11 @@ import {
   hasParDifference,
   formatOtherGendersPar,
 } from '@/lib/games/parDisplay';
+import {
+  isHoleInSegment,
+  firstHalfHoleNumbersForSegment,
+} from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 import { getDrilldownContext, fetchHolesAndScores } from '../holesData';
 
 export async function DrilldownBody({
@@ -28,12 +33,14 @@ export async function DrilldownBody({
   mode,
   isActive,
   requestedTeam,
+  holeSegment,
 }: {
   gameId: string;
   courseId: string;
   mode: LeaderboardMode;
   isActive: boolean;
   requestedTeam: number | null;
+  holeSegment: HoleSegment;
 }) {
   const { supabase } = await getDrilldownContext();
   const tCommon = await getTranslations('leaderboard.common');
@@ -75,14 +82,25 @@ export async function DrilldownBody({
     strokes: s.strokes,
   }));
 
-  // Active rounds: clip to front 9 so back-9 suspense stays intact. Matches
-  // state #3.5 on the leaderboard view.
+  // #1448: front9-/back9-spill drilldowner kun over segmentets hull — 'full'
+  // er et rent pass-through, bit-identisk med før.
+  const scopedHoles = allHoles.filter((h) =>
+    isHoleInSegment(h.holeNumber, holeSegment),
+  );
+  const scopedScores = allScores.filter((s) =>
+    isHoleInSegment(s.holeNumber, holeSegment),
+  );
+
+  // Active rounds: clip to the segment's first half so second-half suspense
+  // stays intact. Matches state #3.5 on the leaderboard view ('full' → 1-9,
+  // byte-identical to the old hardcoded clip).
+  const firstHalf = new Set(firstHalfHoleNumbersForSegment(holeSegment));
   const holes = isActive
-    ? allHoles.filter((h) => h.holeNumber >= 1 && h.holeNumber <= 9)
-    : allHoles;
+    ? scopedHoles.filter((h) => firstHalf.has(h.holeNumber))
+    : scopedHoles;
   const scores = isActive
-    ? allScores.filter((s) => s.holeNumber >= 1 && s.holeNumber <= 9)
-    : allScores;
+    ? scopedScores.filter((s) => firstHalf.has(s.holeNumber))
+    : scopedScores;
 
   const lines = computeLeaderboard({ mode, players, holes, scores });
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
@@ -243,29 +261,27 @@ function DrilldownView({
           </span>
         </div>
 
-        {/* Front nine */}
-        <div className="px-5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-          {t('frontNineLabel')}
-        </div>
-        <HoleTable
-          rows={frontRows}
-          teamPlayers={selected.players}
-          summaryLabel={t('summaryUt')}
-          summaryPar={frontPar}
-          summaryNet={frontNet}
-        />
+        {/* Front nine — #1448: back9-spill har ingen hull ≤ 9 i scope, da
+            skjules hele UT-seksjonen i stedet for å rendre en tom tabell. */}
+        {frontRows.length > 0 && (
+          <>
+            <div className="px-5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+              {t('frontNineLabel')}
+            </div>
+            <HoleTable
+              rows={frontRows}
+              teamPlayers={selected.players}
+              summaryLabel={t('summaryUt')}
+              summaryPar={frontPar}
+              summaryNet={frontNet}
+            />
+          </>
+        )}
 
-        {/* Back nine (finished only) */}
-        {isActive ? (
-          <div className="mx-4 mt-5 rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
-            <p className="font-serif text-[16px] font-medium text-text">
-              {t('hiddenBackNineHeading')}
-            </p>
-            <p className="mt-2 text-xs text-muted">
-              {t('hiddenBackNineSub')}
-            </p>
-          </div>
-        ) : (
+        {/* Back nine — datalaget klipper bort andre halvdel i aktive runder,
+            så radene finnes bare når de skal vises (#1448: front9-spill har
+            ingen, back9-spill får sine her). */}
+        {backRows.length > 0 && (
           <>
             <div className="px-5 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
               {t('backNineLabel')}
@@ -277,30 +293,41 @@ function DrilldownView({
               summaryPar={backPar}
               summaryNet={backNet}
             />
-
-            {/* Total bar — read-only summary, ikke en CTA. Toner ned fra
-                tidligere bg-primary-fyll (skrek til leseren) til en stille
-                surface med subtil topp-border. Tall + accent-kicker bærer
-                hierarkiet uten å trenge høy-kontrast fyll. */}
-            <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] border border-border bg-surface px-5 py-3.5 text-text">
-              <div>
-                <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
-                  {t('totalLabel')}
-                </span>
-                <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
-                  {t('holesWon', { count: holesWon })}
-                </span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
-                  {selected.total}
-                </span>
-                <span className="font-sans text-[14px] font-semibold tabular-nums text-muted">
-                  {formatVsPar(totalVsPar)}
-                </span>
-              </div>
-            </div>
           </>
+        )}
+
+        {isActive ? (
+          <div className="mx-4 mt-5 rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
+            <p className="font-serif text-[16px] font-medium text-text">
+              {t('hiddenBackNineHeading')}
+            </p>
+            <p className="mt-2 text-xs text-muted">
+              {t('hiddenBackNineSub')}
+            </p>
+          </div>
+        ) : (
+          /* Total bar — read-only summary, ikke en CTA. Toner ned fra
+             tidligere bg-primary-fyll (skrek til leseren) til en stille
+             surface med subtil topp-border. Tall + accent-kicker bærer
+             hierarkiet uten å trenge høy-kontrast fyll. */
+          <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] border border-border bg-surface px-5 py-3.5 text-text">
+            <div>
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
+                {t('totalLabel')}
+              </span>
+              <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
+                {t('holesWon', { count: holesWon })}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-3">
+              <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
+                {selected.total}
+              </span>
+              <span className="font-sans text-[14px] font-semibold tabular-nums text-muted">
+                {formatVsPar(totalVsPar)}
+              </span>
+            </div>
+          </div>
         )}
 
         {/* Team prev/next inside the drilldown so the user can scrub through

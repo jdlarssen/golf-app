@@ -7,6 +7,7 @@ import { parseMode, type LeaderboardMode } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { LeaderboardRealtime } from '../LeaderboardRealtime';
+import { RevealHiddenView } from '../RevealHiddenView';
 import { getDrilldownContext } from './holesData';
 import { SkinsHolesBody } from './formats/skins';
 import { WolfHolesBody } from './formats/wolf';
@@ -171,6 +172,13 @@ export default async function LeaderboardHolesPage({
     );
   }
 
+  // #1448 (D12): reveal-active lag-/duellformat må ikke lekke stilling her —
+  // samme RevealHiddenView-gate som leaderboardContent. Solo-formatene over
+  // beholder sin brutto-tvungne drilldown (paritet med RevealBruttoView).
+  if (shouldHideNetto(state)) {
+    return <RevealHiddenView gameName={game.name} backHref={`/games/${id}`} />;
+  }
+
   return withRealtime(
     <Suspense fallback={<DrilldownSkeleton />}>
       <DrilldownBody
@@ -179,6 +187,7 @@ export default async function LeaderboardHolesPage({
         mode={mode}
         isActive={isActive}
         requestedTeam={requestedTeam}
+        holeSegment={game.hole_segment}
       />
     </Suspense>,
   );
