@@ -11,6 +11,7 @@ import {
   requireAdminOrClubAdminOfCup,
 } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
+import { planTournamentGameDeletion } from './tournamentGameDeletion';
 import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
 import {
   derivePointsToWinWeighted,
@@ -439,17 +440,40 @@ export async function deleteTournament(formData: FormData) {
     .maybeSingle();
   if (!cup) redirect('/admin/cup?error=not_found');
   const groupId = (cup.group_id as string | null | undefined) ?? null;
+  const deleteErrorPath = groupId
+    ? `/klubber/${groupId}/cup/${id}/slett?error=delete_failed`
+    : `/admin/cup/${id}/slett?error=delete_failed`;
 
-  // FK på games.tournament_id er ON DELETE SET NULL — historiske matches
-  // blir frittstående spill, ikke slettet.
+  // #1441 (owner-QA finding A): matcher som aldri egentlig ble spilt (draft/
+  // scheduled, eller active uten en eneste score-rad) er cup-genererings-støy
+  // — sletter man cupen skal de bli med i stedet for å strande på spillernes
+  // hjemmeskjerm. Avledede matcher trenger ingen egen sletting her: FK-en
+  // `source_game_id … on delete cascade` (migrasjon 0151) tar dem automatisk
+  // når verten deres slettes under.
+  const plan = await planTournamentGameDeletion(id);
+  if (plan.hostIdsToDelete.length > 0) {
+    try {
+      expectAffected(
+        await supabase
+          .from('games')
+          .delete()
+          .in('id', plan.hostIdsToDelete)
+          .select('id'),
+        'deleteTournament neverPlayedGames',
+      );
+    } catch (err) {
+      console.error('[cup] deleteTournament neverPlayedGames failed', { id, err });
+      redirect(deleteErrorPath);
+    }
+  }
+
+  // FK på games.tournament_id er ON DELETE SET NULL — de GJENVÆRENDE matchene
+  // (reell spilling, eller status='finished') blir frittstående spill, ikke
+  // slettet. Aldri-spilte matcher er allerede fjernet av batchen over.
   const { error } = await supabase.from('tournaments').delete().eq('id', id);
   if (error) {
     console.error('[cup] deleteTournament failed', { id, error });
-    redirect(
-      groupId
-        ? `/klubber/${groupId}/cup/${id}/slett?error=delete_failed`
-        : `/admin/cup/${id}/slett?error=delete_failed`,
-    );
+    redirect(deleteErrorPath);
   }
 
   revalidateTag(`tournament-${id}`, 'max');

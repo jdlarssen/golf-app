@@ -10,6 +10,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { deleteTournament } from '@/lib/cup/actions';
+import { planTournamentGameDeletion } from '@/lib/cup/tournamentGameDeletion';
 
 export type CupDeleteVariant = 'admin' | 'club';
 
@@ -45,10 +46,12 @@ export async function CupDeleteConfirm({
 
   if (!cup) notFound();
 
-  const { count: matchCount } = await supabase
-    .from('games')
-    .select('id', { head: true, count: 'exact' })
-    .eq('tournament_id', tournamentId);
+  // #1441 (owner-QA finding A): forhåndsviser nøyaktig samme regel som
+  // `deleteTournament` utfører — én kilde til sannhet delt mellom preview og
+  // handling (planTournamentGameDeletion).
+  const plan = await planTournamentGameDeletion(tournamentId);
+  const toDeleteCount = plan.hostIdsToDelete.length + plan.derivedIdsRidingAlong.length;
+  const toKeepCount = plan.totalGames - toDeleteCount;
 
   const isClub = variant === 'club';
   const groupId = cup.group_id;
@@ -65,7 +68,10 @@ export async function CupDeleteConfirm({
 
   const errorMessage = errorCode === 'delete_failed' ? t('delete.errors.delete_failed') : undefined;
   const warningMap: Record<'draft' | 'active' | 'finished', string | null> = {
-    draft: null,
+    // #1441: en draft-cup har ALLTID kun aldri-spilte matcher (status
+    // 'scheduled' inntil `startTournament`), så draft-varselet er nå
+    // meningsfullt — sletting tar dem med for godt.
+    draft: t('delete.warnings.draft'),
     active: t('delete.warnings.active'),
     finished: t('delete.warnings.finished'),
   };
@@ -117,9 +123,14 @@ export async function CupDeleteConfirm({
           <li>{t('delete.cupEntry', { name: cup.name })}</li>
           <li>{t('delete.rosterEntry')}</li>
         </ul>
-        {(matchCount ?? 0) > 0 && (
+        {toDeleteCount > 0 && (
           <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-            {t('delete.matchesNote', { count: matchCount ?? 0 })}
+            {t('delete.neverPlayedNote', { count: toDeleteCount })}
+          </p>
+        )}
+        {toKeepCount > 0 && (
+          <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
+            {t('delete.matchesNote', { count: toKeepCount })}
           </p>
         )}
         <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
