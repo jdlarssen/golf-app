@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
 import type { WizardPlayer, WizardCourse } from './GenerateMatches';
@@ -12,6 +12,13 @@ import type { WizardPlayer, WizardCourse } from './GenerateMatches';
 vi.mock('./actions', () => ({
   createCupMatchesFromPlan: vi.fn(async () => ({ error: 'insert_failed' })),
 }));
+
+// jsdom har en ekte window.localStorage — samme mønster som
+// lib/theme/themePreference.test.ts, ingen egen mock trengs. Rydder mellom
+// tester siden lagringen ellers deles på tvers av `it`-blokker i samme fil.
+afterEach(() => {
+  window.localStorage.clear();
+});
 
 const PLAYERS: WizardPlayer[] = [
   { id: 'p1', displayName: 'Kari Nordmann', hcpIndex: 12.0 },
@@ -214,5 +221,68 @@ describe('GenerateMatchesWizard', () => {
     fireEvent.click(toTeam2[2]);
     fireEvent.click(toTeam2[3]);
     expect(screen.getByRole('button', { name: /neste/i })).not.toBeDisabled();
+  });
+
+  it('lagrer bane/tee/preset til localStorage og gjenoppretter dem ved retur til cupen (#1441, F3g)', () => {
+    const first = render(
+      <GenerateMatchesWizard
+        tournamentId="t-1"
+        team1Name="Ørnen"
+        team2Name="Falken"
+        players={PLAYERS}
+        courses={COURSES}
+      />,
+    );
+    expect(screen.queryByText('Valgene dine fra sist er hentet frem.')).not.toBeInTheDocument();
+
+    // Fordel spillerne og fyll ut steg 2 + 3 (splittet-cup-dag + egen
+    // best-ball-andel) — «setter opp cupen» før roster er ferdig fordelt.
+    const toTeam1 = screen.getAllByRole('button', { name: 'Ørnen' });
+    fireEvent.click(toTeam1[0]);
+    fireEvent.click(toTeam1[1]);
+    const toTeam2 = screen.getAllByRole('button', { name: 'Falken' });
+    fireEvent.click(toTeam2[2]);
+    fireEvent.click(toTeam2[3]);
+    fireEvent.click(screen.getByRole('button', { name: /neste/i }));
+    fireEvent.change(screen.getByLabelText(/velg bane/i), { target: { value: 'course-1' } });
+    fireEvent.change(screen.getByLabelText(/velg tee/i), { target: { value: 'tee-1' } });
+    fireEvent.click(screen.getByRole('button', { name: /neste/i }));
+    fireEvent.click(screen.getByTestId('cup-wizard-preset-splittet-cup-dag'));
+    fireEvent.change(screen.getByLabelText(/handicap-andel best ball/i), {
+      target: { value: '70' },
+    });
+
+    const saved = JSON.parse(window.localStorage.getItem('cup-wizard-draft-t-1') ?? '{}');
+    expect(saved.courseId).toBe('course-1');
+    expect(saved.teeBoxId).toBe('tee-1');
+    expect(saved.presetId).toBe('splittet-cup-dag');
+    expect(saved.bestBallAllowancePct).toBe(70);
+
+    // Organisatoren forlater og kommer tilbake til den samme cupen — roster
+    // (steg 1) er BEVISST ikke gjenopprettet (live data hver gang), men
+    // valgene fra steg 2+3 er tilbake med ett, pluss hintet som sier fra.
+    first.unmount();
+    render(
+      <GenerateMatchesWizard
+        tournamentId="t-1"
+        team1Name="Ørnen"
+        team2Name="Falken"
+        players={PLAYERS}
+        courses={COURSES}
+      />,
+    );
+    expect(screen.getByText('Valgene dine fra sist er hentet frem.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Ørnen' })[0]).not.toHaveClass('bg-primary');
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ørnen' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ørnen' })[1]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Falken' })[2]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Falken' })[3]);
+    fireEvent.click(screen.getByRole('button', { name: /neste/i }));
+    expect(screen.getByLabelText(/velg bane/i)).toHaveValue('course-1');
+    expect(screen.getByLabelText(/velg tee/i)).toHaveValue('tee-1');
+    fireEvent.click(screen.getByRole('button', { name: /neste/i }));
+    expect(screen.getByTestId('cup-wizard-preset-splittet-cup-dag')).toBeChecked();
+    expect(screen.getByLabelText(/handicap-andel best ball/i)).toHaveValue(70);
   });
 });
