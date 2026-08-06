@@ -154,7 +154,7 @@ export default async function LoginPage({
         {inviteCard}
         <Card>
           {errorMessage && (
-            <div role="alert" className="mb-4">
+            <div role="alert" data-testid={`login-error-${errorCode}`} className="mb-4">
               <Banner tone="error">{errorMessage}</Banner>
             </div>
           )}
