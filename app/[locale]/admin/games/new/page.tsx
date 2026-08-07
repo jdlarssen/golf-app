@@ -18,7 +18,6 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
 import {
   getFormatsForIntent,
-  getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { getFriendConnectionIds } from '@/lib/friends/getFriendConnectionIds';
@@ -294,23 +293,20 @@ async function GameFormBody({
   initialIntent: Intent | undefined;
   defaultGroupId: string | undefined;
 }) {
-  // Forhåndshent format-katalogen for alle ikke-cup-intents + cup-eligible
-  // listen så client-wizard kan switche intent uten ekstra fetch. Parallell
-  // henting + unstable_cache i F1-helperen gjør dette billig (4 DB-queries
-  // sum, alle tag-cachet 24h).
+  // Forhåndshent format-katalogen for alle ikke-cup-intents så client-wizard
+  // kan switche intent uten ekstra fetch. Parallell henting + unstable_cache i
+  // F1-helperen gjør dette billig (alle tag-cachet 24h).
   const userId = await getProxyVerifiedUserId();
 
   const [
     kompisFormats,
     klubbFormats,
     soloFormats,
-    cupEligibleFormats,
     formatGuide,
   ] = await Promise.all([
     getFormatsForIntent('kompis'),
     getFormatsForIntent('klubb'),
     getFormatsForIntent('solo'),
-    getCupEligibleFormats(),
     getFormatGuideEntries(),
   ]);
 
@@ -356,7 +352,6 @@ async function GameFormBody({
         klubb: klubbFormats,
         solo: soloFormats,
       }}
-      cupEligibleFormats={cupEligibleFormats}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
       friendPlayerIds={friendPlayerIds}

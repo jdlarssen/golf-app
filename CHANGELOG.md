@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.224 · Cup-oppsettet i tre rom</strong></summary>
+
+[#1472](https://github.com/jdlarssen/golf-app/issues/1472) — Å sette opp en cup er nå delt i tre: du setter bane og format ett sted, melder på spillere et annet, og fordeler lagene til slutt når du genererer matchene.
+
+↳ /admin/cup · «Åpne cupene»
+</details>
+
+<details>
 <summary><strong>1.220 · Splittet cup-dag: én runde, én levering</strong></summary>
 
 [#1466](https://github.com/jdlarssen/golf-app/issues/1466) — På en splittet cup-dag går du nå rett fra hull 9 til hull 10, og hull-stripa viser alle 18 hullene som ett vanlig scorekort. Du leverer bare én gang — på hull 18 — så begge delspillene blir levert samtidig.

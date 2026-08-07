@@ -1,16 +1,13 @@
 'use client';
 
-import { startTransition, useActionState, useState } from 'react';
+import { startTransition, useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
-import type { CupEligibleFormat } from '@/lib/formats/getFormatsForIntent';
-import { formatIconFor } from '@/lib/formats/icons';
 import { createTournamentDraft, type CupActionError } from '@/lib/cup/actions';
 
 type Props = {
-  cupEligibleFormats: CupEligibleFormat[];
   // #524: når satt rendres formen klubb-bevisst — et skjult group_id-felt binder
   // cupen til klubben, og en banner forklarer at bare medlemmer kan delta. Tom
   // (default) = frittstående cup, uendret admin-flyt.
@@ -24,22 +21,17 @@ type Props = {
  * (tournament-rad). Felt-keys speiler `createTournamentDraft` så vi gjenbruker
  * eksisterende server-action uten endring der.
  *
- * Multi-select av tillatte match-formats persisteres ikke i F2 — kolonnen
- * `tournaments.allowed_match_formats` lander i et follow-up issue. UI-en er
- * med fordi det er en del av F2 kontrakt-en (signalisere intent + sette
- * forventninger), men cup-detalj-sidens «+ Match»-knapper viser alle
- * cup-eligible formats inntil filtering legges på i Wave-2.
+ * Formen er ren opprettelse: navn + lag-navn + poeng-vekter. Bane, tee og
+ * format velges ETTER opprettelse, i Oppsett-rommet (#1472) — den gamle
+ * format-multiselecten (som aldri ble persistert) er fjernet herfra.
  */
 const INITIAL_STATE: CupActionError = { error: '' };
 
 export function CupSetup({
-  cupEligibleFormats,
   groupId,
   clubName,
 }: Props) {
   const t = useTranslations('wizard.cupSetup');
-  const tModes = useTranslations('modes');
-  const tContent = useTranslations('formatGuide');
   // #1397: feilmeldinger bor i `cup.create.errors.*` (ett hjem, jf. trap 4).
   const tErrors = useTranslations('cup.create');
 
@@ -61,45 +53,15 @@ export function CupSetup({
       ? tErrors(key)
       : tErrors('errors.unexpected', { code: state.error });
   })();
-  // Multi-select state — initialiserer med alle cup-eligible formats valgt
-  // (default-all) så admin ikke trenger å klikke for å bekrefte standard-
-  // oppsettet. Endring av valgene har ingen runtime-effekt i F2 (se docstring).
-  const [selectedFormats, setSelectedFormats] = useState<Set<string>>(
-    () => new Set(cupEligibleFormats.map((f) => f.slug)),
-  );
-
-  function toggleFormat(slug: string) {
-    setSelectedFormats((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) {
-        next.delete(slug);
-      } else {
-        next.add(slug);
-      }
-      return next;
-    });
-  }
-
-  if (cupEligibleFormats.length === 0) {
-    return (
-      <p
-        role="status"
-        className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted"
-      >
-        {t('noCupFormats')}
-      </p>
-    );
-  }
 
   return (
     <form
       action={formAction}
       // #1397 (staging-funn): React 19 auto-resetter formen når en
       // `action`-innsending fullfører — native reset tømmer de ukontrollerte
-      // feltene og drar checkboxene tilbake til defaultChecked, som er
-      // nøyaktig figuren denne fiksen skal fjerne. preventDefault + manuell
-      // dispatch i en transition hopper over auto-reset-en; `action`-attributtet
-      // står igjen som fallback før hydrering (da med reset, uunngåelig uten JS).
+      // feltene. preventDefault + manuell dispatch i en transition hopper over
+      // auto-reset-en; `action`-attributtet står igjen som fallback før
+      // hydrering (da med reset, uunngåelig uten JS).
       onSubmit={(e) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
@@ -178,62 +140,6 @@ export function CupSetup({
             placeholder="0,5"
           />
         </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-          {t('allowedFormatsLegend')}
-        </legend>
-        <p className="text-xs text-muted mb-3">
-          {t('allowedFormatsHint')}
-        </p>
-        <ul className="space-y-2">
-          {cupEligibleFormats.map((f) => {
-            const checked = selectedFormats.has(f.slug);
-            const id = `cup_format_${f.slug}`;
-            return (
-              <li key={f.slug}>
-                <label
-                  htmlFor={id}
-                  className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
-                    checked
-                      ? 'border-primary bg-primary-soft text-text'
-                      : 'border-border bg-surface text-text hover:bg-primary-soft/60'
-                  }`}
-                >
-                  <input
-                    id={id}
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleFormat(f.slug)}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  <span
-                    className={`flex h-6 w-6 items-center justify-center ${
-                      checked ? 'text-primary' : 'text-muted'
-                    }`}
-                  >
-                    {formatIconFor(f.icon_key, 22)}
-                  </span>
-                  <span className="flex-1">
-                    <span className="block font-serif text-sm text-text">
-                      {tModes(f.slug as Parameters<typeof tModes>[0])}
-                    </span>
-                    <span className="block text-xs text-muted">
-                      {
-                        tContent.raw(
-                          `content.${f.slug}.shortDescription` as Parameters<
-                            typeof tContent.raw
-                          >[0],
-                        ) as string
-                      }
-                    </span>
-                  </span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
       </fieldset>
 
       {errorMessage && <Banner tone="error" testId="cup-create-error">{errorMessage}</Banner>}

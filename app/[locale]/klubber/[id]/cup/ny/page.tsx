@@ -5,7 +5,6 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdmin } from '@/lib/admin/auth';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
-import { getCupEligibleFormats } from '@/lib/formats/getFormatsForIntent';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -39,8 +38,6 @@ export default async function NewKlubbCupPage({
     redirect({ href: `/klubber/${id}`, locale: await getLocale() });
   }
 
-  const cupEligibleFormats = await getCupEligibleFormats();
-
   return (
     <AppShell>
       <TopBar backHref={`/klubber/${id}`} kicker={detail.club.name} />
@@ -51,7 +48,6 @@ export default async function NewKlubbCupPage({
       />
 
       <CupSetup
-        cupEligibleFormats={cupEligibleFormats}
         groupId={id}
         clubName={detail.club.name}
       />
