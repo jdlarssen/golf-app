@@ -7,28 +7,17 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
-import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
-import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
-import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
-import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
-import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
-import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
+import { endGameCore } from '@/lib/games/endGameCore';
 import {
   syncDerivedGamesStatus,
-  finishDerivedGames,
   startDerivedGames,
 } from '@/lib/games/syncDerivedGamesStatus';
-import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
-import type { HoleSegment } from '@/lib/scoring';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
-import {
-  notifyPlayersGameFinished,
-  notifyPlayersGameStarted,
-} from '@/lib/notifications/events';
+import { notifyPlayersGameStarted } from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
 
 /**
@@ -278,182 +267,27 @@ export async function endGame(gameId: string, allowMissing = false) {
   // the player game-home, not the admin shell.
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, gameId);
-  const user = { id: role.userId };
   const actorName = role.name?.trim() || (role.isAdmin ? 'Admin' : 'Arrangør');
   const detailPath = role.isAdmin
     ? `/admin/games/${gameId}`
     : `/games/${gameId}`;
 
-  // Verify game is active. Inkluderer game_mode + mode_config + course_id
-  // slik at vi kan bygge mode-aware completion-mail uten å re-fetche game.
-  // #1441: hole_segment også — persistResultSummaries trenger den for at et
-  // segment-HOST-spills (front9/back9) eget resultatsammendrag skal regnes
-  // over de riktige 9 hullene, ikke alle 18.
-  const { data: game } = await supabase
-    .from('games')
-    .select(
-      'id, name, status, require_peer_approval, course_id, game_mode, mode_config, hole_segment',
-    )
-    .eq('id', gameId)
-    .single<{
-      id: string;
-      name: string;
-      status: GameStatus;
-      require_peer_approval: boolean;
-      course_id: string;
-      game_mode: GameMode;
-      mode_config: GameModeConfig;
-      hole_segment: HoleSegment;
-    }>();
-  if (!game || game.status !== 'active') {
-    redirect({ href: `${detailPath}?error=not_active`, locale });
-  }
-
-  // Verify every player has submitted; if require_peer_approval, every
-  // submission must also be approved. Also collect user_id + email + name
-  // her so we can fire både in-app `game_finished`-varsler (user_id) og
-  // «Resultatet er klart»-mail (email/name) etter status-flippen uten
-  // ekstra DB-runde.
-  const { data: players } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(email, name)',
-    )
-    .eq('game_id', gameId)
-    .returns<
-      {
-        user_id: string;
-        submitted_at: string | null;
-        approved_at: string | null;
-        withdrawn_at: string | null;
-        users: { email: string | null; name: string | null } | null;
-      }[]
-    >();
-
-  if (!players || players.length === 0) {
-    redirect({ href: `${detailPath}?error=no_players`, locale });
-  }
-  for (const p of players!) {
-    // Withdrawn (WD, #386): out of the ranking entirely — never counts as a
-    // missing submission or a pending approval, so they never block the end.
-    if (p.withdrawn_at) continue;
-    if (!p.submitted_at) {
-      // No-show: block by default, but let «avslutt likevel» skip past them.
-      // submitted_at stays null — they show as «ikke levert», never a false
-      // levering; their registered scores still count in the leaderboard.
-      if (!allowMissing) {
-        redirect({ href: `${detailPath}?error=not_all_submitted`, locale });
-      }
-      continue;
-    }
-    if (game!.require_peer_approval && !p.approved_at) {
-      redirect({ href: `${detailPath}?error=not_all_approved`, locale });
-    }
-  }
-
-  const endedAt = new Date().toISOString();
-  const { error } = await supabase
-    .from('games')
-    .update({ status: 'finished', ended_at: endedAt })
-    .eq('id', gameId);
-
-  if (error) {
-    console.error('[endGame] finish status update failed', error);
-    redirect({ href: `${detailPath}?error=db_finish`, locale });
-  }
-
-  // #1441 (D3): fan the finish out to every derived game (back9 singles
-  // etc.) in the same operation, including their own result summaries +
-  // score differentials. Best-effort — 0 derived games (the vast majority
-  // of finishes) is a cheap no-op; a real failure is logged but never
-  // blocks the host's own finish, which has already committed above.
-  await finishDerivedGames(supabase, gameId, endedAt);
-
-  // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
-  // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).
-  // #1441: hole_segment sendes med slik at et segment-HOST-spill (front9/
-  // back9) får sitt eget resultat regnet over sine 9 hull, ikke alle 18.
-  await persistResultSummaries({
-    id: gameId,
-    game_mode: game!.game_mode,
-    mode_config: game!.mode_config,
-    course_id: game!.course_id,
-    hole_segment: game!.hole_segment,
-  });
-
-  // #941: fryser WHS score-differensial per spiller. Best-effort — se
-  // persistScoreDifferentials for fullstendig begrunnelse.
-  await persistScoreDifferentials(gameId);
-
-  // #947: best-effort bragd-varsel til spillere som låste opp et øyeblikk
-  // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
-  await notifyAchievementUnlocks(gameId);
-
-  // #1008: best-effort AI-rundereferat («Pressetribunen»). Må kjøre FØR
-  // mail-blasten lenger ned slik at teksten kan bli med i «Resultatet er
-  // klart»-mailen — feiler den (manglende nøkkel, tynn data, SDK-feil)
-  // fortsetter avslutningen som i dag, bare uten referat.
-  const { report: roundReport } = await generateAndPersistRoundReport(gameId);
-
-  await logAdminEvent({
-    actorId: user.id,
-    actorName,
-    eventType: 'game.finished',
-    targetType: 'game',
-    targetId: gameId,
-    payload: { gameName: game!.name },
-  });
-
-  // Best-effort in-app `game_finished`-varsel til hver deltaker. Loopen fyres
-  // parallelt med mail-blasten lenger ned. Phase 4-gating: aktive spillere
-  // (last_seen_at < 5 min) får kun in-app; off-app-spillere får mail som
-  // backup. Notify-feil → ikke send mail (samme rasjonale som inni notify()).
-  const sendMailByUserId = await notifyPlayersGameFinished(
-    players!,
-    { id: gameId, name: game!.name },
-    'endGame',
+  // #1501: the finish pipeline lives in `endGameCore` now (so the cup one-tap
+  // finish can drive the real per-match finish). This wrapper keeps its exact
+  // prior behaviour: same request-scoped client (creator-UPDATE RLS), same
+  // per-game reveal notifications (mail + in-app), same redirects — the core
+  // returns a result instead of redirecting, and this maps it back 1:1.
+  const result = await endGameCore(
+    supabase,
+    gameId,
+    { id: role.userId, name: actorName },
+    { allowMissing },
   );
 
-  // Best-effort: send "Resultatet er klart"-mail kun til off-app-spillere.
-  // Failures er loggført men aborter aldri actionen — leaderboardet er
-  // tilgjengelig in-app uansett, og admin kan re-trigge ved behov (ingen
-  // resend-flyt finnes ennå, men DB er source of truth).
-  //
-  // Mode-aware payload: for stableford regner helperen ut leaderboard og
-  // legger per-spiller rank/poeng på hver mottaker; for best-ball returnerer
-  // den kun userId/email/name (mailen bruker da default nøytral copy).
-  const recipients = await buildGameFinishedRecipients(supabase, gameId, {
-    course_id: game!.course_id,
-    game_mode: game!.game_mode,
-    mode_config: game!.mode_config,
-  });
-  const mailRecipients = recipients.filter(
-    (r) => sendMailByUserId.get(r.userId) === true,
-  );
-  if (mailRecipients.length > 0) {
-    const results = await Promise.allSettled(
-      mailRecipients.map((r) =>
-        sendGameFinishedNotification({
-          to: r.email,
-          playerFirstName: firstName(r.name),
-          gameName: game!.name,
-          gameId,
-          mode: r.mode,
-          locale: r.locale,
-          roundReport,
-        }),
-      ),
-    );
-    for (const r of results) {
-      if (r.status === 'rejected') {
-        console.error('[endGame] game-finished mail failed', r.reason);
-      }
-    }
+  if (!result.ok) {
+    redirect({ href: `${detailPath}?error=${result.reason}`, locale });
   }
-
-  revalidateTag(`game-${gameId}`, 'max');
-  revalidatePath(`/admin/games/${gameId}`);
-  revalidatePath(`/games/${gameId}`);
+  // endGameCore already revalidated `game-${gameId}` + the game paths.
   redirect({ href: `${detailPath}?status=finished`, locale });
 }
 
