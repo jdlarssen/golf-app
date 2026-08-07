@@ -158,9 +158,16 @@ admin view, leaderboards and mail are all correct for free.
   one definition + three call sites, zero inline copies.
   **Evidence:** main-chat grep: definition `singlesMatchplay.ts:152`, call sites
   `singlesMatchplay.ts:366`, `foursomesMatchplay.ts:261`, `fourballMatchplay.ts:213`.
-- [ ] C6 (staging, user-visible): seeded early-decided greensome cup match on
+- [x] C6 (staging, user-visible): seeded early-decided greensome cup match on
   torny-staging shows «5&4 til <lag>» on the cup page (and admin cup view). Evidence
   posted on the PR per staging-verify + `staging-verified` label before merge.
+  **Evidence (2026-08-07):** no seeding needed — the #1441 generalprøve cup «RyderTest2»
+  already held the exact repro (Greensome 1, persisted margin '5up', 9/9 holes). Cup
+  result page on the PR branch shows «5&4 til Nord»; last-hole-decided Greensome 3
+  correctly keeps «1up til Sør»; tied Greensome 2 keeps «Delt (AS)». DB still holds
+  '5up' (compute-on-read proven, zero writes). Post-#1472 admin cup view renders no
+  notation itself — it links to the verified result page. Full oracle table in the PR
+  comment on #1510.
 
 ## Gates
 
