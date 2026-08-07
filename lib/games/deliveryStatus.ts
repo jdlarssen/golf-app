@@ -67,3 +67,43 @@ export function classifyDeliveryStatus(opts: {
 export function isDeliveryReminderTarget(status: DeliveryStatus): boolean {
   return status === 'ready_not_delivered';
 }
+
+/**
+ * Purre-mål-utvelgelse for admin-purringen (#376/#1466). En spiller er et mål
+ * når hen er ferdig (`holesFilled >= expectedHoles`), ikke levert, ikke trukket
+ * og ikke gjest — OG (#1466) ikke har et ulevert back9-søsken. På en splittet
+ * cup-dag purres front9-spillere med ulevert back9-halvdel via back9-spillet i
+ * stedet, siden én levering dekker hele runden; her ekskluderes de.
+ *
+ * Ren funksjon slik at mål-utvelgelsen kan enhetstestes uten å mocke
+ * requireAdmin/redirect. Callers bygger `filledByUser` fra scores og
+ * `undeliveredSiblingUserIds` fra ett batch-oppslag (aldri per-spiller-loop).
+ */
+export function selectDeliveryReminderTargets<
+  T extends {
+    user_id: string;
+    submitted_at: string | null;
+    withdrawn_at: string | null;
+    users: { is_guest: boolean } | null;
+  },
+>(opts: {
+  players: readonly T[];
+  filledByUser: ReadonlyMap<string, number>;
+  expectedHoles: number;
+  /**
+   * #1466: brukere med et ulevert back9-søsken — ekskluderes (de purres via
+   * back9-spillet). Tom/utelatt for vanlige spill og back9-spill.
+   */
+  undeliveredSiblingUserIds?: ReadonlySet<string>;
+}): T[] {
+  const { players, filledByUser, expectedHoles, undeliveredSiblingUserIds } =
+    opts;
+  return players.filter(
+    (p) =>
+      !p.submitted_at &&
+      !p.withdrawn_at &&
+      !p.users?.is_guest &&
+      (filledByUser.get(p.user_id) ?? 0) >= expectedHoles &&
+      !(undeliveredSiblingUserIds?.has(p.user_id) ?? false),
+  );
+}

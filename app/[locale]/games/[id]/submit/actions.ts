@@ -10,6 +10,7 @@ import { sendScorecardSubmittedNotification } from '@/lib/mail/scorecardSubmitte
 import { firstName } from '@/lib/firstName';
 import { notify } from '@/lib/notifications/notify';
 import { peersForApproval } from '@/lib/games/flightScope';
+import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import {
   isScrambleFamily,
   isAlternateShotMatchplay,
@@ -45,15 +46,23 @@ export async function submitScorecard(gameId: string) {
   // we can use it as the mail subject + body without a re-fetch.
   // `require_peer_approval` brukes nedenfor til å gate peer-varsel-loopen.
   // `game_mode` trengs for peersForApproval (#543).
+  // #1466: `hole_segment` + `tournament_id` + `source_game_id` drive the
+  // one-delivery cascade below — a back9 split-cup host delivers its front9
+  // sibling in the same call.
   const { data: game } = await supabase
     .from('games')
-    .select('name, status, require_peer_approval, game_mode')
+    .select(
+      'name, status, require_peer_approval, game_mode, hole_segment, tournament_id, source_game_id',
+    )
     .eq('id', gameId)
     .single<{
       name: string;
       status: 'draft' | 'scheduled' | 'active' | 'finished';
       require_peer_approval: boolean;
       game_mode: string;
+      hole_segment: 'full' | 'front9' | 'back9';
+      tournament_id: string | null;
+      source_game_id: string | null;
     }>();
 
   if (!game || game.status !== 'active') {
@@ -130,6 +139,82 @@ export async function submitScorecard(gameId: string) {
     revalidateTag(`game-${gameId}`, 'max');
     revalidatePath(`/games/${gameId}`);
     redirect({ href: `/games/${gameId}?status=submitted` as string, locale });
+  }
+
+  // #1466: one delivery covers the whole split cup round. A back9 host's
+  // submit ALSO marks the submitter's front9 sibling delivered, so the player
+  // never delivers twice. Direction is back9→front9 only (a manual front9
+  // deliver via the escape hatch never cascades). Runs AFTER the primary
+  // update hit >0 rows and BEFORE the side-effects, so notifications fire once
+  // for the back9 host and the front9 marking stays silent (the admin sees
+  // both cards in the approve queue regardless).
+  if (
+    game!.hole_segment === 'back9' &&
+    game!.tournament_id != null &&
+    game!.source_game_id == null
+  ) {
+    const updatedUserIds = (updated ?? []).map((r) => r.user_id);
+    try {
+      const sibling = await findSegmentSibling(user.id, {
+        holeSegment: 'back9',
+        sourceGameId: null,
+        tournamentId: game!.tournament_id,
+      });
+      // Only cascade to an undelivered sibling. `mySubmittedAt != null` means
+      // it is already delivered (a teammate's cascade won a race, or the
+      // front9 was delivered manually) → nothing to do.
+      if (sibling && sibling.mySubmittedAt == null) {
+        // Team-wide when the front9 sibling is a one-ball team format
+        // (greensome IS — #1453); own-row otherwise. Same guarded, admin-client
+        // form as the primary update above.
+        const siblingTeamSubmit =
+          (isScrambleFamily(sibling.gameMode) ||
+            isAlternateShotMatchplay(sibling.gameMode)) &&
+          sibling.myTeamNumber != null;
+        const { error: siblingError } = siblingTeamSubmit
+          ? await getAdminClient()
+              .from('game_players')
+              .update(submitPatch)
+              .eq('game_id', sibling.gameId)
+              .eq('team_number', sibling.myTeamNumber!)
+              .is('withdrawn_at', null)
+              .is('submitted_at', null)
+              .select('user_id')
+          : await getAdminClient()
+              .from('game_players')
+              .update(submitPatch)
+              .eq('game_id', sibling.gameId)
+              .eq('user_id', user.id)
+              .is('submitted_at', null)
+              .select('user_id');
+        // 0 rows = the sibling was already delivered between the lookup and the
+        // update (race) → tolerated no-op, continue. Any DB error is handled in
+        // the catch below (compensated).
+        if (siblingError) throw siblingError;
+
+        // Both games are now delivered — revalidate the front9 host too.
+        revalidateTag(`game-${sibling.gameId}`, 'max');
+        revalidatePath(`/games/${sibling.gameId}`);
+      }
+    } catch (err) {
+      // #1466 trap #5: a half-delivered pair (back9 marked, front9 not) hides
+      // the front9 deliver-CTA in broModus — a blind gate. Revert the back9
+      // rows just set and fail loudly rather than leave the pair half-done.
+      // (A previously-cleared rejection_reason on the reverted rows is an
+      // accepted cosmetic loss.)
+      console.error(
+        '[submitScorecard] front9 sibling cascade failed — reverting back9',
+        err,
+      );
+      if (updatedUserIds.length > 0) {
+        await getAdminClient()
+          .from('game_players')
+          .update({ submitted_at: null })
+          .eq('game_id', gameId)
+          .in('user_id', updatedUserIds);
+      }
+      redirect({ href: `/games/${gameId}/submit?error=db` as string, locale });
+    }
   }
 
   // Best-effort admin notification + peer in-app varsel. Tre queries fyres

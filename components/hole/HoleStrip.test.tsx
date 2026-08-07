@@ -65,4 +65,33 @@ describe('HoleStrip', () => {
       expect(screen.queryByText(String(n))).not.toBeInTheDocument();
     }
   });
+
+  it('#1466: a front9 game with a sibling renders the full 1-18 union, sibling holes link cross-game', () => {
+    const front9 = Array.from({ length: 9 }, (_, i) => i + 1);
+    const back9 = Array.from({ length: 9 }, (_, i) => 10 + i);
+    const { container } = render(
+      <HoleStrip
+        gameId="front"
+        currentHole={3}
+        holes={front9}
+        sibling={{ gameId: 'back', holes: back9 }}
+      />,
+    );
+    const links = container.querySelectorAll('a');
+    // Union sorted ascending: 18 cells, one per hole 1..18.
+    expect(links.length).toBe(18);
+    for (let n = 1; n <= 18; n++) {
+      expect(screen.getByText(String(n))).toBeInTheDocument();
+    }
+    // Own holes (1-9) link to this game; sibling holes (10-18) link across.
+    expect(links[0].getAttribute('href')).toBe('/games/front/holes/1');
+    expect(links[8].getAttribute('href')).toBe('/games/front/holes/9');
+    expect(links[9].getAttribute('href')).toBe('/games/back/holes/10');
+    expect(links[17].getAttribute('href')).toBe('/games/back/holes/18');
+    // Positional completed semantics kept: hole 1-2 completed, 10-18 future.
+    const hole1Chip = links[0].querySelector('span') as HTMLElement;
+    expect(hole1Chip.style.background).toBe('var(--hole-completed-bg)');
+    const hole10Chip = links[9].querySelector('span') as HTMLElement;
+    expect(hole10Chip.style.background).toBe('transparent');
+  });
 });
