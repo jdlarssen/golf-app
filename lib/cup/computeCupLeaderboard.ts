@@ -40,6 +40,20 @@ export type CupMatchInput = {
     | 'best_ball';
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   result: { winnerSide: 1 | 2 | 'tied'; formatted: string } | null;
+  /**
+   * Host-kamp (`source_game_id IS NULL`) vs. avledet kamp (#1441, splittet
+   * cup-dag). Optional for pre-#1501 call-sites/tester; `getCupSnapshot` setter
+   * den alltid. `finishTournament` bruker den til å ende KUN host-kamper (de
+   * avledede følger via `finishDerivedGames` i pipelinen).
+   */
+  sourceGameId?: string | null;
+  /**
+   * «Scorekort levert» (#1502): true når alle ikke-trukne spillere i kampen har
+   * levert (withdrawn ekskludert). Driver mellomtilstanden på matchkortet
+   * (`cupMatchStatusKey`) OG leverings-gaten i `finishTournament`. Optional for
+   * pre-#1502 call-sites/tester; `getCupSnapshot` setter den alltid.
+   */
+  allScorecardsSubmitted?: boolean;
 };
 
 /**

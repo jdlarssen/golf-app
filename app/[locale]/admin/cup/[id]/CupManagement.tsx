@@ -14,6 +14,11 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
+import { unregisteredSideAwards } from '@/lib/cup/sideAwardsRegistered';
+import {
+  cupMatchStatusKey,
+  CUP_MATCH_STATUS_MESSAGE_KEY,
+} from '@/lib/cup/cupMatchStatusLabel';
 import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
 
 export type CupManagementVariant = 'admin' | 'club';
@@ -226,9 +231,42 @@ export async function CupManagement({
   const statusLabel = t(`status.${tournament.status}`);
 
   const canStart = tournament.status === 'draft' && leaderboard.matches.length >= 2;
-  const canFinish = tournament.status === 'active';
   const showStartHint =
     tournament.status === 'draft' && leaderboard.matches.length < 2;
+
+  // #1501: sidepoeng-gate — «Avslutt cupen» disables til alle konfigurerte
+  // sidepoeng er registrert. Samme regel serveren håndhever (ett hjem via
+  // `unregisteredSideAwards`), så UI aldri lover noe serveren avviser.
+  const unregisteredAwards = unregisteredSideAwards(snapshot.sideAwards);
+  const sideAwardsRegistered = unregisteredAwards.length === 0;
+  const canFinish = tournament.status === 'active' && sideAwardsRegistered;
+
+  const sideAwardKindLabel = (kind: 'ctp' | 'ld' | 'gir'): string =>
+    kind === 'ctp'
+      ? t('sideAwards.kindCtp')
+      : kind === 'ld'
+        ? t('sideAwards.kindLd')
+        : t('sideAwards.kindGir');
+  const missingAwardsList = unregisteredAwards
+    .map(
+      (a) =>
+        `${sideAwardKindLabel(a.kind)} (${t('sideAwards.holeShort', { n: a.holeNumber })})`,
+    )
+    .join(', ');
+
+  // #1501: host-kamper som fortsatt er aktive driver leverings-/feil-banneret.
+  // Avledede kamper følger verten (source_game_id !== null) og endes aldri
+  // eksplisitt, så de holdes utenfor listene.
+  const activeHostMatches = leaderboard.matches.filter(
+    (m) => (m.sourceGameId ?? null) === null && m.status === 'active',
+  );
+  const notSubmittedMatchesList = activeHostMatches
+    .filter((m) => !(m.allScorecardsSubmitted ?? false))
+    .map((m) => m.matchLabel ?? 'Match')
+    .join(', ');
+  const failedMatchesList = activeHostMatches
+    .map((m) => m.matchLabel ?? 'Match')
+    .join(', ');
 
   function preferredName(p: CupRosterPlayer): string {
     return p.nickname?.trim() || p.name?.trim() || t('manage.unknownPlayer');
@@ -423,13 +461,16 @@ export async function CupManagement({
           <ul className="space-y-2">
             {leaderboard.matches.map((m) => {
               // Resultater bor på resultatsiden (#1468) — her kun kampene og en
-              // nøytral status. Ferdig match viser «Spilt», ikke poeng.
-              const statusLabel =
-                m.status === 'finished'
-                  ? t('public.matchPlayed')
-                  : m.status === 'active'
-                    ? t('public.matchInProgress')
-                    : t('public.matchDraft');
+              // nøytral status. Ferdig match viser «Spilt», ikke poeng. #1502:
+              // delt status-label gir «Scorekort levert» når alt er levert.
+              const statusLabel = t(
+                CUP_MATCH_STATUS_MESSAGE_KEY[
+                  cupMatchStatusKey({
+                    status: m.status,
+                    allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
+                  })
+                ],
+              );
               const card = (
                 <Card>
                   <div className="flex items-start justify-between gap-3">
@@ -488,12 +529,59 @@ export async function CupManagement({
         )}
 
         {tournament.status === 'active' && (
-          <form action={finishTournament} data-testid="cup-finish-form">
-            <input type="hidden" name="id" value={tournament.id} />
-            <SubmitButton className="w-full" disabled={!canFinish} pendingLabel={t('manage.finishPending')}>
-              {t('manage.finishButton')}
-            </SubmitButton>
-          </form>
+          <>
+            {/* #1501: sidepoeng-gate — hint navngir hva som mangler; knappen
+                er disabled til alt er registrert. */}
+            {!sideAwardsRegistered && (
+              <Banner tone="info" testId="cup-finish-gate-hint">
+                {t('manage.finishSideAwardsHint', { awards: missingAwardsList })}
+              </Banner>
+            )}
+
+            {/* #1501: uleverte kort — stopp med kampliste + «Avslutt likevel».
+                Peer-godkjenning relaxes aldri; likevel-varianten kjører kun
+                allowMissing per kamp. */}
+            {errorCode === 'matches_not_submitted' && (
+              <div className="space-y-3">
+                <Banner tone="warning" testId="cup-finish-not-submitted">
+                  {t('manage.finishNotSubmitted', { matches: notSubmittedMatchesList })}
+                </Banner>
+                <form action={finishTournament} data-testid="cup-finish-anyway-form">
+                  <input type="hidden" name="id" value={tournament.id} />
+                  <input type="hidden" name="allow_missing" value="true" />
+                  <SubmitButton
+                    className="w-full"
+                    variant="secondary"
+                    disabled={!sideAwardsRegistered}
+                    data-testid="cup-finish-anyway"
+                    pendingLabel={t('manage.finishAnywayPending')}
+                  >
+                    {t('manage.finishAnywayButton')}
+                  </SubmitButton>
+                </form>
+              </div>
+            )}
+
+            {/* #1501: en kamp lot seg ikke avslutte — cupen står, re-trykk er
+                trygt. Banneret navngir de gjenværende aktive kampene. */}
+            {errorCode === 'match_finish_failed' && (
+              <Banner tone="error" testId="cup-finish-failed">
+                {t('manage.finishFailed', { matches: failedMatchesList })}
+              </Banner>
+            )}
+
+            <form action={finishTournament} data-testid="cup-finish-form">
+              <input type="hidden" name="id" value={tournament.id} />
+              <SubmitButton
+                className="w-full"
+                disabled={!canFinish}
+                data-testid="cup-finish-submit"
+                pendingLabel={t('manage.finishPending')}
+              >
+                {t('manage.finishButton')}
+              </SubmitButton>
+            </form>
+          </>
         )}
 
         <SmartLink

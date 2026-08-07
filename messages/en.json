@@ -4629,6 +4629,11 @@
       "startPending": "Starting…",
       "finishButton": "Finish cup",
       "finishPending": "Finishing…",
+      "finishSideAwardsHint": "Register all side points before you can finish the cup: {awards}",
+      "finishNotSubmitted": "Some matches are missing submitted scorecards: {matches}. You can finish the cup anyway — players who haven't submitted won't count in the result.",
+      "finishAnywayButton": "Finish anyway",
+      "finishAnywayPending": "Finishing…",
+      "finishFailed": "These matches could not be finished: {matches}. Try again — matches that already finished are kept.",
       "deleteLink": "Delete cup",
       "startHint": "You need at least 2 matches before you can start the cup.",
       "errors": {
@@ -4765,6 +4770,7 @@
       "matchInProgress": "In progress",
       "matchDraft": "Draft",
       "matchPlayed": "Played",
+      "matchScorecardsSubmitted": "Scorecards submitted",
       "resultsDoor": "View the results",
       "resultsPending": "The results appear once the cup finishes"
     },

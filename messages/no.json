@@ -4629,6 +4629,11 @@
       "startPending": "Starter …",
       "finishButton": "Avslutt cupen",
       "finishPending": "Avslutter …",
+      "finishSideAwardsHint": "Registrer alle sidepoeng før du kan avslutte cupen: {awards}",
+      "finishNotSubmitted": "Noen kamper mangler leverte scorekort: {matches}. Du kan avslutte cupen likevel — de som ikke har levert, teller ikke i resultatet.",
+      "finishAnywayButton": "Avslutt likevel",
+      "finishAnywayPending": "Avslutter …",
+      "finishFailed": "Disse kampene lot seg ikke avslutte: {matches}. Prøv igjen — kampene som allerede er avsluttet, står.",
       "deleteLink": "Slett cupen",
       "startHint": "Du må opprette minst 2 matcher før du kan starte cupen.",
       "errors": {
@@ -4765,6 +4770,7 @@
       "matchInProgress": "Pågår",
       "matchDraft": "Utkast",
       "matchPlayed": "Spilt",
+      "matchScorecardsSubmitted": "Scorekort levert",
       "resultsDoor": "Se resultatene",
       "resultsPending": "Resultatene kommer når cupen avsluttes"
     },

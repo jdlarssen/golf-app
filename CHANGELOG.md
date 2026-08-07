@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.227 · Avslutt cupen i ett trykk</strong></summary>
+
+[#1501](https://github.com/jdlarssen/golf-app/issues/1501) — «Avslutt cupen» avslutter nå alle kampene for deg i ett trykk og kårer vinneren, i stedet for at du må innom hver eneste kamp. Mangler noen scorekort, sier appen fra og lar deg avslutte likevel; og et matchkort viser «Scorekort levert» så du ser når en kamp er klar.
+
+↳ /admin/cup · «Åpne cupene»
+</details>
+
+<details>
 <summary><strong>1.226 · Cup-resultatene på egen side</strong></summary>
 
 [#1468](https://github.com/jdlarssen/golf-app/issues/1468) — Cup-siden viser nå bare kampene mens de spilles, og resultatene får en egen side som åpner når arrangøren avslutter cupen. Da slipper du å få fasiten servert før seremonien.
