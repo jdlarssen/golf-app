@@ -25,14 +25,27 @@ finnes (404) + finished (404). Samme synlighet som leaderboard-siden.
 
 ## Suksesskriterier (avkrysses KUN med evidens)
 
-- [ ] **K1.** Innlogget ikke-deltaker får 200 + `text/csv` med reelt innhold fra
+- [x] **K1.** Innlogget ikke-deltaker får 200 + `text/csv` med reelt innhold fra
   `/games/<id>/leaderboard/export` for en FERDIG best_ball-kamp. Evidens:
   staging-verifisering (klikk/fetch som ikke-deltaker) med respons-detaljer.
-- [ ] **K2.** Ikke-finished spill gir fortsatt 404 (`finishedOnly`), uinnlogget gir
+  → Playwright-driver 2026-08-07 mot lokal server + torny-staging: e2eplayer
+    (verifisert ikke-deltaker, 4 deltakere i kampen) fikk 200,
+    `text/csv; charset=utf-8`, attachment-filnavn, body «﻿Tørny - resultater…»
+    med lagrader. Bevis-kommentar på PR #1507.
+- [x] **K2.** Ikke-finished spill gir fortsatt 404 (`finishedOnly`), uinnlogget gir
   401. Evidens: kode-lesing (sjekkene består uendret) + staging-sjekk av 401/404-sti
   der det er praktisk.
-- [ ] **K3.** `is_admin`-querien er fjernet og ingen ubrukte imports står igjen.
+  → Aktivt spill `9df7b9e0…` ga 404 `{"error":"Eksport er bare tilgjengelig for
+    ferdigspilte spill"}` i samme driver-kjøring; `getProxyVerifiedUserId`-401-sjekken
+    er uendret i diffen.
+- [x] **K3.** `is_admin`-querien er fjernet og ingen ubrukte imports står igjen.
   Evidens: diff + `npm run lint` uten warnings for fila.
+  → Diff commit `1d406d50` (−20/+10, Promise.all → enkel getGameWithPlayers);
+    `npx eslint` på ruta = 0 funn; tsc/build/full vitest grønne; CI grønn på PR #1507.
+
+**Utfall:** PR #1507 rebase-merget `980f8c79` 2026-08-07; issue #1500 lukket med
+closing-kommentar. Oppfølging i samme PR: foreldreløs `noAccess`-nøkkel fjernet
+(commit `16ee8fa9`).
 
 ## Gates
 
