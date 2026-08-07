@@ -60,7 +60,11 @@ export async function sendCupFinishedNotification(
   const t = await getMailTranslator(locale);
 
   const subject = t('cupFinished.subject', { tournamentName });
-  const leaderboardUrl = mailUrl(locale, `/cup/${tournamentId}`);
+  // #1488 (K10): CTA lands on the locked results page, not the cup page. The
+  // mail already reveals the outcome (points + winner) in its body, and the cup
+  // page hides the totals (#1468) — so the button must go where the result
+  // actually lives.
+  const leaderboardUrl = mailUrl(locale, `/cup/${tournamentId}/resultater`);
   const salutation = playerFirstName
     ? t('cupFinished.salutationNamed', { name: playerFirstName })
     : t('cupFinished.salutationGeneric');
