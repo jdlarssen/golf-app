@@ -23,7 +23,8 @@ export function ghClient(token: string, repo: string) {
     });
     return { status: res.status, json: await res.json().catch(() => null) };
   }
-  // GraphQL for markPullRequestReadyForReview (av-draft før auto-merge, #1406).
+  // GraphQL — beholdes for GitHubClient-interfacet (mottakeren i discordActions
+  // bruker den til eier-gated av-draft; auto-merge-stien av-drafter ikke, #1516).
   async function graphql(
     query: string,
     variables: Record<string, unknown>,

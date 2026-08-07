@@ -143,6 +143,10 @@ async function main(): Promise<void> {
   const pr = prRes.json as PrPayload;
 
   if (pr.state !== 'open') return noCard(`PR #${n} ikke åpen (${pr.state})`);
+  // Draft = «økta jobber fortsatt» (#1516): ingen kort, ingen dedup-label, ingen merge —
+  // uansett trigger. Økta signaliserer ferdig med `gh pr ready`; ready_for_review-
+  // triggeren i workflowen tar det derfra.
+  if (pr.draft) return noCard(`PR #${n} er draft — økta jobber fortsatt`);
   if ((pr.labels ?? []).some((l) => l.name === CARD_LABEL)) return noCard(`PR #${n} allerede kortet`);
 
   const fetchCheckRuns = async (): Promise<CheckRun[] | null> => {
