@@ -26,8 +26,6 @@ import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptio
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type SearchParams = Promise<{
-  error?: string | string[];
-  emails?: string | string[];
   tournament_id?: string | string[];
   game_mode?: string | string[];
   // F2 foundation (#272): wizard step 1 leser dette og pre-velger intent.
@@ -78,20 +76,6 @@ export default async function NewGamePage({
   const sp = await searchParams;
   const t = await getTranslations({ locale, namespace: 'wizard' });
 
-  function buildErrorMessage(
-    errorCode: string | undefined,
-    emails: string | undefined,
-  ): string | undefined {
-    if (!errorCode) return undefined;
-    const key = `errors.${errorCode}` as Parameters<typeof t>[0];
-    // Unknown codes render no banner (mirrors the legacy map-lookup miss).
-    if (!t.has(key)) return undefined;
-    // Only pending_players uses {list}; extra values are ignored elsewhere.
-    return t(key, { list: emails ? `: ${emails}` : '' });
-  }
-
-  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
-
   // Cup-link (#47): hvis admin lander via /admin/cup/[id], pre-fyller vi
   // game_mode + match-label og låser modus-velgeren. `game_mode`-param-en
   // (singles_matchplay | fourball_matchplay) styrer hvilken modus admin lander
@@ -129,12 +113,6 @@ export default async function NewGamePage({
           {t('page.subtitle')}
         </p>
       </div>
-
-      {errorMessage && (
-        <div className="mt-4">
-          <Banner tone="error">{errorMessage}</Banner>
-        </div>
-      )}
 
       {cupContext && (
         <div className="mt-4">
