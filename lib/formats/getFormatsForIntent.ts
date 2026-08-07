@@ -11,8 +11,6 @@ export type FormatForIntent = {
   sort_order: number;
 };
 
-export type CupEligibleFormat = Pick<FormatForIntent, 'slug' | 'icon_key'>;
-
 // Tag-cached fetch av aktive formats for en gitt wizard-intent.
 // Returnerer alle synlige (is_visible) formats for intent-en, sortert på
 // (is_primary desc, sort_order asc). UI partisjonerer selv på is_primary
@@ -60,27 +58,5 @@ export const getFormatsForIntent = unstable_cache(
     });
   },
   ['format-intent-mapping'],
-  { tags: ['format-mapping'], revalidate: 60 * 60 * 24 },
-);
-
-// Returnerer alle aktive formats som er cup_eligible. Brukes av Cup-step 2
-// for multi-select av tillatte match-formats.
-export const getCupEligibleFormats = unstable_cache(
-  async (): Promise<CupEligibleFormat[]> => {
-    const supabase = getAdminClient();
-    const { data, error } = await supabase
-      .from('formats')
-      .select('slug, icon_key')
-      .eq('is_active', true)
-      .eq('is_cup_eligible', true)
-      .order('slug', { ascending: true });
-
-    if (error) {
-      console.error('[getCupEligibleFormats] query failed', { error });
-      throw new Error('Failed to fetch cup-eligible formats');
-    }
-    return data ?? [];
-  },
-  ['cup-eligible-formats'],
   { tags: ['format-mapping'], revalidate: 60 * 60 * 24 },
 );
