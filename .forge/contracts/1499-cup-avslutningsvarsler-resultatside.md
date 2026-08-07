@@ -105,8 +105,12 @@ Sjekk om `finalLeaderboard` har andre konsumenter i funksjonen før evt. opprydd
       BEVIS: `mail.cupFinished` i messages/no.json + en.json har nå kun subject/
       salutationNamed/salutationGeneric/bodySettled/bodySettledText/teaser/
       viewResult/viewResultText; result*/viewLeaderboard* slettet i d434d801.
-- [ ] Berørt flyt verifisert på staging (innboks-kort for avsluttet cup deeplinker til
+- [x] Berørt flyt verifisert på staging (innboks-kort for avsluttet cup deeplinker til
       resultatsiden) FØR merge — bevis-kommentar + label på PR-en.
+      BEVIS: innboks-kort tappet som e2e-spiller → RESULTATER-siden; nettverkslogg
+      `GET /cup/5c9eefec-…/resultater → 200`; kommentar
+      github.com/jdlarssen/golf-app/pull/1513#issuecomment-5222054121 +
+      `staging-verified`-label satt.
 
 ## Gates
 
