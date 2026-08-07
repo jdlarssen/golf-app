@@ -4789,6 +4789,13 @@
       "matchTied": "Uavgjort",
       "skinsWon": "🥇 {count, plural, one {# skin} other {# skins}}",
       "skins": "{count, plural, one {# skin} other {# skins}}"
+    },
+    "cup": {
+      "dayMarking": "Cup-dag",
+      "won": "🥇 Laget ditt vant cupen",
+      "lost": "Laget ditt tapte cupen",
+      "tied": "Cupen endte delt",
+      "finished": "Cupen er ferdigspilt"
     }
   },
   "home": {
@@ -4804,6 +4811,7 @@
     "greeting": "Hei, {name}.",
     "playerFallback": "spiller",
     "sectionInProgress": "Pågår nå",
+    "cupDayMarking": "Cup-dag",
     "cardStateContinue": "Fortsett",
     "cardStateSubmitted": "Levert ✓",
     "cardStatePendingApproval": "Til godkjenning",

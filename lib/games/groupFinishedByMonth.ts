@@ -1,22 +1,24 @@
 import { formatMonthLongLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
-import type { FinishedGame } from './getFinishedGamesForUser';
 
-export type FinishedMonthGroup = {
+export type FinishedMonthGroup<T> = {
   /** Stable identity/sort key, e.g. '2026-06' or 'no-date'. */
   key: string;
   /** Display label, e.g. «juni 2026» or «Uten dato». */
   label: string;
-  games: FinishedGame[];
+  games: T[];
 };
 
 /**
- * Buckets finished games into month groups for the /spill-arkiv page (#571).
+ * Buckets dated finished items into month groups for the /spill-arkiv page
+ * (#571). Generic over anything carrying `ended_at` — plain finished games or
+ * the #1449 cup-day entries — so a merged cup day groups by its month like any
+ * other item.
  *
  * - Input is assumed already sorted newest-first (`byEndedAtDesc`); groups come
- *   out in first-seen order, so newest month first and games within a month
+ *   out in first-seen order, so newest month first and items within a month
  *   keep their incoming order.
- * - `ended_at: null` games collect in a trailing «Uten dato»-bucket (they sort
+ * - `ended_at: null` items collect in a trailing «Uten dato»-bucket (they sort
  *   last via `byEndedAtDesc`, so first-seen order puts the bucket at the end).
  * - Month key/label use LOCAL date getters to match `formatMonthLongLocale` and
  *   the card's `formatShortDateLocale` (same local-TZ convention).
@@ -24,19 +26,19 @@ export type FinishedMonthGroup = {
  *   and the dateless bucket via the caller-supplied `noDateLabel` (translated at
  *   the call-site, so this stays pure).
  */
-export function groupFinishedByMonth(
-  games: FinishedGame[],
+export function groupFinishedByMonth<T extends { ended_at: string | null }>(
+  items: T[],
   locale: AppLocale,
   noDateLabel: string,
-): FinishedMonthGroup[] {
-  const groups: FinishedMonthGroup[] = [];
-  const byKey = new Map<string, FinishedMonthGroup>();
+): FinishedMonthGroup<T>[] {
+  const groups: FinishedMonthGroup<T>[] = [];
+  const byKey = new Map<string, FinishedMonthGroup<T>>();
 
-  for (const game of games) {
+  for (const item of items) {
     let key: string;
     let label: string;
-    if (game.ended_at) {
-      const d = new Date(game.ended_at);
+    if (item.ended_at) {
+      const d = new Date(item.ended_at);
       key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       label = formatMonthLongLocale(d, locale);
     } else {
@@ -50,7 +52,7 @@ export function groupFinishedByMonth(
       byKey.set(key, group);
       groups.push(group);
     }
-    group.games.push(game);
+    group.games.push(item);
   }
 
   return groups;

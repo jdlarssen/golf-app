@@ -111,6 +111,12 @@ type DerivedGameForScoring = {
  * `persistScoreDifferentials` naturally no-ops on a 9-hole segment (WHS
  * needs a full 18 scored holes) — verified, not special-cased here.
  *
+ * #1449 note: derived singles no longer render as their own card on Home /
+ * /spill-arkiv (those lists now filter `source_game_id IS NULL`). The
+ * `result_summary` persistence here is KEPT anyway — it stays reversible and
+ * feeds future per-match surfaces (e.g. the cup-page kamp-scorekort, #1456);
+ * it is not dead just because the home/archive cards stopped reading it.
+ *
  * Used by `endGame`/`endGameWithSideWinners` in place of
  * `syncDerivedGamesStatus` for the finish transition specifically.
  *

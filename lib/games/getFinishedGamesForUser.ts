@@ -1,8 +1,22 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { byEndedAtDesc } from './finishedOrder';
+
+/**
+ * The persisted cup outcome the finished cup-day badge reads (#1449, owner
+ * decision 4). Never recomputed — `winner_team`/`status` are stored truth on
+ * `tournaments`; the badge only maps them to «vant/tapte/delt».
+ */
+export type FinishedTournament = {
+  name: string;
+  status: string;
+  winner_team: number | null;
+  team_1_name: string;
+  team_2_name: string;
+};
 
 /**
  * A finished game as shown on the home «Avsluttede spill» list and the
@@ -23,11 +37,27 @@ export type FinishedGame = {
    * `null` for games finished before the feature shipped → 🏆-fallback.
    */
   result_summary: ResultSummary | null;
+  /**
+   * #1449: split-day cup fields. `tournament_id` + `hole_segment` let the
+   * caller pair the two host halves of one cup day into a single cup-branded
+   * card. `team_number` is the viewer's own cup side (1|2) read from their
+   * `game_players` row — the slim roster source, never a recomputed snapshot.
+   * `tournament` carries the persisted cup outcome for the badge.
+   */
+  tournament_id: string | null;
+  hole_segment: HoleSegment;
+  team_number: number | null;
+  tournament: FinishedTournament | null;
 };
 
 type FinishedRow = {
   result_summary: ResultSummary | null;
-  games: Omit<FinishedGame, 'result_summary'> | null;
+  team_number: number | null;
+  games:
+    | (Omit<FinishedGame, 'result_summary' | 'team_number'> & {
+        tournament: FinishedTournament | null;
+      })
+    | null;
 };
 
 /**
@@ -52,10 +82,13 @@ export async function getFinishedGamesForUser(
   const { data, error } = await supabase
     .from('game_players')
     .select(
-      'result_summary, games!inner(id, name, ended_at, game_mode, mode_config, courses(name))',
+      'result_summary, team_number, games!inner(id, name, ended_at, game_mode, mode_config, hole_segment, tournament_id, courses(name), tournament:tournaments(name, status, winner_team, team_1_name, team_2_name))',
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished')
+    // #1449: derived cup games (singles) carry `source_game_id` and must never
+    // render as their own finished card — the host halves are the cards.
+    .is('games.source_game_id', null)
     .returns<FinishedRow[]>();
 
   // #877: a swallowed error returned `[]`, which on Home computed as
@@ -68,6 +101,10 @@ export async function getFinishedGamesForUser(
     .filter((row): row is FinishedRow & { games: NonNullable<FinishedRow['games']> } =>
       row.games != null,
     )
-    .map((row) => ({ ...row.games, result_summary: row.result_summary }))
+    .map((row) => ({
+      ...row.games,
+      result_summary: row.result_summary,
+      team_number: row.team_number,
+    }))
     .sort(byEndedAtDesc);
 }

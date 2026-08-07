@@ -36,6 +36,7 @@ import { firstName } from '@/lib/firstName';
 import { formatTeeOffParts } from '@/lib/i18n/format';
 import { teeOffProximity } from '@/lib/format/teeOffProximity';
 import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
+import { toFinishedEntries } from '@/lib/games/finishedEntries';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { FinishedRoundsSection } from '@/components/games/FinishedRoundsSection';
 import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
@@ -46,6 +47,12 @@ import {
   getActiveGameCardData,
   type ActiveCardExtras,
 } from '@/lib/games/getActiveGameCardData';
+import {
+  pairSplitDayGames,
+  type PairableGame,
+  type SplitDayEntry,
+} from '@/lib/games/splitDayPairing';
+import { mergePairExtras } from '@/lib/games/pairActiveCard';
 import type { ActiveCardState } from '@/lib/games/activeCardState';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
@@ -167,10 +174,14 @@ const activeGamesQuery = (
   supabase
     .from('game_players')
     .select(
-      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, require_peer_approval, game_mode, hole_segment, courses(name))',
+      // #1449: `source_game_id` filter drops derived cup games (they never
+      // render as cards); `tournament_id`/`created_at` + the cup name embed let
+      // us pair the two host halves of a split cup day into one merged card.
+      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, created_at, tournament_id, require_peer_approval, game_mode, hole_segment, courses(name), tournament:tournaments(name))',
     )
     .eq('user_id', userId)
-    .in('games.status', ['draft', 'scheduled', 'active']);
+    .in('games.status', ['draft', 'scheduled', 'active'])
+    .is('games.source_game_id', null);
 
 type GameRow = QueryData<ReturnType<typeof activeGamesQuery>>[number];
 
@@ -259,28 +270,66 @@ async function HomeBody() {
     submitted_at: row.submitted_at,
     withdrawn_at: row.withdrawn_at,
     approved_at: row.approved_at,
+    // #1449: split-day pairing needs the tournament + a day anchor; `cupName`
+    // titles the merged card (the cup, not the per-match host name).
+    tournament_id: row.games.tournament_id,
+    created_at: row.games.created_at,
+    cupName: row.games.tournament?.name ?? null,
   }));
+  type ActiveGame = (typeof activeGames)[number];
+
+  // #1449: fold split cup days into cup entries; the empty-state (and the
+  // finished section) derive from the MERGED lists, so a split-day player never
+  // sees the «start here» welcome and never sees the plumbing.
+  const finishedEntries = toFinishedEntries(finishedGames);
+
+  // #1449: pair the two host halves of a split cup day into one card. A half the
+  // viewer withdrew from stays single (pairEligible false) so it degrades to
+  // today's single-card behaviour; non-cup / full-segment games are always
+  // singles. Day-bucketing anchors on tee-off, falling back to created_at.
+  const activeEntries = pairSplitDayGames(
+    activeGames.map((g) => ({
+      gameId: g.id,
+      tournamentId: g.tournament_id,
+      holeSegment: g.hole_segment,
+      dayAnchor: g.scheduled_tee_off_at
+        ? new Date(g.scheduled_tee_off_at)
+        : g.created_at
+          ? new Date(g.created_at)
+          : null,
+      pairEligible: g.withdrawn_at == null,
+      data: g,
+    })),
+  );
 
   const isEmptyState =
-    activeGames.length === 0 && finishedGames.length === 0;
+    activeEntries.length === 0 && finishedEntries.length === 0;
+
+  // An entry is «pågår nå» when any of its games is active; otherwise it's a
+  // planlagt/utkast round. `now` is computed once for the relative tee-off
+  // labels below and the upcoming sort.
+  const now = new Date();
+  const entryGames = (e: SplitDayEntry<ActiveGame>): ActiveGame[] =>
+    e.kind === 'pair' ? [e.front9.data, e.back9.data] : [e.game.data];
+  const isInProgressEntry = (e: SplitDayEntry<ActiveGame>) =>
+    entryGames(e).some((g) => g.status === 'active');
+  const earliestTeeOff = (e: SplitDayEntry<ActiveGame>) =>
+    Math.min(
+      ...entryGames(e).map((g) =>
+        g.scheduled_tee_off_at
+          ? new Date(g.scheduled_tee_off_at).getTime()
+          : Infinity,
+      ),
+    );
 
   // Løft pågående runder øverst (#363): et aktivt spill skal ikke være bare
-  // ett kort blant flere. Splitt på status='active' vs. resten (planlagte).
-  const inProgressGames = activeGames.filter((g) => g.status === 'active');
-  // #880: sorter planlagte spill stigende på tee-off (nulls sist) så nærmeste
-  // runde ligger øverst. `now` regnes ut én gang til relativ-merkingen under.
-  const now = new Date();
-  const upcomingGames = activeGames
-    .filter((g) => g.status !== 'active')
-    .sort((a, b) => {
-      const at = a.scheduled_tee_off_at
-        ? new Date(a.scheduled_tee_off_at).getTime()
-        : Infinity;
-      const bt = b.scheduled_tee_off_at
-        ? new Date(b.scheduled_tee_off_at).getTime()
-        : Infinity;
-      return at - bt;
-    });
+  // ett kort blant flere.
+  const inProgressEntries = activeEntries.filter(isInProgressEntry);
+  // #880: sorter planlagte runder stigende på tee-off (nulls sist) så nærmeste
+  // ligger øverst.
+  const upcomingEntries = activeEntries
+    .filter((e) => !isInProgressEntry(e))
+    .sort((a, b) => earliestTeeOff(a) - earliestTeeOff(b));
   const firstNameValue = firstName(profile?.name) ?? t('playerFallback');
   // Always-visible handicap reflection (#209). Only render when we have
   // both fields — defensive against a degraded fetch.
@@ -366,12 +415,15 @@ async function HomeBody() {
 
   // #878: per-active-game card data — display state, «rett inn i runden»-href,
   // and peer-approval count. Bounded to the viewer's handful of active games.
+  // #1449: computed for BOTH halves of an in-progress split-day pair so the
+  // merged card can fold them together.
+  const inProgressHostGames = inProgressEntries.flatMap(entryGames);
   const activeCardData: Map<string, ActiveCardExtras> =
-    inProgressGames.length > 0
+    inProgressHostGames.length > 0
       ? await getActiveGameCardData(
           supabase,
           userId!,
-          inProgressGames.map((g) => ({
+          inProgressHostGames.map((g) => ({
             id: g.id,
             game_mode: g.game_mode,
             require_peer_approval: g.require_peer_approval,
@@ -382,6 +434,22 @@ async function HomeBody() {
           })),
         )
       : new Map();
+
+  const defaultExtras = (id: string): ActiveCardExtras => ({
+    state: 'continue',
+    href: `/games/${id}`,
+    pendingApprovalsForMe: 0,
+    nextHole: null,
+  });
+
+  const stateLabelFor = (state: ActiveCardState): string =>
+    state === 'continue'
+      ? t('cardStateContinue')
+      : state === 'submitted'
+        ? t('cardStateSubmitted')
+        : state === 'pending_approval'
+          ? t('cardStatePendingApproval')
+          : t('cardStateWithdrawn');
 
   // «Mine spill» (planlagte/utkast): uendret kort med status-pille, lenker til
   // spill-oversikten.
@@ -438,20 +506,9 @@ async function HomeBody() {
   // generisk status-pille, lenker «rett inn i runden» (neste utastede hull /
   // lever-siden), og en accent-nudge-linje under kortet når en flight-peer
   // venter på din godkjenning. `continue`-kortet beholder gull-rammen (#363).
-  const renderActiveGameCard = (g: (typeof activeGames)[number]) => {
-    const extras: ActiveCardExtras = activeCardData.get(g.id) ?? {
-      state: 'continue',
-      href: `/games/${g.id}`,
-      pendingApprovalsForMe: 0,
-    };
-    const stateLabel =
-      extras.state === 'continue'
-        ? t('cardStateContinue')
-        : extras.state === 'submitted'
-          ? t('cardStateSubmitted')
-          : extras.state === 'pending_approval'
-            ? t('cardStatePendingApproval')
-            : t('cardStateWithdrawn');
+  const renderActiveGameCard = (g: ActiveGame) => {
+    const extras: ActiveCardExtras = activeCardData.get(g.id) ?? defaultExtras(g.id);
+    const stateLabel = stateLabelFor(extras.state);
     return (
       <div key={g.id} className="space-y-2">
         <GameRowCard
@@ -496,6 +553,126 @@ async function HomeBody() {
     );
   };
 
+  // #1449: ETT «Pågår nå»-kort for en splittet cup-dag. Tittel = cup-navnet,
+  // state + href foldet på tvers av begge halvdelene (front9 → back9 → levering
+  // på inne-spillet). Spilleren starter uansett på hull 1.
+  type ActivePair = Extract<SplitDayEntry<ActiveGame>, { kind: 'pair' }>;
+  const renderActivePairCard = (e: ActivePair) => {
+    const front9 = e.front9.data;
+    const back9 = e.back9.data;
+    const extras = mergePairExtras(
+      { id: front9.id, extras: activeCardData.get(front9.id) ?? defaultExtras(front9.id) },
+      { id: back9.id, extras: activeCardData.get(back9.id) ?? defaultExtras(back9.id) },
+    );
+    const stateLabel = stateLabelFor(extras.state);
+    const courseName = front9.courses?.name ?? back9.courses?.name ?? null;
+    return (
+      <div key={`${e.tournamentId}:${e.dayKey}`} className="space-y-2">
+        <GameRowCard
+          href={extras.href}
+          highlighted={extras.state === 'continue'}
+          title={front9.cupName ?? localizeGameName(front9.name, courseName, locale)}
+          meta={
+            <>
+              <GameRowMetaLine>
+                {[t('cupDayMarking'), courseName].filter(Boolean).join(' · ')}
+              </GameRowMetaLine>
+              <GameRowMetaLine>
+                {t('teamFlight', {
+                  teamNumber: front9.teamNumber,
+                  flightNumber: front9.flightNumber,
+                })}
+              </GameRowMetaLine>
+            </>
+          }
+          trailing={
+            <div className="flex items-center gap-3 shrink-0">
+              <ActiveStateLabel state={extras.state} label={stateLabel} />
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </div>
+          }
+        />
+        {extras.pendingApprovalsForMe > 0 && (
+          <SmartLink
+            // Peer approval happens per host; cup games default to it OFF, so
+            // this nudge is effectively dead here — land on the back9 host where
+            // the round's delivery + review live. #1466 Builder B: one-delivery.
+            href={`/games/${back9.id}/approve`}
+            className="flex items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent/5 px-4 py-2.5 transition-colors hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            <span className="text-xs font-medium text-text">
+              {tGameHome('pendingApprovals', {
+                count: extras.pendingApprovalsForMe,
+              })}
+            </span>
+            <span className="text-xs font-medium text-accent whitespace-nowrap">
+              {tGameHome('reviewLink')}
+            </span>
+          </SmartLink>
+        )}
+      </div>
+    );
+  };
+
+  // #1449: ETT «Mine spill»-kort for en planlagt splittet cup-dag — cup-navn +
+  // status-pille, lenker inn til front9-hosten (runden starter på hull 1).
+  const renderUpcomingPairCard = (e: ActivePair) => {
+    const front9 = e.front9.data;
+    const back9 = e.back9.data;
+    const courseName = front9.courses?.name ?? back9.courses?.name ?? null;
+    const teeOff = front9.scheduled_tee_off_at
+      ? new Date(front9.scheduled_tee_off_at)
+      : null;
+    const prox = teeOffProximity(front9.scheduled_tee_off_at, now);
+    const teeParts = teeOff ? formatTeeOffParts(teeOff, locale) : null;
+    return (
+      <GameRowCard
+        key={`${e.tournamentId}:${e.dayKey}`}
+        href={`/games/${front9.id}`}
+        title={front9.cupName ?? localizeGameName(front9.name, courseName, locale)}
+        meta={
+          <>
+            <GameRowMetaLine>
+              {[t('cupDayMarking'), courseName].filter(Boolean).join(' · ')}
+            </GameRowMetaLine>
+            {teeParts && (
+              <>
+                {prox && (
+                  <span className="block text-xs font-medium text-text mt-1 truncate">
+                    {prox.kind === 'today'
+                      ? t('proximity.today', { time: teeParts.time })
+                      : prox.kind === 'tomorrow'
+                        ? t('proximity.tomorrow')
+                        : t('proximity.days', { days: prox.days })}
+                  </span>
+                )}
+                <GameRowMetaLine tabular>
+                  {teeParts.date} {t('teeOffSeparator')} {teeParts.time}
+                </GameRowMetaLine>
+              </>
+            )}
+            <GameRowMetaLine>
+              {t('teamFlight', {
+                teamNumber: front9.teamNumber,
+                flightNumber: front9.flightNumber,
+              })}
+            </GameRowMetaLine>
+          </>
+        }
+        trailing={
+          <div className="flex items-center gap-3 shrink-0">
+            <StatusPill status={front9.status} label={tStatus(front9.status)} />
+            <span aria-hidden className="text-muted">
+              →
+            </span>
+          </div>
+        }
+      />
+    );
+  };
+
   return (
     <>
       <PageHeader
@@ -506,15 +683,23 @@ async function HomeBody() {
       {/* #882: not a nav landmark — these are links to data, not site/app
           navigation. The real global nav is the bottom-nav in the layout. */}
       <div className="space-y-6">
-        {inProgressGames.length > 0 && (
+        {inProgressEntries.length > 0 && (
           <Section label={t('sectionInProgress')} accent>
-            {inProgressGames.map((g) => renderActiveGameCard(g))}
+            {inProgressEntries.map((e) =>
+              e.kind === 'pair'
+                ? renderActivePairCard(e)
+                : renderActiveGameCard(e.game.data),
+            )}
           </Section>
         )}
 
-        {upcomingGames.length > 0 && (
+        {upcomingEntries.length > 0 && (
           <Section label={t('sectionMyGames')}>
-            {upcomingGames.map((g) => renderGameCard(g))}
+            {upcomingEntries.map((e) =>
+              e.kind === 'pair'
+                ? renderUpcomingPairCard(e)
+                : renderGameCard(e.game.data),
+            )}
           </Section>
         )}
 
@@ -567,14 +752,15 @@ async function HomeBody() {
           </SmartLink>
         </Section>
 
-        {finishedGames.length > 0 && (
+        {finishedEntries.length > 0 && (
           <Section label={t('sectionFinished')}>
             {/* #571 + #865 + #986: hjem er play + discover-navet, ikke et arkiv.
                 Vis de siste 3 som tette «Runder»-rader (brutto/netto), så du ser
                 hvordan du gjorde det rett fra Hjem; lenk til /spill-arkiv for
-                resten når det finnes flere. */}
+                resten når det finnes flere. #1449: en splittet cup-dag vises som
+                ett cup-merket kort. */}
             <FinishedRoundsSection
-              finishedGames={finishedGames}
+              entries={finishedEntries}
               userId={userId!}
               locale={locale}
             />

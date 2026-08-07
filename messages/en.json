@@ -4789,6 +4789,13 @@
       "matchTied": "Halved",
       "skinsWon": "🥇 {count, plural, one {# skin} other {# skins}}",
       "skins": "{count, plural, one {# skin} other {# skins}}"
+    },
+    "cup": {
+      "dayMarking": "Cup day",
+      "won": "🥇 Your team won the cup",
+      "lost": "Your team lost the cup",
+      "tied": "The cup ended level",
+      "finished": "The cup is over"
     }
   },
   "home": {
@@ -4804,6 +4811,7 @@
     "greeting": "Hi, {name}.",
     "playerFallback": "player",
     "sectionInProgress": "In progress",
+    "cupDayMarking": "Cup day",
     "cardStateContinue": "Continue",
     "cardStateSubmitted": "Submitted ✓",
     "cardStatePendingApproval": "Awaiting approval",

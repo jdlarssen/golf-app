@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.219 · Splittet cup-dag: ett kort inn i runden, ett kort inn i cupen</strong></summary>
+
+[#1449](https://github.com/jdlarssen/golf-app/issues/1449) — På en splittet cup-dag ser du nå ett kort på Hjem som tar deg rett inn i føringen fra hull 1 — ikke tre kort for samme runde. Når dagen er ferdigspilt, samler ett cup-merket kort hele dagen og fører deg rett inn i cupen.
+
+↳ / · «Åpne Hjem»
+</details>
+
+<details>
 <summary><strong>1.218 · Hele oppskriften på å arrangere golfturnering</strong></summary>
 
 [#1267](https://github.com/jdlarssen/golf-app/issues/1267) — En ny guide tar deg gjennom bane, påmelding, spillform, handicap og premier, og herfra går du videre til en egen side for firmagolfen, vennegjengen eller klubbkvelden med opplegget som passer akkurat din gjeng. Guiden sier også rett ut når du heller bør bruke klubbens eget system.
