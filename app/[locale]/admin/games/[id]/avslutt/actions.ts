@@ -2,23 +2,10 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
-import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
-import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
-import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
-import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
-import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
-import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
-import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
-import { finishDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
-import { firstName } from '@/lib/firstName';
-import { logAdminEvent } from '@/lib/admin/auditLog';
+import { endGameCore, type EndGameSideWinner } from '@/lib/games/endGameCore';
 import type { GameStatus } from '@/lib/games/status';
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
-import type { HoleSegment } from '@/lib/scoring';
-import { notifyPlayersGameFinished } from '@/lib/notifications/events';
 
 /**
  * Self-gate + load action context for `endGameWithSideWinners`. #427 opens the
@@ -38,20 +25,27 @@ async function loadFinishContext(gameId: string) {
 }
 
 /**
- * Admin server action: record LD/CTP winners for a side-tournament-enabled
- * game and flip the game to `finished` in one transaction-like flow. Mirrors
- * the validation in `endGame` (all players submitted, optionally approved)
- * and the best-effort "Resultatet er klart"-mail blast.
+ * Admin/creator server action: record LD/CTP winners for a side-tournament-
+ * enabled game and flip it to `finished`. #1488 (K1): the finish pipeline now
+ * lives entirely in `endGameCore`; this action is the thin wrapper that
  *
- * Winners are upserted on the (game_id, category, position) PK so the action
- * is idempotent — re-submitting the wizard simply overwrites the previous
- * selection. The status flip happens AFTER the winners insert so a partial
- * failure leaves the game in `active` and the admin can retry.
+ *  1. parses the winner dropdowns from `formData` (each named `ld_winner_N` /
+ *     `ctp_winner_N`; missing/empty → back to the wizard),
+ *  2. calls `endGameCore` with `sideWinners` (upserted before the status flip),
+ *     `auditExtras` (so the audit payload keeps `sideTournament` + `sideWinners`)
+ *     and `logContext: 'endGameWithSideWinners'`,
+ *  3. maps the core result back to the exact redirects this flow used before
+ *     (`missing_ld_N`/`missing_ctp_N`/`not_active`/`no_players`/
+ *     `not_all_submitted`/`not_all_approved`/`db_winners`/`db_finish`).
+ *
+ * Winners are upserted on the (game_id, category, position) PK so the action is
+ * idempotent, and the flip runs AFTER the upsert — a partial failure leaves the
+ * game `active` (`?error=db_winners`) and the organiser can retry.
  *
  * `allowMissing` mirrors the «avslutt likevel»-escape in `endGame` (#375):
- * when true, players who never submitted are skipped instead of blocking the
- * end (their `submitted_at` stays null). The peer-approval gate is NOT relaxed
- * (that's #360). Bound before `formData` so the wizard form can pre-bind it.
+ * players who never submitted are skipped instead of blocking the end. The
+ * peer-approval gate is NOT relaxed (that's #360). Bound before `formData` so
+ * the wizard form can pre-bind it.
  */
 export async function endGameWithSideWinners(
   gameId: string,
@@ -63,27 +57,19 @@ export async function endGameWithSideWinners(
   const detailPath = isAdmin ? `/admin/games/${gameId}` : `/games/${gameId}`;
   const wizardPath = `${detailPath}/avslutt`;
 
-  // Inkluderer course_id + game_mode + mode_config slik at den mode-aware
-  // completion-mail-blasten (via buildGameFinishedRecipients) ikke trenger
-  // en re-fetch av game-raden. #1441: hole_segment også — se endGame.
+  // Slot counts (+ status) drive winner parsing. A separate, slim read — not a
+  // pipeline step (that all lives in `endGameCore`); the status pre-check
+  // preserves the old order (an inactive game short-circuits to `not_active`
+  // before any winner-slot redirect).
   const { data: game } = await supabase
     .from('games')
-    .select(
-      'id, name, status, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, course_id, game_mode, mode_config, hole_segment',
-    )
+    .select('id, status, side_ld_count, side_ctp_count')
     .eq('id', gameId)
     .single<{
       id: string;
-      name: string;
       status: GameStatus;
-      require_peer_approval: boolean;
-      side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
-      course_id: string;
-      game_mode: GameMode;
-      mode_config: GameModeConfig;
-      hole_segment: HoleSegment;
     }>();
 
   if (!game || game.status !== 'active') {
@@ -93,13 +79,7 @@ export async function endGameWithSideWinners(
   // Parse winners. Each dropdown is named ld_winner_N / ctp_winner_N where
   // N is the slot position (1-based). Value: user_id (uuid string) or "none"
   // → null. Missing or empty values redirect back to the wizard.
-  type Winner = {
-    category: 'longest_drive' | 'closest_to_pin';
-    position: 1 | 2;
-    winner_user_id: string | null;
-  };
-
-  const winners: Winner[] = [];
+  const winners: EndGameSideWinner[] = [];
 
   for (let pos = 1; pos <= game!.side_ld_count; pos++) {
     const raw = formData.get(`ld_winner_${pos}`);
@@ -124,163 +104,31 @@ export async function endGameWithSideWinners(
     });
   }
 
-  // Verify all players submitted (mirrors endGame validation). Inkluderer
-  // user_id slik at game_finished-notify-loopen nedenfor kan target hver
-  // deltaker uten ekstra DB-runde.
-  const { data: players } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(email, name)',
-    )
-    .eq('game_id', gameId)
-    .returns<
-      {
-        user_id: string;
-        submitted_at: string | null;
-        approved_at: string | null;
-        withdrawn_at: string | null;
-        users: { email: string | null; name: string | null } | null;
-      }[]
-    >();
-
-  if (!players || players.length === 0) {
-    redirect({ href: `${detailPath}?error=no_players`, locale });
-  }
-  for (const p of players!) {
-    // Withdrawn (WD, #386): out of the ranking — never blocks the end.
-    if (p.withdrawn_at) continue;
-    if (!p.submitted_at) {
-      // No-show: «avslutt likevel» skips them (submitted_at stays null).
-      if (!allowMissing) redirect({ href: `${detailPath}?error=not_all_submitted`, locale });
-      continue;
-    }
-    if (game!.require_peer_approval && !p.approved_at) {
-      redirect({ href: `${detailPath}?error=not_all_approved`, locale });
-    }
-  }
-
-  // Insert winners FIRST (idempotent on PK).
-  if (winners.length > 0) {
-    const rows = winners.map((w) => ({
-      game_id: gameId,
-      category: w.category,
-      position: w.position,
-      winner_user_id: w.winner_user_id,
-    }));
-    const { error: winnerErr } = await supabase
-      .from('game_side_winners')
-      .upsert(rows, { onConflict: 'game_id,category,position' });
-    if (winnerErr) {
-      console.error(
-        '[endGameWithSideWinners] winners insert failed',
-        winnerErr,
-      );
-      redirect({ href: `${wizardPath}?error=db_winners`, locale });
-    }
-  }
-
-  // Flip game to finished.
-  const endedAt = new Date().toISOString();
-  const { error: statusErr } = await supabase
-    .from('games')
-    .update({ status: 'finished', ended_at: endedAt })
-    .eq('id', gameId);
-  if (statusErr) {
-    console.error('[endGameWithSideWinners] finish status update failed', statusErr);
-    redirect({ href: `${detailPath}?error=db_finish`, locale });
-  }
-
-  // #1441 (D3): see endGame's identical fan-out for the full rationale.
-  await finishDerivedGames(supabase, gameId, endedAt);
-
-  // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
-  // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).
-  // #1441: hole_segment sendes med, se endGame.
-  await persistResultSummaries({
-    id: gameId,
-    game_mode: game!.game_mode,
-    mode_config: game!.mode_config,
-    course_id: game!.course_id,
-    hole_segment: game!.hole_segment,
-  });
-
-  // #941: fryser WHS score-differensial per spiller. Best-effort — se
-  // persistScoreDifferentials for fullstendig begrunnelse.
-  await persistScoreDifferentials(gameId);
-
-  // #947: best-effort bragd-varsel til spillere som låste opp et øyeblikk
-  // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
-  await notifyAchievementUnlocks(gameId);
-
-  // #1008: best-effort AI-rundereferat («Pressetribunen»). Må kjøre FØR
-  // mail-blasten lenger ned slik at teksten kan bli med i «Resultatet er
-  // klart»-mailen — feiler den (manglende nøkkel, tynn data, SDK-feil)
-  // fortsetter avslutningen som i dag, bare uten referat.
-  const { report: roundReport } = await generateAndPersistRoundReport(gameId);
-
-  await logAdminEvent({
-    actorId: user.id,
-    actorName,
-    eventType: 'game.finished',
-    targetType: 'game',
-    targetId: gameId,
-    payload: {
-      gameName: game!.name,
-      sideTournament: true,
+  // Single finish pipeline. Same request-scoped client as `endGame` (creator-
+  // UPDATE RLS, migration 0071); winners upsert under the same client, so authz
+  // is unchanged from the old inline action.
+  const result = await endGameCore(
+    supabase,
+    gameId,
+    { id: user.id, name: actorName },
+    {
+      allowMissing,
       sideWinners: winners,
+      auditExtras: { sideTournament: true, sideWinners: winners },
+      logContext: 'endGameWithSideWinners',
     },
-  });
-
-  // Best-effort in-app `game_finished`-varsel til hver deltaker. Loopen fyres
-  // parallelt med mail-blasten lenger ned. Phase 4-gating: aktive spillere
-  // (last_seen_at < 5 min) får kun in-app; off-app-spillere får mail som
-  // backup. Notify-feil → ikke send mail (samme rasjonale som inni notify()).
-  const sendMailByUserId = await notifyPlayersGameFinished(
-    players!,
-    { id: gameId, name: game!.name },
-    'endGameWithSideWinners',
   );
 
-  // Best-effort: send "Resultatet er klart"-mail kun til off-app-spillere.
-  // Failures er loggført men aborter aldri — leaderboardet er tilgjengelig
-  // in-app uansett.
-  //
-  // Mode-aware payload: helperen returnerer per-spiller rank+poeng for
-  // stableford og kun userId/email/name for best-ball (default nøytral copy).
-  const recipients = await buildGameFinishedRecipients(supabase, gameId, {
-    course_id: game!.course_id,
-    game_mode: game!.game_mode,
-    mode_config: game!.mode_config,
-  });
-  const mailRecipients = recipients.filter(
-    (r) => sendMailByUserId.get(r.userId) === true,
-  );
-  if (mailRecipients.length > 0) {
-    const results = await Promise.allSettled(
-      mailRecipients.map((r) =>
-        sendGameFinishedNotification({
-          to: r.email,
-          playerFirstName: firstName(r.name),
-          gameName: game!.name,
-          gameId,
-          mode: r.mode,
-          locale: r.locale,
-          roundReport,
-        }),
-      ),
-    );
-    for (const r of results) {
-      if (r.status === 'rejected') {
-        console.error(
-          '[endGameWithSideWinners] game-finished mail failed',
-          r.reason,
-        );
-      }
-    }
+  if (!result.ok) {
+    // `db_winners` lands back on the wizard (the winner picks are still there);
+    // everything else on the detail page, byte-identical to the old redirects.
+    const href =
+      result.reason === 'db_winners'
+        ? `${wizardPath}?error=db_winners`
+        : `${detailPath}?error=${result.reason}`;
+    redirect({ href, locale });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
-  revalidatePath(`/admin/games/${gameId}`);
-  revalidatePath(`/games/${gameId}`);
+  // endGameCore already ran the full pipeline + revalidated the game paths.
   redirect({ href: `${detailPath}?status=finished`, locale });
 }
