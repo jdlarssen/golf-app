@@ -9,7 +9,6 @@
 
 import { Resend } from 'resend';
 import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
-import { formatNumber } from '@/lib/i18n/format';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -31,11 +30,6 @@ export type CupFinishedNotificationParams = {
   playerFirstName: string | null;
   tournamentName: string;
   tournamentId: string;
-  team1Name: string;
-  team2Name: string;
-  team1Points: number;
-  team2Points: number;
-  winnerTeamName: string | null;
   /** Mottakerens locale (#594). Normalt udefinert → norsk. */
   locale?: string | null;
 };
@@ -43,47 +37,20 @@ export type CupFinishedNotificationParams = {
 export async function sendCupFinishedNotification(
   params: CupFinishedNotificationParams,
 ): Promise<void> {
-  const {
-    to,
-    playerFirstName,
-    tournamentName,
-    tournamentId,
-    team1Name,
-    team2Name,
-    team1Points,
-    team2Points,
-    winnerTeamName,
-    locale,
-  } = params;
+  const { to, playerFirstName, tournamentName, tournamentId, locale } = params;
 
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
 
   const subject = t('cupFinished.subject', { tournamentName });
-  // #1488 (K10): CTA lands on the locked results page, not the cup page. The
-  // mail already reveals the outcome (points + winner) in its body, and the cup
-  // page hides the totals (#1468) — so the button must go where the result
-  // actually lives.
-  const leaderboardUrl = mailUrl(locale, `/cup/${tournamentId}/resultater`);
+  // CTA lands on the locked results page (#1468/#1488 K10). The mail itself
+  // teases only — no winner, no standing (owner decision on #1499): the reveal
+  // is the ceremony on the results page, and the mail's job is to get the
+  // player there.
+  const resultUrl = mailUrl(locale, `/cup/${tournamentId}/resultater`);
   const salutation = playerFirstName
     ? t('cupFinished.salutationNamed', { name: playerFirstName })
     : t('cupFinished.salutationGeneric');
-
-  const p1 = formatNumber(team1Points, loc, { useGrouping: false });
-  const p2 = formatNumber(team2Points, loc, { useGrouping: false });
-  const scoreLine = `${escapeHtml(team1Name)} ${p1} — ${p2} ${escapeHtml(team2Name)}`;
-  const scoreLineText = `${team1Name} ${p1} — ${p2} ${team2Name}`;
-
-  const resultLineHtml = winnerTeamName
-    ? t.markup('cupFinished.resultWinner', {
-        winnerName: escapeHtml(winnerTeamName),
-        strong: (c) => `<strong>${c}</strong>`,
-      })
-    : t('cupFinished.resultDraw');
-
-  const resultLineText = winnerTeamName
-    ? t('cupFinished.resultWinnerText', { winnerName: winnerTeamName })
-    : t('cupFinished.resultDraw');
 
   const bodySettledHtml = t.markup('cupFinished.bodySettled', {
     tournamentName: escapeHtml(tournamentName),
@@ -114,15 +81,12 @@ export async function sendCupFinishedNotification(
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
               ${bodySettledHtml}
             </p>
-            <p style="font-size:16px;line-height:1.5;margin:0 0 8px;">
-              ${resultLineHtml}
-            </p>
-            <p style="font-size:20px;line-height:1.3;margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;color:#1B4332;">
-              ${scoreLine}
+            <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+              ${t('cupFinished.teaser')}
             </p>
             <div style="margin:32px 0;">
-              <a href="${leaderboardUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                ${t('cupFinished.viewLeaderboard')}
+              <a href="${resultUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                ${t('cupFinished.viewResult')}
               </a>
             </div>
           </td></tr>
@@ -135,10 +99,9 @@ export async function sendCupFinishedNotification(
 
   const text =
     `${salutation}\n\n` +
-    `${t('cupFinished.bodySettledText', { tournamentName })}\n\n` +
-    `${resultLineText}\n` +
-    `${scoreLineText}\n\n` +
-    `${t('cupFinished.viewLeaderboardText', { url: leaderboardUrl })}\n`;
+    `${t('cupFinished.bodySettledText', { tournamentName })}\n` +
+    `${t('cupFinished.teaser')}\n\n` +
+    `${t('cupFinished.viewResultText', { url: resultUrl })}\n`;
 
   const resend = getClient();
   const result = await resend.emails.send({

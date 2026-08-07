@@ -466,27 +466,18 @@ export async function finishTournament(formData: FormData) {
   // Mail går KUN til off-app-deltakere (shouldAlsoSendMail === true). Aktive
   // deltakere ble nettopp varslet in-app og trenger ingen mail.
   try {
-    const winnerName =
-      winnerTeam === 1
-        ? finalTournament.team_1_name
-        : winnerTeam === 2
-          ? finalTournament.team_2_name
-          : null;
     const mailRecipients = recipients.filter(
       (r) => sendMailByUserId.get(r.user_id) === true,
     );
     const results = await Promise.allSettled(
       mailRecipients.map((r) =>
+        // #1499: mailen teaser bare — vinner/stilling sendes ikke med;
+        // fasiten avsløres først på resultatsiden.
         sendCupFinishedNotification({
           to: r.email,
           playerFirstName: r.name?.split(' ')[0] ?? null,
           tournamentName: finalTournament.name,
           tournamentId: id,
-          team1Name: finalTournament.team_1_name,
-          team2Name: finalTournament.team_2_name,
-          team1Points: finalLeaderboard.team1Points,
-          team2Points: finalLeaderboard.team2Points,
-          winnerTeamName: winnerName,
           locale: r.locale,
         }),
       ),

@@ -5231,11 +5231,9 @@
       "salutationGeneric": "Hei!",
       "bodySettled": "Cup-en <strong>{tournamentName}</strong> er avgjort.",
       "bodySettledText": "Cup-en \"{tournamentName}\" er avgjort.",
-      "resultWinner": "<strong>{winnerName}</strong> vant cupen.",
-      "resultWinnerText": "{winnerName} vant cupen.",
-      "resultDraw": "Cupen endte uavgjort.",
-      "viewLeaderboard": "Se hele leaderboardet",
-      "viewLeaderboardText": "Se hele leaderboardet: {url}"
+      "teaser": "Hvordan endte det? Svaret venter på resultatsiden.",
+      "viewResult": "Se resultatet",
+      "viewResultText": "Se resultatet: {url}"
     },
     "teamInvitation": {
       "subject": "Du er invitert til {teamName} ({gameName})",

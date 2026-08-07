@@ -5231,11 +5231,9 @@
       "salutationGeneric": "Hi!",
       "bodySettled": "The cup <strong>{tournamentName}</strong> is decided.",
       "bodySettledText": "The cup \"{tournamentName}\" is decided.",
-      "resultWinner": "<strong>{winnerName}</strong> won the cup.",
-      "resultWinnerText": "{winnerName} won the cup.",
-      "resultDraw": "The cup ended in a draw.",
-      "viewLeaderboard": "View full leaderboard",
-      "viewLeaderboardText": "View full leaderboard: {url}"
+      "teaser": "How did it end? The answer is waiting on the results page.",
+      "viewResult": "See the result",
+      "viewResultText": "See the result: {url}"
     },
     "teamInvitation": {
       "subject": "You're invited to join {teamName} ({gameName})",
