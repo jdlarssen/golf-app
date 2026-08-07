@@ -3,6 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { computeCupMatchResult } from './computeCupMatchResult';
 import { computeCupBestBallAward } from './computeCupBestBallAward';
+import { computeSubmissionStatusByGame } from './matchSubmissionStatus';
 import { holesForSegment, type HoleSegment } from '@/lib/scoring/holeSegment';
 import type { GameStatus } from '@/lib/games/status';
 import {
@@ -291,6 +292,17 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     scoresByGame.set(s.game_id, arr);
   }
 
+  // #1488 (K4): «Scorekort levert» derived per game in a pre-pass so a DERIVED
+  // match (which owns no submissions of its own) inherits its host's status
+  // instead of showing «Pågår» forever (#1502 owner finding).
+  const submissionStatusByGame = computeSubmissionStatusByGame(
+    games.map((g) => ({
+      gameId: g.id,
+      sourceGameId: g.source_game_id,
+      players: playersByGame.get(g.id) ?? [],
+    })),
+  );
+
   const matchInputs: CupMatchInput[] = [];
 
   // Roster: distinct players grouped by team_number across all matches.
@@ -318,12 +330,11 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     const side1Players = gPlayers.filter((p) => p.team_number === 1);
     const side2Players = gPlayers.filter((p) => p.team_number === 2);
 
-    // #1502: «Scorekort levert» — alle ikke-trukne spillere har levert.
-    // Withdrawn ekskluderes (samme regel som endGame-gaten); en kamp uten
-    // ikke-trukne spillere kan aldri være «levert».
-    const nonWithdrawn = gPlayers.filter((p) => !p.withdrawn_at);
+    // #1502/#1488 (K4): «Scorekort levert» — alle ikke-trukne spillere har
+    // levert (withdrawn ekskludert). Avledede kamper arver host-statusen; se
+    // pre-passet over.
     const allScorecardsSubmitted =
-      nonWithdrawn.length > 0 && nonWithdrawn.every((p) => p.submitted_at != null);
+      submissionStatusByGame.get(game.id)!.allScorecardsSubmitted;
 
     // Collect roster: add players to their respective team-buckets.
     for (const p of gPlayers) {
