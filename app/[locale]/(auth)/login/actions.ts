@@ -135,11 +135,19 @@ export async function sendCode(formData: FormData) {
   if (error) {
     const msg = error.message?.toLowerCase() ?? '';
     let code:
+      | 'rate_limited_quota'
       | 'rate_limited_minute'
       | 'user_not_found'
       | 'invite_expired'
       | 'unknown' = 'unknown';
-    if (
+    if (msg.includes('email rate limit exceeded')) {
+      // #1434: the project-wide mail quota — NO mail was sent, unlike the
+      // 60-second throttle below where a code is already in the inbox. Both
+      // share error.code `over_email_send_rate_limit`, so the message text is
+      // the only discriminator, and this check MUST come before the generic
+      // heuristic: the quota string itself contains "rate".
+      code = 'rate_limited_quota';
+    } else if (
       msg.includes('rate') ||
       msg.includes('too many') ||
       msg.includes('security purposes')
@@ -188,6 +196,8 @@ export async function sendCode(formData: FormData) {
     // field — regardless of whether the request came from step 1 or from
     // «Send ny kode». The copy («be om ny kode om ett minutt») is only true
     // there. `email` is non-empty here; the guard above redirects otherwise.
+    // (One known impostor remains: Supabase's IP-level `over_request_rate_limit`
+    // — "Too many requests…" — still matches the heuristic and lands here.)
     if (code === 'rate_limited_minute') {
       loginErrorRedirect(code, { ...errorCtx, step: 'verify' });
     }

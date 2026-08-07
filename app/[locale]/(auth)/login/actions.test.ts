@@ -452,6 +452,46 @@ describe('sendCode — rate-limit', () => {
     );
   });
 
+  it('maps the project-wide mail quota to rate_limited_quota WITHOUT verify-parking (#1434)', async () => {
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    signInWithOtpMock.mockResolvedValue({
+      error: { message: 'email rate limit exceeded' },
+    });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'kompis@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // No mail was sent, so parking the user at the code field would promise a
+    // code that never comes. The quota string contains "rate" — this asserts
+    // the quota check wins over the generic heuristic.
+    expect(lastRedirect()).toBe(
+      '/login?email=kompis%40example.com&error=rate_limited_quota',
+    );
+  });
+
+  it('quota hit from «Send ny kode» (from=verify) stays on the verify step via errorCtx (#1434)', async () => {
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    signInWithOtpMock.mockResolvedValue({
+      error: { message: 'email rate limit exceeded' },
+    });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'kompis@example.com', from: 'verify' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // The verify step is honest context here — an older code may still be
+    // valid, and the copy promises no new one. This is the plain errorCtx
+    // path (#1345), not the forced step-override the throttle branch uses.
+    expect(lastRedirect()).toBe(
+      '/login?step=verify&email=kompis%40example.com&error=rate_limited_quota',
+    );
+  });
+
   it('calls consumeLoginRateLimit with the trimmed/lowercased email and resolved IP', async () => {
     rpcMock.mockResolvedValue({ data: false, error: null });
     signInWithOtpMock.mockResolvedValue({ error: null });
