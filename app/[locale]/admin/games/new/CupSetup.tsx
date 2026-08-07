@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { startTransition, useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -92,7 +92,21 @@ export function CupSetup({
   }
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form
+      action={formAction}
+      // #1397 (staging-funn): React 19 auto-resetter formen når en
+      // `action`-innsending fullfører — native reset tømmer de ukontrollerte
+      // feltene og drar checkboxene tilbake til defaultChecked, som er
+      // nøyaktig figuren denne fiksen skal fjerne. preventDefault + manuell
+      // dispatch i en transition hopper over auto-reset-en; `action`-attributtet
+      // står igjen som fallback før hydrering (da med reset, uunngåelig uten JS).
+      onSubmit={(e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        startTransition(() => formAction(formData));
+      }}
+      className="space-y-5"
+    >
       {groupId && (
         <input type="hidden" name="group_id" value={groupId} />
       )}
