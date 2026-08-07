@@ -4552,6 +4552,37 @@
         "unexpected": "Uventet feil: {code}"
       }
     },
+    "participants": {
+      "pageTitle": "Spillere",
+      "brassRibbonAdmin": "Cup · {name}",
+      "brassRibbonClub": "Klubb-cup · {name}",
+      "subtitle": "Meld på spillerne i {team1} mot {team2}. Lagfordelingen tar du når du genererer matcher.",
+      "enrolledHeading": "Påmeldte",
+      "count": "{count, plural, =0 {Ingen påmeldte} one {# påmeldt} other {# påmeldte}}",
+      "countCapped": "{count} av {cap} påmeldte",
+      "emptyParticipants": "Ingen er påmeldt ennå. Legg til spillere fra lista under.",
+      "removeButton": "Fjern",
+      "addHeading": "Legg til spillere",
+      "addButton": "Legg til",
+      "allAdded": "Alle tilgjengelige spillere er påmeldt.",
+      "emptyCandidates": "Ingen spillere å legge til ennå. Inviter spillere, så dukker de opp her.",
+      "emptyCandidatesLink": "Åpne spillerlisten",
+      "emptyCandidatesLinkClub": "Åpne klubben",
+      "pendingBadge": "Venter på profil",
+      "pendingHelper": "Mangler handicap",
+      "statusMessages": {
+        "participant_added": "Spilleren er lagt til.",
+        "participant_removed": "Spilleren er fjernet."
+      },
+      "errors": {
+        "not_candidate": "Denne spilleren kan ikke meldes på cupen.",
+        "too_many_players": "En personlig cup tar maks {cap} spillere. Vil du ha flere, lag en klubb-cup.",
+        "not_draft": "Cupen er allerede startet, så påmeldingen er låst.",
+        "not_found": "Fant ikke cupen.",
+        "plan_save_failed": "Klarte ikke å lagre endringen. Prøv igjen.",
+        "unexpected": "Uventet feil: {code}"
+      }
+    },
     "status": {
       "draft": "Utkast",
       "active": "Pågående",
