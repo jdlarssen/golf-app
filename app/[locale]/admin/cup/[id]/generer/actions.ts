@@ -56,10 +56,10 @@ type CupAllowancePcts = {
    * `best_ball_allowance_pct`-kolonne (ingen migrasjon la til én — 0153/0154
    * dekker kun win/tie-poeng + sidepoeng) — og best_ball ER fourball spilt
    * som slagspill, med samme WHS-default (85 %, `ALLOWANCE_DEFAULTS.fourball
-   * === ALLOWANCE_DEFAULTS.bestBall`). Kilde, i prioritert rekkefølge (F3c):
-   * `CupBatchInput.bestBallAllowancePct` (splittet-cup-dag-wizardens eget
-   * felt, default 85 der) → cupens `fourball_allowance_pct`-override (default
-   * 85 når cupen ikke har satt en). Splittet-cup-dag-bunten bruker ALDRI
+   * === ALLOWANCE_DEFAULTS.bestBall`). Kilde, i prioritert rekkefølge (F3c
+   * → #1472): planens lagrede `best_ball_allowance_pct` (splittet-cup-dag-
+   * feltet i Oppsett-rommet) → cupens `fourball_allowance_pct`-override
+   * (default 85 når cupen ikke har satt en). Splittet-cup-dag-bunten bruker ALDRI
    * `fourball_matchplay` som eget sesjonsformat (bunten er
    * greensome+best_ball+singles, se `cupTemplates.ts`), så gjenbruket
    * kolliderer aldri med en faktisk fourball-matches egen allowance i samme
@@ -134,32 +134,16 @@ export type CupBatchMatch = (PlannedMatch | PlannedBundleMatch) & {
   teamStrokesOverride?: { team1: number; team2: number };
 };
 
+/**
+ * #1472: input-typen bærer KUN det klienten faktisk eier — cupens id og den
+ * fordelte match-planen (side1/side2/segment/sourceId + greensomens
+ * `teamStrokesOverride`). Bane/tee/tee-off/best-ball leses server-side fra den
+ * lagrede planen (`tournament_plans`, Oppsett-rommet) i stedet for å komme som
+ * klient-payload — mindre manipulasjonsflate, og serveren er fasit ved submit.
+ */
 export type CupBatchInput = {
   tournamentId: string;
-  courseId: string;
-  teeBoxId: string;
   matches: CupBatchMatch[];
-  /**
-   * #1441 (F3c, D4/D11): «Handicap best ball (%)» fra splittet-cup-dag-
-   * wizarden, cup-dag-bredt (ikke per match). Når satt overstyrer den
-   * `allowances.bestBall` under i stedet for å gjenbruke cupens lagrede
-   * `fourball_allowance_pct` (se `CupAllowancePcts.bestBall`s JSDoc for
-   * hvorfor det gjenbruket eksisterer) — de tre eldre presetene sender aldri
-   * dette feltet (deres wizard-steg viser det ikke), så `undefined` betyr
-   * «ingen bunt i denne batchen, eller organisatoren lot standarden stå».
-   */
-  bestBallAllowancePct?: number;
-  /**
-   * #1441 (owner-QA, F3d): «det er ingen steder å legge inn tee-off. det
-   * mangler i cup-veiviseren.» Cup-STARTEN — flight 1 sin tee-off, ISO (Oslo→
-   * UTC allerede konvertert av wizarden via `parseOsloDateTimeLocal`).
-   * `resolveScheduledTeeOffAt` (lib/cup/splitDayLineup.ts) sprer den ut per
-   * match: samme tidspunkt for alle matcher i de tre eldre presetene (som
-   * ikke har noe flight-konsept), forskjøvet 10 min per flight for
-   * splittet-cup-dagens bunt. `undefined` = feltet stod tomt → NULL på alle
-   * matchene (dagens oppførsel, organisatoren starter rundene manuelt).
-   */
-  scheduledTeeOffAt?: string;
 };
 
 export type CupBatchError = { error: string };
@@ -185,8 +169,7 @@ function isNonNegativeInteger(n: unknown): n is number {
 export async function createCupMatchesFromPlan(
   input: CupBatchInput,
 ): Promise<CupBatchError> {
-  const { tournamentId, courseId, teeBoxId, matches, bestBallAllowancePct, scheduledTeeOffAt } =
-    input;
+  const { tournamentId, matches } = input;
 
   const supabase = await getServerClient();
   // #524/#526: klubb-cup styres av klubb-admin (eller global admin); personlig
@@ -197,7 +180,6 @@ export async function createCupMatchesFromPlan(
     tournamentId,
   );
 
-  if (!courseId || !teeBoxId) return { error: 'missing_course' };
   if (!matches || matches.length === 0) return { error: 'no_matches' };
 
   // #1441 (D10): valider manuelle lag-slag FØR noe skrives — malformed input
@@ -208,30 +190,6 @@ export async function createCupMatchesFromPlan(
     const { team1, team2 } = m.teamStrokesOverride;
     if (!isNonNegativeInteger(team1) || !isNonNegativeInteger(team2)) {
       return { error: 'invalid_team_strokes_override' };
-    }
-  }
-
-  // #1441 (F3c): «Handicap best ball (%)» — samme 0..100-heltalls-kontrakt
-  // som de fem allowance-feltene i createTournamentDraft (parseAllowancePct),
-  // men her er inputen allerede et tall (client-side wizard-state, ikke en
-  // form-streng) — valider direkte i stedet for å gå via parseren.
-  if (
-    bestBallAllowancePct !== undefined &&
-    (!Number.isInteger(bestBallAllowancePct) || bestBallAllowancePct < 0 || bestBallAllowancePct > 100)
-  ) {
-    return { error: 'invalid_best_ball_allowance' };
-  }
-
-  // #1441 (owner-QA, F3d): cup-start tee-off — samme «parses + ikke i
-  // fortiden»-kontrakt som opprett-spill-actionen (lib/games/gamePayload.ts),
-  // men her er feltet ALLTID valgfritt (aldri «publish»-required) — en tom
-  // verdi er gyldig og betyr NULL på alle matchene lenger nede.
-  if (scheduledTeeOffAt !== undefined) {
-    if (Number.isNaN(new Date(scheduledTeeOffAt).getTime())) {
-      return { error: 'invalid_tee_off' };
-    }
-    if (isTeeOffInPast(scheduledTeeOffAt)) {
-      return { error: 'tee_off_in_past' };
     }
   }
 
@@ -255,6 +213,42 @@ export async function createCupMatchesFromPlan(
     .maybeSingle();
   if (cupErr || !cup) return { error: 'not_found' };
   if (cup.status !== 'draft') return { error: 'not_draft' };
+
+  // #1472: bane/tee/tee-off/best-ball leses fra den LAGREDE planen (Oppsett-
+  // rommet), ikke lenger fra klient-payloaden. Fasit ved submit — planen kan
+  // ha blitt endret siden veiviseren ble lastet (annen fane/enhet). SELECT-
+  // policyen (0155) dekker authenticated, så request-klienten holder.
+  const { data: plan } = await supabase
+    .from('tournament_plans')
+    .select('course_id, tee_box_id, scheduled_tee_off_at, best_ball_allowance_pct')
+    .eq('tournament_id', tournamentId)
+    .maybeSingle();
+  if (!plan || !plan.course_id || !plan.tee_box_id) {
+    return { error: 'missing_plan' };
+  }
+  const courseId = plan.course_id as string;
+  const teeBoxId = plan.tee_box_id as string;
+
+  // Re-valider teen server-side: den kan ha blitt arkivert eller flyttet til en
+  // annen bane etter at planen ble lagret (planen ble ikke oppdatert). En
+  // utdatert plan sender arrangøren tilbake til Oppsett, ikke inn i genereringen.
+  const { data: teeRow } = await supabase
+    .from('tee_boxes')
+    .select('course_id, archived_at')
+    .eq('id', teeBoxId)
+    .maybeSingle();
+  if (!teeRow || teeRow.course_id !== courseId || teeRow.archived_at !== null) {
+    return { error: 'plan_tee' };
+  }
+
+  // #1441 (owner-QA, F3d) → #1472: cup-start-tee-off leses nå fra planen. En
+  // stale tee-off i fortiden skal sende arrangøren tilbake til Oppsett for å
+  // sette et nytt tidspunkt, ikke stille generere med et forbigått start-tid.
+  const scheduledTeeOffAt =
+    (plan.scheduled_tee_off_at as string | null) ?? undefined;
+  if (scheduledTeeOffAt !== undefined && isTeeOffInPast(scheduledTeeOffAt)) {
+    return { error: 'tee_off_in_past' };
+  }
 
   // Klubb-cup: matchene skal binde cupen til klubben (group_id på games) og kun
   // inneholde klubbmedlemmer. Pickeren tilbyr bare medlemmer, så en ikke-medlem
@@ -330,11 +324,11 @@ export async function createCupMatchesFromPlan(
     greensome: greensomePct,
     chapman: chapmanPct,
     gruesome: gruesomePct,
-    // #1441 (D4/D11, F3c): splittet-cup-dag-wizardens «Handicap best ball
-    // (%)»-felt vinner når satt; ellers gjenbrukes cupens fourball-override
-    // (se `CupAllowancePcts.bestBall`s JSDoc — bunten bruker aldri
+    // #1441 (D4/D11, F3c) → #1472: planens lagrede «Handicap best ball (%)»
+    // vinner når satt; ellers gjenbrukes cupens fourball-override (se
+    // `CupAllowancePcts.bestBall`s JSDoc — bunten bruker aldri
     // `fourball_matchplay` som eget sesjonsformat, så ingen kollisjon).
-    bestBall: bestBallAllowancePct ?? fourballPct,
+    bestBall: (plan.best_ball_allowance_pct as number | null) ?? fourballPct,
   };
 
   // Resolve tee_gender per player from their profile in one round-trip.

@@ -15,22 +15,22 @@ import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { getRoleContext } from '@/lib/admin/auth';
 import { MAX_PERSONAL_CUP_MATCHES } from '@/lib/cup/limits';
 import {
-  getCupCandidatePlayers,
-  type WizardPlayer,
-} from '@/lib/cup/getCupCandidatePlayers';
+  type CupSessionFormat,
+} from '@/lib/cup/cupTemplates';
+import { type PairingStrategy } from '@/lib/cup/cupPairing';
+import { type WizardPlayer } from '@/lib/cup/getCupCandidatePlayers';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
 
-// WizardPlayer bor nå i lib/cup/getCupCandidatePlayers (#1472 — delt med
-// Spillere-rommet). Re-eksportert her så eksisterende importører av
-// `./GenerateMatches` (GenerateMatchesWizard + dens test) er uendret.
+// WizardPlayer bor i lib/cup/getCupCandidatePlayers (#1472). Re-eksportert her
+// så eksisterende importører av `./GenerateMatches` (GenerateMatchesWizard +
+// dens test) er uendret.
 export type { WizardPlayer };
 
 // #1441 (F3c): rating-feltene under (slope/course_rating/par_total × mens/
 // ladies/juniors) er kun brukt av splittet-cup-dag-bunten, for å vise hver
 // spillers spillehandicap som regnehjelp ved greensomens manuelle lag-slag
 // (D10). Optional i WizardTeeBox (ikke required) — de tre eldre presetene
-// bryr seg ikke, og eksisterende test-fixtures (GenerateMatchesWizard.test)
-// bygger `{id, name}` uten dem.
+// bryr seg ikke, og eksisterende test-fixtures bygger `{id, name}` uten dem.
 type TeeBoxRow = {
   id: string;
   name: string;
@@ -66,24 +66,56 @@ export type WizardTeeBox = {
   par_total_juniors?: number | null;
 };
 
-export type WizardCourse = {
+// FK-joins typer Supabase JS som array selv på many-to-one — normaliser.
+type ParticipantUser = {
   id: string;
-  name: string;
-  teeBoxes: WizardTeeBox[];
+  name: string | null;
+  nickname: string | null;
+  hcp_index: number | string;
+  gender: 'mens' | 'ladies' | null;
 };
+
+function userOf(
+  rel: ParticipantUser | ParticipantUser[] | null | undefined,
+): ParticipantUser | null {
+  if (!rel) return null;
+  return Array.isArray(rel) ? (rel[0] ?? null) : rel;
+}
+
+function displayNameOf(u: ParticipantUser | null): string {
+  return u?.nickname?.trim() || u?.name?.trim() || 'Ukjent spiller';
+}
+
+const SESSION_FORMAT_IDS = new Set<string>([
+  'foursomes_matchplay',
+  'fourball_matchplay',
+  'singles_matchplay',
+  'greensome_matchplay',
+  'chapman_matchplay',
+  'gruesome_matchplay',
+]);
+
+/** Trygg normalisering av `custom_sessions` (jsonb) → CupSessionFormat[]. */
+function normalizeCustomSessions(raw: unknown): CupSessionFormat[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (v): v is CupSessionFormat =>
+      typeof v === 'string' && SESSION_FORMAT_IDS.has(v),
+  );
+}
 
 type GenerateMatchesVariant = 'admin' | 'club';
 
 /**
- * Delt match-genererings-flate (#524). Begge ruter (`/admin/cup/[id]/generer`
- * og `/klubber/[id]/cup/[cupId]/generer`) rendrer denne. Gaten gjøres i ruten;
- * komponenten gjør all fetching + chrome.
+ * Delt Fordel-og-generer-flate (#524/#1472, Rom 3). Begge ruter
+ * (`/admin/cup/[id]/generer` og `/klubber/[id]/cup/[cupId]/generer`) rendrer
+ * denne. Gaten gjøres i ruten; komponenten gjør all fetching + chrome.
  *
- * Spiller-kilden følger cupens kontekst (#524/#526/#464):
- *  - klubb-cup (group_id satt) → KUN klubbens medlemmer.
- *  - personlig cup, global admin → alle profil-fullførte brukere (sekretariat).
- *  - personlig cup, vanlig skaper → skaperens venner + skaperen selv (samme
- *    venne-scoping som opprett-veiviseren, ikke hele brukerbasen).
+ * #1472: bane/tee/tee-off/format/strategi kommer nå fra den LAGREDE planen
+ * (Oppsett-rommet), og rosteren er cupens PÅMELDTE deltakere (Spillere-rommet)
+ * — ikke lenger kandidat-kilden. Mangler forutsetningene, viser rommet en
+ * guided empty-state (#752) med lenke til det rommet som mangler noe, i stedet
+ * for veiviseren.
  */
 export async function GenerateMatches({
   tournamentId,
@@ -93,7 +125,7 @@ export async function GenerateMatches({
   variant: GenerateMatchesVariant;
 }) {
   const supabase = await getServerClient();
-  const { userId, isAdmin } = await getRoleContext(supabase);
+  const { isAdmin } = await getRoleContext(supabase);
 
   const [snapshot, t, locale] = await Promise.all([
     getCupSnapshot(tournamentId),
@@ -116,50 +148,86 @@ export async function GenerateMatches({
     });
   }
 
-  const coursesResult = await supabase
-    .from('courses')
-    .select(
-      'id, name, tee_boxes(id, name, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
-    )
-    .order('name', { ascending: true })
-    .returns<CourseRow[]>();
-  if (coursesResult.error) throw coursesResult.error;
+  const admin = getAdminClient();
 
-  const courses: WizardCourse[] = (coursesResult.data ?? [])
-    .map((c) => ({
-      id: c.id,
-      name: c.name,
-      teeBoxes: (c.tee_boxes ?? [])
-        .filter((t) => t.archived_at === null)
-        .map((t) => ({
-          id: t.id,
-          name: t.name,
-          slope_mens: t.slope_mens,
-          course_rating_mens: t.course_rating_mens,
-          par_total_mens: t.par_total_mens,
-          slope_ladies: t.slope_ladies,
-          course_rating_ladies: t.course_rating_ladies,
-          par_total_ladies: t.par_total_ladies,
-          slope_juniors: t.slope_juniors,
-          course_rating_juniors: t.course_rating_juniors,
-          par_total_juniors: t.par_total_juniors,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'no')),
-    }))
-    .filter((c) => c.teeBoxes.length > 0);
+  // Lagret plan (SELECT-policy tillater authenticated — request-klient holder)
+  // + påmeldte deltakere (admin-client så klubb-admins ser hele lista uansett
+  // users-RLS, samme som Spillere-rommet).
+  const [planRes, participantRes] = await Promise.all([
+    supabase
+      .from('tournament_plans')
+      .select(
+        'course_id, tee_box_id, scheduled_tee_off_at, preset_id, custom_sessions, strategy, best_ball_allowance_pct',
+      )
+      .eq('tournament_id', tournamentId)
+      .maybeSingle(),
+    admin
+      .from('tournament_participants')
+      .select(
+        'user_id, created_at, users:users!tournament_participants_user_id_fkey(id, name, nickname, hcp_index, gender)',
+      )
+      .eq('tournament_id', tournamentId)
+      .order('created_at', { ascending: true }),
+  ]);
+  if (participantRes.error) throw participantRes.error;
+  const plan = planRes.data;
 
-  // Spiller-kilde følger cupens kontekst (#1472: nå delt med Spillere-rommet
-  // via lib/cup/getCupCandidatePlayers). Kilden følger HVEM som ser lista
-  // (klubb-medlemmer / alle profil-fullførte / skaperens venner+selv).
-  const players: WizardPlayer[] = await getCupCandidatePlayers(supabase, {
-    groupId,
-    userId,
-    isAdmin,
+  // Deltakerne er alltid profil-fullførte ved add-time (Spillere-rommet gater
+  // det), så ingen `pending`-rader her — kartlegg rett til WizardPlayer.
+  const participants: WizardPlayer[] = (participantRes.data ?? []).map((row) => {
+    const u = userOf(row.users as ParticipantUser | ParticipantUser[] | null);
+    return {
+      id: row.user_id,
+      displayName: displayNameOf(u),
+      hcpIndex: Number(u?.hcp_index ?? 0),
+      gender: u?.gender ?? null,
+    };
   });
+
+  // Resolve planens bane + tee (navn til recap + rating-sett til greensomens
+  // regnehjelp). En arkivert tee (eller en slettet bane/tee) resolver IKKE →
+  // planen regnes som ufullstendig og guider tilbake til Oppsett-rommet, i tråd
+  // med at genereringen ville avvist en arkivert tee server-side (`plan_tee`).
+  let planCourseName = '';
+  let planTeeName = '';
+  let selectedTee: WizardTeeBox | undefined;
+  if (plan?.course_id && plan?.tee_box_id) {
+    const { data: course } = await supabase
+      .from('courses')
+      .select(
+        'id, name, tee_boxes(id, name, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      )
+      .eq('id', plan.course_id)
+      .maybeSingle<CourseRow>();
+    if (course) {
+      const tee = (course.tee_boxes ?? []).find(
+        (tb) => tb.id === plan.tee_box_id && tb.archived_at === null,
+      );
+      if (tee) {
+        planCourseName = course.name;
+        planTeeName = tee.name;
+        selectedTee = {
+          id: tee.id,
+          name: tee.name,
+          slope_mens: tee.slope_mens,
+          course_rating_mens: tee.course_rating_mens,
+          par_total_mens: tee.par_total_mens,
+          slope_ladies: tee.slope_ladies,
+          course_rating_ladies: tee.course_rating_ladies,
+          par_total_ladies: tee.par_total_ladies,
+          slope_juniors: tee.slope_juniors,
+          course_rating_juniors: tee.course_rating_juniors,
+          par_total_juniors: tee.par_total_juniors,
+        };
+      }
+    }
+  }
+  // planReady krever at planen finnes, har bane+tee, OG at de faktisk resolver.
+  const planReady = selectedTee !== undefined;
 
   let clubName: string | null = null;
   if (groupId) {
-    const { data: club } = await getAdminClient()
+    const { data: club } = await admin
       .from('groups')
       .select('name')
       .eq('id', groupId)
@@ -168,10 +236,11 @@ export async function GenerateMatches({
   }
 
   const Shell = variant === 'club' ? AppShell : AdminShell;
-  const backHref =
+  const cupBase =
     variant === 'club' && groupId
       ? `/klubber/${groupId}/cup/${tournamentId}`
       : `/admin/cup/${tournamentId}`;
+  const backHref = cupBase;
   const kicker = variant === 'club' ? (clubName ?? t('ledger.kicker')) : t('ledger.kicker');
   const ribbonKicker =
     variant === 'club'
@@ -183,17 +252,12 @@ export async function GenerateMatches({
   const matchCap =
     !groupId && !isAdmin ? MAX_PERSONAL_CUP_MATCHES : undefined;
 
-  // #752: guided empty-state — vis forklaring + lenke i stedet for veiviseren
-  // når det mangler spillere eller baner (inkl. «alle tees arkivert»-tilfellet
-  // som allerede er filtrert ut av courses-mappingen over).
-  const hasPlayers = players.length > 0;
-  const hasCourses = courses.length > 0;
+  const hasParticipants = participants.length > 0;
 
-  if (!hasPlayers || !hasCourses) {
-    const playerHref =
-      groupId
-        ? `/klubber/${groupId}`
-        : `/admin/spillere`;
+  // #752: guided empty-state — vis forklaring + lenke til det rommet som mangler
+  // noe (Oppsett / Spillere) i stedet for veiviseren. Kan stables (begge
+  // mangler på en fersk cup).
+  if (!planReady || !hasParticipants) {
     return (
       <Shell>
         <TopBar backHref={backHref} kicker={kicker} />
@@ -203,29 +267,29 @@ export async function GenerateMatches({
           subtitle={`${tournament.team_1_name} ${t('generate.mot')} ${tournament.team_2_name}`}
         />
         <div className="space-y-3">
-          {!hasPlayers && (
+          {!planReady && (
             <Card>
               <p className="text-sm text-muted mb-2">
-                {t('generate.emptyStatePlayers')}
+                {t('generate.emptyStateNoPlan')}
               </p>
               <SmartLink
-                href={playerHref}
+                href={`${cupBase}/oppsett`}
                 className="text-sm text-text underline hover:no-underline"
               >
-                {t('generate.emptyStatePlayersLink')}
+                {t('generate.emptyStateNoPlanLink')}
               </SmartLink>
             </Card>
           )}
-          {!hasCourses && (
+          {!hasParticipants && (
             <Card>
               <p className="text-sm text-muted mb-2">
-                {t('generate.emptyStateCourses')}
+                {t('generate.emptyStateNoParticipants')}
               </p>
               <SmartLink
-                href="/admin/courses/new"
+                href={`${cupBase}/spillere`}
                 className="text-sm text-text underline hover:no-underline"
               >
-                {t('generate.emptyStateCoursesLink')}
+                {t('generate.emptyStateNoParticipantsLink')}
               </SmartLink>
             </Card>
           )}
@@ -233,6 +297,11 @@ export async function GenerateMatches({
       </Shell>
     );
   }
+
+  const presetId = plan?.preset_id ?? 'klassisk';
+  const customSessions = normalizeCustomSessions(plan?.custom_sessions);
+  const strategy: PairingStrategy =
+    plan?.strategy === 'random' ? 'random' : 'handicap';
 
   return (
     <Shell>
@@ -246,9 +315,14 @@ export async function GenerateMatches({
         tournamentId={tournamentId}
         team1Name={tournament.team_1_name}
         team2Name={tournament.team_2_name}
-        players={players}
-        courses={courses}
+        players={participants}
         matchCap={matchCap}
+        planCourseName={planCourseName}
+        planTeeName={planTeeName}
+        selectedTee={selectedTee}
+        presetId={presetId}
+        customSessions={customSessions}
+        strategy={strategy}
       />
     </Shell>
   );
