@@ -4693,7 +4693,8 @@
         "cup_foursomes_allowance": "Sjekk handicap-andelen for foursomes.",
         "cup_win_points": "Poeng for seier må være et tall over 0.",
         "cup_tie_points": "Poeng ved delt kan ikke være negativt.",
-        "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen."
+        "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen.",
+        "unexpected": "Uventet feil: {code}"
       }
     },
     "public": {
