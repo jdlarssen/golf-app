@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCupPlanForm } from './planValidation';
+import { parseCupPlanForm, normalizeCustomSessions } from './planValidation';
 
 /**
  * Type A (pure logic) tests for the Oppsett-room form validator (#1472).
@@ -134,5 +134,28 @@ describe('parseCupPlanForm — best-ball allowance', () => {
   it('whitespace-only → treated as empty → null', () => {
     const result = parseCupPlanForm(input({ bestBallAllowanceRaw: '   ' }));
     expect(result).toMatchObject({ ok: { bestBallAllowancePct: null } });
+  });
+});
+
+describe('normalizeCustomSessions (#1488 K7)', () => {
+  it('keeps only valid CupSessionFormat strings', () => {
+    expect(
+      normalizeCustomSessions([
+        'singles_matchplay',
+        'not_a_format',
+        'fourball_matchplay',
+        42,
+        null,
+      ]),
+    ).toEqual(['singles_matchplay', 'fourball_matchplay']);
+  });
+
+  it('non-array input → empty list', () => {
+    expect(normalizeCustomSessions(null)).toEqual([]);
+    expect(normalizeCustomSessions('singles_matchplay')).toEqual([]);
+  });
+
+  it('empty array → empty list', () => {
+    expect(normalizeCustomSessions([])).toEqual([]);
   });
 });

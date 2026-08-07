@@ -79,6 +79,18 @@ function isCupSessionFormat(v: unknown): v is CupSessionFormat {
 }
 
 /**
+ * Trygg normalisering av en jsonb `custom_sessions`-verdi → `CupSessionFormat[]`
+ * (#1488, K7). Ett hjem for regelen som før lå duplisert verbatim i både
+ * Oppsett- og Generer-flatene med hver sin lokale format-liste.
+ * Gjenbruker `isCupSessionFormat`s `SESSION_FORMAT_SET`-uttømmelighet, så et nytt
+ * `CupSessionFormat`-medlem dekkes automatisk. Ikke-array → `[]`.
+ */
+export function normalizeCustomSessions(raw: unknown): CupSessionFormat[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isCupSessionFormat);
+}
+
+/**
  * Parser best-ball-%: tom (etter trim) → `null`; ellers må det være et heltall
  * 0–100. Speiler tom/gyldig/ugyldig-kontrakten til `parseAllowancePct`, men
  * tomt betyr her «ingen verdi» (NULL i planen), ikke en app-fylt default.
