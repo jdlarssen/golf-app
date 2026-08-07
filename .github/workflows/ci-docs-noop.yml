@@ -25,11 +25,13 @@ on:
       - '.forge/**'
 
 jobs:
+  # NB: no `#` inside these plain-scalar run lines — a space-then-# starts a
+  # YAML comment and silently truncates the command (broke the first run).
   verify:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only PR — ci.yml's verify gate does not apply (paths-ignore, #1195)."
+      - run: echo 'Docs-only PR - the real verify gate in ci.yml does not apply here (paths-ignore, quota trim 1195).'
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only PR — ci.yml's e2e gate does not apply (paths-ignore, #1195)."
+      - run: echo 'Docs-only PR - the real e2e gate in ci.yml does not apply here (paths-ignore, quota trim 1195).'
