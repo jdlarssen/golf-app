@@ -77,8 +77,11 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       return `/games/${p.game_id}/submit`;
     }
     case 'cup_finished': {
+      // #1499: resultatet bor på resultatsiden (#1468) — cup-siden viser
+      // kampene uten fasit, så «resultatet er klart»-varselet må lande der
+      // fasiten faktisk er.
       const p = n.payload as NotificationPayload<'cup_finished'>;
-      return `/cup/${p.tournament_id}`;
+      return `/cup/${p.tournament_id}/resultater`;
     }
     case 'cup_started': {
       const p = n.payload as NotificationPayload<'cup_started'>;

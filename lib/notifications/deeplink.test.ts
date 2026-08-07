@@ -55,6 +55,13 @@ describe('notificationDestination', () => {
       notificationDestination(
         n('cup_finished', { tournament_id: TOURNAMENT, tournament_name: 'C' }),
       ),
+    ).toBe(`/cup/${TOURNAMENT}/resultater`);
+    // cup_started skal derimot lande på cup-siden (kampene) — issue #1499
+    // krever eksplisitt at den IKKE flyttes til resultatsiden.
+    expect(
+      notificationDestination(
+        n('cup_started', { tournament_id: TOURNAMENT, tournament_name: 'C' }),
+      ),
     ).toBe(`/cup/${TOURNAMENT}`);
     expect(
       notificationDestination(
