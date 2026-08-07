@@ -171,6 +171,23 @@ på resultatsiden i stedet for cup-siden (i så fall `npx vitest -u` på snapsho
 - #1449-kortenes badge-oppførsel og `winner_team`-persistering.
 - Å skjule per-kamp-leaderboards etter game-finish (akseptert spoiler-kanal, se over).
 
+## Revisjon 1 (2026-08-07, etter evaluator-runde 1)
+
+Evaluatoren motbeviste kontraktens premiss «kampens leaderboard er åpent etter finish»: RLS
+åpner scores, men SIDE-gaten (`app/[locale]/games/[id]/leaderboard/page.tsx`) krevde
+deltaker/global admin — matchkort-lenkene 404-et dermed for cup-publikummet (selve
+#1456-scenarioet). Rettelse, i tråd med eier-ordren «se hvordan de andre gjorde det (etter
+runden)» og dokumentert RLS-design («alle ser alt etter finished»):
+
+- Leaderboard-gaten får finished-unntak: ferdige spill kan åpnes av alle innloggede;
+  aktive spill er fortsatt kun for deltakere/admin.
+- Matchkort lenker KUN når kampen er ferdig (cup-siden, resultatsiden, klubb-styringssiden);
+  uferdige kamper er rene kort. Admin-drilldown uendret.
+
+`ASSUMPTION:` valget mellom «lenk alltid (aktive lander på reveal-blind side)» og «lenk kun
+ferdige» er tatt autonomt til fordel for sistnevnte — det matcher eier-sitatet «etter runden»
+ordrett og er billig å snu.
+
 ## Evidens (2026-08-07, staging-kjøring)
 
 - **S1 — cup-siden er blind:** staging-driver: `cup-results-pending` synlig, `.text-5xl`=0, 2 matchkort; skjermbilde s1-cup-blind.png; match 1 finished i DB
