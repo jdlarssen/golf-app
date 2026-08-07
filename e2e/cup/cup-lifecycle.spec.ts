@@ -171,19 +171,21 @@ test.describe('Cup lifecycle smoke', () => {
 /**
  * #736 (del A): full cup-livssyklus via den EKTE match-generatoren.
  *
- * Spec-en over seeder match-radene direkte. Denne driver den 5-stegs
- * generer-veiviseren via UI (test-id-ene fra denne PR-en) → den ekte,
+ * Spec-en over seeder match-radene direkte. Denne driver hele tre-roms-flyten
+ * (#1472) via UI: Oppsett-rommet (plan: bane/tee/preset/strategi persistert i
+ * `tournament_plans`) → Spillere-rommet (deltakerliste i
+ * `tournament_participants`) → to-stegs generer-veiviseren → den ekte,
  * ikke-atomiske `createCupMatchesFromPlan`-løkka som produserte #641, og
  * asserter at de PRODUSERTE radene har gyldig form (flight_number=1,
- * team_number 1/2, accepted_at satt, ingen foreldreløse game-rader). Lukker
- * deretter livssyklusen ved å aktivere cupen og asserte at den offentlige
- * leaderboarden rendrer.
+ * team_number 1/2, accepted_at satt, bane/tee fra LAGRET plan, ingen
+ * foreldreløse game-rader). Lukker deretter livssyklusen ved å aktivere cupen
+ * og asserte at den offentlige leaderboarden rendrer.
  *
- * Veiviserens steg-1-gate bruker default-presetet (klassisk, minPerTeam=2), så
- * 4 spillere kreves for å starte i det hele tatt. Vi har bare 2 faste test-
- * brukere, så 2 EFEMERE brukere opprettes (og ryddes) for å nå gulvet.
+ * Veiviserens steg-1-gate bruker planens preset (her: singler, minPerTeam=1),
+ * men 2v2 gir to singles-matcher — 2 EFEMERE brukere opprettes (og ryddes) i
+ * tillegg til de 2 faste test-brukerne.
  *
- * @lifecycle (IKKE @gate): driver en PPR-tung admin-veiviser + oppretter/sletter
+ * @lifecycle (IKKE @gate): driver en PPR-tung admin-flyt + oppretter/sletter
  * auth-brukere på den delte staging-DB-en. For mye feil-flate til å gate hver
  * merge på — den seedede smoke-testen over forblir @gate-lese-sti-vakten, og
  * unit-testen i `generer/actions.test.ts` dekker write-shapet. Denne gir den
@@ -205,7 +207,7 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
     await deleteEphemeralPlayers(ephemerals.map((e) => e.id));
   });
 
-  test('admin drives the 4-step wizard → real createCupMatchesFromPlan → valid rows + leaderboard @lifecycle', async ({
+  test('admin drives three rooms → 2-step wizard → real createCupMatchesFromPlan → valid rows + leaderboard @lifecycle', async ({
     page,
   }) => {
     const admin = adminClient();
@@ -254,12 +256,38 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
     expect(cupErr).toBeNull();
     tournamentId = cup!.id;
 
-    // ── Drive the wizard ────────────────────────────────────────────────────
-    await page.goto(`/login?next=/admin/cup/${tournamentId}/generer`);
+    // ── Rom 1: Oppsett — plan persistert server-side (#1472) ────────────────
+    await page.goto(`/login?next=/admin/cup/${tournamentId}/oppsett`);
     await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto(`/admin/cup/${tournamentId}/oppsett`);
+
+    await expect(page.getByTestId('cup-plan-course')).toBeVisible();
+    await page.getByTestId('cup-plan-course').selectOption(tee!.course_id);
+    await page.getByTestId('cup-plan-tee').selectOption(tee!.id);
+    // Singles-only preset + handicap pairing → 2 singles matches ved 2v2.
+    await page.getByTestId('cup-plan-preset-singler').check();
+    await page.getByTestId('cup-plan-strategy-handicap').check();
+    await page.getByTestId('cup-plan-save').click();
+    // Suksess redirecter til cup-detaljen; feil blir på /oppsett med banner.
+    await expect(page, 'plan save redirected off /oppsett').not.toHaveURL(
+      /\/oppsett/,
+      { timeout: 25_000 },
+    );
+
+    // ── Rom 2: Spillere — deltakerliste persistert (#1472) ──────────────────
+    await page.goto(`/admin/cup/${tournamentId}/spillere`);
+    for (const id of [adminUser!.id, eph1.id, playerUser!.id, eph2.id]) {
+      await page.getByTestId(`cup-participants-add-${id}`).click();
+      // Add-en er en server-action + redirect; raden flytter til påmeldt-lista.
+      await expect(
+        page.getByTestId(`cup-participants-remove-${id}`),
+      ).toBeVisible({ timeout: 25_000 });
+    }
+
+    // ── Rom 3: Fordel & generer — to-stegs veiviser over deltakerlista ──────
     await page.goto(`/admin/cup/${tournamentId}/generer`);
 
-    // Step 1: 2 players per team (admin+eph1 = Lag A, player+eph2 = Lag B).
+    // Steg 1: 2 spillere per lag (admin+eph1 = Lag A, player+eph2 = Lag B).
     await expect(page.getByTestId('cup-wizard-step1')).toBeVisible();
     await page.getByTestId(`cup-wizard-assign-${adminUser!.id}-team1`).click();
     await page.getByTestId(`cup-wizard-assign-${eph1.id}-team1`).click();
@@ -267,21 +295,9 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
     await page.getByTestId(`cup-wizard-assign-${eph2.id}-team2`).click();
     await page.getByTestId('cup-wizard-next').click();
 
-    // Step 2: course + tee.
+    // Steg 2 (terminalt): preview av genererte matcher + generer-knappen →
+    // real createCupMatchesFromPlan (leser planen server-side) → redirect.
     await expect(page.getByTestId('cup-wizard-step2')).toBeVisible();
-    await page.getByTestId('cup-wizard-course').selectOption(tee!.course_id);
-    await page.getByTestId('cup-wizard-tee').selectOption(tee!.id);
-    await page.getByTestId('cup-wizard-next').click();
-
-    // Step 3: singles-only preset + handicap pairing → 2 singles matches.
-    await expect(page.getByTestId('cup-wizard-step3')).toBeVisible();
-    await page.getByTestId('cup-wizard-preset-singler').check();
-    await page.getByTestId('cup-wizard-strategy-handicap').check();
-    await page.getByTestId('cup-wizard-next').click();
-
-    // Step 4 (terminal): preview the generated matches, then confirm from the
-    // same step → real createCupMatchesFromPlan → redirect to cup detail.
-    await expect(page.getByTestId('cup-wizard-step4')).toBeVisible();
     await page.getByTestId('cup-wizard-generate').click();
     // Success redirects OFF /generer to the cup detail. An action error keeps us
     // on /generer with an error banner — so wait to LEAVE /generer.
@@ -293,12 +309,17 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
     // ── Assert the REAL generator output (the #641 write path) ───────────────
     const { data: matchGames } = await admin
       .from('games')
-      .select('id, game_mode, status, tournament_id')
+      .select('id, game_mode, status, tournament_id, course_id, tee_box_id, scheduled_tee_off_at')
       .eq('tournament_id', tournamentId);
     expect(matchGames?.length, 'singler preset (2v2) → 2 singles matches').toBe(2);
     for (const g of matchGames!) {
       expect(g.game_mode).toBe('singles_matchplay');
       expect(g.status).toBe('scheduled');
+      // #1472: bane/tee kommer fra den LAGREDE planen, ikke klient-payloaden;
+      // tee-off stod tomt i Oppsett-rommet → NULL på matchene.
+      expect(g.course_id, 'course from stored plan').toBe(tee!.course_id);
+      expect(g.tee_box_id, 'tee from stored plan').toBe(tee!.id);
+      expect(g.scheduled_tee_off_at, 'no tee-off set in plan').toBeNull();
     }
 
     const matchIds = matchGames!.map((g) => g.id as string);
