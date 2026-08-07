@@ -4552,6 +4552,37 @@
         "unexpected": "Unexpected error: {code}"
       }
     },
+    "participants": {
+      "pageTitle": "Players",
+      "brassRibbonAdmin": "Cup · {name}",
+      "brassRibbonClub": "Club cup · {name}",
+      "subtitle": "Enroll the players in {team1} vs {team2}. You'll split them into teams when you generate matches.",
+      "enrolledHeading": "Enrolled",
+      "count": "{count, plural, =0 {No players enrolled} one {# player} other {# players}}",
+      "countCapped": "{count} of {cap} players",
+      "emptyParticipants": "No one is enrolled yet. Add players from the list below.",
+      "removeButton": "Remove",
+      "addHeading": "Add players",
+      "addButton": "Add",
+      "allAdded": "Every available player is enrolled.",
+      "emptyCandidates": "No players to add yet. Invite players and they'll show up here.",
+      "emptyCandidatesLink": "Open the player list",
+      "emptyCandidatesLinkClub": "Open the club",
+      "pendingBadge": "Awaiting profile",
+      "pendingHelper": "Missing handicap",
+      "statusMessages": {
+        "participant_added": "Player added.",
+        "participant_removed": "Player removed."
+      },
+      "errors": {
+        "not_candidate": "This player can't be enrolled in the cup.",
+        "too_many_players": "A personal cup holds up to {cap} players. For more, create a club cup.",
+        "not_draft": "The cup has already started, so enrollment is locked.",
+        "not_found": "Couldn't find the cup.",
+        "plan_save_failed": "Couldn't save the change. Please try again.",
+        "unexpected": "Unexpected error: {code}"
+      }
+    },
     "status": {
       "draft": "Draft",
       "active": "In progress",
