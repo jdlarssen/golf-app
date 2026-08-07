@@ -12,11 +12,18 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
-import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
-import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { getRoleContext } from '@/lib/admin/auth';
 import { MAX_PERSONAL_CUP_MATCHES } from '@/lib/cup/limits';
+import {
+  getCupCandidatePlayers,
+  type WizardPlayer,
+} from '@/lib/cup/getCupCandidatePlayers';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
+
+// WizardPlayer bor nå i lib/cup/getCupCandidatePlayers (#1472 — delt med
+// Spillere-rommet). Re-eksportert her så eksisterende importører av
+// `./GenerateMatches` (GenerateMatchesWizard + dens test) er uendret.
+export type { WizardPlayer };
 
 // #1441 (F3c): rating-feltene under (slope/course_rating/par_total × mens/
 // ladies/juniors) er kun brukt av splittet-cup-dag-bunten, for å vise hver
@@ -43,31 +50,6 @@ type CourseRow = {
   id: string;
   name: string;
   tee_boxes: TeeBoxRow[];
-};
-
-type UserRow = {
-  id: string;
-  name: string | null;
-  nickname: string | null;
-  hcp_index: number | string;
-  profile_completed_at: string | null;
-  gender: 'mens' | 'ladies' | null;
-};
-
-export type WizardPlayer = {
-  id: string;
-  displayName: string;
-  hcpIndex: number;
-  // #1441 (F3c) — se TeeBoxRow-kommentaren over. Optional: kun satt når
-  // kilde-queriet valgte kolonnen (alle tre spiller-kilder gjør det nå).
-  gender?: 'mens' | 'ladies' | null;
-  // #1441 (owner-QA, F3f): true for venner uten fullført profil
-  // (`profile_completed_at IS NULL`) — rendres som en IKKE-valgbar rad i
-  // Step1Roster, aldri tildelbar til et lag (se `getFriendPlayerOptions`s
-  // `pending`-felt). Alltid `false`/`undefined` for klubb-medlem- og
-  // admin-spillerlistene — de filtrerer pending bort før wizarden i det
-  // hele tatt ser dem (uendret, kun venne-kilden fikk denne synligheten).
-  pending?: boolean;
 };
 
 export type WizardTeeBox = {
@@ -166,79 +148,14 @@ export async function GenerateMatches({
     }))
     .filter((c) => c.teeBoxes.length > 0);
 
-  // Spiller-kilde følger cupens kontekst (se docstring).
-  let players: WizardPlayer[];
-  if (groupId) {
-    // Klubb-cup → kun medlemmer.
-    const members = await getClubMemberOptionsForClub(groupId);
-    players = members
-      .filter((m) => !m.pending)
-      .map((m) => ({
-        id: m.id,
-        displayName: m.nickname?.trim() || m.name?.trim() || 'Ukjent spiller',
-        hcpIndex: m.hcp_index,
-        gender: m.gender,
-      }))
-      .sort((a, b) => a.displayName.localeCompare(b.displayName, 'no'));
-  } else if (isAdmin) {
-    // Personlig cup, global admin → alle profil-fullførte brukere.
-    const usersResult = await supabase
-      .from('users')
-      .select('id, name, nickname, hcp_index, profile_completed_at, gender')
-      .order('name', { ascending: true, nullsFirst: true })
-      .returns<UserRow[]>();
-    if (usersResult.error) throw usersResult.error;
-    players = (usersResult.data ?? [])
-      .filter((u) => u.profile_completed_at !== null)
-      .map((u) => ({
-        id: u.id,
-        displayName: u.nickname?.trim() || u.name?.trim() || 'Ukjent spiller',
-        hcpIndex: Number(u.hcp_index),
-        gender: u.gender,
-      }));
-  } else {
-    // Personlig cup, vanlig skaper → skaperens venner + skaperen selv (#464).
-    // Skaperen selv hentes direkte (alltid synlig for seg selv via RLS); venner
-    // via admin-client-helperen så de ikke faller ut av users-RLS-en.
-    const [friends, selfResult] = await Promise.all([
-      getFriendPlayerOptions(userId),
-      supabase
-        .from('users')
-        .select('id, name, nickname, hcp_index, profile_completed_at, gender')
-        .eq('id', userId)
-        .maybeSingle<UserRow>(),
-    ]);
-    const byId = new Map<string, WizardPlayer>();
-    const self = selfResult.data;
-    if (self && self.profile_completed_at !== null) {
-      byId.set(self.id, {
-        id: self.id,
-        displayName:
-          self.nickname?.trim() || self.name?.trim() || 'Ukjent spiller',
-        hcpIndex: Number(self.hcp_index),
-        gender: self.gender,
-      });
-    }
-    for (const f of friends) {
-      if (byId.has(f.id)) continue;
-      // #1441 (owner-QA, F3f): pending venner (profil ikke fullført) er ikke
-      // lenger filtrert bort — de vises som en ikke-valgbar rad i
-      // Step1Roster (`pending: true`) i stedet, så organisatoren ser hvem
-      // som må dyttes på. `hcp_index` på en pending rad er schema-default
-      // (54.0, se getFriendPlayerOptions), aldri en ekte verdi — UI-en viser
-      // derfor «mangler handicap» i stedet for tallet for disse radene.
-      byId.set(f.id, {
-        id: f.id,
-        displayName: f.nickname?.trim() || f.name?.trim() || 'Ukjent spiller',
-        hcpIndex: f.hcp_index,
-        gender: f.gender,
-        pending: f.pending,
-      });
-    }
-    players = [...byId.values()].sort((a, b) =>
-      a.displayName.localeCompare(b.displayName, 'no'),
-    );
-  }
+  // Spiller-kilde følger cupens kontekst (#1472: nå delt med Spillere-rommet
+  // via lib/cup/getCupCandidatePlayers). Kilden følger HVEM som ser lista
+  // (klubb-medlemmer / alle profil-fullførte / skaperens venner+selv).
+  const players: WizardPlayer[] = await getCupCandidatePlayers(supabase, {
+    groupId,
+    userId,
+    isAdmin,
+  });
 
   let clubName: string | null = null;
   if (groupId) {
