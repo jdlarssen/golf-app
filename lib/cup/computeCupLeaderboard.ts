@@ -85,9 +85,12 @@ export type TournamentInput = {
  * innslaget med 0 poeng til begge lag. Mapping fra `winner_user_id` til
  * hvilket LAG spilleren tilhører (via roster) skjer i F3b (getCupSnapshot) —
  * denne rene laget tar `winnerTeam` direkte som input.
+ *
+ * `gir` (#1489): GIR-tellerne foldes ut til ett innslag per klarte GIR i
+ * getCupSnapshot — motoren her er kind-agnostisk og summerer bare poeng.
  */
 export type CupSideAwardInput = {
-  kind: 'ctp' | 'ld';
+  kind: 'ctp' | 'ld' | 'gir';
   holeNumber: number;
   points: number;
   winnerTeam: 1 | 2 | null;
