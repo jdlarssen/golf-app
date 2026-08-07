@@ -51,3 +51,39 @@ Handled at PR stage by the orchestrator (staging-verified label before merge). N
 2. The success-redirect test covers only the standalone path, not the klubb branch of the redirect. Acceptable under the contract's "representative slice" language.
 
 VERDICT: ACCEPT
+
+---
+
+## Round 2 — delta evaluation (2026-08-07)
+
+**Delta commits:** `d99cd398` (e2e hooks) + `fb242957` (auto-reset fix), HEAD = `fb242957`.
+**Trigger:** staging run found the error banner arriving over a WIPED form — React 19 auto-resets a form when an `action=` submission completes (native reset empties uncontrolled fields, snaps checkboxes to defaultChecked).
+**Evaluator:** fresh-context skeptic, round 1 not re-litigated.
+
+### Auto-reset fix (`fb242957`) ✓
+
+- `CupSetup.tsx:103–107`: `onSubmit` calls `e.preventDefault()` first, builds `new FormData(e.currentTarget)` synchronously BEFORE the transition (correct — `currentTarget` is nulled after the handler returns), and dispatches `formAction(formData)` inside `startTransition` (avoids the React "dispatched outside a transition" warning). `startTransition` imported top-level from `react` (line 3).
+- `action={formAction}` is still on the form (line 96) — pre-hydration fallback intact; `preventDefault` on the hydrated path stops React's own `action=` dispatch, so no double-submit.
+- No try/catch introduced anywhere in the new path. Success path unaffected: `redirect()` at `lib/cup/actions.ts:206` throws NEXT_REDIRECT server-side; the client transition follows the redirect — nothing client-side can swallow it.
+- No `useFormStatus` dependency in CupSetup or `components/ui/Button.tsx` (the submit button is a plain `Button type="submit"`, line 242–247), so manual dispatch breaks no pending-state display.
+- Version re-pin 1.218.7 → 1.218.8 in package.json + package-lock.json (both entries) + the CHANGELOG #1397 line; grep confirms zero stray `1.218.7` references remain.
+
+### e2e hooks (`d99cd398`) ✓ non-behavioral
+
+- `Banner tone="error" testId="cup-create-error"` — Banner already supports `testId` (`components/ui/Banner.tsx:15,20,24`, renders as `data-testid`).
+- `data-testid="wizard-next"` on the WizardFooter next button — passes through `ButtonHTMLAttributes` spread (`Button.tsx:31–39`). Both pure attribute additions; zero logic change.
+- Intermediate commit `4d400d7c` (round-1 finding) verified comment-only.
+
+### Gates (re-run independently, Node 22.23.0)
+
+- `npx tsc --noEmit` → clean.
+- `npx vitest run lib/cup "app/[locale]/admin/games/new/CupSetup.test.tsx" messages` → 16 files, 239 tests, all passed.
+- package.json = package-lock.json = `1.218.8`; CHANGELOG line `1.218.8 · #1397` present. (`1.218.7` is now a skipped number in the CHANGELOG sequence — expected consequence of the re-pin.)
+
+### Out-of-scope finding (REPORTED, not fixed)
+
+**`app/[locale]/admin/liga/new/CreateLigaForm.tsx` has the same wipe-on-error bug.** `<form action={formAction}>` (line 138) + `useActionState` returning `{ error }` on validation failure, with NO onSubmit/preventDefault guard. Uncontrolled fields wiped by the React 19 auto-reset when the action returns an error: `name` (liga name, line 161), `tee_box_id` select (~line 360, resets to placeholder), `best_n_count` (line 469), `penalty_fixed_over_par` (line 591). Controlled fields (dates, radios, course select, player checkboxes) survive. Needs its own issue — same fix pattern as `fb242957`.
+
+(GameWizard/ReadyStep checked as well: its name field is controlled with a value-bound hidden input, so the wizard publish path does not exhibit the wipe.)
+
+VERDICT (round 2): ACCEPT
