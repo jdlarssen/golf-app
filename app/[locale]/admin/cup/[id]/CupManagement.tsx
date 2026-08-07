@@ -172,7 +172,8 @@ function CupDoor({
  *
  * Variant-forskjeller: shell (Admin/App), back/generer/slett-href, og at
  * admin kan bore ned i hver match (SmartLink til /admin/games/[id]) mens
- * club-varianten viser matchene som rene info-kort.
+ * club-varianten lenker ferdige matcher til kampens leaderboard (#1456) og
+ * viser uferdige som rene info-kort.
  */
 export async function CupManagement({
   tournamentId,
@@ -448,15 +449,19 @@ export async function CupManagement({
                   </div>
                 </Card>
               );
-              // Admin borer ned i full game-admin; klubb-varianten lenker til
-              // kampens eget leaderboard (#1456) i stedet for et rent info-kort.
+              // Admin borer ned i full game-admin; klubb-varianten lenker
+              // FERDIGE matcher til kampens leaderboard (#1456) — ruta er åpen
+              // for alle innloggede først etter finish, så uferdige matcher
+              // forblir rene info-kort (ellers 404 for klubb-styrere utenfor
+              // kampen).
+              const href = isClub
+                ? m.status === 'finished'
+                  ? `/games/${m.gameId}/leaderboard`
+                  : null
+                : `/admin/games/${m.gameId}`;
               return (
                 <li key={m.gameId}>
-                  <SmartLink
-                    href={isClub ? `/games/${m.gameId}/leaderboard` : `/admin/games/${m.gameId}`}
-                  >
-                    {card}
-                  </SmartLink>
+                  {href ? <SmartLink href={href}>{card}</SmartLink> : card}
                 </li>
               );
             })}

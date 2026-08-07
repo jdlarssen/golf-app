@@ -121,27 +121,44 @@ export default async function PublicCupPage({ params }: { params: Params }) {
                   : m.status === 'active'
                     ? t('public.matchInProgress')
                     : t('public.matchDraft');
+              const card = (
+                <Card
+                  className={
+                    m.status === 'finished'
+                      ? 'transition-colors hover:border-primary/30'
+                      : undefined
+                  }
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                        {m.matchLabel ?? 'Match'}
+                      </p>
+                      <p className="font-serif text-base text-text mt-1">
+                        {m.team1PlayerName}{' '}
+                        <span className="text-muted">mot</span>{' '}
+                        {m.team2PlayerName}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-xs text-muted">{statusLabel}</p>
+                    </div>
+                  </div>
+                </Card>
+              );
+              // Kun ferdige kamper lenker til kamp-leaderboardet (#1456):
+              // leaderboard-ruta er åpen for alle innloggede først etter
+              // finish — en lenke på en pågående kamp ville 404-et for alle
+              // utenfor kampen.
               return (
                 <li key={m.gameId}>
-                  <SmartLink href={`/games/${m.gameId}/leaderboard`} className="block">
-                    <Card className="transition-colors hover:border-primary/30">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                            {m.matchLabel ?? 'Match'}
-                          </p>
-                          <p className="font-serif text-base text-text mt-1">
-                            {m.team1PlayerName}{' '}
-                            <span className="text-muted">mot</span>{' '}
-                            {m.team2PlayerName}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-xs text-muted">{statusLabel}</p>
-                        </div>
-                      </div>
-                    </Card>
-                  </SmartLink>
+                  {m.status === 'finished' ? (
+                    <SmartLink href={`/games/${m.gameId}/leaderboard`} className="block">
+                      {card}
+                    </SmartLink>
+                  ) : (
+                    card
+                  )}
                 </li>
               );
             })}

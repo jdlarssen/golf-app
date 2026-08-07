@@ -129,8 +129,14 @@ export default async function LeaderboardPage({
   }
 
   const isAdmin = profileRes.data?.is_admin === true;
-  // Non-admin players must be a participant. Reads from cached players list.
-  if (!isAdmin && !gwp.players.some((p) => p.user_id === userId)) {
+  // Non-admin, non-participants may open FINISHED games — RLS gjør alle scores
+  // lesbare etter finish, og cup-matchkortene lenker hele cup-publikummet hit
+  // (#1456/#1468). Under spill er leaderboardet fortsatt kun for deltakere.
+  if (
+    !isAdmin &&
+    game.status !== 'finished' &&
+    !gwp.players.some((p) => p.user_id === userId)
+  ) {
     notFound();
   }
 

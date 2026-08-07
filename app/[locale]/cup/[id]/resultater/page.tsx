@@ -158,10 +158,14 @@ export default async function CupResultsPage({ params }: { params: Params }) {
                 : isActive
                   ? t('public.matchInProgress')
                   : t('public.matchDraft');
-              return (
-                <li key={m.gameId}>
-                  <SmartLink href={`/games/${m.gameId}/leaderboard`} className="block">
-                    <Card className="transition-colors hover:border-primary/30">
+              const card = (
+                <Card
+                  className={
+                    isFinishedMatch
+                      ? 'transition-colors hover:border-primary/30'
+                      : undefined
+                  }
+                >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
@@ -195,7 +199,19 @@ export default async function CupResultsPage({ params }: { params: Params }) {
                         </div>
                       </div>
                     </Card>
-                  </SmartLink>
+              );
+              // Kun ferdige kamper lenker til kamp-leaderboardet (#1456) —
+              // ruta er åpen for alle innloggede først etter finish, og en
+              // tvangsavsluttet cup kan ha uferdige kamper igjen.
+              return (
+                <li key={m.gameId}>
+                  {isFinishedMatch ? (
+                    <SmartLink href={`/games/${m.gameId}/leaderboard`} className="block">
+                      {card}
+                    </SmartLink>
+                  ) : (
+                    card
+                  )}
                 </li>
               );
             })}
