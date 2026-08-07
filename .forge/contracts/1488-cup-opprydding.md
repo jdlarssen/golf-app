@@ -84,65 +84,82 @@ forge:auto-argumentene (mail-CTA-vurdering).
 
 ## Suksesskriterier (avkrysses KUN med evidens fra kjørte kommandoer/diff)
 
-- [ ] **K1 — Én avslutningspipeline.** `app/[locale]/admin/games/[id]/avslutt/actions.ts`
+Evidens-nota: builder-rapport (12 commits `cc6ec917`…`15fda5f5`) + hovedchattens egne
+selv-sjekk-grep og gate-kjøringer 2026-08-07. Full vitest: 444 filer / 5685 tester
+grønne. `npm run build` (hovedchat, dev-server stoppet): BUILD EXIT: 0. Detaljer pr.
+kriterium under hver boks.
+
+- [x] **K1 — Én avslutningspipeline.** `app/[locale]/admin/games/[id]/avslutt/actions.ts`
   inneholder ingen egen kopi av pipeline-stegene (status-flip, finishDerivedGames,
   persistResultSummaries, persistScoreDifferentials, notifyAchievementUnlocks,
   rundereferat, notify/mail-blast, revalidering) — alt går via `endGameCore`.
   Evidens: fil-diff + grep som viser at pipeline-helperne kun importeres av core.
-- [ ] **K2 — Vinner-oppførsel bevart.** Vinnere upsertes fortsatt FØR status-flip
+  → Commit `cc6ec917`: avslutt/actions.ts er ren parse/valider/deleger-wrapper; hovedchat-grep av pipeline-helperne (persistResultSummaries m.fl.) i fila = 0 treff.
+- [x] **K2 — Vinner-oppførsel bevart.** Vinnere upsertes fortsatt FØR status-flip
   (delvis feil → spillet består som `active`, redirect `?error=db_winners`);
   `missing_ld_N`/`missing_ctp_N`-redirectene består; audit-payloaden har fortsatt
   `sideTournament: true` + `sideWinners`. Evidens: kode-lesing av ny wrapper + core
   med linjereferanser.
-- [ ] **K3 — Logg-prefiks samlet.** Alle console.error i `endGameCore` bruker
+  → endGameCore: upsert etter spillervalidering, FØR status-flip (linje ~204–223); `db_winners` → `${wizardPath}?error=db_winners` (wrapper linje 126–127); missing_ld/ctp-redirects består (linje 87/98); auditExtras `{sideTournament, sideWinners}` (wrapper 117, core 273).
+- [x] **K3 — Logg-prefiks samlet.** Alle console.error i `endGameCore` bruker
   `[<logContext>]`; default `'endGame'`, sidevinner-stien `'endGameWithSideWinners'`.
   Ingen `[endGameCore]`-prefiks igjen. Evidens: grep i lib/games/endGameCore.ts.
-- [ ] **K4 — Avledet kamp arver levert-status.** I snapshotet viser en avledet kamp
+  → Hovedchat-grep `endGameCore]` i lib/games/endGameCore.ts = 0 treff; 7 logContext-forekomster, alle error-prefikser `[${logContext}]`; events.test.ts-kontrakten (19 tester) grønn.
+- [x] **K4 — Avledet kamp arver levert-status.** I snapshotet viser en avledet kamp
   «Scorekort levert» når host-kampen har alle ikke-trukne kort levert. Evidens:
   Type A-test på uttrekt/testbar logikk + e2e-assert (K9).
-- [ ] **K5 — Helt trukket kamp blokkerer ikke ett-trykks.** Gate-predikatet bor ETT
+  → Ny ren helper lib/cup/matchSubmissionStatus.ts (`computeSubmissionStatusByGame`, host-pre-pass + arv via source_game_id), 16 tester grønne (commit `a8e52c26`); e2e-assert i K9 (data-status='scorecardsSubmitted' på avledede FØR avslutning) grønn mot staging.
+- [x] **K5 — Helt trukket kamp blokkerer ikke ett-trykks.** Gate-predikatet bor ETT
   sted i `lib/cup/` og brukes av både `finishTournament` og CupManagement-lista; en
   aktiv host-kamp der alle spillere er trukket passerer gaten og avsluttes av løpet.
   Kamp uten spillere blokkerer fortsatt. Statusetiketten for helt trukket kamp forblir
   «Pågår». Evidens: Type A-tester på predikatet (edge-tabellen i notatfila) + grep som
   viser at begge konsumenter bruker samme eksport.
-- [ ] **K6 — formatPoints har ett hjem.** Én eksport i `lib/cup/` med mikrotest; de 4
+  → `matchBlocksOneTapFinish` bor i lib/cup/matchSubmissionStatus.ts; hovedchat-grep viser NØYAKTIG to konsumenter: lib/cup/actions.ts:381 og CupManagement.tsx:262. Predikat-tabelltester grønne (commit `4f0d6e3e`); etikett for helt trukket kamp forblir «Pågår».
+- [x] **K6 — formatPoints har ett hjem.** Én eksport i `lib/cup/` med mikrotest; de 4
   lokale kopiene er borte. Evidens: grep `function formatPoints` i cup-filene = 0 treff.
-- [ ] **K7 — normalizeCustomSessions har ett hjem.** Én eksport i
+  → lib/cup/formatPoints.ts + mikrotest (commit `eb51c822`); hovedchat-grep `function formatPoints` i app/[locale]/cup + admin/cup = 0 treff.
+- [x] **K7 — normalizeCustomSessions har ett hjem.** Én eksport i
   `lib/cup/planValidation.ts` (gjenbruker `SESSION_FORMAT_SET`-uttømmeligheten); begge
   verbatim-kopiene + deres lokale `SESSION_FORMAT_IDS`-sett er slettet. Evidens: grep
   `SESSION_FORMAT_IDS` = 0 treff utenfor planValidation.
-- [ ] **K8 — Død helper borte.** `getCupEligibleFormats` + `CupEligibleFormat` +
+  → Flyttet til planValidation.ts, gjenbruker isCupSessionFormat (commit `10c5d73a`, 34 planValidation-tester grønne); hovedchat-grep SESSION_FORMAT_IDS utenfor planValidation = 0 treff.
+- [x] **K8 — Død helper borte.** `getCupEligibleFormats` + `CupEligibleFormat` +
   tilhørende test-describe slettet. Evidens: grep = 0 treff i repoet.
-- [ ] **K9 — Split-dag-vern committet.** `e2e/cup/cup-lifecycle.spec.ts` (eller
+  → Commit `a97d3d2c`; hovedchat-grep `getCupEligibleFormats|CupEligibleFormat` i app/lib/e2e = 0 treff (+ død buildCupChain-helper røk).
+- [x] **K9 — Split-dag-vern committet.** `e2e/cup/cup-lifecycle.spec.ts` (eller
   søsterfil i `e2e/cup/`) har en `@lifecycle`-test som seeder en split-dag-bunt
   (2 host + 2 avledede), leverer alle kort, kjører ett-trykks-avslutningen og
   SQL-orakler at alle 4 spill + cupen er `finished` — og asserter (data-testid/oracle,
   aldri norsk copy) at avledede kamper viser levert-status før avslutning. Evidens:
   testkjøring mot staging (grønn) — doubler som staging-bevis for K4/K5-flyten.
-- [ ] **K10 — Mail-CTA → resultatsiden.** `cupFinishedNotification` lenker
+  → Commit `15fda5f5`: @lifecycle-test seeder 2 host + 2 avledede, asserter avledet levert-status før avslutning, ett-trykk, SQL-orakler alle 4 spill + cup finished. Kjørt GRØNN mot torny-staging av builder (14.4s).
+- [x] **K10 — Mail-CTA → resultatsiden.** `cupFinishedNotification` lenker
   `/cup/<id>/resultater` i html + text; snapshots refreshet i egen test-commit.
   Evidens: snapshot-diff viser kun URL-endringen.
-- [ ] **K11 — Reactions inerte for ikke-deltakere.** `ReactionsProvider` monteres med
+  → Commit `a0af7be5` (kilde) + `e11d10c1` (snapshot-refresh i egen test-commit); snapshot-diff = kun URL-linjene (/cup/<id>/resultater i html+text, begge locales).
+- [x] **K11 — Reactions inerte for ikke-deltakere.** `ReactionsProvider` monteres med
   `disabled` når vieweren ikke er deltaker; tap gjør ingenting (ingen server-kall).
   Evidens: kode-diff (prop-tråding page → leaderboardContent → provider) + staging-
   klikk som ikke-deltaker (ingen feil i console/network).
-- [ ] **K12 — README-cap riktig.** «four matches» → seksten/16; «twenty-four players»
+  → Commits `528e7945`. Staging-probe (hovedchat, Playwright + OTP-mint): ikke-deltaker på ferskt 3-spiller finished stableford-spill → alle 3 reaction-triggere disabled, 0 POST, 0 console-feil; deltaker-kontroll → triggere aktive, toggle fyrer server-action OK. Seed-data slettet etterpå.
+- [x] **K12 — README-cap riktig.** «four matches» → seksten/16; «twenty-four players»
   verifisert mot `limits.ts` og beholdt. Evidens: diff.
-- [ ] **K13 — GenerateMatches under taket.** Mekanisk splitt (uttrekk av plan/tee-
+  → Commit `ede6c9cc`: README «up to sixteen matches», «twenty-four players» beholdt (limits.ts:18=16, :22=24).
+- [x] **K13 — GenerateMatches under taket.** Mekanisk splitt (uttrekk av plan/tee-
   resolve + empty-state) uten oppførselendring; eslint-complexity-warningen for
   `GenerateMatches` er borte. `createCupMatchesFromPlan` er bevisst urørt. Evidens:
   `npx eslint`-kjøring før/etter på fila.
+  → Commit `2ec9ce39`: resolvePlanCourseTee + empty-state-kort uttrukket; `npx eslint` på fila = 0 complexity-warnings (før: 34>25). createCupMatchesFromPlan urørt (bevisst).
 
 ## Gates (kjøres per chunk, alle før PR)
 
-1. `npx tsc --noEmit`
-2. `npx vitest run <changed>` for hver endret fil med co-located test + full
-   `npx vitest run` før push
-3. `npm run lint` (0 errors; K13-warningen skal være borte)
-4. `npm run build` (T2-fullgate — fanger cacheComponents-feil tsc ikke ser)
-5. e2e `@gate` mot staging kjøres av CI på PR-en
-6. K9-testen kjøres eksplisitt mot staging (@lifecycle er ikke CI-gatet)
+1. `npx tsc --noEmit` ✔ (builder per chunk + hovedchat)
+2. `npx vitest run <changed>` ✔ per chunk + full `npx vitest run` ✔ (444 filer / 5685 tester)
+3. `npm run lint` ✔ (0 errors; GenerateMatches-warningen borte)
+4. `npm run build` ✔ BUILD EXIT: 0 (hovedchat, etter builder)
+5. e2e `@gate` mot staging — kjøres av CI på PR-en (gjenstår)
+6. K9-testen ✔ grønn mot staging (builder, 14.4s)
 
 ## Commit-plan (atomisk, alle med `Refs #1488`)
 
