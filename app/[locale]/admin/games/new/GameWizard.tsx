@@ -394,8 +394,9 @@ export function GameWizard({
 
   // ────────────────────────────────────────────────────────────────────
   // Cup-creation-flyt: bare step 1 (intent) → step 2 (CupSetup). CupSetup
-  // eier sin egen `<form action=createTournamentDraft>` så vi rendrer ingen
-  // ytter-form rundt wizard-en — nestede form-elementer er ugyldig HTML.
+  // eier sin egen `<form action={formAction}>` (useActionState rundt
+  // createTournamentDraft, #1397) så vi rendrer ingen ytter-form rundt
+  // wizard-en — nestede form-elementer er ugyldig HTML.
   // Når intent='cup' med tournament_id satt (cup-link for å legge til
   // match i eksisterende cup) går vi i stedet videre til standard wizard
   // for game-creation, med format låst via lockGameMode.
