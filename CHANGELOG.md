@@ -1439,8 +1439,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 26 rettinger</strong></summary>
+<summary><strong>August 2026 · 27 rettinger</strong></summary>
 
+- `1.227.8` · [#1499](https://github.com/jdlarssen/golf-app/issues/1499) — «Resultatet er klart»-mailen røper ikke lenger vinner og stilling — fasiten venter på resultatsiden.
 - `1.227.7` · [#1499](https://github.com/jdlarssen/golf-app/issues/1499) — Varselet om ferdigspilt cup i appen tar deg nå rett til resultatsiden, ikke cup-siden som holder fasiten skjult.
 - `1.227.6` · [#1488](https://github.com/jdlarssen/golf-app/issues/1488) — «Cupen er avgjort»-mailen tar deg nå rett til resultatsiden der stillingen står, ikke cup-siden som holder totalene skjult til seremonien.
 - `1.227.5` · [#1488](https://github.com/jdlarssen/golf-app/issues/1488) — Ser du leaderboardet til en ferdig kamp du ikke var med i, er emoji-reaksjonene nå avslått — før så de ut som de virket, men trykket ble avvist i det stille.

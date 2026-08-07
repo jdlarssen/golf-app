@@ -32,21 +32,20 @@ async function send(params: CupFinishedNotificationParams) {
   return sendMock.mock.calls[0]![0];
 }
 
-// Cup-finished har salutation i <h2> og to varierende body-linjer: result-
-// linjen (margin:0 0 8px — vinner vs uavgjort) og score-linjen (20px serif —
-// «Lag1 X — Y Lag2»). Henter ut begge joined for å snapshot-e resultat-markup
-// + formatert score uten chrome. Salutation dekkes av text-snapshot-en.
-function resultBlockHtml(html: string): string {
-  const result = html.match(
-    /<p style="font-size:16px;line-height:1\.5;margin:0 0 8px;">\s*([\s\S]*?)\s*<\/p>/,
-  );
-  const score = html.match(
-    /<p style="font-size:20px;[^"]*">\s*([\s\S]*?)\s*<\/p>/,
-  );
-  if (!result || !score) {
-    throw new Error('Result/score paragraphs not found in HTML');
+// #1499: mailen teaser bare — ingen vinner-/score-linjer igjen. De to
+// varierende body-avsnittene (bodySettled + teaser) deler 16px-stylingen;
+// hent begge joined for å snapshot-e body uten chrome. Salutation dekkes av
+// text-snapshot-en.
+function bodyBlockHtml(html: string): string {
+  const paragraphs = [
+    ...html.matchAll(
+      /<p style="font-size:16px;line-height:1\.5;margin:0 0 16px;">\s*([\s\S]*?)\s*<\/p>/g,
+    ),
+  ];
+  if (paragraphs.length === 0) {
+    throw new Error('Body paragraphs not found in HTML');
   }
-  return `${result[1].trim()}\n${score[1].trim()}`;
+  return paragraphs.map((m) => m[1].trim()).join('\n');
 }
 
 const baseParams = {
@@ -54,78 +53,24 @@ const baseParams = {
   playerFirstName: 'Per',
   tournamentName: 'Høst-cup 2026',
   tournamentId: '33333333-3333-3333-3333-333333333333',
-  team1Name: 'Bjørketrærne',
-  team2Name: 'Granskogen',
-  team1Points: 3,
-  team2Points: 2,
-  winnerTeamName: 'Bjørketrærne',
 } satisfies CupFinishedNotificationParams;
 
 describe('sendCupFinishedNotification', () => {
-  it('default: vinner-linje + heltall-score', async () => {
+  it('default: teaser uten vinner eller stilling', async () => {
     const payload = await send(baseParams);
     expect(payload.subject).toMatchInlineSnapshot(`"Resultatet er klart — Høst-cup 2026"`);
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei Per!
 
       Cup-en "Høst-cup 2026" er avgjort.
+      Hvordan endte det? Svaret venter på resultatsiden.
 
-      Bjørketrærne vant cupen.
-      Bjørketrærne 3 — 2 Granskogen
-
-      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater
+      Se resultatet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater
       "
     `);
-    expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
-      "<strong>Bjørketrærne</strong> vant cupen.
-      Bjørketrærne 3 — 2 Granskogen"
-    `);
-  });
-
-  it('winnerTeamName: null → «Cupen endte uavgjort»', async () => {
-    const payload = await send({
-      ...baseParams,
-      team1Points: 2,
-      team2Points: 2,
-      winnerTeamName: null,
-    });
-    expect(payload.text).toMatchInlineSnapshot(`
-      "Hei Per!
-
-      Cup-en "Høst-cup 2026" er avgjort.
-
-      Cupen endte uavgjort.
-      Bjørketrærne 2 — 2 Granskogen
-
-      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater
-      "
-    `);
-    expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
-      "Cupen endte uavgjort.
-      Bjørketrærne 2 — 2 Granskogen"
-    `);
-  });
-
-  it('desimal-score formateres med norsk komma (3.5 — 2,5)', async () => {
-    const payload = await send({
-      ...baseParams,
-      team1Points: 3.5,
-      team2Points: 2.5,
-    });
-    expect(payload.text).toMatchInlineSnapshot(`
-      "Hei Per!
-
-      Cup-en "Høst-cup 2026" er avgjort.
-
-      Bjørketrærne vant cupen.
-      Bjørketrærne 3,5 — 2,5 Granskogen
-
-      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater
-      "
-    `);
-    expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
-      "<strong>Bjørketrærne</strong> vant cupen.
-      Bjørketrærne 3,5 — 2,5 Granskogen"
+    expect(bodyBlockHtml(payload.html)).toMatchInlineSnapshot(`
+      "Cup-en <strong>Høst-cup 2026</strong> er avgjort.
+      Hvordan endte det? Svaret venter på resultatsiden."
     `);
   });
 
@@ -133,44 +78,21 @@ describe('sendCupFinishedNotification', () => {
   // Engelsk (locale: 'en') — Fase M.
   // ─────────────────────────────────────────────────────────────────────
 
-  it('locale en: engelsk subject + vinner-resultat + /en/-lenke', async () => {
+  it('locale en: engelsk subject + teaser + /en/-lenke', async () => {
     const payload = await send({ ...baseParams, locale: 'en' });
     expect(payload.subject).toMatchInlineSnapshot(`"Result confirmed — Høst-cup 2026"`);
     expect(payload.text).toMatchInlineSnapshot(`
       "Hi Per!
 
       The cup "Høst-cup 2026" is decided.
+      How did it end? The answer is waiting on the results page.
 
-      Bjørketrærne won the cup.
-      Bjørketrærne 3 — 2 Granskogen
-
-      View full leaderboard: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333/resultater
+      See the result: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333/resultater
       "
     `);
-    expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
-      "<strong>Bjørketrærne</strong> won the cup.
-      Bjørketrærne 3 — 2 Granskogen"
-    `);
-  });
-
-  it('locale en, uavgjort: draw-tekst på engelsk', async () => {
-    const payload = await send({
-      ...baseParams,
-      locale: 'en',
-      team1Points: 2,
-      team2Points: 2,
-      winnerTeamName: null,
-    });
-    expect(payload.text).toMatchInlineSnapshot(`
-      "Hi Per!
-
-      The cup "Høst-cup 2026" is decided.
-
-      The cup ended in a draw.
-      Bjørketrærne 2 — 2 Granskogen
-
-      View full leaderboard: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333/resultater
-      "
+    expect(bodyBlockHtml(payload.html)).toMatchInlineSnapshot(`
+      "The cup <strong>Høst-cup 2026</strong> is decided.
+      How did it end? The answer is waiting on the results page."
     `);
   });
 
@@ -203,15 +125,12 @@ describe('sendCupFinishedNotification', () => {
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Cup-en <strong>Høst-cup 2026</strong> er avgjort.
                   </p>
-                  <p style="font-size:16px;line-height:1.5;margin:0 0 8px;">
-                    <strong>Bjørketrærne</strong> vant cupen.
-                  </p>
-                  <p style="font-size:20px;line-height:1.3;margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;color:#1B4332;">
-                    Bjørketrærne 3 — 2 Granskogen
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    Hvordan endte det? Svaret venter på resultatsiden.
                   </p>
                   <div style="margin:32px 0;">
                     <a href="https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                      Se hele leaderboardet
+                      Se resultatet
                     </a>
                   </div>
                 </td></tr>
