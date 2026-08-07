@@ -246,6 +246,9 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
     expect(g1.result).toEqual({ winnerSide: 1, formatted: '4–5' });
     expect(g1.pointsTeam1).toBe(5);
     expect(g1.pointsTeam2).toBe(0);
+    // #1497: per-side spiller-ID-er eksponert for per-spiller-regnskapet.
+    expect(g1.team1UserIds).toEqual(['p1', 'p2']);
+    expect(g1.team2UserIds).toEqual(['p3', 'p4']);
 
     // g2 — avledet singles: leser g1s scores (source_game_id) filtrert til
     // back9 (hull 10 finnes, hull 1 er utenfor scope). Scorene AVGJØR
