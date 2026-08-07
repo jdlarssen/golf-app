@@ -136,6 +136,11 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
    ```
    `Closes #N` i PR-body er den autoritative auto-close-triggeren.
 
+   **Draft-først (#1516):** fortsetter økta å pushe etter PR-opprettelse (forge-bokføring
+   o.l.), opprettes PR-en som draft (`gh pr create --draft`); `gh pr ready` er øktas
+   siste handling etter at all bokføring er pushet og `ls-remote` bekrefter remote =
+   lokal HEAD. Kortet noop-er drafts. Detaljer: `docs/forge-workflow.md`.
+
    **PR-presentasjon (fast form, alle aktører — eierbestilling 2026-07-30, #1413).**
    Dette er formens ene hjem; loop-dokumentene (kontrakt-smeden, nattkjøreren)
    peker hit.
