@@ -2966,7 +2966,6 @@
         "notLoggedIn": "Not signed in",
         "gameNotFound": "Game not found",
         "finishedOnly": "Export is only available for finished games",
-        "noAccess": "No access",
         "courseFetchFailed": "Could not load course information",
         "scoresFetchFailed": "Could not load scores"
       }
