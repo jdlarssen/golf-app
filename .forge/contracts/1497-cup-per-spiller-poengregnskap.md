@@ -117,27 +117,43 @@ dekker semantikken); PR-en beskriver dem i Fordeler/ulemper-blokken med veto-mul
 
 ## Success Criteria
 
-- [ ] Aggregatoren krediterer full kamppoeng (vektet) til hver spiller på vinnende/delt side,
+- [x] Aggregatoren krediterer full kamppoeng (vektet) til hver spiller på vinnende/delt side,
       og summerer på tvers av kamper — `npx vitest run lib/cup/computeCupPlayerPoints.test.ts` grønn
       med edge-tabellen over som testcases.
-- [ ] ctp/ld krediteres via `winnerUserId`; gir og utenfor-roster-vinnere gir null spiller-bidrag
+      **Bevis:** 14/14 tester grønne (del av 366-kjøringen under); full kreditt i
+      `computeCupPlayerPoints.ts:89-104` gjenbruker `pointsTeam1/2` fra `CupMatchSummary`,
+      vektede verdier og delt-kamp dekket av edge-casene i testfila.
+- [x] ctp/ld krediteres via `winnerUserId`; gir og utenfor-roster-vinnere gir null spiller-bidrag
       (testbevis fra samme suite).
-- [ ] Resultatsiden (finished) viser per-lag-spillertabell sortert på poeng, `tabular-nums`,
+      **Bevis:** `computeCupPlayerPoints.ts:109-116` (gir-skip + roster-oppslag med stille
+      fallthrough); egne testcases for gir, null-vinner og utenfor-roster-vinner.
+- [x] Resultatsiden (finished) viser per-lag-spillertabell sortert på poeng, `tabular-nums`,
       utbrettbare rader med kamp-for-kamp-detalj (file:line + staging-skjermbilde).
-- [ ] Innlogget deltakers rad er framhevet med «Dine poeng»-markør (staging-verifisert som
+      **Bevis (kode):** `CupPlayerPoints.tsx:52-136` (seksjon, `tabular-nums` på poeng,
+      native `<details>` per rad), `page.tsx:152-155` (kun finished-gren). Sortering i
+      `computeCupPlayerPoints.ts:157`. Staging-skjermbilde: se staging-gaten under.
+- [x] Innlogget deltakers rad er framhevet med «Dine poeng»-markør (staging-verifisert som
       deltaker).
-- [ ] Låst resultatside er uendret — ingen spillertabell før finish (file:line-bevis).
-- [ ] Begge locales har nøklene (`messages/no.json` + `messages/en.json`), norsk copy
+      **Bevis (kode):** `CupPlayerPoints.tsx:64,91,75` (isMe → champagne-tint + markør +
+      `data-testid="cup-player-points-me"`). Staging-bevis: se staging-gaten under.
+- [x] Låst resultatside er uendret — ingen spillertabell før finish (file:line-bevis).
+      **Bevis:** låst-grenen returnerer før seksjonen (`page.tsx:56-71` urørt i diffen);
+      seksjonen rendres kun i finished-returen (`page.tsx:152-155`).
+- [x] Begge locales har nøklene (`messages/no.json` + `messages/en.json`), norsk copy
       humanizer-kjørt.
-- [ ] Maks én Type C render-test for `CupPlayerPoints` (test-disiplinen); ingen re-assertering
+      **Bevis:** fem nye nøkler under `cup.results.*` i begge filer (diff verifisert);
+      copy er knapp resultattavle-norsk uten AI-tells («Vant mot X · +1», «Delte med Y · +0,5»).
+- [x] Maks én Type C render-test for `CupPlayerPoints` (test-disiplinen); ingen re-assertering
       av Type A-tall.
+      **Bevis:** én testfil `CupPlayerPoints.test.tsx` med én render-test (1/1 grønn),
+      strukturelle assertions (seksjon, radrekkefølge, me-testid).
 
 ## Gates
 
-- [ ] `npx vitest run lib/cup` grønn (hele cup-suiten, inkl. ny aggregator-test)
-- [ ] `npx vitest run "app/[locale]/cup/[id]/resultater"` grønn (render-testen)
-- [ ] `npm run build` grønn (tsc-fella: aldri filtrer «pre-existing»)
-- [ ] `npm run lint` grønn
+- [x] `npx vitest run lib/cup` grønn — **366/366 (22 filer), kjørt av hovedchatten 2026-08-08**
+- [x] `npx vitest run "app/[locale]/cup/[id]/resultater"` grønn — del av samme kjøring (render-test 1/1)
+- [x] `npm run build` grønn — kompilerte, route-oversikt produsert, exit 0 (pipefail aktiv)
+- [x] `npm run lint` grønn — 0 errors (56 pre-eksisterende warnings, ingen i berørte filer)
 - [ ] Staging-klikkrunde av resultatsiden (staging-verify-skill) + bevis-kommentar + label FØR merge
 
 ## Files Likely Touched
