@@ -2966,7 +2966,6 @@
         "notLoggedIn": "Ikke innlogget",
         "gameNotFound": "Spillet finnes ikke",
         "finishedOnly": "Eksport er bare tilgjengelig for ferdigspilte spill",
-        "noAccess": "Ingen tilgang",
         "courseFetchFailed": "Klarte ikke å hente baneinformasjon",
         "scoresFetchFailed": "Klarte ikke å hente scores"
       }
