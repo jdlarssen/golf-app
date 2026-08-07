@@ -8,14 +8,21 @@ import { generateSplitDayPlan, type PlannedMatch } from '@/lib/cup/cupPairing';
 import type { CupBatchMatch } from './actions';
 
 /**
- * Unit tests for createCupMatchesFromPlan — the batch cup-match creator (#219).
+ * Unit tests for createCupMatchesFromPlan — the batch cup-match creator (#219,
+ * #1472).
  *
- * DB sequence for the happy path (N matches):
- *   1. requireAdmin → auth.getUser + users.select(is_admin…).eq.single
+ * #1472: bane/tee/tee-off/best-ball leses server-side fra den LAGREDE planen
+ * (`tournament_plans`), ikke lenger fra klient-payloaden. Input er nå kun
+ * `{ tournamentId, matches }`.
+ *
+ * DB sequence for the happy path (N matches), all via the request client:
+ *   1. requireAdmin → auth.getUser + users.select(is_admin…).single
  *   2. tournaments.select(...).eq.maybeSingle — status gate + allowance defaults
- *   3. users.select('id,gender').in(ids) — tee_gender lookup (awaited builder)
- *   4. per match: games.insert(...).select('id').single, then game_players.insert
- *   5. redirect
+ *   3. tournament_plans.select(...).eq.maybeSingle — bane/tee/tee-off/best-ball
+ *   4. tee_boxes.select(...).eq.maybeSingle — re-valider tee mot bane + arkivert
+ *   5. users.select('id,gender').in(ids) — tee_gender lookup (awaited builder)
+ *   6. per match: games.insert(...).select('id').single, then game_players.insert
+ *   7. redirect
  */
 
 const redirectMock = makeRedirectMock();
@@ -115,10 +122,10 @@ function plan(): PlannedMatch[] {
   ];
 }
 
+// #1472: input er kun cup-id + matcher (bane/tee/tee-off/best-ball leses fra
+// planen server-side).
 const baseInput = () => ({
   tournamentId: 'cup-1',
-  courseId: 'course-1',
-  teeBoxId: 'tee-1',
   matches: plan(),
 });
 
@@ -128,6 +135,34 @@ const draftCup = {
   fourball_allowance_pct: 85,
   foursomes_allowance_pct: 50,
 };
+
+// #1472: den lagrede planens rad. Bane/tee 'course-1'/'tee-1' matcher det de
+// gamle testene sendte som input; tee-off/best-ball default NULL.
+const planResult = (
+  overrides: Partial<{
+    course_id: string | null;
+    tee_box_id: string | null;
+    scheduled_tee_off_at: string | null;
+    best_ball_allowance_pct: number | null;
+  }> = {},
+) => ({
+  data: {
+    course_id: 'course-1',
+    tee_box_id: 'tee-1',
+    scheduled_tee_off_at: null,
+    best_ball_allowance_pct: null,
+    ...overrides,
+  },
+  error: null,
+});
+
+// tee_boxes re-valideringsraden: teen tilhører banen og er ikke arkivert.
+const teeResult = (
+  overrides: Partial<{ course_id: string | null; archived_at: string | null }> = {},
+) => ({
+  data: { course_id: 'course-1', archived_at: null, ...overrides },
+  error: null,
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -198,11 +233,52 @@ describe('createCupMatchesFromPlan — status gate', () => {
   });
 });
 
+describe('createCupMatchesFromPlan — plan lookup (#1472)', () => {
+  it('no plan row: returns { error: missing_plan } without inserting', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      { data: null, error: null }, // tournament_plans → ingen rad
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'missing_plan',
+    });
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'insert',
+      ),
+    ).toBe(false);
+  });
+
+  it('plan tee archived / on another course: returns { error: plan_tee }', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      planResult(),
+      teeResult({ archived_at: '2026-01-01T00:00:00Z' }), // teen er arkivert nå
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'plan_tee',
+    });
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'insert',
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('createCupMatchesFromPlan — happy path', () => {
   function happyQueue() {
     return [
       { data: { is_admin: true }, error: null },
       { data: draftCup, error: null },
+      planResult(),
+      teeResult(),
       {
         data: [
           { id: 'A1', gender: 'mens' },
@@ -242,7 +318,7 @@ describe('createCupMatchesFromPlan — happy path', () => {
     ).toHaveLength(2);
   });
 
-  it('first match game row: scheduled status, format, label, mode_config + cup FK', async () => {
+  it('first match game row: scheduled status, format, label, mode_config + cup FK; bane/tee from plan', async () => {
     supabaseMock = buildSupabaseMock(happyQueue());
     setUser('admin-1');
     const { createCupMatchesFromPlan } = await import('./actions');
@@ -258,6 +334,7 @@ describe('createCupMatchesFromPlan — happy path', () => {
     expect(firstGame.tournament_id).toBe('cup-1');
     expect(firstGame.tournament_match_label).toBe('Foursome 1');
     expect(firstGame.created_by).toBe('admin-1');
+    // #1472: bane/tee kommer fra planen, ikke fra input.
     expect(firstGame.course_id).toBe('course-1');
     expect(firstGame.tee_box_id).toBe('tee-1');
     expect(firstGame.mode_config).toEqual({
@@ -342,6 +419,8 @@ describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },
       { data: { ...draftCup, group_id: 'club-1' }, error: null },
+      planResult(),
+      teeResult(),
       { data: genderRows, error: null },
       { data: { id: 'game-1' }, error: null },
       { data: null, error: null },
@@ -368,6 +447,8 @@ describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },
       { data: { ...draftCup, group_id: 'club-1' }, error: null },
+      planResult(),
+      teeResult(),
     ]);
     setUser('admin-1');
     const { createCupMatchesFromPlan } = await import('./actions');
@@ -396,6 +477,8 @@ describe('createCupMatchesFromPlan — rollback on mid-loop failure (#675)', () 
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // requireAdmin
       { data: draftCup, error: null }, // tournament gate
+      planResult(), // plan lookup
+      teeResult(), // tee re-validate
       { data: genderRows, error: null }, // tee_gender roster
       { data: { id: 'game-1' }, error: null }, // match 1 game insert
       { data: null, error: null }, // match 1 game_players insert OK
@@ -459,6 +542,8 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // requireAdmin
       { data: draftCup, error: null }, // tournament gate (fourball 85, greensome unset → default 100)
+      planResult(), // plan (best_ball null → best_ball allowance faller til fourball 85)
+      teeResult(), // tee re-validate
       { data: flightGenderRows, error: null }, // tee_gender roster
       { data: { id: 'game-greensome' }, error: null }, // pass 1: greensome host insert
       { data: null, error: null }, // greensome game_players OK
@@ -475,8 +560,6 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     await expect(
       createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: bundle,
       }),
     ).rejects.toBeInstanceOf(RedirectError);
@@ -534,6 +617,8 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },
       { data: draftCup, error: null },
+      planResult(),
+      teeResult(),
       { data: flightGenderRows, error: null },
       { data: { id: 'game-greensome' }, error: null },
       { data: null, error: null },
@@ -544,8 +629,6 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     await expect(
       createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: [match],
       }),
     ).rejects.toBeInstanceOf(RedirectError);
@@ -562,7 +645,7 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     });
   });
 
-  it('bestBallAllowancePct: overstyrer best_ball mode_config.allowance_pct i stedet for cupens fourball-default (#1441, F3c)', async () => {
+  it('planens best_ball_allowance_pct overstyrer best_ball mode_config.allowance_pct i stedet for cupens fourball-default (#1441 F3c → #1472)', async () => {
     const match: CupBatchMatch = {
       id: 'best_ball-1',
       format: 'best_ball',
@@ -575,6 +658,8 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },
       { data: draftCup, error: null }, // fourball_allowance_pct: 85 — skal IKKE brukes her
+      planResult({ best_ball_allowance_pct: 70 }), // planen har egen best-ball-andel
+      teeResult(),
       { data: flightGenderRows, error: null },
       { data: { id: 'game-bestball' }, error: null },
       { data: null, error: null },
@@ -585,10 +670,7 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     await expect(
       createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: [match],
-        bestBallAllowancePct: 70,
       }),
     ).rejects.toBeInstanceOf(RedirectError);
 
@@ -601,34 +683,6 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       teams_count: 2,
       allowance_pct: 70,
     });
-  });
-
-  it('bestBallAllowancePct utenfor 0..100 eller ikke-heltall: invalid_best_ball_allowance FØR noe insertes', async () => {
-    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
-    setUser('admin-1');
-    const { createCupMatchesFromPlan } = await import('./actions');
-    const match: CupBatchMatch = {
-      id: 'best_ball-1',
-      format: 'best_ball',
-      label: 'Best ball 1',
-      side1: ['p1', 'p2'],
-      side2: ['p3', 'p4'],
-      segment: 'back9',
-      flightIndex: 1,
-    };
-
-    expect(
-      await createCupMatchesFromPlan({
-        tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
-        matches: [match],
-        bestBallAllowancePct: 150,
-      }),
-    ).toEqual({ error: 'invalid_best_ball_allowance' });
-    expect(
-      supabaseMock.__fromCalls.some((c) => c.table === 'tournaments'),
-    ).toBe(false);
   });
 });
 
@@ -643,6 +697,8 @@ describe('createCupMatchesFromPlan — ordinære preset-matcher beholder dagens 
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },
       { data: draftCup, error: null },
+      planResult(),
+      teeResult(),
       { data: genderRows, error: null },
       { data: { id: 'game-1' }, error: null },
       { data: null, error: null },
@@ -660,8 +716,6 @@ describe('createCupMatchesFromPlan — ordinære preset-matcher beholder dagens 
     await expect(
       createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: [match],
       }),
     ).rejects.toBeInstanceOf(RedirectError);
@@ -692,8 +746,6 @@ describe('createCupMatchesFromPlan — team_strokes_override-validering (#1441, 
     expect(
       await createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: [match],
       }),
     ).toEqual({ error: 'invalid_team_strokes_override' });
@@ -718,8 +770,6 @@ describe('createCupMatchesFromPlan — team_strokes_override-validering (#1441, 
     expect(
       await createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: [match],
       }),
     ).toEqual({ error: 'invalid_team_strokes_override' });
@@ -741,15 +791,13 @@ describe('createCupMatchesFromPlan — team_strokes_override-validering (#1441, 
     expect(
       await createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: [match],
       }),
     ).toEqual({ error: 'invalid_team_strokes_override' });
   });
 });
 
-describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 owner-QA, F3d)', () => {
+describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 owner-QA, F3d → #1472)', () => {
   const flightGenderRows = [
     { id: 'p1', gender: 'mens' },
     { id: 'p2', gender: 'mens' },
@@ -757,7 +805,7 @@ describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 o
     { id: 'p4', gender: 'mens' },
   ];
 
-  it('satt: kolonnen settes på BÅDE host- og avledet-pass, samme flight deler tidspunkt', async () => {
+  it('planen har tee-off: kolonnen settes på BÅDE host- og avledet-pass, samme flight deler tidspunkt', async () => {
     const bundle = generateSplitDayPlan({
       team1: [
         { userId: 'p1', name: 'P1', hcpIndex: 5 },
@@ -773,6 +821,8 @@ describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 o
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // requireAdmin
       { data: draftCup, error: null }, // tournament gate
+      planResult({ scheduled_tee_off_at: '2099-06-01T07:00:00.000Z' }), // planens tee-off
+      teeResult(),
       { data: flightGenderRows, error: null }, // tee_gender roster
       { data: { id: 'game-greensome' }, error: null }, // pass 1: greensome host
       { data: null, error: null },
@@ -789,10 +839,7 @@ describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 o
     await expect(
       createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: bundle,
-        scheduledTeeOffAt: '2099-06-01T07:00:00.000Z',
       }),
     ).rejects.toBeInstanceOf(RedirectError);
 
@@ -809,10 +856,12 @@ describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 o
     }
   });
 
-  it('ikke satt: kolonnen er null på alle innsatte matcher (dagens oppførsel)', async () => {
+  it('planen har ingen tee-off: kolonnen er null på alle innsatte matcher (dagens oppførsel)', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },
       { data: draftCup, error: null },
+      planResult(), // scheduled_tee_off_at null
+      teeResult(),
       {
         data: [
           { id: 'A1', gender: 'mens' },
@@ -845,35 +894,23 @@ describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 o
     }
   });
 
-  it('ugyldig dato: invalid_tee_off FØR noe insertes', async () => {
-    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+  it('planens tee-off er i fortiden: tee_off_in_past, ingen matcher opprettet (tilbake til Oppsett)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      planResult({ scheduled_tee_off_at: '2020-01-01T10:00:00.000Z' }), // stale tee-off
+      teeResult(),
+    ]);
     setUser('admin-1');
     const { createCupMatchesFromPlan } = await import('./actions');
 
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'tee_off_in_past',
+    });
     expect(
-      await createCupMatchesFromPlan({
-        ...baseInput(),
-        scheduledTeeOffAt: 'not-a-real-date',
-      }),
-    ).toEqual({ error: 'invalid_tee_off' });
-    expect(
-      supabaseMock.__fromCalls.some((c) => c.table === 'tournaments'),
-    ).toBe(false);
-  });
-
-  it('dato i fortiden: tee_off_in_past FØR noe insertes', async () => {
-    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
-    setUser('admin-1');
-    const { createCupMatchesFromPlan } = await import('./actions');
-
-    expect(
-      await createCupMatchesFromPlan({
-        ...baseInput(),
-        scheduledTeeOffAt: '2020-01-01T10:00:00.000Z',
-      }),
-    ).toEqual({ error: 'tee_off_in_past' });
-    expect(
-      supabaseMock.__fromCalls.some((c) => c.table === 'tournaments'),
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'insert',
+      ),
     ).toBe(false);
   });
 });
@@ -895,8 +932,6 @@ describe('createCupMatchesFromPlan — ugyldig sourceId (#1441, D3)', () => {
     expect(
       await createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches: [match],
       }),
     ).toEqual({ error: 'invalid_source_match' });
@@ -915,6 +950,8 @@ describe('createCupMatchesFromPlan — rollback dekker pass 2 (#1441, D3/#675)',
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // requireAdmin
       { data: draftCup, error: null }, // tournament gate
+      planResult(), // plan lookup
+      teeResult(), // tee re-validate
       { data: genderRows, error: null }, // tee_gender roster
       { data: { id: 'game-host' }, error: null }, // host insert OK
       { data: null, error: null }, // host game_players OK
@@ -948,8 +985,6 @@ describe('createCupMatchesFromPlan — rollback dekker pass 2 (#1441, D3/#675)',
     expect(
       await createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches,
       }),
     ).toEqual({ error: 'insert_failed' });
@@ -969,6 +1004,8 @@ describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede match
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: false }, error: null }, // requireAdmin (loadRole)
       { data: draftCup, error: null }, // tournament gate (group_id mangler → frittstående)
+      planResult(), // plan lookup
+      teeResult(), // tee re-validate
     ]);
     setUser('user-1');
     const { createCupMatchesFromPlan } = await import('./actions');
@@ -1006,8 +1043,6 @@ describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede match
     expect(
       await createCupMatchesFromPlan({
         tournamentId: 'cup-1',
-        courseId: 'course-1',
-        teeBoxId: 'tee-1',
         matches,
       }),
     ).toEqual({ error: 'too_many_matches' });

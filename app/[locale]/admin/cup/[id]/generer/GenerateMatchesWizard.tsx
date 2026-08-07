@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -26,7 +26,6 @@ import {
   groupBundleMatchesByFlight,
   swapFlightPlayer,
   getFlightMatchupRows,
-  splitDayFlightCount,
   splitDayTotalMatches,
   type FlightTeamSide,
 } from '@/lib/cup/splitDayLineup';
@@ -45,10 +44,9 @@ import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
-import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
-import type { WizardPlayer, WizardCourse, WizardTeeBox } from './GenerateMatches';
+import type { WizardPlayer, WizardTeeBox } from './GenerateMatches';
 
-// #1441 (F3c): matchen wizarden holder i steg 4 er enten en av de tre eldre
+// #1441 (F3c): matchen wizarden holder i steg 2 er enten en av de tre eldre
 // presetenes `PlannedMatch` eller splittet-cup-dagens `PlannedBundleMatch` —
 // aldri en blanding innen samme genererte plan (styrt av `presetId`).
 // `teamStrokesOverride` (D10) lever IKKE på denne typen — se
@@ -147,109 +145,29 @@ function effectiveStrokes(raw: string | undefined, fallback: number): number {
 
 type TeamAssignment = 'team1' | 'team2' | 'unassigned';
 
-type CustomSession = {
-  format: CupSessionFormat;
-};
-
 type WizardProps = {
   tournamentId: string;
   team1Name: string;
   team2Name: string;
+  // #1472: rosteren er nå cupens PÅMELDTE deltakere (fra Spillere-rommet),
+  // ikke lenger kandidat-kilden. Deltakere er alltid profil-fullførte ved
+  // add-time, så ingen `pending`-rader her.
   players: WizardPlayer[];
-  courses: WizardCourse[];
   // #526: maks antall matcher for personlig cup (ikke-admin). undefined =
   // uncapped (admin/klubb-cup).
   matchCap?: number;
-};
-
-type Step = 1 | 2 | 3 | 4;
-
-// ─── Wizard draft persistence (localStorage) ───────────────────────────────────
-//
-// #1441 (owner-QA, F3g): «arrangøren skal ha mulighet til å sette opp cupen
-// uten å legge til alle til hvert sitt lag … Så alt annet er satt opp utenom
-// fordelingen av spillerne.» Persisterer wizardens IKKE-roster-valg
-// (bane/tee/preset/strategi/best-ball-andel/tee-off/lag-slag) per cup-id, så
-// organisatoren kan fylle dem ut tidlig og komme tilbake senere for KUN å
-// fordele spillere. Roster (steg 1, `assignments`) er BEVISST utelatt —
-// spillerlisten kommer fra live data hver gang, en gammel lagring ville vist
-// et utdatert bilde av hvem som faktisk er tilgjengelig.
-//
-// `localStorage`, ikke serverside — ingen ny DB-kolonne, og valgene er rene
-// UI-bekvemmeligheter (organisatoren kan alltids taste dem på nytt). Nøkkelen
-// er scoped på `tournamentId` slik at ulike cuper ikke lekker inn i hverandre.
-
-type CupWizardDraft = {
-  courseId: string;
-  teeBoxId: string;
-  teeOffAt: string;
+  // #1472: bane/tee/format kommer fra den lagrede planen (Oppsett-rommet),
+  // ikke lenger wizard-steg. Navn til recap-visning; `selectedTee` bærer
+  // rating-settet greensomens regnehjelp (D10) trenger.
+  planCourseName: string;
+  planTeeName: string;
+  selectedTee: WizardTeeBox | undefined;
   presetId: string;
-  customSessions: CustomSession[];
+  customSessions: CupSessionFormat[];
   strategy: PairingStrategy;
-  bestBallAllowancePct: number;
-  teamStrokesInputs: Record<string, { team1?: string; team2?: string }>;
 };
 
-function draftStorageKey(tournamentId: string): string {
-  return `cup-wizard-draft-${tournamentId}`;
-}
-
-/** Best-effort lesing — `null` for SSR (ingen `window`), manglende lagring,
- * eller korrupt/gammelt JSON-innhold (stille frisk start, aldri en kastet
- * feil brukeren ser). Formen valideres felt-for-felt av kalleren (restore-
- * effekten i `GenerateMatchesWizard`) — denne funksjonen garanterer kun
- * gyldig JSON. */
-function loadDraft(tournamentId: string): Partial<CupWizardDraft> | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(draftStorageKey(tournamentId));
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    return parsed as Partial<CupWizardDraft>;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(tournamentId: string, draft: CupWizardDraft): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(draftStorageKey(tournamentId), JSON.stringify(draft));
-  } catch {
-    // Best-effort — f.eks. privat nettlesing eller full lagringskvote.
-  }
-}
-
-function clearDraft(tournamentId: string): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.removeItem(draftStorageKey(tournamentId));
-  } catch {
-    // Best-effort, se saveDraft.
-  }
-}
-
-/** Duck-typer Next.js' redirect-signal (`redirect()` i en server-action, kalt
- * fra en klient-komponent via `await`, avviser Promise-en med et objekt som
- * har et `digest`-felt som starter på `NEXT_REDIRECT` — se
- * next/dist/client/components/router-reducer/reducers/server-action-reducer.js).
- * Offentlig, stabil form (samme duck-type-mønster brukt i community-kode) —
- * ikke en dyp import av Next-internals. Brukt til å skille «vellykket
- * generering (redirecter bort)» fra en ekte feil i `handleConfirm` under, KUN
- * for å vite når draften skal ryddes — selve navigeringen er urørt, feilen
- * kastes videre uansett. */
-function isNextRedirectSignal(err: unknown): boolean {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'digest' in err &&
-    typeof (err as { digest: unknown }).digest === 'string' &&
-    (err as { digest: string }).digest.startsWith('NEXT_REDIRECT')
-  );
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
+type Step = 1 | 2;
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
@@ -325,9 +243,9 @@ function Step1Roster({
       <div className="space-y-2">
         {players.map((p) => {
           // #1441 (owner-QA, F3f): venner uten fullført profil rendres som en
-          // IKKE-valgbar rad — ingen lag-toggle, kun et varsel om at de venter.
-          // De havner aldri i `assignments` (ingen knapp å klikke), så de
-          // teller aldri med i team1Count/team2Count under.
+          // IKKE-valgbar rad. Deltakerlista (#1472) er alltid profil-fullført,
+          // så grenen fyrer ikke lenger i praksis — beholdt defensivt siden
+          // `WizardPlayer.pending` fortsatt finnes i typen.
           if (p.pending) {
             return (
               <Card
@@ -409,381 +327,9 @@ function Step1Roster({
   );
 }
 
-// ─── Step 2: Course + tee ─────────────────────────────────────────────────────
+// ─── Step 2: Preview + adjust ─────────────────────────────────────────────────
 
-function Step2Course({
-  courses,
-  courseId,
-  teeBoxId,
-  onCourseChange,
-  onTeeChange,
-  teeOffAt,
-  onTeeOffChange,
-  t,
-}: {
-  courses: WizardCourse[];
-  courseId: string;
-  teeBoxId: string;
-  onCourseChange: (id: string) => void;
-  onTeeChange: (id: string) => void;
-  // #1441 (owner-QA, F3d): «cup-start» — flight 1 sin tee-off. Rå
-  // datetime-local-streng (browser wall-clock-format), tolket som Oslo-tid
-  // og konvertert til ISO av kalleren (`resolveCupStartIso`) først ved
-  // innsending — se `Step2Course`s docstring-kommentar over feltet.
-  teeOffAt: string;
-  onTeeOffChange: (value: string) => void;
-  t: ReturnType<typeof useTranslations<'cup'>>;
-}) {
-  const selectedCourse = courses.find((c) => c.id === courseId);
-
-  return (
-    <div className="space-y-5" data-testid="cup-wizard-step2">
-      <div>
-        <SectionHeading>{t('generate.step2BaneHeading')}</SectionHeading>
-        <label htmlFor="generer-course" className="block text-sm font-medium text-text mb-1.5">
-          {t('generate.step2CourseLabel')}
-        </label>
-        <select
-          id="generer-course"
-          data-testid="cup-wizard-course"
-          value={courseId}
-          onChange={(e) => onCourseChange(e.target.value)}
-          className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
-        >
-          <option value="">{t('generate.step2CoursePlaceholder')}</option>
-          {courses.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selectedCourse && (
-        <div>
-          <SectionHeading>{t('generate.step2TeeHeading')}</SectionHeading>
-          <label htmlFor="generer-tee" className="block text-sm font-medium text-text mb-1.5">
-            {t('generate.step2TeeLabel')}
-          </label>
-          <select
-            id="generer-tee"
-            data-testid="cup-wizard-tee"
-            value={teeBoxId}
-            onChange={(e) => onTeeChange(e.target.value)}
-            className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
-          >
-            <option value="">{t('generate.step2TeePlaceholder')}</option>
-            {selectedCourse.teeBoxes.map((tb) => (
-              <option key={tb.id} value={tb.id}>
-                {tb.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* #1441 (owner-QA): «det er ingen steder å legge inn tee-off. det
-          mangler i cup-veiviseren.» Ett felt for HELE batchen — kun
-          flight 1 sin (cup-start) tee-off; senere flights forskyves 10 min
-          per flight av `resolveScheduledTeeOffAt` (lib/cup/splitDayLineup.ts)
-          ved innsending. Valgfritt: tom verdi betyr fortsatt dagens
-          oppførsel (organisatoren starter rundene manuelt). */}
-      <div>
-        <SectionHeading>{t('generate.step2TeeOffHeading')}</SectionHeading>
-        <label htmlFor="generer-teeoff" className="block text-sm font-medium text-text mb-1.5">
-          {t('generate.teeOffLabel')}
-        </label>
-        <input
-          id="generer-teeoff"
-          data-testid="cup-wizard-teeoff"
-          type="datetime-local"
-          value={teeOffAt}
-          onChange={(e) => onTeeOffChange(e.target.value)}
-          className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
-        />
-        <p className="font-sans text-xs text-muted mt-1.5">{t('generate.teeOffHint')}</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Step 3: Preset + pairing ─────────────────────────────────────────────────
-
-function Step3Setup({
-  team1Count,
-  team2Count,
-  presetId,
-  onPresetChange,
-  customSessions,
-  onCustomSessionsChange,
-  strategy,
-  onStrategyChange,
-  matchCap,
-  bestBallAllowancePct,
-  onBestBallAllowancePctChange,
-  t,
-}: {
-  team1Count: number;
-  team2Count: number;
-  presetId: string;
-  onPresetChange: (id: string) => void;
-  customSessions: CustomSession[];
-  onCustomSessionsChange: (sessions: CustomSession[]) => void;
-  strategy: PairingStrategy;
-  onStrategyChange: (s: PairingStrategy) => void;
-  matchCap?: number;
-  // #1441 (D4/D11): kun brukt av «Splittet cup-dag»-presetet — cup-dag-bredt,
-  // ikke per match, derfor state på wizard-nivå og bare rendret her.
-  bestBallAllowancePct: number;
-  onBestBallAllowancePctChange: (pct: number) => void;
-  t: ReturnType<typeof useTranslations<'cup'>>;
-}) {
-  const teamSize = Math.min(team1Count, team2Count);
-  const isSplitDay = presetId === 'splittet-cup-dag';
-
-  const FORMAT_LABELS: Record<CupSessionFormat, string> = {
-    foursomes_matchplay: t('generate.formatFoursomes'),
-    fourball_matchplay: t('generate.formatFourball'),
-    singles_matchplay: t('generate.formatSingles'),
-    greensome_matchplay: t('generate.formatGreensome'),
-    chapman_matchplay: t('generate.formatChapman'),
-    gruesome_matchplay: t('generate.formatGruesome'),
-  };
-
-  function getSessionsForId(id: string): CupSessionFormat[] {
-    if (id === 'tilpasset') return customSessions.map((s) => s.format);
-    const preset = CUP_PRESETS.find((p) => p.id === id);
-    return preset?.sessions ?? [];
-  }
-
-  // #1441 (D4): splittet-cup-dag genereres IKKE via buildSessions/
-  // generateCupPlan (se cupTemplates.ts sin docstring på presetet) — dens
-  // `sessions`-felt er ren dokumentasjon, ikke mat for `buildSessions`.
-  const currentSessions = isSplitDay ? [] : getSessionsForId(presetId);
-  const plan = buildSessions(currentSessions, teamSize);
-  const splitDayFlights = splitDayFlightCount(team1Count, team2Count);
-  const splitDayTotal = splitDayTotalMatches(team1Count, team2Count);
-  const totalMatches = isSplitDay
-    ? splitDayTotal
-    : plan.reduce((sum, s) => sum + s.matchCount, 0);
-  const overCap = matchCap !== undefined && totalMatches > matchCap;
-
-  function addCustomSession() {
-    onCustomSessionsChange([...customSessions, { format: 'singles_matchplay' }]);
-  }
-
-  function removeCustomSession(i: number) {
-    const next = [...customSessions];
-    next.splice(i, 1);
-    onCustomSessionsChange(next);
-  }
-
-  function updateCustomSession(i: number, format: CupSessionFormat) {
-    const next = [...customSessions];
-    next[i] = { format };
-    onCustomSessionsChange(next);
-  }
-
-  return (
-    <div className="space-y-6" data-testid="cup-wizard-step3">
-      {matchCap !== undefined && (
-        <Banner tone={overCap ? 'warning' : 'info'}>
-          {overCap
-            ? t('generate.overCapWarning', { totalMatches, matchCap })
-            : t('generate.capInfoBanner', { matchCap })}
-        </Banner>
-      )}
-      <div>
-        <SectionHeading>{t('generate.step3FormatHeading')}</SectionHeading>
-        <div className="space-y-2">
-          {CUP_PRESETS.map((preset: CupPreset) => (
-            <label
-              key={preset.id}
-              className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
-                presetId === preset.id
-                  ? 'border-primary bg-primary-soft'
-                  : 'border-border bg-surface hover:border-primary/40'
-              }`}
-            >
-              <input
-                type="radio"
-                name="preset"
-                value={preset.id}
-                data-testid={`cup-wizard-preset-${preset.id}`}
-                checked={presetId === preset.id}
-                onChange={() => onPresetChange(preset.id)}
-                className="mt-0.5 accent-primary"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="font-sans text-sm font-semibold text-text">
-                  {t(
-                    `presets.${preset.id as 'klassisk' | 'fourball-singler' | 'singler' | 'splittet-cup-dag'}.name`,
-                  )}
-                </p>
-                <p className="font-sans text-xs text-muted mt-0.5">
-                  {t(
-                    `presets.${preset.id as 'klassisk' | 'fourball-singler' | 'singler' | 'splittet-cup-dag'}.description`,
-                  )}
-                </p>
-                {presetId === preset.id && preset.id !== 'splittet-cup-dag' && plan.length > 0 && (
-                  <p className="font-sans text-xs text-primary mt-1.5">
-                    {plan.map((s) => `${s.matchCount} ${FORMAT_LABELS[s.format]}`).join(' · ')}
-                    {' '}= {totalMatches} {t('generate.matchesLabel').toLowerCase()}
-                  </p>
-                )}
-                {presetId === preset.id && preset.id === 'splittet-cup-dag' && splitDayFlights > 0 && (
-                  <p className="font-sans text-xs text-primary mt-1.5">
-                    {t('generate.splitDayPlanSummary', {
-                      flights: splitDayFlights,
-                      total: splitDayTotal,
-                    })}
-                  </p>
-                )}
-              </div>
-            </label>
-          ))}
-
-          {/* Splittet cup-dag: «Handicap best ball (%)»-feltet ligger UTENFOR
-              preset-<label>-en over — nøstet inni ville fått testing-library
-              (og skjermlesere) til å knytte HELE label-teksten til radio-
-              inputen, siden alt inni et <label> teller som dets tilknyttede
-              tekst uansett hvor dypt nøstet et eget skjema-felt er. */}
-          {presetId === 'splittet-cup-dag' && (
-            <div
-              className="rounded-xl border border-border bg-surface p-4"
-              data-testid="cup-wizard-splitday-setup"
-            >
-              <label
-                htmlFor="generer-best-ball-allowance"
-                className="block text-xs font-medium text-text mb-1.5"
-              >
-                {t('generate.bestBallAllowanceLabel')}
-              </label>
-              <input
-                id="generer-best-ball-allowance"
-                type="number"
-                min={0}
-                max={100}
-                value={bestBallAllowancePct}
-                onChange={(e) => onBestBallAllowancePctChange(Number(e.target.value))}
-                className="w-24 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
-              />
-              <p className="font-sans text-xs text-muted mt-1">
-                {t('generate.bestBallAllowanceHint')}
-              </p>
-            </div>
-          )}
-
-          {/* Custom */}
-          <label
-            className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
-              presetId === 'tilpasset'
-                ? 'border-primary bg-primary-soft'
-                : 'border-border bg-surface hover:border-primary/40'
-            }`}
-          >
-            <input
-              type="radio"
-              name="preset"
-              value="tilpasset"
-              data-testid="cup-wizard-preset-tilpasset"
-              checked={presetId === 'tilpasset'}
-              onChange={() => onPresetChange('tilpasset')}
-              className="mt-0.5 accent-primary"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="font-sans text-sm font-semibold text-text">
-                {t('generate.customPresetName')}
-              </p>
-              <p className="font-sans text-xs text-muted mt-0.5">
-                {t('generate.customPresetDescription')}
-              </p>
-              {presetId === 'tilpasset' && (
-                <div className="mt-3 space-y-2">
-                  {customSessions.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <select
-                        value={s.format}
-                        onChange={(e) =>
-                          updateCustomSession(i, e.target.value as CupSessionFormat)
-                        }
-                        className="flex-1 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
-                      >
-                        <option value="singles_matchplay">{t('generate.formatSingles')}</option>
-                        <option value="fourball_matchplay">{t('generate.formatFourball')}</option>
-                        <option value="foursomes_matchplay">{t('generate.formatFoursomes')}</option>
-                        <option value="greensome_matchplay">{t('generate.formatGreensome')}</option>
-                        <option value="chapman_matchplay">{t('generate.formatChapman')}</option>
-                        <option value="gruesome_matchplay">{t('generate.formatGruesome')}</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => removeCustomSession(i)}
-                        className="min-h-[36px] px-2 py-1 rounded-lg border border-border text-danger text-sm hover:bg-danger/10"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addCustomSession}
-                    className="min-h-[36px] w-full rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted hover:border-primary hover:text-primary transition-colors"
-                  >
-                    {t('generate.addSessionButton')}
-                  </button>
-                  {presetId === 'tilpasset' && plan.length > 0 && (
-                    <p className="font-sans text-xs text-primary">
-                      {plan.map((s) => `${s.matchCount} ${FORMAT_LABELS[s.format]}`).join(' · ')}
-                      {' '}= {totalMatches} {t('generate.matchesLabel').toLowerCase()}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <div>
-        <SectionHeading>{t('generate.step3StrategyHeading')}</SectionHeading>
-        <div className="space-y-2">
-          {([
-            ['handicap', t('generate.strategyHandicapLabel'), t('generate.strategyHandicapDescription')],
-            ['random', t('generate.strategyRandomLabel'), t('generate.strategyRandomDescription')],
-          ] as [PairingStrategy, string, string][]).map(([val, label, desc]) => (
-            <label
-              key={val}
-              className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
-                strategy === val
-                  ? 'border-primary bg-primary-soft'
-                  : 'border-border bg-surface hover:border-primary/40'
-              }`}
-            >
-              <input
-                type="radio"
-                name="strategy"
-                value={val}
-                data-testid={`cup-wizard-strategy-${val}`}
-                checked={strategy === val}
-                onChange={() => onStrategyChange(val)}
-                className="mt-0.5 accent-primary"
-              />
-              <div>
-                <p className="font-sans text-sm font-semibold text-text">{label}</p>
-                <p className="font-sans text-xs text-muted mt-0.5">{desc}</p>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Step 4: Preview + adjust ─────────────────────────────────────────────────
-
-function Step4Preview({
+function Step2Preview({
   matches,
   team1Players,
   team2Players,
@@ -825,7 +371,7 @@ function Step4Preview({
   }
 
   return (
-    <div data-testid="cup-wizard-step4">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <SectionHeading>{t('generate.step4Heading')}</SectionHeading>
         <button
@@ -922,43 +468,29 @@ function Step4Preview({
   );
 }
 
-// ─── Step 4: Confirm (recap + generate) ───────────────────────────────────────
+// ─── Step 2: Confirm (recap + generate) ───────────────────────────────────────
 //
-// #1142: dette var et eget steg 5. Det hadde ingen input — bare bane·tee-recap
-// og generer-knappen — så det bor nå nederst på steg 4, under den redigerbare
-// oppstillingen.
+// #1472: bane·tee-recapen rendres nå fra den lagrede planen (planCourseName/
+// planTeeName-props), og selve genereringen leser bane/tee/tee-off/best-ball
+// server-side fra planen — klienten sender kun `tournamentId` + fordelte
+// matcher (med greensomens `teamStrokesOverride`).
 
-function Step4Confirm({
+function Step2Confirm({
   matches,
-  courseId,
-  teeBoxId,
-  courses,
+  planCourseName,
+  planTeeName,
   tournamentId,
-  bestBallAllowancePct,
-  scheduledTeeOffAt,
   onError,
   t,
 }: {
   matches: CupBatchMatch[];
-  courseId: string;
-  teeBoxId: string;
-  courses: WizardCourse[];
+  planCourseName: string;
+  planTeeName: string;
   tournamentId: string;
-  // #1441 (D4/D11): kun sendt for splittet-cup-dag — actions.ts defaulter
-  // fraværet til cupens fourball-allowance (bestBall-gjenbruket, se
-  // cupMatchModeConfig sin JSDoc i ./actions.ts).
-  bestBallAllowancePct?: number;
-  // #1441 (owner-QA, F3d): cup-start (flight 1 sin tee-off) — ISO, allerede
-  // Oslo→UTC-konvertert (`resolveCupStartIso` i hovedkomponenten). `undefined`
-  // når feltet stod tomt — actions.ts setter da NULL på alle matchene
-  // (dagens oppførsel, uendret).
-  scheduledTeeOffAt?: string;
   onError: (msg: string) => void;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
   const [isPending, startTransition] = useTransition();
-  const course = courses.find((c) => c.id === courseId);
-  const tee = course?.teeBoxes.find((tb) => tb.id === teeBoxId);
 
   const FORMAT_LABELS: Record<CupBundleFormat, string> = {
     foursomes_matchplay: t('generate.formatFoursomes'),
@@ -972,41 +504,21 @@ function Step4Confirm({
 
   function handleConfirm() {
     startTransition(async () => {
-      try {
-        const result = await createCupMatchesFromPlan({
-          tournamentId,
-          courseId,
-          teeBoxId,
-          matches,
-          bestBallAllowancePct,
-          scheduledTeeOffAt,
-        });
-        if (result?.error) {
-          const errorMap: Record<string, string> = {
-            not_draft: t('generate.errors.not_draft'),
-            missing_course: t('generate.errors.missing_course'),
-            no_matches: t('generate.errors.no_matches'),
-            insert_failed: t('generate.errors.insert_failed'),
-            too_many_matches: t('generate.errors.too_many_matches', { max: MAX_PERSONAL_CUP_MATCHES }),
-            too_many_players: t('generate.errors.too_many_players', { max: MAX_PERSONAL_CUP_PLAYERS }),
-            invalid_tee_off: t('generate.errors.invalid_tee_off'),
-            tee_off_in_past: t('generate.errors.tee_off_in_past'),
-          };
-          onError(errorMap[result.error] ?? t('generate.errors.insert_failed'));
-        }
-        // On success, the action redirects automatically (NEXT_REDIRECT) —
-        // handled in the catch below (the redirect surfaces as a rejected
-        // Promise here, see isNextRedirectSignal's docstring), so this line
-        // is unreachable on the success path.
-      } catch (err) {
-        // #1441 (owner-QA, F3g): draft-lagringen (bane/tee/preset/…) skal
-        // ryddes etter VELLYKKET generering, aldri etter en feilet en (da
-        // trenger organisatoren valgene sine igjen for å prøve på nytt).
-        // `result?.error` over dekker feil actionen RETURNERER; en faktisk
-        // redirect (suksess) kastes i stedet — det er eneste signalet vi får
-        // om suksess her, siden actionen aldri returnerer normalt da.
-        if (isNextRedirectSignal(err)) clearDraft(tournamentId);
-        throw err;
+      // Ved suksess redirecter actionen (kaster NEXT_REDIRECT som propagerer og
+      // navigerer bort) — ingen draft-rydding lenger (#1472: ingen localStorage).
+      const result = await createCupMatchesFromPlan({ tournamentId, matches });
+      if (result?.error) {
+        const errorMap: Record<string, string> = {
+          not_draft: t('generate.errors.not_draft'),
+          missing_plan: t('generate.errors.missing_plan'),
+          plan_tee: t('generate.errors.plan_tee'),
+          no_matches: t('generate.errors.no_matches'),
+          insert_failed: t('generate.errors.insert_failed'),
+          too_many_matches: t('generate.errors.too_many_matches', { max: MAX_PERSONAL_CUP_MATCHES }),
+          too_many_players: t('generate.errors.too_many_players', { max: MAX_PERSONAL_CUP_PLAYERS }),
+          tee_off_in_past: t('generate.errors.tee_off_in_past'),
+        };
+        onError(errorMap[result.error] ?? t('generate.errors.insert_failed'));
       }
     });
   }
@@ -1026,7 +538,7 @@ function Step4Confirm({
             <div>
               <p className="font-sans text-xs text-muted">{t('generate.courseTeeLabel')}</p>
               <p className="font-sans text-sm font-medium text-text mt-0.5">
-                {course?.name ?? '—'} · {tee?.name ?? '—'}
+                {planCourseName} · {planTeeName}
               </p>
             </div>
             <div>
@@ -1060,13 +572,13 @@ function Step4Confirm({
   );
 }
 
-// ─── Step 4 (bundle): splittet-cup-dag lineup-editor ──────────────────────────
+// ─── Step 2 (bundle): splittet-cup-dag lineup-editor ──────────────────────────
 //
 // #1441 (F3c): egen preview-komponent for splittet-cup-dag-bunten i stedet
-// for å utvide `Step4Preview` — bunten har en fundamentalt annen redigerings-
+// for å utvide `Step2Preview` — bunten har en fundamentalt annen redigerings-
 // modell (flight-grupperte kort, singles-bytte begrenset til flightens egne
 // fire spillere, greensomens manuelle lag-slag) enn den frie per-slot-
-// dropdownen `Step4Preview` tilbyr på tvers av HELE laget. Gjenbruker
+// dropdownen `Step2Preview` tilbyr på tvers av HELE laget. Gjenbruker
 // `groupBundleMatchesByFlight`/`getFlightMatchupRows`/`swapFlightPlayer`
 // (lib/cup/splitDayLineup.ts) for gruppering/bytte — «extend, don't rebuild»
 // gjelder disse rene hjelperne, ikke UI-komponenten selv (som IKKE fantes
@@ -1186,7 +698,7 @@ function GreensomeCard({
   );
 }
 
-function Step4BundlePreview({
+function Step2BundlePreview({
   matches,
   team1Players,
   team2Players,
@@ -1224,7 +736,7 @@ function Step4BundlePreview({
   const flights = groupBundleMatchesByFlight(matches);
 
   return (
-    <div data-testid="cup-wizard-step4-bundle">
+    <div data-testid="cup-wizard-step2-bundle">
       <div className="flex items-center justify-between mb-4">
         <SectionHeading>{t('generate.step4Heading')}</SectionHeading>
         <button
@@ -1354,11 +866,16 @@ export function GenerateMatchesWizard({
   team1Name,
   team2Name,
   players,
-  courses,
   matchCap,
+  planCourseName,
+  planTeeName,
+  selectedTee,
+  presetId,
+  customSessions,
+  strategy,
 }: WizardProps) {
   const t = useTranslations('cup');
-  const TOTAL_STEPS = 4;
+  const TOTAL_STEPS = 2;
 
   // Step
   const [step, setStep] = useState<Step>(1);
@@ -1370,26 +887,7 @@ export function GenerateMatchesWizard({
     return init;
   });
 
-  // Step 2: course + tee
-  const [courseId, setCourseId] = useState('');
-  const [teeBoxId, setTeeBoxId] = useState('');
-  // #1441 (owner-QA, F3d): «cup-start» — flight 1 sin tee-off. Rå
-  // datetime-local-verdi (browser wall-clock, ikke ISO ennå); konverteres
-  // til Oslo-ISO av `resolveCupStartIso` først ved innsending. Tom streng =
-  // dagens oppførsel (NULL på alle matcher, organisatoren starter manuelt).
-  const [teeOffAt, setTeeOffAt] = useState('');
-
-  // Step 3: preset + strategy
-  const [presetId, setPresetId] = useState<string>('klassisk');
-  const [customSessions, setCustomSessions] = useState<CustomSession[]>([
-    { format: 'singles_matchplay' },
-  ]);
-  const [strategy, setStrategy] = useState<PairingStrategy>('handicap');
-  // #1441 (D4/D11): cup-dag-bred handicap-andel for best-ball-hosten. Kun
-  // relevant/synlig for splittet-cup-dag-presetet (Step3Setup gater visning).
-  const [bestBallAllowancePct, setBestBallAllowancePct] = useState(85);
-
-  // Step 4: generated matches
+  // Step 2: generated matches
   const [matches, setMatches] = useState<WizardMatch[]>([]);
   // #1441 (D10, owner-QA F3d): greensomens manuelle lag-slag holdes som RÅ
   // tekst-input per match-id OG per lag, adskilt fra `matches`. Et felt som
@@ -1404,102 +902,12 @@ export function GenerateMatchesWizard({
     Record<string, { team1?: string; team2?: string }>
   >({});
 
-  // Feil fra createCupMatchesFromPlan (steg 4)
+  // Feil fra createCupMatchesFromPlan (steg 2)
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // #1441 (owner-QA, F3g): draft-gjenoppretting fra localStorage.
-  // `hydrated` gater LAGrings-effekten under til ETTER at gjenopprettings-
-  // effekten har kjørt sitt `setState`-batch ferdig — uten den ville
-  // lagrings-effekten kjørt på FØRSTE render (med de blanke default-verdiene,
-  // før gjenopprettingen slår inn) og straks overskrevet en ekte lagret draft
-  // med tomme felter. `useState` (ikke en ref) er bevisst: en ref-flagg satt
-  // synkront på slutten av restore-effekten ville vært `true` allerede når
-  // lagrings-effekten kjører i SAMME commit-pass, mens closure-verdiene for
-  // course/tee/osv. fortsatt er blanke (state fra `setState`-kall er ikke
-  // synkront tilgjengelig i samme pass) — reactive state unngår denne fella
-  // fordi lagrings-effekten da først kjører i et NYTT render, med de
-  // gjenopprettede verdiene allerede i scope.
-  const [hydrated, setHydrated] = useState(false);
-  // Vist som en liten hint-linje ved steg-indikatoren (kun når noe faktisk
-  // ble gjenopprettet — ikke for en helt fersk cup uten lagret draft).
-  const [draftRestored, setDraftRestored] = useState(false);
-
-  // setState inne i en effect ER nødvendig her: vi synker EKSTERN tilstand
-  // (localStorage, et browser-API React ikke kjenner til) inn i React-state
-  // — samme begrunnelse som URL→state-syncen i GameWizard.tsx. Regelen
-  // advarer mot pattern-en generelt (kaskaderende renders fra intern
-  // state-avledning); for en engangs-hydrering fra en ekstern kilde ved
-  // mount er den ikke treffende, så vi disabler den lokalt for blokken.
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    const draft = loadDraft(tournamentId);
-    let appliedAny = false;
-    if (draft) {
-      if (typeof draft.courseId === 'string') {
-        setCourseId(draft.courseId);
-        appliedAny = true;
-      }
-      if (typeof draft.teeBoxId === 'string') {
-        setTeeBoxId(draft.teeBoxId);
-        appliedAny = true;
-      }
-      if (typeof draft.teeOffAt === 'string') {
-        setTeeOffAt(draft.teeOffAt);
-        appliedAny = true;
-      }
-      if (typeof draft.presetId === 'string') {
-        setPresetId(draft.presetId);
-        appliedAny = true;
-      }
-      if (Array.isArray(draft.customSessions)) {
-        setCustomSessions(draft.customSessions);
-        appliedAny = true;
-      }
-      if (draft.strategy === 'handicap' || draft.strategy === 'random') {
-        setStrategy(draft.strategy);
-        appliedAny = true;
-      }
-      if (typeof draft.bestBallAllowancePct === 'number') {
-        setBestBallAllowancePct(draft.bestBallAllowancePct);
-        appliedAny = true;
-      }
-      if (draft.teamStrokesInputs && typeof draft.teamStrokesInputs === 'object') {
-        setTeamStrokesInputs(draft.teamStrokesInputs);
-        appliedAny = true;
-      }
-    }
-    if (appliedAny) setDraftRestored(true);
-    setHydrated(true);
-    // Kun ved mount (og hvis tournamentId endres, i teorien) — setter-
-    // funksjonene fra useState er stabile referanser, trenger ikke listes.
-  }, [tournamentId]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  useEffect(() => {
-    if (!hydrated) return;
-    saveDraft(tournamentId, {
-      courseId,
-      teeBoxId,
-      teeOffAt,
-      presetId,
-      customSessions,
-      strategy,
-      bestBallAllowancePct,
-      teamStrokesInputs,
-    });
-  }, [
-    hydrated,
-    tournamentId,
-    courseId,
-    teeBoxId,
-    teeOffAt,
-    presetId,
-    customSessions,
-    strategy,
-    bestBallAllowancePct,
-    teamStrokesInputs,
-  ]);
-
+  // #1472: bane/tee/preset/strategi kommer fra den lagrede planen (props), ikke
+  // lenger wizard-steg + localStorage-utkast. Ett lagringslag (server) i stedet
+  // for to (server + localStorage) unngår splitt-hjerne.
   const isSplitDay = presetId === 'splittet-cup-dag';
 
   // Derived
@@ -1507,15 +915,13 @@ export function GenerateMatchesWizard({
   const team2Players = players.filter((p) => assignments[p.id] === 'team2');
   const team1Count = team1Players.length;
   const team2Count = team2Players.length;
-  const selectedCourse = courses.find((c) => c.id === courseId);
-  const selectedTee = selectedCourse?.teeBoxes.find((tb) => tb.id === teeBoxId);
 
   function getSelectedPreset(): CupPreset | null {
     return CUP_PRESETS.find((p) => p.id === presetId) ?? null;
   }
 
   function getEffectiveSessions(): CupSessionFormat[] {
-    if (presetId === 'tilpasset') return customSessions.map((s) => s.format);
+    if (presetId === 'tilpasset') return customSessions;
     return getSelectedPreset()?.sessions ?? [];
   }
 
@@ -1523,6 +929,14 @@ export function GenerateMatchesWizard({
     const teamSize = Math.min(team1Count, team2Count);
     return buildSessions(getEffectiveSessions(), teamSize);
   }
+
+  // Antall matcher oppsettet gir med gjeldende lag-fordeling — brukt til både
+  // cap-varselet og «Neste»-gaten på steg 1 (#1472: gatingen som lå på det gamle
+  // steg 3 flyttet hit, siden format-valget nå er gjort på forhånd i planen).
+  const plannedTotal = isSplitDay
+    ? splitDayTotalMatches(team1Count, team2Count)
+    : getSessionPlan().reduce((sum, s) => sum + s.matchCount, 0);
+  const overCap = matchCap !== undefined && plannedTotal > matchCap;
 
   function runGenerate() {
     const cupTeam1: CupPlayer[] = team1Players.map((p) => ({
@@ -1564,11 +978,11 @@ export function GenerateMatchesWizard({
    */
   function buildSubmissionMatches(): CupBatchMatch[] {
     if (!isSplitDay) return matches as CupBatchMatch[];
-    const players = playerLookup(team1Players, team2Players);
+    const lookup = playerLookup(team1Players, team2Players);
     return (matches as PlannedBundleMatch[]).map((m) => {
       if (m.format !== 'greensome_matchplay') return m;
-      const side1Players = m.side1.map(players).filter((p): p is WizardPlayer => Boolean(p));
-      const side2Players = m.side2.map(players).filter((p): p is WizardPlayer => Boolean(p));
+      const side1Players = m.side1.map(lookup).filter((p): p is WizardPlayer => Boolean(p));
+      const side2Players = m.side2.map(lookup).filter((p): p is WizardPlayer => Boolean(p));
       const default1 = greensomeDefaultOrFallback(side1Players, selectedTee);
       const default2 = greensomeDefaultOrFallback(side2Players, selectedTee);
       const raw = teamStrokesInputs[m.id];
@@ -1578,56 +992,25 @@ export function GenerateMatchesWizard({
     });
   }
 
-  /**
-   * Konverterer «cup-start»-feltet (Step2Course, rå datetime-local wall-
-   * clock) til Oslo-ISO for innsending (#1441 owner-QA, F3d). Tom verdi →
-   * `undefined` (dagens oppførsel: NULL på alle matcher). `parseOsloDateTimeLocal`
-   * kan i teorien kaste på malformed input (samme try/catch-mønster som
-   * opprett-spill-actionen, lib/games/gamePayload.ts) — feltet er valgfritt
-   * her (aldri «publish»-required som der), så en uparsbar verdi faller
-   * bare tilbake til «ikke satt» i stedet for å blokkere veiviseren.
-   */
-  function resolveCupStartIso(): string | undefined {
-    if (!teeOffAt.trim()) return undefined;
-    try {
-      return parseOsloDateTimeLocal(teeOffAt);
-    } catch {
-      return undefined;
-    }
-  }
-
-  // Validation per step
+  // Validation for step 1: minst `minPerTeam` per lag (fra planens preset),
+  // minst én match, og — for personlig cup — under match-taket.
   function canAdvance(): boolean {
     if (step === 1) {
       const preset = getSelectedPreset();
       const minPerTeam = preset?.minPerTeam ?? 1;
-      return team1Count >= minPerTeam && team2Count >= minPerTeam;
-    }
-    if (step === 2) return courseId !== '' && teeBoxId !== '';
-    if (step === 3) {
-      if (isSplitDay) {
-        const total = splitDayTotalMatches(team1Count, team2Count);
-        if (total === 0) return false;
-        if (matchCap !== undefined && total > matchCap) return false;
-        return true;
-      }
-      const plan = getSessionPlan();
-      if (plan.length === 0 || !plan.some((s) => s.matchCount > 0)) return false;
-      // #526: blokker «Neste» når personlig-cup-taket er overskredet.
-      if (matchCap !== undefined) {
-        const total = plan.reduce((sum, s) => sum + s.matchCount, 0);
-        if (total > matchCap) return false;
-      }
+      if (team1Count < minPerTeam || team2Count < minPerTeam) return false;
+      if (plannedTotal === 0) return false;
+      if (matchCap !== undefined && plannedTotal > matchCap) return false;
       return true;
     }
-    // Steg 4 er terminalt (ingen «Neste»), så det trenger ingen gate her.
+    // Steg 2 er terminalt (ingen «Neste»), så det trenger ingen gate her.
     return true;
   }
 
   function handleNext() {
     if (!canAdvance()) return;
-    if (step === 3) {
-      // Generate matches when entering step 4
+    if (step === 1) {
+      // Generate matches when entering step 2
       runGenerate();
     }
     setStep((s) => Math.min(s + 1, TOTAL_STEPS) as Step);
@@ -1640,11 +1023,6 @@ export function GenerateMatchesWizard({
 
   function handleAssignmentChange(id: string, val: TeamAssignment) {
     setAssignments((prev) => ({ ...prev, [id]: val }));
-  }
-
-  function handleCourseChange(id: string) {
-    setCourseId(id);
-    setTeeBoxId('');
   }
 
   function handleMatchChange(
@@ -1687,7 +1065,9 @@ export function GenerateMatchesWizard({
     }));
   }
 
-  // Validation message for step 1
+  // Validation message for step 1: show why "Neste" is disabled instead of
+  // leaving users with a silently-greyed button (#663). Min-per-team først, så
+  // «for få matcher» (den gamle step3ZeroMatchesMsg-en, flyttet hit i #1472).
   const step1ValidationMsg: string | null = (() => {
     if (step !== 1) return null;
     const preset = CUP_PRESETS.find((p) => p.id === presetId);
@@ -1696,18 +1076,7 @@ export function GenerateMatchesWizard({
       return t('generate.step1ValidationMin', { team: team1Name, minPerTeam });
     if (team2Count < minPerTeam)
       return t('generate.step1ValidationMin', { team: team2Name, minPerTeam });
-    return null;
-  })();
-
-  // Validation message for step 3: show why "Neste" is disabled instead of
-  // leaving users with a silently-greyed button (#663).
-  const step3ValidationMsg: string | null = (() => {
-    if (step !== 3) return null;
-    const total = isSplitDay
-      ? splitDayTotalMatches(team1Count, team2Count)
-      : getSessionPlan().reduce((sum, s) => sum + s.matchCount, 0);
-    if (total === 0) return t('generate.step3ZeroMatchesMsg');
-    if (matchCap !== undefined && total > matchCap) return null; // overCap already shown by Banner
+    if (plannedTotal === 0) return t('generate.step3ZeroMatchesMsg');
     return null;
   })();
 
@@ -1719,54 +1088,30 @@ export function GenerateMatchesWizard({
 
       <Card>
         <StepIndicator current={step} total={TOTAL_STEPS} t={t} />
-        {draftRestored && (
-          <p className="font-sans text-xs text-muted mb-6">
-            {t('generate.draftRestoredHint')}
-          </p>
-        )}
 
         {step === 1 && (
-          <Step1Roster
-            players={players}
-            team1Name={team1Name}
-            team2Name={team2Name}
-            assignments={assignments}
-            onChange={handleAssignmentChange}
-            t={t}
-          />
+          <div className="space-y-4">
+            {matchCap !== undefined && (
+              <Banner tone={overCap ? 'warning' : 'info'}>
+                {overCap
+                  ? t('generate.overCapWarning', { totalMatches: plannedTotal, matchCap })
+                  : t('generate.capInfoBanner', { matchCap })}
+              </Banner>
+            )}
+            <Step1Roster
+              players={players}
+              team1Name={team1Name}
+              team2Name={team2Name}
+              assignments={assignments}
+              onChange={handleAssignmentChange}
+              t={t}
+            />
+          </div>
         )}
         {step === 2 && (
-          <Step2Course
-            courses={courses}
-            courseId={courseId}
-            teeBoxId={teeBoxId}
-            onCourseChange={handleCourseChange}
-            onTeeChange={setTeeBoxId}
-            teeOffAt={teeOffAt}
-            onTeeOffChange={setTeeOffAt}
-            t={t}
-          />
-        )}
-        {step === 3 && (
-          <Step3Setup
-            team1Count={team1Count}
-            team2Count={team2Count}
-            presetId={presetId}
-            onPresetChange={setPresetId}
-            customSessions={customSessions}
-            onCustomSessionsChange={setCustomSessions}
-            strategy={strategy}
-            onStrategyChange={setStrategy}
-            matchCap={matchCap}
-            bestBallAllowancePct={bestBallAllowancePct}
-            onBestBallAllowancePctChange={setBestBallAllowancePct}
-            t={t}
-          />
-        )}
-        {step === 4 && (
-          <div className="space-y-6">
+          <div className="space-y-6" data-testid="cup-wizard-step2">
             {isSplitDay ? (
-              <Step4BundlePreview
+              <Step2BundlePreview
                 matches={matches as PlannedBundleMatch[]}
                 team1Players={team1Players}
                 team2Players={team2Players}
@@ -1780,7 +1125,7 @@ export function GenerateMatchesWizard({
                 t={t}
               />
             ) : (
-              <Step4Preview
+              <Step2Preview
                 matches={matches as PlannedMatch[]}
                 team1Players={team1Players}
                 team2Players={team2Players}
@@ -1791,28 +1136,22 @@ export function GenerateMatchesWizard({
                 t={t}
               />
             )}
-            <Step4Confirm
+            <Step2Confirm
               matches={buildSubmissionMatches()}
-              courseId={courseId}
-              teeBoxId={teeBoxId}
-              courses={courses}
+              planCourseName={planCourseName}
+              planTeeName={planTeeName}
               tournamentId={tournamentId}
-              bestBallAllowancePct={isSplitDay ? bestBallAllowancePct : undefined}
-              scheduledTeeOffAt={resolveCupStartIso()}
               t={t}
               onError={setErrorMsg}
             />
           </div>
         )}
 
-        {/* Navigation. Steg 4 er terminalt — generer-knappen i Step4Confirm er
+        {/* Navigation. Steg 2 er terminalt — generer-knappen i Step2Confirm er
             primær-handlingen der, så bare «Tilbake» blir med videre. */}
         <div className="mt-6 space-y-3">
           {step1ValidationMsg && (
             <p className="text-xs text-warning text-center">{step1ValidationMsg}</p>
-          )}
-          {step3ValidationMsg && (
-            <p className="text-xs text-warning text-center">{step3ValidationMsg}</p>
           )}
           <div className="flex gap-3">
             <Button
@@ -1825,7 +1164,7 @@ export function GenerateMatchesWizard({
             >
               {t('generate.prevButton')}
             </Button>
-            {step < 4 && (
+            {step < 2 && (
               <Button
                 type="button"
                 className="flex-1"
