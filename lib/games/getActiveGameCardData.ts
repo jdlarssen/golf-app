@@ -28,6 +28,13 @@ export type ActiveCardExtras = {
   href: string;
   /** Flight-peers who submitted but await THIS user's approval (0 unless peer approval applies). */
   pendingApprovalsForMe: number;
+  /**
+   * #1449: the next unscored hole in THIS game when `state === 'continue'` and
+   * holes remain, else `null` (all scored, or a non-continue state). Lets the
+   * split-day pair merge route across both halves (front9's next hole, then
+   * back9's) without re-parsing `href`.
+   */
+  nextHole: number | null;
 };
 
 /**
@@ -106,20 +113,22 @@ export async function getActiveGameCardData(
     const state = states.get(g.id) ?? 'continue';
 
     let href = `/games/${g.id}`;
+    let nextHole: number | null = null;
     if (state === 'continue') {
       const filled = filledByGame.get(g.id) ?? new Set<number>();
       const holeNumbers = holeNumbersForSegment(g.hole_segment);
       if (filled.size >= holeNumbers.length) {
         href = `/games/${g.id}/submit`;
       } else {
-        let nextHole = holeNumbers[0];
+        let next = holeNumbers[0];
         for (const h of holeNumbers) {
           if (!filled.has(h)) {
-            nextHole = h;
+            next = h;
             break;
           }
         }
-        href = `/games/${g.id}/holes/${nextHole}`;
+        nextHole = next;
+        href = `/games/${g.id}/holes/${next}`;
       }
     }
 
@@ -135,7 +144,7 @@ export async function getActiveGameCardData(
       ).length;
     }
 
-    result.set(g.id, { state, href, pendingApprovalsForMe });
+    result.set(g.id, { state, href, pendingApprovalsForMe, nextHole });
   }
 
   return result;

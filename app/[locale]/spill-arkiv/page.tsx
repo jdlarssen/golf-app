@@ -9,8 +9,10 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
+import { toFinishedEntries } from '@/lib/games/finishedEntries';
 import { groupFinishedByMonth } from '@/lib/games/groupFinishedByMonth';
 import { FinishedGameCard } from '@/components/games/FinishedGameCard';
+import { FinishedCupDayCard } from '@/components/games/FinishedCupDayCard';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('home');
@@ -36,7 +38,9 @@ export default async function SpillArkivPage() {
 
   const supabase = await getServerClient();
   const finishedGames = await getFinishedGamesForUser(supabase, userId!);
-  const groups = groupFinishedByMonth(finishedGames, locale, t('archiveNoDate'));
+  // #1449: fold split cup days into one cup entry before grouping by month.
+  const entries = toFinishedEntries(finishedGames);
+  const groups = groupFinishedByMonth(entries, locale, t('archiveNoDate'));
 
   return (
     <AppShell>
@@ -48,7 +52,7 @@ export default async function SpillArkivPage() {
 
       <PageHeader
         title={t('archiveTitle')}
-        subtitle={finishedGames.length > 0 ? t('archiveSubtitle') : undefined}
+        subtitle={entries.length > 0 ? t('archiveSubtitle') : undefined}
       />
 
       {groups.length === 0 ? (
@@ -66,9 +70,13 @@ export default async function SpillArkivPage() {
                 <div className="h-px flex-1 bg-border" />
               </div>
               <div className="space-y-3">
-                {group.games.map((g) => (
-                  <FinishedGameCard key={g.id} game={g} />
-                ))}
+                {group.games.map((entry) =>
+                  entry.kind === 'cupDay' ? (
+                    <FinishedCupDayCard key={entry.tournamentId} entry={entry} />
+                  ) : (
+                    <FinishedGameCard key={entry.game.id} game={entry.game} />
+                  ),
+                )}
               </div>
             </section>
           ))}

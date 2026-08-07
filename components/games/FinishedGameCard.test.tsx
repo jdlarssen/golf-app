@@ -19,6 +19,11 @@ function makeGame(result_summary: ResultSummary | null): FinishedGame {
     mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
     courses: { name: 'Byneset' },
     result_summary,
+    // #1449: split-day cup fields — a plain finished game is not a cup half.
+    tournament_id: null,
+    hole_segment: 'full',
+    team_number: null,
+    tournament: null,
   };
 }
 
