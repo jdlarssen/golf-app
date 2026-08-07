@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { candidatesOnSameSplitDay } from './splitDayPairing';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 
@@ -40,6 +41,18 @@ type SiblingMembership = {
   game_id: string;
   submitted_at: string | null;
   team_number: number | null;
+};
+
+/**
+ * A HOST half fetched while resolving a sibling: enough to identify the opposite
+ * half, day-scope it (#1449 finding 1), and carry its mode into the match.
+ */
+type SegmentHostRow = {
+  id: string;
+  game_mode: GameMode;
+  hole_segment: SegmentHalf;
+  scheduled_tee_off_at: string | null;
+  created_at: string | null;
 };
 
 const OPPOSITE_HALF: Record<SegmentHalf, SegmentHalf> = {
@@ -124,6 +137,9 @@ export function pickSiblingCandidate(
 export async function findSegmentSibling(
   userId: string,
   game: {
+    /** The source game's own id — needed to read its split-day anchor and to
+     *  exclude itself from the opposite-half candidates (#1449 finding 1). */
+    gameId: string;
     holeSegment: HoleSegment;
     sourceGameId: string | null;
     tournamentId: string | null;
@@ -134,15 +150,34 @@ export async function findSegmentSibling(
   const targetSegment = oppositeSegmentHalf(game.holeSegment);
   const supabase = getAdminClient();
 
-  const { data: candidateRows, error: candidatesError } = await supabase
+  // Fetch EVERY host half in the tournament (both segments, both days), carrying
+  // each host's split-day anchor. A two-day cup shares one `tournament_id`, so
+  // without day-scoping a day-2 lookup could bind to a finished day-1 host
+  // (#1449 finding 1). We read the source's own anchor from this same set, then
+  // keep only the opposite-half hosts on the source's Oslo day — reusing the
+  // pairing rule (`candidatesOnSameSplitDay`) so there is one home for it.
+  //
+  // No status filter: day-scoping already isolates the single opposite host of
+  // the current day, and a delivered-but-not-yet-finished sibling MUST still
+  // resolve — the back9→front9 cascade and the self-heal after a rejected front9
+  // card both target an active (not finished) sibling, so filtering on status
+  // would risk dropping a legitimately-resolvable sibling for no correctness gain.
+  const { data: hostRows, error: hostsError } = await supabase
     .from('games')
-    .select('id, game_mode')
+    .select('id, game_mode, hole_segment, scheduled_tee_off_at, created_at')
     .eq('tournament_id', game.tournamentId)
-    .eq('hole_segment', targetSegment)
     .is('source_game_id', null)
-    .returns<{ id: string; game_mode: GameMode }[]>();
-  if (candidatesError) throw candidatesError;
-  const candidates = candidateRows ?? [];
+    .in('hole_segment', ['front9', 'back9'])
+    .returns<SegmentHostRow[]>();
+  if (hostsError) throw hostsError;
+  const hosts = hostRows ?? [];
+
+  const source = hosts.find((h) => h.id === game.gameId);
+  if (!source) return null; // defensive: source row not found → no bridge
+  const candidates = candidatesOnSameSplitDay(
+    source,
+    hosts.filter((h) => h.hole_segment === targetSegment && h.id !== game.gameId),
+  );
   if (candidates.length === 0) return null;
 
   const { data: membershipRows, error: membershipError } = await supabase

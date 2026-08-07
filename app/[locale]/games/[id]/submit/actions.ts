@@ -156,6 +156,7 @@ export async function submitScorecard(gameId: string) {
     const updatedUserIds = (updated ?? []).map((r) => r.user_id);
     try {
       const sibling = await findSegmentSibling(user.id, {
+        gameId,
         holeSegment: 'back9',
         sourceGameId: null,
         tournamentId: game!.tournament_id,

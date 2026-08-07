@@ -232,6 +232,7 @@ async function ReviewBody({
   const front9Sibling =
     holeSegment === 'back9' && tournamentId != null
       ? await findSegmentSibling(currentUserId, {
+          gameId,
           holeSegment: 'back9',
           sourceGameId: null,
           tournamentId,

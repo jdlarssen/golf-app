@@ -23,6 +23,7 @@ function makeGame(result_summary: ResultSummary | null): FinishedGame {
     tournament_id: null,
     hole_segment: 'full',
     team_number: null,
+    scheduled_tee_off_at: null,
     tournament: null,
   };
 }

@@ -440,6 +440,7 @@ export default async function GameHomePage({
     game.tournament_id != null
   ) {
     const sibling = await findSegmentSibling(userId, {
+      gameId: game.id,
       holeSegment: 'front9',
       sourceGameId: null,
       tournamentId: game.tournament_id,

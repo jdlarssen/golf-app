@@ -122,7 +122,7 @@ export async function FinishedRoundsSection({
           block.kind === 'games' ? (
             <div key={`games-${i}`}>{renderGamesBlock(block.games)}</div>
           ) : (
-            <FinishedCupDayCard key={block.entry.tournamentId} entry={block.entry} />
+            <FinishedCupDayCard key={block.entry.front9.id} entry={block.entry} />
           ),
         )}
       </div>

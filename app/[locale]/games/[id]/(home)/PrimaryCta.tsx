@@ -109,6 +109,7 @@ export async function PrimaryCtaSection({
       state === 'submitted_approved' ||
       state === 'ready_to_submit')
       ? await findSegmentSibling(currentUserId, {
+          gameId,
           holeSegment,
           sourceGameId: null,
           tournamentId,

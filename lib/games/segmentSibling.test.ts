@@ -4,6 +4,7 @@ import {
   isSegmentSiblingCandidate,
   pickSiblingCandidate,
 } from './segmentSibling';
+import { candidatesOnSameSplitDay } from './splitDayPairing';
 
 // Type A per docs/test-discipline.md — ren utvalgs-logikk (#1441 finding B).
 describe('oppositeSegmentHalf', () => {
@@ -119,5 +120,59 @@ describe('pickSiblingCandidate', () => {
         { game_id: 'some-other-game', submitted_at: null, team_number: null },
       ]),
     ).toBeNull();
+  });
+});
+
+// #1449 finding 1: findSegmentSibling day-scopes its opposite-half candidates so
+// a two-day cup (one tournament_id spanning day-1 and day-2 hosts) never resolves
+// the wrong day's host. The pure day-rule (shared with the admin reminder batch)
+// is candidatesOnSameSplitDay; these lock its behaviour.
+describe('candidatesOnSameSplitDay (segment-sibling day-scope)', () => {
+  const DAY1 = {
+    scheduled_tee_off_at: '2026-06-12T08:00:00Z',
+    created_at: '2026-06-12T07:00:00Z',
+  };
+  const DAY2 = {
+    scheduled_tee_off_at: '2026-06-13T08:00:00Z',
+    created_at: '2026-06-13T07:00:00Z',
+  };
+
+  it('a day-2 source resolves the day-2 sibling, never the day-1 host', () => {
+    const source = { id: 'front9-day2', ...DAY2 };
+    const candidates = [
+      { id: 'back9-day1', ...DAY1 },
+      { id: 'back9-day2', ...DAY2 },
+    ];
+    expect(
+      candidatesOnSameSplitDay(source, candidates).map((c) => c.id),
+    ).toEqual(['back9-day2']);
+  });
+
+  it('a source with no anchor (no tee-off, no created_at) resolves nothing', () => {
+    const source = { scheduled_tee_off_at: null, created_at: null };
+    const candidates = [{ id: 'back9-day1', ...DAY1 }];
+    expect(candidatesOnSameSplitDay(source, candidates)).toEqual([]);
+  });
+
+  it('falls back to created_at when scheduled_tee_off_at is null (same physical day)', () => {
+    const source = { scheduled_tee_off_at: null, created_at: '2026-06-12T09:00:00Z' };
+    const candidates = [
+      { id: 'back9-day1', scheduled_tee_off_at: null, created_at: '2026-06-12T09:05:00Z' },
+      { id: 'back9-day2', ...DAY2 },
+    ];
+    expect(
+      candidatesOnSameSplitDay(source, candidates).map((c) => c.id),
+    ).toEqual(['back9-day1']);
+  });
+
+  it('drops a candidate that cannot be anchored', () => {
+    const source = { id: 'front9', ...DAY1 };
+    const candidates = [
+      { id: 'anchorless', scheduled_tee_off_at: null, created_at: null },
+      { id: 'back9-day1', ...DAY1 },
+    ];
+    expect(
+      candidatesOnSameSplitDay(source, candidates).map((c) => c.id),
+    ).toEqual(['back9-day1']);
   });
 });

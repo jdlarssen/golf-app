@@ -72,7 +72,7 @@ export default async function SpillArkivPage() {
               <div className="space-y-3">
                 {group.games.map((entry) =>
                   entry.kind === 'cupDay' ? (
-                    <FinishedCupDayCard key={entry.tournamentId} entry={entry} />
+                    <FinishedCupDayCard key={entry.front9.id} entry={entry} />
                   ) : (
                     <FinishedGameCard key={entry.game.id} game={entry.game} />
                   ),
