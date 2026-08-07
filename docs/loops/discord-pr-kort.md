@@ -208,8 +208,8 @@ Går workflowen rød, åpner den (dedupet) et `CI-vakt:`-issue. Diagnose:
   booter ikke i tide, OTP-login feiler, eller en fikstur mangler på staging → ruten
   droppes. Kortet postes uansett uten bildene.
 - **Auto-merge falt tilbake til knapp-kort:** forventet fail-closed — en åpen/CI-race
-  (409 sha-mismatch), rebase-konflikt (405) eller av-draft-feil gjør at kortet poster
-  knappen i stedet. Grunnen står i `Post merge-kort`-loggen (`demotedReason` /
+  (409 sha-mismatch), rebase-konflikt (405) eller draft ved re-sjekk (#1516) gjør at
+  kortet poster knappen i stedet. Grunnen står i `Post merge-kort`-loggen (`demotedReason` /
   `falt tilbake til knapp-kort — <grunn>`); dette er ikke en bug, bare menneske-porten.
 - **main-verify-dispatch feilet (dette issuet):** mergen er gjennomført, men
   #1075-nettet ble ikke dispatchet (post-steget ga exit 1). Kjør main-verify manuelt:
