@@ -134,21 +134,30 @@ admin view, leaderboards and mail are all correct for free.
 
 ## Success Criteria
 
-- [ ] C1 (test-first repro, core): `foursomesMatchplay.test.ts` — side 1 clinches at
+- [x] C1 (test-first repro, core): `foursomesMatchplay.test.ts` — side 1 clinches at
   hole 14 (5 up, 4 remaining), holes 15–18 entered and won by side 2 →
   `result.formatted === '5&4'`, `decidedAtHole === 14`, `remainingAtDecision === 4`,
   `winner === 'side1'`, while `holesUp === 1` (proves freezing, not final aggregates).
   Written FIRST, shown failing, then green.
-- [ ] C2 (reported mode): `greensomeMatchplay.test.ts` — same scenario through
+  **Evidence:** failing-first `AssertionError: expected '1up' to be '5&4'`
+  (foursomesMatchplay.test.ts:643) before the walk fix in 65200e9b; green in the C4 run.
+- [x] C2 (reported mode): `greensomeMatchplay.test.ts` — same scenario through
   `greensomeMatchplay.compute` → `'5&4'`. Failing first, then green.
-- [ ] C3 (sibling walk): `fourballMatchplay.test.ts` — same scenario shape through
+  **Evidence:** failing-first at greensomeMatchplay.test.ts:427 (same assertion), green
+  in the C4 run; asserts formatted/winner/decidedAtHole/remainingAtDecision/marginUp.
+- [x] C3 (sibling walk): `fourballMatchplay.test.ts` — same scenario shape through
   fourball's own walk → `'5&4'`. Failing first, then green.
-- [ ] C4 (no regressions): full `npx vitest run lib/scoring` green — including existing
+  **Evidence:** failing-first at fourballMatchplay.test.ts:683, green in the C4 run.
+- [x] C4 (no regressions): full `npx vitest run lib/scoring` green — including existing
   F1 last-hole «1up»/«X&0» guards and the singles #800 suite (locks the extraction
   refactor).
-- [ ] C5 (one home): the mat-em snapshot logic exists in exactly one exported helper,
+  **Evidence:** main-chat re-run 2026-08-07 21:53: `Test Files 45 passed (45) · Tests
+  1127 passed (1127)` (was 1124 on main; +3 repro tests).
+- [x] C5 (one home): the mat-em snapshot logic exists in exactly one exported helper,
   used by the singles walk, `computeFoursomesCore` and fourball. Evidence: grep shows
   one definition + three call sites, zero inline copies.
+  **Evidence:** main-chat grep: definition `singlesMatchplay.ts:152`, call sites
+  `singlesMatchplay.ts:366`, `foursomesMatchplay.ts:261`, `fourballMatchplay.ts:213`.
 - [ ] C6 (staging, user-visible): seeded early-decided greensome cup match on
   torny-staging shows «5&4 til <lag>» on the cup page (and admin cup view). Evidence
   posted on the PR per staging-verify + `staging-verified` label before merge.
