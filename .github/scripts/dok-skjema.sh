@@ -213,13 +213,9 @@ PR_URL=$(gh pr create --repo "$REPO" --base main --head "$BRANCH" \
   --title "docs(schema): ukentlig skjema-regenerering ($DATE)" \
   --body-file "$PR_BODY") || fail_closed "gh pr create feilet"
 
-# Discord-kortet fyrer ikke av seg selv for docs-only-PR-er (ci.yml paths-ignore
-# → ingen workflow_run, #1301) — dispatch det eksplisitt. Kort-workflowen venter
-# selv på at checkene lander. Best-effort: et tapt kort fanges av morgenbriefen,
-# så en dispatch-feil skal ikke felle en ellers vellykket kjøring.
-PR_NUMBER="${PR_URL##*/}"
-gh workflow run discord-pr-card.yml --repo "$REPO" -f pr="$PR_NUMBER" ||
-  echo "::warning::dispatch av discord-pr-card for PR #$PR_NUMBER feilet — kortet kommer via morgenbriefen"
+# Discord-kortet fyrer av seg selv: no-op-tvillingen «CI (docs no-op)» kjører på
+# docs-only-paths og står i kortets workflow_run-trigger (#1483). Den gamle
+# eksplisitte dispatchen (#1301) er fjernet.
 
 report_unexpected_diffs
-echo "Dok-skjema: docs-PR åpnet på $BRANCH."
+echo "Dok-skjema: docs-PR åpnet: $PR_URL"
