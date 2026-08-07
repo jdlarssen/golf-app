@@ -8,7 +8,9 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { canViewCupPage } from '@/lib/cup/cupPageAccess';
 import { isTeamMatchGameMode } from '@/lib/cup/computeCupLeaderboard';
+import { computeCupPlayerPoints } from '@/lib/cup/computeCupPlayerPoints';
 import { formatPoints } from '@/lib/cup/formatPoints';
+import { CupPlayerPoints } from './CupPlayerPoints';
 
 type Params = Promise<{ id: string }>;
 
@@ -75,6 +77,18 @@ export default async function CupResultsPage({ params }: { params: Params }) {
         ? tournament.team_2_name
         : null;
 
+  // Per-spiller-poengregnskap (#1497): kamppoeng (full kreditt per spiller) +
+  // ctp/ld-sidepoeng, aggregert fra samme snapshot. Kun lag med spillere vises.
+  const playerPoints = computeCupPlayerPoints({
+    matches: leaderboard.matches,
+    roster: snapshot.roster,
+    sideAwards,
+  });
+  const playerPointGroups = [
+    { team: 1 as const, teamName: tournament.team_1_name, rows: playerPoints.team1 },
+    { team: 2 as const, teamName: tournament.team_2_name, rows: playerPoints.team2 },
+  ].filter((g) => g.rows.length > 0);
+
   return (
     <AppShell>
       <TopBar backHref={`/cup/${id}`} kicker={t('results.kicker')} />
@@ -134,6 +148,11 @@ export default async function CupResultsPage({ params }: { params: Params }) {
           </p>
         )}
       </section>
+
+      {/* Per-spiller-poengregnskap (#1497) — mellom lagtotalene og kamplisten. */}
+      {playerPointGroups.length > 0 && (
+        <CupPlayerPoints groups={playerPointGroups} currentUserId={userId} />
+      )}
 
       {/* Matches-liste med resultater. Hvert kort lenker til kampens eget
           leaderboard (#1456). */}

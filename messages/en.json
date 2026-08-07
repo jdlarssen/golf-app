@@ -4779,7 +4779,12 @@
       "kicker": "Results",
       "lockedBody": "The results appear once the organiser has finished the cup.",
       "winner": "{team} won",
-      "tied": "Tied"
+      "tied": "Tied",
+      "playerPointsHeading": "Player points",
+      "yourPoints": "Your points",
+      "wonAgainst": "Beat {opponent} · +{points}",
+      "tiedWith": "Halved with {opponent} · +{points}",
+      "sideContribution": "{kind}, {hole} · +{points}"
     },
     "sideAwards": {
       "heading": "Side points",
