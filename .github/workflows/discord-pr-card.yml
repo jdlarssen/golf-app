@@ -12,13 +12,18 @@ on:
   # check-runs og gater, så en fail blir en ufarlig no-op. Vi bruker workflow_run
   # (ikke check_suite): check_suite fyrer IKKE for GitHub-Actions-suiter (anti-
   # rekursjon), så CI-en vår trigget aldri kortet — bekreftet på #1162.
+  # «CI (docs no-op)» (#1483): docs-only-PR-er kjører ikke ci.yml, men tvillingen
+  # (ci-docs-noop.yml, #1477) fullfører på sekunder — den fyringen VENTER på at
+  # resten av checkene lander (WAIT_FOR_CHECKS under), siden scan/Vercel typisk
+  # fortsatt kjører. Blandet PR (kode + docs): ci.yml-fyringen kansellerer den
+  # ventende tvilling-kjøringen via concurrency-gruppa (samme head-SHA).
   workflow_run:
-    workflows: [CI]
+    workflows: [CI, "CI (docs no-op)"]
     types: [completed]
-  # Manuell testing / re-post mot en spesifikk PR — OG produsent-dispatch for
-  # docs-only-PR-er (#1301): de kjører ingen CI (ci.yml paths-ignore), så ingen
-  # workflow_run fyrer. Produsenten dispatcher i stedet rett etter PR-opprettelse,
-  # og decide-steget VENTER da på at checkene lander (se WAIT_FOR_CHECKS under).
+  # Manuell testing / re-post mot en spesifikk PR. (Produsent-dispatch for
+  # docs-only-PR-er (#1301) er OVERFLØDIG etter #1483 — tvilling-triggeren over
+  # dekker dem hendelsesdrevet; eksisterende dispatches er ufarlige duplikater,
+  # dedup-labelen + concurrency sluker dem.)
   workflow_dispatch:
     inputs:
       pr:
@@ -89,7 +94,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ inputs.pr }}
-          WAIT_FOR_CHECKS: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          # Vent på checkene ved dispatch (#1301) OG ved tvilling-fyring (#1483):
+          # tvillingen fullfører før scan/Vercel, så uten venting ville docs-only-
+          # kortet no-op'e på pending og aldri få en ny fyring.
+          WAIT_FOR_CHECKS: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.name == 'CI (docs no-op)') && 'true' || 'false' }}
         run: npx --yes tsx scripts/loops/decide-pr-card.ts
 
       # Steg 2 — SKJERMBILDER (kun visuell diff): booter appen mot staging og
