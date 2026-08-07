@@ -426,7 +426,7 @@ async function ReviewBody({
           both halves are delivered here so they don't go looking for a second
           submit on the front9 host. */}
       {showWholeRoundNotice && (
-        <Banner tone="info">{t('wholeRoundNotice')}</Banner>
+        <Banner tone="info" testId="whole-round-notice">{t('wholeRoundNotice')}</Banner>
       )}
 
       <div className="grid grid-cols-2 gap-3">

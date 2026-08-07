@@ -45,6 +45,8 @@ export function FinishedCupDayCard({ entry }: { entry: CupDayEntry }) {
       trailing={
         badge ? (
           <span
+            data-testid="finished-cupday-badge"
+            data-win={badge.isWin}
             className={`shrink-0 max-w-[45%] text-right text-sm font-medium leading-snug ${
               badge.isWin ? 'text-accent' : 'text-muted'
             }`}
@@ -52,7 +54,7 @@ export function FinishedCupDayCard({ entry }: { entry: CupDayEntry }) {
             {t(badge.key as Parameters<typeof t>[0])}
           </span>
         ) : (
-          <span aria-hidden className="shrink-0 text-muted">
+          <span aria-hidden data-testid="finished-cupday-arrow" className="shrink-0 text-muted">
             →
           </span>
         )
