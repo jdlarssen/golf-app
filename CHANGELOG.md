@@ -1391,8 +1391,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 17 rettinger</strong></summary>
+<summary><strong>August 2026 · 18 rettinger</strong></summary>
 
+- `1.218.9` · [#1475](https://github.com/jdlarssen/golf-app/issues/1475) — Samme retting for liga-skjemaet: feiler opprettingen (for eksempel sluttdato før startdato), beholder skjemaet alt du fylte ut i stedet for å tømme seg.
 - `1.218.8` · [#1397](https://github.com/jdlarssen/golf-app/issues/1397) — Feiler oppretting av en cup, står feilmeldingen nå rett over knappen og skjemaet beholder alt du fylte ut — cup-navn, lagnavn og poeng — i stedet for å tømme seg.
 - `1.218.6` · [#1451](https://github.com/jdlarssen/golf-app/issues/1451) — Setter du opp splittet cup-dag, forklarer oppstillings-steget nå irish greensome-varianten: begge slår ut, bytt ball på andreslaget, velg én ball og spill annenhver gang. Scoringen i appen er som før.
 - `1.218.5` · [#1455](https://github.com/jdlarssen/golf-app/issues/1455) — Sidepoeng for nærmest hullet og lengste drive låses nå når cupen starter — er runden i gang, registrerer du bare vinnerne og kan ikke lenger endre oppsettet.

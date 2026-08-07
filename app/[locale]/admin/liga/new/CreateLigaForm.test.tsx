@@ -12,6 +12,27 @@ vi.mock('@/lib/league/actions', () => ({
 
 import { CreateLigaForm } from './CreateLigaForm';
 
+describe('CreateLigaForm — #1475 form state survives a failed submit', () => {
+  // React 19 auto-resets a <form action=...> when the action completes —
+  // without the onSubmit guard the error banner arrives over a wiped form.
+  it('keeps the typed name after the action returns an error', async () => {
+    render(
+      <CreateLigaForm
+        courses={[]}
+        players={[]}
+        meId={null}
+        defaultSeasonStart=""
+        defaultSeasonEnd=""
+      />,
+    );
+    const nameInput = screen.getByLabelText<HTMLInputElement>(/navn/i);
+    fireEvent.change(nameInput, { target: { value: 'Torsdagsligaen' } });
+    fireEvent.submit(screen.getByTestId('liga-create-form'));
+    await screen.findByTestId('liga-create-error');
+    expect(nameInput.value).toBe('Torsdagsligaen');
+  });
+});
+
 describe('CreateLigaForm — #924 season_over message', () => {
   it('renders the season-over message when the action returns season_over', async () => {
     render(
