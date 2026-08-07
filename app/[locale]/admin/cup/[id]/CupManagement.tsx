@@ -13,6 +13,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
+import { matchBlocksOneTapFinish } from '@/lib/cup/matchSubmissionStatus';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
 import { unregisteredSideAwards } from '@/lib/cup/sideAwardsRegistered';
 import {
@@ -261,7 +262,7 @@ export async function CupManagement({
     (m) => (m.sourceGameId ?? null) === null && m.status === 'active',
   );
   const notSubmittedMatchesList = activeHostMatches
-    .filter((m) => !(m.allScorecardsSubmitted ?? false))
+    .filter(matchBlocksOneTapFinish)
     .map((m) => m.matchLabel ?? 'Match')
     .join(', ');
   const failedMatchesList = activeHostMatches

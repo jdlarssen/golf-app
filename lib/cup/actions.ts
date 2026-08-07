@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
 import { allSideAwardsRegistered } from './sideAwardsRegistered';
+import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
 import { endGameCore } from '@/lib/games/endGameCore';
 import { planTournamentGameDeletion } from './tournamentGameDeletion';
 import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
@@ -372,14 +373,13 @@ export async function finishTournament(formData: FormData) {
     (m) => (m.sourceGameId ?? null) === null && m.status === 'active',
   );
 
-  // 3. Leverings-gate (#1501/#375): med mindre «Avslutt likevel», må hver
-  // active host-kamp ha alle ikke-trukne kort levert. Mangler noen → stopp med
-  // kampliste (banneret utleder den fra snapshotet) + «Avslutt likevel»-valg.
+  // 3. Leverings-gate (#1501/#375/#1488 K5): med mindre «Avslutt likevel», må
+  // hver active host-kamp enten ha alle ikke-trukne kort levert ELLER være helt
+  // trukket (den avsluttes da via WD-skip). Delt predikat med CupManagement-
+  // banneret. Mangler noen → stopp med kampliste + «Avslutt likevel»-valg.
   if (!allowMissing) {
-    const notSubmitted = activeHostMatches.filter(
-      (m) => !m.allScorecardsSubmitted,
-    );
-    if (notSubmitted.length > 0) {
+    const blocking = activeHostMatches.filter(matchBlocksOneTapFinish);
+    if (blocking.length > 0) {
       redirect(`${base.path}?error=matches_not_submitted`);
     }
   }

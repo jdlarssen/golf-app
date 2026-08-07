@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeSubmissionStatusByGame,
+  matchBlocksOneTapFinish,
   type MatchPlayerRow,
 } from './matchSubmissionStatus';
 
@@ -58,5 +59,30 @@ describe('derived-match inheritance (#1488 K4)', () => {
       { gameId: 'orphan', sourceGameId: 'missing-host', players: [player(true)] },
     ]);
     expect(map.get('orphan')!.allScorecardsSubmitted).toBe(true);
+  });
+});
+
+describe('computeSubmissionStatusByGame — allPlayersWithdrawn (#1488 K5)', () => {
+  it.each<[string, MatchPlayerRow[], boolean]>([
+    ['no players at all', [], false],
+    ['every player withdrawn', [player(false, true), player(false, true)], true],
+    ['some withdrawn, one still in', [player(false, true), player(false)], false],
+    ['nobody withdrawn', [player(true), player(true)], false],
+  ])('%s → %s', (_desc, players, expected) => {
+    const map = computeSubmissionStatusByGame([
+      { gameId: 'host', sourceGameId: null, players },
+    ]);
+    expect(map.get('host')!.allPlayersWithdrawn).toBe(expected);
+  });
+});
+
+describe('matchBlocksOneTapFinish (#1488 K5)', () => {
+  it.each<[string, { allScorecardsSubmitted?: boolean; allPlayersWithdrawn?: boolean }, boolean]>([
+    ['in progress / no players', { allScorecardsSubmitted: false, allPlayersWithdrawn: false }, true],
+    ['all scorecards submitted', { allScorecardsSubmitted: true, allPlayersWithdrawn: false }, false],
+    ['all players withdrawn', { allScorecardsSubmitted: false, allPlayersWithdrawn: true }, false],
+    ['undefined fields default to blocking', {}, true],
+  ])('%s → blocks=%s', (_desc, match, expected) => {
+    expect(matchBlocksOneTapFinish(match)).toBe(expected);
   });
 });
