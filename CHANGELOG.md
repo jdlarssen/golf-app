@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.225 · Flere sidepoeng-vinnere og GIR</strong></summary>
+
+[#1489](https://github.com/jdlarssen/golf-app/issues/1489) — Nærmest hullet og lengste drive kan nå ha flere vinnerplasser på samme hull (én per flight), og GIR er ny sidepoeng-type: etter runden taster du hvor mange greener hvert lag traff, og poengene legges rett i cup-totalen.
+
+↳ /admin/cup · «Åpne cupene»
+</details>
+
+<details>
 <summary><strong>1.224 · Cup-oppsettet i tre rom</strong></summary>
 
 [#1472](https://github.com/jdlarssen/golf-app/issues/1472) — Å sette opp en cup er nå delt i tre: du setter bane og format ett sted, melder på spillere et annet, og fordeler lagene til slutt når du genererer matchene.

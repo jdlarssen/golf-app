@@ -377,11 +377,14 @@ export async function CupManagement({
       </section>
       )}
 
-      {/* Sidepoeng: closest/longest-oppsett + vinner-registrering (#1441, D9) */}
+      {/* Sidepoeng: ctp/ld/gir-oppsett + registrering etter runden (#1441 D9,
+          #1489 slots + GIR — lagnavnene trengs til GIR-teller-feltene) */}
       <SideAwardsPanel
         tournamentId={tournamentId}
         initialAwards={snapshot.sideAwards}
         rosterOptions={rosterOptions}
+        team1Name={tournament.team_1_name}
+        team2Name={tournament.team_2_name}
         configEditable={tournament.status === 'draft'}
         showWinnerRegistration={tournament.status === 'active' || tournament.status === 'finished'}
       />
