@@ -73,7 +73,7 @@ describe('sendCupFinishedNotification', () => {
       Bjørketrærne vant cupen.
       Bjørketrærne 3 — 2 Granskogen
 
-      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333
+      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater
       "
     `);
     expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
@@ -97,7 +97,7 @@ describe('sendCupFinishedNotification', () => {
       Cupen endte uavgjort.
       Bjørketrærne 2 — 2 Granskogen
 
-      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333
+      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater
       "
     `);
     expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
@@ -120,7 +120,7 @@ describe('sendCupFinishedNotification', () => {
       Bjørketrærne vant cupen.
       Bjørketrærne 3,5 — 2,5 Granskogen
 
-      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333
+      Se hele leaderboardet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater
       "
     `);
     expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
@@ -144,7 +144,7 @@ describe('sendCupFinishedNotification', () => {
       Bjørketrærne won the cup.
       Bjørketrærne 3 — 2 Granskogen
 
-      View full leaderboard: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333
+      View full leaderboard: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333/resultater
       "
     `);
     expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
@@ -169,7 +169,7 @@ describe('sendCupFinishedNotification', () => {
       The cup ended in a draw.
       Bjørketrærne 2 — 2 Granskogen
 
-      View full leaderboard: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333
+      View full leaderboard: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333/resultater
       "
     `);
   });
@@ -210,7 +210,7 @@ describe('sendCupFinishedNotification', () => {
                     Bjørketrærne 3 — 2 Granskogen
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
                       Se hele leaderboardet
                     </a>
                   </div>
