@@ -1,0 +1,35 @@
+# No-op twin of ci.yml's verify/e2e checks (#1477 — the "Handling skipped but
+# required checks" pattern from the GitHub docs). Branch protection on main
+# requires the checks named `verify` and `e2e`, but ci.yml skips docs-only PRs
+# entirely via paths-ignore (quota trim #1195) — and a required check that
+# never runs leaves the PR stuck on "Expected — waiting for status" forever.
+#
+# This workflow runs on exactly the paths ci.yml ignores and reports
+# instantly-green checks with the same job names, so docs-only PRs can merge.
+# A mixed PR (code + docs) triggers BOTH workflows — both must pass, and the
+# no-op side always does, so the real gate still decides.
+#
+# `scan` (secret-scan.yml) needs no twin: it deliberately runs on every PR,
+# because secrets leak into markdown as easily as into code.
+#
+# Keep the paths list in lockstep with ci.yml's paths-ignore — if they drift,
+# a PR class exists that gets neither the real check nor the no-op and hangs.
+name: CI (docs no-op)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - '.forge/**'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only PR — ci.yml's verify gate does not apply (paths-ignore, #1195)."
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only PR — ci.yml's e2e gate does not apply (paths-ignore, #1195)."
