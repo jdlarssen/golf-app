@@ -169,3 +169,18 @@ greit — 6 kamper er småskala); om `startHint`-mønsteret gjenbrukes eller få
 - **S5:** skjermbilde 1501-s2-gate.png: «Scorekort levert» vs «Pågår» på styringssiden; delt label-helper med Type A-test brukt av begge flater.
 - **S6:** build grønn · lint 0 errors · vitest 442 filer/5664 tester grønn · e2e cup 3/3 grønn — alt re-kjørt ETTER rebase på main med PR #1504.
 - **Gates:** staging-bevis + `staging-verified`-label på PR #1505; feat-commit med MINOR-bump (1.226.2→1.227.0, korrigert etter rebase-dobbeltbump) + CHANGELOG-linje.
+
+## Revisjon 1 (2026-08-07, etter evaluator-runde 1)
+
+Evaluator MAJOR-1: aldri startede host-kamper (`scheduled`/`draft`) gled stille forbi begge
+gatene — cupen kunne avsluttes med uspilte kamper (prod-feilklassen gjenskapt). Rettelse:
+
+- Ny delt helper `lib/cup/cupFinishBlockers.ts` (Type A-testet): en host-kamp blokkerer
+  avslutning med mindre den er `finished`, eller `active` med alle ikke-trukne kort levert.
+  Brukes av BÅDE server-gaten og stopp-banneret (én regel, ett hjem).
+- «Avslutt likevel» hopper bevisst over aldri startede kamper: de kan ikke avsluttes uten å ha
+  vært spilt, står igjen uten resultat og teller 0 poeng — og de sto synlig i stopp-lista
+  arrangøren tok valget fra. `ASSUMPTION:` dette er samme bevisste-valg-semantikk eieren valgte
+  for uleverte kort; kan vetoes.
+- Minor-1 rettet: `?error=side_awards_missing` har nå banner-mapping (`manage.errors.*`).
+- `finishNotSubmitted`-copyen dekker nå både uleverte og aldri startede kamper.

@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
 import { allSideAwardsRegistered } from './sideAwardsRegistered';
+import { blockingHostMatches } from './cupFinishBlockers';
 import { endGameCore } from '@/lib/games/endGameCore';
 import { planTournamentGameDeletion } from './tournamentGameDeletion';
 import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
@@ -365,23 +366,23 @@ export async function finishTournament(formData: FormData) {
   }
 
   // 2. Host-kamper endes eksplisitt (source_game_id IS NULL); avledede følger
-  // via `finishDerivedGames` i pipelinen. Vi arbeider på ACTIVE host-kamper —
-  // allerede finished hopper over (idempotent re-trykk), og scheduled/draft
-  // ble aldri spilt (dagens flip rørte uansett aldri kampene).
+  // via `finishDerivedGames` i pipelinen. Løpet under arbeider på ACTIVE
+  // host-kamper — allerede finished hopper over (idempotent re-trykk).
   const activeHostMatches = snapshot.leaderboard.matches.filter(
     (m) => (m.sourceGameId ?? null) === null && m.status === 'active',
   );
 
-  // 3. Leverings-gate (#1501/#375): med mindre «Avslutt likevel», må hver
-  // active host-kamp ha alle ikke-trukne kort levert. Mangler noen → stopp med
-  // kampliste (banneret utleder den fra snapshotet) + «Avslutt likevel»-valg.
-  if (!allowMissing) {
-    const notSubmitted = activeHostMatches.filter(
-      (m) => !m.allScorecardsSubmitted,
-    );
-    if (notSubmitted.length > 0) {
-      redirect(`${base.path}?error=matches_not_submitted`);
-    }
+  // 3. Klar-gate (#1501/#375): med mindre «Avslutt likevel», må HVER host-kamp
+  // være ferdig, eller aktiv med alle ikke-trukne kort levert — aldri startede
+  // kamper (scheduled/draft) blokkerer også (evaluator MAJOR-1: de gled ellers
+  // stille forbi og cupen kunne avsluttes med uspilte kamper). Stopp → banner
+  // med kampliste (utledet fra snapshotet via SAMME helper) + likevel-valg.
+  // «Avslutt likevel» hopper bevisst over aldri startede kamper: de kan ikke
+  // avsluttes uten å ha vært spilt (endGameCore krever active), står igjen
+  // uten resultat og teller 0 poeng — synlig i stopp-lista arrangøren tok
+  // valget fra.
+  if (!allowMissing && blockingHostMatches(snapshot.leaderboard.matches).length > 0) {
+    redirect(`${base.path}?error=matches_not_submitted`);
   }
 
   // 4. Løpet: end hver active host-kamp via den EKTE endGame-pipelinen

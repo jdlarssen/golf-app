@@ -4630,7 +4630,7 @@
       "finishButton": "Finish cup",
       "finishPending": "Finishing…",
       "finishSideAwardsHint": "Register all side points before you can finish the cup: {awards}",
-      "finishNotSubmitted": "Some matches are missing submitted scorecards: {matches}. You can finish the cup anyway — players who haven't submitted won't count in the result.",
+      "finishNotSubmitted": "These matches aren't ready: {matches}. You can finish the cup anyway — matches and scorecards still missing won't count in the result.",
       "finishAnywayButton": "Finish anyway",
       "finishAnywayPending": "Finishing…",
       "finishFailed": "These matches could not be finished: {matches}. Try again — matches that already finished are kept.",
@@ -4642,7 +4642,8 @@
         "too_few_matches": "You need at least 2 matches before you can start the cup.",
         "wrong_status": "The cup is not in draft status and cannot be started.",
         "already_finished": "The cup has already finished.",
-        "not_found": "Cup not found."
+        "not_found": "Cup not found.",
+        "side_awards_missing": "Register every side point before the cup can be finished."
       },
       "statusMessages": {
         "created": "Cup created. Add matches below to get started.",

@@ -15,6 +15,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
 import { unregisteredSideAwards } from '@/lib/cup/sideAwardsRegistered';
+import { blockingHostMatches } from '@/lib/cup/cupFinishBlockers';
 import {
   cupMatchStatusKey,
   CUP_MATCH_STATUS_MESSAGE_KEY,
@@ -217,6 +218,9 @@ export async function CupManagement({
     too_few_matches: t('manage.errors.too_few_matches'),
     wrong_status: t('manage.errors.wrong_status'),
     already_finished: t('manage.errors.already_finished'),
+    // #1501: server-side-gaten avviste avslutningen — det stående gate-hintet
+    // under avslutt-knappen navngir hvilke sidepoeng som mangler.
+    side_awards_missing: t('manage.errors.side_awards_missing'),
   };
   const statusMessageMap: Record<string, string> = {
     created: t('manage.statusMessages.created'),
@@ -254,17 +258,16 @@ export async function CupManagement({
     )
     .join(', ');
 
-  // #1501: host-kamper som fortsatt er aktive driver leverings-/feil-banneret.
-  // Avledede kamper følger verten (source_game_id !== null) og endes aldri
-  // eksplisitt, så de holdes utenfor listene.
-  const activeHostMatches = leaderboard.matches.filter(
-    (m) => (m.sourceGameId ?? null) === null && m.status === 'active',
-  );
-  const notSubmittedMatchesList = activeHostMatches
-    .filter((m) => !(m.allScorecardsSubmitted ?? false))
+  // #1501: stopp-banneret lister host-kamper som ikke er klare — SAMME helper
+  // som server-gaten i finishTournament (én regel, ett hjem): aldri startede
+  // kamper og aktive med manglende leveringer. Avledede kamper følger verten
+  // og holdes utenfor. Feil-banneret lister gjenværende aktive host-kamper
+  // (etter delvis feil er det nøyaktig de som feilet).
+  const notSubmittedMatchesList = blockingHostMatches(leaderboard.matches)
     .map((m) => m.matchLabel ?? 'Match')
     .join(', ');
-  const failedMatchesList = activeHostMatches
+  const failedMatchesList = leaderboard.matches
+    .filter((m) => (m.sourceGameId ?? null) === null && m.status === 'active')
     .map((m) => m.matchLabel ?? 'Match')
     .join(', ');
 

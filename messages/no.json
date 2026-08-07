@@ -4630,7 +4630,7 @@
       "finishButton": "Avslutt cupen",
       "finishPending": "Avslutter …",
       "finishSideAwardsHint": "Registrer alle sidepoeng før du kan avslutte cupen: {awards}",
-      "finishNotSubmitted": "Noen kamper mangler leverte scorekort: {matches}. Du kan avslutte cupen likevel — de som ikke har levert, teller ikke i resultatet.",
+      "finishNotSubmitted": "Disse kampene er ikke klare: {matches}. Du kan avslutte cupen likevel — kamper og scorekort som mangler, teller ikke i resultatet.",
       "finishAnywayButton": "Avslutt likevel",
       "finishAnywayPending": "Avslutter …",
       "finishFailed": "Disse kampene lot seg ikke avslutte: {matches}. Prøv igjen — kampene som allerede er avsluttet, står.",
@@ -4642,7 +4642,8 @@
         "too_few_matches": "Du må opprette minst 2 matcher før du kan starte cupen.",
         "wrong_status": "Cupen er ikke i utkast-status og kan ikke startes.",
         "already_finished": "Cupen er allerede avsluttet.",
-        "not_found": "Cupen finnes ikke."
+        "not_found": "Cupen finnes ikke.",
+        "side_awards_missing": "Registrer alle sidepoengene før cupen kan avsluttes."
       },
       "statusMessages": {
         "created": "Cupen er opprettet. Legg til matcher under for å komme i gang.",
