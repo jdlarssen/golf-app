@@ -36,9 +36,10 @@ type ScoreRow = {
  * fordi norsk Excel-locale forventer det, BOM så Excel også oppdager
  * UTF-8 og rendrer æøå korrekt uten manuell encoding-velger.
  *
- * Auth-gated samme mønster som leaderboard-siden:
- *   - innlogget bruker (proxy-verifisert)
- *   - admin ELLER deltaker i spillet
+ * Auth-gated samme synlighet som leaderboard-siden (#1468/#1500): innlogget
+ * bruker (proxy-verifisert). Ferdige spill er åpne for hele publikummet —
+ * og siden ruta KUN serverer finished-spill (sjekken under), trengs ingen
+ * deltaker/admin-gate i tillegg.
  *
  * Skjer kun for `status='finished'`-spill. Andre statuser returnerer 404 —
  * en mid-runde-eksport ville være misvisende, og knappen på UI-siden
@@ -79,14 +80,7 @@ export async function GET(
 
   const supabase = await getServerClient();
 
-  const [gwp, profileRes] = await Promise.all([
-    getGameWithPlayers(id),
-    supabase
-      .from('users')
-      .select('is_admin')
-      .eq('id', userId)
-      .single<{ is_admin: boolean }>(),
-  ]);
+  const gwp = await getGameWithPlayers(id);
 
   if (!gwp) {
     return NextResponse.json({ error: t('errors.gameNotFound') }, { status: 404 });
@@ -101,11 +95,6 @@ export async function GET(
       { error: t('errors.finishedOnly') },
       { status: 404 },
     );
-  }
-
-  const isAdmin = profileRes.data?.is_admin === true;
-  if (!isAdmin && !gwp.players.some((p) => p.user_id === userId)) {
-    return NextResponse.json({ error: t('errors.noAccess') }, { status: 404 });
   }
 
   // #1441 (D3): a derived game (source_game_id set) owns no scores of its
