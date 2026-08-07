@@ -4650,6 +4650,7 @@
       "flightHeading": "Flight {n}",
       "lineupHeading": "Lineup",
       "lineupHint": "Pick a different player to swap places — across flights, or with your teammate in this one.",
+      "irishGreensomeHint": "Playing the greensome as Irish? Both tee off, you swap balls for the second shot, then pick one ball and alternate from there. The app only tracks the team ball, so scoring is the same as regular greensome.",
       "teamStrokesLabel": "Strokes team {team}",
       "teamStrokesPrefillHint": "Suggested: 60/40 split of playing handicap (60% to the lower one). Overwrite if your team uses a different split.",
       "spillehandicapShort": "CH {n}",

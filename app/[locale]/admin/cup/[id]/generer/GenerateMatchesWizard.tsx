@@ -1236,6 +1236,13 @@ function Step4BundlePreview({
         </button>
       </div>
 
+      {/* #1451 (D6/F5): irish greensome-varianten navngis der greensome-
+          matchene settes opp — én gang over flight-listen, ikke per kort.
+          Kun copy: appen fører lagballen uansett variant. */}
+      <p className="font-sans text-xs text-muted mb-4" data-testid="cup-wizard-irish-hint">
+        {t('generate.irishGreensomeHint')}
+      </p>
+
       <div className="space-y-5">
         {flights.map((flight) => {
           const rows = getFlightMatchupRows(flight);
