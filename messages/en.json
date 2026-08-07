@@ -1943,7 +1943,7 @@
       "summaryBrutto": "Gross total:",
       "summaryHoles": "Holes played:",
       "missingHolesBanner": "{count, plural, one {1 hole is missing. If you submit now, it will be recorded as not played.} other {# holes are missing. If you submit now, they will be recorded as not played.}}",
-      "wholeRoundNotice": "This delivery covers the whole round — both holes 1–9 and holes 10–18.",
+      "wholeRoundNotice": "This delivery covers the whole round — both holes 1–9 and 10–18.",
       "editButton": "← Edit",
       "submitButton": "Submit ✓",
       "submitPending": "Submitting …",
