@@ -194,7 +194,7 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
       // 3. tournament_side_awards (D9): ld-poeng vunnet av p6 (Nord/team1).
       {
         data: [
-          { id: 'sa1', kind: 'ld', hole_number: 6, points: 3, winner_user_id: 'p6' },
+          { id: 'sa1', kind: 'ld', hole_number: 6, points: 3, winner_user_id: 'p6', slot: 1, gir_max_per_team: null, gir_team1_count: null, gir_team2_count: null },
         ],
       },
       // 4. Promise.all → game_players, scores, course_holes.
@@ -269,11 +269,110 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
     // game_players → winnerTeam utledes riktig, poengene legges til team1s
     // totalsum ovenpå match-poengene.
     expect(snap!.sideAwards).toEqual([
-      { id: 'sa1', kind: 'ld', holeNumber: 6, points: 3, winnerUserId: 'p6', winnerTeam: 1 },
+      { id: 'sa1', kind: 'ld', holeNumber: 6, points: 3, slot: 1, slotCount: 1, winnerUserId: 'p6', winnerTeam: 1 },
     ]);
     expect(snap!.leaderboard.sideAwardPoints).toEqual({ team1: 3, team2: 0 });
     // Total = g1s 5 (best-ball-seier) + 3 (sidepoeng) — g2/g3 bidrar 0.
     expect(snap!.leaderboard.team1Points).toBe(8);
     expect(snap!.leaderboard.team2Points).toBe(0);
+  });
+});
+
+/**
+ * #1489: flere vinner-plasser per (type, hull) — slot-rader med `slotCount`
+ * for «1 av 3»-nummereringen — og GIR-rader som foldes ut til ett
+ * leaderboard-innslag per klarte GIR per lag (poeng = teller × points, med
+ * desimalpoeng bevart). Null-tellere (uregistrert) og eksplisitt 0 gir begge
+ * ingen innslag.
+ */
+describe('getCupSnapshot — sidepoeng-slots + GIR (#1489)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('ctp-slots får slotCount, GIR foldes til lag-innslag med desimalpoeng', async () => {
+    supabaseMock = buildSupabaseMock([
+      // 1. tournaments — default-vekter.
+      {
+        data: {
+          id: 't1',
+          name: 'Slots-cup',
+          team_1_name: 'Nord',
+          team_2_name: 'Sør',
+          points_to_win: null,
+          status: 'active',
+          winner_team: null,
+          created_by: 'admin',
+          created_at: '2026-08-07T08:00:00Z',
+          started_at: '2026-08-07T09:00:00Z',
+          finished_at: null,
+          group_id: null,
+          win_points: 1,
+          tie_points: 0.5,
+        },
+      },
+      // 2. games: én singles-match gir rosteret (u1 → team1, u2 → team2).
+      {
+        data: [
+          {
+            id: 'g1',
+            name: 'Slots-cup – Match 1',
+            status: 'active',
+            game_mode: 'singles_matchplay',
+            mode_config: null,
+            tournament_match_label: 'Match 1',
+            course_id: 'c1',
+            tee_box_id: 'tb1',
+            created_at: '2026-08-07T09:00:00Z',
+            hole_segment: 'full',
+            source_game_id: null,
+            score_visibility: 'live',
+          },
+        ],
+      },
+      // 3. tournament_side_awards (sortert kind/hull/slot, som .order gir):
+      //    3×ctp hull 4 (slot 1 vunnet av u1/team1, slot 2 av u2/team2, slot 3
+      //    uregistrert), gir hull 3 med tellere 2/0, gir hull 7 uregistrert.
+      {
+        data: [
+          { id: 'sa1', kind: 'ctp', hole_number: 4, points: 2, winner_user_id: 'u1', slot: 1, gir_max_per_team: null, gir_team1_count: null, gir_team2_count: null },
+          { id: 'sa2', kind: 'ctp', hole_number: 4, points: 2, winner_user_id: 'u2', slot: 2, gir_max_per_team: null, gir_team1_count: null, gir_team2_count: null },
+          { id: 'sa3', kind: 'ctp', hole_number: 4, points: 2, winner_user_id: null, slot: 3, gir_max_per_team: null, gir_team1_count: null, gir_team2_count: null },
+          { id: 'sa4', kind: 'gir', hole_number: 3, points: 1.5, winner_user_id: null, slot: 1, gir_max_per_team: 3, gir_team1_count: 2, gir_team2_count: 0 },
+          { id: 'sa5', kind: 'gir', hole_number: 7, points: 1, winner_user_id: null, slot: 1, gir_max_per_team: 2, gir_team1_count: null, gir_team2_count: null },
+        ],
+      },
+      // 4. Promise.all → game_players, scores, course_holes.
+      {
+        data: [
+          { game_id: 'g1', user_id: 'u1', team_number: 1, course_handicap: 0, users: { name: 'Spiller 1', nickname: null } },
+          { game_id: 'g1', user_id: 'u2', team_number: 2, course_handicap: 0, users: { name: 'Spiller 2', nickname: null } },
+        ],
+      },
+      { data: [] }, // scores
+      {
+        data: [
+          { course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 5, par_juniors: 4, stroke_index: 1 },
+        ],
+      },
+    ]);
+
+    const { getCupSnapshot } = await import('@/lib/cup/getCupSnapshot');
+    const snap = await getCupSnapshot('t1');
+    expect(snap).not.toBeNull();
+
+    expect(snap!.sideAwards).toEqual([
+      { id: 'sa1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 3, winnerUserId: 'u1', winnerTeam: 1 },
+      { id: 'sa2', kind: 'ctp', holeNumber: 4, points: 2, slot: 2, slotCount: 3, winnerUserId: 'u2', winnerTeam: 2 },
+      { id: 'sa3', kind: 'ctp', holeNumber: 4, points: 2, slot: 3, slotCount: 3, winnerUserId: null, winnerTeam: null },
+      { id: 'sa4', kind: 'gir', holeNumber: 3, points: 1.5, maxPerTeam: 3, team1Count: 2, team2Count: 0 },
+      { id: 'sa5', kind: 'gir', holeNumber: 7, points: 1, maxPerTeam: 2, team1Count: null, team2Count: null },
+    ]);
+
+    // team1: ctp slot 1 (2 p) + 2 × gir 1,5 p = 5. team2: ctp slot 2 (2 p) +
+    // eksplisitt 0 gir = 2. Uregistrerte innslag (slot 3, gir hull 7) bidrar 0.
+    expect(snap!.leaderboard.sideAwardPoints).toEqual({ team1: 5, team2: 2 });
+    expect(snap!.leaderboard.team1Points).toBe(5);
+    expect(snap!.leaderboard.team2Points).toBe(2);
   });
 });

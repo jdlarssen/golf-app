@@ -41,20 +41,39 @@ export type CupRosterPlayer = {
 };
 
 /**
- * Ett sidepoeng-innslag (#1441, D9) klart for visning: `winnerTeam` er
- * allerede utledet fra `winner_user_id` via rosteret (samme mapping som mates
- * inn i `computeCupLeaderboard`) — konsumenter slipper å gjøre oppslaget selv.
- * `null` (både `winnerUserId` og `winnerTeam`) inntil arrangøren taster
- * vinneren etter runden.
+ * Ett sidepoeng-innslag (#1441 D9, #1489 slots + GIR) klart for visning.
+ *
+ * ctp/ld: én snapshot-rad PER VINNER-PLASS (slot-rad i DB). `slotCount` er
+ * antall søsken-rader med samme (kind, hull, points) — panelet bruker den til
+ * «1 av 3»-nummerering og viser ingen nummerering når den er 1 (gamle cuper).
+ * `winnerTeam` er allerede utledet fra `winner_user_id` via rosteret (samme
+ * mapping som mates inn i `computeCupLeaderboard`) — konsumenter slipper å
+ * gjøre oppslaget selv. `null` inntil arrangøren taster vinneren.
+ *
+ * gir: én rad per hull med maks per lag og de to lag-tellerne — `null` teller
+ * = ikke registrert ennå, `0` = eksplisitt registrert null GIR (begge gir 0
+ * poeng; skillet er kun semantisk i panelet). Ingen spiller-attribusjon.
  */
-export type CupSideAwardSnapshot = {
-  id: string;
-  kind: 'ctp' | 'ld';
-  holeNumber: number;
-  points: number;
-  winnerUserId: string | null;
-  winnerTeam: 1 | 2 | null;
-};
+export type CupSideAwardSnapshot =
+  | {
+      id: string;
+      kind: 'ctp' | 'ld';
+      holeNumber: number;
+      points: number;
+      slot: number;
+      slotCount: number;
+      winnerUserId: string | null;
+      winnerTeam: 1 | 2 | null;
+    }
+  | {
+      id: string;
+      kind: 'gir';
+      holeNumber: number;
+      points: number;
+      maxPerTeam: number;
+      team1Count: number | null;
+      team2Count: number | null;
+    };
 
 export type CupSnapshot = {
   tournament: {
@@ -104,6 +123,10 @@ type SideAwardRow = {
   hole_number: number;
   points: number;
   winner_user_id: string | null;
+  slot: number;
+  gir_max_per_team: number | null;
+  gir_team1_count: number | null;
+  gir_team2_count: number | null;
 };
 
 type UserRel = { name: string | null; nickname: string | null };
@@ -181,10 +204,17 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
   // #1441 (D9): sidepoeng-konfigurasjonen er tournament-scoped (ingen
   // games-avhengighet) — egen sekventiell fetch, ikke bundlet i Promise.all-
   // gruppen under (den er game-avhengig: venter på `gameIds`).
+  // Deterministisk sortering (#1489): slot-radene må komme i fast rekkefølge
+  // for «1 av 3»-nummereringen i panelet.
   const { data: sideAwardRows, error: saErr } = await supabase
     .from('tournament_side_awards')
-    .select('id, kind, hole_number, points, winner_user_id')
-    .eq('tournament_id', tournamentId);
+    .select(
+      'id, kind, hole_number, points, winner_user_id, slot, gir_max_per_team, gir_team1_count, gir_team2_count',
+    )
+    .eq('tournament_id', tournamentId)
+    .order('kind')
+    .order('hole_number')
+    .order('slot');
   if (saErr) throw saErr;
 
   const [playersRes, scoresRes, holesByCourseRes] = await Promise.all([
@@ -406,9 +436,45 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
   // ikke finnes i rosteret (defensivt — kan ikke skje via
   // `registerSideAwardWinner`s egen roster-validering, men laget her tar ikke
   // det for gitt).
+  //
+  // #1489: gir-rader foldes ut til ett leaderboard-innslag PER klarte GIR per
+  // lag (poeng = teller × points, summert av motoren) — null-tellere
+  // (uregistrert) og 0-tellere gir begge ingen innslag. ctp/ld-slot-rader får
+  // `slotCount` = antall søsken med samme (kind, hull, points) for «1 av
+  // 3»-nummereringen; gruppering per points slik at umulige DB-tilstander
+  // (samme kind+hull med ulik points) vises som de ligger i stedet for å slå
+  // sammen på tvers.
+  const allSideAwardRows = (sideAwardRows ?? []) as SideAwardRow[];
+  const slotCountByKey = new Map<string, number>();
+  for (const row of allSideAwardRows) {
+    if (row.kind === 'gir') continue;
+    const key = `${row.kind}#${row.hole_number}#${row.points}`;
+    slotCountByKey.set(key, (slotCountByKey.get(key) ?? 0) + 1);
+  }
+
   const sideAwardsForLeaderboard: CupSideAwardInput[] = [];
   const sideAwards: CupSideAwardSnapshot[] = [];
-  for (const row of (sideAwardRows ?? []) as SideAwardRow[]) {
+  for (const row of allSideAwardRows) {
+    if (row.kind === 'gir') {
+      const team1Count = row.gir_team1_count;
+      const team2Count = row.gir_team2_count;
+      for (let i = 0; i < (team1Count ?? 0); i++) {
+        sideAwardsForLeaderboard.push({ kind: 'gir', holeNumber: row.hole_number, points: row.points, winnerTeam: 1 });
+      }
+      for (let i = 0; i < (team2Count ?? 0); i++) {
+        sideAwardsForLeaderboard.push({ kind: 'gir', holeNumber: row.hole_number, points: row.points, winnerTeam: 2 });
+      }
+      sideAwards.push({
+        id: row.id,
+        kind: 'gir',
+        holeNumber: row.hole_number,
+        points: row.points,
+        maxPerTeam: row.gir_max_per_team ?? 1,
+        team1Count,
+        team2Count,
+      });
+      continue;
+    }
     const kind: 'ctp' | 'ld' = row.kind === 'ld' ? 'ld' : 'ctp';
     const winnerTeam: 1 | 2 | null = !row.winner_user_id
       ? null
@@ -423,6 +489,8 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       kind,
       holeNumber: row.hole_number,
       points: row.points,
+      slot: row.slot,
+      slotCount: slotCountByKey.get(`${row.kind}#${row.hole_number}#${row.points}`) ?? 1,
       winnerUserId: row.winner_user_id,
       winnerTeam,
     });
