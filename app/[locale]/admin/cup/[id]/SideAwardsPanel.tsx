@@ -224,6 +224,7 @@ export function SideAwardsPanel({
             )}
             <button
               type="button"
+              data-testid="side-award-add"
               onClick={addRow}
               className="min-h-[44px] w-full rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted hover:border-primary hover:text-primary transition-colors"
             >
