@@ -233,14 +233,11 @@ redigeres bort fra #1110; lenk til arkivfila i briefen i stedet. Samme runde
 arkiverer lanserings-tavla #1208 (Utroperens forslag + ✅-markører) til samme
 fil.
 
-Rett etter at arkiv-PR-en er åpnet: dispatch Discord-kortet — docs-only-PR-er
-trigger det ikke selv (#1301, konvensjonen står i `docs/loops/discord-pr-kort.md`):
-`gh workflow run discord-pr-card.yml -f pr=<PR-nummer>`. Best-effort; feiler
-dispatchen er neste morgenbrief backstop.
-
 Arkiv-PR-en er docs-only og har ikke noe produktvalg, så etter #1406 auto-merger
-PR-kortet den selv når Vercel-checkene er grønne (kvitteringsutfall — forventet og
-riktig; ingen `main-verify`-dispatch siden diffen kun rører `docs/**`). Den gamle
+PR-kortet den selv når checkene er grønne (kvitteringsutfall — forventet og
+riktig; ingen `main-verify`-dispatch siden diffen kun rører `docs/**`). Kortet
+fyrer hendelsesdrevet via no-op-tvillingen (#1483) — ingen manuell dispatch
+trengs (den gamle #1301-konvensjonen er fjernet). Den gamle
 «ALDRI selvmerget»-regelen gjaldt eieren; nå lander arkiv-PR-en selv via kortet.
-Briefen skal derfor IKKE vente på eier-merge av arkiv-PR-en — den dispatches og
-lander på egen hånd.
+Briefen skal derfor IKKE vente på eier-merge av arkiv-PR-en — den lander på
+egen hånd.

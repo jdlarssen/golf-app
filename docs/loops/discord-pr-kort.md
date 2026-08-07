@@ -130,11 +130,11 @@ resten av checkene (scan, Vercel) lander før den gater (samme ventemekanisme so
 dispatch, se steg 1).
 
 Den gamle #1301-konvensjonen — produsenten dispatcher kortet selv
-(`gh workflow run discord-pr-card.yml -f pr="$PR_NUMBER"`) — er dermed overflødig.
-Eksisterende produsent-dispatches (`.github/scripts/dok-skjema.sh`, morgenbriefens
-månedlige arkiv-PR) er ufarlige duplikater: dedup-labelen `discord:merge-kort` og
-concurrency-gruppa sluker dem, og de kan fjernes leilighetsvis. Nye produsenter
-skal IKKE legge til dispatch. Manuell dispatch består som test-/re-post-verktøy.
+(`gh workflow run discord-pr-card.yml -f pr="$PR_NUMBER"`) — er avviklet, og
+produsent-dispatchene er fjernet (`dok-skjema.sh` og morgenbriefens arkiv-PR,
+#1483-oppryddingen). Produsenter skal IKKE legge til dispatch. Manuell dispatch
+består som test-/re-post-verktøy, og er ufarlig som duplikat (dedup-labelen
+`discord:merge-kort` + concurrency-gruppa sluker den).
 
 ## Eier-oppsett (engangs) — Actions-secrets
 
