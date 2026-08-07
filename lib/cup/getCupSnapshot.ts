@@ -451,6 +451,11 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       sourceGameId: game.source_game_id,
       allScorecardsSubmitted,
       allPlayersWithdrawn,
+      // #1497: spiller-ID-ene per side, slik at per-spiller-regnskapet
+      // (computeCupPlayerPoints) kan kreditere hver spiller på siden hele
+      // sidens kamppoeng.
+      team1UserIds: side1Players.map((p) => p.user_id),
+      team2UserIds: side2Players.map((p) => p.user_id),
     });
   }
 
