@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Banner } from '@/components/ui/Banner';
 import type { CupEligibleFormat } from '@/lib/formats/getFormatsForIntent';
 import { formatIconFor } from '@/lib/formats/icons';
-import { createTournamentDraft } from '@/lib/cup/actions';
+import { createTournamentDraft, type CupActionError } from '@/lib/cup/actions';
 
 type Props = {
   cupEligibleFormats: CupEligibleFormat[];
@@ -29,6 +30,8 @@ type Props = {
  * forventninger), men cup-detalj-sidens «+ Match»-knapper viser alle
  * cup-eligible formats inntil filtering legges på i Wave-2.
  */
+const INITIAL_STATE: CupActionError = { error: '' };
+
 export function CupSetup({
   cupEligibleFormats,
   groupId,
@@ -37,6 +40,27 @@ export function CupSetup({
   const t = useTranslations('wizard.cupSetup');
   const tModes = useTranslations('modes');
   const tContent = useTranslations('formatGuide');
+  // #1397: feilmeldinger bor i `cup.create.errors.*` (ett hjem, jf. trap 4).
+  const tErrors = useTranslations('cup.create');
+
+  // #1397: server-action-en gis via en klient-closure så dens signatur forblir
+  // `(formData)` — en action gitt direkte til useActionState må ta
+  // `(prevState, formData)` (samme mønster som CreateLigaForm/ReadyStep).
+  const [state, formAction] = useActionState(
+    async (_prev: CupActionError, formData: FormData) =>
+      createTournamentDraft(formData),
+    INITIAL_STATE,
+  );
+
+  // Kode → melding med `t.has`-guard: en umappet kode (f.eks. de unåelige
+  // allowance-kodene) faller til `unexpected` med rå kode i stedet for tom banner.
+  const errorMessage = (() => {
+    if (!state.error) return null;
+    const key = `errors.${state.error}` as Parameters<typeof tErrors>[0];
+    return tErrors.has(key)
+      ? tErrors(key)
+      : tErrors('errors.unexpected', { code: state.error });
+  })();
   // Multi-select state — initialiserer med alle cup-eligible formats valgt
   // (default-all) så admin ikke trenger å klikke for å bekrefte standard-
   // oppsettet. Endring av valgene har ingen runtime-effekt i F2 (se docstring).
@@ -68,7 +92,7 @@ export function CupSetup({
   }
 
   return (
-    <form action={createTournamentDraft} className="space-y-5">
+    <form action={formAction} className="space-y-5">
       {groupId && (
         <input type="hidden" name="group_id" value={groupId} />
       )}
@@ -197,6 +221,8 @@ export function CupSetup({
           })}
         </ul>
       </fieldset>
+
+      {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
 
       <div className="pt-2">
         <Button

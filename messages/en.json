@@ -4693,7 +4693,8 @@
         "cup_foursomes_allowance": "Check the handicap allowance for foursomes.",
         "cup_win_points": "Points for a win must be a number above 0.",
         "cup_tie_points": "Points for a tie can't be negative.",
-        "cup_insert_failed": "Failed to create the cup. Please try again."
+        "cup_insert_failed": "Failed to create the cup. Please try again.",
+        "unexpected": "Unexpected error: {code}"
       }
     },
     "public": {

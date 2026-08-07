@@ -107,17 +107,26 @@ async function cupRedirectBase(
   };
 }
 
-export async function createTournamentDraft(formData: FormData) {
+/**
+ * Feilresultat fra `createTournamentDraft` (#1397). Egen type — bevisst ikke
+ * importert fra league — så cup- og liga-domenene forblir uavhengige (samme
+ * `{ error }`-form, ingen kryss-import). `CupSetup` mapper koden til norsk via
+ * `cup.create.errors.*` med `unexpected`-fallback.
+ */
+export type CupActionError = { error: string };
+
+export async function createTournamentDraft(
+  formData: FormData,
+): Promise<CupActionError> {
   // #524: group_id binder cupen til en klubb. Tom = frittstående (uendret
-  // admin-flyt). Lest først så validerings-feil bouncer til riktig form.
+  // admin-flyt).
   const rawGroupId = String(formData.get('group_id') ?? '').trim();
   const groupId = rawGroupId || null;
-  // Klubb-sti: feil tilbake til klubb-opprett-formen. Frittstående: tilbake til
-  // wizard-en med ?intent=cup (F2 #272 — /admin/cup/new er fjernet). Error-koder
-  // prefiks-et med `cup_` for å unngå kollisjon med game-koder på samme route.
-  const errBase = groupId
-    ? `/klubber/${groupId}/cup/ny?error=`
-    : '/admin/games/new?intent=cup&error=';
+  // #1397: feil returneres som action-resultat (`{ error: kode }`) i stedet for
+  // en redirect til opprett-siden — redirecten unmonterte det utfylte
+  // `CupSetup`-skjemaet og slettet det arrangøren hadde tastet. Kun suksess-
+  // redirecten under (og auth-gatene) kaster fortsatt NEXT_REDIRECT. Kodene er
+  // uendret; `CupSetup` slår dem opp i `cup.create.errors.*`.
 
   const name = String(formData.get('name') ?? '').trim();
   const team1 = String(formData.get('team_1_name') ?? '').trim();
@@ -134,26 +143,26 @@ export async function createTournamentDraft(formData: FormData) {
   const winPointsRaw = String(formData.get('win_points') ?? '');
   const tiePointsRaw = String(formData.get('tie_points') ?? '');
 
-  if (!NAME_RE.test(name)) redirect(`${errBase}cup_name`);
-  if (!TEAM_NAME_RE.test(team1)) redirect(`${errBase}cup_team_1`);
-  if (!TEAM_NAME_RE.test(team2)) redirect(`${errBase}cup_team_2`);
+  if (!NAME_RE.test(name)) return { error: 'cup_name' };
+  if (!TEAM_NAME_RE.test(team1)) return { error: 'cup_team_1' };
+  if (!TEAM_NAME_RE.test(team2)) return { error: 'cup_team_2' };
   if (team1.toLowerCase() === team2.toLowerCase())
-    redirect(`${errBase}cup_team_dup`);
+    return { error: 'cup_team_dup' };
   const fourballAllowance = parseAllowancePct(allowanceRaw, ALLOWANCE_DEFAULTS.fourball);
-  if (fourballAllowance === null) redirect(`${errBase}cup_allowance`);
+  if (fourballAllowance === null) return { error: 'cup_allowance' };
   const foursomesAllowance = parseAllowancePct(foursomesAllowanceRaw, ALLOWANCE_DEFAULTS.foursomes);
-  if (foursomesAllowance === null) redirect(`${errBase}cup_foursomes_allowance`);
+  if (foursomesAllowance === null) return { error: 'cup_foursomes_allowance' };
   const greensomeAllowance = parseAllowancePct(greensomeAllowanceRaw, ALLOWANCE_DEFAULTS.greensome);
-  if (greensomeAllowance === null) redirect(`${errBase}cup_greensome_allowance`);
+  if (greensomeAllowance === null) return { error: 'cup_greensome_allowance' };
   const chapmanAllowance = parseAllowancePct(chapmanAllowanceRaw, ALLOWANCE_DEFAULTS.chapman);
-  if (chapmanAllowance === null) redirect(`${errBase}cup_chapman_allowance`);
+  if (chapmanAllowance === null) return { error: 'cup_chapman_allowance' };
   const gruesomeAllowance = parseAllowancePct(gruesomeAllowanceRaw, ALLOWANCE_DEFAULTS.gruesome);
-  if (gruesomeAllowance === null) redirect(`${errBase}cup_gruesome_allowance`);
+  if (gruesomeAllowance === null) return { error: 'cup_gruesome_allowance' };
   // #1441 (D8): win_points > 0, tie_points >= 0 (migrasjon 0153 CHECK-ene).
   const winPoints = parseWinPoints(winPointsRaw);
-  if (winPoints === null) redirect(`${errBase}cup_win_points`);
+  if (winPoints === null) return { error: 'cup_win_points' };
   const tiePoints = parseTiePoints(tiePointsRaw);
-  if (tiePoints === null) redirect(`${errBase}cup_tie_points`);
+  if (tiePoints === null) return { error: 'cup_tie_points' };
 
   const supabase = await getServerClient();
   // Klubb-cup: klubb-eier/-admin (eller global admin) oppretter. Personlig
@@ -189,7 +198,7 @@ export async function createTournamentDraft(formData: FormData) {
 
   if (error || !data) {
     console.error('[cup] createTournamentDraft failed', { error });
-    redirect(`${errBase}cup_insert_failed`);
+    return { error: 'cup_insert_failed' };
   }
 
   // Klubb-sti: fortsett i klubb-chrome (generer kamper der). Frittstående:

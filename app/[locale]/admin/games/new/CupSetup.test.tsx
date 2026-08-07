@@ -16,10 +16,13 @@ import type { CupEligibleFormat } from '@/lib/formats/getFormatsForIntent';
 // runtime-effekt — den tidligere disabled-sperra er fjernet. Submit-knappen
 // er alltid enabled uavhengig av antall avhukede formater.
 
-// Mock createTournamentDraft — vi binder action-en kun for type-safety,
-// tester aldri faktisk submit her (det testes i lib/cup/actions.test).
+// #1397: createTournamentDraft returnerer nå et action-resultat ({ error })
+// i stedet for å redirecte, og CupSetup konsumerer det via useActionState. Mock-en
+// gir en representativ feilkode så banner-testen under kan verifisere at meldingen
+// rendres; selve retur-i-stedet-for-redirect-regresjonen er unit-testet i
+// lib/cup/actions.test.ts.
 vi.mock('@/lib/cup/actions', () => ({
-  createTournamentDraft: vi.fn(async () => {}),
+  createTournamentDraft: vi.fn(async () => ({ error: 'cup_team_dup' })),
 }));
 
 const CUP_ELIGIBLE: CupEligibleFormat[] = [
@@ -58,5 +61,21 @@ describe('CupSetup', () => {
     expect(singles).not.toBeChecked();
     expect(fourball).not.toBeChecked();
     expect(screen.getByRole('button', { name: /opprett cup/i })).not.toBeDisabled();
+  });
+
+  // #1397: en feilkode fra server-action-en rendres som feilbanner over knappen
+  // (via useActionState) i stedet for en redirect som slettet det utfylte
+  // skjemaet. Mirror av CreateLigaForm.test.tsx sin season_over-banner-test.
+  it('rendrer feilbanner når action-en returnerer en feilkode', async () => {
+    const { container } = render(<CupSetup cupEligibleFormats={CUP_ELIGIBLE} />);
+
+    // Submit trigger-er useActionState → mock returnerer { error: 'cup_team_dup' }.
+    fireEvent.submit(container.querySelector('form')!);
+
+    expect(
+      await screen.findByText('Lagene må ha forskjellige navn.'),
+    ).toBeInTheDocument();
+    // Ikke rå-kode-fallbacken (beviser at koden er mappet i cup.create.errors).
+    expect(screen.queryByText(/Uventet feil:/)).not.toBeInTheDocument();
   });
 });
