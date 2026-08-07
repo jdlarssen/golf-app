@@ -20,6 +20,11 @@ on:
   workflow_run:
     workflows: [CI, "CI (docs no-op)"]
     types: [completed]
+  # Draft-først (#1516): decide noop-er drafts («økta jobber fortsatt»), og
+  # `gh pr ready` re-trigger ikke CI — uten denne triggeren ville en ready-flippet
+  # PR aldri fått kort/auto-merge. Ready-eventet er øktas «jeg er ferdig»-signal.
+  pull_request:
+    types: [ready_for_review]
   # Manuell testing / re-post mot en spesifikk PR. (Produsent-dispatch for
   # docs-only-PR-er (#1301) er OVERFLØDIG etter #1483 — tvilling-triggeren over
   # dekker dem hendelsesdrevet; eksisterende dispatches er ufarlige duplikater,
@@ -33,7 +38,7 @@ on:
 
 # Serialiser per head-SHA så samtidige fullføringer ikke gir dobbelt kort.
 concurrency:
-  group: discord-pr-card-${{ github.event.workflow_run.head_sha || inputs.pr }}
+  group: discord-pr-card-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || inputs.pr }}
   cancel-in-progress: true
 
 permissions:
@@ -60,13 +65,13 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # PR-head-koden (workflow_run: head_sha; workflow_dispatch: PR-ens head-ref)
-      # så skjermbildene viser koden under review.
+      # PR-head-koden (workflow_run: head_sha; ready_for_review: PR-ens head-SHA;
+      # workflow_dispatch: PR-ens head-ref) så skjermbildene viser koden under review.
       - name: Checkout (PR-head)
         if: steps.guard.outputs.run == 'true'
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || format('refs/pull/{0}/head', inputs.pr) }}
+          ref: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || format('refs/pull/{0}/head', inputs.pr) }}
 
       # Automasjons-skriptene (scripts/loops, lib/loops) hentes alltid fra main —
       # en PR-branch kan være forket før disse filene fantes, og da feiler
@@ -93,11 +98,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ inputs.pr }}
-          # Vent på checkene ved dispatch (#1301) OG ved tvilling-fyring (#1483):
-          # tvillingen fullfører før scan/Vercel, så uten venting ville docs-only-
-          # kortet no-op'e på pending og aldri få en ny fyring.
-          WAIT_FOR_CHECKS: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.name == 'CI (docs no-op)') && 'true' || 'false' }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+          # Vent på checkene ved dispatch (#1301), ved tvilling-fyring (#1483) OG ved
+          # ready-flipp (#1516): tvillingen fullfører før scan/Vercel, og en økt kan
+          # markere ready rett etter siste push mens checkene fortsatt kjører — uten
+          # venting ville kortet no-op'e på pending og aldri få en ny fyring.
+          WAIT_FOR_CHECKS: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.name == 'CI (docs no-op)') && 'true' || 'false' }}
         run: npx --yes tsx scripts/loops/decide-pr-card.ts
 
       # Steg 2 — SKJERMBILDER (kun visuell diff): booter appen mot staging og

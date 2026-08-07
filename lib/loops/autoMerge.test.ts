@@ -235,16 +235,12 @@ describe('mergePullRequest', () => {
     });
   });
 
-  it('draft-PR av-draftes via GraphQL før merge', async () => {
-    const { gh, calls } = mockGh([
-      { status: 200, json: { ...openPr, draft: true } },
-      { status: 200, json: greenChecks },
-      { status: 200, json: { data: {} } },
-      { status: 200, json: { merged: true } },
-    ]);
+  it('draft-PR → fallback-signal, ingen av-draft, ingen merge (#1516)', async () => {
+    const { gh, calls } = mockGh([{ status: 200, json: { ...openPr, draft: true } }]);
     const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
-    expect(res).toEqual({ ok: true });
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL', 'PUT']);
+    expect(res).toEqual({ ok: false, reason: 'PR er draft — økta jobber fortsatt' });
+    // Fail-closed: kun PR-oppslaget — aldri GraphQL-av-draft, aldri PUT …/merge.
+    expect(calls.map((c) => c.method)).toEqual(['GET']);
   });
 
   it('409 sha-mismatch (nye commits) → fallback-signal', async () => {
@@ -266,17 +262,6 @@ describe('mergePullRequest', () => {
     const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
     expect(res.ok).toBe(false);
     expect(res).toMatchObject({ reason: expect.stringContaining('not mergeable') });
-  });
-
-  it('av-draft-feil → fallback-signal, ingen merge', async () => {
-    const { gh, calls } = mockGh([
-      { status: 200, json: { ...openPr, draft: true } },
-      { status: 200, json: greenChecks },
-      { status: 500, json: { message: 'graphql nede' } },
-    ]);
-    const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
-    expect(res).toEqual({ ok: false, reason: 'av-draft feilet (HTTP 500)' });
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL']);
   });
 
   it('PR ikke lenger åpen → fallback-signal', async () => {

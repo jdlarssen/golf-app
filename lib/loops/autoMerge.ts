@@ -135,17 +135,16 @@ export function classifyAutoMerge(input: AutoMergeInput): AutoMergeClassificatio
 export type MergeOutcome = { ok: true } | { ok: false; reason: string };
 
 type ReFetchedPr = {
-  node_id: string;
   state: string;
   draft: boolean;
   head: { sha: string };
 };
 
 /**
- * Merger PR-en fail-closed (§2): re-verifiser åpen + check-runs grønne mot
- * `headSha`, av-draft via GraphQL om nødvendig, og `PUT …/merge` med rebase +
- * `sha`-guard (409 ved nye commits). Enhver feil returnerer `{ok:false, reason}`
- * så post-steget kan falle tilbake til knapp-kortet — aldri stille drop.
+ * Merger PR-en fail-closed (§2): re-verifiser åpen + ikke draft + check-runs
+ * grønne mot `headSha`, og `PUT …/merge` med rebase + `sha`-guard (409 ved nye
+ * commits). Enhver feil returnerer `{ok:false, reason}` så post-steget kan
+ * falle tilbake til knapp-kortet — aldri stille drop.
  * Egen helper fremfor executeAction/merge_pr: mottakerens CI-port leser kun
  * ci.yml-runs og ville avvist docs-only-PR-er som bare har Vercel-checks.
  */
@@ -164,6 +163,11 @@ export async function mergePullRequest({
   if (prRes.status !== 200) return { ok: false, reason: `PR-oppslag feilet (HTTP ${prRes.status})` };
   const pr = prRes.json as ReFetchedPr;
   if (pr.state !== 'open') return { ok: false, reason: `PR ikke lenger åpen (${pr.state})` };
+  // Draft-først (#1516): en draft er «økta jobber fortsatt» — kortet av-drafter ALDRI.
+  // Decide noop-er drafts, så dette er race-guarden (re-draftet etter decide) →
+  // fail-closed fallback til knapp-kortet. (Eier-knappen/mottakeren av-drafter fortsatt —
+  // et eier-trykk ER menneskeporten.)
+  if (pr.draft) return { ok: false, reason: 'PR er draft — økta jobber fortsatt' };
 
   const checkRes = await gh.rest('GET', `/repos/${repo}/commits/${headSha}/check-runs?per_page=100`);
   if (checkRes.status !== 200)
@@ -174,14 +178,6 @@ export async function mergePullRequest({
   }));
   const state = classifyChecks(runs);
   if (state !== 'green') return { ok: false, reason: `CI ${state} ved re-sjekk` };
-
-  if (pr.draft) {
-    const ready = await gh.graphql(
-      `mutation($id: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $id }) { pullRequest { isDraft } } }`,
-      { id: pr.node_id },
-    );
-    if (ready.status !== 200) return { ok: false, reason: `av-draft feilet (HTTP ${ready.status})` };
-  }
 
   // Alltid rebase — squash er forbudt i repoet. `sha`-param gir 409 om head har
   // fått nye commits siden decide (race-guard).
