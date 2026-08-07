@@ -159,12 +159,18 @@ test.describe('Cup lifecycle smoke', () => {
     await expect(page.getByText(cupName).first()).toBeVisible();
     await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
 
-    // Offentlig cup-leaderboard rendrer (#642-reproduser: per-kjønn-par).
+    // Offentlig cup-side rendrer kampene (#642-reproduser: per-kjønn-par).
     await page.goto(`/cup/${tournamentId}`);
     await expect(
       page.getByRole('heading', { level: 1 }),
     ).toContainText(cupName);
     await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+
+    // Resultatsiden er låst mens cupen er aktiv (#1468) — ventetekst, ingen
+    // resultatdata (verken totaler eller vinner-banner).
+    await page.goto(`/cup/${tournamentId}/resultater`);
+    await expect(page.getByTestId('cup-results-locked')).toBeVisible();
+    await expect(page.getByTestId('cup-results-totals')).toHaveCount(0);
   });
 });
 
