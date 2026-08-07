@@ -87,6 +87,103 @@ function displayNameOf(u: ParticipantUser | null): string {
 type GenerateMatchesVariant = 'admin' | 'club';
 
 /**
+ * Resolve planens bane + tee (#1488, K13 — trukket ut for å holde
+ * `GenerateMatches` under kompleksitetstaket). En arkivert tee (eller en slettet
+ * bane/tee) resolver IKKE → `selectedTee` forblir undefined og planen regnes som
+ * ufullstendig, i tråd med at genereringen ville avvist en arkivert tee
+ * server-side (`plan_tee`). Byte-identisk med det tidligere inline-blokket.
+ */
+async function resolvePlanCourseTee(
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  plan: { course_id: string | null; tee_box_id: string | null } | null | undefined,
+): Promise<{
+  planCourseName: string;
+  planTeeName: string;
+  selectedTee: WizardTeeBox | undefined;
+}> {
+  const empty = { planCourseName: '', planTeeName: '', selectedTee: undefined };
+  if (!plan?.course_id || !plan?.tee_box_id) return empty;
+  const { data: course } = await supabase
+    .from('courses')
+    .select(
+      'id, name, tee_boxes(id, name, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+    )
+    .eq('id', plan.course_id)
+    .maybeSingle<CourseRow>();
+  if (!course) return empty;
+  const tee = (course.tee_boxes ?? []).find(
+    (tb) => tb.id === plan.tee_box_id && tb.archived_at === null,
+  );
+  if (!tee) return empty;
+  return {
+    planCourseName: course.name,
+    planTeeName: tee.name,
+    selectedTee: {
+      id: tee.id,
+      name: tee.name,
+      slope_mens: tee.slope_mens,
+      course_rating_mens: tee.course_rating_mens,
+      par_total_mens: tee.par_total_mens,
+      slope_ladies: tee.slope_ladies,
+      course_rating_ladies: tee.course_rating_ladies,
+      par_total_ladies: tee.par_total_ladies,
+      slope_juniors: tee.slope_juniors,
+      course_rating_juniors: tee.course_rating_juniors,
+      par_total_juniors: tee.par_total_juniors,
+    },
+  };
+}
+
+/**
+ * Guided empty-state-kortene (#752/#1488 K13) — vis lenke til det rommet som
+ * mangler noe (Oppsett / Spillere). Trukket ut så de to betingede kortene ikke
+ * teller mot `GenerateMatches`-kompleksiteten. Kan stables (begge mangler på en
+ * fersk cup).
+ */
+function GenerateMatchesEmptyStateCards({
+  planReady,
+  hasParticipants,
+  cupBase,
+  t,
+}: {
+  planReady: boolean;
+  hasParticipants: boolean;
+  cupBase: string;
+  t: Awaited<ReturnType<typeof getTranslations<'cup'>>>;
+}) {
+  return (
+    <div className="space-y-3">
+      {!planReady && (
+        <Card>
+          <p className="text-sm text-muted mb-2">
+            {t('generate.emptyStateNoPlan')}
+          </p>
+          <SmartLink
+            href={`${cupBase}/oppsett`}
+            className="text-sm text-text underline hover:no-underline"
+          >
+            {t('generate.emptyStateNoPlanLink')}
+          </SmartLink>
+        </Card>
+      )}
+      {!hasParticipants && (
+        <Card>
+          <p className="text-sm text-muted mb-2">
+            {t('generate.emptyStateNoParticipants')}
+          </p>
+          <SmartLink
+            href={`${cupBase}/spillere`}
+            className="text-sm text-text underline hover:no-underline"
+          >
+            {t('generate.emptyStateNoParticipantsLink')}
+          </SmartLink>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/**
  * Delt Fordel-og-generer-flate (#524/#1472, Rom 3). Begge ruter
  * (`/admin/cup/[id]/generer` og `/klubber/[id]/cup/[cupId]/generer`) rendrer
  * denne. Gaten gjøres i ruten; komponenten gjør all fetching + chrome.
@@ -165,44 +262,12 @@ export async function GenerateMatches({
   });
 
   // Resolve planens bane + tee (navn til recap + rating-sett til greensomens
-  // regnehjelp). En arkivert tee (eller en slettet bane/tee) resolver IKKE →
-  // planen regnes som ufullstendig og guider tilbake til Oppsett-rommet, i tråd
-  // med at genereringen ville avvist en arkivert tee server-side (`plan_tee`).
-  let planCourseName = '';
-  let planTeeName = '';
-  let selectedTee: WizardTeeBox | undefined;
-  if (plan?.course_id && plan?.tee_box_id) {
-    const { data: course } = await supabase
-      .from('courses')
-      .select(
-        'id, name, tee_boxes(id, name, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
-      )
-      .eq('id', plan.course_id)
-      .maybeSingle<CourseRow>();
-    if (course) {
-      const tee = (course.tee_boxes ?? []).find(
-        (tb) => tb.id === plan.tee_box_id && tb.archived_at === null,
-      );
-      if (tee) {
-        planCourseName = course.name;
-        planTeeName = tee.name;
-        selectedTee = {
-          id: tee.id,
-          name: tee.name,
-          slope_mens: tee.slope_mens,
-          course_rating_mens: tee.course_rating_mens,
-          par_total_mens: tee.par_total_mens,
-          slope_ladies: tee.slope_ladies,
-          course_rating_ladies: tee.course_rating_ladies,
-          par_total_ladies: tee.par_total_ladies,
-          slope_juniors: tee.slope_juniors,
-          course_rating_juniors: tee.course_rating_juniors,
-          par_total_juniors: tee.par_total_juniors,
-        };
-      }
-    }
-  }
-  // planReady krever at planen finnes, har bane+tee, OG at de faktisk resolver.
+  // regnehjelp) — se `resolvePlanCourseTee`. planReady krever at planen finnes,
+  // har bane+tee, OG at de faktisk resolver (arkivert/slettet tee → ufullstendig).
+  const { planCourseName, planTeeName, selectedTee } = await resolvePlanCourseTee(
+    supabase,
+    plan,
+  );
   const planReady = selectedTee !== undefined;
 
   let clubName: string | null = null;
@@ -246,34 +311,12 @@ export async function GenerateMatches({
           title={t('generate.pageTitle')}
           subtitle={`${tournament.team_1_name} ${t('generate.mot')} ${tournament.team_2_name}`}
         />
-        <div className="space-y-3">
-          {!planReady && (
-            <Card>
-              <p className="text-sm text-muted mb-2">
-                {t('generate.emptyStateNoPlan')}
-              </p>
-              <SmartLink
-                href={`${cupBase}/oppsett`}
-                className="text-sm text-text underline hover:no-underline"
-              >
-                {t('generate.emptyStateNoPlanLink')}
-              </SmartLink>
-            </Card>
-          )}
-          {!hasParticipants && (
-            <Card>
-              <p className="text-sm text-muted mb-2">
-                {t('generate.emptyStateNoParticipants')}
-              </p>
-              <SmartLink
-                href={`${cupBase}/spillere`}
-                className="text-sm text-text underline hover:no-underline"
-              >
-                {t('generate.emptyStateNoParticipantsLink')}
-              </SmartLink>
-            </Card>
-          )}
-        </div>
+        <GenerateMatchesEmptyStateCards
+          planReady={planReady}
+          hasParticipants={hasParticipants}
+          cupBase={cupBase}
+          t={t}
+        />
       </Shell>
     );
   }
