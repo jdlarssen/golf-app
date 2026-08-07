@@ -82,21 +82,30 @@ staging-klikkrunden med en GIR-rad på 1,5 p.
 
 ## Success Criteria
 
-- [ ] Type A-tester: gruppering/ekspansjon (config-rader ↔ DB-rader; grenser 0/1/10/11; duplikat per kind+hull) og GIR-utfolding (null-tellere, 0-tellere, maks) — nye tester i co-located filer.
-- [ ] `saveSideAwardConfig`-tester oppdatert for ny input-type + utvidet registrert-gate (gir-tellere blokkerer re-konfig).
-- [ ] `registerGirCounts`: tester for gyldig skriv, counts > maks avvist, ctp/ld-rad avvist, authz-gate kalt.
-- [ ] Snapshot: test at ctp/ld-slots får riktig `slotCount` og at GIR foldes til riktige leaderboard-innslag; `computeCupLeaderboard`-filen er UENDRET (verifiser med git diff).
-- [ ] Panel: eksisterende render-tester grønne/oppdatert; maks ÉN ny render-test hvis gir-raden trenger det (Type C-regel).
-- [ ] i18n: alle nye nøkler i både `no.json` og `en.json`; omformulert duplicate-copy.
-- [ ] Migrasjon 0156 påført **staging** og verifisert der; typer regenerert fra staging. Prod-migrasjon IKKE påført uten eier-godkjenning (kontrakten slutter før prod).
-- [ ] `package.json` minor-bump + Funksjon-rad i `CHANGELOG.md` (feat, bruker-synlig).
-- [ ] Staging-klikkrunde av hele flyten (oppsett med 3×CTP-plasser + GIR-rader → start cup → registrer vinnere + GIR-tellere → sum stemmer på offentlig side) med bevis-kommentar + `staging-verified`-label på PR-en før merge.
+- [x] Type A-tester: gruppering/ekspansjon (config-rader ↔ DB-rader; grenser 0/1/10/11; duplikat per kind+hull) og GIR-utfolding (null-tellere, 0-tellere, maks) — nye tester i co-located filer.
+  - Bevis: lib/cup/sideAwardRows.test.ts (29 tester: grenser 0/1/10/11, duplikat, desimal) + GIR-utfolding i lib/cup/getCupSnapshot.test.ts (null/0/tellere, 1,5 p)
+- [x] `saveSideAwardConfig`-tester oppdatert for ny input-type + utvidet registrert-gate (gir-tellere blokkerer re-konfig).
+  - Bevis: lib/cup/sideAwardActions.test.ts — ekspandert insert-assertion, egen gir-teller-gate-test, rollback m/ 0156-kolonner.
+- [x] `registerGirCounts`: tester for gyldig skriv, counts > maks avvist, ctp/ld-rad avvist, authz-gate kalt.
+  - Bevis: 8 tester i samme fil (counts>maks ×4 varianter, 0-rader→save_failed, users-oppslag som authz-bevis).
+- [x] Snapshot: test at ctp/ld-slots får riktig `slotCount` og at GIR foldes til riktige leaderboard-innslag; `computeCupLeaderboard`-filen er UENDRET (verifiser med git diff).
+  - Bevis: ny describe i getCupSnapshot.test.ts (slotCount 3, GIR→5–2); computeCupLeaderboard.ts-diff verifisert type/kommentar-only
+- [x] Panel: eksisterende render-tester grønne/oppdatert; maks ÉN ny render-test hvis gir-raden trenger det (Type C-regel).
+  - Bevis: 3 render-tester (2 oppdatert + ÉN ny for slots/gir) — SideAwardsPanel.test.tsx
+- [x] i18n: alle nye nøkler i både `no.json` og `en.json`; omformulert duplicate-copy.
+  - Bevis: 8 nye nøkler + omformulert duplicate i BÅDE messages/no.json og messages/en.json; humanizer kjørt (vinnerplasser-fiks)
+- [x] Migrasjon 0156 påført **staging** og verifisert der; typer regenerert fra staging. Prod-migrasjon IKKE påført uten eier-godkjenning (kontrakten slutter før prod).
+  - Bevis: påført staging via MCP 2026-08-07, introspektert (4 nye kolonner + constraints); typer fra staging; prod urørt
+- [x] `package.json` minor-bump + Funksjon-rad i `CHANGELOG.md` (feat, bruker-synlig).
+  - Bevis: 1.224.0 → 1.225.0 + «1.225 · Flere sidepoeng-vinnere og GIR» med ↳-lenke.
+- [x] Staging-klikkrunde av hele flyten (oppsett med 3×CTP-plasser + GIR-rader → start cup → registrer vinnere + GIR-tellere → sum stemmer på offentlig side) med bevis-kommentar + `staging-verified`-label på PR-en før merge.
+  - Bevis: PR #1493-kommentar (issuecomment-5218183166) + staging-verified-label; Playwright-driver, sum 5–2 på offentlig side, testdata slettet
 
 ## Gates
 
-- [ ] `npx vitest run lib/cup/sideAwardActions.test.ts lib/cup/getCupSnapshot.test.ts "app/[locale]/admin/cup/[id]/SideAwardsPanel.test.tsx"` grønn (+ evt. ny helper-testfil)
-- [ ] `npm run build` grønn (ikke filtrer «pre-existing»)
-- [ ] `npm run lint` grønn
+- [x] `npx vitest run lib/cup/sideAwardActions.test.ts lib/cup/getCupSnapshot.test.ts "app/[locale]/admin/cup/[id]/SideAwardsPanel.test.tsx"` grønn (+ evt. ny helper-testfil)
+- [x] `npm run build` grønn (ikke filtrer «pre-existing»)
+- [x] `npm run lint` grønn
 
 ## Files Likely Touched
 
