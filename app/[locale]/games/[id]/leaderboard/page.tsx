@@ -51,7 +51,7 @@ function validateFromParam(
   if (value.includes('://')) return null;
   // Allowlist of known Tørny route prefixes. Root ('/') is allowed as a
   // literal match so a home-page entry-point can use ?from=/.
-  const allowedPrefixes = ['/profile/', '/admin/', '/games/', '/'];
+  const allowedPrefixes = ['/profile/', '/admin/', '/games/', '/cup/', '/klubber/', '/'];
   if (
     !allowedPrefixes.some((p) => (p === '/' ? value === '/' : value.startsWith(p)))
   ) {
@@ -85,15 +85,14 @@ export default async function LeaderboardPage({
   // the `?return=hole`-fallback when both are present, since callers
   // that pass `from` know exactly where they want to go.
   const fromOverride = validateFromParam(sp.from);
-  const backHref =
-    fromOverride ??
-    (returnParam === 'hole' &&
+  const defaultBackHref =
+    returnParam === 'hole' &&
     nNum !== null &&
     Number.isInteger(nNum) &&
     nNum >= 1 &&
     nNum <= 18
       ? `/games/${id}/holes/${nNum}`
-      : `/games/${id}`);
+      : `/games/${id}`;
   // For the holes-drilldown — preserve the same return-to-hole context.
   const returnQuery =
     returnParam === 'hole' &&
@@ -129,16 +128,19 @@ export default async function LeaderboardPage({
   }
 
   const isAdmin = profileRes.data?.is_admin === true;
+  const isParticipant = gwp.players.some((p) => p.user_id === userId);
   // Non-admin, non-participants may open FINISHED games — RLS gjør alle scores
   // lesbare etter finish, og cup-matchkortene lenker hele cup-publikummet hit
   // (#1456/#1468). Under spill er leaderboardet fortsatt kun for deltakere.
-  if (
-    !isAdmin &&
-    game.status !== 'finished' &&
-    !gwp.players.some((p) => p.user_id === userId)
-  ) {
+  if (!isAdmin && !isParticipant && game.status !== 'finished') {
     notFound();
   }
+
+  // Ikke-deltakere har ingen adgang til game-home — default-returen går Hjem
+  // i stedet, så tilbake-pilen aldri er en død flate (#752). Eksplisitt
+  // `?from=` (cup-flatene sender den) vinner uansett.
+  const backHref =
+    fromOverride ?? (isParticipant || isAdmin ? defaultBackHref : '/');
 
   // Mark `game_finished`-varsler for dette spillet som lest når brukeren
   // åpner leaderboardet. Wrap i `after()` så DB-mutasjon + revalidateTag

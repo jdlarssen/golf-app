@@ -206,7 +206,10 @@ export default async function CupResultsPage({ params }: { params: Params }) {
               return (
                 <li key={m.gameId}>
                   {isFinishedMatch ? (
-                    <SmartLink href={`/games/${m.gameId}/leaderboard`} className="block">
+                    <SmartLink
+                      href={`/games/${m.gameId}/leaderboard?from=/cup/${id}/resultater`}
+                      className="block"
+                    >
                       {card}
                     </SmartLink>
                   ) : (
