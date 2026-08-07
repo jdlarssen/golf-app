@@ -169,6 +169,7 @@ export default async function HolePage({ params }: { params: Params }) {
     tournamentId: game.tournament_id,
   })
     ? await findSegmentSibling(userId, {
+        gameId: game.id,
         holeSegment: game.hole_segment,
         sourceGameId: game.source_game_id,
         tournamentId: game.tournament_id,

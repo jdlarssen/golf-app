@@ -24,6 +24,7 @@ function game(over: Partial<FinishedGame> & { id: string }): FinishedGame {
     tournament_id: null,
     hole_segment: 'full' as HoleSegment,
     team_number: null,
+    scheduled_tee_off_at: null,
     tournament: null,
     ...over,
   };
@@ -83,6 +84,62 @@ describe('toFinishedEntries', () => {
       game({ id: 'b', hole_segment: 'back9', tournament_id: 't1', tournament: CUP }),
     ]);
     expect(entries.map((e) => e.kind)).toEqual(['game', 'cupDay']);
+  });
+
+  it('#1449 round-1: two halves finished across midnight still pair (scheduled-tee-off anchor)', () => {
+    // Both hosts share a 2026-06-12 tee-off (Oslo), but the admin finishes them
+    // on either side of midnight: front9 at 22:00 Oslo (06-12), back9 at 00:30
+    // Oslo (06-13). Anchoring on `ended_at` would split them into two buckets and
+    // suppress BOTH; anchoring on scheduled_tee_off_at keeps one cup day.
+    const entries = toFinishedEntries([
+      game({
+        id: 'f',
+        hole_segment: 'front9',
+        tournament_id: 't1',
+        tournament: CUP,
+        scheduled_tee_off_at: '2026-06-12T08:00:00Z',
+        ended_at: '2026-06-12T20:00:00Z',
+      }),
+      game({
+        id: 'b',
+        hole_segment: 'back9',
+        tournament_id: 't1',
+        tournament: CUP,
+        scheduled_tee_off_at: '2026-06-12T08:00:00Z',
+        ended_at: '2026-06-12T22:30:00Z',
+      }),
+    ]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].kind).toBe('cupDay');
+  });
+
+  it('#1449 round-1 belt: two finished halves that fail to bucket render as singles, never vanish', () => {
+    // No tee-off set → the anchor falls back to `ended_at`, and these two finish
+    // on different Oslo days, so they don't pair. The belt keeps both visible as
+    // single cards rather than suppressing (and vanishing) the whole day.
+    const entries = toFinishedEntries([
+      game({
+        id: 'f',
+        hole_segment: 'front9',
+        tournament_id: 't1',
+        tournament: CUP,
+        scheduled_tee_off_at: null,
+        ended_at: '2026-06-12T20:00:00Z',
+      }),
+      game({
+        id: 'b',
+        hole_segment: 'back9',
+        tournament_id: 't1',
+        tournament: CUP,
+        scheduled_tee_off_at: null,
+        ended_at: '2026-06-12T22:30:00Z',
+      }),
+    ]);
+    expect(entries.map((e) => e.kind)).toEqual(['game', 'game']);
+    expect(entries.map((e) => (e.kind === 'game' ? e.game.id : null))).toEqual([
+      'f',
+      'b',
+    ]);
   });
 });
 

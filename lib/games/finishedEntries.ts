@@ -1,5 +1,9 @@
 import type { FinishedGame } from './getFinishedGamesForUser';
-import { pairSplitDayGames, type PairableGame } from './splitDayPairing';
+import {
+  pairSplitDayGames,
+  splitDayAnchor,
+  type PairableGame,
+} from './splitDayPairing';
 
 /**
  * Finished-list entries (#1449): the raw finished games fold into ONE cup-day
@@ -32,6 +36,14 @@ export type FinishedEntry =
  * shows as an active card on Home, and no day may appear in both lists (contract
  * guardrail). Plain games pass straight through.
  *
+ * #1449 round-1 deviation (from the contract's «same Oslo day of `ended_at`»):
+ * pairing anchors on `scheduled_tee_off_at ?? ended_at`, the PHYSICAL-day
+ * identity both halves share — matching the active list. Anchoring on `ended_at`
+ * (the admin's avslutt-click moment) broke when the two hosts were finished
+ * across midnight or the next morning: they landed in different day-buckets,
+ * never paired, and the lone-host suppression then hid BOTH halves from every
+ * finished surface forever (#877 class). A belt below hardens that further.
+ *
  * Assumes `games` is already sorted newest-`ended_at`-first; pairing preserves
  * order (the pair anchors at its first-seen half), so entries stay newest-first.
  */
@@ -40,9 +52,34 @@ export function toFinishedEntries(games: FinishedGame[]): FinishedEntry[] {
     gameId: game.id,
     tournamentId: game.tournament_id,
     holeSegment: game.hole_segment,
-    dayAnchor: game.ended_at ? new Date(game.ended_at) : null,
+    // Physical-day identity, not the finish moment (round-1 deviation).
+    dayAnchor: splitDayAnchor({
+      scheduled_tee_off_at: game.scheduled_tee_off_at,
+      created_at: game.ended_at,
+    }),
     data: game,
   }));
+
+  // Belt: does the finished set already contain the OPPOSITE-half host of a
+  // split cup day? If so, both halves are finished — a lone entry then means the
+  // anchor above failed to bucket them together (should be impossible after the
+  // scheduled-tee-off anchor). Rather than suppress and vanish the day from BOTH
+  // lists, degrade to showing the single card. (A sibling that is genuinely
+  // still ACTIVE is not in this finished set → correctly suppressed, since that
+  // day shows in the active list. "Sibling active" vs "sibling missing entirely"
+  // are indistinguishable from the finished set alone; suppressing optimizes for
+  // the dominant sibling-active case and the anchor fix removes the real
+  // vanish-from-both bug.)
+  const finishedOppositeHostExists = (game: FinishedGame): boolean => {
+    if (game.tournament_id == null) return false;
+    const opposite = game.hole_segment === 'front9' ? 'back9' : 'front9';
+    return games.some(
+      (g) =>
+        g.id !== game.id &&
+        g.tournament_id === game.tournament_id &&
+        g.hole_segment === opposite,
+    );
+  };
 
   const entries: FinishedEntry[] = [];
   for (const entry of pairSplitDayGames(pairable)) {
@@ -55,7 +92,9 @@ export function toFinishedEntries(games: FinishedGame[]): FinishedEntry[] {
         ended_at: front9.ended_at ?? back9.ended_at,
         tournamentId: entry.tournamentId,
         cupName: tournament?.name ?? front9.name,
-        status: tournament?.status ?? 'finished',
+        // Fail-closed: a null embed defaults to the neutral/unfinished path so a
+        // missing tournament can never wear a false «Cupen endte»-badge.
+        status: tournament?.status ?? 'active',
         winnerTeam: tournament?.winner_team ?? null,
         teamNumber: front9.team_number ?? back9.team_number,
         courseName: front9.courses?.name ?? back9.courses?.name ?? null,
@@ -65,12 +104,14 @@ export function toFinishedEntries(games: FinishedGame[]): FinishedEntry[] {
       continue;
     }
     const game = entry.game.data;
-    // A lone finished split-day host means its sibling is still active — that
-    // day lives in the ACTIVE list; drop it here to avoid a day in both lists.
-    const isLoneSplitHost =
+    const isSplitHost =
       game.tournament_id != null &&
       (game.hole_segment === 'front9' || game.hole_segment === 'back9');
-    if (isLoneSplitHost) continue;
+    // Suppress a lone finished split host only when its sibling is NOT itself a
+    // finished host in this set (sibling still active → lives in the active
+    // list). If a finished opposite host exists yet didn't pair (belt), show the
+    // single card instead of hiding the day.
+    if (isSplitHost && !finishedOppositeHostExists(game)) continue;
     entries.push({ kind: 'game', ended_at: game.ended_at, game });
   }
   return entries;

@@ -427,8 +427,8 @@ describe('submitScorecard — lag-levering (#1453)', () => {
 // findSegmentSibling + admin-client). Retning kun back9→front9. Kompensert:
 // feiler søsken-oppdateringen reverteres back9-markeringen (trap #5).
 describe('submitScorecard — én levering på tvers av segmentet (#1466)', () => {
-  // findSegmentSibling gjør to admin-queries (kandidater + medlemskap) FØR
-  // søsken-oppdateringen — begge trekker fra adminSupabaseMock sin FIFO-kø.
+  // findSegmentSibling gjør to admin-queries (alle host-halvdeler + medlemskap)
+  // FØR søsken-oppdateringen — begge trekker fra adminSupabaseMock sin FIFO-kø.
   const back9Game = {
     name: 'Cup-dag',
     status: 'active',
@@ -439,6 +439,15 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
     source_game_id: null,
   };
 
+  // #1449 finding 1: findSegmentSibling now fetches ALL segment hosts in the
+  // tournament (source + candidates) and day-scopes them. The source (game-1,
+  // back9) and its front9 sibling share one tee-off day so the sibling resolves.
+  const TEE = '2026-08-07T08:00:00Z';
+  const hostRows = (front9Mode: string) => [
+    { id: 'game-1', game_mode: 'best_ball', hole_segment: 'back9', scheduled_tee_off_at: TEE, created_at: null },
+    { id: 'front9-a', game_mode: front9Mode, hole_segment: 'front9', scheduled_tee_off_at: TEE, created_at: null },
+  ];
+
   it('back9-host: én levering markerer både back9-raden og front9-søskenet (egen-rad)', async () => {
     supabaseMock = buildSupabaseMock([
       { data: back9Game, error: null },
@@ -448,7 +457,7 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
       { data: [], error: null }, // admins (tom)
     ]);
     adminSupabaseMock = buildSupabaseMock([
-      { data: [{ id: 'front9-a', game_mode: 'best_ball' }], error: null }, // findSegmentSibling kandidater
+      { data: hostRows('best_ball'), error: null }, // findSegmentSibling host-halvdeler (kilde + kandidat)
       { data: [{ game_id: 'front9-a', submitted_at: null, team_number: null }], error: null }, // medlemskap
       { data: [{ user_id: 'user-1' }], error: null }, // søsken-UPDATE (front9, egen-rad)
     ]);
@@ -480,7 +489,7 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
       { data: [], error: null },
     ]);
     adminSupabaseMock = buildSupabaseMock([
-      { data: [{ id: 'front9-a', game_mode: 'greensome_matchplay' }], error: null }, // kandidater
+      { data: hostRows('greensome_matchplay'), error: null }, // host-halvdeler (kilde + kandidat)
       { data: [{ game_id: 'front9-a', submitted_at: null, team_number: 2 }], error: null }, // medlemskap (lag 2)
       { data: [{ user_id: 'user-1' }, { user_id: 'mate' }], error: null }, // lag-bred søsken-UPDATE
     ]);
@@ -508,7 +517,7 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
       { data: [{ user_id: 'user-1' }], error: null }, // primær UPDATE (back9)
     ]);
     adminSupabaseMock = buildSupabaseMock([
-      { data: [{ id: 'front9-a', game_mode: 'best_ball' }], error: null }, // kandidater
+      { data: hostRows('best_ball'), error: null }, // host-halvdeler (kilde + kandidat)
       { data: [{ game_id: 'front9-a', submitted_at: null, team_number: null }], error: null }, // medlemskap
       { data: null, error: { message: 'permission denied' } }, // søsken-UPDATE FEILER
       { data: null, error: null }, // revert-UPDATE (kompensasjon)
@@ -548,7 +557,7 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
       { data: [], error: null },
     ]);
     adminSupabaseMock = buildSupabaseMock([
-      { data: [{ id: 'front9-a', game_mode: 'best_ball' }], error: null }, // kandidater
+      { data: hostRows('best_ball'), error: null }, // host-halvdeler (kilde + kandidat)
       // Medlemskap: front9 er ALT levert.
       { data: [{ game_id: 'front9-a', submitted_at: '2026-08-07T09:00:00Z', team_number: null }], error: null },
     ]);
