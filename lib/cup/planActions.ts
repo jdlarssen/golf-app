@@ -1,0 +1,271 @@
+'use server';
+
+import { redirect } from 'next/navigation';
+import { revalidateTag } from 'next/cache';
+import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
+import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { expectAffected } from '@/lib/supabase/affectedRows';
+import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
+import { exceedsPersonalPlayerCap } from '@/lib/cup/limits';
+import { parseOsloDateTimeLocal, isTeeOffInPast } from '@/lib/games/gamePayload';
+import { parseCupPlanForm } from './planValidation';
+import { getCupCandidatePlayers } from './getCupCandidatePlayers';
+
+/**
+ * Server-actions for de to første cup-rommene (#1472): Oppsett (plan) og
+ * Spillere (deltakerliste). Egen fil (ikke `lib/cup/actions.ts`):
+ * `tournament_plans` og `tournament_participants` har INGEN write-RLS-policies
+ * (migrasjon 0155, samme mønster som 0154-sidepoengene) — all skriving går via
+ * `getAdminClient()` (service-role), gatet KUN av `requireAdminOrClubAdminOfCup`
+ * i denne fila. Det er et distinkt sikkerhetsmønster verdt å holde adskilt fra
+ * request-klient-mønsteret resten av `actions.ts` bruker (der RLS er backstop).
+ *
+ * Feil returneres som `{ error: kode }` (#1397-mønsteret — en form-redirect
+ * ville unmontert det utfylte skjemaet og slettet arrangørens input). Kun
+ * suksess redirecter (kaster NEXT_REDIRECT). UI-chunken mapper kodene til norsk.
+ */
+
+// Samme `{ error }`-form som `CupActionError` i actions.ts. Bevisst løs `string`
+// (ikke union-import) så cup-rommene og opprett-flyten forblir uavhengige.
+export type CupPlanActionError = { error: string };
+
+/**
+ * Felles redirect-mål for et cup-rom. Klubb-cup (`groupId` satt) holder seg i
+ * klubb-chrome; frittstående går til admin-cup. Speiler `cupRedirectBase` i
+ * actions.ts, men lokalt (den er ikke eksportert derfra — å eksportere en
+ * helper fra en `'use server'`-fil ville laget et unødvendig action-endepunkt).
+ * `sub` er en valgfri under-sti (f.eks. '/spillere').
+ */
+function cupPath(id: string, groupId: string | null, sub = ''): string {
+  return groupId ? `/klubber/${groupId}/cup/${id}${sub}` : `/admin/cup/${id}${sub}`;
+}
+
+function revalidateCup(id: string, groupId: string | null): void {
+  revalidateTag(`tournament-${id}`, 'max');
+  revalidatePath(`/admin/cup/${id}`);
+  if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
+}
+
+/**
+ * Rom 1 — Oppsett. Lagrer bane/tee/tee-off/preset/strategi/best-ball for cupen
+ * i `tournament_plans` (upsert på `tournament_id` — én plan per cup i v1).
+ *
+ * Validering av DB-uavhengige felt (preset/strategi/sesjoner/best-ball) skjer
+ * i `parseCupPlanForm` FØR DB-en røres (som `createTournamentDraft`). Bane/tee
+ * verifiseres mot DB (tee må tilhøre bane og ikke være arkivert). Tee-off er
+ * valgfri: tom → NULL; ellers parses Oslo-veggklokke → UTC og avvises i fortiden.
+ */
+export async function saveCupPlan(
+  formData: FormData,
+): Promise<CupPlanActionError> {
+  const id = String(formData.get('id') ?? '').trim();
+  if (!id) return { error: 'not_found' };
+
+  const courseId = String(formData.get('course_id') ?? '').trim();
+  const teeBoxId = String(formData.get('tee_box_id') ?? '').trim();
+  const teeOffRaw = String(formData.get('tee_off_at') ?? '').trim();
+
+  // DB-uavhengig validering først (ingen DB-tur på en avvist form).
+  const parsed = parseCupPlanForm({
+    presetId: String(formData.get('preset_id') ?? ''),
+    strategy: String(formData.get('strategy') ?? ''),
+    customSessionsRaw: String(formData.get('custom_sessions') ?? ''),
+    bestBallAllowanceRaw: String(formData.get('best_ball_allowance_pct') ?? ''),
+  });
+  if ('error' in parsed) return { error: parsed.error };
+
+  if (!courseId) return { error: 'plan_course' };
+  if (!teeBoxId) return { error: 'plan_tee' };
+
+  // Tee-off: valgfri. Tom → NULL. Ellers Oslo-veggklokke → UTC ISO, ikke fortid.
+  let scheduledTeeOffAt: string | null = null;
+  if (teeOffRaw !== '') {
+    try {
+      scheduledTeeOffAt = parseOsloDateTimeLocal(teeOffRaw);
+    } catch {
+      return { error: 'plan_tee_off_invalid' };
+    }
+    if (isTeeOffInPast(scheduledTeeOffAt)) return { error: 'plan_tee_off_past' };
+  }
+
+  const supabase = await getServerClient();
+  await requireAdminOrClubAdminOfCup(supabase, id);
+
+  const admin = getAdminClient();
+  const { data: cup } = await admin
+    .from('tournaments')
+    .select('status, group_id')
+    .eq('id', id)
+    .maybeSingle();
+  if (!cup) return { error: 'not_found' };
+  if (cup.status !== 'draft') return { error: 'not_draft' };
+  const groupId = (cup.group_id as string | null) ?? null;
+
+  // Bane må finnes; tee må tilhøre banen og ikke være arkivert.
+  const { data: course } = await admin
+    .from('courses')
+    .select('id')
+    .eq('id', courseId)
+    .maybeSingle();
+  if (!course) return { error: 'plan_course' };
+
+  const { data: tee } = await admin
+    .from('tee_boxes')
+    .select('id, course_id, archived_at')
+    .eq('id', teeBoxId)
+    .maybeSingle();
+  if (!tee || tee.course_id !== courseId || tee.archived_at !== null) {
+    return { error: 'plan_tee' };
+  }
+
+  // Upsert på `tournament_id` (unique) — én plan per cup i v1. `updated_at`
+  // settes eksplisitt (ingen ON UPDATE-trigger på tabellen). `.select()` +
+  // `expectAffected`: en 0-rads-upsert her er en ekte feil (felle #2), ikke
+  // en ærlig no-op.
+  try {
+    expectAffected(
+      await admin
+        .from('tournament_plans')
+        .upsert(
+          {
+            tournament_id: id,
+            course_id: courseId,
+            tee_box_id: teeBoxId,
+            scheduled_tee_off_at: scheduledTeeOffAt,
+            preset_id: parsed.ok.presetId,
+            custom_sessions: parsed.ok.customSessions,
+            strategy: parsed.ok.strategy,
+            best_ball_allowance_pct: parsed.ok.bestBallAllowancePct,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'tournament_id' },
+        )
+        .select('tournament_id'),
+      'saveCupPlan',
+    );
+  } catch (err) {
+    console.error('[cup] saveCupPlan upsert failed', { id, err });
+    return { error: 'plan_save_failed' };
+  }
+
+  revalidateCup(id, groupId);
+  redirect(`${cupPath(id, groupId)}?status=plan_saved`);
+  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
+}
+
+/**
+ * Rom 2 — Spillere: legg til én deltaker. Server-side re-validering av at
+ * brukeren ER en gyldig (ikke-pending) kandidat for cupen — klient-lister er
+ * ikke authz (AGENTS.md-felle #3). Personlig ikke-admin-cup håndhever
+ * `exceedsPersonalPlayerCap` (regelens ene hjem, #526) på deltaker-settet
+ * etter tillegg. Duplikat = stille no-op (upsert, ignoreDuplicates).
+ */
+export async function addCupParticipant(
+  formData: FormData,
+): Promise<CupPlanActionError> {
+  const id = String(formData.get('id') ?? '').trim();
+  const targetUserId = String(formData.get('user_id') ?? '').trim();
+  if (!id) return { error: 'not_found' };
+  if (!targetUserId) return { error: 'not_candidate' };
+
+  const supabase = await getServerClient();
+  const { userId, isAdmin } = await requireAdminOrClubAdminOfCup(supabase, id);
+
+  const admin = getAdminClient();
+  const { data: cup } = await admin
+    .from('tournaments')
+    .select('status, group_id')
+    .eq('id', id)
+    .maybeSingle();
+  if (!cup) return { error: 'not_found' };
+  if (cup.status !== 'draft') return { error: 'not_draft' };
+  const groupId = (cup.group_id as string | null) ?? null;
+
+  // Eligibility: brukeren MÅ være en gyldig, ikke-pending kandidat for cupen.
+  // Kilden følger kallerens rolle (samme som generer-veiviseren ser).
+  const candidates = await getCupCandidatePlayers(supabase, {
+    groupId,
+    userId,
+    isAdmin,
+  });
+  const candidate = candidates.find((c) => c.id === targetUserId);
+  if (!candidate || candidate.pending) return { error: 'not_candidate' };
+
+  // Personlig ikke-admin: håndhev deltaker-taket (#526). Teller distinkt sett
+  // etter tillegg — mirror av genereringens cap-sjekk. Et allerede påmeldt
+  // targetUserId gjør settet uendret (ingen falsk avvisning ved re-add).
+  if (!groupId && !isAdmin) {
+    const { data: existing } = await admin
+      .from('tournament_participants')
+      .select('user_id')
+      .eq('tournament_id', id);
+    const distinctAfter = new Set([
+      ...(existing ?? []).map((r) => r.user_id as string),
+      targetUserId,
+    ]).size;
+    if (exceedsPersonalPlayerCap(distinctAfter, isAdmin)) {
+      return { error: 'too_many_players' };
+    }
+  }
+
+  // Upsert med ignoreDuplicates: allerede påmeldt = stille no-op (ikke en feil).
+  const { error: insertErr } = await admin
+    .from('tournament_participants')
+    .upsert(
+      { tournament_id: id, user_id: targetUserId },
+      { onConflict: 'tournament_id,user_id', ignoreDuplicates: true },
+    );
+  if (insertErr) {
+    console.error('[cup] addCupParticipant failed', { id, targetUserId, error: insertErr });
+    return { error: 'plan_save_failed' };
+  }
+
+  revalidateCup(id, groupId);
+  redirect(`${cupPath(id, groupId, '/spillere')}?status=participant_added`);
+  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
+}
+
+/**
+ * Rom 2 — Spillere: fjern én deltaker. Rører ALDRI allerede genererte matcher
+ * (de bor i games/game_players) — fjerning påvirker kun fremtidig fordeling.
+ */
+export async function removeCupParticipant(
+  formData: FormData,
+): Promise<CupPlanActionError> {
+  const id = String(formData.get('id') ?? '').trim();
+  const targetUserId = String(formData.get('user_id') ?? '').trim();
+  if (!id) return { error: 'not_found' };
+  if (!targetUserId) return { error: 'not_found' };
+
+  const supabase = await getServerClient();
+  await requireAdminOrClubAdminOfCup(supabase, id);
+
+  const admin = getAdminClient();
+  const { data: cup } = await admin
+    .from('tournaments')
+    .select('status, group_id')
+    .eq('id', id)
+    .maybeSingle();
+  if (!cup) return { error: 'not_found' };
+  if (cup.status !== 'draft') return { error: 'not_draft' };
+  const groupId = (cup.group_id as string | null) ?? null;
+
+  // Bevisst INGEN expectAffected her: en delete som treffer 0 rader er en ærlig
+  // no-op (raden er allerede borte — arrangøren ville ha deltakeren fjernet, og
+  // det er hun). I motsetning til upsert-stien over, der 0 rader ville vært en
+  // reell feil (felle #2).
+  const { error: deleteErr } = await admin
+    .from('tournament_participants')
+    .delete()
+    .eq('tournament_id', id)
+    .eq('user_id', targetUserId);
+  if (deleteErr) {
+    console.error('[cup] removeCupParticipant failed', { id, targetUserId, error: deleteErr });
+    return { error: 'plan_save_failed' };
+  }
+
+  revalidateCup(id, groupId);
+  redirect(`${cupPath(id, groupId, '/spillere')}?status=participant_removed`);
+  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
+}
