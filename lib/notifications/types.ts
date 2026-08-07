@@ -180,7 +180,8 @@ const deliverReminderSchema = z.object({
 // cup-deltakere fra `finishTournament` — in-app først, mail kun til off-app
 // (samme prinsipp som game_finished). Slank payload speiler game_finished:
 // tournament_name brukes i innboks-detalj, tournament_id i deeplink til
-// /cup/[id]. (#377)
+// /cup/[id]/resultater — resultatsiden (#1468), ikke cup-siden; den viser
+// kampene uten fasit. (#377, #1499)
 const cupFinishedSchema = z.object({
   tournament_id: uuid,
   tournament_name: z.string().min(1),
