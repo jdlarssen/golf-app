@@ -4495,6 +4495,7 @@
     }
   },
   "cup": {
+    "matchFallback": "Match",
     "plan": {
       "pageTitle": "Setup",
       "brassRibbonAdmin": "Cup · {name}",

@@ -14,6 +14,7 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
 import { matchBlocksOneTapFinish } from '@/lib/cup/matchSubmissionStatus';
+import { formatPoints } from '@/lib/cup/formatPoints';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
 import { unregisteredSideAwards } from '@/lib/cup/sideAwardsRegistered';
 import {
@@ -29,10 +30,6 @@ const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = 
   active: 'aktiv',
   finished: 'signert',
 };
-
-function formatPoints(n: number): string {
-  return String(n).replace('.', ',');
-}
 
 type CupTournamentForCopy = {
   points_to_win: number | null;
@@ -263,10 +260,10 @@ export async function CupManagement({
   );
   const notSubmittedMatchesList = activeHostMatches
     .filter(matchBlocksOneTapFinish)
-    .map((m) => m.matchLabel ?? 'Match')
+    .map((m) => m.matchLabel ?? t('matchFallback'))
     .join(', ');
   const failedMatchesList = activeHostMatches
-    .map((m) => m.matchLabel ?? 'Match')
+    .map((m) => m.matchLabel ?? t('matchFallback'))
     .join(', ');
 
   function preferredName(p: CupRosterPlayer): string {
@@ -477,7 +474,7 @@ export async function CupManagement({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {m.matchLabel ?? 'Match'}
+                        {m.matchLabel ?? t('matchFallback')}
                       </p>
                       <p className="font-serif text-base text-text mt-1">
                         {m.team1PlayerName}{' '}

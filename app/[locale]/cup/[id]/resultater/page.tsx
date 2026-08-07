@@ -8,12 +8,9 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { canViewCupPage } from '@/lib/cup/cupPageAccess';
 import { isTeamMatchGameMode } from '@/lib/cup/computeCupLeaderboard';
+import { formatPoints } from '@/lib/cup/formatPoints';
 
 type Params = Promise<{ id: string }>;
-
-function formatPoints(n: number): string {
-  return String(n).replace('.', ',');
-}
 
 const GOLD_CARD_STYLE = {
   background: 'linear-gradient(180deg, rgba(201, 169, 97, 0.12), rgba(201, 169, 97, 0.04))',
@@ -169,7 +166,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                            {m.matchLabel ?? 'Match'}
+                            {m.matchLabel ?? t('matchFallback')}
                           </p>
                           <p className="font-serif text-base text-text mt-1">
                             {m.team1PlayerName}{' '}

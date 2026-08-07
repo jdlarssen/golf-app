@@ -11,12 +11,9 @@ import {
   cupMatchStatusKey,
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
+import { formatPoints } from '@/lib/cup/formatPoints';
 
 type Params = Promise<{ id: string }>;
-
-function formatPoints(n: number): string {
-  return String(n).replace('.', ',');
-}
 
 /**
  * Header-copyen for poengmålet (#1441, D8) — egen funksjon (ikke inline i
@@ -140,7 +137,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {m.matchLabel ?? 'Match'}
+                        {m.matchLabel ?? t('matchFallback')}
                       </p>
                       <p className="font-serif text-base text-text mt-1">
                         {m.team1PlayerName}{' '}
