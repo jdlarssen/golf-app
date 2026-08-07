@@ -160,10 +160,36 @@ describe('saveSideAwardConfig', () => {
     expect(result).toEqual({ ok: false, error: 'cup_finished' });
   });
 
-  it('en vinner er allerede registrert på et eksisterende innslag: winners_already_registered, ingen sletting/skriving', async () => {
+  it('cup active (ingen vinnere ennå): cup_started — sidepoeng er låst etter start, ingen lesing/skriving', async () => {
+    // #1455: eier-overstyring av D9 — oppsett tillatt KUN i draft. En aktiv cup
+    // avvises FØR eksisterende innslag leses, så verken delete eller insert kjøres.
     adminMock = buildSupabaseMock([
       gateQueueItem,
       { data: { status: 'active', group_id: null }, error: null },
+    ]);
+    supabaseMock = buildSupabaseMock([adminUserQueueItem]);
+    setUser('admin-1');
+
+    const { saveSideAwardConfig } = await import('./sideAwardActions');
+    const result = await saveSideAwardConfig('cup-1', [
+      { kind: 'ctp', holeNumber: 4, points: 2 },
+    ]);
+
+    expect(result).toEqual({ ok: false, error: 'cup_started' });
+    expect(
+      adminMock.__fromCalls.some(
+        (c) => c.table === 'tournament_side_awards' && (c.method === 'delete' || c.method === 'insert'),
+      ),
+    ).toBe(false);
+  });
+
+  it('en vinner er allerede registrert på et eksisterende innslag (draft, dybdeforsvar): winners_already_registered, ingen sletting/skriving', async () => {
+    // #1455: draft-cuper skal ikke kunne ha vinner-rader, men gaten beholdes som
+    // forsvar i dybden. Status draft passerer cup_started-gaten, så winners-grenen
+    // er fortsatt utøvd.
+    adminMock = buildSupabaseMock([
+      gateQueueItem,
+      { data: { status: 'draft', group_id: null }, error: null },
       {
         data: [
           { id: 'sa1', tournament_id: 'cup-1', kind: 'ctp', hole_number: 4, points: 2, winner_user_id: 'p1' },

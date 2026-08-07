@@ -4709,6 +4709,7 @@
       "heading": "Closest & longest",
       "hint": "Sidepoeng for nærmest hullet / lengst drive. Poenget legges på vinnerens lag i cup-totalen når du registrerer vinneren etter runden.",
       "empty": "Ingen sidepoeng lagt til ennå.",
+      "emptyLocked": "Ingen sidepoeng ble satt opp for denne cupen.",
       "kindCtp": "Nærmest hullet",
       "kindLd": "Lengste drive",
       "kindLabel": "Type",
@@ -4731,6 +4732,7 @@
         "duplicate": "Du kan ikke ha to rader med samme type og hull.",
         "notFound": "Fant ikke cupen.",
         "cupFinished": "Cupen er avsluttet — sidepoeng kan ikke endres lenger.",
+        "cupStarted": "Cupen er i gang — sidepoeng kan bare settes opp før start.",
         "winnersRegistered": "Du har allerede registrert en vinner. Sidepoengene kan ikke redigeres etter det.",
         "notParticipant": "Spilleren er ikke med i cupens spillerliste.",
         "saveFailed": "Klarte ikke å lagre. Prøv igjen om litt."

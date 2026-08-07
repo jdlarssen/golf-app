@@ -32,6 +32,7 @@ export type SaveSideAwardConfigError =
   | 'duplicate_side_award'
   | 'not_found'
   | 'cup_finished'
+  | 'cup_started'
   | 'winners_already_registered'
   | 'save_failed';
 
@@ -52,15 +53,17 @@ function isValidSideAward(a: SideAwardConfigInput): boolean {
 }
 
 /**
- * Erstatter cupens fulle sidepoeng-CONFIG (#1441, D9). Timing-regel valgt for
- * denne fasen: tillatt mens cupen er `draft`, ELLER `active` SÅ LENGE ingen
- * av cupens eksisterende innslag har en registrert vinner ennå («active men
- * vinner-løs»). Rasjonale: konfigurasjon hører hjemme i cup-oppsettet (draft,
- * eller tidlig i active før arrangøren har rukket å taste noe) —
- * vinner-registrering skjer ETTER runden er spilt
- * (`registerSideAwardWinner`). Å tillate re-konfigurering etter at en vinner
- * er tastet ville stille slette allerede opptjente poeng, så det avvises
- * (`winners_already_registered`) i stedet for å skje stille.
+ * Erstatter cupens fulle sidepoeng-CONFIG (#1441, D9; timing eier-overstyrt i
+ * #1455). Timing-regel: konfigurasjon tillatt KUN mens cupen er `draft` —
+ * sidepoeng-oppsett hører hjemme i cup-oppsettet. Etter start (`active`/
+ * `finished`) er oppsettet låst; da skjer bare vinner-registrering
+ * (`registerSideAwardWinner`). Gaten avviser `finished` med `cup_finished` og
+ * enhver annen ikke-draft-status med `cup_started`.
+ *
+ * `winners_already_registered`-sjekken beholdes som forsvar i dybden: etter
+ * draft-only-gaten kan den i praksis bare treffe en (teoretisk) draft-cup som
+ * likevel har fått en registrert vinner — poenget er å aldri slette et
+ * allerede opptjent poeng stille.
  *
  * Atomic-or-compensated (AGENTS.md-felle #5): delete-så-insert, ikke upsert.
  * Kalleren sender den FULLE ønskede lista — et rent upsert kan legge til og
@@ -101,6 +104,11 @@ export async function saveSideAwardConfig(
     .maybeSingle();
   if (!cup) return { ok: false, error: 'not_found' };
   if (cup.status === 'finished') return { ok: false, error: 'cup_finished' };
+  // #1455 (eier-overstyring av D9): sidepoeng-oppsett hører hjemme i
+  // cup-oppsettet — konfigurasjon KUN mens cupen er `draft`. Etter start er
+  // det låst (kun vinner-registrering). Rekkefølgen finished → started gir mest
+  // spesifikk melding: en avsluttet cup får fortsatt `cup_finished`.
+  if (cup.status !== 'draft') return { ok: false, error: 'cup_started' };
 
   const { data: existing, error: existingErr } = await admin
     .from('tournament_side_awards')

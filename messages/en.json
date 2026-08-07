@@ -4709,6 +4709,7 @@
       "heading": "Closest & longest",
       "hint": "Side points for closest-to-pin / longest drive. The point is added to the winner's team in the cup total once you register the winner after the round.",
       "empty": "No side awards added yet.",
+      "emptyLocked": "No side awards were set up for this cup.",
       "kindCtp": "Closest to pin",
       "kindLd": "Longest drive",
       "kindLabel": "Type",
@@ -4731,6 +4732,7 @@
         "duplicate": "You can't have two rows with the same type and hole.",
         "notFound": "Couldn't find the cup.",
         "cupFinished": "The cup is finished — side awards can no longer be changed.",
+        "cupStarted": "The cup is under way — side awards can only be set up before the start.",
         "winnersRegistered": "You've already registered a winner. Side awards can't be edited after that.",
         "notParticipant": "That player isn't on the cup's roster.",
         "saveFailed": "Couldn't save. Please try again in a moment."
