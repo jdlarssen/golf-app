@@ -165,7 +165,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
           })}
         </p>
         {sideAwards.length > 0 && (
-          <p className="text-center text-xs text-muted mt-1 tabular-nums">
+          <p className="text-center text-xs text-muted mt-1 tabular-nums" data-testid="cup-side-award-points">
             {t('public.sideAwardPoints', {
               points: `${formatPoints(leaderboard.sideAwardPoints.team1)}–${formatPoints(leaderboard.sideAwardPoints.team2)}`,
             })}

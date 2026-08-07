@@ -169,6 +169,7 @@ export function SideAwardsPanel({
               <div key={i} className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.25rem_3.25rem_2.25rem] items-center gap-2">
                 <select
                   aria-label={t('kindLabel')}
+                  data-testid="side-award-kind"
                   value={row.kind}
                   onChange={(e) => setKind(i, e.target.value as 'ctp' | 'ld' | 'gir')}
                   className="rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
@@ -180,6 +181,7 @@ export function SideAwardsPanel({
                 <input
                   type="number"
                   aria-label={t('holeLabel')}
+                  data-testid="side-award-hole"
                   min={1}
                   max={18}
                   value={row.holeNumber}
@@ -189,6 +191,7 @@ export function SideAwardsPanel({
                 <input
                   type="number"
                   aria-label={t('pointsLabel')}
+                  data-testid="side-award-points"
                   min={0.5}
                   step={0.5}
                   value={row.points}
@@ -198,6 +201,7 @@ export function SideAwardsPanel({
                 <input
                   type="number"
                   aria-label={t('winnersColumnLabel')}
+                  data-testid="side-award-winners"
                   min={1}
                   max={10}
                   step={1}
@@ -230,6 +234,7 @@ export function SideAwardsPanel({
             <Button
               type="button"
               className="w-full"
+              data-testid="side-award-save"
               onClick={handleSave}
               pending={isSaving}
               pendingLabel={t('savingPending')}
@@ -343,6 +348,7 @@ function SideAwardWinnerRow({
         <div className="flex items-center gap-2 shrink-0">
           <select
             aria-label={t('winnerLabel')}
+            data-testid="side-award-winner-select"
             value={winnerId}
             onChange={(e) => {
               setWinnerId(e.target.value);
@@ -359,6 +365,7 @@ function SideAwardWinnerRow({
           </select>
           <button
             type="button"
+            data-testid="side-award-register"
             onClick={handleRegister}
             disabled={!winnerId || isSaving}
             className="min-h-[36px] rounded-lg bg-primary text-white px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
@@ -438,6 +445,7 @@ function GirCountsRow({
           {t('girTeamCountLabel', { team: team1Name })}
           <input
             type="number"
+            data-testid="gir-count-team1"
             min={0}
             max={award.maxPerTeam}
             step={1}
@@ -453,6 +461,7 @@ function GirCountsRow({
           {t('girTeamCountLabel', { team: team2Name })}
           <input
             type="number"
+            data-testid="gir-count-team2"
             min={0}
             max={award.maxPerTeam}
             step={1}
@@ -466,6 +475,7 @@ function GirCountsRow({
         </label>
         <button
           type="button"
+          data-testid="gir-register"
           onClick={handleRegister}
           disabled={!bothFilled || isSaving}
           className="min-h-[36px] rounded-lg bg-primary text-white px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
