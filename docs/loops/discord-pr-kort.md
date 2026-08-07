@@ -15,7 +15,17 @@ er det eksisterende interactions-endepunktet fra #1124
 (`app/api/discord/interactions/route.ts`) — knapp-kortet gjenbruker `merge_pr:<N>`
 uendret. Auto-mergen bruker en egen helper (`lib/loops/autoMerge.ts`), ikke
 mottakeren: mottakerens CI-port leser kun `ci.yml`-runs og ville avvist
-docs-only-PR-er som bare har Vercel-checks.
+docs-only-PR-er, som ikke kjører ci.yml (de har Vercel-checks pluss
+no-op-tvillingens `verify`/`e2e` og `scan`, jf. #1477).
+
+**Branch protection er backstop bak begge merge-veiene (#1477, fra 2026-08-07).**
+Main krever grønn `verify` + `e2e` + `scan` på head-SHA-en server-side, så verken
+auto-merge-helperen (`PUT …/merge`) eller knapp-endepunktet KAN fullføre en merge
+hvis påkrevde checks mangler eller er røde — GitHub svarer 405. Kortets egne
+porter (re-verifisering mot `headSha`, `sha`-guarden) beholdes for presise utfall
+og feilmeldinger, men en logikk-glipp i dem kan ikke lenger komponere en
+uverifisert merge. Docs-only-PR-er oppfyller kravene via no-op-tvillingen
+(`ci-docs-noop.yml`).
 
 ## Hva Action-en gjør
 
@@ -117,7 +127,8 @@ etter PR-opprettelse:**
 gh workflow run discord-pr-card.yml -f pr="$PR_NUMBER"
 ```
 
-Kort-workflowen venter selv på at checkene (typisk kun Vercel) lander før den
+Kort-workflowen venter selv på at checkene (Vercel pluss no-op-tvillingens
+`verify`/`e2e` og `scan` — alle raske) lander før den
 gater — dispatchen kan altså skje umiddelbart, uten egen venting hos produsenten.
 Dispatch-kallet er best-effort: feiler det, er morgenbriefen backstop for kortet.
 
