@@ -132,6 +132,43 @@ export function computeMatchResult(
 }
 
 /**
+ * Oppdager mat-em-punktet ETTER at et hull er ferdig-klassifisert i en
+ * matchplay-walk: returnerer et frosset `MatchplayMatchResult` når matchen nett
+ * ble matematisk avgjort (`|holesUp| > holesRemaining`), ellers `null`.
+ *
+ * Kalles per hull med de løpende verdiene. Caller-en tar vare på det FØRSTE
+ * ikke-null-treffet (`if (matEm === null) matEm = detectMatEm(...)`) og bruker
+ * det som `result` i stedet for `computeMatchResult(...)` på slutt-aggregatene.
+ * Slik viser vi golf-lovleg «X&Y» også når alle hull i scope tastes inn ETTER
+ * at matchen alt var avgjort (#800). Én delt heim for regelen (AGENTS.md trap
+ * 4): singles-walk, `computeFoursomesCore` og fourball-walk bruker alle denne —
+ * ingen inline-kopier (#1458/#1506).
+ *
+ * `totalHoles` (#1441) = antall hull i scope. Guard `holesPlayed < totalHoles`
+ * (F1/#1441): uten den ville det SISTE hullet i scope alltid "trigge" som mat-em
+ * (`remaining=0`, `absUp>0` for enhver ikke-uavgjort match) og produsere feil
+ * «X&0» der golf-standarden er «Xup».
+ */
+export function detectMatEm(
+  holesUp: number,
+  holesPlayed: number,
+  totalHoles: number,
+): MatchplayMatchResult | null {
+  if (holesPlayed >= totalHoles) return null;
+  const absUp = Math.abs(holesUp);
+  const remaining = Math.max(0, totalHoles - holesPlayed);
+  if (absUp <= remaining) return null;
+  const winner: 'side1' | 'side2' = holesUp > 0 ? 'side1' : 'side2';
+  return {
+    winner,
+    marginUp: absUp,
+    decidedAtHole: holesPlayed,
+    remainingAtDecision: remaining,
+    formatted: `${absUp}&${remaining}`,
+  };
+}
+
+/**
  * Per-hull-utfall i matchplay. Single source of truth for win/loss/tied-
  * klassifisering — brukt av både `compute()` (full leaderboard-pipeline)
  * og `computeMatchplayRunningStatus()` (scorekort-flate) slik at de to
@@ -322,25 +359,11 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
     }
 
     // Oppdager mat-em-punktet ved første hull der |holesUp| > holesRemaining
-    // (#800). Lagrer berre det første treffet — seinare hull endrar ikkje
-    // det golf-lovlege lukk-ute-tidspunktet. Guard `holesPlayed < totalHoles`
-    // (#1441): uten den ville det siste hullet i scope alltid "trigge" som
-    // mat-em (remainingSoFar=0, absUpSoFar>0 for enhver ikke-uavgjort match),
-    // og produsere feil «X&0»-format der golf-standarden er «Xup».
-    if (matEmResult === null && holesPlayed < totalHoles) {
-      const holesUpSoFar = side1Wins - side2Wins;
-      const absUpSoFar = Math.abs(holesUpSoFar);
-      const remainingSoFar = Math.max(0, totalHoles - holesPlayed);
-      if (absUpSoFar > remainingSoFar) {
-        const winner: 'side1' | 'side2' = holesUpSoFar > 0 ? 'side1' : 'side2';
-        matEmResult = {
-          winner,
-          marginUp: absUpSoFar,
-          decidedAtHole: holesPlayed,
-          remainingAtDecision: remainingSoFar,
-          formatted: `${absUpSoFar}&${remainingSoFar}`,
-        };
-      }
+    // (#800). Lagrer berre det første treffet — seinare hull endrar ikkje det
+    // golf-lovlege lukk-ute-tidspunktet. Delt heim i `detectMatEm` (#1458/#1506)
+    // slik at foursomes-kjernen og fourball bruker nøyaktig samme regel.
+    if (matEmResult === null) {
+      matEmResult = detectMatEm(side1Wins - side2Wins, holesPlayed, totalHoles);
     }
 
     // Per-side par via parFor — fanger blandet-kjønn-match der side 1 og
