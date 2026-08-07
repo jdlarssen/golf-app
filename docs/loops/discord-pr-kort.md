@@ -31,10 +31,14 @@ uverifisert merge. Docs-only-PR-er oppfyller kravene via no-op-tvillingen
 
 Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
 
-1. **Trigger:** `workflow_run` når **CI**-workflowen fullfører, ELLER
-   `workflow_dispatch` mot ett PR-nummer (manuell test/re-post, og produsent-dispatch
-   for docs-only-PR-er — se egen seksjon). Ved dispatch VENTER decide-steget på at
-   checkene lander (30 s-poll, maks ~10 min) i stedet for å gi opp på pending (#1301).
+1. **Trigger:** `workflow_run` når **CI** eller **CI (docs no-op)** fullfører
+   (tvillingen dekker docs-only-PR-ene hendelsesdrevet, #1483), ELLER
+   `workflow_dispatch` mot ett PR-nummer (manuell test/re-post — se egen seksjon).
+   Ved dispatch OG ved tvilling-fyring VENTER decide-steget på at
+   checkene lander (30 s-poll, maks ~10 min) i stedet for å gi opp på pending
+   (#1301/#1483) — tvillingen fullfører før scan/Vercel, så uten venting fantes
+   ingen senere fyring å falle tilbake på. Blandet PR (kode + docs): ci.yml-fyringen
+   kansellerer den ventende tvilling-kjøringen (concurrency per head-SHA).
    Checker ut PR-head-koden så skjermbildene viser koden under review. (Vi bruker
    `workflow_run`, ikke `check_suite`: check_suite fyrer ikke for
    GitHub-Actions-suiter, så CI trigget aldri kortet.)
@@ -116,25 +120,21 @@ appen bootes mot torny-staging, login via service-role OTP-mint).
 samme øyeblikk kan i sjeldne tilfeller gi to kort — akseptert for v1 (mildt) fremfor
 å risikere et stille tapt kort.
 
-## Docs-only-PR-er — produsenten dispatcher kortet selv (#1301)
+## Docs-only-PR-er — hendelsesdrevet via no-op-tvillingen (#1483, før: #1301)
 
-Docs-only-PR-er kjører ingen CI (kvote-trimmen #1195: `paths-ignore` på `**.md`,
-`docs/**`, `.forge/**` i `ci.yml`), så `workflow_run` fyrer aldri og kortet kom
-aldri. Konvensjon: **produsenter av docs-only-PR-er dispatcher kortet selv rett
-etter PR-opprettelse:**
+Docs-only-PR-er kjører ikke ci.yml (kvote-trimmen #1195: `paths-ignore` på `**.md`,
+`docs/**`, `.forge/**`), men no-op-tvillingen `CI (docs no-op)` (#1477) kjører på
+nøyaktig de path-ene og står i kortets `workflow_run`-trigger — kortet kommer
+altså av seg selv, som for alle andre PR-er. Tvilling-fyringen venter på at
+resten av checkene (scan, Vercel) lander før den gater (samme ventemekanisme som
+dispatch, se steg 1).
 
-```bash
-gh workflow run discord-pr-card.yml -f pr="$PR_NUMBER"
-```
-
-Kort-workflowen venter selv på at checkene (Vercel pluss no-op-tvillingens
-`verify`/`e2e` og `scan` — alle raske) lander før den
-gater — dispatchen kan altså skje umiddelbart, uten egen venting hos produsenten.
-Dispatch-kallet er best-effort: feiler det, er morgenbriefen backstop for kortet.
-
-Produsenter i dag: `.github/scripts/dok-skjema.sh` (ukentlig skjema-PR) og
-morgenbriefens månedlige arkiv-PR (se `docs/loops/morgenbriefen.md`). Nye
-loop-produsenter av docs-PR-er skal følge samme konvensjon.
+Den gamle #1301-konvensjonen — produsenten dispatcher kortet selv
+(`gh workflow run discord-pr-card.yml -f pr="$PR_NUMBER"`) — er dermed overflødig.
+Eksisterende produsent-dispatches (`.github/scripts/dok-skjema.sh`, morgenbriefens
+månedlige arkiv-PR) er ufarlige duplikater: dedup-labelen `discord:merge-kort` og
+concurrency-gruppa sluker dem, og de kan fjernes leilighetsvis. Nye produsenter
+skal IKKE legge til dispatch. Manuell dispatch består som test-/re-post-verktøy.
 
 ## Eier-oppsett (engangs) — Actions-secrets
 
