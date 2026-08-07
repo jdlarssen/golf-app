@@ -60,29 +60,34 @@ export function toFinishedEntries(games: FinishedGame[]): FinishedEntry[] {
     data: game,
   }));
 
-  // Belt: does the finished set already contain the OPPOSITE-half host of a
-  // split cup day? If so, both halves are finished — a lone entry then means the
-  // anchor above failed to bucket them together (should be impossible after the
-  // scheduled-tee-off anchor). Rather than suppress and vanish the day from BOTH
-  // lists, degrade to showing the single card. (A sibling that is genuinely
-  // still ACTIVE is not in this finished set → correctly suppressed, since that
-  // day shows in the active list. "Sibling active" vs "sibling missing entirely"
-  // are indistinguishable from the finished set alone; suppressing optimizes for
-  // the dominant sibling-active case and the anchor fix removes the real
-  // vanish-from-both bug.)
+  const paired = pairSplitDayGames(pairable);
+
+  // Belt (runde-2, singles-scopet): kun hosts som SELV endte uparret kan vitne
+  // om en bucketing-svikt. En PARRET motsatt-half host tilhører en annen dags
+  // par (dag-1s back9 på en to-dagers cup) og skal ikke «redde» dag-2s
+  // ensomme front9 — den dagens søsken er fortsatt aktivt, og dagen vises alt
+  // som merget AKTIVT kort («ingen dag i begge lister»). To uparrede singler
+  // med motsatt half (midnatt-straddle uten tee-off-tider) rendres derimot som
+  // enkeltkort fremfor at dagen forsvinner fra alle lister. Kjent hjørne:
+  // to FORSKJELLIGE dager med hver sin ensomme ferdige host i motsatt half er
+  // et sjeldent, selv-korrigerende admin-mellomstadium og aksepteres.
+  const singleHostIds = new Set(
+    paired.filter((e) => e.kind === 'single').map((e) => e.game.gameId),
+  );
   const finishedOppositeHostExists = (game: FinishedGame): boolean => {
     if (game.tournament_id == null) return false;
     const opposite = game.hole_segment === 'front9' ? 'back9' : 'front9';
     return games.some(
       (g) =>
         g.id !== game.id &&
+        singleHostIds.has(g.id) &&
         g.tournament_id === game.tournament_id &&
         g.hole_segment === opposite,
     );
   };
 
   const entries: FinishedEntry[] = [];
-  for (const entry of pairSplitDayGames(pairable)) {
+  for (const entry of paired) {
     if (entry.kind === 'pair') {
       const front9 = entry.front9.data;
       const back9 = entry.back9.data;

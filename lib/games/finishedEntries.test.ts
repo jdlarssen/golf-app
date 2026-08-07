@@ -141,6 +141,41 @@ describe('toFinishedEntries', () => {
       'b',
     ]);
   });
+
+  it('#1449 round-2: a PAIRED day-1 back9 never rescues day-2s lone front9 (belt is singles-scoped)', () => {
+    // Two-day cup, normal Sunday state: day-1 fully finished (pairs), day-2
+    // front9 finished but back9 still active (absent here). The day-1 back9 is
+    // an opposite-half host in the set, but it is PAIRED — day-2s lone front9
+    // must stay suppressed (its day shows as the merged ACTIVE card), or the
+    // day would appear in both lists.
+    const entries = toFinishedEntries([
+      game({
+        id: 'd2f',
+        hole_segment: 'front9',
+        tournament_id: 't1',
+        tournament: CUP,
+        scheduled_tee_off_at: '2026-06-13T08:00:00Z',
+        ended_at: '2026-06-13T12:00:00Z',
+      }),
+      game({
+        id: 'd1f',
+        hole_segment: 'front9',
+        tournament_id: 't1',
+        tournament: CUP,
+        scheduled_tee_off_at: '2026-06-12T08:00:00Z',
+        ended_at: '2026-06-12T12:00:00Z',
+      }),
+      game({
+        id: 'd1b',
+        hole_segment: 'back9',
+        tournament_id: 't1',
+        tournament: CUP,
+        scheduled_tee_off_at: '2026-06-12T08:00:00Z',
+        ended_at: '2026-06-12T13:00:00Z',
+      }),
+    ]);
+    expect(entries.map((e) => e.kind)).toEqual(['cupDay']);
+  });
 });
 
 describe('cupDayFinishedBadge', () => {

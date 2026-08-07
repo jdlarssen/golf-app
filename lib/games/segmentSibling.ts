@@ -179,6 +179,11 @@ export async function findSegmentSibling(
     hosts.filter((h) => h.hole_segment === targetSegment && h.id !== game.gameId),
   );
   if (candidates.length === 0) return null;
+  // #1449 runde-2: to samme-dags-kandidater (uten tee-off-tider bucketes dager
+  // på created_at og kan kollidere) gjør søskenet flertydig. Speil kort-sidens
+  // nøyaktig-én-semantikk: løs ingenting fremfor å gjette — verste fall
+  // degraderer dagen til to leveringer, aldri en kaskade mot feil spill.
+  if (candidates.length > 1) return null;
 
   const { data: membershipRows, error: membershipError } = await supabase
     .from('game_players')
