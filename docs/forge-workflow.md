@@ -18,6 +18,25 @@ Hvorfor: `/forge:auto` er ment for autonom utførelse mot en allerede gjennomten
 
 Aldri start `/forge:auto`-bygge-løkken uten enten (a) en eksisterende kontrakt-fil, eller (b) en kontrakt-kommentar på et åpent issue. Hvis brukeren eksplisitt spesifiserer et issue uten kontrakt: bekreft at de vil hoppe over `/forge:contract`-diskusjonen før du starter bygging.
 
+#### Draft-først i økt-PR-flyten (#1516)
+
+Gjelder `/forge:auto` og alle andre økt-flyter som fortsetter å pushe etter PR-opprettelse
+(bokføring: kontrakt-avkryssinger, evaluator-verdikt, runde-fil). Discord-PR-kortet
+auto-merger i det checkene blir grønne — uten draft-disiplinen merger det på eldre HEAD
+mens bokføringen fortsatt står i den lokale pre-push-gaten (#1499/#1513 → opprydnings-PR
+#1515).
+
+1. **Opprett PR-en som draft:** `gh pr create --draft …`. Staging-bevis-kommentar +
+   `staging-verified`-label fungerer som før. Kortet noop-er drafts (ingen kort, ingen
+   dedup-label, ingen merge) — draft = «økta jobber fortsatt».
+2. **Gjør all bokføring ferdig:** kontrakt-avkryssinger med evidens, evaluator-verdikt,
+   runde-fil — committet og pushet.
+3. **Bekreft at remote er à jour:** `git ls-remote origin <branch>` viser samme SHA som
+   lokal HEAD (SSH-push kan dø stille under pre-push-gaten — verifiser etter HVER push).
+4. **`gh pr ready` er øktas siste handling.** Ready-flippen fyrer kortet
+   (`pull_request: ready_for_review`-triggeren), som klassifiserer og auto-merger/
+   knapp-korter som normalt. Etter ready finnes per definisjon ingen haler.
+
 #### Kontrakt-kommentar (når /forge:contract lager en)
 
 Når `/forge:contract` produserer en kontrakt i `.forge/contracts/<N>-<slug>.md`, MÅ hovedchatten poste den til korresponderende issue via `gh issue comment N --body-file <path>` i samme runde som kontrakten skrives. Format:

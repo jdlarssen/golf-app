@@ -1,6 +1,7 @@
 # Discord PR-kort — auto-merge + kvittering, eller knapp der du trengs (#1159 + #1406)
 
-Hendelses-drevet GitHub Action som reagerer hver gang en åpen PR blir CI-grønn —
+Hendelses-drevet GitHub Action som reagerer hver gang en åpen PR blir CI-grønn
+(og når en draft flippes til ready, #1516) —
 uansett opphav (natt-runner, CI-vakt, dok-avstemmer ELLER interaktiv økt). Siden
 eierbeslutningen 2026-07-28 (#1406) er kortet et **kvitteringskort**, ikke et
 godkjenningskort: er PR-en kvalifisert og fri for produktvalg, merger kortet den
@@ -33,16 +34,20 @@ Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
 
 1. **Trigger:** `workflow_run` når **CI** eller **CI (docs no-op)** fullfører
    (tvillingen dekker docs-only-PR-ene hendelsesdrevet, #1483), ELLER
+   `pull_request: ready_for_review` når en draft flippes til ready (#1516 —
+   øktas «jeg er ferdig»-signal, se «Draft»-seksjonen under), ELLER
    `workflow_dispatch` mot ett PR-nummer (manuell test/re-post — se egen seksjon).
-   Ved dispatch OG ved tvilling-fyring VENTER decide-steget på at
+   Ved dispatch, tvilling-fyring OG ready-flipp VENTER decide-steget på at
    checkene lander (30 s-poll, maks ~10 min) i stedet for å gi opp på pending
-   (#1301/#1483) — tvillingen fullfører før scan/Vercel, så uten venting fantes
+   (#1301/#1483/#1516) — tvillingen fullfører før scan/Vercel, og en ready-flipp
+   kan komme rett etter siste push, så uten venting fantes
    ingen senere fyring å falle tilbake på. Blandet PR (kode + docs): ci.yml-fyringen
    kansellerer den ventende tvilling-kjøringen (concurrency per head-SHA).
    Checker ut PR-head-koden så skjermbildene viser koden under review. (Vi bruker
    `workflow_run`, ikke `check_suite`: check_suite fyrer ikke for
    GitHub-Actions-suiter, så CI trigget aldri kortet.)
-2. **`decide-pr-card.ts` — gate + tre-utfalls-klassifisering:** åpen · alle
+2. **`decide-pr-card.ts` — gate + tre-utfalls-klassifisering:** åpen · ikke draft
+   (#1516, draft = «økta jobber fortsatt») · alle
    check-runs grønne (`classifyChecks`) · ikke allerede kortet → ellers `noop`.
    Klassifiserer så utfallet (`classifyAutoMerge`, se «Tre utfall» under) og avgjør
    om diffen rører en visuell flate (`isVisualChange`). Skriver `pr-card-plan.json`
@@ -55,8 +60,9 @@ Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
    - `outcome: 'card'` → dagens knapp-kort: PR-tittel (+ 📝 Draft) · norsk
      oppsummering · PR-lenke · grønn **✅ Merge**-knapp (`custom_id: merge_pr:<N>`)
      + lenke-knapp. Poster FØRST, legger så dedup-labelen `discord:merge-kort`.
-   - `outcome: 'auto-merge'` → `mergePullRequest` (re-verifiser åpen + CI grønn mot
-     `headSha`, av-draft, `PUT …/merge` rebase + `sha`-guard). Suksess → **kvitteringskort**
+   - `outcome: 'auto-merge'` → `mergePullRequest` (re-verifiser åpen + ikke draft
+     (fail-closed, #1516) + CI grønn mot
+     `headSha`, `PUT …/merge` rebase + `sha`-guard). Suksess → **kvitteringskort**
      (✅ Merget + funksjonell-setning + lenke, KUN lenke-knapp) → main-verify-dispatch
      → dedup-label. Enhver merge-feil → fall tilbake til knapp-kortet i samme kjøring.
 
@@ -70,7 +76,7 @@ av-drafter og rebase-merger (uendret).
 `classifyAutoMerge` (`lib/loops/autoMerge.ts`, unit-testet) avgjør — første treff
 vinner:
 
-1. **`noop`** som før: ingen kandidat-PR · ikke åpen · allerede kortet · CI ikke grønn.
+1. **`noop`** som før: ingen kandidat-PR · ikke åpen · draft (#1516) · allerede kortet · CI ikke grønn.
 2. **`card`** (knapp-kort) når NOEN treffer:
    - base-branch ≠ `main`, eller tittelen inneholder ordet `WIP` (case-insensitivt).
    - **Aldri-lista** (`NEVER_AUTO_MERGE_GLOBS`): minst én endret fil rører
@@ -95,6 +101,25 @@ stille tak.
 etter en vellykket merge — MED MINDRE alle endrede filer matcher main-verifys egne
 ignore-globs (`**.md`, `docs/**`, `.forge/**`; en slik merge kan ikke komponere rød
 main). Dispatch-feil ETTER en merge gir exit 1 → failure-alarmen åpner CI-vakt-issue.
+
+## Draft = «økta jobber fortsatt» (#1516)
+
+Kortet rører ALDRI en draft-PR: decide noop-er den (ingen kort, ingen dedup-label,
+ingen merge), og `mergePullRequest` er fail-closed på draft (race-guard: re-draftet
+etter decide → knapp-kort-fallback). Draft-status er øktens/produsentens signal om at
+flere pusher er på vei (forge-bokføring, natt-runnerens haler) — mønsteret som ellers
+fikk kortet til å merge på eldre HEAD (#1499/#1513 → opprydnings-PR #1515).
+
+`gh pr ready` er det eksplisitte «jeg er ferdig»-signalet: ready-flippen fyrer kortet
+via `pull_request: ready_for_review`-triggeren, og siden flippen kan komme rett etter
+siste push, venter decide på at checkene lander (samme mekanisme som dispatch/tvilling).
+Nattkjører-drafts følger samme flyt: de ligger kortløse til hovedchatten kjører
+`gh pr ready`.
+
+**Unntak — mottakeren (knappen/#1124):** trykker eieren en merge-knapp på en draft
+(f.eks. fra morgenbriefen), av-drafter mottakeren fortsatt før merge — et eier-trykk ER
+menneskeporten. Økt-disiplinen (draft ved opprettelse, ready som siste handling) står i
+`docs/forge-workflow.md` («Draft-først i økt-PR-flyten»).
 
 ## Del B — skjermbilder av GUI-endringer
 
@@ -172,6 +197,8 @@ Går workflowen rød, åpner den (dedupet) et `CI-vakt:`-issue. Diagnose:
 
 - **Kort kommer ikke:** sjekk `Post merge-kort`-loggen. Vanligst: Discord HTTP 401
   (token utløpt/feil) eller 403/404 (bot ikke i kanalen / feil `DISCORD_CHANNEL_ID`).
+- **Kort kommer ikke for en draft-PR:** forventet (#1516) — draft = «økta jobber
+  fortsatt», decide noop-er. Kortet kommer når PR-en markeres ready (`gh pr ready`).
 - **Dobbelt kort:** labelen `discord:merge-kort` ble ikke lagt (se labeling-loggen)
   — sjekk `issues: write`-tilgang.
 - **Kort for PR uten grønn CI:** skal ikke skje (`classifyChecks` gater); rapportér
