@@ -557,7 +557,6 @@
       }
     },
     "cupSetup": {
-      "noCupFormats": "Ingen cup-kvalifiserte formater konfigurert — kontakt admin.",
       "clubBanner": "Denne cupen settes opp for <strong>{clubName}</strong>. Bare medlemmer i klubben kan være med.",
       "cupNameLabel": "Cup-navn",
       "cupNamePlaceholder": "Tørny Cup 2026 — Sommer-runde",
@@ -566,9 +565,6 @@
       "team1Placeholder": "Team Skog",
       "team2Label": "Lag 2",
       "team2Placeholder": "Team Sjø",
-      "allowedFormatsLegend": "Tillatte match-formater",
-      "allowedFormatsHint": "Velg hvilke spillformater som er lov i matchene. Du legger til de enkelte matchene etter cupen er opprettet.",
-      "atLeastOneFormatError": "Velg minst ett match-format.",
       "pointsWeightLegend": "Poeng-vekting",
       "pointsWeightHint": "Valgfritt. Endrer du fra standard 1 poeng for seier / 0,5 for delt, skjules «først til X»-varslet. Vinneren avgjøres i stedet når cupen avsluttes.",
       "winPointsLabel": "Poeng for seier",
@@ -4623,8 +4619,7 @@
       "rosterHeading": "Spillerliste",
       "matchesHeading": "Matcher",
       "emptyRoster": "Ingen spillere. Spillerlisten fylles fra matchene.",
-      "emptyMatches": "Ingen matcher ennå. Trykk «Generer matcher» over for å legge til kamper.",
-      "generateButton": "Generer matcher",
+      "emptyMatches": "Ingen matcher ennå. Åpne «Fordel & generer» over for å sette opp kampene.",
       "openLeaderboard": "Åpne offentlig leaderboard →",
       "matchesSummary": "Først til {points} poeng · {finished} av {total} matcher spilt",
       "matchTied": "Delt (AS)",
@@ -4655,7 +4650,17 @@
       "matchesSummaryPending": "Poengmål klart ved start · {finished} av {total} matcher spilt",
       "headerSubtitlePendingActive": "{team1} mot {team2} · vinneren avgjøres ved avslutning",
       "matchesSummaryPendingActive": "Vinneren avgjøres ved avslutning · {finished} av {total} matcher spilt",
-      "sideAwardPoints": "Sidepoeng: {points}"
+      "sideAwardPoints": "Sidepoeng: {points}",
+      "doors": {
+        "heading": "Sett opp cupen",
+        "oppsettTitle": "Oppsett",
+        "oppsettSubtitle": "{course} · {tee}",
+        "oppsettEmpty": "Bane og format er ikke satt ennå",
+        "spillereTitle": "Spillere",
+        "spillereSubtitle": "{count, plural, =0 {Ingen påmeldt ennå} one {# spiller påmeldt} other {# spillere påmeldt}}",
+        "genererTitle": "Fordel & generer",
+        "genererSubtitle": "{count, plural, =0 {Ingen matcher ennå} one {# match laget} other {# matcher laget}}"
+      }
     },
     "generate": {
       "pageTitle": "Generer matcher",

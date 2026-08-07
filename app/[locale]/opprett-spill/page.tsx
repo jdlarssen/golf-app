@@ -21,7 +21,6 @@ import { getRoleContext } from '@/lib/admin/auth';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
 import {
   getFormatsForIntent,
-  getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
@@ -354,13 +353,11 @@ async function GameFormBody({
     kompisFormats,
     klubbFormats,
     soloFormats,
-    cupEligibleFormats,
     formatGuide,
   ] = await Promise.all([
     getFormatsForIntent('kompis'),
     getFormatsForIntent('klubb'),
     getFormatsForIntent('solo'),
-    getCupEligibleFormats(),
     getFormatGuideEntries(),
   ]);
   const [{ courses, players, clubs }, friendPlayers, clubMembers, isClubAdmin] =
@@ -406,7 +403,6 @@ async function GameFormBody({
         klubb: klubbFormats,
         solo: soloFormats,
       }}
-      cupEligibleFormats={cupEligibleFormats}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
       // #892/#1007: eksplisitt intent (cup) vinner; en ?klubb=-dyplenke eller

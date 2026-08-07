@@ -557,7 +557,6 @@
       }
     },
     "cupSetup": {
-      "noCupFormats": "No cup-eligible formats configured — contact admin.",
       "clubBanner": "This cup is being set up for <strong>{clubName}</strong>. Only club members can participate.",
       "cupNameLabel": "Cup name",
       "cupNamePlaceholder": "Tørny Cup 2026 — Summer round",
@@ -566,9 +565,6 @@
       "team1Placeholder": "Team Forest",
       "team2Label": "Team 2",
       "team2Placeholder": "Team Lake",
-      "allowedFormatsLegend": "Allowed match formats",
-      "allowedFormatsHint": "Choose which game formats are permitted in the matches. You add the individual matches after the cup is created.",
-      "atLeastOneFormatError": "Choose at least one match format.",
       "pointsWeightLegend": "Points weighting",
       "pointsWeightHint": "Optional. Change from the standard 1 point for a win / 0.5 for a tie and the \"first to X\" banner is hidden — the winner is decided instead when the cup finishes.",
       "winPointsLabel": "Points for a win",
@@ -4623,8 +4619,7 @@
       "rosterHeading": "Team roster",
       "matchesHeading": "Matches",
       "emptyRoster": "No players yet. The roster is built from the matches.",
-      "emptyMatches": "No matches yet. Tap «Generate matches» above to add the fixtures.",
-      "generateButton": "Generate matches",
+      "emptyMatches": "No matches yet. Open «Assign & generate» above to set up the fixtures.",
       "openLeaderboard": "Open public leaderboard →",
       "matchesSummary": "First to {points} points · {finished} of {total} matches played",
       "matchTied": "Halved (AS)",
@@ -4655,7 +4650,17 @@
       "matchesSummaryPending": "Points target set at start · {finished} of {total} matches played",
       "headerSubtitlePendingActive": "{team1} vs {team2} · the winner is decided when the cup finishes",
       "matchesSummaryPendingActive": "Winner decided at finish · {finished} of {total} matches played",
-      "sideAwardPoints": "Side points: {points}"
+      "sideAwardPoints": "Side points: {points}",
+      "doors": {
+        "heading": "Set up the cup",
+        "oppsettTitle": "Setup",
+        "oppsettSubtitle": "{course} · {tee}",
+        "oppsettEmpty": "Course and format not set yet",
+        "spillereTitle": "Players",
+        "spillereSubtitle": "{count, plural, =0 {No one signed up yet} one {# player signed up} other {# players signed up}}",
+        "genererTitle": "Assign & generate",
+        "genererSubtitle": "{count, plural, =0 {No matches yet} one {# match created} other {# matches created}}"
+      }
     },
     "generate": {
       "pageTitle": "Generate matches",

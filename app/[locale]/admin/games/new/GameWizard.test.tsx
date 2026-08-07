@@ -3,10 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { GameWizard } from './GameWizard';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
-import type {
-  FormatForIntent,
-  CupEligibleFormat,
-} from '@/lib/formats/getFormatsForIntent';
+import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 
 // #928: tee-off 7 days out so the past-tee-off guard never rejects these
 // fixtures. Computed relative to now so it can't go stale like a hard-coded date.
@@ -93,11 +90,6 @@ const FORMATS_BY_INTENT = {
   ],
 };
 
-const CUP_ELIGIBLE: CupEligibleFormat[] = [
-  { slug: 'singles_matchplay', icon_key: 'singles_matchplay' },
-  { slug: 'fourball_matchplay', icon_key: 'fourball_matchplay' },
-];
-
 // #1379: opprett-actionene returnerer nå et resultat i stedet for å redirecte
 // ved feil. `{ error: '' }` er «alt gikk bra»-formen.
 const NO_OP = async (): Promise<CreateGameResult> => ({ error: '' });
@@ -128,7 +120,6 @@ function renderWizard({
       }}
       initialValues={initialValues}
       formatsByIntent={FORMATS_BY_INTENT}
-      cupEligibleFormats={CUP_ELIGIBLE}
       friendPlayerIds={friendPlayerIds}
     />,
   );
@@ -374,7 +365,6 @@ function renderWizardWithNines() {
       players={EIGHT_PLAYERS}
       mode={{ kind: 'create', createDraftAction: NO_OP, createAndPublishAction: NO_OP }}
       formatsByIntent={FORMATS_BY_INTENT_WITH_NINES}
-      cupEligibleFormats={CUP_ELIGIBLE}
     />,
   );
 }
@@ -830,7 +820,7 @@ describe('GameWizard — #1065 allowance + kontingent overlever flytting til ste
 });
 
 describe('GameWizard — Cup-intent flow', () => {
-  it('rendrer CupSetup (lag-navn + multi-select) på steg 2 med intent=cup', () => {
+  it('rendrer CupSetup (cup-navn + lag-navn) på steg 2 med intent=cup', () => {
     renderWizard();
     fireEvent.click(screen.getByRole('radio', { name: /^cup$/i }));
     clickNext();
@@ -840,16 +830,11 @@ describe('GameWizard — Cup-intent flow', () => {
     expect(screen.getByLabelText(/cup-navn/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/lag 1/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/lag 2/i)).toBeInTheDocument();
-    // Multi-select for cup-eligible formats. Henter ved id-attributt fordi
-    // /matchplay/-regex matcher to checkboxer (Matchplay + Fourball matchplay).
-    const singlesCheckbox = document.getElementById(
-      'cup_format_singles_matchplay',
-    ) as HTMLInputElement;
-    const fourballCheckbox = document.getElementById(
-      'cup_format_fourball_matchplay',
-    ) as HTMLInputElement;
-    expect(singlesCheckbox).toBeChecked();
-    expect(fourballCheckbox).toBeChecked();
+    // #1472: format-multiselecten er fjernet fra opprettelsen (format velges i
+    // Oppsett-rommet etterpå) — ingen `cup_format_*`-checkboxer her lenger.
+    expect(
+      document.querySelector('input[id^="cup_format_"]'),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /opprett cup/i })).toBeInTheDocument();
   });
 });

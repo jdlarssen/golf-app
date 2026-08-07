@@ -38,10 +38,7 @@ import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import type { Intent } from '@/lib/wizard/intent';
 import { selectablePlayers } from '@/lib/wizard/selectablePlayers';
-import type {
-  FormatForIntent,
-  CupEligibleFormat,
-} from '@/lib/formats/getFormatsForIntent';
+import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { PRIZE_SLOTS, prizeFieldName } from '@/lib/games/prizes';
 import { IntentSelector } from './IntentSelector';
@@ -88,8 +85,6 @@ type Props = {
   // Format-katalog forhåndshentet i page.tsx (server-component) for hver av
   // de tre ikke-cup-intents. Step 2 leser denne basert på state.intent.
   formatsByIntent: Record<'kompis' | 'klubb' | 'solo', FormatForIntent[]>;
-  // Cup-eligible formats brukt av CupSetup-multi-select. Også forhåndshentet.
-  cupEligibleFormats: CupEligibleFormat[];
   // #442: klubber brukeren er medlem av — for «Hvem er dette for?»-velgeren.
   // Tom liste = velgeren vises ikke. Alltid trygt å sende tom liste.
   clubs?: ClubOption[];
@@ -151,7 +146,6 @@ export function GameWizard({
   initialValues,
   initialIntent,
   formatsByIntent,
-  cupEligibleFormats,
   clubs = [],
   defaultGroupId,
   friendPlayerIds = [],
@@ -423,7 +417,7 @@ export function GameWizard({
 
         {step === 2 && (
           <section className="space-y-6">
-            <CupSetup cupEligibleFormats={cupEligibleFormats} />
+            <CupSetup />
           </section>
         )}
 
