@@ -1783,28 +1783,40 @@ export type Database = {
       tournament_side_awards: {
         Row: {
           created_at: string
+          gir_max_per_team: number | null
+          gir_team1_count: number | null
+          gir_team2_count: number | null
           hole_number: number
           id: string
           kind: string
           points: number
+          slot: number
           tournament_id: string
           winner_user_id: string | null
         }
         Insert: {
           created_at?: string
+          gir_max_per_team?: number | null
+          gir_team1_count?: number | null
+          gir_team2_count?: number | null
           hole_number: number
           id?: string
           kind: string
           points: number
+          slot?: number
           tournament_id: string
           winner_user_id?: string | null
         }
         Update: {
           created_at?: string
+          gir_max_per_team?: number | null
+          gir_team1_count?: number | null
+          gir_team2_count?: number | null
           hole_number?: number
           id?: string
           kind?: string
           points?: number
+          slot?: number
           tournament_id?: string
           winner_user_id?: string | null
         }
