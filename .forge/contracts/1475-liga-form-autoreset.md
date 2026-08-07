@@ -9,7 +9,8 @@ Runde-2-evalueringen av #1397 (PR #1474) fant at `CreateLigaForm.tsx` har nøyak
 - **Bevist fiks-mønster i repoet (samme dag):** CupSetup, commit `fb242957` på PR #1474 — `onSubmit` med `e.preventDefault()`, bygg `FormData` fra `e.currentTarget` FØR transitionen, dispatch `formAction(formData)` INNE i `startTransition`; `action`-attributtet står igjen som pre-hydrerings-fallback. Verifisert ende-til-ende på staging.
 - CreateLigaForm har allerede `data-testid="liga-create-form"` (linje 138); feilbanneret (linje 734) mangler `testId` — Banner-komponenten støtter proppen.
 - Server-valideringens rekkefølge (lib/league/actions.ts): `name` → `dates` (`seasonEnd < seasonStart`, linje 94) → … Enkleste staging-repro: gyldig navn + sluttdato før startdato (native `required` blokkerer tom-submit klient-side).
-- Ingen `useFormStatus`-pending-UI i skjemaet — manuell dispatch knekker ingenting.
+- ~~Ingen `useFormStatus`-pending-UI i skjemaet~~ **KORRIGERT under bygging (I1):** skjemaet bruker `SubmitButton`, som leser `useFormStatus().pending` — og useFormStatus ser IKKE manuelle dispatches. Fiksen bytter derfor til `useActionState`s tredje tuple-element (`isPending`) + delte `Button` med `pending`/`pendingLabel` (samme API som resten av appen) så pending-state bevares.
+- jsdom-eksperimentet (Design §3) REPRODUSERTE wipe-en: testen var rød mot u-fikset kode («expected '' to be 'Torsdagsligaen'») — regresjonstesten beholdes.
 
 ## Prior Decisions
 

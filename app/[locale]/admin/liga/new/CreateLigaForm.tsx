@@ -1,9 +1,9 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
-import { useActionState, useMemo, useState } from 'react';
+import { startTransition, useActionState, useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { SubmitButton } from '@/components/ui/SubmitButton';
+import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { createLeagueDraft, type LeagueActionError } from '@/lib/league/actions';
@@ -63,7 +63,7 @@ export function CreateLigaForm({
   const t = useTranslations('liga.create');
   const locale = useLocale() as AppLocale;
 
-  const [state, formAction] = useActionState(
+  const [state, formAction, isPending] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) => {
       return createLeagueDraft(formData) as Promise<LeagueActionError>;
     },
@@ -135,7 +135,23 @@ export function CreateLigaForm({
   }
 
   return (
-    <form action={formAction} data-testid="liga-create-form" className="space-y-6">
+    <form
+      action={formAction}
+      // #1475 (samme figur som #1397/CupSetup): React 19 auto-resetter formen
+      // når en `action`-innsending fullfører — native reset tømmer de
+      // ukontrollerte feltene idet feilbanneret vises. preventDefault +
+      // manuell dispatch i en transition hopper over auto-reset-en;
+      // `action`-attributtet står igjen som fallback før hydrering. Pending
+      // leses fra useActionState (isPending) siden useFormStatus ikke ser
+      // manuelle dispatches.
+      onSubmit={(e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        startTransition(() => formAction(formData));
+      }}
+      data-testid="liga-create-form"
+      className="space-y-6"
+    >
       {/* Hidden fixed fields */}
       <input type="hidden" name="format" value={format} />
       <input type="hidden" name="group_id" value={groupId ?? ''} />
@@ -731,12 +747,17 @@ export function CreateLigaForm({
 
       {/* Error */}
       {errorMessage && (
-        <Banner tone="error">{errorMessage}</Banner>
+        <Banner tone="error" testId="liga-create-error">{errorMessage}</Banner>
       )}
 
-      <SubmitButton className="w-full" pendingLabel={t('submitPending')}>
+      <Button
+        type="submit"
+        className="w-full"
+        pending={isPending}
+        pendingLabel={t('submitPending')}
+      >
         {t('submitButton')}
-      </SubmitButton>
+      </Button>
     </form>
   );
 }
