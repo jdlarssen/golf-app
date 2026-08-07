@@ -167,6 +167,10 @@ export default async function LeaderboardPage({
     supabase,
     includeReactions: true,
     viewerUserId: userId,
+    // #1488 (K11): non-participants can open finished-game leaderboards, but the
+    // reaction write is RLS-gated to participants — mount the provider inert so
+    // their taps do nothing instead of failing silently.
+    reactionsDisabled: !isParticipant,
   });
 
   // #1020: «Revansje?» in the leaderboard footer area. Same gate as the
