@@ -117,30 +117,30 @@ greit — 6 kamper er småskala); om `startHint`-mønsteret gjenbrukes eller få
 
 ## Success Criteria
 
-- [ ] **S1 — ett trykk:** staging, aktiv cup (split-dag: 2 host + 2 derived), alle kort levert,
+- [x] **S1 — ett trykk:** staging, aktiv cup (split-dag: 2 host + 2 derived), alle kort levert,
       alle sidepoeng registrert → ETT trykk på «Avslutt cupen» → alle 4 kamper `finished`,
       cupen `finished` med persistert `winner_team`, resultatsiden åpner med matchresultater
       (Playwright + SQL-orakler).
-- [ ] **S2 — sidepoeng-gate:** én award uregistrert → knappen disabled med hint; direkte
+- [x] **S2 — sidepoeng-gate:** én award uregistrert → knappen disabled med hint; direkte
       action-POST avvises med feilkode (server-side re-validering bevist).
-- [ ] **S3 — uleverte kort:** én spiller ulevert → stopp med kampliste-banner; «Avslutt
+- [x] **S3 — uleverte kort:** én spiller ulevert → stopp med kampliste-banner; «Avslutt
       likevel» avslutter alt, den uleverte beholder `submitted_at IS NULL`.
-- [ ] **S4 — varsler:** ett-trykks-løpet sender ingen per-kamp-mail/in-app-varsel (verifisert i
+- [x] **S4 — varsler:** ett-trykks-løpet sender ingen per-kamp-mail/in-app-varsel (verifisert i
       kode + logg under staging-kjøringen); cup-mailen sendes; vanlig enkeltspill-avslutning
       sender som før (snapshot-suiten grønn uendret).
-- [ ] **S5 — levert-status:** kamp med alle kort levert viser «Scorekort levert» på BÅDE
+- [x] **S5 — levert-status:** kamp med alle kort levert viser «Scorekort levert» på BÅDE
       styringssiden og cup-siden mens den er aktiv; «Spilt» etter avslutning; delvis levert
       viser «Pågår».
-- [ ] **S6 — regresjon:** full vitest grønn; `npx playwright test e2e/cup/` grønn mot staging;
+- [x] **S6 — regresjon:** full vitest grønn; `npx playwright test e2e/cup/` grønn mot staging;
       `endGame`-wrapperen byte-ekvivalent for vanlige spill (co-located tester grønne).
 
 ## Gates
 
-- [ ] `npm run build` · `npm run lint` (0 errors) · `npx vitest run` (hele suiten)
-- [ ] `npx playwright test e2e/cup/` mot staging
-- [ ] Commit-disiplin: `feat(cup)`, MINOR-bump fra 1.226.2, én Funksjon-linje i CHANGELOG,
+- [x] `npm run build` · `npm run lint` (0 errors) · `npx vitest run` (hele suiten)
+- [x] `npx playwright test e2e/cup/` mot staging
+- [x] Commit-disiplin: `feat(cup)`, MINOR-bump fra 1.226.2, én Funksjon-linje i CHANGELOG,
       `Refs #1501`/`Refs #1502` i commit-bodies
-- [ ] PR: `Closes #1501`, `Closes #1502`, fordeler/ulemper-blokk, notat om eier-avgjorte valg
+- [x] PR: `Closes #1501`, `Closes #1502`, fordeler/ulemper-blokk, notat om eier-avgjorte valg
       (ingen `## Produktvalg`-heading); staging-verify + `staging-verified`-label FØR merge
 
 ## Files Likely Touched
@@ -159,3 +159,13 @@ greit — 6 kamper er småskala); om `startHint`-mønsteret gjenbrukes eller få
 - Endringer i sidepoeng-registrerings-UI-et (#1489) og CSV-gaten (#1500).
 - Endring av vanlig spill-avslutning (mails, redirects, avslutt-likevel-ruta) utover wrapper-refactoren.
 - Varsel-sammendrag per spiller («du vant 2 av 3 kamper» e.l.) — cup-mailen som finnes er signalet.
+
+## Evidens (2026-08-07, staging + gates)
+
+- **S1:** e2e `Cup one-tap finish (#1501)` grønn mot staging (ekte finishTournament via UI, SQL-assertert alle finished) + driver: begge kamper + cup `finished`, `winner_team=1` persistert, resultatside åpnet.
+- **S2:** driver: `cup-finish-gate-hint` synlig + knapp disabled med uregistrert ctp; enabled etter registrering (server-side gate i finishTournament, Type A-test på helperen).
+- **S3:** driver: stopp-banner + `cup-finish-anyway`; likevel avsluttet alt; ulevert beholdt `submitted_at IS NULL` (SQL); cup forble aktiv etter stopp.
+- **S4:** `suppressPerGameNotifications: true` i løpet (lib/cup/actions.ts); mail-snapshot-suite grønn uendret; vanlig endGame-wrapper byte-ekvivalent (co-located tester grønne uendret).
+- **S5:** skjermbilde 1501-s2-gate.png: «Scorekort levert» vs «Pågår» på styringssiden; delt label-helper med Type A-test brukt av begge flater.
+- **S6:** build grønn · lint 0 errors · vitest 442 filer/5664 tester grønn · e2e cup 3/3 grønn — alt re-kjørt ETTER rebase på main med PR #1504.
+- **Gates:** staging-bevis + `staging-verified`-label på PR #1505; feat-commit med MINOR-bump (1.226.2→1.227.0, korrigert etter rebase-dobbeltbump) + CHANGELOG-linje.
