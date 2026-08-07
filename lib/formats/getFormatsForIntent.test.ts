@@ -22,7 +22,7 @@ vi.mock('next/cache', () => ({
   ) => fn,
 }));
 
-import { getFormatsForIntent, getCupEligibleFormats } from './getFormatsForIntent';
+import { getFormatsForIntent } from './getFormatsForIntent';
 
 beforeEach(() => {
   fromMock.mockReset();
@@ -31,17 +31,6 @@ beforeEach(() => {
 // Helper to build a chainable mock that resolves to the given result.
 // The chain is .select().eq().eq().eq().order().order() — returns thenable.
 function buildIntentChain(result: ChainResult) {
-  const chain = {
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    then: (onResolved: (r: ChainResult) => unknown) =>
-      Promise.resolve(result).then(onResolved),
-  };
-  return chain;
-}
-
-function buildCupChain(result: ChainResult) {
   const chain = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -141,45 +130,5 @@ describe('getFormatsForIntent', () => {
     expect(result).toHaveLength(1);
     expect(result[0].slug).toBe('stableford');
     expect(result[0].icon_key).toBe('stableford');
-  });
-});
-
-describe('getCupEligibleFormats', () => {
-  it('returner liste over cup-eligible formats', async () => {
-    fromMock.mockImplementation(() =>
-      buildCupChain({
-        data: [
-          { slug: 'foursomes_matchplay', icon_key: 'foursomes_matchplay' },
-          { slug: 'singles_matchplay', icon_key: 'singles_matchplay' },
-        ],
-        error: null,
-      }),
-    );
-
-    const result = await getCupEligibleFormats();
-
-    expect(result).toHaveLength(2);
-    expect(result[0].slug).toBe('foursomes_matchplay');
-    expect(fromMock).toHaveBeenCalledWith('formats');
-  });
-
-  it('returner tom array når ingen cup-eligible formats finnes', async () => {
-    fromMock.mockImplementation(() =>
-      buildCupChain({ data: [], error: null }),
-    );
-
-    const result = await getCupEligibleFormats();
-
-    expect(result).toEqual([]);
-  });
-
-  it('kaster feil hvis Supabase-query feiler', async () => {
-    fromMock.mockImplementation(() =>
-      buildCupChain({ data: null, error: { message: 'permission denied' } }),
-    );
-
-    await expect(getCupEligibleFormats()).rejects.toThrow(
-      'Failed to fetch cup-eligible formats',
-    );
   });
 });
