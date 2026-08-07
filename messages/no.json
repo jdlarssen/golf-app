@@ -4779,7 +4779,12 @@
       "kicker": "Resultater",
       "lockedBody": "Resultatene kommer når arrangøren har avsluttet cupen.",
       "winner": "{team} vant",
-      "tied": "Uavgjort"
+      "tied": "Uavgjort",
+      "playerPointsHeading": "Spillerpoeng",
+      "yourPoints": "Dine poeng",
+      "wonAgainst": "Vant mot {opponent} · +{points}",
+      "tiedWith": "Delte med {opponent} · +{points}",
+      "sideContribution": "{kind}, {hole} · +{points}"
     },
     "sideAwards": {
       "heading": "Sidepoeng",

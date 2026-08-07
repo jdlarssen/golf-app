@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.228 · Poengregnskap per spiller</strong></summary>
+
+[#1497](https://github.com/jdlarssen/golf-app/issues/1497) — Cup-resultatsiden viser nå hvor mange poeng hver spiller dro inn. Brett ut en rad for å se kamp for kamp og sidepoengene som ga uttelling, og din egen rad er løftet fram.
+
+↳ /admin/cup · «Åpne cupene»
+</details>
+
+<details>
 <summary><strong>1.227 · Avslutt cupen i ett trykk</strong></summary>
 
 [#1501](https://github.com/jdlarssen/golf-app/issues/1501) — «Avslutt cupen» avslutter nå alle kampene for deg i ett trykk og kårer vinneren, i stedet for at du må innom hver eneste kamp. Mangler noen scorekort, sier appen fra og lar deg avslutte likevel; og et matchkort viser «Scorekort levert» så du ser når en kamp er klar.
