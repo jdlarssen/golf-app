@@ -5,10 +5,13 @@
 # typecheck + test + lint are all BLOCKING (the pre-existing lint errors were
 # cleaned in #692). lint fails on errors only; warnings don't block.
 #
-# Real enforcement is the local pre-push hook (.githooks/pre-push), which runs
-# the same three checks BEFORE a push leaves the machine — GitHub branch
-# protection is Pro-only on private repos, so this CI job is the visible
-# backstop on the PR rather than a hard merge gate.
+# Enforcement is two-layered (#1477): the local pre-push hook
+# (.githooks/pre-push) runs the same three checks BEFORE a push leaves the
+# machine, and branch protection on main requires `verify` + `e2e` + `scan` to
+# be green before ANY merge (enabled 2026-08-07 — the repo going public in
+# July made protection free). Docs-only PRs skip this workflow via the
+# paths-ignore below; ci-docs-noop.yml reports same-named no-op checks on
+# exactly those paths so they aren't stuck on "Expected — waiting".
 name: CI
 
 on:

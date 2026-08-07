@@ -13,10 +13,11 @@
 #      ble ryddet).
 #   3. test (vitest run) — fanger logikk-regresjoner.
 #
-# Hvorfor lokalt: ekte branch protection er paywallet på private gratis-repo
-# (GitHub krever Pro eller offentlig repo). Dette er den gratis erstatningen
-# som hindrer at rød kode i det hele tatt når en PR. CI kjører de samme tre på
-# PR-en som synlig backstop ved merge.
+# Hvorfor lokalt når branch protection finnes (#1477, skrudd på 2026-08-07
+# etter at repoet ble offentlig): protection stopper merge server-side, men
+# først ETTER at CI har brent minutter på en rød kjøring. Denne gaten fanger
+# rødt før pushen i det hele tatt forlater maskinen; main-protection krever
+# deretter grønn verify + e2e + scan før merge.
 #
 # Bevisst UTELATT: e2e (trenger live-env + er treg — kjøres kun i CI via RUN_E2E).
 #
