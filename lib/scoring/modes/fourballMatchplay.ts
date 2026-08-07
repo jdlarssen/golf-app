@@ -21,6 +21,7 @@ import { parFor } from './parResolver';
 import {
   classifyMatchplayHole,
   computeMatchResult,
+  detectMatEm,
 } from './singlesMatchplay';
 import type {
   ScoringContext,
@@ -30,6 +31,7 @@ import type {
   FourballSide,
   FourballSidePlayer,
   FourballPlayerCell,
+  MatchplayMatchResult,
 } from './types';
 
 /**
@@ -146,6 +148,11 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
   let side1Wins = 0;
   let side2Wins = 0;
   let holesPlayed = 0;
+  // Snapshot av mat-em-tidspunktet (første hull der |holesUp| > holesRemaining).
+  // Fanget hull-for-hull via delt `detectMatEm` slik at «X&Y» fryses også når
+  // alle hull i scope tastes inn etter at matchen alt var avgjort (#1458/#1506,
+  // samme regel som singles' #800).
+  let matEmResult: MatchplayMatchResult | null = null;
 
   const holes: FourballHoleRow[] = holesSorted.map((hole) => {
     // Bygg per-spiller-celler for hver side via samme mønster som bestBall:
@@ -201,6 +208,11 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
       holesPlayed += 1;
     }
 
+    // Behold berre det første mat-em-treffet (#1458/#1506).
+    if (matEmResult === null) {
+      matEmResult = detectMatEm(side1Wins - side2Wins, holesPlayed, totalHoles);
+    }
+
     // Per-side par: bruker første partner som side-representant (samme mønster
     // som bestBall for lag-rad). Når begge partnere har samme teeGender
     // (det normale) er resultatet identisk uansett. #240.
@@ -225,7 +237,11 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
 
   const holesUp = side1Wins - side2Wins;
   const holesRemaining = Math.max(0, totalHoles - holesPlayed);
-  const matchResult = computeMatchResult(holesUp, holesPlayed, holesRemaining, totalHoles);
+  // Frosset mat-em-snapshot vinner når matchen vart avgjort undervegs (#1458/
+  // #1506); elles standard computeMatchResult på slutt-aggregata (live / «Nup» /
+  // AS). Aggregata (holesUp/holesPlayed/holesRemaining) beheld full-walk-verdiane.
+  const matchResult =
+    matEmResult ?? computeMatchResult(holesUp, holesPlayed, holesRemaining, totalHoles);
 
   return {
     kind: 'fourball_matchplay',

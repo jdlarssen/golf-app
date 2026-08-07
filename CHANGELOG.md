@@ -1439,8 +1439,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 20 rettinger</strong></summary>
+<summary><strong>August 2026 · 21 rettinger</strong></summary>
 
+- `1.227.2` · [#1458](https://github.com/jdlarssen/golf-app/issues/1458) — Lag-matchplay (greensome, foursomes, fourball m.fl.) som er avgjort før siste hull viser nå «5&4» i stedet for «8up» — samme lukk-ute-form som singles alt hadde.
 - `1.227.1` · [#1500](https://github.com/jdlarssen/golf-app/issues/1500) — Kan du se leaderboardet til en ferdig kamp, kan du nå også laste ned CSV-en — tilskuere fikk før en feilfil i stedet for regnearket.
 - `1.226.3` · [#1503](https://github.com/jdlarssen/golf-app/issues/1503) — Sidepoeng-lista for GIR sier nå hvor mange poeng laget maks kan hente på hullet («maks 4,5 p per lag») i stedet for et antall det var lett å misforstå.
 - `1.218.9` · [#1475](https://github.com/jdlarssen/golf-app/issues/1475) — Samme retting for liga-skjemaet: feiler opprettingen (for eksempel sluttdato før startdato), beholder skjemaet alt du fylte ut i stedet for å tømme seg.

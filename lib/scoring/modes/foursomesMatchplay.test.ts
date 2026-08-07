@@ -599,3 +599,51 @@ describe('compute — empty-shell ved feil spiller-fordeling', () => {
     expect(r.result).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// #1458/#1506: mat-em-snapshot må fryses også når alle hull i scope tastes inn
+// etter at matchen alt er avgjort. Singles fikk denne i #800; foursomes-kjernen
+// manglet den og kalte computeMatchResult kun på slutt-aggregatene → «Xup» der
+// golf-standarden er «X&Y». Speiler singles-suite #800.
+// ---------------------------------------------------------------------------
+
+describe('compute — lukk-ute-form fryses når hull tastes etter avgjørelse (#1458/#1506)', () => {
+  it('«5&4» selv om side 2 vinner hull 15-18: mat-em på hull 14 (5 up, 4 igjen)', () => {
+    // Side 1 vinner hull 1-5 → 5 up. Hull 6-14 tied. Etter hull 14:
+    // played=14, remaining=4, |5|>4 → mat-em «5&4», avgjort på hull 14.
+    // Hull 15-18 tastes inn og VINNES av side 2 → sluttaggregat holesUp=1.
+    // Uten fix: computeMatchResult(1, 18, 0, 18) → «1up».
+    // Med fix: frosset mat-em-snapshot → «5&4» (holesUp=1 beviser frysingen).
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 18; h++) {
+      if (h <= 5) {
+        // side 1 vinner (kaptein a1 gross 3, kaptein b1 gross 5)
+        scores.push({ userId: 'a1', holeNumber: h, gross: 3 });
+        scores.push({ userId: 'b1', holeNumber: h, gross: 5 });
+      } else if (h <= 14) {
+        // tied
+        scores.push({ userId: 'a1', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'b1', holeNumber: h, gross: 4 });
+      } else {
+        // side 2 vinner hull 15-18
+        scores.push({ userId: 'a1', holeNumber: h, gross: 5 });
+        scores.push({ userId: 'b1', holeNumber: h, gross: 3 });
+      }
+    }
+    const ctx = makeCtx({
+      players: fourSides(),
+      holes: par4Holes(18),
+      scores,
+      allowancePct: 0, // gross-only, CH 0 → net = gross
+    });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(18);
+    expect(r.holesUp).toBe(1); // sluttaggregat 5 − 4 = 1 (beviser frysing, ikke slutt-format)
+    expect(r.result).not.toBeNull();
+    expect(r.result!.formatted).toBe('5&4');
+    expect(r.result!.winner).toBe('side1');
+    expect(r.result!.decidedAtHole).toBe(14);
+    expect(r.result!.remainingAtDecision).toBe(4);
+    expect(r.result!.marginUp).toBe(5);
+  });
+});

@@ -636,3 +636,54 @@ describe('compute — defensiv empty-shell ved feil spiller-fordeling', () => {
     expect(a1?.effectiveHandicap).toBe(18);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #1458/#1506: fourball har sin egen hull-walk (best-ball per side) og manglet
+// samme mat-em-frysing som singles fikk i #800. Uten den formaterer walken kun
+// slutt-aggregatene → «Xup» der golf-standarden er «X&Y».
+// ---------------------------------------------------------------------------
+
+describe('compute — lukk-ute-form fryses i fourballs egen walk (#1458/#1506)', () => {
+  it('«5&4» selv om side 2 vinner hull 15-18: mat-em på hull 14 (5 up, 4 igjen)', () => {
+    // Side 1 vinner hull 1-5 (beste netto 3 mot 5), hull 6-14 tied → 5 up / 4
+    // igjen etter hull 14 = mat-em «5&4». Hull 15-18 vinnes av side 2 →
+    // sluttaggregat holesUp=1. Uten fix: «1up». Med fix: frosset «5&4».
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 18; h++) {
+      if (h <= 5) {
+        // side 1 best = 3, side 2 best = 5 → side 1 vinner
+        scores.push({ userId: 'a1', holeNumber: h, gross: 3 });
+        scores.push({ userId: 'a2', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'b1', holeNumber: h, gross: 5 });
+        scores.push({ userId: 'b2', holeNumber: h, gross: 5 });
+      } else if (h <= 14) {
+        // alle par → tied
+        scores.push({ userId: 'a1', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'a2', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'b1', holeNumber: h, gross: 4 });
+        scores.push({ userId: 'b2', holeNumber: h, gross: 4 });
+      } else {
+        // side 2 best = 3, side 1 best = 5 → side 2 vinner
+        scores.push({ userId: 'a1', holeNumber: h, gross: 5 });
+        scores.push({ userId: 'a2', holeNumber: h, gross: 5 });
+        scores.push({ userId: 'b1', holeNumber: h, gross: 3 });
+        scores.push({ userId: 'b2', holeNumber: h, gross: 4 });
+      }
+    }
+    const ctx = makeCtx({
+      players: fourSides(),
+      holes: par4Holes(18),
+      scores,
+      allowancePct: 0, // gross-only, CH 0 → net = gross
+    });
+    const r = compute(ctx);
+    expect(r.holesPlayed).toBe(18);
+    expect(r.holesUp).toBe(1); // sluttaggregat 5 − 4 = 1 (beviser frysing)
+    expect(r.result).not.toBeNull();
+    expect(r.result!.formatted).toBe('5&4');
+    expect(r.result!.winner).toBe('side1');
+    expect(r.result!.decidedAtHole).toBe(14);
+    expect(r.result!.remainingAtDecision).toBe(4);
+    expect(r.result!.marginUp).toBe(5);
+  });
+});
