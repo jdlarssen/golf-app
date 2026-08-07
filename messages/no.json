@@ -2989,6 +2989,7 @@
     "errors": {
       "rate_limited": "Du har bedt om mange koder på kort tid. Vent et kvarter og prøv igjen.",
       "rate_limited_minute": "Du kan be om ny kode om ett minutt.",
+      "rate_limited_quota": "Vi får ikke sendt flere koder akkurat nå. Prøv igjen senere.",
       "user_not_found": "Denne mailen er ikke registrert. Be admin om en invitasjon.",
       "invite_expired": "Invitasjonen din er utløpt. Be arrangøren om å sende en ny.",
       "disposable_email": "Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.",

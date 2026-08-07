@@ -39,6 +39,9 @@ const KNOWN_ERROR_CODES = new Set([
   // #1347: our own 15-minute bucket vs Supabase's 60-second OTP throttle —
   // two very different waits, so they carry two codes and two messages.
   'rate_limited_minute',
+  // #1434: the project-wide mail quota — no mail was sent, so the copy
+  // promises nothing about a code being on its way.
+  'rate_limited_quota',
   'user_not_found',
   'invite_expired',
   'disposable_email',
