@@ -5,9 +5,10 @@ import { getGameContext } from './gameContext';
 
 /**
  * When a game belongs to a cup (`games.tournament_id` set), surface a link to
- * the public cup leaderboard so a participating player can reach the cup
- * standing straight from the match — not only via a direct URL (#347, part of
- * the «én vei til rom»-umbrella #344). Self-fetches like the other sections
+ * the public cup page so a participating player can reach the cup straight from
+ * the match — not only via a direct URL (#347, part of the «én vei til
+ * rom»-umbrella #344). The cup page shows the matches, not the standing (#1468),
+ * so the copy says «Se cupen», not «Se cup-stillingen». Self-fetches like the other sections
  * here, so it streams behind Suspense and the shared `getGameWithPlayers`
  * cache helper stays untouched. Returns null for non-cup games and for cups
  * that no longer exist (so we never link to a deleted cup → 404).

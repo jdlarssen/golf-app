@@ -13,7 +13,6 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
-import { isTeamMatchGameMode } from '@/lib/cup/computeCupLeaderboard';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
 import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
 
@@ -292,42 +291,26 @@ export async function CupManagement({
         </div>
       )}
 
-      {/* Master-leaderboard-preview */}
+      {/* Status-kort. Totaler + sidepoeng skjules her og på cup-siden (#1468) —
+          resultatet bor på den låste resultatsiden. «X av N matcher spilt»
+          består (fremdrift, ikke resultat). To dører: cup-siden og
+          resultatsiden (samme låse-oppførsel som for spillerne). */}
       <Card className="mb-5">
-        <div className="grid grid-cols-2 gap-3 text-center">
-          <div>
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              {tournament.team_1_name}
-            </p>
-            <p className="font-serif text-4xl tabular-nums text-primary mt-1">
-              {formatPoints(leaderboard.team1Points)}
-            </p>
-          </div>
-          <div>
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              {tournament.team_2_name}
-            </p>
-            <p className="font-serif text-4xl tabular-nums text-primary mt-1">
-              {formatPoints(leaderboard.team2Points)}
-            </p>
-          </div>
-        </div>
-        <p className="text-center text-xs text-muted mt-3">
+        <p className="text-center text-xs text-muted">
           {cupMatchesSummary(tournament, leaderboard, t)}
         </p>
-        {snapshot.sideAwards.length > 0 && (
-          <p className="text-center text-xs text-muted mt-1 tabular-nums">
-            {t('manage.sideAwardPoints', {
-              points: `${formatPoints(leaderboard.sideAwardPoints.team1)}–${formatPoints(leaderboard.sideAwardPoints.team2)}`,
-            })}
-          </p>
-        )}
-        <div className="mt-3 text-center">
+        <div className="mt-3 flex flex-col items-center gap-2">
           <SmartLink
             href={`/cup/${tournamentId}`}
             className="text-xs text-primary underline-offset-2 hover:underline"
           >
-            {t('manage.openLeaderboard')}
+            {t('manage.openCupPage')}
+          </SmartLink>
+          <SmartLink
+            href={`/cup/${tournamentId}/resultater`}
+            className="text-xs text-primary underline-offset-2 hover:underline"
+          >
+            {t('manage.openResults')}
           </SmartLink>
         </div>
       </Card>
@@ -438,7 +421,14 @@ export async function CupManagement({
         ) : (
           <ul className="space-y-2">
             {leaderboard.matches.map((m) => {
-              const isTeamFormat = isTeamMatchGameMode(m.gameMode);
+              // Resultater bor på resultatsiden (#1468) — her kun kampene og en
+              // nøytral status. Ferdig match viser «Spilt», ikke poeng.
+              const statusLabel =
+                m.status === 'finished'
+                  ? t('public.matchPlayed')
+                  : m.status === 'active'
+                    ? t('public.matchInProgress')
+                    : t('public.matchDraft');
               const card = (
                 <Card>
                   <div className="flex items-start justify-between gap-3">
@@ -451,39 +441,22 @@ export async function CupManagement({
                         <span className="text-muted">{t('manage.mot')}</span>{' '}
                         {m.team2PlayerName}
                       </p>
-                      {m.result && (
-                        <p className="text-xs text-muted mt-1">
-                          {m.result.winnerSide === 'tied'
-                            ? t('manage.matchTied')
-                            : m.result.winnerSide === 1
-                              ? `${m.result.formatted} til ${
-                                  isTeamFormat
-                                    ? tournament.team_1_name
-                                    : m.team1PlayerName
-                                }`
-                              : `${m.result.formatted} til ${
-                                  isTeamFormat
-                                    ? tournament.team_2_name
-                                    : m.team2PlayerName
-                                }`}
-                        </p>
-                      )}
                     </div>
-                    <div className="text-right shrink-0 font-serif text-lg tabular-nums text-primary">
-                      {formatPoints(m.pointsTeam1)}–{formatPoints(m.pointsTeam2)}
+                    <div className="shrink-0 text-right">
+                      <p className="text-xs text-muted">{statusLabel}</p>
                     </div>
                   </div>
                 </Card>
               );
-              // Admin kan bore ned i hver match (full game-admin); klubb-varianten
-              // viser dem som info-kort (ingen admin-chrome-lekkasje).
+              // Admin borer ned i full game-admin; klubb-varianten lenker til
+              // kampens eget leaderboard (#1456) i stedet for et rent info-kort.
               return (
                 <li key={m.gameId}>
-                  {isClub ? (
-                    card
-                  ) : (
-                    <SmartLink href={`/admin/games/${m.gameId}`}>{card}</SmartLink>
-                  )}
+                  <SmartLink
+                    href={isClub ? `/games/${m.gameId}/leaderboard` : `/admin/games/${m.gameId}`}
+                  >
+                    {card}
+                  </SmartLink>
                 </li>
               );
             })}

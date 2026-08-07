@@ -1858,7 +1858,7 @@
       "finishGame": "Avslutt spillet",
       "finishGameHint": "Du arrangerer spillet. Lås det og åpne leaderboardet for alle.",
       "gameNotStarted": "Spillet er ikke startet ennå.",
-      "cupStandings": "Se cup-stillingen",
+      "cupStandings": "Se cupen",
       "playersComingSoon": "Spillere kommer.",
       "teamLabel2": "Lag {number}",
       "youLabel": "DEG",
@@ -4620,9 +4620,9 @@
       "matchesHeading": "Matcher",
       "emptyRoster": "Ingen spillere. Spillerlisten fylles fra matchene.",
       "emptyMatches": "Ingen matcher ennå. Åpne «Fordel & generer» over for å sette opp kampene.",
-      "openLeaderboard": "Åpne offentlig leaderboard →",
+      "openCupPage": "Åpne cup-siden →",
+      "openResults": "Se resultatsiden →",
       "matchesSummary": "Først til {points} poeng · {finished} av {total} matcher spilt",
-      "matchTied": "Delt (AS)",
       "mot": "mot",
       "unknownPlayer": "Ukjent spiller",
       "startButton": "Start cupen",
@@ -4650,7 +4650,6 @@
       "matchesSummaryPending": "Poengmål klart ved start · {finished} av {total} matcher spilt",
       "headerSubtitlePendingActive": "{team1} mot {team2} · vinneren avgjøres ved avslutning",
       "matchesSummaryPendingActive": "Vinneren avgjøres ved avslutning · {finished} av {total} matcher spilt",
-      "sideAwardPoints": "Sidepoeng: {points}",
       "doors": {
         "heading": "Sett opp cupen",
         "oppsettTitle": "Oppsett",
@@ -4764,7 +4763,16 @@
       "pointsPendingActive": "Poeng er vektet — vinneren avgjøres når cupen avsluttes",
       "sideAwardPoints": "Sidepoeng: {points}",
       "matchInProgress": "Pågår",
-      "matchDraft": "Utkast"
+      "matchDraft": "Utkast",
+      "matchPlayed": "Spilt",
+      "resultsDoor": "Se resultatene",
+      "resultsPending": "Resultatene kommer når cupen avsluttes"
+    },
+    "results": {
+      "kicker": "Resultater",
+      "lockedBody": "Resultatene kommer når arrangøren har avsluttet cupen.",
+      "winner": "{team} vant",
+      "tied": "Uavgjort"
     },
     "sideAwards": {
       "heading": "Sidepoeng",

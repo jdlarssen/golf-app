@@ -1858,7 +1858,7 @@
       "finishGame": "Finish game",
       "finishGameHint": "You organised this game. Lock it and open the leaderboard for everyone.",
       "gameNotStarted": "The game hasn't started yet.",
-      "cupStandings": "View cup standings",
+      "cupStandings": "View the cup",
       "playersComingSoon": "Players will appear here.",
       "teamLabel2": "Team {number}",
       "youLabel": "YOU",
@@ -4620,9 +4620,9 @@
       "matchesHeading": "Matches",
       "emptyRoster": "No players yet. The roster is built from the matches.",
       "emptyMatches": "No matches yet. Open «Assign & generate» above to set up the fixtures.",
-      "openLeaderboard": "Open public leaderboard →",
+      "openCupPage": "Open cup page →",
+      "openResults": "View results page →",
       "matchesSummary": "First to {points} points · {finished} of {total} matches played",
-      "matchTied": "Halved (AS)",
       "mot": "vs",
       "unknownPlayer": "Unknown player",
       "startButton": "Start cup",
@@ -4650,7 +4650,6 @@
       "matchesSummaryPending": "Points target set at start · {finished} of {total} matches played",
       "headerSubtitlePendingActive": "{team1} vs {team2} · the winner is decided when the cup finishes",
       "matchesSummaryPendingActive": "Winner decided at finish · {finished} of {total} matches played",
-      "sideAwardPoints": "Side points: {points}",
       "doors": {
         "heading": "Set up the cup",
         "oppsettTitle": "Setup",
@@ -4764,7 +4763,16 @@
       "pointsPendingActive": "Points are weighted — the winner is decided when the cup finishes",
       "sideAwardPoints": "Side points: {points}",
       "matchInProgress": "In progress",
-      "matchDraft": "Draft"
+      "matchDraft": "Draft",
+      "matchPlayed": "Played",
+      "resultsDoor": "View the results",
+      "resultsPending": "The results appear once the cup finishes"
+    },
+    "results": {
+      "kicker": "Results",
+      "lockedBody": "The results appear once the organiser has finished the cup.",
+      "winner": "{team} won",
+      "tied": "Tied"
     },
     "sideAwards": {
       "heading": "Side points",
