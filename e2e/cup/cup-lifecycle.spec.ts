@@ -534,3 +534,224 @@ test.describe('Cup one-tap finish (#1501)', () => {
     await expect(page.getByTestId('cup-results-door')).toBeVisible();
   });
 });
+
+/**
+ * #1488 (K9): one-tap finish over a SPLIT-DAY bundle (#1441-form) — 2 host
+ * matches (front9/back9 segments, `source_game_id IS NULL`) + 2 derived matches
+ * (`source_game_id` → their host). A derived match owns no submissions of its
+ * own; #1488 (K4) makes it INHERIT its host's «Scorekort levert»-status instead
+ * of showing «Pågår» forever. This test seeds that shape directly (same rows the
+ * generator's two-pass loop produces), asserts via a language-independent
+ * `data-status` oracle that the derived matches read «delivered» BEFORE the
+ * finish, then drives the one tap and SQL-oracles that ALL 4 games + the cup are
+ * `finished` (the derived pair follows via `finishDerivedGames`).
+ *
+ * @lifecycle (not @gate): drives the real per-host endGame pipeline on the
+ * shared staging DB, same reasoning as the #1501 one-tap test above.
+ */
+test.describe('Cup one-tap finish — split-day bundle (#1488 K9)', () => {
+  test.skip(!envReady, skipReason);
+  test.slow();
+
+  let tournamentId: string | null = null;
+
+  test.afterAll(async () => {
+    if (!tournamentId) return;
+    const admin = adminClient();
+    // Every game (host + derived) carries tournament_id, so this catches the
+    // whole bundle; scores cascade on the games delete.
+    await admin.from('games').delete().eq('tournament_id', tournamentId);
+    await admin.from('tournaments').delete().eq('id', tournamentId);
+  });
+
+  test('derived matches read delivered before finish; one tap finishes all 4 games + cup @lifecycle', async ({
+    page,
+  }) => {
+    const admin = adminClient();
+
+    const { data: adminUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', ADMIN_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    const { data: playerUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', PLAYER_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    expect(adminUser, 'admin user seeded').toBeTruthy();
+    expect(playerUser, 'player user seeded').toBeTruthy();
+
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    expect(tee, 'a tee with a mens rating').toBeTruthy();
+
+    const stamp = Date.now();
+    const cupName = `TEST-Cup-split-${stamp}`;
+    const { data: cup, error: cupErr } = await admin
+      .from('tournaments')
+      .insert({
+        name: cupName,
+        team_1_name: 'Lag A',
+        team_2_name: 'Lag B',
+        points_to_win: 1,
+        status: 'active',
+        created_by: adminUser!.id,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(cupErr).toBeNull();
+    tournamentId = cup!.id;
+
+    // Insert one bundle match (games-row + both game_players). `sourceGameId`
+    // set → derived (no submissions of its own; inherits its host). `submitted`
+    // controls whether the players delivered — hosts true, derived false.
+    async function seedMatch(opts: {
+      label: string;
+      segment: 'front9' | 'back9';
+      sourceGameId: string | null;
+      submitted: boolean;
+    }): Promise<string> {
+      const { data: game, error: gErr } = await admin
+        .from('games')
+        .insert({
+          name: `${cupName} – ${opts.label}`,
+          course_id: tee!.course_id,
+          tee_box_id: tee!.id,
+          game_mode: 'singles_matchplay',
+          mode_config: { kind: 'singles_matchplay', team_size: 1 },
+          status: 'active',
+          require_peer_approval: false,
+          created_by: adminUser!.id,
+          tournament_id: tournamentId,
+          tournament_match_label: opts.label,
+          hole_segment: opts.segment,
+          score_visibility: 'reveal',
+          ...(opts.sourceGameId ? { source_game_id: opts.sourceGameId } : {}),
+        })
+        .select('id')
+        .single<{ id: string }>();
+      expect(gErr, `game insert (${opts.label}) must succeed`).toBeNull();
+      const gameId = game!.id;
+
+      const ts = new Date().toISOString();
+      const { error: gpErr } = await admin.from('game_players').insert([
+        {
+          game_id: gameId,
+          user_id: adminUser!.id,
+          team_number: 1,
+          flight_number: 1,
+          course_handicap: 12,
+          accepted_at: ts,
+          // Derived players never deliver a card of their own (the K4 scenario).
+          submitted_at: opts.submitted ? ts : null,
+        },
+        {
+          game_id: gameId,
+          user_id: playerUser!.id,
+          team_number: 2,
+          flight_number: 1,
+          course_handicap: 18,
+          accepted_at: ts,
+          submitted_at: opts.submitted ? ts : null,
+        },
+      ]);
+      expect(gpErr, `game_players insert (${opts.label}) must succeed`).toBeNull();
+      return gameId;
+    }
+
+    // 2 hosts (front9 + back9), both delivered. Then 2 derived pointing at them,
+    // neither delivered on its own row.
+    const hostFrontId = await seedMatch({
+      label: 'Front 1',
+      segment: 'front9',
+      sourceGameId: null,
+      submitted: true,
+    });
+    const hostBackId = await seedMatch({
+      label: 'Back 1',
+      segment: 'back9',
+      sourceGameId: null,
+      submitted: true,
+    });
+    const derivedFromFrontId = await seedMatch({
+      label: 'Singel back9 A',
+      segment: 'back9',
+      sourceGameId: hostFrontId,
+      submitted: false,
+    });
+    const derivedFromBackId = await seedMatch({
+      label: 'Singel front9 B',
+      segment: 'front9',
+      sourceGameId: hostBackId,
+      submitted: false,
+    });
+
+    // Scores live on the hosts (derived read via source_game_id). Front9 host
+    // scores on holes 1–3, back9 host on holes 10–12.
+    const clientUpdatedAt = new Date().toISOString();
+    const scoreRows = [
+      ...[1, 2, 3].flatMap((hole) => [
+        { game_id: hostFrontId, user_id: adminUser!.id, hole_number: hole, strokes: 4, entered_by: adminUser!.id, client_updated_at: clientUpdatedAt },
+        { game_id: hostFrontId, user_id: playerUser!.id, hole_number: hole, strokes: 5, entered_by: playerUser!.id, client_updated_at: clientUpdatedAt },
+      ]),
+      ...[10, 11, 12].flatMap((hole) => [
+        { game_id: hostBackId, user_id: adminUser!.id, hole_number: hole, strokes: 4, entered_by: adminUser!.id, client_updated_at: clientUpdatedAt },
+        { game_id: hostBackId, user_id: playerUser!.id, hole_number: hole, strokes: 5, entered_by: playerUser!.id, client_updated_at: clientUpdatedAt },
+      ]),
+    ];
+    const { error: sErr } = await admin.from('scores').insert(scoreRows);
+    expect(sErr, 'scores insert must succeed').toBeNull();
+
+    // Open the admin cup detail.
+    await page.goto(`/login?next=/admin/cup/${tournamentId}`);
+    await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto(`/admin/cup/${tournamentId}`);
+    await expect(page.getByText(cupName).first()).toBeVisible();
+
+    // K4 oracle: the DERIVED matches read «delivered» (scorecardsSubmitted) even
+    // though their own game_players never submitted — they inherit the host.
+    // Language-independent via data-status, never Norwegian copy.
+    for (const derivedId of [derivedFromFrontId, derivedFromBackId]) {
+      await expect(
+        page.getByTestId(`cup-match-status-${derivedId}`),
+      ).toHaveAttribute('data-status', 'scorecardsSubmitted');
+    }
+    // Hosts read delivered too (sanity — they actually submitted).
+    for (const hostId of [hostFrontId, hostBackId]) {
+      await expect(
+        page.getByTestId(`cup-match-status-${hostId}`),
+      ).toHaveAttribute('data-status', 'scorecardsSubmitted');
+    }
+
+    // One tap finishes the cup.
+    const finishButton = page.getByTestId('cup-finish-submit');
+    await expect(finishButton).toBeVisible();
+    await expect(finishButton).toBeEnabled();
+    await finishButton.click();
+    await page.waitForURL(/status=finished/, { timeout: 30_000 });
+
+    // SQL oracles: all 4 games AND the cup are finished (the derived pair
+    // followed their hosts via finishDerivedGames).
+    const { data: games } = await admin
+      .from('games')
+      .select('id, status')
+      .eq('tournament_id', tournamentId)
+      .returns<{ id: string; status: string }[]>();
+    expect(games?.length, 'all 4 bundle games present').toBe(4);
+    for (const g of games!) {
+      expect(g.status, `game ${g.id} finished by the one tap`).toBe('finished');
+    }
+
+    const { data: finishedCup } = await admin
+      .from('tournaments')
+      .select('status')
+      .eq('id', tournamentId)
+      .maybeSingle<{ status: string }>();
+    expect(finishedCup?.status, 'cup finished').toBe('finished');
+  });
+});
