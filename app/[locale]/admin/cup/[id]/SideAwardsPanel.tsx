@@ -12,6 +12,7 @@ import {
   registerGirCounts,
 } from '@/lib/cup/sideAwardActions';
 import { groupSideAwardRows, type SideAwardConfigInput } from '@/lib/cup/sideAwardRows';
+import { formatPoints } from '@/lib/cup/formatPoints';
 import type { CupSideAwardSnapshot } from '@/lib/cup/getCupSnapshot';
 
 /**
@@ -46,10 +47,6 @@ type Props = {
   configEditable: boolean;
   showWinnerRegistration: boolean;
 };
-
-function formatPoints(n: number): string {
-  return String(n).replace('.', ',');
-}
 
 /** Snapshot-rader → config-rader for redigerbar state og låst recap. */
 function toConfigRows(awards: CupSideAwardSnapshot[]): SideAwardConfigInput[] {
