@@ -461,14 +461,13 @@ export async function CupManagement({
               // Resultater bor på resultatsiden (#1468) — her kun kampene og en
               // nøytral status. Ferdig match viser «Spilt», ikke poeng. #1502:
               // delt status-label gir «Scorekort levert» når alt er levert.
-              const statusLabel = t(
-                CUP_MATCH_STATUS_MESSAGE_KEY[
-                  cupMatchStatusKey({
-                    status: m.status,
-                    allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
-                  })
-                ],
-              );
+              // #1488 (K9): `data-status` bærer den språk-uavhengige status-
+              // nøkkelen så e2e kan asserte avledet-arven uten norsk copy.
+              const statusKey = cupMatchStatusKey({
+                status: m.status,
+                allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
+              });
+              const statusLabel = t(CUP_MATCH_STATUS_MESSAGE_KEY[statusKey]);
               const card = (
                 <Card>
                   <div className="flex items-start justify-between gap-3">
@@ -483,7 +482,13 @@ export async function CupManagement({
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-xs text-muted">{statusLabel}</p>
+                      <p
+                        className="text-xs text-muted"
+                        data-testid={`cup-match-status-${m.gameId}`}
+                        data-status={statusKey}
+                      >
+                        {statusLabel}
+                      </p>
                     </div>
                   </div>
                 </Card>
