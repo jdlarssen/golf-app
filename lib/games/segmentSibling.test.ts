@@ -69,7 +69,11 @@ describe('isSegmentSiblingCandidate', () => {
 
 describe('pickSiblingCandidate', () => {
   it('null når det ikke finnes kandidater', () => {
-    expect(pickSiblingCandidate([], ['g1'])).toBeNull();
+    expect(
+      pickSiblingCandidate([], [
+        { game_id: 'g1', submitted_at: null, team_number: null },
+      ]),
+    ).toBeNull();
   });
 
   it('null når brukeren ikke er aktiv spiller i noen kandidat', () => {
@@ -77,19 +81,43 @@ describe('pickSiblingCandidate', () => {
     expect(pickSiblingCandidate(candidates, [])).toBeNull();
   });
 
-  it('plukker kandidaten brukeren faktisk er aktiv spiller i', () => {
+  it('plukker kandidaten brukeren faktisk er aktiv spiller i, med submitted_at + team_number', () => {
     const candidates = [
       { id: 'back9-a', game_mode: 'best_ball' as const },
       { id: 'back9-b', game_mode: 'best_ball' as const },
     ];
-    expect(pickSiblingCandidate(candidates, ['back9-b'])).toEqual({
+    expect(
+      pickSiblingCandidate(candidates, [
+        { game_id: 'back9-b', submitted_at: null, team_number: 2 },
+      ]),
+    ).toEqual({
       id: 'back9-b',
       game_mode: 'best_ball',
+      submitted_at: null,
+      team_number: 2,
     });
   });
 
-  it('ignorerer medlemskap-id-er som ikke matcher noen kandidat (defensivt)', () => {
+  it('#1466: bærer med søsterspillets submitted_at (levert søsken)', () => {
+    const candidates = [{ id: 'front9-a', game_mode: 'greensome_matchplay' as const }];
+    expect(
+      pickSiblingCandidate(candidates, [
+        { game_id: 'front9-a', submitted_at: '2026-08-07T10:00:00Z', team_number: 1 },
+      ]),
+    ).toEqual({
+      id: 'front9-a',
+      game_mode: 'greensome_matchplay',
+      submitted_at: '2026-08-07T10:00:00Z',
+      team_number: 1,
+    });
+  });
+
+  it('ignorerer medlemskap som ikke matcher noen kandidat (defensivt)', () => {
     const candidates = [{ id: 'back9-a', game_mode: 'best_ball' as const }];
-    expect(pickSiblingCandidate(candidates, ['some-other-game'])).toBeNull();
+    expect(
+      pickSiblingCandidate(candidates, [
+        { game_id: 'some-other-game', submitted_at: null, team_number: null },
+      ]),
+    ).toBeNull();
   });
 });

@@ -16,6 +16,14 @@ export interface HoleStripProps {
    * runden for eldre callsites.
    */
   holes?: number[];
+  /**
+   * #1466 (eier-tillegget): søsterspillets hull på en splittet cup-dag. Når
+   * satt rendres unionen av egne og søsken-hull (1–18 sortert stigende) — «som
+   * et helt vanlig scorekort». Egne hull lenker til dette spillet; søsken-hull
+   * lenker til `/games/<sibling.gameId>/holes/<n>`. Uten (vanlige spill,
+   * 'full'-segment, trukket fra én halvdel) vises kun `holes` — uendret.
+   */
+  sibling?: { gameId: string; holes: number[] } | null;
 }
 
 const DEFAULT_HOLES = Array.from({ length: 18 }, (_, i) => i + 1);
@@ -80,22 +88,34 @@ function cellStyle(state: 'current' | 'completed' | 'future'): CSSProperties {
 }
 
 export function HoleStrip(props: HoleStripProps): JSX.Element {
-  const { gameId, currentHole, holes = DEFAULT_HOLES } = props;
+  const { gameId, currentHole, holes = DEFAULT_HOLES, sibling = null } = props;
   const t = useTranslations('holes.entry');
+  // #1466: union of own + sibling holes, sorted, so a segment game reads as one
+  // 1–18 scorecard. Own holes stay linked to this game; sibling holes link
+  // across to the other host. `completed` semantics (n < currentHole) are kept
+  // positional — the global numbering makes the split invisible.
+  const ownHoles = new Set(holes);
+  const cells = sibling
+    ? Array.from(new Set([...holes, ...sibling.holes])).sort((a, b) => a - b)
+    : holes;
   return (
     <div style={containerStyle}>
       <div style={innerStyle}>
-        {holes.map((n) => {
+        {cells.map((n) => {
           const state =
             n === currentHole
               ? 'current'
               : n < currentHole
                 ? 'completed'
                 : 'future';
+          const href =
+            sibling && !ownHoles.has(n)
+              ? `/games/${sibling.gameId}/holes/${n}`
+              : `/games/${gameId}/holes/${n}`;
           return (
             <SmartLink
               key={n}
-              href={`/games/${gameId}/holes/${n}`}
+              href={href}
               style={hitAreaStyle}
               aria-label={t('hullAriaLabel', { n })}
               aria-current={state === 'current' ? 'page' : undefined}

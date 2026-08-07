@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.220 · Splittet cup-dag: én runde, én levering</strong></summary>
+
+[#1466](https://github.com/jdlarssen/golf-app/issues/1466) — På en splittet cup-dag går du nå rett fra hull 9 til hull 10, og hull-stripa viser alle 18 hullene som ett vanlig scorekort. Du leverer bare én gang — på hull 18 — så begge delspillene blir levert samtidig.
+
+↳ / · «Åpne Hjem»
+</details>
+
+<details>
 <summary><strong>1.219 · Splittet cup-dag: ett kort inn i runden, ett kort inn i cupen</strong></summary>
 
 [#1449](https://github.com/jdlarssen/golf-app/issues/1449) — På en splittet cup-dag ser du nå ett kort på Hjem som tar deg rett inn i føringen fra hull 1 — ikke tre kort for samme runde. Når dagen er ferdigspilt, samler ett cup-merket kort hele dagen og fører deg rett inn i cupen.

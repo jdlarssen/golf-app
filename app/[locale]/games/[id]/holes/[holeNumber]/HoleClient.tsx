@@ -235,6 +235,21 @@ export interface HoleClientProps {
     holeNumber: number;
     gameMode: GameMode;
   } | null;
+  /**
+   * #1466 (eier-tillegget): the sibling half's own holes on a split cup day,
+   * for the full 1–18 hole strip. Own holes stay linked to this game; sibling
+   * holes link across to the other host. Null → today's segment-only strip.
+   */
+  holeStripSibling?: { gameId: string; holes: number[] } | null;
+  /**
+   * #1466 §2 (broModus): the front9 host's bridge to the sibling's hole 10,
+   * set only when this is a front9 host whose back9 sibling is still
+   * undelivered. When present it REPLACES every «Lever scorekort» in the bottom
+   * CTA (both the isLastHole and roundComplete branches) with the bridge —
+   * delivery happens once, on the back9 host — and suppresses the duplicate
+   * secondary bridge link. Null on the back9 side and off broModus.
+   */
+  broBridge?: { gameId: string; holeNumber: number; gameMode: GameMode } | null;
   players: ClientPlayer[];
 }
 
@@ -349,6 +364,8 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     bingoBangoBongoHoles: bingoBangoBongoHolesInitial,
     roundRobinPlayers,
     segmentSibling = null,
+    holeStripSibling = null,
+    broBridge = null,
     players,
   } = props;
 
@@ -830,20 +847,38 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     : isTexas
       ? t('entry.submitScorecardTeam')
       : t('entry.submitScorecard');
+
+  // #1466 §2 (broModus): on a front9 host whose back9 sibling is undelivered,
+  // the whole round is delivered once — on the back9 host. So every «Lever
+  // scorekort» here (roundComplete on any hole + isLastHole on hole 9) becomes
+  // the bridge to hole 10 instead. Without covering both branches, «Lever
+  // scorekort» would still show on holes 1–8 (roundComplete surfaces the CTA
+  // everywhere) and contradict the one-delivery model. The secondary bridge
+  // link below is suppressed in broModus to avoid a duplicate on hole 9.
+  const submitOrBridgeLabel = broBridge
+    ? t('entry.continueToSibling', {
+        hole: broBridge.holeNumber,
+        format: tModes(broBridge.gameMode as Parameters<typeof tModes>[0]),
+      })
+    : submitLabel;
+  const submitOrBridgeHref = broBridge
+    ? `/games/${broBridge.gameId}/holes/${broBridge.holeNumber}`
+    : `/games/${gameId}/submit`;
+
   const bottomLabel = roundComplete
-    ? submitLabel
+    ? submitOrBridgeLabel
     : !myScoreEntered
       ? t('entry.enterYourScore')
       : isLastHole
-        ? submitLabel
+        ? submitOrBridgeLabel
         : t('entry.nextHole', { next });
 
   const bottomHref = roundComplete
-    ? `/games/${gameId}/submit`
+    ? submitOrBridgeHref
     : !myScoreEntered
       ? undefined
       : isLastHole
-        ? `/games/${gameId}/submit`
+        ? submitOrBridgeHref
         : `/games/${gameId}/holes/${next}`;
 
   // #639: modus-kontekst-linja (Wolf / Skins / Round Robin / Florida) er
@@ -991,6 +1026,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         gameId={gameId}
         currentHole={currentHole}
         holes={holeNumbersForSegment(holeSegment)}
+        sibling={holeStripSibling}
       />
       <HoleHero
         holeNumber={currentHole}
@@ -1169,10 +1205,11 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
 
       {/* #1441 (owner-QA finding B): seamless bridge to the OTHER half of a
           split-day cup round. Only ever set at the segment's boundary hole
-          (server-resolved — see `findSegmentSibling`). Purely additive
-          navigation: this game's own submit/completeness CTA above is
-          unchanged either way. */}
-      {segmentSibling && (
+          (server-resolved — see `findSegmentSibling`). #1466 §2: suppressed in
+          broModus (broBridge set) — the bridge is the primary CTA there, so a
+          secondary copy would duplicate it on hole 9. The back9 «Tilbake til
+          hull 9» link keeps rendering (broBridge is null on that side). */}
+      {segmentSibling && !broBridge && (
         <SmartLink
           href={`/games/${segmentSibling.gameId}/holes/${segmentSibling.holeNumber}`}
           style={segmentBridgeLinkStyle}

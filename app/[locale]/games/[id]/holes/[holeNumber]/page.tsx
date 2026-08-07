@@ -32,7 +32,10 @@ import {
   holeNumbersForSegment,
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
-import { findSegmentSibling } from '@/lib/games/segmentSibling';
+import {
+  findSegmentSibling,
+  isSegmentSiblingCandidate,
+} from '@/lib/games/segmentSibling';
 import { computeGreenCenter } from '@/lib/geo/greenCenter';
 import { PIN_GATE_MAX_PINS, PIN_GATE_WINDOW_DAYS } from '@/lib/geo/pinRules';
 import type { LatLng } from '@/lib/geo/distance';
@@ -155,32 +158,75 @@ export default async function HolePage({ params }: { params: Params }) {
     redirect({ href: `/games/${id}` as string, locale });
   }
 
-  // #1441 (owner-QA finding B): the front9 ⇄ back9 bridge only ever renders
-  // at the segment's boundary hole — front9's last hole (9) or back9's first
-  // hole (10) — so the lookup only runs there. Everywhere else this stays
-  // null without an extra query.
-  const isSegmentBoundaryHole =
-    (game.hole_segment === 'front9' &&
-      holeNumber === lastHoleForSegment('front9')) ||
-    (game.hole_segment === 'back9' &&
-      holeNumber === firstHoleForSegment('back9'));
-  const siblingMatch = isSegmentBoundaryHole
+  // #1466 (eier-tillegget): resolve the segment sibling for ALL holes of a
+  // segment-candidate game — not just the boundary hole — so the hole strip can
+  // render the whole 1–18 round «som et helt vanlig scorekort». Only segment
+  // cup hosts pay this (2 indexed admin queries via findSegmentSibling); every
+  // other game skips the lookup entirely.
+  const siblingMatch = isSegmentSiblingCandidate({
+    holeSegment: game.hole_segment,
+    sourceGameId: game.source_game_id,
+    tournamentId: game.tournament_id,
+  })
     ? await findSegmentSibling(userId, {
         holeSegment: game.hole_segment,
         sourceGameId: game.source_game_id,
         tournamentId: game.tournament_id,
       })
     : null;
-  const segmentSibling = siblingMatch
+
+  // Strip data: the sibling's own segment holes, rendered on every hole so the
+  // full 1–18 union shows across the two hosts. Null → today's 9-hole strip.
+  const holeStripSibling = siblingMatch
     ? {
         gameId: siblingMatch.gameId,
-        gameMode: siblingMatch.gameMode,
-        holeNumber:
-          siblingMatch.holeSegment === 'back9'
-            ? firstHoleForSegment('back9')
-            : lastHoleForSegment('front9'),
+        holes: holeNumbersForSegment(siblingMatch.holeSegment),
       }
     : null;
+
+  // #1466 §2: broModus = front9 host + sibling exists + my back9 row is still
+  // undelivered. When true the front9 bottom CTA becomes the bridge to hole 10
+  // instead of a deliver-CTA (one delivery for the whole round happens on the
+  // back9 host). Self-heals to false when the sibling is delivered — a rejected
+  // front9 card after the cascade brings the deliver-CTA back.
+  const broModus =
+    game.hole_segment === 'front9' &&
+    siblingMatch != null &&
+    siblingMatch.mySubmittedAt == null;
+
+  // The boundary bridge keeps its existing secondary-link semantics: rendered
+  // only at the segment's boundary hole (front9's hole 9, back9's hole 10). In
+  // broModus it is promoted to the primary CTA and this secondary link is
+  // suppressed (see HoleClient) — otherwise a duplicate bridge on hole 9.
+  const isSegmentBoundaryHole =
+    (game.hole_segment === 'front9' &&
+      holeNumber === lastHoleForSegment('front9')) ||
+    (game.hole_segment === 'back9' &&
+      holeNumber === firstHoleForSegment('back9'));
+  const segmentSibling =
+    siblingMatch && isSegmentBoundaryHole
+      ? {
+          gameId: siblingMatch.gameId,
+          gameMode: siblingMatch.gameMode,
+          holeNumber:
+            siblingMatch.holeSegment === 'back9'
+              ? firstHoleForSegment('back9')
+              : lastHoleForSegment('front9'),
+        }
+      : null;
+
+  // broModus bridge target: the front9 host's bridge to the sibling's hole 10.
+  // Available on ALL front9 holes (roundComplete surfaces the deliver-CTA on
+  // every screen), so every «Lever scorekort» occurrence becomes the bridge.
+  // Null off broModus.
+  const broBridge =
+    broModus && siblingMatch
+      ? {
+          gameId: siblingMatch.gameId,
+          holeNumber: firstHoleForSegment('back9'),
+          gameMode: siblingMatch.gameMode,
+        }
+      : null;
 
   // #543: én-flight-regelen — alle aktive spillere er i samme gruppe når
   // spillet har ≤4 aktive spillere ELLER formatet er wolf.
@@ -903,6 +949,8 @@ export default async function HolePage({ params }: { params: Params }) {
         bingoBangoBongoHoles={isBBB ? (bbbHolesData as BingoBangoBongoHoleInput[]) : undefined}
         roundRobinPlayers={roundRobinPlayersForClient}
         segmentSibling={segmentSibling}
+        holeStripSibling={holeStripSibling}
+        broBridge={broBridge}
         players={playersForClient}
       />
     </div>

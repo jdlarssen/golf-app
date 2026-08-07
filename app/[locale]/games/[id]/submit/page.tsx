@@ -26,6 +26,7 @@ import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { isHoleInSegment, firstHoleForSegment } from '@/lib/games/holeScope';
+import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import type { AppLocale } from '@/i18n/routing';
 import { isStablefordFamily, type ScoringGender } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
@@ -193,6 +194,7 @@ export default async function SubmitPage({
             currentUserId={userId}
             meTeeGender={me.tee_gender}
             holeSegment={game.hole_segment}
+            tournamentId={game.tournament_id}
             submitAction={submitAction}
           />
         </Suspense>
@@ -207,6 +209,7 @@ async function ReviewBody({
   currentUserId,
   meTeeGender,
   holeSegment,
+  tournamentId,
   submitAction,
 }: {
   gameId: string;
@@ -214,10 +217,28 @@ async function ReviewBody({
   currentUserId: string;
   meTeeGender: ScoringGender;
   holeSegment: HoleSegment;
+  /** #1466: non-null on cup matches — drives the "whole round" delivery notice
+   *  when this is a back9 host with an undelivered front9 sibling. */
+  tournamentId: string | null;
   submitAction: () => void | Promise<void>;
 }) {
   const t = await getTranslations('game.submit');
   const { supabase } = await getSubmitContext();
+
+  // #1466: on a back9 split-cup host, this one delivery marks the whole round —
+  // both halves. Surface that when the front9 sibling is still undelivered.
+  // findSegmentSibling only resolves for a back9 host with a tournament; every
+  // other submit page pays nothing (the gate below short-circuits the lookup).
+  const front9Sibling =
+    holeSegment === 'back9' && tournamentId != null
+      ? await findSegmentSibling(currentUserId, {
+          holeSegment: 'back9',
+          sourceGameId: null,
+          tournamentId,
+        })
+      : null;
+  const showWholeRoundNotice =
+    front9Sibling != null && front9Sibling.mySubmittedAt == null;
 
   const [holesRes, scoresRes] = await Promise.all([
     supabase
@@ -398,6 +419,13 @@ async function ReviewBody({
         <Banner tone="info">
           {t('missingHolesBanner', { count: missingHoles })}
         </Banner>
+      )}
+
+      {/* #1466: one delivery covers the whole split-cup round — tell the player
+          both halves are delivered here so they don't go looking for a second
+          submit on the front9 host. */}
+      {showWholeRoundNotice && (
+        <Banner tone="info">{t('wholeRoundNotice')}</Banner>
       )}
 
       <div className="grid grid-cols-2 gap-3">

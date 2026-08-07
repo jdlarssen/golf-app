@@ -20,6 +20,26 @@ export type SegmentSibling = {
   gameId: string;
   gameMode: GameMode;
   holeSegment: SegmentHalf;
+  /**
+   * #1466: the acting player's own `submitted_at` on the sibling game (null =
+   * not yet delivered there). Drives broModus (front9's bridge-as-primary CTA)
+   * and the one-delivery cascade's "already delivered?" gate on the back9 host.
+   */
+  mySubmittedAt: string | null;
+  /**
+   * #1466: the acting player's `team_number` on the sibling game (null for
+   * per-player formats / a player with no team). Drives the team-wide vs
+   * own-row form of the one-delivery cascade — a greensome front9 sibling
+   * delivers per team (#1453), a best-ball sibling per player.
+   */
+  myTeamNumber: number | null;
+};
+
+/** #1466: the acting player's own membership row on a sibling candidate. */
+type SiblingMembership = {
+  game_id: string;
+  submitted_at: string | null;
+  team_number: number | null;
 };
 
 const OPPOSITE_HALF: Record<SegmentHalf, SegmentHalf> = {
@@ -57,19 +77,35 @@ export function isSegmentSiblingCandidate(game: {
 
 /**
  * Pure: given the opposite-segment HOST candidates in the tournament and the
- * subset of their ids where `userId` holds an active (non-withdrawn)
- * `game_players` row, picks the one sibling. A player is expected to be on
- * at most one flight's pair of halves, so at most one candidate should ever
- * match — this returns the first match defensively rather than asserting
- * uniqueness (a malformed cup should degrade to "no bridge shown", not a
- * thrown error on a hole page). Exported for direct unit coverage.
+ * acting player's active (non-withdrawn) `game_players` rows on them, picks the
+ * one sibling and carries its `submitted_at` + `team_number` (#1466). A player
+ * is expected to be on at most one flight's pair of halves, so at most one
+ * candidate should ever match — this returns the first match defensively rather
+ * than asserting uniqueness (a malformed cup should degrade to "no bridge
+ * shown", not a thrown error on a hole page). Exported for direct unit coverage.
  */
 export function pickSiblingCandidate(
   candidates: { id: string; game_mode: GameMode }[],
-  activeMembershipGameIds: readonly string[],
-): { id: string; game_mode: GameMode } | null {
-  const memberSet = new Set(activeMembershipGameIds);
-  return candidates.find((c) => memberSet.has(c.id)) ?? null;
+  memberships: readonly SiblingMembership[],
+): {
+  id: string;
+  game_mode: GameMode;
+  submitted_at: string | null;
+  team_number: number | null;
+} | null {
+  const membershipByGameId = new Map(memberships.map((m) => [m.game_id, m]));
+  for (const c of candidates) {
+    const membership = membershipByGameId.get(c.id);
+    if (membership) {
+      return {
+        id: c.id,
+        game_mode: c.game_mode,
+        submitted_at: membership.submitted_at,
+        team_number: membership.team_number,
+      };
+    }
+  }
+  return null;
 }
 
 /**
@@ -111,21 +147,24 @@ export async function findSegmentSibling(
 
   const { data: membershipRows, error: membershipError } = await supabase
     .from('game_players')
-    .select('game_id')
+    .select('game_id, submitted_at, team_number')
     .in(
       'game_id',
       candidates.map((c) => c.id),
     )
     .eq('user_id', userId)
     .is('withdrawn_at', null)
-    .returns<{ game_id: string }[]>();
+    .returns<SiblingMembership[]>();
   if (membershipError) throw membershipError;
 
-  const match = pickSiblingCandidate(
-    candidates,
-    (membershipRows ?? []).map((r) => r.game_id),
-  );
+  const match = pickSiblingCandidate(candidates, membershipRows ?? []);
   return match
-    ? { gameId: match.id, gameMode: match.game_mode, holeSegment: targetSegment }
+    ? {
+        gameId: match.id,
+        gameMode: match.game_mode,
+        holeSegment: targetSegment,
+        mySubmittedAt: match.submitted_at,
+        myTeamNumber: match.team_number,
+      }
     : null;
 }

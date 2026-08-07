@@ -9,6 +9,7 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { sendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
 import { notify } from '@/lib/notifications/notify';
 import { holeCountForSegment } from '@/lib/games/holeScope';
+import { selectDeliveryReminderTargets } from '@/lib/games/deliveryStatus';
 import type { HoleSegment } from '@/lib/scoring';
 
 type PlayerRow = {
@@ -42,9 +43,15 @@ export async function remindUnsubmittedPlayers(gameId: string) {
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status, hole_segment')
+    .select('id, name, status, hole_segment, tournament_id')
     .eq('id', gameId)
-    .single<{ id: string; name: string; status: string; hole_segment: HoleSegment }>();
+    .single<{
+      id: string;
+      name: string;
+      status: string;
+      hole_segment: HoleSegment;
+      tournament_id: string | null;
+    }>();
 
   if (!game || game.status !== 'active') {
     redirect({ href: `${statusPath}?error=not_active`, locale });
@@ -74,15 +81,45 @@ export async function remindUnsubmittedPlayers(gameId: string) {
     filledByUser.set(r.user_id, (filledByUser.get(r.user_id) ?? 0) + 1);
   }
 
-  // #1009: gjester purres ikke — plassholder-adressen kan ikke motta mail,
-  // og gjesten leverer via markøren uansett.
-  const targets = (playersRes.data ?? []).filter(
-    (p) =>
-      !p.submitted_at &&
-      !p.withdrawn_at &&
-      !p.users?.is_guest &&
-      (filledByUser.get(p.user_id) ?? 0) >= expectedHoles,
-  );
+  // #1466: on a split-cup front9 host, a player whose back9 sibling is still
+  // undelivered is nagged via the back9 game (one delivery covers the whole
+  // round). Exclude them here. Batch: find the tournament's back9 host(s), then
+  // ONE query for which finished front9 players are still undelivered there — no
+  // per-player loop. Non-split games (hole_segment='full') skip this entirely.
+  let undeliveredSiblingUserIds: Set<string> | undefined;
+  if (game!.hole_segment === 'front9' && game!.tournament_id != null) {
+    const admin = getAdminClient();
+    const { data: back9Hosts } = await admin
+      .from('games')
+      .select('id')
+      .eq('tournament_id', game!.tournament_id)
+      .eq('hole_segment', 'back9')
+      .is('source_game_id', null)
+      .returns<{ id: string }[]>();
+    const back9Ids = (back9Hosts ?? []).map((g) => g.id);
+    if (back9Ids.length > 0) {
+      const { data: undelivered } = await admin
+        .from('game_players')
+        .select('user_id')
+        .in('game_id', back9Ids)
+        .is('submitted_at', null)
+        .is('withdrawn_at', null)
+        .returns<{ user_id: string }[]>();
+      undeliveredSiblingUserIds = new Set(
+        (undelivered ?? []).map((r) => r.user_id),
+      );
+    }
+  }
+
+  // #1009: gjester purres ikke — plassholder-adressen kan ikke motta mail, og
+  // gjesten leverer via markøren uansett. #1466: front9-spillere med ulevert
+  // back9-søsken ekskluderes (purres via back9).
+  const targets = selectDeliveryReminderTargets({
+    players: playersRes.data ?? [],
+    filledByUser,
+    expectedHoles,
+    undeliveredSiblingUserIds,
+  });
 
   await Promise.allSettled(
     targets.map((p) =>

@@ -1943,6 +1943,7 @@
       "summaryBrutto": "Brutto totalt:",
       "summaryHoles": "Spilte hull:",
       "missingHolesBanner": "{count, plural, one {1 hull mangler. Hvis du leverer nå, går dette som ikke spilt.} other {# hull mangler. Hvis du leverer nå, går disse som ikke spilt.}}",
+      "wholeRoundNotice": "Denne leveringen gjelder hele runden — både hull 1–9 og hull 10–18.",
       "editButton": "← Rediger",
       "submitButton": "Lever ✓",
       "submitPending": "Leverer …",

@@ -42,6 +42,7 @@ import {
 } from '@/lib/games/formatLabel';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { holeCountForSegment } from '@/lib/games/holeScope';
+import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import type { HoleSegment } from '@/lib/scoring';
 import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
@@ -424,11 +425,34 @@ export default async function GameHomePage({
   // på hull-telling + atomisk idempotens-guard, så den er trygg på hvert
   // besøk. Wrap i `after()` fordi notify() kaller revalidateTag som kaster i
   // render-fasen (samme mønster som markNotificationsRead + auto-start over).
+  // #1466: a front9 split-cup host in broModus never delivers here — the whole
+  // round is delivered once, on the back9 host. Skip the auto-nudge so the
+  // player isn't told to deliver a card they'll never deliver. Only front9 cup
+  // hosts pay the sibling lookup (normal games have hole_segment='full'), so
+  // ordinary rounds never take on the extra query.
+  let broModusFront9 = false;
   if (
     game.status === 'active' &&
     !me.submitted_at &&
     !me.withdrawn_at &&
-    !game.source_game_id
+    game.source_game_id == null &&
+    game.hole_segment === 'front9' &&
+    game.tournament_id != null
+  ) {
+    const sibling = await findSegmentSibling(userId, {
+      holeSegment: 'front9',
+      sourceGameId: null,
+      tournamentId: game.tournament_id,
+    });
+    broModusFront9 = sibling != null && sibling.mySubmittedAt == null;
+  }
+
+  if (
+    game.status === 'active' &&
+    !me.submitted_at &&
+    !me.withdrawn_at &&
+    !game.source_game_id &&
+    !broModusFront9
   ) {
     after(() =>
       maybeSendDeliveryReminder({

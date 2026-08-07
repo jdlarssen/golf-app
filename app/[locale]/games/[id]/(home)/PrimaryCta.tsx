@@ -94,17 +94,20 @@ export async function PrimaryCtaSection({
     requirePeerApproval,
   });
 
-  // #1441 (owner-QA finding B): a submitted front9 host otherwise dead-ends
-  // here (static "waiting for approval" / "approved" message, no link
-  // forward). When the player has a back9 sibling, resolve it so the CTA can
-  // offer a way to continue into hole 10 instead. Scoped tight: only the
-  // front9→back9 direction (a finished back9 is genuinely the end of the
-  // round — no further segment to bridge to), and only once submitted (the
-  // 'ready_to_submit' state keeps its own required submit step untouched).
+  // #1441 (owner-QA finding B) + #1466 §2: a front9 host otherwise dead-ends
+  // here — either the static "waiting for approval"/"approved" message once
+  // submitted, or a deliver-CTA that shouldn't exist in broModus. When the
+  // player has a back9 sibling, resolve it so the CTA can continue into hole 10
+  // instead. Scoped tight: only the front9→back9 direction (a finished back9 is
+  // genuinely the end of the round). #1466 extends the lookup to
+  // 'ready_to_submit' too — in broModus (sibling undelivered) that state shows
+  // the bridge as the PRIMARY action instead of «Se over og lever».
   const siblingMatch =
     tournamentId != null &&
     holeSegment === 'front9' &&
-    (state === 'submitted_pending_approval' || state === 'submitted_approved')
+    (state === 'submitted_pending_approval' ||
+      state === 'submitted_approved' ||
+      state === 'ready_to_submit')
       ? await findSegmentSibling(currentUserId, {
           holeSegment,
           sourceGameId: null,
@@ -116,6 +119,7 @@ export async function PrimaryCtaSection({
         gameId: siblingMatch.gameId,
         gameMode: siblingMatch.gameMode,
         holeNumber: firstHoleForSegment('back9'),
+        mySubmittedAt: siblingMatch.mySubmittedAt,
       }
     : null;
 
@@ -149,9 +153,16 @@ function PrimaryCta({
   /** #1441: holes in the game's scope — 9 for front9/back9, 18 for 'full'. */
   totalHoles: number;
   nextHole: number;
-  /** #1441 (owner-QA finding B): resolved back9 sibling, only ever set for a
-   *  submitted front9 host. Null everywhere else — see `PrimaryCtaSection`. */
-  sibling: { gameId: string; gameMode: GameMode; holeNumber: number } | null;
+  /** #1441 (owner-QA finding B) + #1466 §2: resolved back9 sibling, set for a
+   *  submitted OR ready-to-submit front9 host. `mySubmittedAt` gates broModus:
+   *  when null the ready_to_submit state shows the bridge as the primary CTA.
+   *  Null everywhere else — see `PrimaryCtaSection`. */
+  sibling: {
+    gameId: string;
+    gameMode: GameMode;
+    holeNumber: number;
+    mySubmittedAt: string | null;
+  } | null;
 }) {
   const t = useTranslations('game.home');
   const tModes = useTranslations('modes');
@@ -184,6 +195,32 @@ function PrimaryCta({
   }
 
   if (state === 'ready_to_submit') {
+    // #1466 §2 (broModus): a front9 host whose back9 sibling is undelivered
+    // never delivers here — the whole round is delivered once, on the back9
+    // host. Show the bridge to hole 10 as the PRIMARY action instead of «Se
+    // over og lever». Self-heals: once the sibling is delivered (mySubmittedAt
+    // set — e.g. the front9 card was rejected after the cascade), broModus is
+    // false and the deliver-CTA returns.
+    if (sibling && sibling.mySubmittedAt == null) {
+      return (
+        <div className="space-y-1.5">
+          <LinkButton
+            href={`/games/${sibling.gameId}/holes/${sibling.holeNumber}`}
+            full
+          >
+            {t('ctaContinueToSibling', {
+              hole: sibling.holeNumber,
+              format: tModes(sibling.gameMode as Parameters<typeof tModes>[0]),
+            })}
+          </LinkButton>
+          {subtext && (
+            <p className="text-center text-xs text-muted tabular-nums">
+              {subtext}
+            </p>
+          )}
+        </div>
+      );
+    }
     return (
       <div className="space-y-1.5">
         <LinkButton href={`/games/${gameId}/submit`} full>

@@ -421,3 +421,148 @@ describe('submitScorecard — lag-levering (#1453)', () => {
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
   });
 });
+
+// #1466: én levering på hull 18 leverer BEGGE delspillene. En back9-host med
+// tournament kaskaderer leveringen til innsenderens front9-søsken (via
+// findSegmentSibling + admin-client). Retning kun back9→front9. Kompensert:
+// feiler søsken-oppdateringen reverteres back9-markeringen (trap #5).
+describe('submitScorecard — én levering på tvers av segmentet (#1466)', () => {
+  // findSegmentSibling gjør to admin-queries (kandidater + medlemskap) FØR
+  // søsken-oppdateringen — begge trekker fra adminSupabaseMock sin FIFO-kø.
+  const back9Game = {
+    name: 'Cup-dag',
+    status: 'active',
+    require_peer_approval: false,
+    game_mode: 'best_ball',
+    hole_segment: 'back9',
+    tournament_id: 't1',
+    source_game_id: null,
+  };
+
+  it('back9-host: én levering markerer både back9-raden og front9-søskenet (egen-rad)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: back9Game, error: null },
+      { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
+      { data: [{ user_id: 'user-1' }], error: null }, // primær UPDATE (back9, egen-rad)
+      { data: { name: 'Ola Nordmann' }, error: null }, // submitter name
+      { data: [], error: null }, // admins (tom)
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      { data: [{ id: 'front9-a', game_mode: 'best_ball' }], error: null }, // findSegmentSibling kandidater
+      { data: [{ game_id: 'front9-a', submitted_at: null, team_number: null }], error: null }, // medlemskap
+      { data: [{ user_id: 'user-1' }], error: null }, // søsken-UPDATE (front9, egen-rad)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    // Søsken-oppdateringen fyrte via admin-client mot front9-spillet.
+    const calls = adminSupabaseMock.__fromCalls;
+    expect(calls.some((c) => c.method === 'update' && c.table === 'game_players')).toBe(true);
+    expect(
+      calls.some((c) => c.method === 'eq' && c.args[0] === 'game_id' && c.args[1] === 'front9-a'),
+    ).toBe(true);
+    // Begge spill revalideres.
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-front9-a', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+  });
+
+  it('greensome front9-søsken: lag-bred oppdatering (én-ball-lagformat)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: back9Game, error: null }, // back9-host er best_ball (egen-rad primær)
+      { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
+      { data: [{ user_id: 'user-1' }], error: null }, // primær UPDATE (back9)
+      { data: { name: 'Ola Nordmann' }, error: null },
+      { data: [], error: null },
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      { data: [{ id: 'front9-a', game_mode: 'greensome_matchplay' }], error: null }, // kandidater
+      { data: [{ game_id: 'front9-a', submitted_at: null, team_number: 2 }], error: null }, // medlemskap (lag 2)
+      { data: [{ user_id: 'user-1' }, { user_id: 'mate' }], error: null }, // lag-bred søsken-UPDATE
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    const calls = adminSupabaseMock.__fromCalls;
+    // Lag-bred form: eq team_number=2 + is withdrawn_at + is submitted_at.
+    expect(
+      calls.some((c) => c.method === 'eq' && c.args[0] === 'team_number' && c.args[1] === 2),
+    ).toBe(true);
+    expect(calls.some((c) => c.method === 'is' && c.args[0] === 'withdrawn_at')).toBe(true);
+    expect(calls.some((c) => c.method === 'is' && c.args[0] === 'submitted_at')).toBe(true);
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+  });
+
+  it('kompensert: søsken-oppdateringen feiler → back9-markeringen reverteres, ?error=db', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: back9Game, error: null },
+      { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
+      { data: [{ user_id: 'user-1' }], error: null }, // primær UPDATE (back9)
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      { data: [{ id: 'front9-a', game_mode: 'best_ball' }], error: null }, // kandidater
+      { data: [{ game_id: 'front9-a', submitted_at: null, team_number: null }], error: null }, // medlemskap
+      { data: null, error: { message: 'permission denied' } }, // søsken-UPDATE FEILER
+      { data: null, error: null }, // revert-UPDATE (kompensasjon)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    // Kompensasjonen: en update som nuller submitted_at igjen.
+    const revert = adminSupabaseMock.__fromCalls.find(
+      (c) =>
+        c.method === 'update' &&
+        (c.args[0] as { submitted_at?: unknown })?.submitted_at === null,
+    );
+    expect(revert).toBeDefined();
+    // Reverten scopes til back9-spillet + de returnerte user_id-ene.
+    expect(
+      adminSupabaseMock.__fromCalls.some(
+        (c) => c.method === 'in' && c.args[0] === 'user_id',
+      ),
+    ).toBe(true);
+    // Fail loudly — ingen side-effekter, redirect til submit-feil.
+    expect(lastRedirect()).toBe('/games/game-1/submit?error=db');
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('idempotent: front9-søskenet er alt levert (mySubmittedAt satt) → ingen søsken-oppdatering', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: back9Game, error: null },
+      { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
+      { data: [{ user_id: 'user-1' }], error: null }, // primær UPDATE (back9)
+      { data: { name: 'Ola Nordmann' }, error: null },
+      { data: [], error: null },
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      { data: [{ id: 'front9-a', game_mode: 'best_ball' }], error: null }, // kandidater
+      // Medlemskap: front9 er ALT levert.
+      { data: [{ game_id: 'front9-a', submitted_at: '2026-08-07T09:00:00Z', team_number: null }], error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    // Ingen søsken-oppdatering (kun de to findSegmentSibling-oppslagene).
+    expect(
+      adminSupabaseMock.__fromCalls.some((c) => c.method === 'update'),
+    ).toBe(false);
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+  });
+});

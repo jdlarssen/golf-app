@@ -658,3 +658,74 @@ describe('HoleClient — hole-segment scope (#1441)', () => {
     expect(screen.queryByText(/Videre til hull/)).toBeNull();
   });
 });
+
+// #1466 §2: broModus — a front9 host whose back9 sibling is undelivered. The
+// broBridge prop is the materialized broModus decision (server-resolved). When
+// set it REPLACES every «Lever scorekort» with the bridge to hole 10 and
+// suppresses the duplicate secondary link. Null → self-healed (deliver returns).
+describe('HoleClient — broModus (#1466)', () => {
+  const broBridge = { gameId: 'back9-game', holeNumber: 10, gameMode: 'best_ball' as const };
+
+  it('broModus on hole 9: the bridge REPLACES the deliver-CTA and no duplicate secondary link renders', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([{ strokes: 4 }, undefined, undefined, undefined]),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          currentHole: 9,
+          holeSegment: 'front9',
+          // Boundary hole → both broBridge (primary) and segmentSibling
+          // (secondary) would be set; secondary must be suppressed.
+          segmentSibling: { gameId: 'back9-game', holeNumber: 10, gameMode: 'best_ball' },
+          broBridge,
+        })}
+      />,
+    );
+    // No «Lever scorekort» anywhere — one delivery happens on the back9 host.
+    expect(screen.queryByRole('link', { name: 'Lever scorekort' })).toBeNull();
+    // Exactly ONE bridge link (the primary CTA), routing into the sibling.
+    const bridges = screen.getAllByRole('link', {
+      name: 'Videre til hull 10 · Best ball',
+    });
+    expect(bridges).toHaveLength(1);
+    expect(bridges[0].getAttribute('href')).toBe('/games/back9-game/holes/10');
+  });
+
+  it('broModus on a mid-round front9 hole once complete: the bridge replaces the deliver-CTA there too (not just hole 9)', () => {
+    render(
+      <HoleClient
+        {...baseProps({
+          currentHole: 3,
+          holeSegment: 'front9',
+          myCompletedHoles: 9, // roundComplete surfaces the CTA on every hole
+          broBridge,
+        })}
+      />,
+    );
+    expect(screen.queryByRole('link', { name: 'Lever scorekort' })).toBeNull();
+    const bridge = screen.getByRole('link', {
+      name: 'Videre til hull 10 · Best ball',
+    });
+    expect(bridge.getAttribute('href')).toBe('/games/back9-game/holes/10');
+  });
+
+  it('self-healing: broBridge null (sibling delivered) → the deliver-CTA returns on the front9 host', () => {
+    render(
+      <HoleClient
+        {...baseProps({
+          currentHole: 3,
+          holeSegment: 'front9',
+          myCompletedHoles: 9,
+          // broBridge is null because the back9 was delivered (e.g. front9
+          // rejected after the cascade) — the server passes no boundary bridge
+          // off hole 9 anyway.
+          segmentSibling: null,
+          broBridge: null,
+        })}
+      />,
+    );
+    const submitLink = screen.getByRole('link', { name: 'Lever scorekort' });
+    expect(submitLink.getAttribute('href')).toBe('/games/g1/submit');
+  });
+});
