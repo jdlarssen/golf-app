@@ -126,29 +126,29 @@ på resultatsiden i stedet for cup-siden (i så fall `npx vitest -u` på snapsho
 
 ## Success Criteria
 
-- [ ] **S1 — cup-siden er blind:** staging, aktiv cup med minst én ferdig match: `/cup/[id]`
+- [x] **S1 — cup-siden er blind:** staging, aktiv cup med minst én ferdig match: `/cup/[id]`
       viser matchliste + «X av N kamper spilt», men INGEN poengtall, resultattekst eller
       vinner-markering (visuelt verifisert + skjermbilde på PR).
-- [ ] **S2 — resultatsiden er låst:** samme cup, `/cup/[id]/resultater` viser ventetekst uten
+- [x] **S2 — resultatsiden er låst:** samme cup, `/cup/[id]/resultater` viser ventetekst uten
       noen resultatdata — også innlogget som admin/arrangør.
-- [ ] **S3 — styringssiden er skjermet:** admin- og klubb-varianten viser verken totaler eller
+- [x] **S3 — styringssiden er skjermet:** admin- og klubb-varianten viser verken totaler eller
       matchresultater; sidepoeng-registrering kan gjennomføres uten at noe resultat vises (#1459-
       scenarioet re-kjørt på staging).
-- [ ] **S4 — seremonien:** avslutt cupen på staging → resultatsiden viser vinner-banner,
+- [x] **S4 — seremonien:** avslutt cupen på staging → resultatsiden viser vinner-banner,
       lagtotaler, sidepoeng og matchresultater; cup-siden viser dør til resultatsiden.
-- [ ] **S5 — kamp-lenkene (#1456):** matchkort på cup-siden (og klubb-styringssiden) navigerer
+- [x] **S5 — kamp-lenkene (#1456):** matchkort på cup-siden (og klubb-styringssiden) navigerer
       til kampens leaderboard, inkludert for et avledet singles-spill.
-- [ ] **S6 — regresjon:** full vitest-suite grønn; `npx playwright test e2e/cup/` grønn mot
+- [x] **S6 — regresjon:** full vitest-suite grønn; `npx playwright test e2e/cup/` grønn mot
       staging; ikke-cup-flater urørt.
 
 ## Gates
 
-- [ ] `npm run build` (aldri pre-filtrert tsc-output)
-- [ ] `npm run lint` — 0 errors
-- [ ] `npx vitest run` — hele suiten
-- [ ] `npx playwright test e2e/cup/` mot staging — grønn
-- [ ] Commit-disiplin: `feat(cup)`, MINOR-bump, én Funksjon-linje i CHANGELOG, `Refs #1468` i body
-- [ ] PR-body: `Closes #1468`, `Closes #1459`, `Closes #1456`; fordeler/ulemper-blokk; notat om at
+- [x] `npm run build` (aldri pre-filtrert tsc-output)
+- [x] `npm run lint` — 0 errors
+- [x] `npx vitest run` — hele suiten
+- [x] `npx playwright test e2e/cup/` mot staging — grønn
+- [x] Commit-disiplin: `feat(cup)`, MINOR-bump, én Funksjon-linje i CHANGELOG, `Refs #1468` i body
+- [x] PR-body: `Closes #1468`, `Closes #1459`, `Closes #1456`; fordeler/ulemper-blokk; notat om at
       produktvalgene er eier-avgjort i økten (ingen `## Produktvalg`-heading — auto-merge-policy
       #1406 gjelder, men staging-verify + `staging-verified`-label FØR merge)
 
@@ -170,3 +170,13 @@ på resultatsiden i stedet for cup-siden (i så fall `npx vitest -u` på snapsho
 - RLS-/DB-endringer (#1459 alternativ B i full bredde).
 - #1449-kortenes badge-oppførsel og `winner_team`-persistering.
 - Å skjule per-kamp-leaderboards etter game-finish (akseptert spoiler-kanal, se over).
+
+## Evidens (2026-08-07, staging-kjøring)
+
+- **S1 — cup-siden er blind:** staging-driver: `cup-results-pending` synlig, `.text-5xl`=0, 2 matchkort; skjermbilde s1-cup-blind.png; match 1 finished i DB
+- **S2 — resultatsiden er låst:** staging-driver admin+spiller: `cup-results-locked` synlig, `cup-results-totals`=0; e2e @gate-assertion grønn
+- **S3 — styringssiden er skjermet:** staging-driver: `.text-4xl`=0 før/etter ctp-registrering; winner_user_id persistert (SQL); skjermbilde s3-manage-active.png
+- **S4 — seremonien:** ekte «Avslutt cupen»-klikk → status=finished, winner_team=1 (SQL); resultatside viser vinner/totaler/sidepoeng/10&8; cup-siden viser dør
+- **S5 — kamp-lenkene:** klikk Singel 1 → /games/<id>/leaderboard, `matchplay-status-banner` synlig
+- **S6 — regresjon:** vitest 5644/5644 grønn; playwright e2e/cup 2/2 grønn mot staging; build+lint grønn
+- **Gates:** build grønn (ny rute i manifest) · lint 0 errors · vitest 440 filer/5644 tester grønn · e2e cup 2/2 grønn mot staging · staging-bevis + `staging-verified`-label på PR #1498
