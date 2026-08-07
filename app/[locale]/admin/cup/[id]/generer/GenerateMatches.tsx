@@ -14,9 +14,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { getRoleContext } from '@/lib/admin/auth';
 import { MAX_PERSONAL_CUP_MATCHES } from '@/lib/cup/limits';
-import {
-  type CupSessionFormat,
-} from '@/lib/cup/cupTemplates';
+import { normalizeCustomSessions } from '@/lib/cup/planValidation';
 import { type PairingStrategy } from '@/lib/cup/cupPairing';
 import { type WizardPlayer } from '@/lib/cup/getCupCandidatePlayers';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
@@ -84,24 +82,6 @@ function userOf(
 
 function displayNameOf(u: ParticipantUser | null): string {
   return u?.nickname?.trim() || u?.name?.trim() || 'Ukjent spiller';
-}
-
-const SESSION_FORMAT_IDS = new Set<string>([
-  'foursomes_matchplay',
-  'fourball_matchplay',
-  'singles_matchplay',
-  'greensome_matchplay',
-  'chapman_matchplay',
-  'gruesome_matchplay',
-]);
-
-/** Trygg normalisering av `custom_sessions` (jsonb) → CupSessionFormat[]. */
-function normalizeCustomSessions(raw: unknown): CupSessionFormat[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (v): v is CupSessionFormat =>
-      typeof v === 'string' && SESSION_FORMAT_IDS.has(v),
-  );
 }
 
 type GenerateMatchesVariant = 'admin' | 'club';

@@ -10,7 +10,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { formatOsloDateTimeLocal } from '@/lib/games/gamePayload';
-import { type CupSessionFormat } from '@/lib/cup/cupTemplates';
+import { normalizeCustomSessions } from '@/lib/cup/planValidation';
 import { CupPlanForm } from './CupPlanForm';
 
 type CupRoomVariant = 'admin' | 'club';
@@ -20,24 +20,6 @@ type CourseRow = {
   name: string;
   tee_boxes: { id: string; name: string; archived_at: string | null }[];
 };
-
-const SESSION_FORMAT_IDS = new Set<string>([
-  'foursomes_matchplay',
-  'fourball_matchplay',
-  'singles_matchplay',
-  'greensome_matchplay',
-  'chapman_matchplay',
-  'gruesome_matchplay',
-]);
-
-/** Trygg normalisering av `custom_sessions` (jsonb) → CupSessionFormat[]. */
-function normalizeCustomSessions(raw: unknown): CupSessionFormat[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (v): v is CupSessionFormat =>
-      typeof v === 'string' && SESSION_FORMAT_IDS.has(v),
-  );
-}
 
 type PlanRow = {
   course_id: string | null;
