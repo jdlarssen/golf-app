@@ -483,7 +483,7 @@ export async function CupManagement({
         )}
 
         {tournament.status === 'active' && (
-          <form action={finishTournament}>
+          <form action={finishTournament} data-testid="cup-finish-form">
             <input type="hidden" name="id" value={tournament.id} />
             <SubmitButton className="w-full" disabled={!canFinish} pendingLabel={t('manage.finishPending')}>
               {t('manage.finishButton')}
