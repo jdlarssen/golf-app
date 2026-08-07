@@ -4513,7 +4513,7 @@
       "teeOffHint": "Første flight starter på valgt tidspunkt, de neste forskyves ti minutter hver. La stå tom for å starte rundene manuelt selv.",
       "formatHeading": "Format",
       "customPresetName": "Tilpasset",
-      "customPresetDescription": "Bygg din egen sesjon-liste.",
+      "customPresetDescription": "Bygg din egen sesjonsliste.",
       "addSessionButton": "+ Legg til sesjon",
       "formats": {
         "singles_matchplay": "Singel",
@@ -4523,7 +4523,7 @@
         "chapman_matchplay": "Chapman",
         "gruesome_matchplay": "Gruesome"
       },
-      "strategyHeading": "Paring-strategi",
+      "strategyHeading": "Paringsstrategi",
       "strategyHandicapLabel": "Handicap-balansert",
       "strategyHandicapDescription": "Sterk møter sterk, svak møter svak — jevnere kamper.",
       "strategyRandomLabel": "Tilfeldig",
