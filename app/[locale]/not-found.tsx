@@ -22,7 +22,7 @@ export default async function NotFound() {
   return (
     <AppShell>
       <BrandMark className="mt-2" />
-      <section className="mt-10 flex flex-col items-center text-center">
+      <section data-testid="not-found" className="mt-10 flex flex-col items-center text-center">
         <ChampagneMedallion className="mb-7">
           <PinFlag size={72} className="text-primary dark:text-text" />
         </ChampagneMedallion>
