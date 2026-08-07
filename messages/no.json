@@ -4789,7 +4789,7 @@
       "winnersColumnLabel": "Vinnere",
       "winnersHelp": "«Vinnere» er antall vinnerplasser for nærmest hullet og lengste drive. For GIR er tallet maks antall per lag på hullet.",
       "winnerCountSuffix": "{count} vinnere",
-      "girMaxSuffix": "maks {max} per lag",
+      "girMaxSuffix": "maks {maxPoints} p per lag",
       "slotOfCount": "({slot} av {count})",
       "girTeamCountLabel": "Hvor mange GIR klarte {team}?",
       "girRegistered": "GIR-tellingen er registrert.",

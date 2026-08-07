@@ -255,7 +255,7 @@ export function SideAwardsPanel({
                   {kindLabel(row.kind)} · {t('holeShort', { n: row.holeNumber })} ·{' '}
                   {formatPoints(row.points)} p
                   {row.kind === 'gir'
-                    ? ` · ${t('girMaxSuffix', { max: row.maxPerTeam })}`
+                    ? ` · ${t('girMaxSuffix', { maxPoints: formatPoints(row.points * row.maxPerTeam) })}`
                     : row.winnerCount > 1
                       ? ` · ${t('winnerCountSuffix', { count: row.winnerCount })}`
                       : ''}
@@ -439,7 +439,7 @@ function GirCountsRow({
     <Card className="!p-3">
       <p className="font-sans text-sm text-text mb-2">
         {t('kindGir')} · {t('holeShort', { n: award.holeNumber })} · {formatPoints(award.points)} p ·{' '}
-        {t('girMaxSuffix', { max: award.maxPerTeam })}
+        {t('girMaxSuffix', { maxPoints: formatPoints(award.points * award.maxPerTeam) })}
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
