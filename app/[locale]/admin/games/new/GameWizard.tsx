@@ -1258,6 +1258,7 @@ function WizardFooter({
         {showNext && (
           <Button
             type="button"
+            data-testid="wizard-next"
             onClick={onNext}
             disabled={!canAdvance}
             className="flex-1"

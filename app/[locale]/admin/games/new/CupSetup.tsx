@@ -222,7 +222,7 @@ export function CupSetup({
         </ul>
       </fieldset>
 
-      {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+      {errorMessage && <Banner tone="error" testId="cup-create-error">{errorMessage}</Banner>}
 
       <div className="pt-2">
         <Button
