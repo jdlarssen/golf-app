@@ -1683,6 +1683,103 @@ export type Database = {
           },
         ]
       }
+      tournament_participants: {
+        Row: {
+          created_at: string
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_participants_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_plans: {
+        Row: {
+          best_ball_allowance_pct: number | null
+          course_id: string | null
+          created_at: string
+          custom_sessions: Json | null
+          id: string
+          preset_id: string
+          scheduled_tee_off_at: string | null
+          strategy: string
+          tee_box_id: string | null
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          best_ball_allowance_pct?: number | null
+          course_id?: string | null
+          created_at?: string
+          custom_sessions?: Json | null
+          id?: string
+          preset_id?: string
+          scheduled_tee_off_at?: string | null
+          strategy?: string
+          tee_box_id?: string | null
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          best_ball_allowance_pct?: number | null
+          course_id?: string | null
+          created_at?: string
+          custom_sessions?: Json | null
+          id?: string
+          preset_id?: string
+          scheduled_tee_off_at?: string | null
+          strategy?: string
+          tee_box_id?: string | null
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_plans_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_plans_tee_box_id_fkey"
+            columns: ["tee_box_id"]
+            isOneToOne: false
+            referencedRelation: "tee_boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_plans_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: true
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_side_awards: {
         Row: {
           created_at: string
