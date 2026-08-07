@@ -183,11 +183,6 @@ const senders = [
         playerFirstName: 'Per',
         tournamentName: 'Høst-cup 2026',
         tournamentId: '33333333-3333-3333-3333-333333333333',
-        team1Name: 'Bjørketrærne',
-        team2Name: 'Granskogen',
-        team1Points: 3,
-        team2Points: 2,
-        winnerTeamName: 'Bjørketrærne',
       });
     },
   },
