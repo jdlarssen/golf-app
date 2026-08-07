@@ -54,6 +54,14 @@ export type CupMatchInput = {
    * pre-#1502 call-sites/tester; `getCupSnapshot` setter den alltid.
    */
   allScorecardsSubmitted?: boolean;
+  /**
+   * Helt trukket kamp (#1488, K5): true når kampen HAR spillere men alle er
+   * trukket. Sammen med `allScorecardsSubmitted` driver den
+   * `matchBlocksOneTapFinish` — en helt trukket aktiv host-kamp blokkerer IKKE
+   * ett-trykks-avslutningen (endGameCore avslutter den via WD-skip). Optional
+   * for pre-#1488 call-sites/tester; `getCupSnapshot` setter den alltid.
+   */
+  allPlayersWithdrawn?: boolean;
 };
 
 /**

@@ -1439,8 +1439,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 22 rettinger</strong></summary>
+<summary><strong>August 2026 · 23 rettinger</strong></summary>
 
+- `1.227.4` · [#1488](https://github.com/jdlarssen/golf-app/issues/1488) — Trekker alle spillerne i en cup-kamp seg, stopper den ikke lenger avslutningen — du slipper å gå via «Avslutt likevel», cupen avsluttes i ett trykk som resten.
 - `1.227.3` · [#1488](https://github.com/jdlarssen/golf-app/issues/1488) — Splittet cup-dag: en avledet kamp viser nå «Scorekort levert» så snart verten er levert — før sto den på «Pågår» selv etter at kortene var inne.
 - `1.227.2` · [#1458](https://github.com/jdlarssen/golf-app/issues/1458) — Lag-matchplay (greensome, foursomes, fourball m.fl.) som er avgjort før siste hull viser nå «5&4» i stedet for «8up» — samme lukk-ute-form som singles alt hadde.
 - `1.227.1` · [#1500](https://github.com/jdlarssen/golf-app/issues/1500) — Kan du se leaderboardet til en ferdig kamp, kan du nå også laste ned CSV-en — tilskuere fikk før en feilfil i stedet for regnearket.

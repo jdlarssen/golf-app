@@ -22,6 +22,14 @@ export type MatchPlayerRow = {
 export type MatchSubmissionStatus = {
   /** ≥1 non-withdrawn player exists AND all of them have submitted. */
   allScorecardsSubmitted: boolean;
+  /**
+   * The match HAS players but every one of them is withdrawn (#1488, K5). Such a
+   * match never becomes «levert» (there is no card to hand in), yet the one-tap
+   * finish should still close it — `endGameCore` skips withdrawn players. A
+   * match with no players at all is `false` (it would fail with `no_players`
+   * and must keep blocking).
+   */
+  allPlayersWithdrawn: boolean;
 };
 
 export type GameSubmissionInput = {
@@ -39,7 +47,23 @@ function computeOwnStatus(players: MatchPlayerRow[]): MatchSubmissionStatus {
   return {
     allScorecardsSubmitted:
       nonWithdrawn.length > 0 && nonWithdrawn.every((p) => p.submitted_at != null),
+    allPlayersWithdrawn: players.length > 0 && nonWithdrawn.length === 0,
   };
+}
+
+/**
+ * Does this match block the cup's one-tap finish (#1488, K5)? The single home
+ * of that rule, consumed by BOTH the `finishTournament` gate and the
+ * CupManagement banner list. A match blocks only when it is neither fully
+ * submitted NOR fully withdrawn: a fully-withdrawn active host match passes
+ * (`endGameCore` closes it via the WD-skip), while a match with no players at
+ * all still blocks (it would fail with `no_players`).
+ */
+export function matchBlocksOneTapFinish(m: {
+  allScorecardsSubmitted?: boolean;
+  allPlayersWithdrawn?: boolean;
+}): boolean {
+  return !(m.allScorecardsSubmitted ?? false) && !(m.allPlayersWithdrawn ?? false);
 }
 
 /**

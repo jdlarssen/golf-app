@@ -330,11 +330,10 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     const side1Players = gPlayers.filter((p) => p.team_number === 1);
     const side2Players = gPlayers.filter((p) => p.team_number === 2);
 
-    // #1502/#1488 (K4): «Scorekort levert» — alle ikke-trukne spillere har
-    // levert (withdrawn ekskludert). Avledede kamper arver host-statusen; se
-    // pre-passet over.
-    const allScorecardsSubmitted =
-      submissionStatusByGame.get(game.id)!.allScorecardsSubmitted;
+    // #1502/#1488 (K4/K5): «Scorekort levert» + helt-trukket-flagget. Avledede
+    // kamper arver host-statusen; se pre-passet over.
+    const { allScorecardsSubmitted, allPlayersWithdrawn } =
+      submissionStatusByGame.get(game.id)!;
 
     // Collect roster: add players to their respective team-buckets.
     for (const p of gPlayers) {
@@ -451,6 +450,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       result,
       sourceGameId: game.source_game_id,
       allScorecardsSubmitted,
+      allPlayersWithdrawn,
     });
   }
 
