@@ -95,10 +95,11 @@ describe('SideAwardsPanel', () => {
       />,
     );
 
-    // Recap grupperer slot-radene til én linje («2 vinnere») + gir-linjen
-    // («maks 3 per lag» står også i gir-registreringsraden → getAllByText).
+    // Recap grupperer slot-radene til én linje («2 vinnere») + gir-linjen.
+    // Gir-suffikset viser maks POENG per lag (3 × 1,5 p = 4,5 p), ikke antall
+    // («maks 4,5 p per lag» står også i gir-registreringsraden → getAllByText).
     expect(screen.getByText(/2 vinnere/)).toBeInTheDocument();
-    expect(screen.getAllByText(/maks 3 per lag/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/maks 4,5 p per lag/).length).toBeGreaterThan(0);
 
     // Registrering: to vinner-dropdowns (én per ctp-slot, nummerert), og to
     // GIR-teller-felt (ett per lag) med egen registrer-knapp.

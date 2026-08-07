@@ -4789,7 +4789,7 @@
       "winnersColumnLabel": "Winners",
       "winnersHelp": "“Winners” is the number of winner slots for closest to pin and longest drive. For GIR it is the max GIRs per team on the hole.",
       "winnerCountSuffix": "{count} winners",
-      "girMaxSuffix": "max {max} per team",
+      "girMaxSuffix": "max {maxPoints} p per team",
       "slotOfCount": "({slot} of {count})",
       "girTeamCountLabel": "How many GIRs did {team} make?",
       "girRegistered": "GIR counts registered.",

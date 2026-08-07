@@ -1431,8 +1431,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 18 rettinger</strong></summary>
+<summary><strong>August 2026 · 19 rettinger</strong></summary>
 
+- `1.226.3` · [#1503](https://github.com/jdlarssen/golf-app/issues/1503) — Sidepoeng-lista for GIR sier nå hvor mange poeng laget maks kan hente på hullet («maks 4,5 p per lag») i stedet for et antall det var lett å misforstå.
 - `1.218.9` · [#1475](https://github.com/jdlarssen/golf-app/issues/1475) — Samme retting for liga-skjemaet: feiler opprettingen (for eksempel sluttdato før startdato), beholder skjemaet alt du fylte ut i stedet for å tømme seg.
 - `1.218.8` · [#1397](https://github.com/jdlarssen/golf-app/issues/1397) — Feiler oppretting av en cup, står feilmeldingen nå rett over knappen og skjemaet beholder alt du fylte ut — cup-navn, lagnavn og poeng — i stedet for å tømme seg.
 - `1.218.6` · [#1451](https://github.com/jdlarssen/golf-app/issues/1451) — Setter du opp splittet cup-dag, forklarer oppstillings-steget nå irish greensome-varianten: begge slår ut, bytt ball på andreslaget, velg én ball og spill annenhver gang. Scoringen i appen er som før.
