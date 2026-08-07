@@ -23,6 +23,18 @@ import type { HoleSegment } from '@/lib/scoring';
  */
 export type EndGameActor = { id: string; name: string };
 
+/**
+ * One LD/CTP side-tournament winner to persist as part of the finish (#1488,
+ * K1). Upserted on the `(game_id, category, position)` PK, so a re-run
+ * overwrites the previous pick. `winner_user_id` is `null` for a slot the
+ * organiser explicitly left empty («ingen vinner»).
+ */
+export type EndGameSideWinner = {
+  category: 'longest_drive' | 'closest_to_pin';
+  position: 1 | 2;
+  winner_user_id: string | null;
+};
+
 export type EndGameCoreOptions = {
   /**
    * «Avslutt likevel»-rømningen (#375): players who never submitted are
@@ -40,6 +52,28 @@ export type EndGameCoreOptions = {
    * result-reveal notifications are held back.
    */
   suppressPerGameNotifications?: boolean;
+  /**
+   * Side-tournament (LD/CTP) winners to upsert (#1488, K1). Persisted AFTER
+   * player validation and BEFORE the status flip, so a partial failure leaves
+   * the game `active` and returns reason `'db_winners'` — the organiser can
+   * retry. Idempotent on the `(game_id, category, position)` PK. Empty/omitted
+   * → the winner step is skipped entirely (ordinary single-game finish).
+   */
+  sideWinners?: EndGameSideWinner[];
+  /**
+   * Extra fields merged into the `game.finished` audit-log payload (#1488, K1).
+   * The side-winners caller passes `{ sideTournament: true, sideWinners }` so
+   * the audit trail matches the old inline action byte-for-byte.
+   */
+  auditExtras?: Record<string, unknown>;
+  /**
+   * Log-prefix + notify context (#1488, K3). Default `'endGame'`; the
+   * side-winners wrapper passes `'endGameWithSideWinners'`. Used in every
+   * `console.error` prefix in this pipeline AND as the context parameter to
+   * `notifyPlayersGameFinished`, so Vercel logs still tell the two finish
+   * entry points apart.
+   */
+  logContext?: string;
 };
 
 export type EndGameCoreResult =
@@ -51,6 +85,7 @@ export type EndGameCoreResult =
         | 'no_players'
         | 'not_all_submitted'
         | 'not_all_approved'
+        | 'db_winners'
         | 'db_finish';
     };
 
@@ -70,6 +105,11 @@ export type EndGameCoreResult =
  *    gated by `requireAdminOrClubAdminOfCup` before this ever runs).
  *  - Takes the actor explicitly (audit log) and gates the two reveal
  *    notifications behind `suppressPerGameNotifications`.
+ *  - #1488 (K1): also absorbs the former `endGameWithSideWinners` twin via
+ *    `sideWinners` (upserted before the flip), `auditExtras` (merged into the
+ *    audit payload) and `logContext` (log-prefix + notify context). The
+ *    side-tournament action is now a thin wrapper: it parses the winner form
+ *    and maps results to redirects, this is the single finish pipeline.
  *
  * Everything else — query order, derived-game fan-out, all the best-effort
  * persistence, the cache revalidation — is byte-identical to the old `endGame`
@@ -81,7 +121,13 @@ export async function endGameCore(
   actor: EndGameActor,
   options: EndGameCoreOptions = {},
 ): Promise<EndGameCoreResult> {
-  const { allowMissing = false, suppressPerGameNotifications = false } = options;
+  const {
+    allowMissing = false,
+    suppressPerGameNotifications = false,
+    sideWinners,
+    auditExtras,
+    logContext = 'endGame',
+  } = options;
 
   // Verify game is active. Inkluderer game_mode + mode_config + course_id
   // slik at vi kan bygge mode-aware completion-mail uten å re-fetche game.
@@ -150,6 +196,27 @@ export async function endGameCore(
     }
   }
 
+  // #1488 (K1/K2): persist LD/CTP side-tournament winners BEFORE the status
+  // flip so a partial failure leaves the game `active` (result `db_winners`)
+  // and the organiser can retry. Idempotent on the (game_id, category,
+  // position) PK — re-submitting the wizard overwrites. Ordinary finishes pass
+  // no `sideWinners`, so this is a no-op for them.
+  if (sideWinners && sideWinners.length > 0) {
+    const rows = sideWinners.map((w) => ({
+      game_id: gameId,
+      category: w.category,
+      position: w.position,
+      winner_user_id: w.winner_user_id,
+    }));
+    const { error: winnerErr } = await supabase
+      .from('game_side_winners')
+      .upsert(rows, { onConflict: 'game_id,category,position' });
+    if (winnerErr) {
+      console.error(`[${logContext}] winners insert failed`, winnerErr);
+      return { ok: false, reason: 'db_winners' };
+    }
+  }
+
   const endedAt = new Date().toISOString();
   const { error } = await supabase
     .from('games')
@@ -157,7 +224,7 @@ export async function endGameCore(
     .eq('id', gameId);
 
   if (error) {
-    console.error('[endGameCore] finish status update failed', error);
+    console.error(`[${logContext}] finish status update failed`, error);
     return { ok: false, reason: 'db_finish' };
   }
 
@@ -200,7 +267,10 @@ export async function endGameCore(
     eventType: 'game.finished',
     targetType: 'game',
     targetId: gameId,
-    payload: { gameName: game.name },
+    // #1488 (K1): `auditExtras` carries the side-winners caller's
+    // `{ sideTournament: true, sideWinners }` so the audit payload is
+    // byte-identical to the old inline action.
+    payload: { gameName: game.name, ...auditExtras },
   });
 
   // #1501: cup-avslutningen undertrykker de to reveal-signalene per kamp —
@@ -214,7 +284,7 @@ export async function endGameCore(
     const sendMailByUserId = await notifyPlayersGameFinished(
       players,
       { id: gameId, name: game.name },
-      'endGame',
+      logContext,
     );
 
     // Best-effort: send "Resultatet er klart"-mail kun til off-app-spillere.
@@ -249,7 +319,7 @@ export async function endGameCore(
       );
       for (const r of results) {
         if (r.status === 'rejected') {
-          console.error('[endGame] game-finished mail failed', r.reason);
+          console.error(`[${logContext}] game-finished mail failed`, r.reason);
         }
       }
     }
