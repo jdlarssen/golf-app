@@ -456,7 +456,7 @@ export async function CupManagement({
               // kampen).
               const href = isClub
                 ? m.status === 'finished'
-                  ? `/games/${m.gameId}/leaderboard`
+                  ? `/games/${m.gameId}/leaderboard?from=/klubber/${groupId}/cup/${tournamentId}`
                   : null
                 : `/admin/games/${m.gameId}`;
               return (

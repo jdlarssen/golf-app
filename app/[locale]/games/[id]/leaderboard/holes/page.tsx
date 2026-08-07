@@ -72,8 +72,14 @@ export default async function LeaderboardHolesPage({
   const mode: LeaderboardMode = forceBrutto ? 'brutto' : requestedMode;
 
   const isAdmin = profileRes.data?.is_admin === true;
-  // Non-admin players must be a participant. Reads from cached players list.
-  if (!isAdmin && !gwp.players.some((p) => p.user_id === userId)) {
+  // Non-admin, non-participants may open FINISHED games — samme finished-
+  // unntak som leaderboard-siden (#1456/#1468): State4Views lagrader lenker
+  // hit for ferdige cup-matcher. Under spill fortsatt kun for deltakere.
+  if (
+    !isAdmin &&
+    game.status !== 'finished' &&
+    !gwp.players.some((p) => p.user_id === userId)
+  ) {
     notFound();
   }
 

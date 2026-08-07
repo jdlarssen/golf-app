@@ -153,7 +153,10 @@ export default async function PublicCupPage({ params }: { params: Params }) {
               return (
                 <li key={m.gameId}>
                   {m.status === 'finished' ? (
-                    <SmartLink href={`/games/${m.gameId}/leaderboard`} className="block">
+                    <SmartLink
+                      href={`/games/${m.gameId}/leaderboard?from=/cup/${id}`}
+                      className="block"
+                    >
                       {card}
                     </SmartLink>
                   ) : (
