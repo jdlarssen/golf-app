@@ -1,8 +1,27 @@
-# Contract: #1458 — Early-decided greensome shows «Xup» instead of «X&Y»
+# Contract: #1458 + #1506 — Early-decided matchplay team formats show «Xup» instead of «X&Y»
 
-Worktree: `.claude/worktrees/contract-issue-1458-bba865` · Branch: `claude/contract-issue-1458-bba865`
-Spec/anchor: issue #1458 (found in generalprøven of split cup day #1441, criterion 5b).
-All commits include `Refs #1458` in the body.
+Worktree: `.claude/worktrees/contract-golf-app-5f531d` · Branch: `claude/reverent-dirac-5cdc17`
+Spec/anchor: issue #1458 (generalprøven of split cup day #1441, criterion 5b) + issue
+#1506 (independent prod confirmation, cup «testes» 2026-08-07 — same root cause,
+diagnosed to `computeFoursomesCore` missing the #800 snapshot).
+All commits include `Refs #1458` and `Refs #1506` in the body. The PR closes both.
+
+## Addendum 2026-08-07 — #1506 merged into this contract
+
+- #1506 (filed after this contract was written) reached the identical root-cause
+  diagnosis from prod data: game `90f3e5a1` (greensome, front9) decided 5 up with 4 to
+  play, all 9 holes entered → persisted `game_players.result_summary.margin = "8up"`
+  where «5&4» is correct. No contract changes needed — the design below already covers
+  it. Points, winner side and cup totals were verified correct; only the notation string
+  is wrong.
+- Ground truth added this session: `lib/scoring/resultSummary.ts:184` sets
+  `margin = result.formatted`, persisted at endGame via
+  `lib/games/persistResultSummaries.ts`. The engine fix therefore flows into all future
+  persists automatically. Cup pages compute on read, so existing cup matches heal on
+  deploy without data changes.
+- **Out of scope, follow-up issue:** already-persisted `result_summary.margin` strings
+  on finished games (at least prod game `90f3e5a1`) stay wrong until repaired — a prod
+  data repair is firewalled and needs owner approval, so it becomes its own issue.
 
 ## Problem
 
