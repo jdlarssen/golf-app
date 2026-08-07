@@ -286,11 +286,7 @@ export async function CupManagement({
         tournamentId={tournamentId}
         initialAwards={snapshot.sideAwards}
         rosterOptions={rosterOptions}
-        configEditable={
-          tournament.status === 'draft' ||
-          (tournament.status === 'active' &&
-            !snapshot.sideAwards.some((a) => a.winnerUserId !== null))
-        }
+        configEditable={tournament.status === 'draft'}
         showWinnerRegistration={tournament.status === 'active' || tournament.status === 'finished'}
       />
 

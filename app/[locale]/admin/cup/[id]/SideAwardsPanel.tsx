@@ -16,10 +16,10 @@ import type { CupSideAwardSnapshot } from '@/lib/cup/getCupSnapshot';
 /**
  * Sidepoeng-panel for cup-admin-detaljen (#1441, D9). Ett sted for begge
  * halvdelene av flyten:
- *  - **Oppsett** (add/remove-rader: kind/hull/poeng) — redigerbar mens cupen
- *    er `draft`, eller `active` så lenge ingen rad har fått en vinner ennå
- *    (speiler `saveSideAwardConfig`s egen gate — `configEditable` sendes inn
- *    ferdig utledet fra kall-siden, som allerede har snapshotet).
+ *  - **Oppsett** (add/remove-rader: kind/hull/poeng) — redigerbar KUN mens
+ *    cupen er `draft` (#1455: sidepoeng-oppsett låses ved start). Speiler
+ *    `saveSideAwardConfig`s egen draft-only-gate — `configEditable` sendes inn
+ *    ferdig utledet fra kall-siden, som allerede har snapshotet.
  *  - **Vinner-registrering** («Etter runden») — én rad per konfigurert
  *    innslag med en vinner-dropdown, synlig når cupen er `active`/`finished`
  *    OG minst ett innslag finnes.
@@ -67,6 +67,7 @@ export function SideAwardsPanel({
     duplicate_side_award: t('errors.duplicate'),
     not_found: t('errors.notFound'),
     cup_finished: t('errors.cupFinished'),
+    cup_started: t('errors.cupStarted'),
     winners_already_registered: t('errors.winnersRegistered'),
     save_failed: t('errors.saveFailed'),
   };
@@ -180,7 +181,7 @@ export function SideAwardsPanel({
       ) : (
         <Card>
           {initialAwards.length === 0 ? (
-            <p className="text-sm text-muted">{t('empty')}</p>
+            <p className="text-sm text-muted">{t('emptyLocked')}</p>
           ) : (
             <ul className="space-y-1 text-sm text-text">
               {initialAwards.map((a) => (
