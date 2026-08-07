@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import {
   getRoleContext,
@@ -11,6 +12,8 @@ import {
   requireAdminOrClubAdminOfCup,
 } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
+import { allSideAwardsRegistered } from './sideAwardsRegistered';
+import { endGameCore } from '@/lib/games/endGameCore';
 import { planTournamentGameDeletion } from './tournamentGameDeletion';
 import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
 import {
@@ -338,9 +341,14 @@ export async function startTournament(formData: FormData) {
 export async function finishTournament(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   if (!id) redirect('/admin/cup?error=not_found');
+  // «Avslutt likevel» (#1501/#375): sekundær-formen setter allow_missing=true
+  // for å ende cupen selv om noen spillere ikke har levert (per-kamp
+  // allowMissing). Peer-approval-gaten relaxes ALDRI (#360) — den består i
+  // pipelinen uansett.
+  const allowMissing = String(formData.get('allow_missing') ?? '') === 'true';
 
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, id);
+  const actor = await requireAdminOrClubAdminOfCup(supabase, id);
   const base = await cupRedirectBase(supabase, id);
 
   const snapshot = await getCupSnapshot(id);
@@ -349,13 +357,75 @@ export async function finishTournament(formData: FormData) {
     redirect(`${base.path}?error=already_finished`);
   }
 
-  // Vinner bestemmes av point-status ved avslutning. Hvis ingen lag har nådd
-  // point-mål → vinner-team forblir NULL (uavgjort cup avsluttes med
-  // 'finished'-status uten vinner-deklarering).
+  // 1. Sidepoeng-gate (#1501): cupen kan ikke avsluttes før alle konfigurerte
+  // sidepoeng har en registrering (ctp/ld → vinner; gir → begge tellere, 0
+  // gyldig). Server-side re-validering av det CupManagement allerede disabler.
+  if (!allSideAwardsRegistered(snapshot.sideAwards)) {
+    redirect(`${base.path}?error=side_awards_missing`);
+  }
+
+  // 2. Host-kamper endes eksplisitt (source_game_id IS NULL); avledede følger
+  // via `finishDerivedGames` i pipelinen. Vi arbeider på ACTIVE host-kamper —
+  // allerede finished hopper over (idempotent re-trykk), og scheduled/draft
+  // ble aldri spilt (dagens flip rørte uansett aldri kampene).
+  const activeHostMatches = snapshot.leaderboard.matches.filter(
+    (m) => (m.sourceGameId ?? null) === null && m.status === 'active',
+  );
+
+  // 3. Leverings-gate (#1501/#375): med mindre «Avslutt likevel», må hver
+  // active host-kamp ha alle ikke-trukne kort levert. Mangler noen → stopp med
+  // kampliste (banneret utleder den fra snapshotet) + «Avslutt likevel»-valg.
+  if (!allowMissing) {
+    const notSubmitted = activeHostMatches.filter(
+      (m) => !m.allScorecardsSubmitted,
+    );
+    if (notSubmitted.length > 0) {
+      redirect(`${base.path}?error=matches_not_submitted`);
+    }
+  }
+
+  // 4. Løpet: end hver active host-kamp via den EKTE endGame-pipelinen
+  // (resultatsammendrag, differensialer, bragder, rundereferat; avledede følger
+  // via finishDerivedGames). Skriver via admin-client — en klubb-styrer er ikke
+  // games-creator, så creator-RLS-en (0071) dekker ikke stien; authz er alt
+  // gjort av `requireAdminOrClubAdminOfCup` over (AGENTS.md trap #3). Per-kamp-
+  // varsler undertrykkes — cup-mailen under er reveal-signalet. Feil samles;
+  // feiler NOEN kamp → cupen avsluttes IKKE (ingen stille halvferdig tilstand;
+  // allerede-avsluttede kamper står, re-trykk er trygt/idempotent).
+  const adminClient = getAdminClient();
+  const finishActor = { id: actor.userId, name: actor.name?.trim() || 'Arrangør' };
+  const finishFailures: string[] = [];
+  for (const m of activeHostMatches) {
+    const result = await endGameCore(adminClient, m.gameId, finishActor, {
+      allowMissing,
+      suppressPerGameNotifications: true,
+    });
+    if (!result.ok) {
+      finishFailures.push(m.gameId);
+      console.error('[cup] finishTournament match finish failed', {
+        id,
+        gameId: m.gameId,
+        reason: result.reason,
+      });
+    }
+  }
+  if (finishFailures.length > 0) {
+    redirect(`${base.path}?error=match_finish_failed`);
+  }
+
+  // 5. Re-les snapshotet etter at kampene er avsluttet — vinneren regnes på den
+  // ferske stillingen (match-poeng teller kun for `finished` kamper).
+  const finalSnapshot = await getCupSnapshot(id);
+  if (!finalSnapshot) redirect('/admin/cup?error=not_found');
+  const finalLeaderboard = finalSnapshot!.leaderboard;
+  const finalTournament = finalSnapshot!.tournament;
+
+  // Vinner bestemmes av point-status ved avslutning. Hvis ingen lag leder →
+  // vinner-team forblir NULL (uavgjort cup avsluttes uten vinner-deklarering).
   let winnerTeam: 1 | 2 | null = null;
-  if (snapshot.leaderboard.team1Points > snapshot.leaderboard.team2Points) {
+  if (finalLeaderboard.team1Points > finalLeaderboard.team2Points) {
     winnerTeam = 1;
-  } else if (snapshot.leaderboard.team2Points > snapshot.leaderboard.team1Points) {
+  } else if (finalLeaderboard.team2Points > finalLeaderboard.team1Points) {
     winnerTeam = 2;
   }
 
@@ -380,7 +450,8 @@ export async function finishTournament(formData: FormData) {
 
   // Best-effort avslutnings-varsel: in-app til ALLE deltakere først, mail kun
   // til off-app-deltakere (#377). Samme in-app-først-prinsipp som enkeltspill-
-  // avslutningen — ingen egen blanket-mail til alle.
+  // avslutningen — ingen egen blanket-mail til alle. Dette er cupens ENESTE
+  // reveal-signal (#1501): per-kamp-mailene ble undertrykt i løpet over.
   //
   // loadTournamentParticipantEmails dropper deltakere uten e-post, men
   // Tørny-auth er e-post-OTP, så alle brukere HAR e-post — denne lista er
@@ -388,7 +459,7 @@ export async function finishTournament(formData: FormData) {
   const recipients = await loadTournamentParticipantEmails(supabase, id);
   const sendMailByUserId = await notifyParticipantsCupFinished(
     recipients,
-    { id, name: snapshot.tournament.name },
+    { id, name: finalTournament.name },
     'finishTournament',
   );
 
@@ -397,9 +468,9 @@ export async function finishTournament(formData: FormData) {
   try {
     const winnerName =
       winnerTeam === 1
-        ? snapshot.tournament.team_1_name
+        ? finalTournament.team_1_name
         : winnerTeam === 2
-          ? snapshot.tournament.team_2_name
+          ? finalTournament.team_2_name
           : null;
     const mailRecipients = recipients.filter(
       (r) => sendMailByUserId.get(r.user_id) === true,
@@ -409,12 +480,12 @@ export async function finishTournament(formData: FormData) {
         sendCupFinishedNotification({
           to: r.email,
           playerFirstName: r.name?.split(' ')[0] ?? null,
-          tournamentName: snapshot.tournament.name,
+          tournamentName: finalTournament.name,
           tournamentId: id,
-          team1Name: snapshot.tournament.team_1_name,
-          team2Name: snapshot.tournament.team_2_name,
-          team1Points: snapshot.leaderboard.team1Points,
-          team2Points: snapshot.leaderboard.team2Points,
+          team1Name: finalTournament.team_1_name,
+          team2Name: finalTournament.team_2_name,
+          team1Points: finalLeaderboard.team1Points,
+          team2Points: finalLeaderboard.team2Points,
           winnerTeamName: winnerName,
           locale: r.locale,
         }),

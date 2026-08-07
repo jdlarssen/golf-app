@@ -363,3 +363,174 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
     await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
   });
 });
+
+/**
+ * #1501: cup-avslutning i ETT trykk. Seeder en aktiv cup med én host-kamp der
+ * begge scorekort er levert (og ingen sidepoeng konfigurert, så gaten er
+ * trivielt grønn), åpner styringssiden, trykker ÉN gang på «Avslutt cupen» og
+ * verifiserer via SQL-orakler at BÅDE host-kampen og cupen ble `finished` — det
+ * hullet #1468-prod-testen avdekket (cup avsluttet med kampene urørt).
+ *
+ * Golden path via data-testid (`cup-finish-submit`) — ingen norsk-copy-
+ * assertions. @lifecycle: driver den ekte endGame-pipelinen per kamp
+ * (resultatsammendrag, differensialer, best-effort mail) på delt staging-DB.
+ */
+test.describe('Cup one-tap finish (#1501)', () => {
+  test.skip(!envReady, skipReason);
+  test.slow();
+
+  let tournamentId: string | null = null;
+
+  test.afterAll(async () => {
+    if (!tournamentId) return;
+    const admin = adminClient();
+    await admin.from('games').delete().eq('tournament_id', tournamentId);
+    await admin.from('tournaments').delete().eq('id', tournamentId);
+  });
+
+  test('one tap finishes every host match and the cup @lifecycle', async ({
+    page,
+  }) => {
+    const admin = adminClient();
+
+    const { data: adminUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', ADMIN_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    const { data: playerUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', PLAYER_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    expect(adminUser, 'admin user seeded').toBeTruthy();
+    expect(playerUser, 'player user seeded').toBeTruthy();
+
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    expect(tee, 'a tee with a mens rating').toBeTruthy();
+
+    const stamp = Date.now();
+    const cupName = `TEST-Cup-onetap-${stamp}`;
+    const { data: cup, error: cupErr } = await admin
+      .from('tournaments')
+      .insert({
+        name: cupName,
+        team_1_name: 'Lag A',
+        team_2_name: 'Lag B',
+        points_to_win: 1,
+        status: 'active',
+        created_by: adminUser!.id,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(cupErr).toBeNull();
+    tournamentId = cup!.id;
+
+    // One active singles host match. require_peer_approval=false so a delivered
+    // scorecard is enough for the finish gate (peer-approval is never relaxed —
+    // out of scope for the golden path).
+    const { data: matchGame, error: mErr } = await admin
+      .from('games')
+      .insert({
+        name: `${cupName} – Singel 1`,
+        course_id: tee!.course_id,
+        tee_box_id: tee!.id,
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1 },
+        status: 'active',
+        require_peer_approval: false,
+        created_by: adminUser!.id,
+        tournament_id: tournamentId,
+        tournament_match_label: 'Singel 1',
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(mErr).toBeNull();
+    const matchId = matchGame!.id;
+
+    // Both players delivered (submitted_at set) → «Scorekort levert» + the
+    // finish gate passes without «Avslutt likevel».
+    const submittedAt = new Date().toISOString();
+    const { error: gpErr } = await admin.from('game_players').insert([
+      {
+        game_id: matchId,
+        user_id: adminUser!.id,
+        team_number: 1,
+        flight_number: 1,
+        course_handicap: 12,
+        accepted_at: submittedAt,
+        submitted_at: submittedAt,
+      },
+      {
+        game_id: matchId,
+        user_id: playerUser!.id,
+        team_number: 2,
+        flight_number: 1,
+        course_handicap: 18,
+        accepted_at: submittedAt,
+        submitted_at: submittedAt,
+      },
+    ]);
+    expect(gpErr, 'game_players insert must succeed').toBeNull();
+
+    const clientUpdatedAt = new Date().toISOString();
+    const scoreRows = [1, 2, 3].flatMap((hole) => [
+      {
+        game_id: matchId,
+        user_id: adminUser!.id,
+        hole_number: hole,
+        strokes: 4,
+        entered_by: adminUser!.id,
+        client_updated_at: clientUpdatedAt,
+      },
+      {
+        game_id: matchId,
+        user_id: playerUser!.id,
+        hole_number: hole,
+        strokes: 5,
+        entered_by: playerUser!.id,
+        client_updated_at: clientUpdatedAt,
+      },
+    ]);
+    const { error: sErr } = await admin.from('scores').insert(scoreRows);
+    expect(sErr, 'scores insert must succeed').toBeNull();
+
+    // Drive the one tap on the admin cup-detail page.
+    await page.goto(`/login?next=/admin/cup/${tournamentId}`);
+    await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto(`/admin/cup/${tournamentId}`);
+
+    const finishButton = page.getByTestId('cup-finish-submit');
+    await expect(finishButton).toBeVisible();
+    await expect(finishButton).toBeEnabled();
+    await finishButton.click();
+
+    // Success redirects back to the cup detail with ?status=finished.
+    await page.waitForURL(/status=finished/, { timeout: 30_000 });
+
+    // SQL oracles: BOTH the host match and the cup are finished (the #1468 hole
+    // was the cup flipping while the match stayed active).
+    const { data: finishedGame } = await admin
+      .from('games')
+      .select('status')
+      .eq('id', matchId)
+      .maybeSingle<{ status: string }>();
+    expect(finishedGame?.status, 'host match finished by the one tap').toBe('finished');
+
+    const { data: finishedCup } = await admin
+      .from('tournaments')
+      .select('status, winner_team')
+      .eq('id', tournamentId)
+      .maybeSingle<{ status: string; winner_team: number | null }>();
+    expect(finishedCup?.status, 'cup finished').toBe('finished');
+
+    // The public cup page now shows the results door (finished state).
+    await page.goto(`/cup/${tournamentId}`);
+    await expect(page.getByTestId('cup-results-door')).toBeVisible();
+  });
+});

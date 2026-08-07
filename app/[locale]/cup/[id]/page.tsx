@@ -7,6 +7,10 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { canViewCupPage } from '@/lib/cup/cupPageAccess';
+import {
+  cupMatchStatusKey,
+  CUP_MATCH_STATUS_MESSAGE_KEY,
+} from '@/lib/cup/cupMatchStatusLabel';
 
 type Params = Promise<{ id: string }>;
 
@@ -115,12 +119,16 @@ export default async function PublicCupPage({ params }: { params: Params }) {
         ) : (
           <ul className="space-y-2">
             {leaderboard.matches.map((m) => {
-              const statusLabel =
-                m.status === 'finished'
-                  ? t('public.matchPlayed')
-                  : m.status === 'active'
-                    ? t('public.matchInProgress')
-                    : t('public.matchDraft');
+              // #1502: delt status-label — «Scorekort levert» når alle ikke-
+              // trukne har levert og kampen er aktiv, ellers Spilt/Pågår/Utkast.
+              const statusLabel = t(
+                CUP_MATCH_STATUS_MESSAGE_KEY[
+                  cupMatchStatusKey({
+                    status: m.status,
+                    allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
+                  })
+                ],
+              );
               const card = (
                 <Card
                   className={

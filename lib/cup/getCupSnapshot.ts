@@ -135,6 +135,10 @@ type PlayerRow = {
   user_id: string;
   team_number: number | null;
   course_handicap: number | null;
+  // #1502: leverings-tilstand per spiller — driver «Scorekort levert»-labelen
+  // (alle ikke-trukne levert) og leverings-gaten i finishTournament.
+  submitted_at: string | null;
+  withdrawn_at: string | null;
   // Supabase JS typer FK-joins som array selv på many-to-one. Normaliser
   // i call-site (se `userOf`).
   users: UserRel | UserRel[] | null;
@@ -223,7 +227,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       : supabase
           .from('game_players')
           .select(
-            'game_id, user_id, team_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
+            'game_id, user_id, team_number, course_handicap, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
           )
           .in('game_id', gameIds),
     gameIds.length === 0
@@ -313,6 +317,13 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     // lag-format (fourball/foursomes/greensome/chapman/gruesome/best_ball) har 2.
     const side1Players = gPlayers.filter((p) => p.team_number === 1);
     const side2Players = gPlayers.filter((p) => p.team_number === 2);
+
+    // #1502: «Scorekort levert» — alle ikke-trukne spillere har levert.
+    // Withdrawn ekskluderes (samme regel som endGame-gaten); en kamp uten
+    // ikke-trukne spillere kan aldri være «levert».
+    const nonWithdrawn = gPlayers.filter((p) => !p.withdrawn_at);
+    const allScorecardsSubmitted =
+      nonWithdrawn.length > 0 && nonWithdrawn.every((p) => p.submitted_at != null);
 
     // Collect roster: add players to their respective team-buckets.
     for (const p of gPlayers) {
@@ -427,6 +438,8 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       gameMode: matchGameMode,
       status: game.status,
       result,
+      sourceGameId: game.source_game_id,
+      allScorecardsSubmitted,
     });
   }
 
