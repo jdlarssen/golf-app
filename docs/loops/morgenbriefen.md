@@ -37,6 +37,15 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   aldri-liste-fil, eller bruker-synlig uten `staging-verified`. En PR som allerede
   er auto-merget rapporteres under «Skjedde i natt» (verifisert merge), aldri som
   et åpent gjøremål.
+- **Branch protection dekker merge-porten (#1477, fra 2026-08-07).** Main nekter
+  server-side enhver merge uten grønn `verify` + `e2e` + `scan` på head-SHA-en
+  (docs-only-PR-er dekkes av no-op-tvillingene i `ci-docs-noop.yml`). En PR som
+  ER merget har derfor beviselig hatt grønne porter — «Skjedde i natt»-
+  verifiseringen av en merge trenger bare bekrefte selve mergen, ikke re-lese
+  check-rollupen. For ÅPNE PR-er gjelder `gh pr checks`-plikten fortsatt: et
+  tomt/foreldet rollup betyr at checks aldri kjørte (#1469, intermitterende)
+  og må dispatches — det kan ikke lenger merges forbi, men det kan blokkere
+  en legitim merge til noen starter dem.
 - **Tom natt gir én linje** («ingen aktivitet — heartbeats OK»), aldri
   ingenting. Stillhet fra briefen selv skal bety at briefen feilet; da er
   claude.ai/code/routines-siden eierens fallback.
