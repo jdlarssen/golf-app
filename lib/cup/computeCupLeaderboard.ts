@@ -62,6 +62,16 @@ export type CupMatchInput = {
    * for pre-#1488 call-sites/tester; `getCupSnapshot` setter den alltid.
    */
   allPlayersWithdrawn?: boolean;
+  /**
+   * Spiller-ID-ene per side (#1497): brukes av per-spiller-poengregnskapet
+   * (`computeCupPlayerPoints`) til å kreditere hver spiller på siden hele
+   * sidens kamppoeng (Ryder Cup-full-kreditt). Optional for pre-#1497
+   * call-sites/tester; `getCupSnapshot` setter dem fra side1Players/side2Players.
+   * Mangler feltet → aggregatoren gir ingen kamp-kreditt til matchens spillere
+   * (defensiv fallback), regnskapet krasjer aldri på en gammel input-form.
+   */
+  team1UserIds?: string[];
+  team2UserIds?: string[];
 };
 
 /**
