@@ -78,6 +78,14 @@ export type LeaderboardContentOpts = {
   supabase: SupabaseClient<Database>;
   includeReactions: boolean;
   viewerUserId: string;
+  /**
+   * Mount `ReactionsProvider` in its inert state (#1488, K11). Non-participants
+   * may open a FINISHED game's leaderboard (#1468), but the reaction write is
+   * RLS-gated to participants — tapping would just fail silently. The caller
+   * passes `!isParticipant` so a spectator's taps do nothing (no server call).
+   * Only consulted when `includeReactions` is true.
+   */
+  reactionsDisabled?: boolean;
 };
 
 /**
@@ -104,6 +112,7 @@ export async function renderLeaderboardContent({
   supabase,
   includeReactions,
   viewerUserId,
+  reactionsDisabled = false,
 }: LeaderboardContentOpts): Promise<ReactNode> {
   const [tc, locale] = await Promise.all([
     getTranslations('leaderboard.common'),
@@ -154,7 +163,11 @@ export async function renderLeaderboardContent({
   // ReactionsProvider is never mounted (spectate route, #938).
   const withReactions = (node: ReactNode): ReactNode =>
     includeReactions ? (
-      <ReactionsProvider gameId={gameId} initial={reactionSummary}>
+      <ReactionsProvider
+        gameId={gameId}
+        initial={reactionSummary}
+        disabled={reactionsDisabled}
+      >
         {node}
       </ReactionsProvider>
     ) : (
