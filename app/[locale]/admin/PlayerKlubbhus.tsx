@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getMyClubs } from '@/lib/clubs/getMyClubs';
+import { getMyCupIds } from '@/lib/cup/myCups';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { firstName } from '@/lib/firstName';
@@ -65,10 +66,11 @@ async function ArrangementSection({ userId }: { userId: string }) {
   const supabase = await getServerClient();
   const locale = (await getLocale()) as AppLocale;
 
-  // Created games (RLS 0071 «games select own created») + personal-cup count
-  // (RLS select-own; group_id null = personal cup). Fetch limit+1 to detect the
-  // «Se alle →» overflow without a second count query.
-  const [gamesRes, cupRes] = await Promise.all([
+  // Created games (RLS 0071 «games select own created») + the cups the player
+  // is part of — created, on a draft roster, or played (#1463; the count and
+  // the `/admin/cup` list read the same union). Games fetch limit+1 to detect
+  // the «Se alle →» overflow without a second count query.
+  const [gamesRes, cupIds] = await Promise.all([
     supabase
       .from('games')
       .select('id, name, status, courses(name)')
@@ -76,11 +78,7 @@ async function ArrangementSection({ userId }: { userId: string }) {
       .order('created_at', { ascending: false })
       .limit(MAX_ARRANGED + 1)
       .returns<ArrangedGameRow[]>(),
-    supabase
-      .from('tournaments')
-      .select('id', { count: 'exact', head: true })
-      .eq('created_by', userId)
-      .is('group_id', null),
+    getMyCupIds(supabase, userId),
   ]);
 
   const rows = gamesRes.data ?? [];
@@ -93,7 +91,7 @@ async function ArrangementSection({ userId }: { userId: string }) {
   }));
 
   return (
-    <ArrangementView games={games} hasMore={hasMore} cupCount={cupRes.count ?? 0} />
+    <ArrangementView games={games} hasMore={hasMore} cupCount={cupIds.length} />
   );
 }
 

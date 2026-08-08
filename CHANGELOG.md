@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.231 · Cupene dine samlet på ett sted</strong></summary>
+
+[#1463](https://github.com/jdlarssen/golf-app/issues/1463) — Cup-lista i Klubbhuset viser nå alle cupene du er med i, ikke bare dem du har satt opp selv. Er du satt opp på en spillerliste, eller har du spilt en cup, ligger den der — med hvem som vant på de ferdige. Da finner du fram uten å lete etter varselet i innboksen.
+
+↳ /admin/cup · «Åpne cupene»
+</details>
+
+<details>
 <summary><strong>1.230 · Ingen kvalifiserte på nærmest hullet</strong></summary>
 
 [#1530](https://github.com/jdlarssen/golf-app/issues/1530) — Traff ingen greenen? Nå kan du svare «Ingen kvalifiserte» på nærmest hullet og lengste drive. Hullet teller som ferdig registrert, gir ingen poeng, og stopper ikke lenger avslutningen av cupen.
