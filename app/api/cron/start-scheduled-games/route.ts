@@ -5,9 +5,14 @@ import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { startDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
 import { notifyPlayersGameStarted } from '@/lib/notifications/events';
 import {
+  pickStartNotificationTargets,
+  type StartedGameForNotify,
+} from '@/lib/notifications/startNotificationTargets';
+import {
   isStructuralBlockReason,
   maybeNotifyAutoStartBlocked,
 } from '@/lib/notifications/autoStartBlocked';
+import type { HoleSegment } from '@/lib/scoring';
 
 // Scheduled-start sweep — issue #502.
 //
@@ -27,6 +32,13 @@ import {
 // startScheduledGame transition as the E1 page fallback and the admin
 // button. Races between the three paths converge: only the flip winner
 // (`started: true`) fans out game_started notifications.
+//
+// #1450: the sweep runs in two phases — flip every due game first, then a
+// single notification pass over everything that actually started. A split
+// cup day (#1441) makes four games per flight due in the same minute with the
+// same four players, so per-game notification meant 2–3 pushes per player,
+// and WHICH count you got depended on the (unordered) due-query row order.
+// `pickStartNotificationTargets` collapses that to one game per player.
 
 export const maxDuration = 60;
 
@@ -36,6 +48,16 @@ const LOG_PREFIX = 'cron/start-scheduled-games';
 // tee-off passed more than 7 days ago stop being swept — they're abandoned
 // or permanently blocked, and lazy-start still covers them on page visit.
 const SWEEP_WINDOW_DAYS = 7;
+
+type DueGame = {
+  id: string;
+  name: string;
+  created_by: string | null;
+  tournament_id: string | null;
+  /** DB-kolonnen er `text` med default 'full'; verdiene er HoleSegment-unionen. */
+  hole_segment: HoleSegment;
+  source_game_id: string | null;
+};
 
 export async function POST(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -61,11 +83,11 @@ export async function POST(request: NextRequest) {
 
   const { data: due, error: dueError } = await admin
     .from('games')
-    .select('id, name, created_by')
+    .select('id, name, created_by, tournament_id, hole_segment, source_game_id')
     .eq('status', 'scheduled')
     .lte('scheduled_tee_off_at', now.toISOString())
     .gte('scheduled_tee_off_at', windowStart.toISOString())
-    .returns<{ id: string; name: string; created_by: string | null }[]>();
+    .returns<DueGame[]>();
 
   if (dueError) {
     console.error(`[${LOG_PREFIX}] due-games query failed`, dueError);
@@ -77,6 +99,8 @@ export async function POST(request: NextRequest) {
 
   const started: string[] = [];
   const blocked: Array<{ id: string; reason: string }> = [];
+  // Fase 1 samler opp; fase 2 (etter løkka) varsler én gang per spiller.
+  const startedGames: DueGame[] = [];
 
   // Sequential on purpose: due games are few (the gate fires the sweep the
   // minute they become due), and serial DB writes keep load predictable.
@@ -94,27 +118,10 @@ export async function POST(request: NextRequest) {
         // too. Best-effort, see startDerivedGames.
         await startDerivedGames(admin, game.id);
 
-        // game_started to every active player — nobody triggered this start,
-        // so there's no actor to exclude. Best-effort: a notify failure must
-        // not abort the rest of the sweep.
-        const { data: roster, error: rosterError } = await admin
-          .from('game_players')
-          .select('user_id')
-          .eq('game_id', game.id)
-          .is('withdrawn_at', null)
-          .returns<{ user_id: string }[]>();
-        if (rosterError) {
-          console.error(
-            `[${LOG_PREFIX}] roster fetch for varsel failed (game ${game.id})`,
-            rosterError,
-          );
-        } else {
-          await notifyPlayersGameStarted(
-            roster ?? [],
-            { id: game.id, name: game.name },
-            LOG_PREFIX,
-          );
-        }
+        // #1450: notification is deferred to the post-loop pass — a split cup
+        // day starts several of this player's games in the same sweep, and
+        // only the whole set tells us which one to point them at.
+        startedGames.push(game);
       }
       // started=false → another path won the flip in this same minute;
       // that path owns notifications. Nothing to do.
@@ -142,10 +149,67 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  await notifyStartedGames(admin, startedGames);
+
   return NextResponse.json({
     ok: true,
     checked: due?.length ?? 0,
     started,
     blocked,
   });
+}
+
+/**
+ * Fase 2 (#1450): ett `game_started` per spiller for alt som ble startet i
+ * denne sweepen. Ingen aktør å ekskludere — cron-en starter spillene, ingen
+ * spiller trykket på noe.
+ *
+ * Avledede spill hoppes over allerede før tropp-oppslaget (de varsler aldri —
+ * regelens hjem er `notifyPlayersGameStarted`, dette sparer bare rundturene).
+ * Resten sendes gjennom `pickStartNotificationTargets`, som gir hver spiller
+ * nøyaktig ett spill per cup.
+ *
+ * Best-effort hele veien: en tropp-feil hopper over det ene spillet, og
+ * `notifyPlayersGameStarted` svelger sine egne notify-feil — starten er
+ * allerede committet.
+ */
+async function notifyStartedGames(
+  admin: ReturnType<typeof getAdminClient>,
+  startedGames: DueGame[],
+): Promise<void> {
+  const notifiable = startedGames.filter((g) => g.source_game_id == null);
+  if (notifiable.length === 0) return;
+
+  const withRosters: StartedGameForNotify[] = [];
+  for (const game of notifiable) {
+    const { data: roster, error: rosterError } = await admin
+      .from('game_players')
+      .select('user_id')
+      .eq('game_id', game.id)
+      .is('withdrawn_at', null)
+      .returns<{ user_id: string }[]>();
+    if (rosterError) {
+      console.error(
+        `[${LOG_PREFIX}] roster fetch for varsel failed (game ${game.id})`,
+        rosterError,
+      );
+      continue;
+    }
+    withRosters.push({
+      id: game.id,
+      name: game.name,
+      tournamentId: game.tournament_id,
+      holeSegment: game.hole_segment,
+      sourceGameId: game.source_game_id,
+      playerIds: (roster ?? []).map((p) => p.user_id),
+    });
+  }
+
+  for (const target of pickStartNotificationTargets(withRosters)) {
+    await notifyPlayersGameStarted(
+      target.playerIds.map((user_id) => ({ user_id })),
+      { id: target.game.id, name: target.game.name, sourceGameId: null },
+      LOG_PREFIX,
+    );
+  }
 }

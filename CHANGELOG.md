@@ -1455,8 +1455,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 30 rettinger</strong></summary>
+<summary><strong>August 2026 · 31 rettinger</strong></summary>
 
+- `1.229.3` · [#1450](https://github.com/jdlarssen/golf-app/issues/1450) — Starter en splittet cup-dag av seg selv på tee-tid, får du nå ett varsel i stedet for to eller tre, og det tar deg til greensome-kampen du skal føre først.
 - `1.229.2` · [#1517](https://github.com/jdlarssen/golf-app/issues/1517) — Tilbake-pila på leaderboardet holder kursen: går du inn på et lag eller bytter mellom netto og brutto, kommer du fortsatt tilbake dit du kom fra — cup-resultatene, historikken eller Hjem.
 - `1.229.1` · [#1377](https://github.com/jdlarssen/golf-app/issues/1377) — Kjører du appen på engelsk, står cup-siden og resultatsiden nå på engelsk hele veien. «mot», «Delt (AS)» og «3&2 til Lag Rød» var hardkodet norsk og fulgte ikke med oversettelsen.
 - `1.227.9` · [#1434](https://github.com/jdlarssen/golf-app/issues/1434) — Er e-postkvoten for hele appen brukt opp, sier innloggingen nå ærlig at vi ikke får sendt flere koder akkurat nå — før parkerte den deg ved kodefeltet og lovet en kode som aldri ble sendt.

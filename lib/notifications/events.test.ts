@@ -289,7 +289,7 @@ describe('notifyPlayersGameStarted (#502, #1134)', () => {
 
     await notifyPlayersGameStarted(
       [{ user_id: 'a' }, { user_id: 'b' }],
-      { id: 'game-1', name: 'Byneset North' },
+      { id: 'game-1', name: 'Byneset North', sourceGameId: null },
       'cron/start-scheduled-games',
     );
 
@@ -299,6 +299,23 @@ describe('notifyPlayersGameStarted (#502, #1134)', () => {
       kind: 'game_started',
       payload: { game_id: 'game-1', game_name: 'Byneset North' },
     });
+  });
+
+  it('#1450: avledet cup-match varsler aldri — verten eier cup-start-varselet', async () => {
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: true });
+    usersReturnsMock.mockResolvedValue({
+      data: [{ id: 'a', last_seen_at: STALE }],
+      error: null,
+    });
+
+    await notifyPlayersGameStarted(
+      [{ user_id: 'a' }],
+      { id: 'singles-1', name: 'Sommercup – Singles 1', sourceGameId: 'best-ball-1' },
+      'cron/start-scheduled-games',
+    );
+
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(usersReturnsMock).not.toHaveBeenCalled();
   });
 
   it('#1134: dropper raden for on-app-spiller, beholder for off-app', async () => {
@@ -313,7 +330,7 @@ describe('notifyPlayersGameStarted (#502, #1134)', () => {
 
     await notifyPlayersGameStarted(
       [{ user_id: 'a' }, { user_id: 'b' }],
-      { id: 'game-1', name: 'X' },
+      { id: 'game-1', name: 'X', sourceGameId: null },
       'cron/start-scheduled-games',
     );
 
@@ -334,7 +351,7 @@ describe('notifyPlayersGameStarted (#502, #1134)', () => {
 
     await notifyPlayersGameStarted(
       [{ user_id: 'a' }, { user_id: 'b' }],
-      { id: 'game-1', name: 'X' },
+      { id: 'game-1', name: 'X', sourceGameId: null },
       'cron/start-scheduled-games',
     );
 
@@ -351,7 +368,7 @@ describe('notifyPlayersGameStarted (#502, #1134)', () => {
 
     await notifyPlayersGameStarted(
       [{ user_id: 'a' }, { user_id: 'b' }],
-      { id: 'game-1', name: 'X' },
+      { id: 'game-1', name: 'X', sourceGameId: null },
       'cron/start-scheduled-games',
     );
 
@@ -373,7 +390,7 @@ describe('notifyPlayersGameStarted (#502, #1134)', () => {
 
     await notifyPlayersGameStarted(
       [{ user_id: 'a' }, { user_id: 'b' }],
-      { id: 'game-1', name: 'X' },
+      { id: 'game-1', name: 'X', sourceGameId: null },
       'cron/start-scheduled-games',
     );
 
@@ -386,7 +403,7 @@ describe('notifyPlayersGameStarted (#502, #1134)', () => {
   it('tom spillerliste → ingen notify, ingen users-oppslag (tidlig retur)', async () => {
     await notifyPlayersGameStarted(
       [],
-      { id: 'game-1', name: 'X' },
+      { id: 'game-1', name: 'X', sourceGameId: null },
       'cron/start-scheduled-games',
     );
 
@@ -410,7 +427,7 @@ describe('notifyPlayersGameStarted (#502, #1134)', () => {
     await expect(
       notifyPlayersGameStarted(
         [{ user_id: 'a' }, { user_id: 'b' }],
-        { id: 'game-1', name: 'X' },
+        { id: 'game-1', name: 'X', sourceGameId: null },
         'cron/start-scheduled-games',
       ),
     ).resolves.toBeUndefined();

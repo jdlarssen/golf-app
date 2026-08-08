@@ -379,10 +379,11 @@ export default async function GameHomePage({
         revalidateTag(`game-${id}`, { expire: 0 });
       });
       // #1441 (D3): this visit won the flip → start every derived game too.
-      // Best-effort, see startDerivedGames. In practice cup-generated games
-      // never carry a scheduled_tee_off_at, so this branch doesn't fire for
-      // them today — kept for defensiveness/parity with the other two start
-      // paths (admin button, cron sweep), which both fan out the same way.
+      // Best-effort, see startDerivedGames. Live for cup games since F3d: a
+      // cup with a start time gives every generated match a
+      // `scheduled_tee_off_at`, so a player who opens the greensome at tee-off
+      // can win the flip here before the cron sweep does — same fan-out as the
+      // other two start paths (admin button, cron sweep).
       if (result.started) {
         await startDerivedGames(getAdminClient(), id);
       }
@@ -398,7 +399,9 @@ export default async function GameHomePage({
         after(() =>
           notifyPlayersGameStarted(
             playersToNotify,
-            { id, name: game.name },
+            // #1450: a derived match never announces itself — its host owns
+            // the cup-start varsel.
+            { id, name: game.name, sourceGameId: game.source_game_id },
             'auto-start',
           ),
         );
