@@ -47,7 +47,11 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay } from '@/lib/scoring';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
-import { fetchSideWinners, buildPrizeAwards } from './leaderboardContext';
+import {
+  fetchSideWinners,
+  buildPrizeAwards,
+  getResultReadClient,
+} from './leaderboardContext';
 import { PrizeAwardsCard } from '@/components/PrizeAwardsCard';
 import { ReactionsProvider } from './ReactionsProvider';
 import { fetchGameReactions } from '@/lib/games/reactions/fetch';
@@ -103,7 +107,10 @@ export type LeaderboardContentOpts = {
  * `/leaderboard` route (page.tsx) and the public `/spectate/[token]` route.
  *
  * Contract:
- *   - Does NOT call `getLeaderboardContext()` — caller provides `supabase`.
+ *   - Does NOT resolve the viewer itself — caller provides `supabase`. På et
+ *     FERDIG spill byttes den ut med service-role-klienten (#1542,
+ *     `getResultReadClient`); på alt annet brukes den som-den-er, så spectate
+ *     beholder sin egen admin-klient for live-følging.
  *   - Fetches course_holes, scores, courses, and (when enabled) side-winners
  *     via the passed `supabase` client.
  *   - When `includeReactions` is true: fetches reactions and wraps the
@@ -145,21 +152,28 @@ export async function renderLeaderboardContent({
   // behavior, byte-identical).
   const scoresGameId = gameRow.source_game_id ?? gameId;
 
+  // #1542: resultat-dataene leses med den klienten regelen i
+  // `getResultReadClient` peker ut — service-role på et FERDIG spill, ellers
+  // klienten kallstedet sendte inn (uendret for spectate/live). Uten dette gir
+  // RLS 0 rader til alle som ikke selv spilte kampen, og cup-publikummet som
+  // matchkortene lenker hit møter et tomt kort.
+  const readClient = await getResultReadClient(gameRow.status, supabase);
+
   const [gwp, rawHolesRes, rawScoresRes, courseRes, reactionSummary] = await Promise.all([
     getGameWithPlayers(gameId),
-    supabase
+    readClient
       .from('course_holes')
       .select(COURSE_HOLES_SELECT)
       .eq('course_id', gameRow.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
-    supabase
+    readClient
       .from('scores')
       .select(SCORES_SELECT)
       .eq('game_id', scoresGameId)
       .returns<ScoreRow[]>(),
     gameRow.course_id
-      ? supabase
+      ? readClient
           .from('courses')
           .select('name')
           .eq('id', gameRow.course_id)
@@ -221,7 +235,7 @@ export async function renderLeaderboardContent({
   const prizeAwardsNode =
     game.status === 'finished'
       ? await (async () => {
-          const awards = await buildPrizeAwards(supabase, gameId, game.prizes);
+          const awards = await buildPrizeAwards(readClient, gameId, game.prizes);
           return awards.length > 0 ? <PrizeAwardsCard awards={awards} /> : null;
         })()
       : null;
@@ -570,7 +584,7 @@ export async function renderLeaderboardContent({
     );
   }
 
-  const sideWinnerRows: SideWinnerRow[] = await fetchSideWinners(supabase, gameId);
+  const sideWinnerRows: SideWinnerRow[] = await fetchSideWinners(readClient, gameId);
 
   const nettoLines =
     mode === 'netto'

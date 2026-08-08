@@ -6,7 +6,7 @@ import {
 } from '../FoursomesMatchplayView';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
-import { getLeaderboardContext } from '../leaderboardContext';
+import { getResultReadClient } from '../leaderboardContext';
 import { renderMatchplaySideSection } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
 import { RevealHiddenView } from '../RevealHiddenView';
@@ -108,7 +108,10 @@ export async function renderFoursomesMatchplay(opts: {
   // generisk «Lag 1» / «Lag 2».
   let side1Label = tc('teamLabel', { number: 1 });
   let side2Label = tc('teamLabel', { number: 2 });
-  const { supabase } = await getLeaderboardContext();
+  // #1542: samme lese-regel som resten av resultat-dataene. Uten den ble
+  // `games`-raden sperret av RLS for alle utenfor kampen, og lagnavnene falt
+  // tilbake til «Lag 1»/«Lag 2» midt i en cup med ekte lagnavn.
+  const supabase = await getResultReadClient(game.status);
   const { data: tournamentLink } = await supabase
     .from('games')
     .select('tournament_id')

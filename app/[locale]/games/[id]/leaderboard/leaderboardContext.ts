@@ -2,7 +2,9 @@ import { cache } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import type { GameStatus } from '@/lib/games/status';
 import type { SideWinnerRow } from './leaderboardTypes';
 import { safeParsePrizes } from '@/lib/games/prizes';
 import {
@@ -24,6 +26,36 @@ export const getLeaderboardContext = cache(async () => {
   const userId = await getProxyVerifiedUserId();
   return { supabase, userId };
 });
+
+/**
+ * Klienten et spills RESULTAT-data skal leses med (#1542). ETT hjem for regelen
+ * «hvem får se et ferdigspilt scorekort».
+ *
+ * Bakgrunn: RLS-policyen `scores select gating per mode` krever i sin
+ * finished-gren at leseren er deltaker i DET spillet — `games` likeså. Men
+ * `page.tsx` slipper bevisst alle innloggede inn på ferdige spill, og
+ * cup-matchkortene lenker hele startfeltet dit (#1456/#1468). Resultatet var et
+ * tomt kort: hull og par rendret, alle slag «—», og lagnavnene tilbake på
+ * generiske «Lag 1»/«Lag 2» fordi `tournament_id`-oppslaget også ble sperret.
+ *
+ * Fiksen speiler mønsteret ruta rundt allerede bruker — `getCupSnapshot`,
+ * `/spectate/[token]` og `getGameWithPlayers` leser alle med service-role og
+ * beholder autorisasjonen på call-site. Et ferdig spill er per definisjon
+ * offentlig (`lib/games/status.ts`), så adgangen avgjøres av gaten i `page.tsx`,
+ * ikke av RLS. Ingen policy-endring, ingen migrasjon.
+ *
+ * `fallback` er klienten kallstedet allerede holder. Den brukes uendret så lenge
+ * spillet IKKE er ferdig — kritisk for `/spectate`, som sender inn sin egen
+ * admin-klient for å følge en PÅGÅENDE runde anonymt. Utelates den, faller vi
+ * tilbake til den cookie-baserte klienten.
+ */
+export async function getResultReadClient(
+  status: GameStatus,
+  fallback?: SupabaseClient<Database>,
+): Promise<SupabaseClient<Database>> {
+  if (status === 'finished') return getAdminClient();
+  return fallback ?? (await getLeaderboardContext()).supabase;
+}
 
 /**
  * Henter LD/CTP-vinnerne for et spill. Trukket ut (#682) så best-ball-finish-

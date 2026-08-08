@@ -5,7 +5,7 @@ import {
   type FourballPlayerInfo,
 } from '../FourballMatchplayView';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
-import { getLeaderboardContext } from '../leaderboardContext';
+import { getResultReadClient } from '../leaderboardContext';
 import { renderMatchplaySideSection } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
 import { RevealHiddenView } from '../RevealHiddenView';
@@ -108,7 +108,8 @@ export async function renderFourballMatchplay(opts: {
   // siden tournament-radet ikke endres ofte.
   let side1Label = tc('teamLabel', { number: 1 });
   let side2Label = tc('teamLabel', { number: 2 });
-  const { supabase } = await getLeaderboardContext();
+  // #1542: se foursomesMatchplay — samme lese-regel, samme lagnavn-felle.
+  const supabase = await getResultReadClient(game.status);
   const { data: tournamentLink } = await supabase
     .from('games')
     .select('tournament_id')
