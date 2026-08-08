@@ -12,6 +12,7 @@ import {
   requireAdminOrClubAdminOfCup,
 } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
+import { loadTournamentParticipantEmails } from './tournamentParticipants';
 import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
 import { endGameCore } from '@/lib/games/endGameCore';
@@ -46,43 +47,6 @@ const DEFAULT_TIE_POINTS = 0.5;
 
 // Weighted-points parsers (win_points > 0, tie_points >= 0) er konsolidert i
 // ./pointsToWin.ts (#1441, D8) — samme mønster som allowance.ts over.
-
-async function loadTournamentParticipantEmails(
-  supabase: Awaited<ReturnType<typeof getServerClient>>,
-  tournamentId: string,
-): Promise<Array<{ user_id: string; email: string; name: string | null; locale: string | null }>> {
-  // Hent alle distinct user_ids via game_players-joine på games med
-  // tournament_id = id, deretter email via users-tabellen.
-  const { data: gameRows } = await supabase
-    .from('games')
-    .select('id')
-    .eq('tournament_id', tournamentId);
-  const gameIds = (gameRows ?? []).map((g) => g.id);
-  if (gameIds.length === 0) return [];
-
-  const { data: playerRows } = await supabase
-    .from('game_players')
-    .select('user_id, users!game_players_user_id_fkey(email, name, locale)')
-    .in('game_id', gameIds);
-
-  const seen = new Set<string>();
-  const out: Array<{ user_id: string; email: string; name: string | null; locale: string | null }> = [];
-  // Supabase JS typer FK-joins som array selv på many-to-one. Normaliser med
-  // unknown-cast og array-håndtering.
-  const rows = (playerRows ?? []) as unknown as Array<{
-    user_id: string;
-    users: { email: string; name: string | null; locale: string | null } | { email: string; name: string | null; locale: string | null }[] | null;
-  }>;
-  for (const row of rows) {
-    if (seen.has(row.user_id)) continue;
-    seen.add(row.user_id);
-    const userRel = Array.isArray(row.users) ? row.users[0] : row.users;
-    const email = userRel?.email;
-    if (!email) continue;
-    out.push({ user_id: row.user_id, email, name: userRel?.name ?? null, locale: userRel?.locale ?? null });
-  }
-  return out;
-}
 
 /**
  * Felles redirect/revalidate-mål for cup-styringshandlinger (#524). Klubb-cup
@@ -279,10 +243,12 @@ export async function startTournament(formData: FormData) {
   // off-app-deltakere (#417). Symmetrisk søster av cup-avslutningen (#377) —
   // samme in-app-først-prinsipp som enkeltspill, ingen blanket-mail til alle.
   //
-  // loadTournamentParticipantEmails dropper deltakere uten e-post, men
-  // Tørny-auth er e-post-OTP, så alle brukere HAR e-post — denne lista er
-  // dermed hele deltaker-settet, og in-app fyrer for alle reelle deltakere.
-  const recipients = await loadTournamentParticipantEmails(supabase, id);
+  // Mottakerlista slås opp med admin-klienten inne i helperen (#1540) — med den
+  // request-scopede klienten kollapset den til arrangørens egen flight når
+  // arrangøren ikke var global admin. Deltakere uten e-post droppes, men
+  // Tørny-auth er e-post-OTP, så alle brukere HAR e-post — lista er dermed hele
+  // deltaker-settet, og in-app fyrer for alle reelle deltakere.
+  const recipients = await loadTournamentParticipantEmails(id);
   const sendMailByUserId = await notifyParticipantsCupStarted(
     recipients,
     { id, name: current.name },
@@ -453,10 +419,13 @@ export async function finishTournament(formData: FormData) {
   // avslutningen — ingen egen blanket-mail til alle. Dette er cupens ENESTE
   // reveal-signal (#1501): per-kamp-mailene ble undertrykt i løpet over.
   //
-  // loadTournamentParticipantEmails dropper deltakere uten e-post, men
-  // Tørny-auth er e-post-OTP, så alle brukere HAR e-post — denne lista er
-  // dermed hele deltaker-settet, og in-app fyrer for alle reelle deltakere.
-  const recipients = await loadTournamentParticipantEmails(supabase, id);
+  // Mottakerlista slås opp med admin-klienten inne i helperen (#1540) — med den
+  // request-scopede klienten kollapset den til arrangørens egen flight når
+  // arrangøren ikke var global admin, og de øvrige deltakerne mistet cupens
+  // eneste reveal-signal. Deltakere uten e-post droppes, men Tørny-auth er
+  // e-post-OTP, så alle brukere HAR e-post — lista er dermed hele
+  // deltaker-settet, og in-app fyrer for alle reelle deltakere.
+  const recipients = await loadTournamentParticipantEmails(id);
   const sendMailByUserId = await notifyParticipantsCupFinished(
     recipients,
     { id, name: finalTournament.name },
