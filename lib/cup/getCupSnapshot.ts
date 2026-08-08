@@ -52,6 +52,10 @@ export type CupRosterPlayer = {
  * mapping som mates inn i `computeCupLeaderboard`) — konsumenter slipper å
  * gjøre oppslaget selv. `null` inntil arrangøren taster vinneren.
  *
+ * `noWinner` (#1530) skiller «arrangøren har svart: ingen vant» fra «ikke
+ * tastet ennå» — begge har `winnerUserId`/`winnerTeam` null og gir 0 poeng,
+ * men bare den første teller som registrert (`isSideAwardRegistered`).
+ *
  * gir: én rad per hull med maks per lag og de to lag-tellerne — `null` teller
  * = ikke registrert ennå, `0` = eksplisitt registrert null GIR (begge gir 0
  * poeng; skillet er kun semantisk i panelet). Ingen spiller-attribusjon.
@@ -66,6 +70,7 @@ export type CupSideAwardSnapshot =
       slotCount: number;
       winnerUserId: string | null;
       winnerTeam: 1 | 2 | null;
+      noWinner: boolean;
     }
   | {
       id: string;
@@ -132,6 +137,7 @@ type SideAwardRow = {
   hole_number: number;
   points: number;
   winner_user_id: string | null;
+  no_winner: boolean;
   slot: number;
   gir_max_per_team: number | null;
   gir_team1_count: number | null;
@@ -222,7 +228,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
   const { data: sideAwardRows, error: saErr } = await supabase
     .from('tournament_side_awards')
     .select(
-      'id, kind, hole_number, points, winner_user_id, slot, gir_max_per_team, gir_team1_count, gir_team2_count',
+      'id, kind, hole_number, points, winner_user_id, no_winner, slot, gir_max_per_team, gir_team1_count, gir_team2_count',
     )
     .eq('tournament_id', tournamentId)
     .order('kind')
@@ -559,6 +565,9 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       slotCount: slotCountByKey.get(`${row.kind}#${row.hole_number}#${row.points}`) ?? 1,
       winnerUserId: row.winner_user_id,
       winnerTeam,
+      // `?? false` holder eldre rader (og test-fixturer skrevet før 0157)
+      // trygge: fravær av flagget betyr «ikke tastet ennå», ikke «ingen vant».
+      noWinner: row.no_winner ?? false,
     });
   }
 

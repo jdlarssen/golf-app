@@ -45,7 +45,7 @@ export type SideAwardActionResult<E extends string> = { ok: true } | { ok: false
 // FØR slettingen må kunne settes ORDRETT tilbake, inkludert slot- og
 // gir-kolonnene fra migrasjon 0156.
 const SIDE_AWARD_COLUMNS =
-  'id, tournament_id, kind, hole_number, points, winner_user_id, slot, gir_max_per_team, gir_team1_count, gir_team2_count';
+  'id, tournament_id, kind, hole_number, points, winner_user_id, no_winner, slot, gir_max_per_team, gir_team1_count, gir_team2_count';
 
 /**
  * Erstatter cupens fulle sidepoeng-CONFIG (#1441, D9; timing eier-overstyrt i
@@ -112,10 +112,17 @@ export async function saveSideAwardConfig(
     .eq('tournament_id', tournamentId);
   if (existingErr) return { ok: false, error: 'save_failed' };
 
-  // «Registrert» = en tastet vinner ELLER en tastet GIR-teller (#1489) — begge
-  // er opptjente poeng som aldri skal slettes stille av en re-konfig.
+  // «Registrert» = en tastet vinner, et tastet «ingen vinner» (#1530) ELLER en
+  // tastet GIR-teller (#1489) — alle er ferdige svar fra arrangøren som aldri
+  // skal slettes stille av en re-konfig. «Ingen vinner» gir riktignok 0 poeng,
+  // men det er like fullt et svar hun har tastet; samme resonnement som
+  // GIR-telleren 0.
   const hasRegisteredWinner = (existing ?? []).some(
-    (a) => a.winner_user_id !== null || a.gir_team1_count !== null || a.gir_team2_count !== null,
+    (a) =>
+      a.winner_user_id !== null ||
+      a.no_winner === true ||
+      a.gir_team1_count !== null ||
+      a.gir_team2_count !== null,
   );
   if (hasRegisteredWinner) return { ok: false, error: 'winners_already_registered' };
 
@@ -149,6 +156,7 @@ export async function saveSideAwardConfig(
             hole_number: a.hole_number,
             points: a.points,
             winner_user_id: a.winner_user_id,
+            no_winner: a.no_winner,
             slot: a.slot,
             gir_max_per_team: a.gir_max_per_team,
             gir_team1_count: a.gir_team1_count,
@@ -244,11 +252,21 @@ export async function registerGirCounts(input: {
  * GIR-rader har ingen vinner (lag-tellere via `registerGirCounts`) og avvises
  * med `not_found` — for kalleren finnes det ingen vinner-registrerbar rad med
  * den id-en.
+ *
+ * `winnerUserId: null` = «ingen vinner» (#1530): ingen kvalifiserte på hullet.
+ * Da settes `no_winner` i stedet, og roster-valideringen hoppes over — det
+ * finnes ingen spiller å validere. Innslaget teller som ferdig registrert
+ * (`isSideAwardRegistered`) og gir 0 poeng til begge lag.
+ *
+ * De to tilstandene er gjensidig utelukkende, og BEGGE grenene skriver begge
+ * kolonnene: retter arrangøren «ingen vinner» tilbake til en spiller, må
+ * `no_winner` nullstilles i samme update — ellers ville raden bære begge
+ * tilstandene og DB-CHECK-en (migrasjon 0157) avvise skrivingen.
  */
 export async function registerSideAwardWinner(input: {
   tournamentId: string;
   awardId: string;
-  winnerUserId: string;
+  winnerUserId: string | null;
 }): Promise<SideAwardActionResult<RegisterSideAwardWinnerError>> {
   const { tournamentId, awardId, winnerUserId } = input;
   const supabase = await getServerClient();
@@ -273,27 +291,32 @@ export async function registerSideAwardWinner(input: {
 
   // Roster-validering: vinneren må være game_players på en av cupens matcher
   // (samme rosterdefinisjon som getCupSnapshot bruker for team1/team2-mapping).
-  const { data: gameRows } = await admin
-    .from('games')
-    .select('id')
-    .eq('tournament_id', tournamentId);
-  const gameIds = (gameRows ?? []).map((g) => g.id as string);
-  if (gameIds.length === 0) return { ok: false, error: 'not_a_participant' };
+  // Hoppes over for «ingen vinner» (#1530) — det finnes ingen spiller å
+  // validere, og en cup uten genererte matcher skal fortsatt kunne svare
+  // «ingen» på et innslag.
+  if (winnerUserId !== null) {
+    const { data: gameRows } = await admin
+      .from('games')
+      .select('id')
+      .eq('tournament_id', tournamentId);
+    const gameIds = (gameRows ?? []).map((g) => g.id as string);
+    if (gameIds.length === 0) return { ok: false, error: 'not_a_participant' };
 
-  const { data: playerRows } = await admin
-    .from('game_players')
-    .select('user_id')
-    .in('game_id', gameIds)
-    .eq('user_id', winnerUserId);
-  if (!playerRows || playerRows.length === 0) {
-    return { ok: false, error: 'not_a_participant' };
+    const { data: playerRows } = await admin
+      .from('game_players')
+      .select('user_id')
+      .in('game_id', gameIds)
+      .eq('user_id', winnerUserId);
+    if (!playerRows || playerRows.length === 0) {
+      return { ok: false, error: 'not_a_participant' };
+    }
   }
 
   try {
     expectAffected(
       await admin
         .from('tournament_side_awards')
-        .update({ winner_user_id: winnerUserId })
+        .update({ winner_user_id: winnerUserId, no_winner: winnerUserId === null })
         .eq('id', awardId)
         .eq('tournament_id', tournamentId)
         .select('id'),

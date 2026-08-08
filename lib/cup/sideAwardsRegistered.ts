@@ -2,8 +2,10 @@
  * Sidepoeng-registrerings-gate (#1501). Ren klassifisering av om et
  * konfigurert sidepoeng har fått sin registrering etter runden:
  *
- *  - ctp/ld: én vinner er tastet (`winnerUserId` satt). Hver vinner-plass
- *    (slot-rad) må ha en vinner — «alle konfigurerte sidepoeng».
+ *  - ctp/ld: enten er en vinner tastet (`winnerUserId` satt), ELLER arrangøren
+ *    har svart «ingen vinner» (`noWinner`, #1530 — ingen traff greenen). Begge
+ *    er ferdige svar; bare «ikke tastet ennå» blokkerer. Hver vinner-plass
+ *    (slot-rad) må ha sitt eget svar — «alle konfigurerte sidepoeng».
  *  - gir: BEGGE lag-tellerne er satt (`team1Count`/`team2Count` != null). 0 er
  *    en gyldig registrering («registrert null GIR»), ikke «uregistrert» —
  *    derfor `!= null`, ikke truthiness.
@@ -15,14 +17,14 @@
  */
 
 export type SideAwardRegistrationState =
-  | { kind: 'ctp' | 'ld'; winnerUserId: string | null }
+  | { kind: 'ctp' | 'ld'; winnerUserId: string | null; noWinner: boolean }
   | { kind: 'gir'; team1Count: number | null; team2Count: number | null };
 
 export function isSideAwardRegistered(award: SideAwardRegistrationState): boolean {
   if (award.kind === 'gir') {
     return award.team1Count != null && award.team2Count != null;
   }
-  return award.winnerUserId != null;
+  return award.winnerUserId != null || award.noWinner;
 }
 
 export function allSideAwardsRegistered(

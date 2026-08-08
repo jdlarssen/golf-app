@@ -49,6 +49,7 @@ function ctp(overrides: Partial<Extract<CupSideAwardSnapshot, { kind: 'ctp' | 'l
     slotCount: 1,
     winnerUserId: 'p1',
     winnerTeam: 1,
+    noWinner: false,
     ...overrides,
   };
 }

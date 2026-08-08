@@ -272,7 +272,7 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
     // game_players → winnerTeam utledes riktig, poengene legges til team1s
     // totalsum ovenpå match-poengene.
     expect(snap!.sideAwards).toEqual([
-      { id: 'sa1', kind: 'ld', holeNumber: 6, points: 3, slot: 1, slotCount: 1, winnerUserId: 'p6', winnerTeam: 1 },
+      { id: 'sa1', kind: 'ld', holeNumber: 6, points: 3, slot: 1, slotCount: 1, winnerUserId: 'p6', winnerTeam: 1, noWinner: false },
     ]);
     expect(snap!.leaderboard.sideAwardPoints).toEqual({ team1: 3, team2: 0 });
     // Total = g1s 5 (best-ball-seier) + 3 (sidepoeng) — g2/g3 bidrar 0.
@@ -365,6 +365,9 @@ describe('getCupSnapshot — sidepoeng-slots + GIR (#1489)', () => {
           { id: 'sa3', kind: 'ctp', hole_number: 4, points: 2, winner_user_id: null, slot: 3, gir_max_per_team: null, gir_team1_count: null, gir_team2_count: null },
           { id: 'sa4', kind: 'gir', hole_number: 3, points: 1.5, winner_user_id: null, slot: 1, gir_max_per_team: 3, gir_team1_count: 2, gir_team2_count: 0 },
           { id: 'sa5', kind: 'gir', hole_number: 7, points: 1, winner_user_id: null, slot: 1, gir_max_per_team: 2, gir_team1_count: null, gir_team2_count: null },
+          // #1530: arrangøren har svart «ingen vant» på hull 9 — registrert,
+          // men uten vinner. Skiller seg fra sa3 (ikke tastet ennå).
+          { id: 'sa6', kind: 'ld', hole_number: 9, points: 4, winner_user_id: null, no_winner: true, slot: 1, gir_max_per_team: null, gir_team1_count: null, gir_team2_count: null },
         ],
       },
       // 4. Promise.all → game_players, scores, course_holes.
@@ -387,15 +390,19 @@ describe('getCupSnapshot — sidepoeng-slots + GIR (#1489)', () => {
     expect(snap).not.toBeNull();
 
     expect(snap!.sideAwards).toEqual([
-      { id: 'sa1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 3, winnerUserId: 'u1', winnerTeam: 1 },
-      { id: 'sa2', kind: 'ctp', holeNumber: 4, points: 2, slot: 2, slotCount: 3, winnerUserId: 'u2', winnerTeam: 2 },
-      { id: 'sa3', kind: 'ctp', holeNumber: 4, points: 2, slot: 3, slotCount: 3, winnerUserId: null, winnerTeam: null },
+      { id: 'sa1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 3, winnerUserId: 'u1', winnerTeam: 1, noWinner: false },
+      { id: 'sa2', kind: 'ctp', holeNumber: 4, points: 2, slot: 2, slotCount: 3, winnerUserId: 'u2', winnerTeam: 2, noWinner: false },
+      { id: 'sa3', kind: 'ctp', holeNumber: 4, points: 2, slot: 3, slotCount: 3, winnerUserId: null, winnerTeam: null, noWinner: false },
       { id: 'sa4', kind: 'gir', holeNumber: 3, points: 1.5, maxPerTeam: 3, team1Count: 2, team2Count: 0 },
       { id: 'sa5', kind: 'gir', holeNumber: 7, points: 1, maxPerTeam: 2, team1Count: null, team2Count: null },
+      // #1530: «ingen vant» kommer ut som noWinner true med winnerTeam null —
+      // skilt fra sa3, som er samme null-vinner men UTEN svar.
+      { id: 'sa6', kind: 'ld', holeNumber: 9, points: 4, slot: 1, slotCount: 1, winnerUserId: null, winnerTeam: null, noWinner: true },
     ]);
 
     // team1: ctp slot 1 (2 p) + 2 × gir 1,5 p = 5. team2: ctp slot 2 (2 p) +
-    // eksplisitt 0 gir = 2. Uregistrerte innslag (slot 3, gir hull 7) bidrar 0.
+    // eksplisitt 0 gir = 2. Uregistrerte innslag (slot 3, gir hull 7) bidrar 0
+    // — og det samme gjør «ingen vant» (sa6, 4 p som ingen får, #1530).
     expect(snap!.leaderboard.sideAwardPoints).toEqual({ team1: 5, team2: 2 });
     expect(snap!.leaderboard.team1Points).toBe(5);
     expect(snap!.leaderboard.team2Points).toBe(2);

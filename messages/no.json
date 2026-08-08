@@ -4820,9 +4820,11 @@
       "winnersHeading": "Etter runden",
       "winnerLabel": "Vinner",
       "winnerPlaceholder": "— velg vinner —",
+      "winnerNoneOption": "Ingen vinner",
       "registerButton": "Registrer",
       "registeringPending": "Lagrer …",
       "registered": "Vinneren er registrert.",
+      "registeredNone": "Registrert: ingen vant her.",
       "errors": {
         "invalid": "Sjekk type, hull (1–18), poeng (over 0) og vinnere (1–10) på alle rader.",
         "duplicate": "Én rad per type og hull. Vil du ha flere vinnere på samme hull, øker du tallet i «Vinnere»-feltet.",

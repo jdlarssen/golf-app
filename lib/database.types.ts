@@ -1789,6 +1789,8 @@ export type Database = {
           hole_number: number
           id: string
           kind: string
+          // TODO: regen after prod apply (migrasjon 0157, #1530 — staging-only)
+          no_winner: boolean
           points: number
           slot: number
           tournament_id: string
@@ -1802,6 +1804,8 @@ export type Database = {
           hole_number: number
           id?: string
           kind: string
+          // TODO: regen after prod apply (migrasjon 0157, #1530 — staging-only)
+          no_winner?: boolean
           points: number
           slot?: number
           tournament_id: string
@@ -1815,6 +1819,8 @@ export type Database = {
           hole_number?: number
           id?: string
           kind?: string
+          // TODO: regen after prod apply (migrasjon 0157, #1530 — staging-only)
+          no_winner?: boolean
           points?: number
           slot?: number
           tournament_id?: string
