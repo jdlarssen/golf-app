@@ -91,11 +91,16 @@ export function isSegmentSiblingCandidate(game: {
 /**
  * Pure: given the opposite-segment HOST candidates in the tournament and the
  * acting player's active (non-withdrawn) `game_players` rows on them, picks the
- * one sibling and carries its `submitted_at` + `team_number` (#1466). A player
- * is expected to be on at most one flight's pair of halves, so at most one
- * candidate should ever match — this returns the first match defensively rather
- * than asserting uniqueness (a malformed cup should degrade to "no bridge
- * shown", not a thrown error on a hole page). Exported for direct unit coverage.
+ * one sibling and carries its `submitted_at` + `team_number` (#1466).
+ *
+ * #1535: this is ALSO where the ambiguity guard lives. A split cup day has one
+ * opposite-half host PER FLIGHT, so a 3-flight cup hands us 3 candidates — the
+ * count alone says nothing. What must be unambiguous is the acting player's
+ * membership: they play exactly one flight, so exactly one candidate should
+ * carry a row for them. Zero matches → no bridge; two or more (a malformed cup,
+ * or two same-day hosts the day-bucketing couldn't separate) → no bridge either.
+ * Resolving nothing is always safe; bridging to the wrong half is not.
+ * Exported for direct unit coverage.
  */
 export function pickSiblingCandidate(
   candidates: { id: string; game_mode: GameMode }[],
@@ -107,18 +112,20 @@ export function pickSiblingCandidate(
   team_number: number | null;
 } | null {
   const membershipByGameId = new Map(memberships.map((m) => [m.game_id, m]));
-  for (const c of candidates) {
+  const matches = candidates.flatMap((c) => {
     const membership = membershipByGameId.get(c.id);
-    if (membership) {
-      return {
-        id: c.id,
-        game_mode: c.game_mode,
-        submitted_at: membership.submitted_at,
-        team_number: membership.team_number,
-      };
-    }
-  }
-  return null;
+    return membership
+      ? [
+          {
+            id: c.id,
+            game_mode: c.game_mode,
+            submitted_at: membership.submitted_at,
+            team_number: membership.team_number,
+          },
+        ]
+      : [];
+  });
+  return matches.length === 1 ? matches[0] : null;
 }
 
 /**
@@ -179,11 +186,13 @@ export async function findSegmentSibling(
     hosts.filter((h) => h.hole_segment === targetSegment && h.id !== game.gameId),
   );
   if (candidates.length === 0) return null;
-  // #1449 runde-2: to samme-dags-kandidater (uten tee-off-tider bucketes dager
-  // på created_at og kan kollidere) gjør søskenet flertydig. Speil kort-sidens
-  // nøyaktig-én-semantikk: løs ingenting fremfor å gjette — verste fall
-  // degraderer dagen til to leveringer, aldri en kaskade mot feil spill.
-  if (candidates.length > 1) return null;
+  // #1535: NO candidate-count bail here. A cup with N flights has N
+  // opposite-half hosts on the same day — the day-scope above separates days,
+  // never flights — so counting candidates killed the bridge for every
+  // multi-flight cup. The #1449 runde-2 "løs ingenting fremfor å gjette"-rule
+  // still stands; it now lives one step later, on the acting player's own
+  // memberships (`pickSiblingCandidate`), which is the level where ambiguity
+  // is actually meaningful.
 
   const { data: membershipRows, error: membershipError } = await supabase
     .from('game_players')
