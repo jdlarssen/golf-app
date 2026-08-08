@@ -145,7 +145,7 @@ export function NotificationCard({
     const p = payload as NotificationPayload<'product_update'>;
     const showCta = Boolean(p.link && p.cta_label);
     return (
-      <div className={rootClassName}>
+      <div className={rootClassName} data-testid="notification-card" data-notification-kind={kind}>
         {stripe}
         <div className="flex min-w-0 flex-1 items-start gap-3 px-3.5 py-3">
           {emoji}
@@ -188,7 +188,7 @@ export function NotificationCard({
   }
 
   return (
-    <div className={rootClassName}>
+    <div className={rootClassName} data-testid="notification-card" data-notification-kind={kind}>
       {stripe}
 
       <button
