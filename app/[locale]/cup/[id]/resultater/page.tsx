@@ -9,8 +9,10 @@ import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { canViewCupPage } from '@/lib/cup/cupPageAccess';
 import { isTeamMatchGameMode } from '@/lib/cup/computeCupLeaderboard';
 import { computeCupPlayerPoints } from '@/lib/cup/computeCupPlayerPoints';
+import { computeCupMvp, computeCupUnderperformer } from '@/lib/cup/computeCupAwards';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import { CupPlayerPoints } from './CupPlayerPoints';
+import { CupAwards } from './CupAwards';
 
 type Params = Promise<{ id: string }>;
 
@@ -37,7 +39,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
   const snapshot = await getCupSnapshot(id);
   if (!snapshot) notFound();
 
-  const { tournament, leaderboard, sideAwards } = snapshot;
+  const { tournament, leaderboard, sideAwards, performanceInputs } = snapshot;
 
   // Samme klubb-gate som cup-siden (#524, delt helper #1468).
   const allowed = await canViewCupPage({
@@ -88,6 +90,14 @@ export default async function CupResultsPage({ params }: { params: Params }) {
     { team: 1 as const, teamName: tournament.team_1_name, rows: playerPoints.team1 },
     { team: 2 as const, teamName: tournament.team_2_name, rows: playerPoints.team2 },
   ].filter((g) => g.rows.length > 0);
+
+  // Seremonikåringene (#1508): MVP fra samme poengregnskap, «dro ned mest» fra
+  // prestasjons-inputen. Begge kan være null — da vises de ikke.
+  const mvp = computeCupMvp(playerPoints);
+  const underperformer = computeCupUnderperformer({
+    games: performanceInputs,
+    roster: snapshot.roster,
+  });
 
   return (
     <AppShell>
@@ -148,6 +158,9 @@ export default async function CupResultsPage({ params }: { params: Params }) {
           </p>
         )}
       </section>
+
+      {/* Kåringer (#1508) — rett etter lagtotalene, før spillerpoengene. */}
+      <CupAwards mvp={mvp} underperformer={underperformer} />
 
       {/* Per-spiller-poengregnskap (#1497) — mellom lagtotalene og kamplisten. */}
       {playerPointGroups.length > 0 && (
