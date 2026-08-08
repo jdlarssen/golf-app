@@ -1455,8 +1455,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 32 rettinger</strong></summary>
+<summary><strong>August 2026 · 33 rettinger</strong></summary>
 
+- `1.229.5` · [#1535](https://github.com/jdlarssen/golf-app/issues/1535) — Splittet cup-dag med flere flighter: hull-stripa viser igjen hele runden 1–18, og på hull 9 tar knappen deg rett videre til hull 10 i neste kamp. Før stoppet runden på hull 9 og du måtte finne den andre kampen selv.
 - `1.229.4` · [#1533](https://github.com/jdlarssen/golf-app/issues/1533) — Retter du handicapet ditt mens en runde er i gang — for eksempel et plusshandicap der «+» ble glemt — regnes banehandicapet i spillene du står i nå om med det samme. Før ble det stående på den gamle verdien ut runden, og du fikk feil antall slag.
 - `1.229.3` · [#1450](https://github.com/jdlarssen/golf-app/issues/1450) — Starter en splittet cup-dag av seg selv på tee-tid, får du nå ett varsel i stedet for to eller tre, og det tar deg til greensome-kampen du skal føre først.
 - `1.229.2` · [#1517](https://github.com/jdlarssen/golf-app/issues/1517) — Tilbake-pila på leaderboardet holder kursen: går du inn på et lag eller bytter mellom netto og brutto, kommer du fortsatt tilbake dit du kom fra — cup-resultatene, historikken eller Hjem.

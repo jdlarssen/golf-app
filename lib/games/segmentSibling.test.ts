@@ -113,6 +113,40 @@ describe('pickSiblingCandidate', () => {
     });
   });
 
+  // #1535: en splittet cup-dag har én motsatt-halvdel-host PER FLIGHT, så
+  // kandidat-antallet sier ingenting. Det som må være entydig er spillerens
+  // eget medlemskap — hen spiller nøyaktig én flight.
+  it('#1535: tre flights (tre kandidater), spilleren er aktiv i én → resolver den', () => {
+    const candidates = [
+      { id: 'back9-flight-1', game_mode: 'best_ball' as const },
+      { id: 'back9-flight-2', game_mode: 'best_ball' as const },
+      { id: 'back9-flight-3', game_mode: 'best_ball' as const },
+    ];
+    expect(
+      pickSiblingCandidate(candidates, [
+        { game_id: 'back9-flight-3', submitted_at: null, team_number: 1 },
+      ]),
+    ).toEqual({
+      id: 'back9-flight-3',
+      game_mode: 'best_ball',
+      submitted_at: null,
+      team_number: 1,
+    });
+  });
+
+  it('#1535: null når spilleren er aktiv i to kandidater (ekte flertydighet)', () => {
+    const candidates = [
+      { id: 'back9-a', game_mode: 'best_ball' as const },
+      { id: 'back9-b', game_mode: 'best_ball' as const },
+    ];
+    expect(
+      pickSiblingCandidate(candidates, [
+        { game_id: 'back9-a', submitted_at: null, team_number: 1 },
+        { game_id: 'back9-b', submitted_at: null, team_number: 2 },
+      ]),
+    ).toBeNull();
+  });
+
   it('ignorerer medlemskap som ikke matcher noen kandidat (defensivt)', () => {
     const candidates = [{ id: 'back9-a', game_mode: 'best_ball' as const }];
     expect(
