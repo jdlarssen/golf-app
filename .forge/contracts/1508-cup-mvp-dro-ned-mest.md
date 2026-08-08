@@ -164,7 +164,7 @@ anbefalt).
 - [x] `npm run build` grønn (aldri filtrer «pre-existing») — `BUILD_EXIT=0`
 - [x] `npm run lint` grønn — `LINT_EXIT=0`, 0 errors. `getCupSnapshot`-kompleksiteten gikk
       64 → 66 (grense 25, warning-only, målt mot `origin/main`) — allerede over fra før,
-      filt som eget issue framfor å utvide dette PR-ets scope.
+      filt som #1522 framfor å utvide dette PR-ets scope.
 - [x] Staging-klikkrunde av resultatsiden (staging-verify-skill) + bevis-kommentar + label FØR merge
       — bevis-kommentar på PR #1521, label `staging-verified` satt. Full suite: 448 filer,
       5721 tester grønn.
