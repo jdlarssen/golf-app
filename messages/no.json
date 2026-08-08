@@ -4784,7 +4784,12 @@
       "yourPoints": "Dine poeng",
       "wonAgainst": "Vant mot {opponent} · +{points}",
       "tiedWith": "Delte med {opponent} · +{points}",
-      "sideContribution": "{kind}, {hole} · +{points}"
+      "sideContribution": "{kind}, {hole} · +{points}",
+      "awardsHeading": "Kåringer",
+      "mvpLabel": "MVP",
+      "mvpValue": "{points} poeng · flest i cupen",
+      "underperformerLabel": "Dro ned mest",
+      "underperformerValue": "{strokes} slag over eget handicap"
     },
     "sideAwards": {
       "heading": "Sidepoeng",

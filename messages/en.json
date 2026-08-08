@@ -4784,7 +4784,12 @@
       "yourPoints": "Your points",
       "wonAgainst": "Beat {opponent} · +{points}",
       "tiedWith": "Halved with {opponent} · +{points}",
-      "sideContribution": "{kind}, {hole} · +{points}"
+      "sideContribution": "{kind}, {hole} · +{points}",
+      "awardsHeading": "Awards",
+      "mvpLabel": "MVP",
+      "mvpValue": "{points} points · most in the cup",
+      "underperformerLabel": "Biggest slide",
+      "underperformerValue": "{strokes} strokes over own handicap"
     },
     "sideAwards": {
       "heading": "Side points",

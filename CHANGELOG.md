@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.229 · MVP og «dro ned mest»</strong></summary>
+
+[#1508](https://github.com/jdlarssen/golf-app/issues/1508) — Cup-resultatsiden kårer nå cupens MVP, og spilleren som dro mest ned mot eget banehandicap. Deler flere toppen, kåres de sammen.
+
+↳ /admin/cup · «Åpne cupene»
+</details>
+
+<details>
 <summary><strong>1.228 · Poengregnskap per spiller</strong></summary>
 
 [#1497](https://github.com/jdlarssen/golf-app/issues/1497) — Cup-resultatsiden viser nå hvor mange poeng hver spiller dro inn. Brett ut en rad for å se kamp for kamp og sidepoengene som ga uttelling, og din egen rad er løftet fram.
