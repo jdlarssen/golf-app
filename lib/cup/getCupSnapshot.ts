@@ -3,6 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { computeCupMatchResult } from './computeCupMatchResult';
 import { computeCupBestBallAward } from './computeCupBestBallAward';
+import { PERSONALLY_SCORED_CUP_GAME_MODES, type CupPerformanceGame } from './computeCupAwards';
 import { computeSubmissionStatusByGame } from './matchSubmissionStatus';
 import { holesForSegment, type HoleSegment } from '@/lib/scoring/holeSegment';
 import type { GameStatus } from '@/lib/games/status';
@@ -100,6 +101,13 @@ export type CupSnapshot = {
   roster: CupRoster;
   /** Cupens sidepoeng-oppsett (#1441, D9) — tom liste for cuper uten. */
   sideAwards: CupSideAwardSnapshot[];
+  /**
+   * Råstoff for «dro ned mest»-kåringen (#1508): ett innslag per spill der
+   * hver spiller fører sin EGEN ball. Bygget i den eksisterende game-loopen —
+   * ingen ekstra DB-lesinger. Tom liste for cuper uten slike spill (f.eks. en
+   * ren greensome-cup), og da vises kåringen ikke.
+   */
+  performanceInputs: CupPerformanceGame[];
 };
 
 type GameRow = {
@@ -304,6 +312,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
   );
 
   const matchInputs: CupMatchInput[] = [];
+  const performanceInputs: CupPerformanceGame[] = [];
 
   // Roster: distinct players grouped by team_number across all matches.
   const team1Map = new Map<string, CupRosterPlayer>();
@@ -345,6 +354,34 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       };
       if (p.team_number === 1 && !team1Map.has(p.user_id)) team1Map.set(p.user_id, entry);
       if (p.team_number === 2 && !team2Map.has(p.user_id)) team2Map.set(p.user_id, entry);
+    }
+
+    // #1508: prestasjons-input for «dro ned mest»-kåringen. To filtre, begge
+    // nødvendige:
+    //   - Kun modi med personlig føring (PERSONALLY_SCORED_CUP_GAME_MODES) —
+    //     foursomes-familien fører lagball og kan aldri attribuere individuell
+    //     prestasjon.
+    //   - Kun HOST-spill: en avledet match (#1441 D3) eier ingen egne scores,
+    //     den leser host-ens. Uten dette filteret ville splittet cup-dag telt
+    //     det samme scoresettet to ganger.
+    // Ingen ekstra DB-lesing — alt er allerede hentet for match-scoringen.
+    if (
+      game.source_game_id == null &&
+      (PERSONALLY_SCORED_CUP_GAME_MODES as readonly string[]).includes(game.game_mode)
+    ) {
+      performanceInputs.push({
+        gameId: game.id,
+        holes: holes.map((h) => ({ number: h.number, par: h.par, strokeIndex: h.strokeIndex })),
+        players: gPlayers.map((p) => ({
+          userId: p.user_id,
+          courseHandicap: p.course_handicap ?? 0,
+        })),
+        scores: gScores.map((s) => ({
+          userId: s.user_id,
+          holeNumber: s.hole_number,
+          strokes: s.strokes,
+        })),
+      });
     }
 
     // `mode_config` — `allowance_pct` for lag-format, `team_strokes_override`
@@ -541,6 +578,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     tournament: t,
     leaderboard,
     sideAwards,
+    performanceInputs,
     roster: {
       team1: Array.from(team1Map.values()),
       team2: Array.from(team2Map.values()),

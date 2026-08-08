@@ -278,6 +278,28 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
     // Total = g1s 5 (best-ball-seier) + 3 (sidepoeng) — g2/g3 bidrar 0.
     expect(snap!.leaderboard.team1Points).toBe(8);
     expect(snap!.leaderboard.team2Points).toBe(0);
+
+    // #1508 — prestasjons-input for «dro ned mest». Denne fixturen er nettopp
+    // dobbelttellings-fella: g2 (avledet singles) leser g1s score-rader. Kun
+    // g1 slipper inn, så scoresettet telles ÉN gang. g3 (greensome) fører
+    // lagball og holdes utenfor uansett.
+    expect(snap!.performanceInputs.map((p) => p.gameId)).toEqual(['g1']);
+    const perf = snap!.performanceInputs[0];
+    // Segment-filtrert (back9): hull 1 er med i course_holes, men ikke i scope.
+    expect(perf.holes).toEqual([{ number: 10, par: 4, strokeIndex: 1 }]);
+    expect(perf.players).toEqual([
+      { userId: 'p1', courseHandicap: 0 },
+      { userId: 'p2', courseHandicap: 0 },
+      { userId: 'p3', courseHandicap: 0 },
+      { userId: 'p4', courseHandicap: 0 },
+    ]);
+    expect(perf.scores).toHaveLength(4);
+    expect(perf.scores[0]).toEqual({ userId: 'p1', holeNumber: 10, strokes: 4 });
+    // ...og uten nye DB-lesinger: prestasjons-inputen bygges av data loopen
+    // allerede hadde. Tabell-settet er uendret fra før #1508.
+    expect(new Set(supabaseMock.__fromCalls.map((c) => c.table))).toEqual(
+      new Set(['tournaments', 'games', 'tournament_side_awards', 'game_players', 'scores', 'course_holes']),
+    );
   });
 });
 
