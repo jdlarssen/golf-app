@@ -40,11 +40,15 @@ grunn `finishTournament` allerede avslutter kampene via admin-klienten.
       gir null treff.
 - [x] **K4 — Kommentarene ved kallstedene er rettet.** Begge sa tidligere at lista var
       «hele deltaker-settet» uten forbehold; de forklarer nå hvorfor admin-klienten er
-      nødvendig (`lib/cup/actions.ts:246-250` og `:421-427`).
+      nødvendig (`lib/cup/actions.ts:246-250` og `:422-427`).
 - [x] **K5 — Én regresjonstest, og den fanger feilen.**
-      `lib/cup/tournamentParticipants.test.ts` — 12 deltakere over 3 kamper, asserter hele
-      settet ut + at `games`/`game_players` traff admin-klienten. Falsifisert: da helperen
-      midlertidig ble pekt på den request-scopede klienten, feilet testen.
+      `lib/cup/tournamentParticipants.test.ts` — 12 deltakere over 3 kamper (P1 i to,
+      pluss én e-postløs rad). Asserter hele settet ut, dedup, e-post-skip, at oppslaget
+      traff admin-klienten, OG at spørringene er scopet (`eq('tournament_id','T1')` +
+      `in('game_id',[…])`). Falsifisert fire ganger, én per lås: request-scoped klient →
+      rødt; `eq('tournament_id')` fjernet → rødt; dedup fjernet → rødt; e-post-skip
+      fjernet → rødt. Scope-/dedup-/e-post-assertene kom etter evaluator-runde 1, som
+      beviste at den første versjonen av testen passerte selv med alle fire strippet.
 - [x] **K6 — Versjon + CHANGELOG.** `package.json` 1.230.0 → 1.230.1; én linje under
       Feilrettinger (August 2026, teller 33 → 34).
 
@@ -55,14 +59,14 @@ grunn `finishTournament` allerede avslutter kampene via admin-klienten.
 | Co-lokaliserte tester | `npx vitest run lib/cup/tournamentParticipants.test.ts lib/cup/actions.test.ts lib/notifications/events.test.ts` | 3 filer / 26 tester grønne |
 | Typecheck | `npx tsc --noEmit` | exit 0 |
 | Lint | `npm run lint` | 0 errors (55 pre-eksisterende warnings) |
-| Build | `npm run build` | ⚠️ Se verifiseringsgap |
+| Build | Vercel Preview mot `f1f66e7c` | pass — «Deployment has completed» |
+| CI | `gh pr checks 1541` | `verify` 6m5s pass · `e2e` 4m45s pass · `scan` 10s pass |
 
-**VERIFICATION GAP — `npm run build`:** «Compiled successfully» + «Finished TypeScript»
-passerte, men `Collecting page data` avbrøt på `/[locale]/baner/[slug]` fordi worktreet
-mangler `.env.local` (kopiering ble nektet av tillatelses-klassifisereren). Feilen er
-`supabaseUrl is required` / DNS mot placeholder-host — miljø, ikke kode. Endringen rører
-ingen route-filer og legger ikke til `export const runtime`, som er det gaten finnes for
-å fange.
+**Build-gapet er lukket.** Lokalt `npm run build` kom til «Compiled successfully» +
+«Finished TypeScript», men avbrøt i `Collecting page data` fordi worktreet mangler
+`.env.local` (kopiering nektet av tillatelses-klassifisereren) — miljø, ikke kode.
+Vercels preview-deploy for nøyaktig denne SHA-en kjører den ekte produksjonsbygget med
+riktige env-variabler og er grønn, så gaten er dekket.
 
 **Ikke staging-verifisert** — eieren bekreftet at generalprøven kjøres i en parallell økt
 som allerede har riggen oppe mot `torny-staging`.
