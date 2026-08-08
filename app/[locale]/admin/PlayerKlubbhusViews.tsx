@@ -69,7 +69,8 @@ export function GreetingView({ name }: { name: string | null }) {
  * row. With no created games it leads with the «Sett opp en runde» invitation
  * (never an empty list); with ≥1 it shrinks the invitation to a quiet
  * «+ Ny runde» affordance above the capped list. The cup row appears whenever
- * the player has ≥1 personal cup, independent of games (#10 discoverability).
+ * the player is part of ≥1 cup — created, on a draft roster, or played
+ * (#1463) — independent of games (#10 discoverability).
  */
 export function ArrangementView({
   games,
