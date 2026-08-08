@@ -16,9 +16,15 @@ export type StartedGameForNotify = {
   playerIds: string[];
 };
 
-/** Spillet ett sett spillere skal varsles om. */
+/**
+ * Spillet ett sett spillere skal varsles om. `game` bærer `sourceGameId`
+ * videre selv om selektoren allerede har filtrert bort avledede spill: da kan
+ * kalleren sende den ekte verdien til `notifyPlayersGameStarted` i stedet for
+ * å påstå `null`, og guarden der (regelens ene hjem) fyrer fortsatt om
+ * filteret her noen gang skulle bli fjernet.
+ */
 export type StartNotificationTarget = {
-  game: { id: string; name: string };
+  game: { id: string; name: string; sourceGameId: string | null };
   playerIds: string[];
 };
 
@@ -90,7 +96,10 @@ export function pickStartNotificationTargets(
       playerIds.push(playerId);
     }
     if (playerIds.length > 0) {
-      targets.push({ game: { id: game.id, name: game.name }, playerIds });
+      targets.push({
+        game: { id: game.id, name: game.name, sourceGameId: game.sourceGameId },
+        playerIds,
+      });
     }
   }
 
