@@ -1,7 +1,14 @@
 import { first } from '@/lib/url/searchParams';
 import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { getRoleContext } from '@/lib/admin/auth';
+import {
+  getMyCupIds,
+  cupLedgerHref,
+  cupLedgerResult,
+  type CupLedgerRow,
+} from '@/lib/cup/myCups';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -23,6 +30,45 @@ const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = 
   finished: 'signert',
 };
 
+const CUP_SELECT =
+  'id, name, status, team_1_name, team_2_name, points_to_win, created_at, created_by, group_id, winner_team';
+
+type ServerSupabase = Awaited<ReturnType<typeof getServerClient>>;
+
+/** Admin-lista: alle cuper, nyest først — uendret siden #526. */
+async function fetchAllCups(supabase: ServerSupabase): Promise<CupLedgerRow[]> {
+  const { data } = await supabase
+    .from('tournaments')
+    .select(CUP_SELECT)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  // status/winner_team er text/smallint i DB, låst av CHECK — samme cast som
+  // getCupSnapshot gjør på de samme kolonnene.
+  return (data ?? []) as unknown as CupLedgerRow[];
+}
+
+/**
+ * Spiller-lista (#1463): cupene brukeren er en del av. Ids-ene utledes fra
+ * brukerens egne rader (RLS-scopet, `getMyCupIds`), mens selve radene hentes
+ * med admin-klient: en deltaker i en klubb-cup uten klubbmedlemskap får ikke
+ * lest tournament-raden under RLS, men kan åpne `/cup/[id]`. Retten følger av
+ * spillerens egne rader — samme authz-form som `getCupSnapshot`.
+ */
+async function fetchMyCups(
+  supabase: ServerSupabase,
+  userId: string,
+): Promise<CupLedgerRow[]> {
+  const ids = await getMyCupIds(supabase, userId);
+  if (ids.length === 0) return [];
+  const { data } = await getAdminClient()
+    .from('tournaments')
+    .select(CUP_SELECT)
+    .in('id', ids)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return (data ?? []) as unknown as CupLedgerRow[];
+}
+
 export default async function CupListPage({
   searchParams,
 }: {
@@ -40,31 +86,13 @@ export default async function CupListPage({
 
   const supabase = await getServerClient();
   // #526: lista er reachable for alle (admin-layout er auth-only per #392).
-  // Admin ser alle cuper; en vanlig bruker ser kun sine egne personlige cuper.
+  // Admin ser alle cuper; en vanlig bruker ser cupene hen er en del av (#1463)
+  // — opprettet, i utkast-spillerlista, eller spilt.
   const { userId, isAdmin } = await getRoleContext(supabase);
 
-  let query = supabase
-    .from('tournaments')
-    .select(
-      'id, name, status, team_1_name, team_2_name, points_to_win, created_at',
-    )
-    .order('created_at', { ascending: false })
-    .limit(50);
-  if (!isAdmin) {
-    query = query.eq('created_by', userId).is('group_id', null);
-  }
-  const { data: cups } = await query;
-
-  const rows = (cups ?? []) as Array<{
-    id: string;
-    name: string;
-    status: 'draft' | 'active' | 'finished';
-    team_1_name: string;
-    team_2_name: string;
-    // NULL fram til cupen starter (#1142).
-    points_to_win: number | null;
-    created_at: string;
-  }>;
+  const rows = isAdmin
+    ? await fetchAllCups(supabase)
+    : await fetchMyCups(supabase, userId);
 
   return (
     <AdminShell>
@@ -92,7 +120,11 @@ export default async function CupListPage({
             {t.rich('ledger.emptyBody', {
               a: (chunks) => (
                 <SmartLink
-                  href="/admin/games/new?intent=cup"
+                  href={
+                    isAdmin
+                      ? '/admin/games/new?intent=cup'
+                      : '/opprett-spill?intent=cup'
+                  }
                   className="text-text underline hover:no-underline"
                 >
                   {chunks}
@@ -103,9 +135,11 @@ export default async function CupListPage({
         </Card>
       ) : (
         <ul className="space-y-2">
-          {rows.map((cup) => (
+          {rows.map((cup) => {
+            const result = cupLedgerResult(cup);
+            return (
             <li key={cup.id}>
-              <SmartLink href={`/admin/cup/${cup.id}`}>
+              <SmartLink href={cupLedgerHref(cup, { userId, isAdmin })}>
                 <Card>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -124,6 +158,16 @@ export default async function CupListPage({
                               points: String(cup.points_to_win).replace('.', ','),
                             })}
                       </p>
+                      {result && (
+                        <p
+                          className="mt-1 text-xs font-medium text-text"
+                          data-testid="cup-ledger-result"
+                        >
+                          {result.kind === 'winner'
+                            ? t('results.winner', { team: result.team })
+                            : t('results.tied')}
+                        </p>
+                      )}
                     </div>
                     <StatusChip
                       tone={STATUS_TO_CHIP[cup.status]}
@@ -133,7 +177,8 @@ export default async function CupListPage({
                 </Card>
               </SmartLink>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </AdminShell>
