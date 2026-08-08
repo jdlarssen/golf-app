@@ -2481,7 +2481,7 @@
       "decidedAtHole": "Decided on hole {hole}",
       "tiedKicker": "ALL SQUARE",
       "tiedText": "The match ended all square",
-      "tiedSubtext": "All square after 18 holes",
+      "tiedSubtext": "All square after {holes} holes",
       "liveKicker": "LIVE",
       "liveNotStarted": "The match hasn't started yet",
       "liveNotStartedSub": "The board wakes up when the first hole is played.",
@@ -2579,8 +2579,13 @@
       "colVinner": "Winner",
       "colStilling": "Status",
       "extraSlag": "+{count} strokes",
-      "lagHCP": "Team HCP: {hcp}{extra}",
-      "extraHandicap": " (+{n} strokes)"
+      "lagHCP": "Team HCP: {hcp}",
+      "lagHCPStrokes": "Team HCP: {hcp} · {count, plural, one {# stroke} other {# strokes}} on hole {holes}",
+      "spillerHCP": "HCP {hcp}",
+      "spillerHCPStrokes": "HCP {hcp} · {count, plural, one {# stroke} other {# strokes}} on hole {holes}",
+      "colSubBrutto": "gross",
+      "strokeDotAria": "{count, plural, one {# stroke on this hole} other {# strokes on this hole}}",
+      "tableNote": "Numbers are gross. A dot means a stroke on that hole, and the small number below is net — net decides who wins the hole."
     },
     "wolf": {
       "revealHiddenSub": "Wolf points are kept secret until admin finishes the game.",

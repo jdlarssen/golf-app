@@ -13,6 +13,10 @@ import type {
   FoursomesMatchplayResult,
   FoursomesHoleRow,
 } from '@/lib/scoring/modes/types';
+import {
+  strokesReceived,
+  type StrokesReceived,
+} from '@/lib/scoring/strokesReceived';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { MatchplayDuelCard } from './MatchplayDuelCard';
 
@@ -128,6 +132,16 @@ export function FoursomesMatchplayView({
   const hasDecidedWinner =
     result.result !== null && result.result.winner !== 'tied';
 
+  // #1545: slag laget faktisk mottar i DENNE matchen. Tidligere viste linja
+  // 18-hulls-differansen («+5 slag») ved siden av en nihulls-tabell som bare
+  // deler ut tre — de to som manglet var slag på hull laget aldri spilte.
+  const side1Strokes = strokesReceived(
+    result.holes.map((h) => ({ holeNumber: h.holeNumber, extra: h.side1Extra })),
+  );
+  const side2Strokes = strokesReceived(
+    result.holes.map((h) => ({ holeNumber: h.holeNumber, extra: h.side2Extra })),
+  );
+
   return (
     <LeaderboardShell>
       <LeaderboardHeader gameName={gameName} backHref={backHref} />
@@ -152,11 +166,23 @@ export function FoursomesMatchplayView({
           testIdPrefix="foursomes"
           sideA={{
             label: side1Label,
-            sublines: sideSublines(side1, playerInfo, t, tc('unknownPlayerFull')),
+            sublines: sideSublines(
+              side1,
+              side1Strokes,
+              playerInfo,
+              t,
+              tc('unknownPlayerFull'),
+            ),
           }}
           sideB={{
             label: side2Label,
-            sublines: sideSublines(side2, playerInfo, t, tc('unknownPlayerFull')),
+            sublines: sideSublines(
+              side2,
+              side2Strokes,
+              playerInfo,
+              t,
+              tc('unknownPlayerFull'),
+            ),
           }}
           holeResults={result.holes.map((h) => h.result)}
           holesUp={result.holesUp}
@@ -199,22 +225,30 @@ function displayNameFor(info: FoursomesPlayerInfo | undefined, fallback: string)
 }
 
 /**
- * Sub-linjer i duellkortets versus-panel: lagets to spillere + lag-nivå
- * HCP (kombinert CH + eventuell extra-handicap fra greensome/chapman-regler).
+ * Sub-linjer i duellkortets versus-panel: lagets to spillere + lag-handicap.
+ *
+ * #1545: får laget slag, navngir linja hvor mange og på hvilke hull — talt fra
+ * hullradene i matchen, ikke fra 18-hulls-differansen. Da kan spilleren telle
+ * etter i tabellen under og finne igjen nøyaktig de samme hullene.
  */
 function sideSublines(
   side: FoursomesMatchplayResult['sides'][0],
+  strokes: StrokesReceived,
   playerInfo: Record<string, FoursomesPlayerInfo>,
   t: ReturnType<typeof useTranslations<'leaderboard'>>,
   fallback: string,
 ): string[] {
-  const extra =
-    side.effectiveExtraHandicap > 0
-      ? t('matchplay.extraHandicap', { n: side.effectiveExtraHandicap })
-      : '';
+  const hcpLine =
+    strokes.count > 0
+      ? t('matchplay.lagHCPStrokes', {
+          hcp: side.combinedCourseHandicap,
+          count: strokes.count,
+          holes: strokes.holes.join(', '),
+        })
+      : t('matchplay.lagHCP', { hcp: side.combinedCourseHandicap });
   return [
     ...side.players.map((p) => displayNameFor(playerInfo[p.userId], fallback)),
-    t('matchplay.lagHCP', { hcp: side.combinedCourseHandicap, extra }),
+    hcpLine,
   ];
 }
 
@@ -254,18 +288,11 @@ function HoleGrid({
             >
               {t('matchplay.colPar')}
             </th>
-            <th
-              scope="col"
-              className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted truncate"
-            >
-              {side1Short}
-            </th>
-            <th
-              scope="col"
-              className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted truncate"
-            >
-              {side2Short}
-            </th>
+            {/* #1545: kolonnen sa bare «L1»/«L2» og viste netto — spilleren
+                sammenlignet med papirkortet og trodde appen regnet feil.
+                Nå står brutto her, og under-labelen sier det. */}
+            <SideColHeader label={side1Short} t={t} />
+            <SideColHeader label={side2Short} t={t} />
             <th
               scope="col"
               className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
@@ -287,11 +314,42 @@ function HoleGrid({
               hole={hole}
               runningStatus={running[i]}
               isLast={i === holes.length - 1}
+              t={t}
             />
           ))}
         </tbody>
       </table>
+      <p
+        data-testid="foursomes-hole-grid-note"
+        className="border-t border-border px-3 py-2 text-[10.5px] leading-snug text-muted"
+      >
+        {t('matchplay.tableNote')}
+      </p>
     </div>
+  );
+}
+
+/**
+ * Side-kolonnens header: lag-label over en «brutto»-underlabel (#1545), slik
+ * at det ikke er tvil om hvilket tall som står i kolonnen.
+ */
+function SideColHeader({
+  label,
+  t,
+}: {
+  label: string;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
+}): JSX.Element {
+  return (
+    <th
+      scope="col"
+      className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+    >
+      <span className="block truncate">{label}</span>
+      <span className="block text-[8.5px] font-normal normal-case tracking-normal opacity-80">
+        {t('matchplay.colSubBrutto')}
+      </span>
+    </th>
   );
 }
 
@@ -299,10 +357,12 @@ function HoleRow({
   hole,
   runningStatus,
   isLast,
+  t,
 }: {
   hole: FoursomesHoleRow;
   runningStatus: number | null;
   isLast: boolean;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }): JSX.Element {
   const side1Won = hole.result === 'side1_wins';
   const side2Won = hole.result === 'side2_wins';
@@ -323,10 +383,22 @@ function HoleRow({
         {hole.par}
       </td>
       <td className="px-1 py-2 text-center">
-        <NetCell net={hole.side1Net} wonHole={side1Won} />
+        <ScoreCell
+          gross={hole.side1Gross}
+          net={hole.side1Net}
+          extra={hole.side1Extra}
+          wonHole={side1Won}
+          t={t}
+        />
       </td>
       <td className="px-1 py-2 text-center">
-        <NetCell net={hole.side2Net} wonHole={side2Won} />
+        <ScoreCell
+          gross={hole.side2Gross}
+          net={hole.side2Net}
+          extra={hole.side2Extra}
+          wonHole={side2Won}
+          t={t}
+        />
       </td>
       <td className="px-2 py-2 text-center tabular-nums">
         {unplayed && <span className="text-muted">—</span>}
@@ -377,18 +449,48 @@ function StatusCell({
   );
 }
 
-function NetCell({
+/**
+ * Score-celle (#1545): lagets BRUTTO som hovedtall — det er tallet som står på
+ * papirkortet — med prikk for slag på hullet og netto som lite tall under når
+ * de to er forskjellige. Samme oppbygning som singel-tabellen, slik at de to
+ * matchplay-tabellene i én cup ikke lenger viser ulike tall uten å si det.
+ */
+function ScoreCell({
+  gross,
   net,
+  extra,
   wonHole,
+  t,
 }: {
+  gross: number | null;
   net: number | null;
+  extra: number;
   wonHole: boolean;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }): JSX.Element {
-  if (net === null) {
+  if (gross === null) {
     return <span className="text-muted">—</span>;
   }
-  const netClass = wonHole
+  const grossClass = wonHole
     ? 'font-semibold text-score-under-fg tabular-nums'
     : 'text-text tabular-nums';
-  return <span className={netClass}>{net}</span>;
+  return (
+    <span className="inline-flex flex-col items-center leading-tight">
+      <span className={grossClass}>
+        {gross}
+        {extra > 0 && (
+          <span
+            aria-label={t('matchplay.strokeDotAria', { count: extra })}
+            title={t('matchplay.strokeDotAria', { count: extra })}
+            className="ml-0.5 align-super text-[10px] font-semibold leading-none text-text"
+          >
+            {'•'.repeat(extra)}
+          </span>
+        )}
+      </span>
+      {extra > 0 && net !== null && (
+        <span className="text-[10px] tabular-nums text-muted">{net}</span>
+      )}
+    </span>
+  );
 }

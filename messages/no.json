@@ -2481,7 +2481,7 @@
       "decidedAtHole": "Avgjort på hull {hole}",
       "tiedKicker": "UAVGJORT",
       "tiedText": "Matchen endte AS",
-      "tiedSubtext": "All square etter 18 hull",
+      "tiedSubtext": "All square etter {holes} hull",
       "liveKicker": "LIVE",
       "liveNotStarted": "Matchen er ikke startet ennå",
       "liveNotStartedSub": "Tabellen våkner når første hull er spilt.",
@@ -2579,8 +2579,13 @@
       "colVinner": "Vinner",
       "colStilling": "Stilling",
       "extraSlag": "+{count} slag",
-      "lagHCP": "Lag-HCP: {hcp}{extra}",
-      "extraHandicap": " (+{n} slag)"
+      "lagHCP": "Lag-HCP: {hcp}",
+      "lagHCPStrokes": "Lag-HCP: {hcp} · {count, plural, one {# slag} other {# slag}} på hull {holes}",
+      "spillerHCP": "HCP {hcp}",
+      "spillerHCPStrokes": "HCP {hcp} · {count, plural, one {# slag} other {# slag}} på hull {holes}",
+      "colSubBrutto": "brutto",
+      "strokeDotAria": "{count, plural, one {# slag på dette hullet} other {# slag på dette hullet}}",
+      "tableNote": "Tallene er brutto. Prikk betyr slag på hullet, og det lille tallet under er netto — netto avgjør hvem som vinner hullet."
     },
     "wolf": {
       "revealHiddenSub": "Wolf-poeng holdes hemmelig til admin avslutter spillet.",

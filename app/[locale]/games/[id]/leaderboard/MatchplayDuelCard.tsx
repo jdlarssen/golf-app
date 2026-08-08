@@ -307,7 +307,11 @@ function Verdict({
           <p className="font-serif text-[18px] font-medium leading-tight tracking-[-0.01em] text-text">
             {t('tiedText')}
           </p>
-          <p className="text-[12px] text-muted">{t('tiedSubtext')}</p>
+          {/* #1545: antall hull kommer fra matchen — en splittet cup-dag går
+              ni hull, og «etter 18 hull» var da rett og slett feil. */}
+          <p className="text-[12px] text-muted">
+            {t('tiedSubtext', { holes: holesPlayed })}
+          </p>
         </div>
       );
     }
