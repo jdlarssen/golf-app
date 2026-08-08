@@ -86,26 +86,48 @@ avsenderne (`?from=`-lenkene fra cup/historikk/Hjem står som de er).
 
 ## Success Criteria
 
-- [ ] Type A-tester for href-helperen dekker: kun `mode`, `mode+from`, `mode+return+n`,
+- [x] Type A-tester for href-helperen dekker: kun `mode`, `mode+from`, `mode+return+n`,
       alle samlet, og tom/ugyldig kontekst → `npx vitest run <helper-test>` grønn.
-- [ ] Staging-klikkrunde (cup-flyten): cup-resultater → matchkort → leaderboard →
+      **Bevis:** `lib/leaderboard/navContext.test.ts` — `npx vitest run
+      lib/leaderboard/navContext.test.ts` → «Test Files 1 passed (1) / Tests 38 passed (38)».
+      Dekker i tillegg injeksjons-casen (`from` med `&`/`=` → prosentkodet) og en
+      round-trip gjennom `parseLeaderboardNavContext`.
+- [x] Staging-klikkrunde (cup-flyten): cup-resultater → matchkort → leaderboard →
       lag-drilldown → ‹ → ‹ lander på `/cup/{id}/resultater`. Bevis: URL-sjekk per steg
       (drilldown-URL og leaderboard-URL inneholder `from=`).
-- [ ] Staging: trykk «Brutto» på samme leaderboard → URL har `mode=brutto` OG `from=` intakt;
+      **Bevis** (cup `RyderTest2`, spill «Best ball 1» `7388d4ac…`, staging-ref
+      `snwmueecmfqqdurxedxv`):
+      - K2.1 matchkort → `…/leaderboard?from=/cup/4c8e0aba…/resultater`
+      - K2.2 lag-lenka → `…/leaderboard/holes?team=1&mode=netto&from=%2Fcup%2F4c8e0aba…%2Fresultater`
+      - K2.3 drilldown-URL bærer `from=`
+      - K2.4 ‹ → `…/leaderboard?mode=netto&from=%2Fcup%2F…%2Fresultater`
+      - K2.5 ‹ → `http://localhost:3000/cup/4c8e0aba…/resultater` ← selve bug-rapporten
+- [x] Staging: trykk «Brutto» på samme leaderboard → URL har `mode=brutto` OG `from=` intakt;
       ‹ går til cup-resultatene. Toggling frem/tilbake etterlater ingen ekstra
       history-oppføringer (gestus-back fra leaderboardet går til cup-resultater, ikke til
       forrige toggle-tilstand).
-- [ ] `?return=hole&n=N`-konteksten overlever drilldown-rundtur: leaderboard åpnet fra
+      **Bevis:** K3.1 lenka bærer `mode=brutto&from=…`; K3.2 URL-en likeså; K3.3
+      `history.length 10 → 10` etter to toggles (`replace`); K3.4 gestus-back →
+      `/cup/4c8e0aba…/resultater`; K3.5 ‹ fra brutto-visningen → samme.
+- [x] `?return=hole&n=N`-konteksten overlever drilldown-rundtur: leaderboard åpnet fra
       hull-skjermen → drilldown → ‹ → leaderboard med `return=hole&n=N` i URL, ‹ → hull N.
-- [ ] `npm run build` grønn (ikke filtrert `tsc` — build-gaten).
+      **Bevis:** K4.1 `…/holes?team=1&mode=netto&return=hole&n=7`; K4.2 ‹ →
+      `…/leaderboard?mode=netto&return=hole&n=7`; K4.3 ‹ → `…/games/7388d4ac…/holes/7`.
+- [x] `npm run build` grønn (ikke filtrert `tsc` — build-gaten).
+      **Bevis:** `set -o pipefail && npm run build` → rute-tabell + `EXIT=0`.
 
 ## Gates
 
-- [ ] `npm run build` passerer
-- [ ] Co-located vitest for endrede filer passerer (`npx vitest run <endrede filers tester>`)
-- [ ] `npm run lint` passerer
-- [ ] Staging-verifisering av berørt flyt FØR merge + `staging-verified`-label (#1076)
-- [ ] Versjon: `fix` → patch-bump + CHANGELOG-linje (bruker-synlig fix)
+- [x] `npm run build` passerer — `EXIT=0`.
+- [x] Co-located vitest for endrede filer passerer. Ingen av de endrede
+      `app/**`-filene har `*.test.*`-søsken (glob-sjekket); kjørte hele suiten i stedet:
+      `npx vitest run` → «Test Files 449 passed (449) / Tests 5759 passed (5759)».
+- [x] `npm run lint` passerer — «✖ 55 problems (0 errors, 55 warnings)», alle warnings
+      pre-eksisterende (complexity/max-depth i `lib/scoring`, `lib/wizard`, `lib/notifications`).
+- [x] Staging-verifisering av berørt flyt FØR merge + `staging-verified`-label (#1076) —
+      14/14 steg PASS, prod-vakt: ingen Supabase-kall utenom staging-ref.
+- [x] Versjon: `fix` → patch-bump + CHANGELOG-linje (bruker-synlig fix) — `1.229.0` →
+      `1.229.1`, én linje under august-skuffen i `CHANGELOG.md`.
 
 ## Files Likely Touched
 
