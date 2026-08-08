@@ -22,14 +22,14 @@ vi.mock('@/i18n/navigation', () => ({
 }));
 
 const AWARDS: CupSideAwardSnapshot[] = [
-  { id: 'a1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 1, winnerUserId: null, winnerTeam: null },
-  { id: 'a2', kind: 'ld', holeNumber: 6, points: 3, slot: 1, slotCount: 1, winnerUserId: null, winnerTeam: null },
+  { id: 'a1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 1, winnerUserId: null, winnerTeam: null, noWinner: false },
+  { id: 'a2', kind: 'ld', holeNumber: 6, points: 3, slot: 1, slotCount: 1, winnerUserId: null, winnerTeam: null, noWinner: false },
 ];
 
 // #1489: 2×ctp-slots på samme hull + en gir-rad.
 const SLOTTED_AWARDS: CupSideAwardSnapshot[] = [
-  { id: 'b1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 2, winnerUserId: null, winnerTeam: null },
-  { id: 'b2', kind: 'ctp', holeNumber: 4, points: 2, slot: 2, slotCount: 2, winnerUserId: null, winnerTeam: null },
+  { id: 'b1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 2, winnerUserId: null, winnerTeam: null, noWinner: false },
+  { id: 'b2', kind: 'ctp', holeNumber: 4, points: 2, slot: 2, slotCount: 2, winnerUserId: null, winnerTeam: null, noWinner: false },
   { id: 'b3', kind: 'gir', holeNumber: 3, points: 1.5, maxPerTeam: 3, team1Count: null, team2Count: null },
 ];
 
@@ -109,5 +109,35 @@ describe('SideAwardsPanel', () => {
     expect(screen.getByLabelText(/hvor mange gir klarte nord/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/hvor mange gir klarte sør/i)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /registrer/i })).toHaveLength(3);
+  });
+
+  it('«ingen vinner» (#1530): valget finnes og sender winnerUserId null til actionen', async () => {
+    const { registerSideAwardWinner } = await import('@/lib/cup/sideAwardActions');
+    vi.mocked(registerSideAwardWinner).mockClear();
+
+    render(
+      <SideAwardsPanel
+        {...BASE_PROPS}
+        initialAwards={[AWARDS[0]]}
+        configEditable={false}
+        showWinnerRegistration
+      />,
+    );
+
+    const select = screen.getByTestId('side-award-winner-select');
+    const registerButton = screen.getByTestId('side-award-register');
+
+    // Uregistrert innslag: knappen er låst til arrangøren har svart noe.
+    expect(registerButton).toBeDisabled();
+
+    fireEvent.change(select, { target: { value: '__none__' } });
+    expect(registerButton).not.toBeDisabled();
+    fireEvent.click(registerButton);
+
+    expect(registerSideAwardWinner).toHaveBeenCalledWith({
+      tournamentId: BASE_PROPS.tournamentId,
+      awardId: AWARDS[0].id,
+      winnerUserId: null,
+    });
   });
 });

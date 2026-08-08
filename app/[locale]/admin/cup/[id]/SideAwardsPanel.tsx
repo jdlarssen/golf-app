@@ -38,6 +38,12 @@ import type { CupSideAwardSnapshot } from '@/lib/cup/getCupSnapshot';
 
 export type SideAwardRosterOption = { userId: string; label: string };
 
+/**
+ * Sentinel-verdien «ingen vant» (#1530) i vinner-dropdownen. Egen konstant slik
+ * at select-verdien og handleRegister-mappingen ikke kan drifte fra hverandre.
+ */
+const NONE_VALUE = '__none__';
+
 type Props = {
   tournamentId: string;
   initialAwards: CupSideAwardSnapshot[];
@@ -305,7 +311,12 @@ function SideAwardWinnerRow({
 }) {
   const t = useTranslations('cup.sideAwards');
   const router = useRouter();
-  const [winnerId, setWinnerId] = useState(award.winnerUserId ?? '');
+  // Tre tilstander i én select-verdi (#1530): '' = ikke tastet ennå,
+  // NONE_VALUE = «ingen vant», ellers spillerens id. Sentinel-strengen kan
+  // aldri kollidere med en uuid.
+  const [winnerId, setWinnerId] = useState(
+    award.noWinner ? NONE_VALUE : (award.winnerUserId ?? ''),
+  );
   const [isSaving, startSaving] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -323,7 +334,7 @@ function SideAwardWinnerRow({
       const result = await registerSideAwardWinner({
         tournamentId,
         awardId: award.id,
-        winnerUserId: winnerId,
+        winnerUserId: winnerId === NONE_VALUE ? null : winnerId,
       });
       if (!result.ok) {
         setError(registerErrorMap[result.error] ?? t('errors.saveFailed'));
@@ -360,6 +371,9 @@ function SideAwardWinnerRow({
                 {p.label}
               </option>
             ))}
+            {/* Sist i lista, som «Ingen kvalifiserte» i avslutt-veiviseren:
+                unntaket skal ikke stå i veien for det vanlige valget. */}
+            <option value={NONE_VALUE}>{t('winnerNoneOption')}</option>
           </select>
           <button
             type="button"
@@ -373,7 +387,11 @@ function SideAwardWinnerRow({
         </div>
       </div>
       {error && <p className="text-xs text-danger mt-2">{error}</p>}
-      {saved && !error && <p className="text-xs text-primary mt-2">{t('registered')}</p>}
+      {saved && !error && (
+        <p className="text-xs text-primary mt-2">
+          {t(winnerId === NONE_VALUE ? 'registeredNone' : 'registered')}
+        </p>
+      )}
     </Card>
   );
 }

@@ -63,6 +63,7 @@ function dbRow(overrides: Partial<Record<string, unknown>> = {}) {
     hole_number: 4,
     points: 2,
     winner_user_id: null,
+    no_winner: false,
     slot: 1,
     gir_max_per_team: null,
     gir_team1_count: null,
@@ -255,6 +256,28 @@ describe('saveSideAwardConfig', () => {
     ).toBe(false);
   });
 
+  it('winners_already_registered når en rad er tastet «ingen vant» (#1530) — et svar er et svar, selv uten poeng', async () => {
+    adminMock = buildSupabaseMock([
+      gateQueueItem,
+      { data: { status: 'draft', group_id: null }, error: null },
+      { data: [dbRow({ no_winner: true })], error: null }, // existing: answered «ingen vant»
+    ]);
+    supabaseMock = buildSupabaseMock([adminUserQueueItem]);
+    setUser('admin-1');
+
+    const { saveSideAwardConfig } = await import('./sideAwardActions');
+    const result = await saveSideAwardConfig('cup-1', [
+      { kind: 'ctp', holeNumber: 4, points: 2, winnerCount: 1 },
+    ]);
+
+    expect(result).toEqual({ ok: false, error: 'winners_already_registered' });
+    expect(
+      adminMock.__fromCalls.some(
+        (c) => c.table === 'tournament_side_awards' && (c.method === 'delete' || c.method === 'insert'),
+      ),
+    ).toBe(false);
+  });
+
   it('insert feiler etter delete: kompensert rollback — setter de før-slettingen-leste radene rett tilbake (inkl. slot- og gir-kolonner)', async () => {
     const existingRow = dbRow({ kind: 'gir', hole_number: 3, points: 1.5, gir_max_per_team: 3 });
     adminMock = buildSupabaseMock([
@@ -309,7 +332,42 @@ describe('registerSideAwardWinner', () => {
     const updateCall = adminMock.__fromCalls.find(
       (c) => c.table === 'tournament_side_awards' && c.method === 'update',
     );
-    expect(updateCall!.args[0]).toEqual({ winner_user_id: 'p1' });
+    // `no_winner: false` skrives ALLTID med (#1530): retter arrangøren
+    // «ingen vant» tilbake til en spiller, må flagget nullstilles i samme
+    // update — ellers ville raden bære begge tilstandene og DB-CHECK-en
+    // (migrasjon 0157) avvise skrivingen.
+    expect(updateCall!.args[0]).toEqual({ winner_user_id: 'p1', no_winner: false });
+  });
+
+  it('«ingen vinner» (#1530): winnerUserId null → setter no_winner, hopper over roster-oppslagene', async () => {
+    adminMock = buildSupabaseMock([
+      gateQueueItem, // 1. gate
+      { data: { group_id: null }, error: null }, // 2. cup lookup
+      { data: { id: 'sa1', kind: 'ctp' }, error: null }, // 3. award lookup
+      { data: [{ id: 'sa1' }], error: null }, // 4. update...select('id')
+    ]);
+    supabaseMock = buildSupabaseMock([adminUserQueueItem]);
+    setUser('admin-1');
+
+    const { registerSideAwardWinner } = await import('./sideAwardActions');
+    const result = await registerSideAwardWinner({
+      tournamentId: 'cup-1',
+      awardId: 'sa1',
+      winnerUserId: null,
+    });
+
+    expect(result).toEqual({ ok: true });
+    const updateCall = adminMock.__fromCalls.find(
+      (c) => c.table === 'tournament_side_awards' && c.method === 'update',
+    );
+    expect(updateCall!.args[0]).toEqual({ winner_user_id: null, no_winner: true });
+
+    // Ingen spiller å validere: games/game_players-oppslagene skal ikke skje.
+    // (De står heller ikke i mock-køen over — hadde de blitt kalt, ville
+    // update-en fått feil kø-svar og testen falt på assertionen over.)
+    expect(
+      adminMock.__fromCalls.some((c) => c.table === 'games' || c.table === 'game_players'),
+    ).toBe(false);
   });
 
   it('gir-rad (#1489): not_found — GIR har lag-tellere, ingen vinner; ingen update', async () => {

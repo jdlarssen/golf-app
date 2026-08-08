@@ -4820,9 +4820,11 @@
       "winnersHeading": "After the round",
       "winnerLabel": "Winner",
       "winnerPlaceholder": "— choose winner —",
+      "winnerNoneOption": "No winner",
       "registerButton": "Register",
       "registeringPending": "Saving …",
       "registered": "Winner registered.",
+      "registeredNone": "Saved: nobody won this one.",
       "errors": {
         "invalid": "Check the type, hole (1–18), points (above 0) and winners (1–10) on every row.",
         "duplicate": "One row per type and hole. If you want several winners on the same hole, raise the number in the “Winners” field.",
