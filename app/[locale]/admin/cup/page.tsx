@@ -139,7 +139,10 @@ export default async function CupListPage({
             const result = cupLedgerResult(cup);
             return (
             <li key={cup.id}>
-              <SmartLink href={cupLedgerHref(cup, { userId, isAdmin })}>
+              <SmartLink
+                href={cupLedgerHref(cup, { userId, isAdmin })}
+                data-testid="cup-ledger-row"
+              >
                 <Card>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
