@@ -4,6 +4,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { parseMode, type LeaderboardMode } from '@/lib/leaderboard';
+import { parseLeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { LeaderboardRealtime } from '../LeaderboardRealtime';
@@ -24,6 +25,11 @@ type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   mode?: string | string[];
   team?: string | string[];
+  // Back-navigation context forwarded by the leaderboard's drilldown links
+  // (#1517) — carried onward so this page's own links keep it alive.
+  from?: string | string[];
+  return?: string | string[];
+  n?: string | string[];
 }>;
 
 export default async function LeaderboardHolesPage({
@@ -38,6 +44,7 @@ export default async function LeaderboardHolesPage({
   const requestedMode: LeaderboardMode = parseMode(sp.mode);
   const teamParam = Array.isArray(sp.team) ? sp.team[0] : sp.team;
   const requestedTeam = teamParam ? Number.parseInt(teamParam, 10) : null;
+  const navContext = parseLeaderboardNavContext(sp);
 
   const locale = await getLocale();
   const { supabase, userId: userIdRaw } = await getDrilldownContext();
@@ -182,7 +189,12 @@ export default async function LeaderboardHolesPage({
   // samme RevealHiddenView-gate som leaderboardContent. Solo-formatene over
   // beholder sin brutto-tvungne drilldown (paritet med RevealBruttoView).
   if (shouldHideNetto(state)) {
-    return <RevealHiddenView gameName={game.name} backHref={`/games/${id}`} />;
+    return (
+      <RevealHiddenView
+        gameName={game.name}
+        backHref={navContext.from ?? `/games/${id}`}
+      />
+    );
   }
 
   return withRealtime(
@@ -194,6 +206,7 @@ export default async function LeaderboardHolesPage({
         isActive={isActive}
         requestedTeam={requestedTeam}
         holeSegment={game.hole_segment}
+        navContext={navContext}
       />
     </Suspense>,
   );

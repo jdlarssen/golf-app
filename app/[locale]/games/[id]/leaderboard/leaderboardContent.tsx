@@ -8,6 +8,10 @@ import { TopBar } from '@/components/ui/TopBar';
 import { firstName } from '@/lib/firstName';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { isFrontNineOpen } from '@/lib/leaderboard/frontNineGate';
+import {
+  EMPTY_NAV_CONTEXT,
+  type LeaderboardNavContext,
+} from '@/lib/leaderboard/navContext';
 import { holeNumbersForSegment, firstHalfHoleNumbersForSegment } from '@/lib/games/holeScope';
 import {
   computeLeaderboard,
@@ -74,7 +78,13 @@ export type LeaderboardContentOpts = {
   game: GameForHole;
   mode: LeaderboardMode;
   backHref: string;
-  returnQuery: string;
+  /**
+   * Back-navigation context threaded into every leaderboard-internal link
+   * (drilldown, Netto/Brutto-toggle) so the back-arrow keeps pointing at the
+   * entry-point the viewer actually came from (#1517). Omit on routes with no
+   * such context — the chromeless spectate/embed views.
+   */
+  navContext?: LeaderboardNavContext;
   supabase: SupabaseClient<Database>;
   includeReactions: boolean;
   viewerUserId: string;
@@ -108,7 +118,7 @@ export async function renderLeaderboardContent({
   game: gameRow,
   mode,
   backHref,
-  returnQuery,
+  navContext = EMPTY_NAV_CONTEXT,
   supabase,
   includeReactions,
   viewerUserId,
@@ -510,6 +520,7 @@ export async function renderLeaderboardContent({
       holes,
       scores,
       backHref,
+      navContext,
     });
   }
 
@@ -526,8 +537,6 @@ export async function renderLeaderboardContent({
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
   const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
   const holesPlayed = new Set(scores.map((s) => s.holeNumber)).size;
-
-  void returnQuery; // reserved for future drilldown forwarding (no-op today)
 
   const showSideTournament = game.side_tournament_enabled;
 
@@ -549,6 +558,7 @@ export async function renderLeaderboardContent({
         coursePar={coursePar}
         holesPlayed={holesPlayed}
         backHref={backHref}
+        navContext={navContext}
         footerSlot={
           <>
             {prizeAwardsNode}
@@ -613,6 +623,7 @@ export async function renderLeaderboardContent({
               coursePar={coursePar}
               holesPlayed={holesPlayed}
               backHref={backHref}
+              navContext={navContext}
               chromeless
             />
             {prizeAwardsNode}

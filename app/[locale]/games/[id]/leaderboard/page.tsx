@@ -6,6 +6,7 @@ import {
   parseMode,
   type LeaderboardMode,
 } from '@/lib/leaderboard';
+import { parseLeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import {
   getGameWithPlayers,
 } from '@/lib/games/getGameWithPlayers';
@@ -28,38 +29,6 @@ type SearchParams = Promise<{
   from?: string | string[];
 }>;
 
-/**
- * Validates the `?from=` query-param that entry-points use to override the
- * default back-target on the leaderboard page (issue #117). Only accepts
- * relative paths under a known Tørny route prefix — anything else is treated
- * as untrusted input and rejected so we don't open up a redirect-style hole.
- *
- * Returns the validated path or `null` when the param is missing or invalid;
- * callers fall back to the existing back-target heuristic in that case.
- */
-function validateFromParam(
-  raw: string | string[] | undefined,
-): string | null {
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  if (!value || typeof value !== 'string') return null;
-  if (value.length > 200) return null;
-  if (!value.startsWith('/')) return null;
-  // Reject protocol-relative URLs ("//evil.com") — they bypass the
-  // startsWith('/') check but resolve to a different origin.
-  if (value.startsWith('//')) return null;
-  // Reject anything that smells like an absolute URL.
-  if (value.includes('://')) return null;
-  // Allowlist of known Tørny route prefixes. Root ('/') is allowed as a
-  // literal match so a home-page entry-point can use ?from=/.
-  const allowedPrefixes = ['/profile/', '/admin/', '/games/', '/cup/', '/klubber/', '/'];
-  if (
-    !allowedPrefixes.some((p) => (p === '/' ? value === '/' : value.startsWith(p)))
-  ) {
-    return null;
-  }
-  return value;
-}
-
 export default async function LeaderboardPage({
   params,
   searchParams,
@@ -71,37 +40,21 @@ export default async function LeaderboardPage({
   const sp = await searchParams;
   const mode: LeaderboardMode = parseMode(sp.mode);
 
-  // Return-to-hole support: ?return=hole&n=N points the back-arrow at a
-  // specific hole on the round screen (used by the leaderboard icon in
-  // the hole-skjerm header). Validate strictly — out-of-range or
-  // non-integer falls back to the game-home back target.
-  const returnParam = Array.isArray(sp.return) ? sp.return[0] : sp.return;
-  const nParam = Array.isArray(sp.n) ? sp.n[0] : sp.n;
-  const nNum = nParam != null ? Number(nParam) : null;
-  // Explicit back-destination via ?from=. Entry-points that want the
-  // chevron to land somewhere other than the game-home pass it here.
-  // Issue #117: replaces a referrer-heuristic that was unreliable in
-  // iOS PWA standalone (cf. v1.8.3/v1.8.4 history). `from` wins over
-  // the `?return=hole`-fallback when both are present, since callers
-  // that pass `from` know exactly where they want to go.
-  const fromOverride = validateFromParam(sp.from);
+  // Back-navigation context, parsed and validated once per request (#1517):
+  //   - `?from=`: explicit back-destination. Entry-points that want the
+  //     chevron to land somewhere other than the game-home pass it here.
+  //     Issue #117: replaces a referrer-heuristic that was unreliable in
+  //     iOS PWA standalone (cf. v1.8.3/v1.8.4 history).
+  //   - `?return=hole&n=N`: points the back-arrow at a specific hole on the
+  //     round screen (used by the leaderboard icon in the hole-skjerm header).
+  // `from` wins over the `?return=hole`-fallback when both are present, since
+  // callers that pass `from` know exactly where they want to go. The whole
+  // context travels onward into every leaderboard-internal link.
+  const navContext = parseLeaderboardNavContext(sp);
   const defaultBackHref =
-    returnParam === 'hole' &&
-    nNum !== null &&
-    Number.isInteger(nNum) &&
-    nNum >= 1 &&
-    nNum <= 18
-      ? `/games/${id}/holes/${nNum}`
+    navContext.returnTo === 'hole' && navContext.holeNumber !== null
+      ? `/games/${id}/holes/${navContext.holeNumber}`
       : `/games/${id}`;
-  // For the holes-drilldown — preserve the same return-to-hole context.
-  const returnQuery =
-    returnParam === 'hole' &&
-    nNum !== null &&
-    Number.isInteger(nNum) &&
-    nNum >= 1 &&
-    nNum <= 18
-      ? `&return=hole&n=${nNum}`
-      : '';
 
   const locale = await getLocale();
   const { supabase, userId: userIdRaw } = await getLeaderboardContext();
@@ -140,7 +93,7 @@ export default async function LeaderboardPage({
   // i stedet, så tilbake-pilen aldri er en død flate (#752). Eksplisitt
   // `?from=` (cup-flatene sender den) vinner uansett.
   const backHref =
-    fromOverride ?? (isParticipant || isAdmin ? defaultBackHref : '/');
+    navContext.from ?? (isParticipant || isAdmin ? defaultBackHref : '/');
 
   // Mark `game_finished`-varsler for dette spillet som lest når brukeren
   // åpner leaderboardet. Wrap i `after()` så DB-mutasjon + revalidateTag
@@ -163,7 +116,7 @@ export default async function LeaderboardPage({
     game,
     mode,
     backHref,
-    returnQuery,
+    navContext,
     supabase,
     includeReactions: true,
     viewerUserId: userId,

@@ -10,6 +10,11 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
+import {
+  drilldownHref,
+  leaderboardHref,
+  type LeaderboardNavContext,
+} from '@/lib/leaderboard/navContext';
 import { LeaderboardShell } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 
@@ -28,6 +33,12 @@ type Props = {
   holesPlayed: number;
   /** Where the back-arrow should point. Defaults to home ("/"). */
   backHref?: string;
+  /**
+   * Back-navigation context carried onward by the Netto/Brutto-toggle and the
+   * team drilldown links, so the next screen's back-arrow still points at the
+   * entry-point the viewer came from (#1517).
+   */
+  navContext?: LeaderboardNavContext;
   /**
    * When true, omits the outer `<Shell>` wrapper and `<Header>` (back-arrow +
    * kicker). The caller is responsible for providing surrounding page chrome.
@@ -63,6 +74,7 @@ export function State4View({
   coursePar,
   holesPlayed,
   backHref = '/',
+  navContext,
   chromeless = false,
   footerSlot,
 }: Props) {
@@ -136,13 +148,14 @@ export function State4View({
         </p>
       </div>
 
-      <ModeChip gameId={gameId} mode={mode} t={tc} />
+      <ModeChip gameId={gameId} mode={mode} navContext={navContext} t={tc} />
 
       <div className="relative px-3.5 pt-3">
         {replayKey > 0 && <ConfettiBurst key={replayKey} />}
         <LeaderCard
           gameId={gameId}
           mode={mode}
+          navContext={navContext}
           line={leader}
           coursePar={coursePar}
           t={tc}
@@ -156,6 +169,7 @@ export function State4View({
             key={line.teamNumber}
             gameId={gameId}
             mode={mode}
+            navContext={navContext}
             line={line}
             leaderTotal={leader.total}
             coursePar={coursePar}
@@ -265,10 +279,12 @@ function ReplayButton({ onClick, t }: { onClick: () => void; t: ReturnType<typeo
 function ModeChip({
   gameId,
   mode,
+  navContext,
   t,
 }: {
   gameId: string;
   mode: LeaderboardMode;
+  navContext?: LeaderboardNavContext;
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
 }) {
   // Tab-style toggle (both modes visible at once, current is highlighted) —
@@ -277,7 +293,6 @@ function ModeChip({
   // Sized down vs. state #3.5 (28px vs 36px min-height, 10px uppercase vs
   // 14px tracking-tight) so it sits unobtrusively under the celebratory
   // subtitle without competing with the leader-card hero.
-  const baseHref = `/games/${gameId}/leaderboard`;
   return (
     <div className="flex justify-center pb-2">
       <div
@@ -292,7 +307,12 @@ function ModeChip({
               key={m}
               role="tab"
               aria-selected={active}
-              href={`${baseHref}?mode=${m}`}
+              // `replace` so flipping between netto and brutto swaps the URL
+              // instead of stacking history entries — otherwise a gesture-back
+              // has to walk through every toggle state before it leaves the
+              // leaderboard (#1517).
+              replace
+              href={leaderboardHref({ gameId, mode: m, context: navContext })}
               className={`min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
                 active
                   ? 'bg-primary-soft text-text'
@@ -311,6 +331,7 @@ function ModeChip({
 function LeaderCard({
   gameId,
   mode,
+  navContext,
   line,
   coursePar,
   t,
@@ -318,6 +339,7 @@ function LeaderCard({
 }: {
   gameId: string;
   mode: LeaderboardMode;
+  navContext?: LeaderboardNavContext;
   line: TeamLine;
   coursePar: number;
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
@@ -327,7 +349,12 @@ function LeaderCard({
   const playersLine = line.players
     .map((p) => formatRevealName(p.name, p.nickname))
     .join(' · ');
-  const drilldownHref = `/games/${gameId}/leaderboard/holes?team=${line.teamNumber}&mode=${mode}`;
+  const href = drilldownHref({
+    gameId,
+    team: line.teamNumber,
+    mode,
+    context: navContext,
+  });
   const modeLabel = mode === 'netto' ? t('netto') : t('brutto');
 
   return (
@@ -404,7 +431,7 @@ function LeaderCard({
         </div>
 
         <SmartLink
-          href={drilldownHref}
+          href={href}
           aria-label={ts('drillAriaLabel', { number: line.teamNumber })}
           className="absolute inset-0 rounded-[18px]"
         />
@@ -416,6 +443,7 @@ function LeaderCard({
 function TeamRow({
   gameId,
   mode,
+  navContext,
   line,
   leaderTotal,
   coursePar,
@@ -425,6 +453,7 @@ function TeamRow({
 }: {
   gameId: string;
   mode: LeaderboardMode;
+  navContext?: LeaderboardNavContext;
   line: TeamLine;
   leaderTotal: number;
   coursePar: number;
@@ -441,12 +470,17 @@ function TeamRow({
     .map((p) => formatRevealName(p.name, p.nickname))
     .join(' · ');
   const isTied = line.tiedWith.length > 0;
-  const drilldownHref = `/games/${gameId}/leaderboard/holes?team=${line.teamNumber}&mode=${mode}`;
+  const href = drilldownHref({
+    gameId,
+    team: line.teamNumber,
+    mode,
+    context: navContext,
+  });
 
   return (
     <li className="list-none">
       <SmartLink
-        href={drilldownHref}
+        href={href}
         className="reveal-up flex items-center gap-3.5 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_6px_rgba(26,46,31,0.03)] active:scale-[0.99]"
         style={{ animationDelay: `${140 + staggerIndex * 80}ms` }}
       >

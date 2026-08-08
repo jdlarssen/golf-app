@@ -21,6 +21,10 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
+import {
+  leaderboardHref,
+  type LeaderboardNavContext,
+} from '@/lib/leaderboard/navContext';
 import { PreRoundLeaderboardRealtime } from '../PreRoundLeaderboard';
 
 /**
@@ -126,45 +130,38 @@ function TeamCard({
 export function ModeToggle({
   gameId,
   mode,
-  basePath,
+  navContext,
 }: {
   gameId: string;
   mode: LeaderboardMode;
-  // e.g. "/leaderboard" or "/leaderboard/holes"
-  basePath: string;
+  navContext?: LeaderboardNavContext;
 }) {
   const tc = useTranslations('leaderboard.common');
-  const base = `/games/${gameId}${basePath}`;
   return (
     <div
       role="tablist"
       aria-label={tc('modeToggleAriaLabel')}
       className="inline-flex rounded-full bg-primary-soft p-1"
     >
-      <SmartLink
-        role="tab"
-        aria-selected={mode === 'netto'}
-        href={`${base}?mode=netto`}
-        className={`min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-all ${
-          mode === 'netto'
-            ? 'bg-surface text-text shadow-sm'
-            : 'text-muted hover:text-text'
-        }`}
-      >
-        {tc('netto')}
-      </SmartLink>
-      <SmartLink
-        role="tab"
-        aria-selected={mode === 'brutto'}
-        href={`${base}?mode=brutto`}
-        className={`min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-all ${
-          mode === 'brutto'
-            ? 'bg-surface text-text shadow-sm'
-            : 'text-muted hover:text-text'
-        }`}
-      >
-        {tc('brutto')}
-      </SmartLink>
+      {(['netto', 'brutto'] as const).map((m) => (
+        <SmartLink
+          key={m}
+          role="tab"
+          aria-selected={mode === m}
+          // `replace` so flipping between netto and brutto swaps the URL
+          // instead of stacking history entries (#1517) — same rule as the
+          // state #4 ModeChip.
+          replace
+          href={leaderboardHref({ gameId, mode: m, context: navContext })}
+          className={`min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-all ${
+            mode === m
+              ? 'bg-surface text-text shadow-sm'
+              : 'text-muted hover:text-text'
+          }`}
+        >
+          {m === 'netto' ? tc('netto') : tc('brutto')}
+        </SmartLink>
+      ))}
     </div>
   );
 }
@@ -289,10 +286,11 @@ export async function renderState35(opts: {
   holes: LbHole[];
   scores: LbScore[];
   backHref: string;
+  navContext?: LeaderboardNavContext;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const ts35 = await getTranslations('leaderboard.state35');
-  const { gameId, mode, players, holes, scores, backHref } = opts;
+  const { gameId, mode, players, holes, scores, backHref, navContext } = opts;
 
   const frontNineHoles = holes.filter(
     (h) => h.holeNumber >= 1 && h.holeNumber <= 9,
@@ -332,7 +330,7 @@ export async function renderState35(opts: {
       </div>
 
       <div className="flex justify-center mb-5">
-        <ModeToggle gameId={gameId} mode={mode} basePath="/leaderboard" />
+        <ModeToggle gameId={gameId} mode={mode} navContext={navContext} />
       </div>
 
       <div className="space-y-3 px-4">

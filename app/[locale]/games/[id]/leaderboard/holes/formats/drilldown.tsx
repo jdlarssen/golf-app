@@ -14,6 +14,11 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
+import {
+  drilldownHref,
+  leaderboardHref,
+  type LeaderboardNavContext,
+} from '@/lib/leaderboard/navContext';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { nameInitials } from '@/lib/names/initials';
 import {
@@ -34,6 +39,7 @@ export async function DrilldownBody({
   isActive,
   requestedTeam,
   holeSegment,
+  navContext,
 }: {
   gameId: string;
   courseId: string;
@@ -41,6 +47,8 @@ export async function DrilldownBody({
   isActive: boolean;
   requestedTeam: number | null;
   holeSegment: HoleSegment;
+  /** Back-context forwarded from the leaderboard (#1517). */
+  navContext?: LeaderboardNavContext;
 }) {
   const { supabase } = await getDrilldownContext();
   const tCommon = await getTranslations('leaderboard.common');
@@ -109,7 +117,7 @@ export async function DrilldownBody({
     // Nothing to drill into — bounce back to the parent leaderboard, which
     // will render its own empty state.
     redirect({
-      href: `/games/${gameId}/leaderboard?mode=${mode}` as string,
+      href: leaderboardHref({ gameId, mode, context: navContext }) as string,
       locale: await getLocale(),
     });
   }
@@ -149,6 +157,7 @@ export async function DrilldownBody({
       orderedLines={orderedLines}
       selected={selected}
       holeWinners={holeWinners}
+      navContext={navContext}
     />
   );
 }
@@ -164,6 +173,7 @@ function DrilldownView({
   orderedLines,
   selected,
   holeWinners,
+  navContext,
 }: {
   gameId: string;
   mode: LeaderboardMode;
@@ -171,6 +181,7 @@ function DrilldownView({
   orderedLines: TeamLine[];
   selected: TeamLine;
   holeWinners: Array<number | null>;
+  navContext?: LeaderboardNavContext;
 }) {
   const t = useTranslations('leaderboard.holes');
   const tc = useTranslations('leaderboard.common');
@@ -211,7 +222,7 @@ function DrilldownView({
       <div className="mx-auto max-w-md pb-12">
         <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
           <SmartLink
-            href={`/games/${gameId}/leaderboard?mode=${mode}`}
+            href={leaderboardHref({ gameId, mode, context: navContext })}
             aria-label={t('backAriaLabel')}
             className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
           >
@@ -338,12 +349,14 @@ function DrilldownView({
             <TeamNavLink
               gameId={gameId}
               mode={mode}
+              navContext={navContext}
               target={stableOrder[myIdx - 1] ?? null}
               direction="prev"
             />
             <TeamNavLink
               gameId={gameId}
               mode={mode}
+              navContext={navContext}
               target={stableOrder[myIdx + 1] ?? null}
               direction="next"
             />
@@ -559,11 +572,13 @@ function HoleRow({
 function TeamNavLink({
   gameId,
   mode,
+  navContext,
   target,
   direction,
 }: {
   gameId: string;
   mode: LeaderboardMode;
+  navContext?: LeaderboardNavContext;
   target: TeamLine | null;
   direction: 'prev' | 'next';
 }) {
@@ -574,7 +589,12 @@ function TeamNavLink({
   const isPrev = direction === 'prev';
   return (
     <SmartLink
-      href={`/games/${gameId}/leaderboard/holes?team=${target.teamNumber}&mode=${mode}`}
+      href={drilldownHref({
+        gameId,
+        team: target.teamNumber,
+        mode,
+        context: navContext,
+      })}
       className={`inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-text ${
         isPrev ? '' : 'ml-auto'
       }`}

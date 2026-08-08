@@ -133,7 +133,6 @@ export default async function SpectatePage({
     game,
     mode,
     backHref,
-    returnQuery: '',
     supabase: adminClient,
     includeReactions: false,
     viewerUserId: '',

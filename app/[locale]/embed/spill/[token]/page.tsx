@@ -70,7 +70,6 @@ export default async function EmbedGamePage({
     game,
     mode,
     backHref,
-    returnQuery: '',
     supabase: getAdminClient(),
     includeReactions: false,
     viewerUserId: '',
