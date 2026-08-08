@@ -109,23 +109,43 @@ finnes allerede og peker dit). Reversibelt uten datatap.
 
 ## Suksesskriterier
 
-- [ ] **K1** — En sweep med alle fire bunt-spillene fra én flight gir nøyaktig ett
+- [x] **K1** — En sweep med alle fire bunt-spillene fra én flight gir nøyaktig ett
       `game_started` per spiller, uavhengig av rekkefølgen på `due`-radene.
-      *Evidens:* Type A-test som kjører selektoren med begge rekkefølgene (host
-      først, avledet først) og får identisk resultat.
-- [ ] **K2** — Det ene varselet peker på greensome-spillet (front9-verten).
-      *Evidens:* samme test asserter valgt `gameId`.
-- [ ] **K3** — `notifyPlayersGameStarted` returnerer uten å skrive noe når
-      `sourceGameId != null`. *Evidens:* test i `lib/notifications/events.test.ts`
-      som asserter 0 `notify`-kall.
-- [ ] **K4** — Alle tre start-veiene sender `sourceGameId` (typesjekken tvinger det).
-      *Evidens:* `npm run build` grønn + `file:line` per kall-sted.
-- [ ] **K5** — Spill uten `tournament_id` dedupes aldri.
-      *Evidens:* Type A-test med to samtidige, urelaterte spill → to bindinger.
-- [ ] **K6** — Ingen avledede spill i varsel-fasen: en sweep der kun avledede spill
-      startet gir null varsler. *Evidens:* Type A-test.
-- [ ] **K7** — De to utdaterte kommentarene beskriver F3d-virkeligheten.
-      *Evidens:* `file:line` på begge.
+      *Evidens:* `lib/notifications/startNotificationTargets.test.ts:96` —
+      `it.each` med tre rekkefølger (host først, avledet først, best ball før
+      greensome) gir identisk resultat. Grønn: 13/13 i den fila.
+- [x] **K2** — Det ene varselet peker på greensome-spillet (front9-verten).
+      *Evidens:* `lib/notifications/startNotificationTargets.test.ts:81` asserter
+      ett target med `id: 'g-greensome'` og alle fire spillerne.
+- [x] **K3** — `notifyPlayersGameStarted` returnerer uten å skrive noe når
+      `sourceGameId != null`. *Evidens:* guard i
+      `lib/notifications/events.ts:106`; test
+      `lib/notifications/events.test.ts:305` asserter 0 `notify`-kall OG 0
+      `users`-oppslag.
+- [x] **K4** — Alle tre start-veiene sender `sourceGameId` (typesjekken tvinger det).
+      *Evidens:* `app/api/cron/start-scheduled-games/route.ts:211`,
+      `app/[locale]/games/[id]/(home)/page.tsx:404`,
+      `app/[locale]/admin/games/[id]/actions.ts:136`. `npm run build` → `EXIT=0`.
+- [x] **K5** — Spill uten `tournament_id` dedupes aldri.
+      *Evidens:* `lib/notifications/startNotificationTargets.test.ts:139`
+      (to samtidige frittstående spill → to targets) + `:148` (to ulike cuper →
+      ett target per cup).
+- [x] **K6** — Ingen avledede spill i varsel-fasen: en sweep der kun avledede spill
+      startet gir null varsler. *Evidens:*
+      `lib/notifications/startNotificationTargets.test.ts:112`; ruta filtrerer
+      dem allerede før tropp-oppslaget i
+      `app/api/cron/start-scheduled-games/route.ts:180`.
+- [x] **K7** — De to utdaterte kommentarene beskriver F3d-virkeligheten.
+      *Evidens:* `lib/games/syncDerivedGamesStatus.ts:174` og
+      `app/[locale]/games/[id]/(home)/page.tsx:382`.
+
+### Gate-kjøringer (runde 1)
+
+| Gate | Resultat |
+|---|---|
+| `npx vitest run lib/notifications/startNotificationTargets.test.ts lib/notifications/events.test.ts lib/games/syncDerivedGamesStatus.test.ts` | 3 filer, 42 tester grønne |
+| `npm run build` | `EXIT=0` (Compiled successfully, TypeScript ferdig) |
+| `npm run lint` | 0 errors, 56 pre-eksisterende warnings |
 
 ---
 
