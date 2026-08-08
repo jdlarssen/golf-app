@@ -69,7 +69,10 @@ describe('pickStartNotificationTargets', () => {
       game({ id: 'g1', name: 'Fredagsrunden', playerIds: ['a', 'b'] }),
     ]);
     expect(targets).toEqual([
-      { game: { id: 'g1', name: 'Fredagsrunden' }, playerIds: ['a', 'b'] },
+      {
+        game: { id: 'g1', name: 'Fredagsrunden', sourceGameId: null },
+        playerIds: ['a', 'b'],
+      },
     ]);
   });
 
@@ -78,7 +81,11 @@ describe('pickStartNotificationTargets', () => {
 
     expect(targets).toEqual([
       {
-        game: { id: 'g-greensome', name: 'Sommercup – Greensome 1' },
+        game: {
+          id: 'g-greensome',
+          name: 'Sommercup – Greensome 1',
+          sourceGameId: null,
+        },
         playerIds: ['a', 'b', 'c', 'd'],
       },
     ]);
@@ -122,7 +129,10 @@ describe('pickStartNotificationTargets', () => {
     ];
     const targets = pickStartNotificationTargets(games);
     expect(targets).toEqual([
-      { game: { id: 'g-a', name: 'Spill g-a' }, playerIds: ['a'] },
+      {
+        game: { id: 'g-a', name: 'Spill g-a', sourceGameId: null },
+        playerIds: ['a'],
+      },
     ]);
   });
 
@@ -193,8 +203,14 @@ describe('pickStartNotificationTargets', () => {
       }),
     ]);
     expect(targets).toEqual([
-      { game: { id: 'g-front', name: 'Spill g-front' }, playerIds: ['a', 'b'] },
-      { game: { id: 'g-back', name: 'Spill g-back' }, playerIds: ['c'] },
+      {
+        game: { id: 'g-front', name: 'Spill g-front', sourceGameId: null },
+        playerIds: ['a', 'b'],
+      },
+      {
+        game: { id: 'g-back', name: 'Spill g-back', sourceGameId: null },
+        playerIds: ['c'],
+      },
     ]);
   });
 

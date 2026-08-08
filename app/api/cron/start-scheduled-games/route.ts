@@ -104,52 +104,59 @@ export async function POST(request: NextRequest) {
 
   // Sequential on purpose: due games are few (the gate fires the sweep the
   // minute they become due), and serial DB writes keep load predictable.
-  for (const game of due ?? []) {
-    const result = await startScheduledGame(admin, game.id);
+  //
+  // try/finally so an unexpected throw partway through the loop still runs the
+  // notification pass for the games that DID start before it. Without it,
+  // deferring notifications (#1450) would have made one bad game silence the
+  // varsel for every earlier one — pre-#1450 those had already been sent.
+  try {
+    for (const game of due ?? []) {
+      const result = await startScheduledGame(admin, game.id);
 
-    if (result.ok) {
-      if (result.started) {
-        started.push(game.id);
-        // Same invalidation as the other start paths so cached game pages
-        // stop serving the pre-flip 'scheduled' snapshot.
-        revalidateTag(`game-${game.id}`, 'max');
+      if (result.ok) {
+        if (result.started) {
+          started.push(game.id);
+          // Same invalidation as the other start paths so cached game pages
+          // stop serving the pre-flip 'scheduled' snapshot.
+          revalidateTag(`game-${game.id}`, 'max');
 
-        // #1441 (D3): this sweep won the flip → start every derived game
-        // too. Best-effort, see startDerivedGames.
-        await startDerivedGames(admin, game.id);
+          // #1441 (D3): this sweep won the flip → start every derived game
+          // too. Best-effort, see startDerivedGames.
+          await startDerivedGames(admin, game.id);
 
-        // #1450: notification is deferred to the post-loop pass — a split cup
-        // day starts several of this player's games in the same sweep, and
-        // only the whole set tells us which one to point them at.
-        startedGames.push(game);
+          // #1450: notification is deferred to the post-loop pass — a split
+          // cup day starts several of this player's games in the same sweep,
+          // and only the whole set tells us which one to point them at.
+          startedGames.push(game);
+        }
+        // started=false → another path won the flip in this same minute;
+        // that path owns notifications. Nothing to do.
+        continue;
       }
-      // started=false → another path won the flip in this same minute;
-      // that path owns notifications. Nothing to do.
-      continue;
-    }
 
-    blocked.push({ id: game.id, reason: result.reason });
-    if (isStructuralBlockReason(result.reason)) {
-      // Expected state (e.g. matchplay sides not full yet, #544) — the sweep
-      // retries every minute and starts the game the moment it resolves.
-      // info-level so a permanently waiting game doesn't spam error logs.
-      console.log(`[${LOG_PREFIX}] game ${game.id} blocked: ${result.reason}`);
-      await maybeNotifyAutoStartBlocked({
-        gameId: game.id,
-        gameName: game.name,
-        createdBy: game.created_by,
-        reason: result.reason,
-        logPrefix: LOG_PREFIX,
-      });
-    } else {
-      // Transient (db_*) or unexpected — error-level for the Vercel log trail.
-      console.error(
-        `[${LOG_PREFIX}] game ${game.id} could not start: ${result.reason}`,
-      );
+      blocked.push({ id: game.id, reason: result.reason });
+      if (isStructuralBlockReason(result.reason)) {
+        // Expected state (e.g. matchplay sides not full yet, #544) — the sweep
+        // retries every minute and starts the game the moment it resolves.
+        // info-level so a permanently waiting game doesn't spam error logs.
+        console.log(`[${LOG_PREFIX}] game ${game.id} blocked: ${result.reason}`);
+        await maybeNotifyAutoStartBlocked({
+          gameId: game.id,
+          gameName: game.name,
+          createdBy: game.created_by,
+          reason: result.reason,
+          logPrefix: LOG_PREFIX,
+        });
+      } else {
+        // Transient (db_*) or unexpected — error-level for the Vercel log trail.
+        console.error(
+          `[${LOG_PREFIX}] game ${game.id} could not start: ${result.reason}`,
+        );
+      }
     }
+  } finally {
+    await notifyStartedGames(admin, startedGames);
   }
-
-  await notifyStartedGames(admin, startedGames);
 
   return NextResponse.json({
     ok: true,
@@ -169,9 +176,10 @@ export async function POST(request: NextRequest) {
  * Resten sendes gjennom `pickStartNotificationTargets`, som gir hver spiller
  * nøyaktig ett spill per cup.
  *
- * Best-effort hele veien: en tropp-feil hopper over det ene spillet, og
- * `notifyPlayersGameStarted` svelger sine egne notify-feil — starten er
- * allerede committet.
+ * Best-effort hele veien: en tropp-feil hopper over det ene spillet,
+ * `notifyPlayersGameStarted` svelger sine egne notify-feil, og hele passet er
+ * pakket i try/catch — starten er allerede committet, og siden kalleren kjører
+ * dette i en `finally`, ville et kast herfra maskert den opprinnelige feilen.
  */
 async function notifyStartedGames(
   admin: ReturnType<typeof getAdminClient>,
@@ -180,36 +188,40 @@ async function notifyStartedGames(
   const notifiable = startedGames.filter((g) => g.source_game_id == null);
   if (notifiable.length === 0) return;
 
-  const withRosters: StartedGameForNotify[] = [];
-  for (const game of notifiable) {
-    const { data: roster, error: rosterError } = await admin
-      .from('game_players')
-      .select('user_id')
-      .eq('game_id', game.id)
-      .is('withdrawn_at', null)
-      .returns<{ user_id: string }[]>();
-    if (rosterError) {
-      console.error(
-        `[${LOG_PREFIX}] roster fetch for varsel failed (game ${game.id})`,
-        rosterError,
-      );
-      continue;
+  try {
+    const withRosters: StartedGameForNotify[] = [];
+    for (const game of notifiable) {
+      const { data: roster, error: rosterError } = await admin
+        .from('game_players')
+        .select('user_id')
+        .eq('game_id', game.id)
+        .is('withdrawn_at', null)
+        .returns<{ user_id: string }[]>();
+      if (rosterError) {
+        console.error(
+          `[${LOG_PREFIX}] roster fetch for varsel failed (game ${game.id})`,
+          rosterError,
+        );
+        continue;
+      }
+      withRosters.push({
+        id: game.id,
+        name: game.name,
+        tournamentId: game.tournament_id,
+        holeSegment: game.hole_segment,
+        sourceGameId: game.source_game_id,
+        playerIds: (roster ?? []).map((p) => p.user_id),
+      });
     }
-    withRosters.push({
-      id: game.id,
-      name: game.name,
-      tournamentId: game.tournament_id,
-      holeSegment: game.hole_segment,
-      sourceGameId: game.source_game_id,
-      playerIds: (roster ?? []).map((p) => p.user_id),
-    });
-  }
 
-  for (const target of pickStartNotificationTargets(withRosters)) {
-    await notifyPlayersGameStarted(
-      target.playerIds.map((user_id) => ({ user_id })),
-      { id: target.game.id, name: target.game.name, sourceGameId: null },
-      LOG_PREFIX,
-    );
+    for (const target of pickStartNotificationTargets(withRosters)) {
+      await notifyPlayersGameStarted(
+        target.playerIds.map((user_id) => ({ user_id })),
+        target.game,
+        LOG_PREFIX,
+      );
+    }
+  } catch (err) {
+    console.error(`[${LOG_PREFIX}] varsel-pass failed`, err);
   }
 }
