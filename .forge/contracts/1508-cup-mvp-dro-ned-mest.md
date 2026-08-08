@@ -107,29 +107,67 @@ anbefalt).
 
 ## Success Criteria
 
-- [ ] MVP-aggregatoren kårer raden(e) med høyest poengsum på tvers av lag, delt ved likhet,
+- [x] MVP-aggregatoren kårer raden(e) med høyest poengsum på tvers av lag, delt ved likhet,
       `null` ved toppsum 0 — `npx vitest run lib/cup/computeCupAwards.test.ts` grønn med
       edge-tabellen som testcases.
-- [ ] «Dro ned mest»-aggregatoren summerer netto-mot-par kun over personlig førte hull i
+      **Bevis:** `computeCupAwards.ts:78-93`; 19/19 grønn. Vinner på lag 2 beviser
+      kryss-lag-plukket; Å-sortering beviser deterministisk delt kåring; egne cases for
+      toppsum 0 og tom cup. Staging: «Anders Berg og Kristian Strand · 15 poeng».
+- [x] «Dro ned mest»-aggregatoren summerer netto-mot-par kun over personlig førte hull i
       host-spill (singles/fourball/best_ball), krever ≥ 9 hull, deler ved likhet, `null` ved
       ingen kvalifiserte eller toppdiff ≤ 0 — testbevis fra samme suite, inkl.
       dobbelttelling-vernet (host + avledet) og null-strokes-hopp.
-- [ ] `getCupSnapshot` eksponerer prestasjons-input uten nye DB-lesinger (file:line-bevis +
+      **Bevis:** `computeCupAwards.ts:104-155`. Tester dekker slag-trekk (netto ≠ brutto),
+      8 hull → ingen kåring / 9 hull → kåring, delt ved lik diff, toppdiff ≤ 0 → null,
+      null-strokes hopper både diff og hulltelling, segment-fremmede rader ignorert.
+      **AVVIK:** dobbelttelling-vernet er testet i `getCupSnapshot.test.ts`, ikke i denne
+      suiten. Å deduplisere inne i aggregatoren ville vært direkte feil — en to-dagers cup
+      der samme spiller spiller hull 1–9 begge dagene SKAL telle begge rundene. Vernet hører
+      hjemme der forskjellen på host og avledet faktisk er kjent (snapshotten). Låst begge
+      veier: `computeCupAwards.test.ts:333-347` beviser at to ulike spill teller hver for
+      seg, `getCupSnapshot.test.ts:283-287` at avledede spill aldri kommer inn.
+- [x] `getCupSnapshot` eksponerer prestasjons-input uten nye DB-lesinger (file:line-bevis +
       fokusert assertion i eksisterende snapshot-test).
-- [ ] Resultatsiden (finished) viser MVP-kåringen med gull-aksent og «dro ned mest» under,
+      **Bevis:** `getCupSnapshot.ts:352-378` — push-en ligger inne i den eksisterende
+      game-loopen og bruker `holes`/`gPlayers`/`gScores` som allerede var hentet for
+      match-scoringen. Ingen `supabase.from(...)` lagt til. Låst av
+      `getCupSnapshot.test.ts:295-297`, som asserter at tabell-settet er nøyaktig de seks
+      tabellene fra før.
+- [x] Resultatsiden (finished) viser MVP-kåringen med gull-aksent og «dro ned mest» under,
       begge med testid; låst side uendret (file:line + staging-bevis).
-- [ ] Kåringene skjules korrekt når datagrunnlag mangler (staging- eller testbevis for
+      **Bevis:** `resultater/page.tsx:100-101` (kun i finished-grenen, etter lagtotalene);
+      `CupAwards.tsx:50` gull-kortet, `:68` den nøytrale under. Staging:
+      `cup-award-mvp` = 1 med `borderColor: rgba(201, 169, 97, 0.45)`,
+      `cup-award-underperformer` = 1 («Bjørn Dahl · 14 slag over eget handicap», identisk
+      med uavhengig SQL over host-spillene). Låst side: `cup-results-locked` = 1,
+      `cup-awards` = 0.
+- [x] Kåringene skjules korrekt når datagrunnlag mangler (staging- eller testbevis for
       minst ett skjule-tilfelle).
-- [ ] Begge locales har nøklene; norsk copy humanizer-kjørt og godlynt.
-- [ ] Maks én Type C render-test for `CupAwards`; ingen re-assertering av Type A-tall.
+      **Bevis:** staging-cup `5c9eefec` dekker BEGGE skjule-grunnene samtidig —
+      `cup-award-mvp` = 0 (kampen står `active`, ingen sidepoeng → toppsum 0) og
+      `cup-award-underperformer` = 0 (3 førte hull per spiller, under 9-grensen).
+      Testbevis i tillegg: `CupAwards.test.tsx:36-45`.
+- [x] Begge locales har nøklene; norsk copy humanizer-kjørt og godlynt.
+      **Bevis:** `messages/no.json` + `messages/en.json`, fem nøkler hver
+      (`awardsHeading`/`mvpLabel`/`mvpValue`/`underperformerLabel`/`underperformerValue`).
+      Humanizer endret verdilinjen fra «{points} poeng samlet inn» (etterhengt partisipp,
+      oversatt-preg) til husets «·»-separator. Humor-kåringens verdilinje er bevisst
+      nøytral — etiketten bærer humoren, en vits til ville tippet den mot hånlig.
+- [x] Maks én Type C render-test for `CupAwards`; ingen re-assertering av Type A-tall.
+      **Bevis:** `CupAwards.test.tsx` har nøyaktig én `it`. Den asserter struktur (testid,
+      navnejoin, skjuling) — hvem som vinner og med hvilken verdi står kun i Type A-suiten.
 
 ## Gates
 
-- [ ] `npx vitest run lib/cup` grønn (inkl. ny awards-suite)
-- [ ] `npx vitest run "app/[locale]/cup/[id]/resultater"` grønn
-- [ ] `npm run build` grønn (aldri filtrer «pre-existing»)
-- [ ] `npm run lint` grønn
-- [ ] Staging-klikkrunde av resultatsiden (staging-verify-skill) + bevis-kommentar + label FØR merge
+- [x] `npx vitest run lib/cup` grønn (inkl. ny awards-suite) — 22 filer, 384 tester
+- [x] `npx vitest run "app/[locale]/cup/[id]/resultater"` grønn — 2 filer, 2 tester
+- [x] `npm run build` grønn (aldri filtrer «pre-existing») — `BUILD_EXIT=0`
+- [x] `npm run lint` grønn — `LINT_EXIT=0`, 0 errors. `getCupSnapshot`-kompleksiteten gikk
+      64 → 66 (grense 25, warning-only, målt mot `origin/main`) — allerede over fra før,
+      filt som eget issue framfor å utvide dette PR-ets scope.
+- [x] Staging-klikkrunde av resultatsiden (staging-verify-skill) + bevis-kommentar + label FØR merge
+      — bevis-kommentar på PR #1521, label `staging-verified` satt. Full suite: 448 filer,
+      5721 tester grønn.
 
 ## Files Likely Touched
 
