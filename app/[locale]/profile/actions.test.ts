@@ -26,6 +26,11 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+const recomputeMock = vi.fn(async () => ({ updated: 0 }));
+vi.mock('@/lib/games/recomputeCourseHandicap', () => ({
+  recomputeCourseHandicapForUser: (...args: unknown[]) => recomputeMock(...(args as [])),
+}));
+
 function fd(entries: Record<string, string>): FormData {
   const data = new FormData();
   for (const [k, v] of Object.entries(entries)) data.set(k, v);
@@ -71,6 +76,47 @@ describe('updateProfile — trap #2: 0-row UPDATE treated as failure', () => {
     await expect(updateProfile(validForm)).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe('/profile?error=unknown');
+  });
+});
+
+describe('updateProfile — recomputes frozen course handicaps after a hcp edit', () => {
+  // Ryder Cup 2026-regresjonen: en spiller retter et glemt plusshandicap-fortegn
+  // her mens runden er i gang. Uten dette kallet blir de frosne banehandicapene
+  // stående på den gamle verdien ut runden.
+  it('passes the SIGNED hcp (plus-handicap → negative) to the recompute', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [{ id: 'user-1' }], error: null }]);
+    supabaseMock.auth.getUser = vi.fn(async () => ({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    }));
+
+    const { updateProfile } = await import('./actions');
+    const form = fd({
+      name: 'Sander',
+      nickname: '',
+      hcp_index: '2.2',
+      hcp_plus: 'on',
+      gender: 'mens',
+      level: 'normal',
+    });
+
+    await expect(updateProfile(form)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(recomputeMock).toHaveBeenCalledWith('user-1', -2.2);
+  });
+
+  it('does not run the recompute when the UPDATE affected 0 rows', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+    supabaseMock.auth.getUser = vi.fn(async () => ({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    }));
+
+    const { updateProfile } = await import('./actions');
+
+    await expect(updateProfile(validForm)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(recomputeMock).not.toHaveBeenCalled();
   });
 });
 

@@ -12,6 +12,7 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
+import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import type { AppLocale } from '@/i18n/routing';
 import type { TablesUpdate } from '@/lib/database.types';
 
@@ -132,6 +133,18 @@ export async function updateUser(formData: FormData) {
   if (error) {
     console.error('[admin/spillere] updateUser failed', error);
     redirect({ href: `/admin/spillere/${id}?error=update_failed`, locale });
+  }
+
+  // Samme recompute som `completeProfile` (#1176) og `updateProfile`: retter
+  // arrangøren handicapet for en spiller som står midt i en runde, må de frosne
+  // banehandicapene skrives om — ellers scorer spilleren resten av runden på
+  // den gamle verdien. Dette er nettopp flaten en arrangør bruker for å fikse
+  // et glemt plusshandicap-fortegn på vegne av spilleren.
+  // Best-effort: en feilet recompute må aldri blokkere lagringen.
+  try {
+    await recomputeCourseHandicapForUser(id, hcp);
+  } catch (err) {
+    console.error('[admin/spillere] course-handicap recompute threw', err);
   }
 
   redirect({ href: `/admin/spillere/${id}?status=updated`, locale });

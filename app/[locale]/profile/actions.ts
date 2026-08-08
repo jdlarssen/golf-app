@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { safeNextPath } from './safeNext';
 import { toSignedHcp } from '@/lib/handicap/sign';
+import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import { expectOne } from '@/lib/supabase/affectedRows';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -118,6 +119,18 @@ export async function updateProfile(formData: FormData) {
       redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=unknown`, locale });
     }
     throw err; // rethrow unexpected non-Error throws (should never happen)
+  }
+
+  // Samme recompute som `completeProfile` (#1176) — retting av handicapet MENS
+  // en runde er i gang må skrive om de frosne banehandicapene, ellers spilles
+  // resten av runden på den gamle verdien. Dette hullet traff Ryder Cup 2026:
+  // en spiller rettet et glemt plusshandicap-fortegn her, spillene beholdt den
+  // gamle CH-en, og han fikk fem slag for mye i tre aktive kamper.
+  // Best-effort: en feilet recompute må aldri blokkere profil-lagringen.
+  try {
+    await recomputeCourseHandicapForUser(user.id, hcpParsed);
+  } catch (err) {
+    console.error('[updateProfile] course-handicap recompute threw', err);
   }
 
   redirect({ href: nextSafe ?? '/profile?profile=updated', locale });
