@@ -154,7 +154,11 @@ dekker semantikken); PR-en beskriver dem i Fordeler/ulemper-blokken med veto-mul
 - [x] `npx vitest run "app/[locale]/cup/[id]/resultater"` grønn — del av samme kjøring (render-test 1/1)
 - [x] `npm run build` grønn — kompilerte, route-oversikt produsert, exit 0 (pipefail aktiv)
 - [x] `npm run lint` grønn — 0 errors (56 pre-eksisterende warnings, ingen i berørte filer)
-- [ ] Staging-klikkrunde av resultatsiden (staging-verify-skill) + bevis-kommentar + label FØR merge
+- [x] Staging-klikkrunde av resultatsiden (staging-verify-skill) + bevis-kommentar + label FØR merge
+      **Bevis:** Playwright-driver mot torny-staging, 14/14 steg grønne (A1 sortert per-lag-tabell
+      12 rader, A2 utbrett m/ vektet +5/+2 og LD +3 = radsum, A3 me-rad på riktig data-userid,
+      prod-vakt kun staging-ref, 0 console-errors). Bevis-kommentar + `staging-verified`-label
+      på PR #1519 (kommentar 5224574665).
 
 ## Files Likely Touched
 
