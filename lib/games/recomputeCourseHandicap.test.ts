@@ -86,6 +86,27 @@ describe('planHandicapRecompute (#1176)', () => {
     },
   );
 
+  // Prod-fikstur fra Ryder Cup 2026 (2026-08-08): en spiller registrerte
+  // plusshandicapet sitt uten «+», så +2,2 ble lagret som 2,2. Spillene frøs
+  // CH 3 kl. 07:50; profilen ble rettet til −2,2 kl. 09:08 — men rettingen gikk
+  // via /profile, som den gang ikke kalte recompute, så CH ble stående på 3.
+  // Fem slag for mye. Låser fortegnet gjennom hele freeze-pipelinen.
+  it('plusshandicap (negativ index) → negativ course handicap', () => {
+    const mensII: TeeBoxRatings = {
+      ...TEE,
+      slope_mens: 140,
+      course_rating_mens: 71.5,
+      par_total_mens: 71,
+    };
+    // -2.2 * (140/113) + (71.5 - 71) = -2.2257 → round → -2
+    expect(
+      planHandicapRecompute(
+        [activeRow({ courseHandicap: 3, teeRatings: mensII })],
+        -2.2,
+      ),
+    ).toEqual([{ gameId: 'g-active', courseHandicap: -2 }]);
+  });
+
   it('mixed rows → only active + frozen + resolvable are updated', () => {
     const rows: RecomputeGameRow[] = [
       activeRow({ gameId: 'a1' }), // update
