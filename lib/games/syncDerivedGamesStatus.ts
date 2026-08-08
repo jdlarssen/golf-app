@@ -167,15 +167,22 @@ export async function finishDerivedGames(
  * Unlike `syncDerivedGamesStatus`'s raw patch (correct for finish/reopen,
  * which need no per-player computation), starting a game freezes each
  * player's `course_handicap` (`startScheduledGame`'s step 3) — a raw
- * status patch would leave that permanently null for derived games. That
- * matters here specifically because nothing else can ever start a derived
- * game independently: cup-generated matches never get a
- * `scheduled_tee_off_at` (the generator leaves it at its NULL default), so
- * neither the cron sweep (`scheduled_tee_off_at <= now` never matches
- * NULL) nor the E1 page-visit fallback (same NULL guard) can reach them,
- * and a derived game's own game-home is a read-only link to the host, not
- * a start affordance. This is the one lifecycle event where the fan-out
- * has to run the real per-game start flow rather than a shared raw patch.
+ * status patch would leave that permanently null for derived games. This is
+ * the one lifecycle event where the fan-out has to run the real per-game
+ * start flow rather than a shared raw patch.
+ *
+ * Since F3d (#1441 owner-QA), a cup with a start time gives EVERY generated
+ * match a `scheduled_tee_off_at` — both passes, hosts and derived alike (see
+ * `resolveScheduledTeeOffAt` and its call site in the cup match generator).
+ * A derived game can therefore also be picked up on its own by the cron
+ * sweep or the E1 page-visit fallback; this fan-out just normally gets there
+ * first, since the host and its derived games share the same tee-off minute.
+ * Whoever wins, the flip is idempotent and optimistic-locked.
+ *
+ * Derived games started here deliberately fan out NO `game_started` varsel
+ * (#1450): the host owns the cup-start notification, and a derived match's
+ * roster is always a subset of its host's. The rule's home is
+ * `notifyPlayersGameStarted`, which returns early on a set `sourceGameId`.
  *
  * Best-effort: a derived game that fails to start (e.g. an incomplete
  * roster) is logged and skipped — it never blocks or undoes the host's
