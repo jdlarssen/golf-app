@@ -15,9 +15,9 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
-<summary><strong>1.230 · Ingen vinner på nærmest hullet</strong></summary>
+<summary><strong>1.230 · Ingen kvalifiserte på nærmest hullet</strong></summary>
 
-[#1530](https://github.com/jdlarssen/golf-app/issues/1530) — Traff ingen greenen? Nå kan du svare «Ingen vinner» på nærmest hullet og lengste drive. Hullet teller som ferdig registrert, gir ingen poeng, og stopper ikke lenger avslutningen av cupen.
+[#1530](https://github.com/jdlarssen/golf-app/issues/1530) — Traff ingen greenen? Nå kan du svare «Ingen kvalifiserte» på nærmest hullet og lengste drive. Hullet teller som ferdig registrert, gir ingen poeng, og stopper ikke lenger avslutningen av cupen.
 
 ↳ /admin/cup · «Åpne cupene»
 </details>
