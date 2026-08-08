@@ -202,24 +202,24 @@ export default async function CupResultsPage({ params }: { params: Params }) {
                           </p>
                           <p className="font-serif text-base text-text mt-1">
                             {m.team1PlayerName}{' '}
-                            <span className="text-muted">mot</span>{' '}
+                            <span className="text-muted">{t('manage.mot')}</span>{' '}
                             {m.team2PlayerName}
                           </p>
                           {m.result && (
                             <p className="text-xs text-muted mt-1">
                               {m.result.winnerSide === 'tied'
-                                ? 'Delt (AS)'
-                                : m.result.winnerSide === 1
-                                  ? `${m.result.formatted} til ${
-                                      isTeamMatchGameMode(m.gameMode)
-                                        ? tournament.team_1_name
-                                        : m.team1PlayerName
-                                    }`
-                                  : `${m.result.formatted} til ${
-                                      isTeamMatchGameMode(m.gameMode)
-                                        ? tournament.team_2_name
-                                        : m.team2PlayerName
-                                    }`}
+                                ? t('results.matchTied')
+                                : t('results.resultTo', {
+                                    result: m.result.formatted,
+                                    name:
+                                      m.result.winnerSide === 1
+                                        ? isTeamMatchGameMode(m.gameMode)
+                                          ? tournament.team_1_name
+                                          : m.team1PlayerName
+                                        : isTeamMatchGameMode(m.gameMode)
+                                          ? tournament.team_2_name
+                                          : m.team2PlayerName,
+                                  })}
                             </p>
                           )}
                         </div>

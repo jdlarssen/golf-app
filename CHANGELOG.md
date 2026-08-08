@@ -1455,8 +1455,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 28 rettinger</strong></summary>
+<summary><strong>August 2026 · 29 rettinger</strong></summary>
 
+- `1.229.1` · [#1377](https://github.com/jdlarssen/golf-app/issues/1377) — Kjører du appen på engelsk, står cup-siden og resultatsiden nå på engelsk hele veien. «mot», «Delt (AS)» og «3&2 til Lag Rød» var hardkodet norsk og fulgte ikke med oversettelsen.
 - `1.227.9` · [#1434](https://github.com/jdlarssen/golf-app/issues/1434) — Er e-postkvoten for hele appen brukt opp, sier innloggingen nå ærlig at vi ikke får sendt flere koder akkurat nå — før parkerte den deg ved kodefeltet og lovet en kode som aldri ble sendt.
 - `1.227.8` · [#1499](https://github.com/jdlarssen/golf-app/issues/1499) — «Resultatet er klart»-mailen røper ikke lenger vinner og stilling — fasiten venter på resultatsiden.
 - `1.227.7` · [#1499](https://github.com/jdlarssen/golf-app/issues/1499) — Varselet om ferdigspilt cup i appen tar deg nå rett til resultatsiden, ikke cup-siden som holder fasiten skjult.

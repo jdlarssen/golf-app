@@ -141,7 +141,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
                       </p>
                       <p className="font-serif text-base text-text mt-1">
                         {m.team1PlayerName}{' '}
-                        <span className="text-muted">mot</span>{' '}
+                        <span className="text-muted">{t('manage.mot')}</span>{' '}
                         {m.team2PlayerName}
                       </p>
                     </div>

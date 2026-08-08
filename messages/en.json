@@ -4789,7 +4789,9 @@
       "mvpLabel": "MVP",
       "mvpValue": "{points} points · most in the cup",
       "underperformerLabel": "Biggest slide",
-      "underperformerValue": "{strokes} strokes over own handicap"
+      "underperformerValue": "{strokes} strokes over own handicap",
+      "matchTied": "Halved (AS)",
+      "resultTo": "{result} to {name}"
     },
     "sideAwards": {
       "heading": "Side points",
