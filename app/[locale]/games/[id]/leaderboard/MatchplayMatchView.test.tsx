@@ -517,9 +517,12 @@ describe('MatchplayMatchView', () => {
         />,
       );
       const hole1 = screen.getByTestId('matchplay-hole-1');
-      // Side 1 har gross 5 + (4N) — netto-vises som "(4N)"
+      // #1545: brutto er hovedtallet, prikken markerer slaget på hullet, og
+      // netto står under som eget tall (tidligere «(4N)», som ikke fortalte
+      // hvor slaget kom fra).
       expect(hole1.textContent).toMatch(/5/);
-      expect(hole1.textContent).toMatch(/4N/);
+      expect(hole1.textContent).toMatch(/•/);
+      expect(hole1.textContent).toMatch(/4/);
     });
 
     it('rendrer 9-hulls-bane med kun 9 grid-rader', () => {

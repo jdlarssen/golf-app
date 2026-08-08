@@ -159,11 +159,32 @@ describe('FoursomesMatchplayView', () => {
       expect(side1.textContent).toMatch(/Lag-HCP: 30/);
     });
 
-    it('viser effectiveExtraHandicap som slag-bonus på laget som får ekstra', () => {
-      render(<FoursomesMatchplayView {...defaultProps()} />);
+    /**
+     * #1545: linja skal telle slagene laget faktisk mottar i DENNE matchen og
+     * navngi hullene, ikke gjenta 18-hulls-differansen. Regresjonen: en
+     * nihulls-greensome viste «+5 slag» over en tabell som delte ut tre, fordi
+     * to av slagene lå på hull laget aldri spilte.
+     */
+    it('viser slag mottatt i matchen med hullnumrene, ikke 18-hulls-differansen', () => {
+      const holes = [
+        makeHole(1),
+        makeHole(2),
+        makeHole(3, { side2Extra: 1 }),
+        makeHole(4),
+        makeHole(5, { side2Extra: 1 }),
+        makeHole(6),
+        makeHole(7),
+        makeHole(8, { side2Extra: 1 }),
+        makeHole(9),
+      ];
+      render(
+        <FoursomesMatchplayView {...defaultProps({ result: makeResult({ holes }) })} />,
+      );
       const side2 = screen.getByTestId('foursomes-side-2');
-      // effectiveExtraHandicap = 4 → «+4 slag»
-      expect(side2.textContent).toMatch(/\+4 slag/);
+      expect(side2.textContent).toMatch(/3 slag på hull 3, 5, 8/);
+      // Laget uten slag får den nakne HCP-linja.
+      const side1 = screen.getByTestId('foursomes-side-1');
+      expect(side1.textContent).not.toMatch(/slag på hull/);
     });
   });
 

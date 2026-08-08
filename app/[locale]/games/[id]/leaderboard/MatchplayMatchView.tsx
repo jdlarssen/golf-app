@@ -14,6 +14,7 @@ import type {
   SinglesMatchplayResult,
   MatchplayHoleRow,
 } from '@/lib/scoring/modes/types';
+import { strokesReceived } from '@/lib/scoring/strokesReceived';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { MatchplayDuelCard } from './MatchplayDuelCard';
 
@@ -137,6 +138,27 @@ export function MatchplayMatchView({
   const hasDecidedWinner =
     result.result !== null && result.result.winner !== 'tied';
 
+  // #1545: slag spilleren faktisk mottar i denne matchen, med hullnumrene —
+  // talt fra hullradene, så tallet kan telles opp igjen i tabellen under.
+  const hcpSubline = (
+    info: MatchplayPlayerInfo | undefined,
+    extraFor: (h: MatchplayHoleRow) => number,
+  ): string[] | undefined => {
+    if (info === undefined) return undefined;
+    const strokes = strokesReceived(
+      result.holes.map((h) => ({ holeNumber: h.holeNumber, extra: extraFor(h) })),
+    );
+    return [
+      strokes.count > 0
+        ? t('matchplay.spillerHCPStrokes', {
+            hcp: info.courseHandicap,
+            count: strokes.count,
+            holes: strokes.holes.join(', '),
+          })
+        : t('matchplay.spillerHCP', { hcp: info.courseHandicap }),
+    ];
+  };
+
   return (
     <LeaderboardShell>
       <LeaderboardHeader gameName={gameName} backHref={backHref} />
@@ -161,17 +183,11 @@ export function MatchplayMatchView({
           testIdPrefix="matchplay"
           sideA={{
             label: side1Name,
-            sublines:
-              side1Info !== undefined
-                ? [`HCP ${side1Info.courseHandicap}`]
-                : undefined,
+            sublines: hcpSubline(side1Info, (h) => h.side1Extra),
           }}
           sideB={{
             label: side2Name,
-            sublines:
-              side2Info !== undefined
-                ? [`HCP ${side2Info.courseHandicap}`]
-                : undefined,
+            sublines: hcpSubline(side2Info, (h) => h.side2Extra),
           }}
           holeResults={result.holes.map((h) => h.result)}
           holesUp={result.holesUp}
@@ -262,18 +278,9 @@ function HoleGrid({
             >
               {t('matchplay.colPar')}
             </th>
-            <th
-              scope="col"
-              className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted truncate"
-            >
-              {side1ShortName}
-            </th>
-            <th
-              scope="col"
-              className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted truncate"
-            >
-              {side2ShortName}
-            </th>
+            {/* #1545: «brutto»-underlabel, samme som greensome-tabellen. */}
+            <SideColHeader label={side1ShortName} t={t} />
+            <SideColHeader label={side2ShortName} t={t} />
             <th
               scope="col"
               className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
@@ -295,11 +302,42 @@ function HoleGrid({
               hole={hole}
               runningStatus={running[i]}
               isLast={i === holes.length - 1}
+              t={t}
             />
           ))}
         </tbody>
       </table>
+      <p
+        data-testid="matchplay-hole-grid-note"
+        className="border-t border-border px-3 py-2 text-[10.5px] leading-snug text-muted"
+      >
+        {t('matchplay.tableNote')}
+      </p>
     </div>
+  );
+}
+
+/**
+ * Side-kolonnens header: spillerens navn over en «brutto»-underlabel (#1545),
+ * identisk med greensome-tabellen.
+ */
+function SideColHeader({
+  label,
+  t,
+}: {
+  label: string;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
+}): JSX.Element {
+  return (
+    <th
+      scope="col"
+      className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+    >
+      <span className="block truncate">{label}</span>
+      <span className="block text-[8.5px] font-normal normal-case tracking-normal opacity-80">
+        {t('matchplay.colSubBrutto')}
+      </span>
+    </th>
   );
 }
 
@@ -307,10 +345,12 @@ function HoleRow({
   hole,
   runningStatus,
   isLast,
+  t,
 }: {
   hole: MatchplayHoleRow;
   runningStatus: number | null;
   isLast: boolean;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }): JSX.Element {
   const side1Won = hole.result === 'side1_wins';
   const side2Won = hole.result === 'side2_wins';
@@ -337,6 +377,7 @@ function HoleRow({
           netStrokes={hole.side1Net}
           extra={hole.side1Extra}
           wonHole={side1Won}
+          t={t}
         />
       </td>
       <td className="px-1 py-2 text-center">
@@ -345,6 +386,7 @@ function HoleRow({
           netStrokes={hole.side2Net}
           extra={hole.side2Extra}
           wonHole={side2Won}
+          t={t}
         />
       </td>
       <td className="px-2 py-2 text-center tabular-nums">
@@ -401,11 +443,13 @@ function ScoreCell({
   netStrokes,
   extra,
   wonHole,
+  t,
 }: {
   gross: number | null;
   netStrokes: number | null;
   extra: number;
   wonHole: boolean;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }): JSX.Element {
   if (gross === null) {
     return <span className="text-muted">—</span>;
@@ -415,11 +459,22 @@ function ScoreCell({
     : 'text-text';
   return (
     <span className="inline-flex flex-col items-center leading-tight">
-      <span className={`tabular-nums ${grossClass}`}>{gross}</span>
+      <span className={`tabular-nums ${grossClass}`}>
+        {gross}
+        {/* #1545: prikk = slag på hullet, golf-konvensjonen. Erstatter
+            «(4N)», som ikke sa hvor slagene kom fra. */}
+        {extra > 0 && (
+          <span
+            aria-label={t('matchplay.strokeDotAria', { count: extra })}
+            title={t('matchplay.strokeDotAria', { count: extra })}
+            className="ml-0.5 align-super text-[10px] font-semibold leading-none text-text"
+          >
+            {'•'.repeat(extra)}
+          </span>
+        )}
+      </span>
       {extra > 0 && netStrokes !== null ? (
-        <span className="text-[10px] tabular-nums text-muted">
-          ({netStrokes}N)
-        </span>
+        <span className="text-[10px] tabular-nums text-muted">{netStrokes}</span>
       ) : null}
     </span>
   );
