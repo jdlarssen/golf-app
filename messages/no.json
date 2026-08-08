@@ -4789,7 +4789,9 @@
       "mvpLabel": "MVP",
       "mvpValue": "{points} poeng · flest i cupen",
       "underperformerLabel": "Dro ned mest",
-      "underperformerValue": "{strokes} slag over eget handicap"
+      "underperformerValue": "{strokes} slag over eget handicap",
+      "matchTied": "Delt (AS)",
+      "resultTo": "{result} til {name}"
     },
     "sideAwards": {
       "heading": "Sidepoeng",
