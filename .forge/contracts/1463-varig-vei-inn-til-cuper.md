@@ -123,30 +123,50 @@ Ingen skjema- eller RLS-endring. Ren lese-sti; ingen writes.
 
 ## Suksesskriterier
 
-- [ ] Ikke-admin som har SPILT en cup (game_players-rad i spill med tournament_id)
+- [x] Ikke-admin som har SPILT en cup (game_players-rad i spill med tournament_id)
       men ikke opprettet den, ser cupen på `/admin/cup`; raden lenker til `/cup/[id]`.
-- [ ] Ikke-admin som står i spillerlisten til en UTKAST-cup uten genererte kamper
+      → staging, spiller-konto (created_cups = 0 i DB): radene
+      `/cup/5c9eefec-…` og `/cup/11a3ee63-…` (de to spilte cupene) i lista.
+- [x] Ikke-admin som står i spillerlisten til en UTKAST-cup uten genererte kamper
       (tournament_participants-rad, ingen game_players-rader) ser cupen på
       `/admin/cup` med Utkast-chip OG «Cuper»-raden i Klubbhuset (revisjon 1).
-- [ ] Ikke-admin ser fortsatt egne opprettede personlige cuper med lenke til
-      `/admin/cup/[id]` (uendret).
-- [ ] Spiller med kun spilte cuper får «Cuper»-raden i Klubbhuset; spiller uten
-      cup-relasjon ser den ikke (A1).
-- [ ] Ferdig cup-rad viser «{lag} vant» / «Delt»; utkast/aktiv-rader uendret.
-- [ ] Splittet cup-dag gir ÉN rad per cup, og en deltaker som finnes i BEGGE
+      → staging: `E2E-Cup-utkast-1463` (roster 1, games 0) som `/cup/bbd94e52-…`,
+      Klubbhus-raden leste «Cuper (4)». Status-chipen rendres av uendret kode
+      (`STATUS_TO_CHIP[cup.status]`, page.tsx) — ingen copy-assertion (T5-regel).
+- [x] Ikke-admin ser fortsatt egne opprettede personlige cuper med lenke til
+      `/admin/cup/[id]` (uendret). → staging: `ownCupHref =
+      /admin/cup/da2d0907-…`, eneste styringslenke i spillerens liste.
+- [x] Spiller med kun spilte cuper får «Cuper»-raden i Klubbhuset; spiller uten
+      cup-relasjon ser den ikke (A1). → staging: «Cuper (4)» for spilleren;
+      0-relasjons-bruker fikk `player-cup-row`-antall 0. Enhetsdekning:
+      `PlayerKlubbhus.test.tsx` K1 (cupCount 0 → null).
+- [x] Ferdig cup-rad viser «{lag} vant» / «Delt»; utkast/aktiv-rader uendret.
+      → staging: «E2E Blå vant» + «Uavgjort», to `cup-ledger-result`-noder på
+      fem rader. AVVIK: gjenbruker `cup.results.tied` («Uavgjort») i stedet for
+      ny «Delt»-nøkkel — samme faktum, samme ord som cup-resultatsiden.
+- [x] Splittet cup-dag gir ÉN rad per cup, og en deltaker som finnes i BEGGE
       kilder (tournament_participants + game_players) gir ÉN rad (dedupe
-      verifisert i unit-test).
-- [ ] Admin-lista er uendret (alle cuper, styringslenker).
-- [ ] Tom-tilstand for ikke-admin lenker `/opprett-spill?intent=cup`.
+      verifisert i unit-test). → `lib/cup/myCups.test.ts` («collapses a split
+      cup day», «dedupes the same cup across sources», `getMyCupIds`-unionen).
+- [x] Admin-lista er uendret (alle cuper, styringslenker). → staging,
+      admin-konto: 9 rader, alle `/admin/cup/<id>`, null offentlige lenker.
+- [x] Tom-tilstand for ikke-admin lenker `/opprett-spill?intent=cup`.
+      → staging, 0-relasjons-bruker: 0 rader, 1 lenke til
+      `/opprett-spill?intent=cup`, 0 til `/admin/games/new?intent=cup`.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` (fra worktree-rota) grønn
-- [ ] `npm run lint` grønn
-- [ ] Co-located tester for endrede filer + ny dedupe-test: `npx vitest run <filene>` grønn
-- [ ] Ny norsk copy gjennom humanizer-skillet; nøkler i BEGGE messages-filer
-- [ ] Bruker-synlig endring → versjonsbump (fix/feat per commit-msg-hook) + CHANGELOG-linje
-- [ ] Staging-klikkrunde av berørt flyt før merge (spiller-konto: Klubbhuset → Cuper → cup-side)
+- [x] `npx tsc --noEmit` (fra worktree-rota) grønn — exit 0
+- [x] `npm run lint` grønn — 0 errors (55 pre-eksisterende warnings)
+- [x] Co-located tester for endrede filer + ny dedupe-test grønn — pre-push-gaten
+      kjørte hele suiten: 451 filer / 5802 tester grønne
+- [x] Ny norsk copy gjennom humanizer-skillet; nøkler i BEGGE messages-filer —
+      `playerCupRow` → «Cuper ({n})» / «Cups ({n})»
+- [x] Bruker-synlig endring → versjonsbump + CHANGELOG-linje — 1.230.0 → 1.231.0
+- [x] Staging-klikkrunde av berørt flyt før merge — tre Playwright-pass
+      (spiller, admin, 0-relasjons-bruker): ingen console-errors, ingen failed
+      requests, alle Supabase-kall mot `snwmueecmfqqdurxedxv`
+- [x] `npm run build` (§T2 full gate) grønn
 
 ## Filer som trolig røres
 
