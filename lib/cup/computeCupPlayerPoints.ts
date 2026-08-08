@@ -48,8 +48,9 @@ export type CupPlayerPointsInput = {
 };
 
 // Samme fallback-regel som getCupSnapshot.preferredName: nickname foran navn,
-// begge trimmet, «Ukjent spiller» når begge mangler.
-function preferredName(p: CupRosterPlayer): string {
+// begge trimmet, «Ukjent spiller» når begge mangler. Eksportert fordi
+// kåringene (#1508) må navngi de samme spillerne etter nøyaktig samme regel.
+export function preferredName(p: CupRosterPlayer): string {
   return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
 }
 
