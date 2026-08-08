@@ -123,7 +123,7 @@ finnes allerede og peker dit). Reversibelt uten datatap.
       `lib/notifications/events.test.ts:305` asserter 0 `notify`-kall OG 0
       `users`-oppslag.
 - [x] **K4** — Alle tre start-veiene sender `sourceGameId` (typesjekken tvinger det).
-      *Evidens:* `app/api/cron/start-scheduled-games/route.ts:211`,
+      *Evidens:* `app/api/cron/start-scheduled-games/route.ts:220`,
       `app/[locale]/games/[id]/(home)/page.tsx:404`,
       `app/[locale]/admin/games/[id]/actions.ts:136`. `npm run build` → `EXIT=0`.
 - [x] **K5** — Spill uten `tournament_id` dedupes aldri.
@@ -134,7 +134,7 @@ finnes allerede og peker dit). Reversibelt uten datatap.
       startet gir null varsler. *Evidens:*
       `lib/notifications/startNotificationTargets.test.ts:112`; ruta filtrerer
       dem allerede før tropp-oppslaget i
-      `app/api/cron/start-scheduled-games/route.ts:180`.
+      `app/api/cron/start-scheduled-games/route.ts:188`.
 - [x] **K7** — De to utdaterte kommentarene beskriver F3d-virkeligheten.
       *Evidens:* `lib/games/syncDerivedGamesStatus.ts:174` og
       `app/[locale]/games/[id]/(home)/page.tsx:382`.
