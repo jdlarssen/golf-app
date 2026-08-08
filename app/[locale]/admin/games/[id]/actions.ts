@@ -115,9 +115,9 @@ export async function startScheduledGameAction(gameId: string) {
     const [gameRes, rosterRes] = await Promise.all([
       supabase
         .from('games')
-        .select('name')
+        .select('name, source_game_id')
         .eq('id', gameId)
-        .single<{ name: string }>(),
+        .single<{ name: string; source_game_id: string | null }>(),
       supabase
         .from('game_players')
         .select('user_id')
@@ -128,7 +128,13 @@ export async function startScheduledGameAction(gameId: string) {
     if (gameRes.data && rosterRes.data) {
       await notifyPlayersGameStarted(
         rosterRes.data.filter((p) => p.user_id !== user.id),
-        { id: gameId, name: gameRes.data.name },
+        // #1450: a derived match never announces itself — its host owns the
+        // cup-start varsel.
+        {
+          id: gameId,
+          name: gameRes.data.name,
+          sourceGameId: gameRes.data.source_game_id,
+        },
         'startScheduledGameAction',
       );
     }

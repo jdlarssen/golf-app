@@ -83,6 +83,13 @@ export async function notifyPlayersGameFinished(
  *  - filtrer bort trukkede spillere og evt. aktøren som selv utløste
  *    starten før kallet
  *
+ * #1450: et AVLEDET spill (`sourceGameId` satt, #1441 D3) varsler aldri —
+ * verten eier cup-start-varselet, og en avledet singles har alltid et delsett
+ * av vertens tropp. Gaten ligger her, i den ene fan-out-helperen alle tre
+ * start-veiene deler, så regelen har ett hjem. `sourceGameId` er påkrevd (ikke
+ * valgfritt) med vilje: da tvinger typesjekken hvert kall-sted til å svare på
+ * spørsmålet, i stedet for at vakten forsvinner i stillhet.
+ *
  * #1134: en spiller som allerede er i appen når spillet flippes, får INGEN
  * in-app-rad — venterommet refresher via realtime og spilleren ser starten
  * uansett. Kun off-app-spillere (målt på `last_seen_at`, samme terskel som
@@ -92,10 +99,11 @@ export async function notifyPlayersGameFinished(
  */
 export async function notifyPlayersGameStarted(
   players: Array<{ user_id: string }>,
-  game: { id: string; name: string },
+  game: { id: string; name: string; sourceGameId: string | null },
   logPrefix: string,
 ): Promise<void> {
   if (players.length === 0) return;
+  if (game.sourceGameId != null) return;
 
   const admin = getAdminClient();
   const { data, error } = await admin
