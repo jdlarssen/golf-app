@@ -363,7 +363,15 @@ Lokal-først via Dexie. `writeScore()` → IndexedDB → sync-kø → `upsert_sc
 Strengt håndhevet i Postgres. Spillere ser:
 - Sine egne scores
 - Samme-flight scores under aktivt spill
-- ALLE scores etter `games.status = 'finished'`
+- Alle scores i spill **de selv er med i**, etter `games.status = 'finished'`
+
+⚠️ Merk siste punkt: finished-grenen i `scores select gating per mode` krever
+fortsatt deltakelse i DET spillet. Et ferdig spill er altså ikke world-read (#1542).
+Flater som med vilje viser resultater til et bredere publikum — cup-sidene
+(`getCupSnapshot`), `/spectate/[token]`, og kamp-leaderboardet via
+`getResultReadClient` — leser derfor med service-role og holder autorisasjonen
+på call-site. Legger du til en slik flate: gaten i ruta ER håndhevelsen, det
+finnes ingen RLS bak den.
 
 Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 

@@ -17,7 +17,7 @@ import {
   type SideTournamentTeam,
 } from './SideTournamentView';
 import { MatchplaySideTournamentSection } from './MatchplaySideTournamentSection';
-import { getLeaderboardContext, fetchSideWinners } from './leaderboardContext';
+import { getResultReadClient, fetchSideWinners } from './leaderboardContext';
 import type { SideWinnerRow, SideTournamentPlayer } from './leaderboardTypes';
 
 /**
@@ -40,11 +40,13 @@ export async function computeSideTournament(opts: {
   /** Lag-format → 'byTeamNumber'; individuelt/pott-format → 'solo'. */
   teamGrouping: 'solo' | 'byTeamNumber';
 }) {
-  const [tc, { supabase }] = await Promise.all([
-    getTranslations('leaderboard.common'),
-    getLeaderboardContext(),
-  ]);
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, teamGrouping } = opts;
+  // #1542: LD/CTP-vinnerne er resultat-data på lik linje med slagene — samme
+  // lese-regel, ellers forsvant sideturneringen for alle utenfor kampen.
+  const [tc, supabase] = await Promise.all([
+    getTranslations('leaderboard.common'),
+    getResultReadClient(game.status),
+  ]);
 
   const sideWinnerRows: SideWinnerRow[] = await fetchSideWinners(supabase, gameId);
 

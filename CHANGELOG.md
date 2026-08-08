@@ -1463,8 +1463,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 34 rettinger</strong></summary>
+<summary><strong>August 2026 · 35 rettinger</strong></summary>
 
+- `1.230.3` · [#1542](https://github.com/jdlarssen/golf-app/issues/1542) — Åpner du en ferdigspilt cup-kamp du ikke selv spilte, står scorekortet ikke lenger tomt. Slagene, hull-for-hull-stillingen og de ekte lagnavnene er på plass — før møtte alle andre enn de fire som spilte kampen «Matchen er ikke startet ennå».
 - `1.230.2` · [#1545](https://github.com/jdlarssen/golf-app/issues/1545) — Matchplay-tabellene viser nå slaget ditt slik du skrev det på kortet, med en prikk på hullene du får slag og netto som lite tall under. Lag- og spiller-handicapet sier hvor mange slag du får i akkurat denne matchen og på hvilke hull, og en uavgjort nihulls-match står ikke lenger som «all square etter 18 hull».
 - `1.230.1` · [#1540](https://github.com/jdlarssen/golf-app/issues/1540) — Avslutter du en cup du har laget selv, får alle deltakerne nå beskjed om at resultatet er klart. Før gikk varselet bare til deg og de du gikk runden sammen med. Samme retting gjelder varselet når cupen starter.
 - `1.229.5` · [#1535](https://github.com/jdlarssen/golf-app/issues/1535) — Splittet cup-dag med flere flighter: hull-stripa viser igjen hele runden 1–18, og på hull 9 tar knappen deg rett videre til hull 10 i neste kamp. Før stoppet runden på hull 9 og du måtte finne den andre kampen selv.
