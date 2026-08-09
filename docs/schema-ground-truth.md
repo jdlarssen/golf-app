@@ -117,11 +117,11 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 
 ## Generert snapshot — RLS / CHECK / triggere / SECURITY DEFINER
 
-**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-08-02.** Staging matcher prod på alt under.
+**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-08-09.** Staging matcher prod på alt under.
 
-**Totaler:** 35 tabeller · 88 CHECK-constraints · 16 triggere · 44 SECURITY DEFINER-funksjoner.
+**Totaler:** 38 tabeller · 99 CHECK-constraints · 16 triggere · 44 SECURITY DEFINER-funksjoner.
 
-### RLS og policy-antall per tabell (alle 35 har RLS på)
+### RLS og policy-antall per tabell (alle 38 har RLS på)
 
 | Tabell | Policies |
 |---|---|
@@ -157,6 +157,9 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 | reactions | 3 |
 | scores | 4 |
 | tee_boxes | 5 |
+| tournament_participants | 1 |
+| tournament_plans | 1 |
+| tournament_side_awards | 1 |
 | tournaments | 4 |
 | users | 4 |
 | wolf_hole_choices | 4 |
@@ -165,9 +168,9 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 når tabellen (bevisst lockdown for admin-/agent-tabeller). ⚠️ RLS AV = RLS ikke
 aktivert (skal aldri skje på public-tabeller — undersøkes umiddelbart).
 
-### CHECK-constraints per tabell (88 totalt)
+### CHECK-constraints per tabell (99 totalt)
 
-agent_findings 3 · agent_runs 1 · bingo_bango_bongo_holes 1 · course_holes 5 · format_intent_mapping 2 · friendships 2 · game_players 4 · game_registration_requests 3 · game_side_winners 2 · games 10 · green_pins 4 · group_join_requests 1 · groups 2 · idea_submissions 2 · league_rounds 1 · leagues 13 · notifications 1 · patsome_tee_starters 1 · reactions 1 · scores 3 · tee_boxes 11 · tournaments 11 · users 1 · wolf_hole_choices 3
+agent_findings 3 · agent_runs 1 · bingo_bango_bongo_holes 1 · course_holes 5 · format_intent_mapping 2 · friendships 2 · game_players 4 · game_registration_requests 3 · game_side_winners 2 · games 12 · green_pins 4 · group_join_requests 1 · groups 2 · idea_submissions 2 · league_rounds 1 · leagues 13 · notifications 1 · patsome_tee_starters 1 · reactions 1 · scores 3 · tee_boxes 11 · tournament_plans 1 · tournament_side_awards 6 · tournaments 13 · users 1 · wolf_hole_choices 3
 
 Fulle definisjoner: kjør den kanoniske spørringen (docs/loops/dok-avstemmeren.md).
 
