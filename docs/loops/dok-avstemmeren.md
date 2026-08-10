@@ -87,13 +87,13 @@ utvides når nye målbare claims dukker opp i styringsdokumentene.
 
 | # | Påstand (hjem) | Bevis-kommando | Sist verifisert |
 |---|---|---|---|
-| C1 | CLAUDE.md → Datamodell: tabell-antall og peker til generert seksjon | Steg 1-spørringen (`tables_total`) | 2026-08-03 (35) |
-| C2 | CLAUDE.md → Scoring: tall-løs formulering + fasit-kommando | `npx vitest run lib/scoring` | 2026-08-03 (1029) |
-| C3 | CLAUDE.md → Samarbeidsmodell: SQL-tilgang beskriver MCP + staging-først + prod-luke | grep «Supabase MCP» CLAUDE.md; `.claude/hooks/mcp-guard.sh` finnes | 2026-08-03 |
-| C4 | forge-workflow.md: primær kontrakt-søkemetode er per-issue-iterasjon | `gh search issues ... in:comments` returnerer tomt (kjent); per-issue `gh api .../comments` virker | 2026-08-03 (doc-innhold; gh-quirk ikke re-testbar fra sky) |
-| C5 | schema-ground-truth.md: generert seksjon < 15 dager gammel | dato i seksjons-headeren vs `date -u` | 2026-08-03 (målt 2026-08-02) |
-| C6 | docs/test-discipline.md-terskler vs pre-commit-hook: kjent tre-tall-avvik (3/5/10) er ENTEN uendret ELLER løst per eierbeslutning | grep toContain i begge filer | 2026-08-03 (3/5/10-trapp konsistent) |
-| C7 | Levende styringsdokumenter (CLAUDE.md, AGENTS.md, docs/user-flows.md, docs/test-discipline.md, docs/agent-discipline/, docs/loops/) siterer kun fil-stier som finnes | For hver `` `sti` ``-referanse i backticks: `test -e`. Historiske dokumenter (`.forge/contracts/`, `docs/plans/`, `docs/audits/`, `docs/superpowers/specs/`, CHANGELOG) er punkt-i-tid-arkiv og skannes IKKE | 2026-08-03 (16 stier rettet etter `app/` → `app/[locale]/`-flyttingen) |
+| C1 | CLAUDE.md → Datamodell: tabell-antall og peker til generert seksjon | Steg 1-spørringen (`tables_total`) | 2026-08-10 (38 — rettet fra 35) |
+| C2 | CLAUDE.md → Scoring: tall-løs formulering + fasit-kommando | `npx vitest run lib/scoring` | 2026-08-10 (1130 — rettet fra 1029) |
+| C3 | CLAUDE.md → Samarbeidsmodell: SQL-tilgang beskriver MCP + staging-først + prod-luke | grep «Supabase MCP» CLAUDE.md; `.claude/hooks/mcp-guard.sh` finnes | 2026-08-10 |
+| C4 | forge-workflow.md: primær kontrakt-søkemetode er per-issue-iterasjon | `gh search issues ... in:comments` returnerer tomt (kjent); per-issue `gh api .../comments` virker | 2026-08-10 (doc-innhold; gh-quirk ikke re-testbar fra sky) |
+| C5 | schema-ground-truth.md: generert seksjon < 15 dager gammel | dato i seksjons-headeren vs `date -u` | 2026-08-10 (målt 2026-08-02 på main = 8 dager; PR #1552 friskner til 2026-08-09) |
+| C6 | docs/test-discipline.md-terskler vs pre-commit-hook: kjent tre-tall-avvik (3/5/10) er ENTEN uendret ELLER løst per eierbeslutning | grep toContain i begge filer | 2026-08-10 (3/5/10-trapp konsistent) |
+| C7 | Levende styringsdokumenter (CLAUDE.md, AGENTS.md, docs/user-flows.md, docs/test-discipline.md, docs/agent-discipline/, docs/loops/) siterer kun fil-stier som finnes | For hver `` `sti` ``-referanse i backticks: `test -e`. Historiske dokumenter (`.forge/contracts/`, `docs/plans/`, `docs/audits/`, `docs/superpowers/specs/`, CHANGELOG) er punkt-i-tid-arkiv og skannes IKKE | 2026-08-10 (169 repo-rotede stier sjekket, 1 fantom-sti rettet: `lib/courses/derive`) |
 
 ## Steg 3 — Memory-drift-flagg (best effort — kun lokale kjøringer)
 
