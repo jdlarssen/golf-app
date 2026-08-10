@@ -31,7 +31,7 @@ Disse er gjensidig utelukkende. **Hvis en test prøver å svare på to spørsmå
 
 ### Type A — Pure logic
 
-- **Hvor:** `lib/scoring/`, `lib/format/`, `lib/games/`, `lib/courses/derive`, `lib/notifications/types`, validators, alle pure parsing/utility-funksjoner.
+- **Hvor:** `lib/scoring/`, `lib/format/`, `lib/games/`, `lib/courses/`, `lib/notifications/types`, validators, alle pure parsing/utility-funksjoner.
 - **Disiplin:** TDD. Ny test før ny kode for `lib/scoring/`. For andre Type A-moduler: ny test sammen med koden er greit hvis logikken er enkel nok til å designes uten test-drevet-eksplorasjon.
 - **Stil:** Direkte assertions (`toBe`, `toEqual`, `toStrictEqual`). `it.each` for enumererte edge cases. Tabular fixture-data over fluent setup.
 - **Mocking:** Aldri mock egne interne utilities. Mock kun ved system-grenser (Supabase, Resend, Dexie, network).
