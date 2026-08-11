@@ -143,23 +143,11 @@ describe('computeCupBestBallAward', () => {
       holes: h,
       scores,
     };
-    // a1: 37 CH over 9 hull → 4 slag på SI 1 (37 = 4*9 + 1 → SI 1 får 5),
-    // uansett minst 4 per hull. Gross 6 − 4 = 2 eller lavere per hull.
-    // Poenget er ikke det eksakte tallet, men at side1 vinner — med et ekstra
-    // 85 %-trekk (31) ville nettoene vært høyere.
-    const result = computeCupBestBallAward(input);
-    expect(result?.winnerSide).toBe(1);
-
-    const doubleAllowanced = computeCupBestBallAward({
-      ...input,
-      side1: [
-        { userId: 'a1', courseHandicap: 31 },
-        { userId: 'a2', courseHandicap: 0 },
-      ],
-    });
-    // Regresjonsvakten: 37 og 31 SKAL gi ulikt resultat. Gjør de ikke det,
-    // måler testen ingenting.
-    expect(result?.formatted).not.toBe(doubleAllowanced?.formatted);
+    // Låst eksakt verdi, ikke bare «side1 vinner»: med det frosne 37 blir
+    // lagtotalen 35. Trekker funksjonen 85 % en gang til (37 → 31) blir den
+    // 36, og testen går rød. Det er nettopp det dobbelttrekket #1551
+    // beskriver — en løsere assertion ville passert i begge tilfeller.
+    expect(computeCupBestBallAward(input)?.formatted).toBe('35–45');
   });
 
   // #1539/#1551, kriterium K5: kampens egen tavle (motorens `compute()`) og

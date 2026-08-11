@@ -59,19 +59,27 @@ export type CupMatchAllowance = {
 };
 
 /**
- * Alle formater en cup-match kan ha. Eksplisitt liste (ikke utledet) fordi
- * invariant-testen itererer over den — en ny `CupBundleFormat` som ikke legges
- * til her ville ellers stille sluppet unna invarianten.
+ * Alle formater en cup-match kan ha — invariant-testen itererer over denne.
+ *
+ * Utledet fra et `Record<CupBundleFormat, true>` og ikke skrevet som en løs
+ * liste: en ny `CupBundleFormat` som ikke legges til her gir kompileringsfeil.
+ * En liste med `satisfies readonly CupBundleFormat[]` ville bare sjekket at
+ * hvert element ER et gyldig format, ikke at ALLE formatene er med — og et
+ * format som mangler her ville sluppet stille forbi invarianten.
  */
-export const ALL_CUP_MATCH_FORMATS = [
-  'singles_matchplay',
-  'fourball_matchplay',
-  'foursomes_matchplay',
-  'greensome_matchplay',
-  'chapman_matchplay',
-  'gruesome_matchplay',
-  'best_ball',
-] as const satisfies readonly CupBundleFormat[];
+const CUP_MATCH_FORMAT_KEYS: Record<CupBundleFormat, true> = {
+  singles_matchplay: true,
+  fourball_matchplay: true,
+  foursomes_matchplay: true,
+  greensome_matchplay: true,
+  chapman_matchplay: true,
+  gruesome_matchplay: true,
+  best_ball: true,
+};
+
+export const ALL_CUP_MATCH_FORMATS = Object.keys(
+  CUP_MATCH_FORMAT_KEYS,
+) as CupBundleFormat[];
 
 /**
  * Bestemmer hvilket lag som bærer allowancen for én cup-match.
@@ -89,15 +97,30 @@ export function cupMatchAllowance(
   if (format === 'singles_matchplay') {
     return { hcpAllowancePct: 100, modeConfigAllowancePct: null };
   }
-  const modeConfigAllowancePct =
-    format === 'fourball_matchplay'
-      ? allowances.fourball
-      : format === 'foursomes_matchplay'
-        ? allowances.foursomes
-        : format === 'greensome_matchplay'
-          ? allowances.greensome
-          : format === 'chapman_matchplay'
-            ? allowances.chapman
-            : allowances.gruesome; // gruesome_matchplay
+  // Uttømmende switch, ikke en ternær-kjede med hale: et framtidig format som
+  // ikke får en egen gren feiler på `never`-vakten i stedet for å arve
+  // gruesomes prosent i det stille.
+  let modeConfigAllowancePct: number;
+  switch (format) {
+    case 'fourball_matchplay':
+      modeConfigAllowancePct = allowances.fourball;
+      break;
+    case 'foursomes_matchplay':
+      modeConfigAllowancePct = allowances.foursomes;
+      break;
+    case 'greensome_matchplay':
+      modeConfigAllowancePct = allowances.greensome;
+      break;
+    case 'chapman_matchplay':
+      modeConfigAllowancePct = allowances.chapman;
+      break;
+    case 'gruesome_matchplay':
+      modeConfigAllowancePct = allowances.gruesome;
+      break;
+    default: {
+      const unreachable: never = format;
+      throw new Error(`Ukjent cup-format: ${String(unreachable)}`);
+    }
+  }
   return { hcpAllowancePct: 100, modeConfigAllowancePct };
 }
