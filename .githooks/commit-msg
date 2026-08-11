@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
-# Håndhever versjonering-disiplinen beskrevet i CLAUDE.md "Versjonering / CHANGELOG".
+# Håndhever bokførings-disiplinen beskrevet i CLAUDE.md "Versjonering / CHANGELOG".
+#
+# Fra #1562 rører en vanlig commit HVERKEN package.json ELLER CHANGELOG.md.
+# Bruker-synlige commits legger i stedet igjen én notatfil under .changes/, og
+# ukesrutinen (.github/workflows/ukesversjon.yml) folder dem til én versjon
+# mandag morgen. To filer alle PR-er rørte var kilden til de faste
+# rebase-konfliktene mellom parallelle økter.
 #
 # Slår ut på conventional-commit-prefiksene som signaliserer bruker-synlig endring:
-#   feat(...)   → krever MINOR-bump
-#   fix(...)    → krever PATCH-bump
-#   perf(...)   → krever PATCH-bump
+#   feat(...) | fix(...) | perf(...)  → krever én ny fil under .changes/
 #
-# Skip-typer (regelen ignorerer disse): docs, refactor, test, chore, style, ci, build.
-# Bruk dem hvis commiten ikke endrer hva brukeren kan se eller gjøre.
+# Skip-typer (notat-regelen ignorerer disse): docs, refactor, test, chore, style,
+# ci, build. Bruk dem hvis commiten ikke endrer hva brukeren kan se eller gjøre.
+#
+# version-feltet eies av ukesrutinen og er sperret for alle andre commits.
 
 set -e
 
@@ -15,6 +21,7 @@ msg_file="$1"
 [ -z "$msg_file" ] && exit 0
 
 msg="$(head -n 1 "$msg_file")"
+body="$(cat "$msg_file")"
 
 # Ignorer merge-, revert-, fixup-, squash-commits
 case "$msg" in
@@ -22,13 +29,38 @@ case "$msg" in
 esac
 
 # ─────────────────────────────────────────────────────────────────────
-# Issue-referanse (CLAUDE.md → "Branch + PR-flyt": «alle med Refs #N i body»).
+# H1 — version-vern: package.json sitt version-felt eies av ukesrutinen
+# (chore(release)-commiten den lager). Alle andre commits skal la det stå.
+# Gjelder ALLE prefikser, ikke bare de bruker-synlige: en «docs»-commit som
+# drar med seg et bump lager nøyaktig den rebase-konflikten omleggingen fjernet.
+# Actions kjører uten hooks, så unntaket her er for manuell re-kjøring lokalt.
+# ─────────────────────────────────────────────────────────────────────
+if ! printf '%s' "$msg" | grep -qE '^chore\(release\)!?: '; then
+  # Sammenlign verdier, ikke bare «linja finnes»: et nytt package.json (ingen
+  # gammel verdi) eller en urørt version-linje skal ikke slå ut.
+  old_version="$(git diff --cached package.json | grep -E '^-  "version":' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+  new_version="$(git diff --cached package.json | grep -E '^\+  "version":' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+  if [ -n "$old_version" ] && [ -n "$new_version" ] && [ "$old_version" != "$new_version" ]; then
+    printf '\n✗ Commit blokkert: version-feltet i package.json er ikke ditt å endre.\n\n' >&2
+    printf '  Du endret %s → %s.\n' "$old_version" "$new_version" >&2
+    printf '  Versjonen bumpes én gang i uka av ukesrutinen\n' >&2
+    printf '  (.github/workflows/ukesversjon.yml → chore(release)-commiten).\n\n' >&2
+    printf 'For å fortsette:\n' >&2
+    printf '  1. git checkout -- package.json package-lock.json\n' >&2
+    printf '  2. Legg endringen i en notatfil under .changes/ i stedet (se under)\n' >&2
+    printf '  3. git commit (på nytt med samme melding)\n\n' >&2
+    printf '  Reglene står i CLAUDE.md → "Versjonering / CHANGELOG".\n\n' >&2
+    exit 1
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────────────
+# H2 — Issue-referanse (CLAUDE.md → "Branch + PR-flyt": «alle med Refs #N i body»).
 # Alt backlog-arbeid spores i GitHub Issues, så feat/fix/perf/refactor MÅ peke
 # på et issue i commit-body-en. Escape for ekte issue-løse endringer: skriv
 # [no-issue] i body-en.
 # ─────────────────────────────────────────────────────────────────────
 if printf '%s' "$msg" | grep -qE '^(feat|fix|perf|refactor)(\([^)]+\))?!?: '; then
-  body="$(cat "$msg_file")"
   if ! printf '%s' "$body" | grep -qE '(Refs|Closes|Fixes|Resolves) #[0-9]+' \
      && ! printf '%s' "$body" | grep -qF '[no-issue]'; then
     printf '\n✗ Commit blokkert: mangler issue-referanse i body.\n\n' >&2
@@ -40,103 +72,57 @@ if printf '%s' "$msg" | grep -qE '^(feat|fix|perf|refactor)(\([^)]+\))?!?: '; th
   fi
 fi
 
-# Bare håndhev for bruker-synlige commit-typer
+# ─────────────────────────────────────────────────────────────────────
+# H3 — Notatfil: bare for bruker-synlige commit-typer.
+# Interne fikser (test-only, refactor-shipped-as-fix, tooling) hopper med
+# [no-changelog], som før.
+# ─────────────────────────────────────────────────────────────────────
 if ! printf '%s' "$msg" | grep -qE '^(feat|fix|perf)(\([^)]+\))?!?: '; then
   exit 0
 fi
 
-staged="$(git diff --cached --name-only)"
-
-fail=0
-errors=""
-
-if ! printf '%s\n' "$staged" | grep -qx 'package.json'; then
-  fail=1
-  errors="${errors}  • package.json er ikke staget — version-feltet må bumpes\n"
-elif ! git diff --cached package.json | grep -q '^\+  "version":'; then
-  fail=1
-  errors="${errors}  • package.json er staget, men version-feltet er ikke endret\n"
+if printf '%s' "$body" | grep -qF '[no-changelog]'; then
+  exit 0
 fi
 
-# CHANGELOG-oppføring kreves for bruker-synlige endringer, men interne fikser
-# (test-only, refactor-shipped-as-fix, tooling) får hoppe med [no-changelog].
-if ! printf '%s\n' "$staged" | grep -qx 'CHANGELOG.md' \
-   && ! printf '%s' "$(cat "$msg_file")" | grep -qF '[no-changelog]'; then
-  fail=1
-  errors="${errors}  • CHANGELOG.md er ikke staget — legg til én linje (Funksjoner/Feilrettinger), eller [no-changelog] for interne endringer\n"
+# Kun NYE filer teller: en endring i et eksisterende notat er ikke en ny oppføring.
+# README.md er malen, ikke et notat.
+if git diff --cached --name-only --diff-filter=A \
+   | grep -E '^\.changes/.+\.md$' \
+   | grep -qvxF '.changes/README.md'; then
+  exit 0
 fi
 
-if [ "$fail" -eq 1 ]; then
-  prefix="$(printf '%s' "$msg" | grep -oE '^(feat|fix|perf)')"
-  case "$prefix" in
-    feat) bump="npm version minor --no-git-tag-version" ;;
-    fix|perf) bump="npm version patch --no-git-tag-version" ;;
-  esac
-
-  printf '\n✗ Commit blokkert: versjonering-disiplinen mangler\n\n' >&2
-  printf '%b' "$errors" >&2
-  printf '\nReglene står i CLAUDE.md → "Versjonering / CHANGELOG".\n' >&2
-  printf 'CHANGELOG-format: docs/changelog-conventions.md (les FØR ny oppføring).\n\n' >&2
-  printf 'For å fortsette:\n' >&2
-  printf '  1. %s\n' "$bump" >&2
-  printf '  2. Legg til én linje i CHANGELOG.md (Funksjoner/Feilrettinger; se docs/changelog-conventions.md) — eller [no-changelog] i body hvis intern\n' >&2
-  printf '  3. git add package.json package-lock.json CHANGELOG.md\n' >&2
-  printf '  4. git commit (på nytt med samme melding)\n\n' >&2
-  printf 'Hvis commiten IKKE endrer bruker-synlig oppførsel: bytt prefix til\n' >&2
-  printf '  docs(...)    dokumentasjon\n' >&2
-  printf '  refactor(...) intern restrukturering\n' >&2
-  printf '  test(...)    test-endringer\n' >&2
-  printf '  chore(...)   tooling/config\n\n' >&2
-  exit 1
+prefix="$(printf '%s' "$msg" | grep -oE '^(feat|fix|perf)')"
+printf '\n✗ Commit blokkert: mangler notatfil under .changes/\n\n' >&2
+printf '  En bruker-synlig endring (%s) skal legge igjen én notatfil. Ukesrutinen\n' "$prefix" >&2
+printf '  folder alle ukas notater til én versjon og skriver CHANGELOG-oppføringene\n' >&2
+printf '  mandag morgen — derfor rører du hverken package.json eller CHANGELOG.md.\n\n' >&2
+printf 'For å fortsette — lag .changes/<issue>-<slug>.md, f.eks.:\n\n' >&2
+if [ "$prefix" = "feat" ]; then
+  printf '  ---\n' >&2
+  printf '  type: feat\n' >&2
+  printf '  issue: 1463\n' >&2
+  printf '  title: Cupene dine samlet på ett sted\n' >&2
+  printf '  link: /admin/cup\n' >&2
+  printf '  cta: Åpne cupene\n' >&2
+  printf '  ---\n' >&2
+  printf '  Cup-lista i Klubbhuset viser nå alle cupene du er med i.\n\n' >&2
+else
+  printf '  ---\n' >&2
+  printf '  type: %s\n' "$prefix" >&2
+  printf '  issue: 1539\n' >&2
+  printf '  ---\n' >&2
+  printf '  Best ball i en cup gir deg nå de slagene du skal ha.\n\n' >&2
 fi
-
-# ─────────────────────────────────────────────────────────────────────
-# Bump-TYPE-vakt (CLAUDE.md → "Versjonering / CHANGELOG"): H1 over sjekker at
-# version-feltet ENDRET seg; her sjekker vi at det endret seg til RIKTIG type.
-#   feat        → MINOR eller MAJOR (blokker hvis kun PATCH)
-#   fix | perf  → PATCH (blokker MINOR; MAJOR kun ved breaking «!» / BREAKING CHANGE)
-# Legit major/breaking-bump slipper gjennom, så ~null falske treff.
-# ─────────────────────────────────────────────────────────────────────
-old="$(git diff --cached package.json | grep -E '^-  "version":' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
-new="$(git diff --cached package.json | grep -E '^\+  "version":' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
-
-if [ -n "$old" ] && [ -n "$new" ]; then
-  IFS=. read -r oM om op <<EOF
-$old
-EOF
-  IFS=. read -r nM nm np <<EOF
-$new
-EOF
-  prefix="$(printf '%s' "$msg" | grep -oE '^(feat|fix|perf)')"
-  breaking=0
-  if printf '%s' "$msg" | grep -qE '^(feat|fix|perf)(\([^)]+\))?!:'; then breaking=1; fi
-  if cat "$msg_file" | grep -qE 'BREAKING CHANGE'; then breaking=1; fi
-
-  if [ "$nM" -gt "$oM" ]; then kind=major
-  elif [ "$nM" -eq "$oM" ] && [ "$nm" -gt "$om" ]; then kind=minor
-  elif [ "$nM" -eq "$oM" ] && [ "$nm" -eq "$om" ] && [ "$np" -gt "$op" ]; then kind=patch
-  else kind=unknown; fi
-
-  typefail=""
-  case "$prefix" in
-    feat)
-      [ "$kind" = patch ] && typefail="feat krever MINOR- (eller MAJOR-) bump — du gjorde en PATCH ($old → $new)"
-      ;;
-    fix|perf)
-      [ "$kind" = minor ] && typefail="$prefix krever PATCH-bump — du gjorde en MINOR ($old → $new)"
-      [ "$kind" = major ] && [ "$breaking" -ne 1 ] && typefail="$prefix krever PATCH-bump — MAJOR er kun for breaking endringer (merk med «!» eller «BREAKING CHANGE»)"
-      ;;
-  esac
-  [ "$kind" = unknown ] && typefail="version øker ikke korrekt ($old → $new)"
-
-  if [ -n "$typefail" ]; then
-    printf '\n✗ Commit blokkert: feil bump-type.\n\n' >&2
-    printf '  %s\n\n' "$typefail" >&2
-    printf '  Reglene står i CLAUDE.md → "Versjonering / CHANGELOG":\n' >&2
-    printf '    feat → npm version minor --no-git-tag-version\n' >&2
-    printf '    fix/perf → npm version patch --no-git-tag-version\n\n' >&2
-    exit 1
-  fi
-fi
-
-exit 0
+printf '  Deretter: git add .changes/<fila> && git commit (samme melding)\n\n' >&2
+printf '  Full mal og feltgrenser: .changes/README.md\n' >&2
+printf '  Stemme og format: docs/changelog-conventions.md\n\n' >&2
+printf 'Er endringen IKKE bruker-synlig? Da har du to veier:\n' >&2
+printf '  • skriv [no-changelog] i commit-body-en (intern fix som likevel shippes som fix), eller\n' >&2
+printf '  • bytt prefix:\n' >&2
+printf '      docs(...)     dokumentasjon\n' >&2
+printf '      refactor(...) intern restrukturering\n' >&2
+printf '      test(...)     test-endringer\n' >&2
+printf '      chore(...)    tooling/config\n\n' >&2
+exit 1
