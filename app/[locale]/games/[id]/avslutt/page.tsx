@@ -106,8 +106,9 @@ export default async function CreatorAvsluttPage({
   // Withdrawn players are out of the ranking entirely — never block the end.
   const active = (gamePlayers ?? []).filter((gp) => !gp.withdrawn_at);
   const missing = active.filter((gp) => !gp.submitted_at);
-  // Peer approval (when required) blocks finishing — the creator can't force it,
-  // so surface it as a wait state rather than letting the action silently bounce.
+  // Peer approval (when required) blocks finishing — endGame bounces unapproved
+  // scorecards. The creator's sanctioned way out is the approval override on
+  // /spillere (#429), so the wait state below links there instead of dead-ending.
   const unapproved = game.require_peer_approval
     ? active.filter((gp) => gp.submitted_at && !gp.approved_at)
     : [];
@@ -155,7 +156,16 @@ export default async function CreatorAvsluttPage({
           <p className="mt-2 text-text">
             {t('unapprovedNote')}
           </p>
+          <p className="mt-2 text-text">
+            {t('approveOverrideNote')}
+          </p>
         </div>
+        <Link
+          href={`${detailPath}/spillere#leverte-scorekort`}
+          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+        >
+          {t('approveOverrideCta')}
+        </Link>
         <Link
           href={detailPath}
           className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
