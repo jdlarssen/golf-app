@@ -1,4 +1,4 @@
-import { first } from '@/lib/url/searchParams';
+import { first, resolveErrorCode } from '@/lib/url/searchParams';
 import { Suspense } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
@@ -78,6 +78,7 @@ import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   status?: string | string[];
+  error?: string | string[];
 }>;
 
 // Map player-facing game lifecycle onto StatusChip's admin tone palette —
@@ -96,6 +97,24 @@ const STATUS_TONES: Record<GameStatus, StatusChipTone> = {
 const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted: 'bannerSubmitted',
 };
+
+// #1361: every ?error code a creator-facing redirect lands on /games/[id]
+// with (the endGame family, delete, edit, and /avslutt's not_active bounce),
+// plus not_found defensively. Texts live in admin.game.errors — same string,
+// one home, shared with the Sekretariat. An unrecognised value collapses to
+// 'unknown' instead of being dropped silently (the silent drop was this bug).
+const ERROR_BANNER_CODES = new Set([
+  'not_active',
+  'no_players',
+  'not_all_submitted',
+  'not_all_approved',
+  'db_finish',
+  'db_players',
+  'not_deletable',
+  'not_editable',
+  'not_found',
+  'unknown',
+] as const);
 
 type GameRow = {
   id: string;
@@ -192,8 +211,24 @@ export default async function GameHomePage({
   const tModes = await getTranslations('modes');
   const tGameStatus = await getTranslations('gameStatus');
   const tScorecard = await getTranslations('scorecard');
-  const statusBannerKey = STATUS_BANNER_KEYS[first(sp.status) ?? ''] ?? undefined;
+  // #1361: cross-namespace read from a server component — same precedent as
+  // the Sekretariat page. The strings have one home; a reword hits both.
+  const tGameErrors = await getTranslations('admin.game.errors');
+  const errorCode = resolveErrorCode(first(sp.error), ERROR_BANNER_CODES, 'unknown');
+  // Error outranks status — a failure must never be masked by a receipt.
+  const statusBannerKey = errorCode
+    ? undefined
+    : (STATUS_BANNER_KEYS[first(sp.status) ?? ''] ?? undefined);
   const statusBanner = statusBannerKey ? t(statusBannerKey as Parameters<typeof t>[0]) : undefined;
+  // Rendered in BOTH returns below: the scheduled early return has no other
+  // banner slot, and ?error=not_active is reachable on a scheduled game.
+  const errorBanner = errorCode ? (
+    <div role="alert" data-testid={`game-error-${errorCode}`} className="mb-4">
+      <Banner tone="error">
+        {tGameErrors(errorCode as Parameters<typeof tGameErrors>[0])}
+      </Banner>
+    </div>
+  ) : null;
 
   // Snapshot "now" once per request for the E1 auto-start guard below.
   // The react-hooks/purity lint rule flags Date.now() as impure regardless
@@ -607,6 +642,8 @@ export default async function GameHomePage({
           <span className="w-12" aria-hidden />
         </header>
 
+        {errorBanner}
+
         {profileIncomplete && !meIsGuest && (
           <ProfileGateStripe gameId={id} />
         )}
@@ -971,6 +1008,8 @@ export default async function GameHomePage({
           </Banner>
         </div>
       )}
+
+      {errorBanner}
 
       {statusBanner && (
         <div className="mb-4">

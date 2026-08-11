@@ -1479,8 +1479,9 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 ## Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 40 rettinger</strong></summary>
+<summary><strong>August 2026 · 41 rettinger</strong></summary>
 
+- `1.232.2` · [#1361](https://github.com/jdlarssen/golf-app/issues/1361) — Feiler avslutningen, slettingen eller redigeringen av et spill du arrangerer, sier spill-siden nå tydelig fra hva som gikk galt — før forsvant feilen stille og spillet ble stående som pågående uten forklaring.
 - `1.232.1` · [#1360](https://github.com/jdlarssen/golf-app/issues/1360) — Står avslutningen fast fordi et scorekort venter på godkjenning, viser siden nå veien videre: får du ikke tak i medspillerne, kan du som arrangør godkjenne på vegne av gruppa under «Styr spillere».
 - `1.231.3` · [#1559](https://github.com/jdlarssen/golf-app/issues/1559) — Klubbhuset er lettere å lese på mobil: dørene ligger nå som brede rader med teksten sin under navnet, i stedet for firkantede kort der lange navn ble klipt. Det gjelder både arrangørens Spill, Spillere, Baner og Resultatprotokoll, og spillerens Cuper og Verktøy — samme form hele veien. De små gulltallene i hjørnet er borte: de sa bare et tall uten å si hva det gjaldt, og teksten ved siden av sa det allerede med ord.
 - `1.231.2` · [#1539](https://github.com/jdlarssen/golf-app/issues/1539), [#1551](https://github.com/jdlarssen/golf-app/issues/1551) — Best ball i en cup gir deg nå de slagene du skal ha. Kampens egen tavle og cup-stillingen regnet ulikt på samme kamp: spillerne med høyest handicap fikk rundt tre slag for lite på ni hull det ene stedet, og fullt handicap det andre.
