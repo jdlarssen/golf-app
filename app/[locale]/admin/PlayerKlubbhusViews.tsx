@@ -4,7 +4,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
-import { TileGridView, DenseTileList, type Tile } from './TilesView';
+import { DenseTileList, type Tile } from './TilesView';
 import type { GameStatus } from '@/lib/games/status';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
 
@@ -262,8 +262,9 @@ export function ClubsSkeleton() {
 
 /**
  * Verktøy — always shown, de-emphasised tools at the bottom of the room:
- * adding a course and browsing the format reference. Reuses TileGridView so
- * the cards match the admin grid chrome.
+ * adding a course and browsing the format reference. Same `DenseTileList` row
+ * as the cup entry above and the organiser's core doors (#1559), so the whole
+ * room speaks one shape and the helper lines survive.
  */
 export function ToolsView() {
   const t = useTranslations('admin.dashboard');
@@ -290,7 +291,7 @@ export function ToolsView() {
   return (
     <section>
       <p className={SECTION_LABEL}>{t('playerToolsLabel')}</p>
-      <TileGridView tiles={tiles} />
+      <DenseTileList tiles={tiles} />
     </section>
   );
 }

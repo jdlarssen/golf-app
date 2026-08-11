@@ -30,7 +30,7 @@ export type TileIconKind =
 export type Tile = {
   label: string;
   href: string;
-  /** Sub-label under the title. Rendered by `TileGridView` only — the compact
+  /** Sub-label under the title. Rendered by `DenseTileList` only — the compact
    *  grid drops it — so tiles that only ever appear compact can omit it. */
   meta?: string;
   icon: TileIconKind;
@@ -42,65 +42,8 @@ export type Tile = {
 };
 
 /**
- * Presentational tile grid — shared by the admin dashboard (TilesGrid) and the
- * regular-player Klubbhuset view (PlayerKlubbhus) so both render identical
- * card chrome. The `accent` tile gets the champagne-on-forest treatment.
- */
-export function TileGridView({ tiles }: { tiles: Tile[] }) {
-  return (
-    <div className="mb-2 grid grid-cols-2 gap-2.5">
-      {tiles.map((tile, i) => (
-        <SmartLink
-          key={tile.label}
-          href={tile.href}
-          data-testid={tile.testId}
-          className="reveal-up relative min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-          style={{
-            animationDelay: `${60 + i * 70}ms`,
-            background: tile.accent ? 'var(--surface-strong)' : 'var(--surface)',
-            color: tile.accent ? 'var(--bg-tint)' : 'var(--text)',
-            border: tile.accent ? 'none' : '1px solid var(--border)',
-            boxShadow: tile.accent
-              ? '0 4px 14px rgba(26, 46, 31, 0.15)'
-              : '0 1px 2px rgba(26, 46, 31, 0.03)',
-          }}
-        >
-          {tile.badge ? <TileBadge count={tile.badge} /> : null}
-          <div
-            className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-[9px]"
-            style={{
-              background: tile.accent
-                ? 'rgba(201, 169, 97, 0.20)'
-                : 'var(--admin-bg)',
-              color: tile.accent ? 'var(--accent)' : 'var(--primary)',
-            }}
-          >
-            <TileIcon kind={tile.icon} />
-          </div>
-          <p className="font-serif text-base font-medium tracking-[-0.005em]">
-            {tile.label}
-          </p>
-          {tile.meta && (
-            <p
-              className="mt-0.5 font-sans text-[11px] tabular-nums"
-              style={{
-                color: tile.accent
-                  ? 'rgba(240, 237, 229, 0.75)'
-                  : 'var(--text-muted)',
-              }}
-            >
-              {tile.meta}
-            </p>
-          )}
-        </SmartLink>
-      ))}
-    </div>
-  );
-}
-
-/**
  * Dense tile list — the everyday core doors on mobile (#1559). Same data as
- * `TileGridView` in a full-width row: icon left, title + meta stacked, arrow
+ * the compact grid in a full-width row: icon left, title + meta stacked, arrow
  * right. Chosen over the compact grid for these four because the meta line is
  * why they sit on the front page at all — a door without its count is just a
  * menu, and the menu already lives in «Mer i Sekretariatet» below.
@@ -180,7 +123,7 @@ export function DenseTileList({ tiles }: { tiles: Tile[] }) {
 
 /**
  * Compact tile grid — the «Mer i Sekretariatet»-section (#914). Same data
- * shape as TileGridView but a denser single-row layout (icon + label, meta
+ * shape as DenseTileList but a denser single-row layout (icon + label, meta
  * dropped) so the everyday core cards stay visually dominant. Tap target stays
  * ≥44px (min-h-[56px]); the champagne badge is supported here too.
  *
