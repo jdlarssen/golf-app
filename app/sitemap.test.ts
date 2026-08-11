@@ -56,6 +56,7 @@ describe('sitemap', () => {
   it('includes the flat public pages and the seeded course page', async () => {
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
+    expect(urls).toContain(`${BASE}/hvorfor-torny`);
     expect(urls).toContain(`${BASE}/demo`);
     expect(urls).toContain(`${BASE}/finn-turneringer`);
     expect(urls).toContain(`${BASE}/legal/privacy`);

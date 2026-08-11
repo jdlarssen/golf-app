@@ -5577,7 +5577,122 @@
       "openGames": "Open tournaments",
       "login": "Log in",
       "privacy": "Privacy",
-      "guide": "Organiser guide"
+      "guide": "Organiser guide",
+      "whyTorny": "Why Tørny?"
+    }
+  },
+  "whyTorny": {
+    "metaTitle": "What you get with Tørny — a tournament app, no subscription",
+    "metaDescription": "Tørny next to other golf apps: over 20 game formats, no subscription, no ads, and everyone joins straight from the browser. See what you get.",
+    "loginCta": "Log in",
+    "hero": {
+      "h1": "What you get with Tørny",
+      "sub": "Built for one thing: your tournament."
+    },
+    "stats": [
+      { "value": "0", "unit": " kr", "label": "No subscription.\nNo ads." },
+      { "value": "20", "unit": "+", "label": "game formats\nto pick from" },
+      {
+        "value": "2",
+        "unit": " min",
+        "label": "from idea to\ninvites sent"
+      },
+      {
+        "value": "150",
+        "unit": "",
+        "label": "players when the\nwhole club joins"
+      }
+    ],
+    "matrix": {
+      "heading": "Tørny next to the rest",
+      "featureCol": "Feature",
+      "colTorny": "Tørny",
+      "colOther": "Other apps",
+      "yesLabel": "Yes",
+      "rows": [
+        {
+          "feature": "Tournaments in every format",
+          "other": "Needs a subscription"
+        },
+        {
+          "feature": "Join straight from the browser",
+          "other": "Everyone needs the app"
+        },
+        { "feature": "Norwegian all the way", "other": "English first" },
+        { "feature": "No ads", "other": "Ads in the free version" },
+        { "feature": "Cup, league and side contests", "other": "Varies" },
+        { "feature": "Prize pot with Vipps", "other": "Sorted out separately" },
+        { "feature": "Scoring with no coverage", "other": "Needs a connection" },
+        { "feature": "WHS handicap worked out for you", "other": "Varies" }
+      ]
+    },
+    "board": {
+      "heading": "The tension is built in",
+      "cardTitle": "Friday golf · Round 3",
+      "liveLabel": "Live",
+      "rows": [
+        { "name": "Kristian", "points": "38 pts" },
+        { "name": "Marte", "points": "36 pts" },
+        { "name": "Jonas", "points": "33 pts" }
+      ],
+      "chips": [
+        { "icon": "⛳", "label": "Closest to the pin" },
+        { "icon": "🚀", "label": "Longest drive" },
+        { "icon": "💰", "label": "Prize pot" }
+      ]
+    },
+    "points": {
+      "heading": "Built for the tournament",
+      "items": [
+        {
+          "icon": "🎛️",
+          "title": "The organiser is in charge",
+          "body": "Approve scorecards, start automatically at the agreed time, and get the result by email."
+        },
+        {
+          "icon": "📨",
+          "title": "Everyone is in within a minute",
+          "body": "An email invite, a one-time code, and you are playing."
+        },
+        {
+          "icon": "🏆",
+          "title": "The prize ceremony comes with it",
+          "body": "Podium, winners and the prize table when the last putt drops."
+        }
+      ],
+      "quotePre": "Tørny is what you fire up when you play ",
+      "quoteGold": "against each other",
+      "quotePost": "."
+    },
+    "faqHeading": "Questions and answers",
+    "faq": [
+      {
+        "q": "Is Tørny really free?",
+        "a": "Yes. Everything above, with no subscription and no ads."
+      },
+      {
+        "q": "Do the players have to install anything?",
+        "a": "No, nobody has to. Everyone can join straight from the browser. Want Tørny as an app? Add it to your home screen."
+      },
+      {
+        "q": "What about our course?",
+        "a": "If it is not in there already, you can add it yourself in a couple of minutes."
+      }
+    ],
+    "endCta": {
+      "headingPre": "Ready to fire up the ",
+      "headingGold": "tournament",
+      "headingPost": "?",
+      "body": "Try the demo without logging in. It takes under a minute.",
+      "primaryCta": "Try the demo",
+      "secondaryCta": "Or get started for real"
+    },
+    "footer": {
+      "formats": "Formats",
+      "courses": "Courses",
+      "demo": "Demo",
+      "login": "Log in",
+      "privacy": "Privacy"
     }
   },
   "arrangeGuide": {
