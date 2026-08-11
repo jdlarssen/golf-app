@@ -1,0 +1,75 @@
+# Ukesversjon (#1562): folder ukas .changes/-notatfiler til ÉN versjon og én
+# pulje CHANGELOG-oppføringer, og åpner bokførings-PR-en mot main.
+#
+# Hvorfor: hver bruker-synlig commit måtte før bumpe package.json OG legge en
+# linje i CHANGELOG.md — to filer alle PR-er rørte, altså garantert
+# rebase-konflikt mellom parallelle økter. Nå legger commiten igjen en notatfil,
+# og denne jobben gjør bokføringen én gang i uka.
+#
+# Deploy-rytmen røres ikke: merge til main deployer fortsatt rett til prod.
+# Versjonsnummeret er et ukestempel, ikke et deploystempel.
+#
+# Ops-forutsetning: «Allow GitHub Actions to create and approve pull requests»
+# må være på (Settings → Actions → General → Workflow permissions), ellers
+# feiler gh pr create → fail-closed-issue.
+name: Ukesversjon
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # mandag 03:00 UTC = 05:00 Oslo sommertid / 04:00 vintertid
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: ukesversjon
+  cancel-in-progress: false
+
+jobs:
+  bokfor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # npm eier version-feltet (npm version --no-git-tag-version). Ingen
+      # npm ci: skriptet har null avhengigheter, og npm version oppdaterer
+      # package-lock.json uten node_modules (verifisert 2026-08-11).
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Bokfør ukas versjon og åpne PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: bash .github/scripts/ukesversjon.sh
+
+      # Rød kjøring skal aldri dø stille (samme mønster som dok-skjema/prod-vakt).
+      # Skriptets egen fail_closed dekker validerings- og PR-feil; dette steget
+      # fanger alt annet uventet i workflowen.
+      - name: Open alert issue on failure
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          TITLE="CI-vakt: ukesversjon-workflowen rød"
+          bash .github/scripts/discord-notify.sh "🔴 **Ukesversjon rød** — $RUN_URL"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Ukesversjon-workflowen feilet uventet.\n\nKjøring: %s\n\nNotatfilene står urørt i `.changes/` — ingen delvis release er skrevet. Rett årsaken og kjør på nytt med `workflow_dispatch`. Format: `.changes/README.md`.' "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -F milestone=9
