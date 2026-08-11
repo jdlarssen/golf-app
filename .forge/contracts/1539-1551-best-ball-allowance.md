@@ -98,12 +98,24 @@ anvendt nøyaktig én gang). Forskjellen er ren intern rørlegging.
   gråsone (auto-foreslått vs. hand-redigert verdi) og trenger sin egen runde.
 - Frittstående best ball røres ikke.
 
-## Kjent konsekvens (akseptert)
+## Konsekvens for eksisterende data: ingen
 
-TestCup – Best ball 1 sitt cup-poeng går fra 85 % til 100 %, fordi dens frosne banehandicap
-er rått og `hcp_allowance_pct` står på 100. Spillet blir dermed **selv-konsistent** på
-100 % i stedet for å sprike mellom to flater. Det er testdata uten levende stilling, og å
-reparere frosne handicap på et ferdigspilt spill ville skrevet om et spilt resultat.
+Kontrakten antok først at TestCup – Best ball 1 ville miste sin 85 % i cup-poenget.
+Den antakelsen var feil, og evalueringen fanget den. Read-only SELECT mot prod:
+
+| Spill | `tournament_id` | `hcp_allowance_pct` |
+|---|---|---|
+| SICKlestad | NULL | 100 |
+| TestCup – Best ball 1 | **NULL** | 100 |
+| Ryder Cup 2026 – Best ball 1–3 | 7fb3caab… | 85 |
+
+TestCup-spillet henger ikke på noen cup, så `getCupSnapshot` har aldri regnet et cup-poeng
+for det — det finnes ingen verdi å miste. De eneste best-ball-spillene som faktisk ligger i
+en cup er de tre Ryder Cup-kampene, og de står allerede i mål-formen (frosset på 85 %).
+
+Endringen rører altså **ingen eksisterende prod-resultater**. Den fjerner dobbelttrekket i
+cup-poenget for de tre kampene — som var feilen — og sikrer at nye cup-best-ball-matcher
+får riktig hjem fra starten.
 
 ## Funksjonelt (for eieren)
 
