@@ -12,7 +12,7 @@ Changeloggen er et tynt, lesbart **hva-er-nytt-feed** for deg som eier og for ap
 
 ## Veien inn: notatfil → ukesslipp
 
-Commiten din legger igjen `.changes/<issue>-<slug>.md`. Mandag 05:00 leser
+Commiten din legger igjen `.changes/<issue>-<slug>.md`. Mandag tidlig morgen (cron `0 3 * * 1` UTC) leser
 ukerutinen alle notatene, velger ÉN versjon for hele uka (minst ett `feat`-notat
 → minor, ellers patch) og skriver oppføringene inn i fila:
 
