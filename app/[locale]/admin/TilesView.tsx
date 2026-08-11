@@ -99,6 +99,86 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
 }
 
 /**
+ * Dense tile list — the everyday core doors on mobile (#1559). Same data as
+ * `TileGridView` in a full-width row: icon left, title + meta stacked, arrow
+ * right. Chosen over the compact grid for these four because the meta line is
+ * why they sit on the front page at all — a door without its count is just a
+ * menu, and the menu already lives in «Mer i Sekretariatet» below.
+ *
+ * Full width (not two columns) so long labels like «Resultatprotokoll» never
+ * clip, and `accent` carries over so the primary door keeps its weight.
+ *
+ * Deliberately ignores `badge` (owner call 2026-08-11): a bare champagne
+ * number doesn't say what it counts, and every place it appeared, the words
+ * were already there — «35 registrert · 2 venter» in the tile's own meta, or
+ * «1 spill med uleverte scorekort» in the «Krever handling»-stripe right
+ * above. The words carry it; the pill only repeated them without a noun.
+ */
+export function DenseTileList({ tiles }: { tiles: Tile[] }) {
+  return (
+    <div className="mb-2 grid grid-cols-1 gap-2">
+      {tiles.map((tile, i) => (
+        <SmartLink
+          key={tile.label}
+          href={tile.href}
+          data-testid={tile.testId}
+          className="reveal-up flex min-h-[60px] items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          style={{
+            animationDelay: `${60 + i * 70}ms`,
+            background: tile.accent ? 'var(--surface-strong)' : 'var(--surface)',
+            color: tile.accent ? 'var(--bg-tint)' : 'var(--text)',
+            border: tile.accent ? 'none' : '1px solid var(--border)',
+            boxShadow: tile.accent
+              ? '0 4px 14px rgba(26, 46, 31, 0.15)'
+              : '0 1px 2px rgba(26, 46, 31, 0.03)',
+          }}
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
+            style={{
+              background: tile.accent
+                ? 'rgba(201, 169, 97, 0.20)'
+                : 'var(--admin-bg)',
+              color: tile.accent ? 'var(--accent)' : 'var(--primary)',
+            }}
+          >
+            <TileIcon kind={tile.icon} size={20} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-serif text-[15px] font-medium tracking-[-0.005em]">
+              {tile.label}
+            </span>
+            {tile.meta && (
+              <span
+                className="mt-0.5 block font-sans text-[11px] tabular-nums"
+                style={{
+                  color: tile.accent
+                    ? 'rgba(240, 237, 229, 0.75)'
+                    : 'var(--text-muted)',
+                }}
+              >
+                {tile.meta}
+              </span>
+            )}
+          </span>
+          <span
+            aria-hidden
+            className="shrink-0 text-[15px]"
+            style={{
+              color: tile.accent
+                ? 'rgba(240, 237, 229, 0.75)'
+                : 'var(--text-muted)',
+            }}
+          >
+            →
+          </span>
+        </SmartLink>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Compact tile grid — the «Mer i Sekretariatet»-section (#914). Same data
  * shape as TileGridView but a denser single-row layout (icon + label, meta
  * dropped) so the everyday core cards stay visually dominant. Tap target stays

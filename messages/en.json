@@ -3257,6 +3257,7 @@
       "playerNewRound": "New round",
       "playerArrangedLabel": "What you arrange",
       "playerSeeAll": "See all",
+      "playerCupMeta": "You are in {n}",
       "playerClubsLabel": "Your clubs",
       "playerNoClub": "Not in a club yet",
       "playerToolsLabel": "Tools",

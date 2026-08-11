@@ -4,7 +4,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
-import { TileGridView, CompactTileGrid, type Tile } from './TilesView';
+import { TileGridView, DenseTileList, type Tile } from './TilesView';
 import type { GameStatus } from '@/lib/games/status';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
 
@@ -70,9 +70,9 @@ export function GreetingView({ name }: { name: string | null }) {
  * (never an empty list); with ≥1 it shrinks the invitation to a quiet
  * «+ Ny runde» affordance above the capped list. The cup tile appears whenever
  * the player is part of ≥1 cup — created, on a draft roster, or played
- * (#1463) — independent of games (#10 discoverability). It is the same compact
- * tile the organiser sees in the admin room (#1557), with the relation count
- * carried by the champagne badge.
+ * (#1463) — independent of games (#10 discoverability). It is the same dense
+ * row the organiser's core doors use (#1557, #1559); the count sits in the
+ * meta line in words, not as a bare champagne number.
  */
 export function ArrangementView({
   games,
@@ -169,14 +169,13 @@ export function ArrangementView({
 
       {cupCount > 0 && (
         <div className="mt-2">
-          <CompactTileGrid
-            columns={1}
+          <DenseTileList
             tiles={[
               {
                 label: t('tilesCuper'),
                 href: '/admin/cup',
+                meta: t('playerCupMeta', { n: cupCount }),
                 icon: 'pokal',
-                badge: cupCount,
                 testId: 'player-cup-row',
               },
             ]}
