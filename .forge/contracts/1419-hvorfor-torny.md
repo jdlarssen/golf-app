@@ -88,7 +88,9 @@ eller eksisterende ikon-konvensjon hvis appen har en.
 - [x] Anonym GET `/hvorfor-torny` og `/en/hvorfor-torny` gir 200 med innhold (ingen
   login-redirect). **Bevis:** evaluator-runde 1: `next start` + anonym curl → 200/200;
   kontroll `/profile` → 307 login-redirect (gaten aktiv).
-- [ ] Innlogget besøkende ser sida MED bunn-nav. **Bevis:** staging-klikk + skjermbilde.
+- [x] Innlogget besøkende ser sida MED bunn-nav. **Bevis:** staging-klikk: login-POST
+  303 → `/hvorfor-torny`, `[data-testid="bottom-nav"]` i live DOM + skjermbilde
+  (Hjem/Innboks/Klubbhuset/Profil synlig). PR #1563-kommentar.
 - [x] Sidestrukturen matcher mockup v3 (alle 9 seksjoner, 8 matriserader, 3 FAQ).
   **Bevis:** evaluator-runde 1: bygget HTML — 9 seksjoner i mockup-rekkefølge, 8
   matriserader, 3 FAQ, 4 fliser i 2×2. Skjermbilde følger i staging-runden.
@@ -113,9 +115,10 @@ eller eksisterende ikon-konvensjon hvis appen har en.
 - [x] `npm run build` + `npm run lint` + berørte co-located tester grønne
   **Bevis:** build exit 0 (begge locale-ruter prerendret); lint 0 errors / 0 nye
   warnings i berørte filer; 34/34 tester grønne (builder + evaluator, uavhengig).
-- [ ] Commit-body `Refs #1419`; PR-body `Closes #1419` + Fordeler/ulemper-blokk
-  (alle 3 commits har `Refs #1419` — PR-body gjenstår)
-- [ ] Staging-bevis-kommentar + `staging-verified`-label FØR merge (#1076)
+- [x] Commit-body `Refs #1419`; PR-body `Closes #1419` + Fordeler/ulemper-blokk
+  **Bevis:** PR #1563 opprettet draft-først med begge deler.
+- [x] Staging-bevis-kommentar + `staging-verified`-label FØR merge (#1076)
+  **Bevis:** PR #1563-kommentar (orakel-tabell) + label satt 2026-08-11.
 - [x] Ingen produktvalg gjenstår (alle tatt av eier i brainstorm) → auto-merge-policyen
   gjelder når portene er grønne
 
