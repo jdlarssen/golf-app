@@ -3274,6 +3274,8 @@
         "not_scheduled": "Spillet kan ikke startes (det er ikke planlagt).",
         "not_active": "Spillet er ikke aktivt og kan ikke avsluttes.",
         "not_editable": "Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.",
+        "not_deletable": "Spillet kan ikke slettes fordi det allerede er startet eller avsluttet.",
+        "unknown": "Noe gikk galt. Prøv igjen.",
         "no_players": "Ingen spillere på dette spillet.",
         "not_all_submitted": "Alle spillere må ha levert scorekort før spillet kan avsluttes.",
         "not_all_approved": "Alle scorekort må være godkjent før spillet kan avsluttes.",

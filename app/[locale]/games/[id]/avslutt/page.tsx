@@ -35,8 +35,8 @@ type SearchParams = Promise<{ error?: string }>;
  * page that adapts to the game's state, delegating to the SAME server actions
  * the admin uses (their redirects branch to /games/* for a non-admin caller):
  *  - peer-approval still pending → blocking notice, no finish button (the gate
- *    the action would enforce anyway, surfaced here so the creator gets feedback
- *    rather than a silent bounce — /games/[id] doesn't render ?error).
+ *    the action would enforce anyway, surfaced here as a wait state up front;
+ *    action failures also render as ?error banners on /games/[id] since #1361).
  *  - side tournament on → LD/CTP winner picker (endGameWithSideWinners). Missing
  *    submitters are listed and auto-allowed (allowMissing = missing > 0).
  *  - no side tournament + missing submitters → «avslutt likevel» with optional

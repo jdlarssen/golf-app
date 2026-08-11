@@ -3274,6 +3274,8 @@
         "not_scheduled": "The game cannot be started (it is not scheduled).",
         "not_active": "The game is not active and cannot be ended.",
         "not_editable": "The game can no longer be edited because it has already been started or ended.",
+        "not_deletable": "The game cannot be deleted because it has already been started or ended.",
+        "unknown": "Something went wrong. Please try again.",
         "no_players": "No players on this game.",
         "not_all_submitted": "All players must have submitted a scorecard before the game can be ended.",
         "not_all_approved": "All scorecards must be approved before the game can be ended.",
