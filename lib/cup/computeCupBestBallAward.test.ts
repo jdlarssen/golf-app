@@ -3,12 +3,17 @@ import {
   computeCupBestBallAward,
   type CupBestBallAwardInput,
 } from './computeCupBestBallAward';
+import { compute as bestBallCompute } from '@/lib/scoring/modes/bestBall';
+import type { ScoringContext } from '@/lib/scoring/modes/types';
 
 // Type-A unit-test for splittet-cup-dagens best-ball-cup-poeng (#1441, D4).
-// Ren funksjon over holes+scores+sides+allowance — netto lagtotal (lavest
-// vinner), IKKE hull-for-hull som matchplay-familien. Funksjonen tar ingen
-// stilling til games.status ('finished') — det er kallerens ansvar
-// (getCupSnapshot, F3b), se kontrakt-kommentaren i selve fila.
+// Ren funksjon over holes+scores+sides — netto lagtotal (lavest vinner), IKKE
+// hull-for-hull som matchplay-familien. Funksjonen tar ingen stilling til
+// games.status ('finished') — det er kallerens ansvar (getCupSnapshot, F3b),
+// se kontrakt-kommentaren i selve fila.
+//
+// #1539/#1551: funksjonen anvender ingen allowance selv. `courseHandicap` er
+// det frosne banehandicapet, der `games.hcp_allowance_pct` alt er trukket fra.
 
 function holes(n: number, startingAt = 10) {
   return Array.from({ length: n }, (_, i) => ({
@@ -44,7 +49,6 @@ describe('computeCupBestBallAward', () => {
         score('b1', 11, 5),
         score('b2', 11, 7),
       ],
-      allowancePct: 0,
     };
     const result = computeCupBestBallAward(input);
     expect(result).toEqual({ winnerSide: 1, formatted: '8–10' });
@@ -72,55 +76,146 @@ describe('computeCupBestBallAward', () => {
         score('b1', 11, 5),
         score('b2', 11, 6),
       ],
-      allowancePct: 0,
     };
     const result = computeCupBestBallAward(input);
     expect(result).toEqual({ winnerSide: 'tied', formatted: '10–10' });
   });
 
-  it('default allowance er 85 (ikke 0) når allowancePct ikke oppgis', () => {
-    // side1 CH 18 (effektiv 85% → 15 → 1 slag/hull på SI 1-2), side2 CH 0.
-    // Likt gross (5) begge hull → uten allowance blir det delt (10-10);
-    // MED default-allowance vinner side1 (netto 4 per hull → 8 total).
+  it('bruker det frosne banehandicapet rått — ingen allowance trekkes her', () => {
+    // Frosset CH 15 = 18 spilt på 85 %, allerede trukket fra ved start.
+    // 15 gir 1 slag på SI 1-2 → netto 4 per hull → 8 total mot side2s 10.
+    // Trakk funksjonen 85 % en gang til (15 → 13), ville side1 fortsatt fått
+    // 1 slag på SI 1-2 her — derfor er det den EKSPLISITTE grensen under som
+    // faktisk fanger dobbelttrekket.
     const h = holes(2);
-    const side1 = [
-      { userId: 'a1', courseHandicap: 18 },
-      { userId: 'a2', courseHandicap: 18 },
-    ];
-    const side2 = [
-      { userId: 'b1', courseHandicap: 0 },
-      { userId: 'b2', courseHandicap: 0 },
-    ];
+    const input: CupBestBallAwardInput = {
+      side1: [
+        { userId: 'a1', courseHandicap: 15 },
+        { userId: 'a2', courseHandicap: 15 },
+      ],
+      side2: [
+        { userId: 'b1', courseHandicap: 0 },
+        { userId: 'b2', courseHandicap: 0 },
+      ],
+      holes: h,
+      scores: [
+        score('a1', 10, 5),
+        score('a2', 10, 5),
+        score('a1', 11, 5),
+        score('a2', 11, 5),
+        score('b1', 10, 5),
+        score('b2', 10, 5),
+        score('b1', 11, 5),
+        score('b2', 11, 5),
+      ],
+    };
+    expect(computeCupBestBallAward(input)).toEqual({
+      winnerSide: 1,
+      formatted: '8–10',
+    });
+  });
+
+  it('Ryder Cup 2026-regresjonen: frosset CH 37 gir 18 slag på 9 hull, ikke 15', () => {
+    // #1551, målt i prod: Kristoffer hadde banehandicap 44, frosset til 37
+    // (85 %). Cup-poenget trakk så 85 % igjen → 31, som gir 15 slag over ni
+    // hull i stedet for 18. Her spiller side1 alene mot scratch-motstand:
+    // med 37 får a1 slag på ALLE ni hull (37 ≥ 9 → minst ett per hull, to på
+    // SI 1-9 der 37-18=19 rekker), med 31 ville hull med SI 7-9 fått ett
+    // slag mindre. Nettoen skiller derfor de to.
+    const h = holes(9);
     const scores = [
-      score('a1', 10, 5),
-      score('a2', 10, 5),
-      score('a1', 11, 5),
-      score('a2', 11, 5),
-      score('b1', 10, 5),
-      score('b2', 10, 5),
-      score('b1', 11, 5),
-      score('b2', 11, 5),
+      ...h.flatMap((hole) => [
+        score('a1', hole.number, 6),
+        score('a2', hole.number, 9),
+        score('b1', hole.number, 5),
+        score('b2', hole.number, 9),
+      ]),
     ];
-
-    const withDefault = computeCupBestBallAward({ side1, side2, holes: h, scores });
-    const withExplicit85 = computeCupBestBallAward({
-      side1,
-      side2,
+    const input: CupBestBallAwardInput = {
+      side1: [
+        { userId: 'a1', courseHandicap: 37 },
+        { userId: 'a2', courseHandicap: 0 },
+      ],
+      side2: [
+        { userId: 'b1', courseHandicap: 0 },
+        { userId: 'b2', courseHandicap: 0 },
+      ],
       holes: h,
       scores,
-      allowancePct: 85,
-    });
-    const withExplicit0 = computeCupBestBallAward({
-      side1,
-      side2,
-      holes: h,
-      scores,
-      allowancePct: 0,
-    });
+    };
+    // a1: 37 CH over 9 hull → 4 slag på SI 1 (37 = 4*9 + 1 → SI 1 får 5),
+    // uansett minst 4 per hull. Gross 6 − 4 = 2 eller lavere per hull.
+    // Poenget er ikke det eksakte tallet, men at side1 vinner — med et ekstra
+    // 85 %-trekk (31) ville nettoene vært høyere.
+    const result = computeCupBestBallAward(input);
+    expect(result?.winnerSide).toBe(1);
 
-    expect(withDefault).toEqual({ winnerSide: 1, formatted: '8–10' });
-    expect(withDefault).toEqual(withExplicit85);
-    expect(withExplicit0).toEqual({ winnerSide: 'tied', formatted: '10–10' });
+    const doubleAllowanced = computeCupBestBallAward({
+      ...input,
+      side1: [
+        { userId: 'a1', courseHandicap: 31 },
+        { userId: 'a2', courseHandicap: 0 },
+      ],
+    });
+    // Regresjonsvakten: 37 og 31 SKAL gi ulikt resultat. Gjør de ikke det,
+    // måler testen ingenting.
+    expect(result?.formatted).not.toBe(doubleAllowanced?.formatted);
+  });
+
+  // #1539/#1551, kriterium K5: kampens egen tavle (motorens `compute()`) og
+  // cup-poenget må regne med SAMME effektive banehandicap. De to gjorde det
+  // ikke før: `compute()` brukte den frosne verdien, cup-poenget la en ny
+  // allowance oppå. Testen sammenligner de to lagene direkte.
+  describe('samme effektive handicap som kampens egen tavle', () => {
+    it('lagtotalene fra bestBall.compute() er identiske med cup-poengets', () => {
+      const h = holes(9);
+      const frozen = { a1: 37, a2: 4, b1: 9, b2: 2 };
+      const gross: Record<string, number> = { a1: 6, a2: 5, b1: 5, b2: 6 };
+      const flatScores = h.flatMap((hole) =>
+        (['a1', 'a2', 'b1', 'b2'] as const).map((id) =>
+          score(id, hole.number, gross[id]),
+        ),
+      );
+
+      const ctx: ScoringContext = {
+        game: {
+          id: 'g1',
+          game_mode: 'best_ball',
+          mode_config: { kind: 'best_ball', team_size: 2, teams_count: 2 },
+        },
+        players: [
+          { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: frozen.a1 },
+          { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: frozen.a2 },
+          { userId: 'b1', teamNumber: 2, flightNumber: 1, courseHandicap: frozen.b1 },
+          { userId: 'b2', teamNumber: 2, flightNumber: 1, courseHandicap: frozen.b2 },
+        ],
+        holes: h.map((hole) => ({ number: hole.number, par: 4, strokeIndex: hole.strokeIndex })),
+        scores: flatScores.map((s) => ({
+          userId: s.userId,
+          holeNumber: s.holeNumber,
+          gross: s.gross,
+        })),
+      };
+
+      const engine = bestBallCompute(ctx);
+      const team1 = engine.teams.find((t) => t.teamNumber === 1);
+      const team2 = engine.teams.find((t) => t.teamNumber === 2);
+
+      const award = computeCupBestBallAward({
+        side1: [
+          { userId: 'a1', courseHandicap: frozen.a1 },
+          { userId: 'a2', courseHandicap: frozen.a2 },
+        ],
+        side2: [
+          { userId: 'b1', courseHandicap: frozen.b1 },
+          { userId: 'b2', courseHandicap: frozen.b2 },
+        ],
+        holes: h,
+        scores: flatScores,
+      });
+
+      expect(award?.formatted).toBe(`${team1?.total}–${team2?.total}`);
+    });
   });
 
   it('manglende scores på ETT hull for én side → null (partial sum kan ikke sammenlignes)', () => {

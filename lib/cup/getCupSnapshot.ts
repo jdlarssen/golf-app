@@ -390,12 +390,12 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       });
     }
 
-    // `mode_config` — `allowance_pct` for lag-format, `team_strokes_override`
-    // KUN meningsfullt for greensome (D10). Best-ball-hosten (D4/D11) lagrer
-    // OGSÅ `allowance_pct` (85%-default) selv om standard `best_ball`-modusen
-    // ikke har feltet i sin `GameModeConfig` — cup-laget legger det på selv
-    // (se `createCupMatchesFromPlan`/`cupMatchModeConfig`) fordi
-    // `computeCupBestBallAward` (under) trenger det, ikke matchplay-dispatchen.
+    // `mode_config` — `allowance_pct` for matchplay-familiens lag-format,
+    // `team_strokes_override` KUN meningsfullt for greensome (D10).
+    // Best-ball-hosten (D4/D11) har IKKE `allowance_pct` her (#1539/#1551):
+    // dens allowance bor på `games.hcp_allowance_pct` og er alt anvendt i det
+    // frosne banehandicapet, slik at kampens egen tavle og cup-poenget regner
+    // med samme tall. Se `lib/cup/cupMatchAllowance.ts`.
     const modeConfig = (game.mode_config ?? null) as {
       allowance_pct?: number;
       team_strokes_override?: { team1: number; team2: number };
@@ -426,7 +426,6 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
         side2: side2Input,
         holes: holes.map((h) => ({ number: h.number, strokeIndex: h.strokeIndex })),
         scores: scoresInput,
-        allowancePct: modeConfig?.allowance_pct,
       });
     } else {
       // Match-scoring via tabell-drevet dispatcher (#331). Dekker alle seks
