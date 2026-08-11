@@ -91,18 +91,24 @@ Render-/bump-/valideringslogikken skrives som rene, eksporterte funksjoner i skr
 
 ## Success Criteria
 
-- [ ] `npx vitest run scripts/` grønn med dekning for: bump-valg (feat-miks/kun fix/tom), Funksjon-rad-render, Feilrettings-linje inkl. kommaliste-issues, månedsskuff-rollover + teller, valideringsfeil på ugyldig frontmatter.
-- [ ] Lokal `--dry-run` med syntetiske notater (minst 2 feat + 2 fix, én i «ny» måned) viser korrekt CHANGELOG-diff + riktig bump — diff limes som bevis i PR-en.
-- [ ] Hook-røyktest dokumentert i PR-en: (a) feat-commit uten notatfil blokkeres, (b) med notatfil passerer, (c) med `[no-changelog]` passerer, (d) commit som rører `"version"` blokkeres, (e) `chore(release)`-commit med version-endring passerer.
-- [ ] `ukesversjon.yml` har cron `0 3 * * 1`, `workflow_dispatch`, fail-closed-steg med Discord + dedupet alert-issue (verifiserbart ved lesing mot dok-skjema-mønsteret).
-- [ ] Alle fem dokument-oppdateringene i tabellen er gjort; `grep -rn "npm version" docs/ CLAUDE.md` viser ingen gjenlevende per-commit-bump-instruks utenfor historiske loggfiler.
-- [ ] `.changes/README.md` finnes og viser notatfil-malen.
+- [x] `npx vitest run scripts/` grønn med dekning for: bump-valg (feat-miks/kun fix/tom), Funksjon-rad-render, Feilrettings-linje inkl. kommaliste-issues, månedsskuff-rollover + teller, valideringsfeil på ugyldig frontmatter.
+  → `Test Files 1 passed (1) · Tests 42 passed (42)` (`scripts/weekly-release.test.mjs`). Rød først (modulen fantes ikke), så grønn.
+- [x] Lokal `--dry-run` med syntetiske notater (minst 2 feat + 2 fix, én i «ny» måned) viser korrekt CHANGELOG-diff + riktig bump — diff limes som bevis i PR-en.
+  → To fixture-røtter, 4 notater hver (2 feat, 1 fix m/ kommaliste, 1 perf issue-løs): fixture A (August-skuffen finnes) ga `minor 1.231.2 → 1.232.0`, teller 37 → 39; fixture B (siste skuff Juli) åpnet ny `August 2026 · 2 rettinger`-skuff. Diffene er i PR-body-en.
+- [x] Hook-røyktest dokumentert i PR-en: (a) feat-commit uten notatfil blokkeres, (b) med notatfil passerer, (c) med `[no-changelog]` passerer, (d) commit som rører `"version"` blokkeres, (e) `chore(release)`-commit med version-endring passerer.
+  → Kjørt i engangsrepo (worktreet arver hovedrepoets `core.hooksPath`, så den nye hooken må testes isolert). Alle fem som spesifisert, pluss tre kontroller: feat uten `Refs #N` fortsatt blokkert, `docs:` passerer fritt, og `.changes/README.md` alene teller ikke som notat.
+- [x] `ukesversjon.yml` har cron `0 3 * * 1`, `workflow_dispatch`, fail-closed-steg med Discord + dedupet alert-issue (verifiserbart ved lesing mot dok-skjema-mønsteret).
+  → `.github/workflows/ukesversjon.yml:23` cron, `:24` dispatch, `:52–75` alert-steget; `.github/scripts/ukesversjon.sh:36–66` `open_or_note_issue`/`fail_closed` (milestone 9 + `discord-notify.sh`). Yaml parset med js-yaml. Skriptet røyktestet med stubbet `gh`: tom uke → exit 0 uten PR; to notater → bump, branch, commit, push, PR; ugyldig notat → exit 1, varsel-issue, arbeidstre urørt.
+- [x] Alle fem dokument-oppdateringene i tabellen er gjort; `grep -rn "npm version" docs/ CLAUDE.md` viser ingen gjenlevende per-commit-bump-instruks utenfor historiske loggfiler.
+  → Gjenstående treff kun i `docs/plans/**` og `docs/superpowers/{plans,specs}/**` (daterte engangsplaner/-specer). Filtrert grep utenfor historiske kataloger: 0 treff.
+- [x] `.changes/README.md` finnes og viser notatfil-malen.
+  → Filnavn-konvensjon, feat- og fix-mal, felt-tabell med grenser, stemme-peker til `docs/changelog-conventions.md`, og `--dry-run`-oppskrift.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` passerer
-- [ ] `npm run lint` passerer
-- [ ] `npx vitest run scripts/` passerer (+ colocated tester for evt. andre endrede filer)
+- [x] `npx tsc --noEmit` passerer — exit 0
+- [x] `npm run lint` passerer — `✖ 55 problems (0 errors, 55 warnings)`, alle warnings pre-eksisterende (0 treff på `weekly-release`)
+- [x] `npx vitest run scripts/` passerer (+ colocated tester for evt. andre endrede filer) — 42/42; ingen andre endrede filer har colocated tester (branchen rører ingen filer under `app/`, `lib/` eller `components/`)
 
 ## Files Likely Touched
 
