@@ -97,6 +97,7 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
   return (
     <nav
       aria-label={t('ariaLabel')}
+      data-testid="bottom-nav"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 backdrop-blur-sm"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
