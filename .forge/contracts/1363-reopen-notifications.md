@@ -45,12 +45,12 @@ Følg 0149-mønsteret (`0149_scorecard_rejected_notification.sql` — siste kind
 
 ## Success Criteria
 
-- [ ] Gjenåpnes et scorekort, får spilleren in-app-varsel med spillnavn og deeplink til spill-hjem; å tappe varselet lander på `/games/[id]`.
-- [ ] Gjenåpnes et spill, får alle aktive (ikke-withdrawn) deltakere varsel.
+- [x] Gjenåpnes et scorekort, får spilleren in-app-varsel med spillnavn og deeplink til spill-hjem; å tappe varselet lander på `/games/[id]`. **Bevis:** staging-driver: varselkort rendret med spillnavn, tapp landet på `/games/62816e8c-…`; SQL: 1 rad til spilleren (PR #1565-kommentar).
+- [x] Gjenåpnes et spill, får alle aktive (ikke-withdrawn) deltakere varsel. **Bevis:** staging-driver + SQL: `game_reopened` til spilleren, aktøren ekskludert; status tilbake til active (PR #1565-kommentar).
 - [x] Feilet varsling endrer ikke utfallet av gjenåpningen (verifiserbart: simulert notify-feil → redirect skjer, console.error logges). **Bevis:** unit-test i actions.test.ts (notify-feil → suksess-redirect + console.error), evaluator-runde 1.
 - [x] Ingen varsel ved no-op-gjenåpning (kort som ikke var levert). **Bevis:** expectAffected/NoRowsAffectedError-sti unit-testet: idempotent suksess uten notify og uten audit-logg (evaluator-runde 1).
 - [x] Kind-CHECK utvidet og påført staging med verifisering; typer/zod/cardContent/deeplink/EMOJI/mark-read dekker begge kinds; `tsc`/`lint`/`vitest` grønne. **Bevis:** 0158 påført staging via MCP, pg_get_constraintdef viser 28 kinds (hovedøkt + evaluator uavhengig); tsc exit 0, build exit 0, 174 tester grønne.
-- [ ] Staging-verifisering av begge flyter før merge.
+- [x] Staging-verifisering av begge flyter før merge. **Bevis:** orakel-tabell + prod-vakt på PR #1565; label `staging-verified` satt 2026-08-11.
 
 ## Gates
 
