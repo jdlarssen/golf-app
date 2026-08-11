@@ -2013,6 +2013,8 @@
       "missingNoteBold": "not submitted",
       "unapprovedCount": "{count, plural, one {Waiting for 1 scorecard to be approved:} other {Waiting for # scorecards to be approved:}}",
       "unapprovedNote": "A co-player must approve each scorecard before you can finish. Ask them to open the game and approve, then you can finish here.",
+      "approveOverrideNote": "If you can't reach them, you can approve on behalf of the group as the organiser under «Manage players».",
+      "approveOverrideCta": "Approve on behalf of the group",
       "backToGame": "Back to game",
       "withdrawLabel": "Mark as withdrawn",
       "explanationAllowWd": "If you finish now, players without a tick will be recorded as not submitted. Scores they managed to enter still count. Players with a tick will be marked as Withdrawn and won't count in the standings. The rest will be locked and the leaderboard will open for everyone.",

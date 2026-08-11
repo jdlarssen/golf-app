@@ -2013,6 +2013,8 @@
       "missingNoteBold": "ikke levert",
       "unapprovedCount": "{count, plural, one {Venter på at 1 scorekort blir godkjent:} other {Venter på at # scorekort blir godkjent:}}",
       "unapprovedNote": "En medspiller må godkjenne hvert scorekort før du kan avslutte. Be dem åpne spillet og godkjenne, så kan du avslutte her.",
+      "approveOverrideNote": "Får du ikke tak i dem, kan du som arrangør godkjenne på vegne av gruppa under «Styr spillere».",
+      "approveOverrideCta": "Godkjenn på vegne av gruppa",
       "backToGame": "Tilbake til spillet",
       "withdrawLabel": "Marker som trukket",
       "explanationAllowWd": "Avslutter du nå, blir spillere uten hake stående som ikke levert. Scorene de rakk å registrere teller fortsatt. Spillere med hake markeres som Trukket og teller ikke i rangeringen. Resten låses og leaderboard åpnes for alle.",
