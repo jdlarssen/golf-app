@@ -4,7 +4,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
-import { TileGridView, type Tile } from './TilesView';
+import { TileGridView, CompactTileGrid, type Tile } from './TilesView';
 import type { GameStatus } from '@/lib/games/status';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
 
@@ -68,9 +68,11 @@ export function GreetingView({ name }: { name: string | null }) {
  * Arrangement block — the invitation ⇄ arranged switch plus the optional cup
  * row. With no created games it leads with the «Sett opp en runde» invitation
  * (never an empty list); with ≥1 it shrinks the invitation to a quiet
- * «+ Ny runde» affordance above the capped list. The cup row appears whenever
+ * «+ Ny runde» affordance above the capped list. The cup tile appears whenever
  * the player is part of ≥1 cup — created, on a draft roster, or played
- * (#1463) — independent of games (#10 discoverability).
+ * (#1463) — independent of games (#10 discoverability). It is the same compact
+ * tile the organiser sees in the admin room (#1557), with the relation count
+ * carried by the champagne badge.
  */
 export function ArrangementView({
   games,
@@ -166,22 +168,20 @@ export function ArrangementView({
       )}
 
       {cupCount > 0 && (
-        <SmartLink
-          href="/admin/cup"
-          data-testid="player-cup-row"
-          className={`mt-2 ${ROW_LINK}`}
-        >
-          <Card className="min-h-[44px] bg-surface/60 p-4 transition-colors hover:border-primary/30">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-sans text-sm font-medium text-text">
-                {t('playerCupRow', { n: cupCount })}
-              </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </div>
-          </Card>
-        </SmartLink>
+        <div className="mt-2">
+          <CompactTileGrid
+            columns={1}
+            tiles={[
+              {
+                label: t('tilesCuper'),
+                href: '/admin/cup',
+                icon: 'pokal',
+                badge: cupCount,
+                testId: 'player-cup-row',
+              },
+            ]}
+          />
+        </div>
       )}
     </section>
   );
