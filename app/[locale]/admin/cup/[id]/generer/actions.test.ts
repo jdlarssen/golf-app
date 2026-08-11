@@ -586,12 +586,17 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     expect(bestBallRow.hole_segment).toBe('back9');
     expect(bestBallRow.score_visibility).toBe('reveal');
     expect(bestBallRow.source_game_id).toBeUndefined();
+    // #1539/#1551: best_ball bærer allowancen på games-raden, ikke i
+    // mode_config — den anvendes én gang når course_handicap fryses, så
+    // kampens tavle og cup-poenget leser samme tall.
     expect(bestBallRow.mode_config).toEqual({
       kind: 'best_ball',
       team_size: 2,
       teams_count: 2,
-      allowance_pct: 85, // reuses draftCup's fourball_allowance_pct (D4/D11 ASSUMPTION)
     });
+    expect(bestBallRow.hcp_allowance_pct).toBe(85); // draftCups fourball_allowance_pct (D4/D11 ASSUMPTION)
+    // Matchplay-familien beholder sitt hjem i mode_config og står på 100 der.
+    expect(greensomeRow.hcp_allowance_pct).toBe(100);
 
     // #1441 (D3): kjernebeviset — source_game_id peker på det VIRKELIG
     // innsatte host-id-et ('game-bestball'), ikke plan-lokale 'best_ball-1'.
@@ -645,7 +650,7 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     });
   });
 
-  it('planens best_ball_allowance_pct overstyrer best_ball mode_config.allowance_pct i stedet for cupens fourball-default (#1441 F3c → #1472)', async () => {
+  it('planens best_ball_allowance_pct overstyrer best_ball hcp_allowance_pct i stedet for cupens fourball-default (#1441 F3c → #1472)', async () => {
     const match: CupBatchMatch = {
       id: 'best_ball-1',
       format: 'best_ball',
@@ -677,12 +682,13 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     const row = supabaseMock.__fromCalls.find(
       (c) => c.table === 'games' && c.method === 'insert',
     )!.args[0] as Record<string, unknown>;
+    // #1539/#1551: verdien lander på games-raden, ikke i mode_config.
     expect(row.mode_config).toEqual({
       kind: 'best_ball',
       team_size: 2,
       teams_count: 2,
-      allowance_pct: 70,
     });
+    expect(row.hcp_allowance_pct).toBe(70);
   });
 });
 
