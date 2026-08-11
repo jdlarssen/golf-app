@@ -23,6 +23,7 @@ export function ReopenScorecardButton({ reopenAction, playerName }: Props) {
         variant="secondary"
         className="whitespace-nowrap text-sm"
         pendingLabel={t('reopeningScorecardBusy')}
+        data-testid="reopen-scorecard"
       >
         {t('reopenScorecard')}
       </SubmitButton>

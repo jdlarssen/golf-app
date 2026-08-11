@@ -19,7 +19,12 @@ export function ReopenGameButton({ reopenAction }: Props) {
         }
       }}
     >
-      <SubmitButton variant="secondary" className="w-full" pendingLabel={t('reopeningGame')}>
+      <SubmitButton
+        variant="secondary"
+        className="w-full"
+        pendingLabel={t('reopeningGame')}
+        data-testid="reopen-game"
+      >
         {t('reopenGame')}
       </SubmitButton>
     </form>
