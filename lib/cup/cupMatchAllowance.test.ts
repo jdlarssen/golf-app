@@ -52,7 +52,7 @@ describe('cupMatchAllowance', () => {
       ['greensome_matchplay', 100],
       ['chapman_matchplay', 100],
       ['gruesome_matchplay', 50],
-    ] as const)('%s får %i %% i mode_config og 100 på spill-raden', (format, pct) => {
+    ] as const)('%s får allowance %i i mode_config og 100 på spill-raden', (format, pct) => {
       expect(cupMatchAllowance(format, PCTS)).toEqual({
         hcpAllowancePct: 100,
         modeConfigAllowancePct: pct,
@@ -70,8 +70,21 @@ describe('cupMatchAllowance', () => {
   });
 
   describe('invariant: allowancen har ett hjem', () => {
+    // Lista er utledet fra et Record<CupBundleFormat, true>, så typen fanger et
+    // manglende format ved kompilering. Denne testen fanger det motsatte: at
+    // noen fjerner et format fra Record-en for å slippe unna invarianten under.
     it('dekker alle sju cup-formatene', () => {
-      expect(ALL_CUP_MATCH_FORMATS).toHaveLength(7);
+      expect([...ALL_CUP_MATCH_FORMATS].sort()).toEqual(
+        [
+          'best_ball',
+          'chapman_matchplay',
+          'fourball_matchplay',
+          'foursomes_matchplay',
+          'greensome_matchplay',
+          'gruesome_matchplay',
+          'singles_matchplay',
+        ].sort(),
+      );
     });
 
     // Kjernen i #1539/#1551. Bærer BEGGE lagene en verdi ≠ 100, anvendes
