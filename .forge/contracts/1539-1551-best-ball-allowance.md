@@ -44,30 +44,52 @@ anvendt nøyaktig én gang). Forskjellen er ren intern rørlegging.
 
 ## Suksesskriterier
 
-- [ ] **K1.** `lib/cup/cupMatchAllowance.ts` finnes: ren funksjon som for hvert cup-format
+- [x] **K1.** `lib/cup/cupMatchAllowance.ts` finnes: ren funksjon som for hvert cup-format
       returnerer `{ hcpAllowancePct, modeConfigAllowancePct }`, og `best_ball` får
       allowancen i `hcpAllowancePct` (ikke i mode_config).
-- [ ] **K2.** Invariant-test: for hvert av de sju cup-formatene bærer **høyst ett** av de
+      **Evidens:** `lib/cup/cupMatchAllowance.ts:82-104`;
+      `cupMatchAllowance('best_ball', …)` → `{ hcpAllowancePct: 85, modeConfigAllowancePct: null }`.
+- [x] **K2.** Invariant-test: for hvert av de sju cup-formatene bærer **høyst ett** av de
       to lagene en verdi ≠ 100. Testen feiler hvis en framtidig endring gir begge en verdi.
       (Mønster: `lib/courses/teeRatingDbCheck.test.ts`.)
-- [ ] **K3.** `createCupMatchesFromPlan` setter `hcp_allowance_pct` eksplisitt på hver
+      **Evidens:** `lib/cup/cupMatchAllowance.test.ts` «invariant: allowancen har ett hjem»
+      — kjører over `ALL_CUP_MATCH_FORMATS` både med WHS-defaults og med
+      arrangør-verdier der hvert format avviker fra 100. `24 passed`.
+- [x] **K3.** `createCupMatchesFromPlan` setter `hcp_allowance_pct` eksplisitt på hver
       match-rad fra helperen — ingen match arver DB-defaulten stilltiende lenger.
-- [ ] **K4.** `computeCupBestBallAward` anvender ingen allowance selv; `allowancePct`-
+      **Evidens:** `app/[locale]/admin/cup/[id]/generer/actions.ts` — `hcp_allowance_pct:
+      cupMatchAllowance(match.format, allowances).hcpAllowancePct` i `insertMatch`.
+- [x] **K4.** `computeCupBestBallAward` anvender ingen allowance selv; `allowancePct`-
       parameteren er borte fra signaturen og fra `getCupSnapshot`s kall.
-- [ ] **K5.** En ny cup-best-ball-match gir samme effektive banehandicap på kampens egen
+      **Evidens:** `lib/cup/computeCupBestBallAward.ts` — `applyAllowance`-importen er
+      fjernet, `strokesForHole(p.courseHandicap, …)` leser frosset verdi rått;
+      `lib/cup/getCupSnapshot.ts` sender ikke lenger `allowancePct`.
+- [x] **K5.** En ny cup-best-ball-match gir samme effektive banehandicap på kampens egen
       tavle (`bestBall.compute()`) som i cup-poenget — verifisert med en test som regner
       begge veier på samme input.
-- [ ] **K6.** Frittstående best ball er uendret: `hcp_allowance_pct` fra veiviseren,
+      **Evidens (test):** `computeCupBestBallAward.test.ts` → «lagtotalene fra
+      bestBall.compute() er identiske med cup-poengets».
+      **Evidens (staging, ekte prod-data):** Ryder Cup 2026 klonet til `torny-staging`
+      med dobbelt-trekk-dataen intakt (`hcp_allowance_pct = 85` OG
+      `mode_config.allowance_pct = 85`). Kampens tavle: Lag 1 **32**, Lag 2 **33**.
+      Cup-resultatsiden: «BEST BALL 1 … **32–33** til Team Trøndelag». Samme tall.
+      De tre best-ball-kampene gir nå 32–33, Delt (31–31) og 37–33 — nøyaktig verdiene
+      #1551 forutsa for enkel allowance.
+- [x] **K6.** Frittstående best ball er uendret: `hcp_allowance_pct` fra veiviseren,
       anvendt ved frysing, én gang.
+      **Evidens:** ingen endring i `useGameFormState.ts`/`gamePayload.ts`; begge
+      best_ball-konstruktørene der (`gamePayload.ts:572` og `:2156`) bygde allerede
+      `mode_config` uten `allowance_pct`, i tråd med `types.ts:408`. Cup-stien var den
+      eneste som la feltet på, via en `as GameModeConfig`-cast forbi typen.
 
 ## Porter
 
-| Port | Kommando | Krav |
-|---|---|---|
-| Enhetstester | `npx vitest run lib/cup` | grønn |
-| Scoring-suiten | `npx vitest run lib/scoring` | grønn (skal være urørt) |
-| Full build | `npm run build` | grønn (§T2 — tsc alene er ikke nok) |
-| Staging | klikk-gjennom av en cup-best-ball-kamp | tavle og cup-poeng viser samme slag |
+| Port | Kommando | Krav | Resultat |
+|---|---|---|---|
+| Enhetstester | `npx vitest run lib/cup` | grønn | ✅ 24 filer, 417 tester |
+| Scoring-suiten | `npx vitest run lib/scoring` | grønn (skal være urørt) | ✅ 46 filer, 1130 tester |
+| Full build | `npm run build` | grønn (§T2 — tsc alene er ikke nok) | ✅ |
+| Staging | klikk-gjennom av en cup-best-ball-kamp | tavle og cup-poeng viser samme slag | ✅ 32–33 begge steder |
 
 ## Avgrensning
 
