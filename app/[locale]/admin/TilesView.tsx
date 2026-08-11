@@ -30,11 +30,15 @@ export type TileIconKind =
 export type Tile = {
   label: string;
   href: string;
-  meta: string;
+  /** Sub-label under the title. Rendered by `TileGridView` only — the compact
+   *  grid drops it — so tiles that only ever appear compact can omit it. */
+  meta?: string;
   icon: TileIconKind;
   accent?: boolean;
   /** Optional count surfaced as a champagne pill top-right (capped «9+»). */
   badge?: number;
+  /** Hook for tests/e2e to address one specific tile. */
+  testId?: string;
 };
 
 /**
@@ -49,6 +53,7 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
         <SmartLink
           key={tile.label}
           href={tile.href}
+          data-testid={tile.testId}
           className="reveal-up relative min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           style={{
             animationDelay: `${60 + i * 70}ms`,
@@ -75,16 +80,18 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
           <p className="font-serif text-base font-medium tracking-[-0.005em]">
             {tile.label}
           </p>
-          <p
-            className="mt-0.5 font-sans text-[11px] tabular-nums"
-            style={{
-              color: tile.accent
-                ? 'rgba(240, 237, 229, 0.75)'
-                : 'var(--text-muted)',
-            }}
-          >
-            {tile.meta}
-          </p>
+          {tile.meta && (
+            <p
+              className="mt-0.5 font-sans text-[11px] tabular-nums"
+              style={{
+                color: tile.accent
+                  ? 'rgba(240, 237, 229, 0.75)'
+                  : 'var(--text-muted)',
+              }}
+            >
+              {tile.meta}
+            </p>
+          )}
         </SmartLink>
       ))}
     </div>
@@ -96,14 +103,26 @@ export function TileGridView({ tiles }: { tiles: Tile[] }) {
  * shape as TileGridView but a denser single-row layout (icon + label, meta
  * dropped) so the everyday core cards stay visually dominant. Tap target stays
  * ≥44px (min-h-[56px]); the champagne badge is supported here too.
+ *
+ * `columns` drops to 1 for a lone tile (#1557: the player room's cup entry),
+ * which would otherwise sit half-width with dead space beside it.
  */
-export function CompactTileGrid({ tiles }: { tiles: Tile[] }) {
+export function CompactTileGrid({
+  tiles,
+  columns = 2,
+}: {
+  tiles: Tile[];
+  columns?: 1 | 2;
+}) {
   return (
-    <div className="mb-2 grid grid-cols-2 gap-2.5">
+    <div
+      className={`mb-2 grid gap-2.5 ${columns === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
+    >
       {tiles.map((tile, i) => (
         <SmartLink
           key={tile.label}
           href={tile.href}
+          data-testid={tile.testId}
           className="reveal-up relative flex min-h-[56px] items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2.5 text-left text-text transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           style={{ animationDelay: `${60 + i * 70}ms` }}
         >
