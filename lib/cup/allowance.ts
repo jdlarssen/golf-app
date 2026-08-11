@@ -25,11 +25,15 @@ export const ALLOWANCE_DEFAULTS = {
   gruesome: 50,
   /**
    * WHS default for best ball (fourball, strokeplay-scored): each player 85%
-   * of handicap. Used by splittet-cup-dag's back9 host match (#1441, D4/D11) —
-   * the standard `best_ball` game mode has no `allowance_pct` field of its own
-   * (`compute()` in lib/scoring/modes/bestBall.ts uses raw courseHandicap), so
-   * the cup layer applies this allowance itself before feeding effective
-   * handicaps into the best-ball award calculation.
+   * of handicap. Used by splittet-cup-dag's back9 host match (#1441, D4/D11).
+   *
+   * Unlike the matchplay formats above, this percentage is NOT applied at
+   * compute time (#1539/#1551). It lands in `games.hcp_allowance_pct` — see
+   * `cupMatchAllowance` — and is applied once when `startScheduledGame`
+   * freezes `game_players.course_handicap`. Both the match's own leaderboard
+   * (`compute()` in lib/scoring/modes/bestBall.ts) and the cup point
+   * (`computeCupBestBallAward`) then read that frozen value raw, so they
+   * cannot disagree about how many strokes a player got.
    */
   bestBall: 85,
 } as const;

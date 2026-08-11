@@ -1,7 +1,5 @@
-import { applyAllowance } from '@/lib/scoring/courseHandicap';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { bestBallForHole, teamTotal } from '@/lib/scoring/modes/bestBall';
-import { ALLOWANCE_DEFAULTS } from './allowance';
 
 /**
  * Splittet-cup-dagens best-ball-cup-poeng (#1441, D4/D11): en av de fire
@@ -14,12 +12,18 @@ import { ALLOWANCE_DEFAULTS } from './allowance';
  * annen sammenligning (sum vs. sum, ingen hull-for-hull-vinner) og trenger
  * ikke `ScoringContext`s fulle shape — en slankere egen input holder.
  *
- * Allowance: standard `best_ball`-modusen (lib/scoring/modes/bestBall.ts) har
- * INGEN `allowance_pct` i sin `mode_config` — den bruker rå `courseHandicap`.
- * Splittet-cup-dagens best-ball-host trenger derimot WHS-allowance (85 %
- * default, `ALLOWANCE_DEFAULTS.bestBall`), så denne funksjonen anvender
- * `applyAllowance` selv før den bygger per-hull-nettoene (samme mønster som
- * `fourballMatchplay.ts` bruker for sin egen allowance).
+ * Allowance (#1539/#1551): denne funksjonen anvender INGEN allowance selv. Den
+ * leser `courseHandicap` rått — nøyaktig som motorens egen `compute()` i
+ * `lib/scoring/modes/bestBall.ts`, som driver kampens leaderboard. Allowancen
+ * er alt anvendt én gang, da `startScheduledGame` frøs
+ * `game_players.course_handicap` med `games.hcp_allowance_pct`
+ * (`cupMatchAllowance` sørger for at cup-best-ball-matcher får arrangørens
+ * prosent der).
+ *
+ * Funksjonen anvendte tidligere `mode_config.allowance_pct` selv. Det ga to
+ * hjem for samme regel: kampens tavle brukte den frosne verdien mens
+ * cup-poenget la en ny allowance oppå — samme kamp, to ulike antall slag
+ * (Ryder Cup 2026: 85 % ble effektivt ~72 % i cup-poenget).
  */
 
 export type CupBestBallSidePlayer = { userId: string; courseHandicap: number };
@@ -29,8 +33,6 @@ export type CupBestBallAwardInput = {
   side2: CupBestBallSidePlayer[];
   holes: Array<{ number: number; strokeIndex: number }>;
   scores: Array<{ userId: string; holeNumber: number; gross: number | null }>;
-  /** HCP-allowance 0..100. Default `ALLOWANCE_DEFAULTS.bestBall` (85) når undefined. */
-  allowancePct?: number;
 };
 
 export type CupBestBallAwardResult = {
@@ -59,8 +61,6 @@ export function computeCupBestBallAward(
   if (input.side1.length !== 2 || input.side2.length !== 2) return null;
   if (input.holes.length === 0) return null;
 
-  const allowancePct = input.allowancePct ?? ALLOWANCE_DEFAULTS.bestBall;
-
   const grossByKey = new Map<string, number | null>();
   for (const s of input.scores) {
     grossByKey.set(`${s.userId}#${s.holeNumber}`, s.gross);
@@ -70,8 +70,7 @@ export function computeCupBestBallAward(
     const holeRows = input.holes.map((hole) => {
       const players = side.map((p) => {
         const gross = grossByKey.get(`${p.userId}#${hole.number}`) ?? null;
-        const effective = applyAllowance(p.courseHandicap, allowancePct);
-        const extraStrokes = strokesForHole(effective, hole.strokeIndex);
+        const extraStrokes = strokesForHole(p.courseHandicap, hole.strokeIndex);
         return { userId: p.userId, gross, extraStrokes };
       });
       const bb = bestBallForHole(players);

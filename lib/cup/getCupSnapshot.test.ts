@@ -152,7 +152,10 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
             name: 'Splittet cup-dag – Best ball 1',
             status: 'finished',
             game_mode: 'best_ball',
-            mode_config: { kind: 'best_ball', team_size: 2, teams_count: 2, allowance_pct: 85 },
+            // #1539/#1551: best_ball har ingen `allowance_pct` i mode_config —
+            // allowancen bor på `games.hcp_allowance_pct` og er alt trukket fra
+            // i det frosne banehandicapet.
+            mode_config: { kind: 'best_ball', team_size: 2, teams_count: 2 },
             tournament_match_label: 'Best ball 1',
             course_id: 'c1',
             tee_box_id: 'tb1',

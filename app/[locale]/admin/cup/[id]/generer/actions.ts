@@ -12,6 +12,10 @@ import {
   exceedsPersonalPlayerCap,
 } from '@/lib/cup/limits';
 import { ALLOWANCE_DEFAULTS } from '@/lib/cup/allowance';
+import {
+  cupMatchAllowance,
+  type CupAllowancePcts,
+} from '@/lib/cup/cupMatchAllowance';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { isTeeOffInPast } from '@/lib/games/gamePayload';
 import { resolveScheduledTeeOffAt } from '@/lib/cup/splitDayLineup';
@@ -45,28 +49,10 @@ const MATCH_LABEL_MAX = 80;
 const GAME_NAME_MAX = 120;
 // Allowance defaults imported from @/lib/cup/allowance (ALLOWANCE_DEFAULTS) — #809.
 
-type CupAllowancePcts = {
-  fourball: number;
-  foursomes: number;
-  greensome: number;
-  chapman: number;
-  gruesome: number;
-  /**
-   * #1441 (D4/D11) ASSUMPTION: `tournaments` har ingen egen
-   * `best_ball_allowance_pct`-kolonne (ingen migrasjon la til én — 0153/0154
-   * dekker kun win/tie-poeng + sidepoeng) — og best_ball ER fourball spilt
-   * som slagspill, med samme WHS-default (85 %, `ALLOWANCE_DEFAULTS.fourball
-   * === ALLOWANCE_DEFAULTS.bestBall`). Kilde, i prioritert rekkefølge (F3c
-   * → #1472): planens lagrede `best_ball_allowance_pct` (splittet-cup-dag-
-   * feltet i Oppsett-rommet) → cupens `fourball_allowance_pct`-override
-   * (default 85 når cupen ikke har satt en). Splittet-cup-dag-bunten bruker ALDRI
-   * `fourball_matchplay` som eget sesjonsformat (bunten er
-   * greensome+best_ball+singles, se `cupTemplates.ts`), så gjenbruket
-   * kolliderer aldri med en faktisk fourball-matches egen allowance i samme
-   * cup.
-   */
-  bestBall: number;
-};
+// CupAllowancePcts + cupMatchAllowance bor i @/lib/cup/cupMatchAllowance
+// (#1539/#1551) — denne fila er `'use server'` og kan derfor ikke eksportere
+// den rene helperen selv, og invarianten «allowancen bor ett sted» trenger et
+// testbart hjem.
 
 /**
  * Bygger mode_config i samme form som de manuelt opprettede cup-matchene lagrer
@@ -74,6 +60,11 @@ type CupAllowancePcts = {
  * `{kind, team_size:2, teams_count:2, allowance_pct}`. best_ball (#1441, D4)
  * og greensomes `team_strokes_override` (#1441, D10) er splittet-cup-dagens
  * tilskudd.
+ *
+ * Hvorvidt `allowance_pct` skal med avgjøres IKKE her, men av
+ * `cupMatchAllowance` (#1539/#1551) — den er det ene stedet som bestemmer om
+ * allowancen bor på `games`-raden eller i mode_config, slik at de to feltene
+ * ikke kan settes uavhengig og trekke allowancen to ganger.
  */
 function cupMatchModeConfig(
   format: CupBundleFormat,
@@ -83,34 +74,25 @@ function cupMatchModeConfig(
   if (format === 'singles_matchplay') {
     return { kind: 'singles_matchplay', team_size: 1 } as GameModeConfig;
   }
+  const { modeConfigAllowancePct } = cupMatchAllowance(format, allowances);
   if (format === 'best_ball') {
-    // #1441 (D4/D11): standard `best_ball`-modusen har INGEN `allowance_pct`
-    // i sin `GameModeConfig` (motoren bruker rå courseHandicap) —
-    // cup-laget legger feltet på likevel, fordi `computeCupBestBallAward`
-    // (cup-EGEN scoring, ikke motorens `compute()`) leser det derfra for å
-    // anvende WHS-allowance før netto-lagtotal-sammenligningen.
+    // #1539/#1551: best_ball bærer allowancen på `games.hcp_allowance_pct`
+    // (anvendt ved frysing), ikke her — motoren
+    // (`lib/scoring/modes/bestBall.ts`) leser det frosne banehandicapet rått,
+    // og `computeCupBestBallAward` gjør nå det samme. Feltet ble tidligere
+    // lagret her OG anvendt av cup-poenget, mens kampens egen tavle brukte den
+    // frosne verdien — de to flatene viste da ulikt antall slag.
     return {
       kind: 'best_ball',
       team_size: 2,
       teams_count: 2,
-      allowance_pct: allowances.bestBall,
     } as GameModeConfig;
   }
-  const allowance_pct =
-    format === 'fourball_matchplay'
-      ? allowances.fourball
-      : format === 'foursomes_matchplay'
-        ? allowances.foursomes
-        : format === 'greensome_matchplay'
-          ? allowances.greensome
-          : format === 'chapman_matchplay'
-            ? allowances.chapman
-            : allowances.gruesome; // gruesome_matchplay
   return {
     kind: format,
     team_size: 2,
     teams_count: 2,
-    allowance_pct,
+    allowance_pct: modeConfigAllowancePct,
     // #1441 (D10): kun greensome forstår feltet (arrangørens manuelle
     // lag-slag) — andre lag-format ignorerer det bevisst, se
     // `cupMatchModeConfig`s JSDoc og `greensomeMatchplay.ts`.
@@ -386,6 +368,13 @@ export async function createCupMatchesFromPlan(
         status: 'scheduled',
         game_mode: match.format,
         mode_config: cupMatchModeConfig(match.format, allowances, match.teamStrokesOverride),
+        // #1539/#1551: settes ALLTID eksplisitt, aldri arvet fra DB-defaulten
+        // (100). For best_ball er dette hjemmet til allowancen — den anvendes
+        // når `startScheduledGame` fryser `game_players.course_handicap`, og
+        // alle flater leser den frosne verdien rått etterpå. For de øvrige
+        // formatene er 100 en aktiv beslutning: de anvender sin egen
+        // `mode_config.allowance_pct` ved beregning, oppå et rått frosset tall.
+        hcp_allowance_pct: cupMatchAllowance(match.format, allowances).hcpAllowancePct,
         created_by: userId,
         tournament_id: tournamentId,
         tournament_match_label: match.label.slice(0, MATCH_LABEL_MAX),
