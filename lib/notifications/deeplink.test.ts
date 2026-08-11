@@ -38,6 +38,26 @@ describe('notificationDestination', () => {
     ).toBe(`/games/${GAME}/leaderboard`);
   });
 
+  it('#1363: both reopen kinds land on game home, not the leaderboard or /submit', () => {
+    // Spill-hjem er der hullene rettes og den nye statusen vises. game_reopened
+    // må IKKE arve game_finished sin /leaderboard-rute — resultatlista er
+    // nettopp det som forsvant ved gjenåpningen.
+    expect(
+      notificationDestination(
+        n('scorecard_reopened', {
+          game_id: GAME,
+          game_name: 'X',
+          actor_name: 'Jørgen',
+        }),
+      ),
+    ).toBe(`/games/${GAME}`);
+    expect(
+      notificationDestination(
+        n('game_reopened', { game_id: GAME, game_name: 'X' }),
+      ),
+    ).toBe(`/games/${GAME}`);
+  });
+
   it('maps registration_request to the admin signups route', () => {
     expect(
       notificationDestination(

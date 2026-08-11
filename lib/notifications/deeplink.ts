@@ -36,6 +36,13 @@ export function notificationDestination(n: DeeplinkInput): string | null {
     // og «Rediger hullene og lever på nytt». /submit ble forkastet — spilleren
     // må rette hull FØR levering, og banneret finnes ikke der.
     case 'scorecard_rejected':
+    // #1363: spill-hjem er der spilleren retter hullene og finner Lever-veien
+    // igjen. Samme landing som scorecard_rejected av samme grunn — /submit
+    // hopper over rettingen som er hele poenget med en gjenåpning.
+    case 'scorecard_reopened':
+    // #1363: gjenåpnet spill = resultatlista er borte og runden er aktiv
+    // igjen; spill-hjem er der den nye statusen faktisk vises.
+    case 'game_reopened':
     case 'registration_approved': {
       const p = n.payload as NotificationPayload<'invite'>;
       return `/games/${p.game_id}`;

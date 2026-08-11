@@ -72,11 +72,31 @@ export function buildNotificationText(
         }),
       };
     }
+    case 'scorecard_reopened': {
+      const p = payload as NotificationPayload<'scorecard_reopened'>;
+      return {
+        title: t('kinds.scorecardReopened.title'),
+        detail: t('kinds.scorecardReopened.detail', {
+          actorName: p.actor_name ?? t('organizerFallback'),
+          gameName: p.game_name,
+        }),
+      };
+    }
     case 'game_finished': {
       const p = payload as NotificationPayload<'game_finished'>;
       return {
         title: t('kinds.gameFinished.title'),
         detail: t('kinds.gameFinished.detail', { gameName: p.game_name }),
+      };
+    }
+    case 'game_reopened': {
+      const p = payload as NotificationPayload<'game_reopened'>;
+      return {
+        title: t('kinds.gameReopened.title'),
+        detail: t('kinds.gameReopened.detail', {
+          actorName: p.actor_name ?? t('organizerFallback'),
+          gameName: p.game_name,
+        }),
       };
     }
     case 'product_update': {

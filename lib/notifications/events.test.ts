@@ -36,6 +36,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 import {
   notifyPlayersGameFinished,
   notifyPlayersGameStarted,
+  notifyPlayersGameReopened,
   notifyParticipantsCupFinished,
   notifyParticipantsCupStarted,
 } from './events';
@@ -272,6 +273,76 @@ describe('notifyParticipantsCupStarted', () => {
     );
 
     expect(result.size).toBe(0);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('notifyPlayersGameReopened (#1363)', () => {
+  it('fyrer game_reopened med aktørnavn til hver innsendt spiller', async () => {
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: false });
+
+    await notifyPlayersGameReopened(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'game-1', name: 'Vinter-cup', actorName: 'Jørgen' },
+      'reopenGame',
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'a',
+      kind: 'game_reopened',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Vinter-cup',
+        actor_name: 'Jørgen',
+      },
+    });
+  });
+
+  it('varsler ALLE aktive spillere — ingen off-app-partisjon, ingen users-oppslag', async () => {
+    // Motsatt av game_started (#1134): en spiller som står i appen når spillet
+    // gjenåpnes er nettopp den som ser resultatlista si forsvinne, så raden
+    // skal aldri droppes på last_seen_at.
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: false });
+
+    await notifyPlayersGameReopened(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'game-1', name: 'X', actorName: 'Jørgen' },
+      'reopenGame',
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    expect(usersReturnsMock).not.toHaveBeenCalled();
+  });
+
+  it('logger notify-rejection uten å kaste (best-effort, gjenåpningen står)', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    notifyMock
+      .mockResolvedValueOnce({ shouldAlsoSendMail: false })
+      .mockRejectedValueOnce(new Error('insert failed'));
+
+    await expect(
+      notifyPlayersGameReopened(
+        [{ user_id: 'a' }, { user_id: 'b' }],
+        { id: 'game-1', name: 'X', actorName: 'Jørgen' },
+        'reopenGame',
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(consoleErr).toHaveBeenCalledWith(
+      '[reopenGame] game_reopened notify failed',
+      expect.any(Error),
+    );
+    consoleErr.mockRestore();
+  });
+
+  it('tom spillerliste → ingen notify-call', async () => {
+    await notifyPlayersGameReopened(
+      [],
+      { id: 'game-1', name: 'X', actorName: 'Jørgen' },
+      'reopenGame',
+    );
+
     expect(notifyMock).not.toHaveBeenCalled();
   });
 });

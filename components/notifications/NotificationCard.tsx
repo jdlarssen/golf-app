@@ -32,7 +32,13 @@ const EMOJI: Record<NotificationKind, string> = {
   // «sendt i retur» — bevisst ikke 🚫, som er tatt av registration_rejected
   // og betyr «du kom ikke med», et annet budskap.
   scorecard_rejected: '↩️',
+  // #1363: «låst opp igjen» — kortet ditt er ute av arkivet og kan redigeres.
+  // Bevisst ikke ↩️ (scorecard_rejected) som betyr «sendt i retur med grunn».
+  scorecard_reopened: '🔓',
   game_finished: '🏆',
+  // #1363: hele runden er spolt tilbake til aktiv — 🔄 leser som «i sving
+  // igjen» uten å kollidere med 🏁/⛳ som allerede eier start og mål.
+  game_reopened: '🔄',
   product_update: '✨',
   team_invite: '🤝',
   registration_request: '📩',

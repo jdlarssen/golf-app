@@ -150,6 +150,50 @@ export async function notifyPlayersGameStarted(
 }
 
 /**
+ * Best-effort `game_reopened`-varsel når et ferdig spill flippes tilbake til
+ * aktivt (#1363). Motstykket til `notifyPlayersGameStarted`, men uten
+ * off-app-partisjonen: en gjenåpning fjerner resultatlista og gjør runden
+ * redigerbar igjen, og den beskjeden skal nå ALLE aktive deltakere — også den
+ * som står i appen og nettopp så resultatet sitt forsvinne. Kun in-app, ingen
+ * mail (issue-kravet).
+ *
+ * Caller-kontrakt:
+ *  - kall kun etter en vellykket status-flipp
+ *  - send inn kun ikke-trukkede spillere (`withdrawn_at is null`), og filtrer
+ *    bort aktøren selv — samme prinsipp som game_started-fan-outen
+ *
+ * `logPrefix` brukes som console.error-prefix ved notify-rejection, typisk
+ * `'reopenGame'`, så feilen kan spores i Vercel-logs.
+ */
+export async function notifyPlayersGameReopened(
+  players: Array<{ user_id: string }>,
+  game: { id: string; name: string; actorName: string },
+  logPrefix: string,
+): Promise<void> {
+  if (players.length === 0) return;
+
+  const results = await Promise.allSettled(
+    players.map((p) =>
+      notify({
+        userId: p.user_id,
+        kind: 'game_reopened',
+        payload: {
+          game_id: game.id,
+          game_name: game.name,
+          actor_name: game.actorName,
+        },
+      }),
+    ),
+  );
+
+  for (const r of results) {
+    if (r.status === 'rejected') {
+      console.error(`[${logPrefix}] game_reopened notify failed`, r.reason);
+    }
+  }
+}
+
+/**
  * Best-effort `cup_finished`-varsel til alle deltakere i en cup (tournament
  * av matcher). Cup-analogen til `notifyPlayersGameFinished` — samme
  * in-app-først + off-app-mail-prinsipp: `notify()` inserter alltid in-app,
