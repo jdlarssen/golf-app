@@ -85,27 +85,38 @@ eller eksisterende ikon-konvensjon hvis appen har en.
 
 ## Suksesskriterier
 
-- [ ] Anonym GET `/hvorfor-torny` og `/en/hvorfor-torny` gir 200 med innhold (ingen
-  login-redirect). **Bevis:** curl mot dev/staging.
+- [x] Anonym GET `/hvorfor-torny` og `/en/hvorfor-torny` gir 200 med innhold (ingen
+  login-redirect). **Bevis:** evaluator-runde 1: `next start` + anonym curl → 200/200;
+  kontroll `/profile` → 307 login-redirect (gaten aktiv).
 - [ ] Innlogget besøkende ser sida MED bunn-nav. **Bevis:** staging-klikk + skjermbilde.
-- [ ] Sidestrukturen matcher mockup v3 (alle 9 seksjoner, 8 matriserader, 3 FAQ).
-  **Bevis:** skjermbilde side-om-side med mockupen i evalueringsrunden.
-- [ ] Norsk copy er identisk med mockupens (stikkprøve på minst matrise + FAQ i
-  evalueringen — avvik er funn).
-- [ ] JSON-LD i kilden inneholder FAQPage med samme tekst som synlig FAQ; ingen
-  WebSite/Organization-duplikat. **Bevis:** curl + grep.
-- [ ] `grep -ri "gamebook\|for alltid" app/\[locale\]/hvorfor-torny messages/` (case-
-  insensitivt, whyTorny-nøklene) er tomt. **Bevis:** grep-output.
-- [ ] Sitemap inneholder begge locale-URL-ene; `sitemap.test.ts` oppdatert og grønn.
-- [ ] Forsiden har bunnlenke til sida. **Bevis:** render-test-oppdatering eller staging-klikk.
-- [ ] Maks ÉN ny render-test (Type C); `catalogParity`-testene grønne.
+- [x] Sidestrukturen matcher mockup v3 (alle 9 seksjoner, 8 matriserader, 3 FAQ).
+  **Bevis:** evaluator-runde 1: bygget HTML — 9 seksjoner i mockup-rekkefølge, 8
+  matriserader, 3 FAQ, 4 fliser i 2×2. Skjermbilde følger i staging-runden.
+- [x] Norsk copy er identisk med mockupens (stikkprøve på minst matrise + FAQ i
+  evalueringen — avvik er funn). **Bevis:** evaluator-runde 1: full streng-for-streng-
+  diff mockup → `whyTorny.*` i no.json — alt ordrett; 38 strenger gjenfunnet i bygget HTML.
+- [x] JSON-LD i kilden inneholder FAQPage med samme tekst som synlig FAQ; ingen
+  WebSite/Organization-duplikat. **Bevis:** evaluator-runde 1: `@graph` = kun
+  WebPage + FAQPage; FAQPage deep-equal med katalog-arrayet.
+- [x] `grep -ri "gamebook\|for alltid" app/\[locale\]/hvorfor-torny messages/` (case-
+  insensitivt, whyTorny-nøklene) er tomt. **Bevis:** grep tom i hele diffen + begge
+  bygde HTML-varianter (kommentar som siterte frasen omformulert i `af481177`).
+- [x] Sitemap inneholder begge locale-URL-ene; `sitemap.test.ts` oppdatert og grønn.
+  **Bevis:** no-URL som entry + en-URL som hreflang-alternate (filas mønster); test grønn.
+- [x] Forsiden har bunnlenke til sida. **Bevis:** runtime-curl av `/` viser
+  `href="/hvorfor-torny"` med «Hvorfor Tørny?»; `landing.footer.whyTorny` i begge kataloger.
+- [x] Maks ÉN ny render-test (Type C); `catalogParity`-testene grønne. **Bevis:**
+  nøyaktig én ny testfil (`page.test.tsx`); 34/34 grønne inkl. catalogParity + apostropheParity.
 
 ## Gates
 
-- [ ] `npm run build` + `npm run lint` + berørte co-located tester grønne
+- [x] `npm run build` + `npm run lint` + berørte co-located tester grønne
+  **Bevis:** build exit 0 (begge locale-ruter prerendret); lint 0 errors / 0 nye
+  warnings i berørte filer; 34/34 tester grønne (builder + evaluator, uavhengig).
 - [ ] Commit-body `Refs #1419`; PR-body `Closes #1419` + Fordeler/ulemper-blokk
+  (alle 3 commits har `Refs #1419` — PR-body gjenstår)
 - [ ] Staging-bevis-kommentar + `staging-verified`-label FØR merge (#1076)
-- [ ] Ingen produktvalg gjenstår (alle tatt av eier i brainstorm) → auto-merge-policyen
+- [x] Ingen produktvalg gjenstår (alle tatt av eier i brainstorm) → auto-merge-policyen
   gjelder når portene er grønne
 
 ## Filer som trolig berøres
