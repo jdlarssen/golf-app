@@ -136,8 +136,9 @@ videre kun av eieren via PR når tilliten er etablert.
   → Konvergensregler): runde-historikk i `.forge/evaluations/<slug>-runder.md`
   committes, maks 5 evaluate-runder, strategibytte etter to identiske
   finding-sett, aldri «én runde til» forbi taket.
-- Atomiske commits med `Refs #<issuenr>`; versjonsbump/CHANGELOG per
-  CLAUDE.md-reglene for feat/fix.
+- Atomiske commits med `Refs #<issuenr>`; notatfil under `.changes/` per
+  CLAUDE.md-reglene for feat/fix — aldri versjonsbump, aldri CHANGELOG-linje
+  (ukesrutinen bokfører mandag; mal: `.changes/README.md`).
 
 ## Steg 4 — Verifisering utover gates
 
