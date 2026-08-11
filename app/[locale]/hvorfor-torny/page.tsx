@@ -61,8 +61,8 @@ export async function generateMetadata({
  * Sammenligningen er generisk: ingen konkurrent navngis, og påstandene om
  * «andre apper» holdes myke («Krever abonnement», «Varierer») så ingenting på
  * sida ruster når andre endrer priser. Copy-vaktene (native app kommer, jf.
- * epic #1276, så poenget er at ingen MÅ installere; ingen «for alltid»-løfter)
- * er forankret i kontrakten.
+ * epic #1276, så poenget er at ingen MÅ installere; gratis-copy beskriver
+ * nåtid, aldri evige løfter) er forankret i kontrakten.
  *
  * Auth-valgfri via `AUTH_OPTIONAL_PATH_PATTERN` i proxy.ts — IKKE PUBLIC, som
  * ville strippet verified-user-headeren og kostet innloggede bunn-nav-en
