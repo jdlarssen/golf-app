@@ -73,6 +73,7 @@
     "someoneFallback": "En venn",
     "somePlayerFallback": "En spiller",
     "someTeamFallback": "Laget",
+    "organizerFallback": "Arrangøren",
     "kinds": {
       "invite": {
         "title": "{invitedByName} inviterte deg",
@@ -95,9 +96,17 @@
         "detail": "{rejecterName} avviste kortet i {gameName}: {reason}",
         "defaultReason": "ingen grunn oppgitt"
       },
+      "scorecardReopened": {
+        "title": "Scorekortet er åpnet igjen",
+        "detail": "{actorName} åpnet kortet ditt i {gameName}, så du kan rette og levere på nytt"
+      },
       "gameFinished": {
         "title": "Resultatet er klart",
         "detail": "{gameName}"
+      },
+      "gameReopened": {
+        "title": "Runden er åpnet igjen",
+        "detail": "{actorName} åpnet {gameName} igjen, så dere kan rette slagene"
       },
       "productUpdate": {
         "title": "{title}",

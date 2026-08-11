@@ -11,7 +11,9 @@ export type NotificationKind =
   | 'scorecard_submitted'
   | 'scorecard_approved'
   | 'scorecard_rejected'
+  | 'scorecard_reopened'
   | 'game_finished'
+  | 'game_reopened'
   | 'product_update'
   | 'team_invite'
   | 'registration_request'
@@ -80,9 +82,32 @@ const scorecardRejectedSchema = z.object({
   reason: z.string().optional(),
 });
 
+// scorecard_reopened: en arrangør åpnet et allerede levert (og kanskje
+// godkjent) scorekort igjen (#1363). Til spilleren som eier kortet. UPDATE-en
+// nullstiller submitted_at, så kortet MÅ leveres på nytt før spillet kan
+// avsluttes — handlingsvarsel, ikke bare en beskjed. Deeplinker til
+// /games/[game_id] der hullene rettes og leveringen gjøres om igjen.
+// actor_name er optional: kortet fyller den lokaliserte fallbacken ved render
+// (#583), så payloaden holder seg locale-agnostisk.
+const scorecardReopenedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  actor_name: z.string().min(1).nullable().optional(),
+});
+
 const gameFinishedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
+});
+
+// game_reopened: en arrangør flippet et ferdig spill tilbake til aktivt
+// (#1363). Fan-out til alle aktive (ikke-trukkede) deltakere — resultatlista
+// forsvinner for alle, og alle kan redigere igjen, så alle trenger beskjeden.
+// Samme payload som scorecard_reopened; deeplinker til /games/[game_id].
+const gameReopenedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  actor_name: z.string().min(1).nullable().optional(),
 });
 
 // Product-update payload (issue #202). Source-id refererer til
@@ -309,7 +334,9 @@ const schemas = {
   scorecard_submitted: scorecardSubmittedSchema,
   scorecard_approved: scorecardApprovedSchema,
   scorecard_rejected: scorecardRejectedSchema,
+  scorecard_reopened: scorecardReopenedSchema,
   game_finished: gameFinishedSchema,
+  game_reopened: gameReopenedSchema,
   product_update: productUpdateSchema,
   team_invite: teamInviteSchema,
   registration_request: registrationRequestSchema,

@@ -17,7 +17,10 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
-import { notifyPlayersGameStarted } from '@/lib/notifications/events';
+import {
+  notifyPlayersGameStarted,
+  notifyPlayersGameReopened,
+} from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
 
 /**
@@ -312,28 +315,46 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
 
   const { data: game } = await supabase
     .from('games')
-    .select('status')
+    .select('name, status')
     .eq('id', gameId)
-    .single<{ status: GameStatus }>();
+    .single<{ name: string; status: GameStatus }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   if (game!.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
-  const { error } = await supabase
-    .from('game_players')
-    .update({
-      submitted_at: null,
-      approved_at: null,
-      approved_by_user_id: null,
-      rejection_reason: null,
-    })
-    .eq('game_id', gameId)
-    .eq('user_id', playerUserId)
-    .not('submitted_at', 'is', null);
-  if (error) {
-    console.error('[reopenScorecard] reopen update failed', error);
-    redirect({ href: `${detailPath}?error=db_players`, locale });
+  // #1363: expectAffected turns the silent 0-row UPDATE into an explicit
+  // signal. 0 rows here means the scorecard was never submitted (already
+  // reopened, idempotent no-op) or the player row doesn't exist. Same
+  // precedent as adminApproveScorecard: redirect to ?status=scorecard_reopened
+  // rather than an error, but WITHOUT firing the audit log and the varsel for
+  // a write that never happened.
+  try {
+    expectAffected(
+      await supabase
+        .from('game_players')
+        .update({
+          submitted_at: null,
+          approved_at: null,
+          approved_by_user_id: null,
+          rejection_reason: null,
+        })
+        .eq('game_id', gameId)
+        .eq('user_id', playerUserId)
+        .not('submitted_at', 'is', null)
+        .select('user_id'),
+      'reopenScorecard',
+    );
+  } catch (err) {
+    // NoRowsAffectedError → nothing to reopen (idempotent). Plain Error → DB failure.
+    // instanceof (not constructor.name) survives prod server minification — the
+    // helper restores the prototype chain for exactly this check.
+    if (!(err instanceof NoRowsAffectedError)) {
+      console.error('[reopenScorecard] reopen update failed', err);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
+    revalidateTag(`game-${gameId}`, 'max');
+    redirect({ href: `${detailPath}?status=scorecard_reopened`, locale });
   }
 
   await logAdminEvent({
@@ -344,6 +365,24 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     targetId: gameId,
     payload: { gameId, playerUserId },
   });
+
+  // #1363: best-effort varsel til spilleren som eier kortet. Uten det tror hen
+  // fortsatt at kortet er levert og godkjent, mens avslutningen blokkerer på
+  // not_all_submitted. Feil her endrer ikke utfallet av gjenåpningen — try/catch
+  // slutter FØR redirecten under, som kaster by design.
+  try {
+    await notify({
+      userId: playerUserId,
+      kind: 'scorecard_reopened',
+      payload: {
+        game_id: gameId,
+        game_name: game!.name,
+        actor_name: actorName,
+      },
+    });
+  } catch (err) {
+    console.error('[reopenScorecard] scorecard_reopened notify failed', err);
+  }
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
@@ -499,6 +538,27 @@ export async function reopenGame(gameId: string) {
     targetId: gameId,
     payload: { gameName: game!.name },
   });
+
+  // #1363: fan-out til alle aktive deltakere — resultatlista forsvinner for
+  // ALLE ved en gjenåpning, ikke bare for dem som hadde levert. Trukkede
+  // spillere (withdrawn_at satt) og aktøren selv står utenfor. Best-effort:
+  // helperen svelger notify-feil, og et roster-oppslag som feiler dropper bare
+  // varselet — gjenåpningen har allerede skjedd.
+  const { data: roster, error: rosterError } = await supabase
+    .from('game_players')
+    .select('user_id')
+    .eq('game_id', gameId)
+    .is('withdrawn_at', null)
+    .returns<{ user_id: string }[]>();
+  if (rosterError) {
+    console.error('[reopenGame] roster lookup for varsel failed', rosterError);
+  } else {
+    await notifyPlayersGameReopened(
+      (roster ?? []).filter((p) => p.user_id !== user.id),
+      { id: gameId, name: game!.name, actorName },
+      'reopenGame',
+    );
+  }
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);

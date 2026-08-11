@@ -347,6 +347,19 @@ export default async function GameHomePage({
         kind: 'scorecard_rejected',
         entityId: id,
       }),
+      // #1363: begge gjenåpnings-varslene deeplinker hit, så de må ryddes her
+      // — ellers henger bjelle-badgen igjen etter at spilleren har sett siden
+      // (samme regresjon scorecard_rejected ble lagt inn for å unngå, #1358).
+      markNotificationsRead({
+        userId,
+        kind: 'scorecard_reopened',
+        entityId: id,
+      }),
+      markNotificationsRead({
+        userId,
+        kind: 'game_reopened',
+        entityId: id,
+      }),
       // #463: å åpne spillet er en aktivitet = implisitt bekreftelse. Rydder
       // «Ikke bekreftet»-badgen for aktive spillere uten et eksplisitt trykk.
       ...(me.accepted_at == null

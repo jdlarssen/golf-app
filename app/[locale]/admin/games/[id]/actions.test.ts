@@ -368,6 +368,87 @@ describe('adminApproveScorecard', () => {
   });
 });
 
+// ─── reopenScorecard ────────────────────────────────────────────────────────
+
+describe('reopenScorecard (#1363)', () => {
+  it('reopens a submitted scorecard and notifies the player', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users (requireAdmin)
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null }, // games.select(name, status)
+      // expectAffected requires .select() on the mutation. 1 row = a real reopen.
+      { data: [{ user_id: 'user-a' }], error: null }, // game_players.update → 1 row
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenScorecard } = await import('./actions');
+
+    await expect(reopenScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scorecard_reopened');
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'user-a',
+      kind: 'scorecard_reopened',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Vinter-cup',
+        actor_name: 'Jørgen',
+      },
+    });
+  });
+
+  it('0-row update (nothing submitted) → idempotent success, no varsel', async () => {
+    // The `.not('submitted_at','is',null)` filter matches nothing when the card
+    // was never submitted or is already reopened. Before #1363 the action only
+    // destructured `{ error }`, so a 0-row no-op looked like a success and
+    // would have fired a varsel for a write that never happened.
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null }, // games.select
+      { data: [], error: null }, // game_players.update → 0 rows
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenScorecard } = await import('./actions');
+
+    await expect(reopenScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scorecard_reopened');
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(logAdminEventMock).not.toHaveBeenCalled();
+  });
+
+  it('notify failure does not change the outcome of the reopen', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null }, // games.select
+      { data: [{ user_id: 'user-a' }], error: null }, // game_players.update → 1 row
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+    notifyMock.mockRejectedValueOnce(new Error('insert failed'));
+
+    const { reopenScorecard } = await import('./actions');
+
+    await expect(reopenScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scorecard_reopened');
+    expect(consoleErr).toHaveBeenCalledWith(
+      '[reopenScorecard] scorecard_reopened notify failed',
+      expect.any(Error),
+    );
+    consoleErr.mockRestore();
+  });
+});
+
 describe('endGame', () => {
   it('redirects to /login when no user is authenticated (auth gate)', async () => {
     supabaseMock = buildSupabaseMock([]);

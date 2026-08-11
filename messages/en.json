@@ -73,6 +73,7 @@
     "someoneFallback": "A friend",
     "somePlayerFallback": "A player",
     "someTeamFallback": "The team",
+    "organizerFallback": "The organizer",
     "kinds": {
       "invite": {
         "title": "{invitedByName} invited you",
@@ -95,9 +96,17 @@
         "detail": "{rejecterName} rejected the scorecard in {gameName}: {reason}",
         "defaultReason": "no reason given"
       },
+      "scorecardReopened": {
+        "title": "Scorecard reopened",
+        "detail": "{actorName} reopened your scorecard in {gameName}, so you can fix it and submit again"
+      },
       "gameFinished": {
         "title": "Results are in",
         "detail": "{gameName}"
+      },
+      "gameReopened": {
+        "title": "The round is open again",
+        "detail": "{actorName} reopened {gameName}, so scores can be edited again"
       },
       "productUpdate": {
         "title": "{title}",
