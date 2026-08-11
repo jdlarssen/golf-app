@@ -132,9 +132,12 @@ target.
 
 ## §T6 — Commit and PR
 
-- **Metadata rules** (prefix → bump type, CHANGELOG line, `Refs #N`, escapes
+- **Metadata rules** (prefix → a new `.changes/` note file, `Refs #N`, escapes
   `[no-changelog]` / `[no-issue]`): CLAUDE.md §Versjonering + §Branch/PR-flyt — enforced
-  by `.githooks/commit-msg`; its block text names the remedy.
+  by `.githooks/commit-msg`; its block text names the remedy. Note template + field
+  limits: `.changes/README.md`. Never bump `package.json` or edit `CHANGELOG.md` in a
+  normal commit — the weekly release job (`.github/workflows/ukesversjon.yml`) owns both,
+  and the hook blocks any non-`chore(release)` commit that changes the version field.
 - **Untracked work:** decide at intake — `gh issue create` with `type:`/`area:` labels +
   milestone (mandatory), or the rare genuine `[no-issue]`. Tier 1/Tier 5 milestone
   titles are mojibake-corrupted — set by number:

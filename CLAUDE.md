@@ -214,13 +214,16 @@ Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh i
 
 ### Versjonering / CHANGELOG
 
-Hver bruker-synlig commit (`feat`/`fix`/`perf`) MÅ bumpe `package.json`-versjonen. Footeren (`AppVersionFooter.tsx`) viser versjonen i prod ved neste deploy. **Bruker-synlig** endring → også én linje i `CHANGELOG.md` (`feat` → en Funksjon-rad, `fix`/`perf` → en Feilrettinger-linje). **Intern** endring som likevel shippes som `fix` (test-only, refactor, tooling) → ingen CHANGELOG-linje; skriv `[no-changelog]` i commit-body-en.
+Hver bruker-synlig commit (`feat`/`fix`/`perf`) MÅ legge igjen én **notatfil** under `.changes/` — og skal hverken bumpe `package.json` eller redigere `CHANGELOG.md`. Mandag morgen folder ukerutinen (`.github/workflows/ukesversjon.yml` + `scripts/weekly-release.mjs`) alle ukas notater til **én** versjon og skriver oppføringene inn i changeloggen (`feat` → en Funksjon-rad, `fix`/`perf` → en Feilrettinger-linje). Footeren (`AppVersionFooter.tsx`) viser dermed ett versjonsnummer per uke, ikke ett per commit. **Intern** endring som likevel shippes som `fix` (test-only, refactor, tooling) → ingen notatfil; skriv `[no-changelog]` i commit-body-en.
 
-**Håndheves av `.githooks/commit-msg`** — den blokkerer feat/fix/perf-commits som mangler bump (eller mangler CHANGELOG uten `[no-changelog]`), OG hvis bump-typen er feil: **feat → minor/major, fix/perf → patch** (major kun ved breaking `!`/`BREAKING CHANGE`).
+Hvorfor: `package.json` + `CHANGELOG.md` var to filer alle PR-er rørte — altså garantert rebase-konflikt mellom parallelle økter. Notatfilene har unike navn og kan ikke kollidere. Deploy-rytmen er uendret: merge til `main` deployer fortsatt rett til prod.
 
-- **Bump:** `npm version patch|minor|major --no-git-tag-version`, stage `package.json` + `package-lock.json` (+ `CHANGELOG.md` hvis bruker-synlig), commit på nytt med samme melding.
+**Håndheves av `.githooks/commit-msg`** — den blokkerer feat/fix/perf-commits uten en ny fil under `.changes/` (og uten `[no-changelog]`), OG alle commits unntatt `chore(release)` som endrer `version`-feltet i `package.json`. Feltet eies av ukerutinen.
+
+- **Notatfil:** `.changes/<issue>-<slug>.md` (issue-løs: `x-<slug>.md`), frontmatter `type` + `issue`, og for `feat` også `title`/`link`/`cta`. Mal og feltgrenser: [`.changes/README.md`](.changes/README.md). Ett ugyldig notat stopper hele ukesslippet (fail-closed), så hold deg til malen.
+- **Tørrkjøring:** `node scripts/weekly-release.mjs --dry-run` viser hvilken versjon uka ville fått og nøyaktig hvilken CHANGELOG-diff notatene gir — uten å skrive noe.
 - **Ikke bruker-synlig?** Bytt prefix til `docs/refactor/test/chore/style/ci/build` — de passerer fritt.
-- **CHANGELOG-format:** [`docs/changelog-conventions.md`](docs/changelog-conventions.md) (les FØR ny oppføring). Tynt to-seksjons-feed (Funksjoner / Feilrettinger), én linje per endring; ingen Teknisk-blokk (den bor i issue-closing-kommentaren), ingen humanizer påkrevd.
+- **CHANGELOG-format:** [`docs/changelog-conventions.md`](docs/changelog-conventions.md) (les FØR du skriver et notat). Tynt to-seksjons-feed (Funksjoner / Feilrettinger), én linje per endring; ingen Teknisk-blokk (den bor i issue-closing-kommentaren), ingen humanizer påkrevd.
 - Aldri `--no-verify` for å omgå hooken (bash-guard blokkerer den uansett).
 
 ### Språk-kvalitet i bruker-rettet copy

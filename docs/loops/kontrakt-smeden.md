@@ -124,8 +124,9 @@ aldri overhal eieren.
 
   - `teknisk` = **ingen** bruker-synlig effekt (test/infra/tooling/refactor — ville
     vært `[no-changelog]`). `bruker-synlig` = spillere eller eier ser noe endre seg
-    (ville fått en CHANGELOG-linje). **Klassifiserings-regelen ER CHANGELOG-regelen**
-    — samme hook-håndhevede grense, ett hjem, ingen ny gråsone.
+    (ville fått en notatfil under `.changes/`, altså en CHANGELOG-linje ved
+    ukesslippet). **Klassifiserings-regelen ER notatfil-regelen** — samme
+    hook-håndhevede grense, ett hjem, ingen ny gråsone.
   - `funksjonell` er **obligatorisk for begge klasser** («Fikser at …», «Spillerne
     får nå …»), humanizer-tone — det er den eieren godkjenner på, ikke kontrakt-teksten.
   - **Tvil → `bruker-synlig`** (fail-closed: eieren ser mer, aldri mindre). En

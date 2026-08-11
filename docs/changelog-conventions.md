@@ -1,12 +1,34 @@
 # CHANGELOG-konvensjoner
 
-Format-regler for `CHANGELOG.md`. Når-regler (PATCH/MINOR-bump) og hook-håndheving står i [CLAUDE.md](../CLAUDE.md) under «Versjonering / CHANGELOG».
+Format-regler for `CHANGELOG.md`. Når-regler og hook-håndheving står i [CLAUDE.md](../CLAUDE.md) under «Versjonering / CHANGELOG».
 
-Trigger: HTML-kommentaren øverst i `CHANGELOG.md` peker hit. `.githooks/commit-msg` peker også hit. **Les denne fila før du legger til en oppføring.**
+Trigger: HTML-kommentaren øverst i `CHANGELOG.md` peker hit. `.githooks/commit-msg` og [`.changes/README.md`](../.changes/README.md) peker også hit. **Les denne fila før du skriver et notat.**
+
+> **Du redigerer ikke `CHANGELOG.md` selv.** Fra #1562 skriver du i stedet én notatfil under `.changes/` per bruker-synlig commit, og ukerutinen rendrer oppføringen mandag morgen. Formatreglene under er fortsatt fasiten — de beskriver hva notatet ditt blir til.
 
 ## Hva changeloggen er (og ikke er)
 
 Changeloggen er et tynt, lesbart **hva-er-nytt-feed** for deg som eier og for app-brukerne — ikke et utviklerarkiv. Den tekniske historikken (hvilke filer, hvilken approach) bor i **issue-ets closing-kommentar** (`## Teknisk`) og i **commit-meldingene** (`Refs #N`). Ikke dupliser den her — det var nettopp den duplikatet som gjorde fila uleselig (10 000+ linjer). Én linje per endring, det er alt.
+
+## Veien inn: notatfil → ukesslipp
+
+Commiten din legger igjen `.changes/<issue>-<slug>.md`. Mandag 05:00 leser
+ukerutinen alle notatene, velger ÉN versjon for hele uka (minst ett `feat`-notat
+→ minor, ellers patch) og skriver oppføringene inn i fila:
+
+| Notat-`type` | Blir til | Versjonsform i oppføringen |
+|---|---|---|
+| `feat` | En Funksjon-rad øverst i `## Funksjoner` | To-delt, `1.232` |
+| `fix` / `perf` | En linje øverst i inneværende måneds skuff under `## Feilrettinger` | Full, `` `1.232.0` `` |
+
+Notatets frontmatter bærer de fire lanserings-feltene (`title`, `link`, `cta` +
+brødteksten); feltgrensene og malen står i [`.changes/README.md`](../.changes/README.md).
+Brødteksten er changelog-linja ordrett — skriv den ferdig i notatet.
+
+**Versjonssemantikken etter omleggingen:** ett nummer per uke *med innhold*. En
+tom uke gir ingen versjon. Flere funksjoner samme uke deler ukas `X.Y` og får
+hver sin rad. Mellom to mandager viser footeren forrige ukes nummer selv om nytt
+er deployet — det er meningen. Versjonen er et ukestempel, ikke et deploystempel.
 
 ## Strukturen i fila
 
@@ -57,7 +79,7 @@ En funksjon bærer de samme fire feltene som `/admin/lanseringer`-skjemaet (`pro
 
 ## Hvem havner hvor
 
-Versjonsdisiplinen avgjør det nesten alene: `feat` → minor → **Funksjoner**; `fix`/`perf` → patch → **Feilrettinger**. En patch som la til en liten capability (`#### Added` i en `.y`) hører likevel i Feilrettinger — Funksjoner-lista skal være én ren linje per utgivelse. Vil du headline en spesielt stor patch-funksjon, løft den manuelt opp som egen Funksjon-rad.
+Notatets `type` avgjør det alene: `feat` → **Funksjoner**; `fix`/`perf` → **Feilrettinger**. En patch som la til en liten capability (`#### Added` i en `.y`) hører likevel i Feilrettinger — Funksjoner-lista skal være én ren linje per utgivelse. Vil du headline en spesielt stor patch-funksjon, løft den manuelt opp som egen Funksjon-rad.
 
 ## Bare det en bruker ville merke
 
