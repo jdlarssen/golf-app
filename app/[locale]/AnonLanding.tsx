@@ -317,6 +317,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
 
         {/* 11 · Bunnlenker ─────────────────────────────────────────── */}
         <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-border pt-8 font-sans text-[13px] text-muted">
+          <FooterLink href="/hvorfor-torny">{t('footer.whyTorny')}</FooterLink>
           <FooterLink href="/arranger-golfturnering">
             {t('footer.guide')}
           </FooterLink>

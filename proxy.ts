@@ -49,8 +49,12 @@ const PUBLIC_PATH_PATTERN =
 // same reasoning as `spillformater` — an anonymous reader (or a crawler) must
 // see the whole guide with no login redirect, while a logged-in visitor keeps
 // the verified-user header and thus the bottom nav. PUBLIC would strip it.
+// `hvorfor-torny` joined in #1419 (sammenligningssida «Dette får du i Tørny»):
+// same reasoning again — the page exists to be read by strangers and crawlers
+// without logging in, and a logged-in visitor who follows the front page's
+// footer link must keep the bottom nav on the way back.
 const AUTH_OPTIONAL_PATH_PATTERN =
-  /^\/$|^\/(finn-turneringer|spillformater|arranger-golfturnering)(\/|$)/;
+  /^\/$|^\/(finn-turneringer|spillformater|arranger-golfturnering|hvorfor-torny)(\/|$)/;
 
 // #1286: gyldige spillformat-detalj-slugs = MODE_LABELS-nøklene. SAMME kilde
 // som detaljsiden (`app/[locale]/spillformater/[slug]/page.tsx:17`), så guarden

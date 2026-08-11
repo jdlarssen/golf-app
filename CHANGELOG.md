@@ -15,6 +15,14 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 ## Funksjoner
 
 <details>
+<summary><strong>1.232 · Hvorfor Tørny?</strong></summary>
+
+[#1419](https://github.com/jdlarssen/golf-app/issues/1419) — Ny side som viser hva du får i Tørny: null kroner, over 20 spillformater, cup og liga, og at alle blir med rett fra nettleseren. Send den til gjengen som lurer på hvorfor dere skal spille her.
+
+↳ /hvorfor-torny · «Se hva du får»
+</details>
+
+<details>
 <summary><strong>1.231 · Cupene dine samlet på ett sted</strong></summary>
 
 [#1463](https://github.com/jdlarssen/golf-app/issues/1463) — Cup-lista i Klubbhuset viser nå alle cupene du er med i, ikke bare dem du har satt opp selv. Er du satt opp på en spillerliste, eller har du spilt en cup, ligger den der — med hvem som vant på de ferdige. Da finner du fram uten å lete etter varselet i innboksen.

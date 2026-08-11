@@ -11,8 +11,8 @@ import { ARRANGE_AUDIENCES } from '@/lib/seo/arrangeAudiences';
  * source as the detail page's `VALID_MODES`, so a new mode gets a sitemap
  * entry automatically), the organiser pillar page `/arranger-golfturnering`
  * plus its three audience subpages (derived from `ARRANGE_AUDIENCES`, the same
- * source as the subpage route's valid-slug set — #1267), `/demo`,
- * `/finn-turneringer` and `/legal/privacy`.
+ * source as the subpage route's valid-slug set — #1267), the comparison page
+ * `/hvorfor-torny` (#1419), `/demo`, `/finn-turneringer` and `/legal/privacy`.
  * English variants ride along as hreflang alternates (routing: default
  * locale unprefixed, en under /en). Every entry also declares a self- and
  * x-default-reference — Google's hreflang rules require bidirectionality,
@@ -49,6 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...ARRANGE_AUDIENCES.map((audience) =>
       entry(`/arranger-golfturnering/${audience}`),
     ),
+    entry('/hvorfor-torny'),
     entry('/demo'),
     entry('/finn-turneringer'),
     entry('/legal/privacy'),

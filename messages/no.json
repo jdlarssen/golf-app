@@ -5577,7 +5577,123 @@
       "openGames": "Åpne turneringer",
       "login": "Logg inn",
       "privacy": "Personvern",
-      "guide": "Arranger turnering"
+      "guide": "Arranger turnering",
+      "whyTorny": "Hvorfor Tørny?"
+    }
+  },
+  "whyTorny": {
+    "metaTitle": "Dette får du i Tørny — turneringsapp uten abonnement",
+    "metaDescription": "Tørny mot andre golf-apper: over 20 spillformater, ingen abonnement, ingen reklame, og alle blir med rett fra nettleseren. Se hva du får.",
+    "loginCta": "Logg inn",
+    "hero": {
+      "h1": "Dette får du i Tørny",
+      "sub": "Laget for én ting: turneringen deres."
+    },
+    "stats": [
+      {
+        "value": "0",
+        "unit": " kr",
+        "label": "Uten abonnement.\nUten reklame."
+      },
+      { "value": "20", "unit": "+", "label": "spillformater\nå velge mellom" },
+      {
+        "value": "2",
+        "unit": " min",
+        "label": "fra idé til\ninvitasjonene er sendt"
+      },
+      {
+        "value": "150",
+        "unit": "",
+        "label": "deltakere når\nhele klubben skal med"
+      }
+    ],
+    "matrix": {
+      "heading": "Tørny mot resten",
+      "featureCol": "Funksjon",
+      "colTorny": "Tørny",
+      "colOther": "Andre apper",
+      "yesLabel": "Ja",
+      "rows": [
+        {
+          "feature": "Turnering med alle spillformater",
+          "other": "Krever abonnement"
+        },
+        { "feature": "Bli med rett fra nettleseren", "other": "Alle må ha appen" },
+        { "feature": "Norsk hele veien", "other": "Engelsk først" },
+        { "feature": "Reklamefritt", "other": "Reklame i gratisversjonen" },
+        { "feature": "Cup, liga og sideturneringer", "other": "Varierer" },
+        { "feature": "Premiepott med Vipps", "other": "Må ordnes utenom" },
+        { "feature": "Scoring uten dekning", "other": "Krever nett" },
+        { "feature": "WHS-handicap regnes automatisk", "other": "Varierer" }
+      ]
+    },
+    "board": {
+      "heading": "Spenningen er innebygd",
+      "cardTitle": "Fredagsgolfen · Runde 3",
+      "liveLabel": "Live",
+      "rows": [
+        { "name": "Kristian", "points": "38 p" },
+        { "name": "Marte", "points": "36 p" },
+        { "name": "Jonas", "points": "33 p" }
+      ],
+      "chips": [
+        { "icon": "⛳", "label": "Nærmest pinnen" },
+        { "icon": "🚀", "label": "Lengste drive" },
+        { "icon": "💰", "label": "Premiepott" }
+      ]
+    },
+    "points": {
+      "heading": "Spisset for turneringen",
+      "items": [
+        {
+          "icon": "🎛️",
+          "title": "Arrangøren har kontroll",
+          "body": "Godkjenn scorekort, start automatisk til avtalt tid, og få resultatet på e-post."
+        },
+        {
+          "icon": "📨",
+          "title": "Alle er med på et minutt",
+          "body": "Invitasjon på e-post, engangskode, og spillet er i gang."
+        },
+        {
+          "icon": "🏆",
+          "title": "Premieseremonien følger med",
+          "body": "Podium, vinnere og premiebord når siste putt er i hull."
+        }
+      ],
+      "quotePre": "Tørny er det dere fyrer opp når dere spiller ",
+      "quoteGold": "mot hverandre",
+      "quotePost": "."
+    },
+    "faqHeading": "Spørsmål og svar",
+    "faq": [
+      {
+        "q": "Er Tørny virkelig gratis?",
+        "a": "Ja. Alt du ser over, uten abonnement og uten reklame."
+      },
+      {
+        "q": "Må deltakerne installere noe?",
+        "a": "Nei, ingen må. Alle kan bli med rett fra nettleseren. Vil du ha Tørny som app, legger du den på hjemskjermen."
+      },
+      {
+        "q": "Hva med banen vår?",
+        "a": "Ligger den ikke inne allerede, legger du den inn selv på et par minutter."
+      }
+    ],
+    "endCta": {
+      "headingPre": "Klar for å fyre opp ",
+      "headingGold": "turneringen",
+      "headingPost": "?",
+      "body": "Prøv demoen uten å logge inn. Det tar under et minutt.",
+      "primaryCta": "Prøv demoen",
+      "secondaryCta": "Eller kom i gang på ordentlig"
+    },
+    "footer": {
+      "formats": "Spillformater",
+      "courses": "Baner",
+      "demo": "Demo",
+      "login": "Logg inn",
+      "privacy": "Personvern"
     }
   },
   "arrangeGuide": {
