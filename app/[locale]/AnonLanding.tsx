@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from 'react';
+import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BrandMark } from '@/components/ui/BrandMark';
@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { SectionHeading, TextLink, FooterLink } from './marketing-primitives';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { FEATURED_FORMAT_KEYS } from '@/lib/formats/featuredFormats';
 import { getPublicDiscoverableGames } from '@/lib/games/getPublicDiscoverableGames';
@@ -358,14 +359,8 @@ async function AnonOpenGames({
 }
 
 // ─── Presentasjons-helpere ─────────────────────────────────────────────────
-
-function SectionHeading({ children }: { children: ReactNode }) {
-  return (
-    <h2 className="font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
-      {children}
-    </h2>
-  );
-}
+// SectionHeading/TextLink/FooterLink deles med /hvorfor-torny og bor i
+// ./marketing-primitives (#1419). Det som står igjen her er forside-spesifikt.
 
 function Step({
   number,
@@ -411,38 +406,5 @@ function AudienceCard({ title, body }: { title: string; body: string }) {
         {body}
       </p>
     </Card>
-  );
-}
-
-function TextLink({
-  href,
-  children,
-  className = '',
-}: {
-  href: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <SmartLink
-      href={href}
-      className={`inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:text-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className}`}
-    >
-      {children}
-      <span aria-hidden className="ml-1">
-        →
-      </span>
-    </SmartLink>
-  );
-}
-
-function FooterLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <SmartLink
-      href={href}
-      className="inline-flex min-h-[44px] items-center hover:text-primary"
-    >
-      {children}
-    </SmartLink>
   );
 }
