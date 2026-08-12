@@ -16,7 +16,7 @@ describe('SpecificValueSheet', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders 6 buttons for par=4: par-2 through par+2, X', () => {
+  it('renders every stroke 1–15 plus X, and marks the par button', () => {
     render(
       <SpecificValueSheet
         open={true}
@@ -26,48 +26,43 @@ describe('SpecificValueSheet', () => {
         onClose={() => {}}
       />,
     );
-    const buttons = screen
-      .getByTestId('specific-value-sheet')
-      .querySelectorAll('button');
-    expect(buttons.length).toBe(6);
-    const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['2', '3', '4', '5', '6', 'X']);
+    const buttons = Array.from(
+      screen.getByTestId('specific-value-sheet').querySelectorAll('button'),
+    );
+    expect(buttons.length).toBe(16);
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      ...Array.from({ length: 15 }, (_, i) => String(i + 1)),
+      'X',
+    ]);
+    // The par button is marked visually only — no aria/text difference.
+    const parButton = buttons[3];
+    const bogeyButton = buttons[4];
+    expect(parButton.textContent).toBe('4');
+    expect(parButton.style.background).not.toBe(bogeyButton.style.background);
+    expect(parButton.style.border).not.toBe(bogeyButton.style.border);
   });
 
-  it('renders 6 buttons for par=3: par-2 through par+2, X (1 is hole-in-one)', () => {
-    render(
-      <SpecificValueSheet
-        open={true}
-        par={3}
-        onPick={() => {}}
-        onClear={() => {}}
-        onClose={() => {}}
-      />,
-    );
-    const buttons = screen
-      .getByTestId('specific-value-sheet')
-      .querySelectorAll('button');
-    expect(buttons.length).toBe(6);
-    const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['1', '2', '3', '4', '5', 'X']);
-  });
-
-  it('filters out values < 1 (par=2 → 5 buttons: 1 through 4, X)', () => {
-    render(
-      <SpecificValueSheet
-        open={true}
-        par={2}
-        onPick={() => {}}
-        onClear={() => {}}
-        onClose={() => {}}
-      />,
-    );
-    const buttons = screen
-      .getByTestId('specific-value-sheet')
-      .querySelectorAll('button');
-    expect(buttons.length).toBe(5);
-    const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['1', '2', '3', '4', 'X']);
+  it('offers the same buttons regardless of par', () => {
+    const textsFor = (par: number) => {
+      const { unmount } = render(
+        <SpecificValueSheet
+          open={true}
+          par={par}
+          onPick={() => {}}
+          onClear={() => {}}
+          onClose={() => {}}
+        />,
+      );
+      const texts = Array.from(
+        screen.getByTestId('specific-value-sheet').querySelectorAll('button'),
+      ).map((b) => b.textContent);
+      unmount();
+      return texts;
+    };
+    const parThree = textsFor(3);
+    expect(parThree.length).toBe(16);
+    expect(textsFor(4)).toEqual(parThree);
+    expect(textsFor(5)).toEqual(parThree);
   });
 
   it('clicking a number button calls onPick(value) then onClose', () => {
