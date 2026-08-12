@@ -12,6 +12,15 @@ export interface SpecificValueSheetProps {
   onClose: () => void;
 }
 
+// The whole legal range in one grid: a blow-up score is one tap, not seven on
+// the stepper. Mirrors ScoreCard.tsx's 15-stroke cap — kept local since that
+// const is not exported.
+const MAX_STROKES = 15;
+const VALUES: number[] = Array.from(
+  { length: MAX_STROKES },
+  (_, i) => i + 1,
+);
+
 const backdropStyle: CSSProperties = {
   position: 'absolute',
   inset: 0,
@@ -49,7 +58,7 @@ const kickerStyle: CSSProperties = {
 
 const gridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
+  gridTemplateColumns: 'repeat(4, 1fr)',
   gap: 8,
 };
 
@@ -64,6 +73,15 @@ const buttonStyle: CSSProperties = {
   fontVariantNumeric: 'tabular-nums',
   color: 'var(--text)',
   cursor: 'pointer',
+};
+
+// Marks the par button so the eye finds its anchor in a 16-button grid.
+// Visual only — no aria or label difference (a screen reader gets the par
+// from the hole header). Forest tokens, never --accent (winners only).
+const parButtonStyle: CSSProperties = {
+  ...buttonStyle,
+  border: '1px solid var(--primary)',
+  background: 'var(--surface-2)',
 };
 
 const captionStyle: CSSProperties = {
@@ -96,14 +114,6 @@ export function SpecificValueSheet(
     e.stopPropagation();
   }
 
-  // Quick-pick: par-2 through par+2. The most common deviations (bogey /
-  // double bogey) are now one tap away. MAX_STROKES mirrors ScoreCard.tsx
-  // (15 strokes cap) and keeps the list safe for any par value.
-  const MAX_STROKES = 15; // same as ScoreCard.tsx — kept local since not exported
-  const values: number[] = [par - 2, par - 1, par, par + 1, par + 2].filter(
-    (v) => v >= 1 && v <= MAX_STROKES,
-  );
-
   return (
     <div
       style={backdropStyle}
@@ -121,7 +131,7 @@ export function SpecificValueSheet(
         <div style={handleStyle} aria-hidden="true" />
         <div style={kickerStyle}>{t('specificScoreTitle')}</div>
         <div style={gridStyle}>
-          {values.map((v) => (
+          {VALUES.map((v) => (
             <button
               key={v}
               type="button"
@@ -129,7 +139,7 @@ export function SpecificValueSheet(
                 onPick(v);
                 onClose();
               }}
-              style={buttonStyle}
+              style={v === par ? parButtonStyle : buttonStyle}
               aria-label={t('setScoreToAriaLabel', { value: v })}
             >
               {v}
