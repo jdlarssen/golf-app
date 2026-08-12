@@ -166,4 +166,26 @@ describe('HoleStrip', () => {
     expect(hole1Chip.style.background).toBe('var(--hole-completed-bg)');
     expect(links[0].getAttribute('aria-label')).toBe('Hull 1, ferdig');
   });
+
+  it('#1352: scoresAuthoritative=false never marks a hole missing — a shared team card is keyed on someone else, so my empty set proves nothing', () => {
+    const { container } = render(
+      <HoleStrip
+        gameId="g1"
+        currentHole={5}
+        scoredHoles={new Set()}
+        scoresAuthoritative={false}
+      />,
+    );
+    const links = container.querySelectorAll('a');
+    // Holes 1-4 lie behind the current hole with an empty score set — the
+    // #1352 default would dash all four. Here they keep the played look.
+    for (const idx of [0, 1, 2, 3]) {
+      const chip = links[idx].querySelector('span') as HTMLElement;
+      expect(chip.style.background).toBe('var(--hole-completed-bg)');
+      expect(links[idx].getAttribute('aria-label')).toBe(`Hull ${idx + 1}, ferdig`);
+    }
+    // Ahead of the current hole is still plain 'future', not falsely completed.
+    const futureChip = links[5].querySelector('span') as HTMLElement;
+    expect(futureChip.style.background).toBe('transparent');
+  });
 });

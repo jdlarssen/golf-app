@@ -819,6 +819,17 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     ? (cards.find((c) => c.teamNumber === myTeamNumber) ?? cards[0])
     : cards.find((c) => c.userId === myUserId);
   const myScoreEntered = myCard?.score != null;
+  // #1352 follow-up: `scoredHoles` is keyed on MY user id (server select +
+  // Dexie `[gameId+myUserId]`), but in team-collapsed modes every write lands
+  // on the shared team card — keyed on the card owner's user id. For a
+  // non-owner the set is therefore permanently empty, and HoleStrip would dash
+  // every hole behind the current one as «mangler score». Empty-because-
+  // impossible is not evidence of a gap, so tell the strip its data isn't
+  // authoritative and let it fall back to positional rendering (same
+  // philosophy as the sibling-hole guard). Coarse by design in Patsome: from
+  // hole 7 the flag suppresses holes 1-6 too, even though those were scored
+  // individually — a missing warning beats a false one.
+  const scoresAuthoritative = !isTeamCollapsedMode || me?.userId === myUserId;
   // Missing count excludes my own card — that state already has its own
   // affordance (the disabled/no-score CTA state below).
   const missingFlightScoreCount = cards.filter(
@@ -1034,6 +1045,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         gameId={gameId}
         currentHole={currentHole}
         scoredHoles={scoredHoles}
+        scoresAuthoritative={scoresAuthoritative}
         holes={holeNumbersForSegment(holeSegment)}
         sibling={holeStripSibling}
       />

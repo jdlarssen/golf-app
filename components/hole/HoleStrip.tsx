@@ -31,6 +31,18 @@ export interface HoleStripProps {
    * 'full'-segment, trukket fra én halvdel) vises kun `holes` — uendret.
    */
   sibling?: { gameId: string; holes: number[] } | null;
+  /**
+   * Whether `scoredHoles` is a trustworthy record of what THIS viewer played.
+   * False in team-collapsed modes (Texas/Ambrose/Florida, the alternate-shot
+   * matchplay family, Patsome from hole 7) for everyone except the player the
+   * shared team card is keyed on: their own score set is structurally empty,
+   * because both the server row-select and the Dexie rows are keyed on the
+   * card owner's user id. An empty set is not evidence of skipped holes, so
+   * those cells fall back to the pre-#1352 positional reading instead of
+   * dashing the whole strip as «mangler score». Default true — every
+   * individual mode is unaffected.
+   */
+  scoresAuthoritative?: boolean;
 }
 
 const DEFAULT_HOLES = Array.from({ length: 18 }, (_, i) => i + 1);
@@ -134,6 +146,7 @@ export function HoleStrip(props: HoleStripProps): JSX.Element {
     scoredHoles,
     holes = DEFAULT_HOLES,
     sibling = null,
+    scoresAuthoritative = true,
   } = props;
   const t = useTranslations('holes.entry');
   // #1466: union of own + sibling holes, sorted, so a segment game reads as one
@@ -160,10 +173,12 @@ export function HoleStrip(props: HoleStripProps): JSX.Element {
           const isOwn = !sibling || ownHoles.has(n);
           let state = holeCellState(n, currentHole, scoredHoles);
           // A sibling hole belongs to the other host, whose scores this page
-          // never fetches — we cannot tell "played" from "skipped" there. Keep
-          // those cells on the pre-#1352 positional reading instead of
-          // accusing the player of a gap we have no data for.
-          if (state === 'missed' && !isOwn) state = 'scored';
+          // never fetches — we cannot tell "played" from "skipped" there. Same
+          // for every hole when the score set isn't this viewer's (a shared
+          // team card keyed on someone else). Keep those cells on the
+          // pre-#1352 positional reading instead of accusing the player of a
+          // gap we have no data for.
+          if (state === 'missed' && (!isOwn || !scoresAuthoritative)) state = 'scored';
           const href =
             sibling && !ownHoles.has(n)
               ? `/games/${sibling.gameId}/holes/${n}`
