@@ -2209,6 +2209,8 @@
       "myPoints": "Your points:",
       "hullKicker": "HOLE",
       "hullAriaLabel": "Hole {n}",
+      "hullAriaLabelDone": "Hole {n} – scored",
+      "hullAriaLabelMissing": "Hole {n} – missing score",
       "hullIndex": "index {si}",
       "hullPar": "Par {par}",
       "hullTotalSuffix": "of {total}",

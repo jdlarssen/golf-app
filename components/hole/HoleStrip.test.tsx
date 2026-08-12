@@ -2,9 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { HoleStrip } from './HoleStrip';
 
+const NONE: ReadonlySet<number> = new Set();
+
 describe('HoleStrip', () => {
   it('renders 18 hole cells', () => {
-    const { container } = render(<HoleStrip gameId="g1" currentHole={1} />);
+    const { container } = render(
+      <HoleStrip gameId="g1" currentHole={1} scoredHoles={NONE} />,
+    );
     const links = container.querySelectorAll('a');
     expect(links.length).toBe(18);
     for (let n = 1; n <= 18; n++) {
@@ -13,7 +17,9 @@ describe('HoleStrip', () => {
   });
 
   it('each cell links to /games/{gameId}/holes/{N}', () => {
-    const { container } = render(<HoleStrip gameId="abc" currentHole={5} />);
+    const { container } = render(
+      <HoleStrip gameId="abc" currentHole={5} scoredHoles={NONE} />,
+    );
     const links = container.querySelectorAll('a');
     links.forEach((link, idx) => {
       const n = idx + 1;
@@ -22,7 +28,9 @@ describe('HoleStrip', () => {
   });
 
   it('current hole cell uses strong-surface background', () => {
-    const { container } = render(<HoleStrip gameId="g1" currentHole={7} />);
+    const { container } = render(
+      <HoleStrip gameId="g1" currentHole={7} scoredHoles={NONE} />,
+    );
     const links = container.querySelectorAll('a');
     const currentLink = links[6];
     const chip = currentLink.querySelector('span') as HTMLElement;
@@ -30,23 +38,40 @@ describe('HoleStrip', () => {
     expect(chip.style.color).toBe('var(--bg-tint)');
   });
 
-  it('completed cells (N < currentHole) use --hole-completed-bg', () => {
-    const { container } = render(<HoleStrip gameId="g1" currentHole={5} />);
+  it('scored cells use --hole-completed-bg; holes behind you without a score get the dashed warning frame (#1352)', () => {
+    // Holes 1-2 entered, 3-4 skipped, standing on 5.
+    const { container } = render(
+      <HoleStrip gameId="g1" currentHole={5} scoredHoles={new Set([1, 2])} />,
+    );
     const links = container.querySelectorAll('a');
-    const completedChip = links[0].querySelector('span') as HTMLElement;
-    expect(completedChip.style.background).toBe('var(--hole-completed-bg)');
-    expect(completedChip.style.border).toContain('var(--border)');
+    const scoredChip = links[0].querySelector('span') as HTMLElement;
+    expect(scoredChip.style.background).toBe('var(--hole-completed-bg)');
+    expect(scoredChip.style.border).toContain('var(--border)');
+    expect(links[0].getAttribute('aria-label')).toBe('Hull 1 – score ført');
+
+    const missedChip = links[2].querySelector('span') as HTMLElement;
+    expect(missedChip.style.background).toBe('transparent');
+    expect(missedChip.style.border).toBe('1px dashed var(--warning)');
+    // The number itself stays readable — state is carried by frame + label.
+    expect(missedChip.style.color).toBe('var(--text)');
+    expect(links[2].getAttribute('aria-label')).toBe('Hull 3 – mangler score');
   });
 
   it('future cells (N > currentHole) use transparent background', () => {
-    const { container } = render(<HoleStrip gameId="g1" currentHole={3} />);
+    const { container } = render(
+      <HoleStrip gameId="g1" currentHole={3} scoredHoles={NONE} />,
+    );
     const links = container.querySelectorAll('a');
     const futureChip = links[10].querySelector('span') as HTMLElement;
     expect(futureChip.style.background).toBe('transparent');
+    // No dashed frame: a hole you haven't reached yet isn't «missing».
+    expect(futureChip.style.border).not.toContain('dashed');
   });
 
   it('marks current cell with aria-current=page', () => {
-    const { container } = render(<HoleStrip gameId="g1" currentHole={9} />);
+    const { container } = render(
+      <HoleStrip gameId="g1" currentHole={9} scoredHoles={NONE} />,
+    );
     const links = container.querySelectorAll('a');
     expect(links[8].getAttribute('aria-current')).toBe('page');
     expect(links[0].getAttribute('aria-current')).toBeNull();
@@ -55,7 +80,12 @@ describe('HoleStrip', () => {
   it('#1441: a back9 game with a `holes` prop renders only 10-18, and does not mark 1-9 as completed', () => {
     const back9 = Array.from({ length: 9 }, (_, i) => 10 + i);
     const { container } = render(
-      <HoleStrip gameId="g1" currentHole={12} holes={back9} />,
+      <HoleStrip
+        gameId="g1"
+        currentHole={12}
+        scoredHoles={new Set([10, 11])}
+        holes={back9}
+      />,
     );
     const links = container.querySelectorAll('a');
     expect(links.length).toBe(9);
@@ -73,6 +103,7 @@ describe('HoleStrip', () => {
       <HoleStrip
         gameId="front"
         currentHole={3}
+        scoredHoles={new Set([1, 2])}
         holes={front9}
         sibling={{ gameId: 'back', holes: back9 }}
       />,
@@ -88,7 +119,8 @@ describe('HoleStrip', () => {
     expect(links[8].getAttribute('href')).toBe('/games/front/holes/9');
     expect(links[9].getAttribute('href')).toBe('/games/back/holes/10');
     expect(links[17].getAttribute('href')).toBe('/games/back/holes/18');
-    // Positional completed semantics kept: hole 1-2 completed, 10-18 future.
+    // Own holes read from the score set (1-2 entered → scored); sibling holes
+    // keep the positional derivation (#1352 has no score data for them).
     const hole1Chip = links[0].querySelector('span') as HTMLElement;
     expect(hole1Chip.style.background).toBe('var(--hole-completed-bg)');
     const hole10Chip = links[9].querySelector('span') as HTMLElement;

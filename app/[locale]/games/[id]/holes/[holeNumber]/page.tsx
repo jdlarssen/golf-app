@@ -286,7 +286,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const [
     holeRes,
     scoresRes,
-    scoreCountRes,
+    myScoredHolesRes,
     allHolesRes,
     myAllScoresRes,
     wolfChoicesData,
@@ -311,12 +311,17 @@ export default async function HolePage({ params }: { params: Params }) {
         .eq('hole_number', holeNumber)
         .in('user_id', playerIds)
         .returns<ScoreRow[]>(),
+      // #1352: radene, ikke bare antallet — hull-stripa trenger å vite HVILKE
+      // hull som har score for å skille et hoppet-over hull fra et tastet.
+      // Maks 18 rader, samme filtre og RLS-vei som count-en den erstattet
+      // (samme mønster som PrimaryCta.tsx).
       supabase
         .from('scores')
-        .select('hole_number', { count: 'exact', head: true })
+        .select('hole_number')
         .eq('game_id', id)
         .eq('user_id', userId)
-        .not('strokes', 'is', null),
+        .not('strokes', 'is', null)
+        .returns<{ hole_number: number }[]>(),
       isStableford
         ? supabase
             .from('course_holes')
@@ -425,7 +430,10 @@ export default async function HolePage({ params }: { params: Params }) {
   const scoresByUser: Record<string, ScoreRow> = {};
   for (const s of scoresRes.data ?? []) scoresByUser[s.user_id] = s;
 
-  const myCompletedHoles = scoreCountRes.count ?? 0;
+  // `?? []` degraderer på samme måte som dagens `?? 0` gjorde: en feilet
+  // lesing gir tom liste, og Dexie-settet på klienten dekker uansett alt som
+  // er tastet på enheten.
+  const myScoredHoles = (myScoredHolesRes.data ?? []).map((r) => r.hole_number);
 
   // Stableford totals — komputeres server-side når modus krever det.
   // myStablefordTotal: summen over alle ferdig-tastede hull (brukerens egen
@@ -935,7 +943,7 @@ export default async function HolePage({ params }: { params: Params }) {
         strokeIndex={hole.stroke_index}
         myUserId={userId}
         myTeamNumber={me.team_number}
-        myCompletedHoles={myCompletedHoles}
+        myScoredHoles={myScoredHoles}
         courseId={game.course_id}
         greenCenter={greenCenter}
         freshPinCount={freshPinCount}

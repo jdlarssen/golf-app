@@ -76,6 +76,10 @@ function makePlayers(n = 4): HoleClientProps['players'] {
   }));
 }
 
+/** A segment's full set of entered holes — «round complete» for that segment. */
+const FRONT9_SCORED = Array.from({ length: 9 }, (_, i) => i + 1);
+const BACK9_SCORED = Array.from({ length: 9 }, (_, i) => i + 10);
+
 function baseProps(
   overrides: Partial<HoleClientProps> = {},
 ): HoleClientProps {
@@ -87,7 +91,7 @@ function baseProps(
     par: 4,
     strokeIndex: 7,
     myUserId: 'u1',
-    myCompletedHoles: 0,
+    myScoredHoles: [],
     players: makePlayers(),
     ...overrides,
   };
@@ -95,7 +99,8 @@ function baseProps(
 
 // useLiveQuery is called three times per HoleClient render:
 //   1st: localRows (scores per player) — return [undefined,...] per player slot
-//   2nd: localCompletedHoles (count) — return undefined (treated as 0)
+//   2nd: localScoredRows (this player's entered holes) — undefined (= no local
+//        rows yet; the component treats it as an empty set)
 //   3rd: syncQueue (pending items) — return [] (empty queue, no pending)
 // Using mockImplementation with a counter lets each call return the right shape.
 function defaultUseLiveQueryImpl() {
@@ -615,7 +620,7 @@ describe('HoleClient — hole-segment scope (#1441)', () => {
         {...baseProps({
           currentHole: 12,
           holeSegment: 'back9',
-          myCompletedHoles: 9,
+          myScoredHoles: BACK9_SCORED,
         })}
       />,
     );
@@ -698,7 +703,7 @@ describe('HoleClient — broModus (#1466)', () => {
         {...baseProps({
           currentHole: 3,
           holeSegment: 'front9',
-          myCompletedHoles: 9, // roundComplete surfaces the CTA on every hole
+          myScoredHoles: FRONT9_SCORED, // roundComplete surfaces the CTA on every hole
           broBridge,
         })}
       />,
@@ -716,7 +721,7 @@ describe('HoleClient — broModus (#1466)', () => {
         {...baseProps({
           currentHole: 3,
           holeSegment: 'front9',
-          myCompletedHoles: 9,
+          myScoredHoles: FRONT9_SCORED,
           // broBridge is null because the back9 was delivered (e.g. front9
           // rejected after the cascade) — the server passes no boundary bridge
           // off hole 9 anyway.
