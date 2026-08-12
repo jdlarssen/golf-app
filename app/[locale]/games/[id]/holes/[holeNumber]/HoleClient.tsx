@@ -135,12 +135,14 @@ export interface HoleClientProps {
    */
   myTeamNumber?: number | null;
   /**
-   * How many of the player's 18 holes already have a score recorded
-   * (server-side snapshot at render). When this is 18, the bottom CTA
-   * becomes 'Lever scorekort' on every hole — you don't need to
-   * navigate back to hole 18 to find the submit action.
+   * WHICH of the player's holes already have a score recorded (server-side
+   * snapshot at render). Once every hole in the segment is in here the bottom
+   * CTA becomes 'Lever scorekort' on every hole — you don't need to navigate
+   * back to hole 18 to find the submit action. #1352 turned this from a count
+   * into the numbers so `HoleStrip` can mark skipped holes; the count is
+   * derived from the set below, so the two can never disagree.
    */
-  myCompletedHoles: number;
+  myScoredHoles: number[];
   /**
    * Banens course_id (#1210) — trengs av green-pin-chippen for insert.
    * Null når spillet mangler bane (chip og avstandslinje skjules da).
@@ -349,7 +351,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     strokeIndex,
     myUserId,
     myTeamNumber = null,
-    myCompletedHoles,
+    myScoredHoles,
     courseId = null,
     greenCenter = null,
     freshPinCount = 0,
@@ -446,22 +448,29 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     [scoreIdsKey],
   );
 
-  // #668: count THIS player's locally-entered holes across all 18, not just the
-  // current screen. The server snapshot (`myCompletedHoles`) misses strokes that
-  // are still in the offline queue, so a player who taps in every hole offline
-  // would never see the submit CTA. Union via Math.max below — the server count
-  // is the floor (synced holes from earlier sessions Dexie may not hold), the
-  // local count adds the unsynced delta. Never under-counts, so it can only
-  // reveal the CTA earlier, never hide one that used to show.
-  const localCompletedHoles = useLiveQuery(
+  // #668: track THIS player's locally-entered holes across the whole round, not
+  // just the current screen. The server snapshot (`myScoredHoles`) misses
+  // strokes still sitting in the offline queue, so a player who taps in every
+  // hole offline would never see the submit CTA. #1352 turned this from a count
+  // into the hole numbers, so the union below is a real set union rather than a
+  // Math.max: the server set is the floor (synced holes from earlier sessions
+  // Dexie may not hold), the local rows add the unsynced delta. `unique
+  // (game_id, user_id, hole_number)` makes the server count equal to its set
+  // size, and a union never shrinks — so the CTA can only appear earlier than
+  // before, never disappear.
+  const localScoredRows = useLiveQuery(
     () =>
       localDb.scores
         .where('[gameId+userId]')
         .equals([gameId, myUserId])
         .filter((r) => r.strokes != null)
-        .count(),
+        .toArray(),
     [gameId, myUserId],
   );
+  const scoredHoles = new Set(myScoredHoles);
+  for (const row of localScoredRows ?? []) {
+    if (row?.holeNumber != null) scoredHoles.add(row.holeNumber);
+  }
 
   // #754: count non-abandoned items in the sync queue so SyncStatusLine can
   // show a "waiting for network" state while scores are queued but unsynced.
@@ -832,11 +841,10 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const isLastHole = currentHole === lastHoleForSegment(holeSegment);
   // Once the player has a score on every hole, the natural next action is
   // to submit — regardless of which hole they're currently editing. Skip
-  // the 'Neste hull' chain and offer the submit CTA on every screen. Union
-  // the server snapshot with the live local count (#668) so offline-entered
-  // holes still surface the CTA.
-  const roundComplete =
-    Math.max(myCompletedHoles, localCompletedHoles ?? 0) >= totalHoles;
+  // the 'Neste hull' chain and offer the submit CTA on every screen. The
+  // scored set unions the server snapshot with the live Dexie rows (#668,
+  // #1352) so offline-entered holes still surface the CTA.
+  const roundComplete = scoredHoles.size >= totalHoles;
 
   // Stableford = solo-modus, så det er kun «ditt» scorekort, ikke et lag-kort.
   // Texas = ett delt lag-scorekort — «lagets». Best-ball-kopien
@@ -1025,6 +1033,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       <HoleStrip
         gameId={gameId}
         currentHole={currentHole}
+        scoredHoles={scoredHoles}
         holes={holeNumbersForSegment(holeSegment)}
         sibling={holeStripSibling}
       />

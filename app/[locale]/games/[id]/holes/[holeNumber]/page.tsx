@@ -286,7 +286,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const [
     holeRes,
     scoresRes,
-    scoreCountRes,
+    myScoredHolesRes,
     allHolesRes,
     myAllScoresRes,
     wolfChoicesData,
@@ -311,12 +311,16 @@ export default async function HolePage({ params }: { params: Params }) {
         .eq('hole_number', holeNumber)
         .in('user_id', playerIds)
         .returns<ScoreRow[]>(),
+      // #1352: the hole NUMBERS, not just how many. The strip needs to tell a
+      // played hole from a skipped one; at most 18 rows over the same RLS path
+      // the count query already used.
       supabase
         .from('scores')
-        .select('hole_number', { count: 'exact', head: true })
+        .select('hole_number')
         .eq('game_id', id)
         .eq('user_id', userId)
-        .not('strokes', 'is', null),
+        .not('strokes', 'is', null)
+        .returns<{ hole_number: number }[]>(),
       isStableford
         ? supabase
             .from('course_holes')
@@ -425,7 +429,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const scoresByUser: Record<string, ScoreRow> = {};
   for (const s of scoresRes.data ?? []) scoresByUser[s.user_id] = s;
 
-  const myCompletedHoles = scoreCountRes.count ?? 0;
+  const myScoredHoles = (myScoredHolesRes.data ?? []).map((r) => r.hole_number);
 
   // Stableford totals — komputeres server-side når modus krever det.
   // myStablefordTotal: summen over alle ferdig-tastede hull (brukerens egen
@@ -935,7 +939,7 @@ export default async function HolePage({ params }: { params: Params }) {
         strokeIndex={hole.stroke_index}
         myUserId={userId}
         myTeamNumber={me.team_number}
-        myCompletedHoles={myCompletedHoles}
+        myScoredHoles={myScoredHoles}
         courseId={game.course_id}
         greenCenter={greenCenter}
         freshPinCount={freshPinCount}

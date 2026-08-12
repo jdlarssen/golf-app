@@ -2218,6 +2218,8 @@
       "myPoints": "Dine poeng:",
       "hullKicker": "HULL",
       "hullAriaLabel": "Hull {n}",
+      "hullAriaLabelDone": "Hull {n}, ferdig",
+      "hullAriaLabelMissing": "Hull {n}, mangler score",
       "hullIndex": "indeks {si}",
       "hullPar": "Par {par}",
       "hullTotalSuffix": "av {total}",
