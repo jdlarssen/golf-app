@@ -21,11 +21,12 @@ function makeResult(
     totalGrossStrokes: number;
     rank: number;
     holesPlayed: number;
+    tiedWith?: string[];
   }>,
 ): SoloStrokeplayResult {
   return {
     kind: 'solo_strokeplay',
-    players: players.map((p) => ({ ...p, tiedWith: [] })),
+    players: players.map(({ tiedWith = [], ...p }) => ({ ...p, tiedWith })),
     // Per-hull-data brukes ikke av SoloStrokeplayPodium (topp-3-podium) — den
     // format-bevisste «Hull for hull»-flaten har egen render-test (#496).
     holes: [],
@@ -264,6 +265,39 @@ describe('SoloStrokeplayPodium', () => {
     window.sessionStorage.clear();
     render(<SoloStrokeplayPodium {...defaultProps()} />);
     expect(screen.getByText(/Slagspill/i)).toBeInTheDocument();
+  });
+
+  it('delt førsteplass: begge medvinnere får champagne, medaljong «1» og «Delt 1. plass»-merke (#1573)', () => {
+    window.sessionStorage.clear();
+    render(
+      <SoloStrokeplayPodium
+        {...defaultProps({
+          result: makeResult([
+            { userId: 'u1', totalNetStrokes: 68, totalGrossStrokes: 78, rank: 1, holesPlayed: 18, tiedWith: ['u2'] },
+            { userId: 'u2', totalNetStrokes: 68, totalGrossStrokes: 79, rank: 1, holesPlayed: 18, tiedWith: ['u1'] },
+            { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 80, rank: 3, holesPlayed: 18 },
+          ]),
+        })}
+      />,
+    );
+    const podium = screen.getByTestId('strokeplay-podium');
+    // Testid følger fortsatt slotten (posisjonen) — presentasjonen følger rank.
+    const slot1 = within(podium).getByTestId('podium-rank-1');
+    const slot2 = within(podium).getByTestId('podium-rank-2');
+    const slot3 = within(podium).getByTestId('podium-rank-3');
+
+    expect(slot1.dataset.rank).toBe('1');
+    expect(slot2.dataset.rank).toBe('1');
+    // Medvinneren på slot 2 skal ha champagne-accent og medaljong «1» — ikke sølv.
+    expect(slot2.className).toMatch(/border-accent/);
+    expect(within(slot2).getByTitle('1. plass')).toBeInTheDocument();
+    expect(slot1.textContent).toContain('Delt 1. plass');
+    expect(slot2.textContent).toContain('Delt 1. plass');
+
+    // Tredjemann beholder bronse uten delt-merke.
+    expect(slot3.dataset.rank).toBe('3');
+    expect(within(slot3).getByTitle('3. plass')).toBeInTheDocument();
+    expect(slot3.textContent).not.toContain('Delt');
   });
 
 });

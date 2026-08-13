@@ -7,8 +7,18 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
+import type {
+  SoloStrokeplayPlayerLine,
+  SoloStrokeplayResult,
+} from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
+import {
+  PLACE_TIER,
+  SLOT_HEIGHTS,
+  podiumPlace,
+  type PodiumSlot,
+  type PodiumTier,
+} from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SoloStrokeplayPlayerInfo } from './SoloStrokeplayView';
 import { RowReactionsForPlayer } from './RowReactionsForPlayer';
@@ -106,12 +116,17 @@ export function SoloStrokeplayPodium({
     );
   }
 
-  // Podium-trinnene er rank 1, 2 og 3 — men kun hvis vi faktisk har så mange
-  // spillere. result.players er allerede sortert med rank 1 først.
+  // Podium-slottene fylles i sortert rekkefølge (rank 1 først) — men
+  // presentasjonen per trinn følger spillerens FAKTISKE rank, så delt
+  // plassering vises som delt og ikke som sølv/bronse (#1573).
   const first = result.players[0];
   const second = result.players[1] ?? null;
   const third = result.players[2] ?? null;
   const rest = result.players.slice(3);
+  const tiedBadge = (player: SoloStrokeplayPlayerLine): string | null =>
+    player.tiedWith.length > 0
+      ? t('common.tiedRank', { rank: player.rank })
+      : null;
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
@@ -142,53 +157,53 @@ export function SoloStrokeplayPodium({
             3. plass høyre. Når vi ikke har 3 spillere lar vi tom slot stå
             (visuelt sentrert via centered grid). */}
         <div className="grid grid-cols-3 items-end gap-2">
-          {/* 2. plass — venstre */}
+          {/* Slot 2 — venstre (andremann i sortert rekkefølge) */}
           <div className="col-start-1">
             {second && (
               <>
                 <PodiumStep
-                  rank={2}
+                  slot={2}
                   player={second}
                   playerInfo={playersById.get(second.userId)}
-                  tier="silver"
                   staggerIndex={1}
                   slagLabel={t('common.slagLabel')}
                   hullChip={t('common.hullChip', { count: second.holesPlayed })}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
+                  tiedBadge={tiedBadge(second)}
                 />
                 <RowReactionsForPlayer targetUserId={second.userId} />
               </>
             )}
           </div>
 
-          {/* 1. plass — midten (høyeste trinn) */}
+          {/* Slot 1 — midten (høyeste trinn) */}
           <div className="col-start-2">
             <PodiumStep
-              rank={1}
+              slot={1}
               player={first}
               playerInfo={playersById.get(first.userId)}
-              tier="champagne"
               staggerIndex={0}
               slagLabel={t('common.slagLabel')}
               hullChip={t('common.hullChip', { count: first.holesPlayed })}
               unknownPlayerLabel={t('common.unknownPlayerFull')}
+              tiedBadge={tiedBadge(first)}
             />
             <RowReactionsForPlayer targetUserId={first.userId} />
           </div>
 
-          {/* 3. plass — høyre */}
+          {/* Slot 3 — høyre (tredjemann i sortert rekkefølge) */}
           <div className="col-start-3">
             {third && (
               <>
                 <PodiumStep
-                  rank={3}
+                  slot={3}
                   player={third}
                   playerInfo={playersById.get(third.userId)}
-                  tier="bronze"
                   staggerIndex={2}
                   slagLabel={t('common.slagLabel')}
                   hullChip={t('common.hullChip', { count: third.holesPlayed })}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
+                  tiedBadge={tiedBadge(third)}
                 />
                 <RowReactionsForPlayer targetUserId={third.userId} />
               </>
@@ -256,14 +271,6 @@ export function SoloStrokeplayPodium({
 
 
 
-type PodiumTier = 'champagne' | 'silver' | 'bronze';
-
-const TIER_HEIGHTS: Record<PodiumTier, string> = {
-  champagne: 'min-h-[180px]',
-  silver: 'min-h-[150px]',
-  bronze: 'min-h-[130px]',
-};
-
 const TIER_ACCENT: Record<PodiumTier, string> = {
   // Champagne: forest-tinted bg + champagne border + champagne tekst-accent.
   champagne:
@@ -276,40 +283,57 @@ const TIER_ACCENT: Record<PodiumTier, string> = {
 };
 
 function PodiumStep({
-  rank,
+  slot,
   player,
   playerInfo,
-  tier,
   staggerIndex,
   slagLabel,
   hullChip,
   unknownPlayerLabel,
+  tiedBadge,
 }: {
-  rank: 1 | 2 | 3;
-  player: { userId: string; totalNetStrokes: number; totalGrossStrokes: number; holesPlayed: number };
+  /** Grid-posisjon: 1 = midten (høyest trinn), 2 = venstre, 3 = høyre. */
+  slot: PodiumSlot;
+  player: SoloStrokeplayPlayerLine;
   playerInfo: SoloStrokeplayPlayerInfo | undefined;
-  tier: PodiumTier;
   staggerIndex: number;
   slagLabel: string;
   hullChip: string;
   unknownPlayerLabel: string;
+  /** «Delt N. plass»-merke, eller null når spilleren ikke er delt-rangert. */
+  tiedBadge: string | null;
 }) {
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
     : unknownPlayerLabel;
 
-  const tierClass = TIER_ACCENT[tier];
-  const heightClass = TIER_HEIGHTS[tier];
+  // Akse-splitt (#1573): layout (høyde, testid, stagger) følger slotten;
+  // presentasjon (farge, medaljong, tall-styling) følger spillerens faktiske
+  // rank — ved delt førsteplass får begge medvinnerne champagne og «1».
+  const place = podiumPlace(player.rank);
+  const tierClass = TIER_ACCENT[PLACE_TIER[place]];
+  const heightClass = SLOT_HEIGHTS[slot];
   // Medallion-størrelse: 1.-plass får større for å forsterke hierarkiet.
-  const medallionSize = rank === 1 ? 48 : 36;
+  const medallionSize = place === 1 ? 48 : 36;
 
   return (
     <div
-      data-testid={`podium-rank-${rank}`}
+      data-testid={`podium-rank-${slot}`}
+      data-rank={player.rank}
       className={`reveal-up flex flex-col items-center justify-end gap-2 rounded-2xl border ${tierClass} ${heightClass} px-2 py-3`}
       style={{ animationDelay: `${80 + staggerIndex * 90}ms` }}
     >
-      <Medallion place={rank} size={medallionSize} />
+      <Medallion place={place} size={medallionSize} />
+
+      {tiedBadge && (
+        <p
+          className={`text-center text-[9px] font-semibold uppercase tracking-[0.14em] ${
+            place === 1 ? 'text-accent' : 'text-muted'
+          }`}
+        >
+          {tiedBadge}
+        </p>
+      )}
 
       {/* Navn — sentrert og tillates å brytes på 2 linjer. Bruker break-words
           for å unngå at lange navn bryter podium-layouten. */}
@@ -321,9 +345,9 @@ function PodiumStep({
       <div className="text-center">
         <span
           className={`score-num block leading-none tracking-[-0.02em] tabular-nums ${
-            rank === 1
+            place === 1
               ? 'text-[32px] text-accent'
-              : rank === 2
+              : place === 2
                 ? 'text-[24px] text-text'
                 : 'text-[22px] text-text'
           }`}

@@ -8,6 +8,13 @@ import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { BingoBangoBongoResult, BingoBangoBongoPlayerLine } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
+import {
+  PLACE_TIER,
+  SLOT_HEIGHTS,
+  podiumPlace,
+  type PodiumSlot,
+  type PodiumTier,
+} from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { BingoBangoBongoPlayerInfo } from './BingoBangoBongoView';
 import { RowReactionsForPlayer } from './RowReactionsForPlayer';
@@ -80,11 +87,16 @@ export function BingoBangoBongoPodium({
     );
   }
 
-  // result.players er allerede sortert på rank fra scoring-laget.
+  // Podium-slottene fylles i sortert rekkefølge (rank 1 først) — men
+  // presentasjonen per trinn følger spillerens FAKTISKE rank (#1573).
   const first = result.players[0];
   const second = result.players[1] ?? null;
   const third = result.players[2] ?? null;
   const rest = result.players.slice(3);
+  const tiedBadge = (player: BingoBangoBongoPlayerLine): string | null =>
+    player.tiedWith.length > 0
+      ? t('common.tiedRank', { rank: player.rank })
+      : null;
 
   return (
     <LeaderboardShell chromeless={chromeless}>
@@ -111,11 +123,11 @@ export function BingoBangoBongoPodium({
             {second && (
               <>
                 <PodiumStep
-                  rank={2}
+                  slot={2}
                   player={second}
                   playerInfo={playersById.get(second.userId)}
-                  tier="silver"
                   staggerIndex={1}
+                  tiedBadge={tiedBadge(second)}
                 />
                 <RowReactionsForPlayer targetUserId={second.userId} />
               </>
@@ -124,11 +136,11 @@ export function BingoBangoBongoPodium({
 
           <div className="col-start-2">
             <PodiumStep
-              rank={1}
+              slot={1}
               player={first}
               playerInfo={playersById.get(first.userId)}
-              tier="champagne"
               staggerIndex={0}
+              tiedBadge={tiedBadge(first)}
             />
             <RowReactionsForPlayer targetUserId={first.userId} />
           </div>
@@ -137,11 +149,11 @@ export function BingoBangoBongoPodium({
             {third && (
               <>
                 <PodiumStep
-                  rank={3}
+                  slot={3}
                   player={third}
                   playerInfo={playersById.get(third.userId)}
-                  tier="bronze"
                   staggerIndex={2}
+                  tiedBadge={tiedBadge(third)}
                 />
                 <RowReactionsForPlayer targetUserId={third.userId} />
               </>
@@ -197,14 +209,6 @@ export function BingoBangoBongoPodium({
 
 
 
-type PodiumTier = 'champagne' | 'silver' | 'bronze';
-
-const TIER_HEIGHTS: Record<PodiumTier, string> = {
-  champagne: 'min-h-[180px]',
-  silver: 'min-h-[150px]',
-  bronze: 'min-h-[130px]',
-};
-
 const TIER_ACCENT: Record<PodiumTier, string> = {
   champagne:
     'border-accent bg-accent/[0.08] shadow-[0_2px_14px_rgba(201,169,97,0.18)]',
@@ -213,34 +217,50 @@ const TIER_ACCENT: Record<PodiumTier, string> = {
 };
 
 function PodiumStep({
-  rank,
+  slot,
   player,
   playerInfo,
-  tier,
   staggerIndex,
+  tiedBadge,
 }: {
-  rank: 1 | 2 | 3;
+  /** Grid-posisjon: 1 = midten (høyest trinn), 2 = venstre, 3 = høyre. */
+  slot: PodiumSlot;
   player: BingoBangoBongoPlayerLine;
   playerInfo: BingoBangoBongoPlayerInfo | undefined;
-  tier: PodiumTier;
   staggerIndex: number;
+  /** «Delt N. plass»-merke, eller null når spilleren ikke er delt-rangert. */
+  tiedBadge: string | null;
 }) {
   const t = useTranslations('leaderboard');
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
     : t('common.unknownPlayerFull');
 
-  const tierClass = TIER_ACCENT[tier];
-  const heightClass = TIER_HEIGHTS[tier];
-  const medallionSize = rank === 1 ? 48 : 36;
+  // Akse-splitt (#1573): layout (høyde, testid, stagger) følger slotten;
+  // presentasjon (farge, medaljong, tall-styling) følger faktisk rank.
+  const place = podiumPlace(player.rank);
+  const tierClass = TIER_ACCENT[PLACE_TIER[place]];
+  const heightClass = SLOT_HEIGHTS[slot];
+  const medallionSize = place === 1 ? 48 : 36;
 
   return (
     <div
-      data-testid={`podium-rank-${rank}`}
+      data-testid={`podium-rank-${slot}`}
+      data-rank={player.rank}
       className={`reveal-up flex flex-col items-center justify-end gap-2 rounded-2xl border ${tierClass} ${heightClass} px-2 py-3`}
       style={{ animationDelay: `${80 + staggerIndex * 90}ms` }}
     >
-      <Medallion place={rank} size={medallionSize} />
+      <Medallion place={place} size={medallionSize} />
+
+      {tiedBadge && (
+        <p
+          className={`text-center text-[9px] font-semibold uppercase tracking-[0.14em] ${
+            place === 1 ? 'text-accent' : 'text-muted'
+          }`}
+        >
+          {tiedBadge}
+        </p>
+      )}
 
       <p className="text-center font-serif text-[13px] font-medium leading-tight tracking-[-0.005em] text-text break-words">
         {displayName}
@@ -249,9 +269,9 @@ function PodiumStep({
       <div className="text-center">
         <span
           className={`score-num block leading-none tracking-[-0.02em] tabular-nums ${
-            rank === 1
+            place === 1
               ? 'text-[32px] text-accent'
-              : rank === 2
+              : place === 2
                 ? 'text-[24px] text-text'
                 : 'text-[22px] text-text'
           }`}

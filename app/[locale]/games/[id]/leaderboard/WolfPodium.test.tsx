@@ -15,6 +15,7 @@ function makePlayerLine(
   totalPoints: number,
   wolfHolesPlayed: number,
   blindWolfWins = 0,
+  tiedWith: string[] = [],
 ): WolfPlayerLine {
   return {
     userId,
@@ -23,7 +24,7 @@ function makePlayerLine(
     wolfHolesPlayed,
     blindWolfWins,
     rank,
-    tiedWith: [],
+    tiedWith,
   };
 }
 
@@ -126,5 +127,39 @@ describe('WolfPodium', () => {
     expect(allMost.length).toBeGreaterThanOrEqual(2);
     // Bruk rerender bare for å unngå at TypeScript klager på unbrukt variabel.
     void rerender;
+  });
+
+  it('delt førsteplass: begge medvinnere får champagne, medaljong «1» og «Delt 1. plass»-merke (#1573)', () => {
+    window.sessionStorage.clear();
+    render(
+      <WolfPodium
+        {...defaultProps({
+          result: makeResult([
+            makePlayerLine('u1', 1, 16, 5, 0, ['u2']),
+            { ...makePlayerLine('u2', 1, 16, 4, 0, ['u1']), teamNumber: 2 },
+            { ...makePlayerLine('u3', 3, 6, 6, 0), teamNumber: 3 },
+          ]),
+        })}
+      />,
+    );
+
+    const podium = screen.getByTestId('wolf-podium');
+    // Testid følger fortsatt slotten (posisjonen) — presentasjonen følger rank.
+    const slot1 = within(podium).getByTestId('podium-rank-1');
+    const slot2 = within(podium).getByTestId('podium-rank-2');
+    const slot3 = within(podium).getByTestId('podium-rank-3');
+
+    expect(slot1.dataset.rank).toBe('1');
+    expect(slot2.dataset.rank).toBe('1');
+    // Medvinneren på slot 2 skal ha champagne-accent og medaljong «1» — ikke sølv.
+    expect(slot2.className).toMatch(/border-accent/);
+    expect(within(slot2).getByTitle('1. plass')).toBeInTheDocument();
+    expect(slot1.textContent).toContain('Delt 1. plass');
+    expect(slot2.textContent).toContain('Delt 1. plass');
+
+    // Tredjemann beholder bronse uten delt-merke.
+    expect(slot3.dataset.rank).toBe('3');
+    expect(within(slot3).getByTitle('3. plass')).toBeInTheDocument();
+    expect(slot3.textContent).not.toContain('Delt');
   });
 });
