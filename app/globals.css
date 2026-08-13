@@ -807,7 +807,9 @@ h1, h2, h3, h4, h5, h6 {
    *
    * `--tap-extend` er `inset`-verdien (negativ = utover). Én verdi = alle fire
    * sider, to verdier = vertikal/horisontal — sett den inline der utvidelsen
-   * må treffe nøyaktig 44px. Elementet må ikke selv sette `position`. */
+   * må treffe nøyaktig 44px. Elementet må ikke selv sette `position`.
+   * NB: `inset` regnes fra PADDING-boksen — en knapp med border må trekke
+   * borderbredden fra (1px border ⇒ 44 krever border-boks + 2×(inset+1)). */
   .tap-extend {
     position: relative;
   }
