@@ -15,8 +15,13 @@
 --     6. admin sets any player's handicap     → PASS  (admin handicap adjust)
 --     7. admin approves any player's row       → PASS  (admin bypass)
 --
+--   #1362 (migration 0159) — the creator's OWN row, both directions:
+--     8. creator SETS own approved_at         → REJECTED (#670 stands)
+--     9. creator CLEARS own approval (NULLs)  → PASS  (reopen own scorecard)
+--    10. non-creator CLEARS own approval      → REJECTED (guard unchanged)
+--
 --   Negative control:
---     8. service role bypasses the trigger    → PASS  (sanity — proves the
+--    11. service role bypasses the trigger    → PASS  (sanity — proves the
 --        authenticated asserts above are real enforcement, not silent bypass)
 --
 -- Runs as the `authenticated` role with a forged JWT `sub` claim — the same
@@ -34,9 +39,27 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(11);
+select plan(17);
 
 \ir fixtures/rls_helpers.psql
+
+-- ── Probe helper (local to this suite) ───────────────────────────────────────
+-- try_clear_approval(target): the current impersonated user NULLs target's
+-- approval columns — the write `reopenScorecard` performs (#1362). TRUE if the
+-- row updated, FALSE if the guard trigger (42501) or RLS rejected it.
+create or replace function torny_rls.try_clear_approval(p_target uuid) returns boolean
+  language plpgsql as $$
+  declare v_rows int;
+  begin
+    update public.game_players
+       set approved_at = null,
+           approved_by_user_id = null
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception when insufficient_privilege then return false;
+  end;
+$$;
 
 -- ── Seed: one ACTIVE game, five in-flight players + one outsider ──────────────
 -- active_id / flightmate_id are clean (no approved_at / submitted_at), in flight 1
@@ -106,6 +129,66 @@ select ok(
 select ok(
   torny_rls.try_set_team_flight(torny_rls.active_id(), 4, 4),
   'non-admin game creator CAN set ANOTHER player''s team_number/flight_number (roster management preserved)'
+);
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- #1362 (0159) — the creator's OWN row: may CLEAR an approval, never SET one
+-- ═════════════════════════════════════════════════════════════════════════════
+-- created_by is flightmate_id from the block above, so flightmate_id is now a
+-- non-admin creator acting on their own roster row.
+
+-- The #670 invariant must survive the new exception: a creator still cannot
+-- hand themselves an approval.
+select ok(
+  not torny_rls.try_self_approve(torny_rls.flightmate_id()),
+  'game creator is STILL BLOCKED from setting approved_at on their OWN row (#670 invariant holds)'
+);
+
+select is(
+  (select approved_at from public.game_players
+     where game_id = torny_rls.game_id() and user_id = torny_rls.flightmate_id()),
+  null,
+  'blocked creator self-approval left approved_at NULL (no write slipped through)'
+);
+
+-- Seed an approval on the creator's own row (as the service role, i.e. someone
+-- else approved it), then let the creator reopen their own scorecard.
+select torny_rls.as_service();
+update public.game_players
+   set approved_at = now(), approved_by_user_id = torny_rls.admin_id()
+ where game_id = torny_rls.game_id() and user_id = torny_rls.flightmate_id();
+
+select torny_rls.as_user(torny_rls.flightmate_id());
+select ok(
+  torny_rls.try_clear_approval(torny_rls.flightmate_id()),
+  'game creator CAN clear approved_at/approved_by_user_id on their OWN row (reopen own scorecard, #1362)'
+);
+
+select is(
+  (select approved_by_user_id from public.game_players
+     where game_id = torny_rls.game_id() and user_id = torny_rls.flightmate_id()),
+  null,
+  'creator reopen actually nulled approved_by_user_id (not a silent 0-row no-op)'
+);
+
+-- A plain player (not the creator) is unaffected by the exception: clearing an
+-- approval on their own row is still blocked.
+select torny_rls.as_service();
+update public.game_players
+   set approved_at = now(), approved_by_user_id = torny_rls.admin_id()
+ where game_id = torny_rls.game_id() and user_id = torny_rls.active_id();
+
+select torny_rls.as_user(torny_rls.active_id());
+select ok(
+  not torny_rls.try_clear_approval(torny_rls.active_id()),
+  'non-creator player is STILL BLOCKED from clearing the approval on their OWN row'
+);
+
+select isnt(
+  (select approved_at from public.game_players
+     where game_id = torny_rls.game_id() and user_id = torny_rls.active_id()),
+  null,
+  'blocked non-creator self-clear left the approval intact'
 );
 
 -- ═════════════════════════════════════════════════════════════════════════════
