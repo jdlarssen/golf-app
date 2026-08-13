@@ -301,17 +301,23 @@ export async function endGame(gameId: string, allowMissing = false) {
 }
 
 /**
- * Admin: clear a player's submission so they can edit and re-submit. Wipes
- * submitted_at, any approval, and any prior rejection_reason — the row goes
- * back to a clean in-progress state. Players see the game as active again
+ * Admin/creator: clear a player's submission so they can edit and re-submit.
+ * Wipes submitted_at, any approval, and any prior rejection_reason — the row
+ * goes back to a clean in-progress state. Players see the game as active again
  * and can write scores.
+ *
+ * #1362 opens this to the game's creator (same gate as adminApproveScorecard /
+ * adminWithdrawPlayer, #429): admins land back in Sekretariatet, the creator in
+ * their own roster cockpit, via `detailPath`. Reopening the creator's OWN
+ * approved card also needs the narrow trigger exception from migration 0159 —
+ * the guard otherwise blocks every approval-column write on one's own row.
  *
  * No-op safety: only runs when the row currently has submitted_at set.
  */
 export async function reopenScorecard(gameId: string, playerUserId: string) {
   const locale = await getLocale();
-  const { supabase, user, actorName } = await loadAdminContext();
-  const detailPath = `/admin/games/${gameId}`;
+  const { supabase, user, actorName, detailPath } =
+    await loadAdminOrCreatorContext(gameId);
 
   const { data: game } = await supabase
     .from('games')
