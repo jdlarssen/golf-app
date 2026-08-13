@@ -1953,7 +1953,7 @@
       "submitButton": "Lever ✓",
       "submitPending": "Leverer …",
       "syncingPending": "Lagrer slag …",
-      "confirmBase": "Levere scorekortet? Dette kan ikke angres uten admin.",
+      "confirmBase": "Levere scorekortet? Dette kan bare angres av arrangøren.",
       "confirmMissing": "{count, plural, one {1 hull mangler og blir lagret som ikke spilt.} other {# hull mangler og blir lagret som ikke spilt.}}",
       "unknownPlayer": "(ukjent spiller)",
       "puttsPrompt": {
@@ -2108,6 +2108,7 @@
         "player_withdrawn": "Spilleren er trukket fra spillet.",
         "player_reinstated": "Spilleren er med igjen.",
         "admin_approved": "Scorekortet er godkjent.",
+        "scorecard_reopened": "Scorekortet er åpnet igjen. Spilleren kan rette og levere på nytt.",
         "invite_cancelled": "Invitasjonen er trukket tilbake.",
         "guest_added": "Gjesten er lagt til i spillet.",
         "guest_claim_sent": "Resultatet er sendt til {email}. Gjesten logger inn med den adressen og tar over kontoen."
