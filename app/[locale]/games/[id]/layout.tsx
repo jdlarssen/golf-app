@@ -27,7 +27,7 @@ export default async function GameLayout({
   return (
     <>
       {playable && <RealtimeMount gameId={id} />}
-      <SyncBanner />
+      <SyncBanner gameId={id} />
       {children}
     </>
   );

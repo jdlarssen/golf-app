@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { localDb, type SyncQueueItem, type ConflictRecord } from '@/lib/sync/db';
 import { drainQueue } from '@/lib/sync/syncWorker';
+import {
+  summarizeQuarantine,
+  formatHoleList,
+} from '@/lib/sync/quarantineSummary';
+import { Disclosure } from '@/components/ui/Disclosure';
 
 const STUCK_THRESHOLD_MS = 30_000;
 const RETRY_MIN_FEEDBACK_MS = 500;
@@ -72,8 +78,9 @@ function friendlySyncError(
   return 'errorGeneric';
 }
 
-export function SyncBanner() {
+export function SyncBanner({ gameId }: { gameId?: string }) {
   const t = useTranslations('SyncBanner');
+  const locale = useLocale();
   const queue = useLiveQuery<SyncQueueItem[] | undefined>(
     () => localDb.syncQueue.toArray(),
     [],
@@ -101,7 +108,7 @@ export function SyncBanner() {
     await localDb.conflicts.delete(conflictId);
   };
 
-  // Render the queue-related banner (unchanged logic from before).
+  // Render the queue-related banner.
   const queueBanner = (() => {
     if (!queue || queue.length === 0) return null;
 
@@ -110,7 +117,6 @@ export function SyncBanner() {
     // retrying "active" items — a lost stroke must never be silent.
     const abandoned = queue.filter((i) => i.abandonedAt != null);
     const active = queue.filter((i) => i.abandonedAt == null);
-    const abandonedCount = abandoned.length;
 
     const oldestCreatedAt = active.reduce((acc, i) => {
       const t = new Date(i.createdAt).getTime();
@@ -122,9 +128,8 @@ export function SyncBanner() {
     );
     const isStuck = active.length > 0 && oldestAgeMs > STUCK_THRESHOLD_MS;
 
-    if (abandonedCount === 0 && !hasErrors && !isStuck) return null;
+    if (abandoned.length === 0 && !hasErrors && !isStuck) return null;
 
-    const rawError = active.find((i) => i.lastError)?.lastError ?? null;
     // Retry only does something for active items; quarantined items are skipped
     // by drainQueue, so hide the button when there's nothing left to retry.
     const showRetry = active.length > 0;
@@ -139,26 +144,119 @@ export function SyncBanner() {
       setRetrying(false);
     };
 
-    // Abandoned takes priority — it's the most severe (genuine data loss).
-    const message =
-      abandonedCount > 0
-        ? t('abandonedMessage', { count: abandonedCount })
-        : hasErrors
-          ? t('errorWithQueue', {
-              error: t(friendlySyncError(rawError)),
-              count: active.length,
-            })
-          : t('queueWaiting', { count: active.length });
+    const actionButtonClasses =
+      'inline-flex min-h-[44px] items-center rounded-md border border-current px-3 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50';
 
-    const toneClasses =
-      abandonedCount > 0 || hasErrors
-        ? 'bg-danger/[0.08] border-danger/30 text-danger'
-        : 'bg-warning/[0.10] border-warning/40 text-warning';
+    // Quarantine variant (#1369): name the affected holes, link to them, show
+    // the raw error without hover, and offer a confirmed cleanup path.
+    if (abandoned.length > 0) {
+      const summary = summarizeQuarantine(queue, gameId ?? null);
+      const { currentGame, otherGames } = summary;
+
+      // Deleting only the ids that were quarantined at render time guarantees
+      // active (still-retrying) items are never swept up.
+      const handleDismissQuarantine = async () => {
+        if (!window.confirm(t('quarantineDismissConfirm'))) return;
+        await localDb.syncQueue.bulkDelete(abandoned.map((i) => i.id));
+      };
+
+      return (
+        <div className="pointer-events-auto rounded-xl border px-3 py-2 shadow-sm bg-danger/[0.08] border-danger/30 text-danger">
+          <div className="space-y-1 text-sm font-medium leading-tight">
+            {currentGame && (
+              <p className="break-words">
+                {t('quarantineHoles', {
+                  count: currentGame.holes.length,
+                  holes: formatHoleList(currentGame.holes, locale),
+                })}
+              </p>
+            )}
+            {otherGames.map((game) => (
+              <p key={game.gameId} className="break-words">
+                {t('quarantineOtherGame', { count: game.count })}{' '}
+                <Link
+                  href={`/games/${game.gameId}`}
+                  className="underline underline-offset-2"
+                >
+                  {t('quarantineOpenGame')}
+                </Link>
+              </p>
+            ))}
+            {!currentGame && otherGames.length === 0 && (
+              // Every scoreId failed to parse (never expected) — degrade to the
+              // pre-#1369 generic message rather than an empty banner.
+              <p className="break-words">
+                {t('abandonedMessage', { count: summary.totalCount })}
+              </p>
+            )}
+          </div>
+          <p className="mt-1 text-xs font-normal opacity-80">
+            {t('quarantineRecoveryHint')}
+          </p>
+          {currentGame && (
+            <div className="mt-1 flex flex-wrap gap-x-3">
+              {currentGame.holes.map((hole) => (
+                <Link
+                  key={hole}
+                  href={`/games/${currentGame.gameId}/holes/${hole}`}
+                  className="inline-flex min-h-[44px] items-center text-sm font-semibold underline underline-offset-2"
+                >
+                  {t('quarantineOpenHole', { holeNumber: hole })}
+                </Link>
+              ))}
+            </div>
+          )}
+          {summary.errors.length > 0 && (
+            <Disclosure title={t('quarantineDetailsTitle')} className="mt-2">
+              <ul className="space-y-1 text-xs text-muted">
+                {summary.errors.map((error) => (
+                  <li key={error} className="break-words">
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </Disclosure>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void handleDismissQuarantine()}
+              className={actionButtonClasses}
+            >
+              {t('quarantineDismiss')}
+            </button>
+            {showRetry && (
+              <button
+                type="button"
+                onClick={handleRetry}
+                disabled={retrying}
+                className={actionButtonClasses}
+              >
+                {retrying ? t('retrying') : t('retry')}
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Active-only variant: still-retrying items (transient errors / stuck
+    // queue). Compact one-row banner, unchanged behavior from before #1369.
+    const rawError = active.find((i) => i.lastError)?.lastError ?? null;
+    const message = hasErrors
+      ? t('errorWithQueue', {
+          error: t(friendlySyncError(rawError)),
+          count: active.length,
+        })
+      : t('queueWaiting', { count: active.length });
+
+    const toneClasses = hasErrors
+      ? 'bg-danger/[0.08] border-danger/30 text-danger'
+      : 'bg-warning/[0.10] border-warning/40 text-warning';
 
     return (
       <div
         className={`pointer-events-auto flex items-center justify-between gap-2 rounded-xl border px-3 py-2 shadow-sm ${toneClasses}`}
-        title={rawError ?? undefined}
       >
         <div className="min-w-0 text-sm font-medium leading-tight">
           <div className="truncate">{message}</div>
