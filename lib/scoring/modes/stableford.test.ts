@@ -679,6 +679,36 @@ describe('compute (team stableford, par/4BBB)', () => {
       strokeIndex: 17,
     });
   });
+
+  it('returnerer teams i rangert rekkefølge, ikke teamNumber-rekkefølge (#1574)', () => {
+    // Lag 1 taper (bogeys), lag 2 vinner (birdies) — teamNumber-rekkefølge og
+    // rank-rekkefølge er motsatt, så konsumenter kan plukke vinner på indeks 0
+    // (samme kontrakt som solo-stien, som alltid har returnert rangert).
+    const ctx = makeTeamCtx({
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'u3', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+        { userId: 'u4', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      ],
+      holes: par4Holes(2),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 5 },
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+        { userId: 'u1', holeNumber: 2, gross: 5 },
+        { userId: 'u2', holeNumber: 2, gross: 5 },
+        { userId: 'u3', holeNumber: 1, gross: 3 },
+        { userId: 'u4', holeNumber: 1, gross: 3 },
+        { userId: 'u3', holeNumber: 2, gross: 3 },
+        { userId: 'u4', holeNumber: 2, gross: 3 },
+      ],
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'team') throw new Error('expected team');
+    expect(result.teams.map((t) => t.teamNumber)).toEqual([2, 1]);
+    expect(result.teams[0].rank).toBe(1);
+    expect(result.teams[1].rank).toBe(2);
+  });
 });
 
 // ---------------------------------------------------------------------------
