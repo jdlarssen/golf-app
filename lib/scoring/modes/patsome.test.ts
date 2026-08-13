@@ -722,3 +722,28 @@ describe('patsome.compute — defensiv fallback', () => {
     expect(result.scoring).toBe('net');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rangert retur-rekkefølge (#1574 — samme rotårsak som team-stableford)
+// ---------------------------------------------------------------------------
+
+describe('patsome.compute — rangert retur-rekkefølge (#1574)', () => {
+  it('returnerer teams i rangert rekkefølge, ikke teamNumber-rekkefølge', () => {
+    // Lag 1 taper (bogeys), lag 2 vinner (birdies) — teamNumber-rekkefølge og
+    // rank-rekkefølge er motsatt, så podium/view kan plukke vinner på indeks 0.
+    const players = [
+      makePlayer('u1', 1),
+      makePlayer('u2', 1),
+      makePlayer('u3', 2),
+      makePlayer('u4', 2),
+    ];
+    const holes = makeHoles18();
+    const scores = players.flatMap((p) =>
+      holes.map((h) => makeScore(p.userId, h.number, p.teamNumber === 1 ? 5 : 3)),
+    );
+    const result = compute(makeCtx({ players, holes, scores }));
+    expect(result.teams.map((t) => t.teamNumber)).toEqual([2, 1]);
+    expect(result.teams[0].rank).toBe(1);
+    expect(result.teams[1].rank).toBe(2);
+  });
+});

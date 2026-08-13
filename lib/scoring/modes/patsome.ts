@@ -181,14 +181,15 @@ export function compute(ctx: ScoringContext): PatsomeResult {
       holes: padTo18(l.holes.map((h) => h.teamPoints)).map((pts) => -pts),
     })),
   );
-  const rankById = new Map(ranked.map((r) => [r.id, r]));
-
-  const teams: PatsomeTeamLine[] = baseLines.map((l) => {
-    const r = rankById.get(l.teamNumber);
+  // #1574: returner i rangert rekkefølge (rank 1 først), samme kontrakt som
+  // solo-stiene — podium/view-konsumentene plukker vinneren på indeks 0.
+  const lineByTeamNumber = new Map(baseLines.map((l) => [l.teamNumber, l]));
+  const teams: PatsomeTeamLine[] = ranked.map((r) => {
+    const l = lineByTeamNumber.get(r.id)!;
     return {
       ...l,
-      rank: r?.rank ?? 0,
-      tiedWith: r?.tiedWith ?? [],
+      rank: r.rank,
+      tiedWith: r.tiedWith,
     };
   });
 
