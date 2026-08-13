@@ -33,6 +33,10 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { EndGameButton } from './EndGameButton';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
 import { ReopenScorecardButton } from './ReopenScorecardButton';
+import { ScorecardTable } from '@/app/[locale]/games/[id]/_components/ScorecardTable';
+import { fetchScorecardReviewData } from '@/lib/games/scorecardReviewData';
+import type { ScoringGender } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 import { ReopenGameButton } from './ReopenGameButton';
 import { RegistrationOverviewSection } from './RegistrationOverviewSection';
 import { BetalingOverviewSection } from './BetalingOverviewSection';
@@ -91,6 +95,8 @@ type GameRow = {
   require_peer_approval: boolean;
   course_id: string;
   tee_box_id: string;
+  // #1586: segment-filter for review-kortene (front9/back9-spill, #1441).
+  hole_segment: HoleSegment;
   started_at: string | null;
   ended_at: string | null;
   scheduled_tee_off_at: string | null;
@@ -119,6 +125,8 @@ type GamePlayerRow = {
   approved_at: string | null;
   withdrawn_at: string | null;
   accepted_at: string | null;
+  // #1586: kortets eier-par styres av spillerens tee-kjønn i review-tabellen.
+  tee_gender: ScoringGender;
   // #1049: betalt-tidsstempel — non-null = arrangøren har huket av betalt.
   paid_at: string | null;
   users: {
@@ -219,7 +227,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -392,13 +400,14 @@ async function PlayersSections({
   const tCta = await getTranslations('admin.game.cta');
   const tModes = await getTranslations('modes');
   const tRegistration = await getTranslations('admin.game.registration');
+  const tApprove = await getTranslations('game.approve');
 
   // game_players has two FKs to users (user_id and approved_by_user_id), so
   // we must disambiguate via the named constraint.
   const playersPromise = supabase
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, accepted_at, paid_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
     )
     .eq('game_id', gameId)
     .returns<GamePlayerRow[]>();
@@ -426,6 +435,25 @@ async function PlayersSections({
   if (progressRes.error) throw progressRes.error;
 
   const players = playersRes.data ?? [];
+
+  // #1586: leverte kort skal kunne åpnes og leses før godkjenning/gjenåpning.
+  // Egen sekvensiell henting (trenger players først); admin-sesjonens klient
+  // dekker score-lesingen via is_admin()-grenen i RLS-en. Fremdrifts-queryen
+  // over (uten slag) består — spoiler-vernet i progress-visningen røres ikke.
+  const submittedIds =
+    game.status === 'active'
+      ? players
+          .filter((p) => p.submitted_at != null)
+          .map((p) => p.user_id)
+      : [];
+  const { holes: reviewHoles, scoresByUser: reviewScores } =
+    await fetchScorecardReviewData(
+      supabase,
+      supabase,
+      gameId,
+      game.course_id,
+      submittedIds,
+    );
 
   // Mode-narrowing: skiller solo (en spiller = en deltager, ingen lag/flight)
   // fra par-stableford (lag à 2, flight = team mekanisk), best-ball-netto, og
@@ -1020,7 +1048,7 @@ async function PlayersSections({
                   return (
                     <li
                       key={p.user_id}
-                      className="flex flex-col gap-2.5 px-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-2.5 px-2 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium tracking-tight text-text">
@@ -1053,6 +1081,22 @@ async function PlayersSections({
                           playerName={displayName(p)}
                         />
                       </div>
+                      {reviewHoles.length > 0 && (
+                        <details
+                          data-testid="submitted-scorecard-details"
+                          className="sm:basis-full"
+                        >
+                          <summary className="text-sm text-muted cursor-pointer hover:text-text transition-colors">
+                            {tApprove('showCard')}
+                          </summary>
+                          <ScorecardTable
+                            holes={reviewHoles}
+                            scores={reviewScores.get(p.user_id) ?? new Map()}
+                            teeGender={p.tee_gender}
+                            holeSegment={game.hole_segment}
+                          />
+                        </details>
+                      )}
                     </li>
                   );
                 })}

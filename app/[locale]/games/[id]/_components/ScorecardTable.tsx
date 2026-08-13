@@ -7,14 +7,9 @@ import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import { isHoleInSegment } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
+import type { ScorecardHole } from '@/lib/games/scorecardReviewData';
 
-export type ScorecardHole = {
-  hole_number: number;
-  par_mens: number;
-  par_ladies: number;
-  par_juniors: number;
-  stroke_index: number;
-};
+export type { ScorecardHole };
 
 /**
  * The per-hole scorecard table shown when reviewing a player's submitted

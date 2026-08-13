@@ -23,11 +23,8 @@ import { removePlayerFromGame, cancelGameInvitation } from './actions';
 import { sendGuestResult } from '@/app/[locale]/games/guestPlayerActions';
 import { isGuestPlaceholderEmail } from '@/lib/games/createGuestPlayer';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
-import {
-  ScorecardTable,
-  type ScorecardHole,
-} from '../_components/ScorecardTable';
+import { fetchScorecardReviewData } from '@/lib/games/scorecardReviewData';
+import { ScorecardTable } from '../_components/ScorecardTable';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
@@ -81,50 +78,6 @@ const ERROR_KEYS = new Set([
 
 function playerName(p: Pick<PlayerForHole, 'users'>): string {
   return formatRevealName(p.users?.name ?? '', p.users?.nickname ?? null);
-}
-
-// #1586: den som godkjenner må kunne se kortet. Scores hentes med
-// service-role — siden er gated bak requireAdminOrCreator (samme mønster som
-// gjeste-e-postene, #1009), og RLS-klienten ville returnert tomt for andre
-// flighter eller skjult visning (#1542: gaten på call-site ER håndhevelsen).
-async function fetchApprovalCards(
-  supabase: Awaited<ReturnType<typeof getServerClient>>,
-  gameId: string,
-  courseId: string | null,
-  userIds: string[],
-): Promise<{
-  holes: ScorecardHole[];
-  scoresByUser: Map<string, Map<number, number | null>>;
-}> {
-  if (!courseId || userIds.length === 0) {
-    return { holes: [], scoresByUser: new Map() };
-  }
-  const [holesRes, scoresRes] = await Promise.all([
-    supabase
-      .from('course_holes')
-      .select(COURSE_HOLES_SELECT)
-      .eq('course_id', courseId)
-      .order('hole_number', { ascending: true })
-      .returns<ScorecardHole[]>(),
-    getAdminClient()
-      .from('scores')
-      .select('user_id, hole_number, strokes')
-      .eq('game_id', gameId)
-      .in('user_id', userIds)
-      .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>(),
-  ]);
-  if (holesRes.error) throw holesRes.error;
-  if (scoresRes.error) throw scoresRes.error;
-  const scoresByUser = new Map<string, Map<number, number | null>>();
-  for (const s of scoresRes.data ?? []) {
-    let inner = scoresByUser.get(s.user_id);
-    if (!inner) {
-      inner = new Map();
-      scoresByUser.set(s.user_id, inner);
-    }
-    inner.set(s.hole_number, s.strokes);
-  }
-  return { holes: holesRes.data ?? [], scoresByUser };
 }
 
 /**
@@ -263,9 +216,14 @@ export default async function CreatorSpillerePage({
       ? players.filter((p) => !p.withdrawn_at && p.submitted_at && !p.approved_at)
       : [];
 
+  // #1586: den som godkjenner må kunne se kortet. Scores via service-role —
+  // siden er gated bak requireAdminOrCreator (samme mønster som gjeste-
+  // e-postene, #1009); RLS-klienten ville returnert tomt for andre flighter
+  // eller skjult visning (#1542: gaten på call-site ER håndhevelsen).
   const { holes: approvalHoles, scoresByUser: approvalScores } =
-    await fetchApprovalCards(
+    await fetchScorecardReviewData(
       supabase,
+      getAdminClient(),
       gameId,
       game.course_id,
       awaitingApproval.map((p) => p.user_id),
