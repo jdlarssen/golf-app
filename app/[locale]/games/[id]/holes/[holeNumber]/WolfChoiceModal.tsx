@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
+import { useModalFocus } from '@/hooks/useModalFocus';
 import { setWolfChoice } from '@/lib/wolf/setWolfChoice';
 import type { WolfChoice } from '@/lib/scoring/modes/types';
 
@@ -157,6 +158,22 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fokus inn på første valg-knapp ved åpning, og Tab holdes i modalen (#1357).
+  // Fokus-retur er best-effort: modalen åpner seg selv når du er Wolf, så det
+  // finnes ikke alltid en utløser-knapp å gå tilbake til.
+  const { containerRef, focusFirst } = useModalFocus<HTMLDivElement>(isOpen);
+
+  // Mens server-kallet står på er hvert fokuserbart element disabled, og
+  // nettleseren slipper fokus ut på <body>. Når kallet er ferdig — typisk fordi
+  // det kom en feilmelding og knappene våknet igjen — henter vi fokus inn.
+  useEffect(() => {
+    if (!isOpen || submitting) return;
+    const card = containerRef.current;
+    if (!card) return;
+    const active = document.activeElement;
+    if (!card.contains(active) || active === card) focusFirst();
+  }, [isOpen, submitting, containerRef, focusFirst]);
+
   // Escape lukker (men kun hvis vi ikke er midt i en server-call).
   useEffect(() => {
     if (!isOpen) return;
@@ -213,7 +230,9 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
         if (e.target === e.currentTarget && !submitting) onClose();
       }}
     >
-      <div style={cardStyle}>
+      {/* tabIndex={-1}: fokus må kunne parkeres på kortet mens alle knappene
+          er disabled under et server-kall (aldri i tab-rekkefølgen). */}
+      <div ref={containerRef} tabIndex={-1} style={cardStyle}>
         <h2 id="wolf-modal-title" style={headerStyle}>
           {t('modalTitle')}
         </h2>
