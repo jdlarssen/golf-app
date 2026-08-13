@@ -14,6 +14,11 @@ describe('HoleStrip', () => {
     for (let n = 1; n <= 18; n++) {
       expect(screen.getByText(String(n))).toBeInTheDocument();
     }
+    // #1353: hvert hull-mål er ≥44px bredt OG høyt (appens egen treffflate-regel).
+    links.forEach((link) => {
+      expect((link as HTMLElement).style.minWidth).toBe('44px');
+      expect((link as HTMLElement).style.minHeight).toBe('44px');
+    });
   });
 
   it('each cell links to /games/{gameId}/holes/{N}', () => {
