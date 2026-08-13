@@ -20,7 +20,11 @@ export function ApprovePlayerButton({ approveAction }: Props) {
   const t = useTranslations('admin.game.buttons');
   return (
     <form action={approveAction}>
-      <SubmitButton className="whitespace-nowrap text-sm" pendingLabel={t('approvingBusy')}>
+      <SubmitButton
+        data-testid="approve-on-behalf"
+        className="whitespace-nowrap text-sm"
+        pendingLabel={t('approvingBusy')}
+      >
         {t('approveOnBehalf')}
       </SubmitButton>
     </form>
