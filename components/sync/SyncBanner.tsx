@@ -10,9 +10,15 @@ const STUCK_THRESHOLD_MS = 30_000;
 const RETRY_MIN_FEEDBACK_MS = 500;
 
 /**
- * Map raw Supabase / fetch error strings to a short Norwegian explanation
- * a player can act on. The raw error is still kept in Dexie's queue.lastError
- * for diagnostics — only the banner copy is friendlied up.
+ * Map raw Supabase / fetch error strings to a `SyncBanner` message key naming a
+ * short explanation a player can act on. The caller runs the key through
+ * `t()`, so the copy follows the active locale. The raw error is still kept in
+ * Dexie's queue.lastError for diagnostics — only the banner copy is friendlied
+ * up.
+ *
+ * The return type is the literal key union rather than `string` because
+ * next-intl type-checks `t()` arguments against the no.json catalog
+ * (see `i18n/types.d.ts`).
  *
  * Common cases observed during pilot testing:
  *   - Safari offline: "TypeError: Load failed"
@@ -21,8 +27,15 @@ const RETRY_MIN_FEEDBACK_MS = 500;
  *   - Supabase session expired: includes "JWT" / "expired" / "401"
  *   - RLS denied: includes "permission" / "forbidden" / "row-level"
  */
-function friendlySyncError(rawError: string | null): string {
-  if (!rawError) return 'Klarte ikke å lagre';
+function friendlySyncError(
+  rawError: string | null,
+):
+  | 'errorNetwork'
+  | 'errorAuth'
+  | 'errorPermission'
+  | 'errorRateLimit'
+  | 'errorGeneric' {
+  if (!rawError) return 'errorGeneric';
   const lower = rawError.toLowerCase();
   if (
     lower.includes('load failed') ||
@@ -30,7 +43,7 @@ function friendlySyncError(rawError: string | null): string {
     lower.includes('networkerror') ||
     lower.includes('network request failed')
   ) {
-    return 'Mistet nettforbindelsen';
+    return 'errorNetwork';
   }
   if (
     lower.includes('jwt') ||
@@ -39,7 +52,7 @@ function friendlySyncError(rawError: string | null): string {
     lower.includes('401') ||
     lower.includes('unauthorized')
   ) {
-    return 'Innloggingen er utløpt — logg inn på nytt';
+    return 'errorAuth';
   }
   if (
     lower.includes('permission') ||
@@ -47,16 +60,16 @@ function friendlySyncError(rawError: string | null): string {
     lower.includes('row-level') ||
     lower.includes('403')
   ) {
-    return 'Du mangler tilgang';
+    return 'errorPermission';
   }
   if (
     lower.includes('rate limit') ||
     lower.includes('429') ||
     lower.includes('too many')
   ) {
-    return 'For mange forespørsler, vent litt';
+    return 'errorRateLimit';
   }
-  return 'Klarte ikke å lagre';
+  return 'errorGeneric';
 }
 
 export function SyncBanner() {
@@ -129,10 +142,13 @@ export function SyncBanner() {
     // Abandoned takes priority — it's the most severe (genuine data loss).
     const message =
       abandonedCount > 0
-        ? `Kunne ikke lagre ${abandonedCount} slag. Kontakt arrangøren.`
+        ? t('abandonedMessage', { count: abandonedCount })
         : hasErrors
-          ? `${friendlySyncError(rawError)}. ${active.length} slag venter.`
-          : `${active.length} slag venter på lagring.`;
+          ? t('errorWithQueue', {
+              error: t(friendlySyncError(rawError)),
+              count: active.length,
+            })
+          : t('queueWaiting', { count: active.length });
 
     const toneClasses =
       abandonedCount > 0 || hasErrors
@@ -154,7 +170,7 @@ export function SyncBanner() {
             disabled={retrying}
             className="shrink-0 rounded-md border border-current px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50"
           >
-            {retrying ? 'Sender…' : 'Prøv igjen'}
+            {retrying ? t('retrying') : t('retry')}
           </button>
         )}
       </div>
