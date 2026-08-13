@@ -23,6 +23,11 @@ import { removePlayerFromGame, cancelGameInvitation } from './actions';
 import { sendGuestResult } from '@/app/[locale]/games/guestPlayerActions';
 import { isGuestPlaceholderEmail } from '@/lib/games/createGuestPlayer';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
+import {
+  ScorecardTable,
+  type ScorecardHole,
+} from '../_components/ScorecardTable';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
@@ -78,6 +83,50 @@ function playerName(p: Pick<PlayerForHole, 'users'>): string {
   return formatRevealName(p.users?.name ?? '', p.users?.nickname ?? null);
 }
 
+// #1586: den som godkjenner må kunne se kortet. Scores hentes med
+// service-role — siden er gated bak requireAdminOrCreator (samme mønster som
+// gjeste-e-postene, #1009), og RLS-klienten ville returnert tomt for andre
+// flighter eller skjult visning (#1542: gaten på call-site ER håndhevelsen).
+async function fetchApprovalCards(
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  gameId: string,
+  courseId: string | null,
+  userIds: string[],
+): Promise<{
+  holes: ScorecardHole[];
+  scoresByUser: Map<string, Map<number, number | null>>;
+}> {
+  if (!courseId || userIds.length === 0) {
+    return { holes: [], scoresByUser: new Map() };
+  }
+  const [holesRes, scoresRes] = await Promise.all([
+    supabase
+      .from('course_holes')
+      .select(COURSE_HOLES_SELECT)
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<ScorecardHole[]>(),
+    getAdminClient()
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .in('user_id', userIds)
+      .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>(),
+  ]);
+  if (holesRes.error) throw holesRes.error;
+  if (scoresRes.error) throw scoresRes.error;
+  const scoresByUser = new Map<string, Map<number, number | null>>();
+  for (const s of scoresRes.data ?? []) {
+    let inner = scoresByUser.get(s.user_id);
+    if (!inner) {
+      inner = new Map();
+      scoresByUser.set(s.user_id, inner);
+    }
+    inner.set(s.hole_number, s.strokes);
+  }
+  return { holes: holesRes.data ?? [], scoresByUser };
+}
+
 /**
  * Creator/admin roster + approval cockpit for a single game (#429). Gated on
  * requireAdminOrCreator — a game's creator (or an admin) manages their own
@@ -109,6 +158,7 @@ export default async function CreatorSpillerePage({
   const detailPath = `/games/${gameId}`;
 
   const t = await getTranslations('game.players');
+  const tApprove = await getTranslations('game.approve');
   const locale = (await getLocale()) as AppLocale;
 
   const supabase = await getServerClient();
@@ -212,6 +262,14 @@ export default async function CreatorSpillerePage({
     isActive && game.require_peer_approval
       ? players.filter((p) => !p.withdrawn_at && p.submitted_at && !p.approved_at)
       : [];
+
+  const { holes: approvalHoles, scoresByUser: approvalScores } =
+    await fetchApprovalCards(
+      supabase,
+      gameId,
+      game.course_id,
+      awaitingApproval.map((p) => p.user_id),
+    );
 
   return (
     <AppShell>
@@ -381,14 +439,32 @@ export default async function CreatorSpillerePage({
               {awaitingApproval.map((p) => (
                 <li
                   key={p.user_id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3.5 py-3"
+                  className="rounded-xl border border-border bg-surface px-3.5 py-3"
                 >
-                  <p className="min-w-0 truncate text-sm font-medium text-text">
-                    {playerName(p)}
-                  </p>
-                  <ApprovePlayerButton
-                    approveAction={adminApproveScorecard.bind(null, gameId, p.user_id)}
-                  />
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="min-w-0 truncate text-sm font-medium text-text">
+                      {playerName(p)}
+                    </p>
+                    <ApprovePlayerButton
+                      approveAction={adminApproveScorecard.bind(null, gameId, p.user_id)}
+                    />
+                  </div>
+                  {approvalHoles.length > 0 && (
+                    <details
+                      data-testid="submitted-scorecard-details"
+                      className="mt-2"
+                    >
+                      <summary className="text-sm text-muted cursor-pointer hover:text-text transition-colors">
+                        {tApprove('showCard')}
+                      </summary>
+                      <ScorecardTable
+                        holes={approvalHoles}
+                        scores={approvalScores.get(p.user_id) ?? new Map()}
+                        teeGender={p.tee_gender}
+                        holeSegment={game.hole_segment}
+                      />
+                    </details>
+                  )}
                 </li>
               ))}
             </ul>
