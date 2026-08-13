@@ -161,7 +161,10 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
       };
 
       return (
-        <div className="pointer-events-auto rounded-xl border px-3 py-2 shadow-sm bg-danger/[0.08] border-danger/30 text-danger">
+        <div
+          data-testid="quarantine-banner"
+          className="pointer-events-auto rounded-xl border px-3 py-2 shadow-sm bg-danger/[0.08] border-danger/30 text-danger"
+        >
           <div className="space-y-1 text-sm font-medium leading-tight">
             {currentGame && (
               <p className="break-words">
@@ -175,6 +178,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
               <p key={game.gameId} className="break-words">
                 {t('quarantineOtherGame', { count: game.count })}{' '}
                 <Link
+                  data-testid="quarantine-open-game"
                   href={`/games/${game.gameId}`}
                   className="underline underline-offset-2"
                 >
@@ -198,6 +202,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
               {currentGame.holes.map((hole) => (
                 <Link
                   key={hole}
+                  data-testid="quarantine-open-hole"
                   href={`/games/${currentGame.gameId}/holes/${hole}`}
                   className="inline-flex min-h-[44px] items-center text-sm font-semibold underline underline-offset-2"
                 >
@@ -207,7 +212,11 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
             </div>
           )}
           {summary.errors.length > 0 && (
-            <Disclosure title={t('quarantineDetailsTitle')} className="mt-2">
+            <Disclosure
+              id="quarantine-details"
+              title={t('quarantineDetailsTitle')}
+              className="mt-2"
+            >
               <ul className="space-y-1 text-xs text-muted">
                 {summary.errors.map((error) => (
                   <li key={error} className="break-words">
@@ -220,6 +229,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
+              data-testid="quarantine-dismiss"
               onClick={() => void handleDismissQuarantine()}
               className={actionButtonClasses}
             >
