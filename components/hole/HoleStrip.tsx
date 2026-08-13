@@ -42,15 +42,19 @@ const containerStyle: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
+// #1353: gap 0 — hvert ≥44px-mål ligger kant-i-kant, så senter-til-senter blir
+// 44 px uten døde soner mellom cellene. Visuell avstand bæres av differansen
+// mellom målet (44) og cellen (26).
 const innerStyle: CSSProperties = {
   display: 'inline-flex',
-  gap: 4,
+  gap: 0,
 };
 
 const hitAreaStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
+  minWidth: 44,
   minHeight: 44,
   textDecoration: 'none',
 };
