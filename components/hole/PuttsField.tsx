@@ -52,9 +52,13 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
   }
 
   // Compact column tucked under the score number. Stepper on top, tiny label
-  // below. Buttons are 34×30 — deliberately smaller than the score stepper to
-  // fit the free height beside it; a flagged trade-off against the ≥44px tap
-  // guideline that's how this placement adds zero card height.
+  // below. The buttons DRAW at 34×30 — deliberately smaller than the score
+  // stepper so the column fits the free height beside it and adds zero card
+  // height — but each one HITS at 44×44 via `.tap-extend` (#1356): an invisible
+  // ::after hangs ±7px vertically and ±5px horizontally outside the visible box.
+  // The ≥44px rule is therefore met without changing layout or focus-ring
+  // geometry. The overflow lands on non-interactive neighbours only (18px
+  // clearance between − and +, 9px toward the score stepper).
   const columnStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -72,7 +76,9 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
     color: 'var(--text-muted)',
   };
 
+  // 30 + 2×7 = 44 høy, 34 + 2×5 = 44 bred. Se `.tap-extend` i app/globals.css.
   const btnStyle: CSSProperties = {
+    ['--tap-extend' as string]: '-7px -5px',
     width: 34,
     height: 30,
     border: '1px solid var(--border)',
@@ -106,6 +112,7 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
           aria-label={t('decreaseAriaLabel', { name })}
           onClick={decrease}
           disabled={disabled || putts == null}
+          className="tap-extend"
           style={{ ...btnStyle, opacity: disabled || putts == null ? 0.5 : 1 }}
         >
           −
@@ -122,6 +129,7 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
           aria-label={t('increaseAriaLabel', { name })}
           onClick={increase}
           disabled={disabled || putts === MAX_PUTTS}
+          className="tap-extend"
           style={{ ...btnStyle, opacity: disabled || putts === MAX_PUTTS ? 0.5 : 1 }}
         >
           +
