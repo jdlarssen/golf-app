@@ -8,8 +8,17 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { firstName } from '@/lib/firstName';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type { StablefordTeamResult } from '@/lib/scoring/modes/types';
+import type {
+  StablefordTeamLine,
+  StablefordTeamResult,
+} from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
+import {
+  PLACE_TIER,
+  podiumPlace,
+  type PodiumSlot,
+  type PodiumTier,
+} from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SoloStablefordPlayerInfo } from './SoloStablefordView';
 
@@ -101,12 +110,17 @@ export function TeamStablefordPodium({
     );
   }
 
-  // Podium-trinnene er rank 1, 2 og 3 — men kun hvis vi faktisk har så mange
-  // lag. result.teams er allerede sortert (lavest rank først via compute()).
+  // Podium-slottene fylles i sortert rekkefølge (rank 1 først) — men
+  // presentasjonen per trinn følger lagets FAKTISKE rank, så delt plassering
+  // vises som delt og ikke som sølv/bronse (#1573).
   const first = result.teams[0];
   const second = result.teams[1] ?? null;
   const third = result.teams[2] ?? null;
   const rest = result.teams.slice(3);
+  const tiedBadge = (team: StablefordTeamLine): string | null =>
+    team.tiedWith.length > 0
+      ? t('common.tiedRank', { rank: team.rank })
+      : null;
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
@@ -137,39 +151,39 @@ export function TeamStablefordPodium({
             3. plass høyre. Når vi ikke har 3 lag lar vi tom slot stå
             (visuelt sentrert via centered grid). */}
         <div className="grid grid-cols-3 items-end gap-2">
-          {/* 2. plass — venstre */}
+          {/* Slot 2 — venstre (andrelaget i sortert rekkefølge) */}
           <div className="col-start-1">
             {second && (
               <PodiumStep
-                rank={2}
+                slot={2}
                 team={second}
                 playersById={playersById}
-                tier="silver"
                 staggerIndex={1}
+                tiedBadge={tiedBadge(second)}
               />
             )}
           </div>
 
-          {/* 1. plass — midten (høyeste trinn) */}
+          {/* Slot 1 — midten (høyeste trinn) */}
           <div className="col-start-2">
             <PodiumStep
-              rank={1}
+              slot={1}
               team={first}
               playersById={playersById}
-              tier="champagne"
               staggerIndex={0}
+              tiedBadge={tiedBadge(first)}
             />
           </div>
 
-          {/* 3. plass — høyre */}
+          {/* Slot 3 — høyre (tredjelaget i sortert rekkefølge) */}
           <div className="col-start-3">
             {third && (
               <PodiumStep
-                rank={3}
+                slot={3}
                 team={third}
                 playersById={playersById}
-                tier="bronze"
                 staggerIndex={2}
+                tiedBadge={tiedBadge(third)}
               />
             )}
           </div>
@@ -225,12 +239,15 @@ export function TeamStablefordPodium({
 
 
 
-type PodiumTier = 'champagne' | 'silver' | 'bronze';
-
-const TIER_HEIGHTS: Record<PodiumTier, string> = {
-  champagne: 'min-h-[200px]',
-  silver: 'min-h-[170px]',
-  bronze: 'min-h-[150px]',
+/**
+ * Trinnhøyde følger SLOTTEN, ikke ranken — midten er alltid høyest, også når
+ * to trinn deler samme rank. Lag-trinnene er høyere enn fellesskalaen i
+ * `podiumPresentation` fordi de bærer en ekstra partnernavn-linje.
+ */
+const SLOT_HEIGHTS: Record<PodiumSlot, string> = {
+  1: 'min-h-[200px]',
+  2: 'min-h-[170px]',
+  3: 'min-h-[150px]',
 };
 
 const TIER_ACCENT: Record<PodiumTier, string> = {
@@ -268,17 +285,19 @@ function teamPartnerLabel(
 }
 
 function PodiumStep({
-  rank,
+  slot,
   team,
   playersById,
-  tier,
   staggerIndex,
+  tiedBadge,
 }: {
-  rank: 1 | 2 | 3;
-  team: { teamNumber: number; playerIds: string[]; totalPoints: number };
+  /** Grid-posisjon: 1 = midten (høyest trinn), 2 = venstre, 3 = høyre. */
+  slot: PodiumSlot;
+  team: StablefordTeamLine;
   playersById: Map<string, SoloStablefordPlayerInfo>;
-  tier: PodiumTier;
   staggerIndex: number;
+  /** «Delt N. plass»-merke, eller null når laget ikke er delt-rangert. */
+  tiedBadge: string | null;
 }) {
   const t = useTranslations('leaderboard');
   const partners = teamPartnerLabel(
@@ -287,18 +306,32 @@ function PodiumStep({
     t('common.noPlayers'),
     t('common.unknownPlayer'),
   );
-  const tierClass = TIER_ACCENT[tier];
-  const heightClass = TIER_HEIGHTS[tier];
+  // Akse-splitt (#1573): layout (høyde, testid, stagger) følger slotten;
+  // presentasjon (farge, medaljong, tall-styling) følger lagets faktiske rank.
+  const place = podiumPlace(team.rank);
+  const tierClass = TIER_ACCENT[PLACE_TIER[place]];
+  const heightClass = SLOT_HEIGHTS[slot];
   // Medallion-størrelse: 1.-plass får større for å forsterke hierarkiet.
-  const medallionSize = rank === 1 ? 48 : 36;
+  const medallionSize = place === 1 ? 48 : 36;
 
   return (
     <div
-      data-testid={`podium-rank-${rank}`}
+      data-testid={`podium-rank-${slot}`}
+      data-rank={team.rank}
       className={`reveal-up flex flex-col items-center justify-end gap-2 rounded-2xl border ${tierClass} ${heightClass} px-2 py-3`}
       style={{ animationDelay: `${80 + staggerIndex * 90}ms` }}
     >
-      <Medallion place={rank} size={medallionSize} />
+      <Medallion place={place} size={medallionSize} />
+
+      {tiedBadge && (
+        <p
+          className={`text-center text-[9px] font-semibold uppercase tracking-[0.14em] ${
+            place === 1 ? 'text-accent' : 'text-muted'
+          }`}
+        >
+          {tiedBadge}
+        </p>
+      )}
 
       {/* Lag-label — sentrert, bold-vekt for visuell vekt over partnernavn. */}
       <p className="text-center font-serif text-[14px] font-medium leading-tight tracking-[-0.005em] text-text">
@@ -314,9 +347,9 @@ function PodiumStep({
       <div className="text-center">
         <span
           className={`score-num block leading-none tracking-[-0.02em] tabular-nums ${
-            rank === 1
+            place === 1
               ? 'text-[32px] text-accent'
-              : rank === 2
+              : place === 2
                 ? 'text-[24px] text-text'
                 : 'text-[22px] text-text'
           }`}

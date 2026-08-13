@@ -20,6 +20,7 @@ function makeUnitLine(
   units: number,
   unitBreakdown: { front9: boolean; back9: boolean; total18: boolean },
   total18Effective: number,
+  tiedWith: string[] = [],
 ): NassauUnitLine {
   return {
     userId,
@@ -28,7 +29,7 @@ function makeUnitLine(
     total18EffectiveStrokes: total18Effective,
     total18SectionRank: rank,
     rank,
-    tiedWith: [],
+    tiedWith,
   };
 }
 
@@ -204,5 +205,37 @@ describe('NassauPodium', () => {
     const firstBadges = within(first).getByTestId('nassau-unit-badges');
     expect(within(firstBadges).getByTestId('unit-badge-front9').dataset.won).toBe('true');
     expect(within(firstBadges).getByTestId('unit-badge-total18').dataset.won).toBe('false');
+  });
+
+  it('delt førsteplass: begge medvinnere får champagne, medaljong «1» og «Delt 1. plass»-merke (#1573)', () => {
+    window.sessionStorage.clear();
+    const tied: NassauResult = {
+      ...makeSweepResult(),
+      players: [
+        makeUnitLine('uA', 1, 2, { front9: true, back9: true, total18: false }, 70, ['uB']),
+        makeUnitLine('uB', 1, 2, { front9: true, back9: true, total18: false }, 70, ['uA']),
+        makeUnitLine('uC', 3, 0, { front9: false, back9: false, total18: false }, 81),
+      ],
+    };
+    render(<NassauPodium {...defaultProps({ result: tied })} />);
+
+    const podium = screen.getByTestId('nassau-podium');
+    // Testid følger fortsatt slotten (posisjonen) — presentasjonen følger rank.
+    const slot1 = within(podium).getByTestId('podium-rank-1');
+    const slot2 = within(podium).getByTestId('podium-rank-2');
+    const slot3 = within(podium).getByTestId('podium-rank-3');
+
+    expect(slot1.dataset.rank).toBe('1');
+    expect(slot2.dataset.rank).toBe('1');
+    // Medvinneren på slot 2 skal ha champagne-accent og medaljong «1» — ikke sølv.
+    expect(slot2.className).toMatch(/border-accent/);
+    expect(within(slot2).getByTitle('1. plass')).toBeInTheDocument();
+    expect(slot1.textContent).toContain('Delt 1. plass');
+    expect(slot2.textContent).toContain('Delt 1. plass');
+
+    // Tredjemann beholder bronse uten delt-merke.
+    expect(slot3.dataset.rank).toBe('3');
+    expect(within(slot3).getByTitle('3. plass')).toBeInTheDocument();
+    expect(slot3.textContent).not.toContain('Delt');
   });
 });

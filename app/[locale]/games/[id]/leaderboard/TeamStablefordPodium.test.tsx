@@ -322,4 +322,39 @@ describe('TeamStablefordPodium', () => {
     expect(within(podium).getByTestId('podium-rank-2').querySelector('svg')).not.toBeNull();
     expect(within(podium).getByTestId('podium-rank-3').querySelector('svg')).not.toBeNull();
   });
+
+  it('delt førsteplass: begge medvinner-lag får champagne, medaljong «1» og «Delt 1. plass»-merke (#1573)', () => {
+    // TeamStablefordPodium antar at result.teams allerede er rank-sortert
+    // (egen bug — #1574), så fixturet leveres sortert.
+    render(
+      <TeamStablefordPodium
+        {...defaultProps({
+          result: makeResult([
+            makeTeamLine({ teamNumber: 1, playerIds: ['u1', 'u2'], totalPoints: 42, rank: 1, tiedWith: [2] }),
+            makeTeamLine({ teamNumber: 2, playerIds: ['u3', 'u4'], totalPoints: 42, rank: 1, tiedWith: [1] }),
+            makeTeamLine({ teamNumber: 3, playerIds: ['u5', 'u6'], totalPoints: 28, rank: 3 }),
+          ]),
+        })}
+      />,
+    );
+
+    const podium = screen.getByTestId('stableford-team-podium');
+    // Testid følger fortsatt slotten (posisjonen) — presentasjonen følger rank.
+    const slot1 = within(podium).getByTestId('podium-rank-1');
+    const slot2 = within(podium).getByTestId('podium-rank-2');
+    const slot3 = within(podium).getByTestId('podium-rank-3');
+
+    expect(slot1.dataset.rank).toBe('1');
+    expect(slot2.dataset.rank).toBe('1');
+    // Medvinneren på slot 2 skal ha champagne-accent og medaljong «1» — ikke sølv.
+    expect(slot2.className).toMatch(/border-accent/);
+    expect(within(slot2).getByTitle('1. plass')).toBeInTheDocument();
+    expect(slot1.textContent).toContain('Delt 1. plass');
+    expect(slot2.textContent).toContain('Delt 1. plass');
+
+    // Tredjeplassen beholder bronse uten delt-merke.
+    expect(slot3.dataset.rank).toBe('3');
+    expect(within(slot3).getByTitle('3. plass')).toBeInTheDocument();
+    expect(slot3.textContent).not.toContain('Delt');
+  });
 });
