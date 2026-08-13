@@ -14,10 +14,12 @@ import { GuestBadge } from '@/components/ui/GuestBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { ApprovePlayerButton } from '@/app/[locale]/admin/games/[id]/ApprovePlayerButton';
+import { ReopenScorecardButton } from '@/app/[locale]/admin/games/[id]/ReopenScorecardButton';
 import {
   adminWithdrawPlayer,
   adminUndoWithdraw,
   adminApproveScorecard,
+  reopenScorecard,
 } from '@/app/[locale]/admin/games/[id]/actions';
 import { removePlayerFromGame, cancelGameInvitation } from './actions';
 import { sendGuestResult } from '@/app/[locale]/games/guestPlayerActions';
@@ -41,6 +43,7 @@ const STATUS_KEYS = new Set([
   'player_withdrawn',
   'player_reinstated',
   'admin_approved',
+  'scorecard_reopened',
   'invite_cancelled',
   'guest_added',
   'guest_claim_sent',
@@ -269,39 +272,55 @@ export default async function CreatorSpillerePage({
                       )}
                     </div>
 
-                    {isPreStart && (
-                      <form action={removePlayerFromGame.bind(null, gameId)}>
-                        <input type="hidden" name="user_id" value={p.user_id} />
-                        <button
-                          type="submit"
-                          className="min-h-[44px] rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
-                        >
-                          {t('removeButton')}
-                        </button>
-                      </form>
-                    )}
+                    {/* Row actions. Wrapped so a submitted player in a
+                        withdrawal-capable mode can show both Trekk and Åpne
+                        for redigering without justify-between pushing them
+                        apart (#1362). */}
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      {isPreStart && (
+                        <form action={removePlayerFromGame.bind(null, gameId)}>
+                          <input type="hidden" name="user_id" value={p.user_id} />
+                          <button
+                            type="submit"
+                            className="min-h-[44px] rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
+                          >
+                            {t('removeButton')}
+                          </button>
+                        </form>
+                      )}
 
-                    {isActive && canWithdraw && !wd && (
-                      <form action={adminWithdrawPlayer.bind(null, gameId, p.user_id)}>
-                        <button
-                          type="submit"
-                          className="min-h-[44px] whitespace-nowrap rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
-                        >
-                          {t('withdrawButton')}
-                        </button>
-                      </form>
-                    )}
+                      {isActive && canWithdraw && !wd && (
+                        <form action={adminWithdrawPlayer.bind(null, gameId, p.user_id)}>
+                          <button
+                            type="submit"
+                            className="min-h-[44px] whitespace-nowrap rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
+                          >
+                            {t('withdrawButton')}
+                          </button>
+                        </form>
+                      )}
 
-                    {isActive && canWithdraw && wd && (
-                      <form action={adminUndoWithdraw.bind(null, gameId, p.user_id)}>
-                        <button
-                          type="submit"
-                          className="min-h-[44px] whitespace-nowrap rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-accent/50 hover:text-text"
-                        >
-                          {t('undoWithdrawButton')}
-                        </button>
-                      </form>
-                    )}
+                      {isActive && canWithdraw && wd && (
+                        <form action={adminUndoWithdraw.bind(null, gameId, p.user_id)}>
+                          <button
+                            type="submit"
+                            className="min-h-[44px] whitespace-nowrap rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-accent/50 hover:text-text"
+                          >
+                            {t('undoWithdrawButton')}
+                          </button>
+                        </form>
+                      )}
+
+                      {/* #1362: gjenåpning gjelder ALLE leverte kort, også de
+                          godkjente — det er der den eneste angreveien mangler
+                          (peer-avvisningen forsvinner ved godkjenning). */}
+                      {isActive && submitted && (
+                        <ReopenScorecardButton
+                          reopenAction={reopenScorecard.bind(null, gameId, p.user_id)}
+                          playerName={playerName(p)}
+                        />
+                      )}
+                    </div>
                   </li>
                 );
               })}

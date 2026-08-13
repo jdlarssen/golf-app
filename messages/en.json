@@ -1953,7 +1953,7 @@
       "submitButton": "Submit ✓",
       "submitPending": "Submitting …",
       "syncingPending": "Saving strokes …",
-      "confirmBase": "Submit the scorecard? This cannot be undone without admin.",
+      "confirmBase": "Submit the scorecard? Only the organiser can undo this.",
       "confirmMissing": "{count, plural, one {1 hole is missing and will be saved as not played.} other {# holes are missing and will be saved as not played.}}",
       "unknownPlayer": "(unknown player)",
       "puttsPrompt": {
@@ -2108,6 +2108,7 @@
         "player_withdrawn": "Player withdrawn from game.",
         "player_reinstated": "Player is back in the game.",
         "admin_approved": "Scorecard approved.",
+        "scorecard_reopened": "The scorecard is open again. The player can fix it and submit once more.",
         "invite_cancelled": "Invitation cancelled.",
         "guest_added": "The guest has been added to the game.",
         "guest_claim_sent": "The result has been sent to {email}. The guest logs in with that address and takes over the account."
