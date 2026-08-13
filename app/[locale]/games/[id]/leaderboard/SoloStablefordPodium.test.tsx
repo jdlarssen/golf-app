@@ -20,12 +20,13 @@ function makeResult(
     totalPoints: number;
     rank: number;
     holesPlayed: number;
+    tiedWith?: string[];
   }>,
 ): StablefordSoloResult {
   return {
     kind: 'stableford',
     variant: 'solo',
-    players: players.map((p) => ({ ...p, tiedWith: [] })),
+    players: players.map(({ tiedWith = [], ...p }) => ({ ...p, tiedWith })),
     // Per-hull-data brukes ikke av SoloStablefordPodium (topp-3-podium) — den
     // format-bevisste «Hull for hull»-flaten har egen render-test (#496).
     holes: [],
@@ -191,6 +192,38 @@ describe('SoloStablefordPodium', () => {
     const podium = screen.getByTestId('stableford-podium');
     const second = within(podium).getByTestId('podium-rank-2');
     expect(second.textContent).toMatch(/Bjørnen/);
+  });
+
+  it('delt førsteplass: begge medvinnere får champagne, medaljong «1» og «Delt 1. plass»-merke (#1372)', () => {
+    render(
+      <SoloStablefordPodium
+        {...defaultProps({
+          result: makeResult([
+            { userId: 'u1', totalPoints: 38, rank: 1, holesPlayed: 18, tiedWith: ['u2'] },
+            { userId: 'u2', totalPoints: 38, rank: 1, holesPlayed: 18, tiedWith: ['u1'] },
+            { userId: 'u3', totalPoints: 28, rank: 3, holesPlayed: 18 },
+          ]),
+        })}
+      />,
+    );
+    const podium = screen.getByTestId('stableford-podium');
+    // Testid følger fortsatt slotten (posisjonen) — presentasjonen følger rank.
+    const slot1 = within(podium).getByTestId('podium-rank-1');
+    const slot2 = within(podium).getByTestId('podium-rank-2');
+    const slot3 = within(podium).getByTestId('podium-rank-3');
+
+    expect(slot1.dataset.rank).toBe('1');
+    expect(slot2.dataset.rank).toBe('1');
+    // Medvinneren på slot 2 skal ha champagne-accent og medaljong «1» — ikke sølv.
+    expect(slot2.className).toMatch(/border-accent/);
+    expect(within(slot2).getByTitle('1. plass')).toBeInTheDocument();
+    expect(slot1.textContent).toContain('Delt 1. plass');
+    expect(slot2.textContent).toContain('Delt 1. plass');
+
+    // Tredjemann beholder bronse uten delt-merke.
+    expect(slot3.dataset.rank).toBe('3');
+    expect(within(slot3).getByTitle('3. plass')).toBeInTheDocument();
+    expect(slot3.textContent).not.toContain('Delt');
   });
 
   it('faller tilbake til «(ukjent spiller)» hvis info mangler', () => {

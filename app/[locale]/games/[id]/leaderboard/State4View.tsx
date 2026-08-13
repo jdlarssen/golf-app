@@ -349,6 +349,9 @@ function LeaderCard({
   const playersLine = line.players
     .map((p) => formatRevealName(p.name, p.nickname))
     .join(' · ');
+  // Delt ledelse (#1372): hero-kortet skal si «Delt 1. plass», ikke
+  // «Leder · 1. plass» — det like-rangerte laget rendres som rad under.
+  const isTied = line.tiedWith.length > 0;
   const href = drilldownHref({
     gameId,
     team: line.teamNumber,
@@ -380,7 +383,9 @@ function LeaderCard({
 
         <div className="relative flex flex-col items-center">
           <span className="leader-badge-pulse text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
-            {ts('leaderBadge', { rank: line.rank })}
+            {isTied
+              ? t('tiedRank', { rank: line.rank })
+              : ts('leaderBadge', { rank: line.rank })}
           </span>
           <span
             className="score-num my-1 text-[64px] leading-none tracking-[-0.04em] text-accent"
@@ -484,7 +489,9 @@ function TeamRow({
         className="reveal-up flex items-center gap-3.5 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_6px_rgba(26,46,31,0.03)] active:scale-[0.99]"
         style={{ animationDelay: `${140 + staggerIndex * 80}ms` }}
       >
-        {line.rank === 2 || line.rank === 3 ? (
+        {line.rank === 1 || line.rank === 2 || line.rank === 3 ? (
+          // En rank-1-RAD finnes bare når laget deler ledelsen med hero-kortet
+          // (#1372) — da skal den ha gull-medaljong, ikke linen-disc.
           <span className="shrink-0">
             <Medallion place={line.rank} size={36} />
           </span>
@@ -510,7 +517,17 @@ function TeamRow({
                 <span className="tabular-nums">+{gap}</span> {ts('behindLeader')}
               </span>
             )}
-            {isTied && <span className="text-muted"> · {ts('tiedLabel')}</span>}
+            {isTied &&
+              (line.rank === 1 ? (
+                // Delt ledelse: løft merket fra muted «delt» til eksplisitt
+                // «Delt 1. plass» i accent — raden er en medvinner (#1372).
+                <span className="font-semibold text-accent">
+                  {' · '}
+                  {t('tiedRank', { rank: line.rank })}
+                </span>
+              ) : (
+                <span className="text-muted"> · {ts('tiedLabel')}</span>
+              ))}
           </p>
         </div>
         <div className="shrink-0 text-right">
