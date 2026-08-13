@@ -257,7 +257,13 @@ async function PendingApprovals({
               </div>
             </div>
 
-            <details className="px-4 py-3 border-b border-border">
+            {/* #1365: open by default — the approver must see the holes they
+                attest. <summary> stays as a collapse toggle. */}
+            <details
+              open
+              data-testid="approve-scorecard-details"
+              className="px-4 py-3 border-b border-border"
+            >
               <summary className="text-sm text-muted cursor-pointer hover:text-text transition-colors">
                 {t('showCard')}
               </summary>
@@ -352,8 +358,15 @@ function PendingApprovalsSkeleton() {
               <Skeleton className="mt-1 h-3 w-2/5" delay={i * 120 + 30} />
             </div>
           </div>
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-3 border-b border-border space-y-2">
             <Skeleton className="h-3 w-32" delay={i * 120 + 60} />
+            {[0, 1, 2, 3, 4, 5].map((row) => (
+              <Skeleton
+                key={row}
+                className="h-4 w-full"
+                delay={i * 120 + 60 + row * 20}
+              />
+            ))}
           </div>
           <div className="px-4 py-3">
             <Skeleton className="h-11 w-full rounded-full" delay={i * 120 + 90} />
