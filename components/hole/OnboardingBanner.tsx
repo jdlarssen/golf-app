@@ -52,7 +52,14 @@ const closeHitStyle: CSSProperties = {
   justifyContent: 'center',
 };
 
+// Knappens egen boks er ~16×22 (padding 4 + ×-glyfen på 14px/line-height 1).
+// `.tap-extend` (#1356) henger en usynlig ::after utenfor den: 22 + 2×11 = 44
+// høy, og 15px til hver side gir ≥44 bredt selv om glyfen er smal. Boksen,
+// posisjonen og fokusringen står urørt. Utvidelsen lander bare på
+// ikke-interaktive naboer — banner-teksten til venstre, sidemargen til høyre,
+// banner-flaten under, og topp-margen (14px) over. Se app/globals.css.
 const closeBtnStyle: CSSProperties = {
+  ['--tap-extend' as string]: '-11px -15px',
   background: 'transparent',
   border: 'none',
   color: 'var(--accent)',
@@ -74,7 +81,8 @@ export function OnboardingBanner(
     // for lukkeknappen under. Se app/globals.css. Knappens hit-area stikker
     // bevisst litt over banner-kanten (top: -6), så øverste ringstrek treffer
     // side-bakgrunnen — de tre andre sidene ligger på forest og bærer
-    // markeringen.
+    // markeringen. `.tap-extend` på knappen rører ikke denne geometrien:
+    // ringen følger fortsatt knappens egen lille boks.
     <div style={bannerStyle} data-focus-surface="strong">
       <div style={chipStyle} aria-hidden="true">
         ↓
@@ -88,6 +96,7 @@ export function OnboardingBanner(
           type="button"
           aria-label={t('closeAriaLabel')}
           onClick={onDismiss}
+          className="tap-extend"
           style={closeBtnStyle}
         >
           ×

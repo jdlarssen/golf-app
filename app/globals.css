@@ -794,6 +794,29 @@ h1, h2, h3, h4, h5, h6 {
       opacity: 1;
     }
   }
+
+  /* Tap-target-utvidelse (#1356) — gjør en kontroll lettere å treffe UTEN å
+   * røre dens egen boks. `::after` er en usynlig flate som henger utenfor
+   * knappen; treff på den regnes som treff på knappen (pseudo-elementer
+   * hit-testes til opphavselementet), så DOM-en er uendret.
+   *
+   * Hvorfor ikke bare gjøre knappen større med gjennomsiktig kant: fokusringen
+   * tegnes rundt knappens egen boks (`outline` + `outline-offset` øverst i
+   * fila), så en større boks flytter ringen. Pseudo-elementet lar layout,
+   * synlig chrome OG ringgeometri stå helt urørt.
+   *
+   * `--tap-extend` er `inset`-verdien (negativ = utover). Én verdi = alle fire
+   * sider, to verdier = vertikal/horisontal — sett den inline der utvidelsen
+   * må treffe nøyaktig 44px. Elementet må ikke selv sette `position`. */
+  .tap-extend {
+    position: relative;
+  }
+
+  .tap-extend::after {
+    content: '';
+    position: absolute;
+    inset: var(--tap-extend, -6px);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
