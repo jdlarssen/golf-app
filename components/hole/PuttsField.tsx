@@ -55,7 +55,7 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
   // below. The buttons DRAW at 34×30 — deliberately smaller than the score
   // stepper so the column fits the free height beside it and adds zero card
   // height — but each one HITS at 44×44 via `.tap-extend` (#1356): an invisible
-  // ::after hangs ±7px vertically and ±5px horizontally outside the visible box.
+  // ::after hangs ±8px vertically and ±6px horizontally outside the padding box.
   // The ≥44px rule is therefore met without changing layout or focus-ring
   // geometry. The overflow lands on non-interactive neighbours only (18px
   // clearance between − and +, 9px toward the score stepper).
@@ -76,9 +76,10 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
     color: 'var(--text-muted)',
   };
 
-  // 30 + 2×7 = 44 høy, 34 + 2×5 = 44 bred. Se `.tap-extend` i app/globals.css.
+  // ::after ankres til PADDING-boksen (32×28 — border-box 34×30 minus 1px
+  // kant): 28 + 2×8 = 44 høy, 32 + 2×6 = 44 bred. Se `.tap-extend` i globals.css.
   const btnStyle: CSSProperties = {
-    ['--tap-extend' as string]: '-7px -5px',
+    ['--tap-extend' as string]: '-8px -6px',
     width: 34,
     height: 30,
     border: '1px solid var(--border)',
