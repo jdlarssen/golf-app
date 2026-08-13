@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { SpecificValueSheet } from './SpecificValueSheet';
 
 describe('SpecificValueSheet', () => {
@@ -129,6 +129,36 @@ describe('SpecificValueSheet', () => {
     );
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('flytter fokus inn i arket ved åpning og tilbake til ⋯-knappen ved lukking', () => {
+    function Harness({ open }: { open: boolean }) {
+      return (
+        <>
+          <button type="button" data-testid="trigger">
+            ⋯
+          </button>
+          <SpecificValueSheet
+            open={open}
+            par={4}
+            onPick={() => {}}
+            onClear={() => {}}
+            onClose={() => {}}
+          />
+        </>
+      );
+    }
+
+    const { rerender } = render(<Harness open={false} />);
+    act(() => screen.getByTestId('trigger').focus());
+
+    rerender(<Harness open={true} />);
+    expect(
+      screen.getByRole('button', { name: 'Sett score til 1' }),
+    ).toHaveFocus();
+
+    rerender(<Harness open={false} />);
+    expect(screen.getByTestId('trigger')).toHaveFocus();
   });
 
   it('each number button has aria-label "Sett score til N"', () => {

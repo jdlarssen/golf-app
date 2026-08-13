@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import type { CSSProperties, JSX, MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import { useModalFocus } from '@/hooks/useModalFocus';
 
 export interface SpecificValueSheetProps {
   open: boolean;
@@ -97,6 +98,10 @@ export function SpecificValueSheet(
   const { open, par, onPick, onClear, onClose } = props;
   const t = useTranslations('holes.scoreCard');
 
+  // Fokus inn i arket ved åpning, Tab holdes innenfor, og fokus tilbake på
+  // ⋯-knappen ved lukking (#1357).
+  const { containerRef } = useModalFocus<HTMLDivElement>(open);
+
   useEffect(() => {
     if (!open) return;
     function handleKeyDown(event: KeyboardEvent) {
@@ -121,6 +126,7 @@ export function SpecificValueSheet(
       data-testid="specific-value-backdrop"
     >
       <div
+        ref={containerRef}
         style={sheetStyle}
         onClick={handleSheetClick}
         data-testid="specific-value-sheet"
