@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { WolfChoiceModal } from './WolfChoiceModal';
 
 // Mock server-action — vi tester at modalen kaller den med riktige args og
@@ -107,6 +107,22 @@ describe('WolfChoiceModal', () => {
       );
     });
     expect(onChoiceSaved).toHaveBeenCalledWith('blind', null);
+  });
+
+  it('legger fokus på første valg-knapp og holder Tab inne i modalen', () => {
+    render(<WolfChoiceModal {...defaultProps()} />);
+    const firstChoice = screen.getByTestId('wolf-partner-button-u2');
+    const closeButton = screen.getByTestId('wolf-modal-close');
+
+    expect(firstChoice).toHaveFocus();
+
+    // Tab fra siste element wrapper til første i stedet for å havne bak modalen.
+    act(() => closeButton.focus());
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(firstChoice).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(closeButton).toHaveFocus();
   });
 
   it('viser feilmelding ved rls_denied uten å lukke modalen', async () => {
