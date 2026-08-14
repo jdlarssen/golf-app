@@ -77,8 +77,10 @@ Samme blindsone rammer ALLE oppretter-UPDATEs på `game_players` via sesjonsklie
       `approved_by_user_id=252e1a6f` skrevet; prod-vakt grønn. (Rigg-læring: knappen
       krever `require_peer_approval=true` + `.next`-cachen må tømmes etter
       REST-rigging — gwp-cachen overlever server-restart på disk.)
-- [ ] **S6:** PR dokumenterer prod-gaten eksplisitt: migrasjonen er IKKE påført prod;
+- [x] **S6:** PR dokumenterer prod-gaten eksplisitt: migrasjonen er IKKE påført prod;
       påføring krever eier-godkjenning i økt (approve-prod-sentinel).
+      **Evidens:** PR #1627 body-seksjonen «⚠️ Prod-gate (aldri auto-merge)» +
+      bevis-kommentar; evaluator verifiserte read-only at policyen ikke finnes i prod.
 
 ## Gates
 
