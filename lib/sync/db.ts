@@ -36,7 +36,7 @@ export interface SyncQueueItem {
 
 /**
  * Written by syncWorker (#688) when the server-wins branch overwrites a score
- * that the local user had entered. Surfaced by SyncBanner as a one-line notice
+ * that was entered on this device. Surfaced by SyncBanner as a one-line notice
  * so the overwrite is never silent. The record is removed when the user
  * dismisses the banner.
  */
@@ -48,6 +48,14 @@ export interface ConflictRecord {
   localStrokes: number | null;
   serverStrokes: number | null;
   resolvedAt: string;
+  /**
+   * False (#1368) when the overwritten row was one the device owner kept for a
+   * flight-mate (marker role) rather than their own score — SyncBanner then
+   * picks the "the number you kept for someone else" wording. Non-indexed, so
+   * adding it needs no Dexie version bump; `undefined` on records written
+   * before #1368 and read as own score.
+   */
+  forOwnScore?: boolean;
 }
 
 class GolfDb extends Dexie {

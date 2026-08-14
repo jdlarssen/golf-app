@@ -5351,6 +5351,7 @@
   },
   "SyncBanner": {
     "conflictNotice": "Hole {holeNumber} was changed by another player. The most recent value now applies.",
+    "conflictNoticeMarker": "Hole {holeNumber}: the score you kept for another player was changed. The most recent value applies.",
     "conflictDismiss": "OK",
     "errorNetwork": "Lost the network connection",
     "errorAuth": "Your session has expired — log in again",
