@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { endGameCore } from '@/lib/games/endGameCore';
@@ -181,10 +182,9 @@ export async function adminApproveScorecard(
   }
 
   // #712: expectAffected turns a silent 0-row UPDATE into an explicit failure.
-  // 0 rows here means the scorecard was already approved (idempotent no-op) or
-  // the player row doesn't exist. Either way there's nothing to approve, so
-  // we redirect to ?status=admin_approved (idempotent) rather than firing the
-  // audit log and notification for a write that never happened.
+  // 0 rows here means the scorecard was already approved (idempotent no-op),
+  // the player row doesn't exist — or the write was filtered away by RLS. The
+  // catch below tells those apart before claiming success (#1595).
   try {
     expectAffected(
       await supabase
@@ -210,7 +210,36 @@ export async function adminApproveScorecard(
       console.error('[adminApproveScorecard] approve update failed', err);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
-    // Idempotent: scorecard already approved → treat as success without re-notifying.
+
+    // #1595: "0 rows" has two opposite meanings and the mutation itself cannot
+    // tell them apart — PostgREST reports no error either way. Until 0160 a
+    // non-playing creator hit an RLS SELECT blind spot, matched 0 rows, and got
+    // the success banner while the scorecard stayed unapproved. So re-read the
+    // row through the service-role client (RLS-free, so it sees the truth):
+    //   • row gone, or approved_at already set → nothing left to do → idempotent
+    //     success, exactly as before
+    //   • row still pending → the write was blocked, not redundant → say so
+    // Keeps I3 (absence of error ≠ success) honest if RLS ever drifts again.
+    const admin = getAdminClient();
+    const { data: playerRow, error: readError } = await admin
+      .from('game_players')
+      .select('approved_at')
+      .eq('game_id', gameId)
+      .eq('user_id', playerUserId)
+      .maybeSingle<{ approved_at: string | null }>();
+
+    // A failed re-read is not evidence of success either — treat it as a failure
+    // rather than guessing.
+    if (readError || playerRow?.approved_at === null) {
+      console.error(
+        '[adminApproveScorecard] approve matched 0 rows and the scorecard is still pending',
+        { gameId, playerUserId, readError },
+      );
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
+
+    // Idempotent: scorecard already approved (or the row is gone) → treat as
+    // success without re-notifying.
     revalidateTag(`game-${gameId}`, 'max');
     redirect({ href: `${detailPath}?status=admin_approved#leverte-scorekort`, locale });
   }
