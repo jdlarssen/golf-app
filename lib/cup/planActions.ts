@@ -1,14 +1,21 @@
 'use server';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
+import type { Database } from '@/lib/database.types';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
 import { exceedsPersonalPlayerCap } from '@/lib/cup/limits';
 import { parseOsloDateTimeLocal, isTeeOffInPast } from '@/lib/games/gamePayload';
+import {
+  planCupPlanPropagation,
+  type CupPlanValues,
+  type StoredCupMatch,
+} from './cupPlanPropagation';
 import { parseCupPlanForm } from './planValidation';
 import { getCupCandidatePlayers } from './getCupCandidatePlayers';
 
@@ -45,6 +52,79 @@ function revalidateCup(id: string, groupId: string | null): void {
   revalidateTag(`tournament-${id}`, 'max');
   revalidatePath(`/admin/cup/${id}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
+}
+
+/**
+ * Skriver den nettopp lagrede planen ned på cupens ALLEREDE genererte matcher
+ * (#1523). Uten dette var plan→match-kopien en engangs-hendelse ved
+ * generering: endret arrangøren starttiden etterpå, ble matchene stående uten
+ * tee-off, og hverken cron-sveipet eller E1-fallbacken hadde noe å fyre på.
+ *
+ * Hvilke rader som treffes og hvilken tid hver av dem får avgjøres av den rene
+ * `planCupPlanPropagation` (som gjenskaper genereringens egen utregning) —
+ * her gjøres kun I/O.
+ *
+ * To vern på skrivingen:
+ *  - `.eq('status', 'scheduled')` gjentar status-filteret i selve UPDATE-en.
+ *    Rekker cron-sveipet å starte en match mellom lesingen og skrivingen, skal
+ *    den startede runden IKKE få nye verdier — invarianten er hardere enn
+ *    rad-tellingen.
+ *  - `expectAffected`: fant lesingen scheduled-matcher, er 0 oppdaterte rader
+ *    en ekte feil (felle #2), ikke en ærlig no-op. Ingen genererte matcher =
+ *    ingen UPDATE i det hele tatt.
+ *
+ * Én UPDATE per distinkt starttid (splittet cup-dag forskyver flightene ti
+ * minutter hver) — bane og tee er like for alle. Returnerer id-ene som ble
+ * oppdatert, slik at kalleren kan revalidere hver kamps cache-tag.
+ */
+async function propagatePlanToScheduledMatches(
+  admin: SupabaseClient<Database>,
+  tournamentId: string,
+  plan: CupPlanValues,
+): Promise<string[]> {
+  const { data: rows, error } = await admin
+    .from('games')
+    .select('id, status, source_game_id, tournament_match_label, hole_segment')
+    .eq('tournament_id', tournamentId);
+  if (error) throw new Error(`propagatePlanToScheduledMatches: ${error.message}`);
+
+  const matches: StoredCupMatch[] = (rows ?? []).map((r) => ({
+    id: r.id,
+    status: r.status,
+    sourceGameId: r.source_game_id,
+    matchLabel: r.tournament_match_label,
+    holeSegment: r.hole_segment,
+  }));
+
+  const updates = planCupPlanPropagation(matches, plan);
+  if (updates.length === 0) return [];
+
+  const byTeeOff = new Map<string | null, string[]>();
+  for (const u of updates) {
+    const ids = byTeeOff.get(u.scheduledTeeOffAt) ?? [];
+    ids.push(u.gameId);
+    byTeeOff.set(u.scheduledTeeOffAt, ids);
+  }
+
+  const updatedIds: string[] = [];
+  for (const [scheduledTeeOffAt, ids] of byTeeOff) {
+    const affected = expectAffected(
+      await admin
+        .from('games')
+        .update({
+          course_id: plan.courseId,
+          tee_box_id: plan.teeBoxId,
+          scheduled_tee_off_at: scheduledTeeOffAt,
+        })
+        .in('id', ids)
+        .eq('status', 'scheduled')
+        .select('id'),
+      'saveCupPlan.propagateToMatches',
+    );
+    updatedIds.push(...affected.map((row) => row.id));
+  }
+
+  return updatedIds;
 }
 
 /**
@@ -148,6 +228,28 @@ export async function saveCupPlan(
     console.error('[cup] saveCupPlan upsert failed', { id, err });
     return { error: 'plan_save_failed' };
   }
+
+  // #1523: planen er lagret — nå ned på matchene som allerede er generert.
+  // Egen feilkode: planen ER lagret på dette punktet, så `plan_save_failed`
+  // ville løyet. Arrangøren får vite at matchene ikke fikk de nye verdiene og
+  // kan lagre på nytt (skrivingen er idempotent).
+  let propagatedGameIds: string[] = [];
+  try {
+    propagatedGameIds = await propagatePlanToScheduledMatches(admin, id, {
+      courseId,
+      teeBoxId,
+      scheduledTeeOffAt,
+    });
+  } catch (err) {
+    console.error('[cup] saveCupPlan match propagation failed', { id, err });
+    revalidateCup(id, groupId);
+    return { error: 'plan_matches_not_updated' };
+  }
+
+  // Hver berørt kamp leses gjennom `getGameWithPlayers`-cachen (tag
+  // `game-${id}`) — uten dette ville hull-siden og kamp-hjemmet vist gammel
+  // bane/starttid til tagen tilfeldigvis ble revalidert av noe annet.
+  for (const gameId of propagatedGameIds) revalidateTag(`game-${gameId}`, 'max');
 
   revalidateCup(id, groupId);
   redirect(`${cupPath(id, groupId)}?status=plan_saved`);

@@ -50,6 +50,12 @@ type Props = {
     strategy: PlanStrategy;
     bestBallAllowancePct: number;
   };
+  /**
+   * Antall allerede genererte matcher som ennå ikke er startet (#1523). Disse
+   * arver bane/tee/starttid når planen lagres, så arrangøren får beskjed før
+   * hun trykker. 0 → ingen melding (ingenting å oppdatere).
+   */
+  scheduledMatchCount: number;
 };
 
 const INITIAL_STATE: CupPlanActionError = { error: '' };
@@ -73,7 +79,12 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
  * `startTransition(dispatch)` — React 19 ville ellers auto-resette de
  * ukontrollerte feltene når en feil returneres og slette arrangørens input.
  */
-export function CupPlanForm({ tournamentId, courses, initial }: Props) {
+export function CupPlanForm({
+  tournamentId,
+  courses,
+  initial,
+  scheduledMatchCount,
+}: Props) {
   const t = useTranslations('cup.plan');
   // Preset-navn/-beskrivelser deler hjem med resten av cup-flaten (stabil
   // `cup.presets`-nøkkel); tilpasset-varianten bor i `cup.plan`.
@@ -395,15 +406,26 @@ export function CupPlanForm({ tournamentId, courses, initial }: Props) {
         </Banner>
       )}
 
-      <Button
-        type="submit"
-        className="w-full"
-        data-testid="cup-plan-save"
-        pending={isPending}
-        pendingLabel={t('savePending')}
-      >
-        {t('saveButton')}
-      </Button>
+      <div className="space-y-2">
+        <Button
+          type="submit"
+          className="w-full"
+          data-testid="cup-plan-save"
+          pending={isPending}
+          pendingLabel={t('savePending')}
+        >
+          {t('saveButton')}
+        </Button>
+        {/* #1523: matchene er allerede laget — si hva lagringen gjør med dem. */}
+        {scheduledMatchCount > 0 && (
+          <p
+            className="font-sans text-xs text-muted text-center"
+            data-testid="cup-plan-propagation-notice"
+          >
+            {t('propagationNotice', { count: scheduledMatchCount })}
+          </p>
+        )}
+      </div>
     </form>
   );
 }

@@ -128,6 +128,13 @@ export async function CupPlanSetup({
 
   const initial = buildInitialValues(plan);
 
+  // #1523: matchene som ennå ikke er startet får planens bane/tee/starttid når
+  // arrangøren lagrer. Tallet er nøyaktig de radene `saveCupPlan` oppdaterer —
+  // startede og ferdige matcher røres aldri, og telles derfor ikke med.
+  const scheduledMatchCount = snapshot.leaderboard.matches.filter(
+    (m) => m.status === 'scheduled',
+  ).length;
+
   const Shell = variant === 'club' ? AppShell : AdminShell;
   const backHref =
     variant === 'club' && groupId
@@ -155,6 +162,7 @@ export async function CupPlanSetup({
         tournamentId={tournamentId}
         courses={courses}
         initial={initial}
+        scheduledMatchCount={scheduledMatchCount}
       />
     </Shell>
   );

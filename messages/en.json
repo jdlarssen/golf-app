@@ -4558,6 +4558,7 @@
       "bestBallHeading": "Best ball",
       "bestBallLabel": "Best ball handicap (%)",
       "bestBallHint": "The share of course handicap that applies on the best ball holes (10-18). Default is 85%.",
+      "propagationNotice": "{count, plural, one {The match you have made gets the new course, tee and start time.} other {The # matches you have made get the new course, tee and start time.}}",
       "saveButton": "Save setup",
       "savePending": "Saving …",
       "errors": {
@@ -4572,6 +4573,7 @@
         "not_found": "Couldn't find the cup.",
         "not_draft": "The cup has already started, so the setup is locked.",
         "plan_save_failed": "Couldn't save the setup. Please try again.",
+        "plan_matches_not_updated": "The setup is saved, but the matches didn't pick it up. Please try again.",
         "unexpected": "Unexpected error: {code}"
       }
     },

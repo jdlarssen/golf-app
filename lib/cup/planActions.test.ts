@@ -123,6 +123,118 @@ describe('saveCupPlan', () => {
     expect(upsert!.args[1]).toEqual({ onConflict: 'tournament_id' });
   });
 
+  it('genererte matcher: scheduled-radene får ny bane/tee/starttid, én UPDATE per flight-tid', async () => {
+    // Én splittet-cup-dag-flight per host-par; «Singel»-radene er avledede.
+    const games = [
+      { id: 'gs-1', status: 'scheduled', source_game_id: null, tournament_match_label: 'Greensome 1', hole_segment: 'front9' },
+      { id: 'bb-1', status: 'scheduled', source_game_id: null, tournament_match_label: 'Best ball 1', hole_segment: 'back9' },
+      { id: 's-1', status: 'scheduled', source_game_id: 'bb-1', tournament_match_label: 'Singel 1', hole_segment: 'back9' },
+      { id: 'gs-2', status: 'scheduled', source_game_id: null, tournament_match_label: 'Greensome 2', hole_segment: 'front9' },
+      { id: 'aktiv', status: 'active', source_game_id: null, tournament_match_label: 'Greensome 3', hole_segment: 'front9' },
+    ];
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull,
+      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { id: 'course-1' }, error: null },
+      { data: { id: 'tee-1', course_id: 'course-1', archived_at: null }, error: null },
+      { data: [{ tournament_id: 'cup-1' }], error: null }, // plan upsert
+      { data: games, error: null }, // cupens games
+      { data: [{ id: 'gs-1' }, { id: 'bb-1' }, { id: 's-1' }], error: null }, // flight 1
+      { data: [{ id: 'gs-2' }], error: null }, // flight 2
+    ]);
+    supabaseMock = buildSupabaseMock([adminUser]);
+    setUser('admin-1');
+
+    const { saveCupPlan } = await import('./planActions');
+    const err = await saveCupPlan(
+      planForm({ tee_off_at: '2030-06-01T08:00' }),
+    ).catch((e) => e);
+    expect(err, 'success redirects (throws)').toBeInstanceOf(RedirectError);
+
+    const updates = adminMock.__fromCalls.filter(
+      (c) => c.table === 'games' && c.method === 'update',
+    );
+    expect(updates, 'one UPDATE per distinct tee-off').toHaveLength(2);
+
+    const payloads = updates.map(
+      (c) => c.args[0] as { course_id: string; tee_box_id: string; scheduled_tee_off_at: string },
+    );
+    for (const p of payloads) {
+      expect(p.course_id).toBe('course-1');
+      expect(p.tee_box_id).toBe('tee-1');
+    }
+    // Flight 2 ligger ti minutter etter flight 1 (FLIGHT_TEE_OFF_STAGGER_MINUTES).
+    const [first, second] = payloads.map((p) => Date.parse(p.scheduled_tee_off_at));
+    expect(second - first).toBe(10 * 60 * 1000);
+
+    // Den avledede singles-matchen følger hosten sin, ikke sitt eget label-tall.
+    const idGroups = adminMock.__fromCalls
+      .filter((c) => c.table === 'games' && c.method === 'in')
+      .map((c) => c.args[1] as string[]);
+    expect(idGroups).toEqual([['gs-1', 'bb-1', 's-1'], ['gs-2']]);
+
+    // Den startede matchen er hverken i settet eller uten status-vern i UPDATE-en.
+    expect(idGroups.flat()).not.toContain('aktiv');
+    const statusFilters = adminMock.__fromCalls.filter(
+      (c) => c.table === 'games' && c.method === 'eq' && c.args[0] === 'status',
+    );
+    expect(statusFilters).toHaveLength(2);
+    expect(statusFilters[0].args[1]).toBe('scheduled');
+
+    // Hver oppdatert kamp får cachen sin revalidert.
+    const { revalidateTag } = await import('next/cache');
+    const tags = (revalidateTag as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(tags).toEqual(
+      expect.arrayContaining(['game-gs-1', 'game-bb-1', 'game-s-1', 'game-gs-2']),
+    );
+  });
+
+  it('ingen genererte matcher: ingen UPDATE, planen lagres som før', async () => {
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull,
+      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { id: 'course-1' }, error: null },
+      { data: { id: 'tee-1', course_id: 'course-1', archived_at: null }, error: null },
+      { data: [{ tournament_id: 'cup-1' }], error: null }, // plan upsert
+      { data: [], error: null }, // cupen har ingen matcher ennå
+    ]);
+    supabaseMock = buildSupabaseMock([adminUser]);
+    setUser('admin-1');
+
+    const { saveCupPlan } = await import('./planActions');
+    const err = await saveCupPlan(planForm()).catch((e) => e);
+
+    expect(err).toBeInstanceOf(RedirectError);
+    expect(
+      adminMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'update'),
+    ).toBe(false);
+  });
+
+  it('0 oppdaterte rader tross scheduled-matcher: plan_matches_not_updated, ingen redirect', async () => {
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull,
+      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { id: 'course-1' }, error: null },
+      { data: { id: 'tee-1', course_id: 'course-1', archived_at: null }, error: null },
+      { data: [{ tournament_id: 'cup-1' }], error: null }, // plan upsert
+      {
+        data: [
+          { id: 'g1', status: 'scheduled', source_game_id: null, tournament_match_label: 'Singel 1', hole_segment: 'full' },
+        ],
+        error: null,
+      },
+      { data: [], error: null }, // UPDATE traff 0 rader — ekte feil, ikke no-op
+    ]);
+    supabaseMock = buildSupabaseMock([adminUser]);
+    setUser('admin-1');
+
+    const { saveCupPlan } = await import('./planActions');
+    expect(await saveCupPlan(planForm())).toEqual({
+      error: 'plan_matches_not_updated',
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
   it('cup not draft: not_draft, no upsert, no redirect', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
