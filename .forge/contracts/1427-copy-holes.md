@@ -25,14 +25,14 @@ To pre-eksisterende katalog-hull fra #1267-runden:
 
 ## Suksesskriterier
 
-- [ ] `no.json` sier «roterende» (wolf.shortDescription); EN-søsteren uendret (allerede
+- [x] `no.json` sier «roterende» (wolf.shortDescription); EN-søsteren uendret (allerede
   korrekt: «the Wolf rotates»).
-- [ ] `en.json` `landing.endCta.*` gir en hel, naturlig setning MED ikke-tomt gullord.
-- [ ] Ingen test-/snapshot-oppdatering nødvendig (0 test-treff på strengene — verifisert
+- [x] `en.json` `landing.endCta.*` gir en hel, naturlig setning MED ikke-tomt gullord.
+- [x] Ingen test-/snapshot-oppdatering nødvendig (0 test-treff på strengene — verifisert
   grep); `npx vitest -u` kjøres IKKE.
-- [ ] `.changes/1427-copy-hull.md` notatfil (type fix).
-- [ ] Humanizer-sjekk på ny EN-copy (og typo-fiksen).
-- [ ] Staging-bevis: skjermbilde av EN lande-CTA + wolf-kortet i formatguiden på
+- [x] `.changes/1427-copy-hull.md` notatfil (type fix).
+- [x] Humanizer-sjekk på ny EN-copy (og typo-fiksen).
+- [x] Staging-bevis: skjermbilde av EN lande-CTA + wolf-kortet i formatguiden på
   torny-staging, postet som PR-kommentar + `staging-verified`-label FØR ready.
 
 ## Gates
@@ -49,3 +49,11 @@ To pre-eksisterende katalog-hull fra #1267-runden:
 
 - hvorfor-torny-sidens endCta (har allerede gullord i begge locales). Øvrige
   formatGuide-tekster.
+
+## Evidens (2026-08-14/15)
+
+Runde 1 (Alternativ A): staging-driver — end-cta-gold=«par», format-desc uten typo,
+console tom, prodHits=[]; evaluator ACCEPT (.forge/evaluations/1427-copy-holes.md).
+Eiervalg i økta 2026-08-15: Alternativ B («couple») — «a par of minutes» er ikke
+etablert engelsk. Ombygget (én streng) og re-verifisert: end-cta-gold=«couple»,
+console tom, prodHits=[]. PR #1645 har staging-verified-label + to bevis-kommentarer.
