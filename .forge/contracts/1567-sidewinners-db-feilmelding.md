@@ -34,10 +34,13 @@ Begge konsumenter (admin- og creator-avslutt-siden) deler komponenten.
 - [x] `npm run typecheck` + lint + vitest grønt.
   **Evidens:** tsc exit 0; `npx eslint` på begge berørte filer exit 0;
   render-test + catalogParity 3/3 grønne. `npm run build` exit 0 (§T2-full-gate).
-- [ ] Staging-verifisering før merge: `?error=db_winners` på avslutt-veiviseren →
+- [x] Staging-verifisering før merge: `?error=db_winners` på avslutt-veiviseren →
   retry-meldingen vises, ikke valideringsmeldingen.
-  **Plan:** staging-verify-skillet etter draft-PR; forutsetning aktivt spill med
-  `side_ld_count + side_ctp_count > 0` (ellers redirecter siden bort).
+  **Evidens:** staging-klikkrunde 2026-08-14 på PR-HEAD 4f200643 mot E2E-testspill
+  (active, LD=1, CTP=1): `[data-testid=side-winners-error-db]` rendret for
+  db_winners, `…-validation` for missing_ld_1 — begge med invers-assertion.
+  Console + server-errorlogg tomme. Bevis-kommentar + `staging-verified`-label på
+  PR #1601; E2E-testdata slettet (1+1 rader).
 
 ## Gates
 
