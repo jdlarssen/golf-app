@@ -5,6 +5,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { MailEnvelope } from '@/components/icons';
 import { formatShortDateLocale } from '@/lib/i18n/format';
+import { isInviteExpired } from '@/lib/auth/inviteExpiry';
 import type { AppLocale } from '@/i18n/routing';
 import { resendInvitation } from '../actions';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -14,6 +15,7 @@ type PendingInvitation = {
   email: string;
   created_at: string;
   opened_at: string | null;
+  expires_at: string;
 };
 
 type PlayersT = ReturnType<typeof useTranslations<'admin.players'>>;
@@ -52,7 +54,7 @@ export async function PendingInvitations() {
 
   const { data, error } = await supabase
     .from('invitations')
-    .select('id, email, created_at, opened_at')
+    .select('id, email, created_at, opened_at, expires_at')
     .is('accepted_at', null)
     .order('created_at', { ascending: false })
     .returns<PendingInvitation[]>();
@@ -86,6 +88,9 @@ export async function PendingInvitations() {
           key={inv.id}
           inv={inv}
           index={i}
+          // Judged against server time inside the helper (same reason timeAgo
+          // reads the clock there) — no client clock skew decides the badge.
+          expiredLabel={isInviteExpired(inv.expires_at) ? t('expiredBadge') : null}
           sentDate={t('sentDate', { date: formatShortDateLocale(inv.created_at, locale) })}
           openedAtLabel={
             inv.opened_at ? t('openedAt', { relative: timeAgo(inv.opened_at) }) : null
@@ -100,9 +105,32 @@ export async function PendingInvitations() {
   );
 }
 
+/**
+ * Danger-tinted twin of the muted GuestBadge pill. Local to this page: the
+ * shared badges take no tone-prop, and the waiting list is so far the only
+ * flate that needs to mark a row as dead. Same border/color pair the «trekk
+ * tilbake»-link on the row already uses.
+ */
+function ExpiredBadge({ label }: { label: string }) {
+  return (
+    <span
+      data-testid="invitation-expired-badge"
+      className="inline-block shrink-0 rounded-full border px-[7px] py-[2px] font-sans text-[9.5px] font-medium"
+      style={{
+        borderColor: 'rgba(180, 60, 60, 0.3)',
+        background: 'transparent',
+        color: 'var(--danger)',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 function PendingRow({
   inv,
   index,
+  expiredLabel,
   sentDate,
   openedAtLabel,
   notOpenedLabel,
@@ -112,6 +140,7 @@ function PendingRow({
 }: {
   inv: PendingInvitation;
   index: number;
+  expiredLabel: string | null;
   sentDate: string;
   openedAtLabel: string | null;
   notOpenedLabel: string;
@@ -128,9 +157,12 @@ function PendingRow({
       }}
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
-          {inv.email}
-        </p>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="truncate font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
+            {inv.email}
+          </p>
+          {expiredLabel && <ExpiredBadge label={expiredLabel} />}
+        </div>
         <p className="mt-0.5 font-sans text-[11.5px] tabular-nums text-muted">
           {sentDate}
         </p>
