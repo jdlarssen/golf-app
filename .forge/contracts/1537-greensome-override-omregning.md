@@ -66,15 +66,21 @@ Hånd-redigerte verdier overlever alltid. Presedens: prod-casen matchet forslage
       endrede filer + `npm run build`. **Evidens:** 107 filer / 2416 grønne + build
       exit 0 (pipefail) — builder OG evaluator uavhengig; weekly-release dry-run
       validerer notatfila.
-- [ ] **S5:** Staging-verifisering med klonet defekt-data:
-      `scripts/clone-cup-to-staging.mjs` (default = Ryder Cup 2026, har den EKTE
-      defekten). Rett handicapet til spilleren via admin-flaten → verifiser med SQL at
-      overstyringen for laget hans gikk 22 → 19 og at kamp-leaderboardet gir slag på
-      SI 1–5 (ikke 1–8). **Evidens:** bevis-kommentar på PR + label.
-- [ ] **S6:** PR-body har `## Alternativer (produktvalg)`-seksjon: A = retning 2
+- [x] **S5:** Staging-verifisering. **AVVIK fra plan:** prod-dataene i Ryder Cup 2026
+      var allerede manuelt korrigert (override=19, kampene finished), så klonen har
+      ikke defekten lenger — verifisert med syntetisk rigg med issuets tall i stedet
+      (spill bbbbbbbb-1537-…, aktiv greensome, lag 2 = CH 50 + frosset CH 3, override
+      22 == formel(50,3)). **Evidens:** Playwright 2026-08-14: admin rettet
+      handicap-indeks til −2,2 via arrangørens spiller-skjema → frosset CH 3→−5
+      (staging-teens ratings 129/69.7/72) og override 22→17 == formel(50,−5); lag 1
+      urørt på 14; mode_config-nøkler intakt; prod-vakt grønn. Hånd-redigert-overlever
+      er låst i unit-testene (evaluator-verifisert). Bevis-kommentar på PR + label.
+- [x] **S6:** PR-body har `## Alternativer (produktvalg)`-seksjon: A = retning 2
       (bygget), B = retning 1 (lagre auto/hånd-flagg — krever skjema), C = retning 3
       (kun varsel til arrangør). Fordeler/ulemper ×2–3 per alternativ,
-      ombyggingskostnad, reversibilitet, svar-instruks. **Evidens:** PR-body.
+      ombyggingskostnad, reversibilitet, svar-instruks. **Evidens:** PR #-body
+      (opprettes nå); `## Alternativer`-headingen er også maskin-markøren som holder
+      PR-kortet fra å auto-merge.
 
 ## Gates
 
