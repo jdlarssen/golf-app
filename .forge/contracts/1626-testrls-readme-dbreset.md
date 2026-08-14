@@ -11,11 +11,11 @@ første `npm run test:rls` etter skjema-bevegelse blir masse-falsk-rød uten hin
 
 ## Suksesskriterier
 
-- [ ] «Slik kjører du»-seksjonen har et kort avsnitt: symptom (masse-rødt på første
+- [x] «Slik kjører du»-seksjonen har et kort avsnitt: symptom (masse-rødt på første
   kjøring etter at migrasjoner har beveget seg), årsak (stale volum), kur
   (`supabase db reset` før `npm run test:rls`).
-- [ ] Avsnittet ligger ved standardveien (A), der kjøre-instruksene faktisk leses.
-- [ ] Ingen andre deler av README-en endres (I4 — status-teksten om #533 er utenfor scope).
+- [x] Avsnittet ligger ved standardveien (A), der kjøre-instruksene faktisk leses.
+- [x] Ingen andre deler av README-en endres (I4 — status-teksten om #533 er utenfor scope).
 
 ## Gates
 
@@ -32,3 +32,7 @@ første `npm run test:rls` etter skjema-bevegelse blir masse-falsk-rød uten hin
 ## Utenfor scope
 
 - Å fikse #533 (duplikat-prefiks) eller oppdatere status-blokken om den.
+
+## Evidens (runde 1, 2026-08-14)
+
+Selv-sjekk: grep 'version bump'/'versjons-bump' = 0 treff; grep 'supabase db reset' = 1; git diff SmartLink = kun kommentarlinjer. Build exit 0. Evaluator-verdikt: ACCEPT — se .forge/evaluations/docs-trio-1566-1626-1403.md.

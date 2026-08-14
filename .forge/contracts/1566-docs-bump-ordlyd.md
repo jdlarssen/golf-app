@@ -20,9 +20,9 @@ så eksemplene matcher dagens regime.
 
 ## Suksesskriterier
 
-- [ ] Ingen av de to stedene bruker per-commit-bump som gjeldende praksis-eksempel.
-- [ ] commit-and-pr.md forblir repo-agnostisk (ingen Tørny-spesifikke stier/navn).
-- [ ] `git diff` viser kun ordlyds-endring — ingen strukturendring i noen av filene.
+- [x] Ingen av de to stedene bruker per-commit-bump som gjeldende praksis-eksempel.
+- [x] commit-and-pr.md forblir repo-agnostisk (ingen Tørny-spesifikke stier/navn).
+- [x] `git diff` viser kun ordlyds-endring — ingen strukturendring i noen av filene.
 
 ## Gates
 
@@ -39,3 +39,7 @@ så eksemplene matcher dagens regime.
 
 - Øvrige forekomster av bump-språk i repoet (grep-sweep gjøres, men kun disse to filene
   endres — andre funn rapporteres).
+
+## Evidens (runde 1, 2026-08-14)
+
+Selv-sjekk: grep 'version bump'/'versjons-bump' = 0 treff; grep 'supabase db reset' = 1; git diff SmartLink = kun kommentarlinjer. Build exit 0. Evaluator-verdikt: ACCEPT — se .forge/evaluations/docs-trio-1566-1626-1403.md.

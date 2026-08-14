@@ -19,12 +19,12 @@ så den beskriver faktisk semantikk.
 
 ## Suksesskriterier
 
-- [ ] JSDoc-en påstår ikke lenger at prefetch henter sesjons-rendret data.
-- [ ] Ny tekst forklarer: (a) hva som faktisk prefetches (prerendret shell + loading-UI),
+- [x] JSDoc-en påstår ikke lenger at prefetch henter sesjons-rendret data.
+- [x] Ny tekst forklarer: (a) hva som faktisk prefetches (prerendret shell + loading-UI),
   (b) at dynamiske hull tar server-roundtrip ved klikk, (c) hva SmartLink dermed reelt
   kjøper (shell-en maler umiddelbart ved tap; touchstart/hover er tidligere enn viewport-
   prefetch for lenker Next ellers ikke rakk/prioriterte).
-- [ ] Ingen kodeendring — kun kommentaren (git diff viser bare JSDoc-blokken).
+- [x] Ingen kodeendring — kun kommentaren (git diff viser bare JSDoc-blokken).
 
 ## Gates
 
@@ -39,3 +39,7 @@ så den beskriver faktisk semantikk.
 ## Utenfor scope
 
 - Endre prefetch-adferd eller fjerne SmartLink.
+
+## Evidens (runde 1, 2026-08-14)
+
+Selv-sjekk: grep 'version bump'/'versjons-bump' = 0 treff; grep 'supabase db reset' = 1; git diff SmartLink = kun kommentarlinjer. Build exit 0. Evaluator-verdikt: ACCEPT — se .forge/evaluations/docs-trio-1566-1626-1403.md.
