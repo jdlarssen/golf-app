@@ -2529,7 +2529,7 @@
     "state35": {
       "front9Label": "FRONT 9",
       "lockedHeading": "🤫 See you at hole 18.",
-      "lockedSub": "All scorecards must be submitted and approved before the rest of the board is shown."
+      "lockedSub": "The rest of the board is shown when the organizer ends the game."
     },
     "nassau": {
       "front9Label": "Front 9",
@@ -2679,7 +2679,7 @@
       "frontNineLabel": "Out · holes 1–9",
       "backNineLabel": "In · holes 10–18",
       "hiddenBackNineHeading": "🤫 See you at hole 18.",
-      "hiddenBackNineSub": "Holes 10–18 are revealed once all scorecards are submitted and approved.",
+      "hiddenBackNineSub": "Holes 10–18 are revealed when the organizer ends the game.",
       "totalLabel": "Total",
       "holesWon": "{count} holes won",
       "summaryUt": "OUT",

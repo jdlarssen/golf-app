@@ -2529,7 +2529,7 @@
     "state35": {
       "front9Label": "FRONT 9",
       "lockedHeading": "🤫 Vi sees ved hull 18.",
-      "lockedSub": "Alle scorekort må være levert og godkjent før resten av tabellen vises."
+      "lockedSub": "Resten av tabellen vises når arrangøren avslutter spillet."
     },
     "nassau": {
       "front9Label": "For 9",
@@ -2679,7 +2679,7 @@
       "frontNineLabel": "Ut · hull 1–9",
       "backNineLabel": "Inn · hull 10–18",
       "hiddenBackNineHeading": "🤫 Vi sees ved hull 18.",
-      "hiddenBackNineSub": "Hull 10–18 vises når alle scorekort er levert og godkjent.",
+      "hiddenBackNineSub": "Hull 10–18 vises når arrangøren avslutter spillet.",
       "totalLabel": "Totalt",
       "holesWon": "{count} hull vunnet",
       "summaryUt": "UT",
