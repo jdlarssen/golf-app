@@ -49,22 +49,26 @@ const inviteSchema = z.object({
   invited_by_name: z.string().min(1),
 });
 
+// submitter_name / player_name / approver_name / game_name nullable: the card
+// fills the locale fallback at render time (#583, #1364) so the payload never
+// carries Norwegian prose written in the ACTOR's context to a recipient who
+// reads in another locale.
 const peerApprovalRequestSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
-  submitter_name: z.string().min(1),
+  submitter_name: z.string().min(1).nullable().optional(),
 });
 
 const scorecardSubmittedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
-  player_name: z.string().min(1),
+  player_name: z.string().min(1).nullable().optional(),
 });
 
 const scorecardApprovedSchema = z.object({
   game_id: uuid,
-  game_name: z.string().min(1),
-  approver_name: z.string().min(1),
+  game_name: z.string().min(1).nullable().optional(),
+  approver_name: z.string().min(1).nullable().optional(),
 });
 
 // scorecard_rejected: en attestant (medspiller, oppretter eller admin) avviste
@@ -72,12 +76,12 @@ const scorecardApprovedSchema = z.object({
 // så spilleren MÅ rette og levere på nytt før spillet kan avsluttes — dette er
 // et handlingsvarsel, ikke bare en beskjed. Deeplinker til /games/[game_id] der
 // rejection-banneret allerede står med begrunnelse og veien videre.
-// rejecter_name nullable: NotificationCard fyller locale-fallbacken ved render
-// (#583). `reason` utelates når attestanten ikke skrev noe — kortet viser da en
-// lokalisert defaultReason i stedet for DB-radens norske plassholdertekst.
+// rejecter_name + game_name nullable: NotificationCard fyller locale-fallbacken
+// ved render (#583, #1364). `reason` utelates når attestanten ikke skrev noe —
+// kortet viser da en lokalisert defaultReason i stedet for en plassholdertekst.
 const scorecardRejectedSchema = z.object({
   game_id: uuid,
-  game_name: z.string().min(1),
+  game_name: z.string().min(1).nullable().optional(),
   rejecter_name: z.string().min(1).nullable().optional(),
   reason: z.string().optional(),
 });

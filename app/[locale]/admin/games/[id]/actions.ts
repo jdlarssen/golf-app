@@ -48,6 +48,11 @@ async function loadAdminContext() {
  * cockpit. Admin behavior is byte-identical — `requireAdminOrCreator` returns
  * straight after the same `loadRole` users-read, with no extra query on the
  * admin path.
+ *
+ * Two name shapes on purpose (#1364): `actorName` is the audit-log string (it
+ * must be non-null and stays Norwegian — `logAdminEvent` types it that way),
+ * while `name` is the raw profile name for notification payloads, which are
+ * read in the RECIPIENT's locale and therefore must not carry Norwegian prose.
  */
 async function loadAdminOrCreatorContext(gameId: string) {
   const supabase = await getServerClient();
@@ -55,6 +60,7 @@ async function loadAdminOrCreatorContext(gameId: string) {
   return {
     supabase,
     user: { id: ctx.userId },
+    name: ctx.name?.trim() || null,
     actorName: ctx.name?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør'),
     isAdmin: ctx.isAdmin,
     detailPath: ctx.isAdmin
@@ -161,7 +167,7 @@ export async function adminApproveScorecard(
   playerUserId: string,
 ) {
   const locale = await getLocale();
-  const { supabase, user, actorName, detailPath } =
+  const { supabase, user, name, actorName, detailPath } =
     await loadAdminOrCreatorContext(gameId);
 
   const { data: game } = await supabase
@@ -220,21 +226,21 @@ export async function adminApproveScorecard(
 
   // Best-effort in-app varsel til submitter — admin-godkjenning teller på
   // samme måte som peer-godkjenning fra spillerens perspektiv. Vi henter
-  // game.name og bruker actorName fra requireAdmin() (allerede strippet).
+  // game.name og bruker det RÅ navnet (ikke audit-strengen): mangler det,
+  // fyller kortet fallbacken i mottakerens locale (#1364).
   try {
     const { data: gameRow } = await supabase
       .from('games')
       .select('name')
       .eq('id', gameId)
       .single<{ name: string }>();
-    const gameName = gameRow?.name ?? '(ukjent spill)';
     await notify({
       userId: playerUserId,
       kind: 'scorecard_approved',
       payload: {
         game_id: gameId,
-        game_name: gameName,
-        approver_name: actorName,
+        game_name: gameRow?.name ?? null,
+        approver_name: name,
       },
     });
   } catch (err) {

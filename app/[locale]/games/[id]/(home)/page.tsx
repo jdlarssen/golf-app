@@ -24,6 +24,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { type GameStatus } from '@/lib/games/status';
+import { NO_REJECTION_REASON } from '@/lib/games/rejectionReason';
 import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
@@ -1033,7 +1034,13 @@ export default async function GameHomePage({
       {me.rejection_reason && (
         <div className="mb-4">
           <Banner tone="info">
-            {t('rejectionBannerPrefix')}{me.rejection_reason}{t('rejectionBannerSuffix')}
+            {/* #1364: sentinelen betyr «avvist uten begrunnelse» — vis en egen
+                helsetning i leserens locale i stedet for å sitere et maskinord.
+                Ekte begrunnelser (og historiske rader med norsk plassholder)
+                siteres som før. */}
+            {me.rejection_reason === NO_REJECTION_REASON
+              ? t('rejectionBannerNoReason')
+              : `${t('rejectionBannerPrefix')}${me.rejection_reason}${t('rejectionBannerSuffix')}`}
           </Banner>
         </div>
       )}
