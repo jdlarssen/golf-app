@@ -43,17 +43,30 @@ Utløpsregelen har dermed fått hjem nummer to som er uenig (AGENTS.md felle 4).
 
 ## Suksesskriterier
 
-- [ ] **S1:** Test i `teamActions.test.ts` (eksisterende idiom): attach-flytens
+- [x] **S1:** Test i `teamActions.test.ts` (eksisterende idiom): attach-flytens
       invitations-oppslag kjeder `.gt('expires_at', <gyldig ISO-timestamp>)` —
       RED mot HEAD. Eksisterende suite fortsatt grønn.
-- [ ] **S2:** Gates: `npx vitest run` på `app/[locale]/signup/[shortId]/` +
+      **Evidens:** RED 22:04 («expected undefined to be defined», 1 failed /
+      27 passed); GREEN etter fiks (120/120 i fløyen). Evaluator grep-verifiserte
+      0 `.gt(`-kall på origin/main → testen er load-bearing.
+- [x] **S2:** Gates: `npx vitest run` på `app/[locale]/signup/[shortId]/` +
       `npm run build` exit 0.
-- [ ] **S3:** Staging-flip-test på rigget lag-spill (kaptein + invitasjon til
+      **Evidens:** 10 filer / 120 tester grønne (builder OG evaluator);
+      `npm run build` exit 0 (bakgrunnslogg); evaluator `tsc --noEmit` exit 0.
+- [x] **S3:** Staging-flip-test på rigget lag-spill (kaptein + invitasjon til
       e2e-spiller): med `expires_at` i FORTID viser `/signup/<shortId>/team`
       ingen lag-kobling og base-siden ingen lag-peker; med `expires_at`
       flippet til FREMTID (eneste endring) dukker koblingen opp — beviser at
       det er utløpsfilteret som gater. Bevis-kommentar + `staging-verified`-label.
-- [ ] **S4:** `.changes/1437-*.md`-notat (type fix).
+      **Evidens:** fase 1: generisk «Du har ikke et lag»-skjerm (ingen knapp,
+      ingen kaptein-tekst); SQL-flip på samme rad; fase 2: «Karl "Jussa" vil ha
+      deg med på laget Lag 1437» + «Bli med på lag». Skjermbilder begge faser;
+      prod-vakt 0 treff; rigg slettet. PR #1640-kommentar + label.
+      (Evaluator-note: base-sidens peker ble ikke eksplisitt drevet i begge
+      faser — samme filterform, dekket av fase-designet.)
+- [x] **S4:** `.changes/1437-*.md`-notat (type fix).
+      **Evidens:** `.changes/1437-utlopt-lag-invitasjon.md`, type fix,
+      issue 1437; dry-run grønn (evaluator).
 
 ## Gates
 
