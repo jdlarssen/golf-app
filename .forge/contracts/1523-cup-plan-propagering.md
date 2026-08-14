@@ -86,7 +86,18 @@ auto-starter aldri.
 - [x] **S5:** Unit-test på propageringen. **Evidens:** 12 Type A + 3
       action-tester (inkl. ny ærlig feilkode `plan_matches_not_updated` —
       builder-ASSUMPTION dokumentert i rapporten, evaluator: semantikken ærlig).
-- [ ] **S6:** Staging-klikkrunde. **Evidens (fylles):** kjøres nå.
+- [x] **S6:** Staging-klikkrunde. **Evidens:** Playwright 2026-08-14, rigg = 12
+      scheduled-matcher i ekte genererings-form (kopiert fra Ryder-klonen; ekte
+      generering er urørt av PR-en — avvik fra kontraktens «generer»-steg
+      dokumentert). Tre runder: (1) Oppsett-lagring propagerte starttid til alle
+      12 med eksakt 10-min flight-forskyvning (×2 uavhengige lagringer), varsel
+      «De 12 matchene du har laget får ny bane, tee og starttid.»; (2) deltaker
+      åpnet host-kampene etter tee-off → E1-fallbacken startet hele flight 1
+      (host + avledede singles via #1441-kaskaden), flight 2/3 urørt — NB
+      CRON_SECRET finnes ikke i staging-env, så cron-ruta kunne ikke drives;
+      E1 er samme produksjonsvei; (3) blandet status: varselet viste ærlig
+      «De 8 matchene…», de 4 aktive urørt, de 8 scheduled fikk ny tid med
+      forskyvning. Prod-vakt grønn i alle runder. Bevis-kommentar på PR + label.
 - [x] **S7:** Gates: `npx vitest run lib/cup` (26 filer / 451 tester) +
       `npm run build` exit 0 (pipefail) — builder OG evaluator uavhengig;
       typecheck + lint rene; weekly-release dry-run validerer notatfila.
