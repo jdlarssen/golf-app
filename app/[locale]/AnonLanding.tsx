@@ -298,7 +298,9 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           <h2 className="font-serif text-[26px] font-medium leading-tight tracking-[-0.015em] text-text">
             {t('endCta.headingPre')}
             {goldHeadingGold && (
-              <span className="text-accent">{goldHeadingGold}</span>
+              <span data-testid="end-cta-gold" className="text-accent">
+                {goldHeadingGold}
+              </span>
             )}
             {t('endCta.headingPost')}
           </h2>

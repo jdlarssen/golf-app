@@ -86,7 +86,10 @@ export function FormatGrid({
             <FormatStyleBadge mode={f.slug as GameMode} className="shrink-0" />
           </button>
           <div className="space-y-2 border-t border-primary/25 px-3 pb-3 pt-2">
-            <p className="font-sans text-xs leading-snug text-muted">
+            <p
+              data-testid="format-desc"
+              className="font-sans text-xs leading-snug text-muted"
+            >
               {description}
             </p>
             {onShowGuide && (
