@@ -319,6 +319,8 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
       {conflicts?.map((conflict) => (
         <div
           key={conflict.id}
+          data-testid="conflict-notice"
+          data-conflict-variant={conflict.forOwnScore === false ? 'marker' : 'own'}
           className="pointer-events-auto flex items-center justify-between gap-2 rounded-xl border px-3 py-2 shadow-sm bg-warning/[0.10] border-warning/40 text-warning"
         >
           <div className="min-w-0 text-sm font-medium leading-tight">
