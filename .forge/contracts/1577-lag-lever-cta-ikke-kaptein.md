@@ -44,25 +44,38 @@ aldri sann for ikke-kapteiner → bunn-CTA-en bytter aldri til lever-varianten.
 
 ## Suksesskriterier
 
-- [ ] **S1:** Ny ren helper med eier-regelen finnes i `lib/games/` med Type A-tester
+- [x] **S1:** Ny ren helper med eier-regelen finnes i `lib/games/` med Type A-tester
       skrevet FØRST (TDD): solo-modus → viewer; scramble/alternate-shot → lag-eier alle
       hull; patsome → viewer hull 1–6, lag-eier hull 7–18; withdrawn kaptein → lex-min
       av aktive (via `teamScoreOwnerId`); tomt lag → viewer-fallback.
-      **Evidens (fylles ved bygging):** fil + testfil + vitest-output.
+      **Evidens:** `lib/games/scoreOwner.ts` (scoreOwnerForHole:22, scoreOwnerUserIds:45)
+      + `scoreOwner.test.ts`; test-commit dba13013 (rød: modul fantes ikke) FØR
+      impl-commit 6b007967; `npx vitest run lib/games/scoreOwner` → 89/89 grønne
+      (re-kjørt av evaluator).
 - [ ] **S2:** Hull-sidens fullførings-sett bygges per-hull-eier: server-selecten henter
       eierens rader (begge id-enes rader når eier ≠ viewer), og Dexie-queryen speiler
       det. `roundComplete` blir sann for ikke-kaptein når lagkortet (+ egne
       patsome-hull 1–6) er komplett.
-      **Evidens (fylles ved bygging):** diff-referanser + render-test som viser
-      lever-CTA for ikke-kaptein.
-- [ ] **S3:** Submit-siden regner `missingHoles`/scorekort-rader per-hull-eier — en
+      **Evidens:** commit 684915c8 — page.tsx:264 (eier-oppløsning), :333
+      (`.in('user_id', scoreOwnerUserIds(...))`), :456 (per-hull-filter);
+      HoleClient.tsx:472/:478 (Dexie `anyOf` over begge id-er) /:487 (eier-filter);
+      render-testgruppe «deliver CTA for a non-captain (#1577)» i HoleClient.test.tsx
+      (texas ikke-kaptein → «Lever lagets scorekort», patsome-blanding, negativt
+      4BBB-case). Evaluator: begge datakilder bruker samme helper-par.
+- [x] **S3:** Submit-siden regner `missingHoles`/scorekort-rader per-hull-eier — en
       ikke-kaptein med komplett lagkort ser 0 manglende hull.
-      **Evidens (fylles ved bygging):** diff-referanse + test eller staging-observasjon.
-- [ ] **S4:** Kaptein-opplevelsen er uendret (eier == viewer ⇒ effektivt samme datasett
-      som i dag). **Evidens (fylles ved bygging):** eksisterende HoleClient-/submit-tester
-      grønne uendret.
-- [ ] **S5:** Gates grønne: `npx vitest run` for alle endrede filer med co-located tester
-      + `npm run build`. **Evidens (fylles ved bygging):** kommando-output.
+      **Evidens:** submit/page.tsx:276 (`.in('user_id', …)`) /:292 (`ownedScores`
+      per-hull-filter → scoreByHole/enteredByIds/missingHoles); putt-prompten kan ikke
+      fyre i kollapsede modus (formatCapturesPutts=false, dokumentert :360).
+      Ende-til-ende-bevis = S6.
+- [x] **S4:** Kaptein-opplevelsen er uendret (eier == viewer ⇒ effektivt samme datasett
+      som i dag). **Evidens:** scoreOwnerUserIds returnerer `[viewerId]` når eier ==
+      viewer; alle pre-eksisterende tester grønne uendret (1321 → 1324, kun additivt;
+      evaluator: testdiff 0 slettinger).
+- [x] **S5:** Gates grønne: `npx vitest run` for alle endrede filer med co-located tester
+      + `npm run build`. **Evidens:** vitest 68 filer / 1324 grønne + `npm run build`
+      exit 0 (pipefail) — kjørt av builder OG re-kjørt uavhengig av evaluator
+      (Node v22.23.0).
 - [ ] **S6:** Staging-klikkrunde: scramble-spill med 2 spillere, logg inn som
       IKKE-kaptein, fyll lagkortet komplett → lever-CTA vises på hull-siden, /submit
       viser 0 manglende, levering lykkes og lagets rader markeres levert.
