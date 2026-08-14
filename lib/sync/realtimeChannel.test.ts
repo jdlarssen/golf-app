@@ -22,14 +22,16 @@ type MockChannel = {
 
 function makeMockSupabase() {
   const channels: MockChannel[] = [];
-  const setAuthSpy = vi.fn();
-  const session = { access_token: 'jwt' };
   /**
    * Ordered trace of lifecycle calls — lets a test assert that the replacement
    * channel is subscribed BEFORE the old one is removed (removing the last
-   * channel would take the socket down with it).
+   * channel would take the socket down with it), and that auth is primed
+   * before a channel exists at all.
    */
   const trace: string[] = [];
+  const setAuthSpy = vi.fn(async (...args: unknown[]) => {
+    trace.push(`setAuth:${args.length}`);
+  });
 
   function channel(topic: string): MockChannel {
     const realtimeTopic = `realtime:${topic}`;
@@ -69,9 +71,6 @@ function makeMockSupabase() {
     channels,
     setAuthSpy,
     trace,
-    auth: {
-      getSession: async () => ({ data: { session } }),
-    },
     realtime: {
       setAuth: setAuthSpy,
       getChannels: () => channels,
@@ -140,9 +139,14 @@ describe('subscribeRealtimeChannel', () => {
     );
     await flushPromises();
 
-    // #1366: the token lifecycle belongs to supabase-js. A manual setAuth sets
-    // _manuallySetToken, which disables the library's own token upkeep.
-    expect(mockSupabase.setAuthSpy).not.toHaveBeenCalled();
+    // #1366: auth is primed with a NO-ARG setAuth before the channel exists —
+    // subscribe() snapshots the join payload synchronously, so a channel built
+    // before priming joins without an access_token. An argument would set
+    // _manuallySetToken and disable the library's own token upkeep.
+    expect(mockSupabase.setAuthSpy).toHaveBeenCalledTimes(1);
+    expect(mockSupabase.setAuthSpy).toHaveBeenCalledWith();
+    expect(mockSupabase.trace[0]).toBe('setAuth:0');
+    expect(mockSupabase.trace[1]).toMatch(/^create:realtime:scores:game-A#/);
     expect(mockSupabase.channels).toHaveLength(1);
     expect(configure).toHaveBeenCalledTimes(1);
     expect(mockSupabase.channels[0].subscribeSpy).toHaveBeenCalledTimes(1);
@@ -267,6 +271,35 @@ describe('subscribeRealtimeChannel', () => {
       expect(mockSupabase.channels).toHaveLength(0);
     });
 
+    it('gives the rebuilt channel a full failure budget, even though the old one keeps erroring', async () => {
+      vi.useFakeTimers();
+      const { subscribeRealtimeChannel } = await import('./realtimeChannel');
+      const cleanup = subscribeRealtimeChannel('scores:game-A', bind);
+      await flushFake();
+      const first = mockSupabase.channels[0]!;
+
+      emit('CHANNEL_ERROR', 3); // tips over → rebuild scheduled in 2s
+      // Phoenix keeps hammering the doomed channel throughout the backoff
+      // window; those errors belong to the OLD generation.
+      await vi.advanceTimersByTimeAsync(1_000);
+      first.status?.('CHANNEL_ERROR');
+      first.status?.('CHANNEL_ERROR');
+      first.status?.('CHANNEL_ERROR');
+
+      await vi.advanceTimersByTimeAsync(1_000);
+      const second = mockSupabase.channels[0]!;
+      expect(second).not.toBe(first);
+
+      // The replacement starts at zero: two errors must not trigger anything.
+      emit('CHANNEL_ERROR', 2);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(mockSupabase.channels).toEqual([second]);
+
+      cleanup();
+      await flushFake();
+      expect(mockSupabase.channels).toHaveLength(0);
+    });
+
     it('never rebuilds on CLOSED, and SUBSCRIBED resets the failure count', async () => {
       vi.useFakeTimers();
       const { subscribeRealtimeChannel } = await import('./realtimeChannel');
@@ -323,7 +356,18 @@ describe('subscribeRealtimeChannel', () => {
       window.dispatchEvent(new Event('online'));
       await vi.advanceTimersByTimeAsync(2_000);
       expect(mockSupabase.channels).toHaveLength(1);
-      expect(mockSupabase.channels[0]).not.toBe(first);
+      const second = mockSupabase.channels[0]!;
+      expect(second).not.toBe(first);
+
+      // Parked again, but phoenix recovers on its own this time. SUBSCRIBED
+      // must lift the park, or the next wifi flap tears down a healthy channel.
+      setOnline(false);
+      emit('CHANNEL_ERROR', 3);
+      setOnline(true);
+      emit('SUBSCRIBED');
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(mockSupabase.channels).toEqual([second]);
 
       cleanup();
       await flushFake();

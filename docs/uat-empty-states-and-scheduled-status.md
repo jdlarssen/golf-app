@@ -182,4 +182,4 @@ Disse vil bli adressert senere — ikke en del av denne UAT-en:
 
 Bruk **brand-stemme** og **norsk** når du beskriver oppførsel. For tekniske feil: lim inn Vercel-logger eller skjermbilder. For UX-friksjon: forklar hva du forventet å se vs hva du faktisk så.
 
-Mistenker du realtime-feil: sjekk om `setAuth()` ble kalt (Vercel logs eller browser console) før du subscriber på en kanal.
+Mistenker du realtime-feil: sjekk i browser-konsollen at auth ble primet med argument-løs `realtime.setAuth()` FØR kanalen ble subscribet (uten priming joiner kanalen uten token), og at ingen kaller `setAuth(token)` med argument — det skrur av bibliotekets eget token-vedlikehold.
