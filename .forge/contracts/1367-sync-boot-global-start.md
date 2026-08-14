@@ -109,7 +109,7 @@ ingen sending er planlagt; medspillere og admin ser stale scorer imens.
 ## Bygge-evidens (2026-08-14, denne branchen)
 
 - [x] **K1 grep-bevis:** `grep -rn startSyncListener app components lib` (ekskl. tester) → nøyaktig to treff: definisjonen (`lib/sync/syncWorker.ts:180`) og call-sitet (`components/sync/SyncBoot.tsx:22`). HoleClient-effekten (:403–406) og import-spesifikatoren (:20) fjernet; mock-nøkkelen i `HoleClient.test.tsx` fjernet.
-- [ ] **K2 staging-klikkrunde:** utestående — gjøres i PR-fasen (staging-verify før merge).
+- [x] **K2 staging-runde:** Playwright-driver mot torny-staging — kø seedet fra motor-fri side, åpnet spill-hjem direkte (aldri hull-siden) → `syncQueue` 1 → 0, RPC 200, rad i `scores` bekreftet og deretter ryddet. Bevis: PR #1608-kommentar (2026-08-14). Prod-vakt grønn.
 - [x] **K3 tester:** `npx vitest run lib/sync components/sync HoleClient.test.tsx` → 8 filer, 124 tester grønne. `npm run lint` 0 errors; `npm run build` exit 0.
 
 **Avvik fra kontrakt:** «patch-bump + CHANGELOG-linje» erstattet av `.changes/1367-syncboot-alle-spillsider.md` — versjonsregimet byttet til ukesrutine (#1562) etter at kontrakten ble skrevet.
