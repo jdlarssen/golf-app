@@ -151,3 +151,5 @@ om på samme branch. Ingen hast — PR-en venter til svar eller merge.
 ## Bygge-evidens (2026-08-14)
 
 S1–S3 + adversarial a–h: PASS (evaluator runde 1 ACCEPT — `.forge/evaluations/1368-marker-conflict.md`). Red-test-bevis: 3 failed / 5 passed FØR implementasjon, 93/93 etter. S4 (staging): PR-fasen. Gates: vitest 93/93, lint 0 errors, tsc exit 0, build exit 0 (builder). Avvik (godkjent av evaluator): fallback-grenen stempler forOwnScore=true — grenen kan kun matche egen-score-rader.
+
+S4 (staging): PASS 2026-08-14 — Playwright-driver: markør-varsel synlig (variant=marker), ConflictRecord forOwnScore=false, medspillers tall består, testdata ryddet. Bevis: kommentar på PR #1612.
