@@ -5262,6 +5262,8 @@
       "bodyStartedText": "The cup \"{tournamentName}\" has started.",
       "bodyMatchup": "<strong>{team1}</strong> vs <strong>{team2}</strong>. First to <strong>{points}</strong> points wins.",
       "bodyMatchupText": "{team1} vs {team2}. First to {points} points wins.",
+      "bodyMatchupWeighted": "<strong>{team1}</strong> vs <strong>{team2}</strong>. The winner is decided when the cup ends.",
+      "bodyMatchupWeightedText": "{team1} vs {team2}. The winner is decided when the cup ends.",
       "openLeaderboard": "Open leaderboard",
       "openLeaderboardText": "Open leaderboard: {url}",
       "footer": "Good luck on the course!"

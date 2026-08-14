@@ -33,7 +33,11 @@ export type CupStartedNotificationParams = {
   tournamentId: string;
   team1Name: string;
   team2Name: string;
-  pointsToWin: number;
+  /**
+   * Poengmålet cupen spilles mot, eller `null` for vektede cuper (#1441 D8) der
+   * «først til X» ikke finnes — da kåres vinneren ved avslutning (#1444).
+   */
+  pointsToWin: number | null;
   /** Mottakerens locale (#594). Normalt udefinert → norsk. */
   locale?: string | null;
 };
@@ -60,18 +64,43 @@ export async function sendCupStartedNotification(
   const salutation = playerFirstName
     ? t('cupStarted.salutationNamed', { name: playerFirstName })
     : t('cupStarted.salutationGeneric');
-  const pointsLabel = formatNumber(pointsToWin, loc, { useGrouping: false });
 
   const bodyStartedHtml = t.markup('cupStarted.bodyStarted', {
     tournamentName: escapeHtml(tournamentName),
     strong: (c) => `<strong>${c}</strong>`,
   });
-  const bodyMatchupHtml = t.markup('cupStarted.bodyMatchup', {
-    team1: escapeHtml(team1Name),
-    team2: escapeHtml(team2Name),
-    points: pointsLabel,
-    strong: (c) => `<strong>${c}</strong>`,
-  });
+
+  // #1444: vektede cuper (#1441 D8) har ingen «først til X» — `pointsToWin` er
+  // NULL med vilje, og matchup-linja bytter til weighted-varianten. TS-branch
+  // framfor ICU-select, som i resten av mail-familien. Merk at
+  // `formatNumber(pointsToWin)` MÅ ligge i ikke-null-grenen — den ville rendret
+  // søppel på null.
+  let bodyMatchupHtml: string;
+  let bodyMatchupText: string;
+  if (pointsToWin === null) {
+    bodyMatchupHtml = t.markup('cupStarted.bodyMatchupWeighted', {
+      team1: escapeHtml(team1Name),
+      team2: escapeHtml(team2Name),
+      strong: (c) => `<strong>${c}</strong>`,
+    });
+    bodyMatchupText = t('cupStarted.bodyMatchupWeightedText', {
+      team1: team1Name,
+      team2: team2Name,
+    });
+  } else {
+    const pointsLabel = formatNumber(pointsToWin, loc, { useGrouping: false });
+    bodyMatchupHtml = t.markup('cupStarted.bodyMatchup', {
+      team1: escapeHtml(team1Name),
+      team2: escapeHtml(team2Name),
+      points: pointsLabel,
+      strong: (c) => `<strong>${c}</strong>`,
+    });
+    bodyMatchupText = t('cupStarted.bodyMatchupText', {
+      team1: team1Name,
+      team2: team2Name,
+      points: pointsLabel,
+    });
+  }
 
   const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
@@ -119,7 +148,7 @@ export async function sendCupStartedNotification(
   const text =
     `${salutation}\n\n` +
     `${t('cupStarted.bodyStartedText', { tournamentName })}\n\n` +
-    `${t('cupStarted.bodyMatchupText', { team1: team1Name, team2: team2Name, points: pointsLabel })}\n\n` +
+    `${bodyMatchupText}\n\n` +
     `${t('cupStarted.openLeaderboardText', { url: leaderboardUrl })}\n\n` +
     `${t('cupStarted.footer')}\n`;
 
