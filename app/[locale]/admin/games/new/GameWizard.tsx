@@ -21,8 +21,17 @@
  * siden registreringsvalget (som tidligere gjorde spillerlisten valgfri) nå
  * tas EFTER steg 4, ikke før.
  *
- * URL-state: `?step=2..5`. Browser back fra steg N tilbake til N-1; back
- * fra steg 1 går ut av wizard-en.
+ * URL-state: `?step=2..5`. #1380: steg-overganger som arrangøren utløser
+ * (Neste/Forrige/hopp-til-steg) skriver URL-en med `router.push`, så hvert
+ * steg får sin egen history-entry og browser-back fra steg N lander på N-1.
+ * Back fra steg 1 går ut av wizard-en (dokumentert intensjon). URL-skriving
+ * UTEN bruker-intensjon — normalisering av en ugyldig `?step=99` ned til
+ * steg 1 — bruker `router.replace`, ellers ville back-en gå tilbake til den
+ * ugyldige URL-en og normalisere på nytt i en løkke.
+ *
+ * #1380: utfyllingen speiles også til sessionStorage (wizardStatePersistence)
+ * så reload, tilbake-gest og PWA-eviction ikke tar med seg alt arrangøren har
+ * fylt ut. Payloaden slettes ved publisering/utkast-lagring.
  *
  * #1061: escape-hatchen til full-form (GameForm) er fjernet — wizard-en
  * dekker alt GameForm dekket ved opprettelse. Power-users som vil redigere
@@ -31,7 +40,14 @@
  * direkte.
  */
 
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import { useLocale } from 'next-intl';
@@ -70,6 +86,16 @@ import type {
 import type { ClubOption } from '@/lib/games/newGameFormData';
 import { suggestGameName } from '@/lib/games/autoGameName';
 import { fitsPlayerCount } from '@/lib/wizard/fitsPlayerCount';
+import {
+  clearWizardDraft,
+  loadWizardDraft,
+  reconcileWizardDraft,
+  saveWizardDraft,
+  wizardDraftContext,
+  wizardDraftFromState,
+  wizardDraftStorageKey,
+  type WizardDraft,
+} from './wizardStatePersistence';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -130,6 +156,9 @@ type Props = {
 
 const TOTAL_STEPS = 5;
 
+/** Hvor lenge vi venter etter siste tastetrykk før utkastet skrives. */
+const DRAFT_WRITE_DEBOUNCE_MS = 400;
+
 function parseStepFromSearch(sp: URLSearchParams): Step {
   const raw = sp.get('step');
   if (raw === '2') return 2;
@@ -139,7 +168,60 @@ function parseStepFromSearch(sp: URLSearchParams): Step {
   return 1;
 }
 
-export function GameWizard({
+/**
+ * Ytre skall: leser et eventuelt lagret utkast (#1380) og monterer
+ * veiviser-kroppen på nytt med det som seed.
+ *
+ * Hvorfor remount og ikke settere: `useGameFormState` seeder ALL sin state i
+ * useState-initializere fra `initialValues`. De kjører én gang, ved mount — og
+ * sessionStorage kan ikke leses under render (finnes ikke på serveren, ville
+ * gitt hydrerings-mismatch). Vi leser derfor i en effekt etter mount og bytter
+ * `key` på kroppen, slik at initializerne kjører på nytt med utkastet. Finnes
+ * det ikke noe utkast — det vanlige tilfellet — skjer ingen remount i det hele
+ * tatt.
+ */
+export function GameWizard(props: Props) {
+  const pathname = usePathname();
+  const storageKey = wizardDraftStorageKey(pathname);
+  const draftContext = wizardDraftContext({
+    initialIntent: props.initialIntent,
+    initialValues: props.initialValues,
+    defaultGroupId: props.defaultGroupId,
+  });
+  const [draft, setDraft] = useState<WizardDraft | null>(null);
+
+  const { courses, players } = props;
+  useEffect(() => {
+    const found = loadWizardDraft(storageKey, draftContext);
+    if (!found) return;
+    // setState i en effekt er poenget her: vi henter EKSTERN tilstand
+    // (sessionStorage) som ikke kan leses under render. React-linteren
+    // advarer mot mønsteret generelt; for dette tilfellet er det korrekt.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setDraft(reconcileWizardDraft(found, { courses, players }));
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey, draftContext]);
+
+  return (
+    <WizardBody
+      key={draft ? 'restored' : 'fresh'}
+      {...props}
+      draft={draft}
+      storageKey={storageKey}
+      draftContext={draftContext}
+    />
+  );
+}
+
+type BodyProps = Props & {
+  /** Gjenopprettet utkast, eller null når veiviseren starter blankt. */
+  draft: WizardDraft | null;
+  storageKey: string;
+  draftContext: string;
+};
+
+function WizardBody({
   courses,
   players,
   mode,
@@ -154,7 +236,10 @@ export function GameWizard({
   isAdmin = false,
   isClubAdmin = false,
   formatGuide = [],
-}: Props) {
+  draft,
+  storageKey,
+  draftContext,
+}: BodyProps) {
   const t = useTranslations('wizard');
   const tModes = useTranslations('modes');
   const locale = useLocale();
@@ -179,21 +264,32 @@ export function GameWizard({
     parseStepFromSearch(new URLSearchParams(searchParams.toString())),
   );
 
+  // #1380: et gjenopprettet utkast legger seg OVER rutas egne pre-fyll (smart
+  // tee-off-default, cup-/revansje-prefyll). Utkastet er arrangørens egne
+  // valg, så det vinner — men bare når mount-konteksten er den samme (se
+  // wizardDraftContext), så et låst cup-format aldri kan overskrives.
+  const seedValues = draft ? { ...initialValues, ...draft.values } : initialValues;
+
   // Auto-name: hvis admin skrev navn manuelt, slutter wizard-en å overstyre
-  // det. Edit-flow med initialValues.name pre-touches.
+  // det. Edit-flow med initialValues.name pre-touches. Et gjenopprettet utkast
+  // bærer flagget selv — uten det ville auto-navnet overskrevet et håndskrevet
+  // spillnavn ved neste mount.
   const [nameTouched, setNameTouched] = useState<boolean>(
-    !!initialValues?.name && initialValues.name.trim() !== '',
+    draft
+      ? draft.nameTouched
+      : !!initialValues?.name && initialValues.name.trim() !== '',
   );
 
   const state = useGameFormState({
-    initialValues,
+    initialValues: seedValues,
     players,
     courses,
-    initialIntent,
+    initialIntent: draft?.intent ?? initialIntent,
     defaultGroupId,
     // #1066: seeder arrangøren som spiller ved kompis-intent (se setIntent i
     // useGameFormState). Samme prop #464 allerede bruker for selectablePlayers.
     currentUserId,
+    initialExpectedPlayerCount: draft?.expectedPlayerCount,
   });
 
   // #464: picker-kilden følger konteksten (kompis/cup → venner, klubb m/ valgt
@@ -247,16 +343,43 @@ export function GameWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParamsString]);
 
-  // Speil step til URL. Bruker router.replace så history-stacken får
-  // én entry per steg-overgang (browser back fungerer som forventet).
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (step === 1) params.delete('step');
-    else params.set('step', String(step));
+  // URL-en for et gitt steg, bygget på dagens søke-parametre (?klubb=, ?fra=
+  // osv. skal overleve steg-navigasjonen).
+  function urlForStep(next: Step): string {
+    const params = new URLSearchParams(searchParamsString);
+    if (next === 1) params.delete('step');
+    else params.set('step', String(next));
     const qs = params.toString();
-    const nextUrl = qs ? `${pathname}?${qs}` : pathname;
-    // Bare push hvis URL faktisk endres — unngår onødvendige history-entries.
-    const currentQs = searchParams.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  }
+
+  // #1380: effekten under kan IKKE selv se forskjell på «arrangøren gikk til
+  // neste steg» og «vi normaliserte en ugyldig ?step=99 ned til 1» — den
+  // avhenger bare av `step`. Signalet er derfor eksplisitt: steg-handlerne
+  // (goNext/goPrev/hopp-til-steg) skriver URL-en selv med `push` og setter
+  // dette flagget, som effekten leser og nullstiller. Uten skillet ville
+  // normaliseringen pushet en history-entry, og back havnet på `?step=99`
+  // igjen → normaliser → push → back … i ring.
+  const appInitiatedStepNav = useRef(false);
+
+  function goToStep(next: Step) {
+    if (next === step) return;
+    appInitiatedStepNav.current = true;
+    setStep(next);
+    router.push(urlForStep(next), { scroll: false });
+  }
+
+  // Normaliser URL-en når den ikke speiler steget OG endringen ikke kom fra en
+  // steg-handler. I praksis: ugyldig/ukjent `?step=`-verdi ved mount. `replace`
+  // (ikke push) — en normalisering er ikke en navigasjon arrangøren gjorde, og
+  // skal ikke kunne nås med back.
+  useEffect(() => {
+    if (appInitiatedStepNav.current) {
+      appInitiatedStepNav.current = false;
+      return;
+    }
+    const nextUrl = urlForStep(step);
+    const currentQs = searchParamsString;
     const currentUrl = currentQs ? `${pathname}?${currentQs}` : pathname;
     if (nextUrl !== currentUrl) {
       router.replace(nextUrl, { scroll: false });
@@ -325,6 +448,56 @@ export function GameWizard({
   const isNewCupFlow =
     state.intent === 'cup' && !tournamentIdFromInitial;
 
+  // ────────────────────────────────────────────────────────────────────
+  // #1380: speil utfyllingen til sessionStorage. Skrivingen er debouncet så
+  // et navn som tastes inn ikke gir én skriving per tastetrykk, og deduppet
+  // på serialisert innhold så rene re-rendere ikke skriver.
+  // ────────────────────────────────────────────────────────────────────
+  const draftSnapshot = wizardDraftFromState({ state, nameTouched });
+  const draftJson = JSON.stringify(draftSnapshot);
+  // Initialisert til snapshot-en ved mount: å bare ÅPNE veiviseren skal ikke
+  // legge igjen et utkast — først når arrangøren faktisk endrer noe.
+  const lastWrittenRef = useRef<string | null>(draftJson);
+  const writeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (isNewCupFlow) {
+      // Cup-grenen har sin egen form (CupSetup) med egen state, og deler
+      // ingenting med veiviser-skjemaet. Vi hverken skriver et utkast her
+      // eller lar et gammelt bli liggende og lekke inn i cup-opprettelsen.
+      clearWizardDraft(storageKey);
+      lastWrittenRef.current = null;
+      return;
+    }
+    if (draftJson === lastWrittenRef.current) return;
+    const id = setTimeout(() => {
+      lastWrittenRef.current = draftJson;
+      saveWizardDraft(storageKey, draftSnapshot, draftContext);
+    }, DRAFT_WRITE_DEBOUNCE_MS);
+    writeTimerRef.current = id;
+    return () => clearTimeout(id);
+    // `draftSnapshot` er objektet bak `draftJson` — samme render, så
+    // closuren er aldri stale. Vi depender på strengen for å slippe å
+    // sammenligne objekt-identitet som endres hver render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftJson, storageKey, draftContext, isNewCupFlow]);
+
+  /**
+   * Publiser/Lagre utkast → utkastet i sessionStorage skal bort. Suksess
+   * redirecter (actionen kaster NEXT_REDIRECT), så det finnes ingen
+   * «det gikk bra»-tilstand å henge slettingen på — vi rydder derfor når
+   * skjemaet sendes.
+   *
+   * Feiler server-actionen (#1379) står veiviseren fortsatt montert med alt
+   * arrangøren fylte ut; `lastWrittenRef` nullstilles slik at neste endring
+   * skriver utkastet på nytt.
+   */
+  function handleSubmitStart() {
+    if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
+    clearWizardDraft(storageKey);
+    lastWrittenRef.current = null;
+  }
+
   // Neste-knappen gates per steg. Mangel-tekst under knappen henter første
   // element fra missingForPublish (mode-aware).
   function canAdvance(): boolean {
@@ -379,11 +552,14 @@ export function GameWizard({
   }
 
   function goNext() {
-    setStep((s) => (Math.min(TOTAL_STEPS, s + 1) as Step));
+    goToStep(Math.min(TOTAL_STEPS, step + 1) as Step);
   }
 
   function goPrev() {
-    setStep((s) => (Math.max(1, s - 1) as Step));
+    // «Forrige» pusher som «Neste» — ikke router.back(). Arrangøren kan ha
+    // landet rett på `?step=3` fra en lenke, og da ville back tatt dem ut av
+    // veiviseren i stedet for ett steg tilbake.
+    goToStep(Math.max(1, step - 1) as Step);
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -439,7 +615,7 @@ export function GameWizard({
   // form å sende til.
   // ────────────────────────────────────────────────────────────────────
   return (
-    <form className="space-y-6">
+    <form className="space-y-6" onSubmit={handleSubmitStart}>
       <StepperHeader
         step={step}
         title={t(`steps.${step}` as Parameters<typeof t>[0])}
@@ -678,7 +854,7 @@ export function GameWizard({
           state={state}
           mode={mode}
           onNameTouched={() => setNameTouched(true)}
-          onGoToPlayersStep={() => setStep(4)}
+          onGoToPlayersStep={() => goToStep(4)}
         />
       )}
 

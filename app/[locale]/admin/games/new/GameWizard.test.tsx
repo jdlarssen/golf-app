@@ -1,9 +1,21 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { GameWizard } from './GameWizard';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
+import {
+  saveWizardDraft,
+  wizardDraftContext,
+  wizardDraftStorageKey,
+  type WizardDraft,
+} from './wizardStatePersistence';
+
+// #1380: veiviseren speiler nå utfyllingen til sessionStorage. Nullstill
+// mellom testene så et utkast fra én test ikke gjenopprettes i den neste.
+beforeEach(() => {
+  window.sessionStorage.clear();
+});
 
 // #928: tee-off 7 days out so the past-tee-off guard never rejects these
 // fixtures. Computed relative to now so it can't go stale like a hard-coded date.
@@ -836,5 +848,114 @@ describe('GameWizard — Cup-intent flow', () => {
       document.querySelector('input[id^="cup_format_"]'),
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /opprett cup/i })).toBeInTheDocument();
+  });
+});
+
+// #1380: utfyllingen skal overleve reload / PWA-eviction. Selve browser-back-
+// oppførselen krever ekte history (staging-klikket er porten der); det som er
+// unit-testbart er gjenopprettingen fra sessionStorage og opprydningen når
+// spillet publiseres eller lagres som utkast.
+describe('GameWizard — #1380 utkast overlever reload', () => {
+  // usePathname er stubbet til '/' i vitest.setup.ts.
+  const DRAFT_KEY = wizardDraftStorageKey('/');
+  const DRAFT_CONTEXT = wizardDraftContext({});
+
+  function seedDraft(overrides: Partial<WizardDraft['values']> = {}) {
+    const draft: WizardDraft = {
+      intent: 'kompis',
+      expectedPlayerCount: 4,
+      nameTouched: true,
+      values: {
+        name: 'Lørdagsrunden',
+        game_mode: 'stableford',
+        team_size: 1,
+        course_id: 'course-1',
+        tee_box_id: 'tee-1',
+        scheduled_tee_off_at: FUTURE_TEE_OFF,
+        players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+        ...overrides,
+      },
+    };
+    saveWizardDraft(DRAFT_KEY, draft, DRAFT_CONTEXT);
+  }
+
+  it('gjenoppretter arrangement, format, bane og spillere fra sessionStorage', () => {
+    seedDraft();
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+
+    // Steg 1: arrangement-valget er tilbake.
+    expectStep(1);
+    expect(
+      screen.getByRole('radio', { name: /kompis-runde/i }).getAttribute('aria-checked'),
+    ).toBe('true');
+
+    // Steg 2: formatet er tilbake (og «Neste» er dermed åpen).
+    clickNext();
+    expectStep(2);
+    expect(
+      screen.getByRole('radio', { name: /^stableford$/i }).getAttribute('aria-checked'),
+    ).toBe('true');
+
+    // Steg 3: bane, tee og tee-off er tilbake.
+    clickNext();
+    expectStep(3);
+    expect(screen.getByLabelText(/^bane$/i)).toHaveValue('course-1');
+    expect(screen.getByLabelText(/^tee$/i)).toHaveValue('tee-1');
+    expect(screen.getByLabelText(/^tee-off$/i)).toHaveValue(FUTURE_TEE_OFF);
+
+    // Steg 4: spilleren arrangøren hadde krysset av er fortsatt valgt — den
+    // ligger i payloaden (og er derfor ute av den valgbare lista, som viser
+    // ikke-valgte).
+    clickNext();
+    expectStep(4);
+    expect(document.querySelector('input[name="player_0_id"]')).toHaveValue('u0');
+    expect(screen.queryByRole('checkbox', { name: /spiller 1/i })).toBeNull();
+  });
+
+  it('starter blankt når utkastet ble skrevet i en annen mount-kontekst', () => {
+    seedDraft();
+    // Cup-lenke: samme sti, men formatet er låst av ruta. Et utkast fra et
+    // vanlig besøk skal ikke kunne overstyre det.
+    renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      initialValues: {
+        tournament_id: 'cup-1',
+        game_mode: 'fourball_matchplay',
+        lock_game_mode: true,
+      },
+    });
+
+    expectStep(1);
+    expect(
+      screen.getByRole('radio', { name: /kompis-runde/i }).getAttribute('aria-checked'),
+    ).toBe('false');
+  });
+
+  it('skriver utkastet når arrangøren fyller ut noe', async () => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+
+    pickKompisIntent();
+    pickStablefordFormat();
+
+    await waitFor(() =>
+      expect(window.sessionStorage.getItem(DRAFT_KEY)).not.toBeNull(),
+    );
+  });
+
+  it('sletter utkastet når spillet lagres som utkast', async () => {
+    seedDraft();
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+
+    clickNext(); // → steg 2
+    clickNext(); // → steg 3
+    clickNext(); // → steg 4
+    clickNext(); // → steg 5
+    expectStep(5);
+
+    fireEvent.click(screen.getByRole('button', { name: /lagre utkast/i }));
+
+    await waitFor(() =>
+      expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull(),
+    );
   });
 });
