@@ -172,24 +172,35 @@ type ScoreRow = {
   strokes: number | null;
 };
 
-function preferredName(p: { name: string | null; nickname: string | null } | null): string {
-  if (!p) return 'Ukjent spiller';
-  return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
+function preferredName(
+  p: { name: string | null; nickname: string | null } | null,
+  unknownLabel: string,
+): string {
+  if (!p) return unknownLabel;
+  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
 }
 
 /**
  * Bygger en visnings-label for en sides spillere. Singles (1 spiller) → ett
  * navn. Fourball (2 spillere) → «Navn1/Navn2», sortert deterministisk via
- * eksisterende `user_id`-rekkefølge fra Supabase-queriet. Tom side → «Ukjent
- * spiller» som defensiv fallback. #217.
+ * eksisterende `user_id`-rekkefølge fra Supabase-queriet. Tom side →
+ * `unknownLabel` som defensiv fallback. #217.
  */
-function formatSideLabel(sidePlayers: PlayerRow[]): string {
-  if (sidePlayers.length === 0) return 'Ukjent spiller';
-  if (sidePlayers.length === 1) return preferredName(userOf(sidePlayers[0].users));
-  return sidePlayers.map((p) => preferredName(userOf(p.users))).join('/');
+function formatSideLabel(sidePlayers: PlayerRow[], unknownLabel: string): string {
+  if (sidePlayers.length === 0) return unknownLabel;
+  if (sidePlayers.length === 1) return preferredName(userOf(sidePlayers[0].users), unknownLabel);
+  return sidePlayers.map((p) => preferredName(userOf(p.users), unknownLabel)).join('/');
 }
 
-export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot | null> {
+/**
+ * `unknownLabel` er påkrevd (#1527): snapshot-en bygger visnings-navn, og
+ * fallbacken for en spiller uten navn må komme oversatt fra kallstedet — denne
+ * modulen kjenner ingen locale.
+ */
+export async function getCupSnapshot(
+  tournamentId: string,
+  unknownLabel: string,
+): Promise<CupSnapshot | null> {
   const supabase = getAdminClient();
 
   const { data: tournament, error: tErr } = await supabase
@@ -458,9 +469,9 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
 
     // Navn-label per side: singles bruker enkelt-navn, lag-format (fourball/
     // foursomes/greensome/chapman/gruesome/best_ball) joiner med «/». Defensiv:
-    // tom side rendres som «Ukjent spiller» via preferredName.
-    const team1Label = formatSideLabel(side1Players);
-    const team2Label = formatSideLabel(side2Players);
+    // tom side rendres som `unknownLabel` via formatSideLabel.
+    const team1Label = formatSideLabel(side1Players, unknownLabel);
+    const team2Label = formatSideLabel(side2Players, unknownLabel);
 
     // Typesikker fallback hvis en future game_mode skulle vises i en cup.
     // `best_ball` (D4-hostens back9-match) er lag-formatert på lik linje med

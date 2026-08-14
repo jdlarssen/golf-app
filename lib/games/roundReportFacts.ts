@@ -126,6 +126,7 @@ export type BuildRoundReportFactsOpts = {
   totalHoles?: number;
 };
 
+// nb-only surface by design (#1527) — rundereferatet skrives på norsk.
 const PLAYER_FALLBACK = 'Ukjent spiller';
 
 // ---------------------------------------------------------------------------

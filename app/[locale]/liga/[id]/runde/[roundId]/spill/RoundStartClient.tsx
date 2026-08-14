@@ -7,8 +7,8 @@ import { Banner } from '@/components/ui/Banner';
 import { startLeagueRoundFlight } from '@/lib/league/actions';
 import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 
-function playerDisplayName(p: LeagueParticipant): string {
-  return p.nickname ?? p.name ?? 'Ukjent spiller';
+function playerDisplayName(p: LeagueParticipant, unknownLabel: string): string {
+  return p.nickname ?? p.name ?? unknownLabel;
 }
 
 export function RoundStartClient({
@@ -107,7 +107,7 @@ export function RoundStartClient({
                       )}
                     </span>
                     <span className="font-sans text-sm text-text">
-                      {playerDisplayName(p)}
+                      {playerDisplayName(p, t('unknownPlayer'))}
                     </span>
                   </label>
                 </li>

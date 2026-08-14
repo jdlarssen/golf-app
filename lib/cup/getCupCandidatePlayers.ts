@@ -46,12 +46,20 @@ export type WizardPlayer = {
  *
  * `userId`/`isAdmin` er kallerens rolle-kontekst (samme som `getRoleContext`
  * gir) — kilden følger HVEM som ser lista, akkurat som før uttrekket.
+ *
+ * `unknownLabel` er påkrevd (#1527): helperen bygger `displayName`, og
+ * fallbacken for en spiller uten navn må komme oversatt fra kallstedet.
  */
 export async function getCupCandidatePlayers(
   supabase: ServerSupabase,
-  opts: { groupId: string | null; userId: string; isAdmin: boolean },
+  opts: {
+    groupId: string | null;
+    userId: string;
+    isAdmin: boolean;
+    unknownLabel: string;
+  },
 ): Promise<WizardPlayer[]> {
-  const { groupId, userId, isAdmin } = opts;
+  const { groupId, userId, isAdmin, unknownLabel } = opts;
 
   if (groupId) {
     // Klubb-cup → kun medlemmer.
@@ -60,7 +68,7 @@ export async function getCupCandidatePlayers(
       .filter((m) => !m.pending)
       .map((m) => ({
         id: m.id,
-        displayName: m.nickname?.trim() || m.name?.trim() || 'Ukjent spiller',
+        displayName: m.nickname?.trim() || m.name?.trim() || unknownLabel,
         hcpIndex: m.hcp_index,
         gender: m.gender,
       }))
@@ -79,7 +87,7 @@ export async function getCupCandidatePlayers(
       .filter((u) => u.profile_completed_at !== null)
       .map((u) => ({
         id: u.id,
-        displayName: u.nickname?.trim() || u.name?.trim() || 'Ukjent spiller',
+        displayName: u.nickname?.trim() || u.name?.trim() || unknownLabel,
         hcpIndex: Number(u.hcp_index),
         gender: u.gender,
       }));
@@ -101,8 +109,7 @@ export async function getCupCandidatePlayers(
   if (self && self.profile_completed_at !== null) {
     byId.set(self.id, {
       id: self.id,
-      displayName:
-        self.nickname?.trim() || self.name?.trim() || 'Ukjent spiller',
+      displayName: self.nickname?.trim() || self.name?.trim() || unknownLabel,
       hcpIndex: Number(self.hcp_index),
       gender: self.gender,
     });
@@ -115,7 +122,7 @@ export async function getCupCandidatePlayers(
     // schema-default (54.0), aldri en ekte verdi.
     byId.set(f.id, {
       id: f.id,
-      displayName: f.nickname?.trim() || f.name?.trim() || 'Ukjent spiller',
+      displayName: f.nickname?.trim() || f.name?.trim() || unknownLabel,
       hcpIndex: f.hcp_index,
       gender: f.gender,
       pending: f.pending,

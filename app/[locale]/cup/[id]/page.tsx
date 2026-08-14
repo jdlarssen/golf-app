@@ -36,7 +36,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
     getProxyVerifiedUserId(),
     getTranslations('cup'),
   ]);
-  const snapshot = await getCupSnapshot(id);
+  const snapshot = await getCupSnapshot(id, t('manage.unknownPlayer'));
   if (!snapshot) notFound();
 
   const { tournament, leaderboard, roster } = snapshot;

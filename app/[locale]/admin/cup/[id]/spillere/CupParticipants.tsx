@@ -34,8 +34,8 @@ function userOf(rel: UserRel | UserRel[] | null | undefined): UserRel | null {
   return Array.isArray(rel) ? (rel[0] ?? null) : rel;
 }
 
-function displayNameOf(u: UserRel | null): string {
-  return u?.nickname?.trim() || u?.name?.trim() || 'Ukjent spiller';
+function displayNameOf(u: UserRel | null, unknownLabel: string): string {
+  return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
 }
 
 /**
@@ -58,11 +58,14 @@ export async function CupParticipants({
 }) {
   const supabase = await getServerClient();
 
-  const [{ userId, isAdmin }, snapshot, t, locale] = await Promise.all([
+  // Oversettelsene først: navne-fallbacken (#1527) er input til både snapshot-en
+  // og kandidat-kilden under. Begge er lokale oppslag, ingen ekstra rundtur.
+  const [t, locale] = await Promise.all([getTranslations('cup'), getLocale()]);
+  const unknownLabel = t('manage.unknownPlayer');
+
+  const [{ userId, isAdmin }, snapshot] = await Promise.all([
     getRoleContext(supabase),
-    getCupSnapshot(tournamentId),
-    getTranslations('cup'),
-    getLocale(),
+    getCupSnapshot(tournamentId, unknownLabel),
   ]);
   if (!snapshot) notFound();
 
@@ -89,7 +92,7 @@ export async function CupParticipants({
       )
       .eq('tournament_id', tournamentId)
       .order('created_at', { ascending: true }),
-    getCupCandidatePlayers(supabase, { groupId, userId, isAdmin }),
+    getCupCandidatePlayers(supabase, { groupId, userId, isAdmin, unknownLabel }),
   ]);
   if (participantRes.error) throw participantRes.error;
 
@@ -98,7 +101,7 @@ export async function CupParticipants({
       const u = userOf(row.users as UserRel | UserRel[] | null);
       return {
         userId: row.user_id,
-        displayName: displayNameOf(u),
+        displayName: displayNameOf(u, unknownLabel),
         hcpIndex: Number(u?.hcp_index ?? 0),
       };
     },

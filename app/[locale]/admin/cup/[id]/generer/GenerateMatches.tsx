@@ -80,8 +80,8 @@ function userOf(
   return Array.isArray(rel) ? (rel[0] ?? null) : rel;
 }
 
-function displayNameOf(u: ParticipantUser | null): string {
-  return u?.nickname?.trim() || u?.name?.trim() || 'Ukjent spiller';
+function displayNameOf(u: ParticipantUser | null, unknownLabel: string): string {
+  return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
 }
 
 type GenerateMatchesVariant = 'admin' | 'club';
@@ -204,11 +204,11 @@ export async function GenerateMatches({
   const supabase = await getServerClient();
   const { isAdmin } = await getRoleContext(supabase);
 
-  const [snapshot, t, locale] = await Promise.all([
-    getCupSnapshot(tournamentId),
-    getTranslations('cup'),
-    getLocale(),
-  ]);
+  // Oversettelsene først: navne-fallbacken (#1527) er input til snapshot-en.
+  const [t, locale] = await Promise.all([getTranslations('cup'), getLocale()]);
+  const unknownLabel = t('manage.unknownPlayer');
+
+  const snapshot = await getCupSnapshot(tournamentId, unknownLabel);
   if (!snapshot) notFound();
 
   const { tournament } = snapshot;
@@ -255,7 +255,7 @@ export async function GenerateMatches({
     const u = userOf(row.users as ParticipantUser | ParticipantUser[] | null);
     return {
       id: row.user_id,
-      displayName: displayNameOf(u),
+      displayName: displayNameOf(u, unknownLabel),
       hcpIndex: Number(u?.hcp_index ?? 0),
       gender: u?.gender ?? null,
     };
