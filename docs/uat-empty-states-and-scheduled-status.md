@@ -126,7 +126,7 @@ Sett av ~30 minutter. De fleste steg går raskt; flippen mellom rollene tar tid 
   - [ ] **Champagne «FRONT 9»-pille** under header
   - [ ] Vanlig leaderboard-tabell med kun front 9-totaler
   - [ ] Lag som ikke er ferdig med front 9 viser «⚠️ N hull mangler»
-  - [ ] **Låst back-9-blokk** nederst: krittstrek-ramme, **«🤫 Vi sees ved hull 18.»** + «Alle scorekort må være levert og godkjent før resten av tabellen vises.»
+  - [ ] **Låst back-9-blokk** nederst: krittstrek-ramme, **«🤫 Vi sees ved hull 18.»** + «Resten av tabellen vises når arrangøren avslutter spillet.»
   - [ ] Pull-quote: «Lykke til.»
 - [ ] Toggle **Netto / Brutto** — fungerer som i full-modus
 
@@ -135,7 +135,7 @@ Sett av ~30 minutter. De fleste steg går raskt; flippen mellom rollene tar tid 
 - [ ] Tap **«Hull for hull →»** på leaderboarden
 - [ ] **Champagne FRONT 9-pille** øverst
 - [ ] Drilldown viser **kun hull 1–9**
-- [ ] Låst back-9-blokk: «Hull 10–18 vises når alle scorekort er levert og godkjent.»
+- [ ] Låst back-9-blokk: «Hull 10–18 vises når arrangøren avslutter spillet.»
 
 ---
 
