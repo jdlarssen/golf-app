@@ -1,8 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
+
+// --- Module mocks (kun wiring-testene, #1537) -----------------------------
+
+const revalidateTagMock = vi.fn();
+vi.mock('next/cache', () => ({
+  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
+}));
+
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: vi.fn(),
+}));
+
+// -------------------------------------------------------------------------
+
 import {
   planHandicapRecompute,
+  planGreensomeOverrideRecompute,
+  recomputeCourseHandicapForUser,
   type RecomputeGameRow,
+  type GreensomeOverrideRow,
 } from './recomputeCourseHandicap';
+import { getAdminClient } from '@/lib/supabase/admin';
 import type { TeeBoxRatings } from './teeRating';
 
 // A men's rating-set chosen so the course-handicap formula is trivial to
@@ -120,5 +139,343 @@ describe('planHandicapRecompute (#1176)', () => {
       { gameId: 'a1', courseHandicap: 12 },
       { gameId: 'a4', courseHandicap: 12 },
     ]);
+  });
+});
+
+// ─── planGreensomeOverrideRecompute (#1537) ──────────────────────────────
+//
+// Prod-fikstur: Ryder Cup 2026, Greensome 2 (2026-08-08). Lag 1 = CH 12 + 16
+// → lagret 14 (= formelen). Lag 2 = Burgern CH 50 + Sander CH 3 → lagret 22
+// (= formelen med Sanders GAMLE, feilregistrerte handicap). Sander rettes til
+// CH −2 → riktig lag-slag er greensomeTeamHandicap(50, −2) = 19.
+
+/** Sanders rad i Greensome 2 slik den ser ut RETT ETTER CH-rettingen. */
+function greensomeRow(
+  overrides: Partial<GreensomeOverrideRow> = {},
+): GreensomeOverrideRow {
+  return {
+    gameId: 'greensome-2',
+    status: 'active',
+    gameMode: 'greensome_matchplay',
+    modeConfig: {
+      kind: 'greensome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100,
+      team_strokes_override: { team1: 14, team2: 22 },
+    },
+    teamNumber: 2,
+    previousCourseHandicap: 3,
+    newCourseHandicap: -2,
+    teammateCourseHandicap: 50,
+    ...overrides,
+  };
+}
+
+describe('planGreensomeOverrideRecompute (#1537)', () => {
+  it('empty input → no updates', () => {
+    expect(planGreensomeOverrideRecompute([])).toEqual([]);
+  });
+
+  it('lagret verdi == formelen med gammel CH → regnes om, motstanderlaget urørt', () => {
+    // formel(50, 3) = 22 == lagret → formel(50, −2) = 19. Lag 1 (14) står.
+    expect(planGreensomeOverrideRecompute([greensomeRow()])).toEqual([
+      {
+        gameId: 'greensome-2',
+        teamStrokesOverride: { team1: 14, team2: 19 },
+      },
+    ]);
+  });
+
+  it('hånd-redigert verdi (≠ formelen med gammel CH) overlever', () => {
+    // Arrangøren har skrevet 20 selv — det er ikke auto-forslaget (22).
+    expect(
+      planGreensomeOverrideRecompute([
+        greensomeRow({
+          modeConfig: {
+            kind: 'greensome_matchplay',
+            team_strokes_override: { team1: 14, team2: 20 },
+          },
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('rettet spiller på lag 1 → kun team1 endres', () => {
+    // formel(16, 12) = 14 == lagret team1 → ny CH 8 gir formel(16, 8) = 11.
+    expect(
+      planGreensomeOverrideRecompute([
+        greensomeRow({
+          teamNumber: 1,
+          previousCourseHandicap: 12,
+          newCourseHandicap: 8,
+          teammateCourseHandicap: 16,
+        }),
+      ]),
+    ).toEqual([
+      {
+        gameId: 'greensome-2',
+        teamStrokesOverride: { team1: 11, team2: 22 },
+      },
+    ]);
+  });
+
+  it('ny CH gir samme lag-slag → ingen skriving', () => {
+    // formel(50, 3) = 22 og formel(50, 4) = 22 → verdien er allerede riktig.
+    expect(
+      planGreensomeOverrideRecompute([
+        greensomeRow({ newCourseHandicap: 4 }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['finished', 'finished' as const],
+    ['scheduled', 'scheduled' as const],
+    ['draft', 'draft' as const],
+  ])('skips %s games (aldri rør ferdige eller ustartede runder)', (_l, status) => {
+    expect(planGreensomeOverrideRecompute([greensomeRow({ status })])).toEqual(
+      [],
+    );
+  });
+
+  it('ikke-greensome modus → aldri rørt (feltet betyr ingenting der)', () => {
+    expect(
+      planGreensomeOverrideRecompute([
+        greensomeRow({ gameMode: 'foursomes_matchplay' }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('mode_config uten overstyring → ingenting å regne om', () => {
+    expect(
+      planGreensomeOverrideRecompute([
+        greensomeRow({
+          modeConfig: { kind: 'greensome_matchplay', allowance_pct: 100 },
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['null', null],
+    ['tom', {}],
+    ['halv overstyring', { team_strokes_override: { team1: 14 } }],
+    [
+      'ikke-numerisk',
+      { team_strokes_override: { team1: 14, team2: '22' } },
+    ],
+  ])('malformed mode_config (%s) → urørt', (_label, modeConfig) => {
+    expect(
+      planGreensomeOverrideRecompute([greensomeRow({ modeConfig })]),
+    ).toEqual([]);
+  });
+
+  it('lagkamerat mangler CH (null) → urørt (ingen formel-input)', () => {
+    expect(
+      planGreensomeOverrideRecompute([
+        greensomeRow({ teammateCourseHandicap: null }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('egen CH var ikke frosset (null) → urørt', () => {
+    expect(
+      planGreensomeOverrideRecompute([
+        greensomeRow({ previousCourseHandicap: null }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it.each([[1], [2], [null], [3]])(
+    'lagnummer %p: kun 1 og 2 kan regnes om',
+    (teamNumber) => {
+      const updates = planGreensomeOverrideRecompute([
+        greensomeRow({
+          teamNumber,
+          // Gjør rad-en gyldig for BEGGE sider: formelen med gammel CH gir 22,
+          // som er lagret på team2; team1 (14) er formel(12, 16).
+          previousCourseHandicap: teamNumber === 1 ? 12 : 3,
+          teammateCourseHandicap: teamNumber === 1 ? 16 : 50,
+        }),
+      ]);
+      expect(updates).toHaveLength(teamNumber === 1 || teamNumber === 2 ? 1 : 0);
+    },
+  );
+
+  it('kjeder korrekt når begge lagkamerater rettes sekvensielt', () => {
+    // Pass 1: Sander 3 → −2 skriver team2 = formel(50, −2) = 19.
+    const pass1 = planGreensomeOverrideRecompute([greensomeRow()]);
+    expect(pass1).toEqual([
+      { gameId: 'greensome-2', teamStrokesOverride: { team1: 14, team2: 19 } },
+    ]);
+
+    // Pass 2: Burgern 50 → 48, med lagkamerat Sander på den NYE CH-en (−2) og
+    // den verdien pass 1 skrev. formel(50, −2) = 19 == lagret → skriver videre
+    // til formel(48, −2) = 18.
+    expect(
+      planGreensomeOverrideRecompute([
+        greensomeRow({
+          modeConfig: {
+            kind: 'greensome_matchplay',
+            team_strokes_override: pass1[0].teamStrokesOverride,
+          },
+          previousCourseHandicap: 50,
+          newCourseHandicap: 48,
+          teammateCourseHandicap: -2,
+        }),
+      ]),
+    ).toEqual([
+      { gameId: 'greensome-2', teamStrokesOverride: { team1: 14, team2: 18 } },
+    ]);
+  });
+
+  it('flere kamper vurderes hver for seg', () => {
+    const rows: GreensomeOverrideRow[] = [
+      greensomeRow({ gameId: 'g1' }), // omregnes
+      greensomeRow({ gameId: 'g2', status: 'finished' }), // skip
+      greensomeRow({
+        gameId: 'g3',
+        modeConfig: {
+          kind: 'greensome_matchplay',
+          team_strokes_override: { team1: 14, team2: 20 },
+        },
+      }), // hånd-redigert → skip
+      greensomeRow({ gameId: 'g4', newCourseHandicap: 0 }), // formel(50,0)=20
+    ];
+    expect(planGreensomeOverrideRecompute(rows)).toEqual([
+      { gameId: 'g1', teamStrokesOverride: { team1: 14, team2: 19 } },
+      { gameId: 'g4', teamStrokesOverride: { team1: 14, team2: 20 } },
+    ]);
+  });
+});
+
+// ─── recomputeCourseHandicapForUser — greensome-wiring (#1537) ───────────
+
+const mockAdminClient = vi.mocked(getAdminClient);
+
+/** Ryder Cup-tee-en fra prod-fiksturen (−2,2 → CH −2, 3,0-index → CH 3). */
+const MENS_II: TeeBoxRatings = {
+  ...TEE,
+  slope_mens: 140,
+  course_rating_mens: 71.5,
+  par_total_mens: 71,
+};
+
+const GREENSOME_CONFIG = {
+  kind: 'greensome_matchplay',
+  team_size: 2,
+  teams_count: 2,
+  allowance_pct: 100,
+  team_strokes_override: { team1: 14, team2: 22 },
+};
+
+function greensomeQueue(
+  configOverride: Record<string, unknown> = GREENSOME_CONFIG,
+): QueryResult[] {
+  return [
+    // 1) medlemskap for brukeren (frosset CH FØR rettingen)
+    {
+      data: [
+        {
+          game_id: 'greensome-2',
+          tee_gender: 'mens',
+          course_handicap: 3,
+          team_number: 2,
+        },
+      ],
+      error: null,
+    },
+    // 2) spillene
+    {
+      data: [
+        {
+          id: 'greensome-2',
+          status: 'active',
+          hcp_allowance_pct: 100,
+          tee_boxes: MENS_II,
+          game_mode: 'greensome_matchplay',
+          mode_config: configOverride,
+        },
+      ],
+      error: null,
+    },
+    // 3) CH-skrivingen
+    { data: [{ game_id: 'greensome-2' }], error: null },
+    // 4) lagkameraten
+    {
+      data: [
+        {
+          game_id: 'greensome-2',
+          user_id: 'burgern',
+          team_number: 2,
+          course_handicap: 50,
+          withdrawn_at: null,
+        },
+      ],
+      error: null,
+    },
+    // 5) mode_config-skrivingen
+    { data: [{ id: 'greensome-2' }], error: null },
+  ];
+}
+
+describe('recomputeCourseHandicapForUser — greensome-overstyring (#1537)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('auto-foreslått overstyring: skrives om og cachen revalideres', async () => {
+    const client = buildSupabaseMock(greensomeQueue());
+    mockAdminClient.mockReturnValue(client as never);
+
+    expect(await recomputeCourseHandicapForUser('sander', -2.2)).toEqual({
+      updated: 1,
+      overridesUpdated: 1,
+    });
+
+    const write = client.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'update',
+    );
+    // Øvrige mode_config-nøkler overlever merge-en.
+    expect(write?.args[0]).toEqual({
+      mode_config: {
+        kind: 'greensome_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 100,
+        team_strokes_override: { team1: 14, team2: 19 },
+      },
+    });
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-greensome-2', 'max');
+  });
+
+  it('hånd-redigert overstyring: ingen skriving, ingen revalidering', async () => {
+    const client = buildSupabaseMock(
+      greensomeQueue({ ...GREENSOME_CONFIG, team_strokes_override: { team1: 14, team2: 20 } }),
+    );
+    mockAdminClient.mockReturnValue(client as never);
+
+    expect(await recomputeCourseHandicapForUser('sander', -2.2)).toEqual({
+      updated: 1,
+      overridesUpdated: 0,
+    });
+    expect(
+      client.__fromCalls.some((c) => c.table === 'games' && c.method === 'update'),
+    ).toBe(false);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('feilende mode_config-skriving stopper ikke omregningen (best-effort)', async () => {
+    const queue = greensomeQueue();
+    queue[4] = { data: null, error: { message: 'boom' } };
+    const client = buildSupabaseMock(queue);
+    mockAdminClient.mockReturnValue(client as never);
+
+    expect(await recomputeCourseHandicapForUser('sander', -2.2)).toEqual({
+      updated: 1,
+      overridesUpdated: 0,
+    });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });
