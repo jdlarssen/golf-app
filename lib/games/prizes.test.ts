@@ -17,6 +17,7 @@ import {
   prunePrizes,
   prizeFieldName,
   prizeDraftFromList,
+  prizeListFromDraft,
   PRIZE_MAX_SLOTS,
   PRIZE_DESCRIPTION_MAX,
   PRIZE_SPONSOR_MAX,
@@ -186,6 +187,30 @@ describe('prizeDraftFromList — logo prefill (#1052)', () => {
   it('maps a null path to empty string (edit-prefill of a logo-free slot)', () => {
     const draft = prizeDraftFromList([prize({ sponsorLogoPath: null })]);
     expect(draft.placement_1.sponsorLogoPath).toBe('');
+  });
+});
+
+describe('prizeListFromDraft — inversen (#1380 utkast-persistens)', () => {
+  it('runder tur-retur uten å endre premiene', () => {
+    const list = [
+      prize({ position: 1, description: 'Pokal', sponsor: 'Klubben' }),
+      prize({
+        category: 'closest_to_pin',
+        position: 2,
+        description: 'Kikkert',
+        sponsor: null,
+        sponsorLogoPath: 'uid-1/logo.webp',
+      }),
+    ];
+
+    expect(prizeListFromDraft(prizeDraftFromList(list))).toEqual(list);
+  });
+
+  it('hopper over slott uten premie-tekst (tomt felt = slottet av)', () => {
+    const draft = prizeDraftFromList([]);
+    draft.placement_2.sponsor = 'Sponsor uten premie';
+
+    expect(prizeListFromDraft(draft)).toEqual([]);
   });
 });
 

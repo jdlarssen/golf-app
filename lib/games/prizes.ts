@@ -210,3 +210,28 @@ export function prizeDraftFromList(
   }
   return draft;
 }
+
+/**
+ * Inversen av `prizeDraftFromList` — utkast tilbake til premie-liste.
+ *
+ * #1380: veiviser-utkastet speiles til sessionStorage som `InitialValues`, og
+ * `prizes` er formen hooken seeder premiebordet fra. Slott uten premie-tekst
+ * hoppes over (tomt beskrivelses-felt = slottet av), akkurat som server-siden
+ * gjør ved lagring — så en runde utkast → liste → utkast gir samme resultat
+ * som en publisering ville gitt.
+ */
+export function prizeListFromDraft(draft: PrizeDraft): GamePrize[] {
+  const out: GamePrize[] = [];
+  for (const slot of PRIZE_SLOTS) {
+    const cell = draft[slot.key];
+    if (!cell || cell.description.trim() === '') continue;
+    out.push({
+      category: slot.category,
+      position: slot.position,
+      description: cell.description,
+      sponsor: cell.sponsor === '' ? null : cell.sponsor,
+      sponsorLogoPath: cell.sponsorLogoPath === '' ? null : cell.sponsorLogoPath,
+    });
+  }
+  return out;
+}
