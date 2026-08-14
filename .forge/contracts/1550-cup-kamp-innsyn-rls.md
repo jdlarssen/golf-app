@@ -41,27 +41,35 @@ lenker på cup-resultatsiden er blindveier for hver deltaker.
 
 ## Suksesskriterier
 
-- [ ] **S1:** Migrasjon med helper + policy-gren finnes og er påført STAGING.
-      RLS-simulering på staging mot klonet cup (`scripts/clone-cup-to-staging.mjs`,
-      default Ryder Cup 2026): Karl-caset fra issuet — deltaker ser nå scores i
-      Best ball 2 / Greensome 2 (>0 rader), fremmed bruker ser fortsatt 0.
-      **Evidens:** SQL-output før/etter.
-- [ ] **S2:** pgTAP-test (#440-riggen): (a) cup-deltaker leser scores i ferdig kamp
-      han ikke spilte, (b) fremmed ser 0, (c) AKTIV turnering: deltaker ser IKKE
-      andre kampers scores (spoiler-vern), (d) kamp uten tournament_id: uendret
-      oppførsel. **Evidens:** fil + `npm run test:rls`-output eller
-      `VERIFICATION GAP`-linje.
-- [ ] **S3:** Ingen app-kode-endring nødvendig for hovedflyten (kamp-leaderboardet
-      leser med brukerens klient og får nå rader) — verifiser at tom-tilstanden
-      «Matchen er ikke startet ennå» forsvinner av seg selv på staging. Krever
-      flyten likevel kode-endring: dokumentér avviket. **Evidens:**
-      staging-klikkrunde.
-- [ ] **S4:** Gates: `npm run build` + vitest for evt. endrede filer. **Evidens:** output.
-- [ ] **S5:** Staging-klikkrunde: logg inn som cup-deltaker, åpne ferdig kamp
+- [x] **S1:** Migrasjon med helper + policy-gren finnes og er påført STAGING.
+      **Evidens:** 0161 påført (bokført 20260814172210); Karl-caset: 36/0/0 →
+      36/36/18, fremmed 0 (36 finnes), anon 0 uten permission-denied; evaluator
+      maskindiffet policy-qual mot fila (fem gamle grener byte-identiske, én ny
+      sist) og verifiserte prod urørt.
+- [x] **S2:** pgTAP-test (#440-riggen), alle fire scenariene. **Evidens:**
+      `scores_finished_tournament_select_rls_test.sql` (plan(12), SECURITY
+      INVOKER-probe); `npm run test:rls` PASS 19 filer / 200 tester (builder OG
+      evaluator); builder beviste load-bearing (pre-0161-revert flipper nøyaktig
+      de to nye assertene). Spoiler-vernet i tillegg staging-simulert av evaluator
+      (cup flippet active i transaksjon → 0 rader, helper false, rollback bekreftet).
+- [x] **S3:** Ingen app-kode-endring. **KORRIGERT premiss (builder-bevist):**
+      hoved-tavla var allerede kurert av #1542 (service-role for finished);
+      flatene 0161 faktisk låser opp er «Hull for hull»-drilldownen
+      (holes/holesData.ts, brukerens klient) og CSV-eksporten (export/route.ts).
+      **Evidens:** kodelesing med fil:linje i builder-rapporten; staging-klikkrunden
+      i S5 beviser drilldownen ende-til-ende.
+- [x] **S4:** Gates. **Evidens:** `npm run build` exit 0 (pipefail) + test:rls PASS —
+      builder og evaluator uavhengig (Node 22.23.0). Ingen .ts/.tsx endret → ingen
+      vitest-suite gjelder (sjekket faktum, ikke unnskyldning).
+- [x] **S5:** Staging-klikkrunde: logg inn som cup-deltaker, åpne ferdig kamp
       vedkommende IKKE spilte fra cup-resultatsiden → full tabell hull for hull.
-      **Evidens:** bevis-kommentar på PR + label.
-- [ ] **S6:** PR dokumenterer prod-gaten: migrasjonen IKKE påført prod; venter
-      eier-godkjenning.
+      **Evidens:** Playwright 2026-08-14 som Karl (klonet cup): hoved-tavle OK for
+      BB1/BB2/Greensome 2, og «Hull for hull»-drilldownen for BB2 + Greensome 2
+      viser fulle per-hull-tabeller (skjermbilder; ~50 slag-sifre per side);
+      prod-vakt grønn. Bevis-kommentar på PR + label.
+- [x] **S6:** PR dokumenterer prod-gaten: migrasjonen IKKE påført prod; venter
+      eier-godkjenning. **Evidens:** PR-body «⚠️ Prod-gate»-seksjon; evaluator
+      verifiserte read-only at helper/gren ikke finnes i prod.
 
 ## Gates
 
