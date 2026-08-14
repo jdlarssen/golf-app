@@ -54,20 +54,34 @@ nekter alle andre kolonner for ikke-admin — men slipper service-role gjennom
 
 ## Suksesskriterier
 
-- [ ] **S1:** Tester i eksisterende idiom (`buildSupabaseMock`, samme fil):
+- [x] **S1:** Tester i eksisterende idiom (`buildSupabaseMock`, samme fil):
       (a) re-send av utløpt pending → admin-update med fremtidig `expires_at`
       og mail med SAMME nye frist (ikke radens gamle) — RED mot HEAD;
       (b) 0-rads-forlengelse → ingen mail + `error=invite_failed`;
       (c) eksisterende re-send- og insert-tester oppdatert mot helper-TTL,
       fortsatt grønne.
-- [ ] **S2:** Gates: `npx vitest run` på `inviteToGameActions.test.ts` +
+      **Evidens:** RED 21:27 (3 failed / 21 passed — nøyaktig de tre berørte);
+      GREEN 21:28 (24/24). Evaluator bekreftet begge nye tester load-bearing
+      mot origin/main.
+- [x] **S2:** Gates: `npx vitest run` på `inviteToGameActions.test.ts` +
       `lib/auth/inviteExpiry.test.ts` + `admin/spillere/actions.test.ts`
       (deler TTL-hjemmet) + `npm run build` exit 0.
-- [ ] **S3:** Staging: rigg utløpt pending spill-invitasjon, driv re-send via
+      **Evidens:** 3 filer / 43 tester grønne (builder OG evaluator);
+      `npm run build` exit 0 (bakgrunnslogg); evaluator `tsc --noEmit` exit 0.
+- [x] **S3:** Staging: rigg utløpt pending spill-invitasjon, driv re-send via
       UI (samme e-post i invitasjonsskjemaet), SQL-orakel:
       `expires_at > now()` etterpå og `email_is_invited(e-post)` = true.
       Bevis-kommentar + `staging-verified`-label på PR.
-- [ ] **S4:** `.changes/1613-*.md`-notat (type fix).
+      **Evidens:** rigget `utlopt-1613@example.invalid` (utløpt i går,
+      gate false) → Playwright-re-send som e2e-admin →
+      `?status=invite_sent` → samme rad `5e05b259…` fikk +14 d (2026-08-28),
+      gate true. Prod-vakt 0 treff. PR #1637-kommentar + label. Rigg slettet.
+- [x] **S4:** `.changes/1613-*.md`-notat (type fix).
+      **Evidens:** `.changes/1613-utlopt-invitasjon-ny-frist.md`, type fix,
+      issue 1613, 150 tegn.
+
+**Reviewer-funn (ikke-blokkerende):** inline 14 d-TTL i
+`guestPlayerActions.ts:222` → filed som #1638 før merge.
 
 ## Gates
 
