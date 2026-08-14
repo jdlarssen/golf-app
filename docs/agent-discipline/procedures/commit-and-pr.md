@@ -24,7 +24,7 @@ bindings §T6).
    files' co-located tests plus the project's full build/type gate. New errors are yours
    until stash-proof says otherwise (T2 step 4).
 
-5. **Commit metadata** (prefix, tracking reference, version bump, changelog) per
+5. **Commit metadata** (prefix, tracking reference, release-note/changelog artifacts) per
    bindings §T6. A metadata hook block means the metadata is wrong — fix the metadata,
    never the hook (I7); the block text names the remedy. One logical focus per commit;
    split mixed work.
