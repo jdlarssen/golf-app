@@ -261,6 +261,12 @@ type UseGameFormStateInput = {
   // seeding (GameForm sender ikke denne propen — edit-only bruk der intent
   // uansett aldri settes via IntentSelector).
   currentUserId?: string;
+  // #1380: seed for #373-telleren når veiviseren gjenopprettes fra et lagret
+  // utkast. `undefined` = ingen gjenoppretting (telleren starter på
+  // PLAYER_COUNT_DEFAULT); `null` = arrangøren hadde trykket «Vis alle».
+  // De to må kunne skilles fra hverandre, derfor null i stedet for bare et
+  // valgfritt tall.
+  initialExpectedPlayerCount?: number | null;
 };
 
 /**
@@ -297,6 +303,7 @@ export function useGameFormState({
   initialIntent,
   defaultGroupId,
   currentUserId,
+  initialExpectedPlayerCount,
 }: UseGameFormStateInput) {
   const tMissing = useTranslations('wizard.form.missing');
 
@@ -616,9 +623,14 @@ export function useGameFormState({
   // teller-kontrollen setter den til undefined for å vise hele katalogen.
   // Når count endres slik at gjeldende format ikke lenger passer, nullstilles
   // gameMode til default og formatChosen til false slik at brukeren velger på nytt.
+  // #1380: et gjenopprettet utkast seeder telleren (null = «Vis alle»).
   const [expectedPlayerCount, setExpectedPlayerCountRaw] = useState<
     number | undefined
-  >(PLAYER_COUNT_DEFAULT);
+  >(
+    initialExpectedPlayerCount === undefined
+      ? PLAYER_COUNT_DEFAULT
+      : (initialExpectedPlayerCount ?? undefined),
+  );
 
   // Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' — dagens
   // flyt bevart 100% når admin ikke aktivt velger noe annet. Edit-flyten
