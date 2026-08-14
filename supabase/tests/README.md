@@ -51,6 +51,13 @@ npm run test:rls
 supabase stop
 ```
 
+> ⚠️ **Stale Docker-volum → masse-falsk-rødt.** `supabase start` gjenbruker et
+> eksisterende volum uten å re-påføre migrasjoner. Har volumet en eldre
+> skjema-tilstand, blir første `npm run test:rls`-kjøring masse-rød
+> (policyer/tabeller «mangler») uten hint om årsaken. Kur: kjør
+> `supabase db reset` (re-påfører alle migrasjonene) før `npm run test:rls`
+> hver gang migrasjonene har beveget seg siden sist volumet ble bygd.
+
 ### B) Verifisert vei i dag (rundt duplikat-prefiks-blokkeren)
 
 `supabase start` bokfører hver migrasjon på tall-prefiks og kolliderer på de doble
