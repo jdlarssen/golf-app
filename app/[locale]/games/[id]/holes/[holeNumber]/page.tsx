@@ -9,7 +9,10 @@ import { isProfileIncomplete } from '@/lib/auth/profileGate';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
-import { isStablefordFamily, isScrambleFamily } from '@/lib/scoring/modes/types';
+import {
+  isStablefordFamily,
+  modeCollapsesToTeamCard,
+} from '@/lib/scoring/modes/types';
 import { readTeamStrokesOverride } from '@/lib/scoring/modes/greensomeMatchplay';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
@@ -27,6 +30,7 @@ import type {
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
+import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import {
   firstHoleForSegment,
   holeNumbersForSegment,
@@ -257,7 +261,6 @@ export default async function HolePage({ params }: { params: Params }) {
   const playerIds = flight.map((p) => p.user_id);
 
   const isStableford = isStablefordFamily(game.game_mode);
-  const isTexas = isScrambleFamily(game.game_mode);
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isGreensome = game.game_mode === 'greensome_matchplay';
   const isChapman = game.game_mode === 'chapman_matchplay';
@@ -644,14 +647,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // og fordeles per hull via vanlig SI-allokering (strokesForHole).
   let playersForClient: ClientPlayer[];
 
-  if (
-    isTexas ||
-    isFoursomes ||
-    isGreensome ||
-    isChapman ||
-    isGruesome ||
-    (isPatsome && holeNumber >= 7)
-  ) {
+  if (modeCollapsesToTeamCard(game.game_mode, holeNumber)) {
     // Grupper roster på team_number. Vanligvis ett lag (når flight-filteret kun
     // returnerer mitt lag), men ved singleFlight får vi alle lag.
     const teamNumbers = [
@@ -747,12 +743,11 @@ export default async function HolePage({ params }: { params: Params }) {
 
     playersForClient = teamNumbers.map((teamNum) => {
       const teamPlayers = flight.filter((p) => p.team_number === teamNum);
-      const captain = teamPlayers.reduce(
-        (min, p) => (p.user_id < min.user_id ? p : min),
-        teamPlayers[0],
-      );
+      // `flight` is already withdrawal-free, so this is the same lex-min
+      // captain as before — now read from the one home the Home card shares.
+      const captainId = teamScoreOwnerId(teamPlayers) ?? teamPlayers[0].user_id;
       const teamHCP = teamHandicapFor(teamNum);
-      const captainScoreRow = scoresByUser[captain.user_id];
+      const captainScoreRow = scoresByUser[captainId];
       const memberNames = teamPlayers
         .map((p) => p.users?.name ?? '')
         .map((n) => n.split(/\s+/)[0])
@@ -762,7 +757,7 @@ export default async function HolePage({ params }: { params: Params }) {
         (p) => p.submitted_at != null,
       );
       return {
-        userId: captain.user_id,
+        userId: captainId,
         name: `Lag ${teamNum} · ${memberNames}`,
         nickname: null,
         initial: String(teamNum),
