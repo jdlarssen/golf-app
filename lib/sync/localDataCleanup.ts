@@ -127,8 +127,11 @@ export async function ensureLocalDataOwnerBrowser(): Promise<void> {
       try {
         window.localStorage.setItem(LOCAL_DATA_OWNER_KEY, userId);
       } catch {
-        // Storage unavailable (private mode quota etc.) — guard degrades to
-        // clearing on every boot-with-session, which is safe, just eager.
+        // setItem failing with a stale stamp still readable → the guard
+        // clears on every boot-with-session (safe, just eager). Fully
+        // blocked localStorage reads null → every boot is 'first' and the
+        // guard goes inert — accepted corner: such environments also tend
+        // to block IndexedDB, leaving nothing to leak.
       }
     },
     clear: clearAllLocalData,

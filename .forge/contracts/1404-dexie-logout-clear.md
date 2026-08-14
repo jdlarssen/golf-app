@@ -56,20 +56,37 @@ må drenere først eller skille per bruker (issue-teksten).
 
 ## Suksesskriterier
 
-- [ ] **S1:** Type A-tester (RED først) for kjernen: `detectOwnerChange`
+- [x] **S1:** Type A-tester (RED først) for kjernen: `detectOwnerChange`
       (first/same/switched), `ensureLocalDataOwner` (no_session rører
       ingenting; switched tømmer FØR stempling; first stempler uten tømming;
       same no-op), `prepareLogout` (tom kø etter drain → cleared + stempel
       fjernet; drain feiler/kø ikke tom → kept + stempel består; drain-throw
       svelges).
-- [ ] **S2:** `SyncBoot` awaiter eier-vakta før motorstart; `LogoutForm`
+      **Evidens:** RED 22:16 (modul finnes ikke → «no tests»); GREEN 11/11.
+      Evaluator bekreftet ikke-tautologiske asserts (rekkefølge-array m.m.).
+- [x] **S2:** `SyncBoot` awaiter eier-vakta før motorstart; `LogoutForm`
       erstatter profil-formen (samme copy-nøkler, samme route-POST).
-- [ ] **S3:** Gates: `npx vitest run lib/sync/` + `npm run build` exit 0.
-- [ ] **S4:** Staging: (1) som bruker A på game-side → eier-stempel = A;
+      **Evidens:** sekvensiell await i SyncBoot; LogoutForm bruker
+      logoutButton/logoutPending + POST /logout; nativ form.submit() uten
+      onSubmit-løkke. Evaluator verifiserte D2 (kun tabell-clear) og D5
+      (ingen nye Dexie-flater).
+- [x] **S3:** Gates: `npx vitest run lib/sync/` + `npm run build` exit 0.
+      **Evidens:** 8 filer / 104 tester grønne (builder OG evaluator);
+      build exit 0 (bakgrunnslogg); evaluator tsc exit 0; PR-CI grønn.
+- [x] **S4:** Staging: (1) som bruker A på game-side → eier-stempel = A;
       (2) simulert etterlatenskap (rå IndexedDB-rad + stempel A) → login som
       bruker B, åpne game-side → rad borte + stempel = B; (3) utlogging med
       tom kø → tabeller tomme + stempel fjernet. Bevis + `staging-verified`.
-- [ ] **S5:** `.changes/1404-*.md`-notat (type fix).
+      **Evidens:** tre-fase Playwright (fase C re-kjørt med skjerpet
+      rad-nøkkel-orakel etter at «0 rader» viste seg feil — spillsiden fyller
+      Dexie legitimt ETTER vasken); prod-vakt 0 treff. PR #1641-kommentar +
+      label.
+- [x] **S5:** `.changes/1404-*.md`-notat (type fix).
+      **Evidens:** `.changes/1404-ren-enhet-ved-brukerbytte.md`; dry-run grønn.
+
+**Evaluator-funn (ikke-blokkerende):** (1) upresis degradasjons-kommentar i
+setStoredOwnerId — rettet i samme runde; (2) vakta er fail-open ved
+Dexie-feil — akseptert per kontraktens defensive holdning.
 
 ## Gates
 
