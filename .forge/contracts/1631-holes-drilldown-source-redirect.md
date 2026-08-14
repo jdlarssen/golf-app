@@ -39,16 +39,28 @@ finnes med tester i `lib/games/getRoundScoresForGames.ts`.
 
 ## Suksesskriterier
 
-- [ ] **S1:** Ny test `holesData.test.ts` (samme mock-idiom som
+- [x] **S1:** Ny test `holesData.test.ts` (samme mock-idiom som
       `getRoundScoresForGames.test.ts`): avledet spill → scores hentes på host-id;
       host-spill (`source_game_id = null`) → egen id (byte-identisk oppførsel).
       RED først, GREEN etter fiks.
-- [ ] **S2:** Gates grønne: `npx vitest run app/[locale]/games/[id]/leaderboard/holes/`
+      **Evidens:** RED 21:07: «Expected "host-1" / Received "derived-1"» (1 failed,
+      1 passed); GREEN etter fiks i commit `2c50084a`. Evaluator bekreftet testen
+      load-bearing mot gammel kode.
+- [x] **S2:** Gates grønne: `npx vitest run app/[locale]/games/[id]/leaderboard/holes/`
       + `npm run build` (Node 22, pipefail).
-- [ ] **S3:** Staging-klikkrunde: åpne «Hull for hull» på en avledet kamp i den
+      **Evidens:** vitest 10 filer / 11 tester grønne; `npm run build` exit 0
+      (logg i scratchpad, ingen pipe). Evaluator re-kjørte vitest + `tsc --noEmit`
+      exit 0.
+- [x] **S3:** Staging-klikkrunde: åpne «Hull for hull» på en avledet kamp i den
       klonede cupen → fylt per-hull-tabell; host-kamp drilldown uendret.
       Bevis-kommentar + `staging-verified`-label på PR.
-- [ ] **S4:** `.changes/1631-*.md`-notat (type fix) følger malen.
+      **Evidens:** Playwright som Karl mot worktree-server :3131 (port-eierskap
+      lsof-verifisert): «Singel 1» viser full tabell 10–18, K-kolonne
+      4,4,5,4,4,5,4,3,5 = SQL-orakel; host 58 sifferceller; prod-vakt 0 treff
+      utenfor staging-ref; skjermbilder. PR #1636-kommentar + label satt.
+- [x] **S4:** `.changes/1631-*.md`-notat (type fix) følger malen.
+      **Evidens:** `.changes/1631-hull-for-hull-avledet-kamp.md`, type fix,
+      issue 1631, 105 tegn brødtekst; evaluator kjørte dry-run grønt.
 
 ## Gates
 
