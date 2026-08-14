@@ -42,21 +42,30 @@ Hånd-redigerte verdier overlever alltid. Presedens: prod-casen matchet forslage
 
 ## Suksesskriterier
 
-- [ ] **S1:** Ren plan-funksjon med Type A-tester skrevet FØRST, fikstur = prod-tallene
+- [x] **S1:** Ren plan-funksjon med Type A-tester skrevet FØRST, fikstur = prod-tallene
       fra issuet: formel(12,16)=14 urørt lag → urørt; lagret 22 == formel(50,3) →
       omregnes til formel(50,−2)=19; hånd-redigert verdi (≠ formel(gamle)) → urørt;
       ikke-greensome-modus → aldri rørt; finished/scheduled → aldri rørt.
-      **Evidens:** testfil + vitest-output; test-commit før impl-commit.
-- [ ] **S2:** Wiring i `recomputeCourseHandicapForUser`: henter lagkameratens CH +
+      **Evidens:** `planGreensomeOverrideRecompute` (recomputeCourseHandicap.ts:165) +
+      tester fra :175 i testfila; rød commit 5ce57d3e (25 failed — evaluator grep-beviste
+      at funksjonen ikke fantes) før impl a3e57152; kjede-egenskapen låst i test
+      (pass 1 → 19, pass 2 → 18); malformed-JSON/teamNumber-null/3-kanter dekket.
+- [x] **S2:** Wiring i `recomputeCourseHandicapForUser`: henter lagkameratens CH +
       mode_config for brukerens aktive greensome-kamper, skriver omregnet override
       og revaliderer cache-tags. Best-effort (aldri kast — samme kontrakt som resten
-      av funksjonen). **Evidens:** diff + wiring-test i eksisterende
-      `recomputeCourseHandicap.test.ts`-stil.
-- [ ] **S3:** Formel-gjenbruk verifisert: plan-funksjonen importerer samme funksjon
-      som genereringen bruker — ingen ny 60/40-implementasjon. **Evidens:** import-sti
-      i diff; grep viser én formel-definisjon.
-- [ ] **S4:** Gates: `npx vitest run lib/games lib/scoring` + tester for evt. andre
-      endrede filer + `npm run build`. **Evidens:** output.
+      av funksjonen). **Evidens:** `recomputeGreensomeOverrides` (:328) — kandidater kun
+      der CH-skriving traff rader; nøyaktig-én-lagkamerat-krav (to på samme side →
+      konservativ skip); mode_config-merge bevarer øvrige nøkler (assertert);
+      revalidateTag kun etter bekreftet skriving; evaluator: kan aldri kaste ut
+      (ytre try/catch), alle 3 call-sites er server-actions.
+- [x] **S3:** Formel-gjenbruk verifisert: plan-funksjonen importerer samme funksjon
+      som genereringen bruker — ingen ny 60/40-implementasjon. **Evidens:** grep viser
+      ÉN definisjon (`lib/scoring/modes/greensomeMatchplay.ts:29`); lib/scoring og
+      GenerateMatchesWizard.tsx urørt (evaluator-verifisert).
+- [x] **S4:** Gates: `npx vitest run lib/games lib/scoring` + tester for evt. andre
+      endrede filer + `npm run build`. **Evidens:** 107 filer / 2416 grønne + build
+      exit 0 (pipefail) — builder OG evaluator uavhengig; weekly-release dry-run
+      validerer notatfila.
 - [ ] **S5:** Staging-verifisering med klonet defekt-data:
       `scripts/clone-cup-to-staging.mjs` (default = Ryder Cup 2026, har den EKTE
       defekten). Rett handicapet til spilleren via admin-flaten → verifiser med SQL at
