@@ -68,10 +68,15 @@ Samme blindsone rammer ALLE oppretter-UPDATEs på `game_players` via sesjonsklie
       `npm run build`. **Evidens:** vitest 24/24, `npm run build` pipefail exit 0,
       weekly-release dry-run validerer notatfila — kjørt av builder OG re-kjørt av
       evaluator (Node 22.23.0).
-- [ ] **S5:** Staging-klikkrunde: ikke-admin bruker oppretter spill der de selv IKKE
+- [x] **S5:** Staging-klikkrunde: ikke-admin bruker oppretter spill der de selv IKKE
       deltar (deltaker = den andre e2e-brukeren), deltaker leverer, oppretter
       godkjenner via /games/[id]/spillere → suksess OG `approved_at` faktisk satt
-      (verifisert med SQL mot staging). **Evidens:** bevis-kommentar på PR + label.
+      (verifisert med SQL mot staging). **Evidens:** Playwright 2026-08-14 (spill
+      bbbbbbbb-1595-…): oppretter e2eplayer (ikke-admin, ikke-deltaker) fant
+      godkjenn-knappen, klikket, `approved_at=16:37:47Z` +
+      `approved_by_user_id=252e1a6f` skrevet; prod-vakt grønn. (Rigg-læring: knappen
+      krever `require_peer_approval=true` + `.next`-cachen må tømmes etter
+      REST-rigging — gwp-cachen overlever server-restart på disk.)
 - [ ] **S6:** PR dokumenterer prod-gaten eksplisitt: migrasjonen er IKKE påført prod;
       påføring krever eier-godkjenning i økt (approve-prod-sentinel).
 
