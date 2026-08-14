@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
+import { inviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { getQuotaState } from '@/lib/invitations/quota';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import type { AppLocale } from '@/i18n/routing';
@@ -108,7 +109,7 @@ export async function sendFriendInvite(formData: FormData) {
   // Audit log. Token is required NOT NULL UNIQUE; we generate a uuid here
   // just to satisfy the column. The actual OTP code is sent by Supabase
   // when the invitee reaches /login and asks for one.
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = inviteExpiresAtFromNow();
   const inviteToken = randomUUID();
   const { error: insertError } = await supabase.from('invitations').insert({
     email,
