@@ -3699,6 +3699,7 @@
       "sentDate": "Sendt {date}",
       "openedAt": "Har bedt om kode {relative}",
       "notOpened": "Mail sendt, men ikke åpnet ennå",
+      "expiredBadge": "Utløpt",
       "resendButton": "Send på nytt",
       "resendingBusy": "Sender …",
       "withdrawButton": "Trekk tilbake",

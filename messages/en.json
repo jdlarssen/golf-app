@@ -3699,6 +3699,7 @@
       "sentDate": "Sent {date}",
       "openedAt": "Requested a code {relative}",
       "notOpened": "Email sent, but not opened yet",
+      "expiredBadge": "Expired",
       "resendButton": "Resend",
       "resendingBusy": "Sending …",
       "withdrawButton": "Withdraw",
