@@ -10,6 +10,7 @@ import {
   type GitHubClient,
   type LanseringDeps,
 } from './discordActions';
+import { CI_WORKFLOW_FILE, fetchCiRunsForSha } from './ciRuns';
 
 // Ekte ed25519-nøkkelpar per test-kjøring — verifiseringen testes mot ekte
 // kryptografi, ikke mot en mock (Discords rå-hex-format utledes fra SPKI-DER).
@@ -153,11 +154,15 @@ function mockGh(responses: Array<{ status: number; json?: unknown }>) {
   return { gh, calls };
 }
 
+// Full 40-tegns SHA: workflows-runs-endepunktet krever det (en forkortet SHA
+// gir tom liste), så fiksturene må ha samme form som `pr.head.sha` i praksis.
+const HEAD_SHA = 'c8626c90a1b2c3d4e5f60718293a4b5c6d7e8f90';
+
 const greenPr = {
   node_id: 'PR_x',
   draft: false,
   state: 'open',
-  head: { sha: 'abc123' },
+  head: { sha: HEAD_SHA },
 };
 // CI-porten leser nå Actions-workflow-kjøringen for ci.yml (ikke check-runs).
 const greenCi = {
@@ -444,6 +449,40 @@ describe('executeAction: merge_pr', () => {
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
     expect(msg).toContain('Base branch was modified');
+  });
+
+  it('CI-oppslaget feiler → ærlig melding med HTTP-status, ingen merge', async () => {
+    const { gh, calls } = mockGh([{ status: 200, json: greenPr }, { status: 502 }]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls).toHaveLength(2);
+    expect(msg).toContain('502');
+    expect(msg).toContain('ikke merget');
+  });
+});
+
+// ── fetchCiRunsForSha (delt hjem, #1520) ─────────────────────────────────────
+// Samme oppslag brukes av merge-knappen over og av PR-kortets grønt-gate
+// (scripts/loops/decide-pr-card.ts) — derfor testes det som egen enhet her.
+
+describe('fetchCiRunsForSha', () => {
+  it('slår opp ci.yml-kjøringer for head-SHA-en og returnerer lista', async () => {
+    const { gh, calls } = mockGh([{ status: 200, json: greenCi }]);
+    const res = await fetchCiRunsForSha(gh, LOOP_REPO, HEAD_SHA);
+    expect(calls[0]).toMatchObject({
+      method: 'GET',
+      path: `/repos/${LOOP_REPO}/actions/workflows/${CI_WORKFLOW_FILE}/runs?head_sha=${HEAD_SHA}&per_page=20`,
+    });
+    expect(res).toEqual({ ok: true, runs: greenCi.workflow_runs });
+  });
+
+  it('ingen registrert kjøring → ok med tom liste (ikke feil)', async () => {
+    const { gh } = mockGh([{ status: 200, json: { workflow_runs: [] } }]);
+    expect(await fetchCiRunsForSha(gh, LOOP_REPO, HEAD_SHA)).toEqual({ ok: true, runs: [] });
+  });
+
+  it('HTTP-feil holdes adskilt fra tom liste (fail-closed hos kallstedene)', async () => {
+    const { gh } = mockGh([{ status: 403 }]);
+    expect(await fetchCiRunsForSha(gh, LOOP_REPO, HEAD_SHA)).toEqual({ ok: false, status: 403 });
   });
 });
 
