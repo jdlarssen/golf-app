@@ -224,12 +224,15 @@ export default async function PåmeldingPage({
   // så oppslaget for alle modi gir ingen ny null-flate.
   let hasPendingInvitation = false;
   if (profile!.email) {
+    // #1437: en utløpt invitasjon skal ikke gi lag-peker — samme
+    // utløpssemantikk som login-porten (#1348).
     const { data: invitation } = await admin
       .from('invitations')
       .select('id')
       .ilike('email', profile!.email)
       .eq('game_id', game.id)
       .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
       .maybeSingle<{ id: string }>();
     hasPendingInvitation = invitation != null;
   }

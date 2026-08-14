@@ -937,10 +937,15 @@ export async function attachToCaptainTeam(
   }
 
   // Verifiser at invitations-raden tilhører denne brukeren (matching email).
+  // #1437: utløp håndheves med samme figur som verifyCode-laget (#1348) — en
+  // utløpt invitasjon skal ikke kunne feste noen til laget, selv om den
+  // fortsatt ligger i tabellen. Filteret her dekker også vinduet mellom
+  // sidelast (der tilbudet var gyldig) og selve attach-klikket.
   const { data: invitation } = await admin
     .from('invitations')
     .select('id, email, game_id, invited_by')
     .eq('id', invitationId)
+    .gt('expires_at', new Date().toISOString())
     .maybeSingle<{
       id: string;
       email: string;

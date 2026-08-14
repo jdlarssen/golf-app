@@ -115,12 +115,15 @@ export default async function TeamDashboardPage({
       // invitert samme e-post. `.maybeSingle()` ville feilet med PGRST116 og
       // sendt brukeren i en blindvei — vi henter alle åpne og lar
       // `pickPendingInvitation` velge (#1343).
+      // #1437: kun uutløpte invitasjoner gir attach-tilbud — samme
+      // utløpssemantikk som login-porten (#1348).
       const { data: invitations } = await admin
         .from('invitations')
         .select('id, email, invited_by')
         .ilike('email', userRow.email)
         .eq('game_id', game.id)
         .is('accepted_at', null)
+        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .returns<PendingInvitation[]>();
       if (invitations && invitations.length > 0) {

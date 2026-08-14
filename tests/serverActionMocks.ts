@@ -100,7 +100,7 @@ export function buildSupabaseMock(
     // Chainable + lazily-resolvable filters. `order` + `limit` brukes av
     // helpers som henter sortert/begrenset data — de er rene pass-through-er
     // i mock-en (vi sjekker ikke sortering i unit-tests, kun resultatet).
-    for (const m of ['select', 'eq', 'neq', 'is', 'not', 'in', 'order', 'limit', 'ilike']) {
+    for (const m of ['select', 'eq', 'neq', 'gt', 'is', 'not', 'in', 'order', 'limit', 'ilike']) {
       proxy[m] = (...args: unknown[]) => {
         rec(m, args);
         return proxy;
