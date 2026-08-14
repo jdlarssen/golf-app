@@ -19,13 +19,17 @@ Samme blindsone rammer ALLE oppretter-UPDATEs på `game_players` via sesjonsklie
 ## Avgjørelser
 
 - **D1 — fiks på policy-nivå, additiv.** Ny policy `game_players creator select`
-  (SELECT, `to authenticated`) med qual som speiler eksisterende creator-policyer:
-  `EXISTS (SELECT 1 FROM games g WHERE g.id = game_players.game_id AND g.created_by = (SELECT auth.uid()))`.
-  Additiv policy (OR-semantikk) — rører ikke eksisterende policy. Ingen
-  informasjonslekkasje utover intensjon: oppretter-flatene viser allerede roster via
-  service-role (`getGameWithPlayers`), dette gir RLS-paritet med UI-et.
-  (Service-role-alternativet i issuet forkastes: flytter grensen ut av RLS,
-  AGENTS.md felle 3.)
+  (SELECT, `to authenticated`). **KORRIGERT under bygging (2026-08-14):** kontraktens
+  opprinnelige inline-EXISTS-qual utløste `42P17 infinite recursion` på staging —
+  `games select if participant or admin` refererer `game_players` inline, så en
+  game_players-SELECT-policy med inline games-referanse lukker syklusen og dreper
+  ALLE autentiserte game_players-lesinger. Bevist live og rullet tilbake umiddelbart.
+  Endelig qual: `public.is_game_creator_or_admin(game_id)` (eksisterende SECURITY
+  DEFINER-helper, 0107-herdet) — samme intensjon, bryter syklusen. Additiv policy
+  (OR-semantikk) — rører ikke eksisterende policy. Ingen informasjonslekkasje utover
+  intensjon: oppretter-flatene viser allerede roster via service-role
+  (`getGameWithPlayers`), dette gir RLS-paritet med UI-et. (Service-role-alternativet
+  i issuet forkastes: flytter grensen ut av RLS, AGENTS.md felle 3.)
 - **D2 — migrasjonsfil** `supabase/migrations/0160_game_players_creator_select.sql`
   (verifiser løpenummer mot origin/main ved bygging — 0159 er siste per 2026-08-14).
   Følg eksisterende migrasjonsstil; `(SELECT auth.uid())`-innpakning (perf-runden
@@ -45,15 +49,25 @@ Samme blindsone rammer ALLE oppretter-UPDATEs på `game_players` via sesjonsklie
 
 ## Suksesskriterier
 
-- [ ] **S1:** Migrasjonsfil finnes og er påført STAGING; RLS-simulering på staging
+- [x] **S1:** Migrasjonsfil finnes og er påført STAGING; RLS-simulering på staging
       (SET ROLE authenticated + jwt-claims for ikke-deltakende oppretter) viser
-      SELECT count > 0 og approve-UPDATE → 1 rad. **Evidens:** SQL-output.
-- [ ] **S2:** pgTAP-testfil per D4. **Evidens:** fil + test:rls-output eller
-      VERIFICATION GAP-linje.
-- [ ] **S3:** Hardening per D3 i `adminApproveScorecard`. **Evidens:** diff + evt.
-      co-located test hvis testrigg finnes for fila (glob først; finnes ingen → noter).
-- [ ] **S4:** Gates: `npx vitest run` for endrede filer med co-located tester +
-      `npm run build`. **Evidens:** output.
+      SELECT count > 0 og approve-UPDATE → 1 rad. **Evidens:** 0160 påført staging
+      (etter 42P17-korreksjonen, se D1); simulering før: 0/0 rader — etter: 1 synlig
+      rad, UPDATE → 1 rad (rullet tilbake); fremmed ser 0; global game_players-lesing
+      uten rekursjon (39 rader). Evaluator re-verifiserte policy-dump == fil, alle 9
+      gamle policyer uendret, prod har IKKE policyen.
+- [x] **S2:** pgTAP-testfil per D4. **Evidens:**
+      `supabase/tests/game_players_creator_select_rls_test.sql` (plan(7));
+      `npm run test:rls` kjørt REELT av evaluator (Docker + lokal stack):
+      PASS 19 filer / 195 tester. Ingen VERIFICATION GAP.
+- [x] **S3:** Hardening per D3 i `adminApproveScorecard`. **Evidens:** actions.ts:204–245
+      (re-les via admin-client; pending/readError → `?error=db_players` + console.error;
+      borte/godkjent → idempotent suksess); co-located rigg fantes og er utvidet —
+      actions.test.ts 24/24 grønne, nytt case pinner pending-grenen for oppretter-ruta.
+- [x] **S4:** Gates: `npx vitest run` for endrede filer med co-located tester +
+      `npm run build`. **Evidens:** vitest 24/24, `npm run build` pipefail exit 0,
+      weekly-release dry-run validerer notatfila — kjørt av builder OG re-kjørt av
+      evaluator (Node 22.23.0).
 - [ ] **S5:** Staging-klikkrunde: ikke-admin bruker oppretter spill der de selv IKKE
       deltar (deltaker = den andre e2e-brukeren), deltaker leverer, oppretter
       godkjenner via /games/[id]/spillere → suksess OG `approved_at` faktisk satt
