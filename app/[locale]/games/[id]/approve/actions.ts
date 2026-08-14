@@ -7,6 +7,7 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { notify } from '@/lib/notifications/notify';
 import { canApproveScorecardFor } from '@/lib/games/flightScope';
+import { NO_REJECTION_REASON } from '@/lib/games/rejectionReason';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 type AuthorizationResult = {
@@ -155,16 +156,16 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
         .eq('id', user.id)
         .maybeSingle<{ name: string | null }>(),
     ]);
-    const gameName = gameRes.data?.name ?? '(ukjent spill)';
-    const approverName =
-      approverRes.data?.name?.trim() || '(ukjent godkjenner)';
+    // #1364: null i stedet for norsk plassholdertekst. Payloaden skrives i
+    // godkjennerens kontekst men leses i mottakerens locale, så kortet fyller
+    // fallbacken ved render (buildNotificationText).
     await notify({
       userId: playerUserId,
       kind: 'scorecard_approved',
       payload: {
         game_id: gameId,
-        game_name: gameName,
-        approver_name: approverName,
+        game_name: gameRes.data?.name ?? null,
+        approver_name: approverRes.data?.name?.trim() || null,
       },
     });
   } catch (err) {
@@ -194,7 +195,11 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   if (!playerUserId) {
     redirect({ href: `/games/${gameId}/approve?error=bad_request` as string, locale });
   }
-  const reason = reasonRaw.length > 0 ? reasonRaw.slice(0, 500) : 'Ingen grunn oppgitt';
+  // #1364: uten begrunnelse lagres en maskinsentinel, ikke norsk prosa — raden
+  // leses av spillere i begge locales, og banneret på spill-hjem er gated på at
+  // feltet er truthy (se NO_REJECTION_REASON for hvorfor null ikke går).
+  const reason =
+    reasonRaw.length > 0 ? reasonRaw.slice(0, 500) : NO_REJECTION_REASON;
 
   const { supabase, user, authz } = await loadAndAuthorize(gameId, playerUserId);
   if (!authz.ok) redirect({ href: '/', locale });
@@ -254,11 +259,11 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
       kind: 'scorecard_rejected',
       payload: {
         game_id: gameId,
-        game_name: gameRes.data?.name ?? '(ukjent spill)',
+        game_name: gameRes.data?.name ?? null,
         rejecter_name: rejecterRes.data?.name?.trim() || null,
         // Utelat feltet helt når attestanten ikke skrev noe, så kortet kan vise
-        // en lokalisert defaultReason. DB-raden beholder sin egen
-        // 'Ingen grunn oppgitt'-tekst — den styrer spill-hjem-banneret.
+        // en lokalisert defaultReason. DB-raden bærer sentinelen i stedet —
+        // den styrer spill-hjem-banneret, som oversetter på samme måte.
         ...(reasonRaw.length > 0 ? { reason } : {}),
       },
     });

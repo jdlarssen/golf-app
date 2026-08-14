@@ -4,6 +4,7 @@ import {
   makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
+import { NO_REJECTION_REASON } from '@/lib/games/rejectionReason';
 
 /**
  * Unit tests for `approveScorecard`.
@@ -339,9 +340,9 @@ describe('rejectScorecard', () => {
   });
 
   it('#1358: omits reason from the payload when the rejecter wrote nothing', async () => {
-    // The DB row keeps its own «Ingen grunn oppgitt» placeholder, but the
-    // notification leaves `reason` out so the card can render a localised
-    // default instead of a hardcoded Norwegian string.
+    // The DB row stores the machine sentinel (#1364), and the notification
+    // leaves `reason` out entirely — both sides render a localised default in
+    // the reader's locale instead of a hardcoded Norwegian string.
     supabaseMock = buildSupabaseMock([
       { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
       { data: { is_admin: true }, error: null }, // users.is_admin
@@ -368,5 +369,12 @@ describe('rejectScorecard', () => {
         rejecter_name: null,
       },
     });
+
+    const updateCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'update',
+    );
+    expect(
+      (updateCall?.args[0] as { rejection_reason: string }).rejection_reason,
+    ).toBe(NO_REJECTION_REASON);
   });
 });

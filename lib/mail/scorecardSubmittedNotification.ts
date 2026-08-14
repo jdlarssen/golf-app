@@ -31,8 +31,11 @@ export type ScorecardSubmittedNotificationParams = {
   to: string;
   /** First name of the admin recipient, for "Hei <name>!" salutation. Null if unknown. */
   adminFirstName: string | null;
-  /** Display name of the player who submitted the scorecard. */
-  playerName: string;
+  /**
+   * Display name of the player who submitted the scorecard. Null when unknown —
+   * the recipient's catalog fills «En spiller»/«A player» at send time (#1364).
+   */
+  playerName: string | null;
   /** The game's display name, used in subject + body. */
   gameName: string;
   /** Game id — used to build the admin detail URL. */
@@ -48,7 +51,11 @@ export async function sendScorecardSubmittedNotification(
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
 
-  const subject = t('scorecardSubmitted.subject', { playerName, gameName });
+  // #1364: ukjent navn oversettes her, i mottakerens locale, i stedet for at
+  // avsender-siden legger norsk prosa i parameteren.
+  const name = playerName ?? t('common.somePlayerFallback');
+
+  const subject = t('scorecardSubmitted.subject', { playerName: name, gameName });
   const adminUrl = mailUrl(locale, `/admin/games/${gameId}`);
   const homeUrl = mailUrl(locale, '');
 
@@ -57,11 +64,14 @@ export async function sendScorecardSubmittedNotification(
     : t('scorecardSubmitted.salutationGeneric');
 
   const bodyHtml = t.markup('scorecardSubmitted.body', {
-    playerName: escapeHtml(playerName),
+    playerName: escapeHtml(name),
     gameName: escapeHtml(gameName),
     strong: (c) => `<strong>${c}</strong>`,
   });
-  const bodyText = t('scorecardSubmitted.bodyText', { playerName, gameName });
+  const bodyText = t('scorecardSubmitted.bodyText', {
+    playerName: name,
+    gameName,
+  });
 
   const footerHtml = t.markup('scorecardSubmitted.footer', {
     link: (c) =>

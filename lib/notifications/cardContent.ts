@@ -34,7 +34,7 @@ export function buildNotificationText(
       return {
         title: t('kinds.peerApprovalRequest.title'),
         detail: t('kinds.peerApprovalRequest.detail', {
-          submitterName: p.submitter_name,
+          submitterName: p.submitter_name ?? t('somePlayerFallback'),
           gameName: p.game_name,
         }),
       };
@@ -44,7 +44,7 @@ export function buildNotificationText(
       return {
         title: t('kinds.scorecardSubmitted.title'),
         detail: t('kinds.scorecardSubmitted.detail', {
-          playerName: p.player_name,
+          playerName: p.player_name ?? t('somePlayerFallback'),
           gameName: p.game_name,
         }),
       };
@@ -54,8 +54,8 @@ export function buildNotificationText(
       return {
         title: t('kinds.scorecardApproved.title'),
         detail: t('kinds.scorecardApproved.detail', {
-          approverName: p.approver_name,
-          gameName: p.game_name,
+          approverName: p.approver_name ?? t('somePlayerFallback'),
+          gameName: p.game_name ?? t('someGameFallback'),
         }),
       };
     }
@@ -65,7 +65,7 @@ export function buildNotificationText(
         title: t('kinds.scorecardRejected.title'),
         detail: t('kinds.scorecardRejected.detail', {
           rejecterName: p.rejecter_name ?? t('somePlayerFallback'),
-          gameName: p.game_name,
+          gameName: p.game_name ?? t('someGameFallback'),
           // Utelatt reason = attestanten skrev ingenting; vis en lokalisert
           // tekst i stedet for DB-radens norske plassholder (#1358).
           reason: p.reason ?? t('kinds.scorecardRejected.defaultReason'),

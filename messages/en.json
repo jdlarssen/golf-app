@@ -74,6 +74,7 @@
     "somePlayerFallback": "A player",
     "someTeamFallback": "The team",
     "organizerFallback": "The organizer",
+    "someGameFallback": "the game",
     "kinds": {
       "invite": {
         "title": "{invitedByName} invited you",
@@ -1840,6 +1841,7 @@
       "bannerSubmitted": "✓ Scorecard submitted.",
       "rejectionBannerPrefix": "Your scorecard was rejected: «",
       "rejectionBannerSuffix": "». Edit your holes and resubmit.",
+      "rejectionBannerNoReason": "Your scorecard was rejected, with no reason given. Edit your holes and resubmit.",
       "pendingApprovals": "{count, plural, one {1 player is waiting for your approval} other {# players are waiting for your approval}}",
       "reviewLink": "Review →",
       "tournamentKicker": "Tournament",

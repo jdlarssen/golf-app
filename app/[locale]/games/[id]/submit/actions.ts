@@ -250,7 +250,10 @@ export async function submitScorecard(gameId: string) {
     peersQuery,
   ]);
 
-  const playerName = playerRes.data?.name?.trim() || '(ukjent spiller)';
+  // #1364: null i stedet for norsk plassholder. Navnet går til to payloads og
+  // admin-mailen — alle tre oversetter fallbacken hos mottakeren (kortet via
+  // buildNotificationText, mailen via mail.common.somePlayerFallback).
+  const playerName = playerRes.data?.name?.trim() || null;
   const admins = (adminsRes.data ?? []).filter((a) => a.id !== user.id);
 
   // Peer-varsler hvis peer-godkjenning er på.

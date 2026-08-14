@@ -74,6 +74,7 @@
     "somePlayerFallback": "En spiller",
     "someTeamFallback": "Laget",
     "organizerFallback": "Arrangøren",
+    "someGameFallback": "spillet",
     "kinds": {
       "invite": {
         "title": "{invitedByName} inviterte deg",
@@ -1840,6 +1841,7 @@
       "bannerSubmitted": "✓ Scorekortet er levert.",
       "rejectionBannerPrefix": "Scorekortet ditt ble avvist: «",
       "rejectionBannerSuffix": "». Rediger hullene og lever på nytt.",
+      "rejectionBannerNoReason": "Scorekortet ditt ble avvist uten begrunnelse. Rediger hullene og lever på nytt.",
       "pendingApprovals": "{count, plural, one {1 spiller venter på godkjenning fra deg} other {# spillere venter på godkjenning fra deg}}",
       "reviewLink": "Gjennomgå →",
       "tournamentKicker": "Turnering",
