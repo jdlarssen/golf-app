@@ -32,16 +32,24 @@ export function SideWinnersForm({
 }: Props) {
   const t = useTranslations('admin.game.sideWinners');
 
+  // typeof-guard: searchParams kan levere string[] ved duplisert ?error-param —
+  // da (og for alle ikke-missing_-koder, i praksis db_winners) er retry-rådet
+  // det trygge valget (#1567).
+  const isValidationError =
+    typeof error === 'string' && error.startsWith('missing_');
+
   return (
     <form action={action} className="space-y-6">
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-          {/* typeof-guard: searchParams kan levere string[] ved duplisert
-              ?error-param — da (og for alle ikke-missing_-koder, i praksis
-              db_winners) er retry-rådet det trygge valget (#1567). */}
-          {typeof error === 'string' && error.startsWith('missing_')
-            ? t('validationError')
-            : t('dbError')}
+        <div
+          data-testid={
+            isValidationError
+              ? 'side-winners-error-validation'
+              : 'side-winners-error-db'
+          }
+          className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900"
+        >
+          {isValidationError ? t('validationError') : t('dbError')}
         </div>
       )}
 
