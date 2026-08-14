@@ -101,7 +101,10 @@ export function onPostgresChange<TRow>(
  * round-trip, so statuses from a channel that is no longer the current one are
  * dropped, and the counter is reset when the replacement is built. Otherwise a
  * new channel would start life with a spent budget and rebuild on its first
- * hiccup.
+ * hiccup. The same generation gap covers the rebuild's own `setAuth()` await,
+ * where the outgoing channel is still the current one: while a rebuild is in
+ * flight nothing else may schedule one, or the request from that dead
+ * generation would outlive the swap and take the healthy replacement down.
  *
  * Cleanup is synchronous so it composes with React's `useEffect` return
  * contract; the underlying `removeChannel` is fire-and-forget (its Promise
@@ -120,39 +123,59 @@ export function subscribeRealtimeChannel(
   let rebuildAttempts = 0;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let parkedUntilOnline = false;
+  /** True from the start of an `openChannel` call until it settles. */
+  let rebuildInProgress = false;
 
   async function openChannel(): Promise<void> {
-    // A rebuild in progress cancels a stale pending rebuild: without this, a
-    // CHANNEL_ERROR arriving while this call is suspended on setAuth() below
-    // (with the old channel still wired and its failure budget already spent)
-    // can arm a second timer that later tears down the healthy replacement.
+    // A rebuild in progress cancels a stale pending rebuild.
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
     }
-    // Prime realtime auth BEFORE the channel is built: `subscribe()` snapshots
-    // the join payload synchronously and reads `socket.accessTokenValue` as it
-    // stands right then. No argument — see the doc comment.
-    await supabase.realtime.setAuth();
-    if (unsubscribed) return;
-    const channel = configure(
-      supabase.channel(`${topic}#${++nextSubscriptionId}`),
-    );
-    const previous = channelRef;
-    channelRef = channel;
-    // A fresh generation gets a fresh budget: whatever the outgoing channel
-    // shouted during the backoff window is not this one's debt.
-    consecutiveFailures = 0;
-    channel.subscribe((status) => handleStatus(status, channel));
-    if (previous) {
-      // Only now — removing the last channel first would disconnect the socket
-      // the new one is about to join on.
-      void supabase.removeChannel(previous);
+    // Everything from here until this call settles is the blind window: the
+    // swap below happens only AFTER the await, so the OUTGOING channel is
+    // still `channelRef` and still passes the identity check in
+    // `handleStatus`, while its failure budget is already spent and
+    // `retryTimer` is null (the timer that called us nulled itself). Without
+    // this flag, one more CHANNEL_ERROR from that dead generation slips past
+    // the guard in `scheduleRebuild` and arms an orphan timer — one the swap
+    // below never clears, since the clear above already ran. It would fire
+    // later and tear down the healthy replacement.
+    rebuildInProgress = true;
+    try {
+      // Prime realtime auth BEFORE the channel is built: `subscribe()`
+      // snapshots the join payload synchronously and reads
+      // `socket.accessTokenValue` as it stands right then. No argument — see
+      // the doc comment.
+      await supabase.realtime.setAuth();
+      if (unsubscribed) return;
+      const channel = configure(
+        supabase.channel(`${topic}#${++nextSubscriptionId}`),
+      );
+      const previous = channelRef;
+      channelRef = channel;
+      // A fresh generation gets a fresh budget: whatever the outgoing channel
+      // shouted during the backoff window is not this one's debt.
+      consecutiveFailures = 0;
+      channel.subscribe((status) => handleStatus(status, channel));
+      if (previous) {
+        // Only now — removing the last channel first would disconnect the
+        // socket the new one is about to join on.
+        void supabase.removeChannel(previous);
+      }
+    } finally {
+      // `finally`, not a tail assignment: on the reject path this runs BEFORE
+      // the `.catch` handlers below reach `scheduleRebuild`, so a failed
+      // rebuild can still schedule the next one instead of deadlocking.
+      rebuildInProgress = false;
     }
   }
 
   function scheduleRebuild(): void {
-    if (unsubscribed || retryTimer) return;
+    // `rebuildInProgress`: a rebuild already under way is the very thing the
+    // caller is asking for, and it resets the failure budget when it swaps in
+    // the new channel. Scheduling another would outlive that swap.
+    if (unsubscribed || retryTimer || rebuildInProgress) return;
     if (!isOnline()) {
       // No point burning backoff steps while the device is offline; the
       // `online` listener picks this up again.
