@@ -167,7 +167,7 @@ describe('subscribeRealtimeChannel', () => {
         ch.on('postgres_changes', {}, () => {}),
       ) as never,
     );
-    // Cleanup synchronously, before getSession() resolves.
+    // Cleanup synchronously, before the no-arg setAuth() resolves.
     cleanup();
     await flushPromises();
 
@@ -292,6 +292,18 @@ describe('subscribeRealtimeChannel', () => {
 
       // The replacement starts at zero: two errors must not trigger anything.
       emit('CHANNEL_ERROR', 2);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(mockSupabase.channels).toEqual([second]);
+
+      // The OLD channel's status callback stays wired until its own leave
+      // round-trip is fully done — phoenix can still invoke it after the
+      // swap. Those statuses belong to a channel that is no longer
+      // `channelRef`, so the identity check in `handleStatus` must drop
+      // them; without it they'd land on the shared counters and tip the
+      // healthy replacement into an unwarranted rebuild.
+      first.status?.('CHANNEL_ERROR');
+      first.status?.('CHANNEL_ERROR');
+      first.status?.('CHANNEL_ERROR');
       await vi.advanceTimersByTimeAsync(60_000);
       expect(mockSupabase.channels).toEqual([second]);
 

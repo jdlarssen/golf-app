@@ -75,6 +75,12 @@ export function onPostgresChange<TRow>(
  * upkeep is what used to kill the channel mid-round. The separate
  * `auth.getSession()` pre-warm this helper used to do is gone: no-arg
  * `setAuth()` awaits the very same call internally, so it was redundant.
+ * supabase-js itself calls `setAuth(token)` — WITH a token — on every
+ * `TOKEN_REFRESHED`/`SIGNED_IN`, so `_manuallySetToken` flips `true` in
+ * production shortly after the first token refresh regardless of what this
+ * helper does; the no-arg priming above only needs to cover the window
+ * before that first refresh, which is why it happens per channel build
+ * (each `openChannel`) rather than once at app start.
  *
  * **Resubscribe.** `.subscribe()` gets a status callback. `CHANNEL_ERROR` and
  * `TIMED_OUT` only count; a rebuild (fresh channel from the same `configure`,
@@ -116,6 +122,14 @@ export function subscribeRealtimeChannel(
   let parkedUntilOnline = false;
 
   async function openChannel(): Promise<void> {
+    // A rebuild in progress cancels a stale pending rebuild: without this, a
+    // CHANNEL_ERROR arriving while this call is suspended on setAuth() below
+    // (with the old channel still wired and its failure budget already spent)
+    // can arm a second timer that later tears down the healthy replacement.
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
     // Prime realtime auth BEFORE the channel is built: `subscribe()` snapshots
     // the join payload synchronously and reads `socket.accessTokenValue` as it
     // stands right then. No argument — see the doc comment.
@@ -135,10 +149,6 @@ export function subscribeRealtimeChannel(
       // the new one is about to join on.
       void supabase.removeChannel(previous);
     }
-    if (unsubscribed) {
-      channelRef = null;
-      void supabase.removeChannel(channel);
-    }
   }
 
   function scheduleRebuild(): void {
@@ -157,7 +167,10 @@ export function subscribeRealtimeChannel(
     retryTimer = setTimeout(() => {
       retryTimer = null;
       if (unsubscribed) return;
-      void openChannel();
+      openChannel().catch((err) => {
+        console.error('[realtime] channel rebuild failed', err);
+        scheduleRebuild();
+      });
     }, delay);
   }
 
@@ -190,7 +203,10 @@ export function subscribeRealtimeChannel(
     window.addEventListener('online', handleOnline);
   }
 
-  void openChannel();
+  openChannel().catch((err) => {
+    console.error('[realtime] channel rebuild failed', err);
+    scheduleRebuild();
+  });
 
   return () => {
     unsubscribed = true;
