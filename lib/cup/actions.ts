@@ -258,46 +258,34 @@ export async function startTournament(formData: FormData) {
 
   // Mail går KUN til off-app-deltakere (shouldAlsoSendMail === true). Aktive
   // deltakere ble nettopp varslet in-app og trenger ingen mail.
-  //
-  // #1441 (D8) ASSUMPTION/kjent hull: `cupStartedNotification.ts`s mal-tekst
-  // (messages/*.json, utenfor F3b sitt scope) hardkoder «Først til {points}
-  // poeng vinner» og krever et konkret tall. Med egendefinerte vekter er
-  // `pointsToWin` NULL MED VILJE (D8 — «halvparten av totalen» gir ikke
-  // mening som mål når delt betaler mindre enn seier) — det finnes ingen
-  // ærlig verdi å sende malen i det tilfellet. Off-app-STARTET-mailen hoppes
-  // derfor over for vektede cuper inntil malteksten får en egen variant
-  // (anbefalt egen issue, F5-polish); in-app-varselet over
-  // (`notifyParticipantsCupStarted`) fyrer UENDRET for alle deltakere
-  // uansett — kun off-app-e-posten er berørt.
-  if (pointsToWin !== null) {
-    try {
-      const mailRecipients = recipients.filter(
-        (r) => sendMailByUserId.get(r.user_id) === true,
-      );
-      const results = await Promise.allSettled(
-        mailRecipients.map((r) =>
-          sendCupStartedNotification({
-            to: r.email,
-            playerFirstName: r.name?.split(' ')[0] ?? null,
-            tournamentName: current.name,
-            tournamentId: id,
-            team1Name: current.team_1_name,
-            team2Name: current.team_2_name,
-            // Den nettopp utledede verdien — `current` ble lest før update-en
-            // og bærer fortsatt NULL.
-            pointsToWin,
-            locale: r.locale,
-          }),
-        ),
-      );
-      for (const r of results) {
-        if (r.status === 'rejected') {
-          console.error('[cup] cupStartedNotification failed', r.reason);
-        }
+  try {
+    const mailRecipients = recipients.filter(
+      (r) => sendMailByUserId.get(r.user_id) === true,
+    );
+    const results = await Promise.allSettled(
+      mailRecipients.map((r) =>
+        sendCupStartedNotification({
+          to: r.email,
+          playerFirstName: r.name?.split(' ')[0] ?? null,
+          tournamentName: current.name,
+          tournamentId: id,
+          team1Name: current.team_1_name,
+          team2Name: current.team_2_name,
+          // Den nettopp utledede verdien — `current` ble lest før update-en
+          // og bærer fortsatt NULL. NULL = vektet cup (#1441 D8); malen
+          // brancher selv til weighted-copyen (#1444).
+          pointsToWin,
+          locale: r.locale,
+        }),
+      ),
+    );
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.error('[cup] cupStartedNotification failed', r.reason);
       }
-    } catch (e) {
-      console.error('[cup] startTournament mail-fan-out failed', e);
     }
+  } catch (e) {
+    console.error('[cup] startTournament mail-fan-out failed', e);
   }
 
   revalidateTag(`tournament-${id}`, 'max');

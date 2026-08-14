@@ -5262,6 +5262,8 @@
       "bodyStartedText": "Cup-en \"{tournamentName}\" har startet.",
       "bodyMatchup": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Først til <strong>{points}</strong> poeng vinner.",
       "bodyMatchupText": "{team1} møter {team2}. Først til {points} poeng vinner.",
+      "bodyMatchupWeighted": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Vinneren kåres når cupen avsluttes.",
+      "bodyMatchupWeightedText": "{team1} møter {team2}. Vinneren kåres når cupen avsluttes.",
       "openLeaderboard": "Åpne leaderboard",
       "openLeaderboardText": "Åpne leaderboard: {url}",
       "footer": "Lykke til på banen!"

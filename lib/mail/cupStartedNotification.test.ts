@@ -112,6 +112,28 @@ describe('sendCupStartedNotification', () => {
     `);
   });
 
+  // #1444: vektet cup (#1441 D8) har ingen «først til X» — pointsToWin er NULL
+  // og matchup-linja bytter til weighted-varianten.
+  it('pointsToWin: null → weighted-variant uten «først til X»', async () => {
+    const payload = await send({ ...baseParams, pointsToWin: null });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Hei Per!
+
+      Cup-en "Høst-cup 2026" har startet.
+
+      Bjørketrærne møter Granskogen. Vinneren kåres når cupen avsluttes.
+
+      Åpne leaderboard: https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222
+
+      Lykke til på banen!
+      "
+    `);
+    expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "Cup-en <strong>Høst-cup 2026</strong> har startet.
+      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Vinneren kåres når cupen avsluttes."
+    `);
+  });
+
   // ─────────────────────────────────────────────────────────────────────
   // Engelsk (locale: 'en') — Fase M.
   // ─────────────────────────────────────────────────────────────────────
@@ -134,6 +156,26 @@ describe('sendCupStartedNotification', () => {
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
       "The cup <strong>Høst-cup 2026</strong> has started.
       <strong>Bjørketrærne</strong> vs <strong>Granskogen</strong>. First to <strong>10</strong> points wins."
+    `);
+  });
+
+  it('locale en + pointsToWin: null → engelsk weighted-variant', async () => {
+    const payload = await send({ ...baseParams, pointsToWin: null, locale: 'en' });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Hi Per!
+
+      The cup "Høst-cup 2026" has started.
+
+      Bjørketrærne vs Granskogen. The winner is decided when the cup ends.
+
+      Open leaderboard: https://tornygolf.no/en/cup/22222222-2222-2222-2222-222222222222
+
+      Good luck on the course!
+      "
+    `);
+    expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "The cup <strong>Høst-cup 2026</strong> has started.
+      <strong>Bjørketrærne</strong> vs <strong>Granskogen</strong>. The winner is decided when the cup ends."
     `);
   });
 
