@@ -129,7 +129,7 @@ export function NassauPodium({
           data-testid="nassau-sweep"
           className="mx-4 mb-3 rounded-2xl border border-accent bg-accent/[0.08] px-4 py-3 text-center shadow-[0_2px_12px_rgba(201,169,97,0.18)]"
         >
-          <p className="font-serif text-[18px] font-medium leading-tight text-accent">
+          <p className="font-serif text-[18px] font-medium leading-tight text-accent-text">
             {t('nassau.sweepLabel')}
           </p>
           <p className="mt-1 text-[12px] tabular-nums text-muted">
@@ -314,7 +314,7 @@ function PodiumStep({
       {tiedBadge && (
         <p
           className={`text-center text-[9px] font-semibold uppercase tracking-[0.14em] ${
-            place === 1 ? 'text-accent' : 'text-muted'
+            place === 1 ? 'text-accent-text' : 'text-muted'
           }`}
         >
           {tiedBadge}
@@ -329,7 +329,7 @@ function PodiumStep({
         <span
           className={`score-num block leading-none tracking-[-0.02em] tabular-nums ${
             place === 1
-              ? 'text-[32px] text-accent'
+              ? 'text-[32px] text-accent-text'
               : place === 2
                 ? 'text-[24px] text-text'
                 : 'text-[22px] text-text'
@@ -380,7 +380,7 @@ function UnitBadges({
             data-won={won ? 'true' : 'false'}
             className={`inline-flex items-center rounded-full font-semibold uppercase tracking-[0.12em] tabular-nums ${pxClass} ${
               won
-                ? 'border border-accent bg-accent/[0.12] text-accent'
+                ? 'border border-accent bg-accent/[0.12] text-accent-text'
                 : 'border border-border bg-surface text-muted/60'
             }`}
           >

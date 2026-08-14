@@ -59,7 +59,8 @@ describe('HandicapChip', () => {
     const link = screen.getByRole('link');
     expect(link.className).toContain('border-accent');
     const value = screen.getByText('18,4');
-    expect(value.className).toContain('text-accent');
+    // Ringen er dekor (--accent), tallet bruker lesbar tekst-token (#1374).
+    expect(value.className).toContain('text-accent-text');
   });
 
   it('has an accessible label describing the action', () => {

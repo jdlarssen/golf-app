@@ -190,7 +190,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     fontWeight: 600,
     textTransform: 'uppercase',
     letterSpacing: '0.18em',
-    color: 'var(--accent)',
+    // Felt-kritisk info på 9,5px — leses utendørs, må ha tekst-tokenen (#1374).
+    color: 'var(--accent-text)',
     marginLeft: 8,
   };
 
