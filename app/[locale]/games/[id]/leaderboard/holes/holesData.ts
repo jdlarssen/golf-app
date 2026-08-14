@@ -81,8 +81,16 @@ export async function fetchHolesAndScores(
   rawHoles: CourseHoleRow[];
   rawScores: ScoreRow[];
 }> {
-  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
-    getGameWithPlayers(gameId),
+  // #1631: a DERIVED game (source_game_id set) owns no scores of its own —
+  // every score read redirects to the host game, same rule as
+  // leaderboardContent.tsx and export/route.ts (#1441 D3). gwp resolves
+  // first (tag-cache hit — the outer page already warmed it) so the redirect
+  // target is known before the direct fetches fire.
+  const gwp = await getGameWithPlayers(gameId);
+  if (!gwp) notFound();
+  const scoresGameId = gwp.game.source_game_id ?? gameId;
+
+  const [rawHolesRes, rawScoresRes] = await Promise.all([
     supabase
       .from('course_holes')
       .select(COURSE_HOLES_SELECT)
@@ -92,11 +100,9 @@ export async function fetchHolesAndScores(
     supabase
       .from('scores')
       .select(SCORES_SELECT)
-      .eq('game_id', gameId)
+      .eq('game_id', scoresGameId)
       .returns<ScoreRow[]>(),
   ]);
-
-  if (!gwp) notFound();
   if (rawHolesRes.error) throw rawHolesRes.error;
   if (rawScoresRes.error) throw rawScoresRes.error;
 
