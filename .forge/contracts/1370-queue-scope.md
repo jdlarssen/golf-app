@@ -196,3 +196,5 @@ gyldig først når den nye SyncBanner-testen ligger der; juster filteret derette
 ## Bygge-evidens (2026-08-14)
 
 K1–K5, K8: PASS (evaluator runde 1 ACCEPT, uavhengig verifisert — se `.forge/evaluations/1370-queue-scope.md`). K6: N/A per drift-tabellen (ingen nye nøkler, ingen hardkodet norsk). K7: staging-runde gjøres i PR-fasen. Gates: vitest 143/143, lint 0 errors, tsc exit 0, `npm run build` exit 0 (builder-kjøring med pipefail).
+
+K7 (staging): PASS 2026-08-14 — Playwright-driver: fremmed aktivt element sperrer ikke «Lever ✓», #1369-linja består for strandet fremmed element, eget element sperrer fortsatt; 0 server-lekkasje. Bevis: kommentar på PR #1610.
