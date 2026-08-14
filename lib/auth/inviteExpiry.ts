@@ -36,6 +36,25 @@ export function inviteExpiresAtFromNow(nowMs: number = Date.now()): string {
 }
 
 /**
+ * GAME invitations live longer than admin invitations: a game is often set up
+ * a week or two before tee-off, and the invite should survive until then. The
+ * span itself is unchanged from the historical inline value (#1613 gave it
+ * this one home); both the fresh-insert path and «Send på nytt» in the game
+ * invite flow stamp from here, so the two can never drift apart.
+ */
+export const GAME_INVITE_TTL_DAYS = 14;
+
+const GAME_INVITE_TTL_MS = GAME_INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
+
+/**
+ * The ISO instant to write into `invitations.expires_at` for a GAME
+ * invitation issued (or revived) at `nowMs`.
+ */
+export function gameInviteExpiresAtFromNow(nowMs: number = Date.now()): string {
+  return new Date(nowMs + GAME_INVITE_TTL_MS).toISOString();
+}
+
+/**
  * Has the deadline passed? Mirrors the DB gate in `email_is_invited`
  * (open = `expires_at > now()`, migration 0100), so the «Utløpt»-badge in the
  * admin waiting list agrees with what the login door will actually do.

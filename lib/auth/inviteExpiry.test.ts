@@ -4,6 +4,8 @@ process.env.TZ = 'UTC';
 
 import { describe, expect, it } from 'vitest';
 import {
+  GAME_INVITE_TTL_DAYS,
+  gameInviteExpiresAtFromNow,
   INVITE_TTL_DAYS,
   inviteExpiresAtFromNow,
   inviteExpiryTier,
@@ -65,6 +67,15 @@ describe('inviteExpiresAtFromNow (#1381)', () => {
   it('stamps exactly INVITE_TTL_DAYS ahead of the given instant', () => {
     const iso = inviteExpiresAtFromNow(NOW);
     expect(Date.parse(iso) - NOW).toBe(INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
+  });
+});
+
+describe('gameInviteExpiresAtFromNow (#1613)', () => {
+  it('stamps exactly GAME_INVITE_TTL_DAYS ahead of the given instant', () => {
+    const iso = gameInviteExpiresAtFromNow(NOW);
+    expect(Date.parse(iso) - NOW).toBe(
+      GAME_INVITE_TTL_DAYS * 24 * 60 * 60 * 1000,
+    );
   });
 });
 
