@@ -172,7 +172,10 @@ export async function mergePullRequest({
   const checkRes = await gh.rest('GET', `/repos/${repo}/commits/${headSha}/check-runs?per_page=100`);
   if (checkRes.status !== 200)
     return { ok: false, reason: `check-runs-oppslag feilet (HTTP ${checkRes.status})` };
+  // `name` er med fordi classifyChecks filtrerer bort kortets egen post-card-check
+  // (#1520) — uten navnet ville en kansellert kortkjøring lest som rød her.
   const runs = ((checkRes.json as { check_runs?: CheckRun[] }).check_runs ?? []).map((r) => ({
+    name: r.name,
     status: r.status,
     conclusion: r.conclusion,
   }));

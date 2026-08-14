@@ -12,11 +12,14 @@ import { appendFileSync } from 'node:fs';
 import { candidatePrNumber, eventHeadSha, ghClient } from './ghClient';
 import {
   CARD_LABEL,
-  classifyChecks,
+  classifyWithCiGate,
+  expectsRealCi,
   extractPrSummary,
   waitForChecksToSettle,
   type CheckRun,
+  type ChecksState,
 } from '../../lib/loops/prCard';
+import { fetchCiRunsForSha } from '../../lib/loops/ciRuns';
 import {
   classifyAutoMerge,
   linkedIssueNumbers,
@@ -69,14 +72,17 @@ async function prForSha(gh: ReturnType<typeof ghClient>, sha: string): Promise<n
   return (prs.find((p) => p.state === 'open') ?? prs[0])?.number ?? null;
 }
 
+// `null` = oppslaget feilet (HTTP ≠ 200) — MÅ skilles fra `[]` (tom diff), ellers
+// slås ci.yml-gaten stille AV og aldri-lista i classifyAutoMerge ser en tom
+// fil-liste (#1520). Taket på 3×100 filer er kjent og dokumentert i kontrakten.
 async function fetchChangedFiles(
   gh: ReturnType<typeof ghClient>,
   n: number,
-): Promise<string[]> {
+): Promise<string[] | null> {
   const files: string[] = [];
   for (let page = 1; page <= 3; page++) {
     const res = await gh.rest('GET', `/repos/${REPO}/pulls/${n}/files?per_page=100&page=${page}`);
-    if (res.status !== 200) break;
+    if (res.status !== 200) return null;
     const batch = (res.json as Array<{ filename?: string }>) ?? [];
     for (const f of batch) if (f.filename) files.push(f.filename);
     if (batch.length < 100) break;
@@ -149,6 +155,14 @@ async function main(): Promise<void> {
   if (pr.draft) return noCard(`PR #${n} er draft — økta jobber fortsatt`);
   if ((pr.labels ?? []).some((l) => l.name === CARD_LABEL)) return noCard(`PR #${n} allerede kortet`);
 
+  // Endrede filer hentes FØR klassifiseringen: ci.yml-gaten under trenger å vite
+  // om diffen i det hele tatt forventer en CI-kjøring (#1520). Feilet oppslaget,
+  // stopper vi her — både gaten og aldri-lista i classifyAutoMerge ville ellers
+  // jobbet på en falsk tom fil-liste (fail-closed: aldri kort, aldri merge).
+  const changedFiles = await fetchChangedFiles(gh, n);
+  if (changedFiles === null) return noCard(`PR #${n}: fikk ikke lest endrede filer`);
+  const needsCiRun = expectsRealCi(changedFiles);
+
   const fetchCheckRuns = async (): Promise<CheckRun[] | null> => {
     const res = await gh.rest('GET', `/repos/${REPO}/commits/${pr.head.sha}/check-runs?per_page=100`);
     if (res.status !== 200) {
@@ -156,16 +170,27 @@ async function main(): Promise<void> {
       return null;
     }
     const runs = (res.json as { check_runs?: CheckRun[] }).check_runs ?? [];
-    return runs.map((r) => ({ status: r.status, conclusion: r.conclusion }));
+    return runs.map((r) => ({ name: r.name, status: r.status, conclusion: r.conclusion }));
   };
 
-  let state: 'pending' | 'red' | 'green';
+  // Grønne check-runs alene er ikke nok når diffen forventer ci.yml (#1520) —
+  // gaten (og hvorfor) bor i classifyWithCiGate.
+  const classify = (runs: CheckRun[]): Promise<ChecksState> =>
+    classifyWithCiGate({
+      runs,
+      expectsCi: needsCiRun,
+      fetchCiRuns: () => fetchCiRunsForSha(gh, REPO, pr.head.sha),
+      log: (msg) => console.log(`${LOG} PR #${n}: ${msg}`),
+    });
+
+  let state: ChecksState;
   if (WAIT_FOR_CHECKS) {
     // Dispatch-trigget (docs-only-PR-er, #1301): i dispatch-øyeblikket er checkene
     // typisk uregistrerte eller uferdige — vent til de lander (30 s × 21 ≈ 10 min).
     // HTTP-feil underveis behandles som pending og prøves igjen.
     state = await waitForChecksToSettle({
       fetchRuns: async () => (await fetchCheckRuns()) ?? [],
+      classify,
       maxAttempts: 21,
       sleep: () => new Promise((resolve) => setTimeout(resolve, 30_000)),
       log: (msg) => console.log(`${LOG} PR #${n}: ${msg}`),
@@ -173,11 +198,10 @@ async function main(): Promise<void> {
   } else {
     const runs = await fetchCheckRuns();
     if (runs === null) return noCard(`PR #${n}: check-runs-oppslag feilet`);
-    state = classifyChecks(runs);
+    state = await classify(runs);
   }
   if (state !== 'green') return noCard(`PR #${n}: CI ${state}`);
 
-  const changedFiles = await fetchChangedFiles(gh, n);
   const isGui = isVisualChange(changedFiles);
 
   // Tre-utfalls-klassifisering (#1406): ren PR mot main uten produktvalg/aldri-liste/
