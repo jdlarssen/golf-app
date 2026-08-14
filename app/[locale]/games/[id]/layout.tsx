@@ -1,5 +1,6 @@
 import { RealtimeMount } from './RealtimeMount';
 import { SyncBanner } from '@/components/sync/SyncBanner';
+import { SyncBoot } from '@/components/sync/SyncBoot';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 
 type Params = Promise<{ id: string }>;
@@ -27,6 +28,7 @@ export default async function GameLayout({
   return (
     <>
       {playable && <RealtimeMount gameId={id} />}
+      <SyncBoot />
       <SyncBanner gameId={id} />
       {children}
     </>
