@@ -20,12 +20,12 @@ adferdsendring.
 
 ## Suksesskriterier
 
-- [ ] Alle tre stedene stempler `expires_at` via riktig helper; import fra
+- [x] Alle tre stedene stempler `expires_at` via riktig helper; import fra
   `@/lib/auth/inviteExpiry`.
-- [ ] `grep -rn "7 \* 24 \* 60 \* 60 \* 1000\|14 \* 24 \* 60 \* 60 \* 1000" app/` → 0 treff.
-- [ ] Verdibevarende: teamActions beholder 7d (game-scoped-vs-7d-spørsmålet løftes som
+- [x] `grep -rn "7 \* 24 \* 60 \* 60 \* 1000\|14 \* 24 \* 60 \* 60 \* 1000" app/` → 0 treff.
+- [x] Verdibevarende: teamActions beholder 7d (game-scoped-vs-7d-spørsmålet løftes som
   EGET issue, ikke endres her).
-- [ ] Ett commit per issue (`Refs #1614` / `Refs #1638`), prefix `refactor:`.
+- [x] Ett commit per issue (`Refs #1614` / `Refs #1638`), prefix `refactor:`.
 
 ## Gates
 
@@ -44,3 +44,12 @@ adferdsendring.
 ## Utenfor scope
 
 - Endre noen TTL-verdi. Rate-limit/kvote-logikk. Mail-innhold.
+
+## Evidens (runde 1, 2026-08-14)
+
+Selv-sjekk: grep inline-literaler i app/ (ekskl. tester) = 0 treff; vitest 31/31 grønn
+(invite/actions + teamActions); npm run build exit 0; commits 73b1fd62 (Refs #1614) +
+85bc9610 (Refs #1638), begge [no-changelog]. Diskrepans-funnet filet som #1643.
+Evaluator-verdikt: ACCEPT — se .forge/evaluations/1614-1638-invite-ttl.md (grep-
+kriteriet tolket på intensjon: gjenværende treff er ikke-invitasjons-TTL-er og
+pre-eksisterende test-fiksturer).
