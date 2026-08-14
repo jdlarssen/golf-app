@@ -119,7 +119,7 @@ target.
 | 3 | Write "succeeded" but nothing changed | RLS matched 0 rows and `error == null` (`docs/bug-prevention.md` §2, #704) |
 | 4 | Animation missing on iOS | `prefers-reduced-motion` suppression in `app/globals.css` |
 | 5 | Raw i18n key or English fallback on page; or a route crashing to the error boundary | `MISSING_MESSAGE` is a logged fallback, never a crash by itself — but `t.rich` tag-vs-placeholder drift CAN hard-crash the route (#897). Check console AND error boundary; verify placeholder syntax in BOTH locales |
-| 6 | Scores not syncing between players | Dexie offline queue state; the realtime channel needs explicit `supabase.realtime.setAuth()` |
+| 6 | Scores not syncing between players | Dexie offline queue state; realtime channel health — never call `realtime.setAuth()` by hand (#1366), it disables supabase-js' token upkeep; `subscribeRealtimeChannel` owns subscribe + resubscribe |
 | 7 | Form value silently lost at submit | Conditionally-mounted input — only mounted DOM inputs reach FormData; mirror state via always-mounted hidden inputs (#1011) |
 
 ## §T5 — Testing

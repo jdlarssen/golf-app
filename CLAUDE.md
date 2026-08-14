@@ -351,7 +351,7 @@ Invitasjoner: admin/invite-flyten inserter rad i `public.invitations` og sender 
 
 Auth state via cookies (`@supabase/ssr`). Proxy (`proxy.ts`) refresher session.
 
-⚠️ Realtime krever eksplisitt `supabase.realtime.setAuth()` med JWT — auto-propagering virker ikke for WebSocket-kanalen (kjent quirk).
+⚠️ Realtime: kall ALDRI `supabase.realtime.setAuth(token)` selv (#1366). Et manuelt token setter `_manuallySetToken` i realtime-js og skrur AV bibliotekets eget token-vedlikehold (`_setAuthSafely` no-op-er på connect og heartbeat, join-ok hopper over `socket.setAuth()`) — kanalen dør da når tokenet utløper midt i en runde. supabase-js propagerer selv `TOKEN_REFRESHED`/`SIGNED_IN` til alle kanaler så lenge klienten ikke får en `accessToken`-opsjon (vår gjør ikke det). Den gamle quirk-en gjaldt en eldre supabase-js. `subscribeRealtimeChannel` (`lib/sync/realtimeChannel.ts`) eier dette — den forvarmer sesjonen, gir `.subscribe()` en statuscallback og bygger kanalen på nytt etter 3 påfølgende `CHANNEL_ERROR`/`TIMED_OUT` (backoff, parkert mens offline).
 
 **Mail-debug:** Kode-mail går via Supabase Auth (sjekk Auth Logs). Invite/gameFinished/scorecardSubmitted går via Resend (sjekk Resend dashboard + Vercel runtime logs for `[endGame]` / `[submitScorecard]` / `[admin/spillere]`-prefiks). Alle tre Resend-helpers er best-effort med `Promise.allSettled` + `console.error` — feil blokkerer ikke brukerflyten.
 
