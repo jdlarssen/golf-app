@@ -4558,6 +4558,7 @@
       "bestBallHeading": "Best ball",
       "bestBallLabel": "Handicap-andel best ball (%)",
       "bestBallHint": "Andelen av spillehandicapet som gjelder på best ball-hullene (10–18). Standard er 85 %.",
+      "propagationNotice": "{count, plural, one {Matchen du har laget får ny bane, tee og starttid.} other {De # matchene du har laget får ny bane, tee og starttid.}}",
       "saveButton": "Lagre oppsett",
       "savePending": "Lagrer …",
       "errors": {
@@ -4572,6 +4573,7 @@
         "not_found": "Fant ikke cupen.",
         "not_draft": "Cupen er allerede startet, så oppsettet er låst.",
         "plan_save_failed": "Klarte ikke å lagre oppsettet. Prøv igjen.",
+        "plan_matches_not_updated": "Oppsettet er lagret, men matchene fikk det ikke med seg. Prøv igjen.",
         "unexpected": "Uventet feil: {code}"
       }
     },
