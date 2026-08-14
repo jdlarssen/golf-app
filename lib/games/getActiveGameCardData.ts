@@ -91,10 +91,10 @@ function captainsForViewer(
  * captain id has to come back before the scores query knows whose rows to ask
  * for — and only for those rounds; everything else still overlaps.
  *
- * Degrades safely: on any query error the affected game falls back to the game
- * overview href with zero pending approvals, so the card always renders. An
- * unreadable roster (a team split across flights, which RLS does not grant
- * across) degrades one step further, to the viewer's own rows.
+ * Degrades safely: on any query error the affected game falls back to the
+ * segment's first hole with zero pending approvals, so the card always
+ * renders. An unreadable roster (a team split across flights, which RLS does
+ * not grant across) degrades one step further, to the viewer's own rows.
  */
 export async function getActiveGameCardData(
   supabase: SupabaseClient<Database>,
