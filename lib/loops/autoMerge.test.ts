@@ -278,6 +278,28 @@ describe('mergePullRequest', () => {
     const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
     expect(res).toEqual({ ok: false, reason: 'CI red ved re-sjekk' });
   });
+
+  // #1520: re-sjekken deler classifyChecks med kortet, så en kansellert
+  // post-card-check (kortets EGEN jobb, kansellert av concurrency) skal ikke
+  // lese som rød CI her heller.
+  it('kortets egen post-card-check ignoreres i re-sjekken', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: openPr },
+      {
+        status: 200,
+        json: {
+          check_runs: [
+            { name: 'verify', status: 'completed', conclusion: 'success' },
+            { name: 'post-card', status: 'completed', conclusion: 'cancelled' },
+          ],
+        },
+      },
+      { status: 200, json: { merged: true } },
+    ]);
+    const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
+    expect(res).toEqual({ ok: true });
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PUT']);
+  });
 });
 
 // ── shouldDispatchMainVerify ─────────────────────────────────────────────────

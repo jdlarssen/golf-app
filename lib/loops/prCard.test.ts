@@ -1,13 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   buildCardPayload,
   buildReceiptPayload,
+  CARD_CHECK_NAME,
   CARD_LABEL,
+  CI_PATHS_IGNORE,
   classifyChecks,
+  classifyWithCiGate,
+  expectsRealCi,
   extractPrSummary,
   waitForChecksToSettle,
   type CheckRun,
 } from './prCard';
+import { type CiRunsLookup } from './ciRuns';
 
 describe('extractPrSummary', () => {
   it('trekker ut taglinen etter Closes-linja', () => {
@@ -83,6 +90,138 @@ describe('classifyChecks', () => {
       'green',
     );
   });
+
+  // #1520: kortets EGEN check henger på PR-head-en ved pull_request-fyringer —
+  // den er in_progress under hele decide, og en kansellert kortkjøring låste
+  // tidligere SHA-en rød for alle senere fyringer.
+  describe('kortets egen post-card-check', () => {
+    const card = (status: string, conclusion: string | null): CheckRun => ({
+      name: CARD_CHECK_NAME,
+      status,
+      conclusion,
+    });
+
+    it('in_progress post-card blokkerer ikke grønt', () => {
+      expect(classifyChecks([green(), card('in_progress', null)])).toBe('green');
+    });
+
+    it('cancelled post-card gjør ikke PR-en rød', () => {
+      expect(classifyChecks([green(), card('completed', 'cancelled')])).toBe('green');
+    });
+
+    it('en ekte check med cancelled er fortsatt rød', () => {
+      expect(
+        classifyChecks([green(), { name: 'verify', status: 'completed', conclusion: 'cancelled' }]),
+      ).toBe('red');
+    });
+
+    it('kun post-card registrert → pending (ingen ekte CI å bedømme)', () => {
+      expect(classifyChecks([card('completed', 'success')])).toBe('pending');
+    });
+  });
+});
+
+describe('expectsRealCi', () => {
+  it.each([
+    [['docs/loops/discord-pr-kort.md']],
+    [['README.md']],
+    [['.forge/contracts/1520-pr-card-classify.md']],
+    // `**` krysser `/` i GitHubs filter: en .md hvor som helst er docs-only.
+    [['.changes/1520-pr-kort.md']],
+    [['e2e/notat.md']],
+    [['docs/flows/opprett-fremtid.svg']],
+    [['docs/x.md', '.forge/y.md', 'README.md']],
+  ])('docs-only-liste %j forventer ingen ci.yml-kjøring', (files) => {
+    expect(expectsRealCi(files)).toBe(false);
+  });
+
+  it.each([
+    [['lib/loops/prCard.ts']],
+    [['.github/workflows/ci.yml']],
+    [['docs/loops/kort.md', 'lib/loops/prCard.ts']], // blandet
+    [['package.json']],
+  ])('kode i lista %j forventer ci.yml-kjøring', (files) => {
+    expect(expectsRealCi(files)).toBe(true);
+  });
+
+  it('tom liste forventer ingen kjøring (ingenting å bygge)', () => {
+    expect(expectsRealCi([])).toBe(false);
+  });
+
+  it('null (oppslaget feilet) slår gaten PÅ — fail-closed', () => {
+    expect(expectsRealCi(null)).toBe(true);
+  });
+});
+
+// Lockstep mot workflow-filene: helperen speiler ci.yml sin paths-ignore, og
+// selv-check-filteret speiler jobnavnet i kort-workflowen. Drifter noen av dem,
+// feiler denne testen i stedet for at gaten stille slutter å virke (#1520).
+describe('lockstep mot .github/workflows', () => {
+  const workflow = (file: string) =>
+    fs.readFileSync(path.resolve(__dirname, '../../.github/workflows', file), 'utf-8');
+
+  it('CI_PATHS_IGNORE er nøyaktig paths-ignore-lista i ci.yml', () => {
+    const block = /paths-ignore:\n((?:\s*-\s*'[^']+'\n)+)/.exec(workflow('ci.yml'));
+    expect(block, 'fant ingen paths-ignore-blokk i ci.yml').not.toBeNull();
+    const patterns = [...block![1].matchAll(/-\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(patterns).toEqual([...CI_PATHS_IGNORE]);
+  });
+
+  it('CARD_CHECK_NAME er jobnavnet i discord-pr-card.yml', () => {
+    expect(workflow('discord-pr-card.yml')).toContain(`\n  ${CARD_CHECK_NAME}:\n`);
+  });
+});
+
+describe('classifyWithCiGate', () => {
+  const green: CheckRun[] = [{ name: 'verify', status: 'completed', conclusion: 'success' }];
+  const found: CiRunsLookup = { ok: true, runs: [{ id: 9, status: 'completed', conclusion: 'success' }] };
+  const none: CiRunsLookup = { ok: true, runs: [] };
+
+  function gate(lookup: CiRunsLookup, opts: { runs?: CheckRun[]; expectsCi?: boolean } = {}) {
+    const fetchCiRuns = vi.fn(async () => lookup);
+    return {
+      fetchCiRuns,
+      run: () =>
+        classifyWithCiGate({
+          runs: opts.runs ?? green,
+          expectsCi: opts.expectsCi ?? true,
+          fetchCiRuns,
+        }),
+    };
+  }
+
+  it('grønne checks + registrert ci.yml-kjøring → green', async () => {
+    const g = gate(found);
+    await expect(g.run()).resolves.toBe('green');
+    expect(g.fetchCiRuns).toHaveBeenCalledTimes(1);
+  });
+
+  it('grønne checks uten registrert ci.yml-kjøring → pending (tvilling-vinduet)', async () => {
+    const g = gate(none);
+    await expect(g.run()).resolves.toBe('pending');
+  });
+
+  it('feilet run-oppslag → pending (fail-closed, aldri stille gate-av)', async () => {
+    const g = gate({ ok: false, status: 502 });
+    await expect(g.run()).resolves.toBe('pending');
+  });
+
+  it('docs-only (expectsCi=false) slipper grønt gjennom uten oppslag', async () => {
+    const g = gate(none, { expectsCi: false });
+    await expect(g.run()).resolves.toBe('green');
+    expect(g.fetchCiRuns).not.toHaveBeenCalled();
+  });
+
+  it('ikke-grønne checks avgjøres uten oppslag (billig guard sist)', async () => {
+    const pendingRuns: CheckRun[] = [{ status: 'in_progress', conclusion: null }];
+    const redRuns: CheckRun[] = [{ status: 'completed', conclusion: 'failure' }];
+    const p = gate(found, { runs: pendingRuns });
+    await expect(p.run()).resolves.toBe('pending');
+    expect(p.fetchCiRuns).not.toHaveBeenCalled();
+    const r = gate(found, { runs: redRuns });
+    await expect(r.run()).resolves.toBe('red');
+    expect(r.fetchCiRuns).not.toHaveBeenCalled();
+  });
 });
 
 describe('waitForChecksToSettle', () => {
@@ -133,6 +272,23 @@ describe('waitForChecksToSettle', () => {
       waitForChecksToSettle({ fetchRuns: h.fetchRuns, maxAttempts: 3, sleep: h.sleep }),
     ).resolves.toBe('pending');
     expect(h.counts()).toEqual({ fetches: 3, sleeps: 2 });
+  });
+
+  // Sømmen ci.yml-gaten henger på (#1520): den kjøres per forsøk, ikke bare
+  // på det siste — grønne check-runs kan holdes tilbake mens vi venter på at
+  // ci.yml-kjøringen registreres.
+  it('bruker en injisert classify på hvert forsøk', async () => {
+    const h = harness([green]);
+    const classify = vi
+      .fn<(runs: CheckRun[]) => 'pending' | 'green'>()
+      .mockReturnValueOnce('pending')
+      .mockReturnValueOnce('green');
+    await expect(
+      waitForChecksToSettle({ fetchRuns: h.fetchRuns, maxAttempts: 5, sleep: h.sleep, classify }),
+    ).resolves.toBe('green');
+    expect(classify).toHaveBeenCalledTimes(2);
+    expect(classify).toHaveBeenLastCalledWith(green);
+    expect(h.counts()).toEqual({ fetches: 2, sleeps: 1 });
   });
 });
 

@@ -7,6 +7,8 @@
 // interactions-endepunktet (app/api/discord/interactions/route.ts, #1124) —
 // samme kontrakt, ingen ny mottaker-kode.
 
+import { type CiRunsLookup } from './ciRuns';
+
 // Dedup-label: settes på PR-en når kortet er postet, så check_suite-fyringer
 // etterpå ser den og hopper over (ett kort per PR).
 export const CARD_LABEL = 'discord:merge-kort';
@@ -46,22 +48,98 @@ export function extractPrSummary(body: string | null | undefined): string | null
   return null;
 }
 
-export type CheckRun = { status: string; conclusion: string | null };
+export type CheckRun = { name?: string; status: string; conclusion: string | null };
+
+export type ChecksState = 'pending' | 'red' | 'green';
 
 // Konklusjoner som gjør en check rød (samme sett som merge-endepunktet bruker).
 const BAD_CONCLUSIONS = new Set(['failure', 'cancelled', 'timed_out', 'action_required']);
 
+// Kortets EGEN check: på pull_request-/ready_for_review-fyringer kjører
+// kort-workflowen i PR-kontekst, så jobben henger som en check-run på PR-head-en.
+// Den er `in_progress` under hele decide-pollingen (den ER decide), og en
+// kansellert kortkjøring etterlater `conclusion=cancelled` → uten dette filteret
+// klassifiserer kortet enten aldri grønt, eller RØDT for alltid på samme SHA (#1520).
+// LOCKSTEP: navnet er jobnavnet i `.github/workflows/discord-pr-card.yml`
+// (`jobs.post-card`) — endres jobben der, MÅ konstanten endres her.
+export const CARD_CHECK_NAME = 'post-card';
+
 /**
- * Klassifiserer CI-status for en PR-head ut fra check-runs.
+ * Klassifiserer CI-status for en PR-head ut fra check-runs. Kortets egen
+ * `post-card`-check filtreres bort først (ett hjem — også merge-endepunktets
+ * re-sjekk leser gjennom denne funksjonen).
  * - `pending`: minst én check ikke `completed`, ELLER ingen checks registrert
  *   enda (tom liste → carder aldri en PR uten CI).
  * - `red`: minst én fullført check har en dårlig konklusjon.
  * - `green`: alle checks fullført uten dårlig konklusjon.
  */
-export function classifyChecks(runs: CheckRun[]): 'pending' | 'red' | 'green' {
+export function classifyChecks(allRuns: CheckRun[]): ChecksState {
+  const runs = allRuns.filter((r) => r.name !== CARD_CHECK_NAME);
   if (runs.length === 0) return 'pending';
   if (runs.some((r) => r.status !== 'completed')) return 'pending';
   if (runs.some((r) => r.conclusion !== null && BAD_CONCLUSIONS.has(r.conclusion))) return 'red';
+  return 'green';
+}
+
+// `paths-ignore` i `.github/workflows/ci.yml` (og tvillingen ci-docs-noop.yml).
+// LOCKSTEP: mønstrene er låst mot workflow-fila av en test i prCard.test.ts.
+export const CI_PATHS_IGNORE = ['**.md', 'docs/**', '.forge/**'] as const;
+
+// Speiler GitHubs filter-SEMANTIKK, ikke mønsterstrengene: `**` krysser `/`, så
+// `**.md` matcher enhver `.md` hvor som helst (også `.changes/x.md`, `e2e/notat.md`).
+function isCiIgnoredPath(file: string): boolean {
+  return file.endsWith('.md') || file.startsWith('docs/') || file.startsWith('.forge/');
+}
+
+/**
+ * Forventer denne diffen at ci.yml faktisk kjører? Docs-only-PR-er er unntatt av
+ * `paths-ignore` — der finnes ingen CI-kjøring å vente på, og en streng gate
+ * ville hengt dem for alltid (regresjon av #1477/#1483-flyten).
+ * `null` = vi klarte ikke lese endrede filer → gate PÅ (fail-closed).
+ */
+export function expectsRealCi(changedFiles: string[] | null): boolean {
+  if (changedFiles === null) return true;
+  return changedFiles.some((f) => !isCiIgnoredPath(f));
+}
+
+export type CiGateOpts = {
+  /** Check-runs for PR-head-en, som de kom fra API-et. */
+  runs: CheckRun[];
+  /** `expectsRealCi(endrede filer)` — false slår gaten av (docs-only). */
+  expectsCi: boolean;
+  /** Slår opp registrerte ci.yml-kjøringer for head-SHA-en (systemgrensen). */
+  fetchCiRuns: () => Promise<CiRunsLookup>;
+  log?: (msg: string) => void;
+};
+
+/**
+ * `classifyChecks` + ci.yml-gaten (#1520): grønne check-runs er ikke nok når
+ * diffen forventer en ekte CI-kjøring. Tvillingen `ci-docs-noop.yml` rapporterer
+ * SAMME jobnavn som ci.yml og fullfører på sekunder, så på en blandet PR ser
+ * vinduet før ci.yml-kjøringen er registrert grønt ut. Krev derfor at GitHub har
+ * registrert en ci.yml-kjøring for head-SHA-en før grønt slippes gjennom.
+ *
+ * Fail-closed: HTTP-feil eller «ingen kjøring enda» → `pending`, aldri `green`.
+ * Oppslaget gjøres KUN når alt annet allerede er grønt (billig guard sist).
+ */
+export async function classifyWithCiGate({
+  runs,
+  expectsCi,
+  fetchCiRuns,
+  log,
+}: CiGateOpts): Promise<ChecksState> {
+  const state = classifyChecks(runs);
+  if (state !== 'green' || !expectsCi) return state;
+
+  const ci = await fetchCiRuns();
+  if (!ci.ok) {
+    log?.(`ci.yml-runs HTTP ${ci.status} — behandles som pending`);
+    return 'pending';
+  }
+  if (ci.runs.length === 0) {
+    log?.('ingen registrert ci.yml-kjøring for head-SHA-en enda');
+    return 'pending';
+  }
   return 'green';
 }
 
@@ -73,6 +151,12 @@ export type ChecksSettleOpts = {
   /** Pause mellom forsøk (injiseres så tester slipper ekte klokke). */
   sleep: () => Promise<void>;
   log?: (msg: string) => void;
+  /**
+   * Valgfri klassifiserer i stedet for `classifyChecks` — sømmen decide bruker
+   * til å legge ci.yml-run-gaten (#1520) på HVERT pollingforsøk, ikke bare på
+   * det siste. Kan være asynkron (gaten slår opp registrerte kjøringer).
+   */
+  classify?: (runs: CheckRun[]) => ChecksState | Promise<ChecksState>;
 };
 
 /**
@@ -88,10 +172,11 @@ export async function waitForChecksToSettle({
   maxAttempts,
   sleep,
   log,
-}: ChecksSettleOpts): Promise<'pending' | 'red' | 'green'> {
+  classify = classifyChecks,
+}: ChecksSettleOpts): Promise<ChecksState> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (attempt > 1) await sleep();
-    const state = classifyChecks(await fetchRuns());
+    const state = await classify(await fetchRuns());
     if (state !== 'pending') return state;
     log?.(`checks pending (forsøk ${attempt}/${maxAttempts})`);
   }
