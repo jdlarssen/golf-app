@@ -45,18 +45,32 @@ peker også på hull laget alt har tastet.
 
 ## Suksesskriterier
 
-- [ ] **S1:** Ny test `PrimaryCta.test.ts` (mock `getGameContext`, inspiser
+- [x] **S1:** Ny test `PrimaryCta.test.ts` (mock `getGameContext`, inspiser
       returnert element-props — ingen render): (a) ikke-kaptein i greensome
       med komplett lagkort → `state: 'ready_to_submit'` (RED mot HEAD);
       (b) patsome ikke-kaptein: egne rader 1–6 + kapteinens 7–18 → komplett,
       men kapteinens rader på 1–6 teller IKKE (per-hull-filteret);
       (c) solo-modus uendret (egne rader, `teamScoreOwnerId` null).
-- [ ] **S2:** Gates: `npx vitest run` på ny testfil + `lib/games/scoreOwner.test.ts`
+      **Evidens:** RED 21:43 (3 failed / 1 passed — nøyaktig de tre lag-casene);
+      GREEN 21:44 (4/4). Mocken filter-emulerer user_id-filtrene; evaluator
+      re-verifiserte RED-påstanden mot origin/main-koden.
+- [x] **S2:** Gates: `npx vitest run` på ny testfil + `lib/games/scoreOwner.test.ts`
       + `npm run build` exit 0.
-- [ ] **S3:** Staging: rigg aktiv lag-kollapset runde der e2e-admin IKKE er
-      kaptein og lagkortet er komplett → game-home viser «Se over og lever»
-      (ready_to_submit). Bevis-kommentar + `staging-verified`-label på PR.
-- [ ] **S4:** `.changes/1624-*.md`-notat (type fix).
+      **Evidens:** 2 filer / 93 tester grønne (builder OG evaluator);
+      `npm run build` exit 0 (bakgrunnslogg); evaluator `tsc --noEmit` exit 0.
+- [x] **S3:** Staging: rigg aktiv lag-kollapset runde der e2e-admin IKKE er
+      kaptein og lagkortet er komplett → game-home viser lever-CTA-en
+      (ready_to_submit; faktisk katalog-copy er «Gjennomgå og lever →»,
+      kontrakten siterte husket tekst). Bevis-kommentar +
+      `staging-verified`-label på PR.
+      **Evidens:** rigget «TEST-1624 Greensome» (aktiv, admin ikke-kaptein,
+      kortfører eier alle 18 rader) → Playwright: «Gjennomgå og lever →» +
+      «18 av 18 hull tastet inn» + submit-lenke (count 1); skjermbilde;
+      prod-vakt 0 treff; rigg slettet. PR #1639-kommentar + label.
+- [x] **S4:** `.changes/1624-*.md`-notat (type fix).
+      **Evidens:** `.changes/1624-lever-cta-lagmodus-hjem.md`, type fix,
+      issue 1624; sitert copy rettet til «Gjennomgå og lever» etter
+      evaluator-funn (kosmetisk).
 
 ## Gates
 
