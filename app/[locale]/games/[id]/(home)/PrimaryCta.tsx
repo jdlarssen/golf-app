@@ -3,6 +3,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { LinkButton } from '@/components/ui/Button';
 import { firstHoleForSegment, holeNumbersForSegment } from '@/lib/games/holeScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
+import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { getGameContext } from './gameContext';
@@ -41,6 +42,8 @@ export async function PrimaryCtaSection({
   requirePeerApproval,
   holeSegment,
   tournamentId,
+  gameMode,
+  teamScoreOwnerId,
 }: {
   gameId: string;
   currentUserId: string;
@@ -58,16 +61,37 @@ export async function PrimaryCtaSection({
    * extra `sourceGameId` check is needed here.
    */
   tournamentId: string | null;
+  /** #1624: needed to resolve whose scores rows complete the round. */
+  gameMode: GameMode;
+  /**
+   * #1624: the captain owning the team's shared rows (lex-min, #1538), null
+   * when the viewer has no team or the mode never collapses. Computed by the
+   * caller from the already-loaded gwp.players — no extra fetch here.
+   */
+  teamScoreOwnerId: string | null;
 }) {
   const { supabase } = await getGameContext();
 
+  // #1624: in the team-collapsed modes (scramble family, alternate-shot
+  // matchplay, patsome from hole 7) the captain owns the team's scores rows —
+  // a non-captain has none of their own, so counting `eq(user_id, me)` never
+  // reached ready_to_submit. Same figure as the hole page (#1577/PR #1625):
+  // fetch both ids' rows, then keep only the row the per-hole owner rule
+  // points at — the captain's row counts only where the mode collapses
+  // (patsome's 4BBB half does not).
   const { data: filledRows } = await supabase
     .from('scores')
-    .select('hole_number')
+    .select('hole_number, user_id')
     .eq('game_id', gameId)
-    .eq('user_id', currentUserId)
+    .in('user_id', scoreOwnerUserIds(gameMode, currentUserId, teamScoreOwnerId))
     .not('strokes', 'is', null);
-  const filledHoles = (filledRows ?? []).map((r) => r.hole_number);
+  const filledHoles = (filledRows ?? [])
+    .filter(
+      (r) =>
+        r.user_id ===
+        scoreOwnerForHole(gameMode, r.hole_number, currentUserId, teamScoreOwnerId),
+    )
+    .map((r) => r.hole_number);
   const strokesCount = filledHoles.length;
 
   // Issue #164: «Fortsett runden»-knappen skal peke på første tomme hull,

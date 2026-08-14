@@ -43,6 +43,7 @@ import {
 } from '@/lib/games/formatLabel';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { holeCountForSegment } from '@/lib/games/holeScope';
+import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import type { HoleSegment } from '@/lib/scoring';
 import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
@@ -1109,6 +1110,18 @@ export default async function GameHomePage({
                   requirePeerApproval={game.require_peer_approval}
                   holeSegment={game.hole_segment}
                   tournamentId={game.tournament_id}
+                  gameMode={game.game_mode}
+                  teamScoreOwnerId={
+                    // #1624: row ownership is a property of the team (#1538) —
+                    // resolved from the already-loaded roster, null = own rows.
+                    me.team_number == null
+                      ? null
+                      : teamScoreOwnerId(
+                          gwp.players.filter(
+                            (p) => p.team_number === me.team_number,
+                          ),
+                        )
+                  }
                 />
               </Suspense>
             )}
