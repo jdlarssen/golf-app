@@ -22,13 +22,19 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { isHoleInSegment, firstHoleForSegment } from '@/lib/games/holeScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import type { AppLocale } from '@/i18n/routing';
-import { isStablefordFamily, type ScoringGender } from '@/lib/scoring/modes/types';
+import {
+  isStablefordFamily,
+  type GameMode,
+  type ScoringGender,
+} from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 
 type Params = Promise<{ id: string }>;
@@ -52,6 +58,7 @@ type HoleRow = {
 
 type ScoreRow = {
   hole_number: number;
+  user_id: string;
   strokes: number | null;
   putts: number | null;
   entered_by: string | null;
@@ -192,6 +199,17 @@ export default async function SubmitPage({
             gameId={id}
             courseId={game.course_id}
             currentUserId={userId}
+            gameMode={game.game_mode}
+            // #1577: the shared team row lives under the captain's id, so a
+            // non-captain reviewing their card has to read the OWNER's rows —
+            // otherwise a complete team card reads as 18 missing holes.
+            teamScoreOwner={
+              me.team_number == null
+                ? null
+                : teamScoreOwnerId(
+                    players.filter((p) => p.team_number === me.team_number),
+                  )
+            }
             meTeeGender={me.tee_gender}
             holeSegment={game.hole_segment}
             tournamentId={game.tournament_id}
@@ -207,6 +225,8 @@ async function ReviewBody({
   gameId,
   courseId,
   currentUserId,
+  gameMode,
+  teamScoreOwner,
   meTeeGender,
   holeSegment,
   tournamentId,
@@ -215,6 +235,9 @@ async function ReviewBody({
   gameId: string;
   courseId: string;
   currentUserId: string;
+  gameMode: GameMode;
+  /** #1577: who owns the shared team rows, or null when I own my own. */
+  teamScoreOwner: string | null;
   meTeeGender: ScoringGender;
   holeSegment: HoleSegment;
   /** #1466: non-null on cup matches — drives the "whole round" delivery notice
@@ -250,9 +273,9 @@ async function ReviewBody({
       .returns<HoleRow[]>(),
     supabase
       .from('scores')
-      .select('hole_number, strokes, putts, entered_by')
+      .select('hole_number, user_id, strokes, putts, entered_by')
       .eq('game_id', gameId)
-      .eq('user_id', currentUserId)
+      .in('user_id', scoreOwnerUserIds(gameMode, currentUserId, teamScoreOwner))
       .returns<ScoreRow[]>(),
   ]);
 
@@ -266,15 +289,25 @@ async function ReviewBody({
     isHoleInSegment(h.hole_number, holeSegment),
   );
 
+  // #1577: keep the row that owns each hole. Identical to the old
+  // `eq('user_id', me)` filter whenever I own my own rows; in a team-collapsed
+  // mode it swaps in the captain's shared row — per hole, so patsome's 4BBB
+  // half (1–6) still reviews MY ball and its foursomes half (7–18) the team's.
+  const ownedScores = (scoresRes.data ?? []).filter(
+    (s) =>
+      s.user_id ===
+      scoreOwnerForHole(gameMode, s.hole_number, currentUserId, teamScoreOwner),
+  );
+
   const scoreByHole = new Map<number, ScoreRow>();
-  for (const s of scoresRes.data ?? []) scoreByHole.set(s.hole_number, s);
+  for (const s of ownedScores) scoreByHole.set(s.hole_number, s);
 
   // Fetch the names of every distinct `entered_by` user that appears on the
   // scorecard. The list is small (typically just the player themselves and
   // maybe one flight-mate) so a single IN query is cheap.
   const enteredByIds = Array.from(
     new Set(
-      (scoresRes.data ?? [])
+      ownedScores
         .map((s) => s.entered_by)
         .filter((v): v is string => Boolean(v)),
     ),
@@ -324,6 +357,9 @@ async function ReviewBody({
   // player opted into putt-keeping this round (≥1 recorded) but left some played
   // holes blank — never a nag for someone who never tracks putts. The game is
   // still active here, so chips write through the live `writeScore` path.
+  // Prompt-en skriver alltid under MIN user_id — trygt fordi de eneste radene
+  // som kan være en annens er lag-radene, og ingen lag-modus registrerer putter
+  // (`formatCapturesPutts`), så `puttedCount` er 0 der og prompten uteblir.
   const puttedCount = playedHoles.filter((r) => r.putts != null).length;
   const missingPuttHoles = playedHoles
     .filter((r) => r.putts == null)

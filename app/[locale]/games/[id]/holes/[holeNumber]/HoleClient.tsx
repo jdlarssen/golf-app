@@ -48,6 +48,7 @@ import type {
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import type { HoleParByGender } from '@/lib/games/parDisplay';
+import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import {
   holeNumbersForSegment,
   lastHoleForSegment,
@@ -136,12 +137,20 @@ export interface HoleClientProps {
    */
   myTeamNumber?: number | null;
   /**
+   * Who owns the team's shared scores rows (`teamScoreOwnerId`, server-side),
+   * or null when I own my own rows — no team, unreadable roster, everyone
+   * withdrawn. Only differs from `myUserId` for a non-captain in a
+   * team-collapsed mode; that's exactly the seat whose completion set has to
+   * count the captain's rows instead of its own. #1577.
+   */
+  myTeamScoreOwnerId?: string | null;
+  /**
    * WHICH of the player's holes already have a score recorded (server-side
    * snapshot at render, #1352 — used to be a bare count). Unioned with the
    * live Dexie set below: it drives both the hole strip's «missing score»
    * marking and the bottom CTA, which becomes 'Lever scorekort' on every hole
    * once the round is complete — you don't need to navigate back to the last
-   * hole to find the submit action.
+   * hole to find the submit action. Already owner-filtered server-side (#1577).
    */
   myScoredHoles: number[];
   /**
@@ -352,6 +361,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     strokeIndex,
     myUserId,
     myTeamNumber = null,
+    myTeamScoreOwnerId = null,
     myScoredHoles,
     courseId = null,
     greenCenter = null,
@@ -454,18 +464,42 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // the union is never smaller than either side: it can only reveal the CTA
   // earlier, never hide one that used to show. Since #1352 the set — not a
   // count — is the single source for both the CTA and the hole strip.
+  //
+  // #1577: mirrors the server select — the shared team row lives under the
+  // captain's id, so a non-captain reads both ids and keeps the one that owns
+  // each hole. Identical to the old single-id query whenever I own my rows.
+  const scoredHoleOwnerIds = useMemo(
+    () => scoreOwnerUserIds(gameMode, myUserId, myTeamScoreOwnerId),
+    [gameMode, myUserId, myTeamScoreOwnerId],
+  );
+  const scoredHoleOwnerKey = scoredHoleOwnerIds.join('|');
   const localScoredRows = useLiveQuery(
     () =>
       localDb.scores
         .where('[gameId+userId]')
-        .equals([gameId, myUserId])
+        .anyOf(scoredHoleOwnerIds.map((ownerId) => [gameId, ownerId]))
         .filter((r) => r.strokes != null)
         .toArray(),
-    [gameId, myUserId],
+    [gameId, scoredHoleOwnerKey],
   );
   const scoredHoles = new Set<number>([
     ...myScoredHoles,
     ...(localScoredRows ?? [])
+      // The id list is the fetch; this is the rule. Keeping it out here rather
+      // than inside the Dexie callback means a captain's row only counts on the
+      // holes where the mode actually collapses — patsome's 4BBB half stays
+      // mine even though the same round's foursomes half is the team's.
+      .filter(
+        (r) =>
+          r != null &&
+          r.userId ===
+            scoreOwnerForHole(
+              gameMode,
+              r.holeNumber,
+              myUserId,
+              myTeamScoreOwnerId,
+            ),
+      )
       .map((r) => r?.holeNumber)
       .filter((n): n is number => n != null),
   ]);
