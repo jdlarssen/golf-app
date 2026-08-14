@@ -27,7 +27,9 @@ Ren copy-endring, fire strenger + to docs-sitater:
 ## Gates
 
 tsc + catalogParity grønne lokalt; full vitest kjøres av pre-push/CI.
-Staging-klikk: aktivt spill med skjult back 9 → låst kort viser ny tekst (før merge).
+Staging-klikk: GJENNOMFØRT 2026-08-14 — E2E best_ball-spill med ferdig front 9:
+både lockedSub (leaderboard state3.5) og hiddenBackNineSub (drilldown) viste ny
+tekst; bevis + staging-verified-label på PR #1603; testdata slettet.
 
 ## Commits
 
