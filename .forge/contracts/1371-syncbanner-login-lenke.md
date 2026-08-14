@@ -34,8 +34,13 @@ main ved byggestart 2026-08-14: active-varianten hadde kun «Prøv igjen»
   quarantine-varianten ikke rørt (kontraktens aksepterte hull står).
 - [x] Gates: tsc exit 0 · eslint på begge filer exit 0 · vitest 10/10
   (SyncBanner + catalogParity) · `npm run build` exit 0.
-- [ ] Staging-verifisering før merge: fremprovoser auth-feil → lenken navigerer
+- [x] Staging-verifisering før merge: fremprovoser auth-feil → lenken navigerer
   til login med riktig `next` (inkl. engelsk locale).
+  **Evidens:** staging-klikk 2026-08-14 på PR-HEAD 450aadcd: Dexie-injisert
+  auth-feil ga lenke i begge locales (no: `next=%2Fgames%2F<id>`, en:
+  `/en/login?next=%2Fen%2F…` — ingen dobbel-prefiks), klikk landet på login med
+  next intakt, 44px målt. Bevis + `staging-verified`-label på PR #1604;
+  testdata (Dexie-item + E2E-spill) ryddet.
 
 ## Gates
 
