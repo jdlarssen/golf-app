@@ -37,17 +37,35 @@ export async function loadTournamentParticipantEmails(
 
   // Hent alle distinct user_ids via game_players-joine på games med
   // tournament_id = id, deretter email via users-tabellen.
-  const { data: gameRows } = await admin
+  const { data: gameRows, error: gamesError } = await admin
     .from('games')
     .select('id')
     .eq('tournament_id', tournamentId);
+  if (gamesError) {
+    // Bevisst best-effort (#1543): kallstedene kjører ugatet ETTER at
+    // cup-statusen er flippet — et kast ville gitt arrangøren en feilside for
+    // en fullført avslutning. Logg og lever tom liste i stedet.
+    console.error('[cup] participant lookup: games failed', {
+      tournamentId,
+      error: gamesError,
+    });
+    return [];
+  }
   const gameIds = (gameRows ?? []).map((g) => g.id);
   if (gameIds.length === 0) return [];
 
-  const { data: playerRows } = await admin
+  const { data: playerRows, error: playersError } = await admin
     .from('game_players')
     .select('user_id, users!game_players_user_id_fkey(email, name, locale)')
     .in('game_id', gameIds);
+  if (playersError) {
+    // Samme bevisste best-effort som over — ikke «fiks» til et kast.
+    console.error('[cup] participant lookup: game_players failed', {
+      tournamentId,
+      error: playersError,
+    });
+    return [];
+  }
 
   const seen = new Set<string>();
   const out: TournamentParticipant[] = [];

@@ -8,14 +8,17 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  * kollapset — 4 av 12 deltakere fikk `cup_finished`, og mail-fan-outen
  * filtreres på samme liste.
  *
- * Én test, fordi helperen ikke lenger tar en klient og det derfor ikke finnes
- * flere varianter å dekke. Den låser fire ting samtidig, alle nødvendige for at
- * «hele deltaker-settet» skal stemme:
+ * Happy-path-testen låser fire ting samtidig, alle nødvendige for at «hele
+ * deltaker-settet» skal stemme:
  *   1. oppslaget går på admin-klienten (den eneste som ser hele settet),
  *   2. det er scopet til RIKTIG cup — admin-klienten har ingen RLS igjen som
  *      backstop, så en tapt `tournament_id`-filter ville varslet hele basen,
  *   3. en spiller som går flere kamper telles én gang,
  *   4. rader uten e-post droppes.
+ *
+ * #1543: i tillegg to feil-caser — en spørring som feiler skal logges med
+ * `[cup]`-prefiks og gi tom liste, slik at et transient PostgREST-brudd ikke
+ * lenger er umulig å skille fra en cup uten spillere i loggene.
  */
 
 let adminMock: ReturnType<typeof buildSupabaseMock>;
@@ -81,5 +84,49 @@ describe('loadTournamentParticipantEmails (#1540)', () => {
         { table: 'game_players', method: 'in', args: ['game_id', ['G1', 'G2', 'G3']] },
       ]),
     );
+  });
+
+  it('logger og returnerer tom liste når games-spørringen feiler (#1543)', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const gamesError = { message: 'connection reset', code: '08006' };
+    adminMock = buildSupabaseMock([{ data: null, error: gamesError }]);
+
+    const { loadTournamentParticipantEmails } = await import(
+      './tournamentParticipants'
+    );
+    const recipients = await loadTournamentParticipantEmails('T1');
+
+    expect(recipients).toEqual([]);
+    expect(spy).toHaveBeenCalledWith('[cup] participant lookup: games failed', {
+      tournamentId: 'T1',
+      error: gamesError,
+    });
+    // Skiller feil-grenen fra tidligreturen for ekte tomhet: ved feil skal
+    // game_players aldri bli spurt.
+    expect(
+      adminMock.__fromCalls.filter((c) => c.table === 'game_players'),
+    ).toEqual([]);
+    spy.mockRestore();
+  });
+
+  it('logger og returnerer tom liste når game_players-spørringen feiler (#1543)', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const playersError = { message: 'timeout', code: '57014' };
+    adminMock = buildSupabaseMock([
+      { data: [{ id: 'G1' }], error: null },
+      { data: null, error: playersError },
+    ]);
+
+    const { loadTournamentParticipantEmails } = await import(
+      './tournamentParticipants'
+    );
+    const recipients = await loadTournamentParticipantEmails('T1');
+
+    expect(recipients).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      '[cup] participant lookup: game_players failed',
+      { tournamentId: 'T1', error: playersError },
+    );
+    spy.mockRestore();
   });
 });
