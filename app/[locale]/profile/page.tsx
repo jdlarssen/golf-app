@@ -14,7 +14,7 @@ import { safeNextPath } from './safeNext';
 import { ProfileFormBody } from './ProfileFormBody';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getIncomingFriendRequestCount } from '@/lib/friends/getIncomingFriendRequestCount';
-import { SubmitButton } from '@/components/ui/SubmitButton';
+import { LogoutForm } from '@/components/auth/LogoutForm';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
 import { PushToggle } from '@/components/pwa/PushToggle';
@@ -319,11 +319,8 @@ async function AccountActions() {
   const t = await getTranslations('profile');
   return (
     <div className="mt-8 border-t border-border/60 pt-6 dark:border-border/80">
-      <form action="/logout" method="post">
-        <SubmitButton variant="secondary" className="w-full" pendingLabel={t('logoutPending')}>
-          {t('logoutButton')}
-        </SubmitButton>
-      </form>
+      {/* #1404: klient-form som rydder lokale data før POST-en. */}
+      <LogoutForm label={t('logoutButton')} pendingLabel={t('logoutPending')} />
     </div>
   );
 }

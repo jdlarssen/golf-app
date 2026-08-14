@@ -18,12 +18,24 @@ import { useEffect } from 'react';
  */
 export function SyncBoot() {
   useEffect(() => {
-    import('@/lib/sync/syncWorker')
-      .then((m) => m.startSyncListener())
-      .catch(() => {
+    // #1404: the owner guard MUST resolve before the engine starts — on a
+    // shared device a user switch wipes the previous user's leftovers here,
+    // so the bootstrap drain can never push them under the wrong session.
+    void (async () => {
+      try {
+        const cleanup = await import('@/lib/sync/localDataCleanup');
+        await cleanup.ensureLocalDataOwnerBrowser();
+      } catch {
+        // Silent — the guard is defensive; a failure must not block sync.
+      }
+      try {
+        const m = await import('@/lib/sync/syncWorker');
+        m.startSyncListener();
+      } catch {
         // Silent — sync is progressive enhancement; the queue survives in
         // Dexie and later mounts or manual retry will drain it.
-      });
+      }
+    })();
   }, []);
 
   return null;
