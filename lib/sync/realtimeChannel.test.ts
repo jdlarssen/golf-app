@@ -29,9 +29,28 @@ function makeMockSupabase() {
    * before a channel exists at all.
    */
   const trace: string[] = [];
+  /** One-shot gate armed by `holdNextSetAuth()`; see below. */
+  let pendingGate: Promise<void> | null = null;
   const setAuthSpy = vi.fn(async (...args: unknown[]) => {
     trace.push(`setAuth:${args.length}`);
+    const gate = pendingGate;
+    pendingGate = null;
+    if (gate) await gate;
   });
+
+  /**
+   * Arms a one-shot gate: the NEXT `setAuth()` call suspends until the
+   * returned `release()` runs. Lets a test hold a rebuild inside its own
+   * await window — the interval where the old channel is still the current
+   * one — and poke that old channel while the replacement is suspended.
+   */
+  function holdNextSetAuth(): () => void {
+    let release!: () => void;
+    pendingGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return release;
+  }
 
   function channel(topic: string): MockChannel {
     const realtimeTopic = `realtime:${topic}`;
@@ -70,6 +89,7 @@ function makeMockSupabase() {
   return {
     channels,
     setAuthSpy,
+    holdNextSetAuth,
     trace,
     realtime: {
       setAuth: setAuthSpy,
@@ -306,6 +326,52 @@ describe('subscribeRealtimeChannel', () => {
       first.status?.('CHANNEL_ERROR');
       await vi.advanceTimersByTimeAsync(60_000);
       expect(mockSupabase.channels).toEqual([second]);
+
+      cleanup();
+      await flushFake();
+      expect(mockSupabase.channels).toHaveLength(0);
+    });
+
+    it('ignores the old channel’s errors while the replacement is suspended in setAuth', async () => {
+      vi.useFakeTimers();
+      const { subscribeRealtimeChannel } = await import('./realtimeChannel');
+      const cleanup = subscribeRealtimeChannel('scores:game-A', bind);
+      await flushFake();
+      const first = mockSupabase.channels[0]!;
+
+      // Tip the first channel over: a rebuild is armed 2s out, and the
+      // failure budget is now spent.
+      emit('CHANNEL_ERROR', 3);
+      // Hold that rebuild inside its own setAuth() await.
+      const releaseSetAuth = mockSupabase.holdNextSetAuth();
+      await vi.advanceTimersByTimeAsync(2_000);
+      // The timer fired and openChannel is suspended — no replacement yet.
+      expect(mockSupabase.channels).toEqual([first]);
+
+      // Phoenix keeps hammering the doomed channel. This is the dangerous
+      // window: the swap happens AFTER the await, so `first` is still the
+      // current channel (its statuses pass the identity check), its budget
+      // is already spent, and the timer that got us here nulled itself — so
+      // nothing may arm a second, orphaned rebuild here. The in-flight
+      // rebuild is already producing the replacement these errors ask for.
+      first.status?.('CHANNEL_ERROR');
+      first.status?.('CHANNEL_ERROR');
+      first.status?.('CHANNEL_ERROR');
+      first.status?.('CHANNEL_ERROR');
+
+      releaseSetAuth();
+      await flushFake();
+      const second = mockSupabase.channels[0]!;
+      expect(second).not.toBe(first);
+
+      // The replacement is healthy and silent. Nothing armed during the
+      // await window may outlive the swap — wait out the entire backoff
+      // ladder and then some.
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(mockSupabase.channels).toEqual([second]);
+      expect(
+        mockSupabase.trace.filter((t) => t.startsWith('create:')),
+      ).toHaveLength(2);
 
       cleanup();
       await flushFake();
