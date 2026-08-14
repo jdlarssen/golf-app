@@ -151,6 +151,23 @@ describe('SyncBanner — karantene-varianten', () => {
     );
   });
 
+  it('aktivt slag fra en annen runde gir ingen status her (#1370)', () => {
+    // Still-retrying items belong to the round they were entered in — dette
+    // banneret snakker for runden på skjermen. Selve filter-reglene testes i
+    // lib/sync/queueScope.test.ts og re-asserteres ikke her.
+    mockDexieData([
+      qItem({
+        scoreId: 'g2:u1:4',
+        abandonedAt: null,
+        attemptCount: 2,
+        lastError: 'TypeError: Failed to fetch',
+      }),
+    ]);
+    const { container } = render(<SyncBanner gameId="g1" />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('malformet scoreId degraderer til generisk melding uten crash', () => {
     mockDexieData([qItem({ scoreId: 'not-a-score-key' })]);
     render(<SyncBanner gameId="g1" />);

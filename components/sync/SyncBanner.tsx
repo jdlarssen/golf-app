@@ -11,6 +11,7 @@ import {
   summarizeQuarantine,
   formatHoleList,
 } from '@/lib/sync/quarantineSummary';
+import { isActiveForGame } from '@/lib/sync/queueScope';
 import { Disclosure } from '@/components/ui/Disclosure';
 
 const STUCK_THRESHOLD_MS = 30_000;
@@ -89,10 +90,15 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
   );
   // Conflicts (#688 Part 2): records written by syncWorker when server silently
   // overwrites a score the current user had entered. One notice per record,
-  // dismissed individually.
+  // dismissed individually. Scoped to the round on screen (#1370) — a conflict
+  // from another round can't be acted on from here. `conflicts` is indexed on
+  // gameId (db.ts), so the filter runs in Dexie rather than in JS.
   const conflicts = useLiveQuery<ConflictRecord[] | undefined>(
-    () => localDb.conflicts.toArray(),
-    [],
+    () =>
+      gameId != null
+        ? localDb.conflicts.where('gameId').equals(gameId).toArray()
+        : localDb.conflicts.toArray(),
+    [gameId],
   );
   // Tick `now` once per second so the "is older than 30s" check re-evaluates
   // without depending on Dexie writes (queue can sit unchanged for minutes).
@@ -116,9 +122,17 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
 
     // Quarantined items (#668): drainQueue gave up after a permanently-failing
     // sync. They never retry, so they're surfaced separately from the still-
-    // retrying "active" items — a lost stroke must never be silent.
+    // retrying "active" items — a lost stroke must never be silent. Kept
+    // UNFILTERED across games on purpose: the quarantine branch below names
+    // stranded strokes from other rounds too (#1369).
     const abandoned = queue.filter((i) => i.abandonedAt != null);
-    const active = queue.filter((i) => i.abandonedAt == null);
+    // Active items are scoped to the round on screen (#1370). "N strokes
+    // waiting", the error copy and «Prøv igjen» describe THIS round — a stroke
+    // still retrying for another round is that round's business, and drainQueue
+    // keeps pushing it regardless of which banner is mounted.
+    const active = queue.filter((i) =>
+      gameId != null ? isActiveForGame(i, gameId) : i.abandonedAt == null,
+    );
 
     const oldestCreatedAt = active.reduce((acc, i) => {
       const t = new Date(i.createdAt).getTime();

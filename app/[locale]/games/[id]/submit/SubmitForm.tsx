@@ -5,12 +5,20 @@ import { useTranslations } from 'next-intl';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useRouter } from '@/i18n/navigation';
 import { localDb } from '@/lib/sync/db';
+import { isBlockingItem } from '@/lib/sync/queueScope';
 import { drainQueue } from '@/lib/sync/syncWorker';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
   submitAction: () => void | Promise<void>;
   missingHoles: number;
+  /**
+   * Every game this delivery can freeze: this round, plus a split-cup front9
+   * sibling round when the player is delivering a back9 host (#1466). Queued
+   * strokes for any of them block the submit; strokes queued for unrelated
+   * rounds do not (#1370).
+   */
+  blockingGameIds: string[];
 };
 
 /**
@@ -27,20 +35,35 @@ type Props = {
  * preview (and missing-hole count) reflects the now-synced holes. Quarantined
  * (abandonedAt) items are ignored here — they never drain, so blocking on them
  * would trap the player forever.
+ *
+ * #1370: the block counts only strokes queued for a game THIS delivery can
+ * freeze (see `blockingGameIds`). A leftover stroke from an unrelated round no
+ * longer locks «Lever ✓» — it was never at risk from this submit.
  */
-export function SubmitForm({ submitAction, missingHoles }: Props) {
+export function SubmitForm({
+  submitAction,
+  missingHoles,
+  blockingGameIds,
+}: Props) {
   const t = useTranslations('game.submit');
   const router = useRouter();
 
+  // Dexie query deps must be value-stable; the prop is a fresh array on every
+  // render, so key the query on its contents instead.
+  const blockingKey = blockingGameIds.join(',');
   const pendingCount =
     useLiveQuery(
-      () => localDb.syncQueue.filter((i) => i.abandonedAt == null).count(),
-      [],
+      () =>
+        localDb.syncQueue
+          .filter((i) => isBlockingItem(i, blockingGameIds))
+          .count(),
+      [blockingKey],
     ) ?? 0;
   const syncing = pendingCount > 0;
 
   // Kick a drain as soon as the review screen mounts so any strokes entered
-  // offline reach the server before the card can be frozen by submit.
+  // offline reach the server before the card can be frozen by submit. Still
+  // drains the WHOLE queue — drain semantics stay global (#1370).
   useEffect(() => {
     void drainQueue();
   }, []);

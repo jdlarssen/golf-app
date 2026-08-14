@@ -376,12 +376,14 @@ describe('HoleClient — stableford-modus', () => {
   });
 
   it('viser «Lever ditt scorekort» på siste hull for stableford', () => {
-    useLiveQueryMock.mockReturnValue([
-      { strokes: 4 },
-      { strokes: 5 },
-      { strokes: 3 },
-      { strokes: 4 },
-    ]);
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 },
+        { strokes: 5 },
+        { strokes: 3 },
+        { strokes: 4 },
+      ]),
+    );
     render(
       <HoleClient
         {...baseProps({ currentHole: 18, gameMode: 'stableford' })}
@@ -392,12 +394,14 @@ describe('HoleClient — stableford-modus', () => {
   });
 
   it('viser «Lever scorekort» (uten «ditt») for best-ball', () => {
-    useLiveQueryMock.mockReturnValue([
-      { strokes: 4 },
-      { strokes: 5 },
-      { strokes: 3 },
-      { strokes: 4 },
-    ]);
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 },
+        { strokes: 5 },
+        { strokes: 3 },
+        { strokes: 4 },
+      ]),
+    );
     render(
       <HoleClient
         {...baseProps({ currentHole: 18, gameMode: 'best_ball' })}
@@ -408,12 +412,14 @@ describe('HoleClient — stableford-modus', () => {
   });
 
   it('passer stableford-poeng for current hull til ScoreCard når gameMode=stableford', () => {
-    useLiveQueryMock.mockReturnValue([
-      { strokes: 4 }, // u1 par på par 4 = 2 poeng
-      undefined,
-      undefined,
-      undefined,
-    ]);
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 }, // u1 par på par 4 = 2 poeng
+        undefined,
+        undefined,
+        undefined,
+      ]),
+    );
     render(
       <HoleClient
         {...baseProps({
@@ -430,12 +436,14 @@ describe('HoleClient — stableford-modus', () => {
   });
 
   it('passer ikke stableford-poeng til ScoreCard for best-ball-modus', () => {
-    useLiveQueryMock.mockReturnValue([
-      { strokes: 4 },
-      undefined,
-      undefined,
-      undefined,
-    ]);
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 },
+        undefined,
+        undefined,
+        undefined,
+      ]),
+    );
     render(
       <HoleClient
         {...baseProps({ gameMode: 'best_ball', par: 4 })}
@@ -461,6 +469,33 @@ describe('HoleClient — sync status line (#744)', () => {
     // On mount: syncing=false, savedAt='' — no real activity yet.
     // The SyncStatusLine must not appear to avoid a false "Lagret nylig" receipt.
     render(<HoleClient {...baseProps()} />);
+    expect(screen.queryByTestId('sync-dot')).not.toBeInTheDocument();
+  });
+
+  it('teller ikke ventende slag fra en annen runde (#1370)', () => {
+    // Dexie-køen er global. Før #1370 tente et slag som lå igjen fra en annen
+    // runde denne rundens «Venter på nett»-linje. Samme 3-kall-kontrakt som
+    // default-impl-en, men modulo-stabil over re-renders så køen fortsetter å
+    // resolve til det fremmede elementet.
+    let call = 0;
+    useLiveQueryMock.mockImplementation(() => {
+      const n = call++ % 3;
+      if (n === 0) return [undefined, undefined, undefined, undefined];
+      if (n === 2)
+        return [
+          {
+            id: 'g2:u1:5',
+            scoreId: 'g2:u1:5',
+            attemptCount: 1,
+            lastError: null,
+            createdAt: '2026-08-14T10:00:00.000Z',
+            abandonedAt: null,
+          },
+        ];
+      return undefined;
+    });
+
+    render(<HoleClient {...baseProps({ gameId: 'g1' })} />);
     expect(screen.queryByTestId('sync-dot')).not.toBeInTheDocument();
   });
 });
