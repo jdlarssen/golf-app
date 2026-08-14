@@ -7,6 +7,8 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
+import { inviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import {
   consumeAdminInviteRateLimit,
   getClientIp,
@@ -79,7 +81,7 @@ export async function sendInvitation(formData: FormData) {
     redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
   }
 
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = inviteExpiresAtFromNow();
   const inviteToken = randomUUID();
   const { error: insertError } = await supabase.from('invitations').insert({
     email,
@@ -120,20 +122,42 @@ export async function resendInvitation(formData: FormData) {
 
   const { data: inv, error } = await supabase
     .from('invitations')
-    .select('email, accepted_at, token, expires_at')
+    .select('email, accepted_at, token')
     .eq('id', id)
     .single();
   if (error || !inv) redirect({ href: '/admin/spillere?error=resend_failed', locale });
   if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=resend_failed', locale });
+
+  // «Send på nytt» means «give this person a fresh chance» (#1381), so the
+  // deadline is pushed out a full TTL instead of staying at the old one. An
+  // expired-but-unaccepted row otherwise got a mail the login gate would still
+  // refuse — email_is_invited requires expires_at > now() (migration 0100).
+  const expiresAt = inviteExpiresAtFromNow();
+  try {
+    expectAffected(
+      await supabase
+        .from('invitations')
+        .update({ expires_at: expiresAt })
+        .eq('id', id)
+        .is('accepted_at', null)
+        .select('id'),
+      'resendInvitation.extendExpiry',
+    );
+  } catch (extendError) {
+    // expectAffected throws — plain Error on a DB refusal, NoRowsAffectedError
+    // when the write silently matched nothing (row deleted, or accepted between
+    // the read and the write; AGENTS.md trap 2). Both become this file's
+    // redirect so the admin sees a banner, never error.tsx.
+    console.error('[admin/spillere] expiry extend failed', extendError);
+    redirect({ href: '/admin/spillere?error=resend_failed', locale });
+  }
 
   try {
     await sendInviteNotification({
       to: inv!.email,
       invitedByName,
       inviteToken: inv!.token,
-      // Resend forlenger ikke fristen (#1179 out-of-scope): en utløpt-men-ikke-
-      // akseptert rad har expires_at i fortid → mailen utelater frist-linjen.
-      expiresAt: inv!.expires_at,
+      expiresAt,
     });
   } catch (err) {
     console.error('[admin/spillere] resend mail failed', err);

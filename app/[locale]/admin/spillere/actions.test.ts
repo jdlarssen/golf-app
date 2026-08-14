@@ -4,17 +4,20 @@ import {
   makeRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
+import { INVITE_TTL_DAYS } from '@/lib/auth/inviteExpiry';
 
 /**
- * Unit tests for the admin invitation server-actions. Currently scoped to
- * the honeypot silent-reject path on `sendInvitation` — adding the test
- * infrastructure here so future admin-invite coverage can extend it.
+ * Unit tests for the admin invitation server-actions: the honeypot
+ * silent-reject on `sendInvitation`, the shared dedup RPC, and the
+ * deadline-extension `resendInvitation` performs (#1381).
  *
  * Honeypot semantics: when the hidden `website` field is populated, the
  * action MUST NOT touch `invitations` (no insert) nor send a Resend mail.
  * It still redirects with the success status so a bot can't probe the
  * difference.
  */
+
+const TTL_MS = INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 const redirectMock = makeRedirectMock();
 vi.mock('@/i18n/navigation', () => ({
@@ -120,6 +123,96 @@ describe('sendInvitation — shared dedup (#348)', () => {
       (c) => c.method === 'insert',
     );
     expect(insertCalls).toHaveLength(0);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('resendInvitation — the deadline follows the mail (#1381)', () => {
+  const pendingRow = {
+    data: { email: 'sen@example.com', accepted_at: null, token: 'tok-1' },
+    error: null,
+  };
+
+  it('pushes expires_at a full TTL out and mails that new deadline', async () => {
+    supabaseMock = buildSupabaseMock([
+      pendingRow,
+      { data: [{ id: 'inv-1' }], error: null }, // UPDATE ... .select('id')
+    ]);
+    const { resendInvitation } = await import('./actions');
+
+    const before = Date.now();
+    await expect(
+      resendInvitation(fd({ id: 'inv-1' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    const after = Date.now();
+
+    const update = supabaseMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.table).toBe('invitations');
+    const patch = (update?.args[0] ?? {}) as { expires_at?: string };
+    const stamped = Date.parse(patch.expires_at ?? '');
+    // A fresh 7-day window from now — not the row's old (possibly passed) stamp.
+    expect(stamped).toBeGreaterThanOrEqual(before + TTL_MS);
+    expect(stamped).toBeLessThanOrEqual(after + TTL_MS);
+
+    // Scoped to this row AND still-unaccepted (race-safe).
+    expect(supabaseMock.__fromCalls).toContainEqual(
+      expect.objectContaining({ method: 'eq', args: ['id', 'inv-1'] }),
+    );
+    expect(supabaseMock.__fromCalls).toContainEqual(
+      expect.objectContaining({ method: 'is', args: ['accepted_at', null] }),
+    );
+
+    // The mail must carry the NEW deadline, or its date line lies.
+    expect(sendInviteNotificationMock).toHaveBeenCalledWith({
+      to: 'sen@example.com',
+      invitedByName: 'Admin',
+      inviteToken: 'tok-1',
+      expiresAt: patch.expires_at,
+    });
+    expect(lastRedirect()).toBe(
+      '/admin/spillere?status=resent&email=sen%40example.com',
+    );
+  });
+
+  it('0-row UPDATE redirects resend_failed and sends no mail', async () => {
+    // Row deleted (or accepted) between the read and the write: PostgREST
+    // reports no error, so only the affected-row assertion catches it.
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([pendingRow, { data: [], error: null }]);
+    const { resendInvitation } = await import('./actions');
+
+    await expect(
+      resendInvitation(fd({ id: 'inv-1' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/spillere?error=resend_failed');
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it('an accepted invitation is refused before any write', async () => {
+    supabaseMock = buildSupabaseMock([
+      {
+        data: {
+          email: 'joined@example.com',
+          accepted_at: '2026-08-01T10:00:00.000Z',
+          token: 'tok-2',
+        },
+        error: null,
+      },
+    ]);
+    const { resendInvitation } = await import('./actions');
+
+    await expect(
+      resendInvitation(fd({ id: 'inv-2' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/spillere?error=resend_failed');
+    expect(
+      supabaseMock.__fromCalls.filter((c) => c.method === 'update'),
+    ).toHaveLength(0);
     expect(sendInviteNotificationMock).not.toHaveBeenCalled();
   });
 });
