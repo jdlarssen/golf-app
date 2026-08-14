@@ -812,4 +812,51 @@ describe('#1343: attachToCaptainTeam kobler invitéen til kapteinen som invitert
     );
     expect(insertCall).toBeUndefined();
   });
+
+  it('#1437: invitasjons-oppslaget håndhever utløp (.gt på expires_at)', async () => {
+    // FIFO-mocken filter-emulerer ikke, så det ærlige regresjonsbeviset er
+    // query-formen: verifyCode-laget fikk utløpsfilteret i #1348, og uten
+    // samme filter her er attach-stien et andre, uenig hjem for regelen
+    // (AGENTS.md felle 4) — en utløpt lag-invitert kunne fortsatt feste seg.
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: 'inv-1',
+          email: INVITEE_EMAIL,
+          game_id: GAME_ID,
+          invited_by: INVITING_CAPTAIN_ID,
+        },
+        error: null,
+      },
+      { data: { email: INVITEE_EMAIL }, error: null },
+      {
+        data: [
+          {
+            id: INVITING_REQUEST_ID,
+            user_id: INVITING_CAPTAIN_ID,
+            team_name: 'Lag Først',
+            status: 'pending',
+          },
+        ],
+        error: null,
+      },
+      { data: { id: 'child-1' }, error: null },
+      { data: null, error: null },
+    ]);
+
+    const { attachToCaptainTeam } = await import('./teamActions');
+    await attachToCaptainTeam('inv-1', SHORT_ID);
+
+    const expiryFilter = adminMock.__fromCalls.find(
+      (c) =>
+        c.table === 'invitations' &&
+        c.method === 'gt' &&
+        c.args[0] === 'expires_at',
+    );
+    expect(
+      expiryFilter,
+      'invitations-oppslaget må kjede .gt("expires_at", now)',
+    ).toBeDefined();
+    expect(Number.isNaN(Date.parse(expiryFilter!.args[1] as string))).toBe(false);
+  });
 });
