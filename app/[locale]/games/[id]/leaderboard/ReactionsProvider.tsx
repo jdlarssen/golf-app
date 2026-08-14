@@ -63,8 +63,9 @@ function applyToggle(
  * - **Live for others:** subscribes to `reactions` INSERT/DELETE for this game
  *   (REPLICA IDENTITY FULL + realtime publication, migration 0120) and refetches
  *   the authoritative summary — debounced 300ms to collapse bursts. Reuses
- *   `subscribeRealtimeChannel`, which owns the `setAuth` quirk + leak-safe
- *   cleanup (same helper as `LeaderboardRealtime`, #679).
+ *   `subscribeRealtimeChannel`, which owns the token lifecycle, resubscribe on
+ *   channel failure + leak-safe cleanup (same helper as `LeaderboardRealtime`,
+ *   #679).
  * - **Optimistic for me:** `toggle` updates local state immediately, then writes
  *   via the server action; the viewer's own write echoes back as a realtime
  *   event whose refetch reconciles any drift. On write failure it refetches to

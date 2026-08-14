@@ -47,10 +47,17 @@ function gameIdFromPath(pathname: string): string | null {
  * kollapser til én refresh.
  *
  * Følger samme mønster som `PreRoundLeaderboardRealtime`:
- * `subscribeRealtimeChannel` eier `setAuth`-quirken (WebSocket-transporten
- * plukker ikke opp cookie-sesjonen automatisk) og den lekk-resistente
- * oppryddingen. `scores` har REPLICA IDENTITY FULL (0006) og er i
- * realtime-publikasjonen (0005), så UPDATE-events er leverbare.
+ * `subscribeRealtimeChannel` eier token-livssyklusen, resubscribe ved
+ * kanalfeil og den lekk-resistente oppryddingen. `scores` har REPLICA IDENTITY
+ * FULL (0006) og er i realtime-publikasjonen (0005), så UPDATE-events er
+ * leverbare.
+ *
+ * I tillegg fanges tapte events (#1366): iOS suspenderer WebSocket-en når
+ * appen går i bakgrunnen, og events som skjer imens leveres aldri. Både
+ * `visibilitychange` (kun ved retur til synlig) og `online` ruter gjennom den
+ * samme debouncede `scheduleRefresh`, så én refresh henter inn alt som skjedde
+ * mens skjermen var av — uten den ville tavla stått med gamle tall til neste
+ * event kom, og PWA-en har ingen reload-vei.
  */
 export function LeaderboardRealtime({ gameId, active = true }: Props): null {
   const router = useRouter();
@@ -93,8 +100,19 @@ export function LeaderboardRealtime({ gameId, active = true }: Props): null {
           ),
     );
 
+    // Catch-up: alt som skjedde mens fanen lå i bakgrunnen (eller nettet var
+    // borte) hentes inn med én debouncet refresh når vi er tilbake.
+    const catchUp = () => {
+      if (document.visibilityState !== 'visible') return;
+      scheduleRefresh();
+    };
+    document.addEventListener('visibilitychange', catchUp);
+    window.addEventListener('online', catchUp);
+
     return () => {
       if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', catchUp);
+      window.removeEventListener('online', catchUp);
       unsubscribe();
     };
   }, [active, gameId, router]);

@@ -19,14 +19,22 @@ vi.mock('next/navigation', () => ({
 
 import { LeaderboardRealtime } from './LeaderboardRealtime';
 
+function setVisibility(state: 'visible' | 'hidden') {
+  Object.defineProperty(document, 'visibilityState', {
+    value: state,
+    configurable: true,
+  });
+}
+
 describe('LeaderboardRealtime', () => {
   beforeEach(() => {
     subscribeRealtimeChannel.mockClear();
     refresh.mockClear();
+    setVisibility('visible');
     window.history.pushState({}, '', '/no/games/game-from-route/leaderboard');
   });
 
-  it('subscribes to scores INSERT + UPDATE (#745) and skips when inactive', () => {
+  it('subscribes to scores INSERT + UPDATE (#745), catches up on return (#1366), and skips when inactive', () => {
     // Default (chrome mount): no gameId prop → reads it from the URL, subscribes.
     const { unmount } = render(<LeaderboardRealtime />);
     expect(subscribeRealtimeChannel).toHaveBeenCalledTimes(1);
@@ -66,8 +74,35 @@ describe('LeaderboardRealtime', () => {
     vi.advanceTimersByTime(300);
     expect(refresh).toHaveBeenCalledTimes(1);
 
-    vi.useRealTimers();
+    // #1366 catch-up: events lost while the tab was backgrounded (iOS suspends
+    // the socket) are pulled in on return — but not while still hidden.
+    refresh.mockClear();
+    setVisibility('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    vi.advanceTimersByTime(300);
+    expect(refresh).not.toHaveBeenCalled();
+
+    setVisibility('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    vi.advanceTimersByTime(300);
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    // Same catch-up when the network comes back.
+    refresh.mockClear();
+    window.dispatchEvent(new Event('online'));
+    vi.advanceTimersByTime(300);
+    expect(refresh).toHaveBeenCalledTimes(1);
+
     unmount();
+
+    // Both catch-up listeners are unhooked on unmount.
+    refresh.mockClear();
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('online'));
+    vi.advanceTimersByTime(300);
+    expect(refresh).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
 
     // Finished game (active=false): never opens a websocket.
     subscribeRealtimeChannel.mockClear();

@@ -29,8 +29,8 @@ type NotificationRowShape = { read_at: string | null };
  *    UPDATE-event ankommer før initial fetch har fullført.
  *  - Cleanup av realtime-kanalen ved unmount eller userId-bytte.
  *
- * Realtime krever eksplisitt `setAuth(jwt)` — `subscribeRealtimeChannel`
- * gjør det automatisk fra session, så hooken trenger ikke å bekymre seg.
+ * Token-livssyklus og gjenoppkobling ved kanalfeil eies av
+ * `subscribeRealtimeChannel` (#1366) — hooken trenger ikke å bekymre seg.
  */
 export function useUnreadNotificationsCount(userId: string | null): {
   count: number;
