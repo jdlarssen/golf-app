@@ -124,9 +124,12 @@ best ball (per-spiller, IKKE kollapset) — fiksen treffer riktig halvdel.
   **Evidens:** tsc clean; eslint 0 errors (page.tsx-kompleksitet REDUSERT
   112→106); vitest lib/games+lib/scoring/modes: 90 filer / 2016 tester;
   `npm run build` exit 0 (pipefail).
-- [ ] Staging-verifisering før merge: greensome-spill med to spillere, captain
+- [x] Staging-verifisering før merge: greensome-spill med to spillere, captain
   fører 3 hull, makkeren åpner Hjem → kortet viser «Fortsett → hull 4» (ikke
   hull 1).
+  **Evidens:** staging-klikk 2026-08-14 på PR-HEAD 6140129e — eksakt scenario
+  (lex-min = e2eplayer som captain, e2eadmin som makker i browseren): Hjem-kortet
+  lenket `/games/<id>/holes/4`. Bevis + label på PR #1607; testdata slettet.
 
 ## Bygge-avvik (dokumentert, alle vurdert kontrakts-forenlige)
 
