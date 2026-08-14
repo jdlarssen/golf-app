@@ -87,6 +87,15 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #1595: adminApproveScorecard re-reads the roster row through the service-role
+// client when the approve UPDATE matches 0 rows, to tell "already approved" apart
+// from "RLS filtered the write away". Defaults to an empty queue → the read
+// resolves `{ data: null }` (row gone), which keeps the idempotent branch.
+let adminSupabaseMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => adminSupabaseMock,
+}));
+
 function lastRedirect(): string | undefined {
   const arg = redirectMock.mock.calls.at(-1)?.[0];
   if (!arg) return undefined;
@@ -95,6 +104,7 @@ function lastRedirect(): string | undefined {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adminSupabaseMock = buildSupabaseMock([]);
 });
 
 // ─── adminWithdrawPlayer ────────────────────────────────────────────────────
@@ -325,6 +335,11 @@ describe('adminApproveScorecard', () => {
       // WITHOUT firing the audit log or notification (the latent bug #712 fixed).
       { data: [], error: null }, // game_players.update → 0 rows
     ]);
+    // #1595: the re-read confirms the card really is approved already, so the
+    // idempotent branch is the honest answer here.
+    adminSupabaseMock = buildSupabaseMock([
+      { data: { approved_at: '2026-08-14T10:00:00Z' }, error: null }, // game_players re-read
+    ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
     });
@@ -333,6 +348,31 @@ describe('adminApproveScorecard', () => {
 
     await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved#leverte-scorekort');
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(logAdminEventMock).not.toHaveBeenCalled();
+  });
+
+  it('#1595: 0-row update while the scorecard is still pending → ?error=db_players, not a false success', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Kari' }, error: null }, // users (loadRole)
+      { data: { created_by: 'creator-1' }, error: null }, // games.created_by (owner)
+      { data: { status: 'active' }, error: null }, // games.select(status)
+      { data: [], error: null }, // game_players.update → 0 rows (RLS filtered it away)
+    ]);
+    // The row exists and approved_at is STILL null → the write was blocked, not
+    // redundant. This is the shape a non-playing creator saw before migration
+    // 0160 opened the creator SELECT branch.
+    adminSupabaseMock = buildSupabaseMock([
+      { data: { approved_at: null }, error: null }, // game_players re-read
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'creator-1' } },
+    });
+
+    const { adminApproveScorecard } = await import('./actions');
+
+    await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/spillere?error=db_players');
     expect(notifyMock).not.toHaveBeenCalled();
     expect(logAdminEventMock).not.toHaveBeenCalled();
   });
