@@ -38,9 +38,13 @@ commit 068b016b.
   ingen nye copy-tester.
   **Evidens:** eslint 0 errors (3 pre-eksisterende complexity-warnings, ingen
   nye grener); `npm run build` exit 0.
-- [ ] Staging-verifisering før merge: engelsk locale → minst liga-tabellen
-  eller cup-deltakerlista med navnløs spiller; lar navnløs seg ikke arrangere →
-  VERIFICATION GAP + komponent-bevis fra test.
+- [x] Staging-verifisering før merge: engelsk locale → minst liga-tabellen
+  eller cup-deltakerlista med navnløs spiller.
+  **Evidens:** staging-klikk 2026-08-14 på PR-HEAD ddbe4cf0: EKTE navnløs
+  bruker (admin-API, name/nickname null) i E2E-draft-cup → deltakerlista viste
+  «Unknown player» på engelsk og «Ukjent spiller» på norsk (invers-assertert).
+  Ingen VERIFICATION GAP nødvendig. Bevis + label på PR #1605; testdata slettet
+  (deltaker + cup + auth-bruker).
 
 ## Kjente avvik
 
