@@ -204,6 +204,10 @@ describe('useUnreadNotificationsCount', () => {
     const { unmount } = renderHook(() => useUnreadNotificationsCount('user-1'));
 
     await flushPromises();
+    // #1366: hooken går via subscribeRealtimeChannel, som primer realtime-auth
+    // med en argumentløs setAuth før kanalen bygges — med argument ville
+    // biblioteket sluttet å fornye tokenet selv.
+    expect(setAuthSpy).toHaveBeenCalledWith();
     unmount();
     await flushPromises();
 
