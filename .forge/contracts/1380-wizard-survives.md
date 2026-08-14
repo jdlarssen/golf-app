@@ -77,3 +77,5 @@ Svar «alternativ B» i PR-en, så bygges det om på samme branch. Ingen hast �
 ## Bygge-evidens (2026-08-14)
 
 S1–S5 + adversarial a–h: PASS på unit-/kodenivå (evaluator runde 1 ACCEPT — `.forge/evaluations/1380-wizard-survives.md`); S1/S2 ekte back-/reload-oppførsel: staging-runden er porten. Gates: vitest 273/273 (suite-bredt 6109 hos builder), lint 0, tsc ren, build grønn (kjørt av BÅDE builder og evaluator). 4 ikke-blokkerende funn dokumentert i evalueringen (prefill-mounts skriver utkast; kontekst-mismatch sletter; ?bane=-fingeravtrykk; ingen avbryt-UI → TTL dekker).
+
+Staging-porten: PASS 2026-08-14 — S1/S2/S3/S4 + step99-uten-felle alle grønne i Playwright-runde (bevis: kommentar på PR #1620). Testdata ryddet.
