@@ -76,10 +76,13 @@ aldri sann for ikke-kapteiner → bunn-CTA-en bytter aldri til lever-varianten.
       + `npm run build`. **Evidens:** vitest 68 filer / 1324 grønne + `npm run build`
       exit 0 (pipefail) — kjørt av builder OG re-kjørt uavhengig av evaluator
       (Node v22.23.0).
-- [ ] **S6:** Staging-klikkrunde: scramble-spill med 2 spillere, logg inn som
+- [x] **S6:** Staging-klikkrunde: scramble-spill med 2 spillere, logg inn som
       IKKE-kaptein, fyll lagkortet komplett → lever-CTA vises på hull-siden, /submit
       viser 0 manglende, levering lykkes og lagets rader markeres levert.
-      **Evidens (fylles ved verifisering):** staging-bevis-kommentar på PR + label.
+      **Evidens:** Playwright mot staging 2026-08-14 (spill bbbbbbbb-1577-…): negativt
+      vern ved 17/18 (ingen CTA), lever-CTA + /submit-lenke ved 18/18, /submit uten
+      mangler-banner, levering satte submitted_at på BEGGE lag-rader 16:07:56Z,
+      prod-vakt grønn (alle kall mot staging-ref), 0 konsollfeil. Bevis-kommentar på PR.
 
 ## Gates
 
