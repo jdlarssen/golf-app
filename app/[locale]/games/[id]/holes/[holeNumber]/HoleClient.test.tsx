@@ -29,7 +29,6 @@ vi.mock('@/lib/sync/writeScore', () => ({
 }));
 
 vi.mock('@/lib/sync/syncWorker', () => ({
-  startSyncListener: vi.fn(),
   drainQueue: vi.fn().mockResolvedValue(undefined),
 }));
 

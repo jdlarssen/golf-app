@@ -17,7 +17,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { localDb, scoreKey, type LocalScore } from '@/lib/sync/db';
 import { writeScore } from '@/lib/sync/writeScore';
-import { startSyncListener, drainQueue } from '@/lib/sync/syncWorker';
+import { drainQueue } from '@/lib/sync/syncWorker';
 import { ScoreCard } from '@/components/hole/ScoreCard';
 import { PuttsField } from '@/components/hole/PuttsField';
 import { HoleStrip } from '@/components/hole/HoleStrip';
@@ -399,11 +399,6 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // Putt-registrering (#939): kun individuelle slag-/stableford-format viser
   // opt-in-bryteren + putts-feltet.
   const capturesPutts = formatCapturesPutts(gameMode);
-
-  // Sync listener — start once on mount.
-  useEffect(() => {
-    startSyncListener();
-  }, []);
 
   // Seed Dexie with server values on mount / hole change.
   // players is stable per render because the parent is a server component.
