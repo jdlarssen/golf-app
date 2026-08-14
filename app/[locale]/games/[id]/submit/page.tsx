@@ -439,6 +439,12 @@ async function ReviewBody({
         <SubmitForm
           submitAction={submitAction}
           missingHoles={missingHoles}
+          // #1370/#1466: the sync block covers every game this delivery
+          // freezes — this round, and the front9 sibling when it exists.
+          blockingGameIds={[
+            gameId,
+            ...(front9Sibling ? [front9Sibling.gameId] : []),
+          ]}
         />
       </div>
     </>

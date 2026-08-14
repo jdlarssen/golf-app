@@ -16,6 +16,7 @@ import { formatTime } from '@/lib/i18n/format';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { localDb, scoreKey, type LocalScore } from '@/lib/sync/db';
+import { isActiveForGame } from '@/lib/sync/queueScope';
 import { writeScore } from '@/lib/sync/writeScore';
 import { drainQueue } from '@/lib/sync/syncWorker';
 import { ScoreCard } from '@/components/hole/ScoreCard';
@@ -471,9 +472,12 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
 
   // #754: count non-abandoned items in the sync queue so SyncStatusLine can
   // show a "waiting for network" state while scores are queued but unsynced.
+  // #1370: scoped to THIS round — the queue is global, so an unsynced stroke
+  // from another round used to show up here as "waiting". The whole queue is
+  // read in one go and filtered in JS: syncQueue has no gameId index (db.ts).
   const syncQueue = useLiveQuery(() => localDb.syncQueue.toArray(), []);
   const pendingCount = (syncQueue ?? []).filter(
-    (item) => item != null && item.abandonedAt == null,
+    (item) => item != null && isActiveForGame(item, gameId),
   ).length;
 
   const cards = players.map((p, i) => {
