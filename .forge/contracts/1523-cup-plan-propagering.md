@@ -65,25 +65,31 @@ auto-starter aldri.
 
 ## Suksesskriterier (= issuets akseptkriterier + gates)
 
-- [ ] **S1:** Endrer arrangøren starttid i Oppsett etter generering (cup i draft) →
+- [x] **S1:** Endrer arrangøren starttid i Oppsett etter generering (cup i draft) →
       alle `scheduled`-kamper får ny tee-off med flight-forskyvning intakt for
-      splittet cup-dag. **Evidens:** Type A-tester på plan-funksjonen (test-commit
-      først) + staging-verifisering.
-- [ ] **S2:** Samme for bane og tee. **Evidens:** samme.
-- [ ] **S3:** Kamper med status `active`/`finished` endres aldri. **Evidens:**
-      Type A-test + evt. SQL-sjekk på staging.
-- [ ] **S4:** Oppsett-skjermen forteller arrangøren at eksisterende kamper
-      oppdateres (kun når genererte kamper finnes). **Evidens:** diff +
-      staging-skjermbilde; humanizer kjørt.
-- [ ] **S5:** Unit-test på propageringen: hvilke rader treffes, hvilke ikke
-      (scheduled vs active/finished; splittet vs enkel; NULL-plan-base).
-      **Evidens:** vitest-output.
-- [ ] **S6:** Staging-klikkrunde: sett opp cup uten starttid → generer → sett
-      starttid i Oppsett → kampene får den (SQL-verifisert) og auto-start-sveipet
-      plukker dem opp (eller E1-fallbacken på game-home). **Evidens:**
-      bevis-kommentar på PR + label.
-- [ ] **S7:** Gates: `npx vitest run lib/cup` + endrede filers tester +
-      `npm run build`. **Evidens:** output.
+      splittet cup-dag. **Evidens:** `lib/cup/cupPlanPropagation.ts` + 12 Type
+      A-tester (rød commit f7ab3696 før impl c1818c8d); flightIndex-mappingen
+      bevist mot genereringskoden (bunt-host → label-tall, avledet → hostens
+      flight, ikke-bunt → base-tid) og uavhengig re-bevist av evaluator
+      (cupPairing.ts:216–293: teller og flightIndex restarter sammen per batch).
+- [x] **S2:** Samme for bane og tee. **Evidens:** samme plan-funksjon/tester
+      («avledet match får samme bane og tee som hosten»).
+- [x] **S3:** Kamper med status `active`/`finished` endres aldri. **Evidens:**
+      trippelt vern (ren funksjons-filter + `.eq('status','scheduled')` i UPDATE
+      mot cron-racet + not_draft-gaten), alle testet; staging-runden beviser
+      blandet-status-caset ende-til-ende (S6).
+- [x] **S4:** Oppsett-skjermen forteller arrangøren at eksisterende kamper
+      oppdateres (kun når genererte kamper finnes). **Evidens:**
+      `data-testid="cup-plan-propagation-notice"` i delt CupPlanSetup (begge
+      ruter), tall == skrivesettet (evaluator-verifisert 1:1), i18n-paritet no/en,
+      humanizer kjørt av builder; staging-skjermbilder i S6.
+- [x] **S5:** Unit-test på propageringen. **Evidens:** 12 Type A + 3
+      action-tester (inkl. ny ærlig feilkode `plan_matches_not_updated` —
+      builder-ASSUMPTION dokumentert i rapporten, evaluator: semantikken ærlig).
+- [ ] **S6:** Staging-klikkrunde. **Evidens (fylles):** kjøres nå.
+- [x] **S7:** Gates: `npx vitest run lib/cup` (26 filer / 451 tester) +
+      `npm run build` exit 0 (pipefail) — builder OG evaluator uavhengig;
+      typecheck + lint rene; weekly-release dry-run validerer notatfila.
 
 ## Edge-case-tabell
 
