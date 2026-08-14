@@ -36,7 +36,12 @@ export function SideWinnersForm({
     <form action={action} className="space-y-6">
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-          {t('validationError')}
+          {/* typeof-guard: searchParams kan levere string[] ved duplisert
+              ?error-param — da (og for alle ikke-missing_-koder, i praksis
+              db_winners) er retry-rådet det trygge valget (#1567). */}
+          {typeof error === 'string' && error.startsWith('missing_')
+            ? t('validationError')
+            : t('dbError')}
         </div>
       )}
 

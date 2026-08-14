@@ -3547,6 +3547,7 @@
       },
       "sideWinners": {
         "validationError": "You must select a winner in all fields before finishing.",
+        "dbError": "Couldn't save the winners. Please try again.",
         "longestDriveLabel": "Longest drive",
         "longestDriveSlot": "Longest drive #{pos}",
         "closestToPinLabel": "Closest to pin",
