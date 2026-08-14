@@ -85,3 +85,5 @@ Vektede cuper (#1441, D8: egendefinerte `win_points`/`tie_points`) starter med `
 ## Bygge-evidens (2026-08-14)
 
 K1–K5: PASS (evaluator runde 1 ACCEPT — `.forge/evaluations/1444-weighted-cup-mail.md`; gamle snapshots byte-identiske uten -u, 43 filer/586 tester). K6: staging i PR-fasen. Humanizer-verdikt: NO-linja er kontrakt-ordlyd (eier-godkjent fra issuet), kort og idiomatisk — ingen AI-tells; verdiktet står i PR-body per evaluator-funn.
+
+K6 (staging): PASS 2026-08-14 — vektet cup startet via UI uten feil; 2 in-app-varsler; mail-forsøk logget for off-app-deltakeren (Resend-nøkkel ugyldig på staging = dokumentert VERIFICATION GAP for leveransen). Bevis: kommentar på PR #1619. Testdata gjenopprettet.
