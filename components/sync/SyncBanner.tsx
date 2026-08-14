@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useLocale, useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
+import { routing } from '@/i18n/routing';
 import { localDb, type SyncQueueItem, type ConflictRecord } from '@/lib/sync/db';
 import { drainQueue } from '@/lib/sync/syncWorker';
 import {
@@ -81,6 +82,7 @@ function friendlySyncError(
 export function SyncBanner({ gameId }: { gameId?: string }) {
   const t = useTranslations('SyncBanner');
   const locale = useLocale();
+  const pathname = usePathname();
   const queue = useLiveQuery<SyncQueueItem[] | undefined>(
     () => localDb.syncQueue.toArray(),
     [],
@@ -253,12 +255,21 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
     // Active-only variant: still-retrying items (transient errors / stuck
     // queue). Compact one-row banner, unchanged behavior from before #1369.
     const rawError = active.find((i) => i.lastError)?.lastError ?? null;
+    const errorKey = friendlySyncError(rawError);
     const message = hasErrors
       ? t('errorWithQueue', {
-          error: t(friendlySyncError(rawError)),
+          error: t(errorKey),
           count: active.length,
         })
       : t('queueWaiting', { count: active.length });
+
+    // #1371: an expired session tells the player to log in again but offered
+    // no way there — retry just re-runs the same failing sync. The next-param
+    // must carry the locale prefix itself (login's redirect consumes it raw,
+    // same contract as proxy.ts' login redirect).
+    const showLogin = hasErrors && errorKey === 'errorAuth';
+    const loginNext =
+      locale === routing.defaultLocale ? pathname : `/${locale}${pathname}`;
 
     const toneClasses = hasErrors
       ? 'bg-danger/[0.08] border-danger/30 text-danger'
@@ -271,16 +282,26 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
         <div className="min-w-0 text-sm font-medium leading-tight">
           <div className="truncate">{message}</div>
         </div>
-        {showRetry && (
-          <button
-            type="button"
-            onClick={handleRetry}
-            disabled={retrying}
-            className="shrink-0 rounded-md border border-current px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50"
-          >
-            {retrying ? t('retrying') : t('retry')}
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {showLogin && (
+            <Link
+              href={`/login?next=${encodeURIComponent(loginNext)}`}
+              className="inline-flex min-h-[44px] items-center rounded-md border border-current px-2.5 text-xs font-semibold uppercase tracking-wide"
+            >
+              {t('loginAction')}
+            </Link>
+          )}
+          {showRetry && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              disabled={retrying}
+              className="inline-flex min-h-[44px] items-center rounded-md border border-current px-2.5 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50"
+            >
+              {retrying ? t('retrying') : t('retry')}
+            </button>
+          )}
+        </div>
       </div>
     );
   })();

@@ -5368,7 +5368,8 @@
     "errorWithQueue": "{error}. {count, plural, one {1 stroke} other {# strokes}} waiting.",
     "queueWaiting": "{count, plural, one {1 stroke} other {# strokes}} waiting to be saved.",
     "retry": "Try again",
-    "retrying": "Sending…"
+    "retrying": "Sending…",
+    "loginAction": "Log in"
   },
   "installButton": {
     "label": "Install app"
