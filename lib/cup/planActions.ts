@@ -74,14 +74,37 @@ function revalidateCup(id: string, groupId: string | null): void {
  *    ingen UPDATE i det hele tatt.
  *
  * Én UPDATE per distinkt starttid (splittet cup-dag forskyver flightene ti
- * minutter hver) — bane og tee er like for alle. Returnerer id-ene som ble
- * oppdatert, slik at kalleren kan revalidere hver kamps cache-tag.
+ * minutter hver) — bane og tee er like for alle. Hver oppdatert kamp får
+ * cache-tagen sin revalidert her: kampene leses gjennom
+ * `getGameWithPlayers`-cachen (tag `game-${id}`), så uten dette ville
+ * hull-siden og kamp-hjemmet vist gammel bane og starttid.
+ *
+ * `false` ut betyr at planen ER lagret, men matchene ikke fikk verdiene —
+ * kalleren sier fra om nettopp det. En cup uten genererte matcher er `true`
+ * (ærlig no-op).
  */
 async function propagatePlanToScheduledMatches(
   admin: SupabaseClient<Database>,
   tournamentId: string,
   plan: CupPlanValues,
-): Promise<string[]> {
+): Promise<boolean> {
+  try {
+    return await writePlanToScheduledMatches(admin, tournamentId, plan);
+  } catch (err) {
+    console.error('[cup] saveCupPlan match propagation failed', {
+      tournamentId,
+      err,
+    });
+    return false;
+  }
+}
+
+/** Selve lesingen og skrivingen — feil kastes til wrapperen over. */
+async function writePlanToScheduledMatches(
+  admin: SupabaseClient<Database>,
+  tournamentId: string,
+  plan: CupPlanValues,
+): Promise<boolean> {
   const { data: rows, error } = await admin
     .from('games')
     .select('id, status, source_game_id, tournament_match_label, hole_segment')
@@ -97,7 +120,7 @@ async function propagatePlanToScheduledMatches(
   }));
 
   const updates = planCupPlanPropagation(matches, plan);
-  if (updates.length === 0) return [];
+  if (updates.length === 0) return true;
 
   const byTeeOff = new Map<string | null, string[]>();
   for (const u of updates) {
@@ -124,7 +147,8 @@ async function propagatePlanToScheduledMatches(
     updatedIds.push(...affected.map((row) => row.id));
   }
 
-  return updatedIds;
+  for (const gameId of updatedIds) revalidateTag(`game-${gameId}`, 'max');
+  return true;
 }
 
 /**
@@ -233,25 +257,14 @@ export async function saveCupPlan(
   // Egen feilkode: planen ER lagret på dette punktet, så `plan_save_failed`
   // ville løyet. Arrangøren får vite at matchene ikke fikk de nye verdiene og
   // kan lagre på nytt (skrivingen er idempotent).
-  let propagatedGameIds: string[] = [];
-  try {
-    propagatedGameIds = await propagatePlanToScheduledMatches(admin, id, {
-      courseId,
-      teeBoxId,
-      scheduledTeeOffAt,
-    });
-  } catch (err) {
-    console.error('[cup] saveCupPlan match propagation failed', { id, err });
-    revalidateCup(id, groupId);
-    return { error: 'plan_matches_not_updated' };
-  }
-
-  // Hver berørt kamp leses gjennom `getGameWithPlayers`-cachen (tag
-  // `game-${id}`) — uten dette ville hull-siden og kamp-hjemmet vist gammel
-  // bane/starttid til tagen tilfeldigvis ble revalidert av noe annet.
-  for (const gameId of propagatedGameIds) revalidateTag(`game-${gameId}`, 'max');
-
+  const propagated = await propagatePlanToScheduledMatches(admin, id, {
+    courseId,
+    teeBoxId,
+    scheduledTeeOffAt,
+  });
   revalidateCup(id, groupId);
+  if (!propagated) return { error: 'plan_matches_not_updated' };
+
   redirect(`${cupPath(id, groupId)}?status=plan_saved`);
   return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
