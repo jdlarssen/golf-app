@@ -155,6 +155,42 @@ export function supportsHoleSegment(mode: GameMode): boolean {
 }
 
 /**
+ * True for formater der hele laget deler ÉN scores-rad, eid av lag-kapteinen
+ * (lex-min userId, se `pickTeamCaptain` i `lib/games/teamCaptain.ts`). Single
+ * source of truth for «hvem eier radene her» — hull-siden bygger ett kort per
+ * lag i stedet for ett per spiller, og Hjem-kortet må telle kapteinens rader
+ * for å se makkerens reelle fremdrift (#1538).
+ *
+ * Uten dette hjemmet lekker regelen: makkeren i et greensome har null egne
+ * rader, så Hjem-kortet leste `filled.size = 0` og sendte hele laget tilbake
+ * til hull 1 uansett hvor langt de var kommet.
+ *
+ * Eksplisitt sammensetning (ikke egen switch), etter mønsteret fra
+ * `supportsHoleSegment`: scramble-familien (texas + ambrose + florida — alle
+ * tre kollapser, ikke bare texas) PLUSS alternate-shot-matchplay-familien
+ * (foursomes/greensome/chapman/gruesome) PLUSS patsome fra hull 7.
+ *
+ * `holeNumber` er kun nødvendig for patsome, som bytter form midtveis: hull
+ * 1–6 er 4BBB (hver spiller sin egen ball og sin egen rad), hull 7–18 er
+ * foursomes (delt lag-ball). Utelatt hull-nummer betyr «ikke kollapset» for
+ * patsome — 4BBB-halvdelen er det trygge defaultet, siden en feilaktig
+ * kollaps ville pekt på feil rad.
+ *
+ * NB: IKKE `formatPlayStyle(mode) === 'team'` — den er for bred og tar med
+ * best_ball, fourball og shamble, der hver spiller fører sin egen ball.
+ */
+export function modeCollapsesToTeamCard(
+  mode: GameMode,
+  holeNumber?: number,
+): boolean {
+  return (
+    isScrambleFamily(mode) ||
+    isAlternateShotMatchplay(mode) ||
+    (mode === 'patsome' && (holeNumber ?? 0) >= 7)
+  );
+}
+
+/**
  * True for individuelle formater uten lag-/flight-gruppering — spilleren er en
  * flat deltaker, ikke del av et lag eller en side. Single source of truth for
  * når UI skal skjule «Lag»/«Flight»-rader, vise hele deltaker-lista i stedet

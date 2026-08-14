@@ -5,6 +5,7 @@ import {
   isAlternateShotMatchplay,
   isMatchplayFamily,
   supportsHoleSegment,
+  modeCollapsesToTeamCard,
 } from './types';
 import type { GameMode } from './types';
 
@@ -196,5 +197,73 @@ describe('supportsHoleSegment', () => {
   it('additionally includes best_ball (the D11 revision over isMatchplayFamily)', () => {
     expect(supportsHoleSegment('best_ball')).toBe(true);
     expect(isMatchplayFamily('best_ball')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// modeCollapsesToTeamCard (#1538)
+// ---------------------------------------------------------------------------
+
+// The set the hole page collapses into ONE card per team: scramble family +
+// alternate-shot matchplay, unconditionally, plus patsome from hole 7.
+const COLLAPSE_ALWAYS: GameMode[] = [...SCRAMBLE_TRUE, ...ALT_SHOT_TRUE];
+const COLLAPSE_NEVER: GameMode[] = ALL_MODES.filter(
+  (m) => !COLLAPSE_ALWAYS.includes(m) && m !== 'patsome',
+);
+
+describe('modeCollapsesToTeamCard', () => {
+  it.each(COLLAPSE_ALWAYS)('returns true for team-card mode: %s', (mode) => {
+    expect(modeCollapsesToTeamCard(mode)).toBe(true);
+  });
+
+  it.each(COLLAPSE_ALWAYS)(
+    'stays true on every hole for hole-independent mode: %s',
+    (mode) => {
+      for (const hole of [1, 6, 7, 18]) {
+        expect(modeCollapsesToTeamCard(mode, hole)).toBe(true);
+      }
+    },
+  );
+
+  it.each(COLLAPSE_NEVER)('returns false for per-player mode: %s', (mode) => {
+    expect(modeCollapsesToTeamCard(mode)).toBe(false);
+    for (const hole of [1, 6, 7, 18]) {
+      expect(modeCollapsesToTeamCard(mode, hole)).toBe(false);
+    }
+  });
+
+  it.each([1, 2, 3, 4, 5, 6])(
+    'patsome hole %i is still 4BBB — every player owns their own rows',
+    (hole) => {
+      expect(modeCollapsesToTeamCard('patsome', hole)).toBe(false);
+    },
+  );
+
+  it.each([7, 8, 12, 18])(
+    'patsome hole %i is the foursomes segment — the team shares one card',
+    (hole) => {
+      expect(modeCollapsesToTeamCard('patsome', hole)).toBe(true);
+    },
+  );
+
+  it('patsome without a hole number is NOT collapsed (the 4BBB half is the safe default)', () => {
+    expect(modeCollapsesToTeamCard('patsome')).toBe(false);
+  });
+
+  it('includes ambrose and florida_scramble, not just texas (they share the captain row)', () => {
+    expect(modeCollapsesToTeamCard('ambrose')).toBe(true);
+    expect(modeCollapsesToTeamCard('florida_scramble')).toBe(true);
+  });
+
+  it('excludes the per-player team formats best_ball / fourball / shamble', () => {
+    expect(modeCollapsesToTeamCard('best_ball')).toBe(false);
+    expect(modeCollapsesToTeamCard('fourball_matchplay')).toBe(false);
+    expect(modeCollapsesToTeamCard('shamble')).toBe(false);
+  });
+
+  it('classifies every GameMode (exhaustive coverage)', () => {
+    for (const mode of ALL_MODES) {
+      expect(typeof modeCollapsesToTeamCard(mode, 18)).toBe('boolean');
+    }
   });
 });
