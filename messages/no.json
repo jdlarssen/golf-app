@@ -5368,7 +5368,8 @@
     "errorWithQueue": "{error}. {count} slag venter.",
     "queueWaiting": "{count} slag venter på lagring.",
     "retry": "Prøv igjen",
-    "retrying": "Sender…"
+    "retrying": "Sender…",
+    "loginAction": "Logg inn"
   },
   "installButton": {
     "label": "Installer som app"

@@ -132,6 +132,25 @@ describe('SyncBanner — karantene-varianten', () => {
     ).toBeInTheDocument();
   });
 
+  it('auth-feil i aktiv kø → «Logg inn»-lenke med next-param (#1371)', () => {
+    mockDexieData([
+      qItem({
+        scoreId: 'g1:u1:4',
+        abandonedAt: null,
+        attemptCount: 2,
+        lastError: 'invalid JWT: token has expired (401)',
+      }),
+    ]);
+    render(<SyncBanner gameId="g1" />);
+
+    // Global usePathname-mock gir '/', så unit-testen ser kun next=%2F —
+    // locale-prefikset verifiseres i staging-klikket (kontraktens NB).
+    expect(screen.getByRole('link', { name: 'Logg inn' })).toHaveAttribute(
+      'href',
+      '/login?next=%2F',
+    );
+  });
+
   it('malformet scoreId degraderer til generisk melding uten crash', () => {
     mockDexieData([qItem({ scoreId: 'not-a-score-key' })]);
     render(<SyncBanner gameId="g1" />);
