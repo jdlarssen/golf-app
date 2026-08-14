@@ -17,12 +17,19 @@
 -- adminWithdrawPlayer, adminUndoWithdraw and reopenGame — one policy cures all
 -- five, which is why the fix lives here and not in five call-sites (trap 4).
 --
--- The new policy is ADDITIVE and PERMISSIVE: it OR-s with the existing
--- "game_players select shared game" (which stays untouched), so player, admin
--- and flight reads are byte-identical to before. The qual is copied verbatim
--- from the sibling creator policies ("game_players creator insert/update/
--- delete", 0071 + the (SELECT auth.uid()) perf wrap from 0092) so the four
--- creator policies keep one shape.
+-- The qual MUST go through the SECURITY DEFINER helper, not an inline
+-- EXISTS on games: "games select if participant or admin" references
+-- game_players inline, so a game_players SELECT policy that references games
+-- inline closes the cycle game_players → games → game_players and every
+-- authenticated read of game_players dies with 42P17 (infinite recursion).
+-- Proven live on staging 2026-08-14: the inline-EXISTS variant of this policy
+-- took down all authenticated game_players reads and was dropped again. The
+-- sibling creator INSERT/UPDATE/DELETE policies get away with the inline form
+-- because only a SELECT policy participates in that cycle.
+--
+-- `is_game_creator_or_admin` (0107-hardened, SECURITY DEFINER, stable) already
+-- expresses exactly this intent and is what the trigger-side guards use. Its
+-- admin half overlaps is_admin() in the shared-game policy — harmless OR.
 --
 -- Disclosure: none beyond intent. The creator-facing surfaces
 -- (/games/[id]/spillere via getGameWithPlayers) already render this roster
@@ -33,16 +40,13 @@
 create policy "game_players creator select"
   on public.game_players for select
   to authenticated
-  using (exists (
-    select 1 from public.games g
-    where g.id = game_players.game_id
-      and g.created_by = (select auth.uid())
-  ));
+  using (public.is_game_creator_or_admin(game_id));
 
 comment on policy "game_players creator select" on public.game_players is
   '#1595: the game creator may read their own game''s roster even when they are '
   'not a player in it. Without this SELECT branch every creator UPDATE on '
   'game_players (approve, reopen, withdraw) silently matched 0 rows — Postgres '
-  'requires updated rows to pass the SELECT policy too. Additive/permissive: '
-  'OR-s with "game_players select shared game". Coverage: '
+  'requires updated rows to pass the SELECT policy too. Must stay on the '
+  'SECURITY DEFINER helper: an inline EXISTS on games recurses via "games '
+  'select if participant or admin" (42P17). Coverage: '
   'supabase/tests/game_players_creator_select_rls_test.sql.';
