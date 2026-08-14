@@ -5608,9 +5608,9 @@
       }
     ],
     "endCta": {
-      "headingPre": "Fire up your golf tournament in a couple of ",
-      "headingGold": "",
-      "headingPost": "minutes",
+      "headingPre": "Fire up your golf tournament in a ",
+      "headingGold": "par",
+      "headingPost": " of minutes",
       "body": "Enter your email. If you are new here, we will make you an account.",
       "primaryCta": "Create a tournament",
       "secondaryCta": "… or try the demo first"

@@ -1502,7 +1502,7 @@
         "example": "Hull 2, par 5: A slår til 230 m på fairway, B slår til 200 m i bunker. Motstanderlaget sier «B sin» (den i bunkeren). A (partneren til B) slår ut av bunkeren, B slår andreslag mot green, A putter. Lagets score: 5. Motstanderlaget, som er i ordinær foursomes-turnus selv, fullfører på 4 og vinner hullet."
       },
       "wolf": {
-        "shortDescription": "4 spillere, rotereende Wolf. Velg partner eller gå alene.",
+        "shortDescription": "4 spillere, roterende Wolf. Velg partner eller gå alene.",
         "summary": "Tre til fem spillere bytter på å være «ulv». Ulven velger på hvert hull om den vil spille med en partner, eller alene mot de andre.",
         "points": [
           "Velger ulven å spille alene og vinner hullet, gir det mest poeng. Men det er også mest å tape.",
