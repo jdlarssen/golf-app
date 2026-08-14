@@ -5,6 +5,9 @@ import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { expectAffected } from '@/lib/supabase/affectedRows';
+import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
@@ -222,6 +225,33 @@ export async function inviteEmailToGame(
     .maybeSingle<{ id: string; token: string; expires_at: string }>();
 
   if (existingInvite) {
+    // «Send på nytt» means «give this person a fresh chance» (#1381/#1613):
+    // push the deadline out a full TTL BEFORE mailing, so an expired-but-
+    // unaccepted invitation never produces a mail the login gate refuses
+    // (email_is_invited requires expires_at > now(), migration 0100). The
+    // write goes through the admin client: the only invitations UPDATE
+    // policy is «self mark accepted», so a non-admin organiser's user-client
+    // write would silently match 0 rows (AGENTS.md trap 2/3); authz for this
+    // path is the requireAdminOrCreator gate above.
+    const freshExpiresAt = gameInviteExpiresAtFromNow();
+    try {
+      expectAffected(
+        await getAdminClient()
+          .from('invitations')
+          .update({ expires_at: freshExpiresAt })
+          .eq('id', existingInvite.id)
+          .is('accepted_at', null)
+          .select('id'),
+        'inviteEmailToGame.extendExpiry',
+      );
+    } catch (extendError) {
+      // Plain Error on a DB refusal, NoRowsAffectedError when the row was
+      // accepted or deleted between the read and the write. Either way: no
+      // mail without a valid deadline — the organiser gets the error banner.
+      console.error('[inviteToGame/inviteEmail] expiry extend failed', extendError);
+      redirect({ href: `${detailPath}?error=invite_failed`, locale });
+    }
+
     // Re-send the notification mail best-effort so a retry by the organiser
     // always delivers — covers the case where the original send silently
     // dropped (Resend error, spam filter, etc.) without the row being rolled
@@ -236,7 +266,7 @@ export async function inviteEmailToGame(
         gameName: game.name,
         gameMode: game.game_mode,
         inviteToken: existingInvite.token,
-        expiresAt: existingInvite.expires_at,
+        expiresAt: freshExpiresAt,
       });
     } catch (retryErr) {
       console.error('[inviteToGame/inviteEmail] retry mail failed (best-effort)', retryErr);
@@ -245,7 +275,7 @@ export async function inviteEmailToGame(
     redirect({ href: `${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`, locale });
   }
 
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = gameInviteExpiresAtFromNow();
   const inviteToken = randomUUID();
   const { data: insertedInvitation, error: insertError } = await supabase
     .from('invitations')

@@ -66,6 +66,14 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #1613: re-send-grenen forlenger expires_at via admin-klienten (RLS-en har
+// ingen UPDATE-policy som dekker en ikke-admin arrangør). Egen mock-kø så
+// testene kan skille admin-klient-skriv fra bruker-klient-lesninger.
+let adminSupabaseMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => adminSupabaseMock,
+}));
+
 const ADMIN_ID = '11111111-1111-1111-1111-111111111111';
 const RECIPIENT_ID = '22222222-2222-2222-2222-222222222222';
 const GAME_ID = '33333333-3333-3333-3333-333333333333';
@@ -105,6 +113,7 @@ function formData(entries: Record<string, string>): FormData {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adminSupabaseMock = buildSupabaseMock([]);
 });
 
 describe('addExistingPlayerToGame', () => {
@@ -468,6 +477,10 @@ describe('inviteEmailToGame', () => {
         error: null,
       },
     ]);
+    // #1613: forlengelsen skriver via admin-klienten før mailen.
+    adminSupabaseMock = buildSupabaseMock([
+      { data: [{ id: 'invitation-1' }], error: null },
+    ]);
     authedAsAdmin();
 
     const { inviteEmailToGame } = await import('./inviteToGameActions');
@@ -484,9 +497,108 @@ describe('inviteEmailToGame', () => {
       gameName: 'Stiklestad',
       gameMode: 'stableford',
       inviteToken: 'eeeeeeee-1111-2222-3333-444444444444',
+      expiresAt: expect.any(String),
     });
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toContain('status=invite_sent');
+  });
+
+  it('re-send av UTLØPT pending: fristen forlenges og mailen bærer den nye (#1613)', async () => {
+    const STALE_EXPIRES_AT = '2026-08-01T00:00:00.000Z';
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
+      {
+        data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
+        error: null,
+      },
+      // users.select.ilike.maybeSingle — ingen treff
+      { data: null, error: null },
+      // invitations.select.ilike.eq.is.maybeSingle — pending, men utløpt
+      {
+        data: {
+          id: 'invitation-1',
+          token: 'eeeeeeee-1111-2222-3333-444444444444',
+          expires_at: STALE_EXPIRES_AT,
+        },
+        error: null,
+      },
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      // invitations.update.eq.is.select — forlengelsen treffer raden
+      { data: [{ id: 'invitation-1' }], error: null },
+    ]);
+    authedAsAdmin();
+    const before = Date.now();
+
+    const { inviteEmailToGame } = await import('./inviteToGameActions');
+    await expect(
+      inviteEmailToGame(GAME_ID, formData({ email: 'kompis@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Forlengelsen skrives via admin-klienten (RLS har ingen UPDATE-policy som
+    // dekker en ikke-admin arrangør — bruker-klient hadde no-op-et, felle 2/3),
+    // låst til raden og fortsatt-pending.
+    const updateCall = adminSupabaseMock.__fromCalls.find(
+      (c) => c.table === 'invitations' && c.method === 'update',
+    );
+    expect(updateCall, 'admin-klient update på invitations mangler').toBeDefined();
+    const written = (updateCall!.args[0] as { expires_at: string }).expires_at;
+    const ttlMs = Date.parse(written) - before;
+    // Full game-invite-TTL (14 d) fram i tid — ikke radens gamle frist.
+    expect(ttlMs).toBeGreaterThanOrEqual(14 * 24 * 60 * 60 * 1000 - 10_000);
+    expect(ttlMs).toBeLessThanOrEqual(14 * 24 * 60 * 60 * 1000 + 10_000);
+    const eqOnId = adminSupabaseMock.__fromCalls.find(
+      (c) => c.method === 'eq' && c.args[0] === 'id' && c.args[1] === 'invitation-1',
+    );
+    expect(eqOnId, 'forlengelsen må låses til rad-id').toBeDefined();
+    const isPending = adminSupabaseMock.__fromCalls.find(
+      (c) => c.method === 'is' && c.args[0] === 'accepted_at',
+    );
+    expect(isPending, 'forlengelsen må kreve accepted_at IS NULL').toBeDefined();
+
+    // Mailen bærer den NYE fristen — aldri den utløpte.
+    expect(sendInviteNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ expiresAt: written }),
+    );
+    expect(sendInviteNotificationMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ expiresAt: STALE_EXPIRES_AT }),
+    );
+    expect(lastRedirect()).toContain('status=invite_sent');
+  });
+
+  it('forlengelse som treffer 0 rader (akseptert i mellomtiden): ingen mail, error-redirect (#1613)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
+      {
+        data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
+        error: null,
+      },
+      // users.select.ilike.maybeSingle — ingen treff
+      { data: null, error: null },
+      // invitations.select.ilike.eq.is.maybeSingle — pending finnes
+      {
+        data: {
+          id: 'invitation-1',
+          token: 'eeeeeeee-1111-2222-3333-444444444444',
+          expires_at: '2026-08-01T00:00:00.000Z',
+        },
+        error: null,
+      },
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      // invitations.update.eq.is.select — raden ble akseptert/slettet i mellomtiden
+      { data: [], error: null },
+    ]);
+    authedAsAdmin();
+
+    const { inviteEmailToGame } = await import('./inviteToGameActions');
+    await expect(
+      inviteEmailToGame(GAME_ID, formData({ email: 'kompis@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Aldri mail uten gyldig frist (hele poenget med #1613).
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toContain('error=invite_failed');
   });
 
   it('mail-feil ved ukjent e-post: ruller invitations-raden tilbake via row-id (#705)', async () => {
