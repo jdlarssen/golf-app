@@ -602,6 +602,130 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
   });
 });
 
+describe('HoleClient — deliver CTA for a non-captain (#1577)', () => {
+  // The team's rows live under the captain's user_id, so a non-captain has no
+  // rows of their own to count. Same 3-call contract as the helpers above, but
+  // the 2nd call (localScoredRows) now carries the whole round's Dexie rows —
+  // that's the set the owner rule filters.
+  function useLiveQueryImplWithScoredRows(
+    localRows: Array<{ strokes?: number | null } | undefined>,
+    scoredRows: Array<{ userId: string; holeNumber: number; strokes: number }>,
+  ) {
+    let callCount = 0;
+    return () => {
+      callCount++;
+      if (callCount === 1) return localRows;
+      if (callCount === 2) return scoredRows;
+      return [];
+    };
+  }
+
+  const teamCard: HoleClientProps['players'] = [
+    {
+      userId: 'a-captain',
+      name: 'Lag 1 · Ola, Kari',
+      nickname: null,
+      initial: '1',
+      extraStrokes: 0,
+      initialStrokes: null,
+      initialPutts: null,
+      initialClientUpdatedAt: null,
+      initialServerUpdatedAt: null,
+      submitted: false,
+      teamNumber: 1,
+    },
+  ];
+
+  function rowsFor(userId: string, holes: number[]) {
+    return holes.map((holeNumber) => ({ userId, holeNumber, strokes: 4 }));
+  }
+
+  it('texas_scramble: a complete TEAM card surfaces the deliver CTA for the non-captain', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithScoredRows(
+        [{ strokes: 4 }],
+        rowsFor('a-captain', Array.from({ length: 18 }, (_, i) => i + 1)),
+      ),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode: 'texas_scramble',
+          currentHole: 7,
+          players: teamCard,
+          myUserId: 'u-viewer',
+          myTeamNumber: 1,
+          myTeamScoreOwnerId: 'a-captain',
+        })}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Lever lagets scorekort' });
+    expect(link.getAttribute('href')).toBe('/games/g1/submit');
+  });
+
+  it('patsome: my own 4BBB holes 1–6 plus the team ball on 7–18 completes the round', () => {
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithScoredRows(
+        [{ strokes: 4 }],
+        [
+          ...rowsFor('u-viewer', [1, 2, 3, 4, 5, 6]),
+          ...rowsFor(
+            'a-captain',
+            Array.from({ length: 12 }, (_, i) => i + 7),
+          ),
+        ],
+      ),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode: 'patsome',
+          currentHole: 7,
+          players: teamCard,
+          myUserId: 'u-viewer',
+          myTeamNumber: 1,
+          myTeamScoreOwnerId: 'a-captain',
+        })}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Lever scorekort' });
+    expect(link.getAttribute('href')).toBe('/games/g1/submit');
+  });
+
+  it('patsome: the captain’s row on a 4BBB hole does NOT stand in for mine', () => {
+    // Hole 5 is 4BBB — only MY ball counts there, so a captain row on it
+    // leaves the round one hole short and the CTA on «Neste hull».
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithScoredRows(
+        [{ strokes: 4 }],
+        [
+          ...rowsFor('u-viewer', [1, 2, 3, 4, 6]),
+          ...rowsFor('a-captain', [5]),
+          ...rowsFor(
+            'a-captain',
+            Array.from({ length: 12 }, (_, i) => i + 7),
+          ),
+        ],
+      ),
+    );
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode: 'patsome',
+          currentHole: 7,
+          players: teamCard,
+          myUserId: 'u-viewer',
+          myTeamNumber: 1,
+          myTeamScoreOwnerId: 'a-captain',
+        })}
+      />,
+    );
+    expect(
+      screen.getByRole('link', { name: 'Neste hull · 8' }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('HoleClient — missing-score hint renders in team/pot formats (#1058)', () => {
   it.each(['singles_matchplay', 'skins', 'wolf'] as const)(
     'shows the hint for %s when a flight-mate score is missing',

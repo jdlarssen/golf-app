@@ -31,6 +31,7 @@ import type {
 } from '@/lib/scoring/modes/types';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
 import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import {
   firstHoleForSegment,
   holeNumbersForSegment,
@@ -260,6 +261,19 @@ export default async function HolePage({ params }: { params: Params }) {
   const flight = roster;
   const playerIds = flight.map((p) => p.user_id);
 
+  // #1577: in the team-collapsed modes the whole team taps into ONE scores row
+  // owned by the captain, so a non-captain has no rows of their own to count —
+  // the deliver-CTA never appeared for them. Resolve the row owner from the
+  // full team (not the flight): row ownership is a property of the team, the
+  // same rule the Home card reads (#1538). Null when I have no team, when the
+  // team is unreadable, or when everyone withdrew — all «count my own rows».
+  const myTeamScoreOwnerId =
+    me.team_number == null
+      ? null
+      : teamScoreOwnerId(
+          allPlayers.filter((p) => p.team_number === me.team_number),
+        );
+
   const isStableford = isStablefordFamily(game.game_mode);
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isGreensome = game.game_mode === 'greensome_matchplay';
@@ -316,15 +330,18 @@ export default async function HolePage({ params }: { params: Params }) {
         .returns<ScoreRow[]>(),
       // #1352: radene, ikke bare antallet — hull-stripa trenger å vite HVILKE
       // hull som har score for å skille et hoppet-over hull fra et tastet.
-      // Maks 18 rader, samme filtre og RLS-vei som count-en den erstattet
+      // Maks 36 rader, samme filtre og RLS-vei som count-en den erstattet
       // (samme mønster som PrimaryCta.tsx).
+      // #1577: i lag-kollapsede modus ligger radene på kapteinen, så vi henter
+      // begge id-enes rader og siler per hull under — kapteinens rad teller kun
+      // på hull der modusen faktisk kollapser (patsome sin 4BBB-halvdel ikke).
       supabase
         .from('scores')
-        .select('hole_number')
+        .select('hole_number, user_id')
         .eq('game_id', id)
-        .eq('user_id', userId)
+        .in('user_id', scoreOwnerUserIds(game.game_mode, userId, myTeamScoreOwnerId))
         .not('strokes', 'is', null)
-        .returns<{ hole_number: number }[]>(),
+        .returns<{ hole_number: number; user_id: string }[]>(),
       isStableford
         ? supabase
             .from('course_holes')
@@ -436,7 +453,20 @@ export default async function HolePage({ params }: { params: Params }) {
   // `?? []` degraderer på samme måte som dagens `?? 0` gjorde: en feilet
   // lesing gir tom liste, og Dexie-settet på klienten dekker uansett alt som
   // er tastet på enheten.
-  const myScoredHoles = (myScoredHolesRes.data ?? []).map((r) => r.hole_number);
+  // #1577: per-hull-eier siler bort raden som ikke gjelder — er jeg kaptein
+  // (eller er modusen ikke kollapset) er dette nøyaktig dagens `user_id`-filter.
+  const myScoredHoles = (myScoredHolesRes.data ?? [])
+    .filter(
+      (r) =>
+        r.user_id ===
+        scoreOwnerForHole(
+          game.game_mode,
+          r.hole_number,
+          userId,
+          myTeamScoreOwnerId,
+        ),
+    )
+    .map((r) => r.hole_number);
 
   // Stableford totals — komputeres server-side når modus krever det.
   // myStablefordTotal: summen over alle ferdig-tastede hull (brukerens egen
@@ -938,6 +968,7 @@ export default async function HolePage({ params }: { params: Params }) {
         strokeIndex={hole.stroke_index}
         myUserId={userId}
         myTeamNumber={me.team_number}
+        myTeamScoreOwnerId={myTeamScoreOwnerId}
         myScoredHoles={myScoredHoles}
         courseId={game.course_id}
         greenCenter={greenCenter}
