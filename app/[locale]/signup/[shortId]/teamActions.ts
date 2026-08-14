@@ -12,6 +12,7 @@ import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
+import { inviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -379,7 +380,7 @@ export async function submitTeamRegistration(
   // Per-slot-løkke. Hver slot håndteres separat så feil på én ikke
   // ruller tilbake resten.
   const slotResults: TeamSlotResult[] = [];
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = inviteExpiresAtFromNow();
 
   for (const slot of normalizedSlots) {
     try {
