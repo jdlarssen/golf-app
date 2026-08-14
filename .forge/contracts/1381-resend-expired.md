@@ -76,3 +76,5 @@ Svar «alternativ B» i PR-en, så bygges det om på samme branch. Ingen hast �
 ## Bygge-evidens (2026-08-14)
 
 S1–S4 + adversarial a–g: PASS (evaluator runde 1 ACCEPT — `.forge/evaluations/1381-resend-expired.md`). Gates: vitest 227/227 (mail-snapshots uendret), lint 0 errors, tsc clean, build exit 0 (builder). Staging-klikk: PR-fasen. Builder-funn filet: #1613 (spill-invite samme mønster), #1614 (TTL-restanse), #1615 (telle-avvik).
+
+Staging-gate: PASS 2026-08-14 — badge synlig på utløpt rad, resend → +7d frist, `email_is_invited` false→true, testdata ryddet. Bevis: kommentar på PR #1616.
