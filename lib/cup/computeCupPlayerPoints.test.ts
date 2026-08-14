@@ -56,7 +56,12 @@ function ctp(overrides: Partial<Extract<CupSideAwardSnapshot, { kind: 'ctp' | 'l
 
 describe('computeCupPlayerPoints', () => {
   it('tom cup (0 kamper, 0 sidepoeng): alle roster-spillere 0 p, sortert på navn', () => {
-    const result = computeCupPlayerPoints({ matches: [], roster: roster(), sideAwards: [] });
+    const result = computeCupPlayerPoints({
+      matches: [],
+      roster: roster(),
+      sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
+    });
 
     // Navn asc med norsk collator (team2 beviser sortering: motsatt av
     // innsettings-rekkefølgen [Knut, Kari] → [Kari, Knut]).
@@ -72,6 +77,7 @@ describe('computeCupPlayerPoints', () => {
       matches: [match({ pointsTeam1: 1, pointsTeam2: 0 })],
       roster: roster(),
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     const per = result.team1.find((r) => r.userId === 'p1')!;
@@ -109,6 +115,7 @@ describe('computeCupPlayerPoints', () => {
       ],
       roster: roster(),
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     const per = result.team1.find((r) => r.userId === 'p1')!;
@@ -133,6 +140,7 @@ describe('computeCupPlayerPoints', () => {
       ],
       roster: roster(),
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     // p1 spiller begge (win + tie) → winPoints + tiePoints.
@@ -158,6 +166,7 @@ describe('computeCupPlayerPoints', () => {
       ],
       roster: roster(),
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     // Begge på lag 1 får HELE tie_points (1), ikke 0,5.
@@ -190,6 +199,7 @@ describe('computeCupPlayerPoints', () => {
         ],
       }),
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result.team1.map((r) => r.userId)).toEqual(['p2', 'p1']); // Anders før Bård
@@ -206,6 +216,7 @@ describe('computeCupPlayerPoints', () => {
       ],
       roster: roster(),
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result.team1.map((r) => r.userId)).toEqual(['p1', 'p2']);
@@ -216,6 +227,7 @@ describe('computeCupPlayerPoints', () => {
     const result = computeCupPlayerPoints({
       matches: [],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
       sideAwards: [
         ctp({ id: 'sa1', kind: 'ctp', holeNumber: 7, points: 1, winnerUserId: 'p1', winnerTeam: 1 }),
         ctp({ id: 'sa2', kind: 'ld', holeNumber: 12, points: 2, winnerUserId: 'k2', winnerTeam: 2 }),
@@ -235,6 +247,7 @@ describe('computeCupPlayerPoints', () => {
     const result = computeCupPlayerPoints({
       matches: [],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
       sideAwards: [
         ctp({ id: 'sa1', winnerUserId: 'ghost', winnerTeam: null }), // ikke i rosteret
         ctp({ id: 'sa2', winnerUserId: null, winnerTeam: null }), // ingen vinner tastet
@@ -249,6 +262,7 @@ describe('computeCupPlayerPoints', () => {
     const result = computeCupPlayerPoints({
       matches: [],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
       sideAwards: [
         { id: 'sa1', kind: 'gir', holeNumber: 3, points: 1.5, maxPerTeam: 3, team1Count: 2, team2Count: 1 },
       ],
@@ -266,6 +280,7 @@ describe('computeCupPlayerPoints', () => {
       ],
       roster: roster(),
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result.team1.every((r) => r.points === 0)).toBe(true);
@@ -280,6 +295,7 @@ describe('computeCupPlayerPoints', () => {
       ],
       roster: roster(),
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result.team1.find((r) => r.userId === 'p1')!.points).toBe(1.5);
@@ -296,6 +312,7 @@ describe('computeCupPlayerPoints', () => {
         team2: [],
       },
       sideAwards: [],
+      unknownLabel: 'Ukjent spiller',
     });
 
     const names = result.team1.map((r) => r.displayName);

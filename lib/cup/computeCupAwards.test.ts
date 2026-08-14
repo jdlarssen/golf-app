@@ -138,7 +138,11 @@ describe('computeCupUnderperformer', () => {
   it('summerer netto mot par over de personlig førte hullene', () => {
     // Scratch-spiller (CH 0), 9 hull på par 4, brutto 5 hvert hull → +1 per
     // hull = +9 totalt.
-    const result = computeCupUnderperformer({ games: [game()], roster: roster() });
+    const result = computeCupUnderperformer({
+      games: [game()],
+      roster: roster(),
+      unknownLabel: 'Ukjent spiller',
+    });
 
     expect(result).toEqual({ names: ['Per'], overPar: 9 });
   });
@@ -149,6 +153,7 @@ describe('computeCupUnderperformer', () => {
     const scratch = computeCupUnderperformer({
       games: [game({ players: [{ userId: 'p1', courseHandicap: 9 }] })],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
     expect(scratch).toBeNull();
 
@@ -161,6 +166,7 @@ describe('computeCupUnderperformer', () => {
         }),
       ],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
     expect(worse).toEqual({ names: ['Per'], overPar: 9 });
   });
@@ -176,6 +182,7 @@ describe('computeCupUnderperformer', () => {
         }),
       ],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     // g1: 5 hull × +1 = 5. g2: 4 hull × +2 = 8. Til sammen 9 hull, +13.
@@ -186,6 +193,7 @@ describe('computeCupUnderperformer', () => {
     const result = computeCupUnderperformer({
       games: [game({ scores: scoresFor('p1', [1, 2, 3, 4, 5, 6, 7, 8], 8) })],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result).toBeNull();
@@ -193,7 +201,11 @@ describe('computeCupUnderperformer', () => {
 
   it(`kvalifiserer på nøyaktig ${MIN_HOLES_FOR_UNDERPERFORMER} hull (grensen er inklusiv)`, () => {
     expect(MIN_HOLES_FOR_UNDERPERFORMER).toBe(9);
-    const result = computeCupUnderperformer({ games: [game()], roster: roster() });
+    const result = computeCupUnderperformer({
+      games: [game()],
+      roster: roster(),
+      unknownLabel: 'Ukjent spiller',
+    });
 
     expect(result).toEqual({ names: ['Per'], overPar: 9 });
   });
@@ -213,6 +225,7 @@ describe('computeCupUnderperformer', () => {
         }),
       ],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     // Knut: +3 per hull × 9 = 27 mot Pers 9.
@@ -234,6 +247,7 @@ describe('computeCupUnderperformer', () => {
         }),
       ],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result).toEqual({ names: ['Knut', 'Per'], overPar: 9 });
@@ -243,6 +257,7 @@ describe('computeCupUnderperformer', () => {
     const result = computeCupUnderperformer({
       games: [game({ scores: scoresFor('p1', [1, 2, 3, 4, 5, 6, 7, 8, 9], 4) })],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result).toBeNull();
@@ -261,6 +276,7 @@ describe('computeCupUnderperformer', () => {
         }),
       ],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result).toBeNull();
@@ -280,6 +296,7 @@ describe('computeCupUnderperformer', () => {
         }),
       ],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     // Bare de 9 segment-hullene: +1 hver. Front9-radene ville gitt +6 hver.
@@ -301,6 +318,7 @@ describe('computeCupUnderperformer', () => {
         }),
       ],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result).toEqual({ names: ['Per'], overPar: 9 });
@@ -318,13 +336,20 @@ describe('computeCupUnderperformer', () => {
         }),
       ],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result).toEqual({ names: ['Per'], overPar: 9 });
   });
 
   it('returnerer null uten personlig førte spill (f.eks. ren greensome-cup)', () => {
-    expect(computeCupUnderperformer({ games: [], roster: roster() })).toBeNull();
+    expect(
+      computeCupUnderperformer({
+        games: [],
+        roster: roster(),
+        unknownLabel: 'Ukjent spiller',
+      }),
+    ).toBeNull();
   });
 
   it('teller samme hullnummer i to ULIKE spill hver for seg', () => {
@@ -339,6 +364,7 @@ describe('computeCupUnderperformer', () => {
     const result = computeCupUnderperformer({
       games: [game({ gameId: 'dag1' }), game({ gameId: 'dag2' })],
       roster: roster(),
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result).toEqual({ names: ['Per'], overPar: 18 });
@@ -348,6 +374,7 @@ describe('computeCupUnderperformer', () => {
     const result = computeCupUnderperformer({
       games: [game()],
       roster: roster({ team1: [{ userId: 'p1', name: 'Per', nickname: 'Pelle' }] }),
+      unknownLabel: 'Ukjent spiller',
     });
 
     expect(result).toEqual({ names: ['Pelle'], overPar: 9 });

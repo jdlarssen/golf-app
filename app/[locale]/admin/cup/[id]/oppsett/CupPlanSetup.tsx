@@ -69,11 +69,10 @@ export async function CupPlanSetup({
 }) {
   const supabase = await getServerClient();
 
-  const [snapshot, t, locale] = await Promise.all([
-    getCupSnapshot(tournamentId),
-    getTranslations('cup'),
-    getLocale(),
-  ]);
+  // Oversettelsene først: navne-fallbacken (#1527) er input til snapshot-en.
+  const [t, locale] = await Promise.all([getTranslations('cup'), getLocale()]);
+
+  const snapshot = await getCupSnapshot(tournamentId, t('manage.unknownPlayer'));
   if (!snapshot) notFound();
 
   const { tournament } = snapshot;

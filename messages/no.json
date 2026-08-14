@@ -4476,6 +4476,7 @@
         "coPlayersLegend": "Velg medspillere",
         "startButton": "Start flight",
         "startPending": "Starter flight …",
+        "unknownPlayer": "Ukjent spiller",
         "errorMap": {
           "need_marker": "Du må velge minst én medspiller.",
           "outside_window": "Runden er ikke åpen for spill nå.",

@@ -4476,6 +4476,7 @@
         "coPlayersLegend": "Choose your playing partners",
         "startButton": "Start flight",
         "startPending": "Starting flight …",
+        "unknownPlayer": "Unknown player",
         "errorMap": {
           "need_marker": "You must select at least one playing partner.",
           "outside_window": "The round is not open for play right now.",

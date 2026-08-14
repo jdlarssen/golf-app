@@ -3,8 +3,8 @@ import type { LeagueStandingRow, LeagueStandingCell } from '@/lib/league/types';
 import type { LeagueRoundView, LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 
-function playerName(p: LeagueParticipant): string {
-  return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
+function playerName(p: LeagueParticipant, unknownLabel: string): string {
+  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
 }
 
 /** Format a net-to-par number: "E", "+3", "−5". Uses minus sign (−), not hyphen. */
@@ -162,7 +162,11 @@ export function LeagueStandingsTable({
         <tbody>
           {ordered.map((row, idx) => {
             const participant = participantMap.get(row.userId);
-            const name = participant ? playerName(participant) : t('unknownPlayer');
+            // Én kilde for hele tabellen (#1527): samme nøkkel enten raden
+            // mangler deltaker eller deltakeren mangler navn.
+            const name = participant
+              ? playerName(participant, t('unknownPlayer'))
+              : t('unknownPlayer');
             const isFirst = row.rank === 1;
             const isUnranked = !row.ranked;
 

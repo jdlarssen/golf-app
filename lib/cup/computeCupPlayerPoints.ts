@@ -45,17 +45,24 @@ export type CupPlayerPointsInput = {
   matches: CupMatchSummary[];
   roster: CupRoster;
   sideAwards: CupSideAwardSnapshot[];
+  /**
+   * Visningsnavnet for en spiller uten navn OG uten kallenavn. Påkrevd, ikke
+   * defaultet: dette biblioteket kjenner ingen locale, så teksten må komme
+   * oversatt fra kallstedet (#1527). En default her ville stille lekket norsk
+   * inn i engelsk visning igjen.
+   */
+  unknownLabel: string;
 };
 
 // Samme fallback-regel som getCupSnapshot.preferredName: nickname foran navn,
-// begge trimmet, «Ukjent spiller» når begge mangler. Eksportert fordi
-// kåringene (#1508) må navngi de samme spillerne etter nøyaktig samme regel.
-export function preferredName(p: CupRosterPlayer): string {
-  return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
+// begge trimmet, `unknownLabel` når begge mangler. Eksportert fordi kåringene
+// (#1508) må navngi de samme spillerne etter nøyaktig samme regel.
+export function preferredName(p: CupRosterPlayer, unknownLabel: string): string {
+  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
 }
 
 export function computeCupPlayerPoints(input: CupPlayerPointsInput): CupPlayerPointsResult {
-  const { matches, roster, sideAwards } = input;
+  const { matches, roster, sideAwards, unknownLabel } = input;
 
   // Én rad per roster-spiller. Kartene peker på de SAMME rad-objektene som
   // ligger i team-arrayene, så krediteringen muterer raden direkte.
@@ -66,7 +73,7 @@ export function computeCupPlayerPoints(input: CupPlayerPointsInput): CupPlayerPo
     if (team1ByUser.has(p.userId)) continue;
     team1ByUser.set(p.userId, {
       userId: p.userId,
-      displayName: preferredName(p),
+      displayName: preferredName(p, unknownLabel),
       team: 1,
       points: 0,
       contributions: [],
@@ -76,7 +83,7 @@ export function computeCupPlayerPoints(input: CupPlayerPointsInput): CupPlayerPo
     if (team2ByUser.has(p.userId)) continue;
     team2ByUser.set(p.userId, {
       userId: p.userId,
-      displayName: preferredName(p),
+      displayName: preferredName(p, unknownLabel),
       team: 2,
       points: 0,
       contributions: [],

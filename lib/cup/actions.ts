@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -318,7 +319,11 @@ export async function finishTournament(formData: FormData) {
   const actor = await requireAdminOrClubAdminOfCup(supabase, id);
   const base = await cupRedirectBase(supabase, id);
 
-  const snapshot = await getCupSnapshot(id);
+  // Navne-fallbacken snapshot-en bygger (#1527) følger arrangørens locale.
+  const tCup = await getTranslations('cup');
+  const unknownLabel = tCup('manage.unknownPlayer');
+
+  const snapshot = await getCupSnapshot(id, unknownLabel);
   if (!snapshot) redirect('/admin/cup?error=not_found');
   if (snapshot.tournament.status === 'finished') {
     redirect(`${base.path}?error=already_finished`);
@@ -381,7 +386,7 @@ export async function finishTournament(formData: FormData) {
 
   // 5. Re-les snapshotet etter at kampene er avsluttet — vinneren regnes på den
   // ferske stillingen (match-poeng teller kun for `finished` kamper).
-  const finalSnapshot = await getCupSnapshot(id);
+  const finalSnapshot = await getCupSnapshot(id, unknownLabel);
   if (!finalSnapshot) redirect('/admin/cup?error=not_found');
   const finalLeaderboard = finalSnapshot!.leaderboard;
   const finalTournament = finalSnapshot!.tournament;

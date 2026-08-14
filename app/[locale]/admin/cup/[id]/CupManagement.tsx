@@ -189,10 +189,11 @@ export async function CupManagement({
   errorCode?: string;
   statusCode?: string;
 }) {
-  const [snapshot, t] = await Promise.all([
-    getCupSnapshot(tournamentId),
-    getTranslations('cup'),
-  ]);
+  // Oversettelsene først: navne-fallbacken (#1527) er input til snapshot-en.
+  const t = await getTranslations('cup');
+  const unknownLabel = t('manage.unknownPlayer');
+
+  const snapshot = await getCupSnapshot(tournamentId, unknownLabel);
   if (!snapshot) notFound();
 
   const { tournament, leaderboard, roster } = snapshot;
@@ -267,7 +268,7 @@ export async function CupManagement({
     .join(', ');
 
   function preferredName(p: CupRosterPlayer): string {
-    return p.nickname?.trim() || p.name?.trim() || t('manage.unknownPlayer');
+    return p.nickname?.trim() || p.name?.trim() || unknownLabel;
   }
 
   // #1441 (D9): vinner-dropdownen i SideAwardsPanel trenger navn merket med

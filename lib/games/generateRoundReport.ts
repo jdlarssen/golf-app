@@ -13,6 +13,7 @@ const MAX_TOKENS = 800;
 const TIMEOUT_MS = 20_000;
 const MAX_RETRIES = 1;
 const MIN_SCORED_HOLES = 6;
+// nb-only surface by design (#1527) — rundereferatet skrives på norsk.
 const PLAYER_FALLBACK = 'Ukjent spiller';
 
 export type RoundReportStatus = 'generated' | 'skipped' | 'failed';

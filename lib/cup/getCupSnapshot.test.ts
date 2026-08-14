@@ -82,7 +82,7 @@ describe('getCupSnapshot — course_holes par-select (#642)', () => {
     ]);
 
     const { getCupSnapshot } = await import('@/lib/cup/getCupSnapshot');
-    const snap = await getCupSnapshot('t1');
+    const snap = await getCupSnapshot('t1', 'Ukjent spiller');
     expect(snap).not.toBeNull();
 
     const holesSelect = supabaseMock.__fromCalls.find(
@@ -238,7 +238,7 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
     ]);
 
     const { getCupSnapshot } = await import('@/lib/cup/getCupSnapshot');
-    const snap = await getCupSnapshot('t1');
+    const snap = await getCupSnapshot('t1', 'Ukjent spiller');
     expect(snap).not.toBeNull();
 
     const byId = (id: string) => snap!.leaderboard.matches.find((m) => m.gameId === id)!;
@@ -389,7 +389,7 @@ describe('getCupSnapshot — sidepoeng-slots + GIR (#1489)', () => {
     ]);
 
     const { getCupSnapshot } = await import('@/lib/cup/getCupSnapshot');
-    const snap = await getCupSnapshot('t1');
+    const snap = await getCupSnapshot('t1', 'Ukjent spiller');
     expect(snap).not.toBeNull();
 
     expect(snap!.sideAwards).toEqual([

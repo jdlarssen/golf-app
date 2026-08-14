@@ -106,14 +106,20 @@ export function computeCupMvp(playerPoints: CupPlayerPointsResult): CupMvpAward 
 export function computeCupUnderperformer(input: {
   games: CupPerformanceGame[];
   roster: CupRoster;
+  /**
+   * Visningsnavnet for en spiller uten navn OG uten kallenavn. Påkrevd av
+   * samme grunn som i `computeCupPlayerPoints` — biblioteket kjenner ingen
+   * locale, teksten kommer oversatt fra kallstedet (#1527).
+   */
+  unknownLabel: string;
 }): CupUnderperformerAward | null {
-  const { games, roster } = input;
+  const { games, roster, unknownLabel } = input;
 
   // Kun roster-spillere kåres. Navneregelen er den samme som i
   // poengregnskapet (kallenavn foran navn) — ett hjem, importert.
   const nameByUser = new Map<string, string>();
   for (const p of [...roster.team1, ...roster.team2]) {
-    if (!nameByUser.has(p.userId)) nameByUser.set(p.userId, preferredName(p));
+    if (!nameByUser.has(p.userId)) nameByUser.set(p.userId, preferredName(p, unknownLabel));
   }
 
   const diffByUser = new Map<string, number>();

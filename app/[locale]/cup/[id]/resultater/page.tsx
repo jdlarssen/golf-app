@@ -36,7 +36,11 @@ export default async function CupResultsPage({ params }: { params: Params }) {
     getProxyVerifiedUserId(),
     getTranslations('cup'),
   ]);
-  const snapshot = await getCupSnapshot(id);
+  // Navne-fallbacken (#1527) mates inn i alt som bygger visnings-navn her:
+  // snapshot-en, poengregnskapet og «dro ned mest»-kåringen.
+  const unknownLabel = t('manage.unknownPlayer');
+
+  const snapshot = await getCupSnapshot(id, unknownLabel);
   if (!snapshot) notFound();
 
   const { tournament, leaderboard, sideAwards, performanceInputs } = snapshot;
@@ -85,6 +89,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
     matches: leaderboard.matches,
     roster: snapshot.roster,
     sideAwards,
+    unknownLabel,
   });
   const playerPointGroups = [
     { team: 1 as const, teamName: tournament.team_1_name, rows: playerPoints.team1 },
@@ -97,6 +102,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
   const underperformer = computeCupUnderperformer({
     games: performanceInputs,
     roster: snapshot.roster,
+    unknownLabel,
   });
 
   return (

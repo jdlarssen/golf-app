@@ -188,6 +188,9 @@ export async function addCupParticipant(
     groupId,
     userId,
     isAdmin,
+    // Kun `id`/`pending` leses under — `displayName` rendres aldri herfra, så
+    // labelen når ingen skjerm. Konstant framfor en getTranslations-runde.
+    unknownLabel: 'Ukjent spiller',
   });
   const candidate = candidates.find((c) => c.id === targetUserId);
   if (!candidate || candidate.pending) return { error: 'not_candidate' };
