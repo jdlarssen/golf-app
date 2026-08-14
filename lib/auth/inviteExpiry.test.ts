@@ -3,7 +3,12 @@
 process.env.TZ = 'UTC';
 
 import { describe, expect, it } from 'vitest';
-import { inviteExpiryTier } from './inviteExpiry';
+import {
+  INVITE_TTL_DAYS,
+  inviteExpiresAtFromNow,
+  inviteExpiryTier,
+  isInviteExpired,
+} from './inviteExpiry';
 
 // A fixed "now": 2026-07-10 12:00Z → Oslo (summer +02) → 2026-07-10 14:00.
 const NOW = Date.parse('2026-07-10T12:00:00.000Z');
@@ -53,5 +58,37 @@ describe('inviteExpiryTier (#1179)', () => {
 
   it('unparseable timestamp → null', () => {
     expect(inviteExpiryTier('not-a-date', NOW)).toBeNull();
+  });
+});
+
+describe('inviteExpiresAtFromNow (#1381)', () => {
+  it('stamps exactly INVITE_TTL_DAYS ahead of the given instant', () => {
+    const iso = inviteExpiresAtFromNow(NOW);
+    expect(Date.parse(iso) - NOW).toBe(INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
+  });
+});
+
+describe('isInviteExpired (#1381)', () => {
+  it('a deadline in the future is not expired', () => {
+    expect(isInviteExpired('2026-07-11T12:00:00.000Z', NOW)).toBe(false);
+  });
+
+  it('a passed deadline is expired', () => {
+    expect(isInviteExpired('2026-07-09T12:00:00.000Z', NOW)).toBe(true);
+  });
+
+  it('the exact deadline instant counts as expired (mirrors expires_at > now())', () => {
+    // The DB gate in email_is_invited treats `expires_at > now()` as open, so
+    // equality must fall on the expired side or the badge would disagree with
+    // what the login door does.
+    expect(isInviteExpired('2026-07-10T12:00:00.000Z', NOW)).toBe(true);
+  });
+
+  it('a fresh stamp is never expired', () => {
+    expect(isInviteExpired(inviteExpiresAtFromNow(NOW), NOW)).toBe(false);
+  });
+
+  it('unparseable timestamp reads as not expired (no false alarm)', () => {
+    expect(isInviteExpired('not-a-date', NOW)).toBe(false);
   });
 });

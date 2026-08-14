@@ -10,8 +10,48 @@
 // the actual wording lives in the `auth.inviteCard.*` catalog so every locale
 // gets its own phrasing via next-intl (the N-locale criterion, #845). Same
 // shape as `countdownParts` in lib/i18n/format.ts.
+//
+// The module also owns the deadline itself: the TTL constant, the stamp a new
+// (or revived) invitation gets, and the has-it-passed check the admin waiting
+// list renders its «Utløpt»-badge from (#1381).
 
 const OSLO = 'Europe/Oslo';
+
+/**
+ * How long a fresh invitation stays valid. ONE home for the number (AGENTS.md
+ * trap 4): the admin invite-flow stamps `expires_at` with it on insert, and
+ * «Send på nytt» (#1381) pushes the deadline out by the same span — so the two
+ * doors can never drift apart.
+ */
+export const INVITE_TTL_DAYS = 7;
+
+const INVITE_TTL_MS = INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
+
+/**
+ * The ISO instant to write into `invitations.expires_at` for an invitation
+ * issued (or revived) at `nowMs`.
+ */
+export function inviteExpiresAtFromNow(nowMs: number = Date.now()): string {
+  return new Date(nowMs + INVITE_TTL_MS).toISOString();
+}
+
+/**
+ * Has the deadline passed? Mirrors the DB gate in `email_is_invited`
+ * (open = `expires_at > now()`, migration 0100), so the «Utløpt»-badge in the
+ * admin waiting list agrees with what the login door will actually do.
+ *
+ * `expires_at` is NOT NULL and always DB-written, so an unparseable stamp is a
+ * can't-happen — it reads as not-expired rather than raising a false alarm on
+ * a row that may well be fine. `nowMs` is injectable for deterministic tests.
+ */
+export function isInviteExpired(
+  expiresAtIso: string,
+  nowMs: number = Date.now(),
+): boolean {
+  const expMs = Date.parse(expiresAtIso);
+  if (Number.isNaN(expMs)) return false;
+  return expMs <= nowMs;
+}
 
 /**
  * Days since the Unix epoch for the given instant's Oslo *calendar* date.
