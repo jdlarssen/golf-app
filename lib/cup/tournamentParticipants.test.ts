@@ -101,8 +101,9 @@ describe('loadTournamentParticipantEmails (#1540)', () => {
       tournamentId: 'T1',
       error: gamesError,
     });
-    // Skiller feil-grenen fra tidligreturen for ekte tomhet: ved feil skal
-    // game_players aldri bli spurt.
+    // Ved feil skal game_players aldri bli spurt. (Selve gren-skillet bevises
+    // av toHaveBeenCalledWith over — tidligreturen for ekte tomhet logger
+    // ingenting.)
     expect(
       adminMock.__fromCalls.filter((c) => c.table === 'game_players'),
     ).toEqual([]);
