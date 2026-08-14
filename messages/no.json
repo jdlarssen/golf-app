@@ -5351,6 +5351,7 @@
   },
   "SyncBanner": {
     "conflictNotice": "Hull {holeNumber} ble endret av en medspiller. Det nyeste tallet gjelder nå.",
+    "conflictNoticeMarker": "Hull {holeNumber}: tallet du førte for en medspiller ble endret. Det nyeste gjelder nå.",
     "conflictDismiss": "OK",
     "errorNetwork": "Mistet nettforbindelsen",
     "errorAuth": "Innloggingen er utløpt — logg inn på nytt",

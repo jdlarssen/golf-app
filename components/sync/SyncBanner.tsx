@@ -337,7 +337,14 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
         >
           <div className="min-w-0 text-sm font-medium leading-tight">
             <div className="truncate">
-              {t('conflictNotice', { holeNumber: conflict.holeNumber })}
+              {/* #1368: records written before the field shipped have no
+                  forOwnScore — those were always own-score conflicts. */}
+              {t(
+                conflict.forOwnScore === false
+                  ? 'conflictNoticeMarker'
+                  : 'conflictNotice',
+                { holeNumber: conflict.holeNumber },
+              )}
             </div>
           </div>
           <button

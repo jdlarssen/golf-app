@@ -16,7 +16,11 @@ vi.mock('@/lib/sync/syncWorker', () => ({
 }));
 
 import { useLiveQuery } from 'dexie-react-hooks';
-import { localDb, type SyncQueueItem } from '@/lib/sync/db';
+import {
+  localDb,
+  type SyncQueueItem,
+  type ConflictRecord,
+} from '@/lib/sync/db';
 import { SyncBanner } from './SyncBanner';
 
 /**
@@ -41,10 +45,13 @@ function qItem(
 
 // SyncBanner calls useLiveQuery twice per render, queue first, conflicts
 // second — a call-counter modulo keeps the pair stable across re-renders.
-function mockDexieData(queue: SyncQueueItem[]) {
+function mockDexieData(
+  queue: SyncQueueItem[],
+  conflicts: ConflictRecord[] = [],
+) {
   let call = 0;
   vi.mocked(useLiveQuery).mockImplementation(() =>
-    call++ % 2 === 0 ? queue : [],
+    call++ % 2 === 0 ? queue : conflicts,
   );
 }
 
@@ -174,6 +181,33 @@ describe('SyncBanner — karantene-varianten', () => {
 
     expect(
       screen.getByText('Kunne ikke lagre 1 slag. Kontakt arrangøren.'),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Type C: én render-assertion for medspiller-varianten (#1368). Selve gaten som
+ * setter `forOwnScore` testes i `lib/sync/syncWorker.test.ts` (Type A).
+ */
+describe('SyncBanner — konflikt-varsel', () => {
+  it('score du førte for en medspiller får sin egen tekst (#1368)', () => {
+    const conflict: ConflictRecord = {
+      id: 'g1:mate:7',
+      gameId: 'g1',
+      userId: 'mate',
+      holeNumber: 7,
+      localStrokes: 5,
+      serverStrokes: 7,
+      resolvedAt: '2026-08-14T10:00:00.000Z',
+      forOwnScore: false,
+    };
+    mockDexieData([], [conflict]);
+    render(<SyncBanner gameId="g1" />);
+
+    expect(
+      screen.getByText(
+        'Hull 7: tallet du førte for en medspiller ble endret. Det nyeste gjelder nå.',
+      ),
     ).toBeInTheDocument();
   });
 });

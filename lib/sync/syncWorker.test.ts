@@ -75,21 +75,32 @@ vi.mock('./db', () => ({
 
 // Kontrollerbar RPC: hver test setter sin egen implementasjon.
 const rpcMock = vi.fn<(...args: unknown[]) => Promise<unknown>>();
+// #1368: drainQueue slår opp innlogget bruker én gang per drain for å avgjøre
+// om raden ble tastet på DENNE enheten.
+const getSessionMock = vi.fn<() => Promise<unknown>>();
 vi.mock('@/lib/supabase/client', () => ({
-  getBrowserClient: () => ({ rpc: rpcMock }),
+  getBrowserClient: () => ({
+    rpc: rpcMock,
+    auth: { getSession: getSessionMock },
+  }),
 }));
 
 const ID = 'g1#u1#5';
 
-function seedScore(strokes: number, clientUpdatedAt: string): FakeScore {
+function seedScore(
+  strokes: number,
+  clientUpdatedAt: string,
+  overrides: Partial<Pick<FakeScore, 'userId' | 'enteredBy'>> = {},
+): FakeScore {
+  const userId = overrides.userId ?? 'u1';
   const row: FakeScore = {
     id: ID,
     gameId: 'g1',
-    userId: 'u1',
+    userId,
     holeNumber: 5,
     strokes,
     putts: null,
-    enteredBy: 'u1',
+    enteredBy: overrides.enteredBy ?? userId,
     clientUpdatedAt,
     serverUpdatedAt: null,
   };
@@ -123,7 +134,29 @@ beforeEach(() => {
   fakeScores = new Map();
   fakeQueue = new Map();
   fakeConflicts = new Map();
+  // Standard: 'u1' er innlogget på denne enheten.
+  getSessionMock.mockResolvedValue({
+    data: { session: { user: { id: 'u1' } } },
+    error: null,
+  });
 });
+
+/** Server-wins-svar: RPC-en avviste vår rad fordi serveren har en nyere. */
+function serverWins(strokes: number, putts: number | null = null) {
+  return {
+    data: [
+      {
+        was_applied: false,
+        strokes,
+        putts,
+        entered_by: 'u2',
+        client_updated_at: '2026-08-14T10:00:05.000Z',
+        updated_at: '2026-08-14T10:00:05.500Z',
+      },
+    ],
+    error: null,
+  };
+}
 
 // #1457: burst-tasting på samme felt mens forrige synk er underveis mistet
 // sluttverdien — dequeue-en slettet kø-elementet ubetinget, også når
@@ -202,5 +235,97 @@ describe('drainQueue — burst-redigering under in-flight RPC (#1457)', () => {
     expect(res.pushed).toBe(1);
     expect(fakeQueue.has(ID)).toBe(false);
     expect(fakeScores.get(ID)!.serverUpdatedAt).toBe('2026-08-06T10:00:01.000Z');
+  });
+});
+
+// #1368: konflikt-varselet (#688) skrev bare rader der enteredBy === userId —
+// altså din egen score. Fører du for en medspiller (markør-rollen) har hver
+// lokal rad enteredBy = deg og userId = medspilleren, så et tapt LWW-oppgjør
+// overskrev tallet du tastet helt stille. Gaten er nå «tastet på DENNE
+// enheten» (enteredBy === innlogget bruker).
+describe('drainQueue — konflikt-varsel når du fører for andre (#1368)', () => {
+  it('markør-rad som taper LWW gir konflikt-varsel merket som andres score', async () => {
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'me' } } },
+      error: null,
+    });
+    seedScore(5, '2026-08-14T10:00:00.000Z', {
+      userId: 'mate',
+      enteredBy: 'me',
+    });
+    rpcMock.mockResolvedValueOnce(serverWins(7));
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fakeConflicts.get(ID)).toMatchObject({
+      gameId: 'g1',
+      userId: 'mate',
+      holeNumber: 5,
+      localStrokes: 5,
+      serverStrokes: 7,
+      forOwnScore: false,
+    });
+  });
+
+  it('egen score som taper LWW varsler fortsatt (#688-regresjon)', async () => {
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'me' } } },
+      error: null,
+    });
+    seedScore(5, '2026-08-14T10:00:00.000Z', { userId: 'me', enteredBy: 'me' });
+    rpcMock.mockResolvedValueOnce(serverWins(7));
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fakeConflicts.get(ID)).toMatchObject({
+      localStrokes: 5,
+      serverStrokes: 7,
+      forOwnScore: true,
+    });
+  });
+
+  it('uten sesjon faller gaten tilbake til gammel proxy: egen score varsler', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
+    seedScore(5, '2026-08-14T10:00:00.000Z', { userId: 'u1', enteredBy: 'u1' });
+    rpcMock.mockResolvedValueOnce(serverWins(7));
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fakeConflicts.get(ID)).toMatchObject({ forOwnScore: true });
+  });
+
+  it('sesjons-oppslag som feiler kaster ikke, og markør-raden varsler ikke', async () => {
+    getSessionMock.mockRejectedValue(new Error('offline'));
+    seedScore(5, '2026-08-14T10:00:00.000Z', {
+      userId: 'mate',
+      enteredBy: 'me',
+    });
+    rpcMock.mockResolvedValueOnce(serverWins(7));
+
+    const { drainQueue } = await import('./syncWorker');
+    const res = await drainQueue();
+
+    expect(res.rejected).toBe(1);
+    expect(fakeConflicts.has(ID)).toBe(false);
+  });
+
+  it('like slag men ulike putts gir fortsatt ingen varsel', async () => {
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'me' } } },
+      error: null,
+    });
+    seedScore(5, '2026-08-14T10:00:00.000Z', {
+      userId: 'mate',
+      enteredBy: 'me',
+    });
+    rpcMock.mockResolvedValueOnce(serverWins(5, 2));
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fakeConflicts.has(ID)).toBe(false);
   });
 });
