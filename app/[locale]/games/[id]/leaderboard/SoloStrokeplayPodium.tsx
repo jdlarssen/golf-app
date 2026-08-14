@@ -328,7 +328,7 @@ function PodiumStep({
       {tiedBadge && (
         <p
           className={`text-center text-[9px] font-semibold uppercase tracking-[0.14em] ${
-            place === 1 ? 'text-accent' : 'text-muted'
+            place === 1 ? 'text-accent-text' : 'text-muted'
           }`}
         >
           {tiedBadge}
@@ -346,7 +346,7 @@ function PodiumStep({
         <span
           className={`score-num block leading-none tracking-[-0.02em] tabular-nums ${
             place === 1
-              ? 'text-[32px] text-accent'
+              ? 'text-[32px] text-accent-text'
               : place === 2
                 ? 'text-[24px] text-text'
                 : 'text-[22px] text-text'

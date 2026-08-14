@@ -157,7 +157,7 @@ export default async function GameStatusPage({
     // Avsluttet (#918): «Ikke levert» som nøytralt faktum (muted), ikke accent-varsel.
     ready_not_delivered: isFinished
       ? { label: tDetail('statusNotSubmitted'), className: 'text-muted' }
-      : { label: t('statusLabels.ready_not_delivered'), className: 'text-accent' },
+      : { label: t('statusLabels.ready_not_delivered'), className: 'text-accent-text' },
     pending_approval: { label: t('statusLabels.pending_approval'), className: 'text-warning' },
     playing: { label: t('statusLabels.playing'), className: 'text-muted' },
     not_started: { label: t('statusLabels.not_started'), className: 'text-muted' },

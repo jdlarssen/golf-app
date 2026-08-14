@@ -382,13 +382,13 @@ function LeaderCard({
         </div>
 
         <div className="relative flex flex-col items-center">
-          <span className="leader-badge-pulse text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
+          <span className="leader-badge-pulse text-[10px] font-semibold uppercase tracking-[0.20em] text-accent-text">
             {isTied
               ? t('tiedRank', { rank: line.rank })
               : ts('leaderBadge', { rank: line.rank })}
           </span>
           <span
-            className="score-num my-1 text-[64px] leading-none tracking-[-0.04em] text-accent"
+            className="score-num my-1 text-[64px] leading-none tracking-[-0.04em] text-accent-text"
             style={{ textShadow: '0 1px 0 rgba(184,148,70,0.3)' }}
           >
             {line.rank}
@@ -521,7 +521,7 @@ function TeamRow({
               (line.rank === 1 ? (
                 // Delt ledelse: løft merket fra muted «delt» til eksplisitt
                 // «Delt 1. plass» i accent — raden er en medvinner (#1372).
-                <span className="font-semibold text-accent">
+                <span className="font-semibold text-accent-text">
                   {' · '}
                   {t('tiedRank', { rank: line.rank })}
                 </span>

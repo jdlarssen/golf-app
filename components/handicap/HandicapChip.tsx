@@ -33,7 +33,8 @@ export function HandicapChip({
   const containerClasses = stale
     ? 'border-accent/60 bg-surface'
     : 'border-border bg-surface';
-  const numberClasses = stale ? 'text-accent' : 'text-text';
+  // Ringen er dekor (--accent), tallet er info → tekst-tokenen (#1374).
+  const numberClasses = stale ? 'text-accent-text' : 'text-text';
 
   return (
     <SmartLink

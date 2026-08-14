@@ -37,8 +37,14 @@
   --primary: #1b4332;      /* deep forest green */
   --primary-hover: #2d5a40;
   --primary-soft: #e8efe8; /* very pale green tint */
-  --accent: #c9a961;       /* champagne gold */
-  --accent-deep: #b89446;  /* aksent-tekst på lys bg (kicker, tagline) */
+  --accent: #c9a961;       /* champagne gold — DEKOR: borders, hairlines, medaljer */
+  --accent-deep: #b89446;  /* brand-lockup/tagline (bevisst bevart, jf. §Brand) */
+  /* Meningsbærende gull-TEKST på lyse flater (#1374). Appen brukes i sollys, og
+   * --accent måler bare ~2:1 mot lin/hvit — i praksis usynlig ute. Denne tonen
+   * klarerer 4,5:1 mot ALLE lyse flater i paletten: 5,33:1 mot --bg, 5,76:1 mot
+   * --surface, 4,93:1 mot --surface-2 og 5,06:1 mot champagne-plinten
+   * (bg-accent/[0.08] ≈ #f4f0e5). Dekor beholder --accent. */
+  --accent-text: #7d6224;
   /* Spillestil-chips (#498) — skifer for Solo, terrakotta for Lag. Gull er
      reservert til vinnere, så stilen får sin egen rolige palett. */
   --chip-solo-bg: #e7edf1;
@@ -157,6 +163,9 @@
     --primary-soft: #1f2c24;
     --accent: #d4b870;       /* dimmed champagne — keeps the glow */
     --accent-deep: #c9a961;
+    /* Mørk modus er allerede lesbar (8,7:1) — tokenen peker på dagens accent
+     * så #1374-sweepet ikke endrer en eneste piksel her. */
+    --accent-text: #d4b870;
     /* Spillestil-chips (#498) — løftet for mørk bg. */
     --chip-solo-bg: rgba(125, 165, 195, 0.18);
     --chip-solo-fg: #a6c3d8;
@@ -251,6 +260,8 @@
   --primary-soft: #1f2c24;
   --accent: #d4b870;
   --accent-deep: #c9a961;
+  /* Se media-query-blokka: samme verdi som --accent, mørk modus er uendret. */
+  --accent-text: #d4b870;
   /* Spillestil-chips (#498) — løftet for mørk bg. */
   --chip-solo-bg: rgba(125, 165, 195, 0.18);
   --chip-solo-fg: #a6c3d8;
@@ -318,6 +329,7 @@
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
+  --color-accent-text: var(--accent-text);
   --color-bg-tint: var(--bg-tint);
   --color-success: var(--success);
   --color-danger: var(--danger);
