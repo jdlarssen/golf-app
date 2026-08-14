@@ -169,7 +169,7 @@ Konkrete eksempler fra tidligere arbeid:
 - Test-fil med duplikat `vi.mock('resend', ...)`- eller `vi.mock('@/lib/supabase/...')`-oppsett → vurder shared helper
 - Playwright-spec med norske string-literals i `toContain`/`toHaveText`/`getByText` → bruk `data-testid` i stedet
 
-Warns bygger vane uten å skape friksjon. Block-nivå reserveres for ting som har klart entydig svar (commit-msg-format, versjons-bump).
+Warns bygger vane uten å skape friksjon. Block-nivå reserveres for ting som har klart entydig svar (commit-msg-format, manglende `.changes/`-notatfil, versjonsfelt-endring utenfor ukesrutinen).
 
 ---
 
