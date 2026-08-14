@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { fetchCiRunsForSha } from './ciRuns';
 import {
   validateProductUpdateInput,
   type ProductUpdateInputError,
@@ -146,16 +147,7 @@ export interface GitHubClient {
   graphql(query: string, variables: Record<string, unknown>): Promise<{ status: number; json: unknown }>;
 }
 
-// CI-porten leser Actions-workflow-kjøringen for denne fila (ci.yml på main) —
-// IKKE check-runs: fine-grained PAT-er kan ikke gis Checks-lesetilgang (det
-// finnes ikke som PAT-permission), men «Actions: Read» dekker workflow-runs.
-// Endres CI-filnavnet, oppdater her.
-const CI_WORKFLOW_FILE = 'ci.yml';
-
 type PrInfo = { node_id: string; draft: boolean; state: string; head: { sha: string } };
-type WorkflowRuns = {
-  workflow_runs: Array<{ id: number; status: string; conclusion: string | null }>;
-};
 
 // Utfører handlingen og returnerer meldingen eieren ser i Discord. Feil fra
 // GitHub blir ærlige svar («fikk ikke …: <grunn>») — aldri stille.
@@ -255,13 +247,10 @@ export async function executeAction(
       const pr = prRes.json as PrInfo;
       if (pr.state !== 'open') return `PR #${action.pr} er ikke åpen (${pr.state}) — ingenting å merge.`;
 
-      const ciRes = await gh.rest(
-        'GET',
-        `/repos/${LOOP_REPO}/actions/workflows/${CI_WORKFLOW_FILE}/runs?head_sha=${pr.head.sha}&per_page=20`,
-      );
-      if (ciRes.status !== 200)
-        return `Fikk ikke lest CI-status for PR #${action.pr} (HTTP ${ciRes.status}) — ikke merget.`;
-      const ciRuns = (ciRes.json as WorkflowRuns).workflow_runs ?? [];
+      const ciLookup = await fetchCiRunsForSha(gh, LOOP_REPO, pr.head.sha);
+      if (!ciLookup.ok)
+        return `Fikk ikke lest CI-status for PR #${action.pr} (HTTP ${ciLookup.status}) — ikke merget.`;
+      const ciRuns = ciLookup.runs;
       if (ciRuns.length === 0)
         return `Fant ingen CI-kjøring for PR #${action.pr} enda — prøv igjen når CI har startet.`;
       // Nyeste kjøring (høyeste id) er fasit for head-SHA-en; re-kjøringer gir flere.
