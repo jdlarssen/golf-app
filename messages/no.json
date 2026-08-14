@@ -3547,6 +3547,7 @@
       },
       "sideWinners": {
         "validationError": "Du må velge vinner i alle feltene før du kan avslutte.",
+        "dbError": "Klarte ikke å lagre vinnerne. Prøv igjen.",
         "longestDriveLabel": "Longest drive",
         "longestDriveSlot": "Longest drive #{pos}",
         "closestToPinLabel": "Closest to pin",
