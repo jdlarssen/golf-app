@@ -8,6 +8,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
+import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import {
   parseGuestProfile,
   createGuestPlayer,
@@ -219,7 +220,7 @@ export async function sendGuestResult(
       token: randomUUID(),
       invited_by: ctx.userId,
       game_id: gameId,
-      expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: gameInviteExpiresAtFromNow(),
     });
   } catch (err) {
     console.error('[sendGuestResult] invitations insert failed (best-effort)', err);
