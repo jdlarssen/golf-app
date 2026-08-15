@@ -36,12 +36,10 @@ import {
 // Opprett-spill-ruten for ALLE innloggede brukere (#427 — tidligere bare
 // admin/trusted per #198). Gjenbruker GameWizard fra admin-flyten, men kjører
 // i AppShell (ikke AdminShell/Sekretariatet) så vanlige brukere aldri ser
-// admin-shellen. createGameInternal bouncer nå validerings-/publiseringsfeil
-// tilbake hit (ikke til /admin/games/new) for ikke-admins.
+// admin-shellen. Validerings-/publiseringsfeil vises av veiviseren selv
+// (#1379: server-actionene returnerer feilen som state, ingen redirect hit).
 
 type SearchParams = Promise<{
-  error?: string | string[];
-  emails?: string | string[];
   // #442: klubb-side kan dyplenke med forhåndsvalgt klubb.
   klubb?: string | string[];
   // #892: Klubbhuset kan dyplenke «… eller en cup» med ?intent=cup.
@@ -202,20 +200,6 @@ export default async function OpprettSpillPage({
   const sp = await searchParams;
   const t = await getTranslations({ locale, namespace: 'wizard' });
 
-  function buildErrorMessage(
-    errorCode: string | undefined,
-    emails: string | undefined,
-  ): string | undefined {
-    if (!errorCode) return undefined;
-    const key = `errors.${errorCode}` as Parameters<typeof t>[0];
-    // Unknown codes render no banner (mirrors the legacy map-lookup miss).
-    if (!t.has(key)) return undefined;
-    // Only pending_players uses {list}; extra values are ignored elsewhere.
-    return t(key, { list: emails ? `: ${emails}` : '' });
-  }
-
-  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
-
   // #1007: «Revansje?» — kilde-spillets id fra game-home. Ugyldig/uautorisert
   // param (ikke deltaker, ikke finished, cup/liga) gir `null` og faller
   // stille tilbake til en helt vanlig tom veiviser (ingen feilmelding — det
@@ -258,12 +242,6 @@ export default async function OpprettSpillPage({
           {t('createDoor.subtitle')}
         </p>
       </div>
-
-      {errorMessage && (
-        <div className="mt-4">
-          <Banner tone="error">{errorMessage}</Banner>
-        </div>
-      )}
 
       {revansje && (
         <div className="mt-4">
