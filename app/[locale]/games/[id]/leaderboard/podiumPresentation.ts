@@ -42,3 +42,32 @@ export const SLOT_HEIGHTS: Record<PodiumSlot, string> = {
   2: 'min-h-[150px]',
   3: 'min-h-[130px]',
 };
+
+/**
+ * Høyere trinn-skala for podier som bærer en ekstra innholdslinje under
+ * lag-/spillernavnet — medlemsnavn (Shamble, Texas scramble), partnernavn
+ * (Patsome, lag-stableford) eller unit-badge-raden (Nassau). Uten de 20 ekstra
+ * pikslene per trinn presser den linja tallet ut av trinnet. Samme forhold
+ * mellom slottene som `SLOT_HEIGHTS`.
+ */
+export const SLOT_HEIGHTS_TALL: Record<PodiumSlot, string> = {
+  1: 'min-h-[200px]',
+  2: 'min-h-[170px]',
+  3: 'min-h-[150px]',
+};
+
+/**
+ * Trinn-farge per tier. Delt av alle podium-flatene (#1591) — verdiene var
+ * byte-identiske i alle 13 fil-lokale kopiene før de ble samlet her.
+ */
+export const TIER_ACCENT: Record<PodiumTier, string> = {
+  // Champagne: forest-tinted bg + champagne border + champagne tekst-accent.
+  champagne:
+    'border-accent bg-accent/[0.08] shadow-[0_2px_14px_rgba(201,169,97,0.18)]',
+  // Silver: en hårfin dempet ring. Mer dempet enn champagne for å la 1.-plassen
+  // dominere visuelt.
+  silver: 'border-muted/40 bg-surface',
+  // Bronse: varmere brun-tone via warning-tokenen. Tørny har ikke en dedikert
+  // bronze-token, så warning er nærmeste varme accent.
+  bronze: 'border-warning/40 bg-surface',
+};

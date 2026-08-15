@@ -11,9 +11,9 @@ import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import {
   PLACE_TIER,
   SLOT_HEIGHTS,
+  TIER_ACCENT,
   podiumPlace,
   type PodiumSlot,
-  type PodiumTier,
 } from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { NinesPlayerInfo } from './NinesView';
@@ -211,14 +211,6 @@ export function NinesPodium({
   );
 }
 
-
-
-const TIER_ACCENT: Record<PodiumTier, string> = {
-  champagne:
-    'border-accent bg-accent/[0.08] shadow-[0_2px_14px_rgba(201,169,97,0.18)]',
-  silver: 'border-muted/40 bg-surface',
-  bronze: 'border-warning/40 bg-surface',
-};
 
 function PodiumStep({
   slot,
