@@ -25,7 +25,9 @@ import { notificationDestination } from '@/lib/notifications/deeplink';
  *
  * Tap-flyt:
  *  1. Optimistisk mark som lest lokalt (umiddelbart visuelt feedback)
- *  2. Call markOneAsRead-server-action via useTransition (no-op for allerede-lest)
+ *  2. Call markOneAsRead-server-action via useTransition — kun for uleste rader
+ *     (`wasUnread`-gate); etter #1665 melder en enkelt-id-skriving som treffer 0
+ *     rader `ok:false`, så kallet skal aldri gjøres for en allerede-lest rad
  *  3. Naviger til kortets deeplink via router.push
  *
  * «Marker alle som lest» speiler samme pattern på alle uleste rader i én operasjon.
