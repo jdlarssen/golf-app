@@ -205,8 +205,11 @@ export function ReadyStep({
   // høyere tall enn det forrige, så banneret kan vise det ferskeste. Uten den
   // låste en publiser-feil banneret for godt — et påfølgende «Lagre utkast»
   // som feilet med en ANNEN kode viste fortsatt publiser-teksten.
+  // #1398: `isPending` er tredje element fra useActionState. Uten den sto
+  // knappen helt uendret mens forsøket kjørte — arrangøren på steg 5 fikk
+  // ingen kvittering på at noe skjedde, og kunne trykke om igjen.
   const resultSeq = useRef(0);
-  const [publishResult, publishAction] = useActionState(
+  const [publishResult, publishAction, publishPending] = useActionState(
     async (_prev: SubmitState, formData: FormData): Promise<SubmitState> => {
       // edit-draft-actionene returnerer void og redirecter selv ved feil —
       // normaliser til «ingen feil» så state-formen er lik for begge modi.
@@ -215,7 +218,7 @@ export function ReadyStep({
     },
     NO_SUBMIT,
   );
-  const [draftResult, draftAction] = useActionState(
+  const [draftResult, draftAction, draftPending] = useActionState(
     async (_prev: SubmitState, formData: FormData): Promise<SubmitState> => {
       const result = (await actions?.draft(formData)) ?? NO_ERROR;
       return { ...result, seq: ++resultSeq.current };
@@ -551,11 +554,17 @@ export function ReadyStep({
               {submitErrorMessage}
             </Banner>
           )}
+          {/* #1398: mens ett forsøk kjører er BEGGE knappene ute av spill —
+              publisering og utkast-lagring på samme skjema samtidig gir to
+              spill av samme runde. Button setter selv disabled + aria-busy
+              når `pending`. */}
           <Button
             type="submit"
             formAction={publishAction}
             className="w-full"
-            disabled={!canPublish}
+            pending={publishPending}
+            pendingLabel={t('publishPending')}
+            disabled={!canPublish || draftPending}
             aria-describedby={
               !canPublish && missingForPublish.length > 0
                 ? 'publish-missing'
@@ -602,7 +611,9 @@ export function ReadyStep({
             formAction={draftAction}
             formNoValidate
             className="w-full"
-            disabled={nameMissing}
+            pending={draftPending}
+            pendingLabel={t('draftPending')}
+            disabled={nameMissing || publishPending}
             aria-describedby={nameMissing ? 'draft-missing-name' : undefined}
           >
             {t('draftButton')}
