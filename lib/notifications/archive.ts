@@ -26,10 +26,15 @@ export type ArchiveOpts = {
  *    De er allerede lest, så `read_at` røres ikke og prikken er uberørt.
  *
  * Best-effort: getServerClient() (cookies → RLS via notifications_update_own),
- * feiler stille på error, blokkerer aldri parent-flyten. Invaliderer
- * innboks-cachen så SSR ikke serverer den arkiverte raden på nytt.
+ * feiler stille på error (kaster aldri), blokkerer aldri parent-flyten.
+ * Invaliderer innboks-cachen så SSR ikke serverer den arkiverte raden på nytt.
+ * Returnerer `false` når DB-en avviste skrivingen, `true` ellers — innboks-
+ * handlingene ruller tilbake sin optimistiske state på `false` i stedet for å
+ * vise falsk suksess (#1394).
  */
-export async function archiveNotifications(opts: ArchiveOpts): Promise<void> {
+export async function archiveNotifications(
+  opts: ArchiveOpts,
+): Promise<boolean> {
   const supabase = await getServerClient();
   const nowIso = new Date().toISOString();
 
@@ -45,7 +50,7 @@ export async function archiveNotifications(opts: ArchiveOpts): Promise<void> {
       .is('archived_at', null);
     if (error) {
       console.error('[notifications] archive one failed', error);
-      return;
+      return false;
     }
   } else {
     // «Tøm leste»: arkiver alle leste, ikke-arkiverte rader. read_at røres
@@ -58,10 +63,11 @@ export async function archiveNotifications(opts: ArchiveOpts): Promise<void> {
       .is('archived_at', null);
     if (error) {
       console.error('[notifications] archive read failed', error);
-      return;
+      return false;
     }
   }
 
   // Next.js 16 krever to-arg-form for revalidateTag.
   revalidateTag(`notifications-${opts.userId}`, 'max');
+  return true;
 }

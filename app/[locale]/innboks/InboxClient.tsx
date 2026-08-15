@@ -30,6 +30,12 @@ import { notificationDestination } from '@/lib/notifications/deeplink';
  *
  * «Marker alle som lest» speiler samme pattern på alle uleste rader i én operasjon.
  *
+ * Alle fire handlingene går gjennom `runOptimistic`: den tar et snapshot av
+ * lista FØR den optimistiske oppdateringen, awaiter server-action-en, og
+ * setter lista tilbake + viser en feillinje hvis skrivingen ikke gikk gjennom
+ * (#1394). Før dette ble actionene `void`-et: en feilet lagring (typisk
+ * offline på banen) ga et kort som forsvant for godt fram til neste last.
+ *
  * NB: Vi re-grupperer per render slik at en optimistic-update på read_at
  * ikke flytter kort mellom dag-buckets (dag bestemmes av created_at, ikke
  * read_at). DayGroup-en holder seg derfor stabil.
@@ -47,6 +53,7 @@ export function InboxClient({
   const [, startArchive] = useTransition();
   const [clearReadPending, startClearRead] = useTransition();
   const [items, setItems] = useState<NotificationRow[]>(initialNotifications);
+  const [actionFailed, setActionFailed] = useState(false);
 
   const hasUnread = items.some((n) => n.read_at == null);
   const hasRead = items.some((n) => n.read_at != null);
@@ -57,17 +64,43 @@ export function InboxClient({
     labels: { today: t('today'), yesterday: t('yesterday') },
   });
 
+  /**
+   * Kjør en server-action bak en optimistisk oppdatering. `snapshot` er lista
+   * slik den så ut FØR oppdateringen — den legges tilbake hvis action-en
+   * rapporterer `ok: false` (DB-feil / ikke innlogget) eller kaster (offline,
+   * avbrutt request). Feillinja forsvinner igjen ved neste vellykkede handling.
+   */
+  async function runOptimistic(
+    snapshot: NotificationRow[],
+    action: () => Promise<{ ok: boolean }>,
+  ) {
+    try {
+      const result = await action();
+      if (!result?.ok) {
+        setItems(snapshot);
+        setActionFailed(true);
+        return;
+      }
+      if (actionFailed) setActionFailed(false);
+    } catch (err) {
+      console.error('[innboks] handling feilet', err);
+      setItems(snapshot);
+      setActionFailed(true);
+    }
+  }
+
   function handleTap(notification: NotificationRow) {
     const wasUnread = notification.read_at == null;
 
     if (wasUnread) {
       // Optimistisk markering lokalt så badgen + kortet oppdateres umiddelbart.
+      const snapshot = items;
       const nowIso = new Date().toISOString();
       setItems((prev) =>
         prev.map((n) => (n.id === notification.id ? { ...n, read_at: nowIso } : n)),
       );
-      startTransition(() => {
-        void markOneAsRead(notification.id);
+      startTransition(async () => {
+        await runOptimistic(snapshot, () => markOneAsRead(notification.id));
       });
     }
 
@@ -80,35 +113,51 @@ export function InboxClient({
   }
 
   function handleMarkAll() {
+    const snapshot = items;
     const nowIso = new Date().toISOString();
     setItems((prev) =>
       prev.map((n) => (n.read_at == null ? { ...n, read_at: nowIso } : n)),
     );
-    startMarkAll(() => {
-      void markAllAsRead();
+    startMarkAll(async () => {
+      await runOptimistic(snapshot, () => markAllAsRead());
     });
   }
 
   function handleArchive(notification: NotificationRow) {
     // Fjern kortet optimistisk fra lista (soft-archive på server). Vi navigerer
     // IKKE — ✕ er en ren rydde-handling, ikke en åpne-handling.
+    const snapshot = items;
     setItems((prev) => prev.filter((n) => n.id !== notification.id));
-    startArchive(() => {
-      void archiveOne(notification.id);
+    startArchive(async () => {
+      await runOptimistic(snapshot, () => archiveOne(notification.id));
     });
   }
 
   function handleClearRead() {
     // Fjern alle leste optimistisk; uleste blir stående.
+    const snapshot = items;
     setItems((prev) => prev.filter((n) => n.read_at == null));
-    startClearRead(() => {
-      void clearRead();
+    startClearRead(async () => {
+      await runOptimistic(snapshot, () => clearRead());
     });
   }
+
+  // Diskret feillinje, delt av tom-tilstanden og lista: en rollback kan lande i
+  // begge (arkiverte du siste kortet, står du i tom-tilstanden mens svaret kommer).
+  const errorLine = actionFailed ? (
+    <p
+      role="status"
+      data-testid="inbox-action-error"
+      className="mb-3 font-sans text-[12px] text-danger"
+    >
+      {t('actionFailed')}
+    </p>
+  ) : null;
 
   if (items.length === 0) {
     return (
       <div className="mt-2">
+        {errorLine}
         <Card className="flex flex-col items-center text-center">
           <MailEnvelope size={56} className="text-primary" />
           <p className="mt-3 font-serif text-base text-text">{t('emptyHeading')}</p>
@@ -123,6 +172,7 @@ export function InboxClient({
 
   return (
     <div>
+      {errorLine}
       {/* Én tilstands-adaptiv rydde-knapp (#1133): uleste prioriteres, så
           knappen viser «Marker alle som lest» så lenge det finnes uleste, og
           morfer til «Tøm leste» først når alt er lest. Fjerner rekkefølge-

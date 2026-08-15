@@ -64,6 +64,7 @@
     "markingPending": "Markerer …",
     "clearRead": "Tøm leste",
     "clearingPending": "Tømmer …",
+    "actionFailed": "Fikk ikke lagret — prøv igjen.",
     "archiveAria": "Arkiver varsel",
     "today": "I dag",
     "yesterday": "I går",

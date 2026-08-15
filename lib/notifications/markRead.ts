@@ -15,7 +15,11 @@ export type MarkReadOpts = {
 
 /**
  * Markerer matching uleste varsler som lest for `userId`. Best-effort:
- * feiler stille på error, blokkerer aldri parent-page-render.
+ * feiler stille på error (kaster aldri), blokkerer aldri parent-page-render.
+ * Returnerer `false` når DB-en avviste skrivingen, `true` ellers, så
+ * interaktive call-sites (innboks-handlingene) kan rulle tilbake sin
+ * optimistiske state i stedet for å vise falsk suksess (#1394). `after()`-
+ * og page-kallerne bryr seg ikke og `void`-er returverdien som før.
  *
  * Bruker getAdminClient() (service-role, cookies-fri) framfor cookies-
  * klienten fordi flere call-sites kjører inni `after()` (leaderboard,
@@ -33,7 +37,9 @@ export type MarkReadOpts = {
  * spillet). Mail-deeplink-klikk havner også her, siden mailen lenker til
  * samme target-rute.
  */
-export async function markNotificationsRead(opts: MarkReadOpts): Promise<void> {
+export async function markNotificationsRead(
+  opts: MarkReadOpts,
+): Promise<boolean> {
   const supabase = getAdminClient();
 
   let q = supabase
@@ -49,9 +55,10 @@ export async function markNotificationsRead(opts: MarkReadOpts): Promise<void> {
   const { error } = await q;
   if (error) {
     console.error('[notifications] markRead failed', error);
-    return;
+    return false;
   }
 
   // Next.js 16 krever to-arg-form for revalidateTag.
   revalidateTag(`notifications-${opts.userId}`, 'max');
+  return true;
 }
