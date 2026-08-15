@@ -81,15 +81,47 @@ describe('markNotificationsRead', () => {
   });
 
   it('notificationId-filter → .eq("id", "n-uuid") (per-tap fra innboks)', async () => {
-    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+    supabaseMock = buildSupabaseMock([
+      { data: [{ id: 'n-uuid' }], error: null },
+    ]);
     const { markNotificationsRead } = await import('./markRead');
 
-    await markNotificationsRead({ userId: 'u1', notificationId: 'n-uuid' });
+    const ok = await markNotificationsRead({ userId: 'u1', notificationId: 'n-uuid' });
 
+    expect(ok).toBe(true);
     const eqCalls = supabaseMock.__fromCalls.filter((c) => c.method === 'eq');
     expect(eqCalls).toContainEqual(
       expect.objectContaining({ args: ['id', 'n-uuid'] }),
     );
+  });
+
+  it('#1665: enkelt-id som treffer 0 rader → false (RLS/feil id), ingen revalidate', async () => {
+    // PostgREST gir error == null for en UPDATE som traff ingenting. Caller
+    // pekte på ÉN rad hen nettopp så som ulest, så 0 rader er en feil — ellers
+    // ville innboksen/banneret vise falsk suksess.
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+    const { markNotificationsRead } = await import('./markRead');
+
+    const ok = await markNotificationsRead({ userId: 'u1', notificationId: 'n-uuid' });
+
+    expect(ok).toBe(false);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+    // `.select('id')` er det som gjør radantallet synlig i det hele tatt.
+    expect(supabaseMock.__fromCalls).toContainEqual(
+      expect.objectContaining({ method: 'select', args: ['id'] }),
+    );
+    consoleErr.mockRestore();
+  });
+
+  it('#1665: bulk-kall som treffer 0 rader → true (ingenting ulest er lov)', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+    const { markNotificationsRead } = await import('./markRead');
+
+    const ok = await markNotificationsRead({ userId: 'u1' });
+
+    expect(ok).toBe(true);
+    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 
   it('happy path → revalidateTag(`notifications-${userId}`, "max")', async () => {

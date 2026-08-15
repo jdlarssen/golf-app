@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { markOneAsRead } from '@/app/[locale]/innboks/actions';
 import { SmartLink } from '@/components/ui/SmartLink';
 
@@ -11,6 +12,11 @@ import { SmartLink } from '@/components/ui/SmartLink';
  * NotificationCard) for visuell konsistens. Dismiss er optimistisk —
  * banneret forsvinner umiddelbart fra DOM-en, mens markOneAsRead-action
  * sendes i bakgrunnen.
+ *
+ * Går skrivingen i vasken, kommer banneret tilbake med en diskret feillinje
+ * (#1665) — samme rollback-mønster som InboxClient og MonthlyDigestToggle fikk
+ * i #1394. Uten den forsvant banneret for godt i denne økta og dukket opp igjen
+ * ved neste sidelast, uten forklaring.
  */
 export function ProductUpdateBannerClient({
   notificationId,
@@ -25,15 +31,29 @@ export function ProductUpdateBannerClient({
   link: string | null;
   ctaLabel: string | null;
 }) {
+  const t = useTranslations('inbox');
   const [dismissed, setDismissed] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [, startTransition] = useTransition();
 
   if (dismissed) return null;
 
   function handleDismiss() {
     setDismissed(true);
-    startTransition(() => {
-      void markOneAsRead(notificationId);
+    startTransition(async () => {
+      try {
+        const result = await markOneAsRead(notificationId);
+        if (!result?.ok) {
+          setDismissed(false);
+          setFailed(true);
+          return;
+        }
+        if (failed) setFailed(false);
+      } catch (err) {
+        console.error('[products] product update banner dismiss failed', err);
+        setDismissed(false);
+        setFailed(true);
+      }
     });
   }
 
@@ -81,6 +101,15 @@ export function ProductUpdateBannerClient({
           </span>
         </button>
       </div>
+      {failed && (
+        <p
+          role="status"
+          data-testid="product-banner-action-error"
+          className="mt-2 font-sans text-[12px] text-danger"
+        >
+          {t('actionFailed')}
+        </p>
+      )}
     </div>
   );
 }
