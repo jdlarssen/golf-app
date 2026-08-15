@@ -83,10 +83,6 @@ export function TexasScrambleView({
     );
   }
 
-  // result.teams er rangert fra scoring-laget (#1591 gjorde computeScramble
-  // rangert med test først; #1667: viewet leser derfor direkte — én regel,
-  // ett hjem).
-
   return (
     <LeaderboardShell chromeless={chromeless}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
@@ -104,6 +100,9 @@ export function TexasScrambleView({
         data-testid="texas-leaderboard"
         className="flex flex-col gap-2 px-3.5 pt-3 pb-3.5"
       >
+        {/* result.teams er rangert fra scoring-laget (#1591 gjorde
+            computeScramble rangert med test først); #1667: viewet leser
+            derfor direkte — én regel, ett hjem. */}
         {result.teams.map((team, i) => {
           const memberNames = team.members
             .map((m) => {
