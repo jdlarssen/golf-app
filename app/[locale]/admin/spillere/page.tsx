@@ -32,6 +32,9 @@ const getCounts = cache(async () => {
       .not('profile_completed_at', 'is', null)
       // #1012: anonymiserte husk-rader telles ikke som spillere.
       .is('deleted_at', null),
+    // Alle uaksepterte, utløpte inkludert — samme definisjon som ventelista
+    // under (_components/PendingInvitations.tsx) og Klubbhus-flisen
+    // (admin/TilesGrid.tsx). Ett tall, én regel (#1615).
     supabase
       .from('invitations')
       .select('id', { count: 'exact', head: true })
