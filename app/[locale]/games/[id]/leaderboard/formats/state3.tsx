@@ -25,6 +25,11 @@ import {
   leaderboardHref,
   type LeaderboardNavContext,
 } from '@/lib/leaderboard/navContext';
+import {
+  firstHalfHoleNumbersForSegment,
+  lastHoleForSegment,
+} from '@/lib/games/holeScope';
+import type { HoleSegment } from '@/lib/scoring';
 import { PreRoundLeaderboardRealtime } from '../PreRoundLeaderboard';
 
 /**
@@ -270,14 +275,21 @@ export async function renderState3(opts: {
 }
 
 /**
- * State #3.5 — "Front 9 åpen, back 9 låst". Rendered when status='active' and
- * at least one team has fully completed front 9 (both players × all 9 holes).
+ * State #3.5 — "første halvdel åpen, resten låst". Rendered when status='active'
+ * and at least one team has fully completed the segment's first half (both
+ * players × all its holes).
  *
- * The leaderboard is computed against scores+holes clipped to the front 9,
+ * The leaderboard is computed against scores+holes clipped to that first half,
  * so partial teams naturally get `missingHoles.length > 0` and the existing
  * TeamCard renders "⚠️ N hull mangler" — which reads correctly on a 9-hole
- * view ("3 hull mangler" of the 9). Back 9 stays hidden behind the locked
+ * view ("3 hull mangler" of the 9). The rest stays hidden behind the locked
  * block until status flips to 'finished'.
+ *
+ * #1661: the clip and the copy follow `hole_segment`, matching the gate in
+ * `lib/leaderboard/frontNineGate.ts` that opens this view. 'full' → holes 1–9
+ * and «hull 18» (byte-identical to the pre-#1441 hardcoding); a front9 game on
+ * a split cup day → holes 1–5 and «hull 9», instead of promising holes that
+ * belong to the sister game and never show up here.
  */
 export async function renderState35(opts: {
   gameId: string;
@@ -286,18 +298,35 @@ export async function renderState35(opts: {
   holes: LbHole[];
   scores: LbScore[];
   backHref: string;
+  holeSegment: HoleSegment;
   navContext?: LeaderboardNavContext;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const ts35 = await getTranslations('leaderboard.state35');
-  const { gameId, mode, players, holes, scores, backHref, navContext } = opts;
+  const {
+    gameId,
+    mode,
+    players,
+    holes,
+    scores,
+    backHref,
+    holeSegment,
+    navContext,
+  } = opts;
 
-  const frontNineHoles = holes.filter(
-    (h) => h.holeNumber >= 1 && h.holeNumber <= 9,
-  );
-  const frontNineScores = scores.filter(
-    (s) => s.holeNumber >= 1 && s.holeNumber <= 9,
-  );
+  const openHoleNumbers = firstHalfHoleNumbersForSegment(holeSegment);
+  const openHoles = new Set(openHoleNumbers);
+  const frontNineHoles = holes.filter((h) => openHoles.has(h.holeNumber));
+  const frontNineScores = scores.filter((s) => openHoles.has(s.holeNumber));
+  // Pillen navngir halvdelen som ER åpen. 'full' beholder «FRONT 9» — det er
+  // fortsatt hull 1–9; segment-spill får sitt eget hull-spenn.
+  const halfLabel =
+    holeSegment === 'full'
+      ? ts35('front9Label')
+      : ts35('segmentHalfLabel', {
+          from: openHoleNumbers[0],
+          to: openHoleNumbers[openHoleNumbers.length - 1],
+        });
 
   const lines = computeLeaderboard({
     mode,
@@ -322,10 +351,11 @@ export async function renderState35(opts: {
         <span className="w-12" aria-hidden />
       </header>
 
-      {/* FRONT 9 champagne pill — signals this isn't the final standing. */}
+      {/* Champagne-pille for den åpne halvdelen — signaliserer at dette ikke
+          er sluttstillingen. */}
       <div className="flex justify-center mb-5">
         <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full bg-accent/10 text-accent border border-accent/30">
-          {ts35('front9Label')}
+          {halfLabel}
         </span>
       </div>
 
@@ -348,14 +378,14 @@ export async function renderState35(opts: {
         ))}
       </div>
 
-      {/* Locked back 9 block — back-9 scores stay hidden until the game is
+      {/* Locked second-half block — those scores stay hidden until the game is
           finished so the climax doesn't get spoiled mid-round.
           bg-surface (no opacity) lifts off the page bg in both modes:
           white on linen in light, forest-on-darker-forest in dark. The
           /50 we tried first read too subtle in dark mode. */}
       <div className="mx-4 mt-6 rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
         <p className="font-serif text-[16px] font-medium text-text">
-          {ts35('lockedHeading')}
+          {ts35('lockedHeading', { last: lastHoleForSegment(holeSegment) })}
         </p>
         <p className="mt-2 font-sans text-xs text-muted">
           {ts35('lockedSub')}
