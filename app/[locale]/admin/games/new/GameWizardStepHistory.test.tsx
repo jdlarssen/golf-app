@@ -19,9 +19,19 @@ import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 // tom og gir en fersk `push`-spion per kall, så push/replace kan ikke drives
 // derfra. Denne fila har derfor sine egne navigasjons-mocker — bevisst i en
 // egen fil, så GameWizard.test.tsx beholder det delte oppsettet.
+//
+// #1383: mockene skriver også URL-en TILBAKE til `searchString`, slik den ekte
+// router-en gjør. Uten det ser en test aldri en endret `searchParams`, og en
+// effekt som feilaktig kjører på nytt ved navigasjon (i stedet for kun ved
+// mount) er usynlig for suiten. Kombinert med `rerender()` er det nettopp den
+// kjørestien som testes nederst i fila.
 
-const push = vi.fn();
-const replace = vi.fn();
+const push = vi.fn((url: string) => {
+  searchString = url.split('?')[1] ?? '';
+});
+const replace = vi.fn((url: string) => {
+  searchString = url.split('?')[1] ?? '';
+});
 let searchString = '';
 
 vi.mock('next/navigation', () => ({
@@ -83,8 +93,8 @@ const NO_OP = async (): Promise<CreateGameResult> => ({ error: '' });
 
 type WizardProps = ComponentProps<typeof GameWizard>;
 
-function renderWizard(overrides: Partial<WizardProps> = {}) {
-  return render(
+function wizardElement(overrides: Partial<WizardProps> = {}) {
+  return (
     <GameWizard
       courses={COURSES}
       players={PLAYERS}
@@ -92,8 +102,12 @@ function renderWizard(overrides: Partial<WizardProps> = {}) {
       formatsByIntent={FORMATS_BY_INTENT}
       friendPlayerIds={PLAYERS.map((p) => p.id)}
       {...overrides}
-    />,
+    />
   );
+}
+
+function renderWizard(overrides: Partial<WizardProps> = {}) {
+  return render(wizardElement(overrides));
 }
 
 /**
@@ -164,6 +178,26 @@ describe('GameWizard — #1380 per-steg history', () => {
 });
 
 describe('GameWizard — #1383 foreldet ?step-lenke', () => {
+  it('rører ikke steget når arrangøren selv går videre fra steg 1', () => {
+    // Regresjonslås. «Er denne ?step-lenken foreldet?» er et mount-spørsmål.
+    // Ble den avgjort på nytt ved hver navigasjon, ville arrangørens eget
+    // «Neste» blitt lest som en foreldet lenke — utkastet er debounget (og i
+    // cup-flyten skrives det aldri), så det finnes ingenting å gjenoppta i
+    // det øyeblikket URL-en får ?step=2.
+    const { rerender } = renderWizard();
+
+    fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
+    fireEvent.click(screen.getByTestId('wizard-next'));
+
+    expect(push).toHaveBeenCalledWith('/admin/games/new?step=2', { scroll: false });
+
+    // Router-en har nå committet ?step=2 (mocken speiler den ekte). Skallet
+    // re-rendres med den nye URL-en — som før #1383 ikke skjedde i noen test.
+    rerender(wizardElement());
+
+    expect(replace).not.toHaveBeenCalled();
+  });
+
   it('sender blank flyt tilbake til steg 1 og beholder øvrige søke-parametre', () => {
     // Delt/bokmerket lenke åpnet i fersk fane: ingenting i sessionStorage,
     // ingen forvalg fra ruta — steg 5 ville vist defaults arrangøren aldri
