@@ -107,6 +107,9 @@ export function NotificationCard({
 
   // Delt chrome (rot, ulest-stripe, emoji, tidsstempel, arkiv-knapp) gjenbrukes
   // av begge layoutene under, så de to grenene kun skiller seg i selve innholdet.
+  // Begge røttene bærer `data-focus-inset`: tapp-knappen og arkiv-knappen er
+  // flush mot kortkanten, så `overflow-hidden` klipper en outline med positiv
+  // offset helt bort (#1402).
   const rootClassName = `group relative flex items-stretch overflow-hidden rounded-xl border border-border bg-surface transition-colors ${
     isUnread ? '' : 'opacity-80'
   }`;
@@ -151,7 +154,12 @@ export function NotificationCard({
     const p = payload as NotificationPayload<'product_update'>;
     const showCta = Boolean(p.link && p.cta_label);
     return (
-      <div className={rootClassName} data-testid="notification-card" data-notification-kind={kind}>
+      <div
+        className={rootClassName}
+        data-focus-inset
+        data-testid="notification-card"
+        data-notification-kind={kind}
+      >
         {stripe}
         <div className="flex min-w-0 flex-1 items-start gap-3 px-3.5 py-3">
           {emoji}
@@ -194,7 +202,12 @@ export function NotificationCard({
   }
 
   return (
-    <div className={rootClassName} data-testid="notification-card" data-notification-kind={kind}>
+    <div
+      className={rootClassName}
+      data-focus-inset
+      data-testid="notification-card"
+      data-notification-kind={kind}
+    >
       {stripe}
 
       <button

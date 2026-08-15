@@ -102,7 +102,10 @@ export function PlayersListClient({
             : emptyNoPlayers}
         </div>
       ) : (
+        // data-focus-inset: radene er full-bleed, så `overflow-hidden` klipper en
+        // outline med positiv offset helt bort (#1402).
         <div
+          data-focus-inset
           className="overflow-hidden rounded-xl border border-border bg-surface"
           style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
         >

@@ -165,8 +165,13 @@ export async function ActivityLedger() {
   activity.sort((a, b) => (a.ts < b.ts ? 1 : -1));
   const ledger = activity.slice(0, 8);
 
+  // data-focus-inset: radene er full-bleed, så `overflow-hidden` klipper en
+  // outline med positiv offset helt bort (#1402).
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+    <div
+      data-focus-inset
+      className="overflow-hidden rounded-2xl border border-border bg-surface"
+    >
       {ledger.length === 0 ? (
         <p className="px-4 py-5 text-center text-sm text-muted">
           {t('noActivity')}

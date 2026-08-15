@@ -283,7 +283,12 @@ function Step1Roster({
                     HCP {p.hcpIndex.toFixed(1)}
                   </p>
                 </div>
-                <div className="flex shrink-0 rounded-lg border border-border overflow-hidden text-xs font-medium">
+                {/* data-focus-inset: segmentert pill-gruppe — `overflow-hidden`
+                    klipper en outline med positiv offset helt bort (#1402). */}
+                <div
+                  data-focus-inset
+                  className="flex shrink-0 rounded-lg border border-border overflow-hidden text-xs font-medium"
+                >
                   {([
                     ['team1', team1Name],
                     ['unassigned', '—'],
