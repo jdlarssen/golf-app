@@ -57,7 +57,8 @@ export function AdvancedSettingsSection({
     requirePeerApproval,
     setRequirePeerApproval,
     // Visibility-blokk (kun når includeVisibility=true)
-    initialScoreVisibility,
+    scoreVisibility,
+    setScoreVisibility,
     lockScoreVisibility,
     sideEnabled,
     setSideEnabled,
@@ -96,7 +97,16 @@ export function AdvancedSettingsSection({
       {includeVisibility && (
         <>
           {/* Score visibility — wizard-løftet kopi av samme fieldset som
-              GameForm rendrer i BasicsSection. */}
+              GameForm rendrer i BasicsSection.
+
+              #1400: radioene er controlled (useGameFormState) i stedet for
+              defaultChecked, så valget overlever `requestFormReset` når en
+              publisering feiler. I wizard-pathen (serializedExternally) eier
+              GameWizard sin FormDataInputs serialiseringen — da droppes
+              `name` her, akkurat som for side_*-feltene under. I GameForm-
+              pathen finnes ingen speiling, så navnet MÅ bli stående: siden
+              #909 rendrer BasicsSection ikke lenger disse radioene, og disse
+              er dermed eneste kilde til score_visibility i FormData der. */}
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
               {tBasics('visibilityLegend')}
@@ -105,9 +115,11 @@ export function AdvancedSettingsSection({
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="radio"
-                  name="score_visibility"
-                  value="live"
-                  defaultChecked={initialScoreVisibility !== 'reveal'}
+                  {...(serializedExternally
+                    ? {}
+                    : { name: 'score_visibility', value: 'live' })}
+                  checked={scoreVisibility === 'live'}
+                  onChange={() => setScoreVisibility('live')}
                   disabled={lockScoreVisibility}
                   className="mt-1 accent-primary"
                 />
@@ -123,9 +135,11 @@ export function AdvancedSettingsSection({
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="radio"
-                  name="score_visibility"
-                  value="reveal"
-                  defaultChecked={initialScoreVisibility === 'reveal'}
+                  {...(serializedExternally
+                    ? {}
+                    : { name: 'score_visibility', value: 'reveal' })}
+                  checked={scoreVisibility === 'reveal'}
+                  onChange={() => setScoreVisibility('reveal')}
                   disabled={lockScoreVisibility}
                   className="mt-1 accent-primary"
                 />

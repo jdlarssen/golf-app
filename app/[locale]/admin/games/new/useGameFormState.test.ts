@@ -380,6 +380,25 @@ describe('useGameFormState — initialValues pre-fyll for setup-step-formater (#
     expect(result.current.roundRobinAllowancePct).toBe(50);
     expect(result.current.isRoundRobin).toBe(true);
   });
+
+  // #1400: synlighets-valget er controlled state, ikke en uncontrolled radio.
+  // Det er dette som gjør at «Skjul til slutt» overlever en form-action-
+  // dispatch (react-dom nullstiller uncontrolled felt ved hver dispatch).
+  it('score_visibility fra initialValues restorer state, og setteren oppdaterer den (#1400)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { score_visibility: 'reveal' },
+      }),
+    );
+
+    expect(result.current.scoreVisibility).toBe('reveal');
+
+    act(() => result.current.setScoreVisibility('live'));
+
+    expect(result.current.scoreVisibility).toBe('live');
+  });
 });
 
 // Solo-formater uten lag (Nassau / Skins / Bingo Bango Bongo) velges via
