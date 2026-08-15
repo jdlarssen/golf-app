@@ -37,7 +37,7 @@ import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedSta
 import {
   isStablefordFamily,
   isScrambleFamily,
-  isAlternateShotMatchplay,
+  modeCollapsesToTeamCard,
   formatCapturesPutts,
 } from '@/lib/scoring/modes/types';
 import type {
@@ -398,15 +398,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // Florida Scramble (#283): step-aside-regelen vises som påminnelse på hull-flaten.
   // Kun for florida — ikke for texas eller ambrose.
   const isFlorida = gameMode === 'florida_scramble';
-  const isPatsome = gameMode === 'patsome';
   // Team-collapsed moduser (#1058): server bygger ETT kort per lag i stedet
   // for ett per spiller — speiler eksakt samme gruppering som page.tsx sin
-  // `playersForClient`-forgrening (Texas-familien, alternate-shot-matchplay-
-  // familien, og Patsome fra og med foursomes-segmentet på hull 7). "Mitt
-  // kort" kan da ikke slås opp via `userId === myUserId` (jeg er ikke
+  // `playersForClient`-forgrening. Regelens ene hjem er
+  // `modeCollapsesToTeamCard` (#1538/#1606): Texas-familien, alternate-shot-
+  // matchplay-familien, og Patsome fra og med foursomes-segmentet på hull 7.
+  // "Mitt kort" kan da ikke slås opp via `userId === myUserId` (jeg er ikke
   // nødvendigvis lag-kapteinen) — se `myCard` under.
-  const isTeamCollapsedMode =
-    isTexas || isAlternateShotMatchplay(gameMode) || (isPatsome && currentHole >= 7);
+  const isTeamCollapsedMode = modeCollapsesToTeamCard(gameMode, currentHole);
   // Putt-registrering (#939): kun individuelle slag-/stableford-format viser
   // opt-in-bryteren + putts-feltet.
   const capturesPutts = formatCapturesPutts(gameMode);
