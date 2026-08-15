@@ -5435,6 +5435,8 @@
   "spectate": {
     "metaTitle": "Follow the game",
     "liveStatus": "Watching live",
+    "offlineStatus": "Connection lost, retrying",
+    "updatedAt": "Updated {time}",
     "resultStatus": "Result",
     "bannerAriaLabel": "Spectator banner",
     "liveFollowLabel": "Share live link",

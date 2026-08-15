@@ -5435,6 +5435,8 @@
   "spectate": {
     "metaTitle": "Følg spillet",
     "liveStatus": "Følger live",
+    "offlineStatus": "Mistet nettet, prøver igjen",
+    "updatedAt": "Oppdatert {time}",
     "resultStatus": "Resultat",
     "bannerAriaLabel": "Live-følg-banner",
     "liveFollowLabel": "Del live-lenke",

@@ -8,7 +8,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import { renderLeaderboardContent } from '../../games/[id]/leaderboard/leaderboardContent';
-import { SpectatePoller } from './SpectatePoller';
+import { SpectateLiveStatus } from './SpectateLiveStatus';
 import { SpectateCta } from './SpectateCta';
 import { SponsorStrip } from '@/components/SponsorStrip';
 import { safeParsePrizes } from '@/lib/games/prizes';
@@ -80,8 +80,11 @@ export async function generateMetadata({
  * chevron in the format views is a harmless self-link rather than a
  * misleading login redirect.
  *
- * Live-updating: `SpectatePoller` calls `router.refresh()` every 20 s while
- * the game is active; it stops polling once the game is finished.
+ * Live-updating: the banner's `SpectateLiveStatus` island owns the freshness
+ * loop — `router.refresh()` every 20 s while the game is active, paused while
+ * the spectator is offline, and stopped for good once the game is finished.
+ * It renders the dot / label / timestamp from that same state, so the banner
+ * can never claim "live" over frozen numbers (#1376).
  */
 export default async function SpectatePage({
   params,
@@ -126,7 +129,6 @@ export default async function SpectatePage({
   const adminClient = getAdminClient();
 
   const t = await getTranslations('spectate');
-  const statusLabel = live ? t('liveStatus') : t('resultStatus');
 
   const leaderboardNode = await renderLeaderboardContent({
     gameId: found.id,
@@ -167,15 +169,10 @@ export default async function SpectatePage({
             className="inline-block size-1 rounded-full bg-current"
           />
         </span>
-        <span className="flex items-center gap-2">
-          {live && (
-            <span
-              aria-hidden
-              className="inline-block size-2 rounded-full bg-white animate-pulse"
-            />
-          )}
-          <span>{statusLabel}</span>
-        </span>
+        {/* Client island: owns both the 20 s refresh loop and the status it
+            reports, so dot + label + «Oppdatert HH:MM» always describe the
+            same state (#1376). */}
+        <SpectateLiveStatus live={live} />
       </div>
 
       {/* #1051: sponsorstripe — vises når ≥1 premie har sponsor. */}
@@ -187,10 +184,6 @@ export default async function SpectatePage({
           Statisk, utenfor poller-treet, så 20s-refreshen ikke remounter den.
           Kun spectate (ikke embed — tredjeparts klubbsider har EmbedFooter). */}
       <SpectateCta href={`/${locale}/login`} label={t('ctaLabel')} />
-
-      {/* Client poller: refreshes the page every 20 s while the game is active.
-          Renders nothing in the DOM — pure side-effect island. */}
-      <SpectatePoller live={live} />
     </>
   );
 }

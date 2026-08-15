@@ -1,37 +1,29 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from '@/i18n/navigation';
+import { useSpectatePolling, SPECTATE_POLL_INTERVAL_MS } from './useSpectatePolling';
 
 /**
- * Invisible client island that keeps the spectate page fresh while the game
- * is active by calling `router.refresh()` on a 20-second interval.
+ * Invisible client island that keeps an embed fresh while the game is active.
+ * All behavior lives in `useSpectatePolling`; this component is the mounting
+ * point for surfaces that want the polling without any status UI.
  *
- * Polling stops automatically when the game finishes (`live === false`), and
- * the interval is cleared on unmount to avoid leaks. We intentionally do NOT
- * use Supabase Realtime here: anonymous clients cannot subscribe to
- * `postgres_changes` (RLS blocks JWT-less WebSocket connections), so polling
- * is the robust MVP for this read-only public surface (#938).
+ * The spectate page itself does NOT mount this — it renders
+ * `SpectateLiveStatus`, which drives the same hook and also shows the state.
+ * One polling owner per page.
+ *
+ * Consumers: the two embed pages (`/embed/spill`, `/embed/liga`). They keep
+ * their existing markup; since #1376 they inherit the connectivity behavior
+ * (pause offline, immediate refresh on reconnect) without any UI change.
  */
 export function SpectatePoller({
   live,
-  intervalMs = 20_000,
+  intervalMs = SPECTATE_POLL_INTERVAL_MS,
 }: {
   live: boolean;
   /** #1024: liga-embedden poller roligere (60 s) — sesongtabellen endres sjelden. */
   intervalMs?: number;
 }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!live) return;
-
-    const id = setInterval(() => {
-      router.refresh();
-    }, intervalMs);
-
-    return () => clearInterval(id);
-  }, [live, intervalMs, router]);
+  useSpectatePolling(live, intervalMs);
 
   // Renders nothing — purely a side-effect island.
   return null;
