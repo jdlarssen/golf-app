@@ -832,6 +832,7 @@
       "publishButton": "Save and publish",
       "publishButtonWithSummary": "Publish — {count, plural, one {# player} other {# players}} · {mode} · {course}",
       "draftButton": "Save draft",
+      "draftMissingName": "Set a game name first — tap the name above.",
       "missingPrefix": "Missing: {items}",
       "missingGoToPlayers": "Go to players (step 4)",
       "playersSolo": "{count} player",

@@ -832,6 +832,7 @@
       "publishButton": "Lagre og publiser",
       "publishButtonWithSummary": "Publiser — {count, plural, one {# spiller} other {# spillere}} · {mode} · {course}",
       "draftButton": "Lagre utkast",
+      "draftMissingName": "Sett et spillnavn først — trykk på navnet over.",
       "missingPrefix": "Mangler: {items}",
       "missingGoToPlayers": "Gå til spillere (steg 4)",
       "playersSolo": "{count} spiller",

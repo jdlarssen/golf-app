@@ -263,6 +263,10 @@ export function ReadyStep({
   // ellers faller den pent tilbake til den nøytrale labelen. All data finnes
   // allerede i steg-5-scope; ingen ny komponent. `modeSummaryLabel` er samme
   // locale-aware format-tekst summary-kortet over bruker.
+  // #1384: «Lagre utkast» krever et navn — brukt både til disabled-gaten og
+  // til hint-linja som forklarer hvorfor knappen er grå.
+  const nameMissing = name.trim() === '';
+
   const publishLabel =
     selectedPlayerIds.length >= 1 && selectedCourse
       ? t('publishButtonWithSummary', {
@@ -588,16 +592,29 @@ export function ReadyStep({
               )}
             </p>
           )}
+          {/* #1384: utkast-knappen krever et spillnavn, og navnet auto-
+              genereres først når bane er valgt (steg 3). Uten hint-linja så
+              knappen bare død ut for arrangøren som ville lagre tidlig —
+              publiser-knappen over har hatt sin «Mangler: …» hele tiden. */}
           <Button
             type="submit"
             variant="secondary"
             formAction={draftAction}
             formNoValidate
             className="w-full"
-            disabled={name.trim() === ''}
+            disabled={nameMissing}
+            aria-describedby={nameMissing ? 'draft-missing-name' : undefined}
           >
             {t('draftButton')}
           </Button>
+          {nameMissing && (
+            <p
+              id="draft-missing-name"
+              className="text-xs text-muted text-center"
+            >
+              {t('draftMissingName')}
+            </p>
+          )}
         </div>
       )}
     </section>
