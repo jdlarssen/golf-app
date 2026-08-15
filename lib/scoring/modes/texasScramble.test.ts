@@ -661,3 +661,41 @@ describe('texasScramble.compute — lag uten skår rangeres sist (#635)', () => 
     expect(team1.totalNet).toBe(72);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rangert retur-rekkefølge (#1591 — samme kontrakt som patsome/team-stableford
+// fikk i #1574). Gjelder også Ambrose og Florida scramble, som deler kjernen.
+// ---------------------------------------------------------------------------
+
+describe('texasScramble.compute — rangert retur-rekkefølge (#1591)', () => {
+  it('returnerer teams i rangert rekkefølge, ikke teamNumber-rekkefølge', () => {
+    // Lag 2 spiller bedre enn lag 1, så rank-rekkefølgen er motsatt av
+    // teamNumber-rekkefølgen: podium/view kan plukke vinneren på indeks 0.
+    const players: ScoringPlayer[] = [
+      { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+      { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+      { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+    ];
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 18; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 5 }); // 90 netto
+      scores.push({ userId: 'b1', holeNumber: h, gross: 4 }); // 72 netto
+    }
+    const ctx = makeCtx({
+      players,
+      holes: par4Holes(18),
+      scores,
+      modeConfig: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 2,
+        team_handicap_pct: 0,
+      },
+    });
+    const result = compute(ctx);
+    expect(result.teams.map((t) => t.teamNumber)).toEqual([2, 1]);
+    expect(result.teams.map((t) => t.rank)).toEqual([1, 2]);
+    expect(result.teams[0].totalNet).toBe(72);
+  });
+});

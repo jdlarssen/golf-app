@@ -91,13 +91,12 @@ export function ShamblePodium({
     );
   }
 
-  // Podium-slottene fylles i sortert rekkefølge (rank 1 først) — men
-  // presentasjonen per trinn følger lagets FAKTISKE rank (#1573).
-  const sortedTeams = [...result.teams].sort((a, b) => a.rank - b.rank);
-  const first = sortedTeams[0];
-  const second = sortedTeams[1] ?? null;
-  const third = sortedTeams[2] ?? null;
-  const rest = sortedTeams.slice(3);
+  // Podium-slottene fylles i den rekkefølgen computen returnerer — rank 1
+  // først (#1591). Presentasjonen per trinn følger lagets FAKTISKE rank (#1573).
+  const first = result.teams[0];
+  const second = result.teams[1] ?? null;
+  const third = result.teams[2] ?? null;
+  const rest = result.teams.slice(3);
   const tiedBadge = (team: ShambleTeamLine): string | null =>
     team.tiedWith.length > 0
       ? t('common.tiedRank', { rank: team.rank })

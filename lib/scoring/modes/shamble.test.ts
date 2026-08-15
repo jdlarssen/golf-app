@@ -463,6 +463,19 @@ describe('shamble.compute — to-lags rangering', () => {
     expect(result.teams[0].teamNumber).toBe(1);
   });
 
+  it('returnerer teams rangert, ikke i teamNumber-rekkefølge (#1591)', () => {
+    // Lag 2 (8) < lag 1 (9): rank-rekkefølgen er motsatt av teamNumber-
+    // rekkefølgen, så podiet kan plukke vinneren på indeks 0 uten å sortere.
+    const result = compute(
+      base([
+        ['u3', 4],
+        ['u4', 4],
+      ]),
+    );
+    expect(result.teams.map((t) => t.teamNumber)).toEqual([2, 1]);
+    expect(result.teams.map((t) => t.rank)).toEqual([1, 2]);
+  });
+
   it('likt total → begge rank 1, tiedWith hverandre', () => {
     const result = compute(
       base([

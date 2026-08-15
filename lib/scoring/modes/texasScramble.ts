@@ -40,7 +40,7 @@ function pickCaptain(members: ScoringPlayer[]): string {
 
 /**
  * Beregner Texas scramble-leaderboard fra en ScoringContext. Returnerer
- * én rad per lag, sortert (per teams-array) på teamNumber stigende.
+ * én rad per lag, sortert på rank stigende (vinneren først, #1591).
  * Ranking-feltet `rank` reflekterer 1.-plass-finish (lavest totalNet vinner).
  *
  * Forutsetninger:
@@ -173,14 +173,16 @@ export function computeScramble(
       return { id: l.teamNumber, holes: arr };
     }),
   );
-  const rankById = new Map(ranked.map((r) => [r.id, r]));
-
-  const teams: TexasScrambleTeamLine[] = baseLines.map((l) => {
-    const r = rankById.get(l.teamNumber);
+  // #1591: returner i rangert rekkefølge (rank 1 først), samme kontrakt som
+  // patsome og lag-stableford fikk i #1574 — podium/view-konsumentene plukker
+  // vinneren på indeks 0 i stedet for å sortere selv.
+  const lineByTeamNumber = new Map(baseLines.map((l) => [l.teamNumber, l]));
+  const teams: TexasScrambleTeamLine[] = ranked.map((r) => {
+    const l = lineByTeamNumber.get(r.id)!;
     return {
       ...l,
-      rank: r?.rank ?? 0,
-      tiedWith: r?.tiedWith ?? [],
+      rank: r.rank,
+      tiedWith: r.tiedWith,
     };
   });
 
