@@ -534,6 +534,7 @@ export async function renderLeaderboardContent({
       holes,
       scores,
       backHref,
+      holeSegment: game.hole_segment,
       navContext,
     });
   }

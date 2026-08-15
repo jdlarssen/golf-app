@@ -2533,7 +2533,8 @@
     },
     "state35": {
       "front9Label": "FRONT 9",
-      "lockedHeading": "🤫 See you at hole 18.",
+      "segmentHalfLabel": "HOLES {from}–{to}",
+      "lockedHeading": "🤫 See you at hole {last}.",
       "lockedSub": "The rest of the board is shown when the organizer ends the game."
     },
     "nassau": {

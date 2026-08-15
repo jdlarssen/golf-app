@@ -2533,7 +2533,8 @@
     },
     "state35": {
       "front9Label": "FRONT 9",
-      "lockedHeading": "🤫 Vi sees ved hull 18.",
+      "segmentHalfLabel": "HULL {from}–{to}",
+      "lockedHeading": "🤫 Vi sees ved hull {last}.",
       "lockedSub": "Resten av tabellen vises når arrangøren avslutter spillet."
     },
     "nassau": {
