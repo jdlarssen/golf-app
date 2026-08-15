@@ -11,9 +11,10 @@ import type { ShambleResult, ShambleTeamLine } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import {
   PLACE_TIER,
+  SLOT_HEIGHTS_TALL,
+  TIER_ACCENT,
   podiumPlace,
   type PodiumSlot,
-  type PodiumTier,
 } from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { ShamblePlayerInfo } from './ShambleView';
@@ -215,25 +216,6 @@ export function ShamblePodium({
 }
 
 
-
-/**
- * Trinnhøyde følger SLOTTEN, ikke ranken — midten er alltid høyest, også når
- * to trinn deler samme rank. Lag-trinnene er høyere enn fellesskalaen i
- * `podiumPresentation` fordi de bærer en ekstra medlemsnavn-linje.
- */
-const SLOT_HEIGHTS: Record<PodiumSlot, string> = {
-  1: 'min-h-[200px]',
-  2: 'min-h-[170px]',
-  3: 'min-h-[150px]',
-};
-
-const TIER_ACCENT: Record<PodiumTier, string> = {
-  champagne:
-    'border-accent bg-accent/[0.08] shadow-[0_2px_14px_rgba(201,169,97,0.18)]',
-  silver: 'border-muted/40 bg-surface',
-  bronze: 'border-warning/40 bg-surface',
-};
-
 function PodiumStep({
   slot,
   team,
@@ -261,7 +243,7 @@ function PodiumStep({
   // presentasjon (farge, medaljong, tall-styling) følger lagets faktiske rank.
   const place = podiumPlace(team.rank);
   const tierClass = TIER_ACCENT[PLACE_TIER[place]];
-  const heightClass = SLOT_HEIGHTS[slot];
+  const heightClass = SLOT_HEIGHTS_TALL[slot];
   const medallionSize = place === 1 ? 48 : 36;
 
   return (

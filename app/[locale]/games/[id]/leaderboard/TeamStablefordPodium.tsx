@@ -15,9 +15,10 @@ import type {
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import {
   PLACE_TIER,
+  SLOT_HEIGHTS_TALL,
+  TIER_ACCENT,
   podiumPlace,
   type PodiumSlot,
-  type PodiumTier,
 } from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SoloStablefordPlayerInfo } from './SoloStablefordView';
@@ -238,30 +239,6 @@ export function TeamStablefordPodium({
 }
 
 
-
-/**
- * Trinnhøyde følger SLOTTEN, ikke ranken — midten er alltid høyest, også når
- * to trinn deler samme rank. Lag-trinnene er høyere enn fellesskalaen i
- * `podiumPresentation` fordi de bærer en ekstra partnernavn-linje.
- */
-const SLOT_HEIGHTS: Record<PodiumSlot, string> = {
-  1: 'min-h-[200px]',
-  2: 'min-h-[170px]',
-  3: 'min-h-[150px]',
-};
-
-const TIER_ACCENT: Record<PodiumTier, string> = {
-  // Champagne: forest-tinted bg + champagne border + champagne tekst-accent.
-  champagne:
-    'border-accent bg-accent/[0.08] shadow-[0_2px_14px_rgba(201,169,97,0.18)]',
-  // Silver: en hårfin dempet ring. Mer dempet enn champagne for å la 1.-plassen
-  // dominere visuelt.
-  silver: 'border-muted/40 bg-surface',
-  // Bronse: varmere brun-tone via warning-tokenen. Tørny har ikke en dedikert
-  // bronze-token, så warning er nærmeste varme accent.
-  bronze: 'border-warning/40 bg-surface',
-};
-
 /**
  * Mapper userIds + map til en kompakt partner-streng for podium-trinnet.
  * Bruker fornavn («Alice · Bjørn») for å holde linjen lesbar på små
@@ -310,7 +287,7 @@ function PodiumStep({
   // presentasjon (farge, medaljong, tall-styling) følger lagets faktiske rank.
   const place = podiumPlace(team.rank);
   const tierClass = TIER_ACCENT[PLACE_TIER[place]];
-  const heightClass = SLOT_HEIGHTS[slot];
+  const heightClass = SLOT_HEIGHTS_TALL[slot];
   // Medallion-størrelse: 1.-plass får større for å forsterke hierarkiet.
   const medallionSize = place === 1 ? 48 : 36;
 
