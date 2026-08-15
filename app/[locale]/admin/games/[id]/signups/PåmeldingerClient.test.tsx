@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PåmeldingerClient } from './PåmeldingerClient';
 import type { RequestRow } from './types';
 
@@ -117,6 +117,32 @@ describe('PåmeldingerClient — pending tab', () => {
     expect(
       screen.getByLabelText(/Valgfri begrunnelse/i),
     ).toBeInTheDocument();
+  });
+
+  it('reject-modalen tar fokus og lukkes med Escape (#1590)', () => {
+    render(
+      <PåmeldingerClient
+        gameId={GAME_ID}
+        requests={[makeRequest({ displayName: 'Anna Hansen' })]}
+        tab="pending"
+        locked={false}
+        gameMode="stableford"
+        approvedCount={0}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Avvis' });
+    act(() => trigger.focus());
+    fireEvent.click(trigger);
+
+    // Tastatur-/skjermleserbruker lander på begrunnelses-feltet — ikke bak
+    // dialogen, og ikke på det skjulte honeypot-feltet som står først i formen.
+    expect(screen.getByRole('textbox')).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    // Dialogen er borte, og fokus er tilbake på knappen som åpnet den.
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(trigger).toHaveFocus();
   });
 
   it('tom-tilstand når listen er tom', () => {

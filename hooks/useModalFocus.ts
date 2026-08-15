@@ -2,8 +2,27 @@
 
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
-const FOCUSABLE_SELECTOR =
-  'button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+/**
+ * Fokuserbare elementer som faktisk står I tab-rekkefølgen. `tabindex="-1"`
+ * betyr «programmatisk fokuserbar, men hopp over ved Tab», og fella må hoppe
+ * over dem av samme grunn som nettleseren gjør det: avvis-dialogen i
+ * påmeldings-flaten starter med et honeypot-felt (`display:none`,
+ * `tabindex="-1"`) som ellers ville stått først i lista. Nettleseren nekter å
+ * fokusere et skjult felt, så initial-fokus + hver Tab ville blitt spist uten
+ * at fokus flyttet seg. (jsdom fokuserer det gladelig — derfor bor regelen
+ * her, ikke i en test.)
+ */
+const FOCUSABLE_SELECTOR = [
+  'button',
+  'a[href]',
+  'input',
+  'select',
+  'textarea',
+  'summary',
+  '[tabindex]',
+]
+  .map((tag) => `${tag}:not([tabindex="-1"])`)
+  .join(', ');
 
 function getFocusable(container: HTMLElement | null): HTMLElement[] {
   if (!container) return [];
@@ -30,8 +49,8 @@ export interface ModalFocus<T extends HTMLElement> {
  *
  * `role="dialog"` + `aria-modal="true"` lover skjermlesere at bakgrunnen er
  * uinteressant — uten dette holder ikke koden det løftet (WCAG 2.4.3).
- * Mønsteret er hentet fra `components/FormatGuideSheet.tsx`, som beholdes urørt
- * (null testdekning) til den kan migreres med test først.
+ * Mønsteret er hentet fra `components/FormatGuideSheet.tsx`, som selv gikk over
+ * på hooken i #1590 da den fikk testdekning.
  *
  * ⚠️ Effekten har deps `[open]` ALENE, og hooken tar derfor ingen callbacks:
  * Escape-lukking blir liggende i hver dialog. Hadde vi tatt `onClose` inn og

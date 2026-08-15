@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useModalFocus } from '@/hooks/useModalFocus';
 import type { AppLocale } from '@/i18n/routing';
 import { formatDateTime } from '@/lib/i18n/format';
 import { approveRequest, rejectRequest } from './actions';
@@ -282,8 +283,30 @@ function RejectModal({
   onSubmit: (fd: FormData) => void;
   t: ReturnType<typeof useTranslations<'admin.game.signups'>>;
 }) {
+  // Modalen mountes kun når den er åpen, så `open` er konstant true her.
+  // Fokus inn i dialogen, Tab holdes innenfor, og fokus tilbake på «Avvis»-
+  // knappen ved unmount (#1590).
+  const { containerRef } = useModalFocus<HTMLDivElement>(true);
+
+  // Escape lukker. Forelderen eier begrunnelses-teksten, så `onCancel` er en ny
+  // closure for hvert tastetrykk i feltet — lytteren leser den via ref slik at
+  // effekten kjører én gang per åpning i stedet for per tegn.
+  const cancelRef = useRef(onCancel);
+  useEffect(() => {
+    cancelRef.current = onCancel;
+  }, [onCancel]);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') cancelRef.current();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div
+      ref={containerRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="reject-modal-title"

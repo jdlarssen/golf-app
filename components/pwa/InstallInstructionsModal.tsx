@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useModalFocus } from '@/hooks/useModalFocus';
 
 type Variant = 'ios-safari' | 'ios-other' | 'unsupported';
 
@@ -15,6 +16,11 @@ export function InstallInstructionsModal({
   variant: Variant;
 }) {
   const t = useTranslations('installInstructions');
+
+  // Fokus inn i dialogen ved åpning, Tab holdes innenfor, og fokus tilbake på
+  // «Installer»-knappen ved lukking (#1590). Escape-lukkingen blir liggende
+  // her — hooken tar bevisst ingen callbacks.
+  const { containerRef } = useModalFocus<HTMLDivElement>(open);
 
   useEffect(() => {
     if (!open) return;
@@ -34,6 +40,8 @@ export function InstallInstructionsModal({
 
   return (
     <div
+      ref={containerRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="install-modal-title"
