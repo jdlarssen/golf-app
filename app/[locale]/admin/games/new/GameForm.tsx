@@ -609,18 +609,16 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </div>
       ))}
 
-      {/* Section 1: Basics. #909: synlighet + sideturnering løftes ut av
-          Grunnoppsett (showAdvancedInline={false}) og ned i «Innstillinger»-
-          panelet via AdvancedSettingsSection includeVisibility — samme path
-          som wizarden. Holder Grunnoppsett-panelet lett (bane/tee/tid/navn)
-          så det kan stå åpent som default uten å dra med seg sideturnering-
-          katalogen. Form-felt-navn er uendret. */}
+      {/* Section 1: Basics. #909: synlighet + sideturnering bor i
+          «Innstillinger»-panelet via AdvancedSettingsSection includeVisibility
+          — samme path som wizarden. Holder Grunnoppsett-panelet lett
+          (bane/tee/tid/navn) så det kan stå åpent som default uten å dra med
+          seg sideturnering-katalogen. Form-felt-navn er uendret. */}
       <Disclosure title={t('panelTitleBasics')} defaultOpen>
         <BasicsSection
           state={state}
           courses={courses}
           showName
-          showAdvancedInline={false}
           hideHeading
         />
       </Disclosure>
