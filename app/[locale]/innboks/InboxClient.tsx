@@ -83,7 +83,7 @@ export function InboxClient({
       }
       if (actionFailed) setActionFailed(false);
     } catch (err) {
-      console.error('[innboks] handling feilet', err);
+      console.error('[innboks] optimistic action failed', err);
       setItems(snapshot);
       setActionFailed(true);
     }
