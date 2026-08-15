@@ -44,7 +44,16 @@ export async function TilesGrid() {
       .from('invitations')
       .select('id', { count: 'exact', head: true })
       .is('accepted_at', null),
-    supabase.from('users').select('id', { count: 'exact', head: true }),
+    // «Registrert» = ferdig onboardede, ikke-slettede spillere — nøyaktig det
+    // spillerlista på /admin/spillere viser. Uten filteret teller vi også
+    // trigger-radene til ventende invitéer og #1012-anonymiserte husk-rader,
+    // og flisen viste et høyere tall enn siden den lenker til. Samme kjede i
+    // spillere/page.tsx (getCounts) — endres definisjonen, endres begge (#1662).
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .not('profile_completed_at', 'is', null)
+      .is('deleted_at', null),
     supabase.from('courses').select('id', { count: 'exact', head: true }),
     supabase
       .from('games')
