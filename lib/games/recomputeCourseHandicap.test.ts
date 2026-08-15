@@ -454,7 +454,7 @@ describe('recomputeCourseHandicapForUser — greensome-overstyring (#1537)', () 
     expect(revalidateTagMock).toHaveBeenCalledTimes(2);
   });
 
-  it('hånd-redigert overstyring: ingen skriving, ingen revalidering', async () => {
+  it('hånd-redigert overstyring: mode_config skrives ikke; kun CH-revalideringen kjører', async () => {
     const client = buildSupabaseMock(
       greensomeQueue({ ...GREENSOME_CONFIG, team_strokes_override: { team1: 14, team2: 20 } }),
     );
