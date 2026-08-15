@@ -24,7 +24,8 @@ const getCounts = cache(async () => {
   const supabase = await getServerClient();
   // userCount counts fully-onboarded players only (profile_completed_at NOT NULL)
   // to match what PlayersList shows; otherwise pending-invitee trigger rows
-  // would inflate the count.
+  // would inflate the count. Samme kjede i Klubbhus-flisen (admin/TilesGrid.tsx)
+  // — ett tall, én regel (#1662).
   const [usersRes, pendingRes] = await Promise.all([
     supabase
       .from('users')
