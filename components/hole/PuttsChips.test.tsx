@@ -30,6 +30,19 @@ describe('PuttsChips', () => {
     expect(onSelect).toHaveBeenCalledWith(6);
   });
 
+  it('gives both stepper buttons the 44px tap extension (#1584)', () => {
+    const { container } = render(
+      <PuttsChips value={6} ariaName="Hull 9" onSelect={vi.fn()} />,
+    );
+    const extended = container.querySelectorAll<HTMLElement>('.tap-extend');
+    expect(extended).toHaveLength(2);
+    for (const el of extended) {
+      // 36 + 2×4 = 44 on every edge; the drawn box stays h-9 w-9.
+      expect(el.style.getPropertyValue('--tap-extend')).toBe('-4px');
+      expect(el.className).toContain('h-9 w-9');
+    }
+  });
+
   it('clamps the stepper at the CHECK bound of 10', () => {
     const { onSelect } = setup(10);
     expect(screen.getByRole('button', { name: 'Flere putter på Hull 9' })).toBeDisabled();
