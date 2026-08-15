@@ -185,6 +185,9 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
  * is off-app) so the player learns the round has stalled without having to
  * reopen the game — the /approve banner promises exactly this (#1358).
  *
+ * Idempotent since #1395 — a second reject of the same card is a no-op that
+ * still lands on the success banner, but sends no second notification.
+ *
  * Admin rejection runs through this same action (loadAndAuthorize lets admins
  * straight through), so peer and admin rejection are covered by one call site.
  */
@@ -214,6 +217,10 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
     })
     .eq('game_id', gameId)
     .eq('user_id', playerUserId)
+    // #1395: kun et innlevert kort kan avvises. Uten filteret traff et
+    // dobbelttrykk (eller en re-post av skjemaet) fortsatt 1 rad og fyrte et
+    // nytt scorecard_rejected-varsel + push til spilleren.
+    .not('submitted_at', 'is', null)
     .select('user_id');
 
   if (error) {
@@ -222,10 +229,33 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
 
   // #704: samme 0-rads-felle som approveScorecard. Uten denne vakta ville en
   // RLS-blokkert peer-avvisning rapportere falsk suksess (redirect ?status=
-  // rejected) mens raden aldri ble rørt. Reject har ingen idempotens-filter, så
-  // en 0-rads-UPDATE betyr utvetydig nektet tilgang (eller manglende rad). Bruker
-  // den eksisterende `db`-feilkoden i stedet for en ny i18n-nøkkel.
+  // rejected) mens raden aldri ble rørt. Bruker den eksisterende `db`-feilkoden
+  // i stedet for en ny i18n-nøkkel.
+  //
+  // #1395: med submitted_at-filteret har 0 rader to lovlige grunner, akkurat som
+  // i approveScorecard. Ett oppfølgings-SELECT skiller dem — attestanten kan
+  // lese raden («game_players select shared game»: is_admin() OR
+  // is_in_game(game_id), pluss «game_players creator select» for arrangøren som
+  // ikke spiller selv):
+  //   • raden synlig med submitted_at = null → kortet er allerede avvist (eller
+  //     aldri levert) → idempotent suksess, og INGEN nytt varsel.
+  //   • raden usynlig/borte → tilgang nektet → ?error=db som før.
   if (!updated || updated.length === 0) {
+    const { data: existing } = await supabase
+      .from('game_players')
+      .select('submitted_at')
+      .eq('game_id', gameId)
+      .eq('user_id', playerUserId)
+      .maybeSingle<{ submitted_at: string | null }>();
+
+    if (existing && existing.submitted_at === null) {
+      // Allerede avvist — idempotent. Revalider så et stakkars «venter på
+      // godkjenning»-UI ikke blir hengende, men ikke varsle på nytt.
+      revalidateTag(`game-${gameId}`, 'max');
+      revalidatePath(`/games/${gameId}`);
+      revalidatePath(`/games/${gameId}/approve`);
+      redirect({ href: `/games/${gameId}/approve?status=rejected` as string, locale });
+    }
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
 

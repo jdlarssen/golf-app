@@ -277,8 +277,9 @@ describe('rejectScorecard', () => {
   });
 
   it('#704: 0-row reject (RLS-blocked peer) → ?error=db, no success redirect', async () => {
-    // Same trap as approveScorecard: a 0-row UPDATE returns error == null. Reject
-    // has no idempotency filter, so 0 rows unambiguously means access denied.
+    // Same trap as approveScorecard: a 0-row UPDATE returns error == null. Since
+    // #1395 the action follows up with a read to tell "already rejected" from
+    // "access denied" apart — an invisible row means denied.
     supabaseMock = buildSupabaseMock([
       { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
       { data: { is_admin: false }, error: null }, // users.is_admin
@@ -290,6 +291,7 @@ describe('rejectScorecard', () => {
         error: null,
       }, // game_players for attestant-regelen
       { data: [], error: null }, // game_players.update → 0 rows (RLS blocked)
+      { data: null, error: null }, // follow-up read: row not visible → denied
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'side2' } },
@@ -304,6 +306,33 @@ describe('rejectScorecard', () => {
     expect(revalidateTagMock).not.toHaveBeenCalled();
     // I3: a 0-row write must not announce something that never happened.
     expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('#1395: already rejected → idempotent ?status=rejected, no second notification', async () => {
+    // Double-tapping «Avvis» used to hit 1 row again (the UPDATE was unfiltered)
+    // and fire a second scorecard_rejected notification + push. With the
+    // `submitted_at is not null` filter the second write matches 0 rows, and the
+    // follow-up read shows the card is already un-submitted → idempotent success.
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: [], error: null }, // game_players.update → 0 rows (already rejected)
+      { data: { submitted_at: null }, error: null }, // follow-up read: card is not submitted
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { rejectScorecard } = await import('./actions');
+
+    await expect(
+      rejectScorecard('game-1', makeFormData('player-2')),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/approve?status=rejected');
+    // The whole point of #1395: the player gets one notification, not two.
+    expect(notifyMock).not.toHaveBeenCalled();
+    // Idempotent success still revalidates so stale "waiting" UI clears.
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
   });
 
   it('#1358: notifies the player with scorecard_rejected when the card is rejected', async () => {
