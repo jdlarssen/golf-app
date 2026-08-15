@@ -18,7 +18,6 @@ const BUTTON_BASE = [
   'inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full',
   'border px-2 text-sm transition-colors duration-100',
   'disabled:cursor-not-allowed disabled:opacity-40',
-  '',
 ].join(' ');
 
 export interface RowReactionsProps {

@@ -117,7 +117,6 @@ export function LiveFollowControl({
             className={[
               'relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer',
               'rounded-full border-2 border-transparent transition-colors duration-200',
-              '',
               'disabled:opacity-60',
               enabled ? 'bg-primary' : 'bg-border',
             ].join(' ')}
