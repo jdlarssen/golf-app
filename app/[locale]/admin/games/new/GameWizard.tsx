@@ -169,6 +169,22 @@ function parseStepFromSearch(sp: URLSearchParams): Step {
 }
 
 /**
+ * #1383: er arrangøren bevisst sendt inn i flyten med forvalg (cup-lenke,
+ * revansje, `?bane=`), eller er dette en blank start?
+ *
+ * `scheduled_tee_off_at` teller IKKE som forvalg: admin-ruta sender den alltid
+ * (#1171 smart default), så selve tilstedeværelsen av `initialValues` er ikke
+ * et signal. Alt annet er det — cup seeder `game_mode`/`lock_game_mode`/
+ * `tournament_id`, revansje seeder roster + format, `?bane=` seeder
+ * `course_id`.
+ */
+function isSeededFlow(initialValues: InitialValues | undefined): boolean {
+  return Object.keys(initialValues ?? {}).some(
+    (key) => key !== 'scheduled_tee_off_at',
+  );
+}
+
+/**
  * Ytre skall: leser et eventuelt lagret utkast (#1380) og monterer
  * veiviser-kroppen på nytt med det som seed.
  *
@@ -179,9 +195,19 @@ function parseStepFromSearch(sp: URLSearchParams): Step {
  * `key` på kroppen, slik at initializerne kjører på nytt med utkastet. Finnes
  * det ikke noe utkast — det vanlige tilfellet — skjer ingen remount i det hele
  * tatt.
+ *
+ * #1383: samme effekt avgjør også om en `?step=N`-URL er foreldet. Steget
+ * leses fra URL-en ved mount, men skjema-staten starter blank — en delt eller
+ * bokmerket `?step=5`-lenke (ny fane, annen enhet, tømt sessionStorage) ville
+ * ellers vist «Klar?»-oppsummeringen full av defaults arrangøren aldri har
+ * valgt. Finnes det verken utkast eller forvalg, sender vi flyten tilbake til
+ * steg 1.
  */
 export function GameWizard(props: Props) {
+  const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const storageKey = wizardDraftStorageKey(pathname);
   const draftContext = wizardDraftContext({
     initialIntent: props.initialIntent,
@@ -189,19 +215,40 @@ export function GameWizard(props: Props) {
     defaultGroupId: props.defaultGroupId,
   });
   const [draft, setDraft] = useState<WizardDraft | null>(null);
+  // #1383: reset skjer maks én gang per mount. `?step` er borte etter
+  // replace-en, så steg-guarden under stopper uansett en ny runde — men
+  // replace-navigasjonen er en RSC-rundtur, og ref-en holder vinduet før
+  // `searchParams` rekker å oppdatere seg lukket.
+  const didResetStep = useRef(false);
 
   const { courses, players } = props;
+  const seededFlow = isSeededFlow(props.initialValues);
   useEffect(() => {
     const found = loadWizardDraft(storageKey, draftContext);
-    if (!found) return;
-    // setState i en effekt er poenget her: vi henter EKSTERN tilstand
-    // (sessionStorage) som ikke kan leses under render. React-linteren
-    // advarer mot mønsteret generelt; for dette tilfellet er det korrekt.
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setDraft(reconcileWizardDraft(found, { courses, players }));
-    /* eslint-enable react-hooks/set-state-in-effect */
+    if (found) {
+      // setState i en effekt er poenget her: vi henter EKSTERN tilstand
+      // (sessionStorage) som ikke kan leses under render. React-linteren
+      // advarer mot mønsteret generelt; for dette tilfellet er det korrekt.
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setDraft(reconcileWizardDraft(found, { courses, players }));
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
+
+    // #1383: ingenting å gjenoppta. Står det likevel `?step=2..5` i URL-en, og
+    // ruta ikke har seedet flyten, er lenken foreldet → tilbake til steg 1.
+    // `replace` (ikke push): dette er ikke en navigasjon arrangøren gjorde.
+    if (didResetStep.current || seededFlow) return;
+    const params = new URLSearchParams(searchParamsString);
+    if (parseStepFromSearch(params) === 1) return;
+    didResetStep.current = true;
+    // Øvrige params (?intent=, ?klubb=, ?bane=, ?fra=) er seedene RSC-re-
+    // renderen leser — kun `step` skal bort.
+    params.delete('step');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey, draftContext]);
+  }, [storageKey, draftContext, searchParamsString, seededFlow]);
 
   return (
     <WizardBody
