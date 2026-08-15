@@ -161,6 +161,23 @@ describe('SpecificValueSheet', () => {
     expect(screen.getByTestId('trigger')).toHaveFocus();
   });
 
+  it('arket selv kan ta fokus når ingenting inni er fokuserbart (#1666)', () => {
+    render(
+      <SpecificValueSheet
+        open={true}
+        par={4}
+        onPick={() => {}}
+        onClear={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    // useModalFocus faller tilbake på container.focus() når alle knappene er
+    // disabled under et server-kall — uten tabIndex={-1} er kallet en no-op.
+    const sheet = screen.getByTestId('specific-value-sheet');
+    act(() => sheet.focus());
+    expect(sheet).toHaveFocus();
+  });
+
   it('each number button has aria-label "Sett score til N"', () => {
     render(
       <SpecificValueSheet

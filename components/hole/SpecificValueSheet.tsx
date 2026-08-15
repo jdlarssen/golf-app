@@ -125,8 +125,12 @@ export function SpecificValueSheet(
       onClick={onClose}
       data-testid="specific-value-backdrop"
     >
+      {/* tabIndex={-1}: useModalFocus faller tilbake på container.focus() når
+          ingenting inni arket er fokuserbart — uten den er en <div> ikke
+          fokuserbar, og fallbacken feiler stille (aldri i tab-rekkefølgen). */}
       <div
         ref={containerRef}
+        tabIndex={-1}
         style={sheetStyle}
         onClick={handleSheetClick}
         data-testid="specific-value-sheet"
