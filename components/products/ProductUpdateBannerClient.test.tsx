@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 const markOneAsReadMock = vi.fn();
@@ -29,6 +29,8 @@ vi.mock('@/components/ui/SmartLink', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   cleanup();
+  // Default: skrivingen går gjennom. Rollback-testen overstyrer med ok:false.
+  markOneAsReadMock.mockResolvedValue({ ok: true });
 });
 
 describe('ProductUpdateBannerClient', () => {
@@ -101,10 +103,35 @@ describe('ProductUpdateBannerClient', () => {
     const banner = screen.getByTestId('product-update-banner');
     expect(banner).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText('Lukk varselet'));
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Lukk varselet'));
+    });
 
     expect(screen.queryByTestId('product-update-banner')).not.toBeInTheDocument();
     expect(markOneAsReadMock).toHaveBeenCalledWith('notification-xyz');
+  });
+
+  it('#1665: feilet lagring ruller tilbake — banneret kommer igjen med feillinje', async () => {
+    // Uten rollback forsvant banneret for godt i denne økta og dukket opp
+    // igjen ved neste sidelast, uten forklaring.
+    markOneAsReadMock.mockResolvedValue({ ok: false });
+    const { ProductUpdateBannerClient } = await import('./ProductUpdateBannerClient');
+    render(
+      <ProductUpdateBannerClient
+        notificationId="n-1"
+        title="X"
+        body="Y"
+        link={null}
+        ctaLabel={null}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Lukk varselet'));
+    });
+
+    expect(screen.getByTestId('product-update-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('product-banner-action-error')).toBeInTheDocument();
   });
 
   it('CTA-klikk markerer også som lest (parallelt med navigasjon)', async () => {
@@ -118,7 +145,9 @@ describe('ProductUpdateBannerClient', () => {
         ctaLabel="Prøv det"
       />,
     );
-    fireEvent.click(screen.getByRole('link', { name: 'Prøv det' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Prøv det' }));
+    });
     expect(markOneAsReadMock).toHaveBeenCalledWith('n-1');
   });
 });
