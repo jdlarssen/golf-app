@@ -122,6 +122,45 @@ describe('approveScorecard', () => {
     expect(lastRedirect()).toBe('/games/game-1/approve?status=approved');
   });
 
+  it('#1598: the approval payload carries approver_role «peer» so a nameless approver stays «En spiller»', async () => {
+    // Denne stien er alltid en medspiller — arrangøren godkjenner via
+    // adminApproveScorecard. Rollen følger med så kortet velger riktig
+    // fallback når godkjenneren mangler profilnavn.
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: false }, error: null }, // users.is_admin — a plain peer
+      {
+        data: [
+          { user_id: 'side1', flight_number: 1, withdrawn_at: null },
+          { user_id: 'side2', flight_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      }, // game_players (canApproveScorecardFor)
+      { data: [{ user_id: 'side1' }], error: null }, // game_players.update → 1 row
+      { data: { name: 'Sommercup' }, error: null }, // games.name (notify block)
+      { data: { name: null }, error: null }, // users.name — approver has no profile name
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'side2' } },
+    });
+
+    const { approveScorecard } = await import('./actions');
+
+    await expect(approveScorecard('game-1', 'side1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'side1',
+      kind: 'scorecard_approved',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Sommercup',
+        approver_name: null,
+        approver_role: 'peer',
+      },
+    });
+  });
+
   it('#704: 0-row write (RLS-blocked peer) → ?error=db, no success, no notification', async () => {
     // The bug: a same-flight peer who is not creator/admin matches no UPDATE
     // policy → 0 rows, error == null. Without the rows-affected guard this would

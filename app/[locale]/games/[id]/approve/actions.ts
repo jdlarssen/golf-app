@@ -159,6 +159,9 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
     // #1364: null i stedet for norsk plassholdertekst. Payloaden skrives i
     // godkjennerens kontekst men leses i mottakerens locale, så kortet fyller
     // fallbacken ved render (buildNotificationText).
+    // #1598: `approver_role` forteller kortet HVILKEN fallback som gjelder når
+    // navnet mangler. Denne stien er alltid en medspiller — admin/arrangør
+    // godkjenner via adminApproveScorecard.
     await notify({
       userId: playerUserId,
       kind: 'scorecard_approved',
@@ -166,6 +169,7 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
         game_id: gameId,
         game_name: gameRes.data?.name ?? null,
         approver_name: approverRes.data?.name?.trim() || null,
+        approver_role: 'peer',
       },
     });
   } catch (err) {

@@ -65,10 +65,17 @@ const scorecardSubmittedSchema = z.object({
   player_name: z.string().min(1).nullable().optional(),
 });
 
+// scorecard_approved: både medspiller-attestering (approve/actions.ts) og
+// arrangør-/admin-overstyring (admin/games/[id]/actions.ts) produserer denne.
+// `approver_role` sier hvilken av de to det var, slik at kortet kan velge
+// RIKTIG fallback når godkjenneren mangler profilnavn: «Arrangøren» for
+// organizer, «En spiller» for peer (#1598). Historiske payloads uten feltet
+// (skrevet før #1598) faller tilbake til den nøytrale spiller-teksten som før.
 const scorecardApprovedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1).nullable().optional(),
   approver_name: z.string().min(1).nullable().optional(),
+  approver_role: z.enum(['peer', 'organizer']).nullable().optional(),
 });
 
 // scorecard_rejected: en attestant (medspiller, oppretter eller admin) avviste

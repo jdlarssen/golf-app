@@ -41,6 +41,30 @@ describe('buildNotificationText', () => {
     expect(out).toEqual({ title: 'Nyhet', detail: 'Tekst' });
   });
 
+  it('scorecard_approved uten navn velger fallback etter rolle (#1598)', () => {
+    const detailFor = (payload: Record<string, unknown>) =>
+      buildNotificationText(
+        'scorecard_approved',
+        { game_id: 'g', game_name: 'Vinter-cup', ...payload } as NotificationPayload,
+        t,
+      ).detail;
+    const expected = (approverName: string) =>
+      `kinds.scorecardApproved.detail|${JSON.stringify({
+        approverName,
+        gameName: 'Vinter-cup',
+      })}`;
+
+    // En navnløs arrangør er ikke «En spiller» — rollen avgjør fallbacken.
+    expect(detailFor({ approver_role: 'organizer' })).toBe(expected('organizerFallback'));
+    expect(detailFor({ approver_role: 'peer' })).toBe(expected('somePlayerFallback'));
+    // Historisk payload (skrevet før #1598) → nøytral fallback som før.
+    expect(detailFor({})).toBe(expected('somePlayerFallback'));
+    // Har vi navnet, brukes det uansett rolle.
+    expect(detailFor({ approver_name: 'Kari', approver_role: 'organizer' })).toBe(
+      expected('Kari'),
+    );
+  });
+
   it('achievement_unlocked bundles moments with a neutral title (#947)', () => {
     const out = buildNotificationText(
       'achievement_unlocked',
