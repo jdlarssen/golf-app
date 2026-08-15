@@ -19,13 +19,15 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
   useRouter: () => ({ prefetch: () => {} }),
 }));
+let mockUnread = 0;
 vi.mock('@/hooks/useUnreadNotificationsCount', () => ({
-  useUnreadNotificationsCount: () => ({ count: 0, loading: false }),
+  useUnreadNotificationsCount: () => ({ count: mockUnread, loading: false }),
 }));
 
 describe('BottomNav', () => {
   beforeEach(() => {
     mockPathname = '/';
+    mockUnread = 0;
   });
 
   it('rendrer de fire fanene og markerer kun gjeldende rute som aktiv', () => {
@@ -66,6 +68,15 @@ describe('BottomNav', () => {
       expect(klubbhuset).toHaveAttribute('aria-current', 'page');
       unmount();
     }
+  });
+
+  it('legger uleste-antallet i innboks-fanens aria-label (#1389)', () => {
+    // Prikken er aria-hidden dekor, så tallet må bæres av fanen selv.
+    mockUnread = 3;
+    render(<BottomNav userId="user-1" />);
+
+    const inbox = screen.getByTestId('bottomnav-innboks-dot').closest('a');
+    expect(inbox?.getAttribute('aria-label')).toContain('3');
   });
 
   it('skjuler seg på hull-skjermen (fullskjerm scoring)', () => {
