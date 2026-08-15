@@ -257,6 +257,9 @@ export async function adminApproveScorecard(
   // samme måte som peer-godkjenning fra spillerens perspektiv. Vi henter
   // game.name og bruker det RÅ navnet (ikke audit-strengen): mangler det,
   // fyller kortet fallbacken i mottakerens locale (#1364).
+  // #1598: `approver_role: 'organizer'` gjør at den fallbacken blir
+  // «Arrangøren», ikke «En spiller». Gjelder både admin og oppretter — begge
+  // er arrangøren sett fra spilleren som får varselet.
   try {
     const { data: gameRow } = await supabase
       .from('games')
@@ -270,6 +273,7 @@ export async function adminApproveScorecard(
         game_id: gameId,
         game_name: gameRow?.name ?? null,
         approver_name: name,
+        approver_role: 'organizer',
       },
     });
   } catch (err) {
@@ -351,7 +355,7 @@ export async function endGame(gameId: string, allowMissing = false) {
  */
 export async function reopenScorecard(gameId: string, playerUserId: string) {
   const locale = await getLocale();
-  const { supabase, user, actorName, detailPath } =
+  const { supabase, user, name, actorName, detailPath } =
     await loadAdminOrCreatorContext(gameId);
 
   const { data: game } = await supabase
@@ -411,6 +415,10 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
   // fortsatt at kortet er levert og godkjent, mens avslutningen blokkerer på
   // not_all_submitted. Feil her endrer ikke utfallet av gjenåpningen — try/catch
   // slutter FØR redirecten under, som kaster by design.
+  // #1598: payloaden bærer det RÅ navnet, ikke audit-strengen `actorName` (som
+  // har en hardkodet 'Admin'-fallback). Mangler navnet, fyller kortet
+  // `organizerFallback` i MOTTAKERENS locale — samme regel som #1364 satte for
+  // de andre varsel-payloadene. Audit-loggen over bruker fortsatt `actorName`.
   try {
     await notify({
       userId: playerUserId,
@@ -418,7 +426,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
       payload: {
         game_id: gameId,
         game_name: game!.name,
-        actor_name: actorName,
+        actor_name: name,
       },
     });
   } catch (err) {

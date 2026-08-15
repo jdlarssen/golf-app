@@ -300,9 +300,18 @@ describe('adminApproveScorecard', () => {
     // «Leverte scorekort» instead of page top (client-side fallback covers
     // the common case where a server-action redirect drops the fragment).
     expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved#leverte-scorekort');
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'user-a', kind: 'scorecard_approved' }),
-    );
+    // #1598: rollen følger med i payloaden, så en navnløs arrangør får
+    // «Arrangøren»-fallbacken i kortet — ikke «En spiller».
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'user-a',
+      kind: 'scorecard_approved',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Vinter-cup',
+        approver_name: 'Jørgen',
+        approver_role: 'organizer',
+      },
+    });
   });
 
   it('creator: approves on own game, lands on /games/[id]/spillere', async () => {
@@ -437,6 +446,39 @@ describe('reopenScorecard (#1363)', () => {
         actor_name: 'Jørgen',
       },
     });
+  });
+
+  it('#1598: a nameless organizer sends actor_name null, not the «Admin» audit string', async () => {
+    // Payloaden leses i MOTTAKERENS locale, så den skal aldri bære audit-
+    // loggens norske 'Admin'-fallback. Uten navn → null, og kortet fyller
+    // «Arrangøren»/«The organizer» ved render.
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: null }, error: null }, // users (requireAdmin) — no profile name
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null }, // games.select(name, status)
+      { data: [{ user_id: 'user-a' }], error: null }, // game_players.update → 1 row
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenScorecard } = await import('./actions');
+
+    await expect(reopenScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'user-a',
+      kind: 'scorecard_reopened',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Vinter-cup',
+        actor_name: null,
+      },
+    });
+    // Audit-loggen beholder sin egen streng — den er ikke bruker-rettet.
+    expect(logAdminEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({ actorName: 'Admin' }),
+    );
   });
 
   it('0-row update (nothing submitted) → idempotent success, no varsel', async () => {

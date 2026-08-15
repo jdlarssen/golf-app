@@ -54,7 +54,15 @@ export function buildNotificationText(
       return {
         title: t('kinds.scorecardApproved.title'),
         detail: t('kinds.scorecardApproved.detail', {
-          approverName: p.approver_name ?? t('somePlayerFallback'),
+          // #1598: fallbacken må kjenne rollen. En navnløs arrangør som
+          // godkjenner er ikke «En spiller» — da står det «Arrangøren».
+          // Payloads uten `approver_role` (skrevet før #1598) beholder den
+          // nøytrale spiller-teksten.
+          approverName:
+            p.approver_name ??
+            (p.approver_role === 'organizer'
+              ? t('organizerFallback')
+              : t('somePlayerFallback')),
           gameName: p.game_name ?? t('someGameFallback'),
         }),
       };
