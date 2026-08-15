@@ -79,20 +79,20 @@ derfor tilbake til «Live» når publisering feiler. Løsning etter #1011-mønst
    `it`. Ingen ny render-test (GameWizard.test.tsx finnes — kjør den, legg ikke til).
 
 ## Success Criteria
-- [ ] #1384: uten navn viser steg 5 hint-linja under utkast-knappen, knappen har `aria-describedby` som peker på den; med navn er begge borte.
-- [ ] #1398: under publisering/utkast-lagring viser knappen pending-teksten og er `aria-busy`; den andre knappen er disabled imens.
-- [ ] #1399: `opprett-spill/page.tsx` leser verken `error` eller `emails`; ingen error-Banner-blokk; `grep -rn "sp.emails\|sp.error" app/\[locale\]/opprett-spill` = 0 treff.
-- [ ] #1400: velg «Skjul til slutt» på steg 5, utløs publiseringsfeil (f.eks. tomt roster + invite_only, eller mock i test) → radioen står fortsatt på «Skjul til slutt»; publisert spill får `score_visibility='reveal'` (staging-verifisering: opprett spill med reveal, sjekk `games.score_visibility` via staging-DB eller game-home).
-- [ ] Låst spill (edit aktivt) sender ikke `score_visibility` (hidden input ikke montert).
-- [ ] `messages/no.json` og `messages/en.json` har alle nye nøkler (draftMissingName, publishPending, draftPending); ingen MISSING_MESSAGE i konsollen på steg 5.
-- [ ] `.changes/1384-*.md`, `.changes/1398-*.md`, `.changes/1400-*.md` finnes (type fix); #1399 er refactor (ingen notat).
-- [ ] `npm run build`, `npm run lint`, co-located vitest grønt.
+- [x] #1384: … — Evidens: staging runde 1+2 punkt A (`#draft-missing-name` synlig, `aria-describedby`, borte med navn); commit cc7f132e.
+- [x] #1398: … — Evidens: staging runde 2 punkt B (begge knapper `aria-busy` + søsken disabled); commit 3b7537f2.
+- [x] #1399: … — Evidens: grep = 0 treff (bygger + evaluator); commit 70b3de94.
+- [x] #1400: … — Evidens: runde 1 avdekket DOM-reset (BLOCKER) → cadb826f (manuell dispatch); runde 2 punkt C: radio `checked` etter feil, SQL 1 rad `score_visibility='reveal'`; regresjonstest i GameWizard.test.tsx (rød uten fiks).
+- [x] Låst spill … — Evidens: GameWizard.tsx `{!lockScoreVisibility && …}` (kode-nivå; VERIFICATION GAP: `lock_score_visibility` er hardkodet false i editGameInitialValues.ts:131, ingen kjørbar rute).
+- [x] messages … — Evidens: begge JSON parser, 0 console-errors på steg 5 (evaluator runde 1+2).
+- [x] .changes … — Evidens: `node scripts/weekly-release.mjs --dry-run` grønn med alle tre notatene.
+- [x] build/lint/vitest — BUILD_EXIT=0, LINT_EXIT=0, 344/344 (admin/games).
 
 ## Gates
-- [ ] `npx vitest run "app/[locale]/admin/games/new"` (hele katalogen)
-- [ ] `npm run build`
-- [ ] `npm run lint`
-- [ ] Staging-klikkrunde av steg 5 (hint, pending, reveal-overlevelse) før merge
+- [x] vitest admin/games/new — 246/246 → 344/344 (admin/games)
+- [x] `npm run build` — exit 0
+- [x] `npm run lint` — exit 0
+- [x] Staging-klikkrunde — evaluator runde 2, se Staging-bevis i PR-kommentar
 
 ## Out of Scope
 - Fokus-på-klikk-varianten i #1384; BasicsSection/GameForm; #1385 (utkast-gjenopptak-UI); #1653 (?bane=&step=).
