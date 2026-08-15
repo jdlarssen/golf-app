@@ -68,11 +68,23 @@ describe('hasChoiceMarker', () => {
     ['## Produktvalg', true],
     ['#### produktvalg (små)', true],
     ['Closes #1406\n\nEn tagline.\n\n## Alternativ B\nB-varianten.', true],
+    // #1623: mal-teksten i CLAUDE.md foreskrev denne headingen, men regexen
+    // krevde at «produktvalg» sto først. PR #1620 — et ekte produktvalg — ble
+    // derfor auto-merget forbi eieren. Regresjonslås.
+    ['## Alternativer (produktvalg)', true],
+    // Prefiks foran ordet er greit (emoji, nummerering).
+    ['## ⚖️ Produktvalg', true],
+    // Bevisst fail-closed: en negasjon holder også merge-porten. Billigere enn
+    // å miste en eier-beslutning — ikke «fiks» dette.
+    ['## Ingen produktvalg', true],
     // Prosa uten heading = IKKE treff.
     ['Alternativer vurdert: A og B, valgte A.', false],
     ['Vi har et produktvalg her, men bygde A.', false],
     ['#Alternativ A', false], // markdown krever mellomrom etter #
     ['## Alternativ F', false], // utenfor a–e
+    // Heading uten ordet «produktvalg» og uten «Alternativ a–e» teller ikke —
+    // ellers ville rene tekniske PR-er blitt lest som valg.
+    ['## Alternativer vurdert', false],
     ['## Teknisk', false],
   ])('%s → %s', (body, expected) => {
     expect(hasChoiceMarker(body)).toBe(expected);

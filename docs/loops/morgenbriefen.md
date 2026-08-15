@@ -33,8 +33,10 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   (`docs/loops/discord-pr-kort.md`) merger selv grønne PR-er uten produktvalg. En
   «Godkjenn PR #M»-linje under «Trenger deg nå» gjelder derfor KUN PR-er som
   fortsatt har et knapp-kort — altså der kortet degraderte til `card`: produktvalg
-  (`## Produktvalg`/`## Alternativ`-heading eller lenket `autonomy:needs-decision`),
-  aldri-liste-fil, eller bruker-synlig uten `staging-verified`. En PR som allerede
+  (valg-markør i PR-body-en eller lenket `autonomy:needs-decision` — nøyaktig form
+  i `docs/loops/discord-pr-kort.md` steg 2, ikke gjentatt her: #1623 kom av at tre
+  hjem beskrev markøren ulikt), aldri-liste-fil, eller bruker-synlig uten
+  `staging-verified`. En PR som allerede
   er auto-merget rapporteres under «Skjedde i natt» (verifisert merge), aldri som
   et åpent gjøremål.
 - **Branch protection dekker merge-porten (#1477, fra 2026-08-07).** Main nekter
