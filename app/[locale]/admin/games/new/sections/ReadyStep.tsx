@@ -16,7 +16,7 @@
  * mounter den i wizard-stegtreet.
  */
 
-import { useActionState, useRef, useState } from 'react';
+import { startTransition, useActionState, useRef, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatTeeOffLineLocale } from '@/lib/i18n/format';
@@ -63,6 +63,12 @@ type Props = {
    * krever en spillerliste de ikke fylte ut.
    */
   onGoToPlayersStep?: () => void;
+  /**
+   * #1400: kalles idet et publiser-/utkast-forsøk sendes manuelt (se
+   * `dispatchManually`), så veiviseren får samme «submit startet»-hook som
+   * form-ens onSubmit gir på den native stien (utkast-tømming i GameWizard).
+   */
+  onSubmitStart?: () => void;
 };
 
 export function ReadyStep({
@@ -70,6 +76,7 @@ export function ReadyStep({
   mode,
   onNameTouched,
   onGoToPlayersStep,
+  onSubmitStart,
 }: Props) {
   const t = useTranslations('wizard.ready');
   const tWizard = useTranslations('wizard');
@@ -225,6 +232,32 @@ export function ReadyStep({
     },
     NO_SUBMIT,
   );
+
+  // #1400 (samme figur som #1397/CupSetup og #1475/CreateLigaForm): en
+  // `formAction`-dispatch lar react-dom kjøre `requestFormReset` på formen —
+  // også controlled radioer/checkboxer får DOM-`checked` satt tilbake til
+  // `defaultChecked`, og React tegner dem ikke opp igjen fordi prop-en ikke
+  // endret seg. Skjermen sier «Live» mens det skjulte feltet fortsatt sender
+  // «reveal». preventDefault + manuell dispatch i en transition hopper over
+  // auto-reset-en; `formAction` på knappene står igjen som fallback før
+  // hydrering. Constraint-validering kjøres eksplisitt for publiser (native
+  // sti ville gjort det); utkast har `formNoValidate` og hopper over.
+  function dispatchManually(
+    e: React.MouseEvent<HTMLButtonElement>,
+    action: (formData: FormData) => void,
+    validate: boolean,
+  ) {
+    const form = e.currentTarget.form;
+    if (!form) return; // ingen form (SSR-fallback) → la native sti ta det
+    if (validate && !form.reportValidity()) {
+      e.preventDefault();
+      return;
+    }
+    e.preventDefault();
+    onSubmitStart?.();
+    const formData = new FormData(form);
+    startTransition(() => action(formData));
+  }
 
   // Kode → melding. Samme oppslags-figur som opprett-sidenes ?error=-banner,
   // men med eksplisitt fallback i stedet for stille ingenting: en ukjent kode
@@ -561,6 +594,7 @@ export function ReadyStep({
           <Button
             type="submit"
             formAction={publishAction}
+            onClick={(e) => dispatchManually(e, publishAction, true)}
             className="w-full"
             pending={publishPending}
             pendingLabel={t('publishPending')}
@@ -609,6 +643,7 @@ export function ReadyStep({
             type="submit"
             variant="secondary"
             formAction={draftAction}
+            onClick={(e) => dispatchManually(e, draftAction, false)}
             formNoValidate
             className="w-full"
             pending={draftPending}

@@ -917,6 +917,7 @@ function WizardBody({
           mode={mode}
           onNameTouched={() => setNameTouched(true)}
           onGoToPlayersStep={() => goToStep(4)}
+          onSubmitStart={handleSubmitStart}
         />
       )}
 
