@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
@@ -80,7 +81,9 @@ const FORMATS_BY_INTENT = {
 
 const NO_OP = async (): Promise<CreateGameResult> => ({ error: '' });
 
-function renderWizard() {
+type WizardProps = ComponentProps<typeof GameWizard>;
+
+function renderWizard(overrides: Partial<WizardProps> = {}) {
   return render(
     <GameWizard
       courses={COURSES}
@@ -88,9 +91,20 @@ function renderWizard() {
       mode={{ kind: 'create', createDraftAction: NO_OP, createAndPublishAction: NO_OP }}
       formatsByIntent={FORMATS_BY_INTENT}
       friendPlayerIds={PLAYERS.map((p) => p.id)}
+      {...overrides}
     />,
   );
 }
+
+/**
+ * #1383: ruta har seedet flyten med forvalg (her `?bane=`-formen, som seeder
+ * course_id). Skallets reset hopper over seedede flyter, så en test som skal
+ * lande direkte på `?step=2` må rendres med dette — ellers sender #1383-reset-en
+ * flyten tilbake til steg 1 før testen rekker å gjøre noe.
+ */
+const SEEDED_BY_ROUTE: Partial<WizardProps> = {
+  initialValues: { course_id: 'course-1' },
+};
 
 beforeEach(() => {
   push.mockClear();
@@ -112,7 +126,7 @@ describe('GameWizard — #1380 per-steg history', () => {
 
   it('«Forrige» pusher også — hvert steg er sin egen history-entry', () => {
     searchString = 'step=2';
-    renderWizard();
+    renderWizard(SEEDED_BY_ROUTE);
 
     fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
 
@@ -142,9 +156,25 @@ describe('GameWizard — #1380 per-steg history', () => {
 
   it('skriver ikke URL-en når den allerede speiler steget', () => {
     searchString = 'step=2';
-    renderWizard();
+    renderWizard(SEEDED_BY_ROUTE);
 
     expect(push).not.toHaveBeenCalled();
     expect(replace).not.toHaveBeenCalled();
+  });
+});
+
+describe('GameWizard — #1383 foreldet ?step-lenke', () => {
+  it('sender blank flyt tilbake til steg 1 og beholder øvrige søke-parametre', () => {
+    // Delt/bokmerket lenke åpnet i fersk fane: ingenting i sessionStorage,
+    // ingen forvalg fra ruta — steg 5 ville vist defaults arrangøren aldri
+    // har valgt.
+    searchString = 'intent=cup&step=5';
+    renderWizard();
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?intent=cup', {
+      scroll: false,
+    });
+    expect(push).not.toHaveBeenCalled();
   });
 });
