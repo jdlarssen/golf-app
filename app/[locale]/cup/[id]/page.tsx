@@ -44,6 +44,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
   // #524: en klubb-scopet cup er kun synlig for klubbens medlemmer, deltakerne
   // og global admin. Gaten (ikke RLS) ligger i den delte helperen (#1468).
   const allowed = await canViewCupPage({
+    tournamentId: id,
     groupId: tournament.group_id,
     roster,
     proxyUserId: userId,
