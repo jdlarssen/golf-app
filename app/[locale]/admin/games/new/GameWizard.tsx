@@ -177,10 +177,16 @@ function parseStepFromSearch(sp: URLSearchParams): Step {
  * et signal. Alt annet er det — cup seeder `game_mode`/`lock_game_mode`/
  * `tournament_id`, revansje seeder roster + format, `?bane=` seeder
  * `course_id`.
+ *
+ * Verdien avgjør, ikke nøkkelen: en nøkkel som står der med `undefined` er
+ * ingen arrangør-beslutning. Ingen konsument gjør det i dag, men den dagen et
+ * alltid-tilstedeværende valgfritt felt legges inn her, ville en ren
+ * nøkkel-telling slått av hele fiksen uten at noe feilet.
  */
 function isSeededFlow(initialValues: InitialValues | undefined): boolean {
-  return Object.keys(initialValues ?? {}).some(
-    (key) => key !== 'scheduled_tee_off_at',
+  return Object.entries(initialValues ?? {}).some(
+    ([key, value]) =>
+      key !== 'scheduled_tee_off_at' && value !== undefined && value !== '',
   );
 }
 
@@ -247,8 +253,17 @@ export function GameWizard(props: Props) {
     params.delete('step');
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // ⚠️ `searchParamsString` skal IKKE inn i dep-arrayet, selv om effekten
+    // leser den. «Er denne ?step-lenken foreldet?» er per definisjon et
+    // mount-spørsmål: URL-en kom utenfra. Med URL-en som dependency kjører
+    // avgjørelsen på nytt ved HVER steg-navigasjon — og da er utkastet det
+    // eneste «finnes noe å gjenoppta»-signalet. Cup-grenen skriver aldri
+    // utkast (se `isNewCupFlow` under), så arrangørens første «Neste» ble
+    // lest som en foreldet lenke og kastet tilbake til steg 1. Effekten
+    // fanger `searchParamsString` fra sin egen render, så mount-verdien er
+    // den riktige — ingen stale closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey, draftContext, searchParamsString, seededFlow]);
+  }, [storageKey, draftContext]);
 
   return (
     <WizardBody
