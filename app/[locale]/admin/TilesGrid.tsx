@@ -15,7 +15,6 @@ export async function TilesGrid() {
   const { supabase } = await getAdminContext();
   const t = await getTranslations('admin.dashboard');
   const locale = await getLocale();
-  const now = new Date();
 
   const [
     activeGamesRes,
@@ -37,11 +36,14 @@ export async function TilesGrid() {
       .from('games')
       .select('id', { count: 'exact', head: true })
       .in('status', ['draft', 'scheduled']),
+    // «Ventende invitasjoner» = alle uaksepterte, utløpte inkludert: det er
+    // nøyaktig det ventelista på /admin/spillere viser (utløpte får «Utløpt»-
+    // merke, #1381). Samme kjede i spillere/page.tsx (getCounts) og
+    // _components/PendingInvitations.tsx — endres definisjonen, endres alle tre.
     supabase
       .from('invitations')
       .select('id', { count: 'exact', head: true })
-      .is('accepted_at', null)
-      .gt('expires_at', now.toISOString()),
+      .is('accepted_at', null),
     supabase.from('users').select('id', { count: 'exact', head: true }),
     supabase.from('courses').select('id', { count: 'exact', head: true }),
     supabase
