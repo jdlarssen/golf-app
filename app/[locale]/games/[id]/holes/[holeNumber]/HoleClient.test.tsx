@@ -600,6 +600,28 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
     const btn = screen.getByRole('button', { name: 'Tast inn scoren din' });
     expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it('resolves my card by userId — not by team — in an individual format (#1657)', () => {
+    // The other direction of the same rule: the collapse must stay OFF for an
+    // individual format. I am the THIRD player, so a wrongly-collapsed lookup
+    // falls through the teamNumber match to cards[0] — Player 1's empty card —
+    // and the CTA would still read «Tast inn scoren din».
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        undefined, // u1 — not entered
+        undefined, // u2 — not entered
+        { strokes: 5 }, // u3 = myUserId — entered
+        undefined, // u4 — not entered
+      ]),
+    );
+    render(
+      <HoleClient
+        {...baseProps({ gameMode: 'solo_strokeplay', myUserId: 'u3' })}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Neste hull · 2' });
+    expect(link.getAttribute('href')).toBe('/games/g1/holes/2');
+  });
 });
 
 describe('HoleClient — deliver CTA for a non-captain (#1577)', () => {
