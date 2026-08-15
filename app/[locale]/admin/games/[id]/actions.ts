@@ -30,6 +30,13 @@ import { supportsWithdrawal } from '@/lib/scoring';
  * `{ supabase, user, actorName }` like it did with the previously-inlined
  * `requireAdmin()` function. Prepares for Fase 4 chunk 2 (#223) lifting
  * the admin-layout-gate.
+ *
+ * Two name shapes on purpose (#1670), same split `loadAdminOrCreatorContext`
+ * has carried since #1364: `actorName` is the audit-log string (non-null and
+ * Norwegian by contract — `logAdminEvent` types it that way), while `name` is
+ * the raw profile name for notification payloads, which are read in the
+ * RECIPIENT's locale and therefore must not carry Norwegian prose. Having only
+ * `actorName` here is what let 'Admin' leak into the `game_reopened` payload.
  */
 async function loadAdminContext() {
   const supabase = await getServerClient();
@@ -37,6 +44,7 @@ async function loadAdminContext() {
   return {
     supabase,
     user: { id: role.userId },
+    name: role.name?.trim() || null,
     actorName: role.name?.trim() || 'Admin',
   };
 }
@@ -545,7 +553,7 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
  */
 export async function reopenGame(gameId: string) {
   const locale = await getLocale();
-  const { supabase, user, actorName } = await loadAdminContext();
+  const { supabase, user, name, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
   const { data: game } = await supabase
@@ -602,9 +610,15 @@ export async function reopenGame(gameId: string) {
   if (rosterError) {
     console.error('[reopenGame] roster lookup for varsel failed', rosterError);
   } else {
+    // #1670: `actorName` here is the RAW profile name (null when the arrangør
+    // has none), not the audit string destructured above — the payload is read
+    // in the RECIPIENT's locale, so a hardcoded 'Admin' would ship Norwegian
+    // prose as data. On null the card fills `organizerFallback` at render.
+    // Same cure #1598 applied to reopenScorecard; `logAdminEvent` above still
+    // gets the audit string.
     await notifyPlayersGameReopened(
       (roster ?? []).filter((p) => p.user_id !== user.id),
-      { id: gameId, name: game!.name, actorName },
+      { id: gameId, name: game!.name, actorName: name },
       'reopenGame',
     );
   }

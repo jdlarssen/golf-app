@@ -164,10 +164,15 @@ export async function notifyPlayersGameStarted(
  *
  * `logPrefix` brukes som console.error-prefix ved notify-rejection, typisk
  * `'reopenGame'`, så feilen kan spores i Vercel-logs.
+ *
+ * `actorName` er aktørens RÅ profilnavn og kan være null (#1670) — aldri
+ * audit-loggens streng, som har en hardkodet norsk 'Admin'-fallback.
+ * Payloaden leses i MOTTAKERENS locale, så mangler navnet, skal null gå hele
+ * veien inn i `actor_name` og kortet fylle `organizerFallback` ved render.
  */
 export async function notifyPlayersGameReopened(
   players: Array<{ user_id: string }>,
-  game: { id: string; name: string; actorName: string },
+  game: { id: string; name: string; actorName: string | null },
   logPrefix: string,
 ): Promise<void> {
   if (players.length === 0) return;
