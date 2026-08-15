@@ -181,7 +181,7 @@ export function CreateLigaForm({
               required
               maxLength={80}
               placeholder={t('namePlaceholder')}
-              className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+              className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text placeholder:text-muted focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>
 
@@ -200,7 +200,7 @@ export function CreateLigaForm({
                 required
                 value={seasonStart}
                 onChange={(e) => setSeasonStart(e.target.value)}
-                className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-3 font-sans text-[15px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               />
             </div>
             <div className="min-w-0">
@@ -217,7 +217,7 @@ export function CreateLigaForm({
                 required
                 value={seasonEnd}
                 onChange={(e) => setSeasonEnd(e.target.value)}
-                className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-3 font-sans text-[15px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               />
             </div>
           </div>
@@ -353,7 +353,7 @@ export function CreateLigaForm({
                 required
                 value={selectedCourseId}
                 onChange={(e) => setSelectedCourseId(e.target.value)}
-                className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               >
                 <option value="">{t('coursePlaceholder')}</option>
                 {courses.map((c) => (
@@ -378,7 +378,7 @@ export function CreateLigaForm({
                   name="tee_box_id"
                   required
                   disabled={!selectedCourseId}
-                  className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px] disabled:opacity-50"
+                  className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px] disabled:opacity-50"
                 >
                   <option value="">{t('teePlaceholder')}</option>
                   {availableTees.map((t_) => (
@@ -490,7 +490,7 @@ export function CreateLigaForm({
               max={99}
               required
               placeholder="5"
-              className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] tabular-nums text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+              className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] tabular-nums text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>
         )}
@@ -612,7 +612,7 @@ export function CreateLigaForm({
                   max={99}
                   required
                   placeholder="10"
-                  className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] tabular-nums text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                  className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] tabular-nums text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
                 />
               </div>
             )}

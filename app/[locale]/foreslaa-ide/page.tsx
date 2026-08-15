@@ -73,7 +73,7 @@ export default async function ForeslaaIdePage({
                   rows={5}
                   maxLength={2000}
                   placeholder={t('fieldPlaceholder')}
-                  className="w-full resize-none rounded-xl border border-border bg-bg px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 leading-relaxed"
+                  className="w-full resize-none rounded-xl border border-border bg-bg px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:ring-2 focus:ring-primary/30 leading-relaxed"
                   aria-describedby="idea-helper"
                 />
                 <p id="idea-helper" className="mt-1.5 font-sans text-xs text-muted">

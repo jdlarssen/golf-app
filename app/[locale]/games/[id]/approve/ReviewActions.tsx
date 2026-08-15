@@ -74,7 +74,7 @@ export function ReviewActions({
             rows={2}
             maxLength={500}
             placeholder={t('rejectReasonPlaceholder')}
-            className="w-full rounded-xl border border-border bg-surface text-text px-3 py-2 text-sm placeholder-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+            className="w-full rounded-xl border border-border bg-surface text-text px-3 py-2 text-sm placeholder-muted/70 focus:border-accent transition-[border-color,box-shadow] duration-150"
           />
           <div className="grid grid-cols-2 gap-2">
             <Button

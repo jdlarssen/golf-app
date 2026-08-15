@@ -414,7 +414,7 @@ function Step2Preview({
                             onChange={(e) =>
                               onMatchChange(match.id, 'side1', idx, e.target.value)
                             }
-                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs"
                           >
                             {team1Players.map((p) => {
                               const usedIds = usedIdsInSide(match, 'side1');
@@ -446,7 +446,7 @@ function Step2Preview({
                             onChange={(e) =>
                               onMatchChange(match.id, 'side2', idx, e.target.value)
                             }
-                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs"
                           >
                             {team2Players.map((p) => {
                               const usedIds = usedIdsInSide(match, 'side2');
@@ -672,7 +672,7 @@ function GreensomeCard({
             min={0}
             value={team1Value}
             onChange={(e) => onTeamStrokesChange(match.id, 'team1', e.target.value)}
-            className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
           />
           <p className="text-[11px] text-muted mt-1 tabular-nums">
             {side1Players.map((p) => `${p.displayName}: ${regnehjelpText(p, selectedTee, t)}`).join(' · ')}
@@ -691,7 +691,7 @@ function GreensomeCard({
             min={0}
             value={team2Value}
             onChange={(e) => onTeamStrokesChange(match.id, 'team2', e.target.value)}
-            className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
           />
           <p className="text-[11px] text-muted mt-1 tabular-nums">
             {side2Players.map((p) => `${p.displayName}: ${regnehjelpText(p, selectedTee, t)}`).join(' · ')}
@@ -803,7 +803,7 @@ function Step2BundlePreview({
                           onChange={(e) =>
                             onSwapPlayer(flight.flightIndex, 'side1', row.slotIndex, e.target.value)
                           }
-                          className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs"
                         >
                           {team1Players.map((p) => (
                             <option key={p.id} value={p.id}>
@@ -820,7 +820,7 @@ function Step2BundlePreview({
                           onChange={(e) =>
                             onSwapPlayer(flight.flightIndex, 'side2', row.slotIndex, e.target.value)
                           }
-                          className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs"
                         >
                           {team2Players.map((p) => (
                             <option key={p.id} value={p.id}>

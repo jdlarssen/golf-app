@@ -106,7 +106,7 @@ export function PrizesSection({ state }: Props) {
                 placeholder={t('prizePlaceholder')}
                 aria-label={t('prizeAriaLabel', { slot: slot.label })}
                 maxLength={PRIZE_DESCRIPTION_MAX}
-                className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground focus:border-primary"
               />
               {hasDescription && (
                 <>
@@ -121,7 +121,7 @@ export function PrizesSection({ state }: Props) {
                     placeholder={t('sponsorPlaceholder')}
                     aria-label={t('sponsorAriaLabel', { slot: slot.label })}
                     maxLength={PRIZE_SPONSOR_MAX}
-                    className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-muted focus:border-primary focus:outline-none"
+                    className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-muted focus:border-primary"
                   />
                   <SponsorLogoField
                     slotKey={slot.key}

@@ -219,7 +219,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
                 key={entry.key}
                 href={`/spillformater/${entry.mode}`}
                 data-testid="anon-format-card"
-                className="flex min-h-[44px] flex-col gap-1.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="flex min-h-[44px] flex-col gap-1.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-primary-soft"
               >
                 <span className="font-serif text-[16px] leading-tight text-text">
                   {entry.label}

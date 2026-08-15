@@ -689,7 +689,7 @@ function WizardBody({
               type="button"
               onClick={() => openGuide()}
               aria-label={t('formatGuideAriaLabel')}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-muted hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-muted hover:bg-primary-soft"
             >
               ?
             </button>
@@ -1340,7 +1340,7 @@ function PlayerCountPicker({
           aria-label={t('playerCount.lessAriaLabel')}
           onClick={decrement}
           disabled={count <= PLAYER_COUNT_MIN}
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span className="text-xl leading-none select-none">−</span>
         </button>
@@ -1360,7 +1360,7 @@ function PlayerCountPicker({
           aria-label={t('playerCount.moreAriaLabel')}
           onClick={increment}
           disabled={count >= PLAYER_COUNT_MAX}
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span className="text-xl leading-none select-none">+</span>
         </button>
@@ -1451,7 +1451,7 @@ function ClubPicker({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full min-h-[44px] rounded-lg border border-border bg-surface px-3 py-2 font-sans text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary"
+        className="w-full min-h-[44px] rounded-lg border border-border bg-surface px-3 py-2 font-sans text-sm text-text focus:ring-2 focus:ring-primary"
       >
         <option value="">{t('club.noClub')}</option>
         {clubs.map((c) => (

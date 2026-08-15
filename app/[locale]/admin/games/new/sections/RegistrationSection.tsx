@@ -280,7 +280,7 @@ export function RegistrationSection({
             onChange={(e) => setEntryFeeKr(e.target.value)}
             placeholder={t('entryFeePlaceholder')}
             aria-label={t('entryFeeLabel')}
-            className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-foreground focus:border-primary"
           />
         </label>
         {hasEntryFee && (
@@ -296,7 +296,7 @@ export function RegistrationSection({
               placeholder={t('paymentLinkPlaceholder')}
               aria-label={t('paymentLinkLabel')}
               maxLength={200}
-              className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground focus:border-primary"
             />
             <span className="mt-1 block text-xs text-muted/80">
               {t('paymentLinkHint')}

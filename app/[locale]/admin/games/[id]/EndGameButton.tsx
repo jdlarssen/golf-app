@@ -25,7 +25,7 @@ type Props = {
 // Pill-shape + min-height match the primary <Button> styling so the Link
 // variant is visually indistinguishable from the form-action button.
 const LINK_CLASSES =
-  'inline-flex w-full items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full font-medium tracking-tight transition-[background-color,transform,opacity] duration-100 bg-primary hover:bg-primary-hover hover:-translate-y-px text-white dark:text-bg shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40';
+  'inline-flex w-full items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full font-medium tracking-tight transition-[background-color,transform,opacity] duration-100 bg-primary hover:bg-primary-hover hover:-translate-y-px text-white dark:text-bg shadow-sm';
 
 const LINK_DISABLED_CLASSES = 'opacity-50 cursor-not-allowed pointer-events-none hover:translate-y-0';
 

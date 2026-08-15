@@ -175,7 +175,7 @@ export function SideAwardsPanel({
                   data-testid="side-award-kind"
                   value={row.kind}
                   onChange={(e) => setKind(i, e.target.value as 'ctp' | 'ld' | 'gir')}
-                  className="rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  className="rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm"
                 >
                   <option value="ctp">{t('kindCtp')}</option>
                   <option value="ld">{t('kindLd')}</option>
@@ -189,7 +189,7 @@ export function SideAwardsPanel({
                   max={18}
                   value={row.holeNumber}
                   onChange={(e) => updateRow(i, (r) => ({ ...r, holeNumber: Number(e.target.value) }))}
-                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
                 />
                 <input
                   type="number"
@@ -199,7 +199,7 @@ export function SideAwardsPanel({
                   step={0.5}
                   value={row.points}
                   onChange={(e) => updateRow(i, (r) => ({ ...r, points: Number(e.target.value) }))}
-                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
                 />
                 <input
                   type="number"
@@ -210,7 +210,7 @@ export function SideAwardsPanel({
                   step={1}
                   value={countOf(row)}
                   onChange={(e) => setCount(i, Number(e.target.value))}
-                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
                 />
                 <button
                   type="button"
@@ -363,7 +363,7 @@ function SideAwardWinnerRow({
               setWinnerId(e.target.value);
               setSaved(false);
             }}
-            className="rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm"
           >
             <option value="">{t('winnerPlaceholder')}</option>
             {rosterOptions.map((p) => (
@@ -448,7 +448,7 @@ function GirCountsRow({
   }
 
   const inputClass =
-    'w-16 rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40';
+    'w-16 rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums';
 
   return (
     <Card className="!p-3">

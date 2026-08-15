@@ -10,7 +10,7 @@ type Props = {
 };
 
 const inputClass =
-  'w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50';
+  'w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent disabled:opacity-50';
 
 /**
  * Selve gjeste-feltene (navn + handicap + tee-kategori) — delt mellom

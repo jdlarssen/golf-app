@@ -243,7 +243,7 @@ export function CoursesLedgerClient({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('searchPlaceholder')}
           autoComplete="off"
-          className="w-full rounded-xl border border-border bg-surface px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full rounded-xl border border-border bg-surface px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:ring-2 focus:ring-primary/40"
         />
       </div>
 
@@ -258,7 +258,7 @@ export function CoursesLedgerClient({
           id="courses-sort"
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortBy)}
-          className="rounded-lg border border-border bg-surface px-3 py-1.5 font-sans text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="rounded-lg border border-border bg-surface px-3 py-1.5 font-sans text-sm text-text focus:ring-2 focus:ring-primary/40"
         >
           {SORT_OPTIONS.map(({ key, label }) => (
             <option key={key} value={key}>

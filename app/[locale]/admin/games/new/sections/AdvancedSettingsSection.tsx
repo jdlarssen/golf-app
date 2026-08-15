@@ -82,7 +82,7 @@ export function AdvancedSettingsSection({
           name="require_peer_approval"
           checked={requirePeerApproval}
           onChange={(e) => setRequirePeerApproval(e.target.checked)}
-          className="mt-0.5 h-5 w-5 rounded border-border text-primary focus:ring-accent/40 accent-primary"
+          className="mt-0.5 h-5 w-5 rounded border-border text-primary accent-primary"
         />
         <span>
           <span className="block text-sm font-medium text-text">

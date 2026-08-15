@@ -265,7 +265,7 @@ export function TeamRegistrationForm({
           required
           placeholder={t('teamNamePlaceholder')}
           aria-invalid={teamNameError ? true : undefined}
-          className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:outline-none focus:ring-2 ${
+          className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
             teamNameError
               ? 'border-danger focus:border-danger focus:ring-danger/20'
               : 'border-border focus:border-primary focus:ring-primary/20'
@@ -378,7 +378,7 @@ export function TeamRegistrationForm({
                     autoComplete="off"
                     aria-label={t('slotAriaLabel', { n: idx + 1 })}
                     aria-invalid={slotError ? true : undefined}
-                    className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm tracking-tight text-text placeholder:text-muted focus:outline-none focus:ring-2 ${
+                    className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
                       slotError
                         ? 'border-danger focus:border-danger focus:ring-danger/20'
                         : 'border-border focus:border-primary focus:ring-primary/20'

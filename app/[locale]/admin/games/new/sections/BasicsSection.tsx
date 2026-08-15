@@ -116,7 +116,7 @@ export function BasicsSection({
           value={courseId}
           onChange={(e) => setCourseId(e.target.value)}
           required
-          className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+          className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
         >
           <option value="">{t('coursePlaceholder')}</option>
           {courses.map((c) => (
@@ -150,7 +150,7 @@ export function BasicsSection({
           }}
           disabled={!selectedCourse}
           required
-          className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
+          className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
         >
           <option value="">{selectedCourse ? t('teePlaceholderWithCourse') : t('teePlaceholderNoCourse')}</option>
           {availableTees.map((tee) => (

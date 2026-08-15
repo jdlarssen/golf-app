@@ -168,7 +168,7 @@ export function CupPlanForm({
           data-testid="cup-plan-course"
           value={courseId}
           onChange={(e) => handleCourseChange(e.target.value)}
-          className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+          className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:border-accent transition-[border-color,box-shadow] duration-150"
         >
           <option value="">{t('coursePlaceholder')}</option>
           {courses.map((c) => (
@@ -195,7 +195,7 @@ export function CupPlanForm({
             data-testid="cup-plan-tee"
             value={teeBoxId}
             onChange={(e) => setTeeBoxId(e.target.value)}
-            className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+            className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:border-accent transition-[border-color,box-shadow] duration-150"
           >
             <option value="">{t('teePlaceholder')}</option>
             {selectedCourse.teeBoxes.map((tb) => (
@@ -223,7 +223,7 @@ export function CupPlanForm({
           type="datetime-local"
           value={teeOffAt}
           onChange={(e) => setTeeOffAt(e.target.value)}
-          className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+          className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:border-accent transition-[border-color,box-shadow] duration-150"
         />
         <p className="font-sans text-xs text-muted mt-1.5">{t('teeOffHint')}</p>
       </div>
@@ -308,7 +308,7 @@ export function CupPlanForm({
               max={100}
               value={bestBall}
               onChange={(e) => setBestBall(Number(e.target.value))}
-              className="w-24 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-accent/40"
+              className="w-24 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
             />
             <p className="font-sans text-xs text-muted mt-1">
               {t('bestBallHint')}
@@ -326,7 +326,7 @@ export function CupPlanForm({
                   onChange={(e) =>
                     updateCustomSession(i, e.target.value as CupSessionFormat)
                   }
-                  className="flex-1 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  className="flex-1 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm"
                 >
                   {SESSION_FORMATS.map((f) => (
                     <option key={f} value={f}>

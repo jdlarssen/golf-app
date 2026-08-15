@@ -206,7 +206,7 @@ export async function ActivityLedger() {
             <SmartLink
               key={`${row.ts}-${i}`}
               href={row.href}
-              className={`${baseClass} transition-colors hover:bg-bg/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40`}
+              className={`${baseClass} transition-colors hover:bg-bg/50`}
               style={style}
             >
               {inner}

@@ -56,7 +56,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('rosterSearchPlaceholder')}
             disabled={disabled}
-            className="w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
+            className="w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent disabled:opacity-50"
             aria-label={t('rosterSearchAriaLabel')}
           />
           {filtered.length === 0 ? (
@@ -112,7 +112,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
             required
             placeholder={t('inviteEmailPlaceholder')}
             disabled={disabled}
-            className="flex-1 rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
+            className="flex-1 rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent disabled:opacity-50"
             aria-label={t('inviteEmailAriaLabel')}
           />
           <SubmitButton

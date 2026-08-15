@@ -199,7 +199,7 @@ export function TeamSizeSelector({
               onClick={() => {
                 if (!disabled) onChange(tile.size);
               }}
-              className={`flex min-h-[44px] flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex min-h-[44px] flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
                 selected
                   ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
                   : 'cursor-pointer border-border bg-surface text-text hover:bg-primary-soft/60'

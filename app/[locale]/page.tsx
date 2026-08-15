@@ -537,7 +537,7 @@ async function HomeBody() {
         {extras.pendingApprovalsForMe > 0 && (
           <SmartLink
             href={`/games/${g.id}/approve`}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent/5 px-4 py-2.5 transition-colors hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent/5 px-4 py-2.5 transition-colors hover:bg-accent/10"
           >
             <span className="text-xs font-medium text-text">
               {tGameHome('pendingApprovals', {
@@ -600,7 +600,7 @@ async function HomeBody() {
             // this nudge is effectively dead here — land on the back9 host where
             // the round's delivery + review live. #1466 Builder B: one-delivery.
             href={`/games/${back9.id}/approve`}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent/5 px-4 py-2.5 transition-colors hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent/5 px-4 py-2.5 transition-colors hover:bg-accent/10"
           >
             <span className="text-xs font-medium text-text">
               {tGameHome('pendingApprovals', {
@@ -719,7 +719,7 @@ async function HomeBody() {
           <Section label={t('sectionFindTournaments')}>
             <SmartLink
               href="/finn-turneringer"
-              className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="block rounded-2xl"
             >
               <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
                 <span className="text-base font-medium text-text">
@@ -739,7 +739,7 @@ async function HomeBody() {
         <Section label={t('sectionToppliste')}>
           <SmartLink
             href="/profile/statistikk"
-            className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="block rounded-2xl"
           >
             <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
               <span className="text-base font-medium text-text">

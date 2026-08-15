@@ -65,7 +65,7 @@ export function DenseTileList({ tiles }: { tiles: Tile[] }) {
           key={tile.label}
           href={tile.href}
           data-testid={tile.testId}
-          className="reveal-up flex min-h-[60px] items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="reveal-up flex min-h-[60px] items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-opacity duration-100 hover:opacity-95 active:opacity-90"
           style={{
             animationDelay: `${60 + i * 70}ms`,
             background: tile.accent ? 'var(--surface-strong)' : 'var(--surface)',
@@ -146,7 +146,7 @@ export function CompactTileGrid({
           key={tile.label}
           href={tile.href}
           data-testid={tile.testId}
-          className="reveal-up relative flex min-h-[56px] items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2.5 text-left text-text transition-opacity duration-100 hover:opacity-95 active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="reveal-up relative flex min-h-[56px] items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2.5 text-left text-text transition-opacity duration-100 hover:opacity-95 active:opacity-90"
           style={{ animationDelay: `${60 + i * 70}ms` }}
         >
           {tile.badge ? <TileBadge count={tile.badge} /> : null}
