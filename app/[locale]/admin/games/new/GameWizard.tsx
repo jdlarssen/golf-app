@@ -1024,6 +1024,8 @@ function FormDataInputs({
     sideEnabled,
     sideLdCount,
     sideCtpCount,
+    scoreVisibility,
+    lockScoreVisibility,
   } = state;
 
   // Alle controlled state-verdier serialiseres som hidden inputs UANSETT
@@ -1041,9 +1043,12 @@ function FormDataInputs({
   // `name`-attributt (kun controlled UI) mens disclosure er åpen, så FormData
   // ikke får duplikat-navn med avvikende verdier.
   //
-  // score_visibility-radioene er fortsatt uncontrolled og kun synlige inne
-  // i disclosure-en — utenfor scope for #1011 (ikke en datatap-bug: default
-  // 'live' er alltid et gyldig og forventet resultat når panelet er lukket).
+  // #1400: score_visibility er nå controlled state på samme vis, og speiles
+  // her. Det er dette som gjør at «Skjul til slutt» overlever en mislykket
+  // publisering — radioene inne i disclosure-en nullstilles av React-doms
+  // `requestFormReset` ved hver action-dispatch, hidden-inputen gjør ikke det.
+  // Er valget låst (edit av et aktivt spill) monteres ingen input, akkurat som
+  // disabled radioer aldri ble serialisert: parseBase faller da til 'live'.
   return (
     <>
       <input
@@ -1051,6 +1056,9 @@ function FormDataInputs({
         name="side_tournament_enabled"
         value={sideEnabled ? 'true' : ''}
       />
+      {!lockScoreVisibility && (
+        <input type="hidden" name="score_visibility" value={scoreVisibility} />
+      )}
       {sideEnabled && (
         <>
           <input type="hidden" name="side_ld_count" value={String(sideLdCount)} />

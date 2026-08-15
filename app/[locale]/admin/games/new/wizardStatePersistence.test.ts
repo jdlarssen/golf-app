@@ -30,6 +30,9 @@ function makeDraft(overrides: Partial<WizardDraft> = {}): WizardDraft {
       course_id: 'course-1',
       tee_box_id: 'tee-1',
       scheduled_tee_off_at: '2026-09-05T09:00',
+      // #1400: synlighets-valget er controlled state og speiles i utkastet —
+      // et «Skjul til slutt» skal ikke forsvinne ved reload heller.
+      score_visibility: 'reveal',
       game_mode: 'stableford',
       team_size: 1,
       players: [{ user_id: 'p1', team_number: null, flight_number: null }],

@@ -571,6 +571,16 @@ export function useGameFormState({
   const initialScoreVisibility: 'live' | 'reveal' =
     initialValues?.score_visibility === 'reveal' ? 'reveal' : 'live';
   const lockScoreVisibility = initialValues?.lock_score_visibility ?? false;
+  // #1400: synlighets-valget var uncontrolled (defaultChecked). React-doms
+  // `requestFormReset` nullstiller uncontrolled felt ved hver form-action-
+  // dispatch, så «Skjul til slutt» hoppet tilbake til «Live» hver gang
+  // publiseringen feilet. Som controlled state overlever valget forsøket —
+  // samme grep som #1011 gjorde for sideturnering-feltene. `initialScoreVisibility`
+  // blir liggende: BasicsSection (GameForm) rendrer fortsatt sine egne radioer
+  // fra den.
+  const [scoreVisibility, setScoreVisibility] = useState<'live' | 'reveal'>(
+    initialScoreVisibility,
+  );
 
   const initialSideEnabled = initialValues?.side_tournament_enabled ?? false;
   const initialLdCount = ([0, 1, 2] as const).includes(
@@ -1858,6 +1868,10 @@ export function useGameFormState({
     setGroupId,
     // #643: true når et klubb-spill — veiviseren skjuler påmeldings-modus-valget
     isClubScoped,
+    // #1400: synlighets-valget som controlled state — se kommentaren ved
+    // useState-en over.
+    scoreVisibility,
+    setScoreVisibility,
     // Initial / lock flags surfaced for components that render them as
     // defaultChecked / disabled (radios + Side-Tournament-fieldset).
     initialScoreVisibility,

@@ -46,8 +46,6 @@ export const WIZARD_DRAFT_VERSION = 1;
  *   (cup-lenke, edit-lås), ikke av arrangørens utfylling. De inngår i
  *   kontekst-fingeravtrykket under i stedet, så et utkast fra et vanlig besøk
  *   aldri overstyrer et låst format fra en cup-lenke.
- * - `score_visibility`: uncontrolled radio i AdvancedSettingsSection, ikke
- *   state — default 'live' er alltid et gyldig utfall.
  */
 export type PersistedInitialValues = Pick<
   InitialValues,
@@ -57,6 +55,7 @@ export type PersistedInitialValues = Pick<
   | 'scheduled_tee_off_at'
   | 'hcp_allowance_pct'
   | 'require_peer_approval'
+  | 'score_visibility'
   | 'side_tournament_enabled'
   | 'side_ld_count'
   | 'side_ctp_count'
@@ -177,6 +176,9 @@ export function wizardDraftFromState({
       scheduled_tee_off_at: state.scheduledTeeOffAt,
       hcp_allowance_pct: String(state.hcpAllowance),
       require_peer_approval: state.requirePeerApproval,
+      // #1400: controlled state siden synlighets-valget måtte overleve en
+      // mislykket publisering — dermed også noe et utkast kan bære.
+      score_visibility: state.scoreVisibility,
       side_tournament_enabled: state.sideEnabled,
       side_ld_count: state.sideLdCount,
       side_ctp_count: state.sideCtpCount,
