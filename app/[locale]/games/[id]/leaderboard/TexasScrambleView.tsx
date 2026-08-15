@@ -83,8 +83,9 @@ export function TexasScrambleView({
     );
   }
 
-  // result.teams er allerede sortert på rank fra scoring-laget (#1591).
-  const sortedTeams = [...result.teams].sort((a, b) => a.rank - b.rank);
+  // result.teams er rangert fra scoring-laget (#1591 gjorde computeScramble
+  // rangert med test først; #1667: viewet leser derfor direkte — én regel,
+  // ett hjem).
 
   return (
     <LeaderboardShell chromeless={chromeless}>
@@ -103,7 +104,7 @@ export function TexasScrambleView({
         data-testid="texas-leaderboard"
         className="flex flex-col gap-2 px-3.5 pt-3 pb-3.5"
       >
-        {sortedTeams.map((team, i) => {
+        {result.teams.map((team, i) => {
           const memberNames = team.members
             .map((m) => {
               const info = playersById.get(m.userId);
