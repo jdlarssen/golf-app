@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { InboxClient } from './InboxClient';
 import type { NotificationRow } from '@/components/notifications/NotificationCard';
 
@@ -64,6 +64,12 @@ beforeEach(() => {
   archiveOneMock.mockReset();
   clearReadMock.mockReset();
   routerPushMock.mockReset();
+  // Server-actionene returnerer `{ ok }` siden #1394 — default er «lagret»,
+  // og enkelt-tester overstyrer med ok:false for rollback-oppførselen.
+  markOneAsReadMock.mockResolvedValue({ ok: true });
+  markAllAsReadMock.mockResolvedValue({ ok: true });
+  archiveOneMock.mockResolvedValue({ ok: true });
+  clearReadMock.mockResolvedValue({ ok: true });
 });
 
 afterEach(() => {
@@ -256,6 +262,21 @@ describe('InboxClient', () => {
     expect(clearReadMock).toHaveBeenCalledTimes(1);
     // Alle leste fjernes optimistisk → lista er tom.
     expect(screen.queryByText(/Per inviterte deg/)).not.toBeInTheDocument();
+  });
+
+  it('#1394: feilende arkivering ruller kortet tilbake og viser feillinja', async () => {
+    archiveOneMock.mockResolvedValue({ ok: false });
+    render(<InboxClient initialNotifications={[makeInvite('a')]} />);
+
+    // act(async) flusher microtask-køen så den awaitede action-en rekker å
+    // svare før vi asserter (transitionen oppdaterer state asynkront).
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Arkiver varsel/i }));
+    });
+
+    // Kortet er tilbake — den optimistiske fjerningen ble rullet tilbake.
+    expect(screen.getByText(/Per inviterte deg/)).toBeInTheDocument();
+    expect(screen.getByTestId('inbox-action-error')).toBeInTheDocument();
   });
 
   it('viser IKKE «Tøm leste» når alt er ulest', () => {

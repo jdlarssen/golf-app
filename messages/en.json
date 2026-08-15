@@ -65,6 +65,7 @@
     "markingPending": "Marking …",
     "clearRead": "Clear read",
     "clearingPending": "Clearing …",
+    "actionFailed": "Couldn't save — try again.",
     "archiveAria": "Archive notification",
     "today": "Today",
     "yesterday": "Yesterday",
