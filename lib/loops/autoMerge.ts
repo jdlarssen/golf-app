@@ -73,7 +73,22 @@ export const NEEDS_DECISION_LABEL = 'autonomy:needs-decision';
 // Bevisst fail-closed: «## Ingen produktvalg» matcher også. Kostnaden er en
 // menneske-merge; alternativet er en tapt eier-beslutning. Ikke forsøk å
 // utelukke negasjoner.
-const CHOICE_MARKER = /^#{1,6}\s+(?:.*\bproduktvalg\b|alternativ\s+[a-e]\b)/im;
+//
+// Detaljer som ser vilkårlige ut, men ikke er det:
+//   · ingen `\b` ETTER «produktvalg» — bestemt form («## Produktvalget»,
+//     «## Produktvalgene») er idiomatisk norsk, og regelen over lover en heading
+//     som INNEHOLDER ordet. Med ordgrense ville doccen lovet mer enn koden ga —
+//     samme drift som #1623 selv kom av, bare smalere.
+//   · `[ \t]` og ikke `\s` mellom `#` og teksten: `\s` krysser linjeskift, så
+//     «##\nEt produktvalg» ble lest som en heading.
+//   · `(?=([ \t]+))\1` er ikke pynt — det er atomisk gruppering, emulert med
+//     lookahead + backreference (JS har ikke `(?>…)`). Uten den kan motoren
+//     backtracke inn i mellomrom-løpet for hvert startpunkt `.*` prøver, og
+//     matchingen blir kvadratisk: en body på «#» + 65k mellomrom brukte ~3 s,
+//     mot 0,12 ms med atomisk gruppe. GitHub tillater 65 536 tegn i en body, så
+//     taket er reelt. Skriv den IKKE om til et vanlig `[ \t]+`.
+const CHOICE_MARKER =
+  /^#{1,6}(?=([ \t]+))\1(?:.*\bproduktvalg|alternativ[ \t]+[a-e]\b)/im;
 
 export function hasChoiceMarker(body: string | null | undefined): boolean {
   return body != null && CHOICE_MARKER.test(body);
