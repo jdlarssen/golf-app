@@ -1045,9 +1045,10 @@ function FormDataInputs({
   // ikke får duplikat-navn med avvikende verdier.
   //
   // #1400: score_visibility er nå controlled state på samme vis, og speiles
-  // her. Det er dette som gjør at «Skjul til slutt» overlever en mislykket
-  // publisering — radioene inne i disclosure-en nullstilles av React-doms
-  // `requestFormReset` ved hver action-dispatch, hidden-inputen gjør ikke det.
+  // her. Sammen med den manuelle dispatchen i ReadyStep (`dispatchManually`,
+  // som hopper over React-doms `requestFormReset`) er det dette som gjør at
+  // «Skjul til slutt» overlever en mislykket publisering — både i state, i
+  // radioene inne i disclosure-en og i det som faktisk sendes.
   // Er valget låst (edit av et aktivt spill) monteres ingen input, akkurat som
   // disabled radioer aldri ble serialisert: parseBase faller da til 'live'.
   return (

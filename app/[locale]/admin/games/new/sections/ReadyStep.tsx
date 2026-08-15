@@ -239,9 +239,11 @@ export function ReadyStep({
   // `defaultChecked`, og React tegner dem ikke opp igjen fordi prop-en ikke
   // endret seg. Skjermen sier «Live» mens det skjulte feltet fortsatt sender
   // «reveal». preventDefault + manuell dispatch i en transition hopper over
-  // auto-reset-en; `formAction` på knappene står igjen som fallback før
-  // hydrering. Constraint-validering kjøres eksplisitt for publiser (native
-  // sti ville gjort det); utkast har `formNoValidate` og hopper over.
+  // auto-reset-en. `formAction` på knappene beholdes som React-standard
+  // form-kobling (useActionState-closuren er klient-kode, så dette er IKKE
+  // en progressive-enhancement-sti før hydrering). Constraint-validering
+  // kjøres eksplisitt for publiser (native sti ville gjort det); utkast har
+  // `formNoValidate` og hopper over.
   function dispatchManually(
     e: React.MouseEvent<HTMLButtonElement>,
     action: (formData: FormData) => void,
