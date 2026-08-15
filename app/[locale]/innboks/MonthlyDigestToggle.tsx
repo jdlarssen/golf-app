@@ -35,7 +35,7 @@ export function MonthlyDigestToggle({ initialOptIn }: { initialOptIn: boolean })
         }
         if (failed) setFailed(false);
       } catch (err) {
-        console.error('[innboks] månedsbrev-bryter feilet', err);
+        console.error('[innboks] monthly digest toggle failed', err);
         setOptIn(previous);
         setFailed(true);
       }
