@@ -77,6 +77,19 @@ av-drafter og rebase-merger (uendret).
 vinner:
 
 1. **`noop`** som før: ingen kandidat-PR · ikke åpen · draft (#1516) · allerede kortet · CI ikke grønn.
+
+   **Hva «CI grønn» betyr (#1520):** `classifyChecks` (`lib/loops/prCard.ts`) filtrerer
+   først bort kortets EGEN `post-card`-check (`CARD_CHECK_NAME`) — den er
+   `in_progress` under hele decide-pollingen (den ER decide), og en kansellert
+   kortkjøring etterlater `cancelled`, så uten filteret ville kortet aldri sett grønt
+   eller sett rødt for alltid på samme SHA. Filteret gjelder både decide-steget og
+   merge-endepunktets re-sjekk (ett hjem). Deretter **ci.yml-gaten**
+   (`classifyWithCiGate` + `expectsRealCi`): rører diffen noe utenfor `paths-ignore`
+   (`**.md`, `docs/**`, `.forge/**`), må GitHub ha REGISTRERT en `ci.yml`-kjøring for
+   head-SHA-en før grønt slippes gjennom — tvillingen `ci-docs-noop.yml` rapporterer
+   samme jobnavn og fullfører på sekunder, så på en blandet PR ser vinduet før
+   ci.yml er registrert ellers grønt ut. Fail-closed: HTTP-feil eller «ingen kjøring
+   enda» → `pending`, aldri `green`. Docs-only-PR-er er uendret (gaten er av).
 2. **`card`** (knapp-kort) når NOEN treffer:
    - base-branch ≠ `main`, eller tittelen inneholder ordet `WIP` (case-insensitivt).
    - **Aldri-lista** (`NEVER_AUTO_MERGE_GLOBS`): minst én endret fil rører
