@@ -3,10 +3,10 @@
 /**
  * BasicsSection — første kort/seksjon i opprett-spill-flyten.
  *
- * Ansvar: spillnavn (valgfritt), bane- og tee-select, tee-off-datetime,
- * og — når brukt av GameForm — også «Synlighet under runden»-radios og
- * «Sideturnering»-fieldset. Wizard-en skjuler navnefeltet i steg 2 og
- * løfter advanced-blokken inn i AdvancedSettingsSection istedenfor.
+ * Ansvar: spillnavn (valgfritt), bane- og tee-select og tee-off-datetime.
+ * Wizard-en skjuler navnefeltet i steg 2. «Synlighet under runden» og
+ * «Sideturnering» bor i AdvancedSettingsSection — begge flatene går dit
+ * (#909), og den døde inline-kopien her er fjernet (#1660).
  */
 
 import { useEffect } from 'react';
@@ -24,12 +24,6 @@ type Props = {
    * GameForm beholder navn øverst i seksjonen.
    */
   showName?: boolean;
-  /**
-   * Rendrer «Synlighet under runden»-radios + sideturnering-fieldset inline
-   * i seksjonen. Wizard-en setter denne til `false` og rendrer dem heller
-   * inne i AdvancedSettingsSection.
-   */
-  showAdvancedInline?: boolean;
   /**
    * #909: skjul seksjons-headingen. GameForm wrapper seksjonen i et
    * Disclosure-panel som allerede bærer tittelen. Default false.
@@ -60,7 +54,6 @@ export function BasicsSection({
   state,
   courses,
   showName = true,
-  showAdvancedInline = true,
   hideHeading = false,
 }: Props) {
   const t = useTranslations('wizard.sections.basics');
@@ -76,14 +69,6 @@ export function BasicsSection({
     setScheduledTeeOffAt,
     selectedCourse,
     availableTees,
-    initialScoreVisibility,
-    lockScoreVisibility,
-    sideEnabled,
-    setSideEnabled,
-    sideTournamentSupported,
-    lockSideTournament,
-    initialLdCount,
-    initialCtpCount,
   } = state;
 
   // #902: nudge the native datetime-local picker away from past tee-offs by
@@ -193,153 +178,6 @@ export function BasicsSection({
         // containeren (samme fiks som dato-feltene i CreateLigaForm, #453).
         inputClassName="min-w-0 appearance-none"
       />
-
-      {showAdvancedInline && (
-        <>
-          {/* Score visibility — radios, not a checkbox, so the two modes read
-              as exclusive choices. defaultChecked (uncontrolled) is fine here
-              because the field's value is read straight from FormData on
-              submit; no other UI state needs to react to it. */}
-          <fieldset>
-            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {t('visibilityLegend')}
-            </legend>
-            <div className="mt-2 space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="score_visibility"
-                  value="live"
-                  defaultChecked={initialScoreVisibility !== 'reveal'}
-                  disabled={lockScoreVisibility}
-                  className="mt-1 accent-primary"
-                />
-                <div>
-                  <div className="font-serif text-base text-text">
-                    {t('visibilityLiveTitle')}
-                  </div>
-                  <div className="text-xs text-muted">
-                    {t('visibilityLiveDesc')}
-                  </div>
-                </div>
-              </label>
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="score_visibility"
-                  value="reveal"
-                  defaultChecked={initialScoreVisibility === 'reveal'}
-                  disabled={lockScoreVisibility}
-                  className="mt-1 accent-primary"
-                />
-                <div>
-                  <div className="font-serif text-base text-text">
-                    {t('visibilityRevealTitle')}
-                  </div>
-                  <div className="text-xs text-muted">
-                    {t('visibilityRevealDesc')}
-                  </div>
-                </div>
-              </label>
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              {t('visibilityRevealHint')}
-              {lockScoreVisibility && (
-                <span className="block mt-1">
-                  <strong>{t('visibilityLockedNote')}</strong>
-                </span>
-              )}
-            </p>
-          </fieldset>
-
-          {/* Section 1c: Side tournament — tilbys for alle formater. Matchplay
-              viser LD/CTP kompakt under duell-kortet (#585). */}
-          {sideTournamentSupported && (
-          <fieldset>
-            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {t('sideTournamentLegend')}
-            </legend>
-            <div className="mt-2 space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="side_tournament_enabled"
-                  value="true"
-                  checked={sideEnabled}
-                  onChange={(e) => setSideEnabled(e.target.checked)}
-                  disabled={lockSideTournament}
-                  className="mt-1 accent-primary"
-                />
-                <div>
-                  <div className="font-serif text-base text-text">
-                    {t('sideTournamentTitle')}
-                  </div>
-                  <div className="text-xs text-muted">
-                    {t('sideTournamentDesc')}
-                  </div>
-                </div>
-              </label>
-
-              {sideEnabled && (
-                <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
-                  <p className="text-xs text-muted">
-                    {t('sideTournamentPointsHint')}
-                  </p>
-
-                  <fieldset>
-                    <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                      {t('sideLdLegend')}
-                    </legend>
-                    <div className="mt-2 flex gap-2">
-                      {[0, 1, 2].map((n) => (
-                        <label key={n} className="flex items-center gap-1 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="side_ld_count"
-                            value={n}
-                            defaultChecked={initialLdCount === n}
-                            disabled={lockSideTournament}
-                            className="accent-primary"
-                          />
-                          <span className="font-serif text-base text-text tabular-nums">{n}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-
-                  <fieldset>
-                    <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                      {t('sideCtpLegend')}
-                    </legend>
-                    <div className="mt-2 flex gap-2">
-                      {[0, 1, 2].map((n) => (
-                        <label key={n} className="flex items-center gap-1 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="side_ctp_count"
-                            value={n}
-                            defaultChecked={initialCtpCount === n}
-                            disabled={lockSideTournament}
-                            className="accent-primary"
-                          />
-                          <span className="font-serif text-base text-text tabular-nums">{n}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-
-                  {lockSideTournament && (
-                    <p className="text-xs text-muted">
-                      <strong>{t('sideLockedNote')}</strong>
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </fieldset>
-          )}
-        </>
-      )}
     </section>
   );
 }

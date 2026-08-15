@@ -861,7 +861,6 @@ function WizardBody({
           state={state}
           courses={courses}
           showName={false}
-          showAdvancedInline={false}
         />
       )}
 
