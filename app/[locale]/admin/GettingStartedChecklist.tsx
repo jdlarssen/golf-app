@@ -79,7 +79,12 @@ export function GettingStartedChecklist({
           {t('gettingStarted.progress', { done: doneCount, total: steps.length })}
         </p>
       </div>
-      <ul className="overflow-hidden rounded-2xl border border-accent/30 bg-accent/[0.05]">
+      {/* data-focus-inset: radene er full-bleed, så `overflow-hidden` klipper en
+          outline med positiv offset helt bort (#1402). */}
+      <ul
+        data-focus-inset
+        className="overflow-hidden rounded-2xl border border-accent/30 bg-accent/[0.05]"
+      >
         {steps.map((step, i) => (
           <li
             key={step.key}

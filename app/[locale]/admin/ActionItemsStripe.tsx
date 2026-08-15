@@ -50,7 +50,12 @@ export async function ActionItemsStripe() {
       <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         {t('actionItemsHeading')}
       </p>
-      <div className="overflow-hidden rounded-2xl border border-accent/30 bg-accent/[0.05]">
+      {/* data-focus-inset: radene er full-bleed, så `overflow-hidden` klipper en
+          outline med positiv offset helt bort (#1402). */}
+      <div
+        data-focus-inset
+        className="overflow-hidden rounded-2xl border border-accent/30 bg-accent/[0.05]"
+      >
         {rows.map((row, i) => (
           <SmartLink
             key={row.key}

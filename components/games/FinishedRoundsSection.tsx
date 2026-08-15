@@ -65,8 +65,10 @@ export async function FinishedRoundsSection({
   const tModes = await getTranslations('modes');
   const tFinished = await getTranslations('finishedCard');
 
+  // data-focus-inset: radene er full-bleed i et `p-0`-kort, så
+  // `overflow-hidden` klipper en outline med positiv offset helt bort (#1402).
   const renderGamesBlock = (games: FinishedGame[]) => (
-    <Card className="p-0 overflow-hidden">
+    <Card data-focus-inset className="p-0 overflow-hidden">
       <div className="divide-y divide-border">
         {games.map((g) => {
           const { strokes, courseHandicap } = roundScores.get(g.id) ?? {

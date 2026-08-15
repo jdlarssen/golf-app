@@ -132,6 +132,13 @@ describe('NotificationCard', () => {
     expect(container.querySelector('[data-testid="unread-stripe"]')).toBeNull();
   });
 
+  it('kort-roten bærer data-focus-inset så fokusringen ikke klippes bort', () => {
+    const { container } = render(<NotificationCard notification={makeInvite()} />);
+    expect(
+      container.querySelector('[data-testid="notification-card"]'),
+    ).toHaveAttribute('data-focus-inset');
+  });
+
   it('uleste rendres med font-medium', () => {
     render(<NotificationCard notification={makeInvite()} />);
     const title = screen.getByText(/Per inviterte deg/);

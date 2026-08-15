@@ -307,7 +307,10 @@ export function CoursesLedgerClient({
             gridTemplateColumns={COURSES_LEDGER_GRID}
           />
 
+          {/* data-focus-inset: radene er full-bleed, så `overflow-hidden` klipper
+              en outline med positiv offset helt bort (#1402). */}
           <div
+            data-focus-inset
             className="overflow-hidden rounded-b-2xl border bg-surface"
             style={{
               borderColor: 'var(--border)',

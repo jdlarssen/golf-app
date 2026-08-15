@@ -418,10 +418,29 @@ body {
   outline-offset: 2px;
 }
 
-/* Segmenterte pill-grupper klipper barna sine (`overflow-hidden` på wrapperen),
- * så en positiv offset ville blitt kuttet bort i sin helhet og etterlatt NULL
- * fokusmarkering. Tegn outlinen på innsiden i stedet. */
-:where([data-focus-inset]) :where(a[href], button):focus-visible {
+/* Wrappere med `overflow-hidden` klipper barna sine, så en positiv offset ville
+ * blitt kuttet bort i sin helhet og etterlatt NULL fokusmarkering — gjelder
+ * segmenterte pill-grupper og enhver flush rad-liste (kort/ledger/varsler) der
+ * det fokuserbare går helt ut i klippekanten. Wrapperen merkes med
+ * `data-focus-inset`, og outlinen tegnes på innsiden i stedet.
+ *
+ * Elementlista holdes identisk med hovedregelen over: faller et `<input>`,
+ * `<summary>` eller `[role='tab']` inn i en merket wrapper senere, skal det ikke
+ * stille falle tilbake til den klippede positive offseten. */
+:where([data-focus-inset])
+  :where(
+    a[href],
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [role='button'],
+    [role='radio'],
+    [role='switch'],
+    [role='tab'],
+    [tabindex]:not([tabindex='-1'])
+  ):focus-visible {
   outline-offset: -2px;
 }
 

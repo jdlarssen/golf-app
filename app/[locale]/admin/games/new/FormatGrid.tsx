@@ -65,8 +65,12 @@ export function FormatGrid({
         >[0],
       ) as string;
       return (
+        // data-focus-inset: knappen er flush mot topp/venstre/høyre, så
+        // `overflow-hidden` klipper en outline med positiv offset helt bort
+        // (#1402).
         <div
           key={f.slug}
+          data-focus-inset
           className="col-[1/-1] overflow-hidden rounded-xl border border-primary bg-primary-soft shadow-[inset_0_0_0_1px_var(--primary)]"
         >
           <button

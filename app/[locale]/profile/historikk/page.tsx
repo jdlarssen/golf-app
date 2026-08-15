@@ -470,7 +470,9 @@ export default async function HistorikkPage() {
   // rader i ett Card (samme delte-rad-mønster som «Baner»-panelet) — ikke
   // lenger frittstående kort med egen fot-lenke.
   const roundsContent = (
-    <Card className="p-0 overflow-hidden">
+    // data-focus-inset: radene er full-bleed i et `p-0`-kort, så
+    // `overflow-hidden` klipper en outline med positiv offset helt bort (#1402).
+    <Card data-focus-inset className="p-0 overflow-hidden">
       <div className="divide-y divide-border">
         {gamesWithStats.map((game) => {
           const formatLabel = tModes(
