@@ -54,10 +54,26 @@ export function touchesNeverList(files: string[]): boolean {
 
 export const NEEDS_DECISION_LABEL = 'autonomy:needs-decision';
 
-// Maskin-markøren for produktvalg: en markdown-heading «## Produktvalg» eller
-// «## Alternativ A/B» (a–e) i PR-body-en. Prosa som «Alternativer vurdert» uten
-// heading teller IKKE — konvensjonen naglet i CLAUDE.md steg 5.
-const CHOICE_MARKER = /^#{1,6}\s+(produktvalg\b|alternativ\s+[a-e]\b)/im;
+// Maskin-markøren for produktvalg i PR-body-en. To former teller:
+//
+//   1. en markdown-heading som INNEHOLDER ordet «produktvalg» — «## Produktvalg»,
+//      «## Alternativer (produktvalg)», «## ⚖️ Produktvalg»;
+//   2. en heading som STARTER med «Alternativ A»–«Alternativ E».
+//
+// Prosa uten heading teller IKKE («Alternativer vurdert: A og B» forblir false).
+//
+// #1623: form 1 krevde tidligere at headingen startet med «produktvalg», mens
+// mal-teksten i CLAUDE.md foreskrev «## Alternativer (produktvalg)». De to
+// motsa hverandre, og PR #1620 — et ekte produktvalg — ble auto-merget forbi
+// eieren. «alternativ» må fortsatt stå først OG følges av a–e: å matche
+// «alternativ» hvor som helst ville truffet «## Vurderte alternativer» i rene
+// tekniske PR-er. Regelen bor i CLAUDE.md steg 5 og gjentas i
+// docs/loops/discord-pr-kort.md — endres den her, endres den der.
+//
+// Bevisst fail-closed: «## Ingen produktvalg» matcher også. Kostnaden er en
+// menneske-merge; alternativet er en tapt eier-beslutning. Ikke forsøk å
+// utelukke negasjoner.
+const CHOICE_MARKER = /^#{1,6}\s+(?:.*\bproduktvalg\b|alternativ\s+[a-e]\b)/im;
 
 export function hasChoiceMarker(body: string | null | undefined): boolean {
   return body != null && CHOICE_MARKER.test(body);

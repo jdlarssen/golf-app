@@ -85,10 +85,13 @@ vinner:
      `lib/payment/**`, `.github/**`, `.githooks/**` eller `.claude/**`. Migrasjoner,
      destruktive flyter, auth/sikkerhet, penger og enforcement-flater beholder
      menneske-porten (fail-closed, bredere enn issue-ets liste).
-   - **Valg-markør:** PR-body har en markdown-heading `## Produktvalg` eller
-     `## Alternativ A/B` (a–e), ELLER et lenket issue (`closes|fixes|resolves|refs|part of #N`)
-     har labelen `autonomy:needs-decision`. Headingen er maskin-markøren økter MÅ
-     sette når de presenterer et valg (CLAUDE.md steg 5).
+   - **Valg-markør:** PR-body har en markdown-heading som enten inneholder ordet
+     «produktvalg» (`## Produktvalg`, `## Alternativer (produktvalg)`) eller starter
+     med `## Alternativ A`–`E` (a–e), ELLER et lenket issue
+     (`closes|fixes|resolves|refs|part of #N`) har labelen `autonomy:needs-decision`.
+     Headingen er maskin-markøren økter MÅ sette når de presenterer et valg
+     (CLAUDE.md steg 5). Prosa uten heading teller ikke; en negasjon
+     («## Ingen produktvalg») teller derimot — bevisst fail-closed (#1623).
    - **Staging-porten:** PR-en er bruker-synlig (≥1 commit med `feat|fix|perf`-prefiks
      uten `[no-changelog]`, §T7) OG mangler `staging-verified`-labelen (#1076).
 3. **`auto-merge`** ellers.
