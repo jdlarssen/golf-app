@@ -345,6 +345,28 @@ describe('notifyPlayersGameReopened (#1363)', () => {
 
     expect(notifyMock).not.toHaveBeenCalled();
   });
+
+  it('#1670: navnløs aktør → actor_name null, aldri en norsk audit-streng', async () => {
+    // Payloaden leses i MOTTAKERENS locale. Mangler aktøren navn, skal null
+    // videreføres rått så kortet fyller `organizerFallback` ved render.
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: false });
+
+    await notifyPlayersGameReopened(
+      [{ user_id: 'a' }],
+      { id: 'game-1', name: 'Vinter-cup', actorName: null },
+      'reopenGame',
+    );
+
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'a',
+      kind: 'game_reopened',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Vinter-cup',
+        actor_name: null,
+      },
+    });
+  });
 });
 
 describe('notifyPlayersGameStarted (#502, #1134)', () => {

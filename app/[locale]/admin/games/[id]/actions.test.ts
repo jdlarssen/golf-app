@@ -881,3 +881,50 @@ describe('endGame', () => {
     expect(sendGameFinishedNotificationMock).not.toHaveBeenCalled();
   });
 });
+
+// ─── reopenGame ─────────────────────────────────────────────────────────────
+
+describe('reopenGame', () => {
+  it('#1670: a nameless admin sends actor_name null, not the «Admin» audit string', async () => {
+    // Same rule as #1598 gave reopenScorecard: the payload is read in the
+    // RECIPIENT's locale, so it must never carry the audit log's Norwegian
+    // 'Admin' fallback. No name → null, and the card fills
+    // «Arrangøren»/«The organizer» at render time.
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: null }, error: null }, // users (requireAdmin) — no profile name
+      {
+        data: { id: 'game-1', name: 'Vinter-cup', status: 'finished' },
+        error: null,
+      }, // games.select(id, name, status)
+      { data: null, error: null }, // games.update(status='active') → ok
+      { data: [], error: null }, // syncDerivedGamesStatus lookup → no derived games
+      {
+        data: [{ user_id: 'admin-1' }, { user_id: 'user-a' }],
+        error: null,
+      }, // game_players roster (actor included, filtered out below)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenGame } = await import('./actions');
+
+    await expect(reopenGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=game_reopened');
+    // The actor stays out of their own fan-out — only the co-player is told.
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'user-a',
+      kind: 'game_reopened',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Vinter-cup',
+        actor_name: null,
+      },
+    });
+    // The audit log keeps its own string — it is not user-facing.
+    expect(logAdminEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({ actorName: 'Admin' }),
+    );
+  });
+});
