@@ -126,9 +126,6 @@ export function ShambleView({
   const statusLabel = gameStatus === 'finished' ? t('common.afterNHoles', { holes: holesPlayed }) : t('common.live');
   const subtitleParts = [statusLabel, variantLabel, countLabel, scoringLabel];
 
-  // result.teams er allerede sortert på rank fra scoring-laget.
-  const sortedTeams = [...result.teams].sort((a, b) => a.rank - b.rank);
-
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
@@ -142,12 +139,14 @@ export function ShambleView({
         </p>
       </div>
 
-      {/* Rangert lag-tabell — primær storyline: hvem leder på slagsum. */}
+      {/* Rangert lag-tabell — primær storyline: hvem leder på slagsum.
+          `result.teams` kommer rank-sortert fra scoring-laget (kontrakten står
+          på ShambleResult.teams), så vi leser den rett (#1667). */}
       <ul
         data-testid="shamble-leaderboard"
         className="flex flex-col gap-2 px-3.5 pt-3 pb-3.5"
       >
-        {sortedTeams.map((team, i) => {
+        {result.teams.map((team, i) => {
           const memberNames = team.members
             .map((uid) => {
               const info = playersById.get(uid);
