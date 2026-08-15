@@ -74,6 +74,13 @@ describe('hasChoiceMarker', () => {
     ['## Alternativer (produktvalg)', true],
     // Prefiks foran ordet er greit (emoji, nummerering).
     ['## ⚖️ Produktvalg', true],
+    // Bestemt form er idiomatisk norsk og teller — regelen lover en heading som
+    // INNEHOLDER ordet, så en ordgrense her ville latt doccen love mer enn koden gir.
+    ['## Produktvalget', true],
+    ['## Produktvalgene vi vurderte', true],
+    // `#` uten mellomrom foran teksten er ikke en heading, heller ikke når
+    // linjeskiftet står imellom (`\s` ville krysset det).
+    ['##\nEt produktvalg', false],
     // Bevisst fail-closed: en negasjon holder også merge-porten. Billigere enn
     // å miste en eier-beslutning — ikke «fiks» dette.
     ['## Ingen produktvalg', true],
@@ -93,6 +100,22 @@ describe('hasChoiceMarker', () => {
   it('null/undefined er ikke markør', () => {
     expect(hasChoiceMarker(null)).toBe(false);
     expect(hasChoiceMarker(undefined)).toBe(false);
+  });
+
+  it('bruker ikke kvadratisk tid på en body full av mellomrom', () => {
+    // Regresjonslås på den atomiske grupperingen i CHOICE_MARKER. Uten den
+    // backtracker motoren gjennom mellomrom-løpet for hvert startpunkt, og
+    // denne bodyen tar ~3 sekunder i stedet for et brøkdels millisekund.
+    // GitHub tillater 65 536 tegn i en PR-body, så taket er reelt.
+    const body = `#${' '.repeat(65_536)}x`;
+
+    const start = performance.now();
+    const result = hasChoiceMarker(body);
+    const elapsedMs = performance.now() - start;
+
+    expect(result).toBe(false);
+    // Rikelig margin: faktisk måling er ~0,1 ms, den patologiske varianten ~3000 ms.
+    expect(elapsedMs).toBeLessThan(500);
   });
 });
 
