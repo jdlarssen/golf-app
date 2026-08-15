@@ -7,9 +7,9 @@ import { useSpectatePolling } from './useSpectatePolling';
  * Status half of the spectate banner (#1376) — and the spectate page's single
  * polling owner.
  *
- * Before this, the banner rendered a server-side "Følger live" with a pulsing
- * dot for as long as the game was active, while a separate invisible poller
- * did the refreshing. Lose the network and the dot kept pulsing over frozen
+ * Before this, the banner rendered a server-side `liveStatus` label with a
+ * pulsing dot for as long as the game was active, while a separate invisible
+ * poller did the refreshing. Lose the network and the dot kept pulsing over frozen
  * numbers. Now the dot, the label and the timestamp all come from the same
  * hook that drives the polling, so what the spectator sees matches what the
  * page is actually doing.
