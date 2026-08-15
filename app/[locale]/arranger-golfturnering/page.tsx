@@ -133,7 +133,7 @@ export default async function ArrangerGolfturneringPage() {
                   key={audience}
                   href={`/arranger-golfturnering/${audience}`}
                   data-testid="arrange-guide-audience-card"
-                  className="flex min-h-[44px] flex-col gap-1.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="flex min-h-[44px] flex-col gap-1.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-primary-soft"
                 >
                   <span className="font-serif text-[17px] leading-tight text-text">
                     {card.pageTitle}
@@ -161,7 +161,7 @@ export default async function ArrangerGolfturneringPage() {
               <li key={section.id}>
                 <a
                   href={`#${section.id}`}
-                  className="inline-flex min-h-[44px] items-center font-sans text-sm text-primary hover:text-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="inline-flex min-h-[44px] items-center font-sans text-sm text-primary hover:text-primary-hover"
                 >
                   {section.heading}
                 </a>
@@ -198,7 +198,7 @@ export default async function ArrangerGolfturneringPage() {
                 key={entry.key}
                 href={`/spillformater/${entry.mode}`}
                 data-testid="arrange-guide-format-card"
-                className="flex min-h-[44px] flex-col gap-1.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="flex min-h-[44px] flex-col gap-1.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-primary-soft"
               >
                 <span className="font-serif text-[16px] leading-tight text-text">
                   {entry.label}
@@ -212,7 +212,7 @@ export default async function ArrangerGolfturneringPage() {
           <div className="mt-4">
             <SmartLink
               href="/spillformater"
-              className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:text-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:text-primary-hover"
             >
               {t('formats.linkLabel')}
               <span aria-hidden className="ml-1">

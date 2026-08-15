@@ -91,7 +91,7 @@ export function PlayersListClient({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={searchPlaceholder}
           autoComplete="off"
-          className="w-full rounded-xl border border-border bg-surface px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full rounded-xl border border-border bg-surface px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:ring-2 focus:ring-primary/40"
         />
       </div>
 

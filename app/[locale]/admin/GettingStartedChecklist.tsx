@@ -110,7 +110,7 @@ export function GettingStartedChecklist({
               <SmartLink
                 href={step.href}
                 data-testid={`getting-started-link-${step.key}`}
-                className="flex min-h-[44px] items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/[0.09] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="flex min-h-[44px] items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/[0.09]"
               >
                 <StepMark done={false} />
                 <span className="text-[13px] font-medium text-text">{step.label}</span>

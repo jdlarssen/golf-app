@@ -40,7 +40,7 @@ export function AnonDiscoverySection({
           <li key={game.id}>
             <SmartLink
               href={`/signup/${game.short_id}`}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5 transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5 transition-colors hover:bg-surface-2"
               data-testid="anon-discovery-card"
             >
               <span className="min-w-0 flex-1">

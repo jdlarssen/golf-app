@@ -98,7 +98,7 @@ export default async function EditLaunchPage({
                 rows={3}
                 maxLength={400}
                 defaultValue={update.body}
-                className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-text placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-text placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
                 placeholder={t('bodyPlaceholder')}
               />
               <p className="mt-1.5 text-xs text-muted">{t('bodyHint')}</p>

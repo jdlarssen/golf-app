@@ -60,7 +60,7 @@ export async function ActionItemsStripe() {
           <SmartLink
             key={row.key}
             href={row.href}
-            className={`flex min-h-[44px] items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-accent/[0.09] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+            className={`flex min-h-[44px] items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-accent/[0.09] ${
               i > 0 ? 'border-t border-accent/20' : ''
             }`}
           >

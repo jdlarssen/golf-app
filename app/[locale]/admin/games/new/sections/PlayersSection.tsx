@@ -201,7 +201,7 @@ export function PlayersSection({
               placeholder={t('searchPlaceholder')}
               aria-label={t('searchLabel')}
               autoComplete="off"
-              className="w-full min-h-[44px] rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+              className="w-full min-h-[44px] rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
             />
           </div>
 
@@ -232,7 +232,7 @@ export function PlayersSection({
                         disabled={atCap}
                         onChange={() => togglePlayer(p.id)}
                         aria-label={`${playerLabel(p)}${p.pending ? t('pendingPlayerAriaNote') : ''}`}
-                        className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40 accent-primary"
+                        className="h-5 w-5 rounded border-border text-primary accent-primary"
                       />
                       <span className="flex-1 min-w-0 truncate text-sm text-text">
                         {playerLabel(p)}

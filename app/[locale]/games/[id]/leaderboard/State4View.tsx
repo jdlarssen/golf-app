@@ -206,7 +206,7 @@ function ExportLink({ gameId, t }: { gameId: string; t: ReturnType<typeof useTra
       <a
         href={`/games/${gameId}/leaderboard/export`}
         download={`torny-${gameId}-${today}.csv`}
-        className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-border bg-transparent px-[18px] py-2.5 text-sm font-medium tracking-tight text-text transition-[background-color,transform,opacity] duration-100 hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-border bg-transparent px-[18px] py-2.5 text-sm font-medium tracking-tight text-text transition-[background-color,transform,opacity] duration-100 hover:bg-primary-soft"
       >
         {t('downloadCsv')}
       </a>
@@ -269,7 +269,7 @@ function ReplayButton({ onClick, t }: { onClick: () => void; t: ReturnType<typeo
       onClick={onClick}
       aria-label={t('replayAriaLabel')}
       title={t('replayAriaLabel')}
-      className="confetti-replay-button group inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-soft hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
+      className="confetti-replay-button group inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-soft hover:text-accent active:scale-95"
     >
       <ReplayIcon size={20} />
     </button>

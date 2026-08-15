@@ -17,10 +17,10 @@ const SECTION_LABEL =
   'mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted';
 
 const QUIET_LINK =
-  'inline-flex min-h-[44px] items-center rounded font-sans text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40';
+  'inline-flex min-h-[44px] items-center rounded font-sans text-xs font-medium text-primary hover:underline';
 
 const ROW_LINK =
-  'block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40';
+  'block rounded-2xl';
 
 /** Game-arranged here carries its name already locale-resolved by the fetcher. */
 export type ArrangedGame = {
@@ -159,7 +159,7 @@ export function ArrangementView({
             <SmartLink
               href="/opprett-spill?intent=cup"
               data-testid="player-invite-cup"
-              className="inline-flex min-h-[44px] items-center rounded font-sans text-sm text-muted underline underline-offset-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="inline-flex min-h-[44px] items-center rounded font-sans text-sm text-muted underline underline-offset-2 hover:text-text"
             >
               {t('playerInviteOrCup')}
             </SmartLink>
@@ -210,7 +210,7 @@ export function ClubsView({ clubs }: { clubs: MyClub[] }) {
         <SmartLink
           href="/klubber"
           data-testid="player-no-club"
-          className="inline-flex min-h-[44px] items-center rounded font-sans text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="inline-flex min-h-[44px] items-center rounded font-sans text-sm text-muted hover:text-text"
         >
           {t('playerNoClub')} →
         </SmartLink>

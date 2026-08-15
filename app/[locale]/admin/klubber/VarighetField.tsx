@@ -65,7 +65,7 @@ export function VarighetField({
             onChange={(e) => setDate(e.target.value)}
             className={`block w-full max-w-full appearance-none rounded-xl border border-border bg-surface px-3.5 py-3 [box-sizing:border-box] ${
               date ? 'text-text' : 'text-muted'
-            } focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 transition-[border-color,box-shadow] duration-150`}
+            } focus:border-accent transition-[border-color,box-shadow] duration-150`}
           />
           <p className="mt-1.5 text-xs text-muted">
             {t('endDateHint')}

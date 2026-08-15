@@ -144,7 +144,7 @@ function CupDoor({
     <SmartLink
       href={href}
       data-testid={testId}
-      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      className="block rounded-2xl"
     >
       <Card className="flex items-center justify-between gap-3">
         <div className="min-w-0">

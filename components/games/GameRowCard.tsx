@@ -41,7 +41,7 @@ export function GameRowCard({
   return (
     <SmartLink
       href={href}
-      className={`block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40${
+      className={`block rounded-2xl${
         linkClassName ? ` ${linkClassName}` : ''
       }`}
     >

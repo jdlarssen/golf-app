@@ -255,7 +255,7 @@ export function ModeSelector({ value, onChange, disabled = false }: Props) {
               onClick={() => {
                 if (!disabled) onChange(tile.mode);
               }}
-              className={`flex min-h-[44px] flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex min-h-[44px] flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
                 selected
                   ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
                   : 'border-border bg-surface text-text hover:bg-primary-soft/60'

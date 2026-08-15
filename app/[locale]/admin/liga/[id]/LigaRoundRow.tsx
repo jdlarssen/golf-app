@@ -98,7 +98,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
               <select
                 name="course_id"
                 defaultValue={round.courseId ?? ''}
-                className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               >
                 <option value="">{t('courseNotSelected')}</option>
                 {courses.map((c) => (
@@ -118,7 +118,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
               <select
                 name="tee_box_id"
                 defaultValue={round.teeBoxId ?? ''}
-                className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               >
                 <option value="">{t('teeNotSelected')}</option>
                 {tees.map((t_) => (
@@ -159,7 +159,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
               name="closes_at"
               required
               defaultValue={toDatetimeLocal(round.closesAt)}
-              className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+              className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>
 

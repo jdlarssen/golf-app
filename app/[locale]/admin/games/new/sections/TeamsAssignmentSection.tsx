@@ -266,7 +266,7 @@ export function TeamsAssignmentSection({
                     onChange={(e) =>
                       assignPlayerToSide(side, e.target.value)
                     }
-                    className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+                    className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
                   >
                     <option value="">{t('emptySlotOption')}</option>
                     {options.map((p) => (
@@ -382,7 +382,7 @@ export function TeamsAssignmentSection({
                         onChange={(e) =>
                           assignPlayerToSlot(team as TeamNumber, slotIndex, e.target.value)
                         }
-                        className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+                        className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
                       >
                         <option value="">{t('emptySlotOption')}</option>
                         {options.map((p) => (
@@ -442,7 +442,7 @@ export function TeamsAssignmentSection({
                       onChange={(e) =>
                         setFlightForPlayer(pid, Number(e.target.value))
                       }
-                      className="rounded-xl border px-2 py-1.5 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+                      className="rounded-xl border px-2 py-1.5 bg-surface text-sm text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
                     >
                       {FLIGHT_NUMBERS.map((f) => (
                         <option key={f} value={f}>

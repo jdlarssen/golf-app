@@ -136,7 +136,7 @@ export async function FinishedRoundsSection({
       {entries.length > 3 && (
         <SmartLink
           href="/spill-arkiv"
-          className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="block rounded-2xl"
         >
           <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
             <span className="text-base font-medium text-text">

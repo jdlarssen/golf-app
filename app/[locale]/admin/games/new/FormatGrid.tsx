@@ -82,7 +82,7 @@ export function FormatGrid({
             onClick={() => {
               if (!disabled) onChange(f.slug);
             }}
-            className="flex w-full min-h-[44px] items-center justify-between gap-2 px-3 py-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full min-h-[44px] items-center justify-between gap-2 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="font-serif text-base leading-snug text-text">
               {name}
@@ -100,7 +100,7 @@ export function FormatGrid({
               <button
                 type="button"
                 onClick={() => onShowGuide(f.slug)}
-                className="font-sans text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="font-sans text-xs font-medium text-primary hover:underline"
               >
                 {t('howItWorks')}
               </button>
@@ -121,7 +121,7 @@ export function FormatGrid({
         onClick={() => {
           if (!disabled) onChange(f.slug);
         }}
-        className="flex min-h-[44px] flex-col items-start justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2.5 text-left transition-colors duration-150 hover:bg-primary-soft/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex min-h-[44px] flex-col items-start justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2.5 text-left transition-colors duration-150 hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {/* Navn over chip(s): et ett-ords navn («Stableford») + den brede
             to-chip-baren (Solo + Lag) fikk ikke plass på én rad i en smal

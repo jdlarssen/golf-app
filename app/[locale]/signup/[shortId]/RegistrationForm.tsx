@@ -223,7 +223,7 @@ export function RegistrationForm({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t('messagePlaceholder')}
-            className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           <span className="mt-1 block text-right font-sans text-[11px] tabular-nums text-muted">
             {message.length}/{MESSAGE_MAX}

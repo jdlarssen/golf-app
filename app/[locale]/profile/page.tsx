@@ -582,7 +582,7 @@ async function VennerCard() {
   return (
     <SmartLink
       href="/profile/venner"
-      className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      className="block rounded-2xl"
     >
       <Card className="min-h-[44px] flex items-center justify-between gap-3 hover:border-primary/30 transition-colors p-5">
         <div className="min-w-0">

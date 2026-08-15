@@ -48,7 +48,7 @@ export function WagerStakeSetup({
           disabled={disabled}
           placeholder={t('placeholder')}
           aria-label={t('ariaLabel')}
-          className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
+          className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-foreground focus:border-primary"
         />
       </label>
     </fieldset>

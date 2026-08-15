@@ -151,7 +151,7 @@ export function HomeDiscoverySection({
       {preview && hasPassiveDiscovery && (
         <SmartLink
           href="/finn-turneringer"
-          className="flex min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="flex min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-2"
         >
           <span className="font-sans text-sm font-medium text-text">
             {t('seeAllTournaments')}

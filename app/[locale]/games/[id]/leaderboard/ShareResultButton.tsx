@@ -104,7 +104,7 @@ export function ShareResultButton() {
         type="button"
         onClick={onShare}
         disabled={busy}
-        className="inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-medium tracking-tight text-white transition-[background-color,transform,opacity] duration-100 hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60 dark:text-bg"
+        className="inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-medium tracking-tight text-white transition-[background-color,transform,opacity] duration-100 hover:bg-primary-hover disabled:opacity-60 dark:text-bg"
       >
         <svg
           width="16"

@@ -39,7 +39,7 @@ export function TextLink({
   return (
     <SmartLink
       href={href}
-      className={`inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:text-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className}`}
+      className={`inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:text-primary-hover ${className}`}
     >
       {children}
       <span aria-hidden className="ml-1">

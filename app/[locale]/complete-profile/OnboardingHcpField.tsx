@@ -6,7 +6,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { formatGolfboxHcp } from '@/lib/handicap/sign';
 
 const INPUT_CLASS =
-  'w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150';
+  'w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 focus:border-accent transition-[border-color,box-shadow] duration-150';
 
 /**
  * Handicap-felt for onboarding: magnitude-input + «+»-chip for plusshandicap
@@ -47,7 +47,7 @@ export function OnboardingHcpField({
           onClick={() => setIsPlus((v) => !v)}
           aria-pressed={isPlus}
           aria-label={t('hcpPlusLabel')}
-          className={`flex min-h-[46px] w-11 shrink-0 items-center justify-center rounded-xl border text-lg font-semibold transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+          className={`flex min-h-[46px] w-11 shrink-0 items-center justify-center rounded-xl border text-lg font-semibold transition-colors duration-150 ${
             isPlus
               ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
               : 'border-border bg-surface text-muted hover:text-text'

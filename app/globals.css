@@ -378,9 +378,11 @@ body {
  *
  * BEVISST ULAGET. Tailwind v4 emitterer `@layer theme, base, components,
  * utilities`, og lag-rekkefølge slår spesifisitet. Denne regelen MÅ ligge
- * utenfor alle @layer-blokker for å vinne over de ~97 `focus:outline-none`-
- * utilitiene som bor i `@layer utilities`. Flytt den inn i @layer base og den
- * slutter å virke — uten at noe feiler synlig.
+ * utenfor alle @layer-blokker for å vinne over `focus:outline-none` og andre
+ * fokus-utilities, som bor i `@layer utilities`. Flytt den inn i @layer base og
+ * den slutter å virke — uten at noe feiler synlig. (#1401 fjernet de ~111
+ * `focus:outline-none`-kallene som sto igjen i komponentene; regelen må fortsatt
+ * ligge ulaget, for neste utility som skrus på treffer den samme fella.)
  *
  * `outline`, ikke `box-shadow`/`ring`: outline overlever forced-colors-modus
  * (Windows High Contrast), der box-shadow droppes helt. `:where()` holder

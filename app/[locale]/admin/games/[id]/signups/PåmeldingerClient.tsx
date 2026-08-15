@@ -360,7 +360,7 @@ function RejectModal({
             maxLength={REJECTION_REASON_MAX}
             rows={3}
             placeholder={t('rejectReasonPlaceholder')}
-            className="w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder-muted/70 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder-muted/70 focus:border-accent"
           />
           <p className="text-right text-[11px] tabular-nums text-muted">
             {reason.length} / {REJECTION_REASON_MAX}

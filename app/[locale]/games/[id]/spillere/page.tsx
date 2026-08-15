@@ -384,7 +384,7 @@ export default async function CreatorSpillerePage({
                         defaultValue={claimedTo ?? undefined}
                         placeholder={t('guestClaim.emailPlaceholder')}
                         aria-label={t('guestClaim.emailAriaLabel')}
-                        className="flex-1 rounded-xl border border-border bg-bg px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
+                        className="flex-1 rounded-xl border border-border bg-bg px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent"
                       />
                       <SubmitButton
                         pendingLabel={t('guestClaim.sendPending')}

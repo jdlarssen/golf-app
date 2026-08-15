@@ -139,7 +139,7 @@ export function FlighterSeksjon({ gameId, players }: Props) {
                     <select
                       name="flight"
                       defaultValue={player.flight_number ?? ''}
-                      className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:ring-2 focus:ring-primary/30"
                       disabled={isPending}
                       aria-label={t('flightAriaLabel', { name: player.displayName })}
                     >
