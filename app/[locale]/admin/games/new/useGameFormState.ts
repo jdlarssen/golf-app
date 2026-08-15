@@ -1872,8 +1872,10 @@ export function useGameFormState({
     // useState-en over.
     scoreVisibility,
     setScoreVisibility,
-    // Initial / lock flags surfaced for components that render them as
-    // defaultChecked / disabled (radios + Side-Tournament-fieldset).
+    // Lock flags surfaced for components that render disabled controls
+    // (score_visibility-radios, Side-Tournament-fieldset). The `initial*`
+    // values have no external consumer since #1660 removed BasicsSection's
+    // uncontrolled copy — kept on the return type for symmetry with the seeds.
     initialScoreVisibility,
     lockScoreVisibility,
     initialLdCount,
