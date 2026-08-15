@@ -448,6 +448,10 @@ describe('recomputeCourseHandicapForUser — greensome-overstyring (#1537)', () 
       },
     });
     expect(revalidateTagMock).toHaveBeenCalledWith('game-greensome-2', 'max');
+    // To revalideringer: én etter CH-skrivingen (#1629), én etter mode_config-
+    // skrivingen — den siste må komme etterpå for at kampbrettet skal lese det
+    // nye lag-slaget.
+    expect(revalidateTagMock).toHaveBeenCalledTimes(2);
   });
 
   it('hånd-redigert overstyring: ingen skriving, ingen revalidering', async () => {
@@ -463,7 +467,8 @@ describe('recomputeCourseHandicapForUser — greensome-overstyring (#1537)', () 
     expect(
       client.__fromCalls.some((c) => c.table === 'games' && c.method === 'update'),
     ).toBe(false);
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    // Kun CH-revalideringen (#1629) — mode_config ble aldri skrevet.
+    expect(revalidateTagMock).toHaveBeenCalledTimes(1);
   });
 
   it('feilende mode_config-skriving stopper ikke omregningen (best-effort)', async () => {
@@ -474,6 +479,75 @@ describe('recomputeCourseHandicapForUser — greensome-overstyring (#1537)', () 
 
     expect(await recomputeCourseHandicapForUser('sander', -2.2)).toEqual({
       updated: 1,
+      overridesUpdated: 0,
+    });
+    // CH-revalideringen (#1629) står; den feilende mode_config-skrivingen
+    // legger ingen ny til.
+    expect(revalidateTagMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── recomputeCourseHandicapForUser — cache-revalidering (#1629) ─────────
+
+/** Ett vanlig (ikke-greensome) aktivt spill med frosset banehandicap. */
+function plainQueue(writeResult: QueryResult): QueryResult[] {
+  return [
+    // 1) medlemskap
+    {
+      data: [
+        {
+          game_id: 'g-1',
+          tee_gender: 'mens',
+          course_handicap: 18,
+          team_number: null,
+        },
+      ],
+      error: null,
+    },
+    // 2) spillet
+    {
+      data: [
+        {
+          id: 'g-1',
+          status: 'active',
+          hcp_allowance_pct: 100,
+          tee_boxes: TEE,
+          game_mode: 'stableford',
+          mode_config: null,
+        },
+      ],
+      error: null,
+    },
+    // 3) CH-skrivingen
+    writeResult,
+  ];
+}
+
+describe('recomputeCourseHandicapForUser — cache-revalidering (#1629)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('skrevet banehandicap → spill-cachen revalideres', async () => {
+    mockAdminClient.mockReturnValue(
+      buildSupabaseMock(plainQueue({ data: [{ game_id: 'g-1' }], error: null })) as never,
+    );
+
+    expect(await recomputeCourseHandicapForUser('sander', 12)).toEqual({
+      updated: 1,
+      overridesUpdated: 0,
+    });
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-g-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('0-raders skriving → ingen revalidering', async () => {
+    mockAdminClient.mockReturnValue(
+      buildSupabaseMock(plainQueue({ data: [], error: null })) as never,
+    );
+
+    expect(await recomputeCourseHandicapForUser('sander', 12)).toEqual({
+      updated: 0,
       overridesUpdated: 0,
     });
     expect(revalidateTagMock).not.toHaveBeenCalled();

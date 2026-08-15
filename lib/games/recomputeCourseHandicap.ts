@@ -293,6 +293,10 @@ export async function recomputeCourseHandicapForUser(
     updated += affected?.length ?? 0;
     if (affected?.length) {
       writtenCourseHandicaps.set(update.gameId, update.courseHandicap);
+      // Roster og banehandicap leses via den cachede `getGameWithPlayers`
+      // (tag `game-${id}`) — uten dette viser spillsidene den gamle verdien
+      // til revalidate-vinduet løper ut (#1629).
+      revalidateTag(`game-${update.gameId}`, 'max');
     }
   }
 
