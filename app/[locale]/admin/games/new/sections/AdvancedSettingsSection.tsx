@@ -115,9 +115,8 @@ export function AdvancedSettingsSection({
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="radio"
-                  {...(serializedExternally
-                    ? {}
-                    : { name: 'score_visibility', value: 'live' })}
+                  value="live"
+                  {...(serializedExternally ? {} : { name: 'score_visibility' })}
                   checked={scoreVisibility === 'live'}
                   onChange={() => setScoreVisibility('live')}
                   disabled={lockScoreVisibility}
@@ -135,9 +134,8 @@ export function AdvancedSettingsSection({
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="radio"
-                  {...(serializedExternally
-                    ? {}
-                    : { name: 'score_visibility', value: 'reveal' })}
+                  value="reveal"
+                  {...(serializedExternally ? {} : { name: 'score_visibility' })}
                   checked={scoreVisibility === 'reveal'}
                   onChange={() => setScoreVisibility('reveal')}
                   disabled={lockScoreVisibility}

@@ -241,6 +241,16 @@ describe('GameWizard — happy-path solo stableford', () => {
     clickNext();
     expectStep(5);
 
+    // #1400: «Skjul til slutt» er controlled state + manuell dispatch, så
+    // react-doms form-reset ved feilet publisering kan ikke hoppe den tilbake
+    // til «Live» — verken i state eller i DOM.
+    fireEvent.click(screen.getByText('Vis avanserte innstillinger'));
+    const reveal = document.querySelector<HTMLInputElement>(
+      'input[type="radio"][value="reveal"]',
+    )!;
+    fireEvent.click(reveal);
+    expect(reveal.checked).toBe(true);
+
     fireEvent.click(screen.getByRole('button', { name: /publiser/i }));
 
     expect(await screen.findByTestId('wizard-submit-error')).toBeInTheDocument();
@@ -248,6 +258,16 @@ describe('GameWizard — happy-path solo stableford', () => {
     // Fortsatt på steg 5, med banen fra steg 3 i summary-kortet.
     expectStep(5);
     expect(screen.getByText('Stiklestad GK')).toBeInTheDocument();
+    expect(
+      document.querySelector<HTMLInputElement>(
+        'input[type="radio"][value="reveal"]',
+      )!.checked,
+    ).toBe(true);
+    // Det skjulte feltet som faktisk sendes følger radioen.
+    expect(
+      document.querySelector<HTMLInputElement>('input[name="score_visibility"]')!
+        .value,
+    ).toBe('reveal');
   });
 
   it('Forrige-knappen er disabled på steg 1', () => {
