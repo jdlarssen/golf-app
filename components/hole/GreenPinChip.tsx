@@ -1,14 +1,8 @@
 'use client';
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type CSSProperties,
-  type JSX,
-} from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
+import { useOnline } from '@/hooks/useOnline';
 import { PinFlagSm } from '@/components/icons';
 import { isAcceptablePinAccuracy } from '@/lib/geo/pinRules';
 import { saveGreenPin } from '@/app/[locale]/games/[id]/holes/[holeNumber]/greenPinActions';
@@ -39,19 +33,6 @@ const statusStyle: CSSProperties = {
 
 const THANKS_MS = 2500;
 
-// Inline online-tracking — repoet har ingen useOnline-hook (verifisert i
-// kontraktens research), og dette er eneste forbruker. useSyncExternalStore
-// er React-idiomet for navigator.onLine; server-snapshot sier online så
-// SSR/hydrering aldri blinker chippen bort.
-function subscribeOnline(callback: () => void): () => void {
-  window.addEventListener('online', callback);
-  window.addEventListener('offline', callback);
-  return () => {
-    window.removeEventListener('online', callback);
-    window.removeEventListener('offline', callback);
-  };
-}
-
 /**
  * «Står du ved greenen? Lagre punkt» (#1210) — ett-trykks crowdsourcing-chip
  * ved SyncStatusLine-plassen. Forelderen (HoleClient) gater på tastings-økten
@@ -72,11 +53,8 @@ export function GreenPinChip({
   holeNumber: number;
 }): JSX.Element | null {
   const t = useTranslations('holes.greenPin');
-  const online = useSyncExternalStore(
-    subscribeOnline,
-    () => navigator.onLine,
-    () => true,
-  );
+  // Shared hook since #1376 (spectate is the second consumer).
+  const online = useOnline();
   const [state, setState] = useState<'idle' | 'busy' | 'thanks' | 'gone'>('idle');
   const [errorKey, setErrorKey] = useState<'weakGps' | 'denied' | 'failed' | null>(null);
   const thanksTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
