@@ -1252,6 +1252,7 @@ export interface TexasScrambleTeamLine {
 
 export interface TexasScrambleResult {
   kind: 'texas_scramble';
+  /** Per-lag-rader — sortert rank stigende (lavest totalNet = rank 1). */
   teams: TexasScrambleTeamLine[];
 }
 

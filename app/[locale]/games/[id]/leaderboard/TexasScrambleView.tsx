@@ -83,9 +83,7 @@ export function TexasScrambleView({
     );
   }
 
-  // Sorter på rank — scoring-laget setter rank, men teams-arrayen kommer
-  // sortert på teamNumber, ikke rank. Vi sorterer for å vise vinner-laget
-  // øverst på leaderboarden.
+  // result.teams er allerede sortert på rank fra scoring-laget (#1591).
   const sortedTeams = [...result.teams].sort((a, b) => a.rank - b.rank);
 
   return (
