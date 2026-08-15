@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type JSX } from 'react';
+import { useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
 
 // Matches the scores.putts CHECK (0..10) from migration 0123.
@@ -8,6 +8,16 @@ const MAX_PUTTS = 10;
 // Chips 0–4 are the common range; «5+» expands a compact stepper for 5..10.
 const CHIP_VALUES = [0, 1, 2, 3, 4] as const;
 const PLUS_THRESHOLD = 5;
+
+// Stepper-knappene TEGNER 36×36, men TREFFER 44×44 via `.tap-extend` (#1356,
+// tatt i bruk her i #1584): et usynlig ::after henger 4px utenfor padding-
+// boksen på alle fire kanter (36 + 2×4 = 44). Knappene har ingen border, så
+// inset regnes fra hele 36×36-boksen. Overlapp: tallet imellom står 8px unna
+// (`gap-2`) og er ikke klikkbart, og pillen har `px-2` (8px), så utvidelsen
+// holder seg innenfor den — ingen av chip-ene ved siden av mister treff.
+const STEPPER_TAP_STYLE: CSSProperties = {
+  ['--tap-extend' as string]: '-4px',
+};
 
 export interface PuttsChipsProps {
   /** Currently recorded putts for this hole, or null when nothing is set yet. */
@@ -84,7 +94,8 @@ export function PuttsChips({
             type="button"
             disabled={disabled || stepperValue <= PLUS_THRESHOLD}
             aria-label={t('decreaseAriaLabel', { name: ariaName })}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-text disabled:opacity-40"
+            className="tap-extend flex h-9 w-9 items-center justify-center rounded-full text-lg text-text disabled:opacity-40"
+            style={STEPPER_TAP_STYLE}
             onClick={() => onSelect(Math.max(PLUS_THRESHOLD, stepperValue - 1))}
           >
             −
@@ -99,7 +110,8 @@ export function PuttsChips({
             type="button"
             disabled={disabled || stepperValue >= MAX_PUTTS}
             aria-label={t('increaseAriaLabel', { name: ariaName })}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-text disabled:opacity-40"
+            className="tap-extend flex h-9 w-9 items-center justify-center rounded-full text-lg text-text disabled:opacity-40"
+            style={STEPPER_TAP_STYLE}
             onClick={() => onSelect(Math.min(MAX_PUTTS, stepperValue + 1))}
           >
             +
