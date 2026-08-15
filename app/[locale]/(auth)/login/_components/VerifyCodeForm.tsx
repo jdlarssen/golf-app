@@ -132,6 +132,7 @@ function ResendFooter() {
       <p className="text-xs text-muted">{t('resendPrompt')}</p>
       <button
         type="submit"
+        data-testid="resend-code-button"
         disabled={pending}
         className="inline-flex min-h-[44px] items-center justify-center px-3 text-sm font-medium text-primary underline underline-offset-2 disabled:opacity-50"
       >
