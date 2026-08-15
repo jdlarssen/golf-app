@@ -51,7 +51,9 @@ export function SpectateLiveStatus({ live }: { live: boolean }) {
       <span data-testid="spectate-status-label">
         {offline ? t('offlineStatus') : t('liveStatus')}
       </span>
-      {!offline && lastUpdatedAt && (
+      {/* Kept while offline: a frozen timestamp is exactly how the spectator
+          gauges how stale the numbers are. Only the hydration gate hides it. */}
+      {lastUpdatedAt && (
         <span data-testid="spectate-status-updated" className="opacity-75">
           <span aria-hidden>· </span>
           {t('updatedAt', {

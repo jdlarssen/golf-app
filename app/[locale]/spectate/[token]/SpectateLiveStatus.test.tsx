@@ -42,6 +42,7 @@ describe('SpectateLiveStatus', () => {
     expect(screen.getByTestId('spectate-status-label').textContent).not.toBe(
       onlineLabel,
     );
-    expect(screen.queryByTestId('spectate-status-updated')).toBeNull();
+    // The timestamp stays visible offline — frozen, so staleness is gaugeable.
+    expect(screen.getByTestId('spectate-status-updated')).toBeTruthy();
   });
 });
