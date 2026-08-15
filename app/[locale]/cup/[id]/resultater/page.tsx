@@ -47,6 +47,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
 
   // Samme klubb-gate som cup-siden (#524, delt helper #1468).
   const allowed = await canViewCupPage({
+    tournamentId: id,
     groupId: tournament.group_id,
     roster: snapshot.roster,
     proxyUserId: userId,
