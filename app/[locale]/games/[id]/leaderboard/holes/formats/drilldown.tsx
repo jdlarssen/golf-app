@@ -28,6 +28,8 @@ import {
 import {
   isHoleInSegment,
   firstHalfHoleNumbersForSegment,
+  holeNumbersForSegment,
+  lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import { getDrilldownContext, fetchHolesAndScores } from '../holesData';
@@ -157,6 +159,7 @@ export async function DrilldownBody({
       orderedLines={orderedLines}
       selected={selected}
       holeWinners={holeWinners}
+      holeSegment={holeSegment}
       navContext={navContext}
     />
   );
@@ -173,6 +176,7 @@ function DrilldownView({
   orderedLines,
   selected,
   holeWinners,
+  holeSegment,
   navContext,
 }: {
   gameId: string;
@@ -181,6 +185,7 @@ function DrilldownView({
   orderedLines: TeamLine[];
   selected: TeamLine;
   holeWinners: Array<number | null>;
+  holeSegment: HoleSegment;
   navContext?: LeaderboardNavContext;
 }) {
   const t = useTranslations('leaderboard.holes');
@@ -192,6 +197,18 @@ function DrilldownView({
   const backPar = backRows.reduce((sum, h) => sum + h.par, 0);
   const frontNet = frontRows.reduce((sum, h) => sum + (h.teamNet ?? 0), 0);
   const backNet = backRows.reduce((sum, h) => sum + (h.teamNet ?? 0), 0);
+  // Hva som faktisk er skjult (#1602): datalaget klipper aktive runder til
+  // segmentets FØRSTE halvdel, så resten av segmentet er det som venter —
+  // 10–18 i et fullt spill, 6–9 i et front9-spill, 15–18 i et back9-spill.
+  // Teksten må følge segmentet; ellers lover kortet hull som hører til
+  // søsterspillet på en splittet cup-dag og aldri dukker opp her.
+  const firstHalf = new Set(firstHalfHoleNumbersForSegment(holeSegment));
+  const hiddenHoles = holeNumbersForSegment(holeSegment).filter(
+    (n) => !firstHalf.has(n),
+  );
+  const hiddenFrom = hiddenHoles[0]!;
+  const hiddenTo = hiddenHoles[hiddenHoles.length - 1]!;
+
   const totalPar = frontPar + backPar;
   const totalVsPar = selected.total - totalPar;
   const holesWon = holeWinners.filter((w) => w === selected.teamNumber).length;
@@ -310,10 +327,10 @@ function DrilldownView({
         {isActive ? (
           <div className="mx-4 mt-5 rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
             <p className="font-serif text-[16px] font-medium text-text">
-              {t('hiddenBackNineHeading')}
+              {t('hiddenBackNineHeading', { last: lastHoleForSegment(holeSegment) })}
             </p>
             <p className="mt-2 text-xs text-muted">
-              {t('hiddenBackNineSub')}
+              {t('hiddenBackNineSub', { from: hiddenFrom, to: hiddenTo })}
             </p>
           </div>
         ) : (
