@@ -88,8 +88,9 @@ vinner:
    (`**.md`, `docs/**`, `.forge/**`), må GitHub ha REGISTRERT en `ci.yml`-kjøring for
    head-SHA-en før grønt slippes gjennom — tvillingen `ci-docs-noop.yml` rapporterer
    samme jobnavn og fullfører på sekunder, så på en blandet PR ser vinduet før
-   ci.yml er registrert ellers grønt ut. Fail-closed: HTTP-feil eller «ingen kjøring
-   enda» → `pending`, aldri `green`. Docs-only-PR-er er uendret (gaten er av).
+   ci.yml er registrert ellers grønt ut. Fail-closed: HTTP-feil, «ingen kjøring
+   enda», eller at endrede filer ikke lot seg lese (`expectsRealCi(null)` → gate PÅ)
+   → `pending`, aldri `green`. Docs-only-PR-er er uendret (gaten er av).
 2. **`card`** (knapp-kort) når NOEN treffer:
    - base-branch ≠ `main`, eller tittelen inneholder ordet `WIP` (case-insensitivt).
    - **Aldri-lista** (`NEVER_AUTO_MERGE_GLOBS`): minst én endret fil rører

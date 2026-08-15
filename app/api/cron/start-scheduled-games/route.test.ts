@@ -14,6 +14,8 @@ const dueReturnsMock = vi.fn<
 >();
 /** gameId → aktiv tropp, slik `from('game_players')`-oppslaget ser den. */
 const rosters = new Map<string, { user_id: string }[]>();
+/** Hvilke spill sweepen faktisk slo opp tropp for (#1524 punkt 3: avledede spill spares). */
+const rosterLookups: string[] = [];
 
 // Supabase-kjedene ruta faktisk bruker:
 //   games:        select().eq().lte().gte().returns()
@@ -34,13 +36,16 @@ vi.mock('@/lib/supabase/admin', () => ({
         return {
           select: () => ({
             eq: (_column: string, gameId: string) => ({
-              is: () => ({
-                returns: () =>
-                  Promise.resolve({
-                    data: rosters.get(gameId) ?? [],
-                    error: null,
-                  }),
-              }),
+              is: () => {
+                rosterLookups.push(gameId);
+                return {
+                  returns: () =>
+                    Promise.resolve({
+                      data: rosters.get(gameId) ?? [],
+                      error: null,
+                    }),
+                };
+              },
             }),
           }),
         };
@@ -111,6 +116,7 @@ function cronRequest() {
 beforeEach(() => {
   vi.clearAllMocks();
   rosters.clear();
+  rosterLookups.length = 0;
   process.env.CRON_SECRET = 'test-secret';
   dueReturnsMock.mockResolvedValue({ data: [], error: null });
 });
@@ -144,6 +150,9 @@ describe('POST /api/cron/start-scheduled-games', () => {
     expect(notifyStartedMock.mock.calls[0][0]).toEqual(players);
     // Hver vunnet flipp drar med seg sine avledede spill.
     expect(startDerivedGamesMock).toHaveBeenCalledTimes(4);
+    // Avledede spill (source_game_id satt) filtreres FØR tropp-oppslaget —
+    // bare de to vert-spillene koster en DB-rundtur.
+    expect(rosterLookups).toEqual(['g-back', 'g-front']);
     await expect(res.json()).resolves.toMatchObject({
       ok: true,
       checked: 4,
