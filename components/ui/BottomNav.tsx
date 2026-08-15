@@ -36,7 +36,9 @@ import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount
  * varianten stripper prefikset konsistent (server + klient).
  *
  * Innboks-fanen overtar rollen til den gamle `NotificationBell` i TopBar:
- * samme champagne-prikk via `useUnreadNotificationsCount`, ingen telletall.
+ * samme champagne-prikk via `useUnreadNotificationsCount`, ingen synlig
+ * telletall — men skjermleseren får antallet i fanens aria-label (#1389),
+ * siden prikken selv er `aria-hidden` dekor.
  *
  * `position: fixed` + `env(safe-area-inset-bottom)` så baren klarerer iPhone
  * home-indicator (`viewportFit: 'cover'` er satt i app/layout.tsx). App- og
@@ -104,12 +106,16 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
       <ul className="mx-auto flex max-w-md items-stretch">
         {tabs.map(({ href, labelKey, Icon, dot, also }) => {
           const label = t(labelKey);
+          // Prikken er `aria-hidden` dekor, så uten dette fikk skjermleser-
+          // brukeren aldri vite at noe ventet — tellingen finnes allerede i
+          // komponenten (#1389).
+          const ariaLabel = dot ? t('inboxUnread', { count }) : label;
           const active = isActive(href, also);
           return (
             <li key={href} className="flex-1">
               <SmartLink
                 href={href}
-                aria-label={label}
+                aria-label={ariaLabel}
                 aria-current={active ? 'page' : undefined}
                 className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium tracking-tight transition-colors ${
                   active ? 'text-primary' : 'text-muted hover:text-text'
@@ -122,7 +128,9 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
                       data-testid="bottomnav-innboks-dot"
                       aria-hidden
                       className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full border-2 border-bg"
-                      style={{ background: 'var(--accent)' }}
+                      // --accent måler ~2:1 mot lin og forsvinner i sollys;
+                      // --accent-deep er samme champagne, én tone dypere (#1389).
+                      style={{ background: 'var(--accent-deep)' }}
                     />
                   )}
                 </span>

@@ -51,6 +51,7 @@
     "ariaLabel": "Main navigation",
     "home": "Home",
     "inbox": "Inbox",
+    "inboxUnread": "Inbox, {count, plural, one {# unread} other {# unread}}",
     "clubhouse": "Clubhouse",
     "profile": "Profile"
   },
