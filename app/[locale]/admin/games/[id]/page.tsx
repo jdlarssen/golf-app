@@ -491,6 +491,22 @@ async function PlayersSections({
   const modeLabelKey = formatDisplayLabelKey(game.game_mode, game.mode_config);
   const modeLabel = tModes(modeLabelKey as Parameters<typeof tModes>[0]);
 
+  // Tee-off label, pinned to Oslo (#637) — without timeZone, toLocaleString
+  // renders in the server TZ (UTC on Vercel), showing 08:00 for a 10:00
+  // tee-off. Shared by the Format-card row and the scheduled CTA copy, so the
+  // auto-start sentence quotes exactly the time the organiser sees above.
+  // Null when the game has no tee-off (liga/cup-generated rows): no tee-off
+  // means the cron sweep never auto-starts it, so the CTA copy stays silent.
+  const teeOffLabel = game.scheduled_tee_off_at
+    ? formatDateTime(game.scheduled_tee_off_at, locale as AppLocale, {
+        timeZone: 'Europe/Oslo',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
+
   // Lag-terminologi: matchplay bruker «Side» i stedet for «Lag» (golf-standard
   // for 1v1-format). Holdt som lokale strings slik at vi ikke trenger å fyre
   // ternary på hver call-site i markup.
@@ -697,20 +713,7 @@ async function PlayersSections({
           label={tRows('peerApproval')}
           value={game.require_peer_approval ? tRows('peerApprovalOn') : tRows('peerApprovalOff')}
         />
-        {game.scheduled_tee_off_at && (
-          <Row
-            label={tRows('teeOff')}
-            value={formatDateTime(game.scheduled_tee_off_at, locale as AppLocale, {
-              // Pin to Oslo (#637) — without timeZone, toLocaleString renders in
-              // the server TZ (UTC on Vercel), showing 08:00 for a 10:00 tee-off.
-              timeZone: 'Europe/Oslo',
-              day: '2-digit',
-              month: 'short',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          />
-        )}
+        {teeOffLabel && <Row label={tRows('teeOff')} value={teeOffLabel} />}
       </SectionCard>
 
       {/* Card 3 — Course */}
@@ -1129,7 +1132,9 @@ async function PlayersSections({
           <SectionCard ribbon={tSections('startRound')}>
             <div className="px-3.5 pb-3.5 pt-3">
               <p className="mb-3 text-sm text-muted">
-                {tCta('scheduledStartBody')}
+                {teeOffLabel
+                  ? tCta('scheduledStartBodyAutoStart', { time: teeOffLabel })
+                  : tCta('scheduledStartBody')}
               </p>
               <StartScheduledGameButton startAction={startScheduledAction} />
             </div>
@@ -1138,7 +1143,9 @@ async function PlayersSections({
           <SectionCard ribbon={tSections('editGame')}>
             <div className="px-3.5 pb-3.5 pt-3">
               <p className="mb-3 text-sm text-muted">
-                {tCta('scheduledEditBody')}
+                {teeOffLabel
+                  ? tCta('scheduledEditBodyAutoStart')
+                  : tCta('scheduledEditBody')}
               </p>
               <SmartLink
                 href={`/admin/games/${gameId}/edit`}
