@@ -31,7 +31,7 @@ export default async function InboxPage() {
   }
 
   const supabase = await getServerClient();
-  const { data: rows } = await supabase
+  const { data: rows, error: rowsError } = await supabase
     .from('notifications')
     .select('id, kind, payload, read_at, created_at')
     .eq('user_id', userId)
@@ -39,6 +39,9 @@ export default async function InboxPage() {
     .order('created_at', { ascending: false })
     .limit(100)
     .returns<NotificationRow[]>();
+  // Feiler spørringen skal error-grensa ta over med «Prøv igjen» — ikke
+  // tomtilstanden, som ville påstå at ingenting venter (#1392).
+  if (rowsError) throw rowsError;
 
   const notifications = rows ?? [];
 
@@ -62,11 +65,14 @@ export default async function InboxPage() {
     );
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('product_updates_unsubscribed_at')
     .eq('id', userId)
     .maybeSingle();
+  // Samme grunn: en svelget feil her ville vist månedsbrev-bryteren i feil
+  // tilstand (#1392).
+  if (profileError) throw profileError;
   const monthlyOptIn = profile?.product_updates_unsubscribed_at == null;
 
   return (
