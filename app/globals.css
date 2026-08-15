@@ -864,3 +864,23 @@ h1, h2, h3, h4, h5, h6 {
     inset 0 0 0 1px rgba(201, 169, 97, 0.4),
     0 2px 12px rgba(26, 46, 31, 0.04);
 }
+
+/* -----------------------------------------------------------------------------
+ * Tailwind's own `animate-pulse` under reduced motion (#1376).
+ *
+ * BEVISST ULAGET, samme grunn som fokus-indikatoren over: `.animate-pulse` bor
+ * i Tailwinds `@layer utilities`, og lag-rekkefølge slår spesifisitet. En regel
+ * inne i @layer utilities ville vinne eller tape avhengig av hvor `@import
+ * "tailwindcss"` står; utenfor alle lag vinner den alltid.
+ *
+ * Med vilje global: den treffer status-dotten i spectate-banneret OG pulse-
+ * dotten i embed-footeren — begge er ren dekor som formidler «det tikker», og
+ * teksten ved siden av sier det samme uten bevegelse. Repoets egne
+ * animasjoner (`.animate-soft-pulse`, `.sk`, `.reveal-up`, …) har sine egne
+ * reduced-motion-regler lenger opp.
+ * ---------------------------------------------------------------------------*/
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse {
+    animation: none;
+  }
+}
