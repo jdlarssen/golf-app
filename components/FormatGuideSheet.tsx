@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { FormatGuideList, type FormatGuideEntry } from '@/components/FormatGuideList';
+import { useModalFocus } from '@/hooks/useModalFocus';
 
 const CARD_ID_PREFIX = 'format-guide-';
 
@@ -30,64 +31,27 @@ export function FormatGuideSheet({
   focusKey?: string;
   onClose: () => void;
 }) {
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
+  // Fokus inn i arket ved åpning (lukk-knappen er første fokuserbare element),
+  // Tab holdes innenfor, og fokus tilbake på «?»-knappen ved lukking. Delt
+  // mønster siden #1590 — arket hadde sin egen kopi fra #498.
+  const { containerRef } = useModalFocus<HTMLDivElement>(open);
 
-  // Esc-lukk + fokus-felle (Tab sykler innenfor arket) + fokus-gjenoppretting.
+  // Esc-lukk. Ligger her og ikke i hooken: hooken tar bevisst ingen callbacks
+  // (deps `[open]` alene) så en ny `onClose`-closure ikke river fokus ut.
   useEffect(() => {
     if (!open) return;
-
-    previouslyFocused.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-
-    function getFocusable(): HTMLElement[] {
-      if (!sheetRef.current) return [];
-      return Array.from(
-        sheetRef.current.querySelectorAll<HTMLElement>(
-          'button, a[href], summary, [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter((el) => !el.hasAttribute('disabled'));
-    }
-
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = getFocusable();
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey) {
-        if (active === first || !sheetRef.current?.contains(active)) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else if (active === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose();
     }
-
     document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      // Legg fokus tilbake på elementet som åpnet arket (typisk «?»-knappen).
-      previouslyFocused.current?.focus();
-    };
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
-  // Når arket åpnes: fokuser lukk-knappen, og åpne/scroll til valgt format.
+  // Når arket åpnes med et valgt format: åpne og scroll til det kortet.
   useEffect(() => {
     if (!open) return;
-    closeButtonRef.current?.focus();
-
     if (!focusKey) return;
     const target = document.getElementById(`${CARD_ID_PREFIX}${focusKey}`);
     if (target instanceof HTMLDetailsElement) {
@@ -113,7 +77,8 @@ export function FormatGuideSheet({
       data-testid="format-guide-backdrop"
     >
       <div
-        ref={sheetRef}
+        ref={containerRef}
+        tabIndex={-1}
         className="format-guide-sheet flex max-h-[88vh] w-full max-w-xl flex-col rounded-t-2xl bg-bg shadow-2xl"
         role="dialog"
         aria-modal="true"
@@ -127,7 +92,6 @@ export function FormatGuideSheet({
             <p className="text-xs text-muted">{t('sheetSubtitle')}</p>
           </div>
           <button
-            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label={t('closeButton')}

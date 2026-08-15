@@ -46,6 +46,22 @@ function App({ open, disabled }: { open: boolean; disabled?: boolean }) {
   );
 }
 
+/** Avvis-dialogens form: honeypot-felt først, ekte kontroller etterpå. */
+function DialogWithHoneypot({ open }: { open: boolean }) {
+  const { containerRef } = useModalFocus<HTMLDivElement>(open);
+  if (!open) return null;
+  return (
+    <div ref={containerRef} tabIndex={-1} role="dialog">
+      <div aria-hidden="true" style={{ display: 'none' }}>
+        <input name="website" data-testid="honeypot" tabIndex={-1} />
+      </div>
+      <button type="button" data-testid="real-first">
+        Ekte
+      </button>
+    </div>
+  );
+}
+
 describe('useModalFocus', () => {
   it('flytter fokus til første fokuserbare element når dialogen åpnes', () => {
     const { rerender } = render(<App open={false} />);
@@ -130,6 +146,15 @@ describe('useModalFocus', () => {
 
     expect(screen.getByTestId('tick').textContent).toBe('2');
     expect(middle).toHaveFocus();
+  });
+
+  it('hopper over felt som står utenfor tab-rekkefølgen (tabindex=-1)', () => {
+    // Honeypot-feltet i avvis-dialogen er display:none med tabindex=-1. Tar
+    // fella det med, får det initial-fokus — og i en ekte nettleser nekter
+    // fokus å flytte seg dit, så både åpningen og hver Tab blir spist.
+    render(<DialogWithHoneypot open={true} />);
+
+    expect(screen.getByTestId('real-first')).toHaveFocus();
   });
 
   it('slipper ikke fokus ut når alt i dialogen er disabled', () => {
