@@ -122,6 +122,28 @@ function fullBestBallFormData(
   return fd(base);
 }
 
+/** Full greensome-payload: 4 spillere, 2-2 på sidene (2v2-validatoren krever det). */
+function fullGreensomeFormData(
+  overrides: Record<string, string> = {},
+): FormData {
+  const base: Record<string, string> = {
+    name: 'Cup-kamp',
+    course_id: 'course-1',
+    tee_box_id: 'tee-1',
+    hcp_allowance_pct: '100',
+    greensome_allowance_pct: '100',
+    scheduled_tee_off_at: FUTURE_TEE_OFF,
+    side_tournament_enabled: 'false',
+    game_mode: 'greensome_matchplay',
+  };
+  for (let i = 0; i < 4; i++) {
+    base[`player_${i}_id`] = `u${i}`;
+    base[`player_${i}_team`] = String((i % 2) + 1);
+  }
+  for (const [k, v] of Object.entries(overrides)) base[k] = v;
+  return fd(base);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -228,6 +250,59 @@ describe('updateScheduledAction — mode-lock', () => {
 
     expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+  });
+});
+
+describe('updateScheduledAction — mode_config-nøkler skjemaet ikke eier (#1677)', () => {
+  it('beholder team_strokes_override på en planlagt cup-greensome', async () => {
+    // Cup-generatoren har skrevet arrangørens manuelle lag-slag inn i
+    // mode_config. Edit-skjemaet har ikke noe felt for dem, så validator-
+    // outputen mangler nøkkelen — før #1677 slettet enhver lagring den.
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        {
+          data: {
+            status: 'scheduled',
+            game_mode: 'greensome_matchplay',
+            mode_config: {
+              kind: 'greensome_matchplay',
+              team_size: 2,
+              teams_count: 2,
+              allowance_pct: 100,
+              team_strokes_override: { team1: 8, team2: 3 },
+            },
+          },
+          error: null,
+        }, // mode-lock-fetch (leser nå også mode_config)
+        { data: { id: 'game-cup' }, error: null }, // games.update
+        { data: [], error: null }, // priorRoster
+        { data: null, error: null }, // delete
+        { data: null, error: null }, // insert
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-cup', fullGreensomeFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/game-cup?status=updated');
+
+    const gameUpdate = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'update',
+    );
+    expect(
+      (gameUpdate?.args[0] as { mode_config: unknown }).mode_config,
+    ).toEqual({
+      kind: 'greensome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100,
+      team_strokes_override: { team1: 8, team2: 3 },
+    });
   });
 });
 

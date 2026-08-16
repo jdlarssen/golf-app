@@ -13,6 +13,7 @@ import {
   isTeeOffInPast,
   parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
+import { carryPreservedModeConfigKeys } from '@/lib/games/modeConfigEdit';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
@@ -154,9 +155,12 @@ async function updateGameInternal(
   // går i gang med oppdateringen — en publisert/scheduled rad har allerede
   // game_players-tildelinger som matcher modusen, og admin-brukeren skal
   // se en eksplisitt feilmelding (ikke det generelle not_editable-flowet).
+  // mode_config leses med: den lagrede JSONB-en kan bære nøkler skjemaet ikke
+  // eier (cup-generatorens `team_strokes_override`), og de skal overleve
+  // lagringen — se carryPreservedModeConfigKeys under (#1677).
   const { data: existing, error: existingError } = await supabase
     .from('games')
-    .select('status, game_mode')
+    .select('status, game_mode, mode_config')
     .eq('id', gameId)
     .single();
   if (existingError || !existing) {
@@ -189,8 +193,16 @@ async function updateGameInternal(
       // allerede avvist mode-bytte for ikke-draft spill, så denne raden
       // skriver kun samme verdi når status er scheduled — best-ball-rader
       // beholder sin config og draft-rader kan fritt veksle mode.
+      //
+      // #1677: skjemaet bygger mode_config fra bunnen av, så en rå skriving
+      // slettet nøkler ingen skjemafelt eier — arrangørens lag-slag på en
+      // cup-greensome forsvant ved hver lagring. Helperen bærer akkurat de
+      // nøklene over (og bare når modusen er den samme).
       game_mode: payload.game_mode,
-      mode_config: payload.mode_config,
+      mode_config: carryPreservedModeConfigKeys(
+        existing!.mode_config,
+        payload.mode_config,
+      ),
       // #199: self-påmelding-akser. Følger samme optimistic-lock-mønster
       // som de andre feltene — kun skrivbar mens status fortsatt er
       // draft/scheduled (filteret nedenfor blokkerer writes etter start).
