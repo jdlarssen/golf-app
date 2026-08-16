@@ -73,12 +73,26 @@ export function FormatGrid({
           data-focus-inset
           className="col-[1/-1] overflow-hidden rounded-xl border border-primary bg-primary-soft shadow-[inset_0_0_0_1px_var(--primary)]"
         >
+          {/* Ekstra negativ offset (#1673): den valgte flisen har både
+              border-primary og en inset-linje i samme farge, så inset-ringen på
+              −2px la seg rett inntil dem — 4 px sammenhengende primary, ingen
+              ring å se. −5px flytter ringen inn i flisens egen fyll, så det står
+              3 px primary-soft mellom kanten og ringen.
+
+              Inline style, ikke en Tailwind-utility: fokusreglene i globals.css
+              ligger BEVISST utenfor alle @layer (se kommentaren over dem), og
+              lag-rekkefølge slår spesifisitet — en `focus-visible:[outline-offset:…]`
+              i @layer utilities taper mot dem uansett hvor spesifikk den er
+              (målt i Chromium: utility gir −2px, inline gir −5px). Offseten er
+              inert når ingen outline tegnes, så den koster ingenting utenfor
+              tastaturfokus. */}
           <button
             type="button"
             role="radio"
             aria-checked={true}
             aria-label={name}
             disabled={disabled}
+            style={{ outlineOffset: '-5px' }}
             onClick={() => {
               if (!disabled) onChange(f.slug);
             }}
