@@ -55,11 +55,16 @@ export default async function InboxPage() {
   const signupGameIds = collectSignupGameIds(notifications);
   let visibleNotifications = notifications;
   if (signupGameIds.length > 0) {
-    const { data: existing } = await getAdminClient()
+    const { data: existing, error: existingError } = await getAdminClient()
       .from('games')
       .select('id')
       .in('id', signupGameIds)
       .returns<{ id: string }[]>();
+    // Feiler eksistens-oppslaget, ville et tomt `existing` stemplet ALLE
+    // påmeldings-varsler som stale — og fra #1393 arkivert dem. Samme regel
+    // som de andre spørringene på sida (#1392): feil → error-grensa, ikke
+    // gjett.
+    if (existingError) throw existingError;
     const existingIds = new Set((existing ?? []).map((g) => g.id));
     const { visible, stale } = partitionStaleSignupNotifications(
       notifications,
