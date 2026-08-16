@@ -82,6 +82,101 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+/**
+ * #1445: loadDecisionContext folded a failed query into the same
+ * request_not_found / game_not_found redirect as a genuinely missing row.
+ * Both lookups now throw to the route's error boundary (retryable) on a real
+ * failure, and keep their redirect for a true 0-row result.
+ */
+describe('loadDecisionContext — feil vs. fravær (#1445)', () => {
+  const DB_ERR = { message: 'AbortError: This operation was aborted', code: '' };
+
+  function adminOk() {
+    serverMock = buildSupabaseMock([
+      {
+        data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' },
+        error: null,
+      },
+    ]);
+  }
+
+  it('request-oppslaget feiler → kaster (ikke ?error=request_not_found)', async () => {
+    adminOk();
+    adminMock = buildSupabaseMock([{ data: null, error: DB_ERR }]);
+    authedAsAdmin();
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(SOLO_REQUEST_ID)).rejects.toMatchObject({
+      message: expect.stringContaining('AbortError'),
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('ekte 0-rad på request beholder ?error=request_not_found', async () => {
+    adminOk();
+    adminMock = buildSupabaseMock([{ data: null, error: null }]);
+    authedAsAdmin();
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(SOLO_REQUEST_ID)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/admin/games?error=request_not_found');
+  });
+
+  it('game-oppslaget feiler → kaster (ikke ?error=game_not_found)', async () => {
+    adminOk();
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: SOLO_REQUEST_ID,
+          game_id: GAME_ID,
+          user_id: SOLO_USER_ID,
+          status: 'pending',
+          is_team_captain: false,
+          team_name: null,
+          team_request_id: null,
+        },
+        error: null,
+      },
+      { data: null, error: DB_ERR },
+    ]);
+    authedAsAdmin();
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(SOLO_REQUEST_ID)).rejects.toMatchObject({
+      message: expect.stringContaining('AbortError'),
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('ekte 0-rad på game beholder ?error=game_not_found', async () => {
+    adminOk();
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: SOLO_REQUEST_ID,
+          game_id: GAME_ID,
+          user_id: SOLO_USER_ID,
+          status: 'pending',
+          is_team_captain: false,
+          team_name: null,
+          team_request_id: null,
+        },
+        error: null,
+      },
+      { data: null, error: null },
+    ]);
+    authedAsAdmin();
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(SOLO_REQUEST_ID)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/admin/games?error=game_not_found');
+  });
+});
+
 describe('approveRequest', () => {
   it('approve-er en pending solo-request: oppdaterer status, insertes i game_players, notify fyrer', async () => {
     serverMock = buildSupabaseMock([

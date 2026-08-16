@@ -116,6 +116,59 @@ beforeEach(() => {
   adminSupabaseMock = buildSupabaseMock([]);
 });
 
+/**
+ * #1445: loadGameForInvite folded a failed query into the same
+ * `?error=not_found` redirect as a genuinely missing game. It now throws to the
+ * route's error boundary (retryable) on a real failure and keeps the redirect
+ * for a true 0-row result.
+ */
+describe('loadGameForInvite — feil vs. fravær (#1445)', () => {
+  const DB_ERR = { message: 'AbortError: This operation was aborted', code: '' };
+  const ADMIN_ROLE_READ = {
+    data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' },
+    error: null,
+  };
+
+  it('game-oppslaget feiler → kaster (ikke ?error=not_found)', async () => {
+    supabaseMock = buildSupabaseMock([
+      ADMIN_ROLE_READ,
+      { data: null, error: DB_ERR },
+    ]);
+    authedAsAdmin();
+
+    const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+    await expect(
+      addExistingPlayerToGame(
+        GAME_ID,
+        formData({ recipient_user_id: RECIPIENT_ID }),
+      ),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('AbortError'),
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(
+      supabaseMock.__fromCalls.filter((c) => c.method === 'insert'),
+    ).toHaveLength(0);
+  });
+
+  it('ekte 0-rad beholder ?error=not_found', async () => {
+    supabaseMock = buildSupabaseMock([
+      ADMIN_ROLE_READ,
+      { data: null, error: null },
+    ]);
+    authedAsAdmin();
+
+    const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+    await expect(
+      addExistingPlayerToGame(
+        GAME_ID,
+        formData({ recipient_user_id: RECIPIENT_ID }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=not_found`);
+  });
+});
+
 describe('addExistingPlayerToGame', () => {
   it('insertes spiller + fyrer notify når draft-spill har plass', async () => {
     supabaseMock = buildSupabaseMock([
