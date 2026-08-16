@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { pickCaptainRequest, pickPendingInvitation } from './captainLookup';
+import {
+  pickCaptainRequest,
+  pickPendingInvitation,
+  resolveCertainTeamInvitation,
+} from './captainLookup';
 
 /**
  * Type A — ren utvalgs-logikk for hvilken kaptein en e-post-invitert
@@ -71,5 +75,35 @@ describe('pickPendingInvitation', () => {
 
   it('gir null når det ikke finnes noen åpen invitasjon', () => {
     expect(pickPendingInvitation([], [OLDER.user_id])).toBeNull();
+  });
+});
+
+/**
+ * Type A — «vet vi hvilket lag invitasjonen gjelder?» (#1425). Kun et
+ * kaptein-sendt treff er sikkert; fallback-heuristikken gjetter, og en gjetning
+ * skal ikke gi lag-peker.
+ */
+describe('resolveCertainTeamInvitation', () => {
+  it('gir treff når kapteinens invitasjon er eldre enn arrangørens', () => {
+    expect(
+      resolveCertainTeamInvitation(
+        [FROM_ORGANIZER, FROM_CAPTAIN],
+        [NEWEST, OLDER],
+      ),
+    ).toEqual({ invitation: FROM_CAPTAIN, captain: OLDER });
+  });
+
+  it('gir null når kun arrangøren har invitert', () => {
+    expect(
+      resolveCertainTeamInvitation([FROM_ORGANIZER], [NEWEST, OLDER]),
+    ).toBeNull();
+  });
+
+  it('gir null når spillet ikke har noen kapteiner', () => {
+    expect(resolveCertainTeamInvitation([FROM_CAPTAIN], [])).toBeNull();
+  });
+
+  it('gir null når det ikke finnes noen åpen invitasjon', () => {
+    expect(resolveCertainTeamInvitation([], [NEWEST, OLDER])).toBeNull();
   });
 });
