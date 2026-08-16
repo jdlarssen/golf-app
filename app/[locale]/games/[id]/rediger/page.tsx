@@ -81,9 +81,16 @@ export default async function CreatorEditGamePage({
     .from('games')
     .select(GAME_SELECT)
     .eq('id', id)
-    .single<EditGameRow>();
+    .maybeSingle<EditGameRow>();
 
-  if (gameError || !maybeGame) {
+  // Error ≠ absence (#1445): a transient query failure must reach the error
+  // boundary, not bounce the organiser back to the game page as if the row
+  // were gone. Only a genuine 0-row result redirects.
+  if (gameError) {
+    console.error('[GameEditPage] game fetch failed', gameError);
+    throw gameError;
+  }
+  if (!maybeGame) {
     redirect({ href: `/games/${id}` as string, locale });
   }
   const game = maybeGame!;
