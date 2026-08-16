@@ -62,14 +62,38 @@ Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
      + lenke-knapp. Poster FØRST, legger så dedup-labelen `discord:merge-kort`.
    - `outcome: 'auto-merge'` → `mergePullRequest` (re-verifiser åpen + ikke draft
      (fail-closed, #1516) + CI grønn mot
-     `headSha`, `PUT …/merge` rebase + `sha`-guard). Suksess → **kvitteringskort**
+     `headSha`, `PUT …/merge` rebase + `sha`-guard). Suksess → **lukk issuene**
+     (#1634, se under) → **kvitteringskort**
      (✅ Merget + funksjonell-setning + lenke, KUN lenke-knapp) → main-verify-dispatch
      → dedup-label. Enhver merge-feil → fall tilbake til knapp-kortet i samme kjøring.
+
+**Eksplisitt issue-lukking etter auto-merge (#1634).** GitHubs egen auto-close fyrer
+IKKE når mergen kommer fra kortets workflow-identitet (`GITHUB_TOKEN`) — mønsteret var
+6 av 6: ferdigbygde issues sto igjen åpne, med duplikat-bygg som konsekvens. Kortet gjør
+derfor jobben selv:
+
+- Decide trekker ut numrene fra PR-body-en med `closingIssueNumbers`
+  (`lib/loops/autoMerge.ts`) — **kun** closing-nøkkelordene `close(s|d)`, `fix(es|ed)`,
+  `resolve(s|d)`. `refs #N` og `part of #N` betyr «beslektet», ikke «levert», og lukker
+  aldri. Numrene bæres i `pr-card-plan.json` (`closesIssues`), siden post-steget ikke
+  har body-en.
+- Post-steget kjører `closeLinkedIssues` rett etter merge-suksess og FØR
+  main-verify-dispatchen (som kan gi exit 1). Per issue: GET (allerede `closed` → hopp
+  over, aldri reopen) → `PATCH state=closed, state_reason=completed` → en kort kommentar
+  som sier at kortet lukket issuet og at den ekte closing-kommentaren
+  (Teknisk/Funksjonell) fortsatt er øktas ansvar.
+- Best-effort per issue: enhver feil logges og lar løpet gå videre — en tapt lukking
+  skal aldri felle en gjennomført merge. `DRY_RUN=1` logger kun hvilke issues som ville
+  blitt lukket.
 
 **Kvitteringskort, ikke godkjenningskort:** kvalifiserte PR-er merges av kortet
 selv; knappen står bare igjen der eieren faktisk trengs. Trykker eieren en
 gjenværende merge-knapp, verifiserer #1124-endepunktet CI grønn på nytt,
-av-drafter og rebase-merger (uendret).
+av-drafter og rebase-merger (uendret) — den stien merger med eierens egen
+`GITHUB_LOOP_PAT`-identitet, ikke workflow-identiteten, så GitHubs auto-close
+antas å fungere der som før og har ikke fått lukke-steget. Ser du et issue stå
+åpent etter en knapp-merge også, er antakelsen feil: da hører `closeLinkedIssues`
+hjemme i `executeAction`s `merge_pr`-gren i tillegg.
 
 ## Tre utfall (decide-steget, #1406)
 
@@ -228,6 +252,10 @@ Går workflowen rød, åpner den (dedupet) et `CI-vakt:`-issue. Diagnose:
   (409 sha-mismatch), rebase-konflikt (405) eller draft ved re-sjekk (#1516) gjør at
   kortet poster knappen i stedet. Grunnen står i `Post merge-kort`-loggen (`demotedReason` /
   `falt tilbake til knapp-kort — <grunn>`); dette er ikke en bug, bare menneske-porten.
+- **Issuet står åpent etter en auto-merge:** les `Post merge-kort`-loggen. Enten fant
+  `closingIssueNumbers` ingen closing-referanse i PR-body-en (`Refs #N` alene lukker
+  ikke — bruk `Closes #N`), eller lukkingen feilet med en HTTP-status som står i loggen
+  (`#N: lukking feilet …`). Lukk manuelt og sjekk `issues: write` i workflowen.
 - **main-verify-dispatch feilet (dette issuet):** mergen er gjennomført, men
   #1075-nettet ble ikke dispatchet (post-steget ga exit 1). Kjør main-verify manuelt:
   GitHub → Actions → **Main verify → Run workflow** (ref `main`) — eller sjekk om main
