@@ -25,6 +25,13 @@ export type CardPlan = {
   demotedReason?: string | null;
   pr: CardPlanPr | null;
   changedFiles: string[];
+  /**
+   * Issue-numrene PR-body-en lover å lukke (`closes|fixes|resolves #N` — aldri
+   * `refs`/`part of`). Post-steget lukker dem selv etter en auto-merge: GitHubs
+   * auto-close fyrer ikke på workflow-merger (#1634). Decide har body-en, post
+   * har den ikke — derfor bæres numrene i planen.
+   */
+  closesIssues: number[];
 };
 
 export const PLAN_PATH = process.env.CARD_PLAN_PATH || 'pr-card-plan.json';
