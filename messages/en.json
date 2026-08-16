@@ -212,6 +212,8 @@
       "tee_missing": "the game is missing a tee",
       "tee_missing_rating": "the tee is missing a rating",
       "rotation_player_count": "too few signed up to draw the rotation",
+      "unassigned_teams": "some players don't have a team",
+      "unassigned_flights": "some players don't have a flight",
       "default": "open the game to see what's missing"
     }
   },
@@ -1899,6 +1901,7 @@
       "incompleteSidesPart": "side {side} needs {count, plural, one {1 player} other {# players}}",
       "incompleteSidesAnd": " and ",
       "unassignedFlightBanner": "{count, plural, one {1 player hasn't been assigned to a flight yet.} other {# players haven't been assigned to flights yet.}} The organiser will assign flights before the start.",
+      "unassignedTeamBanner": "{count, plural, one {1 player doesn't have a team yet.} other {# players don't have a team yet.}} The organiser will set up the teams before the start.",
       "unknownPlayer": "(unknown)"
     },
     "teeOffCalendar": {
@@ -3310,6 +3313,7 @@
         "pending_players": "These players have not completed their registration yet{list}. They must log in and fill in their name and handicap index before the game can be started.",
         "incomplete_sides": "One or both sides are missing players. All players must have a side and both sides must be complete before the game can be started.",
         "unassigned_flights": "Players have not yet been assigned to flights. Assign flights before starting the game.",
+        "unassigned_teams": "Some players don't have a team yet. Assign them to teams before you start the round.",
         "flight_full": "The selected flight is full (maximum 4 players). Choose a different flight.",
         "signups_not_scheduled": "Only scheduled games can have signups closed or reopened.",
         "bad_flight": "Invalid flight number. Choose a positive flight from the list.",

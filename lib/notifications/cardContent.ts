@@ -316,7 +316,9 @@ type BlockReasonKey =
   | 'no_players'
   | 'tee_missing'
   | 'tee_missing_rating'
-  | 'rotation_player_count';
+  | 'rotation_player_count'
+  | 'unassigned_teams'
+  | 'unassigned_flights';
 
 const KNOWN_BLOCK_REASONS: ReadonlySet<string> = new Set<BlockReasonKey>([
   'incomplete_sides',
@@ -326,6 +328,11 @@ const KNOWN_BLOCK_REASONS: ReadonlySet<string> = new Set<BlockReasonKey>([
   'tee_missing_rating',
   // #969: Wolf/Round Robin couldn't draw a rotation — too few/many signed up.
   'rotation_player_count',
+  // #1669: a team format has players without a team. `unassigned_flights`
+  // (#543) fell through to the generic fallback text for the same reason —
+  // both get a named line now.
+  'unassigned_teams',
+  'unassigned_flights',
 ]);
 
 /**

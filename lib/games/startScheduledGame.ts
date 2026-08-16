@@ -14,6 +14,7 @@ import {
 } from './teeRating';
 import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
 import { needsFlightAssignment } from './flightScope';
+import { needsTeamAssignment } from './teamScope';
 import {
   assignRotationSlots,
   rotationSlotRange,
@@ -36,6 +37,7 @@ export type StartScheduledGameResult =
         | 'no_players'
         | 'pending_players'
         | 'incomplete_sides'
+        | 'unassigned_teams'
         | 'unassigned_flights'
         | 'rotation_player_count'
         | 'db_players'
@@ -127,15 +129,42 @@ export async function startScheduledGame(
     return { ok: false, reason: 'no_players' };
   }
 
+  // Lagstørrelsen begge lag-vaktene under klassifiserer på. `?? 1` (ikke
+  // `expectedTeamSize`s par-fallback) fordi et manglende felt her betyr «vi vet
+  // ikke om dette er par-stableford» — og alle andre lesere av mode_config i
+  // appen (game-home, leaderboard) leser det som solo. En vakt som gjettet
+  // «par» ville blokkert et helt normalt solo-stableford-spill fra å starte.
+  const teamSize = game.mode_config?.team_size ?? 1;
+
   // Guard: matchplay-familien krever eksakt team_size aktive spillere per side
   // (team_number ∈ {1, 2}). Spillere med null team_number eller trukkede
   // spillere blokkerer start. Alle seks matchplay-modi dekkes i ett.
   if (isMatchplayMode(game.game_mode as Parameters<typeof isMatchplayMode>[0])) {
-    const teamSize = game.mode_config?.team_size ?? 1;
     const activeRoster = roster.filter((r) => r.withdrawn_at == null);
     if (!isSideRosterComplete(activeRoster, teamSize)) {
       return { ok: false, reason: 'incomplete_sides' };
     }
+  }
+
+  // Guard: lag-formater (best ball, scramble-familien, shamble, patsome,
+  // par-stableford) må ha alle aktive spillere fordelt på lag før start.
+  // Solo-selvpåmelding setter team_number = null, og scoring-computene hopper
+  // stille over slike rader — uten denne vakta starter spillet og tavla er tom
+  // (#1669). Matchplay dekkes av incomplete_sides over, solo-formater har
+  // ingen lag: `needsTeamAssignment` returnerer false for begge.
+  if (
+    needsTeamAssignment(
+      game.game_mode as Parameters<typeof needsTeamAssignment>[0],
+      teamSize,
+      roster.map((r) => ({
+        user_id: r.user_id,
+        team_number: r.team_number,
+        flight_number: r.flight_number,
+        withdrawn_at: r.withdrawn_at,
+      })),
+    )
+  ) {
+    return { ok: false, reason: 'unassigned_teams' };
   }
 
   // Guard: store solo-formater (>4 aktive, ikke wolf) må ha alle spillere

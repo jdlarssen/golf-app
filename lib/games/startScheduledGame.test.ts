@@ -616,6 +616,178 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
   });
 });
 
+// ─── unassigned_teams guard (#1669) ──────────────────────────────────────────
+
+/** Spill-rad for et lag-format med eksplisitt team_size i mode_config. */
+function makeTeamGameRow(game_mode: GameMode, team_size: number) {
+  return {
+    id: 'game-id',
+    status: 'scheduled',
+    hcp_allowance_pct: 100,
+    tee_box_id: 'tee-id',
+    game_mode,
+    mode_config: { kind: game_mode, team_size },
+    tee_boxes: VALID_TEE_2,
+  };
+}
+
+function teamPlayer(
+  userId: string,
+  team_number: number | null,
+  withdrawn_at: string | null = null,
+) {
+  return {
+    user_id: userId,
+    tee_gender: 'M' as const,
+    team_number,
+    flight_number: team_number,
+    withdrawn_at,
+    users: { hcp_index: 10 },
+  };
+}
+
+/** Kø-halen for et spill som passerer alle vakter: users → CH-updates → flip. */
+function passThroughQueue(roster: { user_id: string }[]) {
+  return [
+    {
+      data: roster.map((r) => ({
+        id: r.user_id,
+        email: `${r.user_id}@x.no`,
+        profile_completed_at: '2026-01-01',
+      })),
+      error: null,
+    },
+    ...roster.map(() => ({ data: null, error: null })),
+    { data: null, error: null }, // status flip
+  ];
+}
+
+describe('startScheduledGame — unassigned_teams guard (#1669)', () => {
+  it('best ball der ingen har lag → unassigned_teams', async () => {
+    const roster = Array.from({ length: 4 }, (_, i) => teamPlayer(`u${i}`, null));
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('best_ball', 2), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'unassigned_teams' });
+  });
+
+  it('best ball der én av fire mangler lag → unassigned_teams', async () => {
+    const roster = [
+      teamPlayer('u1', 1),
+      teamPlayer('u2', 1),
+      teamPlayer('u3', 2),
+      teamPlayer('u4', null),
+    ];
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('best_ball', 2), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'unassigned_teams' });
+  });
+
+  it('best ball der alle har lag → passerer vakta', async () => {
+    const roster = [
+      teamPlayer('u1', 1),
+      teamPlayer('u2', 1),
+      teamPlayer('u3', 2),
+      teamPlayer('u4', 2),
+    ];
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('best_ball', 2), error: null },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: false });
+  });
+
+  it('par-stableford uten lag → unassigned_teams', async () => {
+    const roster = [teamPlayer('u1', null), teamPlayer('u2', null)];
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('stableford', 2), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'unassigned_teams' });
+  });
+
+  it('texas scramble uten lag → unassigned_teams', async () => {
+    const roster = Array.from({ length: 8 }, (_, i) => teamPlayer(`u${i}`, null));
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('texas_scramble', 4), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'unassigned_teams' });
+  });
+
+  it('trukket spiller uten lag blokkerer ikke starten', async () => {
+    const roster = [
+      teamPlayer('u1', 1),
+      teamPlayer('u2', 1),
+      teamPlayer('u3', null, '2026-01-01T00:00:00Z'),
+    ];
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('best_ball', 2), error: null },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: false });
+  });
+
+  it('solo-format er upåvirket — solo-stableford uten lag starter', async () => {
+    const roster = [teamPlayer('u1', null), teamPlayer('u2', null)];
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('stableford', 1), error: null },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: false });
+  });
+
+  it('skins uten lag er upåvirket', async () => {
+    const roster = Array.from({ length: 4 }, (_, i) => teamPlayer(`u${i}`, null));
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('skins', 1), error: null },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: false });
+  });
+
+  it('matchplay er upåvirket — fourball med fulle sider passerer lag-vakta', async () => {
+    const roster = [
+      teamPlayer('u1', 1),
+      teamPlayer('u2', 1),
+      teamPlayer('u3', 2),
+      teamPlayer('u4', 2),
+    ];
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('fourball_matchplay', 2), error: null },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: false });
+  });
+
+  it('matchplay uten sider gir fortsatt incomplete_sides, ikke unassigned_teams', async () => {
+    const roster = [teamPlayer('u1', null), teamPlayer('u2', null)];
+    const supabase = buildSupabaseMock([
+      { data: makeTeamGameRow('singles_matchplay', 1), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'incomplete_sides' });
+  });
+});
+
 // ─── #969 rotation slot drawn at start (Wolf / Round Robin) ───────────────────
 
 describe('startScheduledGame — rotation slot at start (#969)', () => {

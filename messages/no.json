@@ -212,6 +212,8 @@
       "tee_missing": "spillet mangler tee",
       "tee_missing_rating": "tee-en mangler rating",
       "rotation_player_count": "for få påmeldte til å trekke rotasjonen",
+      "unassigned_teams": "noen spillere står uten lag",
+      "unassigned_flights": "noen spillere står uten flight",
       "default": "åpne spillet for å se hva som mangler"
     }
   },
@@ -1899,6 +1901,7 @@
       "incompleteSidesPart": "side {side} mangler {count, plural, one {1 spiller} other {# spillere}}",
       "incompleteSidesAnd": " og ",
       "unassignedFlightBanner": "{count, plural, one {1 spiller er ikke fordelt i flight ennå.} other {# spillere er ikke fordelt i flighter ennå.}} Arrangøren fordeler flightene før start.",
+      "unassignedTeamBanner": "{count, plural, one {1 spiller står uten lag ennå.} other {# spillere står uten lag ennå.}} Arrangøren setter opp lagene før start.",
       "unknownPlayer": "(ukjent)"
     },
     "teeOffCalendar": {
@@ -3310,6 +3313,7 @@
         "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan startes.",
         "incomplete_sides": "En eller begge sider mangler spillere. Alle spillere må ha en side og begge sider må være fulltallige før spillet kan startes.",
         "unassigned_flights": "Spillerne er ikke fordelt i flighter ennå. Del inn flightene før spillet kan startes.",
+        "unassigned_teams": "Noen spillere står uten lag. Fordel dem på lag før du starter runden.",
         "flight_full": "Den valgte flighten er full (maks 4 spillere). Velg en annen flight.",
         "signups_not_scheduled": "Kun planlagte spill kan stenge eller gjenåpne påmeldingen.",
         "bad_flight": "Ugyldig flight-nummer. Velg en positiv flight fra listen.",
