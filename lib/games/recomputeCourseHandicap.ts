@@ -173,6 +173,25 @@ export function planGreensomeOverrideRecompute(
 
     const side = row.teamNumber === 1 ? 'team1' : 'team2';
     // Not the untouched auto-suggestion → the organiser typed it. Leave it.
+    //
+    // Load-bearing assumption (#1628, documented not fixed): the two sides of
+    // this comparison come from different pipelines. The STORED value was
+    // computed by cup generation from *raw* course handicaps (no allowance
+    // applied), while `previous`/`teammate` are the *frozen*
+    // `game_players.course_handicap` — i.e. after `applyAllowance`. They can
+    // only ever be equal when `games.hcp_allowance_pct` is 100, which every
+    // cup greensome has: `cupMatchAllowance` puts the greensome allowance in
+    // `mode_config.allowance_pct` and pins the games-row column at 100
+    // (lib/cup/cupMatchAllowance.ts).
+    //
+    // No existing row can break the assumption today: cup generation is the
+    // only writer of `team_strokes_override` (standalone greensome never
+    // emits the field, see `gamePayload.ts`). #634 — a manual team-strokes
+    // field outside the cup flow, or a cup greensome on an allowance ≠ 100 —
+    // is the trigger to revisit. When it lands, this check must compare like
+    // for like (apply the allowance to the formula inputs, or store the basis
+    // alongside the value the way `team_strokes_override_auto` now does for
+    // scheduled matches).
     if (stored[side] !== greensomeTeamHandicap(previous, teammate)) continue;
 
     const next = greensomeTeamHandicap(row.newCourseHandicap, teammate);
