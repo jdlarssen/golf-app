@@ -195,3 +195,62 @@ describe('setFoursomesTeeStarter', () => {
     });
   });
 });
+
+/**
+ * #1445: a transient query failure (AbortError from Next's dev render-restart,
+ * a network blip) lands in `res.error`, never as a throw. Before the split it
+ * shared a branch with the 0-row case and told the player «du er ikke med i
+ * spillet» mid-round. Each lookup now answers `db_error` on a failed query and
+ * keeps its semantic code for a genuine 0-row result.
+ */
+describe('setFoursomesTeeStarter — feil vs. fravær (#1445)', () => {
+  const DB_ERR = { message: 'AbortError: This operation was aborted', code: '' };
+
+  it('caller-oppslaget feiler → db_error (ikke not_in_game)', async () => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([{ data: null, error: DB_ERR }]);
+    const { setFoursomesTeeStarter } = await import('./foursomesActions');
+
+    const result = await setFoursomesTeeStarter(GAME_ID, 1, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('candidate-oppslaget feiler → db_error (ikke candidate_not_in_game)', async () => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([
+      { data: { team_number: 1 }, error: null },
+      { data: null, error: DB_ERR },
+    ]);
+    const { setFoursomesTeeStarter } = await import('./foursomesActions');
+
+    const result = await setFoursomesTeeStarter(GAME_ID, 1, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+  });
+
+  it('game-oppslaget feiler → db_error (ikke game_not_found)', async () => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([
+      { data: { team_number: 1 }, error: null },
+      { data: { team_number: 1 }, error: null },
+      { data: null, error: DB_ERR },
+    ]);
+    const { setFoursomesTeeStarter } = await import('./foursomesActions');
+
+    const result = await setFoursomesTeeStarter(GAME_ID, 1, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+  });
+
+  it('ekte 0-rad på game-oppslaget beholder game_not_found', async () => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([
+      { data: { team_number: 1 }, error: null },
+      { data: { team_number: 1 }, error: null },
+      { data: null, error: null },
+    ]);
+    const { setFoursomesTeeStarter } = await import('./foursomesActions');
+
+    const result = await setFoursomesTeeStarter(GAME_ID, 1, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'game_not_found' });
+  });
+});

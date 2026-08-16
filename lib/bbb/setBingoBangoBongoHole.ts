@@ -12,7 +12,11 @@ export type SetBingoBangoBongoHoleError =
   | 'invalid_hole'
   | 'game_not_found'
   | 'game_finished'
-  | 'rls_denied';
+  | 'rls_denied'
+  // #1445: transient DB failure on the game lookup — «prøv igjen», not
+  // «spillet finnes ikke». BingoBangoBongoEntry renders every non-ok code
+  // through the same generic `saveFailed`-melding, so no i18n key is needed.
+  | 'db_error';
 
 export interface SetBingoBangoBongoHoleInput {
   gameId: string;
@@ -67,7 +71,17 @@ export async function setBingoBangoBongoHole(
     .eq('id', gameId)
     .maybeSingle();
 
-  if (gameRow.error || !gameRow.data) {
+  // Error ≠ absence (#1445): only a genuine 0-row result (maybeSingle: data
+  // null, error null) means the game is gone. A transient query failure gets
+  // its own code so the entry sheet says «prøv igjen» mid-round.
+  if (gameRow.error) {
+    console.error('[setBingoBangoBongoHole] game lookup failed', {
+      gameId,
+      error: gameRow.error,
+    });
+    return { ok: false, error: 'db_error' };
+  }
+  if (!gameRow.data) {
     return { ok: false, error: 'game_not_found' };
   }
   if (gameRow.data.status === 'finished') {

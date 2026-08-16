@@ -642,6 +642,60 @@ describe('#543: stengt påmelding — accept/attach-guards', () => {
   });
 });
 
+/**
+ * #1445: the request lookup used to fold a failed query into the same
+ * `not_found` answer as a genuinely missing row — a transient blip told the
+ * invitee their invitation did not exist. `db_error` now carries the retryable
+ * case; a real 0-row result (and a row owned by someone else) still answers
+ * not_found.
+ */
+describe('#1445: acceptTeamInvite skiller DB-feil fra fravær', () => {
+  beforeEach(() => {
+    authedAsCaptain();
+  });
+
+  it('request-oppslaget feiler → db_error (ikke not_found)', async () => {
+    adminMock = buildSupabaseMock([
+      {
+        data: null,
+        error: { message: 'AbortError: This operation was aborted', code: '' },
+      },
+    ]);
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite('req-1', SHORT_ID);
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    // Fravær-grenen ble ikke tatt: ingen game-oppslag i det hele tatt.
+    expect(getGameByShortIdMock).not.toHaveBeenCalled();
+  });
+
+  it('ekte 0-rad beholder not_found', async () => {
+    adminMock = buildSupabaseMock([{ data: null, error: null }]);
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite('req-1', SHORT_ID);
+    expect(result).toEqual({ ok: false, error: 'not_found' });
+  });
+
+  it('rad som tilhører en annen bruker beholder not_found', async () => {
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: 'req-1',
+          game_id: GAME_ID,
+          user_id: KNOWN_USER_ID, // ikke CAPTAIN_ID
+          status: 'pending',
+          team_request_id: null,
+          team_name: 'Lag A',
+          is_team_captain: false,
+        },
+        error: null,
+      },
+    ]);
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite('req-1', SHORT_ID);
+    expect(result).toEqual({ ok: false, error: 'not_found' });
+  });
+});
+
 describe('#1344: profil-porten beholder /team-konteksten', () => {
   // attachToCaptainTeam er stien en e-post-invitert ny bruker treffer fra
   // lag-dashboardet. requireAuthedUser kjører FØR game-oppslaget, så ingen av

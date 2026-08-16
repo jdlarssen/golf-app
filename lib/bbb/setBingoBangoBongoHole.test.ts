@@ -126,6 +126,29 @@ describe('setBingoBangoBongoHole — finished-lock', () => {
     expect(result).toEqual({ ok: false, error: 'game_not_found' });
     expect(upsertMock).not.toHaveBeenCalled();
   });
+
+  // #1445: a failed games-query used to share the 0-row branch and told the
+  // scorer «spillet finnes ikke» mid-round. It now has its own code; the
+  // 0-row case above still answers game_not_found.
+  it('games-oppslaget feiler → db_error (ikke game_not_found)', async () => {
+    mockAuthed('u-1');
+    maybeSingleMock.mockResolvedValue({
+      data: null,
+      error: { message: 'AbortError: This operation was aborted', code: '' },
+    });
+
+    const result = await setBingoBangoBongoHole({
+      gameId: 'g-flaky',
+      holeNumber: 1,
+      bingoUserId: null,
+      bangoUserId: null,
+      bongoUserId: null,
+    });
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(upsertMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('setBingoBangoBongoHole — DB-interaksjon', () => {
