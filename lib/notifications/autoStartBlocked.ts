@@ -17,6 +17,11 @@ const STRUCTURAL_BLOCK_REASONS: ReadonlySet<string> = new Set([
   'tee_missing_rating',
   // #969: Wolf/Round Robin couldn't draw a rotation — too few/many signed up.
   'rotation_player_count',
+  // #1669: a team format has players without a team. `unassigned_flights`
+  // (#543) was structural from day one but never listed here — same shape,
+  // same fix: the creator has to split the field before the round can start.
+  'unassigned_teams',
+  'unassigned_flights',
 ]);
 
 export function isStructuralBlockReason(reason: string): boolean {

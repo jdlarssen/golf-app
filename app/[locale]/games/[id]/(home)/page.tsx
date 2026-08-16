@@ -66,6 +66,7 @@ import {
   MAX_FLIGHT_SIZE,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
+import { unassignedTeamPlayers } from '@/lib/games/teamScope';
 import type { FlightOption } from '../ScheduledWaitingRoom';
 import { getGameContext } from './gameContext';
 import { FlightRoster, FlightRosterSkeleton } from './FlightRoster';
@@ -384,6 +385,8 @@ export default async function GameHomePage({
   let autoStartBlockedByIncompleteSides = false;
   // #543: track whether auto-start was blocked by unassigned flights.
   let autoStartBlockedByUnassignedFlights = false;
+  // #1669: same, for a team format where somebody signed up without a team.
+  let autoStartBlockedByUnassignedTeams = false;
 
   // E1: server-side auto-start fallback. When the admin scheduled a tee-off
   // time but didn't manually click "Start runden nå", any player loading
@@ -411,6 +414,9 @@ export default async function GameHomePage({
       }
       if (result.reason === 'unassigned_flights') {
         autoStartBlockedByUnassignedFlights = true;
+      }
+      if (result.reason === 'unassigned_teams') {
+        autoStartBlockedByUnassignedTeams = true;
       }
       // Log to Vercel server logs so a "stuck in scheduled" report has a
       // trail. Don't crash — fall through to the existing scheduled fallback.
@@ -645,6 +651,18 @@ export default async function GameHomePage({
     // Teller ufordelte spillere for banneret (vises bare etter tee-tid).
     const unassignedCount = autoStartBlockedByUnassignedFlights
       ? unassignedActivePlayers(flightPlayers).length
+      : 0;
+
+    // #1669: samme banner for lag-formater der noen står uten lag.
+    const unassignedTeamCount = autoStartBlockedByUnassignedTeams
+      ? unassignedTeamPlayers(
+          gwp.players.map((p) => ({
+            user_id: p.user_id,
+            team_number: p.team_number,
+            flight_number: p.flight_number,
+            withdrawn_at: p.withdrawn_at,
+          })),
+        ).length
       : 0;
 
     return (
@@ -901,6 +919,15 @@ export default async function GameHomePage({
           <div className="mx-4 mt-3">
             <Banner tone="warning">
               {t('unassignedFlightBanner', { count: unassignedCount })}
+            </Banner>
+          </div>
+        )}
+
+        {/* #1669: venter-banner etter tee-tid når noen står uten lag */}
+        {unassignedTeamCount > 0 && (
+          <div className="mx-4 mt-3">
+            <Banner tone="warning">
+              {t('unassignedTeamBanner', { count: unassignedTeamCount })}
             </Banner>
           </div>
         )}
