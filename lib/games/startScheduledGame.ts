@@ -226,7 +226,17 @@ export async function startScheduledGame(
     .from('users')
     .select('id, email, profile_completed_at')
     .in('id', rosterIds);
+  // Best-effort by design (#1445): 'db_players' er riktig for begge ben her.
+  // Dette er en listequery — `!rosterUsers` uten feil forekommer ikke i praksis
+  // (PostgREST gir [] ved 0 treff), og rosterIds er ikke-tom på dette punktet,
+  // så et tomt svar ville uansett vært en DB-anomali, ikke ekte fravær.
   if (rosterUsersError || !rosterUsers) {
+    if (rosterUsersError) {
+      console.error('[startScheduledGame] roster users lookup failed', {
+        gameId,
+        error: rosterUsersError,
+      });
+    }
     return { ok: false, reason: 'db_players' };
   }
   const pending = findPendingPlayers(rosterUsers);

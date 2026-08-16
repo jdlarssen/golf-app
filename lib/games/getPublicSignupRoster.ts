@@ -30,6 +30,10 @@ export async function getPublicSignupRoster(
     .eq('game_id', gameId)
     .is('withdrawn_at', null);
 
+  // Best-effort by design (#1445): dette er sosialt krydder på en offentlig
+  // side. Et tomt roster ser identisk ut for «ingen påmeldte ennå» og «vi
+  // klarte ikke lese» — å kaste ville tatt ned hele påmeldingssiden for en
+  // detalj ingen melder seg på for.
   if (error || !data) {
     if (error) console.error('[getPublicSignupRoster] lookup failed', error);
     return { count: 0, names: [], overflow: 0 };

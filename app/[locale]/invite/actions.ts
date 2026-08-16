@@ -57,7 +57,14 @@ export async function sendFriendInvite(formData: FormData) {
     .eq('id', user.id)
     .single<{ name: string | null; profile_completed_at: string | null }>();
 
+  // Best-effort by design (#1445): migrasjon 0014 garanterer at raden finnes
+  // for en autentisert bruker, så «mangler rad» og «oppslaget feilet» er begge
+  // uventede tilstander med samme svar til brukeren — /profile med en generisk
+  // beskjed. Feilen logges så den ikke forsvinner.
   if (profileError || !profile) {
+    if (profileError) {
+      console.error('[sendFriendInvite] inviter profile lookup failed', profileError);
+    }
     redirect({ href: '/profile?invite_error=unknown', locale });
     return;
   }
