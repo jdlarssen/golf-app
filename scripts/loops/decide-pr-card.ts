@@ -22,6 +22,7 @@ import {
 import { fetchCiRunsForSha } from '../../lib/loops/ciRuns';
 import {
   classifyAutoMerge,
+  closingIssueNumbers,
   linkedIssueNumbers,
   NEEDS_DECISION_LABEL,
 } from '../../lib/loops/autoMerge';
@@ -50,6 +51,7 @@ const NO_CARD: CardPlan = {
   headSha: null,
   pr: null,
   changedFiles: [],
+  closesIssues: [],
 };
 
 type PrPayload = {
@@ -231,6 +233,8 @@ async function main(): Promise<void> {
       summary: extractPrSummary(pr.body),
     },
     changedFiles,
+    // Kun closing-nøkkelordene (#1634) — post-steget lukker disse etter merge.
+    closesIssues: closingIssueNumbers(pr.body),
   };
   emit(plan);
   console.log(
