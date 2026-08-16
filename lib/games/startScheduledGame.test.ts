@@ -80,6 +80,36 @@ function makeGameRow(
   };
 }
 
+// ─── error vs. absence on the game lookup (#1445) ─────────────────────────────
+
+/**
+ * The game fetch used to answer 'not_found' for a failed query as well as for a
+ * genuinely missing row. That mattered beyond the wording: the cron sweep
+ * classifies reasons, and 'not_found' is not retried the way a db_* reason is,
+ * so a transient blip could park a perfectly startable game. 'db_game' was
+ * already in the union (the status-flip returns it) — the lookup now uses it too.
+ */
+describe('startScheduledGame — feil vs. fravær på game-oppslaget (#1445)', () => {
+  it('DB-feil på game-oppslaget → db_game (ikke not_found)', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: null,
+        error: { message: 'AbortError: This operation was aborted', code: '' },
+      },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'db_game' });
+  });
+
+  it('ekte 0-rad (maybeSingle: data null, error null) beholder not_found', async () => {
+    const supabase = buildSupabaseMock([{ data: null, error: null }]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'not_found' });
+  });
+});
+
 // ─── incomplete_sides guard ───────────────────────────────────────────────────
 
 describe('startScheduledGame — incomplete_sides guard', () => {
