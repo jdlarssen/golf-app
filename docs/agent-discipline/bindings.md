@@ -103,6 +103,9 @@ target.
   MCP → verify → then prod. Prod writes are firewalled (mcp-guard/bash-guard); the only
   legitimate escape is §Enforcement's approve-prod sentinel. The firewall matches PROSE
   mentioning prod too — use §Enforcement's `--body-file` workaround.
+  Post-merge, the ledger gate (`.github/workflows/migration-ledger.yml`, #1410) reds
+  daily while a merged migration file has no row in prod's `schema_migrations` — apply
+  it under the file's slug (name minus `NNNN_`), or the gate keeps an alert issue open.
 - **Migration numbering:** check `supabase/migrations/` on `origin/main`, not just your
   branch.
 

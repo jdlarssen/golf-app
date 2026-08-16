@@ -19,7 +19,7 @@ Sjekk i denne rekkefølgen, og samle ALLE funn før fiksing:
 
 1. Åpne `CI-vakt:`-varsel-issues: `gh issue list --state open --search "CI-vakt in:title"`
 2. Røde checks på åpne PR-er: `gh pr list --state open --json number` → `gh pr checks <n>`
-3. Røde kjøringer av Main verify og Schema drift: `gh run list --workflow main-verify.yml --limit 5` (og tilsvarende for schema-drift.yml)
+3. Røde kjøringer av Main verify, Schema drift og Migration ledger: `gh run list --workflow main-verify.yml --limit 5` (og tilsvarende for schema-drift.yml og migration-ledger.yml)
 
 Ingen funn → én logglinje («alt grønt») og ferdig. Det er suksess, ikke tomgang.
 
@@ -76,6 +76,33 @@ regenererte typer). **Auto-fiks (regenerer typer → PR) er fase 2** og krever
 ⚠️ Kjent felle: schema-drift-jobben skipper GRØNT hvis `SUPABASE_ACCESS_TOKEN`
 ikke er satt i repo-secrets. Grønn drift-kjøring beviser altså ikke sync med
 mindre steget faktisk kjørte — sjekk kjøringsloggen ved tvil.
+
+## 6b. Migrasjons-porten rød (merget men ikke påført prod)
+
+Workflow `migration-ledger.yml` (daglig 03:40 UTC + dispatch) leser prods
+`supabase_migrations.schema_migrations` read-only og sammenligner mot
+`supabase/migrations/` (#1410). Tre utfall, alle med eget dedupet issue:
+
+- **«Prod-vakt: migrasjoner merget men ikke påført prod»** (label `prod-vakt`)
+  lister filene som mangler. Dette er et ekte prod-hull: koden er ute, regelen
+  den hviler på er ikke i basen — funksjonen feiler stille. **Fiks = påføring i
+  en økt med eier** (prod-brannmuren #1074; MCP `apply_migration` med filnavnet
+  uten `NNNN_` som navn, staging først). Sky-kjøringer skal IKKE prøve å påføre
+  — kommenter på issuet med hvilken PR som innførte fila og hva som er
+  konsekvensen i appen, og la det stå åpent som handoff. Porten lukker issuet
+  selv ved neste grønne kjøring.
+- Fila BLE påført, men under et annet navn eller utenom hovedboka (SQL Editor):
+  verifiser funksjonelt i prod (policy/constraint/funksjon finnes), og legg
+  linja i `docs/loops/migration-ledger-baseline.txt` via PR med dato + hva som
+  ble sjekket. Aldri baseline uten verifisering — da har porten et blindpunkt.
+- **«Migrasjons-porten: fikk ikke lest hovedboka i prod»** / «CI-vakt:
+  migrasjons-porten rød»: selve lesingen røk (token, API, skript). Behandles
+  som funn — uten lesing er tilstanden usynlig igjen. Reproduser med
+  `LEDGER_FILE=<json>`-kroken lokalt (se skriptets hode) før fiks.
+
+Matching er navn uten nummerprefiks; hovedboka begynner ved 0010 (0001–0009
+gikk via SQL Editor og sjekkes ikke). `::warning` om hovedbok-rader uten fil på
+main betyr SQL påført prod utenom repoet — dok-skjema-jobben eier den driften.
 
 ## 7. Prod-vakt-issues (runtime-signaler fra prod)
 

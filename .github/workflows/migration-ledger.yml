@@ -1,0 +1,78 @@
+# Migrasjons-hovedbok-porten (#1410): er hver migrasjonsfil på main faktisk
+# PÅFØRT prod? schema-drift.yml sammenligner genererte typer (ser ikke policyer/
+# triggere/funksjoner), migrations-gate.yml påfører filene på en lokal base
+# (sier ingenting om prod). Ingen av dem så at 0148 lå merget + annonsert i
+# CHANGELOG uten å være påført, eller at 0158 sto «ubekreftet» i fire dager.
+# Denne leser prods supabase_migrations.schema_migrations read-only via
+# Management API og sammenligner mot supabase/migrations/ — rødt med filnavn
+# når noe mangler, dedupet varsel-issue (label prod-vakt), auto-lukking når
+# grønt igjen. Logikken: .github/scripts/migration-ledger-gate.sh; kjente
+# unntak: docs/loops/migration-ledger-baseline.txt; protokoll:
+# docs/loops/ci-vakta.md §6b.
+#
+# Kjører daglig FØR morgenbriefen (prod-vakt 03:30, denne 03:40, brief ~04:30
+# UTC) så briefen leser et faktum, ikke en gjetning. IKKE på push til main:
+# migrasjoner påføres prod ETTER merge (staging først, så eier-godkjent
+# prod-luke), så en push-trigger ville rødt hver eneste migrasjons-PR i
+# timene mellom merge og påføring. PR-trigger kun på portens egne filer, så
+# PR-en som innfører/endrer den kjører mot ekte hovedbok — der skriver den
+# ingen issues (PR-checken er synlig selv).
+name: Migration ledger
+
+on:
+  schedule:
+    - cron: '40 3 * * *' # daglig 03:40 UTC (~05:40 Oslo sommertid)
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/migration-ledger.yml'
+      - '.github/scripts/migration-ledger-gate.sh'
+      - 'docs/loops/migration-ledger-baseline.txt'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ingen stille skip når tokenet mangler (i motsetning til schema-drift):
+      # en port som skal fange stille tilstander kan ikke selv være stille.
+      # Skriptet fail-closer med ::error, og failure-steget under filer varsel.
+      - name: Sammenlign prods hovedbok med supabase/migrations/
+        id: gate
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          REF: glofubopddkjhymcbaph
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: bash .github/scripts/migration-ledger-gate.sh
+
+      # Uventet rød (skriptet krasjet før det rakk å file sitt eget issue) skal
+      # aldri dø stille — samme mønster som schema-drift/prod-vakt. Skriptet
+      # setter handled=true når det selv har filet, så dette ikke dobler.
+      - name: Open alert issue on failure
+        if: failure() && github.event_name != 'pull_request' && steps.gate.outputs.handled != 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          TITLE="CI-vakt: migrasjons-porten rød"
+          bash .github/scripts/discord-notify.sh "🔴 **Migrasjons-porten rød** — $RUN_URL"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Migrasjons-hovedbok-porten (#1410) feilet uventet — selve kjøringen røk før den fikk sammenlignet.\n\nKjøring: %s\n\nFix-protokoll: `docs/loops/ci-vakta.md` §6b.' "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -F milestone=9
