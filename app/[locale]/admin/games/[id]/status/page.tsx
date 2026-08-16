@@ -82,8 +82,14 @@ export default async function GameStatusPage({
     .from('games')
     .select('id, name, status, require_peer_approval, courses(name), hole_segment')
     .eq('id', id)
-    .single<GameRow>();
-  if (gameError || !game) notFound();
+    .maybeSingle<GameRow>();
+  // Error ≠ absence (#1445): a transient query failure must reach the error
+  // boundary, not render as «spillet finnes ikke».
+  if (gameError) {
+    console.error('[AdminGameStatusPage] game fetch failed', gameError);
+    throw gameError;
+  }
+  if (!game) notFound();
 
   // #1441: front9/back9-spill er «ferdig» ved 9 hull, ikke 18.
   const expectedHoles = holeCountForSegment(game.hole_segment);

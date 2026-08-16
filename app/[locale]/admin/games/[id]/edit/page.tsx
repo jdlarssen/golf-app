@@ -113,9 +113,16 @@ export default async function EditGamePage({
       'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes',
     )
     .eq('id', id)
-    .single<EditGameRow>();
+    .maybeSingle<EditGameRow>();
 
-  if (gameError || !game) {
+  // Error ≠ absence (#1445): a transient query failure must reach the error
+  // boundary, not silently bounce the admin back to the list as if the game
+  // were gone. Only a genuine 0-row result redirects.
+  if (gameError) {
+    console.error('[AdminGameEditPage] game fetch failed', gameError);
+    throw gameError;
+  }
+  if (!game) {
     redirect({ href: '/admin/games', locale });
   }
 

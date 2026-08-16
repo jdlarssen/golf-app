@@ -256,9 +256,16 @@ export default async function GameDetailPage({
       'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', id)
-    .single<GameRow>();
+    .maybeSingle<GameRow>();
 
-  if (gameError || !game) {
+  // Error ≠ absence (#1445): a transient query failure must reach the error
+  // boundary, not render as «spillet finnes ikke». Only a genuine 0-row result
+  // (maybeSingle: data null, error null) means the game is gone.
+  if (gameError) {
+    console.error('[AdminGameDetailPage] game fetch failed', gameError);
+    throw gameError;
+  }
+  if (!game) {
     notFound();
   }
 

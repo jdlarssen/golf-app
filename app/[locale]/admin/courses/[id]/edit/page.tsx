@@ -104,9 +104,16 @@ export default async function EditCoursePage({
     `,
     )
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
-  if (courseError || !course) {
+  // Error ≠ absence (#1445): a transient query failure must reach the error
+  // boundary, not render as «banen finnes ikke». Only a genuine 0-row result
+  // (maybeSingle: data null, error null) means the course is gone.
+  if (courseError) {
+    console.error('[CourseEditPage] course fetch failed', courseError);
+    throw courseError;
+  }
+  if (!course) {
     notFound();
   }
 
