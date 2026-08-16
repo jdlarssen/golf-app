@@ -58,7 +58,7 @@ const VALID_TEE = {
 // Bruker-rad med fullstendig profil og lav hcp
 const PLAYER = (userId: string, team_number: number | null = 1) => ({
   user_id: userId,
-  tee_gender: 'M' as const,
+  tee_gender: 'mens' as const,
   team_number,
   withdrawn_at: null,
   users: { hcp_index: 10 },
@@ -205,7 +205,7 @@ describe('startScheduledGame — incomplete_sides guard', () => {
     const rosterRows = [
       {
         user_id: 'user-1',
-        tee_gender: 'M',
+        tee_gender: 'mens',
         team_number: null,
         withdrawn_at: null,
         users: { hcp_index: 10 },
@@ -243,6 +243,24 @@ describe('startScheduledGame — incomplete_sides guard', () => {
 
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: true, started: true });
+
+    // #1678: starten fryser course_handicap — assert det eksakte tallet, ikke
+    // bare at kallet gikk gjennom. WHS med fikstur-verdiene (VALID_TEE:
+    // slope_mens 113 / CR 72,0 / par 72, hcp_index 10, allowance 100 %):
+    //   round(10 × 113/113 + (72,0 − 72)) = 10 → allowance 100 % → 10.
+    // Fiksturen er bevisst nøytral (slope 113, CR = par), så tallet faller
+    // sammen med hcp-indeksen. Asserten står her for NaN-vernet: med en
+    // tee_gender utenfor `TeeGender` finnes ikke rating-settet, slope/par blir
+    // undefined og hele regnestykket NaN — da faller denne, mens `ok: true`
+    // over ville stått grønt.
+    const chUpdate = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'update',
+    );
+    expect(chUpdate?.args[0]).toEqual({ course_handicap: 10 });
   });
 });
 
@@ -261,7 +279,7 @@ describe('startScheduledGame — started-flagg', () => {
   const SOLO_ROSTER = [
     {
       user_id: 'user-1',
-      tee_gender: 'M',
+      tee_gender: 'mens',
       team_number: null,
       withdrawn_at: null,
       users: { hcp_index: 10 },
@@ -312,7 +330,7 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
   const SOLO_ROSTER = [
     {
       user_id: 'user-1',
-      tee_gender: 'M',
+      tee_gender: 'mens',
       team_number: null,
       withdrawn_at: null,
       users: { hcp_index: 10 },
@@ -477,7 +495,7 @@ function makeGameRow2(game_mode: GameMode) {
 function soloPlayer(userId: string, flightNumber: number | null) {
   return {
     user_id: userId,
-    tee_gender: 'M' as const,
+    tee_gender: 'mens' as const,
     team_number: null,
     flight_number: flightNumber,
     withdrawn_at: null,
@@ -594,8 +612,8 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
     // The incomplete_sides guard runs first for matchplay; if sides are complete,
     // the flight guard must also be skipped (matchplay has 2 players — single-flight).
     const roster = [
-      { user_id: 'u1', tee_gender: 'M' as const, team_number: 1, flight_number: 1, withdrawn_at: null, users: { hcp_index: 10 } },
-      { user_id: 'u2', tee_gender: 'M' as const, team_number: 2, flight_number: 2, withdrawn_at: null, users: { hcp_index: 10 } },
+      { user_id: 'u1', tee_gender: 'mens' as const, team_number: 1, flight_number: 1, withdrawn_at: null, users: { hcp_index: 10 } },
+      { user_id: 'u2', tee_gender: 'mens' as const, team_number: 2, flight_number: 2, withdrawn_at: null, users: { hcp_index: 10 } },
     ];
     const supabase = buildSupabaseMock([
       { data: makeGameRow2('singles_matchplay'), error: null },
@@ -638,7 +656,7 @@ function teamPlayer(
 ) {
   return {
     user_id: userId,
-    tee_gender: 'M' as const,
+    tee_gender: 'mens' as const,
     team_number,
     flight_number: team_number,
     withdrawn_at,
@@ -806,7 +824,7 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
   // Active roster row with null slots (the publish-time state for #969).
   const rot = (userId: string, withdrawn_at: string | null = null) => ({
     user_id: userId,
-    tee_gender: 'M' as const,
+    tee_gender: 'mens' as const,
     team_number: null,
     flight_number: null,
     withdrawn_at,

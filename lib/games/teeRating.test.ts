@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { getRatingForGender, type TeeBoxRatings } from './teeRating';
+import {
+  getRatingForGender,
+  type TeeBoxRatings,
+  type TeeGender,
+} from './teeRating';
 
 const fullTee: TeeBoxRatings = {
   slope_mens: 122,
@@ -48,5 +52,14 @@ describe('getRatingForGender', () => {
       courseRating: 71.5,
       par: 72,
     });
+  });
+
+  // #1678: `gender` is typed, but the value comes off the DB row, so a value
+  // outside the union does reach this function. The lookup yields `undefined`,
+  // and before the `== null` guard that produced a Rating with `undefined`
+  // slope/par — NaN course-handicaps, frozen into game_players at start.
+  // Unknown gender must take the same path as a missing rating-set: null.
+  it('returns null for a gender outside TeeGender (no NaN rating leaks out)', () => {
+    expect(getRatingForGender(fullTee, 'M' as unknown as TeeGender)).toBe(null);
   });
 });
