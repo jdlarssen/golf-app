@@ -258,8 +258,8 @@ export async function recomputeCourseHandicapForUser(
       }[]
     >();
   // Best-effort by design (#1445): recompute kalles som etterarbeid når et
-  // handicap endres. Feiler oppslaget, står de frosne verdiene igjen som de
-  // var — samme tilstand som før kallet — og neste endring prøver på nytt.
+  // handicap endres. Feiler oppslaget, står de frosne verdiene igjen slik de
+  // var (samme tilstand som før kallet), og neste endring prøver på nytt.
   // Å kaste ville veltet den brukerhandlingen som utløste recomputen.
   if (gamesError || !games) {
     console.error('[recomputeCourseHandicap] games lookup failed', gamesError);
