@@ -4,6 +4,7 @@ import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { leaderboardHref } from '@/lib/leaderboard/navContext';
 import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -51,7 +52,7 @@ export default async function PutterPage({ params }: { params: Params }) {
   // Active games use the live hole pages; withdrawn players have no scorecard
   // to back-fill. Both bounce to the leaderboard/game-home like the scorecard.
   if (game.status !== 'finished') {
-    redirect({ href: `/games/${id}/leaderboard` as string, locale });
+    redirect({ href: leaderboardHref({ gameId: id }), locale });
   }
   if (me.withdrawn_at) {
     redirect({ href: `/games/${id}` as string, locale });
@@ -103,7 +104,7 @@ export default async function PutterPage({ params }: { params: Params }) {
 
   return (
     <AppShell showVersion={false}>
-      <TopBar backHref={`/games/${id}/leaderboard`} kicker={t('kicker')} />
+      <TopBar backHref={leaderboardHref({ gameId: id })} kicker={t('kicker')} />
       <div className="space-y-4">
         <Card>
           <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">

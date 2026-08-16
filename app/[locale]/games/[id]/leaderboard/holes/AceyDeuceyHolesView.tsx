@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
+import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { AceyDeuceyResult, AceyDeuceyHoleRow } from '@/lib/scoring/modes/types';
@@ -24,6 +25,11 @@ export interface AceyDeuceyHolesViewProps {
   scoreVisibility: 'live' | 'reveal';
   /** `games.status` — styrer reveal-flow sammen med `scoreVisibility`. */
   gameStatus: 'active' | 'finished';
+  /**
+   * Tilbake-kontekst fra `?from=` (#1517). Uten kontekst peker back-lenken
+   * til spill-siden, som før (#1525).
+   */
+  navContext?: LeaderboardNavContext;
 }
 
 type AdCell = AceyDeuceyHoleRow['perPlayer'][number];
@@ -49,6 +55,7 @@ export function AceyDeuceyHolesView({
   playersById,
   scoreVisibility,
   gameStatus,
+  navContext,
 }: AceyDeuceyHolesViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const isRevealHidden =
@@ -57,7 +64,10 @@ export function AceyDeuceyHolesView({
   if (isRevealHidden) {
     return (
       <LeaderboardShell>
-        <LeaderboardHeader gameName={gameName} backHref={`/games/${gameId}`} />
+        <LeaderboardHeader
+          gameName={gameName}
+          backHref={navContext?.from ?? `/games/${gameId}`}
+        />
         <div
           data-testid="acey-deucey-holes-reveal-hidden"
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
@@ -76,7 +86,10 @@ export function AceyDeuceyHolesView({
 
   return (
     <LeaderboardShell>
-      <LeaderboardHeader gameName={gameName} backHref={`/games/${gameId}`} />
+      <LeaderboardHeader
+        gameName={gameName}
+        backHref={navContext?.from ?? `/games/${gameId}`}
+      />
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
