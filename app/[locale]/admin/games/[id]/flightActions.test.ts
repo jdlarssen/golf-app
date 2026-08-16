@@ -190,6 +190,199 @@ describe('setPlayerFlight', () => {
   });
 });
 
+// ─── suggestTeamAssignment (#1669) ───────────────────────────────────────────
+
+/**
+ * Kø-rekkefølge for lag-actionene:
+ *
+ * suggestTeamAssignment:
+ *   adminMock[0]:  games.select(id, status, game_mode, mode_config).eq.single
+ *   adminMock[1]:  game_players.select(...).eq.order.order.returns
+ *   adminMock[2…]: game_players.update({team_number, flight_number}).eq.eq.select
+ *
+ * setPlayerTeam:
+ *   adminMock[0]: games.select(id, status, game_mode, mode_config).eq.single
+ *   adminMock[1]: game_players.select({count}).eq.eq.neq.is  (kapasitetssjekk)
+ *   adminMock[2]: game_players.select(flight_number).eq.eq.maybeSingle
+ *   adminMock[3]: game_players.update({...}).eq.eq.select
+ */
+const BEST_BALL_GAME = {
+  id: GAME_ID,
+  status: 'scheduled',
+  game_mode: 'best_ball',
+  mode_config: { kind: 'best_ball', team_size: 2 },
+};
+
+describe('suggestTeamAssignment', () => {
+  it('uautentisert → redirect til /login', async () => {
+    unauthed();
+
+    const { suggestTeamAssignment } = await import('./flightActions');
+    await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/login');
+  });
+
+  it('ikke-admin og ikke-oppretter → redirect til /', async () => {
+    authedNonCreator();
+
+    const { suggestTeamAssignment } = await import('./flightActions');
+    await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('happy path: fire uten lag → to lag skrives, redirect til ?status=team_suggested', async () => {
+    authedAdmin();
+
+    const players = Array.from({ length: 4 }, (_, i) => ({
+      user_id: `u${i + 1}`,
+      team_number: null,
+      flight_number: null,
+      withdrawn_at: null,
+    }));
+
+    adminMock = buildSupabaseMock([
+      { data: BEST_BALL_GAME, error: null },
+      { data: players, error: null },
+      { data: [{ user_id: 'u1' }], error: null },
+      { data: [{ user_id: 'u2' }], error: null },
+      { data: [{ user_id: 'u3' }], error: null },
+      { data: [{ user_id: 'u4' }], error: null },
+    ]);
+
+    const { suggestTeamAssignment } = await import('./flightActions');
+    await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=team_suggested`);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+
+    // Lag OG flight må skrives sammen — CHECK-en krever begge.
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
+    expect(updates.map((c) => c.args[0])).toEqual([
+      { team_number: 1, flight_number: 1 },
+      { team_number: 1, flight_number: 1 },
+      { team_number: 2, flight_number: 2 },
+      { team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('0-rad-skriving rapporteres som feil, ikke suksess', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: BEST_BALL_GAME, error: null },
+      {
+        data: [{ user_id: 'u1', team_number: null, flight_number: null, withdrawn_at: null }],
+        error: null,
+      },
+      { data: [], error: null }, // update traff 0 rader
+    ]);
+
+    const { suggestTeamAssignment } = await import('./flightActions');
+    await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
+  });
+
+  it('solo-format → no-op-redirect uten skriving', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: GAME_ID,
+          status: 'scheduled',
+          game_mode: 'skins',
+          mode_config: { kind: 'skins', team_size: 1 },
+        },
+        error: null,
+      },
+    ]);
+
+    const { suggestTeamAssignment } = await import('./flightActions');
+    await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}`);
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
+  });
+
+  it('ferdig spill → redirect til ?error=not_active', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: { ...BEST_BALL_GAME, status: 'finished' }, error: null },
+    ]);
+
+    const { suggestTeamAssignment } = await import('./flightActions');
+    await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=not_active`);
+  });
+});
+
+// ─── setPlayerTeam (#1669) ───────────────────────────────────────────────────
+
+describe('setPlayerTeam', () => {
+  it('lagnummer under 1 → redirect til ?error=bad_team', async () => {
+    authedAdmin();
+
+    const { setPlayerTeam } = await import('./flightActions');
+    await expect(setPlayerTeam(GAME_ID, 'target-user', 0)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=bad_team`);
+  });
+
+  it('laget er fullt (team_size 2) → redirect til ?error=team_full', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: BEST_BALL_GAME, error: null },
+      { data: null, error: null, count: 2 } as { data: null; error: null; count: number },
+    ]);
+
+    const { setPlayerTeam } = await import('./flightActions');
+    await expect(setPlayerTeam(GAME_ID, 'target-user', 1)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=team_full`);
+  });
+
+  it('happy path: spiller uten flight får flight = lag', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: BEST_BALL_GAME, error: null },
+      { data: null, error: null, count: 1 } as { data: null; error: null; count: number },
+      { data: { flight_number: null }, error: null },
+      { data: [{ user_id: 'target-user' }], error: null },
+    ]);
+
+    const { setPlayerTeam } = await import('./flightActions');
+    await expect(setPlayerTeam(GAME_ID, 'target-user', 3)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=team_updated`);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+
+    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.args[0]).toEqual({ team_number: 3, flight_number: 3 });
+  });
+
+  it('spiller med flight fra før beholder flighten sin', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: BEST_BALL_GAME, error: null },
+      { data: null, error: null, count: 0 } as { data: null; error: null; count: number },
+      { data: { flight_number: 7 }, error: null },
+      { data: [{ user_id: 'target-user' }], error: null },
+    ]);
+
+    const { setPlayerTeam } = await import('./flightActions');
+    await expect(setPlayerTeam(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.args[0]).toEqual({ team_number: 2, flight_number: 7 });
+  });
+});
+
 // ─── toggleSignupsClosed ─────────────────────────────────────────────────────
 
 describe('toggleSignupsClosed', () => {

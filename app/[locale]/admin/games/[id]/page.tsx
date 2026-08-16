@@ -56,10 +56,15 @@ import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { InviteToGameSection } from './InviteToGameSection';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import { FlighterSeksjon } from './FlighterSeksjon';
+import { LagSeksjon } from './LagSeksjon';
 import {
   eligibleForFlightAssignment,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
+import {
+  modeRequiresTeamNumber,
+  expectedTeamSize,
+} from '@/lib/games/teamScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { toggleSignupsClosed } from './flightActions';
 
@@ -860,6 +865,28 @@ async function PlayersSections({
           </ul>
         </SectionCard>
       )}
+
+      {/* #1669: Lag-seksjon for lag-formater — scheduled og active. Solo-
+          selvpåmelding gir team_number = null, og uten denne seksjonen fantes
+          det ingen vei til å fordele dem etter publisering.
+          modeRequiresTeamNumber er den delte sannhetskilden med start-vakta. */}
+      {(() => {
+        if (game.status !== 'scheduled' && game.status !== 'active') return null;
+        const teamSize = expectedTeamSize(game.mode_config);
+        if (!modeRequiresTeamNumber(game.game_mode, teamSize)) return null;
+        const activePlayers = players.filter((p) => !p.withdrawn_at);
+        return (
+          <LagSeksjon
+            gameId={gameId}
+            teamSize={teamSize}
+            players={activePlayers.map((p) => ({
+              user_id: p.user_id,
+              displayName: displayName(p),
+              team_number: p.team_number,
+            }))}
+          />
+        );
+      })()}
 
       {/* #543: Flighter-seksjon for solo-spill >4 aktive — scheduled og active.
           eligibleForFlightAssignment er den delte sannhetskilden for om seksjonen
