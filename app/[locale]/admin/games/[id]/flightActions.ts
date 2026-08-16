@@ -20,6 +20,11 @@ import {
   type TeamPlayer,
 } from '@/lib/games/teamScope';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import {
+  FLIGHT_PLAYER_SELECT,
+  FLIGHT_TEAM_SELECT,
+  FLIGHT_PLAYER_ORDER,
+} from './flightPlayerColumns';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
@@ -43,6 +48,10 @@ async function loadFlightContext(gameId: string) {
  * fant at forgjengeren sorterte på en kolonne som ikke finnes, så «Foreslå
  * inndeling» alltid feilet med 42703. Uaksepterte (null) sist, deretter
  * user_id for determinisme. Returnerer null ved DB-feil.
+ *
+ * #1685: kolonnenavnene kommer fra `flightPlayerColumns.ts` og er typesjekket
+ * mot `game_players`-raden, så et navn som ikke finnes stopper bygget i stedet
+ * for kjøringen.
  */
 async function fetchFlightPlayers(
   admin: ReturnType<typeof getAdminClient>,
@@ -50,10 +59,10 @@ async function fetchFlightPlayers(
 ): Promise<(FlightPlayer & { accepted_at: string | null })[] | null> {
   const { data, error } = await admin
     .from('game_players')
-    .select('user_id, flight_number, withdrawn_at, accepted_at')
+    .select(FLIGHT_PLAYER_SELECT.join(', '))
     .eq('game_id', gameId)
-    .order('accepted_at', { ascending: true, nullsFirst: false })
-    .order('user_id', { ascending: true })
+    .order(FLIGHT_PLAYER_ORDER[0], { ascending: true, nullsFirst: false })
+    .order(FLIGHT_PLAYER_ORDER[1], { ascending: true })
     .returns<
       {
         user_id: string;
@@ -185,7 +194,8 @@ export async function setPlayerFlight(
 /**
  * Henter aktive og trukkede spillere for lag-inndeling, sortert på accepted_at
  * ASC (påmeldingsrekkefølge; ingen created_at-kolonne på game_players — se
- * fetchFlightPlayers). Returnerer null ved DB-feil.
+ * fetchFlightPlayers). Kolonnene er typesjekket, se `flightPlayerColumns.ts`
+ * (#1685). Returnerer null ved DB-feil.
  */
 async function fetchTeamPlayers(
   admin: ReturnType<typeof getAdminClient>,
@@ -193,10 +203,10 @@ async function fetchTeamPlayers(
 ): Promise<TeamPlayer[] | null> {
   const { data, error } = await admin
     .from('game_players')
-    .select('user_id, team_number, flight_number, withdrawn_at')
+    .select(FLIGHT_TEAM_SELECT.join(', '))
     .eq('game_id', gameId)
-    .order('accepted_at', { ascending: true, nullsFirst: false })
-    .order('user_id', { ascending: true })
+    .order(FLIGHT_PLAYER_ORDER[0], { ascending: true, nullsFirst: false })
+    .order(FLIGHT_PLAYER_ORDER[1], { ascending: true })
     .returns<TeamPlayer[]>();
   if (error) {
     console.error('[fetchTeamPlayers] game_players read failed', error);

@@ -4,6 +4,10 @@ import {
   makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
+import {
+  FLIGHT_PLAYER_SELECT,
+  FLIGHT_PLAYER_ORDER,
+} from './flightPlayerColumns';
 
 /**
  * Unit-tester for flightActions (#543).
@@ -155,6 +159,45 @@ describe('suggestFlightAssignment', () => {
     await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=flight_suggested`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+  });
+});
+
+// ─── kolonne-lockstep mot game_players (#1685) ───────────────────────────────
+
+/**
+ * #1669 sorterte på `created_at` — en kolonne `game_players` ikke har — og
+ * «Foreslå inndeling» feilet med 42703 i prod. Stubben over godtar enhver
+ * streng, så testene var grønne hele veien. Kolonnenavnene bor nå i
+ * `flightPlayerColumns.ts` og er typesjekket mot `Database`-raden (tsc er
+ * første gate). Denne testen er den andre: den binder spørringen til
+ * konstantene, så en framtidig litteral rett i `.select()`/`.order()` blir rød
+ * i vitest og ikke bare når noen husker å se på typene. Samme lockstep-mønster
+ * som `lib/loops/prCard.test.ts:158-169`.
+ */
+describe('fetchFlightPlayers — kolonne-lockstep', () => {
+  it('leser og sorterer kun kolonner som finnes på game_players', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: { id: GAME_ID, status: 'scheduled', game_mode: 'skins' }, error: null },
+      { data: [], error: null }, // game_players — tomt roster holder for å fange argumentene
+    ]);
+
+    const { suggestFlightAssignment } = await import('./flightActions');
+    await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+
+    const playerRead = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'select',
+    );
+    expect(playerRead?.args[0]).toBe(FLIGHT_PLAYER_SELECT.join(', '));
+
+    const orderCols = adminMock.__fromCalls
+      .filter((c) => c.table === 'game_players' && c.method === 'order')
+      .map((c) => c.args[0]);
+    expect(orderCols.length).toBeGreaterThan(0);
+    for (const col of orderCols) {
+      expect(FLIGHT_PLAYER_ORDER).toContain(col);
+    }
   });
 });
 
