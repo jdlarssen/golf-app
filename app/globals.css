@@ -56,7 +56,15 @@
   --bg-tint: #f0ede5;      /* body color on forest bg (primary/leader cards) */
   --success: #4a7c59;      /* sage */
   --danger: #b8463e;       /* muted brick */
-  --warning: #d89b3a;      /* amber */
+  --warning: #d89b3a;      /* amber — DEKOR: kanter, pill-fyll, ikoner */
+  /* Meningsbærende advarsels-TEKST på lyse flater (#1388), samme grep som
+   * --accent-text (#1374). --warning måler bare 2,24:1 mot --bg og 2,42:1 mot
+   * --surface — under WCAG AA, og i praksis uleselig i sollys. Denne tonen er
+   * bit-identisk med --score-over1-fg (samme amber-familie, allerede låst) og
+   * klarerer 4,5:1 mot alle lyse flater: 6,26:1 mot --bg, 6,77:1 mot --surface,
+   * 5,78:1 mot --surface-2 og 5,48:1 mot det mørkeste amber-tint-fyllet
+   * (bg-warning/[0.18]). Kanter og bakgrunner beholder --warning. */
+  --warning-text: #7a5410;
 
   /* Head-to-head duell-farger (#496). To distinkte spiller-farger til
    * versus-kort + momentum-strip ved 1-mot-1. Bevisst utenfor forest/champagne:
@@ -177,6 +185,9 @@
     --success: #7daa8a;
     --danger: #d67268;
     --warning: #e5b26f;
+    /* Mørk modus har alt en løftet amber som holder 8,73:1 mot --bg — tekst og
+     * dekor kan dele tone her (#1388). */
+    --warning-text: #e5b26f;
     --player-a: #6fa3bd;     /* lifted petrol for dark bg (#496) */
     --player-b: #db8a66;     /* lifted terracotta for dark bg */
     /* Solid, ikke gjennomsiktig: 0.45-alfaen målte 2.2–2.8:1 mot de mørke
@@ -273,6 +284,7 @@
   --success: #7daa8a;
   --danger: #d67268;
   --warning: #e5b26f;
+  --warning-text: #e5b26f; /* se media-blokken over */
   --player-a: #6fa3bd;     /* lifted petrol for dark bg (#496) */
   --player-b: #db8a66;     /* lifted terracotta for dark bg */
   --focus-ring: #d4b870;   /* solid — se kommentaren i media-blokken over */
@@ -334,6 +346,7 @@
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-warning-text: var(--warning-text);
   --color-player-a: var(--player-a);
   --color-player-b: var(--player-b);
   --color-score-under-fg: var(--score-under-fg);

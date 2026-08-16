@@ -41,7 +41,7 @@ export function Input({
       />
       {error && <p className="text-xs text-danger mt-1.5">{error}</p>}
       {!error && warning && (
-        <p className="text-xs text-warning mt-1.5">{warning}</p>
+        <p className="text-xs text-warning-text mt-1.5">{warning}</p>
       )}
       {!error && !warning && hint && (
         <p className="text-xs text-muted mt-1.5">{hint}</p>

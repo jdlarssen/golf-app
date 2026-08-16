@@ -287,7 +287,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
 
     const toneClasses = hasErrors
       ? 'bg-danger/[0.08] border-danger/30 text-danger'
-      : 'bg-warning/[0.10] border-warning/40 text-warning';
+      : 'bg-warning/[0.10] border-warning/40 text-warning-text';
 
     return (
       <div
@@ -335,7 +335,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
           key={conflict.id}
           data-testid="conflict-notice"
           data-conflict-variant={conflict.forOwnScore === false ? 'marker' : 'own'}
-          className="pointer-events-auto flex items-center justify-between gap-2 rounded-xl border px-3 py-2 shadow-sm bg-warning/[0.10] border-warning/40 text-warning"
+          className="pointer-events-auto flex items-center justify-between gap-2 rounded-xl border px-3 py-2 shadow-sm bg-warning/[0.10] border-warning/40 text-warning-text"
         >
           <div className="min-w-0 text-sm font-medium leading-tight">
             <div className="truncate">

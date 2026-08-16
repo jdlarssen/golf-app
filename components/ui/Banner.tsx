@@ -6,7 +6,7 @@ const tones: Record<Tone, string> = {
   success: 'bg-primary-soft border-success/40 text-success',
   error: 'bg-danger/[0.08] border-danger/30 text-danger',
   info: 'bg-accent/[0.10] border-accent/40 text-text',
-  warning: 'bg-warning/[0.10] border-warning/40 text-warning',
+  warning: 'bg-warning/[0.10] border-warning/40 text-warning-text',
 };
 
 export function Banner({

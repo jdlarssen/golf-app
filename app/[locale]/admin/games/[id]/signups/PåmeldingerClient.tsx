@@ -26,7 +26,7 @@ type Props = {
 const REJECTION_REASON_MAX = 200;
 
 const STATUS_TONE: Record<RequestRow['status'], string> = {
-  pending: 'border-warning/40 bg-warning/10 text-warning',
+  pending: 'border-warning/40 bg-warning/10 text-warning-text',
   approved: 'border-success/40 bg-success/10 text-success',
   rejected: 'border-danger/40 bg-danger/10 text-danger',
   withdrawn: 'border-border bg-surface text-muted',
@@ -151,7 +151,7 @@ export function PåmeldingerClient({ gameId, requests, tab, locked, gameMode, ap
           <div
             data-testid="cap-warning"
             role="alert"
-            className="border-b border-warning/30 bg-warning/10 px-3.5 py-3 text-sm font-medium text-warning"
+            className="border-b border-warning/30 bg-warning/10 px-3.5 py-3 text-sm font-medium text-warning-text"
           >
             {t('capWarning', { cap, count: approvedCount })}
           </div>
@@ -169,7 +169,7 @@ export function PåmeldingerClient({ gameId, requests, tab, locked, gameMode, ap
         <div
           data-testid="cap-warning"
           role="alert"
-          className="border-b border-warning/30 bg-warning/10 px-3.5 py-3 text-sm font-medium text-warning"
+          className="border-b border-warning/30 bg-warning/10 px-3.5 py-3 text-sm font-medium text-warning-text"
         >
           {t('capWarning', { cap, count: approvedCount })}
         </div>

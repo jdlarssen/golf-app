@@ -220,7 +220,7 @@ export function ProfileFormBody({
           {t('savedAsSuffix')}
         </p>
       ) : stale ? (
-        <p className="-mt-1 text-xs text-warning">
+        <p className="-mt-1 text-xs text-warning-text">
           {t('staleWarning')}
         </p>
       ) : oppdatertDato ? (

@@ -101,7 +101,7 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
       />
 
       <div className="space-y-4 px-1">
-        <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
           <p className="font-medium">
             {t('warningBody', { name: playerName })}
           </p>

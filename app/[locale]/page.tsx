@@ -866,7 +866,7 @@ function StatusPill({
           // Calm forest tone signals «informative, upcoming» instead.
           'bg-primary-soft text-primary border-primary/20'
         : // draft — the only remaining status (finished never reaches this pill).
-          'bg-warning/10 text-warning border-warning/30';
+          'bg-warning/10 text-warning-text border-warning/30';
   return (
     <span
       className={`inline-flex items-center text-[10px] font-medium uppercase tracking-widest px-2 py-0.5 rounded-full border ${classes}`}
@@ -894,7 +894,7 @@ function ActiveStateLabel({
       : state === 'submitted'
         ? 'bg-success/10 text-success border-success/30'
         : state === 'pending_approval'
-          ? 'bg-warning/10 text-warning border-warning/30'
+          ? 'bg-warning/10 text-warning-text border-warning/30'
           : 'bg-border/40 text-muted border-border';
   return (
     <span

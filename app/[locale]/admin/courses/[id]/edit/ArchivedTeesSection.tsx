@@ -66,7 +66,7 @@ export function ArchivedTeesSection({
                 {tee.length_meters != null && ` · ${tee.length_meters} m`}
               </div>
               {tee.has_active_name_conflict && (
-                <div className="mt-1.5 inline-block rounded border border-warning/40 bg-warning/[0.10] px-2 py-0.5 text-[11px] text-warning">
+                <div className="mt-1.5 inline-block rounded border border-warning/40 bg-warning/[0.10] px-2 py-0.5 text-[11px] text-warning-text">
                   {strings.nameConflict}
                 </div>
               )}

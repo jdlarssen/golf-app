@@ -994,7 +994,7 @@ async function PlayersSections({
                     }
                   } else if (game.require_peer_approval && !p.approved_at) {
                     statusLabel = tDetail('statusWaiting');
-                    statusClass = 'text-warning';
+                    statusClass = 'text-warning-text';
                   } else {
                     statusLabel = tDetail('statusSubmitted');
                     statusClass = 'text-success';
@@ -1239,7 +1239,7 @@ async function PlayersSections({
               </div>
             ) : onlyMissingBlocks ? (
               <div className="space-y-3">
-                <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+                <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning-text">
                   <p>
                     {tCta('missingWarning', {
                       notSubmitted: notSubmittedCount,
@@ -1262,7 +1262,7 @@ async function PlayersSections({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+                <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning-text">
                   {notSubmittedCount > 0 && (
                     <p>
                       {tCta('notSubmittedWarning', {

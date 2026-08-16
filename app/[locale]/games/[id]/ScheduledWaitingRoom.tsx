@@ -138,7 +138,7 @@ export function ScheduledWaitingRoom({
             {t('joinFlightLabel')}
           </p>
           {joinError && (
-            <p className="mb-2 rounded-lg bg-warning/10 px-3 py-2 text-[12.5px] text-warning">
+            <p className="mb-2 rounded-lg bg-warning/10 px-3 py-2 text-[12.5px] text-warning-text">
               {joinError}
             </p>
           )}

@@ -62,7 +62,7 @@ function rankAccent(rank: number): {
     return {
       cardClass: 'border-warning/40',
       badge: '🥉',
-      badgeClass: 'text-warning',
+      badgeClass: 'text-warning-text',
     };
   }
   return { cardClass: '', badge: `${rank}.`, badgeClass: 'text-muted' };
@@ -107,7 +107,7 @@ function TeamCard({
               </p>
             )}
             {missing > 0 && (
-              <p className="text-xs text-warning mt-1">
+              <p className="text-xs text-warning-text mt-1">
                 ⚠️ {tc('missingHoles', { count: missing })}
               </p>
             )}

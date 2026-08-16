@@ -74,7 +74,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
         </div>
         {round.flaggedFlights > 0 && (
           <div className="shrink-0 rounded-lg bg-warning/10 border border-warning/30 px-2.5 py-1.5 text-center">
-            <p className="font-sans text-[11px] font-semibold text-warning">
+            <p className="font-sans text-[11px] font-semibold text-warning-text">
               {t('flaggedFlights', { count: round.flaggedFlights })}
             </p>
           </div>
