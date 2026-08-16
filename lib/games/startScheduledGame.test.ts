@@ -769,3 +769,164 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
     expect(result).toEqual({ ok: true, started: true });
   });
 });
+
+// ─── greensome: urørt lag-slag-forslag re-deriveres ved start (#1628) ─────────
+
+describe('startScheduledGame — greensome team_strokes_override (#1628)', () => {
+  // VALID_TEE har slope 113 og course_rating == par, så rått banehandicap ==
+  // HCP-indeksen. Side 1 er 50/3 → 60/40 gir 22 (det lagrede forslaget); rettes
+  // den ene spilleren til +2 blir 50/-2 → 19.
+  const STORED = { team1: 22, team2: 10 };
+
+  function greensomeGameRow(modeConfig: Record<string, unknown>) {
+    return {
+      id: 'game-id',
+      status: 'scheduled',
+      hcp_allowance_pct: 100,
+      tee_box_id: 'tee-id',
+      game_mode: 'greensome_matchplay',
+      mode_config: {
+        kind: 'greensome_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 100,
+        ...modeConfig,
+      },
+      tee_boxes: VALID_TEE,
+    };
+  }
+
+  /** Side 1 = 50 + `side1b`, side 2 = 12 + 9 (uendret). */
+  function greensomeRoster(side1b: number) {
+    return [
+      { user_id: 'u1', tee_gender: 'mens' as const, team_number: 1, withdrawn_at: null, users: { hcp_index: 50 } },
+      { user_id: 'u2', tee_gender: 'mens' as const, team_number: 1, withdrawn_at: null, users: { hcp_index: side1b } },
+      { user_id: 'u3', tee_gender: 'mens' as const, team_number: 2, withdrawn_at: null, users: { hcp_index: 12 } },
+      { user_id: 'u4', tee_gender: 'mens' as const, team_number: 2, withdrawn_at: null, users: { hcp_index: 9 } },
+    ];
+  }
+
+  function profiles(roster: ReturnType<typeof greensomeRoster>) {
+    return roster.map((r) => ({
+      id: r.user_id,
+      email: `${r.user_id}@x.no`,
+      profile_completed_at: '2026-01-01',
+    }));
+  }
+
+  /** Alle games-UPDATE-er som skriver mode_config (ikke status-flippen). */
+  function configWrites(supabase: unknown) {
+    return (
+      supabase as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls.filter(
+      (c) =>
+        c.table === 'games' &&
+        c.method === 'update' &&
+        typeof c.args[0] === 'object' &&
+        c.args[0] !== null &&
+        'mode_config' in (c.args[0] as Record<string, unknown>),
+    );
+  }
+
+  it('handicap rettet mellom generering og start: urørt forslag re-deriveres, resten av mode_config overlever', async () => {
+    const roster = greensomeRoster(-2);
+    const supabase = buildSupabaseMock([
+      {
+        data: greensomeGameRow({
+          team_strokes_override: STORED,
+          team_strokes_override_auto: STORED,
+        }),
+        error: null,
+      },
+      { data: roster, error: null },
+      { data: profiles(roster), error: null },
+      { data: null, error: null }, // 4 × course_handicap
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null }, // mode_config-oppdateringen
+      { data: [{ id: 'game-id' }], error: null }, // status flip
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+
+    const writes = configWrites(supabase);
+    expect(writes).toHaveLength(1);
+    expect((writes[0].args[0] as { mode_config: unknown }).mode_config).toEqual({
+      kind: 'greensome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100,
+      team_strokes_override: { team1: 19, team2: 10 },
+      team_strokes_override_auto: { team1: 19, team2: 10 },
+    });
+  });
+
+  it('hånd-redigert forslag: mode_config røres ikke', async () => {
+    const roster = greensomeRoster(-2);
+    const supabase = buildSupabaseMock([
+      {
+        data: greensomeGameRow({
+          team_strokes_override: { team1: 7, team2: 10 },
+          team_strokes_override_auto: STORED,
+        }),
+        error: null,
+      },
+      { data: roster, error: null },
+      { data: profiles(roster), error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: [{ id: 'game-id' }], error: null }, // status flip
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+    expect(configWrites(supabase)).toHaveLength(0);
+  });
+
+  it('kamp generert før #1628 (uten auto-spor): mode_config røres ikke', async () => {
+    const roster = greensomeRoster(-2);
+    const supabase = buildSupabaseMock([
+      { data: greensomeGameRow({ team_strokes_override: STORED }), error: null },
+      { data: roster, error: null },
+      { data: profiles(roster), error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: [{ id: 'game-id' }], error: null }, // status flip
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+    expect(configWrites(supabase)).toHaveLength(0);
+  });
+
+  it('mode_config-skrivingen feiler: spillet forblir scheduled (db_game), retry re-deriverer', async () => {
+    const roster = greensomeRoster(-2);
+    const supabase = buildSupabaseMock([
+      {
+        data: greensomeGameRow({
+          team_strokes_override: STORED,
+          team_strokes_override_auto: STORED,
+        }),
+        error: null,
+      },
+      { data: roster, error: null },
+      { data: profiles(roster), error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: { message: 'boom' } }, // mode_config-oppdateringen
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'db_game' });
+  });
+});

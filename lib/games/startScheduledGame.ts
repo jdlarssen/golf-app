@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/lib/database.types';
+import type { Database, Json } from '@/lib/database.types';
 import {
   calculateCourseHandicap,
   applyAllowance,
@@ -13,6 +13,10 @@ import {
   type TeeGender,
 } from './teeRating';
 import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
+import {
+  planGreensomeStartOverride,
+  type GreensomeStartPlayer,
+} from './greensomeOverridePlan';
 import { needsFlightAssignment } from './flightScope';
 import {
   assignRotationSlots,
@@ -59,6 +63,11 @@ export type StartScheduledGameResult =
  * set and some don't, but the game stays `scheduled`, so a retry
  * recomputes and overwrites everyone (idempotent).
  *
+ * #1628: a cup greensome also gets its stored team-strokes suggestion
+ * re-derived here, from the same freshly computed handicaps — see
+ * `planGreensomeStartOverride`. Runs before the status flip so a retry after a
+ * crash redoes it from identical inputs.
+ *
  * Used by:
  * - D5: admin "Start runden nå" server action (interactive)
  * - E1: server-side fallback on /games/[id] when tee-off has passed
@@ -88,7 +97,10 @@ export async function startScheduledGame(
       hcp_allowance_pct: number;
       tee_box_id: string | null;
       game_mode: string;
-      mode_config: { team_size?: number } | null;
+      // #1628: greensomens lag-slag-felter leses også herfra (rå JSON, lest
+      // defensivt av `planGreensomeStartOverride`), og hele objektet skrives
+      // tilbake ved en re-derivering — derfor en åpen form, ikke bare team_size.
+      mode_config: ({ team_size?: number } & Record<string, unknown>) | null;
       tee_boxes: TeeBoxRatings | null;
     }>();
   if (gameError || !game) return { ok: false, reason: 'not_found' };
@@ -221,6 +233,7 @@ export async function startScheduledGame(
   // 3. Compute course_handicap per player using their gender-specific
   //    rating-set on the game's tee. Supabase returns numerics as strings
   //    in some configs, hence the Number() coercion on hcp_index.
+  const frozenPlayers: GreensomeStartPlayer[] = [];
   for (const row of roster) {
     if (!row.users) continue; // defensive — FK constraint should prevent this
     const rating = getRatingForGender(tee, row.tee_gender);
@@ -231,6 +244,11 @@ export async function startScheduledGame(
       courseRating: rating.courseRating,
       par: rating.par,
     });
+    frozenPlayers.push({
+      teamNumber: row.team_number,
+      withdrawnAt: row.withdrawn_at,
+      rawCourseHandicap: raw,
+    });
     const allowed = applyAllowance(raw, game.hcp_allowance_pct);
     const { error: updateError } = await supabase
       .from('game_players')
@@ -238,6 +256,36 @@ export async function startScheduledGame(
       .eq('game_id', gameId)
       .eq('user_id', row.user_id);
     if (updateError) return { ok: false, reason: 'db_players' };
+  }
+
+  // 3b. #1628: greensomens lagrede lag-slag ble foreslått da cupen ble
+  //     generert — typisk dagen før. Er forslaget fortsatt urørt, skal det
+  //     følge et handicap som er rettet i mellomtiden, og `raw`-tallene over
+  //     er nøyaktig samme basis genereringen brukte. Hånd-redigerte tall og
+  //     kamper generert før #1628 (uten auto-spor) står urørt.
+  //     Kjører FØR status-flippen, så en retry etter en krasj re-deriverer
+  //     fra de samme inputene (idempotent).
+  const overridePlan = planGreensomeStartOverride({
+    gameMode: game.game_mode,
+    modeConfig: game.mode_config,
+    players: frozenPlayers,
+  });
+  if (overridePlan) {
+    const base =
+      game.mode_config && typeof game.mode_config === 'object'
+        ? (game.mode_config as Record<string, Json>)
+        : {};
+    // Merge, aldri erstatt: kind/team_size/allowance_pct må overleve.
+    const nextConfig: Json = {
+      ...base,
+      team_strokes_override: overridePlan.teamStrokesOverride,
+      team_strokes_override_auto: overridePlan.teamStrokesOverrideAuto,
+    };
+    const { error: configError } = await supabase
+      .from('games')
+      .update({ mode_config: nextConfig })
+      .eq('id', gameId);
+    if (configError) return { ok: false, reason: 'db_game' };
   }
 
   // 4. Flip status to 'active' with optimistic-lock guard. If another
