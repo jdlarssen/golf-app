@@ -22,6 +22,7 @@ import {
   type PendingRequestView,
 } from './pendingRequestView';
 import { shouldShowTeamInvitePointer } from './teamInvitePointer';
+import { resolveCertainTeamInvitation } from './team/captainLookup';
 import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
 import {
   isPubliclyViewable,
@@ -228,21 +229,46 @@ export default async function PåmeldingPage({
   //    generiske «krever invitasjon».
   //  - lag-skjemaet (#1344): en spiller som allerede er invitert til et lag
   //    får en peker til laget sitt, så de ikke oppretter et duplikat-lag.
+  //    Pekeren krever i tillegg et sikkert lag-treff (#1425, under).
   // Ren SELECT via admin-client, ingen sideeffekter; `users.email` er NOT NULL
   // så oppslaget for alle modi gir ingen ny null-flate.
   let hasPendingInvitation = false;
+  let hasCertainTeamInvitation = false;
   if (profile!.email) {
+    // #1425: ingen unique på (email, game_id) — både arrangøren og en kaptein
+    // kan ha invitert samme e-post. `.maybeSingle()` feilet da med PGRST116 og
+    // ga `data = null`, altså ingen peker for nettopp de spillerne som trengte
+    // den mest. Vi henter alle åpne og lar pickerne velge, som `team/page.tsx`.
     // #1437: en utløpt invitasjon skal ikke gi lag-peker — samme
     // utløpssemantikk som login-porten (#1348).
-    const { data: invitation } = await admin
+    const { data: invitationRows } = await admin
       .from('invitations')
-      .select('id')
+      .select('id, invited_by')
       .ilike('email', profile!.email)
       .eq('game_id', game.id)
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
-      .maybeSingle<{ id: string }>();
-    hasPendingInvitation = invitation != null;
+      .order('created_at', { ascending: false })
+      .returns<{ id: string; invited_by: string | null }[]>();
+    const openInvitations = invitationRows ?? [];
+    hasPendingInvitation = openInvitations.length > 0;
+
+    // #1425: lag-pekeren krever et SIKKERT lag-treff — inviteren må selv være
+    // kaptein i spillet. Er invitasjonen fra arrangøren, vet vi ikke hvilket
+    // lag den gjelder, og /team svarer med stopp-skjermen som sender brukeren
+    // hit igjen. Solo-spill har ingen kapteiner, så spørringen hoppes over.
+    if (openInvitations.length > 0 && game.registration_type !== 'solo') {
+      const { data: captainRows } = await admin
+        .from('game_registration_requests')
+        .select('user_id')
+        .eq('game_id', game.id)
+        .eq('is_team_captain', true)
+        .in('status', ['pending', 'approved'])
+        .order('created_at', { ascending: false })
+        .returns<{ user_id: string }[]>();
+      hasCertainTeamInvitation =
+        resolveCertainTeamInvitation(openInvitations, captainRows ?? []) != null;
+    }
   }
 
   const gameLocked = game.status === 'active' || game.status === 'finished';
@@ -384,6 +410,7 @@ export default async function PåmeldingPage({
             isAlreadyRegistered,
             requestView,
             hasPendingInvitation,
+            hasCertainTeamInvitation,
             isClubMember,
             viewerIsFriend,
             teamCandidates,
@@ -406,6 +433,7 @@ function renderBody({
   isAlreadyRegistered,
   requestView,
   hasPendingInvitation,
+  hasCertainTeamInvitation,
   isClubMember,
   viewerIsFriend,
   teamCandidates,
@@ -421,6 +449,7 @@ function renderBody({
   isAlreadyRegistered: boolean;
   requestView: PendingRequestView;
   hasPendingInvitation: boolean;
+  hasCertainTeamInvitation: boolean;
   isClubMember: boolean;
   viewerIsFriend: boolean;
   teamCandidates: TeamCandidate[];
@@ -603,7 +632,7 @@ function renderBody({
             legitimt ville stille med eget lag. */}
         {shouldShowTeamInvitePointer({
           typeViewKind: typeView.kind,
-          hasPendingInvitation,
+          hasCertainTeamInvitation,
         }) && (
           <div className="space-y-3">
             <Banner tone="info" testId="team-invite-pointer">

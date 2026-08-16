@@ -19,13 +19,20 @@ import type { RegistrationTypeView } from './registrationTypeView';
  * lag-konsept gir `solo_form`, og da får en lag-scopet invitert ingen peker.
  * Lag-teksten ville vært feil for et spill uten lag, og konfigurasjonen er
  * semi-korrupt i utgangspunktet.
+ *
+ * #1425: kravet er et SIKKERT lag-treff (`resolveCertainTeamInvitation`), ikke
+ * bare «det finnes en invitasjon». En invitasjon fra arrangøren sier ingenting
+ * om hvilket lag du hører til, og `/team` svarer da med stopp-skjermen «spør
+ * kapteinen, eller registrer eget lag» — som sender deg hit igjen. Pekeren
+ * ville altså vært en ring. Vi skjuler den i stedet: lag-skjemaet under er den
+ * riktige handlingen når laget er ukjent.
  */
 export function shouldShowTeamInvitePointer({
   typeViewKind,
-  hasPendingInvitation,
+  hasCertainTeamInvitation,
 }: {
   typeViewKind: RegistrationTypeView['kind'];
-  hasPendingInvitation: boolean;
+  hasCertainTeamInvitation: boolean;
 }): boolean {
-  return typeViewKind === 'team_form' && hasPendingInvitation;
+  return typeViewKind === 'team_form' && hasCertainTeamInvitation;
 }

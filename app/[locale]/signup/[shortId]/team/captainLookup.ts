@@ -73,6 +73,36 @@ export function pickPendingInvitation<T extends InvitationCandidate>(
 }
 
 /**
+ * Har denne e-post-inviterte spilleren et SIKKERT lag-treff?
+ *
+ * Kombinerer de to pickerne over til den ene regelen callere egentlig spør
+ * om: «vet vi hvilket lag invitasjonen gjelder?». Svaret er ja kun når den
+ * valgte invitasjonen er sendt av noen som selv er kaptein i spillet
+ * (`source: 'invited_by'`) — fallback-heuristikken gjetter, og en gjetning
+ * skal hverken sette noen på lag eller peke dem mot et lag (#1343/#1425).
+ *
+ * Én regel, ett hjem: både `/team`-siden (som stopper på usikkert treff) og
+ * base-signup-siden (som skjuler lag-pekeren) må svare likt, ellers sender
+ * pekeren folk rett inn i stopp-skjermen som sender dem tilbake igjen.
+ *
+ * Ren funksjon: begge lister forventes sortert nyest først
+ * (`order created_at desc` i kallende query).
+ */
+export function resolveCertainTeamInvitation<
+  I extends InvitationCandidate,
+  C extends CaptainCandidate,
+>(invitations: I[], captainRows: C[]): { invitation: I; captain: C } | null {
+  const invitation = pickPendingInvitation(
+    invitations,
+    captainRows.map((r) => r.user_id),
+  );
+  if (!invitation) return null;
+  const picked = pickCaptainRequest(captainRows, invitation.invited_by);
+  if (picked?.source !== 'invited_by') return null;
+  return { invitation, captain: picked.row };
+}
+
+/**
  * Visningsnavn for en kaptein: navn (eller e-post hvis navnet mangler), med
  * kallenavn i «» når det finnes.
  *
