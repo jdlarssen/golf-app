@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
@@ -7,8 +8,9 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import {
   collectSignupGameIds,
-  filterStaleSignupNotifications,
+  partitionStaleSignupNotifications,
 } from '@/lib/notifications/staleNotifications';
+import { archiveStaleNotifications } from '@/lib/notifications/archive';
 import { InboxClient } from './InboxClient';
 import { MonthlyDigestToggle } from './MonthlyDigestToggle';
 import type { NotificationRow } from '@/components/notifications/NotificationCard';
@@ -59,10 +61,25 @@ export default async function InboxPage() {
       .in('id', signupGameIds)
       .returns<{ id: string }[]>();
     const existingIds = new Set((existing ?? []).map((g) => g.id));
-    visibleNotifications = filterStaleSignupNotifications(
+    const { visible, stale } = partitionStaleSignupNotifications(
       notifications,
       existingIds,
     );
+    visibleNotifications = visible;
+
+    // Å bare skjule dem holdt ikke: radene ble liggende uleste, og
+    // bunn-nav-prikken teller uleste — den kunne aldri slukkes fordi ingen
+    // flate kunne åpne varselet (#1393). Vi arkiverer + markerer lest når
+    // brukeren først er innom innboksen. I `after()` fordi DB-skriving og
+    // revalidateTag ikke er lov i render-fasen i Next.js 16 (samme mønster som
+    // spill-hjem-sida), og best-effort: feiler det, står raden bare over til
+    // neste besøk.
+    const staleIds = stale.map((row) => row.id);
+    if (staleIds.length > 0) {
+      after(async () => {
+        await archiveStaleNotifications({ userId, ids: staleIds });
+      });
+    }
   }
 
   const { data: profile, error: profileError } = await supabase
