@@ -2121,6 +2121,10 @@ export type Database = {
         Args: { p_creator: string; p_group_id: string; p_recipient: string }
         Returns: boolean
       }
+      is_participant_of_finished_tournament: {
+        Args: { p_game_id: string }
+        Returns: boolean
+      }
       join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
       leave_club_league: { Args: { p_league_id: string }; Returns: string }
