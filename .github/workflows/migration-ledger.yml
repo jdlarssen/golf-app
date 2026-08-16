@@ -33,10 +33,19 @@ permissions:
   contents: read
   issues: write
 
+# Dispatch som overlapper cron-kjøringen ville ellers se null åpne issues
+# samtidig og opprette to varsler + to Discord-pinger.
+concurrency:
+  group: migration-ledger
+  cancel-in-progress: false
+
 jobs:
   ledger:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Fork-PR-er (repoet er offentlig) får ikke repo-secrets og ville
+    # fail-close på manglende token uten at bidragsyteren kan gjøre noe.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
     steps:
       - uses: actions/checkout@v4
 
