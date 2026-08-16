@@ -121,7 +121,11 @@ else
     -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
     -d "$BODY") || fail_closed "database/query-endepunktet svarte ikke (curl-feil mot $API/database/query)"
-  [ "$HTTP" = "200" ] || fail_closed "database/query svarte HTTP $HTTP (401/403 = token; 5xx = API) — $(head -c 200 "$TMP/ledger.json" | tr '\n' ' ')"
+  # Endepunktet svarer 201 (ikke 200) på en vellykket spørring — godta hele 2xx.
+  case "$HTTP" in
+    (2[0-9][0-9]) ;;
+    (*) fail_closed "database/query svarte HTTP $HTTP (401/403 = token; 5xx = API) — $(head -c 200 "$TMP/ledger.json" | tr '\n' ' ')" ;;
+  esac
   LEDGER=$(cat "$TMP/ledger.json")
 fi
 # Formvalidering: en tom eller omformet respons skal aldri degradere til «alt mangler».
