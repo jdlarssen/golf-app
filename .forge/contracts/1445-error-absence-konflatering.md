@@ -151,12 +151,12 @@ eksisterende kommentar alt dekker intensjonen; testfil-intern organisering.
 
 ## Success Criteria
 
-- [ ] **K1:** Alle 16 tabell A-steder splitter error fra fravær per mønster A1–A4 (verifiser i diff per sted).
-- [ ] **K2:** Fravær-adferd uendret: samme koder/redirects/notFound som før for ekte 0-rad (tester + diff-review).
-- [ ] **K3:** Type A error-vs-fravær-tester (getGameWithPlayers.test-mønsteret: error → throw/db-kode, 0-rad → dagens semantikk) lagt til i de eksisterende co-located testfilene for: foursomesActions, patsomeActions, teamActions, edit/actions, signups/actions, inviteToGameActions, courses/[id]/edit/actions, startScheduledGame, setBingoBangoBongoHole. Ingen nye testfiler; ingen tester for (b)-steder eller sider.
-- [ ] **K4:** Hvert nytt error-ben logger med `[fnNavn]`-prefiks og feilobjektet som argument.
-- [ ] **K5:** Tabell B-steder: uendret oppførsel; manglende logg lagt til; `#1445`-markørkommentar der intensjon ikke alt er kommentert.
-- [ ] **K6:** `npx tsc --noEmit`, endrede filers co-located tester, `npm run lint` og `npm run build` grønt; ingen versjonsbump/CHANGELOG (refactor-prefiks, `Refs #1445`).
+- [x] **K1:** Alle 16 tabell A-steder splitter error fra fravær per mønster A1–A4 (verifiser i diff per sted). — Evidens: grep-differanse main→HEAD 45→25; de 20 borte = Tabell A; commits d0fd1c47/c20b0e00/1c9892f1/4b2ca4af.
+- [x] **K2:** Fravær-adferd uendret: samme koder/redirects/notFound som før for ekte 0-rad (tester + diff-review). — Evidens: fravær-ben byte-identiske (diff-review per sted); 11 `.single()`→`.maybeSingle()`; optimistic-lock-stedet testet begge ben.
+- [x] **K3:** Type A error-vs-fravær-tester (getGameWithPlayers.test-mønsteret: error → throw/db-kode, 0-rad → dagens semantikk) lagt til i de eksisterende co-located testfilene for: foursomesActions, patsomeActions, teamActions, edit/actions, signups/actions, inviteToGameActions, courses/[id]/edit/actions, startScheduledGame, setBingoBangoBongoHole. Ingen nye testfiler; ingen tester for (b)-steder eller sider. — Evidens: nøyaktig de 9 testfilene endret (+500 linjer), ingen nye filer; 5 mutasjonsprober røde kun på feil-casen.
+- [x] **K4:** Hvert nytt error-ben logger med `[fnNavn]`-prefiks og feilobjektet som argument. — Evidens: 26 nye console.error, alle m/ [fnNavn]-prefiks + feilobjekt (evaluator-gjennomgang).
+- [x] **K5:** Tabell B-steder: uendret oppførsel; manglende logg lagt til; `#1445`-markørkommentar der intensjon ikke alt er kommentert. — Evidens: Tabell B-diff = kun logg/kommentar (0 terminator-bytter); 6 logger + 9 markører lagt til; commit 5dd1e5d0.
+- [x] **K6:** `npx tsc --noEmit`, endrede filers co-located tester, `npm run lint` og `npm run build` grønt; ingen versjonsbump/CHANGELOG (refactor-prefiks, `Refs #1445`). — Evidens: tsc exit 0, build exit 0, lint 0 errors, 160 filer/2019 tester; ingen .changes/CHANGELOG/package.json/messages i diffen.
 
 ## Gates
 
