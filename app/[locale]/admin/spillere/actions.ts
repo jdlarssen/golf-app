@@ -125,7 +125,16 @@ export async function resendInvitation(formData: FormData) {
     .select('email, accepted_at, token')
     .eq('id', id)
     .single();
-  if (error || !inv) redirect({ href: '/admin/spillere?error=resend_failed', locale });
+  // Best-effort by design (#1445): begge ben lander ærlig på resend_failed —
+  // «vi klarte ikke sende på nytt» er sant enten raden mangler eller
+  // oppslaget feilet, og admin-en har samme neste steg (prøv igjen).
+  // Feilen logges så en gjentakende DB-feil er synlig i Vercel-loggen.
+  if (error || !inv) {
+    if (error) {
+      console.error('[resendInvitation] invitation lookup failed', error);
+    }
+    redirect({ href: '/admin/spillere?error=resend_failed', locale });
+  }
   if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=resend_failed', locale });
 
   // «Send på nytt» means «give this person a fresh chance» (#1381), so the
@@ -181,7 +190,14 @@ export async function withdrawInvitation(formData: FormData) {
     .select('email, accepted_at')
     .eq('id', id)
     .single();
-  if (fetchError || !inv) redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
+  // Best-effort by design (#1445): som resendInvitation — withdraw_failed er
+  // ærlig for begge ben, men feilen skal være synlig i loggen.
+  if (fetchError || !inv) {
+    if (fetchError) {
+      console.error('[withdrawInvitation] invitation lookup failed', fetchError);
+    }
+    redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
+  }
   if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
 
   // Delete the invitations row via the cookie client (RLS lets admin do it).

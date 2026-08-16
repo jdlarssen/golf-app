@@ -100,7 +100,15 @@ async function loadRevansjeContext(
       registration_type: 'solo' | 'team' | 'both';
       let_friends_skip_gate: boolean;
     }>();
-  if (error || !extra) return null;
+  // Best-effort by design (#1445): revansje-prefill er en bekvemmelighet. Å
+  // kaste her ville velte hele opprett-døra fordi ett valgfritt oppslag glapp
+  // — brukeren skal få veiviseren, bare uten forhåndsutfylling.
+  if (error || !extra) {
+    if (error) {
+      console.error('[loadRevansjeContext] game-extra lookup failed', error);
+    }
+    return null;
+  }
 
   const gameRow: RevansjeGameRow = {
     id: game.id,
@@ -177,7 +185,14 @@ async function loadBaneCourseId(
     .select('id')
     .eq('id', baneId)
     .maybeSingle<{ id: string }>();
-  if (error || !data) return null;
+  // Best-effort by design (#1445): samme avveining som revansje-prefillen over
+  // — bane-prefill er valgfri, veiviseren åpner tom hvis oppslaget glapp.
+  if (error || !data) {
+    if (error) {
+      console.error('[loadBaneCourseId] course lookup failed', error);
+    }
+    return null;
+  }
   return data.id;
 }
 

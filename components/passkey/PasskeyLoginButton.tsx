@@ -35,6 +35,10 @@ export function PasskeyLoginButton({ next }: { next: string }) {
     try {
       const supabase = getBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithPasskey();
+      // Best-effort by design (#1445): klient-side, og begge ben ender i en
+      // ærlig feilmelding med knappen fortsatt tilgjengelig for nytt forsøk.
+      // «Ingen sesjon uten feil» er like mye en mislykket innlogging som en
+      // eksplisitt feil — brukeren har samme neste steg uansett.
       if (signInError || !data?.session) {
         setError(
           signInError?.code === 'webauthn_credential_not_found'
