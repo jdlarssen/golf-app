@@ -2252,7 +2252,6 @@
       "nettoLabel": "Net {netto}",
       "nettoWithPoints": "Net {netto} · {points} pts",
       "strokesBadge": "+{n} STROKES",
-      "setScoreAriaLabel": "Set score for {name}",
       "moreAriaLabel": "Pick specific score",
       "specificScoreTitle": "SPECIFIC SCORE",
       "specificScoreAriaLabel": "Specific score",

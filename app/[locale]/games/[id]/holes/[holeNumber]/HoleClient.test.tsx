@@ -334,7 +334,7 @@ describe('HoleClient — onboarding banner', () => {
 describe('HoleClient — score writes', () => {
   it('tapping a ScoreCard fires writeScore and drainQueue', async () => {
     render(<HoleClient {...baseProps()} />);
-    const cards = screen.getAllByRole('button', { name: /Sett score for/ });
+    const cards = screen.getAllByTestId('score-card');
     // The first ScoreCard belongs to u1 (myUserId in our base props).
     await act(async () => {
       fireEvent.click(cards[0]);

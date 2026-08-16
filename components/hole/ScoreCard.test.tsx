@@ -26,7 +26,7 @@ function setup(overrides: Partial<ScoreCardProps> = {}) {
     ...overrides,
   };
   const utils = render(<ScoreCard {...props} />);
-  const card = utils.container.querySelector('[role="button"]') as HTMLElement;
+  const card = utils.getByTestId('score-card');
   return { ...utils, card, onSetScore, onLongPress, onClear };
 }
 
@@ -72,6 +72,13 @@ describe('ScoreCard — rendering', () => {
     setup({ score: 6, par: 4 });
     const big = screen.getByTestId('score-number');
     expect(big.textContent).toBe('6');
+  });
+
+  it('kortet bærer ingen role selv — de fire knappene inni er synlige for skjermlesere (#1387)', () => {
+    const { card } = setup({ score: 6, par: 4 });
+    expect(card.getAttribute('role')).toBeNull();
+    // Angre, +, − og ⋯. Med role="button" på kortet ble disse presentasjonelle.
+    expect(screen.getAllByRole('button')).toHaveLength(4);
   });
 });
 

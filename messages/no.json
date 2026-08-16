@@ -2252,7 +2252,6 @@
       "nettoLabel": "Netto {netto}",
       "nettoWithPoints": "Netto {netto} · {points} poeng",
       "strokesBadge": "+{n} SLAG",
-      "setScoreAriaLabel": "Sett score for {name}",
       "moreAriaLabel": "Velg spesifikk score",
       "specificScoreTitle": "SPESIFIKK SCORE",
       "specificScoreAriaLabel": "Spesifikk score",
