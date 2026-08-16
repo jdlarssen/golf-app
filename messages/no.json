@@ -5005,6 +5005,7 @@
     "goToGameButton": "Gå til spillet",
     "findMoreButton": "Finn flere turneringer",
     "pendingRequestBanner": "Forespørsel sendt — du får varsel når arrangøren har bestemt seg.",
+    "captainInvitedBanner": "Du er invitert til et lag i dette spillet. Svar ja eller nei på lagsiden.",
     "gameLockedBanner": "Påmelding er stengt. Spillet er {status}.",
     "gameLockedActive": "i gang",
     "gameLockedFinished": "avsluttet",

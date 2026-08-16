@@ -16,6 +16,11 @@ import { LinkButton } from '@/components/ui/Button';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
 import { resolveRegistrationTypeView } from './registrationTypeView';
+import {
+  pendingRequestView,
+  type PendingRequestRow,
+  type PendingRequestView,
+} from './pendingRequestView';
 import { shouldShowTeamInvitePointer } from './teamInvitePointer';
 import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
 import {
@@ -81,7 +86,8 @@ export async function generateMetadata({ params }: { params: Params }) {
  *   3. (#1176) Profil-løse ser siden — påmeldingen (mutasjonen) gater profil,
  *      ikke visningen. Se registerForOpenGame/attach-actionene.
  *   4. Allerede påmeldt (game_players-rad finnes) → "du er med"-melding.
- *   5. Pending request finnes → "venter på godkjenning"-melding.
+ *   5. Pending request finnes → "venter på godkjenning"-melding, ELLER (#1422)
+ *      en peker til lag-siden når raden er kaptein-opprettet (`team_request_id`).
  *   6. game.status er active/finished → "påmelding stengt".
  *   7. registration_mode = 'invite_only' → "krever invitasjon"-melding,
  *      med fallback hvis bruker har pending invitation-rad.
@@ -193,12 +199,14 @@ export default async function PåmeldingPage({
     .eq('user_id', user!.id)
     .maybeSingle<{ game_id: string }>();
 
+  // #1422: `team_request_id` skiller en kaptein-opprettet child-rad fra en
+  // selv-sendt forespørsel — to helt ulike situasjoner i samme `pending`-status.
   const { data: existingRequest } = await admin
     .from('game_registration_requests')
-    .select('id, status')
+    .select('id, status, team_request_id')
     .eq('game_id', game.id)
     .eq('user_id', user!.id)
-    .maybeSingle<{ id: string; status: 'pending' | 'approved' | 'rejected' | 'withdrawn' }>();
+    .maybeSingle<PendingRequestRow & { id: string }>();
 
   // #442: er brukeren medlem av spillets klubb? Klubb-medlemmer kan melde seg
   // på klubb-spill direkte uansett registration_mode (medlemskap ER
@@ -244,8 +252,7 @@ export default async function PåmeldingPage({
   // søknadsprosessen. game_locked prioriteres over signups_closed.
   const signupsClosed = !gameLocked && game.signups_closed_at != null;
   const isAlreadyRegistered = existingPlayer != null;
-  const hasOpenPendingRequest =
-    existingRequest != null && existingRequest.status === 'pending';
+  const requestView = pendingRequestView(existingRequest);
 
   // #369: er brukeren en akseptert venn av spill-eieren? Brukes til å vise
   // «Meld meg på» i stedet for «Be om å bli med» for manual_approval-spill
@@ -375,7 +382,7 @@ export default async function PåmeldingPage({
             gameLocked,
             signupsClosed,
             isAlreadyRegistered,
-            hasOpenPendingRequest,
+            requestView,
             hasPendingInvitation,
             isClubMember,
             viewerIsFriend,
@@ -397,7 +404,7 @@ function renderBody({
   gameLocked,
   signupsClosed,
   isAlreadyRegistered,
-  hasOpenPendingRequest,
+  requestView,
   hasPendingInvitation,
   isClubMember,
   viewerIsFriend,
@@ -412,7 +419,7 @@ function renderBody({
   gameLocked: boolean;
   signupsClosed: boolean;
   isAlreadyRegistered: boolean;
-  hasOpenPendingRequest: boolean;
+  requestView: PendingRequestView;
   hasPendingInvitation: boolean;
   isClubMember: boolean;
   viewerIsFriend: boolean;
@@ -432,7 +439,23 @@ function renderBody({
     );
   }
 
-  if (hasOpenPendingRequest) {
+  // #1422: en kaptein som har satt deg på laget sitt lager en child-rad med
+  // samme `pending`-status som en selv-sendt forespørsel. «Forespørsel sendt»
+  // var da en blindvei — svaret ditt (ja eller nei) ligger på lag-siden.
+  if (requestView === 'captain_invited') {
+    return (
+      <div className="space-y-4">
+        <Banner tone="info" testId="captain-invited-pointer">
+          {t('captainInvitedBanner')}
+        </Banner>
+        <LinkButton href={`/signup/${game.short_id}/team`} full>
+          {t('goToTeamButton')}
+        </LinkButton>
+      </div>
+    );
+  }
+
+  if (requestView === 'self_request') {
     return (
       <Banner tone="info">
         {t('pendingRequestBanner')}

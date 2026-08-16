@@ -5005,6 +5005,7 @@
     "goToGameButton": "Go to the game",
     "findMoreButton": "Find more tournaments",
     "pendingRequestBanner": "Request sent — you'll be notified once the organiser has decided.",
+    "captainInvitedBanner": "You've been invited to a team in this game. Accept or decline on your team page.",
     "gameLockedBanner": "Sign-up is closed. The game is {status}.",
     "gameLockedActive": "in progress",
     "gameLockedFinished": "finished",
