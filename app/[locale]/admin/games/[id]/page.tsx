@@ -123,8 +123,10 @@ type GameRow = {
 
 type GamePlayerRow = {
   user_id: string;
-  team_number: number;
-  flight_number: number;
+  // #1669: begge er nullable i DB, og solo-selvpåmelding i et lag-format lar
+  // dem stå null helt til arrangøren fordeler lag.
+  team_number: number | null;
+  flight_number: number | null;
   course_handicap: number | null;
   submitted_at: string | null;
   approved_at: string | null;
@@ -144,6 +146,25 @@ type GamePlayerRow = {
     email: string;
   } | null;
 };
+
+/**
+ * Grupperer spillere på et nullable tall-felt (lag eller flight). Rader uten
+ * verdi havner ikke i noen bøtte — de vises i Lag-seksjonen som «Uten lag».
+ */
+function bucketPlayers(
+  rows: GamePlayerRow[],
+  key: (p: GamePlayerRow) => number | null,
+): Map<number, GamePlayerRow[]> {
+  const buckets = new Map<number, GamePlayerRow[]>();
+  for (const p of rows) {
+    const n = key(p);
+    if (n == null) continue;
+    const bucket = buckets.get(n) ?? [];
+    bucket.push(p);
+    buckets.set(n, bucket);
+  }
+  return buckets;
+}
 
 // Request-scoped Supabase client. Each Suspense body that needs it pulls
 // from this cached helper so we don't pay the cookie-auth cost per section.
@@ -516,31 +537,40 @@ async function PlayersSections({
   // for 1v1-format). Holdt som lokale strings slik at vi ikke trenger å fyre
   // ternary på hver call-site i markup.
   const teamLabel = isMatchplay ? tDetail('teamLabel') : tDetail('teamLabelDefault');
-  // Maks-antall lag/sider for «X / Y»-disply i Påmelding-cardet. Best-ball er
-  // alltid 4, par-stableford skalerer 1-4 men UX-en viser fortsatt mot 4 for
-  // konsistens, matchplay er alltid 2.
-  const teamsMax = isMatchplay ? 2 : 4;
+  // Bøttene under er avledet av rosteret, ikke av en hardkodet 1..4-liste:
+  // lag-påmelding tillater opp til 50 lag (0101), og et spill med lag 5+ eller
+  // flight 5+ var usynlig i denne oversikten fram til #1669.
+  const byTeam = bucketPlayers(players, (p) => p.team_number);
+  const byFlight = bucketPlayers(players, (p) => p.flight_number);
+  const teamNumbers = [...byTeam.keys()].sort((a, b) => a - b);
+  const flightNumbers = [...byFlight.keys()].sort((a, b) => a - b);
 
-  // Group by team (1..4). Each team has up to 2 players.
-  const byTeam: Record<number, GamePlayerRow[]> = { 1: [], 2: [], 3: [], 4: [] };
-  for (const p of players) {
-    if (byTeam[p.team_number]) byTeam[p.team_number].push(p);
-  }
+  // Maks-antall lag/sider for «X / Y»-display i Påmelding-cardet. Matchplay er
+  // alltid 2 sider; ellers er `teams_count` fra mode_config fasiten, med det
+  // faktiske rosteret som gulv hvis noen står på et høyere lagnummer.
+  const configuredTeams = (game.mode_config as { teams_count?: number })
+    .teams_count;
+  const teamsMax = isMatchplay
+    ? 2
+    : Math.max(configuredTeams ?? 0, teamNumbers.at(-1) ?? 0, 1);
 
-  // Group by flight (1..4) for the flight overview.
-  const byFlight: Record<number, GamePlayerRow[]> = { 1: [], 2: [], 3: [], 4: [] };
-  for (const p of players) {
-    if (byFlight[p.flight_number]) byFlight[p.flight_number].push(p);
-  }
+  // Hvilke lag-slots Lag-cardet rendrer: matchplay har alltid begge sidene,
+  // de skalerende formatene viser kun lag som har spillere, og resten (best
+  // ball) viser 1..teamsMax så et tomt lag er synlig.
+  const teamSlots = isMatchplay
+    ? [1, 2]
+    : isParStableford || isScramble
+      ? teamNumbers
+      : Array.from({ length: teamsMax }, (_, i) => i + 1);
 
-  const progressByFlight: Record<
+  const progressByFlight = new Map<
     number,
     { maxHole: number; filledCells: number; totalCells: number }
-  > = {};
+  >();
   if (game.status === 'active') {
     const rows = progressRes.data ?? [];
-    for (const f of [1, 2, 3, 4]) {
-      const flightPlayers = byFlight[f];
+    for (const f of flightNumbers) {
+      const flightPlayers = byFlight.get(f) ?? [];
       if (flightPlayers.length === 0) continue;
       const userIds = new Set(flightPlayers.map((p) => p.user_id));
       const flightRows = rows.filter((r) => userIds.has(r.user_id));
@@ -548,11 +578,11 @@ async function PlayersSections({
         (m, r) => Math.max(m, r.hole_number),
         0,
       );
-      progressByFlight[f] = {
+      progressByFlight.set(f, {
         maxHole,
         filledCells: flightRows.length,
         totalCells: flightPlayers.length * 18,
-      };
+      });
     }
   }
 
@@ -595,7 +625,7 @@ async function PlayersSections({
     ? `/admin/games/${gameId}/avslutt`
     : `/admin/games/${gameId}/avslutt-likevel`;
 
-  const teamCount = [1, 2, 3, 4].filter((t) => byTeam[t].length > 0).length;
+  const teamCount = teamNumbers.length;
   const submittedCount = rankablePlayers.filter((p) => p.submitted_at != null).length;
   // Banehandicap fryses + scorekort kan leveres først ved «Start runden nå».
   // Skjul levering/CH og bruk en egen «Påmeldt»-status før det (#905).
@@ -758,10 +788,9 @@ async function PlayersSections({
                 : tDetail('progressFlightDesc')}
             </p>
             <ul className="space-y-3.5">
-              {[1, 2, 3, 4]
-                .filter((f) => byFlight[f].length > 0)
+              {flightNumbers
                 .map((f) => {
-                  const p = progressByFlight[f];
+                  const p = progressByFlight.get(f);
                   const pct = p
                     ? Math.round((p.filledCells / p.totalCells) * 100)
                     : 0;
@@ -801,19 +830,14 @@ async function PlayersSections({
       {!isSolo && (
         <SectionCard ribbon={isMatchplay ? tSections('sides') : tSections('teams')}>
           <div className="grid grid-cols-1 gap-2.5 px-3.5 pb-3.5 pt-3 sm:grid-cols-2">
-            {/* Par-stableford skalerer 1-4 lag — vis kun lag med spillere, ellers
-                blir gridet dominert av «(tom)»-placeholdere. Best-ball er fast
-                4 lag à 2 og bør beholde tomme-slots så admin ser om lag mangler.
-                Matchplay er fast 2 sider à 1 spiller — vis kun Side 1 og Side 2,
-                aldri 3/4 (validatoren håndhever 1+1). Texas scramble skalerer
-                1-4 lag (avhengig av lagstørrelse) — speilar par-stableford. */}
-            {[1, 2, 3, 4]
-              .filter((team) => {
-                if (isMatchplay) return team <= 2;
-                if (isParStableford || isScramble) return byTeam[team].length > 0;
-                return true;
-              })
-              .map((team) => (
+            {/* Par-stableford og scramble-familien skalerer — vis kun lag med
+                spillere, ellers blir gridet dominert av «(tom)»-placeholdere.
+                Best-ball beholder tomme slots opp til teams_count så admin ser
+                om et lag mangler. Matchplay er fast 2 sider à 1 spiller —
+                aldri 3/4 (validatoren håndhever 1+1). */}
+            {teamSlots.map((team) => {
+              const members = byTeam.get(team) ?? [];
+              return (
                 <div
                   key={team}
                   className="rounded-xl border border-border px-3 py-2.5"
@@ -821,11 +845,11 @@ async function PlayersSections({
                   <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                     {teamLabel} {team}
                   </p>
-                  {byTeam[team].length === 0 ? (
+                  {members.length === 0 ? (
                     <p className="text-sm text-muted">{tDetail('teamEmpty')}</p>
                   ) : (
                     <ul className="space-y-0.5">
-                      {byTeam[team].map((p) => (
+                      {members.map((p) => (
                         <li key={p.user_id} className="text-sm text-text">
                           {displayName(p)}
                         </li>
@@ -833,7 +857,8 @@ async function PlayersSections({
                     </ul>
                   )}
                 </div>
-              ))}
+              );
+            })}
           </div>
         </SectionCard>
       )}
@@ -844,11 +869,10 @@ async function PlayersSections({
           (validatoren setter flight = team). Skip for solo (ingen flights),
           par-stableford, matchplay og Texas. */}
       {!isSolo && !isParStableford && !isMatchplay && !isScramble &&
-        [1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
+        flightNumbers.length > 0 && (
         <SectionCard ribbon={tSections('flights')}>
           <ul className="space-y-2 px-3.5 pb-3.5 pt-3">
-            {[1, 2, 3, 4]
-              .filter((f) => byFlight[f].length > 0)
+            {flightNumbers
               .map((f) => (
                 <li
                   key={f}
@@ -858,7 +882,7 @@ async function PlayersSections({
                     {tDetail('flightN', { n: f })}
                   </p>
                   <p className="text-sm text-text">
-                    {byFlight[f].map(displayName).join(', ')}
+                    {(byFlight.get(f) ?? []).map(displayName).join(', ')}
                   </p>
                 </li>
               ))}
@@ -999,10 +1023,14 @@ async function PlayersSections({
                         </div>
                       </td>
                       {!isSolo && (
-                        <td className="px-2 py-2 text-text">{p.team_number}</td>
+                        <td className="px-2 py-2 text-text">
+                          {p.team_number ?? '—'}
+                        </td>
                       )}
                       {isBestBall && (
-                        <td className="px-2 py-2 text-text">{p.flight_number}</td>
+                        <td className="px-2 py-2 text-text">
+                          {p.flight_number ?? '—'}
+                        </td>
                       )}
                       {isPlayPhase && (
                         <td className="px-2 py-2 text-right text-text">
@@ -1093,10 +1121,13 @@ async function PlayersSections({
                           {isSolo
                             ? null
                             : isMatchplay
-                              ? tDetail('sideLagSuffix', { n: p.team_number })
+                              ? tDetail('sideLagSuffix', { n: p.team_number ?? '—' })
                               : isParStableford
-                                ? tDetail('lagSuffix', { n: p.team_number })
-                                : tDetail('flightLagN', { flight: p.flight_number, team: p.team_number })}
+                                ? tDetail('lagSuffix', { n: p.team_number ?? '—' })
+                                : tDetail('flightLagN', {
+                                    flight: p.flight_number ?? '—',
+                                    team: p.team_number ?? '—',
+                                  })}
                           {needsApproval
                             ? tDetail('pendingApproval')
                             : tDetail('approved')}
