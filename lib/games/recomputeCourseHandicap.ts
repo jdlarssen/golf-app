@@ -5,6 +5,10 @@ import {
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
+import {
+  readStoredTeamStrokesOverride,
+  type TeamStrokesOverride,
+} from './greensomeOverridePlan';
 import { getRatingForGender, type TeeBoxRatings, type TeeGender } from './teeRating';
 import type { GameStatus } from './status';
 import type { Json } from '@/lib/database.types';
@@ -85,11 +89,12 @@ export function planHandicapRecompute(
 }
 
 /**
- * `games.mode_config.team_strokes_override` (#1441, D10) — begge sider. Type
- * alias, ikke interface: den skrives tilbake inn i `mode_config` (`Json`), og
- * kun literal-typer får den implisitte index-signaturen `Json` krever.
+ * Re-eksportert fra `./greensomeOverridePlan` (#1628), der typen og
+ * JSON-leseren nå bor sammen med de rene reglene som bruker dem — denne fila
+ * drar med seg `next/cache` + service-role-klienten, og `startScheduledGame`
+ * skal ikke arve det for å lese ett JSONB-felt.
  */
-export type TeamStrokesOverride = { team1: number; team2: number };
+export type { TeamStrokesOverride };
 
 /**
  * One greensome match the corrected player takes part in, flattened into the
@@ -118,20 +123,6 @@ export interface GreensomeOverrideRow {
 export interface GreensomeOverrideUpdate {
   gameId: string;
   teamStrokesOverride: TeamStrokesOverride;
-}
-
-/** Reads `{team1, team2}` off raw mode_config JSON, or null when unusable. */
-function readStoredTeamStrokesOverride(
-  modeConfig: unknown,
-): TeamStrokesOverride | null {
-  if (!modeConfig || typeof modeConfig !== 'object') return null;
-  const raw = (modeConfig as { team_strokes_override?: unknown })
-    .team_strokes_override;
-  if (!raw || typeof raw !== 'object') return null;
-  const { team1, team2 } = raw as { team1?: unknown; team2?: unknown };
-  if (typeof team1 !== 'number' || !Number.isFinite(team1)) return null;
-  if (typeof team2 !== 'number' || !Number.isFinite(team2)) return null;
-  return { team1, team2 };
 }
 
 /**
