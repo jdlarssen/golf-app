@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   collectSignupGameIds,
-  filterStaleSignupNotifications,
+  partitionStaleSignupNotifications,
 } from './staleNotifications';
 import type { NotificationKind, NotificationPayload } from './types';
 
@@ -44,31 +44,66 @@ describe('collectSignupGameIds', () => {
   });
 });
 
-describe('filterStaleSignupNotifications', () => {
-  it('drops registration_request rows whose game no longer exists', () => {
+describe('partitionStaleSignupNotifications', () => {
+  const ids = <T extends { id: string }>(rows: T[]) => rows.map((r) => r.id);
+
+  it('returns two empty buckets for an empty list', () => {
+    const { visible, stale } = partitionStaleSignupNotifications(
+      [],
+      new Set([GAME_A]),
+    );
+    expect(visible).toEqual([]);
+    expect(stale).toEqual([]);
+  });
+
+  it('puts registration_request rows whose game no longer exists in stale', () => {
     const rows = [
-      signup('a', GAME_A), // exists → kept
-      signup('b', GAME_B), // missing → dropped
+      signup('a', GAME_A), // exists → visible
+      signup('b', GAME_B), // missing → stale
     ];
-    const kept = filterStaleSignupNotifications(rows, new Set([GAME_A]));
-    expect(kept.map((r) => r.id)).toEqual(['a']);
+    const { visible, stale } = partitionStaleSignupNotifications(
+      rows,
+      new Set([GAME_A]),
+    );
+    expect(ids(visible)).toEqual(['a']);
+    expect(ids(stale)).toEqual(['b']);
   });
 
-  it('keeps every non-signup notification regardless of game existence', () => {
+  it('moves every signup to stale when no game exists any more', () => {
+    const rows = [signup('a', GAME_A), signup('b', GAME_B)];
+    const { visible, stale } = partitionStaleSignupNotifications(
+      rows,
+      new Set<string>(),
+    );
+    expect(visible).toEqual([]);
+    expect(ids(stale)).toEqual(['a', 'b']);
+  });
+
+  it('keeps every non-signup notification visible regardless of game existence', () => {
     // An invite for a deleted game stays — the branded not-found is the
-    // safety net for those rare dead-ends (#612). Only signups are pruned.
+    // safety net for those rare dead-ends (#612). Only signups are pruned,
+    // and only signups may be archived out from under the user (#1393).
     const rows = [invite('b', GAME_B)];
-    const kept = filterStaleSignupNotifications(rows, new Set<string>());
-    expect(kept.map((r) => r.id)).toEqual(['b']);
+    const { visible, stale } = partitionStaleSignupNotifications(
+      rows,
+      new Set<string>(),
+    );
+    expect(ids(visible)).toEqual(['b']);
+    expect(stale).toEqual([]);
   });
 
-  it('preserves order and keeps a mix of fresh signups and other kinds', () => {
+  it('preserves order in both buckets for a mixed list', () => {
     const rows = [
       invite('keep-1', GAME_B),
-      signup('stale', GAME_C),
+      signup('stale-1', GAME_C),
       signup('fresh', GAME_A),
+      signup('stale-2', GAME_C),
     ];
-    const kept = filterStaleSignupNotifications(rows, new Set([GAME_A, GAME_B]));
-    expect(kept.map((r) => r.id)).toEqual(['keep-1', 'fresh']);
+    const { visible, stale } = partitionStaleSignupNotifications(
+      rows,
+      new Set([GAME_A, GAME_B]),
+    );
+    expect(ids(visible)).toEqual(['keep-1', 'fresh']);
+    expect(ids(stale)).toEqual(['stale-1', 'stale-2']);
   });
 });

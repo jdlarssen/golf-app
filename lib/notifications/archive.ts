@@ -1,6 +1,7 @@
 import 'server-only';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 export type ArchiveOpts = {
   userId: string;
@@ -84,6 +85,53 @@ export async function archiveNotifications(
   }
 
   // Next.js 16 krever to-arg-form for revalidateTag.
+  revalidateTag(`notifications-${opts.userId}`, 'max');
+  return true;
+}
+
+export type ArchiveStaleOpts = {
+  userId: string;
+  /** Id-ene innboks-siden nettopp fant utdaterte. Tom liste → ingen skriving. */
+  ids: string[];
+};
+
+/**
+ * Arkiver påmeldings-varsler som peker på et slettet spill (#1393).
+ *
+ * Innboks-siden holdt dem bare utenfor VISNINGEN (#613). Radene ble liggende
+ * uleste, og siden bunn-nav-prikken teller `read_at is null`, kunne den aldri
+ * slukkes: varselet fantes, men ingen flate kunne åpne det. Vi setter derfor
+ * `archived_at` og `read_at` i samme skriving — samme par som ett-varsel-grenen
+ * i `archiveNotifications` — så prikken slukker og raden ikke dukker opp igjen.
+ * Realtime-hooken ser UPDATE-en og dekrementerer telleren uten reload.
+ *
+ * Admin-klienten (service-role, cookies-fri) fordi call-siten kjører inni
+ * `after()`, der Next.js 16 forbyr `cookies()` — cookies-klienten ville kastet
+ * stille og ingenting blitt arkivert (#726, samme grunn som i markRead).
+ * Authz bevares: skrivingen er alltid scopet `.eq('user_id', userId)`, og
+ * innboks-siden utleder userId server-side via getProxyVerifiedUserId.
+ *
+ * Best-effort: kaster aldri, blokkerer aldri sida. 0 rader er legitimt her —
+ * et parallelt besøk (eller forrige lasting av samme side) kan ha arkivert dem
+ * allerede — så vi teller ikke rader, i motsetning til ✕-grenen over.
+ */
+export async function archiveStaleNotifications(
+  opts: ArchiveStaleOpts,
+): Promise<boolean> {
+  if (opts.ids.length === 0) return true;
+
+  const nowIso = new Date().toISOString();
+  const { error } = await getAdminClient()
+    .from('notifications')
+    .update({ archived_at: nowIso, read_at: nowIso })
+    .eq('user_id', opts.userId)
+    .in('id', opts.ids)
+    .is('archived_at', null);
+  if (error) {
+    console.error('[innboks] archive stale failed', error);
+    return false;
+  }
+
   revalidateTag(`notifications-${opts.userId}`, 'max');
   return true;
 }
