@@ -40,8 +40,8 @@ function withdrawn(
 // ─── DEFAULT_TEAM_SIZE ───────────────────────────────────────────────────────
 
 describe('DEFAULT_TEAM_SIZE', () => {
-  it('er 2 (par-formatene er den vanligste lag-formen)', () => {
-    expect(DEFAULT_TEAM_SIZE).toBe(2);
+  it('er 1 (manglende team_size betyr solo — som alle andre lesere av mode_config)', () => {
+    expect(DEFAULT_TEAM_SIZE).toBe(1);
   });
 });
 
@@ -90,7 +90,7 @@ describe('expectedTeamSize', () => {
     expect(expectedTeamSize({ team_size: 2 })).toBe(2);
   });
 
-  it('faller tilbake til 2 når feltet mangler eller er ugyldig', () => {
+  it('faller tilbake til 1 (solo) når feltet mangler eller er ugyldig', () => {
     expect(expectedTeamSize(null)).toBe(DEFAULT_TEAM_SIZE);
     expect(expectedTeamSize(undefined)).toBe(DEFAULT_TEAM_SIZE);
     expect(expectedTeamSize({})).toBe(DEFAULT_TEAM_SIZE);
@@ -234,9 +234,9 @@ describe('suggestTeamSplit', () => {
     ]);
   });
 
-  it('ugyldig lagstørrelse faller tilbake til 2', () => {
+  it('ugyldig lagstørrelse faller tilbake til 1 (ett lag per spiller)', () => {
     const players = [p('u1'), p('u2'), p('u3')];
-    expect(suggestTeamSplit(players, 0).map((a) => a.team_number)).toEqual([1, 1, 2]);
+    expect(suggestTeamSplit(players, 0).map((a) => a.team_number)).toEqual([1, 2, 3]);
   });
 });
 

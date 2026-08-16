@@ -138,7 +138,7 @@ describe('suggestFlightAssignment', () => {
       user_id: `u${i + 1}`,
       flight_number: null,
       withdrawn_at: null,
-      created_at: `2026-01-0${i + 1}T00:00:00Z`,
+      accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
     }));
 
     adminMock = buildSupabaseMock([

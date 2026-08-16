@@ -38,25 +38,28 @@ async function loadFlightContext(gameId: string) {
 }
 
 /**
- * Henter aktive spillere for flight-inndeling, sortert på created_at ASC
- * (påmeldingsrekkefølge). Returnerer null ved DB-feil.
+ * Henter aktive spillere for flight-inndeling, sortert på accepted_at ASC
+ * (påmeldingsrekkefølge). `game_players` har ingen created_at-kolonne — #1669
+ * fant at forgjengeren sorterte på en kolonne som ikke finnes, så «Foreslå
+ * inndeling» alltid feilet med 42703. Uaksepterte (null) sist, deretter
+ * user_id for determinisme. Returnerer null ved DB-feil.
  */
 async function fetchFlightPlayers(
   admin: ReturnType<typeof getAdminClient>,
   gameId: string,
-): Promise<(FlightPlayer & { created_at: string | null })[] | null> {
+): Promise<(FlightPlayer & { accepted_at: string | null })[] | null> {
   const { data, error } = await admin
     .from('game_players')
-    .select('user_id, flight_number, withdrawn_at, created_at')
+    .select('user_id, flight_number, withdrawn_at, accepted_at')
     .eq('game_id', gameId)
-    .order('created_at', { ascending: true })
+    .order('accepted_at', { ascending: true, nullsFirst: false })
     .order('user_id', { ascending: true })
     .returns<
       {
         user_id: string;
         flight_number: number | null;
         withdrawn_at: string | null;
-        created_at: string | null;
+        accepted_at: string | null;
       }[]
     >();
   if (error) {
@@ -180,8 +183,9 @@ export async function setPlayerFlight(
 }
 
 /**
- * Henter aktive og trukkede spillere for lag-inndeling, sortert på created_at
- * ASC (påmeldingsrekkefølge). Returnerer null ved DB-feil.
+ * Henter aktive og trukkede spillere for lag-inndeling, sortert på accepted_at
+ * ASC (påmeldingsrekkefølge; ingen created_at-kolonne på game_players — se
+ * fetchFlightPlayers). Returnerer null ved DB-feil.
  */
 async function fetchTeamPlayers(
   admin: ReturnType<typeof getAdminClient>,
@@ -191,7 +195,7 @@ async function fetchTeamPlayers(
     .from('game_players')
     .select('user_id, team_number, flight_number, withdrawn_at')
     .eq('game_id', gameId)
-    .order('created_at', { ascending: true })
+    .order('accepted_at', { ascending: true, nullsFirst: false })
     .order('user_id', { ascending: true })
     .returns<TeamPlayer[]>();
   if (error) {
