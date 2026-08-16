@@ -1,0 +1,31 @@
+# Migrasjons-hovedbok-porten (#1410): kjente unntak fra regelen «hver fil i
+# supabase/migrations/ har en rad med samme navn i prods schema_migrations».
+#
+# Format, én per linje:   <filnavn uten .sql> = <hovedbok-navn>
+#                   eller <filnavn uten .sql> = @outside-ledger
+#
+# «= <navn>»           fila ble påført under et annet navn enn filnavnet
+# «= @outside-ledger»  fila ble påført utenom hovedboka (SQL Editor / objektene
+#                      fantes fra før) og er VERIFISERT funksjonelt i prod —
+#                      skriv dato + hva som ble sjekket i kommentaren
+#
+# Filer under 0010 sjekkes ikke: hovedboka begynner ved 0010 (første
+# MCP-påførte migrasjon, 2026-05-11); 0001–0009 gikk via SQL Editor før den
+# fantes. Nye linjer her er BEVISSTE valg — kun via PR med begrunnelse.
+# Protokoll: docs/loops/ci-vakta.md §6b.
+
+# Påført som `skins_format_seed` (2026-05-29).
+0051_skins = skins_format_seed
+
+# Påført utenom hovedboka. Verifisert 2026-08-16: formats.slug='round_robin'
+# finnes i prod.
+0055_round_robin = @outside-ledger
+
+# Objektene (rls_auto_enable() + event-trigger ensure_rls) ble laget direkte i
+# prod før migrasjonen fantes; fila er staging-paritet (#1105). Verifisert
+# 2026-08-16: begge finnes i prod.
+0138_rls_auto_enable_staging_parity = @outside-ledger
+
+# Prod manglet policy-delen og fikk en idempotent variant under nytt navn
+# (#1290 del B, 2026-07-28).
+0148_putts_backfill = putts_backfill_policy_repair
