@@ -83,7 +83,7 @@ export async function startScheduledGame(
       'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', gameId)
-    .single<{
+    .maybeSingle<{
       id: string;
       name: string;
       status: GameStatus;
@@ -93,7 +93,20 @@ export async function startScheduledGame(
       mode_config: { team_size?: number } | null;
       tee_boxes: TeeBoxRatings | null;
     }>();
-  if (gameError || !game) return { ok: false, reason: 'not_found' };
+  // Error ≠ absence (#1445): a transient query failure must report as a
+  // transient DB reason, not 'not_found'. The distinction is load-bearing for
+  // the cron sweep — 'db_game' is not a structural block reason, so the game is
+  // retried next minute instead of firing an «auto-start blokkert»-varsel to the
+  // organiser about a game that is perfectly fine. Only a genuine 0-row result
+  // (maybeSingle: data null, error null) means the game is gone.
+  if (gameError) {
+    console.error('[startScheduledGame] game fetch failed', {
+      gameId,
+      error: gameError,
+    });
+    return { ok: false, reason: 'db_game' };
+  }
+  if (!game) return { ok: false, reason: 'not_found' };
   if (game.status !== 'scheduled') {
     // Already started (or finished) by someone else — desired end state
     // reached for the auto-start caller; admin button caller can still
