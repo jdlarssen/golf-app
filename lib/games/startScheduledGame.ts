@@ -14,7 +14,7 @@ import {
 } from './teeRating';
 import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
 import { needsFlightAssignment } from './flightScope';
-import { needsTeamAssignment } from './teamScope';
+import { expectedTeamSize, needsTeamAssignment } from './teamScope';
 import {
   assignRotationSlots,
   rotationSlotRange,
@@ -129,12 +129,10 @@ export async function startScheduledGame(
     return { ok: false, reason: 'no_players' };
   }
 
-  // Lagstørrelsen begge lag-vaktene under klassifiserer på. `?? 1` (ikke
-  // `expectedTeamSize`s par-fallback) fordi et manglende felt her betyr «vi vet
-  // ikke om dette er par-stableford» — og alle andre lesere av mode_config i
-  // appen (game-home, leaderboard) leser det som solo. En vakt som gjettet
-  // «par» ville blokkert et helt normalt solo-stableford-spill fra å starte.
-  const teamSize = game.mode_config?.team_size ?? 1;
+  // Lagstørrelsen begge lag-vaktene under klassifiserer på — samme helper og
+  // samme fallback (1 = solo) som Lag-seksjonen og team-actionene, så «trenger
+  // dette spillet lag?» har ett hjem (#1669).
+  const teamSize = expectedTeamSize(game.mode_config);
 
   // Guard: matchplay-familien krever eksakt team_size aktive spillere per side
   // (team_number ∈ {1, 2}). Spillere med null team_number eller trukkede

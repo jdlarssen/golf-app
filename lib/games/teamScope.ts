@@ -25,7 +25,14 @@ import { isMatchplayMode } from './matchplaySides';
  * Fallback-lagstørrelse når `mode_config.team_size` mangler. Par (2) er den
  * vanligste lag-formen (best ball, patsome, par-stableford, shamble-preset).
  */
-export const DEFAULT_TEAM_SIZE = 2;
+/**
+ * Fallback når `mode_config.team_size` mangler: 1 (solo). Alle lag-formater
+ * bærer alltid `team_size` i configen (`lib/scoring/modes/types.ts`); det
+ * eneste tilfellet uten feltet er stableford-familiens solo-runder, og alle
+ * andre lesere i appen (game-home, leaderboard, start-vakta) leser det som
+ * solo. Én regel, ett hjem (#1669 evaluator F3).
+ */
+export const DEFAULT_TEAM_SIZE = 1;
 
 /**
  * Minimal spiller-rad slik lag-kalkulatorene trenger den. Holdes løs fra
@@ -118,7 +125,7 @@ export function needsTeamAssignment(
  *   2. laveste ledige lagnummer, som så fylles opp før neste opprettes.
  *
  * Rekkefølgen på `players` er fordelingsrekkefølgen — kallsteder sorterer på
- * `created_at ASC` (påmeldingsrekkefølge), som `flightScope.suggestFlightSplit`.
+ * `accepted_at ASC` (påmeldingsrekkefølge), som `flightScope.suggestFlightSplit`.
  *
  * `flight_number` beholdes hvis spilleren allerede har en; ellers settes den lik
  * lagnummeret. CHECK-en krever at den er satt så snart laget er det.

@@ -82,7 +82,7 @@ export function unassignedActivePlayers(players: FlightPlayer[]): FlightPlayer[]
 /**
  * Foreslår flight-inndeling for alle aktive spillere i grupper av
  * MAX_FLIGHT_SIZE i rekkefølge (array-rekkefølge = påmeldingsrekkefølge —
- * kallsteder sorterer på `created_at ASC` om det er tilgjengelig).
+ * kallsteder sorterer på `accepted_at ASC`).
  *
  * ERSTATTER hele assignment-kartet: admin trykker «Foreslå inndeling» og
  * alle aktive spillere tildeles flight 1, 2, 3 … stigende. Trukkede
