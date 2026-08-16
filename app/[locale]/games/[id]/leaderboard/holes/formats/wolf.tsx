@@ -10,6 +10,7 @@ import {
   localizeHolesGameName,
   fetchHolesAndScores,
 } from '../holesData';
+import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 
 /**
  * Wolf «Hull for hull» (epic #496, PR 2). Som SkinsHolesBody, men henter også
@@ -19,9 +20,11 @@ import {
 export async function WolfHolesBody({
   gameId,
   courseId,
+  navContext,
 }: {
   gameId: string;
   courseId: string;
+  navContext?: LeaderboardNavContext;
 }) {
   const { supabase } = await getDrilldownContext();
   const tCommon = await getTranslations('leaderboard.common');
@@ -67,6 +70,7 @@ export async function WolfHolesBody({
       playersById={playersById}
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
+      navContext={navContext}
     />
   );
 }

@@ -9,6 +9,7 @@ import {
   localizeHolesGameName,
   fetchHolesAndScores,
 } from '../holesData';
+import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 
 /**
  * Nines / Split Sixes «Hull for hull» (epic #496, PR 3). Som SkinsHolesBody
@@ -19,9 +20,11 @@ import {
 export async function NinesHolesBody({
   gameId,
   courseId,
+  navContext,
 }: {
   gameId: string;
   courseId: string;
+  navContext?: LeaderboardNavContext;
 }) {
   const { supabase } = await getDrilldownContext();
   const tCommon = await getTranslations('leaderboard.common');
@@ -67,6 +70,7 @@ export async function NinesHolesBody({
       playersById={playersById}
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
+      navContext={navContext}
     />
   );
 }

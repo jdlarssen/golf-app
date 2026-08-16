@@ -109,7 +109,11 @@ export default async function LeaderboardHolesPage({
   if (game.game_mode === 'skins') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <SkinsHolesBody gameId={id} courseId={game.course_id} />
+        <SkinsHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }
@@ -117,7 +121,11 @@ export default async function LeaderboardHolesPage({
   if (game.game_mode === 'wolf') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <WolfHolesBody gameId={id} courseId={game.course_id} />
+        <WolfHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }
@@ -125,7 +133,11 @@ export default async function LeaderboardHolesPage({
   if (game.game_mode === 'nines') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <NinesHolesBody gameId={id} courseId={game.course_id} />
+        <NinesHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }
@@ -133,7 +145,11 @@ export default async function LeaderboardHolesPage({
   if (game.game_mode === 'round_robin') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <RoundRobinHolesBody gameId={id} courseId={game.course_id} />
+        <RoundRobinHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }
@@ -141,7 +157,11 @@ export default async function LeaderboardHolesPage({
   if (game.game_mode === 'acey_deucey') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <AceyDeuceyHolesBody gameId={id} courseId={game.course_id} />
+        <AceyDeuceyHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }
@@ -149,7 +169,11 @@ export default async function LeaderboardHolesPage({
   if (game.game_mode === 'bingo_bango_bongo') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <BingoBangoBongoHolesBody gameId={id} courseId={game.course_id} />
+        <BingoBangoBongoHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }
@@ -157,7 +181,11 @@ export default async function LeaderboardHolesPage({
   if (game.game_mode === 'nassau') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <NassauHolesBody gameId={id} courseId={game.course_id} />
+        <NassauHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }
@@ -165,7 +193,11 @@ export default async function LeaderboardHolesPage({
   if (game.game_mode === 'solo_strokeplay') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <SoloStrokeplayHolesBody gameId={id} courseId={game.course_id} />
+        <SoloStrokeplayHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }
@@ -180,7 +212,11 @@ export default async function LeaderboardHolesPage({
   ) {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
-        <SoloStablefordHolesBody gameId={id} courseId={game.course_id} />
+        <SoloStablefordHolesBody
+          gameId={id}
+          courseId={game.course_id}
+          navContext={navContext}
+        />
       </Suspense>,
     );
   }

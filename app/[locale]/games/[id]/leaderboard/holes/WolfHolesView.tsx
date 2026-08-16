@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
+import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
@@ -29,6 +30,11 @@ export interface WolfHolesViewProps {
   scoreVisibility: 'live' | 'reveal';
   /** `games.status` — styrer reveal-flow sammen med `scoreVisibility`. */
   gameStatus: 'active' | 'finished';
+  /**
+   * Tilbake-kontekst fra `?from=` (#1517). Uten kontekst peker back-lenken
+   * til spill-siden, som før (#1525).
+   */
+  navContext?: LeaderboardNavContext;
 }
 
 /**
@@ -45,6 +51,7 @@ export function WolfHolesView({
   playersById,
   scoreVisibility,
   gameStatus,
+  navContext,
 }: WolfHolesViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -57,7 +64,7 @@ export function WolfHolesView({
       <LeaderboardShell>
         <LeaderboardHeader
           gameName={gameName}
-          backHref={`/games/${gameId}`}
+          backHref={navContext?.from ?? `/games/${gameId}`}
         />
         <div
           data-testid="wolf-holes-reveal-hidden"
@@ -77,7 +84,10 @@ export function WolfHolesView({
 
   return (
     <LeaderboardShell>
-      <LeaderboardHeader gameName={gameName} backHref={`/games/${gameId}`} />
+      <LeaderboardHeader
+        gameName={gameName}
+        backHref={navContext?.from ?? `/games/${gameId}`}
+      />
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">

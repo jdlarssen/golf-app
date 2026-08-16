@@ -9,6 +9,7 @@ import {
   localizeHolesGameName,
   fetchHolesAndScores,
 } from '../holesData';
+import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 
 /**
  * Solo / modified stableford «Hull for hull» (epic #496, PR 9). Som
@@ -20,9 +21,11 @@ import {
 export async function SoloStablefordHolesBody({
   gameId,
   courseId,
+  navContext,
 }: {
   gameId: string;
   courseId: string;
+  navContext?: LeaderboardNavContext;
 }) {
   const { supabase } = await getDrilldownContext();
   const tCommon = await getTranslations('leaderboard.common');
@@ -81,6 +84,7 @@ export async function SoloStablefordHolesBody({
       }
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
+      navContext={navContext}
     />
   );
 }

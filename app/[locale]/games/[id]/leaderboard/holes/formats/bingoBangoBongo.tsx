@@ -10,6 +10,7 @@ import {
   localizeHolesGameName,
   fetchHolesAndScores,
 } from '../holesData';
+import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 
 /**
  * Bingo Bango Bongo «Hull for hull» (epic #496, PR 6). Som WolfHolesBody: henter
@@ -21,9 +22,11 @@ import {
 export async function BingoBangoBongoHolesBody({
   gameId,
   courseId,
+  navContext,
 }: {
   gameId: string;
   courseId: string;
+  navContext?: LeaderboardNavContext;
 }) {
   const { supabase } = await getDrilldownContext();
   const tCommon = await getTranslations('leaderboard.common');
@@ -70,6 +73,7 @@ export async function BingoBangoBongoHolesBody({
       playersById={playersById}
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
+      navContext={navContext}
     />
   );
 }

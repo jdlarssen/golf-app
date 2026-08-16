@@ -9,6 +9,7 @@ import {
   localizeHolesGameName,
   fetchHolesAndScores,
 } from '../holesData';
+import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 
 /**
  * Solo strokeplay «Hull for hull» (epic #496, PR 8). Som NassauHolesBody (solo,
@@ -20,9 +21,11 @@ import {
 export async function SoloStrokeplayHolesBody({
   gameId,
   courseId,
+  navContext,
 }: {
   gameId: string;
   courseId: string;
+  navContext?: LeaderboardNavContext;
 }) {
   const { supabase } = await getDrilldownContext();
   const tCommon = await getTranslations('leaderboard.common');
@@ -71,6 +74,7 @@ export async function SoloStrokeplayHolesBody({
       playersById={playersById}
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
+      navContext={navContext}
     />
   );
 }
