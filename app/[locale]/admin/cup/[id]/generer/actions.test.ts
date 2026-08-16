@@ -20,9 +20,11 @@ import type { CupBatchMatch } from './actions';
  *   2. tournaments.select(...).eq.maybeSingle — status gate + allowance defaults
  *   3. tournament_plans.select(...).eq.maybeSingle — bane/tee/tee-off/best-ball
  *   4. tee_boxes.select(...).eq.maybeSingle — re-valider tee mot bane + arkivert
- *   5. users.select('id,gender').in(ids) — tee_gender lookup (awaited builder)
- *   6. per match: games.insert(...).select('id').single, then game_players.insert
- *   7. redirect
+ *   5. per match: games.insert(...).select('id').single, then game_players.insert
+ *   6. redirect
+ *
+ * #1628: roster-lesingen (`users.select('id, gender, hcp_index')`) ligger IKKE
+ * lenger i denne køen — den går via admin-klienten (se `adminUserRows`).
  */
 
 const redirectMock = makeRedirectMock();
@@ -56,12 +58,39 @@ vi.mock('@/lib/supabase/server', () => ({
 // branch in createCupMatchesFromPlan (default null keeps the existing
 // non-admin-redirects-to-/ tests unchanged: created_by null never matches a
 // real userId).
+// #1628: roster-lesingen (tee_gender + hcp_index) flyttet fra request-klienten
+// til admin-klienten — `hcp_index` er input til greensomens auto-forslag, og en
+// klubb-admin ser ikke fremmede users-rader under RLS. Defaulten dekker alle
+// fikstur-spillerne i fila (A1–B3 + p1–p4); tester som bryr seg om tallene
+// setter `adminUserRows` selv.
+type AdminUserRow = { id: string; gender: string | null; hcp_index: number };
+const DEFAULT_USER_ROWS: AdminUserRow[] = [
+  { id: 'A1', gender: 'mens', hcp_index: 10 },
+  { id: 'A2', gender: 'mens', hcp_index: 10 },
+  { id: 'A3', gender: 'ladies', hcp_index: 10 },
+  { id: 'B1', gender: 'mens', hcp_index: 10 },
+  { id: 'B2', gender: 'mens', hcp_index: 10 },
+  { id: 'B3', gender: 'mens', hcp_index: 10 },
+  { id: 'p1', gender: 'mens', hcp_index: 5 },
+  { id: 'p2', gender: 'mens', hcp_index: 10 },
+  { id: 'p3', gender: 'mens', hcp_index: 6 },
+  { id: 'p4', gender: 'mens', hcp_index: 11 },
+];
+
 let adminCupGroupId: string | null = null;
 let adminMemberIds: string[] = [];
 let adminCupCreatedBy: string | null = null;
+let adminUserRows: AdminUserRow[] = DEFAULT_USER_ROWS;
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => {
+      if (table === 'users') {
+        return {
+          select: () => ({
+            in: async () => ({ data: adminUserRows, error: null }),
+          }),
+        };
+      }
       if (table === 'group_members') {
         return {
           select: () => ({
@@ -169,6 +198,7 @@ beforeEach(() => {
   adminCupGroupId = null;
   adminMemberIds = [];
   adminCupCreatedBy = null;
+  adminUserRows = DEFAULT_USER_ROWS;
 });
 
 describe('createCupMatchesFromPlan — authz', () => {
@@ -279,17 +309,6 @@ describe('createCupMatchesFromPlan — happy path', () => {
       { data: draftCup, error: null },
       planResult(),
       teeResult(),
-      {
-        data: [
-          { id: 'A1', gender: 'mens' },
-          { id: 'A2', gender: 'mens' },
-          { id: 'A3', gender: 'ladies' },
-          { id: 'B1', gender: 'mens' },
-          { id: 'B2', gender: 'mens' },
-          { id: 'B3', gender: 'mens' },
-        ],
-        error: null,
-      },
       { data: { id: 'game-1' }, error: null },
       { data: null, error: null },
       { data: { id: 'game-2' }, error: null },
@@ -404,15 +423,6 @@ describe('createCupMatchesFromPlan — happy path', () => {
 });
 
 describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
-  const genderRows = [
-    { id: 'A1', gender: 'mens' },
-    { id: 'A2', gender: 'mens' },
-    { id: 'A3', gender: 'ladies' },
-    { id: 'B1', gender: 'mens' },
-    { id: 'B2', gender: 'mens' },
-    { id: 'B3', gender: 'mens' },
-  ];
-
   it('club cup, all players members: games get group_id + redirects to klubb-route', async () => {
     adminCupGroupId = 'club-1';
     adminMemberIds = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3'];
@@ -421,7 +431,6 @@ describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
       { data: { ...draftCup, group_id: 'club-1' }, error: null },
       planResult(),
       teeResult(),
-      { data: genderRows, error: null },
       { data: { id: 'game-1' }, error: null },
       { data: null, error: null },
       { data: { id: 'game-2' }, error: null },
@@ -464,22 +473,12 @@ describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
 });
 
 describe('createCupMatchesFromPlan — rollback on mid-loop failure (#675)', () => {
-  const genderRows = [
-    { id: 'A1', gender: 'mens' },
-    { id: 'A2', gender: 'mens' },
-    { id: 'A3', gender: 'ladies' },
-    { id: 'B1', gender: 'mens' },
-    { id: 'B2', gender: 'mens' },
-    { id: 'B3', gender: 'mens' },
-  ];
-
   it('game_players insert fails on match 2: deletes ALL accumulated games, returns insert_failed', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // requireAdmin
       { data: draftCup, error: null }, // tournament gate
       planResult(), // plan lookup
       teeResult(), // tee re-validate
-      { data: genderRows, error: null }, // tee_gender roster
       { data: { id: 'game-1' }, error: null }, // match 1 game insert
       { data: null, error: null }, // match 1 game_players insert OK
       { data: { id: 'game-2' }, error: null }, // match 2 game insert
@@ -510,13 +509,6 @@ describe('createCupMatchesFromPlan — rollback on mid-loop failure (#675)', () 
 // segment/reveal/source-kolonner, best_ball-mode_config, og
 // team_strokes_override-forwarding for greensome.
 describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)', () => {
-  const flightGenderRows = [
-    { id: 'p1', gender: 'mens' },
-    { id: 'p2', gender: 'mens' },
-    { id: 'p3', gender: 'mens' },
-    { id: 'p4', gender: 'mens' },
-  ];
-
   it('host-pass (greensome+best_ball) fullfører før avledet-pass (2 singles); source_game_id mapper til det INNSATTE host-id-et, ikke plan-id-en', async () => {
     // Ekte plan fra F3a-generatoren (#1441, D4) — kryssjekker F3a↔F3b-
     // kontrakten i stedet for en håndbygd fixture. 'handicap'-strategien er
@@ -544,7 +536,6 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       { data: draftCup, error: null }, // tournament gate (fourball 85, greensome unset → default 100)
       planResult(), // plan (best_ball null → best_ball allowance faller til fourball 85)
       teeResult(), // tee re-validate
-      { data: flightGenderRows, error: null }, // tee_gender roster
       { data: { id: 'game-greensome' }, error: null }, // pass 1: greensome host insert
       { data: null, error: null }, // greensome game_players OK
       { data: { id: 'game-bestball' }, error: null }, // pass 1: best_ball host insert
@@ -624,7 +615,6 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       { data: draftCup, error: null },
       planResult(),
       teeResult(),
-      { data: flightGenderRows, error: null },
       { data: { id: 'game-greensome' }, error: null },
       { data: null, error: null },
     ]);
@@ -647,6 +637,107 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       teams_count: 2,
       allowance_pct: 100,
       team_strokes_override: { team1: 5, team2: 0 },
+      // #1628: auto-sporet skrives ved siden av. Teen i denne fiksturen har
+      // ingen rating-kolonner → samme fallback som veiviseren (rå HCP-indeks):
+      // 60/40 av 5/10 = 7, av 6/11 = 8.
+      team_strokes_override_auto: { team1: 7, team2: 8 },
+    });
+  });
+
+  // #1628: sporet MÅ være det samme tallet veiviseren pre-fylte feltet med —
+  // ellers leser runde-starten «arrangøren har rørt feltet» på en urørt verdi
+  // (eller motsatt) og re-deriveringen bommer.
+  it('team_strokes_override_auto: regnet på spillehandicapet på planens tee, i paritet med veiviserens forslag', async () => {
+    const match: CupBatchMatch = {
+      id: 'greensome_matchplay-1',
+      format: 'greensome_matchplay',
+      label: 'Greensome 1',
+      side1: ['p1', 'p2'],
+      side2: ['p3', 'p4'],
+      segment: 'front9',
+      flightIndex: 1,
+      // Arrangørens eget tall på side 1; side 2 står på forslaget.
+      teamStrokesOverride: { team1: 3, team2: 12 },
+    };
+    // Slope 132 / CR 71.5 / par 72 gjør spillehandicapet ≠ HCP-indeksen, så
+    // testen faktisk beviser at rating-settet brukes:
+    //   p1: round(20 * 132/113 + (71.5 - 72)) = round(22.86) = 23
+    //   p2: round(10 * 132/113 - 0.5)         = round(11.18) = 11
+    //   60/40 → round(0.6*11 + 0.4*23) = round(15.8) = 16
+    //   p3: round(4 * 132/113 - 0.5) = round(4.17) = 4
+    //   p4: round(30 * 132/113 - 0.5) = round(34.54) = 35
+    //   60/40 → round(0.6*4 + 0.4*35) = round(16.4) = 16
+    adminUserRows = [
+      { id: 'p1', gender: 'mens', hcp_index: 20 },
+      { id: 'p2', gender: 'mens', hcp_index: 10 },
+      { id: 'p3', gender: 'mens', hcp_index: 4 },
+      { id: 'p4', gender: 'mens', hcp_index: 30 },
+    ];
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      planResult(),
+      {
+        data: {
+          course_id: 'course-1',
+          archived_at: null,
+          slope_mens: 132,
+          course_rating_mens: 71.5,
+          par_total_mens: 72,
+        },
+        error: null,
+      },
+      { data: { id: 'game-greensome' }, error: null },
+      { data: null, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    await expect(
+      createCupMatchesFromPlan({ tournamentId: 'cup-1', matches: [match] }),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const row = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    )!.args[0] as Record<string, unknown>;
+    const config = row.mode_config as Record<string, unknown>;
+    expect(config.team_strokes_override).toEqual({ team1: 3, team2: 12 });
+    expect(config.team_strokes_override_auto).toEqual({ team1: 16, team2: 16 });
+  });
+
+  it('ikke-greensome format: intet auto-spor', async () => {
+    const match: CupBatchMatch = {
+      id: 'best_ball-1',
+      format: 'best_ball',
+      label: 'Best ball 1',
+      side1: ['p1', 'p2'],
+      side2: ['p3', 'p4'],
+      segment: 'back9',
+      flightIndex: 1,
+      teamStrokesOverride: { team1: 5, team2: 0 },
+    };
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      planResult(),
+      teeResult(),
+      { data: { id: 'game-bestball' }, error: null },
+      { data: null, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    await expect(
+      createCupMatchesFromPlan({ tournamentId: 'cup-1', matches: [match] }),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const row = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    )!.args[0] as Record<string, unknown>;
+    expect(row.mode_config).toEqual({
+      kind: 'best_ball',
+      team_size: 2,
+      teams_count: 2,
     });
   });
 
@@ -665,7 +756,6 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       { data: draftCup, error: null }, // fourball_allowance_pct: 85 — skal IKKE brukes her
       planResult({ best_ball_allowance_pct: 70 }), // planen har egen best-ball-andel
       teeResult(),
-      { data: flightGenderRows, error: null },
       { data: { id: 'game-bestball' }, error: null },
       { data: null, error: null },
     ]);
@@ -694,18 +784,11 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
 
 describe('createCupMatchesFromPlan — ordinære preset-matcher beholder dagens kolonner (#1441 regresjon)', () => {
   it('hole_segment eksplisitt "full"; score_visibility UTELATES (arver DB-default \'live\')', async () => {
-    const genderRows = [
-      { id: 'A1', gender: 'mens' },
-      { id: 'A2', gender: 'mens' },
-      { id: 'B1', gender: 'mens' },
-      { id: 'B2', gender: 'mens' },
-    ];
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },
       { data: draftCup, error: null },
       planResult(),
       teeResult(),
-      { data: genderRows, error: null },
       { data: { id: 'game-1' }, error: null },
       { data: null, error: null },
     ]);
@@ -804,13 +887,6 @@ describe('createCupMatchesFromPlan — team_strokes_override-validering (#1441, 
 });
 
 describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 owner-QA, F3d → #1472)', () => {
-  const flightGenderRows = [
-    { id: 'p1', gender: 'mens' },
-    { id: 'p2', gender: 'mens' },
-    { id: 'p3', gender: 'mens' },
-    { id: 'p4', gender: 'mens' },
-  ];
-
   it('planen har tee-off: kolonnen settes på BÅDE host- og avledet-pass, samme flight deler tidspunkt', async () => {
     const bundle = generateSplitDayPlan({
       team1: [
@@ -829,7 +905,6 @@ describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 o
       { data: draftCup, error: null }, // tournament gate
       planResult({ scheduled_tee_off_at: '2099-06-01T07:00:00.000Z' }), // planens tee-off
       teeResult(),
-      { data: flightGenderRows, error: null }, // tee_gender roster
       { data: { id: 'game-greensome' }, error: null }, // pass 1: greensome host
       { data: null, error: null },
       { data: { id: 'game-bestball' }, error: null }, // pass 1: best_ball host
@@ -868,17 +943,6 @@ describe('createCupMatchesFromPlan — scheduled_tee_off_at / cup-start (#1441 o
       { data: draftCup, error: null },
       planResult(), // scheduled_tee_off_at null
       teeResult(),
-      {
-        data: [
-          { id: 'A1', gender: 'mens' },
-          { id: 'A2', gender: 'mens' },
-          { id: 'A3', gender: 'ladies' },
-          { id: 'B1', gender: 'mens' },
-          { id: 'B2', gender: 'mens' },
-          { id: 'B3', gender: 'mens' },
-        ],
-        error: null,
-      },
       { data: { id: 'game-1' }, error: null },
       { data: null, error: null },
       { data: { id: 'game-2' }, error: null },
@@ -949,16 +1013,11 @@ describe('createCupMatchesFromPlan — ugyldig sourceId (#1441, D3)', () => {
 
 describe('createCupMatchesFromPlan — rollback dekker pass 2 (#1441, D3/#675)', () => {
   it('avledet match sin game_players-insert feiler: ruller tilbake BÅDE host- og avledet-spillet', async () => {
-    const genderRows = [
-      { id: 'p1', gender: 'mens' },
-      { id: 'p3', gender: 'mens' },
-    ];
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // requireAdmin
       { data: draftCup, error: null }, // tournament gate
       planResult(), // plan lookup
       teeResult(), // tee re-validate
-      { data: genderRows, error: null }, // tee_gender roster
       { data: { id: 'game-host' }, error: null }, // host insert OK
       { data: null, error: null }, // host game_players OK
       { data: { id: 'game-derived' }, error: null }, // derived insert OK

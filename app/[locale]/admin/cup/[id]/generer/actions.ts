@@ -17,6 +17,9 @@ import {
   type CupAllowancePcts,
 } from '@/lib/cup/cupMatchAllowance';
 import { teeGenderOf } from '@/lib/games/teeGender';
+import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
+import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
+import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import { isTeeOffInPast } from '@/lib/games/gamePayload';
 import { resolveScheduledTeeOffAt } from '@/lib/cup/splitDayLineup';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
@@ -70,6 +73,7 @@ function cupMatchModeConfig(
   format: CupBundleFormat,
   allowances: CupAllowancePcts,
   teamStrokesOverride?: { team1: number; team2: number },
+  teamStrokesOverrideAuto?: { team1: number; team2: number },
 ): GameModeConfig {
   if (format === 'singles_matchplay') {
     return { kind: 'singles_matchplay', team_size: 1 } as GameModeConfig;
@@ -96,13 +100,91 @@ function cupMatchModeConfig(
     // #1441 (D10): kun greensome forstår feltet (arrangørens manuelle
     // lag-slag) — andre lag-format ignorerer det bevisst, se
     // `cupMatchModeConfig`s JSDoc og `greensomeMatchplay.ts`.
+    // #1628: forslaget vi selv regnet ut lagres ved siden av overstyringen,
+    // slik at runde-starten kan avgjøre om arrangøren har rørt feltet.
     ...(format === 'greensome_matchplay' && teamStrokesOverride
-      ? { team_strokes_override: teamStrokesOverride }
+      ? {
+          team_strokes_override: teamStrokesOverride,
+          ...(teamStrokesOverrideAuto
+            ? { team_strokes_override_auto: teamStrokesOverrideAuto }
+            : {}),
+        }
       : {}),
   } as GameModeConfig;
 }
 
 // teeGenderOf imported from @/lib/games/teeGender (#809).
+
+/** Det veiviseren viser per spiller: kjønn (→ tee-sett) + rå HCP-indeks. */
+type CupProfile = { gender: string | null; hcpIndex: number };
+
+/**
+ * Normaliserer tee-radens rating-kolonner til `TeeBoxRatings` (#1628). Rå
+ * `undefined` (kolonne ikke med i raden) må bli `null` — `getRatingForGender`
+ * ser bare etter `null`, og et `undefined` slope ville gitt NaN i formelen i
+ * stedet for det tiltenkte «teen mangler dette settet»-fallbacket.
+ */
+function teeRatingsFrom(row: Record<string, unknown>): TeeBoxRatings {
+  const num = (key: string): number | null => {
+    const value = row[key];
+    return typeof value === 'number' ? value : null;
+  };
+  return {
+    slope_mens: num('slope_mens'),
+    course_rating_mens: num('course_rating_mens'),
+    par_total_mens: num('par_total_mens'),
+    slope_ladies: num('slope_ladies'),
+    course_rating_ladies: num('course_rating_ladies'),
+    par_total_ladies: num('par_total_ladies'),
+    slope_juniors: num('slope_juniors'),
+    course_rating_juniors: num('course_rating_juniors'),
+    par_total_juniors: num('par_total_juniors'),
+  };
+}
+
+/**
+ * Spillehandicapet på planens tee for én spiller — server-sidens kopi av
+ * veiviserens `computeSpillehandicap` (GenerateMatchesWizard.tsx). Samme
+ * fallback som der: mangler teen ratingsett for spillerens kjønn, brukes den
+ * rå HCP-indeksen. Samme koersjon som `GenerateMatches.tsx` gjør på
+ * `hcp_index` (`Number(... ?? 0)`), så tallene her og i UI-en er identiske.
+ */
+function playingHandicapOf(
+  profile: CupProfile | undefined,
+  tee: TeeBoxRatings,
+): number {
+  const hcpIndex = profile?.hcpIndex ?? 0;
+  const rating = getRatingForGender(tee, teeGenderOf(profile?.gender ?? null));
+  if (!rating) return hcpIndex;
+  return calculateCourseHandicap({
+    hcpIndex,
+    slope: rating.slope,
+    courseRating: rating.courseRating,
+    par: rating.par,
+  });
+}
+
+/**
+ * #1628: forslaget veiviseren pre-fylte greensomens lag-slag-felt med,
+ * regnet ut PÅ NYTT server-side. Serveren er fasit ved submit (#1472-
+ * prinsippet) — og et forslag klienten kunne ha diktet opp duger ikke som
+ * fasit for «har arrangøren rørt feltet?» ved runde-start.
+ *
+ * Speiler `greensomeDefaultOrFallback` i veiviseren: 60/40-formelen på begge
+ * spilleres spillehandicap, og 0 for et par som ikke har nøyaktig to spillere
+ * (kan ikke skje med gyldig bunt-output, men skal ikke krasje batchen).
+ */
+function greensomeAutoTeamStrokes(
+  side: string[],
+  profiles: Map<string, CupProfile>,
+  tee: TeeBoxRatings,
+): number {
+  if (side.length !== 2) return 0;
+  return greensomeTeamHandicap(
+    playingHandicapOf(profiles.get(side[0]), tee),
+    playingHandicapOf(profiles.get(side[1]), tee),
+  );
+}
 
 /**
  * Én match i batch-inputen: enten en av de tre eldre presetenes
@@ -214,14 +296,19 @@ export async function createCupMatchesFromPlan(
   // Re-valider teen server-side: den kan ha blitt arkivert eller flyttet til en
   // annen bane etter at planen ble lagret (planen ble ikke oppdatert). En
   // utdatert plan sender arrangøren tilbake til Oppsett, ikke inn i genereringen.
+  // Rating-settene (#1628) hentes i samme runde-tur: greensomens auto-forslag
+  // regnes ut server-side fra spillehandicapet på nettopp denne teen.
   const { data: teeRow } = await supabase
     .from('tee_boxes')
-    .select('course_id, archived_at')
+    .select(
+      'course_id, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
+    )
     .eq('id', teeBoxId)
     .maybeSingle();
   if (!teeRow || teeRow.course_id !== courseId || teeRow.archived_at !== null) {
     return { error: 'plan_tee' };
   }
+  const teeRatings = teeRatingsFrom(teeRow);
 
   // #1441 (owner-QA, F3d) → #1472: cup-start-tee-off leses nå fra planen. En
   // stale tee-off i fortiden skal sende arrangøren tilbake til Oppsett for å
@@ -313,18 +400,26 @@ export async function createCupMatchesFromPlan(
     bestBall: (plan.best_ball_allowance_pct as number | null) ?? fourballPct,
   };
 
-  // Resolve tee_gender per player from their profile in one round-trip.
+  // Resolve tee_gender + HCP-indeks per player from their profile in one
+  // round-trip. Admin-client (#1628): `hcp_index` er input til greensomens
+  // auto-forslag, og en klubb-admin ser ikke fremmede `users`-rader under RLS
+  // — samme grep og begrunnelse som deltakerlista i `GenerateMatches.tsx`.
   const userIds = Array.from(
     new Set(matches.flatMap((m) => [...m.side1, ...m.side2])),
   );
-  const { data: roster } = await supabase
+  const { data: roster } = await getAdminClient()
     .from('users')
-    .select('id, gender')
+    .select('id, gender, hcp_index')
     .in('id', userIds);
-  const genderById = new Map<string, string | null>(
+  const profileById = new Map<string, CupProfile>(
     (roster ?? []).map((u) => [
       u.id as string,
-      (u.gender as string | null) ?? null,
+      {
+        gender: (u.gender as string | null) ?? null,
+        // Supabase leverer numerics som string i noen oppsett — samme
+        // koersjon som veiviserens `Number(u?.hcp_index ?? 0)`.
+        hcpIndex: Number((u as { hcp_index?: number | string }).hcp_index ?? 0),
+      },
     ]),
   );
 
@@ -359,6 +454,15 @@ export async function createCupMatchesFromPlan(
   ): Promise<{ gameId: string } | CupBatchError> {
     const name = `${cupName} – ${match.label}`.slice(0, GAME_NAME_MAX);
     const bundle = isBundleMatch(match);
+    // #1628: bare greensome-matcher med en overstyring får et auto-spor —
+    // uten overstyring er det ingenting å avgjøre «urørt» for.
+    const teamStrokesOverrideAuto =
+      match.format === 'greensome_matchplay' && match.teamStrokesOverride
+        ? {
+            team1: greensomeAutoTeamStrokes(match.side1, profileById, teeRatings),
+            team2: greensomeAutoTeamStrokes(match.side2, profileById, teeRatings),
+          }
+        : undefined;
     const { data: game, error: gameErr } = await supabase
       .from('games')
       .insert({
@@ -367,7 +471,12 @@ export async function createCupMatchesFromPlan(
         tee_box_id: teeBoxId,
         status: 'scheduled',
         game_mode: match.format,
-        mode_config: cupMatchModeConfig(match.format, allowances, match.teamStrokesOverride),
+        mode_config: cupMatchModeConfig(
+          match.format,
+          allowances,
+          match.teamStrokesOverride,
+          teamStrokesOverrideAuto,
+        ),
         // #1539/#1551: settes ALLTID eksplisitt, aldri arvet fra DB-defaulten
         // (100). For best_ball er dette hjemmet til allowancen — den anvendes
         // når `startScheduledGame` fryser `game_players.course_handicap`, og
@@ -419,7 +528,7 @@ export async function createCupMatchesFromPlan(
       // satt). game_players har INGEN status-kolonne — den lå her før og fikk
       // hele inserten avvist (#641), så cup-generering opprettet 0 spillere.
       flight_number: 1,
-      tee_gender: teeGenderOf(genderById.get(uid) ?? null),
+      tee_gender: teeGenderOf(profileById.get(uid)?.gender ?? null),
       // Admin har bevisst satt opp matchene med valgte spillere → umiddelbart
       // aktive, ingen «Ikke bekreftet»-gate (eier-beslutning, jf. #641).
       accepted_at: acceptedAt,

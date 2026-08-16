@@ -549,6 +549,22 @@ export type GameModeConfig =
       teams_count: 2;
       allowance_pct: number;
       team_strokes_override?: { team1: number; team2: number };
+      /**
+       * `team_strokes_override_auto` (#1628): forslaget cup-genereringen selv
+       * regnet ut (`greensomeTeamHandicap` på spillernes spillehandicap i
+       * genereringsøyeblikket), lagret ved siden av overstyringen. Motoren
+       * leser det ALDRI — det er utelukkende et spor som gjør «har arrangøren
+       * rørt feltet?» avgjørbart for en `scheduled` kamp, der det ennå ikke
+       * finnes frosne banehandicap å utlede svaret fra.
+       *
+       * Ved runde-start re-deriverer `startScheduledGame` en side der
+       * `team_strokes_override` fortsatt er bit-for-bit lik dette tallet — da
+       * er forslaget urørt, og et handicap rettet mellom generering og start
+       * skal slå gjennom. Er tallene ulike, er verdien arrangørens egen og
+       * står. Fravær av feltet (kamper generert før #1628) = ingen
+       * re-derivering, bit for bit som før.
+       */
+      team_strokes_override_auto?: { team1: number; team2: number };
     }
   | {
       kind: 'chapman_matchplay';
