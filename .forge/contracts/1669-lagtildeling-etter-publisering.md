@@ -57,16 +57,20 @@ etterpå; `startScheduledGame` har ingen lag-guard; scoring-computene dropper nu
    du nå fordele dem på lag i Sekretariatet før start — og spillet starter ikke før alle har lag.»
 
 ## Success Criteria
-- [ ] Solo-påmeldte i best ball: admin-siden viser «Uten lag (n)», «Foreslå laginndeling» gir lag à `team_size` (flight satt), «Flytt» flytter én spiller; SQL: `team_number`/`flight_number` satt.
-- [ ] Start med utildelte lag → `unassigned_teams` (admin-banner + game-home-banner + cron logger strukturelt); etter tildeling starter spillet og tavla viser alle lag.
-- [ ] Solo-format og matchplay uberørt (tester).
-- [ ] Admin-oversikten viser lag 5+ / flight 5+ (ingen 4-hardkoding igjen; grep `[1, 2, 3, 4]` i page.tsx = 0).
-- [ ] `.changes`-notat parser; `npm run build`, `npm run lint`, full vitest grønt.
+- [x] Solo-påmeldte i best ball: admin-siden viser «Uten lag (n)», «Foreslå laginndeling» gir lag à `team_size` (flight satt), «Flytt» flytter én spiller; SQL: `team_number`/`flight_number` satt.
+- [x] Start med utildelte lag → `unassigned_teams` (admin-banner + game-home-banner + cron logger strukturelt); etter tildeling starter spillet og tavla viser alle lag.
+- [x] Solo-format og matchplay uberørt (tester).
+- [x] Admin-oversikten viser lag 5+ / flight 5+ (ingen 4-hardkoding igjen; grep `[1, 2, 3, 4]` i page.tsx = 0).
+- [x] `.changes`-notat parser; `npm run build`, `npm run lint`, full vitest grønt.
 
 ## Gates
-- [ ] `npx vitest run lib/games "app/[locale]/admin/games/[id]" lib/notifications "app/[locale]/games/[id]/(home)"` + full suite før PR
-- [ ] `npm run build` · `npm run lint`
-- [ ] Staging: rigg best_ball-spill (`registration_type solo`, åpen påmelding, scheduled), 4 spillere med null-lag → admin: varsel, foreslå, flytt, start blokkert → start OK etter tildeling → tavla har 2 lag.
+- [x] `npx vitest run lib/games "app/[locale]/admin/games/[id]" lib/notifications "app/[locale]/games/[id]/(home)"` + full suite før PR
+- [x] `npm run build` · `npm run lint`
+- [x] Staging: rigg best_ball-spill (`registration_type solo`, åpen påmelding, scheduled), 4 spillere med null-lag → admin: varsel, foreslå, flytt, start blokkert → start OK etter tildeling → tavla har 2 lag.
 
 ## Out of Scope
 - Validering av at alle lag er fulle (delvis siste lag tillates — scoring takler det); signup-flyten (uendret); #1673.
+
+
+## Evidens (ACCEPT runde 2)
+- Runde 1 NEEDS WORK: `created_at` finnes ikke på game_players (også pre-eksisterende i flight-forslaget siden #543) + to fallbacks for lagstørrelse → 10a7941c. Runde 2 staging: uten lag → start blokkert; foreslå → t1/f1,t1/f1,t2/f2,t2/f2; flytt/team_full; start → active; tavla 2 lag 4/4; flight-tvillingen virker igjen; solo-stableford-kontroll uten team-section og ikke blokkert. Full vitest 6379 grønn, tsc 0, build 0, lint 0 errors. Commits a1ba9605…10a7941c.

@@ -22,10 +22,6 @@ import { isSoloFormat, type GameMode } from '@/lib/scoring/modes/types';
 import { isMatchplayMode } from './matchplaySides';
 
 /**
- * Fallback-lagstørrelse når `mode_config.team_size` mangler. Par (2) er den
- * vanligste lag-formen (best ball, patsome, par-stableford, shamble-preset).
- */
-/**
  * Fallback når `mode_config.team_size` mangler: 1 (solo). Alle lag-formater
  * bærer alltid `team_size` i configen (`lib/scoring/modes/types.ts`); det
  * eneste tilfellet uten feltet er stableford-familiens solo-runder, og alle
