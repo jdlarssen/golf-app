@@ -280,14 +280,15 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     alignItems: 'center',
   };
 
+  // Kortet har med vilje ingen button-rolle. Det nester fire ekte knapper
+  // (Angre, +, −, ⋯), og WAI-ARIA gjør barna til et button-element
+  // presentasjonelle — skjermlesere så da bare «Sett score for X», ikke
+  // knappene. Div-en var heller aldri tastatur-nåbar, så rollen lovet noe den
+  // ikke holdt (#1387). onClick blir stående som ren touch-snarvei; det er
+  // knappene inni som bærer semantikken, og +/− dekker tastatur (fra tomt kort
+  // gir + par+1 og − par−1).
   return (
-    <div
-      role="button"
-      aria-label={t('setScoreAriaLabel', { name })}
-      aria-disabled={disabled || undefined}
-      style={cardStyle}
-      onClick={onCardClick}
-    >
+    <div data-testid="score-card" style={cardStyle} onClick={onCardClick}>
       <div style={avatarStyle}>{initialChars}</div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
