@@ -186,3 +186,59 @@ describe('setPatsomeTeeStarter', () => {
     });
   });
 });
+
+/**
+ * #1445: same split as foursomesActions — a failed query answers `db_error`,
+ * a genuine 0-row result keeps its semantic code.
+ */
+describe('setPatsomeTeeStarter — feil vs. fravær (#1445)', () => {
+  const DB_ERR = { message: 'AbortError: This operation was aborted', code: '' };
+
+  it('caller-oppslaget feiler → db_error (ikke not_in_game)', async () => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([{ data: null, error: DB_ERR }]);
+    const { setPatsomeTeeStarter } = await import('./patsomeActions');
+
+    const result = await setPatsomeTeeStarter(GAME_ID, TEAM_NUMBER, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('candidate-oppslaget feiler → db_error (ikke candidate_not_in_game)', async () => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([
+      { data: { team_number: TEAM_NUMBER }, error: null },
+      { data: null, error: DB_ERR },
+    ]);
+    const { setPatsomeTeeStarter } = await import('./patsomeActions');
+
+    const result = await setPatsomeTeeStarter(GAME_ID, TEAM_NUMBER, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+  });
+
+  it('game-oppslaget feiler → db_error (ikke game_not_found)', async () => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([
+      { data: { team_number: TEAM_NUMBER }, error: null },
+      { data: { team_number: TEAM_NUMBER }, error: null },
+      { data: null, error: DB_ERR },
+    ]);
+    const { setPatsomeTeeStarter } = await import('./patsomeActions');
+
+    const result = await setPatsomeTeeStarter(GAME_ID, TEAM_NUMBER, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+  });
+
+  it('ekte 0-rad på game-oppslaget beholder game_not_found', async () => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([
+      { data: { team_number: TEAM_NUMBER }, error: null },
+      { data: { team_number: TEAM_NUMBER }, error: null },
+      { data: null, error: null },
+    ]);
+    const { setPatsomeTeeStarter } = await import('./patsomeActions');
+
+    const result = await setPatsomeTeeStarter(GAME_ID, TEAM_NUMBER, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'game_not_found' });
+  });
+});

@@ -619,7 +619,17 @@ export async function acceptTeamInvite(
       is_team_captain: boolean;
     }>();
 
-  if (reqError || !req || req.user_id !== user.id) {
+  // Error ≠ absence (#1445): a transient query failure must not read as «denne
+  // invitasjonen finnes ikke». Only a genuine 0-row result — or a row that
+  // belongs to somebody else — keeps the not_found answer.
+  if (reqError) {
+    console.error('[acceptTeamInvite] request lookup failed', {
+      requestId,
+      error: reqError,
+    });
+    return { ok: false, error: 'db_error' };
+  }
+  if (!req || req.user_id !== user.id) {
     return { ok: false, error: 'not_found' };
   }
   if (req.status === 'rejected' || req.status === 'withdrawn') {

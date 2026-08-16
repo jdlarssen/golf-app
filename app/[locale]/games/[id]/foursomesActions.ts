@@ -41,7 +41,18 @@ export async function setFoursomesTeeStarter(
     .eq('game_id', gameId)
     .eq('user_id', callerId)
     .maybeSingle();
-  if (callerRow.error || !callerRow.data) {
+  // Error ≠ absence (#1445): a transient query failure must say «prøv igjen»,
+  // not «du er ikke med i spillet». Only a genuine 0-row result (maybeSingle:
+  // data null, error null) means the caller really isn't on the roster.
+  if (callerRow.error) {
+    console.error('[setFoursomesTeeStarter] caller lookup failed', {
+      gameId,
+      sideNumber,
+      error: callerRow.error,
+    });
+    return { ok: false, error: 'db_error' };
+  }
+  if (!callerRow.data) {
     return { ok: false, error: 'not_in_game' };
   }
   if (callerRow.data.team_number !== sideNumber) {
@@ -55,7 +66,16 @@ export async function setFoursomesTeeStarter(
     .eq('game_id', gameId)
     .eq('user_id', userId)
     .maybeSingle();
-  if (candidateRow.error || !candidateRow.data) {
+  if (candidateRow.error) {
+    console.error('[setFoursomesTeeStarter] candidate lookup failed', {
+      gameId,
+      sideNumber,
+      userId,
+      error: candidateRow.error,
+    });
+    return { ok: false, error: 'db_error' };
+  }
+  if (!candidateRow.data) {
     return { ok: false, error: 'candidate_not_in_game' };
   }
   if (candidateRow.data.team_number !== sideNumber) {
@@ -68,7 +88,14 @@ export async function setFoursomesTeeStarter(
     .select('status, game_mode')
     .eq('id', gameId)
     .maybeSingle();
-  if (gameRow.error || !gameRow.data) {
+  if (gameRow.error) {
+    console.error('[setFoursomesTeeStarter] game lookup failed', {
+      gameId,
+      error: gameRow.error,
+    });
+    return { ok: false, error: 'db_error' };
+  }
+  if (!gameRow.data) {
     return { ok: false, error: 'game_not_found' };
   }
   if (gameRow.data.status === 'finished') {
