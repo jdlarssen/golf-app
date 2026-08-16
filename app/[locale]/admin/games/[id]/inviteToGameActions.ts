@@ -341,9 +341,16 @@ async function loadGameForInvite(
     .from('games')
     .select('id, name, status, game_mode, group_id')
     .eq('id', gameId)
-    .single<GameSnapshot>();
+    .maybeSingle<GameSnapshot>();
 
-  if (error || !data) {
+  // Error ≠ absence (#1445): a transient query failure throws to the route's
+  // error boundary (retryable) instead of claiming the game does not exist.
+  // Only a genuine 0-row result keeps the not_found redirect.
+  if (error) {
+    console.error('[loadGameForInvite] game fetch failed', { gameId, error });
+    throw error;
+  }
+  if (!data) {
     redirect({ href: `${detailPath}?error=not_found`, locale });
   }
   return data!;

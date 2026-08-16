@@ -160,6 +160,33 @@ describe('restoreTee', () => {
     expect(updateCalls).toHaveLength(0);
   });
 
+  // #1445: the tee lookup used to fold a failed query into the same
+  // tee_not_found redirect as a genuinely missing row. It now throws to the
+  // route's error boundary, which is retryable; the 0-row case above is
+  // unchanged.
+  it('throws instead of redirecting tee_not_found when the tee lookup fails', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      // tee_boxes.maybeSingle — transient failure, not absence
+      {
+        data: null,
+        error: { message: 'AbortError: This operation was aborted', code: '' },
+      },
+    ]);
+    setupAdminAuth();
+
+    const { restoreTee } = await import('./actions');
+
+    await expect(restoreTee(courseId, teeId)).rejects.toMatchObject({
+      message: expect.stringContaining('AbortError'),
+    });
+    // Ikke en redirect — og ingen mutasjoner rakk å skje.
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(
+      supabaseMock.__fromCalls.filter((c) => c.method === 'update'),
+    ).toHaveLength(0);
+  });
+
   it('rejects when tee belongs to a different course: redirects with error=tee_not_found, no mutations', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },

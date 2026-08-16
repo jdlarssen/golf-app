@@ -73,9 +73,19 @@ async function loadDecisionContext(requestId: string): Promise<{
     .from('game_registration_requests')
     .select('id, game_id, user_id, status, is_team_captain, team_name, team_request_id')
     .eq('id', requestId)
-    .single<RequestSnapshot>();
+    .maybeSingle<RequestSnapshot>();
 
-  if (requestError || !request) {
+  // Error ≠ absence (#1445): a transient query failure throws to the route's
+  // error boundary (retryable) instead of claiming the request is gone. Only a
+  // genuine 0-row result keeps the request_not_found redirect.
+  if (requestError) {
+    console.error('[loadDecisionContext] request fetch failed', {
+      requestId,
+      error: requestError,
+    });
+    throw requestError;
+  }
+  if (!request) {
     redirect({ href: `/admin/games?error=request_not_found`, locale });
   }
 
@@ -83,9 +93,16 @@ async function loadDecisionContext(requestId: string): Promise<{
     .from('games')
     .select('id, name, status, created_by')
     .eq('id', request!.game_id)
-    .single<GameSnapshot>();
+    .maybeSingle<GameSnapshot>();
 
-  if (gameError || !game) {
+  if (gameError) {
+    console.error('[loadDecisionContext] game fetch failed', {
+      gameId: request!.game_id,
+      error: gameError,
+    });
+    throw gameError;
+  }
+  if (!game) {
     redirect({ href: `/admin/games?error=game_not_found`, locale });
   }
 

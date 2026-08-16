@@ -117,7 +117,14 @@ export async function restoreTee(
     .select('id, course_id, archived_at')
     .eq('id', teeId)
     .maybeSingle();
-  if (loadError || !tee) redirect({ href: `${editPath}?error=tee_not_found`, locale });
+  // Error ≠ absence (#1445): a transient query failure throws to the route's
+  // error boundary (retryable) instead of claiming the tee does not exist.
+  // Only a genuine 0-row result keeps the tee_not_found redirect.
+  if (loadError) {
+    console.error('[restoreTee] tee fetch failed', { teeId, error: loadError });
+    throw loadError;
+  }
+  if (!tee) redirect({ href: `${editPath}?error=tee_not_found`, locale });
   if (tee!.course_id !== courseId) redirect({ href: `${editPath}?error=tee_not_found`, locale });
   if (tee!.archived_at === null) redirect({ href: `${editPath}?error=tee_not_archived`, locale });
 

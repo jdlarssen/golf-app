@@ -148,6 +148,109 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+/**
+ * #1445: two lookups in updateGameInternal folded a failed query into the same
+ * `?error=not_editable` bounce as a genuine miss. The second one was the worse
+ * of the pair — it used `.single()`, so an optimistic-lock miss (0 rows because
+ * the status flipped in another tab) arrived as a PGRST116 *error*, which is
+ * exactly the shape a real outage takes. `.maybeSingle()` separates them: a
+ * lock miss is 0 rows and keeps the bounce, a failure throws.
+ */
+describe('updateGameInternal — feil vs. fravær (#1445)', () => {
+  const DB_ERR = { message: 'AbortError: This operation was aborted', code: '' };
+
+  it('mode-lock-oppslaget feiler → kaster (ikke ?error=not_editable)', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        { data: null, error: DB_ERR }, // mode-lock fetch
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('AbortError'),
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(
+      supabaseMock.__fromCalls.filter((c) =>
+        ['update', 'insert', 'delete'].includes(c.method),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('ekte 0-rad på mode-lock-oppslaget beholder ?error=not_editable', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null },
+        { data: null, error: null }, // mode-lock fetch: spillet finnes ikke
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=not_editable');
+  });
+
+  it('selve update-en feiler → kaster (ikke ?error=not_editable)', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null },
+        { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null },
+        { data: null, error: DB_ERR }, // games.update
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('AbortError'),
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+    // Rosteret ble ikke rørt — vi stoppet før delete/insert.
+    expect(
+      supabaseMock.__fromCalls.filter((c) =>
+        ['insert', 'delete'].includes(c.method),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('optimistic-lock-miss (0 rader, ingen feil) beholder ?error=not_editable', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null },
+        { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null },
+        // games.update traff ingen rad: status flippet i en annen fane.
+        { data: null, error: null },
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=not_editable');
+    expect(
+      supabaseMock.__fromCalls.filter((c) =>
+        ['insert', 'delete'].includes(c.method),
+      ),
+    ).toHaveLength(0);
+  });
+});
+
 describe('updateScheduledAction — mode-lock', () => {
   it('blocks mode-bytte når spillet er scheduled (mode_locked_after_publish)', async () => {
     // Admin har publisert en best-ball-runde og prøver nå å sende en

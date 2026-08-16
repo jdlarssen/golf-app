@@ -162,8 +162,18 @@ async function updateGameInternal(
     .from('games')
     .select('status, game_mode, mode_config')
     .eq('id', gameId)
-    .single();
-  if (existingError || !existing) {
+    .maybeSingle();
+  // Error ≠ absence (#1445): a transient query failure throws to the route's
+  // error boundary (retryable) instead of telling the admin the game is not
+  // editable. Only a genuine 0-row result keeps the not_editable redirect.
+  if (existingError) {
+    console.error('[updateGame] existing-game fetch failed', {
+      gameId,
+      error: existingError,
+    });
+    throw existingError;
+  }
+  if (!existing) {
     redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
   if (
@@ -241,12 +251,24 @@ async function updateGameInternal(
     .eq('id', gameId)
     .eq('status', allowedFromStatus)
     .select('id')
-    .single();
+    .maybeSingle();
 
-  if (updateError || !updated) {
-    // Either the optimistic-lock filter excluded the row (status flipped) or
-    // a real DB error. In both cases we bounce to the detail page; the user
-    // will see the current state and (if applicable) the not_editable banner.
+  // Error ≠ absence (#1445). The .maybeSingle() swap is the fix here: with
+  // .single(), an optimistic-lock miss (status flipped in another tab → 0 rows
+  // matched) surfaced as a PGRST116 *error*, indistinguishable from a real DB
+  // failure. Now a lock miss is a clean 0-row result and keeps the
+  // not_editable bounce; a genuine failure throws to the error boundary.
+  if (updateError) {
+    console.error('[updateGame] game update failed', {
+      gameId,
+      error: updateError,
+    });
+    throw updateError;
+  }
+  if (!updated) {
+    // Optimistic-lock filter excluded the row (status flipped under us). Bounce
+    // to the detail page; the user sees the current state and the
+    // not_editable banner.
     redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
 
