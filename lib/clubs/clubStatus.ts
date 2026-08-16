@@ -58,6 +58,6 @@ export function getClubStatusBadge(
   return {
     tone: 'expiresOn',
     date: formatShortDateLocale(expires, locale),
-    className: 'border-warning/40 text-warning bg-warning/[0.10]',
+    className: 'border-warning/40 text-warning-text bg-warning/[0.10]',
   };
 }

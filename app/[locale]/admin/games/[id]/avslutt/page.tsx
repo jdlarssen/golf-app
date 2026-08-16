@@ -121,7 +121,7 @@ export default async function AvsluttPage({
         subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
       />
       {missing.length > 0 && (
-        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
+        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
           <p className="font-medium">
             {t('missingHeader', { count: missing.length })}
           </p>

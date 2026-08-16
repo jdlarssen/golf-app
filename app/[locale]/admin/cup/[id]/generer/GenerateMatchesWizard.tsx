@@ -1156,7 +1156,7 @@ export function GenerateMatchesWizard({
             primær-handlingen der, så bare «Tilbake» blir med videre. */}
         <div className="mt-6 space-y-3">
           {step1ValidationMsg && (
-            <p className="text-xs text-warning text-center">{step1ValidationMsg}</p>
+            <p className="text-xs text-warning-text text-center">{step1ValidationMsg}</p>
           )}
           <div className="flex gap-3">
             <Button

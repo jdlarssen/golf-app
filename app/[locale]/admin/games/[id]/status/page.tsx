@@ -158,7 +158,7 @@ export default async function GameStatusPage({
     ready_not_delivered: isFinished
       ? { label: tDetail('statusNotSubmitted'), className: 'text-muted' }
       : { label: t('statusLabels.ready_not_delivered'), className: 'text-accent-text' },
-    pending_approval: { label: t('statusLabels.pending_approval'), className: 'text-warning' },
+    pending_approval: { label: t('statusLabels.pending_approval'), className: 'text-warning-text' },
     playing: { label: t('statusLabels.playing'), className: 'text-muted' },
     not_started: { label: t('statusLabels.not_started'), className: 'text-muted' },
     delivered: { label: t('statusLabels.delivered'), className: 'text-success' },

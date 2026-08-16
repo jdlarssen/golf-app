@@ -385,7 +385,7 @@ async function ProfileFormCard({
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
               <p className="text-sm text-muted tabular-nums">hcp {hcpDisplay}</p>
               {stale ? (
-                <span className="rounded-full bg-warning/10 px-2 py-0.5 font-sans text-[11px] text-warning">
+                <span className="rounded-full bg-warning/10 px-2 py-0.5 font-sans text-[11px] text-warning-text">
                   {t('hcpStaleShort')}
                 </span>
               ) : oppdatertDato ? (

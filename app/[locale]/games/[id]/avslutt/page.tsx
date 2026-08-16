@@ -123,7 +123,7 @@ export default async function CreatorAvsluttPage({
   }));
 
   const missingList = missing.length > 0 && (
-    <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
+    <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
       <p className="font-medium">
         {t('missingCount', { count: missing.length })}
       </p>
@@ -144,7 +144,7 @@ export default async function CreatorAvsluttPage({
     // Can't finish until every submitted scorecard is approved by a co-player.
     body = (
       <div className="space-y-4 px-1">
-        <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
           <p className="font-medium">
             {t('unapprovedCount', { count: unapproved.length })}
           </p>
@@ -195,7 +195,7 @@ export default async function CreatorAvsluttPage({
     const endAnywayAction = endGameMarkingWithdrawals.bind(null, gameId);
     body = (
       <div className="space-y-4 px-1">
-        <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
           <p className="font-medium">
             {t('missingCount', { count: missing.length })}
           </p>

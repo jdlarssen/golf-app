@@ -321,7 +321,7 @@ function StatusChipMini({ status }: { status: Status }) {
     success: 'bg-primary-soft text-success border-success/40',
     error: 'bg-danger/[0.10] text-danger border-danger/30',
     info: 'bg-accent/[0.10] text-text border-accent/40',
-    warning: 'bg-warning/[0.10] text-warning border-warning/40',
+    warning: 'bg-warning/[0.10] text-warning-text border-warning/40',
   };
   return (
     <span
