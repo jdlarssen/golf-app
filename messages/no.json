@@ -3317,6 +3317,8 @@
         "flight_full": "Den valgte flighten er full (maks 4 spillere). Velg en annen flight.",
         "signups_not_scheduled": "Kun planlagte spill kan stenge eller gjenåpne påmeldingen.",
         "bad_flight": "Ugyldig flight-nummer. Velg en positiv flight fra listen.",
+        "team_full": "Det laget er fullt. Velg et annet lag.",
+        "bad_team": "Ugyldig lagnummer. Velg et lag fra listen.",
         "rotation_player_count_wolf": "Wolf trenger 3–5 spillere for å starte. Nå er {count} påmeldt.",
         "rotation_player_count_round_robin": "Round Robin trenger nøyaktig 4 spillere for å starte. Nå er {count} påmeldt.",
         "guest_invalid_name": "Gjesten trenger et navn (maks 80 tegn).",
@@ -3379,6 +3381,8 @@
         "player_reinstated": "✓ Spilleren er gjeninnsatt i rangeringen.",
         "flight_suggested": "✓ Inndeling er foreslått og lagret.",
         "flight_updated": "✓ Spillerens flight er oppdatert.",
+        "team_suggested": "✓ Lagene er satt opp og lagret.",
+        "team_updated": "✓ Spillerens lag er oppdatert.",
         "signups_closed": "✓ Påmeldingen er stengt. Nye søknader avvises.",
         "signups_reopened": "✓ Påmeldingen er gjenåpnet.",
         "guest_added": "Gjesten er lagt til i spillet."
@@ -3521,6 +3525,16 @@
         "moveButton": "Flytt",
         "flightAriaLabel": "Flight for {name}",
         "flightOptionN": "Flight {n}"
+      },
+      "teams": {
+        "sectionLabel": "Lag",
+        "unassignedLabel": "Uten lag ({n})",
+        "suggestButton": "Foreslå laginndeling",
+        "suggestingBusy": "Setter opp lag…",
+        "movePlayerLabel": "Flytt spiller",
+        "moveButton": "Flytt",
+        "teamAriaLabel": "Lag for {name}",
+        "teamOptionN": "Lag {n}"
       },
       "edit": {
         "kicker": "Rediger spill",

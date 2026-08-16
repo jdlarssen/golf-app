@@ -13,6 +13,13 @@ import {
   MAX_FLIGHT_SIZE,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
+import {
+  suggestTeamSplit,
+  modeRequiresTeamNumber,
+  expectedTeamSize,
+  type TeamPlayer,
+} from '@/lib/games/teamScope';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
@@ -170,6 +177,197 @@ export async function setPlayerFlight(
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   redirect({ href: `${detailPath}?status=flight_updated`, locale });
+}
+
+/**
+ * Henter aktive og trukkede spillere for lag-inndeling, sortert på created_at
+ * ASC (påmeldingsrekkefølge). Returnerer null ved DB-feil.
+ */
+async function fetchTeamPlayers(
+  admin: ReturnType<typeof getAdminClient>,
+  gameId: string,
+): Promise<TeamPlayer[] | null> {
+  const { data, error } = await admin
+    .from('game_players')
+    .select('user_id, team_number, flight_number, withdrawn_at')
+    .eq('game_id', gameId)
+    .order('created_at', { ascending: true })
+    .order('user_id', { ascending: true })
+    .returns<TeamPlayer[]>();
+  if (error) {
+    console.error('[fetchTeamPlayers] game_players read failed', error);
+    return null;
+  }
+  return data ?? [];
+}
+
+/**
+ * Leser spillet og verifiserer at det er et lag-format i scheduled/active.
+ * Redirecter ved avvik; returnerer lagstørrelsen når alt er i orden.
+ *
+ * Delt av begge lag-actionene så UI-gaten (`modeRequiresTeamNumber` i
+ * page.tsx) og skrive-gaten ikke kan divergere. Wolf og Round Robin bruker
+ * `team_number` som rotasjons-slot — de må aldri skrives av disse actionene.
+ */
+async function loadTeamGame(
+  admin: ReturnType<typeof getAdminClient>,
+  gameId: string,
+  detailPath: string,
+  locale: Awaited<ReturnType<typeof getLocale>>,
+): Promise<number> {
+  const { data: game } = await admin
+    .from('games')
+    .select('id, status, game_mode, mode_config')
+    .eq('id', gameId)
+    .single<{
+      id: string;
+      status: string;
+      game_mode: GameMode;
+      mode_config: { team_size?: number } | null;
+    }>();
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  // TypeScript cannot narrow past next-intl redirect (not declared `never`),
+  // so the post-guard non-null assertions are the established 2b pattern.
+  if (game!.status !== 'scheduled' && game!.status !== 'active') {
+    redirect({ href: `${detailPath}?error=not_active`, locale });
+  }
+  const teamSize = expectedTeamSize(game!.mode_config);
+  if (!modeRequiresTeamNumber(game!.game_mode, teamSize)) {
+    // Solo-format eller matchplay — ingen lag å tildele her.
+    redirect({ href: detailPath, locale });
+  }
+  return teamSize;
+}
+
+/**
+ * Admin/creator: foreslår og skriver lag for de aktive spillerne som mangler
+ * lag. Spillere som allerede har lag røres ikke — se `suggestTeamSplit`.
+ *
+ * Redirecter tilbake til admin-siden med ?status=team_suggested ved suksess,
+ * eller ?error=... ved feil.
+ */
+export async function suggestTeamAssignment(gameId: string): Promise<void> {
+  const locale = await getLocale();
+  const { admin, detailPath } = await loadFlightContext(gameId);
+
+  const teamSize = await loadTeamGame(admin, gameId, detailPath, locale);
+
+  // Error (if any) is logged at source in fetchTeamPlayers — the call site
+  // only sees null, so logging here would add nothing but a `null`.
+  const players = await fetchTeamPlayers(admin, gameId);
+  if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
+
+  const assignments = suggestTeamSplit(players!, teamSize);
+  if (assignments.length === 0) {
+    // Alle har allerede lag — ingenting å gjøre.
+    redirect({ href: detailPath, locale });
+  }
+
+  for (const { user_id, team_number, flight_number } of assignments) {
+    let failure: unknown = null;
+    try {
+      // `.select()` + expectAffected: PostgREST melder ikke fra om en UPDATE
+      // som traff 0 rader (bug-prevention §2) — uten dette ville en tapt rad
+      // se ut som suksess og laget stått tomt på tavla.
+      expectAffected(
+        await admin
+          .from('game_players')
+          .update({ team_number, flight_number })
+          .eq('game_id', gameId)
+          .eq('user_id', user_id)
+          .select('user_id'),
+        'suggestTeamAssignment',
+      );
+    } catch (e) {
+      failure = e;
+    }
+    if (failure) {
+      console.error('[suggestTeamAssignment] team update failed', failure);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
+  }
+
+  revalidateTag(`game-${gameId}`, 'max');
+  revalidatePath(`/admin/games/${gameId}`);
+  redirect({ href: `${detailPath}?status=team_suggested`, locale });
+}
+
+/**
+ * Admin/creator: setter team_number for én spiller (per-spiller-justering).
+ *
+ * Validerer at target-laget ikke overstiger lagstørrelsen fra mode_config, og
+ * setter flight = lag når spilleren ikke har flight fra før (CHECK
+ * `game_players_team_flight_consistency`: lag krever flight).
+ */
+export async function setPlayerTeam(
+  gameId: string,
+  targetUserId: string,
+  targetTeam: number,
+): Promise<void> {
+  const locale = await getLocale();
+  const { admin, detailPath } = await loadFlightContext(gameId);
+
+  if (!Number.isInteger(targetTeam) || targetTeam < 1) {
+    redirect({ href: `${detailPath}?error=bad_team`, locale });
+  }
+
+  const teamSize = await loadTeamGame(admin, gameId, detailPath, locale);
+
+  // Kapasitetssjekk: tell aktive spillere i target-laget eksklusive denne.
+  const { count: existingCount, error: countError } = await admin
+    .from('game_players')
+    .select('user_id', { count: 'exact', head: true })
+    .eq('game_id', gameId)
+    .eq('team_number', targetTeam)
+    .neq('user_id', targetUserId)
+    .is('withdrawn_at', null);
+  if (countError) {
+    console.error('[setPlayerTeam] team count read failed', countError);
+    redirect({ href: `${detailPath}?error=db_roster`, locale });
+  }
+  if ((existingCount ?? 0) >= teamSize) {
+    redirect({ href: `${detailPath}?error=team_full`, locale });
+  }
+
+  // Flight må være satt så snart laget er det (CHECK 0030/0095). Behold den
+  // spilleren har; ellers speil lagnummeret, som lag-påmeldingen gjør.
+  const { data: row, error: rowError } = await admin
+    .from('game_players')
+    .select('flight_number')
+    .eq('game_id', gameId)
+    .eq('user_id', targetUserId)
+    .maybeSingle<{ flight_number: number | null }>();
+  if (rowError) {
+    console.error('[setPlayerTeam] player row read failed', rowError);
+    redirect({ href: `${detailPath}?error=db_roster`, locale });
+  }
+  if (!row) redirect({ href: `${detailPath}?error=not_found`, locale });
+
+  let failure: unknown = null;
+  try {
+    expectAffected(
+      await admin
+        .from('game_players')
+        .update({
+          team_number: targetTeam,
+          flight_number: row!.flight_number ?? targetTeam,
+        })
+        .eq('game_id', gameId)
+        .eq('user_id', targetUserId)
+        .select('user_id'),
+      'setPlayerTeam',
+    );
+  } catch (e) {
+    failure = e;
+  }
+  if (failure) {
+    console.error('[setPlayerTeam] team update failed', failure);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
+
+  revalidateTag(`game-${gameId}`, 'max');
+  revalidatePath(`/admin/games/${gameId}`);
+  redirect({ href: `${detailPath}?status=team_updated`, locale });
 }
 
 /**

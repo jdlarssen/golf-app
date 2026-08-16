@@ -3317,6 +3317,8 @@
         "flight_full": "The selected flight is full (maximum 4 players). Choose a different flight.",
         "signups_not_scheduled": "Only scheduled games can have signups closed or reopened.",
         "bad_flight": "Invalid flight number. Choose a positive flight from the list.",
+        "team_full": "That team is full. Choose a different team.",
+        "bad_team": "Invalid team number. Choose a team from the list.",
         "rotation_player_count_wolf": "Wolf needs 3–5 players to start. {count} signed up so far.",
         "rotation_player_count_round_robin": "Round Robin needs exactly 4 players to start. {count} signed up so far.",
         "guest_invalid_name": "The guest needs a name (max 80 characters).",
@@ -3379,6 +3381,8 @@
         "player_reinstated": "✓ Player reinstated in the ranking.",
         "flight_suggested": "✓ Flight assignment proposed and saved.",
         "flight_updated": "✓ Player's flight updated.",
+        "team_suggested": "✓ Teams set up and saved.",
+        "team_updated": "✓ Player's team updated.",
         "signups_closed": "✓ Signups closed. New requests will be declined.",
         "signups_reopened": "✓ Signups reopened.",
         "guest_added": "The guest has been added to the game."
@@ -3521,6 +3525,16 @@
         "moveButton": "Move",
         "flightAriaLabel": "Flight for {name}",
         "flightOptionN": "Flight {n}"
+      },
+      "teams": {
+        "sectionLabel": "Teams",
+        "unassignedLabel": "Without a team ({n})",
+        "suggestButton": "Suggest team split",
+        "suggestingBusy": "Setting up teams…",
+        "movePlayerLabel": "Move player",
+        "moveButton": "Move",
+        "teamAriaLabel": "Team for {name}",
+        "teamOptionN": "Team {n}"
       },
       "edit": {
         "kicker": "Edit game",
