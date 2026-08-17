@@ -227,7 +227,7 @@ Hvorfor: `package.json` + `CHANGELOG.md` var to filer alle PR-er rørte — alts
 - **Notatfil:** `.changes/<issue>-<slug>.md` (issue-løs: `x-<slug>.md`), frontmatter `type` + `issue`, og for `feat` også `title`/`link`/`cta`. Mal og feltgrenser: [`.changes/README.md`](.changes/README.md). Ett ugyldig notat stopper hele ukesslippet (fail-closed), så hold deg til malen.
 - **Tørrkjøring:** `node scripts/weekly-release.mjs --dry-run` viser hvilken versjon uka ville fått og nøyaktig hvilken CHANGELOG-diff notatene gir — uten å skrive noe.
 - **Ikke bruker-synlig?** Bytt prefix til `docs/refactor/test/chore/style/ci/build` — de passerer fritt.
-- **CHANGELOG-format:** [`docs/changelog-conventions.md`](docs/changelog-conventions.md) (les FØR du skriver et notat). Tynt to-seksjons-feed (Funksjoner / Feilrettinger), én linje per endring; ingen Teknisk-blokk (den bor i issue-closing-kommentaren), ingen humanizer påkrevd.
+- **CHANGELOG-format:** [`docs/changelog-conventions.md`](docs/changelog-conventions.md) (les FØR du skriver et notat). Én ukeblokk per slipp under `## Ukeslipp` (funksjonsrader + rettinger-skuff), én linje per endring; ingen Teknisk-blokk (den bor i issue-closing-kommentaren), ingen humanizer påkrevd.
 - Aldri `--no-verify` for å omgå hooken (bash-guard blokkerer den uansett).
 
 ### Språk-kvalitet i bruker-rettet copy

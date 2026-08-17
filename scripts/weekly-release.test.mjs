@@ -406,7 +406,7 @@ describe('applyToChangelog', () => {
 
   it('fails closed when the Ukeslipp heading is missing', () => {
     expect(() =>
-      applyToChangelog('# Changelog\n\n## Feilrettinger\n\n', { version: '1.233.0', notes: [fixA()], now: MONDAY }),
+      applyToChangelog('# Changelog\n\n## Noe helt annet\n\n', { version: '1.233.0', notes: [fixA()], now: MONDAY }),
     ).toThrow(/Ukeslipp/);
   });
 
