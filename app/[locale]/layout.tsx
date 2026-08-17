@@ -11,6 +11,7 @@ import { PwaBoot } from "@/components/PwaBoot";
 import { InstallPromptCapture } from "@/components/pwa/InstallPromptCapture";
 import { PerfHud } from "@/components/PerfHud";
 import { BottomNavGate } from "@/components/ui/BottomNavGate";
+import { GlobalSyncBannerGate } from "@/components/sync/GlobalSyncBannerGate";
 import { themeBootstrapScript } from "@/lib/theme/themePreference";
 
 // Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
@@ -118,6 +119,16 @@ export default async function RootLayout({ children, params }: Props) {
             render-blokkerende (ingen async/defer). */}
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript() }} />
         <NextIntlClientProvider>
+          {/* Synkstatus på alle innloggede flater (#1391): køen drenerer
+              globalt, men banneret sto kun i runde-layouten — «Kunne ikke lagre
+              N slag» var stumt på Hjem, Innboks, Klubbhuset og Profil. Må stå
+              FØR {children}: banneret er `sticky top-0` og i flyten, så etter
+              barna havner det nederst som siste flex-element. Leser proxy-
+              headeren (runtime-API) og streames derfor bak Suspense, som
+              BottomNavGate (#538). */}
+          <Suspense fallback={null}>
+            <GlobalSyncBannerGate />
+          </Suspense>
           {children}
           <Suspense fallback={null}>
             <BottomNavGate />

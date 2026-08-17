@@ -80,6 +80,18 @@ function friendlySyncError(
   return 'errorGeneric';
 }
 
+/**
+ * Sync status for the player. Mounted twice with different jobs:
+ *
+ *  - **Scoped** (`gameId` given) from the round layout — speaks for the round
+ *    on screen, conflict notices included.
+ *  - **Global** (no `gameId`) from the root layout via `GlobalSyncBannerGate`
+ *    (#1391) — counts every still-retrying and quarantined stroke so stranded
+ *    strokes are visible on Hjem, Innboks, Klubbhuset and Profil too. Conflict
+ *    notices stay out of this mode: they are scoped to a round on purpose
+ *    (#1370) and their copy («Hull 7 ble endret …») names no round, so it reads
+ *    as nonsense away from one.
+ */
 export function SyncBanner({ gameId }: { gameId?: string }) {
   const t = useTranslations('SyncBanner');
   const locale = useLocale();
@@ -92,12 +104,14 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
   // overwrites a score the current user had entered. One notice per record,
   // dismissed individually. Scoped to the round on screen (#1370) — a conflict
   // from another round can't be acted on from here. `conflicts` is indexed on
-  // gameId (db.ts), so the filter runs in Dexie rather than in JS.
+  // gameId (db.ts), so the filter runs in Dexie rather than in JS. The global
+  // instance (#1391) skips the query entirely rather than showing round-less
+  // notices.
   const conflicts = useLiveQuery<ConflictRecord[] | undefined>(
     () =>
       gameId != null
         ? localDb.conflicts.where('gameId').equals(gameId).toArray()
-        : localDb.conflicts.toArray(),
+        : [],
     [gameId],
   );
   // Tick `now` once per second so the "is older than 30s" check re-evaluates
@@ -192,7 +206,15 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
             )}
             {otherGames.map((game) => (
               <p key={game.gameId} className="break-words">
-                {t('quarantineOtherGame', { count: game.count })}{' '}
+                {/* «… fra en annen runde» needs a round to be "other" than —
+                    true in the scoped instance, anchorless in the global one
+                    (#1391), which says it plainly instead. */}
+                {t(
+                  gameId != null
+                    ? 'quarantineOtherGame'
+                    : 'quarantineGlobalGame',
+                  { count: game.count },
+                )}{' '}
                 <Link
                   data-testid="quarantine-open-game"
                   href={`/games/${game.gameId}`}
