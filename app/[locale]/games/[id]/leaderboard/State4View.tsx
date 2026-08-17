@@ -12,7 +12,7 @@ import {
 } from '@/lib/leaderboard';
 import {
   drilldownHref,
-  leaderboardHref,
+  modeToggleHref,
   type LeaderboardNavContext,
 } from '@/lib/leaderboard/navContext';
 import { LeaderboardShell } from './LeaderboardChrome';
@@ -47,6 +47,13 @@ type Props = {
    * above the leader card in this mode.
    */
   chromeless?: boolean;
+  /**
+   * True on the public spectate/embed surfaces (#1373). Everything that links
+   * into `/games/*` is a dead end there — an anonymous viewer gets bounced to
+   * /login — so the drilldown links, the drill hint and the CSV export are
+   * dropped, and the Netto/Brutto-toggle reloads `backHref` instead.
+   */
+  publicView?: boolean;
   /** Hale-seksjon rendret inni shell-en, etter hovedinnholdet (#386). */
   footerSlot?: ReactNode;
 };
@@ -76,6 +83,7 @@ export function State4View({
   backHref = '/',
   navContext,
   chromeless = false,
+  publicView = false,
   footerSlot,
 }: Props) {
   const tc = useTranslations('leaderboard.common');
@@ -148,7 +156,14 @@ export function State4View({
         </p>
       </div>
 
-      <ModeChip gameId={gameId} mode={mode} navContext={navContext} t={tc} />
+      <ModeChip
+        gameId={gameId}
+        mode={mode}
+        navContext={navContext}
+        publicView={publicView}
+        backHref={backHref}
+        t={tc}
+      />
 
       <div className="relative px-3.5 pt-3">
         {replayKey > 0 && <ConfettiBurst key={replayKey} />}
@@ -156,6 +171,7 @@ export function State4View({
           gameId={gameId}
           mode={mode}
           navContext={navContext}
+          publicView={publicView}
           line={leader}
           coursePar={coursePar}
           t={tc}
@@ -170,6 +186,7 @@ export function State4View({
             gameId={gameId}
             mode={mode}
             navContext={navContext}
+            publicView={publicView}
             line={line}
             leaderTotal={leader.total}
             coursePar={coursePar}
@@ -180,11 +197,17 @@ export function State4View({
         ))}
       </ul>
 
-      <p className="px-6 pt-1 pb-3 text-center font-serif text-[11px] italic text-muted">
-        {tc('hullForHullDrillHint')}
-      </p>
+      {/* Drill-hinten og CSV-knappen peker begge inn i /games/* — skjult på de
+          offentlige flatene, der de bare ville sendt en tilskuer til /login. */}
+      {!publicView && (
+        <>
+          <p className="px-6 pt-1 pb-3 text-center font-serif text-[11px] italic text-muted">
+            {tc('hullForHullDrillHint')}
+          </p>
 
-      <ExportLink gameId={gameId} t={tc} />
+          <ExportLink gameId={gameId} t={tc} />
+        </>
+      )}
     </LeaderboardShell>
   );
 }
@@ -280,11 +303,15 @@ function ModeChip({
   gameId,
   mode,
   navContext,
+  publicView,
+  backHref,
   t,
 }: {
   gameId: string;
   mode: LeaderboardMode;
   navContext?: LeaderboardNavContext;
+  publicView: boolean;
+  backHref: string;
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
 }) {
   // Tab-style toggle (both modes visible at once, current is highlighted) —
@@ -312,7 +339,13 @@ function ModeChip({
               // has to walk through every toggle state before it leaves the
               // leaderboard (#1517).
               replace
-              href={leaderboardHref({ gameId, mode: m, context: navContext })}
+              href={modeToggleHref({
+                gameId,
+                mode: m,
+                context: navContext,
+                publicView,
+                publicHref: backHref,
+              })}
               className={`min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
                 active
                   ? 'bg-primary-soft text-text'
@@ -332,6 +365,7 @@ function LeaderCard({
   gameId,
   mode,
   navContext,
+  publicView,
   line,
   coursePar,
   t,
@@ -340,6 +374,7 @@ function LeaderCard({
   gameId: string;
   mode: LeaderboardMode;
   navContext?: LeaderboardNavContext;
+  publicView: boolean;
   line: TeamLine;
   coursePar: number;
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
@@ -352,12 +387,16 @@ function LeaderCard({
   // Delt ledelse (#1372): hero-kortet skal si «Delt 1. plass», ikke
   // «Leder · 1. plass» — det like-rangerte laget rendres som rad under.
   const isTied = line.tiedWith.length > 0;
-  const href = drilldownHref({
-    gameId,
-    team: line.teamNumber,
-    mode,
-    context: navContext,
-  });
+  // #1373: full-cover drilldown-lenke kun for innloggede — den peker på
+  // /games/*, som en tilskuer uten konto ikke slipper inn på.
+  const href = publicView
+    ? null
+    : drilldownHref({
+        gameId,
+        team: line.teamNumber,
+        mode,
+        context: navContext,
+      });
   const modeLabel = mode === 'netto' ? t('netto') : t('brutto');
 
   return (
@@ -435,11 +474,13 @@ function LeaderCard({
           </div>
         </div>
 
-        <SmartLink
-          href={href}
-          aria-label={ts('drillAriaLabel', { number: line.teamNumber })}
-          className="absolute inset-0 rounded-[18px]"
-        />
+        {href && (
+          <SmartLink
+            href={href}
+            aria-label={ts('drillAriaLabel', { number: line.teamNumber })}
+            className="absolute inset-0 rounded-[18px]"
+          />
+        )}
       </div>
     </div>
   );
@@ -449,6 +490,7 @@ function TeamRow({
   gameId,
   mode,
   navContext,
+  publicView,
   line,
   leaderTotal,
   coursePar,
@@ -459,6 +501,7 @@ function TeamRow({
   gameId: string;
   mode: LeaderboardMode;
   navContext?: LeaderboardNavContext;
+  publicView: boolean;
   line: TeamLine;
   leaderTotal: number;
   coursePar: number;
@@ -475,73 +518,91 @@ function TeamRow({
     .map((p) => formatRevealName(p.name, p.nickname))
     .join(' · ');
   const isTied = line.tiedWith.length > 0;
-  const href = drilldownHref({
-    gameId,
-    team: line.teamNumber,
-    mode,
-    context: navContext,
-  });
+  // #1373: samme regel som hero-kortet — raden er bare klikkbar for innloggede.
+  const href = publicView
+    ? null
+    : drilldownHref({
+        gameId,
+        team: line.teamNumber,
+        mode,
+        context: navContext,
+      });
+
+  const rowClassName = `reveal-up flex items-center gap-3.5 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_6px_rgba(26,46,31,0.03)]${
+    href ? ' active:scale-[0.99]' : ''
+  }`;
+  const rowStyle = { animationDelay: `${140 + staggerIndex * 80}ms` };
+
+  const rowContent = (
+    <>
+      {line.rank === 1 || line.rank === 2 || line.rank === 3 ? (
+        // En rank-1-RAD finnes bare når laget deler ledelsen med hero-kortet
+        // (#1372) — da skal den ha gull-medaljong, ikke linen-disc.
+        <span className="shrink-0">
+          <Medallion place={line.rank} size={36} />
+        </span>
+      ) : (
+        /* Match the 36px medallion's visual weight so rows 4+ keep the same
+         * rhythm — a quiet linen disc with a hairline ring stands in where
+         * the metallic gradient sits on the podium rows. */
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[18px] font-medium text-muted">
+          {line.rank}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text">
+          {t('teamLabel', { number: line.teamNumber })}
+        </p>
+        <p className="mt-0.5 truncate text-[13px]">
+          <span className="font-serif font-medium text-text">
+            {firstNames || t('noPlayers')}
+          </span>
+          {gap > 0 && (
+            <span className="text-muted">
+              {' · '}
+              <span className="tabular-nums">+{gap}</span> {ts('behindLeader')}
+            </span>
+          )}
+          {isTied &&
+            (line.rank === 1 ? (
+              // Delt ledelse: løft merket fra muted «delt» til eksplisitt
+              // «Delt 1. plass» i accent — raden er en medvinner (#1372).
+              <span className="font-semibold text-accent-text">
+                {' · '}
+                {t('tiedRank', { rank: line.rank })}
+              </span>
+            ) : (
+              <span className="text-muted"> · {ts('tiedLabel')}</span>
+            ))}
+        </p>
+      </div>
+      <div className="shrink-0 text-right">
+        <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
+          {line.total}
+        </span>
+        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+          {formatVsPar(vsPar)} {ts('parLabel')}
+        </span>
+      </div>
+    </>
+  );
 
   return (
     <li className="list-none">
-      <SmartLink
-        href={href}
-        className="reveal-up flex items-center gap-3.5 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_6px_rgba(26,46,31,0.03)] active:scale-[0.99]"
-        style={{ animationDelay: `${140 + staggerIndex * 80}ms` }}
-      >
-        {line.rank === 1 || line.rank === 2 || line.rank === 3 ? (
-          // En rank-1-RAD finnes bare når laget deler ledelsen med hero-kortet
-          // (#1372) — da skal den ha gull-medaljong, ikke linen-disc.
-          <span className="shrink-0">
-            <Medallion place={line.rank} size={36} />
+      {href ? (
+        <SmartLink href={href} className={rowClassName} style={rowStyle}>
+          {rowContent}
+          {/* Chevronen er lenke-affordansen — den følger lenken ut på de
+              offentlige flatene, i stedet for å love en side som ikke finnes. */}
+          <span aria-hidden className="text-muted">
+            ›
           </span>
-        ) : (
-          /* Match the 36px medallion's visual weight so rows 4+ keep the same
-           * rhythm — a quiet linen disc with a hairline ring stands in where
-           * the metallic gradient sits on the podium rows. */
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[18px] font-medium text-muted">
-            {line.rank}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text">
-            {t('teamLabel', { number: line.teamNumber })}
-          </p>
-          <p className="mt-0.5 truncate text-[13px]">
-            <span className="font-serif font-medium text-text">
-              {firstNames || t('noPlayers')}
-            </span>
-            {gap > 0 && (
-              <span className="text-muted">
-                {' · '}
-                <span className="tabular-nums">+{gap}</span> {ts('behindLeader')}
-              </span>
-            )}
-            {isTied &&
-              (line.rank === 1 ? (
-                // Delt ledelse: løft merket fra muted «delt» til eksplisitt
-                // «Delt 1. plass» i accent — raden er en medvinner (#1372).
-                <span className="font-semibold text-accent-text">
-                  {' · '}
-                  {t('tiedRank', { rank: line.rank })}
-                </span>
-              ) : (
-                <span className="text-muted"> · {ts('tiedLabel')}</span>
-              ))}
-          </p>
+        </SmartLink>
+      ) : (
+        <div className={rowClassName} style={rowStyle}>
+          {rowContent}
         </div>
-        <div className="shrink-0 text-right">
-          <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
-            {line.total}
-          </span>
-          <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
-            {formatVsPar(vsPar)} {ts('parLabel')}
-          </span>
-        </div>
-        <span aria-hidden className="text-muted">
-          ›
-        </span>
-      </SmartLink>
+      )}
     </li>
   );
 }
