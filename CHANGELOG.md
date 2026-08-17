@@ -1,21 +1,25 @@
 <!-- ─────────────────────────────────────────────────────────────────────
      Format: les docs/changelog-conventions.md FØR ny oppføring.
-     To seksjoner — Funksjoner (én linje per utgivelse) og Feilrettinger.
-     Ny funksjon bærer tittel + brødtekst + lenke + cta_label (klar for Lanseringer).
+     Ett ukeslipp per blokk under ## Ukeslipp — funksjonsrader (tittel +
+     brødtekst + lenke + cta_label, klar for Lanseringer) og én rettinger-skuff.
+     Skrives av scripts/weekly-release.mjs; ikke rediger for hånd utenom
+     rettelser i tekst.
      ───────────────────────────────────────────────────────────────────── -->
 
 # Changelog
 
 Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versioning](https://semver.org/lang/no/).
 
-**Funksjoner** er hva som er nytt — én linje per utgivelse, brett ut for detaljer. **Feilrettinger** er alt som er blitt bedre, samlet og lukket per måned. Alfa-historikken før 1.0 ligger nederst.
+Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader du kan brette ut, rettingene samlet i én skuff under. Alt fra før ukeslippene (1.0–1.232) og alfa-historikken ligger foldet nederst.
 
 ---
 
-## Funksjoner
+## Ukeslipp
+
+### 1.233.0 · mandag 17. august 2026
 
 <details>
-<summary><strong>1.233 · Hele scoreskalaen i spesifikk score</strong></summary>
+<summary><strong>Hele scoreskalaen i spesifikk score</strong></summary>
 
 [#1354](https://github.com/jdlarssen/golf-app/issues/1354) — Trykk ⋯ på et hull, så får du alle scorer fra 1 til 15 i ett rutenett med par merket. En tier på par 4 er nå ett trykk i stedet for sju på pluss-knappen.
 
@@ -23,7 +27,7 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 </details>
 
 <details>
-<summary><strong>1.233 · Beskjed når kortet ditt åpnes igjen</strong></summary>
+<summary><strong>Beskjed når kortet ditt åpnes igjen</strong></summary>
 
 [#1363](https://github.com/jdlarssen/golf-app/issues/1363) — Åpner arrangøren scorekortet ditt eller hele runden igjen, får du beskjed i innboksen med en gang. Tapp varselet, så lander du rett på runden og kan rette og levere på nytt.
 
@@ -31,18 +35,100 @@ Alle bruker-synlige endringer i Tørny. Versjonering følger [Semantic Versionin
 </details>
 
 <details>
-<summary><strong>1.233 · Lagringsvarselet sier hvilke hull det gjelder</strong></summary>
+<summary><strong>Lagringsvarselet sier hvilke hull det gjelder</strong></summary>
 
 [#1369](https://github.com/jdlarssen/golf-app/issues/1369) — Kunne ikke et slag lagres, sier varselet nå hvilke hull det gjelder og tar deg rett dit så du kan taste på nytt. Feildetaljene ligger et trykk unna, og varselet kan fjernes når du har sett det.
 </details>
 
 <details>
-<summary><strong>1.233 · Lag-tildeling etter påmelding</strong></summary>
+<summary><strong>Lag-tildeling etter påmelding</strong></summary>
 
 [#1669](https://github.com/jdlarssen/golf-app/issues/1669) — Melder spillere seg på enkeltvis i et lagspill, kan du nå fordele dem på lag i Sekretariatet før start — og spillet starter ikke før alle har lag.
 
 ↳ /admin/games · «Åpne spillene»
 </details>
+
+<details>
+<summary>70 rettinger</summary>
+
+- [#1352](https://github.com/jdlarssen/golf-app/issues/1352) — Hull-stripa viser nå hvilke hull som mangler score — et hoppet-over hull ser ikke lenger ferdig ut — og ruller automatisk til hullet du står på.
+- [#1353](https://github.com/jdlarssen/golf-app/issues/1353) — Hull-velgeren øverst på hull-siden er lettere å treffe — hvert hull har nå full trykkflate, så du bommer ikke på nabohullet med hansker på.
+- [#1355](https://github.com/jdlarssen/golf-app/issues/1355) — Lagringsvarslene på banen (feilmeldinger, «slag venter», Prøv igjen) vises nå på engelsk når appen står på engelsk.
+- [#1356](https://github.com/jdlarssen/golf-app/issues/1356) — Putts-knappene og lukkekrysset på hull-siden er lettere å treffe — trykkflaten oppfyller nå 44px-kravet uten at noe ser annerledes ut.
+- [#1357](https://github.com/jdlarssen/golf-app/issues/1357) — Åpner du score-arket med tastatur eller skjermleser, lander du nå rett inni arket: Tab holder seg der, og fokus hopper tilbake til ⋯-knappen når du lukker. Samme grep i Wolf-valget.
+- [#1362](https://github.com/jdlarssen/golf-app/issues/1362) — Arrangøren kan nå gjenåpne et levert eller godkjent scorekort i sitt eget spill, så en tastefeil ikke låses inn i resultatet.
+- [#1364](https://github.com/jdlarssen/golf-app/issues/1364) — Varsler og banneret om avvist scorekort snakker nå ditt språk, også når vi mangler navnet på spilleren, spillet eller den som avviste.
+- [#1365](https://github.com/jdlarssen/golf-app/issues/1365) — Når du godkjenner et scorekort ligger hele 18-hulls-kortet åpent foran deg — ikke gjemt bak en «Vis»-lenke.
+- [#1366](https://github.com/jdlarssen/golf-app/issues/1366) — Live-tavla står ikke lenger fast på gamle tall etter en lang runde eller en tur i lomma: appen kobler seg opp igjen selv og henter inn scorene som kom mens du var borte.
+- [#1367](https://github.com/jdlarssen/golf-app/issues/1367) — Slag som venter på lagring sendes nå automatisk så snart du åpner en spillside — ikke bare fra hull-siden.
+- [#1368](https://github.com/jdlarssen/golf-app/issues/1368) — Fører du scoren for en medspiller og tallet blir endret fra deres egen enhet, sier appen fra i stedet for å bytte det stille.
+- [#1370](https://github.com/jdlarssen/golf-app/issues/1370) — Statusen «slag venter» på hull-siden gjelder nå bare runden du står i, og «Lever ✓» låses ikke lenger av slag som ligger igjen fra en annen runde.
+- [#1371](https://github.com/jdlarssen/golf-app/issues/1371) — Er innloggingen utløpt mens du fører score, får du nå en Logg inn-knapp rett i varselet — i stedet for bare «Prøv igjen».
+- [#1372](https://github.com/jdlarssen/golf-app/issues/1372) — Deler to spillere førsteplassen, viser podiet og resultatsiden nå begge som vinnere med «Delt 1. plass»-merke — før fikk den ene sølv.
+- [#1374](https://github.com/jdlarssen/golf-app/issues/1374) — Vinnertall, «+N slag» og annen gulltekst er nå mørk nok til å leses i skarpt sollys.
+- [#1375](https://github.com/jdlarssen/golf-app/issues/1375) — Det låste back 9-kortet sier nå riktig når resten av tavla åpner: når arrangøren avslutter spillet — ikke «når alle scorekort er godkjent».
+- [#1376](https://github.com/jdlarssen/golf-app/issues/1376) — Følger du et spill uten å være logget inn, sier banneret nå fra når nettet ryker – og viser klokkeslettet for siste oppdatering så du ser hvor ferske tallene er.
+- [#1380](https://github.com/jdlarssen/golf-app/issues/1380) — Tilbake-knappen i veiviseren tar deg nå ett steg tilbake i stedet for rett ut, og det du har fylt ut står der fortsatt om du laster siden på nytt eller telefonen kaster appen ut av minnet.
+- [#1381](https://github.com/jdlarssen/golf-app/issues/1381) — Trykker du «Send på nytt» på en invitasjon, får den sju nye dager, og mottakeren slipper gjennom innloggingen selv om den gamle fristen var ute.
+- [#1381](https://github.com/jdlarssen/golf-app/issues/1381) — Ventelista under Spillere merker invitasjoner som har passert fristen med «Utløpt», så du ser hvem som trenger en ny sjanse.
+- [#1382](https://github.com/jdlarssen/golf-app/issues/1382) — Planlagt-kortene på spillsiden sier nå at runden starter automatisk ved tee-off, med tidspunktet, så du vet når redigering stenger.
+- [#1383](https://github.com/jdlarssen/golf-app/issues/1383) — Åpner du en lenke rett inn i et senere steg av veiviseren uten å ha noe påbegynt, starter du nå på steg 1 i stedet for å møte en oppsummering full av valg du aldri har tatt.
+- [#1384](https://github.com/jdlarssen/golf-app/issues/1384) — «Lagre utkast»-knappen sier nå fra hvorfor den er grå når spillet mangler navn.
+- [#1387](https://github.com/jdlarssen/golf-app/issues/1387) — Skjermlesere og tastatur ser nå +/−-knappene på hvert spillerkort direkte — kortet er ikke lenger én stor «knapp» som gjemmer dem.
+- [#1388](https://github.com/jdlarssen/golf-app/issues/1388) — Gule advarsler («venter på godkjenning», «husk å levere», synk-varsler) har fått mørkere tekst som er lesbar også i sol.
+- [#1389](https://github.com/jdlarssen/golf-app/issues/1389) — Bruker du skjermleser, sier innboks-fanen nå hvor mange uleste varsler som venter — og prikken har fått en dypere gulltone som synes bedre i sollys.
+- [#1392](https://github.com/jdlarssen/golf-app/issues/1392) — Får ikke innboksen kontakt med databasen, sier appen fra og lar deg prøve igjen — i stedet for å påstå at du ikke har varsler.
+- [#1393](https://github.com/jdlarssen/golf-app/issues/1393) — Den røde prikken på Innboks kunne henge igjen etter varsler om spill som var slettet — nå forsvinner den når du åpner innboksen.
+- [#1394](https://github.com/jdlarssen/golf-app/issues/1394) — Feiler lagringen når du rydder i innboksen eller skrur av månedsbrevet, sier appen fra og setter alt tilbake — i stedet for å late som det gikk bra.
+- [#1395](https://github.com/jdlarssen/golf-app/issues/1395) — Trykker arrangøren «Avvis» to ganger på samme scorekort, får spilleren nå ett varsel — ikke to.
+- [#1398](https://github.com/jdlarssen/golf-app/issues/1398) — Publiser- og utkast-knappen viser nå at noe skjer mens lagringen kjører, så du ikke trykker to ganger.
+- [#1400](https://github.com/jdlarssen/golf-app/issues/1400) — Velger du «Skjul til slutt» og publiseringen feiler, står valget fortsatt der når du prøver igjen.
+- [#1402](https://github.com/jdlarssen/golf-app/issues/1402) — Tastaturfokus er nå synlig også i lister og kort som før klippet bort ringen (profil, klubbhus, varsler, rundehistorikk).
+- [#1404](https://github.com/jdlarssen/golf-app/issues/1404) — Logger du ut, ryddes slagene dine av enheten når alt er levert til serveren — og logger noen andre inn på samme telefon, starter de alltid med blanke ark.
+- [#1422](https://github.com/jdlarssen/golf-app/issues/1422) — Er du invitert til et lag av en kaptein, viser påmeldingssiden nå en knapp rett til laget i stedet for bare «Forespørsel sendt».
+- [#1425](https://github.com/jdlarssen/golf-app/issues/1425) — Lag-pekeren på påmeldingssiden dukker nå opp også når både arrangøren og kapteinen har invitert deg, og bare når vi vet hvilket lag det gjelder.
+- [#1427](https://github.com/jdlarssen/golf-app/issues/1427) — Wolf-forklaringen staves riktig («roterende»), og den engelske forsiden fikk tilbake gullordet i avslutnings-CTA-en.
+- [#1437](https://github.com/jdlarssen/golf-app/issues/1437) — En utløpt lag-invitasjon kan ikke lenger brukes til å bli med på laget — samme frist-regel som innloggingen har hatt siden tidligere.
+- [#1444](https://github.com/jdlarssen/golf-app/issues/1444) — Starter du en cup med vektede poeng, får nå også deltakerne som ikke er inne i appen start-mailen — med beskjed om at vinneren kåres når cupen avsluttes.
+- [#1523](https://github.com/jdlarssen/golf-app/issues/1523) — Endrer du starttid, bane eller tee i cup-oppsettet etter at matchene er laget, følger matchene med — de som ikke er startet ennå.
+- [#1527](https://github.com/jdlarssen/golf-app/issues/1527) — Spillere uten navn vises nå som «Unknown player» i engelsk visning i stedet for norsk «Ukjent spiller».
+- [#1537](https://github.com/jdlarssen/golf-app/issues/1537) — Når et handicap rettes etter at en greensome er satt opp, regnes lag-slagene om. Har arrangøren tastet inn sine egne tall, står de.
+- [#1538](https://github.com/jdlarssen/golf-app/issues/1538) — Hjem-kortet viser nå riktig fremdrift for hele laget — makkeren sendes til neste hull og levering, ikke tilbake til hull 1.
+- [#1547](https://github.com/jdlarssen/golf-app/issues/1547) — Står du på deltakerlista til en klubb-cup, kommer du inn på cup-siden — også mens cupen fortsatt er et utkast.
+- [#1550](https://github.com/jdlarssen/golf-app/issues/1550) — Åpner du en kamp i en ferdigspilt cup som du ikke spilte selv, får du nå se hele scorekortet hull for hull.
+- [#1567](https://github.com/jdlarssen/golf-app/issues/1567) — Feiler lagringen av sidevinnerne, sier appen nå «prøv igjen» i stedet for å be deg fylle ut felter som allerede er fylt.
+- [#1573](https://github.com/jdlarssen/golf-app/issues/1573) — Delt plassering vises nå riktig på podiet i alle spillformer — medvinnere får samme medalje og «Delt plass»-merke, uansett format.
+- [#1574](https://github.com/jdlarssen/golf-app/issues/1574) — Patsome-podiet og -lista viser nå laget som vant øverst — samme retting som for lag-stableford.
+- [#1574](https://github.com/jdlarssen/golf-app/issues/1574) — Lag-stableford viser nå riktig lag øverst på podiet og i lista — før kunne lag med lavest nummer ta vinnerplassen fra laget som faktisk vant.
+- [#1577](https://github.com/jdlarssen/golf-app/issues/1577) — Spiller dere på ett felles lagkort — scramble, foursomes eller patsome — får du nå «Lever scorekort» når kortet er fullt, uansett hvem på laget som tastet inn slagene.
+- [#1584](https://github.com/jdlarssen/golf-app/issues/1584) — Pluss og minus i putte-telleren tar imot et større trykk, så du treffer dem med hansken på.
+- [#1586](https://github.com/jdlarssen/golf-app/issues/1586) — I Sekretariatet og på spillere-siden kan du nå åpne hvert levert scorekort med ett trykk og se alle hullene før du godkjenner.
+- [#1590](https://github.com/jdlarssen/golf-app/issues/1590) — Tastatur og skjermleser lander nå inne i dialogene (installasjonshjelp, avvis påmelding, formatguide), Tab holder seg der, og Escape lukker.
+- [#1595](https://github.com/jdlarssen/golf-app/issues/1595) — Er du arrangør uten å spille selv, blir scorekortet faktisk godkjent når du trykker godkjenn. Før fikk du grønt lys uten at noe ble lagret.
+- [#1598](https://github.com/jdlarssen/golf-app/issues/1598) — Godkjenner eller gjenåpner arrangøren et scorekort uten å ha navn i profilen, står det nå «Arrangøren» i varselet — ikke «En spiller» eller «Admin».
+- [#1602](https://github.com/jdlarssen/golf-app/issues/1602) — Går spillet bare over ni hull, sier hull-for-hull-siden nå hvilke av de hullene som holdes skjult til slutten — ikke hull som hører til søsterspillet.
+- [#1613](https://github.com/jdlarssen/golf-app/issues/1613) — Sender du en spill-invitasjon på nytt, får den nå fersk frist — før kunne en utløpt invitasjon sende en mail som ikke lot mottakeren logge inn.
+- [#1615](https://github.com/jdlarssen/golf-app/issues/1615) — Klubbhus-flisen og spillerlista teller nå ventende invitasjoner likt.
+- [#1624](https://github.com/jdlarssen/golf-app/issues/1624) — Spill-sidens store knapp skjønner nå lagformat: når lagkortet er ferdig tastet, får også du som ikke fører kortet «Gjennomgå og lever».
+- [#1629](https://github.com/jdlarssen/golf-app/issues/1629) — Retter du et handicap, viser spillsidene ny banehandicap med en gang.
+- [#1631](https://github.com/jdlarssen/golf-app/issues/1631) — Hull for hull viser nå slagene også for singelkampene i en splittet cup-dag — tabellen var tom før.
+- [#1661](https://github.com/jdlarssen/golf-app/issues/1661) — På en splittet cup-dag viser tavla riktig hvilke hull som er med før resten avsløres — ikke «hull 18» når runden slutter på 9.
+- [#1662](https://github.com/jdlarssen/golf-app/issues/1662) — Klubbhus-flisen og spillerlista teller nå spillere likt.
+- [#1665](https://github.com/jdlarssen/golf-app/issues/1665) — Lukker du produktnytt-banneret og lagringen feiler, kommer banneret tilbake med beskjed — i stedet for å dukke opp igjen uten forklaring.
+- [#1666](https://github.com/jdlarssen/golf-app/issues/1666) — Score-arket beholder tastaturfokus også mens det venter på lagring.
+- [#1669](https://github.com/jdlarssen/golf-app/issues/1669) — «Foreslå inndeling» for flighter virker igjen — knappen har feilet stille siden den ble laget.
+- [#1669](https://github.com/jdlarssen/golf-app/issues/1669) — Formatguiden lover ikke lenger et tak på fire par i best ball.
+- [#1670](https://github.com/jdlarssen/golf-app/issues/1670) — Gjenåpner en arrangør uten navn i profilen et spill, sier varselet «Arrangøren» — ikke «Admin».
+- [#1673](https://github.com/jdlarssen/golf-app/issues/1673) — Tastaturfokus på det valgte spillformatet i veiviseren har fått en tydelig ring.
+- [#1677](https://github.com/jdlarssen/golf-app/issues/1677) — Redigerer du en planlagt greensome-kamp i cupen, står lag-slagene du har satt fortsatt der etterpå. Før forsvant de i det du lagret.
+</details>
+
+## Før ukeslippene (1.0 – 1.232)
+
+<details>
+<summary><strong>Versjon per endring — 1.0 til 1.232</strong></summary>
+
+### Funksjoner
 
 <details>
 <summary><strong>1.232 · Hvorfor Tørny?</strong></summary>
@@ -1506,81 +1592,11 @@ Legg til en sideturnering i spillet; lag samler poeng fra seks kategorier og res
 Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirkel, bogey = firkant) og kallenavn i resultat-visningen.
 </details>
 
-## Feilrettinger
+### Feilrettinger
 
 <details>
-<summary><strong>August 2026 · 111 rettinger</strong></summary>
+<summary><strong>August 2026 · 41 rettinger</strong></summary>
 
-- `1.233.0` · [#1352](https://github.com/jdlarssen/golf-app/issues/1352) — Hull-stripa viser nå hvilke hull som mangler score — et hoppet-over hull ser ikke lenger ferdig ut — og ruller automatisk til hullet du står på.
-- `1.233.0` · [#1353](https://github.com/jdlarssen/golf-app/issues/1353) — Hull-velgeren øverst på hull-siden er lettere å treffe — hvert hull har nå full trykkflate, så du bommer ikke på nabohullet med hansker på.
-- `1.233.0` · [#1355](https://github.com/jdlarssen/golf-app/issues/1355) — Lagringsvarslene på banen (feilmeldinger, «slag venter», Prøv igjen) vises nå på engelsk når appen står på engelsk.
-- `1.233.0` · [#1356](https://github.com/jdlarssen/golf-app/issues/1356) — Putts-knappene og lukkekrysset på hull-siden er lettere å treffe — trykkflaten oppfyller nå 44px-kravet uten at noe ser annerledes ut.
-- `1.233.0` · [#1357](https://github.com/jdlarssen/golf-app/issues/1357) — Åpner du score-arket med tastatur eller skjermleser, lander du nå rett inni arket: Tab holder seg der, og fokus hopper tilbake til ⋯-knappen når du lukker. Samme grep i Wolf-valget.
-- `1.233.0` · [#1362](https://github.com/jdlarssen/golf-app/issues/1362) — Arrangøren kan nå gjenåpne et levert eller godkjent scorekort i sitt eget spill, så en tastefeil ikke låses inn i resultatet.
-- `1.233.0` · [#1364](https://github.com/jdlarssen/golf-app/issues/1364) — Varsler og banneret om avvist scorekort snakker nå ditt språk, også når vi mangler navnet på spilleren, spillet eller den som avviste.
-- `1.233.0` · [#1365](https://github.com/jdlarssen/golf-app/issues/1365) — Når du godkjenner et scorekort ligger hele 18-hulls-kortet åpent foran deg — ikke gjemt bak en «Vis»-lenke.
-- `1.233.0` · [#1366](https://github.com/jdlarssen/golf-app/issues/1366) — Live-tavla står ikke lenger fast på gamle tall etter en lang runde eller en tur i lomma: appen kobler seg opp igjen selv og henter inn scorene som kom mens du var borte.
-- `1.233.0` · [#1367](https://github.com/jdlarssen/golf-app/issues/1367) — Slag som venter på lagring sendes nå automatisk så snart du åpner en spillside — ikke bare fra hull-siden.
-- `1.233.0` · [#1368](https://github.com/jdlarssen/golf-app/issues/1368) — Fører du scoren for en medspiller og tallet blir endret fra deres egen enhet, sier appen fra i stedet for å bytte det stille.
-- `1.233.0` · [#1370](https://github.com/jdlarssen/golf-app/issues/1370) — Statusen «slag venter» på hull-siden gjelder nå bare runden du står i, og «Lever ✓» låses ikke lenger av slag som ligger igjen fra en annen runde.
-- `1.233.0` · [#1371](https://github.com/jdlarssen/golf-app/issues/1371) — Er innloggingen utløpt mens du fører score, får du nå en Logg inn-knapp rett i varselet — i stedet for bare «Prøv igjen».
-- `1.233.0` · [#1372](https://github.com/jdlarssen/golf-app/issues/1372) — Deler to spillere førsteplassen, viser podiet og resultatsiden nå begge som vinnere med «Delt 1. plass»-merke — før fikk den ene sølv.
-- `1.233.0` · [#1374](https://github.com/jdlarssen/golf-app/issues/1374) — Vinnertall, «+N slag» og annen gulltekst er nå mørk nok til å leses i skarpt sollys.
-- `1.233.0` · [#1375](https://github.com/jdlarssen/golf-app/issues/1375) — Det låste back 9-kortet sier nå riktig når resten av tavla åpner: når arrangøren avslutter spillet — ikke «når alle scorekort er godkjent».
-- `1.233.0` · [#1376](https://github.com/jdlarssen/golf-app/issues/1376) — Følger du et spill uten å være logget inn, sier banneret nå fra når nettet ryker – og viser klokkeslettet for siste oppdatering så du ser hvor ferske tallene er.
-- `1.233.0` · [#1380](https://github.com/jdlarssen/golf-app/issues/1380) — Tilbake-knappen i veiviseren tar deg nå ett steg tilbake i stedet for rett ut, og det du har fylt ut står der fortsatt om du laster siden på nytt eller telefonen kaster appen ut av minnet.
-- `1.233.0` · [#1381](https://github.com/jdlarssen/golf-app/issues/1381) — Trykker du «Send på nytt» på en invitasjon, får den sju nye dager, og mottakeren slipper gjennom innloggingen selv om den gamle fristen var ute.
-- `1.233.0` · [#1381](https://github.com/jdlarssen/golf-app/issues/1381) — Ventelista under Spillere merker invitasjoner som har passert fristen med «Utløpt», så du ser hvem som trenger en ny sjanse.
-- `1.233.0` · [#1382](https://github.com/jdlarssen/golf-app/issues/1382) — Planlagt-kortene på spillsiden sier nå at runden starter automatisk ved tee-off, med tidspunktet, så du vet når redigering stenger.
-- `1.233.0` · [#1383](https://github.com/jdlarssen/golf-app/issues/1383) — Åpner du en lenke rett inn i et senere steg av veiviseren uten å ha noe påbegynt, starter du nå på steg 1 i stedet for å møte en oppsummering full av valg du aldri har tatt.
-- `1.233.0` · [#1384](https://github.com/jdlarssen/golf-app/issues/1384) — «Lagre utkast»-knappen sier nå fra hvorfor den er grå når spillet mangler navn.
-- `1.233.0` · [#1387](https://github.com/jdlarssen/golf-app/issues/1387) — Skjermlesere og tastatur ser nå +/−-knappene på hvert spillerkort direkte — kortet er ikke lenger én stor «knapp» som gjemmer dem.
-- `1.233.0` · [#1388](https://github.com/jdlarssen/golf-app/issues/1388) — Gule advarsler («venter på godkjenning», «husk å levere», synk-varsler) har fått mørkere tekst som er lesbar også i sol.
-- `1.233.0` · [#1389](https://github.com/jdlarssen/golf-app/issues/1389) — Bruker du skjermleser, sier innboks-fanen nå hvor mange uleste varsler som venter — og prikken har fått en dypere gulltone som synes bedre i sollys.
-- `1.233.0` · [#1392](https://github.com/jdlarssen/golf-app/issues/1392) — Får ikke innboksen kontakt med databasen, sier appen fra og lar deg prøve igjen — i stedet for å påstå at du ikke har varsler.
-- `1.233.0` · [#1393](https://github.com/jdlarssen/golf-app/issues/1393) — Den røde prikken på Innboks kunne henge igjen etter varsler om spill som var slettet — nå forsvinner den når du åpner innboksen.
-- `1.233.0` · [#1394](https://github.com/jdlarssen/golf-app/issues/1394) — Feiler lagringen når du rydder i innboksen eller skrur av månedsbrevet, sier appen fra og setter alt tilbake — i stedet for å late som det gikk bra.
-- `1.233.0` · [#1395](https://github.com/jdlarssen/golf-app/issues/1395) — Trykker arrangøren «Avvis» to ganger på samme scorekort, får spilleren nå ett varsel — ikke to.
-- `1.233.0` · [#1398](https://github.com/jdlarssen/golf-app/issues/1398) — Publiser- og utkast-knappen viser nå at noe skjer mens lagringen kjører, så du ikke trykker to ganger.
-- `1.233.0` · [#1400](https://github.com/jdlarssen/golf-app/issues/1400) — Velger du «Skjul til slutt» og publiseringen feiler, står valget fortsatt der når du prøver igjen.
-- `1.233.0` · [#1402](https://github.com/jdlarssen/golf-app/issues/1402) — Tastaturfokus er nå synlig også i lister og kort som før klippet bort ringen (profil, klubbhus, varsler, rundehistorikk).
-- `1.233.0` · [#1404](https://github.com/jdlarssen/golf-app/issues/1404) — Logger du ut, ryddes slagene dine av enheten når alt er levert til serveren — og logger noen andre inn på samme telefon, starter de alltid med blanke ark.
-- `1.233.0` · [#1422](https://github.com/jdlarssen/golf-app/issues/1422) — Er du invitert til et lag av en kaptein, viser påmeldingssiden nå en knapp rett til laget i stedet for bare «Forespørsel sendt».
-- `1.233.0` · [#1425](https://github.com/jdlarssen/golf-app/issues/1425) — Lag-pekeren på påmeldingssiden dukker nå opp også når både arrangøren og kapteinen har invitert deg, og bare når vi vet hvilket lag det gjelder.
-- `1.233.0` · [#1427](https://github.com/jdlarssen/golf-app/issues/1427) — Wolf-forklaringen staves riktig («roterende»), og den engelske forsiden fikk tilbake gullordet i avslutnings-CTA-en.
-- `1.233.0` · [#1437](https://github.com/jdlarssen/golf-app/issues/1437) — En utløpt lag-invitasjon kan ikke lenger brukes til å bli med på laget — samme frist-regel som innloggingen har hatt siden tidligere.
-- `1.233.0` · [#1444](https://github.com/jdlarssen/golf-app/issues/1444) — Starter du en cup med vektede poeng, får nå også deltakerne som ikke er inne i appen start-mailen — med beskjed om at vinneren kåres når cupen avsluttes.
-- `1.233.0` · [#1523](https://github.com/jdlarssen/golf-app/issues/1523) — Endrer du starttid, bane eller tee i cup-oppsettet etter at matchene er laget, følger matchene med — de som ikke er startet ennå.
-- `1.233.0` · [#1527](https://github.com/jdlarssen/golf-app/issues/1527) — Spillere uten navn vises nå som «Unknown player» i engelsk visning i stedet for norsk «Ukjent spiller».
-- `1.233.0` · [#1537](https://github.com/jdlarssen/golf-app/issues/1537) — Når et handicap rettes etter at en greensome er satt opp, regnes lag-slagene om. Har arrangøren tastet inn sine egne tall, står de.
-- `1.233.0` · [#1538](https://github.com/jdlarssen/golf-app/issues/1538) — Hjem-kortet viser nå riktig fremdrift for hele laget — makkeren sendes til neste hull og levering, ikke tilbake til hull 1.
-- `1.233.0` · [#1547](https://github.com/jdlarssen/golf-app/issues/1547) — Står du på deltakerlista til en klubb-cup, kommer du inn på cup-siden — også mens cupen fortsatt er et utkast.
-- `1.233.0` · [#1550](https://github.com/jdlarssen/golf-app/issues/1550) — Åpner du en kamp i en ferdigspilt cup som du ikke spilte selv, får du nå se hele scorekortet hull for hull.
-- `1.233.0` · [#1567](https://github.com/jdlarssen/golf-app/issues/1567) — Feiler lagringen av sidevinnerne, sier appen nå «prøv igjen» i stedet for å be deg fylle ut felter som allerede er fylt.
-- `1.233.0` · [#1573](https://github.com/jdlarssen/golf-app/issues/1573) — Delt plassering vises nå riktig på podiet i alle spillformer — medvinnere får samme medalje og «Delt plass»-merke, uansett format.
-- `1.233.0` · [#1574](https://github.com/jdlarssen/golf-app/issues/1574) — Patsome-podiet og -lista viser nå laget som vant øverst — samme retting som for lag-stableford.
-- `1.233.0` · [#1574](https://github.com/jdlarssen/golf-app/issues/1574) — Lag-stableford viser nå riktig lag øverst på podiet og i lista — før kunne lag med lavest nummer ta vinnerplassen fra laget som faktisk vant.
-- `1.233.0` · [#1577](https://github.com/jdlarssen/golf-app/issues/1577) — Spiller dere på ett felles lagkort — scramble, foursomes eller patsome — får du nå «Lever scorekort» når kortet er fullt, uansett hvem på laget som tastet inn slagene.
-- `1.233.0` · [#1584](https://github.com/jdlarssen/golf-app/issues/1584) — Pluss og minus i putte-telleren tar imot et større trykk, så du treffer dem med hansken på.
-- `1.233.0` · [#1586](https://github.com/jdlarssen/golf-app/issues/1586) — I Sekretariatet og på spillere-siden kan du nå åpne hvert levert scorekort med ett trykk og se alle hullene før du godkjenner.
-- `1.233.0` · [#1590](https://github.com/jdlarssen/golf-app/issues/1590) — Tastatur og skjermleser lander nå inne i dialogene (installasjonshjelp, avvis påmelding, formatguide), Tab holder seg der, og Escape lukker.
-- `1.233.0` · [#1595](https://github.com/jdlarssen/golf-app/issues/1595) — Er du arrangør uten å spille selv, blir scorekortet faktisk godkjent når du trykker godkjenn. Før fikk du grønt lys uten at noe ble lagret.
-- `1.233.0` · [#1598](https://github.com/jdlarssen/golf-app/issues/1598) — Godkjenner eller gjenåpner arrangøren et scorekort uten å ha navn i profilen, står det nå «Arrangøren» i varselet — ikke «En spiller» eller «Admin».
-- `1.233.0` · [#1602](https://github.com/jdlarssen/golf-app/issues/1602) — Går spillet bare over ni hull, sier hull-for-hull-siden nå hvilke av de hullene som holdes skjult til slutten — ikke hull som hører til søsterspillet.
-- `1.233.0` · [#1613](https://github.com/jdlarssen/golf-app/issues/1613) — Sender du en spill-invitasjon på nytt, får den nå fersk frist — før kunne en utløpt invitasjon sende en mail som ikke lot mottakeren logge inn.
-- `1.233.0` · [#1615](https://github.com/jdlarssen/golf-app/issues/1615) — Klubbhus-flisen og spillerlista teller nå ventende invitasjoner likt.
-- `1.233.0` · [#1624](https://github.com/jdlarssen/golf-app/issues/1624) — Spill-sidens store knapp skjønner nå lagformat: når lagkortet er ferdig tastet, får også du som ikke fører kortet «Gjennomgå og lever».
-- `1.233.0` · [#1629](https://github.com/jdlarssen/golf-app/issues/1629) — Retter du et handicap, viser spillsidene ny banehandicap med en gang.
-- `1.233.0` · [#1631](https://github.com/jdlarssen/golf-app/issues/1631) — Hull for hull viser nå slagene også for singelkampene i en splittet cup-dag — tabellen var tom før.
-- `1.233.0` · [#1661](https://github.com/jdlarssen/golf-app/issues/1661) — På en splittet cup-dag viser tavla riktig hvilke hull som er med før resten avsløres — ikke «hull 18» når runden slutter på 9.
-- `1.233.0` · [#1662](https://github.com/jdlarssen/golf-app/issues/1662) — Klubbhus-flisen og spillerlista teller nå spillere likt.
-- `1.233.0` · [#1665](https://github.com/jdlarssen/golf-app/issues/1665) — Lukker du produktnytt-banneret og lagringen feiler, kommer banneret tilbake med beskjed — i stedet for å dukke opp igjen uten forklaring.
-- `1.233.0` · [#1666](https://github.com/jdlarssen/golf-app/issues/1666) — Score-arket beholder tastaturfokus også mens det venter på lagring.
-- `1.233.0` · [#1669](https://github.com/jdlarssen/golf-app/issues/1669) — «Foreslå inndeling» for flighter virker igjen — knappen har feilet stille siden den ble laget.
-- `1.233.0` · [#1669](https://github.com/jdlarssen/golf-app/issues/1669) — Formatguiden lover ikke lenger et tak på fire par i best ball.
-- `1.233.0` · [#1670](https://github.com/jdlarssen/golf-app/issues/1670) — Gjenåpner en arrangør uten navn i profilen et spill, sier varselet «Arrangøren» — ikke «Admin».
-- `1.233.0` · [#1673](https://github.com/jdlarssen/golf-app/issues/1673) — Tastaturfokus på det valgte spillformatet i veiviseren har fått en tydelig ring.
-- `1.233.0` · [#1677](https://github.com/jdlarssen/golf-app/issues/1677) — Redigerer du en planlagt greensome-kamp i cupen, står lag-slagene du har satt fortsatt der etterpå. Før forsvant de i det du lagret.
 - `1.232.2` · [#1361](https://github.com/jdlarssen/golf-app/issues/1361) — Feiler avslutningen, slettingen eller redigeringen av et spill du arrangerer, sier spill-siden nå tydelig fra hva som gikk galt — før forsvant feilen stille og spillet ble stående som pågående uten forklaring.
 - `1.232.1` · [#1360](https://github.com/jdlarssen/golf-app/issues/1360) — Står avslutningen fast fordi et scorekort venter på godkjenning, viser siden nå veien videre: får du ikke tak i medspillerne, kan du som arrangør godkjenne på vegne av gruppa under «Styr spillere».
 - `1.231.3` · [#1559](https://github.com/jdlarssen/golf-app/issues/1559) — Klubbhuset er lettere å lese på mobil: dørene ligger nå som brede rader med teksten sin under navnet, i stedet for firkantede kort der lange navn ble klipt. Det gjelder både arrangørens Spill, Spillere, Baner og Resultatprotokoll, og spillerens Cuper og Verktøy — samme form hele veien. De små gulltallene i hjørnet er borte: de sa bare et tall uten å si hva det gjaldt, og teksten ved siden av sa det allerede med ord.
@@ -2008,6 +2024,8 @@ Tørny går fra alpha til 1.0 med reveal-modus, scorekort-former (birdie = sirke
 - `1.0.3` — En «Leaderboard»-knapp på spill-hjem-siden lar deg se brutto-stillingen mens du venter på avslutning.
 - `1.0.2` — Live brutto-leaderbordet viser nå under/over par ved siden av brutto-totalen.
 - `1.0.1` — Par-scorene er nå korrekt plassert i samme kolonne som birdies og bogeys på hullsiden.
+</details>
+
 </details>
 
 ## Før 1.0 — alfa-historikk
