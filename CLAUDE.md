@@ -324,7 +324,7 @@ Ved tvil: hvis oppgaven kan beskrives ferdig i én prompt og forventes å produs
 
 ### Datamodell
 
-38 tabeller i `public` (målt 2026-08-10 — vedlikeholdes av dok-avstemmeren #1078). Kjernen:
+38 tabeller i `public` (målt 2026-08-16 — vedlikeholdes av dok-avstemmeren #1078). Kjernen:
 - `users` (utvider auth.users)
 - `courses` + `course_holes` + `tee_boxes`
 - `games` + `game_players`
@@ -341,7 +341,7 @@ Ren TypeScript i `lib/scoring/`:
 - `bestBall.ts` — netto + best-ball + lag-total
 - `tiebreaker.ts` — 5-tiers cascade
 
-Assertion-rik unit-suite, alle grønne (fasit: `npx vitest run lib/scoring` — 1130 tester per 2026-08-10). TDD-disiplin var streng her — endring krever ny test først.
+Assertion-rik unit-suite, alle grønne (fasit: `npx vitest run lib/scoring` — 1176 tester per 2026-08-17). TDD-disiplin var streng her — endring krever ny test først.
 
 ### Auth-flyt
 
