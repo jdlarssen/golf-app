@@ -218,7 +218,7 @@ Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh i
 
 ### Versjonering / CHANGELOG
 
-Hver bruker-synlig commit (`feat`/`fix`/`perf`) MÅ legge igjen én **notatfil** under `.changes/` — og skal hverken bumpe `package.json` eller redigere `CHANGELOG.md`. Mandag morgen folder ukerutinen (`.github/workflows/ukesversjon.yml` + `scripts/weekly-release.mjs`) alle ukas notater til **én** versjon og skriver oppføringene inn i changeloggen (`feat` → en Funksjon-rad, `fix`/`perf` → en Feilrettinger-linje). Footeren (`AppVersionFooter.tsx`) viser dermed ett versjonsnummer per uke, ikke ett per commit. **Intern** endring som likevel shippes som `fix` (test-only, refactor, tooling) → ingen notatfil; skriv `[no-changelog]` i commit-body-en.
+Hver bruker-synlig commit (`feat`/`fix`/`perf`) MÅ legge igjen én **notatfil** under `.changes/` — og skal hverken bumpe `package.json` eller redigere `CHANGELOG.md`. Mandag morgen folder ukerutinen (`.github/workflows/ukesversjon.yml` + `scripts/weekly-release.mjs`) alle ukas notater til **én** versjon og skriver oppføringene inn i changeloggen som ukas blokk (`feat` → en funksjonsrad, `fix`/`perf` → en linje i blokkas rettinger-skuff). Footeren (`AppVersionFooter.tsx`) viser dermed ett versjonsnummer per uke, ikke ett per commit. **Intern** endring som likevel shippes som `fix` (test-only, refactor, tooling) → ingen notatfil; skriv `[no-changelog]` i commit-body-en.
 
 Hvorfor: `package.json` + `CHANGELOG.md` var to filer alle PR-er rørte — altså garantert rebase-konflikt mellom parallelle økter. Notatfilene har unike navn og kan ikke kollidere. Deploy-rytmen er uendret: merge til `main` deployer fortsatt rett til prod.
 
