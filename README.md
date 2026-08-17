@@ -100,6 +100,6 @@ Migrations live in [`supabase/migrations/`](supabase/migrations/) (120+ files, c
 
 - [CLAUDE.md](CLAUDE.md) is the main reference: working model, conventions, brand voice, and the files worth knowing.
 - [AGENTS.md](AGENTS.md) is short but it matters. Next.js 16 has breaking changes against what you think you know.
-- [CHANGELOG.md](CHANGELOG.md) is the version history, with plain-language taglines and the technical detail collapsed underneath.
+- [CHANGELOG.md](CHANGELOG.md) is the version history: one block per weekly release, the features as collapsible plain-language rows and that week's fixes gathered in a drawer beneath them.
 - [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) is the whole work queue, tagged by type, area, and scope.
 - [`docs/`](docs/) holds the launch checklist, mail templates, and the original design notes.
