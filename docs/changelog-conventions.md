@@ -16,27 +16,32 @@ Commiten din legger igjen `.changes/<issue>-<slug>.md`. Mandag tidlig morgen (cr
 ukerutinen alle notatene, velger ÉN versjon for hele uka (minst ett `feat`-notat
 → minor, ellers patch) og skriver oppføringene inn i fila:
 
-| Notat-`type` | Blir til | Versjonsform i oppføringen |
-|---|---|---|
-| `feat` | En Funksjon-rad øverst i `## Funksjoner` | To-delt, `1.232` |
-| `fix` / `perf` | En linje øverst i inneværende måneds skuff under `## Feilrettinger` | Full, `` `1.232.0` `` |
+| Notat-`type` | Blir til |
+|---|---|
+| `feat` | En Funksjon-rad i ukas blokk under `## Ukeslipp` |
+| `fix` / `perf` | En linje i ukas rettinger-skuff, i samme blokk |
+
+Begge havner altså i **samme** blokk — ukas. Versjonen står én gang, i
+blokk-overskriften, og gjentas ikke på hver oppføring.
 
 Notatets frontmatter bærer de fire lanserings-feltene (`title`, `link`, `cta` +
 brødteksten); feltgrensene og malen står i [`.changes/README.md`](../.changes/README.md).
 Brødteksten er changelog-linja ordrett — skriv den ferdig i notatet.
 
-**Versjonssemantikken etter omleggingen:** ett nummer per uke *med innhold*. En
-tom uke gir ingen versjon. Flere funksjoner samme uke deler ukas `X.Y` og får
-hver sin rad. Mellom to mandager viser footeren forrige ukes nummer selv om nytt
-er deployet — det er meningen. Versjonen er et ukestempel, ikke et deploystempel.
+**Versjonssemantikken etter omleggingen:** ett nummer per uke *med innhold*, og
+det nummeret bærer blokk-overskriften: `### 1.233.0 · mandag 17. august 2026`.
+En tom uke gir ingen versjon og ingen blokk. Flere funksjoner samme uke får hver
+sin rad under samme overskrift. Mellom to mandager viser footeren forrige ukes
+nummer selv om nytt er deployet — det er meningen. Versjonen er et ukestempel,
+ikke et deploystempel.
 
 ## Strukturen i fila
 
 Tre seksjoner, nyeste øverst:
 
-1. **`## Funksjoner`** — én sammenleggbar rad per utgivelse (det `feat`-en som åpnet en minor). Sammendraget er `versjon · tittel`; bretter du ut, ser du brødteksten. Alle foldet som standard.
-2. **`## Feilrettinger`** — alle `fix`/`perf` som korte én-linjere, gruppert i måneds-skuffer (`<details>` per måned), nyeste måned øverst.
-3. **`## Før 1.0 — alfa-historikk`** — 0.x-historikken, bevart i gammelt format, foldet bort. Røres ikke.
+1. **`## Ukeslipp`** — én blokk per slipp, nyeste øverst. Blokka er en `###`-overskrift med ukas fulle versjon og slippdatoen på norsk langform, så ukas funksjoner som sammenleggbare rader, og til slutt én `<details>`-skuff med alle rettingene («70 rettinger»). Uke uten funksjoner gir overskrift + skuff; uke uten rettinger gir overskrift + rader.
+2. **`## Før ukeslippene (1.0 – 1.232)`** — historikken fra da hver endring hadde sin egen versjon, foldet bort i gammelt format (`### Funksjoner` med `versjon · tittel`-rader, `### Feilrettinger` med måneds-skuffer). Røres ikke.
+3. **`## Før 1.0 — alfa-historikk`** — 0.x-historikken, foldet bort. Røres ikke.
 
 ## Funksjon-oppføring (de fire Lanserings-feltene)
 
@@ -44,7 +49,7 @@ En funksjon bærer de samme fire feltene som `/admin/lanseringer`-skjemaet (`pro
 
 ```
 <details>
-<summary><strong>1.142 · Et ryddigere oppsett</strong></summary>
+<summary><strong>Et ryddigere oppsett</strong></summary>
 
 [#909](https://github.com/jdlarssen/golf-app/issues/909) — Spill-oppsettet ligger i panel du bretter ut når du trenger dem, og et publisert spill viser spillformen som et lite kort.
 
@@ -54,7 +59,7 @@ En funksjon bærer de samme fire feltene som `/admin/lanseringer`-skjemaet (`pro
 
 | Felt | Lansering-felt | Grense | Hentes fra |
 |------|----------------|--------|------------|
-| Tittel (i `<summary>`, etter `versjon ·`) | `title` | ≤120 | utgivelsens tema, kort substantiv-frase |
+| Tittel (i `<summary>`) | `title` | ≤120 | endringens tema, kort substantiv-frase |
 | Brødtekst (etter `[#N] —`) | `body` | ≤400 (sikt på én setning) | hva du nå kan gjøre, invitérende |
 | `↳ /lenke` | `link` | intern, starter med `/` | **forventet** — dyplenke dit featuren vises |
 | `«cta»` (etter lenka) | `cta_label` | ≤40, kun med lenke | **forventet** — knapp-tekst, action-verb |
@@ -67,19 +72,19 @@ En funksjon bærer de samme fire feltene som `/admin/lanseringer`-skjemaet (`pro
 
 ## Feilrettings-oppføring
 
-Én linje under inneværende måneds-skuff:
+Én linje i ukas rettinger-skuff:
 
 ```
-- `1.142.1` · [#924](https://github.com/jdlarssen/golf-app/issues/924) — Liga-runder med en frist som alt har vært stoppes med en gang.
+- [#924](https://github.com/jdlarssen/golf-app/issues/924) — Liga-runder med en frist som alt har vært stoppes med en gang.
 ```
 
-- `versjon` i backticks (tabulær), så issue-lenke, så `—` og **én kort setning** som beskriver den forbedrede tilstanden («Lange navn dytter ikke lenger …»), ikke «Fikset at …».
-- Issue-løs retting (sjelden, pre-issue-æra): dropp lenka — `- \`1.0.1\` — …`.
-- Ny måned → åpne en ny `<details>`-skuff øverst i `## Feilrettinger` (`<summary><strong>Juli 2026 · N rettinger</strong></summary>`).
+- Issue-lenke, så `—` og **én kort setning** som beskriver den forbedrede tilstanden («Lange navn dytter ikke lenger …»), ikke «Fikset at …». Ingen versjon på linja — den står i blokk-overskriften.
+- Issue-løs retting (sjelden, pre-issue-æra): dropp lenka — `- …`.
+- Skuffa åpnes av ukesrutinen med tellinga i sammendraget: `<summary>N rettinger</summary>` (uten `<strong>`, i motsetning til funksjonsradene — det er den forskjellen Utroperen leser for å holde rettinger utenfor lanseringskøen).
 
 ## Hvem havner hvor
 
-Notatets `type` avgjør det alene: `feat` → **Funksjoner**; `fix`/`perf` → **Feilrettinger**. En patch som la til en liten capability (`#### Added` i en `.y`) hører likevel i Feilrettinger — Funksjoner-lista skal være én ren linje per utgivelse. Vil du headline en spesielt stor patch-funksjon, løft den manuelt opp som egen Funksjon-rad.
+Notatets `type` avgjør formen: `feat` → en **Funksjon-rad**; `fix`/`perf` → en linje i **rettinger-skuffa**. Begge i ukas blokk. En patch som la til en liten capability hører likevel i skuffa — radene skal være det du faktisk ville lansert. Vil du headline en spesielt stor patch-funksjon, løft den manuelt opp som egen Funksjon-rad.
 
 ## Bare det en bruker ville merke
 

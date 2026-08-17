@@ -9,10 +9,12 @@ interactions-endepunktet (`publish_lansering`, se `lib/loops/discordActions.ts`)
 
 - **Copy hentes ORDRETT fra CHANGELOG.md på main.** Oppføringene er humanisert
   (eierbeslutning 2026-07-10) — Utroperen forfatter aldri egen bruker-copy.
-  Felt-løfting per `docs/changelog-conventions.md`: tittel = teksten etter
-  «·» i `<summary>`, body = setningen etter «—» (uten `[#N]`-prefikset),
-  lenke + knappetekst = `↳ /lenke · «cta»`-linja. Mangler `↳`-linja →
-  foreslå uten lenke/knappetekst (valider-reglene tillater null).
+  Felt-løfting per `docs/changelog-conventions.md`: tittel = teksten i
+  `<summary>` (på rader fra før ukeslippene, altså under «Før ukeslippene»:
+  teksten etter «X.Y · »-prefikset — nye rader har ikke prefiks), body =
+  setningen etter «—» (uten `[#N]`-prefikset), lenke + knappetekst =
+  `↳ /lenke · «cta»`-linja. Mangler `↳`-linja → foreslå uten lenke/knappetekst
+  (valider-reglene tillater null).
 - **Maks ÉN lansering foreslås per uke.** Aldri to; aldri tvangs-lansering.
   Tom kø → eksplisitt tom-uke-melding (stillhet skal bety at loopen feilet).
 - **Read-only mot alt** unntatt kommentarer og body på tavle-issuet #1208 og
@@ -46,6 +48,10 @@ plukker alltid ovenfra og omsorterer aldri.
   **spiller-testen** («vil en kompis i en fredagsflight gjøre noe annerledes
   etter å ha lest dette?») legges NEDERST i «Neste ut». Versjonsnumre,
   opprydding og admin-verktøy stryker; funksjoner med handlingsverdi består.
+  Nye funksjoner er `<details>`-rader med `<strong>`-summary og
+  `[#N] —`-brødtekst i ukeblokkene under `## Ukeslipp`. Rettinger-skuffen
+  (`<summary>N rettinger</summary>`, punktliste) er ALDRI en lanserings-
+  kandidat — det er tabell-innhold, ikke funksjoner.
 - **Stryke publiserte:** oppføringer som er publisert (per ✅-markørene,
   tittel-match) fjernes fra begge seksjoner.
 - **Foreslå arkiv-kandidater:** funksjoner rutinen mener fortjener ny blest
@@ -57,7 +63,9 @@ kvalifiserende CHANGELOG-oppføringer nederst. All omprioritering er eierens.
 **Sannhetssjekk for arkiv-kandidater:** gamle CHANGELOG-tekster kan inneholde
 foreldede påstander (presedens: 1.181-parentesen «(slagspill, stableford og
 best ball)» ble foreldet av 1.183). Verifiser teksten mot nyere oppføringer FØR
-en kandidat foreslås. Er den utdatert → IKKE foreslå ordrett; flagg det i
+en kandidat foreslås. Arkiv-kandidater kommer typisk fra folden «Før
+ukeslippene» — samme sannhetssjekk gjelder der, og den er ekstra påkrevd jo
+eldre raden er. Er den utdatert → IKKE foreslå ordrett; flagg det i
 torsdagsmeldingen («teksten i x.y er utdatert — trenger CHANGELOG-rettelse
 først»), evt. med forslag til docs-PR.
 

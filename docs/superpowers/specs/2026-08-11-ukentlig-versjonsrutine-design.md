@@ -1,5 +1,7 @@
 # Ukentlig versjonsrutine — design
 
+> **Utdatert på ett punkt:** rendering-formatet under er erstattet av ukeblokker — se [#1702](https://github.com/jdlarssen/golf-app/issues/1702) / `.forge/contracts/1702-changelog-ukeslipp.md`. Resten av dokumentet står som det ble skrevet.
+
 **Issue:** [#1562](https://github.com/jdlarssen/golf-app/issues/1562) · **Dato:** 2026-08-11 · **Status:** design godkjent av eier i økt (retning A av tre presenterte alternativer)
 
 ## Mål

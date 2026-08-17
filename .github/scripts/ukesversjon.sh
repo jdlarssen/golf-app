@@ -144,10 +144,10 @@ felles versjonsnummer og skriver oppføringene inn i changeloggen.
 Notatfiler foldet inn og slettet:
 $NOTES_LIST
 
-Rendret av \`scripts/weekly-release.mjs\`: feat-notater ble Funksjon-rader øverst
-i \`## Funksjoner\`, fix/perf-notater ble linjer i inneværende måneds skuff under
-\`## Feilrettinger\` (skuff-telleren er oppdatert). Notater som merges mens denne
-PR-en står åpen er andre filer — de blir med i neste ukes slipp.
+Rendret av \`scripts/weekly-release.mjs\`: feat-notater ble funksjonsrader og
+fix/perf-notater én rettinger-skuff i ukas blokk \`### $VERSION · <dato>\`, øverst
+under \`## Ukeslipp\`. Notater som merges mens denne PR-en står åpen er andre
+filer — de blir med i neste ukes slipp.
 
 Automatisk åpnet av ukesversjon-workflowen. Format: \`.changes/README.md\` +
 \`docs/changelog-conventions.md\`.
