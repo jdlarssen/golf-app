@@ -135,6 +135,45 @@ export function leaderboardHref(opts: {
   );
 }
 
+/**
+ * URL for the Netto/Brutto-toggle (#1373).
+ *
+ * The toggle is the one leaderboard-internal link that also has to work for a
+ * viewer without a session: `/spectate/[token]` and `/embed/spill/[token]`
+ * reuse the authed leaderboard renderer, but `/games/*` is not in
+ * `PUBLIC_PATH_PATTERN` (proxy.ts) — so an anonymous spectator tapping a
+ * `leaderboardHref` toggle lands on /login. Both public surfaces parse `?mode=`
+ * themselves, so the fix is to point the toggle at the public page instead of
+ * hiding it.
+ *
+ * `publicHref` is that page's own path (the `backHref` both surfaces already
+ * pass, self-referential by design). The nav-context is deliberately dropped
+ * there: every `?from=` target it can hold is an authed route, so it would only
+ * be dead weight in a public URL. Missing/empty `publicHref` falls back to the
+ * authed href rather than emitting a mode-only query on an unknown path.
+ */
+export function modeToggleHref(opts: {
+  gameId: string;
+  mode: LeaderboardMode;
+  context?: LeaderboardNavContext | null;
+  /** True on the public spectate/embed surfaces. */
+  publicView?: boolean;
+  /** The public page's own path — required for `publicView` to take effect. */
+  publicHref?: string | null;
+}): string {
+  if (opts.publicView && opts.publicHref) {
+    const [path, query = ''] = opts.publicHref.split('?');
+    const params = new URLSearchParams(query);
+    params.set('mode', opts.mode);
+    return `${path}?${params.toString()}`;
+  }
+  return leaderboardHref({
+    gameId: opts.gameId,
+    mode: opts.mode,
+    context: opts.context,
+  });
+}
+
 /** URL for the «Hull for hull»-drilldown, with back-context preserved. */
 export function drilldownHref(opts: {
   gameId: string;
