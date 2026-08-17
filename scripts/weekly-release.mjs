@@ -14,9 +14,9 @@
  *   2. Validate all of them. One bad file fails the whole run: a partial release
  *      would silently drop somebody's entry.
  *   3. Pick the bump — at least one `feat` note → minor, otherwise patch.
- *   4. Render: feat → a Funksjon row at the top of `## Funksjoner`; fix/perf → a
- *      line at the top of the current month's drawer under `## Feilrettinger`,
- *      opening a new drawer (and counter) when the month has rolled over.
+ *   4. Render ONE week block at the top of `## Ukeslipp`: a `### X.Y.Z · <dato>`
+ *      heading, the week's feat notes as Funksjon rows, then every fix/perf note
+ *      in a single «N rettinger» drawer (#1702).
  *   5. Delete the notes it read — and only those, so a note merged while the
  *      release PR is open survives to next week.
  *
@@ -39,26 +39,9 @@ const MAX_TITLE = 120;
 const MAX_CTA = 40;
 const MAX_BODY = 400;
 
-// The CHANGELOG capitalises Norwegian month names ("August 2026") — see the
-// existing drawers under `## Feilrettinger`.
-const MONTHS_NB = [
-  'Januar',
-  'Februar',
-  'Mars',
-  'April',
-  'Mai',
-  'Juni',
-  'Juli',
-  'August',
-  'September',
-  'Oktober',
-  'November',
-  'Desember',
-];
-
-const FEATURES_HEADING = '## Funksjoner';
-const FIXES_HEADING = '## Feilrettinger';
-const DRAWER_SUMMARY = /^<summary><strong>(.+?) · (\d+) rettinger?<\/strong><\/summary>$/;
+// Every release lands as one block under this anchor, newest first. Everything
+// from before the weekly rhythm sits folded below it — see CHANGELOG.md.
+const WEEK_HEADING = '## Ukeslipp';
 
 // ── Notes ────────────────────────────────────────────────────────────────────
 
@@ -217,15 +200,15 @@ export function nextVersion(current, bump) {
   throw new Error(`ukjent bump-type «${bump}»`);
 }
 
-/** Norwegian month drawer label, in Oslo time — Actions and Vercel both run UTC. */
-export function monthLabel(date) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
+/** The release day in Norwegian long form, in Oslo time — Actions and Vercel both run UTC. */
+export function weekLabel(date) {
+  return new Intl.DateTimeFormat('nb-NO', {
     timeZone: 'Europe/Oslo',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
     year: 'numeric',
-    month: 'numeric',
-  }).formatToParts(date);
-  const value = (type) => Number(parts.find((p) => p.type === type).value);
-  return `${MONTHS_NB[value('month') - 1]} ${value('year')}`;
+  }).format(date);
 }
 
 // ── Rendering ────────────────────────────────────────────────────────────────
@@ -235,11 +218,11 @@ function issueLinks(issues) {
 }
 
 /** A Funksjon row: the four launch fields, ready to paste into /admin/lanseringer. */
-export function renderFeatureBlock(note, featureVersion) {
+export function renderFeatureBlock(note) {
   const links = issueLinks(note.issues);
   const lines = [
     '<details>',
-    `<summary><strong>${featureVersion} · ${note.title}</strong></summary>`,
+    `<summary><strong>${note.title}</strong></summary>`,
     '',
     links ? `${links} — ${note.body}` : note.body,
   ];
@@ -248,14 +231,43 @@ export function renderFeatureBlock(note, featureVersion) {
   return lines.join('\n');
 }
 
-/** A Feilrettinger line, carrying the week's full X.Y.Z. */
-export function renderFixLine(note, version) {
+/** One line in the week's rettinger drawer. The week heading carries the version. */
+export function renderFixLine(note) {
   const links = issueLinks(note.issues);
-  return links ? `- \`${version}\` · ${links} — ${note.body}` : `- \`${version}\` — ${note.body}`;
+  return links ? `- ${links} — ${note.body}` : `- ${note.body}`;
 }
 
-function drawerSummary(label, count) {
-  return `<summary><strong>${label} · ${count} ${count === 1 ? 'retting' : 'rettinger'}</strong></summary>`;
+const byFile = (a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0);
+
+/**
+ * One week's whole entry: the heading, a Funksjon row per feat note, and every
+ * fix/perf note gathered in a single drawer.
+ *
+ * The drawer summary deliberately skips `<strong>` — that is what tells a
+ * Funksjon row apart from table content, both for the eye and for Utroperen,
+ * which never proposes a retting as a launch (docs/loops/utroperen.md).
+ */
+export function renderWeekBlock({ version, notes, now }) {
+  const ordered = [...notes].sort(byFile);
+  const featureNotes = ordered.filter((note) => note.type === 'feat');
+  const fixNotes = ordered.filter((note) => note.type === 'fix' || note.type === 'perf');
+
+  const lines = [`### ${version} · ${weekLabel(now)}`];
+  for (const note of featureNotes) lines.push('', ...renderFeatureBlock(note).split('\n'));
+
+  if (fixNotes.length > 0) {
+    const count = `${fixNotes.length} ${fixNotes.length === 1 ? 'retting' : 'rettinger'}`;
+    lines.push(
+      '',
+      '<details>',
+      `<summary>${count}</summary>`,
+      '',
+      ...fixNotes.map((note) => renderFixLine(note)),
+      '</details>',
+    );
+  }
+
+  return lines.join('\n');
 }
 
 function headingIndex(lines, heading) {
@@ -268,52 +280,24 @@ function headingIndex(lines, heading) {
   return at;
 }
 
-function fixEdit(lines, version, fixNotes, now) {
-  const at = headingIndex(lines, FIXES_HEADING);
-  const label = monthLabel(now);
-  const fixLines = fixNotes.map((note) => renderFixLine(note, version));
-  const summary = DRAWER_SUMMARY.exec(lines[at + 3] ?? '');
-
-  // Same month → prepend into the open drawer and raise its counter.
-  if (lines[at + 2] === '<details>' && summary && summary[1] === label) {
-    if (lines[at + 4] !== '') throw new Error('forventet en tom linje rett under måneds-skuffens <summary>');
-    return {
-      line: at + 3,
-      removed: [lines[at + 3], ''],
-      added: [drawerSummary(label, Number(summary[2]) + fixLines.length), '', ...fixLines],
-    };
-  }
-
-  // New month → open a fresh drawer above the existing ones; they stay untouched.
-  return {
-    line: at + 2,
-    removed: [],
-    added: ['<details>', drawerSummary(label, fixLines.length), '', ...fixLines, '</details>', ''],
-  };
-}
-
 /**
- * Insert the week's entries into CHANGELOG.md.
- * Returns the new text plus the edits that produced it, so `--dry-run` can print
- * a tight diff instead of a 1500-line whole-file comparison.
+ * Insert the week's block into CHANGELOG.md, newest first under `## Ukeslipp`.
+ * Returns the new text plus the edit that produced it, so `--dry-run` can print
+ * a tight diff instead of a 3000-line whole-file comparison.
  */
 export function applyToChangelog(changelog, { version, notes, now }) {
   const lines = changelog.split('\n');
-  const ordered = [...notes].sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
-  const featureNotes = ordered.filter((note) => note.type === 'feat');
-  const fixNotes = ordered.filter((note) => note.type === 'fix' || note.type === 'perf');
-  const edits = [];
+  const at = headingIndex(lines, WEEK_HEADING);
 
-  if (featureNotes.length > 0) {
-    const at = headingIndex(lines, FEATURES_HEADING);
-    const featureVersion = version.split('.').slice(0, 2).join('.');
-    const added = featureNotes.flatMap((note) => [...renderFeatureBlock(note, featureVersion).split('\n'), '']);
-    edits.push({ line: at + 2, removed: [], added });
+  // One release, one block. A second block for the same version can only come
+  // from hand-editing — but a silent duplicate is worse than a failed run (I3).
+  const existing = `### ${version} · `;
+  if (lines.some((line) => line.startsWith(existing))) {
+    throw new Error(`CHANGELOG.md har allerede en blokk for ${version} — skriver ingenting`);
   }
 
-  if (fixNotes.length > 0) edits.push(fixEdit(lines, version, fixNotes, now));
-
-  edits.sort((a, b) => a.line - b.line);
+  const block = renderWeekBlock({ version, notes, now });
+  const edits = [{ line: at + 2, removed: [], added: [...block.split('\n'), ''] }];
   return { text: applyEdits(lines, edits), edits };
 }
 

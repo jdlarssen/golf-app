@@ -7,18 +7,19 @@ import path from 'node:path';
 import {
   applyToChangelog,
   chooseBump,
-  monthLabel,
   nextVersion,
   parseNote,
   readNotes,
   renderFeatureBlock,
   renderFixLine,
+  renderWeekBlock,
   validateNotes,
+  weekLabel,
 } from './weekly-release.mjs';
 
 const ISSUE = 'https://github.com/jdlarssen/golf-app/issues';
 
-/** Minimal stand-in for CHANGELOG.md: both section headings, two month drawers. */
+/** Minimal stand-in for CHANGELOG.md: one released week, then the folded history. */
 const FIXTURE_CHANGELOG = [
   '# Changelog',
   '',
@@ -26,29 +27,46 @@ const FIXTURE_CHANGELOG = [
   '',
   '---',
   '',
-  '## Funksjoner',
+  '## Ukeslipp',
+  '',
+  '### 1.232.0 · mandag 10. august 2026',
   '',
   '<details>',
-  '<summary><strong>1.231 · Cupene dine samlet på ett sted</strong></summary>',
+  '<summary><strong>Cupene dine samlet på ett sted</strong></summary>',
   '',
   `[#1463](${ISSUE}/1463) — Gammel brødtekst.`,
   '',
   '↳ /admin/cup · «Åpne cupene»',
   '</details>',
   '',
-  '## Feilrettinger',
+  '<details>',
+  '<summary>2 rettinger</summary>',
+  '',
+  `- [#1539](${ISSUE}/1539) — Gammel retting.`,
+  `- [#1500](${ISSUE}/1500) — Eldre retting.`,
+  '</details>',
+  '',
+  '## Før ukeslippene (1.0 – 1.232)',
   '',
   '<details>',
-  '<summary><strong>August 2026 · 2 rettinger</strong></summary>',
+  '<summary><strong>Versjon per endring — 1.0 til 1.232</strong></summary>',
   '',
-  `- \`1.231.2\` · [#1539](${ISSUE}/1539) — Gammel retting.`,
-  `- \`1.231.1\` · [#1500](${ISSUE}/1500) — Eldre retting.`,
+  '### Funksjoner',
+  '',
+  '<details>',
+  '<summary><strong>1.231 · En eldre funksjon</strong></summary>',
+  '',
+  `[#1400](${ISSUE}/1400) — Gammel tekst.`,
   '</details>',
+  '',
+  '### Feilrettinger',
   '',
   '<details>',
   '<summary><strong>Juli 2026 · 40 rettinger</strong></summary>',
   '',
   `- \`1.214.2\` · [#1344](${ISSUE}/1344) — Enda eldre retting.`,
+  '</details>',
+  '',
   '</details>',
   '',
 ].join('\n');
@@ -63,8 +81,7 @@ function note(file, front, body) {
   return parseNote(file, noteFile(front, body));
 }
 
-const AUGUST = new Date('2026-08-17T03:00:00Z');
-const SEPTEMBER = new Date('2026-09-07T03:00:00Z');
+const MONDAY = new Date('2026-08-17T03:00:00Z');
 
 describe('parseNote', () => {
   it('reads a full feat note', () => {
@@ -189,15 +206,15 @@ describe('nextVersion', () => {
   });
 });
 
-describe('monthLabel', () => {
-  it('names the month in Norwegian, in Oslo time', () => {
-    expect(monthLabel(AUGUST)).toBe('August 2026');
-    expect(monthLabel(SEPTEMBER)).toBe('September 2026');
+describe('weekLabel', () => {
+  it('names the release day in Norwegian long form', () => {
+    expect(weekLabel(MONDAY)).toBe('mandag 17. august 2026');
+    expect(weekLabel(new Date('2026-09-07T03:00:00Z'))).toBe('mandag 7. september 2026');
   });
 
   it('uses the Oslo date, not UTC, around midnight', () => {
-    // 2026-08-31 23:30 UTC is already 2026-09-01 in Oslo (UTC+2).
-    expect(monthLabel(new Date('2026-08-31T23:30:00Z'))).toBe('September 2026');
+    // 2026-08-16 22:30 UTC is already Monday 2026-08-17 in Oslo (UTC+2).
+    expect(weekLabel(new Date('2026-08-16T22:30:00Z'))).toBe('mandag 17. august 2026');
   });
 });
 
@@ -208,10 +225,10 @@ describe('renderFeatureBlock', () => {
       { type: 'feat', issue: '1463', title: 'Cupene dine samlet', link: '/admin/cup', cta: 'Åpne cupene' },
       'Cup-lista viser nå alle cupene du er med i.',
     );
-    expect(renderFeatureBlock(n, '1.232')).toBe(
+    expect(renderFeatureBlock(n)).toBe(
       [
         '<details>',
-        '<summary><strong>1.232 · Cupene dine samlet</strong></summary>',
+        '<summary><strong>Cupene dine samlet</strong></summary>',
         '',
         `[#1463](${ISSUE}/1463) — Cup-lista viser nå alle cupene du er med i.`,
         '',
@@ -223,10 +240,10 @@ describe('renderFeatureBlock', () => {
 
   it('drops the ↳ line when the feature has no destination', () => {
     const n = note('1464-visuelt.md', { type: 'feat', issue: '1464', title: 'Roligere farger' }, 'Fargene er dempet.');
-    expect(renderFeatureBlock(n, '1.232')).toBe(
+    expect(renderFeatureBlock(n)).toBe(
       [
         '<details>',
-        '<summary><strong>1.232 · Roligere farger</strong></summary>',
+        '<summary><strong>Roligere farger</strong></summary>',
         '',
         `[#1464](${ISSUE}/1464) — Fargene er dempet.`,
         '</details>',
@@ -236,129 +253,167 @@ describe('renderFeatureBlock', () => {
 });
 
 describe('renderFixLine', () => {
-  it('renders version, issue link and sentence', () => {
+  it('renders issue link and sentence', () => {
     const n = note('1542-tomt-kort.md', { type: 'fix', issue: '1542' }, 'Scorekortet står ikke lenger tomt.');
-    expect(renderFixLine(n, '1.232.0')).toBe(
-      `- \`1.232.0\` · [#1542](${ISSUE}/1542) — Scorekortet står ikke lenger tomt.`,
-    );
+    expect(renderFixLine(n)).toBe(`- [#1542](${ISSUE}/1542) — Scorekortet står ikke lenger tomt.`);
   });
 
   it('renders a comma list of issues as separate links', () => {
     const n = note('1539-best-ball.md', { type: 'fix', issue: '1539, 1551' }, 'Best ball gir deg slagene du skal ha.');
-    expect(renderFixLine(n, '1.232.0')).toBe(
-      `- \`1.232.0\` · [#1539](${ISSUE}/1539), [#1551](${ISSUE}/1551) — Best ball gir deg slagene du skal ha.`,
+    expect(renderFixLine(n)).toBe(
+      `- [#1539](${ISSUE}/1539), [#1551](${ISSUE}/1551) — Best ball gir deg slagene du skal ha.`,
     );
   });
 
   it('drops the link on an issue-less retting', () => {
     const n = note('x-gammel.md', { type: 'fix' }, 'En gammel retting.');
-    expect(renderFixLine(n, '1.232.0')).toBe('- `1.232.0` — En gammel retting.');
+    expect(renderFixLine(n)).toBe('- En gammel retting.');
+  });
+});
+
+const featA = () =>
+  note(
+    '1463-cupliste.md',
+    { type: 'feat', issue: '1463', title: 'Cupene samlet', link: '/admin/cup', cta: 'Åpne cupene' },
+    'Cup-lista viser nå alle cupene du er med i.',
+  );
+const featB = () =>
+  note(
+    '1470-liga.md',
+    { type: 'feat', issue: '1470', title: 'Ligaen i Klubbhuset', link: '/admin/liga', cta: 'Åpne ligaen' },
+    'Ligaen din ligger nå i Klubbhuset.',
+  );
+const fixA = () => note('1542-tomt-kort.md', { type: 'fix', issue: '1542' }, 'Scorekortet står ikke lenger tomt.');
+const fixB = () => note('1545-slag.md', { type: 'perf', issue: '1545' }, 'Tabellen laster raskere.');
+
+describe('renderWeekBlock', () => {
+  it('renders the whole week: heading, feature rows, then one drawer of rettinger', () => {
+    const block = renderWeekBlock({ version: '1.233.0', notes: [featB(), featA(), fixB(), fixA()], now: MONDAY });
+    expect(block).toBe(
+      [
+        '### 1.233.0 · mandag 17. august 2026',
+        '',
+        '<details>',
+        '<summary><strong>Cupene samlet</strong></summary>',
+        '',
+        `[#1463](${ISSUE}/1463) — Cup-lista viser nå alle cupene du er med i.`,
+        '',
+        '↳ /admin/cup · «Åpne cupene»',
+        '</details>',
+        '',
+        '<details>',
+        '<summary><strong>Ligaen i Klubbhuset</strong></summary>',
+        '',
+        `[#1470](${ISSUE}/1470) — Ligaen din ligger nå i Klubbhuset.`,
+        '',
+        '↳ /admin/liga · «Åpne ligaen»',
+        '</details>',
+        '',
+        '<details>',
+        '<summary>2 rettinger</summary>',
+        '',
+        `- [#1542](${ISSUE}/1542) — Scorekortet står ikke lenger tomt.`,
+        `- [#1545](${ISSUE}/1545) — Tabellen laster raskere.`,
+        '</details>',
+      ].join('\n'),
+    );
+  });
+
+  it('leaves out the drawer when the week only shipped features', () => {
+    const block = renderWeekBlock({ version: '1.233.0', notes: [featA()], now: MONDAY });
+    expect(block).toBe(
+      [
+        '### 1.233.0 · mandag 17. august 2026',
+        '',
+        '<details>',
+        '<summary><strong>Cupene samlet</strong></summary>',
+        '',
+        `[#1463](${ISSUE}/1463) — Cup-lista viser nå alle cupene du er med i.`,
+        '',
+        '↳ /admin/cup · «Åpne cupene»',
+        '</details>',
+      ].join('\n'),
+    );
+  });
+
+  it('counts a single retting in the singular on a fix-only week', () => {
+    const block = renderWeekBlock({ version: '1.232.1', notes: [fixA()], now: MONDAY });
+    expect(block).toBe(
+      [
+        '### 1.232.1 · mandag 17. august 2026',
+        '',
+        '<details>',
+        '<summary>1 retting</summary>',
+        '',
+        `- [#1542](${ISSUE}/1542) — Scorekortet står ikke lenger tomt.`,
+        '</details>',
+      ].join('\n'),
+    );
+  });
+
+  it('renders an issue-less retting without a link', () => {
+    const n = note('x-gammel.md', { type: 'fix' }, 'En gammel retting.');
+    const block = renderWeekBlock({ version: '1.232.1', notes: [n], now: MONDAY });
+    expect(block.split('\n').at(-2)).toBe('- En gammel retting.');
   });
 });
 
 describe('applyToChangelog', () => {
-  const featA = () =>
-    note(
-      '1463-cupliste.md',
-      { type: 'feat', issue: '1463', title: 'Cupene samlet', link: '/admin/cup', cta: 'Åpne cupene' },
-      'Cup-lista viser nå alle cupene du er med i.',
-    );
-  const featB = () =>
-    note(
-      '1470-liga.md',
-      { type: 'feat', issue: '1470', title: 'Ligaen i Klubbhuset', link: '/admin/liga', cta: 'Åpne ligaen' },
-      'Ligaen din ligger nå i Klubbhuset.',
-    );
-  const fixA = () => note('1542-tomt-kort.md', { type: 'fix', issue: '1542' }, 'Scorekortet står ikke lenger tomt.');
-  const fixB = () => note('1545-slag.md', { type: 'perf', issue: '1545' }, 'Tabellen laster raskere.');
-
-  it('puts both feature rows on top, sharing the week’s X.Y', () => {
+  it('puts the new week straight under the heading, above last week', () => {
     const { text } = applyToChangelog(FIXTURE_CHANGELOG, {
-      version: '1.232.0',
-      notes: [featA(), featB()],
-      now: AUGUST,
+      version: '1.233.0',
+      notes: [featA(), fixA()],
+      now: MONDAY,
     });
     const lines = text.split('\n');
-    const heading = lines.indexOf('## Funksjoner');
-    expect(lines.slice(heading + 1, heading + 5)).toEqual([
-      '',
-      '<details>',
-      '<summary><strong>1.232 · Cupene samlet</strong></summary>',
-      '',
-    ]);
-    // Both new rows carry 1.232, and the previous top row is still there below.
-    expect(text).toContain('<summary><strong>1.232 · Ligaen i Klubbhuset</strong></summary>');
-    expect(text).toContain('<summary><strong>1.231 · Cupene dine samlet på ett sted</strong></summary>');
-    expect(text.indexOf('1.232 · Cupene samlet')).toBeLessThan(text.indexOf('1.232 · Ligaen i Klubbhuset'));
-    expect(text.indexOf('1.232 · Ligaen i Klubbhuset')).toBeLessThan(text.indexOf('1.231 · Cupene dine samlet'));
-  });
-
-  it('adds fix lines to the current month drawer and raises its counter', () => {
-    const { text } = applyToChangelog(FIXTURE_CHANGELOG, {
-      version: '1.231.3',
-      notes: [fixA(), fixB()],
-      now: AUGUST,
-    });
-    expect(text).toContain('<summary><strong>August 2026 · 4 rettinger</strong></summary>');
-    const lines = text.split('\n');
-    const summary = lines.indexOf('<summary><strong>August 2026 · 4 rettinger</strong></summary>');
-    expect(lines.slice(summary + 1, summary + 4)).toEqual([
-      '',
-      `- \`1.231.3\` · [#1542](${ISSUE}/1542) — Scorekortet står ikke lenger tomt.`,
-      `- \`1.231.3\` · [#1545](${ISSUE}/1545) — Tabellen laster raskere.`,
-    ]);
-    // The old lines survive, in place, right below the new ones.
-    expect(lines[summary + 4]).toBe(`- \`1.231.2\` · [#1539](${ISSUE}/1539) — Gammel retting.`);
-    expect(text).toContain('<summary><strong>Juli 2026 · 40 rettinger</strong></summary>');
-  });
-
-  it('opens a new month drawer with counter 1 and leaves the old drawers alone', () => {
-    const { text } = applyToChangelog(FIXTURE_CHANGELOG, {
-      version: '1.231.3',
-      notes: [fixA()],
-      now: SEPTEMBER,
-    });
-    const lines = text.split('\n');
-    const heading = lines.indexOf('## Feilrettinger');
+    const heading = lines.indexOf('## Ukeslipp');
     expect(lines.slice(heading + 1, heading + 6)).toEqual([
       '',
-      '<details>',
-      '<summary><strong>September 2026 · 1 retting</strong></summary>',
+      '### 1.233.0 · mandag 17. august 2026',
       '',
-      `- \`1.231.3\` · [#1542](${ISSUE}/1542) — Scorekortet står ikke lenger tomt.`,
+      '<details>',
+      '<summary><strong>Cupene samlet</strong></summary>',
     ]);
-    expect(lines[heading + 6]).toBe('</details>');
-    // Untouched drawers keep their counters.
-    expect(text).toContain('<summary><strong>August 2026 · 2 rettinger</strong></summary>');
-    expect(text).toContain('<summary><strong>Juli 2026 · 40 rettinger</strong></summary>');
+    // Last week's block survives untouched, below the new one.
+    expect(text).toContain('### 1.232.0 · mandag 10. august 2026');
+    expect(text.indexOf('### 1.233.0 ·')).toBeLessThan(text.indexOf('### 1.232.0 ·'));
+    expect(text).toContain('<summary>2 rettinger</summary>');
   });
 
-  it('touches only the section a note type belongs in', () => {
+  it('reports exactly one edit — the week is a single block', () => {
+    const { edits } = applyToChangelog(FIXTURE_CHANGELOG, {
+      version: '1.233.0',
+      notes: [featA(), featB(), fixA(), fixB()],
+      now: MONDAY,
+    });
+    expect(edits).toHaveLength(1);
+  });
+
+  it('touches nothing but the insertion point', () => {
     const before = FIXTURE_CHANGELOG.split('\n');
     const { text } = applyToChangelog(FIXTURE_CHANGELOG, {
-      version: '1.232.0',
+      version: '1.233.0',
       notes: [featA()],
-      now: AUGUST,
+      now: MONDAY,
     });
     const after = text.split('\n');
-    const tail = (arr) => arr.slice(arr.indexOf('## Feilrettinger'));
+    const heading = after.indexOf('## Ukeslipp');
+    // Everything above the anchor, and everything from last week's block down, is byte-identical.
+    expect(after.slice(0, heading + 2)).toEqual(before.slice(0, heading + 2));
+    const tail = (arr) => arr.slice(arr.indexOf('### 1.232.0 · mandag 10. august 2026'));
     expect(tail(after)).toEqual(tail(before));
   });
 
-  it('reports one edit per touched section', () => {
-    const { edits } = applyToChangelog(FIXTURE_CHANGELOG, {
-      version: '1.232.0',
-      notes: [featA(), fixA()],
-      now: AUGUST,
-    });
-    expect(edits).toHaveLength(2);
-    expect(edits[0].line).toBeLessThan(edits[1].line);
+  it('fails closed when the Ukeslipp heading is missing', () => {
+    expect(() =>
+      applyToChangelog('# Changelog\n\n## Feilrettinger\n\n', { version: '1.233.0', notes: [fixA()], now: MONDAY }),
+    ).toThrow(/Ukeslipp/);
   });
 
-  it('fails closed when a section heading is missing', () => {
+  it('fails closed when the version already has a block — one week, one entry', () => {
     expect(() =>
-      applyToChangelog('# Changelog\n\n## Funksjoner\n\n', { version: '1.232.0', notes: [fixA()], now: AUGUST }),
-    ).toThrow(/Feilrettinger/);
+      applyToChangelog(FIXTURE_CHANGELOG, { version: '1.232.0', notes: [fixA()], now: MONDAY }),
+    ).toThrow(/1\.232\.0/);
   });
 });
 
