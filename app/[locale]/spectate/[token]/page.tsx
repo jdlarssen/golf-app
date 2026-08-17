@@ -137,6 +137,10 @@ export default async function SpectatePage({
     backHref,
     supabase: adminClient,
     includeReactions: false,
+    // #1373: ingen lenker inn i /games/* — de er innloggings-gatet og ender
+    // som blindveier for en tilskuer. Netto/Brutto-toggelen peker på backHref
+    // (denne siden), som selv leser ?mode=.
+    publicView: true,
     viewerUserId: '',
   });
 

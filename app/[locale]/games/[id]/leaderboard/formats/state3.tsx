@@ -22,7 +22,7 @@ import {
   type TeamLine,
 } from '@/lib/leaderboard';
 import {
-  leaderboardHref,
+  modeToggleHref,
   type LeaderboardNavContext,
 } from '@/lib/leaderboard/navContext';
 import {
@@ -136,10 +136,19 @@ export function ModeToggle({
   gameId,
   mode,
   navContext,
+  publicView = false,
+  backHref,
 }: {
   gameId: string;
   mode: LeaderboardMode;
   navContext?: LeaderboardNavContext;
+  /**
+   * True on the public spectate/embed surfaces (#1373) — the toggle then
+   * reloads `backHref` (the public page itself, which parses `?mode=`) instead
+   * of the login-gated `/games/{id}/leaderboard`.
+   */
+  publicView?: boolean;
+  backHref?: string;
 }) {
   const tc = useTranslations('leaderboard.common');
   return (
@@ -157,7 +166,13 @@ export function ModeToggle({
           // instead of stacking history entries (#1517) — same rule as the
           // state #4 ModeChip.
           replace
-          href={leaderboardHref({ gameId, mode: m, context: navContext })}
+          href={modeToggleHref({
+            gameId,
+            mode: m,
+            context: navContext,
+            publicView,
+            publicHref: backHref,
+          })}
           className={`min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-all ${
             mode === m
               ? 'bg-surface text-text shadow-sm'
@@ -300,6 +315,8 @@ export async function renderState35(opts: {
   backHref: string;
   holeSegment: HoleSegment;
   navContext?: LeaderboardNavContext;
+  /** Public spectate/embed surface — see `ModeToggle` (#1373). */
+  publicView?: boolean;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const ts35 = await getTranslations('leaderboard.state35');
@@ -312,6 +329,7 @@ export async function renderState35(opts: {
     backHref,
     holeSegment,
     navContext,
+    publicView = false,
   } = opts;
 
   const openHoleNumbers = firstHalfHoleNumbersForSegment(holeSegment);
@@ -360,7 +378,13 @@ export async function renderState35(opts: {
       </div>
 
       <div className="flex justify-center mb-5">
-        <ModeToggle gameId={gameId} mode={mode} navContext={navContext} />
+        <ModeToggle
+          gameId={gameId}
+          mode={mode}
+          navContext={navContext}
+          publicView={publicView}
+          backHref={backHref}
+        />
       </div>
 
       <div className="space-y-3 px-4">

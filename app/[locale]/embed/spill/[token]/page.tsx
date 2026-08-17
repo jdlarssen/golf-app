@@ -61,7 +61,12 @@ export default async function EmbedGamePage({
   const live = game.status === 'active';
   // Self-referencing back-href: embed visitors have no session, so any back
   // chevron in the format views must not point into the authed app.
-  const backHref = `/${locale}/embed/spill/${token}`;
+  // #1373: the Netto/Brutto-toggle now reloads this same href with a new
+  // `?mode=`, so an opted-in dark embed has to carry `theme` along — otherwise
+  // the first toggle-tap would flip an info-screen back to light.
+  const backHref = `/${locale}/embed/spill/${token}${
+    theme === 'dark' ? '?theme=dark' : ''
+  }`;
 
   const t = await getTranslations('embed');
 
@@ -72,6 +77,9 @@ export default async function EmbedGamePage({
     backHref,
     supabase: getAdminClient(),
     includeReactions: false,
+    // #1373: samme regel som spectate — ingen /games/*-lenker i en iframe uten
+    // session; toggelen laster embed-siden på nytt med ny ?mode=.
+    publicView: true,
     viewerUserId: '',
   });
 

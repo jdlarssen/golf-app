@@ -100,6 +100,16 @@ export type LeaderboardContentOpts = {
    * Only consulted when `includeReactions` is true.
    */
   reactionsDisabled?: boolean;
+  /**
+   * True on the public, session-less surfaces — `/spectate/[token]` and
+   * `/embed/spill/[token]` (#1373). They reuse this renderer, but `/games/*` is
+   * not in `PUBLIC_PATH_PATTERN` (proxy.ts), so every link into it is a dead
+   * end that lands an anonymous viewer on /login. Drilldown links, the drill
+   * hint and the CSV export are therefore dropped, and the Netto/Brutto-toggle
+   * points back at `backHref` — the public page's own path, which parses
+   * `?mode=` itself. Defaults to false: the authed leaderboard is unchanged.
+   */
+  publicView?: boolean;
 };
 
 /**
@@ -130,6 +140,7 @@ export async function renderLeaderboardContent({
   includeReactions,
   viewerUserId,
   reactionsDisabled = false,
+  publicView = false,
 }: LeaderboardContentOpts): Promise<ReactNode> {
   const [tc, locale] = await Promise.all([
     getTranslations('leaderboard.common'),
@@ -536,6 +547,7 @@ export async function renderLeaderboardContent({
       backHref,
       holeSegment: game.hole_segment,
       navContext,
+      publicView,
     });
   }
 
@@ -574,6 +586,7 @@ export async function renderLeaderboardContent({
         holesPlayed={holesPlayed}
         backHref={backHref}
         navContext={navContext}
+        publicView={publicView}
         footerSlot={
           <>
             {prizeAwardsNode}
@@ -639,6 +652,7 @@ export async function renderLeaderboardContent({
               holesPlayed={holesPlayed}
               backHref={backHref}
               navContext={navContext}
+              publicView={publicView}
               chromeless
             />
             {prizeAwardsNode}
