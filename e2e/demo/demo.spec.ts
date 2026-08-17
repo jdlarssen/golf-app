@@ -25,6 +25,15 @@ test.describe('Prøvespill demo (public, no login)', () => {
       expect(await board.innerText()).not.toBe(before);
     }).toPass();
 
+    // #1391: det globale sync-banneret gates på proxy-verifisert innlogging, og
+    // /demo er en offentlig rute der proxyen stripper den headeren. Ingenting
+    // skal derfor ha rørt Dexie her — basen er lazy-open, så eksisterer den,
+    // har banneret (eller noe annet) rendret på en flate uten innlogging.
+    const dbNames = await page.evaluate(async () =>
+      (await indexedDB.databases()).map((db) => db.name),
+    );
+    expect(dbNames).not.toContain('golf-app');
+
     // «Klar for ekte runde?» → inn i registreringen.
     await page.getByTestId('demo-cta').getByRole('link').click();
     await expect(page).toHaveURL(/\/login/);
