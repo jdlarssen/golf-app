@@ -4,6 +4,7 @@ import {
   validateFromParam,
   leaderboardHref,
   drilldownHref,
+  modeToggleHref,
   EMPTY_NAV_CONTEXT,
   type LeaderboardNavContext,
 } from './navContext';
@@ -161,6 +162,72 @@ describe('leaderboardHref', () => {
     expect(href).toBe(
       '/games/g1/leaderboard?mode=netto&from=%2Fcup%2Fx%26mode%3Dbrutto',
     );
+  });
+});
+
+describe('modeToggleHref', () => {
+  const SPECTATE = '/no/spectate/tok123';
+
+  it('builds the authed leaderboard href when the view is not public', () => {
+    expect(
+      modeToggleHref({ gameId: 'g1', mode: 'netto', context: cupContext }),
+    ).toBe(leaderboardHref({ gameId: 'g1', mode: 'netto', context: cupContext }));
+  });
+
+  it('stays on the public page when the view is public', () => {
+    expect(
+      modeToggleHref({
+        gameId: 'g1',
+        mode: 'brutto',
+        publicView: true,
+        publicHref: SPECTATE,
+      }),
+    ).toBe(`${SPECTATE}?mode=brutto`);
+  });
+
+  it('never links into /games/ from a public view', () => {
+    for (const mode of ['netto', 'brutto'] as const) {
+      const href = modeToggleHref({
+        gameId: 'g1',
+        mode,
+        publicView: true,
+        publicHref: SPECTATE,
+        context: cupContext,
+      });
+      expect(href).not.toContain('/games/');
+    }
+  });
+
+  it('keeps the public page other params and replaces an existing mode', () => {
+    expect(
+      modeToggleHref({
+        gameId: 'g1',
+        mode: 'netto',
+        publicView: true,
+        publicHref: `/no/embed/spill/tok123?theme=dark&mode=brutto`,
+      }),
+    ).toBe('/no/embed/spill/tok123?theme=dark&mode=netto');
+  });
+
+  it('drops the nav-context on a public view — it only names authed routes', () => {
+    expect(
+      modeToggleHref({
+        gameId: 'g1',
+        mode: 'netto',
+        publicView: true,
+        publicHref: SPECTATE,
+        context: bothContext,
+      }),
+    ).toBe(`${SPECTATE}?mode=netto`);
+  });
+
+  it.each([
+    ['missing publicHref', undefined],
+    ['empty publicHref', ''],
+  ])('falls back to the authed href for %s', (_label, publicHref) => {
+    expect(
+      modeToggleHref({ gameId: 'g1', mode: 'netto', publicView: true, publicHref }),
+    ).toBe('/games/g1/leaderboard?mode=netto');
   });
 });
 
