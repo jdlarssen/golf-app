@@ -6,6 +6,7 @@ import {
   ADMIN_EMAIL,
   PLAYER_EMAIL,
   signInViaOtp,
+  logEgressFailures,
   seedActiveStablefordGame,
   cleanupTestGame,
   type ActiveGame,
@@ -54,6 +55,10 @@ test.describe('Scoring golden path (solo stableford)', () => {
     const playerPage = await playerCtx.newPage();
     // Lever-knappen viser en window.confirm («uspilte hull») — auto-aksepter.
     playerPage.on('dialog', (d) => d.accept());
+    // #1581: denne specen er den ene i @gate-serien som må nå staging-Supabase
+    // rett fra nettleseren (sync-motorens score-upsert). Ryker den veien i et
+    // proxy-miljø, står `net::`-navnet i loggen i stedet for bare en timeout.
+    logEgressFailures(playerPage);
 
     await test.step('Player signs in and enters scores on two holes', async () => {
       await playerPage.goto(`/login?next=/games/${gameId}/holes/1`);
@@ -109,6 +114,7 @@ test.describe('Scoring golden path (solo stableford)', () => {
     // ── Admin: approve the player's scorecard ─────────────────────────────
     const adminCtx = await browser.newContext();
     const adminPage = await adminCtx.newPage();
+    logEgressFailures(adminPage);
 
     await test.step('Admin approves the submitted scorecard (approved_at set)', async () => {
       await adminPage.goto(`/login?next=/games/${gameId}/approve`);
