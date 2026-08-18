@@ -1,0 +1,10 @@
+{
+  "//": "Run-config for the tsx scripts in this folder (#1509). The scripts import lib/ modules that start with `import 'server-only'` — a Next.js marker, not an installed package: Next strips it at build time and vitest aliases it to a stub, but plain tsx has no such shim and dies at module load with `Cannot find module 'server-only'`. Pointing it at the same stub vitest uses (an empty module — the marker has no runtime exports) makes `npx tsx --tsconfig scripts/tsconfig.json …` work. The root tsconfig is left untouched, so neither `next build` nor `tsc --noEmit` nor vitest resolution changes.",
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../*"],
+      "server-only": ["../vitest.server-only-stub.ts"]
+    }
+  }
+}
