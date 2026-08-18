@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import { subscribeGameScores } from '@/lib/sync/realtime';
-import { localDb } from '@/lib/sync/db';
+import { currentDeviceUserId } from '@/lib/sync/currentUser';
+import { mergeServerScore } from '@/lib/sync/mergeServerScore';
 import { getBrowserClient } from '@/lib/supabase/client';
 
 export function RealtimeMount({ gameId }: { gameId: string }) {
@@ -21,21 +22,26 @@ export function RealtimeMount({ gameId }: { gameId: string }) {
         )
         .eq('game_id', gameId);
       if (!data) return;
+      // Once per catch-up run, outside the merge: awaiting a non-Dexie promise
+      // inside a Dexie transaction commits it early (PrematureCommitError).
+      const currentUserId = await currentDeviceUserId();
       for (const row of data) {
-        const id = `${row.game_id}:${row.user_id}:${row.hole_number}`;
-        const existing = await localDb.scores.get(id);
-        if (existing && existing.clientUpdatedAt >= row.client_updated_at) continue;
-        await localDb.scores.put({
-          id,
-          gameId: row.game_id,
-          userId: row.user_id,
-          holeNumber: row.hole_number,
-          strokes: row.strokes,
-          putts: row.putts ?? null, // #939
-          enteredBy: row.entered_by,
-          clientUpdatedAt: row.client_updated_at,
-          serverUpdatedAt: row.updated_at,
-        });
+        // #1611: LWW, conflict notice and queue cleanup all live in the shared
+        // merge. Catch-up runs on mount/focus/online — i.e. exactly when an iOS
+        // PWA wakes up and finds someone else's number in place of yours.
+        await mergeServerScore(
+          {
+            gameId: row.game_id,
+            userId: row.user_id,
+            holeNumber: row.hole_number,
+            strokes: row.strokes,
+            putts: row.putts ?? null, // #939
+            enteredBy: row.entered_by,
+            clientUpdatedAt: row.client_updated_at,
+            serverUpdatedAt: row.updated_at,
+          },
+          currentUserId,
+        );
       }
     }
     // initial catch-up + on focus + on online
