@@ -252,7 +252,7 @@ som må eksporteres før `npm run e2e:gate`, i samme form som #1183-punktet.
       `ERR_PROXY_CONNECTION_FAILED`-linjen.
 - [x] **SC6 — Dokumentert for loopen:** `docs/loops/nattkjoreren.md` Steg 4 har det nye
       kulepunktet (#1581), inkl. evt. `export`-linje fra Steg 1. Verifiser: diff.
-- [ ] **SC7 — CI uendret grønn:** PR-ens `verify` + `e2e`-jobber grønne uten
+- [x] **SC7 — CI uendret grønn:** PR-ens `verify` + `e2e`-jobber grønne uten
       config-endring i `.github/workflows/`. Verifiser: `gh pr checks`.
 
 ## Gates
@@ -317,6 +317,10 @@ Branch: `claude/forge-auto-1581-7d538d`. Kommandoene under er kjørt i denne øk
 - **Merk (forventet støy):** `requestfailed` fyrer også på `net::ERR_ABORTED` ved
   side-nedrigging, så en grønn kjøring kan vise én slik linje. Bevisst ikke filtrert —
   å skjule koder er nettopp det loggeren finnes for å unngå.
+
+- **SC7** — PR #1706, `gh pr checks`: `verify` pass (6m45s), `e2e` pass (4m46s),
+  `scan` pass (16s), Vercel-preview pass. Ingen endring i `.github/workflows/`
+  (diffen rører kun `playwright.*`, `e2e/`, `docs/`, `.forge/`).
 
 ### SC4 — VERIFICATION GAP
 
