@@ -237,3 +237,20 @@ Guardrails:
 - Leaderboard-realtime (`LeaderboardRealtime.tsx`, `PreRoundLeaderboard.tsx`)
   — de skriver ikke til Dexie.
 - «Ikke varsle når jeg står på hullet» — eieren valgte bort.
+
+---
+
+## Verifikasjon (bygge-økt 2026-08-18)
+
+| # | Kriterium | Bevis |
+|---|---|---|
+| 1 | Pre-emption: kø-element venter, nyere rad med annet slag → record + overskriv + kø tømt | `lib/sync/mergeServerScore.test.ts` «pre-emption: an incoming row that beats the drain still writes the notice». RØD mot dagens oppførsel (stub-kjøring: `expected 'applied' to be 'applied-with-conflict'`), grønn etter. |
+| 2 | Synket, så overskrevet fra annen telefon → record | Samme fil, «already synced, then overwritten from another phone: notice». RØD før, grønn etter. |
+| 3 | Innkommende eldre/lik → ingen skriving noe sted | Samme fil, «an older-or-equal row (the echo of my own write) touches nothing» — rad, kø og conflicts uendret. |
+| 4 | `scores.put` kun i writeScore + merge-helperen | `grep -rn "scores\.put(" app lib components` (uten tester) → `lib/sync/writeScore.ts:64`, `lib/sync/mergeServerScore.ts:72`. |
+| 5 | Konflikt-regelen ett sted; eksisterende suite grønn | `conflictRecordFor` i `lib/sync/conflict.ts`, importert av `syncWorker.ts` og `mergeServerScore.ts`. `npx vitest run lib/sync components/sync` → 11 filer / 145 tester grønne. |
+| 6 | Staging, begge på nett | Playwright-driver mot `torny-staging` fra denne branchens dev-server (port 3141, `lsof`-verifisert cwd = worktreen). Alle steg grønne — se PR-kommentaren. |
+| 7 | `.changes`-notat, ingen bump | `.changes/1611-konfliktvarsel-pa-nett.md` (`type: fix`, `issue: 1611`); `weekly-release.mjs --dry-run` viser linja i ukeblokka. |
+
+Porter: `npx tsc --noEmit` rent · `npm run lint` 0 errors (56 pre-eksisterende warnings) ·
+`npx vitest run lib/sync components/sync` 145/145 · `npm run build` exit 0.
