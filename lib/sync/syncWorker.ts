@@ -1,7 +1,8 @@
 import { localDb } from './db';
 import { getBrowserClient } from '@/lib/supabase/client';
 import { syncRetryDecision } from './classifyError';
-import { resolveConflict } from './conflict';
+import { conflictRecordFor, resolveConflict } from './conflict';
+import { currentDeviceUserId } from './currentUser';
 
 let inFlight = false;
 
@@ -21,18 +22,8 @@ export async function drainQueue(): Promise<{
     const supabase = getBrowserClient();
 
     // #1368: who is logged in on THIS device. Read once per drain — the
-    // conflict gate below needs it for every item. `getSession` reads local
-    // storage and resolves offline, which is exactly when the queue fills up;
-    // `getUser` would round-trip to the server and fail there. A drain must
-    // never break on this lookup, so any failure falls back to the pre-#1368
-    // proxy (see the conflict branch).
-    let currentUserId: string | null = null;
-    try {
-      const { data } = await supabase.auth.getSession();
-      currentUserId = data.session?.user.id ?? null;
-    } catch {
-      currentUserId = null;
-    }
+    // conflict gate below needs it for every item.
+    const currentUserId = await currentDeviceUserId();
 
     let pushed = 0;
     let rejected = 0;
@@ -142,36 +133,16 @@ export async function drainQueue(): Promise<{
           });
 
           if (resolution === 'server-wins') {
-            // Surface the overwrite as a ConflictRecord when the local score was
-            // typed on THIS device AND strokes actually changed. `score` is the
+            // Surface the overwrite as a ConflictRecord when the rule says so.
+            // The rule itself lives in `conflictRecordFor` (#1611) because the
+            // realtime/catch-up merge needs the very same test; `score` is the
             // local row read above — no extra DB call needed.
-            //
-            // #1368: "typed here" is `enteredBy === currentUserId`, not
-            // `enteredBy === userId`. Keeping score for a flight-mate (marker
-            // role) writes rows with enteredBy = you and userId = the mate, so
-            // the old comparison never matched and the mate's device could wipe
-            // the number you typed in silence. Without a session we cannot tell
-            // who "you" are, so we keep the old proxy — it only ever matches a
-            // player's own rows, which is also why such a record is own-score.
-            const strokesChanged = score.strokes !== row.strokes;
-            const enteredOnThisDevice =
-              currentUserId != null
-                ? score.enteredBy === currentUserId
-                : score.enteredBy === score.userId;
-
-            if (strokesChanged && enteredOnThisDevice) {
-              await localDb.conflicts.put({
-                id: item.scoreId,
-                gameId: score.gameId,
-                userId: score.userId,
-                holeNumber: score.holeNumber,
-                localStrokes: score.strokes,
-                serverStrokes: row.strokes,
-                resolvedAt: new Date().toISOString(),
-                forOwnScore:
-                  currentUserId == null || score.userId === currentUserId,
-              });
-            }
+            const conflict = conflictRecordFor({
+              existing: score,
+              incomingStrokes: row.strokes,
+              currentUserId,
+            });
+            if (conflict) await localDb.conflicts.put(conflict);
 
             await localDb.scores.update(item.scoreId, {
               strokes: row.strokes,
