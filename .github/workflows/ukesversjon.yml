@@ -9,9 +9,13 @@
 # Deploy-rytmen røres ikke: merge til main deployer fortsatt rett til prod.
 # Versjonsnummeret er et ukestempel, ikke et deploystempel.
 #
-# Ops-forutsetning: «Allow GitHub Actions to create and approve pull requests»
-# må være på (Settings → Actions → General → Workflow permissions), ellers
-# feiler gh pr create → fail-closed-issue.
+# Ops-forutsetning: secreten PR_AUTHOR_PAT (#1701). PR-en må åpnes med et
+# personlig token — github.token-PR-er får kjøringene sine parkert som «Approve
+# and run» siden GitHubs endring 11. juni 2026, og da kommer verken merge-porten
+# eller Discord-kortet av seg selv. Mangler secreten, faller skriptet tilbake til
+# github.token og filer et varsel-issue. Innstillingen «Allow GitHub Actions to
+# create and approve pull requests» trengs kun for den fallbacken.
+# Oppskrift: docs/loops/discord-pr-kort.md.
 name: Ukesversjon
 
 on:
@@ -46,6 +50,9 @@ jobs:
       - name: Bokfør ukas versjon og åpne PR
         env:
           GH_TOKEN: ${{ github.token }}
+          # Kun til `gh pr create` (#1701) — issues, labels og gh api går
+          # fortsatt på github.token, og pushen likeså.
+          PR_AUTHOR_PAT: ${{ secrets.PR_AUTHOR_PAT }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: bash .github/scripts/ukesversjon.sh
 
