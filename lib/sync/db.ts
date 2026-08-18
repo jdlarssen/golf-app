@@ -35,10 +35,12 @@ export interface SyncQueueItem {
 }
 
 /**
- * Written by syncWorker (#688) when the server-wins branch overwrites a score
- * that was entered on this device. Surfaced by SyncBanner as a one-line notice
- * so the overwrite is never silent. The record is removed when the user
- * dismisses the banner.
+ * Written whenever a server value replaces a score that was entered on this
+ * device: by syncWorker's server-wins branch (#688 — the offline case) and by
+ * mergeServerScore (#1611), which covers realtime, catch-up and the hole seed
+ * and so fires while both phones are online. Surfaced by SyncBanner as a
+ * one-line notice so the overwrite is never silent. The record is removed when
+ * the user dismisses the banner.
  */
 export interface ConflictRecord {
   id: string; // ${gameId}:${userId}:${holeNumber}

@@ -1,5 +1,6 @@
-import { localDb, scoreKey } from './db';
 import { subscribeRealtimeChannel } from './realtimeChannel';
+import { currentDeviceUserId } from './currentUser';
+import { mergeServerScore } from './mergeServerScore';
 
 type ScoreRowFromDb = {
   game_id: string;
@@ -14,25 +15,27 @@ type ScoreRowFromDb = {
 
 /**
  * Merge an incoming row from Supabase Realtime into the local Dexie store.
- * Last-write-wins by client_updated_at; older incoming events are dropped.
+ *
+ * Last-write-wins, conflict detection and the queue cleanup all live in
+ * `mergeServerScore` — shared with the catch-up fetch and the hole seed so a
+ * number typed here is never replaced in silence (#1611). The session lookup
+ * happens out here because the merge runs inside a Dexie transaction.
  */
 async function mergeIncoming(row: ScoreRowFromDb): Promise<void> {
-  const id = scoreKey(row.game_id, row.user_id, row.hole_number);
-  const existing = await localDb.scores.get(id);
-  if (existing && existing.clientUpdatedAt >= row.client_updated_at) {
-    return;
-  }
-  await localDb.scores.put({
-    id,
-    gameId: row.game_id,
-    userId: row.user_id,
-    holeNumber: row.hole_number,
-    strokes: row.strokes,
-    putts: row.putts ?? null, // #939: coalesce — pre-migration rows lack the field
-    enteredBy: row.entered_by,
-    clientUpdatedAt: row.client_updated_at,
-    serverUpdatedAt: row.updated_at,
-  });
+  const currentUserId = await currentDeviceUserId();
+  await mergeServerScore(
+    {
+      gameId: row.game_id,
+      userId: row.user_id,
+      holeNumber: row.hole_number,
+      strokes: row.strokes,
+      putts: row.putts ?? null,
+      enteredBy: row.entered_by,
+      clientUpdatedAt: row.client_updated_at,
+      serverUpdatedAt: row.updated_at,
+    },
+    currentUserId,
+  );
 }
 
 /**

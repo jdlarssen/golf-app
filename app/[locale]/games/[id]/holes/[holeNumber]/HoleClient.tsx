@@ -18,6 +18,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { localDb, scoreKey, type LocalScore } from '@/lib/sync/db';
 import { isActiveForGame } from '@/lib/sync/queueScope';
 import { writeScore } from '@/lib/sync/writeScore';
+import { currentDeviceUserId } from '@/lib/sync/currentUser';
+import { mergeServerScore } from '@/lib/sync/mergeServerScore';
 import { drainQueue } from '@/lib/sync/syncWorker';
 import { ScoreCard } from '@/components/hole/ScoreCard';
 import { PuttsField } from '@/components/hole/PuttsField';
@@ -416,25 +418,31 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Resolved once, before any merge — a Dexie transaction must not await
+      // anything non-Dexie (PrematureCommitError).
+      const currentUserId = await currentDeviceUserId();
       for (const p of players) {
-        const id = scoreKey(gameId, p.userId, currentHole);
-        const existing = await localDb.scores.get(id);
-        const seedClientUpdatedAt =
-          p.initialClientUpdatedAt ?? '1970-01-01T00:00:00.000Z';
-        if (!existing || existing.clientUpdatedAt < seedClientUpdatedAt) {
-          if (cancelled) return;
-          await localDb.scores.put({
-            id,
+        if (cancelled) return;
+        // #1611: the seed goes through the shared merge like realtime and
+        // catch-up do. It runs FIRST on a page load, so if it overwrote without
+        // detection the catch-up right after would see matching timestamps and
+        // the notice would be lost one level down. `enteredBy: ''` is the
+        // server row's unknown author — it never matches a user id, so a seeded
+        // row is never itself treated as typed here.
+        await mergeServerScore(
+          {
             gameId,
             userId: p.userId,
             holeNumber: currentHole,
             strokes: p.initialStrokes,
             putts: p.initialPutts, // #939
             enteredBy: '',
-            clientUpdatedAt: seedClientUpdatedAt,
+            clientUpdatedAt:
+              p.initialClientUpdatedAt ?? '1970-01-01T00:00:00.000Z',
             serverUpdatedAt: p.initialServerUpdatedAt,
-          });
-        }
+          },
+          currentUserId,
+        );
       }
     })();
     return () => {
