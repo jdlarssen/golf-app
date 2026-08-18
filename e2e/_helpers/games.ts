@@ -196,6 +196,29 @@ export async function signInViaOtp(page: Page, email: string): Promise<void> {
   await signInViaOtpWith(page, email, () => fetchOtpForEmail(email));
 }
 
+/**
+ * Skriver én linje til tekstloggen for hver request fra nettleseren som feiler
+ * mot noe annet enn localhost (#1581).
+ *
+ * Uten den ser en miljøfeil ut som en produktfeil: nattkjørerens VM ruter utgående
+ * HTTPS gjennom en agent-proxy, og da rakk `TypeError: Failed to fetch` bare fram
+ * som «lever-knappen ble aldri enabled» i loggen. Med linja står `net::`-navnet
+ * der — `ERR_CERT_AUTHORITY_INVALID` (nettleseren stoler ikke på proxyens CA) og
+ * `ERR_PROXY_CONNECTION_FAILED` (den når ikke proxyen) peker på hver sin kur.
+ *
+ * Kun URL og metode logges — ingen query, ingen headere, ingen body.
+ */
+export function logEgressFailures(page: Page): void {
+  page.on('requestfailed', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return;
+    const reason = request.failure()?.errorText ?? 'ukjent årsak';
+    console.log(
+      `[e2e egress] ${request.method()} ${url.origin}${url.pathname} → ${reason}`,
+    );
+  });
+}
+
 export type CreatedGame = {
   id: string;
   shortId: string;
