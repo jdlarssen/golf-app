@@ -24,6 +24,17 @@ vi.mock('@/lib/sync/db', () => {
   };
 });
 
+// #1611: the hole seed now goes through the shared server->local merge, which
+// runs inside a real Dexie transaction. Mocked at the module boundary like
+// writeScore — the merge's own semantics are covered by mergeServerScore.test.ts.
+vi.mock('@/lib/sync/mergeServerScore', () => ({
+  mergeServerScore: vi.fn().mockResolvedValue('applied'),
+}));
+
+vi.mock('@/lib/sync/currentUser', () => ({
+  currentDeviceUserId: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock('@/lib/sync/writeScore', () => ({
   writeScore: vi.fn().mockResolvedValue(undefined),
 }));
