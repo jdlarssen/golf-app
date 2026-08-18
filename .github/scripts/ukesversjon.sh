@@ -58,6 +58,11 @@ Notatfilene står urørt i \`.changes/\` — ingen delvis release er skrevet. Re
   exit 1
 }
 
+# Delt PR-opprettelse + parkerings-detektor (#1701), samme fil som dok-skjema.sh
+# bruker. Sources ETTER open_or_note_issue: detektoren filer issuet via den, så
+# labelen blir rutine-spesifikk.
+source .github/scripts/robot-pr.sh
+
 # ── 1. Bokfør (skriptet validerer selv og feiler med filnavn) ──
 
 git config user.name "github-actions[bot]"
@@ -153,23 +158,19 @@ Automatisk åpnet av ukesversjon-workflowen. Format: \`.changes/README.md\` +
 \`docs/changelog-conventions.md\`.
 EOF
 
-PR_URL=$(gh pr create --repo "$REPO" --base main --head "$BRANCH" \
-  --title "chore(release): v$VERSION — uke $WEEK" \
-  --body-file "$PR_BODY") || fail_closed "gh pr create feilet"
+PR_URL=$(robot_pr_create "chore(release): v$VERSION — uke $WEEK" "$PR_BODY") \
+  || fail_closed "gh pr create feilet"
 
-# ── 6. CI-trigger-fella: PR-er opprettet med github.token fyrer ikke alltid CI ──
-# Uten checks nekter branch protection merge, og bokføringen blir stående. Tomt
-# check-rollup på head-SHA-en → dispatch portene selv (#1469-fallbacken).
+# ── 6. Parkerings-detektor (#1701) ──
+# PR-en åpnes med PR_AUTHOR_PAT, så kjøringene skal starte av seg selv, og kortet
+# komme som for enhver menneske-PR. Mangler tokenet — eller er det utløpt —
+# parkerer GitHub kjøringene som «Approve and run»; da sier vi fra i stedet for å
+# la bokføringen stå stille og vente på et klikk ingen vet om.
+#
+# Den gamle #1469-dispatchen er borte: parkerte kjøringer FINNES, så guarden
+# («tomt check-rollup») så alltid grønt, og workflowen manglet `actions: write`
+# uansett — den kunne aldri ha dispatchet noe. Død kode, erstattet av varsling.
 
-SHA=$(git rev-parse HEAD)
-sleep 45
-CHECKS=$(gh api "repos/$REPO/commits/$SHA/check-runs" --jq '.total_count' 2>/dev/null || echo 0)
-if [ "${CHECKS:-0}" -eq 0 ]; then
-  echo "::warning::Ingen checks på $SHA — dispatcher ci.yml + secret-scan.yml selv."
-  gh workflow run ci.yml --ref "$BRANCH" || echo "::warning::dispatch av ci.yml feilet"
-  gh workflow run secret-scan.yml --ref "$BRANCH" || echo "::warning::dispatch av secret-scan.yml feilet"
-else
-  echo "Checks fyrte av seg selv ($CHECKS på $SHA)."
-fi
+robot_pr_verify_not_parked "Ukesversjon" "$(git rev-parse HEAD)" "$PR_URL"
 
 echo "Ukesversjon: bokførings-PR åpnet: $PR_URL"

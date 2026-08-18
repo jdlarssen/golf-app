@@ -102,6 +102,11 @@ Skjema-avvik er DB-arbeid, ikke docs-drift: bevisst → baseline i render-script
 som bringer staging/prod i sync. Kjøring: $RUN_URL"
 }
 
+# Delt PR-opprettelse + parkerings-detektor (#1701), samme fil som ukesversjon.sh
+# bruker. Sources ETTER open_or_note_issue: detektoren filer issuet via den, så
+# labelen blir rutine-spesifikk.
+source .github/scripts/robot-pr.sh
+
 # ── 1. Hent snapshots (prod to ganger for idempotens, staging én gang) ──
 PROD_A="$TMP/prod_a.json"; PROD_B="$TMP/prod_b.json"; STAGING="$TMP/staging.json"
 fetch_snapshot "$PROD_REF"    > "$PROD_A" || fail_closed "prod-snapshot svarte ikke (curl/JSON-feil mot $API/$PROD_REF/database/query)"
@@ -209,13 +214,19 @@ seksjonen er maskin-generert, så diffen er ren fakta-oppdatering.
 
 Refs #1078
 EOF
-PR_URL=$(gh pr create --repo "$REPO" --base main --head "$BRANCH" \
-  --title "docs(schema): ukentlig skjema-regenerering ($DATE)" \
-  --body-file "$PR_BODY") || fail_closed "gh pr create feilet"
+PR_URL=$(robot_pr_create "docs(schema): ukentlig skjema-regenerering ($DATE)" "$PR_BODY") \
+  || fail_closed "gh pr create feilet"
 
 # Discord-kortet fyrer av seg selv: no-op-tvillingen «CI (docs no-op)» kjører på
 # docs-only-paths og står i kortets workflow_run-trigger (#1483). Den gamle
-# eksplisitte dispatchen (#1301) er fjernet.
+# eksplisitte dispatchen (#1301) er fjernet — produsenter skal IKKE dispatche
+# kortet.
+#
+# Forutsetningen er at kjøringene faktisk STARTER. Det er derfor PR-en åpnes med
+# PR_AUTHOR_PAT (#1701): åpnes den med github.token, parkerer GitHub kjøringene
+# som «Approve and run», og da kommer verken merge-porten eller kortet av seg
+# selv. Detektoren sier fra hvis det likevel skjer.
+robot_pr_verify_not_parked "Dok-skjema" "$(git rev-parse HEAD)" "$PR_URL"
 
 report_unexpected_diffs
 echo "Dok-skjema: docs-PR åpnet: $PR_URL"

@@ -4,9 +4,13 @@
 # har den ikke og leser i stedet denne jobbens siste kjøring for ferskhet.
 # Se docs/loops/dok-avstemmeren.md steg 1 og issue #1122.
 #
-# Ops-forutsetning: «Allow GitHub Actions to create and approve pull requests»
-# må være på (Settings → Actions → General → Workflow permissions) for at
-# jobben skal kunne åpne docs-PR-en. Uten det feiler gh pr create → fail-closed-issue.
+# Ops-forutsetning: secreten PR_AUTHOR_PAT (#1701). Docs-PR-en må åpnes med et
+# personlig token — github.token-PR-er får kjøringene sine parkert som «Approve
+# and run» siden GitHubs endring 11. juni 2026, og da kommer verken merge-porten
+# eller Discord-kortet av seg selv. Mangler secreten, faller skriptet tilbake til
+# github.token og filer et varsel-issue. Innstillingen «Allow GitHub Actions to
+# create and approve pull requests» trengs kun for den fallbacken.
+# Oppskrift: docs/loops/discord-pr-kort.md.
 name: Dok-skjema
 
 on:
@@ -44,6 +48,9 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           GH_TOKEN: ${{ github.token }}
+          # Kun til `gh pr create` (#1701) — issues, labels og gh api går
+          # fortsatt på github.token, og pushen likeså.
+          PR_AUTHOR_PAT: ${{ secrets.PR_AUTHOR_PAT }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: bash .github/scripts/dok-skjema.sh
 
