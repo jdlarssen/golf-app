@@ -64,14 +64,19 @@ robot_pr_create() { # tittel body-fil → PR-URL på stdout
 # konkludert (conclusion null) er derimot «ok» — den STARTET uten godkjenning,
 # og det er nøyaktig det vi vil bekrefte.
 robot_pr_classify_checks() { # check-runs-JSON på stdin → parked|unknown|ok
-  local json total parked
+  local json len parked
   json=$(cat)
 
-  total=$(printf '%s' "$json" | jq -r '(.total_count // (.check_runs | length)) // 0' 2>/dev/null) || total=""
-  case "$total" in ('' | *[!0-9]*) echo unknown; return 0 ;; esac
-  [ "$total" -gt 0 ] || { echo unknown; return 0; }
+  # Vi teller kjøringene vi FAKTISK ser i `check_runs`, og stoler bevisst IKKE på
+  # `total_count`: et total_count uten tilhørende liste ville blitt lest som
+  # «kjøringer finnes, ingen av dem parkert» — altså falsk grønt på et svar vi i
+  # praksis ikke kunne lese. -1 betyr «feltet er ikke en liste» og dekker tom
+  # input, ugyldig JSON og API-feilobjekter som {"message":"Not Found"}.
+  len=$(printf '%s' "$json" | jq -r '.check_runs | if type == "array" then length else -1 end' 2>/dev/null) || len=""
+  case "$len" in ('' | *[!0-9-]*) echo unknown; return 0 ;; esac
+  if ! [ "$len" -gt 0 ] 2>/dev/null; then echo unknown; return 0; fi
 
-  parked=$(printf '%s' "$json" | jq -r '[.check_runs[]? | select(.conclusion == "action_required")] | length' 2>/dev/null) || parked=""
+  parked=$(printf '%s' "$json" | jq -r '[.check_runs[] | select(.conclusion == "action_required")] | length' 2>/dev/null) || parked=""
   case "$parked" in ('' | *[!0-9]*) echo unknown; return 0 ;; esac
 
   if [ "$parked" -gt 0 ]; then echo parked; else echo ok; fi
