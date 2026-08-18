@@ -149,6 +149,17 @@ videre kun av eieren via PR når tilliten er etablert.
   med «Executable doesn't exist»): eksportér
   `PW_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` før `npm run e2e:gate`
   — da brukes binæren direkte i stedet for det bundlede registry-oppslaget (#1183).
+- Går utgående HTTPS gjennom en agent-proxy med privat CA: e2e-nettleseren speiler
+  Node sitt egress av seg selv (#1581) — `playwright.config.ts` leser
+  `HTTPS_PROXY`/`NO_PROXY` og `NODE_EXTRA_CA_CERTS`/`SSL_CERT_FILE` og gir Chromium
+  samme vei ut. Er variablene bare satt for Node (f.eks. CA-bundelen leses fra en
+  fil miljøet peker på uten å eksportere den), eksportér dem før `npm run e2e:gate`
+  — f.eks. `export NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`. Uten speilingen
+  feiler kun `scoring-golden-path`, fordi den er den ene @gate-specen som må nå
+  staging rett fra nettleseren; specen skriver da `[e2e egress] … → net::…` i
+  tekstloggen, og `net::`-navnet sier hva som mangler (`ERR_CERT_*` = CA-en,
+  `ERR_PROXY_*`/`ERR_TUNNEL_*` = proxy-ruten). Aldri hopp over specen for å få
+  grønt — eskalér med `net::`-navnet i stedet.
 - Mangler env, eller e2e dekker ikke den berørte flyten: sett
   `needs-manual-qa`-label på PR-en og skriv i PR-kommentaren nøyaktig hvilken
   flyt som må klikkes gjennom (stagingbevis-porten #1076 tar den i en
