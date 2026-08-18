@@ -106,8 +106,9 @@ function parseProxy(
 }
 
 /**
- * Playwright mapper selv ledende `.` til `*.`, så leddene sendes videre som de
- * står — vi trimmer bare bort tomme ledd og dupliserte oppføringer.
+ * Leddene sendes videre som de står — vi trimmer bare bort tomme ledd og
+ * dupliserte oppføringer. Chromium behandler et ledende `.` (`.supabase.co`) likt
+ * med `*.supabase.co`, så ingen omskriving trengs her.
  */
 function buildBypass(env: EgressEnv): string {
   const fromEnv = (firstSet(env, NO_PROXY_VARS)?.value ?? '')

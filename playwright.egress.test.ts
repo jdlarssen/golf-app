@@ -25,11 +25,11 @@ describe('egressFromEnv', () => {
         },
       ],
     ])('%s → {}', (_label, env) => {
-      expect(egressFromEnv(env)).toEqual({});
+      expect(egressFromEnv(env)).toStrictEqual({});
     });
 
     it('lar NO_PROXY alene være uten virkning (ingen proxy å omgå)', () => {
-      expect(egressFromEnv({ NO_PROXY: 'supabase.co' })).toEqual({});
+      expect(egressFromEnv({ NO_PROXY: 'supabase.co' })).toStrictEqual({});
     });
   });
 
@@ -143,7 +143,7 @@ describe('egressFromEnv', () => {
       ['NODE_EXTRA_CA_CERTS', { NODE_EXTRA_CA_CERTS: '/root/.ccr/ca-bundle.crt' }],
       ['SSL_CERT_FILE', { SSL_CERT_FILE: '/root/.ccr/ca-bundle.crt' }],
     ])('%s satt → ignoreHTTPSErrors: true', (_label, env) => {
-      expect(egressFromEnv(env)).toEqual({ ignoreHTTPSErrors: true });
+      expect(egressFromEnv(env)).toStrictEqual({ ignoreHTTPSErrors: true });
     });
 
     it('utelater nøkkelen helt når ingen CA-variabel er satt', () => {
@@ -158,7 +158,7 @@ describe('egressFromEnv', () => {
           HTTPS_PROXY: 'http://vert:3128',
           NODE_EXTRA_CA_CERTS: '/root/.ccr/ca-bundle.crt',
         }),
-      ).toEqual({
+      ).toStrictEqual({
         proxy: { server: 'http://vert:3128', bypass: 'localhost,127.0.0.1' },
         ignoreHTTPSErrors: true,
       });
