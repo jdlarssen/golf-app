@@ -1,76 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createFakeDb } from './testing/fakeDb';
+import type { LocalScore } from './db';
 
 // ── Dexie mock ────────────────────────────────────────────────────────────────
-// Same pattern as writeScore.test.ts: mock the whole `./db` module with tiny
-// in-memory Maps so real IndexedDB is never touched. drainQueue reads scores,
-// mutates scores/conflicts and deletes from syncQueue — all mirrored here.
-
-type FakeScore = {
-  id: string;
-  gameId: string;
-  userId: string;
-  holeNumber: number;
-  strokes: number | null;
-  putts: number | null;
-  enteredBy: string;
-  clientUpdatedAt: string;
-  serverUpdatedAt: string | null;
-};
-
-type FakeQueueItem = {
-  id: string;
-  scoreId: string;
-  attemptCount: number;
-  lastError: string | null;
-  createdAt: string;
-  abandonedAt?: string;
-};
-
-let fakeScores: Map<string, FakeScore>;
-let fakeQueue: Map<string, FakeQueueItem>;
-let fakeConflicts: Map<string, unknown>;
-
-const mockDb = {
-  scores: {
-    get: vi.fn(async (id: string) => fakeScores.get(id)),
-    put: vi.fn(async (row: FakeScore) => {
-      fakeScores.set(row.id, row);
-    }),
-    update: vi.fn(async (id: string, patch: Partial<FakeScore>) => {
-      const row = fakeScores.get(id);
-      if (row) fakeScores.set(id, { ...row, ...patch });
-    }),
-  },
-  syncQueue: {
-    orderBy: vi.fn(() => ({
-      toArray: async () => [...fakeQueue.values()],
-    })),
-    put: vi.fn(async (item: FakeQueueItem) => {
-      fakeQueue.set(item.id, item);
-    }),
-    update: vi.fn(async (id: string, patch: Partial<FakeQueueItem>) => {
-      const item = fakeQueue.get(id);
-      if (item) fakeQueue.set(id, { ...item, ...patch });
-    }),
-    delete: vi.fn(async (id: string) => {
-      fakeQueue.delete(id);
-    }),
-  },
-  conflicts: {
-    put: vi.fn(async (row: { id: string }) => {
-      fakeConflicts.set(row.id, row);
-    }),
-  },
-  // Variadisk som Dexie: (mode, ...tables, fn) — kjør bare callbacken.
-  transaction: vi.fn(async (...args: unknown[]) => {
-    const fn = args[args.length - 1] as () => Promise<void>;
-    return fn();
-  }),
-};
+// Shared in-memory fake (see lib/sync/testing/fakeDb.ts) — real IndexedDB is
+// never touched. drainQueue reads scores, mutates scores/conflicts and deletes
+// from syncQueue; every one of those is a spy on `fake.localDb`.
+const fake = createFakeDb();
 
 vi.mock('./db', () => ({
-  localDb: mockDb,
-  scoreKey: (g: string, u: string, h: number) => `${g}#${u}#${h}`,
+  localDb: fake.localDb,
+  scoreKey: fake.scoreKey,
 }));
 
 // Kontrollerbar RPC: hver test setter sin egen implementasjon.
@@ -85,15 +25,15 @@ vi.mock('@/lib/supabase/client', () => ({
   }),
 }));
 
-const ID = 'g1#u1#5';
+const ID = 'g1:u1:5';
 
 function seedScore(
   strokes: number,
   clientUpdatedAt: string,
-  overrides: Partial<Pick<FakeScore, 'userId' | 'enteredBy'>> = {},
-): FakeScore {
+  overrides: Partial<Pick<LocalScore, 'userId' | 'enteredBy'>> = {},
+): LocalScore {
   const userId = overrides.userId ?? 'u1';
-  const row: FakeScore = {
+  const row: LocalScore = {
     id: ID,
     gameId: 'g1',
     userId,
@@ -104,8 +44,8 @@ function seedScore(
     clientUpdatedAt,
     serverUpdatedAt: null,
   };
-  fakeScores.set(ID, row);
-  fakeQueue.set(ID, {
+  fake.scores.set(ID, row);
+  fake.syncQueue.set(ID, {
     id: ID,
     scoreId: ID,
     attemptCount: 0,
@@ -117,9 +57,9 @@ function seedScore(
 
 /** Simulerer writeScore under in-flight RPC: ny verdi + re-put av kø-elementet. */
 function burstEditDuringFlight(strokes: number, clientUpdatedAt: string) {
-  const row = fakeScores.get(ID)!;
-  fakeScores.set(ID, { ...row, strokes, clientUpdatedAt });
-  fakeQueue.set(ID, {
+  const row = fake.scores.get(ID)!;
+  fake.scores.set(ID, { ...row, strokes, clientUpdatedAt });
+  fake.syncQueue.set(ID, {
     id: ID,
     scoreId: ID,
     attemptCount: 0,
@@ -131,9 +71,7 @@ function burstEditDuringFlight(strokes: number, clientUpdatedAt: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
-  fakeScores = new Map();
-  fakeQueue = new Map();
-  fakeConflicts = new Map();
+  fake.reset();
   // Standard: 'u1' er innlogget på denne enheten.
   getSessionMock.mockResolvedValue({
     data: { session: { user: { id: 'u1' } } },
@@ -178,8 +116,8 @@ describe('drainQueue — burst-redigering under in-flight RPC (#1457)', () => {
     await drainQueue();
 
     // Sluttverdien (6) er IKKE lastet opp ennå — kø-elementet må overleve.
-    expect(fakeQueue.has(ID)).toBe(true);
-    expect(fakeScores.get(ID)!.strokes).toBe(6);
+    expect(fake.syncQueue.has(ID)).toBe(true);
+    expect(fake.scores.get(ID)!.strokes).toBe(6);
 
     // Neste drain (rolig felt) laster opp sluttverdien og tømmer køen.
     rpcMock.mockResolvedValueOnce({
@@ -187,7 +125,7 @@ describe('drainQueue — burst-redigering under in-flight RPC (#1457)', () => {
       error: null,
     });
     await drainQueue();
-    expect(fakeQueue.has(ID)).toBe(false);
+    expect(fake.syncQueue.has(ID)).toBe(false);
     const uploaded = rpcMock.mock.calls.at(-1)?.[1] as { p_strokes: number };
     expect(uploaded.p_strokes).toBe(6);
   });
@@ -217,9 +155,9 @@ describe('drainQueue — burst-redigering under in-flight RPC (#1457)', () => {
     const { drainQueue } = await import('./syncWorker');
     await drainQueue();
 
-    expect(fakeScores.get(ID)!.strokes).toBe(6);
-    expect(fakeScores.get(ID)!.clientUpdatedAt).toBe('2026-08-06T10:00:00.500Z');
-    expect(fakeQueue.has(ID)).toBe(true);
+    expect(fake.scores.get(ID)!.strokes).toBe(6);
+    expect(fake.scores.get(ID)!.clientUpdatedAt).toBe('2026-08-06T10:00:00.500Z');
+    expect(fake.syncQueue.has(ID)).toBe(true);
   });
 
   it('kontroll: uten redigering under opplasting tømmes køen som før', async () => {
@@ -233,8 +171,8 @@ describe('drainQueue — burst-redigering under in-flight RPC (#1457)', () => {
     const res = await drainQueue();
 
     expect(res.pushed).toBe(1);
-    expect(fakeQueue.has(ID)).toBe(false);
-    expect(fakeScores.get(ID)!.serverUpdatedAt).toBe('2026-08-06T10:00:01.000Z');
+    expect(fake.syncQueue.has(ID)).toBe(false);
+    expect(fake.scores.get(ID)!.serverUpdatedAt).toBe('2026-08-06T10:00:01.000Z');
   });
 });
 
@@ -258,7 +196,7 @@ describe('drainQueue — konflikt-varsel når du fører for andre (#1368)', () =
     const { drainQueue } = await import('./syncWorker');
     await drainQueue();
 
-    expect(fakeConflicts.get(ID)).toMatchObject({
+    expect(fake.conflicts.get(ID)).toMatchObject({
       gameId: 'g1',
       userId: 'mate',
       holeNumber: 5,
@@ -279,7 +217,7 @@ describe('drainQueue — konflikt-varsel når du fører for andre (#1368)', () =
     const { drainQueue } = await import('./syncWorker');
     await drainQueue();
 
-    expect(fakeConflicts.get(ID)).toMatchObject({
+    expect(fake.conflicts.get(ID)).toMatchObject({
       localStrokes: 5,
       serverStrokes: 7,
       forOwnScore: true,
@@ -294,7 +232,7 @@ describe('drainQueue — konflikt-varsel når du fører for andre (#1368)', () =
     const { drainQueue } = await import('./syncWorker');
     await drainQueue();
 
-    expect(fakeConflicts.get(ID)).toMatchObject({ forOwnScore: true });
+    expect(fake.conflicts.get(ID)).toMatchObject({ forOwnScore: true });
   });
 
   it('sesjons-oppslag som feiler kaster ikke, og markør-raden varsler ikke', async () => {
@@ -309,7 +247,7 @@ describe('drainQueue — konflikt-varsel når du fører for andre (#1368)', () =
     const res = await drainQueue();
 
     expect(res.rejected).toBe(1);
-    expect(fakeConflicts.has(ID)).toBe(false);
+    expect(fake.conflicts.has(ID)).toBe(false);
   });
 
   it('like slag men ulike putts gir fortsatt ingen varsel', async () => {
@@ -326,6 +264,6 @@ describe('drainQueue — konflikt-varsel når du fører for andre (#1368)', () =
     const { drainQueue } = await import('./syncWorker');
     await drainQueue();
 
-    expect(fakeConflicts.has(ID)).toBe(false);
+    expect(fake.conflicts.has(ID)).toBe(false);
   });
 });
