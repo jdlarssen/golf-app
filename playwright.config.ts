@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { egressFromEnv } from './playwright.egress';
 
 // #1259: én kilde for e2e-porten. Lokalt gjenbruker Playwright enhver
 // dev-server som allerede lytter på porten (reuseExistingServer) — også en
@@ -58,6 +59,13 @@ export default defineConfig({
     launchOptions: process.env.PW_CHROMIUM_EXECUTABLE_PATH
       ? { executablePath: process.env.PW_CHROMIUM_EXECUTABLE_PATH }
       : {},
+    // #1581: nattkjørerens VM sender utgående HTTPS gjennom en agent-proxy med
+    // privat CA. Node arver det oppsettet, Chromium gjør det ikke — og
+    // scoring-golden-path er den ene @gate-specen som må nå staging-Supabase rett
+    // fra nettleseren (sync-motorens score-upsert). Speilingen leser HTTPS_PROXY/
+    // NO_PROXY og NODE_EXTRA_CA_CERTS/SSL_CERT_FILE. Usatt (CI, lokal utvikling)
+    // → tomt objekt, og denne blokka er bit-for-bit som før.
+    ...egressFromEnv(process.env),
   },
   webServer: {
     // #1441: on CI, run the PRODUCTION server (`next build && next start`).
