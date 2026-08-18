@@ -227,16 +227,16 @@ som må eksporteres før `npm run e2e:gate`, i samme form som #1183-punktet.
 
 ## Success Criteria
 
-- [ ] **SC1 — Usatt = uendret:** Type A-test viser `egressFromEnv({})` og
+- [x] **SC1 — Usatt = uendret:** Type A-test viser `egressFromEnv({})` og
       `egressFromEnv({ HTTPS_PROXY: '', NODE_EXTRA_CA_CERTS: '' })` → `{}`; og
       `git diff` i `playwright.config.ts` er kun spread-linjen + kommentar (ingen andre
       `use`-nøkler endret). Verifiser: `npx vitest run playwright.egress` grønn +
       diff-lesing.
-- [ ] **SC2 — Proxy-speiling:** `it.each` dekker: uppercase/lowercase `HTTPS_PROXY`,
+- [x] **SC2 — Proxy-speiling:** `it.each` dekker: uppercase/lowercase `HTTPS_PROXY`,
       `HTTP_PROXY`-fallback, userinfo → `username`/`password` og `server` uten userinfo,
       `NO_PROXY` → `bypass` som alltid inneholder `localhost` og `127.0.0.1`, ugyldig URL →
       kaster. Verifiser: testfila + `npx vitest run playwright.egress`.
-- [ ] **SC3 — CA-speiling:** `NODE_EXTRA_CA_CERTS=/x` eller `SSL_CERT_FILE=/x` →
+- [x] **SC3 — CA-speiling:** `NODE_EXTRA_CA_CERTS=/x` eller `SSL_CERT_FILE=/x` →
       `ignoreHTTPSErrors: true`; ingen av dem → nøkkelen finnes ikke. Verifiser: test.
 - [ ] **SC4 — Golden-path grønn i natt-VM-en:** `CI=1 npm run e2e:gate` (med
       `PW_CHROMIUM_EXECUTABLE_PATH` som i Steg 4) gir **31/31** — golden-path inkludert
@@ -245,25 +245,25 @@ som må eksporteres før `npm run e2e:gate`, i samme form som #1183-punktet.
       på rotårsak. Bygges dette i en interaktiv økt utenfor natt-miljøet, er SC4 et
       eksplisitt `VERIFICATION GAP:` i PR-en og PR-en får `needs-manual-qa`
       (nattkjøreren beviser den neste natt).
-- [ ] **SC5 — Selvforklarende logg:** ved en feilet ikke-lokal request skriver
+- [x] **SC5 — Selvforklarende logg:** ved en feilet ikke-lokal request skriver
       golden-path-specen `[e2e egress] … → net::…` til stdout. Verifiser: Steg 1-kjøringen
       i VM-en (rød før kuren) viser linjen; alternativt en lokal kjøring med
       `HTTPS_PROXY=http://127.0.0.1:9` (dødt proxy-mål) mot golden-path som viser
       `ERR_PROXY_CONNECTION_FAILED`-linjen.
-- [ ] **SC6 — Dokumentert for loopen:** `docs/loops/nattkjoreren.md` Steg 4 har det nye
+- [x] **SC6 — Dokumentert for loopen:** `docs/loops/nattkjoreren.md` Steg 4 har det nye
       kulepunktet (#1581), inkl. evt. `export`-linje fra Steg 1. Verifiser: diff.
 - [ ] **SC7 — CI uendret grønn:** PR-ens `verify` + `e2e`-jobber grønne uten
       config-endring i `.github/workflows/`. Verifiser: `gh pr checks`.
 
 ## Gates
 
-- [ ] `npm run typecheck` exit 0 (root-fila inkluderes av `tsconfig.json` `**/*.ts`)
-- [ ] `npm run lint` 0 errors
-- [ ] `npx vitest run playwright.egress` grønn (ny Type A-suite)
-- [ ] `npm test` grønn (full suite — bekrefter at rotfila ikke kolliderer med noe)
-- [ ] `npm run build` grønn (§T2-gaten; endringen rører ikke app-kode, men gaten kjøres)
+- [x] `npm run typecheck` exit 0 (root-fila inkluderes av `tsconfig.json` `**/*.ts`)
+- [x] `npm run lint` 0 errors
+- [x] `npx vitest run playwright.egress` grønn (ny Type A-suite)
+- [x] `npm test` grønn (full suite — bekrefter at rotfila ikke kolliderer med noe)
+- [x] `npm run build` grønn (§T2-gaten; endringen rører ikke app-kode, men gaten kjøres)
 - [ ] `CI=1 npm run e2e:gate` i natt-VM-en → 31/31 (SC4)
-- [ ] Commit-prefix `fix(e2e)` eller `test(e2e)` med `[no-changelog]` i body + `Refs #1581`
+- [x] Commit-prefix `fix(e2e)` eller `test(e2e)` med `[no-changelog]` i body + `Refs #1581`
       — ingen `.changes/`-notat (teknisk, ikke bruker-synlig).
 
 ## Files Likely Touched
@@ -285,3 +285,44 @@ som må eksporteres før `npm run e2e:gate`, i samme form som #1183-punktet.
   loggeren avslører `wss://`-feil, noter det i PR-kommentaren som funn — ikke fiks).
 - Å gjøre Node-siden av proxy-oppsettet repo-eid (miljøet eier den; vi speiler bare).
 - Å rulle `logEgressFailures` ut til alle specer.
+
+## Bevis (bygg-økt 2026-08-18, interaktiv på eierens Mac)
+
+Branch: `claude/forge-auto-1581-7d538d`. Kommandoene under er kjørt i denne økten.
+
+- **SC1** — `npx vitest run playwright.egress` → 27 passed. `git diff playwright.config.ts`
+  = 8 innsettinger, 0 slettinger (import + 6 kommentarlinjer + spread); ingen eksisterende
+  `use`-nøkkel rørt. Ende-til-ende: golden-path mot staging UTEN proxy-env → `1 passed (18.1s)`.
+- **SC2/SC3** — `playwright.egress.test.ts`, 27 tester: usatt/tom-streng → `{}`, uppercase
+  vinner over lowercase, `HTTP_PROXY`-fallback, userinfo dekodet ut av `server`, bypass
+  alltid `localhost,127.0.0.1` + dedup, ugyldig URL kaster med variabelnavnet,
+  `NODE_EXTRA_CA_CERTS`/`SSL_CERT_FILE` → `ignoreHTTPSErrors: true`.
+- **SC5 + rotårsak bekreftet** — golden-path kjørt mot staging med dødt proxy-mål
+  (`HTTPS_PROXY=http://127.0.0.1:9`) reproduserer natt-symptomet nøyaktig, og loggeren
+  navngir requesten:
+
+  ```
+  [e2e egress] POST https://<staging>.supabase.co/rest/v1/rpc/upsert_score_if_newer → net::ERR_PROXY_CONNECTION_FAILED
+  ```
+
+  Testen feiler på `toBeEnabled` for lever-knappen — samme feilbilde som natt-VM-en.
+  Kjøringen beviser samtidig at (a) `use.proxy` faktisk når Chromium og (b) `bypass`
+  holder localhost-trafikken utenom proxyen (innlogging og sidelastinger gikk gjennom).
+  Skrivebords-diagnosen i kontrakten er dermed empirisk bekreftet: den ene requesten som
+  må ut fra nettleseren er `syncWorker`s score-upsert.
+- **Gates** — `npm run typecheck` exit 0 · `npm run lint` 0 errors ·
+  `npx vitest run playwright.egress` 27 passed · `npm test` 492 filer / 6535 tester
+  grønne · `npm run build` exit 0 (første forsøk feilet på `supabaseUrl is required` —
+  fersk worktree uten env-fil, ikke diffen; kjørt om med staging-env sourcet).
+- **Merk (forventet støy):** `requestfailed` fyrer også på `net::ERR_ABORTED` ved
+  side-nedrigging, så en grønn kjøring kan vise én slik linje. Bevisst ikke filtrert —
+  å skjule koder er nettopp det loggeren finnes for å unngå.
+
+### SC4 — VERIFICATION GAP
+
+`CI=1 npm run e2e:gate` → 31/31 i natt-VM-en er IKKE kjørt: denne økten er interaktiv på
+eierens Mac, og VM-ens proxy/CA-oppsett lar seg ikke reprodusere her. Kontrakten forutser
+utfallet (SC4-fallbacken): PR-en merkes `needs-manual-qa` og nattkjøreren beviser den
+neste natt. Kontrakt-Steg 1 (fange `net::`-navnet i VM-en før kuren) er av samme grunn
+ikke kjørt der — loggeren fra Steg 3 er nettopp det som gjør neste natt-kjøring
+selvforklarende, og Steg 2 sier eksplisitt at begge halvdelene bygges uansett H1/H2.
