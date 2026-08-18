@@ -202,6 +202,64 @@ produsent-dispatchene er fjernet (`dok-skjema.sh` og morgenbriefens arkiv-PR,
 består som test-/re-post-verktøy, og er ufarlig som duplikat (dedup-labelen
 `discord:merge-kort` + concurrency-gruppa sluker den).
 
+## Robot-åpnede PR-er må ha menneskelig forfatter (#1701)
+
+To Actions-produsenter åpner PR-er mot `main`: ukesversjon (mandag) og dok-skjema
+(søndag). Begge MÅ åpne PR-en med secreten `PR_AUTHOR_PAT` — ikke med
+`github.token`.
+
+**Hva GitHub endret:** fra **11. juni 2026** («Bot-created pull requests can run
+workflows if approved») blir `pull_request`-kjøringene for PR-er som
+`github.token` åpner *opprettet*, men parkert som `action_required` («Approve and
+run») til noen med skrivetilgang klikker. Ingen repo- eller org-innstilling skrur
+kravet av; GitHubs egen anbefaling er å bruke et personlig token eller en GitHub
+App til selve PR-opprettelsen. Verifisert her: 3 av 3 robot-PR-er de siste tre
+ukene (#1699, #1681, #1552) — og #1335 fra 26. juli — hadde attempt 1 =
+`action_required`.
+
+**Hvorfor det stoppet kortet:** parkerte kjøringer er ikke grønne, så branch
+protection nekter merge, OG `classifyChecks` ser `action_required` ∈
+`BAD_CONCLUSIONS` → `red` → `noCard('CI red')`. Selv etter et manuelt «Approve and
+run» kom det ingen kort: `workflow_run`-kjeden fyrer ikke fra en
+`github.token`-startet PR. Fiksen ligger derfor i **forfatterskapet**, ikke i
+klassifisereren — `action_required` skal fortsatt være rødt (fail-closed).
+
+**Regelen:**
+
+- Produsenter i Actions åpner PR-en med `GH_TOKEN="$PR_AUTHOR_PAT" gh pr create`.
+  Delt helper: `.github/scripts/robot-pr.sh` (`robot_pr_create`).
+- Pushen kan fortsatt gå med `github.token` — `push`-eventet trigger ingen
+  workflows her (ci.yml/secret-scan er `pull_request`-only).
+- ⚠️ **ALDRI push til robot-branchen med `github.token` ETTER at PR-en er åpnet** —
+  `synchronize` parkeres like fullt, og PR-en står like langt tilbake.
+- **Produsenter skal fortsatt IKKE dispatche kortet** (#1483 står). PAT-
+  forfatterskap gjør hendelseskjeden identisk med menneske-PR-ene — det er hele
+  poenget, og da trengs ingen dispatch.
+- Mangler eller avvises PAT-en, faller helperen tilbake til `github.token`, og
+  parkerings-detektoren (`robot_pr_verify_not_parked`) filer et dedupet issue (se
+  fix-protokollen). PR-en er verdifull selv parkert — bokføringen rulles aldri
+  tilbake av dette.
+
+### Eier-oppsett: `PR_AUTHOR_PAT` (engangs)
+
+1. **Hvor:** GitHub → **Settings** (din egen profil, ikke repoet) → **Developer
+   settings** → **Personal access tokens** → **Fine-grained tokens** →
+   **Generate new token**.
+2. **Hva du legger inn:** Repository access = **Only select repositories** →
+   `jdlarssen/golf-app`. Permissions: **Pull requests: Read and write** +
+   **Contents: Read-only** (Metadata: Read følger automatisk). Utløp: det lengste
+   GitHub tilbyr. Kopier tokenet, gå så til repoet → **Settings → Secrets and
+   variables → Actions → New repository secret**, navn `PR_AUTHOR_PAT`, lim inn
+   verdien.
+3. **Hva du forventer å se etter:** `PR_AUTHOR_PAT` listet under «Repository
+   secrets». (Verdien vises aldri igjen — det er normalt.)
+4. **Hvis det ikke ser slik ut:** neste robot-PR åpnes med `github.token`, og du
+   får et issue som heter «… PR-en står med «Approve and run» …». Det issuet ER
+   signalet om at secreten mangler eller er utløpt.
+
+Tokenet trenger **ikke** Contents: write — pushen går fortsatt med
+`github.token`, og PAT-en brukes kun til `gh pr create`. Minst mulig makt.
+
 ## Eier-oppsett (engangs) — Actions-secrets
 
 **Steg 0 — Interactions Endpoint URL (mottakerens av/på-bryter):** knappene
@@ -240,6 +298,11 @@ Går workflowen rød, åpner den (dedupet) et `CI-vakt:`-issue. Diagnose:
   (token utløpt/feil) eller 403/404 (bot ikke i kanalen / feil `DISCORD_CHANNEL_ID`).
 - **Kort kommer ikke for en draft-PR:** forventet (#1516) — draft = «økta jobber
   fortsatt», decide noop-er. Kortet kommer når PR-en markeres ready (`gh pr ready`).
+- **Robot-PR (ukesversjon/dok-skjema) står med «Approve and run»:** `PR_AUTHOR_PAT`
+  mangler eller er utløpt — se «Robot-åpnede PR-er må ha menneskelig forfatter
+  (#1701)». Kortet er ikke buggy her: parkerte kjøringer ER røde, med vilje.
+  Godkjenn kjøringene på PR-en for å få den gjennom nå, og forny secreten for å
+  slippe klikket neste uke. Rutinen har selv filet et issue om det.
 - **Dobbelt kort:** labelen `discord:merge-kort` ble ikke lagt (se labeling-loggen)
   — sjekk `issues: write`-tilgang.
 - **Kort for PR uten grønn CI:** skal ikke skje (`classifyChecks` gater); rapportér

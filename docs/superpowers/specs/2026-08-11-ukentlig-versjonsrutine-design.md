@@ -55,7 +55,7 @@ Cup-lista i Klubbhuset viser nå alle cupene du er med i, ikke bare dem du har s
      - Hvert `fix`/`perf`-notat → én linje i inneværende måneds skuff under Feilrettinger: `- \`X.Y.Z\` · [#N](…) — {brødtekst}` med ukas fulle versjon. Ny måned → ny `<details>`-skuff; skuffens teller («… · N rettinger») oppdateres.
   5. Slett notatfilene.
   6. Commit `chore(release): vX.Y.Z — uke <ISO-uke>` og åpne PR mot `main` med body som sier at dette er ren bokføring (ingen produktvalg-heading → Discord-PR-kortet auto-merger når sjekkene er grønne).
-- **Kjent felle som må verifiseres ved bygging:** PR-er opprettet med `github.token` fyrer ikke CI-workflows automatisk. Dok-skjema-PR-ene håndteres i dag av dispatch-fallbacken fra #1469 (tomt check-rollup → dispatch `ci.yml` + `secret-scan.yml`). Første kjøring av ukesversjon-PR-en skal bekrefte at samme fallback dekker den; gjør den ikke det, dispatcher workflowen CI selv.
+- **Løst i #1701 (fella var feildiagnostisert her):** PR-er opprettet med `github.token` får kjøringene sine *parkert* som `action_required` («Approve and run») etter GitHubs endring 11. juni 2026 — de mangler ikke, de venter på et klikk. Produsentene åpner derfor PR-en med `PR_AUTHOR_PAT`, og #1469-dispatch-fallbacken er fjernet som død kode. Regel + eier-oppsett: `docs/loops/discord-pr-kort.md`, «Robot-åpnede PR-er må ha menneskelig forfatter (#1701)».
 
 ### 3. Hook-omskriving (`.githooks/commit-msg`)
 
@@ -100,4 +100,4 @@ Utroperen og morgenbriefen er uberørt: begge leser `CHANGELOG.md` på `main` so
 
 - **Reversibelt uten datatap:** gjeninnfør gammel hook + slett workflow; CHANGELOG-formatet er uendret så historikken er intakt.
 - **Konfliktvinduet** krymper fra «alle PR-er mot alle» til «ukes-PR-en mot det som merges akkurat da» — én kort eksponering per uke.
-- **Verifiseringspunkt første kjøring:** CI-trigger på Action-opprettet PR (fella over) og at Discord-PR-kortet auto-merger bokførings-PR-en.
+- **Verifiseringspunkt første kjøring:** at kjøringene på bokførings-PR-en starter uten «Approve and run» (#1701, PAT-forfatterskap) og at Discord-PR-kortet auto-merger den.
