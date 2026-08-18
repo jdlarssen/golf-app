@@ -27,9 +27,14 @@
 # filingen blir hos kalleren med vilje.
 
 # ── PR-opprettelse: PAT når den finnes, github.token som ærlig fallback ──
-# Skriver PR-URL-en til stdout. Returnerer != 0 bare når BEGGE veier feilet;
-# kalleren fail_closed-er da som før. Aldri to PR-er: fallbacken kjøres kun når
-# PAT-kallet feilet, og `gh pr create` avviser en ny PR på samme head.
+# Skriver PR-URL-en til stdout — og BARE den: kalleren fanger stdout i
+# PR_URL=$(robot_pr_create …), så alle meldinger må gå til stderr, ellers havner
+# de i variabelen i stedet for i loggen. Actions plukker opp ::warning:: fra
+# stderr like godt.
+#
+# Returnerer != 0 bare når BEGGE veier feilet; kalleren fail_closed-er da som
+# før. Aldri to PR-er: fallbacken kjøres kun når PAT-kallet feilet, og
+# `gh pr create` avviser en ny PR på samme head.
 robot_pr_create() { # tittel body-fil → PR-URL på stdout
   local title="$1" body_file="$2" url
 
@@ -39,9 +44,9 @@ robot_pr_create() { # tittel body-fil → PR-URL på stdout
       printf '%s\n' "$url"
       return 0
     fi
-    echo "::warning::PR_AUTHOR_PAT ble avvist (utløpt, eller for smale rettigheter?) — prøver github.token i stedet. Da parkeres CI til noen godkjenner kjøringene. Forny tokenet: docs/loops/discord-pr-kort.md."
+    echo "::warning::PR_AUTHOR_PAT ble avvist (utløpt, eller for smale rettigheter?) — prøver github.token i stedet. Da parkeres CI til noen godkjenner kjøringene. Forny tokenet: docs/loops/discord-pr-kort.md." >&2
   else
-    echo "::warning::PR_AUTHOR_PAT er ikke satt — PR-en åpnes med github.token, og CI parkeres til noen trykker «Approve and run». Legg inn secreten: docs/loops/discord-pr-kort.md."
+    echo "::warning::PR_AUTHOR_PAT er ikke satt — PR-en åpnes med github.token, og CI parkeres til noen trykker «Approve and run». Legg inn secreten: docs/loops/discord-pr-kort.md." >&2
   fi
 
   url=$(gh pr create --repo "$REPO" --base main --head "$BRANCH" \
