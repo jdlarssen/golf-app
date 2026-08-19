@@ -23,6 +23,17 @@ Sjekk i denne rekkefølgen, og samle ALLE funn før fiksing:
 
 Ingen funn → én logglinje («alt grønt») og ferdig. Det er suksess, ikke tomgang.
 
+**Kjent, uendret `CI-vakt:`-issue (allerede eskalert, root cause under
+interaktiv oppfølging):** ikke post en ny kommentar bare fordi runden fant
+det samme mønsteret som forrige gang. Sammenlign mot forrige kommentar FØR du
+skriver noe nytt — kommentér kun når noe faktisk er nytt: en ny forekomst av
+mønsteret, en CI-kjøring med et annet utfall enn sist, eller at root cause er
+bekreftet/avkreftet. Uendret tilstand rapporteres kun i rutinens egen logg
+(synlig via claude.ai/code/routines), aldri som en ny issue-kommentar — jf.
+linjen over. Timelige «ingen nye forekomster»-kommentarer på samme issue er
+selve feilen #1711 dokumenterte (56/86 duplikater på #1582/#1572 på åtte
+dager); ikke gjenta mønsteret.
+
 ## 2. Reproduser FØR fiks (obligatorisk)
 
 - Kjør den feilende gaten i klonen: `npm ci` → `npm run typecheck` /
