@@ -93,8 +93,14 @@ regenererte typer). **Auto-fiks (regenerer typer → PR) er fase 2** og krever
   Fiks ved rødt: `npx supabase gen types typescript --project-id
   snwmueecmfqqdurxedxv --schema public > lib/database.types.ts` og commit.
 - **Cron (nattlig)** → sammenlignes mot **prod**. Dette er avstemmingen mot
-  virkeligheten og skal aldri flyttes til staging. Fiks ved rødt:
-  `npm run gen:types` (leser prod) og commit.
+  virkeligheten og skal aldri flyttes til staging. Fiks ved rødt: sjekk FØRST
+  om en merget migrasjon venter på prod-påføring (samme situasjon som §6b —
+  migrasjons-porten har da typisk sitt eget issue). I så fall er dette §6b:
+  **ikke** regenerer typene fra prod — det stripper staging-kolonnene koden på
+  main kompilerer mot og knekker `tsc`. Fiks = prod-påføring i en økt med eier,
+  så blir cron-drift grønn av seg selv. Kun når ingen migrasjon venter (noen
+  har endret prod utenom migrasjonsflyten): `npm run gen:types` (leser prod)
+  og commit.
 - **Manuell kjøring** (workflow_dispatch) → `target`-input, `prod` som default.
   Bruk `staging` for å bevise staging-grenen fra en PR-branch.
 
