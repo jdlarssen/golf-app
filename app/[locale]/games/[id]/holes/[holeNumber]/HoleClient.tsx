@@ -253,8 +253,21 @@ export interface HoleClientProps {
    * #1466 (eier-tillegget): the sibling half's own holes on a split cup day,
    * for the full 1–18 hole strip. Own holes stay linked to this game; sibling
    * holes link across to the other host. Null → today's segment-only strip.
+   *
+   * #1578: `scoredHoles` is the sibling half's server snapshot of entered holes
+   * (already owner-filtered), unioned with this device's unsynced Dexie rows
+   * below — a split day is normally played on one phone, so the front9 rows may
+   * only exist locally. `gameMode` + `teamOwnerId` are what that union needs to
+   * ask who owns each row over there. `scoredHoles: null` = we couldn't read
+   * the half; the strip then keeps its positional derivation.
    */
-  holeStripSibling?: { gameId: string; holes: number[] } | null;
+  holeStripSibling?: {
+    gameId: string;
+    holes: number[];
+    gameMode: GameMode;
+    teamOwnerId: string | null;
+    scoredHoles: number[] | null;
+  } | null;
   /**
    * #1466 §2 (broModus): the front9 host's bridge to the sibling's hole 10,
    * set only when this is a front9 host whose back9 sibling is still
@@ -502,6 +515,48 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       myTeamScoreOwnerId,
     ),
   ]);
+
+  // #1578: the same set for the OTHER half of a split cup day. The Dexie index
+  // `[gameId+userId]` is global across games, so this is the query above with
+  // the sibling's id — and the sibling's own mode/owner decide who holds each
+  // row over there. When the server couldn't read that half we keep null all
+  // the way to the strip: a partial local-only set would mark synced-but-not-
+  // on-this-device holes as «missing», which is exactly the false accusation
+  // the fallback exists to avoid.
+  const siblingGameId = holeStripSibling?.gameId ?? null;
+  const siblingGameMode = holeStripSibling?.gameMode ?? null;
+  const siblingTeamOwnerId = holeStripSibling?.teamOwnerId ?? null;
+  const siblingOwnerIds = useMemo(
+    () =>
+      siblingGameMode == null
+        ? []
+        : scoreOwnerUserIds(siblingGameMode, myUserId, siblingTeamOwnerId),
+    [siblingGameMode, myUserId, siblingTeamOwnerId],
+  );
+  const siblingOwnerKey = siblingOwnerIds.join('|');
+  const siblingLocalScoredRows = useLiveQuery<LocalScore[]>(
+    () =>
+      siblingGameId == null || siblingOwnerIds.length === 0
+        ? Promise.resolve<LocalScore[]>([])
+        : localDb.scores
+            .where('[gameId+userId]')
+            .anyOf(siblingOwnerIds.map((ownerId) => [siblingGameId, ownerId]))
+            .filter((r) => r.strokes != null)
+            .toArray(),
+    [siblingGameId, siblingOwnerKey],
+  );
+  const siblingScoredHoles: ReadonlySet<number> | null =
+    holeStripSibling == null || holeStripSibling.scoredHoles == null
+      ? null
+      : new Set<number>([
+          ...holeStripSibling.scoredHoles,
+          ...scoredHoleNumbers(
+            siblingLocalScoredRows,
+            holeStripSibling.gameMode,
+            myUserId,
+            holeStripSibling.teamOwnerId,
+          ),
+        ]);
 
   // #754: count non-abandoned items in the sync queue so SyncStatusLine can
   // show a "waiting for network" state while scores are queued but unsynced.
@@ -1070,7 +1125,15 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         currentHole={currentHole}
         scoredHoles={scoredHoles}
         holes={holeNumbersForSegment(holeSegment)}
-        sibling={holeStripSibling}
+        sibling={
+          holeStripSibling
+            ? {
+                gameId: holeStripSibling.gameId,
+                holes: holeStripSibling.holes,
+                scoredHoles: siblingScoredHoles,
+              }
+            : null
+        }
       />
       <HoleHero
         holeNumber={currentHole}
