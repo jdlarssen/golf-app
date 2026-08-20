@@ -107,23 +107,27 @@ function baseProps(
   };
 }
 
-// useLiveQuery is called three times per HoleClient render:
+// useLiveQuery is called FOUR times per HoleClient render, and these mocks are
+// keyed on that order — a new liveQuery shifts every position below, so add one
+// here in the same commit you add one there:
 //   1st: localRows (scores per player) — return [undefined,...] per player slot
 //   2nd: localScoredRows (this player's entered holes) — undefined (= no local
 //        rows yet; the component treats it as an empty set)
-//   3rd: syncQueue (pending items) — return [] (empty queue, no pending)
+//   3rd: siblingLocalScoredRows (#1578, the other half of a split cup day) —
+//        undefined; only a split-day game passes holeStripSibling at all
+//   4th: syncQueue (pending items) — return [] (empty queue, no pending)
 // Using mockImplementation with a counter lets each call return the right shape.
 function defaultUseLiveQueryImpl() {
   let callCount = 0;
   return () => {
     callCount++;
     if (callCount === 1) return [undefined, undefined, undefined, undefined];
-    if (callCount === 3) return [];
+    if (callCount === 4) return [];
     return undefined;
   };
 }
 
-// Same 3-call contract as defaultUseLiveQueryImpl, but lets a test control
+// Same 4-call contract as defaultUseLiveQueryImpl, but lets a test control
 // exactly what localRows (1st call) resolves to — e.g. "my" card has a score
 // while flight-mates' cards don't yet.
 function useLiveQueryImplWithLocalRows(
@@ -133,7 +137,7 @@ function useLiveQueryImplWithLocalRows(
   return () => {
     callCount++;
     if (callCount === 1) return localRows;
-    if (callCount === 3) return [];
+    if (callCount === 4) return [];
     return undefined;
   };
 }
@@ -485,14 +489,14 @@ describe('HoleClient — sync status line (#744)', () => {
 
   it('teller ikke ventende slag fra en annen runde (#1370)', () => {
     // Dexie-køen er global. Før #1370 tente et slag som lå igjen fra en annen
-    // runde denne rundens «Venter på nett»-linje. Samme 3-kall-kontrakt som
+    // runde denne rundens «Venter på nett»-linje. Samme 4-kall-kontrakt som
     // default-impl-en, men modulo-stabil over re-renders så køen fortsetter å
     // resolve til det fremmede elementet.
     let call = 0;
     useLiveQueryMock.mockImplementation(() => {
-      const n = call++ % 3;
+      const n = call++ % 4;
       if (n === 0) return [undefined, undefined, undefined, undefined];
-      if (n === 2)
+      if (n === 3)
         return [
           {
             id: 'g2:u1:5',
@@ -637,9 +641,9 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
 
 describe('HoleClient — deliver CTA for a non-captain (#1577)', () => {
   // The team's rows live under the captain's user_id, so a non-captain has no
-  // rows of their own to count. Same 3-call contract as the helpers above, but
+  // rows of their own to count. Same 4-call contract as the helpers above, but
   // the 2nd call (localScoredRows) now carries the whole round's Dexie rows —
-  // that's the set the owner rule filters.
+  // that's the set the owner rule filters. Calls 3-4 fall through to [].
   function useLiveQueryImplWithScoredRows(
     localRows: Array<{ strokes?: number | null } | undefined>,
     scoredRows: Array<{ userId: string; holeNumber: number; strokes: number }>,
