@@ -86,9 +86,13 @@ target.
   `npm run gen:types` (reads PROD). For a schema not yet in prod: apply the migration to
   staging first, then introspect STAGING via MCP — gen:types won't see it.
   TS types for a staging-only column: generate them against the staging ref
-  (`npx supabase gen types typescript --project-id snwmueecmfqqdurxedxv`), or hand-extend
-  `lib/database.types.ts` with a `// TODO: regen after prod apply` marker and run
-  `npm run gen:types` once the migration reaches prod.
+  (`npx supabase gen types typescript --project-id snwmueecmfqqdurxedxv`) — first choice,
+  and the one the CI drift check agrees with: on PRs `schema-drift.yml` diffs against
+  STAGING (#1532), so staging-generated types are green even before prod is applied.
+  Fallback: hand-extend `lib/database.types.ts` with a `// TODO: regen after prod apply`
+  marker and run `npm run gen:types` once the migration reaches prod — the marker stays
+  the trace for that path, but expect the PR's drift check to be red until the types
+  match staging.
   `docs/schema-ground-truth.md` is a dated snapshot, not authority.
 - **Affected rows:** `expectAffected` / `expectOne` in `lib/supabase/affectedRows.ts`.
 - **Hostile-request rig:** DB-enforced authz here is Postgres RLS (+ BEFORE-triggers for

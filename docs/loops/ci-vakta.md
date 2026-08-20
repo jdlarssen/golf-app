@@ -79,10 +79,30 @@ Etter 3 iterasjoner uten grønt: **aldri kast delarbeid, aldri stille exit.**
 ## 6. Schema-drift rød (v1 — kun eskalering)
 
 Varsel-issuet fra workflowen er leveransen i v1. Forklar på norsk i issuet hva
-drift betyr (prod-skjemaet og `lib/database.types.ts` er ute av sync — noen har
+drift betyr (skjemaet og `lib/database.types.ts` er ute av sync — noen har
 endret databasen utenom migrasjonsflyten, eller en migrasjon mangler
 regenererte typer). **Auto-fiks (regenerer typer → PR) er fase 2** og krever
 `SUPABASE_ACCESS_TOKEN` i routine-miljøet — en eier-handling.
+
+**To mål, ett per hendelse (#1532)** — les alltid hvilket mål kjøringen brukte
+(står i jobbens notice og i feilmeldingen) før du diagnostiserer:
+
+- **PR** (endrer `supabase/migrations/**`) → sammenlignes mot **staging**.
+  Migrasjoner går staging-først, så en PR som er migrert på staging og har typer
+  regenerert fra staging skal være grønn selv om prod ikke er påført ennå.
+  Fiks ved rødt: `npx supabase gen types typescript --project-id
+  snwmueecmfqqdurxedxv --schema public > lib/database.types.ts` og commit.
+- **Cron (nattlig)** → sammenlignes mot **prod**. Dette er avstemmingen mot
+  virkeligheten og skal aldri flyttes til staging. Fiks ved rødt:
+  `npm run gen:types` (leser prod) og commit.
+- **Manuell kjøring** (workflow_dispatch) → `target`-input, `prod` som default.
+  Bruk `staging` for å bevise staging-grenen fra en PR-branch.
+
+⚠️ Felle: staging er delt. Andre økter kan ha migrasjoner liggende på staging
+som ikke er i din PR — da blir PR-drift rød av fremmed diff. Rødt er ærlig nok
+(typene ER ute av sync med staging), men fiksen er ikke din PR: regenerer typene
+fra staging når staging er riktig, eller rydd bort den fremmede migrasjonen på
+staging. Nevn funnet på PR-en så det ikke ser ut som din endring.
 
 ⚠️ Kjent felle: schema-drift-jobben skipper GRØNT hvis `SUPABASE_ACCESS_TOKEN`
 ikke er satt i repo-secrets. Grønn drift-kjøring beviser altså ikke sync med
