@@ -110,7 +110,7 @@ describe('HoleStrip', () => {
         currentHole={3}
         scoredHoles={new Set([1, 2])}
         holes={front9}
-        sibling={{ gameId: 'back', holes: back9 }}
+        sibling={{ gameId: 'back', holes: back9, scoredHoles: null }}
       />,
     );
     const links = container.querySelectorAll('a');
@@ -124,11 +124,59 @@ describe('HoleStrip', () => {
     expect(links[8].getAttribute('href')).toBe('/games/front/holes/9');
     expect(links[9].getAttribute('href')).toBe('/games/back/holes/10');
     expect(links[17].getAttribute('href')).toBe('/games/back/holes/18');
-    // Own holes read from the score set (1-2 entered → scored); sibling holes
-    // keep the positional derivation (#1352 has no score data for them).
+    // Own holes read from the score set (1-2 entered → scored). With
+    // `sibling.scoredHoles = null` (#1578: we couldn't read the other half)
+    // the sibling cells keep the positional derivation.
     const hole1Chip = links[0].querySelector('span') as HTMLElement;
     expect(hole1Chip.style.background).toBe('var(--hole-completed-bg)');
     const hole10Chip = links[9].querySelector('span') as HTMLElement;
     expect(hole10Chip.style.background).toBe('transparent');
+  });
+
+  it('#1578: with the sibling’s score set, its cells read scored/missed/future by the same rules as own holes', () => {
+    const front9 = Array.from({ length: 9 }, (_, i) => i + 1);
+    const back9 = Array.from({ length: 9 }, (_, i) => 10 + i);
+    // Back9 host, standing on hole 14. The front9 half was played first: hole
+    // 1 entered, hole 2 skipped. Hole 18 is nobody's past — it is still ahead.
+    const { container } = render(
+      <HoleStrip
+        gameId="back"
+        currentHole={14}
+        scoredHoles={new Set([10, 11, 12, 13])}
+        holes={back9}
+        sibling={{ gameId: 'front', holes: front9, scoredHoles: new Set([1]) }}
+      />,
+    );
+    const links = container.querySelectorAll('a');
+    const chipOf = (idx: number) =>
+      links[idx].querySelector('span') as HTMLElement;
+
+    // Hole 1 (sibling, entered) → scored, and says so out loud.
+    expect(chipOf(0).style.background).toBe('var(--hole-completed-bg)');
+    expect(links[0].getAttribute('aria-label')).toBe('Hull 1 – score ført');
+
+    // Hole 2 (sibling, skipped, behind me) → the dashed «missing» frame the
+    // own-half cells have had since #1352.
+    expect(chipOf(1).style.border).toBe('1px dashed var(--warning)');
+    expect(links[1].getAttribute('aria-label')).toBe('Hull 2 – mangler score');
+
+    // The other direction: from the front9 host the sibling holes lie AHEAD,
+    // so an unplayed one is future (no dashed frame) while an already-entered
+    // one still reads as scored — position never overrides a real score.
+    const fromFront = render(
+      <HoleStrip
+        gameId="front"
+        currentHole={3}
+        scoredHoles={new Set([1, 2])}
+        holes={front9}
+        sibling={{ gameId: 'back', holes: back9, scoredHoles: new Set([10]) }}
+      />,
+    ).container.querySelectorAll('a');
+    expect(
+      (fromFront[9].querySelector('span') as HTMLElement).style.background,
+    ).toBe('var(--hole-completed-bg)');
+    expect(
+      (fromFront[10].querySelector('span') as HTMLElement).style.border,
+    ).not.toContain('dashed');
   });
 });
