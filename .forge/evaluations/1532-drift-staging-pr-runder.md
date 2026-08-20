@@ -44,3 +44,23 @@ BEGGE prosjekter via MCP — begge byte-identiske med committet
   PR-en reverserer halve beslutningen; decision record trenger sporlinje.
 - `.github/workflows/migrations-gate.yml:1–2` header sier «schema-drift.yml
   COMPARES generated types against prod» — nå kun delvis sant.
+
+## Runde 2 — fiks-verifisering → ACCEPT
+
+Funn-verifisering er objektiv (GitHub Actions-kjøringer — samme bevisform som
+#673-presedensen), ikke en ny gjennomlesnings-runde:
+
+| Funn | Bevis | Resultat |
+|------|-------|----------|
+| 1 (`ci-vakta.md + cron-fiks-instruks`) | Commit `68fad11`: cron-bulleten ruter nå §6b-situasjonen (merget migrasjon venter på prod) til prod-påføring med eier og forbyr gen:types der; gen:types kun når ingen migrasjon venter. | LUKKET |
+| 2 (`schema-drift.yml + gates/dispatch-bevis`) | Plan A viste seg tilgjengelig: dispatch fra PR-branchen ble akseptert (input-skjemaet leses fra ref-en). Run [163](https://github.com/jdlarssen/golf-app/actions/runs/32321257046) `target=staging` → **success**, steg-navn rendret «Regenerate types from staging …». Run [164](https://github.com/jdlarssen/golf-app/actions/runs/32321270528) `target=prod` → **success**, «Regenerate types from prod …». Begge grener live-bevist; byggerens step-name-`steps`-kontekst-usikkerhet også avkreftet i praksis. | LUKKET (uten gap) |
+
+Suksesskriterier: (1) staging-grenen grønn live (run 163; pull_request-event
+mapper til samme gren, shell-tabelltestet av byggeren for alle 5
+event/input-kombinasjoner — full pull_request-kjøring skjer naturlig på neste
+migrasjons-PR); (2) prod-default bevist live (run 164) + cron-gren
+effekt-ekvivalent (runde 1); (3) målnavn i meldinger bevist i steg-navnene på
+run 163/164; (4) docs oppdatert inkl. runde-1-carve-out. Pre-push
+verify-gaten (typecheck + lint + full vitest) passerte ved push.
+
+**Verdikt: ACCEPT** → videre til kryss-modell-gaten (Steg 4.5).
