@@ -57,3 +57,21 @@ staging-skjema via Supabase MCP — riktige navn og typer.
   resultatet forkastes — harmløst, kunne kortsluttes.
 
 **Verdikt: ACCEPT** → Steg 4 (e2e) og Steg 4.5 (kryss-modell-gate).
+
+## Steg 4/4.5 — e2e og kryss-modell-gate
+
+- **e2e `@gate` mot staging: 30/31 grønne (2,6 min).** Den ene røde er
+  `scoring-golden-path` («Lagrer slag …»-knappen forblir disabled — sync-kø
+  drenerer ikke), som er nøyaktig signaturen i det åpne miljø-issuet #1581
+  (feiler også på fersk main i natt-VM-en). Ingen `net::`-linje i loggen, så
+  egress-speilingen var aktiv — dette er #1581s kjente feilmodus, ikke denne
+  diffen: endringen aktiveres kun når `siblingMatch != null` (splittet
+  cup-dag); den røde specen er et solo-spill. Egne cellers oppførsel er
+  uendret (bevist i runde 1), og null nye queries for vanlige spill.
+- **Kryss-modell-gate (Sonnet, fersk kontekst): CONFIRM.** Selvstendig
+  verifisert alle kriterier mot diffen + 335 tester grønne lokalt; probet
+  edge-cases (ulik game_mode på tvers av halvdelene, viewer uten lag i
+  søskenspillet, helt withdrawn søskenlag) — alle korrekt håndtert.
+
+**Gjenstår ved levering:** kriterium 5 (staging-klikkrunde på ekte splittet
+cup-dag) → `needs-manual-qa` på PR-en med flyten beskrevet.
