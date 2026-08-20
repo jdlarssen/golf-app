@@ -50,3 +50,35 @@ export function scoreOwnerUserIds(
   if (teamOwnerId == null || teamOwnerId === viewerId) return [viewerId];
   return modeCollapsesToTeamCard(mode, 18) ? [viewerId, teamOwnerId] : [viewerId];
 }
+
+/** The minimum a score row must carry for us to ask who owns it. */
+export type ScoredHoleRow = { holeNumber: number; userId: string };
+
+/**
+ * Rows fetched with `scoreOwnerUserIds` → the hole numbers the viewer actually
+ * has a score on. The id list is the fetch, this is the rule: each row survives
+ * only if it belongs to the id that owns THAT hole, so a captain's shared row
+ * counts on the collapsed holes and the viewer's own row on the rest.
+ *
+ * Same shape for both sides of the sync line — the server passes PostgREST rows
+ * (mapped to camelCase) and the client passes Dexie rows — so the hole strip
+ * cannot end up with one semantics online and another offline (#1578).
+ *
+ * Never deduplicates: `scores` is unique on (game_id, user_id, hole_number) and
+ * exactly one id owns each hole, so a hole can appear at most once.
+ */
+export function scoredHoleNumbers(
+  rows: readonly (ScoredHoleRow | null | undefined)[] | null | undefined,
+  mode: GameMode,
+  viewerId: string,
+  teamOwnerId: string | null,
+): number[] {
+  return (rows ?? [])
+    .filter(
+      (r): r is ScoredHoleRow =>
+        r != null &&
+        r.userId ===
+          scoreOwnerForHole(mode, r.holeNumber, viewerId, teamOwnerId),
+    )
+    .map((r) => r.holeNumber);
+}

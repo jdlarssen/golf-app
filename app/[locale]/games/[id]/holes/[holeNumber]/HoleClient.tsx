@@ -50,7 +50,7 @@ import type {
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import type { HoleParByGender } from '@/lib/games/parDisplay';
-import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
+import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import {
   holeNumbersForSegment,
   lastHoleForSegment,
@@ -489,26 +489,18 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         .toArray(),
     [gameId, scoredHoleOwnerKey],
   );
+  // The id list is the fetch; `scoredHoleNumbers` is the rule. Applying it out
+  // here rather than inside the Dexie callback means a captain's row only counts
+  // on the holes where the mode actually collapses — patsome's 4BBB half stays
+  // mine even though the same round's foursomes half is the team's.
   const scoredHoles = new Set<number>([
     ...myScoredHoles,
-    ...(localScoredRows ?? [])
-      // The id list is the fetch; this is the rule. Keeping it out here rather
-      // than inside the Dexie callback means a captain's row only counts on the
-      // holes where the mode actually collapses — patsome's 4BBB half stays
-      // mine even though the same round's foursomes half is the team's.
-      .filter(
-        (r) =>
-          r != null &&
-          r.userId ===
-            scoreOwnerForHole(
-              gameMode,
-              r.holeNumber,
-              myUserId,
-              myTeamScoreOwnerId,
-            ),
-      )
-      .map((r) => r?.holeNumber)
-      .filter((n): n is number => n != null),
+    ...scoredHoleNumbers(
+      localScoredRows,
+      gameMode,
+      myUserId,
+      myTeamScoreOwnerId,
+    ),
   ]);
 
   // #754: count non-abandoned items in the sync queue so SyncStatusLine can
