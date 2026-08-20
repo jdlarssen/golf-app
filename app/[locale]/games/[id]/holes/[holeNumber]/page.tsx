@@ -31,7 +31,7 @@ import type {
 } from '@/lib/scoring/modes/types';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
 import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
-import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
+import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import {
   firstHoleForSegment,
   holeNumbersForSegment,
@@ -455,18 +455,15 @@ export default async function HolePage({ params }: { params: Params }) {
   // er tastet på enheten.
   // #1577: per-hull-eier siler bort raden som ikke gjelder — er jeg kaptein
   // (eller er modusen ikke kollapset) er dette nøyaktig dagens `user_id`-filter.
-  const myScoredHoles = (myScoredHolesRes.data ?? [])
-    .filter(
-      (r) =>
-        r.user_id ===
-        scoreOwnerForHole(
-          game.game_mode,
-          r.hole_number,
-          userId,
-          myTeamScoreOwnerId,
-        ),
-    )
-    .map((r) => r.hole_number);
+  const myScoredHoles = scoredHoleNumbers(
+    (myScoredHolesRes.data ?? []).map((r) => ({
+      holeNumber: r.hole_number,
+      userId: r.user_id,
+    })),
+    game.game_mode,
+    userId,
+    myTeamScoreOwnerId,
+  );
 
   // Stableford totals — komputeres server-side når modus krever det.
   // myStablefordTotal: summen over alle ferdig-tastede hull (brukerens egen

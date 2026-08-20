@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { scoreOwnerForHole, scoreOwnerUserIds } from './scoreOwner';
+import {
+  scoreOwnerForHole,
+  scoreOwnerUserIds,
+  scoredHoleNumbers,
+} from './scoreOwner';
 import { teamScoreOwnerId } from './teamCaptain';
 
 // Lex-min decides the captain (pickTeamCaptain), so 'a-…' sorts ahead of
@@ -132,5 +136,76 @@ describe('scoreOwnerUserIds', () => {
 
   it('asks only for the viewer when the team has no owner', () => {
     expect(scoreOwnerUserIds('texas_scramble', VIEWER, null)).toEqual([VIEWER]);
+  });
+});
+
+describe('scoredHoleNumbers', () => {
+  const row = (userId: string, holeNumber: number) => ({ userId, holeNumber });
+
+  it('returns nothing for an empty, null or undefined row list', () => {
+    expect(scoredHoleNumbers([], 'best_ball', VIEWER, null)).toEqual([]);
+    expect(scoredHoleNumbers(null, 'best_ball', VIEWER, null)).toEqual([]);
+    expect(scoredHoleNumbers(undefined, 'best_ball', VIEWER, null)).toEqual([]);
+  });
+
+  it('keeps the viewer’s own holes in a per-player mode', () => {
+    expect(
+      scoredHoleNumbers(
+        [row(VIEWER, 3), row(VIEWER, 4)],
+        'best_ball',
+        VIEWER,
+        null,
+      ),
+    ).toEqual([3, 4]);
+  });
+
+  it('drops rows owned by someone else — a stranger’s row never counts as mine', () => {
+    expect(
+      scoredHoleNumbers(
+        [row(VIEWER, 3), row(CAPTAIN, 4)],
+        'best_ball',
+        VIEWER,
+        null,
+      ),
+    ).toEqual([3]);
+  });
+
+  it('counts the captain’s shared rows in a team-collapsed mode, not the viewer’s stale ones', () => {
+    expect(
+      scoredHoleNumbers(
+        [row(CAPTAIN, 1), row(VIEWER, 2), row(CAPTAIN, 5)],
+        'texas_scramble',
+        VIEWER,
+        CAPTAIN,
+      ),
+    ).toEqual([1, 5]);
+  });
+
+  it('patsome splits per hole: the viewer owns 1–6, the captain owns 7–18', () => {
+    expect(
+      scoredHoleNumbers(
+        [
+          row(VIEWER, 6),
+          row(CAPTAIN, 6),
+          row(VIEWER, 7),
+          row(CAPTAIN, 7),
+          row(CAPTAIN, 18),
+        ],
+        'patsome',
+        VIEWER,
+        CAPTAIN,
+      ),
+    ).toEqual([6, 7, 18]);
+  });
+
+  it('falls back to the viewer’s rows when the team has no owner', () => {
+    expect(
+      scoredHoleNumbers(
+        [row(VIEWER, 2), row(CAPTAIN, 3)],
+        'texas_scramble',
+        VIEWER,
+        null,
+      ),
+    ).toEqual([2]);
   });
 });
