@@ -1,21 +1,38 @@
-# Catches the case where lib/database.types.ts drifts from the live prod schema
-# (the root cause behind #641/#642/#647). Regenerates the types from prod and
+# Catches the case where lib/database.types.ts drifts from a live schema
+# (the root cause behind #641/#642/#647). Regenerates the types from Supabase and
 # diffs against the committed file; fails if they differ.
 #
+# Two targets, because migrations go to staging first and prod later (#1532):
+#   - pull_request    → STAGING (snwmueecmfqqdurxedxv). A PR that migrated staging
+#                       and regenerated types from staging is green even though
+#                       prod has not been migrated yet.
+#   - schedule (cron) → PROD (glofubopddkjhymcbaph). Prod reconciliation is the
+#                       whole point of the nightly run — it never moves to staging.
+#   - workflow_dispatch → the `target` input (default prod), so either branch of
+#                       the logic can be proven by hand.
+#
 # Requires a SUPABASE_ACCESS_TOKEN repo secret (Settings → Secrets and variables
-# → Actions → New repository secret). Generate one at
-# https://supabase.com/dashboard/account/tokens.
+# → Actions → New repository secret) — one token covers both projects. Generate
+# one at https://supabase.com/dashboard/account/tokens.
 #
 # Until that secret exists the job SKIPS gracefully (green, with a notice) so it
 # never blocks a PR. First real run may flag a formatting-only diff between the
-# CLI output and the committed file — if so, run `npm run gen:types` once and
-# commit to canonicalise.
+# CLI output and the committed file — if so, regenerate against the target
+# project once and commit to canonicalise.
 name: Schema drift
 
 on:
   schedule:
     - cron: '0 5 * * *' # daily 05:00 UTC
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which project to diff lib/database.types.ts against'
+        type: choice
+        default: prod
+        options:
+          - prod
+          - staging
   pull_request:
     paths:
       - 'supabase/migrations/**'
@@ -42,23 +59,55 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # PR → staging, cron → prod, dispatch → the input (default prod). See the
+      # header comment for why: migrations land on staging before prod, so a PR
+      # diffed against prod would be red for the whole staging→prod window.
+      - name: Select drift target
+        id: target
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_TARGET: ${{ github.event.inputs.target }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            TARGET_NAME="staging"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DISPATCH_TARGET" = "staging" ]; then
+            TARGET_NAME="staging"
+          else
+            TARGET_NAME="prod"
+          fi
+          if [ "$TARGET_NAME" = "staging" ]; then
+            PROJECT_ID="snwmueecmfqqdurxedxv"
+          else
+            PROJECT_ID="glofubopddkjhymcbaph"
+          fi
+          echo "::notice::Schema-drift target: $TARGET_NAME ($PROJECT_ID)"
+          echo "target_name=$TARGET_NAME" >> "$GITHUB_OUTPUT"
+          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+
       - uses: supabase/setup-cli@v1
         if: steps.guard.outputs.run == 'true'
         with:
           version: latest
 
-      - name: Regenerate types from prod and diff against committed file
+      - name: Regenerate types from ${{ steps.target.outputs.target_name }} and diff against committed file
         if: steps.guard.outputs.run == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_ID: ${{ steps.target.outputs.project_id }}
+          TARGET_NAME: ${{ steps.target.outputs.target_name }}
         run: |
           supabase gen types typescript \
-            --project-id glofubopddkjhymcbaph --schema public > /tmp/fresh.types.ts
+            --project-id "$PROJECT_ID" --schema public > /tmp/fresh.types.ts
           if ! diff -u lib/database.types.ts /tmp/fresh.types.ts; then
-            echo "::error::lib/database.types.ts is out of sync with the live schema. Run 'npm run gen:types' and commit the result."
+            if [ "$TARGET_NAME" = "staging" ]; then
+              FIX="Regenerate against staging: 'npx supabase gen types typescript --project-id $PROJECT_ID --schema public > lib/database.types.ts' and commit the result."
+            else
+              FIX="Run 'npm run gen:types' and commit the result."
+            fi
+            echo "::error::lib/database.types.ts is out of sync with the live $TARGET_NAME schema. $FIX"
             exit 1
           fi
-          echo "lib/database.types.ts is in sync with the live schema."
+          echo "lib/database.types.ts is in sync with the live $TARGET_NAME schema."
 
       # Alert on red cron/dispatch runs (#1075) — PR failures are visible on the
       # PR itself, but a red scheduled run used to die silently in the Actions
@@ -70,7 +119,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TARGET_NAME: ${{ steps.target.outputs.target_name }}
         run: |
+          TARGET_NAME="${TARGET_NAME:-prod}"
           TITLE="CI-vakt: schema-drift rød"
           bash .github/scripts/discord-notify.sh "🔴 **Schema-drift rød** — $RUN_URL"
           EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
@@ -78,7 +129,7 @@ jobs:
             echo "Åpent varsel-issue finnes allerede — hopper over."
             exit 0
           fi
-          BODY=$(printf 'Schema-drift-sjekken feilet — lib/database.types.ts er ute av sync med prod-skjemaet, eller selve kjøringen røk.\n\nKjøring: %s\n\nFix-protokoll: `docs/loops/ci-vakta.md` (schema-drift-seksjonen). Dette issuet lukkes når drift-sjekken er grønn igjen.' "$RUN_URL")
+          BODY=$(printf 'Schema-drift-sjekken feilet — lib/database.types.ts er ute av sync med %s-skjemaet, eller selve kjøringen røk.\n\nKjøring: %s\n\nFix-protokoll: `docs/loops/ci-vakta.md` (schema-drift-seksjonen). Dette issuet lukkes når drift-sjekken er grønn igjen.' "$TARGET_NAME" "$RUN_URL")
           gh api "repos/$GITHUB_REPOSITORY/issues" \
             -f title="$TITLE" \
             -f body="$BODY" \
