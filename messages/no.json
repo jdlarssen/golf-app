@@ -4844,7 +4844,14 @@
       "underperformerLabel": "Dro ned mest",
       "underperformerValue": "{strokes} slag over eget handicap",
       "matchTied": "Delt (AS)",
-      "resultTo": "{result} til {name}"
+      "resultTo": "{result} til {name}",
+      "sideAwardsHeading": "Sidepoeng hull for hull",
+      "sideAwardsHint": "Ingen ekstra poeng her, bare de samme sett fra hullet.",
+      "sideAwardWinnerOnTeam": "{name} · {team}",
+      "sideAwardNoWinner": "Ingen vant",
+      "sideAwardUnregistered": "Ikke registrert",
+      "sideAwardPoints": "+{points}",
+      "sideAwardGirTeam": "{team}: {count} av {max} · +{points}"
     },
     "sideAwards": {
       "heading": "Sidepoeng",
