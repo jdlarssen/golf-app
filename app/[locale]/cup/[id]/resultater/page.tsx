@@ -11,8 +11,10 @@ import { isTeamMatchGameMode } from '@/lib/cup/computeCupLeaderboard';
 import { computeCupPlayerPoints } from '@/lib/cup/computeCupPlayerPoints';
 import { computeCupMvp, computeCupUnderperformer } from '@/lib/cup/computeCupAwards';
 import { formatPoints } from '@/lib/cup/formatPoints';
+import { buildSideAwardDetails } from '@/lib/cup/sideAwardDetails';
 import { CupPlayerPoints } from './CupPlayerPoints';
 import { CupAwards } from './CupAwards';
+import { SideAwardDetails } from './SideAwardDetails';
 
 type Params = Promise<{ id: string }>;
 
@@ -99,6 +101,15 @@ export default async function CupResultsPage({ params }: { params: Params }) {
 
   // Seremonikåringene (#1508): MVP fra samme poengregnskap, «dro ned mest» fra
   // prestasjons-inputen. Begge kan være null — da vises de ikke.
+  // Sidepoeng hull for hull (#1496) — samme visnings-betingelse som sum-linja
+  // over (`sideAwards.length > 0`), håndhevet av at helperen gir tom liste for
+  // en cup uten sidepoeng.
+  const sideAwardGroups = buildSideAwardDetails({
+    sideAwards,
+    roster: snapshot.roster,
+    unknownLabel,
+  });
+
   const mvp = computeCupMvp(playerPoints);
   const underperformer = computeCupUnderperformer({
     games: performanceInputs,
@@ -173,6 +184,14 @@ export default async function CupResultsPage({ params }: { params: Params }) {
       {playerPointGroups.length > 0 && (
         <CupPlayerPoints groups={playerPointGroups} currentUserId={userId} />
       )}
+
+      {/* Sidepoeng hull for hull (#1496) — mellom spillerpoengene og kamplisten.
+          Samme poeng som i spillerraden over, sett fra hullet i stedet. */}
+      <SideAwardDetails
+        groups={sideAwardGroups}
+        team1Name={tournament.team_1_name}
+        team2Name={tournament.team_2_name}
+      />
 
       {/* Matches-liste med resultater. Hvert kort lenker til kampens eget
           leaderboard (#1456). */}

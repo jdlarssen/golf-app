@@ -4844,7 +4844,14 @@
       "underperformerLabel": "Biggest slide",
       "underperformerValue": "{strokes} strokes over own handicap",
       "matchTied": "Halved (AS)",
-      "resultTo": "{result} to {name}"
+      "resultTo": "{result} to {name}",
+      "sideAwardsHeading": "Side points hole by hole",
+      "sideAwardsHint": "No extra points here, just the same ones seen from the hole.",
+      "sideAwardWinnerOnTeam": "{name} · {team}",
+      "sideAwardNoWinner": "Nobody won",
+      "sideAwardUnregistered": "Not registered",
+      "sideAwardPoints": "+{points}",
+      "sideAwardGirTeam": "{team}: {count} of {max} · +{points}"
     },
     "sideAwards": {
       "heading": "Side points",
