@@ -12,7 +12,11 @@ import {
   requireAdminOrClubAdmin,
   requireAdminOrClubAdminOfCup,
 } from '@/lib/admin/auth';
+import { teeGenderOf } from '@/lib/games/teeGender';
+import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
+import type { Tables } from '@/lib/database.types';
 import { getCupSnapshot } from './getCupSnapshot';
+import { validateMatchSwap } from './matchSwapValidation';
 import { loadTournamentParticipantEmails } from './tournamentParticipants';
 import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
@@ -457,6 +461,265 @@ export async function finishTournament(formData: FormData) {
   base.revalidate();
   revalidatePath(`/cup/${id}`);
   redirect(`${base.path}?status=finished`);
+}
+
+/**
+ * Bytt én spiller i en generert, ikke-startet cup-match (#1473) — frafall inn,
+ * reserve ut. Arrangøren slipper å slette og re-generere hele cupen fordi én
+ * kompis meldte forfall kvelden før.
+ *
+ * Bunt, ikke enkelt-match: en splittet cup-dag (#1441 D3) lager én host-match
+ * pluss avledede matcher (`source_game_id`). Arrangøren trykker på ETT kort,
+ * men spilleren byttes overalt i bunten der hun står — ellers ville frafallet
+ * fortsatt stått i back-nine-singelen. Guard-tabellen (hvilke matcher som
+ * skrives, og om byttet er lov i det hele tatt) bor i `matchSwapValidation.ts`.
+ *
+ * Skriver via admin-client med authz på call-site (samme mønster som
+ * `finishTournament`): en klubb-styrer er ikke games-creator, så creator-RLS-en
+ * (0071) dekker ikke stien. Gaten over ER håndhevelsen (AGENTS.md trap #3).
+ *
+ * Delete + insert er trygt her fordi bunten er `scheduled`: ingen scores
+ * finnes, og spillehandicap fryses først ved start. `game_players` har
+ * komposit-PK (game_id, user_id) og ingen auto-generert nøkkel, så radene
+ * kan re-inserters ordrett om noe feiler underveis (#907, felle #5).
+ *
+ * Feil returneres som `{ error: kode }` (#1397) — kun suksess redirecter.
+ */
+export async function swapCupMatchPlayer(
+  formData: FormData,
+): Promise<CupActionError> {
+  const tournamentId = String(formData.get('tournament_id') ?? '').trim();
+  const gameId = String(formData.get('game_id') ?? '').trim();
+  const outUserId = String(formData.get('out_user_id') ?? '').trim();
+  const inUserId = String(formData.get('in_user_id') ?? '').trim();
+  if (!tournamentId || !gameId) return { error: 'not_found' };
+  if (!outUserId) return { error: 'player_not_in_match' };
+  if (!inUserId) return { error: 'not_participant' };
+
+  const supabase = await getServerClient();
+  const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
+  const base = await cupRedirectBase(supabase, tournamentId);
+
+  const admin = getAdminClient();
+
+  // Matchen arrangøren trykket på må høre til DENNE cupen — `game_id` kommer
+  // fra klienten, og en fremmed match ville ellers vært skrivbar med en cup
+  // kalleren tilfeldigvis styrer.
+  const { data: tapped } = await admin
+    .from('games')
+    .select('id, tournament_id, source_game_id')
+    .eq('id', gameId)
+    .maybeSingle();
+  if (!tapped || tapped.tournament_id !== tournamentId) {
+    return { error: 'not_found' };
+  }
+  const root = (tapped.source_game_id as string | null) ?? tapped.id;
+
+  // Hele cupens matcher i ett kall; bunten plukkes ut lokalt (host = den med
+  // id === root, avledede peker på den). Host først, så `gameIds` under bærer
+  // rekkefølgen videre til varselet.
+  const { data: cupGames, error: gamesError } = await admin
+    .from('games')
+    .select('id, status, source_game_id')
+    .eq('tournament_id', tournamentId);
+  if (gamesError) {
+    console.error('[cup] swapCupMatchPlayer bundle read failed', {
+      tournamentId,
+      gameId,
+      error: gamesError,
+    });
+    return { error: 'swap_failed' };
+  }
+  const inBundle = (cupGames ?? []).filter(
+    (g) => ((g.source_game_id as string | null) ?? g.id) === root,
+  );
+  const bundle = [
+    ...inBundle.filter((g) => g.id === root),
+    ...inBundle.filter((g) => g.id !== root),
+  ];
+  const bundleIds = bundle.map((g) => g.id);
+  if (bundleIds.length === 0) return { error: 'not_found' };
+
+  const { data: playerRows, error: playersError } = await admin
+    .from('game_players')
+    .select('game_id, user_id')
+    .in('game_id', bundleIds);
+  if (playersError) {
+    console.error('[cup] swapCupMatchPlayer roster read failed', {
+      tournamentId,
+      gameId,
+      error: playersError,
+    });
+    return { error: 'swap_failed' };
+  }
+
+  const { data: participantRows, error: participantsError } = await admin
+    .from('tournament_participants')
+    .select('user_id')
+    .eq('tournament_id', tournamentId);
+  if (participantsError) {
+    console.error('[cup] swapCupMatchPlayer participant read failed', {
+      tournamentId,
+      error: participantsError,
+    });
+    return { error: 'swap_failed' };
+  }
+
+  // Klubb-cup: medlemskap kan trekkes ETTER påmelding, så deltaker-lista alene
+  // er ikke nok (speiler generatorens `not_members`-guard).
+  let clubMemberIds: string[] | null = null;
+  if (base.groupId) {
+    const { data: memberRows, error: membersError } = await admin
+      .from('group_members')
+      .select('user_id')
+      .eq('group_id', base.groupId);
+    if (membersError) {
+      console.error('[cup] swapCupMatchPlayer membership read failed', {
+        tournamentId,
+        groupId: base.groupId,
+        error: membersError,
+      });
+      return { error: 'swap_failed' };
+    }
+    clubMemberIds = (memberRows ?? []).map((m) => m.user_id as string);
+  }
+
+  const validation = validateMatchSwap({
+    bundle: bundle.map((g) => ({
+      gameId: g.id,
+      status: g.status,
+      playerIds: (playerRows ?? [])
+        .filter((p) => p.game_id === g.id)
+        .map((p) => p.user_id as string),
+    })),
+    outUserId,
+    inUserId,
+    participantIds: (participantRows ?? []).map((p) => p.user_id as string),
+    clubMemberIds,
+  });
+  if (!validation.ok) return { error: validation.error };
+
+  // Bærende, ikke arvet: `startScheduledGame` velger rating-sett fra
+  // `tee_gender`, så inn-spilleren skal ha SIN egen — arver vi ut-spillerens,
+  // fryses feil spillehandicap ved start.
+  const { data: inProfile } = await admin
+    .from('users')
+    .select('gender')
+    .eq('id', inUserId)
+    .maybeSingle();
+  const teeGender = teeGenderOf((inProfile?.gender as string | null) ?? null);
+
+  const acceptedAt = new Date().toISOString();
+  const removedRows: Tables<'game_players'>[] = [];
+  const insertedGameIds: string[] = [];
+
+  /**
+   * Tilbake til før-tilstanden: slett inn-radene som rakk å bli skrevet, og
+   * re-insert ut-radene ordrett. Best-effort — en feilet kompensering logges,
+   * men kalleren får uansett en ærlig feilkode og kan prøve på nytt.
+   */
+  async function compensate(): Promise<void> {
+    if (insertedGameIds.length > 0) {
+      const { error } = await admin
+        .from('game_players')
+        .delete()
+        .in('game_id', insertedGameIds)
+        .eq('user_id', inUserId);
+      if (error) {
+        console.error('[cup] swapCupMatchPlayer compensation delete failed', error);
+      }
+    }
+    if (removedRows.length > 0) {
+      const { error } = await admin.from('game_players').insert(removedRows);
+      if (error) {
+        console.error('[cup] swapCupMatchPlayer compensation re-insert failed', error);
+      }
+    }
+  }
+
+  try {
+    for (const writeGameId of validation.gameIds) {
+      // 0 slettede rader er en ekte feil her (felle #2) — guarden fant nettopp
+      // spilleren i denne matchen.
+      const deleted = expectAffected(
+        await admin
+          .from('game_players')
+          .delete()
+          .eq('game_id', writeGameId)
+          .eq('user_id', outUserId)
+          .select('*')
+          .returns<Tables<'game_players'>[]>(),
+        'swapCupMatchPlayer.removeOutPlayer',
+      );
+      removedRows.push(...deleted);
+
+      // Eksplisitt kolonneliste: KUN lag + flight arves. Alt annet
+      // (paid_at/submitted_at/approved_at/withdrawn_at/result_summary/
+      // score_differential/signup_source) hører til ut-spilleren og skal aldri
+      // følge med (speiler roster-swappen i admin/games/[id]/edit).
+      const { error: insertError } = await admin.from('game_players').insert({
+        game_id: writeGameId,
+        user_id: inUserId,
+        team_number: deleted[0].team_number,
+        flight_number: deleted[0].flight_number,
+        tee_gender: teeGender,
+        // Arrangøren har bevisst satt spilleren inn → ingen «Ikke bekreftet»-
+        // gate (samme beslutning som cup-genereringen, #641).
+        accepted_at: acceptedAt,
+        // Spillehandicap fryses ved start, ikke her.
+        course_handicap: null,
+      });
+      if (insertError) {
+        throw new Error(`swapCupMatchPlayer.addInPlayer: ${insertError.message}`);
+      }
+      insertedGameIds.push(writeGameId);
+    }
+
+    // TOCTOU mot cron-sveipet: auto-start fyrer hvert minutt når
+    // `scheduled_tee_off_at` har passert, og fryser handicap per rad. Lander
+    // byttet rett etter frysingen, ville inn-spilleren stått i en aktiv match
+    // med course_handicap = null. Les statusen på nytt og rull tilbake.
+    const { data: afterRows, error: afterError } = await admin
+      .from('games')
+      .select('id, status')
+      .in('id', bundleIds);
+    if (afterError) {
+      throw new Error(`swapCupMatchPlayer.recheckStatus: ${afterError.message}`);
+    }
+    if ((afterRows ?? []).some((g) => g.status !== 'scheduled')) {
+      await compensate();
+      return { error: 'already_started' };
+    }
+  } catch (err) {
+    console.error('[cup] swapCupMatchPlayer write failed', {
+      tournamentId,
+      gameId,
+      err,
+    });
+    await compensate();
+    return { error: 'swap_failed' };
+  }
+
+  // Best-effort invite-varsel til den som kom inn (samme kind og samme
+  // presedens som roster-swappen). Feiler det, står byttet uansett.
+  await Promise.allSettled([
+    notifyInvitedToGame({
+      recipientUserId: inUserId,
+      gameId: validation.gameIds[0],
+      inviterUserId: actor.userId,
+    }),
+  ]);
+
+  revalidateTag(`tournament-${tournamentId}`, 'max');
+  // Hver skrevet match har sin egen cache-tag (`getGameWithPlayers`) — uten
+  // dette viser hull-siden og kamp-hjemmet den gamle spilleren i opptil 15 min.
+  for (const writtenGameId of validation.gameIds) {
+    revalidateTag(`game-${writtenGameId}`, 'max');
+  }
+  base.revalidate();
+  revalidatePath(`/cup/${tournamentId}`);
+  redirect(`${base.path}?status=player_swapped`);
+  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
 
 export async function deleteTournament(formData: FormData) {
