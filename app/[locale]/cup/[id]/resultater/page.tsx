@@ -99,8 +99,6 @@ export default async function CupResultsPage({ params }: { params: Params }) {
     { team: 2 as const, teamName: tournament.team_2_name, rows: playerPoints.team2 },
   ].filter((g) => g.rows.length > 0);
 
-  // Seremonikåringene (#1508): MVP fra samme poengregnskap, «dro ned mest» fra
-  // prestasjons-inputen. Begge kan være null — da vises de ikke.
   // Sidepoeng hull for hull (#1496) — samme visnings-betingelse som sum-linja
   // over (`sideAwards.length > 0`), håndhevet av at helperen gir tom liste for
   // en cup uten sidepoeng.
@@ -110,6 +108,8 @@ export default async function CupResultsPage({ params }: { params: Params }) {
     unknownLabel,
   });
 
+  // Seremonikåringene (#1508): MVP fra samme poengregnskap, «dro ned mest» fra
+  // prestasjons-inputen. Begge kan være null — da vises de ikke.
   const mvp = computeCupMvp(playerPoints);
   const underperformer = computeCupUnderperformer({
     games: performanceInputs,
