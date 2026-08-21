@@ -4702,7 +4702,8 @@
         "created": "Cupen er opprettet. Legg til matcher under for å komme i gang.",
         "started": "Cupen er startet. Spillerne får varsel.",
         "finished": "Cupen er avsluttet. Resultatet er sendt til alle deltakere.",
-        "matches_generated": "Matchene er opprettet. Se gjennom listen under."
+        "matches_generated": "Matchene er opprettet. Se gjennom listen under.",
+        "player_swapped": "Spilleren er byttet."
       },
       "deletedMessage": "Cupen «{name}» er slettet.",
       "headerSubtitlePending": "{team1} mot {team2} · poengmål klart ved start",
@@ -4718,6 +4719,25 @@
         "spillereSubtitle": "{count, plural, =0 {Ingen påmeldt ennå} one {# spiller påmeldt} other {# spillere påmeldt}}",
         "genererTitle": "Fordel & generer",
         "genererSubtitle": "{count, plural, =0 {Ingen matcher ennå} one {# match laget} other {# matcher laget}}"
+      }
+    },
+    "swap": {
+      "openButton": "Bytt spiller",
+      "outLabel": "Hvem går ut?",
+      "inLabel": "Hvem går inn?",
+      "submitButton": "Bytt",
+      "submitPending": "Bytter …",
+      "cancelButton": "Avbryt",
+      "noReserves": "Alle påmeldte spiller allerede i denne kampen. Meld på flere spillere først.",
+      "errors": {
+        "not_found": "Fant ikke kampen.",
+        "already_started": "Kampen er i gang. Nå er det for sent å bytte.",
+        "player_not_in_match": "Spilleren står ikke i denne kampen lenger.",
+        "already_in_match": "Den spilleren er allerede med i kampen.",
+        "not_participant": "Spilleren er ikke påmeldt cupen. Meld hen på først.",
+        "not_member": "Spilleren er ikke medlem av klubben lenger.",
+        "swap_failed": "Klarte ikke å bytte spilleren. Prøv igjen.",
+        "unexpected": "Uventet feil: {code}"
       }
     },
     "generate": {
