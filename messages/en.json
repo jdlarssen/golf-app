@@ -4702,7 +4702,8 @@
         "created": "Cup created. Add matches below to get started.",
         "started": "Cup started. Players will be notified.",
         "finished": "Cup finished. Results have been sent to all participants.",
-        "matches_generated": "Matches created. Review the list below."
+        "matches_generated": "Matches created. Review the list below.",
+        "player_swapped": "The player has been swapped."
       },
       "deletedMessage": "The cup «{name}» has been deleted.",
       "headerSubtitlePending": "{team1} vs {team2} · points target set at start",
@@ -4718,6 +4719,25 @@
         "spillereSubtitle": "{count, plural, =0 {No one signed up yet} one {# player signed up} other {# players signed up}}",
         "genererTitle": "Assign & generate",
         "genererSubtitle": "{count, plural, =0 {No matches yet} one {# match created} other {# matches created}}"
+      }
+    },
+    "swap": {
+      "openButton": "Swap player",
+      "outLabel": "Who is dropping out?",
+      "inLabel": "Who is coming in?",
+      "submitButton": "Swap",
+      "submitPending": "Swapping …",
+      "cancelButton": "Cancel",
+      "noReserves": "Everyone signed up is already in this match. Add more players first.",
+      "errors": {
+        "not_found": "Match not found.",
+        "already_started": "The match has started. It is too late to swap.",
+        "player_not_in_match": "That player is no longer in this match.",
+        "already_in_match": "That player is already in the match.",
+        "not_participant": "That player is not signed up for the cup. Add them first.",
+        "not_member": "That player is no longer a member of the club.",
+        "swap_failed": "Could not swap the player. Try again.",
+        "unexpected": "Unexpected error: {code}"
       }
     },
     "generate": {

@@ -222,8 +222,8 @@ function readsUpToProfile(overrides: { games?: unknown[] } = {}) {
     gateGroupIdNull, // 1. gaten
     { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
     { data: overrides.games ?? SPLIT_GAMES, error: null },
-    { data: SPLIT_PLAYERS, error: null },
     { data: PARTICIPANTS, error: null },
+    { data: SPLIT_PLAYERS, error: null },
     { data: { gender: 'ladies' }, error: null },
   ];
 }
@@ -327,9 +327,9 @@ describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
       { data: { group_id: 'club-1' }, error: null }, // gaten
       { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
       { data: SPLIT_GAMES, error: null },
-      { data: SPLIT_PLAYERS, error: null },
       { data: PARTICIPANTS, error: null },
       { data: [{ user_id: 'out' }, { user_id: 'mate' }], error: null }, // group_members: reserve er ute
+      { data: SPLIT_PLAYERS, error: null },
     ]);
     supabaseMock = buildSupabaseMock([
       cupAdminUser,

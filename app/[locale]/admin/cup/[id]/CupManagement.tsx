@@ -22,6 +22,7 @@ import {
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
 import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
+import { SwapMatchPlayer, type SwapPlayerOption } from './SwapMatchPlayer';
 
 export type CupManagementVariant = 'admin' | 'club';
 
@@ -126,6 +127,45 @@ async function fetchCupDoorData(tournamentId: string): Promise<CupDoorData> {
 }
 
 /**
+ * Alle påmeldte i cupen, klare som valg i «Bytt spiller» (#1473).
+ *
+ * Leses med admin-klienten, ikke request-klienten: `users`-radene til ANDRE
+ * spillere er ikke synlige for en arrangør som ikke er global admin, så en
+ * request-scoped lesing ville stille droppet navnene (#1540/#366-fella).
+ * Flaten er allerede gatet av `requireAdminOrClubAdminOfCup` i ruta.
+ *
+ * To kall framfor én FK-join: join-syntaksen krever constraint-navnet, og
+ * to enkle spørringer på en liste av denne størrelsen koster ingenting.
+ */
+async function fetchCupParticipantOptions(
+  tournamentId: string,
+  unknownLabel: string,
+): Promise<SwapPlayerOption[]> {
+  const admin = getAdminClient();
+  const { data: rows } = await admin
+    .from('tournament_participants')
+    .select('user_id')
+    .eq('tournament_id', tournamentId);
+  const userIds = (rows ?? []).map((r) => r.user_id as string);
+  if (userIds.length === 0) return [];
+
+  const { data: users } = await admin
+    .from('users')
+    .select('id, name, nickname')
+    .in('id', userIds);
+
+  return (users ?? [])
+    .map((u) => ({
+      userId: u.id as string,
+      label:
+        (u.nickname as string | null)?.trim() ||
+        (u.name as string | null)?.trim() ||
+        unknownLabel,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'no'));
+}
+
+/**
  * Én dør fra cup-detaljsiden til et rom (#1472). Hele kortet er lenken
  * (≥44px tap-target); tittel + status-subtitle + chevron-affordance.
  */
@@ -222,6 +262,7 @@ export async function CupManagement({
     started: t('manage.statusMessages.started'),
     finished: t('manage.statusMessages.finished'),
     matches_generated: t('manage.statusMessages.matches_generated'),
+    player_swapped: t('manage.statusMessages.player_swapped'),
   };
   const errorMessage = errorCode ? errorMessageMap[errorCode] : undefined;
   const statusMessage = statusCode ? statusMessageMap[statusCode] : undefined;
@@ -296,6 +337,53 @@ export async function CupManagement({
     isClub && groupId
       ? `/klubber/${groupId}/cup/${tournamentId}/${room}`
       : `/admin/cup/${tournamentId}/${room}`;
+
+  // #1473: «Bytt spiller» finnes kun på matcher som ennå ikke er startet, så
+  // deltakerlista hentes bare når det faktisk står en slik match på lista.
+  const hasScheduledMatch = leaderboard.matches.some(
+    (m) => m.status === 'scheduled',
+  );
+  const swapCandidates = hasScheduledMatch
+    ? await fetchCupParticipantOptions(tournamentId, unknownLabel)
+    : [];
+
+  // Navn på alle som allerede står i en match — rosteret dekker dem, også
+  // spillere som ikke ligger i `tournament_participants` (eldre cuper der
+  // matchene ble generert rett fra pickeren).
+  const matchPlayerNames = new Map<string, string>(
+    [...roster.team1, ...roster.team2].map((p) => [p.userId, preferredName(p)]),
+  );
+
+  /**
+   * Valgene for ett match-kort. Bunten (host + avledede, #1441 D3) løses fra
+   * snapshotet — arrangøren skal kunne bytte fra hvilket som helst kort i
+   * bunten, og reserven må ikke allerede stå i NOEN av buntens matcher.
+   */
+  function swapOptionsFor(match: (typeof leaderboard.matches)[number]): {
+    outOptions: SwapPlayerOption[];
+    inOptions: SwapPlayerOption[];
+  } {
+    const root = match.sourceGameId ?? match.gameId;
+    const bundle = leaderboard.matches.filter(
+      (x) => (x.sourceGameId ?? x.gameId) === root,
+    );
+    const team1Ids = new Set(bundle.flatMap((x) => x.team1UserIds ?? []));
+    const bundleIds: string[] = [];
+    for (const x of bundle) {
+      for (const uid of [...(x.team1UserIds ?? []), ...(x.team2UserIds ?? [])]) {
+        if (!bundleIds.includes(uid)) bundleIds.push(uid);
+      }
+    }
+    return {
+      outOptions: bundleIds.map((uid) => ({
+        userId: uid,
+        label: `${matchPlayerNames.get(uid) ?? unknownLabel} (${
+          team1Ids.has(uid) ? tournament.team_1_name : tournament.team_2_name
+        })`,
+      })),
+      inOptions: swapCandidates.filter((c) => !bundleIds.includes(c.userId)),
+    };
+  }
 
   // #1472: dør-status-data hentes kun mens cupen er draft (dørene vises bare da).
   const isDraft = tournament.status === 'draft';
@@ -504,9 +592,21 @@ export async function CupManagement({
                   ? `/games/${m.gameId}/leaderboard?from=/klubber/${groupId}/cup/${tournamentId}`
                   : null
                 : `/admin/games/${m.gameId}`;
+              // #1473: bytte-panelet ligger UTENFOR kort-lenken — en knapp inne
+              // i en <a> ville navigert i stedet for å åpne panelet.
+              const swap =
+                m.status === 'scheduled' ? swapOptionsFor(m) : null;
               return (
                 <li key={m.gameId}>
                   {href ? <SmartLink href={href}>{card}</SmartLink> : card}
+                  {swap && (
+                    <SwapMatchPlayer
+                      tournamentId={tournamentId}
+                      gameId={m.gameId}
+                      outOptions={swap.outOptions}
+                      inOptions={swap.inOptions}
+                    />
+                  )}
                 </li>
               );
             })}
