@@ -352,7 +352,7 @@ function SectionPlayerRow({
           <span className="score-num block text-[24px] leading-none tracking-[-0.02em] text-text tabular-nums">
             {line.totalEffectiveStrokes}
           </span>
-          <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+          <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
             {t('nassau.totalEffectiveStrokesLabel')}
           </span>
         </div>

@@ -190,7 +190,7 @@ export function RoundRobinPodium({
                     <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
                       {player.totalHoleWins}
                     </span>
-                    <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                    <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
                       {t('roundRobin.hullLabel')}
                     </span>
                   </div>
@@ -246,7 +246,7 @@ function PodiumStep({
 
       {tiedBadge && (
         <p
-          className={`text-center text-[9px] font-semibold uppercase tracking-[0.14em] ${
+          className={`text-center text-[11px] font-semibold uppercase tracking-[0.14em] ${
             place === 1 ? 'text-accent-text' : 'text-muted'
           }`}
         >
@@ -270,12 +270,12 @@ function PodiumStep({
         >
           {player.totalHoleWins}
         </span>
-        <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
+        <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           {t('roundRobin.hullLabel')}
         </span>
       </div>
 
-      <p className="text-[10px] tabular-nums text-muted">
+      <p className="text-[11px] tabular-nums text-muted">
         {t('roundRobin.tapetLabel', { count: player.totalHolesLost })}
       </p>
     </div>

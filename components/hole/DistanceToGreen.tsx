@@ -39,7 +39,7 @@ const buttonStyle: CSSProperties = {
 
 const hintStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
-  fontSize: 10,
+  fontSize: 11,
   color: 'var(--text-muted)',
   whiteSpace: 'nowrap',
 };

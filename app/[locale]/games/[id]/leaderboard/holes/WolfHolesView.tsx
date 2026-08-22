@@ -237,7 +237,7 @@ function HoleCard({
                     {name}
                   </span>
                   {cell.side != null && (
-                    <span className="shrink-0 text-[10px] uppercase tracking-[0.1em] text-muted">
+                    <span className="shrink-0 text-[11px] uppercase tracking-[0.1em] text-muted">
                       {cell.side === 'wolf' ? t('wolf.wolfSide') : t('wolf.andreSide')}
                     </span>
                   )}

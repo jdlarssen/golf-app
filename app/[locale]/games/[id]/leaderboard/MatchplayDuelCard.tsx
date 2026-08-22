@@ -233,7 +233,7 @@ function SidePanel({
       >
         {holesWon}
       </span>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
         {t('holesWon')}
       </span>
       {side.sublines?.map((line, i) => (

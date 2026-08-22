@@ -20,7 +20,10 @@ import { formatShortDateLocale } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 
-const GAMES_LEDGER_GRID = '1fr 84px 14px';
+// Status-kolonnen rommer StatusChip. Etter 11px-løftet (#1390) måler den
+// lengste labelen — «Påmelding» — ~96px, mot ~84px på 9,5px. 100px gir chipen
+// plass uten å klippe, og 1fr-kolonnen har fortsatt ~198px på 360px viewport.
+const GAMES_LEDGER_GRID = '1fr 100px 14px';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -339,7 +342,7 @@ function GamesLedgerSkeleton() {
               <Skeleton className="h-4 w-3/5" delay={i * 90} />
               <Skeleton className="mt-1 h-3 w-2/5" delay={i * 90 + 30} />
             </div>
-            <Skeleton className="ml-auto h-5 w-20 rounded-full" delay={i * 90 + 60} />
+            <Skeleton className="ml-auto h-5 w-24 rounded-full" delay={i * 90 + 60} />
             <span aria-hidden className="text-[14px] text-muted">
               ›
             </span>

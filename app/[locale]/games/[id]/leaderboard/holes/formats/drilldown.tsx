@@ -245,7 +245,7 @@ function DrilldownView({
           >
             ‹
           </SmartLink>
-          <span className="flex-1 truncate text-center text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+          <span className="flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
             {t('teamHeader', { number: selected.teamNumber, rank: selected.rank })}
           </span>
           <span className="w-8" aria-hidden />
@@ -272,7 +272,7 @@ function DrilldownView({
             <span className="block font-serif text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text">
               {selected.total}
             </span>
-            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+            <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
               {formatVsPar(selected.total - totalPar)} PAR
             </span>
           </div>
@@ -293,7 +293,7 @@ function DrilldownView({
             skjules hele UT-seksjonen i stedet for å rendre en tom tabell. */}
         {frontRows.length > 0 && (
           <>
-            <div className="px-5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+            <div className="px-5 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {t('frontNineLabel')}
             </div>
             <HoleTable
@@ -311,7 +311,7 @@ function DrilldownView({
             ingen, back9-spill får sine her). */}
         {backRows.length > 0 && (
           <>
-            <div className="px-5 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+            <div className="px-5 pt-5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {t('backNineLabel')}
             </div>
             <HoleTable
@@ -340,7 +340,7 @@ function DrilldownView({
              hierarkiet uten å trenge høy-kontrast fyll. */
           <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] border border-border bg-surface px-5 py-3.5 text-text">
             <div>
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-accent-text">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-accent-text">
                 {t('totalLabel')}
               </span>
               <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
@@ -422,7 +422,7 @@ function HoleTable({
           <span className="font-serif text-[13px] font-semibold tracking-[0.04em] text-muted">
             {summaryLabel}
           </span>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
             P{summaryPar}
           </span>
         </div>
@@ -431,7 +431,7 @@ function HoleTable({
           {summaryNet}
         </span>
         <span
-          className="ml-2 w-[40px] shrink-0 rounded-full px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums"
+          className="ml-2 w-[40px] shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums"
           style={{
             background: `var(${summaryTone.bg})`,
             color: `var(${summaryTone.fg})`,
@@ -473,7 +473,7 @@ function HoleRow({
         <span className="font-serif text-[15px] font-medium leading-none tabular-nums text-text">
           {row.holeNumber}
         </span>
-        <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+        <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
           P{row.par}
           {row.parByGender && hasParDifference(row.parByGender) && (
             <sup
@@ -546,7 +546,7 @@ function HoleRow({
                 {nettoText}
               </span>
               <span
-                className="w-[32px] rounded-full py-0.5 text-center text-[10px] font-semibold tabular-nums"
+                className="w-[32px] rounded-full py-0.5 text-center text-[11px] font-semibold tabular-nums"
                 style={
                   nettoVsPar !== null
                     ? {
@@ -569,7 +569,7 @@ function HoleRow({
           {row.teamNet ?? '–'}
         </span>
         <span
-          className="w-[40px] rounded-full py-0.5 text-center text-[10px] font-semibold tabular-nums"
+          className="w-[40px] rounded-full py-0.5 text-center text-[11px] font-semibold tabular-nums"
           style={
             teamVsPar !== null
               ? {

@@ -278,13 +278,13 @@ function HoleGrid({
           <tr className="border-b border-border bg-primary-soft/30">
             <th
               scope="col"
-              className="px-2 py-2 text-left font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+              className="px-2 py-2 text-left font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
             >
               {t('matchplay.colHull')}
             </th>
             <th
               scope="col"
-              className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+              className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
             >
               {t('matchplay.colPar')}
             </th>
@@ -295,13 +295,13 @@ function HoleGrid({
             <SideColHeader label={side2Short} t={t} />
             <th
               scope="col"
-              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
             >
               {t('matchplay.colVinner')}
             </th>
             <th
               scope="col"
-              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
             >
               {t('matchplay.colStilling')}
             </th>
@@ -343,10 +343,10 @@ function SideColHeader({
   return (
     <th
       scope="col"
-      className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+      className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
     >
       <span className="block truncate">{label}</span>
-      <span className="block text-[8.5px] font-normal normal-case tracking-normal opacity-80">
+      <span className="block text-[11px] font-normal normal-case tracking-normal opacity-80">
         {t('matchplay.colSubBrutto')}
       </span>
     </th>
@@ -404,12 +404,12 @@ function HoleRow({
         {unplayed && <span className="text-muted">—</span>}
         {tied && <span className="text-muted">=</span>}
         {side1Won && (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-score-under-fg">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-score-under-fg">
             L1
           </span>
         )}
         {side2Won && (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-score-under-fg">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-score-under-fg">
             L2
           </span>
         )}
@@ -482,14 +482,14 @@ function ScoreCell({
           <span
             aria-label={t('matchplay.strokeDotAria', { count: extra })}
             title={t('matchplay.strokeDotAria', { count: extra })}
-            className="ml-0.5 align-super text-[10px] font-semibold leading-none text-text"
+            className="ml-0.5 align-super text-[11px] font-semibold leading-none text-text"
           >
             {'•'.repeat(extra)}
           </span>
         )}
       </span>
       {extra > 0 && net !== null && (
-        <span className="text-[10px] tabular-nums text-muted">{net}</span>
+        <span className="text-[11px] tabular-nums text-muted">{net}</span>
       )}
     </span>
   );
