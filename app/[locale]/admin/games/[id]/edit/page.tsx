@@ -18,6 +18,9 @@ import {
   type CourseOption,
   type PlayerOption,
 } from '@/app/[locale]/admin/games/new/GameForm';
+import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
+import { getWizardMountData } from '@/lib/wizard/getWizardMountData';
+import { planDraftResume } from '@/lib/wizard/draftResumePlan';
 import {
   saveDraftAction,
   publishFromDraftAction,
@@ -110,7 +113,7 @@ export default async function EditGamePage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes',
+      'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes, group_id, tournament_id, league_round_id',
     )
     .eq('id', id)
     .maybeSingle<EditGameRow>();
@@ -261,19 +264,62 @@ async function EditGameFormBody({
   game: EditGameRow;
 }) {
   const { supabase } = await getEditContext();
-  const [{ courses, playerOptions }, playersResult] = await Promise.all([
-    getOptions(),
+
+  // #1385: et utkast gjenopptas i veiviseren det ble laget i. Cup-/liga-koblede
+  // utkast er unntaket (veiviserens cup-gren er en opprettelses-kortslutning,
+  // ikke en redigeringsflate) — de trenger ikke veiviser-oppsettet i det hele
+  // tatt, og heller ikke planlagte spill.
+  const mayResumeInWizard =
+    game.status === 'draft' && !game.tournament_id && !game.league_round_id;
+
+  const [playersResult, wizardData] = await Promise.all([
     supabase
       .from('game_players')
       .select('user_id, team_number, flight_number, tee_gender')
       .eq('game_id', gameId)
       .returns<EditGamePlayerRow[]>(),
+    mayResumeInWizard ? getWizardMountData() : Promise.resolve(null),
   ]);
 
   if (playersResult.error) throw playersResult.error;
 
   const playerRows = playersResult.data ?? [];
   const initialValues = buildEditInitialValues(game, playerRows);
+
+  if (wizardData) {
+    // Katalog-vakten kan fortsatt sende utkastet til GameForm: finnes ikke
+    // formatet i noen av veiviserens kataloger, ville steg 2 vist et grid uten
+    // spillets eget format.
+    const plan = planDraftResume(game, wizardData.formatsByIntent);
+    if (plan.kind === 'wizard') {
+      return (
+        <GameWizard
+          courses={wizardData.courses}
+          players={wizardData.players}
+          initialValues={initialValues}
+          mode={{
+            kind: 'edit-draft',
+            gameId,
+            saveDraftAction,
+            publishAction: publishFromDraftAction,
+          }}
+          initialIntent={plan.intent}
+          defaultGroupId={plan.groupId}
+          formatsByIntent={wizardData.formatsByIntent}
+          clubs={wizardData.clubs}
+          friendPlayerIds={wizardData.friendPlayerIds}
+          clubMemberIdsByClub={wizardData.clubMemberIdsByClub}
+          currentUserId={wizardData.userId ?? ''}
+          // Ruta er `requireAdmin`-gatet over, så Solo- og Klubb-flisene i
+          // steg 1 skal vises (IntentSelector skjuler begge uten dette).
+          isAdmin
+          formatGuide={wizardData.formatGuide}
+        />
+      );
+    }
+  }
+
+  const { courses, playerOptions } = await getOptions();
 
   if (game.status === 'draft') {
     return (
