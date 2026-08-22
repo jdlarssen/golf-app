@@ -1,0 +1,3 @@
+# Runde-historikk — 1656-valgmarker-kommentar
+
+Runde 1 (2026-08-22): ACCEPT — ingen blokkerende findings. Alternativ A bygget: commentBodies i AutoMergeInput, markør leses fra body + alle kommentarer (autoMerge.ts:185), kommentar-henting fail-closed i decide-pr-card.ts, fem markør-hjem konsistente i samme commit, rød-først bevist for de fire nye testene. To ikke-blokkerende nits fra evaluator: morgenbriefen.md:36 har litt utdatert ordlyd (peker eksplisitt videre til kanonisk hjem — ikke filt som issue), og HTTP-200-med-uparsebar-JSON-hjørnet følger eksisterende ghClient-mønster (praktisk uoppnåelig). PR-body-en får produktvalg-heading (i BODY, per nattkjoreren.md:206 etter denne endringen).
