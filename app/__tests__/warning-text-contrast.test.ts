@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   contrast,
   readVar,
+  tintOver,
   ROOT,
   DARK_MEDIA,
   DARK_ATTR,
@@ -23,21 +24,6 @@ const TOKEN = 'warning-text';
 
 /** bg-warning/[0.18] er det mørkeste amber-fyllet i bruk (score-over1-bg). */
 const TINT_ALPHA = 0.18;
-
-/** Amber-tinten lagt over en flate, slik nettleseren komponerer den. */
-function amberTint(surface: string, warning: string): string {
-  const px = (hex: string) => {
-    const n = parseInt(hex.slice(1), 16);
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  };
-  const [fr, fg, fb] = px(warning);
-  const [br, bg, bb] = px(surface);
-  const mix = (f: number, b: number) =>
-    Math.round(f * TINT_ALPHA + b * (1 - TINT_ALPHA))
-      .toString(16)
-      .padStart(2, '0');
-  return `#${mix(fr, br)}${mix(fg, bg)}${mix(fb, bb)}`;
-}
 
 describe('--warning-text (#1388)', () => {
   it('er definert i :root, ikke bare i dark-blokkene', () => {
@@ -72,7 +58,7 @@ describe('--warning-text (#1388)', () => {
       expect(warning, '--warning mangler i blokken').not.toBeNull();
       expect(bg, '--bg mangler i blokken').not.toBeNull();
 
-      const fill = amberTint(bg as string, warning as string);
+      const fill = tintOver(bg as string, warning as string, TINT_ALPHA);
       expect(contrast(text as string, fill)).toBeGreaterThanOrEqual(4.5);
     });
   });
