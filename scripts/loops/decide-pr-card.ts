@@ -110,9 +110,35 @@ async function fetchCommitMessages(
   return messages;
 }
 
-// Slår opp om ett av de lenkede issue-ene har autonomy:needs-decision — den andre
-// valg-markøren (ved siden av body-headingen). Fail-open: klarer vi ikke lese
-// labelene, stoler vi på body-headingen (maskin-markøren sesjonene MÅ sette).
+// Kommentarene på PR-en (`issues/{n}/comments` — PR-er ER issues her; review-
+// kommentarer på diff-linjer er en annen samling og er bevisst utenfor). Valg-
+// markøren kan stå i en kommentar, ikke bare i body-en (#1656).
+//
+// `null` = oppslaget feilet — MÅ skilles fra `[]` (ingen kommentarer), akkurat som
+// i fetchChangedFiles. Bevisst ULIK fetchCommitMessages' fail-open `break`: der
+// koster en tapt side en unødig streng staging-port, her ville den auto-merget et
+// produktvalg forbi eieren — nøyaktig hullet #1656 lukker.
+async function fetchCommentBodies(
+  gh: ReturnType<typeof ghClient>,
+  n: number,
+): Promise<string[] | null> {
+  const bodies: string[] = [];
+  for (let page = 1; page <= 3; page++) {
+    const res = await gh.rest('GET', `/repos/${REPO}/issues/${n}/comments?per_page=100&page=${page}`);
+    if (res.status !== 200) return null;
+    const batch = (res.json as Array<{ body?: string | null }>) ?? [];
+    for (const c of batch) if (c.body) bodies.push(c.body);
+    if (batch.length < 100) return bodies; // siste side — hele lista lest
+  }
+  // 300 kommentarer og fortsatt full side: det finnes kommentarer vi ikke har sett,
+  // og en av dem kan bære markøren → behandle som mislykket oppslag, ikke som «fant
+  // ingenting». Taket er teoretisk her (kort-/nattkjører-PR-er har en håndfull).
+  return null;
+}
+
+// Slår opp om ett av de lenkede issue-ene har autonomy:needs-decision — den tredje
+// valg-markøren (ved siden av headingen i body og i kommentarene). Fail-open: klarer
+// vi ikke lese labelene, stoler vi på headingen (maskin-markøren sesjonene MÅ sette).
 async function anyLinkedIssueNeedsDecision(
   gh: ReturnType<typeof ghClient>,
   body: string | null,
@@ -209,6 +235,10 @@ async function main(): Promise<void> {
   // Tre-utfalls-klassifisering (#1406): ren PR mot main uten produktvalg/aldri-liste/
   // manglende staging-bevis → auto-merge; ellers knapp-kort som før.
   const commitMessages = await fetchCommitMessages(gh, n);
+  // Fail-closed (#1656): uten kommentarene kan vi ikke vite om PR-en bærer et
+  // produktvalg → ingen kort, ingen merge. Samme behandling som en feilet fil-liste.
+  const commentBodies = await fetchCommentBodies(gh, n);
+  if (commentBodies === null) return noCard(`PR #${n}: fikk ikke lest PR-kommentarene`);
   const needsDecisionIssue = await anyLinkedIssueNeedsDecision(gh, pr.body);
   const { outcome, demotedReason } = classifyAutoMerge({
     baseRef: pr.base.ref,
@@ -216,6 +246,7 @@ async function main(): Promise<void> {
     body: pr.body,
     changedFiles,
     commitMessages,
+    commentBodies,
     prLabels: (pr.labels ?? []).map((l) => l.name),
     needsDecisionIssue,
   });

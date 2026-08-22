@@ -179,13 +179,17 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
    - Discord-PR-kortet (docs/loops/discord-pr-kort.md) håndhever samme policy på
      loop-siden (#1406): grønne PR-er uten produktvalg auto-merges av kortet selv,
      resten beholder merge-knappen. Maskin-markøren kortet leser for «produktvalg»:
-     **økter som presenterer et produktvalg MÅ ha en markdown-heading i PR-body-en
-     som enten inneholder ordet «produktvalg» (`## Produktvalg`,
-     `## Alternativer (produktvalg)`) eller starter med `## Alternativ A`–`E`** —
-     uten den leser kortet PR-en som valgfri og merger den. Prosa uten heading
+     **økter som presenterer et produktvalg MÅ ha en markdown-heading som enten
+     inneholder ordet «produktvalg» (`## Produktvalg`, `## Alternativer
+     (produktvalg)`) eller starter med `## Alternativ A`–`E`** — uten den leser
+     kortet PR-en som valgfri og merger den. **PR-body-en er den foreskrevne
+     plassen**; kortet leser i tillegg PR-ens kommentarer, så en alternativ-seksjon
+     som (også) står i en kommentar stopper auto-mergen (#1656). Prosa uten heading
      teller ikke. (#1623: markøren krevde tidligere at «produktvalg» sto FØRST i
      headingen, mens malen over foreskrev «Alternativer (produktvalg)» — de to
-     motsa hverandre, og et ekte produktvalg ble auto-merget forbi eieren.)
+     motsa hverandre, og et ekte produktvalg ble auto-merget forbi eieren. #1656:
+     doccene tillot kommentar-plassering mens porten kun leste body-en — samme
+     utfall, annen vei inn.)
 
 #### Forge-arbeidsflyt (kontrakt-først)
 

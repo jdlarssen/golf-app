@@ -219,6 +219,7 @@ describe('classifyAutoMerge', () => {
     body: 'Closes #1406\n\nEn tagline.',
     changedFiles: ['docs/loops/x.md'],
     commitMessages: ['chore(loops): ryddig'],
+    commentBodies: [],
     prLabels: [],
     needsDecisionIssue: false,
   };
@@ -246,6 +247,43 @@ describe('classifyAutoMerge', () => {
   it('valg-markør i body → card', () => {
     const out = classifyAutoMerge({ ...base, body: 'Closes #1\n\n## Alternativ B\nB.' });
     expect(out.demotedReason).toContain('produktvalg-markør');
+  });
+
+  // #1656: doccene har alltid tillatt at alternativ-seksjonen står i en PR-kommentar
+  // (nattkjøreren gjengir den DER), men porten leste kun body-en → valget ble
+  // auto-merget forbi eieren. Samme utfall som #1623, annen vei inn.
+  it('valg-markør kun i en PR-kommentar → card', () => {
+    const out = classifyAutoMerge({
+      ...base,
+      commentBodies: ['🤖 Bygget A.\n\n## Alternativer (produktvalg)\nAnbefaling: A.'],
+    });
+    expect(out.outcome).toBe('card');
+    expect(out.demotedReason).toContain('produktvalg-markør');
+  });
+
+  it('valg-markør i én av flere kommentarer → card', () => {
+    const out = classifyAutoMerge({
+      ...base,
+      commentBodies: ['Ser bra ut.', 'Rebaset.', '## Alternativ C\nEn tredje vei.', 'Klar.'],
+    });
+    expect(out.outcome).toBe('card');
+  });
+
+  it('kommentarer uten markør → auto-merge (prosa teller ikke)', () => {
+    const out = classifyAutoMerge({
+      ...base,
+      commentBodies: ['Vurderte alternativer: A og B — rent teknisk valg.', 'CI grønn.'],
+    });
+    expect(out).toEqual({ outcome: 'auto-merge', demotedReason: null });
+  });
+
+  it('markør i body + tomme kommentarer → card (regresjon)', () => {
+    const out = classifyAutoMerge({
+      ...base,
+      body: 'Closes #1\n\n## Produktvalg\nVelg.',
+      commentBodies: [],
+    });
+    expect(out.outcome).toBe('card');
   });
 
   it('lenket issue trenger beslutning → card', () => {
