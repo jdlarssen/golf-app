@@ -194,7 +194,7 @@ export default async function HvorforTornyPage({
                       {row.feature}
                     </th>
                     <td className="px-1 py-3 text-center">
-                      <span className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-full bg-primary-soft font-sans text-sm font-bold text-success">
+                      <span className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-full bg-primary-soft font-sans text-sm font-bold text-success-text">
                         <span aria-hidden>✓</span>
                         <span className="sr-only">{t('matrix.yesLabel')}</span>
                       </span>
@@ -218,7 +218,7 @@ export default async function HvorforTornyPage({
               <span className="font-serif text-[16px] font-medium text-text">
                 {t('board.cardTitle')}
               </span>
-              <span className="inline-flex items-center gap-1.5 font-sans text-[10.5px] font-bold uppercase tracking-[0.1em] text-success">
+              <span className="inline-flex items-center gap-1.5 font-sans text-[10.5px] font-bold uppercase tracking-[0.1em] text-success-text">
                 <span
                   aria-hidden
                   className="h-[7px] w-[7px] shrink-0 rounded-full bg-success"

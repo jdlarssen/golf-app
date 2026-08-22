@@ -45,7 +45,7 @@ export function getClubStatusBadge(
   if (!validUntil) {
     return {
       tone: 'active',
-      className: 'border-success/40 text-success bg-primary-soft',
+      className: 'border-success/40 text-success-text bg-primary-soft',
     };
   }
   const expires = new Date(validUntil);

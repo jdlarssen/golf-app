@@ -98,7 +98,7 @@ export function BetalingClient({
             {t('remindButton', { count: unpaidCount })}
           </button>
           {remindedCount !== null && (
-            <p className="text-center text-xs text-success" role="status">
+            <p className="text-center text-xs text-success-text" role="status">
               {t('remindDone', { count: remindedCount })}
             </p>
           )}
@@ -127,7 +127,7 @@ export function BetalingClient({
               <label className="flex cursor-pointer items-center gap-2">
                 <span
                   className={`font-sans text-xs tabular-nums ${
-                    paid ? 'text-success' : 'text-muted'
+                    paid ? 'text-success-text' : 'text-muted'
                   }`}
                 >
                   {paid ? t('paid') : t('unpaid')}

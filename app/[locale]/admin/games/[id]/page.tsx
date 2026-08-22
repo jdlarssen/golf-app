@@ -1004,7 +1004,7 @@ async function PlayersSections({
                     statusClass = 'text-warning-text';
                   } else {
                     statusLabel = tDetail('statusSubmitted');
-                    statusClass = 'text-success';
+                    statusClass = 'text-success-text';
                   }
 
                   // Per-player trekk/angre for active in-scope games.

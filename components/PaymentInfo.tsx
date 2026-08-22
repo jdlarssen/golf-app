@@ -64,7 +64,7 @@ export function PaymentInfo({
       <div
         className={`rounded-xl border border-border bg-surface-2 px-4 py-3 ${className ?? ''}`}
       >
-        <p className="font-sans text-sm font-medium text-success">
+        <p className="font-sans text-sm font-medium text-success-text">
           ✓ {t('paidBadge')}
         </p>
       </div>

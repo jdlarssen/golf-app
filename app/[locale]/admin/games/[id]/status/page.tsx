@@ -167,7 +167,7 @@ export default async function GameStatusPage({
     pending_approval: { label: t('statusLabels.pending_approval'), className: 'text-warning-text' },
     playing: { label: t('statusLabels.playing'), className: 'text-muted' },
     not_started: { label: t('statusLabels.not_started'), className: 'text-muted' },
-    delivered: { label: t('statusLabels.delivered'), className: 'text-success' },
+    delivered: { label: t('statusLabels.delivered'), className: 'text-success-text' },
     withdrawn: { label: t('statusLabels.withdrawn'), className: 'text-muted' },
   };
 
