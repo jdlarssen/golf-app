@@ -123,13 +123,21 @@ vinner:
      `lib/payment/**`, `.github/**`, `.githooks/**` eller `.claude/**`. Migrasjoner,
      destruktive flyter, auth/sikkerhet, penger og enforcement-flater beholder
      menneske-porten (fail-closed, bredere enn issue-ets liste).
-   - **Valg-markør:** PR-body har en markdown-heading som enten inneholder ordet
-     «produktvalg» (`## Produktvalg`, `## Alternativer (produktvalg)`) eller starter
-     med `## Alternativ A`–`E` (a–e), ELLER et lenket issue
-     (`closes|fixes|resolves|refs|part of #N`) har labelen `autonomy:needs-decision`.
-     Headingen er maskin-markøren økter MÅ sette når de presenterer et valg
-     (CLAUDE.md steg 5). Prosa uten heading teller ikke; en negasjon
-     («## Ingen produktvalg») teller derimot — bevisst fail-closed (#1623).
+   - **Valg-markør:** PR-body **eller en av PR-ens kommentarer** har en markdown-
+     heading som enten inneholder ordet «produktvalg» (`## Produktvalg`,
+     `## Alternativer (produktvalg)`) eller starter med `## Alternativ A`–`E` (a–e),
+     ELLER et lenket issue (`closes|fixes|resolves|refs|part of #N`) har labelen
+     `autonomy:needs-decision`. Headingen er maskin-markøren økter MÅ sette når de
+     presenterer et valg (CLAUDE.md steg 5); body er den foreskrevne plassen, men
+     kommentarene leses fordi nattkjøreren gjengir alternativ-seksjonen DER (#1656).
+     Kortets og nattkjørerens EGNE kommentarer teller med — en markør de har skrevet
+     er nettopp et valg eieren skal ta. Prosa uten heading teller ikke; en negasjon
+     («## Ingen produktvalg») teller derimot — bevisst fail-closed (#1623). Det
+     samme gjelder en historisk alternativ-kommentar på en ombygd PR: den holder
+     PR-en på knapp-kortet for alltid, og eieren merger manuelt.
+     Kommentar-oppslaget er selv fail-closed: lar kommentarene seg ikke lese, blir
+     utfallet `noop` (ingen kort, ingen merge) — en fail-open her ville gjenåpnet
+     hullet #1656 lukket.
    - **Staging-porten:** PR-en er bruker-synlig (≥1 commit med `feat|fix|perf`-prefiks
      uten `[no-changelog]`, §T7) OG mangler `staging-verified`-labelen (#1076).
 3. **`auto-merge`** ellers.

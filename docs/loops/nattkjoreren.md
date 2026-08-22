@@ -202,8 +202,13 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
     PR-kommentaren på norsk, i den faste formen fra CLAUDE.md
     §«PR-presentasjon» (formens ene hjem) — anbefaling først, fordeler/ulemper
     per alternativ (også bygget A), ombyggingskostnad, reversibilitet, og
-    avslutningen med svar-instruks + «ingen hast». Produktvalg-PR-er
-    auto-merges aldri av noen økt før eieren har valgt.
+    avslutningen med svar-instruks + «ingen hast». **Headingen
+    `## Alternativer (produktvalg)` skal OGSÅ stå i PR-body-en** — body er den
+    foreskrevne plassen for maskin-markøren (CLAUDE.md steg 5). Kortet leser
+    riktignok kommentarene også (#1656), så en markør kun i kommentaren stopper
+    auto-mergen; body-headingen er likevel det som gjør valget synlig i PR-en
+    uten å måtte scrolle. Produktvalg-PR-er auto-merges aldri av noen økt før
+    eieren har valgt.
   - **Uten produktvalg:** feat/fix/perf-leveranser får likevel en kort
     «Fordeler/ulemper»-blokk for valgt løsning i PR-kommentaren (2–3 hver,
     produktspråk — CLAUDE.md §«PR-presentasjon»).

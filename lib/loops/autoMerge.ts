@@ -54,7 +54,15 @@ export function touchesNeverList(files: string[]): boolean {
 
 export const NEEDS_DECISION_LABEL = 'autonomy:needs-decision';
 
-// Maskin-markøren for produktvalg i PR-body-en. To former teller:
+// Maskin-markøren for produktvalg. Den leses BÅDE i PR-body-en og i PR-ens
+// kommentarer (#1656): CLAUDE.md §«PR-presentasjon» tillater fordeler/ulemper «i body
+// eller første kommentar», og nattkjøreren (docs/loops/nattkjoreren.md steg 5) gjengir
+// hele alternativ-seksjonen i PR-KOMMENTAREN. Leste porten bare body-en, ble et ekte
+// produktvalg auto-merget forbi eieren — samme utfall som #1623, annen vei inn.
+// Body er fortsatt den foreskrevne primærplassen for økter; kommentar-lesningen er
+// nettet under.
+//
+// To former teller:
 //
 //   1. en markdown-heading som INNEHOLDER ordet «produktvalg» — «## Produktvalg»,
 //      «## Alternativer (produktvalg)», «## ⚖️ Produktvalg»;
@@ -67,8 +75,9 @@ export const NEEDS_DECISION_LABEL = 'autonomy:needs-decision';
 // motsa hverandre, og PR #1620 — et ekte produktvalg — ble auto-merget forbi
 // eieren. «alternativ» må fortsatt stå først OG følges av a–e: å matche
 // «alternativ» hvor som helst ville truffet «## Vurderte alternativer» i rene
-// tekniske PR-er. Regelen bor i CLAUDE.md steg 5 og gjentas i
-// docs/loops/discord-pr-kort.md — endres den her, endres den der.
+// tekniske PR-er. Regelen har FEM hjem: her, scripts/loops/decide-pr-card.ts
+// (henteren), CLAUDE.md steg 5, docs/loops/discord-pr-kort.md og
+// docs/loops/nattkjoreren.md steg 5 — endres den her, endres den der.
 //
 // Bevisst fail-closed: «## Ingen produktvalg» matcher også. Kostnaden er en
 // menneske-merge; alternativet er en tapt eier-beslutning. Ikke forsøk å
@@ -144,6 +153,13 @@ export type AutoMergeInput = {
   body: string | null | undefined;
   changedFiles: string[];
   commitMessages: string[];
+  /**
+   * Bodyene til PR-ens issue-kommentarer (#1656). Valg-markøren leses her i tillegg
+   * til `body`. Kortets/nattkjørerens EGNE kommentarer teller med — en markør de har
+   * skrevet er nettopp et valg eieren skal ta. Feiler henteren, skal PR-en aldri
+   * auto-merges (fail-closed i decide-pr-card.ts, ikke her).
+   */
+  commentBodies: string[];
   prLabels: string[];
   /** Minst ett lenket issue har autonomy:needs-decision (slås opp av decide — ikke rent). */
   needsDecisionIssue: boolean;
@@ -158,15 +174,16 @@ export type AutoMergeClassification = {
 const WIP_RE = /\bwip\b/i;
 
 // Portrekkefølge (første treff avgjør), jf. §1: base ≠ main → WIP → aldri-lista →
-// valg-markør (heading ELLER lenket-issue-label) → staging-porten → ellers auto-merge.
+// valg-markør (heading i body ELLER kommentar ELLER lenket-issue-label) →
+// staging-porten → ellers auto-merge.
 export function classifyAutoMerge(input: AutoMergeInput): AutoMergeClassification {
   if (input.baseRef !== 'main')
     return { outcome: 'card', demotedReason: `base-branch «${input.baseRef}» ≠ main` };
   if (WIP_RE.test(input.title)) return { outcome: 'card', demotedReason: 'WIP i tittel' };
   if (touchesNeverList(input.changedFiles))
     return { outcome: 'card', demotedReason: 'endrer fil på aldri-lista' };
-  if (hasChoiceMarker(input.body))
-    return { outcome: 'card', demotedReason: 'produktvalg-markør i PR-body' };
+  if (hasChoiceMarker(input.body) || input.commentBodies.some(hasChoiceMarker))
+    return { outcome: 'card', demotedReason: 'produktvalg-markør i PR-body/kommentar' };
   if (input.needsDecisionIssue)
     return { outcome: 'card', demotedReason: 'lenket issue har autonomy:needs-decision' };
   if (isUserVisibleByCommits(input.commitMessages) && !input.prLabels.includes(STAGING_VERIFIED_LABEL))
