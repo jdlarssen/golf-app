@@ -280,7 +280,7 @@ function SideBlock({
       }`}
     >
       {isWinner && (
-        <span className="mb-0.5 block text-[9.5px] font-semibold uppercase tracking-[0.14em] text-accent">
+        <span className="mb-0.5 block text-[9.5px] font-semibold uppercase tracking-[0.14em] text-accent-text">
           {t('roundRobin.vantHulletLabel')}
         </span>
       )}
@@ -322,7 +322,7 @@ function SideBlock({
                 )}
                 <span
                   className={`score-num text-[18px] leading-none ${
-                    isWinner ? 'text-accent' : 'text-text'
+                    isWinner ? 'text-accent-text' : 'text-text'
                   }`}
                 >
                   {cell.net ?? '–'}

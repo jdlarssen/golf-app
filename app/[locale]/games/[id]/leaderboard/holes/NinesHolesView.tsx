@@ -203,7 +203,7 @@ function HoleCard({
           {hole.pending ? (
             <span className="text-[10.5px] text-muted/70">{t('nines.ventePaaScore')}</span>
           ) : (
-            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent tabular-nums">
+            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text tabular-nums">
               {t('nines.potLabel', { pot: potTotal(variant) })}
             </span>
           )}
@@ -240,7 +240,7 @@ function HoleCard({
                       placement == null
                         ? 'border border-dashed border-border text-muted/50'
                         : isLeader
-                          ? 'border border-accent bg-accent/[0.12] text-accent'
+                          ? 'border border-accent bg-accent/[0.12] text-accent-text'
                           : 'border border-border text-muted'
                     }`}
                   >
@@ -256,7 +256,7 @@ function HoleCard({
                 </span>
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
                   {pts > 0 && (
-                    <span className="text-[12px] font-semibold text-accent">
+                    <span className="text-[12px] font-semibold text-accent-text">
                       +{formatPoints(pts)}
                     </span>
                   )}
@@ -267,7 +267,7 @@ function HoleCard({
                   )}
                   <span
                     className={`score-num text-[18px] leading-none ${
-                      isLeader ? 'text-accent' : 'text-text'
+                      isLeader ? 'text-accent-text' : 'text-text'
                     }`}
                   >
                     {cell.effectiveScore ?? '–'}

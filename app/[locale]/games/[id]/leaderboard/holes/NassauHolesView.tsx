@@ -186,7 +186,7 @@ function UnitsHeader({
                 </span>
                 <span
                   className={`score-num w-7 shrink-0 text-right text-[20px] leading-none tabular-nums ${
-                    isLeader ? 'text-accent' : 'text-text'
+                    isLeader ? 'text-accent-text' : 'text-text'
                   }`}
                 >
                   {line.units}
@@ -205,7 +205,7 @@ function UnitDot({ label, won }: { label: string; won: boolean }) {
     <span
       className={`inline-flex h-5 min-w-[26px] items-center justify-center rounded-full px-1.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] tabular-nums ${
         won
-          ? 'border border-accent/40 bg-accent/[0.10] text-accent'
+          ? 'border border-accent/40 bg-accent/[0.10] text-accent-text'
           : 'border border-border bg-surface text-muted/50'
       }`}
     >
@@ -257,7 +257,7 @@ function SectionBlock({
         {cleanWinnerId && (
           <span
             data-testid={`${testId}-winner`}
-            className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent"
+            className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text"
           >
             ★ {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
           </span>
@@ -322,7 +322,7 @@ function SummaryStrip({
             key={line.userId}
             className={`inline-flex items-baseline gap-1.5 rounded-full px-2.5 py-1 text-[12px] ${
               isLeader
-                ? 'border border-accent/40 bg-accent/[0.06] text-accent'
+                ? 'border border-accent/40 bg-accent/[0.06] text-accent-text'
                 : 'border border-border bg-surface text-muted'
             }`}
           >
@@ -413,7 +413,7 @@ function HoleCard({
                 </span>
                 <span
                   className={`score-num shrink-0 text-[18px] leading-none tabular-nums ${
-                    isBest ? 'text-accent' : 'text-text'
+                    isBest ? 'text-accent-text' : 'text-text'
                   }`}
                 >
                   {cell.effective ?? '–'}
@@ -458,7 +458,7 @@ function TotalBlock({
           </p>
         </div>
         {cleanWinnerId && (
-          <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent">
+          <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text">
             ★ {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
           </span>
         )}
