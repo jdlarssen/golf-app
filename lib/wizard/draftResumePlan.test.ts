@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   planDraftResume,
+  resumeExpectedPlayerCount,
   type DraftResumeRow,
   type FormatCatalog,
 } from './draftResumePlan';
+import { fitsPlayerCount } from './fitsPlayerCount';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 // #1385: hvilken flate et lagret utkast gjenopptas i. Ren avledning fra
@@ -122,5 +124,46 @@ describe('planDraftResume — cup og liga ekskluderes', () => {
         CATALOG,
       ),
     ).toEqual({ kind: 'form' });
+  });
+});
+
+describe('resumeExpectedPlayerCount — #373-telleren på et gjenopptatt utkast', () => {
+  it('bruker rosteret når det passer formatet', () => {
+    expect(resumeExpectedPlayerCount('singles_matchplay' as GameMode, 2)).toBe(2);
+    expect(resumeExpectedPlayerCount('nines' as GameMode, 3)).toBe(3);
+    expect(resumeExpectedPlayerCount('shamble' as GameMode, 6)).toBe(6);
+  });
+
+  it('viser alle formater når rosteret ikke passer formatet ennå', () => {
+    // Et halvferdig utkast: formatet er valgt, spillerne ikke fylt ut. Uten
+    // «Vis alle» ville steg 2 filtrert bort utkastets eget format.
+    expect(resumeExpectedPlayerCount('singles_matchplay' as GameMode, 1)).toBeNull();
+    expect(resumeExpectedPlayerCount('shamble' as GameMode, 3)).toBeNull();
+    expect(resumeExpectedPlayerCount('best_ball' as GameMode, 3)).toBeNull();
+  });
+
+  it('viser alle formater når rosteret er tomt', () => {
+    expect(resumeExpectedPlayerCount('best_ball' as GameMode, 0)).toBeNull();
+  });
+
+  it('gir aldri en verdi som filtrerer bort formatet selv', () => {
+    // Regresjonslåsen: uansett format og rosterstørrelse skal seeden enten
+    // være «Vis alle» eller et antall formatet faktisk passer.
+    const modes = [
+      'singles_matchplay',
+      'nines',
+      'best_ball',
+      'shamble',
+      'florida_scramble',
+      'wolf',
+      'stableford',
+      'round_robin',
+    ] as GameMode[];
+    for (const mode of modes) {
+      for (let roster = 0; roster <= 8; roster++) {
+        const seed = resumeExpectedPlayerCount(mode, roster);
+        if (seed !== null) expect(fitsPlayerCount(mode, seed)).toBe(true);
+      }
+    }
   });
 });
