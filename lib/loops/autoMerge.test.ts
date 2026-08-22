@@ -3,8 +3,10 @@ import {
   classifyAutoMerge,
   closeLinkedIssues,
   closingIssueNumbers,
+  deleteHeadBranch,
   dispatchMainVerify,
   hasChoiceMarker,
+  headBranchDeleteSkipReason,
   isUserVisibleByCommits,
   linkedIssueNumbers,
   mergePullRequest,
@@ -384,6 +386,90 @@ describe('mergePullRequest', () => {
     const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
     expect(res).toEqual({ ok: true });
     expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PUT']);
+  });
+});
+
+// ── deleteHeadBranch (injisert klient) ───────────────────────────────────────
+
+describe('deleteHeadBranch', () => {
+  const headRef = 'claude/forge-1675-branch-sweep';
+
+  it('claude/*-head i samme repo: DELETE-er ref-en, 204 = slettet', async () => {
+    const { gh, calls } = mockGh([{ status: 204 }]);
+    const res = await deleteHeadBranch({ gh, repo: REPO, headRef, headRepo: REPO });
+    expect(res).toEqual({ deleted: true, reason: null });
+    // Pathen konkateneres rått av ghClient — «claude/…» SKAL stå som sti-segmenter,
+    // ikke prosent-kodes (en kodet «%2F» treffer ikke ref-en).
+    expect(calls).toEqual([
+      { method: 'DELETE', path: `/repos/${REPO}/git/refs/heads/${headRef}`, body: undefined },
+    ]);
+  });
+
+  it.each([
+    ['fork (annet head-repo)', 'someone/golf-app'],
+    ['slettet fork (head.repo === null)', null],
+  ])('%s → ingen DELETE', async (_label, headRepo) => {
+    const { gh, calls } = mockGh([{ status: 204 }]);
+    const res = await deleteHeadBranch({ gh, repo: REPO, headRef, headRepo });
+    expect(res.deleted).toBe(false);
+    expect(res.reason).toContain('fork');
+    expect(calls).toEqual([]);
+  });
+
+  it.each([
+    ['main', 'main'],
+    ['fremmed branch', 'feature/noe'],
+    ['claude-prefiks uten skråstrek', 'claudex/noe'],
+    ['sti-traversering', 'claude/../../main'],
+    ['tom ref', ''],
+  ])('%s → ingen DELETE (prefiks-vakten)', async (_label, ref) => {
+    const { gh, calls } = mockGh([{ status: 204 }]);
+    const res = await deleteHeadBranch({ gh, repo: REPO, headRef: ref, headRepo: REPO });
+    expect(res.deleted).toBe(false);
+    expect(calls).toEqual([]);
+  });
+
+  it.each([404, 422])('HTTP %i = allerede slettet → logges som OK, ingen feil', async (status) => {
+    const logError = vi.fn();
+    const { gh } = mockGh([{ status }]);
+    const res = await deleteHeadBranch({ gh, repo: REPO, headRef, headRepo: REPO, logError });
+    expect(res).toEqual({ deleted: false, reason: 'allerede slettet' });
+    expect(logError).not.toHaveBeenCalled();
+  });
+
+  it('HTTP 500 logges, men feller aldri kort-flyten', async () => {
+    const logError = vi.fn();
+    const { gh } = mockGh([{ status: 500 }]);
+    const res = await deleteHeadBranch({ gh, repo: REPO, headRef, headRepo: REPO, logError });
+    expect(res.deleted).toBe(false);
+    expect(res.reason).toContain('500');
+    expect(logError).toHaveBeenCalledTimes(1);
+  });
+
+  it('kastende klient svelges (best-effort, aldri exception)', async () => {
+    const logError = vi.fn();
+    const gh: GitHubClient = {
+      rest: vi.fn(async () => {
+        throw new Error('nett nede');
+      }),
+      graphql: vi.fn(async () => ({ status: 200, json: null })),
+    };
+    const res = await deleteHeadBranch({ gh, repo: REPO, headRef, headRepo: REPO, logError });
+    expect(res.deleted).toBe(false);
+    expect(logError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('headBranchDeleteSkipReason', () => {
+  // Samme regel som DRY_RUN-logga i post-pr-card leser — ett hjem, to lesere.
+  it('claude/*-head i samme repo → ingen grunn til å hoppe over', () => {
+    expect(
+      headBranchDeleteSkipReason({ repo: REPO, headRef: 'claude/x', headRepo: REPO }),
+    ).toBeNull();
+  });
+
+  it('manglende head-ref → hopp over', () => {
+    expect(headBranchDeleteSkipReason({ repo: REPO, headRef: null, headRepo: REPO })).not.toBeNull();
   });
 });
 
