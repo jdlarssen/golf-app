@@ -53,7 +53,7 @@ const kickerStyle: CSSProperties = {
   fontWeight: 600,
   letterSpacing: '0.20em',
   textTransform: 'uppercase',
-  color: 'var(--accent)',
+  color: 'var(--accent-text)',
   marginBottom: 14,
 };
 

@@ -115,7 +115,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
           {tournament.name}
         </h1>
         {winnerName ? (
-          <p className="mt-2 text-sm font-medium" style={{ color: 'var(--accent)' }}>
+          <p className="mt-2 text-sm font-medium" style={{ color: 'var(--accent-text)' }}>
             {t('results.winner', { team: winnerName })}
           </p>
         ) : (
