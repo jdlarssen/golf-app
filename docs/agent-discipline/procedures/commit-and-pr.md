@@ -41,7 +41,8 @@ bindings §T6).
    required check reports pass — a red OR skipped check is a full stop even where merging
    is mechanically possible. User-visible change (definition: bindings §T7) → the
    pre-merge verification must already have happened, with evidence in the PR or closing
-   comment.
+   comment. **After merge:** run the cleanup block in bindings §T6 (Merge) — a merged
+   branch left on remote or a stale worktree is #1675's failure mode.
 
 9. **Reviewer findings** not fixed in this PR → filed as issues BEFORE merge
    (bindings §T6). A verbal report evaporates with the context window.

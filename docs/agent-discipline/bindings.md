@@ -154,7 +154,20 @@ target.
   `npm run build` (§T2).
 - **PR-checks command:** `gh pr checks` — every required check "pass", zero "skipping".
 - **Merge:** `gh pr merge --rebase --delete-branch` (squash is denied); afterwards rebase
-  the local branch onto `origin/main` before further work.
+  the local branch onto `origin/main` before further work, then sweep the leftovers:
+
+  ```bash
+  git fetch --prune origin                    # drop remote-tracking refs that are gone
+  git branch --format '%(refname:short) %(upstream:track)' \
+    | awk '$2 == "[gone]" {print $1}' | xargs -r git branch -D
+  git worktree prune                          # drop worktree records for deleted dirs
+  ```
+
+  `--delete-branch` only covers merges you run yourself. A merge through the API — the
+  Discord card, GitHub-MCP from a remote session — does NOT fire GitHub's
+  `delete_branch_on_merge` (#1675). The card now deletes its own head branch, and
+  `.github/workflows/branch-sweep.yml` sweeps the rest weekly; a `claude/*` branch you
+  left behind by hand is still yours to remove.
 - **Closing comment** on every closed issue: `## Teknisk` + `## Funksjonell`
   (CLAUDE.md §Closing-kommentar) — the main chat writes it, not a subagent.
 - **Reviewer findings** → issues (with milestone) before merge (CLAUDE.md
