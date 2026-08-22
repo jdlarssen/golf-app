@@ -256,7 +256,7 @@ function PlayerRow({
           >
             {player.totalHoleWins}
           </span>
-          <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
             {t('roundRobin.hullLabel')}
           </span>
         </div>

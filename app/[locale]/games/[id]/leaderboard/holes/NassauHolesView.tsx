@@ -154,7 +154,7 @@ function UnitsHeader({
   return (
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           {t('nassau.sectionVunnetLabel')}
         </p>
         <ul
@@ -203,7 +203,7 @@ function UnitsHeader({
 function UnitDot({ label, won }: { label: string; won: boolean }) {
   return (
     <span
-      className={`inline-flex h-5 min-w-[26px] items-center justify-center rounded-full px-1.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] tabular-nums ${
+      className={`inline-flex h-5 min-w-[26px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] tabular-nums ${
         won
           ? 'border border-accent/40 bg-accent/[0.10] text-accent'
           : 'border border-border bg-surface text-muted/50'

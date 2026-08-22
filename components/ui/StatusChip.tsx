@@ -29,7 +29,13 @@ const TONE_STYLES: Record<
 /**
  * Uppercase status pill used on admin "protokoll" surfaces. 4 tones map to the
  * 4 lifecycle states (Aktiv / Påmelding / Signert / Utkast). Tracks tightly
- * (0.16em) at 9.5px — meant to read as a stamp.
+ * (0.16em) at 11px — still a stamp, but one you can read outdoors (#1390; it
+ * was 9.5px, which the HCD audit flagged as too small for the core loop).
+ *
+ * Width note for callers with a fixed column: the longest label, "Påmelding",
+ * measures ~96px here (Inter SemiBold, 0.16em tracking, 7px side padding) —
+ * it was ~84px at 9.5px. `GAMES_LEDGER_GRID` in admin/games was widened to
+ * match; any new fixed-width mount point needs at least 100px.
  */
 export function StatusChip({
   tone,
@@ -43,7 +49,7 @@ export function StatusChip({
   const t = TONE_STYLES[tone];
   return (
     <span
-      className={`inline-block rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase ${className ?? ''}`}
+      className={`inline-block rounded-full px-[7px] py-[3px] font-sans text-[11px] font-semibold uppercase ${className ?? ''}`}
       style={{
         background: t.bg,
         color: t.fg,

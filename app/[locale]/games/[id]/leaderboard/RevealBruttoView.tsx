@@ -152,7 +152,7 @@ function RevealTeamRow({ line }: { line: TeamLine }) {
             <p className="score-num text-text leading-none text-3xl">
               {line.total}
             </p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
               {teamDelta && (
                 <span className="tabular-nums mr-1.5 normal-case">
                   {teamDelta}

@@ -270,7 +270,7 @@ function PlayerRow({
           >
             {totalPoints}
           </span>
-          <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
             {t('common.poengLabel')}
           </span>
         </div>
@@ -337,7 +337,7 @@ function HoleRow({
                 >
                   {isPending ? '—' : points}
                 </span>
-                <span className="text-[10px] text-muted truncate max-w-[60px] text-center">
+                <span className="text-[11px] text-muted truncate max-w-[60px] text-center">
                   {displayName}
                 </span>
               </div>

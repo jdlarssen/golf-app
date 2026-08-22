@@ -5,7 +5,7 @@ type LedgerHeaderProps = {
   rightLabel: string;
   /**
    * CSS grid-template-columns. Tre kolonner: hoved-tittel (1fr), target-bredde,
-   * og chevron-spacer (14px). admin/games bruker 84px for status-pill,
+   * og chevron-spacer (14px). admin/games bruker 100px for status-pill,
    * admin/courses bruker 64px for tee-count.
    */
   gridTemplateColumns: string;

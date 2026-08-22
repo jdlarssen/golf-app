@@ -286,7 +286,7 @@ function TeamRow({
             >
               {team.totalPoints}
             </span>
-            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+            <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
               {t('patsome.totalLabel')}
             </span>
           </div>
@@ -323,7 +323,7 @@ function HoleRow({
           className="flex items-center gap-2 px-1 py-0.5"
         >
           <div className="h-px flex-1 bg-border" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
             {isFirstGreensome
               ? SEGMENT_LABELS.greensome
               : SEGMENT_LABELS.foursomes}
@@ -380,7 +380,7 @@ function HoleRow({
                 >
                   {isUnplayed ? '—' : points}
                 </span>
-                <span className="text-[10px] text-muted truncate max-w-[64px] text-center">
+                <span className="text-[11px] text-muted truncate max-w-[64px] text-center">
                   {partnerLabel}
                 </span>
               </div>

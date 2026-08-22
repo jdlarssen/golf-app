@@ -313,7 +313,7 @@ function SidePanel({
       >
         {score}
       </span>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
         {unitLabel}
       </span>
       {subLabel && (

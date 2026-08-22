@@ -280,7 +280,7 @@ function SideBlock({
       }`}
     >
       {isWinner && (
-        <span className="mb-0.5 block text-[9.5px] font-semibold uppercase tracking-[0.14em] text-accent">
+        <span className="mb-0.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
           {t('roundRobin.vantHulletLabel')}
         </span>
       )}
