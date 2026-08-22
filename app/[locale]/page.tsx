@@ -892,7 +892,7 @@ function ActiveStateLabel({
     state === 'continue'
       ? 'bg-primary-soft text-primary border-primary/20'
       : state === 'submitted'
-        ? 'bg-success/10 text-success border-success/30'
+        ? 'bg-success/10 text-success-text border-success/30'
         : state === 'pending_approval'
           ? 'bg-warning/10 text-warning-text border-warning/30'
           : 'bg-border/40 text-muted border-border';

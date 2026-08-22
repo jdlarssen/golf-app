@@ -27,7 +27,7 @@ const REJECTION_REASON_MAX = 200;
 
 const STATUS_TONE: Record<RequestRow['status'], string> = {
   pending: 'border-warning/40 bg-warning/10 text-warning-text',
-  approved: 'border-success/40 bg-success/10 text-success',
+  approved: 'border-success/40 bg-success/10 text-success-text',
   rejected: 'border-danger/40 bg-danger/10 text-danger',
   withdrawn: 'border-border bg-surface text-muted',
 };
