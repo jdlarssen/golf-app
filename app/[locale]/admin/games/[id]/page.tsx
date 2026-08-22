@@ -1295,16 +1295,20 @@ async function PlayersSections({
               </div>
             )}
 
-            <div className="mt-3 border-t border-border pt-3 text-center">
-              <SmartLink
-                href={`/admin/games/${gameId}/status`}
-                className="font-sans text-[13px] font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary"
-              >
-                {notSubmittedCount > 0
-                  ? tCta('viewStatusWithReminderLink')
-                  : tCta('viewStatusLink')}
-              </SmartLink>
-            </div>
+            {/* onlyMissingBlocks-grenen har allerede status-lenken som knapp over
+                «Avslutt likevel» — footeren ville duplisert den (#1688). */}
+            {!onlyMissingBlocks && (
+              <div className="mt-3 border-t border-border pt-3 text-center">
+                <SmartLink
+                  href={`/admin/games/${gameId}/status`}
+                  className="font-sans text-[13px] font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary"
+                >
+                  {notSubmittedCount > 0
+                    ? tCta('viewStatusWithReminderLink')
+                    : tCta('viewStatusLink')}
+                </SmartLink>
+              </div>
+            )}
           </div>
         </SectionCard>
       )}
