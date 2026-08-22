@@ -32,6 +32,14 @@ export type CardPlan = {
    * har den ikke — derfor bæres numrene i planen.
    */
   closesIssues: number[];
+  /**
+   * Head-branchens navn og eier-repo («owner/repo», `null` for en slettet fork).
+   * Post-steget sletter branchen etter en auto-merge (#1675): GitHubs
+   * `delete_branch_on_merge` fyrer ikke på API-merger. Decide har PR-payloaden,
+   * post har den ikke — derfor bæres feltene i planen.
+   */
+  headRef: string | null;
+  headRepo: string | null;
 };
 
 export const PLAN_PATH = process.env.CARD_PLAN_PATH || 'pr-card-plan.json';
