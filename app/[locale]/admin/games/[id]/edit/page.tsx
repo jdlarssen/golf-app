@@ -20,7 +20,10 @@ import {
 } from '@/app/[locale]/admin/games/new/GameForm';
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
 import { getWizardMountData } from '@/lib/wizard/getWizardMountData';
-import { planDraftResume } from '@/lib/wizard/draftResumePlan';
+import {
+  planDraftResume,
+  resumeExpectedPlayerCount,
+} from '@/lib/wizard/draftResumePlan';
 import {
   saveDraftAction,
   publishFromDraftAction,
@@ -272,13 +275,18 @@ async function EditGameFormBody({
   const mayResumeInWizard =
     game.status === 'draft' && !game.tournament_id && !game.league_round_id;
 
-  const [playersResult, wizardData] = await Promise.all([
+  const [playersResult, wizardData, options] = await Promise.all([
     supabase
       .from('game_players')
       .select('user_id, team_number, flight_number, tee_gender')
       .eq('game_id', gameId)
       .returns<EditGamePlayerRow[]>(),
     mayResumeInWizard ? getWizardMountData() : Promise.resolve(null),
+    // GameForm-grenene henter fortsatt sin egen rosterkilde, parallelt som før.
+    // Veiviser-grenen har sin egen (getWizardMountData) og trenger den ikke —
+    // faller den likevel tilbake til GameForm via katalog-vakten, er
+    // `getOptions` React-`cache`-et, så oppslaget under koster ingenting nytt.
+    mayResumeInWizard ? Promise.resolve(null) : getOptions(),
   ]);
 
   if (playersResult.error) throw playersResult.error;
@@ -310,6 +318,12 @@ async function EditGameFormBody({
           friendPlayerIds={wizardData.friendPlayerIds}
           clubMemberIdsByClub={wizardData.clubMemberIdsByClub}
           currentUserId={wizardData.userId ?? ''}
+          // Uten denne står #373-telleren på default-4, og steg 2 filtrerer
+          // bort utkastets eget format for alt som ikke passer fire spillere.
+          initialExpectedPlayerCount={resumeExpectedPlayerCount(
+            game.game_mode,
+            playerRows.length,
+          )}
           // Ruta er `requireAdmin`-gatet over, så Solo- og Klubb-flisene i
           // steg 1 skal vises (IntentSelector skjuler begge uten dette).
           isAdmin
@@ -319,7 +333,7 @@ async function EditGameFormBody({
     }
   }
 
-  const { courses, playerOptions } = await getOptions();
+  const { courses, playerOptions } = options ?? (await getOptions());
 
   if (game.status === 'draft') {
     return (
