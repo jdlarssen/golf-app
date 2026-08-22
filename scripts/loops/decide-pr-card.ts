@@ -52,6 +52,8 @@ const NO_CARD: CardPlan = {
   pr: null,
   changedFiles: [],
   closesIssues: [],
+  headRef: null,
+  headRepo: null,
 };
 
 type PrPayload = {
@@ -61,7 +63,9 @@ type PrPayload = {
   html_url: string;
   body: string | null;
   base: { ref: string };
-  head: { sha: string };
+  // `head.repo` er `null` når head-forken er slettet etter at PR-en ble åpnet —
+  // post-steget bruker det til å la fork-branches være i fred (#1675).
+  head: { sha: string; ref: string; repo: { full_name: string } | null };
   labels: Array<{ name: string }>;
 };
 
@@ -235,6 +239,9 @@ async function main(): Promise<void> {
     changedFiles,
     // Kun closing-nøkkelordene (#1634) — post-steget lukker disse etter merge.
     closesIssues: closingIssueNumbers(pr.body),
+    // Head-branchen post-steget rydder bort etter en auto-merge (#1675).
+    headRef: pr.head.ref,
+    headRepo: pr.head.repo?.full_name ?? null,
   };
   emit(plan);
   console.log(

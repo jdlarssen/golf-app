@@ -1,14 +1,14 @@
 // Discord PR-kort (#1159 + #1406), steg 3 av 3: POST. Leser planen fra decide-
 // steget. Tre utfall: 'noop' → ingenting; 'card' → dagens knapp-kort (merge-knapp
-// fra #1124-mottakeren); 'auto-merge' → kortet merger selv (fail-closed), lukker
-// issuene body-en lovet (#1634), poster kvittering og dispatcher main-verify.
-// Fester skjermbilder fra screenshot-steget
+// fra #1124-mottakeren); 'auto-merge' → kortet merger selv (fail-closed), sletter
+// head-branchen (#1675), lukker issuene body-en lovet (#1634), poster kvittering og
+// dispatcher main-verify. Fester skjermbilder fra screenshot-steget
 // (Del B) via multipart. Kjøres via `npx --yes tsx` UTEN npm ci (global fetch/
 // FormData + ren lib-import).
 //
 // Env:
-//   GITHUB_TOKEN         — merge + issue-lukking + dedup-label + main-verify-dispatch
-//                          (Actions default token)
+//   GITHUB_TOKEN         — merge + branch-sletting + issue-lukking + dedup-label +
+//                          main-verify-dispatch (Actions default token)
 //   DISCORD_BOT_TOKEN    — bot-identitet (knapper krever bot, ikke webhook)
 //   DISCORD_CHANNEL_ID   — kanalen kortet postes i
 //   GH_REPO              — «owner/repo» (default jdlarssen/golf-app)
@@ -25,7 +25,9 @@ import { basename, join } from 'node:path';
 import { buildCardPayload, buildReceiptPayload, CARD_LABEL } from '../../lib/loops/prCard';
 import {
   closeLinkedIssues,
+  deleteHeadBranch,
   dispatchMainVerify,
+  headBranchDeleteSkipReason,
   mergePullRequest,
   shouldDispatchMainVerify,
 } from '../../lib/loops/autoMerge';
@@ -149,6 +151,9 @@ async function runAutoMerge(plan: CardPlan, pr: CardPlanPr, shots: string[]): Pr
   });
 
   const closesIssues = plan.closesIssues ?? [];
+  // Planer skrevet før #1675 mangler feltene — les dem defensivt (samme som closesIssues).
+  const headRef = plan.headRef ?? null;
+  const headRepo = plan.headRepo ?? null;
 
   if (DRY_RUN) {
     const dispatchNote = shouldDispatchMainVerify(plan.changedFiles)
@@ -160,6 +165,12 @@ async function runAutoMerge(plan: CardPlan, pr: CardPlanPr, shots: string[]): Pr
         : 'ingen issues å lukke';
     console.log(
       `${LOG} DRY_RUN auto-merge PR #${pr.number}: ville rebase-merget mot headSha ${plan.headSha ?? '(mangler)'} (sha-guard), ${closeNote}, postet kvittering ${dispatchNote}. Ingen skriv.`,
+    );
+    // Slette-intensjonen logges eksplisitt: en DRY_RUN som tier om et skrivende
+    // steg er nøyaktig gapet #1679 måtte tette for issue-lukkingen.
+    const skipDelete = headBranchDeleteSkipReason({ repo: REPO, headRef, headRepo });
+    console.log(
+      `${LOG} DRY_RUN PR #${pr.number}: ${skipDelete ? `hopper over sletting (${skipDelete})` : `ville slettet \`${headRef}\``}`,
     );
     console.log(JSON.stringify(receipt, null, 2));
     return;
@@ -179,7 +190,21 @@ async function runAutoMerge(plan: CardPlan, pr: CardPlanPr, shots: string[]): Pr
   }
   console.log(`${LOG} PR #${pr.number}: rebase-merget (headSha ${plan.headSha}).`);
 
-  // 1. Lukk issuene PR-body-en lovet å lukke (#1634). GitHubs auto-close fyrer ikke
+  // 1. Slett head-branchen (#1675). GitHubs delete_branch_on_merge fyrer ikke på
+  // API-merger, så uten dette hoper fullmergede claude/*-branches seg opp på remote.
+  // Best-effort: ukessweepen (branch-sweep.yml) er nettet under.
+  const deleted = await deleteHeadBranch({
+    gh,
+    repo: REPO,
+    headRef,
+    headRepo,
+    logError: (msg) => console.error(`${LOG} PR #${pr.number}: ${msg}`),
+  });
+  console.log(
+    `${LOG} PR #${pr.number}: ${deleted.deleted ? `slettet head-branchen \`${headRef}\`` : `beholdt head-branchen (${deleted.reason})`}.`,
+  );
+
+  // 2. Lukk issuene PR-body-en lovet å lukke (#1634). GitHubs auto-close fyrer ikke
   // på workflow-merger (GITHUB_TOKEN), så uten dette står ferdigbygde issues åpne og
   // risikerer å bli bygget på nytt. Står FØR dispatch-steget under, som kan exit(1).
   if (closesIssues.length > 0) {
@@ -197,7 +222,7 @@ async function runAutoMerge(plan: CardPlan, pr: CardPlanPr, shots: string[]): Pr
     );
   }
 
-  // 2. Post kvittering (best-effort — mergen står uansett; morgenbriefen er backstop).
+  // 3. Post kvittering (best-effort — mergen står uansett; morgenbriefen er backstop).
   let receiptPosted = false;
   if (BOT_TOKEN && CHANNEL_ID) {
     receiptPosted = await postCard(receipt, shots);
@@ -207,7 +232,7 @@ async function runAutoMerge(plan: CardPlan, pr: CardPlanPr, shots: string[]): Pr
     console.log(`${LOG} mangler DISCORD_BOT_TOKEN/DISCORD_CHANNEL_ID — mergen står, ingen kvittering (best-effort).`);
   }
 
-  // 3. main-verify-dispatch: GITHUB_TOKEN-mergen trigger aldri #1075-nettet via push,
+  // 4. main-verify-dispatch: GITHUB_TOKEN-mergen trigger aldri #1075-nettet via push,
   // så det må dispatches. Feil ETTER merge → exit 1 så failure-alarmen åpner CI-vakt.
   if (shouldDispatchMainVerify(plan.changedFiles)) {
     const dispatch = await dispatchMainVerify(gh, REPO);
@@ -220,7 +245,7 @@ async function runAutoMerge(plan: CardPlan, pr: CardPlanPr, shots: string[]): Pr
     console.log(`${LOG} PR #${pr.number}: docs-only merge — hopper over main-verify-dispatch.`);
   }
 
-  // 4. Dedup-label (etter kvittering, som dagens rekkefølge).
+  // 5. Dedup-label (etter kvittering, som dagens rekkefølge).
   if (receiptPosted) await addLabel(pr.number);
 }
 
