@@ -58,6 +58,17 @@ export type EditGameRow = {
   // den (pre-fyller), revansje-flyten utelater den (samme prinsipp som
   // entry_fee — en rematch skal ikke dra premiebordet med automatisk).
   prizes?: unknown;
+  // #1385 — koblings-kolonnene. Kun admin-edit-ruta selekterer dem i dag
+  // (den avleder veiviser-intent og fail-closer på cup/liga, se
+  // `lib/wizard/draftResumePlan.ts`), så de er VALGFRIE: revansje-flyten og
+  // `/games/[id]/rediger` bygger samme radtype fra sine egne, smalere selects.
+  //
+  // `buildEditInitialValues` leser dem bevisst IKKE. Outputen deles med
+  // revansje-prefillen, og en `group_id` emittert her ville stille latt en
+  // revansje arve klubb-scopet fra spillet den ble startet fra.
+  group_id?: string | null;
+  tournament_id?: string | null;
+  league_round_id?: string | null;
 };
 
 export type EditGamePlayerRow = {
