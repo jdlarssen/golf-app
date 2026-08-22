@@ -544,7 +544,7 @@ async function HomeBody() {
                 count: extras.pendingApprovalsForMe,
               })}
             </span>
-            <span className="text-xs font-medium text-accent whitespace-nowrap">
+            <span className="text-xs font-medium text-accent-text whitespace-nowrap">
               {tGameHome('reviewLink')}
             </span>
           </SmartLink>
@@ -607,7 +607,7 @@ async function HomeBody() {
                 count: extras.pendingApprovalsForMe,
               })}
             </span>
-            <span className="text-xs font-medium text-accent whitespace-nowrap">
+            <span className="text-xs font-medium text-accent-text whitespace-nowrap">
               {tGameHome('reviewLink')}
             </span>
           </SmartLink>
@@ -824,7 +824,7 @@ function Section({
             Same styling → no visual change. */}
         <h2
           className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
-            accent ? 'text-accent' : 'text-muted'
+            accent ? 'text-accent-text' : 'text-muted'
           }`}
         >
           {label}

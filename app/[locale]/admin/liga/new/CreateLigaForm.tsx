@@ -721,7 +721,7 @@ export function CreateLigaForm({
                     <span className="block font-sans text-[14px] text-text truncate">
                       {preferredName(p, t('unknownPlayer'))}
                       {p.id === meId && (
-                        <span className="ml-1.5 font-sans text-[10px] text-accent">{t('youLabel')}</span>
+                        <span className="ml-1.5 font-sans text-[10px] text-accent-text">{t('youLabel')}</span>
                       )}
                       {p.pending && (
                         <span className="ml-1.5 font-sans text-[10px] text-muted">
