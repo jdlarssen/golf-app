@@ -169,7 +169,7 @@ function HoleCard({
             </span>
           </div>
           {hole.stake > 1 && (
-            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent tabular-nums">
+            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text tabular-nums">
               {hole.stake}x
             </span>
           )}
@@ -244,7 +244,7 @@ function HoleCard({
                 </span>
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
                   {pts > 0 && (
-                    <span className="text-[12px] font-semibold text-accent">
+                    <span className="text-[12px] font-semibold text-accent-text">
                       +{pts}
                     </span>
                   )}

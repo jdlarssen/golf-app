@@ -175,7 +175,7 @@ function HoleCard({
             {t('common.hullNumber', { number: hole.holeNumber })}
           </span>
           {sweptAll ? (
-            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent">
+            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text">
               {t('bingoBangoBongo.feietChip')}
             </span>
           ) : isPending ? (
@@ -211,7 +211,7 @@ function HoleCard({
                     <span
                       className={`flex shrink-0 items-center gap-1 text-[14px] ${
                         isSweeper
-                          ? 'font-semibold text-accent'
+                          ? 'font-semibold text-accent-text'
                           : 'font-sans text-text'
                       }`}
                     >

@@ -255,7 +255,7 @@ function DrilldownView({
         <div className="flex items-center gap-3.5 px-4 pt-1.5 pb-3.5">
           <div
             className={`min-w-[50px] text-center font-serif text-[48px] font-semibold leading-none tracking-[-0.04em] tabular-nums ${
-              isLeader ? 'text-accent' : 'text-muted'
+              isLeader ? 'text-accent-text' : 'text-muted'
             }`}
           >
             {selected.rank}
@@ -340,7 +340,7 @@ function DrilldownView({
              hierarkiet uten å trenge høy-kontrast fyll. */
           <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] border border-border bg-surface px-5 py-3.5 text-text">
             <div>
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-accent-text">
                 {t('totalLabel')}
               </span>
               <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
