@@ -34,10 +34,14 @@
  * fylt ut. Payloaden slettes ved publisering/utkast-lagring.
  *
  * #1061: escape-hatchen til full-form (GameForm) er fjernet — wizard-en
- * dekker alt GameForm dekket ved opprettelse. Power-users som vil redigere
- * detaljer utover wizard-en lagrer utkast og bruker rediger-siden
- * (`app/[locale]/admin/games/[id]/edit`), som fortsatt mounter GameForm
- * direkte.
+ * dekker alt GameForm dekket ved opprettelse.
+ *
+ * #1385: og et lagret utkast gjenopptas nå i veiviseren, ikke i GameForm.
+ * Admin sin rediger-rute (`app/[locale]/admin/games/[id]/edit`) mounter denne
+ * komponenten med `mode.kind === 'edit-draft'`. GameForm står igjen som
+ * flate for planlagte spill — og for de utkastene veiviseren ikke kan
+ * representere (cup-/liga-koblede, eller et format utenfor katalogene; se
+ * `lib/wizard/draftResumePlan.ts`).
  */
 
 import {
@@ -152,6 +156,18 @@ type Props = {
    * viser ingenting (defensivt; arket åpnes likevel uten å feile).
    */
   formatGuide?: FormatGuideEntry[];
+  /**
+   * #1385: startverdi for #373-telleren på steg 2. Utelatt → default-4 (fersk
+   * opprettelse). `null` → «Vis alle», altså ufiltrert format-grid.
+   *
+   * Et gjenopptatt utkast MÅ sette denne: default-4 filtrerer bort utkastets
+   * eget format fra grid-et for alt som ikke passer 4 spillere (singles
+   * matchplay, nines, shamble …), og da står steg 2 uten valgt kort.
+   * `resumeExpectedPlayerCount` (lib/wizard/draftResumePlan.ts) eier regelen.
+   * Et gjenopprettet sessionStorage-utkast bærer sin egen verdi og vinner over
+   * denne.
+   */
+  initialExpectedPlayerCount?: number | null;
 };
 
 const TOTAL_STEPS = 5;
@@ -229,7 +245,18 @@ export function GameWizard(props: Props) {
 
   const { courses, players } = props;
   const seededFlow = isSeededFlow(props.initialValues);
+  // #1385: et utkast som gjenopptas fra databasen seedes ALDRI fra
+  // sessionStorage. Kontekst-fingeravtrykket (wizardDraftContext) består av
+  // intent/tournament_id/game_mode/lock_game_mode/group_id — alt sammen
+  // stabilt på tvers av besøk på samme utkast — så et lokalt utkast fra i
+  // sted ville passert vakten og lagt seg OVER radens verdier
+  // (`seedValues = { ...initialValues, ...draft.values }`). For et gjenopptatt
+  // utkast er serveren fasit. Reset-grenen under er samtidig uaktuell her:
+  // en draft-rad seeder alltid flyten (`seededFlow`), så `?step=5` er aldri
+  // en foreldet lenke.
+  const resumingServerDraft = props.mode.kind === 'edit-draft';
   useEffect(() => {
+    if (resumingServerDraft) return;
     const found = loadWizardDraft(storageKey, draftContext);
     if (found) {
       // setState i en effekt er poenget her: vi henter EKSTERN tilstand
@@ -263,7 +290,7 @@ export function GameWizard(props: Props) {
     // fanger `searchParamsString` fra sin egen render, så mount-verdien er
     // den riktige — ingen stale closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey, draftContext]);
+  }, [storageKey, draftContext, resumingServerDraft]);
 
   return (
     <WizardBody
@@ -295,6 +322,7 @@ function WizardBody({
   friendPlayerIds = [],
   clubMemberIdsByClub = {},
   currentUserId = '',
+  initialExpectedPlayerCount,
   isAdmin = false,
   isClubAdmin = false,
   formatGuide = [],
@@ -351,7 +379,12 @@ function WizardBody({
     // #1066: seeder arrangøren som spiller ved kompis-intent (se setIntent i
     // useGameFormState). Samme prop #464 allerede bruker for selectablePlayers.
     currentUserId,
-    initialExpectedPlayerCount: draft?.expectedPlayerCount,
+    // Ternær, ikke `??`: et gjenopprettet utkast kan bære `null` («Vis alle»),
+    // og det er et ekte valg arrangøren tok — ikke et fravær som skal falle
+    // gjennom til rutas seed.
+    initialExpectedPlayerCount: draft
+      ? draft.expectedPlayerCount
+      : initialExpectedPlayerCount,
   });
 
   // #464: picker-kilden følger konteksten (kompis/cup → venner, klubb m/ valgt
