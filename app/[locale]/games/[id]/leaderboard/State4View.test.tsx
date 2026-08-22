@@ -51,8 +51,13 @@ describe('State4View', () => {
         mode="netto"
         coursePar={72}
         holesPlayed={18}
+        footerSlot={<div data-testid="footer-probe" />}
       />,
     );
+
+    // Hale-seksjonen (premier, rundereferat, trukne spillere) må nå fram i
+    // hovedgrenen også — ikke bare i tom-lag-grenen (#1695).
+    expect(screen.getByTestId('footer-probe')).toBeInTheDocument();
 
     // Hero-badgen sier «Delt 1. plass» — ikke «Leder · 1. plass» …
     expect(screen.queryByText(/Leder ·/)).toBeNull();
