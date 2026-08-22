@@ -270,7 +270,7 @@ function PlayerRow({
         <div className="shrink-0 text-right">
           <span
             className={`score-num block text-[26px] leading-none tracking-[-0.02em] tabular-nums ${
-              isLeader ? 'text-accent' : 'text-text'
+              isLeader ? 'text-accent-text' : 'text-text'
             }`}
           >
             {formatSigned(total)}
