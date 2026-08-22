@@ -62,11 +62,23 @@ async function updateGameInternal(
     ? `/admin/games/${gameId}`
     : `/games/${gameId}`;
 
+  // #1385: admin sin utkast-gren gjenopptas i veiviseren, og feilbanneret hører
+  // hjemme på steg 5 — der «Publiser»/«Lagre utkast» står. Uten `step` i
+  // redirecten ville arrangøren landet på steg 1 og måttet klikke seg fram til
+  // banneret. Planlagte spill (GameForm) og skaper-flyten på `/games/[id]/
+  // rediger` har ingen steg, og skal ikke ha parameteren.
+  const editStep = ctx.isAdmin && mode !== 'update_scheduled' ? '5' : null;
+  function editHref(params: Record<string, string>): string {
+    const qs = new URLSearchParams(params);
+    if (editStep) qs.set('step', editStep);
+    return `${editBase}?${qs.toString()}`;
+  }
+
   const payloadMode = mode === 'save_draft' ? 'draft' : 'publish';
   const payload = buildGameInsertPayload(formData, payloadMode);
 
   if (payload.errorCode) {
-    redirect({ href: `${editBase}?error=${payload.errorCode}`, locale });
+    redirect({ href: editHref({ error: payload.errorCode }), locale });
   }
 
   // Tee-off is required when publishing or editing a scheduled game (you
@@ -79,12 +91,12 @@ async function updateGameInternal(
       scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
     } catch {
       if (mode !== 'save_draft') {
-        redirect({ href: `${editBase}?error=tee_off_required`, locale });
+        redirect({ href: editHref({ error: 'tee_off_required' }), locale });
       }
       scheduledTeeOffAt = null;
     }
   } else if (mode !== 'save_draft') {
-    redirect({ href: `${editBase}?error=tee_off_required`, locale });
+    redirect({ href: editHref({ error: 'tee_off_required' }), locale });
   }
 
   // #902: same past-tee-off guard as the create flow. Applies when publishing a
@@ -96,14 +108,14 @@ async function updateGameInternal(
     scheduledTeeOffAt &&
     isTeeOffInPast(scheduledTeeOffAt)
   ) {
-    redirect({ href: `${editBase}?error=tee_off_in_past`, locale });
+    redirect({ href: editHref({ error: 'tee_off_in_past' }), locale });
   }
 
   // Side-tournament config (parsed up front; persisted below only if the row
   // is still in an editable state).
   const sideResult = parseSideTournamentFromFormData(formData);
   if (!sideResult.ok) {
-    redirect({ href: `${editBase}?error=${sideResult.errorCode}`, locale });
+    redirect({ href: editHref({ error: sideResult.errorCode }), locale });
   }
   // TypeScript cannot narrow past next-intl redirect (not declared `never` at
   // call-site); assert ok branch explicitly.
@@ -137,16 +149,18 @@ async function updateGameInternal(
 
     if (rosterErr) {
       console.error('[updateGameInternal] roster check failed', rosterErr);
-      redirect({ href: `${editBase}?error=db_roster`, locale });
+      redirect({ href: editHref({ error: 'db_roster' }), locale });
     }
 
     const pendingRows = (pending ?? []) as { id: string; email: string }[];
     if (pendingRows.length > 0) {
-      const qs = new URLSearchParams({
-        error: 'pending_players',
-        emails: pendingRows.map((p) => p.email).join(', '),
+      redirect({
+        href: editHref({
+          error: 'pending_players',
+          emails: pendingRows.map((p) => p.email).join(', '),
+        }),
+        locale,
       });
-      redirect({ href: `${editBase}?${qs.toString()}`, locale });
     }
   }
 
@@ -180,7 +194,7 @@ async function updateGameInternal(
     existing!.status !== 'draft' &&
     existing!.game_mode !== payload.game_mode
   ) {
-    redirect({ href: `${editBase}?error=mode_locked_after_publish`, locale });
+    redirect({ href: editHref({ error: 'mode_locked_after_publish' }), locale });
   }
 
   // Optimistic lock: only update if the row's current status matches the
@@ -299,7 +313,7 @@ async function updateGameInternal(
     .eq('game_id', gameId);
   if (deleteError) {
     console.error('[updateGameInternal] roster delete failed', deleteError);
-    redirect({ href: `${editBase}?error=db_players`, locale });
+    redirect({ href: editHref({ error: 'db_players' }), locale });
   }
 
   // #1009: gjeste-rader (skygge-brukere) må re-inserters via service-role —
@@ -360,7 +374,7 @@ async function updateGameInternal(
           );
         }
       }
-      redirect({ href: `${editBase}?error=db_players`, locale });
+      redirect({ href: editHref({ error: 'db_players' }), locale });
     }
   }
 

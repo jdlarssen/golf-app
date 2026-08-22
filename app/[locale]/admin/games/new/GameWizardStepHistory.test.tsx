@@ -263,3 +263,57 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
     expect(push).not.toHaveBeenCalled();
   });
 });
+
+describe('GameWizard — #1385 gjenopptatt utkast', () => {
+  it('åpner på steg 5 med radens verdier, ikke et gammelt lokalt utkast', async () => {
+    // Utkastet ble lagret i veiviseren, arrangøren klikker «Rediger utkast»
+    // (`?step=5`). To ting må holde: steg-5-lenken skal ikke leses som
+    // foreldet (raden seeder flyten), og et sessionStorage-utkast fra tidligere
+    // i økta skal IKKE legge seg over det serveren nettopp leverte —
+    // kontekst-fingeravtrykket er identisk for to besøk på samme utkast, så
+    // uten seed-skippet ville den lokale payloaden vunnet.
+    const { saveWizardDraft, wizardDraftContext, wizardDraftStorageKey } =
+      await import('./wizardStatePersistence');
+
+    const initialValues = {
+      name: 'Serverutkastet',
+      game_mode: 'stableford' as const,
+      lock_game_mode: false,
+      course_id: 'course-1',
+      tee_box_id: 'tee-1',
+      players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+    };
+
+    saveWizardDraft(
+      wizardDraftStorageKey('/admin/games/new'),
+      {
+        intent: 'kompis',
+        expectedPlayerCount: 4,
+        nameTouched: true,
+        values: { name: 'Gammelt lokalt utkast', game_mode: 'stableford' },
+      },
+      wizardDraftContext({ initialIntent: 'kompis', initialValues }),
+    );
+
+    searchString = 'step=5';
+    renderWizard({
+      mode: {
+        kind: 'edit-draft',
+        gameId: 'game-1',
+        saveDraftAction: async () => {},
+        publishAction: async () => {},
+      },
+      initialValues,
+      initialIntent: 'kompis',
+    });
+
+    const stepLabel = Array.from(document.querySelectorAll('span')).find(
+      (el) => el.textContent === 'Steg 5 av 5',
+    );
+    expect(stepLabel, 'Forventet «Steg 5 av 5» i DOM').toBeTruthy();
+    expect(replace).not.toHaveBeenCalled();
+
+    expect(screen.getByText('Serverutkastet')).toBeTruthy();
+    expect(screen.queryByText('Gammelt lokalt utkast')).toBeNull();
+  });
+});

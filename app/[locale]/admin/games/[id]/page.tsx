@@ -1182,8 +1182,11 @@ async function PlayersSections({
             <p className="mb-3 text-sm text-muted">
               {tCta('draftBody')}
             </p>
+            {/* #1385: utkastet gjenopptas i veiviseren, og `?step=5` lander
+                arrangøren på oppsummeringen — ikke på steg 1 med valg de
+                allerede har tatt. */}
             <SmartLink
-              href={`/admin/games/${gameId}/edit`}
+              href={`/admin/games/${gameId}/edit?step=5`}
               className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
             >
               {tCta('draftEditButton')}
