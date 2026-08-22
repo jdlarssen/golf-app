@@ -48,7 +48,7 @@ export function FinishedCupDayCard({ entry }: { entry: CupDayEntry }) {
             data-testid="finished-cupday-badge"
             data-win={badge.isWin}
             className={`shrink-0 max-w-[45%] text-right text-sm font-medium leading-snug ${
-              badge.isWin ? 'text-accent' : 'text-muted'
+              badge.isWin ? 'text-accent-text' : 'text-muted'
             }`}
           >
             {t(badge.key as Parameters<typeof t>[0])}

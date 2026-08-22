@@ -51,7 +51,7 @@ export function StreakPanel({
               <span aria-hidden className="text-2xl leading-none">
                 🔥
               </span>
-              <span className="font-serif text-3xl font-medium tabular-nums leading-none text-accent">
+              <span className="font-serif text-3xl font-medium tabular-nums leading-none text-accent-text">
                 {summary.weeklyStreak}
               </span>
               <span className="font-sans text-sm text-muted">{weeksLabel}</span>

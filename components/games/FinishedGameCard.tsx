@@ -61,7 +61,7 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
         badge ? (
           <span
             className={`shrink-0 max-w-[45%] text-right text-sm font-medium leading-snug ${
-              badge.isWin ? 'text-accent' : 'text-muted'
+              badge.isWin ? 'text-accent-text' : 'text-muted'
             }`}
           >
             {t(

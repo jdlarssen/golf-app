@@ -53,7 +53,7 @@ export function GameHistoryRow({
             <span
               className={
                 resultIsWin
-                  ? 'font-medium text-accent'
+                  ? 'font-medium text-accent-text'
                   : 'text-[13px] text-muted'
               }
             >

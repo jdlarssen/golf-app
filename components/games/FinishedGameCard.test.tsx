@@ -35,7 +35,7 @@ describe('FinishedGameCard', () => {
         game={makeGame({ kind: 'placement', rank: 1, fieldSize: 4, isTeam: false })}
       />,
     );
-    const badge = container.querySelector('.text-accent');
+    const badge = container.querySelector('.text-accent-text');
     expect(badge?.textContent).toContain('Du vant');
     // Ingen 🏆 når et resultat finnes.
     expect(container.textContent).not.toContain('🏆');
@@ -49,7 +49,7 @@ describe('FinishedGameCard', () => {
     );
     const muted = container.querySelector('span.text-muted.font-medium');
     expect(muted?.textContent).toContain('2. plass av 4');
-    expect(container.querySelector('.text-accent')).toBeNull();
+    expect(container.querySelector('.text-accent-text')).toBeNull();
   });
 
   it('manglende summary → 🏆-fallback', () => {

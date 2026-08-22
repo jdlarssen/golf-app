@@ -67,7 +67,7 @@ describe('FinishedCupDayCard', () => {
     const { container } = render(
       <FinishedCupDayCard entry={cupDayEntry(FINISHED_TEAM1_WON, 1)} />,
     );
-    const accent = container.querySelector('.text-accent');
+    const accent = container.querySelector('.text-accent-text');
     expect(accent?.textContent).toContain('vant cupen');
   });
 
