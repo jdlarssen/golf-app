@@ -112,12 +112,27 @@ function renderWizard(overrides: Partial<WizardProps> = {}) {
 
 /**
  * #1383: ruta har seedet flyten med forvalg (her `?bane=`-formen, som seeder
- * course_id). Skallets reset hopper over seedede flyter, så en test som skal
- * lande direkte på `?step=2` må rendres med dette — ellers sender #1383-reset-en
- * flyten tilbake til steg 1 før testen rekker å gjøre noe.
+ * course_id). Et rent course_id-seed hever skallets reset-tak til steg 2
+ * (#1653), så en test som skal lande direkte på `?step=2` må rendres med dette
+ * — ellers sender reset-en flyten tilbake til steg 1 før testen rekker å gjøre
+ * noe. Steg 3+ resettes fortsatt med samme seed (formatvalget er ikke dekket) —
+ * se #1653-blokka nederst i fila.
  */
 const SEEDED_BY_ROUTE: Partial<WizardProps> = {
   initialValues: { course_id: 'course-1' },
+};
+
+/**
+ * #1653: cup-lenkas form (`/admin/games/new?tournament_id=…`) seeder mange felt
+ * — format, låsen på det, og cup-koblingen. Den klassen skal aldri resettes:
+ * arrangøren er bevisst sendt inn med forvalgene.
+ */
+const SEEDED_BY_CUP: Partial<WizardProps> = {
+  initialValues: {
+    tournament_id: 't1',
+    game_mode: 'stableford',
+    lock_game_mode: true,
+  },
 };
 
 beforeEach(() => {
@@ -209,6 +224,42 @@ describe('GameWizard — #1383 foreldet ?step-lenke', () => {
     expect(replace).toHaveBeenCalledWith('/admin/games/new?intent=cup', {
       scroll: false,
     });
+    expect(push).not.toHaveBeenCalled();
+  });
+});
+
+describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () => {
+  // Et `?bane=`-seed dekker banen og ingenting annet. Før #1653 slo ethvert
+  // seedet felt av #1383-reset-en helt, så en delt `?bane=…&step=5`-lenke
+  // landet arrangøren i «Klar?» med et default-format ingen hadde valgt —
+  // nøyaktig plagen #1383 skulle fjerne.
+  it.each(['step=5', 'step=4', 'step=3'])(
+    'resetter %s til steg 1 og lar ?bane= stå',
+    (step) => {
+      searchString = `bane=course-1&${step}`;
+      renderWizard(SEEDED_BY_ROUTE);
+
+      expect(replace).toHaveBeenCalledTimes(1);
+      expect(replace).toHaveBeenCalledWith('/admin/games/new?bane=course-1', {
+        scroll: false,
+      });
+      expect(push).not.toHaveBeenCalled();
+    },
+  );
+
+  it('beholder ?step=2 — bane-seeden rettferdiggjør format-steget', () => {
+    searchString = 'bane=course-1&step=2';
+    renderWizard(SEEDED_BY_ROUTE);
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('rører ikke cup-formet seed på ?step=5 — forvalgene er bevisst sendt inn', () => {
+    searchString = 'step=5';
+    renderWizard(SEEDED_BY_CUP);
+
+    expect(replace).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
   });
 });

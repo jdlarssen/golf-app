@@ -169,25 +169,50 @@ function parseStepFromSearch(sp: URLSearchParams): Step {
 }
 
 /**
- * #1383: er arrangøren bevisst sendt inn i flyten med forvalg (cup-lenke,
- * revansje, `?bane=`), eller er dette en blank start?
+ * #1383/#1653: hvor langt inn i veiviseren rutas forvalg rettferdiggjør at en
+ * `?step=N`-lenke får lande? Alt OVER taket er en foreldet lenke og sendes
+ * tilbake til steg 1.
  *
  * `scheduled_tee_off_at` teller IKKE som forvalg: admin-ruta sender den alltid
  * (#1171 smart default), så selve tilstedeværelsen av `initialValues` er ikke
- * et signal. Alt annet er det — cup seeder `game_mode`/`lock_game_mode`/
- * `tournament_id`, revansje seeder roster + format, `?bane=` seeder
- * `course_id`.
+ * et signal. Verdien avgjør, ikke nøkkelen: en nøkkel som står der med
+ * `undefined` er ingen arrangør-beslutning. Ingen konsument gjør det i dag, men
+ * den dagen et alltid-tilstedeværende valgfritt felt legges inn her, ville en
+ * ren nøkkel-telling slått av hele fiksen uten at noe feilet.
  *
- * Verdien avgjør, ikke nøkkelen: en nøkkel som står der med `undefined` er
- * ingen arrangør-beslutning. Ingen konsument gjør det i dag, men den dagen et
- * alltid-tilstedeværende valgfritt felt legges inn her, ville en ren
- * nøkkel-telling slått av hele fiksen uten at noe feilet.
+ * Tre klasser, ikke en per-felt-matrise:
+ *
+ *   ingenting seedet → **1**. Blank start; enhver `?step=2..5` er foreldet.
+ *   kun `course_id`  → **2**. `?bane=`-dyplenka (#1023) fra de offentlige
+ *                      banesidene. Banen er reell, så Format-steget (den neste
+ *                      ekte beslutningen) er greit å lande på — men ikke forbi:
+ *                      steg 3+ forutsetter et formatvalg ingen har tatt, og
+ *                      seeden dekker bare én av steg 3s tre gates (bane/tee/
+ *                      tidspunkt). Det var #1653: `?bane=…&step=5` landet
+ *                      arrangøren i «Klar?» med default-format og tom
+ *                      spillerliste — plagen #1383 skulle fjerne.
+ *   alt annet        → **Infinity**. Cup-lenka (`tournament_id`/`game_mode`/
+ *                      `lock_game_mode`) og revansje (`?fra=`: roster + format
+ *                      + baneoppsett) er bevisst sendt inn med forvalg og skal
+ *                      aldri resettes.
+ *
+ * ⚠️ Nye ett-felts-seeds må velge sitt eget tak her — faller de i «alt annet»
+ * får de Infinity, altså ingen reset, og #1653 gjentar seg for den lenka.
+ *
+ * `initialIntent`/`defaultGroupId` (`?intent=`, `?klubb=`) er bevisst utenfor:
+ * de er egne props, ikke `initialValues`, og hever aldri taket.
  */
-function isSeededFlow(initialValues: InitialValues | undefined): boolean {
-  return Object.entries(initialValues ?? {}).some(
-    ([key, value]) =>
-      key !== 'scheduled_tee_off_at' && value !== undefined && value !== '',
-  );
+function seededStepCeiling(initialValues: InitialValues | undefined): number {
+  const seededKeys = Object.entries(initialValues ?? {})
+    .filter(
+      ([key, value]) =>
+        key !== 'scheduled_tee_off_at' && value !== undefined && value !== '',
+    )
+    .map(([key]) => key);
+
+  if (seededKeys.length === 0) return 1;
+  if (seededKeys.length === 1 && seededKeys[0] === 'course_id') return 2;
+  return Infinity;
 }
 
 /**
@@ -228,7 +253,7 @@ export function GameWizard(props: Props) {
   const didResetStep = useRef(false);
 
   const { courses, players } = props;
-  const seededFlow = isSeededFlow(props.initialValues);
+  const stepCeiling = seededStepCeiling(props.initialValues);
   useEffect(() => {
     const found = loadWizardDraft(storageKey, draftContext);
     if (found) {
@@ -241,12 +266,16 @@ export function GameWizard(props: Props) {
       return;
     }
 
-    // #1383: ingenting å gjenoppta. Står det likevel `?step=2..5` i URL-en, og
-    // ruta ikke har seedet flyten, er lenken foreldet → tilbake til steg 1.
+    // #1383: ingenting å gjenoppta. Står det likevel et steg i URL-en som er
+    // høyere enn rutas forvalg rettferdiggjør, er lenken foreldet → tilbake til
+    // steg 1 (#1653: taket, ikke et av/på-flagg). Reset-målet er alltid steg 1,
+    // ikke taket: én semantikk — «lenken var foreldet, start fra begynnelsen
+    // med forvalgene intakte». Minste tak er 1 og parseren gir ≥1, så en useedet
+    // flyt oppfører seg akkurat som før.
     // `replace` (ikke push): dette er ikke en navigasjon arrangøren gjorde.
-    if (didResetStep.current || seededFlow) return;
+    if (didResetStep.current) return;
     const params = new URLSearchParams(searchParamsString);
-    if (parseStepFromSearch(params) === 1) return;
+    if (parseStepFromSearch(params) <= stepCeiling) return;
     didResetStep.current = true;
     // Øvrige params (?intent=, ?klubb=, ?bane=, ?fra=) er seedene RSC-re-
     // renderen leser — kun `step` skal bort.
