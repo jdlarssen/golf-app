@@ -335,7 +335,7 @@ function HoleRow({
             </span>
           </div>
           {hole.stake > 1 && (
-            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent tabular-nums">
+            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text tabular-nums">
               {hole.stake}x
             </span>
           )}
@@ -369,7 +369,7 @@ function HoleRow({
                 <li key={userId} className="list-none">
                   <span className="inline-flex items-baseline gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] tabular-nums text-text">
                     <span className="text-muted">{name}</span>
-                    <span className="font-semibold text-accent">+{pts}</span>
+                    <span className="font-semibold text-accent-text">+{pts}</span>
                   </span>
                 </li>
               );

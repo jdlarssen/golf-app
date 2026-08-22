@@ -313,7 +313,7 @@ function PlayerRow({
 function outcomeClass(outcome: SkinsHoleRow['outcome']): string {
   switch (outcome) {
     case 'won':
-      return 'text-accent';
+      return 'text-accent-text';
     case 'carryover':
       return 'text-muted';
     default:
@@ -358,7 +358,7 @@ function HoleRow({
           {/* Skins på spill — fremhevet når potten er bygget opp */}
           <span
             className={`text-[10.5px] tabular-nums font-medium ${
-              hole.atStake > 1 ? 'text-accent' : 'text-muted'
+              hole.atStake > 1 ? 'text-accent-text' : 'text-muted'
             }`}
           >
             {atStakeLabel}
@@ -383,7 +383,7 @@ function HoleRow({
               <span aria-hidden className="text-muted/40">
                 ·
               </span>
-              <span className="tabular-nums text-accent font-medium">
+              <span className="tabular-nums text-accent-text font-medium">
                 +{hole.skinsAwarded}{' '}
                 {t('skins.skinLabel', { count: hole.skinsAwarded })}
               </span>
