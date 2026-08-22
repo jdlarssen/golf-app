@@ -156,6 +156,18 @@ type Props = {
    * viser ingenting (defensivt; arket åpnes likevel uten å feile).
    */
   formatGuide?: FormatGuideEntry[];
+  /**
+   * #1385: startverdi for #373-telleren på steg 2. Utelatt → default-4 (fersk
+   * opprettelse). `null` → «Vis alle», altså ufiltrert format-grid.
+   *
+   * Et gjenopptatt utkast MÅ sette denne: default-4 filtrerer bort utkastets
+   * eget format fra grid-et for alt som ikke passer 4 spillere (singles
+   * matchplay, nines, shamble …), og da står steg 2 uten valgt kort.
+   * `resumeExpectedPlayerCount` (lib/wizard/draftResumePlan.ts) eier regelen.
+   * Et gjenopprettet sessionStorage-utkast bærer sin egen verdi og vinner over
+   * denne.
+   */
+  initialExpectedPlayerCount?: number | null;
 };
 
 const TOTAL_STEPS = 5;
@@ -339,6 +351,7 @@ function WizardBody({
   friendPlayerIds = [],
   clubMemberIdsByClub = {},
   currentUserId = '',
+  initialExpectedPlayerCount,
   isAdmin = false,
   isClubAdmin = false,
   formatGuide = [],
@@ -395,7 +408,12 @@ function WizardBody({
     // #1066: seeder arrangøren som spiller ved kompis-intent (se setIntent i
     // useGameFormState). Samme prop #464 allerede bruker for selectablePlayers.
     currentUserId,
-    initialExpectedPlayerCount: draft?.expectedPlayerCount,
+    // Ternær, ikke `??`: et gjenopprettet utkast kan bære `null` («Vis alle»),
+    // og det er et ekte valg arrangøren tok — ikke et fravær som skal falle
+    // gjennom til rutas seed.
+    initialExpectedPlayerCount: draft
+      ? draft.expectedPlayerCount
+      : initialExpectedPlayerCount,
   });
 
   // #464: picker-kilden følger konteksten (kompis/cup → venner, klubb m/ valgt

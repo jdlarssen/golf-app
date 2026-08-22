@@ -1,5 +1,6 @@
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { formatPlayStyle } from '@/lib/scoring/modes/types';
+import { fitsPlayerCount } from '@/lib/wizard/fitsPlayerCount';
 import type { Intent } from '@/lib/wizard/intent';
 
 /**
@@ -97,4 +98,33 @@ export function planDraftResume(
     return { kind: 'wizard', intent: 'kompis', groupId: groupIdOrUndefined(row) };
   }
   return { kind: 'form' };
+}
+
+/**
+ * Startverdi for #373-telleren («Hvor mange er dere?») når et utkast
+ * gjenopptas.
+ *
+ * Hvorfor den ikke bare kan stå på defaulten: på Kompis-intent filtrerer steg 2
+ * format-grid-et på `fitsPlayerCount(slug, telleren)`. Står telleren på
+ * default-4 mens utkastet er en singles matchplay (nøyaktig 2), en nines
+ * (3) eller en shamble (6/8), rendres grid-et UTEN utkastets eget format —
+ * ingen kort er valgt, og det neste kortet arrangøren trykker bytter
+ * `game_mode`, som lagringen faktisk skriver.
+ *
+ * Regelen:
+ *  - Rosteret passer formatet → bruk rosteret. Telleren blir sann (steg
+ *    4-hintet stemmer også), og formatet består filteret per definisjon.
+ *  - Alt annet (tomt roster, eller et roster som ikke passer ennå — utkast er
+ *    per definisjon uferdige) → `null`, som er «Vis alle»: filteret slås av,
+ *    og formatet er garantert synlig og valgt.
+ *
+ * `null` og `undefined` betyr IKKE det samme nedstrøms: `undefined` gir
+ * default-4, `null` gir «Vis alle» (useGameFormState.ts).
+ */
+export function resumeExpectedPlayerCount(
+  gameMode: GameMode,
+  rosterSize: number,
+): number | null {
+  if (rosterSize > 0 && fitsPlayerCount(gameMode, rosterSize)) return rosterSize;
+  return null;
 }

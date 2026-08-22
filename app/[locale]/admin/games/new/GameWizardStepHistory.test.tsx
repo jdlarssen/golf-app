@@ -275,13 +275,20 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     const { saveWizardDraft, wizardDraftContext, wizardDraftStorageKey } =
       await import('./wizardStatePersistence');
 
+    // Utkastet er en 2-spillers singles matchplay: formatet passer nøyaktig 2,
+    // så det er nettopp dette utkastet #373-telleren ville filtrert bort hvis
+    // den sto på default-4 (steg 2 uten valgt kort, og neste klikk bytter
+    // game_mode for godt).
     const initialValues = {
       name: 'Serverutkastet',
-      game_mode: 'stableford' as const,
+      game_mode: 'singles_matchplay' as const,
       lock_game_mode: false,
       course_id: 'course-1',
       tee_box_id: 'tee-1',
-      players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+      players: [
+        { user_id: 'u0', team_number: 1, flight_number: null },
+        { user_id: 'u1', team_number: 2, flight_number: null },
+      ],
     };
 
     saveWizardDraft(
@@ -305,6 +312,16 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
       },
       initialValues,
       initialIntent: 'kompis',
+      // Det ruta seeder: `resumeExpectedPlayerCount('singles_matchplay', 2)`.
+      initialExpectedPlayerCount: 2,
+      formatsByIntent: {
+        ...FORMATS_BY_INTENT,
+        kompis: [
+          formatRow('stableford', 10),
+          formatRow('best_ball', 20),
+          formatRow('singles_matchplay', 30),
+        ],
+      },
     });
 
     const stepLabel = Array.from(document.querySelectorAll('span')).find(
@@ -315,5 +332,13 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
 
     expect(screen.getByText('Serverutkastet')).toBeTruthy();
     expect(screen.queryByText('Gammelt lokalt utkast')).toBeNull();
+
+    // Tilbake til steg 2: utkastets eget format må stå der, og stå valgt.
+    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+
+    const formatCard = screen.getByRole('radio', { name: /^matchplay$/i });
+    expect(formatCard.getAttribute('aria-checked')).toBe('true');
   });
 });
