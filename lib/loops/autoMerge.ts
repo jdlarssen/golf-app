@@ -239,6 +239,85 @@ export async function mergePullRequest({
   return { ok: true };
 }
 
+// ── Sletting av head-branchen etter merge ────────────────────────────────────
+
+export type DeleteBranchResult = {
+  /** Ble ref-en faktisk slettet i denne kjøringen? */
+  deleted: boolean;
+  /** Hvorfor ikke (eller `null` ved suksess) — kun logging/observability. */
+  reason: string | null;
+};
+
+// Kun head-branches loopen selv lager. Regexen har to jobber: den ER prefiks-vakten,
+// OG den er grunnen til at vi trygt kan la være å URL-kode `headRef` — `ghClient.rest`
+// konkatenerer pathen rått (scripts/loops/ghClient.ts:15), og «claude/foo» SKAL stå
+// som to sti-segmenter i `git/refs/heads/…` (en prosent-kodet «%2F» treffer ingen ref).
+// Tegnsettet slipper derfor ingenting som kan bryte ut av pathen.
+const DELETABLE_HEAD_REF = /^claude\/[A-Za-z0-9._/-]+$/;
+
+/**
+ * Skal head-branchen IKKE slettes? Returnerer grunnen, eller `null` når den er
+ * trygg å slette. Egen eksport fordi DRY_RUN-logga i post-pr-card må si det samme
+ * som selve slettingen gjør — regelen har ett hjem (AGENTS.md trap 4).
+ */
+export function headBranchDeleteSkipReason({
+  repo,
+  headRef,
+  headRepo,
+}: {
+  repo: string;
+  headRef: string | null | undefined;
+  headRepo: string | null | undefined;
+}): string | null {
+  if (!headRef) return 'mangler head-ref i planen';
+  // `head.repo` er `null` for en fork som er slettet etter at PR-en ble åpnet.
+  if (headRepo !== repo) return `fork (head-repo ${headRepo ?? 'slettet'} ≠ ${repo})`;
+  // `..` ville normalisert seg bort i URL-en (…/heads/claude/../../main → …/refs/main).
+  // Git forbyr det i ref-navn, men pathen bygges rått — så vakten står her også.
+  if (!DELETABLE_HEAD_REF.test(headRef) || headRef.includes('..'))
+    return `ikke claude/* («${headRef}»)`;
+  return null;
+}
+
+/**
+ * Sletter PR-ens head-branch etter en gjennomført merge (#1675). GitHubs
+ * `delete_branch_on_merge` fyrer IKKE på API-/PAT-merger, så kortets rebase-merger
+ * etterlot fullmergede `claude/*`-branches på remote.
+ *
+ * Best-effort, akkurat som issue-lukkingen: 204 = slettet, 404/422 («Reference does
+ * not exist») = allerede borte og dermed OK, alt annet logges. Ingen sti feller
+ * kort-flyten — mergen står uansett, og ukessweepen
+ * (`.github/workflows/branch-sweep.yml`) er nettet under.
+ */
+export async function deleteHeadBranch({
+  gh,
+  repo,
+  headRef,
+  headRepo,
+  logError = (msg: string) => console.error(msg),
+}: {
+  gh: GitHubClient;
+  repo: string;
+  headRef: string | null | undefined;
+  headRepo: string | null | undefined;
+  logError?: (msg: string) => void;
+}): Promise<DeleteBranchResult> {
+  const skip = headBranchDeleteSkipReason({ repo, headRef, headRepo });
+  if (skip) return { deleted: false, reason: skip };
+
+  try {
+    const res = await gh.rest('DELETE', `/repos/${repo}/git/refs/heads/${headRef}`);
+    if (res.status === 204) return { deleted: true, reason: null };
+    if (res.status === 404 || res.status === 422) return { deleted: false, reason: 'allerede slettet' };
+    const detail = (res.json as { message?: string })?.message ?? '';
+    logError(`branch-sletting feilet (HTTP ${res.status}${detail ? `: ${detail}` : ''}) — ukessweepen tar den.`);
+    return { deleted: false, reason: `HTTP ${res.status}` };
+  } catch (err) {
+    logError(`branch-sletting kastet — ${String(err)}`);
+    return { deleted: false, reason: 'kastet' };
+  }
+}
+
 // ── Eksplisitt issue-lukking etter merge ─────────────────────────────────────
 
 export type CloseIssuesResult = {
