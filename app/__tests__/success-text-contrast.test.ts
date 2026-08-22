@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   contrast,
   readVar,
+  tintOver,
   ROOT,
   DARK_MEDIA,
   DARK_ATTR,
@@ -24,21 +25,6 @@ const TOKEN = 'success-text';
 
 /** bg-success/10 er det eneste sage-tintede fyllet suksess-tekst står på. */
 const TINT_ALPHA = 0.1;
-
-/** Sage-tinten lagt over en flate, slik nettleseren komponerer den. */
-function sageTint(surface: string, success: string): string {
-  const px = (hex: string) => {
-    const n = parseInt(hex.slice(1), 16);
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  };
-  const [fr, fg, fb] = px(success);
-  const [br, bg, bb] = px(surface);
-  const mix = (f: number, b: number) =>
-    Math.round(f * TINT_ALPHA + b * (1 - TINT_ALPHA))
-      .toString(16)
-      .padStart(2, '0');
-  return `#${mix(fr, br)}${mix(fg, bg)}${mix(fb, bb)}`;
-}
 
 describe('--success-text (#1686)', () => {
   it('er definert i :root, ikke bare i dark-blokkene', () => {
@@ -76,7 +62,7 @@ describe('--success-text (#1686)', () => {
       expect(success, '--success mangler i blokken').not.toBeNull();
       expect(bg, '--bg mangler i blokken').not.toBeNull();
 
-      const fill = sageTint(bg as string, success as string);
+      const fill = tintOver(bg as string, success as string, TINT_ALPHA);
       expect(contrast(text as string, fill)).toBeGreaterThanOrEqual(4.5);
     });
   });
