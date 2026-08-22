@@ -76,7 +76,7 @@ export function MatchplaySideTournamentSection(
   return (
     <section className="px-3.5 pt-3 pb-1" data-testid="matchplay-side-tournament">
       <div className="rounded-2xl border border-border bg-surface px-4 py-3">
-        <h2 className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
           {t('heading')}
         </h2>
 

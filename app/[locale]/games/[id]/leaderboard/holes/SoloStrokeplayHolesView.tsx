@@ -147,7 +147,7 @@ function TotalsHeader({
   return (
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           {t('common.stillingen')}
         </p>
         <ul

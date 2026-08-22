@@ -372,7 +372,7 @@ export async function renderState35(opts: {
       {/* Champagne-pille for den åpne halvdelen — signaliserer at dette ikke
           er sluttstillingen. */}
       <div className="flex justify-center mb-5">
-        <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full bg-accent/10 text-accent-text border border-accent/30">
+        <span className="inline-flex items-center text-[11px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full bg-accent/10 text-accent-text border border-accent/30">
           {halfLabel}
         </span>
       </div>

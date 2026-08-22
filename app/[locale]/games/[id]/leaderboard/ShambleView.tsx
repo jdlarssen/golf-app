@@ -261,7 +261,7 @@ function TeamRow({
           >
             {totalScore}
           </span>
-          <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
             {t('common.slagLabel')}
           </span>
         </div>
