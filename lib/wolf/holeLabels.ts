@@ -52,7 +52,7 @@ export function wolfOutcomeKey(outcome: WolfHoleOutcome): WolfOutcomeKey {
 export function wolfOutcomeClass(outcome: WolfHoleOutcome): string {
   switch (outcome) {
     case 'wolf_side_wins':
-      return 'text-accent';
+      return 'text-accent-text';
     case 'opp_side_wins':
       return 'text-text';
     case 'tied':
