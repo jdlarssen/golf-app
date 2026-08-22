@@ -1,0 +1,49 @@
+# Branch-sweepen (#1675): ukentlig opprydding av fullmergede `claude/*`-branches
+# på remote. GitHubs `delete_branch_on_merge` fyrer ikke på API-/PAT-merger, så
+# 9 fullmergede branches sto igjen 2026-08-16. PR-kortet rydder nå etter seg selv
+# (lib/loops/autoMerge.ts → deleteHeadBranch); denne er nettet under for alt annet
+# (GitHub-MCP-merger fra remote-økter, avbrutte økter, gamle branches).
+#
+# Fail-safe: branch med åpen PR røres aldri, branch med unike commits slettes
+# aldri (rapporteres på #1110 i stedet), og ingenting utenfor `claude/*` er
+# innenfor rekkevidde. Logikken: .github/scripts/branch-sweep.sh.
+name: Branch sweep
+
+on:
+  schedule:
+    - cron: '15 5 * * 1' # mandag 05:15 UTC — etter ukesversjon (03:00) og morgenbriefen
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Klassifiser og logg uten å slette noe'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write # slette refs
+  issues: write # rapportere foreldreløse branches på #1110
+  pull-requests: read # klassifisere mot åpne/mergede PR-er
+
+# En dispatch som overlapper cron-kjøringen ville klassifisert mot samme refs og
+# rapportert de samme foreldreløse branchene to ganger.
+concurrency:
+  group: branch-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # fetch-depth: 0 — `git cherry` trenger full historikk for å sammenligne
+      # patch-id-er mot main (en rebase-merge har helt andre SHA-er).
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Klassifiser og rydd claude/*-branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: bash .github/scripts/branch-sweep.sh
