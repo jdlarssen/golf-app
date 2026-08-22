@@ -65,7 +65,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
           <p className="font-sans text-[12px] text-muted mt-0.5">
             {formatWindowDate(round.opensAt, locale)} – {formatWindowDate(round.closesAt, locale)}
             {round.windowOverriddenAt && (
-              <span className="ml-1.5 text-accent">{t('windowExtended')}</span>
+              <span className="ml-1.5 text-accent-text">{t('windowExtended')}</span>
             )}
           </p>
           <p className="font-sans text-[11px] tabular-nums text-muted mt-0.5">

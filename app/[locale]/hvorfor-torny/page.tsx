@@ -233,7 +233,7 @@ export default async function HvorforTornyPage({
                   <div
                     key={row.name}
                     className={`flex items-center justify-between border-t border-border py-2.5 font-serif text-[16px] first:border-t-0 ${
-                      isLeader ? 'text-accent-deep' : 'text-text'
+                      isLeader ? 'text-accent-text' : 'text-text'
                     }`}
                   >
                     <span>
@@ -323,7 +323,7 @@ export default async function HvorforTornyPage({
         <section className="text-center">
           <h2 className="font-serif text-[26px] font-medium leading-tight tracking-[-0.015em] text-text">
             {t('endCta.headingPre')}
-            <span className="text-accent-deep">{t('endCta.headingGold')}</span>
+            <span className="text-accent-text">{t('endCta.headingGold')}</span>
             {t('endCta.headingPost')}
           </h2>
           <p className="mx-auto mt-3 max-w-[300px] font-sans text-[14px] leading-relaxed text-muted">
@@ -366,7 +366,7 @@ function StatTile({ stat, gold }: { stat: Stat; gold: boolean }) {
     <div className="rounded-2xl border border-border bg-surface px-4 py-5 text-center">
       <div
         className={`font-serif text-[44px] font-medium leading-none tracking-[-0.02em] ${
-          gold ? 'text-accent-deep' : 'text-primary'
+          gold ? 'text-accent-text' : 'text-primary'
         }`}
       >
         {stat.value}

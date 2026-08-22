@@ -199,7 +199,7 @@ export function PåmeldingerClient({ gameId, requests, tab, locked, gameMode, ap
                       {row.displayName}
                     </p>
                     {row.isTeamCaptain && (
-                      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-[2px] font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
+                      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-[2px] font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-text">
                         {t('captainBadge')}
                       </span>
                     )}
