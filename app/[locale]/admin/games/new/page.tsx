@@ -16,13 +16,7 @@ import { getRoleContext } from '@/lib/admin/auth';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
-import {
-  getFormatsForIntent,
-} from '@/lib/formats/getFormatsForIntent';
-import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
-import { getFriendConnectionIds } from '@/lib/friends/getFriendConnectionIds';
-import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { getWizardMountData } from '@/lib/wizard/getWizardMountData';
 
 type SearchParams = Promise<{
   tournament_id?: string | string[];
@@ -293,39 +287,19 @@ async function GameFormBody({
   initialIntent: Intent | undefined;
   defaultGroupId: string | undefined;
 }) {
-  // Forhåndshent format-katalogen for alle ikke-cup-intents så client-wizard
-  // kan switche intent uten ekstra fetch. Parallell henting + unstable_cache i
-  // F1-helperen gjør dette billig (alle tag-cachet 24h).
-  const userId = await getProxyVerifiedUserId();
-
-  const [
-    kompisFormats,
-    klubbFormats,
-    soloFormats,
+  // #1385: oppsettet veiviseren mountes med er delt med gjenoppta-utkast-
+  // grenen på rediger-ruta (lib/wizard/getWizardMountData) — én kilde, så en
+  // ny prop ikke kan lande på bare én av flatene.
+  const {
+    userId,
+    courses,
+    players,
+    clubs,
+    formatsByIntent,
     formatGuide,
-  ] = await Promise.all([
-    getFormatsForIntent('kompis'),
-    getFormatsForIntent('klubb'),
-    getFormatsForIntent('solo'),
-    getFormatGuideEntries(),
-  ]);
-
-  const [{ courses, players, clubs }, friendPlayerIds, clubMembers] =
-    await Promise.all([
-      getNewGameFormData(),
-      // #464: venne-relasjonene til admin-brukeren — picker-kilde for kompis/cup.
-      // Inkluderer pending forespørsler (begge retninger) så folk du nettopp har
-      // sendt forespørsel til kan velges. Best-effort — tom liste ved feil.
-      userId ? getFriendConnectionIds(userId).catch(() => []) : Promise.resolve([]),
-      // #464: klubbmedlemmer — picker-kilde for klubb-intent. Admin-rosteren
-      // (hele basen) inneholder allerede medlemmene, så vi trenger bare id-mappet.
-      userId
-        ? getClubMemberPlayerOptions(userId).catch(() => ({
-            memberIdsByClub: {},
-            options: [],
-          }))
-        : Promise.resolve({ memberIdsByClub: {}, options: [] }),
-    ]);
+    friendPlayerIds,
+    clubMemberIdsByClub,
+  } = await getWizardMountData();
 
   return (
     <GameWizard
@@ -341,21 +315,18 @@ async function GameFormBody({
       // prop (ikke render/effekt) → ingen hydration-mismatch, ingen
       // set-state-in-effect. Cup-prefyllen legges på toppen og beholdes; den
       // setter aldri scheduled_tee_off_at selv, så defaulten overlever.
-      // Edit/utkast er egen rute (GameForm) og røres ikke.
+      // Rediger-ruta er en egen flate og røres ikke: den seeder tee-off fra
+      // raden (#1385 mounter samme veiviser der, men med sine egne verdier).
       initialValues={{
         scheduled_tee_off_at: defaultTeeOffAt(new Date()),
         ...(cupContext ? buildCupInitialValues(cupContext) : {}),
       }}
       initialIntent={initialIntent}
-      formatsByIntent={{
-        kompis: kompisFormats,
-        klubb: klubbFormats,
-        solo: soloFormats,
-      }}
+      formatsByIntent={formatsByIntent}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
       friendPlayerIds={friendPlayerIds}
-      clubMemberIdsByClub={clubMembers.memberIdsByClub}
+      clubMemberIdsByClub={clubMemberIdsByClub}
       currentUserId={userId ?? ''}
       // #477: ruten er admin-gatet (redirect over), så «Solo / Test» vises her.
       isAdmin
