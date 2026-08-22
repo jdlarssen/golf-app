@@ -1108,7 +1108,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             <span
               className="score-num"
               style={{
-                color: 'var(--accent)',
+                color: 'var(--accent-text)',
                 fontFamily: 'var(--font-serif)',
                 fontSize: 13,
                 marginLeft: 2,
