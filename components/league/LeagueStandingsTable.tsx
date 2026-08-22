@@ -194,7 +194,7 @@ export function LeagueStandingsTable({
                 {/* Rank */}
                 <td
                   className="w-8 px-2 py-2.5 font-serif tabular-nums text-sm"
-                  style={isFirst ? { color: 'var(--accent)' } : undefined}
+                  style={isFirst ? { color: 'var(--accent-text)' } : undefined}
                 >
                   {isUnranked ? '–' : (row.rank ?? idx + 1)}
                 </td>
@@ -202,7 +202,7 @@ export function LeagueStandingsTable({
                 {/* Name */}
                 <td
                   className="px-2 py-2.5 font-sans text-sm font-medium"
-                  style={isFirst ? { color: 'var(--accent-deep)' } : undefined}
+                  style={isFirst ? { color: 'var(--accent-text)' } : undefined}
                 >
                   <div className="flex items-center gap-1.5">
                     <span>{name}</span>
@@ -223,7 +223,7 @@ export function LeagueStandingsTable({
                 {/* Season value */}
                 <td
                   className="px-2 py-2.5 text-right font-serif tabular-nums text-sm font-semibold"
-                  style={isFirst ? { color: 'var(--accent)' } : undefined}
+                  style={isFirst ? { color: 'var(--accent-text)' } : undefined}
                 >
                   {formatValue(row.value, standingsModel, pointsBased)}
                 </td>
