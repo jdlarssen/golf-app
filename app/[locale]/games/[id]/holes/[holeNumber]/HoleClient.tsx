@@ -310,7 +310,7 @@ const titleStyle: CSSProperties = {
   flex: 1,
   textAlign: 'center',
   fontFamily: 'var(--font-sans)',
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.20em',

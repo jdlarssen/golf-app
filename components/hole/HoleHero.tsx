@@ -93,7 +93,7 @@ const centerStyle: CSSProperties = {
 
 const kickerStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 600,
   letterSpacing: '0.20em',
   textTransform: 'uppercase',

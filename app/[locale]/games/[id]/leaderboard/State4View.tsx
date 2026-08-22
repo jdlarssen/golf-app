@@ -257,7 +257,7 @@ function Header({
       >
         ‹
       </SmartLink>
-      <span className="flex-1 truncate text-center text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+      <span className="flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
         {gameName}
       </span>
       {onReplay ? (
@@ -346,7 +346,7 @@ function ModeChip({
                 publicView,
                 publicHref: backHref,
               })}
-              className={`min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+              className={`min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
                 active
                   ? 'bg-primary-soft text-text'
                   : 'text-muted hover:text-text'
@@ -421,7 +421,7 @@ function LeaderCard({
         </div>
 
         <div className="relative flex flex-col items-center">
-          <span className="leader-badge-pulse text-[10px] font-semibold uppercase tracking-[0.20em] text-accent-text">
+          <span className="leader-badge-pulse text-[11px] font-semibold uppercase tracking-[0.20em] text-accent-text">
             {isTied
               ? t('tiedRank', { rank: line.rank })
               : ts('leaderBadge', { rank: line.rank })}
@@ -453,7 +453,7 @@ function LeaderCard({
           style={{ borderTop: '1px solid rgba(201,169,97,0.4)' }}
         >
           <div className="text-left">
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {ts('totalLabel', { mode: modeLabel })}
             </span>
             <span className="score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] text-text">
@@ -461,7 +461,7 @@ function LeaderCard({
             </span>
           </div>
           <div className="text-right">
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {ts('vsParLabel')}
             </span>
             <span
@@ -580,7 +580,7 @@ function TeamRow({
         <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
           {line.total}
         </span>
-        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+        <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
           {formatVsPar(vsPar)} {ts('parLabel')}
         </span>
       </div>

@@ -219,16 +219,13 @@ export function NassauPodium({
                       <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
                         {displayName}
                       </p>
-                      <UnitBadges
-                        unitBreakdown={player.unitBreakdown}
-                        size="sm"
-                      />
+                      <UnitBadges unitBreakdown={player.unitBreakdown} />
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
                         {player.units}
                       </span>
-                      <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                      <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
                         {player.units === 1 ? t('nassau.seier') : t('nassau.seire')}
                       </span>
                     </div>
@@ -295,7 +292,7 @@ function PodiumStep({
 
       {tiedBadge && (
         <p
-          className={`text-center text-[9px] font-semibold uppercase tracking-[0.14em] ${
+          className={`text-center text-[11px] font-semibold uppercase tracking-[0.14em] ${
             place === 1 ? 'text-accent-text' : 'text-muted'
           }`}
         >
@@ -319,12 +316,12 @@ function PodiumStep({
         >
           {player.units}
         </span>
-        <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
+        <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           {player.units === 1 ? t('nassau.seier') : t('nassau.seire')}
         </span>
       </div>
 
-      <UnitBadges unitBreakdown={player.unitBreakdown} size="md" />
+      <UnitBadges unitBreakdown={player.unitBreakdown} />
     </div>
   );
 }
@@ -336,12 +333,10 @@ function PodiumStep({
  */
 function UnitBadges({
   unitBreakdown,
-  size,
 }: {
   unitBreakdown: { front9: boolean; back9: boolean; total18: boolean };
-  size: 'sm' | 'md';
 }) {
-  const pxClass = size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px]';
+  const pxClass = 'px-1.5 py-0.5 text-[11px]';
   const items: Array<{ key: 'front9' | 'back9' | 'total18'; label: string }> = [
     { key: 'front9', label: 'F9' },
     { key: 'back9', label: 'B9' },
