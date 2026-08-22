@@ -23,7 +23,7 @@ export function StreakChip({
       <span aria-hidden className="text-[15px] leading-none">
         🔥
       </span>
-      <span className="font-serif text-[15px] tabular-nums text-accent">
+      <span className="font-serif text-[15px] tabular-nums text-accent-text">
         {weeks}
       </span>
     </SmartLink>
