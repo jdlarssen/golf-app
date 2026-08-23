@@ -637,6 +637,14 @@ async function PlayersSections({
   // Banehandicap fryses + scorekort kan leveres først ved «Start runden nå».
   // Skjul levering/CH og bruk en egen «Påmeldt»-status før det (#905).
   const isPlayPhase = game.status === 'active' || game.status === 'finished';
+  // Avslutt-seksjonens tredje gren står tom når alle spillere er trukket: ingen
+  // warning-boks, ingen knapp. Da skal footer-lenka heller ikke ha skillelinje
+  // over seg — en strek uten innhold over ser ut som en feil (#1723).
+  const endSectionHasBody =
+    everyPlayerReady ||
+    onlyMissingBlocks ||
+    notSubmittedCount > 0 ||
+    pendingApprovalCount > 0;
 
   return (
     <>
@@ -1269,21 +1277,25 @@ async function PlayersSections({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning-text">
-                  {notSubmittedCount > 0 && (
-                    <p>
-                      {tCta('notSubmittedWarning', {
-                        notSubmitted: notSubmittedCount,
-                        total: rankablePlayers.length,
-                      })}
-                    </p>
-                  )}
-                  {pendingApprovalCount > 0 && (
-                    <p className={notSubmittedCount > 0 ? 'mt-1.5' : undefined}>
-                      {tCta('pendingApprovalWarning', { count: pendingApprovalCount })}
-                    </p>
-                  )}
-                </div>
+                {/* Begge tellerne er 0 når alle spillere er trukket (#1723) —
+                    da har boksen ingen tekst, og skal ikke rendres i det hele tatt. */}
+                {(notSubmittedCount > 0 || pendingApprovalCount > 0) && (
+                  <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning-text">
+                    {notSubmittedCount > 0 && (
+                      <p>
+                        {tCta('notSubmittedWarning', {
+                          notSubmitted: notSubmittedCount,
+                          total: rankablePlayers.length,
+                        })}
+                      </p>
+                    )}
+                    {pendingApprovalCount > 0 && (
+                      <p className={notSubmittedCount > 0 ? 'mt-1.5' : undefined}>
+                        {tCta('pendingApprovalWarning', { count: pendingApprovalCount })}
+                      </p>
+                    )}
+                  </div>
+                )}
                 {pendingApprovalCount > 0 && (
                   <a
                     href="#leverte-scorekort"
@@ -1298,7 +1310,13 @@ async function PlayersSections({
             {/* onlyMissingBlocks-grenen har allerede status-lenken som knapp over
                 «Avslutt likevel» — footeren ville duplisert den (#1688). */}
             {!onlyMissingBlocks && (
-              <div className="mt-3 border-t border-border pt-3 text-center">
+              <div
+                className={
+                  endSectionHasBody
+                    ? 'mt-3 border-t border-border pt-3 text-center'
+                    : 'text-center'
+                }
+              >
                 <SmartLink
                   href={`/admin/games/${gameId}/status`}
                   className="font-sans text-[13px] font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary"
