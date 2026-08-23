@@ -161,7 +161,11 @@ export default async function EditGamePage({
       </div>
 
       <div className="mt-4 space-y-2">
-        {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+        {errorMessage && (
+          <Banner tone="error" testId="edit-error-banner">
+            {errorMessage}
+          </Banner>
+        )}
         <Banner tone="info">
           {g.status === 'draft' ? t('bannerDraft') : t('bannerScheduled')}
         </Banner>
