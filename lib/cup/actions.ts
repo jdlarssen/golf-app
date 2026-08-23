@@ -17,6 +17,7 @@ import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Tables } from '@/lib/database.types';
 import { getCupSnapshot } from './getCupSnapshot';
+import { getCupCandidatePlayers } from './getCupCandidatePlayers';
 import { validateMatchSwap } from './matchSwapValidation';
 import { loadTournamentParticipantEmails } from './tournamentParticipants';
 import { allSideAwardsRegistered } from './sideAwardsRegistered';
@@ -480,15 +481,26 @@ type SwapPlan = {
  */
 async function planCupMatchSwap(
   admin: SupabaseClient<Database>,
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
   args: {
     tournamentId: string;
     gameId: string;
     groupId: string | null;
+    actorUserId: string;
+    actorIsAdmin: boolean;
     outUserId: string;
     inUserId: string;
   },
 ): Promise<SwapPlan | { error: string }> {
-  const { tournamentId, gameId, groupId, outUserId, inUserId } = args;
+  const {
+    tournamentId,
+    gameId,
+    groupId,
+    actorUserId,
+    actorIsAdmin,
+    outUserId,
+    inUserId,
+  } = args;
 
   // Matchen arrangøren trykket på må høre til DENNE cupen — `game_id` kommer
   // fra klienten, og en fremmed match ville ellers vært skrivbar med en cup
@@ -510,22 +522,55 @@ async function planCupMatchSwap(
     .from('games')
     .select('id, status, source_game_id')
     .eq('tournament_id', tournamentId);
-  const { data: participantRows, error: participantsError } = await admin
-    .from('tournament_participants')
-    .select('user_id')
-    .eq('tournament_id', tournamentId);
-  // Klubb-cup: medlemskap kan trekkes ETTER påmelding, så deltaker-lista alene
-  // er ikke nok (speiler generatorens `not_members`-guard).
+  // Klubb-cup: kun klubbmedlemmer i matchene (speiler generatorens
+  // `not_members`-guard). Medlemskap kan trekkes når som helst, så det leses
+  // her og nå — ikke arvet fra en liste klienten hadde.
   const { data: memberRows, error: membersError } = groupId
     ? await admin.from('group_members').select('user_id').eq('group_id', groupId)
     : { data: null, error: null };
-  if (gamesError || participantsError || membersError) {
+  // Bærende, ikke arvet: `startScheduledGame` velger rating-sett fra
+  // `tee_gender`, så inn-spilleren skal ha SIN egen — arver vi ut-spillerens,
+  // fryses feil spillehandicap ved start. Samme runde-tur henter
+  // profil-statusen guarden trenger (kandidatlista er bredere enn
+  // deltakerlista, så profil-fullført er ikke lenger gitt).
+  const { data: inProfile, error: profileError } = await admin
+    .from('users')
+    .select('gender, profile_completed_at')
+    .eq('id', inUserId)
+    .maybeSingle();
+  if (gamesError || membersError || profileError) {
     console.error('[cup] swapCupMatchPlayer context read failed', {
       tournamentId,
       gameId,
       gamesError,
-      participantsError,
       membersError,
+      profileError,
+    });
+    return { error: 'swap_failed' };
+  }
+
+  // Reserven hentes fra cupens KANDIDATLISTE — venner / klubbmedlemmer / alle
+  // profil-fullførte for global admin — via samme helper som Spillere-rommet
+  // og generer-veiviseren bruker. Én kilde, samme rolle-semantikk: er en
+  // spiller valgbar der, er hun valgbar her. Helperen kaster på lese-feil.
+  let candidateIds: string[];
+  try {
+    const candidates = await getCupCandidatePlayers(supabase, {
+      groupId,
+      userId: actorUserId,
+      isAdmin: actorIsAdmin,
+      // Kun `id` leses under — labelen når aldri en skjerm, så en konstant
+      // sparer en getTranslations-runde (samme grep som `addCupParticipant`).
+      unknownLabel: 'Ukjent spiller',
+    });
+    // Pending venner beholdes med vilje: profil-guarden avviser dem med en
+    // presis beskjed i stedet for et generisk «ikke kandidat».
+    candidateIds = candidates.map((c) => c.id);
+  } catch (err) {
+    console.error('[cup] swapCupMatchPlayer candidate read failed', {
+      tournamentId,
+      gameId,
+      err,
     });
     return { error: 'swap_failed' };
   }
@@ -563,21 +608,13 @@ async function planCupMatchSwap(
     })),
     outUserId,
     inUserId,
-    participantIds: (participantRows ?? []).map((p) => p.user_id as string),
+    candidateIds,
+    inProfileCompleted: Boolean(inProfile?.profile_completed_at),
     clubMemberIds: groupId
       ? (memberRows ?? []).map((m) => m.user_id as string)
       : null,
   });
   if (!validation.ok) return { error: validation.error };
-
-  // Bærende, ikke arvet: `startScheduledGame` velger rating-sett fra
-  // `tee_gender`, så inn-spilleren skal ha SIN egen — arver vi ut-spillerens,
-  // fryses feil spillehandicap ved start.
-  const { data: inProfile } = await admin
-    .from('users')
-    .select('gender')
-    .eq('id', inUserId)
-    .maybeSingle();
 
   return {
     bundleIds,
@@ -590,6 +627,12 @@ async function planCupMatchSwap(
  * Bytt én spiller i en generert, ikke-startet cup-match (#1473) — frafall inn,
  * reserve ut. Arrangøren slipper å slette og re-generere hele cupen fordi én
  * kompis meldte forfall kvelden før.
+ *
+ * Reserven hentes fra cupens kandidatliste (venner / klubbmedlemmer / alle for
+ * global admin), ikke fra deltakerlista: den som stiller opp på kort varsel
+ * rakk sjelden å melde seg på. Prisen er at «deltaker = profil fullført»-
+ * invarianten ikke holder her, så profil- og medlemskaps-vaktene bor i
+ * guard-tabellen (`matchSwapValidation.ts`) og mates fra reads under.
  *
  * Bunt, ikke enkelt-match: en splittet cup-dag (#1441 D3) lager én host-match
  * pluss avledede matcher (`source_game_id`). Arrangøren trykker på ETT kort,
@@ -617,7 +660,7 @@ export async function swapCupMatchPlayer(
   const inUserId = String(formData.get('in_user_id') ?? '').trim();
   if (!tournamentId || !gameId) return { error: 'not_found' };
   if (!outUserId) return { error: 'player_not_in_match' };
-  if (!inUserId) return { error: 'not_participant' };
+  if (!inUserId) return { error: 'not_candidate' };
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
@@ -625,10 +668,12 @@ export async function swapCupMatchPlayer(
 
   const admin = getAdminClient();
 
-  const plan = await planCupMatchSwap(admin, {
+  const plan = await planCupMatchSwap(admin, supabase, {
     tournamentId,
     gameId,
     groupId: base.groupId,
+    actorUserId: actor.userId,
+    actorIsAdmin: actor.isAdmin,
     outUserId,
     inUserId,
   });
