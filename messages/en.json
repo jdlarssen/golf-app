@@ -4728,13 +4728,14 @@
       "submitButton": "Swap",
       "submitPending": "Swapping …",
       "cancelButton": "Cancel",
-      "noReserves": "Everyone signed up is already in this match. Add more players first.",
+      "noReserves": "Everyone you could swap in is already in this match.",
       "errors": {
         "not_found": "Match not found.",
         "already_started": "The match has started. It is too late to swap.",
         "player_not_in_match": "That player is no longer in this match.",
         "already_in_match": "That player is already in the match.",
-        "not_participant": "That player is not signed up for the cup. Add them first.",
+        "not_candidate": "You cannot swap that player into this cup.",
+        "profile_incomplete": "That player has to finish their profile before they can be swapped in.",
         "not_member": "That player is no longer a member of the club.",
         "swap_failed": "Could not swap the player. Try again.",
         "unexpected": "Unexpected error: {code}"
