@@ -51,6 +51,14 @@ vi.mock('@/lib/notifications/notifyInvitedToGame', () => ({
   notifyInvitedToGame: (...args: unknown[]) => notifyInvitedMock(...(args as [])),
 }));
 
+// Boundary mock (same reason, and the same seam planActions.test.ts uses): the
+// swap's eligibility source. Which players it returns per role is its own
+// suite's business; here it only has to be the list the guard is fed.
+const candidateMock = vi.fn();
+vi.mock('./getCupCandidatePlayers', () => ({
+  getCupCandidatePlayers: (...args: unknown[]) => candidateMock(...args),
+}));
+
 function setUser(id: string) {
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { user: { id, email: `${id}@x.no` } },
@@ -59,6 +67,7 @@ function setUser(id: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  candidateMock.mockResolvedValue(CANDIDATES);
 });
 
 /** Valid standalone cup form; per-case overrides break one field. */
@@ -145,8 +154,9 @@ describe('createTournamentDraft — success still redirects (#1397)', () => {
  * skal skrives) er ren logikk og dekkes uttømmende av
  * `matchSwapValidation.test.ts`. Denne suiten dekker det som BARE finnes i
  * action-en: at riktig rader leses og skrives, at inn-raden får eksplisitte
- * kolonner (ikke arvet søl), at klubb-medlemskap mates inn i guarden, at et
- * halvskrevet bytte kompenseres, og at cron-sveipet ikke kan etterlate en
+ * kolonner (ikke arvet søl), at kandidatlista og klubb-medlemskapet mates inn
+ * i guarden med kallerens rolle, at profil-statusen leses fra users-raden, at
+ * et halvskrevet bytte kompenseres, og at cron-sveipet ikke kan etterlate en
  * spiller uten spillehandicap i en aktiv match.
  *
  * Admin-caller DB-sekvens (gaten kortslutter på is_admin):
@@ -175,12 +185,14 @@ const SPLIT_PLAYERS = [
   { game_id: 'g-derived', user_id: 'out' },
   { game_id: 'g-derived', user_id: 'opp1' },
 ];
-const PARTICIPANTS = [
-  { user_id: 'out' },
-  { user_id: 'mate' },
-  { user_id: 'opp1' },
-  { user_id: 'opp2' },
-  { user_id: 'reserve' },
+/**
+ * Kandidatlista (#1473, valg 1B): reserven hentes fra venner/klubbmedlemmer,
+ * ikke fra deltakerlista — «reserve» er derfor med her uten å være påmeldt.
+ */
+const CANDIDATES = [
+  { id: 'out', displayName: 'Ut', hcpIndex: 12 },
+  { id: 'mate', displayName: 'Makker', hcpIndex: 8 },
+  { id: 'reserve', displayName: 'Reserve', hcpIndex: 20 },
 ];
 
 /**
@@ -216,15 +228,21 @@ function swapForm(overrides: Record<string, string> = {}): FormData {
   return fd;
 }
 
-/** Lesningene fram til (og med) inn-spillerens profil, for en personlig cup. */
-function readsUpToProfile(overrides: { games?: unknown[] } = {}) {
+/** Lesningene fram til (og med) buntens roster, for en personlig cup. */
+function readsUpToRoster(overrides: { games?: unknown[]; profile?: unknown } = {}) {
   return [
     gateGroupIdNull, // 1. gaten
     { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
     { data: overrides.games ?? SPLIT_GAMES, error: null },
-    { data: PARTICIPANTS, error: null },
+    // users: inn-spillerens tee-kjønn + profil-status i én runde-tur.
+    {
+      data: overrides.profile ?? {
+        gender: 'ladies',
+        profile_completed_at: '2026-07-01T09:00:00.000Z',
+      },
+      error: null,
+    },
     { data: SPLIT_PLAYERS, error: null },
-    { data: { gender: 'ladies' }, error: null },
   ];
 }
 
@@ -237,7 +255,7 @@ function gamePlayerCalls(method: string) {
 describe('swapCupMatchPlayer — happy path (#1473)', () => {
   it('bytter spilleren i HELE bunten, med eksplisitte kolonner på inn-raden', async () => {
     adminMock = buildSupabaseMock([
-      ...readsUpToProfile(),
+      ...readsUpToRoster(),
       { data: [outRow('g-host')], error: null }, // delete host
       { data: null, error: null }, // insert host
       { data: [outRow('g-derived')], error: null }, // delete derived
@@ -302,6 +320,20 @@ describe('swapCupMatchPlayer — happy path (#1473)', () => {
       gameId: 'g-host',
       inviterUserId: 'admin-1',
     });
+
+    // #1473 (1B): 'reserve' er IKKE påmeldt cupen — byttet går fordi hun står i
+    // kandidatlista, og den slås opp med KALLERENS rolle (kandidatsettet er
+    // rollestyrt: venner / klubbmedlemmer / alle for global admin).
+    expect(candidateMock).toHaveBeenCalledTimes(1);
+    expect(candidateMock.mock.calls[0][1]).toMatchObject({
+      groupId: null,
+      userId: 'admin-1',
+      isAdmin: true,
+    });
+    // Deltakerlista er ikke lenger en kilde i denne flyten.
+    expect(
+      adminMock.__fromCalls.some((c) => c.table === 'tournament_participants'),
+    ).toBe(false);
   });
 });
 
@@ -322,13 +354,13 @@ describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it('klubb-cup: medlemskapet er trukket etter påmelding → not_member, ingen skriving', async () => {
+  it('klubb-cup: medlemskapet er trukket → not_member, ingen skriving', async () => {
     adminMock = buildSupabaseMock([
       { data: { group_id: 'club-1' }, error: null }, // gaten
       { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
       { data: SPLIT_GAMES, error: null },
-      { data: PARTICIPANTS, error: null },
       { data: [{ user_id: 'out' }, { user_id: 'mate' }], error: null }, // group_members: reserve er ute
+      { data: { gender: 'ladies', profile_completed_at: '2026-07-01T09:00:00.000Z' }, error: null },
       { data: SPLIT_PLAYERS, error: null },
     ]);
     supabaseMock = buildSupabaseMock([
@@ -341,13 +373,32 @@ describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
     expect(await swapCupMatchPlayer(swapForm())).toEqual({ error: 'not_member' });
     expect(gamePlayerCalls('delete')).toHaveLength(0);
     expect(redirectMock).not.toHaveBeenCalled();
+    // Klubb-cupens kandidatliste slås opp mot klubben, ikke mot vennelista.
+    expect(candidateMock.mock.calls[0][1]).toMatchObject({ groupId: 'club-1' });
+  });
+
+  it('reserven har ikke fullført profilen → profile_incomplete, ingen skriving', async () => {
+    // 1A hvilte på «deltaker = profil fullført ved påmelding». Kandidatlista er
+    // bredere, så profil-statusen leses fra users-raden og mates inn i guarden.
+    adminMock = buildSupabaseMock([
+      ...readsUpToRoster({ profile: { gender: 'ladies', profile_completed_at: null } }),
+    ]);
+    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    setUser('admin-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    expect(await swapCupMatchPlayer(swapForm())).toEqual({
+      error: 'profile_incomplete',
+    });
+    expect(gamePlayerCalls('delete')).toHaveLength(0);
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });
 
 describe('swapCupMatchPlayer — atomic-or-compensated (#1473)', () => {
   it('inn-inserten feiler midt i bunten: ut-radene re-inserters ordrett, inn-radene ryddes', async () => {
     adminMock = buildSupabaseMock([
-      ...readsUpToProfile(),
+      ...readsUpToRoster(),
       { data: [outRow('g-host')], error: null }, // delete host
       { data: null, error: null }, // insert host — ok
       { data: [outRow('g-derived')], error: null }, // delete derived
@@ -376,7 +427,7 @@ describe('swapCupMatchPlayer — atomic-or-compensated (#1473)', () => {
 
   it('cron-sveipet startet bunten under skrivingen: rulles tilbake, already_started', async () => {
     adminMock = buildSupabaseMock([
-      ...readsUpToProfile(),
+      ...readsUpToRoster(),
       { data: [outRow('g-host')], error: null },
       { data: null, error: null },
       { data: [outRow('g-derived')], error: null },

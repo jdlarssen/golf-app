@@ -25,7 +25,8 @@ function input(overrides: Partial<SwapValidationInput> = {}): SwapValidationInpu
     bundle: SPLIT_BUNDLE,
     outUserId: 'a1',
     inUserId: 'r1',
-    participantIds: ['a1', 'a2', 'b1', 'b2', 'r1'],
+    candidateIds: ['a1', 'a2', 'b1', 'b2', 'r1'],
+    inProfileCompleted: true,
     clubMemberIds: null,
     ...overrides,
   };
@@ -101,9 +102,14 @@ describe('validateMatchSwap — guard-tabellen', () => {
       { ok: false, error: 'already_in_match' },
     ],
     [
-      'inn-spilleren er ikke påmeldt cupen',
-      { participantIds: ['a1', 'a2', 'b1', 'b2'] },
-      { ok: false, error: 'not_participant' },
+      'reserven er ikke kandidat for cupen (ikke venn / ikke klubbmedlem)',
+      { candidateIds: ['a1', 'a2', 'b1', 'b2'] },
+      { ok: false, error: 'not_candidate' },
+    ],
+    [
+      'reserven er kandidat uten å være påmeldt cupen fra før',
+      { candidateIds: ['a1', 'r1'] },
+      { ok: true, gameIds: ['host', 'derived'] },
     ],
     [
       'klubb-cup: inn-spilleren er medlem',
@@ -111,21 +117,32 @@ describe('validateMatchSwap — guard-tabellen', () => {
       { ok: true, gameIds: ['host', 'derived'] },
     ],
     [
-      'klubb-cup: medlemskapet er trukket etter påmelding',
+      'klubb-cup: medlemskapet er trukket',
       { clubMemberIds: ['a1', 'a2', 'b1', 'b2'] },
       { ok: false, error: 'not_member' },
     ],
     [
-      'ikke påmeldt slår ut før medlemskap',
-      { participantIds: ['a1'], clubMemberIds: [] },
-      { ok: false, error: 'not_participant' },
+      'reserven har ikke fullført profilen',
+      { inProfileCompleted: false },
+      { ok: false, error: 'profile_incomplete' },
+    ],
+    [
+      'ikke kandidat slår ut før medlemskap',
+      { candidateIds: ['a1'], clubMemberIds: [] },
+      { ok: false, error: 'not_candidate' },
+    ],
+    [
+      'medlemskap slår ut før profil',
+      { clubMemberIds: [], inProfileCompleted: false },
+      { ok: false, error: 'not_member' },
     ],
     [
       'startet bunt slår ut før alt annet',
       {
         bundle: [{ gameId: 'host', status: 'active', playerIds: [] }],
         outUserId: 'ukjent',
-        participantIds: [],
+        candidateIds: [],
+        inProfileCompleted: false,
       },
       { ok: false, error: 'already_started' },
     ],
