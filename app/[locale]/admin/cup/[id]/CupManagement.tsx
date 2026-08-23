@@ -12,7 +12,9 @@ import { Card } from '@/components/ui/Card';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { getRoleContext } from '@/lib/admin/auth';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
+import { getCupCandidatePlayers } from '@/lib/cup/getCupCandidatePlayers';
 import { matchBlocksOneTapFinish } from '@/lib/cup/matchSubmissionStatus';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
@@ -127,41 +129,34 @@ async function fetchCupDoorData(tournamentId: string): Promise<CupDoorData> {
 }
 
 /**
- * Alle påmeldte i cupen, klare som valg i «Bytt spiller» (#1473).
+ * Reservene arrangøren kan bytte inn i en ikke-startet match (#1473).
  *
- * Leses med admin-klienten, ikke request-klienten: `users`-radene til ANDRE
- * spillere er ikke synlige for en arrangør som ikke er global admin, så en
- * request-scoped lesing ville stille droppet navnene (#1540/#366-fella).
- * Flaten er allerede gatet av `requireAdminOrClubAdminOfCup` i ruta.
+ * Kilden er cupens KANDIDATLISTE, ikke deltakerlista: den som stiller opp
+ * kvelden før rakk sjelden å melde seg på. Samme helper — og dermed samme
+ * rolle-semantikk — som Spillere-rommet og generer-veiviseren bruker:
+ * klubb-cup → klubbens medlemmer, personlig cup → arrangørens venner (alle
+ * profil-fullførte for en global admin).
  *
- * To kall framfor én FK-join: join-syntaksen krever constraint-navnet, og
- * to enkle spørringer på en liste av denne størrelsen koster ingenting.
+ * Pending kandidater (venn uten fullført profil) filtreres bort her, akkurat
+ * som de er ikke-valgbare i veiviseren. Serveren avviser dem uansett
+ * (`profile_incomplete`) — lista er UX, guarden er håndhevelsen.
  */
-async function fetchCupParticipantOptions(
-  tournamentId: string,
+async function fetchCupSwapCandidateOptions(
+  groupId: string | null,
   unknownLabel: string,
 ): Promise<SwapPlayerOption[]> {
-  const admin = getAdminClient();
-  const { data: rows } = await admin
-    .from('tournament_participants')
-    .select('user_id')
-    .eq('tournament_id', tournamentId);
-  const userIds = (rows ?? []).map((r) => r.user_id as string);
-  if (userIds.length === 0) return [];
+  const supabase = await getServerClient();
+  const { userId, isAdmin } = await getRoleContext(supabase);
+  const candidates = await getCupCandidatePlayers(supabase, {
+    groupId,
+    userId,
+    isAdmin,
+    unknownLabel,
+  });
 
-  const { data: users } = await admin
-    .from('users')
-    .select('id, name, nickname')
-    .in('id', userIds);
-
-  return (users ?? [])
-    .map((u) => ({
-      userId: u.id as string,
-      label:
-        (u.nickname as string | null)?.trim() ||
-        (u.name as string | null)?.trim() ||
-        unknownLabel,
-    }))
+  return candidates
+    .filter((c) => !c.pending)
+    .map((c) => ({ userId: c.id, label: c.displayName }))
     .sort((a, b) => a.label.localeCompare(b.label, 'no'));
 }
 
@@ -339,12 +334,12 @@ export async function CupManagement({
       : `/admin/cup/${tournamentId}/${room}`;
 
   // #1473: «Bytt spiller» finnes kun på matcher som ennå ikke er startet, så
-  // deltakerlista hentes bare når det faktisk står en slik match på lista.
+  // kandidatlista hentes bare når det faktisk står en slik match på lista.
   const hasScheduledMatch = leaderboard.matches.some(
     (m) => m.status === 'scheduled',
   );
   const swapCandidates = hasScheduledMatch
-    ? await fetchCupParticipantOptions(tournamentId, unknownLabel)
+    ? await fetchCupSwapCandidateOptions(groupId, unknownLabel)
     : [];
 
   // Navn på alle som allerede står i en match — rosteret dekker dem, også

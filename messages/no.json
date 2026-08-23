@@ -4728,13 +4728,14 @@
       "submitButton": "Bytt",
       "submitPending": "Bytter …",
       "cancelButton": "Avbryt",
-      "noReserves": "Alle påmeldte spiller allerede i denne kampen. Meld på flere spillere først.",
+      "noReserves": "Alle du kan bytte inn står allerede i kampen.",
       "errors": {
         "not_found": "Fant ikke kampen.",
         "already_started": "Kampen er i gang. Nå er det for sent å bytte.",
         "player_not_in_match": "Spilleren står ikke i denne kampen lenger.",
         "already_in_match": "Den spilleren er allerede med i kampen.",
-        "not_participant": "Spilleren er ikke påmeldt cupen. Meld hen på først.",
+        "not_candidate": "Den spilleren kan du ikke bytte inn i denne cupen.",
+        "profile_incomplete": "Spilleren må fylle ut profilen sin før hen kan settes inn.",
         "not_member": "Spilleren er ikke medlem av klubben lenger.",
         "swap_failed": "Klarte ikke å bytte spilleren. Prøv igjen.",
         "unexpected": "Uventet feil: {code}"
