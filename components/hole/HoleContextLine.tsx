@@ -11,7 +11,7 @@ export interface HoleContextLineProps {
   testId: string;
   /**
    * Tonet variant for «aktiv» modus-kontekst (Round Robin / Wolf / Skins) —
-   * champagne-tonet tekst (`--accent-deep`) + sterkere vekt. Florida
+   * champagne-tonet tekst (`--accent-text`) + sterkere vekt. Florida
    * step-aside-påminnelsen er en stille regel-note og bruker default (muted).
    * Default false.
    */
@@ -36,7 +36,7 @@ export function HoleContextLine({
     fontSize: 11.5,
     fontWeight: accent ? 600 : 400,
     lineHeight: 1.3,
-    color: accent ? 'var(--accent-deep)' : 'var(--text-muted)',
+    color: accent ? 'var(--accent-text)' : 'var(--text-muted)',
     textAlign: 'center',
   };
   return (

@@ -49,7 +49,7 @@ export function CupAwards({
         <div className="rounded-2xl p-5 text-center" style={GOLD_CARD_STYLE} data-testid="cup-award-mvp">
           <p
             className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em]"
-            style={{ color: 'var(--accent)' }}
+            style={{ color: 'var(--accent-text)' }}
           >
             {t('results.mvpLabel')}
           </p>

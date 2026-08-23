@@ -7,7 +7,7 @@ export function BrassRibbon({ kicker }: { kicker: string }) {
   return (
     <div className="flex items-center gap-2.5 px-[18px] pt-1 pb-3.5">
       <Hairlines />
-      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-accent whitespace-nowrap">
+      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text whitespace-nowrap">
         {kicker}
       </span>
       <Hairlines />

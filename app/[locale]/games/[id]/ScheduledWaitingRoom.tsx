@@ -181,7 +181,7 @@ export function ScheduledWaitingRoom({
                           {opt.memberCount}/{MAX_FLIGHT_SIZE}
                         </span>
                         {isMine && (
-                          <p className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent">
+                          <p className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent-text">
                             {t('flightYours')}
                           </p>
                         )}

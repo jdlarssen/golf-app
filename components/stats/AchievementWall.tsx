@@ -63,7 +63,7 @@ export function AchievementWall({ achievements, heading, subtitle, labels }: Pro
                 </span>
                 <span
                   className={`mt-1 block font-serif text-xl font-medium tabular-nums leading-none ${
-                    earned ? 'text-accent' : 'text-muted'
+                    earned ? 'text-accent-text' : 'text-muted'
                   }`}
                 >
                   {count}

@@ -182,7 +182,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
                     >
                       <td
                         className={`py-2 font-serif text-[17px] ${
-                          isLeader ? 'text-accent' : 'text-text'
+                          isLeader ? 'text-accent-text' : 'text-text'
                         }`}
                       >
                         {isLeader && (
@@ -194,7 +194,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
                       </td>
                       <td
                         className={`py-2 text-right font-serif text-[17px] tabular-nums ${
-                          isLeader ? 'text-accent' : 'text-text'
+                          isLeader ? 'text-accent-text' : 'text-text'
                         }`}
                       >
                         {row.points}
@@ -298,7 +298,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           <h2 className="font-serif text-[26px] font-medium leading-tight tracking-[-0.015em] text-text">
             {t('endCta.headingPre')}
             {goldHeadingGold && (
-              <span data-testid="end-cta-gold" className="text-accent">
+              <span data-testid="end-cta-gold" className="text-accent-text">
                 {goldHeadingGold}
               </span>
             )}

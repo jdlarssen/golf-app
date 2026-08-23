@@ -133,7 +133,7 @@ export function State4View({
   ];
 
   return (
-    <LeaderboardShell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && (
         <Header gameName={gameName} onReplay={onReplay} backHref={backHref} t={tc} />
       )}

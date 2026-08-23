@@ -318,7 +318,7 @@ function StatusChipMini({ status }: { status: Status }) {
   const t = useTranslations('signup');
   const tone = STATUS_TONES[status];
   const palette: Record<typeof tone, string> = {
-    success: 'bg-primary-soft text-success border-success/40',
+    success: 'bg-primary-soft text-success-text border-success/40',
     error: 'bg-danger/[0.10] text-danger border-danger/30',
     info: 'bg-accent/[0.10] text-text border-accent/40',
     warning: 'bg-warning/[0.10] text-warning-text border-warning/40',

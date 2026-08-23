@@ -54,7 +54,16 @@
   --chip-team-fg: #845239;
   --chip-team-border: #e3d1c4;
   --bg-tint: #f0ede5;      /* body color on forest bg (primary/leader cards) */
-  --success: #4a7c59;      /* sage */
+  --success: #4a7c59;      /* sage — DEKOR: kanter, pill-fyll, ikoner */
+  /* Meningsbærende suksess-TEKST på lyse flater (#1686), tredje verset av
+   * --accent-text (#1374) og --warning-text (#1388). --success som tekst måler
+   * 4,15:1 mot --primary-soft (success-bannerets eget fyll), 4,16:1 mot
+   * --surface-2 og 4,4997:1 mot --bg — under WCAG AA på tre av fire flater.
+   * Denne tonen er bit-identisk med --score-under-fg (samme grønn-familie,
+   * allerede låst) og klarerer med margin: 7,34:1 mot --bg, 7,93:1 mot
+   * --surface, 6,78:1 mot --surface-2 og --primary-soft, 7,02:1 mot
+   * --admin-bg. Kanter og bakgrunner beholder --success. */
+  --success-text: #2f5a3c;
   --danger: #b8463e;       /* muted brick */
   --warning: #d89b3a;      /* amber — DEKOR: kanter, pill-fyll, ikoner */
   /* Meningsbærende advarsels-TEKST på lyse flater (#1388), samme grep som
@@ -183,6 +192,9 @@
     --chip-team-border: rgba(205, 135, 95, 0.34);
     --bg-tint: #ece5d2;      /* body color on forest cards in dark mode */
     --success: #7daa8a;
+    /* Mørk modus har alt en løftet sage som holder 6,38:1 mot --bg — tekst og
+     * dekor kan dele tone her (#1686), samme grep som --warning-text. */
+    --success-text: #7daa8a;
     --danger: #d67268;
     --warning: #e5b26f;
     /* Mørk modus har alt en løftet amber som holder 8,73:1 mot --bg — tekst og
@@ -282,6 +294,7 @@
   --chip-team-border: rgba(205, 135, 95, 0.34);
   --bg-tint: #ece5d2;
   --success: #7daa8a;
+  --success-text: #7daa8a; /* se media-blokken over */
   --danger: #d67268;
   --warning: #e5b26f;
   --warning-text: #e5b26f; /* se media-blokken over */
@@ -344,6 +357,7 @@
   --color-accent-text: var(--accent-text);
   --color-bg-tint: var(--bg-tint);
   --color-success: var(--success);
+  --color-success-text: var(--success-text);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-warning-text: var(--warning-text);

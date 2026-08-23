@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { isProfileIncomplete } from '@/lib/auth/profileGate';
@@ -31,7 +32,7 @@ import type {
 } from '@/lib/scoring/modes/types';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
 import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
-import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
+import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import {
   firstHoleForSegment,
   holeNumbersForSegment,
@@ -181,15 +182,6 @@ export default async function HolePage({ params }: { params: Params }) {
       })
     : null;
 
-  // Strip data: the sibling's own segment holes, rendered on every hole so the
-  // full 1–18 union shows across the two hosts. Null → today's 9-hole strip.
-  const holeStripSibling = siblingMatch
-    ? {
-        gameId: siblingMatch.gameId,
-        holes: holeNumbersForSegment(siblingMatch.holeSegment),
-      }
-    : null;
-
   // #1466 §2: broModus = front9 host + sibling exists + my back9 row is still
   // undelivered. When true the front9 bottom CTA becomes the bridge to hole 10
   // instead of a deliver-CTA (one delivery for the whole round happens on the
@@ -314,6 +306,7 @@ export default async function HolePage({ params }: { params: Params }) {
     bbbHolesData,
     patsomeTeeStarterRes,
     greenPinsRes,
+    siblingTeamRes,
   ] = await Promise.all([
       supabase
         .from('course_holes')
@@ -413,6 +406,23 @@ export default async function HolePage({ params }: { params: Params }) {
             .eq('hole_number', holeNumber)
             .returns<{ lat: number; lng: number; created_at: string }[]>()
         : Promise.resolve({ data: null, error: null }),
+      // #1578: who holds the shared scores rows on the SIBLING half, so the
+      // strip can mark that half's holes ført/mangler instead of guessing from
+      // position. Admin client on purpose (same as findSegmentSibling): in a
+      // team-collapsed sibling mode a non-captain reads 0 captain rows through
+      // RLS, and 0 rows comes back as `error == null` — the strip would silently
+      // claim the whole half was skipped. Membership on the sibling is already
+      // proven: findSegmentSibling only ever returns a half where I have an
+      // active game_players row. Rides along in round 2 (only the scores read
+      // below has to wait for the answer).
+      siblingMatch && siblingMatch.myTeamNumber != null
+        ? getAdminClient()
+            .from('game_players')
+            .select('user_id, withdrawn_at')
+            .eq('game_id', siblingMatch.gameId)
+            .eq('team_number', siblingMatch.myTeamNumber)
+            .returns<{ user_id: string; withdrawn_at: string | null }[]>()
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
   const { data: hole, error: holeError } = holeRes;
@@ -455,18 +465,77 @@ export default async function HolePage({ params }: { params: Params }) {
   // er tastet på enheten.
   // #1577: per-hull-eier siler bort raden som ikke gjelder — er jeg kaptein
   // (eller er modusen ikke kollapset) er dette nøyaktig dagens `user_id`-filter.
-  const myScoredHoles = (myScoredHolesRes.data ?? [])
-    .filter(
-      (r) =>
-        r.user_id ===
-        scoreOwnerForHole(
-          game.game_mode,
-          r.hole_number,
+  const myScoredHoles = scoredHoleNumbers(
+    (myScoredHolesRes.data ?? []).map((r) => ({
+      holeNumber: r.hole_number,
+      userId: r.user_id,
+    })),
+    game.game_mode,
+    userId,
+    myTeamScoreOwnerId,
+  );
+
+  // #1578: the same question, asked about the OTHER half of a split cup day.
+  // Both reads are fail-soft on purpose — the strip is secondary UI, and a
+  // half we couldn't read must fall back to the positional derivation rather
+  // than take down the hole page (or, worse, accuse the player of skipping
+  // holes they actually entered). `null` all the way through means «no data».
+  let siblingTeamOwnerId: string | null = null;
+  let siblingScoredHoles: number[] | null = null;
+  if (siblingMatch) {
+    if (siblingTeamRes.error) {
+      console.error('[holes] sibling team fetch failed — strip stays positional', {
+        gameId: siblingMatch.gameId,
+        error: siblingTeamRes.error,
+      });
+    } else {
+      siblingTeamOwnerId = siblingTeamRes.data
+        ? teamScoreOwnerId(siblingTeamRes.data)
+        : null;
+      // Admin client for the same reason as the roster read above: the shared
+      // row lives under the captain's id, which RLS does not hand a non-captain
+      // on the other host.
+      const siblingScoresRes = await getAdminClient()
+        .from('scores')
+        .select('hole_number, user_id')
+        .eq('game_id', siblingMatch.gameId)
+        .in(
+          'user_id',
+          scoreOwnerUserIds(siblingMatch.gameMode, userId, siblingTeamOwnerId),
+        )
+        .not('strokes', 'is', null)
+        .returns<{ hole_number: number; user_id: string }[]>();
+      if (siblingScoresRes.error) {
+        console.error('[holes] sibling scores fetch failed — strip stays positional', {
+          gameId: siblingMatch.gameId,
+          error: siblingScoresRes.error,
+        });
+      } else {
+        siblingScoredHoles = scoredHoleNumbers(
+          (siblingScoresRes.data ?? []).map((r) => ({
+            holeNumber: r.hole_number,
+            userId: r.user_id,
+          })),
+          siblingMatch.gameMode,
           userId,
-          myTeamScoreOwnerId,
-        ),
-    )
-    .map((r) => r.hole_number);
+          siblingTeamOwnerId,
+        );
+      }
+    }
+  }
+
+  // Strip data: the sibling's own segment holes plus everything needed to read
+  // them score-aware, rendered on every hole so the full 1–18 union shows
+  // across the two hosts. Null → today's 9-hole strip.
+  const holeStripSibling = siblingMatch
+    ? {
+        gameId: siblingMatch.gameId,
+        holes: holeNumbersForSegment(siblingMatch.holeSegment),
+        gameMode: siblingMatch.gameMode,
+        teamOwnerId: siblingTeamOwnerId,
+        scoredHoles: siblingScoredHoles,
+      }
+    : null;
 
   // Stableford totals — komputeres server-side når modus krever det.
   // myStablefordTotal: summen over alle ferdig-tastede hull (brukerens egen

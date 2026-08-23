@@ -11,8 +11,8 @@ export interface HoleStripProps {
    * #1352: hull-numrene spilleren FAKTISK har en score på (server-snapshot ∪
    * usynkede Dexie-rader). Uten dette settet leste stripa «ferdig» rent
    * posisjonelt, så et hoppet-over hull så identisk ut med et tastet — «hva
-   * mangler?» kunne ikke besvares før submit-siden. Gjelder KUN egne hull;
-   * søsken-celler (se `sibling`) har vi ingen score-data for.
+   * mangler?» kunne ikke besvares før submit-siden. Gjelder egne hull;
+   * søsterspillets hull har sitt eget sett på `sibling.scoredHoles` (#1578).
    */
   scoredHoles: ReadonlySet<number>;
   /**
@@ -30,8 +30,18 @@ export interface HoleStripProps {
    * et helt vanlig scorekort». Egne hull lenker til dette spillet; søsken-hull
    * lenker til `/games/<sibling.gameId>/holes/<n>`. Uten (vanlige spill,
    * 'full'-segment, trukket fra én halvdel) vises kun `holes` — uendret.
+   *
+   * #1578: `scoredHoles` er søsterspillets egne førte hull (server-snapshot ∪
+   * usynkede Dexie-rader, samme form som settet over). Med det leses søsken-
+   * cellene med nøyaktig samme regler som egne. `null` = vi fikk ikke tak i
+   * dataene; da beholder de den posisjonelle avledningen, for en falsk
+   * «mangler»-anklage er verre enn ingen info.
    */
-  sibling?: { gameId: string; holes: number[] } | null;
+  sibling?: {
+    gameId: string;
+    holes: number[];
+    scoredHoles: ReadonlySet<number> | null;
+  } | null;
 }
 
 const DEFAULT_HOLES = Array.from({ length: 18 }, (_, i) => i + 1);
@@ -62,7 +72,10 @@ const hitAreaStyle: CSSProperties = {
 export type HoleCellState = 'current' | 'scored' | 'missed' | 'future';
 
 /**
- * #1352: tilstanden til én celle for et av spillerens EGNE hull.
+ * #1352: tilstanden til én celle, gitt hvilke hull som faktisk er ført. Kalles
+ * med spillerens eget sett for egne hull og med søsterspillets sett for
+ * søsken-hull (#1578) — begge halvdelene av en splittet cup-dag leses av
+ * samme regel.
  *
  * Rekkefølgen er bevisst: `current` vinner alltid (du står der — stripa skal
  * ikke rope «mangler» om hullet du taster nå), deretter `scored` uansett
@@ -164,23 +177,31 @@ export function HoleStrip(props: HoleStripProps): JSX.Element {
     <div style={containerStyle}>
       <div style={innerStyle}>
         {cells.map((n) => {
-          // Søsken-hull ligger i et ANNET spill — vi har ingen score-data for
-          // dem her, så de beholder den posisjonelle avledningen og vises
-          // aldri som «mangler» (en falsk anklage er verre enn ingen info).
           const isOwn = ownHoles.has(n);
+          // #1578: søsken-hull ligger i et ANNET spill, men vi henter nå dets
+          // førte hull sammen med resten av sibling-oppslaget. Har vi settet,
+          // avgjøres cellen av `holeCellState` akkurat som egne hull — én
+          // semantikk i hele stripa. `current`-grenen er død her: segmentene er
+          // disjunkte, så `currentHole` er aldri et søsken-hull. Uten settet
+          // (fetch feilet) faller vi tilbake til den posisjonelle avledningen,
+          // som aldri roper «mangler» — en falsk anklage er verre enn ingen info.
+          const siblingScoredHoles = isOwn ? null : (sibling?.scoredHoles ?? null);
+          const isScoreAware = isOwn || siblingScoredHoles != null;
           const state: HoleCellState = isOwn
             ? holeCellState(n, currentHole, scoredHoles)
-            : n < currentHole
-              ? 'scored'
-              : 'future';
+            : siblingScoredHoles
+              ? holeCellState(n, currentHole, siblingScoredHoles)
+              : n < currentHole
+                ? 'scored'
+                : 'future';
           const href =
             isOwn || !sibling
               ? `/games/${gameId}/holes/${n}`
               : `/games/${sibling.gameId}/holes/${n}`;
           const ariaKey =
-            isOwn && state === 'scored'
+            isScoreAware && state === 'scored'
               ? 'hullAriaLabelDone'
-              : isOwn && state === 'missed'
+              : isScoreAware && state === 'missed'
                 ? 'hullAriaLabelMissing'
                 : 'hullAriaLabel';
           const isCurrent = state === 'current';

@@ -27,7 +27,7 @@ const REJECTION_REASON_MAX = 200;
 
 const STATUS_TONE: Record<RequestRow['status'], string> = {
   pending: 'border-warning/40 bg-warning/10 text-warning-text',
-  approved: 'border-success/40 bg-success/10 text-success',
+  approved: 'border-success/40 bg-success/10 text-success-text',
   rejected: 'border-danger/40 bg-danger/10 text-danger',
   withdrawn: 'border-border bg-surface text-muted',
 };
@@ -199,7 +199,7 @@ export function PåmeldingerClient({ gameId, requests, tab, locked, gameMode, ap
                       {row.displayName}
                     </p>
                     {row.isTeamCaptain && (
-                      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-[2px] font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
+                      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-[2px] font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-text">
                         {t('captainBadge')}
                       </span>
                     )}

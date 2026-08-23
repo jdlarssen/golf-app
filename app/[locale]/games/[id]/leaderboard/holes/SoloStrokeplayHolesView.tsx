@@ -183,7 +183,7 @@ function TotalsHeader({
                   </span>
                   <span
                     className={`score-num text-[20px] leading-none ${
-                      isLeader ? 'text-accent' : 'text-text'
+                      isLeader ? 'text-accent-text' : 'text-text'
                     }`}
                   >
                     {line.totalNetStrokes}
@@ -286,7 +286,7 @@ function SubtotalStrip({
             key={id}
             className={`inline-flex items-baseline gap-1.5 rounded-full px-2.5 py-1 text-[12px] ${
               isLeader
-                ? 'border border-accent/40 bg-accent/[0.06] text-accent'
+                ? 'border border-accent/40 bg-accent/[0.06] text-accent-text'
                 : 'border border-border bg-surface text-muted'
             }`}
           >
@@ -393,7 +393,7 @@ function HoleCard({
                   </ScoreShape>
                   <span
                     className={`score-num text-[18px] leading-none ${
-                      isBest ? 'text-accent' : 'text-text'
+                      isBest ? 'text-accent-text' : 'text-text'
                     }`}
                   >
                     {cell.net ?? '–'}

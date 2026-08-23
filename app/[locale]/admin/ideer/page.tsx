@@ -78,7 +78,7 @@ export default async function AdminIdeerPage() {
                       </p>
 
                       {built ? (
-                        <span className="inline-flex items-center rounded-full border border-success/40 bg-primary-soft px-2.5 py-0.5 font-sans text-[11px] font-medium text-success">
+                        <span className="inline-flex items-center rounded-full border border-success/40 bg-primary-soft px-2.5 py-0.5 font-sans text-[11px] font-medium text-success-text">
                           {t('statusBuilt')}
                           {builtDate ? ` · ${builtDate}` : ''}
                         </span>

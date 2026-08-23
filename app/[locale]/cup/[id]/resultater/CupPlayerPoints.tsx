@@ -70,7 +70,7 @@ export function CupPlayerPoints({
                     {isMe && (
                       <span
                         className="ml-2 align-middle text-[11px] font-medium"
-                        style={{ color: 'var(--accent)' }}
+                        style={{ color: 'var(--accent-text)' }}
                       >
                         {t('results.yourPoints')}
                       </span>

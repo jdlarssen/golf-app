@@ -95,6 +95,17 @@ export function contrast(foreground: string, surface: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/**
+ * Fyllet en flate får når `color` legges over med `alpha` (bg-warning/[0.18],
+ * bg-success/10 o.l.), slik nettleseren komponerer det.
+ */
+export function tintOver(surface: string, color: string, alpha: number): string {
+  const fg = parseColor(color);
+  const { r, g, b } = composite({ ...fg, a: alpha }, parseColor(surface));
+  const hex = (v: number) => Math.round(v).toString(16).padStart(2, '0');
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
+}
+
 /** Brace-dybden på posisjon `at`: 0 = toppnivå, 1 = inne i én regelblokk. */
 export function depthAt(at: number): number {
   let depth = 0;

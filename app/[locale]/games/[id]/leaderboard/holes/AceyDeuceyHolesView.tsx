@@ -206,7 +206,7 @@ function HoleCard({
                     <span
                       className={`text-[12px] font-semibold ${
                         isAce
-                          ? 'text-accent'
+                          ? 'text-accent-text'
                           : isDeuce
                             ? 'text-muted'
                             : 'text-muted/40'
@@ -222,7 +222,7 @@ function HoleCard({
                   )}
                   <span
                     className={`score-num text-[18px] leading-none ${
-                      isAce ? 'text-accent' : isDeuce ? 'text-muted' : 'text-text'
+                      isAce ? 'text-accent-text' : isDeuce ? 'text-muted' : 'text-text'
                     }`}
                   >
                     {cell.effectiveScore ?? '–'}

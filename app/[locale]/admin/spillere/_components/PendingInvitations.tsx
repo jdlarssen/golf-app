@@ -168,7 +168,7 @@ function PendingRow({
         </p>
         <p className="mt-0.5 font-sans text-[11px] text-muted">
           {openedAtLabel ? (
-            <span style={{ color: 'var(--success)' }}>
+            <span style={{ color: 'var(--success-text)' }}>
               {openedAtLabel}
             </span>
           ) : (

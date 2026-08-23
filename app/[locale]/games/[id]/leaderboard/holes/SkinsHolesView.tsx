@@ -138,7 +138,7 @@ export function SkinsHolesView({
 function outcomeClass(outcome: SkinsHoleRow['outcome']): string {
   switch (outcome) {
     case 'won':
-      return 'text-accent';
+      return 'text-accent-text';
     case 'carryover':
       return 'text-muted';
     default:
@@ -176,7 +176,7 @@ function HoleCard({
           </div>
           <span
             className={`text-[10.5px] tabular-nums font-medium ${
-              hole.atStake > 1 ? 'text-accent' : 'text-muted'
+              hole.atStake > 1 ? 'text-accent-text' : 'text-muted'
             }`}
           >
             {atStakeLabel}
@@ -232,7 +232,7 @@ function HoleCard({
                   )}
                   <span
                     className={`score-num text-[18px] leading-none ${
-                      isSkinWinner ? 'text-accent' : 'text-text'
+                      isSkinWinner ? 'text-accent-text' : 'text-text'
                     }`}
                   >
                     {cell.effectiveScore ?? '–'}
