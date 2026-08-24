@@ -94,6 +94,33 @@ describe('notificationDestination', () => {
     ).toBe(`/klubber/${GROUP}`);
   });
 
+  it('#1490: cup_signup lands in the Spillere room, in the chrome the cup belongs to', () => {
+    // Skaperen skal se lista der den faktisk redigeres. Personlig cup → admin-
+    // rommet; klubb-cup → klubb-chromen (samme rom, annen ramme).
+    expect(
+      notificationDestination(
+        n('cup_signup', {
+          tournament_id: TOURNAMENT,
+          tournament_name: 'C',
+          group_id: null,
+          participant_name: 'Per',
+          action: 'joined',
+        }),
+      ),
+    ).toBe(`/admin/cup/${TOURNAMENT}/spillere`);
+    expect(
+      notificationDestination(
+        n('cup_signup', {
+          tournament_id: TOURNAMENT,
+          tournament_name: 'C',
+          group_id: GROUP,
+          participant_name: 'Per',
+          action: 'left',
+        }),
+      ),
+    ).toBe(`/klubber/${GROUP}/cup/${TOURNAMENT}/spillere`);
+  });
+
   it('maps achievement_unlocked to the personal stats hub (badge wall, #947)', () => {
     expect(
       notificationDestination(

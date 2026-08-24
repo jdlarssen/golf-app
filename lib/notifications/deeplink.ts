@@ -94,6 +94,17 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       const p = n.payload as NotificationPayload<'cup_started'>;
       return `/cup/${p.tournament_id}`;
     }
+    case 'cup_signup': {
+      // #1490: skaperen skal rett inn i Spillere-rommet der lista faktisk
+      // står — det er der hun ser den nye deltakeren og kan fjerne igjen.
+      // Klubb-cup holder seg i klubb-chromen, personlig cup går til admin-
+      // rommet (som cupens skaper har tilgang til, jf.
+      // `requireAdminOrTournamentCreator`).
+      const p = n.payload as NotificationPayload<'cup_signup'>;
+      return p.group_id
+        ? `/klubber/${p.group_id}/cup/${p.tournament_id}/spillere`
+        : `/admin/cup/${p.tournament_id}/spillere`;
+    }
     case 'club_join_request': {
       const p = n.payload as NotificationPayload<'club_join_request'>;
       return `/klubber/${p.group_id}`;
