@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { AppShell } from '@/components/ui/AppShell';
@@ -9,22 +8,16 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
-import { SubmitButton } from '@/components/ui/SubmitButton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { getRoleContext } from '@/lib/admin/auth';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
-import { getCupCandidatePlayers } from '@/lib/cup/getCupCandidatePlayers';
 import { matchBlocksOneTapFinish } from '@/lib/cup/matchSubmissionStatus';
 import { formatPoints } from '@/lib/cup/formatPoints';
-import { startTournament, finishTournament } from '@/lib/cup/actions';
 import { unregisteredSideAwards } from '@/lib/cup/sideAwardsRegistered';
-import {
-  cupMatchStatusKey,
-  CUP_MATCH_STATUS_MESSAGE_KEY,
-} from '@/lib/cup/cupMatchStatusLabel';
 import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
-import { SwapMatchPlayer, type SwapPlayerOption } from './SwapMatchPlayer';
+import { CupMatchList } from './CupMatchList';
+import { CupActionsSection } from './CupActionsSection';
+import { CupDoorsSection } from './CupDoorsSection';
 
 export type CupManagementVariant = 'admin' | 'club';
 
@@ -82,125 +75,6 @@ function cupMatchesSummary(
     finished: leaderboard.finishedMatches,
     total: leaderboard.matches.length,
   });
-}
-
-type CupDoorData = {
-  courseName: string | null;
-  teeName: string | null;
-  participantCount: number;
-};
-
-/**
- * Dør-status-data (#1472): bane/tee-navn fra lagret plan + antall påmeldte.
- * Kun kalt mens cupen er `draft` (dørene vises bare da). Trukket ut av
- * `CupManagement` for å holde komponentens cyclomatic complexity nede — leser
- * fra request-klienten (SELECT-policy tillater authenticated, 0154-mønsteret).
- */
-async function fetchCupDoorData(tournamentId: string): Promise<CupDoorData> {
-  const supabase = await getServerClient();
-  const [{ data: plan }, participantsResult] = await Promise.all([
-    supabase
-      .from('tournament_plans')
-      .select('course_id, tee_box_id')
-      .eq('tournament_id', tournamentId)
-      .maybeSingle(),
-    supabase
-      .from('tournament_participants')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('tournament_id', tournamentId),
-  ]);
-
-  let courseName: string | null = null;
-  let teeName: string | null = null;
-  if (plan?.course_id && plan?.tee_box_id) {
-    const [{ data: course }, { data: tee }] = await Promise.all([
-      supabase.from('courses').select('name').eq('id', plan.course_id).maybeSingle(),
-      supabase.from('tee_boxes').select('name').eq('id', plan.tee_box_id).maybeSingle(),
-    ]);
-    courseName = course?.name ?? null;
-    teeName = tee?.name ?? null;
-  }
-
-  return {
-    courseName,
-    teeName,
-    participantCount: participantsResult.count ?? 0,
-  };
-}
-
-/**
- * Reservene arrangøren kan bytte inn i en ikke-startet match (#1473).
- *
- * Kilden er cupens KANDIDATLISTE, ikke deltakerlista: den som stiller opp
- * kvelden før rakk sjelden å melde seg på. Samme helper — og dermed samme
- * rolle-semantikk — som Spillere-rommet og generer-veiviseren bruker:
- * klubb-cup → klubbens medlemmer, personlig cup → arrangørens venner (alle
- * profil-fullførte for en global admin).
- *
- * Pending kandidater (venn uten fullført profil) filtreres bort her, akkurat
- * som de er ikke-valgbare i veiviseren. Serveren avviser dem uansett
- * (`profile_incomplete`) — lista er UX, guarden er håndhevelsen.
- */
-async function fetchCupSwapCandidateOptions(
-  groupId: string | null,
-  unknownLabel: string,
-): Promise<SwapPlayerOption[]> {
-  const supabase = await getServerClient();
-  const { userId, isAdmin } = await getRoleContext(supabase);
-  const candidates = await getCupCandidatePlayers(supabase, {
-    groupId,
-    userId,
-    isAdmin,
-    unknownLabel,
-  });
-
-  return candidates
-    .filter((c) => !c.pending)
-    .map((c) => ({ userId: c.id, label: c.displayName }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'no'));
-}
-
-/**
- * Én dør fra cup-detaljsiden til et rom (#1472). Hele kortet er lenken
- * (≥44px tap-target); tittel + status-subtitle + chevron-affordance.
- */
-function CupDoor({
-  href,
-  testId,
-  title,
-  subtitle,
-}: {
-  href: string;
-  testId: string;
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <SmartLink
-      href={href}
-      data-testid={testId}
-      className="block rounded-2xl"
-    >
-      <Card className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-serif text-base text-text">{title}</p>
-          <p className="text-xs text-muted mt-0.5">{subtitle}</p>
-        </div>
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.75}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5 shrink-0 text-muted"
-        >
-          <path d="M7.5 4.5 13 10l-5.5 5.5" />
-        </svg>
-      </Card>
-    </SmartLink>
-  );
 }
 
 /**
@@ -333,64 +207,6 @@ export async function CupManagement({
       ? `/klubber/${groupId}/cup/${tournamentId}/${room}`
       : `/admin/cup/${tournamentId}/${room}`;
 
-  // #1473: «Bytt spiller» finnes kun på matcher som ennå ikke er startet, så
-  // kandidatlista hentes bare når det faktisk står en slik match på lista.
-  const hasScheduledMatch = leaderboard.matches.some(
-    (m) => m.status === 'scheduled',
-  );
-  const swapCandidates = hasScheduledMatch
-    ? await fetchCupSwapCandidateOptions(groupId, unknownLabel)
-    : [];
-
-  // Navn på alle som allerede står i en match — rosteret dekker dem, også
-  // spillere som ikke ligger i `tournament_participants` (eldre cuper der
-  // matchene ble generert rett fra pickeren).
-  const matchPlayerNames = new Map<string, string>(
-    [...roster.team1, ...roster.team2].map((p) => [p.userId, preferredName(p)]),
-  );
-
-  /**
-   * Valgene for ett match-kort. Bunten (host + avledede, #1441 D3) løses fra
-   * snapshotet — arrangøren skal kunne bytte fra hvilket som helst kort i
-   * bunten, og reserven må ikke allerede stå i NOEN av buntens matcher.
-   */
-  function swapOptionsFor(match: (typeof leaderboard.matches)[number]): {
-    outOptions: SwapPlayerOption[];
-    inOptions: SwapPlayerOption[];
-  } {
-    const root = match.sourceGameId ?? match.gameId;
-    const bundle = leaderboard.matches.filter(
-      (x) => (x.sourceGameId ?? x.gameId) === root,
-    );
-    const team1Ids = new Set(bundle.flatMap((x) => x.team1UserIds ?? []));
-    const bundleIds: string[] = [];
-    for (const x of bundle) {
-      for (const uid of [...(x.team1UserIds ?? []), ...(x.team2UserIds ?? [])]) {
-        if (!bundleIds.includes(uid)) bundleIds.push(uid);
-      }
-    }
-    return {
-      outOptions: bundleIds.map((uid) => ({
-        userId: uid,
-        label: `${matchPlayerNames.get(uid) ?? unknownLabel} (${
-          team1Ids.has(uid) ? tournament.team_1_name : tournament.team_2_name
-        })`,
-      })),
-      inOptions: swapCandidates.filter((c) => !bundleIds.includes(c.userId)),
-    };
-  }
-
-  // #1472: dør-status-data hentes kun mens cupen er draft (dørene vises bare da).
-  const isDraft = tournament.status === 'draft';
-  const doorData = isDraft ? await fetchCupDoorData(tournamentId) : null;
-  const oppsettSubtitle =
-    doorData && doorData.courseName && doorData.teeName
-      ? t('manage.doors.oppsettSubtitle', {
-          course: doorData.courseName,
-          tee: doorData.teeName,
-        })
-      : t('manage.doors.oppsettEmpty');
-
   return (
     <Shell>
       <TopBar backHref={backHref} kicker={kicker} />
@@ -493,203 +309,36 @@ export async function CupManagement({
         showWinnerRegistration={tournament.status === 'active' || tournament.status === 'finished'}
       />
 
-      {/* #1472: tre dører — Oppsett, Spillere, Fordel & generer. Vises kun i
-          draft; empty-states håndteres inne i rommene, så dørene er alltid
-          klikkbare. */}
-      {isDraft && doorData && (
-        <section className="mb-5 space-y-3">
-          <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            {t('manage.doors.heading')}
-          </h2>
-          <CupDoor
-            href={roomHref('oppsett')}
-            testId="cup-door-oppsett"
-            title={t('manage.doors.oppsettTitle')}
-            subtitle={oppsettSubtitle}
-          />
-          <CupDoor
-            href={roomHref('spillere')}
-            testId="cup-door-spillere"
-            title={t('manage.doors.spillereTitle')}
-            subtitle={t('manage.doors.spillereSubtitle', {
-              count: doorData.participantCount,
-            })}
-          />
-          <CupDoor
-            href={roomHref('generer')}
-            testId="cup-door-generer"
-            title={t('manage.doors.genererTitle')}
-            subtitle={t('manage.doors.genererSubtitle', {
-              count: leaderboard.matches.length,
-            })}
-          />
-        </section>
-      )}
+      <CupDoorsSection
+        tournamentId={tournamentId}
+        isDraft={tournament.status === 'draft'}
+        isClub={isClub}
+        groupId={groupId}
+        matchCount={leaderboard.matches.length}
+      />
 
-      {/* Matches-liste */}
-      <section className="mb-5">
-        <div className="mb-2">
-          <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            {t('manage.matchesHeading')}
-          </h2>
-        </div>
-        {leaderboard.matches.length === 0 ? (
-          <Card>
-            <p className="text-sm text-muted">
-              {t('manage.emptyMatches')}
-            </p>
-          </Card>
-        ) : (
-          <ul className="space-y-2">
-            {leaderboard.matches.map((m) => {
-              // Resultater bor på resultatsiden (#1468) — her kun kampene og en
-              // nøytral status. Ferdig match viser «Spilt», ikke poeng. #1502:
-              // delt status-label gir «Scorekort levert» når alt er levert.
-              // #1488 (K9): `data-status` bærer den språk-uavhengige status-
-              // nøkkelen så e2e kan asserte avledet-arven uten norsk copy.
-              const statusKey = cupMatchStatusKey({
-                status: m.status,
-                allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
-              });
-              const statusLabel = t(CUP_MATCH_STATUS_MESSAGE_KEY[statusKey]);
-              const card = (
-                <Card>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {m.matchLabel ?? t('matchFallback')}
-                      </p>
-                      <p className="font-serif text-base text-text mt-1">
-                        {m.team1PlayerName}{' '}
-                        <span className="text-muted">{t('manage.mot')}</span>{' '}
-                        {m.team2PlayerName}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p
-                        className="text-xs text-muted"
-                        data-testid={`cup-match-status-${m.gameId}`}
-                        data-status={statusKey}
-                      >
-                        {statusLabel}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              );
-              // Admin borer ned i full game-admin; klubb-varianten lenker
-              // FERDIGE matcher til kampens leaderboard (#1456) — ruta er åpen
-              // for alle innloggede først etter finish, så uferdige matcher
-              // forblir rene info-kort (ellers 404 for klubb-styrere utenfor
-              // kampen).
-              const href = isClub
-                ? m.status === 'finished'
-                  ? `/games/${m.gameId}/leaderboard?from=/klubber/${groupId}/cup/${tournamentId}`
-                  : null
-                : `/admin/games/${m.gameId}`;
-              // #1473: bytte-panelet ligger UTENFOR kort-lenken — en knapp inne
-              // i en <a> ville navigert i stedet for å åpne panelet.
-              const swap =
-                m.status === 'scheduled' ? swapOptionsFor(m) : null;
-              return (
-                <li key={m.gameId}>
-                  {href ? <SmartLink href={href}>{card}</SmartLink> : card}
-                  {swap && (
-                    <SwapMatchPlayer
-                      tournamentId={tournamentId}
-                      gameId={m.gameId}
-                      outOptions={swap.outOptions}
-                      inOptions={swap.inOptions}
-                    />
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      <CupMatchList
+        tournamentId={tournamentId}
+        isClub={isClub}
+        groupId={groupId}
+        matches={leaderboard.matches}
+        roster={roster}
+        team1Name={tournament.team_1_name}
+        team2Name={tournament.team_2_name}
+      />
 
-      {/* Cup-handlinger */}
-      <section className="space-y-3 mt-6">
-        {tournament.status === 'draft' && (
-          <>
-            {showStartHint && (
-              <Banner tone="info">
-                {t('manage.startHint')}
-              </Banner>
-            )}
-            <form action={startTournament}>
-              <input type="hidden" name="id" value={tournament.id} />
-              <SubmitButton className="w-full" disabled={!canStart} pendingLabel={t('manage.startPending')}>
-                {t('manage.startButton')}
-              </SubmitButton>
-            </form>
-          </>
-        )}
-
-        {tournament.status === 'active' && (
-          <>
-            {/* #1501: sidepoeng-gate — hint navngir hva som mangler; knappen
-                er disabled til alt er registrert. */}
-            {!sideAwardsRegistered && (
-              <Banner tone="info" testId="cup-finish-gate-hint">
-                {t('manage.finishSideAwardsHint', { awards: missingAwardsList })}
-              </Banner>
-            )}
-
-            {/* #1501: uleverte kort — stopp med kampliste + «Avslutt likevel».
-                Peer-godkjenning relaxes aldri; likevel-varianten kjører kun
-                allowMissing per kamp. */}
-            {errorCode === 'matches_not_submitted' && (
-              <div className="space-y-3">
-                <Banner tone="warning" testId="cup-finish-not-submitted">
-                  {t('manage.finishNotSubmitted', { matches: notSubmittedMatchesList })}
-                </Banner>
-                <form action={finishTournament} data-testid="cup-finish-anyway-form">
-                  <input type="hidden" name="id" value={tournament.id} />
-                  <input type="hidden" name="allow_missing" value="true" />
-                  <SubmitButton
-                    className="w-full"
-                    variant="secondary"
-                    disabled={!sideAwardsRegistered}
-                    data-testid="cup-finish-anyway"
-                    pendingLabel={t('manage.finishAnywayPending')}
-                  >
-                    {t('manage.finishAnywayButton')}
-                  </SubmitButton>
-                </form>
-              </div>
-            )}
-
-            {/* #1501: en kamp lot seg ikke avslutte — cupen står, re-trykk er
-                trygt. Banneret navngir de gjenværende aktive kampene. */}
-            {errorCode === 'match_finish_failed' && (
-              <Banner tone="error" testId="cup-finish-failed">
-                {t('manage.finishFailed', { matches: failedMatchesList })}
-              </Banner>
-            )}
-
-            <form action={finishTournament} data-testid="cup-finish-form">
-              <input type="hidden" name="id" value={tournament.id} />
-              <SubmitButton
-                className="w-full"
-                disabled={!canFinish}
-                data-testid="cup-finish-submit"
-                pendingLabel={t('manage.finishPending')}
-              >
-                {t('manage.finishButton')}
-              </SubmitButton>
-            </form>
-          </>
-        )}
-
-        <SmartLink
-          href={roomHref('slett')}
-          className="block text-center text-xs text-danger underline-offset-2 hover:underline pt-2"
-        >
-          {t('manage.deleteLink')}
-        </SmartLink>
-      </section>
+      <CupActionsSection
+        tournament={{ id: tournament.id, status: tournament.status }}
+        canStart={canStart}
+        showStartHint={showStartHint}
+        canFinish={canFinish}
+        sideAwardsRegistered={sideAwardsRegistered}
+        missingAwardsList={missingAwardsList}
+        notSubmittedMatchesList={notSubmittedMatchesList}
+        failedMatchesList={failedMatchesList}
+        errorCode={errorCode}
+        deleteHref={roomHref('slett')}
+      />
     </Shell>
   );
 }
