@@ -16,6 +16,40 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.234.0 · mandag 24. august 2026
+
+<details>
+<summary><strong>Bytt inn en reserve når noen melder forfall</strong></summary>
+
+[#1473](https://github.com/jdlarssen/golf-app/issues/1473) — Melder noen forfall før cupen sparkes i gang, bytter du inn en reserve rett på matchkortet — uten å generere kampene på nytt.
+</details>
+
+<details>
+<summary><strong>Sidepoengene hull for hull</strong></summary>
+
+[#1496](https://github.com/jdlarssen/golf-app/issues/1496) — Resultatsiden viser nå hva som skjedde med sidepoengene på hvert hull: hvem som vant nærmest hullet og lengste drive, hvor mange GIR hvert lag klarte, og hvilke som endte uten vinner.
+</details>
+
+<details>
+<summary>15 rettinger</summary>
+
+- [#1373](https://github.com/jdlarssen/golf-app/issues/1373) — Deler du resultatlenken, havner ingen på innloggingssiden lenger: Netto/Brutto bytter rett på siden, og knappene som krevde konto er borte.
+- [#1385](https://github.com/jdlarssen/golf-app/issues/1385) — «Rediger utkast» tar deg nå tilbake til veiviseren på oppsummeringssteget, med alt du hadde fylt ut, i stedet for det lange skjemaet.
+- [#1390](https://github.com/jdlarssen/golf-app/issues/1390) — Småtekst på leaderboard, hull-siden og podiene er løftet til 11px, så statusmerker og etiketter er til å lese i sola.
+- [#1391](https://github.com/jdlarssen/golf-app/issues/1391) — Du ser nå varselet om slag som ikke ble lagret på alle skjermer, ikke bare inne i runden.
+- [#1578](https://github.com/jdlarssen/golf-app/issues/1578) — På en splittet cup-dag markerer hull-stripa nå hullene du hoppet over i den andre halvrunden — før så de ut som ført.
+- [#1611](https://github.com/jdlarssen/golf-app/issues/1611) — Endrer en medspiller et tall du har tastet, sier appen fra. Før kom det varselet bare hvis du hadde vært offline.
+- [#1621](https://github.com/jdlarssen/golf-app/issues/1621) — Gulltekst som bærer tall og navn — ledertall, poeng og liga-lederens navn — er nå mørk nok til å leses i sola.
+- [#1628](https://github.com/jdlarssen/golf-app/issues/1628) — Retter du et handicap etter at cup-matchene er satt opp, men før runden starter, følger greensome-lagets slag med — så lenge du ikke har tastet inn tallet selv.
+- [#1643](https://github.com/jdlarssen/golf-app/issues/1643) — Melder du på et lag, varer invitasjonene til medspillerne dine nå i 14 dager i stedet for 7. Samme frist som resten av spill-invitasjonene, så de rekker fram selv om du setter opp laget en uke eller to før første utslag.
+- [#1653](https://github.com/jdlarssen/golf-app/issues/1653) — Åpner du en delt banelenke med et gammelt stegnummer i, starter oppsettet nå fra begynnelsen med banen ferdig valgt. Før havnet du rett i «Klar?» med valg du aldri hadde tatt.
+- [#1686](https://github.com/jdlarssen/golf-app/issues/1686) — De grønne bekreftelsene — «Betalt», «Levert», suksess-bannerne — er mørkere nå, så de er lesbare i sollys.
+- [#1688](https://github.com/jdlarssen/golf-app/issues/1688) — Mangler alle å levere scorekort, står «Se spillerstatus og send påminnelse» én gang i Avslutt-kortet — ikke to.
+- [#1695](https://github.com/jdlarssen/golf-app/issues/1695) — Ferdige best ball-runder viser igjen premiene, rundereferatet og hvem som trakk seg — det sto under tavla og forsvant.
+- [#1697](https://github.com/jdlarssen/golf-app/issues/1697) — Låner du bort telefonen, dukker ikke lenger forrige spillers ulagrede slag opp i varselet på Hjem.
+- [#1723](https://github.com/jdlarssen/golf-app/issues/1723) — Har alle spillerne trukket seg, står Avslutt-kortet uten den tomme gule boksen — det er ingenting å advare om.
+</details>
+
 ### 1.233.0 · mandag 17. august 2026
 
 <details>
