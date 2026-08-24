@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { test, expect } from '@playwright/test';
 import {
   envReady,
@@ -5,11 +6,50 @@ import {
   adminClient,
   ADMIN_EMAIL,
   PLAYER_EMAIL,
+  SUPABASE_URL,
   signInViaOtp,
+  fetchOtpForEmail,
+  withFreshOtpRetry,
   seedEphemeralPlayers,
   deleteEphemeralPlayers,
   type EphemeralPlayer,
 } from '../_helpers/games';
+
+// ANON_KEY er offentlig by design (den shippes til hver nettleser), men holdes
+// utenfor repoet — leses fra env som SUPABASE_URL (#1197).
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+/**
+ * supabase-js-klient signert inn som `email` — samme mønster som #849-riggen
+ * (`e2e/games/adversarial-role-replay.spec.ts`): mint OTP via admin-API-et,
+ * verifyOtp med supersede-race-retry. Brukes til hostile direkte-skriv mot
+ * PostgREST, altså UTENOM server-actionene, så RLS testes på DB-laget.
+ */
+async function signedInClient(email: string) {
+  if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
+  if (!ANON_KEY) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
+  const client = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  await withFreshOtpRetry<void>(
+    () => fetchOtpForEmail(email),
+    async (otp) => {
+      const { error } = await client.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+      if (!error) return { ok: true, value: undefined };
+      const msg = error.message?.toLowerCase() ?? '';
+      return {
+        ok: false,
+        retryable: msg.includes('expired') || msg.includes('invalid'),
+      };
+    },
+    { label: `signedInClient(${email})` },
+  );
+  return client;
+}
 
 /**
  * Cup-livssyklus-smoke (#674, del 1) — reproduserer #642 (offentlig cup-
@@ -872,6 +912,33 @@ test.describe('Cup self-signup via shared link (#1490)', () => {
         .eq('tournament_id', tournamentId)
         .returns<{ user_id: string }[]>();
       expect(rows?.map((r) => r.user_id) ?? []).not.toContain(playerUser!.id);
+    });
+
+    await test.step('hostile: direkte PostgREST-insert utenom actionen avvises', async () => {
+      // `tournament_participants` har KUN select-RLS (0155) — påmelding skjer
+      // via service-role bak vakten i actionen. Beviset på at det holder er at
+      // nøyaktig samme rad, skrevet direkte av en innlogget spiller, ikke
+      // lander. Ikke-vakuøst: tjeneste-rollen skrev den samme raden lenger opp
+      // i testen.
+      const hostile = await signedInClient(PLAYER_EMAIL!);
+      try {
+        const { data, error } = await hostile
+          .from('tournament_participants')
+          .insert({ tournament_id: tournamentId!, user_id: playerUser!.id })
+          .select();
+        const rowCount = (data ?? []).length;
+        expect(
+          rowCount,
+          `direkte insert i tournament_participants ga ${rowCount} rader (ventet 0) — RLS-hull!`,
+        ).toBe(0);
+        if (error) {
+          expect(error.message).toMatch(
+            /permission|rls|denied|security|policy|violat/i,
+          );
+        }
+      } finally {
+        await hostile.auth.signOut();
+      }
     });
   });
 });
