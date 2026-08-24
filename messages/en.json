@@ -4570,7 +4570,9 @@
       "leaveButton": "Withdraw",
       "statusMessages": {
         "joined": "You're signed up. We let the organiser know.",
-        "left": "You've withdrawn. We let the organiser know."
+        "left": "You've withdrawn. We let the organiser know.",
+        "joined_self": "You're signed up for your own cup.",
+        "left_self": "You've withdrawn."
       },
       "errors": {
         "not_found": "Couldn't find that cup. Check that the link is complete.",

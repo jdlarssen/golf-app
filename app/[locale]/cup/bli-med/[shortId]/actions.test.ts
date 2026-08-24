@@ -173,15 +173,20 @@ describe('joinCup', () => {
     ).toBe(false);
   });
 
-  it('skaperen melder seg på sin egen cup: ingen selv-varsel', async () => {
+  it('skaperen melder seg på sin egen cup: ingen selv-varsel, og bekreftelsen sier det ikke', async () => {
     adminMock = buildSupabaseMock([{ data: null, error: null }]); // kun upsert
     contextMock.mockResolvedValue(context());
     setUser(CREATOR);
 
     const { joinCup } = await import('./actions');
-    await joinCup(form()).catch(() => {});
+    const err = await joinCup(form()).catch((e) => e);
 
     expect(notifyMock).not.toHaveBeenCalled();
+    // Egen status-kode ⇒ eget banner: «vi sa fra til arrangøren» ville vært
+    // usant her, siden varselet over aldri ble sendt.
+    expect((err as RedirectError).url).toBe(
+      '/cup/bli-med/abcd1234?status=joined_self',
+    );
   });
 });
 

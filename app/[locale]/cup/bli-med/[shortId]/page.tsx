@@ -22,6 +22,13 @@ type Params = Promise<{ shortId: string }>;
 type SearchParams = Promise<{ status?: string | string[] }>;
 
 /**
+ * Bekreftelsene actionene redirecter med. `*_self`-variantene er skaperens egen
+ * påmelding: samme handling, men uten «vi sa fra til arrangøren» — det varselet
+ * sendes aldri til deg selv (`actions.ts`, `actorIsCreator`).
+ */
+const STATUS_CODES = ['joined', 'left', 'joined_self', 'left_self'] as const;
+
+/**
  * `/cup/bli-med/[shortId]` — spillerens ene dør inn i en cup (#1490, #344
  * «one door per room»). Arrangøren deler lenken fra Spillere-rommet; lenken ER
  * gaten (eierbeslutning 2026-08-07: ingen godkjenningsrunde).
@@ -100,10 +107,16 @@ export default async function CupBliMedPage({
     }
   }
 
-  const statusBanner =
-    statusCode === 'joined' || statusCode === 'left'
-      ? t(`statusMessages.${statusCode}`)
-      : null;
+  const status = STATUS_CODES.find((code) => code === statusCode);
+  const statusBanner = status ? t(`statusMessages.${status}`) : null;
+
+  // Lenken til cup-siden er bare en vei videre for den som slipper inn der:
+  // `canViewCupPage` (lib/cup/cupPageAccess.ts) gir 404 på en klubb-cup til en
+  // som hverken er medlem eller deltaker. Uten denne sjekken ble den stengte
+  // tilstanden en blindvei. (Global admin kommer også inn, men det vet ikke
+  // join-konteksten — da mangler knappen heller enn å lyve.)
+  const canOpenCupPage =
+    !cup!.group_id || facts.isClubMember || facts.alreadyJoined;
 
   return (
     <AppShell>
@@ -158,9 +171,11 @@ export default async function CupBliMedPage({
           {decision === 'closed' && (
             <>
               <p className="font-sans text-[15px] text-text">{t('closed')}</p>
-              <LinkButton href={`/cup/${cup!.id}`} variant="secondary" full>
-                {t('goToCupButton')}
-              </LinkButton>
+              {canOpenCupPage && (
+                <LinkButton href={`/cup/${cup!.id}`} variant="secondary" full>
+                  {t('goToCupButton')}
+                </LinkButton>
+              )}
             </>
           )}
 
