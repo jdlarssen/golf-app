@@ -2104,8 +2104,8 @@ export type Database = {
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
       generate_friend_code: { Args: never; Returns: string }
       generate_game_short_id: { Args: never; Returns: string }
-      generate_tournament_short_id: { Args: never; Returns: string }
       generate_group_short_id: { Args: never; Returns: string }
+      generate_tournament_short_id: { Args: never; Returns: string }
       incomplete_profiles_for_ids: {
         Args: { p_user_ids: string[] }
         Returns: {
