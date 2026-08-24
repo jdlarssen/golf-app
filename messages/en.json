@@ -160,6 +160,11 @@
         "title": "The cup has started",
         "detail": "{tournamentName}"
       },
+      "cupSignup": {
+        "titleJoined": "{participantName} signed up",
+        "titleLeft": "{participantName} withdrew",
+        "detail": "{tournamentName}"
+      },
       "clubJoinRequest": {
         "title": "{requesterName} wants to join the club",
         "detail": "{groupName}"
@@ -4548,6 +4553,36 @@
   },
   "cup": {
     "matchFallback": "Match",
+    "join": {
+      "kicker": "Join a cup",
+      "teams": "{team1} vs {team2}",
+      "invite": "Sign up and the organiser will put you on a team before the start.",
+      "alreadyJoined": "You're signed up. The organiser sets the teams before the start.",
+      "goToCupButton": "Go to the cup",
+      "closed": "Signups are closed. You can still follow the cup.",
+      "full": "The cup is full. It has room for {cap} players, and they're taken.",
+      "notMember": "This cup is for members of {club}.",
+      "theClubFallback": "the club",
+      "joinClubButton": "Join the club",
+      "profileIncomplete": "Your profile is missing a handicap. Add it and you're ready to sign up.",
+      "completeProfileButton": "Complete your profile",
+      "joinButton": "Sign me up",
+      "leaveButton": "Withdraw",
+      "statusMessages": {
+        "joined": "You're signed up. We let the organiser know.",
+        "left": "You've withdrawn. We let the organiser know."
+      },
+      "errors": {
+        "not_found": "Couldn't find that cup. Check that the link is complete.",
+        "closed": "Signups are closed.",
+        "profile_incomplete": "Add a handicap to your profile first.",
+        "not_member": "This cup is for the club's members.",
+        "full": "The cup is full. It takes {cap} players.",
+        "not_joined": "You're not on the roster for this cup.",
+        "save_failed": "Couldn't save. Please try again.",
+        "unexpected": "Unexpected error: {code}"
+      }
+    },
     "plan": {
       "pageTitle": "Setup",
       "brassRibbonAdmin": "Cup · {name}",
@@ -4623,6 +4658,14 @@
       "statusMessages": {
         "participant_added": "Player added.",
         "participant_removed": "Player removed."
+      },
+      "share": {
+        "heading": "Signup link",
+        "helper": "Send the link to your players and they sign up themselves.",
+        "ariaLabel": "Link for signing up to the cup",
+        "copyButton": "Copy link",
+        "copiedButton": "✓ Copied",
+        "copyError": "Couldn't copy automatically. Select the link and copy it manually."
       },
       "errors": {
         "not_candidate": "This player can't be enrolled in the cup.",

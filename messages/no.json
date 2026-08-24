@@ -160,6 +160,11 @@
         "title": "Cupen har startet",
         "detail": "{tournamentName}"
       },
+      "cupSignup": {
+        "titleJoined": "{participantName} meldte seg på",
+        "titleLeft": "{participantName} meldte seg av",
+        "detail": "{tournamentName}"
+      },
       "clubJoinRequest": {
         "title": "{requesterName} vil bli med i klubben",
         "detail": "{groupName}"
@@ -4548,6 +4553,36 @@
   },
   "cup": {
     "matchFallback": "Match",
+    "join": {
+      "kicker": "Bli med i cup",
+      "teams": "{team1} mot {team2}",
+      "invite": "Meld deg på, så setter arrangøren deg på et lag før start.",
+      "alreadyJoined": "Du er påmeldt. Arrangøren fordeler lagene før start.",
+      "goToCupButton": "Gå til cupen",
+      "closed": "Påmeldingen er stengt. Du kan fortsatt følge cupen.",
+      "full": "Cupen er full. Det er plass til {cap} spillere, og de er tatt.",
+      "notMember": "Denne cupen er for medlemmer av {club}.",
+      "theClubFallback": "klubben",
+      "joinClubButton": "Bli med i klubben",
+      "profileIncomplete": "Du mangler handicap på profilen. Fyll det inn, så er du klar til å melde deg på.",
+      "completeProfileButton": "Fyll ut profilen",
+      "joinButton": "Meld meg på",
+      "leaveButton": "Meld meg av",
+      "statusMessages": {
+        "joined": "Du er påmeldt. Vi sa fra til arrangøren.",
+        "left": "Du er meldt av. Vi sa fra til arrangøren."
+      },
+      "errors": {
+        "not_found": "Fant ikke cupen. Sjekk at lenken er hel.",
+        "closed": "Påmeldingen er stengt.",
+        "profile_incomplete": "Fyll ut handicap på profilen først.",
+        "not_member": "Cupen er for medlemmene i klubben.",
+        "full": "Cupen er full. Den tar {cap} spillere.",
+        "not_joined": "Du står ikke på lista i denne cupen.",
+        "save_failed": "Klarte ikke å lagre. Prøv igjen.",
+        "unexpected": "Uventet feil: {code}"
+      }
+    },
     "plan": {
       "pageTitle": "Oppsett",
       "brassRibbonAdmin": "Cup · {name}",
@@ -4623,6 +4658,14 @@
       "statusMessages": {
         "participant_added": "Spilleren er lagt til.",
         "participant_removed": "Spilleren er fjernet."
+      },
+      "share": {
+        "heading": "Påmeldingslenke",
+        "helper": "Send lenken til spillerne, så melder de seg på selv.",
+        "ariaLabel": "Lenke for å melde seg på cupen",
+        "copyButton": "Kopier lenke",
+        "copiedButton": "✓ Kopiert",
+        "copyError": "Klarte ikke å kopiere automatisk. Marker lenken og kopier manuelt."
       },
       "errors": {
         "not_candidate": "Denne spilleren kan ikke meldes på cupen.",
