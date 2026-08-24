@@ -18,6 +18,7 @@ import {
   type ParticipantRow,
   type AddableRow,
 } from './CupParticipantsList';
+import { CupShareLink } from './CupShareLink';
 
 type CupRoomVariant = 'admin' | 'club';
 
@@ -84,7 +85,7 @@ export async function CupParticipants({
 
   const admin = getAdminClient();
 
-  const [participantRes, candidates] = await Promise.all([
+  const [participantRes, candidates, shortIdRes] = await Promise.all([
     admin
       .from('tournament_participants')
       .select(
@@ -93,6 +94,14 @@ export async function CupParticipants({
       .eq('tournament_id', tournamentId)
       .order('created_at', { ascending: true }),
     getCupCandidatePlayers(supabase, { groupId, userId, isAdmin, unknownLabel }),
+    // #1490: `short_id` bygger den delbare påmeldingslenken. Egen slank
+    // lesing framfor å utvide `getCupSnapshot` — snapshot-en leses av cup-
+    // detaljen, resultatsiden og spectate, og ingen av dem trenger kolonnen.
+    admin
+      .from('tournaments')
+      .select('short_id')
+      .eq('id', tournamentId)
+      .maybeSingle<{ short_id: string }>(),
   ]);
   if (participantRes.error) throw participantRes.error;
 
@@ -155,6 +164,12 @@ export async function CupParticipants({
       ? t(`participants.statusMessages.${statusCode}`)
       : undefined;
 
+  // Absolutt URL: lenken skal kunne limes inn i en melding og virke der, ikke
+  // bare i appen. Samme fallback-mønster som klubbens del-lenke.
+  const joinUrl = shortIdRes.data
+    ? `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tornygolf.no'}/cup/bli-med/${shortIdRes.data.short_id}`
+    : null;
+
   return (
     <Shell>
       <TopBar backHref={backHref} kicker={kicker} />
@@ -169,6 +184,11 @@ export async function CupParticipants({
       {statusMessage && (
         <div className="mb-4">
           <Banner tone="success">{statusMessage}</Banner>
+        </div>
+      )}
+      {joinUrl && (
+        <div className="mb-6">
+          <CupShareLink joinUrl={joinUrl} />
         </div>
       )}
       <CupParticipantsList
