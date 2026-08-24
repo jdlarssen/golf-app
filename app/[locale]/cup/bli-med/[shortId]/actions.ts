@@ -46,6 +46,15 @@ function revalidateCup(id: string, groupId: string | null): void {
 }
 
 /**
+ * Er den som trykker cupens egen skaper? Ett hjem for fakta, to konsekvenser:
+ * varselet droppes (ingen varsler seg selv), OG bekreftelsen sier noe annet —
+ * «vi sa fra til arrangøren» er usant når arrangøren er deg.
+ */
+function actorIsCreator(cup: CupJoinCup, actorUserId: string): boolean {
+  return cup.created_by === actorUserId;
+}
+
+/**
  * Varsle cupens skaper om at deltakerlista endret seg. Best-effort i ordets
  * fulle betydning: en feil her skal aldri velte spillerens påmelding, så den
  * fanges og logges. Skaperen som melder seg på sin egen cup varsler ikke seg
@@ -56,7 +65,7 @@ async function notifyCreator(
   actorUserId: string,
   action: 'joined' | 'left',
 ): Promise<void> {
-  if (cup.created_by === actorUserId) return;
+  if (actorIsCreator(cup, actorUserId)) return;
   try {
     const admin = getAdminClient();
     const { data: actor } = await admin
@@ -138,7 +147,10 @@ export async function joinCup(
   revalidateCup(cup!.id, cup!.group_id);
   await notifyCreator(cup!, user!.id, 'joined');
 
-  redirect({ href: `${joinPath(shortId)}?status=joined`, locale });
+  // Egen cup ⇒ egen bekreftelse: ingen fikk beskjed, så banneret sier ikke at
+  // noen gjorde det.
+  const status = actorIsCreator(cup!, user!.id) ? 'joined_self' : 'joined';
+  redirect({ href: `${joinPath(shortId)}?status=${status}`, locale });
   return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
 
@@ -190,6 +202,7 @@ export async function leaveCup(
   revalidateCup(cup!.id, cup!.group_id);
   await notifyCreator(cup!, user!.id, 'left');
 
-  redirect({ href: `${joinPath(shortId)}?status=left`, locale });
+  const status = actorIsCreator(cup!, user!.id) ? 'left_self' : 'left';
+  redirect({ href: `${joinPath(shortId)}?status=${status}`, locale });
   return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }

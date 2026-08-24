@@ -4570,7 +4570,9 @@
       "leaveButton": "Meld meg av",
       "statusMessages": {
         "joined": "Du er påmeldt. Vi sa fra til arrangøren.",
-        "left": "Du er meldt av. Vi sa fra til arrangøren."
+        "left": "Du er meldt av. Vi sa fra til arrangøren.",
+        "joined_self": "Du er påmeldt din egen cup.",
+        "left_self": "Du er meldt av."
       },
       "errors": {
         "not_found": "Fant ikke cupen. Sjekk at lenken er hel.",
