@@ -65,6 +65,31 @@ describe('buildNotificationText', () => {
     );
   });
 
+  it('cup_signup velger tittel på retningen, med locale-fallback for navnet (#1490)', () => {
+    const titleFor = (payload: Record<string, unknown>) =>
+      buildNotificationText(
+        'cup_signup',
+        {
+          tournament_id: 't',
+          tournament_name: 'Vinter-cup',
+          group_id: null,
+          ...payload,
+        } as NotificationPayload,
+        t,
+      ).title;
+
+    expect(titleFor({ action: 'joined', participant_name: 'Kari' })).toBe(
+      'kinds.cupSignup.titleJoined|{"participantName":"Kari"}',
+    );
+    expect(titleFor({ action: 'left', participant_name: 'Kari' })).toBe(
+      'kinds.cupSignup.titleLeft|{"participantName":"Kari"}',
+    );
+    // Navnløs payload → katalogens fallback fylles ved render, ikke ved skriving.
+    expect(titleFor({ action: 'joined' })).toBe(
+      'kinds.cupSignup.titleJoined|{"participantName":"somePlayerFallback"}',
+    );
+  });
+
   it('achievement_unlocked bundles moments with a neutral title (#947)', () => {
     const out = buildNotificationText(
       'achievement_unlocked',

@@ -24,6 +24,7 @@ export type NotificationKind =
   | 'deliver_reminder'
   | 'cup_finished'
   | 'cup_started'
+  | 'cup_signup'
   | 'club_join_request'
   | 'club_role_changed'
   | 'friend_request'
@@ -233,6 +234,23 @@ const cupStartedSchema = z.object({
   tournament_name: z.string().min(1),
 });
 
+// cup_signup: en spiller meldte seg på ELLER av en cup via den delbare
+// påmeldingslenken (#1490). Sendes til cupens skaper — en heads-up, ingen
+// handling påkrevd (søster av club_join_request). ÉN kind med retningsfelt
+// framfor to: mottakeren har samme sted å gå uansett, og et par/av-par ville
+// duplisert både payload, deeplink og emoji.
+// `action` avgjør tittelen ved render. `group_id` velger hvilket Spillere-rom
+// deeplinken peker på (klubb-chrome vs. admin-chrome) — null for personlig cup.
+// participant_name nullable: kortet fyller den lokaliserte fallbacken ved
+// render (#583), så payloaden holder seg locale-agnostisk.
+const cupSignupSchema = z.object({
+  tournament_id: uuid,
+  tournament_name: z.string().min(1),
+  group_id: uuid.nullable().optional(),
+  participant_name: z.string().min(1).nullable().optional(),
+  action: z.enum(['joined', 'left']),
+});
+
 // club_join_request: noen ba om å bli med i en klubb via del-lenken. Sendes til
 // klubbens eier(e)/admin(er). group_id deeplinker til /klubber/[group_id] hvor
 // forespørselen godkjennes/avslås. (#442)
@@ -358,6 +376,7 @@ const schemas = {
   deliver_reminder: deliverReminderSchema,
   cup_finished: cupFinishedSchema,
   cup_started: cupStartedSchema,
+  cup_signup: cupSignupSchema,
   club_join_request: clubJoinRequestSchema,
   club_role_changed: clubRoleChangedSchema,
   friend_request: friendRequestSchema,

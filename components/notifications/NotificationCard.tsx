@@ -49,6 +49,7 @@ const EMOJI: Record<NotificationKind, string> = {
   deliver_reminder: '📤',
   cup_finished: '🏁',
   cup_started: '🏌️',
+  cup_signup: '📝',
   club_join_request: '🙋',
   club_role_changed: '🔑',
   friend_request: '👋',

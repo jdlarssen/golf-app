@@ -198,6 +198,19 @@ export function buildNotificationText(
         detail: t('kinds.cupStarted.detail', { tournamentName: p.tournament_name }),
       };
     }
+    case 'cup_signup': {
+      const p = payload as NotificationPayload<'cup_signup'>;
+      const participantName = p.participant_name ?? t('somePlayerFallback');
+      return {
+        title:
+          p.action === 'left'
+            ? t('kinds.cupSignup.titleLeft', { participantName })
+            : t('kinds.cupSignup.titleJoined', { participantName }),
+        detail: t('kinds.cupSignup.detail', {
+          tournamentName: p.tournament_name,
+        }),
+      };
+    }
     case 'club_join_request': {
       const p = payload as NotificationPayload<'club_join_request'>;
       return {
