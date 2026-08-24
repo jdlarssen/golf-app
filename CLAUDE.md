@@ -328,7 +328,7 @@ Ved tvil: hvis oppgaven kan beskrives ferdig i én prompt og forventes å produs
 
 ### Datamodell
 
-38 tabeller i `public` (målt 2026-08-16 — vedlikeholdes av dok-avstemmeren #1078). Kjernen:
+38 tabeller i `public` (målt 2026-08-23 — vedlikeholdes av dok-avstemmeren #1078). Kjernen:
 - `users` (utvider auth.users)
 - `courses` + `course_holes` + `tee_boxes`
 - `games` + `game_players`
