@@ -47,3 +47,10 @@
 ## Verdict
 
 **ACCEPT** — alle byggbare suksesskriterier grønne; staging-klikkrunden (kriterium 2, ekte flyt) håndteres i Steg 4/leveranse.
+
+## Kryss-modell-gate (Steg 4.5) — Sonnet CONFIRM
+
+Uavhengig Sonnet-agent (fersk kontekst; kun kontrakt + diff + evalueringsrapport)
+forsøkte å motbevise suksesskriteriene: **CONFIRM**. Re-verifiserte gates selv
+(506 lib/cup-tester, tsc clean, eslint 0 errors, dry-run gyldig). Restfunnene
+F1/F2 vurdert ikke-substansielle for kriteriene som skrevet; F1 er filet som #1745.
