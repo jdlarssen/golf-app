@@ -44,3 +44,11 @@ Fiks: `DECOR_CLIP = 'overflow-x-clip'` (delt) + `DECOR_CLIP_INSET` med `-mx-4 px
 ## Verdict
 
 **ACCEPT** etter 3 evaluate-runder (innenfor #1077-taket på 5, kryss-modell-gaten medregnet som runde 4). Runtime-scrollWidth på ekte mobil-viewport gjenstår som manuell QA.
+
+## Kryss-modell-gate (Steg 4.5, runde 4) — Sonnet CONFIRM
+
+Uavhengig Sonnet-agent (kun kontrakt + produktdiff + evalueringsrapport) forsøkte å
+motbevise kriteriene: **CONFIRM**. Verifiserte selv emitted CSS, kompilert SSR-chunk,
+prerendret demo-HTML (chromeless uten `-mx-4`), `!chromeless`-gatingen av alle piler,
+og CSS Overflow-semantikken for `clip`. Restnit (upresist JSDoc-prosa om «caller
+responsibility») — ikke-substansielt.
