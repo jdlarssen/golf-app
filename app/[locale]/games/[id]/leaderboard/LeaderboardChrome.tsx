@@ -40,18 +40,6 @@ export interface LeaderboardShellProps {
 }
 
 /**
- * Delt ramme rundt alle poeng-format-leaderboardene: `LeaderboardBackdrop`
- * bak innholdet, valgfri `AppShell`-wrapper. Trukket ut fra ~40 identiske
- * lokale `Shell`-kopier (issue #598). `chromeless=false` (default) matcher
- * den paddede full-side-varianten; `chromeless=true` den bare backdrop-en.
- *
- * Montert her: `LeaderboardRealtime` (issue #679). Siden hver format-visning
- * rendrer gjennom denne shellen, får alle ~14 score-/standings-flatene live
- * auto-refresh uten at noen av visnings-filene må røres. Komponenten leser
- * spill-ID fra `window.location` siden shellen ikke får den som prop (ikke
- * `useParams`, som ville sprengt format-visnings-testene).
- */
-/**
  * Clips decoration that deliberately paints outside the leaderboard content
  * box, so it can no longer push the document sideways (#1739). `ConfettiBurst`
  * anchors an `absolute; height: 0; overflow: visible` container to the leader
@@ -64,17 +52,38 @@ export interface LeaderboardShellProps {
  * (nothing here is `sticky`, portalled, or horizontally scrollable). Vertical
  * overflow is untouched.
  *
- * `-mx-2 px-2` moves the clip edge 8px outside the content box without
- * changing layout: the back arrows in `LeaderboardHeader` (and the local
- * headers in `HeadToHeadResult` / `State4View` / the holes views) hang 8px
- * left via `-ml-2`, and `overflow: clip` clips hit-testing as well as paint —
- * without this the arrows would lose part of their 44px tap target.
+ * `-mx-4 px-4` moves the clip edge 16px outside the content box without
+ * changing layout, because `overflow: clip` clips hit-testing and focus rings
+ * as well as paint. The in-shell back arrows — `LeaderboardHeader` (used by
+ * the `*HolesView.tsx` files among others), plus the local headers in
+ * `HeadToHeadResult` and `State4View` — hang 8px left via `-ml-2`, and the
+ * global focus ring adds 4px outside that box (`outline-offset: 2px` plus a
+ * 2px `outline`, see `app/globals.css`). 16px covers both with margin; the
+ * old 8px landed the clip edge exactly on the arrow's border box and cut the
+ * left segment of its keyboard focus ring. Not `data-focus-inset` on the
+ * root: that would re-inset rings for the whole subtree, not just the arrow.
  * (`overflow-clip-margin` would be the tidier tool but Safari lacks it.)
+ *
+ * The negative margin stays inside `AppShell` (`max-w-md px-5`), so even at
+ * 360px the root's border box never reaches the viewport edge.
  *
  * Safari floor: `overflow: clip` needs iOS/Safari ≥ 16. Older Safari simply
  * does not clip — the side-scroll symptom remains there, nothing breaks.
  */
-const DECOR_CLIP = 'overflow-x-clip -mx-2 px-2';
+const DECOR_CLIP = 'overflow-x-clip -mx-4 px-4';
+
+/**
+ * Delt ramme rundt alle poeng-format-leaderboardene: `LeaderboardBackdrop`
+ * bak innholdet, valgfri `AppShell`-wrapper. Trukket ut fra ~40 identiske
+ * lokale `Shell`-kopier (issue #598). `chromeless=false` (default) matcher
+ * den paddede full-side-varianten; `chromeless=true` den bare backdrop-en.
+ *
+ * Montert her: `LeaderboardRealtime` (issue #679). Siden hver format-visning
+ * rendrer gjennom denne shellen, får alle ~14 score-/standings-flatene live
+ * auto-refresh uten at noen av visnings-filene må røres. Komponenten leser
+ * spill-ID fra `window.location` siden shellen ikke får den som prop (ikke
+ * `useParams`, som ville sprengt format-visnings-testene).
+ */
 
 export function LeaderboardShell({
   children,
