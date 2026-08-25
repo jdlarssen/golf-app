@@ -51,6 +51,31 @@ export interface LeaderboardShellProps {
  * spill-ID fra `window.location` siden shellen ikke får den som prop (ikke
  * `useParams`, som ville sprengt format-visnings-testene).
  */
+/**
+ * Clips decoration that deliberately paints outside the leaderboard content
+ * box, so it can no longer push the document sideways (#1739). `ConfettiBurst`
+ * anchors an `absolute; height: 0; overflow: visible` container to the leader
+ * card and translates each piece up to ±210px horizontally — transformed
+ * absolute boxes still contribute to the document's rightward scrollable
+ * overflow, which put a horizontal scrollbar on a 375px viewport.
+ *
+ * `overflow-x: clip` rather than `hidden`: clip does NOT establish a scroll
+ * container, so no new scroll behavior is introduced anywhere in the tree
+ * (nothing here is `sticky`, portalled, or horizontally scrollable). Vertical
+ * overflow is untouched.
+ *
+ * `-mx-2 px-2` moves the clip edge 8px outside the content box without
+ * changing layout: the back arrows in `LeaderboardHeader` (and the local
+ * headers in `HeadToHeadResult` / `State4View` / the holes views) hang 8px
+ * left via `-ml-2`, and `overflow: clip` clips hit-testing as well as paint —
+ * without this the arrows would lose part of their 44px tap target.
+ * (`overflow-clip-margin` would be the tidier tool but Safari lacks it.)
+ *
+ * Safari floor: `overflow: clip` needs iOS/Safari ≥ 16. Older Safari simply
+ * does not clip — the side-scroll symptom remains there, nothing breaks.
+ */
+const DECOR_CLIP = 'overflow-x-clip -mx-2 px-2';
+
 export function LeaderboardShell({
   children,
   chromeless = false,
@@ -76,7 +101,7 @@ export function LeaderboardShell({
 
   if (chromeless) {
     return (
-      <div className="relative isolate">
+      <div className={`relative isolate ${DECOR_CLIP}`}>
         {live && <LeaderboardRealtime />}
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
@@ -87,7 +112,7 @@ export function LeaderboardShell({
   }
   return (
     <AppShell>
-      <div className="relative isolate pb-12">
+      <div className={`relative isolate pb-12 ${DECOR_CLIP}`}>
         {live && <LeaderboardRealtime />}
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>

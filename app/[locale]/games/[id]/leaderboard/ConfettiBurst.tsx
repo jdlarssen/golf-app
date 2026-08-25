@@ -27,8 +27,11 @@ type Piece = {
 function generatePieces(): Piece[] {
   return Array.from({ length: PIECE_COUNT }, () => {
     // Parametric trajectory per spec § confetti.
-    //   angle spans roughly −75° to +75° from vertical.
+    //   angle spans ±(π · 1.3 / 2) ≈ ±117° from vertical.
     //   speed is the magnitude; cos(angle) biases dy toward "down".
+    // Worst-case |dx| is therefore ~210px (sin peaks at 1 well inside that
+    // range × max speed) — wider than the card, which is why the shell clips
+    // decoration overflow (`DECOR_CLIP` in LeaderboardChrome.tsx, #1739).
     const angle = (Math.random() - 0.5) * Math.PI * 1.3;
     const speed = 90 + Math.random() * 120;
     const dx = Math.sin(angle) * speed;
