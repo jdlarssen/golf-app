@@ -19,6 +19,7 @@ import type { Database, Tables } from '@/lib/database.types';
 import { getCupSnapshot } from './getCupSnapshot';
 import { getCupCandidatePlayers } from './getCupCandidatePlayers';
 import { validateMatchSwap } from './matchSwapValidation';
+import { planParticipantRosterSync } from './participantRosterSync';
 import { loadTournamentParticipantEmails } from './tournamentParticipants';
 import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
@@ -77,7 +78,14 @@ async function cupRedirectBase(
     groupId,
     revalidate: () => {
       revalidatePath(`/admin/cup/${id}`);
-      if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
+      // Spillere-rommet er en egen rute og arver ikke revalideringen over
+      // (#1735). Deltakerlista endrer seg av flere cup-handlinger enn de
+      // rommet selv eier (et bytte melder på reserven), så den bustes her.
+      revalidatePath(`/admin/cup/${id}/spillere`);
+      if (groupId) {
+        revalidatePath(`/klubber/${groupId}/cup/${id}`);
+        revalidatePath(`/klubber/${groupId}/cup/${id}/spillere`);
+      }
     },
   };
 }
@@ -471,6 +479,12 @@ type SwapPlan = {
   bundleIds: string[];
   /** Matchene der ut-spilleren faktisk står — de eneste som skrives. */
   gameIds: string[];
+  /**
+   * ALLE cupens matcher, ikke bare bunten (#1735). Deltaker-synkingen etterpå
+   * må vite om ut-spilleren fortsatt står i en annen bunt. Settet leses uansett
+   * i planfasen, så det bæres videre i stedet for å hentes på nytt.
+   */
+  allCupGameIds: string[];
   teeGender: 'mens' | 'ladies';
 };
 
@@ -619,8 +633,84 @@ async function planCupMatchSwap(
   return {
     bundleIds,
     gameIds: validation.gameIds,
+    allCupGameIds: (cupGames ?? []).map((g) => g.id),
     teeGender: teeGenderOf((inProfile?.gender as string | null) ?? null),
   };
+}
+
+/**
+ * Hold `tournament_participants` i takt med matchene etter et bytte (#1735).
+ *
+ * Deltakerlista er det Spillere-rommet viser og den ENESTE spillerkilden
+ * generer-veiviseren leser. Byttet skriver kun `game_players`, så uten dette
+ * blir frafallet stående på lista og reserven mangler i neste
+ * genererings-runde.
+ *
+ * Best-effort med vilje: byttet er allerede skrevet og står uansett. En feil
+ * her logges og svelges — den skal aldri velte en gjennomført endring.
+ * Beslutningen (hvem meldes på, hvem fjernes) bor i `participantRosterSync.ts`.
+ */
+async function syncParticipantsAfterSwap(
+  admin: SupabaseClient<Database>,
+  args: {
+    tournamentId: string;
+    gameId: string;
+    allCupGameIds: string[];
+    outUserId: string;
+    inUserId: string;
+  },
+): Promise<void> {
+  const { tournamentId, gameId, allCupGameIds, outUserId, inUserId } = args;
+  const logFailure = (error: unknown) =>
+    console.error('[cup] swapCupMatchPlayer participant sync failed', {
+      tournamentId,
+      gameId,
+      error,
+    });
+
+  try {
+    // Hele cupens roster etter byttet — ut-spilleren kan fortsatt stå i en
+    // annen bunt (splittet cup-dag), og da beholdes deltaker-raden hennes.
+    const { data: rosterRows, error: rosterError } = await admin
+      .from('game_players')
+      .select('user_id')
+      .in('game_id', allCupGameIds);
+    if (rosterError) logFailure(rosterError);
+
+    const plan = planParticipantRosterSync({
+      outUserId,
+      inUserId,
+      rosterUserIds: rosterError
+        ? null
+        : (rosterRows ?? []).map((r) => r.user_id as string),
+    });
+
+    if (plan.addParticipantId) {
+      // Samme mønster som `addCupParticipant`: ignoreDuplicates gjør en
+      // allerede påmeldt reserve til en stille no-op, ikke en feil.
+      const { error } = await admin
+        .from('tournament_participants')
+        .upsert(
+          { tournament_id: tournamentId, user_id: plan.addParticipantId },
+          { onConflict: 'tournament_id,user_id', ignoreDuplicates: true },
+        );
+      if (error) logFailure(error);
+    }
+
+    if (plan.removeParticipantId) {
+      // Bevisst INGEN expectAffected (som `removeCupParticipant`): 0 rader er
+      // en ærlig no-op — spilleren var aldri påmeldt, og skal uansett ikke stå
+      // der nå.
+      const { error } = await admin
+        .from('tournament_participants')
+        .delete()
+        .eq('tournament_id', tournamentId)
+        .eq('user_id', plan.removeParticipantId);
+      if (error) logFailure(error);
+    }
+  } catch (err) {
+    logFailure(err);
+  }
 }
 
 /**
@@ -678,7 +768,7 @@ export async function swapCupMatchPlayer(
     inUserId,
   });
   if ('error' in plan) return { error: plan.error };
-  const { bundleIds, gameIds, teeGender } = plan;
+  const { bundleIds, gameIds, allCupGameIds, teeGender } = plan;
 
   const acceptedAt = new Date().toISOString();
   const removedRows: Tables<'game_players'>[] = [];
@@ -770,6 +860,15 @@ export async function swapCupMatchPlayer(
     await compensate();
     return { error: 'swap_failed' };
   }
+
+  // Deltakerlista følger matchene (#1735) — best-effort, se helperen.
+  await syncParticipantsAfterSwap(admin, {
+    tournamentId,
+    gameId,
+    allCupGameIds,
+    outUserId,
+    inUserId,
+  });
 
   // Best-effort invite-varsel til den som kom inn (samme kind og samme
   // presedens som roster-swappen). Feiler det, står byttet uansett.

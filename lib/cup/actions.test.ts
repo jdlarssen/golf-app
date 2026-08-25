@@ -252,15 +252,53 @@ function gamePlayerCalls(method: string) {
   );
 }
 
+function participantCalls(method: string) {
+  return adminMock.__fromCalls.filter(
+    (c) => c.table === 'tournament_participants' && c.method === method,
+  );
+}
+
+/**
+ * Cupens roster slik det ser ut ETTER et gjennomført bytte (#1735) — 'out' er
+ * borte, 'reserve' står i begge buntens matcher.
+ */
+const ROSTER_AFTER_SWAP = [
+  { user_id: 'reserve' },
+  { user_id: 'mate' },
+  { user_id: 'opp1' },
+  { user_id: 'opp2' },
+  { user_id: 'reserve' },
+  { user_id: 'opp1' },
+];
+
+/** Skrivingene i bunten + TOCTOU-re-lesingen, alle vellykkede. */
+function successfulBundleWrites() {
+  return [
+    { data: [outRow('g-host')], error: null }, // delete host
+    { data: null, error: null }, // insert host
+    { data: [outRow('g-derived')], error: null }, // delete derived
+    { data: null, error: null }, // insert derived
+    {
+      data: [
+        { id: 'g-host', status: 'scheduled' },
+        { id: 'g-derived', status: 'scheduled' },
+      ],
+      error: null,
+    }, // re-lesing: bunten står fortsatt urørt
+  ];
+}
+
 describe('swapCupMatchPlayer — happy path (#1473)', () => {
   it('bytter spilleren i HELE bunten, med eksplisitte kolonner på inn-raden', async () => {
     adminMock = buildSupabaseMock([
       ...readsUpToRoster(),
-      { data: [outRow('g-host')], error: null }, // delete host
-      { data: null, error: null }, // insert host
-      { data: [outRow('g-derived')], error: null }, // delete derived
-      { data: null, error: null }, // insert derived
-      { data: [{ id: 'g-host', status: 'scheduled' }, { id: 'g-derived', status: 'scheduled' }], error: null },
+      ...successfulBundleWrites(),
+      // #1735: deltaker-synkingen etter byttet. Seedet eksplisitt — fallbacken
+      // ({data:null}) ville lest som «0 gjenværende matcher» og gitt en delete
+      // testen ikke handler om.
+      { data: ROSTER_AFTER_SWAP, error: null }, // cupens roster etter byttet
+      { data: null, error: null }, // participants upsert
+      { data: null, error: null }, // participants delete
     ]);
     supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
     setUser('admin-1');
@@ -330,10 +368,120 @@ describe('swapCupMatchPlayer — happy path (#1473)', () => {
       userId: 'admin-1',
       isAdmin: true,
     });
-    // Deltakerlista er ikke lenger en kilde i denne flyten.
+    // Deltakerlista er ikke en KILDE i denne flyten: alt fram til første
+    // skriving (gate, plan, guard) rører den ikke — kandidatlista er eneste
+    // kilde. Etter skrivingen synkroniseres den (#1735), dekket under.
+    const firstWrite = adminMock.__fromCalls.findIndex(
+      (c) => c.table === 'game_players' && c.method === 'delete',
+    );
+    expect(firstWrite, 'byttet skrev faktisk').toBeGreaterThan(-1);
     expect(
-      adminMock.__fromCalls.some((c) => c.table === 'tournament_participants'),
+      adminMock.__fromCalls
+        .slice(0, firstWrite)
+        .some((c) => c.table === 'tournament_participants'),
     ).toBe(false);
+  });
+});
+
+/**
+ * #1735: byttet skrev kun `game_players`, mens Spillere-rommet og
+ * generer-veiviseren leser `tournament_participants`. Uten synkingen står
+ * frafallet igjen på deltakerlista og reserven mangler i neste
+ * genererings-runde. Beslutningstabellen (hvem meldes på / fjernes gitt
+ * rosteret) er ren logikk og dekkes av `participantRosterSync.test.ts`; her
+ * dekkes I/O-en: at riktig rader skrives, og at en feil ikke velter byttet.
+ */
+describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => {
+  it('ut-spilleren står i 0 gjenværende matcher: reserven meldes på, frafallet fjernes', async () => {
+    adminMock = buildSupabaseMock([
+      ...readsUpToRoster(),
+      ...successfulBundleWrites(),
+      { data: ROSTER_AFTER_SWAP, error: null },
+      { data: null, error: null }, // upsert
+      { data: null, error: null }, // delete
+    ]);
+    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    setUser('admin-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    const err = await swapCupMatchPlayer(swapForm()).catch((e) => e);
+    expect(err, 'byttet gikk gjennom').toBeInstanceOf(RedirectError);
+
+    const upserts = participantCalls('upsert');
+    expect(upserts).toHaveLength(1);
+    expect(upserts[0].args[0]).toEqual({
+      tournament_id: 'cup-1',
+      user_id: 'reserve',
+    });
+    // Allerede påmeldt reserve = stille no-op, ikke en feil.
+    expect(upserts[0].args[1]).toMatchObject({
+      onConflict: 'tournament_id,user_id',
+      ignoreDuplicates: true,
+    });
+
+    expect(participantCalls('delete')).toHaveLength(1);
+    expect(participantCalls('eq').map((c) => c.args)).toEqual([
+      ['tournament_id', 'cup-1'],
+      ['user_id', 'out'],
+    ]);
+  });
+
+  it('ut-spilleren står fortsatt i en annen match: deltaker-raden beholdes', async () => {
+    adminMock = buildSupabaseMock([
+      // Cupen har en match til utenfor bunten — der spiller 'out' fortsatt.
+      ...readsUpToRoster({
+        games: [
+          ...SPLIT_GAMES,
+          { id: 'g-other', status: 'scheduled', source_game_id: null },
+        ],
+      }),
+      ...successfulBundleWrites(),
+      { data: [...ROSTER_AFTER_SWAP, { user_id: 'out' }], error: null },
+      { data: null, error: null }, // upsert
+    ]);
+    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    setUser('admin-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    const err = await swapCupMatchPlayer(swapForm()).catch((e) => e);
+    expect(err, 'byttet gikk gjennom').toBeInstanceOf(RedirectError);
+
+    // Rosteret leses for HELE cupen, ikke bare bunten — ellers ville
+    // g-other-matchen vært usynlig og raden slettet feilaktig.
+    const rosterRead = gamePlayerCalls('in').at(-1);
+    expect(rosterRead!.args).toEqual([
+      'game_id',
+      ['g-host', 'g-derived', 'g-other'],
+    ]);
+    expect(participantCalls('upsert')).toHaveLength(1);
+    expect(participantCalls('delete')).toHaveLength(0);
+  });
+
+  it('synkingen feiler: byttet står likevel, feilen logges', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      ...readsUpToRoster(),
+      ...successfulBundleWrites(),
+      { data: ROSTER_AFTER_SWAP, error: null },
+      { data: null, error: { message: 'participants boom' } }, // upsert feiler
+      { data: null, error: null }, // delete
+    ]);
+    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    setUser('admin-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    const err = await swapCupMatchPlayer(swapForm()).catch((e) => e);
+
+    // Byttet er allerede skrevet — en feilet synk skal aldri velte det.
+    expect(err, 'redirect skjer uansett').toBeInstanceOf(RedirectError);
+    expect((err as RedirectError).url).toBe(
+      '/admin/cup/cup-1?status=player_swapped',
+    );
+    expect(errSpy).toHaveBeenCalledWith(
+      '[cup] swapCupMatchPlayer participant sync failed',
+      expect.objectContaining({ error: { message: 'participants boom' } }),
+    );
+    errSpy.mockRestore();
   });
 });
 
