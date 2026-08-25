@@ -52,25 +52,38 @@ export interface LeaderboardShellProps {
  * (nothing here is `sticky`, portalled, or horizontally scrollable). Vertical
  * overflow is untouched.
  *
- * `-mx-4 px-4` moves the clip edge 16px outside the content box without
- * changing layout, because `overflow: clip` clips hit-testing and focus rings
- * as well as paint. The in-shell back arrows — `LeaderboardHeader` (used by
- * the `*HolesView.tsx` files among others), plus the local headers in
- * `HeadToHeadResult` and `State4View` — hang 8px left via `-ml-2`, and the
- * global focus ring adds 4px outside that box (`outline-offset: 2px` plus a
- * 2px `outline`, see `app/globals.css`). 16px covers both with margin; the
- * old 8px landed the clip edge exactly on the arrow's border box and cut the
- * left segment of its keyboard focus ring. Not `data-focus-inset` on the
- * root: that would re-inset rings for the whole subtree, not just the arrow.
- * (`overflow-clip-margin` would be the tidier tool but Safari lacks it.)
- *
- * The negative margin stays inside `AppShell` (`max-w-md px-5`), so even at
- * 360px the root's border box never reaches the viewport edge.
- *
  * Safari floor: `overflow: clip` needs iOS/Safari ≥ 16. Older Safari simply
  * does not clip — the side-scroll symptom remains there, nothing breaks.
  */
-const DECOR_CLIP = 'overflow-x-clip -mx-4 px-4';
+const DECOR_CLIP = 'overflow-x-clip';
+
+/**
+ * Full-page variant: the clip plus a 16px outset (`-mx-4 px-4`) that moves the
+ * clip edge outside the content box without changing layout, because
+ * `overflow: clip` clips hit-testing and focus rings as well as paint. The
+ * in-shell back arrows — `LeaderboardHeader` (used by the `*HolesView.tsx`
+ * files among others), plus the local headers in `HeadToHeadResult` and
+ * `State4View` — hang 8px left via `-ml-2`, and the global focus ring adds 4px
+ * outside that box (`outline-offset: 2px` plus a 2px `outline`, see
+ * `app/globals.css`). 16px covers both with margin; the old 8px landed the clip
+ * edge exactly on the arrow's border box and cut the left segment of its
+ * keyboard focus ring. Not `data-focus-inset` on the root: that would re-inset
+ * rings for the whole subtree, not just the arrow.
+ * (`overflow-clip-margin` would be the tidier tool but Safari lacks it.)
+ *
+ * Safe only here: this branch's root sits inside `AppShell` (`max-w-md px-5`),
+ * and 20px of padding absorbs the 16px pull, so even at 360px the border box
+ * never reaches the viewport edge.
+ *
+ * The chromeless branch deliberately does NOT get the outset. It has no padded
+ * ancestor — on the finished-game path the caller renders it as a bare sibling
+ * of the podium, directly under the page body — so `-mx-4` there would make the
+ * used width `viewport + 32px` and reintroduce the very side-scroll #1739
+ * fixed. It needs no compensation either: every in-shell back arrow is gated
+ * behind `!chromeless` at its call site (`HeadToHeadResult`, `State4View`,
+ * `SkinsView`, the podiums, …), so no `-ml-2` overhang renders in that branch.
+ */
+const DECOR_CLIP_INSET = `${DECOR_CLIP} -mx-4 px-4`;
 
 /**
  * Delt ramme rundt alle poeng-format-leaderboardene: `LeaderboardBackdrop`
@@ -121,7 +134,7 @@ export function LeaderboardShell({
   }
   return (
     <AppShell>
-      <div className={`relative isolate pb-12 ${DECOR_CLIP}`}>
+      <div className={`relative isolate pb-12 ${DECOR_CLIP_INSET}`}>
         {live && <LeaderboardRealtime />}
         <LeaderboardBackdrop />
         <div className="relative">{children}</div>
