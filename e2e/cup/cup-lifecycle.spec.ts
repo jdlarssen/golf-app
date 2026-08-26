@@ -1,55 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
 import { test, expect } from '@playwright/test';
 import {
   envReady,
   skipReason,
   adminClient,
+  signedInClient,
   ADMIN_EMAIL,
   PLAYER_EMAIL,
-  SUPABASE_URL,
   signInViaOtp,
-  fetchOtpForEmail,
-  withFreshOtpRetry,
   seedEphemeralPlayers,
   deleteEphemeralPlayers,
   type EphemeralPlayer,
 } from '../_helpers/games';
-
-// ANON_KEY er offentlig by design (den shippes til hver nettleser), men holdes
-// utenfor repoet — leses fra env som SUPABASE_URL (#1197).
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-
-/**
- * supabase-js-klient signert inn som `email` — samme mønster som #849-riggen
- * (`e2e/games/adversarial-role-replay.spec.ts`): mint OTP via admin-API-et,
- * verifyOtp med supersede-race-retry. Brukes til hostile direkte-skriv mot
- * PostgREST, altså UTENOM server-actionene, så RLS testes på DB-laget.
- */
-async function signedInClient(email: string) {
-  if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
-  if (!ANON_KEY) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
-  const client = createClient(SUPABASE_URL, ANON_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  await withFreshOtpRetry<void>(
-    () => fetchOtpForEmail(email),
-    async (otp) => {
-      const { error } = await client.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email',
-      });
-      if (!error) return { ok: true, value: undefined };
-      const msg = error.message?.toLowerCase() ?? '';
-      return {
-        ok: false,
-        retryable: msg.includes('expired') || msg.includes('invalid'),
-      };
-    },
-    { label: `signedInClient(${email})` },
-  );
-  return client;
-}
 
 /**
  * Cup-livssyklus-smoke (#674, del 1) — reproduserer #642 (offentlig cup-

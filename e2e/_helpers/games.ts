@@ -22,6 +22,11 @@ export const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL?.trim().toLowerCase();
 export const PLAYER_EMAIL = process.env.E2E_PLAYER_EMAIL?.trim().toLowerCase();
 
+// ANON_KEY is public by design (it ships to every browser), but keep the
+// literal out of the repo — read from env like SUPABASE_URL; the staging
+// value lives in .env.staging.local (#1197).
+export const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
 /**
  * Env-readiness for selv-påmeldings-spec-ene. Krever URL + service-role +
  * admin-mail + spiller-mail (sistnevnte må være en separat pre-seeded bruker
@@ -48,6 +53,18 @@ export function adminClient(): SupabaseClient {
     );
   }
   return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+/**
+ * Build an unauthenticated anon supabase-js client. No session — exactly what a
+ * logged-out browser would have if it tried to call the REST API directly.
+ */
+export function anonClient() {
+  if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
+  if (!ANON_KEY) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
+  return createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
@@ -117,6 +134,33 @@ export async function withFreshOtpRetry<T>(
   throw new Error(
     `withFreshOtpRetry(${opts?.label ?? 'otp'}) brukte opp ${maxAttempts} forsøk: ${lastReason}`,
   );
+}
+
+/**
+ * Build a supabase-js client signed in as `email`. We mint an OTP via the
+ * admin API (no rate-limit hit), then call verifyOtp to get a real session.
+ * Returns the authed client; caller should sign out when done.
+ */
+export async function signedInClient(email: string) {
+  const client = anonClient();
+  // Same supersede-race as the page-driven login (#861): a concurrent mint on
+  // this email can invalidate our token before verifyOtp runs. Retry with a
+  // fresh OTP on an expired/invalid error instead of throwing on the first miss.
+  await withFreshOtpRetry<void>(
+    () => fetchOtpForEmail(email),
+    async (otp) => {
+      const { error } = await client.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+      if (!error) return { ok: true, value: undefined };
+      const msg = error.message?.toLowerCase() ?? '';
+      return { ok: false, retryable: msg.includes('expired') || msg.includes('invalid') };
+    },
+    { label: `signedInClient(${email})` },
+  );
+  return client;
 }
 
 /**
