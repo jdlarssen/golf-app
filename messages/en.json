@@ -4815,6 +4815,7 @@
         "plan_tee": "That tee no longer exists. Open Setup and pick a tee again.",
         "no_matches": "No matches to create.",
         "insert_failed": "Failed to create the matches. Please try again.",
+        "profile_read_failed": "Couldn't fetch the player data, so no matches were created. Please try again.",
         "too_many_matches": "A personal cup allows at most {max} matches. For more, create a club cup.",
         "too_many_players": "A personal cup allows at most {max} players. For more, create a club cup.",
         "tee_off_in_past": "The tee-off time can't be in the past. Pick a time from now on."

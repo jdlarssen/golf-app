@@ -407,10 +407,21 @@ export async function createCupMatchesFromPlan(
   const userIds = Array.from(
     new Set(matches.flatMap((m) => [...m.side1, ...m.side2])),
   );
-  const { data: roster } = await getAdminClient()
+  const { data: roster, error: rosterError } = await getAdminClient()
     .from('users')
     .select('id, gender, hcp_index')
     .in('id', userIds);
+  // #1718: en feilet lesing ga tidligere et tomt kart, og HELE batchen ble
+  // generert med 'mens'-tee og hcpIndex 0 — stille feil slag for alle. Stopp
+  // før første insert; ingenting er skrevet, så det er ingenting å kompensere.
+  // (En DELVIS rad-mengde er derimot ikke en feil — se `?? null`/`?? 0` under.)
+  if (rosterError) {
+    console.error('[cup] generateMatches profile read failed', {
+      tournamentId,
+      error: rosterError,
+    });
+    return { error: 'profile_read_failed' };
+  }
   const profileById = new Map<string, CupProfile>(
     (roster ?? []).map((u) => [
       u.id as string,

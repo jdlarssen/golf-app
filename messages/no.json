@@ -4815,6 +4815,7 @@
         "plan_tee": "Teen finnes ikke lenger. Åpne oppsettet og velg tee på nytt.",
         "no_matches": "Ingen matcher å opprette.",
         "insert_failed": "Klarte ikke å opprette matchene. Prøv igjen.",
+        "profile_read_failed": "Fikk ikke tak i spillerdataene, så matchene ble ikke laget. Prøv igjen.",
         "too_many_matches": "En personlig cup tar maks {max} matcher. Vil du ha flere, lag en klubb-cup.",
         "too_many_players": "En personlig cup tar maks {max} spillere. Vil du ha flere, lag en klubb-cup.",
         "tee_off_in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av."
