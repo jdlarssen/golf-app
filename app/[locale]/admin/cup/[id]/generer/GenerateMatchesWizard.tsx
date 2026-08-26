@@ -519,6 +519,7 @@ function Step2Confirm({
           plan_tee: t('generate.errors.plan_tee'),
           no_matches: t('generate.errors.no_matches'),
           insert_failed: t('generate.errors.insert_failed'),
+          profile_read_failed: t('generate.errors.profile_read_failed'),
           too_many_matches: t('generate.errors.too_many_matches', { max: MAX_PERSONAL_CUP_MATCHES }),
           too_many_players: t('generate.errors.too_many_players', { max: MAX_PERSONAL_CUP_PLAYERS }),
           tee_off_in_past: t('generate.errors.tee_off_in_past'),

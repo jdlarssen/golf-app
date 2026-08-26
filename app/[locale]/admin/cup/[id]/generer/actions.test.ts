@@ -81,13 +81,19 @@ let adminCupGroupId: string | null = null;
 let adminMemberIds: string[] = [];
 let adminCupCreatedBy: string | null = null;
 let adminUserRows: AdminUserRow[] = DEFAULT_USER_ROWS;
+// #1718: lesefeilen på profilene skal stoppe genereringen. Mutabel så én test
+// kan bryte nettopp det kallet; default null holder alle andre tester uendret.
+let adminUserRowsError: unknown = null;
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => {
       if (table === 'users') {
         return {
           select: () => ({
-            in: async () => ({ data: adminUserRows, error: null }),
+            in: async () => ({
+              data: adminUserRowsError ? null : adminUserRows,
+              error: adminUserRowsError,
+            }),
           }),
         };
       }
@@ -199,6 +205,7 @@ beforeEach(() => {
   adminMemberIds = [];
   adminCupCreatedBy = null;
   adminUserRows = DEFAULT_USER_ROWS;
+  adminUserRowsError = null;
 });
 
 describe('createCupMatchesFromPlan — authz', () => {
@@ -299,6 +306,45 @@ describe('createCupMatchesFromPlan — plan lookup (#1472)', () => {
         (c) => c.table === 'games' && c.method === 'insert',
       ),
     ).toBe(false);
+  });
+});
+
+/**
+ * #1718: profil-lesingen svelget `error`. Et tomt kart ga stille 'mens'-tee og
+ * hcpIndex 0 for ALLE spillere i batchen — feil tee-sett og feil greensome-
+ * forslag, uten et eneste synlig tegn. Lesingen skal nå stoppe genereringen.
+ */
+describe('createCupMatchesFromPlan — profil-lesing (#1718)', () => {
+  it('users-lesingen feiler: returnerer profile_read_failed uten å inserte noe', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: draftCup, error: null },
+      planResult(),
+      teeResult(),
+    ]);
+    adminUserRowsError = { message: 'profiles boom' };
+    setUser('admin-1');
+
+    const { createCupMatchesFromPlan } = await import('./actions');
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'profile_read_failed',
+    });
+
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) =>
+          (c.table === 'games' || c.table === 'game_players') &&
+          c.method === 'insert',
+      ),
+      'ingenting skrevet — feilen kommer før første insert',
+    ).toBe(false);
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(errSpy).toHaveBeenCalledWith(
+      '[cup] generateMatches profile read failed',
+      expect.objectContaining({ error: { message: 'profiles boom' } }),
+    );
+    errSpy.mockRestore();
   });
 });
 
