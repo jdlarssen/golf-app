@@ -59,14 +59,18 @@ const DEFAULT_TIE_POINTS = 0.5;
 /**
  * Felles redirect/revalidate-mål for cup-styringshandlinger (#524). Klubb-cup
  * (group_id satt) holder seg i klubb-chrome; frittstående går til admin-cup.
- * Leses via request-scoped klient — kalleren er allerede gatet, så en klubb-cup
- * er synlig (medlem/admin via scoped-select RLS 0089).
+ *
+ * Leses med admin-klienten (#1718), samme grunn som
+ * `requireAdminOrClubAdminOfCup`: `groupId` er ikke bare et redirect-mål — den
+ * mates inn som klubb-medlemskaps-guarden i `planCupMatchSwap`, og en klubb-cup
+ * som request-klienten ikke ser ville lest som `null` og skrudd guarden AV
+ * (feiler ÅPENT). Kalleren er alltid gatet før dette, og lesingen eksponerer
+ * ingenting utover sti + groupId.
  */
 async function cupRedirectBase(
-  supabase: Awaited<ReturnType<typeof getServerClient>>,
   id: string,
 ): Promise<{ path: string; groupId: string | null; revalidate: () => void }> {
-  const { data } = await supabase
+  const { data } = await getAdminClient()
     .from('tournaments')
     .select('group_id')
     .eq('id', id)
@@ -199,7 +203,7 @@ export async function startTournament(formData: FormData) {
 
   const supabase = await getServerClient();
   await requireAdminOrClubAdminOfCup(supabase, id);
-  const base = await cupRedirectBase(supabase, id);
+  const base = await cupRedirectBase(id);
 
   // Krev minst 2 matches før start (per kontrakt-success-kriterium).
   const { count } = await supabase
@@ -319,7 +323,7 @@ export async function finishTournament(formData: FormData) {
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, id);
-  const base = await cupRedirectBase(supabase, id);
+  const base = await cupRedirectBase(id);
 
   // Navne-fallbacken snapshot-en bygger (#1527) følger arrangørens locale.
   const tCup = await getTranslations('cup');
@@ -759,7 +763,7 @@ export async function swapCupMatchPlayer(
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
-  const base = await cupRedirectBase(supabase, tournamentId);
+  const base = await cupRedirectBase(tournamentId);
 
   const admin = getAdminClient();
 

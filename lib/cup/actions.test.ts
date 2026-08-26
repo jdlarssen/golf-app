@@ -162,7 +162,7 @@ describe('createTournamentDraft — success still redirects (#1397)', () => {
  * Admin-caller DB-sekvens (gaten kortslutter på is_admin):
  *   1. adminMock: tournaments.select('group_id') — gaten
  *   2. supabaseMock: users.select(...) — loadRole
- *   3. supabaseMock: tournaments.select('group_id') — cupRedirectBase
+ *   3. adminMock: tournaments.select('group_id') — cupRedirectBase (#1718)
  *   4. onwards: action-ens egne adminMock-lesninger/skrivinger
  */
 
@@ -232,6 +232,7 @@ function swapForm(overrides: Record<string, string> = {}): FormData {
 function readsUpToRoster(overrides: { games?: unknown[]; profile?: unknown } = {}) {
   return [
     gateGroupIdNull, // 1. gaten
+    gateGroupIdNull, // 3. cupRedirectBase (#1718: admin-klienten, ikke request)
     { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
     { data: overrides.games ?? SPLIT_GAMES, error: null },
     // users: inn-spillerens tee-kjønn + profil-status i én runde-tur.
@@ -300,7 +301,7 @@ describe('swapCupMatchPlayer — happy path (#1473)', () => {
       { data: null, error: null }, // participants upsert
       { data: null, error: null }, // participants delete
     ]);
-    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
@@ -384,6 +385,64 @@ describe('swapCupMatchPlayer — happy path (#1473)', () => {
 });
 
 /**
+ * #1718: `cupRedirectBase` leste `group_id` med request-klienten, og
+ * `swapCupMatchPlayer` mater den verdien inn som klubb-medlemskaps-guarden i
+ * `planCupMatchSwap`. Ble cupen usynlig for kalleren under RLS, leste den som
+ * `null` — og guarden slo seg stille AV (feilet ÅPENT) i stedet for å avvise.
+ * Lesingen går nå via admin-klienten, som gaten alltid har gjort.
+ */
+describe('swapCupMatchPlayer — klubb-tilhørigheten leses med admin-klienten (#1718)', () => {
+  it('klubb-cup: group_id kommer fra admin-klienten, request-klienten rører aldri tournaments', async () => {
+    adminMock = buildSupabaseMock([
+      { data: { group_id: 'club-1' }, error: null }, // gaten
+      { data: { group_id: 'club-1' }, error: null }, // cupRedirectBase
+      { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
+      { data: SPLIT_GAMES, error: null },
+      {
+        data: [
+          { user_id: 'out' },
+          { user_id: 'mate' },
+          { user_id: 'reserve' },
+          { user_id: 'opp1' },
+          { user_id: 'opp2' },
+        ],
+        error: null,
+      }, // group_members: reserven er medlem
+      { data: { gender: 'ladies', profile_completed_at: '2026-07-01T09:00:00.000Z' }, error: null },
+      { data: SPLIT_PLAYERS, error: null },
+      ...successfulBundleWrites(),
+      { data: ROSTER_AFTER_SWAP, error: null },
+      { data: null, error: null }, // participants upsert
+      { data: null, error: null }, // participants delete
+    ]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
+    setUser('admin-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    const err = await swapCupMatchPlayer(swapForm()).catch((e) => e);
+
+    // Klubb-cupen holder seg i klubb-chrome — redirect-målet beviser at
+    // groupId ble lest, og medlemskaps-guarden fikk samme verdi.
+    expect(err, 'byttet gikk gjennom').toBeInstanceOf(RedirectError);
+    expect((err as RedirectError).url).toBe(
+      '/klubber/club-1/cup/cup-1?status=player_swapped',
+    );
+    expect(candidateMock.mock.calls[0][1]).toMatchObject({ groupId: 'club-1' });
+
+    // Begge tournaments-oppslagene (gaten + cupRedirectBase) er admin-klientens.
+    expect(
+      adminMock.__fromCalls.filter(
+        (c) => c.table === 'tournaments' && c.method === 'maybeSingle',
+      ),
+    ).toHaveLength(2);
+    expect(
+      supabaseMock.__fromCalls.filter((c) => c.table === 'tournaments'),
+      'request-klienten leser ikke cup-raden lenger',
+    ).toHaveLength(0);
+  });
+});
+
+/**
  * #1735: byttet skrev kun `game_players`, mens Spillere-rommet og
  * generer-veiviseren leser `tournament_participants`. Uten synkingen står
  * frafallet igjen på deltakerlista og reserven mangler i neste
@@ -400,7 +459,7 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
       { data: null, error: null }, // upsert
       { data: null, error: null }, // delete
     ]);
-    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
@@ -439,7 +498,7 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
       { data: [...ROSTER_AFTER_SWAP, { user_id: 'out' }], error: null },
       { data: null, error: null }, // upsert
     ]);
-    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
@@ -467,7 +526,7 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
       { data: null, error: { message: 'participants boom' } }, // upsert feiler
       { data: null, error: null }, // delete
     ]);
-    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
@@ -489,10 +548,11 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
 describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
   it('matchen tilhører en annen cup: not_found, ingen skriving', async () => {
     adminMock = buildSupabaseMock([
-      gateGroupIdNull,
+      gateGroupIdNull, // gaten
+      gateGroupIdNull, // cupRedirectBase
       { data: { id: 'g-x', tournament_id: 'annen-cup', source_game_id: null }, error: null },
     ]);
-    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
@@ -506,16 +566,14 @@ describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
   it('klubb-cup: medlemskapet er trukket → not_member, ingen skriving', async () => {
     adminMock = buildSupabaseMock([
       { data: { group_id: 'club-1' }, error: null }, // gaten
+      { data: { group_id: 'club-1' }, error: null }, // cupRedirectBase
       { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
       { data: SPLIT_GAMES, error: null },
       { data: [{ user_id: 'out' }, { user_id: 'mate' }], error: null }, // group_members: reserve er ute
       { data: { gender: 'ladies', profile_completed_at: '2026-07-01T09:00:00.000Z' }, error: null },
       { data: SPLIT_PLAYERS, error: null },
     ]);
-    supabaseMock = buildSupabaseMock([
-      cupAdminUser,
-      { data: { group_id: 'club-1' }, error: null }, // cupRedirectBase
-    ]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
@@ -532,7 +590,7 @@ describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
     adminMock = buildSupabaseMock([
       ...readsUpToRoster({ profile: { gender: 'ladies', profile_completed_at: null } }),
     ]);
-    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
@@ -555,7 +613,7 @@ describe('swapCupMatchPlayer — atomic-or-compensated (#1473)', () => {
       { data: null, error: null }, // kompensering: slett inn-radene
       { data: null, error: null }, // kompensering: re-insert ut-radene
     ]);
-    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
@@ -586,7 +644,7 @@ describe('swapCupMatchPlayer — atomic-or-compensated (#1473)', () => {
       { data: null, error: null }, // kompensering: slett inn-radene
       { data: null, error: null }, // kompensering: re-insert ut-radene
     ]);
-    supabaseMock = buildSupabaseMock([cupAdminUser, gateGroupIdNull]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
     setUser('admin-1');
 
     const { swapCupMatchPlayer } = await import('./actions');
