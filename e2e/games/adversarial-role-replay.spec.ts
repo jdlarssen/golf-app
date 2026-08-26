@@ -1,17 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import {
   envReady,
   skipReason,
   adminClient,
+  anonClient,
+  signedInClient,
   ADMIN_EMAIL,
   PLAYER_EMAIL,
-  SUPABASE_URL,
   signInViaOtp,
   seedActiveStablefordGame,
   cleanupTestGame,
-  fetchOtpForEmail,
-  withFreshOtpRetry,
   seedEphemeralPlayers,
   deleteEphemeralPlayers,
   type ActiveGame,
@@ -50,54 +48,6 @@ import {
  * Tagged @lifecycle (seeds multiple roles + logs in; individual tests are >15s).
  * Env-gated to staging; never touches prod.
  */
-
-// ANON_KEY is public by design (it ships to every browser), but keep the
-// literal out of the repo — read from env like SUPABASE_URL; the staging
-// value lives in .env.staging.local (#1197).
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-
-/**
- * Build an unauthenticated anon supabase-js client. No session — exactly what a
- * logged-out browser would have if it tried to call the REST API directly.
- */
-function anonClient() {
-  if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
-  if (!ANON_KEY) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
-  return createClient(SUPABASE_URL, ANON_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-/**
- * Build a supabase-js client signed in as `email`. We mint an OTP via the
- * admin API (no rate-limit hit), then call verifyOtp to get a real session.
- * Returns the authed client; caller should sign out when done.
- */
-async function signedInClient(email: string) {
-  if (!SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
-  if (!ANON_KEY) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
-  const client = createClient(SUPABASE_URL, ANON_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  // Same supersede-race as the page-driven login (#861): a concurrent mint on
-  // this email can invalidate our token before verifyOtp runs. Retry with a
-  // fresh OTP on an expired/invalid error instead of throwing on the first miss.
-  await withFreshOtpRetry<void>(
-    () => fetchOtpForEmail(email),
-    async (otp) => {
-      const { error } = await client.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email',
-      });
-      if (!error) return { ok: true, value: undefined };
-      const msg = error.message?.toLowerCase() ?? '';
-      return { ok: false, retryable: msg.includes('expired') || msg.includes('invalid') };
-    },
-    { label: `signedInClient(${email})` },
-  );
-  return client;
-}
 
 /**
  * Seed a real score row (service-role) so a hostile UPDATE/READ has an EXISTING
