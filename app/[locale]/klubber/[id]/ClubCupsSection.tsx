@@ -8,6 +8,10 @@ export type ClubCupRow = {
   id: string;
   name: string;
   status: string;
+  /** Cup-ens delbare bli-med-kode (`tournaments.short_id`, NOT NULL siden 0162). */
+  short_id: string;
+  /** Har jeg allerede en `tournament_participants`-rad i denne cupen? */
+  joined: boolean;
 };
 
 /**
@@ -19,6 +23,12 @@ export type ClubCupRow = {
  * dedikerte klubb-flaten (ingen admin-chrome).
  *
  * Cup status labels reuse cup.status.* (byte-identical with the old local map).
+ *
+ * #1491: for a cup still in `draft` the row also carries the signup affordance —
+ * membership IS the invitation, so no member should have to be handed the share
+ * link by hand. Both states (not signed up / signed up) point at
+ * `/cup/bli-med/[shortId]`, which owns every rejection state and the withdraw
+ * action; this row is just the door, it decides nothing.
  */
 export function ClubCupsSection({
   cups,
@@ -61,6 +71,18 @@ export function ClubCupsSection({
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
                     {tCup(`${cup.status}` as Parameters<typeof tCup>[0])}
                   </span>
+                  {cup.status === 'draft' && (
+                    <SmartLink
+                      href={`/cup/bli-med/${cup.short_id}`}
+                      className={
+                        cup.joined
+                          ? 'min-h-[44px] flex items-center font-sans text-xs text-muted hover:underline'
+                          : 'min-h-[44px] flex items-center font-sans text-xs font-medium text-primary hover:underline'
+                      }
+                    >
+                      {cup.joined ? t('joinedMarker') : t('joinLink')}
+                    </SmartLink>
+                  )}
                   {canManage && (
                     <SmartLink
                       href={`/klubber/${clubId}/cup/${cup.id}`}

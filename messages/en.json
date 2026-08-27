@@ -4135,7 +4135,9 @@
       "heading": "Club cups",
       "empty": "No cups in this club yet.",
       "newButton": "New cup",
-      "manageLink": "Manage"
+      "manageLink": "Manage",
+      "joinLink": "Sign up",
+      "joinedMarker": "Signed up"
     },
     "copyLink": {
       "ariaLabel": "Link to join the club",
