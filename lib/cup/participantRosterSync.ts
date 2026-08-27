@@ -2,8 +2,8 @@
  * Deltakerlista etter et spillerbytte (#1735).
  *
  * Pure — no I/O. `swapCupMatchPlayer` (lib/cup/actions.ts) writes the swap into
- * `game_players`, re-reads the cup's rosters, hands them in here, and performs
- * the upsert/delete this returns.
+ * `game_players`, re-reads the two swapped players' rows across the cup's
+ * matches, hands them in here, and performs the upsert/delete this returns.
  *
  * Why the sync exists at all: `tournament_participants` is what the Spillere
  * room lists and what the generate wizard reads as its ONLY player source. A
@@ -23,7 +23,9 @@ export type ParticipantRosterSyncInput = {
   /** Reserven som ble byttet INN. */
   inUserId: string;
   /**
-   * `game_players.user_id` over ALLE cupens matcher, lest ETTER byttet.
+   * `game_players.user_id` for radene til de to byttede spillerne, på tvers av
+   * cupens matcher, lest ETTER byttet. Kun `outUserId`/`inUserId` avgjør noe
+   * under, så et bredere roster ville vært lest til ingen nytte (#1745).
    * Duplikater er greit (én rad per match). `null` = rosteret er ukjent
    * (lese-feilen slo til) — da fjernes ingen, jf. `removeParticipantId`.
    */
