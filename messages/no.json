@@ -4135,7 +4135,9 @@
       "heading": "Klubbens cuper",
       "empty": "Ingen cuper i klubben ennå.",
       "newButton": "Ny cup",
-      "manageLink": "Styr"
+      "manageLink": "Styr",
+      "joinLink": "Meld deg på",
+      "joinedMarker": "Påmeldt"
     },
     "copyLink": {
       "ariaLabel": "Lenke for å bli med i klubben",

@@ -70,19 +70,37 @@ export default async function KlubbDetailPage({
 
   // #480: klubbens ligaer. RLS («leagues select scoped») lar medlemmer se
   // klubb-scopede rader; oppretting/styring er klubb-admin (knapp nedenfor).
-  const { data: clubLeagues } = await supabase
-    .from('leagues')
-    .select('id, name, status')
-    .eq('group_id', id)
-    .order('created_at', { ascending: false });
+  // #524: klubbens cuper — samme mønster («tournaments select scoped»).
+  // #1491: mine egne roster-rader, så en kladd-cup kan vise «Meld deg på» eller
+  // «Påmeldt» rett i lista. Filtrert på meg selv og lest med request-klienten
+  // (policyen `tournament_participants_select_authenticated`, 0155, er
+  // `using (true)`) — ingen service-role på denne siden. Alle tre kjører
+  // parallelt: roster-raden trenger ikke cup-id-ene, bare mitt bruker-id.
+  const [{ data: clubLeagues }, { data: clubCups }, { data: myCupRoster }] =
+    await Promise.all([
+      supabase
+        .from('leagues')
+        .select('id, name, status')
+        .eq('group_id', id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('tournaments')
+        .select('id, name, status, short_id')
+        .eq('group_id', id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('tournament_participants')
+        .select('tournament_id')
+        .eq('user_id', user!.id),
+    ]);
 
-  // #524: klubbens cuper. RLS («tournaments select scoped») lar medlemmer se
-  // klubb-scopede rader; oppretting/styring er klubb-admin (knapp nedenfor).
-  const { data: clubCups } = await supabase
-    .from('tournaments')
-    .select('id, name, status')
-    .eq('group_id', id)
-    .order('created_at', { ascending: false });
+  const joinedCupIds = new Set(
+    (myCupRoster ?? []).map((row) => row.tournament_id),
+  );
+  const cupRows = (clubCups ?? []).map((cup) => ({
+    ...cup,
+    joined: joinedCupIds.has(cup.id),
+  }));
 
   // #50: en utløpt klubb (frossen avtale) tar ikke imot nye medlemmer eller
   // spill. Vi fryser legg-til-medlem, del-lenke og «sett opp runde», og viser
@@ -356,9 +374,10 @@ export default async function KlubbDetailPage({
         canManage={isAdmin}
       />
 
-      {/* Klubbens cuper (#524) — alle medlemmer ser lista; owner/admin oppretter. */}
+      {/* Klubbens cuper (#524) — alle medlemmer ser lista; owner/admin oppretter.
+          Kladd-rader har påmeldings-døra (#1491). */}
       <ClubCupsSection
-        cups={clubCups ?? []}
+        cups={cupRows}
         clubId={club.id}
         canCreate={isAdmin && !frozen}
         canManage={isAdmin}

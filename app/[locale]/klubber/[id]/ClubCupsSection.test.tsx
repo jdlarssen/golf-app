@@ -9,8 +9,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 const CUPS: ClubCupRow[] = [
-  { id: 'c1', name: 'Klubbmesterskap', status: 'active' },
-  { id: 'c2', name: 'Høst-cup', status: 'draft' },
+  { id: 'c1', name: 'Klubbmesterskap', status: 'active', short_id: 'AAA111', joined: false },
+  { id: 'c2', name: 'Høst-cup', status: 'draft', short_id: 'BBB222', joined: false },
 ];
 
 describe('ClubCupsSection (#524)', () => {
@@ -63,6 +63,35 @@ describe('ClubCupsSection (#524)', () => {
     expect(screen.getByRole('link', { name: 'Ny cup' })).toHaveAttribute(
       'href',
       '/klubber/c1/cup/ny',
+    );
+  });
+
+  it('#1491: a draft cup carries the signup door — «Meld deg på» when I am not on the roster, «Påmeldt» when I am; other statuses keep no affordance', () => {
+    // Not on the roster → the invitation IS the membership: sign-up link on the
+    // draft row, pointing at the shared join page.
+    const { rerender } = render(
+      <ClubCupsSection cups={CUPS} clubId="c1" canCreate={false} canManage={false} />,
+    );
+    const join = screen.getByRole('link', { name: 'Meld deg på' });
+    expect(join).toHaveAttribute('href', '/cup/bli-med/BBB222');
+    expect(screen.queryByRole('link', { name: 'Påmeldt' })).toBeNull();
+    // The active cup (c1) has no signup affordance — only the draft row does.
+    expect(screen.getAllByRole('link', { name: 'Meld deg på' })).toHaveLength(1);
+
+    // Already on the roster → «Påmeldt», linking at the same page (where the
+    // withdraw action lives).
+    rerender(
+      <ClubCupsSection
+        cups={CUPS.map((c) => (c.status === 'draft' ? { ...c, joined: true } : c))}
+        clubId="c1"
+        canCreate={false}
+        canManage={false}
+      />,
+    );
+    expect(screen.queryByRole('link', { name: 'Meld deg på' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Påmeldt' })).toHaveAttribute(
+      'href',
+      '/cup/bli-med/BBB222',
     );
   });
 });
