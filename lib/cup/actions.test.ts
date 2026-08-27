@@ -446,12 +446,13 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
     const err = await swapCupMatchPlayer(swapForm()).catch((e) => e);
     expect(err, 'byttet gikk gjennom').toBeInstanceOf(RedirectError);
 
-    // Rosteret leses for HELE cupen, ikke bare bunten — ellers ville
-    // g-other-matchen vært usynlig og raden slettet feilaktig.
-    const rosterRead = gamePlayerCalls('in').at(-1);
-    expect(rosterRead!.args).toEqual([
-      'game_id',
-      ['g-host', 'g-derived', 'g-other'],
+    // Rosteret leses over alle cupens matcher, men bare de to byttede
+    // spillernes rader (#1745): uten game_id-bredden ville g-other-matchen vært
+    // usynlig og raden slettet feilaktig, og uten user_id-smalheten kunne en
+    // trunkert side ha mistet 'out' og gitt samme feilslettingen.
+    expect(gamePlayerCalls('in').slice(-2).map((c) => c.args)).toEqual([
+      ['game_id', ['g-host', 'g-derived', 'g-other']],
+      ['user_id', ['out', 'reserve']],
     ]);
     expect(participantCalls('upsert')).toHaveLength(1);
     expect(participantCalls('delete')).toHaveLength(0);

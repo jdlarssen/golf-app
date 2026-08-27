@@ -669,12 +669,17 @@ async function syncParticipantsAfterSwap(
     });
 
   try {
-    // Hele cupens roster etter byttet — ut-spilleren kan fortsatt stå i en
-    // annen bunt (splittet cup-dag), og da beholdes deltaker-raden hennes.
+    // Radene til de to byttede spillerne, over ALLE cupens matcher: bredden på
+    // game_id trengs fordi ut-spilleren kan stå i en annen bunt (splittet
+    // cup-dag), og da beholdes deltaker-raden hennes. Smalheten på user_id
+    // trengs fordi planen kun spør om disse to — å lese hele cup-rosteret var
+    // O(alle deltakere) og kunne bli stille trunkert av PostgREST, slik at en
+    // spiller som fortsatt står i en match feilaktig ble fjernet (#1745).
     const { data: rosterRows, error: rosterError } = await admin
       .from('game_players')
       .select('user_id')
-      .in('game_id', allCupGameIds);
+      .in('game_id', allCupGameIds)
+      .in('user_id', [outUserId, inUserId]);
     if (rosterError) logFailure(rosterError);
 
     const plan = planParticipantRosterSync({
