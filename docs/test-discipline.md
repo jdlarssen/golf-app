@@ -72,6 +72,8 @@ Eierbeslutning 2026-07-07 (#1104): behold alle tre nivåer — de fanger ulike t
 - **Forbudt:** Vente-på-timing-hack-er. Bruk `await expect(locator).toBeVisible()` med default-timeout.
 - **Worktree-isolasjon (lokalt):** `reuseExistingServer` gjør at Playwright lokalt gjenbruker enhver dev-server som lytter på porten — også en fremmed worktrees — som gir falskt grønt/rødt (flyten passerer uten at branchens egen kode kjørte). Kjør worktree-isolert med `PLAYWRIGHT_PORT=<unik port>` (default 3000), og verifiser eierskap før du stoler på et resultat: `lsof -ti:<port>` → `lsof -a -p <pid> -d cwd` (#1259). CI er trygg (`reuseExistingServer: false`).
 
+  **Automatisk vakt (#1299):** `e2e/global-setup.ts` spør serveren på porten hvem den er (`/api/health` → cwd, commit, boot-tidspunkt) og stopper kjøringen med en kopier-lim-klar opprydding før noen spec kjører hvis den ikke er dette arbeidstreet — booter den før siste checkout, står den i en annen mappe, eller på en annen commit. Lytter ingenting, hopper vakten over og Playwright booter sin egen server. Den manuelle `lsof`-runden over er dermed ryggdekning, ikke førstelinje.
+
 ---
 
 ## Beslutningstre — når en endring kommer
