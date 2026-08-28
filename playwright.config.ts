@@ -21,6 +21,11 @@ if (
 
 export default defineConfig({
   testDir: './e2e',
+  // #1299: nivå 2 av #1259. Før noen spec kjører, spør vi serveren på porten
+  // hvem den er (`/api/health`) og stopper kjøringen hvis den ikke er dette
+  // arbeidstreet. Lytter ingenting, hopper den over — Playwright booter da sin
+  // egen server rett etterpå.
+  globalSetup: './e2e/global-setup.ts',
   // On CI: serialize (workers: 1) so authenticated specs don't cluster logins
   // for the same few test users at once, and allow one retry to absorb a
   // transient prod-DB/network blip. Locally these stay at Playwright defaults.
