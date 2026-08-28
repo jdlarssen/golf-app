@@ -1,6 +1,9 @@
 import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { SmartLink } from '@/components/ui/SmartLink';
+import {
+  LeaderboardBackLink,
+  LeaderboardBackLinkSpacer,
+} from '@/components/ui/LeaderboardBackLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
@@ -61,14 +64,15 @@ const DECOR_CLIP = 'overflow-x-clip';
  * Full-page variant: the clip plus a 16px outset (`-mx-4 px-4`) that moves the
  * clip edge outside the content box without changing layout, because
  * `overflow: clip` clips hit-testing and focus rings as well as paint. The
- * in-shell back arrows — `LeaderboardHeader` (used by the `*HolesView.tsx`
- * files among others), plus the local headers in `HeadToHeadResult` and
- * `State4View` — hang 8px left via `-ml-2`, and the global focus ring adds 4px
- * outside that box (`outline-offset: 2px` plus a 2px `outline`, see
- * `app/globals.css`). 16px covers both with margin; the old 8px landed the clip
- * edge exactly on the arrow's border box and cut the left segment of its
- * keyboard focus ring. Not `data-focus-inset` on the root: that would re-inset
- * rings for the whole subtree, not just the arrow.
+ * in-shell back arrow is `LeaderboardBackLink` (`components/ui/`) — rendered by
+ * `LeaderboardHeader` below (used by the `*HolesView.tsx` files among others)
+ * and by the local headers in `HeadToHeadResult` and `State4View`. It hangs 8px
+ * left via `-ml-2`, and the global focus ring adds 4px outside that box
+ * (`outline-offset: 2px` plus a 2px `outline`, see `app/globals.css`). 16px
+ * covers both with margin; the old 8px landed the clip edge exactly on the
+ * arrow's border box and cut the left segment of its keyboard focus ring. Not
+ * `data-focus-inset` on the root: that would re-inset rings for the whole
+ * subtree, not just the arrow.
  * (`overflow-clip-margin` would be the tidier tool but Safari lacks it.)
  *
  * Safe only here: this branch's root sits inside `AppShell` (`max-w-md px-5`),
@@ -81,7 +85,8 @@ const DECOR_CLIP = 'overflow-x-clip';
  * used width `viewport + 32px` and reintroduce the very side-scroll #1739
  * fixed. It needs no compensation either: every in-shell back arrow is gated
  * behind `!chromeless` at its call site (`HeadToHeadResult`, `State4View`,
- * `SkinsView`, the podiums, …), so no `-ml-2` overhang renders in that branch.
+ * `SkinsView`, the podiums, …), so no `LeaderboardBackLink` — and thus no
+ * `-ml-2` overhang — renders in that branch.
  */
 const DECOR_CLIP_INSET = `${DECOR_CLIP} -mx-4 px-4`;
 
@@ -166,15 +171,9 @@ export function LeaderboardHeader({
   const tc = useTranslations('leaderboard.common');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
-      <SmartLink
-        href={backHref}
-        aria-label={tc('backAriaLabel')}
-        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-      >
-        ‹
-      </SmartLink>
+      <LeaderboardBackLink href={backHref} label={tc('backAriaLabel')} />
       <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
-      <span className="w-11" aria-hidden />
+      <LeaderboardBackLinkSpacer />
     </header>
   );
 }

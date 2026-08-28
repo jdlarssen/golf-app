@@ -5,6 +5,10 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Laurel, PinFlagSm, ReplayIcon } from '@/components/icons';
 import { Medallion } from '@/components/ui/Medallion';
+import {
+  LeaderboardBackLink,
+  LeaderboardBackLinkSpacer,
+} from '@/components/ui/LeaderboardBackLink';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
   type LeaderboardMode,
@@ -250,20 +254,14 @@ function Header({
 }) {
   return (
     <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
-      <SmartLink
-        href={backHref}
-        aria-label={t('backAriaLabel')}
-        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-      >
-        ‹
-      </SmartLink>
+      <LeaderboardBackLink href={backHref} label={t('backAriaLabel')} />
       <span className="flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
         {gameName}
       </span>
       {onReplay ? (
         <ReplayButton onClick={onReplay} t={t} />
       ) : (
-        <span className="w-11" aria-hidden />
+        <LeaderboardBackLinkSpacer />
       )}
     </header>
   );

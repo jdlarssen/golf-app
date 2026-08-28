@@ -3,6 +3,10 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
+import {
+  LeaderboardBackLink,
+  LeaderboardBackLinkSpacer,
+} from '@/components/ui/LeaderboardBackLink';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
@@ -238,17 +242,14 @@ function DrilldownView({
     <div className="min-h-screen bg-bg text-text">
       <div className="mx-auto max-w-md pb-12">
         <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
-          <SmartLink
+          <LeaderboardBackLink
             href={leaderboardHref({ gameId, mode, context: navContext })}
-            aria-label={t('backAriaLabel')}
-            className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
-          >
-            ‹
-          </SmartLink>
+            label={t('backAriaLabel')}
+          />
           <span className="flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
             {t('teamHeader', { number: selected.teamNumber, rank: selected.rank })}
           </span>
-          <span className="w-8" aria-hidden />
+          <LeaderboardBackLinkSpacer />
         </header>
 
         {/* Team hero */}
