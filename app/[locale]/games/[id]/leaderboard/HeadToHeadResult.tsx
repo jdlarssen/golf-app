@@ -2,7 +2,10 @@
 
 import { useEffect, useState, type JSX, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { SmartLink } from '@/components/ui/SmartLink';
+import {
+  LeaderboardBackLink,
+  LeaderboardBackLinkSpacer,
+} from '@/components/ui/LeaderboardBackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { LeaderboardShell } from './LeaderboardChrome';
@@ -162,15 +165,9 @@ export function HeadToHeadResult({
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
       {!chromeless && (
         <header className="mb-2 flex items-center justify-between gap-4">
-          <SmartLink
-            href={backHref}
-            aria-label={t('backAriaLabel')}
-            className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-          >
-            ‹
-          </SmartLink>
+          <LeaderboardBackLink href={backHref} label={t('backAriaLabel')} />
           <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
-          <span className="w-11" aria-hidden />
+          <LeaderboardBackLinkSpacer />
         </header>
       )}
 

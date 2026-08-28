@@ -8,8 +8,10 @@ import { SmartLink } from './SmartLink';
  * for screen readers (e.g. "Tilbake til hjem", "← Hjem") without it
  * showing visually. Falls back to "Tilbake" if no string was passed.
  *
- * Visual style mirrors the leaderboard's State4 back arrow — Jørgen's
- * chosen reference for app-wide consistency.
+ * Visual style follows the leaderboard's back arrow — Jørgen's chosen
+ * reference for app-wide consistency — except for the box: the leaderboard
+ * headers moved to a 44px tap target in `LeaderboardBackLink` (#1747), while
+ * this one still uses 32px app-wide. Harmonizing the two is its own change.
  */
 export function BackLink({
   href,

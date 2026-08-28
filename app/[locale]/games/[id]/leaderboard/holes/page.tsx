@@ -3,6 +3,10 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/Skeleton';
+import {
+  LeaderboardBackLinkPlaceholder,
+  LeaderboardBackLinkSpacer,
+} from '@/components/ui/LeaderboardBackLink';
 import { parseMode, type LeaderboardMode } from '@/lib/leaderboard';
 import { parseLeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
@@ -253,11 +257,9 @@ function DrilldownSkeleton() {
     <div className="min-h-screen bg-bg text-text">
       <div className="mx-auto max-w-md pb-12">
         <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
-          <span className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text">
-            ‹
-          </span>
+          <LeaderboardBackLinkPlaceholder />
           <Skeleton className="h-3 w-32" />
-          <span className="w-8" aria-hidden />
+          <LeaderboardBackLinkSpacer />
         </header>
         <div className="flex items-center gap-3.5 px-4 pt-1.5 pb-3.5">
           <Skeleton className="h-12 w-12 rounded-md" />
