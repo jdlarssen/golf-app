@@ -93,18 +93,32 @@ ikoner, TestFlight) er #1283 — dette skjelettet er testriggen for fysisk push-
 
 ## Suksesskriterier
 
-- [ ] Migrasjon påført STAGING (MCP `list_tables`-bevis); prod eksplisitt IKKE rørt
-- [ ] `lib/notifications/push/apns.ts`: Type A-tester grønne for JWT (verifiserbar med
+- [x] Migrasjon påført STAGING (MCP `list_tables`-bevis); prod eksplisitt IKKE rørt
+      — EVIDENS: commit de0bb88d; MCP list_tables viser `public.apns_tokens`
+      rls_enabled=true på snwmueecmfqqdurxedxv; prod-lista har den IKKE
+- [x] `lib/notifications/push/apns.ts`: Type A-tester grønne for JWT (verifiserbar med
       `crypto.verify`), payload-form, prune-/miljø-beslutning; ingen nye npm-deps
-- [ ] `sendPush.ts`-fan-out dekker begge kanaler; EKSISTERENDE `sendPush.test.ts`
-      passerer UENDRET (akseptkriterium 3-regresjon)
-- [ ] `apnsActions.ts` + klient-søm bak Capacitor-deteksjon; `npm run build` grønn;
-      nettleser-stien i `lib/pwa/push.ts` uendret i diff utenfor den nye grenen
-- [ ] `native/ios/`-skjelett committet med push-entitlement + AppDelegate-hooks;
-      `xcodebuild build` mot fysisk enhet exit 0
-- [ ] VERIFICATION GAP dokumentert i PR: fysisk push-mottak (3 NotificationKind-er +
-      deeplink), prod-migrasjon og Vercel-env er neste-økt-steg med eieren — issuet
-      lukkes først når akseptkriteriene i #1282 er innfridd fysisk
+      — EVIDENS: commit 02af0fa3, `vitest run lib/notifications/push` 23/23;
+      package.json-diff = 0 deps (web-appen)
+- [x] `sendPush.ts`-fan-out dekker begge kanaler; EKSISTERENDE `sendPush.test.ts`
+      passerer UENDRET — EVIDENS: commit 96cea6c8; `git diff` på sendPush.test.ts
+      over alle chunk-commits = 0 linjer; `vitest run lib/notifications` 174/174
+- [x] `apnsActions.ts` + klient-søm bak Capacitor-deteksjon; `npm run build` grønn;
+      nettleser-stien uendret — EVIDENS: commit 55a155c7; full vitest 6966/6966,
+      build exit 0; nettleser-gren dødkode-bevist i push.test.ts
+- [x] `native/ios/`-skjelett committet med push-entitlement + AppDelegate-hooks;
+      `xcodebuild build` mot fysisk enhet exit 0 — EVIDENS: commit df9af1f8;
+      BUILD SUCCEEDED mot UDID 00008110-…; `codesign -d --entitlements` viser
+      aps-environment=development i signert produkt
+- [x] VERIFICATION GAP dokumentert i PR — EVIDENS: PR-body-seksjonen; i tillegg:
+      .p8-nøkkel (DTB99PV7FA) mottatt fra eier og lagt i ~/.torny-native/apns/ +
+      APNS_*-env i .env.staging.local (gitignorert)
+
+**Avvik godkjent i evalueringsrunden (builder-rapport):** clamp → delt `clampText.ts`
+(sirkulær import), direkte prune ved BadDeviceToken på kjent miljø (miljøet kom fra en
+tidligere 200), deeplink-lytter i `PwaBoot` (PushToggle er kun montert på /profile),
+DI-parameter i enable/disablePush, token i localStorage for avregistrering.
+Reviewer-funn → issue #1790 (RLS ved kontobytte, gjelder også web-push).
 
 ## Gates (per chunk)
 
