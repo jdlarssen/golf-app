@@ -4795,6 +4795,7 @@
         "not_candidate": "Den spilleren kan du ikke bytte inn i denne cupen.",
         "profile_incomplete": "Spilleren må fylle ut profilen sin før hen kan settes inn.",
         "not_member": "Spilleren er ikke medlem av klubben lenger.",
+        "too_many_players": "Cupen er full — en personlig cup tar maks {cap} spillere. Fjern en deltaker først, eller bytt inn en som allerede er påmeldt.",
         "swap_failed": "Klarte ikke å bytte spilleren. Prøv igjen.",
         "unexpected": "Uventet feil: {code}"
       }
