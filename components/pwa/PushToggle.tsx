@@ -9,6 +9,7 @@ import {
   type PushState,
 } from '@/lib/pwa/push';
 import { savePushSubscription, removePushSubscription } from '@/app/[locale]/profile/pushActions';
+import { registerApnsToken, removeApnsToken } from '@/app/[locale]/profile/apnsActions';
 import { Switch } from '@/components/ui/Switch';
 
 export function PushToggle() {
@@ -24,10 +25,12 @@ export function PushToggle() {
   // tab it renders the install hint; when unsupported it renders nothing.
   if (state === 'loading' || state === 'unsupported') return null;
 
+  // The second argument is the APNs path, used only inside the iOS shell; in a
+  // browser enablePush/disablePush ignore it and take the web-push route.
   async function turnOn() {
     setBusy(true);
     try {
-      setState(await enablePush(savePushSubscription));
+      setState(await enablePush(savePushSubscription, registerApnsToken));
     } finally {
       setBusy(false);
     }
@@ -36,7 +39,7 @@ export function PushToggle() {
   async function turnOff() {
     setBusy(true);
     try {
-      setState(await disablePush(removePushSubscription));
+      setState(await disablePush(removePushSubscription, removeApnsToken));
     } finally {
       setBusy(false);
     }
