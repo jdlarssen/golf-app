@@ -650,8 +650,13 @@ export function useGameFormState({
   const [registrationModeChoice, setRegistrationMode] = useState<RegistrationMode>(
     initialValues?.registration_mode ?? 'invite_only',
   );
+  // #1792: 'both' er ikke lenger valgbart i UI-et. Et eksisterende both-spill
+  // (edit-flyt / restaurert wizard-draft) behandles som lag — coercion her gjør
+  // at «Lag»-radioen står valgt i stedet for at ingen radio matcher state.
   const [registrationType, setRegistrationType] = useState<RegistrationType>(
-    initialValues?.registration_type ?? 'solo',
+    initialValues?.registration_type === 'both'
+      ? 'team'
+      : (initialValues?.registration_type ?? 'solo'),
   );
   // #369: «Slipp venner direkte inn» — kun relevant for manual_approval.
   // Persisteres som games.let_friends_skip_gate. Settes til false automatisk

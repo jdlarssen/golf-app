@@ -195,6 +195,44 @@ describe('registerForOpenGame', () => {
     expect(result).toEqual({ ok: false, error: 'team_not_supported_yet' });
   });
 
+  // ── #1792: solo-bakdøren for 'both' (HCD F5) ───────────────────────────────
+  // Signup-siden viser KUN lag-skjemaet for both+lagmodus (alle slots påkrevd),
+  // men action-en slapp solo-POST forbi fordi gaten bare sjekket === 'team'.
+  // Gaten skal speile resolveRegistrationTypeView: alt annet enn solo_form
+  // avvises.
+
+  it('#1792: both + lagmodus (best_ball) → solo-POST avvises', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ registration_type: 'both', game_mode: 'best_ball' }),
+    );
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'team_not_supported_yet' });
+  });
+
+  it('#1792: both + solo-modus (stableford) → fortsatt tillatt (solo_form er eneste inngang)', async () => {
+    authedAsUser();
+    adminMock = buildSupabaseMock([
+      { data: null, error: null }, // insert
+      { data: { name: 'Per', nickname: null, email: 'per@x.no' }, error: null }, // notify lookup
+    ]);
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ registration_type: 'both' }), // stableford default
+    );
+
+    const { registerForOpenGame } = await import('./actions');
+    await expect(
+      registerForOpenGame(fd({ shortId: SHORT_ID })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/games/${GAME_ID}` }),
+    );
+  });
+
   it('UNIQUE-conflict (23505) → already_registered-error', async () => {
     authedAsUser();
     adminMock = buildSupabaseMock([
@@ -626,6 +664,22 @@ describe('requestApproval', () => {
     const result = await requestApproval(fd({ shortId: SHORT_ID }));
 
     expect(result).toEqual({ ok: false, error: 'wrong_mode' });
+  });
+
+  it('#1792: both + lagmodus (best_ball) → forespørsel avvises (samme gate som open)', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        registration_mode: 'manual_approval',
+        registration_type: 'both',
+        game_mode: 'best_ball',
+      }),
+    );
+
+    const { requestApproval } = await import('./actions');
+    const result = await requestApproval(fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'team_not_supported_yet' });
   });
 
   it('duplikat-request → already_requested', async () => {
