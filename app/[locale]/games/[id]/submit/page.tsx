@@ -470,7 +470,9 @@ async function ReviewBody({
         <Banner tone="info" testId="whole-round-notice">{t('wholeRoundNotice')}</Banner>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* #1793: gap-6 (24px) gir feiltrykk-margin mellom Rediger og Lever —
+          de to knappene har motsatt konsekvens. */}
+      <div className="grid grid-cols-2 gap-6">
         <SmartLink
           href={`/games/${gameId}/holes/${firstHoleForSegment(holeSegment)}`}
           className="inline-flex items-center justify-center min-h-[44px] rounded-full border border-border px-[18px] py-2.5 text-sm font-medium text-text hover:bg-primary-soft transition-colors"
@@ -516,7 +518,7 @@ function ReviewBodySkeleton() {
       <Card>
         <Skeleton className="h-3 w-3/5" />
       </Card>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-6">
         <Skeleton className="h-11 rounded-full" />
         <Skeleton className="h-11 rounded-full" delay={60} />
       </div>
