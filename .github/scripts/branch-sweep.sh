@@ -8,12 +8,15 @@
 # Denne er nettet under: den kjører ukentlig og tar det som ble liggende.
 #
 # Klassifisering per branch (første treff avgjør):
-#   1. åpen PR         → BEHOLD (økta jobber fortsatt)
-#   2. merget PR       → SLETT  (autoritativt selv når patch-id-ene har drevet,
+#   1. oppslag feilet  → BEHOLD (PR-lista eller `git cherry` svarte ikke — vi vet
+#                                for lite til å klassifisere; rapporteres som
+#                                «feilet» og prøves igjen neste uke)
+#   2. åpen PR         → BEHOLD (økta jobber fortsatt)
+#   3. merget PR       → SLETT  (autoritativt selv når patch-id-ene har drevet,
 #                                f.eks. en rebase-merge med konfliktløsning)
-#   3. 0 unike patcher → SLETT  (`git cherry` sammenligner patch-id, så en
+#   4. 0 unike patcher → SLETT  (`git cherry` sammenligner patch-id, så en
 #                                rebase-merge med nye SHA-er leses riktig)
-#   4. ellers          → FORELDRELØS: aldri slett, rapporter på #1110
+#   5. ellers          → FORELDRELØS: aldri slett, rapporter på #1110
 #
 # Fail-safe: sletter kun beviste tilfeller, og aldri en ref utenfor `claude/*`.
 # (En sletting er uansett omgjørbar fra PR-siden på GitHub så lenge PR-en finnes.)
@@ -26,6 +29,14 @@ set -uo pipefail
 REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY må være satt}"
 DRY_RUN="${DRY_RUN:-0}"
 DRIFT_ISSUE=1110 # Loop-drift-tavla — foreldreløse branches rapporteres her.
+
+# `gh pr list --head` matcher på branchNAVN alene, og treffer derfor også PR-er
+# fra en fork som tilfeldigvis har samme navn (`claude/…` er et vanlig mønster).
+# En fremmed forks åpne PR ville da fått repoets egen branch klassifisert som
+# BEHOLD — og verre: en fremmed forks MERGEDE PR ville fått den klassifisert som
+# SLETT. Tell derfor kun PR-er hvis head-repo eies av dette repoets egen eier.
+REPO_OWNER="${REPO%%/*}"
+OWN_PR_COUNT_JQ="[.[] | select(.headRepositoryOwner.login == \"$REPO_OWNER\")] | length"
 
 if ! git fetch --prune --quiet origin '+refs/heads/*:refs/remotes/origin/*'; then
   echo "::error::git fetch feilet — sweepen kan ikke klassifisere noe."
@@ -57,7 +68,8 @@ while read -r branch; do
       ;;
   esac
 
-  open_prs=$(gh pr list --repo "$REPO" --state open --head "$branch" --json number --jq 'length')
+  open_prs=$(gh pr list --repo "$REPO" --state open --head "$branch" \
+    --json number,headRepositoryOwner --jq "$OWN_PR_COUNT_JQ")
   if [ -z "$open_prs" ]; then
     echo "::warning::$branch: PR-oppslaget feilet — beholder branchen."
     failed+=("$branch")
@@ -69,8 +81,21 @@ while read -r branch; do
     continue
   fi
 
-  merged_prs=$(gh pr list --repo "$REPO" --state merged --head "$branch" --json number --jq 'length')
-  unique=$(git cherry "origin/main" "origin/$branch" | grep -c '^+')
+  merged_prs=$(gh pr list --repo "$REPO" --state merged --head "$branch" \
+    --json number,headRepositoryOwner --jq "$OWN_PR_COUNT_JQ")
+
+  # Exit-statusen MÅ fanges før klassifiseringen: i røret under gikk `git cherry`s
+  # exit tapt, og en feilende cherry (skadet ref, manglende objekt) ga tom
+  # utdata → `unique=0` → «0 unike patcher» → SLETT. Feilen så altså ut som et
+  # bevis på at branchen var fullmerget.
+  if ! cherry_out=$(git cherry "origin/main" "origin/$branch" 2>/dev/null); then
+    echo "::warning::$branch: git cherry feilet — beholder branchen."
+    failed+=("$branch")
+    continue
+  fi
+  # `grep -c` gir 0 OG exit 1 når ingenting matcher — `|| true` er påkrevd her
+  # (ikke kosmetikk): uten den ville tilordningen arvet exit 1.
+  unique=$(grep -c '^+' <<<"$cherry_out" || true)
 
   if [ "${merged_prs:-0}" -gt 0 ]; then
     reason="merget PR ($unique unik(e) patch(er) i cherry)"
