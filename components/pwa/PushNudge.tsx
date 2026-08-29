@@ -14,24 +14,52 @@ const DISMISS_KEY = 'torny-push-nudge-dismissed';
  * when running as an installed PWA (isStandalone) on a touch device, push is
  * supported but off, and the nudge hasn't been dismissed. Never on desktop. (#24)
  */
-export function PushNudge() {
+export function PushNudge({
+  visible,
+  onVerdict,
+}: {
+  /** #1797: nudge-køen (HomeNudgeRail) styrer hvilken plass som faktisk vises. */
+  visible: boolean;
+  /** Meldes når kvalifiseringen er avklart (sync-sjekkene eller push-proben). */
+  onVerdict: (qualified: boolean) => void;
+}) {
   const t = useTranslations('pushSettings');
   const [show, setShow] = useState(false);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!isStandalone()) return;            // installed PWA only
-    if (!isIos() && !('ontouchstart' in window)) return; // touch (mobile/tablet) only
+    if (!isStandalone()) {                  // installed PWA only
+      onVerdict(false);
+      return;
+    }
+    if (!isIos() && !('ontouchstart' in window)) { // touch (mobile/tablet) only
+      onVerdict(false);
+      return;
+    }
     let dismissed = false;
     try {
       dismissed = localStorage.getItem(DISMISS_KEY) === '1';
     } catch { /* private mode */ }
-    if (dismissed) return;
-    getPushState().then((s: PushState) => {
-      if (s === 'off') setShow(true);
-    });
-  }, []);
+    if (dismissed) {
+      onVerdict(false);
+      return;
+    }
+    let cancelled = false;
+    getPushState()
+      .then((s: PushState) => {
+        if (cancelled) return;
+        if (s === 'off') setShow(true);
+        onVerdict(s === 'off');
+      })
+      // En feilet probe skal ikke kile fast køen — meld 'no' (#1797).
+      .catch(() => {
+        if (!cancelled) onVerdict(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [onVerdict]);
 
   function dismiss() {
     try { localStorage.setItem(DISMISS_KEY, '1'); } catch { /* ignore */ }
@@ -48,6 +76,8 @@ export function PushNudge() {
       setBusy(false);
     }
   }
+
+  if (!visible) return null; // #1797: en annen nudge holder plassen
 
   if (done) {
     return (

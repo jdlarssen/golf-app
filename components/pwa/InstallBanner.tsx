@@ -49,7 +49,15 @@ const getVisitSnapshot = () => {
 // flashes before the client-side visit count is read.
 const getVisitServerSnapshot = () => false;
 
-export function InstallBanner() {
+export function InstallBanner({
+  visible,
+  onVerdict,
+}: {
+  /** #1797: nudge-køen (HomeNudgeRail) styrer hvilken plass som faktisk vises. */
+  visible: boolean;
+  /** Meldes når kvalifiseringen er avklart — og på nytt om den endrer seg. */
+  onVerdict: (qualified: boolean) => void;
+}) {
   const t = useTranslations('installBanner');
   const { status, install } = useInstallPrompt();
   const dismissed = useSyncExternalStore(
@@ -67,6 +75,19 @@ export function InstallBanner() {
   const [modalOpen, setModalOpen] = useState(false);
   const countedRef = useRef(false);
 
+  const qualified =
+    status !== 'loading' &&
+    status !== 'standalone' &&
+    !dismissed &&
+    passedVisitGate;
+
+  useEffect(() => {
+    // 'loading' = miljøet er uavklart — hold køens plass på 'pending' så
+    // ingen lavere nudge vises på en gjetning (#1797).
+    if (status === 'loading') return;
+    onVerdict(qualified);
+  }, [status, qualified, onVerdict]);
+
   useEffect(() => {
     // Count this mount as one Home visit. Guard against React StrictMode's
     // double-invoked effect (dev/staging run `next dev`) so a single mount is
@@ -83,9 +104,8 @@ export function InstallBanner() {
     window.dispatchEvent(new Event(VISITS_EVENT));
   }, []);
 
-  if (status === 'loading' || status === 'standalone') return null;
-  if (dismissed) return null;
-  if (!passedVisitGate) return null; // #1186 value-first gate (additive AND)
+  if (!visible) return null; // #1797: en annen nudge holder plassen
+  if (!qualified) return null; // loading/standalone/dismissed/visit gate (#1186)
 
   function dismiss() {
     try {
