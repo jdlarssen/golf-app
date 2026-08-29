@@ -8,16 +8,16 @@ import { NextResponse } from 'next/server';
 // redirects for this file, so it must answer 200 directly on the apex host
 // (mail links build against apex via APP_BASE_URL in lib/mail/i18n.ts).
 //
-// PLACEHOLDER content — #1283 fills the real appID (TEAMID.no.tornygolf.app)
-// and tightens `components` from the catch-all `/*` to the deeplink
-// vocabulary (lib/notifications/deeplink.ts). The form is valid so Apple's
-// parser reads it without error even while the appID is a dummy.
+// Real appID as of #1283 (team 8C8WCW67J9, bundle no.tornygolf.app).
+// `components` deliberately stays at catch-all `/*`: the deeplink vocabulary
+// (lib/notifications/deeplink.ts) spans /games, /admin, /login, /signup, /cup
+// and more — narrowing it buys nothing and adds a maintenance trap.
 const AASA = {
   applinks: {
     apps: [],
     details: [
       {
-        appIDs: ['TEAMID.no.tornygolf.app'],
+        appIDs: ['8C8WCW67J9.no.tornygolf.app'],
         components: [{ '/': '/*' }],
       },
     ],
