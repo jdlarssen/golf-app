@@ -120,9 +120,14 @@ vinner:
    - **Aldri-lista** (`NEVER_AUTO_MERGE_GLOBS`): minst én endret fil rører
      `supabase/**`, `**/slett/**`, `**/slett-konto/**`, `proxy.ts`, `lib/auth/**`,
      `lib/supabase/**`, `app/api/**`, `app/[locale]/(auth)/**`, `**/betaling/**`,
-     `lib/payment/**`, `.github/**`, `.githooks/**` eller `.claude/**`. Migrasjoner,
-     destruktive flyter, auth/sikkerhet, penger og enforcement-flater beholder
-     menneske-porten (fail-closed, bredere enn issue-ets liste).
+     `lib/payment/**`, `.github/**`, `.githooks/**`, `.claude/**`, `lib/loops/**`
+     eller `scripts/loops/**`. Migrasjoner, destruktive flyter, auth/sikkerhet,
+     penger, enforcement-flater og merge-porten selv beholder menneske-porten
+     (fail-closed, bredere enn issue-ets liste). Merk om porten-selv-radene
+     (#1655): workflowen henter alltid main sin versjon av `lib/loops` +
+     `scripts/loops` (#1181), så en PR dømmer aldri seg selv med egne regler —
+     lista hindrer at en gate-endring auto-merges av den gamle gaten og deretter
+     styrer alle senere PR-er uten at et menneske har sett den.
    - **Valg-markør:** PR-body **eller en av PR-ens kommentarer** har en markdown-
      heading som enten inneholder ordet «produktvalg» (`## Produktvalg`,
      `## Alternativer (produktvalg)`) eller starter med `## Alternativ A`–`E` (a–e),
