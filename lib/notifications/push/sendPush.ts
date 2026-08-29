@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { ensureVapid, isPushConfigured } from './vapid';
+import { clamp, TITLE_MAX, BODY_MAX } from './clampText';
 import { buildNotificationText } from '@/lib/notifications/cardContent';
 import { notificationDestination } from '@/lib/notifications/deeplink';
 import { getInboxTranslator } from '@/lib/notifications/inboxTranslator';
@@ -37,8 +38,8 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
     // Cap lengths so admin-authored content (product_update has no max length)
     // can't overflow the push service's ~4 KB payload limit and silently fail.
     const body = JSON.stringify({
-      title: clamp(title, 120),
-      body: clamp(detail, 240),
+      title: clamp(title, TITLE_MAX),
+      body: clamp(detail, BODY_MAX),
       url,
       kind: opts.kind,
     });
@@ -68,9 +69,4 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
     // Never let push break the parent flow.
     console.error('[push] sendPushToUser failed', err);
   }
-}
-
-/** Trim a string to `max` chars, adding an ellipsis when it was cut. */
-function clamp(s: string, max: number): string {
-  return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
 }
