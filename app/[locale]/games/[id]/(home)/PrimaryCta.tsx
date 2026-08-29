@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { LinkButton } from '@/components/ui/Button';
 import { firstHoleForSegment, holeNumbersForSegment } from '@/lib/games/holeScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
-import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
+import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { getGameContext } from './gameContext';
@@ -85,13 +85,15 @@ export async function PrimaryCtaSection({
     .eq('game_id', gameId)
     .in('user_id', scoreOwnerUserIds(gameMode, currentUserId, teamScoreOwnerId))
     .not('strokes', 'is', null);
-  const filledHoles = (filledRows ?? [])
-    .filter(
-      (r) =>
-        r.user_id ===
-        scoreOwnerForHole(gameMode, r.hole_number, currentUserId, teamScoreOwnerId),
-    )
-    .map((r) => r.hole_number);
+  const filledHoles = scoredHoleNumbers(
+    (filledRows ?? []).map((r) => ({
+      holeNumber: r.hole_number,
+      userId: r.user_id,
+    })),
+    gameMode,
+    currentUserId,
+    teamScoreOwnerId,
+  );
   const strokesCount = filledHoles.length;
 
   // Issue #164: «Fortsett runden»-knappen skal peke på første tomme hull,

@@ -73,12 +73,26 @@ export function scoredHoleNumbers(
   viewerId: string,
   teamOwnerId: string | null,
 ): number[] {
-  return (rows ?? [])
-    .filter(
-      (r): r is ScoredHoleRow =>
-        r != null &&
-        r.userId ===
-          scoreOwnerForHole(mode, r.holeNumber, viewerId, teamOwnerId),
-    )
-    .map((r) => r.holeNumber);
+  return ownedScoreRows(rows, mode, viewerId, teamOwnerId).map(
+    (r) => r.holeNumber,
+  );
+}
+
+/**
+ * The same rule, keeping the rows instead of projecting to hole numbers —
+ * for callers that render the surviving rows (the submit review page reads
+ * strokes/entered_by off them). Generic so the input rows come back
+ * unnarrowed (#1715).
+ */
+export function ownedScoreRows<T extends ScoredHoleRow>(
+  rows: readonly (T | null | undefined)[] | null | undefined,
+  mode: GameMode,
+  viewerId: string,
+  teamOwnerId: string | null,
+): T[] {
+  return (rows ?? []).filter(
+    (r): r is T =>
+      r != null &&
+      r.userId === scoreOwnerForHole(mode, r.holeNumber, viewerId, teamOwnerId),
+  );
 }

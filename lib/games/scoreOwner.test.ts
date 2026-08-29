@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import {
+  ownedScoreRows,
   scoreOwnerForHole,
   scoreOwnerUserIds,
   scoredHoleNumbers,
@@ -207,5 +208,15 @@ describe('scoredHoleNumbers', () => {
         null,
       ),
     ).toEqual([2]);
+  });
+});
+
+describe('ownedScoreRows', () => {
+  it('keeps the surviving rows themselves, extra fields intact (#1715)', () => {
+    const mine = { userId: VIEWER, holeNumber: 4, strokes: 5 };
+    const theirs = { userId: 'u-stranger', holeNumber: 6, strokes: 7 };
+    const kept = ownedScoreRows([mine, null, theirs], 'best_ball', VIEWER, null);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]).toBe(mine);
   });
 });
