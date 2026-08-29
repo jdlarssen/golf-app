@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   planParticipantRosterSync,
+  swapExceedsPersonalPlayerCap,
   type ParticipantRosterSyncInput,
   type ParticipantRosterSyncPlan,
+  type SwapParticipantCapInput,
 } from './participantRosterSync';
 
 /**
@@ -62,5 +64,74 @@ describe('planParticipantRosterSync — beslutningstabellen (#1735)', () => {
 
   it.each(cases)('%s', (_name, overrides, expected) => {
     expect(planParticipantRosterSync(input(overrides))).toEqual(expected);
+  });
+});
+
+/**
+ * Type A for tak-vakta i planfasen av et spillerbytte (#1804). Samme
+ * beslutningstabell-stil som over: hver rad er «ville byttet sprengt taket?»
+ * for én input-klasse. Cap-tallet og sammenligningen bor i lib/cup/limits
+ * (exceedsPersonalPlayerCap) — her testes sett-matematikken rundt.
+ */
+
+/** 24 deltakere — nøyaktig på taket (MAX_PERSONAL_CUP_PLAYERS). */
+const AT_CAP = Array.from({ length: 24 }, (_, i) => `p${i}`);
+
+function capInput(
+  overrides: Partial<SwapParticipantCapInput> = {},
+): SwapParticipantCapInput {
+  return {
+    // 'out' står på lista (p0 byttes ut som default-navn under), 'reserve' ikke.
+    participantIds: AT_CAP,
+    outUserId: 'p0',
+    inUserId: 'reserve',
+    outRemainsInCup: false,
+    actorIsAdmin: false,
+    ...overrides,
+  };
+}
+
+describe('swapExceedsPersonalPlayerCap — tak-vakta i planfasen (#1804)', () => {
+  const cases: Array<[string, Partial<SwapParticipantCapInput>, boolean]> = [
+    [
+      'på taket, ny reserve inn, ut-spilleren BLIR i en annen bunt: 25 → avvis',
+      { outRemainsInCup: true },
+      true,
+    ],
+    [
+      'på taket, ny reserve inn, ut-spilleren forlater cupen helt: 24 → ok',
+      {},
+      false,
+    ],
+    [
+      'under taket (23), ny reserve inn, ut-spilleren blir: 24 → ok (taket er >, ikke >=)',
+      { participantIds: AT_CAP.slice(0, 23), outRemainsInCup: true },
+      false,
+    ],
+    [
+      'på taket, reserven er ALLEREDE deltaker, ut-spilleren blir: settet uendret → ok',
+      { inUserId: 'p5', outRemainsInCup: true },
+      false,
+    ],
+    [
+      'ut-spilleren står ikke på deltakerlista (divergerte sett): ingen rad å godskrive → avvis',
+      { participantIds: AT_CAP.map((p) => `andre-${p}`) },
+      true,
+    ],
+    [
+      'admin-aktør er uncapped: samme 25-input som rad 1 → ok',
+      { outRemainsInCup: true, actorIsAdmin: true },
+      false,
+    ],
+    ['tom deltakerliste: 1 etter byttet → ok', { participantIds: [] }, false],
+    [
+      'én deltaker (ut-spilleren), ny reserve inn, ut forlater: 1 → ok',
+      { participantIds: ['p0'] },
+      false,
+    ],
+  ];
+
+  it.each(cases)('%s', (_name, overrides, expected) => {
+    expect(swapExceedsPersonalPlayerCap(capInput(overrides))).toBe(expected);
   });
 });

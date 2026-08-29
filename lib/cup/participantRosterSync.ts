@@ -17,6 +17,8 @@
  * (a split cup day, #1441 D3, can leave her standing in another bundle).
  */
 
+import { exceedsPersonalPlayerCap } from './limits';
+
 export type ParticipantRosterSyncInput = {
   /** Spilleren som ble byttet UT av matchen. */
   outUserId: string;
@@ -63,4 +65,46 @@ export function planParticipantRosterSync(
     addParticipantId: roster.has(inUserId) ? inUserId : null,
     removeParticipantId: roster.has(outUserId) ? null : outUserId,
   };
+}
+
+export type SwapParticipantCapInput = {
+  /** `tournament_participants.user_id` for cupen, lest FØR byttet. */
+  participantIds: string[];
+  /** Spilleren som byttes UT av matchene som skrives. */
+  outUserId: string;
+  /** Reserven som byttes INN. */
+  inUserId: string;
+  /**
+   * Står ut-spilleren igjen i en cup-match utenfor matchene som skrives
+   * (splittet cup-dag, #1441)? Da beholder synken over deltaker-raden hennes.
+   */
+  outRemainsInCup: boolean;
+  actorIsAdmin: boolean;
+};
+
+/**
+ * Ville spillerbyttet sprengt deltaker-taket for en personlig cup (#1804)?
+ *
+ * Vakta bor i PLANFASEN av `swapCupMatchPlayer` — de tre andre skriveveiene
+ * inn i `tournament_participants` håndhever taket allerede, og synken over er
+ * best-effort med vilje (#1735) og kan ikke avvise. Kallersiden gater på
+ * personlig ikke-admin-cup (som `addCupParticipant`); klubb-cuper er uncapped.
+ *
+ * Speiler `planParticipantRosterSync` sin semantikk for hva byttet gjør med
+ * lista: reserven kommer inn, og ut-spillerens rad godskrives som fjernet KUN
+ * når hun ikke står i noen cup-match etterpå. Akseptert rest-kant: godskriver
+ * planfasen fjerningen, men roster-lesingen i synken feiler etterpå
+ * (`removeParticipantId: null` mens reserven likevel meldes på), kan lista
+ * unntaksvis lande én over taket. Taket selv (tall + sammenligning) bor i
+ * `lib/cup/limits`.
+ */
+export function swapExceedsPersonalPlayerCap(
+  input: SwapParticipantCapInput,
+): boolean {
+  const after = new Set(input.participantIds);
+  after.add(input.inUserId);
+  // Sletting av en som aldri sto på lista er en no-op — divergerte sett
+  // (spiller i match uten deltaker-rad) gir da ingen falsk godskriving.
+  if (!input.outRemainsInCup) after.delete(input.outUserId);
+  return exceedsPersonalPlayerCap(after.size, input.actorIsAdmin);
 }
