@@ -47,8 +47,10 @@ docs-notat, uten interaktiv gråsone-diskusjon (gråsonene ble avgjort av eviden
 - [x] Forebyggende notat i `docs/loops/discord-pr-kort.md` («Dedup & race»):
       hvordan spore en kort-kjøring — aldri via PR-head-SHA, bruk PR-nummer i
       Decide-loggen eller label-tidsstempelet. — Commit 070d5299.
-- [ ] Issue #1802 lukkes med Teknisk + Funksjonell closing-kommentar som
-      inkluderer hele evidenskjeden.
+- [x] Issue #1802 lukkes med Teknisk + Funksjonell closing-kommentar som
+      inkluderer hele evidenskjeden. — Kommentar postet:
+      <https://github.com/jdlarssen/golf-app/issues/1802#issuecomment-5465574896>;
+      selve lukkingen skjer via `Closes #1802` når PR #1807 merges.
 
 ## Gates
 
