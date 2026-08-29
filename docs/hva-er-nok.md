@@ -81,11 +81,21 @@ Herding og Sesongstyrt — neste bane besluttes av eieren.
 | Resend Pro / nytt mail-domene | #54, #55 | >100 mail/dag (som issuene selv sier) |
 | Booking-integrasjon | #51 | En klubb ber om det |
 | Emoji-reaksjoner på lag/matchplay | #977 | Målt bruk av reaksjoner i solo-formater |
-| Restfunn subtraksjonsrevisjonen | #1069 | Eier-triage |
+| Lag-påmeldings-forenklinger (slot-radioer, lagnavn-forslag + rename, kvittering→oversikt) | #1069 (lukket — triage-kart der) | Første reelle lag-påmelding i prod |
+| QR-snarvei forbi re-bekreftelsen etter OTP (open+solo) | #1069 (lukket — triage-kart der) | Eier-pull, eller turnering med plakat-QR planlagt |
 
 Worth-do-forenklingene fra subtraksjonsrevisjonen (#1133–#1141) er alle tatt —
 siste lukket 2026-07-15. Beslutnings-issues (f.eks. #1146) venter på eier-svar og
 er verken parkert eller tillatt.
+
+**Avgjort 2026-08-29 — restfunn-triagen (#1069):** raden «Restfunn
+subtraksjonsrevisjonen | Eier-triage» slo til — eieren triagerte alle 15 punktene i
+fire tap-spørsmål. 11 punkter ble polish-bølgen #1792–#1800 (kontrakt
+`.forge/contracts/1069-polish-bolgen.md`, postet på hvert issue); lag-klyngen og
+QR-snarveien ble de to parkerte radene over; «Forkastet av verifikatorene»-lista i
+#1069 står ved lag og re-forsøkes ikke. Merk: polish-bølgen er friksjon-i-brukte-
+flater og subtraksjon — innenfor grensen uten egen vekking, jf. §Slik brukes
+dokumentet.
 
 **Vekket 2026-07-14 — null-bruk-oppryddingen cup/liga/betaling (#1142–#1145):**
 raden sto parkert med trigger «ekte bruk av flaten, eller eier-beslutning om
