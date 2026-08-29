@@ -8,16 +8,21 @@
 --        pg_proc.proconfig — verified via information_schema + pg_proc.
 --        (same_flight was one of the original 5; dropped in 0139 / #1129.)
 --
+-- Extended for migration 0167 (#1790):
+--   8–13. The two possession-gated claim RPCs (claim_apns_token,
+--         claim_push_subscription) have SET search_path, anon has NO EXECUTE
+--         (only a logged-in device may claim), authenticated HAS EXECUTE.
+--
 -- These tests assert catalog state only — no runtime seed required, no role
--- impersonation needed. They will fail if 0104 has not been applied, and pass
--- once it has. Run via: supabase test db
+-- impersonation needed. Runtime hostile probes for the claim RPCs live in
+-- push_device_claim_rls_test.sql. Run via: supabase test db
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(7);
+select plan(13);
 
 -- ── 1. email_is_in_auth_users: anon must NOT have EXECUTE ─────────────────────
 select ok(
@@ -101,6 +106,78 @@ select ok(
       and p.proconfig::text like '%search_path%'
   ),
   '#671: same_flight_or_solo() has SET search_path in proconfig'
+);
+
+-- ── 8–13. 0167 claim RPCs (#1790): hardened + authenticated-only ──────────────
+-- Same catalog checks as above, applied to the two possession-gated takeover
+-- functions: locked search_path, no anon EXECUTE, authenticated EXECUTE intact.
+
+select ok(
+  exists(
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'claim_apns_token'
+      and p.proconfig::text like '%search_path%'
+  ),
+  '#1790: claim_apns_token() has SET search_path in proconfig'
+);
+
+select ok(
+  not exists(
+    select 1
+    from information_schema.role_routine_grants
+    where routine_schema  = 'public'
+      and routine_name    = 'claim_apns_token'
+      and grantee         = 'anon'
+      and privilege_type  = 'EXECUTE'
+  ),
+  '#1790: anon does NOT have EXECUTE on claim_apns_token'
+);
+
+select ok(
+  exists(
+    select 1
+    from information_schema.role_routine_grants
+    where routine_schema  = 'public'
+      and routine_name    = 'claim_apns_token'
+      and grantee         = 'authenticated'
+      and privilege_type  = 'EXECUTE'
+  ),
+  '#1790: authenticated has EXECUTE on claim_apns_token'
+);
+
+select ok(
+  exists(
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'claim_push_subscription'
+      and p.proconfig::text like '%search_path%'
+  ),
+  '#1790: claim_push_subscription() has SET search_path in proconfig'
+);
+
+select ok(
+  not exists(
+    select 1
+    from information_schema.role_routine_grants
+    where routine_schema  = 'public'
+      and routine_name    = 'claim_push_subscription'
+      and grantee         = 'anon'
+      and privilege_type  = 'EXECUTE'
+  ),
+  '#1790: anon does NOT have EXECUTE on claim_push_subscription'
+);
+
+select ok(
+  exists(
+    select 1
+    from information_schema.role_routine_grants
+    where routine_schema  = 'public'
+      and routine_name    = 'claim_push_subscription'
+      and grantee         = 'authenticated'
+      and privilege_type  = 'EXECUTE'
+  ),
+  '#1790: authenticated has EXECUTE on claim_push_subscription'
 );
 
 select * from finish();
