@@ -49,7 +49,34 @@ xcrun devicectl device process launch --device <DEVICECTL-UUID> no.tornygolf.app
   `push_subscriptions` (web-push) og `apns_tokens` (APNs). Døde tokens prunes
   (410/Unregistered; BadDeviceToken i begge miljøer).
 
-## TestFlight (#1283, kommer)
+## TestFlight — arkiver og last opp (#1283)
 
-Produksjonspolish (native offline-/retry-skjerm, ikoner, arkivering/opplasting)
-spores i #1283 — dette dokumentet utvides da.
+Første opplasting skjedde 2026-08-30 (build 1.0 (1)). Gjenta slik ved ny build
+(husk å bumpe `CURRENT_PROJECT_VERSION` i `project.pbxproj`, ellers avviser
+App Store Connect duplikat-buildnummeret):
+
+```bash
+cd native/ios && npx cap sync ios && cd ios/App
+xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+  -destination 'generic/platform=iOS' \
+  -archivePath ~/.torny-native/dist/Torny-<versjon>-<build>.xcarchive archive \
+  -allowProvisioningUpdates DEVELOPMENT_TEAM=8C8WCW67J9
+xcodebuild -exportArchive \
+  -archivePath ~/.torny-native/dist/Torny-<versjon>-<build>.xcarchive \
+  -exportOptionsPlist ~/.torny-native/dist/ExportOptions.plist \
+  -exportPath ~/.torny-native/dist/export -allowProvisioningUpdates
+```
+
+`ExportOptions.plist` (ligger i `~/.torny-native/dist/`) bruker
+`method: app-store-connect` + `destination: upload` — eksporten LASTER OPP
+selv via Apple-ID-en som er innlogget i Xcode. Vellykket kjøring slutter med
+«Upload succeeded» + «EXPORT SUCCEEDED». Builden dukker opp i App Store
+Connect → TestFlight etter 5–30 min behandling.
+
+- `ITSAppUsesNonExemptEncryption=false` i `Info.plist` — eksport-kontroll-
+  dialogen («App Encryption Documentation») stilles aldri igjen; appen bruker
+  kun OS-ets HTTPS.
+- **Offline-skjermen** er `www/error.html` via `server.errorPath` — norsk,
+  auto-probe hvert 5. s. Testes fysisk: flymodus + kald start.
+- **TestFlight-builds utløper etter 90 dager** — testerne mister appen uten ny
+  build. Re-utgi før utløp til App Store-utgaven (#1284) tar over.

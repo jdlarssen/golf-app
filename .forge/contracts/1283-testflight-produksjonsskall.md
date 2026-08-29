@@ -66,17 +66,24 @@ Remote-URL apex, ingen SW i skallet, aldri CapacitorCookies (#1281); butikknavn
 
 ## Suksesskriterier (i natt)
 
-- [ ] `detect.ts`-fix + AASA-appID merget og deployet; `curl` viser ekte appID
-- [ ] Fysisk iPhone: kald start i flymodus viser Tørny-offline-skjermen (aldri
-      svart/hvit), og appen laster selv når nettet kommer tilbake
-- [ ] Fysisk iPhone: install-banneret er borte i skallet
-- [ ] Ikoner + splash: hjemskjerm-ikonet er Tørny-ikonet; splash viser logo på linen
-- [ ] Arkiv lastet opp til App Store Connect; build synlig i TestFlight (Processing/klar)
-- [ ] Eieren installert via TestFlight (intern) — kjerneflyt-sjekk light
-- [ ] Ekstern gruppe m/ public link sendt til Beta App Review
-- [ ] VERIFICATION GAP dokumentert: vennegjenge-installasjon (kriterium 1) og
-      universal-link-test (kriterium 4) fullføres når Beta-review/CDN er klare —
-      issuet lukkes først da
+- [x] `detect.ts`-fix + AASA-appID merget og deployet — EVIDENS: PR #1805 merget
+      (dce755d7); `curl` mot apex viser `8C8WCW67J9.no.tornygolf.app`
+- [x] Fysisk iPhone: kald start i flymodus viser Tørny-offline-skjermen, og appen
+      laster selv når nettet kommer tilbake — EVIDENS: eier-verifisert i økta
+      («etter at jeg fikk nett igjen … kom jeg inn i appen som forventet»)
+- [x] Fysisk iPhone: install-banneret er borte i skallet — EVIDENS: eier-verifisert
+      etter deploy + app-relansering (første sjekk traff stale JS — lærdom notert)
+- [x] Ikoner + splash — EVIDENS: eier bekreftet riktig hjemskjerm-ikon; splash
+      komponert fra #1278-assets (PIL, 2732² på linen)
+- [x] Arkiv lastet opp — EVIDENS: «Upload succeeded» + «EXPORT SUCCEEDED» i
+      upload-loggen; build 1.0 (1) synlig og ferdigbehandlet i TestFlight
+- [x] Eieren installert via TestFlight (intern) — EVIDENS: eier bekreftet
+      installasjon, fortsatt innlogget (sesjon overlever prod-signert reinstall)
+- [~] Ekstern gruppe m/ public link sendt til Beta App Review — eieren fikk
+      steg-for-steg-guiden, la seg før bekreftelse; står i morgen-sjekklista
+- [x] VERIFICATION GAP dokumentert — EVIDENS: statuskommentar på #1283
+      (vennegjenge-installasjon, universal-link-test og Beta-innsending gjenstår;
+      issuet holdes åpent)
 
 ## Filer som trolig røres
 
