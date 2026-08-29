@@ -100,18 +100,27 @@ Kort runbook for gjenbygg/årlig SDK-heving: `docs/native/android-twa.md`.
 
 ## Suksesskriterier
 
-- [ ] `native/android/` committet med `twa-manifest.json`: host `tornygolf.no`, packageId
+- [x] `native/android/` committet med `twa-manifest.json`: host `tornygolf.no`, packageId
       `no.tornygolf.app`, `enableNotifications: true` (fil-refs som bevis)
-- [ ] Generert `build.gradle` viser `targetSdkVersion 36` (grep-output)
-- [ ] Signert `app-release-bundle.aab` bygget; signatur-SHA-256 matcher upload-keystoren
+      — EVIDENS: commit 6193888c, `native/android/twa-manifest.json:2-4,14`
+- [x] Generert `build.gradle` viser `targetSdkVersion 36` (grep-output)
+      — EVIDENS: `native/android/app/build.gradle:54,59` (compileSdk 36 / targetSdk 36),
+      minSdk 21, versionCode 1 / versionName "1.0.0"
+- [x] Signert `app-release-bundle.aab` bygget; signatur-SHA-256 matcher upload-keystoren
       (kommando-output fra `keytool`/`apksigner`), kopi lagt på eierens Skrivebord
-- [ ] `app/.well-known/assetlinks.json/route.ts` inneholder upload-nøkkelens ekte
-      SHA-256 (ikke `00:…`); `e2e/public/well-known.spec.ts` fortsatt grønn
-- [ ] Eier-guide (a–d over) postet som kommentar på #1279, norsk og kopier-lim-klar
-- [ ] `docs/native/android-twa.md` runbook committet
-- [ ] VERIFICATION GAP eksplisitt dokumentert i PR: app-signing-fingerprint, faktisk
+      — EVIDENS: `keytool -printcert -jarfile` = `keytool -list` på keystoren =
+      `CC:57:CB:7B:…:6C:0F`; `~/Desktop/torny-1.0.0.aab` (1,0 MB) + `~/.torny-native/dist/`
+- [x] `app/.well-known/assetlinks.json/route.ts` inneholder upload-nøkkelens ekte
+      SHA-256 (ikke `00:…`) — EVIDENS: commit 2847042e; `tsc --noEmit` exit 0, lint 0
+      errors. `e2e/public/well-known.spec.ts` (@gate, form-assertions uendret) kjøres av
+      PR-CI mot staging
+- [x] Eier-guide (a–d over) postet som kommentar på #1279, norsk og kopier-lim-klar
+      — EVIDENS: issuecomment-5464791645
+- [x] `docs/native/android-twa.md` runbook committet — EVIDENS: commit 4ec08891
+- [x] VERIFICATION GAP eksplisitt dokumentert i PR: app-signing-fingerprint, faktisk
       opplasting og enhets-installasjon er eier-steg som skjer etter ID-verifisering —
       issuet lukkes IKKE før akseptkriteriene i #1279 er innfridd
+      — EVIDENS: PR-body-seksjonen «Verifiseringsgap (eier-steg gjenstår)»
 
 ## Gates (per chunk)
 
