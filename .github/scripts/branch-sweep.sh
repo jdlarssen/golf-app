@@ -83,6 +83,14 @@ while read -r branch; do
 
   merged_prs=$(gh pr list --repo "$REPO" --state merged --head "$branch" \
     --json number,headRepositoryOwner --jq "$OWN_PR_COUNT_JQ")
+  # Samme vakt som for open-oppslaget over: et feilende `gh pr list` gir tom
+  # streng, og uvoktet ville den lest som «0 merged» — nok et tomt-utdata-som-
+  # autoritativt-nei. Toppkommentarens regel #1 gjelder ALLE tre oppslagene.
+  if [ -z "$merged_prs" ]; then
+    echo "::warning::$branch: PR-oppslaget (merged) feilet — beholder branchen."
+    failed+=("$branch")
+    continue
+  fi
 
   # Exit-statusen MÅ fanges før klassifiseringen: i røret under gikk `git cherry`s
   # exit tapt, og en feilende cherry (skadet ref, manglende objekt) ga tom
@@ -97,7 +105,7 @@ while read -r branch; do
   # (ikke kosmetikk): uten den ville tilordningen arvet exit 1.
   unique=$(grep -c '^+' <<<"$cherry_out" || true)
 
-  if [ "${merged_prs:-0}" -gt 0 ]; then
+  if [ "$merged_prs" -gt 0 ]; then
     reason="merget PR ($unique unik(e) patch(er) i cherry)"
   elif [ "$unique" -eq 0 ]; then
     reason="0 unike patcher mot main"
