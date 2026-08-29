@@ -961,7 +961,7 @@ export async function attachToCaptainTeam(
       id: string;
       email: string;
       game_id: string | null;
-      invited_by: string | null;
+      invited_by: string;
     }>();
   if (!invitation || invitation.game_id !== game.id) {
     return { ok: false, error: 'not_found' };

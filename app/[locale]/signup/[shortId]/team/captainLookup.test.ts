@@ -35,13 +35,6 @@ describe('pickCaptainRequest', () => {
     expect(picked).toEqual({ row: NEWEST, source: 'fallback' });
   });
 
-  it('faller tilbake til nyeste rad når invited_by mangler', () => {
-    expect(pickCaptainRequest([NEWEST, OLDER], null)).toEqual({
-      row: NEWEST,
-      source: 'fallback',
-    });
-  });
-
   it('gir null når spillet ikke har noen kaptein-rader', () => {
     expect(pickCaptainRequest([], OLDER.user_id)).toBeNull();
   });

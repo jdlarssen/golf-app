@@ -249,7 +249,7 @@ export default async function PåmeldingPage({
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
-      .returns<{ id: string; invited_by: string | null }[]>();
+      .returns<{ id: string; invited_by: string }[]>();
     const openInvitations = invitationRows ?? [];
     hasPendingInvitation = openInvitations.length > 0;
 

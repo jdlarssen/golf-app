@@ -38,7 +38,7 @@ type TeamMemberRow = {
 type PendingInvitation = {
   id: string;
   email: string;
-  invited_by: string | null;
+  invited_by: string;
 };
 
 type CaptainRequestRow = {
