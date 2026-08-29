@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { getResultReadClient } from '../leaderboardContext';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import {
@@ -90,6 +91,14 @@ export async function fetchHolesAndScores(
   if (!gwp) notFound();
   const scoresGameId = gwp.game.source_game_id ?? gameId;
 
+  // #1632 (eiervalg B): drilldownen leser scores med SAMME klient som
+  // hoved-tavla — service-role når spillet er ferdig, ellers brukerens
+  // cookie-klient. Gaten i holes/page.tsx er håndhevelsen (#1542); før dette
+  // fikk sanksjonert cup-publikum (klubbmedlemmer, tilskuere i aktiv cup)
+  // navnene fra den admin-cachede getGameWithPlayers men «—» på alle slag,
+  // fordi RLS (0161) krever deltakelse eller ferdig cup.
+  const scoresClient = await getResultReadClient(gwp.game.status, supabase);
+
   const [rawHolesRes, rawScoresRes] = await Promise.all([
     supabase
       .from('course_holes')
@@ -97,7 +106,7 @@ export async function fetchHolesAndScores(
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
-    supabase
+    scoresClient
       .from('scores')
       .select(SCORES_SELECT)
       .eq('game_id', scoresGameId)
