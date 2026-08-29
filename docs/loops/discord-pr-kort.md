@@ -203,11 +203,12 @@ samme øyeblikk kan i sjeldne tilfeller gi to kort — akseptert for v1 (mildt) 
 PR-ens head-SHA — `workflow_run`-utløste relékjøringer listes under **main** sin
 `head_branch`/`head_sha`, så SHA-søket finner bare den kansellerte
 `pull_request`-kjøringen og konkluderer feilaktig «kortet uteble» (falsk alarm
-#1802: kortet VAR postet av relékjøringen). Spor i stedet via (a) PR-nummeret i
-Decide-loggen (`gh run view <id> --log | grep decide-pr-card`), eller (b)
-`labeled`-tidsstempelet for `discord:merge-kort` på PR-ens issue-timeline
-(`gh api repos/<repo>/issues/<pr>/timeline`) — kjøringen som dekker det
-tidspunktet er den som postet.
+#1802: kortet VAR postet av relékjøringen). Spor i stedet: list kandidatene med
+`gh run list --workflow=discord-pr-card.yml --limit 20`, og finn riktig kjøring
+via (a) PR-nummeret i Decide-loggen (`gh run view <id> --log | grep
+decide-pr-card`), eller (b) `labeled`-tidsstempelet for `discord:merge-kort` på
+PR-ens issue-timeline (`gh api repos/<repo>/issues/<pr>/timeline`) — kjøringen
+som dekker det tidspunktet er den som postet.
 
 ## Docs-only-PR-er — hendelsesdrevet via no-op-tvillingen (#1483, før: #1301)
 
