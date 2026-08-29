@@ -50,6 +50,21 @@ const MATCHPLAY_CONFIG: Record<CupMatchplayMode, MatchplayConfig> = {
   gruesome_matchplay: { compute: computeGruesomeMatchplay, sideSize: 2, defaultAllowance: 50 },
 };
 
+/**
+ * Runtime-oppslaget går via `Map`, ikke rått objekt-oppslag: `input.gameMode`
+ * er fri tekst (`games.game_mode`), og `MATCHPLAY_CONFIG['toString']` ville
+ * truffet `Object.prototype` og gitt en *funksjon* — truthy nok til å passere
+ * `if (!cfg)`-guarden, for så å krasje på `cfg.sideSize` lenger nede (#1777).
+ * `Object.entries` gir kun egne nøkler, og avledningen skjer ÉN gang ved
+ * modulens rot. Deklarasjonen over blir bevisst stående som
+ * `Record<CupMatchplayMode, …>` så en ny matchplay-modus fortsatt gir
+ * kompileringsfeil her i stedet for en stille null-retur.
+ * Presedens: `cupMatchGameMode.ts` (#1522).
+ */
+const MATCHPLAY_CONFIG_BY_MODE: ReadonlyMap<string, MatchplayConfig> = new Map(
+  Object.entries(MATCHPLAY_CONFIG),
+);
+
 export type CupMatchSidePlayer = { userId: string; courseHandicap: number };
 
 export type CupMatchScoringInput = {
@@ -78,7 +93,7 @@ export type CupMatchScoringInput = {
  * modusen, eller matchen ikke har et avgjort resultat ennå (ingen hull spilt).
  */
 export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInput['result'] {
-  const cfg = MATCHPLAY_CONFIG[input.gameMode as CupMatchplayMode];
+  const cfg = MATCHPLAY_CONFIG_BY_MODE.get(input.gameMode);
   if (!cfg) return null;
   if (input.side1.length !== cfg.sideSize || input.side2.length !== cfg.sideSize) return null;
 
