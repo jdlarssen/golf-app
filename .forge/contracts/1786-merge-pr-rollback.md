@@ -39,16 +39,26 @@ I `handleMergePr`, kun flip/merge-stien:
 
 ## Success Criteria
 
-- [ ] U1: Nye tester i `discordActions.test.ts` (APPEND — eksisterende tester urørte;
+- [x] U1: Nye tester i `discordActions.test.ts` (APPEND — eksisterende tester urørte;
       må en eksisterende test for draft+merge-feil-komboen justeres, flagg det):
       (a) draft + grønn gate + merge-feil → `convertPullRequestToDraft` kalt med
       PR-ens node_id og svaret inneholder «lagt tilbake som draft»; (b) samme men
       kompensasjonen feiler (non-200 ELLER 200-med-errors) → ⚠️-svaret, ingen throw;
       (c) ikke-draft + merge-feil → INGEN convert-kall, svar som før; (d) flip svarer
       200-med-errors → behandles som feilet flip, ingen merge-PUT.
-- [ ] U2: `npx vitest run lib/loops app/api/discord` grønn; `npx tsc --noEmit` grønn;
+      EVIDENS: commit ee58eafa; testfil append-only (99/0 numstat); TDD-bevis 5 røde
+      før implementasjon; evaluator kjørte den nye blokka mot GAMMEL kode: 5/7 røde,
+      de to grønne er regresjonslåsene. (c) bevist med toBe + kall-sekvens
+      ['GET','GET','PUT'].
+- [x] U2: `npx vitest run lib/loops app/api/discord` grønn; `npx tsc --noEmit` grønn;
       `npx eslint lib/loops scripts/loops` null problemer (ingen funksjon > 25).
-- [ ] U3: `npm run build` + full `npx vitest run` grønne (hovedchat).
+      EVIDENS: 288/288 exit 0, tsc exit 0, eslint null problemer (også etter
+      nit-herding 2a41cbdd — « — »-skjøt i rollback-svaret); handleMergePr 13→14.
+      Evaluator: ACCEPT, null MUST-FIX (alle adversarielle sjekker negative;
+      try/catch svelger IKKE merge-PUT-feil — PUT-en awaites utenfor try).
+- [x] U3: `npm run build` + full `npx vitest run` grønne (hovedchat).
+      EVIDENS: build exit 0; full vitest 513 filer/6919 tester exit 0 (HEAD ee58eafa;
+      2a41cbdd re-gatet skopert: 288/288 + tsc + eslint grønne).
 - [ ] U4: Draft-PR med grønn CI, eier-melding i body; IKKE merget av økta (eierens
       «merge»-svar er porten).
 
