@@ -26,12 +26,8 @@ import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
 import { endGameCore } from '@/lib/games/endGameCore';
 import { planTournamentGameDeletion } from './tournamentGameDeletion';
-import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
-import {
-  derivePointsToWinWeighted,
-  parseTiePoints,
-  parseWinPoints,
-} from './pointsToWin';
+import { derivePointsToWinWeighted } from './pointsToWin';
+import { parseCupDraftForm } from './parseCupDraftForm';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
 import {
@@ -42,11 +38,9 @@ import {
 // Form-felt-keyene matcher hidden inputs i cup-create-formet + admin-detalj-
 // formene. Holdt eksplisitt for å gjøre call-sites lesbare.
 
-const NAME_RE = /^.{1,80}$/;
-const TEAM_NAME_RE = /^.{1,40}$/;
-
-// Allowance parsers er konsolidert i ./allowance.ts (#809).
-// Use parseAllowancePct(raw, ALLOWANCE_DEFAULTS.<format>) at call-sites.
+// Cup-formens feltvalidering (navn/lag/allowances/vektpoeng) bor i
+// ./parseCupDraftForm.ts (#1778) — den eier også allowance-parserne fra
+// ./allowance.ts (#809), så denne fila kaller dem ikke lenger selv.
 
 // #1441 (D8) — samme 1/0,5-default som computeCupLeaderboard/pointsToWin.ts
 // faller tilbake til. Egen konstant her av samme grunn de filene er
@@ -101,51 +95,34 @@ export type CupActionError = { error: string };
 export async function createTournamentDraft(
   formData: FormData,
 ): Promise<CupActionError> {
+  const field = (key: string) => String(formData.get(key) ?? '');
   // #524: group_id binder cupen til en klubb. Tom = frittstående (uendret
   // admin-flyt).
-  const rawGroupId = String(formData.get('group_id') ?? '').trim();
-  const groupId = rawGroupId || null;
+  const groupId = field('group_id').trim() || null;
+
+  // #1778: feltvalideringen bor i `parseCupDraftForm` — en ren funksjon som
+  // kjører FØR DB-en røres (samme mønster som `saveCupPlan`/`parseCupPlanForm`).
   // #1397: feil returneres som action-resultat (`{ error: kode }`) i stedet for
   // en redirect til opprett-siden — redirecten unmonterte det utfylte
   // `CupSetup`-skjemaet og slettet det arrangøren hadde tastet. Kun suksess-
   // redirecten under (og auth-gatene) kaster fortsatt NEXT_REDIRECT. Kodene er
   // uendret; `CupSetup` slår dem opp i `cup.create.errors.*`.
-
-  const name = String(formData.get('name') ?? '').trim();
-  const team1 = String(formData.get('team_1_name') ?? '').trim();
-  const team2 = String(formData.get('team_2_name') ?? '').trim();
-  const allowanceRaw = String(formData.get('fourball_allowance_pct') ?? '');
-  const foursomesAllowanceRaw = String(
-    formData.get('foursomes_allowance_pct') ?? '',
-  );
-  const greensomeAllowanceRaw = String(formData.get('greensome_allowance_pct') ?? '');
-  const chapmanAllowanceRaw = String(formData.get('chapman_allowance_pct') ?? '');
-  const gruesomeAllowanceRaw = String(formData.get('gruesome_allowance_pct') ?? '');
-  // #1441 (D8): valgfrie vektede cup-poeng. Tomt felt (dagens skjema,
-  // ordinære cuper) → utelates fra inserten, DB-default 1/0,5 gjelder.
-  const winPointsRaw = String(formData.get('win_points') ?? '');
-  const tiePointsRaw = String(formData.get('tie_points') ?? '');
-
-  if (!NAME_RE.test(name)) return { error: 'cup_name' };
-  if (!TEAM_NAME_RE.test(team1)) return { error: 'cup_team_1' };
-  if (!TEAM_NAME_RE.test(team2)) return { error: 'cup_team_2' };
-  if (team1.toLowerCase() === team2.toLowerCase())
-    return { error: 'cup_team_dup' };
-  const fourballAllowance = parseAllowancePct(allowanceRaw, ALLOWANCE_DEFAULTS.fourball);
-  if (fourballAllowance === null) return { error: 'cup_allowance' };
-  const foursomesAllowance = parseAllowancePct(foursomesAllowanceRaw, ALLOWANCE_DEFAULTS.foursomes);
-  if (foursomesAllowance === null) return { error: 'cup_foursomes_allowance' };
-  const greensomeAllowance = parseAllowancePct(greensomeAllowanceRaw, ALLOWANCE_DEFAULTS.greensome);
-  if (greensomeAllowance === null) return { error: 'cup_greensome_allowance' };
-  const chapmanAllowance = parseAllowancePct(chapmanAllowanceRaw, ALLOWANCE_DEFAULTS.chapman);
-  if (chapmanAllowance === null) return { error: 'cup_chapman_allowance' };
-  const gruesomeAllowance = parseAllowancePct(gruesomeAllowanceRaw, ALLOWANCE_DEFAULTS.gruesome);
-  if (gruesomeAllowance === null) return { error: 'cup_gruesome_allowance' };
-  // #1441 (D8): win_points > 0, tie_points >= 0 (migrasjon 0153 CHECK-ene).
-  const winPoints = parseWinPoints(winPointsRaw);
-  if (winPoints === null) return { error: 'cup_win_points' };
-  const tiePoints = parseTiePoints(tiePointsRaw);
-  if (tiePoints === null) return { error: 'cup_tie_points' };
+  const parsed = parseCupDraftForm({
+    name: field('name'),
+    team1: field('team_1_name'),
+    team2: field('team_2_name'),
+    fourballAllowanceRaw: field('fourball_allowance_pct'),
+    foursomesAllowanceRaw: field('foursomes_allowance_pct'),
+    greensomeAllowanceRaw: field('greensome_allowance_pct'),
+    chapmanAllowanceRaw: field('chapman_allowance_pct'),
+    gruesomeAllowanceRaw: field('gruesome_allowance_pct'),
+    // #1441 (D8): valgfrie vektede cup-poeng. Tomt felt (dagens skjema,
+    // ordinære cuper) → utelates fra inserten, DB-default 1/0,5 gjelder.
+    winPointsRaw: field('win_points'),
+    tiePointsRaw: field('tie_points'),
+  });
+  if (!parsed.ok) return { error: parsed.error };
+  const values = parsed.values;
 
   const supabase = await getServerClient();
   // Klubb-cup: klubb-eier/-admin (eller global admin) oppretter. Personlig
@@ -159,22 +136,22 @@ export async function createTournamentDraft(
   const { data, error } = await supabase
     .from('tournaments')
     .insert({
-      name,
-      team_1_name: team1,
-      team_2_name: team2,
+      name: values.name,
+      team_1_name: values.team1,
+      team_2_name: values.team2,
       // points_to_win utelates med vilje: en draft vet ikke hvor mange matcher
       // den får ennå. startTournament utleder målet fra det reelle antallet.
-      fourball_allowance_pct: fourballAllowance as number,
-      foursomes_allowance_pct: foursomesAllowance as number,
-      greensome_allowance_pct: greensomeAllowance as number,
-      chapman_allowance_pct: chapmanAllowance as number,
-      gruesome_allowance_pct: gruesomeAllowance as number,
+      fourball_allowance_pct: values.fourballAllowance,
+      foursomes_allowance_pct: values.foursomesAllowance,
+      greensome_allowance_pct: values.greensomeAllowance,
+      chapman_allowance_pct: values.chapmanAllowance,
+      gruesome_allowance_pct: values.gruesomeAllowance,
       created_by: userId,
       group_id: groupId,
       // #1441 (D8): utelates når feltet var tomt — DB-default 1/0,5 (migrasjon
       // 0153) gjelder da, bit for bit dagens oppførsel for ordinære cuper.
-      ...(winPoints !== undefined ? { win_points: winPoints } : {}),
-      ...(tiePoints !== undefined ? { tie_points: tiePoints } : {}),
+      ...(values.winPoints !== undefined ? { win_points: values.winPoints } : {}),
+      ...(values.tiePoints !== undefined ? { tie_points: values.tiePoints } : {}),
     })
     .select('id')
     .single();
