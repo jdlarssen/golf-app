@@ -10,6 +10,8 @@ import { notify } from '@/lib/notifications/notify';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { signupSourceFromParam } from '@/lib/games/publicSignupVisibility';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
+import { gameModeSupportsTeams } from '@/lib/games/registration';
+import { resolveRegistrationTypeView } from './registrationTypeView';
 import { soloPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
@@ -62,6 +64,25 @@ export type ActionError =
   | 'game_full';
 
 const MESSAGE_MAX = 200;
+
+/**
+ * #1792 (HCD F5): felles gate for begge solo-actions. Solo-påmelding er kun
+ * gyldig når signup-siden faktisk viser solo-skjemaet — samme utledning som
+ * `renderBody` i page.tsx bruker. Alt annet ('team', eller 'both' på en
+ * lagmodus der siden krever fullt lag) avvises, ellers kan en håndbygd POST
+ * gå utenom lag-kravet.
+ */
+function isSoloRegistrationView(game: {
+  registration_type: Parameters<typeof resolveRegistrationTypeView>[0];
+  game_mode: Parameters<typeof gameModeSupportsTeams>[0];
+}): boolean {
+  return (
+    resolveRegistrationTypeView(
+      game.registration_type,
+      gameModeSupportsTeams(game.game_mode),
+    ).kind === 'solo_form'
+  );
+}
 
 /**
  * Sjekk om PG-error er UNIQUE-violation (23505) eller inneholder "duplicate"
@@ -187,10 +208,12 @@ export async function registerForOpenGame(
   if (game.signups_closed_at != null) {
     return { ok: false, error: 'signup_closed' };
   }
-  // Lag-påmelding kommer i chunk 8 — for nå avviser vi team-only spill i
-  // åpen-modus med en plassholdermelding slik at solo-flyten kan landes
-  // isolert. `both` tillater solo-grenen.
-  if (game.registration_type === 'team') {
+  // #1792 (HCD F5): gaten speiler signup-sidens visning. Alt annet enn
+  // solo_form avvises — 'team', og 'both' på en lagmodus (siden viser da
+  // lag-skjemaet med alle slots påkrevd, så en solo-POST ville gått utenom
+  // lag-kravet). 'both' på en solo-modus faller fortsatt til solo_form og
+  // er eneste inngang for slike spill.
+  if (!isSoloRegistrationView(game)) {
     return { ok: false, error: 'team_not_supported_yet' };
   }
 
@@ -400,7 +423,8 @@ export async function requestApproval(
   if (game.signups_closed_at != null) {
     return { ok: false, error: 'signup_closed' };
   }
-  if (game.registration_type === 'team') {
+  // #1792: samme solo-gate som registerForOpenGame — se isSoloRegistrationView.
+  if (!isSoloRegistrationView(game)) {
     return { ok: false, error: 'team_not_supported_yet' };
   }
 

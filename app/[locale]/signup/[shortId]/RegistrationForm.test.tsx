@@ -131,16 +131,28 @@ describe('RegistrationForm — matchplay side-velger', () => {
 });
 
 describe('RegistrationForm — manual_approval-modus', () => {
-  it('viser message-textarea + «Send forespørsel»-knapp', () => {
+  it('#1792: meldingsfeltet er kollapset bak «Legg til melding»-lenken', () => {
     render(<RegistrationForm mode="manual_approval" shortId={SHORT_ID} />);
-    expect(screen.getByText(/Valgfri hilsen/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Valgfri hilsen/i)).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Send forespørsel' }),
     ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('add-message-link'));
+    expect(screen.getByText(/Valgfri hilsen/i)).toBeInTheDocument();
+  });
+
+  it('#1792: ?src=qr → meldingsfeltet starter ekspandert', () => {
+    render(
+      <RegistrationForm mode="manual_approval" shortId={SHORT_ID} src="qr" />,
+    );
+    expect(screen.getByText(/Valgfri hilsen/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('add-message-link')).not.toBeInTheDocument();
   });
 
   it('viser tegn-teller for message', () => {
     render(<RegistrationForm mode="manual_approval" shortId={SHORT_ID} />);
+    fireEvent.click(screen.getByTestId('add-message-link'));
     const textarea = screen.getByPlaceholderText(/Hei!/i) as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: 'Hei på deg' } });
     expect(screen.getByText('10/200')).toBeInTheDocument();

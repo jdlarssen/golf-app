@@ -60,10 +60,12 @@ const REGISTRATION_MODES: readonly RegistrationMode[] = [
   'open',
 ] as const;
 
+// #1792: 'both' er ikke lenger valgbart — DB-enumen står, men nye/redigerte
+// spill velger solo ELLER lag. Eksisterende both-spill behandles som lag
+// (edit-flyten coercer 'both' → 'team' i useGameFormState).
 const REGISTRATION_TYPES: readonly RegistrationType[] = [
   'solo',
   'team',
-  'both',
 ] as const;
 
 export function RegistrationSection({
@@ -116,8 +118,7 @@ export function RegistrationSection({
 
   function typeTitle(type: RegistrationType): string {
     if (type === 'solo') return t('typeSoloTitle');
-    if (type === 'team') return t('typeTeamTitle');
-    return t('typeBothTitle');
+    return t('typeTeamTitle');
   }
 
   const modeChoiceFieldset = !hideModeChoice && (
@@ -214,7 +215,7 @@ export function RegistrationSection({
         </legend>
         <div className="mt-2 space-y-3">
           {REGISTRATION_TYPES.map((type) => {
-            const isTeamOption = type === 'team' || type === 'both';
+            const isTeamOption = type === 'team';
             const disabled = isTeamOption ? teamRadioDisabled : lockGameMode;
             return (
               <label

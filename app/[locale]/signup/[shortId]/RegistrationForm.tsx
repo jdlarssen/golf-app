@@ -38,6 +38,10 @@ export function RegistrationForm({
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
   const [message, setMessage] = useState('');
+  // #1792: meldingsfeltet brukes nesten aldri — kollapset bak en lenke som
+  // default. QR-inngangen (?src=qr) er unntaket: der står du typisk fysisk på
+  // stedet uten relasjon til arrangøren, så feltet åpnes ferdig ekspandert.
+  const [showMessage, setShowMessage] = useState(src === 'qr');
   const [selectedSide, setSelectedSide] = useState<1 | 2 | null>(null);
 
   // Dersom bare én side har ledig plass, forhåndsvelg den.
@@ -211,25 +215,35 @@ export function RegistrationForm({
         className="absolute left-[-9999px] h-0 w-0 opacity-0"
       />
 
-      {mode === 'manual_approval' && (
-        <label className="block">
-          <span className="mb-1.5 block font-sans text-xs font-medium tracking-tight text-muted">
-            {t('messageLabel')}
-          </span>
-          <textarea
-            name="message"
-            rows={3}
-            maxLength={MESSAGE_MAX}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={t('messagePlaceholder')}
-            className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-          <span className="mt-1 block text-right font-sans text-[11px] tabular-nums text-muted">
-            {message.length}/{MESSAGE_MAX}
-          </span>
-        </label>
-      )}
+      {mode === 'manual_approval' &&
+        (showMessage ? (
+          <label className="block">
+            <span className="mb-1.5 block font-sans text-xs font-medium tracking-tight text-muted">
+              {t('messageLabel')}
+            </span>
+            <textarea
+              name="message"
+              rows={3}
+              maxLength={MESSAGE_MAX}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={t('messagePlaceholder')}
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <span className="mt-1 block text-right font-sans text-[11px] tabular-nums text-muted">
+              {message.length}/{MESSAGE_MAX}
+            </span>
+          </label>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowMessage(true)}
+            data-testid="add-message-link"
+            className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary underline underline-offset-2"
+          >
+            {t('addMessageLink')}
+          </button>
+        ))}
 
       {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
 
