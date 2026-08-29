@@ -23,7 +23,7 @@ import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
-import { scoreOwnerForHole, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
+import { ownedScoreRows, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -293,10 +293,15 @@ async function ReviewBody({
   // `eq('user_id', me)` filter whenever I own my own rows; in a team-collapsed
   // mode it swaps in the captain's shared row — per hole, so patsome's 4BBB
   // half (1–6) still reviews MY ball and its foursomes half (7–18) the team's.
-  const ownedScores = (scoresRes.data ?? []).filter(
-    (s) =>
-      s.user_id ===
-      scoreOwnerForHole(gameMode, s.hole_number, currentUserId, teamScoreOwner),
+  const ownedScores = ownedScoreRows(
+    (scoresRes.data ?? []).map((s) => ({
+      ...s,
+      holeNumber: s.hole_number,
+      userId: s.user_id,
+    })),
+    gameMode,
+    currentUserId,
+    teamScoreOwner,
   );
 
   const scoreByHole = new Map<number, ScoreRow>();
