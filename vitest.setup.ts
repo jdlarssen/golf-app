@@ -12,6 +12,15 @@ import noMessages from './messages/no.json';
 delete process.env.RESEND_STUB_SEND;
 delete process.env.SELFREG_RATE_LIMIT_DISABLED;
 
+// Same class of leak for APNs (#1282): sendPush tests assert the web-push-only
+// path when APNs is unconfigured, and an exported APNS_* shell variable would
+// flip isApnsConfigured() and fan out to a table the mocks don't expect.
+// Tests that want the APNs path configure these via vi.stubEnv themselves.
+delete process.env.APNS_KEY_ID;
+delete process.env.APNS_TEAM_ID;
+delete process.env.APNS_BUNDLE_ID;
+delete process.env.APNS_PRIVATE_KEY;
+
 // Stub next/navigation so components that call useRouter / usePathname /
 // useSearchParams (e.g. SmartLink) don't throw "invariant: app router not
 // mounted" during unit tests.
