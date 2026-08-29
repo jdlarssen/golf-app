@@ -197,18 +197,22 @@ export async function requireAdminOrTournamentCreator(
  * does not depend on the caller's own RLS visibility. This gate is a UX guard;
  * the real security boundary is the RLS WRITE policies on tournaments (0089 +
  * 0090), which evaluate each row's actual `group_id`/`created_by`.
+ *
+ * Returns the resolved `groupId` on the context (#1749) so callers — notably
+ * `cupRedirectBase` — reuse this admin-client read instead of repeating it.
  */
 export async function requireAdminOrClubAdminOfCup(
   supabase: ServerSupabase,
   tournamentId: string,
-): Promise<AdminRoleContext> {
+): Promise<AdminRoleContext & { groupId: string | null }> {
   const { data } = await getAdminClient()
     .from('tournaments')
     .select('group_id')
     .eq('id', tournamentId)
     .maybeSingle();
   const groupId = (data?.group_id as string | null | undefined) ?? null;
-  return groupId
+  const ctx = await (groupId
     ? requireAdminOrClubAdmin(supabase, groupId)
-    : requireAdminOrTournamentCreator(supabase, tournamentId);
+    : requireAdminOrTournamentCreator(supabase, tournamentId));
+  return { ...ctx, groupId };
 }
