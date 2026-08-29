@@ -29,27 +29,33 @@ describe('parseCupPlanForm — preset', () => {
       const customSessionsRaw =
         presetId === 'tilpasset' ? '["singles_matchplay"]' : '';
       const result = parseCupPlanForm(input({ presetId, customSessionsRaw }));
-      expect(result).toHaveProperty('ok');
+      expect(result).toHaveProperty('ok', true);
     },
   );
 
   it.each(['', 'bogus', 'KLASSISK', 'stableford'])(
     'rejects unknown preset %j with plan_preset',
     (presetId) => {
-      expect(parseCupPlanForm(input({ presetId }))).toEqual({ error: 'plan_preset' });
+      expect(parseCupPlanForm(input({ presetId }))).toEqual({
+        ok: false,
+        error: 'plan_preset',
+      });
     },
   );
 });
 
 describe('parseCupPlanForm — strategy', () => {
   it.each(['handicap', 'random'])('accepts strategy %s', (strategy) => {
-    expect(parseCupPlanForm(input({ strategy }))).toHaveProperty('ok');
+    expect(parseCupPlanForm(input({ strategy }))).toHaveProperty('ok', true);
   });
 
   it.each(['', 'seeded', 'Handicap'])(
     'rejects unknown strategy %j with plan_strategy',
     (strategy) => {
-      expect(parseCupPlanForm(input({ strategy }))).toEqual({ error: 'plan_strategy' });
+      expect(parseCupPlanForm(input({ strategy }))).toEqual({
+        ok: false,
+        error: 'plan_strategy',
+      });
     },
   );
 });
@@ -63,7 +69,8 @@ describe('parseCupPlanForm — custom sessions', () => {
       }),
     );
     expect(result).toEqual({
-      ok: {
+      ok: true,
+      values: {
         presetId: 'tilpasset',
         strategy: 'handicap',
         customSessions: ['foursomes_matchplay', 'singles_matchplay'],
@@ -81,7 +88,8 @@ describe('parseCupPlanForm — custom sessions', () => {
       }),
     );
     expect(result).toEqual({
-      ok: {
+      ok: true,
+      values: {
         presetId: 'klassisk',
         strategy: 'handicap',
         customSessions: null,
@@ -102,7 +110,7 @@ describe('parseCupPlanForm — custom sessions', () => {
     (_label, customSessionsRaw) => {
       expect(
         parseCupPlanForm(input({ presetId: 'tilpasset', customSessionsRaw })),
-      ).toEqual({ error: 'plan_sessions' });
+      ).toEqual({ ok: false, error: 'plan_sessions' });
     },
   );
 });
@@ -110,7 +118,7 @@ describe('parseCupPlanForm — custom sessions', () => {
 describe('parseCupPlanForm — best-ball allowance', () => {
   it('empty → null', () => {
     const result = parseCupPlanForm(input({ bestBallAllowanceRaw: '' }));
-    expect(result).toMatchObject({ ok: { bestBallAllowancePct: null } });
+    expect(result).toMatchObject({ ok: true, values: { bestBallAllowancePct: null } });
   });
 
   it.each([
@@ -119,13 +127,14 @@ describe('parseCupPlanForm — best-ball allowance', () => {
     ['100', 100],
   ])('accepts integer %s', (raw, expected) => {
     const result = parseCupPlanForm(input({ bestBallAllowanceRaw: raw }));
-    expect(result).toMatchObject({ ok: { bestBallAllowancePct: expected } });
+    expect(result).toMatchObject({ ok: true, values: { bestBallAllowancePct: expected } });
   });
 
   it.each(['-1', '101', '85.5', 'abc'])(
     'rejects out-of-range / non-integer %j with plan_best_ball',
     (raw) => {
       expect(parseCupPlanForm(input({ bestBallAllowanceRaw: raw }))).toEqual({
+        ok: false,
         error: 'plan_best_ball',
       });
     },
@@ -133,7 +142,7 @@ describe('parseCupPlanForm — best-ball allowance', () => {
 
   it('whitespace-only → treated as empty → null', () => {
     const result = parseCupPlanForm(input({ bestBallAllowanceRaw: '   ' }));
-    expect(result).toMatchObject({ ok: { bestBallAllowancePct: null } });
+    expect(result).toMatchObject({ ok: true, values: { bestBallAllowancePct: null } });
   });
 });
 

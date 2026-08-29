@@ -177,7 +177,7 @@ export async function saveCupPlan(
     customSessionsRaw: String(formData.get('custom_sessions') ?? ''),
     bestBallAllowanceRaw: String(formData.get('best_ball_allowance_pct') ?? ''),
   });
-  if ('error' in parsed) return { error: parsed.error };
+  if (!parsed.ok) return { error: parsed.error };
 
   if (!courseId) return { error: 'plan_course' };
   if (!teeBoxId) return { error: 'plan_tee' };
@@ -238,10 +238,10 @@ export async function saveCupPlan(
             course_id: courseId,
             tee_box_id: teeBoxId,
             scheduled_tee_off_at: scheduledTeeOffAt,
-            preset_id: parsed.ok.presetId,
-            custom_sessions: parsed.ok.customSessions,
-            strategy: parsed.ok.strategy,
-            best_ball_allowance_pct: parsed.ok.bestBallAllowancePct,
+            preset_id: parsed.values.presetId,
+            custom_sessions: parsed.values.customSessions,
+            strategy: parsed.values.strategy,
+            best_ball_allowance_pct: parsed.values.bestBallAllowancePct,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'tournament_id' },
