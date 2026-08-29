@@ -82,7 +82,7 @@ Remote-URL apex, ingen SW i skallet, aldri CapacitorCookies (#1281); butikknavn
 - [~] Ekstern gruppe m/ public link sendt til Beta App Review — eieren fikk
       steg-for-steg-guiden, la seg før bekreftelse; står i morgen-sjekklista
 - [x] VERIFICATION GAP dokumentert — EVIDENS: statuskommentar på #1283
-      (vennegjenge-installasjon, universal-link-test og Beta-innsending gjenstår;
+      (issuecomment-5465418598: gjenstående steg + morgen-sjekkliste;
       issuet holdes åpent)
 
 ## Filer som trolig røres
