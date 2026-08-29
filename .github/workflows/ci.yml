@@ -36,6 +36,8 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # #1709: fail loudly instead of GitHub's 6h default. Observed 4m05s-6m55s.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -87,6 +89,10 @@ jobs:
   e2e:
     if: ${{ vars.RUN_E2E == 'true' }}
     runs-on: ubuntu-latest
+    # #1709: a hang must release the shared e2e-staging slot — GitHub's default
+    # is 6 hours, which blocks every other PR's e2e for the duration (#1708).
+    # Worst observed run 6m51s (dispatch w/ lifecycle lane), PR-p95 5m18s.
+    timeout-minutes: 20
     # #1272: serialize e2e across ALL PRs. The @gate suite runs against the
     # shared torny-staging DB with the SAME two test users (E2E_ADMIN_EMAIL /
     # E2E_PLAYER_EMAIL). Two PRs running e2e at once collided on those users and
@@ -147,6 +153,9 @@ jobs:
             pw-${{ runner.os }}-
 
       - name: Install Playwright (chromium)
+        # #1709: this exact step hung >1h in #1708 — a step timeout names the
+        # culprit in the log. Seconds on cache hit, ~2-3 min cold.
+        timeout-minutes: 10
         run: npx playwright install --with-deps chromium
 
       - name: Authenticated e2e (golden-path + cup/liga smoke)

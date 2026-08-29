@@ -27,6 +27,9 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # #1709: mirrors ci.yml's verify timeout — a hang here burns up to 6h of
+    # Actions quota on a quiet night before cancel-in-progress can save it.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
