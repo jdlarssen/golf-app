@@ -316,7 +316,9 @@ async function handleMergePr(
     const detail = (merge.json as { message?: string })?.message ?? `HTTP ${merge.status}`;
     const failure = `Fikk ikke merget PR #${action.pr}: ${detail}`;
     if (!flippedFromDraft) return failure;
-    return failure + (await restoreDraft(gh, pr.node_id));
+    // « — » skiller GitHubs melding (uforutsigbar tegnsetting) fra rollback-noten,
+    // så svaret ikke blir en løpesetning når meldingen mangler punktum.
+    return `${failure} —${await restoreDraft(gh, pr.node_id)}`;
   }
   return `✅ PR #${action.pr} er rebase-merget. Issuet med «Closes» lukkes automatisk — closing-kommentaren ligger allerede der.`;
 }
