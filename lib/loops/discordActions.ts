@@ -295,13 +295,17 @@ async function handleMergePr(
   if (latest.conclusion !== 'success')
     return `🔴 CI er ikke grønn på PR #${action.pr} (CI: ${latest.conclusion ?? 'ukjent'}) — ikke merget.`;
 
+  // Husk om DENNE knappen tok PR-en ut av draft: bare da eier vi å legge
+  // tilstanden tilbake hvis mergen under feiler (#1786).
+  let flippedFromDraft = false;
   if (pr.draft) {
     const ready = await gh.graphql(
       `mutation($id: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $id }) { pullRequest { isDraft } } }`,
       { id: pr.node_id },
     );
-    if (ready.status !== 200)
+    if (!graphqlSucceeded(ready))
       return `Fikk ikke tatt PR #${action.pr} ut av draft (HTTP ${ready.status}) — ikke merget.`;
+    flippedFromDraft = true;
   }
 
   // Alltid rebase — squash er forbudt i repoet (mister granulær audit-trail).
@@ -310,9 +314,38 @@ async function handleMergePr(
   });
   if (merge.status !== 200) {
     const detail = (merge.json as { message?: string })?.message ?? `HTTP ${merge.status}`;
-    return `Fikk ikke merget PR #${action.pr}: ${detail}`;
+    const failure = `Fikk ikke merget PR #${action.pr}: ${detail}`;
+    if (!flippedFromDraft) return failure;
+    return failure + (await restoreDraft(gh, pr.node_id));
   }
   return `✅ PR #${action.pr} er rebase-merget. Issuet med «Closes» lukkes automatisk — closing-kommentaren ligger allerede der.`;
+}
+
+// GraphQL svarer 200 MED et `errors`-felt når mutasjonen avvises — statuskoden
+// alene er altså ikke bevis på at noe skjedde (I3). Samme dobbeltsjekk som
+// scripts/loops/sweep-natt-drafts.ts. Tom errors-liste er ikke en feil.
+function graphqlSucceeded(res: { status: number; json: unknown }): boolean {
+  if (res.status !== 200) return false;
+  const errors = (res.json as { errors?: unknown[] } | null)?.errors;
+  return !(Array.isArray(errors) && errors.length > 0);
+}
+
+// Kompenserende handling (#1786): mergen feilet etter at vi tok PR-en ut av
+// draft, så draft-tilstanden legges tilbake — ellers står PR-en ready uten at
+// noen valgte det, og natt-sweepen (#1769) leser ready som «klar til kortet».
+// Best-effort: en feilet kompensasjon sier fra i svaret, men kaster aldri —
+// merge-feilen er hovedbudskapet eieren skal få.
+async function restoreDraft(gh: GitHubClient, nodeId: string): Promise<string> {
+  try {
+    const back = await gh.graphql(
+      `mutation($id: ID!) { convertPullRequestToDraft(input: { pullRequestId: $id }) { pullRequest { isDraft } } }`,
+      { id: nodeId },
+    );
+    if (graphqlSucceeded(back)) return ' PR-en er lagt tilbake som draft.';
+  } catch {
+    // Nettverksfeil mot GitHub — samme utfall som en avvist mutasjon.
+  }
+  return ' ⚠️ PR-en står igjen som ready — legg den tilbake som draft manuelt om ønsket.';
 }
 
 async function handlePublishLansering(

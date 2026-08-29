@@ -629,3 +629,102 @@ describe('executeAction: publish_lansering', () => {
     expect(msg).not.toContain('nr.');
   });
 });
+
+// ── merge_pr: rollback av draft-flippen (#1786) ───────────────────────────────
+// Knappen tar en draft-PR ut av draft FØR merge-PUT-en. Feiler mergen, skal
+// draft-tilstanden legges tilbake — ellers står PR-en ready uten at noen valgte
+// det (og #1769-sweepen leser ready som «klar»). GraphQL svarer dessuten 200 MED
+// errors-felt ved mutasjonsfeil, så statuskoden alene er ikke bevis på flipp.
+
+describe('executeAction: merge_pr — draft-rollback', () => {
+  const draftPr = { ...greenPr, draft: true };
+  const mergeFailure = { status: 405, json: { message: 'Base branch was modified' } };
+  const graphqlOk = { status: 200, json: { data: {} } };
+
+  it('draft + merge-feil → PR-en konverteres tilbake til draft med samme node_id', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: draftPr },
+      { status: 200, json: greenCi },
+      graphqlOk, // flipp til ready
+      mergeFailure,
+      graphqlOk, // kompensasjon
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL', 'PUT', 'GRAPHQL']);
+    // mockGh lagrer kun de 40 første tegnene av spørringen — nok til å skille
+    // convert-mutasjonen fra markPullRequestReadyForReview.
+    expect(calls[4].path).toContain('convertPullRequest');
+    expect(calls[4].body).toEqual({ id: draftPr.node_id });
+    expect(msg).toContain('Base branch was modified');
+    expect(msg).toContain('lagt tilbake som draft');
+  });
+
+  it.each([
+    ['non-200', { status: 502 }],
+    ['200 med errors', { status: 200, json: { errors: [{ message: 'nope' }] } }],
+  ])('draft + merge-feil + kompensasjon feiler (%s) → ⚠️-svar, ingen throw', async (_navn, compensation) => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: draftPr },
+      { status: 200, json: greenCi },
+      graphqlOk,
+      mergeFailure,
+      compensation,
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls).toHaveLength(5);
+    expect(msg).toContain('Base branch was modified');
+    expect(msg).toContain('⚠️');
+    expect(msg).toContain('står igjen som ready');
+  });
+
+  it('kompensasjonen kaster (nettverksfeil) → ⚠️-svar, ingen throw', async () => {
+    const graphql = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 200, json: { data: {} } })
+      .mockRejectedValueOnce(new Error('fetch failed'));
+    const rest = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 200, json: draftPr })
+      .mockResolvedValueOnce({ status: 200, json: greenCi })
+      .mockResolvedValueOnce(mergeFailure);
+    const gh: GitHubClient = { rest, graphql };
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(graphql).toHaveBeenCalledTimes(2);
+    expect(msg).toContain('står igjen som ready');
+  });
+
+  it('ikke-draft + merge-feil → ingen GraphQL-kall, svaret er uendret', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: greenPr },
+      { status: 200, json: greenCi },
+      mergeFailure,
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PUT']);
+    expect(msg).toBe('Fikk ikke merget PR #1112: Base branch was modified');
+  });
+
+  it('flipp svarer 200 MED errors → behandles som feilet flipp, ingen merge-PUT', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: draftPr },
+      { status: 200, json: greenCi },
+      { status: 200, json: { errors: [{ message: 'Resource not accessible' }] } },
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL']);
+    expect(msg).toContain('ut av draft');
+    expect(msg).toContain('ikke merget');
+  });
+
+  it('tom errors-liste er ikke en feil → mergen går som normalt', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: draftPr },
+      { status: 200, json: greenCi },
+      { status: 200, json: { data: {}, errors: [] } },
+      { status: 200, json: { merged: true } },
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL', 'PUT']);
+    expect(msg).toContain('rebase-merget');
+  });
+});
