@@ -27,8 +27,9 @@ docs-notat, uten interaktiv gråsone-diskusjon (gråsonene ble avgjort av eviden
    - `[decide-pr-card] PR #1791: outcome=card (endrer fil på aldri-lista), isGui=true (45 filer).`
    - `[post-pr-card] PR #1791: knapp-kort postet (0 skjermbilde(r)).` (22:04:09)
    Rekkefølgen matcher koden: post først, label etterpå.
-3. Den kansellerte kjøringen 33277312485 (21:56–22:02:38) var det dokumenterte
-   #1572-stafettbyttet — relékjøringen tok over, som designet.
+3. Den kansellerte kjøringen 33277312485 (21:56:02–22:02:43, jobb ferdig
+   22:02:41) var det dokumenterte #1572-stafettbyttet — relékjøringen tok over,
+   som designet. (Issue-teksten oppga 22:02:38; runs-API-et er fasit.)
 4. Hvorfor rapportøren bommet: `workflow_run`-utløste kjøringer listes under
    **main** sin head-SHA (`48aa2177` = main HEAD da, verifisert med
    `gh api .../runs/33277571345` → `head_branch: main`), ikke PR-ens SHA. Søk
