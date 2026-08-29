@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { isStandalone, isIos } from '@/lib/pwa/detect';
 import { getPushState, enablePush, type PushState } from '@/lib/pwa/push';
 import { savePushSubscription } from '@/app/[locale]/profile/pushActions';
+import { registerApnsToken } from '@/app/[locale]/profile/apnsActions';
 
 const DISMISS_KEY = 'torny-push-nudge-dismissed';
 
@@ -40,7 +41,7 @@ export function PushNudge() {
   async function turnOn() {
     setBusy(true);
     try {
-      const next = await enablePush(savePushSubscription);
+      const next = await enablePush(savePushSubscription, registerApnsToken);
       if (next === 'on') { setDone(true); dismiss(); }
       else setShow(false); // blocked/denied — the profile row explains it
     } finally {

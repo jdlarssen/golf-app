@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { initNativePush } from '@/lib/pwa/push';
+import { registerApnsToken } from '@/app/[locale]/profile/apnsActions';
 
 /**
  * Registers the service worker in production and wires up the Background Sync
@@ -8,10 +10,22 @@ import { useEffect } from 'react';
  *
  * In development we skip registration to keep hot-reload sane — a stale SW
  * cache would mask source changes.
+ *
+ * Also boots the iOS shell's push bridge (#1282). It lives here rather than in
+ * PushToggle because a tapped notification must reach a listener on any page,
+ * including a cold start, and this component is mounted in the root layout.
  */
 export function PwaBoot() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // No-op in every browser; runs only inside the Capacitor shell. Must sit
+    // above the service-worker guards below, which the shell does not pass.
+    initNativePush({
+      register: registerApnsToken,
+      navigate: (url) => window.location.assign(url),
+    });
+
     if (!('serviceWorker' in navigator)) return;
     if (process.env.NODE_ENV !== 'production') return;
 
