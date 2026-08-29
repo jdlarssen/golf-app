@@ -24,10 +24,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
-import { InstallBanner } from '@/components/pwa/InstallBanner';
-import { PushNudge } from '@/components/pwa/PushNudge';
-import { PasskeyEnrollmentNudge } from '@/components/passkey/PasskeyEnrollmentNudge';
-import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
+import { HomeNudges } from './HomeNudges';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { StreakChip } from '@/components/stats/StreakChip';
 import { getUserStreak } from '@/lib/stats/getUserStreak';
@@ -129,15 +126,12 @@ export default async function Home({
         <BrandMark />
       </div>
 
-      <InstallBanner />
-      <PushNudge />
-
+      {/* #1797 (kontrakt #1069 K6): maks én nudge om gangen — Install > Push >
+          Nytt-i-Tørny > Passkey. HomeNudges avgjør server-plassene og
+          HomeNudgeRail orkestrerer køen i klienten. Suksess-bannerne under står
+          med vilje UTENFOR køen. */}
       <Suspense fallback={null}>
-        <PasskeyEnrollmentNudge />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <ProductUpdateBanner userId={userId!} />
+        <HomeNudges userId={userId!} />
       </Suspense>
 
       {profileUpdated && (

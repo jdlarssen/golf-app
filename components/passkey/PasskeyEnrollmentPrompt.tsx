@@ -12,9 +12,17 @@ const DISMISS_KEY = 'torny-passkey-nudge-dismissed';
  * signed in (#63). Only appears when WebAuthn is supported, the user has no
  * passkey yet, and they haven't dismissed it. Enrollment is a user gesture
  * (button tap) — WebAuthn requires user activation, so it never auto-fires.
- * The rollout/role gate is handled by the server wrapper `PasskeyEnrollmentNudge`.
+ * The rollout/role gate is resolved server-side in `HomeNudges` (#1797).
  */
-export function PasskeyEnrollmentPrompt() {
+export function PasskeyEnrollmentPrompt({
+  visible,
+  onVerdict,
+}: {
+  /** #1797: nudge-køen (HomeNudgeRail) styrer hvilken plass som faktisk vises. */
+  visible: boolean;
+  /** Meldes når kvalifiseringen er avklart (support/dismiss eller list-kallet). */
+  onVerdict: (qualified: boolean) => void;
+}) {
   const t = useTranslations('passkey');
   const supported = useWebAuthnSupported();
   const [show, setShow] = useState(false);
@@ -22,27 +30,37 @@ export function PasskeyEnrollmentPrompt() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!supported) return;
+    if (!supported) {
+      onVerdict(false);
+      return;
+    }
     let dismissed = false;
     try {
       dismissed = localStorage.getItem(DISMISS_KEY) === '1';
     } catch {
       /* private mode */
     }
-    if (dismissed) return;
+    if (dismissed) {
+      onVerdict(false);
+      return;
+    }
     let cancelled = false;
     getBrowserClient()
       .auth.passkey.list()
       .then(({ data }) => {
-        if (!cancelled && (!data || data.length === 0)) setShow(true);
+        if (cancelled) return;
+        const qualified = !data || data.length === 0;
+        if (qualified) setShow(true);
+        onVerdict(qualified);
       })
       .catch(() => {
-        /* Beta hiccup — just don't nudge */
+        // Beta hiccup — just don't nudge, and don't wedge the queue (#1797).
+        if (!cancelled) onVerdict(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [supported]);
+  }, [supported, onVerdict]);
 
   function dismiss() {
     try {
@@ -69,6 +87,8 @@ export function PasskeyEnrollmentPrompt() {
       setBusy(false);
     }
   }
+
+  if (!visible) return null; // #1797: en annen nudge holder plassen
 
   if (done) {
     return (
