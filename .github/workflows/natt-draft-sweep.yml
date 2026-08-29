@@ -1,0 +1,61 @@
+# Natt-draft-sweep (#1769): backstopp for natt-PR-er som blir stående som draft.
+# Nattkjøreren flipper selv (`gh pr ready` er leveransens siste handling,
+# docs/loops/nattkjoreren.md steg 5) — denne jobben finnes bare for netter som dør
+# ETTER bokføringen og FØR flippen. Da noop-er PR-kortet drafts (#1516), og PR-en
+# blir liggende til et menneske flipper den manuelt (seks slike 2026-08-29).
+#
+# Rekkevidden er smal med vilje: kun åpne drafts på `claude/natt-*` med
+# `autonomy:review`, stille i 90 min, med en fullført leveransekommentar. Alt annet
+# står — logikken og hvorfor: lib/loops/draftSweep.ts.
+#
+# Ops-forutsetning: secreten PR_AUTHOR_PAT (#1701). Flippen MÅ gjøres med et
+# personlig token: handlinger utført med github.token trigger aldri andre
+# workflows (GitHubs rekursjonsvern), så kortets `ready_for_review`-trigger ville
+# ikke fyrt — og da hadde flippen vært like stum som draften. Mangler secreten,
+# feiler jobben rødt i stedet for å flippe stille uten kort.
+name: Natt-draft-sweep
+
+on:
+  schedule:
+    - cron: '30 5 * * *' # daglig 05:30 UTC — etter natt-leveransene, før morgenbriefen
+  workflow_dispatch:
+
+# PAT-en bærer skrive-rettighetene; github.token trenger bare å hente ut koden.
+permissions:
+  contents: read
+
+# En dispatch som overlapper cron-kjøringen ville klassifisert de samme PR-ene.
+concurrency:
+  group: natt-draft-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Fail-loud: uten PAT-en ville flippen ikke trigget kortet, og sweepen hadde
+      # gjort skade i stillhet (draft → ready, men fortsatt ingen kort).
+      - name: Krev PR_AUTHOR_PAT
+        env:
+          PAT: ${{ secrets.PR_AUTHOR_PAT }}
+        run: |
+          if [ -z "$PAT" ]; then
+            echo "::error::PR_AUTHOR_PAT mangler — natt-drafts kan ikke flippes (github.token trigger ikke PR-kortet). Oppskrift: docs/loops/discord-pr-kort.md."
+            exit 1
+          fi
+
+      # Tynn runner (ingen npm ci): global fetch + rene lib-importer, som
+      # decide-pr-card.ts. Rød kjøring = CI-vaktas bord.
+      - name: Flipp ferdig bokførte natt-drafts
+        env:
+          GITHUB_TOKEN: ${{ secrets.PR_AUTHOR_PAT }}
+          GH_REPO: ${{ github.repository }}
+        run: npx --yes tsx scripts/loops/sweep-natt-drafts.ts
