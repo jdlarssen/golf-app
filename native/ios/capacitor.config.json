@@ -3,7 +3,8 @@
   "appName": "Tørny",
   "webDir": "www",
   "server": {
-    "url": "https://tornygolf.no"
+    "url": "https://tornygolf.no",
+    "errorPath": "error.html"
   },
   "plugins": {
     "PushNotifications": {

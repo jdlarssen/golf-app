@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tørny</title>
+<style>
+  :root {
+    --bg: #f8f6f0;
+    --text: #1b4332;
+    --muted: #6b7c72;
+    --btn-bg: #1b4332;
+    --btn-fg: #f8f6f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14201a;
+      --text: #ece5d2;
+      --muted: #9a9180;
+      --btn-bg: #7eaa80;
+      --btn-fg: #14201a;
+    }
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-serif, Georgia, serif;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  main { padding: 2rem; max-width: 26rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .5rem; }
+  p { font-family: ui-sans-serif, -apple-system, sans-serif; color: var(--muted); line-height: 1.5; margin: 0 0 1.5rem; }
+  button {
+    font: inherit;
+    font-family: ui-sans-serif, -apple-system, sans-serif;
+    font-weight: 600;
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    border: 0;
+    border-radius: 999px;
+    padding: .9rem 2.2rem;
+    min-height: 44px;
+  }
+  .flag { font-size: 2.4rem; display: block; margin-bottom: .75rem; }
+</style>
+</head>
+<body>
+<main>
+  <span class="flag">⛳️</span>
+  <h1>Ingen dekning akkurat nå</h1>
+  <p>Tørny trenger nett for å laste. Appen prøver igjen av seg selv så snart dekningen er tilbake.</p>
+  <button id="retry" type="button">Prøv igjen</button>
+</main>
+<script>
+  var APP = 'https://tornygolf.no/';
+  function goOnline() { window.location.replace(APP); }
+  document.getElementById('retry').addEventListener('click', goOnline);
+  // Probe the app host every 5s; the moment it answers, load the app. Kept
+  // deliberately tiny (manifest fetch, no-store) so retries stay cheap.
+  var timer = setInterval(function () {
+    fetch(APP + 'manifest.webmanifest', { cache: 'no-store', method: 'HEAD' })
+      .then(function (r) { if (r.ok) { clearInterval(timer); goOnline(); } })
+      .catch(function () { /* still offline */ });
+  }, 5000);
+</script>
+</body>
+</html>
