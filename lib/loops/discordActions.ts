@@ -149,6 +149,11 @@ export interface GitHubClient {
 
 type PrInfo = { node_id: string; draft: boolean; state: string; head: { sha: string } };
 
+// Én handler per custom_id-familie (#1782). Handlerne tar den SMALNEDE
+// action-varianten, så hver kropp er ordrett den samme som da alt lå i
+// executeActions switch — dispatchen under er ren delegering.
+type ActionOf<K extends DiscordAction['kind']> = Extract<DiscordAction, { kind: K }>;
+
 // Utfører handlingen og returnerer meldingen eieren ser i Discord. Feil fra
 // GitHub blir ærlige svar («fikk ikke …: <grunn>») — aldri stille.
 // `lansering` er kun nødvendig for publish_lansering; mangler den, svarer
@@ -159,190 +164,222 @@ export async function executeAction(
   lansering?: LanseringDeps,
 ): Promise<string> {
   switch (action.kind) {
-    case 'ready_issue': {
-      const res = await gh.rest('POST', `/repos/${LOOP_REPO}/issues/${action.issue}/labels`, {
-        labels: ['autonomy:ready'],
-      });
-      if (res.status !== 200)
-        return `Fikk ikke merket #${action.issue} (HTTP ${res.status}) — sjekk at issuet finnes og er åpent.`;
-      return `🌙 #${action.issue} står i natt-køen — bygges i natt.`;
-    }
-
-    case 'answer': {
-      const res = await gh.rest('POST', `/repos/${LOOP_REPO}/issues/${action.issue}/comments`, {
-        body: `Eierbeslutning via Discord: **${action.choice}**`,
-      });
-      if (res.status !== 201)
-        return `Fikk ikke postet svaret på #${action.issue} (HTTP ${res.status}).`;
-      return `✅ Svaret «${action.choice}» er postet på #${action.issue}.`;
-    }
-
-    // 🗑-knappen (#1151): flyt-forankrings-avvisning som ett tapp. Kommentaren
-    // postes FØR lukkingen — ingen tilstandsendring uten audit-trail. Ordlyden
-    // deler prefiks med answer-kommentaren, men uten fet A/B, slik at smedens
-    // deteksjons-regex aldri leser et dropp som et svar (test-låst).
-    case 'drop_issue': {
-      const comment = await gh.rest(
-        'POST',
-        `/repos/${LOOP_REPO}/issues/${action.issue}/comments`,
-        { body: 'Eierbeslutning via Discord: droppet 🗑' },
-      );
-      if (comment.status !== 201)
-        return `Fikk ikke postet dropp-kommentaren på #${action.issue} (HTTP ${comment.status}) — issuet er IKKE lukket.`;
-
-      const close = await gh.rest('PATCH', `/repos/${LOOP_REPO}/issues/${action.issue}`, {
-        state: 'closed',
-        state_reason: 'not_planned',
-      });
-      if (close.status !== 200)
-        return `Dropp-kommentaren står på #${action.issue}, men lukkingen feilet (HTTP ${close.status}) — lukk manuelt på GitHub.`;
-
-      // Et dropp skal aldri etterlate en byggbar kø-markering (#1302): fjern
-      // autonomy:ready så en senere gjenåpning ikke re-plukkes av nattkjøreren.
-      // 404 = labelen var der ikke — suksess, samme mønster som snooze.
-      const unready = await gh.rest(
-        'DELETE',
-        `/repos/${LOOP_REPO}/issues/${action.issue}/labels/${encodeURIComponent('autonomy:ready')}`,
-      );
-      if (unready.status !== 200 && unready.status !== 404)
-        return `🗑 #${action.issue} er droppet og lukket, men fikk ikke fjernet autonomy:ready (HTTP ${unready.status}) — fjern den manuelt.`;
-      return `🗑 #${action.issue} er droppet — lukket som «not planned».`;
-    }
-
-    // ⏸-knappen (#1151): parkér bak eierens egen trigger. parked-labelen er
-    // eksisterende vokabular («ikke bygg ennå»); smeden ekskluderer den i
-    // steg 1. 404 på label-fjerning betyr bare at labelen ikke var der
-    // (dobbel-tapp) — det er suksess, ikke feil.
-    // autonomy:ready fjernes også (#1302): en auto-køet sak som utsettes skal
-    // ikke bygges av nattkjøreren likevel — snooze må rydde kø-markeringen.
-    case 'snooze_issue': {
-      const comment = await gh.rest(
-        'POST',
-        `/repos/${LOOP_REPO}/issues/${action.issue}/comments`,
-        { body: 'Eierbeslutning via Discord: utsatt ⏸ — parkert til eieren fjerner parked-labelen.' },
-      );
-      if (comment.status !== 201)
-        return `Fikk ikke postet utsett-kommentaren på #${action.issue} (HTTP ${comment.status}) — ingenting er endret.`;
-
-      const park = await gh.rest('POST', `/repos/${LOOP_REPO}/issues/${action.issue}/labels`, {
-        labels: ['parked'],
-      });
-      if (park.status !== 200)
-        return `Utsett-kommentaren står på #${action.issue}, men parked-labelen feilet (HTTP ${park.status}) — sett den manuelt.`;
-
-      for (const label of ['autonomy:needs-decision', 'autonomy:needs-contract-session', 'autonomy:ready']) {
-        const removed = await gh.rest(
-          'DELETE',
-          `/repos/${LOOP_REPO}/issues/${action.issue}/labels/${encodeURIComponent(label)}`,
-        );
-        if (removed.status !== 200 && removed.status !== 404)
-          return `#${action.issue} er parkert, men fikk ikke fjernet ${label} (HTTP ${removed.status}) — fjern den manuelt.`;
-      }
-      return `⏸ #${action.issue} er parkert — fjern parked-labelen når den blir aktuell igjen.`;
-    }
-
-    case 'merge_pr': {
-      const prRes = await gh.rest('GET', `/repos/${LOOP_REPO}/pulls/${action.pr}`);
-      if (prRes.status !== 200) return `Fant ikke PR #${action.pr} (HTTP ${prRes.status}).`;
-      const pr = prRes.json as PrInfo;
-      if (pr.state !== 'open') return `PR #${action.pr} er ikke åpen (${pr.state}) — ingenting å merge.`;
-
-      const ciLookup = await fetchCiRunsForSha(gh, LOOP_REPO, pr.head.sha);
-      if (!ciLookup.ok)
-        return `Fikk ikke lest CI-status for PR #${action.pr} (HTTP ${ciLookup.status}) — ikke merget.`;
-      const ciRuns = ciLookup.runs;
-      if (ciRuns.length === 0)
-        return `Fant ingen CI-kjøring for PR #${action.pr} enda — prøv igjen når CI har startet.`;
-      // Nyeste kjøring (høyeste id) er fasit for head-SHA-en; re-kjøringer gir flere.
-      const latest = ciRuns.reduce((a, b) => (b.id > a.id ? b : a));
-      if (latest.status !== 'completed')
-        return `⏳ CI kjører fortsatt på PR #${action.pr} (${latest.status}) — prøv igjen om litt.`;
-      if (latest.conclusion !== 'success')
-        return `🔴 CI er ikke grønn på PR #${action.pr} (CI: ${latest.conclusion ?? 'ukjent'}) — ikke merget.`;
-
-      if (pr.draft) {
-        const ready = await gh.graphql(
-          `mutation($id: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $id }) { pullRequest { isDraft } } }`,
-          { id: pr.node_id },
-        );
-        if (ready.status !== 200)
-          return `Fikk ikke tatt PR #${action.pr} ut av draft (HTTP ${ready.status}) — ikke merget.`;
-      }
-
-      // Alltid rebase — squash er forbudt i repoet (mister granulær audit-trail).
-      const merge = await gh.rest('PUT', `/repos/${LOOP_REPO}/pulls/${action.pr}/merge`, {
-        merge_method: 'rebase',
-      });
-      if (merge.status !== 200) {
-        const detail = (merge.json as { message?: string })?.message ?? `HTTP ${merge.status}`;
-        return `Fikk ikke merget PR #${action.pr}: ${detail}`;
-      }
-      return `✅ PR #${action.pr} er rebase-merget. Issuet med «Closes» lukkes automatisk — closing-kommentaren ligger allerede der.`;
-    }
-
-    case 'publish_lansering': {
-      if (!lansering)
-        return 'Publisering er ikke koblet opp i dette miljøet — publiser manuelt fra /admin/lanseringer.';
-
-      const res = await gh.rest(
-        'GET',
-        `/repos/${LOOP_REPO}/issues/comments/${action.commentId}`,
-      );
-      if (res.status !== 200)
-        return `Fant ikke forslags-kommentaren (HTTP ${res.status}) — er den slettet? Publiser manuelt fra /admin/lanseringer.`;
-
-      const comment = res.json as { body?: string; issue_url?: string };
-      const proposal = extractLanseringProposal(comment.body ?? '');
-      if (!proposal.ok) {
-        if (proposal.reason === 'no_block' || proposal.reason === 'bad_json')
-          return 'Fant ingen gyldig forslags-blokk i kommentaren — publiser manuelt fra /admin/lanseringer.';
-        return `Forslaget validerer ikke (${proposal.reason}) — publiser manuelt fra /admin/lanseringer.`;
-      }
-      const { value } = proposal;
-
-      if (await lansering.wasRecentlyPublished(value.title))
-        return `⚠️ «${value.title}» er allerede publisert — ingen ny utsendelse.`;
-
-      const publisherId = await lansering.findPublisherUserId();
-      if (!publisherId)
-        return 'Fant ingen admin-bruker å publisere som — publiser manuelt fra /admin/lanseringer.';
-
-      const { recipientCount } = await lansering.publish({
-        ...value,
-        createdByUserId: publisherId,
-      });
-
-      // Herfra er lanseringen ute — resten er kvittering og best-effort markør;
-      // feil under skal aldri rapportere publiseringen som mislykket.
-      const monthCount = await lansering.countPublishedThisMonth().catch(() => null);
-
-      // ✅-markøren på tavle-issuet er Utroperens tilstandssignal («denne er
-      // publisert») — issue-nummeret utledes av kommentarens issue_url.
-      const issueMatch = /\/issues\/(\d+)$/.exec(comment.issue_url ?? '');
-      let markerNote = '';
-      if (issueMatch) {
-        try {
-          const marker = await gh.rest(
-            'POST',
-            `/repos/${LOOP_REPO}/issues/${issueMatch[1]}/comments`,
-            { body: `✅ Publisert: ${value.title} — ${new Date().toISOString().slice(0, 10)}` },
-          );
-          if (marker.status !== 201)
-            markerNote = ` (fikk ikke markert tavla: HTTP ${marker.status})`;
-        } catch {
-          // Nettverksfeil mot GitHub etter at lanseringen er ute — kvitteringen
-          // må fortsatt melde suksess, bare med caveat.
-          markerNote = ' (fikk ikke markert tavla: nettverksfeil)';
-        }
-      } else {
-        markerNote = ' (fant ikke tavle-issuet å markere)';
-      }
-
-      const monthNote =
-        monthCount !== null && monthCount > 0
-          ? ` (lansering nr. ${monthCount} i ${lansering.monthLabel()})`
-          : '';
-      return `📣 Publisert: «${value.title}» — ute hos ${recipientCount} brukere${monthNote}.${markerNote}`;
-    }
+    case 'ready_issue':
+      return handleReadyIssue(action, gh);
+    case 'answer':
+      return handleAnswer(action, gh);
+    case 'drop_issue':
+      return handleDropIssue(action, gh);
+    case 'snooze_issue':
+      return handleSnoozeIssue(action, gh);
+    case 'merge_pr':
+      return handleMergePr(action, gh);
+    case 'publish_lansering':
+      return handlePublishLansering(action, gh, lansering);
   }
+}
+
+async function handleReadyIssue(
+  action: ActionOf<'ready_issue'>,
+  gh: GitHubClient,
+): Promise<string> {
+  const res = await gh.rest('POST', `/repos/${LOOP_REPO}/issues/${action.issue}/labels`, {
+    labels: ['autonomy:ready'],
+  });
+  if (res.status !== 200)
+    return `Fikk ikke merket #${action.issue} (HTTP ${res.status}) — sjekk at issuet finnes og er åpent.`;
+  return `🌙 #${action.issue} står i natt-køen — bygges i natt.`;
+}
+
+async function handleAnswer(
+  action: ActionOf<'answer'>,
+  gh: GitHubClient,
+): Promise<string> {
+  const res = await gh.rest('POST', `/repos/${LOOP_REPO}/issues/${action.issue}/comments`, {
+    body: `Eierbeslutning via Discord: **${action.choice}**`,
+  });
+  if (res.status !== 201)
+    return `Fikk ikke postet svaret på #${action.issue} (HTTP ${res.status}).`;
+  return `✅ Svaret «${action.choice}» er postet på #${action.issue}.`;
+}
+
+// 🗑-knappen (#1151): flyt-forankrings-avvisning som ett tapp. Kommentaren
+// postes FØR lukkingen — ingen tilstandsendring uten audit-trail. Ordlyden
+// deler prefiks med answer-kommentaren, men uten fet A/B, slik at smedens
+// deteksjons-regex aldri leser et dropp som et svar (test-låst).
+async function handleDropIssue(
+  action: ActionOf<'drop_issue'>,
+  gh: GitHubClient,
+): Promise<string> {
+  const comment = await gh.rest(
+    'POST',
+    `/repos/${LOOP_REPO}/issues/${action.issue}/comments`,
+    { body: 'Eierbeslutning via Discord: droppet 🗑' },
+  );
+  if (comment.status !== 201)
+    return `Fikk ikke postet dropp-kommentaren på #${action.issue} (HTTP ${comment.status}) — issuet er IKKE lukket.`;
+
+  const close = await gh.rest('PATCH', `/repos/${LOOP_REPO}/issues/${action.issue}`, {
+    state: 'closed',
+    state_reason: 'not_planned',
+  });
+  if (close.status !== 200)
+    return `Dropp-kommentaren står på #${action.issue}, men lukkingen feilet (HTTP ${close.status}) — lukk manuelt på GitHub.`;
+
+  // Et dropp skal aldri etterlate en byggbar kø-markering (#1302): fjern
+  // autonomy:ready så en senere gjenåpning ikke re-plukkes av nattkjøreren.
+  // 404 = labelen var der ikke — suksess, samme mønster som snooze.
+  const unready = await gh.rest(
+    'DELETE',
+    `/repos/${LOOP_REPO}/issues/${action.issue}/labels/${encodeURIComponent('autonomy:ready')}`,
+  );
+  if (unready.status !== 200 && unready.status !== 404)
+    return `🗑 #${action.issue} er droppet og lukket, men fikk ikke fjernet autonomy:ready (HTTP ${unready.status}) — fjern den manuelt.`;
+  return `🗑 #${action.issue} er droppet — lukket som «not planned».`;
+}
+
+// ⏸-knappen (#1151): parkér bak eierens egen trigger. parked-labelen er
+// eksisterende vokabular («ikke bygg ennå»); smeden ekskluderer den i
+// steg 1. 404 på label-fjerning betyr bare at labelen ikke var der
+// (dobbel-tapp) — det er suksess, ikke feil.
+// autonomy:ready fjernes også (#1302): en auto-køet sak som utsettes skal
+// ikke bygges av nattkjøreren likevel — snooze må rydde kø-markeringen.
+async function handleSnoozeIssue(
+  action: ActionOf<'snooze_issue'>,
+  gh: GitHubClient,
+): Promise<string> {
+  const comment = await gh.rest(
+    'POST',
+    `/repos/${LOOP_REPO}/issues/${action.issue}/comments`,
+    { body: 'Eierbeslutning via Discord: utsatt ⏸ — parkert til eieren fjerner parked-labelen.' },
+  );
+  if (comment.status !== 201)
+    return `Fikk ikke postet utsett-kommentaren på #${action.issue} (HTTP ${comment.status}) — ingenting er endret.`;
+
+  const park = await gh.rest('POST', `/repos/${LOOP_REPO}/issues/${action.issue}/labels`, {
+    labels: ['parked'],
+  });
+  if (park.status !== 200)
+    return `Utsett-kommentaren står på #${action.issue}, men parked-labelen feilet (HTTP ${park.status}) — sett den manuelt.`;
+
+  for (const label of ['autonomy:needs-decision', 'autonomy:needs-contract-session', 'autonomy:ready']) {
+    const removed = await gh.rest(
+      'DELETE',
+      `/repos/${LOOP_REPO}/issues/${action.issue}/labels/${encodeURIComponent(label)}`,
+    );
+    if (removed.status !== 200 && removed.status !== 404)
+      return `#${action.issue} er parkert, men fikk ikke fjernet ${label} (HTTP ${removed.status}) — fjern den manuelt.`;
+  }
+  return `⏸ #${action.issue} er parkert — fjern parked-labelen når den blir aktuell igjen.`;
+}
+
+async function handleMergePr(
+  action: ActionOf<'merge_pr'>,
+  gh: GitHubClient,
+): Promise<string> {
+  const prRes = await gh.rest('GET', `/repos/${LOOP_REPO}/pulls/${action.pr}`);
+  if (prRes.status !== 200) return `Fant ikke PR #${action.pr} (HTTP ${prRes.status}).`;
+  const pr = prRes.json as PrInfo;
+  if (pr.state !== 'open') return `PR #${action.pr} er ikke åpen (${pr.state}) — ingenting å merge.`;
+
+  const ciLookup = await fetchCiRunsForSha(gh, LOOP_REPO, pr.head.sha);
+  if (!ciLookup.ok)
+    return `Fikk ikke lest CI-status for PR #${action.pr} (HTTP ${ciLookup.status}) — ikke merget.`;
+  const ciRuns = ciLookup.runs;
+  if (ciRuns.length === 0)
+    return `Fant ingen CI-kjøring for PR #${action.pr} enda — prøv igjen når CI har startet.`;
+  // Nyeste kjøring (høyeste id) er fasit for head-SHA-en; re-kjøringer gir flere.
+  const latest = ciRuns.reduce((a, b) => (b.id > a.id ? b : a));
+  if (latest.status !== 'completed')
+    return `⏳ CI kjører fortsatt på PR #${action.pr} (${latest.status}) — prøv igjen om litt.`;
+  if (latest.conclusion !== 'success')
+    return `🔴 CI er ikke grønn på PR #${action.pr} (CI: ${latest.conclusion ?? 'ukjent'}) — ikke merget.`;
+
+  if (pr.draft) {
+    const ready = await gh.graphql(
+      `mutation($id: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $id }) { pullRequest { isDraft } } }`,
+      { id: pr.node_id },
+    );
+    if (ready.status !== 200)
+      return `Fikk ikke tatt PR #${action.pr} ut av draft (HTTP ${ready.status}) — ikke merget.`;
+  }
+
+  // Alltid rebase — squash er forbudt i repoet (mister granulær audit-trail).
+  const merge = await gh.rest('PUT', `/repos/${LOOP_REPO}/pulls/${action.pr}/merge`, {
+    merge_method: 'rebase',
+  });
+  if (merge.status !== 200) {
+    const detail = (merge.json as { message?: string })?.message ?? `HTTP ${merge.status}`;
+    return `Fikk ikke merget PR #${action.pr}: ${detail}`;
+  }
+  return `✅ PR #${action.pr} er rebase-merget. Issuet med «Closes» lukkes automatisk — closing-kommentaren ligger allerede der.`;
+}
+
+async function handlePublishLansering(
+  action: ActionOf<'publish_lansering'>,
+  gh: GitHubClient,
+  lansering: LanseringDeps | undefined,
+): Promise<string> {
+  if (!lansering)
+    return 'Publisering er ikke koblet opp i dette miljøet — publiser manuelt fra /admin/lanseringer.';
+
+  const res = await gh.rest(
+    'GET',
+    `/repos/${LOOP_REPO}/issues/comments/${action.commentId}`,
+  );
+  if (res.status !== 200)
+    return `Fant ikke forslags-kommentaren (HTTP ${res.status}) — er den slettet? Publiser manuelt fra /admin/lanseringer.`;
+
+  const comment = res.json as { body?: string; issue_url?: string };
+  const proposal = extractLanseringProposal(comment.body ?? '');
+  if (!proposal.ok) {
+    if (proposal.reason === 'no_block' || proposal.reason === 'bad_json')
+      return 'Fant ingen gyldig forslags-blokk i kommentaren — publiser manuelt fra /admin/lanseringer.';
+    return `Forslaget validerer ikke (${proposal.reason}) — publiser manuelt fra /admin/lanseringer.`;
+  }
+  const { value } = proposal;
+
+  if (await lansering.wasRecentlyPublished(value.title))
+    return `⚠️ «${value.title}» er allerede publisert — ingen ny utsendelse.`;
+
+  const publisherId = await lansering.findPublisherUserId();
+  if (!publisherId)
+    return 'Fant ingen admin-bruker å publisere som — publiser manuelt fra /admin/lanseringer.';
+
+  const { recipientCount } = await lansering.publish({
+    ...value,
+    createdByUserId: publisherId,
+  });
+
+  // Herfra er lanseringen ute — resten er kvittering og best-effort markør;
+  // feil under skal aldri rapportere publiseringen som mislykket.
+  const monthCount = await lansering.countPublishedThisMonth().catch(() => null);
+
+  // ✅-markøren på tavle-issuet er Utroperens tilstandssignal («denne er
+  // publisert») — issue-nummeret utledes av kommentarens issue_url.
+  const issueMatch = /\/issues\/(\d+)$/.exec(comment.issue_url ?? '');
+  let markerNote = '';
+  if (issueMatch) {
+    try {
+      const marker = await gh.rest(
+        'POST',
+        `/repos/${LOOP_REPO}/issues/${issueMatch[1]}/comments`,
+        { body: `✅ Publisert: ${value.title} — ${new Date().toISOString().slice(0, 10)}` },
+      );
+      if (marker.status !== 201)
+        markerNote = ` (fikk ikke markert tavla: HTTP ${marker.status})`;
+    } catch {
+      // Nettverksfeil mot GitHub etter at lanseringen er ute — kvitteringen
+      // må fortsatt melde suksess, bare med caveat.
+      markerNote = ' (fikk ikke markert tavla: nettverksfeil)';
+    }
+  } else {
+    markerNote = ' (fant ikke tavle-issuet å markere)';
+  }
+
+  const monthNote =
+    monthCount !== null && monthCount > 0
+      ? ` (lansering nr. ${monthCount} i ${lansering.monthLabel()})`
+      : '';
+  return `📣 Publisert: «${value.title}» — ute hos ${recipientCount} brukere${monthNote}.${markerNote}`;
 }
