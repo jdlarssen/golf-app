@@ -43,6 +43,10 @@ beforeEach(() => {
 
 // Gyldige tee-box-rader (alle tre ratingssett). Brukes i success-path der
 // vi ikke vil at tee-mangling skal skjule incomplete_sides-logikken.
+// Degenerasjonen (slope 113, CR = par → CH = hcp-indeks) er BEVISST beholdt
+// der fiksturen brukes: guard-testene asserter ikke CH, og greensome-tallene
+// er håndutledet fra nettopp nøytraliteten (#1628). Skal en test gjøre
+// CH-aritmetikken synlig, bruk REAL_TEE under (#1691).
 const VALID_TEE = {
   slope_mens: 113,
   course_rating_mens: 72.0,
@@ -53,6 +57,21 @@ const VALID_TEE = {
   slope_juniors: 113,
   course_rating_juniors: 72.0,
   par_total_juniors: 72,
+};
+
+// Ikke-degenerert tee (#1691): slope ≠ 113 OG CR ≠ par gjør begge WHS-leddene
+// synlige i asserten, og kjønns-settene er distinkte så feil rating-sett også
+// ville gitt feil tall (mens: CH 14 ved HI 10, ladies: 16, juniors: 12).
+const REAL_TEE = {
+  slope_mens: 135,
+  course_rating_mens: 74.5,
+  par_total_mens: 72,
+  slope_ladies: 129,
+  course_rating_ladies: 76.1,
+  par_total_ladies: 72,
+  slope_juniors: 121,
+  course_rating_juniors: 71.8,
+  par_total_juniors: 71,
 };
 
 // Bruker-rad med fullstendig profil og lav hcp
@@ -256,7 +275,7 @@ describe('startScheduledGame — incomplete_sides guard', () => {
           tee_box_id: 'tee-id',
           game_mode: 'stableford',
           mode_config: { kind: 'stableford', team_size: 1 },
-          tee_boxes: VALID_TEE,
+          tee_boxes: REAL_TEE,
         },
         error: null,
       },
@@ -279,14 +298,14 @@ describe('startScheduledGame — incomplete_sides guard', () => {
     expect(result).toEqual({ ok: true, started: true });
 
     // #1678: starten fryser course_handicap — assert det eksakte tallet, ikke
-    // bare at kallet gikk gjennom. WHS med fikstur-verdiene (VALID_TEE:
-    // slope_mens 113 / CR 72,0 / par 72, hcp_index 10, allowance 100 %):
-    //   round(10 × 113/113 + (72,0 − 72)) = 10 → allowance 100 % → 10.
-    // Fiksturen er bevisst nøytral (slope 113, CR = par), så tallet faller
-    // sammen med hcp-indeksen. Asserten står her for NaN-vernet: med en
-    // tee_gender utenfor `TeeGender` finnes ikke rating-settet, slope/par blir
-    // undefined og hele regnestykket NaN — da faller denne, mens `ok: true`
-    // over ville stått grønt.
+    // bare at kallet gikk gjennom. WHS med REAL_TEE (#1691: slope_mens 135 /
+    // CR 74,5 / par 72, hcp_index 10, allowance 100 %):
+    //   raw = 10 × 135/113 + (74,5 − 72) = 11,9469… + 2,5 = 14,4469… → 14.
+    // 14 skiller alle feilmodusene fra hverandre: 13 = slope-leddet droppet,
+    // 12 = CR-leddet droppet, 10 = hcp-indeksen rett gjennom (den gamle
+    // degenererte fiksturen kunne ikke se forskjell på dem). NaN-vernet står
+    // også: tee_gender utenfor `TeeGender` gir undefined slope/par → NaN →
+    // asserten faller, mens `ok: true` over ville stått grønt.
     const chUpdate = (
       supabase as unknown as {
         __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
@@ -294,7 +313,7 @@ describe('startScheduledGame — incomplete_sides guard', () => {
     ).__fromCalls.find(
       (c) => c.table === 'game_players' && c.method === 'update',
     );
-    expect(chUpdate?.args[0]).toEqual({ course_handicap: 10 });
+    expect(chUpdate?.args[0]).toEqual({ course_handicap: 14 });
   });
 });
 
@@ -502,18 +521,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
 
 // ─── unassigned_flights guard (#543) ─────────────────────────────────────────
 
-const VALID_TEE_2 = {
-  slope_mens: 113,
-  course_rating_mens: 72.0,
-  par_total_mens: 72,
-  slope_ladies: 113,
-  course_rating_ladies: 72.0,
-  par_total_ladies: 72,
-  slope_juniors: 113,
-  course_rating_juniors: 72.0,
-  par_total_juniors: 72,
-};
-
 function makeGameRow2(game_mode: GameMode) {
   return {
     id: 'game-id',
@@ -522,7 +529,7 @@ function makeGameRow2(game_mode: GameMode) {
     tee_box_id: 'tee-id',
     game_mode,
     mode_config: { kind: game_mode },
-    tee_boxes: VALID_TEE_2,
+    tee_boxes: VALID_TEE,
   };
 }
 
@@ -679,7 +686,7 @@ function makeTeamGameRow(game_mode: GameMode, team_size: number) {
     tee_box_id: 'tee-id',
     game_mode,
     mode_config: { kind: game_mode, team_size },
-    tee_boxes: VALID_TEE_2,
+    tee_boxes: VALID_TEE,
   };
 }
 
