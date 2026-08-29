@@ -1087,7 +1087,7 @@ export async function attachToCaptainTeam(
   // at accepted_at er satt over — så vennegrafen fortsatt vokser når en e-post-
   // invitert medspiller faktisk blir med på laget. RPC-en gateres på auth.uid()
   // (invitéen), så vi bruker bruker-konteksten, ikke admin. Best-effort: stille.
-  if (invitation.invited_by && invitation.invited_by !== user.id) {
+  if (invitation.invited_by !== user.id) {
     const supabase = await getServerClient();
     const { error: befriendError } = await supabase.rpc('befriend_inviter', {
       p_inviter: invitation.invited_by,
