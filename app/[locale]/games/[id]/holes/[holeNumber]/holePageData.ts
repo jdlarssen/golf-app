@@ -1,9 +1,10 @@
 // Server-fetchene hull-siden trenger (#1716 — ren flytting ut av `page.tsx`).
 //
-// Rekkefølgen er en del av kontrakten: `courses.name` hentes FØRST (sekvensielt),
-// deretter kjøres alt annet i ÉN `Promise.all`-bølge, og søsken-scorene leses
-// etter den bølgen fordi de venter på hvem som eier lagets rader. Cachingen er
-// uendret: `games`/`game_players` kommer fra den tag-cachede `getGameWithPlayers`
+// Rekkefølgen er en del av kontrakten: alt hentes i ÉN `Promise.all`-bølge
+// (`courses.name` inkludert — #1779 fjernet den sekvensielle forhåndslesingen;
+// navnet mater ingenting i bølgen), og søsken-scorene leses etter den bølgen
+// fordi de venter på hvem som eier lagets rader. Cachingen er uendret:
+// `games`/`game_players` kommer fra den tag-cachede `getGameWithPlayers`
 // (kaller i page.tsx), mens alt her er ucachede per-request-lesinger.
 
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -85,11 +86,8 @@ export async function fetchHolePageData(args: {
   // «Dine poeng»-headeren og per-hull-poeng-chip-en. Best-ball-modus dropper
   // disse to ekstra queryene (de er null) for å holde latency lik dagens.
   // supabase-klienten er allerede opprettet for profil-gaten i page.tsx.
-  const courseNameRes = game.course_id
-    ? await supabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
-    : { data: null as { name: string } | null };
-  const courseName = courseNameRes.data?.name ?? null;
   const [
+    courseNameRes,
     holeRes,
     scoresRes,
     myScoredHolesRes,
@@ -105,6 +103,9 @@ export async function fetchHolePageData(args: {
     greenPinsRes,
     siblingTeamRes,
   ] = await Promise.all([
+      game.course_id
+        ? supabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
+        : { data: null as { name: string } | null },
       supabase
         .from('course_holes')
         .select(COURSE_HOLES_SELECT)
@@ -221,6 +222,7 @@ export async function fetchHolePageData(args: {
             .returns<{ user_id: string; withdrawn_at: string | null }[]>()
         : Promise.resolve({ data: null, error: null }),
     ]);
+  const courseName = courseNameRes.data?.name ?? null;
 
   // Error ≠ absence (#1441): throw on query failure (error boundary), 404
   // only when the hole row is genuinely missing — the caller does that.
