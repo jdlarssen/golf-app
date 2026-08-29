@@ -153,6 +153,9 @@ når vi utfører.
   test blir #2 → fortsatt $0. Et evt. tredje miljø ville krevd Pro.
 - **`gen:types` + schema-drift forblir prod-pekende:** Begge er hardkodet til
   prod-project-id og skal **ikke** endres — prod er sannhetskilden for typer.
+  *(Supersedert 2026-08 av #1532 for schema-drift sin del: på `pull_request`-events
+  diffes typene nå mot staging, siden migrasjoner lander der først; cron/dispatch-default
+  peker fortsatt på prod. `gen:types` er uendret prod-pekende.)*
 - **Resend i Preview:** La `RESEND_API_KEY` være **usatt** i Vercel Preview-env i første
   omgang → ingen ekte e-post fra UAT. Revurder hvis manuell mail-testing trengs senere.
 
