@@ -104,10 +104,12 @@ export default async function InboxPage() {
         backLabel={t('backLabel')}
         kicker={t('kicker')}
       />
-      <div className="mb-4">
+      <InboxClient initialNotifications={visibleNotifications} />
+      {/* #1799: bryteren er en innstilling, ikke et varsel — den bor nederst
+          så varslene (grunnen til at du er her) kommer først. */}
+      <div className="mt-6">
         <MonthlyDigestToggle initialOptIn={monthlyOptIn} />
       </div>
-      <InboxClient initialNotifications={visibleNotifications} />
     </AppShell>
   );
 }
