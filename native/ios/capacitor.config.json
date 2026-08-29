@@ -1,0 +1,13 @@
+{
+  "appId": "no.tornygolf.app",
+  "appName": "Tørny",
+  "webDir": "www",
+  "server": {
+    "url": "https://tornygolf.no"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}
