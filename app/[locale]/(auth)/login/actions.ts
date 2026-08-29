@@ -349,13 +349,11 @@ export async function verifyCode(formData: FormData) {
       .ilike('email', email)
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
-      .returns<
-        { id: string; game_id: string | null; invited_by: string | null }[]
-      >();
+      .returns<{ id: string; game_id: string | null; invited_by: string }[]>();
 
-    const gameScoped = (pendingInvites ?? []).filter(
-      (inv) => inv.game_id != null && inv.invited_by != null,
-    );
+    // Kun `game_id` skiller her: `invited_by` er NOT NULL (0001), så en
+    // null-sjekk på den ville aldri kunne treffe.
+    const gameScoped = (pendingInvites ?? []).filter((inv) => inv.game_id != null);
 
     // #676: resolve registration_type + short_id for every game-scoped
     // invitation so we know which are team-scoped BEFORE deciding which
@@ -451,7 +449,7 @@ export async function verifyCode(formData: FormData) {
             await notifyInvitedToGame({
               recipientUserId: userRow.id,
               gameId: inv.game_id!,
-              inviterUserId: inv.invited_by!,
+              inviterUserId: inv.invited_by,
             });
           }),
         );
