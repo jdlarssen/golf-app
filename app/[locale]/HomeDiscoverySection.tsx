@@ -12,6 +12,7 @@ import type {
 import type { GameSocialProof } from '@/lib/games/socialProof';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { capDiscoveryPreview } from '@/lib/games/discoveryPreviewCap';
 
 /**
  * «Funn turneringer»-seksjon på hjem-siden (#257). Vises kun for non-admin/
@@ -21,9 +22,6 @@ import { localizeGameName } from '@/lib/games/autoGameName';
  * samme query kan styre BÅDE velkomst-teksten over og denne seksjonen —
  * uten å fyre lookup-en to ganger.
  */
-/** #879: how many passive funn-kort each list shows in Home-preview mode. */
-const PREVIEW_CAP = 3;
-
 export function HomeDiscoverySection({
   data,
   socialProof = {},
@@ -42,8 +40,9 @@ export function HomeDiscoverySection({
    */
   socialProof?: Record<string, GameSocialProof>;
   /**
-   * Hjems fylt-tilstand-forhåndsvisning (#879): kapp de passive listene
-   * (klubb/venner/åpne) til `PREVIEW_CAP` og legg på en «Se alle»-hale til
+   * Hjems fylt-tilstand-forhåndsvisning (#879, tak revidert i #1798): kapp de
+   * passive listene til ett samlet totaltak på tvers av klubb/venner/åpne
+   * (kuratert klubb > venner > åpne) og legg på en «Se alle»-hale til
    * /finn-turneringer. Egne ventende forespørsler er spillerens egen handling
    * og kappes aldri. Default (false) = fulle lister — brukes av Hjems tom-
    * tilstand og /finn-turneringer-siden.
@@ -53,15 +52,9 @@ export function HomeDiscoverySection({
   const t = useTranslations('discover');
   const locale = useLocale() as AppLocale;
   const { pendingRequests } = data;
-  const clubGames = preview
-    ? data.clubGames.slice(0, PREVIEW_CAP)
-    : data.clubGames;
-  const friendGames = preview
-    ? data.friendGames.slice(0, PREVIEW_CAP)
-    : data.friendGames;
-  const openGames = preview
-    ? data.openGames.slice(0, PREVIEW_CAP)
-    : data.openGames;
+  const { clubGames, friendGames, openGames } = preview
+    ? capDiscoveryPreview(data)
+    : data;
   // «Se alle»-halen og siste-blokk-spacing kobler på om det fantes NOEN passive
   // funn (før kapping), ikke på om noe ble kuttet.
   const hasPassiveDiscovery =
