@@ -1,7 +1,7 @@
 'use server';
 
 import { getServerClient } from '@/lib/supabase/server';
-import { expectOne } from '@/lib/supabase/affectedRows';
+import { expectOneOrClaim } from '@/lib/supabase/claimFallback';
 
 /**
  * Register the caller's APNs device token for the iOS shell (#1282). Sister to
@@ -9,9 +9,11 @@ import { expectOne } from '@/lib/supabase/affectedRows';
  * comes from the session, never from the client.
  *
  * The token is globally unique, so a device that switches accounts conflicts on
- * `token`. RLS deliberately refuses that takeover (the existing row belongs to
- * the other user), which fails loudly here rather than silently rerouting one
- * user's notifications to another user's device.
+ * `token`. RLS still refuses the naive upsert (the existing row belongs to the
+ * other user) — that refusal is what keeps takeover out of the normal write
+ * path. The recovery is the possession-gated claim RPC (0167, #1790): only a
+ * caller presenting the exact unguessable token — proof the device is theirs —
+ * gets the row moved to their account.
  */
 export async function registerApnsToken(token: string, userAgent: string): Promise<void> {
   const supabase = await getServerClient();
@@ -21,19 +23,25 @@ export async function registerApnsToken(token: string, userAgent: string): Promi
   if (!user) throw new Error('not_authenticated');
   if (!token) throw new Error('invalid_token');
 
-  expectOne(
+  const userAgentSlim = userAgent.slice(0, 400);
+  await expectOneOrClaim(
     await supabase
       .from('apns_tokens')
       .upsert(
         {
           user_id: user.id,
           token,
-          user_agent: userAgent.slice(0, 400),
+          user_agent: userAgentSlim,
         },
         { onConflict: 'token' },
       )
       .select(),
     'registerApnsToken',
+    () =>
+      supabase.rpc('claim_apns_token', {
+        p_token: token,
+        p_user_agent: userAgentSlim,
+      }),
   );
 }
 

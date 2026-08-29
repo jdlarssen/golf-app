@@ -2111,6 +2111,19 @@ export type Database = {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
       }
+      claim_apns_token: {
+        Args: { p_token: string; p_user_agent: string }
+        Returns: undefined
+      }
+      claim_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent: string
+        }
+        Returns: undefined
+      }
       connect_via_friend_code: { Args: { p_code: string }; Returns: Json }
       consume_admin_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number }
