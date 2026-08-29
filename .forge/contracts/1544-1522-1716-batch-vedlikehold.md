@@ -124,17 +124,31 @@ snitt i #1716 — så lenge kravene over holdes.
 
 ## Success Criteria
 
-- [ ] S1 (#1544): `lib/async/allSettledInBatches.ts` finnes; alle kant-tabell-rader har
+- [x] S1 (#1544): `lib/async/allSettledInBatches.ts` finnes; alle kant-tabell-rader har
       Type A-test; `npx vitest run lib/async` grønn.
-- [ ] S2 (#1544): de fire fan-outene går via helperen; `grep -n "Promise.allSettled"
+      EVIDENS (hovedchat-verifisert 2026-08-29): 13/13 tester, exit 0. Commit 7c85b73c.
+- [x] S2 (#1544): de fire fan-outene går via helperen; `grep -n "Promise.allSettled"
       lib/notifications/events.ts lib/cup/actions.ts` viser ingen ubegrenset deltaker-
       fan-out igjen i start/finish-stiene.
-- [ ] S3 (#1522): `npx eslint lib/cup/` → ingen complexity-warning for `getCupSnapshot`
+      EVIDENS: grep gir kun events.ts:50/133/181 (gameFinished/Started/Reopened — utenfor
+      scope) og actions.ts:879 (swapCupMatchPlayer, fast 2-elements array). Commit 7c85b73c.
+- [x] S3 (#1522): `npx eslint lib/cup/` → ingen complexity-warning for `getCupSnapshot`
       (og ingen ny funksjon over 25); `npx vitest run lib/cup` grønn; signatur uendret.
-- [ ] S4 (#1716): `npx eslint "app/[locale]/games/[id]/holes/[holeNumber]/"` → ingen
+      EVIDENS: eneste warning igjen er pre-eksisterende createTournamentDraft 30
+      (actions.ts:101, eget issue). getCupSnapshot 66→21, alle nye helpers ≤7.
+      vitest lib/cup 36 filer/617 tester grønne, 0 eksisterende tester endret.
+      Commit 7ccfd12b.
+- [x] S4 (#1716): `npx eslint "app/[locale]/games/[id]/holes/[holeNumber]/"` → ingen
       complexity-warning; `npx vitest run` for katalogens co-located tester grønn.
-- [ ] S5 (alle): `npx tsc --noEmit` og `npm run build` grønne; full `npx vitest run`
+      EVIDENS: eslint helt ren (hovedchat-verifisert). HoleClient 1374→545 linjer
+      (123→6), HolePage 1062→328 (114→20), maks i katalogen nå 20. 93/93 co-located
+      tester grønne uendret; data-testid-/rolle-sett diffet identisk mot HEAD.
+      Commit 44f96ebb.
+- [x] S5 (alle): `npx tsc --noEmit` og `npm run build` grønne; full `npx vitest run`
       grønn (exit 0, ingen unhandled errors — jf. falsk-grønn-fella).
+      EVIDENS: tsc exit 0 (hovedchat-verifisert på 44f96ebb); `npm run build` exit 0 og
+      full vitest 510 filer/6820 tester exit 0 (kjørt av bygger C på samme HEAD 44f96ebb;
+      route-tabellen diffet identisk mot baseline — 124 ruter, hull-ruta fortsatt PPR).
 - [ ] S6 (PR): CI på PR-en (verify + e2e @gate + scan) grønn — e2e-gaten mot staging ER
       staging-beviset for at hull-flyt og cup-flyt er uendret.
 - [ ] S7 (bevislukkinger): #1759 og #1572 lukket med `## Teknisk`/`## Funksjonell`-
