@@ -71,14 +71,28 @@ describe('assessServerIdentity', () => {
     ).toEqual({ match: true });
   });
 
-  it('flags a sha mismatch (the re-run pattern)', () => {
+  it('accepts a sha difference when HEAD is readable and the boot is newer', () => {
+    // #1761: the server stamps its sha on its FIRST health call, which may be
+    // long before this probe. A `git commit` on a clean tree moves HEAD without
+    // changing a single file, so the stamp goes stale while the code the server
+    // is serving stays byte-identical to the working tree. With a readable HEAD
+    // mtime the checkout leg above has already answered the real question, so a
+    // sha difference here is a stale stamp — not a stale server.
     const otherSha = '2222222222222222222222222222222222222222';
-    const result = assessServerIdentity(server({ sha: otherSha }), local());
 
-    expect(result).toMatchObject({ match: false, code: 'sha' });
-    if (result.match) throw new Error('expected a mismatch');
-    expect(result.summary).toContain(otherSha);
-    expect(result.summary).toContain(SHA);
+    expect(assessServerIdentity(server({ sha: otherSha }), local())).toEqual({
+      match: true,
+    });
+  });
+
+  it('accepts a sha difference at the boundary bootedAt === headMtimeMs', () => {
+    // Same boundary as the checkout leg: equal timestamps are fresh, so the sha
+    // leg must not fire behind it either.
+    const otherSha = '2222222222222222222222222222222222222222';
+
+    expect(
+      assessServerIdentity(server({ sha: otherSha, bootedAt: CHECKOUT_AT }), local()),
+    ).toEqual({ match: true });
   });
 
   it('reports cwd first when several checks would fire', () => {
@@ -134,13 +148,20 @@ describe('assessServerIdentity', () => {
       ).toMatchObject({ match: false, code: 'cwd' });
     });
 
-    it('still runs the sha leg when HEAD is unreadable', () => {
-      expect(
-        assessServerIdentity(
-          server({ sha: '4444444444444444444444444444444444444444' }),
-          local({ headMtimeMs: null }),
-        ),
-      ).toMatchObject({ match: false, code: 'sha' });
+    it('falls back to the sha leg when HEAD is unreadable', () => {
+      // #1761: this is the ONLY surviving reason to fail on sha. Without a HEAD
+      // mtime the checkout leg is blind, so the sha is the last signal left —
+      // and there it stays fail-closed.
+      const otherSha = '4444444444444444444444444444444444444444';
+      const result = assessServerIdentity(
+        server({ sha: otherSha }),
+        local({ headMtimeMs: null }),
+      );
+
+      expect(result).toMatchObject({ match: false, code: 'sha' });
+      if (result.match) throw new Error('expected a mismatch');
+      expect(result.summary).toContain(otherSha);
+      expect(result.summary).toContain(SHA);
     });
   });
 
