@@ -194,17 +194,18 @@ export async function saveCupPlan(
   }
 
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, id);
+  // `groupId` kommer fra gaten (#1749) — den har allerede lest kolonnen med
+  // admin-klienten, så cup-lesingen under trenger bare `status`.
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
 
   const admin = getAdminClient();
   const { data: cup } = await admin
     .from('tournaments')
-    .select('status, group_id')
+    .select('status')
     .eq('id', id)
     .maybeSingle();
   if (!cup) return { error: 'not_found' };
   if (cup.status !== 'draft') return { error: 'not_draft' };
-  const groupId = (cup.group_id as string | null) ?? null;
 
   // Bane må finnes; tee må tilhøre banen og ikke være arkivert.
   const { data: course } = await admin
@@ -285,17 +286,17 @@ export async function addCupParticipant(
   if (!targetUserId) return { error: 'not_candidate' };
 
   const supabase = await getServerClient();
-  const { userId, isAdmin } = await requireAdminOrClubAdminOfCup(supabase, id);
+  // `groupId` kommer fra gaten (#1749) — se saveCupPlan.
+  const { userId, isAdmin, groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
 
   const admin = getAdminClient();
   const { data: cup } = await admin
     .from('tournaments')
-    .select('status, group_id')
+    .select('status')
     .eq('id', id)
     .maybeSingle();
   if (!cup) return { error: 'not_found' };
   if (cup.status !== 'draft') return { error: 'not_draft' };
-  const groupId = (cup.group_id as string | null) ?? null;
 
   // Eligibility: brukeren MÅ være en gyldig, ikke-pending kandidat for cupen.
   // Kilden følger kallerens rolle (samme som generer-veiviseren ser).
@@ -357,17 +358,17 @@ export async function removeCupParticipant(
   if (!targetUserId) return { error: 'not_found' };
 
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, id);
+  // `groupId` kommer fra gaten (#1749) — se saveCupPlan.
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
 
   const admin = getAdminClient();
   const { data: cup } = await admin
     .from('tournaments')
-    .select('status, group_id')
+    .select('status')
     .eq('id', id)
     .maybeSingle();
   if (!cup) return { error: 'not_found' };
   if (cup.status !== 'draft') return { error: 'not_draft' };
-  const groupId = (cup.group_id as string | null) ?? null;
 
   // Bevisst INGEN expectAffected her: en delete som treffer 0 rader er en ærlig
   // no-op (raden er allerede borte — arrangøren ville ha deltakeren fjernet, og

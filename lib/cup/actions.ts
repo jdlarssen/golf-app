@@ -901,15 +901,17 @@ export async function deleteTournament(formData: FormData) {
   if (!id) redirect('/admin/cup?error=not_found');
 
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, id);
+  // Gaten har allerede slått opp cupens `group_id` med admin-klienten (#1749) —
+  // gjenbruk den i stedet for å lese kolonnen om igjen her. Lesingen under blir
+  // dermed kun `name` (redirect-QS) + eksistenssjekken.
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
 
   const { data: cup } = await supabase
     .from('tournaments')
-    .select('id, name, group_id')
+    .select('id, name')
     .eq('id', id)
     .maybeSingle();
   if (!cup) redirect('/admin/cup?error=not_found');
-  const groupId = (cup.group_id as string | null | undefined) ?? null;
   const deleteErrorPath = groupId
     ? `/klubber/${groupId}/cup/${id}/slett?error=delete_failed`
     : `/admin/cup/${id}/slett?error=delete_failed`;

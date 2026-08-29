@@ -74,7 +74,9 @@ export async function saveSideAwardConfig(
   awards: SideAwardConfigInput[],
 ): Promise<SideAwardActionResult<SaveSideAwardConfigError>> {
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, tournamentId);
+  // `groupId` kommer fra gaten (#1749): den har allerede lest kolonnen med
+  // admin-klienten, så cup-lesingen under trenger bare `status`.
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
 
   if (!awards.every(isValidSideAward)) {
     return { ok: false, error: 'invalid_side_award' };
@@ -95,7 +97,7 @@ export async function saveSideAwardConfig(
 
   const { data: cup } = await admin
     .from('tournaments')
-    .select('status, group_id')
+    .select('status')
     .eq('id', tournamentId)
     .maybeSingle();
   if (!cup) return { ok: false, error: 'not_found' };
@@ -168,7 +170,6 @@ export async function saveSideAwardConfig(
     }
   }
 
-  const groupId = (cup.group_id as string | null) ?? null;
   revalidateTag(`tournament-${tournamentId}`, 'max');
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
@@ -192,16 +193,12 @@ export async function registerGirCounts(input: {
 }): Promise<SideAwardActionResult<RegisterGirCountsError>> {
   const { tournamentId, awardId, team1Count, team2Count } = input;
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, tournamentId);
+  // `groupId` kommer fra gaten (#1749). Ingen egen cup-lesing her: en ukjent
+  // turnering faller allerede på award-oppslaget under, som filtrerer på
+  // `tournament_id` og gir samme `not_found`.
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
 
   const admin = getAdminClient();
-
-  const { data: cup } = await admin
-    .from('tournaments')
-    .select('group_id')
-    .eq('id', tournamentId)
-    .maybeSingle();
-  if (!cup) return { ok: false, error: 'not_found' };
 
   const { data: award } = await admin
     .from('tournament_side_awards')
@@ -234,7 +231,6 @@ export async function registerGirCounts(input: {
     return { ok: false, error: 'save_failed' };
   }
 
-  const groupId = (cup.group_id as string | null) ?? null;
   revalidateTag(`tournament-${tournamentId}`, 'max');
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
@@ -270,16 +266,12 @@ export async function registerSideAwardWinner(input: {
 }): Promise<SideAwardActionResult<RegisterSideAwardWinnerError>> {
   const { tournamentId, awardId, winnerUserId } = input;
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, tournamentId);
+  // `groupId` kommer fra gaten (#1749). Ingen egen cup-lesing her: en ukjent
+  // turnering faller allerede på award-oppslaget under, som filtrerer på
+  // `tournament_id` og gir samme `not_found`.
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
 
   const admin = getAdminClient();
-
-  const { data: cup } = await admin
-    .from('tournaments')
-    .select('group_id')
-    .eq('id', tournamentId)
-    .maybeSingle();
-  if (!cup) return { ok: false, error: 'not_found' };
 
   const { data: award } = await admin
     .from('tournament_side_awards')
@@ -327,7 +319,6 @@ export async function registerSideAwardWinner(input: {
     return { ok: false, error: 'save_failed' };
   }
 
-  const groupId = (cup.group_id as string | null) ?? null;
   revalidateTag(`tournament-${tournamentId}`, 'max');
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
