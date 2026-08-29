@@ -97,27 +97,35 @@ export function normalizeCustomSessions(raw: unknown): CupSessionFormat[] {
  */
 function parseBestBall(
   raw: string,
-): { ok: number | null } | { error: 'plan_best_ball' } {
+): { ok: true; value: number | null } | { ok: false; error: 'plan_best_ball' } {
   const cleaned = raw.trim();
-  if (cleaned === '') return { ok: null };
+  if (cleaned === '') return { ok: true, value: null };
   const n = Number(cleaned);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return { error: 'plan_best_ball' };
-  return { ok: n };
+  if (!Number.isInteger(n) || n < 0 || n > 100) {
+    return { ok: false, error: 'plan_best_ball' };
+  }
+  return { ok: true, value: n };
 }
 
 /**
- * Validerer og normaliserer Oppsett-formens DB-uavhengige felt.
- * `{ ok: values }` ved suksess, `{ error: code }` ved første feil.
+ * Flagg-formen (`ok: true/false`) er repoets dominante parser-idiom (#1783) —
+ * samme som `CupDraftParseResult` og `SideAwardActionResult`.
  */
-export function parseCupPlanForm(
-  input: CupPlanFormInput,
-): { ok: CupPlanValues } | { error: CupPlanError } {
+export type CupPlanParseResult =
+  | { ok: true; values: CupPlanValues }
+  | { ok: false; error: CupPlanError };
+
+/**
+ * Validerer og normaliserer Oppsett-formens DB-uavhengige felt.
+ * `{ ok: true, values }` ved suksess, `{ ok: false, error }` ved første feil.
+ */
+export function parseCupPlanForm(input: CupPlanFormInput): CupPlanParseResult {
   const presetId = input.presetId.trim();
-  if (!VALID_PRESET_IDS.has(presetId)) return { error: 'plan_preset' };
+  if (!VALID_PRESET_IDS.has(presetId)) return { ok: false, error: 'plan_preset' };
 
   const strategy = input.strategy.trim();
   if (strategy !== 'handicap' && strategy !== 'random') {
-    return { error: 'plan_strategy' };
+    return { ok: false, error: 'plan_strategy' };
   }
 
   let customSessions: CupSessionFormat[] | null = null;
@@ -128,27 +136,28 @@ export function parseCupPlanForm(
       // (en tilpasset preset MÅ ha minst én sesjon).
       parsed = JSON.parse(input.customSessionsRaw);
     } catch {
-      return { error: 'plan_sessions' };
+      return { ok: false, error: 'plan_sessions' };
     }
     if (
       !Array.isArray(parsed) ||
       parsed.length === 0 ||
       !parsed.every(isCupSessionFormat)
     ) {
-      return { error: 'plan_sessions' };
+      return { ok: false, error: 'plan_sessions' };
     }
     customSessions = parsed;
   }
 
   const bestBall = parseBestBall(input.bestBallAllowanceRaw);
-  if ('error' in bestBall) return { error: bestBall.error };
+  if (!bestBall.ok) return { ok: false, error: bestBall.error };
 
   return {
-    ok: {
+    ok: true,
+    values: {
       presetId,
       strategy,
       customSessions,
-      bestBallAllowancePct: bestBall.ok,
+      bestBallAllowancePct: bestBall.value,
     },
   };
 }
