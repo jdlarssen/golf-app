@@ -1,0 +1,12 @@
+{
+  "name": "torny-ios-shell",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Capacitor iOS shell for tornygolf.no (#1282/#1283). Remote-URL architecture per the #1281 spike.",
+  "dependencies": {
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/push-notifications": "^8.1.2"
+  }
+}

@@ -1,0 +1,9 @@
+# Secrets never enter the repo (public). APNs .p8 keys live in ~/.torny-native/.
+*.p8
+*.mobileprovision
+
+node_modules/
+ios/App/build/
+ios/App/DerivedData/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
