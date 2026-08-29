@@ -374,7 +374,10 @@ function DesktopMatrix({
                           disabled={inactive}
                           onClick={() => onPrimary(f.slug, intent, !primary)}
                           className={`text-base leading-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                            primary ? 'text-accent' : 'text-muted hover:text-accent'
+                            // Interaktiv kontroll → WCAG 1.4.11 krever ≥3:1;
+                            // --accent er ~2,1:1 mot lys flate, accent-text
+                            // klarerer i begge temaer (#1733).
+                            primary ? 'text-accent-text' : 'text-muted hover:text-accent-text'
                           }`}
                         >
                           {primary ? '★' : '☆'}
