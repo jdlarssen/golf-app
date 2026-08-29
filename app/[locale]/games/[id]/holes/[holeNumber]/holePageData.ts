@@ -75,9 +75,11 @@ export async function fetchHolePageData(args: {
   } = args;
   const { isStableford, isWolf, isSkins, isBBB, isPatsome } = modes;
 
-  // Round 2 — hole row, flight scores and the user's completed-hole count.
-  // All three are independent and can run in parallel:
-  //   hole       needs game.course_id (resolved from the cached read above)
+  // Round 2 — ONE Promise.all wave with everything the page needs up front:
+  // course name, hole row, flight scores, the user's completed holes, plus the
+  // mode-gated extras below. Every element is independent of the others:
+  //   courseName needs game.course_id (resolved from the cached read above)
+  //   hole       needs game.course_id (same)
   //   scores     needs playerIds (also resolved above)
   //   scoreCount needs only id + userId, available from the start
   //
