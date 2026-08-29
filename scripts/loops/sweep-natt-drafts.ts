@@ -89,7 +89,9 @@ async function flipToReady(gh: ReturnType<typeof ghClient>, pr: PrListItem): Pro
         errors ? ` — ${JSON.stringify(errors)}` : ''
       })`,
     );
+}
 
+async function postAuditComment(gh: ReturnType<typeof ghClient>, pr: PrListItem): Promise<void> {
   const comment = await gh.rest('POST', `/repos/${REPO}/issues/${pr.number}/comments`, {
     body: buildSweepComment(),
   });
@@ -137,7 +139,10 @@ async function main(): Promise<void> {
         continue;
       }
       await flipToReady(gh, pr);
+      // Telles i det flippen har skjedd — feiler audit-kommentaren under, skal
+      // oppsummeringen fortsatt si sannheten om at PR-en ble flippet.
       flipped++;
+      await postAuditComment(gh, pr);
       console.log(`${LOG} PR #${pr.number}: flippet til ready — kortet tar den derfra.`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
