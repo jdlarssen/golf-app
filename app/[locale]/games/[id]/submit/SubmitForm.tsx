@@ -22,9 +22,10 @@ type Props = {
 };
 
 /**
- * Wraps the final «Lever ✓» button in a confirm() guard. If the player has
- * unplayed holes, the confirm message warns that those will be recorded as
- * not played.
+ * Wraps the final «Lever ✓» button in a confirm() guard — but only when the
+ * player has unplayed holes (they get locked in as not played, so that
+ * deserves a stop). A complete card submits straight through: the review
+ * screen the player is standing on is the confirmation (#1793).
  *
  * #668: also drains the offline sync queue on mount and blocks the submit
  * while strokes are still queued. The review preview is server-rendered from
@@ -90,11 +91,13 @@ export function SubmitForm({
           event.preventDefault();
           return;
         }
-        const base = t('confirmBase');
-        const msg =
-          missingHoles > 0
-            ? `${base}\n\n${t('confirmMissing', { count: missingHoles })}`
-            : base;
+        // #1793: a complete card submits without a confirm — the review screen
+        // the player is standing on IS the confirmation. Only ask when holes
+        // are missing, since those get locked in as not played.
+        if (missingHoles === 0) return;
+        const msg = `${t('confirmBase')}\n\n${t('confirmMissing', {
+          count: missingHoles,
+        })}`;
         if (!window.confirm(msg)) {
           event.preventDefault();
         }
