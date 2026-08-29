@@ -33,18 +33,19 @@ export type CaptainPick<T extends CaptainCandidate> = {
  */
 export function pickCaptainRequest<T extends CaptainCandidate>(
   rows: T[],
-  invitedBy: string | null | undefined,
+  invitedBy: string,
 ): CaptainPick<T> | null {
   if (rows.length === 0) return null;
-  const invited = invitedBy
-    ? rows.find((r) => r.user_id === invitedBy)
-    : undefined;
+  const invited = rows.find((r) => r.user_id === invitedBy);
   if (invited) return { row: invited, source: 'invited_by' };
   return { row: rows[0], source: 'fallback' };
 }
 
-/** Minimum en invitasjons-rad må bære for at invitasjons-pickeren skal virke. */
-type InvitationCandidate = { invited_by: string | null };
+/**
+ * Minimum en invitasjons-rad må bære for at invitasjons-pickeren skal virke.
+ * `invited_by` er NOT NULL i `invitations` (#1690) — ingen null-gren her.
+ */
+type InvitationCandidate = { invited_by: string };
 
 /**
  * Velg hvilken åpen invitasjon vi skal gå videre med for en e-post.
@@ -66,9 +67,7 @@ export function pickPendingInvitation<T extends InvitationCandidate>(
   const captains = Array.isArray(captainUserIds)
     ? new Set(captainUserIds)
     : captainUserIds;
-  const fromCaptain = invitations.find(
-    (i) => i.invited_by != null && captains.has(i.invited_by),
-  );
+  const fromCaptain = invitations.find((i) => captains.has(i.invited_by));
   return fromCaptain ?? invitations[0];
 }
 
