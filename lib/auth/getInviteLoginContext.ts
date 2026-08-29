@@ -24,7 +24,7 @@ export type InviteLoginContext = {
   gameMode: string;
   courseName: string | null;
   teeOffAt: string | null;
-  /** Med i retur-typen for frist-linja (#1179) — vises ikke på kortet ennå. */
+  /** Driver frist-linja på invitasjonskortet (#1179) via inviteExpiryTier på /login. */
   expiresAt: string;
 };
 
