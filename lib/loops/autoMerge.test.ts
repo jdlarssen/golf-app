@@ -35,6 +35,8 @@ describe('touchesNeverList', () => {
     ['.github/workflows/ci.yml', '.github/**'],
     ['.githooks/pre-push', '.githooks/**'],
     ['.claude/hooks/bash-guard.sh', '.claude/**'],
+    ['lib/loops/autoMerge.ts', 'lib/loops/**'],
+    ['scripts/loops/decide-pr-card.ts', 'scripts/loops/**'],
   ])('%s treffer aldri-lista', (file) => {
     expect(touchesNeverList([file])).toBe(true);
   });

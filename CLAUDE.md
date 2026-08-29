@@ -172,7 +172,8 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
      tekniske valg (implementasjonsdetaljer) er aldri et produktvalg — de avgjøres i
      økten og eskaleres ikke.
    - **Aldri auto-merge:** prod-DB-migrasjoner (prod-brannmuren #1074 står), destruktive
-     flyter (sletting av data/kontoer), auth-/sikkerhetsendringer, noe som koster penger.
+     flyter (sletting av data/kontoer), auth-/sikkerhetsendringer, noe som koster penger,
+     og endringer i selve merge-porten (`lib/loops/`, `scripts/loops/` — #1655).
      Disse venter alltid på eksplisitt eier-godkjenning.
    - Eieren orienteres i etterkant i produktspråk (aldri teknisk, jf. #1302): morgen-
      briefens «Skjedde i natt» + CHANGELOG. Ingen egen merge-melding kreves.

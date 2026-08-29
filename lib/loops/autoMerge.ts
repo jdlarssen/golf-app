@@ -29,6 +29,8 @@ export const NEVER_AUTO_MERGE_GLOBS = [
   '.github/**', // enforcement-/guard-rail-flater
   '.githooks/**',
   '.claude/**',
+  'lib/loops/**', // merge-porten selv + kort-logikken (#1655)
+  'scripts/loops/**', // decide-/post-harnessen som kjører porten (#1655)
 ] as const;
 
 // Tre glob-former: `**/mid/**` (katalog hvor som helst), `prefix/**` (under prefiks),
