@@ -60,22 +60,17 @@ const DEFAULT_TIE_POINTS = 0.5;
  * Felles redirect/revalidate-mål for cup-styringshandlinger (#524). Klubb-cup
  * (group_id satt) holder seg i klubb-chrome; frittstående går til admin-cup.
  *
- * Leses med admin-klienten (#1718), samme grunn som
- * `requireAdminOrClubAdminOfCup`: `groupId` er ikke bare et redirect-mål — den
- * mates inn som klubb-medlemskaps-guarden i `planCupMatchSwap`, og en klubb-cup
+ * `groupId` kommer fra gatens admin-klient-lesing (#1749, tidligere en egen
+ * duplikat-lesing her, #1718): den er ikke bare et redirect-mål — den mates
+ * inn som klubb-medlemskaps-guarden i `planCupMatchSwap`, og en klubb-cup
  * som request-klienten ikke ser ville lest som `null` og skrudd guarden AV
- * (feiler ÅPENT). Kalleren er alltid gatet før dette, og lesingen eksponerer
- * ingenting utover sti + groupId.
+ * (feiler ÅPENT). Send derfor ALLTID verdien fra
+ * `requireAdminOrClubAdminOfCup`, aldri en RLS-lesing.
  */
-async function cupRedirectBase(
+function cupRedirectBase(
   id: string,
-): Promise<{ path: string; groupId: string | null; revalidate: () => void }> {
-  const { data } = await getAdminClient()
-    .from('tournaments')
-    .select('group_id')
-    .eq('id', id)
-    .maybeSingle();
-  const groupId = (data?.group_id as string | null | undefined) ?? null;
+  groupId: string | null,
+): { path: string; groupId: string | null; revalidate: () => void } {
   const path = groupId ? `/klubber/${groupId}/cup/${id}` : `/admin/cup/${id}`;
   return {
     path,
@@ -202,8 +197,8 @@ export async function startTournament(formData: FormData) {
   if (!id) redirect('/admin/cup?error=not_found');
 
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, id);
-  const base = await cupRedirectBase(id);
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
+  const base = cupRedirectBase(id, groupId);
 
   // Krev minst 2 matches før start (per kontrakt-success-kriterium).
   const { count } = await supabase
@@ -323,7 +318,7 @@ export async function finishTournament(formData: FormData) {
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, id);
-  const base = await cupRedirectBase(id);
+  const base = cupRedirectBase(id, actor.groupId);
 
   // Navne-fallbacken snapshot-en bygger (#1527) følger arrangørens locale.
   const tCup = await getTranslations('cup');
@@ -763,7 +758,7 @@ export async function swapCupMatchPlayer(
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
-  const base = await cupRedirectBase(tournamentId);
+  const base = cupRedirectBase(tournamentId, actor.groupId);
 
   const admin = getAdminClient();
 

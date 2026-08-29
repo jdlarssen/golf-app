@@ -160,10 +160,10 @@ describe('createTournamentDraft — success still redirects (#1397)', () => {
  * spiller uten spillehandicap i en aktiv match.
  *
  * Admin-caller DB-sekvens (gaten kortslutter på is_admin):
- *   1. adminMock: tournaments.select('group_id') — gaten
+ *   1. adminMock: tournaments.select('group_id') — gaten (#1749: eneste
+ *      group_id-lesing; cupRedirectBase gjenbruker gatens verdi)
  *   2. supabaseMock: users.select(...) — loadRole
- *   3. adminMock: tournaments.select('group_id') — cupRedirectBase (#1718)
- *   4. onwards: action-ens egne adminMock-lesninger/skrivinger
+ *   3. onwards: action-ens egne adminMock-lesninger/skrivinger
  */
 
 const gateGroupIdNull = { data: { group_id: null }, error: null };
@@ -231,8 +231,7 @@ function swapForm(overrides: Record<string, string> = {}): FormData {
 /** Lesningene fram til (og med) buntens roster, for en personlig cup. */
 function readsUpToRoster(overrides: { games?: unknown[]; profile?: unknown } = {}) {
   return [
-    gateGroupIdNull, // 1. gaten
-    gateGroupIdNull, // 3. cupRedirectBase (#1718: admin-klienten, ikke request)
+    gateGroupIdNull, // 1. gaten (#1749: cupRedirectBase gjenbruker verdien)
     { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
     { data: overrides.games ?? SPLIT_GAMES, error: null },
     // users: inn-spillerens tee-kjønn + profil-status i én runde-tur.
@@ -394,8 +393,7 @@ describe('swapCupMatchPlayer — happy path (#1473)', () => {
 describe('swapCupMatchPlayer — klubb-tilhørigheten leses med admin-klienten (#1718)', () => {
   it('klubb-cup: group_id kommer fra admin-klienten, request-klienten rører aldri tournaments', async () => {
     adminMock = buildSupabaseMock([
-      { data: { group_id: 'club-1' }, error: null }, // gaten
-      { data: { group_id: 'club-1' }, error: null }, // cupRedirectBase
+      { data: { group_id: 'club-1' }, error: null }, // gaten (#1749: eneste)
       { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
       { data: SPLIT_GAMES, error: null },
       {
@@ -429,12 +427,13 @@ describe('swapCupMatchPlayer — klubb-tilhørigheten leses med admin-klienten (
     );
     expect(candidateMock.mock.calls[0][1]).toMatchObject({ groupId: 'club-1' });
 
-    // Begge tournaments-oppslagene (gaten + cupRedirectBase) er admin-klientens.
+    // Tournaments-oppslaget (gaten — cupRedirectBase gjenbruker verdien,
+    // #1749) er admin-klientens, og det finnes bare ETT.
     expect(
       adminMock.__fromCalls.filter(
         (c) => c.table === 'tournaments' && c.method === 'maybeSingle',
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(
       supabaseMock.__fromCalls.filter((c) => c.table === 'tournaments'),
       'request-klienten leser ikke cup-raden lenger',
@@ -548,8 +547,7 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
 describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
   it('matchen tilhører en annen cup: not_found, ingen skriving', async () => {
     adminMock = buildSupabaseMock([
-      gateGroupIdNull, // gaten
-      gateGroupIdNull, // cupRedirectBase
+      gateGroupIdNull, // gaten (#1749: eneste group_id-lesing)
       { data: { id: 'g-x', tournament_id: 'annen-cup', source_game_id: null }, error: null },
     ]);
     supabaseMock = buildSupabaseMock([cupAdminUser]);
@@ -565,8 +563,7 @@ describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
 
   it('klubb-cup: medlemskapet er trukket → not_member, ingen skriving', async () => {
     adminMock = buildSupabaseMock([
-      { data: { group_id: 'club-1' }, error: null }, // gaten
-      { data: { group_id: 'club-1' }, error: null }, // cupRedirectBase
+      { data: { group_id: 'club-1' }, error: null }, // gaten (#1749: eneste)
       { data: { id: 'g-derived', tournament_id: 'cup-1', source_game_id: 'g-host' }, error: null },
       { data: SPLIT_GAMES, error: null },
       { data: [{ user_id: 'out' }, { user_id: 'mate' }], error: null }, // group_members: reserve er ute
