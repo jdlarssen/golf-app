@@ -33,7 +33,9 @@ export async function allSettledInBatches<T, R>(
     // The `async` wrapper turns a synchronous throw from `fn` into a rejected
     // result too, so one bad item cannot abort the whole run.
     const settled = await Promise.allSettled(batch.map(async (item) => fn(item)));
-    results.push(...settled);
+    // Push one by one: spreading a whole batch into push() puts every element
+    // on the argument stack, which caps out for very large caller-supplied sizes.
+    for (const s of settled) results.push(s);
   }
   return results;
 }

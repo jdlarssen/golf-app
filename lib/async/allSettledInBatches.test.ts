@@ -190,6 +190,22 @@ describe('allSettledInBatches', () => {
     expect(tracker.maxInFlight).toBe(1);
   });
 
+  it('contains a synchronous throw from fn as a rejected result', async () => {
+    const boom = new Error('sync boom');
+    const syncThrower = (n: number): Promise<number> => {
+      if (n === 2) throw boom; // throws before returning a promise
+      return Promise.resolve(n);
+    };
+
+    const results = await allSettledInBatches([1, 2, 3], syncThrower, 2);
+
+    expect(results).toEqual([
+      { status: 'fulfilled', value: 1 },
+      { status: 'rejected', reason: boom },
+      { status: 'fulfilled', value: 3 },
+    ]);
+  });
+
   it('batches in groups of 20 by default', async () => {
     const items = Array.from({ length: 41 }, (_, i) => i);
     const tracker = makeTracker();
