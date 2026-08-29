@@ -9,6 +9,13 @@
 
 export function isStandalone(): boolean {
   if (typeof window === 'undefined') return false;
+  // The Capacitor shell (#1283) IS the installed app — but its WKWebView
+  // reports itself like a Safari tab, so without this branch every
+  // "install Tørny as an app" surface shows inside the native app.
+  const w = window as Window & {
+    Capacitor?: { isNativePlatform?: () => boolean };
+  };
+  if (w.Capacitor?.isNativePlatform?.() === true) return true;
   if (window.matchMedia?.('(display-mode: standalone)').matches) return true;
   const nav = navigator as Navigator & { standalone?: boolean };
   return nav.standalone === true;
