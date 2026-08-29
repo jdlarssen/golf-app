@@ -152,10 +152,12 @@ describe('loadGameForInvite — feil vs. fravær (#1445)', () => {
   });
 
   it('ekte 0-rad beholder ?error=not_found', async () => {
-    supabaseMock = buildSupabaseMock([
-      ADMIN_ROLE_READ,
-      { data: null, error: null },
-    ]);
+    // strictSingle (#1693): låser .maybeSingle()-byttet på game-oppslaget.
+    supabaseMock = buildSupabaseMock(
+      [ADMIN_ROLE_READ, { data: null, error: null }],
+      {},
+      { strictSingle: true },
+    );
     authedAsAdmin();
 
     const { addExistingPlayerToGame } = await import('./inviteToGameActions');

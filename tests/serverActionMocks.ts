@@ -61,10 +61,17 @@ export type QueryResult = { data?: unknown; error?: unknown };
  *
  * Inspect query calls via `client.__fromCalls` (FIFO list of
  * `{table, method, args}`).
+ *
+ * `opts.strictSingle` mirrors PostgREST's load-bearing difference between the
+ * terminators (#1693): a queue entry of `{ data: null, error: null }` resolves
+ * as-is from `.maybeSingle()` but becomes a PGRST116 error from `.single()` —
+ * PostgREST never resolves 0 rows as success there. Turn it on in tests that
+ * lock a `.maybeSingle()` call site, so a rollback to `.single()` goes red.
  */
 export function buildSupabaseMock(
   queue: QueryResult[],
   rpcResults: Record<string, unknown> = {},
+  opts: { strictSingle?: boolean } = {},
 ) {
   const fromCalls: Array<{
     table: string;
@@ -110,7 +117,19 @@ export function buildSupabaseMock(
     // Explicit terminal resolvers — these forcibly pop the next result.
     proxy.single = (...args: unknown[]) => {
       rec('single', args);
-      return Promise.resolve(next());
+      const result = next();
+      if (opts.strictSingle && result.data == null && result.error == null) {
+        return Promise.resolve({
+          data: null,
+          error: {
+            code: 'PGRST116',
+            message: 'JSON object requested, multiple (or no) rows returned',
+            details: 'The result contains 0 rows',
+            hint: null,
+          },
+        });
+      }
+      return Promise.resolve(result);
     };
     proxy.maybeSingle = (...args: unknown[]) => {
       rec('maybeSingle', args);
