@@ -15,8 +15,11 @@ import { SmartLink } from './SmartLink';
  *   exactly this overhang plus the focus ring; dropping it here would leave that
  *   16px outset unexplained, and widening it would push the arrow out of the clip.
  */
+// `shrink-0` is part of the tap-target guarantee: the headers are flex rows,
+// and without it a long game name compresses the box below 44px (#1765) —
+// `w-11` is only a basis in flex layout, not a floor.
 const BACK_LINK_BOX =
-  '-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text';
+  '-ml-2 inline-flex h-11 w-11 shrink-0 items-center justify-center text-lg text-text';
 
 /**
  * Back arrow for the leaderboard headers. `label` is the already-translated
@@ -43,7 +46,7 @@ export function LeaderboardBackLink({
  * deliberately not mirrored — it only shifts the glyph, not the layout column).
  */
 export function LeaderboardBackLinkSpacer() {
-  return <span className="w-11" aria-hidden />;
+  return <span className="w-11 shrink-0" aria-hidden />;
 }
 
 /**

@@ -166,7 +166,10 @@ export function HeadToHeadResult({
       {!chromeless && (
         <header className="mb-2 flex items-center justify-between gap-4">
           <LeaderboardBackLink href={backHref} label={t('backAriaLabel')} />
-          <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
+          {/* min-w-0 + truncate: lange navn klippes i stedet for å presse pilene (#1765). */}
+          <Kicker tone="accent" className="min-w-0 truncate">
+            {gameName.toUpperCase()}
+          </Kicker>
           <LeaderboardBackLinkSpacer />
         </header>
       )}
