@@ -139,9 +139,8 @@ describe('distinctInviterIds', () => {
     expect(distinctInviterIds(invites, ME)).toEqual([A]);
   });
 
-  it('skips invites with no inviter or no game', () => {
+  it('skips game-less invites', () => {
     const invites = [
-      { game_id: 'g1', invited_by: null },
       { game_id: null, invited_by: A },
       { game_id: 'g2', invited_by: B },
     ];

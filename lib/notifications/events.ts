@@ -1,4 +1,5 @@
 import 'server-only';
+import { allSettledInBatches } from '@/lib/async/allSettledInBatches';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify, shouldSendMailFallback } from './notify';
 
@@ -213,17 +214,17 @@ export async function notifyParticipantsCupFinished(
   tournament: { id: string; name: string },
   logPrefix: string,
 ): Promise<Map<string, boolean>> {
-  const results = await Promise.allSettled(
-    participants.map((p) =>
-      notify({
-        userId: p.user_id,
-        kind: 'cup_finished',
-        payload: {
-          tournament_id: tournament.id,
-          tournament_name: tournament.name,
-        },
-      }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
-    ),
+  // Pulje-kjørt (#1544): en klubb-cup har ~150 deltakere, og ett notify-kall
+  // per deltaker i én burst er ~150 samtidige DB-innsettinger.
+  const results = await allSettledInBatches(participants, (p) =>
+    notify({
+      userId: p.user_id,
+      kind: 'cup_finished',
+      payload: {
+        tournament_id: tournament.id,
+        tournament_name: tournament.name,
+      },
+    }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
   );
 
   const sendMailByUserId = new Map<string, boolean>();
@@ -253,17 +254,16 @@ export async function notifyParticipantsCupStarted(
   tournament: { id: string; name: string },
   logPrefix: string,
 ): Promise<Map<string, boolean>> {
-  const results = await Promise.allSettled(
-    participants.map((p) =>
-      notify({
-        userId: p.user_id,
-        kind: 'cup_started',
-        payload: {
-          tournament_id: tournament.id,
-          tournament_name: tournament.name,
-        },
-      }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
-    ),
+  // Pulje-kjørt (#1544), samme grunn som i søsteren over.
+  const results = await allSettledInBatches(participants, (p) =>
+    notify({
+      userId: p.user_id,
+      kind: 'cup_started',
+      payload: {
+        tournament_id: tournament.id,
+        tournament_name: tournament.name,
+      },
+    }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
   );
 
   const sendMailByUserId = new Map<string, boolean>();

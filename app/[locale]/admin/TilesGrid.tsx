@@ -196,18 +196,26 @@ export async function TilesGrid() {
       meta: t('metaSpillformater'),
       icon: 'spillformater',
     },
-    // #984: innsendte ideer fra spillerne.
-    {
-      label: t('tilesIdeer'),
-      href: '/admin/ideer',
-      meta:
-        unbuiltIdeasCount === 0
-          ? t('metaIdeerNone')
-          : t('metaIdeer', { n: unbuiltIdeasCount }),
-      icon: 'sparkle',
-      badge: unbuiltIdeasCount,
-    },
   ];
+
+  // #984/#1560 (eiervalg B): innsendte ideer fra spillerne. Ligger det usette
+  // ideer, flyttes døra opp blant kjerne-dørene der meta-linja bærer signalet
+  // i ord («N nye ideer») — den siste tallpillen i appen er dermed borte. Tom
+  // kø → kompakt dør nederst som før.
+  const ideasTile: Tile = {
+    label: t('tilesIdeer'),
+    href: '/admin/ideer',
+    meta:
+      unbuiltIdeasCount === 0
+        ? t('metaIdeerNone')
+        : t('metaIdeer', { n: unbuiltIdeasCount }),
+    icon: 'sparkle',
+  };
+  if (unbuiltIdeasCount > 0) {
+    coreTiles.push(ideasTile);
+  } else {
+    moreTiles.push(ideasTile);
+  }
 
   return (
     <>
@@ -227,7 +235,9 @@ export async function TilesGrid() {
 
 export function TilesSkeleton() {
   // Lockstep with the tiered structure (#914, #1559): 4 full-width core rows,
-  // then the «Mer i Sekretariatet»-label, then 7 compact cards.
+  // then the «Mer i Sekretariatet»-label, then 7 compact cards. With unseen
+  // ideas the real grid is 5+6 (#1560) — the skeleton stays static on the
+  // common empty-queue shape; a one-row shift on load is accepted cosmetics.
   return (
     <>
       <div className="mb-2 grid grid-cols-1 gap-2">

@@ -87,17 +87,20 @@ export function suggestionIds(
 
 /**
  * #481: Distinkte inviter-ider å auto-vennskap mot fra et sett aksepterte
- * invitasjoner. Beholder kun spill-scopede invitasjoner med kjent inviter,
- * dropper invitéen selv, og deduper — flere invitasjoner fra samme person gir
- * ett vennskap. Ren funksjon så `verifyCode`-wiringen kan testes uten DB.
+ * invitasjoner. Beholder kun spill-scopede invitasjoner, dropper invitéen selv,
+ * og deduper — flere invitasjoner fra samme person gir ett vennskap. Ren
+ * funksjon så `verifyCode`-wiringen kan testes uten DB.
+ *
+ * `invitations.invited_by` er NOT NULL (0001), så det finnes ingen «ukjent
+ * inviter»-tilfelle å filtrere bort — kun `game_id` er nullbar (#1767).
  */
 export function distinctInviterIds(
-  invites: ReadonlyArray<{ game_id: string | null; invited_by: string | null }>,
+  invites: ReadonlyArray<{ game_id: string | null; invited_by: string }>,
   selfUserId: string,
 ): string[] {
   const ids = new Set<string>();
   for (const inv of invites) {
-    if (inv.game_id == null || inv.invited_by == null) continue;
+    if (inv.game_id == null) continue;
     if (inv.invited_by === selfUserId) continue;
     ids.add(inv.invited_by);
   }

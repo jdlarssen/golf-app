@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
+import { allSettledInBatches } from '@/lib/async/allSettledInBatches';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -275,22 +276,22 @@ export async function startTournament(formData: FormData) {
     const mailRecipients = recipients.filter(
       (r) => sendMailByUserId.get(r.user_id) === true,
     );
-    const results = await Promise.allSettled(
-      mailRecipients.map((r) =>
-        sendCupStartedNotification({
-          to: r.email,
-          playerFirstName: r.name?.split(' ')[0] ?? null,
-          tournamentName: current.name,
-          tournamentId: id,
-          team1Name: current.team_1_name,
-          team2Name: current.team_2_name,
-          // Den nettopp utledede verdien — `current` ble lest før update-en
-          // og bærer fortsatt NULL. NULL = vektet cup (#1441 D8); malen
-          // brancher selv til weighted-copyen (#1444).
-          pointsToWin,
-          locale: r.locale,
-        }),
-      ),
+    // Pulje-kjørt (#1544): en klubb-cup kan ha ~150 off-app-mottakere, og
+    // Resend-kallene skal ikke fyre i én burst midt i en Vercel-request.
+    const results = await allSettledInBatches(mailRecipients, (r) =>
+      sendCupStartedNotification({
+        to: r.email,
+        playerFirstName: r.name?.split(' ')[0] ?? null,
+        tournamentName: current.name,
+        tournamentId: id,
+        team1Name: current.team_1_name,
+        team2Name: current.team_2_name,
+        // Den nettopp utledede verdien — `current` ble lest før update-en
+        // og bærer fortsatt NULL. NULL = vektet cup (#1441 D8); malen
+        // brancher selv til weighted-copyen (#1444).
+        pointsToWin,
+        locale: r.locale,
+      }),
     );
     for (const r of results) {
       if (r.status === 'rejected') {
@@ -444,18 +445,17 @@ export async function finishTournament(formData: FormData) {
     const mailRecipients = recipients.filter(
       (r) => sendMailByUserId.get(r.user_id) === true,
     );
-    const results = await Promise.allSettled(
-      mailRecipients.map((r) =>
-        // #1499: mailen teaser bare — vinner/stilling sendes ikke med;
-        // fasiten avsløres først på resultatsiden.
-        sendCupFinishedNotification({
-          to: r.email,
-          playerFirstName: r.name?.split(' ')[0] ?? null,
-          tournamentName: finalTournament.name,
-          tournamentId: id,
-          locale: r.locale,
-        }),
-      ),
+    // Pulje-kjørt (#1544), samme grunn som i starten av cupen.
+    const results = await allSettledInBatches(mailRecipients, (r) =>
+      // #1499: mailen teaser bare — vinner/stilling sendes ikke med;
+      // fasiten avsløres først på resultatsiden.
+      sendCupFinishedNotification({
+        to: r.email,
+        playerFirstName: r.name?.split(' ')[0] ?? null,
+        tournamentName: finalTournament.name,
+        tournamentId: id,
+        locale: r.locale,
+      }),
     );
     for (const r of results) {
       if (r.status === 'rejected') {
@@ -901,15 +901,17 @@ export async function deleteTournament(formData: FormData) {
   if (!id) redirect('/admin/cup?error=not_found');
 
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, id);
+  // Gaten har allerede slått opp cupens `group_id` med admin-klienten (#1749) —
+  // gjenbruk den i stedet for å lese kolonnen om igjen her. Lesingen under blir
+  // dermed kun `name` (redirect-QS) + eksistenssjekken.
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
 
   const { data: cup } = await supabase
     .from('tournaments')
-    .select('id, name, group_id')
+    .select('id, name')
     .eq('id', id)
     .maybeSingle();
   if (!cup) redirect('/admin/cup?error=not_found');
-  const groupId = (cup.group_id as string | null | undefined) ?? null;
   const deleteErrorPath = groupId
     ? `/klubber/${groupId}/cup/${id}/slett?error=delete_failed`
     : `/admin/cup/${id}/slett?error=delete_failed`;

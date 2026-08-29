@@ -21,7 +21,11 @@ import {
  * Admin-caller DB sequence (gate short-circuits on is_admin):
  *   1. adminMock: tournaments.select('group_id')...maybeSingle — gate
  *   2. supabaseMock: users.select('is_admin,...')...single — loadRole
- *   3. onwards: the action's own adminMock reads/writes
+ *   3. adminMock: tournaments.select('status')...maybeSingle — the action's own
+ *      cup lookup. `group_id` is NOT re-read: the gate returns the resolved
+ *      `groupId` (#1749) and the actions destructure it (#1768), so this read
+ *      only answers «does the cup exist, and is it still draft?».
+ *   4. onwards: the action's own adminMock reads/writes
  */
 
 const redirectMock = makeRedirectMock();
@@ -91,7 +95,7 @@ describe('saveCupPlan', () => {
   it('happy path: upserts the plan on tournament_id, redirects with plan_saved', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull, // 1. gate
-      { data: { status: 'draft', group_id: null }, error: null }, // 2. cup lookup
+      { data: { status: 'draft' }, error: null }, // 2. cup lookup
       { data: { id: 'course-1' }, error: null }, // 3. course exists
       { data: { id: 'tee-1', course_id: 'course-1', archived_at: null }, error: null }, // 4. tee of course
       { data: [{ tournament_id: 'cup-1' }], error: null }, // 5. upsert...select
@@ -134,7 +138,7 @@ describe('saveCupPlan', () => {
     ];
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
       { data: { id: 'course-1' }, error: null },
       { data: { id: 'tee-1', course_id: 'course-1', archived_at: null }, error: null },
       { data: [{ tournament_id: 'cup-1' }], error: null }, // plan upsert
@@ -192,7 +196,7 @@ describe('saveCupPlan', () => {
   it('ingen genererte matcher: ingen UPDATE, planen lagres som før', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
       { data: { id: 'course-1' }, error: null },
       { data: { id: 'tee-1', course_id: 'course-1', archived_at: null }, error: null },
       { data: [{ tournament_id: 'cup-1' }], error: null }, // plan upsert
@@ -213,7 +217,7 @@ describe('saveCupPlan', () => {
   it('0 oppdaterte rader tross scheduled-matcher: plan_matches_not_updated, ingen redirect', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
       { data: { id: 'course-1' }, error: null },
       { data: { id: 'tee-1', course_id: 'course-1', archived_at: null }, error: null },
       { data: [{ tournament_id: 'cup-1' }], error: null }, // plan upsert
@@ -238,7 +242,7 @@ describe('saveCupPlan', () => {
   it('cup not draft: not_draft, no upsert, no redirect', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
-      { data: { status: 'active', group_id: null }, error: null }, // cup lookup: active
+      { data: { status: 'active' }, error: null }, // cup lookup: active
     ]);
     supabaseMock = buildSupabaseMock([adminUser]);
     setUser('admin-1');
@@ -254,7 +258,7 @@ describe('saveCupPlan', () => {
   it('tee does not belong to the chosen course: plan_tee, no upsert', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
-      { data: { status: 'draft', group_id: null }, error: null }, // cup lookup
+      { data: { status: 'draft' }, error: null }, // cup lookup
       { data: { id: 'course-1' }, error: null }, // course exists
       { data: { id: 'tee-1', course_id: 'course-OTHER', archived_at: null }, error: null }, // tee of a different course
     ]);
@@ -273,7 +277,7 @@ describe('addCupParticipant', () => {
   it('happy path: upserts the participant, redirects to the spillere room', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull, // gate
-      { data: { status: 'draft', group_id: null }, error: null }, // cup lookup
+      { data: { status: 'draft' }, error: null }, // cup lookup
       { data: null, error: null }, // participant upsert
     ]);
     supabaseMock = buildSupabaseMock([adminUser]);
@@ -301,7 +305,7 @@ describe('addCupParticipant', () => {
   it('target is not a valid candidate: not_candidate, no insert', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
     ]);
     supabaseMock = buildSupabaseMock([adminUser]);
     setUser('admin-1');
@@ -321,7 +325,7 @@ describe('addCupParticipant', () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull, // gate group_id
       { data: { created_by: 'creator-1' }, error: null }, // requireAdminOrTournamentCreator
-      { data: { status: 'draft', group_id: null }, error: null }, // cup lookup
+      { data: { status: 'draft' }, error: null }, // cup lookup
       { data: existing, error: null }, // existing participants read (24 distinct)
     ]);
     supabaseMock = buildSupabaseMock([normalUser]);
@@ -345,7 +349,7 @@ describe('removeCupParticipant', () => {
   it('happy path: deletes the participant, redirects to the spillere room', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull, // gate
-      { data: { status: 'draft', group_id: null }, error: null }, // cup lookup
+      { data: { status: 'draft' }, error: null }, // cup lookup
       { data: null, error: null }, // delete
     ]);
     supabaseMock = buildSupabaseMock([adminUser]);

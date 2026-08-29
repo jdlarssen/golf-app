@@ -66,18 +66,30 @@ type ProbeResult =
 async function probeHealth(baseURL: string): Promise<ProbeResult> {
   let response: Response;
   try {
-    response = await fetch(new URL('/api/health', baseURL), {
-      signal: AbortSignal.timeout(3_000),
-    });
+    response = await fetchHealth(baseURL, 3_000);
   } catch (error) {
     // A timeout means something DID accept the connection and then failed to
-    // answer — that is a sick server, not an absent one. Every other transport
-    // failure (ECONNREFUSED and friends) means no server yet: skip, and let
-    // Playwright boot its own.
-    if (error instanceof Error && error.name === 'TimeoutError') {
-      return { kind: 'unusable', detail: 'it did not answer /api/health within 3s' };
+    // answer. Every other transport failure (ECONNREFUSED and friends) means no
+    // server yet: skip, and let Playwright boot its own.
+    if (!isTimeoutError(error)) return { kind: 'nothing-listening' };
+
+    // #1761: a timeout here is not yet proof of a sick server. On a freshly
+    // started `npm run dev`, /api/health has never been built, and Turbopack
+    // compiles it on this very first request — which can comfortably outlast
+    // 3s. That is a slow server, not a broken one, so give it exactly one more
+    // try with a budget wide enough to cover the compile. CI never pays for
+    // this: it runs `next start` against a precompiled build, so the first
+    // probe answers immediately.
+    try {
+      response = await fetchHealth(baseURL, 15_000);
+    } catch (retryError) {
+      return {
+        kind: 'unusable',
+        detail: isTimeoutError(retryError)
+          ? 'it did not answer /api/health within 3s, nor within 15s on a retry'
+          : 'it did not answer /api/health within 3s, and dropped the connection on a 15s retry',
+      };
     }
-    return { kind: 'nothing-listening' };
   }
 
   if (!response.ok) {
@@ -102,6 +114,16 @@ async function probeHealth(baseURL: string): Promise<ProbeResult> {
   }
 
   return { kind: 'ok', identity: payload };
+}
+
+function fetchHealth(baseURL: string, timeoutMs: number): Promise<Response> {
+  return fetch(new URL('/api/health', baseURL), {
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'TimeoutError';
 }
 
 function isServerIdentity(value: unknown): value is ServerIdentity {

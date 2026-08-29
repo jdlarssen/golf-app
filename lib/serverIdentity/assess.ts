@@ -48,8 +48,23 @@ export type ServerIdentityAssessment =
  *    (#1758). This is the load-bearing check: the server's sha is stashed on
  *    its FIRST health call, which in the worst case is this very probe, taken
  *    after the branch switch — then the sha would match falsely.
- * 3. `sha` — catches the re-run pattern, where run 1 stamped the stash on
- *    branch A and run 2 probes it after switching to B.
+ * 3. `sha` — but ONLY as a fallback for a blind leg 2 (#1761).
+ *
+ * Why leg 3 is conditional. The stash the server compares against is stamped on
+ * its first health call and never refreshed, so the two timestamps that matter
+ * are the stamp and the last HEAD move — and only leg 2 can see both. A plain
+ * `git commit` on a clean tree moves HEAD without touching a single file: the
+ * stamp goes stale while the code the server is serving stays byte-identical to
+ * the working tree. Firing on sha there is a false red, and a long-running dev
+ * server collects one on every commit.
+ *
+ * When leg 2 CAN see the checkout (`headMtimeMs !== null`) it has already
+ * answered the real question — did this server boot before the code it is
+ * serving? A sha difference that survives that is a stale stamp, not a stale
+ * server. Only when HEAD cannot be stat-ed does the sha become the last signal
+ * left, and there it stays fail-closed: the re-run pattern (run 1 stamped on
+ * branch A, run 2 probes after switching to B) is caught by leg 2 whenever HEAD
+ * is readable, because the checkout that switched branches moved its mtime.
  *
  * Both degrading legs (no readable HEAD mtime, sha missing on either side) are
  * skipped rather than failed: a machine without git must still be able to run
@@ -77,7 +92,12 @@ export function assessServerIdentity(
     };
   }
 
-  if (server.sha !== null && local.sha !== null && server.sha !== local.sha) {
+  if (
+    local.headMtimeMs === null &&
+    server.sha !== null &&
+    local.sha !== null &&
+    server.sha !== local.sha
+  ) {
     return {
       match: false,
       code: 'sha',

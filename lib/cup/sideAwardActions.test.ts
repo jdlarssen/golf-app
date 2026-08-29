@@ -19,6 +19,13 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  *   2. supabaseMock: users.select('is_admin,...')...single — loadRole
  *   3. onwards: this module's own adminMock reads/writes
  *
+ * The gate hands back the resolved `groupId` (#1749) and every action here
+ * destructures it (#1768), so `group_id` is read exactly once per call — by
+ * the gate. `saveSideAwardConfig` still reads the cup, but only for `status`;
+ * `registerSideAwardWinner`/`registerGirCounts` no longer read it at all
+ * (an unknown tournament falls out of the tournament_id-filtered award lookup
+ * with the same `not_found`). Hence no cup-lookup entry in those queues.
+ *
  * Config-validering og config↔DB-rad-mappingen er ren logikk med egen full
  * edge-case-suite i sideAwardRows.test.ts — her dekkes kun at actionen BRUKER
  * dem (én-to representative caser), ikke hele tabellen på nytt.
@@ -76,7 +83,7 @@ describe('saveSideAwardConfig', () => {
   it('happy path: deletes existing rows then inserts the expanded slot/gir rows, revalidates', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem, // 1. gate: tournaments.group_id
-      { data: { status: 'draft', group_id: null }, error: null }, // 2. cup lookup
+      { data: { status: 'draft' }, error: null }, // 2. cup status lookup
       { data: [], error: null }, // 3. existing awards (none yet)
       { data: null, error: null }, // 4. delete
       { data: null, error: null }, // 5. insert
@@ -111,7 +118,7 @@ describe('saveSideAwardConfig', () => {
   it('empty list: deletes existing rows, skips the insert call entirely (clears the config)', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
       { data: [], error: null }, // existing
       { data: null, error: null }, // delete
     ]);
@@ -168,7 +175,7 @@ describe('saveSideAwardConfig', () => {
   it('cup finished: cup_finished, ingen skriving', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { status: 'finished', group_id: null }, error: null },
+      { data: { status: 'finished' }, error: null },
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
     setUser('admin-1');
@@ -186,7 +193,7 @@ describe('saveSideAwardConfig', () => {
     // avvises FØR eksisterende innslag leses, så verken delete eller insert kjøres.
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { status: 'active', group_id: null }, error: null },
+      { data: { status: 'active' }, error: null },
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
     setUser('admin-1');
@@ -210,7 +217,7 @@ describe('saveSideAwardConfig', () => {
     // er fortsatt utøvd.
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
       { data: [dbRow({ winner_user_id: 'p1' })], error: null },
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
@@ -232,7 +239,7 @@ describe('saveSideAwardConfig', () => {
   it('en GIR-teller er allerede registrert: winners_already_registered — tellere er opptjente poeng (#1489)', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
       {
         data: [
           dbRow({ kind: 'gir', hole_number: 3, points: 1.5, gir_max_per_team: 3, gir_team1_count: 2, gir_team2_count: 0 }),
@@ -259,7 +266,7 @@ describe('saveSideAwardConfig', () => {
   it('winners_already_registered når en rad er tastet «ingen vant» (#1530) — et svar er et svar, selv uten poeng', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
       { data: [dbRow({ no_winner: true })], error: null }, // existing: answered «ingen vant»
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
@@ -282,7 +289,7 @@ describe('saveSideAwardConfig', () => {
     const existingRow = dbRow({ kind: 'gir', hole_number: 3, points: 1.5, gir_max_per_team: 3 });
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { status: 'draft', group_id: null }, error: null },
+      { data: { status: 'draft' }, error: null },
       { data: [existingRow], error: null }, // existing (no winner/counts — gate passes)
       { data: null, error: null }, // delete OK
       { data: null, error: { message: 'boom' } }, // insert FAILS
@@ -312,11 +319,10 @@ describe('registerSideAwardWinner', () => {
   it('happy path: winner is a roster participant → update succeeds, revalidates', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem, // 1. gate
-      { data: { group_id: null }, error: null }, // 2. cup lookup
-      { data: { id: 'sa1', kind: 'ctp' }, error: null }, // 3. award lookup (#1489)
-      { data: [{ id: 'g1' }, { id: 'g2' }], error: null }, // 4. cup's games
-      { data: [{ user_id: 'p1' }], error: null }, // 5. roster check (found)
-      { data: [{ id: 'sa1' }], error: null }, // 6. update...select('id')
+      { data: { id: 'sa1', kind: 'ctp' }, error: null }, // 2. award lookup (#1489)
+      { data: [{ id: 'g1' }, { id: 'g2' }], error: null }, // 3. cup's games
+      { data: [{ user_id: 'p1' }], error: null }, // 4. roster check (found)
+      { data: [{ id: 'sa1' }], error: null }, // 5. update...select('id')
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
     setUser('admin-1');
@@ -342,9 +348,8 @@ describe('registerSideAwardWinner', () => {
   it('«ingen vinner» (#1530): winnerUserId null → setter no_winner, hopper over roster-oppslagene', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem, // 1. gate
-      { data: { group_id: null }, error: null }, // 2. cup lookup
-      { data: { id: 'sa1', kind: 'ctp' }, error: null }, // 3. award lookup
-      { data: [{ id: 'sa1' }], error: null }, // 4. update...select('id')
+      { data: { id: 'sa1', kind: 'ctp' }, error: null }, // 2. award lookup
+      { data: [{ id: 'sa1' }], error: null }, // 3. update...select('id')
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
     setUser('admin-1');
@@ -373,7 +378,6 @@ describe('registerSideAwardWinner', () => {
   it('gir-rad (#1489): not_found — GIR har lag-tellere, ingen vinner; ingen update', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { group_id: null }, error: null },
       { data: { id: 'sa9', kind: 'gir' }, error: null }, // award lookup: gir
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
@@ -397,7 +401,6 @@ describe('registerSideAwardWinner', () => {
   it('vinneren er IKKE en deltaker i cupen: not_a_participant, ingen update', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { group_id: null }, error: null },
       { data: { id: 'sa1', kind: 'ctp' }, error: null },
       { data: [{ id: 'g1' }], error: null },
       { data: [], error: null }, // roster check: not found
@@ -423,7 +426,6 @@ describe('registerSideAwardWinner', () => {
   it('cupen har ingen matcher ennå (tomt roster): not_a_participant', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { group_id: null }, error: null },
       { data: { id: 'sa1', kind: 'ctp' }, error: null },
       { data: [], error: null }, // no games
     ]);
@@ -443,7 +445,6 @@ describe('registerSideAwardWinner', () => {
   it('update treffer 0 rader (feil awardId/tournamentId): save_failed (expectAffected)', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { group_id: null }, error: null },
       { data: { id: 'sa1', kind: 'ctp' }, error: null },
       { data: [{ id: 'g1' }], error: null },
       { data: [{ user_id: 'p1' }], error: null },
@@ -467,9 +468,8 @@ describe('registerGirCounts (#1489)', () => {
   it('happy path: tellere innenfor maks → update med begge tellerne, authz-gaten kjørte', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem, // 1. gate
-      { data: { group_id: null }, error: null }, // 2. cup lookup
-      { data: { id: 'sa9', kind: 'gir', gir_max_per_team: 3 }, error: null }, // 3. award lookup
-      { data: [{ id: 'sa9' }], error: null }, // 4. update...select('id')
+      { data: { id: 'sa9', kind: 'gir', gir_max_per_team: 3 }, error: null }, // 2. award lookup
+      { data: [{ id: 'sa9' }], error: null }, // 3. update...select('id')
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
     setUser('admin-1');
@@ -499,7 +499,6 @@ describe('registerGirCounts (#1489)', () => {
   ])('teller utenfor 0..maks (%s, %s): invalid_counts, ingen update', async (t1, t2) => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { group_id: null }, error: null },
       { data: { id: 'sa9', kind: 'gir', gir_max_per_team: 3 }, error: null },
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
@@ -524,7 +523,6 @@ describe('registerGirCounts (#1489)', () => {
   it('ctp/ld-rad: not_found — tellere finnes bare på gir-rader; ingen update', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { group_id: null }, error: null },
       { data: { id: 'sa1', kind: 'ctp', gir_max_per_team: null }, error: null },
     ]);
     supabaseMock = buildSupabaseMock([adminUserQueueItem]);
@@ -549,7 +547,6 @@ describe('registerGirCounts (#1489)', () => {
   it('update treffer 0 rader: save_failed (expectAffected)', async () => {
     adminMock = buildSupabaseMock([
       gateQueueItem,
-      { data: { group_id: null }, error: null },
       { data: { id: 'sa9', kind: 'gir', gir_max_per_team: 3 }, error: null },
       { data: [], error: null }, // update affected 0 rows
     ]);

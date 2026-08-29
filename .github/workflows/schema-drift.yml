@@ -98,7 +98,16 @@ jobs:
         run: |
           supabase gen types typescript \
             --project-id "$PROJECT_ID" --schema public > /tmp/fresh.types.ts
-          if ! diff -u lib/database.types.ts /tmp/fresh.types.ts; then
+
+          # PostgrestVersion is platform metadata (the PostgREST version Supabase
+          # is currently running on the project) — not a schema fact, and prod
+          # and staging roll it independently of any migration (#1772). Normalize
+          # it out of both sides before diffing so a version bump on one project
+          # doesn't flag as drift.
+          sed -E 's/(PostgrestVersion: ")[^"]*(")/\1IGNORED\2/' lib/database.types.ts > /tmp/committed.normalized.ts
+          sed -E 's/(PostgrestVersion: ")[^"]*(")/\1IGNORED\2/' /tmp/fresh.types.ts > /tmp/fresh.normalized.ts
+
+          if ! diff -u /tmp/committed.normalized.ts /tmp/fresh.normalized.ts; then
             if [ "$TARGET_NAME" = "staging" ]; then
               FIX="Regenerate against staging: 'npx supabase gen types typescript --project-id $PROJECT_ID --schema public > lib/database.types.ts' and commit the result."
             else
