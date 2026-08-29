@@ -35,8 +35,6 @@ export type Tile = {
   meta?: string;
   icon: TileIconKind;
   accent?: boolean;
-  /** Optional count surfaced as a champagne pill top-right (capped «9+»). */
-  badge?: number;
   /** Hook for tests/e2e to address one specific tile. */
   testId?: string;
 };
@@ -51,11 +49,10 @@ export type Tile = {
  * Full width (not two columns) so long labels like «Resultatprotokoll» never
  * clip, and `accent` carries over so the primary door keeps its weight.
  *
- * Deliberately ignores `badge` (owner call 2026-08-11): a bare champagne
- * number doesn't say what it counts, and every place it appeared, the words
- * were already there — «35 registrert · 2 venter» in the tile's own meta, or
- * «1 spill med uleverte scorekort» in the «Krever handling»-stripe right
- * above. The words carry it; the pill only repeated them without a noun.
+ * Tiles carry no badge (owner calls 2026-08-11 + #1560): a bare champagne
+ * number doesn't say what it counts — the words in the tile's own meta
+ * («35 registrert · 2 venter», «3 nye ideer») or the «Krever handling»-stripe
+ * carry the signal instead. The last badge user died with #1560.
  */
 export function DenseTileList({ tiles }: { tiles: Tile[] }) {
   return (
@@ -125,7 +122,7 @@ export function DenseTileList({ tiles }: { tiles: Tile[] }) {
  * Compact tile grid — the «Mer i Sekretariatet»-section (#914). Same data
  * shape as DenseTileList but a denser single-row layout (icon + label, meta
  * dropped) so the everyday core cards stay visually dominant. Tap target stays
- * ≥44px (min-h-[56px]); the champagne badge is supported here too.
+ * ≥44px (min-h-[56px]).
  *
  * `columns` drops to 1 for a lone tile (#1557: the player room's cup entry),
  * which would otherwise sit half-width with dead space beside it.
@@ -149,7 +146,6 @@ export function CompactTileGrid({
           className="reveal-up relative flex min-h-[56px] items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2.5 text-left text-text transition-opacity duration-100 hover:opacity-95 active:opacity-90"
           style={{ animationDelay: `${60 + i * 70}ms` }}
         >
-          {tile.badge ? <TileBadge count={tile.badge} /> : null}
           <span
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px]"
             style={{ background: 'var(--admin-bg)', color: 'var(--primary)' }}
@@ -162,26 +158,6 @@ export function CompactTileGrid({
         </SmartLink>
       ))}
     </div>
-  );
-}
-
-/**
- * Champagne count pill, top-right of a tile (#914). Reuses the BottomNav-dot
- * treatment — accent fill, page-bg border to lift it off the card — but carries
- * a number with `tabular-nums`, capped at «9+». Decorative: the count is also
- * conveyed by the tile meta / «Krever handling»-stripa, so it's aria-hidden.
- */
-function TileBadge({ count }: { count: number }) {
-  if (count <= 0) return null;
-  return (
-    <span
-      aria-hidden
-      data-testid="tile-badge"
-      className="absolute right-2.5 top-2.5 flex h-5 min-w-[20px] items-center justify-center rounded-full border-2 border-bg px-1 font-sans text-[11px] font-semibold tabular-nums"
-      style={{ background: 'var(--accent)', color: 'var(--primary)' }}
-    >
-      {count > 9 ? '9+' : count}
-    </span>
   );
 }
 
