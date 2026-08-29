@@ -43,9 +43,9 @@ docs-notat, uten interaktiv gråsone-diskusjon (gråsonene ble avgjort av eviden
       decide-utfall og post — Funn 2: run 33277571345, begge logglinjer sitert over.
 - [x] SHA-forklaringen (hvorfor søket bommet) er verifisert mot runs-API-et —
       Funn 4: `head_branch: main`, `head_sha: 48aa2177` = main HEAD (`git log -1 48aa2177`).
-- [ ] Forebyggende notat i `docs/loops/discord-pr-kort.md` («Dedup & race»):
+- [x] Forebyggende notat i `docs/loops/discord-pr-kort.md` («Dedup & race»):
       hvordan spore en kort-kjøring — aldri via PR-head-SHA, bruk PR-nummer i
-      Decide-loggen eller label-tidsstempelet.
+      Decide-loggen eller label-tidsstempelet. — Commit 070d5299.
 - [ ] Issue #1802 lukkes med Teknisk + Funksjonell closing-kommentar som
       inkluderer hele evidenskjeden.
 
