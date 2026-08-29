@@ -217,3 +217,16 @@ describe('computeCupMatchResult — dispatch over alle seks matchplay-modi', () 
     });
   });
 });
+
+// #1777: `gameMode` er fri tekst fra DB (`games.game_mode`). Med rått
+// objekt-oppslag i dispatch-tabellen ville en prototype-nøkkel gitt en funksjon
+// fra `Object.prototype` — truthy nok til å passere `if (!cfg)`-guarden, for så
+// å krasje på `cfg.sideSize`. Map-oppslaget ser kun egne nøkler.
+describe('computeCupMatchResult — prototype-nøkler er ikke moduser (#1777)', () => {
+  it.each(['toString', 'constructor', 'valueOf', 'not_a_mode'])(
+    '%s → null uten å kaste',
+    (gameMode) => {
+      expect(computeCupMatchResult(alternateShotSide1Wins(gameMode))).toBeNull();
+    },
+  );
+});
