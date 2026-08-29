@@ -149,11 +149,18 @@ snitt i #1716 — så lenge kravene over holdes.
       EVIDENS: tsc exit 0 (hovedchat-verifisert på 44f96ebb); `npm run build` exit 0 og
       full vitest 510 filer/6820 tester exit 0 (kjørt av bygger C på samme HEAD 44f96ebb;
       route-tabellen diffet identisk mot baseline — 124 ruter, hull-ruta fortsatt PPR).
-- [ ] S6 (PR): CI på PR-en (verify + e2e @gate + scan) grønn — e2e-gaten mot staging ER
+- [x] S6 (PR): CI på PR-en (verify + e2e @gate + scan) grønn — e2e-gaten mot staging ER
       staging-beviset for at hull-flyt og cup-flyt er uendret.
-- [ ] S7 (bevislukkinger): #1759 og #1572 lukket med `## Teknisk`/`## Funksjonell`-
+      EVIDENS: PR #1781 head 0fd03545 — verify pass (6m45s), e2e pass (4m53s, @gate mot
+      staging), scan pass (13s), Vercel pass; `gh pr checks --watch` exit 0, 2026-08-29.
+- [x] S7 (bevislukkinger): #1759 og #1572 lukket med `## Teknisk`/`## Funksjonell`-
       kommentar; #1469 avgjort av denne PR-ens egen push (lukk hvis pull_request-
       workflows fyrer automatisk; ellers dokumentér og la stå).
+      EVIDENS: #1759 + #1572 lukket 2026-08-29 med begge seksjoner. #1469 del 1
+      (opened-event): CI + docs-noop + scan fyrte automatisk på 0fd03545 ved
+      PR-opprettelse. Del 2 (synchronize-event) testes av pushen ETTER denne
+      avkryssingen — utfallet dokumenteres autoritativt på issue #1469 og i PR-en,
+      ikke her (kontrakten kan ikke bære evidens for sin egen siste push).
 
 ## Gates
 
