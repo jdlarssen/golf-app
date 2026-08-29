@@ -40,9 +40,12 @@ export const getLeaderboardContext = cache(async () => {
  *
  * Fiksen speiler mønsteret ruta rundt allerede bruker — `getCupSnapshot`,
  * `/spectate/[token]` og `getGameWithPlayers` leser alle med service-role og
- * beholder autorisasjonen på call-site. Et ferdig spill er per definisjon
- * offentlig (`lib/games/status.ts`), så adgangen avgjøres av gaten i `page.tsx`,
- * ikke av RLS. Ingen policy-endring, ingen migrasjon.
+ * beholder autorisasjonen på call-site. NB: et ferdig spill er IKKE world-read
+ * (#1542, CLAUDE.md §RLS) — det er lesbart for INNLOGGEDE brukere på nettopp
+ * disse flatene, og gaten i ruta ER håndhevelsen; RLS står uendret bak alle
+ * andre veier inn. Hull-drilldownen leser med samme klient siden #1632
+ * (eiervalg B), så hoved-tavla og drilldownen svarer likt.
+ * Ingen policy-endring, ingen migrasjon.
  *
  * `fallback` er klienten kallstedet allerede holder. Den brukes uendret så lenge
  * spillet IKKE er ferdig — kritisk for `/spectate`, som sender inn sin egen

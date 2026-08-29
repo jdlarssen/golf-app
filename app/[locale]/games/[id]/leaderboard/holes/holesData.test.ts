@@ -14,6 +14,11 @@ vi.mock('next-intl/server', () => ({
 vi.mock('@/lib/games/getGameWithPlayers', () => ({
   getGameWithPlayers: vi.fn(),
 }));
+// #1632: finished-spill skal lese scores via admin-klienten (getResultReadClient).
+const getAdminClientMock = vi.fn();
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => getAdminClientMock(),
+}));
 
 const HOLES = [
   {
@@ -68,9 +73,9 @@ function makeSupabase() {
   return { client, captured };
 }
 
-function mockGwp(sourceGameId: string | null) {
+function mockGwp(sourceGameId: string | null, status = 'active') {
   vi.mocked(getGameWithPlayers).mockResolvedValue({
-    game: { id: 'game-1', source_game_id: sourceGameId },
+    game: { id: 'game-1', source_game_id: sourceGameId, status },
     players: [],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
@@ -79,6 +84,7 @@ function mockGwp(sourceGameId: string | null) {
 describe('fetchHolesAndScores', () => {
   beforeEach(() => {
     vi.mocked(getGameWithPlayers).mockReset();
+    getAdminClientMock.mockReset();
   });
 
   it('a host game (source_game_id null) reads its own scores (byte-identical pre-#1631 behavior)', async () => {
@@ -97,5 +103,29 @@ describe('fetchHolesAndScores', () => {
     const result = await fetchHolesAndScores(client, 'derived-1', 'course-1');
     expect(captured.scoresGameId).toBe('host-1');
     expect(result.rawScores).toEqual(SCORES);
+  });
+
+  it('a finished game reads scores through the result-read client (#1632)', async () => {
+    mockGwp(null, 'finished');
+    const cookie = makeSupabase();
+    const admin = makeSupabase();
+    getAdminClientMock.mockReturnValue(admin.client);
+    const result = await fetchHolesAndScores(cookie.client, 'game-1', 'course-1');
+    // Scores gikk via admin-klienten; course_holes fortsatt via cookie-klienten.
+    expect(admin.captured.scoresGameId).toBe('game-1');
+    expect(cookie.captured.scoresGameId).toBeNull();
+    expect(cookie.captured.holesCourseId).toBe('course-1');
+    expect(result.rawScores).toEqual(SCORES);
+  });
+
+  it('an active game keeps the caller-provided cookie client (#1632)', async () => {
+    mockGwp(null, 'active');
+    const cookie = makeSupabase();
+    const admin = makeSupabase();
+    getAdminClientMock.mockReturnValue(admin.client);
+    await fetchHolesAndScores(cookie.client, 'game-1', 'course-1');
+    expect(cookie.captured.scoresGameId).toBe('game-1');
+    expect(admin.captured.scoresGameId).toBeNull();
+    expect(getAdminClientMock).not.toHaveBeenCalled();
   });
 });
