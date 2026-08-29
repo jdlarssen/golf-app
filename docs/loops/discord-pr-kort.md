@@ -199,6 +199,16 @@ appen bootes mot torny-staging, login via service-role OTP-mint).
 samme øyeblikk kan i sjeldne tilfeller gi to kort — akseptert for v1 (mildt) fremfor
 å risikere et stille tapt kort.
 
+**Spore en kort-kjøring (vakt-runder, #1802):** søk ALDRI etter kort-kjøringer på
+PR-ens head-SHA — `workflow_run`-utløste relékjøringer listes under **main** sin
+`head_branch`/`head_sha`, så SHA-søket finner bare den kansellerte
+`pull_request`-kjøringen og konkluderer feilaktig «kortet uteble» (falsk alarm
+#1802: kortet VAR postet av relékjøringen). Spor i stedet via (a) PR-nummeret i
+Decide-loggen (`gh run view <id> --log | grep decide-pr-card`), eller (b)
+`labeled`-tidsstempelet for `discord:merge-kort` på PR-ens issue-timeline
+(`gh api repos/<repo>/issues/<pr>/timeline`) — kjøringen som dekker det
+tidspunktet er den som postet.
+
 ## Docs-only-PR-er — hendelsesdrevet via no-op-tvillingen (#1483, før: #1301)
 
 Docs-only-PR-er kjører ikke ci.yml (kvote-trimmen #1195: `paths-ignore` på `**.md`,
