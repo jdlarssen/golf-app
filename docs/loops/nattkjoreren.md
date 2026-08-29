@@ -77,6 +77,10 @@ dette steget først, hver natt.
    5. **Oppdater PR-kommentaren** med en ny 🤖-kommentar per Steg 5: nytt bevis
       (gate-utfall, e2e, kryss-modell-gate) + oppdatert alternativ-status
       («valgt: B — nå bygget»), med A beholdt i listen så historikken er lesbar.
+   6. **Avslutt som enhver annen leveranse:** en ombygging ER en ny leveranse, så
+      den ender likt — `gh pr ready <M>` som siste handling, etter at bokføringen
+      er postet og pushet (Steg 5, #1769). Er PR-en allerede tatt ut av draft fra
+      forrige runde, hopper du over steget.
 5. **Uferdig ombygging (krasjet natt):** en 🔁-kvittering UTEN en påfølgende
    oppdatert leveransekommentar betyr at forrige natt døde midt i ombyggingen.
    **Gjenoppta den** — samme branch, samme alternativ — før du plukker noe nytt
@@ -220,9 +224,28 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
   eieren merger PR #<M>». Auto-close ved merge skriver ingen kommentar selv,
   og eieren skal slippe — kommentaren må derfor stå klar FØR merge (hull
   funnet ved første kjøring: #1099 lukket kommentar-løst).
+- **Ta PR-en ut av draft — den konvergerte leveransens SISTE handling (#1769):**
+  når alt over er gjort for DENNE PR-en (🤖-kommentaren postet, closing-kommentaren på issuet
+  postet, `autonomy:ready` fjernet, alt pushet, og `git ls-remote origin <branch>`
+  viser at remote står på samme HEAD som lokalt) → `gh pr ready <M>`.
+  - **Hvorfor steget finnes:** kortet noop-er drafts (#1516), og ingen nedstrøms
+    aktør flipper for deg — morgenbriefen er read-only by design. Uten steget blir
+    leveransen stående til eieren flipper den for hånd; seks slike lå og ventet
+    2026-08-29 (#1769).
+  - **Hvorfor SIST:** #1516-disiplinen. Ready er «jeg er ferdig»-signalet, og det
+    er `ready_for_review` som fyrer kortet. Flipper du før bokføringen er pushet,
+    kan kortet rekke å merge en eldre HEAD.
+  - **Flippen åpner ingen ny dør:** kortets egne porter står etterpå —
+    produktvalg-markør og bruker-synlig uten `staging-verified` demoteres til
+    knapp-kort, rød CI gir ingenting. Eieren beholder nøyaktig de beslutningene
+    policyen gir ham i dag, minus den manuelle flippen.
+  - Dør økta før dette steget, tar natt-draft-sweepen PR-en neste morgen (se
+    «Backstopp» nederst) — men den er nettet, ikke veien.
 - **Ikke konvergert:** push delarbeidet som draft-PR, post utfylt
   `.forge/templates/eskalering.md` som issue-kommentar (runde-tabell + ETT
-  A/B-spørsmål), sett `autonomy:blocked`, fjern `autonomy:ready`.
+  A/B-spørsmål), sett `autonomy:blocked`, fjern `autonomy:ready`. Den PR-en blir
+  liggende som draft med vilje — ingen `gh pr ready`. Delarbeid er ikke en
+  leveranse, og eskaleringsspørsmålet skal besvares før noe kort dukker opp.
 
 ## Steg 6 — Heartbeat (ALLTID, uansett utfall)
 
@@ -234,3 +257,29 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
 
 Morgenbriefen (#1080) bruker heartbeaten som liveness-signal — mangler den,
 flagges det.
+
+## Backstopp — natt-draft-sweepen (#1769)
+
+Dør natta ETTER bokføringen, men FØR `gh pr ready`, blir leveransen stående som
+draft — og kortet noop-er drafts (#1516). Da tar den daglige workflowen
+`.github/workflows/natt-draft-sweep.yml` (05:30 UTC) PR-en: den flipper drafts som
+beviselig er ferdige leveranser, og legger igjen en 🧹-kommentar på PR-en om at
+flippen kom derfra.
+
+Sweepen rører KUN en PR som oppfyller alt dette (logikken og begrunnelsene:
+`lib/loops/draftSweep.ts`):
+
+- åpen draft
+- branch `claude/natt-*` OG label `autonomy:review` — interaktive økters drafts er
+  utenfor rekkevidde, alltid (#1516)
+- ingen aktivitet på 90 minutter, så en økt som fortsatt jobber får være i fred
+- siste markørkommentar er 🤖. Er den 🔁, står en ombygging uferdig og Steg 0.5
+  gjenopptar den; finnes ingen markør i det hele tatt, ble Steg 5 aldri nådd, og da
+  skal et menneske se på PR-en
+
+🧹 er verken 🤖 eller 🔁, så sweepens egen kommentar teller aldri som nattkjørerens
+i Steg 0-filteret — og den matcher ikke eier-svar-mønsteret. Begge egenskapene er
+test-låst.
+
+Dette er et nett, ikke en vei: en natt som gjør jobben sin flipper selv i Steg 5.
+Ser du en 🧹-kommentar om morgenen, døde natta underveis.
