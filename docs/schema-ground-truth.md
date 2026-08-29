@@ -72,12 +72,9 @@ Do **not** assume one shape across the three. `games.status` is a typed enum; th
 
 - `score_visibility IN ('live', 'reveal')`
 - `short_id ~ ^[0-9a-z]{8}$`
-- `hole_segment IN ('full', 'front9', 'back9')` — **constraint name drifted between envs** (#1649,
-  verified 2026-08-15): prod has it as the auto-named `games_hole_segment_check` (added inline on
-  the column), staging/migrations name it `games_hole_segment_valid` (migration 0151). Definition
-  is identical in both, so nothing is broken today — but a future migration that touches the
-  constraint **by name** will pass on staging and fail on prod (`constraint ... does not exist`).
-  Check the live name via `pg_get_constraintdef` before writing one.
+- `hole_segment IN ('full', 'front9', 'back9')` — named `games_hole_segment_valid` in BOTH envs
+  since migration 0165 (#1649; prod previously carried the auto-named `games_hole_segment_check`,
+  renamed 2026-08-29).
 
 ---
 
