@@ -60,7 +60,7 @@ describe('pickPendingInvitation', () => {
 
   it('faller tilbake til nyeste invitasjon når ingen kaptein har invitert', () => {
     const picked = pickPendingInvitation(
-      [FROM_ORGANIZER, { id: 'inv-eldst', invited_by: null }],
+      [FROM_ORGANIZER, { id: 'inv-eldst', invited_by: 'annen-arrangor' }],
       [NEWEST.user_id],
     );
     expect(picked).toEqual(FROM_ORGANIZER);
