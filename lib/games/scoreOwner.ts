@@ -64,8 +64,9 @@ export type ScoredHoleRow = { holeNumber: number; userId: string };
  * (mapped to camelCase) and the client passes Dexie rows — so the hole strip
  * cannot end up with one semantics online and another offline (#1578).
  *
- * Never deduplicates: `scores` is unique on (game_id, user_id, hole_number) and
- * exactly one id owns each hole, so a hole can appear at most once.
+ * Never deduplicates (the filtering itself lives in `ownedScoreRows` below):
+ * `scores` is unique on (game_id, user_id, hole_number) and exactly one id owns
+ * each hole, so a hole can appear at most once.
  */
 export function scoredHoleNumbers(
   rows: readonly (ScoredHoleRow | null | undefined)[] | null | undefined,
