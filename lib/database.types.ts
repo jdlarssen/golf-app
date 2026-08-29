@@ -150,6 +150,44 @@ export type Database = {
         }
         Relationships: []
       }
+      apns_tokens: {
+        Row: {
+          created_at: string
+          environment: string | null
+          id: string
+          last_used_at: string | null
+          token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          environment?: string | null
+          id?: string
+          last_used_at?: string | null
+          token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          environment?: string | null
+          id?: string
+          last_used_at?: string | null
+          token?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apns_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bingo_bango_bongo_holes: {
         Row: {
           bango_user_id: string | null
