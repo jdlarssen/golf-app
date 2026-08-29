@@ -79,7 +79,19 @@ export async function prepareLogout(deps: {
   pendingCount: () => Promise<number>;
   clear: () => Promise<void>;
   clearStoredOwner: () => void;
+  cleanupPush?: () => Promise<unknown>;
 }): Promise<'cleared' | 'kept'> {
+  // #1790: drop the device's push registration for the account logging out —
+  // server row, browser subscription and the remembered native token — while
+  // the session is still valid. Runs in parallel with the drain, best-effort:
+  // it must never decide the drain outcome nor block the logout (the browser
+  // binding's timeout race covers a hang, e.g. a dev env without a service
+  // worker where `disablePush` awaits `serviceWorker.ready` forever).
+  const pushCleanup = deps.cleanupPush
+    ? Promise.resolve().then(deps.cleanupPush).catch(() => {})
+    : undefined;
+
+  let outcome: 'cleared' | 'kept';
   try {
     await deps.drain();
   } catch {
@@ -88,11 +100,16 @@ export async function prepareLogout(deps: {
   if ((await deps.pendingCount()) > 0) {
     // Unsynced (or quarantined) strokes on board: keep the data AND the
     // owner stamp, so the switch guard still fires if someone else logs in.
-    return 'kept';
+    outcome = 'kept';
+  } else {
+    await deps.clear();
+    deps.clearStoredOwner();
+    outcome = 'cleared';
   }
-  await deps.clear();
-  deps.clearStoredOwner();
-  return 'cleared';
+  // Let the push cleanup finish before the caller POSTs /logout — a navigation
+  // mid-request would kill the server-row delete.
+  if (pushCleanup) await pushCleanup;
+  return outcome;
 }
 
 // --- Browser bindings (thin, untested — system boundary) -------------------
@@ -143,8 +160,13 @@ export async function ensureLocalDataOwnerBrowser(): Promise<void> {
  * against a short timeout so a hanging network never blocks the logout
  * itself; the timeout resolves to 'kept', which is always safe (the switch
  * guard covers the next user).
+ *
+ * `cleanupPush` (#1790) is injected by the form, not imported here — the
+ * cleanup calls server actions, and `lib/sync/` stays free of action imports.
  */
-export async function prepareLogoutBrowser(): Promise<'cleared' | 'kept'> {
+export async function prepareLogoutBrowser(
+  cleanupPush?: () => Promise<unknown>,
+): Promise<'cleared' | 'kept'> {
   if (typeof window === 'undefined') return 'kept';
   const run = (async () => {
     const { drainQueue } = await import('./syncWorker');
@@ -159,6 +181,7 @@ export async function prepareLogoutBrowser(): Promise<'cleared' | 'kept'> {
           // Harmless: a stale stamp only makes the next boot re-check.
         }
       },
+      cleanupPush,
     });
   })();
   const timeout = new Promise<'kept'>((resolve) => {

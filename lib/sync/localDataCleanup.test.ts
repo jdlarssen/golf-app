@@ -126,4 +126,51 @@ describe('prepareLogout', () => {
     expect(result).toBe('cleared');
     expect(deps.clear).toHaveBeenCalledTimes(1);
   });
+
+  // #1790 — push cleanup rides along with the logout round: best-effort,
+  // never part of the drain decision, but awaited so the POST that follows
+  // the caller's return can't kill the server-row delete mid-request.
+  it('push cleanup runs once and is awaited before the outcome returns', async () => {
+    let settled = false;
+    const deps = logoutDeps({
+      cleanupPush: vi.fn(async () => {
+        await Promise.resolve();
+        settled = true;
+      }),
+    });
+    const result = await prepareLogout(deps);
+    expect(result).toBe('cleared');
+    expect(deps.cleanupPush).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(true);
+  });
+
+  it('push cleanup rejection is swallowed — the drain decision stands', async () => {
+    const deps = logoutDeps({
+      cleanupPush: vi.fn(async () => {
+        throw new Error('no service worker');
+      }),
+    });
+    await expect(prepareLogout(deps)).resolves.toBe('cleared');
+    expect(deps.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('a synchronously throwing push cleanup is swallowed too', async () => {
+    const deps = logoutDeps({
+      cleanupPush: vi.fn(() => {
+        throw new Error('sync boom');
+      }),
+    });
+    await expect(prepareLogout(deps)).resolves.toBe('cleared');
+  });
+
+  it('push cleanup failure never blocks the kept path either', async () => {
+    const deps = logoutDeps({
+      pendingCount: vi.fn(async () => 3),
+      cleanupPush: vi.fn(async () => {
+        throw new Error('offline');
+      }),
+    });
+    await expect(prepareLogout(deps)).resolves.toBe('kept');
+    expect(deps.clear).not.toHaveBeenCalled();
+  });
 });

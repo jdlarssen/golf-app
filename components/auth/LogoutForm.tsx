@@ -10,6 +10,12 @@ import { Button } from '@/components/ui/Button';
  * en kort timeout i `prepareLogoutBrowser`, så utloggingen aldri henger på
  * nettet; beholdt data dekkes av eierbytte-vakta i SyncBoot.
  *
+ * #1790: samme runde rydder enhetens push-kobling for kontoen som logger ut
+ * (server-rad + browser-abonnement + husket APNs-token), mens sesjonen ennå er
+ * gyldig. Callbacken injiseres her — formen kan importere server-actions,
+ * `lib/sync/` skal ikke. Best-effort inne i samme race: får ikke ryddingen
+ * fullført, reddes neste konto av 42501-fallbacken i registreringen.
+ *
  * Native `form.submit()` re-trigger IKKE onSubmit, så den programmatiske
  * innsendingen etter oppryddingen løper rett til route-handleren.
  */
@@ -34,8 +40,18 @@ export function LogoutForm({
         setCleaning(true);
         void (async () => {
           try {
-            const cleanup = await import('@/lib/sync/localDataCleanup');
-            await cleanup.prepareLogoutBrowser();
+            const [cleanup, push, pushActions, apnsActions] = await Promise.all([
+              import('@/lib/sync/localDataCleanup'),
+              import('@/lib/pwa/push'),
+              import('@/app/[locale]/profile/pushActions'),
+              import('@/app/[locale]/profile/apnsActions'),
+            ]);
+            await cleanup.prepareLogoutBrowser(() =>
+              push.disablePush(
+                pushActions.removePushSubscription,
+                apnsActions.removeApnsToken,
+              ),
+            );
           } catch {
             // Best-effort — utloggingen skal aldri blokkeres av opprydding.
           }
