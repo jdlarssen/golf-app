@@ -59,8 +59,11 @@ I `handleMergePr`, kun flip/merge-stien:
 - [x] U3: `npm run build` + full `npx vitest run` grønne (hovedchat).
       EVIDENS: build exit 0; full vitest 513 filer/6919 tester exit 0 (HEAD ee58eafa;
       2a41cbdd re-gatet skopert: 288/288 + tsc + eslint grønne).
-- [ ] U4: Draft-PR med grønn CI, eier-melding i body; IKKE merget av økta (eierens
-      «merge»-svar er porten).
+- [x] U4: Draft-PR med grønn CI, eier-melding i body; IKKE merget av økta (eierens
+      «merge»-svar er porten). (Avkryssingen dekker kun øktas del — mergen er eierens.)
+      EVIDENS: PR #1789 head d06442ad — verify 6m30s, e2e 4m6s (@gate mot staging),
+      scan pass; `gh pr checks --watch` exit 0. Draft-status består; forhånds-closing
+      postet på #1786.
 
 ## Files Likely Touched
 
