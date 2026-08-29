@@ -166,6 +166,9 @@ describe('audit-kommentaren', () => {
     expect(SWEEP_MARKER).not.toBe(REBUILD_MARKER);
     // Selve filteret nattkjøreren bruker (steg 0.3) — ikke en håndskrevet kopi.
     expect(lastNattMarker([body])).toBeNull();
+    // Hele teksten, ikke bare åpningen: en fremtidig `includes`-lesning av
+    // markørene må heller ikke kunne treffe midt i setningen.
+    expect(body).not.toMatch(/🤖|🔁/);
   });
 
   it('matcher ikke eier-svar-regexen fra nattkjøreren steg 0.3', () => {
@@ -195,6 +198,10 @@ describe('lockstep mot .github/workflows/natt-draft-sweep.yml', () => {
 
   it('bruker PR_AUTHOR_PAT — github.token ville aldri trigget kortet (#1701)', () => {
     expect(workflow).toContain('secrets.PR_AUTHOR_PAT');
+  });
+
+  it('cron-uttrykket står — et stille droppet schedule er et nett ingen savner', () => {
+    expect(workflow).toContain("'30 5 * * *'");
   });
 });
 
