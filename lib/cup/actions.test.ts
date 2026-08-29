@@ -599,6 +599,125 @@ describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
   });
 });
 
+/**
+ * #1804: deltaker-taket (#526) håndheves i de tre andre skriveveiene inn i
+ * `tournament_participants`, men synken etter byttet er best-effort og kan
+ * ikke avvise — så vakta bor i PLANFASEN, før noe skrives. Beslutningen
+ * (sett-matematikken) er ren logikk og dekkes av
+ * `participantRosterSync.test.ts`; her dekkes wiringen: at gaten kun gjelder
+ * personlig ikke-admin-cup, at riktige rader leses, og at avvisning/lese-feil
+ * skjer FØR første skriving. Admin-kaller-testene over beviser kortslutningen
+ * (deres mock-køer har ingen tak-lesinger og står urørt).
+ *
+ * Ikke-admin creator-DB-sekvens (requireAdminOrTournamentCreator leser
+ * created_by når is_admin er false):
+ *   1. adminMock: tournaments.select('group_id') — gaten
+ *   2. supabaseMock: users.select(...) — loadRole (is_admin: false)
+ *   3. adminMock: tournaments.select('created_by') — creator-sjekken
+ *   4. onwards: planfasens lesinger, så tak-vaktas to
+ */
+
+const cupCreatorUser = {
+  data: { is_admin: false, email: 'c@x.no', name: 'Creator' },
+  error: null,
+};
+
+/** 24 deltakere — nøyaktig på taket. Ut-spilleren er én av dem. */
+const PARTICIPANTS_AT_CAP = [
+  { user_id: 'out' },
+  ...Array.from({ length: 23 }, (_, i) => ({ user_id: `p${i}` })),
+];
+
+/** Som `readsUpToRoster`, men for cupens IKKE-admin-skaper. */
+function creatorReadsUpToRoster(overrides: { games?: unknown[] } = {}) {
+  const [gate, ...rest] = readsUpToRoster(overrides);
+  return [
+    gate,
+    { data: { created_by: 'creator-1' }, error: null }, // creator-sjekken
+    ...rest,
+  ];
+}
+
+describe('swapCupMatchPlayer — deltaker-taket vokter planfasen (#1804)', () => {
+  it('personlig cup på taket, ny reserve inn, ut-spilleren blir i en annen match: too_many_players, ingenting skrives', async () => {
+    adminMock = buildSupabaseMock([
+      ...creatorReadsUpToRoster({
+        // En match utenfor bunten — der blir ut-spilleren stående.
+        games: [
+          ...SPLIT_GAMES,
+          { id: 'g-other', status: 'scheduled', source_game_id: null },
+        ],
+      }),
+      { data: PARTICIPANTS_AT_CAP, error: null }, // deltakerlista (tak-vakta)
+      {
+        data: [{ game_id: 'g-host' }, { game_id: 'g-derived' }, { game_id: 'g-other' }],
+        error: null,
+      }, // ut-spillerens rader: g-other skrives ikke → hun blir i cupen
+    ]);
+    supabaseMock = buildSupabaseMock([cupCreatorUser]);
+    setUser('creator-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    expect(await swapCupMatchPlayer(swapForm())).toEqual({
+      error: 'too_many_players',
+    });
+    expect(gamePlayerCalls('delete')).toHaveLength(0);
+    expect(gamePlayerCalls('insert')).toHaveLength(0);
+    expect(participantCalls('upsert')).toHaveLength(0);
+    expect(participantCalls('delete')).toHaveLength(0);
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('samme bytte der ut-spilleren forlater cupen helt: netto 0, går gjennom på taket', async () => {
+    adminMock = buildSupabaseMock([
+      ...creatorReadsUpToRoster(),
+      { data: PARTICIPANTS_AT_CAP, error: null },
+      // Ut-spilleren står KUN i matchene som skrives → raden godskrives.
+      { data: [{ game_id: 'g-host' }, { game_id: 'g-derived' }], error: null },
+      ...successfulBundleWrites(),
+      { data: ROSTER_AFTER_SWAP, error: null },
+      { data: null, error: null }, // participants upsert
+      { data: null, error: null }, // participants delete
+    ]);
+    supabaseMock = buildSupabaseMock([cupCreatorUser]);
+    setUser('creator-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    const err = await swapCupMatchPlayer(swapForm()).catch((e) => e);
+    expect(err, 'frafallet godskrives — byttet går gjennom').toBeInstanceOf(
+      RedirectError,
+    );
+    expect((err as RedirectError).url).toBe(
+      '/admin/cup/cup-1?status=player_swapped',
+    );
+  });
+
+  it('tak-lesingen feiler: swap_failed (fail-closed), ingenting skrives', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      ...creatorReadsUpToRoster(),
+      { data: null, error: { message: 'participants boom' } }, // deltakerlista
+      { data: [{ game_id: 'g-host' }, { game_id: 'g-derived' }], error: null },
+    ]);
+    supabaseMock = buildSupabaseMock([cupCreatorUser]);
+    setUser('creator-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    expect(await swapCupMatchPlayer(swapForm())).toEqual({
+      error: 'swap_failed',
+    });
+    expect(gamePlayerCalls('delete')).toHaveLength(0);
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(errSpy).toHaveBeenCalledWith(
+      '[cup] swapCupMatchPlayer cap read failed',
+      expect.objectContaining({
+        participantsError: { message: 'participants boom' },
+      }),
+    );
+    errSpy.mockRestore();
+  });
+});
+
 describe('swapCupMatchPlayer — atomic-or-compensated (#1473)', () => {
   it('inn-inserten feiler midt i bunten: ut-radene re-inserters ordrett, inn-radene ryddes', async () => {
     adminMock = buildSupabaseMock([

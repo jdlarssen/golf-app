@@ -4784,6 +4784,7 @@
         "not_candidate": "You cannot swap that player into this cup.",
         "profile_incomplete": "That player has to finish their profile before they can be swapped in.",
         "not_member": "That player is no longer a member of the club.",
+        "too_many_players": "The cup is full — a personal cup holds up to {cap} players. Remove a participant first, or swap in someone who has already signed up.",
         "swap_failed": "Could not swap the player. Try again.",
         "unexpected": "Unexpected error: {code}"
       }

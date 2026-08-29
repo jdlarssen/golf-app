@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { swapCupMatchPlayer, type CupActionError } from '@/lib/cup/actions';
+import { MAX_PERSONAL_CUP_PLAYERS } from '@/lib/cup/limits';
 
 /** Én valgbar spiller i byttet — `label` er ferdig formatert av serveren. */
 export type SwapPlayerOption = { userId: string; label: string };
@@ -52,6 +53,12 @@ export function SwapMatchPlayer({
 
   const errorMessage = (() => {
     if (!state.error) return null;
+    // `too_many_players`-strengen har en {cap}-plass; capet er regelens ene
+    // hjem (lib/cup/limits), ikke en tekst-hardkodet 24 (samme grep som
+    // CupParticipantsList).
+    if (state.error === 'too_many_players') {
+      return t('errors.too_many_players', { cap: MAX_PERSONAL_CUP_PLAYERS });
+    }
     const key = `errors.${state.error}` as Parameters<typeof t>[0];
     return t.has(key) ? t(key) : t('errors.unexpected', { code: state.error });
   })();

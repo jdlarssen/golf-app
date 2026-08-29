@@ -20,7 +20,10 @@ import type { Database, Tables } from '@/lib/database.types';
 import { getCupSnapshot } from './getCupSnapshot';
 import { getCupCandidatePlayers } from './getCupCandidatePlayers';
 import { validateMatchSwap } from './matchSwapValidation';
-import { planParticipantRosterSync } from './participantRosterSync';
+import {
+  planParticipantRosterSync,
+  swapExceedsPersonalPlayerCap,
+} from './participantRosterSync';
 import { loadTournamentParticipantEmails } from './tournamentParticipants';
 import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
@@ -606,12 +609,87 @@ async function planCupMatchSwap(
   });
   if (!validation.ok) return { error: validation.error };
 
+  const allCupGameIds = (cupGames ?? []).map((g) => g.id);
+
+  const capError = await checkSwapParticipantCap(admin, {
+    tournamentId,
+    gameId,
+    groupId,
+    actorIsAdmin,
+    outUserId,
+    inUserId,
+    allCupGameIds,
+    writtenGameIds: validation.gameIds,
+  });
+  if (capError) return capError;
+
   return {
     bundleIds,
     gameIds: validation.gameIds,
-    allCupGameIds: (cupGames ?? []).map((g) => g.id),
+    allCupGameIds,
     teeGender: teeGenderOf((inProfile?.gender as string | null) ?? null),
   };
+}
+
+/**
+ * Deltaker-taket (#526) håndheves i planfasen av byttet (#1804): synken etter
+ * byttet er den fjerde skriveveien inn i `tournament_participants`, men den er
+ * best-effort med vilje (#1735) og kan ikke avvise — da hadde matchene og
+ * deltakerlista pekt hver sin vei. Gaten speiler `addCupParticipant`:
+ * klubb-cuper og global admin er uncapped. Returnerer `null` når byttet holder
+ * seg under taket; beslutningen selv bor i `participantRosterSync.ts`.
+ */
+async function checkSwapParticipantCap(
+  admin: SupabaseClient<Database>,
+  args: {
+    tournamentId: string;
+    gameId: string;
+    groupId: string | null;
+    actorIsAdmin: boolean;
+    outUserId: string;
+    inUserId: string;
+    allCupGameIds: string[];
+    /** Matchene byttet faktisk skriver (`validation.gameIds`). */
+    writtenGameIds: string[];
+  },
+): Promise<{ error: string } | null> {
+  const { tournamentId, gameId, groupId, actorIsAdmin, outUserId, inUserId } =
+    args;
+  if (groupId || actorIsAdmin) return null;
+
+  const { data: participantRows, error: participantsError } = await admin
+    .from('tournament_participants')
+    .select('user_id')
+    .eq('tournament_id', tournamentId);
+  // Ut-spillerens rader over ALLE cupens matcher: en rad utenfor matchene som
+  // skrives betyr at hun blir stående i en annen bunt (splittet cup-dag,
+  // #1441) og beholder deltaker-raden sin.
+  const { data: outRows, error: outRowsError } = await admin
+    .from('game_players')
+    .select('game_id')
+    .eq('user_id', outUserId)
+    .in('game_id', args.allCupGameIds);
+  if (participantsError || outRowsError) {
+    console.error('[cup] swapCupMatchPlayer cap read failed', {
+      tournamentId,
+      gameId,
+      participantsError,
+      outRowsError,
+    });
+    return { error: 'swap_failed' };
+  }
+
+  const writtenIds = new Set(args.writtenGameIds);
+  const wouldExceedCap = swapExceedsPersonalPlayerCap({
+    participantIds: (participantRows ?? []).map((r) => r.user_id as string),
+    outUserId,
+    inUserId,
+    outRemainsInCup: (outRows ?? []).some(
+      (r) => !writtenIds.has(r.game_id as string),
+    ),
+    actorIsAdmin,
+  });
+  return wouldExceedCap ? { error: 'too_many_players' } : null;
 }
 
 /**
