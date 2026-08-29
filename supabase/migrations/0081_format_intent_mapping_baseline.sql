@@ -16,6 +16,13 @@
 -- transcription). Idempotent upsert: a no-op on prod (values already match),
 -- authoritative on a fresh build. Admins may keep curating via the UI; re-run
 -- a snapshot like this when the catalog meaningfully changes.
+--
+-- #1650 (2026-08-29): this table is OPERATIONAL DATA, not schema. Prod is the
+-- source of truth (admin-curated at runtime); this file is only the seed for
+-- empty databases. Drift between prod and this snapshot is therefore EXPECTED
+-- and is not a deviation — do not file it as one, and do not re-snapshot on
+-- every drift. Staging was one-time synced to prod's values on 2026-08-29
+-- (21 of 34 rows differed on is_primary; md5 checksums equal afterwards).
 
 insert into public.format_intent_mapping
   (format_slug, intent, is_visible, is_primary, sort_order)
