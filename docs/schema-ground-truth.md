@@ -76,6 +76,15 @@ Do **not** assume one shape across the three. `games.status` is a typed enum; th
   since migration 0165 (#1649; prod previously carried the auto-named `games_hole_segment_check`,
   renamed 2026-08-29).
 
+## `format_intent_mapping` — operational data, drift from the snapshot is expected
+
+The wizard format catalog is admin-curated at runtime; **prod is the source of truth** and
+migration 0081 is only a seed for empty databases (#1650, decided 2026-08-29). Value drift
+between prod and 0081 — or between prod and a stale staging — is expected and is NOT a
+schema deviation: don't file it, don't re-snapshot on every diff. Staging was one-time
+synced to prod's values 2026-08-29 (md5 checksums equal). Compare live catalogs with
+`md5(string_agg(format_slug||':'||intent||':'||is_visible::text||':'||is_primary::text||':'||sort_order::text, ',' order by format_slug, intent))`.
+
 ---
 
 ## RLS — the real authorization boundary
