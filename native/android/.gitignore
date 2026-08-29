@@ -1,0 +1,13 @@
+# Signing keys live OUTSIDE the repo (~/.torny-native/) — the repo is public.
+# These patterns are a belt-and-suspenders guard against accidental copies.
+*.keystore
+*.jks
+*.aab
+*.apk
+*.idsig
+
+# Gradle build output
+.gradle/
+build/
+app/build/
+local.properties
