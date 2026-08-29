@@ -223,6 +223,9 @@ export async function submitTeamRegistration(
   }
 
   const captain = await requireAuthedUser(shortId);
+  // #1727: invitéen er konto-løs, så kapteinens UI-språk er beste gjett for
+  // mail-språket — før dette gikk lag-invitasjonsmailen alltid ut på norsk.
+  const locale = (await getLocale()) as AppLocale;
 
   const game = await getGameByShortId(shortId);
   if (!game) {
@@ -514,6 +517,7 @@ export async function submitTeamRegistration(
           gameName: game.name,
           teamName,
           gameShortId: game.short_id,
+          locale,
         }).catch((err) =>
           console.error('[submitTeamRegistration] team mail failed', err),
         );
