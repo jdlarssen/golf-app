@@ -33,30 +33,46 @@ export function PuttsTogglePill({
       onClick={onToggle}
       disabled={disabled}
       style={{
+        // #1796: den visuelle pillen er ~27px høy — under stilguidens
+        // 44px-minimum. Selve knappen er en usynlig, større trykkflate:
+        // padding utvider hit-arealet til ≥44px høyde, negativ margin
+        // speiler paddingen så pillen beholder eksakt plassering og
+        // størrelse i header-raden (#939-designet består).
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 6,
-        padding: '5px 11px',
-        borderRadius: 999,
-        border: `1px solid ${
-          enabled
-            ? 'color-mix(in srgb, var(--primary) 50%, transparent)'
-            : 'var(--border)'
-        }`,
-        background: enabled
-          ? 'color-mix(in srgb, var(--primary) 16%, transparent)'
-          : 'transparent',
-        color: enabled ? 'var(--text)' : 'var(--text-muted)',
-        fontFamily: 'var(--font-sans)',
-        fontSize: 12.5,
-        fontWeight: 600,
+        background: 'transparent',
+        border: 'none',
+        padding: '9px 6px',
+        margin: '-9px -6px',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        whiteSpace: 'nowrap',
       }}
     >
-      <PinFlagSm size={13} />
-      <span>{t('putts.fieldLabel')}</span>
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '5px 11px',
+          borderRadius: 999,
+          border: `1px solid ${
+            enabled
+              ? 'color-mix(in srgb, var(--primary) 50%, transparent)'
+              : 'var(--border)'
+          }`,
+          background: enabled
+            ? 'color-mix(in srgb, var(--primary) 16%, transparent)'
+            : 'transparent',
+          color: enabled ? 'var(--text)' : 'var(--text-muted)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 12.5,
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <PinFlagSm size={13} />
+        <span>{t('putts.fieldLabel')}</span>
+      </span>
     </button>
   );
 }
