@@ -84,3 +84,16 @@ synlige i lista — alt annet er `unknown` og eskalerer som parkert (fail-loud).
   med en ekte PAT faktisk gir `triggering_actor: jdlarssen`. Det krever at eieren
   legger inn secreten først; ingen PAT finnes i Actions i dag.
 - **Uavhengig evaluator-lesning** — se metode-forbeholdet øverst.
+
+## Etterskrift 2026-08-29 — kriterium 5 observert: FULL ACCEPT
+
+Eieren la inn `PR_AUTHOR_PAT` 23. august. Første planlagte kjøringer (mandag
+2026-08-24) beviste hele kjeden, avlest via API 2026-08-29:
+
+- PR #1740 (ukesversjon) head `f2850b74`: CI + CI (docs no-op) + Secret scan alle
+  `run_attempt=1`, `conclusion=success`, `triggering_actor=jdlarssen`;
+  `mergedBy: app/github-actions`; label `discord:merge-kort`.
+- PR #1743 (dok-skjema) head `570f184d`: samme bilde.
+
+Ingen `action_required` på noen attempt — parkeringen fra juni-endringen er borte.
+Kriterium 5 ✅ → kontrakten er fullt oppfylt, #1701 lukkes.

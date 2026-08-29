@@ -226,7 +226,7 @@ issue (pkt. 3). Issue-teksten er eierens neste-steg. Ingen ny alarm-workflow.
       eier-oppskrift for `PR_AUTHOR_PAT` (fire-stegs-malen) + fix-protokoll-punkt;
       design-spec `:58/:103` peker til #1701. **Evidens:** `grep -n "PR_AUTHOR_PAT\|#1701"
       docs/loops/discord-pr-kort.md docs/superpowers/specs/2026-08-11-*.md`.
-- [ ] **5. (tidsbundet, etter merge + secret på plass)** Første planlagte robot-PR
+- [x] **5. (tidsbundet, etter merge + secret på plass)** Første planlagte robot-PR
       (dok-skjema søndag 2026-08-23 ved skjema-diff, ellers ukesversjon mandag
       2026-08-24) får `pull_request`-kjøringer som starter uten `action_required`,
       kortet fyrer, PR-en auto-merges med `discord:merge-kort` og kvittering — uten
@@ -286,6 +286,20 @@ bruker `Refs`, ikke `Closes`.
 | 3 | Detektor: `robot-pr.sh:88–137`, kalt fra `ukesversjon.sh:174` og `dok-skjema.sh:229`, `exit 0` i alle grener. Klassifiseringen er faktorert til `robot_pr_classify_checks` (stdin-JSON → ett ord), testet i 6 klasser: fabrikkert `action_required` → `parked`; ekte grønn `origin/main`-SHA → `ok`; 0 runs → `unknown`; ugyldig JSON → `unknown`; alle `conclusion:null` → `ok`; API-feilobjekt → `unknown`. |
 | 4 | `docs/loops/discord-pr-kort.md`: ny seksjon «Robot-åpnede PR-er må ha menneskelig forfatter (#1701)» + eier-oppskrift (fire-stegs) + fix-protokoll-punkt (6 × `PR_AUTHOR_PAT`-treff). Design-spec `:58` og `:103` peker nå til #1701. |
 | 5 | **ÅPEN — tidsbundet.** Bevis kommer 23./24. august. |
+
+## Round 2 — kriterium 5 observert (2026-08-29)
+
+Begge planlagte robot-PR-er fra mandag 2026-08-24 gikk hele kjeden uten manuelt klikk:
+
+- **PR #1740** (ukesversjon, v1.234.0): head-SHA `f2850b74` — `actions/runs?head_sha=`
+  viser CI, CI (docs no-op) og Secret scan alle med `run_attempt=1`,
+  `conclusion=success`, `triggering_actor=jdlarssen`. `gh pr view 1740` →
+  `mergedBy: app/github-actions`, label `discord:merge-kort`. Åpnet 03:54, merget 04:02.
+- **PR #1743** (dok-skjema): head-SHA `570f184d` — samme bilde (attempt 1 success,
+  `triggering_actor=jdlarssen`), `mergedBy: app/github-actions`, `discord:merge-kort`.
+
+Ingen `action_required` på noen attempt-1-kjøring. Kriterium 5 oppfylt → kontrakten
+er komplett og #1701 lukkes.
 
 **Porter:** `bash -n` × 3 exit 0 · `npx vitest run lib/loops` 4 filer / 226 tester
 grønne · `npm run lint` `0 errors` (56 forhåndseksisterende advarsler i urørte
