@@ -669,7 +669,8 @@ describe('#1445: acceptTeamInvite skiller DB-feil fra fravær', () => {
   });
 
   it('ekte 0-rad beholder not_found', async () => {
-    adminMock = buildSupabaseMock([{ data: null, error: null }]);
+    // strictSingle (#1693): låser .maybeSingle()-byttet på request-oppslaget.
+    adminMock = buildSupabaseMock([{ data: null, error: null }], {}, { strictSingle: true });
     const { acceptTeamInvite } = await import('./teamActions');
     const result = await acceptTeamInvite('req-1', SHORT_ID);
     expect(result).toEqual({ ok: false, error: 'not_found' });

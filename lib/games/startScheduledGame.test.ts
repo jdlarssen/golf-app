@@ -103,7 +103,11 @@ describe('startScheduledGame — feil vs. fravær på game-oppslaget (#1445)', (
   });
 
   it('ekte 0-rad (maybeSingle: data null, error null) beholder not_found', async () => {
-    const supabase = buildSupabaseMock([{ data: null, error: null }]);
+    // strictSingle låser #1445-byttet: rulles kilden tilbake til .single(),
+    // blir 0-raden PGRST116 → reason 'db_game' → denne testen rødner.
+    const supabase = buildSupabaseMock([{ data: null, error: null }], {}, {
+      strictSingle: true,
+    });
 
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: false, reason: 'not_found' });

@@ -184,12 +184,14 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
   });
 
   it('ekte 0-rad på mode-lock-oppslaget beholder ?error=not_editable', async () => {
+    // strictSingle (#1693): låser .maybeSingle()-byttet på mode-lock-fetchen.
     supabaseMock = buildSupabaseMock(
       [
         { data: { is_admin: true }, error: null },
         { data: null, error: null }, // mode-lock fetch: spillet finnes ikke
       ],
       { incomplete_profiles_for_ids: [] },
+      { strictSingle: true },
     );
     signIn('admin-1');
 
@@ -227,6 +229,7 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
   });
 
   it('optimistic-lock-miss (0 rader, ingen feil) beholder ?error=not_editable', async () => {
+    // strictSingle (#1693): låser .maybeSingle()-byttet på update-terminatoren.
     supabaseMock = buildSupabaseMock(
       [
         { data: { is_admin: true }, error: null },
@@ -235,6 +238,7 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
         { data: null, error: null },
       ],
       { incomplete_profiles_for_ids: [] },
+      { strictSingle: true },
     );
     signIn('admin-1');
 
