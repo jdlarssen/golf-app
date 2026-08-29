@@ -56,7 +56,8 @@ vi.mock('@/lib/supabase/server', () => ({
 let pendingInvitations: Array<{
   id: string;
   game_id: string | null;
-  invited_by: string | null;
+  // NOT NULL i skjemaet (0001) — ingen fikstur kan uttrykke «ukjent inviter».
+  invited_by: string;
   /**
    * #1348: verifyCode filtrerer nå på utløp i selve queryen, så fiksturene må
    * bære en frist. Alt annet enn de eksplisitt utløpte casene får en frist
