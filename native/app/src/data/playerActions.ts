@@ -40,6 +40,29 @@ const MAX_REASON_LENGTH = 500;
 
 const done = (alreadyDone: boolean): ActionResult => ({ ok: true, alreadyDone });
 
+/**
+ * Webbens `loadAndAuthorize` nekter alle tre handlingene utenfor et aktivt
+ * spill, og det gjør denne porten her.
+ *
+ * Uten den ville et ferdig spill sett ut som en stille suksess i appen:
+ * `game_players`-radene finnes fortsatt, så en approve-UPDATE ville truffet
+ * 0 rader (RLS stopper skrivingen) og `resolveZeroRows` ville lest raden som
+ * «alt godkjent» → `alreadyDone: true`. Feil svar på feil spørsmål. Porten
+ * svarer i stedet det som faktisk er sant: spillet er ikke aktivt.
+ *
+ * Returnerer `null` når spillet ER aktivt — kalleren fortsetter da som før.
+ */
+async function refuseUnlessActive(gameId: string): Promise<ActionResult | null> {
+  const { data, error } = await supabase
+    .from('games')
+    .select('status')
+    .eq('id', gameId)
+    .maybeSingle<{ status: string }>();
+  if (error) return failed('db', error.message);
+  if (!data || data.status !== 'active') return failed('not-active');
+  return null;
+}
+
 const failed = (reason: ActionFailure, message?: string): ActionResult => ({
   ok: false,
   reason,
@@ -67,13 +90,8 @@ export async function submitScorecard(gameId: string): Promise<ActionResult> {
 
   try {
     // Et ferdig spill er lesevisning, et draft har ingen kort å levere.
-    const { data: game, error: gameError } = await supabase
-      .from('games')
-      .select('status')
-      .eq('id', gameId)
-      .maybeSingle<{ status: string }>();
-    if (gameError) return failed('db', gameError.message);
-    if (!game || game.status !== 'active') return failed('not-active');
+    const inactive = await refuseUnlessActive(gameId);
+    if (inactive) return inactive;
 
     const { data: me, error: meError } = await supabase
       .from('game_players')
@@ -128,6 +146,10 @@ export async function approveScorecard(
   if (!userId) return failed('no-session');
 
   try {
+    // Samme port som ved levering: godkjenning finnes bare i et aktivt spill.
+    const inactive = await refuseUnlessActive(gameId);
+    if (inactive) return inactive;
+
     expectAffected(
       await supabase
         .from('game_players')
@@ -178,6 +200,9 @@ export async function rejectScorecard(
     trimmed.length > 0 ? trimmed.slice(0, MAX_REASON_LENGTH) : NO_REJECTION_REASON;
 
   try {
+    const inactive = await refuseUnlessActive(gameId);
+    if (inactive) return inactive;
+
     expectAffected(
       await supabase
         .from('game_players')
