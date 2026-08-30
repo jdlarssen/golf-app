@@ -35,6 +35,10 @@ const GAME_ROW = {
   hole_segment: 'full',
   source_game_id: null,
   created_by: 'user-admin',
+  score_visibility: 'live',
+  tournament_id: null,
+  foursomes_side1_tee_starter_user_id: null,
+  foursomes_side2_tee_starter_user_id: null,
   courses: {
     name: 'Losby',
     // Med vilje i feil rekkefølge: bundelen skal sortere hullene.
@@ -103,6 +107,10 @@ describe('gameBundle', () => {
       holeSegment: 'full',
       sourceGameId: null,
       createdBy: 'user-admin',
+      scoreVisibility: 'live',
+      tournamentId: null,
+      foursomesSide1TeeStarterUserId: null,
+      foursomesSide2TeeStarterUserId: null,
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
@@ -161,6 +169,52 @@ describe('gameBundle', () => {
 
   it('gir undefined når spillet aldri er hentet', async () => {
     expect(await bundleModule().loadGameBundle('ukjent')).toBeUndefined();
+  });
+
+  it('leser en eldre nyttelast som «ingen cache» i stedet for å levere hull i den', async () => {
+    // Slik en v1-oppføring så ut: bundelen rett i payload, uten versjon rundt
+    // og uten `scoreVisibility`. Leses den som-er, går `undefined` rett inn i
+    // reveal-narrowingen på leaderboardet og netto kan lekke i et reveal-spill.
+    const { gameBundleCacheKey, loadGameBundle } = bundleModule();
+    const db = require('./db') as typeof import('./db');
+    const connection = await db.getDb();
+    await db.putCacheEntry(connection, {
+      key: gameBundleCacheKey(GAME),
+      payload: JSON.stringify({
+        game: { id: GAME, name: 'Gammel runde' },
+        players: [],
+        courseName: null,
+        teeBoxName: null,
+        holes: [],
+        fetchedAt: '2026-08-01T10:00:00.000Z',
+      }),
+      fetchedAt: '2026-08-01T10:00:00.000Z',
+    });
+
+    expect(await loadGameBundle(GAME)).toBeUndefined();
+
+    // ... og neste refetch skriver den om, slik at spilleren ikke sitter fast.
+    riggFetch();
+    const fresh = await bundleModule().refreshGameBundle(GAME);
+    expect(fresh.game.scoreVisibility).toBe('live');
+    expect(await bundleModule().loadGameBundle(GAME)).toEqual(fresh);
+  });
+
+  it('avviser en nyttelast fra en FREMTIDIG versjon like hardt', async () => {
+    const { gameBundleCacheKey, loadGameBundle, BUNDLE_PAYLOAD_VERSION } =
+      bundleModule();
+    const db = require('./db') as typeof import('./db');
+    const connection = await db.getDb();
+    await db.putCacheEntry(connection, {
+      key: gameBundleCacheKey(GAME),
+      payload: JSON.stringify({
+        v: BUNDLE_PAYLOAD_VERSION + 1,
+        bundle: { game: { id: GAME } },
+      }),
+      fetchedAt: '2026-08-01T10:00:00.000Z',
+    });
+
+    expect(await loadGameBundle(GAME)).toBeUndefined();
   });
 
   it('kaster når spillet ikke er synlig for spilleren', async () => {

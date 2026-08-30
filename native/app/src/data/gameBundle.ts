@@ -12,6 +12,22 @@
 import { supabase } from '../supabase';
 import { getCacheEntry, getDb, putCacheEntry } from './db';
 
+/**
+ * Nyttelast-versjonen som ligger lagret sammen med bundelen.
+ *
+ * Hver gang `BundleGame`/`BundlePlayer`/`BundleHole` får et NYTT felt som
+ * koden narrower på, bumpes dette tallet. En cache-oppføring fra før bumpen
+ * leses som «ingen cache» (se `loadGameBundle`) og hentes på nytt — i stedet
+ * for å levere `undefined` inn i en `revealState(...)` eller en gate som tror
+ * feltet alltid finnes. Alternativet, å lese gammel payload og fylle inn
+ * defaults, er verre: da ville et manglende `score_visibility` stille blitt
+ * til «live» og kunne lekket netto i et reveal-spill.
+ *
+ * v2 (N4, #1828): la til `scoreVisibility`, `tournamentId` og de to
+ * foursomes-tee-starter-feltene.
+ */
+export const BUNDLE_PAYLOAD_VERSION = 2;
+
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
   id: string;
@@ -26,6 +42,20 @@ export interface BundleGame {
   holeSegment: string;
   sourceGameId: string | null;
   createdBy: string | null;
+  /**
+   * `'live'` eller `'reveal'`. Kolonnen er NOT NULL med default `'live'`, så
+   * den er alltid satt — men typen holdes bred (`string`) her og smalnes ved
+   * bruk, som `status` og `gameMode`.
+   */
+  scoreVisibility: string;
+  /** Satt når spillet hører til en cup/turnering. N5 eier etikettene. */
+  tournamentId: string | null;
+  /**
+   * Hvem som slår ut på odde hull for hver side i foursomes. Valget gjøres på
+   * nettsiden; appen viser det bare.
+   */
+  foursomesSide1TeeStarterUserId: string | null;
+  foursomesSide2TeeStarterUserId: string | null;
 }
 
 /**
@@ -83,6 +113,10 @@ interface GameRow {
   hole_segment: string;
   source_game_id: string | null;
   created_by: string | null;
+  score_visibility: string;
+  tournament_id: string | null;
+  foursomes_side1_tee_starter_user_id: string | null;
+  foursomes_side2_tee_starter_user_id: string | null;
   courses: { name: string; course_holes: CourseHoleRow[] } | null;
   tee_boxes: { name: string } | null;
 }
@@ -118,7 +152,7 @@ const PLAYER_SELECT =
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
 // der hullene må vente på at course_id kommer tilbake.
 const GAME_SELECT =
-  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name)';
+  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name)';
 
 function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
   return {
@@ -135,6 +169,10 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       holeSegment: game.hole_segment,
       sourceGameId: game.source_game_id,
       createdBy: game.created_by,
+      scoreVisibility: game.score_visibility,
+      tournamentId: game.tournament_id,
+      foursomesSide1TeeStarterUserId: game.foursomes_side1_tee_starter_user_id,
+      foursomesSide2TeeStarterUserId: game.foursomes_side2_tee_starter_user_id,
     },
     players: players.map((row) => ({
       userId: row.user_id,
@@ -190,7 +228,36 @@ export async function fetchGameBundle(gameId: string): Promise<GameBundle> {
   return toBundle(gameRes.data, playersRes.data ?? []);
 }
 
-/** Bundelen som ligger på enheten, eller `undefined` om den aldri er hentet. */
+/**
+ * Slik bundelen ligger i `cache_entries`: versjonen utenpå, bundelen inni.
+ * Versjonen står i selve nyttelasten (ikke i nøkkelen) slik at en ny versjon
+ * overskriver den gamle oppføringen i stedet for å legge seg ved siden av den.
+ */
+interface CachedBundlePayload {
+  v: number;
+  bundle: GameBundle;
+}
+
+/** Sant kun for en nyttelast skrevet av NÅVÆRENDE versjon av denne fila. */
+function isCurrentPayload(parsed: unknown): parsed is CachedBundlePayload {
+  return (
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    (parsed as { v?: unknown }).v === BUNDLE_PAYLOAD_VERSION &&
+    typeof (parsed as { bundle?: unknown }).bundle === 'object' &&
+    (parsed as { bundle?: unknown }).bundle !== null
+  );
+}
+
+/**
+ * Bundelen som ligger på enheten, eller `undefined` om den aldri er hentet —
+ * eller ble skrevet av en eldre versjon av appen.
+ *
+ * Versjons-sjekken er den viktige raden: en v1-oppføring har hverken
+ * `scoreVisibility` eller foursomes-feltene, og ville levert `undefined` rett
+ * inn i reveal-narrowingen på leaderboardet. Den leses derfor som «ingen
+ * cache», og `refreshGameBundle` skriver den om ved første nettkontakt.
+ */
 export async function loadGameBundle(
   gameId: string,
 ): Promise<GameBundle | undefined> {
@@ -198,7 +265,8 @@ export async function loadGameBundle(
   const entry = await getCacheEntry(db, gameBundleCacheKey(gameId));
   if (!entry) return undefined;
   try {
-    return JSON.parse(entry.payload) as GameBundle;
+    const parsed: unknown = JSON.parse(entry.payload);
+    return isCurrentPayload(parsed) ? parsed.bundle : undefined;
   } catch {
     // En ødelagt nyttelast (avbrutt skriving, eldre format) skal ikke krasje en
     // skjerm — den leses som «ingen cache», og neste refetch skriver den om.
@@ -216,9 +284,10 @@ export async function loadGameBundle(
 export async function refreshGameBundle(gameId: string): Promise<GameBundle> {
   const bundle = await fetchGameBundle(gameId);
   const db = await getDb();
+  const payload: CachedBundlePayload = { v: BUNDLE_PAYLOAD_VERSION, bundle };
   await putCacheEntry(db, {
     key: gameBundleCacheKey(gameId),
-    payload: JSON.stringify(bundle),
+    payload: JSON.stringify(payload),
     fetchedAt: bundle.fetchedAt,
   });
   return bundle;
