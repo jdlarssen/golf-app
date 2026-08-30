@@ -1,0 +1,105 @@
+# Spec: Native N4 — leaderboards + format-familiene (scramble, matchplay, poengspill)
+
+## Problem
+
+Etter N3 (#1825) kan appen føre og levere enkle formater, men den har ingen resultatvisning — og format-gaten henviser hele lag- og matchplay-familien til nettsiden. N4 gir appen leaderboard-skjermen (drevet av delt `computeLeaderboard`, samme motor som webben) og un-gater de store familiene: scramble-lagene og matchplay. Wolf/BBB (krever egen per-hull-valg-UI) og patsome (segment-hybrid) bokføres ærlig som gjenstående i stedet for å skipes halvveis.
+
+## Research Findings (verifisert i økta 2026-08-30, fil:linje i kartleggingen på issuet)
+
+- **RLS gjør leaderboard-lesing mulig UTEN service-role:** `scores select gating per mode` (0031→0161) har en 0121-gren som gir deltakere i AKTIVT spill med `score_visibility='live'` (default) kryssflight-lesing av ALLE scores. Ferdige spill: deltaker-grenen holder. Webbens service-role-swap (`getResultReadClient`, #1632/#1542) finnes KUN for å slippe inn ikke-deltakere på ferdige spill — den flaten forblir web-eneste.
+- **Motoren er allerede delt og komplett:** `computeLeaderboard(ctx: ScoringContext): ModeResult` (`lib/scoring/index.ts:44`) ruter alle 21 modi til 16 `kind`-diskriminerte resultatformer (`lib/scoring/modes/types.ts:2282`). `ScoringHoleScore` = `{userId, holeNumber, gross}` — putts inngår ikke i motoren. `ambrose`/`florida` returnerer `kind:'texas_scramble'`; greensome/chapman/gruesome returnerer `kind:'foursomes_matchplay'`.
+- **Motoren eksponerer handicap-tallene UI trenger:** `TexasScrambleResult.teams[].teamHandicap`, og `MatchplayHoleRow` bærer per-side gross/net/extra per hull (types.ts:1005–1027). Appens lag-«+N»-badges kan derfor hentes FRA motoren — webbens hull-side har en duplisert inline-implementasjon av side-handicap-formlene (60/40, scramble-pct), og et tredje hjem for de formlene er forbudt terreng (trap 4).
+- **Reveal-modus er 100 % render-lag:** RLS skjuler ingenting; webben skjuler via `revealState`/`shouldHideNetto` (`lib/games/visibility.ts` — verifisert import-ren, delbar). Matchplay-familien: `RevealHiddenView` (ingenting vises); øvrige: brutto-visning. Matchplay har bevisst INGEN podium/reveal-props (`isMatchplayFamily`, types.ts:113).
+- **Web-leaderboardet er realtime** via samme `postgres_changes`-kanal appen alt har (N2 `subscribeGameScores`) — appen skal gjenbruke sitt eksisterende abonnement, aldri åpne en kanal til.
+- **Staging-seed-mønster finnes:** `e2e/_helpers/games.ts:seedFinishedModeGame` (#736) viser insert-fasongen (games + game_players + scores via service-role). N4 gjenbruker fasongen inline (curl) med `status:'active'` for å rigge testspill; captain = leksikografisk minste user_id (`teamScoreOwnerId`).
+
+## Prior Decisions (N1 #1818, N2 #1823, N3 #1825 — alle står)
+
+- Frittstående app i `native/app/`; deling via watchFolders; web-fredning (diff kun `native/app/**`, `docs/native/**`, `.forge/**`; `lib/` null diff). Sanksjonerte rot-unntak KUN ved byggekollisjon, dokumenteres her.
+- N3-mønstrene gjenbrukes: navigasjonsstacken, `gameBundle`-cachen (stale-while-revalidate), `seedGameScores` + realtime → lokal DB er eneste lesekilde for skjermene, jest-expo-harnessen, `chore(native)`-commits uten `.changes`-notat.
+- All skriving mot staging; simulator 820CA940 for iterasjon; eier-tapptest på fysisk iPhone som sluttbevis.
+
+## Design
+
+**Ny skjerm: Leaderboard** (nav-param gameId; lenke fra GameHome for alle ikke-gatede formater, alle statuser):
+1. **Adapter** `src/lib/scoringContext.ts`: bygg `ScoringContext` fra bundle + lokal DB — players (user_id/team/flight/frosset CH/tee_gender fra rosteret), holes (par per kjønn + SI fra bundle), scores (lokal DB: strokes → gross; ALLE spillets rader, ikke bare egne). Kjør delt `computeLeaderboard`. Type A-tester på adapteren (mapping, withdrawn-filtrering, tom-tilstand).
+2. **Renderer** per resultat-familie (én komponent per visuell form, `kind`-switch med exhaustiveness):
+   - *Rad-tabeller:* `solo_strokeplay` (netto/brutto), `stableford` (variant solo/team → poeng), `texas_scramble` (lag, teamHandicap, totalNet), `shamble`, `best_ball`, `nines`, `round_robin`, `acey_deucey` — kolonner per form, rank-sortering fra motoren, `tabular-nums`-stil.
+   - *Match-status (duell):* `singles_matchplay`/`fourball_matchplay`/`foursomes_matchplay` — sidene m/ navn, holes-up-status («2 up» / «AS»), hull-rad-stripe (W/L/T per hull fra `holes[]`), `result`-strengen («3&2») når avgjort. INGEN podium/rank — familien har det ikke på web heller.
+   - *Potter:* `skins` (totalSkins per spiller + carriedPot), `nassau` (tre seksjoner front9/back9/total18 m/ vinnere). Enkle lister — spike-grad.
+   - `wolf`/`bingo_bango_bongo`/`patsome`-kinds kan ikke oppstå (formatene er gatet, se under) — `default`-grenen viser rolig «Formatet vises på nettsiden ennå», aldri krasj.
+3. **Reveal:** delt `revealState`/`shouldHideNetto` fra `lib/games/visibility.ts`. `reveal-active` + matchplay-familie → alt skjult («Resultatet avsløres når runden avsluttes»); `reveal-active` + øvrige → kun brutto-kolonner, ingen netto/poeng/rank. Krever `score_visibility` i bundelen (v-bump av bundle-payloaden, se datalag).
+4. **Realtime:** skjermen abonnerer via eksisterende `subscribeGameScores` (som Hole gjør) — hver merge → recompute fra lokal DB. `seedGameScores` ved åpning.
+
+**Format-gate-endringer** (`src/lib/formatGate.ts` — fortsatt ett hjem):
+- **UT av gaten (scoring støttes nå):** scramble-familien (texas/ambrose/florida) og alternate-shot-matchplay (foursomes/greensome/chapman/gruesome).
+- **INN i gaten (var misvisende åpne):** `wolf` og `bingo_bango_bongo` — ren slag-tasting uten valg-UI gir menings­løse resultater (wolf resolvér «pending» hvert hull). Bokføres som egen restanse-slice.
+- **Fortsatt gatet:** `patsome` (segment-hybrid + egne tee-starters), segment-spill (`hole_segment !== 'full'`), derived. Gate-teksten differensieres: «Formatet føres på nettsiden ennå».
+- Leaderboard-lenken følger samme gate som føring, MED unntak: gate-ede formater viser heller ingen leaderboard i appen (én regel, ingen halvstater).
+
+**Lag-føring (un-gatede team-formater), i Hole/Scorecard:**
+- Kort per LAG via delte `modeCollapsesToTeamCard` + `teamScoreOwnerId` (leksikografisk minste aktive medlem); kortnavn «Lag N · Fornavn1, Fornavn2»; skriv går til kapteinens rad via delt `scoreOwnerForHole` (`enteredBy` = meg). Putter føres på samme delte rad.
+- **«+N»-badge fra motoren:** kjør `computeLeaderboard` på gjeldende kontekst; scramble → `teams[].teamHandicap` → `strokesForHole(teamHandicap, SI)`; alternate-shot → `holes[]`-radens per-side extra for hullet. Ingen ny handicap-formel i appen.
+- Scorecard forblir Layout A og viser lagets (kapteinens) rader for kollapsede formater; matchplay-status vises på Leaderboard-skjermen, ikke i scorekortet (Layout B bokføres som senere polish).
+- **Lever gates for team-kollapsede formater:** webbens team-submit oppdaterer HELE lagets rader via service-role — appen kan bare skrive egen rad under RLS, og et halv-levert lag ville blokkert `endGame`. Scorecard viser «Levering av lagkort gjøres på nettsiden ennå» i stedet for Lever-knappen. Restanse: `submit_team_scorecard`-RPC (SECURITY DEFINER) som egen DB-kontrakt senere. Singles/fourball matchplay er per-spiller-rader — Lever fungerer som i dag.
+- Foursomes-familien: vis tee-starter-hintet («X slår ut på odde hull») når `games.foursomes_side1/2_tee_starter_user_id` er satt i bundelen; valget gjøres på web (ingen skrivevei i appen).
+
+**Datalag:** bundle-payload utvides (`score_visibility`, `tournament_id`, foursomes-tee-starter-feltene) — payload-versjonering slik at gamle cache-entries re-fetches i stedet for å krasje narrowingen. GameHome-CTA-en for team-kollapsede formater peker på lagets føring (neste ufylte hull for KAPTEINENS rader).
+
+## Edge Cases & Guardrails
+
+- **Web-fredning:** som N1–N3. `lib/` null diff.
+- **Reveal-active må aldri lekke netto/poeng** i appen — samme delte predikat som web; matchplay-familien viser INGENTING (heller ikke brutto).
+- **Delvis datasett:** leaderboard uten alle scores (midt i runden) skal rendre det motoren gir — aldri kreve komplett felt. Tomt spill → rolig tom-tilstand.
+- **Withdrawn:** filtreres fra ScoringContext-players (delte hjelpere); et helt trukket lag (captain null) → laget utelates.
+- **Team-skriv-kappløp:** to lagmedlemmer taster samme hull → samme rad-id (kapteinens) → N2s LWW/kø-semantikk gjelder uendret; `conflictRecordFor` varsler som før.
+- **Exhaustive kind-switch:** ny motor-kind i fremtiden skal gi kompilefeil i appen (satisfies/never-guard), aldri stille tom render — MEN gate-ede kinds går i default-grenen med ærlig tekst.
+- **Ingen nye npm-deps.** Ingen ny realtime-kanal. Ingen DB-endringer (RPC-restansen er bokført, ikke bygget).
+- **Cache-migrering:** bundle-payload-versjon bumpes; gammel payload → refetch, aldri undefined-krasj.
+
+## Key Decisions
+
+- **Leaderboard kun for deltakere/admin i appen** — RLS-lesing som deltaker er komplett for aktive (0121) og ferdige (deltaker-gren) spill; webbens ikke-deltaker-visning av ferdige spill (service-role) forblir web. Teknisk valg, bokført.
+- **Badges og lag-handicap hentes fra motor-output** — aldri en tredje kopi av 60/40-/pct-formlene (trap 4).
+- **Wolf/BBB gates NÅ** — misvisende halv-støtte er verre enn ærlig henvisning; egen slice med valg-UI + `wolf_hole_choices`/`bingo_bango_bongo_holes`-fetch bokføres.
+- **Team-lever gates** — RLS tillater kun egen rad; team-submit-RPC er egen fremtidig DB-kontrakt (aldri auto-merge, jf. prod-regler).
+- **Én gate-regel for føring OG leaderboard** — ingen formater som kan «ses men ikke føres» i appen i N4 (unntak: ferdige spill av un-gatede formater vises selvsagt).
+
+**Claude's Discretion:** komponentstruktur, kolonnedetaljer per tabellform, match-stripens utforming, tom-/delvis-tilstandstekster, hvordan payload-versjonen kodes, testfil-inndeling. Nøktern styling (brandfarger, `tabular-nums`, tap-targets ≥44px).
+
+## Success Criteria
+
+- [ ] 1. **Adapter + renderere jest-låst:** `npx jest` grønn i `native/app/` med nye Type A-suiter for ScoringContext-adapteren (mapping/withdrawn/tomt) og minst rad-tabell-, match- og potte-render-logikken (logikk-nivå; maks 1 Type C per ny skjerm); exhaustive kind-håndtering bevist med kompilerende never-guard. Evidens: kjøringslogg + filliste.
+- [ ] 2. **Stableford-leaderboard live:** Byneset-spillet (9df7b9e0) i simulator viser poeng-tabell konsistent med delt motor (stikkprøve mot `computeLeaderboard`-output for samme input); ekstern score-endring via RPC oppdaterer tabellen uten reload (realtime-piggyback). Evidens: skjermbilder + service-role-les.
+- [ ] 3. **Scramble ende-til-ende:** service-role-rigget AKTIVT texas_scramble-spill (2×2, e2e-spiller som kaptein på lag 1) — appen viser ETT kort per lag på hull-siden med motor-derivert «+N»; tasting skriver til kapteinens rad på staging (service-role-les av `user_id`); leaderboardet viser lag-rader med teamHandicap; Lever-knappen er erstattet av web-henvisning. Evidens: skjermbilder + service-role-les.
+- [ ] 4. **Matchplay-status:** i et aktivt singles_matchplay-spill (eksisterende TEST-Cup) viser leaderboardet begge sider, per-hull W/L/T-stripe og korrekt holes-up-status mot motorens fasit; foursomes-rigget spill viser side-kort med delt rad-føring. Evidens: skjermbilder.
+- [ ] 5. **Gate-endringene:** wolf/BBB-spill viser gate-tekst (ingen føring, ingen leaderboard); scramble/alternate-shot er åpne; patsome/segment/derived fortsatt gatet — jest-låst i formatGate-suiten + simulator-stikkprøve på ett wolf-spill hvis et finnes på staging (ellers kun jest).
+- [ ] 6. **Reveal-modus:** service-role-flipp av `score_visibility` til 'reveal' på et aktivt testspill → appen skjuler netto/poeng (brutto-visning) og matchplay viser ingenting; flipp tilbake gjenoppretter. Evidens: skjermbilder før/etter.
+- [ ] 7. **Web urørt + porter + runbook + iPhone:** diff-scope som N3 (`lib/` null diff); alle Gates grønne; runbook-seksjon for N4 (leaderboard, gate-endringene, seed-oppskriften); eier-tapptest på fysisk iPhone (scramble-føring + leaderboard). Eier utilgjengelig → `VERIFICATION GAP` + restanse.
+
+## Gates
+
+- [ ] `npx jest` i `native/app/` grønt
+- [ ] `npx tsc --noEmit` i `native/app/` grønt
+- [ ] `npx expo export --platform ios` grønt (`dist/` slettes etterpå)
+- [ ] `npm run typecheck` (rot) grønt
+- [ ] `npx vitest run lib/sync lib/scoring` grønt (uendret antall)
+- [ ] `npm run build` (rot) grønt før PR — hovedøkta
+- [ ] `npx eslint native/app` grønt
+
+## Files Likely Touched
+
+- `native/app/src/screens/Leaderboard.tsx` + `src/components/leaderboard/*` — ny skjerm + form-renderere
+- `native/app/src/lib/scoringContext.ts` — ScoringContext-adapter (ny)
+- `native/app/src/lib/formatGate.ts` — gate-endringene
+- `native/app/src/lib/teamRoster.ts` (el.l.) — lag-kort-bygging m/ delte captain-hjelpere
+- `native/app/src/screens/{GameHome,Hole,Scorecard}.tsx` — lag-kort, badge fra motor, lever-gate, leaderboard-lenke
+- `native/app/src/data/gameBundle.ts` — payload v-bump + nye felt
+- `native/app/src/**/*.test.ts(x)` — nye suiter
+- `docs/native/app-spike.md` — N4-seksjon
+- `.forge/contracts/native-n4-leaderboards.md` — denne
+
+## Out of Scope
+
+- Wolf/BBB valg-UI + datafetch (egen slice, bokføres som issue); patsome; Layout B-scorekort i app; podium-/reveal-seremoni-polish; «Hull for hull»-drilldown; side-turneringer (LD/CTP); cup-/liga-etiketter og segment-spill (N5); team-submit-RPC (egen DB-kontrakt); ikke-deltaker-visning av ferdige spill; arrangørflater (N6); push (N7).
+- Deferred fra tidligere: plattformnøytral sync-refaktor; expo-router-revurdering (N7).
