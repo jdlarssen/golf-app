@@ -20,7 +20,7 @@ import type { GameMode } from '../../../../lib/scoring/modes/types';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { seedGameScores } from '../data/seedScores';
 import { displayName, formatTeeOff } from '../lib/display';
-import { isScoringSupported, UNSUPPORTED_FORMAT_MESSAGE } from '../lib/formatGate';
+import { gateMessage, gateReason, type GateReason } from '../lib/formatGate';
 import {
   computePrimaryCtaState,
   nextUnfilledHole,
@@ -71,7 +71,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const roster = toRoster(bundle.players);
   const me = findInRoster(roster, userId);
   const mode = game.gameMode as GameMode;
-  const supported = isScoringSupported(game);
+  const gated = gateReason(game);
+  const supported = gated === null;
   const filled = filledHolesFor(scores, userId);
   const approvals = me ? pendingApprovals(roster, mode, userId) : [];
 
@@ -109,7 +110,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       <PrimarySection
         bundle={bundle}
         me={me?.player}
-        supported={supported}
+        gated={gated}
         filled={filled}
         onNavigate={navigation.navigate}
       />
@@ -157,22 +158,22 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
 function PrimarySection({
   bundle,
   me,
-  supported,
+  gated,
   filled,
   onNavigate,
 }: {
   bundle: GameBundle;
   me: BundlePlayer | undefined;
-  supported: boolean;
+  gated: GateReason | null;
   filled: number[];
   onNavigate: ScreenProps<'GameHome'>['navigation']['navigate'];
 }) {
   const { game } = bundle;
 
-  if (!supported) {
+  if (gated !== null) {
     return (
       <View style={ui.banner} testID="format-gate">
-        <Text style={ui.body}>{UNSUPPORTED_FORMAT_MESSAGE}</Text>
+        <Text style={ui.body}>{gateMessage(gated)}</Text>
       </View>
     );
   }
