@@ -63,8 +63,10 @@ Epic #1816 (eier-beslutning 2026-08-30) gjør ekte native app til målet; webben
   - *Evidens:* e2e-spiller-adressen limt inn → «Send meg kode» (staging svarte; feil adresse ga tidligere korrekt «Signups not allowed for otp» — shouldCreateUser-gaten virker) → kode-steg → service-role-mintet kode tastet → Hjem viser «Innlogget som jlarssen90+e2eplayer@gmail.com». `simctl terminate` + relansering (PID 81418→81595) → rett inn på Hjem uten innlogging. Skjermbilder 10:54/10:55.
 - [x] 4. Web er urørt: `git diff origin/main --stat` viser kun `native/app/`, `docs/native/`, `.forge/`; `npm run typecheck`, `npx vitest run lib/scoring` og `npm run build` er grønne fra repo-rota.
   - *Evidens (2026-08-30, bygge-runde 1):* diff-stat = `native/app/**` + `docs/native/app-spike.md` + `.forge/` + den sanksjonerte `tsconfig.json`-exclude-linja (se Guardrails). `npm run typecheck` exit 0; `npx vitest run lib/scoring` → 1176 passed (1176); `npm run build` exit 0 (full logg i øktas /tmp/webbuild.log).
-- [ ] 5. Appen kjører på fysisk iPhone med bundle id `no.tornygolf.dev` (foto/skjermbilde-evidens; krever eier-assistanse med enheten — utilgjengelig enhet i økta → dokumentert `VERIFICATION GAP` + eier-tapptest som restanse, ikke stille hopp).
-- [ ] 6. Runbook `docs/native/app-spike.md` finnes og kommandoene i den er kjørt som skrevet minst én gang.
+- [x] 5. Appen kjører på fysisk iPhone med bundle id `no.tornygolf.dev` (foto/skjermbilde-evidens; krever eier-assistanse med enheten — utilgjengelig enhet i økta → dokumentert `VERIFICATION GAP` + eier-tapptest som restanse, ikke stille hopp).
+  - *Evidens (2026-08-30 ~10:57):* signert Release-bygg (team 8C8WCW67J9, -allowProvisioningUpdates) BUILD SUCCEEDED; installert via `devicectl device install` og lansert via `devicectl device process launch` på eierens iPhone 13 (2E8094E4). Eieren bekreftet i økta («ja») at innloggingsskjermen vises på telefonen.
+- [x] 6. Runbook `docs/native/app-spike.md` finnes og kommandoene i den er kjørt som skrevet minst én gang.
+  - *Evidens:* runbooken ble skrevet i økta og hvert steg (npm install, prebuild, pod install m/ LANG-fiks, xcodebuild Release, simctl install/launch, devicectl-løypa, OTP-mint-mønsteret) er identisk med kommandoene faktisk kjørt i runde 1–2.
 
 ## Gates
 
