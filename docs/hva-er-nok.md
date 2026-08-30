@@ -58,7 +58,7 @@ det ene issuet.
 |---|---|---|
 | **Herding** | Kjernesløyfa skal aldri ødelegge en lørdag: stagingbevis-porten, staging/prod-paritet, natt-miljøets e2e | #1076 (+ flake-datapunktet #1168) |
 | **Sesongstyrt** | Kavalkaden — golfåret som delbar fortelling. Bygges mot sesongslutt; start dekomponering tidligst september | #1040 |
-| **Native app** | Tørny i Google Play (TWA via Bubblewrap) og App Store (Capacitor 8-skall). Eier-bestilt 2026-07-17 | Epic #1276 (del-issues #1277–#1284) |
+| **Native app** | Etappe 1: skall i begge butikker (TWA + Capacitor, eier-bestilt 2026-07-17). Etappe 2: ekte native app (React Native + Expo) som erstatter skallene under samme oppføringer (eier-bestilt 2026-08-30) | Epic #1276 (etappe 1, del-issues #1277–#1284) + epic #1816 (etappe 2) |
 
 Når en bane tømmes, beslutter eieren neste — dokumentet oppdateres i samme PR.
 
@@ -115,6 +115,15 @@ alle bygget kontrakt-først og i prod. Effekten måles i onboarding-funnelen fra
 overstyrer alltid grensen. #52 (React Native-premisset, forkastet i researchen) og #53
 er lukket som superseded; arbeidet spores i epic #1276 (del-issues #1277–#1284), og
 banen står nå i §3.
+
+**Utvidet 2026-08-30 — native-appen er målet, ikke skallene:** eieren presiserte at
+nettsiden/PWA-en var en stop-gap og at målet er ekte native iOS-/Android-apper — alt i
+appen fra dag én, butikk-byttet skjer først ved full paritet. Skall-løpet i #1276
+fullføres som etappe 1; den native appen (React Native + Expo) spores i epic #1816 og
+erstatter skallene under samme butikk-oppføringer. Etter byttet bygges ny funksjonalitet
+app-først; webben består som døråpner (invitasjonslenker, tilskuere, offentlige
+banesider) og fryses på vedlikehold. RN-premisset fra 2026-07-17-researchen er dermed
+reversert av eier-bestilling.
 
 ## 5. Hva teller som «pull» (vekke-kriterier)
 
