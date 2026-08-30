@@ -2,6 +2,10 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // TypeScript 6 tar ikke lenger inn alt under node_modules/@types av seg selv,
+    // så jest-globalene (describe/it/expect/jest) må navngis her. React- og
+    // better-sqlite3-typene kommer inn via vanlige imports og trenger ingen rad.
+    "types": ["jest", "node"],
     "paths": {
       "@/*": ["../../*"]
     }
