@@ -25,7 +25,8 @@ const STAGING_ENV = '.env.staging.local';
 
 /** Gjenkjennbart navn så gjenkjøringer finner spillet igjen. Engelsk — revieweren leser det. */
 const DEMO_GAME_NAME = 'Demo Round — Tørny';
-const REVIEW_USER_NAME = 'App Reviewer';
+// Fornavnet brukes i hilsener («Hi, Alex.») — må lese som et ekte navn.
+const REVIEW_USER_NAME = 'Alex Reviewer';
 const REVIEW_HCP_INDEX = 18;
 const REVIEW_COURSE_HANDICAP = 18;
 
