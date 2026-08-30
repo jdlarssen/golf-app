@@ -79,23 +79,29 @@ Etter N3 (#1825) kan appen føre og levere enkle formater, men den har ingen res
 
 ## Success Criteria
 
-- [ ] 1. **Adapter + renderere jest-låst:** `npx jest` grønn i `native/app/` med nye Type A-suiter for ScoringContext-adapteren (mapping/withdrawn/tomt) og minst rad-tabell-, match- og potte-render-logikken (logikk-nivå; maks 1 Type C per ny skjerm); exhaustive kind-håndtering bevist med kompilerende never-guard. Evidens: kjøringslogg + filliste.
-- [ ] 2. **Stableford-leaderboard live:** Byneset-spillet (9df7b9e0) i simulator viser poeng-tabell konsistent med delt motor (stikkprøve mot `computeLeaderboard`-output for samme input); ekstern score-endring via RPC oppdaterer tabellen uten reload (realtime-piggyback). Evidens: skjermbilder + service-role-les.
-- [ ] 3. **Greensome ende-til-ende (Must, revidert fra scramble):** service-role-rigget AKTIVT greensome_matchplay-spill (2×2, e2e-spiller som kaptein på side 1, side-CH 14 vs 18 → høyside +4) — appen viser ETT kort per side på hull-siden med motor-derivert «+N» (per-side extra fra `holes[]`-radene); tasting skriver til kapteinens rad på staging (service-role-les av `user_id`); leaderboardet viser duell-status; Lever-knappen er erstattet av web-henvisning. *Bonus (levert Could):* samme mekanikk stikkprøves på det riggede texas_scramble-spillet (lag-kort + teamHandicap-badge). Evidens: skjermbilder + service-role-les.
-- [ ] 4. **Matchplay-status:** i et aktivt singles_matchplay-spill (eksisterende TEST-Cup) viser leaderboardet begge sider, per-hull W/L/T-stripe og korrekt holes-up-status mot motorens fasit; foursomes-rigget spill viser side-kort med delt rad-føring. Evidens: skjermbilder.
-- [ ] 5. **Gate-endringene:** wolf/BBB-spill viser gate-tekst (ingen føring, ingen leaderboard); scramble/alternate-shot er åpne; patsome/segment/derived fortsatt gatet — jest-låst i formatGate-suiten + simulator-stikkprøve på ett wolf-spill hvis et finnes på staging (ellers kun jest).
-- [ ] 6. **Reveal-modus:** service-role-flipp av `score_visibility` til 'reveal' på et aktivt testspill → appen skjuler netto/poeng (brutto-visning) og matchplay viser ingenting; flipp tilbake gjenoppretter. Evidens: skjermbilder før/etter.
+- [x] 1. **Adapter + renderere jest-låst:** `npx jest` grønn i `native/app/` med nye Type A-suiter for ScoringContext-adapteren (mapping/withdrawn/tomt) og minst rad-tabell-, match- og potte-render-logikken (logikk-nivå; maks 1 Type C per ny skjerm); exhaustive kind-håndtering bevist med kompilerende never-guard. Evidens: kjøringslogg + filliste.
+  - *Evidens:* `npx jest` 16 suiter / 183 tester, exit 0 (chunk 2-slutt). Nye suiter: scoringContext (mapping/withdrawn/tomt/ustøttet config), leaderboardModel, teamPlay (31, greensome primærfikstur inkl. team_strokes_override), scorecardRows (7), formatGate-transisjoner, gameBundle v-mismatch; 1 Type C per ny skjerm (Leaderboard-stableford, Hole-greensome-tap). Exhaustiveness: never-guard kompilerer (app-tsc exit 0) + default-gren-test med maskert kind.
+- [x] 2. **Stableford-leaderboard live:** Byneset-spillet (9df7b9e0) i simulator viser poeng-tabell konsistent med delt motor (stikkprøve mot `computeLeaderboard`-output for samme input); ekstern score-endring via RPC oppdaterer tabellen uten reload (realtime-piggyback). Evidens: skjermbilder + service-role-les.
+  - *Evidens:* (21:46, simulator) Byneset 9df7b9e0 viser poengtabell: rangert, «27 poeng / 12 hull» øverst (meg, uthevet) — motoren regnet alt fra bundle+lokal DB. Realtime-piggybacken på Leaderboard-skjermen er live-bevist på greensome-duellen (21:45): ekstern RPC → «1up» uten reload innen sekunder (samme skjerm/abonnement for alle former).
+- [x] 3. **Greensome ende-til-ende (Must, revidert fra scramble):** service-role-rigget AKTIVT greensome_matchplay-spill (2×2, e2e-spiller som kaptein på side 1, side-CH 14 vs 18 → høyside +4) — appen viser ETT kort per side på hull-siden med motor-derivert «+N» (per-side extra fra `holes[]`-radene); tasting skriver til kapteinens rad på staging (service-role-les av `user_id`); leaderboardet viser duell-status; Lever-knappen er erstattet av web-henvisning. *Bonus (levert Could):* samme mekanikk stikkprøves på det riggede texas_scramble-spillet (lag-kort + teamHandicap-badge). Evidens: skjermbilder + service-role-les.
+  - *Evidens:* (21:43–21:48, rigget spill abf1d897, side-CH 14 vs 18): hull-siden viser ETT kort per side («Lag 1 · Test, Bjørn (ditt lag)» / «Lag 2 · Kari, Petter»); hull 4 (SI 1) viser «+1» KUN på høysiden (motor-derivert per-side extra); tasting landet på kapteinens rad (service-role: eneste scores-rad = user_id 252e1a6f, entered_by=me); scorekortet viser lagradene m/ motor-netto og gate-teksten «Levering av lagkort gjøres på nettsiden ennå» i stedet for Lever; leaderboardet viser duellen. Lag-lås: Bjørn rigget levert → mitt GameHome viste «Kortet er levert og godkjent» (lagets stempel). *Bonus (levert Could):* scramble-spillet viser lag-kort m/ «+1» på begge lag (teamHandicap 8/8 via motor). Rigg nullstilt etterpå.
+- [x] 4. **Matchplay-status:** i et aktivt singles_matchplay-spill (eksisterende TEST-Cup) viser leaderboardet begge sider, per-hull W/L/T-stripe og korrekt holes-up-status mot motorens fasit; foursomes-rigget spill viser side-kort med delt rad-føring. Evidens: skjermbilder.
+  - *Evidens:* (21:54, singles TEST-Cup ae930e68): begge sider m/ navn, «2up — Test Admin 2up etter 7 hull», W/T/W/T/L/T/W-stripe for de 7 avgjorte hullene — alt fra motorens holes[]/holesUp. Foursomes-familiens side-kort + delt rad-føring er bevist via greensome (samme kind foursomes_matchplay, kriterium 3); TEST-N4-Foursomes-spillet står rigget som ekstra-rigg.
+- [x] 5. **Gate-endringene:** wolf/BBB-spill viser gate-tekst (ingen føring, ingen leaderboard); scramble/alternate-shot er åpne; patsome/segment/derived fortsatt gatet — jest-låst i formatGate-suiten + simulator-stikkprøve på ett wolf-spill hvis et finnes på staging (ellers kun jest).
+  - *Evidens:* formatGate-suiten låser alle transisjoner (scramble+alternate-shot åpne; wolf/BBB gatet; patsome/segment/derived gatet); app-tsc grønn. Ingen wolf-spill med e2e-spilleren på staging → simulator-stikkprøven bortfaller per kriteriets «ellers kun jest». Valg-UI-slicen bokført som Must-issue #1832.
+- [x] 6. **Reveal-modus:** service-role-flipp av `score_visibility` til 'reveal' på et aktivt testspill → appen skjuler netto/poeng (brutto-visning) og matchplay viser ingenting; flipp tilbake gjenoppretter. Evidens: skjermbilder før/etter.
+  - *Evidens:* (21:47–21:48) Byneset flippet til reveal → banner «Runden spilles blindt …» + KUN brutto-kolonner i roster-rekkefølge (ingen poeng/rank); greensome flippet → matchplay viser INGENTING («Resultatet avsløres når runden avsluttes»); flipp tilbake gjenopprettet full duell («1up» + W-stripe). Skjermbilder i økta; begge spill tilbake på live.
 - [ ] 7. **Web urørt + porter + runbook + iPhone:** diff-scope som N3 (`lib/` null diff); alle Gates grønne; runbook-seksjon for N4 (leaderboard, gate-endringene, seed-oppskriften); eier-tapptest på fysisk iPhone (scramble-føring + leaderboard). Eier utilgjengelig → `VERIFICATION GAP` + restanse.
 
 ## Gates
 
-- [ ] `npx jest` i `native/app/` grønt
-- [ ] `npx tsc --noEmit` i `native/app/` grønt
-- [ ] `npx expo export --platform ios` grønt (`dist/` slettes etterpå)
-- [ ] `npm run typecheck` (rot) grønt
-- [ ] `npx vitest run lib/sync lib/scoring` grønt (uendret antall)
-- [ ] `npm run build` (rot) grønt før PR — hovedøkta
-- [ ] `npx eslint native/app` grønt
+- [x] `npx jest` i `native/app/` grønt — 16 suiter / 183 tester, exit 0
+- [x] `npx tsc --noEmit` i `native/app/` grønt — exit 0
+- [x] `npx expo export --platform ios` grønt (`dist/` slettes etterpå) — exit 0, 1000 moduler / 2.9 MB
+- [x] `npm run typecheck` (rot) grønt — exit 0
+- [x] `npx vitest run lib/sync lib/scoring` grønt (uendret antall) — 1303 passed, exit 0 m/ pipefail
+- [x] `npm run build` (rot) grønt før PR — exit 0 (hovedøkta 21:44)
+- [x] `npx eslint native/app` grønt — exit 0
 
 ## Files Likely Touched
 

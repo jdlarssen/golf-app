@@ -1,4 +1,4 @@
-# Native app-spike (N1 #1818, N2 #1823, N3 #1825) — runbook
+# Native app-spike (N1 #1818, N2 #1823, N3 #1825, N4 #1828) — runbook
 
 Frittstående Expo-app i `native/app/` som beviser fundamentet for epic #1816:
 delt `lib/scoring`-kilde med webappen, Supabase-OTP-innlogging mot staging
@@ -78,9 +78,12 @@ Fallgruver:
 
 Samme autonome mønster som web-e2e (CLAUDE.md «Testing — staging»): mint kode
 via service-role REST `POST <staging-URL>/auth/v1/admin/generate_link` med
-`type: "email_otp"` for `E2E_PLAYER_EMAIL`/`E2E_ADMIN_EMAIL`, tast e-post →
-«Send meg kode» → minted kode → «Logg inn». Mint koden ETTER at appen har
-sendt sin egen (siste OTP vinner). Staging-koder validerer kun mot staging.
+`type: "magiclink"` — koden ligger som **`email_otp`-felt i svaret** (dagens
+GoTrue avviser `type: "email_otp"` som request-type; verifisert 2026-08-30).
+Tast e-post → «Send meg kode» → minted kode → «Logg inn». Mint koden ETTER at
+appen har sendt sin egen (siste OTP vinner). Staging-koder validerer kun mot
+staging. E-postfeltet: simctl pbcopy + Paste-menyen (tekstinjeksjon radbrekker
+`+`/`@`); selve koden er sifre og kan tastes rett inn.
 
 ## Datalaget (N2, #1823)
 
@@ -243,6 +246,58 @@ sett makkerens `game_players.submitted_at` (`is.null`-filter så det er
 idempotent), åpne spillet i appen → «Godkjenn (1)» → godkjenn/avvis, og
 verifiser kolonnene med en service-role-lesing etterpå. Selv-godkjenning
 stoppes av 0106-triggeren.
+
+## Leaderboards + lag-føring (N4, #1828)
+
+MoSCoW-revisjonen (epic #1816, 2026-08-30) styrer scope: Must er de 8 brukte
+formatene; greensome er Must-målet for lag-mekanikken, scramble-familien er
+levert som Could-biprodukt av samme kode. Wolf/BBB er gatet til valg-UI-slicen
+(#1832) står.
+
+### Leaderboard-skjermen
+
+`src/screens/Leaderboard.tsx` (lenket fra GameHome, «Resultater») bygger
+`ScoringContext` fra bundle + lokal DB via `src/lib/scoringContext.ts`
+(`computeGameLeaderboard`) og rendrer delt `computeLeaderboard`-output per
+`kind` — tabellformer, duell-status for matchplay (holes-up, W/L/T-stripe,
+«3&2»-resultat) og potter (skins/nassau). Exhaustiveness er kompilehåndhevet;
+en ukjent/gatet kind faller i en rolig default-gren. Reveal-modus respekteres
+via delt `lib/games/visibility.ts`: matchplay skjuler ALT under reveal-active,
+øvrige viser kun brutto. Realtime rir på det eksisterende
+`subscribeGameScores`-abonnementet — aldri en ny kanal.
+
+Merk: appens leaderboard er for deltakere/admin. Webbens «alle innloggede kan
+se ferdige spill» krever service-role (#1542/#1632) og forblir web.
+
+### Lag-føring (kollapsede formater)
+
+`src/lib/teamPlay.ts` er appens ene hjem for lag-reglene, og ALT delegerer til
+delt kilde: `modeCollapsesToTeamCard` avgjør kollaps per hull,
+`teamScoreOwnerId` velger kaptein (leksikografisk minste aktive),
+`scoreOwnerForHole` ruter skrivingene til kapteinens rad. «+N»-badgen hentes
+fra MOTOR-output (`teams[].teamHandicap` for scramble via `strokesForHole`;
+per-side `side1Extra`/`side2Extra` fra `holes[]` for alternate-shot) — det
+finnes bevisst INGEN handicap-formel i appen (webbens hull-side har alt en
+duplikat; en tredje kopi var forbudt i kontrakten). Ukjent allokering → ingen
+badge og «—» i netto, aldri gjettet 0.
+
+Lever er GATET for kollapsede formater («Levering av lagkort gjøres på
+nettsiden ennå»): webbens team-submit skriver hele lagets rader med
+service-role; appen kan bare egen rad under RLS, og et halv-levert lag ville
+blokkert avslutning. Restanse: `submit_team_scorecard`-RPC som egen
+DB-kontrakt.
+
+### Rigge testspill på staging (service-role)
+
+Fasongen speiler `e2e/_helpers/games.ts:seedFinishedModeGame`, men med
+`status:'active'`: insert i `games` (name/course_id/tee_box_id/status/
+game_mode/mode_config/created_by) → `game_players` (user_id/team_number/
+flight_number 1/course_handicap/accepted_at). Greensome-config:
+`{"kind":"greensome_matchplay","team_size":2,"teams_count":2,"allowance_pct":100}`.
+Gi sidene ulik side-CH (60/40-blanding) så høysiden får synlige ekstra slag.
+⚠️ Bruk FULLE user-id-er lest fra DB — trunkerte prefikser fra terminal-
+utskrift er ikke id-er. Kaptein = leksikografisk minste id på laget; vil du at
+e2e-spilleren skal taste, må hen være kaptein.
 
 ### Porter
 
