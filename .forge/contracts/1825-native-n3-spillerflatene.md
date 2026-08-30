@@ -53,6 +53,7 @@ N1 (#1818) beviste delt hjerne + OTP; N2 (#1823) beviste lokal-først-datalaget.
 ## Edge Cases & Guardrails
 
 - **Web-fredning (arvet):** diff kun `native/app/**`, `docs/native/**`, `.forge/**`; `lib/` null diff. Trengs en endring i delt kode: stopp og eskaler.
+  - *Sanksjonert unntak (samme klasse som N1s tsconfig-exclude):* én blokk i rot-`vitest.config.ts` — `'native/**'` lagt i `test.exclude`. Uten den globber webbens vitest opp appens jest-suiter («jest is not defined») og både pre-push-porten og CI blir røde. Endringen berører kun test-oppdagelse, aldri runtime; full rot-suite verifisert grønn med den.
 - **0-row-fella (trap 2):** alle game_players-UPDATEs asserter radantall via `.select()`. RLS-avslag skal synes i UI.
 - **Selv-godkjenning:** 0106-triggeren kaster — appen viser feilen pent, men delte `pendingApprovalsFor` skal uansett aldri liste en selv.
 - **Offline:** hull-føring og scorekort fungerer helt uten nett når bundelen er cachet; lever-knappen blokkerer mens køen har elementer for spillet (aldri lever et kort med usynkede slag). Hjem uten cache + uten nett → rolig feilmelding, ingen krasj.

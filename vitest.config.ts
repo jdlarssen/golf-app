@@ -25,6 +25,10 @@ export default defineConfig({
     exclude: [
       ...configDefaults.exclude,
       'e2e/**',
+      // The native app (native/app) is its own npm project with a jest-expo
+      // suite — its *.test files use jest globals and must never be picked up
+      // by the web's vitest run (they fail with "jest is not defined").
+      'native/**',
       '**/.claude/worktrees/**',
       '**/.claire/worktrees/**',
     ],
