@@ -492,7 +492,7 @@ describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)',
     ).toBeChecked();
   });
 
-  it('«Hva melder man på?» (individuelt/lag/begge) ligger inne i disclosuren', () => {
+  it('«Hva melder man på?» (individuelt/lag) ligger inne i disclosuren', () => {
     renderWizard();
     goToReadyStep();
 
@@ -501,7 +501,7 @@ describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)',
     expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
   });
 
-  it('disabler "lag"/"begge" når modus er stableford (solo-modus)', () => {
+  it('disabler "lag" når modus er stableford (solo-modus)', () => {
     renderWizard();
     pickKompisIntent();
     pickStablefordFormat();
@@ -521,7 +521,8 @@ describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)',
     openAdvanced();
 
     expect(screen.getByRole('radio', { name: /^lag$/i })).toBeDisabled();
-    expect(screen.getByRole('radio', { name: /^begge$/i })).toBeDisabled();
+    // #1792: «begge»-radioen er fjernet fra UI-et — kun individuelt/lag igjen.
+    expect(screen.queryByRole('radio', { name: /^begge$/i })).toBeNull();
     expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
   });
 
