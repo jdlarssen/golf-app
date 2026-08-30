@@ -1,5 +1,15 @@
 # Spec: Native N4 — leaderboards + format-familiene (scramble, matchplay, poengspill)
 
+> **Scope-revisjon 2026-08-30 21:10 (eierbeslutning, MoSCoW i epic #1816 — kommentar på #1828):**
+> Must = de 8 brukte formatene (stableford, modified_stableford, singles_matchplay,
+> greensome_matchplay, best_ball, wolf, BBB, skins). **Greensome erstatter scramble som
+> Must-målet for lag-infraen** (samme kollaps-mekanikk); scramble-familien + foursomes/
+> fourball/chapman/gruesome/patsome + nassau/nines/acey_deucey/round_robin/solo_strokeplay
+> er Could. Allerede bygget Could-arbeid (chunk 1-renderere, scramble-grener) beholdes og
+> bokføres som «levert Could» — det poleres ikke videre. Wolf/BBB-gaten står, men valg-UI-
+> slicen er Must FØR butikk-byttet (eget issue). Kriterium 3 er omskrevet til greensome;
+> scramble-beviset nedgraderes til bonus-evidens.
+
 ## Problem
 
 Etter N3 (#1825) kan appen føre og levere enkle formater, men den har ingen resultatvisning — og format-gaten henviser hele lag- og matchplay-familien til nettsiden. N4 gir appen leaderboard-skjermen (drevet av delt `computeLeaderboard`, samme motor som webben) og un-gater de store familiene: scramble-lagene og matchplay. Wolf/BBB (krever egen per-hull-valg-UI) og patsome (segment-hybrid) bokføres ærlig som gjenstående i stedet for å skipes halvveis.
@@ -61,7 +71,7 @@ Etter N3 (#1825) kan appen føre og levere enkle formater, men den har ingen res
 
 - **Leaderboard kun for deltakere/admin i appen** — RLS-lesing som deltaker er komplett for aktive (0121) og ferdige (deltaker-gren) spill; webbens ikke-deltaker-visning av ferdige spill (service-role) forblir web. Teknisk valg, bokført.
 - **Badges og lag-handicap hentes fra motor-output** — aldri en tredje kopi av 60/40-/pct-formlene (trap 4).
-- **Wolf/BBB gates NÅ** — misvisende halv-støtte er verre enn ærlig henvisning; egen slice med valg-UI + `wolf_hole_choices`/`bingo_bango_bongo_holes`-fetch bokføres.
+- **Wolf/BBB gates NÅ** — misvisende halv-støtte er verre enn ærlig henvisning; egen slice med valg-UI + `wolf_hole_choices`/`bingo_bango_bongo_holes`-fetch bokføres. *(MoSCoW-revisjonen: slicen er Must før butikk-byttet — bokført som eget issue.)*
 - **Team-lever gates** — RLS tillater kun egen rad; team-submit-RPC er egen fremtidig DB-kontrakt (aldri auto-merge, jf. prod-regler).
 - **Én gate-regel for føring OG leaderboard** — ingen formater som kan «ses men ikke føres» i appen i N4 (unntak: ferdige spill av un-gatede formater vises selvsagt).
 
@@ -71,7 +81,7 @@ Etter N3 (#1825) kan appen føre og levere enkle formater, men den har ingen res
 
 - [ ] 1. **Adapter + renderere jest-låst:** `npx jest` grønn i `native/app/` med nye Type A-suiter for ScoringContext-adapteren (mapping/withdrawn/tomt) og minst rad-tabell-, match- og potte-render-logikken (logikk-nivå; maks 1 Type C per ny skjerm); exhaustive kind-håndtering bevist med kompilerende never-guard. Evidens: kjøringslogg + filliste.
 - [ ] 2. **Stableford-leaderboard live:** Byneset-spillet (9df7b9e0) i simulator viser poeng-tabell konsistent med delt motor (stikkprøve mot `computeLeaderboard`-output for samme input); ekstern score-endring via RPC oppdaterer tabellen uten reload (realtime-piggyback). Evidens: skjermbilder + service-role-les.
-- [ ] 3. **Scramble ende-til-ende:** service-role-rigget AKTIVT texas_scramble-spill (2×2, e2e-spiller som kaptein på lag 1) — appen viser ETT kort per lag på hull-siden med motor-derivert «+N»; tasting skriver til kapteinens rad på staging (service-role-les av `user_id`); leaderboardet viser lag-rader med teamHandicap; Lever-knappen er erstattet av web-henvisning. Evidens: skjermbilder + service-role-les.
+- [ ] 3. **Greensome ende-til-ende (Must, revidert fra scramble):** service-role-rigget AKTIVT greensome_matchplay-spill (2×2, e2e-spiller som kaptein på side 1, side-CH 14 vs 18 → høyside +4) — appen viser ETT kort per side på hull-siden med motor-derivert «+N» (per-side extra fra `holes[]`-radene); tasting skriver til kapteinens rad på staging (service-role-les av `user_id`); leaderboardet viser duell-status; Lever-knappen er erstattet av web-henvisning. *Bonus (levert Could):* samme mekanikk stikkprøves på det riggede texas_scramble-spillet (lag-kort + teamHandicap-badge). Evidens: skjermbilder + service-role-les.
 - [ ] 4. **Matchplay-status:** i et aktivt singles_matchplay-spill (eksisterende TEST-Cup) viser leaderboardet begge sider, per-hull W/L/T-stripe og korrekt holes-up-status mot motorens fasit; foursomes-rigget spill viser side-kort med delt rad-føring. Evidens: skjermbilder.
 - [ ] 5. **Gate-endringene:** wolf/BBB-spill viser gate-tekst (ingen føring, ingen leaderboard); scramble/alternate-shot er åpne; patsome/segment/derived fortsatt gatet — jest-låst i formatGate-suiten + simulator-stikkprøve på ett wolf-spill hvis et finnes på staging (ellers kun jest).
 - [ ] 6. **Reveal-modus:** service-role-flipp av `score_visibility` til 'reveal' på et aktivt testspill → appen skjuler netto/poeng (brutto-visning) og matchplay viser ingenting; flipp tilbake gjenoppretter. Evidens: skjermbilder før/etter.
