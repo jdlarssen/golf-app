@@ -25,8 +25,11 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // OG-image route (app/[locale]/opengraph-image.tsx) — served extensionless,
 // so the matcher's asset exclusions miss it, and social scrapers fetch it
 // anonymously.
+// `review-login` (#1284) er passord-inngangen for App Store-reviewere — den
+// må være nåbar utlogget, som /login. Ruta er ulenket og env-gatet (404 uten
+// REVIEW_ACCOUNT_EMAIL), så den er inert til eieren skrur den på.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register)$|^\/(legal|signup|spectate|baner|embed|demo|opengraph-image)(\/|$)/;
+  /^\/(login|register|review-login)$|^\/(legal|signup|spectate|baner|embed|demo|opengraph-image)(\/|$)/;
 
 // #1185: auth-optional routes. The proxy STILL resolves the user here (so a
 // logged-in visitor keeps their verified-user header — and thus their

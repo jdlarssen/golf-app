@@ -3048,6 +3048,18 @@
       "changeEmail": "Wrong address? Change email",
       "spamHint": "Not showing up? Check your spam folder. The code can take a couple of minutes.",
       "spinnerLabel": "Loading"
+    },
+    "reviewLogin": {
+      "metaTitle": "Sign in with password",
+      "heading": "Sign in with password",
+      "intro": "This entrance is for App Store review only.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "errors": {
+        "review_failed": "Wrong email or password.",
+        "rate_limited": "Too many attempts. Wait 15 minutes and try again."
+      }
     }
   },
   "foreslaaIde": {

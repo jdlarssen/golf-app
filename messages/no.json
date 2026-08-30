@@ -3048,6 +3048,18 @@
       "changeEmail": "Feil adresse? Endre e-post",
       "spamHint": "Kommer den ikke? Sjekk søppelposten. Koden kan ta et par minutter.",
       "spinnerLabel": "Laster"
+    },
+    "reviewLogin": {
+      "metaTitle": "Logg inn med passord",
+      "heading": "Logg inn med passord",
+      "intro": "Denne inngangen er forbeholdt App Store-vurdering.",
+      "emailLabel": "E-post",
+      "passwordLabel": "Passord",
+      "submit": "Logg inn",
+      "errors": {
+        "review_failed": "Feil e-post eller passord.",
+        "rate_limited": "For mange forsøk. Vent et kvarter og prøv igjen."
+      }
     }
   },
   "foreslaaIde": {
