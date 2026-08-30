@@ -5,6 +5,7 @@
 // (e.g. @/lib/games/teamCaptain) resolve through this app's tsconfig paths,
 // which Expo's Metro honors by default. The repo root itself is NOT watched:
 // pulling in the Next app's node_modules would be slow and risky.
+/* eslint-disable @typescript-eslint/no-require-imports -- Metro loads this file via CommonJS require */
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
