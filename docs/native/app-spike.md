@@ -203,9 +203,9 @@ Sync-laben lever videre som dev-verktøy, lenket nederst på Hjem.
 
 ### Format-gaten
 
-`src/lib/formatGate.ts`: lag-kollapsede formater (`modeCollapsesToTeamCard`),
-segment-spill og deriverte spill henvises til nettsiden. ⚠️ `hole_segment` er
-NOT NULL med default `'full'` — gaten tester `!== 'full'`, aldri «er satt»
+**⚠️ Modus-lista under er N3-tilstanden — erstattet av N4 (#1828), se
+«Format-gaten» i N4-seksjonen.** Selve segment-regelen består: `hole_segment`
+er NOT NULL med default `'full'` — gaten tester `!== 'full'`, aldri «er satt»
 (et vanlig spill står alltid som `'full'`).
 
 ### Datalag v2
