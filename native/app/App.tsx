@@ -1,6 +1,7 @@
-// Native N1 spike (#1818): two screens, no polish. Proves (1) shared
+// Native spike: three screens, no polish. N1 (#1818) proved (1) shared
 // lib/scoring source consumed straight from the repo, (2) Supabase OTP login
-// against staging with a session that survives relaunch.
+// against staging with a session that survives relaunch. N2 (#1823) adds the
+// Sync-lab screen — the local-first data layer made visible.
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -16,6 +17,7 @@ import type { Session } from '@supabase/supabase-js';
 // import pulls the full mode-router graph (23 modes) through Metro.
 import { computeLeaderboard } from '../../lib/scoring';
 import { calculateCourseHandicap } from '../../lib/scoring/courseHandicap';
+import { SyncLab } from './src/SyncLab';
 import { supabase } from './src/supabase';
 
 // Demo inputs for the shared-source proof: WHS course handicap.
@@ -29,6 +31,9 @@ export default function App() {
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Third screen (#1823). Navigation state is one field — a router is more
+  // machinery than a spike with three screens earns.
+  const [screen, setScreen] = useState<'home' | 'lab'>('home');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -78,6 +83,18 @@ export default function App() {
     );
   }
 
+  if (session && screen === 'lab') {
+    return (
+      <>
+        <StatusBar style="dark" />
+        <SyncLab
+          userId={session.user.id}
+          onBack={() => setScreen('home')}
+        />
+      </>
+    );
+  }
+
   if (session) {
     const courseHandicap = calculateCourseHandicap(DEMO);
     const sharedLoaded = typeof computeLeaderboard === 'function';
@@ -99,7 +116,20 @@ export default function App() {
             {courseHandicap}
           </Text>
         </View>
-        <Pressable style={styles.buttonSecondary} onPress={() => supabase.auth.signOut()}>
+        <Pressable
+          style={styles.button}
+          onPress={() => setScreen('lab')}
+          testID="open-sync-lab"
+        >
+          <Text style={styles.buttonText}>Åpne sync-lab</Text>
+        </Pressable>
+        <Pressable
+          style={styles.buttonSecondary}
+          onPress={() => {
+            setScreen('home');
+            void supabase.auth.signOut();
+          }}
+        >
           <Text style={styles.buttonSecondaryText}>Logg ut</Text>
         </Pressable>
       </View>
