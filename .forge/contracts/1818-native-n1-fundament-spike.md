@@ -70,10 +70,10 @@ Epic #1816 (eier-beslutning 2026-08-30) gjør ekte native app til målet; webben
 
 ## Gates
 
-- [ ] `npm run typecheck` (repo-rot) grønt
-- [ ] `npx vitest run lib/scoring` grønt (1176 tester — uendret antall)
-- [ ] `npx tsc --noEmit` i `native/app/` grønt
-- [ ] `npm run build` (repo-rot) grønt før PR
+- [x] `npm run typecheck` (repo-rot) grønt — exit 0 (verifisert av evaluator, runde 1)
+- [x] `npx vitest run lib/scoring` grønt (1176 tester — uendret antall) — 1176 passed, exit 0 m/ pipefail (evaluator)
+- [x] `npx tsc --noEmit` i `native/app/` grønt — exit 0 (evaluator)
+- [x] `npm run build` (repo-rot) grønt før PR — exit 0 (runde 1, /tmp/webbuild.log)
 
 ## Files Likely Touched
 
