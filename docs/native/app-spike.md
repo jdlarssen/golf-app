@@ -1,9 +1,9 @@
-# Native app-spike (N1, #1818) — runbook
+# Native app-spike (N1 #1818, N2 #1823) — runbook
 
 Frittstående Expo-app i `native/app/` som beviser fundamentet for epic #1816:
-delt `lib/scoring`-kilde med webappen og Supabase-OTP-innlogging mot staging.
-Dette er IKKE produkt-appen — det er spike-fundamentet senere etapper bygger
-videre på.
+delt `lib/scoring`-kilde med webappen, Supabase-OTP-innlogging mot staging
+(N1) og et lokal-først datalag med sync-kø og realtime (N2). Dette er IKKE
+produkt-appen — det er spike-fundamentet senere etapper bygger videre på.
 
 ## Arkitektur-beslutninger (kontrakt `.forge/contracts/1818-native-n1-fundament-spike.md`)
 
@@ -61,6 +61,11 @@ Fallgruver:
   (frarådet oppstrøms).
 - `pod install` krever `LANG=en_US.UTF-8` (CocoaPods 1.17 + Ruby 4 kræsjer
   ellers).
+- **`expo-sqlite` og `expo-network` er native moduler** (N2, #1823). Et
+  eksisterende `ios/`-bygg kjenner dem ikke — kjør `npx expo prebuild` +
+  `pod install` + nytt xcodebuild etter at de kom inn, ellers krasjer appen ved
+  første DB-kall. `npx expo export` bundler fint uten rebuild, så JS-porten
+  fanger ikke dette.
 - `ios/`-mappa er prebuild-output og gitignorert — regenerer den heller enn å
   redigere den.
 - Rot-`tsconfig.json` ekskluderer `native/` — React Natives globale typer
@@ -74,3 +79,107 @@ via service-role REST `POST <staging-URL>/auth/v1/admin/generate_link` med
 `type: "email_otp"` for `E2E_PLAYER_EMAIL`/`E2E_ADMIN_EMAIL`, tast e-post →
 «Send meg kode» → minted kode → «Logg inn». Mint koden ETTER at appen har
 sendt sin egen (siste OTP vinner). Staging-koder validerer kun mot staging.
+
+## Datalaget (N2, #1823)
+
+Lokal-først: tastingen treffer SQLite på enheten og er ferdig; sync mot staging
+skjer i bakgrunnen mot nøyaktig samme server-kontrakt som webben bruker
+(`upsert_score_if_newer`, LWW på `client_updated_at`).
+
+### Delt kilde vs. speilet kode
+
+Web-appens sync-motor er Dexie- og DOM-bundet og kan ikke kjøre i appen. Skillet
+er derfor bevisst:
+
+| Kommer rett fra repo-kilden (`lib/sync/`) | Speilet i `native/app/src/data/` |
+| --- | --- |
+| `conflict.ts` — `resolveConflict`, `conflictRecordFor` | `db.ts` — expo-sqlite i stedet for Dexie |
+| `classifyError.ts` — `syncRetryDecision` | `writeScore.ts` |
+| `queueScope.ts` — `isActiveForGame` | `syncWorker.ts` (drain-rekkefølgen) |
+| Typene `LocalScore`/`SyncQueueItem`/`ConflictRecord` (type-import) | `realtime.ts` (kanal + merge) |
+
+Alle avgjørelser som kan gå galt — hvem vinner en konflikt, fortjener en
+overskriving et varsel, skal et feilet kø-element gis opp — bor ÉTT sted, i
+repo-kilden. Bare rekkefølgen rundt dem er speilet. `lib/sync/` har null diff
+fra N2; trenger en etappe å endre noe der, er det en egen beslutning.
+
+Type-import er runtime-fri (babel stripper `import type`), så Dexie følger aldri
+med i app-bundelen — verifiserbart med `grep -i dexie` mot `dist/`-bundelen etter
+`npx expo export`.
+
+### Lokalt skjema (`torny.db`, `PRAGMA user_version = 1`)
+
+| Tabell | Nøkkel | Merk |
+| --- | --- | --- |
+| `scores` | `${gameId}:${userId}:${holeNumber}` | Speiler `scoreKey`; `strokes`/`putts` nullbare, `server_updated_at` null til første vellykkede sync |
+| `sync_queue` | = score-id | Ny tasting på samme hull ERSTATTER elementet; `created_at = client_updated_at` gir køens rekkefølge; `abandoned_at` = karantene (#668) |
+| `conflicts` | = score-id | Skrives når en server-verdi overskrev et tall tastet på denne enheten |
+
+Kolonnene er snake_case, typene camelCase; mappingen bor kun i `db.ts`.
+Journalmodus er WAL — `withExclusiveTransactionAsync` skriver på en egen
+forbindelse, og bare WAL lar lesinger fortsette mens den låsen står. `withTxn`
+serialiserer transaksjonene, ellers ville to overlappende gitt «database is
+locked».
+
+### Triggere for drain
+
+Speil av webbens `startSyncListener`, med appens egne signaler:
+
+- **expo-network** — `isConnected` flipper til true (på iOS er
+  `isInternetReachable` bare et ekko av `isConnected`, så `isConnected` ER
+  signalet)
+- **AppState** — appen kommer i forgrunnen
+- **30 s-intervall**
+- **Oppstart** — én drain når triggerne startes
+
+En tasting drainer med vilje IKKE — samme som på web. Køen skal være synlig
+til en trigger tømmer den.
+
+### Realtime
+
+Én kanal per spill (`postgres_changes`, `event: '*'`, filter
+`game_id=eq.<id>` på `scores`). #1366-disiplinen er ufravikelig og speilet i
+`realtime.ts`: argumentløs `await supabase.realtime.setAuth()` FØR hver
+`subscribe`, per kanalbygg; statuscallback; ny kanal etter 3 påfølgende
+`CHANNEL_ERROR`/`TIMED_OUT` med backoff; retries parkert mens enheten er
+offline. Send aldri tokenet som argument — det skrur av bibliotekets eget
+token-vedlikehold, og en runde varer lenger enn et access-token.
+
+Innkommende rad merges kun når `client_updated_at` er strengt nyere enn den
+lokale. Ekkoet av enhetens egen skriving har LIK timestamp og droppes derfor
+stille — det blir aldri en konflikt.
+
+### Sync-lab (tredje skjerm)
+
+Bak innlogging: «Åpne sync-lab» på hjem-skjermen. Laben velger nyeste AKTIVE
+spill spilleren er med i (vanlig RLS-lesing), viser hull 1–3 med −/+ på slag,
+og en statusblokk med kø-lengde, siste drain, realtime-status og
+konflikt-teller. «Synk nå» tvinger en drain. Alle kontroller har `testID`.
+
+Ingen aktive spill på staging → rolig tom-tilstand, ingen krasj.
+
+### Flymodus-testen (fysisk iPhone)
+
+1. Åpne Sync-laben og la den koble seg opp (realtime: «tilkoblet»).
+2. Slå på flymodus.
+3. Tast slag på hull 1–3. Tallene skal oppdatere seg UMIDDELBART, og «I kø»
+   skal telle opp.
+4. Slå av flymodus. Innen ~30 s (eller straks, med «Synk nå») skal «I kø» gå til
+   0 og radene si «synket».
+5. Verifiser mot staging med en service-role-lesing av `scores` for spillet —
+   `client_updated_at` skal være appens tidsstempel.
+
+Realtime motsatt vei: kjør en `upsert_score_if_newer` med service-role utenfra
+(nyere timestamp, annet slag-tall) mens laben står åpen — tallet skal bytte i
+appen uten reload.
+
+### Porter
+
+```bash
+# I native/app/ (Node 22):
+npx tsc --noEmit
+npx expo export --platform ios   # slett dist/ etterpå
+# I repo-rota:
+npm run typecheck
+npx vitest run lib/sync lib/scoring
+```
