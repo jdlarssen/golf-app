@@ -62,7 +62,8 @@ N1 (#1818) beviste delt scoring-hjerne og OTP-innlogging. Det som gjenstår før
 - [ ] 4. **Delt kilde, null kopier:** app-koden importerer `resolveConflict`/`conflictRecordFor`/`syncRetryDecision` fra `../../lib/sync/*` (fil:linje-evidens); `git diff` viser null endring i `lib/sync/`; `npx vitest run lib/sync lib/scoring` grønn.
 - [x] 5. **Web urørt + porter grønne:** diff-scope per guardrail; `npm run typecheck`, `npm run build`, app-`tsc`, `npx expo export --platform ios` alle grønne.
   - *Evidens:* byggerens gates (typecheck 0, vitest lib/sync+lib/scoring 1303 passed, app-tsc 0, expo export 0, eslint 0) + hovedøktas `npm run build` exit 0 (2026-08-30 ettermiddag). `git diff main...HEAD -- lib/` = 0 linjer.
-- [ ] 6. **Flymodus på fysisk iPhone (eier-assistert):** slag tastet i flymodus vises umiddelbart; nett på igjen → raden verifisert på staging. Eier utilgjengelig i økta → dokumentert `VERIFICATION GAP` + restanse, aldri stille hopp.
+- [x] 6. **Flymodus på fysisk iPhone (eier-assistert):** slag tastet i flymodus vises umiddelbart; nett på igjen → raden verifisert på staging. Eier utilgjengelig i økta → dokumentert `VERIFICATION GAP` + restanse, aldri stille hopp.
+  - *Evidens (2026-08-30 ~18:03, eierens iPhone 13):* eieren logget inn på telefonen, tastet slag på hull 1–3 i flymodus (umiddelbar UI per eier), slo av flymodus → «synket ganske instant» (eier-sitat). Service-role-les bekrefter: `client_updated_at` 16:03:12–20Z (tastet offline, spredt over 8 s) mot `updated_at` 16:03:26–27Z (én drain-salve ved nett-retur) — offline-gapet står i selve dataene.
 - [ ] 7. **Runbook:** `docs/native/app-spike.md` utvidet med datalag-seksjonen (skjema, triggere, sync-lab, flymodus-testen).
 
 ## Gates
