@@ -84,7 +84,7 @@ const EMOJI: Record<NotificationKind, string> = {
  * `product_update` (lanseringer) får en egen layout: full brødtekst (ingen
  * 2-linjers klamp) + en dedikert CTA-knapp til lenken, slik at lang tekst kan
  * leses i innboksen uten at tappen kaster deg ut til lenken. Speiler
- * ProductUpdateBanner. Deeplink-en returnerer `null` for denne kind-en, så
+ * ProductUpdateBannerClient. Deeplink-en returnerer `null` for denne kind-en, så
  * kort-tappen markerer kun som lest.
  */
 export function NotificationCard({
