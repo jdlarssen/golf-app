@@ -29,8 +29,10 @@ være nøye med. Fire ting holder den trygg:
   nøyaktig samme feilmelding. Ingen kan lese seg fram til hvilken adresse
   kontoen har.
 - **Rate-limit.** Samme buckets som vanlig innlogging (5 forsøk per adresse
-  og 10 per IP per kvarter), og de brukes opp FØR passordet sjekkes. Supabase
-  har i tillegg sine egne grenser på `/token`.
+  og 10 per IP per kvarter), og de brukes opp FØR passordet sjekkes. Merk at
+  bucketene kun dekker skjemaet vårt — den som kaller Supabase sitt
+  `/token`-endepunkt direkte møter bare Supabase sine egne grenser. Derfor er
+  passordstyrken (neste avsnitt) den bærende sperren, ikke rate-limiten.
 - **Sida finnes ikke uten env-varen.** Fjerner du `REVIEW_ACCOUNT_EMAIL` i
   Vercel og deployer, er inngangen borte igjen.
 
@@ -119,7 +121,8 @@ husker det gamle.
 
 ## Demo-dataene revieweren møter
 
-- **Konto:** navn «App Reviewer», handicap 18, engelsk UI (`locale = 'en'`).
+- **Konto:** navn «Alex Reviewer» (fornavnet brukes i hilsenen på hjem-skjermen),
+  handicap 18, engelsk UI (`locale = 'en'`).
 - **Runde:** «Demo Round — Tørny», stableford, status «pågår», fire spillere i
   samme flight.
 - **Medspillere:** Emma, Jonas og Nora — gjestespillere uten innlogging, på et
