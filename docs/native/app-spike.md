@@ -1,9 +1,10 @@
-# Native app-spike (N1 #1818, N2 #1823) — runbook
+# Native app-spike (N1 #1818, N2 #1823, N3 #1825) — runbook
 
 Frittstående Expo-app i `native/app/` som beviser fundamentet for epic #1816:
 delt `lib/scoring`-kilde med webappen, Supabase-OTP-innlogging mot staging
-(N1) og et lokal-først datalag med sync-kø og realtime (N2). Dette er IKKE
-produkt-appen — det er spike-fundamentet senere etapper bygger videre på.
+(N1), et lokal-først datalag med sync-kø og realtime (N2) og spillerflatene
+hjem → game-home → hull-føring → scorekort → lever/godkjenn (N3). Dette er
+IKKE produkt-appen ennå — men fra N3 er det flatene spillerne skal arve.
 
 ## Arkitektur-beslutninger (kontrakt `.forge/contracts/1818-native-n1-fundament-spike.md`)
 
@@ -61,11 +62,12 @@ Fallgruver:
   (frarådet oppstrøms).
 - `pod install` krever `LANG=en_US.UTF-8` (CocoaPods 1.17 + Ruby 4 kræsjer
   ellers).
-- **`expo-sqlite` og `expo-network` er native moduler** (N2, #1823). Et
-  eksisterende `ios/`-bygg kjenner dem ikke — kjør `npx expo prebuild` +
-  `pod install` + nytt xcodebuild etter at de kom inn, ellers krasjer appen ved
-  første DB-kall. `npx expo export` bundler fint uten rebuild, så JS-porten
-  fanger ikke dette.
+- **`expo-sqlite` og `expo-network` er native moduler** (N2, #1823), og
+  N3 (#1825) la til `react-native-screens` + `react-native-safe-area-context`
+  (navigasjonen). Et eksisterende `ios/`-bygg kjenner dem ikke — kjør
+  `npx expo prebuild` + `pod install` + nytt xcodebuild etter at de kom inn,
+  ellers krasjer appen ved oppstart eller første DB-kall. `npx expo export`
+  bundler fint uten rebuild, så JS-porten fanger ikke dette.
 - `ios/`-mappa er prebuild-output og gitignorert — regenerer den heller enn å
   redigere den.
 - Rot-`tsconfig.json` ekskluderer `native/` — React Natives globale typer
@@ -173,13 +175,84 @@ Realtime motsatt vei: kjør en `upsert_score_if_newer` med service-role utenfra
 (nyere timestamp, annet slag-tall) mens laben står åpen — tallet skal bytte i
 appen uten reload.
 
+## Spillerflatene (N3, #1825)
+
+Fem skjermer på en `@react-navigation/native-stack` (`src/navigation.tsx`),
+bak samme login-gate som før: Hjem → GameHome → Hole/Scorecard/Approve.
+Sync-laben lever videre som dev-verktøy, lenket nederst på Hjem.
+
+- **Hjem** (`src/screens/Home.tsx`) — «Pågår nå» / «Mine spill» / «Siste
+  avsluttede» fra RLS-spørringer (speil av webbens hjem, minus discovery).
+  Lista caches i `cache_entries` (`home`) og re-hentes ved fokus.
+- **GameHome** — leser `gameBundle`-cachen øyeblikkelig, re-henter i bakgrunnen.
+  Primær-CTA-en er webbens `computeState`-maskin speilet i
+  `src/lib/primaryCtaState.ts`.
+- **Hole** — flighten avgjøres av delt `isSingleFlightGame`-regel (≤4 aktive
+  eller wolf = alle; ellers samme `flight_number`); «+N»-badgen kommer fra delt
+  `strokesForHole`. Slag- og putte-stepperne skriver via N2s `writeScore`
+  (putte-skriv sender IKKE slag med — mergen bevarer det) og drainer etter hver
+  tasting, som webben.
+- **Scorecard** — webbens Layout A (Hull/Par/SI/Slag/Netto + totaler).
+  «Lever»-knappen speiler webbens to porter: drain + kø-vakt (delt
+  `isActiveForGame`), og bekreftelses-Alert ved manglende hull.
+- **Approve** — lista fra delt `pendingApprovalsFor`; godkjenn/avvis er rene
+  `game_players`-oppdateringer under 0106-policyen.
+
+### Format-gaten
+
+`src/lib/formatGate.ts`: lag-kollapsede formater (`modeCollapsesToTeamCard`),
+segment-spill og deriverte spill henvises til nettsiden. ⚠️ `hole_segment` er
+NOT NULL med default `'full'` — gaten tester `!== 'full'`, aldri «er satt»
+(et vanlig spill står alltid som `'full'`).
+
+### Datalag v2
+
+`PRAGMA user_version = 2` legger til `cache_entries (key, payload, fetched_at)`
+— JSON-cache for spill-bundler (`game:<id>`, via `src/data/gameBundle.ts`) og
+hjem-lista (`home`). Migrasjonen er additiv; N2-data overlever.
+`src/data/seedScores.ts` (`seedGameScores`) erstatter SyncLab-ens gamle
+hull 1–3-seed: ALLE spillets scores går gjennom `mergeServerScore`, så LWW
+forblir eneste vei server-data kommer inn lokalt. `src/data/playerActions.ts`
+(lever/godkjenn/avvis) speiler webbens server-action-guards og asserter
+radantall med delt `expectAffected` (`lib/supabase/affectedRows.ts`) — en
+0-raders UPDATE er en synlig feil, aldri stille suksess. Merk: skriv fra appen
+sender INGEN notifikasjoner (webbens server actions eier dem) — bokført gap
+mot N7.
+
+### Test-harnessen (jest-expo)
+
+```bash
+cd native/app && source ~/.nvm/nvm.sh && nvm use 22
+npx jest            # hele suiten
+npx jest writeScore # én suite
+```
+
+`jest.config.js` bruker `preset: "jest-expo"` og mapper `expo-sqlite` →
+`src/test/sqliteMock.ts`: en adapter over better-sqlite3 (in-memory) som
+implementerer nøyaktig subsettet appen bruker — ekte SQL-semantikk i test,
+ingen håndlaget fake. (better-sqlite3 avviser `$`-prefiksede bind-nøkler;
+adapteren stripper prefikset, appens SQL kjører uendret.) `@/*`-aliasene i
+delt kode mappes til repo-rota. `src/test/supabaseMock.ts` har chainbare
+stubs for `from`/`rpc`. TypeScript 6 auto-inkluderer ikke `@types/` lenger —
+`"types": ["jest", "node"]` i tsconfig er derfor lastbærende.
+
+### Godkjenn-testen mot staging
+
+Godkjenn krever et levert kort fra en flight-makker. Rigg med service-role:
+sett makkerens `game_players.submitted_at` (`is.null`-filter så det er
+idempotent), åpne spillet i appen → «Godkjenn (1)» → godkjenn/avvis, og
+verifiser kolonnene med en service-role-lesing etterpå. Selv-godkjenning
+stoppes av 0106-triggeren.
+
 ### Porter
 
 ```bash
 # I native/app/ (Node 22):
+npx jest
 npx tsc --noEmit
 npx expo export --platform ios   # slett dist/ etterpå
 # I repo-rota:
 npm run typecheck
 npx vitest run lib/sync lib/scoring
+npx eslint native/app
 ```
