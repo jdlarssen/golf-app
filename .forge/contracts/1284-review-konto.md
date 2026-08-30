@@ -87,19 +87,29 @@ demo-scorenes verdier, spillnavn, HCP-verdier, om `next`-param støttes (trolig 
 
 ## Suksesskriterier
 
-- [ ] `/review-login` finnes, er env-gatet (usatt env → 404-adferd), noindex, og nåbar
-      utlogget (PUBLIC_PATH_PATTERN) — verifiseres med unit-test + staging-klikk
-- [ ] Server action: kun `REVIEW_ACCOUNT_EMAIL` kan logges inn; feil e-post og feil
-      passord gir identisk feilkode; rate-limit konsumeres før auth-kallet — bevises
-      med unit-tester (mock ved systemgrensen, som login/actions.test.ts)
-- [ ] Provisjoneringsskriptet er idempotent: to kjøringer på rad gir samme slutt-tilstand
-      (én review-bruker, ett aktivt demo-spill, kjente scores) — bevises mot staging
-- [ ] Staging ende-til-ende: provisjonert konto logger inn via `/review-login` med
-      passord og ser det aktive demo-spillet — bevis (skjermbilde/DOM) på PR +
-      `staging-verified`-label
-- [ ] Runbook-dokumentet finnes med ASC-notes-mal og eier-steg for prod (env-var i
-      Vercel, skript-kjøring m/ godkjenning, credentials inn i ASC)
-- [ ] Gates grønne: `npm run build`, `npm run lint`, co-lokaliserte vitest-filer
+- [x] `/review-login` finnes, er env-gatet (usatt env → 404-adferd), noindex, og nåbar
+      utlogget (PUBLIC_PATH_PATTERN) — EVIDENS: staging-driver PASS «skjema-utlogget»
+      (`#review-email`/`#review-password`, robots="noindex, nofollow", utlogget);
+      usatt-env-grenen bevist med `next start` under bygging (connection()-fiksen,
+      se page.tsx-kommentaren) + unit-test på action-ens env-gren
+- [x] Server action: kun `REVIEW_ACCOUNT_EMAIL` kan logges inn; feil e-post og feil
+      passord gir identisk feilkode; rate-limit konsumeres før auth-kallet —
+      EVIDENS: actions.test.ts (6 tester, del av 50 grønne i builder-kjøringen);
+      staging-driver PASS «feil-passord-generisk-feil» (?error=review_failed)
+- [x] Provisjoneringsskriptet er idempotent — EVIDENS: staging-kjøring 1
+      «✅ Provisjonert», kjøring 2 «✅ Allerede provisjonert — resatt», samme spill-id
+      (488a4819), 4 spillere, 21 scores; DB-orakel: 1 spill m/ navnet, status active,
+      3 gjester + review-konto, scores 3+6+6+6
+- [x] Staging ende-til-ende — EVIDENS: Playwright-driver 5/5 PASS (innlogging →
+      «Demo Round — Tørny» på hjem → hull 4 m/ Emma/Jonas/Nora); SQL-orakel
+      last_sign_in_at 15 sek fersk; bevis-kommentar på PR #1813
+      (issuecomment-5465782884) + `staging-verified`-label satt
+- [x] Runbook-dokumentet finnes — EVIDENS: docs/native/app-store-review-konto.md
+      (sikkerhetsmodell, 4 eier-steg m/ eksakte Vercel-/ASC-stier, reset-seksjon,
+      engelsk ASC-notes-mal, «ikke i repoet»-seksjon)
+- [x] Gates grønne — EVIDENS: builder-kjøring på 560e1d13: vitest 7 filer/50 tester
+      grønne, lint exit 0 (0 errors), `npm run build` exit 0; staging-build på samme
+      tre exit 0; pre-push-gaten (tsc+lint+vitest) passerte ved push av 560e1d13
 
 ## Gates
 
