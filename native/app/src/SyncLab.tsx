@@ -23,18 +23,14 @@ import {
   listScoresForGame,
   type LocalScore,
 } from './data/db';
-import {
-  mergeServerScore,
-  subscribeGameScores,
-  type RealtimeStatus,
-} from './data/realtime';
+import { subscribeGameScores, type RealtimeStatus } from './data/realtime';
+import { seedGameScores } from './data/seedScores';
 import { startSyncTriggers } from './data/syncTriggers';
 import { drainQueue, getLastDrain, type DrainLog } from './data/syncWorker';
 import { writeScore } from './data/writeScore';
-import { currentDeviceUserId, supabase } from './supabase';
+import { supabase } from './supabase';
 
 const HOLES = [1, 2, 3];
-const MAX_HOLE = HOLES[HOLES.length - 1]!;
 const MAX_STROKES = 15;
 
 type Phase = 'laster' | 'klar' | 'tomt' | 'feil';
@@ -43,39 +39,6 @@ function clockOf(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
-/**
- * Hent gjeldende serververdier for hull 1–3 én gang ved åpning, gjennom SAMME
- * merge realtime bruker — da er start-tilstanden ekte og LWW-regelen er den
- * eneste som noen gang skriver server-data inn i den lokale basen.
- */
-async function seedFromServer(gameId: string, userId: string): Promise<void> {
-  const { data, error } = await supabase
-    .from('scores')
-    .select(
-      'game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, updated_at',
-    )
-    .eq('game_id', gameId)
-    .eq('user_id', userId)
-    .lte('hole_number', MAX_HOLE);
-  if (error || !data) return;
-  const currentUserId = await currentDeviceUserId();
-  for (const row of data) {
-    await mergeServerScore(
-      {
-        gameId: row.game_id,
-        userId: row.user_id,
-        holeNumber: row.hole_number,
-        strokes: row.strokes,
-        putts: row.putts ?? null,
-        enteredBy: row.entered_by,
-        clientUpdatedAt: row.client_updated_at,
-        serverUpdatedAt: row.updated_at,
-      },
-      currentUserId,
-    );
-  }
 }
 
 export function SyncLab({
@@ -170,7 +133,9 @@ export function SyncLab({
         void refresh();
       },
     });
-    void seedFromServer(gameId, userId)
+    // N3: samme seed som resten av appen bruker (`seedGameScores`) — den henter
+    // alle synlige hull, ikke bare 1–3, og lar RLS avgjøre hva som er synlig.
+    void seedGameScores(gameId)
       .catch(() => {
         // Klarer vi ikke lese serververdiene, starter laben bare på lokal
         // tilstand — det er ikke verdt å stoppe skjermen for.
@@ -185,7 +150,7 @@ export function SyncLab({
       unsubscribe();
       stopTriggers();
     };
-  }, [gameId, userId, refresh]);
+  }, [gameId, refresh]);
 
   const scoreFor = (holeNumber: number): LocalScore | undefined =>
     scores.find(

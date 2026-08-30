@@ -18,10 +18,11 @@ import type {
 
 export type { ConflictRecord, LocalScore, SyncQueueItem };
 
-const DATABASE_NAME = 'torny.db';
+/** Eksportert for migrasjonstesten — filnavnet er skjemaets identitet. */
+export const DATABASE_NAME = 'torny.db';
 
 /** Bumpes når skjemaet endres; styrer `PRAGMA user_version`-migrasjonen. */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 /**
  * Nøkkelen for én score-rad. Speiler `scoreKey` i `lib/sync/db.ts` — den kan
@@ -36,7 +37,12 @@ export function scoreKey(
   return `${gameId}:${userId}:${holeNumber}`;
 }
 
-const MIGRATION_V1 = `
+/**
+ * Migrasjonene er eksportert fordi migrasjonstesten rigger en v1-formet base før
+ * den lar `getDb()` løfte den til v2. Skjemaet skal ha ETT hjem — en kopi av
+ * `CREATE TABLE`-ene i testen ville bare drevet fra hverandre.
+ */
+export const MIGRATION_V1 = `
 CREATE TABLE IF NOT EXISTS scores (
   id TEXT PRIMARY KEY NOT NULL,
   game_id TEXT NOT NULL,
@@ -74,6 +80,19 @@ CREATE TABLE IF NOT EXISTS conflicts (
 CREATE INDEX IF NOT EXISTS conflicts_game_idx ON conflicts (game_id);
 `;
 
+/**
+ * N3 (#1825): JSON-cache for metadata skjermene trenger — spill-bundelen
+ * (`game:<id>`) og hjem-lista. Rent additiv, så en enhet som alt har N2-data
+ * beholder hver eneste score- og kø-rad gjennom løftet.
+ */
+export const MIGRATION_V2 = `
+CREATE TABLE IF NOT EXISTS cache_entries (
+  key TEXT PRIMARY KEY NOT NULL,
+  payload TEXT NOT NULL,
+  fetched_at TEXT NOT NULL
+);
+`;
+
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
@@ -88,8 +107,12 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     'PRAGMA user_version;',
   );
   const current = versionRow?.user_version ?? 0;
-  if (current < 1) {
-    await db.execAsync(MIGRATION_V1);
+  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → 2, en
+  // enhet som alt kjørte N2 går 1 → 2 og beholder radene sine. Skrittene er
+  // additive (`CREATE TABLE IF NOT EXISTS`), aldri destruktive.
+  if (current < 1) await db.execAsync(MIGRATION_V1);
+  if (current < 2) await db.execAsync(MIGRATION_V2);
+  if (current < SCHEMA_VERSION) {
     // PRAGMA tar ikke bind-parametre; SCHEMA_VERSION er en tallkonstant i denne
     // fila, aldri brukerdata.
     await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION};`);
@@ -163,6 +186,22 @@ interface QueueRow {
   abandoned_at: string | null;
 }
 
+/**
+ * Én cachet JSON-nyttelast. `key` er kallerens navnerom (`game:<id>`), `payload`
+ * er ren JSON-tekst — dette laget tolker den aldri.
+ */
+export interface CacheEntry {
+  key: string;
+  payload: string;
+  fetchedAt: string;
+}
+
+interface CacheRow {
+  key: string;
+  payload: string;
+  fetched_at: string;
+}
+
 interface ConflictRow {
   id: string;
   game_id: string;
@@ -196,6 +235,14 @@ function toQueueItem(row: QueueRow): SyncQueueItem {
     lastError: row.last_error,
     createdAt: row.created_at,
     abandonedAt: row.abandoned_at,
+  };
+}
+
+function toCacheEntry(row: CacheRow): CacheEntry {
+  return {
+    key: row.key,
+    payload: row.payload,
+    fetchedAt: row.fetched_at,
   };
 }
 
@@ -363,6 +410,36 @@ export async function putConflict(
       $resolved_at: record.resolvedAt,
       $for_own_score:
         record.forOwnScore == null ? null : record.forOwnScore ? 1 : 0,
+    },
+  );
+}
+
+export async function getCacheEntry(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+): Promise<CacheEntry | undefined> {
+  const row = await db.getFirstAsync<CacheRow>(
+    'SELECT * FROM cache_entries WHERE key = $key;',
+    { $key: key },
+  );
+  return row ? toCacheEntry(row) : undefined;
+}
+
+/**
+ * Skriv (eller overskriv) en cachet nyttelast. `INSERT OR REPLACE` gjør en
+ * refetch til en ren erstatning — det finnes aldri to versjoner av samme nøkkel.
+ */
+export async function putCacheEntry(
+  db: SQLite.SQLiteDatabase,
+  entry: CacheEntry,
+): Promise<void> {
+  await db.runAsync(
+    `INSERT OR REPLACE INTO cache_entries (key, payload, fetched_at)
+     VALUES ($key, $payload, $fetched_at);`,
+    {
+      $key: entry.key,
+      $payload: entry.payload,
+      $fetched_at: entry.fetchedAt,
     },
   );
 }
