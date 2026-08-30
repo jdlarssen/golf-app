@@ -5,6 +5,10 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
+// Same generated schema the web app uses (#1823) — type-only, so nothing from
+// the web graph ends up in the bundle. It is what types the RPC arguments and
+// the row that comes back from `upsert_score_if_newer`.
+import type { Database } from '../../../lib/database.types';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -15,7 +19,7 @@ if (!url || !anonKey) {
   );
 }
 
-export const supabase = createClient(url, anonKey, {
+export const supabase = createClient<Database>(url, anonKey, {
   auth: {
     storage: AsyncStorage,
     persistSession: true,
@@ -23,6 +27,23 @@ export const supabase = createClient(url, anonKey, {
     detectSessionInUrl: false,
   },
 });
+
+/**
+ * Who is logged in on THIS device (#1368) — mirror of `lib/sync/currentUser.ts`.
+ *
+ * Every path that may overwrite a local number needs it, and a sync path must
+ * never break on the lookup: `getSession` reads local storage and resolves
+ * offline (which is exactly when the queue fills up), and any failure returns
+ * null so `conflictRecordFor` falls back to its pre-#1368 proxy.
+ */
+export async function currentDeviceUserId(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 AppState.addEventListener('change', (state) => {
   if (state === 'active') {
