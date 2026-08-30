@@ -193,7 +193,7 @@ describe('playerActions', () => {
     it('setter approved_at + approved_by_user_id og filtrerer bort alt annet enn et levert, ikke-godkjent kort', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const update = queryStub(ONE_ROW);
-      routeFrom({ game_players: [update] });
+      routeFrom({ games: [queryStub(ACTIVE_GAME)], game_players: [update] });
 
       expect(await actions().approveScorecard(GAME, MATE)).toEqual({
         ok: true,
@@ -216,6 +216,7 @@ describe('playerActions', () => {
     it('leser 0 rader som suksess når kortet alt er godkjent', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
+        games: [queryStub(ACTIVE_GAME)],
         game_players: [
           queryStub(ZERO_ROWS),
           queryStub({ data: { approved_at: '2026-08-30T09:30:00.000Z' }, error: null }),
@@ -231,6 +232,7 @@ describe('playerActions', () => {
     it('leser 0 rader som FEIL når kortet ikke er godkjent (RLS nektet)', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
+        games: [queryStub(ACTIVE_GAME)],
         game_players: [
           queryStub(ZERO_ROWS),
           queryStub({ data: { approved_at: null }, error: null }),
@@ -246,6 +248,7 @@ describe('playerActions', () => {
     it('leser 0 rader som FEIL når raden ikke er synlig i det hele tatt', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
+        games: [queryStub(ACTIVE_GAME)],
         game_players: [queryStub(ZERO_ROWS), queryStub({ data: null, error: null })],
       });
 
@@ -254,13 +257,29 @@ describe('playerActions', () => {
         reason: 'no-rows',
       });
     });
+
+    it.each([['draft'], ['scheduled'], ['finished']])(
+      'nekter å godkjenne i et %s spill, og skriver ingenting',
+      async (status: string) => {
+        const { queryStub, routeFrom, supabase } = mocks();
+        // Ingen `game_players`-plan: prøver handlingen å skrive likevel, kaster
+        // ruteren og testen faller. Porten skal svare før noen UPDATE finnes.
+        routeFrom({ games: [queryStub({ data: { status }, error: null })] });
+
+        expect(await actions().approveScorecard(GAME, MATE)).toEqual({
+          ok: false,
+          reason: 'not-active',
+        });
+        expect(supabase.from).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 
   describe('rejectScorecard', () => {
     it('nuller leverings- og godkjenningssporet og lagrer grunnen', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const update = queryStub(ONE_ROW);
-      routeFrom({ game_players: [update] });
+      routeFrom({ games: [queryStub(ACTIVE_GAME)], game_players: [update] });
 
       expect(await actions().rejectScorecard(GAME, MATE, '  Hull 7 mangler  ')).toEqual(
         { ok: true, alreadyDone: false },
@@ -286,7 +305,7 @@ describe('playerActions', () => {
     ])('lagrer maskinsentinelen ved %s', async (_label: string, reason?: string) => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const update = queryStub(ONE_ROW);
-      routeFrom({ game_players: [update] });
+      routeFrom({ games: [queryStub(ACTIVE_GAME)], game_players: [update] });
 
       await actions().rejectScorecard(GAME, MATE, reason);
 
@@ -299,7 +318,7 @@ describe('playerActions', () => {
     it('kutter en overlang grunn på 500 tegn', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const update = queryStub(ONE_ROW);
-      routeFrom({ game_players: [update] });
+      routeFrom({ games: [queryStub(ACTIVE_GAME)], game_players: [update] });
 
       await actions().rejectScorecard(GAME, MATE, 'x'.repeat(900));
 
@@ -310,6 +329,7 @@ describe('playerActions', () => {
     it('leser 0 rader som suksess når kortet alt er avvist', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
+        games: [queryStub(ACTIVE_GAME)],
         game_players: [
           queryStub(ZERO_ROWS),
           queryStub({ data: { submitted_at: null }, error: null }),
@@ -325,6 +345,7 @@ describe('playerActions', () => {
     it('leser 0 rader som FEIL når kortet fortsatt står som levert', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
+        games: [queryStub(ACTIVE_GAME)],
         game_players: [
           queryStub(ZERO_ROWS),
           queryStub({
@@ -339,5 +360,19 @@ describe('playerActions', () => {
         reason: 'no-rows',
       });
     });
+
+    it.each([['draft'], ['scheduled'], ['finished']])(
+      'nekter å avvise i et %s spill, og skriver ingenting',
+      async (status: string) => {
+        const { queryStub, routeFrom, supabase } = mocks();
+        routeFrom({ games: [queryStub({ data: { status }, error: null })] });
+
+        expect(await actions().rejectScorecard(GAME, MATE, 'for sent')).toEqual({
+          ok: false,
+          reason: 'not-active',
+        });
+        expect(supabase.from).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 });
