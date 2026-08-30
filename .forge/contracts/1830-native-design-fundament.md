@@ -167,13 +167,15 @@ splash-plugin-feltene, rekkefølge på commits.
 - [x] 4. **Gates grønne** (alle syv): app-jest, app-tsc, `npx expo export --platform
   ios`, rot-typecheck, `npx vitest run lib/sync lib/scoring`, rot-build, `npx eslint
   native/app`. *Evidens: Gates-seksjonen under, alle kjørt 2026-08-30 21:35–21:50.*
-- [ ] 5. **Web-fredning + koordinering:** diff kun `native/app/**`, `docs/native/**`,
+- [x] 5. **Web-fredning + koordinering:** diff kun `native/app/**`, `docs/native/**`,
   `.forge/**`; `navigation.tsx` og skjermfilene har NULL diff; PR-body lister de nye
   token-eksportene for N4; oppfølgings-issue for skjerm-/navigasjonskonvertering
   opprettet før merge.
-  - *Delevidens (21:52):* `git diff origin/main --name-only` = 8 filer, 0 utenfor de tre
-    sonene; skjermer/navigasjon/SyncLab 0 diff; `git diff origin/main -- lib/` = 0
-    linjer. Oppfølgings-issue #1833 opprettet (milestone Native app). PR-body gjenstår.
+  - *Evidens (21:52–22:05):* `git diff origin/main --name-only` = 10 filer, 0 utenfor de
+    tre sonene; skjermer/navigasjon/SyncLab 0 diff; `git diff origin/main -- lib/` = 0
+    linjer. Oppfølgings-issue #1833 opprettet (milestone Native app). PR #1834 opprettet
+    (draft-først) med token-eksport-tabellen for N4 i body-en; evaluator-observasjonen
+    getSession-catch fikset i PR-en (runde-fila).
 
 ## Gates
 
