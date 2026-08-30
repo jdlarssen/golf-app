@@ -64,6 +64,9 @@ test.describe('Påmelding · manual_approval-modus (full flow) @gate', () => {
     const hilsen = 'Gleder meg!';
 
     await test.step('spiller fyller inn hilsen og sender forespørsel', async () => {
+      // #1792: meldingsfeltet er kollapset bak en lenke som default (QR-inngangen
+      // er unntaket) — åpne den før feltet kan fylles ut.
+      await playerPage.getByTestId('add-message-link').click();
       await playerPage
         .getByLabel('Valgfri hilsen til arrangøren')
         .fill(hilsen);
