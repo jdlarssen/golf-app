@@ -256,3 +256,33 @@ npm run typecheck
 npx vitest run lib/sync lib/scoring
 npx eslint native/app
 ```
+
+## Design-fundamentet (#1830)
+
+Fraunces/Inter og lys/mørk token-splitt, lagt ADDITIVT oppå N3-theme-fila av
+hensyn til N4-parallellen (#1828) — `COLORS`, `TAP` og `ui` beholdt navn og
+nøkler; skjermkonvertering er egen oppfølger.
+
+- **Fonter:** seks snitt (Fraunces 500/600, Inter 400/500/600/700) via
+  `useFonts` i `App.tsx`; splashen står til fontene OG sesjons-sjekken er
+  ferdig (`expo-splash-screen`), så kaldstart aldri viser systemfont-blits.
+  Font-feil slipper appen videre på systemfonter.
+  - **Felle:** importér snittene fra per-vekt-subpath
+    (`@expo-google-fonts/inter/400Regular`) — pakke-rotas index require-er
+    ALLE snitt og kursiver (~15 MB TTF inn i bundelen).
+  - **Felle:** expo-font registrerer én familie per snitt — `fontWeight`
+    velger ikke snitt for custom-fonter (Android fake-bolder, iOS faller
+    tilbake). Bruk `FONTS`-tokenene fra `theme.ts`, aldri `fontWeight` oppå
+    en custom familie.
+- **Tokens:** `theme.ts` eksporterer `PALETTES` (lys = N3-verdiene
+  bit-identisk; mørk = webbens klubbhus-natt fra `app/globals.css`), `FONTS`,
+  `Scheme`/`ThemeColors`/`Theme` og `useTheme()` (via `useColorScheme`; null/
+  `'unspecified'` → lys). Per-scheme `StyleSheet`-varianter bygges én gang på
+  modulnivå; `ui` er lys-varianten. `theme.test.ts` låser rolle-mapping og
+  nøkkelsett-paritet.
+- **Mørk modus-mekanismen:** `app.json` har `userInterfaceStyle: "automatic"`
+  (sto på `"light"` — det LÅSTE appen til lys) + splash-plugin med mørk
+  bakgrunnsvariant. Skjermene er fortsatt lyse til konverterings-oppfølgeren
+  tar dem (StatusBar står derfor bevisst på `style="dark"` inntil videre).
+- **Native modul-fella igjen:** expo-font/expo-splash-screen er native
+  moduler — prebuild + pod install + nytt xcodebuild før simulatorbevis.
