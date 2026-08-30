@@ -63,11 +63,18 @@ N1 (#1818) beviste delt scoring-hjerne og OTP-innlogging. Det som gjenstår før
 
 ## Gates
 
-- [ ] `npm run typecheck` (rot) grønt
-- [ ] `npx vitest run lib/sync lib/scoring` grønt (web-suitene uendret)
-- [ ] `npx tsc --noEmit` i `native/app/` grønt
-- [ ] `npx expo export --platform ios` bundler grønt
-- [ ] `npm run build` (rot) grønt før PR
+- [x] `npm run typecheck` (rot) grønt — exit 0 (2026-08-30)
+- [x] `npx vitest run lib/sync lib/scoring` grønt (web-suitene uendret) — exit 0, 55 filer / 1303 tester passed
+- [x] `npx tsc --noEmit` i `native/app/` grønt — exit 0
+- [x] `npx expo export --platform ios` bundler grønt — exit 0, 710 moduler, 2.3 MB hbc (`dist/` slettet etterpå)
+- [ ] `npm run build` (rot) grønt før PR — kjøres av hovedøkta
+
+Tilleggsbevis fra samme runde:
+
+- `npx eslint native/app` — exit 0.
+- `git diff main...HEAD -- lib/` — 0 linjer (delingen er les-eneste).
+- `grep -i dexie` mot den eksporterte iOS-bundelen — ingen treff, altså er
+  type-importene fra `lib/sync/db.ts` faktisk runtime-frie.
 
 ## Files Likely Touched
 
