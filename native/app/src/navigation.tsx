@@ -17,6 +17,7 @@ import { Approve } from './screens/Approve';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { Home } from './screens/Home';
+import { Leaderboard } from './screens/Leaderboard';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
@@ -26,6 +27,7 @@ export type RootStackParamList = {
   GameHome: { gameId: string };
   Hole: { gameId: string; holeNumber: number };
   Scorecard: { gameId: string };
+  Leaderboard: { gameId: string };
   Approve: { gameId: string };
   SyncLab: undefined;
 };
@@ -77,6 +79,11 @@ export function RootNavigator() {
           name="Scorecard"
           component={Scorecard}
           options={{ title: 'Scorekort' }}
+        />
+        <Stack.Screen
+          name="Leaderboard"
+          component={Leaderboard}
+          options={{ title: 'Resultater' }}
         />
         <Stack.Screen
           name="Approve"

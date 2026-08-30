@@ -125,6 +125,19 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         </Pressable>
       ) : null}
 
+      {/* Resultattabellen følger samme gate som føringen (#1828): et format
+          appen ikke kan taste, viser den heller ikke tall for. Planlagte spill
+          har ingen slag ennå, så lenken dukker opp når runden er i gang. */}
+      {supported && game.status !== 'scheduled' ? (
+        <Pressable
+          style={ui.buttonSecondary}
+          onPress={() => navigation.navigate('Leaderboard', { gameId })}
+          testID="open-leaderboard"
+        >
+          <Text style={ui.buttonSecondaryText}>Resultater</Text>
+        </Pressable>
+      ) : null}
+
       {approvals.length > 0 ? (
         <Pressable
           style={ui.buttonSecondary}
