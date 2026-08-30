@@ -10,6 +10,12 @@
 //     suksess og sletter kø-elementet — slaget er borte.
 //  2. **Manglende hull (#1793):** et komplett kort leveres uten spørsmål; er
 //     det hull uten slag, spør vi først, for de låses som ikke spilt.
+//
+// N4 (#1828): i lag-formatene som deler én ball viser kortet LAGETS rader
+// (kapteinens), og Lever-knappen er byttet ut med en henvisning til nettsiden.
+// Grunnen er RLS: webbens lag-levering skriver alle medlemmenes rader med
+// service-role, mens appen bare kan skrive sin egen. Et halvlevert lag ville
+// blokkert avslutningen av runden — så vi leverer ikke halvt.
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -19,9 +25,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { parForPlayer } from '../../../../lib/games/parDisplay';
-import type { ScoringGender } from '../../../../lib/scoring/modes/types';
-import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
+import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
+import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { isActiveForGame } from '../../../../lib/sync/queueScope';
 import { getDb, listQueue } from '../data/db';
 import { submitScorecard } from '../data/playerActions';
@@ -29,22 +34,18 @@ import { seedGameScores } from '../data/seedScores';
 import { drainQueue } from '../data/syncWorker';
 import { describeFailure } from '../lib/actionFeedback';
 import { isScoringSupported } from '../lib/formatGate';
+import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, toRoster } from '../lib/roster';
-import { scoresByHoleFor, useGameBundle, useLocalScores } from '../lib/useGameData';
+import { buildScorecardRows } from '../lib/scorecardRows';
+import { computeGameLeaderboard } from '../lib/scoringContext';
+import { buildTeamCards, findMyTeamCard, myTeamCaptainId } from '../lib/teamPlay';
+import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { COLORS, ui } from '../theme';
 
 const HOLE_COUNT = 18;
 const QUEUE_POLL_MS = 1500;
-
-interface Row {
-  holeNumber: number;
-  par: number;
-  strokeIndex: number;
-  strokes: number | null;
-  extra: number;
-}
 
 export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const { gameId } = route.params;
@@ -97,29 +98,39 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   }
 
   const courseHandicap = me.player.courseHandicap ?? 0;
-  const byHole = scoresByHoleFor(scores, userId);
-  const rows: Row[] = bundle.holes.map((hole) => ({
-    holeNumber: hole.holeNumber,
-    par: parForPlayer(
-      { mens: hole.parMens, ladies: hole.parLadies, juniors: hole.parJuniors },
-      me.player.teeGender as ScoringGender,
-    ),
-    strokeIndex: hole.strokeIndex,
-    strokes: byHole.get(hole.holeNumber)?.strokes ?? null,
-    extra: strokesForHole(courseHandicap, hole.strokeIndex),
-  }));
+  const mode = bundle.game.gameMode as GameMode;
+  const myCaptainId = myTeamCaptainId(roster, userId);
+  // «Deler denne runden ett kort i det hele tatt?» Hull 18 er spørsmålet som
+  // svarer på det: patsome er det eneste formatet der svaret varierer per hull,
+  // og foursomes-halvdelen der går til 18. Selve rad-eierskapet spørres likevel
+  // per hull, inne i `buildScorecardRows`.
+  const teamMode = myCaptainId != null && modeCollapsesToTeamCard(mode, 18);
+  const myTeamCard = teamMode
+    ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
+    : null;
+  // Motoren spørres bare når det faktisk er et lagkort som skal vises.
+  const leaderboard = teamMode ? computeGameLeaderboard(bundle, scores) : null;
 
-  const played = rows.filter((row) => row.strokes != null);
-  const totalBrutto = played.reduce((sum, row) => sum + (row.strokes ?? 0), 0);
-  const totalExtra = played.reduce((sum, row) => sum + row.extra, 0);
-  const totalNetto = totalBrutto - totalExtra;
-  const missing = HOLE_COUNT - played.length;
+  const { rows, totals } = buildScorecardRows({
+    holes: bundle.holes,
+    scores,
+    mode,
+    viewerId: userId,
+    teamOwnerId: myCaptainId,
+    teeGender: me.player.teeGender as ScoringGender,
+    courseHandicap,
+    teamNumber: myTeamCard?.teamNumber ?? me.player.teamNumber,
+    leaderboard,
+  });
+  const missing = HOLE_COUNT - totals.playedHoles;
 
   const canSubmit =
     bundle.game.status === 'active' &&
     me.submitted_at == null &&
     me.withdrawn_at == null &&
-    isScoringSupported(bundle.game);
+    isScoringSupported(bundle.game) &&
+    // Lag-levering er nettsidens jobb — se fil-toppen.
+    !teamMode;
 
   const doSubmit = async () => {
     setBusy(true);
@@ -152,7 +163,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="scorecard-screen">
       <Text style={ui.title}>{bundle.game.name}</Text>
-      <Text style={[ui.muted, ui.num]}>Banehandicap {courseHandicap}</Text>
+      {teamMode ? (
+        <Text style={ui.muted} testID="scorecard-team-label">
+          {myTeamCard?.label ?? 'Lagets kort'}
+        </Text>
+      ) : (
+        <Text style={[ui.muted, ui.num]}>Banehandicap {courseHandicap}</Text>
+      )}
 
       <View style={styles.table}>
         <View style={[styles.row, styles.headRow]}>
@@ -168,21 +185,27 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             <Text style={[styles.cell, styles.mutedCell, ui.num]}>{row.par}</Text>
             <Text style={[styles.cell, styles.mutedCell, ui.num]}>{row.strokeIndex}</Text>
             <Text style={[styles.cell, ui.num]}>{row.strokes ?? '—'}</Text>
-            <Text style={[styles.cell, ui.num]}>
-              {row.strokes != null ? row.strokes - row.extra : '—'}
-            </Text>
+            <Text style={[styles.cell, ui.num]}>{row.netto ?? '—'}</Text>
           </View>
         ))}
       </View>
 
       <View style={ui.card} testID="scorecard-totals">
-        <Total label="Spilte hull" value={played.length} />
-        <Total label="Brutto" value={totalBrutto} />
-        <Total label="Tildelte slag" value={totalExtra} />
-        <Total label="Netto" value={totalNetto} />
+        <Total label="Spilte hull" value={totals.playedHoles} />
+        <Total label="Brutto" value={totals.totalGross} />
+        {totals.totalExtra != null && totals.totalNet != null ? (
+          <>
+            <Total label="Tildelte slag" value={totals.totalExtra} />
+            <Total label="Netto" value={totals.totalNet} />
+          </>
+        ) : null}
       </View>
 
-      {canSubmit ? (
+      {teamMode ? (
+        <Text style={ui.muted} testID="team-submit-gate">
+          Levering av lagkort gjøres på nettsiden ennå.
+        </Text>
+      ) : canSubmit ? (
         <>
           {queued > 0 ? (
             <Text style={ui.muted} testID="queue-guard">

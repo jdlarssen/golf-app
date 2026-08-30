@@ -4,6 +4,10 @@
 // CTA-en kommer fra `computePrimaryCtaState`, speilet av webbens PrimaryCta, og
 // telles på LOKALE slag: står det tre hull i SQLite som ikke har rukket opp til
 // serveren ennå, teller de likevel. Alt annet på skjermen er bundelen.
+//
+// N4 (#1828): i lag-formatene som deler én ball er «mine hull» LAGETS hull —
+// kapteinens rader — og «levert» er lagets stempel, ikke bare mitt. Begge
+// spørsmålene stilles til delte hjelpere; CTA-regelen selv er uendret.
 import { useCallback } from 'react';
 import {
   ActivityIndicator,
@@ -17,16 +21,24 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
+import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { seedGameScores } from '../data/seedScores';
 import { displayName, formatTeeOff } from '../lib/display';
 import { gateMessage, gateReason, type GateReason } from '../lib/formatGate';
+import { nameLookup } from '../lib/leaderboardModel';
 import {
   computePrimaryCtaState,
   nextUnfilledHole,
 } from '../lib/primaryCtaState';
 import { findInRoster, pendingApprovals, toRoster } from '../lib/roster';
-import { filledHolesFor, useGameBundle, useLocalScores } from '../lib/useGameData';
+import {
+  buildTeamCards,
+  filledHolesForOwner,
+  findMyTeamCard,
+  myTeamCaptainId,
+} from '../lib/teamPlay';
+import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { COLORS, ui } from '../theme';
@@ -73,7 +85,16 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const mode = game.gameMode as GameMode;
   const gated = gateReason(game);
   const supported = gated === null;
-  const filled = filledHolesFor(scores, userId);
+  // Lag-formatene: mine hull er kapteinens rader, og «levert» er lagets
+  // stempel («noen på laget» — samme regel webbens lagkort bruker).
+  const myCaptainId = myTeamCaptainId(roster, userId);
+  const myTeamCard =
+    myCaptainId != null && modeCollapsesToTeamCard(mode, HOLE_COUNT)
+      ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
+      : null;
+  const filled = filledHolesForOwner(scores, mode, userId, myCaptainId);
+  // Godkjenn-lista er per SPILLER også i lag-formater: hvert medlem har sin
+  // egen `game_players`-rad, og den delte regelen er alt mode-bevisst.
   const approvals = me ? pendingApprovals(roster, mode, userId) : [];
 
   return (
@@ -112,6 +133,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         me={me?.player}
         gated={gated}
         filled={filled}
+        submittedAt={myTeamCard ? myTeamCard.submittedAt : (me?.player.submittedAt ?? null)}
+        approvedAt={myTeamCard ? myTeamCard.approvedAt : (me?.player.approvedAt ?? null)}
         onNavigate={navigation.navigate}
       />
 
@@ -173,12 +196,21 @@ function PrimarySection({
   me,
   gated,
   filled,
+  submittedAt,
+  approvedAt,
   onNavigate,
 }: {
   bundle: GameBundle;
   me: BundlePlayer | undefined;
   gated: GateReason | null;
   filled: number[];
+  /**
+   * Stemplene CTA-en skal regne på — mine egne, eller lagets i de formatene
+   * som deler ett kort. Sendes inn i stedet for å leses av `me`, slik at
+   * begge tilfellene går gjennom samme fem grener.
+   */
+  submittedAt: string | null;
+  approvedAt: string | null;
   onNavigate: ScreenProps<'GameHome'>['navigation']['navigate'];
 }) {
   const { game } = bundle;
@@ -233,8 +265,8 @@ function PrimarySection({
   const state = computePrimaryCtaState({
     strokesCount: filled.length,
     totalHoles: HOLE_COUNT,
-    submittedAt: me.submittedAt,
-    approvedAt: me.approvedAt,
+    submittedAt,
+    approvedAt,
     requirePeerApproval: game.requirePeerApproval,
   });
 
