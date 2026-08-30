@@ -140,7 +140,15 @@ eksakt spacing i K2, batching av K-ene i PR-er.
 - [ ] P3 (per K ved bygging): kriteriene i K-seksjonen over + drift-tabell +
       staging-bevis + grønn CI; én PR per K eller små K-batcher (byggerens valg,
       aldri på tvers av en eier-reversering og en ikke-reversering i samme commit).
-- [ ] P4: K1s hostile-POST-test rød mot gammel kode, grønn etter (TDD-bevis).
+      — K1/K2/K5/K8 bygget, staging-verifisert (bevis-kommentar + label på PR
+      #1809) og evaluator-ACCEPT 2026-08-30
+      (`.forge/evaluations/1792-1793-1796-1799-1803-batch.md`); K3/K4/K6/K7/K9
+      gjenstår.
+- [x] P4: K1s hostile-POST-test rød mot gammel kode, grønn etter (TDD-bevis).
+      — Evidens 2026-08-30: rød kjøring `2 failed | 30 passed` mot gammel gate
+      (`=== 'team'`), grønn `33 passed` etter `isSoloRegistrationView`-gaten;
+      testene i `actions.test.ts` dekker begge actions (PR #1809, commit
+      09345ad1).
 
 ## Gates
 
