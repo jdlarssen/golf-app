@@ -37,6 +37,7 @@ Epic #1816 (eier-beslutning 2026-08-30) gjør ekte native app til målet; webben
 ## Edge Cases & Guardrails
 
 - **Web-fredning er absolutt:** `git diff` mot main skal vise NULL endringer utenfor `native/app/`, `docs/native/` og `.forge/` — treffer spiken en hindring som «krever» web-endring, stopp og eskaler i stedet for å røre web.
+  - *Sanksjonert unntak (bygge-runde 1):* én linje i rot-`tsconfig.json` — `"native"` lagt i `exclude`. Uten den forgifter React Natives globale typer (egen `FormData`) DOM-typene i hele web-programmet (fantom-TS2339 i `app/api/unsubscribe/product-update/route.ts`). Endringen berører kun typesjekk-scope, aldri runtime; rot-typecheck er verifisert grønn med den.
 - Staging-koden valideres kun mot staging; ingen prod-URL noe sted i appen (grep-sjekk før commit).
 - `.env` i `native/app/` gitignores; repoet er offentlig — aldri commit nøkler (anon-key er ok å bruke lokalt, men holdes ute av git likevel for vane-konsistens).
 - Feil kode / utløpt kode i login-skjermen: vis Supabase-feilmeldingen enkelt — polish er ikke i scope.
@@ -57,7 +58,8 @@ Epic #1816 (eier-beslutning 2026-08-30) gjør ekte native app til målet; webben
 - [ ] 1. `native/app/` bygger og kjører i iOS-simulator (skjermbilde-evidens av begge skjermer).
 - [ ] 2. Hjem-skjermen viser banehandicap beregnet av DELT kilde: import-sti i app-koden peker på `lib/scoring/` (fil:linje-evidens), ingen kopierte scoring-filer i `native/app/`, og verdien matcher `calculateCourseHandicap` for demo-inputene. I tillegg importeres `lib/scoring/index.ts` (eller tilsvarende modul med interne `@/`-imports) uten runtime-feil.
 - [ ] 3. OTP-innlogging mot staging fungerer i appen: send kode → verifiser → Hjem viser innlogget e-post. Session overlever kill + relansering (evidens: skjermbilde etter relansering uten ny innlogging).
-- [ ] 4. Web er urørt: `git diff origin/main --stat` viser kun `native/app/`, `docs/native/`, `.forge/`; `npm run typecheck`, `npx vitest run lib/scoring` og `npm run build` er grønne fra repo-rota.
+- [x] 4. Web er urørt: `git diff origin/main --stat` viser kun `native/app/`, `docs/native/`, `.forge/`; `npm run typecheck`, `npx vitest run lib/scoring` og `npm run build` er grønne fra repo-rota.
+  - *Evidens (2026-08-30, bygge-runde 1):* diff-stat = `native/app/**` + `docs/native/app-spike.md` + `.forge/` + den sanksjonerte `tsconfig.json`-exclude-linja (se Guardrails). `npm run typecheck` exit 0; `npx vitest run lib/scoring` → 1176 passed (1176); `npm run build` exit 0 (full logg i øktas /tmp/webbuild.log).
 - [ ] 5. Appen kjører på fysisk iPhone med bundle id `no.tornygolf.dev` (foto/skjermbilde-evidens; krever eier-assistanse med enheten — utilgjengelig enhet i økta → dokumentert `VERIFICATION GAP` + eier-tapptest som restanse, ikke stille hopp).
 - [ ] 6. Runbook `docs/native/app-spike.md` finnes og kommandoene i den er kjørt som skrevet minst én gang.
 
