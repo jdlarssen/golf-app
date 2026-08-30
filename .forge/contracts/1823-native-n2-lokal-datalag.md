@@ -72,7 +72,7 @@ N1 (#1818) beviste delt scoring-hjerne og OTP-innlogging. Det som gjenstår før
 - [x] `npx vitest run lib/sync lib/scoring` grønt (web-suitene uendret) — exit 0, 55 filer / 1303 tester passed
 - [x] `npx tsc --noEmit` i `native/app/` grønt — exit 0
 - [x] `npx expo export --platform ios` bundler grønt — exit 0, 710 moduler, 2.3 MB hbc (`dist/` slettet etterpå)
-- [ ] `npm run build` (rot) grønt før PR — kjøres av hovedøkta
+- [x] `npm run build` (rot) grønt før PR — exit 0 (hovedøkta) + re-bevist av evaluator (exit 0, runde 1) — kjøres av hovedøkta
 
 Tilleggsbevis fra samme runde:
 
