@@ -46,10 +46,13 @@ export default function App() {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setBooting(false);
-    });
+    // .catch + .finally: en avvist getSession må ALDRI la splashen henge —
+    // uten sesjon faller vi til Login, som selv viser feil ved ny innlogging.
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch(() => setSession(null))
+      .finally(() => setBooting(false));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
     });
