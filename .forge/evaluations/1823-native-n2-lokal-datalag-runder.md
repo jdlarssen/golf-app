@@ -1,0 +1,1 @@
+Runde 1 (2026-08-30): ACCEPT — funn-signaturer (kosmetiske, ingen handling): realtime.ts + kriterium 4 (type-import mergeServerScore); kontraktsfila + kriterium 4 (sti-ordlyd); supabase.ts + kriterium 5 (Database-generic, runtime-fri).
