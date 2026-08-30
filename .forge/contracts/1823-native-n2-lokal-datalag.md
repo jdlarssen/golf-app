@@ -53,11 +53,15 @@ N1 (#1818) beviste delt scoring-hjerne og OTP-innlogging. Det som gjenstår før
 
 ## Success Criteria
 
-- [ ] 1. **Øyeblikkelig lokal skriving:** tap på + i Sync-lab oppdaterer UI umiddelbart; lokal DB har raden og køen elementet (evidens: skjermbilde + kø-teller i UI før drain).
-- [ ] 2. **Drain lander på staging:** etter drain finnes raden i staging `scores` med appens `client_updated_at` (service-role-les som evidens), og køen er tom i UI.
-- [ ] 3. **Realtime inn:** en service-role-utført `upsert_score_if_newer` utenfra (nyere timestamp, annet slag-tall) vises i appen uten reload innen ~5 s (evidens: skjermbilder før/etter).
+- [x] 1. **Øyeblikkelig lokal skriving:** tap på + i Sync-lab oppdaterer UI umiddelbart; lokal DB har raden og køen elementet (evidens: skjermbilde + kø-teller i UI før drain).
+  - *Evidens (2026-08-30 17:56, simulator):* tre tapp på Hull 1 → «3» vist umiddelbart, status «venter», «I kø: 1» (tre tastinger = ETT kø-element, web-semantikk). Skjermbilde i økta.
+- [x] 2. **Drain lander på staging:** etter drain finnes raden i staging `scores` med appens `client_updated_at` (service-role-les som evidens), og køen er tom i UI.
+  - *Evidens:* service-role-les av `scores` for spill 69d7641e/hull 1 → strokes 3, `client_updated_at` 2026-08-30T15:56:27.288Z (appens stempel), `updated_at` 15:56:34. UI: «synket», «I kø: 0». Merk: intervall-triggeren drainet før knappen — begge triggere observert i drift.
+- [x] 3. **Realtime inn:** en service-role-utført `upsert_score_if_newer` utenfra (nyere timestamp, annet slag-tall) vises i appen uten reload innen ~5 s (evidens: skjermbilder før/etter).
+  - *Evidens:* ekstern RPC 15:57:21Z (strokes 5, was_applied=true) → appen viste 5 innen ~4 s uten reload, og «Konfliktvarsler: 1» — delt `conflictRecordFor` fanget overskrivingen av lokalt tastet tall. Skjermbilder før/etter i økta.
 - [ ] 4. **Delt kilde, null kopier:** app-koden importerer `resolveConflict`/`conflictRecordFor`/`syncRetryDecision` fra `../../lib/sync/*` (fil:linje-evidens); `git diff` viser null endring i `lib/sync/`; `npx vitest run lib/sync lib/scoring` grønn.
-- [ ] 5. **Web urørt + porter grønne:** diff-scope per guardrail; `npm run typecheck`, `npm run build`, app-`tsc`, `npx expo export --platform ios` alle grønne.
+- [x] 5. **Web urørt + porter grønne:** diff-scope per guardrail; `npm run typecheck`, `npm run build`, app-`tsc`, `npx expo export --platform ios` alle grønne.
+  - *Evidens:* byggerens gates (typecheck 0, vitest lib/sync+lib/scoring 1303 passed, app-tsc 0, expo export 0, eslint 0) + hovedøktas `npm run build` exit 0 (2026-08-30 ettermiddag). `git diff main...HEAD -- lib/` = 0 linjer.
 - [ ] 6. **Flymodus på fysisk iPhone (eier-assistert):** slag tastet i flymodus vises umiddelbart; nett på igjen → raden verifisert på staging. Eier utilgjengelig i økta → dokumentert `VERIFICATION GAP` + restanse, aldri stille hopp.
 - [ ] 7. **Runbook:** `docs/native/app-spike.md` utvidet med datalag-seksjonen (skjema, triggere, sync-lab, flymodus-testen).
 
