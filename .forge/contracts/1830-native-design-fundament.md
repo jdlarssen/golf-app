@@ -134,35 +134,56 @@ splash-plugin-feltene, rekkefølge på commits.
 
 ## Success Criteria
 
-- [ ] 1. **Fontene lever:** simulator-skjermbilde viser Fraunces på titler/tall
+- [x] 1. **Fontene lever:** simulator-skjermbilde viser Fraunces på titler/tall
   (`ui.title`/`ui.value`) og Inter på brødtekst/knapper på ekte skjermer (Hjem/Login);
   kaldstart viser ALDRI systemfont-blits (splash står til fontene er klare — verifisert
   ved relaunch).
-- [ ] 2. **Token-splitt additivt:** `theme.ts` eksporterer `Scheme`, `ThemeColors`,
+  - *Evidens (2026-08-30 21:49–21:50, simulator 820CA940, Release-bygg):* Hjem viser
+    Fraunces-serif på spilltitler («TEST-Cup-…», «Byneset North 3. juli») og Inter på
+    banelinje/badges/«PÅGÅR NÅ»; GameHome viser Fraunces-tittel + Inter-brødtekst og
+    «Scorekort»-knapp (Inter SemiBold). Kaldstart-burst i lys modus: frame 4 = splash
+    (linen, ingen tekst) → frame 5–8 = ferdig fontet Hjem, ingen mellomframe med
+    systemfont. *Avvik:* Login ikke fotografert — utlogging ville ødelagt simulatorens
+    innloggede e2e-sesjon (rigg-asset for N-etappene); Hjem+GameHome dekker beviset.
+    Bundelen inneholder nøyaktig de 6 TTF-ene (find i TrnyDev.app → 6 treff).
+- [x] 2. **Token-splitt additivt:** `theme.ts` eksporterer `Scheme`, `ThemeColors`,
   `PALETTES` (lys bit-identisk med dagens verdier; mørk = klubbhus-natt fra
   globals.css), `FONTS` og `useTheme()`; eksisterende eksporter `COLORS`/`TAP`/`ui`
   uendret i navn og nøkkelsett (`git diff` viser ingen fjernede eksporter/nøkler).
-- [ ] 3. **Mørk modus-mekanismen:** `app.json` har `userInterfaceStyle: "automatic"` +
+  - *Evidens:* `theme.test.ts` (7 tester grønne, TDD rød→grønn i økta) låser lys
+    palett == COLORS-verdiene rolle for rolle, mørk komplett + distinkt, nøkkelsett-
+    paritet lys/mørk og `ui` === lys-varianten. Diff i `ui`-stiler er kun
+    fontFamily inn / fontWeight ut; COLORS/TAP uendret.
+- [x] 3. **Mørk modus-mekanismen:** `app.json` har `userInterfaceStyle: "automatic"` +
   splash-plugin med mørk variant; simulator i dark appearance booter uten krasj og viser
   mørk splash; jest-testen beviser at `useTheme` gir mørk palett ved `'dark'` og lys ved
   `null`.
-- [ ] 4. **Gates grønne** (alle syv): app-jest, app-tsc, `npx expo export --platform
+  - *Evidens (21:49–21:50):* `simctl ui … appearance dark` + kaldstart → skjermbilde av
+    mørk splash (klubbhus-natt-bakgrunn + ikon) og deretter Hjem uten krasj (lys som
+    bokført — konvertering er #1833). Prebuild-colorsettet: ANY = (248,246,240) =
+    #F8F6F0, dark = (20,32,26) = #14201A — eksakt kontraktverdiene.
+    `resolveScheme`-testene dekker `'dark'`/`'light'`/`null`/`undefined`/`'unspecified'`
+    (RN 0.86-unionen inkluderer 'unspecified' — fanget av tsc i økta).
+- [x] 4. **Gates grønne** (alle syv): app-jest, app-tsc, `npx expo export --platform
   ios`, rot-typecheck, `npx vitest run lib/sync lib/scoring`, rot-build, `npx eslint
-  native/app`.
+  native/app`. *Evidens: Gates-seksjonen under, alle kjørt 2026-08-30 21:35–21:50.*
 - [ ] 5. **Web-fredning + koordinering:** diff kun `native/app/**`, `docs/native/**`,
   `.forge/**`; `navigation.tsx` og skjermfilene har NULL diff; PR-body lister de nye
   token-eksportene for N4; oppfølgings-issue for skjerm-/navigasjonskonvertering
   opprettet før merge.
+  - *Delevidens (21:52):* `git diff origin/main --name-only` = 8 filer, 0 utenfor de tre
+    sonene; skjermer/navigasjon/SyncLab 0 diff; `git diff origin/main -- lib/` = 0
+    linjer. Oppfølgings-issue #1833 opprettet (milestone Native app). PR-body gjenstår.
 
 ## Gates
 
-- [ ] `npx jest` i `native/app/` grønt
-- [ ] `npx tsc --noEmit` i `native/app/` grønt
-- [ ] `npx expo export --platform ios` grønt (`dist/` slettes etterpå)
-- [ ] `npm run typecheck` (rot) grønt
-- [ ] `npx vitest run lib/sync lib/scoring` grønt
-- [ ] `npm run build` (rot) grønt
-- [ ] `npx eslint native/app` grønt
+- [x] `npx jest` i `native/app/` grønt — 12 suiter / 92 tester, exit 0 (21:45)
+- [x] `npx tsc --noEmit` i `native/app/` grønt — exit 0 (21:45)
+- [x] `npx expo export --platform ios` grønt (`dist/` slettet) — exit 0, hbc 2.8MB, nøyaktig 6 TTF-assets (21:44)
+- [x] `npm run typecheck` (rot) grønt — exit 0 (21:47)
+- [x] `npx vitest run lib/sync lib/scoring` grønt — 1303/1303, exit 0 m/ pipefail (21:47)
+- [x] `npm run build` (rot) grønt — exit 0 (21:48)
+- [x] `npx eslint native/app` grønt — exit 0 (21:47)
 
 ## Files Likely Touched
 
