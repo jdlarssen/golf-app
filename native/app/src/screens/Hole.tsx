@@ -8,6 +8,12 @@
 // Å taste for en makker er lov (`enteredBy` = meg): flighten fører for
 // hverandre på banen, og `can_score_for` (0095/0106) er porten som avgjør om
 // skrivingen står seg på serveren.
+//
+// N4 (#1828): i lag-formatene som slår ÉN ball — scramble-familien og
+// alternate-shot-matchplay — er kortet lagets, ikke spillerens. Da tegnes ett
+// kort per lag, og hvert tapp går til kapteinens rad via den delte
+// `scoreOwnerForHole`. Tallene på kortet (lagets tildelte slag) kommer fra
+// motoren; se `lib/teamPlay.ts` for hvorfor de ikke regnes her.
 import { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -18,17 +24,30 @@ import {
   View,
 } from 'react-native';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
+import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
+import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import type { LocalScore } from '../data/db';
-import type { BundleHole, BundlePlayer } from '../data/gameBundle';
+import type { BundleGame, BundleHole, BundlePlayer } from '../data/gameBundle';
 import { subscribeGameScores } from '../data/realtime';
 import { seedGameScores } from '../data/seedScores';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { displayName } from '../lib/display';
+import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
-import { filledHolesFor, useGameBundle, useLocalScores } from '../lib/useGameData';
+import { computeGameLeaderboard } from '../lib/scoringContext';
+import {
+  buildTeamCards,
+  filledHolesForOwner,
+  findMyTeamCard,
+  foursomesTeeStarterId,
+  myTeamCaptainId,
+  teamExtraForHole,
+  type TeamCard,
+} from '../lib/teamPlay';
+import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { COLORS, TAP, ui } from '../theme';
@@ -102,14 +121,27 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
     { mens: hole.parMens, ladies: hole.parLadies, juniors: hole.parJuniors },
     me.player.teeGender as ScoringGender,
   );
-  const myFilled = filledHolesFor(scores, userId);
+  // Kollapser dette hullet til ett lagkort? Spørsmålet er per HULL (patsome
+  // bytter halvveis), og laget mitt må faktisk ha en aktiv kaptein.
+  const myCaptainId = myTeamCaptainId(roster, userId);
+  const collapsed = myCaptainId != null && modeCollapsesToTeamCard(mode, holeNumber);
+  const nameOf = nameLookup(bundle.players);
+  const teamCards = collapsed ? buildTeamCards(flight, nameOf) : [];
+  const myCard = findMyTeamCard(teamCards, userId);
+  // Hull-stripen teller radene JEG fører i: lagets i de kollapsede modiene,
+  // mine egne ellers. Den delte regelen svarer per hull.
+  const myFilled = filledHolesForOwner(scores, mode, userId, myCaptainId);
   const byUserHole = new Map(
     scores.map((row) => [`${row.userId}#${row.holeNumber}`, row]),
   );
   // Defensivt, som på web: et levert kort eller et spill som ikke lenger er
   // aktivt skal ikke kunne tastes på. RLS stopper det uansett — dette er bare
-  // for at knappene ikke skal love noe de ikke kan holde.
-  const locked = bundle.game.status !== 'active' || me.submitted_at != null;
+  // for at knappene ikke skal love noe de ikke kan holde. På et lagkort er det
+  // lagets stempel som gjelder: leverer én makker, er kortet frosset for alle.
+  const mySubmittedAt = collapsed ? (myCard?.submittedAt ?? null) : me.submitted_at;
+  const locked = bundle.game.status !== 'active' || mySubmittedAt != null;
+  // Badgen hentes fra motoren, og bare når vi faktisk skal tegne lagkort.
+  const leaderboard = collapsed ? computeGameLeaderboard(bundle, scores) : null;
 
   const adjustStrokes = async (playerUserId: string, delta: number) => {
     const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.strokes ?? null;
@@ -165,24 +197,66 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
 
       {locked ? (
         <Text style={ui.muted} testID="hole-locked">
-          {bundle.game.status === 'active'
-            ? 'Kortet ditt er levert. Føringen er låst.'
-            : 'Spillet er ikke aktivt. Føringen er låst.'}
+          {bundle.game.status !== 'active'
+            ? 'Spillet er ikke aktivt. Føringen er låst.'
+            : collapsed
+              ? 'Lagkortet er levert. Føringen er låst.'
+              : 'Kortet ditt er levert. Føringen er låst.'}
         </Text>
       ) : null}
 
-      {flight.map((entry) => (
-        <PlayerCard
-          key={entry.user_id}
-          entry={entry}
-          hole={hole}
-          score={byUserHole.get(`${entry.user_id}#${holeNumber}`)}
-          isMe={entry.user_id === userId}
-          locked={locked}
-          onStrokes={(delta) => void adjustStrokes(entry.user_id, delta)}
-          onPutts={(delta) => void adjustPutts(entry.user_id, delta)}
-        />
-      ))}
+      {collapsed
+        ? teamCards.map((card) => (
+            <TeamCardView
+              key={card.teamNumber}
+              card={card}
+              // Kapteinens rad er lagets rad — samme oppslag for alle på laget.
+              score={byUserHole.get(`${card.captainId}#${holeNumber}`)}
+              isMine={card.teamNumber === myCard?.teamNumber}
+              extra={
+                leaderboard
+                  ? teamExtraForHole(
+                      leaderboard,
+                      card.teamNumber,
+                      holeNumber,
+                      hole.strokeIndex,
+                    )
+                  : null
+              }
+              teeStarterName={teeStarterNameFor({
+                card,
+                gameMode: mode,
+                game: bundle.game,
+                holeNumber,
+                nameOf,
+              })}
+              locked={locked || card.submittedAt != null}
+              onStrokes={(delta) =>
+                void adjustStrokes(
+                  scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
+                  delta,
+                )
+              }
+              onPutts={(delta) =>
+                void adjustPutts(
+                  scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
+                  delta,
+                )
+              }
+            />
+          ))
+        : flight.map((entry) => (
+            <PlayerCard
+              key={entry.user_id}
+              entry={entry}
+              hole={hole}
+              score={byUserHole.get(`${entry.user_id}#${holeNumber}`)}
+              isMe={entry.user_id === userId}
+              locked={locked}
+              onStrokes={(delta) => void adjustStrokes(entry.user_id, delta)}
+              onPutts={(delta) => void adjustPutts(entry.user_id, delta)}
+            />
+          ))}
 
       <Text style={ui.sectionTitle}>Runden</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="hole-strip">
@@ -234,10 +308,106 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
           onPress={() => navigation.navigate('Scorecard', { gameId })}
           testID="hole-submit"
         >
-          <Text style={ui.buttonText}>Lever scorekort</Text>
+          {/* Lagkort leveres på nettsiden (RLS lar appen bare skrive egen rad),
+              så knappen lover bare det den kan: å vise kortet. */}
+          <Text style={ui.buttonText}>
+            {collapsed ? 'Se lagets kort' : 'Lever scorekort'}
+          </Text>
         </Pressable>
       ) : null}
     </ScrollView>
+  );
+}
+
+/**
+ * «Anna slår ut» — utslags-hintet for siden, eller `null`.
+ *
+ * Regelen bor i `teamPlay`; her settes bare navnet på svaret.
+ */
+function teeStarterNameFor(opts: {
+  card: TeamCard;
+  gameMode: GameMode;
+  game: BundleGame;
+  holeNumber: number;
+  nameOf: (userId: string) => string;
+}): string | null {
+  const starterId = foursomesTeeStarterId({
+    gameMode: opts.gameMode,
+    game: opts.game,
+    teamNumber: opts.card.teamNumber,
+    holeNumber: opts.holeNumber,
+    memberIds: opts.card.memberIds,
+  });
+  return starterId ? opts.nameOf(starterId) : null;
+}
+
+/**
+ * Ett lag, ett kort, én rad.
+ *
+ * Kortet ser ut som spiller-kortet med vilje — samme steppere, samme
+ * badge-plass — for det er den samme handlingen. Forskjellen er hvem tallet
+ * havner hos, og det står i overskriften («Lag 1 · Anna, Bjørn»).
+ */
+function TeamCardView({
+  card,
+  score,
+  isMine,
+  extra,
+  teeStarterName,
+  locked,
+  onStrokes,
+  onPutts,
+}: {
+  card: TeamCard;
+  score: LocalScore | undefined;
+  isMine: boolean;
+  /** `null` = motoren kunne ikke svare. Da vises ingen badge. */
+  extra: number | null;
+  teeStarterName: string | null;
+  locked: boolean;
+  onStrokes: (delta: number) => void;
+  onPutts: (delta: number) => void;
+}) {
+  return (
+    <View style={ui.card} testID={`team-card-${card.teamNumber}`}>
+      <View style={styles.cardHead}>
+        <Text style={[ui.body, isMine && styles.meName]}>
+          {card.label}
+          {isMine ? ' (ditt lag)' : ''}
+        </Text>
+        {extra != null && extra !== 0 ? (
+          <View style={ui.badge}>
+            <Text
+              style={[ui.badgeText, ui.num]}
+              testID={`team-${card.teamNumber}-extra`}
+            >
+              {extra > 0 ? `+${extra}` : String(extra)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {teeStarterName ? (
+        <Text style={ui.muted} testID={`team-${card.teamNumber}-tee-starter`}>
+          {teeStarterName} slår ut
+        </Text>
+      ) : null}
+
+      <Stepper
+        label="Slag"
+        value={score?.strokes ?? null}
+        disabled={locked}
+        onChange={onStrokes}
+        testIDPrefix={`team-${card.teamNumber}`}
+      />
+      <Stepper
+        label="Putter"
+        value={score?.putts ?? null}
+        disabled={locked}
+        onChange={onPutts}
+        testIDPrefix={`team-${card.teamNumber}-putts`}
+      />
+    </View>
   );
 }
 
