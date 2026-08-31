@@ -6,16 +6,17 @@
 //
 // N4 flyttet scramble-familien og alternate-shot-matchplay UT av gaten: begge
 // kollapser til ett lagkort, som appen nå fører, og motoren gir dem ferdige
-// lag-/side-resultater. Til gjengjeld gikk to formater INN:
+// lag-/side-resultater. Til gjengjeld gikk wolf og Bingo Bango Bongo INN — de
+// henter halve regnestykket sitt fra egne per-hull-tabeller, og appen kunne
+// hverken lese eller skrive dem.
 //
-//  1. **Wolf og Bingo Bango Bongo.** Begge henter halve regnestykket sitt fra
-//     egne per-hull-tabeller (`wolf_hole_choices`, `bingo_bango_bongo_holes`)
-//     som appen hverken leser eller skriver. Ren slag-tasting ga dermed et
-//     resultat som SÅ riktig ut og var tomt: hvert Wolf-hull sto som uavgjort
-//     fordi ingen hadde valgt partner. Misvisende halv-støtte er verre enn
-//     ingen. Egen slice bokfører valg-UI-en.
-//  2. **Patsome** står som før — segment-hybrid (4BBB til hull 6, foursomes
-//     fra hull 7) med egne tee-starters.
+// #1832 åpnet de to igjen: appen leser nå `wolf_hole_choices` og
+// `bingo_bango_bongo_holes` (`data/choices.ts`), fører valgene på hull-siden
+// (`components/hole/`) og mater dem inn i den delte motoren. Ett format står
+// igjen i gaten:
+//
+//  1. **Patsome** — segment-hybrid (4BBB til hull 6, foursomes fra hull 7) med
+//     egne tee-starters.
 //
 // Uendret fra N3:
 //  - **Segment-spill** (`hole_segment !== 'full'`): front9/back9-halvdelene av
@@ -27,16 +28,15 @@
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 
 /**
- * Formatene som er stengt på grunn av SELVE spilleformen. Skrevet ut som en
- * liste og ikke utledet fra et delt predikat med vilje: ingen av de delte
- * predikatene beskriver «mangler per-hull-valg-UI i appen», og en gate som
- * later som den følger et delt begrep ville drevet fra det ved neste endring.
+ * Formatene som er stengt på grunn av SELVE spilleformen — ett per d.d.
+ *
+ * Skrevet ut som en liste og ikke utledet fra et delt predikat med vilje:
+ * ingen av de delte predikatene beskriver «har ikke fått sin flate i appen
+ * ennå», og en gate som later som den følger et delt begrep ville drevet fra
+ * det ved neste endring. Lista har krympet én gang før (#1832 slapp wolf og
+ * Bingo Bango Bongo ut), og det skal den kunne gjøre igjen — én rad om gangen.
  */
-const GATED_MODES: readonly GameMode[] = [
-  'wolf',
-  'bingo_bango_bongo',
-  'patsome',
-];
+const GATED_MODES: readonly GameMode[] = ['patsome'];
 
 /** Hvorfor et spill ikke vises i appen. `null` = det vises. */
 export type GateReason = 'mode' | 'segment' | 'derived';

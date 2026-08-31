@@ -17,6 +17,10 @@
 //     ingenting — gammelt er bedre enn borte. Men har INGEN henting lyktes,
 //     står svaret tomt, og adapteren sier `missing-choices` i stedet for å
 //     bygge en tabell der hvert hull står uavgjort (`ScoringExtras`).
+//
+// Hooken gir også `refresh` tilbake: hull-skjermen skriver valg, og da skal
+// badgen stå riktig med en gang — ikke etter opptil ti sekunder. Det er samme
+// henting som pollingen kjører, ikke en ny vei inn i tabellen.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchBingoBangoBongoHoles, fetchWolfChoices } from '../data/choices';
@@ -45,20 +49,26 @@ export function choiceSourceFor(gameMode: string): ChoiceSource | null {
   return null;
 }
 
+export interface GameChoices {
+  /** Klar til å tres rett inn i `computeGameLeaderboard`. */
+  extras: ScoringExtras;
+  /** Hent på nytt nå — brukes rett etter at skjermen selv har skrevet et valg. */
+  refresh: () => Promise<void>;
+}
+
 /**
  * Valgene for spillet, hentet ved fokus og på intervall mens skjermen står
  * åpen.
  *
- * Returnerer `ScoringExtras` klar til å tres rett inn i
- * `computeGameLeaderboard`. Et tomt objekt betyr enten «formatet trenger ingen
- * valg» eller «ingen henting har lyktes ennå» — adapteren skiller de to på
- * `game_mode`, så kalleren trenger ikke.
+ * `extras` er et tomt objekt både når «formatet trenger ingen valg» og når
+ * «ingen henting har lyktes ennå» — adapteren skiller de to på `game_mode`, så
+ * kalleren trenger ikke.
  */
 export function useGameChoices(
   gameId: string,
   gameMode: string,
   pollMs: number = CHOICES_POLL_MS,
-): ScoringExtras {
+): GameChoices {
   const source = choiceSourceFor(gameMode);
   const [extras, setExtras] = useState<ScoringExtras>({});
 
@@ -97,5 +107,5 @@ export function useGameChoices(
     }, [pollMs, refresh, source]),
   );
 
-  return extras;
+  return { extras, refresh };
 }

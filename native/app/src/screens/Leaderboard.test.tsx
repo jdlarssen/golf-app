@@ -200,11 +200,18 @@ describe('LeaderboardBody', () => {
   });
 
   it('henviser til nettsiden for et gatet format, uten å røre motoren', async () => {
+    // Patsome er formatet som fortsatt står i gaten — #1832 slapp wolf og BBB
+    // ut da valg-UI-en kom på hull-siden.
     await render(
       <LeaderboardBody
         bundle={withGame({
-          gameMode: 'wolf',
-          modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
+          gameMode: 'patsome',
+          modeConfig: {
+            kind: 'patsome',
+            team_size: 2,
+            teams_count: 2,
+            patsome_scoring: 'net',
+          },
         })}
         scores={mockLocalScores}
       />,

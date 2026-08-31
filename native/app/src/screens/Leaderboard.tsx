@@ -59,7 +59,7 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   // Wolf og BBB henter halve regnestykket fra serveren. Alle andre formater
   // svarer `null` på kilde-spørsmålet og koster ikke et eneste kall — og før
   // bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
-  const extras = useGameChoices(gameId, bundle?.game.gameMode ?? '');
+  const { extras } = useGameChoices(gameId, bundle?.game.gameMode ?? '');
 
   // Påheng på det eksisterende abonnementet: samme kanal hull-siden bruker,
   // og hver merge leser den lokale basen på nytt.
