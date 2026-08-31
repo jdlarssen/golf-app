@@ -3,10 +3,14 @@ import { getServerClient } from '@/lib/supabase/server';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CopyShareLinkButton } from './CopyShareLinkButton';
+import { toggleSignupsClosed } from './flightActions';
+import type { GameStatus } from '@/lib/games/status';
 
 type Props = {
   gameId: string;
   registrationMode: 'invite_only' | 'manual_approval' | 'open';
+  gameStatus: GameStatus;
+  signupsClosedAt: string | null;
   shortId: string;
   selfRegisteredCount: number;
 };
@@ -19,15 +23,22 @@ type Props = {
  *
  * `selfRegisteredCount` regnes ut hos caller (vi har allerede game_players-
  * raden ut fra players-fetchen i page.tsx — ingen ny round-trip her).
+ *
+ * #1795: steng/gjenåpne-påmelding (#543) lå som eget kort rett under dette; nå
+ * er det en sekundær rad nederst her. Gaten bor derfor INNE i kortet — se
+ * `canToggleSignups` under.
  */
 export async function RegistrationOverviewSection({
   gameId,
   registrationMode,
+  gameStatus,
+  signupsClosedAt,
   shortId,
   selfRegisteredCount,
 }: Props) {
   const supabase = await getServerClient();
   const t = await getTranslations('admin.game.registration');
+  const tCta = await getTranslations('admin.game.cta');
 
   // Pending-telleren gjelder request-modiene (manual_approval + invite_only).
   // For open viser vi i stedet "antall selv-påmeldte spillere" som caller
@@ -47,6 +58,16 @@ export async function RegistrationOverviewSection({
     }
     pendingCount = count ?? 0;
   }
+
+  // #543-gaten, flyttet inn i kortet (#1795). `draft` har ingen påmelding å
+  // stenge ennå, og `invite_only` har ingen registreringsliste — samme to
+  // betingelser som server-actionen selv håndhever (flightActions.ts).
+  // Kortet rendres uansett bare på draft/scheduled, så scheduled-leddet er det
+  // som holder raden borte fra utkast.
+  const canToggleSignups =
+    gameStatus === 'scheduled' &&
+    (registrationMode === 'open' || registrationMode === 'manual_approval');
+  const signupsClosed = signupsClosedAt != null;
 
   const shareUrl = `https://tornygolf.no/signup/${shortId}`;
   const modeLabel =
@@ -115,6 +136,32 @@ export async function RegistrationOverviewSection({
           >
             {t('viewAllSignups')}
           </SmartLink>
+
+          {/* Sekundær rad: steng/gjenåpne påmeldingen (#543 → #1795). Skilt fra
+              hovedhandlingene med en strek, og med sekundær knappestil — dette
+              er en justering av påmeldingen, ikke kortets hovedvei. */}
+          {canToggleSignups && (
+            <div className="space-y-2.5 border-t border-border pt-3">
+              <p className="font-sans text-xs leading-relaxed text-muted">
+                {signupsClosed
+                  ? tCta('signupsClosedBody')
+                  : tCta('closeSignupsBody')}
+              </p>
+              <form
+                action={toggleSignupsClosed.bind(null, gameId, !signupsClosed)}
+              >
+                <button
+                  type="submit"
+                  data-testid="toggle-signups-closed"
+                  className="block w-full min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+                >
+                  {signupsClosed
+                    ? tCta('reopenSignupsButton')
+                    : tCta('closeSignupsButton')}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </section>

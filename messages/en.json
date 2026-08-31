@@ -3404,9 +3404,7 @@
       },
       "sections": {
         "overview": "Overview",
-        "manageSignups": "Manage signups",
-        "format": "Format",
-        "course": "Course",
+        "formatAndCourse": "Format and course",
         "progress": "Progress",
         "sides": "Sides",
         "teams": "Teams",
@@ -3432,9 +3430,6 @@
         "teeOff": "Tee-off",
         "course": "Course",
         "tee": "Tee",
-        "genderMens": "Men",
-        "genderLadies": "Ladies",
-        "genderJuniors": "Juniors",
         "unknownCourse": "(unknown)",
         "notSubmittedWaiting": "{count, plural, one {# waiting} other {# waiting}}",
         "notSubmittedFinished": "{count, plural, one {# did not submit} other {# did not submit}}"
