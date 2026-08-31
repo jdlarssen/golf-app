@@ -293,22 +293,36 @@ export default async function OpprettSpillPage({
   );
 }
 
+/**
+ * #1794: banneret skal bare stå der når det faktisk ER spillermangel.
+ *
+ * Terskelen var `< 8`, som ropte «du har bare 7 registrerte spillere» til
+ * en arrangør med mer enn nok folk til hvilket som helst format — og som
+ * dermed lærte brukeren å overse banneret. Ny terskel: `<= 1`, altså kun når
+ * det ikke finnes noen å spille med.
+ *
+ * `=== 0` er bevisst IKKE terskelen: `getNewGameFormData` leser users-tabellen,
+ * og en innlogget arrangør er alltid selv en rad der, så lista har minst ett
+ * element. En null-gren ville vært død kode (og var det).
+ *
+ * Steg 4 i veiviseren har sin egen tom-tilstand (`PickerSourceEmptyHint`) for
+ * «ingen venner/klubbmedlemmer å velge blant» — den er picker-kildens problem,
+ * dette er rosterets, og de to overlapper ikke.
+ */
 async function PlayerShortageBanner() {
   // includeEmail=false (#435): non-admin create must not leak co-players'
   // e-postadresser into the page payload. Same `(false)` arg here and in
   // GameFormBody so React `cache` dedupes the two Suspense reads.
   const { players } = await getNewGameFormData(false);
-  if (players.length >= 8) return null;
+  if (players.length > 1) return null;
   const t = await getTranslations('wizard');
-  const isSingular = players.length === 1;
-  const bannerText =
-    players.length === 0
-      ? t('createDoor.shortageBannerZero')
-      : t('createDoor.shortageBannerSome', {
-          count: players.length,
-          suffix: isSingular ? '' : 'e',
-          plural: isSingular ? '' : 'e',
-        });
+  // Alltid nøyaktig én (se doc-kommentaren over) — derfor entall, uten
+  // bøynings-parametre å regne ut.
+  const bannerText = t('createDoor.shortageBannerSome', {
+    count: players.length,
+    suffix: '',
+    plural: '',
+  });
   return (
     <div className="mt-4">
       <Banner tone="info">
