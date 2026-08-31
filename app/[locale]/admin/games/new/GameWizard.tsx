@@ -4,7 +4,9 @@
  * GameWizard — 5-stegs hurtig-oppsett av nye spill (F2 #272).
  *
  * Orchestrert som:
- *   Steg 1 (Arrangement) → IntentSelector (Kompis/Klubb/Cup/Solo)
+ *   Steg 1 (Arrangement) → IntentSelector (Kompis/Klubb/Cup/Solo). #1794:
+ *                          flis-klikket går rett videre til steg 2 — se
+ *                          `handleIntentSelect`.
  *   Steg 2 (Format)      → teller (kun kompis) + FormatGrid (Kompis/Klubb/
  *                          Solo) eller CupSetup (Cup, kort-circuit til
  *                          2-step cup-creation-flyt) + mode-spesifikk setup
@@ -686,6 +688,25 @@ function WizardBody({
     goToStep(Math.max(1, step - 1) as Step);
   }
 
+  /**
+   * #1794: arrangements-flisen er hele innholdet på steg 1, så klikket ER
+   * beslutningen — vi går videre med én gang i stedet for å kreve et «Neste»
+   * som ikke kan bety noe annet. Derfor er flisene knapper og ikke radioer
+   * (se IntentSelector): WCAG 3.2.2 forbyr at et radiovalg bytter kontekst av
+   * seg selv, mens en knapp per definisjon utfører en handling.
+   *
+   * «Neste» står igjen på steget for dyplenker som lander her med intent
+   * forhåndsvalgt (`?intent=cup`, revansje-prefill, gjenopprettet utkast) —
+   * da er det ingen flis å trykke for å komme videre.
+   *
+   * Angring: `goToStep` pusher (#1380), så både «Forrige» og browser-back
+   * tar arrangøren tilbake hit med valget intakt.
+   */
+  function handleIntentSelect(next: Intent) {
+    state.setIntent(next);
+    goToStep(2);
+  }
+
   // ────────────────────────────────────────────────────────────────────
   // Cup-creation-flyt: bare step 1 (intent) → step 2 (CupSetup). CupSetup
   // eier sin egen `<form action={formAction}>` (useActionState rundt
@@ -708,7 +729,7 @@ function WizardBody({
         {step === 1 && (
           <IntentSelector
             value={state.intent}
-            onChange={state.setIntent}
+            onChange={handleIntentSelect}
             disabled={state.lockGameMode}
             isAdmin={isAdmin}
             isClubAdmin={isClubAdmin}
@@ -762,7 +783,7 @@ function WizardBody({
       {step === 1 && (
         <IntentSelector
           value={state.intent}
-          onChange={state.setIntent}
+          onChange={handleIntentSelect}
           disabled={state.lockGameMode}
           isAdmin={isAdmin}
           isClubAdmin={isClubAdmin}

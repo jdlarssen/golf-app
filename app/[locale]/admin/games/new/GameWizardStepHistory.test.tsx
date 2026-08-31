@@ -146,8 +146,9 @@ describe('GameWizard — #1380 per-steg history', () => {
   it('steg-overgang arrangøren utløser pusher en history-entry', () => {
     renderWizard();
 
-    fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^neste$/i }));
+    // #1794: arrangements-flisen går rett videre — klikket ER steg-overgangen,
+    // og den skal fortsatt pushe så browser-back angrer valget.
+    fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 
     expect(push).toHaveBeenCalledWith('/admin/games/new?step=2', { scroll: false });
     expect(replace).not.toHaveBeenCalled();
@@ -175,8 +176,7 @@ describe('GameWizard — #1380 per-steg history', () => {
     searchString = 'klubb=k1';
     renderWizard();
 
-    fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^neste$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 
     expect(push).toHaveBeenCalledWith('/admin/games/new?klubb=k1&step=2', {
       scroll: false,
@@ -196,13 +196,12 @@ describe('GameWizard — #1383 foreldet ?step-lenke', () => {
   it('rører ikke steget når arrangøren selv går videre fra steg 1', () => {
     // Regresjonslås. «Er denne ?step-lenken foreldet?» er et mount-spørsmål.
     // Ble den avgjort på nytt ved hver navigasjon, ville arrangørens eget
-    // «Neste» blitt lest som en foreldet lenke — utkastet er debounget (og i
+    // steg-1-klikk blitt lest som en foreldet lenke — utkastet er debounget (og i
     // cup-flyten skrives det aldri), så det finnes ingenting å gjenoppta i
     // det øyeblikket URL-en får ?step=2.
     const { rerender } = renderWizard();
 
-    fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
-    fireEvent.click(screen.getByTestId('wizard-next'));
+    fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 
     expect(push).toHaveBeenCalledWith('/admin/games/new?step=2', { scroll: false });
 
