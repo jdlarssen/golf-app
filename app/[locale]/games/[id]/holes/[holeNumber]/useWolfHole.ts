@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
 import type { WolfChoice, WolfHoleChoice } from '@/lib/scoring/modes/types';
-import { determineWolfForHole } from './wolfRotation';
+import { determineWolfForHole } from '@/lib/wolf/wolfRotation';
 
 export type WolfPlayer = { userId: string; teamNumber: number; name: string };
 

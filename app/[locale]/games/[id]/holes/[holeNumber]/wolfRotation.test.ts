@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   determineWolfForHole,
   type WolfRotationPlayer,
-} from './wolfRotation';
+} from '@/lib/wolf/wolfRotation';
 
 const PLAYERS: WolfRotationPlayer[] = [
   { userId: 'u1', teamNumber: 1 },
