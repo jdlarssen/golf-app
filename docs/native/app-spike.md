@@ -341,3 +341,69 @@ nøkler; skjermkonvertering er egen oppfølger.
   tar dem (StatusBar står derfor bevisst på `style="dark"` inntil videre).
 - **Native modul-fella igjen:** expo-font/expo-splash-screen er native
   moduler — prebuild + pod install + nytt xcodebuild før simulatorbevis.
+
+## Wolf/BBB valg-UI (#1832)
+
+Format-gaten er åpnet for `wolf` og `bingo_bango_bongo` — `GATED_MODES` i
+`src/lib/formatGate.ts` inneholder nå kun `patsome`. Åpningen gjør også
+wolf-/BBB-scorekort levérbare fra appen (per-spiller-rader, samme lever-flyt
+som web — tilsiktet).
+
+### Valg-semantikken
+
+- **Datalag:** `src/data/choices.ts` — fetch (`fetchWolfChoices`/
+  `fetchBingoBangoBongoHoles`, select-lister speiler webbens
+  `getWolfChoices`/`getBingoBangoBongoHoles`, snake→camel til de delte
+  scoring-typene) + validerte skriv (`setWolfChoice`/`setBingoBangoBongoHole`)
+  som direkte RLS-upserts med trap 2-vern (`.select()`-kjeding, 0 rader =
+  typet feil). Valideringene speiler webbens server actions: wolf har INGEN
+  finished-lås (paritet med web v1), BBB avviser skriv når
+  `games.status === 'finished'` (status tas inn som parameter fra bundlen —
+  RLS håndhever den ikke, appen MÅ speile sjekken).
+- **Wolf på Hole-skjermen:** badge via delt `lib/wolf/wolfRotation.ts`
+  (flyttet fra webbens hull-mappe i denne slicen — web importerer samme fil).
+  Rotasjonslista bygges som webbens `computeWolfContext`: `team_number` =
+  rotasjonsslot, INGEN sortering, withdrawn-spillere står i lista (et
+  WD-filter ville gitt en annen wolf enn web på trailing-hull — n styrer både
+  rotasjonslengden og potten). Trailing-wolf-poeng hentes fra motorens
+  `WolfPlayerLine.totalPoints`, aldri egen formel. Valg-UI vises kun for
+  wolfen selv, når spillet er `active` og hullet mangler valg (web-paritet:
+  ingen «endre valg»-flate i v1).
+- **BBB på Hole-skjermen:** tre mottaker-chips (bingo/bango/bongo), åpne for
+  alle deltakere. Upserten skriver ALLE tre kolonnene — derfor er kortet
+  read-only til fetch har lyktes (et tap i blinde ville nullet de to andre
+  kategoriene).
+- **Ærlig-note-guardrailen:** har fetch ALDRI lyktes denne skjerm-økta viser
+  leaderboardet en «fikk ikke hentet valgene»-note i stedet for en
+  all-pending-tabell (adapterens `missing-choices`-problem); tom liste etter
+  vellykket fetch er et gyldig mellomresultat. Valgene går ALDRI i
+  sync-køen — skriv krever nett (v1-beslutning i kontrakten).
+
+### Polling, ikke realtime
+
+`wolf_hole_choices` og `bingo_bango_bongo_holes` står IKKE i
+`supabase_realtime`-publikasjonen (staging + prod) — en
+`postgres_changes`-binding leverer ingenting. Henting skjer derfor via
+`useGameChoices` (`src/lib/useChoices.ts`): fetch ved fokus + intervall
+`CHOICES_POLL_MS = 10 000` mens skjermen er aktiv, umiddelbar refetch etter
+egen skriving. De elleve andre modiene fyrer null choice-requests
+(`choiceSourceFor()` → null). Oppgradering til realtime krever
+publikasjons-migrasjon (egen DB-kontrakt).
+
+### Rigge wolf-/BBB-testspill på staging (service-role)
+
+Samme fasong som greensome-oppskriften over, men:
+
+- **Wolf:** eget spill med 3-5 spillere, `mode_config`
+  `{"kind":"wolf"}` + `game_players.team_number` = rotasjonsslot (1..n, unik
+  per spiller — slot 1 er Wolf på hull 1). Skal e2e-spilleren være wolf på
+  hull h ≤ rotasjonslengden, gi hen slot `((h-1) mod n) + 1`. Valg-rader kan
+  seedes/verifiseres direkte i `wolf_hole_choices`
+  (`game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by`;
+  PK = game_id+hole_number).
+- **BBB:** 2-4 spillere, `mode_config` `{"kind":"bingo_bango_bongo"}`,
+  ingen team_number-krav; rader i `bingo_bango_bongo_holes` har nullable
+  `bingo_user_id`/`bango_user_id`/`bongo_user_id`.
+- ⚠️ Sjekk `mode_config`-fasongen mot et ekte spill i staging-DB-en
+  (`select mode_config from games where game_mode = '<mode>' limit 1`) før
+  seeding — kolonnen har CHECK-er.
