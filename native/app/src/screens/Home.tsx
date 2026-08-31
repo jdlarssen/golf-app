@@ -105,9 +105,18 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
     <ScrollView contentContainerStyle={ui.scroll} testID="home-screen">
       {empty ? (
         <Text style={ui.body} testID="home-empty">
-          Ingen spill på deg ennå. Blir du med i et spill, dukker det opp her.
+          Ingen spill på deg ennå. Fyr opp et selv, eller vent til noen tar deg
+          med.
         </Text>
       ) : null}
+
+      <Pressable
+        style={ui.button}
+        onPress={() => navigation.navigate('CreateGame')}
+        testID="home-create-game"
+      >
+        <Text style={ui.buttonText}>Opprett spill</Text>
+      </Pressable>
 
       <Section title="Pågår nå" cards={active} navigation={navigation} testID="home-active" />
       <Section
