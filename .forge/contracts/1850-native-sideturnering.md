@@ -188,22 +188,22 @@ om `SideWinnerRow`-typen re-brukes via type-import eller defineres lokalt.
 
 ## Success Criteria
 
-- [ ] 1. **Jest-låst logikk:** beregningsmodulen gir motor-paritet på fixtures —
+- [x] 1. **Jest-låst logikk:** beregningsmodulen gir motor-paritet på fixtures —
   inkl. slot-fixturen (samme spiller på begge LD-slots → to headline-linjer, 4p),
   WD-filter, team_number null/0-hopp, solo- vs. byTeamNumber-grouping, netto-regning
   via delt `strokesForHole` (si-fallback 18); bundle-v3-mapping; copy-paritetstesten
   mot `messages/no.json` grønn. `npx jest` grønn i `native/app/`.
-- [ ] 2. **Ende-til-ende på staging (score-format):** service-role-rigget FERDIG
+- [x] 2. **Ende-til-ende på staging (score-format):** service-role-rigget FERDIG
   stableford-/solo-spill med side på, scores, og `game_side_winners`-rader (minst én
   spiller på to slots) — appen viser seksjonen med LD/CTP-linjer og poengjakt, og
   totalene stemmer med webbens leaderboard for SAMME spill (kryssjekk web mot
   staging). Evidens: skjermbilder app + web.
-- [ ] 3. **Matchplay på staging:** ferdig singles- eller greensome-spill med side på
+- [x] 3. **Matchplay på staging:** ferdig singles- eller greensome-spill med side på
   → kompakt seksjon under duellresultatet; et AKTIVT side-spill viser ingenting
   side-relatert (skjermbilde begge).
-- [ ] 4. **Guardrail:** aldri-lykkes-fetch på finished side-spill (ld/ctp > 0) gir
+- [x] 4. **Guardrail:** aldri-lykkes-fetch på finished side-spill (ld/ctp > 0) gir
   ærlig note, ikke poengtabell (jest).
-- [ ] 5. **Web uendret:** `npx vitest run` (rot) grønn med identisk antall som
+- [x] 5. **Web uendret:** `npx vitest run` (rot) grønn med identisk antall som
   baseline; web-diff utenfor native/docs/forge = 0 filer.
 - [ ] 6. **Porter + runbook:** alle Gates grønne; `docs/native/app-spike.md` får
   sideturnering-seksjon (finished-gaten, slot-semantikken, copy-paritetsmønsteret,
@@ -215,13 +215,13 @@ om `SideWinnerRow`-typen re-brukes via type-import eller defineres lokalt.
 (Fersk worktree: `npm install` i BÅDE repo-rot og `native/app/` — eget lockfile.
 Node 22.)
 
-- [ ] `npx jest` i `native/app/` grønt
-- [ ] `npx tsc --noEmit` i `native/app/` grønt
-- [ ] `npx expo export --platform ios` grønt (slett `dist/` etterpå)
-- [ ] `npm run typecheck` (rot) grønt
-- [ ] `npx vitest run` (rot) grønt — identisk antall som baseline
-- [ ] `npx eslint native/app` grønt
-- [ ] `npm run build` (rot) grønt m/ pipefail
+- [x] `npx jest` i `native/app/` grønt
+- [x] `npx tsc --noEmit` i `native/app/` grønt
+- [x] `npx expo export --platform ios` grønt (slett `dist/` etterpå)
+- [x] `npm run typecheck` (rot) grønt
+- [x] `npx vitest run` (rot) grønt — identisk antall som baseline
+- [x] `npx eslint native/app` grønt
+- [x] `npm run build` (rot) grønt m/ pipefail
 
 ## Files Likely Touched
 
@@ -302,3 +302,103 @@ Ingen kontrakt-endring nødvendig. Grouping-regelen implementeres som «spør mo
 (`ModeResult.variant` + de delte `isStablefordFamily`/`isScrambleFamily`/`isMatchplayFamily`-
 predikatene) i stedet for en hardkodet modus-tabell — samme disiplin som `scoringContext.ts`
 bruker mot `build*Context`-hjelperne.
+
+---
+
+## Evidens (bygge-økt 2026-08-31)
+
+### Porter — alle kjørt i denne økta, alle exit 0
+
+| Port | Resultat |
+|---|---|
+| `npx jest` (native/app) | **27 suiter, 346 tester**, exit 0 |
+| `npx tsc --noEmit` (native/app) | exit 0, ingen utskrift |
+| `npx expo export --platform ios` | exit 0 (`dist/` slettet etterpå) |
+| `npm run typecheck` (rot) | exit 0 |
+| `npx vitest run` (rot) | **522 filer / 7028 tester** — identisk med baseline målt før første kodelinje |
+| `npx eslint native/app` | exit 0, ingen utskrift |
+| `npm run build` (rot, m/ pipefail) | exit 0 |
+
+### Staging-rigg
+
+Tre spill seedet med service-role på `torny-staging`
+(`snwmueecmfqqdurxedxv`), bane Stiklestad Golfbane (par 71), e2e-spilleren
+deltar i alle tre:
+
+| Spill | id | Fasong |
+|---|---|---|
+| A | `06ad104f-0bf1-43c5-8231-bf6eb358c959` | solo stableford, finished, 2 LD + 1 CTP, **samme spiller på begge LD-slots** |
+| B | `75e9372b-7b12-4016-bf33-0af31b5c7de9` | singles matchplay, finished, 1 LD + 1 CTP |
+| C | `2d9047e7-a60f-4b5e-b4bc-4025418639dd` | solo stableford, **aktiv**, side på (skal vise ingenting) |
+
+⚠️ To feller traff under seedingen, begge bokført i runbooken:
+`scores.entered_by` er NOT NULL, og `mode_config` MÅ ha `kind` — appens
+`asModeConfig` avviser `{}`, mens webben ruter på `game_mode` og ikke merker det.
+Alle TEST-/E2E-seedede stableford-spill i staging står med `{}`; ekte
+veiviser-spill har `{"kind":"stableford","team_size":1,"points_table":"standard"}`.
+
+### Kriterium 2 — kryssjekk app mot web, samme spill
+
+Webben kjørt i **prod-modus** (`next build` med `.env.staging.local` + `next start`),
+ikke dev. Fanen «Sideturnering» på spill A mot appens seksjon:
+
+| | Web | App |
+|---|---|---|
+| 🥇 Anders Berg | 66p | **66p** |
+| 🥈 Test Spiller | 34p | **34p** |
+| 🥉 Christian Eide | 10p | **10p** |
+| · Bjørn Dahl | 4p | **4p** |
+
+Hovedtabellen stemmer også (46/41/37/28 begge steder). Test Spillers ekspanderte
+kort er **tegn for tegn identisk** på tvers av alle seks grupper, inkludert:
+
+```
+Longest drive #1 (Test): 2p
+Longest drive #2 (Test): 2p     ← samme spiller, begge slots, 4p
+Snowman (+5 på hull 5): -2p     ← solo-formen, ikke «hele laget»
+Hole-wins: 10p på 5 hull (hull 4, 10, 14, 16–17)
+```
+
+### Kriterium 3 — matchplay + aktiv runde
+
+- **Spill B (finished singles matchplay):** duellkortet («Test Spiller mot Anders
+  Berg — AS») + hull-for-hull-stripa, og under dem den kompakte
+  sideturnerings-seksjonen: «Lengste drive #1: Anders», «Nærmest pinnen #1: Test»,
+  🥇 Anders Berg 66p / 🥈 Test Spiller 32p. Identisk med webbens
+  `MatchplaySideTournamentSection` for samme spill. Merk at radene viser
+  SPILLERNAVN, ikke «Lag 1»/«Lag 2» — grupperingen er `byTeamNumber`, men et lag
+  med ett medlem viser medlemmets navn (web-regelen fra `SideTournamentView:247-256`).
+- **Spill C (aktiv, side på):** hovedtabellen vises (16/10/10, identisk med web) og
+  **ingenting** side-relatert — ingen overskrift, ingen LD/CTP-linjer, ingen
+  poengjakt. Hentingen fyres heller ikke.
+
+### Kriterium 6 — restanse
+
+Runbook-seksjonen er skrevet og committet. Eier-tapptest på fysisk iPhone gjenstår
+(eieren er tilgjengelig) — kjøres med
+`npx expo run:ios --device --configuration Release`. NB: `--device` vil ha den
+klassiske UDID-en fra `xcrun xctrace list devices`, ikke `devicectl`-ID-en.
+
+### Avvik fra kontrakten (bokført, ikke skjult)
+
+1. **Navne-filteret droppet.** Kontrakten sa eligible = `users != null &&
+   withdrawn_at == null`. Bundelen kollapser «ingen users-rad» og «users-rad uten
+   navn» til `name: null`, så et navne-filter ville kastet ut ferske
+   selvregistrerte spillere (`handle_new_auth_user` setter bare id/e-post/hcp) og
+   ikke fanget en eneste slettet (`anonymize_user` skriver «Slettet bruker»).
+   Nettoen deres ville forsvunnet fra lagets best-ball og gjort sidepoengene
+   stille feil. Kun WD-filteret står — samme avveining `scoringContext.ts` gjorde
+   for hovedtabellen, og de to deler skjerm.
+2. **Grouping utledes, ikke tabelleres.** Kontrakten ba om en fasit-tabell per
+   format. Den delte `isSoloFormat`-predikatet viste seg å matche webbens
+   per-renderer-valg 22/22, så regelen spør den delte kilden i stedet. En
+   `it.each`-tabell låser alle 22 modi mot web-fasiten.
+3. **Copy-oppslaget er nøklet på `SideCategory`, ikke `SideCategoryId`** som
+   kontrakten antok — de to unionene avviker på to navn (#1851).
+
+### Funn filet som egne issues
+
+- **#1851** — `SideCategory` vs `SideCategoryId`: to 45-medlems-unioner for samme
+  domene, ulike på `best_netto_front9/back9` mot `best_netto_f9/b9`.
+- **#1852** — «18 hull hull 1–18»: `longestBogeyFreeDetail` legger på «hull» som
+  `streakRange` allerede har. Gjelder web i dag; appen speiler den for paritet.
