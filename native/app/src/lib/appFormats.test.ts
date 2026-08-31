@@ -14,7 +14,9 @@ import {
   usesTeamAssignment,
 } from './appFormats';
 
-const modeSource = source.modes as Record<string, string>;
+// `modes` har noen nøstede grener (playStyle, modeVariants) ved siden av
+// slug-strengene, så oppslaget går via unknown og narrowes per nøkkel.
+const modeSource = source.modes as unknown as Record<string, unknown>;
 
 describe('APP_SUPPORTED_MODES', () => {
   it('er de åtte modiene kontrakten navngir', () => {
@@ -48,6 +50,7 @@ describe('APP_SUPPORTED_MODES', () => {
 describe('paritet med messages/no.json', () => {
   it.each(APP_SUPPORTED_MODES)('modes.%s er identisk med kilden', (slug) => {
     expect(APP_MODE_LABELS[slug]).toBe(modeSource[slug]);
+    expect(typeof modeSource[slug]).toBe('string');
   });
 
   it('har en etikett per modus og ingen etikett uten modus', () => {
