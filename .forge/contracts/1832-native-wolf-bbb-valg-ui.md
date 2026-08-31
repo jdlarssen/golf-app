@@ -163,24 +163,24 @@ humanizer-tone), testfil-inndeling.
 
 ## Success Criteria
 
-- [ ] 1. **Jest-låst logikk:** adapteren ruter wolf/BBB med extras til delte byggere
+- [x] 1. **Jest-låst logikk:** adapteren ruter wolf/BBB med extras til delte byggere
   (Type A: mapping snake→camel, tom liste, withdrawn); valg-valideringen speiler
   webbens regler (partner-kravene, hull 1-18, BBB-finished-låsen); gate-suiten
   oppdatert (wolf/BBB åpne, patsome gatet); renderer-logikken dekket (maks 1 Type C
   per ny view). `npx jest` grønn i `native/app/`.
-- [ ] 2. **Wolf ende-til-ende på staging:** service-role-rigget aktivt wolf-spill
+- [x] 2. **Wolf ende-til-ende på staging:** service-role-rigget aktivt wolf-spill
   (3-4 spillere, e2e-spiller som wolf på et hull) — appen viser wolf-badge, valg-UI
   for wolfen, skrevet valg lander i `wolf_hole_choices` (service-role-les), og
   leaderboardet viser motorens poeng; valg skrevet utenfra (service-role) dukker opp
   i appen innen neste poll/refetch uten app-restart. Evidens: skjermbilder +
   service-role-les.
-- [ ] 3. **BBB ende-til-ende på staging:** rigget BBB-spill — mottaker-velger synlig
+- [x] 3. **BBB ende-til-ende på staging:** rigget BBB-spill — mottaker-velger synlig
   for vanlig deltaker, skriv lander i `bingo_bango_bongo_holes`, leaderboard viser
   poeng; finished-spill avviser skriv med norsk melding. Evidens: skjermbilder +
   service-role-les.
-- [ ] 4. **Web uendret:** `npx vitest run` grønn (uendret antall) etter
+- [x] 4. **Web uendret:** `npx vitest run` grønn (uendret antall) etter
   wolfRotation-flyttingen; web-diff = kun flytting + import-re-pek.
-- [ ] 5. **Porter + runbook:** alle Gates grønne; `docs/native/app-spike.md` får
+- [x] 5. **Porter + runbook:** alle Gates grønne; `docs/native/app-spike.md` får
   wolf/BBB-seksjon (gate-åpningen, valg-semantikken, polling-beslutningen,
   seed-oppskrift). Eier-tapptest på fysisk iPhone hvis eier tilgjengelig, ellers
   `VERIFICATION GAP` + restanse.
@@ -189,13 +189,13 @@ humanizer-tone), testfil-inndeling.
 
 (Fersk worktree: `npm install` i BÅDE repo-rot og `native/app/` — eget lockfile.)
 
-- [ ] `npx jest` i `native/app/` grønt
-- [ ] `npx tsc --noEmit` i `native/app/` grønt
-- [ ] `npx expo export --platform ios` grønt (`dist/` slettes etterpå)
-- [ ] `npm run typecheck` (rot) grønt
-- [ ] `npx vitest run` (rot) grønt — uendret antall (wolfRotation-flyttingen)
-- [ ] `npx eslint native/app` grønt
-- [ ] `npm run build` (rot) grønt før PR
+- [x] `npx jest` i `native/app/` grønt — 23 suiter / 289 tester
+- [x] `npx tsc --noEmit` i `native/app/` grønt — exit 0
+- [x] `npx expo export --platform ios` grønt — 3 MB hbc-bundle + 22 assets; dist/ slettet
+- [x] `npm run typecheck` (rot) grønt — exit 0
+- [x] `npx vitest run` (rot) grønt — 522 filer / 7027 tester, identisk med baseline
+- [x] `npx eslint native/app` grønt — exit 0
+- [x] `npm run build` (rot) grønt — exit 0 m/ pipefail
 
 ## Files Likely Touched
 
@@ -260,3 +260,38 @@ design-fundamentet (#1830, PR #1834) merget:
 - Wolf-seed: eget testspill 3-5 spillere (rotasjonsslot = `team_number`), full
   user-id-er fra DB; seed-oppskrift i runbook «Rigge testspill på staging».
 - Eier er tilgjengelig for tapp-test på fysisk iPhone til slutt (kriterium 5).
+
+---
+
+## Evidens (2026-08-31, etter bygging — fylt ut etter faktiske resultater)
+
+- **K1:** `npx jest` i `native/app/`: 23 suiter / 289 tester grønne. Red-run-bevis
+  begge veier: BBB-finished-lås + trap 2-gren mutert ut → nøyaktig de 4 vernende
+  testene røde (chunk 1); `refuseUnlessGameLives`-kallet mutert ut → nøyaktig 4 røde
+  (fix-runden). Gate-suiten flippet (wolf/BBB åpne, patsome gatet, + ny
+  segment-vs-mode-test).
+- **K2:** staging-spill `TEST-1832-wolf-…` (`37a631a3`): hull 3-badge «🐺 Wolf: Jørg —
+  venter på valg» (rotasjons-fasit), valg-UI på hull 1 for e2e-spilleren (wolf),
+  app-skrevet valg verifisert i `wolf_hole_choices` via service-role-les
+  (partner=Jørgen, entered_by=spilleren), leaderboard viste motorpoeng (alle 2 etter
+  hull 1-2), eksternt hull 3-skriv (Lone Wolf-seier) synlig i appen via poll uten
+  restart (Jørg → #1 med 6). Skjermbilder 01-04 i øktas evidensmappe.
+- **K3:** staging-spill `TEST-1832-bbb-…` (`ca676fc8`): mottaker-chips synlige og
+  skrivbare for vanlig deltaker, app-skrevet hull 1-rad verifisert via
+  service-role-les, leaderboard viste poengkort (2/2/2 med bingo/bango/bongo-brytning
+  — uten ett eneste ført slag), og finished-avvisning bevist LIVE i race-scenariet:
+  spill flippet til finished utenfra mens hull-skjermen sto åpen → tap ga rød norsk
+  melding «Runden er avsluttet. Nå kan ingenting registreres mer.» og DB-raden sto
+  uendret (fresk status-sjekk per skriv, commit 67d20526 — paritets-glipe funnet i
+  staging-verifiseringen og lukket). Skjermbilder 05-09.
+- **K4:** `npx vitest run` (rot): 522 filer / 7027 tester — identisk antall som
+  baseline før endringene. Web-diff utenfor native/docs/forge: kun
+  `wolfRotation.ts`-flyttingen (100 % similarity, 0 innholdsendring) + 2 import-linjer.
+- **K5:** alle Gates grønne (tall i Gates-seksjonen); runbook-seksjonen «Wolf/BBB
+  valg-UI (#1832)» committet (82d27c4a). **VERIFICATION GAP:** eier-tapptest på fysisk
+  iPhone gjenstår (eier ikke til stede i økta) — bokført som restanse i PR-en, samme
+  mønster som N4 (#1828 kriterium 7).
+
+Sidefunn bokført som issues før merge: #1844 (WEB_ONLY_RESULT_MESSAGE gjør tre
+jobber), #1845 (ALL_CODES håndvedlikeholdt). #1836 (webbens døde choice-abonnementer)
+fantes fra kontraktsrunden.
