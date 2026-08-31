@@ -243,3 +243,62 @@ Node 22.)
   `game_side_winners`; offline-first-lagring av vinner-radene (mount-fetch holder
   for statiske data); endringer i motor, RLS eller DB-skjema; #1846
   (WD-filter-restansen i adapteren — eget issue, egen fasit).
+
+---
+
+## Drift-verifisering mot HEAD (bygge-økt 2026-08-31, base `38cd745d`)
+
+Kontrakten ble skrevet i en egen spec-økt. Alle påstander er kontrollert mot
+byggebranchens HEAD før første kodelinje. **Ingen påstand var feil**; tre presiseringer
+og én oppdatert forutsetning står under.
+
+### Bekreftet uendret
+
+| Påstand | Bevis |
+|---|---|
+| `calculateSideTournament` + `SideTournamentInput/Result` + `SideCategoryAward` | `lib/scoring/sideTournament.ts:404`, `:71`, `:152`, `:94` |
+| `buildCourseArrays` / `mapSideWinners` / `buildSideTournamentInput` | `lib/scoring/sideTournamentInput.ts:27`, `:54`, `:84` |
+| Vekter + `SideCategoryId` + `ALL_CATEGORY_IDS` | `lib/scoring/sideTournamentConfig.ts:7`, `:76`, `:125` |
+| Post-game-gaten på alle formater | `formats/stableford.tsx:115-121`, `formats/skins.tsx:102`, `sideTournament.tsx:265` (`return undefined`), `leaderboardContent.tsx:516-529` |
+| `computeSideTournament`-oppskriften (eligible → per-hull netto → grouping → best-ball → input) | `app/[locale]/games/[id]/leaderboard/sideTournament.tsx:31-210` |
+| `fetchSideWinners` (category, position, winner_user_id; order category+position) | `leaderboardContext.ts:73-86` |
+| `GAME_SELECT` mangler de fire side-kolonnene | `native/app/src/data/gameBundle.ts:154` (kontrakten skrev `:155`, ±1 linje) |
+| `BUNDLE_PAYLOAD_VERSION = 2` | `gameBundle.ts:29` |
+| `PLAYER_SELECT` har alt seksjonen trenger | `gameBundle.ts:148` (team_number, course_handicap, withdrawn_at, users(name, nickname)) |
+| `messages/no.json` → 48 `awards`, 6 `groups`, alle detalj-mønstre | målt med node; fila er 341 KB (kontrakten skrev 344 KB) |
+| RLS: SELECT = `is_admin() OR (deltaker ∧ status='finished')` | `supabase/migrations/0092_rls_policy_perf.sql:411-427` |
+| Creator-policyen for skriving står | `0071_games_creator_rls.sql:76` |
+| `games`-kolonnene finnes i skjemaet | `lib/database.types.ts:732-735` |
+| `firstName` / `formatRevealName` er rene | `lib/firstName.ts:1`, `lib/names/formatRevealName.ts:1` |
+| `position` = hull-slot, ikke rang | `leaderboardTypes.ts:7-11` + `MatchplaySideTournamentSection.tsx:52-75` (løkke `pos = 1..ldCount`) |
+
+### Presiseringer (kontrakten var ikke feil, men ufullstendig)
+
+1. **`#1833` har IKKE landet.** `native/app/src/screens/Leaderboard.tsx:35` importerer
+   fortsatt statiske `COLORS, ui` fra `../theme`. Kontraktens betingede gren løses
+   dermed til **statiske tokens**, ikke `useTheme()`.
+2. **Appen viser langt flere enn «de 8 Must-formatene».** `formatGate.ts` gater i dag
+   KUN `patsome` (+ segment-spill og deriverte). Sideturneringen må derfor ha en
+   grouping-regel som dekker HELE det åpne format-settet, ikke 8 navngitte.
+   Fasit hentes fra webbens per-renderer-valg:
+   - `byTeamNumber`: best_ball (`leaderboardContent.tsx:625-643` via `buildSideTournamentInput`),
+     stableford-familien når motoren svarer `variant === 'team'` (`stableford.tsx:208,247`),
+     hele matchplay-familien (`sideTournament.tsx:266`), scramble-familien
+     (`texasScramble.tsx:206`), `shamble` (`shamble.tsx:162`), `patsome` (`patsome.tsx:136`, gatet).
+   - `solo`: stableford-familien når `variant === 'solo'` (`stableford.tsx:357`),
+     `solo_strokeplay:264`, `skins:206`, `wolf:160`, `bingo_bango_bongo:213`,
+     `nassau:222`, `round_robin:131`, `nines:145`, `acey_deucey:144`.
+   - **`modified_stableford` har ingen egen regel** — den rutes gjennom
+     `renderStableford` (`isStablefordFamily`, `leaderboardContent.tsx:255`) og arver
+     lag/solo-grenen der. Kontraktens I1-krav om å verifisere den er dermed innfridd:
+     grouping skal utledes fra motorens `variant`, ikke fra en håndskrevet modus-liste.
+3. **Delt kode importeres med RELATIVE stier i appen** (`'../../../../lib/...'`), ikke
+   `@/`-aliaset — se `scoringContext.ts:27`, `teamPlay.ts:23-26`. Nye native-filer følger
+   husets stil.
+
+### Konsekvens for byggingen
+
+Ingen kontrakt-endring nødvendig. Grouping-regelen implementeres som «spør motoren»
+(`ModeResult.variant` + de delte `isStablefordFamily`/`isScrambleFamily`/`isMatchplayFamily`-
+predikatene) i stedet for en hardkodet modus-tabell — samme disiplin som `scoringContext.ts`
+bruker mot `build*Context`-hjelperne.
