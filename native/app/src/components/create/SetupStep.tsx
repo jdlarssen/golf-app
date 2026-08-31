@@ -11,6 +11,7 @@
 // mellomtilstand for arrangøren, men ville vært et gyldig TALL for
 // validatoren — så teksten eier feltet, og tallet utledes først ved
 // publisering.
+import { isStablefordFamily } from '../../../../../lib/scoring/modes/types';
 import { Text, TextInput, View } from 'react-native';
 import type { AppGameMode } from '../../lib/appFormats';
 import type { ModeSetup } from '../../lib/wizardPayload';
@@ -58,8 +59,7 @@ export function SetupStep({
   onText: (patch: Partial<SetupText>) => void;
 }) {
   const { colors, ui } = useTheme();
-  const isStablefordFamily =
-    mode === 'stableford' || mode === 'modified_stableford';
+  const stablefordFamily = isStablefordFamily(mode);
   const hasScoringToggle = mode === 'wolf' || mode === 'skins';
   const hasKrPerUnit =
     mode === 'wolf' || mode === 'skins' || mode === 'bingo_bango_bongo';
@@ -80,7 +80,7 @@ export function SetupStep({
         />
       </Field>
 
-      {isStablefordFamily ? (
+      {stablefordFamily ? (
         <Field
           label="Spilles alene eller i par?"
           hint="Par er 4BBB: to og to på lag, og beste score på hvert hull teller."

@@ -189,6 +189,10 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
 
   const selectMode = useCallback(
     (mode: AppGameMode) => {
+      // Trykk paa formatet som ALLEREDE er valgt er en no-op. Uten denne
+      // ville et uskyldig dobbelttrykk paa kortet kastet «Par», greensome-
+      // andelen og kr-per-poeng uten at noe sa fra.
+      if (mode === gameMode) return;
       setGameMode(mode);
       // Lag betyr forskjellige ting per format (fire lag i best ball, to sider
       // i matchplay). Et tall fra forrige format ville vært feil her, så
@@ -204,7 +208,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
         nameTouched ? prev : { ...prev, name: defaultGameName(mode) },
       );
     },
-    [nameTouched],
+    [gameMode, nameTouched],
   );
 
   const togglePlayer = useCallback(
@@ -443,10 +447,12 @@ function summaryLines(
     {
       key: 'format',
       label: 'Format',
-      value:
-        draft.setup?.stablefordTeamSize === 2
-          ? `${APP_MODE_LABELS[mode]} i par`
-          : APP_MODE_LABELS[mode],
+      // Samme spoersmaal som resten av veiviseren stiller. Sto det
+      // `stablefordTeamSize === 2` her, hadde regelen hatt to hjem, og
+      // oppsummeringen kunne sagt «Wolf i par».
+      value: isParStableford(mode, draft.setup)
+        ? `${APP_MODE_LABELS[mode]} i par`
+        : APP_MODE_LABELS[mode],
     },
     { key: 'name', label: 'Navn', value: draft.name.trim() || defaultGameName(mode) },
     {

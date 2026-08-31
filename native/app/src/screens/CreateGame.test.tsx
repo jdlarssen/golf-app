@@ -200,4 +200,39 @@ describe('CreateGame', () => {
     });
     expect(navigation.navigate).not.toHaveBeenCalled();
   });
+
+  // N6a-evaluatorens funn N2: at `selectMode` nullstiller oppsettet var
+  // ubeskyttet -- begge linjene kunne slettes med 511/511 groenne tester. Selve
+  // lekkasjen fanges av `isParStableford` i payload-laget, men nullstillingen er
+  // det som gjoer at SKJERMEN ikke viser et «Par»-valg som ikke lenger gjelder.
+  it('kaster modus-spesifikke valg naar formatet byttes, og lar dobbelttrykk staa', async () => {
+    await renderWizard();
+
+    // Stableford -> «Par», altsaa 4BBB.
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-team-size-2'));
+
+    // Dobbelttrykk paa formatet som ALLEREDE er valgt skal ikke kaste noe.
+    await fireEvent.press(screen.getByTestId('create-back'));
+    await fireEvent.press(screen.getByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId('create-team-size-2').props.accessibilityState)
+      .toMatchObject({ selected: true });
+
+    // Bytte til wolf skal kaste det. Wolf rendrer ikke kontrollen i det hele
+    // tatt, saa fravaeret av den beviser ingenting -- vi maa gaa TILBAKE til
+    // stableford og se at valget faktisk er borte. Uten nullstillingen staar
+    // «Par» der fortsatt, og arrangoeren faar 4BBB hen ikke har bedt om.
+    await fireEvent.press(screen.getByTestId('create-back'));
+    await fireEvent.press(screen.getByTestId('create-format-wolf'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.queryByTestId('create-team-size-2')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('create-back'));
+    await fireEvent.press(screen.getByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId('create-team-size-1').props.accessibilityState)
+      .toMatchObject({ selected: true });
+  });
 });
