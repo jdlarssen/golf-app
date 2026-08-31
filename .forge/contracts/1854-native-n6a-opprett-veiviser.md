@@ -201,27 +201,27 @@ inline vs modal, «sist brukte bane»-sortering.
 
 ## Success Criteria
 
-- [ ] 1. **Jest-låst payload-paritet:** FormData-shim + delt `buildGameInsertPayload`
+- [x] 1. **Jest-låst payload-paritet:** FormData-shim + delt `buildGameInsertPayload`
   gir webbens payload-fasong for alle 8 modi (it.each-fixtures, inkl. mode_config
   med riktig `kind`), accepted_at-regelen (self=now, andre=null), kompenserende
   delete ved player-insert-feil, tee-off-i-fortid-avvisning. `npx jest` grønn i
   `native/app/`.
-- [ ] 2. **Ende-til-ende på staging:** logg inn som e2e-admin i appen, opprett et
+- [x] 2. **Ende-til-ende på staging:** logg inn som e2e-admin i appen, opprett et
   stableford-spill med 2+ co-players og sideturnering (1 LD + 1 CTP) → spillet
   finnes i staging-DB med `status='scheduled'`, korrekt `mode_config`
   (service-role-lesing), game_players-rader med accepted_at null for andre — og
   spillet åpner i webbens `/games/[id]` uten feil (webben er fasit-konsument).
-- [ ] 3. **Lag-modus på staging:** opprett et best_ball- eller greensome-spill med
+- [x] 3. **Lag-modus på staging:** opprett et best_ball- eller greensome-spill med
   lag-tildeling i veiviseren → team_number-riktige rader i DB; et wolf-spill
   opprettes UTEN lag-UI og uten team_number (slots settes først ved start).
-- [ ] 4. **Format-gaten:** veiviseren viser nøyaktig de 8 støttede modiene når
+- [x] 4. **Format-gaten:** veiviseren viser nøyaktig de 8 støttede modiene når
   DB-lesingen lykkes (jest mot mock + skjermbilde fra staging); fetch-feil gir
   ærlig note (jest).
-- [ ] 5. **Guardrail:** dobbel-trykk-lås + RLS-avvisning → games-rad kompensert
+- [x] 5. **Guardrail:** dobbel-trykk-lås + RLS-avvisning → games-rad kompensert
   bort (jest med feilende player-insert i supabaseMock).
-- [ ] 6. **Web uendret:** `npx vitest run` (rot) grønn med identisk antall som
+- [x] 6. **Web uendret:** `npx vitest run` (rot) grønn med identisk antall som
   baseline; web-diff utenfor native/docs/forge = 0 filer.
-- [ ] 7. **Porter + runbook:** alle Gates grønne; `docs/native/app-spike.md` får
+- [x] 7. **Porter + runbook:** alle Gates grønne; `docs/native/app-spike.md` får
   N6a-seksjon (veiviser-arkitekturen, FormData-shimmen, co-player-begrensningen,
   datetimepicker-pod-fella, seed-/verifiseringsoppskrift). Eier-tapptest på fysisk
   iPhone hvis eier tilgjengelig, ellers `VERIFICATION GAP` + restanse.
@@ -232,13 +232,13 @@ inline vs modal, «sist brukte bane»-sortering.
 Datetimepicker er ny native modul: `npx expo prebuild` + `pod install` + nytt
 xcodebuild før simulatorbevis.)
 
-- [ ] `npx jest` i `native/app/` grønt
-- [ ] `npx tsc --noEmit` i `native/app/` grønt
-- [ ] `npx expo export --platform ios` grønt (slett `dist/` etterpå)
-- [ ] `npm run typecheck` (rot) grønt
-- [ ] `npx vitest run` (rot) grønt — identisk antall som baseline
-- [ ] `npx eslint native/app` grønt
-- [ ] `npm run build` (rot) grønt m/ pipefail
+- [x] `npx jest` i `native/app/` grønt
+- [x] `npx tsc --noEmit` i `native/app/` grønt
+- [x] `npx expo export --platform ios` grønt (slett `dist/` etterpå)
+- [x] `npm run typecheck` (rot) grønt
+- [x] `npx vitest run` (rot) grønt — identisk antall som baseline
+- [x] `npx eslint native/app` grønt
+- [x] `npm run build` (rot) grønt m/ pipefail
 
 ## Files Likely Touched
 
@@ -308,3 +308,47 @@ ligger på 2141 i en 2227-linjers fil · `acceptedAtForActor` · kompenserende d
 · 0071/0092-policyene og 0115-triggeren · `courses`/`tee_boxes` SELECT `using (true)` ·
 `users` SELECT = egen ∨ admin ∨ delt spill · `fitsPlayerCount` er ren TS (og eksporterer
 også `soloPlayerCap`, som kontrakten ikke nevnte) · 12 CHECK-constraints på `games`.
+
+---
+
+## Bevis (bygge-økt 2026-08-31, HEAD `557d6018`)
+
+Fire spill opprettet fra appen på simulator 498CF5EF mot staging, innlogget som
+**e2e-SPILLEREN** (`252e1a6f`), ikke admin. Avvik fra kriterium 2s ordlyd, i skjerpende
+retning: 0115-triggeren no-op-er for `is_admin()`, og `users`-SELECT-policyen gir en
+admin HELE brukertabellen. En admin-kjøring ville derfor hverken bevist RLS-insert-veien
+eller at kandidatlista faktisk er medspiller-subsettet. Som vanlig spiller bet begge.
+
+| # | Bevis |
+| --- | --- |
+| 1 | `npx jest` 35 suiter / **499** tester, exit 0 (baseline 28/350). Paritet for alle 8 modi via `it.each`, pluss en test som mater byggeren et rått `{get}`-objekt |
+| 2 | `+N6a+side` (`51780e73`): `status='scheduled'`, `mode_config {"kind":"stableford","team_size":1,"points_table":"standard"}`, `side_tournament_enabled=true`, `side_ld_count=1`, `side_ctp_count=1`, `side_disabled_categories=[]`, `invite_only`/`solo`, `entry_fee_kr=0`, `prizes=[]`, `group_id`/`tournament_id`/`started_at` null, `hole_segment='full'`, `short_id` generert. `accepted_at` satt KUN for arrangøren. Åpner i web: HTTP 200, ingen error-boundary, ingen `not-found` |
+| 3 | `Best ball+N6a+lag` (`e092565e`): `mode_config {"kind":"best_ball","team_size":2,"teams_count":2}`, `team_number` 1/1/2/2 nøyaktig som tildelt, `flight_number` 1 for alle (webbens best-ball-default). `Wolf+N6a+wolf` (`d2c39cbe`): `mode_config {"kind":"wolf",...,"wolf_scoring":"net"}`, **`team_number` null for alle**, og veiviseren viste ingen lag-UI |
+| 4 | Skjermbilde fra staging: nøyaktig de 8 modiene, hver med sitt spillerkrav («Wolf 3–5 spillere», «Greensome 4 spillere»). Fetch-feil → ærlig note (jest) |
+| 5 | Jest: kompenserende delete utstedes m/ `.eq('id', …)`, `{data: [], error: null}` → `no_rows`, `code '42501'` → `rls_denied`, tee-off i fortid → avvist UTEN at `games`/`game_players` berøres (`routeFrom` kaster ellers) |
+| 6 | `npx vitest run`: 522 filer / 7028 tester — **identisk med baseline målt før første kodelinje**. `git diff --name-only origin/main...HEAD` utenfor `native/`/`docs/`/`.forge/` = **0 filer** |
+| 7 | Alle syv porter grønne (tabell under). Runbook-seksjon skrevet. **Eier-tapptest på fysisk iPhone gjenstår** |
+
+### Porter
+
+| Port | Resultat |
+| --- | --- |
+| `npx jest` (native/app) | exit 0 — 35 suiter, 499 tester |
+| `npx tsc --noEmit` (native/app) | exit 0 |
+| `npx expo export --platform ios` | exit 0 (`dist/` slettet) |
+| `npm run typecheck` (rot) | exit 0 |
+| `npx vitest run` (rot) | exit 0 — 522/7028, = baseline |
+| `npx eslint native/app` | exit 0 |
+| `npm run build` (rot, pipefail) | exit 0 |
+| iOS Release (`xcodebuild`) | `** BUILD SUCCEEDED **`, exit 0 (×3) |
+
+### Funn underveis
+
+- **Metro/zod:** delt `gamePayload.ts` → `prizes.ts` → `zod` lot seg ikke resolve;
+  `expo export` rødt mens jest var grønt. Fikset i `b08004f0`.
+- **Hermes/Oslo:** tee-off lagret én time feil fordi webbens `parseOsloDateTimeLocal`
+  streng-sammenligner `Intl`-utdata mot `'GMT+2'`. Fikset i `87eef602` — appen bruker
+  pickerens absolutte øyeblikk. Bevist: `21:00Z` = Oslo `23:00` = det pickeren viste,
+  og webben viser «TEE-OFF 23:00 · man. 31. aug» for samme rad.
+- **Restanse-issues:** #1858 (webbens feiltekster navngir feil spillform),
+  #1859 (ingen tee-sett-velger i appen, junior utilgjengelig).
