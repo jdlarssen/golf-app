@@ -14,7 +14,9 @@ import { buildGameInsertPayload } from '../../../../lib/games/gamePayload';
 import { APP_SUPPORTED_MODES, type AppGameMode } from './appFormats';
 import {
   buildDraftPayload,
+  draftNeedsTeamAssignment,
   draftToFormData,
+  isParStableford,
   teeOffInstant,
   type DraftPlayer,
   type GameDraft,
@@ -372,18 +374,123 @@ describe('oppsett-feltene', () => {
   });
 });
 
-describe('teeOffInstant', () => {
-  // Regresjonsvakt for tee-off-en som ble lagret en time feil (simulator
-  // 2026-08-31). Poenget er at pickerens oeyeblikk gaar RETT gjennom: ingen
-  // veggklokke-streng, ingen Intl-avhengig sommertid-gjetting. Datoene under er
-  // valgt paa hver sin side av sommertid-skiftet, saa en gjeninnfoert
-  // Oslo-konvertering ville brutt minst en av dem uansett hvilken vei den bommet.
+describe('teeOffInstant — regresjonsvakt for tee-off-en som ble lagret en time feil', () => {
+  // Feilen (simulator 2026-08-31): pickerens Date gikk om en veggklokke-streng
+  // og inn i webbens `parseOsloDateTimeLocal`, som avgjoer sommer-/vintertid ved
+  // aa STRENG-SAMMENLIGNE Intl-utdata mot 'GMT+2'. Under Hermes slaar ikke den
+  // sammenligningen til, saa en august-dato fikk vintertidens +01:00.
+  //
+  // ⚠️ Den FOERSTE utgaven av denne vakten var verdiloes: den asserterte
+  // `teeOffInstant(d) === d.toISOString()`, som er en identitet, og paa en norsk
+  // maskin er lokaltid == Oslo-veggklokke, saa selv en gjeninnfoert
+  // Oslo-konvertering ga samme svar. Evaluatoren gjeninnfoerte feilen og alle
+  // 499 testene forble groenne. Vakten maatte derfor gjoeres om helt:
+  //   1. `jest.config.js` pinner TZ=UTC, saa lokaltid og Oslo IKKE er samme tall.
+  //   2. Vi gaar gjennom den EKTE payload-veien, ikke bare helperen.
+  //   3. En strukturell sjekk forbyr importen uansett tidssone.
+  it('pinner TZ=UTC, ellers kan ikke vakten under skille de to', () => {
+    // Uten dette er resten av denne describe-blokka teater.
+    expect(new Date(2026, 7, 31, 23, 0).toISOString()).toBe('2026-08-31T23:00:00.000Z');
+  });
+
   it.each([
-    ['sommertid', new Date(2026, 7, 31, 23, 0)],
-    ['vintertid', new Date(2026, 11, 24, 14, 30)],
-  ])('gir pickerens eget oeyeblikk (%s)', (_name, picked: Date) => {
-    expect(teeOffInstant(picked)).toBe(picked.toISOString());
-    // Og veien tilbake gir nøyaktig klokkeslettet arrangøren valgte.
-    expect(new Date(teeOffInstant(picked)).getHours()).toBe(picked.getHours());
+    ['sommertid (CEST — feilen bommet her)', new Date(2026, 7, 31, 23, 0)],
+    ['vintertid (CET)', new Date(2026, 11, 24, 14, 30)],
+  ])('skriver pickerens eget oeyeblikk til scheduled_tee_off_at (%s)', (_n, picked: Date) => {
+    const form = draftToFormData(draft({ gameMode: 'stableford', teeOffAt: teeOffInstant(picked) }));
+    // Verdien som faktisk naar `games.scheduled_tee_off_at`. En gjeninnfoert
+    // Oslo-konvertering forskyver denne med en eller to timer under TZ=UTC.
+    expect(form.get('scheduled_tee_off_at')).toBe(picked.toISOString());
+  });
+
+  it('verken payload-laget eller datalaget IMPORTERER webbens Oslo-parser', () => {
+    // Strukturell og tidssone-uavhengig: selve importen ER feilen. Holder selv
+    // om noen skulle fjerne TZ-pinningen over.
+    //
+    // Vi matcher import-setningen, ikke navnet: begge filene OMTALER helperen i
+    // kommentarer nettopp for aa forklare hvorfor den ikke skal brukes, og en
+    // naiv `toContain` ville gjort de forklaringene ulovlige.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs') as typeof import('fs');
+    for (const rel of ['./wizardPayload.ts', '../data/createGame.ts']) {
+      const src = fs.readFileSync(require.resolve(rel), 'utf8');
+      const importsIt = /import\s*(type\s*)?\{[^}]*\bparseOsloDateTimeLocal\b[^}]*\}/s.test(src);
+      expect({ file: rel, importsOsloParser: importsIt }).toEqual({
+        file: rel,
+        importsOsloParser: false,
+      });
+    }
+  });
+});
+
+describe('lekkasje av stablefordTeamSize paa tvers av format-bytte', () => {
+  // Evaluator-funn i #1854. Veiviseren lar arrangoeren gaa tilbake til steg 1 og
+  // bytte format etter aa ha vaert innom oppsettet. `stablefordTeamSize: 2`
+  // («Par») ble haengende ved, og siden regelen den gang bare spurte
+  // «er team_size 2?» — uten aa spoerre HVILKET format — trodde wolf, skins og
+  // BBB at de var lag-modi. `orderedSlots` DROPPER spillere uten lagtildeling i
+  // en lag-modus, saa payloaden ble TOM: publisering doede med
+  // «Formatet trenger flere spillere» mens tre spillere sto valgt. Feltet har
+  // ingen UI utenfor stableford-familien, saa arrangoeren kunne ikke angre.
+  const LEAKED = { stablefordTeamSize: 2 } as const;
+
+  it.each(['wolf', 'skins', 'bingo_bango_bongo', 'singles_matchplay', 'best_ball'] as const)(
+    'isParStableford er false for %s selv med team_size 2',
+    (mode) => {
+      expect(isParStableford(mode, LEAKED)).toBe(false);
+    },
+  );
+
+  it.each(['stableford', 'modified_stableford'] as const)(
+    'isParStableford er true for %s med team_size 2',
+    (mode) => {
+      expect(isParStableford(mode, LEAKED)).toBe(true);
+    },
+  );
+
+  it.each(['wolf', 'skins', 'bingo_bango_bongo'] as const)(
+    '%s krever ikke lagtildeling selv med lekket team_size',
+    (mode) => {
+      expect(
+        draftNeedsTeamAssignment(draft({ gameMode: mode, setup: LEAKED })),
+      ).toBe(false);
+    },
+  );
+
+  it('wolf beholder ALLE spillerne selv med lekket team_size', () => {
+    // Kjernen i feilen: dette var 0 spillere foer fiksen.
+    const payload = buildDraftPayload(
+      draft({ gameMode: 'wolf', players: solo('a', 'b', 'c'), setup: LEAKED }),
+    ).payload;
+    expect(payload.errorCode).toBeUndefined();
+    expect(payload.players).toHaveLength(3);
+    expect(payload.players.every((p) => p.team_number === null)).toBe(true);
+  });
+});
+
+describe('best ball-flight for lag 3 og 4', () => {
+  // Webbens default (`useGameFormState.ts`): lag 1-2 spiller i flight 1, lag 3-4
+  // i flight 2. Staging-runden brukte bare to lag, saa den oevre halvdelen av
+  // regelen var uproevd — evaluator-funn i #1854.
+  it('legger lag 3 og 4 i flight 2', () => {
+    const payload = buildDraftPayload(
+      draft({
+        gameMode: 'best_ball',
+        players: [
+          { userId: 'a', teeGender: 'M', teamNumber: 1 },
+          { userId: 'b', teeGender: 'M', teamNumber: 1 },
+          { userId: 'c', teeGender: 'M', teamNumber: 2 },
+          { userId: 'd', teeGender: 'M', teamNumber: 2 },
+          { userId: 'e', teeGender: 'M', teamNumber: 3 },
+          { userId: 'f', teeGender: 'M', teamNumber: 3 },
+          { userId: 'g', teeGender: 'M', teamNumber: 4 },
+          { userId: 'h', teeGender: 'M', teamNumber: 4 },
+        ],
+      }),
+    ).payload;
+    expect(payload.errorCode).toBeUndefined();
+    expect(
+      payload.players.map((p) => [p.team_number, p.flight_number]),
+    ).toEqual([[1, 1], [1, 1], [2, 1], [2, 1], [3, 2], [3, 2], [4, 2], [4, 2]]);
   });
 });

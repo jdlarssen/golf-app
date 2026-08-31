@@ -14,6 +14,7 @@ import {
   buildGameInsertPayload,
   type ParsedPayload,
 } from '../../../../lib/games/gamePayload';
+import { isStablefordFamily } from '../../../../lib/scoring/modes/types';
 import {
   APP_MODE_LABELS,
   usesTeamAssignment,
@@ -128,8 +129,31 @@ function bestBallDefaultFlight(team: number): number {
  */
 export function draftNeedsTeamAssignment(draft: GameDraft): boolean {
   return (
-    usesTeamAssignment(draft.gameMode) || draft.setup?.stablefordTeamSize === 2
+    usesTeamAssignment(draft.gameMode) || isParStableford(draft.gameMode, draft.setup)
   );
+}
+
+/**
+ * Er dette par-stableford (4BBB)?
+ *
+ * ⚠️ Modusen MÅ være med i spørsmålet. `stablefordTeamSize` er et felt på et
+ * delt `setup`-objekt, og veiviseren lar arrangøren bytte format etter at
+ * oppsett-steget er besøkt. Uten mode-leddet ble et «Par»-valg gjort på
+ * stableford hengende ved når hen så gikk tilbake og valgte wolf: wolf fikk et
+ * lag-grid den ikke skal ha, og siden {@link orderedSlots} DROPPER spillere
+ * uten lag-tildeling i en lag-modus, ble payloaden tom — publisering døde med
+ * «Formatet trenger flere spillere» mens tre spillere sto valgt. Feltet finnes
+ * bare i stableford-familiens eget oppsett-UI, så arrangøren kunne ikke engang
+ * angre valget. Funnet av evaluatoren i #1854.
+ *
+ * Familie-medlemskapet leses fra den DELTE `isStablefordFamily`, ikke en lokal
+ * liste — samme kilde som webben ruter på.
+ */
+export function isParStableford(
+  mode: AppGameMode,
+  setup: ModeSetup | undefined,
+): boolean {
+  return isStablefordFamily(mode) && setup?.stablefordTeamSize === 2;
 }
 
 /**

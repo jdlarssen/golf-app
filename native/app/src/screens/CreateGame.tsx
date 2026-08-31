@@ -49,6 +49,7 @@ import {
 import {
   defaultGameName,
   draftNeedsTeamAssignment,
+  isParStableford,
   teeOffInstant,
   type DraftPlayer,
   type GameDraft,
@@ -193,6 +194,12 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
       // i matchplay). Et tall fra forrige format ville vært feil her, så
       // tildelingen nullstilles — spillerne selv står.
       setPicked((prev) => prev.map((p) => ({ ...p, teamNumber: null })));
+      // Oppsettet nullstilles av samme grunn: feltene er modus-spesifikke, og
+      // de fleste har ingen UI utenfor sitt eget format. `stablefordTeamSize`
+      // var det verste tilfellet (se `isParStableford`), men en allowance eller
+      // en kr-per-poeng fra forrige format hører like lite hjemme her.
+      setSetup({});
+      setSetupText({ allowance: '', krPerUnit: '' });
       setCommon((prev) =>
         nameTouched ? prev : { ...prev, name: defaultGameName(mode) },
       );
@@ -249,7 +256,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   }, [common, courseId, gameMode, players, resolvedSetup, teeBoxId, teeOff]);
 
   const teamLayout = gameMode
-    ? teamLayoutFor(gameMode, resolvedSetup.stablefordTeamSize === 2)
+    ? teamLayoutFor(gameMode, isParStableford(gameMode, resolvedSetup))
     : null;
 
   const publish = useCallback(async () => {
