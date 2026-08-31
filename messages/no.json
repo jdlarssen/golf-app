@@ -3403,9 +3403,7 @@
       },
       "sections": {
         "overview": "Oversikt",
-        "manageSignups": "Administrer påmelding",
-        "format": "Format",
-        "course": "Banen",
+        "formatAndCourse": "Format og bane",
         "progress": "Fremgang",
         "sides": "Sider",
         "teams": "Lag",
@@ -3431,9 +3429,6 @@
         "teeOff": "Tee-off",
         "course": "Bane",
         "tee": "Tee",
-        "genderMens": "Herrer",
-        "genderLadies": "Damer",
-        "genderJuniors": "Junior",
         "unknownCourse": "(ukjent)",
         "notSubmittedWaiting": "{count, plural, one {# venter} other {# venter}}",
         "notSubmittedFinished": "{count, plural, one {# leverte ikke} other {# leverte ikke}}"

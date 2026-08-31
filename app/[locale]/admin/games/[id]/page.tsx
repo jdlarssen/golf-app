@@ -48,10 +48,6 @@ import {
   reopenGame,
   adminUndoWithdraw,
 } from './actions';
-import {
-  getRatingForGender,
-  type TeeBoxRatings,
-} from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { InviteToGameSection } from './InviteToGameSection';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
@@ -66,7 +62,6 @@ import {
   expectedTeamSize,
 } from '@/lib/games/teamScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { toggleSignupsClosed } from './flightActions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -118,7 +113,9 @@ type GameRow = {
   // #1049: startkontingent — driver betaling-telle-kortet (vises kun når > 0).
   entry_fee_kr: number;
   courses: { name: string } | null;
-  tee_boxes: (TeeBoxRatings & { name: string }) | null;
+  // #1795: kun navnet leses her. Rating-radene (slope/CR/par per kjønn) er ute
+  // av protokoll-kortet, så selecten henter ikke lenger de ni rating-kolonnene.
+  tee_boxes: { name: string } | null;
 };
 
 type GamePlayerRow = {
@@ -253,7 +250,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, courses(name), tee_boxes(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -680,11 +677,15 @@ async function PlayersSections({
           avslå er hard-låst (signups/actions.ts), og den offentlige
           påmeldingssiden viser «stengt». Kortet erstattes da av en liten
           tekstlenke til historikken, som fortsatt er eneste vei til frosne
-          pending-forespørsler på finished. */}
+          pending-forespørsler på finished.
+          #1795: «Steng påmelding» (#543) bor nå som sekundær rad inne i kortet —
+          status + modus sendes med slik at kortet eier gaten selv. */}
       {!isPlayPhase ? (
         <RegistrationOverviewSection
           gameId={gameId}
           registrationMode={game.registration_mode}
+          gameStatus={game.status}
+          signupsClosedAt={game.signups_closed_at}
           shortId={game.short_id}
           selfRegisteredCount={players.length}
         />
@@ -713,47 +714,14 @@ async function PlayersSections({
         />
       )}
 
-      {/* #543: Steng påmelding — kun scheduled + open/manual_approval. */}
-      {game.status === 'scheduled' &&
-        (game.registration_mode === 'open' ||
-          game.registration_mode === 'manual_approval') && (
-          <SectionCard ribbon={tSections('manageSignups')}>
-            <div className="px-3.5 pb-3.5 pt-3">
-              {game.signups_closed_at ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted">
-                    {tCta('signupsClosedBody')}
-                  </p>
-                  <form action={toggleSignupsClosed.bind(null, gameId, false)}>
-                    <button
-                      type="submit"
-                      className="block w-full min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
-                    >
-                      {tCta('reopenSignupsButton')}
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted">
-                    {tCta('closeSignupsBody')}
-                  </p>
-                  <form action={toggleSignupsClosed.bind(null, gameId, true)}>
-                    <button
-                      type="submit"
-                      className="block w-full min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
-                    >
-                      {tCta('closeSignupsButton')}
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
-          </SectionCard>
-        )}
-
-      {/* Card 2 — Format */}
-      <SectionCard ribbon={tSections('format')}>
+      {/* Card 2 — Format og bane (#1795). Tidligere to kort; slått sammen fordi
+          de til sammen var seks–ni rader oppsett som arrangøren scroller forbi.
+          Rating-radene (slope/CR/par per kjønn) er droppet — de hører hjemme på
+          banesida, ikke i spillprotokollen.
+          Handicap-justering og Peer-godkjenning MÅ bli stående: etter start er
+          dette eneste admin-flata som viser dem (edit/page.tsx redirecter på alt
+          annet enn draft/scheduled). */}
+      <SectionCard ribbon={tSections('formatAndCourse')}>
         <Row label={tRows('gameMode')} value={modeLabel} />
         <Row
           label={tRows('hcpAllowance')}
@@ -764,31 +732,12 @@ async function PlayersSections({
           value={game.require_peer_approval ? tRows('peerApprovalOn') : tRows('peerApprovalOff')}
         />
         {teeOffLabel && <Row label={tRows('teeOff')} value={teeOffLabel} />}
-      </SectionCard>
-
-      {/* Card 3 — Course */}
-      <SectionCard ribbon={tSections('course')}>
         <Row
           label={tRows('course')}
           value={game.courses?.name ?? tRows('unknownCourse')}
         />
         {game.tee_boxes && (
-          <>
-            <Row label={tRows('tee')} value={game.tee_boxes.name} />
-            {(['mens', 'ladies', 'juniors'] as const).map((g) => {
-              const rating = getRatingForGender(game.tee_boxes!, g);
-              if (!rating) return null;
-              const label =
-                g === 'mens' ? tRows('genderMens') : g === 'ladies' ? tRows('genderLadies') : tRows('genderJuniors');
-              return (
-                <Row
-                  key={g}
-                  label={label}
-                  value={`slope ${rating.slope} / CR ${rating.courseRating.toFixed(1)} / par ${rating.par}`}
-                />
-              );
-            })}
-          </>
+          <Row label={tRows('tee')} value={game.tee_boxes.name} />
         )}
       </SectionCard>
 
