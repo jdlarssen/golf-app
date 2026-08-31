@@ -288,9 +288,19 @@ design-fundamentet (#1830, PR #1834) merget:
   baseline før endringene. Web-diff utenfor native/docs/forge: kun
   `wolfRotation.ts`-flyttingen (100 % similarity, 0 innholdsendring) + 2 import-linjer.
 - **K5:** alle Gates grønne (tall i Gates-seksjonen); runbook-seksjonen «Wolf/BBB
-  valg-UI (#1832)» committet (82d27c4a). **VERIFICATION GAP:** eier-tapptest på fysisk
-  iPhone gjenstår (eier ikke til stede i økta) — bokført som restanse i PR-en, samme
-  mønster som N4 (#1828 kriterium 7).
+  valg-UI (#1832)» committet (82d27c4a). **Eier-tapptest på fysisk iPhone bestått
+  2026-08-31 (kveldsøkta, samme dag som mergen)** — GAP-en fra byggeøkta er lukket:
+  bygg fra main deployet til eierens iPhone 13 (`expo run:ios --device`, klassisk
+  UDID — devicectl-ID-en matcher ikke), innlogget som Test Spiller mot staging.
+  Bekreftet av eier på enheten: (a) wolf-valg-UI på eget hull (hull 5, valgte
+  partner: Forny — raden verifisert i `wolf_hole_choices` med `entered_by` =
+  telefonens konto), (b) kun badge uten kontroller på andres hull (hull 7, Jørgs
+  tur — eieren rapporterte det selv som «feil» før rolleforklaringen: riktig
+  oppførsel), (c) live poll-oppdatering på resultattavla (hull 4 skrevet utenfra →
+  «nå endra tavla seg»), (d) BBB-kryss på blankt hull (hull 3, alle tre mottakere
+  satt fra telefonen — rad verifisert med `entered_by` = Test Spiller) og
+  eksisterende kryss synlige på hull 1-2, resultatsiden oppdatert. Ingen
+  UX-funn meldt av eier.
 
 Sidefunn bokført som issues før merge: #1844 (WEB_ONLY_RESULT_MESSAGE gjør tre
 jobber), #1845 (ALL_CODES håndvedlikeholdt). #1836 (webbens døde choice-abonnementer)
