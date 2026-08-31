@@ -407,3 +407,82 @@ Samme fasong som greensome-oppskriften over, men:
 - ⚠️ Sjekk `mode_config`-fasongen mot et ekte spill i staging-DB-en
   (`select mode_config from games where game_mode = '<mode>' limit 1`) før
   seeding — kolonnen har CHECK-er.
+
+## Sideturnering — LD/CTP + poengjakt (#1850)
+
+Appens resultatskjerm viser nå sideturneringen: LD/CTP-vinnerne og poengjakten
+på tvers av de ~45 kategoriene. Ingen DB-endring — SELECT-policyen på
+`game_side_winners` (0092:411-427) slipper deltakere gjennom nøyaktig når
+`status = 'finished'`, som er det eneste tidspunktet appen trenger radene.
+
+### Finished-gaten er hele regelen
+
+Sideturneringen er et **post-game-reveal-element på web, i alle formater** —
+verifisert i `formats/stableford.tsx:115-121`, `formats/skins.tsx:102`,
+`renderMatchplaySideSection` (`sideTournament.tsx:265` — `return undefined` når
+ikke finished) og best_ball-fallthrough i `leaderboardContent.tsx:516-529`.
+Appen speiler det: en AKTIV runde viser ingenting side-relatert, uansett hva
+`side_tournament_enabled` sier, og fyrer ikke fetchen heller.
+
+Seksjonen rendres når **alle tre** holder: `status === 'finished'`,
+`sideTournamentEnabled`, og `gateReason(game) === null`.
+
+### `position` er en hull-slot, ikke en plassering
+
+Den viktigste fella i denne tabellen. `game_side_winners.position` = **hvilket
+LD-/CTP-hull** (1 eller 2), ikke medaljerang. Samme spiller kan derfor stå på
+BEGGE slots og få 2p × 2. Linjene skrives alltid med slot-nummer
+(«Lengste drive #1: Karl», «Lengste drive #2: Karl») — aldri «1. plass».
+Slots uten kåret vinner (`winner_user_id = null`, arrangøren valgte «ingen
+kvalifiserte») hoppes stille over.
+
+### Grouping utledes, den hardkodes ikke
+
+`teamGrouping` speiler webbens per-renderer-valg, men appen spør den delte
+kilden i stedet for å føre en modus-liste: stableford-familien følger motorens
+`variant` (`team` → `byTeamNumber`, `solo` → `solo`), og de delte
+familie-predikatene avgjør resten. `modified_stableford` har ingen egen regel —
+den rutes gjennom samme renderer som `stableford` og arver grenen der.
+
+Én visningsregel henger sammen med dette: **et lag med nøyaktig ett medlem viser
+spillerens navn, ikke «Lag N»** (`SideTournamentView.tsx:247-256`). Derfor viser
+et singles-matchplay-spill spillernavn selv om grupperingen er `byTeamNumber`.
+
+### Copy uten 344 KB JSON
+
+Webbens etiketter bor i `messages/no.json` under `leaderboard.sideTournament`
+(48 awards + 6 grupper) og `leaderboard.matchplaySide`. Fila er 341 KB — appen
+speiler subsettet i `src/lib/sideTournamentCopy.ts`, og en **jest-paritetstest**
+importerer `messages/no.json` node-side og krever at hver streng er identisk.
+Drift fanges i CI uten at JSON-en havner i app-bundelen.
+
+⚠️ Oppslagstabellen er nøklet på `SideCategory` (`lib/scoring/sideTournament.ts`),
+ikke `SideCategoryId` (`sideTournamentConfig.ts`). De to unionene har 45 medlemmer
+hver og er identiske bortsett fra `best_netto_front9`/`best_netto_back9` mot
+`best_netto_f9`/`best_netto_b9` — se #1851.
+
+### Ærlig note framfor feil tall
+
+En fetch som ALDRI har lyktes (kaldstart offline på et finished side-spill med
+slots) gir en rolig «fikk ikke hentet»-note i stedet for poengtabellen. Hver
+slot er verdt 2p, så en tabell uten vinnerradene ville vist feil totaler med
+autoritativ mine. Tom liste etter en VELLYKKET fetch er derimot gyldig — et
+gammelt spill kan være avsluttet uten kåring. Samme skille som `data/choices.ts`.
+
+### Rigge et ferdig side-spill på staging (service-role)
+
+Samme fasong som greensome-/wolf-oppskriftene over, pluss:
+
+- `games`: `side_tournament_enabled: true`, `side_ld_count` og `side_ctp_count`
+  0-2, `side_disabled_categories: []`.
+- `scores`: **`entered_by` er NOT NULL** — seed-skript som utelater den feiler
+  med `23502`.
+- `game_side_winners`: `game_id, category ('longest_drive'|'closest_to_pin'),
+  position, winner_user_id`. Vil du bevise slot-semantikken, gi samme
+  `winner_user_id` både `position: 1` og `position: 2`.
+- Gi spillerne ulike course_handicap og et variert slag-mønster (én eagle, noen
+  birdier, én `par+5` for snowman) — ellers fyrer bare et par kategorier og
+  tabellen beviser lite.
+- Kryssjekk mot web: kjør `next build` med `.env.staging.local` og `next start`,
+  logg inn som e2e-spilleren, åpne `/no/games/<id>/leaderboard` og fanen
+  «Sideturnering». Tallene der er fasit for appen.
