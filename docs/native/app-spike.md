@@ -486,3 +486,101 @@ Samme fasong som greensome-/wolf-oppskriftene over, pluss:
 - Kryssjekk mot web: kjør `next build` med `.env.staging.local` og `next start`,
   logg inn som e2e-spilleren, åpne `/no/games/<id>/leaderboard` og fanen
   «Sideturnering». Tallene der er fasit for appen.
+
+## Opprett spill i appen (N6a, #1854)
+
+Arrangøren oppretter runden i appen: format → oppsett → bane/tid → spillere/lag →
+publiser. Fem steg i ÉN skjerm (`src/screens/CreateGame.tsx`) med lokal steg-state;
+utkastet lever i minnet og forkastes hvis veiviseren avbrytes. Ingen DB-endring —
+`games creator insert` (0071/0092) og `game_players creator insert` bærer skrivingen,
+og `guard_game_players_invite_eligibility` (0115) håndhever hvem som kan legges til.
+
+### Reglene er delt kode, bare monteringen er speilet
+
+`buildGameInsertPayload` (`lib/games/gamePayload.ts`) bygger `mode_config` for alle åtte
+modiene, akkurat som på web. Appen speiler ALDRI modus-reglene — den speiler bare
+rekkefølgen og kolonnesettet fra `createGameInternal`. Delt og importert:
+`buildGameInsertPayload`, `isTeeOffInPast`, `parsePrizesFromFormData`,
+`parseSideTournamentFromFormData`, `acceptedAtForActor`, `fitsPlayerCount`.
+
+**FormData-shimmen** (`src/lib/wizardFormData.ts`): byggeren leser `FormData`, og React
+Natives globale `FormData` er laget for nettverks-opplasting — den har ingen `get()`.
+Shimmen er en Map med `get`. Det holder: byggeren bruker `formData.get()` og ingenting
+annet (53 kall, null `getAll`/`has`/`entries`). En jest-test mater byggeren et rått
+`{get}`-objekt og krever identisk payload, så shimmens flate er låst.
+
+To nøkkel-konvensjoner i samme payload, begge må treffes: spiller-slots leses på
+INDEKS (`player_${i}_id`, `_team`, `_flight`), mens tee-kjønn leses på BRUKER-ID
+(`player_${uuid}_gender`).
+
+### ⚠️ Metro resolver bare-importer fra den IMPORTERENDE fila
+
+`gamePayload.ts` value-importerer `prizes.ts`, som importerer `zod`. Metro slo den opp i
+repo-rotas `node_modules` — utenfor prosjektet og utenfor `watchFolders` — og
+`npx expo export` feilet med «Unable to resolve module zod».
+
+**Jest var grønn hele tiden.** Den bruker Node-oppslag og fant rotas zod 4. Grønne
+tester, rød bundle. `metro.config.js` har derfor `resolver.nodeModulesPaths` mot appens
+egen `node_modules`, og regelen er nå: **enhver bare-import som er nåbar fra den delte
+`lib/`-grafen MÅ være en deklarert dependency i `native/app`.** `npx expo export` er den
+ENESTE porten som fanger et brudd.
+
+### ⚠️ Ikke bruk webbens Oslo-parser i appen
+
+`parseOsloDateTimeLocal` velger sommer- eller vintertid ved å STRENG-SAMMENLIGNE
+`Intl`-utdata mot `'GMT+2'`. Den sammenligningen holder i Node og i nettlesere, men ikke
+under Hermes — en dato i august fikk vintertidens `+01:00`, og en tee-off tastet 23:00
+ble lagret som 22:00Z i stedet for 21:00Z. Funnet ved første publisering fra simulator.
+
+Webben MÅ gå om veggklokke: `<input type="datetime-local">` har ingen tidssone. Appen
+har pickerens `Date` — et faktisk øyeblikk — og bruker det direkte (`teeOffInstant`).
+Picker, lagret verdi og `formatTeeOff` er da alle enhetens lokaltid. Regresjonsvakten
+prøver begge sider av sommertid-skiftet.
+
+### Hva appen IKKE kan (bevisste grenser)
+
+- **Kandidatlista er medspillere, ikke venner.** `users`-SELECT under RLS gir egen rad ∨
+  admin ∨ delt spill. Webbens union (venner ∪ medspillere ∪ klubbmedlemmer) er
+  `server-only` + service-role. En venn du aldri har spilt med er ikke navnlesbar.
+  Oppfølger: egen SECURITY DEFINER-RPC.
+- **Gjester utelates.** En gjesterad MÅ inn via service-role (0115 blokkerer
+  klient-inserten); å tilby en spiller hvis insert er dømt til å feile er uærlig.
+- **Ingen tee-sett-velger** — utledes av `users.gender`, og junior er utilgjengelig
+  (#1859).
+- **Ingen utkast, ingen redigering, ingen e-postinvitasjon** — web-eid.
+- Format-etikettene er speilet i `src/lib/appFormats.ts` med paritetstest mot
+  `messages/no.json`: `formats`-tabellen har INGEN navne-kolonne, bare `slug`,
+  `icon_key`, `scoring_module`, `is_active`, `is_cup_eligible`.
+  `format_intent_mapping` nøkles på `format_slug`.
+
+### Spillertak per modus
+
+`src/lib/rosterLimits.ts` speiler slot-tellingen i `gamePayload.ts`, fordi
+`fitsPlayerCount` alene er for løs: `fitsPlayerCount('stableford', 9)` er `true`, men
+byggeren leser bare 8 slots — spiller nr. 9 ville forsvunnet stille. Tak: stableford /
+modified / best ball 8, singles 2, greensome 4, wolf 5, skins / BBB 16. (Byggeren leser
+17 for skins/BBB med vilje, så en 17. spiller blir en FEIL og ikke en stille kutting.)
+
+### Verifisere en publisering mot staging
+
+```bash
+# Bygg + installer (datetimepicker er en NATIV modul — prebuild + pod install først):
+cd native/app && source ~/.nvm/nvm.sh && nvm use 22
+npx expo prebuild --platform ios --no-install
+(cd ios && LANG=en_US.UTF-8 pod install)
+(cd ios && LANG=en_US.UTF-8 xcodebuild -workspace TrnyDev.xcworkspace -scheme TrnyDev \
+   -configuration Release -destination 'generic/platform=iOS Simulator' \
+   -derivedDataPath build CODE_SIGNING_ALLOWED=NO build)
+xcrun simctl install <UDID> ios/build/Build/Products/Release-iphonesimulator/TrnyDev.app
+xcrun simctl launch <UDID> no.tornygolf.dev
+```
+
+Etter publisering, les raden med service-role og sjekk `status='scheduled'`,
+`mode_config.kind`, `scheduled_tee_off_at at time zone 'Europe/Oslo'` mot det pickeren
+viste, `team_number` (null for wolf), og at `accepted_at` kun er satt for arrangøren.
+
+⚠️ **RN `Switch` tar ikke imot injiserte tapp** fra simulator-verktøyet. Dra i stedet:
+en kort `swipe` tvers over bryteren slår den om. Vanlige `Pressable`-er tar tapp fint.
+
+Web er fasit-konsument: bygg med `.env.staging.local` og kjør `npx next start`
+(`torny-staging-prod` i `.claude/launch.json`), logg inn og åpne `/games/<id>`.
