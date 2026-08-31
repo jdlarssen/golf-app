@@ -14,6 +14,11 @@
 // kort per lag, og hvert tapp går til kapteinens rad via den delte
 // `scoreOwnerForHole`. Tallene på kortet (lagets tildelte slag) kommer fra
 // motoren; se `lib/teamPlay.ts` for hvorfor de ikke regnes her.
+//
+// #1832: wolf og bingo bango bongo får hver sin seksjon her, fordi halve
+// regnestykket deres ikke er slag i det hele tatt — det er valg og
+// prestasjoner, ført på hullet. De to seksjonene er additive: de legger seg
+// over og under de vanlige kortene, og resten av skjermen merker dem ikke.
 import { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -28,6 +33,8 @@ import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
+import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
+import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundleHole, BundlePlayer } from '../data/gameBundle';
 import { subscribeGameScores } from '../data/realtime';
@@ -47,7 +54,9 @@ import {
   teamExtraForHole,
   type TeamCard,
 } from '../lib/teamPlay';
+import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
+import { wolfHoleState, wolfPointsByUser } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { COLORS, TAP, ui } from '../theme';
@@ -66,6 +75,13 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   const { userId } = useSession();
   const { bundle, loading } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId, POLL_MS);
+  // Wolf/BBB henter valgene sine fra serveren. De elleve andre formatene
+  // svarer `null` på kilde-spørsmålet og koster ikke et eneste nettkall — og
+  // før bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
+  const { extras, refresh: refreshChoices } = useGameChoices(
+    gameId,
+    bundle?.game.gameMode ?? '',
+  );
 
   // Realtime + seed henger på SPILLET, ikke på hullet: å bytte hull skal ikke
   // bygge kanalen på nytt (#1366-disiplinen bor i `subscribeGameScores`).
@@ -141,7 +157,30 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   const mySubmittedAt = collapsed ? (myCard?.submittedAt ?? null) : me.submitted_at;
   const locked = bundle.game.status !== 'active' || mySubmittedAt != null;
   // Badgen hentes fra motoren, og bare når vi faktisk skal tegne lagkort.
+  // Wolf og BBB kollapser aldri (`modeCollapsesToTeamCard` dekker
+  // scramble-familien, alternate shot og patsome fra hull 7), så dette
+  // kallstedet trenger ingen valg — wolf-grenen under har sitt eget.
   const leaderboard = collapsed ? computeGameLeaderboard(bundle, scores) : null;
+
+  const isWolf = mode === 'wolf';
+  const isBingoBangoBongo = mode === 'bingo_bango_bongo';
+  // Trailing-wolf (hull R+1..18) er «den som ligger sist», og det tallet er
+  // motorens. Uten valgene svarer adapteren `missing-choices`, og da faller
+  // rotasjonen tilbake på slot-rekkefølgen — samme som webben gjør når
+  // `pointsByUser` er `undefined`.
+  const wolfOutcome = isWolf ? computeGameLeaderboard(bundle, scores, extras) : null;
+  const wolf = isWolf
+    ? wolfHoleState({
+        holeNumber,
+        myUserId: userId,
+        gameStatus: bundle.game.status,
+        players: bundle.players,
+        choices: extras.wolfChoices,
+        pointsByUser: wolfPointsByUser(
+          wolfOutcome?.ok ? wolfOutcome.result : null,
+        ),
+      })
+    : null;
 
   const adjustStrokes = async (playerUserId: string, delta: number) => {
     const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.strokes ?? null;
@@ -205,6 +244,19 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
         </Text>
       ) : null}
 
+      {/* Wolf-badgen står over kortene, som på web: hvem som er Wolf avgjør
+          hva slagene under er verdt. `key` på hullet nullstiller feil- og
+          lagre-tilstanden når spilleren blar videre. */}
+      {wolf ? (
+        <WolfChoiceCard
+          key={holeNumber}
+          gameId={gameId}
+          holeNumber={holeNumber}
+          state={wolf}
+          onSaved={refreshChoices}
+        />
+      ) : null}
+
       {collapsed
         ? teamCards.map((card) => (
             <TeamCardView
@@ -257,6 +309,28 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
               onPutts={(delta) => void adjustPutts(entry.user_id, delta)}
             />
           ))}
+
+      {/* BBB-registreringen står under kortene, som på web: den handler om
+          det flighten så, ikke om tallene over. */}
+      {isBingoBangoBongo ? (
+        <BingoBangoBongoCard
+          key={holeNumber}
+          gameId={gameId}
+          holeNumber={holeNumber}
+          gameStatus={bundle.game.status}
+          players={flight.map((entry) => ({
+            userId: entry.user_id,
+            name: displayName(entry.player),
+          }))}
+          saved={
+            extras.bingoBangoBongoHoles?.find(
+              (row) => row.holeNumber === holeNumber,
+            ) ?? null
+          }
+          loaded={extras.bingoBangoBongoHoles !== undefined}
+          onSaved={refreshChoices}
+        />
+      ) : null}
 
       <Text style={ui.sectionTitle}>Runden</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="hole-strip">

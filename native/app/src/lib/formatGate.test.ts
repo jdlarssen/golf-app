@@ -4,9 +4,10 @@
 //  - `hole_segment` er NOT NULL med default `'full'` (verifisert mot staging
 //    2026-08-30), så en gate som spør «er feltet satt?» ville stengt HVERT
 //    eneste vanlige spill ute. Testen låser at den spør om verdien.
-//  - Familie-overgangene i N4 går begge veier. Scramble og alternate shot ble
-//    åpnet, wolf/BBB ble stengt. Uten en rad per familie kan en senere endring
-//    dra en av dem tilbake uten at noe sier fra.
+//  - Familie-overgangene går begge veier. N4 åpnet scramble og alternate shot
+//    og stengte wolf/BBB; #1832 åpnet de to igjen da valg-UI-en kom på plass.
+//    Uten en rad per familie kan en senere endring dra en av dem tilbake uten
+//    at noe sier fra.
 import { gateMessage, gateReason, isScoringSupported } from './formatGate';
 
 function game(overrides: Partial<Parameters<typeof isScoringSupported>[0]> = {}) {
@@ -41,11 +42,11 @@ describe('isScoringSupported', () => {
     ['nines', game({ gameMode: 'nines' }), true],
     ['round robin', game({ gameMode: 'round_robin' }), true],
     ['acey deucey', game({ gameMode: 'acey_deucey' }), true],
-    // N4 stengte disse to: regnestykket bor i egne per-hull-tabeller appen
-    // hverken leser eller skriver, så ren slag-tasting gir tomme resultater.
-    ['wolf — mangler per-hull-valg', game({ gameMode: 'wolf' }), false],
-    ['bingo bango bongo — mangler per-hull-valg', game({ gameMode: 'bingo_bango_bongo' }), false],
-    // Uendret fra N3.
+    // #1832 åpnet disse to: appen leser og skriver nå per-hull-valgene, og
+    // motoren får dermed hele regnestykket.
+    ['wolf — valg-UI på hullet', game({ gameMode: 'wolf' }), true],
+    ['bingo bango bongo — mottakere føres på hullet', game({ gameMode: 'bingo_bango_bongo' }), true],
+    // Uendret fra N3: det ene formatet som fortsatt står i gaten.
     ['patsome — segment-hybrid', game({ gameMode: 'patsome' }), false],
     ['front9-halvdel av en delt cup-dag', game({ holeSegment: 'front9' }), false],
     ['back9-halvdel', game({ holeSegment: 'back9' }), false],
@@ -57,7 +58,7 @@ describe('isScoringSupported', () => {
 
 describe('gateReason', () => {
   it('skiller formatet fra runden — teksten spilleren får er ikke den samme', () => {
-    expect(gateReason(game({ gameMode: 'wolf' }))).toBe('mode');
+    expect(gateReason(game({ gameMode: 'patsome' }))).toBe('mode');
     expect(gateReason(game({ holeSegment: 'front9' }))).toBe('segment');
     expect(gateReason(game({ sourceGameId: 'host' }))).toBe('derived');
     expect(gateReason(game())).toBeNull();
@@ -67,7 +68,14 @@ describe('gateReason', () => {
     expect(gateMessage('derived')).toBe('Denne runden føres på nettsiden ennå.');
   });
 
-  it('lar formatet stenge før runden — et wolf-front9 er stengt som format', () => {
-    expect(gateReason(game({ gameMode: 'wolf', holeSegment: 'front9' }))).toBe('mode');
+  it('lar formatet stenge før runden — et patsome-front9 er stengt som format', () => {
+    expect(gateReason(game({ gameMode: 'patsome', holeSegment: 'front9' }))).toBe('mode');
+  });
+
+  it('stenger fortsatt RUNDEN for et åpnet format — wolf på en cup-halvdel', () => {
+    // Gate-åpningen i #1832 gjelder spilleformen, ikke segment-spillene: en
+    // wolf-front9 er fortsatt N5s bord.
+    expect(gateReason(game({ gameMode: 'wolf', holeSegment: 'front9' }))).toBe('segment');
+    expect(gateReason(game({ gameMode: 'wolf' }))).toBeNull();
   });
 });
