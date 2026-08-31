@@ -27,7 +27,9 @@ import { grossLines, leaderboardVisibility, nameLookup } from '../lib/leaderboar
 import {
   computeGameLeaderboard,
   type ScoringContextProblem,
+  type ScoringExtras,
 } from '../lib/scoringContext';
+import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { COLORS, ui } from '../theme';
@@ -42,7 +44,10 @@ const POLL_MS = 1500;
 const PROBLEM_MESSAGES: Record<ScoringContextProblem, string> = {
   'unknown-mode': WEB_ONLY_RESULT_MESSAGE,
   'missing-config': WEB_ONLY_RESULT_MESSAGE,
-  'needs-choices': WEB_ONLY_RESULT_MESSAGE,
+  // Wolf og BBB uten valgene: ærlig melding, ALDRI en tabell der hvert hull
+  // står uavgjort. Den ville sett like autoritativ ut som en ekte stilling.
+  'missing-choices':
+    'Fikk ikke tak i valgene som avgjør poengene. Tabellen kommer når nettet er tilbake.',
   'no-course': 'Banen er ikke satt for denne runden ennå.',
   'no-players': 'Ingen spillere står oppført i runden.',
 };
@@ -51,6 +56,10 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   const { gameId } = route.params;
   const { bundle, loading } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId, POLL_MS);
+  // Wolf og BBB henter halve regnestykket fra serveren. Alle andre formater
+  // svarer `null` på kilde-spørsmålet og koster ikke et eneste kall — og før
+  // bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
+  const extras = useGameChoices(gameId, bundle?.game.gameMode ?? '');
 
   // Påheng på det eksisterende abonnementet: samme kanal hull-siden bruker,
   // og hver merge leser den lokale basen på nytt.
@@ -85,7 +94,7 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
         {bundle.game.status === 'finished' ? 'Sluttresultat' : 'Slik står det nå'}
       </Text>
 
-      <LeaderboardBody bundle={bundle} scores={scores} />
+      <LeaderboardBody bundle={bundle} scores={scores} extras={extras} />
     </ScrollView>
   );
 }
@@ -98,9 +107,12 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
 export function LeaderboardBody({
   bundle,
   scores,
+  extras = {},
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
+  /** Wolf-/BBB-valgene. Tomt for de elleve formatene som ikke bruker dem. */
+  extras?: ScoringExtras;
 }) {
   const { game } = bundle;
   const nameOf = nameLookup(bundle.players);
@@ -130,14 +142,18 @@ export function LeaderboardBody({
     return <GrossOnlyTable bundle={bundle} scores={scores} />;
   }
 
-  const outcome = computeGameLeaderboard(bundle, scores);
+  const outcome = computeGameLeaderboard(bundle, scores, extras);
   if (!outcome.ok) {
     return (
       <CalmNote text={PROBLEM_MESSAGES[outcome.problem]} testID="leaderboard-web-only" />
     );
   }
 
-  if (!hasAnyStroke(scores)) {
+  // Bingo Bango Bongo deler ut poeng for prestasjoner, ikke for slag: en bingo
+  // kan stå registrert lenge før noen har tastet et tall. Slag-vakten under
+  // ville skjult den tabellen bak «ingen slag ført ennå», som er sant og
+  // irrelevant. Alle andre formater regner FRA slagene og beholder vakten.
+  if (game.gameMode !== 'bingo_bango_bongo' && !hasAnyStroke(scores)) {
     return (
       <CalmNote
         text="Ingen slag er ført ennå. Tabellen fyller seg mens dere spiller."

@@ -219,6 +219,127 @@ describe('LeaderboardBody', () => {
 });
 
 describe('ResultView', () => {
+  // Én render-test per ny visning (#1832). De svarer på ÉN ting: at motorens
+  // rader faktisk blir til rader på skjermen, og at `ResultView` ruter de to
+  // kindsene dit. Tallene selv er motorens og er dekket i `lib/scoring`.
+  it('tegner wolf-totalene og hullene wolfen har valgt på', async () => {
+    const result = {
+      kind: 'wolf',
+      scoring: 'net',
+      rotation: 'random_with_trailing',
+      players: [
+        {
+          userId: 'me',
+          teamNumber: 1,
+          totalPoints: 4,
+          wolfHolesPlayed: 2,
+          blindWolfWins: 0,
+          rank: 1,
+          tiedWith: [],
+        },
+        {
+          userId: 'mate',
+          teamNumber: 2,
+          totalPoints: 1,
+          wolfHolesPlayed: 1,
+          blindWolfWins: 0,
+          rank: 2,
+          tiedWith: [],
+        },
+      ],
+      holes: [
+        {
+          holeNumber: 1,
+          par: 4,
+          strokeIndex: 1,
+          wolfUserId: 'me',
+          choice: 'partner',
+          partnerUserId: 'mate',
+          stake: 2,
+          outcome: 'wolf_side_wins',
+          players: [],
+          pointsByPlayer: { me: 4, mate: 4, other: 0 },
+        },
+        // Ingen har valgt her ennå — raden skal ikke tegnes i det hele tatt.
+        {
+          holeNumber: 2,
+          par: 4,
+          strokeIndex: 2,
+          wolfUserId: 'mate',
+          choice: null,
+          partnerUserId: null,
+          stake: 1,
+          outcome: 'pending',
+          players: [],
+          pointsByPlayer: {},
+        },
+      ],
+    } as unknown as ModeResult;
+
+    await render(
+      <ResultView
+        result={result}
+        status="active"
+        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      />,
+    );
+
+    expect(screen.getByTestId('wolf-view')).toBeTruthy();
+    expect(cell('me', 'points')).toBe('4');
+    expect(cell('mate', 'rank')).toBe('2');
+
+    expect(screen.getByTestId('wolf-hole-1-line').props.children).toBe(
+      'Wolf: Meg Selv · Partner: Makker Makkersen · Wolf vant',
+    );
+    expect(screen.getByTestId('wolf-hole-1-points').props.children).toBe(
+      'Meg Selv +4 · Makker Makkersen +4',
+    );
+    expect(screen.queryByTestId('wolf-hole-2')).toBeNull();
+  });
+
+  it('tegner BBB-poengene med fordelingen bak dem', async () => {
+    const result = {
+      kind: 'bingo_bango_bongo',
+      holes: [],
+      players: [
+        {
+          userId: 'me',
+          bingos: 2,
+          bangos: 1,
+          bongos: 0,
+          totalPoints: 3,
+          rank: 1,
+          tiedWith: [],
+        },
+        {
+          userId: 'mate',
+          bingos: 0,
+          bangos: 1,
+          bongos: 1,
+          totalPoints: 2,
+          rank: 2,
+          tiedWith: [],
+        },
+      ],
+    } as unknown as ModeResult;
+
+    await render(
+      <ResultView
+        result={result}
+        status="active"
+        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      />,
+    );
+
+    expect(screen.getByTestId('bbb-view')).toBeTruthy();
+    expect(screen.getByTestId('bbb-player-me-points').props.children).toBe(3);
+    expect(
+      screen.getByTestId('bbb-player-mate-breakdown').props.children.join(''),
+    ).toBe('0 bingo · 1 bango · 1 bongo');
+    // Noen har poeng, så «ingenting registrert ennå» skal ikke stå der.
+    expect(screen.queryByTestId('bbb-no-points')).toBeNull();
+  });
+
   it('viser en rolig henvisning i stedet for å krasje på en ukjent resultatform', async () => {
     // Eldre app, nyere server: motoren sender en `kind` denne versjonen ikke
     // kjenner. `tsc` fanger den når vi bygger MOT den nye motoren — dette er

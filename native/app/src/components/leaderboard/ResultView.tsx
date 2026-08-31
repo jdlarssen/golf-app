@@ -1,18 +1,20 @@
 // Native N4 (#1828): motor-resultatet → én visning per resultatform.
 //
 // Switchen under er uttømmende med en `never`-vakt: får den delte motoren en ny
-// `kind`, stopper `tsc` her i stedet for at telefonen viser en tom skjerm. De
-// tre gatede formatene (wolf, bingo bango bongo, patsome) har egne grener med
-// ærlig tekst — de kan ikke oppstå så lenge `formatGate` stenger dem, men en
-// gren er billigere enn en antakelse.
+// `kind`, stopper `tsc` her i stedet for at telefonen viser en tom skjerm. Det
+// ene gatede formatet (patsome) har en egen gren med ærlig tekst — den kan ikke
+// oppstå så lenge `formatGate` stenger den, men en gren er billigere enn en
+// antakelse.
 //
 // Ingen sortering her. Motoren har rangert radene; en `sort` til i render-laget
 // ville vært en andre og konkurrerende regel for hvem som leder.
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
+import { BingoBangoBongoView } from './BingoBangoBongoView';
 import { MatchView } from './MatchView';
 import { NassauView, SkinsView } from './PotViews';
 import { CalmNote, LeaderTable, type LeaderColumn } from './Table';
+import { WolfView } from './WolfView';
 
 /** Teksten for formater appen ennå ikke tegner. Aldri en krasj, aldri tomt. */
 export const WEB_ONLY_RESULT_MESSAGE = 'Formatet vises på nettsiden ennå.';
@@ -285,10 +287,14 @@ export function ResultView({
         />
       );
 
+    case 'wolf':
+      return <WolfView result={result} nameOf={nameOf} />;
+
+    case 'bingo_bango_bongo':
+      return <BingoBangoBongoView result={result} nameOf={nameOf} />;
+
     // Gatet i `formatGate` — kan ikke nås fra appen, men har en gren så en
     // fremtidig åpning ikke møter en tom skjerm.
-    case 'wolf':
-    case 'bingo_bango_bongo':
     case 'patsome':
       return <CalmNote text={WEB_ONLY_RESULT_MESSAGE} testID="leaderboard-web-only" />;
 

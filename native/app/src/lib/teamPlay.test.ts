@@ -473,15 +473,16 @@ describe('teamExtraForHole', () => {
   });
 
   it('kan ikke motoren svare, vises ingen badge — aldri et gjettet null', () => {
-    // Wolf er gatet nettopp fordi halve regnestykket ligger i en tabell appen
-    // ikke henter; adapteren svarer `needs-choices`.
+    // Wolf UTEN valgene tredd inn: halve regnestykket ligger i
+    // `wolf_hole_choices`, og adapteren svarer `missing-choices` i stedet for
+    // å bygge på en tom liste.
     const outcome = computeGameLeaderboard(
       bundle({ gameMode: 'wolf', modeConfig: { kind: 'wolf' } }, [
         player({ userId: 'anna', teamNumber: 1 }),
       ]),
       [],
     );
-    expect(outcome.ok).toBe(false);
+    expect(outcome).toEqual({ ok: false, problem: 'missing-choices' });
     expect(teamExtraForHole(outcome, 1, 1, 1)).toBeNull();
   });
 
