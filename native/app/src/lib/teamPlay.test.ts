@@ -67,6 +67,10 @@ function game(overrides: Partial<BundleGame>): BundleGame {
     tournamentId: null,
     foursomesSide1TeeStarterUserId: null,
     foursomesSide2TeeStarterUserId: null,
+    sideTournamentEnabled: false,
+    sideLdCount: 0,
+    sideCtpCount: 0,
+    sideDisabledCategories: [],
     ...overrides,
   };
 }

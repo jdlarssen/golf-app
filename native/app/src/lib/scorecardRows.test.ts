@@ -75,6 +75,10 @@ const GAME_BASE: BundleGame = {
   tournamentId: null,
   foursomesSide1TeeStarterUserId: null,
   foursomesSide2TeeStarterUserId: null,
+  sideTournamentEnabled: false,
+  sideLdCount: 0,
+  sideCtpCount: 0,
+  sideDisabledCategories: [],
 };
 
 /** Greensome 2v2: side 1 = 20 (60/40 av 20/20), side 2 = 0, allowance 50 %. */

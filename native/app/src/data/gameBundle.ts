@@ -25,8 +25,12 @@ import { getCacheEntry, getDb, putCacheEntry } from './db';
  *
  * v2 (N4, #1828): la til `scoreVisibility`, `tournamentId` og de to
  * foursomes-tee-starter-feltene.
+ * v3 (#1850): la til `sideTournamentEnabled`, de to slot-tellerne og
+ * `sideDisabledCategories`. En v2-oppføring mangler dem, og et `undefined`
+ * inn i sideturnerings-gaten ville skrudd seksjonen av på et spill som
+ * faktisk har LD/CTP — den leses derfor som «ingen cache».
  */
-export const BUNDLE_PAYLOAD_VERSION = 2;
+export const BUNDLE_PAYLOAD_VERSION = 3;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -56,6 +60,24 @@ export interface BundleGame {
    */
   foursomesSide1TeeStarterUserId: string | null;
   foursomesSide2TeeStarterUserId: string | null;
+  /** Slår sideturneringen av eller på for hele spillet. */
+  sideTournamentEnabled: boolean;
+  /**
+   * Hvor mange LD-/CTP-hull runden har, 0–2 hver.
+   *
+   * Dette er SLOTS — hull sideturneringen spilles på — ikke medaljeplasser.
+   * `sideLdCount: 2` betyr to ULIKE hull med lengste drive, hvert med sin egen
+   * vinner, ikke en første- og andreplass på samme hull. Leses den som
+   * plassering, blir poengtabellen feil: hver slot gir 2p til én spiller.
+   */
+  sideLdCount: number;
+  sideCtpCount: number;
+  /**
+   * Kategorier som er slått AV. Legacy: kategori-valget ble fjernet i #1139, og
+   * nye spill får alltid tom liste = alle kategorier aktive. Kolonnen leses
+   * fortsatt fordi gamle spill kan ha verdier her.
+   */
+  sideDisabledCategories: string[];
 }
 
 /**
@@ -117,6 +139,10 @@ interface GameRow {
   tournament_id: string | null;
   foursomes_side1_tee_starter_user_id: string | null;
   foursomes_side2_tee_starter_user_id: string | null;
+  side_tournament_enabled: boolean;
+  side_ld_count: number;
+  side_ctp_count: number;
+  side_disabled_categories: string[];
   courses: { name: string; course_holes: CourseHoleRow[] } | null;
   tee_boxes: { name: string } | null;
 }
@@ -152,7 +178,7 @@ const PLAYER_SELECT =
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
 // der hullene må vente på at course_id kommer tilbake.
 const GAME_SELECT =
-  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name)';
+  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name)';
 
 function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
   return {
@@ -173,6 +199,12 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       tournamentId: game.tournament_id,
       foursomesSide1TeeStarterUserId: game.foursomes_side1_tee_starter_user_id,
       foursomesSide2TeeStarterUserId: game.foursomes_side2_tee_starter_user_id,
+      sideTournamentEnabled: game.side_tournament_enabled,
+      sideLdCount: game.side_ld_count,
+      sideCtpCount: game.side_ctp_count,
+      // NOT NULL i skjemaet, men en eldre cache-rad eller en select som mister
+      // kolonnen skal gi tom liste — ikke `undefined` inn i kategori-filteret.
+      sideDisabledCategories: game.side_disabled_categories ?? [],
     },
     players: players.map((row) => ({
       userId: row.user_id,
