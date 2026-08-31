@@ -205,7 +205,7 @@ om `SideWinnerRow`-typen re-brukes via type-import eller defineres lokalt.
   ærlig note, ikke poengtabell (jest).
 - [x] 5. **Web uendret:** `npx vitest run` (rot) grønn med identisk antall som
   baseline; web-diff utenfor native/docs/forge = 0 filer.
-- [ ] 6. **Porter + runbook:** alle Gates grønne; `docs/native/app-spike.md` får
+- [x] 6. **Porter + runbook:** alle Gates grønne; `docs/native/app-spike.md` får
   sideturnering-seksjon (finished-gaten, slot-semantikken, copy-paritetsmønsteret,
   seed-oppskrift for ferdig side-spill). Eier-tapptest på fysisk iPhone hvis eier
   tilgjengelig, ellers `VERIFICATION GAP` + restanse (#1832-mønsteret).
@@ -372,12 +372,33 @@ Hole-wins: 10p på 5 hull (hull 4, 10, 14, 16–17)
   **ingenting** side-relatert — ingen overskrift, ingen LD/CTP-linjer, ingen
   poengjakt. Hentingen fyres heller ikke.
 
-### Kriterium 6 — restanse
+### Kriterium 6 — FULLT BEVIST (eier-tapptest på fysisk iPhone)
 
-Runbook-seksjonen er skrevet og committet. Eier-tapptest på fysisk iPhone gjenstår
-(eieren er tilgjengelig) — kjøres med
-`npx expo run:ios --device --configuration Release`. NB: `--device` vil ha den
-klassiske UDID-en fra `xcrun xctrace list devices`, ikke `devicectl`-ID-en.
+Runbook-seksjonen er skrevet og committet.
+
+Release-bygget ble installert på eierens egen iPhone (`jlars's iPhone`, iOS 26.5) med
+`npx expo run:ios --device 00008110-000A1D3E3C10401E --configuration Release` — det
+klassiske UDID-et fra `xcrun xctrace list devices`, ikke `devicectl`-ID-en. Bygget er
+fra etter F1-fiksen (`a1cd90c4`). Bekreftet installert:
+
+```
+Torny Dev   no.tornygolf.dev   1.0.0   1
+```
+
+**Eierens observasjon på telefonen** (spill A, 2026-08-31):
+
+> «lengste drive #1 er Test og lengste drive #2 er test og nærmest pinnen #1 er Anders.
+> Test spiller fikk det opp på sitt kort og anders fikk sitt opp på sitt kort.»
+
+Det er nøyaktig web-fasiten: begge LD-slotene til samme spiller (slot-semantikken holder
+på ekte enhet), CTP til Anders, og ekspander-interaksjonen virker på begge lag-radene.
+
+⚠️ **Felle for neste økt:** `expo run:ios --device` installerer og starter appen, og blir
+DERETTER liggende og strømme logger. Prosessen lever altså videre lenge etter at
+installasjonen er ferdig, og en `| tail`-pipe gir ingen output før prosessen dør — «tom
+logg + levende prosess» betyr IKKE at bygget henger. `devicectl device info apps` kjørt
+MENS installasjonen pågår får heller ikke opp tunnelen og svarer tomt; kjør den på nytt
+etterpå før du konkluderer med at appen mangler.
 
 ### Avvik fra kontrakten (bokført, ikke skjult)
 

@@ -43,7 +43,7 @@ Bokført i kontraktens «Drift-verifisering»-seksjon (commit `079cd450`).
 | 3 | Matchplay + aktiv runde | Spill B: kompakt seksjon under duellkortet («Lengste drive #1: Anders», 66p/32p). Spill C (aktiv): hovedtabell 16/10/10, ingenting side-relatert; hentingen fyres ikke (`useSideWinners.ts:59`). | PASS |
 | 4 | Guardrail — ærlig note | `SideTournamentSection.tsx` bytter tavla mot noten; mutasjonsprobe gjorde render-testen rød. | PASS |
 | 5 | Web uendret | `git diff --name-only origin/main...HEAD` utenfor `native/`/`docs/`/`.forge/` = **0 filer**. `npx vitest run`: 522 filer / 7028 tester — identisk med baseline målt før første kodelinje, verifisert uavhengig av evaluator. | PASS |
-| 6 | Porter + runbook | Alle porter grønne (tabell under). Runbook-seksjon skrevet. Eier-tapptest på fysisk iPhone gjenstår. | DELVIS |
+| 6 | Porter + runbook | Alle porter grønne (tabell under). Runbook-seksjon skrevet. Eier-tapptest utført på fysisk iPhone: begge LD-slotene og CTP-en står riktig, og begge lag-radene folder seg ut. | PASS |
 
 ### Gates
 
@@ -94,4 +94,4 @@ Med fem funn. To ble fikset i samme runde, tre står som noter.
   nettleser-panel, jf. #1219). Hovedchatten gjorde den sammenligningen tidligere i økta med
   utskrift og skjermbilder; evaluator erstattet den med en uavhengig rekjøring av oppskriften,
   som er sterkere for tallene men ikke beviser webbens rendring.
-- Eier-tapptest på fysisk iPhone (kriterium 6) — eieren er tilgjengelig, kjøres til slutt.
+- ~~Eier-tapptest på fysisk iPhone~~ — **utført**, se kontraktens kriterium 6.
