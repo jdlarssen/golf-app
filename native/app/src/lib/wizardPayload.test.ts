@@ -15,7 +15,7 @@ import { APP_SUPPORTED_MODES, type AppGameMode } from './appFormats';
 import {
   buildDraftPayload,
   draftToFormData,
-  toOsloDateTimeLocal,
+  teeOffInstant,
   type DraftPlayer,
   type GameDraft,
 } from './wizardPayload';
@@ -41,7 +41,7 @@ function draft(over: Partial<GameDraft> & { gameMode: AppGameMode }): GameDraft 
     name: 'Torsdagsrunden',
     courseId: COURSE,
     teeBoxId: TEE,
-    teeOffLocal: '2026-09-01T09:00',
+    teeOffAt: '2026-09-01T07:00:00.000Z',
     players: solo('a'),
     ...over,
   };
@@ -372,13 +372,18 @@ describe('oppsett-feltene', () => {
   });
 });
 
-describe('toOsloDateTimeLocal', () => {
-  it('formaterer som webbens datetime-local, med ledende nuller', () => {
-    expect(toOsloDateTimeLocal(new Date(2026, 8, 1, 9, 5))).toBe(
-      '2026-09-01T09:05',
-    );
-    expect(toOsloDateTimeLocal(new Date(2026, 11, 24, 14, 30))).toBe(
-      '2026-12-24T14:30',
-    );
+describe('teeOffInstant', () => {
+  // Regresjonsvakt for tee-off-en som ble lagret en time feil (simulator
+  // 2026-08-31). Poenget er at pickerens oeyeblikk gaar RETT gjennom: ingen
+  // veggklokke-streng, ingen Intl-avhengig sommertid-gjetting. Datoene under er
+  // valgt paa hver sin side av sommertid-skiftet, saa en gjeninnfoert
+  // Oslo-konvertering ville brutt minst en av dem uansett hvilken vei den bommet.
+  it.each([
+    ['sommertid', new Date(2026, 7, 31, 23, 0)],
+    ['vintertid', new Date(2026, 11, 24, 14, 30)],
+  ])('gir pickerens eget oeyeblikk (%s)', (_name, picked: Date) => {
+    expect(teeOffInstant(picked)).toBe(picked.toISOString());
+    // Og veien tilbake gir nøyaktig klokkeslettet arrangøren valgte.
+    expect(new Date(teeOffInstant(picked)).getHours()).toBe(picked.getHours());
   });
 });

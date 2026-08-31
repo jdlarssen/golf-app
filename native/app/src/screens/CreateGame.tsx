@@ -49,7 +49,7 @@ import {
 import {
   defaultGameName,
   draftNeedsTeamAssignment,
-  toOsloDateTimeLocal,
+  teeOffInstant,
   type DraftPlayer,
   type GameDraft,
   type ModeSetup,
@@ -237,7 +237,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
       gameMode,
       courseId,
       teeBoxId,
-      teeOffLocal: toOsloDateTimeLocal(teeOff),
+      teeOffAt: teeOffInstant(teeOff),
       requirePeerApproval: common.requirePeerApproval,
       scoreVisibility: common.scoreVisibility,
       sideTournamentEnabled: common.sideTournamentEnabled,
