@@ -1,0 +1,17 @@
+# #1794 (K3) — drift-sjekk mot HEAD
+
+Kontrakten (`.forge/contracts/1069-polish-bolgen.md`, seksjon K3) bygger på en
+revisjon fra 2026-07-05, re-verifisert delvis 2026-08-29. Kontrakten sier selv at
+linjenumre er omtrentlige og at hver bygger MÅ re-verifisere. Dette er den
+verifiseringen, gjort 2026-08-31 mot `origin/main`.
+
+| Kontrakt-påstand | Hva HEAD faktisk viser | Konsekvens |
+|---|---|---|
+| «Steg 1: … flisen er stegets eneste innhold» | Stemmer. Standard-grenen rendrer kun `<IntentSelector>` på steg 1 (`GameWizard.tsx:762–770`), og cup-grenen likeså (`:708–716`). | Auto-videre kan trygt utløses av flis-klikket — ingenting annet på steget går tapt. |
+| «Semantikk radio → knapper» | Flisene ER allerede `<button type="button">`-elementer; det er kun ARIA-laget som lyver: `role="radiogroup"` på wrapperen og `role="radio"` + `aria-checked` per flis (`IntentSelector.tsx:127–166`). | Endringen er ren ARIA-fjerning, ikke en element-omskriving. Valgt tilstand bæres videre av `aria-current`, som er «gjeldende element i et sett» uten å love radio-/toggle-semantikk. |
+| «`router.replace` gir ingen per-steg-history» | **Feil mot HEAD.** #1380 gjorde steg-navigasjon til `router.push` (`GameWizard.tsx:489–494`); `replace` brukes nå KUN til å normalisere en ugyldig `?step=` (`:500–512`) og til #1383-resetten (`:311`). | Kontraktens begrunnelse er foreldet, men konklusjonen står — og blir sterkere: auto-videre pusher en history-entry, så browser-back angrer valget i tillegg til «Forrige». Ingen grunn til å bytte til `replace`. |
+| «Spillermangel-banneret … `=== 0` er uoppnåelig og skal IKKE brukes» | HEAD gater ikke på `=== 0` i det hele tatt, men på `players.length >= 8 → null` (`opprett-spill/page.tsx:301`) — altså banner ved 1–7 spillere. `=== 0` finnes som en *undergren* inni (`:306`, `createDoor.shortageBannerZero`). | Den reelle endringen er `>= 8` → `> 1`, ikke `=== 0` → `<= 1`. Kontraktens intensjon (ikke skrik om spillermangel når det ikke ER mangel) treffer likevel: 7 spillere er ikke mangel. `createDoor.shortageBannerZero` blir uoppnåelig og fjernes fra begge kataloger. |
+| «Steg 4 har allerede `PickerSourceEmptyHint` — ingen dobbeltmelding» | Stemmer (`GameWizard.tsx:955–957`, komponenten `:1332–1360`). Steg 4 har i tillegg `step4.emptyRosterHint` for tomt utvalg (`:939–943`). | Ingen dobbeltmelding introduseres. |
+| «e2e: sjekk om … wizard-specs asserter på steg-1-«Neste»» | Ingen e2e-spec rører spill-veiviserens steg 1. Eneste treff, `e2e/cup/cup-lifecycle.spec.ts:303`, bruker `cup-wizard-next` — det er `GenerateMatchesWizard` (kamp-generering i cup), en annen komponent. `e2e/admin/games.spec.ts` treffer bare login-redirecten. | Ingen e2e-endring nødvendig. |
+| «Files Likely Touched: … spillermangel-banner-komponenten» | Banneret er ikke én komponent, men tre lokale RSC-funksjoner med samme navn: `opprett-spill/page.tsx:296`, `admin/games/new/page.tsx:248` og en variant i `admin/games/[id]/edit/page.tsx:245`. | K3 nevner eksplisitt kun `/opprett-spill`, så bare den endres. Søsknene rapporteres som eget funn i stedet for drive-by-fiks (I4). |
+| (usagt) Hvilke tester dekker steg 1? | `IntentSelector.test.tsx` (6 tester på radio-rollen), `GameWizard.test.tsx` (`pickKompisIntent`-helperen + tre `aria-checked`-assertions), `GameWizardStepHistory.test.tsx` (tre tester som klikker flis + «Neste»). | Alle tre oppdateres i samme endring — ingen nye testfiler. |
