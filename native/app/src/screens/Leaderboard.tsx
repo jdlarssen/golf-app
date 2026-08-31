@@ -17,6 +17,7 @@ import {
   ResultView,
   WEB_ONLY_RESULT_MESSAGE,
 } from '../components/leaderboard/ResultView';
+import { SideTournamentSection } from '../components/leaderboard/SideTournamentSection';
 import { CalmNote, LeaderTable } from '../components/leaderboard/Table';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
@@ -29,13 +30,38 @@ import {
   type ScoringContextProblem,
   type ScoringExtras,
 } from '../lib/scoringContext';
+import { buildSideTournament } from '../lib/sideTournament';
 import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
+import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
 import type { ScreenProps } from '../navigation';
 import { COLORS, ui } from '../theme';
 
 /** Samme takt som hull-siden — en drain eller en merge skjer utenfor React. */
 const POLL_MS = 1500;
+
+/**
+ * Skal sideturneringen vises for dette spillet?
+ *
+ * Tre betingelser, og alle tre er webbens. Den viktigste er `finished`:
+ * sideturneringen er et post-game-reveal-element på ALLE formater der
+ * (`formats/stableford.tsx:115-121`, `formats/skins.tsx:102`,
+ * `renderMatchplaySideSection` returnerer `undefined` når spillet ikke er
+ * avsluttet). En pågående runde viser derfor ingenting side-relatert, uansett
+ * hva `sideTournamentEnabled` sier — og fyrer heller ikke hentingen.
+ */
+function sideTournamentVisible(bundle: GameBundle | null): boolean {
+  if (bundle === null) return false;
+  const { game } = bundle;
+  return (
+    game.status === 'finished' &&
+    game.sideTournamentEnabled &&
+    gateReason(game) === null
+  );
+}
+
+/** Ingen henting gjort. `neverLoaded` er true, men leses kun av side-spill. */
+const NO_SIDE_WINNERS: SideWinnersState = { rows: [], neverLoaded: true };
 
 /**
  * Hva spilleren får se når motoren ikke kan svare. Alle er rolige: en
@@ -60,6 +86,9 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   // svarer `null` på kilde-spørsmålet og koster ikke et eneste kall — og før
   // bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
   const { extras } = useGameChoices(gameId, bundle?.game.gameMode ?? '');
+  // LD/CTP-vinnerne. Samme gate som seksjonen selv, så et aktivt spill aldri
+  // koster et nettkall for data det uansett ikke får vise.
+  const sideWinners = useSideWinners(gameId, sideTournamentVisible(bundle));
 
   // Påheng på det eksisterende abonnementet: samme kanal hull-siden bruker,
   // og hver merge leser den lokale basen på nytt.
@@ -94,7 +123,12 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
         {bundle.game.status === 'finished' ? 'Sluttresultat' : 'Slik står det nå'}
       </Text>
 
-      <LeaderboardBody bundle={bundle} scores={scores} extras={extras} />
+      <LeaderboardBody
+        bundle={bundle}
+        scores={scores}
+        extras={extras}
+        sideWinners={sideWinners}
+      />
     </ScrollView>
   );
 }
@@ -108,11 +142,18 @@ export function LeaderboardBody({
   bundle,
   scores,
   extras = {},
+  sideWinners = NO_SIDE_WINNERS,
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
   /** Wolf-/BBB-valgene. Tomt for de elleve formatene som ikke bruker dem. */
   extras?: ScoringExtras;
+  /**
+   * LD/CTP-vinnerne fra skjermen over. Defaulten lar de mange testene som
+   * rendrer kroppen direkte slippe å bry seg — de spillene har ikke
+   * sideturnering, og da leses feltet aldri.
+   */
+  sideWinners?: SideWinnersState;
 }) {
   const { game } = bundle;
   const nameOf = nameLookup(bundle.players);
@@ -144,25 +185,55 @@ export function LeaderboardBody({
 
   const outcome = computeGameLeaderboard(bundle, scores, extras);
   if (!outcome.ok) {
+    // Ingen sideturnering her heller: uten et `ModeResult` finnes det ingen
+    // fasit for lag-grupperingen, og en gjettet gruppering ville delt ut
+    // sidepoengene til feil lag.
     return (
       <CalmNote text={PROBLEM_MESSAGES[outcome.problem]} testID="leaderboard-web-only" />
     );
   }
+
+  // Sideturneringen ligger UNDER hovedresultatet — ikke i en fane som på
+  // webben. Matchplay får dermed nøyaktig webbens plassering (der ligger den
+  // allerede under duellkortet, #585), og de øvrige formatene en RN-tilpasning
+  // av fanen. Appen har ingen fane-primitiv, og #1830-mandatet er
+  // native-følelse framfor pikselparitet.
+  const sideSection = sideTournamentVisible(bundle) ? (
+    <SideTournamentSection
+      {...buildSideTournament({
+        bundle,
+        scores,
+        sideWinnerRows: sideWinners.rows,
+        result: outcome.result,
+      })}
+      sideWinnersUnavailable={sideWinners.neverLoaded}
+    />
+  ) : null;
 
   // Bingo Bango Bongo deler ut poeng for prestasjoner, ikke for slag: en bingo
   // kan stå registrert lenge før noen har tastet et tall. Slag-vakten under
   // ville skjult den tabellen bak «ingen slag ført ennå», som er sant og
   // irrelevant. Alle andre formater regner FRA slagene og beholder vakten.
   if (game.gameMode !== 'bingo_bango_bongo' && !hasAnyStroke(scores)) {
+    // Sideturneringen henger med: LD/CTP kåres av arrangøren og finnes selv om
+    // ingen rakk å føre et slag.
     return (
-      <CalmNote
-        text="Ingen slag er ført ennå. Tabellen fyller seg mens dere spiller."
-        testID="leaderboard-empty"
-      />
+      <>
+        <CalmNote
+          text="Ingen slag er ført ennå. Tabellen fyller seg mens dere spiller."
+          testID="leaderboard-empty"
+        />
+        {sideSection}
+      </>
     );
   }
 
-  return <ResultView result={outcome.result} status={game.status} nameOf={nameOf} />;
+  return (
+    <>
+      <ResultView result={outcome.result} status={game.status} nameOf={nameOf} />
+      {sideSection}
+    </>
+  );
 }
 
 /** Reveal-runde som fortsatt går: bruttoslag, ingen plassering, ingen netto. */
