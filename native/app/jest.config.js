@@ -10,6 +10,14 @@
 //    oppfører seg som på enheten, i stedet for mot en håndskrevet fake.
 //  - `@/*` → repo-rota, samme alias som `tsconfig.json` og Metro bruker inne i
 //    den delte `lib/`-grafen.
+// Tidssonen er PINNET. Uten den kjører suiten i maskinens egen sone, og på en
+// norsk maskin er «enhetens lokaltid» og «Oslo-veggklokke» det samme tallet —
+// da blir en tee-off-test som skal fange en Oslo-konvertering en identitet som
+// aldri kan feile. Evaluatoren i #1854 gjeninnførte nettopp den feilen og alle
+// 499 testene forble grønne. UTC er også det CI-maskiner kjører i, så dette
+// gjør suiten deterministisk i tillegg til å gjøre vakten ekte.
+process.env.TZ = 'UTC';
+
 module.exports = {
   preset: 'jest-expo',
   moduleNameMapper: {

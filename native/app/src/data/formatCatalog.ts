@@ -9,7 +9,7 @@
 //     Admin kan slå av et format på nettsiden, og da skal det forsvinne fra
 //     appen uten at appen slippes på nytt.
 //  3. **Rosteret** — `fitsPlayerCount` (delt, ren TS). Wolf med to spillere er
-//     ikke wolf. Legges på av `catalogForPlayerCount` når antallet er kjent.
+//     ikke wolf. Kravet vises på kortet; selve fit-sjekken gjør `rosterLimits`.
 //
 // **Hvorfor tabellene leses direkte og ikke via webbens helper.**
 // `getFormatsForIntent` og `isValidActiveGameMode` åpner begge med
@@ -27,7 +27,6 @@
 // tom liste er et gyldig svar («admin har slått av alt»), en feilet henting er
 // det ikke. En tom formatliste som ser autoritativ ut er verre enn en ærlig
 // «fikk ikke hentet» — arrangøren ville trodd appen ikke kan opprette spill.
-import { fitsPlayerCount } from '../../../../lib/wizard/fitsPlayerCount';
 import {
   APP_MODE_LABELS,
   APP_SUPPORTED_MODES,
@@ -130,23 +129,6 @@ export async function fetchFormatCatalog(): Promise<FormatCatalogEntry[]> {
   );
 }
 
-/**
- * Katalogen filtrert på hvor mange spillere runden faktisk har.
- *
- * `fitsPlayerCount` er delt, ren TS og webbens egen regel — wolf 3–5, singles
- * matchplay eksakt 2, best ball partall 2–8. Den kalles som et EGET steg og
- * ikke inne i hentingen, fordi rosteret endrer seg etter at formatet er valgt:
- * veiviseren re-validerer formatvalget mot samme funksjon før publisering
- * (webbens semantikk).
- *
- * `playerCount` 0 gir tom liste — ingen formater passer et tomt spill.
- */
-export function catalogForPlayerCount(
-  entries: readonly FormatCatalogEntry[],
-  playerCount: number,
-): FormatCatalogEntry[] {
-  return entries.filter((entry) => fitsPlayerCount(entry.slug, playerCount));
-}
 
 /**
  * Teksten arrangøren får når hentingen feilet.

@@ -56,7 +56,14 @@ export interface RosterCandidate {
   name: string;
   nickname: string | null;
   hcpIndex: number;
-  /** `'M' | 'D' | 'J'` fra profilen, eller null. Forhåndsvelger tee-kjønnet. */
+  /**
+   * Rå `users.gender` — DB-enumen `'mens' | 'ladies'` (0036), eller null.
+   *
+   * ⚠️ IKKE veiviserens `'M' | 'D' | 'J'`-alfabet. Oversettelsen skjer i
+   * `teeGenderFor` (`screens/CreateGame.tsx`), som sammenligner mot `'ladies'`.
+   * Sammenlign aldri dette feltet mot `'D'` — det er alltid usant, og hver
+   * kvinne ville stille fått herretee og dermed feil banehandicap.
+   */
   gender: string | null;
   /** Profilen er ikke fullført. Blokkerer publisering (delt RPC-gate). */
   pending: boolean;
