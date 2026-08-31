@@ -163,6 +163,10 @@ describe('matchStanding + matchStandingLine', () => {
         tournamentId: null,
         foursomesSide1TeeStarterUserId: null,
         foursomesSide2TeeStarterUserId: null,
+        sideTournamentEnabled: false,
+        sideLdCount: 0,
+        sideCtpCount: 0,
+        sideDisabledCategories: [],
       },
       players: [
         player({ userId: 'a', nickname: 'Anna', teamNumber: 1 }),

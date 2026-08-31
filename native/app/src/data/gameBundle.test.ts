@@ -39,6 +39,11 @@ const GAME_ROW = {
   tournament_id: null,
   foursomes_side1_tee_starter_user_id: null,
   foursomes_side2_tee_starter_user_id: null,
+  side_tournament_enabled: true,
+  // To LD-hull og ett CTP-hull: slots, ikke plasseringer.
+  side_ld_count: 2,
+  side_ctp_count: 1,
+  side_disabled_categories: [],
   courses: {
     name: 'Losby',
     // Med vilje i feil rekkefølge: bundelen skal sortere hullene.
@@ -111,6 +116,10 @@ describe('gameBundle', () => {
       tournamentId: null,
       foursomesSide1TeeStarterUserId: null,
       foursomesSide2TeeStarterUserId: null,
+      sideTournamentEnabled: true,
+      sideLdCount: 2,
+      sideCtpCount: 1,
+      sideDisabledCategories: [],
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
@@ -198,6 +207,21 @@ describe('gameBundle', () => {
     const fresh = await bundleModule().refreshGameBundle(GAME);
     expect(fresh.game.scoreVisibility).toBe('live');
     expect(await bundleModule().loadGameBundle(GAME)).toEqual(fresh);
+  });
+
+  it('forkaster en v2-nyttelast — den mangler sideturnerings-feltene', async () => {
+    // Grunnen til v3-bumpen: en v2-bundel har ingen `sideTournamentEnabled`, og
+    // `undefined` inn i gaten ville skrudd seksjonen av på et spill med LD/CTP.
+    const { gameBundleCacheKey, loadGameBundle } = bundleModule();
+    const db = require('./db') as typeof import('./db');
+    const connection = await db.getDb();
+    await db.putCacheEntry(connection, {
+      key: gameBundleCacheKey(GAME),
+      payload: JSON.stringify({ v: 2, bundle: { game: { id: GAME } } }),
+      fetchedAt: '2026-08-01T10:00:00.000Z',
+    });
+
+    expect(await loadGameBundle(GAME)).toBeUndefined();
   });
 
   it('avviser en nyttelast fra en FREMTIDIG versjon like hardt', async () => {
