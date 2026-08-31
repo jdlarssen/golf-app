@@ -16,6 +16,60 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.235.0 · mandag 31. august 2026
+
+<details>
+<summary><strong>Spillerne melder seg på cupen selv</strong></summary>
+
+[#1490](https://github.com/jdlarssen/golf-app/issues/1490) — Del påmeldingslenken fra Spillere-rommet, så melder spillerne seg på cupen selv. Du får beskjed hver gang noen melder seg på eller av.
+
+↳ /admin/cup · «Del påmeldingslenken»
+</details>
+
+<details>
+<summary><strong>Påmelding til klubbens cuper rett fra klubbsiden</strong></summary>
+
+[#1491](https://github.com/jdlarssen/golf-app/issues/1491) — Er cupen fortsatt et utkast, står det «Meld deg på» rett i cup-lista i klubben din. Du trenger ikke vente på at noen sender deg lenken. Er du allerede med, står det «Påmeldt» i stedet.
+
+↳ /klubber · «Åpne klubben»
+</details>
+
+<details>
+<summary><strong>Én ting om gangen på Hjem</strong></summary>
+
+[#1797](https://github.com/jdlarssen/golf-app/issues/1797) — Hjem viser nå maks ett tips om gangen — installer appen først, så push-varsler, nytt i Tørny og Face ID — i stedet for å stable alle øverst på skjermen.
+
+↳ / · «Åpne Hjem»
+</details>
+
+<details>
+<summary><strong>Strammere funn-liste på Hjem</strong></summary>
+
+[#1798](https://github.com/jdlarssen/golf-app/issues/1798) — «Spill du kan bli med i» på Hjem holder seg nå til tre kort totalt — klubben først, så venner, så åpne turneringer — resten ligger bak «Se alle».
+
+↳ / · «Åpne Hjem»
+</details>
+
+<details>
+<summary>15 rettinger</summary>
+
+- [#1560](https://github.com/jdlarssen/golf-app/issues/1560) — Når spillerne har sendt inn nye ideer, løftes Ideer-døra opp blant hoveddørene i Sekretariatet med antallet i klartekst — den siste tause tallpillen er borte.
+- [#1632](https://github.com/jdlarssen/golf-app/issues/1632) — «Hull for hull»-visningen på ferdige spill viser nå slagene til alle som kan se resultattavla — før fikk cup-tilskuere og klubbmedlemmer bare navn og tomme streker.
+- [#1718](https://github.com/jdlarssen/golf-app/issues/1718) — Skjærer det seg når spillerdataene hentes, blir cup-matchene ikke opprettet. Du får beskjed med en gang, i stedet for matcher med feil tee og feil handicap.
+- [#1727](https://github.com/jdlarssen/golf-app/issues/1727) — Lag-invitasjonsmailen sendes nå på språket kapteinen bruker i appen — før gikk den alltid ut på norsk.
+- [#1733](https://github.com/jdlarssen/golf-app/issues/1733) — Gullstjerna som markerer utvalgt format i formatkatalogen er nå mørk nok til å ses tydelig — også ute i sola.
+- [#1735](https://github.com/jdlarssen/golf-app/issues/1735) — Bytter du inn en reserve i en cup-match, havner hun nå på spillerlista med det samme — og den som meldte forfall forsvinner derfra så snart hun ikke står i flere matcher.
+- [#1739](https://github.com/jdlarssen/golf-app/issues/1739) — Konfettien på resultatlista dytter ikke lenger siden sidelengs på mobil.
+- [#1747](https://github.com/jdlarssen/golf-app/issues/1747) — Tilbake-pila på hull-for-hull-sidene er like stor som på resten av leaderboardet nå, så du treffer den med tommelen første gang.
+- [#1765](https://github.com/jdlarssen/golf-app/issues/1765) — Tilbake-pila på resultattavla holder full trykkflate også når spillnavnet er svært langt — navnet klippes med «…» i stedet for å presse pilene sammen.
+- [#1790](https://github.com/jdlarssen/golf-app/issues/1790) — Push-varsler virker igjen når du logger inn med en annen konto på samme enhet — og når du logger ut, rydder appen enhetens push-kobling.
+- [#1792](https://github.com/jdlarssen/golf-app/issues/1792) — Bli med-siden er ryddet: «Begge»-valget er borte fra oppsettet, lagspill uten fullt lag kan ikke lenger snikes forbi påmeldingen, og hilsen-feltet ligger bak en «Legg til melding»-lenke til du trenger det.
+- [#1793](https://github.com/jdlarssen/golf-app/issues/1793) — Har du ført alle hullene, leverer scorekortet uten ekstra «er du sikker?» — spørsmålet kommer bare når hull mangler. Rediger- og Lever-knappene har også fått mer luft mellom seg, så du ikke trykker feil.
+- [#1796](https://github.com/jdlarssen/golf-app/issues/1796) — Putter-bryteren i hull-headeren er blitt mye lettere å treffe med tommelen — trykkflaten er nesten doblet uten at pillen ser annerledes ut.
+- [#1799](https://github.com/jdlarssen/golf-app/issues/1799) — Innboksen starter nå med varslene dine — månedsbrev-bryteren har flyttet ned til bunnen av siden.
+- [#1804](https://github.com/jdlarssen/golf-app/issues/1804) — Spillerbytte i en personlig cup kan ikke lenger sprenge deltaker-taket — appen sier ifra før byttet gjøres.
+</details>
+
 ### 1.234.0 · mandag 24. august 2026
 
 <details>
