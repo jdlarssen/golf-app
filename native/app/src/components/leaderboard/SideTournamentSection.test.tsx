@@ -115,5 +115,15 @@ describe('SideTournamentSection', () => {
     ).toHaveTextContent(SIDE_WINNERS_UNAVAILABLE_MESSAGE);
     expect(screen.queryByTestId('side-team-1')).toBeNull();
     expect(screen.queryByTestId('side-headline-ld-1')).toBeNull();
+
+    // 5: MENS vi venter er hverken tavla eller noten sann — tavla mangler 2p
+    // per slot, og noten ville meldt en feil som ikke har skjedd. Seksjonen
+    // holder kjeft til svaret er inne.
+    await rerender(
+      <SideTournamentSection {...props} sideWinnersLoading />,
+    );
+
+    expect(screen.queryByTestId('side-tournament-section')).toBeNull();
+    expect(screen.queryByTestId('side-tournament-unavailable')).toBeNull();
   });
 });
