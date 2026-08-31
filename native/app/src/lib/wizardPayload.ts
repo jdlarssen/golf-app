@@ -116,6 +116,24 @@ function bestBallDefaultFlight(team: number): number {
 }
 
 /**
+ * Trenger denne modusen at hver spiller får et lag/side FØR publisering?
+ *
+ * Eksportert fordi veiviser-skjermen må stille nøyaktig samme spørsmål: den
+ * som svarer «nei» her, dropper spillere uten lag i {@link orderedSlots}. Sto
+ * regelen to steder, ville en skjerm uten lag-UI stille publisert en runde med
+ * færre spillere enn arrangøren valgte.
+ *
+ * `usesTeamAssignment` dekker de tre lag-sluggene. Par-stableford (4BBB) har
+ * ingen egen slug — den er `stableford`/`modified_stableford` med
+ * `stablefordTeamSize: 2` — og er derfor det ekstra leddet.
+ */
+export function draftNeedsTeamAssignment(draft: GameDraft): boolean {
+  return (
+    usesTeamAssignment(draft.gameMode) || draft.setup?.stablefordTeamSize === 2
+  );
+}
+
+/**
  * Spillerne i den rekkefølgen `player_0…player_n` skal bære dem.
  *
  * Lag-modi: sortert på lag stigende (stabilt innen laget), og spillere UTEN
@@ -126,10 +144,7 @@ function bestBallDefaultFlight(team: number): number {
  * Solo-modi og wolf: alle spillere, lag og flight `null`.
  */
 function orderedSlots(draft: GameDraft): PlayerSlot[] {
-  const teamMode =
-    usesTeamAssignment(draft.gameMode) || draft.setup?.stablefordTeamSize === 2;
-
-  if (!teamMode) {
+  if (!draftNeedsTeamAssignment(draft)) {
     return draft.players.map((p) => ({
       userId: p.userId,
       team: null,
