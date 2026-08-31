@@ -162,6 +162,34 @@ const createUi = (c: ThemeColors) =>
       fontFamily: FONTS.sansMedium,
       textDecorationLine: 'underline',
     },
+    /**
+     * Skjema-etikett — teksten over et felt, ikke en seksjonsoverskrift.
+     * `sectionTitle` er versalt og luftig; en etikett skal ligge tett på
+     * feltet sitt.
+     */
+    label: {
+      fontSize: 14,
+      fontFamily: FONTS.sansMedium,
+      color: c.muted,
+      marginTop: 8,
+    },
+    /**
+     * Tekstfelt. `color` er satt EKSPLISITT: `TextInput` tegner ellers svart
+     * tekst uansett palett, og i mørk modus blir feltet da uleselig.
+     * `minHeight` er tap-flaten (44), ikke en estetisk høyde.
+     */
+    input: {
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 10,
+      backgroundColor: c.surface,
+      color: c.text,
+      fontSize: 16,
+      fontFamily: FONTS.sans,
+      minHeight: TAP,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
     banner: {
       backgroundColor: c.surface,
       borderRadius: 10,
