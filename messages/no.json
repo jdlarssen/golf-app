@@ -1185,7 +1185,6 @@
       "kicker": "Nytt spill",
       "heading": "Sett opp ny runde",
       "subtitle": "Bane, spillere, lag og innstillinger",
-      "shortageBannerZero": "Du har ingen registrerte spillere.",
       "shortageBannerSome": "Du har bare {count} registrert{suffix} spiller{plural}.",
       "shortageBannerNote": "Best ball trenger et partall spillere (minst 2), stableford holder med 1. Be admin invitere flere fra",
       "shortageBannerLink": "forsiden",

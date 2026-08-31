@@ -1185,7 +1185,6 @@
       "kicker": "New game",
       "heading": "Set up a new round",
       "subtitle": "Course, players, teams and settings",
-      "shortageBannerZero": "You have no registered players.",
       "shortageBannerSome": "You only have {count} registered player{plural}.",
       "shortageBannerNote": "Best ball needs an even number of players (at least 2), stableford works with 1. Ask an admin to invite more from the",
       "shortageBannerLink": "home page",
