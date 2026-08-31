@@ -534,8 +534,15 @@ ble lagret som 22:00Z i stedet for 21:00Z. Funnet ved første publisering fra si
 
 Webben MÅ gå om veggklokke: `<input type="datetime-local">` har ingen tidssone. Appen
 har pickerens `Date` — et faktisk øyeblikk — og bruker det direkte (`teeOffInstant`).
-Picker, lagret verdi og `formatTeeOff` er da alle enhetens lokaltid. Regresjonsvakten
-prøver begge sider av sommertid-skiftet.
+Picker, lagret verdi og `formatTeeOff` er da alle enhetens lokaltid.
+
+⚠️ **`jest.config.js` pinner `process.env.TZ = 'UTC'`, og den linja er lastbærende.**
+Den første regresjonsvakten for denne feilen var verdiløs: på en norsk maskin er
+enhetens lokaltid og Oslo-veggklokke samme tall, så assertionen ble en identitet.
+Evaluatoren gjeninnførte hele feilen og alle testene forble grønne. Med UTC pinnet er
+de to ikke lenger samme tall, og vakten biter (bevist: mutanten gir 3 røde). Fjerner
+noen TZ-pinningen, blir vakten teater igjen. Suiten er dessuten deterministisk uansett
+hvilken sone maskinen står i — som er sonen CI kjører i.
 
 ### Hva appen IKKE kan (bevisste grenser)
 
