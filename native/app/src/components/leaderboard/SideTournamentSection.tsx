@@ -205,6 +205,14 @@ export type SideTournamentSectionProps = SideTournamentData & {
    * {@link SIDE_WINNERS_UNAVAILABLE_MESSAGE}.
    */
   sideWinnersUnavailable?: boolean;
+  /**
+   * Første henting av vinnerradene er ikke ferdig ennå.
+   *
+   * Skilles fra {@link sideWinnersUnavailable} med vilje: mens vi venter er det
+   * hverken riktig å vise tavla (den mangler 2p per slot) eller noten (den ville
+   * meldt en feil som ikke har skjedd). Da vises seksjonen rett og slett ikke.
+   */
+  sideWinnersLoading?: boolean;
 };
 
 /**
@@ -221,6 +229,7 @@ export function SideTournamentSection({
   sideWinners,
   coursePars,
   sideWinnersUnavailable = false,
+  sideWinnersLoading = false,
 }: SideTournamentSectionProps) {
   // `<details>` finnes ikke i RN, så utvidelsen er vår egen. Et sett, ikke én
   // id: webbens rader åpnes uavhengig av hverandre, og et lag som lukker seg
@@ -252,6 +261,11 @@ export function SideTournamentSection({
   // Uten vinnerradene mangler hver slot 2p i lagenes totaler. En tabell med
   // feil totaler er verre enn ingen tabell — den ser riktig ut.
   const winnersMissing = sideWinnersUnavailable && ldCount + ctpCount > 0;
+
+  // Venter vi fortsatt på radene, viser vi ingenting i stedet for å velge
+  // mellom to feil: en tavle som mangler 2p per slot, eller en note om en feil
+  // som ikke har skjedd ennå. Uten slots er det ingenting å vente på.
+  if (sideWinnersLoading && ldCount + ctpCount > 0) return null;
 
   return (
     <View testID="side-tournament-section">

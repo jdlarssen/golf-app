@@ -27,6 +27,16 @@ export interface SideWinnersState {
    * vilje — se fil-kommentaren.
    */
   neverLoaded: boolean;
+  /**
+   * `false` til det første forsøket er FERDIG — enten det lyktes eller feilet.
+   *
+   * Uten dette ville `neverLoaded` gjort dobbelt arbeid: den er sann både mens
+   * hentingen er i lufta og etter at den har feilet. Skjermen ville dermed vist
+   * «fikk ikke tak i vinnerne» i det halve sekundet hver eneste åpning tar — en
+   * feilmelding om en helt frisk lasting. Noten skal kun komme når vi faktisk
+   * har prøvd og mislyktes.
+   */
+  settled: boolean;
 }
 
 /**
@@ -43,6 +53,7 @@ export function useSideWinners(
   const [state, setState] = useState<SideWinnersState>({
     rows: [],
     neverLoaded: true,
+    settled: false,
   });
 
   // Skjermen kan forsvinne mens spørringen er i lufta; da skal svaret falle på
@@ -56,13 +67,20 @@ export function useSideWinners(
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!enabled) return;
+    // Er hentingen av, er det ingenting å vente på — da er tilstanden avklart
+    // med en gang, og skjermen slipper å stå og se ut som den laster.
+    if (!enabled) {
+      if (alive.current) setState((prev) => ({ ...prev, settled: true }));
+      return;
+    }
     try {
       const rows = await fetchSideWinners(gameId);
-      if (alive.current) setState({ rows, neverLoaded: false });
+      if (alive.current) setState({ rows, neverLoaded: false, settled: true });
     } catch {
       // Lar forrige svar stå. Har vi aldri hatt noe, blir `neverLoaded`
-      // stående true, og seksjonen viser den ærlige noten.
+      // stående true — men forsøket er gjort, så `settled` blir sann og
+      // seksjonen bytter fra laster til den ærlige noten.
+      if (alive.current) setState((prev) => ({ ...prev, settled: true }));
     }
   }, [enabled, gameId]);
 

@@ -60,8 +60,16 @@ function sideTournamentVisible(bundle: GameBundle | null): boolean {
   );
 }
 
-/** Ingen henting gjort. `neverLoaded` er true, men leses kun av side-spill. */
-const NO_SIDE_WINNERS: SideWinnersState = { rows: [], neverLoaded: true };
+/**
+ * Defaulten for testene som rendrer kroppen direkte. `settled: true` gjør den
+ * til «ferdig, ingenting å hente» — de spillene har ikke sideturnering, så
+ * feltet leses aldri, og en «laster evig»-default ville vært en felle.
+ */
+const NO_SIDE_WINNERS: SideWinnersState = {
+  rows: [],
+  neverLoaded: true,
+  settled: true,
+};
 
 /**
  * Hva spilleren får se når motoren ikke kan svare. Alle er rolige: en
@@ -206,7 +214,8 @@ export function LeaderboardBody({
         sideWinnerRows: sideWinners.rows,
         result: outcome.result,
       })}
-      sideWinnersUnavailable={sideWinners.neverLoaded}
+      sideWinnersUnavailable={sideWinners.neverLoaded && sideWinners.settled}
+      sideWinnersLoading={!sideWinners.settled}
     />
   ) : null;
 
