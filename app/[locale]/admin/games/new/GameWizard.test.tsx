@@ -148,10 +148,11 @@ function expectStep(n: 1 | 2 | 3 | 4 | 5) {
   expect(found, `Forventet «Steg ${n} av 5» i DOM`).toBeTruthy();
 }
 
-// Helper: klikk Kompis-intent og gå videre til steg 2.
+// Helper: klikk Kompis-intent. #1794: flisen ER steg-overgangen — steg 1 har
+// ikke annet innhold, så klikket sender arrangøren rett til steg 2. Ingen
+// «Neste» her lenger.
 function pickKompisIntent() {
-  fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
-  clickNext();
+  fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 }
 
 // Helper: pluck stableford-format i step 2 (Kompis-katalog har stableford
@@ -283,7 +284,7 @@ describe('GameWizard — happy-path solo stableford', () => {
     expectStep(1);
     // Kompis-tile skal fortsatt være valgt.
     expect(
-      screen.getByRole('radio', { name: /kompis-runde/i }).getAttribute('aria-checked'),
+      screen.getByRole('button', { name: /kompis-runde/i }).getAttribute('aria-current'),
     ).toBe('true');
   });
 });
@@ -406,8 +407,7 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
     renderWizardWithNines();
 
     // Steg 1: velg Kompis
-    fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
-    clickNext();
+    fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 
     // Steg 2: default er 4 spillere → best_ball passer (partall 2–8),
     // nines (nøyaktig 3) er filtrert bort fra start
@@ -855,8 +855,8 @@ describe('GameWizard — #1065 allowance + kontingent overlever flytting til ste
 describe('GameWizard — Cup-intent flow', () => {
   it('rendrer CupSetup (cup-navn + lag-navn) på steg 2 med intent=cup', () => {
     renderWizard();
-    fireEvent.click(screen.getByRole('radio', { name: /^cup$/i }));
-    clickNext();
+    // #1794: også cup-grenens steg 1 går videre på flis-klikket.
+    fireEvent.click(screen.getByRole('button', { name: /^cup$/i }));
 
     // Wizard-en er nå i cup-creation-flyt: bare 2 steg vises, og CupSetup
     // sin form er på skjermen.
@@ -907,7 +907,7 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     // Steg 1: arrangement-valget er tilbake.
     expectStep(1);
     expect(
-      screen.getByRole('radio', { name: /kompis-runde/i }).getAttribute('aria-checked'),
+      screen.getByRole('button', { name: /kompis-runde/i }).getAttribute('aria-current'),
     ).toBe('true');
 
     // Steg 2: formatet er tilbake (og «Neste» er dermed åpen).
@@ -948,8 +948,8 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
 
     expectStep(1);
     expect(
-      screen.getByRole('radio', { name: /kompis-runde/i }).getAttribute('aria-checked'),
-    ).toBe('false');
+      screen.getByRole('button', { name: /kompis-runde/i }).getAttribute('aria-current'),
+    ).toBeNull();
   });
 
   it('skriver utkastet når arrangøren fyller ut noe', async () => {

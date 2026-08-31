@@ -93,9 +93,14 @@ const TILES: IntentTile[] = [
  * IntentSelector — wizard step 1, intent-først pickeren. Erstatter dagens
  * flate ModeSelector. 4 store kort i 2x2 mobil-grid med ikon over tekst.
  *
- * ARIA: radiogroup-mønster (radio-role per kort med aria-checked). Bruker
- * button-elementer, ikke `<input type="radio">`, fordi tile-presentasjonen
- * krever full kontroll over layout.
+ * ARIA (#1794): flisene er knapper, ikke radioer. Et klikk velger arrangement
+ * OG sender arrangøren videre til steg 2 (GameWizard eier den navigasjonen),
+ * og WCAG 3.2.2 «On Input» sier at det å endre en innstilling ikke skal bytte
+ * kontekst av seg selv. En knapp utfører per definisjon en handling, så
+ * kontekst-byttet er forventet der. Grupperingen kommer fra `<fieldset>` +
+ * `<legend>` (implisitt role="group"); den valgte flisen bæres av
+ * `aria-current` — «gjeldende element i settet» — som er synlig når arrangøren
+ * kommer tilbake hit via «Forrige» eller en dyplenke med forhåndsvalgt intent.
  *
  * Mobile-først: 2-col grid, ≥44px tap-targets (kortene blir ~140px høye
  * pga padding + ikon + tekst).
@@ -124,19 +129,14 @@ export function IntentSelector({
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         {t('legend')}
       </legend>
-      <div
-        role="radiogroup"
-        aria-label={t('legend')}
-        className="mt-2 grid grid-cols-2 gap-3"
-      >
+      <div className="mt-2 grid grid-cols-2 gap-3">
         {tiles.map((tile) => {
           const selected = value === tile.intent;
           return (
             <button
               key={tile.intent}
               type="button"
-              role="radio"
-              aria-checked={selected}
+              aria-current={selected ? 'true' : undefined}
               aria-label={t(`${tile.intent}.label`)}
               disabled={disabled}
               onClick={() => {
