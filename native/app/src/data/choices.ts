@@ -155,6 +155,13 @@ export type WolfChoiceValidationError =
 /** Valideringsfeil for en BBB-rad. Speiler `lib/bbb/setBingoBangoBongoHole.ts:53-89`. */
 export type BingoBangoBongoValidationError = 'invalid_hole' | 'game_finished';
 
+/**
+ * Feil bare BBB-skrivingen kan gi, fordi bare den slår opp spillet på nytt før
+ * upserten. Wolf har ingen tilsvarende — webben har bevisst ingen status-lås
+ * der, og paritet er poenget.
+ */
+export type BingoBangoBongoWriteError = 'game_not_found';
+
 export type ChoiceWriteResult<E> = { ok: true } | { ok: false; error: E };
 
 export type SetWolfChoiceResult = ChoiceWriteResult<
@@ -162,7 +169,7 @@ export type SetWolfChoiceResult = ChoiceWriteResult<
 >;
 
 export type SetBingoBangoBongoHoleResult = ChoiceWriteResult<
-  BingoBangoBongoValidationError | ChoiceWriteFailure
+  BingoBangoBongoValidationError | BingoBangoBongoWriteError | ChoiceWriteFailure
 >;
 
 export interface WolfChoiceWrite {
@@ -226,8 +233,9 @@ export function validateWolfChoice(
  * spør bare om du er med i spillet — så uten sjekken her ville appen skrevet
  * prestasjoner inn i et avsluttet spill mens webben nektet det samme trykket.
  *
- * `gameStatus` kommer INN som argument: kalleren har spillets status i bundelen
- * fra før, og en ekstra `games`-runde midt i en runde er en runde for mye.
+ * `gameStatus` er kallerens bundle-status, og den er et RASKT NEI, ikke fasiten:
+ * bundelen kan være minutter gammel. Den autoritative sjekken er det ferske
+ * oppslaget i `setBingoBangoBongoHole` — se der.
  *
  * @returns feilkoden, eller `null` når raden kan skrives.
  */
@@ -315,12 +323,47 @@ export async function setWolfChoice(
 }
 
 /**
+ * Slå opp spillets status FERSKT, rett før skrivingen.
+ *
+ * Bundle-statusen kalleren sitter på kan være minutter gammel. Står spilleren
+ * på hull-skjermen i det runden avsluttes, sier bundelen fortsatt «active», og
+ * uten dette oppslaget ville tappet landet i databasen: `bbb_holes_write` spør
+ * bare om du er med i spillet, ikke om spillet lever. Webben leser statusen på
+ * nytt ved hvert skriv av nøyaktig samme grunn.
+ *
+ * Feil ≠ fravær (#1445): bare et ekte 0-rads-svar betyr at spillet er borte. En
+ * spørring som falt på nettet får sin egen kode, så meldingen midt i runden
+ * blir «prøv igjen» og ikke «spillet finnes ikke».
+ *
+ * @returns feilkoden, eller `null` når spillet finnes og fortsatt tar imot.
+ */
+async function refuseUnlessGameLives(
+  gameId: string,
+): Promise<'db_error' | 'game_not_found' | 'game_finished' | null> {
+  const { data, error } = await supabase
+    .from('games')
+    .select('status')
+    .eq('id', gameId)
+    .maybeSingle<{ status: string }>();
+
+  if (error) return 'db_error';
+  if (!data) return 'game_not_found';
+  if (data.status === 'finished') return 'game_finished';
+
+  return null;
+}
+
+/**
  * Lagre bingo/bango/bongo for ett hull.
  *
  * Delt registrering: alle deltakere kan sette og endre raden, og alle tre
  * feltene er nullable — et hull der ingen nådde greena først har ingen bingo.
  * `null` settes eksplisitt, slik at en retting faktisk fjerner forrige mottaker
  * i stedet for å la den stå.
+ *
+ * To lag rundt finished-låsen: bundle-statusen svarer med én gang når kalleren
+ * allerede vet at runden er over, og det ferske oppslaget fanger runden som ble
+ * avsluttet mens spilleren sto på hullet.
  */
 export async function setBingoBangoBongoHole(
   input: BingoBangoBongoHoleWrite,
@@ -331,6 +374,9 @@ export async function setBingoBangoBongoHole(
 
   const userId = await currentDeviceUserId();
   if (!userId) return { ok: false, error: 'not_authenticated' };
+
+  const stale = await refuseUnlessGameLives(input.gameId);
+  if (stale) return { ok: false, error: stale };
 
   const failure = readUpsertResult(
     await supabase

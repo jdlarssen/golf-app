@@ -5,6 +5,7 @@
 // er vi tilbake i #667/#704: en skriving som aldri skjedde, meldt som suksess.
 import type {
   BingoBangoBongoValidationError,
+  BingoBangoBongoWriteError,
   ChoiceWriteFailure,
   WolfChoiceValidationError,
 } from '../data/choices';
@@ -42,6 +43,7 @@ export function describeChoiceFailure(
   error:
     | WolfChoiceValidationError
     | BingoBangoBongoValidationError
+    | BingoBangoBongoWriteError
     | ChoiceWriteFailure,
 ): string {
   switch (error) {
@@ -59,6 +61,8 @@ export function describeChoiceFailure(
       return 'Du kan ikke velge deg selv som partner.';
     case 'game_finished':
       return 'Runden er avsluttet. Nå kan ingenting registreres mer.';
+    case 'game_not_found':
+      return 'Fant ikke spillet. Det kan ha blitt slettet.';
     case 'rls_denied':
       return 'Du har ikke lov til å lagre dette valget.';
     case 'no_rows':

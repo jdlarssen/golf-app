@@ -35,6 +35,8 @@ function choices(): Choices {
 
 const ONE_ROW = { data: [{ hole_number: 7 }], error: null };
 const ZERO_ROWS = { data: [], error: null };
+/** Svaret på det ferske status-oppslaget BBB-skrivingen gjør før upserten. */
+const ACTIVE_GAME = { data: { status: 'active' }, error: null };
 
 type WolfOver = Partial<Parameters<Choices['setWolfChoice']>[0]>;
 type BbbOver = Partial<Parameters<Choices['setBingoBangoBongoHole']>[0]>;
@@ -322,11 +324,16 @@ describe('choices', () => {
     it('upserter alle tre plassene, tomme inkludert', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const write = queryStub(ONE_ROW);
-      routeFrom({ bingo_bango_bongo_holes: [write] });
+      const lookup = queryStub(ACTIVE_GAME);
+      routeFrom({ games: [lookup], bingo_bango_bongo_holes: [write] });
 
       expect(await choices().setBingoBangoBongoHole(bbbWrite(), 'active')).toEqual({
         ok: true,
       });
+
+      // Statusen leses ferskt, på spillets egen rad — ikke fra bundelen.
+      expect(stepArgs(lookup, 'select')).toEqual([['status']]);
+      expect(stepArgs(lookup, 'eq')).toEqual([['id', GAME]]);
 
       // `null` skrives eksplisitt: en retting skal FJERNE forrige mottaker.
       expect(stepArgs(write, 'upsert')[0]).toEqual([
@@ -343,13 +350,53 @@ describe('choices', () => {
       expect(stepArgs(write, 'select')).toEqual([['hole_number']]);
     });
 
-    it('nekter å skrive i et ferdig spill, og spør ikke databasen', async () => {
+    it('nekter å skrive når bundelen alt sier ferdig, og spør ikke databasen', async () => {
       const { supabase } = mocks();
 
       expect(
         await choices().setBingoBangoBongoHole(bbbWrite(), 'finished'),
       ).toEqual({ ok: false, error: 'game_finished' });
       expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    it('stopper skrivingen når spillet ble avsluttet mens spilleren sto på hullet', async () => {
+      const { queryStub, routeFrom, supabase } = mocks();
+      // Bundelen er minutter gammel og sier fortsatt «active». Serveren vet
+      // bedre — og uten det ferske oppslaget hadde raden landet: RLS spør bare
+      // om du er med i spillet, ikke om spillet lever.
+      // Ingen `bingo_bango_bongo_holes`-plan: prøver koden å skrive likevel,
+      // kaster ruteren og testen faller.
+      routeFrom({ games: [queryStub({ data: { status: 'finished' }, error: null })] });
+
+      expect(await choices().setBingoBangoBongoHole(bbbWrite(), 'active')).toEqual({
+        ok: false,
+        error: 'game_finished',
+      });
+      expect(supabase.from).toHaveBeenCalledTimes(1);
+    });
+
+    it('skiller et borte spill fra en falt spørring — 0 rader er game_not_found', async () => {
+      const { queryStub, routeFrom, supabase } = mocks();
+      routeFrom({ games: [queryStub({ data: null, error: null })] });
+
+      expect(await choices().setBingoBangoBongoHole(bbbWrite(), 'active')).toEqual({
+        ok: false,
+        error: 'game_not_found',
+      });
+      expect(supabase.from).toHaveBeenCalledTimes(1);
+    });
+
+    it('gir db_error når selve oppslaget feiler (#1445: feil ≠ fravær)', async () => {
+      const { queryStub, routeFrom, supabase } = mocks();
+      routeFrom({
+        games: [queryStub({ data: null, error: { message: 'nettet falt' } })],
+      });
+
+      expect(await choices().setBingoBangoBongoHole(bbbWrite(), 'active')).toEqual({
+        ok: false,
+        error: 'db_error',
+      });
+      expect(supabase.from).toHaveBeenCalledTimes(1);
     });
 
     it('gjør ingenting uten sesjon', async () => {
@@ -365,7 +412,10 @@ describe('choices', () => {
 
     it('leser 0 rader som feil, ikke som stille suksess', async () => {
       const { queryStub, routeFrom } = mocks();
-      routeFrom({ bingo_bango_bongo_holes: [queryStub(ZERO_ROWS)] });
+      routeFrom({
+        games: [queryStub(ACTIVE_GAME)],
+        bingo_bango_bongo_holes: [queryStub(ZERO_ROWS)],
+      });
 
       expect(await choices().setBingoBangoBongoHole(bbbWrite(), 'active')).toEqual({
         ok: false,
@@ -376,6 +426,7 @@ describe('choices', () => {
     it('oversetter RLS-avslag til en typet kode, aldri rå Postgres-tekst', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
+        games: [queryStub(ACTIVE_GAME)],
         bingo_bango_bongo_holes: [
           queryStub({
             data: null,
