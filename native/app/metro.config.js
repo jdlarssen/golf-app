@@ -12,4 +12,13 @@ const path = require('path');
 const config = getDefaultConfig(__dirname);
 config.watchFolders = [path.resolve(__dirname, '../../lib')];
 
+// Shared repo modules under ../../lib have bare imports of their own (e.g.
+// lib/games/prizes.ts imports 'zod'). Metro resolves those from the REQUIRING
+// file upward, which lands in the repo root's node_modules — outside the
+// project and outside watchFolders, so Metro refuses to serve it. Pointing the
+// resolver at this app's node_modules makes shared files resolve their deps
+// against the app's own dependency tree instead. Any bare import reachable from
+// the shared graph must therefore be a declared dependency of THIS package.
+config.resolver.nodeModulesPaths = [path.resolve(__dirname, 'node_modules')];
+
 module.exports = config;
