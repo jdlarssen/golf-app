@@ -267,3 +267,44 @@ xcodebuild før simulatorbevis.)
 **Til byggeren:** kjør drift-verifisering mot HEAD før første kodelinje
 (#1850-mønsteret — tabell over bekreftet/endret per påstand her), og sjekk
 natt-PR-ene for overlappende arbeid før du starter.
+
+---
+
+## Drift-verifisering mot HEAD (bygge-økt 2026-08-31, base `de966161`)
+
+Kontrakten ble skrevet i en egen spec-økt. Alle påstander ble kontrollert mot HEAD før
+første kodelinje. Fire påstander var feil eller ufullstendige, og én av dem endret
+byggeplanen vesentlig.
+
+### Feil / drift
+
+| # | Kontrakt-påstand | Faktisk ved HEAD | Konsekvens |
+| --- | --- | --- | --- |
+| 1 | «Format-metadata bor i DB og er world-readable» | `formats` har KUN `slug, icon_key, scoring_module, is_active, is_cup_eligible`. **Ingen navne-kolonne.** Etikettene bor i `messages/no.json` under `modes.<slug>` | Appen speiler de 8 etikettene lokalt + jest-paritetstest mot `no.json` — samme mønster som `sideTournamentCopy.ts` (#1850). Contract-antakelsen kunne ikke oppfylles |
+| 2 | `format_intent_mapping` joines på `game_mode` | Kolonnen heter **`format_slug`** | Spørringen rettet |
+| 3 | Web-defaults i `lib/wizard/useGameFormState.ts` | Fila ligger i `app/[locale]/admin/games/new/useGameFormState.ts`. `lib/wizard/` har bare `draftResumePlan/fitsPlayerCount/getWizardMountData/intent/selectablePlayers` | Verdiene stemte; stien gjorde ikke |
+| 4 | «formatvalg re-valideres når rosteret endres i steg 3» (GameWizard.tsx:793-812) | De linjene er FormatGrid-filteret på `expectedPlayerCount`. Den ekte re-valideringen henger på **PlayerCountPicker**, ikke på roster-endring; steg 4 gates av `playersValidForMode` | Appen speiler webbens semantikk (gate ved publisering), ikke en strengere roster-watcher |
+
+### Presiseringer som endret byggeplanen
+
+| Funn | Konsekvens |
+| --- | --- |
+| **`lib/games/gamePayload.ts` value-importerer `lib/games/prizes.ts`, som importerer `zod`.** Metro slår opp bare-importer fra den IMPORTERENDE fila og oppover, altså i repo-rotas `node_modules` — utenfor prosjektet og utenfor `watchFolders`. `npx expo export` feilet med «Unable to resolve module zod». **Jest var grønn hele tiden** (Node-oppslag fant rotas zod 4) | `metro.config.js` fikk `resolver.nodeModulesPaths` mot appens egen `node_modules`, og `zod@^4.4.3` ble en ekte dep av `native/app`. Ny ufravikelig regel: enhver bare-import som er nåbar fra den delte grafen MÅ være deklarert dep i `native/app`. Bevist med `expo export` exit 0 (commit `b08004f0`) |
+| `getFormatsForIntent.ts` og `validateGameMode.ts` er hard `server-only` + service-role | Kan ikke importeres. Appen leser `formats`/`format_intent_mapping` direkte under RLS. Policyene er `to public` men gatet på `authenticated` — innlogget lesing virker, anonym gjør ikke |
+| `formData.get()` er den ENESTE FormData-metoden `gamePayload.ts` bruker (53 kall, null `getAll`/`has`/`entries`) | Shimmen er en Map med `get()`. Bevist under jest før arkitekturen ble låst |
+| Spiller-slots leses på INDEKS (`player_${i}_id`), men tee-gender på BRUKER-ID (`player_${uid}_gender`, actions.ts:295) | To nøkkel-konvensjoner i samme payload — begge må treffes |
+| `effectiveMode`-nedgraderingen (`gamePayload.ts:2205`): publish med `registration_mode !== 'invite_only'` kjører validatoren i `'draft'` | Vi bruker alltid `invite_only`, så full validering. Notert som felle |
+| `courses` har INGEN arkiv-kolonne; kun `tee_boxes.archived_at`, filtrert i JS etter fetch (`newGameFormData.ts:104`) | Appen speiler JS-filteret. Kontraktens «speil webbens arkiv-/synlighetsfilter fra bane-pickeren» hadde ingen SQL-motpart å speile |
+| `incomplete_profiles_for_ids`: `authenticated` HAR fortsatt EXECUTE (`0071:120`); 0137 rører den ikke | Publish-gaten bygges — ingen restanse, ingen hoppet gate |
+| Gjeste-rader krever service-role (`actions.ts:318-322`, 0115-triggeren) | Gjester (`is_guest = true`) finnes i RLS-kandidatsettet men kan aldri insertes fra appen → ekskluderes fra kandidatlista |
+| `useTheme()` FINNES (`theme.ts:211`) — #1833 har landet | Nye flater bygges mot `useTheme()`. Merk: `navigation.tsx` sine header-farger er fortsatt hardkodet lyse |
+| `theme.ts` har ingen `input`-token; appen har ingen form-primitiv utenom `Login.tsx` sin lokale stil | Veiviseren trenger et input-token i `createUi` (begge paletter) |
+
+### Bekreftet uendret
+
+`createGameInternal` gater kun på innlogging · `buildGameInsertPayload` er import-ren og
+ligger på 2141 i en 2227-linjers fil · `acceptedAtForActor` · kompenserende delete
+(`actions.ts:329`) · tee-off-i-fortid-sjekken · games-kolonnesettet + `status:'scheduled'`
+· 0071/0092-policyene og 0115-triggeren · `courses`/`tee_boxes` SELECT `using (true)` ·
+`users` SELECT = egen ∨ admin ∨ delt spill · `fitsPlayerCount` er ren TS (og eksporterer
+også `soloPlayerCap`, som kontrakten ikke nevnte) · 12 CHECK-constraints på `games`.
