@@ -11,7 +11,12 @@
 
 export interface StubResult {
   data: unknown;
-  error: { message: string } | null;
+  /**
+   * `code` er PostgRESTs SQLSTATE. Den er med fordi grensen faktisk sender den,
+   * og fordi `42501` (RLS nektet) og alt annet (nettbrudd, constraint) fortjener
+   * hver sin melding til spilleren — et mock uten feltet kunne ikke uttrykt det.
+   */
+  error: { message: string; code?: string } | null;
 }
 
 export interface RecordedStep {
