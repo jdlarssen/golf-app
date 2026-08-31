@@ -14,6 +14,7 @@ import {
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { Approve } from './screens/Approve';
+import { CreateGame } from './screens/CreateGame';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { Home } from './screens/Home';
@@ -24,6 +25,7 @@ import { SyncLab } from './SyncLab';
 
 export type RootStackParamList = {
   Home: undefined;
+  CreateGame: undefined;
   GameHome: { gameId: string };
   Hole: { gameId: string; holeNumber: number };
   Scorecard: { gameId: string };
@@ -64,6 +66,11 @@ export function RootNavigator() {
           name="Home"
           component={Home}
           options={{ title: 'Tørny Dev' }}
+        />
+        <Stack.Screen
+          name="CreateGame"
+          component={CreateGame}
+          options={{ title: 'Nytt spill' }}
         />
         <Stack.Screen
           name="GameHome"
