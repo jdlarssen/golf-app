@@ -13,7 +13,7 @@
 // assertion: en test som IKKE nevner `games` beviser at porten foran skrev
 // ingenting.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { toOsloDateTimeLocal, type GameDraft } from '../lib/wizardPayload';
+import { teeOffInstant, type GameDraft } from '../lib/wizardPayload';
 import { useFreshModules } from '../test/harness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -34,7 +34,7 @@ const MATE = 'user-mate';
 const GAME_ID = 'game-new';
 
 const inDays = (days: number): string =>
-  toOsloDateTimeLocal(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+  teeOffInstant(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
 
 function draft(over: Partial<GameDraft> = {}): GameDraft {
   return {
@@ -42,7 +42,7 @@ function draft(over: Partial<GameDraft> = {}): GameDraft {
     gameMode: 'stableford',
     courseId: 'course-1',
     teeBoxId: 'tee-1',
-    teeOffLocal: inDays(1),
+    teeOffAt: inDays(1),
     players: [
       { userId: ME, teeGender: 'M', teamNumber: null },
       { userId: MATE, teeGender: 'D', teamNumber: null },
@@ -278,7 +278,7 @@ describe('publishGame', () => {
       routeFrom({ formats: [queryStub(ACTIVE_FORMAT)] });
 
       expect(
-        await createGame().publishGame(draft({ teeOffLocal: inDays(-1) })),
+        await createGame().publishGame(draft({ teeOffAt: inDays(-1) })),
       ).toEqual({ ok: false, error: 'tee_off_in_past' });
     });
 
@@ -286,7 +286,7 @@ describe('publishGame', () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({ formats: [queryStub(ACTIVE_FORMAT)] });
 
-      expect(await createGame().publishGame(draft({ teeOffLocal: null }))).toEqual({
+      expect(await createGame().publishGame(draft({ teeOffAt: null }))).toEqual({
         ok: false,
         error: 'tee_off_required',
       });

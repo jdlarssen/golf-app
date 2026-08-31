@@ -11,7 +11,7 @@
 // Fire ting bærer fila:
 //
 //  1. **Reglene er delt kode.** `buildGameInsertPayload` bygger `mode_config`
-//     og eier alle valideringskodene; `parseOsloDateTimeLocal`, `isTeeOffInPast`,
+//     og eier alle valideringskodene; `isTeeOffInPast`,
 //     `parseSideTournamentFromFormData`, `parsePrizesFromFormData` og
 //     `acceptedAtForActor` er de samme funksjonene webben kaller. Det eneste
 //     som er speilet her er REKKEFØLGEN og kolonnesettet.
@@ -32,7 +32,6 @@
 import { acceptedAtForActor } from '../../../../lib/games/participantAcceptance';
 import {
   isTeeOffInPast,
-  parseOsloDateTimeLocal,
   parsePrizesFromFormData,
   type GameValidationErrorCode,
 } from '../../../../lib/games/gamePayload';
@@ -349,15 +348,17 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
   const modeProblem = await refuseUnlessModeIsActive(payload.game_mode);
   if (modeProblem) return failed(modeProblem);
 
+  // Tee-off er alt et absolutt tidspunkt (`teeOffInstant` på pickerens Date).
+  // Appen kaller MED VILJE ikke webbens `parseOsloDateTimeLocal`: den avgjør
+  // sommer-/vintertid ved å streng-sammenligne `Intl`-utdata mot `'GMT+2'`, og
+  // den sammenligningen holder ikke under Hermes. Resultatet var en tee-off
+  // lagret én time feil — se `teeOffInstant` for hele historien.
   const rawTeeOff = (form.get('scheduled_tee_off_at') ?? '').trim();
   if (!rawTeeOff) return failed('tee_off_required');
-  let scheduledTeeOffAt: string;
-  try {
-    scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
-  } catch {
-    // `parseOsloDateTimeLocal` kaster RangeError på en ulesbar streng. Appen
-    // bygger strengen selv fra pickeren, så dette er en programfeil hos oss —
-    // men den skal likevel ende i en melding og ikke i en krasj.
+  const scheduledTeeOffAt = rawTeeOff;
+  if (Number.isNaN(new Date(scheduledTeeOffAt).getTime())) {
+    // Appen bygger strengen selv, så en ulesbar verdi er en programfeil hos
+    // oss — den skal likevel ende i en melding og ikke i en krasj.
     return failed('tee_off_required');
   }
   // #902: en tee-off i fortiden får E1-auto-starten til å fyre med én gang og

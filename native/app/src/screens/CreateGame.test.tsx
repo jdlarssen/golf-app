@@ -177,7 +177,7 @@ describe('CreateGame', () => {
         sideCtpCount: 1,
       }),
     );
-    expect(draft.teeOffLocal).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(draft.teeOffAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     // Tee-kjønnet leses fra profilen: Ada står som `ladies` og skal spille fra
     // dametee uten at veiviseren spør.
     expect(draft.players).toEqual([

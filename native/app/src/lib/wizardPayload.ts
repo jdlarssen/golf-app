@@ -74,11 +74,10 @@ export interface GameDraft {
   courseId: string | null;
   teeBoxId: string | null;
   /**
-   * Tee-off som Oslo-veggklokke, `'YYYY-MM-DDTHH:mm'` — samme format som
-   * webbens `<input type="datetime-local">`. Bruk {@link toOsloDateTimeLocal}
+   * Tee-off som ABSOLUTT tidspunkt (ISO 8601, UTC). Bruk {@link teeOffInstant}
    * på datoen fra pickeren. `null` er ikke publiserbart.
    */
-  teeOffLocal: string | null;
+  teeOffAt: string | null;
   /** HCP-andel 0–100. Default 100. */
   hcpAllowancePct?: number;
   /** Krever makker-godkjenning av leverte kort. Default false. */
@@ -171,20 +170,28 @@ function orderedSlots(draft: GameDraft): PlayerSlot[] {
 }
 
 /**
- * Formaterer et `Date` fra datetimepickeren som `'YYYY-MM-DDTHH:mm'`.
+ * Tidspunktet fra datetimepickeren som absolutt ISO-tid.
  *
- * Pickeren gir enhetens lokaltid, og den delte `parseOsloDateTimeLocal` leser
- * strengen som Oslo-veggklokke. På en telefon i Norge er de to det samme, og
- * arrangøren skriver uansett inn den tiden som står på klubbens starttavle.
- * På en enhet i en annen tidssone blir tee-off tolket som Oslo-tid — bevisst:
- * runden spilles i Norge.
+ * ⚠️ Her lå en ekte feil (funnet på simulator 2026-08-31, første publisering
+ * fra appen): tee-off ble lagret én time feil. Veien var pickerens `Date` →
+ * veggklokke-streng → delt `parseOsloDateTimeLocal`. Den helperen velger
+ * sommer- eller vintertid ved å STRENG-SAMMENLIGNE `Intl`-utdata mot `'GMT+2'`
+ * (`lib/games/gamePayload.ts`). Den sammenligningen slår til i Node og i
+ * nettlesere, men ikke under Hermes — så en dato i august fikk vintertidens
+ * `+01:00`, og 23:00 ble lagret som 22:00Z i stedet for 21:00Z.
+ *
+ * Webben MÅ gå veien om veggklokke: `<input type="datetime-local">` har ingen
+ * tidssone, så Oslo er den eneste fornuftige tolkningen. Appen har derimot
+ * pickerens `Date` — et faktisk øyeblikk — og trenger ikke gjette. Vi bruker
+ * det direkte. Da stemmer det arrangøren ser i pickeren med det som lagres, og
+ * med det {@link formatTeeOff} viser etterpå: alle tre er enhetens lokaltid.
+ *
+ * Konsekvens verdt å kjenne: på en enhet i en annen tidssone lagrer appen
+ * øyeblikket arrangøren faktisk valgte, mens webben ville lest samme tall som
+ * Oslo-tid. Appen er selvkonsistent; det er den som er riktig av de to.
  */
-export function toOsloDateTimeLocal(date: Date): string {
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
-  );
+export function teeOffInstant(date: Date): string {
+  return date.toISOString();
 }
 
 /** Navnet et navnløst utkast får, så `name_required` aldri møter arrangøren. */
@@ -212,7 +219,7 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   // Checkbox-semantikk: webben tester mot strengen 'on', ikke mot 'true'.
   if (draft.requirePeerApproval) form.set('require_peer_approval', 'on');
   form.set('score_visibility', draft.scoreVisibility ?? 'live');
-  form.set('scheduled_tee_off_at', draft.teeOffLocal ?? '');
+  form.set('scheduled_tee_off_at', draft.teeOffAt ?? '');
 
   // Appen inviterer alltid eksplisitt. Verdien er ikke bare en default:
   // `buildGameInsertPayload` degraderer modus-valideringen til 'draft' når

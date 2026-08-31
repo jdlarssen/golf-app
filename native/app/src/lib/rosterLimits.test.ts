@@ -43,7 +43,7 @@ function draftWith(
     gameMode: mode,
     courseId: 'course-1',
     teeBoxId: 'tee-1',
-    teeOffLocal: '2099-06-01T09:00',
+    teeOffAt: '2099-06-01T07:00:00.000Z',
     players: Array.from({ length: count }, (_, i) => ({
       userId: `player-${i}`,
       teeGender: 'M' as const,
