@@ -24,18 +24,22 @@
 //     tabellen kommer på nettsiden.
 import { computeLeaderboard } from '../../../../lib/scoring';
 import { buildAceyDeuceyContext } from '../../../../lib/scoring/context/buildAceyDeuceyContext';
+import { buildBingoBangoBongoContext } from '../../../../lib/scoring/context/buildBingoBangoBongoContext';
 import { buildNassauContext } from '../../../../lib/scoring/context/buildNassauContext';
 import { buildNinesContext } from '../../../../lib/scoring/context/buildNinesContext';
 import { buildRoundRobinContext } from '../../../../lib/scoring/context/buildRoundRobinContext';
 import { buildSkinsContext } from '../../../../lib/scoring/context/buildSkinsContext';
 import { buildSoloStrokeplayContext } from '../../../../lib/scoring/context/buildSoloStrokeplayContext';
 import { buildStablefordContext } from '../../../../lib/scoring/context/buildStablefordContext';
+import { buildWolfContext } from '../../../../lib/scoring/context/buildWolfContext';
 import type {
+  BingoBangoBongoHoleInput,
   GameMode,
   GameModeConfig,
   ModeResult,
   ScoringContext,
   ScoringGender,
+  WolfHoleChoice,
 } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
@@ -49,16 +53,16 @@ import type { GameBundle } from '../data/gameBundle';
  *  - `missing-config` — `mode_config` mangler eller peker på et annet format
  *                       enn `game_mode`. Motoren narrower på den, så en gjetning
  *                       her ville gitt tall som ser riktige ut.
- *  - `needs-choices`  — wolf/BBB: halve regnestykket bor i per-hull-tabeller
- *                       appen ikke henter. Samme grunn som format-gaten stenger
- *                       dem.
+ *  - `missing-choices`— wolf/BBB: halve regnestykket bor i per-hull-tabeller,
+ *                       og kalleren har ikke tredd dem inn. Se `ScoringExtras`
+ *                       for hvorfor svaret er «nei» og ikke en tom liste.
  *  - `no-course`      — bundelen har ingen hull (banen er ikke satt ennå).
  *  - `no-players`     — ingen aktive spillere igjen etter WD-filtreringen.
  */
 export type ScoringContextProblem =
   | 'unknown-mode'
   | 'missing-config'
-  | 'needs-choices'
+  | 'missing-choices'
   | 'no-course'
   | 'no-players';
 
@@ -69,6 +73,29 @@ export type ScoringContextOutcome =
 export type LeaderboardOutcome =
   | { ok: true; result: ModeResult }
   | { ok: false; problem: ScoringContextProblem };
+
+/**
+ * Input som IKKE ligger i bundelen eller i den lokale slag-basen: wolf- og
+ * BBB-valgene fra sine egne per-hull-tabeller (`data/choices.ts`).
+ *
+ * **`undefined` og `[]` betyr to helt ulike ting, og det er hele poenget.**
+ * `[]` = hentet, ingen har valgt ennå — et gyldig mellomresultat, samme som på
+ * web før første valg. `undefined` = ikke hentet (kaldstart offline, nettfeil).
+ * De to må ikke kollapse: bygger vi en wolf-kontekst med tom liste fordi
+ * hentingen feilet, får spilleren en tabell der hvert hull står uavgjort — som
+ * ser autoritativ ut og er ren fiksjon. Det var grunnen til at formatet var
+ * gatet i det hele tatt.
+ *
+ * Derfor svarer adapteren `missing-choices` i stedet for å gjette. Selve
+ * TEKSTEN spilleren får eies av skjermen (`PROBLEM_MESSAGES`), på linje med
+ * `no-course` og `no-players` — dette laget sier bare hvilket input som mangler.
+ */
+export interface ScoringExtras {
+  /** Alle wolf-valg i spillet. `undefined` = ikke hentet, ikke «ingen valg». */
+  wolfChoices?: WolfHoleChoice[];
+  /** Alle BBB-hullrader i spillet. Samme `undefined`-semantikk som over. */
+  bingoBangoBongoHoles?: BingoBangoBongoHoleInput[];
+}
 
 /**
  * Rå `game_players`-rad slik de delte hjelperne leser den. Alle feltene de
@@ -255,6 +282,7 @@ function buildUniformContext(opts: {
 export function buildScoringContext(
   bundle: GameBundle,
   scores: readonly LocalScore[],
+  extras: ScoringExtras = {},
 ): ScoringContextOutcome {
   const mode = asGameMode(bundle.game.gameMode);
   if (mode === null) return { ok: false, problem: 'unknown-mode' };
@@ -317,11 +345,39 @@ export function buildScoringContext(
         ctx: buildAceyDeuceyContext({ gameId, modeConfig, players, holesRows, scoresRows }),
       };
     // Halve regnestykket ligger i `wolf_hole_choices` /
-    // `bingo_bango_bongo_holes`. Appen henter dem ikke, og en kontekst uten
-    // dem ville gitt et resultat der hvert hull står uavgjort.
+    // `bingo_bango_bongo_holes`. Har kalleren dem, bygger vi; har den dem
+    // ikke, sier vi fra — aldri en kontekst med tom liste (se `ScoringExtras`).
+    // Rotasjons-sloten wolf leser er `team_number`, som radene alt bærer.
     case 'wolf':
+      if (extras.wolfChoices === undefined) {
+        return { ok: false, problem: 'missing-choices' };
+      }
+      return {
+        ok: true,
+        ctx: buildWolfContext({
+          gameId,
+          modeConfig,
+          players,
+          holesRows,
+          scoresRows,
+          wolfChoices: extras.wolfChoices,
+        }),
+      };
     case 'bingo_bango_bongo':
-      return { ok: false, problem: 'needs-choices' };
+      if (extras.bingoBangoBongoHoles === undefined) {
+        return { ok: false, problem: 'missing-choices' };
+      }
+      return {
+        ok: true,
+        ctx: buildBingoBangoBongoContext({
+          gameId,
+          modeConfig,
+          players,
+          holesRows,
+          scoresRows,
+          bingoBangoBongoHoles: extras.bingoBangoBongoHoles,
+        }),
+      };
     case 'best_ball':
     case 'singles_matchplay':
     case 'fourball_matchplay':
@@ -362,8 +418,9 @@ export function buildScoringContext(
 export function computeGameLeaderboard(
   bundle: GameBundle,
   scores: readonly LocalScore[],
+  extras: ScoringExtras = {},
 ): LeaderboardOutcome {
-  const outcome = buildScoringContext(bundle, scores);
+  const outcome = buildScoringContext(bundle, scores, extras);
   if (!outcome.ok) return outcome;
   return { ok: true, result: computeLeaderboard(outcome.ctx) };
 }

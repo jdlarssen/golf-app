@@ -80,6 +80,25 @@ function score(overrides: Partial<LocalScore> = {}): LocalScore {
   };
 }
 
+/** Wolf krever 3-5 spillere, og `team_number` er rotasjons-sloten. */
+const WOLF_GAME = {
+  gameMode: 'wolf',
+  modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
+};
+
+const BBB_GAME = {
+  gameMode: 'bingo_bango_bongo',
+  modeConfig: { kind: 'bingo_bango_bongo', team_size: 1 },
+};
+
+/** Fire spillere med hver sin rotasjons-slot. */
+const WOLF_PLAYERS = [
+  player({ userId: 'a', teamNumber: 1, courseHandicap: 0 }),
+  player({ userId: 'b', teamNumber: 2, courseHandicap: 0 }),
+  player({ userId: 'c', teamNumber: 3, courseHandicap: 0 }),
+  player({ userId: 'd', teamNumber: 4, courseHandicap: 0 }),
+];
+
 function unwrap(outcome: ReturnType<typeof buildScoringContext>) {
   if (!outcome.ok) throw new Error(`forventet kontekst, fikk ${outcome.problem}`);
   return outcome.ctx;
@@ -224,15 +243,14 @@ describe('buildScoringContext', () => {
       'missing-config',
     ],
     [
-      'wolf — per-hull-valgene henter appen ikke',
-      {
-        game: {
-          ...bundle().game,
-          gameMode: 'wolf',
-          modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
-        },
-      },
-      'needs-choices',
+      'wolf — valgene er ikke tredd inn',
+      { game: { ...bundle().game, ...WOLF_GAME } },
+      'missing-choices',
+    ],
+    [
+      'bingo bango bongo — hullradene er ikke tredd inn',
+      { game: { ...bundle().game, ...BBB_GAME } },
+      'missing-choices',
     ],
     ['banen er ikke satt ennå', { holes: [] }, 'no-course'],
     [
@@ -275,5 +293,100 @@ describe('computeGameLeaderboard', () => {
   it('sender problemet videre uten å røre motoren', () => {
     const outcome = computeGameLeaderboard(bundle({ holes: [] }), []);
     expect(outcome).toEqual({ ok: false, problem: 'no-course' });
+  });
+});
+
+/**
+ * Wolf og BBB henter halve regnestykket sitt fra egne per-hull-tabeller. Det
+ * som låses her er at valgene faktisk NÅR de delte byggerne — og at forskjellen
+ * mellom «hentet, tomt» og «ikke hentet» overlever hele veien. Kollapser de to,
+ * får spilleren en tabell full av uavgjorte hull som ser ekte ut.
+ */
+describe('wolf og bingo bango bongo', () => {
+  const wolfBundle = () =>
+    bundle({ game: { ...bundle().game, ...WOLF_GAME }, players: WOLF_PLAYERS });
+  const bbbBundle = () =>
+    bundle({ game: { ...bundle().game, ...BBB_GAME }, players: WOLF_PLAYERS });
+
+  const choice = {
+    holeNumber: 1,
+    wolfUserId: 'a',
+    choice: 'partner' as const,
+    partnerUserId: 'b',
+  };
+  const bbbRow = {
+    holeNumber: 1,
+    bingoUserId: 'a',
+    bangoUserId: null,
+    bongoUserId: 'c',
+  };
+
+  it('treder wolf-valgene inn i konteksten og holder rotasjons-sloten', () => {
+    const ctx = unwrap(
+      buildScoringContext(wolfBundle(), [], { wolfChoices: [choice] }),
+    );
+
+    expect(ctx.game.game_mode).toBe('wolf');
+    expect(ctx.wolfChoices).toEqual([choice]);
+    // Wolf leser `team_number` som rotasjons-slot — den MÅ følge med.
+    expect(ctx.players.map((p) => p.teamNumber)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('bygger på en TOM valgliste — ingen har valgt ennå er et gyldig svar', () => {
+    const ctx = unwrap(buildScoringContext(wolfBundle(), [], { wolfChoices: [] }));
+    expect(ctx.wolfChoices).toEqual([]);
+  });
+
+  it('holder trukne spillere ute av wolf-konteksten', () => {
+    const ctx = unwrap(
+      buildScoringContext(
+        bundle({
+          game: { ...bundle().game, ...WOLF_GAME },
+          players: [
+            ...WOLF_PLAYERS,
+            player({ userId: 'e', teamNumber: 5, withdrawnAt: '2026-08-30T09:00:00.000Z' }),
+          ],
+        }),
+        [],
+        { wolfChoices: [] },
+      ),
+    );
+    expect(ctx.players.map((p) => p.userId)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('treder BBB-hullradene inn og lar spillerne stå uten lag', () => {
+    const ctx = unwrap(
+      buildScoringContext(bbbBundle(), [], { bingoBangoBongoHoles: [bbbRow] }),
+    );
+
+    expect(ctx.game.game_mode).toBe('bingo_bango_bongo');
+    expect(ctx.bingoBangoBongoHoles).toEqual([bbbRow]);
+    // BBB er et solo-format: den delte byggeren nuller lagnummeret, og
+    // rotasjons-sloten fra wolf skal ikke lekke inn her.
+    expect(ctx.players.every((p) => p.teamNumber === null)).toBe(true);
+  });
+
+  it('valgene når helt fram til motoren — wolf', () => {
+    const outcome = computeGameLeaderboard(wolfBundle(), [], {
+      wolfChoices: [choice],
+    });
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok || outcome.result.kind !== 'wolf') return;
+    const first = outcome.result.holes[0]!;
+    expect(first.wolfUserId).toBe('a');
+    expect(first.choice).toBe('partner');
+    expect(first.partnerUserId).toBe('b');
+  });
+
+  it('valgene når helt fram til motoren — bingo bango bongo', () => {
+    const outcome = computeGameLeaderboard(bbbBundle(), [], {
+      bingoBangoBongoHoles: [bbbRow],
+    });
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok || outcome.result.kind !== 'bingo_bango_bongo') return;
+    const anna = outcome.result.players.find((p) => p.userId === 'a')!;
+    expect(anna.bingos).toBe(1);
   });
 });

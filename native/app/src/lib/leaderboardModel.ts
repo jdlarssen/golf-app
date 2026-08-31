@@ -13,8 +13,16 @@ import type {
   GameMode,
   MatchplayHoleResult,
   MatchplayMatchResult,
+  WolfChoice,
+  WolfHoleOutcome,
 } from '../../../../lib/scoring/modes/types';
 import { isMatchplayFamily } from '../../../../lib/scoring/modes/types';
+import {
+  wolfChoiceKey,
+  wolfOutcomeKey,
+  type WolfChoiceKey,
+  type WolfOutcomeKey,
+} from '../../../../lib/wolf/holeLabels';
 import type { BundlePlayer } from '../data/gameBundle';
 import { displayName } from './display';
 
@@ -197,6 +205,85 @@ export const NASSAU_SECTION_LABELS: Record<
   back9: 'Siste ni',
   total18: 'Hele runden',
 };
+
+// ---------------------------------------------------------------------------
+// Wolf
+// ---------------------------------------------------------------------------
+
+/**
+ * Norske ord for de to Wolf-begrepene et hull har: hva wolfen valgte, og
+ * hvordan det gikk.
+ *
+ * KLASSIFISERINGEN — hvilken av de fire mulighetene et valg eller et utfall er
+ * — gjøres av `wolfChoiceKey`/`wolfOutcomeKey` i den DELTE `lib/wolf/`, samme
+ * kilde webbens to wolf-flater bruker. Bare selve ordene bor her, fordi appen
+ * ikke har next-intl. Skrev appen sin egen switch på `outcome`, ville den vært
+ * et tredje hjem for en regel som alt har ett.
+ *
+ * Ordene er webbens (`messages/no.json`, `leaderboard.wolf.*`) med ett bevisst
+ * avvik: «Venter…» heter «Ikke valgt ennå» her, siden appen viser valget og
+ * utfallet på samme linje og to «Venter» etter hverandre ikke sier noe.
+ */
+const WOLF_CHOICE_LABELS: Record<WolfChoiceKey, string> = {
+  choiceWaiting: 'Ikke valgt ennå',
+  choicePartner: 'Partner',
+  choiceLone: 'Lone Wolf',
+  choiceBlind: 'Blind Wolf',
+};
+
+const WOLF_OUTCOME_LABELS: Record<WolfOutcomeKey, string> = {
+  outcomeWolfVant: 'Wolf vant',
+  outcomeAndreVant: 'Andre vant',
+  outcomeLik: 'Lik',
+  outcomeVenter: 'Venter',
+};
+
+/**
+ * Wolf-hullene som har noe å fortelle: wolfen har valgt, eller hullet er
+ * avgjort.
+ *
+ * Samme regel som `matchStrip` følger for duell-stripen. Motoren gir en rad
+ * per hull på banen, og atten kort der de fleste sier «Ikke valgt ennå ·
+ * Venter» drukner de hullene som faktisk har skjedd noe på.
+ */
+export function wolfHolesWithStory<
+  T extends { choice: WolfChoice | null; outcome: WolfHoleOutcome },
+>(holes: readonly T[]): T[] {
+  return holes.filter((hole) => hole.choice !== null || hole.outcome !== 'pending');
+}
+
+/** «Partner: Anna», «Lone Wolf», «Ikke valgt ennå». */
+export function wolfChoiceLabel(
+  choice: WolfChoice | null,
+  partnerUserId: string | null,
+  nameOf: (userId: string) => string,
+): string {
+  const key = wolfChoiceKey(choice);
+  if (key !== 'choicePartner') return WOLF_CHOICE_LABELS[key];
+  // CHECK-en på tabellen krever en partner når valget er 'partner'; havner vi
+  // her uten, er raden i utakt med seg selv og et navn ville vært en gjetning.
+  return partnerUserId ? `Partner: ${nameOf(partnerUserId)}` : 'Partner';
+}
+
+export function wolfOutcomeLabel(outcome: WolfHoleOutcome): string {
+  return WOLF_OUTCOME_LABELS[wolfOutcomeKey(outcome)];
+}
+
+/**
+ * «Anna +2 · Bjørn +2» — hvem som fikk poeng på hullet.
+ *
+ * Motoren fyller `pointsByPlayer` med 0 for spillere som ikke fikk noe, og en
+ * linje full av «+0» sier ingenting. `null` = ingen fikk poeng (pending eller
+ * likt hull), og da har raden ingen linje.
+ */
+export function wolfHolePointsLine(
+  pointsByPlayer: Record<string, number>,
+  nameOf: (userId: string) => string,
+): string | null {
+  const earned = Object.entries(pointsByPlayer).filter(([, points]) => points > 0);
+  if (earned.length === 0) return null;
+  return earned.map(([userId, points]) => `${nameOf(userId)} +${points}`).join(' · ');
+}
 
 // ---------------------------------------------------------------------------
 // Brutto-visning (reveal-runde som går)
