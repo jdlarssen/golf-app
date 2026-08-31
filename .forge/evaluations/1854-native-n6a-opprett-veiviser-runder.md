@@ -72,7 +72,7 @@ atomisk commit-disiplin enn repoet ber om; kan ikke amendes, så det står her i
 
 | # | Kriterium | Bevis | Resultat |
 | --- | --- | --- | --- |
-| 1 | Jest-låst payload-paritet, 8 modi | 35 suiter / 511 tester, exit 0. Egen test mater byggeren et rått `{get}`-objekt og krever identisk payload | PASS |
+| 1 | Jest-låst payload-paritet, 8 modi | 35 suiter / 512 tester, exit 0. Egen test mater byggeren et rått `{get}`-objekt og krever identisk payload | PASS |
 | 2 | Ende-til-ende på staging | `+N6a+side`: `scheduled`, riktig `mode_config`, side 1 LD + 1 CTP, `accepted_at` kun for arrangøren, alle kolonner mot `actions.ts:238-277`. Åpner i web (prod-server-modus): HTTP 200, ingen error-boundary, «TEE-OFF 23:00 · man. 31. aug» | PASS |
 | 3 | Lag-modus + wolf | Best ball: `team_number` 1/1/2/2, `flight` 1. Wolf: `team_number` NULL, ingen lag-UI. **Etter F1-fiksen re-verifisert med selve lekkasje-reproen på enhet: wolf publiserte med 3 spillere og 0 team_number** | PASS |
 | 4 | Format-gaten | Nøyaktig de 8 modiene fra ekte DB-lesing, hver med spillerkrav. Fetch-feil → ærlig note (jest) | PASS |
@@ -84,15 +84,37 @@ atomisk commit-disiplin enn repoet ber om; kan ikke amendes, så det står her i
 
 | Port | Resultat |
 | --- | --- |
-| `npx jest` (native/app) | exit 0 — 35 suiter, 511 tester |
+| `npx jest` (native/app) | exit 0 — 35 suiter, 512 tester |
 | `npx tsc --noEmit` (native/app) | exit 0 |
 | `npx expo export --platform ios` | exit 0 |
 | `npm run typecheck` (rot) | exit 0 |
 | `npx vitest run` (rot) | exit 0 — 522/7028 = baseline |
 | `npx eslint native/app` | exit 0 |
 | `npm run build` (rot, pipefail) | exit 0 |
-| `xcodebuild` Release | `** BUILD SUCCEEDED **` ×4 |
+| `xcodebuild` Release | `** BUILD SUCCEEDED **` ×5 |
 | CI på PR #1860 | verify, e2e, scan, Vercel — alle pass |
+
+## Runde 3 — evaluator runde 2: ACCEPT, fire smaa funn ryddet
+
+Evaluatoren bekreftet begge de blokkerende fiksene med egne mutasjoner (F1 → 9 røde,
+F2 → 3 røde), og gjorde noe bedre enn bestilt: den re-implementerte tidssone-feilen
+**inline uten import**, altså usynlig for den strukturelle testen. Den ble fanget
+likevel — av den TZ-pinnede assertionen. Vakten holder av riktig grunn, ikke ved flaks.
+TZ-pinningen ble bevist å nå fram til jest-workerne (probe i forket child:
+`TZ=UTC local=2026-08-31T23:00:00.000Z`), ikke bare til foreldreprosessen.
+
+Fire LOW-funn ryddet i `d8ecf86f`:
+
+| # | Funn | Fiks |
+| --- | --- | --- |
+| N1 | Oppsummeringens format-etikett leste FORTSATT `stablefordTeamSize` mode-blindt. Regelen hadde altså to hjem, ikke ett som `d3928166` påsto | Bruker `isParStableford`. **Hygiene, ikke observerbar:** med nullstillingen på plass når en lekket verdi aldri fram hit, så mutasjonen forblir grønn. Sagt rett ut i commit-meldingen |
+| N2 | Nullstillingen ved format-bytte var HELT udekket — begge linjene kunne slettes med 511/511 grønne | Skjerm-test som går stableford → wolf → stableford og krever at «Par» er borte. ⚠️ Første utgave av testen var verdiløs (sjekket bare at kontrollen manglet på wolf — den rendres aldri der); mutasjonen avslørte det, og assertionen ble skrevet om |
+| N3 | Trykk på formatet som ALLEREDE var valgt kastet hele oppsettet — «Par», greensome-andel, kr-per-poeng | `if (mode === gameMode) return;`. Mutasjon gir rødt |
+| N4 | `SetupStep` hadde en tredje håndskrevet kopi av familie-regelen | Delt `isStablefordFamily` |
+| N6 | Runbooken nevnte ikke at TZ-pinningen er lastbærende | Skrevet inn med hvorfor |
+
+Smoke-test på simulator etter fiksene: veiviseren går fortsatt gjennom, og et bevisst
+dobbelttrykk på det valgte formatet lar oppsettet stå (N3 i praksis).
 
 ### Restanser
 
