@@ -387,4 +387,37 @@ describe('generateSplitDayPlan — splittet cup-dag-bunt', () => {
     const ids = plan.map((m) => m.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('honours a matchCount BELOW what the teams could field (#1883)', () => {
+    // Ryder-oppsettet: 16 per lag, men bare 12 singler spilles — de fire
+    // høyeste handicapene benkes (handicap-strategien rangerer stigende).
+    const klassisk = CUP_PRESETS.find((p) => p.id === 'klassisk')!;
+    const team1 = Array.from({ length: 16 }, (_, i) => ({
+      userId: `a${i}`,
+      name: `A${i}`,
+      hcpIndex: i,
+    }));
+    const team2 = Array.from({ length: 16 }, (_, i) => ({
+      userId: `b${i}`,
+      name: `B${i}`,
+      hcpIndex: i,
+    }));
+
+    const matches = generateCupPlan({
+      team1,
+      team2,
+      sessions: buildSessions(klassisk.sessions, 16, { 2: 12 }),
+      strategy: 'handicap',
+    });
+
+    expect(matches).toHaveLength(28);
+    const singles = matches.filter((m) => m.format === 'singles_matchplay');
+    expect(singles).toHaveLength(12);
+    // Hver gjenværende spiller brukes høyst én gang i økta.
+    const side1Ids = singles.map((m) => m.side1[0]);
+    expect(new Set(side1Ids).size).toBe(12);
+    // De fire høyeste handicapene (a12–a15) står over.
+    expect(side1Ids).not.toContain('a15');
+    expect(side1Ids).not.toContain('a12');
+  });
 });

@@ -4847,8 +4847,8 @@
       "sessionCountsHeading": "Matches per session",
       "sessionCountsHint": "Not everyone has to play every session. Lower the count and the rest sit out.",
       "sessionCountValue": "{count} of {max}",
-      "sessionCountMinusAria": "Fewer matches for {format}",
-      "sessionCountPlusAria": "More matches for {format}"
+      "sessionCountMinusAria": "Fewer matches in session {n} ({format})",
+      "sessionCountPlusAria": "More matches in session {n} ({format})"
     },
     "delete": {
       "brassRibbon": "Confirm deletion",
