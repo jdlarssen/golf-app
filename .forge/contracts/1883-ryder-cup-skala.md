@@ -30,7 +30,7 @@ Ingen ny bibliotek-flate — alt bygger på mønstre lest fra repoet i spec-økt
 - [x] **SK5 — i18n + copy:** nye nøkler under `cup.generate` i BÅDE `messages/no.json` og `messages/en.json` (paritetstester grønne); `humanizer:humanizer` kjørt på de norske strengene før commit.
 - [x] **SK6 — Versjonsnotater:** `.changes/1883-ryder-cup-tak.md` + `.changes/1883-matcher-per-okt.md` gyldige — `node scripts/weekly-release.mjs --dry-run` godtar begge.
 - [x] **SK7 — Tester:** planens ene interaksjonstest i `GenerateMatchesWizard.test.tsx` grønn (stepper ↔ visning-wiring; ingen re-assert av Type A-tall); hele suiten grønn.
-- [ ] **SK8 — Staging-bevis:** klikkrunde på torny-staging FØR merge: cup-kladd med klassisk preset → Generer → del lag → skru ned singler → Neste → forhåndsvisning har nedjustert antall → generer. Bevis-kommentar + `staging-verified`-label på PR-en.
+- [x] **SK8 — Staging-bevis:** klikkrunde på torny-staging FØR merge: cup-kladd med klassisk preset → Generer → del lag → skru ned singler → Neste → forhåndsvisning har nedjustert antall → generer. Bevis-kommentar + `staging-verified`-label på PR-en.
 
 ## Gates
 
@@ -79,7 +79,7 @@ Ingen ny bibliotek-flate — alt bygger på mønstre lest fra repoet i spec-økt
 | SK5 | Fem nøkler i BEGGE kataloger; `npx vitest run messages` grønn (katalog- + apostrof-paritet). `humanizer`-skillet kjørt — to strenger endret mot planen (se avvik under). |
 | SK6 | `node scripts/weekly-release.mjs --dry-run` lister begge 1883-notatene som gyldige feat-rader, ingen valideringsfeil. |
 | SK7 | Interaksjonstesten grønn; full suite `npx vitest run` → **522 filer / 7050 tester, exit 0**. `npx tsc --noEmit` exit 0, `npm run lint` 0 errors, `npm run build` exit 0. |
-| SK8 | **Utestående** — staging-klikkrunde gjenstår før merge. |
+| SK8 | Kjørt mot staging på commit `4b4f690a` i produksjonsmodus, 16v16 klassisk personlig cup opprettet av en ikke-admin: steppere «8 av 8 / 8 av 8 / 16 av 16», singler ned til «12 av 16», steg 2 nådd, og DB-en fikk **28 matcher (8+8+12), 32 deltakere, 24 singel-plasser**. 0 prod-treff, ingen feilede requests. Bevis: PR #1890-kommentar + `staging-verified`. |
 
 ## Avvik fra planen (begrunnet)
 
@@ -106,3 +106,26 @@ Ingen ny bibliotek-flate — alt bygger på mønstre lest fra repoet i spec-økt
    `claude/ryder-cup-format-b137cd` — sistnevnte er sjekket ut i en søster-worktree
    og git nekter dobbel-checkout. Kontrakt-/spec-/plan-commitene er forfedre av
    PR-en, så `b137cd` er fullt merget etterpå og kan slettes.
+
+## Evaluator-pass (fresh-context skeptiker, 5 linser + dommer)
+
+Verdikt **ACCEPT**, null must-fix. Fire funn ble likevel rettet i PR-en fordi de
+gjaldt kode denne PR-en selv innfører:
+
+1. **Pinne-bugen** (dommeren ville filt den som eget issue): stepperen lagret en
+   overstyring på HVERT klikk, også et som landet på taket, og slettet den aldri.
+   Rørte organisatoren singel-stepperen ved 2v2 og fordelte resten til 16v16, sto
+   singler låst på det gamle tallet. Rettet ved å ikke lagre noe på taket.
+   Regresjonstesten er null-testet: uten fiksen «3 av 3» → «2 av 3», rød.
+2. **Test-hullet** som tre linser konvergerte på: interaksjonstesten stoppet på
+   visningen, så et refaktor som droppet overrides-argumentet ville gjort stepperne
+   rent kosmetiske med grønn suite. Testen går nå til steg 2 og teller matchene.
+3. **Like aria-navn** når en tilpasset plan gjentar samme format — labelene bærer nå
+   øktas posisjon.
+4. **Generator-dekning**: én Type A-case i `cupPairing.test.ts` for matchCount under
+   det lagene kan stille.
+
+To funn ble filt som egne issues i stedet, siden de ligger utenfor denne PR-ens
+scope: #1893 (cap-varselets copy peker forbi den nye løsningen) og #1894 (mål
+generering + cup-snapshot på 36-match-skala — begge pre-eksisterende kodeveier,
+men skalaen er ny for vanlige brukere).
