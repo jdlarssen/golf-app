@@ -186,10 +186,12 @@ export function OrganiserSection({
   const teamCount = Math.max(1, Math.ceil(activeCount / teamSize));
   const flightCount = Math.max(1, Math.ceil(activeCount / MAX_FLIGHT_SIZE));
   const canWithdraw = active && supportsWithdrawal(mode);
-  // Noten skal bare stå der den forklarer noe arrangøren faktisk ser mangle.
+  // Noten forklarer ÉN ting nå: at trekk-knappen mangler på egen rad. Lag og
+  // flight er ikke lenger sperret der — migrasjon 0168 ga arrangøren samme
+  // unntak på egen rad som de alt hadde på andres (#1855/#1868). Vakt (c)
+  // står, så «trekk deg selv» er fortsatt web-veien, akkurat som på nettsiden.
   const showOwnRowNote =
-    (showTeams || showFlights || canWithdraw) &&
-    bundle.players.some((p) => p.userId === userId);
+    canWithdraw && bundle.players.some((p) => p.userId === userId);
 
   const chosen = new Set(bundle.players.map((p) => p.userId));
   const query = search.trim().toLowerCase();
@@ -223,7 +225,7 @@ export function OrganiserSection({
                 </Text>
               </View>
 
-              {showTeams && !isMe ? (
+              {showTeams ? (
                 <ChipRow
                   label="Lag"
                   count={teamCount}
@@ -234,7 +236,7 @@ export function OrganiserSection({
                 />
               ) : null}
 
-              {showFlights && !isMe ? (
+              {showFlights ? (
                 <ChipRow
                   label="Flight"
                   count={flightCount}
