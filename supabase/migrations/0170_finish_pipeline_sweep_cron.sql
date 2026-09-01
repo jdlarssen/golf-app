@@ -31,8 +31,12 @@
 -- under the 15-minute threshold the contract set for adding an opportunistic
 -- after() fallback on the web game page, so no such fallback is built.
 --
--- The gate is the sweep's candidate set verbatim, and matches
--- games_finish_pipeline_pending_idx (0169) so it stays an index lookup:
+-- ONE RULE, THREE HOMES (AGENTS.md trap #4). This gate is the sweep's candidate
+-- set written out a second time; the other two homes are the route's own query
+-- (app/api/cron/finish-pipeline/route.ts) and the partial index
+-- games_finish_pipeline_pending_idx (created in 0169, corrected in 0171 - the
+-- index MUST keep matching this WHERE clause or the gate stops being an index
+-- lookup). Change one predicate, change all three in the same commit:
 --   status = 'finished'          - the flip has happened
 --   finish_pipeline_at is null   - but the tail has not run (0169 backfilled all
 --                                  pre-existing finished games, so history is
@@ -41,6 +45,20 @@
 --                                  own finish path and the suppressPerGameNotifi-
 --                                  cations mechanics, and the app refuses to end
 --                                  a cup round in the first place.
+--   source_game_id is null       - derived games (#1441 D3) are excluded. Their
+--                                  host's tail finishes them through
+--                                  finishDerivedGames, which writes only
+--                                  {status, ended_at} and never the marker, so
+--                                  each one is born matching the first two
+--                                  predicates. tournament_id does NOT cover
+--                                  them: games_tournament_id_fkey is ON DELETE
+--                                  SET NULL, so deleting a cup turns its entire
+--                                  match tree into candidates. Sweeping one
+--                                  re-runs the whole tail per match without the
+--                                  cup's suppressPerGameNotifications - a
+--                                  per-match "Resultatet er klart" mail to the
+--                                  same players and a billed Anthropic round
+--                                  report each.
 --
 -- No time window, unlike 0094's 7-day one. That window exists because a blocked
 -- scheduled game stays due forever; here the route claims the row (win-the-row
@@ -91,6 +109,7 @@ select cron.schedule(
     where status = 'finished'
       and finish_pipeline_at is null
       and tournament_id is null
+      and source_game_id is null
   );
   $job$
 );

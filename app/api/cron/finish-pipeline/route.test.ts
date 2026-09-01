@@ -119,14 +119,24 @@ describe('POST /api/cron/finish-pipeline — auth', () => {
 });
 
 describe('POST /api/cron/finish-pipeline — kandidatfilteret', () => {
-  it('spør kun etter finished spill uten markør og uten cup, eldste først', async () => {
+  it('spør kun etter finished spill uten markør, uten cup og uten kilde-spill, eldste først', async () => {
     await POST(cronRequest());
 
-    // Nøyaktig de tre predikatene i 0170s cron-gate og 0169s partielle indeks.
+    // Nøyaktig de FIRE predikatene i 0170s cron-gate og den partielle indeksen
+    // (0169, korrigert i 0171). Ett rule, tre hjem — de må være identiske.
     expect(eqCalls).toEqual([{ column: 'status', value: 'finished' }]);
     expect(isCalls).toEqual([
       { column: 'finish_pipeline_at', value: null },
       { column: 'tournament_id', value: null },
+      // #1856: avledede cup-kamper (#1441 D3) må ut. `finishDerivedGames`
+      // avslutter dem med kun {status, ended_at} og setter aldri markøren, så
+      // de fødes som kandidater — og `tournament_id is null` fanger dem ikke:
+      // `games_tournament_id_fkey` er ON DELETE SET NULL, så en slettet cup
+      // gjør hele kamptreet til kandidater. Hver av dem ville fått HELE halen
+      // kjørt på nytt uten cupens `suppressPerGameNotifications`: én
+      // «Resultatet er klart»-mail per kamp til de samme spillerne, og ett
+      // fakturert Anthropic-referat hver.
+      { column: 'source_game_id', value: null },
     ]);
     expect(orderCalls).toEqual([
       { column: 'ended_at', options: { ascending: true } },
