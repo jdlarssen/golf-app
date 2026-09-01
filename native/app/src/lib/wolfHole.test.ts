@@ -25,6 +25,7 @@ function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePl
     flightNumber: null,
     courseHandicap: 0,
     teeGender: 'mens',
+    acceptedAt: null,
     submittedAt: null,
     approvedAt: null,
     rejectionReason: null,

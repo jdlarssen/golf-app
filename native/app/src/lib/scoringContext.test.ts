@@ -20,6 +20,7 @@ function player(overrides: Partial<BundlePlayer> = {}): BundlePlayer {
     flightNumber: null,
     courseHandicap: 12,
     teeGender: 'mens',
+    acceptedAt: null,
     submittedAt: null,
     approvedAt: null,
     rejectionReason: null,

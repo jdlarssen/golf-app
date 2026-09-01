@@ -41,6 +41,7 @@ function player(
     flightNumber: null,
     courseHandicap: 0,
     teeGender: 'mens',
+    acceptedAt: null,
     submittedAt: null,
     approvedAt: null,
     rejectionReason: null,

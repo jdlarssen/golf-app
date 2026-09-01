@@ -74,6 +74,7 @@ const PLAYER_ROWS = [
     flight_number: 1,
     course_handicap: 12,
     tee_gender: 'mens',
+    accepted_at: '2026-08-29T18:00:00.000Z',
     submitted_at: null,
     approved_at: null,
     rejection_reason: null,
@@ -134,6 +135,8 @@ describe('gameBundle', () => {
         // Frossen kolonne — aldri regnet om i appen.
         courseHandicap: 12,
         teeGender: 'mens',
+        // #463: arrangør-flatene skiller bekreftet fra ubekreftet på dette feltet.
+        acceptedAt: '2026-08-29T18:00:00.000Z',
         submittedAt: null,
         approvedAt: null,
         rejectionReason: null,
@@ -209,20 +212,24 @@ describe('gameBundle', () => {
     expect(await bundleModule().loadGameBundle(GAME)).toEqual(fresh);
   });
 
-  it('forkaster en v2-nyttelast — den mangler sideturnerings-feltene', async () => {
-    // Grunnen til v3-bumpen: en v2-bundel har ingen `sideTournamentEnabled`, og
-    // `undefined` inn i gaten ville skrudd seksjonen av på et spill med LD/CTP.
-    const { gameBundleCacheKey, loadGameBundle } = bundleModule();
-    const db = require('./db') as typeof import('./db');
-    const connection = await db.getDb();
-    await db.putCacheEntry(connection, {
-      key: gameBundleCacheKey(GAME),
-      payload: JSON.stringify({ v: 2, bundle: { game: { id: GAME } } }),
-      fetchedAt: '2026-08-01T10:00:00.000Z',
-    });
+  it.each([[2], [3]])(
+    'forkaster en v%i-nyttelast — den mangler felt koden narrower på',
+    async (version: number) => {
+      // v2 mangler `sideTournamentEnabled` (seksjonen ville blitt skrudd av på
+      // et spill med LD/CTP); v3 mangler `acceptedAt` (hele rosteret ville stått
+      // «Ikke bekreftet»). Begge er falsy-hull, ikke krasj — derfor bumpen.
+      const { gameBundleCacheKey, loadGameBundle } = bundleModule();
+      const db = require('./db') as typeof import('./db');
+      const connection = await db.getDb();
+      await db.putCacheEntry(connection, {
+        key: gameBundleCacheKey(GAME),
+        payload: JSON.stringify({ v: version, bundle: { game: { id: GAME } } }),
+        fetchedAt: '2026-08-01T10:00:00.000Z',
+      });
 
-    expect(await loadGameBundle(GAME)).toBeUndefined();
-  });
+      expect(await loadGameBundle(GAME)).toBeUndefined();
+    },
+  );
 
   it('avviser en nyttelast fra en FREMTIDIG versjon like hardt', async () => {
     const { gameBundleCacheKey, loadGameBundle, BUNDLE_PAYLOAD_VERSION } =
