@@ -248,7 +248,8 @@ async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
   // ville vært direkte misvisende for et solo-format.
   if (isStablefordFamily(gameMode)) return null;
   const { playerOptions } = await getOptions();
-  if (playerOptions.length >= 8) return null;
+  // #1838: samme terskel som `/opprett-spill` (#1794) og `/admin/games/new`.
+  if (playerOptions.length > 1) return null;
   const tEdit = await getTranslations('admin.game.edit');
   return (
     <Banner tone="info">
