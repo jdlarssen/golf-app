@@ -29,8 +29,11 @@ import { getCacheEntry, getDb, putCacheEntry } from './db';
  * `sideDisabledCategories`. En v2-oppføring mangler dem, og et `undefined`
  * inn i sideturnerings-gaten ville skrudd seksjonen av på et spill som
  * faktisk har LD/CTP — den leses derfor som «ingen cache».
+ * v4 (N6b, #1855): la til `acceptedAt` på spiller-radene. En v3-oppføring
+ * mangler feltet, og `undefined` er falsy — hele rosteret ville stått som
+ * «Ikke bekreftet» i arrangør-visningen, også spillere som har sagt ja.
  */
-export const BUNDLE_PAYLOAD_VERSION = 3;
+export const BUNDLE_PAYLOAD_VERSION = 4;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -92,6 +95,13 @@ export interface BundlePlayer {
   flightNumber: number | null;
   courseHandicap: number | null;
   teeGender: string;
+  /**
+   * Når spilleren bekreftet at hen blir med (#463), eller null.
+   *
+   * Arrangør-flatene gater bekreftet/ubekreftet på den, og
+   * `confirmParticipation` (`rosterActions.ts`) er det som setter den.
+   */
+  acceptedAt: string | null;
   submittedAt: string | null;
   approvedAt: string | null;
   rejectionReason: string | null;
@@ -161,6 +171,7 @@ interface PlayerRow {
   flight_number: number | null;
   course_handicap: number | null;
   tee_gender: string;
+  accepted_at: string | null;
   submitted_at: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
@@ -172,7 +183,7 @@ interface PlayerRow {
 // users (user_id, approved_by_user_id, withdrawn_by_user_id), så et bart
 // `users(...)` er tvetydig og feiler. Samme hint som webben bruker.
 const PLAYER_SELECT =
-  'user_id, team_number, flight_number, course_handicap, tee_gender, submitted_at, approved_at, rejection_reason, withdrawn_at, users!game_players_user_id_fkey(name, nickname)';
+  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, approved_at, rejection_reason, withdrawn_at, users!game_players_user_id_fkey(name, nickname)';
 
 // Bane, tee og hullene rir med på games-raden som embeds. Det gjør hele
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
@@ -214,6 +225,7 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       flightNumber: row.flight_number,
       courseHandicap: row.course_handicap,
       teeGender: row.tee_gender,
+      acceptedAt: row.accepted_at,
       submittedAt: row.submitted_at,
       approvedAt: row.approved_at,
       rejectionReason: row.rejection_reason,
