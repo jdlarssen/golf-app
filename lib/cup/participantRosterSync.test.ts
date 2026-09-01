@@ -6,6 +6,7 @@ import {
   type ParticipantRosterSyncPlan,
   type SwapParticipantCapInput,
 } from './participantRosterSync';
+import { MAX_PERSONAL_CUP_PLAYERS } from './limits';
 
 /**
  * Type A (pure logic) for deltakerlista etter et spillerbytte (#1735).
@@ -74,8 +75,15 @@ describe('planParticipantRosterSync — beslutningstabellen (#1735)', () => {
  * (exceedsPersonalPlayerCap) — her testes sett-matematikken rundt.
  */
 
-/** 24 deltakere — nøyaktig på taket (MAX_PERSONAL_CUP_PLAYERS). */
-const AT_CAP = Array.from({ length: 24 }, (_, i) => `p${i}`);
+/**
+ * Nøyaktig på deltaker-taket. Utledet fra konstanten, ALDRI en litteral: taket
+ * har flyttet seg (#1883, 24 → 40), og en hardkodet fixture går rødt hver gang
+ * det skjer i stedet for å følge regelens ene hjem (lib/cup/limits.ts).
+ */
+const AT_CAP = Array.from(
+  { length: MAX_PERSONAL_CUP_PLAYERS },
+  (_, i) => `p${i}`,
+);
 
 function capInput(
   overrides: Partial<SwapParticipantCapInput> = {},
@@ -94,18 +102,21 @@ function capInput(
 describe('swapExceedsPersonalPlayerCap — tak-vakta i planfasen (#1804)', () => {
   const cases: Array<[string, Partial<SwapParticipantCapInput>, boolean]> = [
     [
-      'på taket, ny reserve inn, ut-spilleren BLIR i en annen bunt: 25 → avvis',
+      'på taket, ny reserve inn, ut-spilleren BLIR i en annen bunt: taket + 1 → avvis',
       { outRemainsInCup: true },
       true,
     ],
     [
-      'på taket, ny reserve inn, ut-spilleren forlater cupen helt: 24 → ok',
+      'på taket, ny reserve inn, ut-spilleren forlater cupen helt: blir stående på taket → ok',
       {},
       false,
     ],
     [
-      'under taket (23), ny reserve inn, ut-spilleren blir: 24 → ok (taket er >, ikke >=)',
-      { participantIds: AT_CAP.slice(0, 23), outRemainsInCup: true },
+      'under taket (taket − 1), ny reserve inn, ut-spilleren blir: taket → ok (taket er >, ikke >=)',
+      {
+        participantIds: AT_CAP.slice(0, MAX_PERSONAL_CUP_PLAYERS - 1),
+        outRemainsInCup: true,
+      },
       false,
     ],
     [
@@ -119,7 +130,7 @@ describe('swapExceedsPersonalPlayerCap — tak-vakta i planfasen (#1804)', () =>
       true,
     ],
     [
-      'admin-aktør er uncapped: samme 25-input som rad 1 → ok',
+      'admin-aktør er uncapped: samme «taket + 1»-input som rad 1 → ok',
       { outRemainsInCup: true, actorIsAdmin: true },
       false,
     ],

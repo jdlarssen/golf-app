@@ -6,6 +6,10 @@ import {
 } from '@/tests/serverActionMocks';
 import { generateSplitDayPlan, type PlannedMatch } from '@/lib/cup/cupPairing';
 import type { CupBatchMatch } from './actions';
+import {
+  MAX_PERSONAL_CUP_MATCHES,
+  MAX_PERSONAL_CUP_PLAYERS,
+} from '@/lib/cup/limits';
 
 /**
  * Unit tests for createCupMatchesFromPlan — the batch cup-match creator (#219,
@@ -1141,7 +1145,19 @@ describe('createCupMatchesFromPlan — rollback dekker pass 2 (#1441, D3/#675)',
 });
 
 describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede matcher (#1441, D5)', () => {
-  it('6 host + 12 avledet (18 matcher totalt) alene overskrider taket (16): too_many_matches, ingen insert', async () => {
+  // Bunten er 1 host + 2 avledede per flight, så totalen er 3 × antall flights.
+  // Begge tallene utledes fra takene, ALDRI som litteraler: #1883 hevet
+  // match-taket 16 → 36, og en hardkodet 18-match-fixture sluttet dermed å
+  // overskride noe som helst (testen ble grønn på feil grunnlag).
+  const HOST_COUNT = Math.floor(MAX_PERSONAL_CUP_MATCHES / 3) + 1;
+  // Flightene deler en spiller-pool på nøyaktig deltaker-taket (fire spillere
+  // per flight, gjenbrukt på tvers av flights). Det isolerer det testen faktisk
+  // handler om: med fire DISTINKTE spillere per flight ville HOST_COUNT flights
+  // sprengt deltaker-taket også, og testen hadde svart `too_many_matches` bare
+  // fordi match-taket sjekkes først (actions.ts) — riktig svar av feil grunn.
+  const QUADS = Math.floor(MAX_PERSONAL_CUP_PLAYERS / 4);
+
+  it('host + avledede matcher over match-taket: too_many_matches, ingen insert', async () => {
     adminCupCreatedBy = 'user-1'; // ikke-admin passerer som cupens egen skaper
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: false }, error: null }, // requireAdmin (loadRole)
@@ -1152,12 +1168,12 @@ describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede match
     setUser('user-1');
     const { createCupMatchesFromPlan } = await import('./actions');
 
-    const hosts: CupBatchMatch[] = Array.from({ length: 6 }, (_, i) => ({
+    const hosts: CupBatchMatch[] = Array.from({ length: HOST_COUNT }, (_, i) => ({
       id: `best_ball-${i + 1}`,
       format: 'best_ball',
       label: `Best ball ${i + 1}`,
-      side1: [`A${i}1`, `A${i}2`],
-      side2: [`B${i}1`, `B${i}2`],
+      side1: [`A${i % QUADS}1`, `A${i % QUADS}2`],
+      side2: [`B${i % QUADS}1`, `B${i % QUADS}2`],
       segment: 'back9',
       flightIndex: i + 1,
     }));
@@ -1166,21 +1182,29 @@ describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede match
         id: `singles_matchplay-${i * 2 + 1}`,
         format: 'singles_matchplay' as const,
         label: `Singel ${i * 2 + 1}`,
-        side1: [`A${i}1`],
-        side2: [`B${i}1`],
+        side1: [`A${i % QUADS}1`],
+        side2: [`B${i % QUADS}1`],
         sourceId: h.id,
       },
       {
         id: `singles_matchplay-${i * 2 + 2}`,
         format: 'singles_matchplay' as const,
         label: `Singel ${i * 2 + 2}`,
-        side1: [`A${i}2`],
-        side2: [`B${i}2`],
+        side1: [`A${i % QUADS}2`],
+        side2: [`B${i % QUADS}2`],
         sourceId: h.id,
       },
     ]);
     const matches = [...hosts, ...derived];
-    expect(matches).toHaveLength(18); // 6 host + 12 avledet — kun host-ene (6) ville vært under taket
+    // Host-ene ALENE er under taket — det er de avledede som velter det (D5).
+    expect(HOST_COUNT).toBeLessThanOrEqual(MAX_PERSONAL_CUP_MATCHES);
+    expect(matches).toHaveLength(HOST_COUNT * 3);
+    expect(matches.length).toBeGreaterThan(MAX_PERSONAL_CUP_MATCHES);
+    // ...og deltakerne holder seg innenfor spiller-taket, så svaret under kan
+    // bare komme fra match-taket.
+    expect(
+      new Set(matches.flatMap((m) => [...m.side1, ...m.side2])).size,
+    ).toBeLessThanOrEqual(MAX_PERSONAL_CUP_PLAYERS);
 
     expect(
       await createCupMatchesFromPlan({

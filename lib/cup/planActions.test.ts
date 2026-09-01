@@ -4,6 +4,7 @@ import {
   makeRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
+import { MAX_PERSONAL_CUP_PLAYERS } from './limits';
 
 /**
  * Unit tests for saveCupPlan / addCupParticipant / removeCupParticipant (#1472).
@@ -321,21 +322,30 @@ describe('addCupParticipant', () => {
   });
 
   it('personal non-admin cup at the player cap: too_many_players, no insert', async () => {
-    const existing = Array.from({ length: 24 }, (_, i) => ({ user_id: `p${i + 1}` }));
+    // Fixturen ligger PÅ taket og utledes fra konstanten, ikke en litteral —
+    // #1883 hevet taket 24 → 40, og en hardkodet 24 hadde gjort raden grønn
+    // på feil grunnlag (settet ville ikke lenger overskride noe).
+    const existing = Array.from(
+      { length: MAX_PERSONAL_CUP_PLAYERS },
+      (_, i) => ({ user_id: `p${i + 1}` }),
+    );
+    const overCapCandidate = `p${MAX_PERSONAL_CUP_PLAYERS + 1}`;
     adminMock = buildSupabaseMock([
       gateGroupIdNull, // gate group_id
       { data: { created_by: 'creator-1' }, error: null }, // requireAdminOrTournamentCreator
       { data: { status: 'draft' }, error: null }, // cup lookup
-      { data: existing, error: null }, // existing participants read (24 distinct)
+      { data: existing, error: null }, // existing participants read (på taket)
     ]);
     supabaseMock = buildSupabaseMock([normalUser]);
     setUser('creator-1');
-    // p25 is a valid candidate but pushes the distinct set to 25 (> cap of 24).
-    candidateMock.mockResolvedValue([{ id: 'p25', displayName: 'Nr 25', hcpIndex: 12 }]);
+    // A valid candidate, but it pushes the distinct set one past the cap.
+    candidateMock.mockResolvedValue([
+      { id: overCapCandidate, displayName: 'Én for mange', hcpIndex: 12 },
+    ]);
 
     const { addCupParticipant } = await import('./planActions');
     expect(
-      await addCupParticipant(participantForm({ user_id: 'p25' })),
+      await addCupParticipant(participantForm({ user_id: overCapCandidate })),
     ).toEqual({ error: 'too_many_players' });
     expect(
       adminMock.__fromCalls.some(
