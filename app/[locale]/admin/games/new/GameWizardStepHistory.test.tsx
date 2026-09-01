@@ -154,6 +154,21 @@ describe('GameWizard — #1380 per-steg history', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
+  // #1837: overgangen unmounter flisen som ble klikket, så fokus falt til
+  // <body> — tastaturbrukere måtte tabbe fra toppen igjen, og ingen
+  // skjermleser sa at steget byttet. Fokus skal ligge på steg-overskriften.
+  it('auto-videre flytter fokus til steg-overskriften', () => {
+    renderWizard();
+
+    fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
+
+    const heading = screen.getByRole('heading', { name: 'Format' });
+    expect(document.activeElement).toBe(heading);
+    // Annonseringen står på egne ben: telleren er overskriftens beskrivelse.
+    expect(document.getElementById(heading.getAttribute('aria-describedby')!))
+      .toHaveTextContent('Steg 2 av 5');
+  });
+
   it('«Forrige» pusher også — hvert steg er sin egen history-entry', () => {
     searchString = 'step=2';
     renderWizard(SEEDED_BY_ROUTE);
