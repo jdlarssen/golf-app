@@ -229,7 +229,7 @@ describe('SideTournamentView — full ordered award sequence (characterization #
         "Konge på par-3 (lag): 4p",
         "Konge på par-4 (lag): 4p",
         "Konge på par-5 (lag): 4p",
-        "Lengste bogey-fri (Alice, 5 hull hull 3–7): 4p",
+        "Lengste bogey-fri (Alice, 5 på hull 3–7): 4p",
         "Flest albatrosser (lag): 4p",
         "Flest eagles+ (lag): 4p",
         "Flest hole-in-one (lag): 4p",
