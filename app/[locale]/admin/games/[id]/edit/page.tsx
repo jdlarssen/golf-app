@@ -252,7 +252,7 @@ async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
   if (playerOptions.length > 1) return null;
   const tEdit = await getTranslations('admin.game.edit');
   return (
-    <Banner tone="info">
+    <Banner tone="info" testId="player-shortage-banner">
       {tEdit.rich('playerShortageBanner', {
         link: (chunks) => (
           <SmartLink href="/admin/spillere" className="underline hover:no-underline">
