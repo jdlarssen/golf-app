@@ -7,20 +7,21 @@ import {
 } from './limits';
 
 describe('personal cup limits', () => {
-  it('caps are the public kompis-sized values (#525/#526, #1441 raised match cap)', () => {
-    expect(MAX_PERSONAL_CUP_MATCHES).toBe(16);
-    expect(MAX_PERSONAL_CUP_PLAYERS).toBe(24);
+  it('caps fit a full Ryder Cup with 16-player teams (#1883)', () => {
+    expect(MAX_PERSONAL_CUP_MATCHES).toBe(36);
+    expect(MAX_PERSONAL_CUP_PLAYERS).toBe(40);
   });
 
   describe('exceedsPersonalMatchCap', () => {
     it.each<[number, boolean, boolean]>([
       // [totalMatches, isAdmin, expected]
-      [16, false, false], // at the cap (#1441: raised from 4) → allowed
-      [17, false, true], // over the cap → blocked
+      [36, false, false], // at the cap (#1883: raised from 16) → allowed
+      [37, false, true], // over the cap → blocked
+      [28, false, false], // the submitted 8+8+12 Ryder Cup setup
       [0, false, false],
       [1, false, false],
       [99, true, false], // admin is uncapped
-      [17, true, false],
+      [37, true, false],
     ])('total=%i admin=%s → %s', (total, isAdmin, expected) => {
       expect(exceedsPersonalMatchCap(total, isAdmin)).toBe(expected);
     });
@@ -29,12 +30,13 @@ describe('personal cup limits', () => {
   describe('exceedsPersonalPlayerCap', () => {
     it.each<[number, boolean, boolean]>([
       // [distinctPlayers, isAdmin, expected]
-      [24, false, false], // at the cap → allowed
-      [25, false, true], // over the cap → blocked
+      [40, false, false], // at the cap → allowed
+      [41, false, true], // over the cap → blocked
+      [34, false, false], // 16+16 players + two captains
       [0, false, false],
       [16, false, false],
       [99, true, false], // admin is uncapped
-      [25, true, false],
+      [41, true, false],
     ])('distinct=%i admin=%s → %s', (distinct, isAdmin, expected) => {
       expect(exceedsPersonalPlayerCap(distinct, isAdmin)).toBe(expected);
     });

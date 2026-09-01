@@ -1,25 +1,28 @@
 /**
  * Tak for personlige (frittstående) cuper (#526).
  *
- * En vanlig bruker kan lage sin egen cup blant venner, men capped til en
- * «1 helg»-størrelse Ryder Cup. Global admin er uncapped (sekretariatet kjører
- * klubb-skala). Klubb-cuper (#480/#524) har egne, uncappede regler.
+ * En vanlig bruker kan lage sin egen cup blant venner, capped til Ryder
+ * Cup-skala (#1883): 16 spillere per lag + kapteiner og et fullt
+ * 8 foursomes + 8 four-ball + 12 singler-oppsett (28 matcher / 34
+ * deltakere) skal få plass med slingringsmonn. Global admin er uncapped
+ * (sekretariatet kjører klubb-skala). Klubb-cuper (#480/#524) har egne,
+ * uncappede regler.
  *
- * Match-taket ble hevet 4 → 16 (#1441): splittet-cup-dag-bunten er 4 matcher
- * per flight (greensome + best ball + 2 singles), så en ikke-admin som setter
- * opp en hel cup-dag selv (3 flights × 4 matcher = 12, opp mot 16 med litt
- * slingringsmonn) trenger et tak som faktisk får plass til formatet. Spiller-
- * taket (24, uendret) er nå det reelt bindende for en full 6v6-dag — 4
- * matcher à maks 2 spillere/side ville tidligere vært det bindende taket, men
- * er det ikke lenger ved 16.
+ * Historikk: match-taket 4 → 16 i #1441 (splittet-cup-dag-bunten),
+ * 16 → 36 i #1883. Spiller-taket delte verdi med Kompis-runde-taket
+ * (#525, 24) fram til #1883 — de to er nå frikoblet, og 24-taket for
+ * Kompis-runder lever videre der.
+ *
+ * Fixtures som ligger PÅ taket skal utledes fra konstantene under, aldri
+ * skrives som litteraler — ellers går de rødt neste gang taket flyttes
+ * (AGENTS.md-felle 4: en regel har ett hjem).
  */
 
 /** Maks antall matcher i en personlig cup (ikke-admin). */
-export const MAX_PERSONAL_CUP_MATCHES = 16;
+export const MAX_PERSONAL_CUP_MATCHES = 36;
 
-/** Maks antall distinkte deltakere i en personlig cup (ikke-admin). Samme
- * offentlige tak som Kompis-runder (#525). */
-export const MAX_PERSONAL_CUP_PLAYERS = 24;
+/** Maks antall distinkte deltakere i en personlig cup (ikke-admin). */
+export const MAX_PERSONAL_CUP_PLAYERS = 40;
 
 /**
  * True hvis `totalMatches` overskrider match-taket for en ikke-admin. Admin er

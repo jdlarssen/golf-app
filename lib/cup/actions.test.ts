@@ -4,6 +4,7 @@ import {
   makeRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
+import { MAX_PERSONAL_CUP_PLAYERS } from './limits';
 
 /**
  * #1397: createTournamentDraft signalled every error via `redirect('?error=…')`,
@@ -622,10 +623,16 @@ const cupCreatorUser = {
   error: null,
 };
 
-/** 24 deltakere — nøyaktig på taket. Ut-spilleren er én av dem. */
+/**
+ * Nøyaktig på deltaker-taket. Ut-spilleren er én av dem. Antallet utledes fra
+ * konstanten (ikke en litteral) så raden blir stående PÅ taket også neste gang
+ * taket flyttes — #1883 hevet det 24 → 40.
+ */
 const PARTICIPANTS_AT_CAP = [
   { user_id: 'out' },
-  ...Array.from({ length: 23 }, (_, i) => ({ user_id: `p${i}` })),
+  ...Array.from({ length: MAX_PERSONAL_CUP_PLAYERS - 1 }, (_, i) => ({
+    user_id: `p${i}`,
+  })),
 ];
 
 /** Som `readsUpToRoster`, men for cupens IKKE-admin-skaper. */

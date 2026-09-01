@@ -335,13 +335,16 @@ export async function createCupMatchesFromPlan(
     );
     if (!allInClub) return { error: 'not_members' };
   } else if (!isAdmin) {
-    // Personlig cup, ikke-admin: håndhev «1 helg»-tak (#526, hevet til 16
-    // matcher i #1441 — se lib/cup/limits.ts). Teller eksisterende + nye
-    // (`matches.length` inkluderer BÅDE host- og avledede matcher — en
-    // splittet-cup-dag-bunt på 4 matcher per flight teller alle 4, ikke bare
-    // host-ene), så semantikken «≤16 matcher / ≤24 deltakere i cupen» holder
-    // selv ved re-generering. Match-taket er bindende i praksis. Admin
-    // hopper over (uncapped) — derfor `!isAdmin`-grenen.
+    // Personlig cup, ikke-admin: håndhev taket (#526, hevet til Ryder
+    // Cup-skala i #1883 — se lib/cup/limits.ts for verdiene og historikken).
+    // Teller eksisterende + nye (`matches.length` inkluderer BÅDE host- og
+    // avledede matcher — en splittet-cup-dag-bunt på 4 matcher per flight
+    // teller alle 4, ikke bare host-ene), så semantikken «≤ match-taket /
+    // ≤ deltaker-taket i cupen» holder selv ved re-generering. Hvilket av de
+    // to som binder først avhenger av formatet: 2v2-bunter bruker fire
+    // distinkte spillere per flight og treffer deltaker-taket først, mens
+    // singel-tunge oppsett treffer match-taket. Admin hopper over (uncapped)
+    // — derfor `!isAdmin`-grenen.
     // Tellingene bruker admin-client: game_players-SELECT-RLS krever at man er
     // spiller i kampen (is_in_game), så en skaper som ikke selv spiller ville
     // lest 0 eksisterende deltakere og undertelt taket. Skaperen er allerede
