@@ -440,6 +440,62 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
     });
   });
 
+  // #1867: RLS kan filtrere auto-avslaget ned til null rader, og PostgREST
+  // svarer `error == null` på det. Før talte kjernen ikke rader og returnerte
+  // alle søkerne som «utløpt» — wrapperen sendte da registration_expired for
+  // forespørsler som fortsatt sto `pending` i databasen.
+  it('0 rader tilbake fra auto-avslaget → ingen notify, starten står', async () => {
+    const pendingRequests = [
+      { id: 'req-1', user_id: 'applicant-1' },
+      { id: 'req-2', user_id: 'applicant-2' },
+    ];
+
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      { data: null, error: null },
+      { data: [{ id: 'game-id' }], error: null },
+      // #1055: SELECT pending game_registration_requests
+      { data: pendingRequests, error: null },
+      // #1867: UPDATE traff null rader — ingen feil, men ingenting skjedde
+      { data: [], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  // Samme vakt, delvis utslag: flippet én rad av to, så nøyaktig én søker skal
+  // få beskjed. Den andre står fortsatt `pending` og skal ikke varsles.
+  it('delvis flipp → kun søkeren hvis rad faktisk ble avslått varsles', async () => {
+    const pendingRequests = [
+      { id: 'req-1', user_id: 'applicant-1' },
+      { id: 'req-2', user_id: 'applicant-2' },
+    ];
+
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      { data: null, error: null },
+      { data: [{ id: 'game-id' }], error: null },
+      { data: pendingRequests, error: null },
+      // Kun req-2 kom tilbake fra UPDATE-en.
+      { data: [{ id: 'req-2' }], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'applicant-2',
+      kind: 'registration_expired',
+      payload: { game_id: 'game-id', game_name: 'Lørdagsrunden' },
+    });
+  });
+
   it('ingen ventende forespørsler → ingen UPDATE, ingen notify', async () => {
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
