@@ -315,10 +315,22 @@ export async function addCupParticipant(
   // etter tillegg — mirror av genereringens cap-sjekk. Et allerede påmeldt
   // targetUserId gjør settet uendret (ingen falsk avvisning ved re-add).
   if (!groupId && !isAdmin) {
-    const { data: existing } = await admin
+    const { data: existing, error: existingErr } = await admin
       .from('tournament_participants')
       .select('user_id')
       .eq('tournament_id', id);
+    // #1810: uten denne sjekken ga en feilet lesing `existing = null` → settet
+    // ble 1 → taket slapp påmeldingen gjennom. Vakta må feile LUKKET (samme
+    // semantikk som `checkSwapParticipantCap`): kan vi ikke telle, sier vi nei.
+    // En vellykket lesing med 0 rader er derimot en gyldig tom cup.
+    if (existingErr) {
+      console.error('[cup] addCupParticipant cap read failed', {
+        id,
+        targetUserId,
+        error: existingErr,
+      });
+      return { error: 'plan_save_failed' };
+    }
     const distinctAfter = new Set([
       ...(existing ?? []).map((r) => r.user_id as string),
       targetUserId,

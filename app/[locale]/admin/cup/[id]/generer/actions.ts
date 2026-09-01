@@ -346,19 +346,40 @@ export async function createCupMatchesFromPlan(
     // spiller i kampen (is_in_game), så en skaper som ikke selv spiller ville
     // lest 0 eksisterende deltakere og undertelt taket. Skaperen er allerede
     // gatet (requireAdminOrTournamentCreator), så admin-client er trygt her.
+    // #1810: begge tellingene ignorerte error-kanalen og falt tilbake til `[]`
+    // — en feilet `games`-lesing undertelte match-taket OG hoppet over
+    // deltaker-lesingen helt (betingelsen under), så begge takene slapp
+    // batchen gjennom. Vakta feiler nå LUKKET: kan vi ikke telle, generer vi
+    // ikke. Ingenting er skrevet på dette punktet, så `insert_failed` er
+    // riktig svar til veiviseren (0 matcher opprettet). En vellykket lesing
+    // med 0 rader er derimot en gyldig, tom cup — den passerer som før.
     const admin = getAdminClient();
-    const { data: existingGames } = await admin
+    const { data: existingGames, error: existingGamesError } = await admin
       .from('games')
       .select('id')
       .eq('tournament_id', tournamentId);
+    if (existingGamesError) {
+      console.error('[cup] generateMatches cap read failed (games)', {
+        tournamentId,
+        error: existingGamesError,
+      });
+      return { error: 'insert_failed' };
+    }
     const existingGameIds = (existingGames ?? []).map((g) => g.id as string);
 
     let existingPlayerIds: string[] = [];
     if (existingGameIds.length > 0) {
-      const { data: existingPlayers } = await admin
+      const { data: existingPlayers, error: existingPlayersError } = await admin
         .from('game_players')
         .select('user_id')
         .in('game_id', existingGameIds);
+      if (existingPlayersError) {
+        console.error('[cup] generateMatches cap read failed (game_players)', {
+          tournamentId,
+          error: existingPlayersError,
+        });
+        return { error: 'insert_failed' };
+      }
       existingPlayerIds = (existingPlayers ?? []).map(
         (p) => p.user_id as string,
       );
