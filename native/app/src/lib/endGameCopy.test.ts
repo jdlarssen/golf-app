@@ -6,9 +6,9 @@
 //  1. **Ingen kode uten setning.** `tsc` sikrer at switchen er uttømmende;
 //     denne sikrer at det som kommer ut er lesbar tekst — ikke tom streng,
 //     ikke en igjenglemt `{pos}`.
-//  2. **Én årsak, én setning.** Fjorten grunner som alle sier «noe gikk galt»
+//  2. **Én årsak, én setning.** Femten grunner som alle sier «noe gikk galt»
 //     er den feilen som kostet N6b tre feilsøkingsrunder. Testen krever at de
-//     fjorten er forskjellige fra hverandre.
+//     femten er forskjellige fra hverandre.
 import source from '../../../../messages/no.json';
 import type { EndRoundFailure } from '../data/endGame';
 import {
@@ -29,6 +29,7 @@ const REASONS: EndRoundFailure[] = [
   'not-all-submitted',
   'not-all-approved',
   'withdrawal-unsupported',
+  'withdraw-after-submit',
   'db-withdraw',
   'db-winners',
   'rls-denied',
@@ -46,7 +47,7 @@ describe('describeEndRoundFailure', () => {
     expect(isFinishedSentence(describeEndRoundFailure(reason))).toBe(true);
   });
 
-  it('gir fjorten FORSKJELLIGE setninger', () => {
+  it('gir femten FORSKJELLIGE setninger', () => {
     const sentences = REASONS.map((reason) => describeEndRoundFailure(reason));
     expect(new Set(sentences).size).toBe(REASONS.length);
   });
@@ -74,6 +75,23 @@ describe('describeEndRoundFailure', () => {
     );
     expect(END_GAME_TEXT.withdrawLabel).toBe(source.game.finish.withdrawLabel);
     expect(END_GAME_TEXT.submitBusy).toBe(source.game.finish.finishPending);
+  });
+
+  it('bøyer kortet etter hvor mange som rakk å levere', () => {
+    // Flertallsformen er ikke pynt: «Even og Kari leverte kortet sitt» leses som
+    // ETT kort, og arrangøren leter etter feil antall rader i listen.
+    const one = describeEndRoundFailure('withdraw-after-submit', ['Even']);
+    const two = describeEndRoundFailure('withdraw-after-submit', [
+      'Even',
+      'Kari',
+    ]);
+    expect(one).toContain('Even leverte kortet sitt');
+    expect(two).toContain('Even og Kari leverte kortene sine');
+    // Begge må si at avkryssingen IKKE ble utført halvveis — ellers leter
+    // arrangøren etter en trukket spiller som ikke finnes.
+    for (const text of [one, two]) {
+      expect(text).toContain('ingen ble trukket');
+    }
   });
 
   it('sier samme nett-linje som roster-skrivingene', () => {
@@ -125,5 +143,17 @@ describe('END_GAME_TEXT', () => {
 
   it('sier at avslutningen ikke kan angres fra appen', () => {
     expect(END_GAME_TEXT.confirmBody).toContain('nettsiden');
+  });
+
+  it('holder trukket og «uten kort» fra hverandre — de svarer motsatt', () => {
+    // Eieren leste den forrige versjonen og skjønte den ikke, med god grunn:
+    // introen lovet at slagene «teller fortsatt» over BEGGE radtypene, mens
+    // hinten rett under sa at trukne ikke teller. Introen tok feil — en
+    // trukket spiller er ute av både spiller- og score-settet i
+    // `buildModeResultForGame` (:308-334). Testen låser todelingen, ikke
+    // ordlyden: introen skal ikke uttale seg om slagene i det hele tatt.
+    expect(END_GAME_TEXT.missingIntro).not.toContain('teller');
+    expect(END_GAME_TEXT.withdrawHint).toContain('teller ikke i rangeringen');
+    expect(END_GAME_TEXT.noCardHint).toContain('teller fortsatt');
   });
 });

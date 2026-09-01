@@ -7,7 +7,7 @@
 // legger noen til en kode i `EndRoundFailure`, faller `tsc` på den manglende
 // returverdien. Det er hele grunnen til at fila finnes.
 //
-// **Én årsak, én setning.** Avslutningen kan avvises av fjorten forskjellige
+// **Én årsak, én setning.** Avslutningen kan avvises av femten forskjellige
 // grunner, og de betyr helt ulike ting for arrangøren: «noen mangler
 // godkjenning» løses av en medspiller, «du har ikke lov» løses ikke i appen i
 // det hele tatt. Én generisk «noe gikk galt» over alle fjorten kostet N6b tre
@@ -71,6 +71,17 @@ export function describeEndRoundFailure(
         : 'Et kort mangler godkjenning. En medspiller må godkjenne før du avslutter.';
     case 'withdrawal-unsupported':
       return 'I dette formatet kan du ikke trekke en spiller.';
+    case 'withdraw-after-submit': {
+      // Flertall endrer bare eiendelen — norsk bøyer ikke verbet etter antall.
+      const cards = names.length > 1 ? 'kortene sine' : 'kortet sitt';
+      const lead = who
+        ? `${who} leverte ${cards} i mellomtiden`
+        : 'Et kort kom inn i mellomtiden';
+      // «ingen ble trukket» er ikke pynt: arrangøren MÅ vite at avkryssingen
+      // ikke ble utført halvveis, ellers leter hen etter en trukket spiller
+      // som ikke finnes.
+      return `${lead}, så ingen ble trukket. Sjekk listen og prøv igjen.`;
+    }
     case 'db-withdraw':
       return who
         ? `Fikk ikke trukket ${who}. Prøv igjen.`
@@ -122,11 +133,20 @@ export const END_GAME_TEXT = {
   allReady:
     'Alle har levert. Avslutter du nå, låses runden og resultatene åpnes for hele gjengen.',
   missingHeading: 'Disse mangler kort',
-  missingIntro:
-    'Huk av alle sammen, så kan du avslutte likevel. Slagene de rakk å taste teller fortsatt.',
+  // Introen står over BEGGE radtypene, så den kan ikke si noe om hva slagene
+  // gjør — de to radene svarer motsatt, og hver sin hint sier det selv.
+  missingIntro: 'Huk av alle sammen, så kan du avslutte likevel.',
   withdrawLabel: 'Marker som trukket',
-  withdrawHint: 'Trukne spillere teller ikke i rangeringen.',
+  // Trukket = ute av `buildModeResultForGame`s BÅDE spiller- og score-sett
+  // (:308-334), altså ute av rangeringen OG sideturneringen. Radene i `scores`
+  // slettes derimot aldri, og appen lar spilleren åpne sitt eget kort etterpå
+  // (GameHome «Scorekort» er kun gatet på `supported`) — derfor «blir stående».
+  withdrawHint:
+    'Trukne spillere teller ikke i rangeringen. Slagene blir stående på scorekortet.',
   noCardLabel: 'Avslutt uten kortet',
+  // IKKE samme sak: denne raden trekkes ikke, den avsluttes bare uten kort.
+  // Spilleren er fortsatt med i rangeringen, så her teller slagene faktisk.
+  // Webbens `game.finish.bodyWithWd` gjør nøyaktig samme todeling.
   noCardHint: 'Spilleren blir stående som ikke levert. Slagene teller fortsatt.',
   ownRowHint:
     'Deg selv kan du ikke trekke herfra. Det gjør du på nettsiden. Huker du av, avslutter du runden uten kortet ditt.',

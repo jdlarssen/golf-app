@@ -335,6 +335,9 @@ describe('finishRound', () => {
       routeFrom({
         games: [queryStub(gameRow()), queryStub(WD_GATE), flip],
         game_players: [
+          // Rosteret slik det står rett før frafallet skrives: makkeren mangler
+          // fortsatt kort, så avkryssingen er fortsatt gyldig.
+          queryStub(roster(playerRow(ME), playerRow(MATE, { submitted_at: null }))),
           wdUpdate,
           queryStub(
             roster(playerRow(ME), playerRow(MATE, { withdrawn_at: SUBMITTED })),
@@ -356,14 +359,17 @@ describe('finishRound', () => {
       expect(tablesTouched()).toEqual([
         // 1. porten
         'games',
-        // 2–3. frafallet (rosterActions leser spillet før sitt eget skriv)
+        // 2. rosteret leses FØR frafallet skrives — vakten mot at en spiller
+        //    som rakk å levere blir trukket likevel
+        'game_players',
+        // 3–4. frafallet (rosterActions leser spillet før sitt eget skriv)
         'games',
         'game_players',
-        // 4. rosteret leses ETTER frafallet, ellers blokkerer den trukne fortsatt
+        // 5. rosteret leses ETTER frafallet, ellers blokkerer den trukne fortsatt
         'game_players',
-        // 5. kåringen FØR flippen — en feil her etterlater spillet `active`
+        // 6. kåringen FØR flippen — en feil her etterlater spillet `active`
         'game_side_winners',
-        // 6. flippen
+        // 7. flippen
         'games',
       ]);
     });
@@ -559,11 +565,51 @@ describe('finishRound', () => {
       expect(tablesTouched()).toEqual(['games']);
     });
 
+    it('trekker INGEN når en avkrysset spiller rakk å levere i mellomtiden', async () => {
+      // Kappløpet eieren fant på tapp-testen: arrangøren ser «ikke levert»,
+      // huker av, og spilleren leverer på sin egen telefon før avslutt-trykket.
+      // Uten vakten hadde makkeren mistet runden sin, stille — `withdrawPlayer`
+      // treffer raden sin og svarer OK.
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow())],
+        game_players: [
+          queryStub(
+            roster(
+              playerRow(ME),
+              // Kortet kom inn etter at skjermen ble tegnet.
+              playerRow(MATE),
+              playerRow(OTHER, { submitted_at: null }),
+            ),
+          ),
+        ],
+      });
+
+      expect(
+        await endGame().finishRound(GAME, {
+          allowMissing: true,
+          withdrawUserIds: [MATE, OTHER],
+        }),
+      ).toEqual({
+        ok: false,
+        reason: 'withdraw-after-submit',
+        blockedUserIds: [MATE],
+      });
+
+      // Alle-eller-ingen: heller ikke OTHER — som fortsatt mangler kort — blir
+      // trukket. To oppslag, null skriv. (Et uplanlagt kall mot `game_players`
+      // ville dessuten kastet i `routeFrom`.)
+      expect(tablesTouched()).toEqual(['games', 'game_players']);
+    });
+
     it('stopper med db-withdraw når et frafalls-skriv feiler', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
         games: [queryStub(gameRow()), queryStub(WD_GATE)],
-        game_players: [queryStub({ data: null, error: { message: 'boom' } })],
+        game_players: [
+          queryStub(roster(playerRow(MATE, { submitted_at: null }))),
+          queryStub({ data: null, error: { message: 'boom' } }),
+        ],
       });
 
       expect(

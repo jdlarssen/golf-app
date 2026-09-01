@@ -58,7 +58,7 @@ import { COLORS, TAP, ui } from '../theme';
 export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   const { gameId } = route.params;
   const { userId } = useSession();
-  const { bundle, loading } = useGameBundle(gameId);
+  const { bundle, loading, refresh } = useGameBundle(gameId);
 
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
@@ -83,6 +83,12 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
    * `alreadyRunning` i starten (#502). Begge veier ender på resultatskjermen,
    * og `replace` gjør at «tilbake» ikke lander på en avslutt-flate for en runde
    * som alt er lukket.
+   *
+   * `withdraw-after-submit` er det ene avslaget skjermen selv må gjøre noe med:
+   * det betyr at listen på skjermen er utdatert, og knappen er grå til hver
+   * manglende spiller er huket av. Uten en refetch her ville arrangøren stått
+   * fast i samme avslag ved hvert nye trykk. Fokus-refetchen redder oss ikke —
+   * skjermen mister aldri fokus.
    */
   const finish = useCallback(
     async (plan: FinishPlan, players: readonly BundlePlayer[]) => {
@@ -105,13 +111,14 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
             result.message,
           ),
         );
+        if (result.reason === 'withdraw-after-submit') await refresh();
       } catch {
         setNotice(describeEndRoundFailure('db'));
       } finally {
         setBusy(false);
       }
     },
-    [acknowledged, choices, gameId, navigation],
+    [acknowledged, choices, gameId, navigation, refresh],
   );
 
   if (!bundle) {
