@@ -343,6 +343,34 @@ describe('addCupParticipant', () => {
       ),
     ).toBe(false);
   });
+
+  // #1810: cap-vakta leste deltakerne uten å se på error-kanalen. En feilet
+  // lesing ga `existing = null` → distinct-settet ble 1 → taket slapp
+  // påmeldingen gjennom (fail-open). Vakta skal feile LUKKET, som
+  // `checkSwapParticipantCap` gjør.
+  it('personal non-admin cup, participant read fails: plan_save_failed, no insert', async () => {
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull, // gate group_id
+      { data: { created_by: 'creator-1' }, error: null }, // requireAdminOrTournamentCreator
+      { data: { status: 'draft' }, error: null }, // cup lookup
+      { data: null, error: { message: 'boom' } }, // existing participants read FAILS
+    ]);
+    supabaseMock = buildSupabaseMock([normalUser]);
+    setUser('creator-1');
+    candidateMock.mockResolvedValue([
+      { id: 'p25', displayName: 'Nr 25', hcpIndex: 12 },
+    ]);
+
+    const { addCupParticipant } = await import('./planActions');
+    expect(
+      await addCupParticipant(participantForm({ user_id: 'p25' })),
+    ).toEqual({ error: 'plan_save_failed' });
+    expect(
+      adminMock.__fromCalls.some(
+        (c) => c.table === 'tournament_participants' && c.method === 'upsert',
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('removeCupParticipant', () => {

@@ -84,9 +84,40 @@ let adminUserRows: AdminUserRow[] = DEFAULT_USER_ROWS;
 // #1718: lesefeilen på profilene skal stoppe genereringen. Mutabel så én test
 // kan bryte nettopp det kallet; default null holder alle andre tester uendret.
 let adminUserRowsError: unknown = null;
+// #1810: cap-vakta i den personlige ikke-admin-grenen teller eksisterende
+// matcher (`games`) og deltakere (`game_players`) via admin-klienten. De to
+// lesingene trengte egne grener for å (a) kunne returnere rader og (b) ha en
+// error-kanal — den generiske fallback-en under har ingen av delene, og
+// `game_players`-lesingen bruker `.in()`, som fallback-en ikke tilbyr.
+// Defaultene (tomme rader, ingen feil) matcher det fallback-en effektivt ga
+// (`data` undefined → `?? []`), så eksisterende tester er uendret.
+let adminExistingGameRows: { id: string }[] = [];
+let adminExistingGamesError: unknown = null;
+let adminExistingPlayerRows: { user_id: string }[] = [];
+let adminExistingPlayersError: unknown = null;
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => {
+      if (table === 'games') {
+        return {
+          select: () => ({
+            eq: async () => ({
+              data: adminExistingGamesError ? null : adminExistingGameRows,
+              error: adminExistingGamesError,
+            }),
+          }),
+        };
+      }
+      if (table === 'game_players') {
+        return {
+          select: () => ({
+            in: async () => ({
+              data: adminExistingPlayersError ? null : adminExistingPlayerRows,
+              error: adminExistingPlayersError,
+            }),
+          }),
+        };
+      }
       if (table === 'users') {
         return {
           select: () => ({
@@ -108,12 +139,8 @@ vi.mock('@/lib/supabase/admin', () => ({
         };
       }
       // tournaments group_id/created_by lookup (gate). #1441: the personal-
-      // cup cap-check's admin-client `games`/`game_players` count queries
-      // (no `.maybeSingle()`) also land in this generic branch — they await
-      // a non-thenable `{maybeSingle}` object, which resolves to itself; the
-      // destructured `data` is then `undefined` and the cap-check code falls
-      // back to `[]` via `?? []`. That's fine for a cap test that trips the
-      // cap on NEW matches alone (no simulated pre-existing games).
+      // cup cap-check's `games`/`game_players` count queries used to land here
+      // too; #1810 gave them dedicated branches above (rows + error channel).
       return {
         select: () => ({
           eq: () => ({
@@ -206,6 +233,10 @@ beforeEach(() => {
   adminCupCreatedBy = null;
   adminUserRows = DEFAULT_USER_ROWS;
   adminUserRowsError = null;
+  adminExistingGameRows = [];
+  adminExistingGamesError = null;
+  adminExistingPlayerRows = [];
+  adminExistingPlayersError = null;
 });
 
 describe('createCupMatchesFromPlan — authz', () => {
@@ -1157,6 +1188,52 @@ describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede match
         matches,
       }),
     ).toEqual({ error: 'too_many_matches' });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert'),
+    ).toBe(false);
+  });
+});
+
+// #1810: begge tellingene i cap-grenen ignorerte error-kanalen. En feilet
+// `games`-lesing undertelte match-taket OG hoppet over deltaker-lesingen helt
+// (`if (existingGameIds.length > 0)`), så begge takene slapp batchen gjennom.
+// Vakta skal feile LUKKET: ingenting er skrevet, så `insert_failed` er riktig
+// svar til veiviseren.
+describe('createCupMatchesFromPlan — cap-vakta feiler lukket ved lesefeil (#1810)', () => {
+  function capSetup() {
+    adminCupCreatedBy = 'user-1'; // ikke-admin passerer som cupens egen skaper
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // requireAdmin (loadRole)
+      { data: draftCup, error: null }, // tournament gate (frittstående cup)
+      planResult(), // plan lookup
+      teeResult(), // tee re-validate
+    ]);
+    setUser('user-1');
+  }
+
+  it('games-lesingen feiler: insert_failed, ingen insert', async () => {
+    capSetup();
+    adminExistingGamesError = { message: 'boom' };
+
+    const { createCupMatchesFromPlan } = await import('./actions');
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'insert_failed',
+    });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert'),
+    ).toBe(false);
+  });
+
+  it('game_players-lesingen feiler: insert_failed, ingen insert', async () => {
+    capSetup();
+    // Deltaker-lesingen kjøres bare når det finnes minst ett eksisterende spill.
+    adminExistingGameRows = [{ id: 'game-old' }];
+    adminExistingPlayersError = { message: 'boom' };
+
+    const { createCupMatchesFromPlan } = await import('./actions');
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'insert_failed',
+    });
     expect(
       supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert'),
     ).toBe(false);
