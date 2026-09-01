@@ -202,6 +202,7 @@ describe('runFinishPipeline — the finish-pipeline claim', () => {
     expect(callSeq(adminClientMock!)).toEqual([
       'games.update',
       'games.eq',
+      'games.eq',
       'games.is',
       'games.select',
       'games.maybeSingle',
@@ -210,17 +211,37 @@ describe('runFinishPipeline — the finish-pipeline claim', () => {
       finish_pipeline_at: expect.any(String),
     });
     expect(adminClientMock!.__fromCalls[1].args).toEqual(['id', GAME_ID]);
-    expect(adminClientMock!.__fromCalls[2].args).toEqual([
+    expect(adminClientMock!.__fromCalls[2].args).toEqual(['status', 'finished']);
+    expect(adminClientMock!.__fromCalls[3].args).toEqual([
       'finish_pipeline_at',
       null,
     ]);
-    expect(adminClientMock!.__fromCalls[3].args).toEqual(['id']);
+    expect(adminClientMock!.__fromCalls[4].args).toEqual(['id']);
 
     // Claim FIRST, work SECOND — the whole point.
     const claim = firstCallOrder(
       adminClientMock!.from as unknown as { mock: { invocationCallOrder: number[] } },
     );
     expect(claim).toBeLessThan(firstCallOrder(finishDerivedGamesMock));
+  });
+
+  it('the claim carries status = finished, so a reopened game cannot be claimed', async () => {
+    // The status check in `runFinishPipelineForGame` is a SEPARATE query, run
+    // before this UPDATE — a different transaction. Without the predicate INSIDE
+    // the claim, the sweep can read a candidate, an admin can reopen the game a
+    // moment later, and the claim still succeeds: the tail then mails results
+    // for a live round and burns the marker on a game that is `active`. The
+    // house pattern this claim mirrors, `maybeNotifyAutoStartBlocked`, puts
+    // `status = 'scheduled'` inside its own win-the-row UPDATE for exactly this
+    // reason.
+    const client = buildSupabaseMock([]);
+
+    await runFinishPipeline(client as never, input());
+
+    const filters = adminClientMock!.__fromCalls
+      .filter((c) => c.method === 'eq' || c.method === 'is')
+      .map((c) => c.args);
+    expect(filters).toContainEqual(['status', 'finished']);
   });
 
   it('never claims on the caller-supplied client (guard trigger 0169 would reject it)', async () => {
