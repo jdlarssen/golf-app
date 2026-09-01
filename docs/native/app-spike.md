@@ -591,3 +591,121 @@ en kort `swipe` tvers over bryteren slår den om. Vanlige `Pressable`-er tar tap
 
 Web er fasit-konsument: bygg med `.env.staging.local` og kjør `npx next start`
 (`torny-staging-prod` i `.claude/launch.json`), logg inn og åpne `/games/<id>`.
+
+## Runde-drift i appen (N6b, #1855)
+
+Fra `scheduled` til `active` uten å gå om nettsiden: spillerne bekrefter plassen sin
+ved å åpne runden, arrangøren justerer rosteret, og «Start runden nå» flipper status.
+Alt henger på `src/screens/GameHome.tsx` — `src/components/game/OrganiserSection.tsx`
+rendres når `bundle.game.createdBy === userId`. **Ingen admin-flagg noe sted:** appen er
+arrangørens flate, Sekretariatet bor på web.
+
+### Auto-bekreftelse gjelder alle, ikke bare arrangøren
+
+Åpner du spill-hjem og din egen rad har `accepted_at IS NULL` i et spill som ikke er
+`draft`, setter appen stempelet stille (`confirmParticipation`). Ingen knapp, ingen
+kvittering — webbens modell er «besøk = bekreftelse» (#463), og arrangøren ser bare at
+merket dukker opp i rosteret. Policyen er `game_players self mark accepted` (0082);
+webben bruker admin-klienten der kun fordi den kjører inne i `after()` uten cookies.
+
+Betingelsen er skilt ut som `shouldConfirmParticipation` (`src/lib/roster.ts`) i stedet
+for å ligge inne i effekten. Da kunne den testes med fire rader i stedet for en
+render-test, og effekten kan ikke gå i ring: `refresh()` etterpå henter bundelen med
+stempelet satt, og flagget slår om til false.
+
+### Start-kjernen er delt kode, ikke speilet
+
+`startScheduledGame` ble splittet i to (samme PR): `lib/games/startScheduledGameCore.ts`
+er import-ren og eier ALT — tee-rating-vakta, pending-spillere, ufullstendige
+sider/lag/flighter, rotasjons-antallet, frysingen av `course_handicap`,
+greensome-overstyringen (#1628), rotasjonsslotene (#969) og selve status-flippen.
+`lib/games/startScheduledGame.ts` er nå en tynn web-wrapper som legger varsel-fan-out
+på toppen.
+
+Hvorfor splitten: `notify` åpner med `import 'server-only'` og skriver via service-role.
+Den ene tingen kjernen ikke kan gjøre er altså å varsle. Kjernen avslår derfor ventende
+påmeldinger selv (DB-skrivet) og RETURNERER søkerne; wrapperen fyrer
+`registration_expired` for dem. Appen (`src/data/startGame.ts`) kaller kjernen med sin
+egen RLS-klient og slipper lista.
+
+⚠️ **`{ ok: true, started: false }` er SUKSESS, ikke feil (#502).** Det betyr at en annen
+aktør vant status-flippen: cron-sweepen på tee-off, nettsidens knapp, eller
+E1-fallbacken når noen åpner spillsiden. Runden ER i gang, som er nøyaktig det
+arrangøren trykket for. Appen bærer utfallet som `alreadyRunning: true` under `ok: true`
+nettopp for at ingen skal lese det som en feilmelding.
+
+⚠️ **To installasjoner av `@supabase/supabase-js`.** Appen har sin egen (Metro må resolve
+mot appens avhengighetstre), rota har sin. Kjernen ligger i `lib/` og annoterer derfor
+ROTAS `SupabaseClient`; TypeScript nominal-sammenligner klasser med `protected`-felter og
+avviser de to som ulike. `startGame.ts` har ett dokumentert kast (`CoreSupabaseClient`,
+hentet fra kjernens egen signatur) — et pakke-duplikat-kast, ikke et «typene stemmer
+ikke»-kast.
+
+### RLS-veien per skriv
+
+Appen har ingen service-role og skal ikke få en. Alle sju skrivene i
+`src/data/rosterActions.ts` går rett på `game_players` under RLS:
+
+| Handling | Policy / vakt |
+|---|---|
+| Bekreft egen deltakelse | `game_players self mark accepted` (0082) |
+| Legg til spiller | `game_players creator insert` (0071) + `guard_game_players_invite_eligibility` (0115) |
+| Fjern spiller | `game_players creator delete` (0071), kun `draft`/`scheduled` |
+| Sett lag / flight | `game_players creator update` (0071) + `guard_game_players_self_update` (0147), creator-bypass på ANDRES rader |
+| Trekk / angre trekk | samme som over |
+| Start runden | `games creator update` (0071) for status-flippen; 0147s creator-bypass for CH-frysingen |
+
+Gatene i TypeScript står foran for UX-ens skyld. **Porten er Postgres.** Hvert 0-rads-svar
+splittes med ett oppfølgings-SELECT: er raden i måltilstanden, er handlingen idempotent
+utført; er den ikke det, nektet RLS. Stille suksess finnes ikke (trap 2, #667/#704).
+
+### ⚠️ Arrangørens EGEN rad er låst (#1868)
+
+`guard_game_players_self_update` (0147) blokkerer `team_number`, `flight_number` (gren b)
+og `withdrawn_at` (gren c) på egen rad. Unntakene er **kun** service-role og `is_admin()`
+— det finnes ingen creator-vei ut av egen-rad-grenen. Appen skriver alltid under RLS, så
+en arrangør som ikke også er global admin får 42501 → `rls-denied` hver eneste gang.
+
+Webben skjuler dette for lag/flight fordi `flightActions.ts` bruker admin-klienten. For
+frafall har webben nøyaktig samme begrensning som appen.
+
+Appen viser derfor ikke knappen. Der lag-/flight-kontrollen eller trekk-knappen ellers
+ville stått på egen rad, står `OWN_ROW_LOCKED_NOTE` i stedet:
+
+> Appen får ikke endre ditt eget lag eller trekke deg selv. Det ordner du på nettsiden.
+
+Dette er «ærlig feil»-guardrailen: si sant om hva appen kan, i stedet for å feile etterpå.
+Det blokkerer ikke start av et app-opprettet spill — N6a-veiviseren tildeler lag ved
+opprettelse — men det rammer justering i etterkant. Vil arrangøren flytte seg selv,
+er nettsiden veien.
+
+Fjern-knappen har derimot **ingen** selv-vakt, med vilje: `spillere/actions.ts` har ingen,
+og både `game_players creator delete` (0071) og self-register-grenen (0043) tillater den.
+To flater med hver sin regel er verre enn regelen selv.
+
+### Bokførte gap
+
+- **Ingen varsler fra appen.** `player_added` ved roster-endring og `registration_expired`
+  for søkere starten avviste er server-eide (`notify` = `server-only` + service-role).
+  Starter arrangøren fra appen, skjer avslaget i basen, men varselet uteblir. Cron-sweepen
+  varsler fortsatt for spill som starter på tee-off.
+- **Ingen admin-hendelseslogg.** `logAdminEvent` er server-eid; appens skriv legger ingen
+  rad i loggen.
+- **Åpen påmelding / forespørsels-godkjenning** (`game_registration_requests`-UI),
+  `toggleSignupsClosed`, rediger-spill-feltene, gjester og e-postinvitasjoner er web-eid.
+- **Lag-/flight-justering vises kun når noe MANGLER** (`needsTeamAssignment` /
+  `needsFlightAssignment`). Er alle fordelt, hører omfordelingen hjemme på nettsiden.
+- **Avslutt-flyten** kommer i N6c (#1856).
+
+### Verifisere driften mot staging
+
+Bygg og installer som i N6a-seksjonen over, og les med service-role etterpå:
+
+1. E2E-spilleren åpner runden i appen → `game_players.accepted_at` er satt.
+2. Arrangøren legger til og fjerner en spiller, setter lag → radene stemmer, og
+   `flight_number` er satt sammen med `team_number` (CHECK 0030/0095).
+3. «Start runden nå» → `games.status = 'active'`, `course_handicap` frosset på ALLE
+   aktive rader, og et wolf-testspill har fått rotasjonsslots.
+4. Trekk + angre i aktiv runde → `withdrawn_at` satt og nullet igjen.
+5. Fasit: åpne samme spill på webben (`torny-staging-prod` i `.claude/launch.json`) og
+   sammenlign roster og banehandicap.

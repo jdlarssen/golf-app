@@ -6,7 +6,13 @@
 // `resolveFlight` gir samme utvalg i appen.
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import type { BundlePlayer } from '../data/gameBundle';
-import { findInRoster, pendingApprovals, resolveFlight, toRoster } from './roster';
+import {
+  findInRoster,
+  pendingApprovals,
+  resolveFlight,
+  shouldConfirmParticipation,
+  toRoster,
+} from './roster';
 
 function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePlayer {
   return {
@@ -112,5 +118,29 @@ describe('pendingApprovals', () => {
     ]);
 
     expect(idsOf(pendingApprovals(roster, SOLO, 'me'))).toEqual(['mate']);
+  });
+});
+
+describe('shouldConfirmParticipation', () => {
+  // #463: «besøk = bekreftelse». Fire grener, og bare den første skal skrive.
+  it.each([
+    ['ubekreftet i et planlagt spill', { acceptedAt: null }, 'scheduled', true],
+    ['ubekreftet i et spill som går', { acceptedAt: null }, 'active', true],
+    [
+      'alt bekreftet',
+      { acceptedAt: '2026-08-30T08:00:00.000Z' },
+      'scheduled',
+      false,
+    ],
+    ['arrangørens kladd — ingen er invitert ennå', { acceptedAt: null }, 'draft', false],
+  ] as [string, { acceptedAt: string | null }, string, boolean][])(
+    '%s → %s',
+    (_label, me, status, expected) => {
+      expect(shouldConfirmParticipation(me, status)).toBe(expected);
+    },
+  );
+
+  it('skriver ikke for noen som ikke står på rosteret', () => {
+    expect(shouldConfirmParticipation(undefined, 'active')).toBe(false);
   });
 });
