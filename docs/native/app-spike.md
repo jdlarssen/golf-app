@@ -774,9 +774,18 @@ Gatene speiles derfor tynt i `src/data/endGame.ts` med jest-paritet; halen deles
 ### Markøren vinnes FØRST, ikke sist
 
 `runFinishPipeline` starter med å vinne raden:
-`.update({finish_pipeline_at: now}).is('finish_pipeline_at', null).select('id').maybeSingle()`
+`.update({finish_pipeline_at: now}).eq('status','finished').is('finish_pipeline_at', null).select('id').maybeSingle()`
 — 0 rader betyr at noen andre eier kjøringen, og den returnerer uten å gjøre noe.
-Formen er husets egen fra `lib/notifications/autoStartBlocked.ts:67-82`.
+Formen er husets egen fra `lib/notifications/autoStartBlocked.ts:67-82`, status-predikatet
+inkludert: statussjekken lenger oppe i `runFinishPipelineForGame` er en EGEN spørring, så
+uten predikatet inne i selve kapringen kan en admin gjenåpne spillet i mellomtiden og
+halen kjøre — og brenne markøren — mot en runde som er live igjen.
+
+⚠️ **Gjenåpning MÅ nulle markøren.** `reopenGame` nuller `finish_pipeline_at` sammen med
+`ended_at` og `round_report`, både på verts-spillet og på de avledede. Uten det finner
+re-avslutningen ingenting å kapre, og hele halen hoppes over — inkludert referatet reopen
+nettopp slettet. Handlingen er admin-only, så guard-triggeren i 0169 slipper den gjennom
+på `is_admin()`-luka.
 
 ⚠️ **Ikke snu dette til «sett markøren sist».** Det gir at-least-once, og stegene tåler
 det ikke: `notifyAchievementUnlocks` kaller `notify()`, som er en bar INSERT — prod har
@@ -815,9 +824,36 @@ I **appen** er `tournament_id` derimot riktig sjekk: den skjuler avslutt-CTA-en 
 HTTP-POSTen kun fyrer når det finnes arbeid. **POST** — pg_net kan ikke GET. URL-formen er
 0146s apex, ikke 0094s www. `cron_secret` finnes alt i Vault.
 
-⚠️ **0170 påføres FØRST etter deploy.** Jobben peker på `/api/cron/finish-pipeline`;
-påføres den før ruta er ute, er hver fyring en 404. 0169 (markørkolonnen) er trygg når
-som helst.
+**Kandidatsettet har tre hjem og må være identisk i alle tre** (AGENTS.md-felle 4): ruta
+sin egen spørring, `where exists`-gaten i 0170, og den partielle indeksen (0169, korrigert
+i 0171). Fire predikater: `status='finished'`, `finish_pipeline_at is null`,
+`tournament_id is null` og `source_game_id is null`. Det siste er ikke pynt — avledede
+cup-kamper avsluttes av `finishDerivedGames`, som kun skriver `{status, ended_at}` og
+aldri markøren, så de fødes som kandidater. `tournament_id` dekker dem ikke:
+`games_tournament_id_fkey` er `ON DELETE SET NULL` (verifisert live), så en slettet cup
+gjør hele kamptreet til kandidater. Sveipes én, kjøres HELE halen på nytt per kamp uten
+cupens `suppressPerGameNotifications` — én «Resultatet er klart»-mail per kamp til de
+samme spillerne, og ett fakturert Anthropic-referat hver.
+
+### Rekkefølgen på migrasjonene er lastbærende — begge veier
+
+**0169 + 0171 MÅ på prod FØR koden merges.** Merge til `main` deployer med én gang, og
+den deployede koden kaprer markøren ved hver eneste web-avslutning. Mangler kolonnen,
+svarer PostgREST 42703, `claimFinishPipeline` leser enhver feil som «ikke kapret» og
+hopper over HELE halen — ingen sammendrag, differensialer, bragder, referat, auditrad
+eller «Resultatet er klart»-mail — mens `endGameCore` fortsatt returnerer `{ok:true}` og
+arrangøren ser en helt normal avslutning. Stumt, for hver runde som avsluttes i vinduet.
+Og tapet blir permanent: backfillen i 0169 stempler alle alt-avsluttede spill som ferdige,
+så de foreldreløse rundene er usynlige for sweepen i det den lander.
+
+**0170 påføres SIST, etter deploy.** Jobben peker på `/api/cron/finish-pipeline`; påføres
+den før ruta er ute, er hver fyring en 404.
+
+| Steg | Hva | Hvorfor akkurat der |
+|---|---|---|
+| 1 | 0169 + 0171 på prod (eier-luka #1074) | Ingen kode avhenger av dem ennå; kolonnen må finnes før koden som skriver den |
+| 2 | Merge → Vercel deployer | Koden kaprer markøren fra første avslutning |
+| 3 | 0170 på prod | Ruta må finnes før cron POSTer mot den |
 
 ⚠️ **Staging kan ikke kjøre pg_cron-veien** — vaultet der er tomt, så
 Authorization-headeren ville blitt NULL. Driv ruta direkte i stedet (se under).
