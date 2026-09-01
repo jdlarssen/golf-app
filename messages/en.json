@@ -4843,7 +4843,12 @@
       "spillehandicapShort": "CH {n}",
       "hcpIndexShort": "HCP {n}",
       "pendingBadge": "Awaiting profile",
-      "pendingHelper": "Missing handicap"
+      "pendingHelper": "Missing handicap",
+      "sessionCountsHeading": "Matches per session",
+      "sessionCountsHint": "Not everyone has to play every session. Lower the count and the rest sit out.",
+      "sessionCountValue": "{count} of {max}",
+      "sessionCountMinusAria": "Fewer matches for {format}",
+      "sessionCountPlusAria": "More matches for {format}"
     },
     "delete": {
       "brassRibbon": "Confirm deletion",

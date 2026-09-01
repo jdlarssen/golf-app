@@ -4843,7 +4843,12 @@
       "spillehandicapShort": "SH {n}",
       "hcpIndexShort": "HCP {n}",
       "pendingBadge": "Venter på profil",
-      "pendingHelper": "Mangler handicap"
+      "pendingHelper": "Mangler handicap",
+      "sessionCountsHeading": "Matcher per økt",
+      "sessionCountsHint": "Ikke alle trenger å spille hver økt. Skru ned antallet, så står resten over.",
+      "sessionCountValue": "{count} av {max}",
+      "sessionCountMinusAria": "Færre matcher for {format}",
+      "sessionCountPlusAria": "Flere matcher for {format}"
     },
     "delete": {
       "brassRibbon": "Bekreft sletting",

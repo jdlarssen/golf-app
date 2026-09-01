@@ -139,4 +139,27 @@ describe('GenerateMatchesWizard', () => {
     expect(screen.getByTestId('cup-wizard-lineup-1-side1-1')).toHaveValue('p1');
     expect(screen.getByTestId('cup-wizard-lineup-1-side2-1')).toHaveValue('p4');
   });
+
+  it('lar organisatoren skru ned antall matcher per økt (#1883)', () => {
+    render(<GenerateMatchesWizard {...BASE} players={PLAYERS} />);
+
+    fireEvent.click(screen.getByTestId('cup-wizard-assign-p1-team1'));
+    fireEvent.click(screen.getByTestId('cup-wizard-assign-p2-team1'));
+    fireEvent.click(screen.getByTestId('cup-wizard-assign-p3-team2'));
+    fireEvent.click(screen.getByTestId('cup-wizard-assign-p4-team2'));
+
+    // klassisk @ 2 per lag: foursomes 1, four-ball 1, singler 2 (indeks 0/1/2).
+    expect(screen.getByTestId('cup-session-count-2')).toHaveTextContent('2 av 2');
+    // Foursomes står allerede på minimum — minus er død.
+    expect(screen.getByTestId('cup-session-minus-0')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('cup-session-minus-2'));
+    expect(screen.getByTestId('cup-session-count-2')).toHaveTextContent('1 av 2');
+    expect(screen.getByTestId('cup-session-minus-2')).toBeDisabled();
+
+    // Opp igjen — men aldri forbi derivert tak.
+    fireEvent.click(screen.getByTestId('cup-session-plus-2'));
+    expect(screen.getByTestId('cup-session-count-2')).toHaveTextContent('2 av 2');
+    expect(screen.getByTestId('cup-session-plus-2')).toBeDisabled();
+  });
 });
