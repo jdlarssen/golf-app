@@ -659,29 +659,58 @@ Gatene i TypeScript står foran for UX-ens skyld. **Porten er Postgres.** Hvert 
 splittes med ett oppfølgings-SELECT: er raden i måltilstanden, er handlingen idempotent
 utført; er den ikke det, nektet RLS. Stille suksess finnes ikke (trap 2, #667/#704).
 
-### ⚠️ Arrangørens EGEN rad er låst (#1868)
+### ⚠️ Arrangørens EGEN rad — halvveis åpnet (#1868, migrasjon 0168)
 
-`guard_game_players_self_update` (0147) blokkerer `team_number`, `flight_number` (gren b)
-og `withdrawn_at` (gren c) på egen rad. Unntakene er **kun** service-role og `is_admin()`
-— det finnes ingen creator-vei ut av egen-rad-grenen. Appen skriver alltid under RLS, så
-en arrangør som ikke også er global admin får 42501 → `rls-denied` hver eneste gang.
+`guard_game_players_self_update` (0147) blokkerte `team_number`, `flight_number` (gren b)
+og `withdrawn_at` (gren c) på egen rad. Unntakene var **kun** service-role og `is_admin()`
+— ingen creator-vei ut av egen-rad-grenen. Webben merket det aldri for lag/flight, fordi
+`flightActions.ts` skriver med admin-klienten; appen har aldri service-role.
 
-Webben skjuler dette for lag/flight fordi `flightActions.ts` bruker admin-klienten. For
-frafall har webben nøyaktig samme begrensning som appen.
+**Det var ikke kosmetikk.** `startScheduledGameCore` trekker wolf-/round-robin-slots (#969)
+for ALLE aktive spillere, arrangøren inkludert, så vakta avviste nøyaktig én rad og hele
+starten falt. Målt på staging 2026-09-01:
 
-Appen viser derfor ikke knappen. Der lag-/flight-kontrollen eller trekk-knappen ellers
-ville stått på egen rad, står `OWN_ROW_LOCKED_NOTE` i stedet:
+```
+SLOT_WRITE 069cda6e error: null
+SLOT_WRITE 252e1a6f error: 42501 "A player cannot change their own team_number/flight_number"
+SLOT_WRITE 1f016c6a error: null
+```
+
+**Migrasjon 0168** gir oppretteren samme unntak på egen rad som de alt har på andres, for
+`team_number`/`flight_number`. Ikke ny makt: samme arrangør kan alt omrokere alle andre og
+legge til/fjerne hvem som helst før start.
+
+**Gren (c) står.** En arrangør kan fortsatt ikke trekke seg selv — nøyaktig som på webben,
+der `adminWithdrawPlayer` går på request-klienten og møter samme vakt. `OWN_ROW_LOCKED_NOTE`
+står derfor fortsatt der trekk-knappen ellers ville vært:
 
 > Appen får ikke endre ditt eget lag eller trekke deg selv. Det ordner du på nettsiden.
-
-Dette er «ærlig feil»-guardrailen: si sant om hva appen kan, i stedet for å feile etterpå.
-Det blokkerer ikke start av et app-opprettet spill — N6a-veiviseren tildeler lag ved
-opprettelse — men det rammer justering i etterkant. Vil arrangøren flytte seg selv,
-er nettsiden veien.
 
 Fjern-knappen har derimot **ingen** selv-vakt, med vilje: `spillere/actions.ts` har ingen,
 og både `game_players creator delete` (0071) og self-register-grenen (0043) tillater den.
 To flater med hver sin regel er verre enn regelen selv.
+
+### ⚠️ Hermes har ingen `crypto` — og delt kode antar at den finnes
+
+`assignRotationSlots` (`lib/games/`) trekker rotasjonen med en Fisher–Yates backet av
+`crypto.getRandomValues`. Kommentaren i fila sier selv «available in Node 18+», og det er
+der den hadde kjørt til nå. Expos runtime-polyfills gir `AbortSignal`, `FormData`,
+`TextDecoder`, `URL` og `fetch` — men **ikke** WebCrypto, og `expo-crypto` er ikke
+installert.
+
+Fra appen kastet kallet derfor, `OrganiserSection` fanget det i sin `try/catch` og viste
+den generiske «Klarte ikke å oppdatere spillet. Prøv igjen.» Feilmeldingen pekte på
+databasen mens årsaken var en manglende global, og den traff **kun** wolf og round robin —
+solo-stableford startet fint hele veien. Det tok tre feilsøkingsrunder å se, fordi den ene
+symptomteksten dekket to helt ulike årsaker (denne og 0147 over).
+
+`react-native-get-random-values` importeres nå **først** i `index.ts`, før alt annet.
+
+**Regelen for framtidig delt kode:** en `lib/`-modul som leser en JS-global må enten holde
+seg til det Hermes + Expos winter-runtime faktisk gir, eller appen må polyfille den. Jest
+fanger det aldri (Node har globalene), og `expo export` heller ikke — bare en kjøring på
+enhet eller simulator gjør det. Samme klasse felle som metro-bare-importene over, men på
+runtime-siden.
 
 ### Bokførte gap
 
