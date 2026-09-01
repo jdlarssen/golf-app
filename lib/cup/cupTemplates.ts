@@ -81,16 +81,56 @@ export function sessionMatchCount(format: CupSessionFormat, teamSize: number): n
   return Math.floor(teamSize / 2);
 }
 
+/** Én rad per økt for veiviserens matchantall-steppere (#1883). */
+export type SessionCountRow = {
+  /** Posisjon i input-lista — nøkkelen overstyringer adresseres med. */
+  index: number;
+  format: CupSessionFormat;
+  /** Derivert antall for lagstørrelsen — stepperens tak. */
+  derived: number;
+  /** Klampet effektivt antall: override ∧ [1, derived]. */
+  effective: number;
+};
+
+/**
+ * Bygger radene for en (effektiv) lagstørrelse, med organisatorens
+ * per-økt-overstyringer (#1883). Overstyringer er nøklet på posisjon i
+ * `sessions` (samme format kan stå flere ganger i en tilpasset liste) og
+ * klampes til [1, derivert] — aldri OPP forbi det lagene kan stille med.
+ * Økter som ikke kan bemannes (derivert 0) droppes, override eller ei.
+ * Ikke-endelige overstyringer ignoreres.
+ */
+export function buildSessionCountRows(
+  sessions: CupSessionFormat[],
+  teamSize: number,
+  overrides: Readonly<Record<number, number>> = {},
+): SessionCountRow[] {
+  return sessions
+    .map((format, index) => {
+      const derived = sessionMatchCount(format, teamSize);
+      const override = overrides[index];
+      const effective =
+        derived > 0 && typeof override === 'number' && Number.isFinite(override)
+          ? Math.min(Math.max(1, Math.floor(override)), derived)
+          : derived;
+      return { index, format, derived, effective };
+    })
+    .filter((row) => row.derived > 0);
+}
+
 /**
  * Bygger den konkrete sesjonsplanen for en gitt (effektiv) lagstørrelse. Bruk
  * `min(lag1, lag2)` som `teamSize` på kall-siden. Sesjoner som ikke får plass
- * (matchCount 0) droppes.
+ * (matchCount 0) droppes. Valgfrie `overrides` (#1883) senker antallet per
+ * økt — se `buildSessionCountRows` for klampe-regelen.
  */
 export function buildSessions(
   sessions: CupSessionFormat[],
   teamSize: number,
+  overrides?: Readonly<Record<number, number>>,
 ): SessionPlan[] {
-  return sessions
-    .map((format) => ({ format, matchCount: sessionMatchCount(format, teamSize) }))
-    .filter((s) => s.matchCount > 0);
+  return buildSessionCountRows(sessions, teamSize, overrides).map((row) => ({
+    format: row.format,
+    matchCount: row.effective,
+  }));
 }
