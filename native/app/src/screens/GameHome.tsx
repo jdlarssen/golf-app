@@ -12,6 +12,10 @@
 // N6b (#1855): arrangørens roster-drift henger under skjermen, og ALLE
 // deltakere bekrefter plassen sin stille når de åpner den — webbens
 // «besøk = bekreftelse» (#463), uten eget UI.
+//
+// N6c (#1856): arrangøren avslutter runden herfra — men på en egen flate
+// (`EndGame`), ikke med en knapp her. Flippen er praktisk irreversibel, og
+// husregelen er at slikt får sin egen bekreftelses-side.
 import { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -209,7 +213,12 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       {/* Arrangør-seksjonen henger på `created_by`, ikke på et admin-flagg:
           appen er arrangørens flate, Sekretariatet bor på nettsiden. */}
       {game.createdBy === userId ? (
-        <OrganiserSection bundle={bundle} userId={userId} onChanged={refresh} />
+        <OrganiserSection
+          bundle={bundle}
+          userId={userId}
+          onChanged={refresh}
+          onFinish={() => navigation.navigate('EndGame', { gameId })}
+        />
       ) : null}
 
       {errorText ? (

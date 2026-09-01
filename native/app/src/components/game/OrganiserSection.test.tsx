@@ -66,7 +66,10 @@ function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePl
 }
 
 /** Best ball med to per lag, og ingen lag tildelt → lag-kontrollen skal vises. */
-function bundle(status: string): GameBundle {
+function bundle(
+  status: string,
+  gameOverrides: Partial<GameBundle['game']> = {},
+): GameBundle {
   return {
     game: {
       id: 'game-1',
@@ -89,6 +92,7 @@ function bundle(status: string): GameBundle {
       sideLdCount: 0,
       sideCtpCount: 0,
       sideDisabledCategories: [],
+      ...gameOverrides,
     },
     players: [
       player({ userId: ME, name: 'Meg Selv', acceptedAt: '2026-08-30T08:00:00.000Z' }),
@@ -111,8 +115,14 @@ describe('OrganiserSection', () => {
         buttons?.find((b) => b.style === 'destructive')?.onPress?.();
       });
     const onChanged = jest.fn();
+    const onFinish = jest.fn();
     const { rerender } = await render(
-      <OrganiserSection bundle={bundle('scheduled')} userId={ME} onChanged={onChanged} />,
+      <OrganiserSection
+        bundle={bundle('scheduled')}
+        userId={ME}
+        onChanged={onChanged}
+        onFinish={onFinish}
+      />,
     );
 
     // 1. Bekreftet/ubekreftet står per spiller.
@@ -153,9 +163,18 @@ describe('OrganiserSection', () => {
     });
     expect(onChanged).toHaveBeenCalled();
 
+    // 4b. Avslutt-CTA-en hører til den AKTIVE runden (N6c, #1856) — på en
+    //     planlagt runde finnes det ingenting å avslutte.
+    expect(screen.queryByTestId('organiser-finish')).toBeNull();
+
     // 5. Aktiv runde: frafall for makkeren, ingenting for meg selv.
     await rerender(
-      <OrganiserSection bundle={bundle('active')} userId={ME} onChanged={onChanged} />,
+      <OrganiserSection
+        bundle={bundle('active')}
+        userId={ME}
+        onChanged={onChanged}
+        onFinish={onFinish}
+      />,
     );
     expect(screen.getByTestId(`organiser-withdraw-${MATE}`)).toBeTruthy();
     expect(screen.queryByTestId(`organiser-withdraw-${ME}`)).toBeNull();
@@ -172,5 +191,26 @@ describe('OrganiserSection', () => {
     await waitFor(() => {
       expect(withdrawPlayer).toHaveBeenCalledWith('game-1', MATE);
     });
+
+    // 7. #1856: avslutt-CTA-en åpner den egne flaten. Den skriver ingenting
+    //    her — flippen er praktisk irreversibel, og husregelen er at slikt får
+    //    en bekreftelses-side, ikke en knapp midt i rosteret.
+    await fireEvent.press(screen.getByTestId('organiser-finish'));
+    expect(onFinish).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('organiser-cup-note')).toBeNull();
+
+    // 8. Cup-runde: ingen CTA i det hele tatt, bare setningen som sier hvor
+    //    avslutningen gjøres. Cup-flyten eier de avledede kampene og demper
+    //    per-spill-varslene; en app-flipp ville gått utenom begge.
+    await rerender(
+      <OrganiserSection
+        bundle={bundle('active', { tournamentId: 'cup-1' })}
+        userId={ME}
+        onChanged={onChanged}
+        onFinish={onFinish}
+      />,
+    );
+    expect(screen.queryByTestId('organiser-finish')).toBeNull();
+    expect(screen.getByTestId('organiser-cup-note')).toBeTruthy();
   });
 });

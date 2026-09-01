@@ -15,6 +15,7 @@ import {
 } from '@react-navigation/native-stack';
 import { Approve } from './screens/Approve';
 import { CreateGame } from './screens/CreateGame';
+import { EndGame } from './screens/EndGame';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { Home } from './screens/Home';
@@ -31,6 +32,8 @@ export type RootStackParamList = {
   Scorecard: { gameId: string };
   Leaderboard: { gameId: string };
   Approve: { gameId: string };
+  /** Arrangørens avslutt-flate (N6c, #1856) — kåring + status-flipp. */
+  EndGame: { gameId: string };
   SyncLab: undefined;
 };
 
@@ -96,6 +99,11 @@ export function RootNavigator() {
           name="Approve"
           component={Approve}
           options={{ title: 'Godkjenn' }}
+        />
+        <Stack.Screen
+          name="EndGame"
+          component={EndGame}
+          options={{ title: 'Avslutt runden' }}
         />
         <Stack.Screen
           name="SyncLab"
