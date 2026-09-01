@@ -309,10 +309,19 @@ export async function startScheduledGameCore(
 
   // #969: all guards passed — draw the Wolf/Round Robin rotation slot now,
   // over the final active roster. Reassign all active players a fresh
-  // contiguous 1..n (idempotent on retry after a mid-loop crash). All start
-  // callers run as service-role (E1 fallback, cron) or the admin/creator (D5),
-  // so the 0107 immutability trigger lets these slot writes through (it only
-  // blocks a non-admin player editing rows).
+  // contiguous 1..n (idempotent on retry after a mid-loop crash).
+  //
+  // ⚠️ #1855: the caller set is no longer "service-role or admin". This file
+  // became shared code so the native app could run it, and the app calls it as
+  // a plain authenticated CREATOR. That is exactly what surfaced the missing
+  // own-row escape in `guard_game_players_self_update` (migration 0168): the
+  // organiser's own slot write raised 42501 while everyone else's went through.
+  //
+  // These writes still chain no `.select()`, so an RLS-FILTERED row (0 rows,
+  // error null) would pass silently — trap 2. A trigger raise surfaces as an
+  // error and is caught; a policy miss would not be. Not tightened here because
+  // the same applies to the course_handicap freeze and the mode_config write
+  // below, and changing all three alters web behaviour too. Tracked separately.
   if (rotationRange) {
     for (const slot of assignRotationSlots(activeRotationIds)) {
       const { error: slotError } = await supabase

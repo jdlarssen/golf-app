@@ -21,7 +21,15 @@
 --   The other own-row guards must NOT have moved (trap 4 — 0168 rebuilt the
 --   whole body, so every sibling guard needs a live assert, not an eyeball):
 --     6. CREATOR clears own withdrawn_at             → REJECTED (guard c)
---     7. CREATOR sets own approved_at                → REJECTED (guard a)
+--     7. CREATOR sets own approved_at                → REJECTED (guard a, set-direction)
+--     8. CREATOR clears own approval                 → PASS  (guard a, #1362 reopen)
+--     9. non-creator clears own approval             → REJECTED (#1362 is creator-only)
+--
+-- Asserts 8–9 exist because the first draft of 0168 copied 0147's body — 0147
+-- says "copy from the LATEST create-or-replace", but 0147 is NOT the latest:
+-- 0159 (#1362) is. That draft silently reverted the reopen exception and reached
+-- staging. Guard (a) had a set-direction assert but no clear-direction one, so
+-- nothing caught it. These two close that hole in both directions.
 --
 -- The seeded game is created by admin_id(), whose is_admin() escape fires before
 -- the own-row branch and would mask everything. Every probe below therefore
@@ -36,7 +44,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(7);
+select plan(9);
 
 \ir fixtures/rls_helpers.psql
 
@@ -89,6 +97,19 @@ create or replace function torny_rls.try_self_approve(p_target uuid)
   begin
     update public.game_players
        set approved_at = now(), approved_by_user_id = p_target
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception when insufficient_privilege then return false;
+  end;
+  $$;
+
+create or replace function torny_rls.try_clear_approval_row(p_target uuid)
+  returns boolean language plpgsql as $$
+  declare v_rows int;
+  begin
+    update public.game_players
+       set approved_at = null, approved_by_user_id = null
      where game_id = torny_rls.game_id() and user_id = p_target;
     get diagnostics v_rows = row_count;
     return v_rows > 0;
@@ -149,6 +170,29 @@ select ok(
 select ok(
   NOT torny_rls.try_self_approve(torny_rls.active_id()),
   'creator still may NOT approve their own scorecard (guard a, #670, untouched)'
+);
+
+-- ── 8–9. #1362's reopen exception must survive 0168's rebuild ────────────────
+-- The regression that motivated these: guard (a) is asymmetric — SETTING your
+-- own approval is forbidden for everyone, CLEARING it is allowed for the
+-- creator only. A body copied from the wrong base keeps the first half and
+-- loses the second, and assert 7 alone stays green.
+select torny_rls.as_service();
+update public.game_players
+   set approved_at = now(), approved_by_user_id = torny_rls.admin_id()
+ where game_id = torny_rls.game_id()
+   and user_id in (torny_rls.active_id(), torny_rls.flightmate_id());
+
+select torny_rls.as_user(torny_rls.active_id());
+select ok(
+  torny_rls.try_clear_approval_row(torny_rls.active_id()),
+  'creator may CLEAR their own approval — reopen own scorecard (0159 / #1362)'
+);
+
+select torny_rls.as_user(torny_rls.flightmate_id());
+select ok(
+  NOT torny_rls.try_clear_approval_row(torny_rls.flightmate_id()),
+  'non-creator may NOT clear their own approval (#1362 is creator-only)'
 );
 
 select * from finish();
