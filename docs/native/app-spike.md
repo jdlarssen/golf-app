@@ -651,9 +651,9 @@ Appen har ingen service-role og skal ikke få en. Alle sju skrivene i
 | Bekreft egen deltakelse | `game_players self mark accepted` (0082) |
 | Legg til spiller | `game_players creator insert` (0071) + `guard_game_players_invite_eligibility` (0115) |
 | Fjern spiller | `game_players creator delete` (0071), kun `draft`/`scheduled` |
-| Sett lag / flight | `game_players creator update` (0071) + `guard_game_players_self_update` (0147), creator-bypass på ANDRES rader |
+| Sett lag / flight | `game_players creator update` (0071) + `guard_game_players_self_update` (siste kropp: **0168**), creator-bypass på andres OG egen rad |
 | Trekk / angre trekk | samme som over |
-| Start runden | `games creator update` (0071) for status-flippen; 0147s creator-bypass for CH-frysingen |
+| Start runden | `games creator update` (0071) for status-flippen; vaktas creator-bypass for CH-frysingen og rotasjonsslottene |
 
 Gatene i TypeScript står foran for UX-ens skyld. **Porten er Postgres.** Hvert 0-rads-svar
 splittes med ett oppfølgings-SELECT: er raden i måltilstanden, er handlingen idempotent
@@ -661,10 +661,21 @@ utført; er den ikke det, nektet RLS. Stille suksess finnes ikke (trap 2, #667/#
 
 ### ⚠️ Arrangørens EGEN rad — halvveis åpnet (#1868, migrasjon 0168)
 
-`guard_game_players_self_update` (0147) blokkerte `team_number`, `flight_number` (gren b)
-og `withdrawn_at` (gren c) på egen rad. Unntakene var **kun** service-role og `is_admin()`
-— ingen creator-vei ut av egen-rad-grenen. Webben merket det aldri for lag/flight, fordi
+`guard_game_players_self_update` blokkerte `team_number`, `flight_number` (gren b) og
+`withdrawn_at` (gren c) på egen rad. Webben merket det aldri for lag/flight, fordi
 `flightActions.ts` skriver med admin-klienten; appen har aldri service-role.
+
+⚠️ **Funksjonen har mange hjem, og det siste er ikke det du tror.** Kroppen er skrevet om
+av 0103 → 0106 → 0107 → 0108 → 0133 → 0147 → 0159 → 0168. Egen-rad-grenen hadde allerede
+ETT creator-unntak før dette arbeidet: 0159 (#1362) lot oppretteren *fjerne* sin egen
+godkjenning. Den nyanse kostet en runde her — første utkast av 0168 kopierte 0147 fordi
+0147s egen kommentar sier «copy from the LATEST create-or-replace», og reverterte 0159
+stille til staging. Finn den siste med kommando, ikke med tillit:
+
+```bash
+grep -l "create or replace function public.guard_game_players_self_update" \
+  supabase/migrations/*.sql | tail -1
+```
 
 **Det var ikke kosmetikk.** `startScheduledGameCore` trekker wolf-/round-robin-slots (#969)
 for ALLE aktive spillere, arrangøren inkludert, så vakta avviste nøyaktig én rad og hele
