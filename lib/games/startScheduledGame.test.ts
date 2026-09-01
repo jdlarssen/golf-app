@@ -47,6 +47,36 @@ beforeEach(() => {
 // der fiksturen brukes: guard-testene asserter ikke CH, og greensome-tallene
 // er håndutledet fra nettopp nøytraliteten (#1628). Skal en test gjøre
 // CH-aritmetikken synlig, bruk REAL_TEE under (#1691).
+/**
+ * Kø-svar for et skriv som traff sin ene rad.
+ *
+ * #1871: rotasjonsslot, course_handicap-frysen og mode_config-overstyringen
+ * kjeder nå `.select()` og går gjennom `expectOne`, så `{ data: null }` betyr
+ * «0 rader» — altså et typet avslag, ikke en vellykket start. Fikstur-svaret
+ * må derfor si hvilken rad som ble truffet. Innholdet leses ikke, kun antallet.
+ */
+const WROTE_ROW = { data: [{ id: 'row' }], error: null };
+
+/**
+ * Status-flippene (`games.update({status})`) mock-en faktisk så. #1871-testene
+ * bruker den til å vise at et filtrert skriv gir et typet avslag og IKKE en
+ * startet runde — å sjekke returverdien alene ville ikke skilt de to.
+ */
+function statusFlipWrites(supabase: unknown) {
+  return (
+    supabase as {
+      __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+    }
+  ).__fromCalls.filter(
+    (c) =>
+      c.table === 'games' &&
+      c.method === 'update' &&
+      typeof c.args[0] === 'object' &&
+      c.args[0] !== null &&
+      'status' in (c.args[0] as Record<string, unknown>),
+  );
+}
+
 const VALID_TEE = {
   slope_mens: 113,
   course_rating_mens: 72.0,
@@ -241,9 +271,9 @@ describe('startScheduledGame — incomplete_sides guard', () => {
         error: null,
       },
       // 4) course_handicap update user-1
-      { data: null, error: null },
+      WROTE_ROW,
       // 5) course_handicap update user-2
-      { data: null, error: null },
+      WROTE_ROW,
       // 6) status flip — vant raden (1 rad tilbake fra .select('id'))
       { data: [{ id: 'game-id' }], error: null },
     ]);
@@ -289,7 +319,7 @@ describe('startScheduledGame — incomplete_sides guard', () => {
         error: null,
       },
       // 4) course_handicap update
-      { data: null, error: null },
+      WROTE_ROW,
       // 5) status flip — vant raden
       { data: [{ id: 'game-id' }], error: null },
     ]);
@@ -348,7 +378,7 @@ describe('startScheduledGame — started-flagg', () => {
       { data: SOLO_ROSTER, error: null },
       { data: SOLO_USERS, error: null },
       // course_handicap update
-      { data: null, error: null },
+      WROTE_ROW,
       // status flip — en annen caller vant; .eq('status','scheduled') matchet 0 rader
       { data: [], error: null },
     ]);
@@ -364,6 +394,23 @@ describe('startScheduledGame — started-flagg', () => {
 
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: true, started: false });
+  });
+
+  // #1871: en policy kan filtrere course_handicap-frysen ned til null rader,
+  // og PostgREST svarer `error == null` på det. Før gikk kjernen rett videre
+  // og flippet status — runden startet med ufrosne banehandicap, uten et spor.
+  it('0 rader fra course_handicap-frysen → db_players, ingen flip', async () => {
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      // course_handicap-skrivet traff null rader — ingen feil, ingenting skjedd
+      { data: [], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'db_players' });
+    expect(statusFlipWrites(supabase)).toHaveLength(0);
   });
 });
 
@@ -404,7 +451,7 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
       { data: SOLO_ROSTER, error: null },
       { data: SOLO_USERS, error: null },
       // course_handicap update
-      { data: null, error: null },
+      WROTE_ROW,
       // status flip — denne calleren vant
       { data: [{ id: 'game-id' }], error: null },
       // #1055: SELECT pending game_registration_requests
@@ -454,7 +501,7 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
       { data: SOLO_USERS, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       // #1055: SELECT pending game_registration_requests
       { data: pendingRequests, error: null },
@@ -479,7 +526,7 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
       { data: SOLO_USERS, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       { data: pendingRequests, error: null },
       // Kun req-2 kom tilbake fra UPDATE-en.
@@ -501,7 +548,7 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
       { data: SOLO_USERS, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       // #1055: SELECT pending → tom liste
       { data: [], error: null },
@@ -532,7 +579,7 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
       { data: SOLO_USERS, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
       // status flip — en annen caller vant (0 rader)
       { data: [], error: null },
     ]);
@@ -561,7 +608,7 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
       { data: SOLO_USERS, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       { data: pendingRequests, error: null },
       { data: pendingRequests.map((r) => ({ id: r.id })), error: null },
@@ -635,11 +682,11 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
         error: null,
       },
       // 5 hcp updates
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       // status flip
       { data: null, error: null },
     ]);
@@ -662,10 +709,10 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
         })),
         error: null,
       },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       { data: null, error: null }, // status flip
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
@@ -689,16 +736,16 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
       },
       // #969: 5 rotation-slot updates (one per active player), then 5
       // course_handicap updates, then the status flip.
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       { data: null, error: null }, // status flip
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
@@ -722,8 +769,10 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
         ],
         error: null,
       },
-      { data: null, error: null },
-      { data: null, error: null },
+      // 2 × course_handicap, så status-flippen: 0 rader, altså en annen
+      // caller vant kappløpet (derfor `started: false` under).
+      WROTE_ROW,
+      WROTE_ROW,
       { data: null, error: null },
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
@@ -772,7 +821,7 @@ function passThroughQueue(roster: { user_id: string }[]) {
       })),
       error: null,
     },
-    ...roster.map(() => ({ data: null, error: null })),
+    ...roster.map(() => WROTE_ROW),
     { data: null, error: null }, // status flip
   ];
 }
@@ -988,12 +1037,12 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
         error: null,
       },
       // 3 slot updates + 3 course_handicap updates
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       // status flip — won the row
       { data: [{ id: 'game-id' }], error: null },
     ]);
@@ -1041,19 +1090,43 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
         error: null,
       },
       // 4 slot updates + 4 course_handicap updates
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       // status flip
       { data: [{ id: 'game-id' }], error: null },
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: true, started: true });
+  });
+
+  // #1871: samme felle på rotasjons-slotene. Null rader tilbake betyr at
+  // ingen slot ble skrevet, og en wolf-runde uten rotasjon skal ikke starte.
+  it('0 rader fra en rotasjons-slot → db_players, ingen flip', async () => {
+    const roster = [rot('u1'), rot('u2'), rot('u3')];
+    const supabase = buildSupabaseMock([
+      { data: makeRotationGameRow('wolf'), error: null },
+      { data: roster, error: null },
+      {
+        data: roster.map((r) => ({
+          id: r.user_id,
+          email: `${r.user_id}@x.no`,
+          profile_completed_at: '2026-01-01',
+        })),
+        error: null,
+      },
+      // første slot-skriv traff null rader
+      { data: [], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'db_players' });
+    expect(statusFlipWrites(supabase)).toHaveLength(0);
   });
 });
 
@@ -1129,11 +1202,11 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
       },
       { data: roster, error: null },
       { data: profiles(roster), error: null },
-      { data: null, error: null }, // 4 × course_handicap
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null }, // mode_config-oppdateringen
+      WROTE_ROW, // 4 × course_handicap
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW, // mode_config-oppdateringen
       { data: [{ id: 'game-id' }], error: null }, // status flip
     ]);
 
@@ -1164,10 +1237,10 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
       },
       { data: roster, error: null },
       { data: profiles(roster), error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null }, // status flip
     ]);
 
@@ -1182,10 +1255,10 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
       { data: greensomeGameRow({ team_strokes_override: STORED }), error: null },
       { data: roster, error: null },
       { data: profiles(roster), error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null }, // status flip
     ]);
 
@@ -1206,14 +1279,41 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
       },
       { data: roster, error: null },
       { data: profiles(roster), error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
-      { data: null, error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       { data: null, error: { message: 'boom' } }, // mode_config-oppdateringen
     ]);
 
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: false, reason: 'db_game' });
+  });
+
+  // #1871: samme utfall uten feilkanal — skrivet traff null rader fordi en
+  // policy filtrerte raden bort. Runden skal ikke starte med et lag-slag-
+  // forslag som ikke ble skrevet.
+  it('0 rader fra mode_config-skrivet → db_game, ingen flip', async () => {
+    const roster = greensomeRoster(-2);
+    const supabase = buildSupabaseMock([
+      {
+        data: greensomeGameRow({
+          team_strokes_override: STORED,
+          team_strokes_override_auto: STORED,
+        }),
+        error: null,
+      },
+      { data: roster, error: null },
+      { data: profiles(roster), error: null },
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
+      { data: [], error: null }, // mode_config traff null rader
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'db_game' });
+    expect(statusFlipWrites(supabase)).toHaveLength(0);
   });
 });

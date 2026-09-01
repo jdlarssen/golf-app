@@ -4,7 +4,7 @@ import {
   calculateCourseHandicap,
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
-import { expectAffected } from '@/lib/supabase/affectedRows';
+import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 import { findPendingPlayers } from './pendingPlayers';
 import type { GameStatus } from './status';
 import {
@@ -318,22 +318,38 @@ export async function startScheduledGameCore(
   // own-row escape in `guard_game_players_self_update` (migration 0168): the
   // organiser's own slot write raised 42501 while everyone else's went through.
   //
-  // These writes still chain no `.select()`, so an RLS-FILTERED row (0 rows,
-  // error null) would pass silently — trap 2. A trigger raise surfaces as an
-  // error and is caught; a policy miss would not be. Not tightened here because
-  // the same applies to the course_handicap freeze and the mode_config write
-  // below, and changing all three alters web behaviour too. Tracked separately.
+  // #1871: a trigger raise surfaces as an error and was always caught. What was
+  // NOT caught was a POLICY filtering the row away: 0 rows, `error === null`,
+  // and the round started with unfrozen course handicaps or without rotation
+  // slots — silently. All three writes from here down (the slots, the
+  // course_handicap freeze, the greensome mode_config override) therefore chain
+  // `.select()` and go through `expectOne`, so a filtered row becomes the typed
+  // refusal this function already returns instead of a quiet no-op. That is a
+  // behaviour change on web too, and the intended one: a path that used to
+  // no-op now answers `db_players` / `db_game`.
   if (rotationRange) {
     for (const slot of assignRotationSlots(activeRotationIds)) {
-      const { error: slotError } = await supabase
-        .from('game_players')
-        .update({
-          team_number: slot.team_number,
-          flight_number: slot.flight_number,
-        })
-        .eq('game_id', gameId)
-        .eq('user_id', slot.user_id);
-      if (slotError) return { ok: false, reason: 'db_players' };
+      try {
+        expectOne(
+          await supabase
+            .from('game_players')
+            .update({
+              team_number: slot.team_number,
+              flight_number: slot.flight_number,
+            })
+            .eq('game_id', gameId)
+            .eq('user_id', slot.user_id)
+            .select('user_id'),
+          'startScheduledGameCore/rotationSlot',
+        );
+      } catch (err) {
+        console.error('[startScheduledGame] rotation slot write failed', {
+          gameId,
+          userId: slot.user_id,
+          err,
+        });
+        return { ok: false, reason: 'db_players' };
+      }
     }
   }
 
@@ -357,12 +373,24 @@ export async function startScheduledGameCore(
       rawCourseHandicap: raw,
     });
     const allowed = applyAllowance(raw, game.hcp_allowance_pct);
-    const { error: updateError } = await supabase
-      .from('game_players')
-      .update({ course_handicap: allowed })
-      .eq('game_id', gameId)
-      .eq('user_id', row.user_id);
-    if (updateError) return { ok: false, reason: 'db_players' };
+    try {
+      expectOne(
+        await supabase
+          .from('game_players')
+          .update({ course_handicap: allowed })
+          .eq('game_id', gameId)
+          .eq('user_id', row.user_id)
+          .select('user_id'),
+        'startScheduledGameCore/freezeCourseHandicap',
+      );
+    } catch (err) {
+      console.error('[startScheduledGame] course_handicap freeze failed', {
+        gameId,
+        userId: row.user_id,
+        err,
+      });
+      return { ok: false, reason: 'db_players' };
+    }
   }
 
   // 3b. #1628: greensomens lagrede lag-slag ble foreslått da cupen ble
@@ -388,11 +416,22 @@ export async function startScheduledGameCore(
       team_strokes_override: overridePlan.teamStrokesOverride,
       team_strokes_override_auto: overridePlan.teamStrokesOverrideAuto,
     };
-    const { error: configError } = await supabase
-      .from('games')
-      .update({ mode_config: nextConfig })
-      .eq('id', gameId);
-    if (configError) return { ok: false, reason: 'db_game' };
+    try {
+      expectOne(
+        await supabase
+          .from('games')
+          .update({ mode_config: nextConfig })
+          .eq('id', gameId)
+          .select('id'),
+        'startScheduledGameCore/greensomeOverride',
+      );
+    } catch (err) {
+      console.error('[startScheduledGame] greensome override write failed', {
+        gameId,
+        err,
+      });
+      return { ok: false, reason: 'db_game' };
+    }
   }
 
   // 4. Flip status to 'active' with optimistic-lock guard. If another
