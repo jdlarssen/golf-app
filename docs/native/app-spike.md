@@ -749,3 +749,146 @@ Bygg og installer som i N6a-seksjonen over, og les med service-role etterpå:
 4. Trekk + angre i aktiv runde → `withdrawn_at` satt og nullet igjen.
 5. Fasit: åpne samme spill på webben (`torny-staging-prod` i `.claude/launch.json`) og
    sammenlign roster og banehandicap.
+
+## Avslutt runden i appen (N6c, #1856)
+
+Arrangøren avslutter runden fra appen: leveringskontroll, «avslutt likevel» med
+trekk-avkrysning, LD/CTP-kåring per slot, og status-flippen. Halen som webben kjører
+etter flippen — differensialer, resultat-sammendrag, bragder, varsler/mail,
+rundereferat — kan telefonen ikke kjøre. Den er derfor sentralisert server-side og
+plukkes opp av en sweep.
+
+### Halen kan ikke flyttes til telefonen — det er hele grunnen til fullføreren
+
+Seks av post-stegene henter `getAdminClient()` **selv** og tar ikke injisert klient:
+`persistResultSummaries`, `persistScoreDifferentials`, `notifyAchievementUnlocks`,
+`generateAndPersistRoundReport`, `logAdminEvent` og `notify()` (inne i
+`notifyPlayersGameFinished`). `score_differential` er dessuten trigger-låst for
+ikke-admin (0117). En app-avslutning som bare flipper status ville gitt et ferdig
+spill **uten** sammendrag, differensialer, bragder, referat og «Resultatet er klart»-mail.
+
+`endGameCore` kan ikke gjenbrukes slik N6b gjenbrukte start-kjernen: linje 1 er
+`import 'server-only'`, og `native/app/node_modules/server-only` er en bar `throw`.
+Gatene speiles derfor tynt i `src/data/endGame.ts` med jest-paritet; halen deles ikke.
+
+### Markøren vinnes FØRST, ikke sist
+
+`runFinishPipeline` starter med å vinne raden:
+`.update({finish_pipeline_at: now}).is('finish_pipeline_at', null).select('id').maybeSingle()`
+— 0 rader betyr at noen andre eier kjøringen, og den returnerer uten å gjøre noe.
+Formen er husets egen fra `lib/notifications/autoStartBlocked.ts:67-82`.
+
+⚠️ **Ikke snu dette til «sett markøren sist».** Det gir at-least-once, og stegene tåler
+det ikke: `notifyAchievementUnlocks` kaller `notify()`, som er en bar INSERT — prod har
+**ingen** unik indeks på `public.notifications` (kun `notifications_pkey` + tre ikke-unike
+btrees), så hver ekstra kjøring dupliserer varselet og fyrer push på nytt.
+`generateAndPersistRoundReport` fakturerer et Anthropic-kall per kjøring, og
+finish-mailen er re-sendbar. Dobbel-varsling er verre enn et manglende referat.
+
+### Den optimistiske låsen ble bygget her — den fantes ikke før
+
+Flippen var `.update({status, ended_at}).eq('id', gameId)`: ingen status-predikat, ingen
+`.select()`. Et 0-rads-skriv ga `error === null`, og hele halen kjørte mot et spill som
+fortsatt var aktivt. Det var maskert av at `status !== 'active'`-gaten blokkerte
+re-inngang i hele pipelinen — et vern som forsvinner i det halen skilles ut. Låsen og
+uttrekket hører derfor til i samme commit.
+
+**0 rader = allerede avsluttet = idempotent suksess**, ikke en feil. Speilet fra
+`startScheduledGameCore`s `started`-boolean, så et legitimt dobbelttrykk ikke gir
+feilmelding.
+
+### Cup-ness kommer to ulike steder fra
+
+I **webben** kommer cup-oppførsel aldri fra `tournament_id` — `endGameCore` har null
+treff på kolonnen. Den kommer fra hvilken klient calleren sender (`lib/cup/actions.ts`
+sender service-role, fordi en klubb-styrer ikke er spillenes oppretter) og fra
+`suppressPerGameNotifications`. Begge må forbli parametere gjennom uttrekket.
+`finishDerivedGames` gater på `games.source_game_id` og kjører ubetinget.
+
+I **appen** er `tournament_id` derimot riktig sjekk: den skjuler avslutt-CTA-en og viser
+«Denne runden hører til en cup. Den avslutter du på nettsiden, så cup-tavla følger med.»
+
+### Sweepen er pg_cron, ikke Vercel-cron
+
+#502 er bevisst **ute** av `vercel.json` (Hobby gir 1/døgn). Jobben bor i migrasjon 0170:
+`cron.schedule('finish-pipeline-sweep', '* * * * *', ...)` med `where exists`-gate, så
+HTTP-POSTen kun fyrer når det finnes arbeid. **POST** — pg_net kan ikke GET. URL-formen er
+0146s apex, ikke 0094s www. `cron_secret` finnes alt i Vault.
+
+⚠️ **0170 påføres FØRST etter deploy.** Jobben peker på `/api/cron/finish-pipeline`;
+påføres den før ruta er ute, er hver fyring en 404. 0169 (markørkolonnen) er trygg når
+som helst.
+
+⚠️ **Staging kan ikke kjøre pg_cron-veien** — vaultet der er tomt, så
+Authorization-headeren ville blitt NULL. Driv ruta direkte i stedet (se under).
+
+### `finish_pipeline_at` har egen vakt
+
+`games creator update` gir oppretteren blankofullmakt på alle kolonner, og markøren
+styrer varsling og et betalt Anthropic-kall. 0169 legger derfor på en guard-trigger:
+en klient som prøver å sette eller nulle kolonnen får 42501, mens urelaterte felt går
+gjennom som før.
+
+### RLS-veien for appens tre skriv
+
+Alle tre går rett på RLS uten service-role, og hvert skriv rad-asserteres:
+
+| Handling | Policy |
+|---|---|
+| Marker manglende spiller som trukket | `game_players creator update` (0071) + `guard_game_players_self_update` (0168) |
+| Kår LD/CTP-vinnere | `game_side_winners creator all` (0071/0092), `onConflict: game_id,category,position` |
+| Flipp `active → finished` | `games creator update` (0071/0092), låst på `status=eq.active` |
+
+Empirisk bekreftet på staging med ekte JWT for en ikke-admin oppretter: upsert med
+`return=representation` mens spillet er `active` gir **201 + rader** (husets
+trap-2-idiom er trygt her — `creator all` har `cmd=ALL`, så SELECT-armen bærer det);
+låst flipp gir 200 + rad; flipp på et alt avsluttet spill gir **200 + `[]`**;
+re-upsert av vinnere på et finished spill virker (retry-stien).
+
+### Verifisere avslutt-flyten mot staging
+
+1. Seed et aktivt spill med side på (`side_ld_count`/`side_ctp_count` > 0), leverte kort
+   og varierte slag. `scores.entered_by` er NOT NULL. Hull-par heter **`par_mens`**,
+   ikke `par` — `course_holes` har `par_mens`/`par_ladies`/`par_juniors`.
+2. Avslutt fra appen med kåring (én spiller på LD, «Ingen kvalifiserte» på CTP) →
+   `game_side_winners` får `winner_user_id: null` for den tomme sloten,
+   `status='finished'`, og `finish_pipeline_at` er **fortsatt null**.
+3. Fyr sweepen. Staging har tomt vault, så POST ruta direkte mot en
+   **prod-server-modus**-build (`next build` med `.env.staging.local` + `next start`,
+   aldri dev):
+   ```
+   curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+     http://localhost:3111/api/cron/finish-pipeline
+   ```
+   → `{"ok":true,"checked":1,"completed":[...],"failed":[]}`, og etterpå har spillerne
+   `score_differential` + `result_summary` og spillet `finish_pipeline_at`.
+4. Fyr sweepen **én gang til** → `checked: 0`. Er den ikke 0, er markøren ikke satt og
+   varsler vil dupliseres.
+5. Fasit mot web: åpne `/no/games/<id>/leaderboard` → fanen «Sideturnering». Poengene
+   der skal være identiske med appens seksjon.
+
+⚠️ **Webbens avslutt-knapp kan ikke klikkes av et skript uten videre.** `EndGameButton`
+pakker innsendingen i `window.confirm()`, og Playwright avviser dialoger som standard —
+`preventDefault()` fyrer og formen sendes aldri. Registrer
+`page.on('dialog', d => d.accept())` først. Symptomet er stumt: knappen rapporterer
+`enabled: true`, klikket «lykkes», og ingenting skjer.
+
+⚠️ **Ikke klikk «Send meg kode» i skript.** Det kaller `signInWithOtp` og
+rate-limiter staging (`error=rate_limited_minute`), og da feiler server-action-en
+stille på auth etterpå. Mint koden med service-role og gå rett til
+`/no/login?step=verify&email=...`.
+
+### Bokførte gap
+
+- **Appen er strengere enn webben på «avslutt likevel».** Webbens avkryssinger er
+  valgfrie — `avslutt/page.tsx` setter `allowMissing = missing.length > 0` uten å spørre.
+  Appen krever at hver manglende spiller krysses av. Bevisst, per kontrakten: et trykk
+  som trekker en spiller skal være et valg, ikke en bieffekt.
+- **Slot-etikettene er norske i appen** («Lengste drive #1»), engelske i webbens
+  admin-skjema. Divergensen fantes fra før på begge flater; det lastbærende —
+  slot-NUMMERET, ikke en plassering — er identisk.
+- **Kåringsvelgeren tilbyr også en spiller som er krysset av som trukket.** Speiler
+  webben, som heller ikke filtrerer.
+- **Cup-avslutning, reopen og Sekretariat-godkjenning forblir web/admin.**
+- **Ingen admin-hendelseslogg for app-avslutningen selv** — `logAdminEvent` kjøres av
+  fullføreren, med sweepen som aktør.
