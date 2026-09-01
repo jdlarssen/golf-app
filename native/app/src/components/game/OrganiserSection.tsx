@@ -56,6 +56,7 @@ import {
 } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
 import { displayName } from '../../lib/display';
+import { CUP_NOTE } from '../../lib/endGameCopy';
 import {
   describeRosterFailure,
   describeStartRefusal,
@@ -90,11 +91,19 @@ export function OrganiserSection({
   bundle,
   userId,
   onChanged,
+  onFinish,
 }: {
   bundle: GameBundle;
   userId: string;
   /** Hent bundelen på nytt. Kalles etter HVER skriving, også de som feilet. */
   onChanged: () => void | Promise<void>;
+  /**
+   * Åpne avslutt-flaten (N6c, #1856).
+   *
+   * Sendes inn i stedet for at seksjonen navigerer selv: den kjenner ingen
+   * ruter i dag, og avslutningen skal ikke være grunnen til at den begynner.
+   */
+  onFinish: () => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -167,8 +176,9 @@ export function OrganiserSection({
 
   const scheduled = game.status === 'scheduled';
   const active = game.status === 'active';
-  // Utkast har ingen roster å drifte, og et ferdig spill er lesevisning (N6c
-  // eier avslutningen). Ingen seksjon der.
+  // Utkast har ingen roster å drifte, og et ferdig spill er lesevisning —
+  // avslutningen er alt gjort, og gjenåpning er admin-only på nettsiden.
+  // Ingen seksjon der.
   if (!scheduled && !active) return null;
 
   const mode = game.gameMode as GameMode;
@@ -186,6 +196,10 @@ export function OrganiserSection({
   const teamCount = Math.max(1, Math.ceil(activeCount / teamSize));
   const flightCount = Math.max(1, Math.ceil(activeCount / MAX_FLIGHT_SIZE));
   const canWithdraw = active && supportsWithdrawal(mode);
+  // Cup-runder avsluttes fra nettsiden: cup-flyten eier de avledede kampene og
+  // demper per-spill-varslene. `finishRound` avviser dem uansett — men en knapp
+  // som garantert svarer «nei» er verre enn en setning som sier hvor det gjøres.
+  const isCupGame = game.tournamentId !== null;
   // Noten forklarer ÉN ting nå: at trekk-knappen mangler på egen rad. Lag og
   // flight er ikke lenger sperret der — migrasjon 0168 ga arrangøren samme
   // unntak på egen rad som de alt hadde på andres (#1855/#1868). Vakt (c)
@@ -373,6 +387,23 @@ export function OrganiserSection({
         >
           <Text style={ui.buttonText}>Start runden nå</Text>
         </Pressable>
+      ) : null}
+
+      {active && !isCupGame ? (
+        <Pressable
+          style={ui.button}
+          disabled={busy}
+          testID="organiser-finish"
+          onPress={onFinish}
+        >
+          <Text style={ui.buttonText}>Avslutt runden</Text>
+        </Pressable>
+      ) : null}
+
+      {active && isCupGame ? (
+        <Text style={ui.muted} testID="organiser-cup-note">
+          {CUP_NOTE}
+        </Text>
       ) : null}
 
       {notice ? (

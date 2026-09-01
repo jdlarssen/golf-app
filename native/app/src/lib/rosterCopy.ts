@@ -22,8 +22,11 @@ import type { StartRoundRefusal } from '../data/startGame';
 /** Fallbacken når serveren svarte med noe vi ikke har en egen setning for. */
 const GENERIC_DB = 'Noe gikk galt mot serveren.';
 
-/** Nett-linja. Én formulering for alle skrivingene, så den ikke driver fra hverandre. */
-const OFFLINE = 'Du er uten nett. Koble til, så går det gjennom.';
+/**
+ * Nett-linja. Én formulering for alle skrivingene, så den ikke driver fra
+ * hverandre — også avslutt-copyen (`endGameCopy.ts`) leser den herfra.
+ */
+export const OFFLINE_NOTE = 'Du er uten nett. Koble til, så går det gjennom.';
 
 /**
  * ⚠️ Arrangørens EGEN rad (#1868).
@@ -60,7 +63,7 @@ export function describeRosterFailure(
     case 'no-session':
       return 'Du er ikke logget inn lenger. Logg inn på nytt.';
     case 'offline':
-      return OFFLINE;
+      return OFFLINE_NOTE;
     case 'not-found':
       return 'Fant ikke spilleren i denne runden.';
     case 'roster-locked':
@@ -104,7 +107,7 @@ export function describeRosterFailure(
 export function describeStartRefusal(refusal: StartRoundRefusal): string {
   switch (refusal.reason) {
     case 'offline':
-      return OFFLINE;
+      return OFFLINE_NOTE;
     case 'not_found':
       return 'Spillet ble ikke funnet.';
     case 'not_scheduled':
