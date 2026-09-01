@@ -327,7 +327,7 @@ eller at kandidatlista faktisk er medspiller-subsettet. Som vanlig spiller bet b
 | 4 | Skjermbilde fra staging: nøyaktig de 8 modiene, hver med sitt spillerkrav («Wolf 3–5 spillere», «Greensome 4 spillere»). Fetch-feil → ærlig note (jest) |
 | 5 | Jest: kompenserende delete utstedes m/ `.eq('id', …)`, `{data: [], error: null}` → `no_rows`, `code '42501'` → `rls_denied`, tee-off i fortid → avvist UTEN at `games`/`game_players` berøres (`routeFrom` kaster ellers) |
 | 6 | `npx vitest run`: 522 filer / 7028 tester — **identisk med baseline målt før første kodelinje**. `git diff --name-only origin/main...HEAD` utenfor `native/`/`docs/`/`.forge/` = **0 filer** |
-| 7 | Alle syv porter grønne (tabell under). Runbook-seksjon skrevet. **Eier-tapptest på fysisk iPhone gjenstår** |
+| 7 | Alle syv porter grønne (tabell under). Runbook-seksjon skrevet. **Eier-tapptest på fysisk iPhone BESTÅTT 2026-09-01** — eier bekreftet i interaktiv økt (Fable-hovedchatten for #1832-sporet) at veiviseren er tapptestet på enheten tidligere samme dag; ingen funn meldt. Bokført etter faktisk eier-utsagn, jf. #1849-mønsteret |
 
 ### Porter
 
