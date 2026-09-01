@@ -247,19 +247,22 @@ async function loadCupContext(
 
 async function PlayerShortageBanner() {
   const { players } = await getNewGameFormData();
-  if (players.length >= 8) return null;
+  // #1838: samme terskel som `/opprett-spill` fikk i #1794. Banneret er en
+  // nudge om at klubben er for liten til å spille noe som helst — ikke en
+  // advarsel om at 7 spillere er få. Med <= 1 er `players.length` enten 0
+  // eller 1, så entalls-bøyningen er gitt og trenger ingen utregning.
+  if (players.length > 1) return null;
   // /new vet ikke hvilken modus admin lander på (velges i form-en under),
   // så copy-en nevner begge moduser. /edit har eget banner som dropper
   // visning helt for stableford siden modus er låst der.
   const t = await getTranslations('wizard');
-  const isSingular = players.length === 1;
   const bannerText =
     players.length === 0
       ? t('page.shortageBannerZero')
       : t('page.shortageBannerSome', {
           count: players.length,
-          suffix: isSingular ? '' : 'e',
-          plural: isSingular ? '' : 'e',
+          suffix: '',
+          plural: '',
         });
   return (
     <div className="mt-4">
