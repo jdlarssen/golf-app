@@ -23,13 +23,13 @@ Ingen ny bibliotek-flate — alt bygger på mønstre lest fra repoet i spec-økt
 
 ## Suksesskriterier
 
-- [ ] **SK1 — Tak:** `MAX_PERSONAL_CUP_MATCHES = 36`, `MAX_PERSONAL_CUP_PLAYERS = 40` i `lib/cup/limits.ts`; grensetester 36/37 og 40/41 (+ 28- og 34-radene for innsenderens oppsett) grønne i `lib/cup/limits.test.ts`. Kommentaren begrunner Ryder-skalaen og frikoblingen fra #525.
-- [ ] **SK2 — Klampe-regel:** `buildSessionCountRows(sessions, teamSize, overrides)` + `buildSessions(…, overrides?)` i `lib/cup/cupTemplates.ts`: klassisk @ 16 med `{2: 12}` → 8/8/12; override klampes [1, derivert]; derivert-0-økter droppes uansett override; nøkling på posisjon (duplikatformater i tilpasset liste); ikke-endelige verdier ignoreres; uten overrides identisk med dagens oppførsel. Verifisert av `lib/cup/cupTemplates.test.ts`.
-- [ ] **SK3 — Veiviser-UI:** Generer-rommets steg 1 viser én rad per økt (ikke splittet-cup-dag) med −/+-steppere (≥44px tap-targets, `tabular-nums`), disabled på grensene, testid-kontrakt `cup-session-count-<i>` / `cup-session-minus-<i>` / `cup-session-plus-<i>`. `plannedTotal`, cap-gaten og genereringen leser den justerte planen.
-- [ ] **SK4 — Splittet cup-dag uberørt:** ingen steppere når `isSplitDay`; `generateSplitDayPlan`-løypa uendret; eksisterende bunt-tester grønne.
-- [ ] **SK5 — i18n + copy:** nye nøkler under `cup.generate` i BÅDE `messages/no.json` og `messages/en.json` (paritetstester grønne); `humanizer:humanizer` kjørt på de norske strengene før commit.
-- [ ] **SK6 — Versjonsnotater:** `.changes/1883-ryder-cup-tak.md` + `.changes/1883-matcher-per-okt.md` gyldige — `node scripts/weekly-release.mjs --dry-run` godtar begge.
-- [ ] **SK7 — Tester:** planens ene interaksjonstest i `GenerateMatchesWizard.test.tsx` grønn (stepper ↔ visning-wiring; ingen re-assert av Type A-tall); hele suiten grønn.
+- [x] **SK1 — Tak:** `MAX_PERSONAL_CUP_MATCHES = 36`, `MAX_PERSONAL_CUP_PLAYERS = 40` i `lib/cup/limits.ts`; grensetester 36/37 og 40/41 (+ 28- og 34-radene for innsenderens oppsett) grønne i `lib/cup/limits.test.ts`. Kommentaren begrunner Ryder-skalaen og frikoblingen fra #525.
+- [x] **SK2 — Klampe-regel:** `buildSessionCountRows(sessions, teamSize, overrides)` + `buildSessions(…, overrides?)` i `lib/cup/cupTemplates.ts`: klassisk @ 16 med `{2: 12}` → 8/8/12; override klampes [1, derivert]; derivert-0-økter droppes uansett override; nøkling på posisjon (duplikatformater i tilpasset liste); ikke-endelige verdier ignoreres; uten overrides identisk med dagens oppførsel. Verifisert av `lib/cup/cupTemplates.test.ts`.
+- [x] **SK3 — Veiviser-UI:** Generer-rommets steg 1 viser én rad per økt (ikke splittet-cup-dag) med −/+-steppere (≥44px tap-targets, `tabular-nums`), disabled på grensene, testid-kontrakt `cup-session-count-<i>` / `cup-session-minus-<i>` / `cup-session-plus-<i>`. `plannedTotal`, cap-gaten og genereringen leser den justerte planen.
+- [x] **SK4 — Splittet cup-dag uberørt:** ingen steppere når `isSplitDay`; `generateSplitDayPlan`-løypa uendret; eksisterende bunt-tester grønne.
+- [x] **SK5 — i18n + copy:** nye nøkler under `cup.generate` i BÅDE `messages/no.json` og `messages/en.json` (paritetstester grønne); `humanizer:humanizer` kjørt på de norske strengene før commit.
+- [x] **SK6 — Versjonsnotater:** `.changes/1883-ryder-cup-tak.md` + `.changes/1883-matcher-per-okt.md` gyldige — `node scripts/weekly-release.mjs --dry-run` godtar begge.
+- [x] **SK7 — Tester:** planens ene interaksjonstest i `GenerateMatchesWizard.test.tsx` grønn (stepper ↔ visning-wiring; ingen re-assert av Type A-tall); hele suiten grønn.
 - [ ] **SK8 — Staging-bevis:** klikkrunde på torny-staging FØR merge: cup-kladd med klassisk preset → Generer → del lag → skru ned singler → Neste → forhåndsvisning har nedjustert antall → generer. Bevis-kommentar + `staging-verified`-label på PR-en.
 
 ## Gates
@@ -67,3 +67,42 @@ Ingen ny bibliotek-flate — alt bygger på mønstre lest fra repoet i spec-økt
 - Oppjustering av matchantall (flere matcher enn spillere per økt).
 - Lagring av overstyringer på `tournament_plans`.
 - Endringer i klubb-cup-/admin-takene (fortsatt uncapped).
+
+## Bevis (bygge-økta 2026-09-01)
+
+| SK | Bevis |
+|---|---|
+| SK1 | `lib/cup/limits.ts` 36/40 + omskrevet doc-kommentar; `npx vitest run lib/cup/limits.test.ts` grønn med 36/37- og 40/41-radene + 28/34-radene. Commit `0444ec17`. |
+| SK2 | `buildSessionCountRows`/`buildSessions` i `lib/cup/cupTemplates.ts`; 10 nye Type A-tester grønne (`npx vitest run lib/cup/cupTemplates.test.ts lib/cup/cupPairing.test.ts` → 58). Commit `5da4885b`. |
+| SK3 | `Step1SessionCounts` i veiviseren: testid-ene `cup-session-count/minus/plus-<i>`, `min-h-[44px] min-w-[44px]`, `tabular-nums`, `disabled` på begge grenser. `getSessionPlan()` (som `plannedTotal`, cap-gaten og `runGenerate` alle leser) tar overstyringene. Commit `aaacb4fe`. |
+| SK4 | Rendres bak `!isSplitDay`; `generateSplitDayPlan`-løypa urørt; bunt-testen i `GenerateMatchesWizard.test.tsx` fortsatt grønn. |
+| SK5 | Fem nøkler i BEGGE kataloger; `npx vitest run messages` grønn (katalog- + apostrof-paritet). `humanizer`-skillet kjørt — to strenger endret mot planen (se avvik under). |
+| SK6 | `node scripts/weekly-release.mjs --dry-run` lister begge 1883-notatene som gyldige feat-rader, ingen valideringsfeil. |
+| SK7 | Interaksjonstesten grønn; full suite `npx vitest run` → **522 filer / 7050 tester, exit 0**. `npx tsc --noEmit` exit 0, `npm run lint` 0 errors, `npm run build` exit 0. |
+| SK8 | **Utestående** — staging-klikkrunde gjenstår før merge. |
+
+## Avvik fra planen (begrunnet)
+
+1. **Fem filer mer i Task 1 enn planen listet.** En pre-flight-revisjon fant at
+   cap-hevingen sprakk fire testfiler som hardkodet `24`/`16` i stedet for å
+   importere konstanten (`lib/cup/actions.test.ts`, `lib/cup/participantRosterSync.test.ts`,
+   `lib/cup/planActions.test.ts`, `app/[locale]/admin/cup/[id]/generer/actions.test.ts`).
+   Målt: 5 røde tester rett etter hevingen. Alle fire utleder nå fixturen fra
+   konstanten slik `lib/cup/joinValidation.test.ts` allerede gjorde, så neste
+   tak-endring ikke kan re-brekke dem (AGENTS.md-felle 4). I tillegg ble en
+   utdatert kommentar i `generer/actions.ts` rettet — den påsto «match-taket er
+   bindende i praksis», som ikke lenger stemmer ved 36/40.
+2. **Fixturen i `generer/actions.test.ts` gjenbruker en spiller-pool.** Planens
+   naive oppskalering (13 flights à 4 distinkte spillere = 52) ville sprengt
+   deltaker-taket òg, og testen hadde svart `too_many_matches` bare fordi
+   match-taket sjekkes først. Flightene deler nå en pool på nøyaktig
+   deltaker-taket, så bare match-taket brytes — testen beviser det den heter.
+3. **To copy-strenger endret.** Hintet «Alle må ikke spille hver økt» leser i
+   bokmål først som forbud; katalogen har 0 treff på «må ikke» og flere på
+   «trenger ikke». Nå: «Ikke alle trenger å spille hver økt. Skru ned antallet,
+   så står resten over.» Aria-labelene bruker husmønsteret «Færre matcher for
+   {format}» (jf. «Færre putter for {name}») i stedet for planens kolon-form.
+4. **Branch.** Bygget på `claude/ryder-cup-format-impl-5324d7`, ikke
+   `claude/ryder-cup-format-b137cd` — sistnevnte er sjekket ut i en søster-worktree
+   og git nekter dobbel-checkout. Kontrakt-/spec-/plan-commitene er forfedre av
+   PR-en, så `b137cd` er fullt merget etterpå og kan slettes.
