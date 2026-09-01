@@ -266,7 +266,7 @@ async function PlayerShortageBanner() {
         });
   return (
     <div className="mt-4">
-      <Banner tone="info">
+      <Banner tone="info" testId="player-shortage-banner">
         {bannerText}{' '}
         {t('page.shortageBannerNote')}{' '}
         <SmartLink
