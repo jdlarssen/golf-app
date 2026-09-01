@@ -1,7 +1,9 @@
 # Re-gates main after every merge (#1075). CI runs on pull_request only, and
 # without branch protection (free tier) two individually-green rebase-merges
-# can compose a red main that nobody sees. This mirrors ci.yml's verify job and
-# raises a deduped alert issue if main goes red — a red scheduled/push run must
+# can compose a red main that nobody sees. This mirrors ci.yml's verify job
+# (including the native port added in #1861 — the two must stay in lockstep, or
+# main can go red on the app without anyone being told) and raises a deduped
+# alert issue if main goes red — a red scheduled/push run must
 # never die silently in the Actions tab (fail-closed, epic #1073).
 name: Main verify
 
@@ -29,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     # #1709: mirrors ci.yml's verify timeout — a hang here burns up to 6h of
     # Actions quota on a quiet night before cancel-in-progress can save it.
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -37,6 +39,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          # Two lockfiles, two `npm ci` calls (#1861). Without this the cache
+          # key covers the root lockfile only, and a native-only dependency
+          # bump would restore a cache that can't satisfy it.
+          cache-dependency-path: |
+            package-lock.json
+            native/app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -52,6 +60,49 @@ jobs:
 
       - name: Guard hooks (blocking)
         run: bash tests/hooks/guard.test.sh
+
+      # ── Native port (#1861) ────────────────────────────────────────────────
+      # The Expo app's jest suite (512 tests, 35 suites) ran in ZERO CI runs
+      # until now: no workflow mentioned native/app, so it only ran when
+      # someone remembered `npx jest` by hand. Two #1854 bugs reached a phone
+      # through exactly that hole. A gate that doesn't run is not a gate.
+      #
+      # These are STEPS in `verify`, not a separate job, on purpose: `verify`
+      # is one of the three checks branch protection requires on main
+      # (verify + e2e + scan). A new job means a new check name the owner has
+      # to add to that list by hand in GitHub settings — and until they did, a
+      # red native run would block exactly nothing.
+      #
+      # Order matters: the root `npm ci` above must already have run. The app's
+      # tsconfig maps `@/*` to the repo root, so tsc also type-checks the
+      # shared lib/ files, whose own imports resolve against ROOT node_modules.
+      #
+      # The app is a standalone npm project with its own lockfile, hence its
+      # own `npm ci` (the npm cache above is keyed on both lockfiles).
+      - name: Install native app dependencies
+        working-directory: native/app
+        run: npm ci
+
+      - name: Native test (blocking)
+        working-directory: native/app
+        run: npx jest
+
+      - name: Native typecheck (blocking)
+        working-directory: native/app
+        run: npx tsc --noEmit
+
+      # The ONLY gate that catches Metro resolution. metro.config.js pins the
+      # resolver to native/app/node_modules, so every bare import reachable
+      # from the shared lib/ graph must be a declared dependency of THIS
+      # package — jest resolves from the repo root instead and stays green
+      # while the bundle is unbuildable (#1854 bug 1: the shared `zod` import).
+      # `ios` alone is enough (the JS graph is platform-shared) and needs no
+      # Xcode: export is Metro + Hermes, and both ship linux binaries.
+      - name: Native bundle — Metro resolution (blocking)
+        working-directory: native/app
+        env:
+          EXPO_NO_TELEMETRY: '1'
+        run: npx expo export --platform ios
 
       # Alert on red main: open a deduped issue so the hourly CI-vakt routine
       # (and the owner) sees it without watching the Actions tab. continue-on-
