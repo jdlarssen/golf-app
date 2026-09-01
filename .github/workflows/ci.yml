@@ -3,7 +3,10 @@
 # is too late (see #673, and the #641/#642/#647 prod-break cluster).
 #
 # typecheck + test + lint are all BLOCKING (the pre-existing lint errors were
-# cleaned in #692). lint fails on errors only; warnings don't block.
+# cleaned in #692). lint fails on errors only; warnings don't block. Since
+# #1861 the `verify` job also runs the native app's own port (jest + tsc +
+# expo export in native/app) — steps in this job rather than a job of their
+# own, so they inherit the required-check status instead of needing a new one.
 #
 # Enforcement is two-layered (#1477): the local pre-push hook
 # (.githooks/pre-push) runs the same three checks BEFORE a push leaves the
@@ -36,8 +39,10 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # #1709: fail loudly instead of GitHub's 6h default. Observed 4m05s-6m55s.
-    timeout-minutes: 15
+    # #1709: fail loudly instead of GitHub's 6h default. Observed 4m05s-6m55s
+    # before #1861; the native port (own npm ci + jest + tsc + expo export)
+    # adds a few minutes on top, so the ceiling moved with it.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -45,6 +50,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          # Two lockfiles, two `npm ci` calls (#1861). Without this the cache
+          # key covers the root lockfile only, and a native-only dependency
+          # bump would restore a cache that can't satisfy it.
+          cache-dependency-path: |
+            package-lock.json
+            native/app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -62,6 +73,49 @@ jobs:
       # plain bash/jq, so vitest never exercises them — this is their only gate.
       - name: Guard hooks (blocking)
         run: bash tests/hooks/guard.test.sh
+
+      # ── Native port (#1861) ────────────────────────────────────────────────
+      # The Expo app's jest suite (512 tests, 35 suites) ran in ZERO CI runs
+      # until now: no workflow mentioned native/app, so it only ran when
+      # someone remembered `npx jest` by hand. Two #1854 bugs reached a phone
+      # through exactly that hole. A gate that doesn't run is not a gate.
+      #
+      # These are STEPS in `verify`, not a separate job, on purpose: `verify`
+      # is one of the three checks branch protection requires on main
+      # (verify + e2e + scan). A new job means a new check name the owner has
+      # to add to that list by hand in GitHub settings — and until they did, a
+      # red native run would block exactly nothing.
+      #
+      # Order matters: the root `npm ci` above must already have run. The app's
+      # tsconfig maps `@/*` to the repo root, so tsc also type-checks the
+      # shared lib/ files, whose own imports resolve against ROOT node_modules.
+      #
+      # The app is a standalone npm project with its own lockfile, hence its
+      # own `npm ci` (the npm cache above is keyed on both lockfiles).
+      - name: Install native app dependencies
+        working-directory: native/app
+        run: npm ci
+
+      - name: Native test (blocking)
+        working-directory: native/app
+        run: npx jest
+
+      - name: Native typecheck (blocking)
+        working-directory: native/app
+        run: npx tsc --noEmit
+
+      # The ONLY gate that catches Metro resolution. metro.config.js pins the
+      # resolver to native/app/node_modules, so every bare import reachable
+      # from the shared lib/ graph must be a declared dependency of THIS
+      # package — jest resolves from the repo root instead and stays green
+      # while the bundle is unbuildable (#1854 bug 1: the shared `zod` import).
+      # `ios` alone is enough (the JS graph is platform-shared) and needs no
+      # Xcode: export is Metro + Hermes, and both ship linux binaries.
+      - name: Native bundle — Metro resolution (blocking)
+        working-directory: native/app
+        env:
+          EXPO_NO_TELEMETRY: '1'
+        run: npx expo export --platform ios
 
   # Authenticated e2e gate (#674): the golden-path scoring loop + cup/liga
   # lifecycle smoke — the flows where #641/#642/#647 lived. These run against the
