@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { sendDigestForPeriod } from '@/lib/productUpdates/digest';
+import { requireCronAuth } from '@/lib/cron/auth';
 
 // Vercel Cron handler — issue #202.
 //
@@ -10,20 +11,13 @@ import { sendDigestForPeriod } from '@/lib/productUpdates/digest';
 //
 // Auth: Vercel automatically sends `Authorization: Bearer ${CRON_SECRET}`.
 // If the header doesn't match, return 401 so accidental public-fetch is
-// blocked.
+// blocked. Shared with the two pg_net routes via lib/cron/auth.ts (#1856) —
+// same secret, different transport.
 
 
 export async function GET(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    console.error('[cron/product-update-digest] CRON_SECRET not set');
-    return new NextResponse('CRON_SECRET not configured', { status: 500 });
-  }
-
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${secret}`) {
-    return new NextResponse('Unauthorized', { status: 401 });
-  }
+  const denied = requireCronAuth(request, 'cron/product-update-digest');
+  if (denied) return denied;
 
   // Gate: only fire on the 1st of the month in Europe/Oslo.
   const dayInOslo = Number(

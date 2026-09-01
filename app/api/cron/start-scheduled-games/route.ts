@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { requireCronAuth } from '@/lib/cron/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { startDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
 import { notifyPlayersGameStarted } from '@/lib/notifications/events';
@@ -26,7 +27,10 @@ import type { HoleSegment } from '@/lib/scoring';
 //
 // Auth: pg_net sends `Authorization: Bearer <cron_secret from Vault>`,
 // which must equal CRON_SECRET in Vercel env. 401 on mismatch blocks
-// accidental public fetch; 500 surfaces missing configuration.
+// accidental public fetch; 500 surfaces missing configuration. The check
+// itself lives in lib/cron/auth.ts — one home for all three cron routes
+// (#1856); it was inlined here and in product-update-digest until the
+// finish-pipeline sweep would have made it a third copy.
 //
 // Per due game this runs the same idempotent, optimistic-locked
 // startScheduledGame transition as the E1 page fallback and the admin
@@ -60,16 +64,8 @@ type DueGame = {
 };
 
 export async function POST(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    console.error(`[${LOG_PREFIX}] CRON_SECRET not set`);
-    return new NextResponse('CRON_SECRET not configured', { status: 500 });
-  }
-
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${secret}`) {
-    return new NextResponse('Unauthorized', { status: 401 });
-  }
+  const denied = requireCronAuth(request, LOG_PREFIX);
+  if (denied) return denied;
 
   // Service-role client: the transition writes ALL players' course_handicap
   // and flips games.status — system-level work with no user session (same
