@@ -53,6 +53,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter, usePathname, Link } from '@/i18n/navigation';
@@ -488,6 +489,10 @@ function WizardBody({
   // igjen → normaliser → push → back … i ring.
   const appInitiatedStepNav = useRef(false);
 
+  /** #1837: satt av `handleIntentSelect`, lest av fokus-effekten under. */
+  const autoAdvancedRef = useRef(false);
+  const stepTitleRef = useRef<HTMLSpanElement>(null);
+
   function goToStep(next: Step) {
     if (next === step) return;
     appInitiatedStepNav.current = true;
@@ -511,6 +516,24 @@ function WizardBody({
       router.replace(nextUrl, { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // #1837: auto-videre unmounter flisen arrangøren nettopp klikket, og fokus
+  // faller til <body> — tastaturbrukere må tabbe fra toppen igjen, og ingen
+  // skjermleser sier at steget byttet. Under den gamle flyten overlevde fokus
+  // fordi «Neste» i footeren besto på tvers av steg.
+  //
+  // Fokus flyttes derfor til steg-overskriften: den annonserer det nye steget
+  // (rolle + tittel + «Steg 2 av 5» via aria-describedby), og neste Tab lander
+  // i steg 2 sitt innhold i stedet for i toppen av siden.
+  //
+  // Kun ved auto-videre. «Neste»/«Forrige» og URL-normalisering lar fokus stå
+  // der det er — flagget settes bare i `handleIntentSelect`, og nullstilles her
+  // så et senere stegbytte ikke arver det.
+  useEffect(() => {
+    if (!autoAdvancedRef.current) return;
+    autoAdvancedRef.current = false;
+    stepTitleRef.current?.focus();
   }, [step]);
 
   // Auto-name: når bane/tee-off endres OG admin ikke har redigert navnet
@@ -704,6 +727,7 @@ function WizardBody({
    */
   function handleIntentSelect(next: Intent) {
     state.setIntent(next);
+    autoAdvancedRef.current = true;
     goToStep(2);
   }
 
@@ -724,6 +748,7 @@ function WizardBody({
           title={t(`steps.${step}` as Parameters<typeof t>[0])}
           subText={subText}
           totalSteps={2}
+          titleRef={stepTitleRef}
         />
 
         {step === 1 && (
@@ -766,6 +791,7 @@ function WizardBody({
         title={t(`steps.${step}` as Parameters<typeof t>[0])}
         subText={subText}
         totalSteps={TOTAL_STEPS}
+        titleRef={stepTitleRef}
         action={
           step === 2 && state.intent !== 'cup' && !state.lockGameMode ? (
             <button
@@ -1472,12 +1498,21 @@ function PlayerCountPicker({
 // transition-en.
 // ──────────────────────────────────────────────────────────────────────
 
+/**
+ * Id-ene som binder steg-telleren til steg-overskriften. Bare én StepperHeader
+ * er montert av gangen (cup-grenen returnerer før den vanlige), så de kolliderer
+ * ikke med seg selv.
+ */
+const STEP_COUNTER_ID = 'wizard-step-counter';
+const STEP_TITLE_ID = 'wizard-step-title';
+
 function StepperHeader({
   step,
   title,
   subText,
   totalSteps,
   action,
+  titleRef,
 }: {
   step: Step;
   title: string;
@@ -1485,16 +1520,34 @@ function StepperHeader({
   totalSteps: number;
   /** Valgfri handling til høyre for tittelen (#498: «?»-knapp på steg 2). */
   action?: ReactNode;
+  /** #1837: fokusmål ved auto-videre — se `handleIntentSelect`. */
+  titleRef?: RefObject<HTMLSpanElement | null>;
 }) {
   const t = useTranslations('wizard');
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="text-muted tabular-nums">
+        <span id={STEP_COUNTER_ID} className="text-muted tabular-nums">
           {t('stepCounter', { step, total: totalSteps })}
         </span>
         <div className="flex items-center gap-2">
-          <span className="font-serif text-lg text-text">{title}</span>
+          {/* #1837: overskrift i navn og gagn. `role=heading` gir den en rolle
+              en skjermleser kan annonsere, `aria-describedby` henter «Steg 2 av
+              5» fra telleren så annonseringen står på egne ben, og
+              `tabIndex={-1}` gjør den til et fokusmål uten å legge den inn i
+              tab-rekkefølgen. Fokusregelen i globals.css utelater bevisst
+              `[tabindex='-1']`, så den får ingen ring ved muse-klikk. */}
+          <span
+            ref={titleRef}
+            id={STEP_TITLE_ID}
+            role="heading"
+            aria-level={2}
+            aria-describedby={STEP_COUNTER_ID}
+            tabIndex={-1}
+            className="font-serif text-lg text-text"
+          >
+            {title}
+          </span>
           {action}
         </div>
       </div>
