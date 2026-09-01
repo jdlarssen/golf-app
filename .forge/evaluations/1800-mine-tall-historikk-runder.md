@@ -6,6 +6,7 @@ Bygger: Opus-subagent (nattkjøreren, Fable-orkestrert). Evaluator: Opus i fersk
 |---|---|---|---|
 | 1 | REJECT | `.changes/1800-mine-tall-historikk.md` hadde en lekket `</content>`-tag på siste linje — validatoren i `scripts/weekly-release.mjs` slipper den gjennom, så den ville havnet ordrett i CHANGELOG mandag. Nits: hengende `getMyStats`-referanse i kommentar (historikk/page.tsx), dobbel `countRoundAchievements`-kjøring (ren CPU, ubetydelig). | Tag-linja slettet; kommentar-referansen fjernet. Dobbel-telling-nitten står (bevisst minimal diff — AchievementWall beholder sin datakilde). |
 | 2 | — | Re-verifisering: `weekly-release --dry-run` gir ren CHANGELOG-blokk, typecheck/lint grønn. | Videre til kryss-modell-gate (Sonnet). |
+| Kryss-modell (Sonnet) | CONFIRM | Uavhengig verifisering av semantikk-paritet, i18n-paritet (4454 leaf-nøkler begge locales), null nye DB-kall, ren profil-sletting. Nit: hengende `getMyStats`-kommentar i `notifyAchievementUnlocks.ts` — fikset (4b0915a). | Levering. |
 
 Evaluator runde 1 bekreftet eksplisitt (negativfunn, skal ikke re-litigeres):
 semantikk-paritet gammel/ny `roundsPlayed`/`grossAverage`/`bestRound` (NULL-strokes-
