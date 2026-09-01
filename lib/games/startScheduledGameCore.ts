@@ -4,6 +4,7 @@ import {
   calculateCourseHandicap,
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import { findPendingPlayers } from './pendingPlayers';
 import type { GameStatus } from './status';
 import {
@@ -439,6 +440,10 @@ export async function startScheduledGameCore(
  * throws) and the Resend mail helpers. Every failure path therefore returns an
  * empty list — nothing to notify, start unharmed.
  *
+ * «Affected» is literal since #1867: the UPDATE chains `.select('id')` and the
+ * returned rows are the ones that actually flipped, so an applicant whose row a
+ * policy filtered away is never told their request expired.
+ *
  * RLS: the write is legal for the organiser too, not just service-role — the
  * `game_reg_requests admin update` policy (0092) allows
  * `is_game_creator_or_admin(game_id)` — so the RN app's user-scoped client can
@@ -465,23 +470,36 @@ async function autoRejectPendingSignups(
     if (!pending || pending.length === 0) return [];
 
     const decidedAt = new Date().toISOString();
-    const { error: updateError } = await supabase
-      .from('game_registration_requests')
-      .update({ status: 'rejected', decided_at: decidedAt })
-      .in(
-        'id',
-        pending.map((r) => r.id),
-      )
-      .eq('status', 'pending');
-    if (updateError) {
-      console.error(
-        '[startScheduledGame] auto-reject signup-requests update failed',
-        { gameId, error: updateError },
-      );
-      return [];
-    }
+    // #1867: trap 2 (`docs/bug-prevention.md`) in its plain form — PostgREST
+    // answers `error == null` for an UPDATE that RLS filtered down to zero
+    // rows. Without `.select()` this step reported every applicant as expired
+    // and the wrapper fired `registration_expired` for requests still sitting
+    // `pending` in the database. `.select('id')` names the rows that actually
+    // flipped: only those are notified, and a 0-row result throws into the
+    // catch below (logged, empty list, start unharmed).
+    //
+    // Not a live bug today — every current caller is service-role or the
+    // organiser, and `game_reg_requests admin update` (0092) lets the organiser
+    // through on both `using` and `with check`. It is hardening, because the
+    // core stopped having exactly three callers with guaranteed write access
+    // when it became shared code (#1855).
+    const rejected = expectAffected(
+      await supabase
+        .from('game_registration_requests')
+        .update({ status: 'rejected', decided_at: decidedAt })
+        .in(
+          'id',
+          pending.map((r) => r.id),
+        )
+        .eq('status', 'pending')
+        .select('id'),
+      'autoRejectPendingSignups',
+    );
+    const rejectedIds = new Set(rejected.map((r) => r.id));
 
-    return pending.map((r) => ({ requestId: r.id, userId: r.user_id }));
+    return pending
+      .filter((r) => rejectedIds.has(r.id))
+      .map((r) => ({ requestId: r.id, userId: r.user_id }));
   } catch (err) {
     console.error('[startScheduledGame] autoRejectPendingSignups failed', {
       gameId,
