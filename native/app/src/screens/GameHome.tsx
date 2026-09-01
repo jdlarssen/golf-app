@@ -8,7 +8,11 @@
 // N4 (#1828): i lag-formatene som deler én ball er «mine hull» LAGETS hull —
 // kapteinens rader — og «levert» er lagets stempel, ikke bare mitt. Begge
 // spørsmålene stilles til delte hjelpere; CTA-regelen selv er uendret.
-import { useCallback } from 'react';
+//
+// N6b (#1855): arrangørens roster-drift henger under skjermen, og ALLE
+// deltakere bekrefter plassen sin stille når de åpner den — webbens
+// «besøk = bekreftelse» (#463), uten eget UI.
+import { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -22,7 +26,9 @@ import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
+import { OrganiserSection } from '../components/game/OrganiserSection';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
+import { confirmParticipation } from '../data/rosterActions';
 import { seedGameScores } from '../data/seedScores';
 import { displayName, formatTeeOff } from '../lib/display';
 import { gateMessage, gateReason, type GateReason } from '../lib/formatGate';
@@ -31,7 +37,12 @@ import {
   computePrimaryCtaState,
   nextUnfilledHole,
 } from '../lib/primaryCtaState';
-import { findInRoster, pendingApprovals, toRoster } from '../lib/roster';
+import {
+  findInRoster,
+  pendingApprovals,
+  shouldConfirmParticipation,
+  toRoster,
+} from '../lib/roster';
 import {
   buildTeamCards,
   filledHolesForOwner,
@@ -49,7 +60,7 @@ const HOLE_COUNT = 18;
 export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const { gameId } = route.params;
   const { userId } = useSession();
-  const { bundle, errorText, loading } = useGameBundle(gameId);
+  const { bundle, errorText, loading, refresh } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId);
 
   // Hent ned det serveren har hver gang skjermen åpnes, og les lokalt etterpå.
@@ -61,6 +72,23 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         .then(() => reload());
     }, [gameId, reload]),
   );
+
+  // Bekreft plassen min ved å ÅPNE spillet (#463) — samme modell som webben,
+  // og bevisst uten UI: arrangøren ser bare at merket dukker opp i rosteret.
+  //
+  // Oppslaget gjøres her, foran de tidlige returene, fordi hooks ikke kan stå
+  // etter dem. `refresh` etterpå henter bundelen med `accepted_at` satt, og
+  // flagget slår om til false — effekten kan derfor ikke gå i ring.
+  // Skrivingen er best-effort: uten nett skjer ingenting, og neste åpning
+  // prøver igjen.
+  const confirmNeeded = shouldConfirmParticipation(
+    bundle?.players.find((player) => player.userId === userId),
+    bundle?.game.status ?? 'draft',
+  );
+  useEffect(() => {
+    if (!confirmNeeded) return;
+    void confirmParticipation(gameId).then(() => refresh());
+  }, [confirmNeeded, gameId, refresh]);
 
   if (!bundle) {
     if (loading) {
@@ -177,6 +205,12 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           <RosterRow key={player.userId} player={player} isMe={player.userId === userId} />
         ))}
       </View>
+
+      {/* Arrangør-seksjonen henger på `created_by`, ikke på et admin-flagg:
+          appen er arrangørens flate, Sekretariatet bor på nettsiden. */}
+      {game.createdBy === userId ? (
+        <OrganiserSection bundle={bundle} userId={userId} onChanged={refresh} />
+      ) : null}
 
       {errorText ? (
         <Text style={ui.muted} testID="game-stale">

@@ -87,3 +87,25 @@ export function canApprove(
     ownerUserId,
   );
 }
+
+/**
+ * Skal appen bekrefte deltakelsen min nå? (#463, N6b #1855)
+ *
+ * Webbens modell er «besøk = bekreftelse»: åpner du spillsiden, regnes du som
+ * påmeldt, og `maybeAutoConfirmParticipation` setter `accepted_at`. Appen gjør
+ * det samme når spill-hjem åpnes, uten noe eget UI — arrangøren ser bare at
+ * merket dukker opp i rosteret.
+ *
+ * To gater, begge webbens:
+ *  - Jeg må stå på rosteret, og `accepted_at` må fortsatt være tom. En rad som
+ *    alt er bekreftet skal ikke få et nytt tidsstempel hver gang skjermen åpnes.
+ *  - Et `draft` er arrangørens kladd. Ingen er invitert ennå, så det finnes
+ *    ingenting å bekrefte.
+ */
+export function shouldConfirmParticipation(
+  me: { acceptedAt: string | null } | undefined,
+  gameStatus: string,
+): boolean {
+  if (!me || me.acceptedAt != null) return false;
+  return gameStatus !== 'draft';
+}
