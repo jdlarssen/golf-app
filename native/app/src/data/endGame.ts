@@ -87,6 +87,11 @@ export type EndRoundFailure =
   | 'not-all-approved'
   /** Formatet støtter ikke frafall — et WD betyr noe annet der. */
   | 'withdrawal-unsupported'
+  /**
+   * En avkrysset spiller rakk å levere mens arrangøren sto på skjermen.
+   * Fail-closed: da trekkes INGEN — heller ikke de andre avkryssede.
+   */
+  | 'withdraw-after-submit'
   /** Et frafalls-skriv feilet; spillet står fortsatt `active`. */
   | 'db-withdraw'
   /** Kåringen ble ikke lagret; spillet står fortsatt `active`, retry er trygt. */
@@ -326,6 +331,26 @@ function findBlockingPlayers(
 // -----------------------------------------------------------------------------
 
 /**
+ * Hvem av de avkryssede som alt har levert.
+ *
+ * Arrangøren ser «ikke levert» og huker av; spilleren leverer på sin egen
+ * telefon i mellomtiden; arrangøren trykker avslutt. Uten denne vakten ville
+ * frafallet blitt skrevet uansett, og en spiller som gjorde alt riktig mistet
+ * runden sin — stille, for `withdrawPlayer` treffer raden sin og svarer OK.
+ *
+ * Roster-rekkefølge, som {@link findBlockingPlayers}: navnene skal komme i
+ * samme orden på alle flatene arrangøren ser dem.
+ */
+function lateSubmitters(
+  rows: FinishPlayerRow[],
+  userIds: readonly string[],
+): string[] {
+  return rows
+    .filter((row) => userIds.includes(row.user_id) && row.submitted_at !== null)
+    .map((row) => row.user_id);
+}
+
+/**
  * (a) Merk de avkryssede spillerne som trukket.
  *
  * Skrivingen er `withdrawPlayer` i `rosterActions.ts` — samme rad, samme
@@ -340,6 +365,11 @@ function findBlockingPlayers(
  * ⚠️ Arrangøren kan ikke trekke SEG SELV: `guard_game_players_self_update`
  * (0147) har ingen creator-vei ut av egen-rad-grenen, og Postgres svarer 42501.
  * Nøyaktig samme grense som på nettsiden for en ikke-admin oppretter.
+ *
+ * **Leverings-kappløpet.** Avkryssingen ble gjort mot listen slik den så ut da
+ * skjermen ble tegnet, og et kort kan komme inn mellom det trykket og dette
+ * skrivet. Derfor leses rosteret ÉN gang til her, før første frafall — se
+ * {@link lateSubmitters}.
  */
 async function markWithdrawals(
   gameId: string,
@@ -350,6 +380,14 @@ async function markWithdrawals(
   if (!supportsWithdrawal(gameMode as GameMode)) {
     return failed('withdrawal-unsupported', undefined, userIds);
   }
+
+  const before = await loadFinishPlayers(gameId);
+  if ('error' in before) return before.error;
+  const late = lateSubmitters(before.rows, userIds);
+  // Fail-closed, og alle-eller-ingen: én uventet levering stopper HELE bunken.
+  // Å trekke «resten» ville vært en halv handling arrangøren ikke ba om, mot en
+  // liste hen nettopp har fått vite at hen ikke kan stole på.
+  if (late.length > 0) return failed('withdraw-after-submit', undefined, late);
 
   for (const playerUserId of userIds) {
     const result = await withdrawPlayer(gameId, playerUserId);
@@ -444,7 +482,9 @@ async function flipToFinished(gameId: string): Promise<EndRoundResult> {
  *
  * Rekkefølgen er kontrakten: porter → (a) frafall → (b) kåring → (c) flipp.
  * Rosteret leses ETTER frafallene, slik at en spiller arrangøren nettopp
- * krysset av faktisk slutter å blokkere.
+ * krysset av faktisk slutter å blokkere — og ÉN gang til FØR dem
+ * ({@link lateSubmitters}), slik at et kort som kom inn i mellomtiden stopper
+ * frafallet i stedet for å bli overkjørt av det.
  *
  * @param gameId spillet som skal flippes fra `active` til `finished`.
  * @param options «avslutt likevel», frafallene og kåringen.

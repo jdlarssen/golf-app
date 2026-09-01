@@ -195,7 +195,7 @@ describe('EndGame', () => {
   });
 
   it('navngir årsaken når skrivingen avviser', async () => {
-    // Ærlig feil (N6b-guardrailen): fjorten grunner, fjorten setninger. Én
+    // Ærlig feil (N6b-guardrailen): femten grunner, femten setninger. Én
     // generisk «noe gikk galt» over alle sammen kostet tre feilsøkingsrunder.
     setBundle([
       player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
