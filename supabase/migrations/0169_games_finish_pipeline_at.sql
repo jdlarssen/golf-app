@@ -37,9 +37,11 @@
 --
 -- THE MARKER IS WON FIRST, NOT SET LAST
 -- runFinishPipeline claims the row BEFORE doing any work, with the win-the-row
--- shape lib/notifications/autoStartBlocked.ts:67-82 already uses:
---   .update({ finish_pipeline_at: now }).is('finish_pipeline_at', null)
---   .select('id').maybeSingle()
+-- shape lib/notifications/autoStartBlocked.ts:67-82 already uses - status
+-- predicate included, so a game reopened between the sweep's candidate read and
+-- the claim cannot have its tail run against a live round:
+--   .update({ finish_pipeline_at: now }).eq('status', 'finished')
+--   .is('finish_pipeline_at', null).select('id').maybeSingle()
 -- 0 rows back = another runner owns this game = return. That is at-most-once for
 -- the steps that cannot survive a re-run: notifyAchievementUnlocks is a bare
 -- INSERT and public.notifications has no unique index, and
@@ -47,15 +49,46 @@
 -- Setting the marker last would be at-least-once, and a duplicate "Resultatet er
 -- klart" mail is worse than a missing round report.
 --
+-- !! REOPENING A GAME MUST CLEAR THE MARKER. reopenGame (admin-only) nulls
+-- finish_pipeline_at together with ended_at and round_report. Without that, a
+-- corrected round that is finished a second time finds nothing to claim and
+-- silently loses its entire tail - including the round report reopen just
+-- deleted. The admin path passes the guard trigger below on its is_admin()
+-- escape hatch, so no service-role client is needed there.
+--
 -- !! THE MARKER NEEDS THE ADMIN CLIENT. The guard trigger below rejects the write
 -- from every non-admin authenticated caller - and the web's endGame path allows a
 -- non-admin CREATOR (requireAdminOrCreator). Write the marker with
 -- getAdminClient(), never with the caller's RLS client, or finishing a game as a
 -- non-admin creator starts failing with SQLSTATE 42501.
 --
--- Safe to apply at any time: additive column, additive partial index, and a
--- trigger on a column nothing writes yet. Migration 0170 (the cron job) is the
--- one that must wait for the route to be deployed.
+-- !! DEPLOY ORDER: THIS MIGRATION GOES FIRST, BEFORE THE CODE IS MERGED.
+-- The column is additive, so it is safe in the "nothing breaks" sense - but it
+-- is NOT safe to apply late, and an earlier version of this header said it was.
+-- Merging to main deploys to prod immediately, and the deployed code claims the
+-- marker on EVERY web finish. Against a database without the column, PostgREST
+-- answers 42703 (undefined column); claimFinishPipeline treats any error as
+-- "not claimed" and returns false, so the whole tail is skipped - no result
+-- summaries, no differentials, no achievements, no round report, no audit row
+-- and no "Resultatet er klart" mail - while endGameCore still returns
+-- { ok: true } and the organiser sees a perfectly normal finish. Silent, and
+-- for every round finished in that window.
+--
+-- Then it gets permanent: the backfill below stamps every already-finished game
+-- as done, so those orphaned rounds are invisible to the sweep the moment this
+-- lands. There is no automatic second chance.
+--
+-- THE ORDER, IN FULL:
+--   1. 0169 (this file) + 0171 (index correction) on prod, through the owner
+--      gate (#1074). No code depends on them yet; nothing writes the column.
+--   2. Merge -> Vercel deploys the code that claims the marker.
+--   3. 0170 (the pg_cron job) LAST - it POSTs to /api/cron/finish-pipeline, so
+--      applying it before step 2 makes every fire a 404.
+--
+-- NOTE ON THE INDEX BELOW: its predicate was corrected by migration 0171, which
+-- drops and recreates it with `and source_game_id is null` so it keeps matching
+-- the sweep's real candidate set (derived cup matches must be excluded). This
+-- file is left as applied - see 0171's header.
 -- =============================================================================
 
 alter table public.games
