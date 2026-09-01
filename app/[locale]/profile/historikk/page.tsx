@@ -31,6 +31,11 @@ import {
   type SeasonRoundInput,
 } from '@/lib/stats/seasonStats';
 import { computeStreak } from '@/lib/stats/streak';
+import {
+  computePlayerStats,
+  type MyStats,
+  type RoundInput,
+} from '@/lib/stats/playerStats';
 import { PuttsStatPanel } from '@/components/stats/PuttsStatPanel';
 import {
   computePuttsStats,
@@ -320,16 +325,15 @@ export default async function HistorikkPage() {
         })
       : t('puttsEmpty');
 
-  // #946 — sesong-recap: bøtt ferdige runder på Oslo-kalenderår. Bragder regnes
-  // per runde fra rå scorer mot kjønns-par (uavhengig av modus/sideturnering);
-  // snitt/beste følger samme komplett-18-disiplin som resten av huben.
-  const seasonRounds: SeasonRoundInput[] = gamesWithStats.map((game) => {
-    const date = effectiveDate(game);
+  // #946/#1800 — rå slag mot kjønns-par per runde, bygget ÉN gang og delt av alle
+  // som trenger hull-nivå: sesong-recap-ens bragd-telling og «Mine tall». Samme
+  // rekkefølge som `gamesWithStats`, så indeksen er nøkkelen. Ingen ekstra DB-runde.
+  const roundHoles: HoleScore[][] = gamesWithStats.map((game) => {
     const courseHoles = game.course_id
       ? holesByCourse.get(game.course_id)
       : undefined;
     const gender = genderByGame.get(game.id) ?? null;
-    const holes: HoleScore[] = (scoresByGame.get(game.id) ?? []).map((s) => {
+    return (scoresByGame.get(game.id) ?? []).map((s) => {
       const holeRow = courseHoles?.get(s.hole_number);
       return {
         holeNumber: s.hole_number,
@@ -337,13 +341,28 @@ export default async function HistorikkPage() {
         par: holeRow ? parForGender(holeRow, gender) : 0,
       };
     });
+  });
+
+  // #1800 — «Mine tall» (#865) bor nå her, øverst i statistikk-fanen: runder spilt
+  // + brutto-snitt + beste runde over de samme rundene resten av huben bryter ned.
+  // Bragd-stripa kortet hadde på profil-landingen er droppet — badge-veggen under
+  // viser de samme livstids-tallene.
+  const myStats = computePlayerStats(
+    roundHoles.map((holes): RoundInput => ({ holes })),
+  );
+
+  // #946 — sesong-recap: bøtt ferdige runder på Oslo-kalenderår. Bragder regnes
+  // per runde fra rå scorer mot kjønns-par (uavhengig av modus/sideturnering);
+  // snitt/beste følger samme komplett-18-disiplin som resten av huben.
+  const seasonRounds: SeasonRoundInput[] = gamesWithStats.map((game, i) => {
+    const date = effectiveDate(game);
     return {
       year: date ? osloParts(date).year : null,
       completeBrutto:
         game.holeCount === COMPLETE_ROUND_HOLES && game.bruttoSum != null
           ? game.bruttoSum
           : null,
-      achievements: countRoundAchievements(holes),
+      achievements: countRoundAchievements(roundHoles[i]),
     };
   });
   const seasonStats = computeSeasonStats(seasonRounds);
@@ -372,11 +391,12 @@ export default async function HistorikkPage() {
     { ...EMPTY_ACHIEVEMENTS },
   );
 
-  // «Statistikk»-fanen (default), komponert etter trajektorie → periode →
-  // nedbrytning: formkurve (når ≥2 komplette runder) → sesong-recap → per-bane.
-  // Faller formkurven bort (<2 komplette runder), leder sesong-recap-en naturlig.
+  // «Statistikk»-fanen (default), komponert etter oppsummering → trajektorie →
+  // periode → nedbrytning: «Mine tall» (#1800) → formkurve (når ≥2 komplette
+  // runder) → sesong-recap → per-bane.
   const statsContent = (
     <div className="space-y-4">
+      <MyStatsCard stats={myStats} />
       {trend && trendSummary && (
         <Card>
           <ScoringTrendChart
@@ -535,6 +555,51 @@ export default async function HistorikkPage() {
         <HistorikkTabs statsContent={statsContent} roundsContent={roundsContent} />
       )}
     </AppShell>
+  );
+}
+
+/**
+ * «Mine tall» (#865, flyttet fra profil-landingen i #1800): tre brutto-tall som
+ * oppsummerer alt panelene under bryter ned. Ren brutto — handicap-uavhengig og
+ * gyldig på tvers av alle spillemodi; netto bor i runde-lista. Kortet rendres kun
+ * inne i statistikk-fanen, som selv bare vises når spilleren HAR ferdige runder,
+ * så det trenger ingen tom-tilstand (siden har sin egen).
+ */
+async function MyStatsCard({ stats }: { stats: MyStats }) {
+  const t = await getTranslations('profile.myStats');
+  return (
+    <Card>
+      <h2 className="font-serif text-base font-medium text-text mb-3">
+        {t('heading')}
+      </h2>
+      <div className="grid grid-cols-3 gap-3">
+        <StatTile
+          label={t('roundsPlayed')}
+          value={String(stats.roundsPlayed)}
+        />
+        <StatTile
+          label={t('grossAverage')}
+          value={stats.grossAverage != null ? String(stats.grossAverage) : '–'}
+        />
+        <StatTile
+          label={t('bestRound')}
+          value={stats.bestRound != null ? String(stats.bestRound) : '–'}
+        />
+      </div>
+    </Card>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-bg/50 px-3 py-3 text-center">
+      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1.5">
+        {label}
+      </p>
+      <p className="font-serif text-2xl font-medium text-text tabular-nums leading-none">
+        {value}
+      </p>
+    </div>
   );
 }
 

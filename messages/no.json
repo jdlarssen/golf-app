@@ -387,13 +387,7 @@
       "heading": "Mine tall",
       "roundsPlayed": "Runder spilt",
       "grossAverage": "Brutto-snitt",
-      "bestRound": "Beste runde",
-      "emptyState": "Spill din første runde, så dukker tallene dine opp her.",
-      "achievementsLabel": "Bragder",
-      "achievementHoleInOne": "Hole-in-one",
-      "achievementEagle": "Eagle",
-      "achievementBirdie": "Birdie",
-      "achievementTurkey": "Turkey"
+      "bestRound": "Beste runde"
     },
     "theme": {
       "rowLabel": "Tema",

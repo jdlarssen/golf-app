@@ -387,13 +387,7 @@
       "heading": "My numbers",
       "roundsPlayed": "Rounds played",
       "grossAverage": "Gross average",
-      "bestRound": "Best round",
-      "emptyState": "Play your first round and your numbers will show up here.",
-      "achievementsLabel": "Highlights",
-      "achievementHoleInOne": "Hole-in-one",
-      "achievementEagle": "Eagle",
-      "achievementBirdie": "Birdie",
-      "achievementTurkey": "Turkey"
+      "bestRound": "Best round"
     },
     "theme": {
       "rowLabel": "Theme",
