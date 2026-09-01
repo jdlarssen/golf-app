@@ -3,16 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
-import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
-import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
-import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
-import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
-import { finishDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
-import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
-import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
-import { notifyPlayersGameFinished } from '@/lib/notifications/events';
-import { logAdminEvent } from '@/lib/admin/auditLog';
-import { firstName } from '@/lib/firstName';
+import { runFinishPipeline } from '@/lib/games/runFinishPipeline';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
@@ -77,7 +68,20 @@ export type EndGameCoreOptions = {
 };
 
 export type EndGameCoreResult =
-  | { ok: true; gameName: string }
+  | {
+      ok: true;
+      gameName: string;
+      /**
+       * True when the optimistic lock found no `active` row to flip — someone
+       * else (another admin tab, the phone) finished this game in the split
+       * second since the status check above. Idempotent SUCCESS, not a failure:
+       * the end state is exactly what the caller asked for, so every caller
+       * still redirects to «avsluttet». Mirrors `startScheduledGameCore`'s
+       * `started` boolean, and like it, only the flip WINNER runs the follow-up
+       * work (#1856).
+       */
+      alreadyFinished: boolean;
+    }
   | {
       ok: false;
       reason:
@@ -111,9 +115,18 @@ export type EndGameCoreResult =
  *    side-tournament action is now a thin wrapper: it parses the winner form
  *    and maps results to redirects, this is the single finish pipeline.
  *
- * Everything else — query order, derived-game fan-out, all the best-effort
- * persistence, the cache revalidation — is byte-identical to the old `endGame`
- * body, so the thin `endGame` wrapper stays behaviourally unchanged.
+ *  - #1856 (N6c): this function is now the GATES + the two writes. Everything
+ *    after the status flip — derived games, result summaries, differentials,
+ *    achievements, round report, audit log, varsler + mail — moved verbatim to
+ *    `runFinishPipeline`, which the finish-pipeline sweep also calls for games
+ *    the phone finished on its own. Order, per-step client choice and the
+ *    best-effort wrapping are unchanged; this call site just delegates.
+ *
+ * Everything else — query order, the winners-before-flip rule, the cache
+ * revalidation — is byte-identical to the old `endGame` body, so the thin
+ * `endGame` wrapper stays behaviourally unchanged apart from the optimistic
+ * lock on the flip (a concurrent second finish is now a no-op success instead
+ * of a duplicate mail blast).
  */
 export async function endGameCore(
   supabase: SupabaseClient<Database>,
@@ -217,116 +230,58 @@ export async function endGameCore(
     }
   }
 
+  // Status flip WITH an optimistic lock (#1856). The `.eq('status','active')`
+  // makes a concurrent finish a no-op instead of a second flip that re-stamps
+  // `ended_at` and re-runs the whole tail; `.select('id')` is what reveals who
+  // won — the winner gets its row back, a loser gets an empty array. Same shape
+  // as `startScheduledGameCore`'s scheduled→active flip.
+  //
+  // The window is narrow (between the status read at the top of this function
+  // and this UPDATE) but it is real now that the phone can finish a game too:
+  // before the lock, the loser silently sent a second «Resultatet er klart»-mail
+  // to everyone and billed a second round report.
   const endedAt = new Date().toISOString();
-  const { error } = await supabase
+  const { data: flipped, error } = await supabase
     .from('games')
     .update({ status: 'finished', ended_at: endedAt })
-    .eq('id', gameId);
+    .eq('id', gameId)
+    .eq('status', 'active')
+    .select('id');
 
   if (error) {
     console.error(`[${logContext}] finish status update failed`, error);
     return { ok: false, reason: 'db_finish' };
   }
 
-  // #1441 (D3): fan the finish out to every derived game (back9 singles
-  // etc.) in the same operation, including their own result summaries +
-  // score differentials. Best-effort — 0 derived games (the vast majority
-  // of finishes) is a cheap no-op; a real failure is logged but never
-  // blocks the host's own finish, which has already committed above.
-  await finishDerivedGames(supabase, gameId, endedAt);
+  const flipWon = (flipped?.length ?? 0) > 0;
 
-  // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
-  // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).
-  // #1441: hole_segment sendes med slik at et segment-HOST-spill (front9/
-  // back9) får sitt eget resultat regnet over sine 9 hull, ikke alle 18.
-  await persistResultSummaries({
-    id: gameId,
-    game_mode: game.game_mode,
-    mode_config: game.mode_config,
-    course_id: game.course_id,
-    hole_segment: game.hole_segment,
-  });
-
-  // #941: fryser WHS score-differensial per spiller. Best-effort — se
-  // persistScoreDifferentials for fullstendig begrunnelse.
-  await persistScoreDifferentials(gameId);
-
-  // #947: best-effort bragd-varsel til spillere som låste opp et øyeblikk
-  // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
-  await notifyAchievementUnlocks(gameId);
-
-  // #1008: best-effort AI-rundereferat («Pressetribunen»). Må kjøre FØR
-  // mail-blasten lenger ned slik at teksten kan bli med i «Resultatet er
-  // klart»-mailen — feiler den (manglende nøkkel, tynn data, SDK-feil)
-  // fortsetter avslutningen som i dag, bare uten referat.
-  const { report: roundReport } = await generateAndPersistRoundReport(gameId);
-
-  await logAdminEvent({
-    actorId: actor.id,
-    actorName: actor.name,
-    eventType: 'game.finished',
-    targetType: 'game',
-    targetId: gameId,
-    // #1488 (K1): `auditExtras` carries the side-winners caller's
-    // `{ sideTournament: true, sideWinners }` so the audit payload is
-    // byte-identical to the old inline action.
-    payload: { gameName: game.name, ...auditExtras },
-  });
-
-  // #1501: cup-avslutningen undertrykker de to reveal-signalene per kamp —
-  // cup-mailen er reveal-signalet der. Vanlig enkeltspill-avslutning kjører
-  // begge som før.
-  if (!suppressPerGameNotifications) {
-    // Best-effort in-app `game_finished`-varsel til hver deltaker. Loopen fyres
-    // parallelt med mail-blasten lenger ned. Phase 4-gating: aktive spillere
-    // (last_seen_at < 5 min) får kun in-app; off-app-spillere får mail som
-    // backup. Notify-feil → ikke send mail (samme rasjonale som inni notify()).
-    const sendMailByUserId = await notifyPlayersGameFinished(
+  // Only the flip winner owns the tail. A loser returns success — the game IS
+  // finished, which is what the caller wanted — without touching notifications,
+  // mail or the billed round report; whoever won them owns them. (The tail
+  // claims `finish_pipeline_at` for itself as well, so even a lost race here
+  // could not double-run it — belt and braces, cheap.)
+  if (flipWon) {
+    await runFinishPipeline(supabase, {
+      game: {
+        id: gameId,
+        name: game.name,
+        course_id: game.course_id,
+        game_mode: game.game_mode,
+        mode_config: game.mode_config,
+        hole_segment: game.hole_segment,
+      },
+      // Unfiltered on purpose: withdrawn players still get the round-over varsel.
       players,
-      { id: gameId, name: game.name },
+      endedAt,
+      actor,
+      suppressPerGameNotifications,
+      auditExtras,
       logContext,
-    );
-
-    // Best-effort: send "Resultatet er klart"-mail kun til off-app-spillere.
-    // Failures er loggført men aborter aldri actionen — leaderboardet er
-    // tilgjengelig in-app uansett, og admin kan re-trigge ved behov (ingen
-    // resend-flyt finnes ennå, men DB er source of truth).
-    //
-    // Mode-aware payload: for stableford regner helperen ut leaderboard og
-    // legger per-spiller rank/poeng på hver mottaker; for best-ball returnerer
-    // den kun userId/email/name (mailen bruker da default nøytral copy).
-    const recipients = await buildGameFinishedRecipients(supabase, gameId, {
-      course_id: game.course_id,
-      game_mode: game.game_mode,
-      mode_config: game.mode_config,
     });
-    const mailRecipients = recipients.filter(
-      (r) => sendMailByUserId.get(r.userId) === true,
-    );
-    if (mailRecipients.length > 0) {
-      const results = await Promise.allSettled(
-        mailRecipients.map((r) =>
-          sendGameFinishedNotification({
-            to: r.email,
-            playerFirstName: firstName(r.name),
-            gameName: game.name,
-            gameId,
-            mode: r.mode,
-            locale: r.locale,
-            roundReport,
-          }),
-        ),
-      );
-      for (const r of results) {
-        if (r.status === 'rejected') {
-          console.error(`[${logContext}] game-finished mail failed`, r.reason);
-        }
-      }
-    }
   }
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
-  return { ok: true, gameName: game.name };
+  return { ok: true, gameName: game.name, alreadyFinished: !flipWon };
 }

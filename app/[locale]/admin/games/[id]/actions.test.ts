@@ -532,6 +532,20 @@ describe('reopenScorecard (#1363)', () => {
 });
 
 describe('endGame', () => {
+  /**
+   * #1856: the finish tail lives in `runFinishPipeline` now, and it claims
+   * `games.finish_pipeline_at` through the SERVICE-ROLE client before running a
+   * single step (at-most-once — the achievement varsler and the billed round
+   * report are not idempotent). Tests that expect the tail to run must hand the
+   * claim a winning row; the shared `adminSupabaseMock` is otherwise empty,
+   * which reads as «already claimed».
+   */
+  function claimWon() {
+    adminSupabaseMock = buildSupabaseMock([
+      { data: { id: 'game-1' }, error: null },
+    ]);
+  }
+
   it('redirects to /login when no user is authenticated (auth gate)', async () => {
     supabaseMock = buildSupabaseMock([]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -604,6 +618,7 @@ describe('endGame', () => {
   });
 
   it('avslutt likevel (#375): with allowMissing=true, flips to finished despite an unsubmitted player and never marks them submitted', async () => {
+    claimWon();
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
       {
@@ -636,7 +651,7 @@ describe('endGame', () => {
         ],
         error: null,
       },
-      { data: null, error: null }, // games.update(status='finished')
+      { data: [{ id: 'game-1' }], error: null }, // games.update — flip WON
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
@@ -665,6 +680,7 @@ describe('endGame', () => {
   });
 
   it('WD (#386): a withdrawn player is skipped — game ends without allowMissing even though they never submitted', async () => {
+    claimWon();
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
       {
@@ -700,7 +716,7 @@ describe('endGame', () => {
         ],
         error: null,
       },
-      { data: null, error: null }, // games.update(status='finished')
+      { data: [{ id: 'game-1' }], error: null }, // games.update — flip WON
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
@@ -720,6 +736,7 @@ describe('endGame', () => {
   });
 
   it('happy path: flips to finished, logs admin event, sends mail to every player', async () => {
+    claimWon();
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
       {
@@ -751,7 +768,7 @@ describe('endGame', () => {
         ],
         error: null,
       },
-      { data: null, error: null }, // games.update(status='finished')
+      { data: [{ id: 'game-1' }], error: null }, // games.update — flip WON
     ]);
     // Mottakerne kommer fra buildGameFinishedRecipients (mocket) — default-
     // fixturen returnerer 2 best-ball-mottakere med userId-felt slik at Phase
@@ -778,6 +795,7 @@ describe('endGame', () => {
   });
 
   it('off-app gating: filtrerer game_finished-mail per spiller basert på shouldAlsoSendMail', async () => {
+    claimWon();
     // Phase 4-kontrakt: hver spiller får mail KUN hvis last_seen_at > 5 min
     // siden (= off-app). Simulert ved at user-a er aktiv (false) og user-b er
     // off-app (true) — kun Bjørn skal få mail.
@@ -816,7 +834,7 @@ describe('endGame', () => {
         ],
         error: null,
       },
-      { data: null, error: null },
+      { data: [{ id: 'game-1' }], error: null }, // games.update — flip WON
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
