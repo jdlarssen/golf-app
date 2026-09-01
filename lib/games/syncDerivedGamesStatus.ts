@@ -14,6 +14,14 @@ export type DerivedStatusPatch = {
   started_at?: string | null;
   ended_at?: string | null;
   round_report?: string | null;
+  /**
+   * #1856: only ever passed as `null`, by `reopenGame`. Clearing the finish
+   * tail's at-most-once claim is what lets a re-finish run the tail again; a
+   * derived game that keeps its marker through a reopen is permanently stuck
+   * without result summaries, differentials, varsler and mail. It is never set
+   * here — the server claims it inside `runFinishPipeline`.
+   */
+  finish_pipeline_at?: null;
 };
 
 /**

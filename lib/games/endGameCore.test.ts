@@ -197,6 +197,8 @@ const FLIP_LOST = { data: [] as unknown[], error: null };
 
 /** The finish-pipeline marker claim, on the admin client. */
 const CLAIM_WON = { data: { id: GAME_ID }, error: null };
+/** 0 rows from the claim UPDATE: `finish_pipeline_at` was NOT null. */
+const CLAIM_LOST = { data: null, error: null };
 
 type Client = ReturnType<typeof buildSupabaseMock>;
 
@@ -559,6 +561,48 @@ describe('endGameCore — write order', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
   });
 
+  it('#1856: flip WON but marker claim LOST silently skips the whole tail', async () => {
+    // The second, quieter half of the race, and the one that has teeth for
+    // reopen: winning the `active → finished` flip does NOT entitle you to the
+    // tail. `runFinishPipeline` claims `finish_pipeline_at` separately, and a
+    // lost claim means every post-step is skipped — while endGameCore still
+    // reports `ok: true, alreadyFinished: false`, i.e. a perfectly ordinary
+    // finish to the organiser.
+    //
+    // This branch is the reason `reopenGame` MUST null the marker: a reopened
+    // game that keeps it lands here on its re-finish and loses its result
+    // summaries, differentials, achievements, audit row, mail — and its round
+    // report, which reopen deleted. Nothing anywhere reports the loss.
+    adminClientMock = buildSupabaseMock([CLAIM_LOST]);
+    const client = buildSupabaseMock([
+      gameRow(),
+      playersRows([PLAYER_A, PLAYER_B]),
+      FLIP_WON,
+    ]);
+
+    const result = await endGameCore(client as never, GAME_ID, ACTOR);
+
+    expect(result).toEqual({
+      ok: true,
+      gameName: 'Vinter-cup',
+      alreadyFinished: false,
+    });
+    // The claim was attempted — this is a lost race, not a skipped call.
+    expect(adminClientMock.__fromCalls[0]).toEqual({
+      table: 'games',
+      method: 'update',
+      args: [{ finish_pipeline_at: expect.any(String) }],
+    });
+    expect(finishDerivedGamesMock).not.toHaveBeenCalled();
+    expect(persistResultSummariesMock).not.toHaveBeenCalled();
+    expect(persistScoreDifferentialsMock).not.toHaveBeenCalled();
+    expect(notifyAchievementUnlocksMock).not.toHaveBeenCalled();
+    expect(generateAndPersistRoundReportMock).not.toHaveBeenCalled();
+    expect(logAdminEventMock).not.toHaveBeenCalled();
+    expect(notifyPlayersGameFinishedMock).not.toHaveBeenCalled();
+    expect(sendGameFinishedNotificationMock).not.toHaveBeenCalled();
+  });
+
   it('a failed status flip returns db_finish and runs none of the tail', async () => {
     const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
     const client = buildSupabaseMock([
@@ -625,6 +669,7 @@ describe('endGameCore — post-flip tail', () => {
     expect(adminClientMock.__fromCalls.map((c) => `${c.table}.${c.method}`)).toEqual([
       'games.update',
       'games.eq',
+      'games.eq',
       'games.is',
       'games.select',
       'games.maybeSingle',
@@ -632,7 +677,11 @@ describe('endGameCore — post-flip tail', () => {
     expect(adminClientMock.__fromCalls[0].args[0]).toEqual({
       finish_pipeline_at: expect.any(String),
     });
-    expect(adminClientMock.__fromCalls[2].args).toEqual([
+    // The claim is gated on the status too, not just the null marker: the flip
+    // above and this UPDATE are separate transactions, so a reopen in between
+    // must make the claim find 0 rows rather than run the tail on a live round.
+    expect(adminClientMock.__fromCalls[2].args).toEqual(['status', 'finished']);
+    expect(adminClientMock.__fromCalls[3].args).toEqual([
       'finish_pipeline_at',
       null,
     ]);

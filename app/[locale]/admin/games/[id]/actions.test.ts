@@ -945,4 +945,52 @@ describe('reopenGame', () => {
       expect.objectContaining({ actorName: 'Admin' }),
     );
   });
+
+  it('#1856: nulls finish_pipeline_at on the host AND on every derived game', async () => {
+    // The marker is the finish tail's at-most-once claim. Reopening a game to
+    // correct a score and finishing it again must re-run that tail — the
+    // numbers changed. Leave the marker set and `claimFinishPipeline` finds 0
+    // rows, so the re-finish silently ships no result summaries, no
+    // differentials, no achievements, no audit row and no mail — and no round
+    // report either, because the same UPDATE just nulled the one that existed.
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
+      {
+        data: { id: 'game-1', name: 'Vinter-cup', status: 'finished' },
+        error: null,
+      }, // games.select(id, name, status)
+      { data: null, error: null }, // games.update(...) on the host → ok
+      { data: [{ id: 'derived-1' }], error: null }, // findDerivedGameIds
+      { data: [{ id: 'derived-1' }], error: null }, // the derived batch UPDATE
+      { data: [{ user_id: 'admin-1' }], error: null }, // roster (actor only)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenGame } = await import('./actions');
+
+    await expect(reopenGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=game_reopened');
+
+    const updates = supabaseMock.__fromCalls
+      .filter((c) => c.table === 'games' && c.method === 'update')
+      .map((c) => c.args[0]);
+    expect(updates).toEqual([
+      // Host.
+      {
+        status: 'active',
+        ended_at: null,
+        round_report: null,
+        finish_pipeline_at: null,
+      },
+      // Derived fan-out — same patch, same reason (#1441 D3 + #1856).
+      {
+        status: 'active',
+        ended_at: null,
+        round_report: null,
+        finish_pipeline_at: null,
+      },
+    ]);
+  });
 });

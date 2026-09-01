@@ -48,8 +48,9 @@ import type { HoleSegment } from '@/lib/scoring';
  *     failing whenever Resend hiccups.
  *
  * CLAIM FIRST, WORK SECOND. The marker is won at the very top (`UPDATE … SET
- * finish_pipeline_at = now() WHERE finish_pipeline_at IS NULL … RETURNING id`,
- * the same win-the-row shape as `maybeNotifyAutoStartBlocked`), NOT written at
+ * finish_pipeline_at = now() WHERE status = 'finished' AND finish_pipeline_at
+ * IS NULL … RETURNING id`, the same win-the-row shape as
+ * `maybeNotifyAutoStartBlocked`, status predicate included), NOT written at
  * the end. That is a deliberate at-most-once choice over at-least-once, because
  * the expensive steps are the non-idempotent ones: `notifyAchievementUnlocks`
  * does a bare INSERT with no unique index (a second pass = duplicate varsler in
@@ -110,7 +111,23 @@ export type RunFinishPipelineResult = {
 
 /**
  * Win the `finish_pipeline_at` row for `gameId`. Returns true only for the
- * caller that flipped it from null.
+ * caller that flipped it from null ON A GAME THAT IS STILL FINISHED.
+ *
+ * The `status = 'finished'` predicate is part of the claim, not a separate
+ * check, for the same reason `maybeNotifyAutoStartBlocked` puts
+ * `status = 'scheduled'` inside its win-the-row UPDATE: any status read done
+ * BEFORE the claim is a different transaction. The sweep reads its candidates,
+ * an admin reopens the game a moment later, and a pre-claim check has already
+ * passed — without this predicate the claim then succeeds and the tail mails
+ * results for a round that is live again, burning the marker on the way out
+ * (and `reopenGame` has already cleared it once, so nothing clears it a second
+ * time). With the predicate the claim simply finds 0 rows and the tail returns.
+ *
+ * Every caller already guarantees `finished` at this point, which is what makes
+ * the predicate free: `endGameCore` calls in only after its own optimistic
+ * `active → finished` flip WON, and `runFinishPipelineForGame` refuses anything
+ * whose status is not `finished`. The predicate is here for the window between
+ * that guarantee and this UPDATE.
  *
  * Best-effort in the pessimistic direction: any error (including a missing
  * service-role key) is logged and reported as "not claimed", so a broken
@@ -128,6 +145,7 @@ async function claimFinishPipeline(
       .from('games')
       .update({ finish_pipeline_at: new Date().toISOString() })
       .eq('id', gameId)
+      .eq('status', 'finished')
       .is('finish_pipeline_at', null)
       .select('id')
       .maybeSingle<{ id: string }>();
