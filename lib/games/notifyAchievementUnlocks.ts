@@ -16,8 +16,8 @@ import type { ScoringGender } from '@/lib/scoring/modes/types';
  * nettopp avsluttet spill (#947). Birdie er aldri med (for vanlig) — det styres
  * av `selectNotableMoments`. Varselet går KUN til spilleren selv.
  *
- * Datagrunnlaget speiler `getMyStats` (profil-siden), men for alle spillere i
- * ÉTT spill: per-spiller `tee_gender` → kjønns-par per hull → rå slag →
+ * Datagrunnlaget speiler «Mine tall»-aggregeringen (`computePlayerStats`,
+ * nå i /profile/historikk), men for alle spillere i ÉTT spill: per-spiller `tee_gender` → kjønns-par per hull → rå slag →
  * `countRoundAchievements`. Trukne spillere (WD) hoppes over — runden deres er
  * ofte ufullstendig og de er ute av rankingen.
  *
