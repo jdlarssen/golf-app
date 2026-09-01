@@ -65,9 +65,12 @@ export async function POST(request: NextRequest) {
   // `guard_games_finish_pipeline_at` (0169).
   const admin = getAdminClient();
 
-  // The candidate set, verbatim the same three predicates as 0170's cron gate
-  // and 0169's partial index — change one and change all three (AGENTS.md
-  // trap #4):
+  // ONE RULE, THREE HOMES (AGENTS.md trap #4). This candidate set is written
+  // out three times — here, in 0170's `cron.schedule` EXISTS gate, and in
+  // 0169/0171's partial index. Change one predicate and you MUST change all
+  // three in the same commit, or the cron stops firing for rows the route
+  // would process (or fires for rows it skips) and the index stops covering
+  // the query:
   //   status = 'finished'         the flip has happened
   //   finish_pipeline_at is null  but the tail has not run (0169 backfilled
   //                               every pre-existing finished game, so history
@@ -76,12 +79,28 @@ export async function POST(request: NextRequest) {
   //                               own finish path and the suppress-notifications
   //                               mechanics, and the app refuses to end a cup
   //                               round in the first place
+  //   source_game_id is null      derived games (#1441 D3) are excluded: their
+  //                               host's tail already finished them via
+  //                               `finishDerivedGames`, which writes only
+  //                               {status, ended_at} and never the marker, so
+  //                               every one of them is born matching the first
+  //                               two predicates. `tournament_id is null` does
+  //                               NOT cover them — `games_tournament_id_fkey`
+  //                               is ON DELETE SET NULL (verified live), so
+  //                               deleting a cup turns its whole match tree
+  //                               into candidates. Sweeping one would re-run
+  //                               the FULL tail per match with
+  //                               `suppressPerGameNotifications` undefined:
+  //                               a per-match «Resultatet er klart»-mail to the
+  //                               same players, a billed round report each, and
+  //                               a duplicate audit row.
   const { data: pending, error: pendingError } = await admin
     .from('games')
     .select('id')
     .eq('status', 'finished')
     .is('finish_pipeline_at', null)
     .is('tournament_id', null)
+    .is('source_game_id', null)
     .order('ended_at', { ascending: true })
     .limit(SWEEP_BATCH_LIMIT)
     .returns<PendingGame[]>();
