@@ -4847,8 +4847,8 @@
       "sessionCountsHeading": "Matcher per økt",
       "sessionCountsHint": "Ikke alle trenger å spille hver økt. Skru ned antallet, så står resten over.",
       "sessionCountValue": "{count} av {max}",
-      "sessionCountMinusAria": "Færre matcher for {format}",
-      "sessionCountPlusAria": "Flere matcher for {format}"
+      "sessionCountMinusAria": "Færre matcher i økt {n} ({format})",
+      "sessionCountPlusAria": "Flere matcher i økt {n} ({format})"
     },
     "delete": {
       "brassRibbon": "Bekreft sletting",

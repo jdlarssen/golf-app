@@ -141,7 +141,14 @@ describe('GenerateMatchesWizard', () => {
   });
 
   it('lar organisatoren skru ned antall matcher per økt (#1883)', () => {
-    render(<GenerateMatchesWizard {...BASE} players={PLAYERS} />);
+    // 6 deltakere, så lagene kan VOKSE underveis — pinne-regresjonen under
+    // krever at rosteret endrer seg etter at stepperen er rørt.
+    const sixPlayers: WizardPlayer[] = [
+      ...PLAYERS,
+      { id: 'p5', displayName: 'Per Nilsen', hcpIndex: 15.0 },
+      { id: 'p6', displayName: 'Mette Lie', hcpIndex: 20.0 },
+    ];
+    render(<GenerateMatchesWizard {...BASE} players={sixPlayers} />);
 
     fireEvent.click(screen.getByTestId('cup-wizard-assign-p1-team1'));
     fireEvent.click(screen.getByTestId('cup-wizard-assign-p2-team1'));
@@ -161,5 +168,24 @@ describe('GenerateMatchesWizard', () => {
     fireEvent.click(screen.getByTestId('cup-session-plus-2'));
     expect(screen.getByTestId('cup-session-count-2')).toHaveTextContent('2 av 2');
     expect(screen.getByTestId('cup-session-plus-2')).toBeDisabled();
+
+    // Regresjon: en økt som står på taket er IKKE overstyrt, så den følger
+    // laget når organisatoren fordeler resten av spillerne. Pinnet den seg,
+    // ville singel-økta blitt stående på «2 av 3».
+    fireEvent.click(screen.getByTestId('cup-wizard-assign-p5-team1'));
+    fireEvent.click(screen.getByTestId('cup-wizard-assign-p6-team2'));
+    expect(screen.getByTestId('cup-session-count-2')).toHaveTextContent('3 av 3');
+
+    // Og nedjusteringen når HELE veien til den genererte planen — ikke bare
+    // visningen: 3 singler blir 1, så steg 2 rendrer én singel-match.
+    fireEvent.click(screen.getByTestId('cup-session-minus-2'));
+    fireEvent.click(screen.getByTestId('cup-session-minus-2'));
+    expect(screen.getByTestId('cup-session-count-2')).toHaveTextContent('1 av 3');
+
+    fireEvent.click(screen.getByTestId('cup-wizard-next'));
+    expect(screen.getByTestId('cup-wizard-step2')).toBeInTheDocument();
+    expect(
+      screen.getAllByTestId(/^cup-wizard-match-singles_matchplay-/),
+    ).toHaveLength(1);
   });
 });

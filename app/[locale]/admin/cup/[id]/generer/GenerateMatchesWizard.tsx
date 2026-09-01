@@ -364,7 +364,7 @@ function Step1SessionCounts({
         {t('generate.sessionCountsHint')}
       </p>
       <div className="space-y-2">
-        {rows.map((row) => (
+        {rows.map((row, position) => (
           <Card key={row.index} className="!p-3">
             <div className="flex items-center justify-between gap-3">
               <p className="font-sans text-sm font-medium text-text truncate">
@@ -375,6 +375,7 @@ function Step1SessionCounts({
                   type="button"
                   data-testid={`cup-session-minus-${row.index}`}
                   aria-label={t('generate.sessionCountMinusAria', {
+                    n: position + 1,
                     format: FORMAT_LABELS[row.format],
                   })}
                   onClick={() => onAdjust(row, -1)}
@@ -396,6 +397,7 @@ function Step1SessionCounts({
                   type="button"
                   data-testid={`cup-session-plus-${row.index}`}
                   aria-label={t('generate.sessionCountPlusAria', {
+                    n: position + 1,
                     format: FORMAT_LABELS[row.format],
                   })}
                   onClick={() => onAdjust(row, 1)}
@@ -478,7 +480,11 @@ function Step2Preview({
             <div className="space-y-3">
               {formatMatches.map((match) => {
                 return (
-                  <Card key={match.id} className="!p-4">
+                  <Card
+                    key={match.id}
+                    data-testid={`cup-wizard-match-${match.id}`}
+                    className="!p-4"
+                  >
                     <p className="font-sans text-xs font-semibold text-muted mb-2">
                       {match.label}
                     </p>
@@ -1133,7 +1139,18 @@ export function GenerateMatchesWizard({
 
   function adjustSessionCount(row: SessionCountRow, delta: 1 | -1) {
     const next = Math.min(Math.max(1, row.effective + delta), row.derived);
-    setSessionCountOverrides((prev) => ({ ...prev, [row.index]: next }));
+    setSessionCountOverrides((prev) => {
+      // Tilbake på derivert tak = INGEN overstyring. Lagret vi den likevel,
+      // ble økta pinnet til lagstørrelsen den ble satt ved: organisatoren som
+      // prøver stepperen på halvfordelte lag og fordeler resten etterpå, ville
+      // fått singel-økta stående på det gamle tallet i stedet for å følge det
+      // voksende laget.
+      if (next >= row.derived) {
+        const { [row.index]: _atCeiling, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [row.index]: next };
+    });
   }
 
   function handleMatchChange(
