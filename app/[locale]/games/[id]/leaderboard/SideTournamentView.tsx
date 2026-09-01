@@ -948,7 +948,12 @@ function GroupSection({
       <h3 className={headerClass}>{t(`groups.${group}`)}</h3>
       <ul className="space-y-1 font-serif text-base text-text">
         {rows.map((r) => (
-          <li key={r.key}>{r.render}</li>
+          // `r.key` er allerede unik per rad og er kategori-navnet (evt. med
+          // _team/_individual-hale), så den dobler som stabilt testanker for
+          // stagingbevis og e2e — ellers må en assertion matche norsk copy.
+          <li key={r.key} data-testid={`side-award-${r.key}`}>
+            {r.render}
+          </li>
         ))}
       </ul>
     </section>
