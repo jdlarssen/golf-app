@@ -7,8 +7,8 @@
 // web uten at appen følger etter, blir CI rød i stedet for at to flater sier
 // hver sin ting om samme feil.
 //
-// De fem app-egne strengene står i `UNMIRRORED_WIZARD_ERROR_KEYS`, og testen
-// krever at de faktisk AVVIKER — ellers ville lista sluttet å bety noe.
+// De app-egne strengene står i `UNMIRRORED_WIZARD_ERROR_KEYS`, og testen krever
+// at de faktisk AVVIKER — ellers ville lista sluttet å bety noe.
 import source from '../../../../messages/no.json';
 import type { CreateGameFailure } from '../data/createGame';
 import {
@@ -39,6 +39,11 @@ const MIRRORED: CreateGameFailure[] = [
   'db_roster',
   'db_game',
   'db_players',
+  // #1858: webbens tekster for disse tre navnga ett format under en kode som
+  // fyrer for mange — nå er de format-agnostiske, og appen speiler dem igjen.
+  'bad_team',
+  'team_balance',
+  'too_many_players_for_mode',
 ];
 
 /** Kodene appen skriver selv fordi webben ikke har dem. */
