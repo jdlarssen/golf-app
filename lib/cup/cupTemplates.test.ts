@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   CUP_PRESETS,
+  buildSessionCountRows,
   buildSessions,
   sessionMatchCount,
   type CupSessionFormat,
@@ -92,5 +93,61 @@ describe('buildSessions', () => {
       { format: 'fourball_matchplay', matchCount: 3 },
       { format: 'singles_matchplay', matchCount: 6 },
     ]);
+  });
+});
+
+describe('buildSessionCountRows / buildSessions with overrides', () => {
+  const klassisk = CUP_PRESETS.find((p) => p.id === 'klassisk')!;
+
+  it('the submitted Ryder Cup shape: klassisk @ 16 with singles lowered to 12', () => {
+    expect(buildSessions(klassisk.sessions, 16, { 2: 12 })).toEqual([
+      { format: 'foursomes_matchplay', matchCount: 8 },
+      { format: 'fourball_matchplay', matchCount: 8 },
+      { format: 'singles_matchplay', matchCount: 12 },
+    ]);
+  });
+
+  it.each<[string, Record<number, number>, number, number]>([
+    // [case, overrides, sessionIndex, expectedEffective] — klassisk @ teamSize 4
+    ['override above derived clamps down', { 2: 99 }, 2, 4],
+    ['override below 1 clamps to 1', { 2: 0 }, 2, 1],
+    ['negative override clamps to 1', { 2: -3 }, 2, 1],
+    ['non-integer override floors', { 2: 2.7 }, 2, 2],
+    ['untouched session keeps derived', { 2: 2 }, 0, 2],
+  ])('%s', (_case, overrides, sessionIndex, expected) => {
+    const rows = buildSessionCountRows(klassisk.sessions, 4, overrides);
+    expect(rows.find((r) => r.index === sessionIndex)!.effective).toBe(expected);
+  });
+
+  it('rows carry index/format/derived so the UI can render steppers', () => {
+    expect(buildSessionCountRows(klassisk.sessions, 4, {})).toEqual([
+      { index: 0, format: 'foursomes_matchplay', derived: 2, effective: 2 },
+      { index: 1, format: 'fourball_matchplay', derived: 2, effective: 2 },
+      { index: 2, format: 'singles_matchplay', derived: 4, effective: 4 },
+    ]);
+  });
+
+  it('a dropped session (derived 0) stays dropped even with an override', () => {
+    // teamSize 1: no 2v2 possible — foursomes/four-ball are gone, override or not.
+    expect(buildSessionCountRows(klassisk.sessions, 1, { 0: 5 })).toEqual([
+      { index: 2, format: 'singles_matchplay', derived: 1, effective: 1 },
+    ]);
+  });
+
+  it('duplicate formats are keyed by position, not format', () => {
+    // Tilpasset list with foursomes twice (a two-day cup): only the second lowered.
+    const sessions: CupSessionFormat[] = [
+      'foursomes_matchplay',
+      'foursomes_matchplay',
+    ];
+    expect(buildSessions(sessions, 8, { 1: 2 })).toEqual([
+      { format: 'foursomes_matchplay', matchCount: 4 },
+      { format: 'foursomes_matchplay', matchCount: 2 },
+    ]);
+  });
+
+  it('non-finite override is ignored', () => {
+    const rows = buildSessionCountRows(klassisk.sessions, 4, { 2: Number.NaN });
+    expect(rows.find((r) => r.index === 2)!.effective).toBe(4);
   });
 });
