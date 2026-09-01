@@ -126,8 +126,7 @@ export default async function HistorikkPage() {
   // outcome (`result_summary`, #572) for netto + result badge.
   // No SQL `.order()` here: supabase-js foreignTable-order is a no-op on a
   // to-one `games!inner` embed (#569) — the JS sort below is authoritative.
-  // #1441: excludes DERIVED games (games.source_game_id IS NOT NULL) — same
-  // rationale as getMyStats (app/[locale]/profile/page.tsx): a derived game
+  // #1441: excludes DERIVED games (games.source_game_id IS NOT NULL): a derived game
   // (e.g. a back9 singles match) has no own scores, so its bruttoSum/
   // nettoSum here would show as an empty/0 round for a physical day that's
   // already represented via its host. Segment HOST games still count.
