@@ -8,9 +8,11 @@ import { Banner } from '@/components/ui/Banner';
 import { StatusChip } from '@/components/ui/StatusChip';
 import {
   CUP_PRESETS,
+  buildSessionCountRows,
   buildSessions,
   type CupSessionFormat,
   type CupPreset,
+  type SessionCountRow,
   type SessionPlan,
 } from '@/lib/cup/cupTemplates';
 import {
@@ -327,6 +329,85 @@ function Step1Roster({
           </p>
           <p className="font-serif text-3xl tabular-nums text-primary mt-1">{team2Count}</p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 1b: Matcher per økt (#1883) ────────────────────────────────────────
+
+function Step1SessionCounts({
+  rows,
+  onAdjust,
+  t,
+}: {
+  rows: SessionCountRow[];
+  onAdjust: (row: SessionCountRow, delta: 1 | -1) => void;
+  t: ReturnType<typeof useTranslations<'cup'>>;
+}) {
+  // Tredje lokale format-kartet i fila (Step2Preview/Step2BundlePreview har
+  // sine): en delt konstant måtte widene CupSessionFormat/CupBundleFormat på
+  // tvers — ikke verdt det for tre t()-kart.
+  const FORMAT_LABELS: Record<CupSessionFormat, string> = {
+    foursomes_matchplay: t('generate.formatFoursomes'),
+    fourball_matchplay: t('generate.formatFourball'),
+    singles_matchplay: t('generate.formatSingles'),
+    greensome_matchplay: t('generate.formatGreensome'),
+    chapman_matchplay: t('generate.formatChapman'),
+    gruesome_matchplay: t('generate.formatGruesome'),
+  };
+
+  return (
+    <div>
+      <SectionHeading>{t('generate.sessionCountsHeading')}</SectionHeading>
+      <p className="font-sans text-xs text-muted mt-1 mb-3">
+        {t('generate.sessionCountsHint')}
+      </p>
+      <div className="space-y-2">
+        {rows.map((row) => (
+          <Card key={row.index} className="!p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-sans text-sm font-medium text-text truncate">
+                {FORMAT_LABELS[row.format]}
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  data-testid={`cup-session-minus-${row.index}`}
+                  aria-label={t('generate.sessionCountMinusAria', {
+                    format: FORMAT_LABELS[row.format],
+                  })}
+                  onClick={() => onAdjust(row, -1)}
+                  disabled={row.effective <= 1}
+                  className="min-h-[44px] min-w-[44px] rounded-lg border border-border font-sans text-lg text-text disabled:opacity-40"
+                >
+                  −
+                </button>
+                <p
+                  data-testid={`cup-session-count-${row.index}`}
+                  className="font-sans text-sm tabular-nums text-text min-w-[64px] text-center"
+                >
+                  {t('generate.sessionCountValue', {
+                    count: row.effective,
+                    max: row.derived,
+                  })}
+                </p>
+                <button
+                  type="button"
+                  data-testid={`cup-session-plus-${row.index}`}
+                  aria-label={t('generate.sessionCountPlusAria', {
+                    format: FORMAT_LABELS[row.format],
+                  })}
+                  onClick={() => onAdjust(row, 1)}
+                  disabled={row.effective >= row.derived}
+                  className="min-h-[44px] min-w-[44px] rounded-lg border border-border font-sans text-lg text-text disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
     </div>
   );
@@ -895,6 +976,12 @@ export function GenerateMatchesWizard({
 
   // Step 2: generated matches
   const [matches, setMatches] = useState<WizardMatch[]>([]);
+  // #1883: organisatorens nedjusteringer av matchantall per økt, nøklet på
+  // øktas posisjon i den effektive sesjonslista. Engangs-input som lag-
+  // delingen — lagres ikke; regenerering senere starter fra derivert antall.
+  const [sessionCountOverrides, setSessionCountOverrides] = useState<
+    Record<number, number>
+  >({});
   // #1441 (D10, owner-QA F3d): greensomens manuelle lag-slag holdes som RÅ
   // tekst-input per match-id OG per lag, adskilt fra `matches`. Et felt som
   // aldri er rørt av organisatoren mangler helt fra kartet/objektet
@@ -931,9 +1018,22 @@ export function GenerateMatchesWizard({
     return getSelectedPreset()?.sessions ?? [];
   }
 
+  function getSessionCountRows(): SessionCountRow[] {
+    const teamSize = Math.min(team1Count, team2Count);
+    return buildSessionCountRows(
+      getEffectiveSessions(),
+      teamSize,
+      sessionCountOverrides,
+    );
+  }
+
   function getSessionPlan(): SessionPlan[] {
     const teamSize = Math.min(team1Count, team2Count);
-    return buildSessions(getEffectiveSessions(), teamSize);
+    return buildSessions(
+      getEffectiveSessions(),
+      teamSize,
+      sessionCountOverrides,
+    );
   }
 
   // Antall matcher oppsettet gir med gjeldende lag-fordeling — brukt til både
@@ -1031,6 +1131,11 @@ export function GenerateMatchesWizard({
     setAssignments((prev) => ({ ...prev, [id]: val }));
   }
 
+  function adjustSessionCount(row: SessionCountRow, delta: 1 | -1) {
+    const next = Math.min(Math.max(1, row.effective + delta), row.derived);
+    setSessionCountOverrides((prev) => ({ ...prev, [row.index]: next }));
+  }
+
   function handleMatchChange(
     matchId: string,
     side: 'side1' | 'side2',
@@ -1112,6 +1217,13 @@ export function GenerateMatchesWizard({
               onChange={handleAssignmentChange}
               t={t}
             />
+            {!isSplitDay && getSessionCountRows().length > 0 && (
+              <Step1SessionCounts
+                rows={getSessionCountRows()}
+                onAdjust={adjustSessionCount}
+                t={t}
+              />
+            )}
           </div>
         )}
         {step === 2 && (
