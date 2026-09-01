@@ -709,6 +709,7 @@ export type Database = {
           delivered_outside_window: boolean
           ended_at: string | null
           entry_fee_kr: number
+          finish_pipeline_at: string | null
           foursomes_side1_tee_starter_user_id: string | null
           foursomes_side2_tee_starter_user_id: string | null
           game_mode: string
@@ -750,6 +751,7 @@ export type Database = {
           delivered_outside_window?: boolean
           ended_at?: string | null
           entry_fee_kr?: number
+          finish_pipeline_at?: string | null
           foursomes_side1_tee_starter_user_id?: string | null
           foursomes_side2_tee_starter_user_id?: string | null
           game_mode: string
@@ -791,6 +793,7 @@ export type Database = {
           delivered_outside_window?: boolean
           ended_at?: string | null
           entry_fee_kr?: number
+          finish_pipeline_at?: string | null
           foursomes_side1_tee_starter_user_id?: string | null
           foursomes_side2_tee_starter_user_id?: string | null
           game_mode?: string
