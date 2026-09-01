@@ -37,9 +37,14 @@ const OFFLINE = 'Du er uten nett. Koble til, så går det gjennom.';
  * Derfor vises den ikke. Dette er setningen som står i stedet: den sier hva
  * appen ikke får til og hvor det gjøres, uten å be arrangøren gjette. En knapp
  * som alltid feiler er verre enn ingen knapp.
+ *
+ * Gjelder nå KUN frafall. Lag og flight var med her fram til eieren godkjente
+ * migrasjon 0168 (#1855/#1868) — men UI-sperren ble stående igjen etter at
+ * basen åpnet, så evnen fantes uten å være mulig å nå. Funnet av eieren under
+ * tapptest, ikke av en test.
  */
 export const OWN_ROW_LOCKED_NOTE =
-  'Appen får ikke endre ditt eget lag eller trekke deg selv. Det ordner du på nettsiden.';
+  'Du kan ikke trekke deg selv herfra. Det ordner du på nettsiden.';
 
 /**
  * Roster-skrivingene: legg til, fjern, lag, flight, trekk og angre.

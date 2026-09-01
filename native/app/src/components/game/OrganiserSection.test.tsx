@@ -102,7 +102,7 @@ function bundle(status: string): GameBundle {
 }
 
 describe('OrganiserSection', () => {
-  it('holder arrangørens egen rad utenfor det RLS nekter, og tegner en tapt start-flipp som suksess', async () => {
+  it('aapner egen rad der basen tillater det, holder den utenfor der den ikke gjoer, og tegner en tapt start-flipp som suksess', async () => {
     // Bekreftelses-dialogen svarer ja med én gang: det som testes er skrivingen
     // bak knappen, ikke at iOS tegner en Alert.
     jest
@@ -123,11 +123,17 @@ describe('OrganiserSection', () => {
       'Ikke bekreftet',
     );
 
-    // 2. #1868: lag-kontrollen finnes for makkeren, men ikke for meg selv —
-    //    0147-vakta ville avvist mitt eget lag-skriv. Noten står i stedet.
+    // 2. #1855/#1868: lag-kontrollen finnes for BEGGE, ogsaa min egen rad.
+    //    Migrasjon 0168 ga oppretteren samme unntak paa egen rad som de alt
+    //    hadde paa andres. UI-sperren ble staaende igjen etter at basen aapnet,
+    //    saa evnen fantes uten aa vaere naabar — eieren fant det i tapptest,
+    //    ikke denne testen. Naa laaser den begge radene.
     expect(screen.getByTestId(`organiser-team-${MATE}-1`)).toBeTruthy();
-    expect(screen.queryByTestId(`organiser-team-${ME}-1`)).toBeNull();
-    expect(screen.getByTestId('organiser-own-row-note')).toBeTruthy();
+    expect(screen.getByTestId(`organiser-team-${ME}-1`)).toBeTruthy();
+
+    // 2b. Foer runden er i gang finnes det ingenting aa forklare paa egen rad:
+    //     lag og flight er aapne, og frafall gjelder foerst naar spillet gaar.
+    expect(screen.queryByTestId('organiser-own-row-note')).toBeNull();
 
     // 3. Fjern-knappen har derimot INGEN selv-vakt — hverken webbens action
     //    eller RLS har en, og to flater med hver sin regel er verre.
@@ -154,6 +160,8 @@ describe('OrganiserSection', () => {
     expect(screen.getByTestId(`organiser-withdraw-${MATE}`)).toBeTruthy();
     expect(screen.queryByTestId(`organiser-withdraw-${ME}`)).toBeNull();
     expect(screen.queryByTestId(`organiser-remove-${MATE}`)).toBeNull();
+    // Naa — og foerst naa — har noten noe aa forklare: vakt (c) staar, saa
+    // «trekk deg selv» er fortsatt web-veien. Samme grense som nettsiden.
     expect(screen.getByTestId('organiser-own-row-note')).toBeTruthy();
 
     // 6. Frafallet går gjennom bekreftelses-dialogen, ikke rett på skrivingen.
