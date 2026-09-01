@@ -2833,7 +2833,7 @@
       "snowmanDetailSolo": "+{delta} på hull {hole}",
       "snowmanDetailHole": "hele laget på hull {hole}",
       "snowmanDetailHoleSolo": "på hull {hole}",
-      "longestBogeyFreeDetail": "{name}, {count} hull {range}",
+      "longestBogeyFreeDetail": "{name}, {count} på {range}",
       "scoreOnHole": "{name}, {score} på hull {hole}",
       "scoreOnHoleBrutto": "{name}, {score} brutto på hull {hole}",
       "comebackDetail": "{name}, snudd {delta} slag",

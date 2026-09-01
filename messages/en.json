@@ -2833,7 +2833,7 @@
       "snowmanDetailSolo": "+{delta} on hole {hole}",
       "snowmanDetailHole": "whole team on hole {hole}",
       "snowmanDetailHoleSolo": "on hole {hole}",
-      "longestBogeyFreeDetail": "{name}, {count} {count, plural, one {hole} other {holes}} {range}",
+      "longestBogeyFreeDetail": "{name}, {count} on {range}",
       "scoreOnHole": "{name}, {score} on hole {hole}",
       "scoreOnHoleBrutto": "{name}, {score} gross on hole {hole}",
       "comebackDetail": "{name}, turned {delta} {delta, plural, one {stroke} other {strokes}}",
