@@ -114,7 +114,28 @@ Ingen ny bibliotek-flate — Supabase-/Next-mønstrene er husets egne, verifiser
 - [x] **SK10 — Staging-bevis:** Full klikkrunde kjørt mot torny-staging i
   prod-server-modus (build med staging-env + `next start`), logget inn som
   kaptein og arrangør via mintede OTP-er. Alle stegene over er observert
-  utfall fra den runden, ikke antakelser.
+  utfall fra den runden, ikke antakelser. Kjørt PÅ NYTT etter
+  evaluerings-fiksene, pluss en egen runde som beviser den nye vakta: en
+  spiller ble flyttet mellom lagene etter levering, og avdekkingen ble avvist
+  med 0 kamper, `revealed_at` null og riktig norsk beskjed til arrangøren.
+
+## Evaluering
+
+Skeptisk gjennomgang med fem linser og tre motbevisere per funn: 26 funn reist,
+4 overlevde, alle fire rettet på branchen.
+
+1. Migrasjonsrekkefølgen var snudd (prod må komme FØR koden) — rettet i
+   migrasjonsfila, kontrakten og PR-teksten.
+2. Avdekkingen re-validerte ikke lagrede plasser mot dagens lag —
+   `validateStoredLineups`, Type A-testet og bevist på staging.
+3. Match-taket hadde to hjem som var uenige — `countPendingLineupSlots` er nå
+   det ene hjemmet, brukt av både uttaket og veiviseren.
+4. Singel het «Matchplay» i uttaks-rommet mens kampene het «Singel 1» — bruker
+   nå cupens eget vokabular.
+
+Ikke fikset her, filet som issues før merge: #1901 (avdekking som feiler har
+ingen «prøv igjen»-vei) og #1902 (poengmålet flytter seg ikke når en økt legger
+til kamper underveis).
 
 ## Gates (per chunk)
 
