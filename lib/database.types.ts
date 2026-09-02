@@ -385,6 +385,125 @@ export type Database = {
           },
         ]
       }
+      cup_lineup_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          format: string
+          id: string
+          revealed_at: string | null
+          session_index: number
+          slot_count: number
+          team_1_submitted_at: string | null
+          team_1_submitted_by: string | null
+          team_2_submitted_at: string | null
+          team_2_submitted_by: string | null
+          tournament_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          format: string
+          id?: string
+          revealed_at?: string | null
+          session_index: number
+          slot_count: number
+          team_1_submitted_at?: string | null
+          team_1_submitted_by?: string | null
+          team_2_submitted_at?: string | null
+          team_2_submitted_by?: string | null
+          tournament_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          format?: string
+          id?: string
+          revealed_at?: string | null
+          session_index?: number
+          slot_count?: number
+          team_1_submitted_at?: string | null
+          team_1_submitted_by?: string | null
+          team_2_submitted_at?: string | null
+          team_2_submitted_by?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cup_lineup_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cup_lineup_sessions_team_1_submitted_by_fkey"
+            columns: ["team_1_submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cup_lineup_sessions_team_2_submitted_by_fkey"
+            columns: ["team_2_submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cup_lineup_sessions_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cup_lineup_slots: {
+        Row: {
+          created_at: string
+          id: string
+          seat: number
+          session_id: string
+          slot_index: number
+          team_number: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          seat: number
+          session_id: string
+          slot_index: number
+          team_number: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          seat?: number
+          session_id?: string
+          slot_index?: number
+          team_number?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cup_lineup_slots_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cup_lineup_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cup_lineup_slots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       format_intent_mapping: {
         Row: {
           created_at: string
@@ -1727,16 +1846,22 @@ export type Database = {
       tournament_participants: {
         Row: {
           created_at: string
+          is_captain: boolean
+          team_number: number | null
           tournament_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          is_captain?: boolean
+          team_number?: number | null
           tournament_id: string
           user_id: string
         }
         Update: {
           created_at?: string
+          is_captain?: boolean
+          team_number?: number | null
           tournament_id?: string
           user_id?: string
         }

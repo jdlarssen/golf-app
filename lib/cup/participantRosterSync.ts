@@ -25,6 +25,18 @@ export type ParticipantRosterSyncInput = {
   /** Reserven som ble byttet INN. */
   inUserId: string;
   /**
+   * Har ut-spillerens deltaker-rad en varig rolle arrangøren eier — lag eller
+   * kapteinsflagg (#1884)? Da står raden uansett hva matchene sier.
+   *
+   * Uten unntaket ville kaptein-cupen mistet folk fra lista i det stille:
+   * en benket spiller står i null matcher etter et bytte, og en ikke-spillende
+   * kaptein står aldri i noen. Begge er på lista med vilje, og bare arrangøren
+   * tar dem av. Regelen selv bor i `hasPersistentCupRole` (captainRoles.ts).
+   *
+   * Default `false` = dagens oppførsel for alle cuper uten kapteiner.
+   */
+  outHasPersistentRole?: boolean;
+  /**
    * `game_players.user_id` for radene til de to byttede spillerne, på tvers av
    * cupens matcher, lest ETTER byttet. Kun `outUserId`/`inUserId` avgjør noe
    * under, så et bredere roster ville vært lest til ingen nytte (#1745).
@@ -51,7 +63,7 @@ export type ParticipantRosterSyncPlan = {
 export function planParticipantRosterSync(
   input: ParticipantRosterSyncInput,
 ): ParticipantRosterSyncPlan {
-  const { outUserId, inUserId, rosterUserIds } = input;
+  const { outUserId, inUserId, rosterUserIds, outHasPersistentRole } = input;
 
   // Ukjent roster: reserven meldes likevel på (upserten er idempotent, og hun
   // ble nettopp skrevet inn i matchen), men INGEN slettes uten bevis for at
@@ -63,7 +75,10 @@ export function planParticipantRosterSync(
   const roster = new Set(rosterUserIds);
   return {
     addParticipantId: roster.has(inUserId) ? inUserId : null,
-    removeParticipantId: roster.has(outUserId) ? null : outUserId,
+    // #1884: en varig lag-/kapteinsrolle overstyrer match-derivasjonen. Uten
+    // rolle er regelen som før — ute av alle matcher, av lista.
+    removeParticipantId:
+      roster.has(outUserId) || outHasPersistentRole ? null : outUserId,
   };
 }
 
@@ -79,6 +94,12 @@ export type SwapParticipantCapInput = {
    * (splittet cup-dag, #1441)? Da beholder synken over deltaker-raden hennes.
    */
   outRemainsInCup: boolean;
+  /**
+   * Har ut-spilleren en varig lag-/kapteinsrolle (#1884)? Da blir raden hennes
+   * stående, akkurat som i `planParticipantRosterSync` — og lista krymper
+   * altså ikke, uansett hva matchene sier.
+   */
+  outHasPersistentRole?: boolean;
   actorIsAdmin: boolean;
 };
 
@@ -105,6 +126,9 @@ export function swapExceedsPersonalPlayerCap(
   after.add(input.inUserId);
   // Sletting av en som aldri sto på lista er en no-op — divergerte sett
   // (spiller i match uten deltaker-rad) gir da ingen falsk godskriving.
-  if (!input.outRemainsInCup) after.delete(input.outUserId);
+  // #1884: en varig rolle beholder raden, så fjerningen godskrives ikke da.
+  if (!input.outRemainsInCup && !input.outHasPersistentRole) {
+    after.delete(input.outUserId);
+  }
   return exceedsPersonalPlayerCap(after.size, input.actorIsAdmin);
 }

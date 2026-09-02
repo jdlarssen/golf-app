@@ -61,6 +61,22 @@ describe('planParticipantRosterSync — beslutningstabellen (#1735)', () => {
       { rosterUserIds: [] },
       { addParticipantId: null, removeParticipantId: 'out' },
     ],
+    // #1884: varig lag-/kapteinsrolle er arrangørens, ikke match-derivasjonens.
+    [
+      'benket spiller med varig lag: ute av alle matcher, men raden står',
+      { rosterUserIds: [], outHasPersistentRole: true },
+      { addParticipantId: null, removeParticipantId: null },
+    ],
+    [
+      'ikke-spillende kaptein: står i 0 matcher og skal aldri fjernes',
+      { rosterUserIds: ['reserve', 'mate'], outHasPersistentRole: true },
+      { addParticipantId: 'reserve', removeParticipantId: null },
+    ],
+    [
+      'uten rolle er regelen som før: eksplisitt false fjerner frafallet',
+      { outHasPersistentRole: false },
+      { addParticipantId: 'reserve', removeParticipantId: 'out' },
+    ],
   ];
 
   it.each(cases)('%s', (_name, overrides, expected) => {
@@ -123,6 +139,12 @@ describe('swapExceedsPersonalPlayerCap — tak-vakta i planfasen (#1804)', () =>
       'på taket, reserven er ALLEREDE deltaker, ut-spilleren blir: settet uendret → ok',
       { inUserId: 'p5', outRemainsInCup: true },
       false,
+    ],
+    // #1884: raden blir stående, så fjerningen kan ikke godskrives i taket.
+    [
+      'på taket, ut-spilleren har varig rolle og forlater matchene: raden står → avvis',
+      { outHasPersistentRole: true },
+      true,
     ],
     [
       'ut-spilleren står ikke på deltakerlista (divergerte sett): ingen rad å godskrive → avvis',
