@@ -95,6 +95,14 @@ describe('buildUniformContext — game-feltene', () => {
       { kind: 'greensome_matchplay', team_size: 2, teams_count: 2, allowance_pct: 100 },
     ],
     [
+      'chapman_matchplay',
+      { kind: 'chapman_matchplay', team_size: 2, teams_count: 2, allowance_pct: 100 },
+    ],
+    [
+      'gruesome_matchplay',
+      { kind: 'gruesome_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50 },
+    ],
+    [
       'texas_scramble',
       { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 },
     ],
