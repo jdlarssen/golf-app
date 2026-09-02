@@ -84,6 +84,16 @@ describe('describeDeleteFailure', () => {
   // Sletting legges ALDRI i kø. Den delte offline-setningen lover «koble til, så
   // går det gjennom» — sant for en score, feil her. Testen låser at vi ikke
   // faller tilbake på den igjen.
+  // Eier-tapptest 2026-09-02: med Wi-Fi av og mobildata på er enheten «online»,
+  // men når ikke serveren — da er det denne grenen som vises. Den må si kravet,
+  // ikke bare «prøv igjen».
+  it('sier at sletting krever nett i BEGGE nett-grenene', () => {
+    for (const reason of ['offline', 'network'] as const) {
+      expect(describeDeleteFailure(reason)).toMatch(/nett|tilkobling/i);
+    }
+    expect(describeDeleteFailure('network')).toContain('slette kontoen');
+  });
+
   it('lover ikke at slettingen går gjennom senere', () => {
     const offline = describeDeleteFailure('offline');
     expect(offline).not.toBe(OFFLINE_NOTE);
