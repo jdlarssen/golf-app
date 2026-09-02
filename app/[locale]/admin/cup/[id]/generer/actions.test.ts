@@ -99,6 +99,11 @@ let adminExistingGameRows: { id: string }[] = [];
 let adminExistingGamesError: unknown = null;
 let adminExistingPlayerRows: { user_id: string }[] = [];
 let adminExistingPlayersError: unknown = null;
+// #1884: åpnede, ikke-avdekkede uttaks-økter teller mot match-taket sammen med
+// `games` — de er kamper som ER lovet. Tom som default, så alle eldre tester
+// oppfører seg nøyaktig som før.
+let adminPendingLineupRows: { slot_count: number }[] = [];
+let adminPendingLineupError: unknown = null;
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => {
@@ -108,6 +113,18 @@ vi.mock('@/lib/supabase/admin', () => ({
             eq: async () => ({
               data: adminExistingGamesError ? null : adminExistingGameRows,
               error: adminExistingGamesError,
+            }),
+          }),
+        };
+      }
+      if (table === 'cup_lineup_sessions') {
+        return {
+          select: () => ({
+            eq: () => ({
+              is: async () => ({
+                data: adminPendingLineupError ? null : adminPendingLineupRows,
+                error: adminPendingLineupError,
+              }),
             }),
           }),
         };
@@ -235,6 +252,8 @@ beforeEach(() => {
   adminCupGroupId = null;
   adminMemberIds = [];
   adminCupCreatedBy = null;
+  adminPendingLineupRows = [];
+  adminPendingLineupError = null;
   adminUserRows = DEFAULT_USER_ROWS;
   adminUserRowsError = null;
   adminExistingGameRows = [];
@@ -1158,6 +1177,47 @@ describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede match
   // sprengt deltaker-taket også, og testen hadde svart `too_many_matches` bare
   // fordi match-taket sjekkes først (actions.ts) — riktig svar av feil grunn.
   const QUADS = Math.floor(MAX_PERSONAL_CUP_PLAYERS / 4);
+
+  it('åpnede uttaks-økter teller mot match-taket (#1884)', async () => {
+    adminCupCreatedBy = 'user-1'; // ikke-admin passerer som cupens egen skaper
+    // Cupen har ingen kamper ennå, men en åpnet singel-økt som vil lage
+    // nøyaktig taket minus én. Planen under legger to til → over taket.
+    adminPendingLineupRows = [{ slot_count: MAX_PERSONAL_CUP_MATCHES - 1 }];
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null },
+      { data: draftCup, error: null },
+      planResult(),
+      teeResult(),
+    ]);
+    setUser('user-1');
+
+    const { createCupMatchesFromPlan } = await import('./actions');
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'too_many_matches',
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('uttaks-tellingen feiler: generer ikke, ikke tell taket for lavt (#1884)', async () => {
+    adminCupCreatedBy = 'user-1';
+    adminPendingLineupError = { message: 'lineup count boom' };
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null },
+      { data: draftCup, error: null },
+      planResult(),
+      teeResult(),
+    ]);
+    setUser('user-1');
+
+    const { createCupMatchesFromPlan } = await import('./actions');
+    // Fail-closed: et tak vi ikke kan regne ut, er et tak vi ikke håndhever.
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'insert_failed',
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
 
   it('host + avledede matcher over match-taket: too_many_matches, ingen insert', async () => {
     adminCupCreatedBy = 'user-1'; // ikke-admin passerer som cupens egen skaper

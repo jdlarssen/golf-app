@@ -17,6 +17,7 @@ import {
   type CupAllowancePcts,
 } from '@/lib/cup/cupMatchAllowance';
 import { isTeeOffInPast } from '@/lib/games/gamePayload';
+import { countPendingLineupSlots } from '@/lib/cup/lineupData';
 import {
   hasValidSourceMatches,
   insertCupMatches,
@@ -213,7 +214,17 @@ export async function createCupMatchesFromPlan(
       );
     }
 
-    const totalMatches = existingGameIds.length + matches.length;
+    // #1884: åpnede, ikke-avdekkede uttaks-økter er kamper som ER lovet — de
+    // opprettes så snart begge kapteiner har levert, og avdekkingen sjekker
+    // ikke taket selv. Uten dem i regnestykket kunne veiviseren og uttaket hver
+    // for seg holde seg under taket og til sammen sprenge det (én regel, to
+    // hjem — AGENTS.md-felle 4). Feiler tellingen, generer vi ikke: samme
+    // fail-closed-linje som de to tellingene over.
+    const pendingLineupSlots = await countPendingLineupSlots(tournamentId);
+    if (pendingLineupSlots === null) return { error: 'insert_failed' };
+
+    const totalMatches =
+      existingGameIds.length + pendingLineupSlots + matches.length;
     if (exceedsPersonalMatchCap(totalMatches, isAdmin)) {
       return { error: 'too_many_matches' };
     }

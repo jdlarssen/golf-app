@@ -4732,6 +4732,7 @@
         "lineup_not_in_squad": "En av spillerne er ikke på laget ditt.",
         "lineup_slot_shape": "Uttaket ser rart ut. Last siden på nytt og prøv igjen.",
         "lineup_squad_too_small": "Laget har for få spillere til denne økten.",
+        "lineup_squad_changed": "Lagene er endret etter at uttaket ble levert. Lås opp uttaket og be kapteinen velge på nytt.",
         "lineup_revealed": "Økten er allerede avdekket.",
         "lineup_already_submitted": "Uttaket er levert. Be arrangøren låse det opp hvis du vil endre noe.",
         "lineup_format": "Ukjent format.",

@@ -207,3 +207,36 @@ export function squadUserIds(
 ): string[] {
   return teamRoster(access.participants, team).map((p) => p.userId);
 }
+
+/**
+ * Hvor mange kamper cupens ÅPNEDE, ikke-avdekkede uttaks-økter kommer til å
+ * lage (#1884).
+ *
+ * Match-taket for en personlig cup må telle disse i tillegg til `games`: en
+ * åpnet økt er en forpliktelse om å opprette akkurat så mange kamper når begge
+ * kapteiner har levert, og avdekkingen sjekker ikke taket selv (da ville to
+ * leverte uttak kunne ende uten kamper). Både `openCupLineupSession` og
+ * generer-veiviserens `createCupMatchesFromPlan` bruker den, så regelen har
+ * ett hjem — uten det kunne veiviseren og uttaket hver for seg holde seg under
+ * taket og til sammen sprenge det.
+ *
+ * Returnerer `null` når tellingen ikke kunne gjøres. Kallerne skal da feile
+ * LUKKET: et tak vi ikke kan regne ut, er et tak vi ikke håndhever (I3).
+ */
+export async function countPendingLineupSlots(
+  tournamentId: string,
+): Promise<number | null> {
+  const { data, error } = await getAdminClient()
+    .from('cup_lineup_sessions')
+    .select('slot_count')
+    .eq('tournament_id', tournamentId)
+    .is('revealed_at', null);
+  if (error) {
+    console.error('[cup] countPendingLineupSlots failed', {
+      tournamentId,
+      error,
+    });
+    return null;
+  }
+  return (data ?? []).reduce((sum, r) => sum + (r.slot_count as number), 0);
+}

@@ -31,9 +31,22 @@
 -- koden ER håndhevelsen for hvem som ser hva, og RLS-en her sørger for at det
 -- ikke finnes noen vei utenom den.
 --
--- ⚠ Påfør staging først, verifiser, DERETTER prod (CLAUDE.md DB-disiplin).
--- Additiv: ingen eksisterende rad endrer betydning, og all ny lesing er
--- kode som først finnes etter deploy.
+-- ⚠⚠ DENNE MÅ PÅ PROD **FØR** KODEN DEPLOYES — IKKE ETTER. ⚠⚠
+--
+-- Migrasjonen er additiv og helt trygg å påføre mens bare den GAMLE koden
+-- kjører: ingenting som er deployet i dag leser eller skriver noe av dette.
+-- Motsatt rekkefølge er derimot et driftsavbrudd. Den nye koden leser
+-- `team_number, is_captain` i to flater som allerede er i bruk og som feiler
+-- LUKKET på en ukjent kolonne (PostgREST 42703):
+--
+--   * Spillere-rommet (CupParticipants.tsx) kaster og viser feilsiden — for
+--     ALLE utkast-cuper, med eller uten kapteiner.
+--   * Spillerbyttet (lib/cup/actions.ts) svarer `swap_failed` på hver eneste
+--     personlige cup.
+--
+-- Rekkefølgen er altså: staging → verifiser → PROD (bak eier-luka, #1074) →
+-- merge → deploy. Samme lærdom som 0169 (#1074-runden): «Safe to apply at any
+-- time» betyr trygg å påføre TIDLIG, ikke trygg å utsette.
 
 -- ---------------------------------------------------------------------------
 -- 1. Varig lag + kapteinsrolle på deltakerlista
