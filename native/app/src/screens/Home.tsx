@@ -204,6 +204,13 @@ function Footer({
       </Text>
       <Pressable
         style={ui.link}
+        onPress={() => navigation.navigate('Account')}
+        testID="open-account"
+      >
+        <Text style={ui.linkText}>Konto</Text>
+      </Pressable>
+      <Pressable
+        style={ui.link}
         onPress={() => navigation.navigate('SyncLab')}
         testID="open-sync-lab"
       >

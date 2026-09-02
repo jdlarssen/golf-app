@@ -18,8 +18,10 @@ import {
   createNativeStackNavigator,
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
+import { Account } from './screens/Account';
 import { Approve } from './screens/Approve';
 import { CreateGame } from './screens/CreateGame';
+import { DeleteAccount } from './screens/DeleteAccount';
 import { EndGame } from './screens/EndGame';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
@@ -40,6 +42,10 @@ export type RootStackParamList = {
   Approve: { gameId: string };
   /** Arrangørens avslutt-flate (N6c, #1856) — kåring + status-flipp. */
   EndGame: { gameId: string };
+  /** Kontoflata (#1876) — e-post, utlogging og veien til sletting. */
+  Account: undefined;
+  /** Bekreftelse på konto-sletting (#1876) — egen skjerm, husregelen. */
+  DeleteAccount: undefined;
   SyncLab: undefined;
 };
 
@@ -139,6 +145,16 @@ export function RootNavigator() {
           name="EndGame"
           component={EndGame}
           options={{ title: 'Avslutt runden' }}
+        />
+        <Stack.Screen
+          name="Account"
+          component={Account}
+          options={{ title: 'Konto' }}
+        />
+        <Stack.Screen
+          name="DeleteAccount"
+          component={DeleteAccount}
+          options={{ title: 'Slett konto' }}
         />
         <Stack.Screen
           name="SyncLab"
