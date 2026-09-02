@@ -169,7 +169,11 @@ target.
   `.github/workflows/branch-sweep.yml` sweeps the rest weekly; a `claude/*` branch you
   left behind by hand is still yours to remove.
 - **Closing comment** on every closed issue: `## Teknisk` + `## Funksjonell`
-  (CLAUDE.md §Closing-kommentar) — the main chat writes it, not a subagent.
+  (CLAUDE.md §Closing-kommentar) — the main chat writes it, not a subagent. ONE per
+  issue: list the thread's comments first; if a delivery/closing comment already
+  exists (a build or night session posted it before merge), PATCH its stale
+  statements — merge SHA, prod-migration status, deviations — instead of posting a
+  second one (#1907; bash-guard reminds you when the thread already has one).
 - **Reviewer findings** → issues (with milestone) before merge (CLAUDE.md
   §Reviewer-funn).
 

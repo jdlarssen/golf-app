@@ -35,6 +35,11 @@ invoke it; this file is the fallback.
    - Assumptions still standing → repeat the `ASSUMPTION:` lines in the final summary.
    - Test failures or skipped steps are reported plainly, with output — never rounded up
      to success.
+   - An issue-closing comment is a status message too: list the thread's comments
+     FIRST. If a delivery/closing comment already exists (`## Teknisk`/`## Funksjonell`),
+     correct its stale claims in place (PATCH) instead of adding a second one — two
+     closing comments on one issue, the first still saying "waiting for merge", was
+     the #1884 failure (#1907).
 
 5. **Re-read the original request once, top to bottom.** Anything asked but not delivered
    and not explicitly deferred → do it now, or list it as not-done. Silence about a

@@ -196,14 +196,16 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
 
 Kontrakt-først-disiplinen for `/forge:auto` (hva hovedchatten gjør når issue/kontrakt ikke er spesifisert) og hvordan `/forge:contract`-kontrakter postes som issue-kommentar er flyttet til [`docs/forge-workflow.md`](docs/forge-workflow.md). Kjernen: **aldri start `/forge:auto`-løkken uten enten en eksisterende kontrakt-fil eller en kontrakt-kommentar på et åpent issue** — les docs-fila før du kjører `/forge:auto` uten spesifisert issue, eller når `/forge:contract` lager en kontrakt.
 
-#### Closing-kommentar (ALLTID)
+#### Closing-kommentar (ALLTID — og bare én per issue)
 
-Når en issue lukkes, MÅ hovedchatten poste en kommentar med `gh issue comment N --body ...`. Kommentaren har to seksjoner:
+Når en issue lukkes, MÅ det stå en closing-kommentar på den. **Sjekk tråden først** (`gh api repos/jdlarssen/golf-app/issues/N/comments --jq '.[] | "\(.id) | \(.body | split("\n")[0])"'`), for det finnes ofte en fra før:
 
-- **`## Teknisk`** — hvilke filer/komponenter endret, hvilken approach, evt. avvik fra issue-design, PR-link + commit-SHA-er.
-- **`## Funksjonell`** — hva brukeren ser i appen nå, på vanlig norsk, action-orientert. Samme tone som CHANGELOG-taglines («Du kan nå …», «Når X skjer, sier appen nå …»).
+- **Finnes det alt en leveranse-/closing-kommentar** (typisk byggeøktas eller nattkjørerens «Bygget på PR #M — venter på merge …» med `## Teknisk`/`## Funksjonell`): IKKE post en ny. Gå gjennom den og korrigér det som ikke lenger står seg — merge-status og merge-SHA, prod-migrasjonsstatus, avvik som kom til underveis — med `gh api -X PATCH repos/jdlarssen/golf-app/issues/comments/<id> --input <json-fil med body>`. Postet du en dublett likevel: slett din egen og fold rettelsene inn i originalen. (Eierregel 2026-09-02 etter #1884, jf. #1907 — bash-guard minner om det i det du kjører `gh issue comment` på en tråd som alt har en.)
+- **Finnes ingen:** post én med `gh issue comment N --body-file …`. Kommentaren har to seksjoner:
+  - **`## Teknisk`** — hvilke filer/komponenter endret, hvilken approach, evt. avvik fra issue-design, PR-link + commit-SHA-er.
+  - **`## Funksjonell`** — hva brukeren ser i appen nå, på vanlig norsk, action-orientert. Samme tone som CHANGELOG-taglines («Du kan nå …», «Når X skjer, sier appen nå …»).
 
-Gjelder også når subagenter har gjort selve implementasjonen — hovedchatten skriver closing-kommentaren, ikke subagenten.
+Gjelder også når subagenter har gjort selve implementasjonen — hovedchatten skriver (eller korrigerer) closing-kommentaren, ikke subagenten.
 
 #### Avvik fra issue-design
 
