@@ -1,24 +1,14 @@
 // Native N3 (#1825): fargene og de få stilene alle spillerskjermene deler.
-// #1830 legger design-fundamentet oppå: Fraunces/Inter-tokens og lys/mørk
+// #1830 la design-fundamentet oppå: Fraunces/Inter-tokens og lys/mørk
 // palett-splitt med samme semantiske roller som webben (`app/globals.css`).
 //
-// Additivt av hensyn til N4 (#1828): `COLORS`, `TAP` og `ui` beholder navn og
-// nøkler; nye flater bygges mot `useTheme()`. Skjermer bruker alltid
-// tokens/primitivene her — aldri hardkodede farger eller fonter.
+// #1833 fjernet den siste dobbeltheten: den flate `COLORS`-tabellen og den
+// statiske lys-`ui`-en er borte. `useTheme()` er nå den ene veien inn, og
+// derfor finnes det ingen måte å skrive en skjerm som bare virker i lys drakt.
+//
+// Mønsteret alle flatene følger: layout i et statisk `StyleSheet.create`-ark,
+// farger inline fra `colors`/`ui`. Aldri hardkodede farger eller fonter.
 import { StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
-
-export const COLORS = {
-  /** Deep forest — tekst, knapper, rammer. */
-  forest: '#1B4332',
-  /** Champagne gold — kun til framheving (aktivt hull, vinnermarkør). */
-  gold: '#C9A961',
-  /** Linen — bakgrunn. */
-  linen: '#F8F6F0',
-  card: '#FFFFFF',
-  border: '#E3DFD3',
-  muted: '#5C6B60',
-  error: '#B00020',
-} as const;
 
 /** Minste tappbare flate (≥44px, Apple HIG). Brukt av alle steppere. */
 export const TAP = 44;
@@ -37,31 +27,32 @@ export type ThemeColors = {
   accent: string;
   /**
    * Tekst og merker OPPÅ en gull-flate — hull-stripens førte hull, matchplay-
-   * stripens vunne hull. Egen rolle fordi gull er lyst i begge palettene:
-   * `text` er mørk skog i lys modus og lys krem i mørk, og den siste
-   * forsvinner i gullet. Blekket på gull er mørkt uansett scheme.
+   * stripens vunne hull. Egen rolle fordi gull er lys i begge palettene: `text`
+   * er mørk skog i lys modus og lys krem i mørk, og den siste forsvinner i
+   * gullet. Blekket på gull er mørkt uansett scheme.
    */
   onAccent: string;
   danger: string;
 };
 
 /**
- * Lys = N3-paletten uendret. Mørk = webbens «klubbhus-natt»
- * (`app/globals.css` `[data-theme='dark']`-blokka), inkl. knappe-regelen
- * `dark:text-bg` fra `components/ui/Button.tsx`.
+ * Lys = N3-paletten uendret (forest `#1B4332`, gold `#C9A961`, linen
+ * `#F8F6F0`). Mørk = webbens «klubbhus-natt» (`app/globals.css`
+ * `[data-theme='dark']`-blokka), inkl. knappe-regelen `dark:text-bg` fra
+ * `components/ui/Button.tsx`.
  */
 export const PALETTES: Record<Scheme, ThemeColors> = {
   light: {
-    bg: COLORS.linen,
-    surface: COLORS.card,
-    border: COLORS.border,
-    text: COLORS.forest,
-    muted: COLORS.muted,
-    primary: COLORS.forest,
+    bg: '#F8F6F0',
+    surface: '#FFFFFF',
+    border: '#E3DFD3',
+    text: '#1B4332',
+    muted: '#5C6B60',
+    primary: '#1B4332',
     onPrimary: '#FFFFFF',
-    accent: COLORS.gold,
-    onAccent: COLORS.forest,
-    danger: COLORS.error,
+    accent: '#C9A961',
+    onAccent: '#1B4332',
+    danger: '#B00020',
   },
   dark: {
     bg: '#14201A',
@@ -91,6 +82,7 @@ export const FONTS = {
   sansBold: 'Inter_700Bold',
 } as const;
 
+/** De delte stilene, bygget én gang per palett. */
 const createUi = (c: ThemeColors) =>
   StyleSheet.create({
     screen: {
@@ -219,18 +211,18 @@ const createUi = (c: ThemeColors) =>
     badgeText: { fontSize: 12, fontFamily: FONTS.sansSemiBold, color: c.text },
   });
 
-const uiVariants: Record<Scheme, ReturnType<typeof createUi>> = {
+/** De delte stilene for én palett — det `useTheme().ui` gir deg. */
+export type Ui = ReturnType<typeof createUi>;
+
+const uiVariants: Record<Scheme, Ui> = {
   light: createUi(PALETTES.light),
   dark: createUi(PALETTES.dark),
 };
 
-/** Lys-varianten — navnet N3-skjermene alt importerer. Nye flater: `useTheme()`. */
-export const ui = uiVariants.light;
-
 export type Theme = {
   scheme: Scheme;
   colors: ThemeColors;
-  ui: typeof ui;
+  ui: Ui;
 };
 
 const THEMES: Record<Scheme, Theme> = {
