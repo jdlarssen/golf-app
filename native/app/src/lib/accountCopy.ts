@@ -98,8 +98,12 @@ export function describeDeleteFailure(reason: AccountDeleteFailure): string {
     // la knappen gjøre ingenting (ærlig-feil-guardrailen).
     case 'no-web-base-url':
       return 'Appen mangler adressen til serveren, så du får ikke slettet kontoen herfra. Ta kontakt med administrator.';
+    // Begge nett-tekstene MÅ si at sletting krever tilkobling. Eier-tapptesten
+    // traff nettopp denne grenen (Wi-Fi av, mobildata på: enheten er «online»,
+    // men når ikke serveren) og savnet kravet. «Prøv igjen» alene forteller ikke
+    // hva som skal være annerledes neste gang.
     case 'network':
-      return 'Fikk ikke svar fra serveren. Sjekk nettet og prøv igjen.';
+      return 'Du må være på nett for å slette kontoen. Sjekk tilkoblingen og prøv igjen.';
     // Tokenet kan bare ha gått ut. Derfor «prøv igjen» og ingen lokal wipe:
     // var kontoen faktisk slettet, stopper innloggingen av seg selv.
     case 'unauthorized':
