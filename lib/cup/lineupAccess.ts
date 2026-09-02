@@ -60,29 +60,37 @@ export async function loadCupLineupAccess(
   // cup-radens `created_by`, og en klubb-admin ser ikke fremmede deltaker-rader
   // — leser vi med request-klienten, kollapser rollen til `none` for akkurat de
   // brukerne gaten finnes for.
-  const [{ data: cup }, { data: profile }, { data: participantRows }] =
-    await Promise.all([
-      admin
-        .from('tournaments')
-        .select('group_id, created_by')
-        .eq('id', tournamentId)
-        .maybeSingle(),
-      userId
-        ? admin.from('users').select('is_admin').eq('id', userId).maybeSingle()
-        : Promise.resolve({ data: null }),
-      admin
-        .from('tournament_participants')
-        .select('user_id, team_number, is_captain')
-        .eq('tournament_id', tournamentId)
-        .order('created_at', { ascending: true }),
-    ]);
+  // De to ubetingede lesingene først, profilen etterpå. Rekkefølgen er bevisst:
+  // en betinget lesing MIDT i en `Promise.all` ville flyttet på de andre når
+  // brukeren er utlogget — akkurat den forskyvningen ga en TypeError i
+  // gate-testene før dette ble snudd om (#1884).
+  const [{ data: cup }, { data: participantRows }] = await Promise.all([
+    admin
+      .from('tournaments')
+      .select('group_id, created_by')
+      .eq('id', tournamentId)
+      .maybeSingle(),
+    admin
+      .from('tournament_participants')
+      .select('user_id, team_number, is_captain')
+      .eq('tournament_id', tournamentId)
+      .order('created_at', { ascending: true }),
+  ]);
+
+  const { data: profile } = userId
+    ? await admin.from('users').select('is_admin').eq('id', userId).maybeSingle()
+    : { data: null };
 
   const isAdmin = profile?.is_admin === true;
   const groupId = (cup?.group_id as string | null | undefined) ?? null;
   const createdBy = (cup?.created_by as string | null | undefined) ?? null;
 
-  const participants: CupParticipantRole[] = (participantRows ?? []).map(
-    (row) => ({
+  // `Array.isArray` framfor `?? []`: en feilet lesing gir `null`, men en
+  // uventet form skal også lande som «ingen deltakere» framfor å kaste midt i
+  // en gate — en gate som kaster er en gate som ikke svarer.
+  const participants: CupParticipantRole[] = (
+    Array.isArray(participantRows) ? participantRows : []
+  ).map((row) => ({
       userId: row.user_id as string,
       teamNumber: ((row.team_number as number | null) ?? null) as
         | CupTeamNumber

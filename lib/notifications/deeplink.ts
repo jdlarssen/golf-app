@@ -105,6 +105,12 @@ export function notificationDestination(n: DeeplinkInput): string | null {
         ? `/klubber/${p.group_id}/cup/${p.tournament_id}/spillere`
         : `/admin/cup/${p.tournament_id}/spillere`;
     }
+    case 'cup_lineup_revealed': {
+      // #1884: rett til cup-siden, der avdekkings-kortet og de ferske
+      // kampene står. Samme mål som cup_started — seremonien bor på cupen.
+      const p = n.payload as NotificationPayload<'cup_lineup_revealed'>;
+      return `/cup/${p.tournament_id}`;
+    }
     case 'club_join_request': {
       const p = n.payload as NotificationPayload<'club_join_request'>;
       return `/klubber/${p.group_id}`;

@@ -276,3 +276,43 @@ export async function notifyParticipantsCupStarted(
   }
   return sendMailByUserId;
 }
+
+/**
+ * Best-effort `cup_lineup_revealed`-varsel til alle cupens deltakere (#1884).
+ *
+ * Avdekkingen ER seremonien: begge kapteiner har levert, matchene er nettopp
+ * opprettet, og alle vil vite hvem de møter. Fyres derfor til hele deltaker-
+ * settet, ikke bare de som fikk en plass i økta — den som står over vil se
+ * oppstillingen like mye som den som spiller.
+ *
+ * In-app only med vilje (mail er utenfor scope for #1884), så denne returnerer
+ * ingen mail-Map slik søstrene over gjør. Feiler et enkelt varsel, logges det
+ * og resten går ut: avdekkingen er allerede skrevet og skal aldri velte på et
+ * varsel.
+ */
+export async function notifyParticipantsCupLineupRevealed(
+  participants: Array<{ user_id: string }>,
+  tournament: { id: string; name: string },
+  session: { format: string; matchCount: number },
+  logPrefix: string,
+): Promise<void> {
+  // Pulje-kjørt (#1544), samme grunn som i søstrene over.
+  const results = await allSettledInBatches(participants, (p) =>
+    notify({
+      userId: p.user_id,
+      kind: 'cup_lineup_revealed',
+      payload: {
+        tournament_id: tournament.id,
+        tournament_name: tournament.name,
+        session_format: session.format,
+        match_count: session.matchCount,
+      },
+    }),
+  );
+
+  for (const r of results) {
+    if (r.status === 'rejected') {
+      console.error(`[${logPrefix}] cup_lineup_revealed notify failed`, r.reason);
+    }
+  }
+}

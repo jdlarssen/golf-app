@@ -50,6 +50,9 @@ const EMOJI: Record<NotificationKind, string> = {
   cup_finished: '🏁',
   cup_started: '🏌️',
   cup_signup: '📝',
+  // #1884: kampene er akkurat avdekket. 🎭 for at teppet går opp — bevisst
+  // ikke 🏌️ (cup_started) eller 🏁 (cup_finished), som eier start og slutt.
+  cup_lineup_revealed: '🎭',
   club_join_request: '🙋',
   club_role_changed: '🔑',
   friend_request: '👋',

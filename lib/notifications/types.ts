@@ -25,6 +25,7 @@ export type NotificationKind =
   | 'cup_finished'
   | 'cup_started'
   | 'cup_signup'
+  | 'cup_lineup_revealed'
   | 'club_join_request'
   | 'club_role_changed'
   | 'friend_request'
@@ -251,6 +252,20 @@ const cupSignupSchema = z.object({
   action: z.enum(['joined', 'left']),
 });
 
+// cup_lineup_revealed: begge kapteiner har levert uttaket for en økt, og
+// matchene er nettopp opprettet (#1884). Fyres til alle cupens deltakere —
+// avdekkingen ER seremonien, og den som står over denne økta vil vite det like
+// mye som den som spiller. In-app only (mail er utenfor scope), best-effort.
+// `session_label` er formatets norske navn slik matchene heter («Foursome»),
+// ikke fri prosa: kortet setter setningen sammen ved render, så payloaden er
+// locale-agnostisk som resten (#583).
+const cupLineupRevealedSchema = z.object({
+  tournament_id: uuid,
+  tournament_name: z.string().min(1),
+  session_format: z.string().min(1),
+  match_count: z.number().int().positive(),
+});
+
 // club_join_request: noen ba om å bli med i en klubb via del-lenken. Sendes til
 // klubbens eier(e)/admin(er). group_id deeplinker til /klubber/[group_id] hvor
 // forespørselen godkjennes/avslås. (#442)
@@ -377,6 +392,7 @@ const schemas = {
   cup_finished: cupFinishedSchema,
   cup_started: cupStartedSchema,
   cup_signup: cupSignupSchema,
+  cup_lineup_revealed: cupLineupRevealedSchema,
   club_join_request: clubJoinRequestSchema,
   club_role_changed: clubRoleChangedSchema,
   friend_request: friendRequestSchema,
