@@ -30,7 +30,12 @@ import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
 import { endGameCore } from '@/lib/games/endGameCore';
 import { planTournamentGameDeletion } from './tournamentGameDeletion';
-import { derivePointsToWinWeighted, resolveCupMatchTotal } from './pointsToWin';
+import {
+  DEFAULT_TIE_POINTS,
+  DEFAULT_WIN_POINTS,
+  derivePointsToWinWeighted,
+  resolveCupMatchTotal,
+} from './pointsToWin';
 import { parseCupDraftForm } from './parseCupDraftForm';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
@@ -45,12 +50,6 @@ import {
 // Cup-formens feltvalidering (navn/lag/allowances/vektpoeng) bor i
 // ./parseCupDraftForm.ts (#1778) — den eier også allowance-parserne fra
 // ./allowance.ts (#809), så denne fila kaller dem ikke lenger selv.
-
-// #1441 (D8) — samme 1/0,5-default som computeCupLeaderboard/pointsToWin.ts
-// faller tilbake til. Egen konstant her av samme grunn de filene er
-// uavhengige: ingen av dem importerer fra hverandre.
-const DEFAULT_WIN_POINTS = 1;
-const DEFAULT_TIE_POINTS = 0.5;
 
 // Weighted-points parsers (win_points > 0, tie_points >= 0) er konsolidert i
 // ./pointsToWin.ts (#1441, D8) — samme mønster som allowance.ts over.

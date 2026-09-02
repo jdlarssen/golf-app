@@ -9,9 +9,11 @@ import { ALLOWANCE_DEFAULTS } from './allowance';
 import type { CupAllowancePcts } from './cupMatchAllowance';
 import { planCupRoleChange, type CupTeamNumber } from './captainRoles';
 import { exceedsPersonalMatchCap } from './limits';
+import { hasDefaultCupWeights, parsePlannedMatchCount } from './pointsToWin';
+import { syncCupPointsToWin } from './pointsToWinSync';
 import { insertCupMatches, teeRatingsFrom } from './insertCupMatches';
 import { loadCupLineupAccess, canWriteTeamLineup } from './lineupAccess';
-import { countPendingLineupSlots, squadUserIds } from './lineupData';
+import { squadUserIds } from './lineupData';
 import { buildRevealMatches, nextLabelNumber } from './lineupReveal';
 import {
   planLineupPairs,
@@ -149,6 +151,125 @@ export async function setCupParticipantRole(
 }
 
 /**
+ * #1902 — arrangøren oppgir hvor mange kamper cupen skal ha TOTALT.
+ *
+ * Poengmålet ble utledet av de kampene som fantes ved start, og uttaks-øktene
+ * legger til kamper etterpå — en Ryder Cup som startet med 8 av 28 fikk målet
+ * 4,5, og et lag kunne krones etter dag 1. Tallet her er arrangørens utsagn om
+ * hele cupen, og målet regnes av `max(faktisk, planlagt)`.
+ *
+ * Kan rettes når som helst før avslutning: en skrivefeil eller et for høyt tall
+ * skal ikke kreve at noen åpner en økt for å bli kvitt. Er cupen alt aktiv,
+ * flytter målet seg med én gang — det ER fiksen for cupen som er grunnen til
+ * issuet.
+ *
+ * Eget kort og egen action framfor et felt inne i «Åpne en økt»: den ville
+ * trengt en to-skrivs kompensasjon hvis økta feilet etter at tallet var lagret.
+ */
+export async function setCupPlannedMatchCount(
+  formData: FormData,
+): Promise<CupLineupActionError> {
+  const tournamentId = String(formData.get('id') ?? '');
+  if (!tournamentId) return { error: 'not_found' };
+
+  const access = await loadCupLineupAccess(tournamentId);
+  // Antall kamper er arrangørens beslutning. En kaptein som kunne satt det,
+  // kunne flyttet poengmålet midt i cupen.
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const { data: cup, error: cupError } = await admin
+    .from('tournaments')
+    .select('status')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (cupError) {
+    console.error('[cup] setCupPlannedMatchCount cup read failed', {
+      tournamentId,
+      error: cupError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!cup) return { error: 'not_found' };
+  // Ferdig cup: vinneren er kåret, målet er historie.
+  if (cup.status === 'finished') return { error: 'cup_finished' };
+
+  const [{ data: sessionRows, error: sessionsErr }, { data: gameRows, error: gamesErr }] =
+    await Promise.all([
+      admin
+        .from('cup_lineup_sessions')
+        .select('slot_count, revealed_at')
+        .eq('tournament_id', tournamentId),
+      admin.from('games').select('id').eq('tournament_id', tournamentId),
+    ]);
+  // Et gulv vi ikke kan regne ut er et gulv vi ikke håndhever (I3) — samme
+  // fail-lukket-regel som tak-tellingen i openCupLineupSession.
+  if (sessionsErr || gamesErr) {
+    console.error('[cup] setCupPlannedMatchCount count read failed', {
+      tournamentId,
+      sessionsErr,
+      gamesErr,
+    });
+    return { error: 'save_failed' };
+  }
+
+  // Gulvet: kampene som alt finnes + plassene i åpnede, ikke-avdekkede økter.
+  // Et lavere tall er en skrivefeil — kampene er alt satt opp og forsvinner
+  // ikke av at noen skriver et mindre tall i et felt.
+  const pendingSlots = (sessionRows ?? [])
+    .filter((row) => row.revealed_at === null)
+    .reduce((sum, row) => sum + (row.slot_count as number), 0);
+  const floor = Math.max(2, (gameRows ?? []).length + pendingSlots);
+
+  const planned = parsePlannedMatchCount(
+    String(formData.get('planned_match_count') ?? ''),
+    floor,
+  );
+  if (planned === null) return { error: 'lineup_planned_total' };
+
+  // Klubb-cuper og global admin er uncapped (#526) — samme regel, samme hjem
+  // som åpningen av en økt bruker.
+  const uncapped = access.isAdmin || access.groupId !== null;
+  if (exceedsPersonalMatchCap(planned, uncapped)) {
+    return { error: 'too_many_matches' };
+  }
+
+  try {
+    expectAffected(
+      await admin
+        .from('tournaments')
+        .update({ planned_match_count: planned })
+        .eq('id', tournamentId)
+        .select('id'),
+      'setCupPlannedMatchCount',
+    );
+  } catch (err) {
+    console.error('[cup] setCupPlannedMatchCount update failed', {
+      tournamentId,
+      error: err,
+    });
+    return { error: 'save_failed' };
+  }
+
+  // Aktiv cup får det nye målet nå. Feiler synken, er tallet likevel lagret og
+  // en ny lagring synker på nytt (helperen er idempotent) — derfor `save_failed`
+  // framfor en kompensasjon: «prøv igjen» ER reparasjonen, og en tilbakerulling
+  // ville kastet et tall arrangøren mente.
+  try {
+    await syncCupPointsToWin(admin, tournamentId);
+  } catch (err) {
+    console.error('[cup] setCupPlannedMatchCount points sync failed', {
+      tournamentId,
+      error: err,
+    });
+    return { error: 'save_failed' };
+  }
+
+  revalidateCup(tournamentId, access.groupId);
+  return OK;
+}
+
+/**
  * SK2 — arrangøren åpner en økt for uttak.
  *
  * Antall plasser default-es fra de varige lagstørrelsene (samme regel som
@@ -180,11 +301,25 @@ export async function openCupLineupSession(
   const admin = getAdminClient();
   const { data: cup } = await admin
     .from('tournaments')
-    .select('status')
+    .select('status, planned_match_count, win_points, tie_points')
     .eq('id', tournamentId)
     .maybeSingle();
   if (!cup) return { error: 'not_found' };
   if (cup.status === 'finished') return { error: 'cup_finished' };
+
+  // #1902: poengmålet skal være kjent FØR den første økta avdekker kamper.
+  // Gaten er her, server-side, ikke bare som en disabled knapp — UI-et speiler
+  // den, men en POST utenom skjemaet skal treffe den samme veggen.
+  //
+  // Vektede cuper (#1441 D8) slipper spørsmålet: de har ikke noe «først til X»
+  // i det hele tatt, så et planlagt antall ville ikke endret noe.
+  const weightsAreDefault = hasDefaultCupWeights(
+    (cup.win_points as number | null) ?? 1,
+    (cup.tie_points as number | null) ?? 0.5,
+  );
+  if (weightsAreDefault && cup.planned_match_count === null) {
+    return { error: 'lineup_planned_total_missing' };
+  }
 
   // Taket for økta: den minste stallen bestemmer, som i veiviseren.
   const teamSize = Math.min(
@@ -745,6 +880,25 @@ async function revealCupLineupSession(
       });
     }
     return outcome;
+  }
+
+  // #1902 sikkerhetsnettet: kampene som nettopp ble til kan ha passert det
+  // arrangøren planla — da flytter målet seg opp. Planlagt er et gulv, ikke et
+  // tak. Er faktisk antall fortsatt under planlagt, er skrivet en no-op i verdi.
+  //
+  // Bevisst best-effort, den ene lomma i denne fila: kampene ER opprettet, og
+  // en feilet omregning skal ikke rulle dem tilbake eller gi kapteinen en
+  // feilmelding om et uttak som faktisk gikk gjennom. Synken er idempotent, så
+  // neste avdekking retter tallet (det gjør en ny lagring av planlagt antall
+  // også).
+  try {
+    await syncCupPointsToWin(admin, tournamentId);
+  } catch (err) {
+    console.error('[cup] revealCupLineupSession points sync failed', {
+      tournamentId,
+      sessionId,
+      error: err,
+    });
   }
 
   // Varselet er best-effort og bevisst sist: kampene står, og et varsel som

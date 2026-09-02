@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import {
+  MAX_PLANNED_MATCH_COUNT,
   derivePointsToWin,
   derivePointsToWinWeighted,
   hasDefaultCupWeights,
+  parsePlannedMatchCount,
   parseTiePoints,
   parseWinPoints,
   resolveCupMatchTotal,
@@ -130,6 +134,75 @@ describe('hasDefaultCupWeights', () => {
         hasDefaultCupWeights(win, tie),
       );
     }
+  });
+});
+
+// #1902: arrangørens tall fra uttaks-rommet. Gulvet er kampene som ALT finnes
+// (pluss plassene i åpnede økter) — et lavere tall er en skrivefeil, ikke et
+// ønske om å kutte kamper. Taket er DB-ens tullverdi-vakt.
+describe('parsePlannedMatchCount', () => {
+  it.each([
+    ['', 2],
+    ['   ', 2],
+    ['abc', 2],
+    ['3.5', 2], // ikke et helt tall — en halv kamp finnes ikke
+    ['-4', 2],
+    ['1', 2], // under det absolutte minstekravet (startTournament krever 2)
+    ['3', 4], // under gulvet: cupen har alt 4 kamper eller åpnede plasser
+  ])('ugyldig: %s med gulv %i → null', (raw, floor) => {
+    expect(parsePlannedMatchCount(raw, floor)).toBeNull();
+  });
+
+  it.each([
+    ['2', 2, 2], // nøyaktig på gulvet
+    ['28', 8, 28], // innsenderens Ryder Cup
+    ['400', 2, 400], // nøyaktig på DB-taket
+  ])('gyldig: %s med gulv %i → %i', (raw, floor, expected) => {
+    expect(parsePlannedMatchCount(raw, floor)).toBe(expected);
+  });
+
+  it('godtar tall som er HØYERE enn gulvet — planlagt er et gulv, ikke et tak', () => {
+    // Arrangøren skal kunne planlegge 28 kamper mens bare 3 er satt opp.
+    expect(parsePlannedMatchCount('28', 3)).toBe(28);
+  });
+
+  it('avviser tall over DB-ens tullverdi-vakt', () => {
+    expect(parsePlannedMatchCount(String(MAX_PLANNED_MATCH_COUNT + 1), 2)).toBeNull();
+  });
+});
+
+/**
+ * Trap #4-avstemming (AGENTS.md): validatoren ↔ DB CHECK.
+ *
+ * `tournaments.planned_match_count` er avgrenset av CHECK-en
+ * `tournaments_planned_match_count_range` i 0173. De samme grensene bor i
+ * `parsePlannedMatchCount`. Endres den ene uten den andre, ryker denne — i
+ * stedet for at et lovlig tall gir en rå 400 fra PostgREST.
+ */
+describe('planned_match_count DB CHECK ↔ validator (trap #4)', () => {
+  function checkBounds(): { min: number; max: number } {
+    const sql = readFileSync(
+      resolve(__dirname, '../../supabase/migrations/0173_tournaments_planned_match_count.sql'),
+      'utf-8',
+    );
+    const m = sql.match(
+      /planned_match_count >= (\d+) and planned_match_count <= (\d+)/i,
+    );
+    if (!m) throw new Error('Fant ikke CHECK-grensene i 0173');
+    return { min: Number(m[1]), max: Number(m[2]) };
+  }
+
+  it('nedre grense stemmer: min godtas, min-1 avvises', () => {
+    const { min } = checkBounds();
+    expect(parsePlannedMatchCount(String(min), min)).toBe(min);
+    expect(parsePlannedMatchCount(String(min - 1), min - 1)).toBeNull();
+  });
+
+  it('øvre grense stemmer: max godtas, max+1 avvises', () => {
+    const { max } = checkBounds();
+    expect(parsePlannedMatchCount(String(max), 2)).toBe(max);
+    expect(parsePlannedMatchCount(String(max + 1), 2)).toBeNull();
+    expect(MAX_PLANNED_MATCH_COUNT).toBe(max);
   });
 });
 
