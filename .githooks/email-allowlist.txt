@@ -1,0 +1,33 @@
+# E-postadresser som SKAL kunne stå i repoet og i det vi poster til GitHub.
+#
+# Repoet er offentlig. Alt som ligner en e-postadresse og IKKE matcher en linje
+# her, blokkeres av .claude/hooks/bash-guard.sh (publiserende gh-kommandoer) og
+# .githooks/pre-commit (nye linjer i staged filer). Se #1929.
+#
+# Én ERE-regex per linje, matchet mot hele adressen, uten hensyn til store/små
+# bokstaver. Tomme linjer og #-linjer ignoreres.
+#
+# Legger du til en linje her: skriv HVORFOR adressen er ufarlig. En adresse som
+# peker på et ekte menneske eller en ekte konto hører ikke hjemme i lista —
+# bruk rollen i teksten i stedet («review-kontoen», «e2e-spilleren»).
+
+# Maskinelle avsendere og commit-identitet
+^noreply@
+@privaterelay\.appleid\.com$
+
+# Dokumentasjons- og test-plassholdere (peker ikke på noen)
+@example\.(com|org|net|test)$
+@eksempel\.no$
+@x\.co\.uk$
+^example@gmail\.com$
+^ola@gmail\.com$
+^jorgen@gmail\.com$
+
+# Genererte plassholder-domener i appen selv
+@guest\.tornygolf\.no$
+@deleted\.tornygolf\.no$
+
+# Bevisste, offentlige kontaktadresser (står i copy og i changeloggen)
+^klubb@tornygolf\.no$
+^personvern@tornygolf\.no$
+^dmarc-reports@tornygolf\.no$
