@@ -2046,6 +2046,12 @@
       "cancelButton": "Avbryt",
       "allSubmittedNote": "Alle har levert scorekort. Avslutter du nå, låses spillet og leaderboardet åpnes for alle deltakerne."
     },
+    "remind": {
+      "button": "Purr på dem som mangler ({count})",
+      "pending": "Purrer …",
+      "none": "Ingen av dem har ført alle hullene ennå. Purring hjelper først da.",
+      "sent": "Purret. De får et varsel nå."
+    },
     "delete": {
       "kicker": "Slett spill",
       "heading": "Slett «{name}»?",

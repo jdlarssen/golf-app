@@ -8,14 +8,21 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { RemindMissing } from '@/components/games/RemindMissing';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { endGameMarkingWithdrawals } from './actions';
+// Purringen deles med søsterflaten «/avslutt» — én action, én gate
+// (`requireAdmin`), og `surface` sier bare hvor brukeren skal tilbake (#1889).
+import { remindMissingPlayers } from '../avslutt/actions';
 
 type Params = Promise<{ id: string }>;
+// `status=reminded` er kvitteringen purre-action-en redirecter tilbake med —
+// samme search-param-mønster som admin-status-siden bruker.
+type SearchParams = Promise<{ status?: string }>;
 
 /**
  * «Avslutt likevel»-bekreftelse (#375) for spill UTEN sideturnering.
@@ -38,10 +45,13 @@ type Params = Promise<{ id: string }>;
  */
 export default async function AvsluttLikevelPage({
   params,
+  searchParams,
 }: {
   params: Params;
+  searchParams: SearchParams;
 }) {
   const { id: gameId } = await params;
+  const { status: notice } = await searchParams;
   const detailPath = `/admin/games/${gameId}`;
 
   const locale = await getLocale();
@@ -161,6 +171,18 @@ export default async function AvsluttLikevelPage({
             )}
           </ul>
         </div>
+
+        {/* Purreknappen (#1889): den ikke-destruktive veien videre, rett under
+            lista over hvem som mangler — før «avslutt likevel»-forklaringen. */}
+        <RemindMissing
+          gameId={gameId}
+          remindAction={remindMissingPlayers.bind(
+            null,
+            gameId,
+            'avslutt-likevel',
+          )}
+          justReminded={notice === 'reminded'}
+        />
 
         <p className="text-sm text-muted">
           {allowWd

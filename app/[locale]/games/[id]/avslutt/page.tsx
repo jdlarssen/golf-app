@@ -8,6 +8,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { RemindMissing } from '@/components/games/RemindMissing';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import type { GameStatus } from '@/lib/games/status';
@@ -21,9 +22,12 @@ import {
 import { endGameWithSideWinners } from '@/app/[locale]/admin/games/[id]/avslutt/actions';
 import { endGame } from '@/app/[locale]/admin/games/[id]/actions';
 import { endGameMarkingWithdrawals } from '@/app/[locale]/admin/games/[id]/avslutt-likevel/actions';
+import { remindMissingPlayers } from './actions';
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ error?: string }>;
+// `status=reminded` er kvitteringen purre-action-en redirecter tilbake med
+// (#1889) — samme search-param-mønster som admin-status-siden bruker.
+type SearchParams = Promise<{ error?: string; status?: string }>;
 
 /**
  * Creator-facing «Avslutt spill»-flate (#427) — the non-admin mirror of the
@@ -51,7 +55,7 @@ export default async function CreatorAvsluttPage({
   searchParams: SearchParams;
 }) {
   const { id: gameId } = await params;
-  const { error } = await searchParams;
+  const { error, status: notice } = await searchParams;
   const t = await getTranslations('game.finish');
   const locale = await getLocale();
   const detailPath = `/games/${gameId}`;
@@ -138,6 +142,17 @@ export default async function CreatorAvsluttPage({
     </div>
   );
 
+  // Purreknappen (#1889). Uten den er «marker dem som trukket» eneste vei
+  // videre herfra — en destruktiv handling som det ene alternativet. Begge
+  // grenene under som viser manglende leveringer rendrer den.
+  const remindBlock = missing.length > 0 && (
+    <RemindMissing
+      gameId={gameId}
+      remindAction={remindMissingPlayers.bind(null, gameId)}
+      justReminded={notice === 'reminded'}
+    />
+  );
+
   let body: ReactNode;
 
   if (unapproved.length > 0) {
@@ -179,6 +194,7 @@ export default async function CreatorAvsluttPage({
     body = (
       <div className="space-y-4 px-1">
         {missingList}
+        {remindBlock}
         <SideWinnersForm
           gameId={gameId}
           ldCount={game.side_ld_count}
@@ -224,6 +240,7 @@ export default async function CreatorAvsluttPage({
             )}
           </ul>
         </div>
+        {remindBlock}
         <p className="text-sm text-muted">
           {allowWd ? t('explanationAllowWd') : t('explanationNoWd')}
         </p>
