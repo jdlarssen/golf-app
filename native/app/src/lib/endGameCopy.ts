@@ -20,8 +20,13 @@
 // webbens admin-skjema sier «Longest drive #1», og appen skal ikke bytte språk
 // midt i en flyt.
 import type { EndRoundFailure } from '../data/endGame';
+// Kun typen: `data/remind.ts` drar med seg supabase-klienten og sync-triggerne,
+// og en copy-modul skal ikke koble på noe av det. `import type` forsvinner i
+// kompileringen, så koden her er fortsatt ren tekst.
+import type { ReminderFailure } from '../data/remind';
 import { OFFLINE_NOTE } from './rosterCopy';
 import { fillCopy } from './sideTournamentCopy';
+import { WEB_LINK_TEXT } from './webLink';
 import type { FinishSlot } from './endGamePlan';
 
 /** Fallbacken når serveren svarte med noe vi ikke har en egen setning for. */
@@ -108,6 +113,27 @@ export function describeEndRoundFailure(
 export const CUP_NOTE =
   'Denne runden hører til en cup. Den avslutter du på nettsiden, så cup-tavla følger med.';
 
+/**
+ * Knappen som står under {@link CUP_NOTE} (#1891).
+ *
+ * Noten sto i to år uten vei videre — «på nettsiden» uten å si hvor. Etiketten
+ * og stien bor sammen med noten fordi begge kallstedene (avslutt-skjermen og
+ * arrangør-seksjonen) skal sende arrangøren til den SAMME siden; to inline
+ * strenger ville drevet fra hverandre ved første ruteendring.
+ */
+export const CUP_LINK_LABEL = 'Åpne cupen';
+
+/**
+ * Cup-forsiden på webben.
+ *
+ * `encodeURIComponent` selv om id-en er en uuid fra vår egen bundle: en sti
+ * bygget av data kodes der den bygges, ikke der noen senere antar at den var
+ * trygg (samme regel som `remindPath` i `data/remind.ts`).
+ */
+export function cupWebPath(tournamentId: string): string {
+  return `/cup/${encodeURIComponent(tournamentId)}`;
+}
+
 /** Slot-etikettene. `{pos}` er hvilket HULL, aldri en plassering. */
 const SLOT_LABELS: Record<FinishSlot['category'], string> = {
   longest_drive: 'Lengste drive #{pos}',
@@ -151,8 +177,14 @@ export const END_GAME_TEXT = {
   ownRowHint:
     'Deg selv kan du ikke trekke herfra. Det gjør du på nettsiden. Huker du av, avslutter du runden uten kortet ditt.',
   unapprovedHeading: 'Venter på godkjenning',
+  // #1891: siste setning pekte til nettsiden fordi appen ikke HADDE
+  // overstyringen. Nå har den den (godkjenn-knappen under), og henvisningen er
+  // dermed en blindvei som beskriver en app som ikke finnes lenger.
   unapprovedNote:
-    'En medspiller må godkjenne hvert kort før du kan avslutte. Be dem åpne runden og godkjenne. Får du ikke tak i dem, godkjenner du på vegne av gruppa på nettsiden.',
+    'En medspiller må godkjenne hvert kort før du kan avslutte. Be dem åpne runden og godkjenne — eller godkjenn på vegne av gruppa her.',
+  /** Både knappe-etiketten og tittelen i bekreftelsen — det er samme handling. */
+  approveOnBehalf: 'Godkjenn på vegne av gruppa',
+  approveConfirmCta: 'Godkjenn',
   awardHeading: 'Kår vinnerne',
   awardIntro:
     'Velg hvem som tok hvert hull. Ingen som kvalifiserte? Si det, så står hullet som kåret uten vinner.',
@@ -164,3 +196,127 @@ export const END_GAME_TEXT = {
     'Resultatene låses og åpnes for alle. Skal runden åpnes igjen, må du gjøre det fra nettsiden.',
   confirmCta: 'Avslutt',
 } as const;
+
+// -----------------------------------------------------------------------------
+// Purring (#1889)
+// -----------------------------------------------------------------------------
+
+/**
+ * Malene med innsatte tall. De ligger UTENFOR {@link END_GAME_TEXT} med vilje:
+ * testen der krever ferdige setninger uten `{}`, og en halvferdig mal i den
+ * tabellen ville vært nøyaktig den feilen testen finnes for å hindre.
+ */
+const REMIND_LABEL = 'Purr på dem som mangler ({n})';
+const STILL_PLAYING_NOTE =
+  '{m} av dem har ikke ført alle hullene ennå. Purring hjelper først da.';
+const LAST_REMINDED_NOTE = 'Sist purret kl. {clock}';
+const APPROVE_CONFIRM_BODY =
+  'Godkjenn kortet til {name}? Du står som den som godkjente.';
+
+/**
+ * Knappeteksten med antallet purringen faktisk treffer.
+ *
+ * Tallet står i etiketten og ikke i en egen linje fordi det ER handlingens
+ * omfang: «Purr på dem som mangler» uten tall lover noe annet enn den gjør når
+ * to av fem fortsatt spiller.
+ */
+export function remindLabel(targets: number): string {
+  return fillCopy(REMIND_LABEL, { n: targets });
+}
+
+/**
+ * Linja om dem purringen IKKE treffer.
+ *
+ * Serveren purrer bare spillere som er ferdige uten å ha levert
+ * (`selectDeliveryReminderTargets`). Resten står midt i runden, og en purring
+ * til dem er støy. Setningen sier hvorfor tallet på knappen er lavere enn
+ * lista over — uten den ser differansen ut som en feil.
+ */
+export function stillPlayingNote(count: number): string {
+  return fillCopy(STILL_PLAYING_NOTE, { m: count });
+}
+
+/**
+ * «Sist purret kl. 14.05».
+ *
+ * @param clock klokkeslettet fra `formatClock` (`lib/display.ts`) — enhetens
+ *   egen tid, aldri en Oslo-konvertering (Hermes har ingen ICU-tidssoner).
+ *
+ * Dette er det eneste som står mellom arrangøren og en dobbeltpurring:
+ * eieren valgte bort en sperre, så linja ER guardrailen.
+ */
+export function lastRemindedNote(clock: string): string {
+  return fillCopy(LAST_REMINDED_NOTE, { clock });
+}
+
+/** «Godkjenn kortet til Kari? Du står som den som godkjente.» */
+export function approveConfirmBody(name: string): string {
+  return fillCopy(APPROVE_CONFIRM_BODY, { name });
+}
+
+/**
+ * Hvorfor purringen ikke gikk gjennom.
+ *
+ * Fire av kodene har hver sin setning fordi de krever fire helt ulike ting av
+ * arrangøren: koble til nett, logge inn på nytt, innse at runden er lukket,
+ * eller ta kontakt med den som bygde appen. Resten («ikke arrangør», «fant
+ * ikke runden», nettverksfeil, serverfeil) ender i samme «prøv igjen» — de er
+ * alle utenfor arrangørens kontroll her og nå, og fire varianter av samme
+ * råd hjelper ingen.
+ *
+ * Ingen `default`-gren: legger ruta til en kode i `ReminderFailure`, faller
+ * `tsc` på den manglende returverdien.
+ */
+export function describeReminderFailure(reason: ReminderFailure): string {
+  switch (reason) {
+    case 'offline':
+      return 'Purring krever nett.';
+    // Delt med lenke-knappene: den samme mangelen i bygget stopper begge, og
+    // meldingen skal ikke nevne én av dem. Slette-flyten har sin egen, mer
+    // spesifikke variant (`accountCopy.ts`) som navngir kontoen.
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
+    case 'unauthorized':
+      return 'Logg inn på nytt og prøv igjen.';
+    // Samme setning som skjermens egen «ikke i gang»-tilstand: runden er
+    // lukket, og da er det ingenting å purre på.
+    case 'not_active':
+      return END_GAME_TEXT.notActive;
+    case 'network':
+    case 'forbidden':
+    case 'not_found':
+    case 'remind_failed':
+      return 'Fikk ikke purret. Prøv igjen.';
+  }
+}
+
+/** Kvitteringen. Sier at varselet er sendt, ikke at det er lest. */
+export const REMIND_DONE_NOTE = 'Purret. De får et varsel nå.';
+
+/** Knappen mens kallet pågår — den er `disabled` i samme tilstand. */
+export const REMIND_BUSY_LABEL = 'Purrer …';
+
+/**
+ * Samme jobb for GET-en som henter antallet.
+ *
+ * De fire kodene som beskriver appens egen tilstand (uten nett, uten adresse,
+ * uten sesjon, lukket runde) betyr det samme uansett hvilket av de to kallene
+ * som feilet, og gjenbrukes derfor uendret. Resten gjør det ikke: «Fikk ikke
+ * purret» etter en feilet forhåndssjekk sier at et forsøk gikk galt, og det
+ * skjedde aldri noe forsøk. Arrangøren ville lett etter en purring som ikke
+ * finnes.
+ */
+export function describeReminderPreviewFailure(reason: ReminderFailure): string {
+  switch (reason) {
+    case 'network':
+    case 'forbidden':
+    case 'not_found':
+    case 'remind_failed':
+      return 'Fikk ikke sjekket hvem som kan purres. Prøv igjen.';
+    case 'offline':
+    case 'no-web-base-url':
+    case 'unauthorized':
+    case 'not_active':
+      return describeReminderFailure(reason);
+  }
+}
