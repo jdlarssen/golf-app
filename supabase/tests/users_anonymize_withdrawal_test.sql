@@ -1,6 +1,6 @@
 -- supabase/tests/users_anonymize_withdrawal_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Runtime test for migration 0173 (#1909): `anonymize_user` must WITHDRAW the
+-- Runtime test for migration 0174 (#1909): `anonymize_user` must WITHDRAW the
 -- account from everything that has not finished, in the same transaction as the
 -- scrub.
 --

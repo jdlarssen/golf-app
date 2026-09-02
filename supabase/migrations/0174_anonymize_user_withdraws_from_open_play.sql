@@ -1,4 +1,4 @@
--- 0173 (#1909): anonymize_user trekker brukeren ut av alt som ikke er avsluttet.
+-- 0174 (#1909): anonymize_user trekker brukeren ut av alt som ikke er avsluttet.
 --
 -- Bakgrunn: slette-sperren i lib/users/deleteAccount.ts snevres i samme PR inn
 -- til «eneste arrangør av noe aktivt». Deltakere slipper dermed gjennom — og en

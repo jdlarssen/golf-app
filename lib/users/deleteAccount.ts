@@ -42,7 +42,7 @@ export type DeleteAccountResult =
  * ingen kan logge inn på). Admin-kontoen har sin egen grunn
  * (`admin_account`) og sjekkes først.
  *
- * Å DELTA blokkerer ikke lenger (#1909). `anonymize_user` (0173) trekker
+ * Å DELTA blokkerer ikke lenger (#1909). `anonymize_user` (0174) trekker
  * brukeren ut av alt som pågår eller ikke har startet, i samme transaksjon
  * som scrubben: aktive spill får `withdrawn_at`, ikke-startede mister raden.
  * Resten av gruppa spiller dermed videre og arrangøren kan avslutte uten å
