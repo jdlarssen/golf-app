@@ -82,6 +82,16 @@ describe('resolveCupMatchTotal', () => {
     },
   );
 
+  it('en umulig verdi fra databasen kan ikke senke eller nulle målet', () => {
+    // Ikke nåbart i dag: CHECK-en i 0173 og `parsePlannedMatchCount` slipper
+    // hverken NaN eller negative tall inn. Radene låser garantien likevel — et
+    // NaN her ville forplantet seg til `derivePointsToWin` og blitt sendt som
+    // `null` av JSON.stringify, altså stilltiende slettet målet i en aktiv cup.
+    expect(resolveCupMatchTotal(8, Number.NaN)).toBe(8);
+    expect(resolveCupMatchTotal(8, -4)).toBe(8);
+    expect(resolveCupMatchTotal(0, -4)).toBe(0);
+  });
+
   it('likhet endrer ingenting (planlagt 28, faktisk 28)', () => {
     expect(resolveCupMatchTotal(28, 28)).toBe(28);
   });
