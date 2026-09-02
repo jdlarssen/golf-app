@@ -48,7 +48,7 @@ import {
   SIDE_TEXT,
   type SideGroupId,
 } from '../../lib/sideTournamentCopy';
-import { COLORS, FONTS, TAP, ui } from '../../theme';
+import { FONTS, TAP, useTheme } from '../../theme';
 import { CalmNote } from './Table';
 
 /**
@@ -231,6 +231,7 @@ export function SideTournamentSection({
   sideWinnersUnavailable = false,
   sideWinnersLoading = false,
 }: SideTournamentSectionProps) {
+  const { colors, ui } = useTheme();
   // `<details>` finnes ikke i RN, så utvidelsen er vår egen. Et sett, ikke én
   // id: webbens rader åpnes uavhengig av hverandre, og et lag som lukker seg
   // selv når du åpner nabolaget ville vært en ny regel.
@@ -275,7 +276,7 @@ export function SideTournamentSection({
         headlineLines.map((line) => (
           <Text
             key={line.key}
-            style={styles.headline}
+            style={[styles.headline, { color: colors.text }]}
             testID={`side-headline-${line.key}`}
           >
             {line.text}
@@ -339,6 +340,7 @@ function TeamRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const { colors, ui } = useTheme();
   const label =
     team?.label ?? fillCopy(SIDE_TEXT.teamFallback, { id: standing.teamId });
   const soloMember = team && team.members.length === 1 ? team.members[0] : null;
@@ -349,7 +351,13 @@ function TeamRow({
   const medal = MEDALS[standing.rank] ?? '·';
 
   return (
-    <View style={styles.teamCard} testID={`side-team-${standing.teamId}`}>
+    <View
+      style={[
+        styles.teamCard,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+      testID={`side-team-${standing.teamId}`}
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
@@ -360,23 +368,31 @@ function TeamRow({
         <View style={styles.summaryMain}>
           <View style={styles.titleRow}>
             <Text style={styles.medal}>{medal}</Text>
-            <Text style={styles.teamTitle} numberOfLines={1}>
+            <Text
+              style={[styles.teamTitle, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {title}
             </Text>
           </View>
           {memberNames ? (
-            <Text style={styles.members} numberOfLines={1}>
+            <Text
+              style={[styles.members, { color: colors.muted }]}
+              numberOfLines={1}
+            >
               {memberNames}
             </Text>
           ) : null}
         </View>
         <Text
-          style={[styles.points, ui.num]}
+          style={[styles.points, ui.num, { color: colors.text }]}
           testID={`side-team-${standing.teamId}-points`}
         >
           {standing.totalPoints}p
         </Text>
-        <Text style={styles.chevron}>{expanded ? '▴' : '▾'}</Text>
+        <Text style={[styles.chevron, { color: colors.muted }]}>
+          {expanded ? '▴' : '▾'}
+        </Text>
       </Pressable>
 
       {expanded ? (
@@ -412,6 +428,7 @@ function TeamAwards({
   sideWinners: readonly SideTournamentSlotWinner[];
   coursePars: number[];
 }) {
+  const { colors, ui } = useTheme();
   const rows = buildAwardRows({
     teamId,
     standings,
@@ -424,7 +441,7 @@ function TeamAwards({
 
   if (rows === null) {
     return (
-      <View style={styles.body}>
+      <View style={[styles.body, { borderTopColor: colors.border }]}>
         <Text style={ui.muted} testID={`side-team-${teamId}-empty`}>
           {SIDE_TEXT.noPoints}
         </Text>
@@ -433,7 +450,7 @@ function TeamAwards({
   }
 
   return (
-    <View style={styles.body}>
+    <View style={[styles.body, { borderTopColor: colors.border }]}>
       {GROUP_ORDER.map((group) => {
         const groupRows = rows[group];
         if (groupRows.length === 0) return null;
@@ -442,7 +459,7 @@ function TeamAwards({
             <Text
               style={[
                 styles.groupTitle,
-                group === 'penalty' ? styles.groupTitlePenalty : null,
+                { color: group === 'penalty' ? colors.danger : colors.muted },
               ]}
             >
               {SIDE_GROUP_LABELS[group]}
@@ -450,12 +467,12 @@ function TeamAwards({
             {groupRows.map((row) => (
               <Text
                 key={row.key}
-                style={styles.awardRow}
+                style={[styles.awardRow, { color: colors.text }]}
                 testID={`side-award-${teamId}-${row.key}`}
               >
                 {row.label}{' '}
                 <Text
-                  style={[ui.num, row.points < 0 ? styles.negative : null]}
+                  style={[ui.num, row.points < 0 ? { color: colors.danger } : null]}
                 >{`${row.points}p`}</Text>
                 {row.tail}
               </Text>
@@ -1074,14 +1091,11 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 15,
     fontFamily: FONTS.serifDisplay,
-    color: COLORS.forest,
     marginTop: 2,
   },
   teamCard: {
-    backgroundColor: COLORS.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
     marginTop: 8,
     overflow: 'hidden',
   },
@@ -1100,19 +1114,16 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 16,
     fontFamily: FONTS.serifScore,
-    color: COLORS.forest,
   },
   members: {
     marginTop: 2,
     fontSize: 12,
     fontFamily: FONTS.sans,
-    color: COLORS.muted,
   },
-  points: { fontSize: 16, fontFamily: FONTS.serifScore, color: COLORS.forest },
-  chevron: { fontSize: 14, fontFamily: FONTS.sans, color: COLORS.muted },
+  points: { fontSize: 16, fontFamily: FONTS.serifScore },
+  chevron: { fontSize: 14, fontFamily: FONTS.sans },
   body: {
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     paddingHorizontal: 12,
     paddingVertical: 12,
     gap: 12,
@@ -1123,14 +1134,10 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: COLORS.muted,
   },
-  groupTitlePenalty: { color: COLORS.error },
   awardRow: {
     marginTop: 2,
     fontSize: 15,
     fontFamily: FONTS.serifDisplay,
-    color: COLORS.forest,
   },
-  negative: { color: COLORS.error },
 });

@@ -3,8 +3,11 @@
 // Ingen ambisjon om et designsystem — akkurat nok til at ni formater ser ut
 // som samme app. Tall står høyrestilt med `tabular-nums` slik at kolonnene
 // linjerer seg, samme regel som på web.
+//
+// #1833: layout ligger i det statiske arket under, fargene kommer fra
+// `useTheme()` — appens ene mønster for tema-avhengige stiler.
 import { StyleSheet, Text, View } from 'react-native';
-import { COLORS, ui } from '../../theme';
+import { FONTS, useTheme } from '../../theme';
 
 export interface LeaderColumn {
   key: string;
@@ -36,9 +39,10 @@ export function LeaderTable({
   rows: readonly LeaderRow[];
   testID: string;
 }) {
+  const { colors, ui } = useTheme();
   return (
     <View style={ui.card} testID={testID}>
-      <View style={styles.row}>
+      <View style={[styles.row, { borderBottomColor: colors.border }]}>
         {columns.map((column) => (
           <Text
             key={column.key}
@@ -54,7 +58,11 @@ export function LeaderTable({
         ))}
       </View>
       {rows.map((row) => (
-        <View key={row.key} style={styles.row} testID={`${testID}-row-${row.key}`}>
+        <View
+          key={row.key}
+          style={[styles.row, { borderBottomColor: colors.border }]}
+          testID={`${testID}-row-${row.key}`}
+        >
           {columns.map((column, index) => (
             <Text
               key={column.key}
@@ -80,6 +88,7 @@ export function LeaderTable({
 
 /** Rolig tekst når det ikke er noe å vise ennå. Aldri en tom tabell. */
 export function CalmNote({ text, testID }: { text: string; testID: string }) {
+  const { ui } = useTheme();
   return (
     <View style={ui.banner} testID={testID}>
       <Text style={ui.body}>{text}</Text>
@@ -94,9 +103,10 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
   },
   headCell: { fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 },
   numericCell: { textAlign: 'right' },
-  highlight: { fontWeight: '700' },
+  // Egen familie, ikke `fontWeight`: expo-font registrerer ett snitt per
+  // familie, så en vekt oppå Inter Regular gjør ingenting.
+  highlight: { fontFamily: FONTS.sansBold },
 });

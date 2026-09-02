@@ -22,7 +22,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BingoBangoBongoHoleInput } from '../../../../../lib/scoring/modes/types';
 import { setBingoBangoBongoHole } from '../../data/choices';
 import { describeChoiceFailure } from '../../lib/actionFeedback';
-import { COLORS, TAP, ui } from '../../theme';
+import { TAP, useTheme } from '../../theme';
 
 /** Nøkkel, overskrift og forklaring — webbens copy, ord for ord. */
 const CATEGORIES = [
@@ -61,6 +61,7 @@ export function BingoBangoBongoCard({
   loaded: boolean;
   onSaved: () => Promise<void>;
 }) {
+  const { ui } = useTheme();
   // Optimistisk overlag som lever nøyaktig så lenge skrivingen gjør: valget
   // vises med en gang, og når refetchen har landet er `saved` fasiten igjen.
   // Ingen langlivet kopi av server-tilstanden — den fella er #1219 i miniatyr.
@@ -183,9 +184,18 @@ function Chip({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const { colors, ui } = useTheme();
   return (
     <Pressable
-      style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled]}
+      style={[
+        styles.chip,
+        {
+          backgroundColor: colors.bg,
+          borderColor: selected ? colors.accent : colors.border,
+          borderWidth: selected ? 2 : 1,
+        },
+        disabled && styles.chipDisabled,
+      ]}
       disabled={disabled}
       onPress={onPress}
       testID={testID}
@@ -202,13 +212,9 @@ const styles = StyleSheet.create({
     minHeight: TAP,
     minWidth: TAP,
     borderRadius: 22,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.linen,
     paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipSelected: { borderColor: COLORS.gold, borderWidth: 2 },
   chipDisabled: { opacity: 0.4 },
 });

@@ -15,7 +15,7 @@ import {
   wolfHolesWithStory,
   wolfOutcomeLabel,
 } from '../../lib/leaderboardModel';
-import { ui } from '../../theme';
+import { useTheme } from '../../theme';
 import { LeaderTable } from './Table';
 
 export function WolfView({
@@ -25,6 +25,7 @@ export function WolfView({
   result: WolfResult;
   nameOf: (userId: string) => string;
 }) {
+  const { ui } = useTheme();
   const holes = wolfHolesWithStory(result.holes);
   const blindWolves = result.players.filter((player) => player.blindWolfWins > 0);
 

@@ -11,9 +11,10 @@
 // `supportsWithdrawal`. Ingen av de tre spørsmålene besvares på nytt her, og
 // selve skrivingene ligger i `data/rosterActions.ts` med RLS som ekte port.
 //
-// **Statisk `ui`/`COLORS`, ikke `useTheme()`.** GameHome er statisk, og #1866
-// (lys/mørk) er et utsatt eier-valg — nye flater følger flertallet til det er
-// avgjort, ellers vokser gapet som skal lukkes.
+// **Tema-bevisst via `useTheme()` (#1833).** Layout ligger i det statiske arket
+// nederst, fargene hentes fra paletten — appens ene mønster. (Seksjonen sto en
+// stund på den statiske lys-paletten mens spill-stacken var lys; den ventingen
+// er over.)
 //
 // ⚠️ **Arrangørens EGEN rad er låst for lag, flight og frafall (#1868).**
 // `guard_game_players_self_update` (0147) slipper bare service-role og
@@ -62,7 +63,7 @@ import {
   describeStartRefusal,
   OWN_ROW_LOCKED_NOTE,
 } from '../../lib/rosterCopy';
-import { COLORS, TAP, ui } from '../../theme';
+import { TAP, useTheme } from '../../theme';
 
 /** `game_players`-formen de delte lag-/flight-reglene leser. */
 function toTeamPlayers(players: readonly BundlePlayer[]): TeamPlayer[] {
@@ -105,6 +106,7 @@ export function OrganiserSection({
    */
   onFinish: () => void;
 }) {
+  const { colors, ui } = useTheme();
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -348,7 +350,7 @@ export function OrganiserSection({
             value={search}
             onChangeText={setSearch}
             placeholder="Søk etter navn"
-            placeholderTextColor={COLORS.muted}
+            placeholderTextColor={colors.muted}
             autoCorrect={false}
             testID="organiser-candidate-search"
           />
@@ -357,7 +359,7 @@ export function OrganiserSection({
               Fikk ikke hentet spillerlisten. Sjekk nettet og prøv igjen.
             </Text>
           ) : candidates === null ? (
-            <ActivityIndicator color={COLORS.forest} />
+            <ActivityIndicator color={colors.primary} />
           ) : pickable.length === 0 ? (
             <Text style={ui.muted}>
               Ingen flere å velge her. Nye folk inviterer du fra nettsiden.
@@ -431,22 +433,32 @@ function ChipRow({
   testIDPrefix: string;
   onPick: (value: number) => void;
 }) {
+  const { colors, ui } = useTheme();
   return (
     <View style={styles.chipRow}>
       <Text style={ui.muted}>{label}</Text>
-      {Array.from({ length: count }, (_, i) => i + 1).map((value) => (
-        <Pressable
-          key={value}
-          style={[styles.chip, selected === value && styles.chipOn]}
-          disabled={disabled}
-          testID={`${testIDPrefix}-${value}`}
-          onPress={() => onPick(value)}
-        >
-          <Text style={[ui.body, ui.num, selected === value && styles.chipOnText]}>
-            {value}
-          </Text>
-        </Pressable>
-      ))}
+      {Array.from({ length: count }, (_, i) => i + 1).map((value) => {
+        const on = selected === value;
+        return (
+          <Pressable
+            key={value}
+            style={[
+              styles.chip,
+              {
+                borderColor: on ? colors.primary : colors.border,
+                backgroundColor: on ? colors.primary : 'transparent',
+              },
+            ]}
+            disabled={disabled}
+            testID={`${testIDPrefix}-${value}`}
+            onPress={() => onPick(value)}
+          >
+            <Text style={[ui.body, ui.num, on ? { color: colors.onPrimary } : null]}>
+              {value}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -466,10 +478,7 @@ const styles = StyleSheet.create({
     minHeight: TAP,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipOn: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
-  chipOnText: { color: COLORS.card },
 });
