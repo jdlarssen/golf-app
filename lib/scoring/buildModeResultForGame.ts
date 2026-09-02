@@ -27,6 +27,7 @@ import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
 import { buildAceyDeuceyContext } from '@/lib/scoring/context/buildAceyDeuceyContext';
 import { buildBingoBangoBongoContext } from '@/lib/scoring/context/buildBingoBangoBongoContext';
+import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
 
 /**
  * Game-feltene scoring trenger. Matcher `endGame`-contextet + backfill-spørringen.
@@ -288,56 +289,17 @@ function buildContext(
     case 'florida_scramble':
     case 'shamble':
     case 'patsome':
-      return buildUniformContext(game, players, holesRows, scoresRows);
+      return buildUniformContext({
+        gameId: game.id,
+        gameMode: game.game_mode,
+        modeConfig: game.mode_config,
+        players,
+        holesRows,
+        scoresRows,
+      });
     default:
       return assertNever(mode);
   }
-}
-
-/**
- * Uniform context for lag-/side-modi uten dedikert builder — speiler
- * leaderboard-sidens inline-mapping (`teamNumber: p.team_number ?? 0`,
- * `flightNumber: null`, WD-filtrert på både spillere og scores).
- */
-function buildUniformContext(
-  game: GameForScoring,
-  players: NormalizedPlayerRow[],
-  holesRows: CourseHoleRow[],
-  scoresRows: ScoreRow[],
-): ScoringContext {
-  const withdrawnIds = new Set(
-    players.filter((p) => p.withdrawn_at != null).map((p) => p.user_id),
-  );
-
-  return {
-    game: { id: game.id, game_mode: game.game_mode, mode_config: game.mode_config },
-    players: players
-      .filter((p) => p.users != null && p.withdrawn_at == null)
-      .map((p) => ({
-        userId: p.user_id,
-        teamNumber: p.team_number,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        teeGender: p.tee_gender,
-      })),
-    holes: holesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: scoresRows
-      .filter((s) => !withdrawnIds.has(s.user_id))
-      .map((s) => ({
-        userId: s.user_id,
-        holeNumber: s.hole_number,
-        gross: s.strokes,
-      })),
-  };
 }
 
 async function fetchWolfChoices(
