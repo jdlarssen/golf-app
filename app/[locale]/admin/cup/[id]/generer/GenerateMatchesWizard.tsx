@@ -31,7 +31,8 @@ import {
   splitDayTotalMatches,
   type FlightTeamSide,
 } from '@/lib/cup/splitDayLineup';
-import { createCupMatchesFromPlan, type CupBatchMatch } from './actions';
+import { createCupMatchesFromPlan } from './actions';
+import type { CupBatchMatch } from '@/lib/cup/insertCupMatches';
 import {
   MAX_PERSONAL_CUP_MATCHES,
   MAX_PERSONAL_CUP_PLAYERS,

@@ -5,7 +5,7 @@ import {
   RedirectError,
 } from '@/tests/serverActionMocks';
 import { generateSplitDayPlan, type PlannedMatch } from '@/lib/cup/cupPairing';
-import type { CupBatchMatch } from './actions';
+import type { CupBatchMatch } from '@/lib/cup/insertCupMatches';
 import {
   MAX_PERSONAL_CUP_MATCHES,
   MAX_PERSONAL_CUP_PLAYERS,
@@ -376,7 +376,9 @@ describe('createCupMatchesFromPlan — profil-lesing (#1718)', () => {
     ).toBe(false);
     expect(redirectMock).not.toHaveBeenCalled();
     expect(errSpy).toHaveBeenCalledWith(
-      '[cup] generateMatches profile read failed',
+      // #1884: skrivingen flyttet til `lib/cup/insertCupMatches` og logger
+      // under sitt eget navn — samme `[cup]`-prefiks som før for Vercel-søk.
+      '[cup] insertCupMatches profile read failed',
       expect.objectContaining({ error: { message: 'profiles boom' } }),
     );
     errSpy.mockRestore();
