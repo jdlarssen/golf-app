@@ -63,7 +63,7 @@ Egne funn:
   `consumeLoginRateLimitMock.mock.invocationCallOrder[0] < signInWithPasswordMock.mock.invocationCallOrder[0]`
   (`actions.test.ts:156-158`) — altså ekte rekkefølge-assertion, ikke bare «ble kalt».
 - Live: feil passord ga
-  `http://localhost:3131/review-login?email=applereview%2Bstaging%40tornygolf.no&error=review_failed`
+  `http://localhost:3131/review-login?email=<review-kontoen, URL-kodet>&error=review_failed`
   og bannerne `data-testid="review-login-error-review_failed"`.
 - `?error=bogus` kollapser til `review-login-error-review_failed`
   (`page.tsx:77-81` + `lib/url/searchParams.ts:resolveErrorCode`) — ukjente koder lekker ikke.
@@ -105,7 +105,7 @@ hevder etter to kjøringer.
 
 **VERIFIED** (re-kjørt av meg)
 
-`REVIEW_ACCOUNT_EMAIL=applereview+staging@tornygolf.no … BASE_URL=http://localhost:3131
+`REVIEW_ACCOUNT_EMAIL=<review-kontoens staging-adresse> … BASE_URL=http://localhost:3131
 node --input-type=module --eval "$(cat review-login-driver.mjs)"`:
 
 ```

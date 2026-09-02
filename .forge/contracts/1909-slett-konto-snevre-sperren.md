@@ -54,8 +54,8 @@ via Supabase MCP (staging `snwmueecmfqqdurxedxv`, prod read-only `glofubopddkjhy
   `requireAdminOrClubAdminOfCup/League` lar en klubbadmin avslutte KLUBB-cup/-liga;
   personlige cuper kan kun creator (+ global admin) avslutte. FK
   `tournaments/leagues.created_by` er RESTRICT, og cron/varsler adresserer creator.
-- **Prod-tilstand:** 1 admin; review-kontoen (`applereview@…`) eier 1 aktivt demo-spill
-  (`tournament_id` null). **Staging:** `applereview+staging@…` eier 1 aktivt spill;
+- **Prod-tilstand:** 1 admin; review-kontoen eier 1 aktivt demo-spill
+  (`tournament_id` null). **Staging:** review-kontoens staging-variant eier 1 aktivt spill;
   `E2E_ADMIN` er admin.
 - **Copy-hjemmene:** web `messages/{no,en}.json → profile.deleteAccount.blockedBanner`
   (før) + `errors.active_games` (etter) + `admin.players…errors.target_active` (**to**
