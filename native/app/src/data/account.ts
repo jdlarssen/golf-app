@@ -11,10 +11,16 @@
 //
 // **Appens første fetch-modul.** Alt annet i `src/data/` går gjennom
 // `supabase.from`/`.rpc`. Her finnes ingen postgrest-vei, så dette er stedet
-// mønsteret settes: nett-gate først, så konfigurasjon, så token, så kallet;
+// mønsteret ble satt: nett-gate først, så konfigurasjon, så token, så kallet;
 // alle utfall som TYPEDE koder (ingen bruker-tekst i datalaget, som i
 // `startGame.ts` og `rosterActions.ts`); og HTTP-status oversettes én gang, her,
 // slik at skjermen aldri leser et statusnummer.
+//
+// Selve kallet bor ikke lenger her. #1891 ga purringen en rute til, og da måtte
+// mønsteret ha ett hjem i stedet for to kopier: vakt-rekkefølgen, tokenet og
+// den trygge kropp-lesingen ligger i `webApi.ts`, som denne fila og
+// `remind.ts` deler. Igjen står det som er slette-spesifikt — stien, wiren og
+// rekkefølgen under.
 //
 // **Wire-kontrakten er frosset** og står i ruta. Denne fila er den andre halvdelen
 // av den; endres den ene, endres den andre i samme PR:
@@ -30,7 +36,7 @@
 import type { AccountDeleteFailure, DeleteBlockReason } from '../lib/accountCopy';
 import { supabase } from '../supabase';
 import { wipeLocalData } from './db';
-import { isDeviceOnline } from './syncTriggers';
+import { callWebRoute } from './webApi';
 
 /** Ruta appen snakker med. Én sti, to verb. */
 const DELETE_PATH = '/api/account/delete';
@@ -57,92 +63,6 @@ export type AccountDeleteStatus =
 export type AccountDeleteResult =
   | { ok: true; mode: DeleteMode | null }
   | { ok: false; reason: AccountDeleteFailure };
-
-/** Det ruta kan svare med, etter at JSON-en er lest trygt. */
-type WireCall =
-  | { ok: true; status: number; body: Record<string, unknown> }
-  | { ok: false; reason: AccountDeleteFailure };
-
-/**
- * Bearer-tokenet for denne enheten, eller `null` når vi ikke har en sesjon.
- *
- * Samme form som `currentDeviceUserId` i `supabase.ts`: `getSession` leser
- * lokalt lager og svarer også uten nett, og et kast skal aldri velte flyten —
- * det leses som «ingen sesjon», og kalleren stopper med `unauthorized` i stedet
- * for å sende et kall uten token.
- */
-async function accessToken(): Promise<string | null> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Kroppen som et objekt, uansett hva som kom.
- *
- * En 500 kan komme fra et lag foran appen vår og være HTML, og en 401 kan være
- * tom. `response.json()` kaster på begge. Statusen har vi allerede lest, så et
- * uleselig svar skal ikke bli en annen feil enn den statusen sier.
- */
-async function readBody(response: Response): Promise<Record<string, unknown>> {
-  try {
-    const parsed: unknown = await response.json();
-    return parsed !== null && typeof parsed === 'object'
-      ? (parsed as Record<string, unknown>)
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-/**
- * Ett kall mot ruta, med alle guardene foran i fast rekkefølge.
- *
- * 1. **Nett.** Skrivingen går aldri i sync-køen (samme v1-linje som
- *    starten og roster-skrivingene), og statusen er heller ikke noe vi kan
- *    gjette lokalt. Uten nett stopper begge her, i stedet for i en rå «Network
- *    request failed».
- * 2. **Adressen.** `EXPO_PUBLIC_WEB_BASE_URL` bakes inn ved bundling. Mangler
- *    den, er bygget feil — og da skal appen si det (ærlig-feil-guardrailen fra
- *    `supabase.ts`), ikke la knappen gjøre ingenting. Lest her og ikke på
- *    modulnivå: et kast ved import ville tatt ned hele appen for en skjerm de
- *    fleste aldri åpner.
- * 3. **Tokenet.** Uten sesjon finnes det ingenting å autentisere med, og vi
- *    sender ikke et kall vi vet blir avvist.
- *
- * Kallet har **ingen kropp og ingen query**. Bruker-id-en kommer utelukkende fra
- * tokenet serveren validerer; sender appen aldri en id, finnes det ingen id å
- * forveksle med en annens.
- */
-async function callRoute(method: 'GET' | 'POST'): Promise<WireCall> {
-  if (!isDeviceOnline()) return { ok: false, reason: 'offline' };
-
-  const baseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.trim();
-  if (!baseUrl) return { ok: false, reason: 'no-web-base-url' };
-
-  const token = await accessToken();
-  if (!token) return { ok: false, reason: 'unauthorized' };
-
-  try {
-    const response = await fetch(
-      `${baseUrl.replace(/\/+$/, '')}${DELETE_PATH}`,
-      {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-      },
-    );
-    return { ok: true, status: response.status, body: await readBody(response) };
-  } catch (err) {
-    console.error(`[account] ${method} ${DELETE_PATH} feilet`, err);
-    return { ok: false, reason: 'network' };
-  }
-}
 
 /**
  * Blokk-koden fra kroppen, eller `undefined` når den ikke er en vi kjenner.
@@ -177,7 +97,7 @@ function readMode(value: unknown): DeleteMode | null {
  * selv.
  */
 export async function fetchDeleteStatus(): Promise<AccountDeleteStatus> {
-  const call = await callRoute('GET');
+  const call = await callWebRoute(DELETE_PATH, 'GET');
   if (!call.ok) return call;
 
   if (call.status === 200) {
@@ -229,7 +149,7 @@ export async function fetchDeleteStatus(): Promise<AccountDeleteStatus> {
  * har alt garantert at brukeren ikke er med i noe aktivt spill, så køen er tom.
  */
 export async function deleteAccount(): Promise<AccountDeleteResult> {
-  const call = await callRoute('POST');
+  const call = await callWebRoute(DELETE_PATH, 'POST');
   if (!call.ok) return call;
 
   if (call.status === 200) {
