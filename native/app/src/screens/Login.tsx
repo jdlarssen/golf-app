@@ -9,14 +9,23 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../supabase';
-import { COLORS, ui } from '../theme';
+import { FONTS, useTheme } from '../theme';
 
 export function Login() {
+  const { colors, ui } = useTheme();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // `color` settes EKSPLISITT: `TextInput` tegner ellers svart tekst uansett
+  // palett, og i mørk modus blir feltet uleselig (samme regel som `ui.input`).
+  const inputColors = {
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+    color: colors.text,
+  };
 
   const sendCode = async () => {
     setBusy(true);
@@ -48,14 +57,18 @@ export function Login() {
   };
 
   return (
-    <View style={styles.screen} testID="login-screen">
-      <StatusBar style="dark" />
-      <Text style={styles.heading}>Tørny Dev</Text>
+    <View
+      style={[styles.screen, { backgroundColor: colors.bg }]}
+      testID="login-screen"
+    >
+      {/* «auto» følger systemets lys/mørk — samme valg som `App.tsx`. */}
+      <StatusBar style="auto" />
+      <Text style={[styles.heading, { color: colors.text }]}>Tørny Dev</Text>
       {step === 'email' ? (
         <>
           <Text style={ui.body}>E-postadresse</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, inputColors]}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
@@ -71,7 +84,7 @@ export function Login() {
         <>
           <Text style={ui.body}>Kode fra e-posten</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, inputColors]}
             autoCapitalize="none"
             keyboardType="number-pad"
             value={code}
@@ -87,7 +100,7 @@ export function Login() {
         </>
       )}
       {error ? (
-        <Text style={styles.error} testID="login-error">
+        <Text style={[styles.error, { color: colors.danger }]} testID="login-error">
           {error}
         </Text>
       ) : null}
@@ -98,25 +111,23 @@ export function Login() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.linen,
     justifyContent: 'center',
     padding: 24,
     gap: 8,
   },
   heading: {
+    // Egen familie, ikke `fontWeight`: expo-font registrerer ett snitt per
+    // familie, og en vekt oppå den ville ikke valgt noe snitt.
+    fontFamily: FONTS.serifScore,
     fontSize: 28,
-    fontWeight: '700',
-    color: COLORS.forest,
     textAlign: 'center',
     marginBottom: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.forest,
     borderRadius: 8,
     padding: 12,
     fontSize: 18,
-    backgroundColor: COLORS.card,
   },
-  error: { color: COLORS.error, fontSize: 15, textAlign: 'center' },
+  error: { fontSize: 15, textAlign: 'center' },
 });

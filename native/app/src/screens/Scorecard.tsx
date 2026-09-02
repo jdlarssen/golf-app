@@ -42,12 +42,13 @@ import { buildTeamCards, findMyTeamCard, myTeamCaptainId } from '../lib/teamPlay
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { COLORS, ui } from '../theme';
+import { FONTS, useTheme } from '../theme';
 
 const HOLE_COUNT = 18;
 const QUEUE_POLL_MS = 1500;
 
 export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
+  const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
   const { bundle } = useGameBundle(gameId);
@@ -171,21 +172,46 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         <Text style={[ui.muted, ui.num]}>Banehandicap {courseHandicap}</Text>
       )}
 
-      <View style={styles.table}>
-        <View style={[styles.row, styles.headRow]}>
-          <Text style={[styles.cell, styles.headCell, styles.holeCell]}>Hull</Text>
-          <Text style={[styles.cell, styles.headCell]}>Par</Text>
-          <Text style={[styles.cell, styles.headCell]}>SI</Text>
-          <Text style={[styles.cell, styles.headCell]}>Slag</Text>
-          <Text style={[styles.cell, styles.headCell]}>Netto</Text>
+      <View
+        style={[
+          styles.table,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+      >
+        <View style={[styles.row, styles.headRow, { backgroundColor: colors.bg }]}>
+          {['Hull', 'Par', 'SI', 'Slag', 'Netto'].map((label, index) => (
+            <Text
+              key={label}
+              style={[
+                styles.cell,
+                styles.headCell,
+                index === 0 ? styles.holeCell : null,
+                { color: colors.muted },
+              ]}
+            >
+              {label}
+            </Text>
+          ))}
         </View>
         {rows.map((row) => (
-          <View style={styles.row} key={row.holeNumber} testID={`card-row-${row.holeNumber}`}>
-            <Text style={[styles.cell, styles.holeCell, ui.num]}>{row.holeNumber}</Text>
-            <Text style={[styles.cell, styles.mutedCell, ui.num]}>{row.par}</Text>
-            <Text style={[styles.cell, styles.mutedCell, ui.num]}>{row.strokeIndex}</Text>
-            <Text style={[styles.cell, ui.num]}>{row.strokes ?? '—'}</Text>
-            <Text style={[styles.cell, ui.num]}>{row.netto ?? '—'}</Text>
+          <View
+            style={[styles.row, { borderTopColor: colors.border }]}
+            key={row.holeNumber}
+            testID={`card-row-${row.holeNumber}`}
+          >
+            <Text style={[styles.cell, styles.holeCell, ui.num, { color: colors.text }]}>
+              {row.holeNumber}
+            </Text>
+            <Text style={[styles.cell, ui.num, { color: colors.muted }]}>{row.par}</Text>
+            <Text style={[styles.cell, ui.num, { color: colors.muted }]}>
+              {row.strokeIndex}
+            </Text>
+            <Text style={[styles.cell, ui.num, { color: colors.text }]}>
+              {row.strokes ?? '—'}
+            </Text>
+            <Text style={[styles.cell, ui.num, { color: colors.text }]}>
+              {row.netto ?? '—'}
+            </Text>
           </View>
         ))}
       </View>
@@ -241,6 +267,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
 }
 
 function Total({ label, value }: { label: string; value: number }) {
+  const { ui } = useTheme();
   return (
     <View style={styles.totalRow}>
       <Text style={ui.body}>{label}</Text>
@@ -253,25 +280,22 @@ function Total({ label, value }: { label: string; value: number }) {
 
 const styles = StyleSheet.create({
   table: {
-    backgroundColor: COLORS.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
     overflow: 'hidden',
     marginTop: 12,
   },
   row: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
-  headRow: { borderTopWidth: 0, backgroundColor: COLORS.linen },
-  cell: { flex: 1, textAlign: 'right', fontSize: 15, color: COLORS.forest },
-  headCell: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
+  headRow: { borderTopWidth: 0 },
+  cell: { flex: 1, textAlign: 'right', fontSize: 15 },
+  // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
+  headCell: { fontSize: 12, fontFamily: FONTS.sansBold },
   holeCell: { textAlign: 'left' },
-  mutedCell: { color: COLORS.muted },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   buttonDisabled: { opacity: 0.5 },
 });

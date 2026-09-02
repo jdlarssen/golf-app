@@ -12,12 +12,10 @@
 // `data/endGame.ts`, som speiler webbens `endGameCore` og har RLS bak seg.
 // Skjermen er montering: den viser hva planen sier og sender resultatet videre.
 //
-// **Statisk `ui`/`COLORS`, ikke `useTheme()`.** Samme valg som
-// `OrganiserSection` (N6b): spill-stacken er statisk, og #1866 (lys/mørk) er et
-// utsatt eier-valg. Avkryssingen og slot-velgeren er derfor bygget lokalt etter
-// formen til `components/create/primitives.tsx` i stedet for å importeres
-// derfra — de primitivene er tema-bevisste, og én mørk-kapabel flate midt i en
-// lys stack er verre enn litt duplisert layout.
+// **Tema-bevisst via `useTheme()` (#1833).** Avkryssingen og slot-velgeren er
+// bygget lokalt etter formen til `components/create/primitives.tsx` i stedet for
+// å importeres derfra: de primitivene kjenner ikke «huket av»-firkanten, og
+// formen her er ikke helt den samme. Fargene er de samme tokenene.
 //
 // **Manglende godkjenning har ingen vei rundt.** Den kan ikke krysses bort,
 // verken her eller i datamodulen. Appen har ingen Sekretariat-overstyring;
@@ -53,9 +51,10 @@ import {
 import { useGameBundle } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { COLORS, TAP, ui } from '../theme';
+import { TAP, useTheme } from '../theme';
 
 export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
+  const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
   const { bundle, loading, refresh } = useGameBundle(gameId);
@@ -125,7 +124,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     return (
       <View style={ui.centered} testID={loading ? 'end-game-loading' : 'end-game-error'}>
         {loading ? (
-          <ActivityIndicator color={COLORS.forest} />
+          <ActivityIndicator color={colors.primary} />
         ) : (
           <Text style={ui.error}>{END_GAME_TEXT.loadFailed}</Text>
         )}
@@ -327,6 +326,7 @@ function CheckRow({
   testID: string;
   onPress: () => void;
 }) {
+  const { colors, ui } = useTheme();
   return (
     <Pressable
       testID={testID}
@@ -334,10 +334,27 @@ function CheckRow({
       accessibilityState={{ checked, disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={[styles.checkRow, checked && styles.checkRowOn]}
+      style={[
+        styles.checkRow,
+        {
+          backgroundColor: colors.surface,
+          borderColor: checked ? colors.accent : colors.border,
+          borderWidth: checked ? 2 : 1,
+        },
+      ]}
     >
-      <View style={[styles.box, checked && styles.boxOn]}>
-        {checked ? <Text style={styles.boxMark}>✓</Text> : null}
+      <View
+        style={[
+          styles.box,
+          {
+            borderColor: colors.primary,
+            backgroundColor: checked ? colors.primary : 'transparent',
+          },
+        ]}
+      >
+        {checked ? (
+          <Text style={[styles.boxMark, { color: colors.onPrimary }]}>✓</Text>
+        ) : null}
       </View>
       <View style={styles.checkText}>
         <Text style={ui.body}>{label}</Text>
@@ -369,6 +386,7 @@ function SlotPicker({
   disabled: boolean;
   onPick: (value: string) => void;
 }) {
+  const { colors, ui } = useTheme();
   const options = [
     ...players.map((player) => ({
       value: player.userId,
@@ -391,7 +409,14 @@ function SlotPicker({
               accessibilityState={{ selected: active, disabled }}
               disabled={disabled}
               onPress={() => onPick(option.value)}
-              style={[styles.chip, active && styles.chipOn]}
+              style={[
+                styles.chip,
+                {
+                  borderColor: active ? colors.accent : colors.border,
+                  borderWidth: active ? 2 : 1,
+                  backgroundColor: active ? colors.surface : 'transparent',
+                },
+              ]}
             >
               <Text style={active ? ui.body : ui.muted}>{option.label}</Text>
             </Pressable>
@@ -417,37 +442,28 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: TAP + 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginTop: 8,
   },
-  checkRowOn: { borderWidth: 2, borderColor: COLORS.gold },
   checkText: { flex: 1, gap: 2 },
   box: {
     width: 24,
     height: 24,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: COLORS.forest,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
-  boxOn: { backgroundColor: COLORS.forest },
-  boxMark: { color: COLORS.card, fontSize: 15 },
+  boxMark: { fontSize: 15 },
   slot: { gap: 6, marginTop: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     minHeight: TAP,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipOn: { borderWidth: 2, borderColor: COLORS.gold, backgroundColor: COLORS.card },
 });

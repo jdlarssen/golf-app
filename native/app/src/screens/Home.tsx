@@ -26,9 +26,10 @@ import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { supabase } from '../supabase';
-import { COLORS, ui } from '../theme';
+import { useTheme } from '../theme';
 
 export function Home({ navigation }: ScreenProps<'Home'>) {
+  const { colors, ui } = useTheme();
   const { userId, email } = useSession();
   const [cards, setCards] = useState<HomeCard[] | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -78,7 +79,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   if (cards === null && errorText === null) {
     return (
       <View style={ui.centered} testID="home-loading">
-        <ActivityIndicator color={COLORS.forest} />
+        <ActivityIndicator color={colors.primary} />
         <Text style={ui.muted}>Henter spillene dine …</Text>
       </View>
     );
@@ -154,6 +155,7 @@ function Section({
   navigation: ScreenProps<'Home'>['navigation'];
   testID: string;
 }) {
+  const { colors, ui } = useTheme();
   if (cards.length === 0) return null;
   return (
     <View testID={testID}>
@@ -161,7 +163,10 @@ function Section({
       {cards.map((card) => (
         <Pressable
           key={card.gameId}
-          style={styles.gameCard}
+          style={[
+            styles.gameCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
           onPress={() => navigation.navigate('GameHome', { gameId: card.gameId })}
           testID={`game-card-${card.gameId}`}
         >
@@ -191,6 +196,7 @@ function Footer({
   navigation: ScreenProps<'Home'>['navigation'];
   email: string | null;
 }) {
+  const { ui } = useTheme();
   return (
     <View style={styles.footer}>
       <Text style={ui.muted} testID="session-email">
@@ -216,10 +222,8 @@ function Footer({
 
 const styles = StyleSheet.create({
   gameCard: {
-    backgroundColor: COLORS.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
     padding: 16,
     marginTop: 8,
     gap: 6,
