@@ -928,3 +928,246 @@ stille på auth etterpå. Mint koden med service-role og gå rett til
 - **Cup-avslutning, reopen og Sekretariat-godkjenning forblir web/admin.**
 - **Ingen admin-hendelseslogg for app-avslutningen selv** — `logAdminEvent` kjøres av
   fullføreren, med sweepen som aktør.
+
+## Slett konto i appen (#1876)
+
+Spilleren sletter kontoen sin uten å gå om nettsiden — App Store 5.1.1(v). Hele
+slettingen er service-role (`anonymize_user` er `security definer` med execute kun for
+`service_role`, og GoTrue-softdeleten er et admin-API), så telefonen kan ikke gjøre den
+selv. Appen snakker i stedet med én ny route handler på web-deployen, og regelen blir
+liggende der den alltid har ligget: `lib/users/deleteAccount.ts`. Ruta er transport,
+ikke logikk — appen speiler ingen blokk-regel, den spør og viser svaret.
+
+Flatene: «Konto» nederst på hjem → `src/screens/Account.tsx` (e-post, «Logg ut»,
+«Slett konto») → `src/screens/DeleteAccount.tsx` (dedikert bekreftelsesskjerm, husregelen
+for irreversible handlinger). Kallene bor i `src/data/account.ts`, copyen i
+`src/lib/accountCopy.ts` (paritet med `messages/no.json` → `profile.deleteAccount`).
+
+### API-kontrakten — ett endepunkt, to verb
+
+`app/api/account/delete/route.ts`. Auth på BEGGE verb er
+`Authorization: Bearer <supabase access_token>`, validert server-side med
+`auth.getUser(token)` på admin-klienten (repoet har ingen fabrikk for en cookie-løs anon
+server-klient). Det er altså GoTrue som avgjør om tokenet er ekte og gyldig, ikke oss.
+
+```
+GET  /api/account/delete
+  200 { blocked: 'admin_account' | 'active_engagements' | null }
+  401 { error: 'unauthorized' }
+  500 { error: 'status_failed' }
+
+POST /api/account/delete
+  200 { mode: 'hard' | 'anonymized' }
+  401 { error: 'unauthorized' }
+  403 { error: 'admin_account' | 'active_engagements' }
+  500 { error: 'delete_failed' }
+```
+
+**Bruker-id-en kommer KUN fra tokenet.** Ruta leser aldri body eller query etter en id,
+og appen sender ingen — kallene har verken kropp eller query-parametre. Det finnes derfor
+ingen vei til å slette en annens konto, og en `userId` limt inn i kroppen har null effekt
+(egen test på nettopp det). `api/` ligger utenfor proxy-matcheren (`proxy.ts`), så ruta
+eier sin egen auth: ingen sesjons-cookie, ingen `x-torny-user-id`.
+
+GET-en er kun til visning — den styrer om skjermen viser banner eller knapp. POST-en
+sjekker blokk-regelen på nytt og er den autoritative; noe kan ha startet i mellomtiden.
+
+⚠️ **403-koden er hjelperens egen, ikke webbens copy-nøkkel.** `DeleteBlockReason` er
+`'admin_account' | 'active_engagements'`, mens `messages/no.json` heter
+`errors.active_games` og webben bygger bro i sin egen redirect. På wiren står regelens
+navn; appen oversetter kode → setning i `accountCopy.ts`. Legger du `active_games` inn
+her, har regelen fått to navn (AGENTS-felle 4).
+
+Feil-bodyene er faste, ugjennomsiktige koder. Endepunktet er offentlig eksponert, så
+`err.message` — Postgres-detaljer, env-navn — skal aldri ut.
+
+### `EXPO_PUBLIC_WEB_BASE_URL` bakes inn ved bundling
+
+Appen må vite hvor web-deployen står. Ny variabel i `native/app/.env.local`
+(gitignorert, som de to andre):
+
+```bash
+# native/app/.env.local
+# Staging-verify: lokal web i prod-server-modus, samme port som du starter under.
+EXPO_PUBLIC_WEB_BASE_URL=http://localhost:3111
+# Butikk-bygg: EXPO_PUBLIC_WEB_BASE_URL=https://tornygolf.no
+```
+
+⚠️ **`EXPO_PUBLIC_*` leses IKKE ved oppstart — den bakes inn i bundelen.** Babel bytter
+`process.env.EXPO_PUBLIC_WEB_BASE_URL` med selve strengen når bundelen lages. Å rette
+`.env.local` og starte appen på nytt gjør derfor ingenting: i dev må Metro startes med
+tømt cache (`npx expo start -c`), i Release må du bygge og installere på nytt. Dette er
+fella som koster en halvtime — symptomet er at appen fortsatt ringer den gamle adressen
+mens fila på disk sier noe annet.
+
+Mangler variabelen, sier skjermen det rett ut (kode `no-web-base-url`) i stedet for en
+knapp som ikke gjør noe — samme ærlig-feil-guardrail som `supabase.ts` har for
+Supabase-nøklene. Den leses inne i kallet, ikke på modulnivå: et kast ved import ville
+tatt ned hele appen for en skjerm de fleste aldri åpner.
+
+⚠️ **Bevis at simulatoren når adressen FØR du bygger hele flyten.** Simulatoren deler
+Mac-ens nettverksstakk, så `http://localhost:<port>` skal virke, og ATS i det genererte
+prosjektet tillater lokal trafikk (`NSAllowsLocalNetworking`). Men `native/app/ios/` er
+gitignorert og regenereres av `expo prebuild`, så det er et artefakt og ikke en garanti.
+Sjekk med et engangs-`fetch` mot `http://localhost:<port>/api/health` først. Blokkeres
+det, fikses det via `ios.infoPlist.NSAppTransportSecurity` i `app.json` + ny prebuild —
+aldri ved å redigere `ios/` for hånd.
+
+### To slette-grener — vit hvilken du ser på
+
+`deleteOrAnonymizeUser` velger gren på om brukeren har `game_players`-rader:
+
+| Gren | Når | Hva du kan lese etterpå | Svar |
+|---|---|---|---|
+| **HARD** | 0 `game_players`-rader | Raden er BORTE fra både `auth.users` og (via cascade) `public.users` | `{ mode: 'hard' }` |
+| **ANONYMISER** | brukeren har historikk | Gravsteins-rad står igjen, auth-raden er soft-slettet | `{ mode: 'anonymized' }` |
+
+⚠️ **Dette er den vanligste feillesningen i denne flyten.** En fersk engangsbruker på
+staging har null `game_players`-rader og tar HARD-grenen — da finnes det ingen
+`deleted_at` og ingen «Slettet bruker» å asserte, og et helt korrekt resultat ser ut som
+en feil. Skal du bevise gravsteinen, må brukeren ha historikk: service-role-INSERT i
+`game_players` på et **ferdig** spill (et aktivt/planlagt ville trippet
+`active_engagements`). Den insertet er unntatt invite-eligibility-triggeren
+(`0115_game_players_invite_eligibility_rls.sql:112-123` — `auth.uid()` er NULL for
+service-role). Si i PR-en hvilken gren hver testbruker beviste.
+
+Gravsteins-fasiten er `supabase/migrations/0142_green_pins.sql:159-170`:
+
+```sql
+name = 'Slettet bruker', nickname = null,
+email = 'slettet+' || p_user_id || '@deleted.tornygolf.no',
+gender = null, locale = null, last_seen_at = null, hcp_index = 54.0,
+friend_code = public.generate_friend_code(),
+product_updates_unsubscribed_at = coalesce(product_updates_unsubscribed_at, now()),
+deleted_at = coalesce(deleted_at, now())
+```
+
+**DB-objektet heter `anonymize_user` — innført i 0131, men kroppen som kjører er 0142-s**
+(`create or replace`, som la til nullingen av `green_pins.user_id`). Siter 0142, ikke
+0131; sender du neste leser til 0131, leser hen en utdatert kropp. Verifisert live i
+denne økta: identisk funksjonskropp i staging og prod. Funksjonen er `security definer`
+med execute kun for `service_role`, og den blokkerer admin-kontoer på DB-nivå
+(`0142:154-157`, errcode `insufficient_privilege`) — blokk-regelen i TS er altså ikke det
+eneste vernet. **Ingen migrasjon i denne slicen.**
+
+### Ingenting stopper sync eksplisitt — unmount-kaskaden gjør det
+
+Appen har **ingen** `stopSync()`-primitiv, og fikk ingen her. `startSyncTriggers` gir
+stopp-closuren til kalleren, `drainQueue` har ingen abort, `subscribeGameScores` gir
+unsubscribe-closuren til kalleren — det finnes ikke noe register å be om stopp gjennom.
+
+Rekkefølgen i `deleteAccount()` er derfor selve kontrakten:
+
+1. **POST** mot ruta (krever nett).
+2. **Kun ved 200:** `wipeLocalData()`.
+3. **`signOut({ scope: 'local' })`** — sesjonene er alt revokert av GoTrue, så global
+   scope ville bare gitt 403-støy.
+
+Steg 3 er også stoppen: `App.tsx` lytter på `onAuthStateChange`, setter sesjonen til
+null og bytter til Login-stacken, hvorpå hver skjerm unmountes og `useEffect`-oppryddingen
+deres kjører stopp/unsubscribe. Det er bevisst, ikke en forglemmelse — å legge til et
+eksplisitt stopp-API ville vært en ny primitiv for en kaskade som allerede kjører.
+
+⚠️ **Aldri wipe på 401, 403, 500 eller nettverksfeil.** En 401 betyr som oftest bare at
+tokenet gikk ut mens skjermen sto åpen; kontoen lever, og en wipe der ville slettet lokale
+data for en bruker som fortsatt har dem. Ble kontoen faktisk slettet, feiler
+re-innloggingen naturlig med «ingen konto».
+
+### Wipen er `DELETE FROM` × 4 i `withTxn`
+
+`wipeLocalData()` i `src/data/db.ts` tømmer alle fire tabellene — `scores`, `sync_queue`,
+`conflicts`, `cache_entries` — i én transaksjon. Ikke `deleteDatabaseAsync`: den finnes i
+expo-sqlite SDK 57, men mangler i jest-mocken (`src/test/sqliteMock.ts`), og et
+fil-slett ville dessuten etterlatt den modul-lokale `dbPromise` som en levende peker mot
+en slettet fil. Primitiven ligger i `db.ts` nettopp for at **#1877 (wipe ved vanlig
+utlogging) skal gjenbruke den samme**.
+
+Wipen står i `withTxn`-køen og kolliderer derfor aldri med en åpen skriving fra
+sync-drainen. Den lover ikke mer enn det: en drain som er midt i en nettverks-rundtur når
+wipen commiter, kan rekke å legge igjen en rad etterpå. I praksis tar signOut-kaskaden
+rett over, og blokk-regelen har alt garantert at brukeren ikke er med i noe aktivt spill,
+så køen er tom. Ikke skriv om denne setningen til noe sterkere.
+
+### Verifisere sletting mot staging
+
+🚨 **STAGING-VERN — les dette før du sletter noe som helst.** Staging deles med andre
+økter. Disse kontoene skal **ALDRI** slettes:
+
+- `E2E_ADMIN_EMAIL` og `E2E_PLAYER_EMAIL` (hele e2e-suiten er hardt avhengig av dem)
+- App Store-review-kontoen og gjestene dens (`gjest+…@guest.tornygolf.no`)
+
+**Trygg-å-slette-predikatet** er begge deler samtidig: e-posten slutter på
+`@torny-e2e.invalid` **OG** id-en kom tilbake fra ditt eget `createUser` i denne
+kjøringen. Sveip aldri på navneprefiks — en annen økt kan ha en bruker som ligner.
+
+Web-ruta må kjøre i **prod-server-modus** (dev gir falske røde):
+
+```bash
+source ~/.nvm/nvm.sh && nvm use 22
+set -a && source .env.staging.local && set +a
+npm run build && npx next start -p 3111
+```
+
+⚠️ `torny-staging-prod` i `.claude/launch.json` **bygger ikke** og står på hardkodet port
+3000. En søsterøkt på 3000 svarer stille med en build uten ruta di — en 404 du jakter i en
+time. Velg egen port og sjekk eierskap: `lsof -ti:<port>` → `lsof -a -p <pid> -d cwd`.
+
+Engangsbruker + Bearer-token (ingen ferdig skript finnes — sett det sammen slik):
+
+```js
+const admin = createClient(URL, SRK, { auth: { autoRefreshToken: false, persistSession: false } });
+const email = `test-slettkonto-${Date.now()}@torny-e2e.invalid`;
+const { data } = await admin.auth.admin.createUser({ email, email_confirm: true });
+// on_auth_user_created inserter public.users — poll ~5×200 ms og ASSERT rows.length > 0
+const { data: link } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
+const otp = link.properties.email_otp.replace(/\s+/g, '');
+const anon = createClient(URL, ANON, { auth: { persistSession: false } });
+const { data: s } = await anon.auth.verifyOtp({ email, token: otp, type: 'email' });
+// s.session.access_token → Authorization: Bearer …
+```
+
+⚠️ `generateLink` regenererer engangstokenet og ugyldiggjør det forrige (#861) — mint
+aldri to ganger og bruk den første.
+
+Så, i rekkefølge:
+
+1. `curl -H "Authorization: Bearer $TOKEN" http://localhost:3111/api/account/delete`
+   → `{"blocked":null}`. Uten header → 401.
+2. Seed den samme brukeren inn i et **aktivt** spill med service-role og gjenta →
+   `{"blocked":"active_engagements"}`. Appen skal da vise banner og **ingen** slette-knapp.
+3. Bruker A (historikk i et **ferdig** spill): slett fra appen → `{"mode":"anonymized"}`,
+   og les med service-role: `deleted_at` satt, `name = 'Slettet bruker'`, e-post
+   `slettet+<uuid>@deleted.tornygolf.no`, auth-raden soft-slettet, og de historiske
+   `scores`-radene står igjen.
+4. Bruker B (ingen spill): slett → `{"mode":"hard"}`, og raden er **borte** fra både
+   `public.users` og `auth.users`. Null rader er fasit her, ikke en feil.
+5. Enheten: appen står på Login etter slettingen, `torny.db` er tom i alle fire tabeller,
+   og innlogging som en annen bruker starter rent.
+6. Rydd opp: `await admin.auth.admin.deleteUser(id)` for de engangsbrukerne som fortsatt
+   finnes.
+
+Husk at appen må bygges på nytt hvis du endret `EXPO_PUBLIC_WEB_BASE_URL` mellom
+forsøkene — se avsnittet over.
+
+### Bokførte gap
+
+- **Blokk-lesingen er fail-open.** `getDeleteBlockReason` forkaster PostgREST-feil og
+  leser en forbigående DB-feil som «ikke blokkert». En 403 er derfor en port, ikke en
+  garanti. Oppførselen er webbens egen og uendret her — regelen har ett hjem.
+- **`anonymize_user` sletter `push_subscriptions`, men ikke `apns_tokens`** (0166 kom
+  etter 0142). Push er parkert til N7, så det er filt som eget issue og ikke fikset her.
+- **Konto-skjermen som inngang er et eier-vetopunkt.** «Slett konto» ligger ett trykk
+  unna, ikke rett i hjem-footeren. Vil eieren ha lenka på hjem, er det en liten ombygging.
+- **«Logg ut» står to steder** — hjem-footeren beholder sin, og Konto-skjermen har sin.
+  Bevisst: et konto-rom uten utlogging ville sendt folk tilbake til hjem for den ene
+  tingen de kom for.
+- **`backLabel` er «Tilbake», ikke webbens «Tilbake til profil»** — appen har ingen
+  profil-skjerm å love. Eneste stedet copy-pariteten med `messages/no.json` bevisst
+  brytes.
+- **Appen viser aldri `mode`.** Feltet er informasjon til logg og staging-bevis; for
+  spilleren er utfallet det samme.
+- **Appen oppretter fortsatt ikke kontoer** (`shouldCreateUser: false` i `Login.tsx`), så
+  5.1.1(v) binder strengt tatt først når kontoopprettelse kommer til appen. Must-statusen
+  er eiervalg — web-veien alene blir uansett en blindvei etter butikk-byttet.
+- **Admin-slett av andre spillere forblir web/Sekretariat**, og webbens
+  `/profile/slett-konto` er urørt.
