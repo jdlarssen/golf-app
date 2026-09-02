@@ -17,13 +17,20 @@ import { CalmNote, LeaderTable, type LeaderColumn } from './Table';
 import { WolfView } from './WolfView';
 
 /**
- * Teksten for et format som er STENGT i appen med vilje (`formatGate`) — det
- * finnes på nettsiden, spilleren skal bare et annet sted. Ordlyden «… på
- * nettsiden ennå» er den samme som `gateMessage` (`lib/formatGate.ts`) bruker, så
- * føring-CTA-en og resultatflaten ikke lover to ulike ting.
+ * Fallskjermen for patsome-grenen under — teksten en spiller ville fått hvis
+ * `formatGate` slapp formatet ut FØR denne fila fikk en ekte visning for det.
  *
- * Skilt fra {@link UNKNOWN_FORMAT_RESULT_MESSAGE} i #1844: dette er den ENESTE
- * av de to som er sann om nettsiden.
+ * **Den er ikke det spilleren ser i dag.** Gate-grenen i `LeaderboardBody`
+ * returnerer først, og den bruker `gateMessage` (`lib/formatGate.ts`) — som
+ * skiller «Dette formatet …» fra «Denne runden …», noe en enkelt konstant her
+ * ikke kan. Endrer du strengen under, endrer du derfor ingenting på skjermen;
+ * gate-teksten bor i `formatGate.ts`.
+ *
+ * Begge ender likevel på «… på nettsiden ennå», og begge rendres med testID
+ * `leaderboard-gated-format`. Det er hele skillet #1844 innførte: dette er det
+ * ENE av de tre «vi kan ikke vise dette»-tilfellene der nettsiden faktisk har
+ * svaret. De to andre ({@link UNKNOWN_FORMAT_RESULT_MESSAGE} og
+ * `missing-config` i `Leaderboard.tsx`) nevner den ikke.
  */
 export const GATED_FORMAT_RESULT_MESSAGE = 'Formatet vises på nettsiden ennå.';
 
