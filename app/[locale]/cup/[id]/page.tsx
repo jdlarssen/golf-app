@@ -79,7 +79,7 @@ export default async function PublicCupPage({ params }: { params: Params }) {
 
       {/* #1884: avdekkings-kortet og kapteinens vei inn til uttaket. Rendrer
           ingenting for cuper uten uttaks-økter. */}
-      <CupLineupSpotlight tournamentId={id} />
+      <CupLineupSpotlight tournamentId={id} groupId={tournament.group_id} />
 
       {/* Dør til resultatsiden (#1468). Etter finish et tydelig dør-kort; før
           finish en dempet linje som fortsatt lenker dit (låst ventetekst) — én
