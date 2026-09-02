@@ -15,7 +15,7 @@ import {
   matchStrip,
   type StripOutcome,
 } from '../../lib/leaderboardModel';
-import { COLORS, ui } from '../../theme';
+import { FONTS, useTheme, type ThemeColors } from '../../theme';
 
 export interface MatchSideInfo {
   sideNumber: 1 | 2;
@@ -40,6 +40,7 @@ export function MatchView({
   result: MatchplayMatchResult | null;
   nameOf: (userId: string) => string;
 }) {
+  const { colors, ui } = useTheme();
   const side1Name = side1.userIds.map(nameOf).join(' & ');
   const side2Name = side2.userIds.map(nameOf).join(' & ');
   const standing = matchStanding({ holesUp, result });
@@ -83,11 +84,26 @@ export function MatchView({
             {strip.map((cell) => (
               <View
                 key={cell.holeNumber}
-                style={[styles.cell, cellStyle(cell.outcome)]}
+                style={[
+                  styles.cell,
+                  { borderColor: colors.border, backgroundColor: cellFill(cell.outcome, colors) },
+                ]}
                 testID={`match-strip-${cell.holeNumber}`}
               >
-                <Text style={[ui.num, styles.cellHole]}>{cell.holeNumber}</Text>
-                <Text style={[ui.num, styles.cellOutcome]}>{cell.outcome}</Text>
+                <Text style={[ui.num, styles.cellHole, { color: colors.muted }]}>
+                  {cell.holeNumber}
+                </Text>
+                <Text
+                  style={[
+                    ui.num,
+                    styles.cellOutcome,
+                    // Vunne hull er gull-fylte, og blekket på gull er mørkt i
+                    // begge palettene.
+                    { color: cell.outcome === 'W' ? colors.onAccent : colors.text },
+                  ]}
+                >
+                  {cell.outcome}
+                </Text>
               </View>
             ))}
           </View>
@@ -100,10 +116,10 @@ export function MatchView({
   );
 }
 
-function cellStyle(outcome: StripOutcome) {
-  if (outcome === 'W') return styles.cellWin;
-  if (outcome === 'L') return styles.cellLoss;
-  return styles.cellTied;
+function cellFill(outcome: StripOutcome, colors: ThemeColors): string {
+  if (outcome === 'W') return colors.accent;
+  if (outcome === 'L') return colors.surface;
+  return colors.bg;
 }
 
 const styles = StyleSheet.create({
@@ -114,19 +130,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sideRight: { textAlign: 'right' },
-  leading: { fontWeight: '700' },
+  // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
+  leading: { fontFamily: FONTS.sansBold },
   strip: { flexDirection: 'row', gap: 6, paddingVertical: 8 },
   cell: {
     minWidth: 40,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: 'center',
   },
-  cellWin: { backgroundColor: COLORS.gold },
-  cellLoss: { backgroundColor: COLORS.card },
-  cellTied: { backgroundColor: COLORS.linen },
-  cellHole: { fontSize: 11, color: COLORS.muted },
-  cellOutcome: { fontSize: 15, fontWeight: '700', color: COLORS.forest },
+  cellHole: { fontSize: 11 },
+  cellOutcome: { fontSize: 15, fontFamily: FONTS.sansBold },
 });

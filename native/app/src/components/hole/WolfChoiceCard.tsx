@@ -21,7 +21,7 @@ import type { WolfChoice } from '../../../../../lib/scoring/modes/types';
 import { setWolfChoice } from '../../data/choices';
 import { describeChoiceFailure } from '../../lib/actionFeedback';
 import type { WolfHoleState } from '../../lib/wolfHole';
-import { COLORS, TAP, ui } from '../../theme';
+import { TAP, useTheme } from '../../theme';
 
 export function WolfChoiceCard({
   gameId,
@@ -35,6 +35,7 @@ export function WolfChoiceCard({
   /** Kalles etter et lagret valg — henter valgene på nytt. */
   onSaved: () => Promise<void>;
 }) {
+  const { ui } = useTheme();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,9 +143,17 @@ function ChoiceButton({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const { colors, ui } = useTheme();
   return (
     <Pressable
-      style={[styles.choice, accent && styles.choiceAccent, disabled && styles.choiceDisabled]}
+      style={[
+        styles.choice,
+        {
+          backgroundColor: colors.bg,
+          borderColor: accent ? colors.accent : colors.border,
+        },
+        disabled && styles.choiceDisabled,
+      ]}
       disabled={disabled}
       onPress={onPress}
       testID={testID}
@@ -161,13 +170,10 @@ const styles = StyleSheet.create({
     minHeight: TAP + 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.linen,
     paddingHorizontal: 14,
     paddingVertical: 10,
     justifyContent: 'center',
     gap: 2,
   },
-  choiceAccent: { borderColor: COLORS.gold },
   choiceDisabled: { opacity: 0.4 },
 });

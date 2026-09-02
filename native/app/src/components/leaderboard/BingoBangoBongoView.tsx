@@ -10,7 +10,7 @@
 // ingenting om.
 import { StyleSheet, Text, View } from 'react-native';
 import type { BingoBangoBongoResult } from '../../../../../lib/scoring/modes/types';
-import { COLORS, ui } from '../../theme';
+import { useTheme } from '../../theme';
 
 export function BingoBangoBongoView({
   result,
@@ -19,6 +19,7 @@ export function BingoBangoBongoView({
   result: BingoBangoBongoResult;
   nameOf: (userId: string) => string;
 }) {
+  const { colors, ui } = useTheme();
   const anyPoints = result.players.some((player) => player.totalPoints > 0);
 
   return (
@@ -26,10 +27,16 @@ export function BingoBangoBongoView({
       {result.players.map((player) => (
         <View
           key={player.userId}
-          style={[ui.card, styles.row, player.rank === 1 ? styles.leader : null]}
+          style={[
+            ui.card,
+            styles.row,
+            player.rank === 1 ? { borderColor: colors.accent } : null,
+          ]}
           testID={`bbb-player-${player.userId}`}
         >
-          <Text style={[ui.value, ui.num, styles.rank]}>{player.rank}</Text>
+          <Text style={[ui.value, ui.num, styles.rank, { color: colors.muted }]}>
+            {player.rank}
+          </Text>
           <View style={styles.detail}>
             <Text style={ui.body} numberOfLines={1}>
               {nameOf(player.userId)}
@@ -65,7 +72,6 @@ export function BingoBangoBongoView({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rank: { minWidth: 28, textAlign: 'center', color: COLORS.muted },
+  rank: { minWidth: 28, textAlign: 'center' },
   detail: { flex: 1, gap: 2 },
-  leader: { borderColor: COLORS.gold },
 });

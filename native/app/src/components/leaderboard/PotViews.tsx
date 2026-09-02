@@ -7,7 +7,7 @@ import {
   NASSAU_SECTION_LABELS,
   nassauSectionLine,
 } from '../../lib/leaderboardModel';
-import { ui } from '../../theme';
+import { useTheme } from '../../theme';
 import { LeaderTable } from './Table';
 
 export function SkinsView({
@@ -19,6 +19,7 @@ export function SkinsView({
   status: string;
   nameOf: (userId: string) => string;
 }) {
+  const { ui } = useTheme();
   const potLine = carriedPotLine(result.carriedPot, status);
   return (
     <View testID="skins-view">
@@ -55,6 +56,7 @@ export function NassauView({
   result: NassauResult;
   nameOf: (userId: string) => string;
 }) {
+  const { ui } = useTheme();
   const sections = [
     result.sections.front9,
     result.sections.back9,
