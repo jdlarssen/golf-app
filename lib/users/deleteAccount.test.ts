@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * blokkerer ikke» kan bevises for ekte — mocken kan jo ikke filtrere selv.
  *
  * SQL-siden (scrub, frafall, vakter) dekkes av
- * supabase/tests/users_anonymize_test.sql, ikke her.
+ * supabase/tests/users_anonymize_withdrawal_test.sql, ikke her.
  */
 
 type QueryResult = { data?: unknown; error?: unknown; count?: number | null };
@@ -181,6 +181,24 @@ describe('getDeleteBlockReason', () => {
         };
         expect(await getDeleteBlockReason(USER_ID)).toBeNull();
         expect(queriedTables()).not.toContain('game_players');
+      },
+    );
+
+    // Fail-closed (#1909): etter at deltaker-grenen forsvant er disse tre
+    // spørringene det eneste som skiller en arrangør fra en anonymisering som
+    // etterlater turneringen uten styring. En feilende spørring gir
+    // `data: null`, som uten vakten ville lest som «arrangerer ingenting».
+    it.each(['games', 'tournaments', 'leagues'])(
+      'blocks when the %s query fails, instead of reading the error as "nothing"',
+      async (failing) => {
+        state.tables = {
+          users: livingUser,
+          games: { data: [] },
+          tournaments: { data: [] },
+          leagues: { data: [] },
+          [failing]: { data: null, error: { message: 'boom' } },
+        };
+        expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
       },
     );
 

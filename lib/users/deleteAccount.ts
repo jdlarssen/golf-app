@@ -89,6 +89,23 @@ export async function getDeleteBlockReason(
       .limit(1),
   ]);
 
+  // Fail-closed. En spørring som FEILER gir `data: null`, som ville lest som
+  // «arrangerer ingenting» og sluppet slettingen gjennom. Det var levelig da
+  // fire grener måtte svare nei samtidig; etter #1909 er disse tre det eneste
+  // som står mellom en arrangør og en anonymisering som etterlater turneringen
+  // uten styring. RPC-en fanger det ikke — den nekter kun admin-kontoen. Ved
+  // tvil blokkerer vi heller én sletting for mye: brukeren kan prøve igjen,
+  // et herreløst spill kan ingen rydde opp i.
+  if (games.error || cups.error || leagues.error) {
+    console.error('[getDeleteBlockReason] engasjement-oppslag feilet — blokkerer', {
+      userId,
+      games: games.error,
+      cups: cups.error,
+      leagues: leagues.error,
+    });
+    return 'active_engagements';
+  }
+
   const organisesSomethingOpen =
     (games.data?.length ?? 0) > 0 ||
     (cups.data?.length ?? 0) > 0 ||

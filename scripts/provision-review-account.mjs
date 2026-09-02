@@ -141,11 +141,18 @@ async function updateUserRow(db, userId, patch, label) {
 
 /** Finn auth-brukeren for adressen. `public.users` først, så GoTrue-paging. */
 async function findAuthUserId(db, email) {
+  // `ilike` tolker `%` og `_` som jokertegn, og begge er lovlige i en e-post
+  // (`a_b@x.no` ville matchet `aXb@x.no`). Vi henter derfor kandidatene og
+  // filtrerer på eksakt likhet i JS, slik `resolveOrganizer` gjør — treffet her
+  // får skrevet navn, hcp og `deleted_at: null`, så feil bruker er dyrt.
   const rows = ok(
     'slå opp users på e-post',
-    await db.from('users').select('id').ilike('email', email).limit(1),
+    await db.from('users').select('id, email').ilike('email', email).limit(20),
   );
-  if (rows.length > 0) return rows[0].id;
+  const exact = rows.filter(
+    (r) => (r.email ?? '').toLowerCase() === email.toLowerCase(),
+  );
+  if (exact.length > 0) return exact[0].id;
 
   // Fallback: auth-raden kan finnes uten users-rad (avbrutt tidligere kjøring).
   for (let page = 1; page <= 10; page++) {
@@ -386,6 +393,24 @@ async function main() {
 
   let game = existingGames[0] ?? null;
   if (game) {
+    // Eierskapsgard. Uten creator-filteret i oppslaget over er navnet det
+    // eneste som peker ut spillet, og «Demo Round — Tørny» er ikke reservert:
+    // en ekte bruker kan kalle runden sin det samme. Steg 4-5 under sletter
+    // alle scores og feier rosteret, så et feiltreff er uopprettelig. Vi
+    // godtar derfor bare et spill som ALT tilhører review-kontoen eller
+    // arrangøren — alt annet stopper med en melding som ber om opprydding for
+    // hånd, i stedet for å skrive blindt.
+    if (
+      game.created_by !== organizer.id &&
+      game.created_by !== reviewUserId
+    ) {
+      throw new Error(
+        `Fant et spill som heter «${DEMO_GAME_NAME}» (${game.id}), men det eies ` +
+          `verken av review-kontoen eller arrangøren. Skriptet rører det ikke — ` +
+          `det ville slettet scorene og rosteret til noen andre. Sjekk spillet i ` +
+          `databasen og rydd opp for hånd, eller gi demo-spillet et annet navn.`,
+      );
+    }
     console.log(`3. Demo-spillet fantes (${game.id}).`);
     if (game.created_by !== organizer.id) {
       // PostgREST svarer error == null på en update som ikke traff noe
