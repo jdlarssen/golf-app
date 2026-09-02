@@ -4,6 +4,11 @@ import { canSeeTeamLineup, teamRoster, type CupTeamNumber } from './captainRoles
 import { loadCupLineupAccess, type CupLineupAccess } from './lineupAccess';
 import type { CupSessionFormat } from './cupTemplates';
 import type { LineupSlotRow } from './lineupValidation';
+import {
+  DEFAULT_TIE_POINTS,
+  DEFAULT_WIN_POINTS,
+  hasDefaultCupWeights,
+} from './pointsToWin';
 
 /**
  * Lesingen av kaptein-uttaket (#1884) — og dermed hemmeligholdet selv.
@@ -51,6 +56,22 @@ export type CupLineupBoard = {
   cupStatus: string;
   teamNames: Record<CupTeamNumber, string>;
   sessions: CupLineupSessionView[];
+  /**
+   * Planlagt antall kamper i hele cupen (#1902), `null` når arrangøren ikke
+   * har oppgitt det ennå. Poengmålet regnes av `max(faktisk, planlagt)`.
+   */
+  plannedMatchCount: number | null;
+  /** Dagens mål fra DB — `null` i utkast (#1142) og i vektede cuper (#1441). */
+  pointsToWin: number | null;
+  /**
+   * Har cupen 1/½-vektene? Er den vektet, finnes det ikke noe «først til X»,
+   * og arrangøren får ikke spørsmålet om planlagt antall i det hele tatt.
+   */
+  hasDefaultWeights: boolean;
+  /** Kamper som alt finnes. */
+  matchCount: number;
+  /** Plasser i åpnede, ikke-avdekkede økter — de blir kamper ved avdekking. */
+  pendingSlotCount: number;
   squads: {
     1: CupLineupPlayer[];
     2: CupLineupPlayer[];
@@ -85,18 +106,28 @@ export async function loadCupLineupBoard(
 
   const { data: cup } = await admin
     .from('tournaments')
-    .select('name, status, team_1_name, team_2_name')
+    .select(
+      'name, status, team_1_name, team_2_name, planned_match_count, points_to_win, win_points, tie_points',
+    )
     .eq('id', tournamentId)
     .maybeSingle();
   if (!cup) return null;
 
-  const { data: sessionRows } = await admin
-    .from('cup_lineup_sessions')
-    .select(
-      'id, session_index, format, slot_count, revealed_at, team_1_submitted_at, team_2_submitted_at',
-    )
-    .eq('tournament_id', tournamentId)
-    .order('session_index', { ascending: true });
+  const [{ data: sessionRows }, { count: matchCount }] = await Promise.all([
+    admin
+      .from('cup_lineup_sessions')
+      .select(
+        'id, session_index, format, slot_count, revealed_at, team_1_submitted_at, team_2_submitted_at',
+      )
+      .eq('tournament_id', tournamentId)
+      .order('session_index', { ascending: true }),
+    // #1902: kortet viser gulvet for planlagt antall — arrangøren skal ikke
+    // kunne skrive et tall som er lavere enn kampene som alt er satt opp.
+    admin
+      .from('games')
+      .select('id', { head: true, count: 'exact' })
+      .eq('tournament_id', tournamentId),
+  ]);
 
   const sessionIds = (sessionRows ?? []).map((r) => r.id as string);
   const { data: slotRows } = sessionIds.length
@@ -177,10 +208,25 @@ export async function loadCupLineupBoard(
     };
   });
 
+  // Plassene i åpnede, ikke-avdekkede økter — regnet lokalt her fordi radene
+  // alt er lest (samme regel som countPendingLineupSlots, som skrivestien
+  // bruker når den ikke har dem).
+  const pendingSlotCount = (sessionRows ?? [])
+    .filter((row) => row.revealed_at === null)
+    .reduce((sum, row) => sum + (row.slot_count as number), 0);
+
   return {
     access,
     cupName: cup.name as string,
     cupStatus: cup.status as string,
+    plannedMatchCount: (cup.planned_match_count as number | null) ?? null,
+    pointsToWin: (cup.points_to_win as number | null) ?? null,
+    hasDefaultWeights: hasDefaultCupWeights(
+      (cup.win_points as number | null) ?? DEFAULT_WIN_POINTS,
+      (cup.tie_points as number | null) ?? DEFAULT_TIE_POINTS,
+    ),
+    matchCount: matchCount ?? 0,
+    pendingSlotCount,
     teamNames: {
       1: (cup.team_1_name as string | null) ?? 'Lag 1',
       2: (cup.team_2_name as string | null) ?? 'Lag 2',

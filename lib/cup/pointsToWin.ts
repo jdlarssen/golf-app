@@ -17,9 +17,14 @@ export function derivePointsToWin(matchCount: number): number {
 }
 
 /** Dagens 1/½-default (#1441, D8) — samme verdier som computeCupLeaderboard
- * faller tilbake til når en cup mangler win_points/tie_points. */
-const DEFAULT_WIN_POINTS = 1;
-const DEFAULT_TIE_POINTS = 0.5;
+ * faller tilbake til når en cup mangler win_points/tie_points.
+ *
+ * Eksportert i #1902: tre steder må nå defaulte en cup-rad som bærer NULL i
+ * `win_points`/`tie_points` (startTournament, synk-helperen, og denne fila
+ * selv). Tre litteral-par ville vært tre hjem for én regel
+ * (AGENTS.md-felle 4). */
+export const DEFAULT_WIN_POINTS = 1;
+export const DEFAULT_TIE_POINTS = 0.5;
 
 /**
  * Vektbar variant av `derivePointsToWin` (#1441, D8). Arrangøren av splittet
@@ -79,6 +84,52 @@ export function resolveCupMatchTotal(
   plannedMatchCount: number | null,
 ): number {
   return Math.max(actualMatches, plannedMatchCount ?? 0);
+}
+
+/**
+ * Tullverdi-vakten på `tournaments.planned_match_count` — samme tall som
+ * CHECK-en `tournaments_planned_match_count_range` i migrasjon 0173 (#1902).
+ *
+ * ⚠️ Dette er IKKE match-taket. Det ekte taket bor i ./limits.ts
+ * (`MAX_PERSONAL_CUP_MATCHES`) og gjelder kun personlige cuper; klubb-cuper og
+ * global admin er uncapped (#526). Denne grensa finnes bare for at en avsporet
+ * tastetrykk-rekke ikke skal nå databasen — den ligger derfor godt over alt
+ * noen kan finne på å arrangere.
+ *
+ * Endres den her, må CHECK-en endres i samme commit (AGENTS.md-felle 4);
+ * avstemmingstesten i pointsToWin.test.ts leser migrasjonen og går rød ellers.
+ */
+export const MAX_PLANNED_MATCH_COUNT = 400;
+
+/**
+ * Parser arrangørens «planlagt antall kamper» fra uttaks-rommets tallfelt
+ * (#1902).
+ *
+ * `floor` er det laveste tallet som gir mening akkurat nå: kampene cupen alt
+ * har, pluss plassene i åpnede, ikke-avdekkede økter — aldri under 2, siden
+ * `startTournament` nekter å starte en cup med færre. Et tall under gulvet er
+ * en skrivefeil, ikke et ønske om å kutte kamper som alt er satt opp.
+ *
+ * Planlagt er et GULV for målet, aldri et tak for øktene: et tall HØYERE enn
+ * gulvet er hele poenget (28 planlagt mens 3 er satt opp).
+ *
+ * Returnerer `null` for alt som ikke er et helt tall innenfor
+ * `[floor, MAX_PLANNED_MATCH_COUNT]` — kalleren svarer da med feilkoden
+ * `lineup_planned_total` og skriver ingenting.
+ */
+export function parsePlannedMatchCount(
+  raw: string,
+  floor: number,
+): number | null {
+  const cleaned = raw.trim();
+  // Eksplisitt tom-sjekk FØR Number(): `Number('')` er 0, som er et helt tall
+  // og ville sluppet gjennom som «arrangøren skrev null kamper».
+  if (cleaned === '') return null;
+  const n = Number(cleaned);
+  if (!Number.isInteger(n)) return null;
+  if (n < floor || n < 2) return null;
+  if (n > MAX_PLANNED_MATCH_COUNT) return null;
+  return n;
 }
 
 /**
