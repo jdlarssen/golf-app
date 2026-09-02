@@ -35,7 +35,14 @@ import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { confirmParticipation } from '../data/rosterActions';
 import { seedGameScores } from '../data/seedScores';
 import { displayName, formatTeeOff } from '../lib/display';
-import { gateMessage, gateReason, type GateReason } from '../lib/formatGate';
+import {
+  GATE_LINK_LABEL,
+  gameWebPath,
+  gateMessage,
+  gateReason,
+  type GateReason,
+} from '../lib/formatGate';
+import { WebLinkButton } from '../components/WebLinkButton';
 import { nameLookup } from '../lib/leaderboardModel';
 import {
   computePrimaryCtaState,
@@ -264,6 +271,14 @@ function PrimarySection({
     return (
       <View style={ui.banner} testID="format-gate">
         <Text style={ui.body}>{gateMessage(gated)}</Text>
+        {/* #1891: dette er hovedstedet spilleren møter gaten — leaderboardet er
+            det andre. Uten knappen er setningen en blindvei: den sier hvor
+            runden føres, men ikke hvordan du kommer dit. */}
+        <WebLinkButton
+          label={GATE_LINK_LABEL}
+          path={gameWebPath(game.id)}
+          testID="format-gate-link"
+        />
       </View>
     );
   }

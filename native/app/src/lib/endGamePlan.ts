@@ -83,6 +83,15 @@ export interface FinishPlan {
   /** Slots som må kåres. Tom når sideturneringen er av eller har null hull. */
   slots: FinishSlot[];
   requirePeerApproval: boolean;
+  /**
+   * Om formatet i det hele tatt har frafall (#1891).
+   *
+   * `MissingEntry.withdrawable` svarer ikke på dette alene: den er alltid
+   * `false` for arrangørens egen rad, uansett format. Skjermen trenger begge
+   * for å vite om «trekk deg»-veien finnes — og en lenke til en side som bare
+   * sender deg tilbake er verre enn ingen lenke.
+   */
+  withdrawalSupported: boolean;
 }
 
 /**
@@ -139,6 +148,7 @@ export function buildFinishPlan(
     active,
     missing,
     unapproved,
+    withdrawalSupported,
     slots: sideSlots(game),
     requirePeerApproval: game.requirePeerApproval,
   };
