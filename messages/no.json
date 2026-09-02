@@ -165,6 +165,10 @@
         "titleLeft": "{participantName} meldte seg av",
         "detail": "{tournamentName}"
       },
+      "cupLineupRevealed": {
+        "title": "Kampene er klare",
+        "detail": "{tournamentName}: {matchCount, plural, one {# kamp} other {# kamper}} er satt opp."
+      },
       "clubJoinRequest": {
         "title": "{requesterName} vil bli med i klubben",
         "detail": "{groupName}"
@@ -4670,13 +4674,76 @@
         "copiedButton": "✓ Kopiert",
         "copyError": "Klarte ikke å kopiere automatisk. Marker lenken og kopier manuelt."
       },
+      "roleHeading": "Lag og kapteiner",
+      "roleHelper": "Sett spillerne på lag og pek ut én kaptein per lag. Da gjør kapteinene uttaket selv, økt for økt.",
+      "teamLabel": "Lag",
+      "unassignedOption": "Uten lag",
+      "captainLabel": "Kaptein",
+      "captainBadge": "Kaptein",
+      "saveRole": "Lagre",
       "errors": {
         "not_candidate": "Denne spilleren kan ikke meldes på cupen.",
         "too_many_players": "En personlig cup tar maks {cap} spillere. Vil du ha flere, lag en klubb-cup.",
         "not_draft": "Cupen er allerede startet, så påmeldingen er låst.",
         "not_found": "Fant ikke cupen.",
+        "not_participant": "Spilleren står ikke på deltakerlista.",
+        "captain_needs_team": "En kaptein må stå på et lag.",
+        "team_taken": "Laget har allerede en kaptein.",
+        "invalid_team": "Ugyldig lag.",
+        "not_allowed": "Bare arrangøren kan sette lag og kapteiner.",
         "plan_save_failed": "Klarte ikke å lagre endringen. Prøv igjen.",
         "unexpected": "Uventet feil: {code}"
+      }
+    },
+    "lineup": {
+      "pageTitle": "Uttak",
+      "subtitleOrganizer": "Åpne øktene og følg med på hvem som har levert.",
+      "subtitleCaptain": "Sett laget ditt. Motstanderen ser ingenting før begge har levert.",
+      "needsCaptains": "Begge lag trenger en kaptein før du kan åpne en økt. Det gjør du i Spillere-rommet.",
+      "openHeading": "Åpne en økt",
+      "openHelper": "Velg format og hvor mange kamper økten skal ha. Kapteinene fyller resten.",
+      "formatLabel": "Format",
+      "slotCountLabel": "Antall kamper",
+      "decrease": "Én kamp færre",
+      "increase": "Én kamp til",
+      "openButton": "Åpne økten",
+      "squadTooSmall": "Lagene er for små til dette formatet. Fordel flere spillere først.",
+      "sessionsHeading": "Økter",
+      "emptyOrganizer": "Du har ikke åpnet noen økt ennå.",
+      "emptyCaptain": "Arrangøren har ikke åpnet noen økt ennå.",
+      "slotSummary": "{count, plural, one {# kamp} other {# kamper}}",
+      "revealed": "Avdekket",
+      "waiting": "Venter",
+      "submitted": "Levert",
+      "notSubmitted": "Ikke levert",
+      "hidden": "Skjult til begge lag har levert.",
+      "unlock": "Lås opp",
+      "deleteSession": "Slett økten",
+      "seatLabel": "Kamp {slot}, spiller {seat}",
+      "pickPlayer": "Velg spiller",
+      "submitButton": "Lever uttaket",
+      "fillAllSlots": "Fyll alle plassene før du leverer.",
+      "errors": {
+        "not_allowed": "Du har ikke tilgang til dette uttaket.",
+        "not_found": "Fant ikke cupen eller økta.",
+        "save_failed": "Klarte ikke å lagre. Prøv igjen.",
+        "lineup_incomplete": "Du må fylle alle plassene før du kan levere.",
+        "lineup_duplicate_player": "Samme spiller står på to plasser. Én plass per spiller i hver økt.",
+        "lineup_not_in_squad": "En av spillerne er ikke på laget ditt.",
+        "lineup_slot_shape": "Uttaket ser rart ut. Last siden på nytt og prøv igjen.",
+        "lineup_squad_too_small": "Laget har for få spillere til denne økten.",
+        "lineup_revealed": "Økten er allerede avdekket.",
+        "lineup_already_submitted": "Uttaket er levert. Be arrangøren låse det opp hvis du vil endre noe.",
+        "lineup_format": "Ukjent format.",
+        "lineup_slot_count": "Antall kamper passer ikke med lagstørrelsen.",
+        "too_many_matches": "Cupen har ikke plass til flere kamper.",
+        "cup_finished": "Cupen er avsluttet.",
+        "missing_plan": "Bane og tee mangler. Fyll ut Oppsett-rommet først.",
+        "plan_tee": "Teen fra oppsettet finnes ikke lenger. Velg en ny i Oppsett-rommet.",
+        "insert_failed": "Klarte ikke å sette opp kampene. Prøv igjen.",
+        "profile_read_failed": "Klarte ikke å hente spillerne. Prøv igjen.",
+        "invalid_source_match": "Uttaket ser rart ut. Last siden på nytt og prøv igjen.",
+        "unexpected": "Noe gikk galt ({code})."
       }
     },
     "status": {
@@ -4764,7 +4831,9 @@
         "spillereTitle": "Spillere",
         "spillereSubtitle": "{count, plural, =0 {Ingen påmeldt ennå} one {# spiller påmeldt} other {# spillere påmeldt}}",
         "genererTitle": "Fordel & generer",
-        "genererSubtitle": "{count, plural, =0 {Ingen matcher ennå} one {# match laget} other {# matcher laget}}"
+        "genererSubtitle": "{count, plural, =0 {Ingen matcher ennå} one {# match laget} other {# matcher laget}}",
+        "uttakTitle": "Uttak",
+        "uttakSubtitle": "{count, plural, =0 {Ingen økter åpnet} one {# økt} other {# økter}}"
       }
     },
     "swap": {
@@ -4900,7 +4969,11 @@
       "matchPlayed": "Spilt",
       "matchScorecardsSubmitted": "Scorekort levert",
       "resultsDoor": "Se resultatene",
-      "resultsPending": "Resultatene kommer når cupen avsluttes"
+      "resultsPending": "Resultatene kommer når cupen avsluttes",
+      "lineupRevealedTitle": "Kampene er klare",
+      "lineupRevealedBody": "Kapteinene har levert. {format}: {count, plural, one {# kamp} other {# kamper}} er satt opp.",
+      "lineupDoor": "Uttaket",
+      "lineupDoorSubtitle": "Sett laget for neste økt"
     },
     "results": {
       "kicker": "Resultater",

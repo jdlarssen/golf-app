@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useActionState } from 'react';
+import { startTransition, useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,12 +12,17 @@ import {
   removeCupParticipant,
   type CupPlanActionError,
 } from '@/lib/cup/planActions';
+import { setCupParticipantRole } from '@/lib/cup/lineupActions';
+import type { CupTeamNumber } from '@/lib/cup/captainRoles';
 import { MAX_PERSONAL_CUP_PLAYERS } from '@/lib/cup/limits';
 
 export type ParticipantRow = {
   userId: string;
   displayName: string;
   hcpIndex: number;
+  /** Varig lagtilhørighet (#1884). `null` = utildelt. */
+  teamNumber?: CupTeamNumber | null;
+  isCaptain?: boolean;
 };
 
 export type AddableRow = ParticipantRow & { pending: boolean };
@@ -31,6 +36,8 @@ type Props = {
   candidateCount: number;
   /** Deltaker-tak for personlig ikke-admin-cup; udefinert = uncapped. */
   cap?: number;
+  /** Lagnavnene fra cupen — etikettene på lag-velgeren (#1884). */
+  teamNames: { 1: string; 2: string };
   /** Hvor «ingen kandidater»-lenken peker (spillerliste / klubb). */
   emptyCandidatesHref: string;
   emptyCandidatesLinkKey: 'emptyCandidatesLink' | 'emptyCandidatesLinkClub';
@@ -56,16 +63,25 @@ export function CupParticipantsList({
   addable,
   candidateCount,
   cap,
+  teamNames,
   emptyCandidatesHref,
   emptyCandidatesLinkKey,
 }: Props) {
   const t = useTranslations('cup.participants');
 
   const [state, dispatch, isPending] = useActionState(
-    async (_prev: CupPlanActionError, formData: FormData) =>
-      formData.get('intent') === 'remove'
-        ? removeCupParticipant(formData)
-        : addCupParticipant(formData),
+    async (_prev: CupPlanActionError, formData: FormData) => {
+      switch (formData.get('intent')) {
+        case 'remove':
+          return removeCupParticipant(formData);
+        // #1884: lag + kaptein bor i lineupActions (deny-by-default-tabellene
+        // har sitt eget gate-mønster), men deler feilbanner med resten her.
+        case 'role':
+          return setCupParticipantRole(formData);
+        default:
+          return addCupParticipant(formData);
+      }
+    },
     INITIAL_STATE,
   );
 
@@ -124,6 +140,11 @@ export function CupParticipantsList({
                   <div className="min-w-0">
                     <p className="font-sans text-sm font-medium text-text truncate">
                       {p.displayName}
+                      {p.isCaptain && (
+                        <span className="ml-2 rounded-full bg-[var(--score-under-bg)] px-2 py-0.5 font-sans text-[11px] font-medium text-[var(--score-under-fg)]">
+                          {t('captainBadge')}
+                        </span>
+                      )}
                     </p>
                     <p className="font-sans text-xs text-muted tabular-nums">
                       HCP {p.hcpIndex.toFixed(1)}
@@ -144,11 +165,21 @@ export function CupParticipantsList({
                     </Button>
                   </form>
                 </div>
+                <RoleControls
+                  tournamentId={tournamentId}
+                  participant={p}
+                  teamNames={teamNames}
+                  isPending={isPending}
+                  onSubmit={(fd) => startTransition(() => dispatch(fd))}
+                />
               </Card>
             ))}
           </div>
         )}
       </section>
+
+      {/* #1884: hjelpetekst for lag/kaptein-raden over. */}
+      <p className="-mt-4 text-xs text-muted">{t('roleHelper')}</p>
 
       {/* Legg til */}
       <section>
@@ -229,5 +260,97 @@ export function CupParticipantsList({
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * Lag- og kaptein-velgeren for én deltaker (#1884).
+ *
+ * Én rad, to felt: lag (uten lag / lag 1 / lag 2) og et kaptein-avkryss. De
+ * lagres sammen — «flytt kapteinen til det andre laget» skal være én handling,
+ * ikke en mellomtilstand der hun er kaptein for et lag hun ikke står på.
+ *
+ * Vises alltid, også i cuper uten kapteiner: en tom lag-velger koster ingenting,
+ * og det er her arrangøren oppdager at muligheten finnes. Uten en utnevnt
+ * kaptein oppfører cupen seg nøyaktig som før.
+ */
+function RoleControls({
+  tournamentId,
+  participant,
+  teamNames,
+  isPending,
+  onSubmit,
+}: {
+  tournamentId: string;
+  participant: ParticipantRow;
+  teamNames: { 1: string; 2: string };
+  isPending: boolean;
+  onSubmit: (formData: FormData) => void;
+}) {
+  const t = useTranslations('cup.participants');
+  const [team, setTeam] = useState<string>(
+    participant.teamNumber ? String(participant.teamNumber) : '',
+  );
+  const [captain, setCaptain] = useState(participant.isCaptain === true);
+
+  const dirty =
+    team !== (participant.teamNumber ? String(participant.teamNumber) : '') ||
+    captain !== (participant.isCaptain === true);
+
+  return (
+    <form
+      className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData();
+        fd.set('intent', 'role');
+        fd.set('id', tournamentId);
+        fd.set('user_id', participant.userId);
+        fd.set('team', team);
+        if (captain) fd.set('is_captain', 'on');
+        onSubmit(fd);
+      }}
+    >
+      <label className="flex items-center gap-2">
+        <span className="font-sans text-xs text-muted">{t('teamLabel')}</span>
+        <select
+          data-testid={`cup-participants-team-${participant.userId}`}
+          className="min-h-[44px] rounded-xl border border-line bg-bg px-3 text-sm text-text"
+          value={team}
+          onChange={(e) => {
+            setTeam(e.target.value);
+            // Uten lag kan man ikke være kaptein — speiler CHECK-en i 0172, så
+            // knappen ikke sender en kombinasjon serveren uansett avviser.
+            if (e.target.value === '') setCaptain(false);
+          }}
+        >
+          <option value="">{t('unassignedOption')}</option>
+          <option value="1">{teamNames[1]}</option>
+          <option value="2">{teamNames[2]}</option>
+        </select>
+      </label>
+
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          data-testid={`cup-participants-captain-${participant.userId}`}
+          className="h-5 w-5 rounded border-line"
+          checked={captain}
+          disabled={team === ''}
+          onChange={(e) => setCaptain(e.target.checked)}
+        />
+        <span className="font-sans text-xs text-muted">{t('captainLabel')}</span>
+      </label>
+
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={isPending || !dirty}
+        data-testid={`cup-participants-save-role-${participant.userId}`}
+        className="!px-3.5 text-sm"
+      >
+        {t('saveRole')}
+      </Button>
+    </form>
   );
 }

@@ -165,6 +165,10 @@
         "titleLeft": "{participantName} withdrew",
         "detail": "{tournamentName}"
       },
+      "cupLineupRevealed": {
+        "title": "The matches are set",
+        "detail": "{tournamentName}: {matchCount, plural, one {# match} other {# matches}}."
+      },
       "clubJoinRequest": {
         "title": "{requesterName} wants to join the club",
         "detail": "{groupName}"
@@ -4670,13 +4674,76 @@
         "copiedButton": "✓ Copied",
         "copyError": "Couldn't copy automatically. Select the link and copy it manually."
       },
+      "roleHeading": "Teams and captains",
+      "roleHelper": "Put the players on teams and name one captain per team. The captains then pick the lineups themselves, session by session.",
+      "teamLabel": "Team",
+      "unassignedOption": "No team",
+      "captainLabel": "Captain",
+      "captainBadge": "Captain",
+      "saveRole": "Save",
       "errors": {
         "not_candidate": "This player can't be enrolled in the cup.",
         "too_many_players": "A personal cup holds up to {cap} players. For more, create a club cup.",
         "not_draft": "The cup has already started, so enrollment is locked.",
         "not_found": "Couldn't find the cup.",
+        "not_participant": "That player is not on the participant list.",
+        "captain_needs_team": "A captain must be on a team.",
+        "team_taken": "That team already has a captain.",
+        "invalid_team": "Invalid team.",
+        "not_allowed": "Only the organiser can set teams and captains.",
         "plan_save_failed": "Couldn't save the change. Please try again.",
         "unexpected": "Unexpected error: {code}"
+      }
+    },
+    "lineup": {
+      "pageTitle": "Lineups",
+      "subtitleOrganizer": "Open the sessions and track who has submitted.",
+      "subtitleCaptain": "Pick your team. The other side sees nothing until both have submitted.",
+      "needsCaptains": "Both teams need a captain before you can open a session. Set them in the Players room.",
+      "openHeading": "Open a session",
+      "openHelper": "Pick the format and how many matches the session runs. The captains fill in the rest.",
+      "formatLabel": "Format",
+      "slotCountLabel": "Number of matches",
+      "decrease": "One match fewer",
+      "increase": "One match more",
+      "openButton": "Open session",
+      "squadTooSmall": "The teams are too small for this format. Assign more players first.",
+      "sessionsHeading": "Sessions",
+      "emptyOrganizer": "You haven't opened a session yet.",
+      "emptyCaptain": "The organiser hasn't opened a session yet.",
+      "slotSummary": "{count, plural, one {# match} other {# matches}}",
+      "revealed": "Revealed",
+      "waiting": "Waiting",
+      "submitted": "Submitted",
+      "notSubmitted": "Not submitted",
+      "hidden": "Hidden until both teams have submitted.",
+      "unlock": "Unlock",
+      "deleteSession": "Delete session",
+      "seatLabel": "Match {slot}, player {seat}",
+      "pickPlayer": "Pick a player",
+      "submitButton": "Submit lineup",
+      "fillAllSlots": "Fill every slot before you submit.",
+      "errors": {
+        "not_allowed": "You don't have access to this lineup.",
+        "not_found": "Couldn't find the cup or the session.",
+        "save_failed": "Couldn't save. Please try again.",
+        "lineup_incomplete": "You must fill every slot before you can submit.",
+        "lineup_duplicate_player": "The same player is in two slots. One slot per player per session.",
+        "lineup_not_in_squad": "One of the players is not on your team.",
+        "lineup_slot_shape": "That lineup looks off. Reload the page and try again.",
+        "lineup_squad_too_small": "The team has too few players for this session.",
+        "lineup_revealed": "The session has already been revealed.",
+        "lineup_already_submitted": "The lineup is submitted. Ask the organiser to unlock it if you want to change it.",
+        "lineup_format": "Unknown format.",
+        "lineup_slot_count": "That number of matches doesn't fit the team size.",
+        "too_many_matches": "The cup has no room for more matches.",
+        "cup_finished": "The cup is finished.",
+        "missing_plan": "Course and tee are missing. Fill in the Setup room first.",
+        "plan_tee": "The tee from the setup no longer exists. Pick a new one in the Setup room.",
+        "insert_failed": "Couldn't create the matches. Please try again.",
+        "profile_read_failed": "Couldn't load the players. Please try again.",
+        "invalid_source_match": "That lineup looks off. Reload the page and try again.",
+        "unexpected": "Something went wrong ({code})."
       }
     },
     "status": {
@@ -4764,7 +4831,9 @@
         "spillereTitle": "Players",
         "spillereSubtitle": "{count, plural, =0 {No one signed up yet} one {# player signed up} other {# players signed up}}",
         "genererTitle": "Assign & generate",
-        "genererSubtitle": "{count, plural, =0 {No matches yet} one {# match created} other {# matches created}}"
+        "genererSubtitle": "{count, plural, =0 {No matches yet} one {# match created} other {# matches created}}",
+        "uttakTitle": "Lineups",
+        "uttakSubtitle": "{count, plural, =0 {No sessions opened} one {# session} other {# sessions}}"
       }
     },
     "swap": {
@@ -4900,7 +4969,11 @@
       "matchPlayed": "Played",
       "matchScorecardsSubmitted": "Scorecards submitted",
       "resultsDoor": "View the results",
-      "resultsPending": "The results appear once the cup finishes"
+      "resultsPending": "The results appear once the cup finishes",
+      "lineupRevealedTitle": "The matches are set",
+      "lineupRevealedBody": "The captains have submitted. {format}: {count, plural, one {# match} other {# matches}}.",
+      "lineupDoor": "Lineups",
+      "lineupDoorSubtitle": "Pick the team for the next session"
     },
     "results": {
       "kicker": "Results",

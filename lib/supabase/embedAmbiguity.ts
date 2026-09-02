@@ -44,6 +44,7 @@ export const MULTI_FK_TO_USERS: readonly string[] = [
   'bingo_bango_bongo_holes', // bingo_user_id, bango_user_id, bongo_user_id, entered_by
   'courses', // created_by, updated_by
   'reactions', // user_id, target_user_id
+  'cup_lineup_sessions', // created_by, team_1_submitted_by, team_2_submitted_by
 ] as const;
 
 const MULTI_FK_SET = new Set(MULTI_FK_TO_USERS);

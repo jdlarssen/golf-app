@@ -89,7 +89,7 @@ export async function CupParticipants({
     admin
       .from('tournament_participants')
       .select(
-        'user_id, created_at, users:users!tournament_participants_user_id_fkey(id, name, nickname, hcp_index)',
+        'user_id, created_at, team_number, is_captain, users:users!tournament_participants_user_id_fkey(id, name, nickname, hcp_index)',
       )
       .eq('tournament_id', tournamentId)
       .order('created_at', { ascending: true }),
@@ -112,6 +112,10 @@ export async function CupParticipants({
         userId: row.user_id,
         displayName: displayNameOf(u, unknownLabel),
         hcpIndex: Number(u?.hcp_index ?? 0),
+        // #1884: varig lag + kapteinsrolle. Utildelt (`null`) er
+        // start-tilstanden og hele tilstanden i cuper uten kapteiner.
+        teamNumber: (row.team_number as 1 | 2 | null) ?? null,
+        isCaptain: row.is_captain === true,
       };
     },
   );
@@ -198,6 +202,10 @@ export async function CupParticipants({
         key={participants.map((p) => p.userId).join(',')}
         tournamentId={tournamentId}
         participants={participants}
+        teamNames={{
+          1: tournament.team_1_name,
+          2: tournament.team_2_name,
+        }}
         addable={addable}
         candidateCount={candidates.length}
         cap={cap}
