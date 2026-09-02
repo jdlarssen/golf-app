@@ -178,9 +178,9 @@ Alle kommandoer kjørt i denne økta, på `claude/poengmaal-1902-bygg`.
 | SK4 | Enhetstest: planlagt NULL på default-vektet cup → `lineup_planned_total_missing`, 0 skriv; vektet cup åpner som før. Staging: knappen `cup-lineup-open` disabled + `cup-lineup-needs-planned` synlig; etter lagring disabled=false. |
 | SK5 | `lib/cup/actions.test.ts`: 8 kamper + planlagt 28 → 14,5 i update-en OG i `sendCupStartedNotification`-kallet (`pointsToWin: 14.5`); planlagt NULL → 4,5; 30 faktiske > 28 planlagt → 15,5; vektet → null. |
 | SK6 | `lib/cup/lineupActions.test.ts`: avdekking med 6 faktiske > 4 planlagt → `points_to_win` 3,5; 8 faktiske < 28 planlagt → 14,5; synk-feil → logget, avdekkingen returnerer `{error:''}` og kampene står. |
-| SK7 | `npx vitest run` → **531 filer, 7270 tester, exit 0**. `npm run build` → exit 0. `npx tsc --noEmit` → exit 0. `npx eslint lib/cup/` → 0. |
+| SK7 | `npx vitest run` → **532 filer, 7276 tester, exit 0**. `npm run build` → exit 0. `npx tsc --noEmit` → exit 0. `npx eslint lib/cup/` → 0. |
 | SK8 | Nye `cup.lineup.*`-nøkler i BEGGE kataloger (paritetstest grønn: `npx vitest run messages` → 4 passed). `.changes/1902-poengmaal-planlagt.md` godtatt av `node scripts/weekly-release.mjs --dry-run`. `humanizer:humanizer` kjørt — endret passiv «regnes ut fra» → «følger», «Oppgi» → «Si hvor mange kamper cupen skal ha», løste opp som…som-kjeden i valideringsfeilen. |
-| SK9 | Staging (`snwmueecmfqqdurxedxv`), prod-server-modus (`npm run build` + `next start`, `/api/health` sha `514090c9`). Fikstur-cup `5283f7c3-de93-49b4-96a0-298ba2157bea`, 3 mot 3, default-vekter, to kapteiner. Se tabellen under. |
+| SK9 | Staging (`snwmueecmfqqdurxedxv`), prod-server-modus (`npm run build` + `next start`, `/api/health` sha `9f936427` = endelig HEAD — hele runden ble kjørt om igjen etter evaluator-fiksene, på nullstilt fikstur). Fikstur-cup `5283f7c3-de93-49b4-96a0-298ba2157bea`, 3 mot 3, default-vekter, to kapteiner. Se tabellen under. |
 
 ### SK9 — staging-runden steg for steg
 
