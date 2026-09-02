@@ -15,7 +15,7 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import {
   ResultView,
-  WEB_ONLY_RESULT_MESSAGE,
+  UNKNOWN_FORMAT_RESULT_MESSAGE,
 } from '../components/leaderboard/ResultView';
 import { SideTournamentSection } from '../components/leaderboard/SideTournamentSection';
 import { CalmNote, LeaderTable } from '../components/leaderboard/Table';
@@ -23,7 +23,7 @@ import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
 import { subscribeGameScores } from '../data/realtime';
 import { seedGameScores } from '../data/seedScores';
-import { gateReason } from '../lib/formatGate';
+import { gateMessage, gateReason } from '../lib/formatGate';
 import { grossLines, leaderboardVisibility, nameLookup } from '../lib/leaderboardModel';
 import {
   computeGameLeaderboard,
@@ -74,16 +74,36 @@ const NO_SIDE_WINNERS: SideWinnersState = {
 /**
  * Hva spilleren får se når motoren ikke kan svare. Alle er rolige: en
  * resultattabell som ikke finnes er ikke en feil spilleren har gjort.
+ *
+ * INGEN av dem nevner nettsiden. Fram til #1844 delte `unknown-mode` og
+ * `missing-config` teksten med den gatede grenen under, og lovet dermed
+ * spilleren en nettside-tabell vi ikke vet finnes. De fem årsakene er fem ulike
+ * ting, og sier nå hver sin.
  */
 const PROBLEM_MESSAGES: Record<ScoringContextProblem, string> = {
-  'unknown-mode': WEB_ONLY_RESULT_MESSAGE,
-  'missing-config': WEB_ONLY_RESULT_MESSAGE,
+  'unknown-mode': UNKNOWN_FORMAT_RESULT_MESSAGE,
+  // `mode_config` mangler eller peker på et annet format enn `game_mode`. Det
+  // er en mangel ved SELVE runden, ikke ved app-versjonen.
+  'missing-config': 'Formatet er ikke satt opp for denne runden.',
   // Wolf og BBB uten valgene: ærlig melding, ALDRI en tabell der hvert hull
   // står uavgjort. Den ville sett like autoritativ ut som en ekte stilling.
   'missing-choices':
     'Fikk ikke tak i valgene som avgjør poengene. Tabellen kommer når nettet er tilbake.',
   'no-course': 'Banen er ikke satt for denne runden ennå.',
   'no-players': 'Ingen spillere står oppført i runden.',
+};
+
+/**
+ * Én testID per årsak. Alle fem rendres gjennom det samme kallstedet, så uten
+ * denne tabellen kunne en test ikke skille «appen kjenner ikke formatet» fra
+ * «banen mangler» — de så like ut for testeren selv etter at tekstene ble delt.
+ */
+const PROBLEM_TEST_IDS: Record<ScoringContextProblem, string> = {
+  'unknown-mode': 'leaderboard-unknown-format',
+  'missing-config': 'leaderboard-missing-config',
+  'missing-choices': 'leaderboard-missing-choices',
+  'no-course': 'leaderboard-no-course',
+  'no-players': 'leaderboard-no-players',
 };
 
 export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
@@ -167,8 +187,12 @@ export function LeaderboardBody({
   const { game } = bundle;
   const nameOf = nameLookup(bundle.players);
 
-  if (gateReason(game) !== null) {
-    return <CalmNote text={WEB_ONLY_RESULT_MESSAGE} testID="leaderboard-web-only" />;
+  // Gaten skiller selv på hva som er stengt — formatet (gjelder alle runder i
+  // det formatet) eller nettopp denne runden (cup-halvdeler og avledninger).
+  // `gateMessage` er det ene hjemmet for de to ordlydene, delt med føring-CTA-en.
+  const gate = gateReason(game);
+  if (gate !== null) {
+    return <CalmNote text={gateMessage(gate)} testID="leaderboard-gated-format" />;
   }
 
   const visibility = leaderboardVisibility(
@@ -198,7 +222,10 @@ export function LeaderboardBody({
     // fasit for lag-grupperingen, og en gjettet gruppering ville delt ut
     // sidepoengene til feil lag.
     return (
-      <CalmNote text={PROBLEM_MESSAGES[outcome.problem]} testID="leaderboard-web-only" />
+      <CalmNote
+        text={PROBLEM_MESSAGES[outcome.problem]}
+        testID={PROBLEM_TEST_IDS[outcome.problem]}
+      />
     );
   }
 
