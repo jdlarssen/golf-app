@@ -59,7 +59,7 @@ import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import { wolfHoleState, wolfPointsByUser } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { COLORS, TAP, ui } from '../theme';
+import { FONTS, TAP, useTheme } from '../theme';
 
 const HOLE_COUNT = 18;
 /** Webbens grenser: én slag-verdi er alltid mellom 1 og 15. */
@@ -71,6 +71,7 @@ const MAX_PUTTS = 10;
 const POLL_MS = 1500;
 
 export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
+  const { colors, ui } = useTheme();
   const { gameId, holeNumber } = route.params;
   const { userId } = useSession();
   const { bundle, loading } = useGameBundle(gameId);
@@ -109,7 +110,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
     return (
       <View style={ui.centered} testID="hole-loading">
         {loading ? (
-          <ActivityIndicator color={COLORS.forest} />
+          <ActivityIndicator color={colors.primary} />
         ) : (
           <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
         )}
@@ -337,18 +338,31 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
         <View style={styles.strip}>
           {Array.from({ length: HOLE_COUNT }, (_, i) => i + 1).map((n) => {
             const isCurrent = n === holeNumber;
+            const isFilled = myFilled.includes(n);
             return (
               <Pressable
                 key={n}
                 onPress={() => goToHole(n)}
                 style={[
                   styles.stripHole,
-                  myFilled.includes(n) && styles.stripFilled,
-                  isCurrent && styles.stripCurrent,
+                  {
+                    backgroundColor: isFilled ? colors.accent : colors.surface,
+                    borderColor: isCurrent ? colors.primary : colors.border,
+                    borderWidth: isCurrent ? 2 : 1,
+                  },
                 ]}
                 testID={`hole-strip-${n}`}
               >
-                <Text style={[ui.num, styles.stripText, isCurrent && styles.stripTextCurrent]}>
+                <Text
+                  style={[
+                    ui.num,
+                    styles.stripText,
+                    // Blekket på gull er mørkt i begge palettene; ellers vanlig
+                    // tekstfarge.
+                    { color: isFilled ? colors.onAccent : colors.text },
+                    isCurrent && styles.stripTextCurrent,
+                  ]}
+                >
                   {n}
                 </Text>
               </Pressable>
@@ -442,6 +456,7 @@ function TeamCardView({
   onStrokes: (delta: number) => void;
   onPutts: (delta: number) => void;
 }) {
+  const { ui } = useTheme();
   return (
     <View style={ui.card} testID={`team-card-${card.teamNumber}`}>
       <View style={styles.cardHead}>
@@ -502,6 +517,7 @@ function PlayerCard({
   onStrokes: (delta: number) => void;
   onPutts: (delta: number) => void;
 }) {
+  const { ui } = useTheme();
   const player: BundlePlayer = entry.player;
   const extra = strokesForHole(player.courseHandicap ?? 0, hole.strokeIndex);
 
@@ -552,27 +568,34 @@ function Stepper({
   onChange: (delta: number) => void;
   testIDPrefix: string;
 }) {
+  const { colors, ui } = useTheme();
+  const stepStyle = [
+    styles.step,
+    { backgroundColor: colors.primary },
+    disabled && styles.stepDisabled,
+  ];
+  const stepTextStyle = [styles.stepText, { color: colors.onPrimary }];
   return (
     <View style={styles.stepperRow}>
       <Text style={[ui.muted, styles.stepperLabel]}>{label}</Text>
       <Pressable
-        style={[styles.step, disabled && styles.stepDisabled]}
+        style={stepStyle}
         onPress={() => onChange(-1)}
         disabled={disabled}
         testID={`${testIDPrefix}-minus`}
       >
-        <Text style={styles.stepText}>−</Text>
+        <Text style={stepTextStyle}>−</Text>
       </Pressable>
       <Text style={[ui.value, ui.num, styles.stepValue]} testID={`${testIDPrefix}-value`}>
         {value ?? '—'}
       </Text>
       <Pressable
-        style={[styles.step, disabled && styles.stepDisabled]}
+        style={stepStyle}
         onPress={() => onChange(1)}
         disabled={disabled}
         testID={`${testIDPrefix}-plus`}
       >
-        <Text style={styles.stepText}>+</Text>
+        <Text style={stepTextStyle}>+</Text>
       </Pressable>
     </View>
   );
@@ -585,35 +608,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  meName: { fontWeight: '700' },
+  // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
+  meName: { fontFamily: FONTS.sansBold },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepperLabel: { width: 60 },
   step: {
     width: TAP,
     height: TAP,
     borderRadius: 8,
-    backgroundColor: COLORS.forest,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepDisabled: { opacity: 0.4 },
-  stepText: { color: COLORS.card, fontSize: 22, fontWeight: '700' },
+  stepText: { fontSize: 22, fontFamily: FONTS.sansBold },
   stepValue: { width: 44, textAlign: 'center' },
   strip: { flexDirection: 'row', gap: 6, paddingVertical: 8 },
   stripHole: {
     width: TAP,
     height: TAP,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stripFilled: { backgroundColor: COLORS.gold },
-  stripCurrent: { borderColor: COLORS.forest, borderWidth: 2 },
-  stripText: { color: COLORS.forest, fontSize: 15 },
-  stripTextCurrent: { fontWeight: '700' },
+  stripText: { fontSize: 15 },
+  stripTextCurrent: { fontFamily: FONTS.sansBold },
   navRow: { flexDirection: 'row', gap: 12 },
   navButton: { flex: 1 },
 });

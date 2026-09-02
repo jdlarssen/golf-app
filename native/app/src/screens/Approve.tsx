@@ -29,9 +29,10 @@ import { findInRoster, pendingApprovals, toRoster, type RosterEntry } from '../l
 import { scoresByHoleFor, useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { ui } from '../theme';
+import { useTheme } from '../theme';
 
 export function Approve({ route }: ScreenProps<'Approve'>) {
+  const { ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
   const { bundle, refresh } = useGameBundle(gameId);
@@ -166,6 +167,7 @@ function ScoreSummary({
   scores: readonly LocalScore[];
   userId: string;
 }) {
+  const { ui } = useTheme();
   const byHole = scoresByHoleFor(scores, userId);
   const played = [...byHole.values()]
     .filter((row) => row.strokes != null)

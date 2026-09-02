@@ -1,5 +1,8 @@
 // Native N2 (#1823): Sync-lab — spike-flata som gjør datalaget synlig.
 //
+// #1833: fargene kommer fra `useTheme()` som ellers i appen — layouten står
+// igjen i det statiske arket nederst.
+//
 // Ingen polish, samme stil som N1: velg nyeste aktive spill spilleren er med i,
 // vis hull 1–3 med −/+ på slag, og la statuslinja fortelle hva kø, drain og
 // realtime driver med. Tapping drainer med vilje IKKE: køen skal være synlig
@@ -29,6 +32,7 @@ import { startSyncTriggers } from './data/syncTriggers';
 import { drainQueue, getLastDrain, type DrainLog } from './data/syncWorker';
 import { writeScore } from './data/writeScore';
 import { supabase } from './supabase';
+import { FONTS, TAP, useTheme } from './theme';
 
 const HOLES = [1, 2, 3];
 const MAX_STROKES = 15;
@@ -48,6 +52,7 @@ export function SyncLab({
   userId: string;
   onBack: () => void;
 }) {
+  const { colors } = useTheme();
   const [phase, setPhase] = useState<Phase>('laster');
   const [errorText, setErrorText] = useState<string | null>(null);
   const [game, setGame] = useState<{ id: string; name: string } | null>(null);
@@ -191,69 +196,75 @@ export function SyncLab({
     }
   };
 
+  const screenStyle = [styles.screen, { backgroundColor: colors.bg }];
+  const bodyStyle = [styles.body, { color: colors.text }];
+  const cardStyle = [styles.card, { backgroundColor: colors.surface }];
+  const stepStyle = [styles.step, { backgroundColor: colors.primary }];
+  const stepTextStyle = [styles.stepText, { color: colors.onPrimary }];
+  const errorStyle = [styles.error, { color: colors.danger }];
+
   if (phase === 'laster') {
     return (
-      <View style={styles.screen} testID="sync-lab-screen">
-        <ActivityIndicator color="#1B4332" />
-        <Text style={styles.body}>Finner et aktivt spill …</Text>
+      <View style={screenStyle} testID="sync-lab-screen">
+        <ActivityIndicator color={colors.primary} />
+        <Text style={bodyStyle}>Finner et aktivt spill …</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.screen}
-      testID="sync-lab-screen"
-    >
-      <Text style={styles.title}>Sync-lab</Text>
+    <ScrollView contentContainerStyle={screenStyle} testID="sync-lab-screen">
+      <Text style={[styles.title, { color: colors.text }]}>Sync-lab</Text>
 
       {phase === 'tomt' ? (
-        <Text style={styles.body} testID="empty-state">
+        <Text style={bodyStyle} testID="empty-state">
           Ingen aktive spill på staging. Start et spill der og åpne laben på nytt.
         </Text>
       ) : null}
 
       {phase === 'feil' ? (
-        <Text style={styles.error} testID="lab-error">
+        <Text style={errorStyle} testID="lab-error">
           {errorText}
         </Text>
       ) : null}
 
       {phase === 'klar' && game ? (
         <>
-          <Text style={styles.body}>Spill</Text>
-          <Text style={styles.value} testID="game-name">
+          <Text style={bodyStyle}>Spill</Text>
+          <Text style={[styles.value, { color: colors.text }]} testID="game-name">
             {game.name}
           </Text>
 
-          <View style={styles.card}>
+          <View style={cardStyle}>
             {HOLES.map((holeNumber) => {
               const row = scoreFor(holeNumber);
               return (
                 <View style={styles.holeRow} key={holeNumber}>
-                  <Text style={styles.holeLabel}>Hull {holeNumber}</Text>
+                  <Text style={[styles.holeLabel, { color: colors.text }]}>
+                    Hull {holeNumber}
+                  </Text>
                   <Pressable
-                    style={styles.step}
+                    style={stepStyle}
                     onPress={() => void adjust(holeNumber, -1)}
                     testID={`hole-${holeNumber}-minus`}
                   >
-                    <Text style={styles.stepText}>−</Text>
+                    <Text style={stepTextStyle}>−</Text>
                   </Pressable>
                   <Text
-                    style={styles.strokes}
+                    style={[styles.strokes, { color: colors.text }]}
                     testID={`hole-${holeNumber}-strokes`}
                   >
                     {row?.strokes ?? '—'}
                   </Text>
                   <Pressable
-                    style={styles.step}
+                    style={stepStyle}
                     onPress={() => void adjust(holeNumber, 1)}
                     testID={`hole-${holeNumber}-plus`}
                   >
-                    <Text style={styles.stepText}>+</Text>
+                    <Text style={stepTextStyle}>+</Text>
                   </Pressable>
                   <Text
-                    style={styles.synced}
+                    style={[styles.synced, { color: colors.muted }]}
                     testID={`hole-${holeNumber}-synced`}
                   >
                     {row ? (row.serverUpdatedAt ? 'synket' : 'venter') : ''}
@@ -263,37 +274,37 @@ export function SyncLab({
             })}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.body} testID="queue-count">
+          <View style={cardStyle}>
+            <Text style={bodyStyle} testID="queue-count">
               I kø: {queueCount}
             </Text>
-            <Text style={styles.body} testID="last-drain">
+            <Text style={bodyStyle} testID="last-drain">
               Siste synk:{' '}
               {drain
                 ? `${clockOf(drain.at)} (${drain.reason}) — ${drain.pushed} sendt, ${drain.rejected} overskrevet, ${drain.errored} feil, ${drain.abandoned} gitt opp`
                 : 'ingen ennå'}
             </Text>
-            <Text style={styles.body} testID="realtime-status">
+            <Text style={bodyStyle} testID="realtime-status">
               Realtime: {realtime}
             </Text>
-            <Text style={styles.body} testID="conflict-count">
+            <Text style={bodyStyle} testID="conflict-count">
               Konfliktvarsler: {conflictCount}
             </Text>
           </View>
 
           <Pressable
-            style={styles.button}
+            style={[styles.button, { backgroundColor: colors.primary }]}
             onPress={() => void syncNow()}
             disabled={busy}
             testID="sync-now"
           >
-            <Text style={styles.buttonText}>
+            <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
               {busy ? 'Jobber …' : 'Synk nå'}
             </Text>
           </Pressable>
 
           {errorText ? (
-            <Text style={styles.error} testID="lab-error">
+            <Text style={errorStyle} testID="lab-error">
               {errorText}
             </Text>
           ) : null}
@@ -301,64 +312,63 @@ export function SyncLab({
       ) : null}
 
       <Pressable style={styles.buttonSecondary} onPress={onBack} testID="lab-back">
-        <Text style={styles.buttonSecondaryText}>Tilbake</Text>
+        <Text style={[styles.buttonSecondaryText, { color: colors.primary }]}>
+          Tilbake
+        </Text>
       </Pressable>
     </ScrollView>
   );
 }
 
+// Kun layout og typografi her — fargene settes inline fra paletten.
+// `fontWeight` er byttet mot familienavn: expo-font registrerer ett snitt per
+// familie, så en vekt oppå Inter Regular gjør ingenting.
 const styles = StyleSheet.create({
   screen: {
     flexGrow: 1,
-    backgroundColor: '#F8F6F0',
     justifyContent: 'center',
     padding: 24,
     gap: 8,
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#1B4332',
+    fontFamily: FONTS.serifScore,
     textAlign: 'center',
     marginBottom: 16,
   },
-  body: { fontSize: 16, color: '#1B4332' },
-  value: { fontSize: 22, fontWeight: '700', color: '#1B4332' },
+  body: { fontSize: 16, fontFamily: FONTS.sans },
+  value: { fontSize: 22, fontFamily: FONTS.serifScore },
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginVertical: 16,
     gap: 8,
   },
   holeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  holeLabel: { fontSize: 16, color: '#1B4332', width: 72 },
+  holeLabel: { fontSize: 16, fontFamily: FONTS.sans, width: 72 },
   step: {
-    width: 44,
-    height: 44,
+    width: TAP,
+    height: TAP,
     borderRadius: 8,
-    backgroundColor: '#1B4332',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepText: { color: '#FFFFFF', fontSize: 22, fontWeight: '700' },
+  stepText: { fontSize: 22, fontFamily: FONTS.sansBold },
   strokes: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#1B4332',
+    fontFamily: FONTS.serifScore,
     width: 36,
     textAlign: 'center',
   },
-  synced: { fontSize: 13, color: '#1B4332', flexShrink: 1 },
+  synced: { fontSize: 13, fontFamily: FONTS.sans, flexShrink: 1 },
   button: {
-    backgroundColor: '#1B4332',
     borderRadius: 8,
     padding: 14,
     alignItems: 'center',
     marginTop: 8,
   },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  buttonText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },
   buttonSecondary: { padding: 12, alignItems: 'center' },
-  buttonSecondaryText: { color: '#1B4332', fontSize: 15 },
-  error: { color: '#B00020', fontSize: 15, textAlign: 'center' },
+  buttonSecondaryText: { fontSize: 15, fontFamily: FONTS.sans },
+  error: { fontSize: 15, fontFamily: FONTS.sans, textAlign: 'center' },
 });

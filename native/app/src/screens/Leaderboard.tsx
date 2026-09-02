@@ -35,7 +35,7 @@ import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
 import type { ScreenProps } from '../navigation';
-import { COLORS, ui } from '../theme';
+import { useTheme } from '../theme';
 
 /** Samme takt som hull-siden — en drain eller en merge skjer utenfor React. */
 const POLL_MS = 1500;
@@ -87,6 +87,7 @@ const PROBLEM_MESSAGES: Record<ScoringContextProblem, string> = {
 };
 
 export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
+  const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { bundle, loading } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId, POLL_MS);
@@ -116,7 +117,7 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
     return (
       <View style={ui.centered} testID="leaderboard-loading">
         {loading ? (
-          <ActivityIndicator color={COLORS.forest} />
+          <ActivityIndicator color={colors.primary} />
         ) : (
           <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
         )}

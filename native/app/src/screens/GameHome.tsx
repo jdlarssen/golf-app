@@ -56,12 +56,13 @@ import {
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { COLORS, ui } from '../theme';
+import { FONTS, useTheme } from '../theme';
 
 /** Appen fører bare hele runder — segment-spill gates bort i `formatGate`. */
 const HOLE_COUNT = 18;
 
 export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
+  const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
   const { bundle, errorText, loading, refresh } = useGameBundle(gameId);
@@ -98,7 +99,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     if (loading) {
       return (
         <View style={ui.centered} testID="game-loading">
-          <ActivityIndicator color={COLORS.forest} />
+          <ActivityIndicator color={colors.primary} />
         </View>
       );
     }
@@ -256,6 +257,7 @@ function PrimarySection({
   approvedAt: string | null;
   onNavigate: ScreenProps<'GameHome'>['navigation']['navigate'];
 }) {
+  const { ui } = useTheme();
   const { game } = bundle;
 
   if (gated !== null) {
@@ -363,6 +365,7 @@ function PrimarySection({
 }
 
 function RosterRow({ player, isMe }: { player: BundlePlayer; isMe: boolean }) {
+  const { ui } = useTheme();
   const marks: string[] = [];
   if (player.flightNumber != null) marks.push(`Flight ${player.flightNumber}`);
   if (player.teamNumber != null) marks.push(`Lag ${player.teamNumber}`);
@@ -389,5 +392,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  meName: { fontWeight: '700' },
+  // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
+  meName: { fontFamily: FONTS.sansBold },
 });
