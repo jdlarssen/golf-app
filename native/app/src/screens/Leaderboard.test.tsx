@@ -216,7 +216,22 @@ describe('LeaderboardBody', () => {
         scores={mockLocalScores}
       />,
     );
-    expect(screen.getByTestId('leaderboard-web-only')).toBeTruthy();
+    expect(screen.getByTestId('leaderboard-gated-format')).toBeTruthy();
+    // Ordlyden er `gateMessage('mode')`. Nettsiden nevnes KUN her (#1844), og
+    // #1891 fester «Åpne runden på nettsiden»-knappen på nettopp denne grenen.
+    expect(screen.getByText('Dette formatet føres på nettsiden ennå.')).toBeTruthy();
+  });
+
+  it('sier at oppsettet mangler — ikke at formatet finnes på nettsiden', async () => {
+    // `mode_config` er borte: motoren narrower på den, så adapteren svarer
+    // `missing-config`. Fram til #1844 delte den tekst med den gatede grenen
+    // over og sendte spilleren til en nettside-tabell vi ikke vet finnes.
+    await render(
+      <LeaderboardBody bundle={withGame({ modeConfig: null })} scores={mockLocalScores} />,
+    );
+    expect(screen.getByTestId('leaderboard-missing-config')).toBeTruthy();
+    expect(screen.getByText('Formatet er ikke satt opp for denne runden.')).toBeTruthy();
+    expect(screen.queryByTestId('leaderboard-gated-format')).toBeNull();
   });
 
   it('sier rolig fra når ingen har ført et slag ennå', async () => {
@@ -347,7 +362,7 @@ describe('ResultView', () => {
     expect(screen.queryByTestId('bbb-no-points')).toBeNull();
   });
 
-  it('viser en rolig henvisning i stedet for å krasje på en ukjent resultatform', async () => {
+  it('sier rolig fra i stedet for å krasje på en ukjent resultatform', async () => {
     // Eldre app, nyere server: motoren sender en `kind` denne versjonen ikke
     // kjenner. `tsc` fanger den når vi bygger MOT den nye motoren — dette er
     // fallskjermen for tilfellet der appen alt står på telefonen.
@@ -355,7 +370,8 @@ describe('ResultView', () => {
     await render(
       <ResultView result={fromTheFuture} status="active" nameOf={() => 'Ukjent'} />,
     );
-    expect(screen.getByTestId('leaderboard-web-only')).toBeTruthy();
-    expect(screen.getByText('Formatet vises på nettsiden ennå.')).toBeTruthy();
+    expect(screen.getByTestId('leaderboard-unknown-format')).toBeTruthy();
+    // Nevner IKKE nettsiden (#1844): vi vet ikke om formatet finnes der.
+    expect(screen.getByText('Appen kjenner ikke dette formatet ennå.')).toBeTruthy();
   });
 });

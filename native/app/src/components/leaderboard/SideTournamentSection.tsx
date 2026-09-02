@@ -20,7 +20,7 @@
 //     paritetstestet mot webbens `no.json`. Den ENE strengen som ikke gjør det
 //     er {@link SIDE_WINNERS_UNAVAILABLE_MESSAGE} — den har ingen web-motpart
 //     (webben renderer på serveren og kan ikke miste vinnerradene), og bor
-//     derfor her, etter samme mønster som `WEB_ONLY_RESULT_MESSAGE`.
+//     derfor her, etter samme mønster som `GATED_FORMAT_RESULT_MESSAGE`.
 //  4. **Regelpanelet «Slik gis poengene» er ute av v1.** Webbens
 //     `AchievementRow` viser en regel-undertittel under turkey/solid/snowman
 //     (`achievementRules.*`); de strengene er bevisst ikke speilet, så appen

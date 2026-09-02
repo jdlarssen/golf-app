@@ -16,8 +16,25 @@ import { NassauView, SkinsView } from './PotViews';
 import { CalmNote, LeaderTable, type LeaderColumn } from './Table';
 import { WolfView } from './WolfView';
 
-/** Teksten for formater appen ennå ikke tegner. Aldri en krasj, aldri tomt. */
-export const WEB_ONLY_RESULT_MESSAGE = 'Formatet vises på nettsiden ennå.';
+/**
+ * Teksten for et format som er STENGT i appen med vilje (`formatGate`) — det
+ * finnes på nettsiden, spilleren skal bare et annet sted. Ordlyden «… på
+ * nettsiden ennå» er den samme som `gateMessage` (`lib/formatGate.ts`) bruker, så
+ * føring-CTA-en og resultatflaten ikke lover to ulike ting.
+ *
+ * Skilt fra {@link UNKNOWN_FORMAT_RESULT_MESSAGE} i #1844: dette er den ENESTE
+ * av de to som er sann om nettsiden.
+ */
+export const GATED_FORMAT_RESULT_MESSAGE = 'Formatet vises på nettsiden ennå.';
+
+/**
+ * Teksten for et format appen ikke kjenner igjen — motoren sendte en `kind`
+ * denne app-versjonen aldri har sett, eller adapteren fant ingen `GameMode`.
+ *
+ * Sier bevisst INGENTING om nettsiden: vi vet ikke om formatet finnes der.
+ * Alt vi vet er at appen på telefonen er eldre enn spillet.
+ */
+export const UNKNOWN_FORMAT_RESULT_MESSAGE = 'Appen kjenner ikke dette formatet ennå.';
 
 const RANK: LeaderColumn = { key: 'rank', label: '#', flex: 0.5, numeric: true };
 const PLAYER: LeaderColumn = { key: 'name', label: 'Navn', flex: 3 };
@@ -296,7 +313,12 @@ export function ResultView({
     // Gatet i `formatGate` — kan ikke nås fra appen, men har en gren så en
     // fremtidig åpning ikke møter en tom skjerm.
     case 'patsome':
-      return <CalmNote text={WEB_ONLY_RESULT_MESSAGE} testID="leaderboard-web-only" />;
+      return (
+        <CalmNote
+          text={GATED_FORMAT_RESULT_MESSAGE}
+          testID="leaderboard-gated-format"
+        />
+      );
 
     default: {
       // `never`-vakten er kompilefeilen; returen under er fallskjermen. En
@@ -304,7 +326,12 @@ export function ResultView({
       // (eldre app, nyere server) skal si fra, ikke rendre ingenting.
       const exhaustive: never = result;
       void exhaustive;
-      return <CalmNote text={WEB_ONLY_RESULT_MESSAGE} testID="leaderboard-web-only" />;
+      return (
+        <CalmNote
+          text={UNKNOWN_FORMAT_RESULT_MESSAGE}
+          testID="leaderboard-unknown-format"
+        />
+      );
     }
   }
 }
