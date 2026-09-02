@@ -26,8 +26,10 @@ import {
   rosterFitsMode,
   type TeamLayout,
 } from '../../lib/rosterLimits';
+import { CREATE_ON_WEB_PATH } from '../../lib/createGameCopy';
 import type { DraftPlayer } from '../../lib/wizardPayload';
 import { useTheme } from '../../theme';
+import { WebLinkButton } from '../WebLinkButton';
 import { Chips, Field, Note, SelectRow } from './primitives';
 
 function teamOptions(layout: TeamLayout, userId: string) {
@@ -125,10 +127,21 @@ export function PlayersStep({
       ) : null}
 
       {candidates !== null && others.length === 0 && needle === '' ? (
-        <Note testID="create-players-empty">
-          Du har ingen medspillere å velge fra ennå. Du kan opprette runden med
-          bare deg selv. Nye folk inviterer du på nettsiden.
-        </Note>
+        <>
+          <Note testID="create-players-empty">
+            Du har ingen medspillere å velge fra ennå. Du kan opprette runden med
+            bare deg selv. Nye folk inviterer du på nettsiden.
+          </Note>
+          {/* #1891: veiviseren har ingen runde ennå, så det finnes ingen
+              `/games/{id}/spillere` å peke på. Webbens egen veiviser er den
+              nærmeste flaten som gater riktig — der ligger invitasjonen i
+              samme flyt. */}
+          <WebLinkButton
+            label="Inviter på nettsiden"
+            path={CREATE_ON_WEB_PATH}
+            testID="create-players-empty-link"
+          />
+        </>
       ) : null}
 
       {candidates !== null && others.length > 0 ? (

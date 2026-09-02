@@ -18,8 +18,13 @@ import {
   type FormatCatalogEntry,
 } from '../../data/formatCatalog';
 import type { AppGameMode } from '../../lib/appFormats';
+import {
+  CREATE_ON_WEB_LABEL,
+  CREATE_ON_WEB_PATH,
+} from '../../lib/createGameCopy';
 import { describePlayerCounts } from '../../lib/rosterLimits';
 import { useTheme } from '../../theme';
+import { WebLinkButton } from '../WebLinkButton';
 import { SelectRow } from './primitives';
 
 export function FormatStep({
@@ -65,9 +70,19 @@ export function FormatStep({
       ) : null}
 
       {entries !== null && entries.length === 0 ? (
-        <Text style={ui.body} testID="create-format-empty">
-          Ingen formater er slått på akkurat nå. Opprett spillet på nettsiden.
-        </Text>
+        <>
+          <Text style={ui.body} testID="create-format-empty">
+            Ingen formater er slått på akkurat nå. Opprett spillet på nettsiden.
+          </Text>
+          {/* #1891: uten knapp var dette veiviserens blindvei — ingen formater
+              å velge, og ingen vei videre. Webbens `/opprett-spill` er den
+              åpne veiviseren, ikke Sekretariatet. */}
+          <WebLinkButton
+            label={CREATE_ON_WEB_LABEL}
+            path={CREATE_ON_WEB_PATH}
+            testID="create-format-empty-link"
+          />
+        </>
       ) : null}
 
       {(entries ?? []).map((entry) => (

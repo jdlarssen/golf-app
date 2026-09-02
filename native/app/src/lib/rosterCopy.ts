@@ -50,6 +50,28 @@ export const OWN_ROW_LOCKED_NOTE =
   'Du kan ikke trekke deg selv herfra. Det ordner du på nettsiden.';
 
 /**
+ * Knappen som står under noten (#1891), og under `ownRowHint` på avslutt-flaten
+ * (`endGameCopy.ts`) — samme mangel, samme vei ut.
+ *
+ * Etiketten og stien bor sammen med noten så de to kallstedene ikke kan drive
+ * fra hverandre. Webbens `/games/[id]/trekk-fra` slipper en aktiv runde inn
+ * (`isActiveWithdrawable`) så lenge formatet støtter frafall; gjør det ikke
+ * det, sender siden arrangøren tilbake til runden. Det er en ærlig grense og
+ * ikke en feil — appen kan uansett ikke gjøre skrivingen selv (#1917).
+ */
+export const WITHDRAW_SELF_LINK_LABEL = 'Trekk deg på nettsiden';
+
+/**
+ * Frafalls-siden for én runde.
+ *
+ * `encodeURIComponent` selv om id-en er en uuid fra vår egen bundle: en sti
+ * bygget av data kodes der den bygges.
+ */
+export function withdrawSelfWebPath(gameId: string): string {
+  return `/games/${encodeURIComponent(gameId)}/trekk-fra`;
+}
+
+/**
  * Roster-skrivingene: legg til, fjern, lag, flight, trekk og angre.
  *
  * @param reason koden fra `RosterActionResult`.

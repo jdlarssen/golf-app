@@ -28,6 +28,7 @@ import {
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { isActiveForGame } from '../../../../lib/sync/queueScope';
+import { WebLinkButton } from '../components/WebLinkButton';
 import { getDb, listQueue } from '../data/db';
 import { submitScorecard } from '../data/playerActions';
 import { seedGameScores } from '../data/seedScores';
@@ -228,9 +229,19 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       </View>
 
       {teamMode ? (
-        <Text style={ui.muted} testID="team-submit-gate">
-          Levering av lagkort gjøres på nettsiden ennå.
-        </Text>
+        <>
+          <Text style={ui.muted} testID="team-submit-gate">
+            Levering av lagkort gjøres på nettsiden ennå.
+          </Text>
+          {/* #1891: setningen sto uten vei videre. Webbens lever-side skriver
+              hele lagets rader med service-role — det er nettopp evnen appen
+              mangler (#1918), så knappen tar spilleren dit den finnes. */}
+          <WebLinkButton
+            label="Lever lagkortet på nettsiden"
+            path={`/games/${encodeURIComponent(gameId)}/submit`}
+            testID="team-submit-link"
+          />
+        </>
       ) : canSubmit ? (
         <>
           {queued > 0 ? (

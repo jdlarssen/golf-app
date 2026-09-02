@@ -149,6 +149,15 @@ describe('OrganiserSection', () => {
     //    eller RLS har en, og to flater med hver sin regel er verre.
     expect(screen.getByTestId(`organiser-remove-${ME}`)).toBeTruthy();
 
+    // 3b. #1891: er det ingen igjen å velge, sto det «inviterer du fra
+    //     nettsiden» uten adresse. Invitasjon er Resend + rate-limit og dermed
+    //     server-eid til #1919 lander — men veien dit finnes nå.
+    await fireEvent.press(screen.getByTestId('organiser-add-toggle'));
+    await waitFor(() => {
+      expect(screen.getByTestId('organiser-invite-link')).toBeTruthy();
+    });
+    await fireEvent.press(screen.getByTestId('organiser-add-toggle'));
+
     // 4. #502: en annen aktør vant status-flippen. Runden er i gang.
     (startRoundNow as jest.Mock).mockResolvedValue({
       ok: true,
@@ -182,6 +191,8 @@ describe('OrganiserSection', () => {
     // Naa — og foerst naa — har noten noe aa forklare: vakt (c) staar, saa
     // «trekk deg selv» er fortsatt web-veien. Samme grense som nettsiden.
     expect(screen.getByTestId('organiser-own-row-note')).toBeTruthy();
+    // #1891: og noten har nå en knapp, ikke bare en påstand om nettsiden.
+    expect(screen.getByTestId('organiser-own-row-link')).toBeTruthy();
 
     // 6. Frafallet går gjennom bekreftelses-dialogen, ikke rett på skrivingen.
     //    Trykker man «Trekk» og raden forsvinner uten et spørsmål, er det en
@@ -212,5 +223,6 @@ describe('OrganiserSection', () => {
     );
     expect(screen.queryByTestId('organiser-finish')).toBeNull();
     expect(screen.getByTestId('organiser-cup-note')).toBeTruthy();
+    expect(screen.getByTestId('organiser-cup-link')).toBeTruthy();
   });
 });

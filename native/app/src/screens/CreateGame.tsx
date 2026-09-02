@@ -38,7 +38,10 @@ import {
 import { fetchFormatCatalog } from '../data/formatCatalog';
 import { isDeviceOnline } from '../data/syncTriggers';
 import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
-import { describeCreateGameFailure } from '../lib/createGameCopy';
+import {
+  createFailureBelongsOnWeb,
+  describeCreateGameFailure,
+} from '../lib/createGameCopy';
 import { displayName, formatTeeOff } from '../lib/display';
 import {
   describePlayerCounts,
@@ -165,7 +168,16 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     { userId, teamNumber: null },
   ]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /**
+   * Feilen etter et publiseringsforsøk, og om den peker til nettsiden (#1891).
+   *
+   * Ett felt og ikke to `useState`: teksten og knappen beskriver SAMME feil, og
+   * to tilstander som må settes i takt på fire steder er nettopp der de går ut
+   * av takt — en knapp som blir stående etter neste, urelaterte feil.
+   */
+  const [failure, setFailure] = useState<{ text: string; onWeb: boolean } | null>(
+    null,
+  );
 
   const formats = useRemote(fetchFormatCatalog);
   const courses = useRemote(fetchCourses);
@@ -268,11 +280,11 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     // gjennomkjøringer ville gitt to runder med samme navn.
     if (busy || !draft) return;
     if (!isDeviceOnline()) {
-      setError(OFFLINE_NOTE);
+      setFailure({ text: OFFLINE_NOTE, onWeb: false });
       return;
     }
     setBusy(true);
-    setError(null);
+    setFailure(null);
     try {
       const result = await publishGame(draft);
       if (result.ok) {
@@ -281,9 +293,15 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
         navigation.replace('GameHome', { gameId: result.gameId });
         return;
       }
-      setError(describeCreateGameFailure(result.error));
+      setFailure({
+        text: describeCreateGameFailure(result.error),
+        onWeb: createFailureBelongsOnWeb(result.error),
+      });
     } catch {
-      setError('Fikk ikke opprettet spillet. Sjekk nettet og prøv igjen.');
+      setFailure({
+        text: 'Fikk ikke opprettet spillet. Sjekk nettet og prøv igjen.',
+        onWeb: false,
+      });
     }
     // Bevisst utenfor `finally`: på suksess er skjermen borte, og knappen skal
     // ikke låses opp igjen på vei ut.
@@ -361,7 +379,8 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
         <SummaryStep
           lines={summaryLines(draft, gameMode, courses.data, candidates.data, teeOff)}
           warnings={summaryWarnings(draft, gameMode)}
-          error={error}
+          error={failure?.text ?? null}
+          errorOnWeb={failure?.onWeb ?? false}
           busy={busy}
           canPublish={courseId !== null && teeBoxId !== null}
           onPublish={() => void publish()}

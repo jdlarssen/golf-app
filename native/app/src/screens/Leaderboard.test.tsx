@@ -220,6 +220,7 @@ describe('LeaderboardBody', () => {
     // Ordlyden er `gateMessage('mode')`. Nettsiden nevnes KUN her (#1844), og
     // #1891 fester «Åpne runden på nettsiden»-knappen på nettopp denne grenen.
     expect(screen.getByText('Dette formatet føres på nettsiden ennå.')).toBeTruthy();
+    expect(screen.getByTestId('leaderboard-gated-format-link')).toBeTruthy();
   });
 
   it('sier at oppsettet mangler — ikke at formatet finnes på nettsiden', async () => {
@@ -232,6 +233,8 @@ describe('LeaderboardBody', () => {
     expect(screen.getByTestId('leaderboard-missing-config')).toBeTruthy();
     expect(screen.getByText('Formatet er ikke satt opp for denne runden.')).toBeTruthy();
     expect(screen.queryByTestId('leaderboard-gated-format')).toBeNull();
+    // Og ingen knapp: nettsiden har ikke svaret her (eierpresisering på #1891).
+    expect(screen.queryByTestId('leaderboard-gated-format-link')).toBeNull();
   });
 
   it('sier rolig fra når ingen har ført et slag ennå', async () => {
@@ -302,6 +305,7 @@ describe('ResultView', () => {
       <ResultView
         result={result}
         status="active"
+        gameId={GAME_ID}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
     );
@@ -349,6 +353,7 @@ describe('ResultView', () => {
       <ResultView
         result={result}
         status="active"
+        gameId={GAME_ID}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
     );
@@ -368,10 +373,16 @@ describe('ResultView', () => {
     // fallskjermen for tilfellet der appen alt står på telefonen.
     const fromTheFuture = { kind: 'lasersnooker', players: [] } as unknown as ModeResult;
     await render(
-      <ResultView result={fromTheFuture} status="active" nameOf={() => 'Ukjent'} />,
+      <ResultView
+        result={fromTheFuture}
+        status="active"
+        gameId={GAME_ID}
+        nameOf={() => 'Ukjent'}
+      />,
     );
     expect(screen.getByTestId('leaderboard-unknown-format')).toBeTruthy();
     // Nevner IKKE nettsiden (#1844): vi vet ikke om formatet finnes der.
     expect(screen.getByText('Appen kjenner ikke dette formatet ennå.')).toBeTruthy();
+    expect(screen.queryByTestId('leaderboard-gated-format-link')).toBeNull();
   });
 });

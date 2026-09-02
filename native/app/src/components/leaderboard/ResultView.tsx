@@ -9,7 +9,9 @@
 // Ingen sortering her. Motoren har rangert radene; en `sort` til i render-laget
 // ville vært en andre og konkurrerende regel for hvem som leder.
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
+import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
+import { WebLinkButton } from '../WebLinkButton';
 import { BingoBangoBongoView } from './BingoBangoBongoView';
 import { MatchView } from './MatchView';
 import { NassauView, SkinsView } from './PotViews';
@@ -50,10 +52,13 @@ const TEAM: LeaderColumn = { key: 'team', label: 'Lag', flex: 3 };
 export function ResultView({
   result,
   status,
+  gameId,
   nameOf,
 }: {
   result: ModeResult;
   status: string;
+  /** Kun til lenke-knappen i patsome-grenen (#1891) — ingen visning leser den. */
+  gameId: string;
   nameOf: ReturnType<typeof nameLookup>;
 }) {
   switch (result.kind) {
@@ -321,10 +326,21 @@ export function ResultView({
     // fremtidig åpning ikke møter en tom skjerm.
     case 'patsome':
       return (
-        <CalmNote
-          text={GATED_FORMAT_RESULT_MESSAGE}
-          testID="leaderboard-gated-format"
-        />
+        <>
+          <CalmNote
+            text={GATED_FORMAT_RESULT_MESSAGE}
+            testID="leaderboard-gated-format"
+          />
+          {/* Samme knapp som gate-grenen i `LeaderboardBody`, av samme grunn:
+              dette er det ene «vi kan ikke vise dette» der nettsiden faktisk
+              har svaret. Grenen under (`leaderboard-unknown-format`) får den
+              ikke — der vet vi ikke engang hva formatet er. */}
+          <WebLinkButton
+            label={GATE_LINK_LABEL}
+            path={gameWebPath(gameId)}
+            testID="leaderboard-gated-format-link"
+          />
+        </>
       );
 
     default: {
