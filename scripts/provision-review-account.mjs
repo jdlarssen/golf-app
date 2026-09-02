@@ -15,6 +15,13 @@
  * Idempotent — kjør så mange ganger du vil. Andre kjøring finner alt som
  * finnes, roterer passordet og resetter demo-spillet til kjent tilstand
  * («frisk demo før hver innsending»).
+ *
+ * Kjøringen tåler også at revieweren har SLETTET kontoen sin — det skal gå an
+ * (App Store 5.1.1(v), #1909). Derfor er det ADMIN-kontoen som står som
+ * arrangør av demo-runden, ikke review-kontoen: runden overlever slettingen,
+ * og en ny kjøring lager kontoen på nytt, rydder bort den anonymiserte raden i
+ * rosteret og seeder demoen om igjen. Finnes det flere (eller ingen)
+ * admin-kontoer, må REVIEW_DEMO_ORGANIZER_EMAIL peke ut arrangøren.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -187,6 +194,64 @@ async function createGuest(db, profile) {
   return userId;
 }
 
+/**
+ * Finn arrangøren for demo-runden: admin-kontoen, ikke review-kontoen.
+ *
+ * Hvorfor det er sånn: revieweren skal kunne slette kontoen sin, og sperren i
+ * `lib/users/deleteAccount.ts` stopper den som arrangerer noe som ikke er
+ * avsluttet. Eide review-kontoen demo-runden, ville sperren vært permanent —
+ * nøyaktig omveien Apple avviser. Som deltaker slipper revieweren alltid
+ * gjennom, og runden blir stående når kontoen forsvinner.
+ *
+ * Nøyaktig én admin → den brukes. Ingen eller flere → skriptet nekter å gjette,
+ * og REVIEW_DEMO_ORGANIZER_EMAIL må si hvem det er. Er env-varen satt, vinner
+ * den uansett: en adresse noen har skrevet inn skal aldri bli stille ignorert.
+ */
+async function resolveOrganizer(db) {
+  const override = (process.env.REVIEW_DEMO_ORGANIZER_EMAIL ?? '').trim().toLowerCase();
+  if (override) {
+    // `ilike` fanger store/små bokstaver, men behandler `%` og `_` som
+    // jokertegn — og `_` er lovlig i en e-postadresse. Derfor filtreres treffene
+    // på eksakt likhet etterpå: aldri feil arrangør på grunn av et mønster.
+    const candidates = ok(
+      'slå opp arrangør på e-post',
+      await db.from('users').select('id, name, email').ilike('email', override).limit(10),
+    );
+    const rows = candidates.filter((u) => (u.email ?? '').toLowerCase() === override);
+    if (rows.length === 0) {
+      throw new Error(
+        `REVIEW_DEMO_ORGANIZER_EMAIL peker på «${override}», men ingen bruker i dette miljøet har den adressen.`,
+      );
+    }
+    if (rows.length > 1) {
+      throw new Error(
+        `REVIEW_DEMO_ORGANIZER_EMAIL «${override}» treffer ${rows.length} brukere — adressen må være entydig.`,
+      );
+    }
+    return { ...rows[0], source: 'REVIEW_DEMO_ORGANIZER_EMAIL' };
+  }
+
+  const admins = ok(
+    'slå opp admin-kontoer',
+    await db.from('users').select('id, name, email').eq('is_admin', true),
+  );
+  if (admins.length === 1) {
+    return { ...admins[0], source: 'users.is_admin' };
+  }
+
+  const why =
+    admins.length === 0
+      ? 'Fant ingen admin-konto (users.is_admin = true) som kan stå som arrangør for demo-runden.'
+      : `Fant ${admins.length} admin-kontoer — skriptet gjetter ikke på hvem som skal arrangere demo-runden.`;
+  throw new Error(
+    `${why}\n` +
+      '  Sett REVIEW_DEMO_ORGANIZER_EMAIL til e-postadressen til den som skal stå som\n' +
+      '  arrangør, og kjør på nytt:\n' +
+      '    REVIEW_DEMO_ORGANIZER_EMAIL=… REVIEW_ACCOUNT_EMAIL=… REVIEW_ACCOUNT_PASSWORD=… \\\n' +
+      '      node scripts/provision-review-account.mjs',
+  );
+}
+
 async function main() {
   // ------------------------------------------------------------- argumenter
   const args = process.argv.slice(2);
@@ -242,6 +307,12 @@ async function main() {
   console.log(`Miljø:        ${target}  (${envFile})`);
   console.log(`Skriver til:  ${env.NEXT_PUBLIC_SUPABASE_URL}`);
   console.log(`Konto:        ${email}`);
+
+  // Arrangøren løses FØR første skriv — mangler den, skal ingenting være
+  // halvveis gjort når skriptet stopper.
+  const organizer = await resolveOrganizer(db);
+  const organizerLabel = `${organizer.name ?? '(uten navn)'} <${organizer.email}>`;
+  console.log(`Arrangør:     ${organizerLabel}  [${organizer.source}]`);
   if (target === 'prod') {
     console.log('⚠️  PRODUKSJON — dette skriver til den ekte databasen.');
   }
@@ -289,6 +360,11 @@ async function main() {
       // Engelsk UI: revieweren leser ikke norsk.
       locale: 'en',
       is_guest: false,
+      // Nulles fordi en tidligere reviewer kan ha rukket å slette seg. Det kan
+      // bare treffe raden vi nettopp har identifisert SOM review-kontoen: en
+      // fullført sletting obfuskerer adressen i både public.users (scrubben i
+      // anonymize_user) og GoTrue (soft delete), så oppslaget over finner
+      // ingenting og vi havner i createUser-grenen med en fersk rad i stedet.
       deleted_at: null,
     },
     'oppdater review-profil',
@@ -296,19 +372,40 @@ async function main() {
   console.log(`2. Profil satt (${REVIEW_USER_NAME}, hcp ${REVIEW_HCP_INDEX}, locale en).`);
 
   // -------------------------------------------------------- 3. demo-spillet
+  // Oppslag på NAVN, ikke på creator: arrangøren kan ha blitt flyttet (og et
+  // spill fra før #1909 står fortsatt på review-kontoen). Nyeste vinner.
   const existingGames = ok(
     'les games',
     await db
       .from('games')
-      .select('id, short_id, course_id, tee_box_id')
-      .eq('created_by', reviewUserId)
+      .select('id, short_id, course_id, tee_box_id, created_by')
       .eq('name', DEMO_GAME_NAME)
+      .order('created_at', { ascending: false })
       .limit(1),
   );
 
   let game = existingGames[0] ?? null;
   if (game) {
     console.log(`3. Demo-spillet fantes (${game.id}).`);
+    if (game.created_by !== organizer.id) {
+      // PostgREST svarer error == null på en update som ikke traff noe
+      // (AGENTS.md trap 2) — radtellingen er det eneste ekte suksess-signalet.
+      const reparented = ok(
+        'flytt demo-spillet til arrangøren',
+        await db
+          .from('games')
+          .update({ created_by: organizer.id })
+          .eq('id', game.id)
+          .select('id'),
+      );
+      if (reparented.length !== 1) {
+        throw new Error(
+          `flytt demo-spillet til arrangøren: traff ${reparented.length} rader, forventet 1`,
+        );
+      }
+      game.created_by = organizer.id;
+      console.log(`   Arrangør flyttet til ${organizerLabel}.`);
+    }
   } else {
     const tees = ok(
       'les tee_boxes',
@@ -351,9 +448,9 @@ async function main() {
           registration_mode: 'invite_only',
           registration_type: 'solo',
           status: 'active',
-          created_by: reviewUserId,
+          created_by: organizer.id,
         })
-        .select('id, short_id, course_id, tee_box_id'),
+        .select('id, short_id, course_id, tee_box_id, created_by'),
     );
     if (inserted.length !== 1) throw new Error('Insert av demo-spill traff 0 rader');
     game = inserted[0];
@@ -361,6 +458,10 @@ async function main() {
   }
 
   // ------------------------------------------------------- 4. medspillerne
+  // Scorene ryddes her, før roster-radene: en rad som skal bort kan ha scores,
+  // og hele settet seedes uansett på nytt i steg 5.
+  ok('slett scores', await db.from('scores').delete().eq('game_id', game.id));
+
   const roster = ok(
     'les game_players',
     await db.from('game_players').select('user_id').eq('game_id', game.id),
@@ -373,6 +474,27 @@ async function main() {
       await db.from('users').select('id, name').in('id', rosterIds),
     );
     for (const u of users) rosterNames.set(u.name, u.id);
+  }
+
+  // Rydd alt som ikke er review-kontoen eller en av de tre gjestene. Har en
+  // reviewer slettet seg, står den gamle raden igjen som «Slettet bruker» — og
+  // en kjøring fra før #1909 kan ha lagt arrangøren i rosteret. Begge ut.
+  const keepIds = [reviewUserId];
+  for (const profile of CO_PLAYERS) {
+    const known = rosterNames.get(profile.name);
+    if (known) keepIds.push(known);
+  }
+  const swept = ok(
+    'rydd roster',
+    await db
+      .from('game_players')
+      .delete()
+      .eq('game_id', game.id)
+      .not('user_id', 'in', `(${keepIds.join(',')})`)
+      .select('user_id'),
+  );
+  if (swept.length > 0) {
+    console.log(`   Fjernet ${swept.length} rad(er) som ikke hører hjemme i demo-rosteret.`);
   }
 
   const acceptedAt = nowIso();
@@ -450,12 +572,13 @@ async function main() {
     );
     if (rows.length !== 1) throw new Error(`Roster-insert for ${profile.name} traff 0 rader`);
   }
-  console.log(`4. Roster: review-kontoen + ${CO_PLAYERS.map((p) => p.name).join(', ')}.`);
+  console.log(
+    `4. Roster: review-kontoen (deltaker) + ${CO_PLAYERS.map((p) => p.name).join(', ')}.`,
+  );
 
   // --------------------------------------------------- 5. scores + tilstand
-  // Full reset: revieweren kan ha spilt (og avsluttet) demoen forrige runde.
-  ok('slett scores', await db.from('scores').delete().eq('game_id', game.id));
-
+  // Scorene ble tømt i steg 4; her legges utgangstilstanden inn igjen, uansett
+  // hvor langt forrige reviewer rakk å spille.
   const holes = ok(
     'les course_holes',
     await db
@@ -478,8 +601,8 @@ async function main() {
         user_id: userId,
         hole_number: holeNumber,
         strokes: par + offset,
-        // Alt er tastet av review-kontoen: gjester har ingen innlogging, så
-        // det er arrangøren som fører slagene deres — som i ekte bruk.
+        // Alt er tastet av review-kontoen: gjestene har ingen innlogging, så
+        // en flightkamerat fører slagene deres — som i ekte bruk.
         entered_by: reviewUserId,
         client_updated_at: stampScores,
       });
@@ -538,7 +661,8 @@ async function main() {
   console.log(created ? '✅ Provisjonert.' : '✅ Allerede provisjonert — resatt til frisk demo.');
   console.log(`   Spill:    ${game.id} (${DEMO_GAME_NAME})`);
   console.log(`   Kortnavn: ${game.short_id}`);
-  console.log(`   Spillere: ${finalRoster.length}`);
+  console.log(`   Arrangør: ${organizerLabel}`);
+  console.log(`   Spillere: ${finalRoster.length}  (review-kontoen + ${CO_PLAYERS.length} gjester)`);
   console.log(`   Scores:   ${finalScores.length}`);
   console.log('   Innlogging: /en/review-login (passordet står ikke her og skal ikke logges)');
 }
