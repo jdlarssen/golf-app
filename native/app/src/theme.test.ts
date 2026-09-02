@@ -1,32 +1,30 @@
-// #1830: locks the additive theme contract N4 builds against — light palette
-// bit-identical to the pre-split COLORS, dark palette complete, ui key parity
-// between schemes, and the scheme resolution the useTheme hook composes.
+// #1830 la den additive tema-kontrakten; #1833 fjernet den lys-bare halvdelen
+// av den. Testen låser derfor tre ting: at lys-paletten fortsatt HAR N3-verdiene
+// (ingen skjerm skiftet farge da `COLORS` forsvant), at mørk er komplett, og at
+// `useTheme()` er den ene veien inn — én `ui` per scheme, med samme nøkler.
 import { renderHook } from '@testing-library/react-native';
+import * as theme from './theme';
 import {
-  COLORS,
   FONTS,
   PALETTES,
   resolveScheme,
   themeFor,
-  ui,
   useTheme,
 } from './theme';
 
 describe('PALETTES', () => {
-  it('maps the light palette bit-identical to the pre-split COLORS values', () => {
+  it('keeps the light palette on the N3 forest-and-champagne values', () => {
     expect(PALETTES.light).toEqual({
-      bg: COLORS.linen,
-      surface: COLORS.card,
-      border: COLORS.border,
-      text: COLORS.forest,
-      muted: COLORS.muted,
-      primary: COLORS.forest,
+      bg: '#F8F6F0',
+      surface: '#FFFFFF',
+      border: '#E3DFD3',
+      text: '#1B4332',
+      muted: '#5C6B60',
+      primary: '#1B4332',
       onPrimary: '#FFFFFF',
-      accent: COLORS.gold,
-      // Blekket på gull er skog i lys modus — nøyaktig det gull-flatene
-      // tegnet med før rollen fikk et navn.
-      onAccent: COLORS.forest,
-      danger: COLORS.error,
+      accent: '#C9A961',
+      onAccent: '#1B4332',
+      danger: '#B00020',
     });
   });
 
@@ -61,16 +59,26 @@ describe('themeFor / resolveScheme', () => {
     expect(resolveScheme('dark')).toBe('dark');
   });
 
-  it('keeps the legacy ui export as the light variant with key parity to dark', () => {
+  it('gives each scheme its own stable ui with key parity to the other', () => {
     const light = themeFor('light');
     const dark = themeFor('dark');
-    expect(light.ui).toBe(ui);
+    // Stabile objekter: en ny `ui` per render ville brutt hver `React.memo`
+    // og hver `useMemo` som har stilen i dependency-lista.
+    expect(themeFor('light').ui).toBe(light.ui);
+    expect(dark.ui).not.toBe(light.ui);
     expect(Object.keys(dark.ui).sort()).toEqual(Object.keys(light.ui).sort());
   });
 
   it('selects the matching palette per scheme', () => {
     expect(themeFor('light').colors).toBe(PALETTES.light);
     expect(themeFor('dark').colors).toBe(PALETTES.dark);
+  });
+
+  // Vakten mot at en skjerm igjen kan bygges lys-bare: det finnes ingen
+  // ferdigfarget eksport å importere, bare `useTheme()`/`themeFor()`.
+  it('exports no light-only colour table or style sheet', () => {
+    expect(theme).not.toHaveProperty('COLORS');
+    expect(theme).not.toHaveProperty('ui');
   });
 });
 
@@ -79,6 +87,6 @@ describe('useTheme', () => {
     const { result } = await renderHook(() => useTheme());
     expect(result.current.scheme).toBe('light');
     expect(result.current.colors).toBe(PALETTES.light);
-    expect(result.current.ui).toBe(ui);
+    expect(result.current.ui).toBe(themeFor('light').ui);
   });
 });
