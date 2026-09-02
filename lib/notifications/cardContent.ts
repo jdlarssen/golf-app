@@ -211,6 +211,16 @@ export function buildNotificationText(
         }),
       };
     }
+    case 'cup_lineup_revealed': {
+      const p = payload as NotificationPayload<'cup_lineup_revealed'>;
+      return {
+        title: t('kinds.cupLineupRevealed.title'),
+        detail: t('kinds.cupLineupRevealed.detail', {
+          tournamentName: p.tournament_name,
+          matchCount: p.match_count,
+        }),
+      };
+    }
     case 'club_join_request': {
       const p = payload as NotificationPayload<'club_join_request'>;
       return {
