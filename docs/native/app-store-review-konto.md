@@ -16,6 +16,7 @@ resten av #1284.
 | Innloggingssida | `/review-login` (`/en/review-login` for engelsk) | E-post + passord. Ulenket, `noindex`. |
 | Env-porten | `REVIEW_ACCOUNT_EMAIL` i Vercel | Er den ikke satt, svarer sida «finnes ikke». |
 | Provisjonering | `scripts/provision-review-account.mjs` | Lager kontoen, demo-runden og medspillerne. |
+| Arrangør-porten | `REVIEW_DEMO_ORGANIZER_EMAIL` (valgfri, kun når skriptet kjører) | Peker ut hvem demo-runden skal stå på når det ikke finnes nøyaktig én admin-konto. |
 
 ## Sikkerhetsmodellen
 
@@ -85,10 +86,21 @@ Skriptet printer hvilken Supabase-URL det skriver til før første skriv — les
 den linja før du lar det gå videre. `--env prod` må stå der; uten flagget
 kjører det mot staging.
 
+Skriptet setter admin-kontoen din som arrangør av demo-runden og legger
+review-kontoen inn som deltaker. Har du bare én admin-konto, finner det henne
+selv. Har du flere (eller ingen), stopper det og ber deg si hvem det skal være:
+
+```bash
+REVIEW_DEMO_ORGANIZER_EMAIL='<din-admin-epost>' \
+REVIEW_ACCOUNT_EMAIL='<review-epost>' \
+REVIEW_ACCOUNT_PASSWORD='<passordet>' \
+node scripts/provision-review-account.mjs --env prod
+```
+
 **Forventet resultat:** en oppsummering som slutter med «✅ Provisjonert.» og
-linjene `Spill`, `Kortnavn`, `Spillere: 4`, `Scores: 21`. Feiler noe, stopper
-skriptet med «❌» og en forklaring — ingenting er halvveis skrevet ut over det
-som allerede står i loggen.
+linjene `Spill`, `Kortnavn`, `Arrangør`, `Spillere: 4`, `Scores: 21`. Feiler
+noe, stopper skriptet med «❌» og en forklaring — ingenting er halvveis skrevet
+ut over det som allerede står i loggen.
 
 ### 4. Legg inn i App Store Connect
 
@@ -99,11 +111,17 @@ som allerede står i loggen.
 - **Password:** passordet fra steg 1
 - **Notes:** lim inn malen nederst i dette dokumentet
 
-## Reset før hver innsending
+## Reset før hver innsending — og etter hver review
 
-Revieweren er oppretteren av demo-runden og kan avslutte den — det er meningen,
-det viser hele kjernesløyfa. Men neste reviewer skal møte en fersk runde. Kjør
-derfor samme kommando som i steg 3 på nytt før hver innsending:
+**Revieweren kan slette review-kontoen.** Det er meningen: Apple krever
+(5.1.1(v)) at sletting går an rett i appen, og fra #1909 slipper alle gjennom så
+lenge de ikke arrangerer noe som pågår. Derfor er det admin-kontoen din som står
+som arrangør av demo-runden, ikke review-kontoen — den er bare deltaker. Prisen
+er at demo-runden ligger blant dine egne runder i appen. Det er en avtalt
+kostnad, ikke en feil.
+
+Kjør samme kommando som i steg 3 på nytt **før hver innsending, og etter hver
+review der kontoen kan ha blitt slettet**:
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
@@ -112,9 +130,20 @@ REVIEW_ACCOUNT_PASSWORD='<passordet>' \
 node scripts/provision-review-account.mjs --env prod
 ```
 
-Kjøringen finner kontoen og runden som allerede finnes, setter passordet på
-nytt, sletter scorene og legger inn utgangstilstanden igjen. Den slutter med
-«✅ Allerede provisjonert — resatt til frisk demo.»
+Kjøringen rydder opp etter alt revieweren kan ha gjort:
+
+- **Slettet kontoen?** Adressen blir frigitt når kontoen anonymiseres, så
+  kjøringen lager kontoen på nytt med samme adresse og setter passordet.
+- **Står det en «Slettet bruker» igjen i runden?** Den raden fjernes. Etterpå er
+  rosteret nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
+- **Spilt, levert eller trukket seg?** Scorene slettes og legges inn på nytt,
+  runden settes tilbake til «pågår», og alle leveringer nullstilles.
+- **Runden står på feil person?** Den flyttes til arrangøren. Det gjelder også
+  gamle demo-runder som fortsatt står på review-kontoen.
+
+Den slutter med «✅ Allerede provisjonert — resatt til frisk demo.» og en
+`Arrangør`-linje som viser hvem runden står på. Les den linja — det er den som
+avgjør om revieweren får slette kontoen sin.
 
 Sender du inn med et nytt passord, må steg 4 gjøres om — App Store Connect
 husker det gamle.
@@ -124,11 +153,18 @@ husker det gamle.
 - **Konto:** navn «Alex Reviewer» (fornavnet brukes i hilsenen på hjem-skjermen),
   handicap 18, engelsk UI (`locale = 'en'`).
 - **Runde:** «Demo Round — Tørny», stableford, status «pågår», fire spillere i
-  samme flight.
+  samme flight. Arrangert av admin-kontoen din — revieweren er deltaker, ikke
+  arrangør.
 - **Medspillere:** Emma, Jonas og Nora — gjestespillere uten innlogging, på et
   plassholder-domene uten MX. De kan aldri motta mail.
 - **Scores:** medspillerne har spilt hull 1–6, kontoen selv hull 1–3. Revieweren
   fortsetter på hull 4 og ser et levende leaderboard med en gang.
+- **Så langt går det:** taste slag, følge leaderboardet og **levere
+  scorekortet**. Å avslutte hele runden er arrangørens knapp, og den ser
+  revieweren ikke.
+- **Slett konto:** «Account → Delete account» virker for denne kontoen. Brukes
+  den, trekkes kontoen automatisk ut av runden, runden blir stående hos
+  arrangøren, og neste kjøring av skriptet setter alt tilbake.
 
 ## Notes-mal til App Store Connect
 
@@ -147,12 +183,18 @@ HOW TO SIGN IN
 3. Enter the user name and password from the fields above.
 
 WHAT YOU WILL SEE
-The account is set up with an active demo round ("Demo Round — Tørny") with
-three co-players. Holes 1-6 are already scored for the co-players and holes
-1-3 for the review account, so you can continue on hole 4, watch the
-leaderboard update, submit the scorecard and finish the round.
+The account plays in an active demo round ("Demo Round — Tørny") with three
+co-players. Holes 1-6 are already scored for the co-players and holes 1-3 for
+the review account, so you can continue on hole 4, watch the leaderboard update
+and submit the scorecard. The round is hosted by a different account, so
+closing the round itself is not part of this account's view.
 
 FEATURES WORTH TESTING
+- Account deletion: Account -> Delete account deletes this account from inside
+  the app. It goes through; the account is withdrawn from the demo round
+  automatically. You are signed out afterwards and these credentials stop
+  working — that is the expected result, and we restore the account and the
+  demo data before every submission.
 - Offline scoring: enable Airplane Mode while entering scores on a hole. The
   scores are stored on the device and sync automatically once you go back
   online — no data is lost.
