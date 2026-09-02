@@ -197,4 +197,12 @@ Alle kommandoer kjørt i denne økta, på `claude/poengmaal-1902-bygg`.
 | Offentlig cup-side | «**Først til 3,5 poeng** vinner» |
 | Fiendtlig REST-PATCH, kaptein-JWT (`252e1a6f`), `planned_match_count: 999` | HTTP 200, body `[]` → **0 rader**. Samme mot `points_to_win: 0.5` → 0 rader. DB etterpå uendret: 4 / 3,5 |
 
-**Avvik fra kontrakten:** ett — forhåndsvisningen skrev «2.5» med engelsk desimalpunktum. Fanget på staging-runden, ikke av noen test; fikset ved å sende tallet gjennom `formatPoints` (samme helper cup-siden bruker). Egen commit.
+### Avvik fra kontrakten
+
+**1. Desimalpunktum i forhåndsvisningen.** Kortet skrev «4 kamper gir et poengmål på 2.5» — engelsk punktum i norsk copy. Fanget på staging-runden, ikke av noen test. Fikset ved å sende tallet gjennom `formatPoints`, samme helper cup-siden og resultat-flatene bruker. Egen commit.
+
+**2. Kant-tilfellet «cup fra før fiksen som alt har økter» oppfører seg annerledes enn tabellen sier.** Kontrakten skriver at en slik cup beholder «dagens mål inntil» arrangøren oppgir tallet. I praksis kjører `revealCupLineupSession` → `syncCupPointsToWin` for enhver AKTIV cup, og med `planned_match_count = NULL` skriver den `derivePointsToWin(faktisk antall)`. Avdekker en slik cup en økt som alt var åpnet, flyttes altså målet uten at arrangøren har oppgitt noe.
+
+Oppførselen er den riktige — det er nøyaktig sikkerhetsnettet fra alternativ A, og alternativet (å la et mål utledet av 8 kamper stå mens cupen får 14) er verre. Men den avviker fra tabellen, og det er en stille endring av et tall spillerne ser, så den står her framfor å bli oppdaget i drift. Ingen kodeendring gjort; kontraktens tabellrad er den som er upresis.
+
+**Funn fra evaluatoren som ble rettet i egen commit:** literal-paret 1/0,5 som snek seg inn i `openCupLineupSession` i strid med denne PR-ens egen JSDoc · `save_failed` på en delvis skriving der tallet FAKTISK var lagret (nå egen kode + egen tekst, og tavla revalideres uansett utfall) · NaN-forplantning i `resolveCupMatchTotal` · manglende Type C-test for kortet · innrykk i messages-katalogene.

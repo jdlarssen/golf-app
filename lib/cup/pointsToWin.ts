@@ -83,7 +83,14 @@ export function resolveCupMatchTotal(
   actualMatches: number,
   plannedMatchCount: number | null,
 ): number {
-  return Math.max(actualMatches, plannedMatchCount ?? 0);
+  // Et bart `Math.max` ville forplantet NaN: `Math.max(8, NaN)` er NaN, og et
+  // NaN-mål blir `null` gjennom JSON.stringify — altså et stilltiende slettet
+  // poengmål i en aktiv cup. CHECK-en i 0173 og `parsePlannedMatchCount`
+  // stopper begge deler i dag, men denne funksjonen skal holde uansett hva
+  // kalleren finner på å gi den.
+  const planned = plannedMatchCount ?? 0;
+  if (!Number.isFinite(planned) || planned <= 0) return actualMatches;
+  return Math.max(actualMatches, planned);
 }
 
 /**

@@ -23,6 +23,7 @@ import { MAX_PERSONAL_CUP_MATCHES } from './limits';
  */
 
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }));
+import { revalidateTag } from 'next/cache';
 vi.mock('@/lib/i18n/revalidateLocalePath', () => ({ revalidatePath: vi.fn() }));
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
@@ -523,6 +524,36 @@ describe('setCupPlannedMatchCount — planlagt antall kamper (#1902)', () => {
 
     // Kun planlagt — INGEN points_to_win. Målet utledes ved start.
     expect(tournamentUpdates()).toEqual([{ planned_match_count: 28 }]);
+  });
+
+  it('synken feiler ETTER at tallet er lagret → egen kode, og tavla revalideres', async () => {
+    // Feilkoden må ikke være `save_failed`: tallet ER lagret, og «klarte ikke å
+    // lagre» ville fått arrangøren til å tro det motsatte. Revalideringen må
+    // skje uansett — ellers viser tavla et tomt felt og en sperret knapp mens
+    // databasen sier noe annet.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      ...accessReads(),
+      ACTIVE,
+      ...floorReads(8),
+      { data: [{ id: 'cup-1' }], error: null }, // planlagt lagret
+      { data: null, error: { message: 'boom' } }, // synkens cup-lesing feiler
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('organizer');
+
+    const { setCupPlannedMatchCount } = await import('./lineupActions');
+    expect(
+      await setCupPlannedMatchCount(
+        form({ id: 'cup-1', planned_match_count: '28' }),
+      ),
+    ).toEqual({ error: 'planned_saved_target_failed' });
+
+    // Tallet står — handlingen rullet ingenting tilbake.
+    expect(tournamentUpdates()).toEqual([{ planned_match_count: 28 }]);
+    // …og tavla ble revalidert, så arrangøren ser det lagrede tallet.
+    expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', 'max');
+    errorSpy.mockRestore();
   });
 
   it('avsluttet cup: cup_finished, ingen skriving', async () => {

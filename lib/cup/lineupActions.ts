@@ -9,7 +9,12 @@ import { ALLOWANCE_DEFAULTS } from './allowance';
 import type { CupAllowancePcts } from './cupMatchAllowance';
 import { planCupRoleChange, type CupTeamNumber } from './captainRoles';
 import { exceedsPersonalMatchCap } from './limits';
-import { hasDefaultCupWeights, parsePlannedMatchCount } from './pointsToWin';
+import {
+  DEFAULT_TIE_POINTS,
+  DEFAULT_WIN_POINTS,
+  hasDefaultCupWeights,
+  parsePlannedMatchCount,
+} from './pointsToWin';
 import { syncCupPointsToWin } from './pointsToWinSync';
 import { insertCupMatches, teeRatingsFrom } from './insertCupMatches';
 import { loadCupLineupAccess, canWriteTeamLineup } from './lineupAccess';
@@ -251,22 +256,29 @@ export async function setCupPlannedMatchCount(
     return { error: 'save_failed' };
   }
 
-  // Aktiv cup får det nye målet nå. Feiler synken, er tallet likevel lagret og
-  // en ny lagring synker på nytt (helperen er idempotent) — derfor `save_failed`
-  // framfor en kompensasjon: «prøv igjen» ER reparasjonen, og en tilbakerulling
-  // ville kastet et tall arrangøren mente.
+  // Aktiv cup får det nye målet nå. Feiler synken, er tallet LIKEVEL lagret —
+  // og det er nettopp derfor feilkoden ikke er `save_failed`: den sier «klarte
+  // ikke å lagre», og arrangøren ville trodd tallet var borte. Egen kode med
+  // egen tekst forteller sannheten (tallet står, målet henger etter) og ber om
+  // det som faktisk reparerer: lagre en gang til. Synken er idempotent.
+  //
+  // Revalideringen skjer FØR retur uansett utfall: uten den viser tavla
+  // fortsatt `plannedMatchCount: null` og en sperret «Åpne en økt»-knapp, mens
+  // databasen sier noe annet — de to ville vært uenige til neste harde
+  // sidelast.
+  let syncFailed = false;
   try {
     await syncCupPointsToWin(admin, tournamentId);
   } catch (err) {
+    syncFailed = true;
     console.error('[cup] setCupPlannedMatchCount points sync failed', {
       tournamentId,
       error: err,
     });
-    return { error: 'save_failed' };
   }
 
   revalidateCup(tournamentId, access.groupId);
-  return OK;
+  return syncFailed ? { error: 'planned_saved_target_failed' } : OK;
 }
 
 /**
@@ -314,8 +326,8 @@ export async function openCupLineupSession(
   // Vektede cuper (#1441 D8) slipper spørsmålet: de har ikke noe «først til X»
   // i det hele tatt, så et planlagt antall ville ikke endret noe.
   const weightsAreDefault = hasDefaultCupWeights(
-    (cup.win_points as number | null) ?? 1,
-    (cup.tie_points as number | null) ?? 0.5,
+    (cup.win_points as number | null) ?? DEFAULT_WIN_POINTS,
+    (cup.tie_points as number | null) ?? DEFAULT_TIE_POINTS,
   );
   if (weightsAreDefault && cup.planned_match_count === null) {
     return { error: 'lineup_planned_total_missing' };
