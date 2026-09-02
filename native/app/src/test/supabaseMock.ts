@@ -95,12 +95,26 @@ export function routeFrom(plan: Record<string, QueryStub[]>): void {
   });
 }
 
+/**
+ * `auth` kom til med konto-sletting (#1876): den er den første flyten der
+ * datalaget selv rører sesjonen — henter Bearer-tokenet før kallet og logger ut
+ * lokalt etterpå. Tillegget er rent additivt, så suitene som bare bruker `rpc`
+ * og `from` merker ingenting.
+ */
 export const supabase: {
   rpc: jest.Mock;
   from: jest.Mock;
+  auth: {
+    getSession: jest.Mock;
+    signOut: jest.Mock;
+  };
 } = {
   rpc: jest.fn(),
   from: jest.fn(),
+  auth: {
+    getSession: jest.fn(),
+    signOut: jest.fn(),
+  },
 };
 
 export const currentDeviceUserId: jest.Mock<Promise<string | null>, []> =

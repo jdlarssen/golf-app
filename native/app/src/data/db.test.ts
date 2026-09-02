@@ -123,3 +123,131 @@ describe('lokalt skjema', () => {
     expect(await getCacheEntry(await getDb(), 'finnes-ikke')).toBeUndefined();
   });
 });
+
+// Native N6d (#1876): wipe-primitiven bak konto-sletting (og #1877s utlogging).
+describe('wipeLocalData', () => {
+  useFreshModules();
+
+  /** Tabell-lista slik BASEN kjenner den — ikke en kopi skrevet av her. */
+  async function tableNames(db: Awaited<ReturnType<Db['getDb']>>) {
+    const rows = await db.getAllAsync<{ name: string }>(
+      `SELECT name FROM sqlite_master
+        WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+        ORDER BY name;`,
+    );
+    return rows.map((row) => row.name);
+  }
+
+  async function countRows(
+    db: Awaited<ReturnType<Db['getDb']>>,
+    tables: string[],
+  ) {
+    const counts: Record<string, number> = {};
+    for (const table of tables) {
+      // Navnet kommer fra sqlite_master, aldri fra brukerdata; PRAGMA-lignende
+      // identifikatorer kan uansett ikke bindes som parameter.
+      const row = await db.getFirstAsync<{ n: number }>(
+        `SELECT COUNT(*) AS n FROM "${table}";`,
+      );
+      counts[table] = row?.n ?? 0;
+    }
+    return counts;
+  }
+
+  it('etterlater ingen rad i noen tabell', async () => {
+    const {
+      getDb,
+      putCacheEntry,
+      putConflict,
+      putQueueItem,
+      putScore,
+      wipeLocalData,
+    } = require('./db') as Db;
+    const db = await getDb();
+
+    await putScore(db, {
+      id: `${GAME}:${ME}:1`,
+      gameId: GAME,
+      userId: ME,
+      holeNumber: 1,
+      strokes: 4,
+      putts: 2,
+      enteredBy: ME,
+      clientUpdatedAt: '2026-09-01T09:00:00.000Z',
+      serverUpdatedAt: null,
+    });
+    await putQueueItem(db, {
+      id: 'kø-1',
+      scoreId: `${GAME}:${ME}:1`,
+      attemptCount: 0,
+      lastError: null,
+      createdAt: '2026-09-01T09:00:01.000Z',
+      abandonedAt: null,
+    });
+    await putConflict(db, {
+      id: 'konflikt-1',
+      gameId: GAME,
+      userId: ME,
+      holeNumber: 1,
+      localStrokes: 4,
+      serverStrokes: 5,
+      resolvedAt: '2026-09-01T09:00:02.000Z',
+      forOwnScore: true,
+    });
+    await putCacheEntry(db, {
+      key: `game:${GAME}`,
+      payload: '{"game":{}}',
+      fetchedAt: '2026-09-01T09:00:03.000Z',
+    });
+
+    const tables = await tableNames(db);
+
+    // Forhåndsbetingelsen ER halve testen: er en tabell tom alt før wipe-en,
+    // beviser «tom etterpå» ingenting om den. Den eksplisitte fasiten her er
+    // med vilje — legges det til en femte tabell, feiler denne linja først, og
+    // neste forfatter må både seede den OG ta stilling til om `wipeLocalData`
+    // skal tømme den.
+    expect(await countRows(db, tables)).toEqual({
+      cache_entries: 1,
+      conflicts: 1,
+      scores: 1,
+      sync_queue: 1,
+    });
+
+    await wipeLocalData();
+
+    // Fasiten leses ut av basen: en tabell wipe-en ikke rører blir rød her,
+    // uten at noen må huske å utvide en liste i testen.
+    expect(await countRows(db, tables)).toEqual(
+      Object.fromEntries(tables.map((table) => [table, 0])),
+    );
+  });
+
+  it('lar skjemaet stå, så neste innlogging skriver rett videre', async () => {
+    const { getCacheEntry, getDb, putCacheEntry, wipeLocalData } =
+      require('./db') as Db;
+    const db = await getDb();
+
+    await putCacheEntry(db, {
+      key: 'home',
+      payload: 'før',
+      fetchedAt: '2026-09-01T09:00:00.000Z',
+    });
+    await wipeLocalData();
+
+    // Ingen ny migrasjonsrunde, ingen død forbindelse: samme `getDb()` svarer.
+    expect(
+      await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
+    ).toEqual({ user_version: 2 });
+    expect(await getCacheEntry(db, 'home')).toBeUndefined();
+
+    await putCacheEntry(db, {
+      key: 'home',
+      payload: 'etter',
+      fetchedAt: '2026-09-01T09:05:00.000Z',
+    });
+    expect(await getCacheEntry(db, 'home')).toMatchObject({
+      payload: 'etter',
+    });
+  });
+});

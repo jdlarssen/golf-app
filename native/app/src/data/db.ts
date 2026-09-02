@@ -161,6 +161,35 @@ export function withTxn<T>(
   return run;
 }
 
+/**
+ * Tømmer alt lokalt lager: hver rad i hver tabell, skjemaet står igjen.
+ *
+ * Primitiven bor her, ikke i flyten som kaller den, fordi «glem denne enheten»
+ * trengs to steder: konto-sletting (#1876) og utlogging (#1877). Regelen skal
+ * ha ETT hjem, ikke to som kan drive fra hverandre.
+ *
+ * `DELETE FROM`, ikke `SQLite.deleteDatabaseAsync`: fila skal ikke rives bort
+ * under den delte forbindelsen (`dbPromise` peker videre på den), og skjemaet
+ * står klart til neste innlogging uten en ny migrasjonsrunde.
+ *
+ * Tabellene listes eksplisitt i stedet for å leses ut av `sqlite_master` —
+ * en framtidig tabell skal være et bevisst valg om den ryker eller overlever.
+ * `db.test.ts` leser tabell-lista fra basen og krever at hver eneste tabell er
+ * tom etterpå, så en femte tabell som glemmes her blir rød.
+ *
+ * Trygt å kalle mens en sync-drain pågår: kallet står i `withTxn`-køen, så det
+ * kolliderer aldri med en åpen skriving — drainens transaksjon fullføres først,
+ * og radene den rakk å legge igjen ryker med i denne.
+ */
+export async function wipeLocalData(): Promise<void> {
+  await withTxn(async (txn) => {
+    await txn.runAsync('DELETE FROM scores;');
+    await txn.runAsync('DELETE FROM sync_queue;');
+    await txn.runAsync('DELETE FROM conflicts;');
+    await txn.runAsync('DELETE FROM cache_entries;');
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Rå rad-fasonger + mapping. Ingen annen fil rører snake_case.
 // ---------------------------------------------------------------------------
