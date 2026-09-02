@@ -31,6 +31,7 @@ import { buildRoundRobinContext } from '../../../../lib/scoring/context/buildRou
 import { buildSkinsContext } from '../../../../lib/scoring/context/buildSkinsContext';
 import { buildSoloStrokeplayContext } from '../../../../lib/scoring/context/buildSoloStrokeplayContext';
 import { buildStablefordContext } from '../../../../lib/scoring/context/buildStablefordContext';
+import { buildUniformContext } from '../../../../lib/scoring/context/buildUniformContext';
 import { buildWolfContext } from '../../../../lib/scoring/context/buildWolfContext';
 import type {
   BingoBangoBongoHoleInput,
@@ -223,54 +224,6 @@ function toScoreRows(
       hole_number: score.holeNumber,
       strokes: score.strokes,
     }));
-}
-
-/**
- * Uniform kontekst for lag-/side-formatene uten egen delt hjelper (best ball,
- * matchplay-familien, scramble-familien, shamble, patsome).
- *
- * Speiler `buildUniformContext` i `lib/scoring/buildModeResultForGame.ts`.
- * Kopien finnes fordi den fila åpner med `import 'server-only'` og
- * web-fredningen forbyr å flytte hjelperen ut av den i denne etappen —
- * bokført som restanse, ikke som et nytt hjem for en regel.
- */
-function buildUniformContext(opts: {
-  gameId: string;
-  gameMode: GameMode;
-  modeConfig: GameModeConfig;
-  players: ContextPlayerRow[];
-  holesRows: ContextHoleRow[];
-  scoresRows: ContextScoreRow[];
-}): ScoringContext {
-  return {
-    game: {
-      id: opts.gameId,
-      game_mode: opts.gameMode,
-      mode_config: opts.modeConfig,
-    },
-    players: opts.players.map((player) => ({
-      userId: player.user_id,
-      teamNumber: player.team_number,
-      flightNumber: null,
-      courseHandicap: player.course_handicap ?? 0,
-      teeGender: player.tee_gender,
-    })),
-    holes: opts.holesRows.map((hole) => ({
-      number: hole.hole_number,
-      par: hole.par_mens,
-      parByGender: {
-        mens: hole.par_mens,
-        ladies: hole.par_ladies,
-        juniors: hole.par_juniors,
-      },
-      strokeIndex: hole.stroke_index,
-    })),
-    scores: opts.scoresRows.map((score) => ({
-      userId: score.user_id,
-      holeNumber: score.hole_number,
-      gross: score.strokes,
-    })),
-  };
 }
 
 /**
