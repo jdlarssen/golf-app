@@ -723,6 +723,33 @@ fanger det aldri (Node har globalene), og `expo export` heller ikke — bare en 
 enhet eller simulator gjør det. Samme klasse felle som metro-bare-importene over, men på
 runtime-siden.
 
+### Logg inn på test-enhet uten e-post
+
+OTP-veien er ubrukelig for testkontoer: GoTrue nekter å SENDE kode til
+`@torny-e2e.invalid` (domenet er ikke leverbart), og en ekte adresse går på
+Supabase sitt time-tak for innebygd SMTP etter noen få forsøk. Appen kommer aldri
+til kode-steget uten et vellykket `signInWithOtp`, så innloggingen låser seg.
+
+Legg sesjonen rett inn i stedet. Virker på BÅDE simulator og fysisk enhet:
+
+1. Mint sesjonen med appens egne klient-opsjoner mot en opptaks-storage, så du får
+   den EKSAKTE nøkkelen og verdien — ikke gjett nøkkelnavnet.
+2. AsyncStorage på iOS: `Library/Application Support/<bundleid>/RCTAsyncLocalStorage_V1`.
+   `manifest.json` er `{"<nøkkel>": null}` når verdien er over 1024 byte
+   (`RCTInlineValueThreshold`), og selve verdien ligger i en nabofil med
+   `md5(nøkkel)` som navn, små bokstaver. En supabase-sesjon er ~2 kB, altså
+   alltid egen fil. Nøkkelen mot staging er `sb-snwmueecmfqqdurxedxv-auth-token`.
+3. Simulator: skriv rett i containeren (`xcrun simctl get_app_container <udid> <bundle> data`).
+   Fysisk enhet: `xcrun devicectl device copy to --device <UDID> --domain-type
+   appDataContainer --domain-identifier <bundle> --user mobile --source <fil>
+   --destination "<sti i containeren>"`.
+4. Avslutt appen før du skriver, start den etterpå.
+
+⚠️ `devicectl` trenger at enheten står som `connected`. `available (paired)` kan
+fungere, `unavailable` gjør det ikke — kabel i og telefonen ulåst.
+⚠️ Simulatorens tekstinjeksjon skriver `-` som `+`. Skal du likevel taste noe inn,
+bruk `xcrun simctl pbcopy` og lim inn med langtrykk.
+
 ### Bokførte gap
 
 - **Ingen varsler fra appen.** `player_added` ved roster-endring og `registration_expired`
