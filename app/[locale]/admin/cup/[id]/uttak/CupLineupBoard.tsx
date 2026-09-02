@@ -21,6 +21,7 @@ import {
 } from '@/lib/cup/lineupActions';
 import { seatsPerSlot } from '@/lib/cup/lineupValidation';
 import { derivePointsToWin } from '@/lib/cup/pointsToWin';
+import { formatPoints } from '@/lib/cup/formatPoints';
 
 const INITIAL: CupLineupActionError = { error: '' };
 
@@ -268,9 +269,11 @@ function PlannedMatchCountForm({
             data-testid="cup-lineup-planned-target"
             className="text-xs text-muted tabular-nums"
           >
+            {/* formatPoints: norsk desimalkomma (2,5 — ikke 2.5), samme
+                helper som cup-siden og resultat-flatene bruker. */}
             {t('plannedTarget', {
               count: preview,
-              points: derivePointsToWin(preview),
+              points: formatPoints(derivePointsToWin(preview)),
             })}
           </p>
         )}
@@ -279,7 +282,7 @@ function PlannedMatchCountForm({
             lagrede tallet faktisk slo gjennom. */}
         {board.pointsToWin !== null && (
           <p className="text-xs text-muted tabular-nums">
-            {t('plannedCurrent', { points: board.pointsToWin })}
+            {t('plannedCurrent', { points: formatPoints(board.pointsToWin) })}
           </p>
         )}
 
