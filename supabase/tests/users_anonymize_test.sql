@@ -37,7 +37,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(11);
+select plan(12);
 
 \ir fixtures/rls_helpers.psql
 
@@ -123,11 +123,24 @@ select is(
   'invitations addressed to the old email are deleted'
 );
 
+-- #1909 (migration 0174): the row is preserved, but it is now also marked
+-- WITHDRAWN, because seed_active_game() builds an ACTIVE game and the RPC
+-- withdraws the account from everything that has not finished. The count below
+-- is therefore still 1 — had the fixture used a draft/scheduled game, the row
+-- would be gone and this assert would be red. The withdrawal itself is covered
+-- in users_anonymize_withdrawal_test.sql; here we only guard the count.
 select is(
   (select count(*) from public.game_players
     where user_id = torny_rls.active_id()),
   1::bigint,
   'game_players rows are PRESERVED (history stays in the tournament)'
+);
+
+select isnt(
+  (select withdrawn_at from public.game_players
+    where user_id = torny_rls.active_id()),
+  null,
+  '#1909: the preserved row in an ACTIVE game is now marked withdrawn'
 );
 
 select lives_ok(

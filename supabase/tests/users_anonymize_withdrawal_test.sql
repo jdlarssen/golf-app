@@ -26,7 +26,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(15);
 
 -- ── Fixture ids ──────────────────────────────────────────────────────────────
 create schema if not exists torny_wd;
@@ -189,20 +189,36 @@ select ok(
   '#1909: cup_lineup_slots seat in an unfinished cup is released (0172)'
 );
 
--- ── 14. Idempotence: a second run preserves the FIRST withdrawn_at ──────────
--- The retry path (auth step failed, RPC committed) re-enters here, so a second
+-- ── 14. Idempotence: an EXISTING withdrawal is never overwritten ────────────
+-- The retry path (RPC committed, auth step failed) re-enters here, so a second
 -- call must not move the timestamp.
-create temporary table wd_first_stamp as
-  select withdrawn_at from public.game_players
-   where game_id = torny_wd.game_active_id() and user_id = torny_wd.subject_id();
+--
+-- This CANNOT be tested by calling the function twice and comparing: `now()` is
+-- `transaction_timestamp()`, constant for the whole transaction, so both calls
+-- would write the same value and the assert would pass with or without the
+-- `coalesce` — the one thing it is supposed to lock. Instead we plant a
+-- distinctly OLD withdrawal, made by SOMEONE ELSE, and prove both columns
+-- survive untouched.
+update public.game_players set
+  withdrawn_at = timestamptz '2020-01-01 12:00:00+00',
+  withdrawn_by_user_id = torny_wd.organizer_id()
+where game_id = torny_wd.game_active_id()
+  and user_id = torny_wd.subject_id();
 
 select public.anonymize_user(torny_wd.subject_id());
 
 select is(
   (select withdrawn_at from public.game_players
     where game_id = torny_wd.game_active_id() and user_id = torny_wd.subject_id()),
-  (select withdrawn_at from wd_first_stamp),
-  '#1909: re-running anonymize_user preserves the first withdrawn_at (idempotent)'
+  timestamptz '2020-01-01 12:00:00+00',
+  '#1909: a withdrawal that already existed keeps its original timestamp (coalesce)'
+);
+
+select is(
+  (select withdrawn_by_user_id from public.game_players
+    where game_id = torny_wd.game_active_id() and user_id = torny_wd.subject_id()),
+  torny_wd.organizer_id(),
+  '#1909: an existing withdrawn_by (the organiser) is not overwritten by the account itself'
 );
 
 select * from finish();
