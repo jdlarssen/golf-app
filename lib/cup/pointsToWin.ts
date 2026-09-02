@@ -40,8 +40,45 @@ export function derivePointsToWinWeighted(
   winPoints: number,
   tiePoints: number,
 ): number | null {
-  if (winPoints !== DEFAULT_WIN_POINTS || tiePoints !== DEFAULT_TIE_POINTS) return null;
+  if (!hasDefaultCupWeights(winPoints, tiePoints)) return null;
   return derivePointsToWin(matchCount);
+}
+
+/**
+ * Har cupen dagens 1/½-vekter — altså: gir den et «først til X» i det hele
+ * tatt (#1441 D8)?
+ *
+ * Trukket ut i #1902 fordi svaret nå styrer to ting til: om arrangøren blir
+ * spurt om planlagt antall kamper i uttaks-rommet, og om synk-helperen skal
+ * skrive et mål. Uten ett hjem ville «avviker fra default» stått skrevet tre
+ * steder og drevet fra hverandre (AGENTS.md-felle 4).
+ */
+export function hasDefaultCupWeights(winPoints: number, tiePoints: number): boolean {
+  return winPoints === DEFAULT_WIN_POINTS && tiePoints === DEFAULT_TIE_POINTS;
+}
+
+/**
+ * Effektiv total kamper for poengmålet (#1902).
+ *
+ * `points_to_win` ble satt én gang, ved start, fra de kampene som fantes
+ * akkurat da. Kaptein-uttaket (#1884) åpner økt 2 og 3 MENS cupen er aktiv, så
+ * en Ryder Cup som starter med 8 av 28 kamper fikk målet 4,5 — og et lag kunne
+ * krones etter dag 1. Arrangøren oppgir derfor planlagt antall kamper totalt,
+ * og målet regnes av det.
+ *
+ * Planlagt er et GULV, aldri et tak: blir det flere kamper enn planlagt,
+ * flytter målet seg opp av seg selv (sikkerhetsnettet i eierbeslutningen).
+ * Blir det færre, står målet der arrangøren satte det — et for høyt tall betyr
+ * bare at ingen krones underveis og at `finishTournament` avgjør på poeng.
+ *
+ * `null` planlagt = ikke oppgitt → faktisk antall, bit for bit som før fiksen.
+ * Det gjelder hver eneste cup uten kapteiner, og alle cuper fra før #1902.
+ */
+export function resolveCupMatchTotal(
+  actualMatches: number,
+  plannedMatchCount: number | null,
+): number {
+  return Math.max(actualMatches, plannedMatchCount ?? 0);
 }
 
 /**

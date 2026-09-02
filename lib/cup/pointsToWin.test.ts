@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   derivePointsToWin,
   derivePointsToWinWeighted,
+  hasDefaultCupWeights,
   parseTiePoints,
   parseWinPoints,
+  resolveCupMatchTotal,
 } from './pointsToWin';
 
 // Type A per docs/test-discipline.md — ren regel-logikk (#1142).
@@ -55,6 +57,79 @@ describe('derivePointsToWinWeighted', () => {
 
   it('avvik i KUN tie_points → null', () => {
     expect(derivePointsToWinWeighted(8, 1, 1)).toBeNull();
+  });
+});
+
+// #1902: poengmålet skal være kjent fra START, ikke utledet av de kampene som
+// tilfeldigvis fantes ved cup-start. Arrangøren oppgir planlagt antall kamper
+// totalt; effektiv total er `max(faktisk, planlagt)` — planlagt er et GULV for
+// målet, aldri et tak for hvor mange kamper cupen får ha.
+describe('resolveCupMatchTotal', () => {
+  it.each([
+    // [faktisk, planlagt, effektiv total]
+    [8, null, 8], // ikke oppgitt → dagens oppførsel, bit for bit
+    [8, 28, 28], // innsenderens Ryder Cup: 8 kamper dag 1, 28 planlagt
+    [30, 28, 30], // sikkerhetsnettet: flere kamper enn planlagt → faktisk vinner
+    [0, 28, 28], // ingen kamper ennå (draft) → planlagt bærer målet
+  ])(
+    'faktisk %i, planlagt %s → effektiv total %i',
+    (actual, planned, expected) => {
+      expect(resolveCupMatchTotal(actual, planned)).toBe(expected);
+    },
+  );
+
+  it('likhet endrer ingenting (planlagt 28, faktisk 28)', () => {
+    expect(resolveCupMatchTotal(28, 28)).toBe(28);
+  });
+
+  it('planlagt LAVERE enn faktisk kan aldri senke målet', () => {
+    // Arrangøren skriver 4 på en cup som alt har 12 kamper: målet skal bli
+    // 6,5 (fra 12), aldri 2,5. Et for lavt tall er en skrivefeil, ikke et tak.
+    expect(resolveCupMatchTotal(12, 4)).toBe(12);
+  });
+
+  it('komposisjonen med derivePointsToWinWeighted gir målet fra start', () => {
+    // Selve fiksen, i ett uttrykk: 8 spilte kamper + 28 planlagt → 14,5,
+    // ikke 4,5. Ingen kan krones etter dag 1.
+    expect(derivePointsToWinWeighted(resolveCupMatchTotal(8, 28), 1, 0.5)).toBe(
+      14.5,
+    );
+    // Uten planlagt antall: nøyaktig som før (#1142).
+    expect(
+      derivePointsToWinWeighted(resolveCupMatchTotal(8, null), 1, 0.5),
+    ).toBe(4.5);
+  });
+
+  it('vektet cup får fortsatt ikke noe mål, uansett planlagt antall (#1441 D8)', () => {
+    // Planlagt antall endrer INGENTING for en vektet cup — «først til X»
+    // finnes ikke der, og spørsmålet stilles derfor heller ikke i UI-et.
+    expect(derivePointsToWinWeighted(resolveCupMatchTotal(8, 28), 5, 2)).toBeNull();
+  });
+});
+
+// #1902: «skal spørsmålet om planlagt antall stilles?» og «gir denne cupen et
+// mål i det hele tatt?» er samme spørsmål. Ett hjem for begge (AGENTS.md-felle 4).
+describe('hasDefaultCupWeights', () => {
+  it('default 1/0,5 → true', () => {
+    expect(hasDefaultCupWeights(1, 0.5)).toBe(true);
+  });
+
+  it.each([
+    [5, 2],
+    [2, 0.5],
+    [1, 1],
+  ])('egendefinerte vekter %f/%f → false', (win, tie) => {
+    expect(hasDefaultCupWeights(win, tie)).toBe(false);
+  });
+
+  it('er den samme grenen derivePointsToWinWeighted brukes av', () => {
+    // Lås koblingen: hvis den ene endrer definisjon av «default» uten den
+    // andre, går denne rød.
+    for (const [win, tie] of [[1, 0.5], [5, 2], [1, 1]] as const) {
+      expect(derivePointsToWinWeighted(8, win, tie) !== null).toBe(
+        hasDefaultCupWeights(win, tie),
+      );
+    }
   });
 });
 
