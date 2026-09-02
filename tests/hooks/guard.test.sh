@@ -56,9 +56,24 @@ run_fixture_file() { # fixtures.json hook-script
         mkdir -p "$TMP/.claude" && touch "$SENTINEL" ;;
       approve-prod-stale)
         mkdir -p "$TMP/.claude" && touch -t 202001010000 "$SENTINEL" ;;
+      # #1907: stubber issue-trådens kommentarer for gh-issue-comment-regelen, så
+      # fixturen aldri går på nett. «exists» = én kontrakt- og én leveranse-
+      # kommentar med ## Teknisk; «none» = kun en kontraktkommentar.
+      closing-comment-exists)
+        printf '%s' '[{"id":1,"body":"## 📋 Forge-kontrakt tilgjengelig\n\n<details>…</details>"},{"id":2,"body":"Bygget på PR #9 — venter på merge.\n\n## Teknisk\n\nx\n\n## Funksjonell\n\ny"}]' > "$TMP/issue-comments.json"
+        export BASH_GUARD_ISSUE_COMMENTS_JSON="$TMP/issue-comments.json" ;;
+      closing-comment-none)
+        printf '%s' '[{"id":1,"body":"## 📋 Forge-kontrakt tilgjengelig\n\n<details>…</details>"}]' > "$TMP/issue-comments.json"
+        export BASH_GUARD_ISSUE_COMMENTS_JSON="$TMP/issue-comments.json" ;;
+      # Falsk positiv funnet i null-testen mot #1884: kontrakten NEVNER
+      # «`## Teknisk`» i en PR-regel-setning uten å være en closing-kommentar.
+      closing-comment-inline-mention)
+        printf '%s' '[{"id":1,"body":"## 📋 Forge-kontrakt tilgjengelig\n\n- Closing-kommentar etter merge: `## Teknisk` (inkl. avvik) + `## Funksjonell`."}]' > "$TMP/issue-comments.json"
+        export BASH_GUARD_ISSUE_COMMENTS_JSON="$TMP/issue-comments.json" ;;
     esac
 
     decision="$(decide "$hook_script" "$payload")"
+    unset BASH_GUARD_ISSUE_COMMENTS_JSON
 
     ok=1
     [ "$decision" = "$expect" ] || ok=0
