@@ -219,9 +219,15 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
   **Fjern deretter `autonomy:ready` fra issuet (#1307)** — PR-en bærer mandatet
   videre, og labelen skal aldri overleve leveringen (ellers re-plukkes issuet
   neste natt og bygges som duplikat, jf. #1253-varselet 2026-07-18).
-- **Closing-kommentar ved levering:** post samtidig CLAUDE.md-konvensjonens
-  Teknisk/Funksjonell-kommentar på ISSUET, innledet med «Lukkes automatisk når
-  eieren merger PR #<M>». Auto-close ved merge skriver ingen kommentar selv,
+- **Closing-kommentar ved levering:** sjekk først om issuet ALT har en
+  leveranse-/closing-kommentar (`## Teknisk`/`## Funksjonell` — fra en tidligere
+  natt eller en interaktiv økt). Finnes den: korrigér den med PATCH, post ikke en
+  ny (CLAUDE.md §Closing-kommentar, eierregel #1907). Ellers: post CLAUDE.md-
+  konvensjonens Teknisk/Funksjonell-kommentar på ISSUET, innledet med «Lukkes
+  automatisk når eieren merger PR #<M>». Skriv statusutsagnene («venter på
+  merge», «prod er ikke påført») som egne, lett gjenkjennelige linjer — det er
+  nettopp dem økta som lander PR-en senere skal korrigere i stedet for å legge
+  til en kommentar nr. 2. Auto-close ved merge skriver ingen kommentar selv,
   og eieren skal slippe — kommentaren må derfor stå klar FØR merge (hull
   funnet ved første kjøring: #1099 lukket kommentar-løst).
 - **Ta PR-en ut av draft — den konvergerte leveransens SISTE handling (#1769):**
