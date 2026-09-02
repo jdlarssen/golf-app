@@ -1,41 +1,58 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Unit tests for #1012: branch selection in the shared account-deletion
- * helper. The Supabase admin client is the system boundary — mocked with a
- * FIFO queue per query plus spies for the GoTrue admin API and the
- * anonymize_user RPC. The SQL side (scrub + cleanup + guards) is covered by
- * supabase/tests/users_anonymize_test.sql, not here.
+ * Unit tests for #1012 (grenvalget i sletting) og #1909 (hvem sperren
+ * treffer). Supabase-admin-klienten er system-grensen — mocket med ett
+ * pre-kanet svar per tabell, pluss spioner for GoTrue-admin-API-et og
+ * `anonymize_user`-RPC-en.
+ *
+ * Svarene er nøklet på TABELL, ikke på rekkefølge: spørringene i blokk-
+ * sjekken kjører i `Promise.all`, og en FIFO-kø ville dermed testet
+ * kall-rekkefølgen i stedet for regelen. Mocken noterer i tillegg hvilke
+ * filtre hver spørring satte, slik at «draft blokkerer ikke» og «ferdig
+ * blokkerer ikke» kan bevises for ekte — mocken kan jo ikke filtrere selv.
+ *
+ * SQL-siden (scrub, frafall, vakter) dekkes av
+ * supabase/tests/users_anonymize_test.sql, ikke her.
  */
 
 type QueryResult = { data?: unknown; error?: unknown; count?: number | null };
 type SpyFn = (...args: unknown[]) => Promise<{ data: unknown; error: unknown }>;
+type Filter = { method: string; args: unknown[] };
 
 const state = {
-  queue: [] as QueryResult[],
+  /** Svar per tabellnavn. Uoppgitt tabell → tomt svar (ingen treff). */
+  tables: {} as Record<string, QueryResult>,
+  /** Én oppføring per `from(...)`-kjede, i kallsrekkefølge. */
+  calls: [] as Array<{ table: string; filters: Filter[] }>,
   rpc: vi.fn<SpyFn>(),
   deleteUser: vi.fn<SpyFn>(),
 };
 
-function makeBuilder() {
-  const next = () =>
-    Promise.resolve(state.queue.shift() ?? { data: null, error: null });
+function makeBuilder(table: string) {
+  const call = { table, filters: [] as Filter[] };
+  state.calls.push(call);
+  const result = () =>
+    Promise.resolve(state.tables[table] ?? { data: null, error: null });
   const proxy: Record<string, unknown> = {};
   for (const m of ['select', 'eq', 'neq', 'is', 'not', 'in', 'limit']) {
-    proxy[m] = () => proxy;
+    proxy[m] = (...args: unknown[]) => {
+      call.filters.push({ method: m, args });
+      return proxy;
+    };
   }
-  proxy.maybeSingle = () => next();
+  proxy.maybeSingle = () => result();
   proxy.then = (
     onFulfilled: (v: QueryResult) => unknown,
     onRejected?: (e: unknown) => unknown,
-  ) => next().then(onFulfilled, onRejected);
+  ) => result().then(onFulfilled, onRejected);
   return proxy;
 }
 
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
-    from: () => makeBuilder(),
+    from: (table: string) => makeBuilder(table),
     rpc: (...args: unknown[]) => state.rpc(...args),
     auth: { admin: { deleteUser: (...args: unknown[]) => state.deleteUser(...args) } },
   }),
@@ -47,19 +64,29 @@ const { deleteOrAnonymizeUser, getDeleteBlockReason } = await import(
 
 const USER_ID = '00000000-0000-4000-a000-000000000001';
 
+/** Tabellene blokk-sjekken faktisk spurte. */
+const queriedTables = () => state.calls.map((c) => c.table);
+/** Filtrene den (første) spørringen mot `table` satte. */
+const filtersFor = (table: string) =>
+  state.calls.find((c) => c.table === table)?.filters ?? [];
+
+/** Levende bruker, ingen av delene: utgangspunktet for blokk-testene. */
+const livingUser = { data: { is_admin: false, deleted_at: null } };
+
 beforeEach(() => {
   vi.clearAllMocks();
-  state.queue = [];
+  state.tables = {};
+  state.calls = [];
   state.rpc.mockResolvedValue({ data: null, error: null });
   state.deleteUser.mockResolvedValue({ data: null, error: null });
 });
 
 describe('deleteOrAnonymizeUser', () => {
   it('hard-deletes when the user has no game history', async () => {
-    state.queue = [
-      { data: { deleted_at: null } }, // users lookup
-      { count: 0 }, // game_players count
-    ];
+    state.tables = {
+      users: { data: { deleted_at: null } },
+      game_players: { count: 0 },
+    };
     const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
     expect(result).toEqual({ ok: true, mode: 'hard' });
     expect(state.deleteUser).toHaveBeenCalledExactlyOnceWith(USER_ID);
@@ -67,7 +94,10 @@ describe('deleteOrAnonymizeUser', () => {
   });
 
   it('falls back to anonymization when hard delete hits a residual FK', async () => {
-    state.queue = [{ data: { deleted_at: null } }, { count: 0 }];
+    state.tables = {
+      users: { data: { deleted_at: null } },
+      game_players: { count: 0 },
+    };
     state.deleteUser
       .mockResolvedValueOnce({ data: null, error: { message: 'FK violation' } }) // hard
       .mockResolvedValueOnce({ data: null, error: null }); // soft
@@ -80,7 +110,10 @@ describe('deleteOrAnonymizeUser', () => {
   });
 
   it('anonymizes directly when the user has game history', async () => {
-    state.queue = [{ data: { deleted_at: null } }, { count: 3 }];
+    state.tables = {
+      users: { data: { deleted_at: null } },
+      game_players: { count: 3 },
+    };
     const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
     expect(result).toEqual({ ok: true, mode: 'anonymized' });
     expect(state.rpc).toHaveBeenCalledExactlyOnceWith('anonymize_user', {
@@ -91,7 +124,7 @@ describe('deleteOrAnonymizeUser', () => {
   });
 
   it('retries only the auth soft delete when deleted_at is already set', async () => {
-    state.queue = [{ data: { deleted_at: '2026-07-03T10:00:00Z' } }];
+    state.tables = { users: { data: { deleted_at: '2026-07-03T10:00:00Z' } } };
     const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
     expect(result).toEqual({ ok: true, mode: 'anonymized' });
     expect(state.rpc).not.toHaveBeenCalled();
@@ -99,7 +132,10 @@ describe('deleteOrAnonymizeUser', () => {
   });
 
   it('reports failure when the anonymize RPC errors', async () => {
-    state.queue = [{ data: { deleted_at: null } }, { count: 1 }];
+    state.tables = {
+      users: { data: { deleted_at: null } },
+      game_players: { count: 1 },
+    };
     state.rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
     const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
     expect(result).toEqual({ ok: false, reason: 'failed' });
@@ -108,44 +144,130 @@ describe('deleteOrAnonymizeUser', () => {
 });
 
 describe('getDeleteBlockReason', () => {
-  it('blocks admin accounts', async () => {
-    state.queue = [{ data: { is_admin: true, deleted_at: null } }];
-    expect(await getDeleteBlockReason(USER_ID)).toBe('admin_account');
+  describe('short-circuits before any engagement lookup', () => {
+    it('blocks admin accounts', async () => {
+      state.tables = { users: { data: { is_admin: true, deleted_at: null } } };
+      expect(await getDeleteBlockReason(USER_ID)).toBe('admin_account');
+      expect(queriedTables()).toEqual(['users']);
+    });
+
+    it('passes an already anonymized account (only the auth retry is left)', async () => {
+      state.tables = {
+        users: { data: { is_admin: false, deleted_at: '2026-07-03T10:00:00Z' } },
+      };
+      expect(await getDeleteBlockReason(USER_ID)).toBeNull();
+      expect(queriedTables()).toEqual(['users']);
+    });
+
+    it('passes a user that does not exist', async () => {
+      state.tables = { users: { data: null } };
+      expect(await getDeleteBlockReason(USER_ID)).toBeNull();
+      expect(queriedTables()).toEqual(['users']);
+    });
   });
 
-  it('blocks when the user plays in an active or scheduled game', async () => {
-    state.queue = [
-      { data: { is_admin: false, deleted_at: null } },
-      { data: [{ game_id: 'g1' }] }, // playing
-      { data: [] }, // created games
-      { data: [] }, // cups
-      { data: [] }, // leagues
-    ];
-    expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+  describe('participation no longer blocks (#1909)', () => {
+    // `game_players` er ladet med en rad nettopp for å bevise at den aldri
+    // konsulteres — frafallet skjer i anonymize_user, ikke via en sperre.
+    it.each(['active', 'scheduled'])(
+      'passes a player in a %s game they did not organise',
+      async (status) => {
+        state.tables = {
+          users: livingUser,
+          game_players: { data: [{ game_id: 'g1', games: { status } }] },
+          games: { data: [] },
+          tournaments: { data: [] },
+          leagues: { data: [] },
+        };
+        expect(await getDeleteBlockReason(USER_ID)).toBeNull();
+        expect(queriedTables()).not.toContain('game_players');
+      },
+    );
+
+    it('asks only about things the account organises', async () => {
+      state.tables = { users: livingUser };
+      await getDeleteBlockReason(USER_ID);
+      expect(queriedTables()).toEqual([
+        'users',
+        'games',
+        'tournaments',
+        'leagues',
+      ]);
+      for (const table of ['games', 'tournaments', 'leagues']) {
+        expect(filtersFor(table)).toContainEqual({
+          method: 'eq',
+          args: ['created_by', USER_ID],
+        });
+      }
+    });
   });
 
-  it('blocks when the user organises an unfinished league', async () => {
-    state.queue = [
-      { data: { is_admin: false, deleted_at: null } },
-      { data: [] },
-      { data: [] },
-      { data: [] },
-      { data: [{ id: 'l1' }] },
-    ];
-    expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+  describe('organising something unfinished blocks', () => {
+    it.each(['active', 'scheduled'])(
+      'blocks the creator of a %s game',
+      async (status) => {
+        state.tables = {
+          users: livingUser,
+          games: { data: [{ id: `g-${status}` }] },
+          tournaments: { data: [] },
+          leagues: { data: [] },
+        };
+        expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+      },
+    );
+
+    it('blocks the creator of an unfinished cup', async () => {
+      state.tables = {
+        users: livingUser,
+        games: { data: [] },
+        tournaments: { data: [{ id: 't1' }] },
+        leagues: { data: [] },
+      };
+      expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+    });
+
+    it('blocks the creator of an unfinished league', async () => {
+      state.tables = {
+        users: livingUser,
+        games: { data: [] },
+        tournaments: { data: [] },
+        leagues: { data: [{ id: 'l1' }] },
+      };
+      expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+    });
   });
 
-  it('passes an idle non-admin user (and skips checks when already deleted)', async () => {
-    state.queue = [
-      { data: { is_admin: false, deleted_at: null } },
-      { data: [] },
-      { data: [] },
-      { data: [] },
-      { data: [] },
-    ];
-    expect(await getDeleteBlockReason(USER_ID)).toBeNull();
+  describe('nothing left to run passes', () => {
+    it('passes the creator of a draft game', async () => {
+      // Mocken filtrerer ikke, så draft-caset må bevises på filteret:
+      // spørringen ber kun om active/scheduled, altså kan draft aldri treffe.
+      state.tables = {
+        users: livingUser,
+        games: { data: [] },
+        tournaments: { data: [] },
+        leagues: { data: [] },
+      };
+      expect(await getDeleteBlockReason(USER_ID)).toBeNull();
+      expect(filtersFor('games')).toContainEqual({
+        method: 'in',
+        args: ['status', ['active', 'scheduled']],
+      });
+    });
 
-    state.queue = [{ data: { is_admin: false, deleted_at: '2026-07-03T10:00:00Z' } }];
-    expect(await getDeleteBlockReason(USER_ID)).toBeNull();
+    it('passes the creator of finished games, cups and leagues only', async () => {
+      state.tables = {
+        users: livingUser,
+        games: { data: [] },
+        tournaments: { data: [] },
+        leagues: { data: [] },
+      };
+      expect(await getDeleteBlockReason(USER_ID)).toBeNull();
+      for (const table of ['tournaments', 'leagues']) {
+        expect(filtersFor(table)).toContainEqual({
+          method: 'neq',
+          args: ['status', 'finished'],
+        });
+      }
+    });
   });
 });
