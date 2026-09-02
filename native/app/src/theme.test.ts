@@ -23,6 +23,9 @@ describe('PALETTES', () => {
       primary: COLORS.forest,
       onPrimary: '#FFFFFF',
       accent: COLORS.gold,
+      // Blekket på gull er skog i lys modus — nøyaktig det gull-flatene
+      // tegnet med før rollen fikk et navn.
+      onAccent: COLORS.forest,
       danger: COLORS.error,
     });
   });

@@ -35,6 +35,13 @@ export type ThemeColors = {
   primary: string;
   onPrimary: string;
   accent: string;
+  /**
+   * Tekst og merker OPPÅ en gull-flate — hull-stripens førte hull, matchplay-
+   * stripens vunne hull. Egen rolle fordi gull er lyst i begge palettene:
+   * `text` er mørk skog i lys modus og lys krem i mørk, og den siste
+   * forsvinner i gullet. Blekket på gull er mørkt uansett scheme.
+   */
+  onAccent: string;
   danger: string;
 };
 
@@ -53,6 +60,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     primary: COLORS.forest,
     onPrimary: '#FFFFFF',
     accent: COLORS.gold,
+    onAccent: COLORS.forest,
     danger: COLORS.error,
   },
   dark: {
@@ -64,6 +72,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     primary: '#7EAA80',
     onPrimary: '#14201A',
     accent: '#D4B870',
+    onAccent: '#14201A',
     danger: '#D67268',
   },
 };
