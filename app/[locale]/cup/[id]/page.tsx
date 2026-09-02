@@ -12,6 +12,7 @@ import {
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
 import { formatPoints } from '@/lib/cup/formatPoints';
+import { CupLineupSpotlight } from './CupLineupSpotlight';
 
 type Params = Promise<{ id: string }>;
 
@@ -75,6 +76,10 @@ export default async function PublicCupPage({ params }: { params: Params }) {
           })}
         </p>
       </header>
+
+      {/* #1884: avdekkings-kortet og kapteinens vei inn til uttaket. Rendrer
+          ingenting for cuper uten uttaks-økter. */}
+      <CupLineupSpotlight tournamentId={id} />
 
       {/* Dør til resultatsiden (#1468). Etter finish et tydelig dør-kort; før
           finish en dempet linje som fortsatt lenker dit (låst ventetekst) — én

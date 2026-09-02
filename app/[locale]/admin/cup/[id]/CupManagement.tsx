@@ -18,6 +18,7 @@ import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
 import { CupMatchList } from './CupMatchList';
 import { CupActionsSection } from './CupActionsSection';
 import { CupDoorsSection } from './CupDoorsSection';
+import { CupLineupDoor } from './CupLineupDoor';
 
 export type CupManagementVariant = 'admin' | 'club';
 
@@ -315,6 +316,16 @@ export async function CupManagement({
         isClub={isClub}
         groupId={groupId}
         matchCount={leaderboard.matches.length}
+      />
+
+      {/* #1884: uttaks-døra lever gjennom hele cupen, ikke bare i utkast —
+          økt 2 og 3 åpnes mens det spilles. Vises kun når cupen har en
+          kaptein, så cuper uten kapteiner ser ut nøyaktig som før. */}
+      <CupLineupDoor
+        tournamentId={tournamentId}
+        isClub={isClub}
+        groupId={groupId}
+        isFinished={tournament.status === 'finished'}
       />
 
       <CupMatchList
