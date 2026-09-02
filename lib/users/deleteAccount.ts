@@ -32,10 +32,27 @@ export type DeleteAccountResult =
 
 /**
  * Blokk-sjekk, gjenbrukt av begge bekreftelses-sider og begge actions.
- * Blokkerer når kontoen er admin, deltar i aktive/kommende spill, eller
- * arrangerer noe som ikke er avsluttet (spill, cup, liga) — en anonymisert
- * arrangør ville etterlatt turneringen uten styring (auto-start-cron ville
- * f.eks. varslet en konto ingen kan logge inn på).
+ *
+ * Sperren treffer kun den som ARRANGERER noe uavsluttet: `created_by` på et
+ * spill som er i gang eller planlagt (draft teller ikke — det er ikke satt i
+ * gang), eller på en cup/liga som ikke er avsluttet. `created_by` er én
+ * person og det finnes ingen med-arrangør-rolle, så arrangøren er alltid den
+ * eneste som kan avslutte — en anonymisert arrangør ville etterlatt
+ * turneringen uten styring (auto-start-cron ville f.eks. varslet en konto
+ * ingen kan logge inn på). Admin-kontoen har sin egen grunn
+ * (`admin_account`) og sjekkes først.
+ *
+ * Å DELTA blokkerer ikke lenger (#1909). `anonymize_user` (0173) trekker
+ * brukeren ut av alt som pågår eller ikke har startet, i samme transaksjon
+ * som scrubben: aktive spill får `withdrawn_at`, ikke-startede mister raden.
+ * Resten av gruppa spiller dermed videre og arrangøren kan avslutte uten å
+ * vente på en konto som er borte — derfor er det ingen grunn til å nekte
+ * spilleren å slette seg. Merk avhengigheten: uten den migrasjonen er regelen
+ * her feil, for da ville en spiller midt i runden blitt anonymisert uten å bli
+ * trukket.
+ *
+ * Wire-koden `active_engagements` er frosset (appen fail-closer på ukjente
+ * koder) — kun betydningen er snevret inn, ikke navnet.
  */
 export async function getDeleteBlockReason(
   userId: string,
@@ -51,13 +68,7 @@ export async function getDeleteBlockReason(
   if (target.is_admin) return 'admin_account';
   if (target.deleted_at) return null; // allerede anonymisert → kun auth-retry igjen
 
-  const [playing, created, cups, leagues] = await Promise.all([
-    admin
-      .from('game_players')
-      .select('game_id, games!inner(status)')
-      .eq('user_id', userId)
-      .in('games.status', ['active', 'scheduled'])
-      .limit(1),
+  const [games, cups, leagues] = await Promise.all([
     admin
       .from('games')
       .select('id')
@@ -78,12 +89,11 @@ export async function getDeleteBlockReason(
       .limit(1),
   ]);
 
-  const hasActive =
-    (playing.data?.length ?? 0) > 0 ||
-    (created.data?.length ?? 0) > 0 ||
+  const organisesSomethingOpen =
+    (games.data?.length ?? 0) > 0 ||
     (cups.data?.length ?? 0) > 0 ||
     (leagues.data?.length ?? 0) > 0;
-  return hasActive ? 'active_engagements' : null;
+  return organisesSomethingOpen ? 'active_engagements' : null;
 }
 
 /** Sletter (hard) eller anonymiserer kontoen. Caller har allerede kjørt
