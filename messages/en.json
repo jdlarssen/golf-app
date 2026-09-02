@@ -287,13 +287,14 @@
     "deleteAccount": {
       "kicker": "Delete account",
       "backLabel": "Back to profile",
-      "blockedBanner": "You're taking part in or organising something that is in progress or starting soon. Finish it first, or contact an administrator for help.",
+      "blockedBanner": "You're organising something that hasn't finished yet. You finish rounds in the app or on the website, and cups and leagues on the website. After that you can delete your account.",
       "adminBanner": "The admin account can't be deleted from here.",
       "blockedBackLink": "Back to profile",
       "deletedHeading": "What will be deleted",
       "bullet1": "Your user profile (name, nickname, handicap)",
       "bullet2": "Your email address is freed up and can't be used to log in again",
       "bullet3": "Friendships, club memberships, notifications and open invitations",
+      "bullet4": "Your place in rounds that are in progress or haven't started. You're withdrawn automatically, and the rest of the group plays on.",
       "keptHeading": "What is kept",
       "keptBullet": "Results from finished rounds. They stay in the tournament, but with \"Slettet bruker\" in place of your name",
       "confirmParagraph": "You are about to permanently delete <strong>{displayName}</strong>. This action cannot be undone.",
@@ -301,7 +302,7 @@
       "deletePending": "Deleting …",
       "cancelButton": "Cancel",
       "errors": {
-        "active_games": "You're taking part in or organising something that is in progress or hasn't started yet. Your account can't be deleted until it has finished. Contact an administrator.",
+        "active_games": "You're still organising something that hasn't finished. Finish it, and you can delete your account.",
         "admin_account": "The admin account can't be deleted from here.",
         "delete_failed": "Something went wrong while deleting. Please try again, or contact an administrator."
       }
@@ -3713,7 +3714,7 @@
         "rate_limited": "Too many invitations in a short time. Wait a minute and try again.",
         "withdraw_failed": "Could not withdraw the invitation. Please try again.",
         "self_delete_forbidden": "You cannot delete your own account.",
-        "target_active": "This player is taking part in or organising something that is in progress, and can't be deleted until it has finished.",
+        "target_active": "This player is organising something that hasn't finished yet. Finish it first, and you can delete the account.",
         "auth_delete_failed": "Could not delete the account. Please try again.",
         "unknown": "Could not complete the action. Please try again."
       },
@@ -3795,7 +3796,7 @@
           "update_failed": "Could not save the changes.",
           "not_admin": "You do not have access.",
           "self_delete_forbidden": "You cannot delete your own account.",
-          "target_active": "This player is taking part in or organising something that is in progress, and can't be deleted until it has finished.",
+          "target_active": "This player is organising something that hasn't finished yet. Finish it first, and you can delete the account.",
           "auth_delete_failed": "Could not delete the account. Please try again.",
           "email_invalid": "Invalid email address.",
           "email_in_use": "This email address is already registered.",
