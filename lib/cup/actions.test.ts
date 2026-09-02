@@ -456,6 +456,7 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
       ...readsUpToRoster(),
       ...successfulBundleWrites(),
       { data: ROSTER_AFTER_SWAP, error: null },
+      { data: null, error: null }, // #1884: ut-spillerens rolle-rad (ingen)
       { data: null, error: null }, // upsert
       { data: null, error: null }, // delete
     ]);
@@ -479,7 +480,9 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
     });
 
     expect(participantCalls('delete')).toHaveLength(1);
-    expect(participantCalls('eq').map((c) => c.args)).toEqual([
+    // De to siste `eq`-ene er slettingens: rolle-lesingen (#1884) filtrerer på
+    // samme to kolonner rett før, så hele lista inneholder begge par.
+    expect(participantCalls('eq').slice(-2).map((c) => c.args)).toEqual([
       ['tournament_id', 'cup-1'],
       ['user_id', 'out'],
     ]);
@@ -496,6 +499,7 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
       }),
       ...successfulBundleWrites(),
       { data: [...ROSTER_AFTER_SWAP, { user_id: 'out' }], error: null },
+      { data: null, error: null }, // #1884: ut-spillerens rolle-rad (ingen)
       { data: null, error: null }, // upsert
     ]);
     supabaseMock = buildSupabaseMock([cupAdminUser]);
@@ -517,12 +521,33 @@ describe('swapCupMatchPlayer — deltakerlista følger matchene (#1735)', () => 
     expect(participantCalls('delete')).toHaveLength(0);
   });
 
+  it('ut-spilleren er kaptein: raden står selv om hun er ute av alle matcher (#1884)', async () => {
+    adminMock = buildSupabaseMock([
+      ...readsUpToRoster(),
+      ...successfulBundleWrites(),
+      { data: ROSTER_AFTER_SWAP, error: null },
+      // Varig rolle på deltaker-raden → synken fjerner henne ikke.
+      { data: { team_number: 1, is_captain: true }, error: null },
+      { data: null, error: null }, // upsert
+    ]);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
+    setUser('admin-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    const err = await swapCupMatchPlayer(swapForm()).catch((e) => e);
+    expect(err, 'byttet gikk gjennom').toBeInstanceOf(RedirectError);
+
+    expect(participantCalls('upsert')).toHaveLength(1);
+    expect(participantCalls('delete')).toHaveLength(0);
+  });
+
   it('synkingen feiler: byttet står likevel, feilen logges', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     adminMock = buildSupabaseMock([
       ...readsUpToRoster(),
       ...successfulBundleWrites(),
       { data: ROSTER_AFTER_SWAP, error: null },
+      { data: null, error: null }, // #1884: ut-spillerens rolle-rad (ingen)
       { data: null, error: { message: 'participants boom' } }, // upsert feiler
       { data: null, error: null }, // delete
     ]);

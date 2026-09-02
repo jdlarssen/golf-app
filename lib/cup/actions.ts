@@ -24,6 +24,7 @@ import {
   planParticipantRosterSync,
   swapExceedsPersonalPlayerCap,
 } from './participantRosterSync';
+import { hasPersistentCupRole } from './captainRoles';
 import { loadTournamentParticipantEmails } from './tournamentParticipants';
 import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
@@ -657,9 +658,12 @@ async function checkSwapParticipantCap(
     args;
   if (groupId || actorIsAdmin) return null;
 
+  // #1884: rolle-kolonnene leses med — en ut-spiller med varig lag eller
+  // kapteinsflagg blir stående på lista, og fjerningen skal da ikke godskrives
+  // i tak-regnestykket.
   const { data: participantRows, error: participantsError } = await admin
     .from('tournament_participants')
-    .select('user_id')
+    .select('user_id, team_number, is_captain')
     .eq('tournament_id', tournamentId);
   // Ut-spillerens rader over ALLE cupens matcher: en rad utenfor matchene som
   // skrives betyr at hun blir stående i en annen bunt (splittet cup-dag,
@@ -680,12 +684,23 @@ async function checkSwapParticipantCap(
   }
 
   const writtenIds = new Set(args.writtenGameIds);
+  const outRoleRow = (participantRows ?? []).find(
+    (r) => r.user_id === outUserId,
+  );
   const wouldExceedCap = swapExceedsPersonalPlayerCap({
     participantIds: (participantRows ?? []).map((r) => r.user_id as string),
     outUserId,
     inUserId,
     outRemainsInCup: (outRows ?? []).some(
       (r) => !writtenIds.has(r.game_id as string),
+    ),
+    outHasPersistentRole: hasPersistentCupRole(
+      outRoleRow
+        ? {
+            teamNumber: (outRoleRow.team_number as 1 | 2 | null) ?? null,
+            isCaptain: outRoleRow.is_captain === true,
+          }
+        : null,
     ),
     actorIsAdmin,
   });
@@ -736,12 +751,35 @@ async function syncParticipantsAfterSwap(
       .in('user_id', [outUserId, inUserId]);
     if (rosterError) logFailure(rosterError);
 
+    // #1884: ut-spillerens varige rolle. En benket spiller eller en
+    // ikke-spillende kaptein står i null matcher, men skal bli på lista.
+    // Feiler lesingen, faller vi tilbake til «ingen rolle» — synken er
+    // best-effort, og fjerningsregelen er da som før kapteinene fantes.
+    // Bevisst sekvensiell etter roster-lesingen, ikke i en `Promise.all`:
+    // synken er best-effort og ikke tidskritisk, og to samtidige lesinger mot
+    // samme klient gjorde rekkefølgen — og dermed feilsøkingen — uklar.
+    const { data: outRoleRow, error: outRoleError } = await admin
+      .from('tournament_participants')
+      .select('team_number, is_captain')
+      .eq('tournament_id', tournamentId)
+      .eq('user_id', outUserId)
+      .maybeSingle();
+    if (outRoleError) logFailure(outRoleError);
+
     const plan = planParticipantRosterSync({
       outUserId,
       inUserId,
       rosterUserIds: rosterError
         ? null
         : (rosterRows ?? []).map((r) => r.user_id as string),
+      outHasPersistentRole: hasPersistentCupRole(
+        outRoleRow
+          ? {
+              teamNumber: (outRoleRow.team_number as 1 | 2 | null) ?? null,
+              isCaptain: outRoleRow.is_captain === true,
+            }
+          : null,
+      ),
     });
 
     if (plan.addParticipantId) {
