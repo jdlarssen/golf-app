@@ -28,7 +28,6 @@
 // spiller fått to ulike forklaringer på samme regel, avhengig av flate.
 // Resten (nett, utløpt sesjon, manglende server-adresse) er app-egne koder uten
 // fasit, skrevet i husets stemme.
-import { OFFLINE_NOTE } from './rosterCopy';
 
 /**
  * Hvorfor kontoen ikke kan slettes, slik GET-en svarer.
@@ -88,8 +87,12 @@ export function describeDeleteBlock(reason: DeleteBlockReason): string {
  */
 export function describeDeleteFailure(reason: AccountDeleteFailure): string {
   switch (reason) {
+    // Ikke den delte offline-setningen fra rosterCopy: den lover «koble til, så
+    // går det gjennom», som er sant for en score i sync-køen og feil her.
+    // Sletting legges aldri i kø — den skjer på serveren, eller ikke i det hele
+    // tatt.
     case 'offline':
-      return OFFLINE_NOTE;
+      return 'Du er uten nett. Koble til, så kan du slette kontoen herfra.';
     // Env-varen bakes inn ved bundling. Mangler den, er det en feil i bygget,
     // ikke noe spilleren kan rette — men den skal si det høyt i stedet for å
     // la knappen gjøre ingenting (ærlig-feil-guardrailen).

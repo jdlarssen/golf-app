@@ -106,12 +106,17 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
     );
   }
 
-  // To veier inn i samme tilstand: serveren sa «blokkert», eller vi fikk ikke
-  // spurt (uten nett, utløpt sesjon, feil i bygget). Begge betyr at vi ikke vet
-  // at kontoen kan slettes — og da tilbys ingen sletting.
-  const blockText = status.ok
-    ? status.blocked && describeDeleteBlock(status.blocked)
-    : describeDeleteFailure(status.reason);
+  // Serveren sa «blokkert»: da er svaret gitt, og siden er ferdig. Ingen knapp,
+  // og ingen grunn til å ramse opp hva en sletting ville gjort.
+  const blockText =
+    status.ok && status.blocked ? describeDeleteBlock(status.blocked) : null;
+
+  // Vi fikk ikke SPURT (uten nett, utløpt sesjon, feil i bygget). Det er noe
+  // annet enn et nei: brukeren skal fortsatt kunne lese hva sletting innebærer
+  // — kontrakten sier «les-og-vis fritt» — men knappen erstattes av grunnen til
+  // at den ikke er der. Å skjule alt ville gjort en midlertidig nettfeil
+  // uskillelig fra et avslag.
+  const unreachableText = status.ok ? null : describeDeleteFailure(status.reason);
 
   if (blockText) {
     return (
@@ -163,17 +168,25 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
         {ACCOUNT_TEXT.confirmTrail}
       </Text>
 
-      <Pressable
-        style={[ui.button, { backgroundColor: colors.danger }, pending && styles.buttonOff]}
-        disabled={pending}
-        accessibilityState={{ disabled: pending }}
-        onPress={() => void confirm()}
-        testID="delete-account-submit"
-      >
-        <Text style={ui.buttonText}>
-          {pending ? ACCOUNT_TEXT.deletePending : ACCOUNT_TEXT.deleteButton}
-        </Text>
-      </Pressable>
+      {unreachableText ? (
+        <View style={ui.banner}>
+          <Text style={ui.body} testID="delete-account-unreachable">
+            {unreachableText}
+          </Text>
+        </View>
+      ) : (
+        <Pressable
+          style={[ui.button, { backgroundColor: colors.danger }, pending && styles.buttonOff]}
+          disabled={pending}
+          accessibilityState={{ disabled: pending }}
+          onPress={() => void confirm()}
+          testID="delete-account-submit"
+        >
+          <Text style={ui.buttonText}>
+            {pending ? ACCOUNT_TEXT.deletePending : ACCOUNT_TEXT.deleteButton}
+          </Text>
+        </Pressable>
+      )}
 
       <Pressable
         style={ui.link}

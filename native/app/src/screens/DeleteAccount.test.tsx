@@ -82,17 +82,24 @@ describe('DeleteAccount', () => {
     },
   );
 
-  it('tilbyr ingen sletting når statusen ikke kunne hentes', async () => {
+  // «Fikk ikke spurt» er ikke det samme som «nei». Kontrakten sier les-og-vis
+  // fritt: teksten skal stå der, knappen skal ikke.
+  it('lar deg lese hva sletting gjør selv om statusen ikke kunne hentes', async () => {
     (fetchDeleteStatus as jest.Mock).mockResolvedValue({
       ok: false,
       reason: 'offline',
     });
     await renderScreen();
 
-    expect(screen.getByTestId('delete-account-banner')).toHaveTextContent(
+    expect(screen.getByTestId('delete-account-deleted')).toBeTruthy();
+    expect(screen.getByTestId('delete-account-kept')).toBeTruthy();
+    expect(screen.getByTestId('delete-account-unreachable')).toHaveTextContent(
       describeDeleteFailure('offline'),
     );
+    // Ingen knapp i det hele tatt — ikke en grå én.
     expect(screen.queryByTestId('delete-account-submit')).toBeNull();
+    // Og ikke forvekslet med et avslag fra serveren.
+    expect(screen.queryByTestId('delete-account-banner')).toBeNull();
   });
 
   it('viser hva som slettes, hva som beholdes og navnet ditt', async () => {

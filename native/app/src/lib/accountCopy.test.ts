@@ -81,8 +81,14 @@ describe('describeDeleteFailure', () => {
     },
   );
 
-  it('sier samme nett-linje som resten av appen', () => {
-    expect(describeDeleteFailure('offline')).toBe(OFFLINE_NOTE);
+  // Sletting legges ALDRI i kø. Den delte offline-setningen lover «koble til, så
+  // går det gjennom» — sant for en score, feil her. Testen låser at vi ikke
+  // faller tilbake på den igjen.
+  it('lover ikke at slettingen går gjennom senere', () => {
+    const offline = describeDeleteFailure('offline');
+    expect(offline).not.toBe(OFFLINE_NOTE);
+    expect(offline).toContain('uten nett');
+    expect(offline).not.toContain('går det gjennom');
   });
 
   it('sier hva som mangler når appen ikke vet hvilken server den skal spørre', () => {

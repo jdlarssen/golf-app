@@ -239,6 +239,23 @@ describe('konto-sletting', () => {
       expect(await account().deleteAccount()).toEqual({ ok: true, mode: 'hard' });
       expect(mockCalls).toEqual(['wipe']);
     });
+
+    // Etter 200 er kontoen borte. Feiler den lokale oppryddingen, er svaret
+    // fortsatt «slettet» — sier vi «prøv igjen», ber vi brukeren prøve på en
+    // konto som ikke finnes, og neste forsøk faller uansett på 401.
+    it('er slettet selv om den lokale basen ikke lot seg tømme', async () => {
+      respondWith(200, { mode: 'anonymized' });
+      wipeLocalData().mockRejectedValue(new Error('database locked'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect(await account().deleteAccount()).toEqual({
+        ok: true,
+        mode: 'anonymized',
+      });
+      // Utloggingen skjer likevel — ellers står brukeren igjen innlogget på en
+      // slettet konto.
+      expect(mockCalls).toEqual(['signOut']);
+    });
   });
 
   describe('fetchDeleteStatus', () => {
