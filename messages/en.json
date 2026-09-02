@@ -295,7 +295,7 @@
       "bullet2": "Your email address is freed up and can't be used to log in again",
       "bullet3": "Friendships, club memberships, notifications and open invitations",
       "keptHeading": "What is kept",
-      "keptBullet": "Results from finished rounds — they belong to the tournament and stay visible, but with \"Slettet bruker\" in place of your name",
+      "keptBullet": "Results from finished rounds. They stay in the tournament, but with \"Slettet bruker\" in place of your name",
       "confirmParagraph": "You are about to permanently delete <strong>{displayName}</strong>. This action cannot be undone.",
       "deleteButton": "Delete my account permanently",
       "deletePending": "Deleting …",

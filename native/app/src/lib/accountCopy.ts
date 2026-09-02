@@ -154,7 +154,7 @@ export const ACCOUNT_TEXT = {
   ],
   keptHeading: 'Dette beholdes',
   keptBullet:
-    'Resultatene fra fullførte runder — de tilhører turneringen og vises videre, men med «Slettet bruker» i stedet for navnet ditt',
+    'Resultatene fra fullførte runder. De blir stående i turneringen, men med «Slettet bruker» i stedet for navnet ditt',
   // Webbens `confirmParagraph` er én streng med `<strong>{displayName}</strong>`
   // midt i, rendret med `t.rich`. React Native har ingen HTML, så setningen er
   // delt i to og navnet settes inn som en egen fet <Text> mellom dem:

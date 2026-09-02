@@ -295,7 +295,7 @@
       "bullet2": "E-postadressen din frigis og kan ikke brukes til å logge inn igjen",
       "bullet3": "Vennskap, klubbmedlemskap, varsler og åpne invitasjoner",
       "keptHeading": "Dette beholdes",
-      "keptBullet": "Resultatene fra fullførte runder — de tilhører turneringen og vises videre, men med «Slettet bruker» i stedet for navnet ditt",
+      "keptBullet": "Resultatene fra fullførte runder. De blir stående i turneringen, men med «Slettet bruker» i stedet for navnet ditt",
       "confirmParagraph": "Du er i ferd med å slette <strong>{displayName}</strong> permanent. Handlingen kan ikke angres.",
       "deleteButton": "Slett kontoen min for alltid",
       "deletePending": "Sletter …",
