@@ -166,7 +166,7 @@ flowchart LR
 | Venner | `/profile/venner` + `actions.ts` (#369) | Legg til (forslag/e-post/lenke), godta/avslå, fjern. RPCer `send_friend_request`/`*_by_email`/`respond_friend_request`/`remove_friend`/`connect_via_friend_code`; `getFriendData` for siden. Delt lenke landes på `/venner/legg-til/[code]`. |
 | Historikk / statistikk | `/profile/historikk`, `/profile/statistikk` | |
 | GDPR-eksport | `app/[locale]/profile/export/route.ts` | Last ned egne data. |
-| Slett konto | `app/[locale]/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis eneste arrangør av noe uavsluttet (spill, cup, liga) — deltakere slipper alltid gjennom og trekkes automatisk (`anonymize_user`, 0173). `admin.deleteUser`. |
+| Slett konto | `app/[locale]/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis eneste arrangør av noe uavsluttet (spill, cup, liga) — deltakere slipper alltid gjennom og trekkes automatisk (`anonymize_user`, 0174). `admin.deleteUser`. |
 | Varsler | `app/[locale]/innboks/page.tsx` | Via `NotificationBell`. Mark-as-read. |
 
 ---

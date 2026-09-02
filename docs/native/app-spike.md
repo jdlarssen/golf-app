@@ -1078,7 +1078,7 @@ med execute kun for `service_role`, og den blokkerer admin-kontoer på DB-nivå
 eneste vernet. **Ingen migrasjon i denne slicen.**
 
 ⚠️ **Fra #1909 gjør RPC-en mer enn å skrubbe: den melder deg av alt som ikke er
-avsluttet.** Migrasjon `0173_anonymize_user_withdraws_from_open_play.sql` legger fem steg
+avsluttet.** Migrasjon `0174_anonymize_user_withdraws_from_open_play.sql` legger fem steg
 inn FØR scrubben, i samme transaksjon: pågående spill får `withdrawn_at` +
 `withdrawn_by_user_id` på `game_players`-raden (raden og scorene består), ikke-startede
 spill mister raden helt, og deltakelsen i uavsluttede cuper og ligaer — inkludert setene
@@ -1087,7 +1087,7 @@ spill, cuper og ligaer er urørt. Frafallet bor i RPC-en og ikke i helper-laget 
 fordi alle tre kallerne (selv-slett på web, admin-slett på web, denne ruta) går gjennom
 `deleteOrAnonymizeUser` → RPC-en: ett hjem for regelen (AGENTS-felle 4), atomisk sammen
 med `deleted_at`, og service-role-konteksten slipper forbi vaktene på `game_players` uten
-at noen policy må endres. Konsekvensen for appen: kroppen å sitere er `0173`, ikke `0142`
+at noen policy må endres. Konsekvensen for appen: kroppen å sitere er `0174`, ikke `0142`
 — og en spiller midt i en runde som sletter seg SKAL ha `withdrawn_at` satt etterpå.
 
 ### Ingenting stopper sync eksplisitt — unmount-kaskaden gjør det
