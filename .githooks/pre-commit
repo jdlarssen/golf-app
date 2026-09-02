@@ -181,4 +181,26 @@ if [ "$warn_count" -gt 0 ]; then
   printf 'Full pattern-katalog + bevisst-bevart-listen: docs/copy-style.md\n' >&2
 fi
 
+
+# ── BLOKK 2/2: e-postadresse i nye linjer (#1929) ─────────────────────────────
+# Andre harde blokk i denne ellers rådgivende hooken. Samme begrunnelse som
+# Dexie-rename: skaden kan ikke angres. Repoet er offentlig, og en adresse som
+# er committet blir liggende i historikken selv om fila rettes etterpå.
+scan_emails="$(git rev-parse --show-toplevel)/.githooks/scan-emails.sh"
+if [ -x "$scan_emails" ]; then
+  added="$(git diff --cached -U0 --diff-filter=ACM -- . ':!package-lock.json' \
+           | grep -E '^\+' | grep -vE '^\+\+\+' || true)"
+  if [ -n "$added" ]; then
+    if email_leaks="$(printf '%s' "$added" | "$scan_emails")"; then :; else
+      printf '\n\033[31m✖ E-postadresse i nye linjer — commit stoppet\033[0m\n'
+      printf '%s\n' "$email_leaks" | sed 's/^/    /'
+      printf '\nRepoet er OFFENTLIG. En committet adresse blir liggende i historikken\n'
+      printf 'selv om fila rettes senere. Bruk rollen i stedet («review-kontoen»,\n'
+      printf '«e2e-spilleren»). Skal den kunne stå: legg et mønster i\n'
+      printf '.githooks/email-allowlist.txt med begrunnelse. Se #1929.\n\n'
+      exit 1
+    fi
+  fi
+fi
+
 exit 0

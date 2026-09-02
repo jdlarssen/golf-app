@@ -103,6 +103,32 @@ case "$cmd_stripped" in
     emit_deny "no-verify" "CLAUDE.md forbyr --no-verify: det omgår commit-msg/pre-commit/pre-push-gatene (versjonering, Refs #N, Dexie-vakt, typecheck/lint/test). Fiks årsaken i stedet. Ekte nødssituasjon? La eier kjøre den manuelt." ;;
 esac
 
+# ── DENY: e-postadresser i noe som publiseres til GitHub (#1929) ──────────────
+# Repoet er offentlig, og en adresse som først er postet kan ikke tas tilbake:
+# GitHub beholder redigeringshistorikken til en kommentar, git beholder gamle
+# commits. Derfor blokk, ikke advarsel.
+#
+# Skanner BÅDE den inline quotede bodyen (derfor $cmd, ikke $cmd_stripped) og
+# fila som --body-file/--input peker på — lekkasjen i #1909 gikk gjennom
+# --body-file, som en ren kommandostreng-sjekk aldri ville sett.
+case "$cmd_stripped" in
+  *"gh issue create"*|*"gh issue comment"*|*"gh issue edit"*|\
+  *"gh pr create"*|*"gh pr comment"*|*"gh pr edit"*|*"gh pr review"*|\
+  *"gh release create"*|*"gh gist create"*|*"gh api"*)
+    scanner="${CLAUDE_PROJECT_DIR:-.}/.githooks/scan-emails.sh"
+    if [ -x "$scanner" ]; then
+      body_text="$cmd"
+      for f in $(printf '%s' "$cmd" | tr '\n' ' ' \
+                 | sed -nE 's/.*(--body-file|--input)[= ]+"?([^ "'"'"']+)"?.*/\2/p'); do
+        [ -f "$f" ] && body_text="$body_text
+$(cat "$f" 2>/dev/null)"
+      done
+      leaks="$(printf '%s' "$body_text" | "$scanner" 2>/dev/null)" || {
+        emit_deny "email-leak" "E-postadresse i noe som skal publiseres til GitHub: $(printf '%s' "$leaks" | tr '\n' ' '). Repoet er OFFENTLIG, og en postet adresse kan ikke tas tilbake — GitHub beholder redigeringshistorikken til kommentarer. Bruk ROLLEN i stedet («review-kontoen», «admin-kontoen», «e2e-spilleren») — det er også det leseren trenger. Skal adressen virkelig kunne stå, legg et mønster i .githooks/email-allowlist.txt med begrunnelse. Se #1929."
+      }
+    fi ;;
+esac
+
 # ── gh pr merge: DENY squash (rebase-only), ellers REMIND stagingbevis-porten (#1076) ──
 case "$cmd_stripped" in
   *"gh pr merge"*)
