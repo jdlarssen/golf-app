@@ -182,6 +182,13 @@ export const END_GAME_TEXT = {
   // dermed en blindvei som beskriver en app som ikke finnes lenger.
   unapprovedNote:
     'En medspiller må godkjenne hvert kort før du kan avslutte. Be dem åpne runden og godkjenne — eller godkjenn på vegne av gruppa her.',
+  /**
+   * Egen rad i ventelista (#1891). Ingen kan godkjenne sitt eget kort — vakta i
+   * basen nekter det uansett hvem du er — så her står en forklaring i stedet
+   * for en knapp som bare kunne feilet.
+   */
+  ownCardNeedsPeer:
+    'Ditt eget kort må en medspiller godkjenne. Det kan du ikke gjøre selv.',
   /** Både knappe-etiketten og tittelen i bekreftelsen — det er samme handling. */
   approveOnBehalf: 'Godkjenn på vegne av gruppa',
   approveConfirmCta: 'Godkjenn',

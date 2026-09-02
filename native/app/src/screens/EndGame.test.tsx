@@ -413,6 +413,38 @@ describe('EndGame', () => {
     });
   });
 
+  it('gir ikke egen rad en godkjenn-knapp — vakta i basen nekter den uansett', async () => {
+    // Funnet i gjennomgangen av #1891: `unapproved` filtrerer ikke bort
+    // arrangøren (til forskjell fra `missing.withdrawable`), så knappen ble
+    // tegnet på et kort ingen kan godkjenne. Trykket endte i en rå engelsk
+    // Postgres-tekst på skjermen — `guard_game_players_self_update` forbyr at
+    // NOEN setter godkjenning på sin egen rad.
+    setBundle(
+      [
+        player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
+        player({ userId: MATE, submittedAt: '2026-09-01T09:10:00.000Z' }),
+      ],
+      { requirePeerApproval: true },
+    );
+    await renderScreen();
+
+    expect(screen.queryByTestId(`end-game-approve-${mockMe}`)).toBeNull();
+    expect(screen.getByTestId('end-game-own-card-needs-peer')).toBeTruthy();
+    // Makkerens kort er fortsatt overstyrbart — det er hele poenget med #1891.
+    expect(screen.getByTestId(`end-game-approve-${MATE}`)).toBeTruthy();
+  });
+
+  it('lenker ikke til frafall i et format som ikke har frafall', async () => {
+    // `singles_matchplay` er utenfor `supportsWithdrawal`. Uten denne gaten
+    // sendte knappen arrangøren til /trekk-fra, som bare redirecter tilbake.
+    setBundle([player({ userId: mockMe }), player({ userId: MATE })], {
+      gameMode: 'singles_matchplay',
+    });
+    await renderScreen();
+
+    expect(screen.queryByTestId('end-game-withdraw-self-link')).toBeNull();
+  });
+
   it('peker egen rad til frafalls-siden — den kan ikke trekkes herfra', async () => {
     // `guard_game_players_self_update` (0147) nekter arrangøren å trekke sin
     // egen rad. Hinten sa «på nettsiden»; #1891 la veien dit.

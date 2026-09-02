@@ -264,7 +264,19 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
             {END_GAME_TEXT.unapprovedHeading}: {plan.unapproved.map(displayName).join(', ')}
           </Text>
           <Text style={ui.muted}>{END_GAME_TEXT.unapprovedNote}</Text>
-          {plan.unapproved.map((player) => (
+          {/* Egen rad får ingen knapp. `guard_game_players_self_update` nekter
+              enhver spiller å sette godkjenning på sitt eget kort, så knappen
+              kunne bare feilet — med den rå engelske Postgres-teksten på
+              skjermen. Kortet står fortsatt i lista over: det blokkerer
+              avslutningen, og arrangøren skal se hvorfor. */}
+          {plan.unapproved.some((player) => player.userId === userId) ? (
+            <Text style={ui.muted} testID="end-game-own-card-needs-peer">
+              {END_GAME_TEXT.ownCardNeedsPeer}
+            </Text>
+          ) : null}
+          {plan.unapproved
+            .filter((player) => player.userId !== userId)
+            .map((player) => (
             <Pressable
               key={player.userId}
               style={ui.buttonSecondary}
@@ -326,7 +338,8 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
               />
             ))}
           </View>
-          {plan.missing.some((entry) => entry.player.userId === userId) ? (
+          {plan.withdrawalSupported &&
+          plan.missing.some((entry) => entry.player.userId === userId) ? (
             // Egen rad står i lista med `ownRowHint`, som sier at frafallet
             // gjøres på nettsiden. Knappen står under KORTET og ikke inni
             // raden: raden er selv en `Pressable` (avkryssingen), og en knapp
