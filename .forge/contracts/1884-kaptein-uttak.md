@@ -100,8 +100,15 @@ Ingen ny bibliotek-flate — Supabase-/Next-mønstrene er husets egne, verifiser
 - [x] **SK8 — Migrasjon:** 0172 påført staging (`snwmueecmfqqdurxedxv`) via
   Supabase MCP. Verifisert: begge nye tabeller `rowsecurity=true`, 0 policyer,
   0 grants til anon/authenticated; `tournament_participants` har `team_number`
-  (nullable) + `is_captain` (NOT NULL default false). **Prod: IKKE påført** —
-  skjer etter merge, bak eier-luka (#1074).
+  (nullable) + `is_captain` (NOT NULL default false). CI-ens drift-jobb
+  regenererte typene fra staging og bekreftet at `lib/database.types.ts` er
+  identisk med det live skjemaet. **Prod: IKKE påført.**
+  ⚠️ Rettet etter evaluator-funn: prod må påføres **FØR** merge/deploy, ikke
+  etter. Kontrakten sa opprinnelig «etter merge», men den nye koden leser
+  `team_number`/`is_captain` i Spillere-rommet og i spillerbyttet, og begge
+  feiler lukket på en ukjent kolonne — hele Spillere-rommet ville vist feilsiden
+  for alle cuper i vinduet. Migrasjonen er additiv og trygg å påføre mens bare
+  gammel kode kjører. Samme lærdom som 0169.
 - [x] **SK9 — i18n + notat:** `npx vitest run messages` grønn (paritet).
   `node scripts/weekly-release.mjs --dry-run` viser 1884-notatet som gyldig.
 - [x] **SK10 — Staging-bevis:** Full klikkrunde kjørt mot torny-staging i

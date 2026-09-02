@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   seatsPerSlot,
   validateLineupSubmission,
+  validateStoredLineups,
   planLineupPairs,
   type LineupSlotInput,
 } from './lineupValidation';
@@ -244,5 +245,70 @@ describe('planLineupPairs', () => {
     });
     expect(out.map((p) => p.slotIndex)).toEqual([0, 1, 2]);
     expect(out.map((p) => p.side1[0])).toEqual(['a', 'b', 'c']);
+  });
+});
+
+/**
+ * Reveal-tidens re-validering (#1884, evaluator-funn). Uttakene ble validert da
+ * de ble levert, men lagene kan ha endret seg før avdekkingen — og ingenting
+ * rører de lagrede plassene når de gjør det.
+ */
+describe('validateStoredLineups', () => {
+  const base = {
+    slotCount: 1,
+    format: 'foursomes_matchplay' as const,
+    team1: [
+      { slotIndex: 0, seat: 1 as const, userId: 'a' },
+      { slotIndex: 0, seat: 2 as const, userId: 'b' },
+    ],
+    team2: [
+      { slotIndex: 0, seat: 1 as const, userId: 'x' },
+      { slotIndex: 0, seat: 2 as const, userId: 'y' },
+    ],
+    squad1: ['a', 'b', 'c'],
+    squad2: ['x', 'y', 'z'],
+  };
+
+  it('accepts two intact lineups', () => {
+    expect(validateStoredLineups(base)).toEqual({ ok: true });
+  });
+
+  it('rejects a player moved to the other team after submitting', () => {
+    // «a» ble flyttet til lag 2, men lag 1s lagrede plass beholdt henne.
+    expect(
+      validateStoredLineups({
+        ...base,
+        squad1: ['b', 'c'],
+        squad2: ['x', 'y', 'z', 'a'],
+      }),
+    ).toEqual({ ok: false, error: 'lineup_squad_changed' });
+  });
+
+  it('rejects a player removed from the cup entirely', () => {
+    expect(
+      validateStoredLineups({ ...base, squad2: ['y', 'z'] }),
+    ).toEqual({ ok: false, error: 'lineup_squad_changed' });
+  });
+
+  it('rejects the same player standing on both sides', () => {
+    // Begge stallene inneholder «a» — kan skje om lagtildelingen endres to
+    // ganger. Uten denne sjekken ville avdekkingen laget en kamp der samme
+    // spiller står på begge lag.
+    expect(
+      validateStoredLineups({
+        ...base,
+        team2: [
+          { slotIndex: 0, seat: 1, userId: 'a' },
+          { slotIndex: 0, seat: 2, userId: 'y' },
+        ],
+        squad2: ['a', 'y', 'z'],
+      }),
+    ).toEqual({ ok: false, error: 'lineup_squad_changed' });
+  });
+
+  it('rejects a lineup that lost rows since submission', () => {
+    expect(
+      validateStoredLineups({ ...base, team1: [base.team1[0]] }),
+    ).toEqual({ ok: false, error: 'lineup_incomplete' });
   });
 });

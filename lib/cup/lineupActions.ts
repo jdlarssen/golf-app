@@ -11,12 +11,12 @@ import { planCupRoleChange, type CupTeamNumber } from './captainRoles';
 import { exceedsPersonalMatchCap } from './limits';
 import { insertCupMatches, teeRatingsFrom } from './insertCupMatches';
 import { loadCupLineupAccess, canWriteTeamLineup } from './lineupAccess';
-import { squadUserIds } from './lineupData';
+import { countPendingLineupSlots, squadUserIds } from './lineupData';
 import { buildRevealMatches, nextLabelNumber } from './lineupReveal';
 import {
   planLineupPairs,
-  seatsPerSlot,
   validateLineupSubmission,
+  validateStoredLineups,
   type LineupSlotInput,
   type LineupSlotRow,
 } from './lineupValidation';
@@ -215,6 +215,8 @@ export async function openCupLineupSession(
   }
 
   const existingSessions = sessionRows ?? [];
+  // Samme regel som veiviseren bruker (lib/cup/lineupData:countPendingLineupSlots)
+  // — regnet lokalt her fordi radene alt er lest.
   const pendingSlots = existingSessions
     .filter((s) => s.revealed_at === null)
     .reduce((sum, s) => sum + (s.slot_count as number), 0);
@@ -637,24 +639,40 @@ async function revealCupLineupSession(
         userId: r.user_id as string,
       }));
 
-  const seats = seatsPerSlot(format);
   const team1 = bySide(1);
   const team2 = bySide(2);
-  // Begge uttak ble validert komplette før de ble stemplet levert. Er de det
-  // likevel ikke nå, har databasen og valideringen kommet ut av takt — stopp
-  // heller enn å bygge halve kamper.
-  if (
-    team1.length !== slotCount * seats ||
-    team2.length !== slotCount * seats
-  ) {
-    console.error('[cup] revealCupLineupSession incomplete slots', {
+
+  // Begge uttak ble validert da de ble levert — men mot stallene slik de så ut
+  // DA. Arrangøren kan lovlig ha flyttet en spiller til det andre laget eller
+  // tatt hen av lista i mellomtiden, og ingen av delene rører de lagrede
+  // plassene. Uten denne sjekken ville avdekkingen bygget kamper med samme
+  // spiller på begge sider, eller med en som ikke er med i cupen lenger.
+  const { data: currentParticipants } = await admin
+    .from('tournament_participants')
+    .select('user_id, team_number')
+    .eq('tournament_id', tournamentId);
+  const squadOf = (team: CupTeamNumber): string[] =>
+    (currentParticipants ?? [])
+      .filter((p) => p.team_number === team)
+      .map((p) => p.user_id as string);
+
+  const stored = validateStoredLineups({
+    slotCount,
+    format,
+    team1,
+    team2,
+    squad1: squadOf(1),
+    squad2: squadOf(2),
+  });
+  if (!stored.ok) {
+    console.error('[cup] revealCupLineupSession stored lineup rejected', {
       tournamentId,
       sessionId,
+      error: stored.error,
       team1: team1.length,
       team2: team2.length,
-      expected: slotCount * seats,
     });
-    return { error: 'lineup_incomplete' };
+    return { error: stored.error };
   }
 
   // 1. Klem avdekkingen. `.is('revealed_at', null)` gjør det til DB-ens

@@ -4732,6 +4732,7 @@
         "lineup_not_in_squad": "One of the players is not on your team.",
         "lineup_slot_shape": "That lineup looks off. Reload the page and try again.",
         "lineup_squad_too_small": "The team has too few players for this session.",
+        "lineup_squad_changed": "The teams changed after the lineup was submitted. Unlock it and ask the captain to pick again.",
         "lineup_revealed": "The session has already been revealed.",
         "lineup_already_submitted": "The lineup is submitted. Ask the organiser to unlock it if you want to change it.",
         "lineup_format": "Unknown format.",
