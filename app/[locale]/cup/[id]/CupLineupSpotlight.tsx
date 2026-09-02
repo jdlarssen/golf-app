@@ -19,8 +19,11 @@ import type { CupSessionFormat } from '@/lib/cup/cupTemplates';
  */
 export async function CupLineupSpotlight({
   tournamentId,
+  groupId,
 }: {
   tournamentId: string;
+  /** Klubb-cup holder seg i klubb-chromen, som resten av cup-rommene. */
+  groupId: string | null;
 }) {
   const admin = getAdminClient();
   const { data: sessions } = await admin
@@ -66,7 +69,11 @@ export async function CupLineupSpotlight({
 
       {showDoor && (
         <SmartLink
-          href={`/admin/cup/${tournamentId}/uttak`}
+          href={
+            groupId
+              ? `/klubber/${groupId}/cup/${tournamentId}/uttak`
+              : `/admin/cup/${tournamentId}/uttak`
+          }
           data-testid="cup-lineup-door"
           className="block rounded-2xl"
         >
