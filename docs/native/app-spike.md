@@ -1233,3 +1233,92 @@ brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 4
   er eiervalg — web-veien alene blir uansett en blindvei etter butikk-byttet.
 - **Admin-slett av andre spillere forblir web/Sekretariat**, og webbens
   `/profile/slett-konto` er urørt.
+
+## App→server-ruter (#1891, #1889)
+
+Slette-ruta (#1876) var den første. Med purringen ble den et **mønster**, og fra og med
+#1891 har det ett hjem: `lib/api/appAuth.ts` på webben, `src/data/webApi.ts` i appen.
+`#1917` (trekk deg selv), `#1918` (lever lagkort) og `#1919` (inviter) arver begge og
+skal ikke lage en tredje variant.
+
+### Når trenger noe en rute i det hele tatt?
+
+Bare når handlingen krever Node. Tre ting driver det: `notify()`, Resend-mail og
+service-role. Alt annet skal appen gjøre selv, direkte mot PostgREST, med RLS som port.
+
+«Godkjenn på vegne av gruppa» er eksempelet på hvor billig svaret kan bli når man
+sjekker: det ser ut som en admin-overstyring, men er ren DB. `guard_game_players_self_update`
+(0147) slipper oppretteren gjennom på andres rad, og webbens egen override
+(`adminApproveScorecard`) sender ikke varsel. Appen skriver derfor de samme kolonnene
+selv — ingen rute, ingen migrasjon. **Sjekk alltid dette først.** Smedens gjetning om at
+«trekk deg selv» var like billig var derimot feil: vakt (c) i 0147 nekter egen rad.
+
+### Adgangssjekken
+
+```ts
+authenticatedUserId(request)            // string | null — id KUN fra Bearer-tokenet
+gameOrganiserAccess(userId, gameId)     // 'organiser' | 'not_organiser' | 'game_not_found'
+```
+
+`api/` ligger utenfor proxy-matcheren (`proxy.ts` config.matcher), så en rute her har
+hverken sesjons-cookie eller `x-torny-user-id`: **ruta eier sin egen auth.** Tokenet
+valideres av GoTrue via `auth.getUser(token)` på admin-klienten — det er ikke vi som
+avgjør om det er ekte.
+
+`gameOrganiserAccess` svarer med tre verdier og ikke en boolean, fordi ruta må skille
+404 fra 403. Ukjent spill svares som ukjent også for en admin: ellers ville forskjellen
+røpet hvem som er admin til en tilfeldig kaller.
+
+⚠️ **Ingen id fra body eller query. Noensinne.** Bruker-id fra tokenet, spill-id fra
+stien. Da finnes det ingen id å forveksle med en annens, og ingen rute kan gjøre feilen
+ved et uhell. Begge rutene har en test på nettopp det, og det er verifisert live på
+staging: en POST med en annen brukers id OG et annet spills id i kroppen purret spillet
+i stien, og rørte ikke det i kroppen.
+
+### Wire-kontrakten for purring
+
+```
+GET  /api/games/{id}/remind   200 { targets: number, lastRemindedAt: string | null }
+POST /api/games/{id}/remind   200 { reminded: number }
+     401 unauthorized · 403 forbidden · 404 not_found · 409 not_active · 500 remind_failed
+```
+
+Frosset, og speilet i `src/data/remind.ts`. **Endres den ene, endres den andre i samme
+PR.** `targets` er de som er FERDIGE uten å ha levert — ikke alle som mangler kort.
+`lastRemindedAt` er `max(deliver_reminder_sent_at)` over hele spillet, altså også
+auto-purringens stempel: det ER «sist noen fikk purring».
+
+Regelen selv bor i `lib/games/remindUnsubmitted.ts` og speiles ALDRI i appen. Kjernen
+kjører på service-role og har **ingen egen authz** — porten ligger hos kalleren. Legger
+du til et kallsted, er gaten din del av sikkerheten; det finnes ingen RLS bak den.
+
+### Appen ser aldri innboks-varselet
+
+Kanal-regelen i `notify()` sender in-app alltid, og push + e-post kun når `last_seen_at`
+er eldre enn 5 minutter. **Appen skriver aldri `last_seen_at`** (kun `proxy.ts` gjør det)
+og **har ingen innboks-skjerm**. En ren app-spiller regnes derfor alltid som «ikke inne»:
+hen får e-post i dag, og APNs-push den dagen appen registrerer tokens (N7).
+
+Det er ikke en feil, og det trengs ingen ny regel for det — men det betyr at purring fra
+appen i praksis er en e-post til mottakeren. Verdt å vite når N7 lander og den samme
+purringen plutselig også blir en push.
+
+### Lenkeknapper: når svaret ikke er en rute
+
+Noen henvisninger til nettsiden blir stående — bevisste grenser (cup-avslutning,
+tee-editoren) og midlertidige (#1917–#1919). De skal likevel aldri være blindveier.
+
+`lib/webLink.ts` eier `EXPO_PUBLIC_WEB_BASE_URL`-regelen, og `components/WebLinkButton.tsx`
+er knappen, med den faste underteksten «Åpner nettsiden i nettleseren. Der logger du inn
+med kode.» Appen og Safari deler ikke pålogging, så det skal stå der — ikke som en
+unnskyldning, men fordi en bruker som vet det, ikke tror appen er ødelagt. Proxyen sender
+uinnloggede til `/login?next=<sti>`, så dyplenka lander riktig etter kode-innlogging.
+
+⚠️ **Verifiser stien mot `app/[locale]/` før du skriver den.** Kontrakten for #1891 pekte
+på `/admin/courses/{id}`, som ikke er en rute — tee-editoren bor på `…/edit`. Og sjekk
+hvem sida slipper inn: den samme `…/edit` er `requireAdmin`, så en ikke-admin arrangør
+som trykker «Legg inn teer på nettsiden» blir sendt hjem. Knappen står fordi admin er den
+eneste som KAN gjøre jobben, men det er et valg, ikke en forglemmelse.
+
+`EXPO_PUBLIC_*` bakes inn ved bundling — samme felle som slette-flyten beskriver over.
+Mangler adressen, sier både purringen og lenkeknappene det rett ut. Aldri en stille knapp.
