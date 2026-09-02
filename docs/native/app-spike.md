@@ -1149,8 +1149,30 @@ Så, i rekkefølge:
 Husk at appen må bygges på nytt hvis du endret `EXPO_PUBLIC_WEB_BASE_URL` mellom
 forsøkene — se avsnittet over.
 
+### Uten nett: les fritt, slett ikke
+
+Skjermen skiller på to ting som lett blir én. Sier serveren «blokkert», er svaret
+gitt: banner og ingenting mer. Fikk vi ikke SPURT — uten nett, utløpt sesjon, eller
+et bygg uten server-adresse — står begge boksene der som vanlig, men den røde knappen
+er byttet ut med grunnen til at den ikke er der. En midlertidig nettfeil skal ikke se
+ut som et avslag.
+
+Offline-setningen er slette-spesifikk med vilje. Den delte `OFFLINE_NOTE` i
+`rosterCopy.ts` lover «koble til, så går det gjennom», og det er sant for en score som
+ligger i sync-køen. Sletting legges aldri i kø. En test låser at vi ikke gjenbruker
+den linja her.
+
+Etter et 200-svar er kontoen borte, og da rapporteres ingen lokal feil som en feilet
+sletting. Både wipen og den lokale utloggingen står i hver sin try/catch: glipper en
+av dem, logges det, og utfallet er fortsatt «slettet». Å si «prøv igjen» ville sendt
+brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 401.
+
 ### Bokførte gap
 
+- **Ingenting stopper et butikk-bygg uten `EXPO_PUBLIC_WEB_BASE_URL`.** Fila er
+  gitignorert, Babel baker inn `undefined`, og appen kjører helt normalt helt til noen
+  åpner «Slett konto» og får «Appen mangler adressen til serveren». Sjekk den før et
+  butikk-bygg — det finnes ingen port som gjør det for deg.
 - **Blokk-lesingen er fail-open.** `getDeleteBlockReason` forkaster PostgREST-feil og
   leser en forbigående DB-feil som «ikke blokkert». En 403 er derfor en port, ikke en
   garanti. Oppførselen er webbens egen og uendret her — regelen har ett hjem.
