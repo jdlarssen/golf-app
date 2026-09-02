@@ -74,3 +74,19 @@ export function gateMessage(reason: GateReason): string {
     ? 'Dette formatet føres på nettsiden ennå.'
     : 'Denne runden føres på nettsiden ennå.';
 }
+
+/**
+ * Knappen som står under gate-teksten (#1891).
+ *
+ * **Bare her.** De to søsknene på samme skjerm — «Appen kjenner ikke dette
+ * formatet ennå» og «Formatet er ikke satt opp for denne runden» — får INGEN
+ * knapp: der vet vi ikke om nettsiden har svaret, og en knapp ville lovet noe
+ * vi ikke kan innfri. Gate-teksten er det ene av de tre tilfellene der
+ * nettsiden faktisk fører runden (eiervalg på #1891, etter kontrakten).
+ */
+export const GATE_LINK_LABEL = 'Åpne runden på nettsiden';
+
+/** Rundens forside på webben. */
+export function gameWebPath(gameId: string): string {
+  return `/games/${encodeURIComponent(gameId)}`;
+}

@@ -19,6 +19,7 @@ import DateTimePicker, {
 import type { CourseOption } from '../../data/createGame';
 import { formatTeeOff } from '../../lib/display';
 import { useTheme } from '../../theme';
+import { WebLinkButton } from '../WebLinkButton';
 import { Field, SelectRow } from './primitives';
 
 /** «Herre · Dame» — hvilke tee-kjønn denne teen har rating for. */
@@ -153,10 +154,21 @@ export function CourseStep({
       {selectedCourse && !browsing ? (
         <Field label="Tee">
           {selectedCourse.tees.length === 0 ? (
-            <Text style={ui.muted} testID="create-tee-none">
-              Denne banen har ingen aktive teer. Velg en annen bane, eller legg
-              inn teene på nettsiden.
-            </Text>
+            <>
+              <Text style={ui.muted} testID="create-tee-none">
+                Denne banen har ingen aktive teer. Velg en annen bane, eller legg
+                inn teene på nettsiden.
+              </Text>
+              {/* #1891: `/admin/courses/{id}/edit` er den ENESTE flaten med
+                  tee-editoren, og den er admin-only (`requireAdmin` sender
+                  andre hjem). Alternativet, ingen knapp, lot arrangøren stå
+                  igjen med «på nettsiden» uten adresse. */}
+              <WebLinkButton
+                label="Legg inn teer på nettsiden"
+                path={`/admin/courses/${encodeURIComponent(selectedCourse.id)}/edit`}
+                testID="create-tee-none-link"
+              />
+            </>
           ) : null}
           {selectedCourse.tees.map((tee) => (
             <SelectRow

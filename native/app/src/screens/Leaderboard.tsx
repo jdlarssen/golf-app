@@ -19,11 +19,17 @@ import {
 } from '../components/leaderboard/ResultView';
 import { SideTournamentSection } from '../components/leaderboard/SideTournamentSection';
 import { CalmNote, LeaderTable } from '../components/leaderboard/Table';
+import { WebLinkButton } from '../components/WebLinkButton';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
 import { subscribeGameScores } from '../data/realtime';
 import { seedGameScores } from '../data/seedScores';
-import { gateMessage, gateReason } from '../lib/formatGate';
+import {
+  GATE_LINK_LABEL,
+  gameWebPath,
+  gateMessage,
+  gateReason,
+} from '../lib/formatGate';
 import { grossLines, leaderboardVisibility, nameLookup } from '../lib/leaderboardModel';
 import {
   computeGameLeaderboard,
@@ -192,7 +198,19 @@ export function LeaderboardBody({
   // `gateMessage` er det ene hjemmet for de to ordlydene, delt med føring-CTA-en.
   const gate = gateReason(game);
   if (gate !== null) {
-    return <CalmNote text={gateMessage(gate)} testID="leaderboard-gated-format" />;
+    // Knappen henger på DENNE noten alene (#1891). De to søsknene lenger nede
+    // — «Appen kjenner ikke dette formatet ennå» og «Formatet er ikke satt opp
+    // for denne runden» — får ingen: der vet vi ikke om nettsiden har svaret.
+    return (
+      <>
+        <CalmNote text={gateMessage(gate)} testID="leaderboard-gated-format" />
+        <WebLinkButton
+          label={GATE_LINK_LABEL}
+          path={gameWebPath(game.id)}
+          testID="leaderboard-gated-format-link"
+        />
+      </>
+    );
   }
 
   const visibility = leaderboardVisibility(
@@ -267,7 +285,12 @@ export function LeaderboardBody({
 
   return (
     <>
-      <ResultView result={outcome.result} status={game.status} nameOf={nameOf} />
+      <ResultView
+        result={outcome.result}
+        status={game.status}
+        gameId={game.id}
+        nameOf={nameOf}
+      />
       {sideSection}
     </>
   );

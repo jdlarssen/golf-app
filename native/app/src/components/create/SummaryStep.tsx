@@ -14,7 +14,12 @@
 // ville laget to runder, og en knapp som blir stående grå etter en feilet
 // skriving ser ut som om noe ble lagret.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  CREATE_ON_WEB_LABEL,
+  CREATE_ON_WEB_PATH,
+} from '../../lib/createGameCopy';
 import { useTheme } from '../../theme';
+import { WebLinkButton } from '../WebLinkButton';
 import { Note } from './primitives';
 
 export interface SummaryLine {
@@ -32,6 +37,7 @@ export function SummaryStep({
   lines,
   warnings,
   error,
+  errorOnWeb = false,
   busy,
   canPublish,
   onPublish,
@@ -39,6 +45,14 @@ export function SummaryStep({
   lines: readonly SummaryLine[];
   warnings: readonly SummaryWarning[];
   error: string | null;
+  /**
+   * Peker feilen til webbens veiviser (#1891)?
+   *
+   * Bare `unsupported_mode` gjør det — formatet finnes, appen har bare ikke
+   * flaten for det. Skjermen avgjør (`createFailureBelongsOnWeb`); her rendres
+   * bare knappen, så to steder ikke kan bli uenige om hvilke koder det gjelder.
+   */
+  errorOnWeb?: boolean;
   busy: boolean;
   /** Falsk når et påkrevd valg mangler — knappen står, men gjør ingenting. */
   canPublish: boolean;
@@ -81,6 +95,14 @@ export function SummaryStep({
         <Text style={ui.error} testID="create-error">
           {error}
         </Text>
+      ) : null}
+
+      {error && errorOnWeb ? (
+        <WebLinkButton
+          label={CREATE_ON_WEB_LABEL}
+          path={CREATE_ON_WEB_PATH}
+          testID="create-error-link"
+        />
       ) : null}
     </View>
   );

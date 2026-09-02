@@ -109,3 +109,27 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
       return 'Spillerne ble ikke lagret, og vi fikk ikke ryddet bort spillet. Se om det ligger under «Mine spill» — da kan du slette det og prøve på nytt.';
   }
 }
+
+/**
+ * Knappen som står under de to «det gjøres på nettsiden»-tekstene i
+ * veiviseren (#1891): en tom format-liste (`FormatStep`) og
+ * `unsupported_mode` etter et publiseringsforsøk (`SummaryStep`).
+ *
+ * Etiketten og stien bor sammen her fordi begge stedene skal ende på SAMME
+ * side. Webbens `/opprett-spill` er den åpne veiviseren — ikke Sekretariatets
+ * admin-flate — så den gater riktig for en vanlig arrangør.
+ */
+export const CREATE_ON_WEB_LABEL = 'Opprett på nettsiden';
+export const CREATE_ON_WEB_PATH = '/opprett-spill';
+
+/**
+ * Peker denne feilen til webbens veiviser?
+ *
+ * Bare den ene: `unsupported_mode` betyr at formatet FINNES, men at appen
+ * ikke har flaten for det ennå. De andre kodene løses i appen (velg færre
+ * spillere, gi laget et navn) eller ikke i det hele tatt (`rls_denied`), og en
+ * knapp til nettsiden ville sendt arrangøren på en tur uten svar.
+ */
+export function createFailureBelongsOnWeb(error: CreateGameFailure): boolean {
+  return error === 'unsupported_mode';
+}

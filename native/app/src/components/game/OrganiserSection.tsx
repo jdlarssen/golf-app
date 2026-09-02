@@ -44,6 +44,7 @@ import {
   supportsWithdrawal,
   type GameMode,
 } from '../../../../../lib/scoring/modes/types';
+import { WebLinkButton } from '../WebLinkButton';
 import { fetchRosterCandidates, type RosterCandidate } from '../../data/createGame';
 import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
 import {
@@ -57,11 +58,13 @@ import {
 } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
 import { displayName } from '../../lib/display';
-import { CUP_NOTE } from '../../lib/endGameCopy';
+import { CUP_LINK_LABEL, CUP_NOTE, cupWebPath } from '../../lib/endGameCopy';
 import {
   describeRosterFailure,
   describeStartRefusal,
   OWN_ROW_LOCKED_NOTE,
+  WITHDRAW_SELF_LINK_LABEL,
+  withdrawSelfWebPath,
 } from '../../lib/rosterCopy';
 import { TAP, useTheme } from '../../theme';
 
@@ -325,9 +328,16 @@ export function OrganiserSection({
       </View>
 
       {showOwnRowNote ? (
-        <Text style={ui.muted} testID="organiser-own-row-note">
-          {OWN_ROW_LOCKED_NOTE}
-        </Text>
+        <>
+          <Text style={ui.muted} testID="organiser-own-row-note">
+            {OWN_ROW_LOCKED_NOTE}
+          </Text>
+          <WebLinkButton
+            label={WITHDRAW_SELF_LINK_LABEL}
+            path={withdrawSelfWebPath(game.id)}
+            testID="organiser-own-row-link"
+          />
+        </>
       ) : null}
 
       {scheduled ? (
@@ -361,9 +371,20 @@ export function OrganiserSection({
           ) : candidates === null ? (
             <ActivityIndicator color={colors.primary} />
           ) : pickable.length === 0 ? (
-            <Text style={ui.muted}>
-              Ingen flere å velge her. Nye folk inviterer du fra nettsiden.
-            </Text>
+            <>
+              <Text style={ui.muted}>
+                Ingen flere å velge her. Nye folk inviterer du fra nettsiden.
+              </Text>
+              {/* Spillersiden for DENNE runden (#1891): invitasjon er Resend +
+                  rate-limit og dermed server-eid til #1919 lander. Siden gater
+                  på `requireAdminOrCreator`, altså nøyaktig den som ser
+                  seksjonen her. */}
+              <WebLinkButton
+                label="Inviter på nettsiden"
+                path={`/games/${encodeURIComponent(game.id)}/spillere`}
+                testID="organiser-invite-link"
+              />
+            </>
           ) : (
             pickable.map((candidate) => (
               <Pressable
@@ -402,10 +423,19 @@ export function OrganiserSection({
         </Pressable>
       ) : null}
 
-      {active && isCupGame ? (
-        <Text style={ui.muted} testID="organiser-cup-note">
-          {CUP_NOTE}
-        </Text>
+      {/* `game.tournamentId !== null` og ikke `isCupGame`: samme svar, men
+          narrowingen gjør id-en til en `string` for `cupWebPath`. */}
+      {active && game.tournamentId !== null ? (
+        <>
+          <Text style={ui.muted} testID="organiser-cup-note">
+            {CUP_NOTE}
+          </Text>
+          <WebLinkButton
+            label={CUP_LINK_LABEL}
+            path={cupWebPath(game.tournamentId)}
+            testID="organiser-cup-link"
+          />
+        </>
       ) : null}
 
       {notice ? (
