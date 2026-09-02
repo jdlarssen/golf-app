@@ -8,7 +8,12 @@
 //
 // Param-lista er hele kontrakten mellom skjermene: en skjerm kan ikke åpnes
 // uten id-ene den trenger, og `tsc` sier fra hvis noen navigerer feil.
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  DarkTheme,
+  DefaultTheme,
+  NavigationContainer,
+  type Theme as NavigationTheme,
+} from '@react-navigation/native';
 import {
   createNativeStackNavigator,
   type NativeStackScreenProps,
@@ -23,6 +28,7 @@ import { Leaderboard } from './screens/Leaderboard';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
+import { FONTS, useTheme, type Theme } from './theme';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -53,16 +59,45 @@ function SyncLabScreen({ navigation }: ScreenProps<'SyncLab'>) {
   return <SyncLab userId={userId} onBack={() => navigation.goBack()} />;
 }
 
+/**
+ * Vår palett → react-navigations container-tema.
+ *
+ * Containeren tegner flatene stacken IKKE eier — bakgrunnen bak en overgang og
+ * under et gjennomsiktig header. Uten den ville en mørk app blinket lyst mellom
+ * to skjermer. Bibliotekets egen default brukes som base slik at `fonts` og
+ * andre felter vi ikke har en mening om blir stående.
+ */
+function navigationThemeFor(theme: Theme): NavigationTheme {
+  const base = theme.scheme === 'dark' ? DarkTheme : DefaultTheme;
+  return {
+    ...base,
+    dark: theme.scheme === 'dark',
+    colors: {
+      ...base.colors,
+      primary: theme.colors.primary,
+      background: theme.colors.bg,
+      card: theme.colors.bg,
+      text: theme.colors.text,
+      border: theme.colors.border,
+      notification: theme.colors.accent,
+    },
+  };
+}
+
 export function RootNavigator() {
+  const theme = useTheme();
+  const { colors } = theme;
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationThemeFor(theme)}>
       <Stack.Navigator
         screenOptions={{
-          headerStyle: { backgroundColor: '#F8F6F0' },
-          headerTintColor: '#1B4332',
-          headerTitleStyle: { color: '#1B4332', fontWeight: '700' },
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.text,
+          // Familienavn, ikke `fontWeight`: expo-font registrerer ett snitt per
+          // familie, så en vekt oppå Inter Regular velger ikke Bold.
+          headerTitleStyle: { color: colors.text, fontFamily: FONTS.sansBold },
           headerBackButtonDisplayMode: 'minimal',
-          contentStyle: { backgroundColor: '#F8F6F0' },
+          contentStyle: { backgroundColor: colors.bg },
         }}
       >
         <Stack.Screen

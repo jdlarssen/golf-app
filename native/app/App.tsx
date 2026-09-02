@@ -84,7 +84,10 @@ export default function App() {
     <SessionProvider
       value={{ userId: session.user.id, email: session.user.email ?? null }}
     >
-      <StatusBar style="dark" />
+      {/* «auto» følger systemets lys/mørk (#1833): mørk tekst på lys app, lys
+          tekst på mørk. «dark» var en midlertidig sannhet mens skjermene bare
+          fantes i lys drakt. */}
+      <StatusBar style="auto" />
       <RootNavigator />
     </SessionProvider>
   );
