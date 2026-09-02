@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getAdminClient } from '@/lib/supabase/admin';
+import { authenticatedUserId } from '@/lib/api/appAuth';
 import {
   deleteOrAnonymizeUser,
   getDeleteBlockReason,
@@ -14,11 +14,11 @@ import {
 // blokk-regelen og slette-/anonymiser-regelen har ett hjem der, og speiles
 // aldri her (AGENTS trap 4). Webbens flyt røres ikke.
 //
-// AUTH: `Authorization: Bearer <supabase access_token>`, validert server-side
-// mot GoTrue. Bruker-id-en kommer KUN fra det validerte tokenet — vi leser
-// aldri body eller query for en id, så det finnes ingen vei til å slette en
-// annens konto. `api/` ligger utenfor proxy-matcheren (proxy.ts config.matcher),
-// så ruta eier sin egen auth: ingen sesjons-cookie, ingen `x-torny-user-id`.
+// AUTH: `authenticatedUserId` i `lib/api/appAuth.ts` — den delte adgangssjekken
+// for alle app→server-ruter (#1891). `Authorization: Bearer <access_token>`
+// validert mot GoTrue; bruker-id-en kommer KUN derfra, aldri fra body eller
+// query, så det finnes ingen vei til å slette en annens konto. Sjekken lå her
+// først (#1876) og ble flyttet ut da purre-ruta trengte den samme.
 //
 // WIRE (frosset — appen speiler den):
 //   GET  200 { blocked: 'admin_account' | 'active_engagements' | null }
@@ -44,27 +44,6 @@ const LOG_PREFIX = 'api/account/delete';
 
 /** GET-svaret. Appen kartlegger koden til banner-copy, se `accountCopy`. */
 type StatusBody = { blocked: DeleteBlockReason | null };
-
-/**
- * Bruker-id fra Bearer-tokenet, eller `null` når kalleren ikke er autentisert.
- *
- * Repoet har ingen fabrikk for en cookie-løs anon server-klient
- * (`getServerClient()` leser cookies, `getBrowserClient()` er browser-only), så
- * vi kaller `auth.getUser(token)` på admin-klienten: auth-js legger tokenet i
- * `Authorization` og lar service-nøkkelen stå som `apikey`, altså validerer
- * GoTrue tokenets signatur og utløp — ikke oss. Kaster `getAdminClient()`
- * (manglende service-nøkkel), bobler det opp til kallerens 500.
- */
-async function authenticatedUserId(request: NextRequest): Promise<string | null> {
-  const header = request.headers.get('authorization');
-  if (!header?.startsWith('Bearer ')) return null;
-  const token = header.slice('Bearer '.length).trim();
-  if (!token) return null;
-
-  const { data, error } = await getAdminClient().auth.getUser(token);
-  if (error || !data.user) return null;
-  return data.user.id;
-}
 
 /** Blokk-status FØR bekreftelsesskjermen — appen viser banner i stedet for knapp. */
 export async function GET(request: NextRequest) {
