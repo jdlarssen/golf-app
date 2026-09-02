@@ -61,16 +61,53 @@ Ingen ny bibliotek-flate — Supabase-/Next-mønstrene er husets egne, verifiser
 
 ## Suksesskriterier
 
-- [ ] **SK1 — Utnevnelse:** Arrangøren kan i Spillere-rommet sette lag (1/2/utildelt) og markere maks én kaptein per lag; lagres varig på deltakerlista. Verifiseres i staging-klikkrunden + Type A på valideringen.
-- [ ] **SK2 — Åpne uttak:** Arrangøren åpner en økt (format + antall plasser, default derivert via `buildSessionCountRows` av varige lagstørrelser, justerbart ned). Persistert — synlig etter reload.
-- [ ] **SK3 — Kaptein leverer:** Kapteinen fyller ordnede slots fra eget lags stall og leverer; validering per kant-tabellen; levert = låst for kapteinen. Type A-testet.
-- [ ] **SK4 — Hemmelighold:** Før begge uttak er levert returnerer ingen server-flate motstanderens slots til en kaptein/deltaker — bevist med test (gate-avvisning) OG hostile-read mot ny tabell med `authenticated`-JWT (0 rader).
-- [ ] **SK5 — Avdekking:** Begge levert → matcher opprettes (slot i mot slot i, riktig mode-config, fortsettende labels), økta merkes avdekket, cupsiden viser avdekkings-kortet, `notify`-fan-out sendt (best-effort, VERIFICATION GAP OK på mail-løse).
-- [ ] **SK6 — Nødluke:** Arrangøren kan se begge kladder, levere på vegne av kaptein, og låse opp levert uttak før avdekking. Kaptein kan IKKE noe av dette for motstanderlaget (gate-test).
-- [ ] **SK7 — Uendret uten kapteiner:** Cup uten kapteiner: Generer-rommet, synken og alle eksisterende cup-tester grønne uten endring i oppførsel.
-- [ ] **SK8 — Migrasjon:** Påført staging via Supabase MCP og verifisert (kolonner + RLS-posture) FØR koden merges. Prod KUN etter merge + eksplisitt eier-godkjenning (prod-brannmuren #1074).
-- [ ] **SK9 — i18n + notat:** Alle nye strenger i begge kataloger (paritet grønn); `.changes/1884-kaptein-uttak.md` gyldig i `--dry-run`.
-- [ ] **SK10 — Staging-bevis:** Full klikkrunde på torny-staging: utnevn kapteiner → åpne foursomes-uttak → kaptein A leverer → verifiser at kaptein B ikke ser noe → B leverer → avdekking viser kampene + varsel i innboksen. Bevis + `staging-verified`-label.
+- [x] **SK1 — Utnevnelse:** Lag- og kaptein-raden står under hver deltaker i
+  Spillere-rommet (`CupParticipantsList.tsx` → `RoleControls`), lagres via
+  `setCupParticipantRole` og håndheves av `planCupRoleChange`
+  (`lib/cup/captainRoles.ts`, 18 Type A-tester). DB-en har partiell unik indeks
+  `tournament_participants_one_captain_per_team` + CHECK «kaptein må ha lag».
+  Staging: fikstur-cupen `de77c617` fikk kaptein per lag og rommet leste dem.
+- [x] **SK2 — Åpne uttak:** `openCupLineupSession` + `OpenSessionForm`.
+  Default-antall derives av de varige lagstørrelsene og klampes ned.
+  Staging: 3 mot 3 + foursomes ga default 1 kamp (floor(3/2)); økta var der
+  etter reload som `cup-lineup-session-0`.
+- [x] **SK3 — Kaptein leverer:** `submitCupLineup` + `LineupEditor`.
+  Validering i `validateLineupSubmission` (21 Type A-tester dekker hele
+  kant-tabellen). Staging: kapteinen fylte to seter, leverte, og raden ble
+  «Levert» — knappen låst etterpå.
+- [x] **SK4 — Hemmelighold:** To bevis.
+  (a) Gate-test: `lineupActions.test.ts` — kaptein lag 1 som leverer for lag 2
+  får `not_allowed` og skriver 0 rader; samme for vanlig deltaker og utlogget.
+  (b) Staging-lesing: kapteinen så 0 redigerbare felt for motstanderlaget og
+  teksten «Skjult til begge lag har levert», og 0 kamper fantes før begge
+  hadde levert.
+  (c) Fiendtlig REST mot staging MED data i tabellene (1 session, 4 slots):
+  `authenticated`-JWT → HTTP 403 / 42501 på SELECT av begge tabeller, og på
+  INSERT `cup_lineup_slots` og PATCH `cup_lineup_sessions`. Anonym → 401.
+- [x] **SK5 — Avdekking:** Staging, etter at lag 2 leverte: 1 kamp opprettet
+  med label «Foursome 1», `revealed_at` satt, 6 varsler av kind
+  `cup_lineup_revealed`, cup-siden viste «Kampene er klare» og varselet lå i
+  innboksen. Label-fortsettelsen er Type A-testet i `lineupReveal.test.ts`.
+- [x] **SK6 — Nødluke:** `unlockCupLineup` og `setCupParticipantRole` er
+  arrangør-only (fire gate-tester viser at kapteinen får `not_allowed` på
+  unlock, utnevnelse, åpne og slett økt). Staging: arrangøren leverte på vegne
+  av lag 2 og så begge lags uttak.
+- [x] **SK7 — Uendret uten kapteiner:** `npx vitest run` — 530 filer / 7190
+  tester, exit 0, ingen eksisterende cup-test endret oppførsel.
+  Uttaks-døra rendres kun når cupen har en kaptein (`CupLineupDoor`), og
+  `CupLineupSpotlight` returnerer før rolle-oppslaget når cupen ikke har
+  uttaks-økter — en cup uten kapteiner ser ut nøyaktig som før.
+- [x] **SK8 — Migrasjon:** 0172 påført staging (`snwmueecmfqqdurxedxv`) via
+  Supabase MCP. Verifisert: begge nye tabeller `rowsecurity=true`, 0 policyer,
+  0 grants til anon/authenticated; `tournament_participants` har `team_number`
+  (nullable) + `is_captain` (NOT NULL default false). **Prod: IKKE påført** —
+  skjer etter merge, bak eier-luka (#1074).
+- [x] **SK9 — i18n + notat:** `npx vitest run messages` grønn (paritet).
+  `node scripts/weekly-release.mjs --dry-run` viser 1884-notatet som gyldig.
+- [x] **SK10 — Staging-bevis:** Full klikkrunde kjørt mot torny-staging i
+  prod-server-modus (build med staging-env + `next start`), logget inn som
+  kaptein og arrangør via mintede OTP-er. Alle stegene over er observert
+  utfall fra den runden, ikke antakelser.
 
 ## Gates (per chunk)
 
