@@ -43,3 +43,31 @@ export function formatTeeOff(iso: string | null): string | null {
     date.getHours(),
   )}:${pad(date.getMinutes())}`;
 }
+
+/**
+ * Bare klokkeslettet, som «14:05» — til «Sist purret kl. …» (#1889).
+ *
+ * **Enhetens egne gettere, ikke en Oslo-konvertering.** Webben pinner alt
+ * bruker-synlig til `Europe/Oslo` via `Intl.DateTimeFormat`
+ * (`lib/format/teeOff.ts`), fordi serveren kjører UTC. Den veien er stengt
+ * her: Hermes har ikke ICU-tidssonene, og forsøket på å gjette sone-offset ved
+ * å streng-sammenligne `Intl`-utdata lagret en tee-off én time feil på
+ * simulatoren (hele historien står i `wizardPayload.ts`, `teeOffInstant`).
+ * Appen bruker derfor gjennomgående enhetens lokaltid — samme valg som
+ * {@link formatTeeOff}, og riktig for en arrangør som står på banen.
+ *
+ * Kolon og ikke punktum: begge er korrekt norsk, men {@link formatTeeOff} rett
+ * over skriver «kl. 15:30», og to skrivemåter for klokkeslett i samme app er
+ * verre for arrangøren enn valget mellom dem. Kontrakten skrev «HH.MM», men ga
+ * samtidig formatet som byggerens skjønn — og da veier appens egen form tyngst.
+ *
+ * @param iso tidsstempel fra basen, eller `null` når det ikke finnes noe.
+ * @returns klokkeslettet, eller `null` for både manglende og ulesbar verdi —
+ *   kalleren dropper linja i stedet for å vise «Sist purret kl. NaN».
+ */
+export function formatClock(iso: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
