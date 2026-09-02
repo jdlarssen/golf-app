@@ -91,5 +91,29 @@
     "expect": "deny",
     "setup": "approve-prod-stale",
     "payload": { "tool_input": { "command": "psql \"postgresql://postgres:pw@db.glofubopddkjhymcbaph.supabase.co:5432/postgres\" -f x.sql" } }
+  },
+  {
+    "name": "#1907: gh issue comment når tråden alt har closing-kommentar → context",
+    "expect": "context",
+    "setup": "closing-comment-exists",
+    "payload": { "tool_input": { "command": "gh issue comment 1884 --repo jdlarssen/golf-app --body-file closing.md" } }
+  },
+  {
+    "name": "#1907: gh issue comment uten closing-kommentar i tråden → none",
+    "expect": "none",
+    "setup": "closing-comment-none",
+    "payload": { "tool_input": { "command": "gh issue comment 1907 --body-file closing.md" } }
+  },
+  {
+    "name": "#1907: kontrakt som NEVNER ## Teknisk i en setning er ikke closing-kommentar → none",
+    "expect": "none",
+    "setup": "closing-comment-inline-mention",
+    "payload": { "tool_input": { "command": "gh issue comment 1884 --body-file closing.md" } }
+  },
+  {
+    "name": "#1907: gh issue comment uten issue-nummer → none (fail-open)",
+    "expect": "none",
+    "setup": "closing-comment-exists",
+    "payload": { "tool_input": { "command": "gh issue comment --help" } }
   }
 ]

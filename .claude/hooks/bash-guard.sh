@@ -143,4 +143,29 @@ case "$cmd_stripped" in
     emit_ctx "pr-create" "You are running gh pr create — packaging a branch for review. Run git diff origin/main...HEAD and check whether anything README.md documents has changed: user-facing capabilities (Hva du far), the stack table, the local-dev or test commands, the cited test or migration counts, or the architecture notes (Hvordan det henger sammen). If so: update README.md, run the humanizer skill on any new or changed Norwegian copy (and the no-nb skill if you translated from English) per docs/copy-style.md, then commit and push it so it lands in THIS PR before you create it.${closes_note} Most PRs need no README change; only touch it when one of those documented facts actually changed." ;;
 esac
 
+# ── REMIND: gh issue comment N når tråden ALT har en closing-/leveransekommentar (#1907) ──
+# Eierregel 2026-09-02 (etter #1884): én closing-kommentar per issue. Finnes en
+# (## Teknisk / ## Funksjonell — typisk byggeøktas «Bygget på PR #M — venter på
+# merge»), skal den KORRIGERES med PATCH, ikke dupliseres. Nudge, ikke deny:
+# kontrakt-, port- og spørsmålskommentarer skal fortsatt kunne postes. Fail-open:
+# uten issue-nummer, gh eller nett skjer ingenting. BASH_GUARD_ISSUE_COMMENTS_JSON
+# peker på en stub-fil med kommentar-arrayet (fixture-harnessen, ingen nettavhengighet).
+case "$cmd_stripped" in
+  *"gh issue comment"*)
+    issue_no="$(printf '%s' "$cmd_stripped" | sed -nE 's/.*gh issue comment[^0-9]*([0-9]+).*/\1/p')"
+    if [ -n "$issue_no" ]; then
+      if [ -n "${BASH_GUARD_ISSUE_COMMENTS_JSON:-}" ]; then
+        comments_json="$(cat "$BASH_GUARD_ISSUE_COMMENTS_JSON" 2>/dev/null)"
+      else
+        comments_json="$(gh api "repos/{owner}/{repo}/issues/${issue_no}/comments?per_page=100" 2>/dev/null)"
+      fi
+      # Heading på LINJESTART — en kontrakt som nevner «`## Teknisk`» i en
+      # setning er ikke en closing-kommentar (falsk positiv funnet i null-testen).
+      closing_ids="$(printf '%s' "$comments_json" | jq -r 'if type == "array" then [.[] | select((.body // "") | test("(^|\n)## (Teknisk|Funksjonell)")) | .id] | join(", ") else "" end' 2>/dev/null)"
+      if [ -n "$closing_ids" ]; then
+        emit_ctx "issue-closing-duplicate" "Issue #${issue_no} har allerede en closing-/leveransekommentar (id ${closing_ids}). CLAUDE.md §Closing-kommentar (eierregel #1907): poster du en closing-kommentar nå, blir det en dublett. Gå heller gjennom den eksisterende og korrigér det som ikke lenger står seg — merge-status + SHA, prod-migrasjon, avvik — med: gh api -X PATCH repos/{owner}/{repo}/issues/comments/${closing_ids%%,*} --input <json-fil med body>. Andre kommentartyper (kontrakt, port, spørsmål, funn) er upåvirket."
+      fi
+    fi ;;
+esac
+
 exit 0
