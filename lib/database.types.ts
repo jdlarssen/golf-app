@@ -2019,6 +2019,7 @@ export type Database = {
           gruesome_allowance_pct: number
           id: string
           name: string
+          planned_match_count: number | null
           points_to_win: number | null
           short_id: string
           started_at: string | null
@@ -2041,6 +2042,7 @@ export type Database = {
           gruesome_allowance_pct?: number
           id?: string
           name: string
+          planned_match_count?: number | null
           points_to_win?: number | null
           short_id?: string
           started_at?: string | null
@@ -2063,6 +2065,7 @@ export type Database = {
           gruesome_allowance_pct?: number
           id?: string
           name?: string
+          planned_match_count?: number | null
           points_to_win?: number | null
           short_id?: string
           started_at?: string | null

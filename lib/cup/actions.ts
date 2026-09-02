@@ -30,7 +30,7 @@ import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
 import { endGameCore } from '@/lib/games/endGameCore';
 import { planTournamentGameDeletion } from './tournamentGameDeletion';
-import { derivePointsToWinWeighted } from './pointsToWin';
+import { derivePointsToWinWeighted, resolveCupMatchTotal } from './pointsToWin';
 import { parseCupDraftForm } from './parseCupDraftForm';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
@@ -193,7 +193,9 @@ export async function startTournament(formData: FormData) {
 
   const { data: current } = await supabase
     .from('tournaments')
-    .select('id, name, status, team_1_name, team_2_name, win_points, tie_points')
+    .select(
+      'id, name, status, team_1_name, team_2_name, win_points, tie_points, planned_match_count',
+    )
     .eq('id', id)
     .maybeSingle();
   if (!current) redirect(`/admin/cup?error=not_found`);
@@ -210,8 +212,17 @@ export async function startTournament(formData: FormData) {
   // X»-UI-en skjules; vinneren avgjøres ved finishTournament, som allerede
   // takler NULL, #1142). Med default-vektene er dette bit for bit
   // `derivePointsToWin(count)` som før.
+  // #1902: målet regnes av PLANLAGT antall kamper når arrangøren har oppgitt
+  // det, ikke av de kampene som tilfeldigvis finnes akkurat nå. Uttaks-økter
+  // (#1884) legger til kamper etter start, og uten dette ville en Ryder Cup
+  // som starter med 8 av 28 fått målet 4,5 — kronet etter dag 1. Planlagt er
+  // et gulv: blir det flere kamper enn planlagt, vinner faktisk antall.
+  // NULL planlagt → `count`, bit for bit som før.
   const pointsToWin = derivePointsToWinWeighted(
-    count ?? 0,
+    resolveCupMatchTotal(
+      count ?? 0,
+      (current.planned_match_count as number | null) ?? null,
+    ),
     (current.win_points as number | null) ?? DEFAULT_WIN_POINTS,
     (current.tie_points as number | null) ?? DEFAULT_TIE_POINTS,
   );

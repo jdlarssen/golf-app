@@ -42,7 +42,16 @@ export function makeLocaleRedirectMock() {
   });
 }
 
-export type QueryResult = { data?: unknown; error?: unknown };
+export type QueryResult = {
+  data?: unknown;
+  error?: unknown;
+  /**
+   * PostgREST returns a row count alongside `data` for `{ head: true, count:
+   * 'exact' }` selects — the shape `startTournament` reads to gate on the
+   * match count (#1902). Queued like any other result.
+   */
+  count?: number | null;
+};
 
 /**
  * Build a fake Supabase server-client that resolves queries from a FIFO

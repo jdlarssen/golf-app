@@ -60,6 +60,34 @@ vi.mock('./getCupCandidatePlayers', () => ({
   getCupCandidatePlayers: (...args: unknown[]) => candidateMock(...args),
 }));
 
+// Boundary mocks for startTournament's varsel-vifte (#1902). All three open
+// their own clients or reach Resend; their own behaviour is covered where they
+// live. Here they only have to not eat queue entries — and
+// `cupStartedMailMock` doubles as the assertion that the mail carries the
+// SAME points target the update wrote.
+const participantEmailsMock = vi.fn<() => Promise<unknown[]>>(async () => []);
+vi.mock('./tournamentParticipants', () => ({
+  loadTournamentParticipantEmails: (...a: unknown[]) =>
+    participantEmailsMock(...(a as [])),
+}));
+
+const notifyCupStartedMock = vi.fn<() => Promise<Map<string, boolean>>>(
+  async () => new Map<string, boolean>(),
+);
+vi.mock('@/lib/notifications/events', () => ({
+  notifyParticipantsCupStarted: (...a: unknown[]) =>
+    notifyCupStartedMock(...(a as [])),
+  notifyParticipantsCupFinished: vi.fn(async () => new Map<string, boolean>()),
+}));
+
+const cupStartedMailMock = vi.fn<(arg: Record<string, unknown>) => Promise<void>>(
+  async () => {},
+);
+vi.mock('@/lib/mail/cupStartedNotification', () => ({
+  sendCupStartedNotification: (arg: Record<string, unknown>) =>
+    cupStartedMailMock(arg),
+}));
+
 function setUser(id: string) {
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { user: { id, email: `${id}@x.no` } },
@@ -803,5 +831,134 @@ describe('swapCupMatchPlayer — atomic-or-compensated (#1473)', () => {
     expect(inserts.at(-1)!.args[0]).toEqual([outRow('g-host'), outRow('g-derived')]);
     // Ingen varsel når byttet ikke ble stående.
     expect(notifyInvitedMock).not.toHaveBeenCalled();
+  });
+});
+
+
+/**
+ * #1902 — poengmålet følger PLANLAGT antall kamper.
+ *
+ * `startTournament` utledet målet fra de `games`-radene som fantes ved start.
+ * Kaptein-uttaket (#1884) legger til kamper MENS cupen er aktiv, så en Ryder
+ * Cup som starter med 8 av 28 kamper fikk målet 4,5 — og et lag kunne krones
+ * etter dag 1. Arrangøren oppgir nå planlagt antall, og målet regnes av
+ * `max(faktisk, planlagt)`.
+ *
+ * Lese-sekvensen for en personlig cup med en global admin som arrangør:
+ *   adminMock:    1. tournaments.select('group_id').maybeSingle   (gaten)
+ *   supabaseMock: 1. users.select('is_admin, email, name').single (loadRole)
+ *                 2. games.select(head/count)                     (matchtellingen)
+ *                 3. tournaments.select('id, name, status, …')    (current)
+ *                 4. tournaments.update(...).select('id')         (status-flippen)
+ */
+describe('startTournament — poengmålet regnes av planlagt antall (#1902)', () => {
+  /** Cup-raden `startTournament` leser rett før den flipper status. */
+  function cupRow(plannedMatchCount: number | null) {
+    return {
+      data: {
+        id: 'cup-1',
+        name: 'Ryder Cup',
+        status: 'draft',
+        team_1_name: 'Europa',
+        team_2_name: 'USA',
+        win_points: 1,
+        tie_points: 0.5,
+        planned_match_count: plannedMatchCount,
+      },
+      error: null,
+    };
+  }
+
+  /** Kjører start-flyten med `actual` eksisterende kamper og et planlagt antall. */
+  async function start(actual: number, planned: number | null) {
+    adminMock = buildSupabaseMock([{ data: { group_id: null }, error: null }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'a@x.no', name: 'Arrangør' }, error: null },
+      { count: actual },
+      cupRow(planned),
+      { data: [{ id: 'cup-1' }], error: null },
+    ]);
+    setUser('organizer');
+
+    const { startTournament } = await import('./actions');
+    const fd = new FormData();
+    fd.set('id', 'cup-1');
+    // Suksess-stien ender i redirect(), som mock-en kaster fra.
+    await expect(startTournament(fd)).rejects.toBeInstanceOf(RedirectError);
+  }
+
+  /** Verdien `points_to_win` fikk i status-flippen. */
+  function writtenPointsToWin(): unknown {
+    const update = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'tournaments' && c.method === 'update',
+    );
+    return (update?.args[0] as { points_to_win?: unknown })?.points_to_win;
+  }
+
+  it('8 kamper + planlagt 28 → målet er 14,5, ikke 4,5', async () => {
+    await start(8, 28);
+    // Selve fiksen: ingen kan krones etter dag 1.
+    expect(writtenPointsToWin()).toBe(14.5);
+  });
+
+  it('start-mailen bærer det SAMME målet som ble skrevet', async () => {
+    // Én off-app-mottaker, så fan-out-en faktisk fyrer: mailen sier «først til
+    // X» med egne ord, og et mål som avvek fra tavla ville vært verre enn
+    // ingen mail i det hele tatt.
+    participantEmailsMock.mockResolvedValueOnce([
+      { user_id: 'pl', email: 'pl@x.no', name: 'Per Spiller', locale: 'no' },
+    ]);
+    notifyCupStartedMock.mockResolvedValueOnce(new Map([['pl', true]]));
+
+    await start(8, 28);
+
+    expect(cupStartedMailMock).toHaveBeenCalledTimes(1);
+    expect(cupStartedMailMock.mock.calls[0][0]).toMatchObject({
+      to: 'pl@x.no',
+      tournamentName: 'Ryder Cup',
+      pointsToWin: 14.5,
+    });
+    // Samme tall begge steder — mailen og tavla kan ikke drive fra hverandre.
+    expect(writtenPointsToWin()).toBe(14.5);
+  });
+
+  it('planlagt NULL → dagens oppførsel, bit for bit (8 kamper → 4,5)', async () => {
+    await start(8, null);
+    expect(writtenPointsToWin()).toBe(4.5);
+  });
+
+  it('flere kamper enn planlagt → faktisk antall bærer målet (sikkerhetsnettet)', async () => {
+    await start(30, 28);
+    expect(writtenPointsToWin()).toBe(15.5);
+  });
+
+  it('vektet cup får fortsatt NULL, uansett planlagt antall (#1441 D8)', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null }, error: null }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'a@x.no', name: 'Arrangør' }, error: null },
+      { count: 8 },
+      {
+        data: {
+          id: 'cup-1',
+          name: 'Splittet cup-dag',
+          status: 'draft',
+          team_1_name: 'Europa',
+          team_2_name: 'USA',
+          win_points: 5,
+          tie_points: 2,
+          planned_match_count: 28,
+        },
+        error: null,
+      },
+      { data: [{ id: 'cup-1' }], error: null },
+    ]);
+    setUser('organizer');
+
+    const { startTournament } = await import('./actions');
+    const fd = new FormData();
+    fd.set('id', 'cup-1');
+    await expect(startTournament(fd)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(writtenPointsToWin()).toBeNull();
   });
 });
