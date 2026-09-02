@@ -11,13 +11,23 @@
 //     femten er forskjellige fra hverandre.
 import source from '../../../../messages/no.json';
 import type { EndRoundFailure } from '../data/endGame';
+import type { ReminderFailure } from '../data/remind';
 import {
+  approveConfirmBody,
+  CUP_LINK_LABEL,
   CUP_NOTE,
-  END_GAME_TEXT,
+  cupWebPath,
   describeEndRoundFailure,
+  describeReminderFailure,
+  describeReminderPreviewFailure,
+  END_GAME_TEXT,
+  lastRemindedNote,
+  remindLabel,
   slotLabel,
+  stillPlayingNote,
 } from './endGameCopy';
 import { describeRosterFailure } from './rosterCopy';
+import { WEB_LINK_TEXT } from './webLink';
 
 const REASONS: EndRoundFailure[] = [
   'no-session',
@@ -136,9 +146,12 @@ describe('END_GAME_TEXT', () => {
 
   it('sier hvor godkjenningen kan overstyres, i stedet for å stoppe i en blindvei', () => {
     // Guardrailen er «ærlig feil»: gaten kan ikke passeres i appen, så teksten
-    // MÅ si hvem som løser den og hvor.
+    // MÅ si hvem som løser den og hvor. Fram til #1891 var «hvor» nettsiden,
+    // fordi appen ikke hadde overstyringen. Nå har den den — og da er en
+    // henvisning videre en beskrivelse av en app som ikke finnes lenger.
     expect(END_GAME_TEXT.unapprovedNote).toContain('medspiller');
-    expect(END_GAME_TEXT.unapprovedNote).toContain('nettsiden');
+    expect(END_GAME_TEXT.unapprovedNote).toContain('på vegne av gruppa');
+    expect(END_GAME_TEXT.unapprovedNote).not.toContain('nettsiden');
   });
 
   it('sier at avslutningen ikke kan angres fra appen', () => {
@@ -155,5 +168,97 @@ describe('END_GAME_TEXT', () => {
     expect(END_GAME_TEXT.missingIntro).not.toContain('teller');
     expect(END_GAME_TEXT.withdrawHint).toContain('teller ikke i rangeringen');
     expect(END_GAME_TEXT.noCardHint).toContain('teller fortsatt');
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Purring (#1889) og lenke-etikettene (#1891)
+// -----------------------------------------------------------------------------
+
+const REMINDER_REASONS: ReminderFailure[] = [
+  'offline',
+  'no-web-base-url',
+  'unauthorized',
+  'network',
+  'forbidden',
+  'not_found',
+  'not_active',
+  'remind_failed',
+];
+
+describe('describeReminderFailure', () => {
+  it.each(REMINDER_REASONS)('gir en ferdig setning for «%s»', (reason) => {
+    expect(isFinishedSentence(describeReminderFailure(reason))).toBe(true);
+  });
+
+  it('skiller de fire årsakene arrangøren kan gjøre noe med', () => {
+    // Fire ulike neste-steg: koble til, logg inn, innse at runden er lukket,
+    // ta kontakt. Faller to av dem sammen, mister arrangøren rådet.
+    expect(describeReminderFailure('offline')).toBe('Purring krever nett.');
+    expect(describeReminderFailure('unauthorized')).toBe(
+      'Logg inn på nytt og prøv igjen.',
+    );
+    expect(describeReminderFailure('not_active')).toBe(END_GAME_TEXT.notActive);
+    // Delt med lenke-knappene: samme mangel i bygget stopper begge, og
+    // meldingen skal derfor ikke nevne én av dem.
+    expect(describeReminderFailure('no-web-base-url')).toBe(
+      WEB_LINK_TEXT.missingBaseUrl,
+    );
+  });
+
+  it('samler resten i ett råd — de har alle samme neste steg', () => {
+    const rest = (['network', 'forbidden', 'not_found', 'remind_failed'] as const).map(
+      describeReminderFailure,
+    );
+    expect(new Set(rest).size).toBe(1);
+    expect(rest[0]).toBe('Fikk ikke purret. Prøv igjen.');
+  });
+});
+
+describe('describeReminderPreviewFailure', () => {
+  it.each(REMINDER_REASONS)('gir en ferdig setning for «%s»', (reason) => {
+    expect(isFinishedSentence(describeReminderPreviewFailure(reason))).toBe(true);
+  });
+
+  it('sier ikke at en purring feilet når ingen purring ble forsøkt', () => {
+    // GET-en er forhåndssjekken. «Fikk ikke purret» ville sendt arrangøren på
+    // leting etter en purring som aldri ble sendt.
+    expect(describeReminderPreviewFailure('remind_failed')).toBe(
+      'Fikk ikke sjekket hvem som kan purres. Prøv igjen.',
+    );
+    expect(describeReminderPreviewFailure('remind_failed')).not.toBe(
+      describeReminderFailure('remind_failed'),
+    );
+  });
+
+  it('gjenbruker setningen der årsaken betyr det samme for begge kallene', () => {
+    for (const reason of ['offline', 'no-web-base-url', 'unauthorized', 'not_active'] as const) {
+      expect(describeReminderPreviewFailure(reason)).toBe(
+        describeReminderFailure(reason),
+      );
+    }
+  });
+});
+
+describe('purre-malene', () => {
+  it('setter inn tallene og lar ingen `{}` slippe gjennom', () => {
+    expect(remindLabel(3)).toBe('Purr på dem som mangler (3)');
+    expect(stillPlayingNote(2)).toBe(
+      '2 av dem har ikke ført alle hullene ennå. Purring hjelper først da.',
+    );
+    expect(lastRemindedNote('14:05')).toBe('Sist purret kl. 14:05');
+    expect(approveConfirmBody('Kari')).toBe(
+      'Godkjenn kortet til Kari? Du står som den som godkjente.',
+    );
+  });
+});
+
+describe('cup-lenka', () => {
+  it('peker på cupens forside, med id-en kodet', () => {
+    expect(cupWebPath('cup-1')).toBe('/cup/cup-1');
+    // En sti bygget av data kodes DER den bygges — ikke der noen senere antar
+    // at den var trygg.
+    expect(cupWebPath('a/b')).toBe('/cup/a%2Fb');
+    expect(isFinishedSentence(CUP_LINK_LABEL)).toBe(true);
   });
 });

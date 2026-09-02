@@ -17,10 +17,19 @@
 // å importeres derfra: de primitivene kjenner ikke «huket av»-firkanten, og
 // formen her er ikke helt den samme. Fargene er de samme tokenene.
 //
-// **Manglende godkjenning har ingen vei rundt.** Den kan ikke krysses bort,
-// verken her eller i datamodulen. Appen har ingen Sekretariat-overstyring;
-// skjermen navngir hvem det står på og sier hvor overstyringen finnes.
-import { useCallback, useState } from 'react';
+// **Manglende godkjenning har ingen vei rundt** — men den har nå en vei
+// GJENNOM (#1891). `guard_game_players_self_update` (0147) slipper oppretteren
+// til på andres rad, og webbens egen overstyring (`adminApproveScorecard`) er
+// ren DB uten varsel. Appen kan derfor gjøre nøyaktig det samme med den
+// `approveScorecard` den alt har. Det som fortsatt IKKE finnes er en vei rundt:
+// kortet må godkjennes, av en medspiller eller av arrangøren.
+//
+// **Purringen er den ikke-destruktive utveien (#1889).** Manglet noen kort, var
+// eneste knapp «marker som trukket» — en destruktiv handling presentert som
+// eneste alternativ. Purringen krever Node (`notify()`, Resend, push), så den
+// bor på serveren; skjermen spør `/api/games/{id}/remind` via `data/remind.ts`
+// og viser svaret. Regelen om HVEM som purres speiles aldri her.
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,14 +39,32 @@ import {
   Text,
   View,
 } from 'react-native';
+import { WebLinkButton } from '../components/WebLinkButton';
 import { finishRound } from '../data/endGame';
 import type { BundlePlayer } from '../data/gameBundle';
-import { displayName } from '../lib/display';
+import { approveScorecard } from '../data/playerActions';
 import {
+  fetchReminderPreview,
+  sendReminder,
+  type ReminderPreview,
+} from '../data/remind';
+import { describeFailure } from '../lib/actionFeedback';
+import { displayName, formatClock } from '../lib/display';
+import {
+  approveConfirmBody,
+  CUP_LINK_LABEL,
   CUP_NOTE,
-  END_GAME_TEXT,
+  cupWebPath,
   describeEndRoundFailure,
+  describeReminderFailure,
+  describeReminderPreviewFailure,
+  END_GAME_TEXT,
+  lastRemindedNote,
+  REMIND_BUSY_LABEL,
+  REMIND_DONE_NOTE,
+  remindLabel,
   slotLabel,
+  stillPlayingNote,
 } from '../lib/endGameCopy';
 import {
   buildFinishPlan,
@@ -48,6 +75,10 @@ import {
   type FinishPlan,
   type FinishSlot,
 } from '../lib/endGamePlan';
+import {
+  WITHDRAW_SELF_LINK_LABEL,
+  withdrawSelfWebPath,
+} from '../lib/rosterCopy';
 import { useGameBundle } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -120,6 +151,41 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     [acknowledged, choices, gameId, navigation, refresh],
   );
 
+  /**
+   * Godkjenn en medspillers kort på vegne av gruppa (#1891).
+   *
+   * Ingen ny rute og ingen ny regel: dette er `approveScorecard` slik spilleren
+   * selv bruker den, og RLS er porten. 0147-vakta slipper oppretteren gjennom
+   * på andres rad, og UPDATE-filteret (`submitted_at not null`, `approved_at
+   * is null`) sørger for at et ULEVERT kort aldri kan godkjennes herfra.
+   *
+   * **Ingen varsel sendes.** Webbens egen overstyring gjør heller ikke det
+   * («success without re-notifying»): spilleren blir ikke bedt om noe, hen får
+   * beskjed om at arrangøren tok jobben — og det skjer i resultatet.
+   *
+   * `refresh()` kjøres uansett utfall. Ble kortet godkjent, skal banneret
+   * forsvinne; ble det avvist, er lista på skjermen utdatert og en ny henting
+   * er nettopp det som gjør avslaget forståelig.
+   */
+  const approve = useCallback(
+    async (player: BundlePlayer) => {
+      setBusy(true);
+      setNotice(null);
+      try {
+        // `alreadyDone: true` er suksess, ikke et avslag: kortet ER godkjent —
+        // en medspiller rakk det først. Samme semantikk som `alreadyFinished`.
+        const result = await approveScorecard(gameId, player.userId);
+        setNotice(describeFailure(result));
+      } catch {
+        setNotice(describeEndRoundFailure('db'));
+      } finally {
+        setBusy(false);
+        await refresh();
+      }
+    },
+    [gameId, refresh],
+  );
+
   if (!bundle) {
     return (
       <View style={ui.centered} testID={loading ? 'end-game-loading' : 'end-game-error'}>
@@ -145,6 +211,11 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
           <Text style={ui.body} testID="end-game-cup-note">
             {CUP_NOTE}
           </Text>
+          <WebLinkButton
+            label={CUP_LINK_LABEL}
+            path={cupWebPath(game.tournamentId)}
+            testID="end-game-cup-link"
+          />
         </View>
       </ScrollView>
     );
@@ -193,6 +264,37 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
             {END_GAME_TEXT.unapprovedHeading}: {plan.unapproved.map(displayName).join(', ')}
           </Text>
           <Text style={ui.muted}>{END_GAME_TEXT.unapprovedNote}</Text>
+          {plan.unapproved.map((player) => (
+            <Pressable
+              key={player.userId}
+              style={ui.buttonSecondary}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: busy }}
+              testID={`end-game-approve-${player.userId}`}
+              onPress={() =>
+                Alert.alert(
+                  END_GAME_TEXT.approveOnBehalf,
+                  approveConfirmBody(displayName(player)),
+                  [
+                    { text: 'Avbryt', style: 'cancel' },
+                    {
+                      text: END_GAME_TEXT.approveConfirmCta,
+                      onPress: () => void approve(player),
+                    },
+                  ],
+                )
+              }
+            >
+              <Text style={ui.buttonSecondaryText}>
+                {END_GAME_TEXT.approveOnBehalf}
+              </Text>
+              {/* Navnet på egen linje, ikke i etiketten: med to ventende kort
+                  er «Godkjenn på vegne av gruppa» to ganger et valg uten
+                  forskjell. Etiketten står som eieren skrev den. */}
+              <Text style={ui.muted}>{displayName(player)}</Text>
+            </Pressable>
+          ))}
         </View>
       ) : null}
 
@@ -224,6 +326,18 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
               />
             ))}
           </View>
+          {plan.missing.some((entry) => entry.player.userId === userId) ? (
+            // Egen rad står i lista med `ownRowHint`, som sier at frafallet
+            // gjøres på nettsiden. Knappen står under KORTET og ikke inni
+            // raden: raden er selv en `Pressable` (avkryssingen), og en knapp
+            // inni den ville stjålet tappet fra avkryssingen.
+            <WebLinkButton
+              label={WITHDRAW_SELF_LINK_LABEL}
+              path={withdrawSelfWebPath(gameId)}
+              testID="end-game-withdraw-self-link"
+            />
+          ) : null}
+          <ReminderPanel gameId={gameId} missingCount={plan.missing.length} />
         </>
       ) : plan.unapproved.length === 0 ? (
         <Text style={ui.muted} testID="end-game-all-ready">
@@ -277,6 +391,146 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         </Text>
       ) : null}
     </ScrollView>
+  );
+}
+
+/**
+ * Purreknappen og alt som hører til den (#1889).
+ *
+ * **Egen komponent, ikke en gren i skjermen.** Den eier en effekt og tre
+ * tilstander, og monteres bare når det faktisk mangler kort — som en gren
+ * ville betydd at GET-en gikk av gårde også for runder der alle har levert,
+ * eller at hooks-rekkefølgen i skjermen ble avhengig av bundelen.
+ *
+ * **Tallet kommer fra serveren, aldri fra lista på skjermen.** `missingCount`
+ * er «mangler kort», mens `targets` er «ferdig UTEN å ha levert» — bare den
+ * siste kan purres (`selectDeliveryReminderTargets`). Regnestykket for hvem
+ * bor på serveren; her regnes bare differansen, for å kunne si hvorfor de to
+ * tallene er ulike.
+ *
+ * @param missingCount hvor mange rader «Disse mangler kort» viser.
+ */
+function ReminderPanel({
+  gameId,
+  missingCount,
+}: {
+  gameId: string;
+  missingCount: number;
+}) {
+  const { ui } = useTheme();
+  const [preview, setPreview] = useState<{
+    targets: number;
+    lastRemindedAt: string | null;
+  } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  /**
+   * Ta imot et GET-svar.
+   *
+   * Uten et tall vet vi ikke hvem knappen ville truffet, så den vises ikke —
+   * setningen står i stedet. En tom plass ville sett ut som «ingen å purre»,
+   * som er et helt annet svar enn «vi fikk ikke spurt».
+   */
+  const applyPreview = useCallback((result: ReminderPreview) => {
+    if (result.ok) {
+      setPreview({ targets: result.targets, lastRemindedAt: result.lastRemindedAt });
+      setProblem(null);
+      return;
+    }
+    setPreview(null);
+    setProblem(describeReminderPreviewFailure(result.reason));
+  }, []);
+
+  // Samme form som `DeleteAccount`s status-henting: `cancelled`-flagget hindrer
+  // en setState etter at arrangøren har forlatt flaten, og `.catch` fanger det
+  // datalaget ikke forutså — en skjerm som bare ble stående tom ville vært den
+  // stille feilen guardrailen finnes for.
+  useEffect(() => {
+    let cancelled = false;
+    fetchReminderPreview(gameId)
+      .then((result) => {
+        if (!cancelled) applyPreview(result);
+      })
+      .catch(() => {
+        if (!cancelled) applyPreview({ ok: false, reason: 'remind_failed' });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPreview, gameId]);
+
+  /**
+   * Purr, og hent antallet på nytt etterpå.
+   *
+   * Den andre GET-en er ikke pynt: «Sist purret kl. …» ER guardrailen mot en
+   * dobbeltpurring (eieren valgte bort en sperre), og en linje som ikke
+   * oppdaterte seg etter trykket ville vært verre enn ingen linje.
+   */
+  const remind = useCallback(async () => {
+    setBusy(true);
+    setNotice(null);
+    setProblem(null);
+    try {
+      const result = await sendReminder(gameId);
+      if (result.ok) {
+        setNotice(REMIND_DONE_NOTE);
+        applyPreview(await fetchReminderPreview(gameId));
+        return;
+      }
+      setProblem(describeReminderFailure(result.reason));
+    } finally {
+      setBusy(false);
+    }
+  }, [applyPreview, gameId]);
+
+  // Negativ differanse er mulig: serveren teller på nytt, og noen kan ha
+  // levert siden bundelen ble hentet. Da er «−1 av dem …» tull, ikke data.
+  const stillPlaying = preview ? Math.max(0, missingCount - preview.targets) : 0;
+  const lastReminded = preview ? formatClock(preview.lastRemindedAt) : null;
+
+  return (
+    <View style={styles.reminder} testID="end-game-reminder">
+      {stillPlaying > 0 ? (
+        <Text style={ui.muted} testID="end-game-reminder-still-playing">
+          {stillPlayingNote(stillPlaying)}
+        </Text>
+      ) : null}
+
+      {preview !== null && preview.targets > 0 ? (
+        <Pressable
+          style={[ui.buttonSecondary, busy && styles.buttonOff]}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy }}
+          testID="end-game-remind"
+          onPress={() => void remind()}
+        >
+          <Text style={ui.buttonSecondaryText}>
+            {busy ? REMIND_BUSY_LABEL : remindLabel(preview.targets)}
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {lastReminded ? (
+        <Text style={ui.muted} testID="end-game-reminder-last">
+          {lastRemindedNote(lastReminded)}
+        </Text>
+      ) : null}
+
+      {notice ? (
+        <Text style={ui.muted} testID="end-game-reminder-done">
+          {notice}
+        </Text>
+      ) : null}
+
+      {problem ? (
+        <Text style={ui.error} testID="end-game-reminder-error">
+          {problem}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -436,6 +690,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   buttonOff: { opacity: 0.4 },
+  reminder: { gap: 6, marginTop: 8 },
   checkRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
