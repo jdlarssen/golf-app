@@ -367,7 +367,7 @@ function TeamRow({
       >
         <View style={styles.summaryMain}>
           <View style={styles.titleRow}>
-            <Text style={styles.medal}>{medal}</Text>
+            <Text style={[styles.medal, { color: colors.muted }]}>{medal}</Text>
             <Text
               style={[styles.teamTitle, { color: colors.text }]}
               numberOfLines={1}
