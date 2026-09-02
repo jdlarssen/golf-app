@@ -401,6 +401,14 @@ function TeamPanel({
         <p className="mt-2 text-xs text-muted">{t('hidden')}</p>
       ) : canEdit ? (
         <LineupEditor
+          // Plass-valgene er lokal state seedet fra serveren, og en
+          // `useState`-initializer kjører kun ved mount. Uten en key som
+          // følger datasettet ville en kladd som endret seg server-side
+          // (arrangøren leverte på vegne av laget og låste opp igjen) blitt
+          // stående som de gamle valgene i skjemaet.
+          key={`${session.id}-${team.teamNumber}-${team.slots
+            .map((s) => `${s.slotIndex}.${s.seat}.${s.userId}`)
+            .join('|')}`}
           tournamentId={tournamentId}
           session={session}
           teamNumber={team.teamNumber}
