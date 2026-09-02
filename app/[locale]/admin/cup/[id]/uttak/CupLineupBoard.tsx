@@ -13,12 +13,14 @@ import type {
 } from '@/lib/cup/lineupData';
 import {
   openCupLineupSession,
+  setCupPlannedMatchCount,
   submitCupLineup,
   unlockCupLineup,
   deleteCupLineupSession,
   type CupLineupActionError,
 } from '@/lib/cup/lineupActions';
 import { seatsPerSlot } from '@/lib/cup/lineupValidation';
+import { derivePointsToWin } from '@/lib/cup/pointsToWin';
 
 const INITIAL: CupLineupActionError = { error: '' };
 
@@ -90,6 +92,8 @@ export function CupLineupBoard({
       switch (formData.get('intent')) {
         case 'open':
           return openCupLineupSession(formData);
+        case 'planned':
+          return setCupPlannedMatchCount(formData);
         case 'unlock':
           return unlockCupLineup(formData);
         case 'delete':
@@ -117,6 +121,12 @@ export function CupLineupBoard({
   };
   const bothCaptains = Boolean(captains[1] && captains[2]);
 
+  // #1902: poengmålet skal være kjent før den første økta avdekker kamper.
+  // Vektede cuper (#1441 D8) har ikke noe «først til X», så de slipper
+  // spørsmålet — og dermed også sperren.
+  const needsPlanned =
+    board.hasDefaultWeights && board.plannedMatchCount === null;
+
   return (
     <div className="space-y-6">
       {errorMessage && (
@@ -131,12 +141,22 @@ export function CupLineupBoard({
         </Banner>
       )}
 
+      {isOrganizer && bothCaptains && board.hasDefaultWeights && (
+        <PlannedMatchCountForm
+          tournamentId={tournamentId}
+          board={board}
+          onSubmit={submit}
+          isPending={isPending}
+        />
+      )}
+
       {isOrganizer && bothCaptains && (
         <OpenSessionForm
           tournamentId={tournamentId}
           board={board}
           onSubmit={submit}
           isPending={isPending}
+          needsPlanned={needsPlanned}
         />
       )}
 
@@ -176,8 +196,17 @@ export function CupLineupBoard({
   );
 }
 
-/** Arrangørens «åpne økt»-form: format + antall plasser. */
-function OpenSessionForm({
+/**
+ * #1902 — arrangørens «hvor mange kamper skal cupen ha?».
+ *
+ * Eget kort over «Åpne en økt», ikke et felt inne i den: tallet kan rettes
+ * uten å åpne noe (skrivefeil, for høyt tall), og en cup som alt har startet
+ * får det nye poengmålet med én gang det lagres.
+ *
+ * Konsekvenslinja regnes lokalt med den samme rene funksjonen serveren bruker,
+ * så arrangøren ser målet FØR hun lagrer — «28 kamper gir et poengmål på 14,5».
+ */
+function PlannedMatchCountForm({
   tournamentId,
   board,
   onSubmit,
@@ -187,6 +216,99 @@ function OpenSessionForm({
   board: Board;
   onSubmit: (fd: FormData) => void;
   isPending: boolean;
+}) {
+  const t = useTranslations('cup.lineup');
+
+  // Gulvet serveren håndhever: kampene som alt finnes + plassene i åpnede,
+  // ikke-avdekkede økter, aldri under 2.
+  const floor = Math.max(2, board.matchCount + board.pendingSlotCount);
+  const [value, setValue] = useState(
+    board.plannedMatchCount === null ? '' : String(board.plannedMatchCount),
+  );
+
+  const parsed = Number(value);
+  const preview =
+    value.trim() !== '' && Number.isInteger(parsed) && parsed >= floor
+      ? parsed
+      : null;
+
+  return (
+    <Card>
+      <h2 className="font-serif text-lg text-text">{t('plannedHeading')}</h2>
+      <p className="mt-1 text-xs text-muted">{t('plannedHelper')}</p>
+
+      <form
+        className="mt-3 space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const fd = new FormData();
+          fd.set('intent', 'planned');
+          fd.set('id', tournamentId);
+          fd.set('planned_match_count', value.trim());
+          onSubmit(fd);
+        }}
+      >
+        <label className="block">
+          <span className="font-sans text-xs text-muted">
+            {t('plannedLabel')}
+          </span>
+          <input
+            data-testid="cup-lineup-planned-input"
+            type="number"
+            inputMode="numeric"
+            min={floor}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="mt-1 w-full min-h-[44px] rounded-xl border border-line bg-bg px-3 font-serif text-lg tabular-nums text-text"
+          />
+        </label>
+
+        {preview !== null && (
+          <p
+            data-testid="cup-lineup-planned-target"
+            className="text-xs text-muted tabular-nums"
+          >
+            {t('plannedTarget', {
+              count: preview,
+              points: derivePointsToWin(preview),
+            })}
+          </p>
+        )}
+
+        {/* Aktiv cup: hva tavla sier akkurat nå, så arrangøren ser at det
+            lagrede tallet faktisk slo gjennom. */}
+        {board.pointsToWin !== null && (
+          <p className="text-xs text-muted tabular-nums">
+            {t('plannedCurrent', { points: board.pointsToWin })}
+          </p>
+        )}
+
+        <Button
+          type="submit"
+          disabled={isPending || value.trim() === ''}
+          data-testid="cup-lineup-planned-save"
+        >
+          {t('plannedSave')}
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
+/** Arrangørens «åpne økt»-form: format + antall plasser. */
+function OpenSessionForm({
+  tournamentId,
+  board,
+  onSubmit,
+  isPending,
+  needsPlanned,
+}: {
+  tournamentId: string;
+  board: Board;
+  onSubmit: (fd: FormData) => void;
+  isPending: boolean;
+  /** #1902: planlagt antall mangler → økta kan ikke åpnes ennå. */
+  needsPlanned: boolean;
 }) {
   const t = useTranslations('cup.lineup');
   const tf = useTranslations('cup');
@@ -276,11 +398,16 @@ function OpenSessionForm({
 
         <Button
           type="submit"
-          disabled={isPending || derived < 1}
+          disabled={isPending || derived < 1 || needsPlanned}
           data-testid="cup-lineup-open"
         >
           {t('openButton')}
         </Button>
+        {needsPlanned && (
+          <p className="text-xs text-muted" data-testid="cup-lineup-needs-planned">
+            {t('needsPlanned')}
+          </p>
+        )}
         {derived < 1 && (
           <p className="text-xs text-muted">{t('squadTooSmall')}</p>
         )}
