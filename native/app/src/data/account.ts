@@ -185,7 +185,11 @@ export async function fetchDeleteStatus(): Promise<AccountDeleteStatus> {
     // `null` betyr «ikke blokkert» og er det vanlige svaret. En ukjent streng
     // betyr at wiren har driftet: da vet vi ikke om kontoen kan slettes, og
     // fail-closed er å si nettopp det i stedet for å vise knappen.
-    if (raw === null || raw === undefined) return { ok: true, blocked: null };
+    // Bare eksplisitt `null` er «ikke blokkert». Mangler feltet helt, har wiren
+    // driftet (eller kroppen var uleselig og ble vasket til {}) — og da vet vi
+    // ikke om kontoen kan slettes. Samme fail-closed som for en ukjent streng.
+    if (raw === null) return { ok: true, blocked: null };
+    if (raw === undefined) return { ok: false, reason: 'status_failed' };
     const blocked = readBlockReason(raw);
     return blocked
       ? { ok: true, blocked }
@@ -229,7 +233,17 @@ export async function deleteAccount(): Promise<AccountDeleteResult> {
   if (!call.ok) return call;
 
   if (call.status === 200) {
-    await wipeLocalData();
+    // Herfra er kontoen SLETTET. Alt under er lokal opprydding, og ingenting av
+    // det kan gjøre slettingen ugjort — derfor rapporteres en feil her aldri som
+    // «slettingen feilet». Sier vi det, ber vi brukeren prøve igjen på en konto
+    // som ikke finnes, og neste forsøk svarer 401.
+    try {
+      await wipeLocalData();
+    } catch (err) {
+      // Basen er lokal og sesjonen ryker uansett i steget under, så enheten
+      // ender uten vei tilbake til dataene. Logg og gå videre.
+      console.error('[deleteAccount] lokal wipe feilet', err);
+    }
     try {
       await supabase.auth.signOut({ scope: 'local' });
     } catch (err) {
