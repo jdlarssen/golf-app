@@ -113,15 +113,15 @@ Byggeren kan i tillegg trekke ut `hasDefaultCupWeights(win, tie)` (brukes av `de
 
 ## Suksesskriterier
 
-- [ ] **SK1 — Regelen (Type A):** `resolveCupMatchTotal` i `lib/cup/pointsToWin.ts` med `it.each`-tabell i `pointsToWin.test.ts`: (8, null)→8 · (8, 28)→28 · (30, 28)→30 · (0, 28)→28; komposisjon med vektede vekter → null. Eksisterende `derivePointsToWin*`-tester uendret.
-- [ ] **SK2 — Migrasjon:** `supabase/migrations/0173_tournaments_planned_match_count.sql` (nummer verifisert mot `origin/main`): nullable kolonne + CHECK + kommentar + ⚠⚠-header med prod-FØRST-begrunnelsen. Påført staging via MCP; `lib/database.types.ts` regenerert fra staging; drift-sjekken grønn. Prod-status står ærlig i PR-en («IKKE påført» til eieren har åpnet luka).
-- [ ] **SK3 — Planlagt-action:** `setCupPlannedMatchCount` med gate-tester i `lineupActions.test.ts` (samme mock-oppsett som i dag): kaptein → `not_allowed` + 0 skriv · arrangør under gulvet → `lineup_planned_total` + 0 skriv · over personlig tak → `too_many_matches` · aktiv cup → planlagt skrevet OG `points_to_win` synket · draft → planlagt skrevet, `points_to_win` urørt · finished → `cup_finished`.
-- [ ] **SK4 — Første økt krever tallet:** `openCupLineupSession` returnerer `lineup_planned_total_missing` når planlagt er NULL på default-vektet cup (test), og går som før på vektet cup (test). UI: `cup-lineup-open` disabled + `cup-lineup-needs-planned` synlig til tallet er lagret.
-- [ ] **SK5 — Start:** `actions.test.ts`: 8 kamper + planlagt 28 → `points_to_win` 14,5 i update-en OG i `sendCupStartedNotification`-kallet; planlagt NULL → 4,5 (dagens tester grønne uendret).
-- [ ] **SK6 — Sikkerhetsnettet:** `lineupActions.test.ts`: avdekking i aktiv cup der faktisk antall passerer planlagt → `tournaments.update({ points_to_win })` med verdien fra faktisk antall; faktisk ≤ planlagt → verdien fra planlagt (uendret tall). Synk-feil → logget, avdekkingen returnerer OK og kampene står.
-- [ ] **SK7 — Uendret uten kapteiner/planlagt:** `npx vitest run` grønn (hele suiten, exit 0 — ikke bare pass-tallene, jf. unhandled-rejection-fella); ingen eksisterende cup-test endret oppførsel.
-- [ ] **SK8 — i18n + notat + copy:** nye nøkler i begge kataloger, `npx vitest run messages` grønn; `.changes/1902-poengmaal-planlagt.md` (`type: feat`, `link: /admin/cup`, cta ≤ 40 tegn) godtatt av `node scripts/weekly-release.mjs --dry-run`; `humanizer:humanizer` kjørt på de norske strengene før commit.
-- [ ] **SK9 — Staging-bevis (FØR merge, prod-server-modus):** kaptein-cup på torny-staging (fikstur `de77c617` 3 mot 3, eller ny): planlagt = 4 → økt 1 singel 3 kamper → begge leverer → avdekket (3 kamper) → start → cup-siden sier «Først til 2,5 poeng» → økt 2 singel 3 → avdekket → 6 > 4 → «Først til 3,5 poeng». Pluss: hostile REST-PATCH av `planned_match_count` med kaptein-JWT → 0 rader/42501. Bevis-kommentar + `staging-verified`-label på PR-en.
+- [x] **SK1 — Regelen (Type A):** `resolveCupMatchTotal` i `lib/cup/pointsToWin.ts` med `it.each`-tabell i `pointsToWin.test.ts`: (8, null)→8 · (8, 28)→28 · (30, 28)→30 · (0, 28)→28; komposisjon med vektede vekter → null. Eksisterende `derivePointsToWin*`-tester uendret.
+- [x] **SK2 — Migrasjon:** `supabase/migrations/0173_tournaments_planned_match_count.sql` (nummer verifisert mot `origin/main`): nullable kolonne + CHECK + kommentar + ⚠⚠-header med prod-FØRST-begrunnelsen. Påført staging via MCP; `lib/database.types.ts` regenerert fra staging; drift-sjekken grønn. Prod-status står ærlig i PR-en («IKKE påført» til eieren har åpnet luka).
+- [x] **SK3 — Planlagt-action:** `setCupPlannedMatchCount` med gate-tester i `lineupActions.test.ts` (samme mock-oppsett som i dag): kaptein → `not_allowed` + 0 skriv · arrangør under gulvet → `lineup_planned_total` + 0 skriv · over personlig tak → `too_many_matches` · aktiv cup → planlagt skrevet OG `points_to_win` synket · draft → planlagt skrevet, `points_to_win` urørt · finished → `cup_finished`.
+- [x] **SK4 — Første økt krever tallet:** `openCupLineupSession` returnerer `lineup_planned_total_missing` når planlagt er NULL på default-vektet cup (test), og går som før på vektet cup (test). UI: `cup-lineup-open` disabled + `cup-lineup-needs-planned` synlig til tallet er lagret.
+- [x] **SK5 — Start:** `actions.test.ts`: 8 kamper + planlagt 28 → `points_to_win` 14,5 i update-en OG i `sendCupStartedNotification`-kallet; planlagt NULL → 4,5 (dagens tester grønne uendret).
+- [x] **SK6 — Sikkerhetsnettet:** `lineupActions.test.ts`: avdekking i aktiv cup der faktisk antall passerer planlagt → `tournaments.update({ points_to_win })` med verdien fra faktisk antall; faktisk ≤ planlagt → verdien fra planlagt (uendret tall). Synk-feil → logget, avdekkingen returnerer OK og kampene står.
+- [x] **SK7 — Uendret uten kapteiner/planlagt:** `npx vitest run` grønn (hele suiten, exit 0 — ikke bare pass-tallene, jf. unhandled-rejection-fella); ingen eksisterende cup-test endret oppførsel.
+- [x] **SK8 — i18n + notat + copy:** nye nøkler i begge kataloger, `npx vitest run messages` grønn; `.changes/1902-poengmaal-planlagt.md` (`type: feat`, `link: /admin/cup`, cta ≤ 40 tegn) godtatt av `node scripts/weekly-release.mjs --dry-run`; `humanizer:humanizer` kjørt på de norske strengene før commit.
+- [x] **SK9 — Staging-bevis (FØR merge, prod-server-modus):** kaptein-cup på torny-staging (fikstur `de77c617` 3 mot 3, eller ny): planlagt = 4 → økt 1 singel 3 kamper → begge leverer → avdekket (3 kamper) → start → cup-siden sier «Først til 2,5 poeng» → økt 2 singel 3 → avdekket → 6 > 4 → «Først til 3,5 poeng». Pluss: hostile REST-PATCH av `planned_match_count` med kaptein-JWT → 0 rader/42501. Bevis-kommentar + `staging-verified`-label på PR-en.
 
 ## Gates (per chunk)
 
@@ -164,3 +164,37 @@ Byggeren kan i tillegg trekke ut `hasDefaultCupWeights(win, tie)` (brukes av `de
 - Splittet-cup-dag-preset, klubb-cup-regler, native-appen (#1816 — leser ikke `points_to_win`).
 - #1901 (avdekking som feiler har ingen «prøv igjen»-vei) — eget issue.
 - Automatisk omskriving av planlagt antall ut fra åpnede økter (planlagt er arrangørens utsagn).
+
+
+## Bevis (byggeøkta 2026-09-02)
+
+Alle kommandoer kjørt i denne økta, på `claude/poengmaal-1902-bygg`.
+
+| SK | Bevis |
+|---|---|
+| SK1 | `npx vitest run lib/cup/pointsToWin.test.ts` → 52 passed. `resolveCupMatchTotal` (`lib/cup/pointsToWin.ts`) med it.each-tabellen fra kontrakten + komposisjon mot vektede vekter → null. Rød først (13 failed før implementasjon). |
+| SK2 | `supabase/migrations/0173_tournaments_planned_match_count.sql`. Nummer verifisert: `git ls-tree origin/main supabase/migrations/` topper på 0172. Påført staging via MCP (`apply_migration`); `information_schema` bekrefter `planned_match_count integer NULL`; `pg_constraint` bekrefter CHECK 2–400. `lib/database.types.ts` avviker nå fra staging-generert skjema med 0 linjer for kolonnen. **Prod: IKKE påført.** |
+| SK3 | `lib/cup/lineupActions.test.ts` → kaptein `not_allowed` + 0 skriv · under gulvet `lineup_planned_total` + 0 skriv · åpnede plasser teller i gulvet · over tak `too_many_matches` · aktiv cup skriver planlagt OG mål · draft skriver kun planlagt · finished `cup_finished`. |
+| SK4 | Enhetstest: planlagt NULL på default-vektet cup → `lineup_planned_total_missing`, 0 skriv; vektet cup åpner som før. Staging: knappen `cup-lineup-open` disabled + `cup-lineup-needs-planned` synlig; etter lagring disabled=false. |
+| SK5 | `lib/cup/actions.test.ts`: 8 kamper + planlagt 28 → 14,5 i update-en OG i `sendCupStartedNotification`-kallet (`pointsToWin: 14.5`); planlagt NULL → 4,5; 30 faktiske > 28 planlagt → 15,5; vektet → null. |
+| SK6 | `lib/cup/lineupActions.test.ts`: avdekking med 6 faktiske > 4 planlagt → `points_to_win` 3,5; 8 faktiske < 28 planlagt → 14,5; synk-feil → logget, avdekkingen returnerer `{error:''}` og kampene står. |
+| SK7 | `npx vitest run` → **531 filer, 7270 tester, exit 0**. `npm run build` → exit 0. `npx tsc --noEmit` → exit 0. `npx eslint lib/cup/` → 0. |
+| SK8 | Nye `cup.lineup.*`-nøkler i BEGGE kataloger (paritetstest grønn: `npx vitest run messages` → 4 passed). `.changes/1902-poengmaal-planlagt.md` godtatt av `node scripts/weekly-release.mjs --dry-run`. `humanizer:humanizer` kjørt — endret passiv «regnes ut fra» → «følger», «Oppgi» → «Si hvor mange kamper cupen skal ha», løste opp som…som-kjeden i valideringsfeilen. |
+| SK9 | Staging (`snwmueecmfqqdurxedxv`), prod-server-modus (`npm run build` + `next start`, `/api/health` sha `514090c9`). Fikstur-cup `5283f7c3-de93-49b4-96a0-298ba2157bea`, 3 mot 3, default-vekter, to kapteiner. Se tabellen under. |
+
+### SK9 — staging-runden steg for steg
+
+| Steg | Observert |
+|---|---|
+| Uttaks-rommet, planlagt NULL | Kortet «Planlagt antall kamper» vises · `cup-lineup-needs-planned`: «Si hvor mange kamper cupen skal ha før du åpner den første økten.» · `cup-lineup-open` **disabled** |
+| Skriver 4 i feltet | Forhåndsvisning: «4 kamper gir et poengmål på 2,5» |
+| Lagrer | Feltet husker 4 · hjelpeteksten borte · `cup-lineup-open` **enabled** · ingen feilbanner |
+| Økt 1, singel, 3 plasser → begge uttak levert | Økta merket «Avdekket» · DB: 3 kamper, planlagt 4, `points_to_win` **NULL** (draft — #1142 står) |
+| «Start cupen» | DB: status active, `points_to_win` **2,5** (av planlagt 4, ikke av 3 faktiske) |
+| Offentlig cup-side | «**Først til 2,5 poeng** vinner» |
+| Uttaks-rommet, aktiv cup | Kortet viser «Målet nå: først til 2,5 poeng» |
+| Økt 2, singel, 3 plasser → avdekket | DB: 6 kamper > 4 planlagt → `points_to_win` **3,5**; `planned_match_count` fortsatt **4** (arrangørens utsagn skrives aldri om) |
+| Offentlig cup-side | «**Først til 3,5 poeng** vinner» |
+| Fiendtlig REST-PATCH, kaptein-JWT (`252e1a6f`), `planned_match_count: 999` | HTTP 200, body `[]` → **0 rader**. Samme mot `points_to_win: 0.5` → 0 rader. DB etterpå uendret: 4 / 3,5 |
+
+**Avvik fra kontrakten:** ett — forhåndsvisningen skrev «2.5» med engelsk desimalpunktum. Fanget på staging-runden, ikke av noen test; fikset ved å sende tallet gjennom `formatPoints` (samme helper cup-siden bruker). Egen commit.
