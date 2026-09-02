@@ -40,6 +40,20 @@ function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
   );
 }
 
+/**
+ * Cupens eget format-vokabular, ikke `modes.*`. En singel-økt heter «Singel»
+ * her og kampene den lager heter «Singel 1», «Singel 2» — `modes.*` ville
+ * skrevet «Matchplay» i rommet og «Singel» på kampene rett under.
+ */
+const FORMAT_LABEL_KEY = {
+  foursomes_matchplay: 'generate.formatFoursomes',
+  fourball_matchplay: 'generate.formatFourball',
+  singles_matchplay: 'generate.formatSingles',
+  greensome_matchplay: 'generate.formatGreensome',
+  chapman_matchplay: 'generate.formatChapman',
+  gruesome_matchplay: 'generate.formatGruesome',
+} as const;
+
 const FORMATS = [
   'foursomes_matchplay',
   'fourball_matchplay',
@@ -66,7 +80,7 @@ export function CupLineupBoard({
   board: Board;
 }) {
   const t = useTranslations('cup.lineup');
-  const tf = useTranslations('modes');
+  const tf = useTranslations('cup');
   const isOrganizer = board.access.role.kind === 'organizer';
   const myTeam =
     board.access.role.kind === 'captain' ? board.access.role.teamNumber : null;
@@ -147,7 +161,13 @@ export function CupLineupBoard({
               myTeam={myTeam}
               onSubmit={submit}
               isPending={isPending}
-              formatLabel={(f) => tf(f as Parameters<typeof tf>[0])}
+              formatLabel={(f) =>
+                tf(
+                  FORMAT_LABEL_KEY[
+                    f as keyof typeof FORMAT_LABEL_KEY
+                  ] as Parameters<typeof tf>[0],
+                )
+              }
             />
           ))
         )}
@@ -169,7 +189,7 @@ function OpenSessionForm({
   isPending: boolean;
 }) {
   const t = useTranslations('cup.lineup');
-  const tf = useTranslations('modes');
+  const tf = useTranslations('cup');
   const [format, setFormat] = useState<(typeof FORMATS)[number]>(
     'foursomes_matchplay',
   );
@@ -216,7 +236,7 @@ function OpenSessionForm({
           >
             {FORMATS.map((f) => (
               <option key={f} value={f}>
-                {tf(f as Parameters<typeof tf>[0])}
+                {tf(FORMAT_LABEL_KEY[f] as Parameters<typeof tf>[0])}
               </option>
             ))}
           </select>
