@@ -6,15 +6,18 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { RemindMissing } from '@/components/games/RemindMissing';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { GameStatus } from '@/lib/games/status';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { SideWinnersForm, type PlayerOption } from './SideWinnersForm';
-import { endGameWithSideWinners } from './actions';
+import { endGameWithSideWinners, remindMissingPlayers } from './actions';
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ error?: string }>;
+// `status=reminded` er kvitteringen purre-action-en redirecter tilbake med
+// (#1889) — samme search-param-mønster som admin-status-siden bruker.
+type SearchParams = Promise<{ error?: string; status?: string }>;
 
 /**
  * Admin wizard for selecting LD/CTP winners before flipping a side-tournament
@@ -38,7 +41,7 @@ export default async function AvsluttPage({
   searchParams: SearchParams;
 }) {
   const { id: gameId } = await params;
-  const { error } = await searchParams;
+  const { error, status: notice } = await searchParams;
 
   const locale = await getLocale();
   const t = await getTranslations('admin.game.finish');
@@ -121,20 +124,29 @@ export default async function AvsluttPage({
         subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
       />
       {missing.length > 0 && (
-        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
-          <p className="font-medium">
-            {t('missingHeader', { count: missing.length })}
-          </p>
-          <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
-            {missing.map((name, i) => (
-              <li key={i}>{name}</li>
-            ))}
-          </ul>
-          <p className="mt-2 text-text">
-            {t.rich('missingBody', {
-              bold: (chunks) => <strong>{chunks}</strong>,
-            })}
-          </p>
+        // Purreknappen (#1889) hører til her, i blokken som sier hvem som
+        // mangler — ikke på status-siden i et annet rom.
+        <div className="mb-4 space-y-3">
+          <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
+            <p className="font-medium">
+              {t('missingHeader', { count: missing.length })}
+            </p>
+            <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
+              {missing.map((name, i) => (
+                <li key={i}>{name}</li>
+              ))}
+            </ul>
+            <p className="mt-2 text-text">
+              {t.rich('missingBody', {
+                bold: (chunks) => <strong>{chunks}</strong>,
+              })}
+            </p>
+          </div>
+          <RemindMissing
+            gameId={gameId}
+            remindAction={remindMissingPlayers.bind(null, gameId, 'avslutt')}
+            justReminded={notice === 'reminded'}
+          />
         </div>
       )}
       <SideWinnersForm

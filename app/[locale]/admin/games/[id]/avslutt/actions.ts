@@ -3,9 +3,51 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
 import { endGameCore, type EndGameSideWinner } from '@/lib/games/endGameCore';
+import { sendReminders } from '@/lib/games/remindUnsubmitted';
 import type { GameStatus } from '@/lib/games/status';
+
+/**
+ * De to admin-avslutt-flatene («/avslutt» med vinnervalg og «/avslutt-likevel»).
+ * Union og ikke fri sti: en bundet action-parameter reiser via klienten, og en
+ * sti derfra hadde vært en åpen redirect.
+ */
+type AdminFinishSurface = 'avslutt' | 'avslutt-likevel';
+
+/**
+ * Purr på dem som er ferdige uten å ha levert, fra admins avslutt-flater
+ * (#1889). Regelen (hvem som er mål, sendingen og stemplingen) bor i
+ * `lib/games/remindUnsubmitted.ts` (#1891); kjernen spør aldri hvem som ringer,
+ * så denne action-en er porten (`requireAdmin`) og redirecten, ingenting annet.
+ *
+ * Begge admin-flatene deler den. `surface` sier bare hvilken av dem brukeren
+ * skal tilbake til, og en ukjent verdi faller til «/avslutt» framfor å bygge en
+ * sti av det den fikk.
+ */
+export async function remindMissingPlayers(
+  gameId: string,
+  surface: AdminFinishSurface,
+) {
+  const locale = await getLocale();
+  const supabase = await getServerClient();
+  await requireAdmin(supabase);
+
+  const finishPath =
+    surface === 'avslutt-likevel'
+      ? `/admin/games/${gameId}/avslutt-likevel`
+      : `/admin/games/${gameId}/avslutt`;
+
+  const result = await sendReminders(gameId);
+
+  // Feilgrenene får ingen egen tekst: flaten vi sender tilbake til ER porten
+  // (ikke aktivt → videre til detaljsiden med `?error=not_active`, borte →
+  // `notFound()`). Én melding, ett hjem — status-siden gjør det samme.
+  redirect({
+    href: result.ok ? `${finishPath}?status=reminded` : finishPath,
+    locale,
+  });
+}
 
 /**
  * Self-gate + load action context for `endGameWithSideWinners`. #427 opens the

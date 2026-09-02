@@ -2046,6 +2046,12 @@
       "cancelButton": "Cancel",
       "allSubmittedNote": "Everyone has submitted their scorecard. If you finish now, the game will be locked and the leaderboard will open for all participants."
     },
+    "remind": {
+      "button": "Remind the ones missing ({count})",
+      "pending": "Reminding …",
+      "none": "None of them have entered every hole yet. A reminder only helps once they have.",
+      "sent": "Reminder sent. They'll get a notification now."
+    },
     "delete": {
       "kicker": "Delete game",
       "heading": "Delete «{name}»?",
