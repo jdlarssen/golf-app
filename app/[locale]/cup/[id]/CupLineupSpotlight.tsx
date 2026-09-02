@@ -35,7 +35,16 @@ export async function CupLineupSpotlight({
   if (!sessions || sessions.length === 0) return null;
 
   const t = await getTranslations('cup');
-  const tf = await getTranslations('modes');
+  // Cupens eget vokabular («Singel»), ikke `modes.*` («Matchplay») — kortet
+  // står rett over kampene, som heter «Singel 1».
+  const FORMAT_LABEL_KEY = {
+    foursomes_matchplay: 'generate.formatFoursomes',
+    fourball_matchplay: 'generate.formatFourball',
+    singles_matchplay: 'generate.formatSingles',
+    greensome_matchplay: 'generate.formatGreensome',
+    chapman_matchplay: 'generate.formatChapman',
+    gruesome_matchplay: 'generate.formatGruesome',
+  } as const;
 
   // Nyeste avdekkede økt er seremonien vi feirer. Eldre avdekkinger er
   // historie og står i match-lista.
@@ -58,8 +67,10 @@ export async function CupLineupSpotlight({
           </p>
           <p className="mt-1 text-sm text-muted">
             {t('public.lineupRevealedBody', {
-              format: tf(
-                latest.format as CupSessionFormat as Parameters<typeof tf>[0],
+              format: t(
+                FORMAT_LABEL_KEY[
+                  latest.format as CupSessionFormat
+                ] as Parameters<typeof t>[0],
               ),
               count: latest.slot_count as number,
             })}
