@@ -15,8 +15,9 @@
 //  3. **De to kartene holdes fra hverandre.** Banneret før innsending og feilen
 //     etter innsending er ULIKE nøkler for samme årsak. Testen låser hvilken
 //     nøkkel som hører til hvilken retning, så ingen «rydder opp» ved å slå dem
-//     sammen — det ville byttet ut «snart starter» med «ikke har startet ennå»
-//     i banneret og gitt appen en annen ordlyd enn webben.
+//     sammen — banneret ramser opp veien ut per ting, feilmeldingen sier bare
+//     «avslutt det», og en sammenslåing ville gitt appen en annen ordlyd enn
+//     webben.
 import source from '../../../../messages/no.json';
 import { OFFLINE_NOTE } from './rosterCopy';
 import {
@@ -134,6 +135,7 @@ describe('ACCOUNT_TEXT', () => {
     ['deletedBullets[0]', ACCOUNT_TEXT.deletedBullets[0], web.bullet1],
     ['deletedBullets[1]', ACCOUNT_TEXT.deletedBullets[1], web.bullet2],
     ['deletedBullets[2]', ACCOUNT_TEXT.deletedBullets[2], web.bullet3],
+    ['deletedBullets[3]', ACCOUNT_TEXT.deletedBullets[3], web.bullet4],
     ['keptHeading', ACCOUNT_TEXT.keptHeading, web.keptHeading],
     ['keptBullet', ACCOUNT_TEXT.keptBullet, web.keptBullet],
     ['deleteButton', ACCOUNT_TEXT.deleteButton, web.deleteButton],

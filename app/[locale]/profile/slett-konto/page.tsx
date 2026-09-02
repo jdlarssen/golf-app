@@ -32,8 +32,9 @@ export default async function SlettKontoPage({
     ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
     : errorCode ? t('errors.delete_failed') : undefined;
 
-  // #1012: delt blokk-regel med admin-flyten — deltakelse i ELLER arrangering
-  // av noe pågående (spill, cup, liga) blokkerer; admin-kontoen alltid.
+  // #1012/#1909: delt blokk-regel med admin-flyten. Å DELTA blokkerer ikke
+  // lenger (slettingen trekker deg automatisk); det gjør bare å arrangere noe
+  // uavsluttet (spill, cup, liga). Admin-kontoen er alltid blokkert.
   const blockReason = await getDeleteBlockReason(userId);
   const isBlocked = blockReason !== null;
   const blockedText =
@@ -92,6 +93,13 @@ export default async function SlettKontoPage({
               <li className="flex gap-2">
                 <span className="text-muted mt-0.5">•</span>
                 <span>{t('bullet3')}</span>
+              </li>
+              {/* #1909: frafallet er en konsekvens av slettingen, ikke en
+                  bonus-opplysning — spilleren skal vite at plassen i en
+                  pågående runde forsvinner med kontoen. */}
+              <li className="flex gap-2">
+                <span className="text-muted mt-0.5">•</span>
+                <span>{t('bullet4')}</span>
               </li>
             </ul>
           </div>

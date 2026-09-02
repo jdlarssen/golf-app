@@ -73,10 +73,11 @@ export function describeDeleteBlock(reason: DeleteBlockReason): string {
     // = profile.deleteAccount.adminBanner
     case 'admin_account':
       return 'Admin-kontoen kan ikke slettes herfra.';
-    // = profile.deleteAccount.blockedBanner. Merk «snart starter» her mot
-    // «ikke har startet ennå» i feilmeldingen — to nøkler, to setninger.
+    // = profile.deleteAccount.blockedBanner. Merk at banneret ramser opp
+    // veien ut per ting, mens feilmeldingen under bare sier «avslutt det» —
+    // to nøkler, to setninger.
     case 'active_engagements':
-      return 'Du er med i eller arrangerer noe som pågår eller snart starter. Avslutt det først, eller ta kontakt med administrator for hjelp.';
+      return 'Du arrangerer noe som ikke er avsluttet ennå. Runder avslutter du i appen eller på nettsiden, cup og liga på nettsiden. Etterpå kan du slette kontoen.';
   }
 }
 
@@ -115,7 +116,7 @@ export function describeDeleteFailure(reason: AccountDeleteFailure): string {
     // kode (`active_engagements`); webbens copy-nøkkel heter noe annet. Kartet
     // står her, ikke i datalaget.
     case 'active_engagements':
-      return 'Du er med i eller arrangerer noe som pågår eller ikke har startet ennå. Kontoen kan ikke slettes før det er avsluttet. Ta kontakt med administrator.';
+      return 'Du arrangerer fortsatt noe som ikke er avsluttet. Avslutt det, så kan du slette kontoen.';
     case 'status_failed':
       return 'Fikk ikke sjekket om kontoen kan slettes. Prøv igjen.';
     // = profile.deleteAccount.errors.delete_failed
@@ -151,6 +152,7 @@ export const ACCOUNT_TEXT = {
     'Brukerprofilen din (navn, kallenavn, handicap)',
     'E-postadressen din frigis og kan ikke brukes til å logge inn igjen',
     'Vennskap, klubbmedlemskap, varsler og åpne invitasjoner',
+    'Plassen din i runder som pågår eller ikke har startet. Du blir trukket automatisk, og resten av gruppa spiller videre.',
   ],
   keptHeading: 'Dette beholdes',
   keptBullet:
