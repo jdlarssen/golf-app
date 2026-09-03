@@ -390,3 +390,71 @@ describe('undoWithdraw', () => {
     expect(result).toEqual({ ok: false, error: 'game_locked' });
   });
 });
+
+/**
+ * #1814: en cup-kamp trekker man seg fra via `/cup/[id]/trekk`, ikke herfra.
+ * Pre-start-grenen SLETTER `game_players`-raden — på en cup-kamp etterlot det
+ * en ufullstendig side som auto-start aldri kunne starte, stille. Venterommets
+ * lenke ruter til cup-siden; dette er vakta bak den.
+ */
+describe('withdrawFromGame — cup-kamper er låst (#1814)', () => {
+  const TOURNAMENT_ID = '66666666-6666-6666-6666-666666666666';
+
+  function cupGame(status: 'draft' | 'scheduled' | 'active' | 'finished') {
+    return {
+      data: {
+        id: GAME_ID,
+        name: 'Kamp 3',
+        short_id: 'abc12345',
+        status,
+        game_mode: 'singles_matchplay',
+        tournament_id: TOURNAMENT_ID,
+      },
+      error: null,
+    };
+  }
+
+  it.each(['draft', 'scheduled', 'active', 'finished'] as const)(
+    '%s cup-kamp → game_locked, ingen sletting og ingen flagging',
+    async (status) => {
+      authedAsUser();
+      adminMock = buildSupabaseMock([
+        cupGame(status),
+        { data: { user_id: USER_ID, team_number: 1 }, error: null },
+      ]);
+      const { withdrawFromGame } = await import('./withdrawActions');
+
+      expect(await withdrawFromGame(GAME_ID)).toEqual({
+        ok: false,
+        error: 'game_locked',
+      });
+      const writes = adminMock.__fromCalls.filter(
+        (c) => c.method === 'delete' || c.method === 'update',
+      );
+      expect(writes).toHaveLength(0);
+    },
+  );
+
+  it('rører ikke et frittstående spill (tournament_id null)', async () => {
+    authedAsUser();
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: GAME_ID,
+          name: 'X',
+          short_id: 'abc12345',
+          status: 'scheduled',
+          game_mode: 'stableford',
+          tournament_id: null,
+        },
+        error: null,
+      },
+      { data: { user_id: USER_ID, team_number: null }, error: null },
+      { data: null, error: null }, // DELETE game_players
+      { data: null, error: null }, // DELETE registration requests
+    ]);
+    const { withdrawFromGame } = await import('./withdrawActions');
+
+    expect(await withdrawFromGame(GAME_ID)).toEqual({ ok: true, kept: false });
+  });
+});

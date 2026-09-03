@@ -182,3 +182,92 @@ describe('validateMatchSwap — hvilke matcher skrives', () => {
     });
   });
 });
+
+// #1814 (E6): et trekk frigjør ingen plass. Har noen i bunten trukket seg, er
+// kampen enten alt avgjort av konvoluttregelen eller satt opp som «makkeren
+// spiller alene» — et bytte ville skrevet om noe som er gjort opp.
+describe('validateMatchSwap — kamp med registrert trekk (#1814)', () => {
+  it('avviser byttet når ut-spillerens egen kamp har en trukket rad', () => {
+    expect(
+      validateMatchSwap(
+        input({
+          bundle: [
+            {
+              gameId: 'host',
+              status: 'scheduled',
+              playerIds: ['a1', 'a2', 'b1', 'b2'],
+              withdrawnPlayerIds: ['a2'],
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ ok: false, error: 'match_has_withdrawal' });
+  });
+
+  it('avviser byttet når en ANNEN kamp i bunten har en trukket rad', () => {
+    expect(
+      validateMatchSwap(
+        input({
+          bundle: [
+            {
+              gameId: 'host',
+              status: 'scheduled',
+              playerIds: ['a1', 'b1'],
+              withdrawnPlayerIds: [],
+            },
+            {
+              gameId: 'derived',
+              status: 'scheduled',
+              playerIds: ['a1', 'b1'],
+              withdrawnPlayerIds: ['a1'],
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ ok: false, error: 'match_has_withdrawal' });
+  });
+
+  it('slipper gjennom en bunt uten trekk — dagens oppførsel', () => {
+    expect(
+      validateMatchSwap(
+        input({
+          bundle: [
+            {
+              gameId: 'host',
+              status: 'scheduled',
+              playerIds: ['a1', 'b1'],
+              withdrawnPlayerIds: [],
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ ok: true, gameIds: ['host'] });
+  });
+
+  it('slipper gjennom en pre-#1814 bunt uten feltet i det hele tatt', () => {
+    expect(
+      validateMatchSwap(
+        input({
+          bundle: [{ gameId: 'host', status: 'scheduled', playerIds: ['a1', 'b1'] }],
+        }),
+      ),
+    ).toEqual({ ok: true, gameIds: ['host'] });
+  });
+
+  it('rangeres etter status — en startet bunt melder fortsatt already_started', () => {
+    expect(
+      validateMatchSwap(
+        input({
+          bundle: [
+            {
+              gameId: 'host',
+              status: 'active',
+              playerIds: ['a1', 'b1'],
+              withdrawnPlayerIds: ['a1'],
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ ok: false, error: 'already_started' });
+  });
+});

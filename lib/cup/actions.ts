@@ -17,6 +17,7 @@ import { teeGenderOf } from '@/lib/games/teeGender';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Tables } from '@/lib/database.types';
+import { cupBasePath } from './cupPaths';
 import { getCupSnapshot } from './getCupSnapshot';
 import { getCupCandidatePlayers } from './getCupCandidatePlayers';
 import { validateMatchSwap } from './matchSwapValidation';
@@ -69,7 +70,7 @@ function cupRedirectBase(
   id: string,
   groupId: string | null,
 ): { path: string; groupId: string | null; revalidate: () => void } {
-  const path = groupId ? `/klubber/${groupId}/cup/${id}` : `/admin/cup/${id}`;
+  const path = cupBasePath(id, groupId);
   return {
     path,
     groupId,
@@ -591,7 +592,9 @@ async function planCupMatchSwap(
 
   const { data: playerRows, error: playersError } = await admin
     .from('game_players')
-    .select('game_id, user_id')
+    // #1814: `withdrawn_at` leses her for guarden under — en kamp med et
+    // registrert trekk kan ikke få noen byttet inn (E6).
+    .select('game_id, user_id, withdrawn_at')
     .in('game_id', bundleIds);
   if (playersError) {
     console.error('[cup] swapCupMatchPlayer roster read failed', {
@@ -608,6 +611,9 @@ async function planCupMatchSwap(
       status: g.status,
       playerIds: (playerRows ?? [])
         .filter((p) => p.game_id === g.id)
+        .map((p) => p.user_id as string),
+      withdrawnPlayerIds: (playerRows ?? [])
+        .filter((p) => p.game_id === g.id && p.withdrawn_at != null)
         .map((p) => p.user_id as string),
     })),
     outUserId,
