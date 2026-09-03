@@ -183,10 +183,16 @@ async function writeWithdrawal(
     userId: string;
     byUserId: string;
     games: GameRow[];
-    playOnGameIds: Set<string>;
+    /**
+     * Arrangørens fourball-valg per kamp. En oppføring er et REGISTRERT valg —
+     * også `false` — så en kamp i denne mappa skriver `withdrawal_play_on` og
+     * slutter å vente på arrangøren. Tom mappe (selv-trekk) rører ingen
+     * `mode_config`: da er valget fortsatt arrangørens (E4).
+     */
+    playOnChoices: Map<string, boolean>;
   },
 ): Promise<{ error: string } | { writtenGameIds: string[]; skippedGameIds: string[] }> {
-  const { tournamentId, userId, byUserId, games, playOnGameIds } = args;
+  const { tournamentId, userId, byUserId, games, playOnChoices } = args;
   const withdrawnAt = new Date().toISOString();
   const written: string[] = [];
   const gameById = new Map(games.map((g) => [g.id, g]));
@@ -205,7 +211,7 @@ async function writeWithdrawal(
   async function compensate(gameIds: string[]): Promise<void> {
     await undoRows(admin, userId, gameIds);
     for (const gameId of gameIds) {
-      if (!playOnGameIds.has(gameId)) continue;
+      if (!playOnChoices.has(gameId)) continue;
       const game = gameById.get(gameId);
       if (!game) continue;
       const { error } = await admin
@@ -235,11 +241,12 @@ async function writeWithdrawal(
       );
       written.push(game.id);
 
-      if (playOnGameIds.has(game.id)) {
+      const choice = playOnChoices.get(game.id);
+      if (choice !== undefined) {
         expectAffected(
           await admin
             .from('games')
-            .update({ mode_config: withPlayOn(game.mode_config, true) })
+            .update({ mode_config: withPlayOn(game.mode_config, choice) })
             .eq('id', game.id)
             .select('id'),
           'withdrawCupPlayer/playOn',
@@ -300,7 +307,9 @@ async function undoRows(
  * alt som rører spillerrader gjøres på hele bunten).
  *
  * `play_on_game_ids` er en kommaliste med de fourball-kampene arrangøren valgte
- * «makkeren spiller alene» for.
+ * «makkeren spiller alene» for. De øvrige fourball-kampene får en eksplisitt
+ * `withdrawal_play_on: false` — arrangøren SÅ avkrysningen og lot den stå, og
+ * det er et svar, ikke et utsatt valg.
  */
 export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdrawalError> {
   const tournamentId = String(formData.get('tournament_id') ?? '').trim();
@@ -336,12 +345,17 @@ export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdraw
     userId,
     byUserId: actor.userId,
     games: pending,
-    // Kun fourball-kamper kan bære flagget — en klient som sender andre
-    // ID-er skal ikke kunne skrive `withdrawal_play_on` på en foursomes.
-    playOnGameIds: new Set(
+    // Kun fourball-kamper kan bære flagget — en klient som sender andre ID-er
+    // skal ikke kunne skrive `withdrawal_play_on` på en foursomes.
+    //
+    // Hver fourball får et EKSPLISITT svar, også når boksen sto tom: skjemaet
+    // viste avkrysningen, og å la den stå er arrangørens «etter regelen» — ikke
+    // «jeg har ikke bestemt meg». Uten dette kunne venter-banneret på
+    // cup-styringen aldri besvares med regelen, bare med alene-valget.
+    playOnChoices: new Map(
       pending
-        .filter((g) => g.game_mode === 'fourball_matchplay' && playOnGameIds.has(g.id))
-        .map((g) => g.id),
+        .filter((g) => g.game_mode === 'fourball_matchplay')
+        .map((g) => [g.id, playOnGameIds.has(g.id)] as const),
     ),
   });
   if ('error' in result) return { error: result.error };
@@ -385,7 +399,9 @@ export async function withdrawSelfFromCup(formData: FormData): Promise<CupWithdr
     userId: user.id,
     byUserId: user.id,
     games: pending,
-    playOnGameIds: new Set<string>(),
+    // Tom med vilje (E4): spilleren bestemmer ikke over makkeren, så valget
+    // står som «ikke tatt» og venter-banneret ber arrangøren om svaret.
+    playOnChoices: new Map<string, boolean>(),
   });
   if ('error' in result) return { error: result.error };
 
