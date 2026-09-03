@@ -59,3 +59,6 @@ next-env.d.ts
 # Python bytecode (dok-skjema Actions scripts, #1122)
 __pycache__/
 *.pyc
+
+# forge (#1931): lokal arbeidsflate for forge-skillene — den kanoniske kopien av kontrakter og evalueringer lever i issues og PR-er
+.forge/
