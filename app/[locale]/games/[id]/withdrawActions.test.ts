@@ -392,30 +392,72 @@ describe('undoWithdraw', () => {
 });
 
 /**
- * #1814: en cup-kamp trekker man seg fra via `/cup/[id]/trekk`, ikke herfra.
- * Pre-start-grenen SLETTER `game_players`-raden — på en cup-kamp etterlot det
- * en ufullstendig side som auto-start aldri kunne starte, stille. Venterommets
- * lenke ruter til cup-siden; dette er vakta bak den.
+ * #1814: en cup-kamp som ennå ikke har startet trekker man seg fra via
+ * `/cup/[id]/trekk`, ikke herfra. Pre-start-grenen SLETTER `game_players`-raden
+ * — på en cup-kamp etterlot det en ufullstendig side som auto-start aldri kunne
+ * starte, stille. Venterommets lenke ruter til cup-siden; dette er vakta bak den.
+ *
+ * Gaten er SMAL med vilje: en cup-kamp som alt er i gang har ingen rad å slette,
+ * og det myke trekket (#386) er fortsatt riktig vei ut der.
  */
-describe('withdrawFromGame — cup-kamper er låst (#1814)', () => {
+describe('withdrawFromGame — cup-kamper er låst før start (#1814)', () => {
   const TOURNAMENT_ID = '66666666-6666-6666-6666-666666666666';
 
-  function cupGame(status: 'draft' | 'scheduled' | 'active' | 'finished') {
+  function cupGame(
+    status: 'draft' | 'scheduled' | 'active' | 'finished',
+    gameMode = 'singles_matchplay',
+  ) {
     return {
       data: {
         id: GAME_ID,
         name: 'Kamp 3',
         short_id: 'abc12345',
         status,
-        game_mode: 'singles_matchplay',
+        game_mode: gameMode,
         tournament_id: TOURNAMENT_ID,
       },
       error: null,
     };
   }
 
-  it.each(['draft', 'scheduled', 'active', 'finished'] as const)(
+  it.each(['draft', 'scheduled'] as const)(
     '%s cup-kamp → game_locked, ingen sletting og ingen flagging',
+    async (status) => {
+      authedAsUser();
+      adminMock = buildSupabaseMock([
+        cupGame(status),
+        { data: { user_id: USER_ID, team_number: 1 }, error: null },
+      ]);
+      const { withdrawFromGame } = await import('./withdrawActions');
+
+      expect(await withdrawFromGame(GAME_ID)).toEqual({
+        ok: false,
+        error: 'game_locked',
+      });
+      const writes = adminMock.__fromCalls.filter(
+        (c) => c.method === 'delete' || c.method === 'update',
+      );
+      expect(writes).toHaveLength(0);
+    },
+  );
+
+  it('aktiv cup-kamp i en WD-støttet modus → mykt trekk som før, ikke låst', async () => {
+    authedAsUser();
+    adminMock = buildSupabaseMock([
+      cupGame('active', 'best_ball'),
+      { data: { user_id: USER_ID, team_number: 1 }, error: null },
+      { data: [{ user_id: USER_ID }], error: null }, // UPDATE withdrawn_at
+    ]);
+    const { withdrawFromGame } = await import('./withdrawActions');
+
+    expect(await withdrawFromGame(GAME_ID)).toEqual({ ok: true, kept: true });
+    expect(
+      adminMock.__fromCalls.filter((c) => c.method === 'delete'),
+    ).toHaveLength(0);
+  });
+
+  it.each(['active', 'finished'] as const)(
+    '%s cup-kamp uten WD-støtte (matchplay) → game_locked, ingen skriving',
     async (status) => {
       authedAsUser();
       adminMock = buildSupabaseMock([

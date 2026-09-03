@@ -45,6 +45,8 @@ type GameRow = {
   status: GameStatus;
   game_mode: GameMode;
   scheduled_tee_off_at: string | null;
+  /** #1814: en ikke-startet cup-kamp trekker man seg fra på cup-nivå. */
+  tournament_id: string | null;
   courses: { name: string } | null;
 };
 
@@ -70,11 +72,24 @@ export default async function TrekkFraPage({
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status, game_mode, scheduled_tee_off_at, courses(name)')
+    .select('id, name, status, game_mode, scheduled_tee_off_at, tournament_id, courses(name)')
     .eq('id', id)
     .maybeSingle<GameRow>();
 
   if (!game) notFound();
+
+  // #1814: en cup-kamp som ennå ikke har startet trekker man seg fra på
+  // cup-nivå — pre-start-grenen her SLETTER `game_players`-raden, og på en
+  // cup-kamp etterlater det en ufullstendig side auto-start aldri kan starte.
+  // `withdrawFromGame` avviser den samme kombinasjonen (`game_locked`); uten
+  // denne omdirigeringen møtte spilleren en side som lovet noe serveren nekter.
+  // En cup-kamp som ER i gang beholder det myke trekket (#386) og siden under.
+  if (
+    game.tournament_id &&
+    (game.status === 'draft' || game.status === 'scheduled')
+  ) {
+    redirect({ href: `/cup/${game.tournament_id}/trekk` as string, locale });
+  }
 
   // Sjekk at brukeren faktisk er påmeldt og at spillet er pre-active.
   // Hvis ikke: redirect tilbake — det er ikke noe meningsfullt å vise her.

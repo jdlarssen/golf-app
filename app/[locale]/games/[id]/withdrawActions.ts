@@ -107,13 +107,19 @@ export async function withdrawFromGame(
   }
   const game = gameRes.data;
 
-  // #1814: en cup-kamp trekkes man seg fra via `/cup/[id]/trekk`, aldri her.
-  // Pre-start-grenen under SLETTER `game_players`-raden — på en cup-kamp
-  // etterlot det en ufullstendig side som auto-start aldri kunne starte, uten
-  // at noen fikk beskjed. Venterommets «Trekk deg»-lenke ruter dit; dette er
-  // vakta bak den, så raden ikke kan slettes via en direkte POST heller.
+  // #1814: en cup-kamp som ennå ikke har startet trekker man seg fra via
+  // `/cup/[id]/trekk`, aldri her. Pre-start-grenen under SLETTER
+  // `game_players`-raden — på en cup-kamp etterlot det en ufullstendig side som
+  // auto-start aldri kunne starte, uten at noen fikk beskjed. Venterommets
+  // «Trekk deg»-lenke ruter dit; dette er vakta bak den, så raden ikke kan
+  // slettes via en direkte POST heller.
+  //
+  // Gaten er bevisst SMAL: den beskytter DELETE-grenen, ikke det myke trekket
+  // (#386) i en cup-kamp som alt er i gang. Der finnes ingen rad å slette, og
+  // cup-siden har ingenting å tilby — den lister bare ikke-startede kamper.
   // Liga-runder (`tournament_id` null) er uberørt.
-  if (game.tournament_id) {
+  const isPreStart = game.status === 'draft' || game.status === 'scheduled';
+  if (game.tournament_id && isPreStart) {
     return { ok: false, error: 'game_locked' };
   }
 
