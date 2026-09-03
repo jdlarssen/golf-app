@@ -11,6 +11,7 @@ import {
   cupMatchStatusValues,
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
+import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
 import { SwapMatchPlayer, type SwapPlayerOption } from './SwapMatchPlayer';
 import { FourballPlayOnPanel } from './FourballPlayOnPanel';
 
@@ -125,22 +126,6 @@ export async function CupMatchList({
     };
   }
 
-  /**
-   * #1814: hvem står igjen på den trukne siden? Brukes til fourball-panelet når
-   * arrangøren ennå IKKE har valgt «spiller alene» — da finnes ingen
-   * `soloPlayOn` å lese navnet fra, men valget skal fortsatt tilbys.
-   * `null` når hele siden har trukket seg (ingen ball igjen å slå).
-   */
-  function remainingPartnerName(match: CupMatchSummary): string | null {
-    const w = match.withdrawal;
-    if (!w || w.withdrawnSide === 'both') return null;
-    const sideIds =
-      (w.withdrawnSide === 1 ? match.team1UserIds : match.team2UserIds) ?? [];
-    const remaining = sideIds.filter((uid) => !w.withdrawnUserIds.includes(uid));
-    if (remaining.length === 0) return null;
-    return remaining.map((uid) => matchPlayerNames.get(uid) ?? unknownLabel).join('/');
-  }
-
   return (
     <section className="mb-5">
       <div className="mb-2">
@@ -232,7 +217,11 @@ export async function CupMatchList({
               m.status === 'scheduled' && !hasWithdrawal ? swapOptionsFor(m) : null;
             // Fourball-valget: arrangøren kan snu «makkeren spiller alene» helt
             // fram til kampen starter (E4).
-            const partnerName = m.soloPlayOn?.partnerName ?? remainingPartnerName(m);
+            // #1814: uten et registrert valg finnes ingen `soloPlayOn` å lese
+            // navnet fra — men valget skal fortsatt tilbys, så navnet utledes.
+            const partnerName =
+              m.soloPlayOn?.partnerName ??
+              remainingPartnerName(m, (uid) => matchPlayerNames.get(uid) ?? unknownLabel);
             const showPlayOn =
               m.status === 'scheduled' &&
               m.gameMode === 'fourball_matchplay' &&

@@ -88,6 +88,13 @@ export type CupMatchInput = {
    * kortet må si hvorfor det står én mot to. `null` i alle andre tilfeller.
    */
   soloPlayOn?: { partnerName: string } | null;
+  /**
+   * #1814 (E4): fourball-kampen er avgjort ved trekk, men makkeren KUNNE spilt
+   * alene — og arrangøren har ikke tatt stilling ennå (`withdrawal_play_on`
+   * mangler helt i `mode_config`). Driver venter-banneret på `CupManagement`.
+   * En eksplisitt `false` er et valg og gir `false` her.
+   */
+  playOnChoicePending?: boolean;
 };
 
 /**

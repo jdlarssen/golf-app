@@ -11,9 +11,11 @@ import { Card } from '@/components/ui/Card';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
+import type { CupMatchSummary } from '@/lib/cup/computeCupLeaderboard';
 import { matchBlocksOneTapFinish } from '@/lib/cup/matchSubmissionStatus';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import { unregisteredSideAwards } from '@/lib/cup/sideAwardsRegistered';
+import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
 import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
 import { CupMatchList } from './CupMatchList';
 import { CupActionsSection } from './CupActionsSection';
@@ -76,6 +78,77 @@ function cupMatchesSummary(
     finished: leaderboard.finishedMatches,
     total: leaderboard.matches.length,
   });
+}
+
+/**
+ * #1814: hvem har i det hele tatt en kamp igjen å trekke seg fra? Både
+ * `withdrawCupPlayer` og `undoCupWithdrawal` avviser en spiller uten
+ * ikke-startede kamper (`no_pending_matches`/`not_withdrawn`) — uten dette sto
+ * trekk-lenka der og lovet noe serveren nekter, for hver eneste spiller i en
+ * cup der alt er i gang eller ferdigspilt.
+ */
+function playersWithNotStartedMatch(matches: CupMatchSummary[]): Set<string> {
+  return new Set(
+    matches
+      .filter((m) => m.status === 'draft' || m.status === 'scheduled')
+      .flatMap((m) => [...(m.team1UserIds ?? []), ...(m.team2UserIds ?? [])]),
+  );
+}
+
+/**
+ * #1814 (E4): et selv-trekk i en fourball etterlater et valg bare ARRANGØREN
+ * kan ta — skal makkeren spille alene, eller avgjøres kampen etter regelen? Uten
+ * venter-banneret lå valget nede på ett av mange kampkort, og ingen tok det.
+ *
+ * Fravær av `withdrawal_play_on` = ingen har bestemt seg (`playOnChoicePending`
+ * fra `cupMatchEntry`); et registrert valg — også «etter regelen» — fjerner
+ * kampen herfra. Kamper uten en makker igjen å spille alene faller ut med
+ * `remainingPartnerName === null`.
+ */
+function pendingPlayOnChoices(
+  matches: CupMatchSummary[],
+  nameOf: (userId: string) => string,
+  fallbackLabel: string,
+): { gameId: string; label: string; partner: string }[] {
+  const rows = matches
+    .filter((m) => m.playOnChoicePending)
+    .map((m) => ({
+      gameId: m.gameId,
+      label: m.matchLabel ?? fallbackLabel,
+      partner: remainingPartnerName(m, nameOf),
+    }));
+  return rows.filter(
+    (m): m is { gameId: string; label: string; partner: string } => m.partner !== null,
+  );
+}
+
+/** Venter-banneret selv — hopp-lenka scroller ned til kampens valg-panel. */
+function playOnPendingBanner(
+  rows: { gameId: string; label: string; partner: string }[],
+  t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="mb-4">
+      <Banner tone="warning" testId="cup-playon-pending">
+        <p className="font-semibold">{t('manage.playOnPendingHeading')}</p>
+        <ul className="mt-1 space-y-1">
+          {rows.map((m) => (
+            <li key={m.gameId}>
+              {t('manage.playOnPending', { match: m.label, partner: m.partner })}{' '}
+              <a
+                href={`#playon-${m.gameId}`}
+                data-testid={`cup-playon-pending-link-${m.gameId}`}
+                className="underline underline-offset-2"
+              >
+                {t('manage.playOnChoose')}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </Banner>
+    </div>
+  );
 }
 
 /**
@@ -193,6 +266,17 @@ export async function CupManagement({
     return p.nickname?.trim() || p.name?.trim() || unknownLabel;
   }
 
+  const playersWithPendingMatch = playersWithNotStartedMatch(leaderboard.matches);
+  const rosterNameOf = (userId: string): string => {
+    const p = [...roster.team1, ...roster.team2].find((r) => r.userId === userId);
+    return p ? preferredName(p) : unknownLabel;
+  };
+  const pendingPlayOn = pendingPlayOnChoices(
+    leaderboard.matches,
+    rosterNameOf,
+    t('matchFallback'),
+  );
+
   /**
    * #1814: én roster-rad. Den trukne blir stående på laget sitt, merket
    * «Trukket» (E5) — merket flytter ingen og tar ingen poeng. Lenkene under
@@ -200,7 +284,8 @@ export async function CupManagement({
    * fra, og en avsluttet cup har et signert resultat.
    */
   function rosterRow(p: CupRosterPlayer) {
-    const canAct = tournament.status === 'active';
+    const canAct =
+      tournament.status === 'active' && playersWithPendingMatch.has(p.userId);
     return (
       <li key={p.userId} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span>{preferredName(p)}</span>
@@ -271,6 +356,8 @@ export async function CupManagement({
           <Banner tone="success">{statusMessage}</Banner>
         </div>
       )}
+
+      {playOnPendingBanner(pendingPlayOn, t)}
 
       {/* Status-kort. Totaler + sidepoeng skjules her og på cup-siden (#1468) —
           resultatet bor på den låste resultatsiden. «X av N matcher spilt»
