@@ -55,6 +55,22 @@ function context(status: 'draft' | 'active' | 'finished'): CupWithdrawalContext 
           late: false,
         },
       },
+      // Fourball der makkeren alt er satt til å spille alene etter et
+      // tidligere trekk: boksen skal speile det registrerte valget.
+      {
+        gameId: 'g2',
+        matchLabel: 'Kamp 4',
+        gameMode: 'fourball_matchplay',
+        status: 'scheduled',
+        scheduledTeeOffAt: '2026-09-11T08:00:00.000Z',
+        canPlayOn: true,
+        playOn: true,
+        partnerName: 'Per',
+        opponentLabel: 'Ola & Nils',
+        side: 1,
+        alreadyWithdrawn: false,
+        outcome: null,
+      },
     ],
     untouched: [],
   };
@@ -80,6 +96,11 @@ describe('CupWithdrawConfirm — cup-status-gaten (#1814)', () => {
       expect(screen.queryByTestId('cup-withdraw-cup-not-active')).toBeNull();
       expect(screen.getByTestId('cup-withdraw-consequences')).toBeTruthy();
       expect(screen.getByRole('button')).toBeTruthy();
+      // Registrert «spiller alene» må stå avkrysset — en umerket boks
+      // skriver eksplisitt «etter regelen» og ville snudd valget.
+      expect(
+        (screen.getByTestId('cup-withdraw-playon-g2') as HTMLInputElement).checked,
+      ).toBe(true);
     } else {
       expect(screen.getByTestId('cup-withdraw-cup-not-active')).toBeTruthy();
       expect(screen.queryByTestId('cup-withdraw-consequences')).toBeNull();
