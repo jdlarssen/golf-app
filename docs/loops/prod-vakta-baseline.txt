@@ -11,6 +11,14 @@ rls_enabled_no_policy_public_agent_findings
 rls_enabled_no_policy_public_agent_runs
 rls_enabled_no_policy_public_product_update_digests
 #
+# #1940 — cup_lineup_sessions/cup_lineup_slots (migrasjon 0172, #1884). Samme
+# mønster: deny-by-default med RLS på og ingen policyer, all tilgang gatet via
+# service-role-server-actions (migrasjonens egen kommentar sier det eksplisitt).
+# Personlige cup-sider er world-read, så en sidegate ikke ville skjult noe —
+# RLS-en her er det som faktisk stenger anon/authenticated ute.
+rls_enabled_no_policy_public_cup_lineup_sessions
+rls_enabled_no_policy_public_cup_lineup_slots
+#
 # ─────────────────────────────────────────────────────────────────────────────
 # #1121 — sikkerhetsherding fra prod-vaktas første kjøring (migrasjon 0137).
 # Live katalog-gjennomgang per funksjon (staging + prod read-only, 2026-07-07),
