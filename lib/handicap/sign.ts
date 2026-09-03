@@ -7,8 +7,6 @@
  * (så spilleren slipper å taste fortegn på mobil); disse helperne oversetter
  * begge veier mellom UI og lagret verdi.
  */
-import type { AppLocale } from '@/i18n/routing';
-import { formatNumber } from '@/lib/i18n/format';
 
 /** UI (magnitude ≥ 0 + plus-flagg) → lagret signert verdi. */
 export function toSignedHcp(magnitude: number, isPlus: boolean): number {
@@ -23,45 +21,4 @@ export function fromSignedHcp(signed: number): {
   isPlus: boolean;
 } {
   return { magnitude: Math.abs(signed), isPlus: signed < 0 };
-}
-
-/**
- * Golfbox-stil visning for live «Lagres som …»-bekreftelsen: «+1,5» for
- * plusshandicap, «12,4» ellers.
- *
- * Echo av det brukeren taster akkurat nå — locale-bevisst desimalskille (norsk
- * «12,4», engelsk «12.4») men UTEN tvungen én-desimal: i motsetning til
- * `formatHcpDisplay` (som viser den kanoniske LAGREDE verdien) speiler denne
- * inputen tro, så «1,25» vises som «1,25», ikke avrundet. `locale` defaulter
- * til 'no' så eldre kall + norsk visning forblir byte-identiske.
- */
-export function formatGolfboxHcp(
-  magnitude: number,
-  isPlus: boolean,
-  locale: AppLocale = 'no',
-): string {
-  const nb = formatNumber(magnitude, locale);
-  return isPlus && magnitude !== 0 ? `+${nb}` : nb;
-}
-
-/**
- * Locale-bevisst handicap-visning fra en lagret signert verdi (#615).
- *
- * Tar den lagrede signerte hcp-indexen og gir en display-streng med:
- * - locale-riktig desimalskille (norsk «12,2», engelsk «12.2»),
- * - alltid én desimal («8,0», ikke «8»),
- * - golf-konvensjonens «+» på plusshandicap (lagret negativt → «+8,0»),
- * - ingen fortegn på scratch (0 → «0,0»).
- *
- * Komponerer `fromSignedHcp` (fortegn/magnitude) + `formatNumber` (locale-tall).
- * I motsetning til `formatGolfboxHcp` er den både locale-bevisst og garanterer
- * én desimal, så admin-spillerlista matcher resten av appen.
- */
-export function formatHcpDisplay(signed: number, locale: AppLocale): string {
-  const { magnitude, isPlus } = fromSignedHcp(signed);
-  const nb = formatNumber(magnitude, locale, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
-  return isPlus && magnitude !== 0 ? `+${nb}` : nb;
 }

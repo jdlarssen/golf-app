@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SegmentedField } from '@/components/ui/SegmentedField';
 import { isHandicapStale } from '@/lib/handicap/staleness';
-import { fromSignedHcp, formatGolfboxHcp } from '@/lib/handicap/sign';
+import { fromSignedHcp } from '@/lib/handicap/sign';
+import { formatGolfboxHcp } from '@/lib/handicap/signFormat';
 
 type Gender = 'mens' | 'ladies';
 type Level = 'junior' | 'normal' | 'senior';

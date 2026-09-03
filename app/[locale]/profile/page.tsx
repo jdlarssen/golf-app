@@ -22,7 +22,7 @@ import { PasskeySettings } from '@/components/passkey/PasskeySettings';
 import { getPasskeyEnrollAccess } from '@/lib/auth/passkeyEnrollAccess';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
-import { formatHcpDisplay } from '@/lib/handicap/sign';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { formatDate } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';

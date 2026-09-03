@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
-import { formatGolfboxHcp } from '@/lib/handicap/sign';
+import { formatGolfboxHcp } from '@/lib/handicap/signFormat';
 
 const INPUT_CLASS =
   'w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 focus:border-accent transition-[border-color,box-shadow] duration-150';

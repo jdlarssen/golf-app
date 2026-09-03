@@ -5,7 +5,7 @@ import { useRouter } from '@/i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { GuestBadge } from '@/components/ui/GuestBadge';
-import { formatHcpDisplay } from '@/lib/handicap/sign';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import type { AppLocale } from '@/i18n/routing';
 
 export type PlayerRow = {
