@@ -14,6 +14,10 @@ import {
 } from './teeRating';
 import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
 import {
+  readWithdrawalPlayOn,
+  resolveCupMatchWithdrawal,
+} from '@/lib/cup/cupWithdrawalOutcome';
+import {
   planGreensomeStartOverride,
   type GreensomeStartPlayer,
 } from './greensomeOverridePlan';
@@ -63,6 +67,10 @@ export type StartScheduledGameFailure = {
     | 'no_players'
     | 'pending_players'
     | 'incomplete_sides'
+    // #1814: en cup-kamp der noen har trukket seg og konvoluttregelen alt har
+    // avgjort utfallet (halvert / walkover). Ikke en oppsettsfeil — arrangøren
+    // tok valget selv — så den varsles ALDRI som «auto-start blokkert».
+    | 'decided_by_withdrawal'
     | 'unassigned_teams'
     | 'unassigned_flights'
     | 'rotation_player_count'
@@ -132,7 +140,7 @@ export async function startScheduledGameCore(
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tournament_id, scheduled_tee_off_at, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', gameId)
     .maybeSingle<{
@@ -142,6 +150,11 @@ export async function startScheduledGameCore(
       hcp_allowance_pct: number;
       tee_box_id: string | null;
       game_mode: string;
+      // #1814: cup-kamper avgjøres av konvoluttregelen når noen har trukket
+      // seg; begge feltene er input til den (`tournament_id` avgrenser regelen
+      // til cup, `scheduled_tee_off_at` er 30-minutters-fristen).
+      tournament_id: string | null;
+      scheduled_tee_off_at: string | null;
       // #1628: greensomens lag-slag-felter leses også herfra (rå JSON, lest
       // defensivt av `planGreensomeStartOverride`), og hele objektet skrives
       // tilbake ved en re-derivering — derfor en åpen form, ikke bare team_size.
@@ -207,12 +220,41 @@ export async function startScheduledGameCore(
   // dette spillet lag?» har ett hjem (#1669).
   const teamSize = expectedTeamSize(game.mode_config);
 
+  // #1814: en cup-kamp der noen har trukket seg kan alt være avgjort av
+  // konvoluttregelen (halvert / walkover). Da skal den ALDRI starte — poengene
+  // utledes av `withdrawn_at` mot tee-off, og kampen står `scheduled` for godt.
+  // Sjekken kommer FØR side-vakta under, ellers ville den samme kampen meldt
+  // 'incomplete_sides' og utløst «auto-start blokkert»-varselet til arrangøren
+  // for noe hen selv bestemte.
+  const playOn = readWithdrawalPlayOn(game.mode_config);
+  if (game.tournament_id) {
+    const decided = resolveCupMatchWithdrawal({
+      status: 'scheduled',
+      gameMode: game.game_mode,
+      scheduledTeeOffAt: game.scheduled_tee_off_at,
+      playOn,
+      players: roster
+        .filter((r) => r.team_number === 1 || r.team_number === 2)
+        .map((r) => ({
+          userId: r.user_id,
+          side: r.team_number as 1 | 2,
+          withdrawnAt: r.withdrawn_at,
+        })),
+    });
+    if (decided) return { ok: false, reason: 'decided_by_withdrawal' };
+  }
+
   // Guard: matchplay-familien krever eksakt team_size aktive spillere per side
   // (team_number ∈ {1, 2}). Spillere med null team_number eller trukkede
   // spillere blokkerer start. Alle seks matchplay-modi dekkes i ett.
+  //
+  // #1814: unntaket er en cup-fourball der arrangøren valgte at makkeren
+  // spiller alene — da er én aktiv spiller på siden nok. Kom vi hit med det
+  // flagget, sa regelen over nettopp at kampen SKAL spilles.
   if (isMatchplayMode(game.game_mode as Parameters<typeof isMatchplayMode>[0])) {
     const activeRoster = roster.filter((r) => r.withdrawn_at == null);
-    if (!isSideRosterComplete(activeRoster, teamSize)) {
+    const allowSoloSide = playOn && game.game_mode === 'fourball_matchplay';
+    if (!isSideRosterComplete(activeRoster, teamSize, { allowSoloSide })) {
       return { ok: false, reason: 'incomplete_sides' };
     }
   }

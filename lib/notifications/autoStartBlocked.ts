@@ -29,6 +29,26 @@ export function isStructuralBlockReason(reason: string): boolean {
 }
 
 /**
+ * Blokkeringsårsaker som er en STILLE, forventet tilstand: kampen skal ikke
+ * starte, og arrangøren skal ikke få beskjed om det (#1814).
+ *
+ * `decided_by_withdrawal` er arrangørens eget valg — hen registrerte trekket,
+ * og konvoluttregelen avgjorde kampen med det samme. Et «auto-start blokkert»-
+ * varsel ville lest som en oppsettsfeil hen måtte rette. Sveipet treffer kampen
+ * hvert minutt til tee-off-vinduet lukkes, så et varsel ville dessuten kommet
+ * hver gang forsøket kjørte.
+ *
+ * Bevisst en egen liste, ikke en utvidelse av `STRUCTURAL_BLOCK_REASONS`:
+ * strukturelle grunner ER varselverdige (det er hele poenget med den lista) —
+ * disse er det motsatte.
+ */
+const SILENT_BLOCK_REASONS: ReadonlySet<string> = new Set(['decided_by_withdrawal']);
+
+export function isSilentBlockReason(reason: string): boolean {
+  return SILENT_BLOCK_REASONS.has(reason);
+}
+
+/**
  * Én-gangs «auto-start blokkert»-varsel til spillets oppretter (#502).
  *
  * Cron-sweepen treffer et blokkert spill hvert minutt til blokkeringen

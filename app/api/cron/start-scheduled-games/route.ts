@@ -10,6 +10,7 @@ import {
   type StartedGameForNotify,
 } from '@/lib/notifications/startNotificationTargets';
 import {
+  isSilentBlockReason,
   isStructuralBlockReason,
   maybeNotifyAutoStartBlocked,
 } from '@/lib/notifications/autoStartBlocked';
@@ -131,7 +132,14 @@ export async function POST(request: NextRequest) {
       }
 
       blocked.push({ id: game.id, reason: result.reason });
-      if (isStructuralBlockReason(result.reason)) {
+      if (isSilentBlockReason(result.reason)) {
+        // #1814: cup-kampen er avgjort ved trekk (halvert / walkover) og skal
+        // ikke starte. Arrangørens eget valg, ikke en oppsettsfeil — info-logg,
+        // ingen «auto-start blokkert»-varsel.
+        console.log(
+          `[${LOG_PREFIX}] game ${game.id} not started: ${result.reason}`,
+        );
+      } else if (isStructuralBlockReason(result.reason)) {
         // Expected state (e.g. matchplay sides not full yet, #544) — the sweep
         // retries every minute and starts the game the moment it resolves.
         // info-level so a permanently waiting game doesn't spam error logs.

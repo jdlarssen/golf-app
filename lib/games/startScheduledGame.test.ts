@@ -1317,3 +1317,157 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
     expect(statusFlipWrites(supabase)).toHaveLength(0);
   });
 });
+
+// ─── decided_by_withdrawal (#1814) ────────────────────────────────────────────
+
+/**
+ * En cup-kamp der noen har trukket seg og konvoluttregelen alt har avgjort
+ * utfallet skal ALDRI starte. Grunnen er sin egen — `incomplete_sides` ville
+ * utløst «auto-start blokkert»-varselet til arrangøren for noe hen selv
+ * bestemte (cron-sida av det ligger i `autoStartBlocked.test.ts`).
+ */
+function cupGameRow(opts: {
+  game_mode: GameMode;
+  team_size: number;
+  scheduled_tee_off_at: string | null;
+  withdrawal_play_on?: boolean;
+  tournament_id?: string | null;
+}) {
+  return {
+    id: 'game-id',
+    name: 'Kamp 3',
+    status: 'scheduled',
+    hcp_allowance_pct: 100,
+    tee_box_id: 'tee-id',
+    game_mode: opts.game_mode,
+    mode_config: {
+      kind: opts.game_mode,
+      team_size: opts.team_size,
+      teams_count: 2,
+      ...(opts.withdrawal_play_on ? { withdrawal_play_on: true } : {}),
+    },
+    tournament_id: opts.tournament_id === undefined ? 'cup-1' : opts.tournament_id,
+    scheduled_tee_off_at: opts.scheduled_tee_off_at,
+    tee_boxes: VALID_TEE,
+  };
+}
+
+const TEE_OFF = '2026-09-10T08:00:00.000Z';
+const WITHDREW_EARLY = '2026-09-09T20:00:00.000Z';
+
+function withdrawn(userId: string, team_number: number, at: string) {
+  return { ...PLAYER(userId, team_number), withdrawn_at: at };
+}
+
+describe('startScheduledGame — decided_by_withdrawal (#1814)', () => {
+  it('nekter å starte en singles-cupkamp der motstanderen har trukket seg', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: cupGameRow({
+          game_mode: 'singles_matchplay',
+          team_size: 1,
+          scheduled_tee_off_at: TEE_OFF,
+        }),
+        error: null,
+      },
+      {
+        data: [PLAYER('a1', 1), withdrawn('b1', 2, WITHDREW_EARLY)],
+        error: null,
+      },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'decided_by_withdrawal' });
+    // Ingen status-flipp: kampen blir stående `scheduled` for godt.
+    expect(statusFlipWrites(supabase)).toHaveLength(0);
+  });
+
+  it('starter en fourball med «makkeren spiller alene» — én aktiv per side er nok', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: cupGameRow({
+          game_mode: 'fourball_matchplay',
+          team_size: 2,
+          scheduled_tee_off_at: TEE_OFF,
+          withdrawal_play_on: true,
+        }),
+        error: null,
+      },
+      {
+        data: [
+          PLAYER('a1', 1),
+          withdrawn('a2', 1, WITHDREW_EARLY),
+          PLAYER('b1', 2),
+          PLAYER('b2', 2),
+        ],
+        error: null,
+      },
+      // profil-sjekken: alle tre aktive er fullførte
+      {
+        data: [
+          { id: 'a1', email: 'a1@x.no', profile_completed_at: '2026-01-01' },
+          { id: 'a2', email: 'a2@x.no', profile_completed_at: '2026-01-01' },
+          { id: 'b1', email: 'b1@x.no', profile_completed_at: '2026-01-01' },
+          { id: 'b2', email: 'b2@x.no', profile_completed_at: '2026-01-01' },
+        ],
+        error: null,
+      },
+      WROTE_ROW, // course_handicap a1
+      WROTE_ROW, // course_handicap a2
+      WROTE_ROW, // course_handicap b1
+      WROTE_ROW, // course_handicap b2
+      { data: [{ id: 'game-id' }], error: null }, // status-flipp
+      { data: [], error: null }, // pending signup-requests
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+  });
+
+  it('avgjør den samme fourballen uten flagget — kampen spilles ikke', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: cupGameRow({
+          game_mode: 'fourball_matchplay',
+          team_size: 2,
+          scheduled_tee_off_at: TEE_OFF,
+        }),
+        error: null,
+      },
+      {
+        data: [
+          PLAYER('a1', 1),
+          withdrawn('a2', 1, WITHDREW_EARLY),
+          PLAYER('b1', 2),
+          PLAYER('b2', 2),
+        ],
+        error: null,
+      },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'decided_by_withdrawal' });
+  });
+
+  it('rører ikke et frittstående spill (tournament_id null) — regelen gjelder kun cup', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: cupGameRow({
+          game_mode: 'singles_matchplay',
+          team_size: 1,
+          scheduled_tee_off_at: TEE_OFF,
+          tournament_id: null,
+        }),
+        error: null,
+      },
+      {
+        data: [PLAYER('a1', 1), withdrawn('b1', 2, WITHDREW_EARLY)],
+        error: null,
+      },
+    ]);
+
+    // Uten cup-regelen faller den tilbake til den vanlige side-vakta.
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'incomplete_sides' });
+  });
+});
