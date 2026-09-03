@@ -146,7 +146,7 @@ aldri overhal eieren.
   ````
 
   Full kontrakt-tekst under i en `<details>` (som #1147). Kommentaren er den
-  autoritative kilden; `.forge/`-fila lages ved behov under selve bygget.
+  autoritative kilden; pluginen skriver et lokalt utkast til `.forge/` under bygget, og det committes aldri (#1931).
 - **Auto-kø ALLE kontrakter unntatt aldri-auto-kategoriene (eierbeslutning
   2026-07-30, #1413 — utvider #1302):** sett `autonomy:ready` selv rett etter
   postering (smeden HAR GitHub-tilgang), for både `teknisk` og `bruker-synlig`.
@@ -205,5 +205,5 @@ aldri overhal eieren.
 
 - Produktvalg håndteres i kontrakten som alternativer (steg 2, #1413) — kun
   uskopbare kandidater rutes til eieren.
-- Kontrakter er kommentar-only (ingen `.forge/`-fil, ingen PR) for å unngå en PR
+- Kontrakter er kommentar-only (ingen committet fil, ingen PR) for å unngå en PR
   per kontrakt. Surfaceren (#1149) og nattkjøreren leser begge kommentar-headeren.
