@@ -10,6 +10,7 @@ import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/lib/database.types';
 import { cupBasePath } from './cupPaths';
+import { hasWithdrawalPlayOnChoice } from './cupWithdrawalOutcome';
 
 /**
  * Trekk underveis i en cup (#1814) — arrangørens og spillerens vei ut.
@@ -136,14 +137,32 @@ function revalidateCup(tournamentId: string, groupId: string | null, gameIds: st
   revalidatePath(`/cup/${tournamentId}/resultater`);
 }
 
-/** Slår `withdrawal_play_on` av eller på i et spills `mode_config`. */
+function baseConfig(modeConfig: unknown): Record<string, Json> {
+  return modeConfig && typeof modeConfig === 'object'
+    ? { ...(modeConfig as Record<string, Json>) }
+    : {};
+}
+
+/**
+ * Skriver arrangørens valg som en EKSPLISITT boolean. `false` er ikke det samme
+ * som fravær: fravær betyr «ingen har bestemt seg», og det er den tilstanden
+ * venter-banneret på `CupManagement` maser om (E4). Begge gir samme utfall i
+ * regelen — `readWithdrawalPlayOn` krever `=== true`.
+ */
 function withPlayOn(modeConfig: unknown, on: boolean): Json {
-  const base =
-    modeConfig && typeof modeConfig === 'object'
-      ? { ...(modeConfig as Record<string, Json>) }
-      : {};
-  if (on) base.withdrawal_play_on = true;
-  else delete base.withdrawal_play_on;
+  const base = baseConfig(modeConfig);
+  base.withdrawal_play_on = on;
+  return base as Json;
+}
+
+/**
+ * Fjerner nøkkelen helt. Brukes når det ikke lenger FINNES noe valg å ta —
+ * angret trekk, eller en kompensert skriving — så kampen ikke blir stående med
+ * et alene-valg uten en trukket spiller.
+ */
+function withoutPlayOn(modeConfig: unknown): Json {
+  const base = baseConfig(modeConfig);
+  delete base.withdrawal_play_on;
   return base as Json;
 }
 
@@ -170,6 +189,34 @@ async function writeWithdrawal(
   const { tournamentId, userId, byUserId, games, playOnGameIds } = args;
   const withdrawnAt = new Date().toISOString();
   const written: string[] = [];
+  const gameById = new Map(games.map((g) => [g.id, g]));
+
+  /**
+   * Ruller tilbake alt vi skrev for de oppgitte kampene — både trekk-raden og
+   * `withdrawal_play_on`. Uten flagg-delen ble en kamp vi nettopp kompenserte
+   * stående med arrangørens alene-valg i `mode_config` uten at noen var
+   * trukket: kampen ville startet 1 mot 2 med fulltallige lag. Samme opprydding
+   * som `undoCupWithdrawal` gjør.
+   *
+   * `mode_config` skrives tilbake nøyaktig slik lesingen fant den — det
+   * gjenoppretter både «ingen har valgt ennå» og et eldre valg fra en annen
+   * spillers trekk.
+   */
+  async function compensate(gameIds: string[]): Promise<void> {
+    await undoRows(admin, userId, gameIds);
+    for (const gameId of gameIds) {
+      if (!playOnGameIds.has(gameId)) continue;
+      const game = gameById.get(gameId);
+      if (!game) continue;
+      const { error } = await admin
+        .from('games')
+        .update({ mode_config: (game.mode_config ?? null) as Json })
+        .eq('id', gameId);
+      if (error) {
+        console.error('[cup] withdrawal play-on compensation failed', { gameId, error });
+      }
+    }
+  }
 
   try {
     for (const game of games) {
@@ -201,7 +248,7 @@ async function writeWithdrawal(
     }
   } catch (err) {
     console.error('[cup] withdrawCupPlayer write failed', { tournamentId, userId, err });
-    await undoRows(admin, userId, written);
+    await compensate(written);
     return { error: 'withdraw_failed' };
   }
 
@@ -214,13 +261,13 @@ async function writeWithdrawal(
     .in('id', written);
   if (afterError) {
     console.error('[cup] withdrawCupPlayer recheck failed', { tournamentId, afterError });
-    await undoRows(admin, userId, written);
+    await compensate(written);
     return { error: 'withdraw_failed' };
   }
   const started = (after ?? [])
     .filter((g) => !PENDING_STATUSES.has(g.status as string))
     .map((g) => g.id as string);
-  if (started.length > 0) await undoRows(admin, userId, started);
+  if (started.length > 0) await compensate(started);
 
   return {
     writtenGameIds: written.filter((id) => !started.includes(id)),
@@ -388,11 +435,13 @@ export async function undoCupWithdrawal(formData: FormData): Promise<CupWithdraw
           .select('user_id'),
         'undoCupWithdrawal/clearRow',
       );
-      if (readPlayOn(game.mode_config)) {
+      // Ethvert registrert valg (også en eksplisitt «etter regelen») fjernes:
+      // står ingen trukket igjen, finnes det ikke noe valg å ta.
+      if (hasWithdrawalPlayOnChoice(game.mode_config)) {
         expectAffected(
           await admin
             .from('games')
-            .update({ mode_config: withPlayOn(game.mode_config, false) })
+            .update({ mode_config: withoutPlayOn(game.mode_config) })
             .eq('id', game.id)
             .select('id'),
           'undoCupWithdrawal/clearPlayOn',
@@ -429,6 +478,24 @@ export async function setFourballWithdrawalChoice(
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
   const admin = getAdminClient();
+
+  // Samme cup-status-gate som de tre andre handlingene (`readCupTarget`): et
+  // utkast har ingen kamper å velge for, og en avsluttet cup har et signert
+  // resultat som ikke skal kunne endres av et alene-valg i etterkant.
+  const { data: tournament, error: tErr } = await admin
+    .from('tournaments')
+    .select('id, status')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (tErr) {
+    console.error('[cup] setFourballWithdrawalChoice tournament read failed', {
+      tournamentId,
+      tErr,
+    });
+    return { error: 'withdraw_failed' };
+  }
+  if (!tournament) return { error: 'not_found' };
+  if (tournament.status !== 'active') return { error: 'wrong_status' };
 
   // `game_id` kommer fra klienten — kampen MÅ høre til denne cupen, ellers
   // ville en fremmed kamp vært skrivbar med en cup kalleren tilfeldigvis styrer.
@@ -488,10 +555,4 @@ export async function setFourballWithdrawalChoice(
   revalidateCup(tournamentId, actor.groupId, [gameId]);
   redirect(`${cupBasePath(tournamentId, actor.groupId)}?status=play_on_saved`);
   return { error: '' }; // unreachable
-}
-
-/** Lokal, synkron lesing av flagget (modulen er `'use server'`, så ingen eksport). */
-function readPlayOn(modeConfig: unknown): boolean {
-  if (!modeConfig || typeof modeConfig !== 'object') return false;
-  return (modeConfig as { withdrawal_play_on?: unknown }).withdrawal_play_on === true;
 }

@@ -44,6 +44,8 @@ const ADMIN = 'admin-1';
 
 /** Gatens to lesninger for en frittstående cup med en global admin. */
 const gateGroupIdNull = { data: { group_id: null }, error: null };
+/** Cup-status-lesninga `setFourballWithdrawalChoice` gjør rett etter gaten. */
+const cupActive = { data: { id: CUP, status: 'active' }, error: null };
 const cupAdminUser = {
   data: { is_admin: true, email: 'a@x.no', name: 'Admin' },
   error: null,
@@ -186,6 +188,33 @@ describe('withdrawCupPlayer — hvilke kamper som flagges (#1814)', () => {
       withdrawn_at: null,
       withdrawn_by_user_id: null,
     });
+  });
+
+  it('nuller også withdrawal_play_on når kampen rakk å starte (kompensering)', async () => {
+    const config = { kind: 'fourball_matchplay', team_size: 2, teams_count: 2 };
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull,
+      ...reads({
+        games: [game('g1', 'scheduled', 'fourball_matchplay', config)],
+        rows: [playerRow('g1')],
+      }),
+      { data: [{ user_id: PLAYER }], error: null }, // flagg raden
+      { data: [{ id: 'g1' }], error: null }, // skriv withdrawal_play_on
+      { data: [{ id: 'g1', status: 'active' }], error: null }, // cron rakk å starte
+      { data: null, error: null }, // kompenserende nulling av raden
+      { data: null, error: null }, // kompenserende fjerning av flagget
+    ]);
+
+    const { withdrawCupPlayer } = await import('./withdrawalActions');
+    await withdrawCupPlayer(
+      form({ tournament_id: CUP, user_id: PLAYER, play_on_game_ids: 'g1' }),
+    ).catch(() => {});
+
+    const gameWrites = updates('games');
+    expect(gameWrites).toHaveLength(2);
+    // Siste skriving legger kampen tilbake slik den sto: uten flagget hadde en
+    // fulltallig fourball startet 1 mot 2.
+    expect(gameWrites[1].args[0]).toEqual({ mode_config: config });
   });
 
   it('skriver withdrawal_play_on på den valgte fourball-kampen — og bare den', async () => {
@@ -436,6 +465,7 @@ describe('setFourballWithdrawalChoice (#1814)', () => {
   it('slår på flagget for en fourball med en trukket rad og en makker igjen', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
+      cupActive,
       { data: FOURBALL, error: null },
       {
         data: [
@@ -468,6 +498,7 @@ describe('setFourballWithdrawalChoice (#1814)', () => {
   it('avviser en kamp fra en annen cup', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
+      cupActive,
       { data: { ...FOURBALL, tournament_id: 'cup-2' }, error: null },
     ]);
 
@@ -485,6 +516,7 @@ describe('setFourballWithdrawalChoice (#1814)', () => {
   ])('avviser %s → match_not_eligible', async (_name, overrides) => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
+      cupActive,
       { data: { ...FOURBALL, ...overrides }, error: null },
     ]);
 
@@ -499,6 +531,7 @@ describe('setFourballWithdrawalChoice (#1814)', () => {
   it('avviser en kamp uten trekk — flagget ville ikke betydd noe', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
+      cupActive,
       { data: FOURBALL, error: null },
       {
         data: [
@@ -520,6 +553,7 @@ describe('setFourballWithdrawalChoice (#1814)', () => {
   it('avviser når HELE siden har trukket seg — ingen ball igjen å slå', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
+      cupActive,
       { data: FOURBALL, error: null },
       {
         data: [
@@ -539,9 +573,13 @@ describe('setFourballWithdrawalChoice (#1814)', () => {
     ).toEqual({ error: 'match_not_eligible' });
   });
 
-  it('fjerner flagget igjen når arrangøren ombestemmer seg', async () => {
+  // «Etter regelen» skrives som en EKSPLISITT `false`, ikke ved å slette
+  // nøkkelen: fravær betyr «ingen har bestemt seg», og det er den tilstanden
+  // venter-banneret på cup-styringen maser om (E4).
+  it('skriver et eksplisitt nei når arrangøren ombestemmer seg', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
+      cupActive,
       {
         data: {
           ...FOURBALL,
@@ -565,7 +603,30 @@ describe('setFourballWithdrawalChoice (#1814)', () => {
     ).catch(() => {});
 
     expect(updates('games')[0].args[0]).toEqual({
-      mode_config: { kind: 'fourball_matchplay', team_size: 2, teams_count: 2 },
+      mode_config: {
+        kind: 'fourball_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        withdrawal_play_on: false,
+      },
     });
   });
+
+  it.each(['draft', 'finished'] as const)(
+    'avviser når cupen er %s → wrong_status, ingen skriving',
+    async (status) => {
+      adminMock = buildSupabaseMock([
+        gateGroupIdNull,
+        { data: { id: CUP, status }, error: null },
+      ]);
+
+      const { setFourballWithdrawalChoice } = await import('./withdrawalActions');
+      expect(
+        await setFourballWithdrawalChoice(
+          form({ tournament_id: CUP, game_id: 'g1', play_on: '1' }),
+        ),
+      ).toEqual({ error: 'wrong_status' });
+      expect(updates('games')).toHaveLength(0);
+    },
+  );
 });
