@@ -75,6 +75,12 @@ export default async function CupSelfWithdrawPage({
     return t.has(key) ? t(key) : t('withdraw.errors.withdraw_failed');
   })();
 
+  // Cup-status-gaten (kontrakten: «cup draft/finished → alle trekk-innganger
+  // skjult og actions avviser»). `withdrawSelfFromCup` returnerer `wrong_status`
+  // uansett; her sier vi det FØR spilleren trykker, i stedet for å love en
+  // knapp serveren avviser. Info-linje framfor `notFound()` — spilleren fulgte
+  // en gyldig lenke, og en 404 forklarer ingenting.
+  const cupActive = ctx.tournament.status === 'active';
   const toWrite = ctx.pending.filter((m) => !m.alreadyWithdrawn);
   const teamNames = {
     team1: ctx.tournament.team_1_name,
@@ -104,11 +110,22 @@ export default async function CupSelfWithdrawPage({
         </div>
       )}
 
-      <div className="mt-5">
-        <Banner tone="warning">{t('withdraw.warningSelf')}</Banner>
-      </div>
+      {cupActive && (
+        <div className="mt-5">
+          <Banner tone="warning">{t('withdraw.warningSelf')}</Banner>
+        </div>
+      )}
 
-      {toWrite.length === 0 ? (
+      {!cupActive ? (
+        <div className="mt-5 rounded-xl border border-border bg-surface px-4 py-3.5">
+          <p
+            className="font-sans text-[13px] leading-relaxed text-text"
+            data-testid="cup-withdraw-cup-not-active"
+          >
+            {t('withdraw.errors.wrong_status')}
+          </p>
+        </div>
+      ) : toWrite.length === 0 ? (
         <div className="mt-5 rounded-xl border border-border bg-surface px-4 py-3.5">
           <p className="font-sans text-[13px] leading-relaxed text-text">
             {t('withdraw.nothingPending')}
@@ -165,7 +182,7 @@ export default async function CupSelfWithdrawPage({
       )}
 
       <div className="mt-6 flex flex-col gap-2.5">
-        {toWrite.length > 0 && (
+        {cupActive && toWrite.length > 0 && (
           <form action={submitSelfCupWithdrawal}>
             <input type="hidden" name="tournament_id" value={id} />
             <SubmitButton
