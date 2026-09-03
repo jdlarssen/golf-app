@@ -1424,3 +1424,77 @@ en annen bruker inn på telefonen, finnes det ingen eier-vakt som rydder. Låst 
 - **`refreshHomeCards` er vaktet, ikke navnerommet.** `HOME_CACHE_KEY` er fortsatt
   global (`'home'`, uten `userId`); vakten sammenligner eier før skriving. Et
   bruker-prefikset nøkkelrom ville vært den egentlige fiksen.
+
+## Rediger profil i appen (#1906, PR B)
+
+Profil-rommet kunne lese de fem feltene; nå kan det skrive dem. «Rediger profil»
+→ `screens/EditProfile.tsx` → `PUT /api/profile`.
+
+### Hvorfor en rute, og ikke `supabase.from('users').update(...)`
+
+Appen HAR lov til å skrive sin egen rad — RLS-policyen `users update own` tillater det.
+Det er ikke skrivingen som er problemet, det er **halen**: webbens `updateProfile` kaller
+`recomputeCourseHandicapForUser`, som skriver om FROSNE `game_players.course_handicap` i
+runder som pågår. Den kjører på service-role, fordi 0107-triggeren
+(`guard_game_players_self_update`) med vilje sperrer en spiller fra å endre sitt eget
+banehandicap i et aktivt spill.
+
+En app-side-update ville altså lykkes — og stille latt de aktive rundene stå igjen med
+det gamle banehandicapet. Det er nøyaktig Ryder Cup 2026-feilen: en spiller rettet et
+glemt plusshandicap-fortegn, spillene beholdt gammel CH, og han fikk fem slag for mye i
+tre aktive kamper. **Derfor er hele lagringen én rute, ikke en RLS-skriving pluss et
+kall.**
+
+### Wire-kontrakten (frosset — appen speiler den)
+
+```
+PUT /api/profile
+  200 { ok: true }
+  400 { error: 'name_required'|'hcp_invalid'|'gender_required'|'level_invalid' }
+  401 { error: 'unauthorized' }
+  500 { error: 'update_failed' }
+```
+
+Kroppen bærer feltverdier og **aldri identitet**. Bruker-id-en kommer utelukkende fra
+Bearer-tokenet (`lib/api/appAuth.ts`), og payloaden bygges fra parserens resultat — ikke
+fra rå kropp — så det finnes ingen felt en kaller kan smugle inn. En `userId` i kroppen
+ignoreres, og det er testet.
+
+### Regelen har ett hjem: `lib/users/profileInput.ts`
+
+Både webbens server-action og ruta kaller `parseProfileInput`. Rekkefølgen på sjekkene
+(navn → hcp → gender → level) er en del av kontrakten og er låst i test: samme input skal
+gi samme FØRSTE feil på begge flatene.
+
+⚠️ **`gender` og `level` er IKKE symmetriske**, selv om de ser like ut i skjemaet:
+
+| Input | `gender` | `level` |
+|---|---|---|
+| utelatt (`undefined`/`null`) | utelates fra payloaden — raden beholder verdien (#1064) | default `'normal'` |
+| tom streng `''` | samme: utelates | **`level_invalid`** |
+
+Det er dagens web-oppførsel, bevart med vilje. Sender en klient `level: ''` får den en
+feil webben ikke ville gitt — send `undefined`.
+
+`app/[locale]/complete-profile/actions.ts` har fortsatt sin EGEN kopi av de samme
+reglene. Den er parkert til eget issue, og den avviker allerede litt i dag — diff dem før
+de slås sammen, ikke anta at de er like.
+
+### ⚠️ `lib/handicap/sign.ts` er en ren blad-modul, og det er lastbærende
+
+Fila inneholdt både fortegns-konverteringen og visningen, og visningen går veien om
+`Intl` (`lib/i18n/format`). Da `EditProfile` trengte `fromSignedHcp` for å vise et lagret
+plusshandicap som magnitude + chip, ville hele Intl-grafen fulgt med inn i app-bundelen
+for første gang — og Hermes har ikke ICU-dataene.
+
+Visningen bor derfor i `lib/handicap/signFormat.ts`. **Legg aldri noe Intl-avhengig
+tilbake i `sign.ts`.** Appen formaterer handicap lokalt (`formatHcpNb` i
+`profileCopy.ts`) og låser seg mot webbens `formatHcpDisplay` i TEST, der Intl finnes.
+
+### Bokførte gap
+
+- **Appens cachede spill-bundle viser gammelt banehandicap til neste refetch.** Recompute
+  skjer på serveren; GameHome refetcher ved fokus, så det retter seg selv — men i det
+  sekundet du går tilbake fra skjemaet, kan tallet være gammelt.
+- **Lagring legges aldri i sync-køen.** Skriv krever nett. En profil-endring kan ikke
+  ligge lokalt og gå opp senere, for det er serveren som må regne om de aktive rundene.
