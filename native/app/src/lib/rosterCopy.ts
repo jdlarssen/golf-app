@@ -148,6 +148,8 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
     }
     case 'incomplete_sides':
       return 'En eller begge sider mangler spillere. Alle spillere må ha en side og begge sider må være fulltallige før spillet kan startes.';
+    case 'decided_by_withdrawal':
+      return 'Kampen er allerede avgjort uten spill — noen trakk seg. Kan ikke startes.';
     case 'unassigned_teams':
       return 'Noen spillere står uten lag. Fordel dem på lag før du starter runden.';
     case 'unassigned_flights':
