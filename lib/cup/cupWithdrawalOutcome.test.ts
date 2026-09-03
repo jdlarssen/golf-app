@@ -81,16 +81,25 @@ describe('resolveCupMatchWithdrawal — ingen avgjørelse', () => {
   );
 
   it('ignorerer trukne rader uten side (team_number utenfor 1/2)', () => {
+    // En rad uten lag hører til ingen side (marshal-/reserve-rusk i eldre
+    // cuper). Den skal hverken avgjøre kampen eller havne i «{navn} trakk seg».
+    const rogue = { userId: 'x9', side: 3 as 1 | 2, withdrawnAt: EARLY };
+
+    expect(
+      resolveCupMatchWithdrawal(singles({ players: [rogue] })),
+    ).toBeNull();
+
     expect(
       resolveCupMatchWithdrawal(
         singles({
           players: [
-            { userId: 'a1', side: 1, withdrawnAt: null },
+            { userId: 'a1', side: 1, withdrawnAt: EARLY },
             { userId: 'b1', side: 2, withdrawnAt: null },
+            rogue,
           ],
         }),
       ),
-    ).toBeNull();
+    ).toMatchObject({ outcome: 'halved', withdrawnUserIds: ['a1'] });
   });
 });
 
