@@ -137,8 +137,9 @@ videre kun av eieren via PR når tilliten er etablert.
   PR-ens eksisterende branch).
 - Bygg mot kontrakten: implementer → kjør gates → evaluer skeptisk i fersk
   kontekst → fiks. **#1077-konvergensreglene gjelder** (docs/forge-workflow.md
-  → Konvergensregler): runde-historikk i `.forge/evaluations/<slug>-runder.md`
-  committes, maks 5 evaluate-runder, strategibytte etter to identiske
+  → Konvergensregler): runde-historikk i ÉN PR-kommentar med overskriften
+  `## Evaluate-runder` — runde 1 oppretter den, senere runder PATCH-er samme
+  kommentar — maks 5 evaluate-runder, strategibytte etter to identiske
   finding-sett, aldri «én runde til» forbi taket.
 - Atomiske commits med `Refs #<issuenr>`; notatfil under `.changes/` per
   CLAUDE.md-reglene for feat/fix — aldri versjonsbump, aldri CHANGELOG-linje
@@ -248,7 +249,7 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
   - Dør økta før dette steget, tar natt-draft-sweepen PR-en neste morgen (se
     «Backstopp» nederst) — men den er nettet, ikke veien.
 - **Ikke konvergert:** push delarbeidet som draft-PR, post utfylt
-  `.forge/templates/eskalering.md` som issue-kommentar (runde-tabell + ETT
+  `docs/loops/eskalering-mal.md` som issue-kommentar (runde-tabell + ETT
   A/B-spørsmål), sett `autonomy:blocked`, fjern `autonomy:ready`. Den PR-en blir
   liggende som draft med vilje — ingen `gh pr ready`. Delarbeid er ikke en
   leveranse, og eskaleringsspørsmålet skal besvares før noe kort dukker opp.

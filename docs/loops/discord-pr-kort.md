@@ -109,8 +109,9 @@ vinner:
    eller sett rødt for alltid på samme SHA. Filteret gjelder både decide-steget og
    merge-endepunktets re-sjekk (ett hjem). Deretter **ci.yml-gaten**
    (`classifyWithCiGate` + `expectsRealCi`): rører diffen noe utenfor `paths-ignore`
-   (`**.md`, `docs/**`, `.forge/**`), må GitHub ha REGISTRERT en `ci.yml`-kjøring for
-   head-SHA-en før grønt slippes gjennom — tvillingen `ci-docs-noop.yml` rapporterer
+   (`**.md`, `docs/**`, `.forge/**` — den siste mappa er ute av repoet siden #1931;
+   globben er harmløs og står igjen for å speile CI ord for ord), må GitHub ha
+   REGISTRERT en `ci.yml`-kjøring for head-SHA-en før grønt slippes gjennom — tvillingen `ci-docs-noop.yml` rapporterer
    samme jobnavn og fullfører på sekunder, så på en blandet PR ser vinduet før
    ci.yml er registrert ellers grønt ut. Fail-closed: HTTP-feil, «ingen kjøring
    enda», eller at endrede filer ikke lot seg lese (`expectsRealCi(null)` → gate PÅ)

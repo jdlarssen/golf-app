@@ -194,7 +194,7 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
 
 #### Forge-arbeidsflyt (kontrakt-først)
 
-Kontrakt-først-disiplinen for `/forge:auto` (hva hovedchatten gjør når issue/kontrakt ikke er spesifisert) og hvordan `/forge:contract`-kontrakter postes som issue-kommentar er flyttet til [`docs/forge-workflow.md`](docs/forge-workflow.md). Kjernen: **aldri start `/forge:auto`-løkken uten enten en eksisterende kontrakt-fil eller en kontrakt-kommentar på et åpent issue** — les docs-fila før du kjører `/forge:auto` uten spesifisert issue, eller når `/forge:contract` lager en kontrakt.
+Kontrakt-først-disiplinen for `/forge:auto` (hva hovedchatten gjør når issue/kontrakt ikke er spesifisert) og hvordan `/forge:contract`-kontrakter postes som issue-kommentar er flyttet til [`docs/forge-workflow.md`](docs/forge-workflow.md). Kjernen: **aldri start `/forge:auto`-løkken uten en kontrakt-kommentar på et åpent issue** (kontrakt-filer committes ikke — `.forge/` er lokal arbeidsflate, #1931) — les docs-fila før du kjører `/forge:auto` uten spesifisert issue, eller når `/forge:contract` lager en kontrakt.
 
 #### Closing-kommentar (ALLTID — og bare én per issue)
 

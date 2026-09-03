@@ -8,15 +8,13 @@ Flyttet ut av `CLAUDE.md` for å holde den lett (uendret innhold). Gjelder `/for
 
 Når brukeren invoker `/forge:auto` uten å spesifisere konkret issue/kontrakt, MÅ hovedchatten følge denne flyten:
 
-1. **Finn åpne issues med eksisterende kontrakt.** To kilder å sjekke:
-   - **Primært:** iterér åpne issues og sjekk kommentarene per issue: `gh issue list --state open --json number --jq '.[].number'` → per N: `gh api repos/jdlarssen/golf-app/issues/N/comments --jq '.[].body'` og se etter headeren «Forge-kontrakt tilgjengelig». (`gh search issues … in:comments` returnerer tomt for kommentar-innhold og skal IKKE brukes — verifisert 2026-07-07, jf. dok-avstemmeren C4.)
-   - **Sekundært (sanity-check):** `ls .forge/contracts/` for `<number>-*.md`-filer på nåværende branch, krysset mot åpen-status via `gh issue view N --json state`.
+1. **Finn åpne issues med eksisterende kontrakt.** Issue-kommentaren er eneste kilde: iterér åpne issues og sjekk kommentarene per issue: `gh issue list --state open --json number --jq '.[].number'` → per N: `gh api repos/jdlarssen/golf-app/issues/N/comments --jq '.[].body'` og se etter headeren «Forge-kontrakt tilgjengelig». (`gh search issues … in:comments` returnerer tomt for kommentar-innhold og skal IKKE brukes — verifisert 2026-07-07, jf. dok-avstemmeren C4.) Å lete etter kontrakt-filer på branchen er ikke lenger en gyldig sanity-check — filene committes ikke (#1931).
 2. **Hvis funnet:** Hvis det er ett kandidat-issue → kjør `/forge:auto` på den. Hvis flere → vis kort liste med issue-nummer + tittel + branch-navn, spør brukeren hvilken som skal kjøres.
 3. **Hvis ingen funnet:** Kjør `/forge:contract` istedenfor. Spør brukeren hvilket åpent issue kontrakten skal skrives for, eller forslå basert på `gh issue list --state open` (filtrert til ikke-`epic` + ikke-`blocks-club-scale`-tunge kandidater).
 
 Hvorfor: `/forge:auto` er ment for autonom utførelse mot en allerede gjennomtenkt spec. Å starte den uten kontrakt betyr at gray-area-diskusjonen skipps og bygge-løkken kjører på antagelser — det er nettopp dette `/forge:contract` skal forhindre. Kontrakt-først-disiplinen sikrer at hver `/forge:auto`-runde har et reelt sannhets-anker.
 
-Aldri start `/forge:auto`-bygge-løkken uten enten (a) en eksisterende kontrakt-fil, eller (b) en kontrakt-kommentar på et åpent issue. Hvis brukeren eksplisitt spesifiserer et issue uten kontrakt: bekreft at de vil hoppe over `/forge:contract`-diskusjonen før du starter bygging.
+Aldri start `/forge:auto`-bygge-løkken uten en kontrakt-kommentar på et åpent issue. Hvis brukeren eksplisitt spesifiserer et issue uten kontrakt: bekreft at de vil hoppe over `/forge:contract`-diskusjonen før du starter bygging.
 
 #### Draft-først i økt-PR-flyten (#1516)
 
@@ -39,12 +37,13 @@ mens bokføringen fortsatt står i den lokale pre-push-gaten (#1499/#1513 → op
 
 #### Kontrakt-kommentar (når /forge:contract lager en)
 
-Når `/forge:contract` produserer en kontrakt i `.forge/contracts/<N>-<slug>.md`, MÅ hovedchatten poste den til korresponderende issue via `gh issue comment N --body-file <path>` i samme runde som kontrakten skrives. Format:
+`/forge:contract` skriver kontrakt-utkastet lokalt til `.forge/contracts/<N>-<slug>.md` — det gjør pluginen, og den fila **committes aldri** (`.forge/` er gitignorert, #1931). Det er posteringen som gjør utkastet til en kontrakt: hovedchatten MÅ poste den til korresponderende issue via `gh issue comment N --body-file <path>` i samme runde som kontrakten skrives. Format:
 
 ```markdown
 ## 📋 Forge-kontrakt tilgjengelig
 
-Det finnes en eksisterende forge-kontrakt for dette issuet på branchen `<branch-navn>`.
+Kontrakten for dette issuet ligger her. Den er ikke committet — issue-kommentaren er den
+kanoniske kopien. Byggeren leser den herfra.
 
 <details>
 <summary><strong>Kontrakt: <kontrakt-tittel> — klikk for å vise</strong></summary>
@@ -54,18 +53,24 @@ Det finnes en eksisterende forge-kontrakt for dette issuet på branchen `<branch
 </details>
 ```
 
-Hvorfor: kontrakter lever i branch-spesifikke `.forge/contracts/`-mapper og er usynlige for noen som ser på issue-en i nettleseren. Posting på issue-en gjør at scope og beslutninger er tilgjengelig der konteksten finnes, og at fremtidige sesjoner ikke gjør duplikat-arbeid.
+Hvorfor: issue-kommentaren er den eneste kopien som overlever at branchen slettes, at worktreet ryddes eller at neste økt starter på en annen maskin. Posting på issue-en gjør at scope og beslutninger er tilgjengelig der konteksten finnes, og at fremtidige sesjoner ikke gjør duplikat-arbeid.
 
 Bruk `<details>`-wrapper så issue-siden ikke drukner i veggen av tekst. Bygg comment-body i en temp-fil og post med `--body-file` (kontrakter er 15–30KB, for store til shell-escaping).
 
 Hvis kontrakten revideres senere i samme sesjon: post oppdatert versjon som ny kommentar — ikke editer den gamle. Audit-trail er viktigere enn ren issue-historikk.
 
+#### Tidligere beslutninger — de bor i issuene
+
+`/forge:contract`s «load prior decisions»-steg leter i issue-kommentarene, ikke på disk: iterér de aktuelle issuene og hent kommentarene per issue med `gh api repos/jdlarssen/golf-app/issues/N/comments`, og se etter headeren «📋 Forge-kontrakt tilgjengelig». Bruk ALDRI `gh search … in:comments` — den returnerer tomt for kommentar-innhold (verifisert 2026-07-07, jf. dok-avstemmeren C4).
+
+Et ferskt worktree har tom eller manglende `.forge/`. Det er forventet, ikke en feil: `.forge/` er en lokal arbeidsflate for forge-skillene, den er gitignorert (#1931), og ingen økt skal lete etter en kontrakt eller en evaluering der. Fant du ingenting på issuet, finnes det ingen kontrakt.
+
 #### Konvergensregler (#1077)
 
 Reglene under gjelder hver `/forge:auto`-kjøring og stopper de to verste autonomi-feilmodusene: å spinne på identiske avvisninger, og å gi opp uten artefakt.
 
-1. **Runde-historikk.** Etter hver evaluate-runde: appender én linje til `.forge/evaluations/<kontrakt-slug>-runder.md` med runde-nummer, verdikt (ACCEPT/NEEDS WORK) og finding-signaturene. Fila committes med `Refs #N` — evalueringssignaler skal overleve kontekstvinduet.
+1. **Runde-historikk.** Etter hver evaluate-runde bokføres runden i ÉN kommentar på PR-en, med overskriften `## Evaluate-runder` og en tabell: runde · verdikt (ACCEPT/NEEDS WORK) · finding-signaturer. Runde 1 oppretter kommentaren; hver senere runde PATCH-er den SAMME kommentaren med en ny rad (`gh api -X PATCH repos/jdlarssen/golf-app/issues/comments/<id> --input <json-fil med body>`) — én tabell å lese, ikke én kommentar per runde. Draft-PR-en er opprettet før første runde (#1516), så det finnes alltid et sted å poste; kjøres `/forge:auto` i en flyt uten PR, går tabellen på issuet under samme overskrift. Closing-kommentaren lenker til den. Poenget er uendret: evalueringssignaler skal overleve kontekstvinduet.
 2. **Finding-signatur.** Hvert funn normaliseres til `fil + kriterium` (f.eks. `bash-guard.sh + logg-lekkasje`), ikke fritekst. Fremgang måles mekanisk: signatur-settet i runde k sammenlignes med runde k−1.
 3. **No-progress → tvunget strategibytte.** To påfølgende runder med identisk signatur-sett = ingen fremgang. Da er blind retry forbudt — bytt strategi: dispatch en fresh-context fix-subagent som KUN får evalueringsrapporten som spec (aldri den forrige agentens kontekst eller antagelser).
 4. **Harde tak.** Maks 5 evaluate-runder totalt per kontrakt; maks 2 no-progress-runder etter strategibytte. Taket nås → gå til punkt 5, aldri «én runde til».
-5. **Ikke-konvergens har alltid artefakt.** Aldri kast delarbeid, aldri reset, aldri stille exit: push delarbeidet som draft-PR og post `.forge/templates/eskalering.md` (utfylt) som kommentar på issuet — inkludert ETT konkret A/B-spørsmål eieren kan besvare uten å lese kode.
+5. **Ikke-konvergens har alltid artefakt.** Aldri kast delarbeid, aldri reset, aldri stille exit: push delarbeidet som draft-PR og post `docs/loops/eskalering-mal.md` (utfylt) som kommentar på issuet — inkludert ETT konkret A/B-spørsmål eieren kan besvare uten å lese kode.

@@ -1,7 +1,7 @@
 # Tapp-innlogging som testbruker i Tørny Dev — design
 
 **Dato:** 2026-09-02 · **Issue:** #1923 · **Kontrakt (bygge-spec):**
-`.forge/contracts/1923-dev-login-testbrukere.md`
+[kontrakt-kommentaren på #1923](https://github.com/jdlarssen/golf-app/issues/1923)
 
 ## Bakgrunn
 
