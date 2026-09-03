@@ -415,9 +415,10 @@ export async function withdrawSelfFromCup(formData: FormData): Promise<CupWithdr
 
 /**
  * Angrer et trekk (E7 — kun arrangøren, og kun for kamper som ennå ikke har
- * startet). Nuller radene og fjerner `withdrawal_play_on` fra de samme kampene:
- * står ingen trukket igjen, betyr flagget ingenting og skal ikke ligge og
- * skjule seg i `mode_config`.
+ * startet). Nuller radene, og fjerner `withdrawal_play_on` fra de kampene der
+ * ingen andre står trukket etterpå: da betyr flagget ingenting og skal ikke
+ * ligge og skjule seg i `mode_config`. Er en annen spiller fortsatt trukket fra
+ * kampen, gjelder valget og blir stående.
  *
  * Har tee-off passert, starter cron-sveipet kampen neste minutt hvis siden er
  * komplett. Det er ønsket — arrangøren angret nettopp fordi folk er der.
@@ -439,6 +440,26 @@ export async function undoCupWithdrawal(formData: FormData): Promise<CupWithdraw
   );
   if (toUndo.length === 0) return { error: 'not_withdrawn' };
 
+  // Er det ANDRE trukne rader igjen i kampen etter denne angringen, gjelder
+  // alene-valget fortsatt og skal bli stående: en fourball der begge lagene
+  // mistet en spiller mister ikke arrangørens svar fordi den ene kom tilbake.
+  const { data: otherRows, error: oErr } = await admin
+    .from('game_players')
+    .select('game_id')
+    .in(
+      'game_id',
+      toUndo.map((g) => g.id),
+    )
+    .neq('user_id', userId)
+    .not('withdrawn_at', 'is', null);
+  if (oErr) {
+    console.error('[cup] undoCupWithdrawal peer read failed', { tournamentId, oErr });
+    return { error: 'withdraw_failed' };
+  }
+  const stillWithdrawn = new Set(
+    ((otherRows ?? []) as { game_id: string }[]).map((r) => r.game_id),
+  );
+
   try {
     for (const game of toUndo) {
       expectAffected(
@@ -451,9 +472,11 @@ export async function undoCupWithdrawal(formData: FormData): Promise<CupWithdraw
           .select('user_id'),
         'undoCupWithdrawal/clearRow',
       );
-      // Ethvert registrert valg (også en eksplisitt «etter regelen») fjernes:
-      // står ingen trukket igjen, finnes det ikke noe valg å ta.
-      if (hasWithdrawalPlayOnChoice(game.mode_config)) {
+      // Ethvert registrert valg (også en eksplisitt «etter regelen») fjernes —
+      // men bare når ingen trukket rad står igjen i kampen. Ellers finnes
+      // valget fortsatt, og å slette det ville sendt kampen tilbake til
+      // «venter på arrangøren» uten at noe var endret for den andre trukne.
+      if (!stillWithdrawn.has(game.id) && hasWithdrawalPlayOnChoice(game.mode_config)) {
         expectAffected(
           await admin
             .from('games')
