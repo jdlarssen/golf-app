@@ -505,6 +505,16 @@ export type GameModeConfig =
        * mangler i draft-state.
        */
       allowance_pct: number;
+      /**
+       * #1814: arrangørens «makkeren spiller alene»-valg på en cup-fourball der
+       * én spiller har trukket seg. Fravær/false = kampen avgjøres etter
+       * 30-minutters-regelen; `true` = siden spiller videre med én ball mot to.
+       *
+       * Skrives kun av cup-trekk-flyten (`lib/cup/withdrawalActions.ts`) — aldri
+       * av edit-skjemaet, som derfor bærer nøkkelen over uendret via
+       * `PRESERVED_MODE_CONFIG_KEYS`.
+       */
+      withdrawal_play_on?: boolean;
     }
   | {
       kind: 'foursomes_matchplay';
