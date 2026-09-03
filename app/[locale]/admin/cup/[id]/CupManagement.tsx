@@ -121,6 +121,12 @@ export async function CupManagement({
   }
 
   const errorMessageMap: Record<string, string> = {
+    // #1814 — trekk-handlingene redirecter hit ved avslag.
+    no_pending_matches: t('manage.errors.no_pending_matches'),
+    not_participant: t('manage.errors.not_participant'),
+    not_withdrawn: t('manage.errors.not_withdrawn'),
+    match_not_eligible: t('manage.errors.match_not_eligible'),
+    withdraw_failed: t('manage.errors.withdraw_failed'),
     start_failed: t('manage.errors.start_failed'),
     finish_failed: t('manage.errors.finish_failed'),
     too_few_matches: t('manage.errors.too_few_matches'),
@@ -133,6 +139,11 @@ export async function CupManagement({
     finished: t('manage.statusMessages.finished'),
     matches_generated: t('manage.statusMessages.matches_generated'),
     player_swapped: t('manage.statusMessages.player_swapped'),
+    // #1814
+    player_withdrawn: t('manage.statusMessages.player_withdrawn'),
+    player_withdrawn_partial: t('manage.statusMessages.player_withdrawn_partial'),
+    withdrawal_undone: t('manage.statusMessages.withdrawal_undone'),
+    play_on_saved: t('manage.statusMessages.play_on_saved'),
   };
   const errorMessage = errorCode ? errorMessageMap[errorCode] : undefined;
   const statusMessage = statusCode ? statusMessageMap[statusCode] : undefined;
@@ -180,6 +191,38 @@ export async function CupManagement({
 
   function preferredName(p: CupRosterPlayer): string {
     return p.nickname?.trim() || p.name?.trim() || unknownLabel;
+  }
+
+  /**
+   * #1814: én roster-rad. Den trukne blir stående på laget sitt, merket
+   * «Trukket» (E5) — merket flytter ingen og tar ingen poeng. Lenkene under
+   * finnes kun mens cupen er i gang: i utkast er det ingenting å trekke seg
+   * fra, og en avsluttet cup har et signert resultat.
+   */
+  function rosterRow(p: CupRosterPlayer) {
+    const canAct = tournament.status === 'active';
+    return (
+      <li key={p.userId} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span>{preferredName(p)}</span>
+        {p.withdrawn && (
+          <span
+            data-testid={`cup-roster-withdrawn-${p.userId}`}
+            className="rounded-full border border-border px-1.5 py-0.5 font-sans text-[10px] uppercase tracking-[0.12em] text-muted"
+          >
+            {t('manage.withdrawnChip')}
+          </span>
+        )}
+        {canAct && (
+          <SmartLink
+            href={`${roomHref('trekk')}/${p.userId}`}
+            data-testid={`cup-withdraw-link-${p.userId}`}
+            className="text-[11px] text-muted underline-offset-2 hover:underline"
+          >
+            {p.withdrawn ? t('manage.undoWithdrawLink') : t('manage.withdrawLink')}
+          </SmartLink>
+        )}
+      </li>
+    );
   }
 
   // #1441 (D9): vinner-dropdownen i SideAwardsPanel trenger navn merket med
@@ -272,9 +315,7 @@ export async function CupManagement({
               </p>
             ) : (
               <ul className="space-y-1 text-sm text-text">
-                {roster.team1.map((p) => (
-                  <li key={p.userId}>{preferredName(p)}</li>
-                ))}
+                {roster.team1.map(rosterRow)}
               </ul>
             )}
           </Card>
@@ -288,9 +329,7 @@ export async function CupManagement({
               </p>
             ) : (
               <ul className="space-y-1 text-sm text-text">
-                {roster.team2.map((p) => (
-                  <li key={p.userId}>{preferredName(p)}</li>
-                ))}
+                {roster.team2.map(rosterRow)}
               </ul>
             )}
           </Card>

@@ -67,6 +67,15 @@ export function CupPlayerPoints({
                 const name = (
                   <span className="min-w-0 flex-1 truncate">
                     <span className="font-serif text-[15px] text-text">{row.displayName}</span>
+                    {/* #1814: poengene står — merket sier bare at hen trakk seg. */}
+                    {row.withdrawn && (
+                      <span
+                        data-testid={`cup-points-withdrawn-${row.userId}`}
+                        className="ml-2 align-middle rounded-full border border-border px-1.5 py-0.5 font-sans text-[10px] uppercase tracking-[0.12em] text-muted"
+                      >
+                        {t('manage.withdrawnChip')}
+                      </span>
+                    )}
                     {isMe && (
                       <span
                         className="ml-2 align-middle text-[11px] font-medium"

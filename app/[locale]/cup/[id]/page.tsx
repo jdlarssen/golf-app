@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { first } from '@/lib/url/searchParams';
 import { AppShell } from '@/components/ui/AppShell';
+import { Banner } from '@/components/ui/Banner';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -9,12 +11,14 @@ import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { canViewCupPage } from '@/lib/cup/cupPageAccess';
 import {
   cupMatchStatusKey,
+  cupMatchStatusValues,
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import { CupLineupSpotlight } from './CupLineupSpotlight';
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<{ status?: string | string[] }>;
 
 /**
  * Header-copyen for poengmålet (#1441, D8) — egen funksjon (ikke inline i
@@ -31,8 +35,15 @@ function pointsHeaderCopy(
   return tournament.status === 'active' ? t('public.pointsPendingActive') : t('public.pointsPendingDraft');
 }
 
-export default async function PublicCupPage({ params }: { params: Params }) {
+export default async function PublicCupPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
   const [userId, t] = await Promise.all([
     getProxyVerifiedUserId(),
     getTranslations('cup'),
@@ -53,6 +64,26 @@ export default async function PublicCupPage({ params }: { params: Params }) {
   if (!allowed) notFound();
 
   const isFinished = tournament.status === 'finished';
+
+  // #1814: navnene bak «{navn} trakk seg» på matchkortene, og døra ut for
+  // spilleren selv. Lenka vises kun mens cupen er i gang, kun til deltakere som
+  // faktisk har en kamp igjen som ikke har startet — er alt i gang eller
+  // ferdigspilt, er det ingenting å trekke seg fra.
+  const rosterNames = new Map(
+    [...roster.team1, ...roster.team2].map((p) => [
+      p.userId,
+      p.nickname?.trim() || p.name?.trim() || t('manage.unknownPlayer'),
+    ]),
+  );
+  const myPendingMatches =
+    userId !== null &&
+    tournament.status === 'active' &&
+    leaderboard.matches.some(
+      (m) =>
+        (m.status === 'draft' || m.status === 'scheduled') &&
+        m.withdrawal == null &&
+        [...(m.team1UserIds ?? []), ...(m.team2UserIds ?? [])].includes(userId),
+    );
 
   return (
     <AppShell>
@@ -76,6 +107,14 @@ export default async function PublicCupPage({ params }: { params: Params }) {
           })}
         </p>
       </header>
+
+      {/* #1814: kvittering etter et selv-trekk. Spilleren blir stående på
+          laget sitt, så uten denne linja ser siden nøyaktig ut som før. */}
+      {first(sp.status) === 'withdrawn' && (
+        <div className="mb-4">
+          <Banner tone="success">{t('public.withdrawnBanner')}</Banner>
+        </div>
+      )}
 
       {/* #1884: avdekkings-kortet og kapteinens vei inn til uttaket. Rendrer
           ingenting for cuper uten uttaks-økter. */}
@@ -124,13 +163,21 @@ export default async function PublicCupPage({ params }: { params: Params }) {
             {leaderboard.matches.map((m) => {
               // #1502: delt status-label — «Scorekort levert» når alle ikke-
               // trukne har levert og kampen er aktiv, ellers Spilt/Pågår/Utkast.
+              // #1814: en kamp avgjort ved trekk står fortsatt `scheduled` —
+              // status-nøkkelen er det eneste som skiller den fra «Utkast».
               const statusLabel = t(
                 CUP_MATCH_STATUS_MESSAGE_KEY[
                   cupMatchStatusKey({
                     status: m.status,
                     allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
+                    withdrawal: m.withdrawal,
                   })
                 ],
+                cupMatchStatusValues(m, {
+                  nameOf: (uid) => rosterNames.get(uid) ?? t('manage.unknownPlayer'),
+                  team1Name: tournament.team_1_name,
+                  team2Name: tournament.team_2_name,
+                }),
               );
               const card = (
                 <Card
@@ -150,6 +197,14 @@ export default async function PublicCupPage({ params }: { params: Params }) {
                         <span className="text-muted">{t('manage.mot')}</span>{' '}
                         {m.team2PlayerName}
                       </p>
+                      {/* #1814: uten denne linja ser én ball mot to ut som feil. */}
+                      {m.soloPlayOn && (
+                        <p className="mt-1 font-sans text-[12px] text-muted">
+                          {t('public.matchSoloPlayOn', {
+                            partner: m.soloPlayOn.partnerName,
+                          })}
+                        </p>
+                      )}
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-xs text-muted">{statusLabel}</p>
@@ -179,6 +234,20 @@ export default async function PublicCupPage({ params }: { params: Params }) {
           </ul>
         )}
       </section>
+
+      {/* #1814: dempet dør ut for spilleren selv (E7). Bekreftelsessiden viser
+          hva som skjer med hver enkelt kamp før noe skrives. */}
+      {myPendingMatches && (
+        <div className="pt-4 pb-2">
+          <SmartLink
+            href={`/cup/${id}/trekk`}
+            data-testid="cup-withdraw-self-link"
+            className="block text-center text-xs text-muted underline underline-offset-2 decoration-muted/40 transition-colors hover:text-text"
+          >
+            {t('public.withdrawSelfLink')}
+          </SmartLink>
+        </div>
+      )}
     </AppShell>
   );
 }

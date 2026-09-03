@@ -60,6 +60,10 @@ import {
   computeSideShortfall,
 } from '@/lib/games/matchplaySides';
 import {
+  readWithdrawalPlayOn,
+  resolveCupMatchWithdrawal,
+} from '@/lib/cup/cupWithdrawalOutcome';
+import {
   isSingleFlightGame,
   unassignedActivePlayers,
   eligibleForFlightAssignment,
@@ -305,6 +309,7 @@ export default async function GameHomePage({
   const profileIncomplete = !ownProfileRes.data?.profile_completed_at;
   const meIsGuest = me.users?.is_guest === true;
 
+
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =
     spectateRes.data?.spectate_token ?? null;
@@ -376,6 +381,15 @@ export default async function GameHomePage({
     courses: joinsRes.data.courses,
     tee_boxes: joinsRes.data.tee_boxes,
   };
+
+  // #1814: en cup-kamp trekker man seg fra på cup-nivå — `/games/[id]/trekk-fra`
+  // sletter `game_players`-raden, som på en cup-kamp etterlot en ufullstendig
+  // side auto-start aldri kunne starte. Cup-siden viser konsekvensen for HVER
+  // kamp og lar arrangøren velge om en fourball-makker spiller alene.
+  // Liga-runder beholder dagens vei ut.
+  const withdrawHref = game.tournament_id
+    ? `/cup/${game.tournament_id}/trekk`
+    : `/games/${id}/trekk-fra`;
 
   // Drafts are visible to invited players as a venterom — see the draft
   // branch in the default return below for progressive disclosure.
@@ -610,6 +624,36 @@ export default async function GameHomePage({
       isMatchplayMode(game.game_mode)
         ? computeSideShortfall(gwp.players, modeTeamSize)
         : null;
+
+    // #1814: cup-kampen kan alt være avgjort fordi noen trakk seg. Da skal
+    // hverken nedtellingen eller start-CTA-en vises — den starter aldri.
+    // Samme regelmodul som `startScheduledGameCore` nettopp avslo starten med,
+    // så banneret og virkeligheten kan ikke si to forskjellige ting.
+    const cupWithdrawalDecision = game.tournament_id
+      ? resolveCupMatchWithdrawal({
+          status: 'scheduled',
+          gameMode: game.game_mode,
+          scheduledTeeOffAt: game.scheduled_tee_off_at,
+          playOn: readWithdrawalPlayOn(gwp.game.mode_config),
+          players: gwp.players
+            .filter((p) => p.team_number === 1 || p.team_number === 2)
+            .map((p) => ({
+              userId: p.user_id,
+              side: p.team_number as 1 | 2,
+              withdrawnAt: p.withdrawn_at,
+            })),
+        })
+      : null;
+    const decidedNames = cupWithdrawalDecision
+      ? cupWithdrawalDecision.withdrawnUserIds
+          .map((uid) => {
+            const u = gwp.players.find((p) => p.user_id === uid)?.users;
+            return (
+              u?.nickname?.trim() || u?.name?.trim() || t('withdrawnPlayerFallback')
+            );
+          })
+          .join('/')
+      : '';
 
     // #543: venteroms-velger og unassigned_flights-banner.
     // Vises bare når spillet er eligible for flight-inndeling (>4 aktive, ikke wolf).
@@ -886,16 +930,32 @@ export default async function GameHomePage({
           </Suspense>
         </div>
 
-        {/* Countdown banner + flight-velger (#543) */}
-        {teeOffDate && (
+        {/* #1814: kampen er avgjort uten spill. Banneret ERSTATTER nedtellingen
+            — spillerne åpner appen den morgenen og skal se med én gang at det
+            ikke blir noe av, ikke en klokke som teller ned til ingenting. */}
+        {cupWithdrawalDecision ? (
           <div className="mx-4 mt-4">
-            <ScheduledWaitingRoom
-              gameId={id}
-              teeOffAt={game.scheduled_tee_off_at!}
-              flightOptions={flightOptions}
-              currentFlightNumber={me.flight_number}
-            />
+            <Banner tone="warning">
+              {cupWithdrawalDecision.outcome === 'halved'
+                ? t('cupDecidedHalved', { names: decidedNames })
+                : t('cupDecidedWalkover', {
+                    names: decidedNames,
+                    side: cupWithdrawalDecision.winnerSide === 1 ? 1 : 2,
+                  })}
+            </Banner>
           </div>
+        ) : (
+          /* Countdown banner + flight-velger (#543) */
+          teeOffDate && (
+            <div className="mx-4 mt-4">
+              <ScheduledWaitingRoom
+                gameId={id}
+                teeOffAt={game.scheduled_tee_off_at!}
+                flightOptions={flightOptions}
+                currentFlightNumber={me.flight_number}
+              />
+            </div>
+          )
         )}
 
         {/* #544: venter-banner etter tee-tid når sidene ikke er fulltallige */}
@@ -949,7 +1009,7 @@ export default async function GameHomePage({
             kapteinen hvis bruker var team-medlem. */}
         <div className="pt-2 pb-4">
           <SmartLink
-            href={`/games/${id}/trekk-fra`}
+            href={withdrawHref}
             className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
           >
             {t('withdrawLink')}
@@ -1440,7 +1500,7 @@ export default async function GameHomePage({
         {isDraft && (
           <div className="pt-2">
             <SmartLink
-              href={`/games/${id}/trekk-fra`}
+              href={withdrawHref}
               className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
             >
               {t('withdrawLink')}
@@ -1457,7 +1517,7 @@ export default async function GameHomePage({
           supportsWithdrawal(game.game_mode) && (
             <div className="pt-1">
               <SmartLink
-                href={`/games/${id}/trekk-fra`}
+                href={withdrawHref}
                 className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
               >
                 {t('withdrawLink')}
