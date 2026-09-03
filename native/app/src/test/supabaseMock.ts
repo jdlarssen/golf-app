@@ -107,6 +107,7 @@ export const supabase: {
   auth: {
     getSession: jest.Mock;
     signOut: jest.Mock;
+    onAuthStateChange: jest.Mock;
   };
 } = {
   rpc: jest.fn(),
@@ -114,8 +115,40 @@ export const supabase: {
   auth: {
     getSession: jest.fn(),
     signOut: jest.fn(),
+    onAuthStateChange: jest.fn((callback: (event: string) => void) => {
+      authListeners.add(callback);
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {
+              authListeners.delete(callback);
+            },
+          },
+        },
+      };
+    }),
   },
 };
+
+/**
+ * Abonnentene på `onAuthStateChange`.
+ *
+ * Kom til med #1877: utloggingen kan ikke avgjøre ut fra `signOut()`s
+ * returverdi alene om den lokale sesjonen faktisk ble borte — auth-js svarer
+ * med `{ error }` både når den ryddet sesjonen og når den lot den stå.
+ * `SIGNED_OUT` er det ene signalet som skiller dem, så testene må kunne fyre
+ * det (eller la være).
+ */
+const authListeners = new Set<(event: string) => void>();
+
+/**
+ * Fyr et auth-event mot alle abonnenter — det den ekte klienten gjør inne i
+ * `signOut()` når sesjonen faktisk fjernes. Kalles fra en `signOut`-stub som
+ * skal etterligne «sesjonen ble ryddet, og SÅ kom feilen».
+ */
+export function emitAuthEvent(event: string): void {
+  for (const listener of authListeners) listener(event);
+}
 
 export const currentDeviceUserId: jest.Mock<Promise<string | null>, []> =
   jest.fn(async () => null);

@@ -15,7 +15,7 @@ import {
   resolveActiveCardState,
   type ActiveCardState,
 } from '../../../../lib/games/activeCardState';
-import { supabase } from '../supabase';
+import { currentDeviceUserId, supabase } from '../supabase';
 import { getCacheEntry, getDb, putCacheEntry } from './db';
 
 export const HOME_CACHE_KEY = 'home';
@@ -112,9 +112,31 @@ export async function loadHomeCards(): Promise<HomeList | undefined> {
 /**
  * Hent på nytt og legg i cachen. Som i `gameBundle.ts` slipper kastet ut FØR vi
  * rører cachen, så en feilet refetch lar den forrige lista stå.
+ *
+ * **Sesjonsvakten (#1877).** `HOME_CACHE_KEY` er global — den har ingen
+ * `userId` i seg, for det finnes bare én hjem-liste om gangen på en enhet. Da
+ * kan en refetch som var i lufta da spilleren logget ut, lande ETTER at
+ * utloggingen tømte basen og skrive forrige brukers kort inn igjen; neste
+ * bruker på telefonen ville sett dem. Eier ikke den innloggede lenger lista vi
+ * nettopp hentet, dropper vi derfor SKRIVINGEN. Lista returneres som før —
+ * kalleren som ba om den, skal få den; det er bare sporet på disken vi ikke
+ * legger igjen.
+ *
+ * Vakten sammenligner id-er i stedet for å nøye seg med «finnes det en
+ * sesjon?». En null-sjekk ville sluppet gjennom det verre tilfellet: A sin
+ * refetch henger (RN `fetch` har ingen tidsavbrudd), A logger ut, B logger inn
+ * — og når svaret endelig lander, finnes det en sesjon, den er bare ikke A sin.
+ * Da havner A sine spillnavn og baner på B sitt hjem.
  */
 export async function refreshHomeCards(userId: string): Promise<HomeList> {
   const list = await fetchHomeCards(userId);
+
+  // Leses etter fetchen, ikke før: vinduet vi vokter er nettopp det fetchen
+  // brukte. `currentDeviceUserId` leser sesjonen fra lokalt lager og svarer
+  // også offline (og null ved enhver feil), så vakten holder på en teeboks uten
+  // dekning like godt som på wifi. Null dekkes av samme sammenligning.
+  if ((await currentDeviceUserId()) !== userId) return list;
+
   const db = await getDb();
   await putCacheEntry(db, {
     key: HOME_CACHE_KEY,
