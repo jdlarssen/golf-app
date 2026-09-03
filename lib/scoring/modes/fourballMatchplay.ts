@@ -89,8 +89,13 @@ function readAllowancePct(ctx: ScoringContext): number {
 }
 
 /**
- * Bygger en `FourballSide` fra 2 sorterte spillere. Sortering på userId skjer
- * i `compute()` før kall, så vi kan trygt anta tuple-rekkefølge her.
+ * Bygger en `FourballSide` fra sidens 1–2 sorterte spillere. Sortering på
+ * userId skjer i `compute()` før kall, så rekkefølgen er deterministisk her.
+ *
+ * #1814: lista er ikke lenger en 2-tuple. En side kan stå med ÉN spiller når
+ * makkeren har trukket seg og arrangøren valgte «makkeren spiller alene» —
+ * ingen fantom-makker fylles inn, for en tom rad ville tatt slag på SI og
+ * forvrengt lag-besten.
  */
 function buildSide(
   sideNumber: 1 | 2,
@@ -103,10 +108,7 @@ function buildSide(
     effectiveHandicap: applyAllowance(p.courseHandicap, allowancePct),
     teeGender: p.teeGender,
   }));
-  return {
-    sideNumber,
-    players: [players[0], players[1]],
-  };
+  return { sideNumber, players };
 }
 
 export function compute(ctx: ScoringContext): FourballMatchplayResult {
@@ -119,8 +121,13 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
     .slice()
     .sort((a, b) => a.userId.localeCompare(b.userId));
 
-  // Fourball krever EKSAKT 2 spillere per side. Avvik → defensiv empty shell.
-  if (side1Players.length !== 2 || side2Players.length !== 2) {
+  // Fourball krever 1–2 spillere per side (#1814). To er det normale; én er en
+  // makker som ble stående alene etter et trekk i cupen og spiller videre —
+  // «best ball av én» er hens egen ball, så hull-sammenlikningen er uendret.
+  // Tom eller overbooket side → defensiv empty shell (draft-state kan ha
+  // 0/3/4 på samme side).
+  const sideSizeOk = (n: number) => n === 1 || n === 2;
+  if (!sideSizeOk(side1Players.length) || !sideSizeOk(side2Players.length)) {
     return emptyShell(ctx.holes.length);
   }
 
