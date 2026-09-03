@@ -18,7 +18,8 @@ import {
   createNativeStackNavigator,
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
-import { Account } from './screens/Account';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { PROFILE_TEXT } from './lib/profileCopy';
 import { Approve } from './screens/Approve';
 import { CreateGame } from './screens/CreateGame';
 import { DeleteAccount } from './screens/DeleteAccount';
@@ -27,10 +28,11 @@ import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { Home } from './screens/Home';
 import { Leaderboard } from './screens/Leaderboard';
+import { Profile } from './screens/Profile';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
-import { FONTS, useTheme, type Theme } from './theme';
+import { FONTS, TAP, useTheme, type Theme } from './theme';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -42,8 +44,8 @@ export type RootStackParamList = {
   Approve: { gameId: string };
   /** Arrangørens avslutt-flate (N6c, #1856) — kåring + status-flipp. */
   EndGame: { gameId: string };
-  /** Kontoflata (#1876) — e-post, utlogging og veien til sletting. */
-  Account: undefined;
+  /** Profil-rommet (#1906) — hvem du er, utlogging og veien til sletting. */
+  Profile: undefined;
   /** Bekreftelse på konto-sletting (#1876) — egen skjerm, husregelen. */
   DeleteAccount: undefined;
   SyncLab: undefined;
@@ -54,6 +56,30 @@ export type ScreenProps<T extends keyof RootStackParamList> =
   NativeStackScreenProps<RootStackParamList, T>;
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/**
+ * Ordet «Profil» oppe til høyre på hjem.
+ *
+ * Et ord og ikke et ikon: ikonspråket (#1879) er ikke bygget ennå, og en løs
+ * silhuett her ville forskuttert det valget. Tap-flaten er `TAP` bred og høy
+ * selv om ordet er smalere — headeren er det trangeste stedet i appen å treffe,
+ * og et ord på fem tegn er ikke en tap-flate i seg selv.
+ */
+function HeaderProfileLink({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={styles.headerLink}
+      testID="open-profile"
+    >
+      <Text style={[styles.headerLinkText, { color: colors.primary }]}>
+        {PROFILE_TEXT.heading}
+      </Text>
+    </Pressable>
+  );
+}
 
 /**
  * Sync-laben fra N2 beholdes som dev-verktøy. Den tar `userId` + `onBack` og
@@ -109,7 +135,16 @@ export function RootNavigator() {
         <Stack.Screen
           name="Home"
           component={Home}
-          options={{ title: 'Tørny Dev' }}
+          // `options` som funksjon får sin egen `navigation`, så inngangen til
+          // profil-rommet kan bo her i stedet for i `Home.tsx`. Hjem slipper
+          // dermed å kjenne til en skjerm den ellers ikke har noe med — og
+          // headeren er uansett navigatorens flate, ikke skjermens.
+          options={({ navigation }) => ({
+            title: 'Tørny Dev',
+            headerRight: () => (
+              <HeaderProfileLink onPress={() => navigation.navigate('Profile')} />
+            ),
+          })}
         />
         <Stack.Screen
           name="CreateGame"
@@ -147,9 +182,9 @@ export function RootNavigator() {
           options={{ title: 'Avslutt runden' }}
         />
         <Stack.Screen
-          name="Account"
-          component={Account}
-          options={{ title: 'Konto' }}
+          name="Profile"
+          component={Profile}
+          options={{ title: PROFILE_TEXT.heading }}
         />
         <Stack.Screen
           name="DeleteAccount"
@@ -165,3 +200,13 @@ export function RootNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  headerLink: {
+    minWidth: TAP,
+    minHeight: TAP,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  headerLinkText: { fontSize: 16, fontFamily: FONTS.sansMedium },
+});

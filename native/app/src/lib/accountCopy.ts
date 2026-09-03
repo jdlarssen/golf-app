@@ -2,6 +2,12 @@
 // Native #1876: tekstene konto-slettingen viser, og oversettelsen fra kode til
 // setning.
 //
+// Fila het en gang «tekstene på konto-flatene». #1906 tok Konto-skjermen bort
+// og erstattet den med profil-rommet, og de fire tekstene bare den brukte
+// («Konto», «Innlogget som», «Logg ut», «Slett konto») fulgte med ut: rommets
+// egne bor i `profileCopy.ts`, som i tillegg er paritetstestet mot webbens
+// `/profile`. Det som er igjen her tilhører slette-skjermen alene.
+//
 // Samme arbeidsdeling som `rosterCopy.ts` og `endGameCopy.ts`: datalaget svarer
 // med koder, skjermen viser tekst, og oversettelsen bor ett sted. Ingen
 // `default`-gren i noen av switch-ene — legger noen til en kode i en av
@@ -133,20 +139,15 @@ export function describeDeleteFailure(reason: AccountDeleteFailure): string {
  */
 export const DISPLAY_NAME_FALLBACK = 'kontoen din';
 
-/** Tekstene skjermene viser. Samlet her, ikke strødd i JSX-en. */
+/** Tekstene slette-skjermen viser. Samlet her, ikke strødd i JSX-en. */
 export const ACCOUNT_TEXT = {
-  // Konto-skjermen (app-egen — webben har ingen tilsvarende flate).
-  accountHeading: 'Konto',
-  signedInAs: 'Innlogget som',
-  signOut: 'Logg ut',
-  deleteEntry: 'Slett konto',
-
-  // Slette-skjermen. Alt fra og med `deletedHeading` er webbens ordlyd.
+  // Alt fra og med `deletedHeading` er webbens ordlyd.
   heading: 'Slett konto',
-  // Webben skriver «Tilbake til profil» fordi lenka går til /profile. I appen
-  // går veien tilbake til Konto-skjermen, som stack-headeren alt navngir — så
-  // her er det korte ordet det ærlige.
-  backLabel: 'Tilbake',
+  // #1876 skrev «Tilbake» her og bokførte avviket: webben sier «Tilbake til
+  // profil» fordi lenka går til `/profile`, og appen hadde ingen profil å gå
+  // tilbake til. #1906 bygde rommet, `goBack()` lander i det, og avviket er
+  // dermed borte — appen sier nå det samme som webben.
+  backLabel: 'Tilbake til profil',
   deletedHeading: 'Dette vil bli slettet',
   deletedBullets: [
     'Brukerprofilen din (navn, kallenavn, handicap)',

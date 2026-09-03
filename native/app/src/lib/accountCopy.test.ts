@@ -131,6 +131,10 @@ describe('de to kartene', () => {
 describe('ACCOUNT_TEXT', () => {
   it.each([
     ['heading', ACCOUNT_TEXT.heading, web.kicker],
+    // #1906: appen skrev «Tilbake» så lenge det ikke fantes noe profil-rom å
+    // gå tilbake til. Rommet finnes nå, `goBack()` lander i det, og strengen er
+    // webbens igjen — låst her så avviket ikke sniker seg inn på nytt.
+    ['backLabel', ACCOUNT_TEXT.backLabel, web.backLabel],
     ['deletedHeading', ACCOUNT_TEXT.deletedHeading, web.deletedHeading],
     ['deletedBullets[0]', ACCOUNT_TEXT.deletedBullets[0], web.bullet1],
     ['deletedBullets[1]', ACCOUNT_TEXT.deletedBullets[1], web.bullet2],
@@ -163,18 +167,5 @@ describe('ACCOUNT_TEXT', () => {
     expect(
       `${ACCOUNT_TEXT.confirmLead}${DISPLAY_NAME_FALLBACK}${ACCOUNT_TEXT.confirmTrail}`,
     ).toBe('Du er i ferd med å slette kontoen din permanent. Handlingen kan ikke angres.');
-  });
-
-  it('har ferdige setninger i alle app-egne tekster', () => {
-    const appOnly = [
-      ACCOUNT_TEXT.accountHeading,
-      ACCOUNT_TEXT.signedInAs,
-      ACCOUNT_TEXT.signOut,
-      ACCOUNT_TEXT.deleteEntry,
-      ACCOUNT_TEXT.backLabel,
-    ];
-    for (const text of appOnly) {
-      expect(isFinishedSentence(text)).toBe(true);
-    }
   });
 });
