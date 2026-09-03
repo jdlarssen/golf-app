@@ -219,12 +219,18 @@ export async function CupWithdrawConfirm({
                         {t('withdraw.playOnLegend', { partner: m.partnerName ?? '' })}
                       </legend>
                       {/* Forhåndsvalget er «etter regelen» (E4): arrangøren
-                          skal aktivt bestemme at makkeren spiller videre. */}
+                          skal aktivt bestemme at makkeren spiller videre.
+                          Boksen speiler et valg som alt er registrert på
+                          kampen (et tidligere trekk i samme fourball) — en
+                          umerket boks skriver eksplisitt «etter regelen»,
+                          så uten speilingen ville et nytt trekk stille
+                          snudd forrige svar (evaluator-funn, runde 3). */}
                       <label className="mt-1 flex min-h-[44px] items-center gap-2 font-sans text-[13px] text-text">
                         <input
                           type="checkbox"
                           name="play_on_game_ids"
                           value={m.gameId}
+                          defaultChecked={m.playOn}
                           data-testid={`cup-withdraw-playon-${m.gameId}`}
                         />
                         {t('withdraw.playOnYes', { partner: m.partnerName ?? '' })}
