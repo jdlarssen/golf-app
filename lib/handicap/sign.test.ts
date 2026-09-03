@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import {
-  toSignedHcp,
-  fromSignedHcp,
-  formatGolfboxHcp,
-  formatHcpDisplay,
-} from './sign';
+import { toSignedHcp, fromSignedHcp } from './sign';
+// #1906: visningen bor i `./signFormat` — `./sign` er en ren blad-modul uten
+// Intl, slik at native-appen kan importere fortegns-helperne uten å dra hele
+// Intl-grafen inn i bundelen. Testen dekker fortsatt begge halvdelene.
+import { formatGolfboxHcp, formatHcpDisplay } from './signFormat';
 
 describe('toSignedHcp', () => {
   it.each([
