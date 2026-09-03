@@ -182,7 +182,8 @@ appen uten reload.
 
 Fem skjermer på en `@react-navigation/native-stack` (`src/navigation.tsx`),
 bak samme login-gate som før: Hjem → GameHome → Hole/Scorecard/Approve.
-Sync-laben lever videre som dev-verktøy, lenket nederst på Hjem.
+Sync-laben lever videre som dev-verktøy — fra #1906 lenket fra utvikler-seksjonen
+i profil-rommet, og bare i staging-bygg.
 
 - **Hjem** (`src/screens/Home.tsx`) — «Pågår nå» / «Mine spill» / «Siste
   avsluttede» fra RLS-spørringer (speil av webbens hjem, minus discovery).
@@ -965,10 +966,12 @@ selv. Appen snakker i stedet med én ny route handler på web-deployen, og regel
 liggende der den alltid har ligget: `lib/users/deleteAccount.ts`. Ruta er transport,
 ikke logikk — appen speiler ingen blokk-regel, den spør og viser svaret.
 
-Flatene: «Konto» nederst på hjem → `src/screens/Account.tsx` (e-post, «Logg ut»,
-«Slett konto») → `src/screens/DeleteAccount.tsx` (dedikert bekreftelsesskjerm, husregelen
-for irreversible handlinger). Kallene bor i `src/data/account.ts`, copyen i
-`src/lib/accountCopy.ts` (paritet med `messages/no.json` → `profile.deleteAccount`).
+Flatene (oppdatert i #1906): ordet «Profil» oppe til høyre i hjem-headeren →
+`src/screens/Profile.tsx` → `src/screens/DeleteAccount.tsx` (dedikert bekreftelsesskjerm,
+husregelen for irreversible handlinger). `src/screens/Account.tsx` er slettet — rommet
+erstattet den, og sletting ligger fortsatt to nivåer ned. Kallene bor i
+`src/data/account.ts`, copyen i `src/lib/accountCopy.ts` (paritet med `messages/no.json`
+→ `profile.deleteAccount`).
 
 ### API-kontrakten — ett endepunkt, to verb
 
@@ -1218,14 +1221,12 @@ brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 4
   garanti. Oppførselen er webbens egen og uendret her — regelen har ett hjem.
 - **`anonymize_user` sletter `push_subscriptions`, men ikke `apns_tokens`** (0166 kom
   etter 0142). Push er parkert til N7, så det er filt som eget issue og ikke fikset her.
-- **Konto-skjermen som inngang er et eier-vetopunkt.** «Slett konto» ligger ett trykk
-  unna, ikke rett i hjem-footeren. Vil eieren ha lenka på hjem, er det en liten ombygging.
-- **«Logg ut» står to steder** — hjem-footeren beholder sin, og Konto-skjermen har sin.
-  Bevisst: et konto-rom uten utlogging ville sendt folk tilbake til hjem for den ene
-  tingen de kom for.
-- **`backLabel` er «Tilbake», ikke webbens «Tilbake til profil»** — appen har ingen
-  profil-skjerm å love. Eneste stedet copy-pariteten med `messages/no.json` bevisst
-  brytes.
+- ~~**Konto-skjermen som inngang er et eier-vetopunkt.**~~ Lukket i #1906: inngangen er
+  «Profil» i hjem-headeren, og sletting ligger fortsatt to nivåer ned.
+- ~~**«Logg ut» står to steder.**~~ Lukket i #1906: hjem-footeren er borte, og
+  utloggingen finnes bare i profil-rommet.
+- ~~**`backLabel` er «Tilbake», ikke webbens «Tilbake til profil».**~~ Lukket i #1906 —
+  rommet finnes, `goBack()` lander i det, og pariteten er gjenopprettet og låst i test.
 - **Appen viser aldri `mode`.** Feltet er informasjon til logg og staging-bevis; for
   spilleren er utfallet det samme.
 - **Appen oppretter fortsatt ikke kontoer** (`shouldCreateUser: false` i `Login.tsx`), så
@@ -1322,3 +1323,104 @@ eneste som KAN gjøre jobben, men det er et valg, ikke en forglemmelse.
 
 `EXPO_PUBLIC_*` bakes inn ved bundling — samme felle som slette-flyten beskriver over.
 Mangler adressen, sier både purringen og lenkeknappene det rett ut. Aldri en stille knapp.
+
+## Profil-rommet (#1906 / #1877)
+
+Appen hadde ingen profil-flate. Det som fantes var en tynn `Account`-skjerm og fire
+lenker nederst på hjem (e-post, Konto, Sync-lab, Logg ut) — en restehylle som vokste
+hver gang noe ikke passet andre steder. #1906 ga det ett rom, og #1877 ga utloggingen
+en opprydding.
+
+**Inngangen er ordet «Profil» oppe til høyre i hjem-headeren** (`testID="open-profile"`,
+satt i `navigation.tsx` via `options`-funksjonen, så `Home.tsx` slipper å vite om den).
+Hjem-footeren er borte i sin helhet, og `Account.tsx` er slettet.
+
+### Hierarkiet ER endringen
+
+På Konto-skjermen var «Logg ut» en innrammet knapp (`ui.buttonSecondary`) og «Slett
+konto» en dempet lenke under den. Den reversible handlingen ropte, den irreversible
+hvisket. Rommet snur det:
+
+1. **Identitetskort** — navn (fallback: e-post, så «Profil»), e-post, «hcp 12,4» med
+   webbens ferskhetsmerke. Feiler radlesingen, blir feilen inne i kortet: utlogging og
+   sletting spør serveren selv og skal virke uansett — særlig sletting, som App Review
+   skal finne uten forklaring.
+2. **«Utvikler» → «Sync-lab»** — kun i staging-bygg. Står ØVERST av seksjonene, slik at
+   sletting forblir siste rad uansett bygg.
+3. **«Konto» → «Logg ut»** — en helt vanlig rad. Ingen ramme, ingen chevron (den
+   navigerer ikke, den handler).
+4. **Ekstra luft, så «Slett konto»** alene i egen liste, i `colors.danger`. Luften er en
+   tap-buffer, ikke en marg: en tommel på vei mot «Logg ut» skal ikke treffe sletting.
+
+Radprimitiven er `components/SettingRow.tsx` (+ `SettingList`), portert fra webbens
+`components/ui/SettingRow.tsx`. Chevron er en tekst-glyf `›` inntil ikonspråket (#1879)
+lander — ikke dra inn et ikonbibliotek for den.
+
+### Staging-gaten: verten, ikke `__DEV__`
+
+`lib/stagingGate.ts` sammenligner verten i `EXPO_PUBLIC_SUPABASE_URL` med
+`STAGING_SUPABASE_HOST`. **`__DEV__` duger ikke** — eierens telefonbygg er Release, og
+da ville utvikler-raden vært usynlig nettopp der den trengs. Gaten er fail-closed:
+manglende, tom eller uparsbar URL gir `false`, og verten sammenlignes som vert (ikke
+`includes`, som ville sluppet gjennom `…supabase.co.angriper.no`). I et butikk-bygg
+finnes raden ikke i treet i det hele tatt.
+
+### Utloggingsregelen (#1877)
+
+`data/logout.ts` eier den, og rekkefølgen er kontrakten:
+
+```
+tell kø (inkl. karantene) → drain best-effort, racet mot 4 s → tell på nytt
+  → fortsatt uleverte og ikke keepUnsent? → returner `unsent`, ingenting har skjedd
+  → ellers signOut → wipe, men KUN når køen var tom
+```
+
+Motsatt av `deleteAccount`, som wiper FØR signOut: der er kontoen borte og wipen er ren
+opprydding; her lever kontoen, så sesjonen skal dø først, slik at en drain som fortsatt
+puster mister tilgangen i stedet for å skrive nye rader inn etter tømmingen.
+
+**Avviket fra webben:** webben logger deg stille ut (`prepareLogout`, #1404) fordi den
+ikke kan spørre midt i en POST. Appen spør — `Alert` med [Avbryt] / [Logg ut likevel].
+En teeboks uten dekning er ikke kanten her, det er det normale tilfellet. Regelen om hva
+som beholdes og tømmes er fortsatt #1404 sin.
+
+⚠️ **`signOut()` sier IKKE om sesjonen ble borte.** Dette er fella i slicen, funnet i
+gransking og verifisert i `@supabase/auth-js` 2.112.4. Klienten resolver med `{ error }`
+i to helt ulike tilfeller:
+
+- **Sesjonen ble ryddet, så kom feilen.** Serveren svarte ikke (den vanlige
+  offline-utloggingen). `_signOut` kaller `removeCurrentSession()` før den returnerer.
+  Spilleren ER logget ut.
+- **Sesjonen ble stående.** Er access-tokenet utløpt OG refresh feiler med en
+  nettverksfeil, hopper `_callRefreshToken` over `_removeSession` (den grenen kjører kun
+  for feil som ikke er retryable), `__loadSession` svarer `{ session: null, error }`, og
+  `_signOut` returnerer med en tidlig `return` FØR opprydningen. Sesjonen ligger igjen i
+  AsyncStorage. Dette treffer nøyaktig én situasjon: offline i mer enn en time — altså
+  en runde uten dekning.
+
+`getSession()` kan ikke skille dem (`session: null` i begge). Det som kan, er
+**`SIGNED_OUT`**: `_removeSession()` avslutter med å varsle abonnentene, og `_signOut`
+venter på det kallet. `signOutAndConfirm` lytter derfor over kallet og svarer på om
+eventet kom. Uten det skillet ville appen tømt hele den lokale basen for en spiller som
+fortsatt er innlogget — og meldt at utloggingen gikk bra. Utfallet heter
+`signout-failed`, og skjermen sier at nett er kravet i stedet for å låse raden på
+«Logger ut …».
+
+**Copyen lover ikke levering.** «Blir liggende på telefonen til du logger inn igjen» —
+ikke «sendes». Karantene-rader (#668) telles med i antallet og går aldri opp, og logger
+en annen bruker inn på telefonen, finnes det ingen eier-vakt som rydder. Låst i test.
+
+### Bokførte gap
+
+- **Ingen eier-vakt ved innlogging.** Webben har to lag (#1404): `prepareLogout` OG
+  `ensureLocalDataOwner`, som tømmer forrige brukers rester når en annen logger inn.
+  Appen har bare det første. Velger A «Logg ut likevel» og B logger inn på samme
+  telefon, drainer B sin sesjon A sine kø-rader, RLS avviser dem permanent, og etter
+  fem forsøk karanteneres de for godt. Filt som eget issue — utenfor #1906 (kontrakten
+  legger eierbytte-vakten til #1368-familien).
+- **«Sett handicap» rendres ikke.** Webben har lenka; den hopper til profilskjemaet, som
+  først finnes i PR B. En rad som ber deg gjøre noe appen ikke lar deg gjøre er verre
+  enn ingen rad. `PROFILE_TEXT.setHandicap` står klar og paritetstestet til PR B.
+- **`refreshHomeCards` er vaktet, ikke navnerommet.** `HOME_CACHE_KEY` er fortsatt
+  global (`'home'`, uten `userId`); vakten sammenligner eier før skriving. Et
+  bruker-prefikset nøkkelrom ville vært den egentlige fiksen.
