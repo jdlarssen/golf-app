@@ -125,6 +125,25 @@ describe('EditProfile', () => {
       expect(navigate).toHaveBeenCalledWith('Profile', { saved: true });
     });
   });
+
+  it('fjerner feilen når spilleren retter feltet', async () => {
+    // Sett i staging-runden: «99» ga «Handicap-index må være et tall mellom 0
+    // og 54», og den røde linja ble stående etter at feltet var rettet. En feil
+    // som gjelder verdier spilleren nettopp har endret, er ikke sann lenger.
+    saveProfileMock.mockResolvedValue({ ok: false, reason: 'hcp_invalid' });
+    await renderScreen();
+
+    // `fireEvent` er asynkron i RNTL 14 — uten `await` er state-oppdateringen
+    // ikke landet når neste linje leser skjermen.
+    await fireEvent.changeText(screen.getByTestId('edit-profile-hcp'), '99');
+    await fireEvent.press(screen.getByTestId('edit-profile-save'));
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-profile-error')).toBeTruthy();
+    });
+
+    await fireEvent.changeText(screen.getByTestId('edit-profile-hcp'), '4');
+    expect(screen.queryByTestId('edit-profile-error')).toBeNull();
+  });
 });
 
 describe('asGender / asLevel', () => {
