@@ -92,6 +92,13 @@ export async function CupWithdrawConfirm({
     team2: ctx.tournament.team_2_name,
   };
 
+  // Cup-status-gaten (kontrakten: «cup draft/finished → alle trekk-innganger
+  // skjult og actions avviser»). Alle fire handlingene svarer `wrong_status`
+  // uansett, men et utkast med genererte kamper rendret hele skjemaet — og en
+  // knapp serveren garantert avviser er verre enn ingen knapp. Samme info-linje
+  // som spillerens egen side (`/cup/[id]/trekk`), ikke `notFound()`: arrangøren
+  // fulgte en gyldig lenke, og en 404 forklarer ingenting.
+  const cupActive = ctx.tournament.status === 'active';
   // Allerede trukket → angre-varianten (E7).
   const isUndo = ctx.pending.some((m) => m.alreadyWithdrawn);
   const toWrite = ctx.pending.filter((m) => !m.alreadyWithdrawn);
@@ -130,13 +137,22 @@ export async function CupWithdrawConfirm({
         </div>
       )}
 
-      {!isUndo && (
+      {!isUndo && cupActive && (
         <div className="mt-5">
           <Banner tone="warning">{t('withdraw.warningAdmin')}</Banner>
         </div>
       )}
 
-      {isUndo ? (
+      {!cupActive ? (
+        <div className="mt-5 rounded-xl border border-border bg-surface px-4 py-3.5">
+          <p
+            className="font-sans text-[13px] leading-relaxed text-text"
+            data-testid="cup-withdraw-cup-not-active"
+          >
+            {t('withdraw.errors.wrong_status')}
+          </p>
+        </div>
+      ) : isUndo ? (
         <div className="mt-5 rounded-xl border border-border bg-surface px-4 py-3.5">
           <p className="font-sans text-[13px] leading-relaxed text-text">
             {t('withdraw.undoBody')}
@@ -178,7 +194,7 @@ export async function CupWithdrawConfirm({
       )}
 
       <div className="mt-6 flex flex-col gap-2.5">
-        {isUndo ? (
+        {!cupActive ? null : isUndo ? (
           <form action={submitUndoCupWithdrawal}>
             <input type="hidden" name="tournament_id" value={tournamentId} />
             <input type="hidden" name="user_id" value={userId} />
