@@ -386,9 +386,15 @@ export default async function GameHomePage({
   // side auto-start aldri kunne starte. Cup-siden viser konsekvensen for HVER
   // kamp og lar arrangøren velge om en fourball-makker spiller alene.
   // Liga-runder beholder dagens vei ut.
-  const withdrawHref = game.tournament_id
-    ? `/cup/${game.tournament_id}/trekk`
-    : `/games/${id}/trekk-fra`;
+  //
+  // Kun FØR start: en cup-kamp som er i gang har ingen DELETE-gren å beskytte
+  // mot, og det myke trekket underveis (#386, `withdrawn_at` på en pågående
+  // best ball) er fortsatt riktig vei ut. Ruter vi den til cup-siden, møter
+  // spilleren en side som sier «ingenting å trekke seg fra».
+  const withdrawHref =
+    game.tournament_id && (game.status === 'draft' || game.status === 'scheduled')
+      ? `/cup/${game.tournament_id}/trekk`
+      : `/games/${id}/trekk-fra`;
 
   // Drafts are visible to invited players as a venterom — see the draft
   // branch in the default return below for progressive disclosure.
