@@ -7,7 +7,7 @@ Mobil-først PWA for å arrangere golf-turneringer. Skalerer fra 4 kompiser til 
 
 **Produksjon:** [tornygolf.no](https://tornygolf.no) (også `tørny.no`)
 **Repo:** github.com/jdlarssen/golf-app
-**Hosting:** Vercel (Hobby tier)
+**Hosting:** Vercel (Hobby tier) — funksjonene kjører i Stockholm (`arn1`, satt i `vercel.json`), samme by som Supabase (`eu-north-1`). Ikke fjern `regions` uten å måle: standardverdien er Washington.
 **Database/Auth:** Supabase (Free tier, EU-region)
 **Mail:** Resend SMTP via verifisert domene `tornygolf.no`
 
