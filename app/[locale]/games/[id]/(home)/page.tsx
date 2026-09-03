@@ -672,10 +672,12 @@ export default async function GameHomePage({
               .select('team_1_name, team_2_name')
               .eq('id', game.tournament_id!)
               .maybeSingle<{ team_1_name: string; team_2_name: string }>();
-            if (!cup) return '';
-            return cupWithdrawalDecision.winnerSide === 1
-              ? cup.team_1_name
-              : cup.team_2_name;
+            const side = cupWithdrawalDecision.winnerSide === 1 ? 1 : 2;
+            const name = side === 1 ? cup?.team_1_name : cup?.team_2_name;
+            // Slår oppslaget feil, eller står lagnavnet tomt, endte setningen
+            // på «… så walkover til .». «Lag 1»/«Lag 2» sier i det minste
+            // hvilken side som får kampen.
+            return name?.trim() || t('teamValue', { number: side });
           })()
         : '';
 
