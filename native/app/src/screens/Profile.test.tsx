@@ -17,10 +17,14 @@
 //  3. **«Logg ut» spør før den lar slag ligge igjen.** `logOut` svarer `unsent`,
 //     skjermen viser dialogen, «Avbryt» setter raden tilbake slik den var, og
 //     «Logg ut likevel» er det ENESTE som sender `keepUnsent`.
+//  4. **Raden låser seg ikke når sesjonen overlevde.** `signout-failed` betyr at
+//     spilleren fortsatt er innlogget; da må «Logger ut …» gå tilbake til «Logg
+//     ut», for skjermen unmountes aldri — `SIGNED_OUT` kom jo ikke.
 //
-// Tre renders og ikke én: staging-på og staging-av er to bygg, og en dialog som
-// står åpen er en tilstand skjermen ikke kan være i samtidig med utgangspunktet.
-// Samme grunn som `DeleteAccount.test.tsx` har flere.
+// Fire renders og ikke én: staging-på og staging-av er to bygg, og en dialog som
+// står åpen (eller en feilet utlogging) er tilstander skjermen ikke kan være i
+// samtidig med utgangspunktet. Samme grunn som `DeleteAccount.test.tsx` har
+// flere. Kontrakten ba om «én Type C-render»; avviket er bokført i PR-en.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';

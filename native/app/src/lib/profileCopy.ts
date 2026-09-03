@@ -64,7 +64,8 @@ export const PROFILE_TEXT = {
   // sletting spør serveren selv, så feilen holdes inne i kortet i stedet for å
   // bytte ut hele skjermen. Ordlyden er hjems, for det er samme slags svar på
   // samme slags problem.
-  loadFailedNote: 'Fikk ikke tak i profilen din. Sjekk nettet og prøv igjen.',
+  loadFailedNote:
+    'Fikk ikke tak i profilen din. Sjekk nettet — vi henter den på nytt neste gang du åpner Profil.',
   // Utloggingen kastet. En rad som blir trykkbar igjen uten et ord ville lest
   // som at appen hang.
   logoutFailedNote: 'Fikk ikke logget deg ut. Prøv igjen.',
@@ -139,7 +140,7 @@ export function formatHcpNb(signed: number): string {
  * Det samme gjelder datoformatet: `formatShortDateNb` er håndskrevet og
  * Intl-fri, så den bundler rett inn i appen.
  *
- * @param updatedAt tidsstempelet fra `users.hcp_updated_at`, eller `null`.
+ * @param updatedAt tidsstempelet fra `users.handicap_updated_at`, eller `null`.
  * @param now injiserbar for tester; produksjonskall lar den stå.
  */
 export function describeHandicapAge(
