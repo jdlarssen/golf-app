@@ -243,6 +243,7 @@ export async function CupMatchList({
                     tournamentId={tournamentId}
                     gameId={m.gameId}
                     playOn={m.soloPlayOn != null}
+                    choicePending={m.playOnChoicePending === true}
                     partnerName={partnerName}
                   />
                 )}

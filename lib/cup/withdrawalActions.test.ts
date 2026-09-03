@@ -217,7 +217,11 @@ describe('withdrawCupPlayer — hvilke kamper som flagges (#1814)', () => {
     expect(gameWrites[1].args[0]).toEqual({ mode_config: config });
   });
 
-  it('skriver withdrawal_play_on på den valgte fourball-kampen — og bare den', async () => {
+  // Den avkryssede kampen får `true`, den uavkryssede en EKSPLISITT `false` —
+  // ikke fravær. Arrangøren så avkrysningen og lot den stå: det er svaret
+  // «etter regelen», og venter-banneret på cup-styringen skal slutte å mase.
+  // Uten dette var banneret umulig å besvare med regelen.
+  it('skriver arrangørens svar på HVER fourball — true på avkrysset, false på resten', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
       ...reads({
@@ -228,13 +232,18 @@ describe('withdrawCupPlayer — hvilke kamper som flagges (#1814)', () => {
             teams_count: 2,
             allowance_pct: 90,
           }),
-          game('g2', 'scheduled', 'fourball_matchplay'),
+          game('g2', 'scheduled', 'fourball_matchplay', {
+            kind: 'fourball_matchplay',
+            team_size: 2,
+            teams_count: 2,
+          }),
         ],
         rows: [playerRow('g1'), playerRow('g2')],
       }),
       { data: [{ user_id: PLAYER }], error: null }, // flagg g1
       { data: [{ id: 'g1' }], error: null }, // mode_config g1
       { data: [{ user_id: PLAYER }], error: null }, // flagg g2
+      { data: [{ id: 'g2' }], error: null }, // mode_config g2
       {
         data: [
           { id: 'g1', status: 'scheduled' },
@@ -250,7 +259,7 @@ describe('withdrawCupPlayer — hvilke kamper som flagges (#1814)', () => {
     ).catch(() => {});
 
     const configWrites = updates('games');
-    expect(configWrites).toHaveLength(1);
+    expect(configWrites).toHaveLength(2);
     // Merge, aldri erstatt: allowance_pct og kind må overleve.
     expect(configWrites[0].args[0]).toEqual({
       mode_config: {
@@ -261,9 +270,19 @@ describe('withdrawCupPlayer — hvilke kamper som flagges (#1814)', () => {
         withdrawal_play_on: true,
       },
     });
+    expect(configWrites[1].args[0]).toEqual({
+      mode_config: {
+        kind: 'fourball_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        withdrawal_play_on: false,
+      },
+    });
   });
 
-  it('ignorerer et play_on-valg på en modus som ikke har alene-varianten', async () => {
+  // Verken `true` eller den eksplisitte `false`-en: modusen deler ball, så det
+  // finnes ikke noe valg å registrere (E4).
+  it('rører ikke mode_config på en modus som ikke har alene-varianten', async () => {
     adminMock = buildSupabaseMock([
       gateGroupIdNull,
       ...reads({
