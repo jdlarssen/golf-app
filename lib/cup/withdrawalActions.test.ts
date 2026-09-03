@@ -431,6 +431,7 @@ describe('undoCupWithdrawal (#1814)', () => {
           playerRow('g2', '2026-09-09T20:00:00.000Z'),
         ],
       }),
+      { data: [], error: null }, // ingen andre trukne rader i g2
       { data: [{ user_id: PLAYER }], error: null }, // nulling g2
       { data: [{ id: 'g2' }], error: null }, // mode_config g2
     ]);
@@ -457,6 +458,35 @@ describe('undoCupWithdrawal (#1814)', () => {
         teams_count: 2,
       },
     });
+  });
+
+  // En fourball der begge lag mistet en spiller: kommer den ene tilbake, står
+  // makkeren på den andre siden fortsatt alene, og arrangørens svar gjelder.
+  it('lar play-on-valget stå når en annen spiller fortsatt er trukket', async () => {
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull,
+      ...reads({
+        games: [
+          game('g1', 'scheduled', 'fourball_matchplay', {
+            kind: 'fourball_matchplay',
+            team_size: 2,
+            teams_count: 2,
+            withdrawal_play_on: true,
+          }),
+        ],
+        rows: [playerRow('g1', '2026-09-09T20:00:00.000Z')],
+      }),
+      { data: [{ game_id: 'g1' }], error: null }, // en annen står fortsatt trukket
+      { data: [{ user_id: PLAYER }], error: null }, // nulling g1
+    ]);
+
+    const { undoCupWithdrawal } = await import('./withdrawalActions');
+    await undoCupWithdrawal(form({ tournament_id: CUP, user_id: PLAYER })).catch(
+      () => {},
+    );
+
+    expect(updates('game_players')).toHaveLength(1);
+    expect(updates('games')).toHaveLength(0);
   });
 
   it('spiller som ikke er trukket → not_withdrawn', async () => {
