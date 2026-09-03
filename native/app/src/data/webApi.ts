@@ -21,10 +21,14 @@
 // 3. **Tokenet.** Uten sesjon finnes det ingenting å autentisere med, og vi
 //    sender ikke et kall vi vet blir avvist.
 //
-// **Kallet har ingen kropp og ingen query.** Bruker-id-en kommer utelukkende
-// fra tokenet serveren validerer; sender appen aldri en id, finnes det ingen id
-// å forveksle med en annens. Alt som skal identifisere noe annet enn brukeren
-// står i STIEN (`/api/games/<id>/remind`), og gates av ruta.
+// **Kroppen bærer verdier, aldri identitet.** #1906 ga profil-lagringen en
+// rute, og med den den første kroppen — feltene spilleren skrev inn. Regelen
+// under er den samme som da det ikke fantes noen kropp: bruker-id-en kommer
+// utelukkende fra tokenet serveren validerer. Sender appen aldri en id, finnes
+// det ingen id å forveksle med en annens — og rutene på den andre siden leser
+// ingen id fra kroppen, uansett hva som skulle stå der.
+// Alt som skal identifisere noe ANNET enn brukeren står i STIEN
+// (`/api/games/<id>/remind`), og gates av ruta. Ingen av kallene bruker query.
 //
 // Utfallene er TYPEDE koder, aldri bruker-tekst (samme linje som `startGame.ts`
 // og `rosterActions.ts`). HTTP-status oversettes én gang, i kaller-modulen, slik
@@ -86,11 +90,17 @@ async function readBody(response: Response): Promise<Record<string, unknown>> {
  * Ett kall mot en app→server-rute, med alle guardene foran i fast rekkefølge.
  *
  * @param path stien på web-deployen, f.eks. `/api/account/delete`.
- * @param method verbet ruta forventer. Ingen av rutene tar en kropp.
+ * @param method verbet ruta forventer.
+ * @param body feltverdiene ruta skal lagre, eller `undefined` for de kallene
+ *   som ikke har noe å sende. Tillegget er additivt med vilje: uten `body`
+ *   sendes hverken `Content-Type` eller kropp, så slettingen (#1876) og
+ *   purringen (#1889) går på nettet nøyaktig som før. Aldri en id her — se
+ *   fil-kommentaren.
  */
 export async function callWebRoute(
   path: string,
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT',
+  body?: Record<string, unknown>,
 ): Promise<WebApiCall> {
   if (!isDeviceOnline()) return { ok: false, reason: 'offline' };
 
@@ -106,7 +116,9 @@ export async function callWebRoute(
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
     return { ok: true, status: response.status, body: await readBody(response) };
   } catch (err) {

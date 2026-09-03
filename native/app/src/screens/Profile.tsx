@@ -15,11 +15,14 @@
 // med luft over. Luften er ikke pynt — den er avstanden en tommel på vei mot
 // «Logg ut» trenger for ikke å treffe sletting.
 //
-// **Rommet leser, det skriver ikke.** Redigering av profilfeltene kommer i
-// PR B (`PUT /api/profile`), og derfor finnes det ingen rad her som later som
-// om den fører til et skjema.
+// **Rommet leser; skrivingen bor i sitt eget rom.** «Rediger profil» fører til
+// `EditProfile`, og lagringen derfra går gjennom `PUT /api/profile` — appen kan
+// aldri skrive rett mot `users`, for en handicap-retting må også regne om de
+// frosne banehandicapene i pågående runder, og den jobben er service-role. Her
+// vises resultatet: kommer spilleren tilbake med en kvittering, står banneret
+// øverst og raden hentes på nytt.
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { logOut } from '../data/logout';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
@@ -32,9 +35,9 @@ import {
 import { isStagingBuild } from '../lib/stagingGate';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { useTheme } from '../theme';
+import { TAP, useTheme } from '../theme';
 
-export function Profile({ navigation }: ScreenProps<'Profile'>) {
+export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   const { userId, email } = useSession();
   const { ui } = useTheme();
 
@@ -46,11 +49,22 @@ export function Profile({ navigation }: ScreenProps<'Profile'>) {
   // den generelle når kallet kastet. To ulike årsaker, to ulike setninger.
   const [logoutNote, setLogoutNote] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Kvitteringen `EditProfile` kommer tilbake med. Banneret er RENT avledet av
+  // ruteparameteren — ingen egen state, ingen setState i en effekt — og
+  // parameteren nullstilles når rommet mister fokus (effekten lenger nede).
+  const updated = route.params?.saved === true;
+
+  // Hentingen bor i en callback fordi rommet leser raden to ganger: når det
+  // åpnes, og på nytt når `EditProfile` kommer tilbake med en kvittering. Samme
+  // funksjon begge veier — to lesninger som kunne drifte fra hverandre er
+  // nettopp det vi ikke vil ha rett etter en lagring.
+  const load = useCallback(() => {
     let cancelled = false;
-    fetchOwnProfile(userId)
+    void fetchOwnProfile(userId)
       .then((row) => {
-        if (!cancelled) setProfile(row);
+        if (cancelled) return;
+        setProfile(row);
+        setLoadFailed(false);
       })
       .catch((err: unknown) => {
         console.error('[Profile] profiloppslag feilet', err);
@@ -60,6 +74,30 @@ export function Profile({ navigation }: ScreenProps<'Profile'>) {
       cancelled = true;
     };
   }, [userId]);
+
+  useEffect(load, [load]);
+
+  // Ny lagring → les raden på nytt, så kortet viser det som faktisk står i
+  // basen og ikke det skjemaet trodde det sendte. Opprydningen fra `load`
+  // kastes her: kvitteringen kommer én gang, og en avbrutt henting ville vært
+  // nettopp den vi ba om.
+  useEffect(() => {
+    if (!updated) return;
+    load();
+  }, [updated, load]);
+
+  // Kvitteringen er en engangsbeskjed, og den nullstilles når rommet mister
+  // fokus. Uten det ville flagget blitt stående i ruteparameteren — skjermen
+  // ligger jo igjen i stacken — og banneret dukket opp på nytt neste gang
+  // spilleren kom tilbake hit, for eksempel etter å ha åpnet skjemaet og
+  // ombestemt seg.
+  useEffect(
+    () =>
+      navigation.addListener('blur', () => {
+        navigation.setParams({ saved: false });
+      }),
+    [navigation],
+  );
 
   /**
    * Spørsmålet `logOut` stiller når køen ikke er tom.
@@ -149,6 +187,14 @@ export function Profile({ navigation }: ScreenProps<'Profile'>) {
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="profile-screen">
+      {updated ? (
+        <View style={ui.banner}>
+          <Text style={ui.body} testID="profile-updated-banner">
+            {PROFILE_TEXT.updatedBanner}
+          </Text>
+        </View>
+      ) : null}
+
       <View style={ui.card} testID="profile-identity">
         <Text style={ui.value} testID="profile-name">
           {shownName}
@@ -165,9 +211,22 @@ export function Profile({ navigation }: ScreenProps<'Profile'>) {
             {PROFILE_TEXT.loadFailedNote}
           </Text>
         ) : profile ? (
-          <HandicapLine profile={profile} />
+          <HandicapLine
+            profile={profile}
+            onSetHandicap={() => navigation.navigate('EditProfile')}
+          />
         ) : null}
       </View>
+
+      {/* Chevron: raden fører til et rom, den handler ikke her og nå. */}
+      <SettingList testID="profile-edit">
+        <SettingRow
+          label={PROFILE_TEXT.editRow}
+          chevron
+          onPress={() => navigation.navigate('EditProfile')}
+          testID="profile-edit-entry"
+        />
+      </SettingList>
 
       {/* Utvikler-seksjonen står ØVERST av de to, slik at sletting forblir den
           siste raden på skjermen uansett hvilket bygg appen er. I et
@@ -227,13 +286,18 @@ export function Profile({ navigation }: ScreenProps<'Profile'>) {
 /**
  * «hcp 12,4» med ferskheten på linja under.
  *
- * Uten handicap står det bare «hcp –». Webben setter en «Sett handicap»-lenke
- * ved siden av, men den lenka hopper til feltet i profilskjemaet — og det
- * skjemaet finnes ikke i appen før PR B. En dempet linje som ber deg gjøre noe
- * appen ikke lar deg gjøre er verre enn ingen linje, så den kommer sammen med
- * skjemaet den peker på.
+ * Uten handicap står det «hcp –» og en «Sett handicap»-lenke i stedet for
+ * ferskhets-linja — webbens ordlyd, og nå med et sted å gå: skjemaet den peker
+ * på finnes fra og med denne PR-en. Lenka har tap-flate (`TAP`) selv om
+ * teksten er smalere; to ord er ikke en trykkflate i seg selv.
  */
-function HandicapLine({ profile }: { profile: OwnProfile }) {
+function HandicapLine({
+  profile,
+  onSetHandicap,
+}: {
+  profile: OwnProfile;
+  onSetHandicap: () => void;
+}) {
   const { ui } = useTheme();
   // Lokal konstant, ikke `profile.hcpIndex` direkte: `tsc` snevrer inn en const
   // etter null-sjekken, men ikke et felt på et objekt som kan ha endret seg
@@ -250,17 +314,27 @@ function HandicapLine({ profile }: { profile: OwnProfile }) {
         </Text>
       </Text>
       {/* Ferskhets-merket hører til et handicap. Uten et tall er det ingenting
-          å si «oppdatert» om. */}
+          å si «oppdatert» om — da er spørsmålet i stedet om å sette det. */}
       {hcp != null ? (
         <Text style={ui.muted} testID="profile-hcp-age">
           {describeHandicapAge(profile.handicapUpdatedAt)}
         </Text>
-      ) : null}
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onSetHandicap}
+          style={styles.setHandicap}
+          testID="profile-set-handicap"
+        >
+          <Text style={ui.linkText}>{PROFILE_TEXT.setHandicap}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   hcpLine: { gap: 2 },
+  setHandicap: { minHeight: TAP, justifyContent: 'center', alignSelf: 'flex-start' },
   dangerGap: { marginTop: 24 },
 });
