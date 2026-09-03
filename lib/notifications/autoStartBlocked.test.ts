@@ -14,6 +14,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 }));
 
 import {
+  isSilentBlockReason,
   isStructuralBlockReason,
   maybeNotifyAutoStartBlocked,
 } from './autoStartBlocked';
@@ -102,5 +103,41 @@ describe('maybeNotifyAutoStartBlocked', () => {
     expect(adminMock.from).not.toHaveBeenCalled();
     expect(notifyMock).not.toHaveBeenCalled();
     consoleLog.mockRestore();
+  });
+});
+
+// ─── Stille årsaker (#1814) ──────────────────────────────────────────────────
+
+/**
+ * `decided_by_withdrawal` er arrangørens eget valg — cup-kampen er avgjort ved
+ * trekk. Cron-sveipet logger den, men skal ALDRI varsle om den: et
+ * «auto-start blokkert»-varsel ville lest som en oppsettsfeil hen måtte rette,
+ * og sveipet treffer kampen hvert minutt.
+ */
+describe('isSilentBlockReason (#1814)', () => {
+  it('decided_by_withdrawal er stille', () => {
+    expect(isSilentBlockReason('decided_by_withdrawal')).toBe(true);
+  });
+
+  it.each(['incomplete_sides', 'no_players', 'db_game', 'unassigned_teams'])(
+    '%s er ikke stille',
+    (reason) => {
+      expect(isSilentBlockReason(reason)).toBe(false);
+    },
+  );
+
+  it('er ikke også strukturell — de to listene er disjunkte for denne grunnen', () => {
+    expect(isStructuralBlockReason('decided_by_withdrawal')).toBe(false);
+  });
+
+  it('varsler ikke, selv om noen skulle kalle helperen direkte', async () => {
+    await maybeNotifyAutoStartBlocked({
+      gameId: 'g1',
+      gameName: 'Kamp 3',
+      createdBy: 'admin-1',
+      reason: 'decided_by_withdrawal',
+      logPrefix: 'test',
+    });
+    expect(notifyMock).not.toHaveBeenCalled();
   });
 });
