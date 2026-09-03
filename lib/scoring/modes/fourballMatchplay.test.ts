@@ -577,12 +577,30 @@ describe('compute — defensiv empty-shell ved feil spiller-fordeling', () => {
     expect(r.result).toBeNull();
   });
 
-  it('3 spillere (skjev fordeling) → empty shell', () => {
+  it('3 spillere på én side (overbooket) → empty shell', () => {
+    // #1814 gjorde 1 spiller per side gyldig (makkeren spiller alene), men
+    // FLERE enn 2 er fortsatt en umulig fourball-side.
     const ctx = makeCtx({
       players: [
         { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
         { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'a3', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
         { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+        { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      ],
+      holes: par4Holes(18),
+      scores: [],
+    });
+    const r = compute(ctx);
+    expect(r.holes).toEqual([]);
+    expect(r.result).toBeNull();
+  });
+
+  it('tom side (2 mot 0) → empty shell', () => {
+    const ctx = makeCtx({
+      players: [
+        { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
       ],
       holes: par4Holes(18),
       scores: [],
@@ -685,5 +703,113 @@ describe('compute — lukk-ute-form fryses i fourballs egen walk (#1458/#1506)',
     expect(r.result!.decidedAtHole).toBe(14);
     expect(r.result!.remainingAtDecision).toBe(4);
     expect(r.result!.marginUp).toBe(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1814: en makker som blir stående alene etter et trekk i cupen kan spille
+// videre — én ball mot to. «Best ball av én» er hens egen ball, så hull-for-
+// hull-sammenlikningen er uendret; det eneste som må vike er eksakt-2-vakta.
+// ---------------------------------------------------------------------------
+
+describe('compute — én spiller mot to (#1814)', () => {
+  /** Side 1 er alene; side 2 er komplett. Alle med spillehandicap 0. */
+  function soloVsPair(): ScoringPlayer[] {
+    return [
+      { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+      { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+    ];
+  }
+
+  it('scorer hull for hull og avgjør matchen: alenespilleren vinner 3&2', () => {
+    // Hull 1-3: a1 par mot begge motstandernes bogey → 3 up.
+    // Hull 4-16: alle par → tied. Etter hull 16: 3 up, 2 igjen → mat-em «3&2».
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 16; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 4 });
+      const opponentGross = h <= 3 ? 5 : 4;
+      scores.push({ userId: 'b1', holeNumber: h, gross: opponentGross });
+      scores.push({ userId: 'b2', holeNumber: h, gross: opponentGross });
+    }
+    const r = compute(
+      makeCtx({ players: soloVsPair(), holes: par4Holes(18), scores }),
+    );
+
+    expect(r.result).toEqual({
+      winner: 'side1',
+      marginUp: 3,
+      decidedAtHole: 16,
+      remainingAtDecision: 2,
+      formatted: '3&2',
+    });
+    expect(r.holesUp).toBe(3);
+    expect(r.holesPlayed).toBe(16);
+  });
+
+  it('lar den ene ballen være sidens best-ball, med alenespilleren som contributor', () => {
+    const scores: ScoringHoleScore[] = [
+      { userId: 'a1', holeNumber: 1, gross: 5 },
+      { userId: 'b1', holeNumber: 1, gross: 4 },
+      { userId: 'b2', holeNumber: 1, gross: 6 },
+    ];
+    const r = compute(
+      makeCtx({ players: soloVsPair(), holes: par4Holes(1), scores }),
+    );
+
+    const hole = r.holes[0];
+    expect(hole.side1Players).toHaveLength(1);
+    expect(hole.side1BestNet).toBe(5);
+    expect(hole.side1ContributorIds).toEqual(['a1']);
+    // Motstandersiden er uendret: beste av to baller teller.
+    expect(hole.side2BestNet).toBe(4);
+    expect(hole.result).toBe('side2_wins');
+  });
+
+  it('gir alenespilleren sin egen slag-allokering (ingen fantom-makker)', () => {
+    const players: ScoringPlayer[] = [
+      { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 18 },
+      { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+    ];
+    const r = compute(
+      makeCtx({
+        players,
+        holes: par4Holes(1),
+        scores: [
+          { userId: 'a1', holeNumber: 1, gross: 5 },
+          { userId: 'b1', holeNumber: 1, gross: 4 },
+          { userId: 'b2', holeNumber: 1, gross: 4 },
+        ],
+      }),
+    );
+
+    expect(r.sides[0].players).toHaveLength(1);
+    expect(r.sides[0].players[0].userId).toBe('a1');
+    expect(r.sides[0].players[0].effectiveHandicap).toBe(18);
+    // 18 i spillehandicap = ett ekstra slag på SI 1 → netto 4, hullet deles.
+    expect(r.holes[0].side1BestNet).toBe(4);
+    expect(r.holes[0].result).toBe('tied');
+  });
+
+  it('takler at BEGGE sider står med én spiller hver', () => {
+    const r = compute(
+      makeCtx({
+        players: [
+          { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+          { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+        ],
+        holes: par4Holes(1),
+        scores: [
+          { userId: 'a1', holeNumber: 1, gross: 4 },
+          { userId: 'b1', holeNumber: 1, gross: 5 },
+        ],
+      }),
+    );
+
+    expect(r.sides[0].players).toHaveLength(1);
+    expect(r.sides[1].players).toHaveLength(1);
+    expect(r.holes[0].result).toBe('side1_wins');
+    expect(r.holesUp).toBe(1);
   });
 });

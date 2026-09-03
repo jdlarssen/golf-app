@@ -80,10 +80,18 @@ export function computeSideShortfall(
  *  - Ingen rader med team_number utenfor {1, 2} (null teller som utenfor)
  *
  * En underbooket side ELLER en null-rad blokkerer start.
+ *
+ * `opts.allowSoloSide` (#1814) mykner det første kravet til «1..teamSize»: i en
+ * cup-fourball der arrangøren har valgt at makkeren spiller alene etter et
+ * trekk, ER en side med én aktiv spiller komplett. Flagget settes KUN av
+ * `startScheduledGameCore`, og kun for fourball med
+ * `mode_config.withdrawal_play_on` — de øvrige lag-modusene deler ball og har
+ * ingen alene-variant. En helt tom side blokkerer fortsatt start.
  */
 export function isSideRosterComplete(
   roster: RosterRow[],
   teamSize: number,
+  opts: { allowSoloSide?: boolean } = {},
 ): boolean {
   // Check for any null/bad team_number among active players
   const hasInvalidSide = roster.some(
@@ -95,5 +103,9 @@ export function isSideRosterComplete(
   if (hasInvalidSide) return false;
 
   const { side1, side2 } = countSidePlayers(roster);
+  if (opts.allowSoloSide) {
+    const ok = (n: number) => n >= 1 && n <= teamSize;
+    return ok(side1) && ok(side2);
+  }
   return side1 === teamSize && side2 === teamSize;
 }

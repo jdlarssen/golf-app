@@ -178,3 +178,63 @@ describe('isSideRosterComplete', () => {
     expect(isSideRosterComplete(roster, teamSize)).toBe(expected);
   });
 });
+
+// #1814: en cup-fourball der arrangøren har valgt «makkeren spiller alene»
+// skal starte med én aktiv spiller på siden. Flagget settes kun for fourball —
+// alle andre matchplay-modi bruker vakta uendret.
+describe('isSideRosterComplete — allowSoloSide (#1814)', () => {
+  const soloSideRoster: RosterRow[] = [
+    { team_number: 1, withdrawn_at: null },
+    { team_number: 1, withdrawn_at: '2026-09-10T07:00:00.000Z' },
+    { team_number: 2, withdrawn_at: null },
+    { team_number: 2, withdrawn_at: null },
+  ];
+
+  it('blokkerer 1 aktiv + 1 trukket uten flagget (dagens oppførsel)', () => {
+    expect(isSideRosterComplete(soloSideRoster, 2)).toBe(false);
+  });
+
+  it('godtar 1 aktiv + 1 trukket med flagget', () => {
+    expect(isSideRosterComplete(soloSideRoster, 2, { allowSoloSide: true })).toBe(true);
+  });
+
+  it('godtar fortsatt en full side med flagget', () => {
+    const full: RosterRow[] = [
+      { team_number: 1, withdrawn_at: null },
+      { team_number: 1, withdrawn_at: null },
+      { team_number: 2, withdrawn_at: null },
+      { team_number: 2, withdrawn_at: null },
+    ];
+    expect(isSideRosterComplete(full, 2, { allowSoloSide: true })).toBe(true);
+  });
+
+  it('blokkerer en HELT trukket side selv med flagget — ingen ball igjen', () => {
+    const emptySide: RosterRow[] = [
+      { team_number: 1, withdrawn_at: '2026-09-10T07:00:00.000Z' },
+      { team_number: 1, withdrawn_at: '2026-09-10T07:00:00.000Z' },
+      { team_number: 2, withdrawn_at: null },
+      { team_number: 2, withdrawn_at: null },
+    ];
+    expect(isSideRosterComplete(emptySide, 2, { allowSoloSide: true })).toBe(false);
+  });
+
+  it('blokkerer en overbooket side selv med flagget', () => {
+    const overbooked: RosterRow[] = [
+      { team_number: 1, withdrawn_at: null },
+      { team_number: 1, withdrawn_at: null },
+      { team_number: 1, withdrawn_at: null },
+      { team_number: 2, withdrawn_at: null },
+      { team_number: 2, withdrawn_at: null },
+    ];
+    expect(isSideRosterComplete(overbooked, 2, { allowSoloSide: true })).toBe(false);
+  });
+
+  it('blokkerer fortsatt en aktiv rad uten side, med flagget', () => {
+    const nullSide: RosterRow[] = [
+      { team_number: null, withdrawn_at: null },
+      { team_number: 1, withdrawn_at: null },
+      { team_number: 2, withdrawn_at: null },
+    ];
+    expect(isSideRosterComplete(nullSide, 2, { allowSoloSide: true })).toBe(false);
+  });
+});

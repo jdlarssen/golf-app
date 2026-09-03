@@ -1360,8 +1360,14 @@ export interface FourballHoleRow {
 export interface FourballSide {
   /** 1 eller 2 — matcher game_players.team_number for fourball-spillere. */
   sideNumber: 1 | 2;
-  /** Begge partnere, sortert deterministisk på userId for stabil UI. */
-  players: [FourballSidePlayer, FourballSidePlayer];
+  /**
+   * Sidens spillere, sortert deterministisk på userId for stabil UI. Normalt
+   * begge partnerne — men EN spiller er gyldig siden #1814: blir makkeren
+   * stående alene etter et trekk i cupen, kan hen spille videre (én ball mot
+   * to), og «best ball av én» er hens egen ball. Ingen visning kan derfor
+   * indeksere `players[1]` uten å sjekke først.
+   */
+  players: FourballSidePlayer[];
 }
 
 /**
