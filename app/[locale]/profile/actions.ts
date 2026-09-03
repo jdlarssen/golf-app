@@ -4,29 +4,13 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { safeNextPath } from './safeNext';
-import { toSignedHcp } from '@/lib/handicap/sign';
+import { parseProfileInput } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import { expectOne } from '@/lib/supabase/affectedRows';
 import type { AppLocale } from '@/i18n/routing';
 
-const HCP_MIN = -10;
-const HCP_MAX = 54.0;
-const GENDERS = ['mens', 'ladies'] as const;
-const LEVELS = ['junior', 'normal', 'senior'] as const;
-type Gender = (typeof GENDERS)[number];
-type Level = (typeof LEVELS)[number];
-
 export async function updateProfile(formData: FormData) {
   const locale = (await getLocale()) as AppLocale;
-  const name = String(formData.get('name') ?? '').trim();
-  const nicknameRaw = String(formData.get('nickname') ?? '').trim();
-  const nickname = nicknameRaw === '' ? null : nicknameRaw;
-  // Hcp-feltet sender en positiv magnitude + et plus-flagg (spilleren slipper
-  // å taste fortegn på mobil). Plusshandicap lagres internt negativt.
-  const hcpRaw = String(formData.get('hcp_index') ?? '').trim();
-  const hcpPlus = formData.get('hcp_plus') === 'on';
-  const genderRaw = String(formData.get('gender') ?? '').trim();
-  const levelRaw = String(formData.get('level') ?? 'normal').trim();
   // Optional ?next=-redirect target. Validation in safeNextPath rejects
   // anything that isn't a same-origin path (open-redirect vern).
   const nextRaw = formData.get('next');
@@ -35,37 +19,34 @@ export async function updateProfile(formData: FormData) {
     ? `/profile?next=${encodeURIComponent(nextSafe)}`
     : '/profile';
 
-  if (!name) {
-    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=name_required`, locale });
+  // Selve regelen bor i `lib/users/profileInput.ts` — den deles nå med ruta
+  // native-appen kaller (#1906), så begge dørene godtar og avviser NØYAKTIG
+  // det samme (AGENTS trap 4: én regel, ett hjem). Denne actionen oversetter
+  // bare feilkoden til redirecten skjemaets feilbanner allerede leser.
+  //
+  // Hcp-feltet sender en positiv magnitude + et plus-flagg (spilleren slipper
+  // å taste fortegn på mobil). Plusshandicap lagres internt negativt.
+  //
+  // `level` sendes videre som `null` når feltet mangler helt — parseren
+  // defaulter da til «normal», mens et felt som ER sendt tomt fortsatt er en
+  // valideringsfeil.
+  const levelEntry = formData.get('level');
+  const parsed = parseProfileInput({
+    name: String(formData.get('name') ?? ''),
+    nickname: String(formData.get('nickname') ?? ''),
+    hcpIndex: String(formData.get('hcp_index') ?? ''),
+    hcpPlus: formData.get('hcp_plus') === 'on',
+    gender: String(formData.get('gender') ?? ''),
+    level: levelEntry === null ? null : String(levelEntry),
+  });
+  if (!parsed.ok) {
+    redirect({
+      href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=${parsed.error}`,
+      locale,
+    });
+    return; // unreachable — i18n redirect throws but isn't typed `never`
   }
-
-  const hcpMagnitude = Number.parseFloat(hcpRaw.replace(',', '.'));
-  if (!Number.isFinite(hcpMagnitude) || hcpMagnitude < 0 || hcpMagnitude > HCP_MAX) {
-    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`, locale });
-  }
-  const hcpParsed = toSignedHcp(hcpMagnitude, hcpPlus);
-  if (hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
-    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`, locale });
-  }
-
-  // #1064: gender is no longer collected during onboarding, so a user whose
-  // /profile form somehow submits without it (e.g. a stale cached page from
-  // before this change) must not have their already-set gender nulled out.
-  // An empty value means "leave it alone" — the column is simply omitted
-  // from the update payload below. A present-but-invalid value is still a
-  // hard validation error.
-  let gender: Gender | undefined;
-  if (genderRaw !== '') {
-    if (!GENDERS.includes(genderRaw as Gender)) {
-      redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=gender_required`, locale });
-    }
-    gender = genderRaw as Gender;
-  }
-
-  if (!LEVELS.includes(levelRaw as Level)) {
-    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=level_invalid`, locale });
-  }
-  const level = levelRaw as Level;
+  const { name, nickname, hcpIndex: hcpParsed, gender, level } = parsed.value;
 
   // Månedsbrev-opt-in (#202) eies nå av Innboks-flaten (toggleProductUpdates),
   // ikke dette skjemaet — så updateProfile rører ikke
