@@ -177,6 +177,12 @@ export function EditProfile({ navigation }: ScreenProps<'EditProfile'>) {
   /** Ett felt om gangen, uten å miste de andre. */
   const setField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((current) => (current ? { ...current, [key]: value } : current));
+    // Feilen gjaldt verdiene som ble sendt. Retter spilleren feltet, er den
+    // ikke sann lenger — og en rød linje som blir stående mens tallet er riktig
+    // leser som at appen ikke fikk det med seg. (Sett i staging-runden: «99»
+    // ga «må være et tall mellom 0 og 54», og teksten ble stående etter at
+    // feltet var rettet til «4».) Webben slipper unna fordi den redirecter.
+    setError(null);
   }, []);
 
   /**
