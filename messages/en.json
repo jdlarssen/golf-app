@@ -4848,7 +4848,7 @@
       "withdrawnChip": "Withdrawn",
       "withdrawLink": "Withdraw from the cup",
       "undoWithdrawLink": "Undo withdrawal",
-      "playOnPendingHeading": "One choice is waiting",
+      "playOnPendingHeading": "Choices waiting",
       "playOnPending": "{match}: should {partner} play alone, or is the match settled without play?",
       "playOnChoose": "Choose for the match",
       "matchesHeading": "Matches",
