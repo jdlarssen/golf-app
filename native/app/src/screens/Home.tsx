@@ -4,6 +4,12 @@
 // spill-bundelen). Derfor ser skjermen aldri tom ut mens nettet henter, og en
 // feilet refetch lar den forrige lista stå: feilteksten dukker bare opp når vi
 // ikke har noe å vise i det hele tatt.
+//
+// #1906 tok footeren bort. E-posten, «Konto», «Sync-lab» og «Logg ut» lå der
+// som fire lenker under spillene dine — alt sammen ting som handler om deg og
+// ikke om runden. De bor i profil-rommet nå, og veien dit er ordet «Profil»
+// oppe til høyre i headeren (satt i `navigation.tsx`). Hjem handler igjen bare
+// om spill.
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -25,12 +31,11 @@ import { startSyncTriggers } from '../data/syncTriggers';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { supabase } from '../supabase';
 import { useTheme } from '../theme';
 
 export function Home({ navigation }: ScreenProps<'Home'>) {
   const { colors, ui } = useTheme();
-  const { userId, email } = useSession();
+  const { userId } = useSession();
   const [cards, setCards] = useState<HomeCard[] | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,7 +99,6 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
         <Pressable style={ui.button} onPress={() => void refresh()} testID="home-retry">
           <Text style={ui.buttonText}>{refreshing ? 'Prøver …' : 'Prøv igjen'}</Text>
         </Pressable>
-        <Footer navigation={navigation} email={email} />
       </ScrollView>
     );
   }
@@ -138,8 +142,6 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
           Viser lagrede spill — fikk ikke kontakt med serveren.
         </Text>
       ) : null}
-
-      <Footer navigation={navigation} email={email} />
     </ScrollView>
   );
 }
@@ -189,44 +191,6 @@ function Section({
   );
 }
 
-function Footer({
-  navigation,
-  email,
-}: {
-  navigation: ScreenProps<'Home'>['navigation'];
-  email: string | null;
-}) {
-  const { ui } = useTheme();
-  return (
-    <View style={styles.footer}>
-      <Text style={ui.muted} testID="session-email">
-        {email ?? 'Innlogget'}
-      </Text>
-      <Pressable
-        style={ui.link}
-        onPress={() => navigation.navigate('Account')}
-        testID="open-account"
-      >
-        <Text style={ui.linkText}>Konto</Text>
-      </Pressable>
-      <Pressable
-        style={ui.link}
-        onPress={() => navigation.navigate('SyncLab')}
-        testID="open-sync-lab"
-      >
-        <Text style={ui.linkText}>Sync-lab</Text>
-      </Pressable>
-      <Pressable
-        style={ui.link}
-        onPress={() => void supabase.auth.signOut()}
-        testID="sign-out"
-      >
-        <Text style={ui.linkText}>Logg ut</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   gameCard: {
     borderRadius: 12,
@@ -235,5 +199,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 6,
   },
-  footer: { marginTop: 32, alignItems: 'center', gap: 4 },
 });
