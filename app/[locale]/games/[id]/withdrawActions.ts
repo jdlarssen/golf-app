@@ -53,6 +53,12 @@ type GameSnapshot = {
   short_id: string;
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   game_mode: GameMode;
+  /**
+   * #1814: en cup-kamp har en helt annen trekk-semantikk (Ryder Cup-modellen —
+   * kampen halveres eller dømmes som tap). Sletting av raden her ville knekt
+   * kampen stille: siden blir ufullstendig og auto-start blokkerer for alltid.
+   */
+  tournament_id: string | null;
 };
 
 type PlayerSnapshot = {
@@ -85,7 +91,7 @@ export async function withdrawFromGame(
   const [gameRes, playerRes] = await Promise.all([
     admin
       .from('games')
-      .select('id, name, short_id, status, game_mode')
+      .select('id, name, short_id, status, game_mode, tournament_id')
       .eq('id', gameId)
       .maybeSingle<GameSnapshot>(),
     admin
@@ -100,6 +106,16 @@ export async function withdrawFromGame(
     return { ok: false, error: 'game_not_found' };
   }
   const game = gameRes.data;
+
+  // #1814: en cup-kamp trekkes man seg fra via `/cup/[id]/trekk`, aldri her.
+  // Pre-start-grenen under SLETTER `game_players`-raden — på en cup-kamp
+  // etterlot det en ufullstendig side som auto-start aldri kunne starte, uten
+  // at noen fikk beskjed. Venterommets «Trekk deg»-lenke ruter dit; dette er
+  // vakta bak den, så raden ikke kan slettes via en direkte POST heller.
+  // Liga-runder (`tournament_id` null) er uberørt.
+  if (game.tournament_id) {
+    return { ok: false, error: 'game_locked' };
+  }
 
   // Active + in-scope mode → soft WD (set withdrawn_at). Pre-start → DELETE.
   // Any other combination (finished, active+unsupported) → locked.

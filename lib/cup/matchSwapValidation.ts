@@ -21,6 +21,13 @@ export type SwapBundleGame = {
   status: string;
   /** `game_players.user_id` for denne matchen (begge lag). */
   playerIds: string[];
+  /**
+   * `game_players.user_id` for radene med `withdrawn_at != null` (#1814).
+   * Valgfri for pre-#1814 call-sites/tester; `planCupMatchSwap` setter den
+   * alltid. En kamp som er avgjort ved trekk kan ikke få noen byttet inn
+   * etterpå — poengene er alt fordelt (E6).
+   */
+  withdrawnPlayerIds?: string[];
 };
 
 export type SwapValidationInput = {
@@ -63,6 +70,7 @@ export type SwapValidationInput = {
 export type SwapValidationError =
   | 'not_found'
   | 'already_started'
+  | 'match_has_withdrawal'
   | 'player_not_in_match'
   | 'already_in_match'
   | 'not_candidate'
@@ -106,6 +114,15 @@ export function validateMatchSwap(
   //    spilleren uten spillehandicap i en aktiv match.
   if (bundle.some((g) => g.status !== 'scheduled')) {
     return { ok: false, error: 'already_started' };
+  }
+
+  // 2b. #1814 (E6): et trekk frigjør ingen plass. Har noen i bunten trukket
+  //     seg, er kampen enten alt avgjort av konvoluttregelen (poengene er
+  //     fordelt) eller satt opp som «makkeren spiller alene» — i begge
+  //     tilfeller ville et bytte skrevet om noe som allerede er gjort opp.
+  //     Bytte FØR noen trekker seg består som i dag.
+  if (bundle.some((g) => (g.withdrawnPlayerIds ?? []).length > 0)) {
+    return { ok: false, error: 'match_has_withdrawal' };
   }
 
   // 3. Ut-spilleren må stå i minst én av buntens matcher; inn-spilleren i
