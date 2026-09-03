@@ -165,14 +165,13 @@ export default async function PublicCupPage({
               // trukne har levert og kampen er aktiv, ellers Spilt/Pågår/Utkast.
               // #1814: en kamp avgjort ved trekk står fortsatt `scheduled` —
               // status-nøkkelen er det eneste som skiller den fra «Utkast».
+              const statusKey = cupMatchStatusKey({
+                status: m.status,
+                allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
+                withdrawal: m.withdrawal,
+              });
               const statusLabel = t(
-                CUP_MATCH_STATUS_MESSAGE_KEY[
-                  cupMatchStatusKey({
-                    status: m.status,
-                    allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
-                    withdrawal: m.withdrawal,
-                  })
-                ],
+                CUP_MATCH_STATUS_MESSAGE_KEY[statusKey],
                 cupMatchStatusValues(m, {
                   nameOf: (uid) => rosterNames.get(uid) ?? t('manage.unknownPlayer'),
                   team1Name: tournament.team_1_name,
@@ -207,7 +206,17 @@ export default async function PublicCupPage({
                       )}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-xs text-muted">{statusLabel}</p>
+                      {/* #1488 (K9) / #1814: `data-status` bærer den språk-
+                          uavhengige nøkkelen så e2e kan asserte «avgjort ved
+                          trekk» uten å lese norsk copy — samme form som
+                          admin-kortet i `CupMatchList`. */}
+                      <p
+                        className="text-xs text-muted"
+                        data-testid={`cup-public-match-status-${m.gameId}`}
+                        data-status={statusKey}
+                      >
+                        {statusLabel}
+                      </p>
                     </div>
                   </div>
                 </Card>
