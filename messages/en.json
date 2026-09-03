@@ -1847,7 +1847,7 @@
       "withdrawLink": "Withdraw from game",
       "withdrawnPlayerFallback": "The player",
       "cupDecidedHalved": "The match is settled without play — {names} withdrew, so the match is halved.",
-      "cupDecidedWalkover": "The match is settled without play — {names} withdrew too close to the start, so the opponents take it.",
+      "cupDecidedWalkover": "The match is settled without play — {names} withdrew too close to the start, so it goes to {team} as a walkover.",
       "backToHome": "Back to home",
       "draftBanner": "Draft — admin is still planning. Details may change.",
       "bannerSubmitted": "✓ Scorecard submitted.",
