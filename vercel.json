@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["arn1"],
   "crons": [
     {
       "path": "/api/cron/product-update-digest",
