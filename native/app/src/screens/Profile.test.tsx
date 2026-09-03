@@ -12,8 +12,8 @@
 //  1. **Sync-lab finnes ikke i et butikk-bygg.** Den viktigste asserten i fila:
 //     den er porten mot at en utviklerflate følger med appen ut i App Store.
 //     Ikke skjult, ikke deaktivert — ikke i treet.
-//  2. **«Slett konto» navigerer og sletter ingenting selv.** Bekreftelsen er et
-//     eget rom, og det er der den røde knappen bor.
+//  2. **«Slett konto» og «Rediger profil» navigerer** og gjør ingenting selv.
+//     Både bekreftelsen og skjemaet er egne rom; rommet her er inngangen.
 //  3. **«Logg ut» spør før den lar slag ligge igjen.** `logOut` svarer `unsent`,
 //     skjermen viser dialogen, «Avbryt» setter raden tilbake slik den var, og
 //     «Logg ut likevel» er det ENESTE som sender `keepUnsent`.
@@ -56,12 +56,21 @@ const MY_NAME = 'Jørgen Larssen';
 const MY_HCP = 12.4;
 
 const navigate = jest.fn();
+const setParams = jest.fn();
+// Rommet abonnerer på `blur` for å nullstille lagrings-kvitteringen. Stubben
+// svarer med en avmeldingsfunksjon, slik den ekte gjør — uten den ville
+// effektens opprydding kastet.
+const addListener = jest.fn(() => jest.fn());
 
 /** Rendrer rommet og venter til profilraden har landet i kortet. */
 async function renderScreen() {
   await render(
     <Profile
-      {...({ navigation: { navigate } } as unknown as ScreenProps<'Profile'>)}
+      {...({
+        navigation: { navigate, setParams, addListener },
+        // Ingen kvittering: rommet er åpnet fra hjem, ikke fra en lagring.
+        route: { params: undefined },
+      } as unknown as ScreenProps<'Profile'>)}
     />,
   );
   await screen.findByTestId('profile-hcp');
@@ -105,8 +114,11 @@ describe('Profile', () => {
     expect(screen.queryByTestId('profile-sync-lab')).toBeNull();
     expect(screen.queryByTestId('profile-developer')).toBeNull();
 
-    // Inngangen navigerer — den sletter ingenting selv, og den logger deg
-    // slett ikke ut på veien.
+    // Begge inngangene navigerer bare — skjemaet fylles ut i sitt eget rom, og
+    // sletting bekreftes i sitt. Ingen av dem logger deg ut på veien.
+    await fireEvent.press(screen.getByTestId('profile-edit-entry'));
+    expect(navigate).toHaveBeenCalledWith('EditProfile');
+
     await fireEvent.press(screen.getByTestId('profile-delete-entry'));
     expect(navigate).toHaveBeenCalledWith('DeleteAccount');
     expect(logOutMock).not.toHaveBeenCalled();

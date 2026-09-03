@@ -14,18 +14,43 @@
 //     `formatHcpDisplay(x, 'no')` gir. Det er denne todelingen — lokal
 //     implementasjon, Intl-fasit i testen — som holder de to i takt.
 //  4. **Advarselen ved utlogging leser riktig for ett og for mange slag.**
+//  5. **Ingen lagrings-kode uten setning.** Hver verdi i `ProfileSaveFailure`
+//     skal gi en lesbar norsk linje. `tsc` sikrer at switch-en er uttømmende;
+//     denne sikrer at det som kommer ut faktisk er tekst — og at de fire
+//     valideringskodene sier NØYAKTIG det webbens skjema sier, siden det er
+//     samme regel som avviste deg.
+//
+// `ProfileSaveFailure` hentes som ren TYPE fra `data/profile.ts`. Det er
+// bevisst: en verdi-import derfra ville dratt inn `../supabase`, som kaster
+// uten `EXPO_PUBLIC_SUPABASE_*` — og denne suiten mocker ingenting.
 import source from '../../../../messages/no.json';
-import { formatHcpDisplay } from '../../../../lib/handicap/sign';
+import { formatHcpDisplay } from '../../../../lib/handicap/signFormat';
 import { HANDICAP_STALENESS_MS } from '../../../../lib/handicap/staleness';
+import type { ProfileSaveFailure } from '../data/profile';
 import {
   PROFILE_TEXT,
   describeHandicapAge,
+  describeProfileSaveFailure,
   formatHcpNb,
   hcpUpdatedLine,
   unsentStrokesWarning,
 } from './profileCopy';
 
 const web = source.profile;
+const webForm = web.form;
+const webErrors: Record<string, string> = web.errors;
+
+const SAVE_FAILURES: ProfileSaveFailure[] = [
+  'offline',
+  'no-web-base-url',
+  'network',
+  'unauthorized',
+  'name_required',
+  'hcp_invalid',
+  'gender_required',
+  'level_invalid',
+  'update_failed',
+];
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {
@@ -48,6 +73,29 @@ describe('PROFILE_TEXT', () => {
     ['logout', PROFILE_TEXT.logout, web.logoutButton],
     ['logoutPending', PROFILE_TEXT.logoutPending, web.logoutPending],
     ['deleteRow', PROFILE_TEXT.deleteRow, web.deleteRow],
+    ['updatedBanner', PROFILE_TEXT.updatedBanner, web.updatedBanner],
+    // Skjemaet: samme felt, samme ord, to flater.
+    ['nameLabel', PROFILE_TEXT.nameLabel, webForm.nameLabel],
+    ['nicknameLabel', PROFILE_TEXT.nicknameLabel, webForm.nicknameLabel],
+    ['nicknamePlaceholder', PROFILE_TEXT.nicknamePlaceholder, webForm.nicknamePlaceholder],
+    ['handicapLabel', PROFILE_TEXT.handicapLabel, webForm.handicapLabel],
+    ['plusHandicapLabel', PROFILE_TEXT.plusHandicapLabel, webForm.plusHandicapAriaLabel],
+    ['savedAsPrefix', PROFILE_TEXT.savedAsPrefix, webForm.savedAsPrefix],
+    ['savedAsSuffix', PROFILE_TEXT.savedAsSuffix, webForm.savedAsSuffix],
+    ['emailLine', PROFILE_TEXT.emailLine, webForm.emailLine],
+    ['golfProfileLabel', PROFILE_TEXT.golfProfileLabel, webForm.golfProfileLabel],
+    ['genderLegend', PROFILE_TEXT.genderLegend, webForm.genderLegend],
+    ['genderHint', PROFILE_TEXT.genderHint, webForm.genderHint],
+    ['genderMale', PROFILE_TEXT.genderMale, webForm.genderMale],
+    ['genderFemale', PROFILE_TEXT.genderFemale, webForm.genderFemale],
+    ['levelLegend', PROFILE_TEXT.levelLegend, webForm.levelLegend],
+    ['levelHint', PROFILE_TEXT.levelHint, webForm.levelHint],
+    ['levelJunior', PROFILE_TEXT.levelJunior, webForm.levelJunior],
+    ['levelAdult', PROFILE_TEXT.levelAdult, webForm.levelAdult],
+    ['levelSenior', PROFILE_TEXT.levelSenior, webForm.levelSenior],
+    ['saveButton', PROFILE_TEXT.saveButton, webForm.saveButton],
+    ['savePending', PROFILE_TEXT.savePending, webForm.savePending],
+    ['saveHint', PROFILE_TEXT.saveHint, webForm.saveHint],
   ])('«%s» er webbens streng tegn for tegn', (_key, appText, webText) => {
     expect(appText).toBe(webText);
   });
@@ -64,6 +112,70 @@ describe('PROFILE_TEXT', () => {
     expect(hcpUpdatedLine('12. mai')).toBe('Oppdatert 12. mai');
   });
 
+  it('setter handicap-ekkoet sammen til en hel linje', () => {
+    // «Lagres som +1,5 · plusshandicap» — delene står hver for seg fordi
+    // tallet skal midt inn og suffikset bare henger på for plusshandicap.
+    expect(
+      `${PROFILE_TEXT.savedAsPrefix} ${formatHcpNb(-1.5)} ${PROFILE_TEXT.savedAsSuffix}`,
+    ).toBe('Lagres som +1,5 · plusshandicap');
+  });
+
+  it('skiller raden inn til skjemaet fra tittelen på skjemaet', () => {
+    // Like i dag, to nøkler likevel — samme grunn som `deleteRow` og
+    // `ACCOUNT_TEXT.heading`: den ene er veien inn, den andre er stedet.
+    expect(PROFILE_TEXT.editRow).toBe('Rediger profil');
+    expect(PROFILE_TEXT.editHeading).toBe('Rediger profil');
+  });
+});
+
+describe('describeProfileSaveFailure', () => {
+  it.each(SAVE_FAILURES)('gir en ferdig setning for «%s»', (reason) => {
+    const text = describeProfileSaveFailure(reason);
+    expect(text).toBeDefined();
+    expect(isFinishedSentence(text)).toBe(true);
+  });
+
+  it.each([
+    ['name_required', 'name_required'],
+    ['hcp_invalid', 'hcp_invalid'],
+    ['gender_required', 'gender_required'],
+    ['level_invalid', 'level_invalid'],
+    // Ruta svarer `update_failed`; webbens copy-nøkkel for samme utfall heter
+    // `unknown`. Kartet står her, ikke i datalaget.
+    ['update_failed', 'unknown'],
+  ] as [ProfileSaveFailure, string][])(
+    'viser webbens feilmelding for «%s»',
+    (reason, webKey) => {
+      expect(describeProfileSaveFailure(reason)).toBe(webErrors[webKey]);
+    },
+  );
+
+  it('sier at lagring krever nett i BEGGE nett-grenene', () => {
+    // Eier-tapptesten på slette-flyten (Wi-Fi av, mobildata på: enheten er
+    // «online», men når ikke serveren) viste at «prøv igjen» alene ikke
+    // forteller hva som skal være annerledes neste gang.
+    for (const reason of ['offline', 'network'] as const) {
+      expect(describeProfileSaveFailure(reason)).toMatch(/nett|tilkobling/i);
+      expect(describeProfileSaveFailure(reason)).toContain('lagre');
+    }
+  });
+
+  it('lover ikke at lagringen skjer av seg selv senere', () => {
+    // Profil-lagring legges ALDRI i sync-køen — regelen kjøres på serveren.
+    // En setning som lover levering ville vært usann.
+    expect(describeProfileSaveFailure('offline')).not.toMatch(/sendes|går det gjennom/);
+  });
+
+  it('sier hva som mangler når appen ikke vet hvilken server den skal spørre', () => {
+    expect(describeProfileSaveFailure('no-web-base-url')).toContain('administrator');
+  });
+
+  it('holder valideringskodene fra hverandre', () => {
+    // Fire ulike grunner til at skjemaet ble avvist. Slås to av dem sammen,
+    // står spilleren med en setning som peker på feil felt.
+    const sentences = SAVE_FAILURES.map(describeProfileSaveFailure);
+    expect(new Set(sentences).size).toBe(SAVE_FAILURES.length);
+  });
 });
 
 describe('formatHcpNb', () => {

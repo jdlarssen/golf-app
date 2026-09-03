@@ -23,6 +23,7 @@ import { PROFILE_TEXT } from './lib/profileCopy';
 import { Approve } from './screens/Approve';
 import { CreateGame } from './screens/CreateGame';
 import { DeleteAccount } from './screens/DeleteAccount';
+import { EditProfile } from './screens/EditProfile';
 import { EndGame } from './screens/EndGame';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
@@ -44,8 +45,17 @@ export type RootStackParamList = {
   Approve: { gameId: string };
   /** Arrangørens avslutt-flate (N6c, #1856) — kåring + status-flipp. */
   EndGame: { gameId: string };
-  /** Profil-rommet (#1906) — hvem du er, utlogging og veien til sletting. */
-  Profile: undefined;
+  /**
+   * Profil-rommet (#1906) — hvem du er, utlogging og veien til sletting.
+   *
+   * `saved` er kvitteringen `EditProfile` sender tilbake etter en lagring:
+   * rommet viser banneret og henter raden på nytt. Rommet nullstiller den med
+   * det samme (`setParams`), ellers ville banneret stått igjen neste gang
+   * spilleren kom tilbake hit fra en annen skjerm.
+   */
+  Profile: { saved?: boolean } | undefined;
+  /** Skjemaet bak «Rediger profil» (#1906) — de fem feltene, lagret via ruta. */
+  EditProfile: undefined;
   /** Bekreftelse på konto-sletting (#1876) — egen skjerm, husregelen. */
   DeleteAccount: undefined;
   SyncLab: undefined;
@@ -185,6 +195,11 @@ export function RootNavigator() {
           name="Profile"
           component={Profile}
           options={{ title: PROFILE_TEXT.heading }}
+        />
+        <Stack.Screen
+          name="EditProfile"
+          component={EditProfile}
+          options={{ title: PROFILE_TEXT.editHeading }}
         />
         <Stack.Screen
           name="DeleteAccount"

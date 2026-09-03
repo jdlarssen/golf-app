@@ -9,9 +9,18 @@
 // testen rød. Uten den porten ville en spiller fått to ulike ordlyder for
 // samme rad, avhengig av flate.
 //
-// Det som IKKE har en web-fasit er merket som app-egent under. Det er to ting:
-// utvikler-seksjonen (webben har ingen Sync-lab) og advarselen om uleverte
-// slag ved utlogging (webben har ingen lokal base å rydde).
+// Det som IKKE har en web-fasit er merket som app-egent under: utvikler-
+// seksjonen (webben har ingen Sync-lab), advarselen om uleverte slag ved
+// utlogging (webben har ingen lokal base å rydde), raden og headeren for
+// redigering (webben har ett skjema på samme side, appen har et rom og en
+// skjerm) og nett-kodene i {@link describeProfileSaveFailure} (webbens skjema
+// kan ikke være offline).
+//
+// **PROFILE_TEXT er FLAT med vilje.** Skjema-tekstene ligger under sitt eget
+// avsnitt i stedet for i et `form`-objekt: testen går gjennom
+// `Object.entries(PROFILE_TEXT)` og krever at hver verdi er en ferdig setning,
+// og et nøstet objekt ville sluppet unna den porten uten at noen la merke til
+// det.
 //
 // **Hvorfor tallformateringen bor her og ikke i `lib/i18n/format.ts`.**
 // Webbens `formatHcpDisplay` går veien om `Intl.NumberFormat` med nb-NO.
@@ -21,6 +30,7 @@
 // TESTEN: den kjører i node, importerer webbens `formatHcpDisplay` og krever
 // at hver eneste verdi i tabellen gir samme streng. Importer aldri
 // `lib/i18n/format` eller `formatHcpDisplay` i app-kildekode — bare i tester.
+import type { ProfileSaveFailure } from '../data/profile';
 import { formatShortDateNb } from '../../../../lib/format/date';
 import { isHandicapStale } from '../../../../lib/handicap/staleness';
 
@@ -42,6 +52,49 @@ export const PROFILE_TEXT = {
   logout: 'Logg ut',
   logoutPending: 'Logger ut …',
   deleteRow: 'Slett konto',
+  /** Banneret profil-rommet viser når du kommer tilbake fra en lagring. */
+  updatedBanner: '✓ Profilen din er oppdatert.',
+
+  // --- Webbens ordlyd: skjemaet (messages/no.json → profile.form) ---------
+  // Webben har feltene på samme side som resten av profilen; appen har dem på
+  // en egen skjerm. Ordlyden er den samme, og testen låser den — en spiller
+  // som fyller ut det samme skjemaet på to flater skal lese det samme.
+  nameLabel: 'Navn',
+  nicknameLabel: 'Kallenavn',
+  nicknamePlaceholder: 'Valgfritt',
+  /** Skjermleser-etikett for «+»-chipen (= webbens `aria-label`). */
+  plusHandicapLabel: 'Plusshandicap',
+  handicapLabel: 'Handicap',
+  // Ekkoet under handicap-feltet: «Lagres som +1,5 · plusshandicap». Delene
+  // settes sammen av skjermen fordi tallet står mellom dem, og suffikset
+  // henger bare på når plusshandicap er huket av — derfor to nøkler, ikke én
+  // ICU-streng vi ikke har en motor til.
+  savedAsPrefix: 'Lagres som',
+  savedAsSuffix: '· plusshandicap',
+  // Halen på e-postlinja: «kari@eksempel.no · kan ikke endres». Adressen byttes
+  // ikke herfra på noen av flatene.
+  emailLine: 'kan ikke endres',
+  golfProfileLabel: 'Golfprofil',
+  genderLegend: 'Kjønn',
+  genderHint: 'Brukes til å foreslå riktig tee og beregne banehandicap.',
+  genderMale: 'Herre',
+  genderFemale: 'Dame',
+  levelLegend: 'Spillerklasse',
+  levelHint:
+    'Junior gir juniortee. Senior er foreløpig bare et merke og endrer ikke spillet.',
+  levelJunior: 'Junior',
+  levelAdult: 'Voksen',
+  levelSenior: 'Senior',
+  saveButton: 'Lagre',
+  savePending: 'Lagrer …',
+  saveHint: 'Lagre blir aktiv når du endrer noe.',
+
+  // --- App-egent: veien inn i skjemaet ------------------------------------
+  // To nøkler for det som i dag er samme ord, av samme grunn som `deleteRow`
+  // og `ACCOUNT_TEXT.heading` er to: den ene er raden som fører dit, den andre
+  // er tittelen på skjermen du havner på. De kan endres hver for seg.
+  editRow: 'Rediger profil',
+  editHeading: 'Rediger profil',
 
   // --- App-egent: utvikler-seksjonen -------------------------------------
   // Finnes bare i staging-bygg (`stagingGate.ts`). Webben har ingen Sync-lab,
@@ -156,4 +209,60 @@ export function describeHandicapAge(
   if (Number.isNaN(updated.getTime())) return PROFILE_TEXT.hcpStaleShort;
   if (isHandicapStale(updated, now)) return PROFILE_TEXT.hcpStaleShort;
   return hcpUpdatedLine(formatShortDateNb(updated));
+}
+
+/**
+ * Hvorfor lagringen ikke gikk gjennom — koden fra `data/profile.ts` som en
+ * setning spilleren kan gjøre noe med.
+ *
+ * Uttømmende switch uten `default`: legger noen til en kode i
+ * {@link ProfileSaveFailure}, faller `tsc` på den manglende returverdien. Det
+ * er hele grunnen til at funksjonen finnes i stedet for et oppslagsobjekt.
+ *
+ * De fire valideringskodene er webbens `profile.errors.*` tegn for tegn, og
+ * `update_failed` er webbens `errors.unknown` — samme feil, samme setning,
+ * uansett flate. Nett-kodene har ingen fasit: webbens skjema kan ikke være
+ * offline.
+ */
+export function describeProfileSaveFailure(reason: ProfileSaveFailure): string {
+  switch (reason) {
+    // Profil-lagring legges ALDRI i sync-køen: regelen (recompute av frosne
+    // banehandicap) kjøres på serveren. Derfor ikke den delte offline-setningen
+    // fra `rosterCopy`, som lover «koble til, så går det gjennom».
+    case 'offline':
+      return 'Du er uten nett. Koble til, så kan du lagre profilen din.';
+    // Env-varen bakes inn ved bundling. Mangler den, er det en feil i bygget,
+    // ikke noe spilleren kan rette — men den skal si det høyt i stedet for å
+    // la Lagre gjøre ingenting (ærlig-feil-guardrailen).
+    case 'no-web-base-url':
+      return 'Appen mangler adressen til serveren, så du får ikke lagret profilen herfra. Ta kontakt med administrator.';
+    // Begge nett-grenene MÅ si at lagring krever tilkobling. Eier-tapptesten
+    // på slette-flyten traff nettopp denne grenen (Wi-Fi av, mobildata på:
+    // enheten er «online», men når ikke serveren) og savnet kravet — «prøv
+    // igjen» alene forteller ikke hva som skal være annerledes neste gang.
+    case 'network':
+      return 'Du må være på nett for å lagre profilen. Sjekk tilkoblingen og prøv igjen.';
+    // Tokenet kan bare ha gått ut mens skjemaet sto åpent. Ingenting er lagret,
+    // og feltene står som de står — derfor «prøv igjen».
+    case 'unauthorized':
+      return 'Du er ikke logget inn lenger. Logg inn på nytt og prøv igjen.';
+    // = profile.errors.name_required
+    case 'name_required':
+      return 'Du må fylle inn navn.';
+    // = profile.errors.hcp_invalid. Setningen peker på plusshandicap-knappen
+    // fordi feltet tar en magnitude uten fortegn — uten den siste setningen
+    // ville en spiller med +1,5 prøvd å taste minus.
+    case 'hcp_invalid':
+      return 'Handicap-index må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.';
+    // = profile.errors.gender_required
+    case 'gender_required':
+      return 'Velg kjønn.';
+    // = profile.errors.level_invalid
+    case 'level_invalid':
+      return 'Ugyldig spillerklasse.';
+    // = profile.errors.unknown. Catch-all for alt ruta ikke navnga, inkludert
+    // en 0-rads skriving (AGENTS trap 2) som ruta melder som 500.
+    case 'update_failed':
+      return 'Noe gikk galt. Prøv igjen.';
+  }
 }
