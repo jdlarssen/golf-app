@@ -6,7 +6,7 @@
 
 **Hva som er bygget så langt:** <én setning på norsk om delarbeidet, + lenke til draft-PR-en>
 
-**Runde-historikk** (fra `.forge/evaluations/<kontrakt-slug>-runder.md`):
+**Runde-historikk** (fra PR-kommentaren `## Evaluate-runder`):
 
 | Runde | Verdikt | Gjenstående funn (signaturer) |
 |---|---|---|

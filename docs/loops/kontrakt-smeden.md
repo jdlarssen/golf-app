@@ -33,7 +33,7 @@ stående kostnad.
 `gh issue list --state open` → behold issues der ALT stemmer:
 
 - **ingen kontrakt:** ingen kommentar med header «📋 Forge-kontrakt tilgjengelig»
-  OG ingen `.forge/contracts/<n>-*.md` på main, OG
+  — kommentaren er eneste kilde, kontrakt-filer committes ikke (#1931), OG
 - **ikke `autonomy:blocked` og ikke `parked`** (parkert = eieren har sagt
   «ikke nå» — via ⏸-knappen eller manuelt), OG
 - **buildbar type:** label `enhancement` eller `bug`. Milestone er IKKE lenger

@@ -6,7 +6,7 @@ delt `lib/scoring`-kilde med webappen, Supabase-OTP-innlogging mot staging
 hjem → game-home → hull-føring → scorekort → lever/godkjenn (N3). Dette er
 IKKE produkt-appen ennå — men fra N3 er det flatene spillerne skal arve.
 
-## Arkitektur-beslutninger (kontrakt `.forge/contracts/1818-native-n1-fundament-spike.md`)
+## Arkitektur-beslutninger (kontrakt på [#1818](https://github.com/jdlarssen/golf-app/issues/1818))
 
 - **Ingen npm-workspaces.** Appen er et selvstendig npm-prosjekt (samme mønster
   som `native/ios/`-skallet); repo-rota og Vercel-bygget røres ikke. Deling

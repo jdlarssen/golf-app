@@ -92,8 +92,8 @@ Ingenting å melde i en gruppe → utelat gruppa. Alle fem tomme → tom-natt-li
 køet, så eieren kan merke dem `autonomy:ready` med ett tapp. Et issue kvalifiserer
 kun når ALT stemmer:
 
-- forge-kontrakt finnes: `.forge/contracts/<n>-*.md` på main ELLER en kommentar
-  med header «📋 Forge-kontrakt tilgjengelig», OG
+- forge-kontrakt finnes: en kommentar på issuet med header «📋 Forge-kontrakt
+  tilgjengelig» (eneste kilde — kontrakt-filer committes ikke, #1931), OG
 - IKKE labelet `autonomy:ready` (ikke allerede i køen), OG
 - IKKE labelet `autonomy:blocked`, OG
 - IKKE issue **#1110 selv** — den levende Loop-drift-tavla skal aldri bygges

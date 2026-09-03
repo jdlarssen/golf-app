@@ -65,7 +65,7 @@ Når en bane tømmes, beslutter eieren neste — dokumentet oppdateres i samme P
 **Tømt 2026-07-12 — Vekstsløyfa (Tier 1):** alle fem (#1169, #1170, #1173, #1176, #1177)
 er bygget og i prod, sammen med forutsetningene #1183 (natt-e2e) og #1192 (funnel-måling).
 Eieren åpnet samtidig adferdspsykologi-pulja (se §4-noten) — begge kjørt kontrakt-først
-via `.forge/contracts/`.
+via kontrakt-kommentar på issuet.
 
 **Tømt 2026-07-13 — avstand til green:** #1210 (crowdsourcet green-pinning + «~X m til
 green» på hullskjermen) er levert og live i prod. Banen sto her som eier-pull etter
