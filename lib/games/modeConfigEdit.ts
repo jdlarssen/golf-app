@@ -11,10 +11,16 @@ import type { GameModeConfig } from '@/lib/scoring/modes/types';
  * `team_strokes_override_auto` er med her på forhånd: den kommer med #1628,
  * og hører til samme eier (cup-/startflyten, aldri skjemaet). Står den i
  * lista fra før, arver den riktig oppførsel den dagen den lander.
+ *
+ * `withdrawal_play_on` (#1814) hører hjemme her av nøyaktig samme grunn:
+ * arrangørens «makkeren spiller alene»-valg på en cup-fourball skrives av
+ * trekk-flyten, ikke av edit-skjemaet. Uten den i lista nullet en lagring av
+ * kampen valget, og en avgjort kamp våknet stille til live igjen.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
   'team_strokes_override_auto',
+  'withdrawal_play_on',
 ] as const;
 
 /**

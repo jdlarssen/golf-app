@@ -57,6 +57,24 @@ describe('carryPreservedModeConfigKeys', () => {
     expect(carryPreservedModeConfigKeys(existing, next)).toEqual(next);
   });
 
+  it('bærer over fourball-ens withdrawal_play_on (#1814)', () => {
+    const fourball = (extra: Record<string, unknown> = {}): GameModeConfig =>
+      ({
+        kind: 'fourball_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 85,
+        ...extra,
+      }) as GameModeConfig;
+    const existing = fourball({ withdrawal_play_on: true });
+
+    const result = carryPreservedModeConfigKeys(existing, fourball()) as Record<
+      string,
+      unknown
+    >;
+    expect(result.withdrawal_play_on).toBe(true);
+  });
+
   it('bærer ikke over nøkler utenfor lista (skjemaet eier resten)', () => {
     const existing = greensome({
       allowance_pct: 60,
