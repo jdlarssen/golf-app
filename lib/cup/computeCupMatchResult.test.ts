@@ -221,7 +221,7 @@ describe('computeCupMatchResult — dispatch over alle seks matchplay-modi', () 
 // #1777: `gameMode` er fri tekst fra DB (`games.game_mode`). Med rått
 // objekt-oppslag i dispatch-tabellen ville en prototype-nøkkel gitt en funksjon
 // fra `Object.prototype` — truthy nok til å passere `if (!cfg)`-guarden, for så
-// å krasje på `cfg.sideSize`. Map-oppslaget ser kun egne nøkler.
+// å krasje på `cfg.allowedSideSizes`. Map-oppslaget ser kun egne nøkler.
 describe('computeCupMatchResult — prototype-nøkler er ikke moduser (#1777)', () => {
   it.each(['toString', 'constructor', 'valueOf', 'not_a_mode'])(
     '%s → null uten å kaste',
@@ -229,4 +229,69 @@ describe('computeCupMatchResult — prototype-nøkler er ikke moduser (#1777)', 
       expect(computeCupMatchResult(alternateShotSide1Wins(gameMode))).toBeNull();
     },
   );
+});
+
+// #1814: fourball er den ENESTE modusen der en side kan møte opp med én
+// spiller — makkeren spiller alene etter et trekk. De øvrige lag-modusene
+// deler ball og må fortsatt ha begge partnerne.
+describe('computeCupMatchResult — side-størrelse per modus (#1814)', () => {
+  const soloVsPair = (gameMode: string): CupMatchScoringInput => ({
+    gameMode,
+    modeConfig: null,
+    side1: [{ userId: 'a1', courseHandicap: 0 }],
+    side2: [
+      { userId: 'b1', courseHandicap: 0 },
+      { userId: 'b2', courseHandicap: 0 },
+    ],
+    holes: par4Holes(N),
+    scores: Array.from({ length: N }, (_, i) => i + 1).flatMap((hole) => [
+      { userId: 'a1', holeNumber: hole, gross: 4 },
+      { userId: 'b1', holeNumber: hole, gross: 5 },
+      { userId: 'b2', holeNumber: hole, gross: 5 },
+    ]),
+  });
+
+  it('fourball godtar 1 mot 2 og kårer alenespilleren som vinner', () => {
+    const result = computeCupMatchResult(soloVsPair('fourball_matchplay'));
+    expect(result).not.toBeNull();
+    expect(result?.winnerSide).toBe(1);
+  });
+
+  it('fourball godtar fortsatt 2 mot 2', () => {
+    const input = soloVsPair('fourball_matchplay');
+    input.side1 = [
+      { userId: 'a1', courseHandicap: 0 },
+      { userId: 'a2', courseHandicap: 0 },
+    ];
+    expect(computeCupMatchResult(input)?.winnerSide).toBe(1);
+  });
+
+  it.each([
+    'foursomes_matchplay',
+    'greensome_matchplay',
+    'chapman_matchplay',
+    'gruesome_matchplay',
+  ])('%s avviser fortsatt 1 mot 2 → null', (gameMode) => {
+    expect(computeCupMatchResult(soloVsPair(gameMode))).toBeNull();
+  });
+
+  it('singles avviser 2 mot 1 → null', () => {
+    const input = soloVsPair('singles_matchplay');
+    input.side1 = [
+      { userId: 'a1', courseHandicap: 0 },
+      { userId: 'a2', courseHandicap: 0 },
+    ];
+    input.side2 = [{ userId: 'b1', courseHandicap: 0 }];
+    expect(computeCupMatchResult(input)).toBeNull();
+  });
+
+  it('fourball avviser 3 på en side → null', () => {
+    const input = soloVsPair('fourball_matchplay');
+    input.side2 = [
+      { userId: 'b1', courseHandicap: 0 },
+      { userId: 'b2', courseHandicap: 0 },
+      { userId: 'b3', courseHandicap: 0 },
+    ];
+    expect(computeCupMatchResult(input)).toBeNull();
+  });
 });

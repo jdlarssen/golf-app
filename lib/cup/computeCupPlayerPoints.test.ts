@@ -320,3 +320,67 @@ describe('computeCupPlayerPoints', () => {
     expect(names).toContain('Ukjent spiller');
   });
 });
+
+// #1814: en kamp avgjort ved trekk har ingen `result`, så «vunnet» vs. «delt»
+// må leses av `withdrawal`. Poengtallene selv kommer uendret fra
+// computeCupLeaderboard — regnskapet regner dem aldri på nytt.
+describe('computeCupPlayerPoints — kamper avgjort ved trekk (#1814)', () => {
+  it('krediterer begge sider full tie-kreditt for en halvert kamp, merket «tied»', () => {
+    const r = computeCupPlayerPoints({
+      matches: [
+        match({
+          status: 'scheduled',
+          result: null,
+          pointsTeam1: 0.5,
+          pointsTeam2: 0.5,
+          withdrawal: {
+            outcome: 'halved',
+            winnerSide: 'tied',
+            withdrawnSide: 1,
+            withdrawnUserIds: ['p1'],
+            late: false,
+          },
+        }),
+      ],
+      roster: roster(),
+      sideAwards: [],
+      unknownLabel: 'Ukjent',
+    });
+
+    const per = r.team1.find((p) => p.userId === 'p1');
+    const knut = r.team2.find((p) => p.userId === 'k1');
+    expect(per?.points).toBe(0.5);
+    expect(knut?.points).toBe(0.5);
+    expect(per?.contributions[0]).toMatchObject({ type: 'match', outcome: 'tied', points: 0.5 });
+  });
+
+  it('krediterer motstanderne som seier ved walkover, og den trukne siden ingenting', () => {
+    const r = computeCupPlayerPoints({
+      matches: [
+        match({
+          status: 'scheduled',
+          result: null,
+          pointsTeam1: 0,
+          pointsTeam2: 1,
+          withdrawal: {
+            outcome: 'walkover',
+            winnerSide: 2,
+            withdrawnSide: 1,
+            withdrawnUserIds: ['p1'],
+            late: true,
+          },
+        }),
+      ],
+      roster: roster(),
+      sideAwards: [],
+      unknownLabel: 'Ukjent',
+    });
+
+    const per = r.team1.find((p) => p.userId === 'p1');
+    const knut = r.team2.find((p) => p.userId === 'k1');
+    expect(per?.points).toBe(0);
+    expect(per?.contributions).toHaveLength(0);
+    expect(knut?.points).toBe(1);
+    expect(knut?.contributions[0]).toMatchObject({ type: 'match', outcome: 'won', points: 1 });
+  });
+});

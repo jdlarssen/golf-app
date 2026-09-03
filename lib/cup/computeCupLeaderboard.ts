@@ -10,6 +10,8 @@
 // kombinasjoner: vunnet, halvert, in-progress, blanding, vinner-deklarert)
 // uten å mocke games/game_players/scores.
 //
+import type { CupMatchWithdrawal } from './cupWithdrawalOutcome';
+
 // Point-tildelings-regel (matcher PGA/European Tour-ryder-cup-tradisjon):
 //   - winnerSide === 1 → 1 point til team 1
 //   - winnerSide === 2 → 1 point til team 2
@@ -72,7 +74,40 @@ export type CupMatchInput = {
    */
   team1UserIds?: string[];
   team2UserIds?: string[];
+  /**
+   * Avgjort ved trekk (#1814): kampen ble aldri spilt fordi noen trakk seg, og
+   * konvoluttregelen har fordelt poengene — halvert (`tie_points` til begge)
+   * eller walkover (`win_points` til motstanderlaget). Utledet av
+   * `resolveCupMatchWithdrawal`, aldri lagret; `status` forblir `scheduled`.
+   * `null`/`undefined` = kampen skal fortsatt spilles.
+   */
+  withdrawal?: CupMatchWithdrawal | null;
 };
+
+/**
+ * Kampens avgjørelse, uansett hvordan den kom: spilt ferdig eller avgjort ved
+ * trekk. Ett hjem for presedensen — trekket vinner, og regelmodulen har
+ * allerede sagt `null` for `active`/`finished`, så de to kan aldri kollidere.
+ *
+ * Eksportert fordi per-spiller-regnskapet (`computeCupPlayerPoints`) må
+ * klassifisere «vunnet» vs. «delt» etter nøyaktig samme regel.
+ */
+export function cupMatchDecision(
+  input: CupMatchInput,
+): { winnerSide: 1 | 2 | 'tied' } | null {
+  if (input.withdrawal) return { winnerSide: input.withdrawal.winnerSide };
+  if (input.status !== 'finished' || input.result === null) return null;
+  return { winnerSide: input.result.winnerSide };
+}
+
+/**
+ * True når kampen er ferdig i regnskapets forstand: spilt ferdig ELLER avgjort
+ * ved trekk. Driver «X av N matcher spilt» og `remainingMatches` — en kamp som
+ * aldri skal spilles er ikke «gjenstående».
+ */
+export function isCupMatchSettled(input: CupMatchInput): boolean {
+  return input.status === 'finished' || input.withdrawal != null;
+}
 
 /**
  * Lag-formaterte game-modes: result-teksten viser lagnavn (`tournament.team_N_name`)
@@ -163,11 +198,10 @@ function pointsForMatch(
   winPoints: number,
   tiePoints: number,
 ): { team1: number; team2: number } {
-  if (input.status !== 'finished' || input.result === null) {
-    return { team1: 0, team2: 0 };
-  }
-  if (input.result.winnerSide === 1) return { team1: winPoints, team2: 0 };
-  if (input.result.winnerSide === 2) return { team1: 0, team2: winPoints };
+  const decision = cupMatchDecision(input);
+  if (!decision) return { team1: 0, team2: 0 };
+  if (decision.winnerSide === 1) return { team1: winPoints, team2: 0 };
+  if (decision.winnerSide === 2) return { team1: 0, team2: winPoints };
   return { team1: tiePoints, team2: tiePoints };
 }
 
@@ -187,7 +221,10 @@ export function computeCupLeaderboard(
     const pts = pointsForMatch(m, winPoints, tiePoints);
     team1Points += pts.team1;
     team2Points += pts.team2;
-    if (m.status === 'finished') finished += 1;
+    // #1814: en kamp avgjort ved trekk teller som ferdig — den skal aldri
+    // spilles, så «X av N matcher spilt» og `remainingMatches` ville ellers
+    // stått og ventet på noe som aldri kommer.
+    if (isCupMatchSettled(m)) finished += 1;
     return { ...m, pointsTeam1: pts.team1, pointsTeam2: pts.team2 };
   });
 

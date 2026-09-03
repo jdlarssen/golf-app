@@ -23,12 +23,27 @@ export type CupNamedPlayerRow = {
   user_id: string;
   team_number: number | null;
   users: CupUserRel | CupUserRel[] | null;
+  /**
+   * `game_players.withdrawn_at` (#1814). Valgfri: `formatSideLabel` bryr seg
+   * ikke om den, og eldre call-sites/tester som bare navngir en side slipper å
+   * fylle den ut. `buildCupRoster` leser den for «Trukket»-merket.
+   */
+  withdrawn_at?: string | null;
 };
 
 export type CupRosterPlayer = {
   userId: string;
   name: string | null;
   nickname: string | null;
+  /**
+   * #1814: spilleren har trukket seg fra cupen — minst én av kampene hens er
+   * flagget. Hen blir stående på laget (E5), merket «Trukket»; spilte kamper
+   * og poeng beholdes. Merket endrer aldri plassering.
+   *
+   * Valgfri for pre-#1814 call-sites/tester som bygger et roster for hånd;
+   * `buildCupRoster` setter den alltid. Fravær leses som «ikke trukket».
+   */
+  withdrawn?: boolean;
 };
 
 export type CupRoster = {
@@ -72,6 +87,7 @@ function toRosterPlayer(p: CupNamedPlayerRow): CupRosterPlayer {
     userId: p.user_id,
     name: u?.name ?? null,
     nickname: u?.nickname ?? null,
+    withdrawn: false,
   };
 }
 
@@ -95,6 +111,18 @@ export function buildCupRoster(
       }
       if (p.team_number === 2 && !team2Map.has(p.user_id)) {
         team2Map.set(p.user_id, toRosterPlayer(p));
+      }
+      // #1814: «Trukket» settes av ENHVER trukket rad, ikke bare den første
+      // treffet over. Et trekk flagger alle spillerens ikke-startede kamper,
+      // og den første kampen i rekkefølgen kan godt være en hen alt har spilt.
+      if (p.withdrawn_at != null) {
+        const row =
+          p.team_number === 1
+            ? team1Map.get(p.user_id)
+            : p.team_number === 2
+              ? team2Map.get(p.user_id)
+              : undefined;
+        if (row) row.withdrawn = true;
       }
     }
   }
