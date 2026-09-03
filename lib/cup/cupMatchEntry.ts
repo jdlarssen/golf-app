@@ -4,6 +4,7 @@ import { computeCupMatchDisplayResult } from './cupMatchDisplayResult';
 import { toCupMatchGameMode } from './cupMatchGameMode';
 import { formatSideLabel, type CupNamedPlayerRow } from './cupRoster';
 import {
+  hasWithdrawalPlayOnChoice,
   readWithdrawalPlayOn,
   resolveCupMatchWithdrawal,
 } from './cupWithdrawalOutcome';
@@ -125,7 +126,7 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
   // #1814: er kampen avgjort ved trekk? Utledes hver gang, aldri lagret —
   // «angre trekk» er derfor bare å nulle `withdrawn_at`. Regelen selv bor i
   // `cupWithdrawalOutcome.ts`; her plumbes kun input og output.
-  const withdrawal = resolveCupMatchWithdrawal({
+  const ruleInput = {
     status: game.status,
     gameMode: game.game_mode,
     scheduledTeeOffAt: game.scheduled_tee_off_at,
@@ -135,7 +136,19 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
       side: p.team_number as 1 | 2,
       withdrawnAt: p.withdrawn_at,
     })),
-  });
+  };
+  const withdrawal = resolveCupMatchWithdrawal(ruleInput);
+
+  // #1814 (E4): kampen er avgjort NÅ, men den trenger ikke være det — hadde
+  // arrangøren sagt «makkeren spiller alene», ville den blitt spilt. Så lenge
+  // ingen har tatt valget (nøkkelen mangler helt), venter det på arrangøren, og
+  // `CupManagement` maser om det. Regelen spørres to ganger i stedet for å
+  // gjentas her: samme modul avgjør begge svarene.
+  const playOnChoicePending =
+    game.status === 'scheduled' &&
+    withdrawal !== null &&
+    !hasWithdrawalPlayOnChoice(game.mode_config) &&
+    resolveCupMatchWithdrawal({ ...ruleInput, playOn: true }) === null;
 
   // Kampen SKAL spilles, men står én mot to fordi arrangøren valgte det (E4).
   // Kortet må si hvorfor — ellers ser en fourball med tre navn ut som en feil.
@@ -208,6 +221,7 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
       // #1814: begge null når kampen skal spilles som normalt.
       withdrawal,
       soloPlayOn,
+      playOnChoicePending,
     },
     performance: buildPerformanceGame(input, holes),
   };

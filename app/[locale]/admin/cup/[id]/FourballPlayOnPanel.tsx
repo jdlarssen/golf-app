@@ -59,7 +59,12 @@ export function FourballPlayOnPanel({
   }
 
   return (
-    <div className="mt-3 space-y-2" data-testid={`cup-playon-panel-${gameId}`}>
+    // `id`-en er hoppmålet for venter-banneret øverst på cup-styringen (#1814).
+    <div
+      id={`playon-${gameId}`}
+      className="mt-3 scroll-mt-4 space-y-2"
+      data-testid={`cup-playon-panel-${gameId}`}
+    >
       {errorMessage && (
         <Banner tone="error" testId={`cup-playon-error-${gameId}`}>
           {errorMessage}

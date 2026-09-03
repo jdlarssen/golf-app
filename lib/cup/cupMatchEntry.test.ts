@@ -321,6 +321,71 @@ describe('buildCupMatchEntry — trukne rader og scoring (#1814)', () => {
     expect(match.team1PlayerName).toBe('Per/Kari');
   });
 
+  // E4: fravær av `withdrawal_play_on` = ingen har bestemt seg, og kampen
+  // venter på arrangøren. En eksplisitt `true`/`false` er et valg.
+  it.each([
+    ['ingen nøkkel — valget venter', undefined, true],
+    ['eksplisitt nei — arrangøren har valgt regelen', false, false],
+    ['eksplisitt ja — makkeren spiller alene', true, false],
+  ] as const)('playOnChoicePending: %s', (_name, flag, expected) => {
+    const { match } = buildCupMatchEntry(
+      entryInput({
+        game: {
+          id: 'g1',
+          status: 'scheduled',
+          game_mode: 'fourball_matchplay',
+          mode_config: {
+            kind: 'fourball_matchplay',
+            team_size: 2,
+            teams_count: 2,
+            ...(flag === undefined ? {} : { withdrawal_play_on: flag }),
+          },
+          tournament_match_label: 'Kamp 1',
+          hole_segment: 'full',
+          source_game_id: null,
+          score_visibility: 'live',
+          scheduled_tee_off_at: '2026-09-10T08:00:00.000Z',
+        },
+        players: [
+          { user_id: 'a1', team_number: 1, course_handicap: 0, users: { name: 'Per', nickname: null }, withdrawn_at: '2026-09-09T20:00:00.000Z' },
+          { user_id: 'a2', team_number: 1, course_handicap: 0, users: { name: 'Kari', nickname: null }, withdrawn_at: null },
+          { user_id: 'b1', team_number: 2, course_handicap: 0, users: { name: 'Ola', nickname: null }, withdrawn_at: null },
+          { user_id: 'b2', team_number: 2, course_handicap: 0, users: { name: 'Ida', nickname: null }, withdrawn_at: null },
+        ],
+        scores: [],
+      }),
+    );
+
+    expect(match.playOnChoicePending).toBe(expected);
+  });
+
+  it('playOnChoicePending: false når hele siden har trukket seg', () => {
+    const { match } = buildCupMatchEntry(
+      entryInput({
+        game: {
+          id: 'g1',
+          status: 'scheduled',
+          game_mode: 'fourball_matchplay',
+          mode_config: { kind: 'fourball_matchplay', team_size: 2, teams_count: 2 },
+          tournament_match_label: 'Kamp 1',
+          hole_segment: 'full',
+          source_game_id: null,
+          score_visibility: 'live',
+          scheduled_tee_off_at: '2026-09-10T08:00:00.000Z',
+        },
+        players: [
+          { user_id: 'a1', team_number: 1, course_handicap: 0, users: { name: 'Per', nickname: null }, withdrawn_at: '2026-09-09T20:00:00.000Z' },
+          { user_id: 'a2', team_number: 1, course_handicap: 0, users: { name: 'Kari', nickname: null }, withdrawn_at: '2026-09-09T20:00:00.000Z' },
+          { user_id: 'b1', team_number: 2, course_handicap: 0, users: { name: 'Ola', nickname: null }, withdrawn_at: null },
+          { user_id: 'b2', team_number: 2, course_handicap: 0, users: { name: 'Ida', nickname: null }, withdrawn_at: null },
+        ],
+        scores: [],
+      }),
+    );
+
+    expect(match.playOnChoicePending).toBe(false);
+  });
+
   it('beholder cup-poenget på en ferdig best-ball der noen soft-trakk seg', () => {
     const { match } = buildCupMatchEntry(
       entryInput({
