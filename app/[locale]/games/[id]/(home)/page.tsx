@@ -309,7 +309,6 @@ export default async function GameHomePage({
   const profileIncomplete = !ownProfileRes.data?.profile_completed_at;
   const meIsGuest = me.users?.is_guest === true;
 
-
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =
     spectateRes.data?.spectate_token ?? null;
@@ -654,6 +653,25 @@ export default async function GameHomePage({
           })
           .join('/')
       : '';
+    // Walkover-banneret skal si HVEM som får kampen — «motstanderne» er ingen
+    // hjelp for en spiller som åpner appen den morgenen. Lagnavnene bor på
+    // turneringsraden, som ikke er lastet her; ett slankt oppslag i den
+    // sjeldne walkover-grenen er billigere enn å bære dem gjennom hele siden.
+    // Service-role som resten av cup-flatene (#1542) — gaten er ruta.
+    const decidedWinnerTeam =
+      cupWithdrawalDecision?.outcome === 'walkover' && game.tournament_id
+        ? await (async () => {
+            const { data: cup } = await getAdminClient()
+              .from('tournaments')
+              .select('team_1_name, team_2_name')
+              .eq('id', game.tournament_id!)
+              .maybeSingle<{ team_1_name: string; team_2_name: string }>();
+            if (!cup) return '';
+            return cupWithdrawalDecision.winnerSide === 1
+              ? cup.team_1_name
+              : cup.team_2_name;
+          })()
+        : '';
 
     // #543: venteroms-velger og unassigned_flights-banner.
     // Vises bare når spillet er eligible for flight-inndeling (>4 aktive, ikke wolf).
@@ -940,7 +958,7 @@ export default async function GameHomePage({
                 ? t('cupDecidedHalved', { names: decidedNames })
                 : t('cupDecidedWalkover', {
                     names: decidedNames,
-                    side: cupWithdrawalDecision.winnerSide === 1 ? 1 : 2,
+                    team: decidedWinnerTeam,
                   })}
             </Banner>
           </div>
