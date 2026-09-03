@@ -34,6 +34,15 @@ export type CupPlayerPointsRow = {
   points: number;
   /** Kun poenggivende hendelser — en kvittering for innsamlede poeng. */
   contributions: CupPlayerContribution[];
+  /**
+   * #1814: spilleren har trukket seg fra cupen. Merket følger med hit fordi
+   * raden BLIR STÅENDE med sine poeng (E5) — den trukne beholder alt hen
+   * spilte inn, merket sier bare hvorfor hen ikke er med videre.
+   *
+   * Valgfri for pre-#1814 call-sites/tester som bygger rader for hånd;
+   * `computeCupPlayerPoints` setter den alltid. Fravær = ikke trukket.
+   */
+  withdrawn?: boolean;
 };
 
 export type CupPlayerPointsResult = {
@@ -77,6 +86,7 @@ export function computeCupPlayerPoints(input: CupPlayerPointsInput): CupPlayerPo
       team: 1,
       points: 0,
       contributions: [],
+      withdrawn: p.withdrawn === true,
     });
   }
   for (const p of roster.team2) {
@@ -87,6 +97,7 @@ export function computeCupPlayerPoints(input: CupPlayerPointsInput): CupPlayerPo
       team: 2,
       points: 0,
       contributions: [],
+      withdrawn: p.withdrawn === true,
     });
   }
 

@@ -82,6 +82,12 @@ export type CupMatchInput = {
    * `null`/`undefined` = kampen skal fortsatt spilles.
    */
   withdrawal?: CupMatchWithdrawal | null;
+  /**
+   * #1814: fourball der noen har trukket seg OG arrangøren valgte at makkeren
+   * spiller videre alene. Kampen skal spilles (`withdrawal` er `null`), men
+   * kortet må si hvorfor det står én mot to. `null` i alle andre tilfeller.
+   */
+  soloPlayOn?: { partnerName: string } | null;
 };
 
 /**

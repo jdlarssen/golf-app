@@ -8,9 +8,11 @@ import type { CupRoster, CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
 import type { CupMatchSummary } from '@/lib/cup/computeCupLeaderboard';
 import {
   cupMatchStatusKey,
+  cupMatchStatusValues,
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
 import { SwapMatchPlayer, type SwapPlayerOption } from './SwapMatchPlayer';
+import { FourballPlayOnPanel } from './FourballPlayOnPanel';
 
 /**
  * Reservene arrangøren kan bytte inn i en ikke-startet match (#1473).
@@ -123,6 +125,22 @@ export async function CupMatchList({
     };
   }
 
+  /**
+   * #1814: hvem står igjen på den trukne siden? Brukes til fourball-panelet når
+   * arrangøren ennå IKKE har valgt «spiller alene» — da finnes ingen
+   * `soloPlayOn` å lese navnet fra, men valget skal fortsatt tilbys.
+   * `null` når hele siden har trukket seg (ingen ball igjen å slå).
+   */
+  function remainingPartnerName(match: CupMatchSummary): string | null {
+    const w = match.withdrawal;
+    if (!w || w.withdrawnSide === 'both') return null;
+    const sideIds =
+      (w.withdrawnSide === 1 ? match.team1UserIds : match.team2UserIds) ?? [];
+    const remaining = sideIds.filter((uid) => !w.withdrawnUserIds.includes(uid));
+    if (remaining.length === 0) return null;
+    return remaining.map((uid) => matchPlayerNames.get(uid) ?? unknownLabel).join('/');
+  }
+
   return (
     <section className="mb-5">
       <div className="mb-2">
@@ -144,11 +162,22 @@ export async function CupMatchList({
             // delt status-label gir «Scorekort levert» når alt er levert.
             // #1488 (K9): `data-status` bærer den språk-uavhengige status-
             // nøkkelen så e2e kan asserte avledet-arven uten norsk copy.
+            // #1814: en kamp avgjort ved trekk står fortsatt `scheduled` i
+            // DB-en (utfallet lagres aldri) — status-nøkkelen er det eneste
+            // som skiller den fra «Ikke startet».
             const statusKey = cupMatchStatusKey({
               status: m.status,
               allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
+              withdrawal: m.withdrawal,
             });
-            const statusLabel = t(CUP_MATCH_STATUS_MESSAGE_KEY[statusKey]);
+            const statusLabel = t(
+              CUP_MATCH_STATUS_MESSAGE_KEY[statusKey],
+              cupMatchStatusValues(m, {
+                nameOf: (uid) => matchPlayerNames.get(uid) ?? unknownLabel,
+                team1Name,
+                team2Name,
+              }),
+            );
             const card = (
               <Card>
                 <div className="flex items-start justify-between gap-3">
@@ -161,6 +190,15 @@ export async function CupMatchList({
                       <span className="text-muted">{t('manage.mot')}</span>{' '}
                       {m.team2PlayerName}
                     </p>
+                    {/* #1814: uten denne linja ser en fourball med én ball mot
+                        to ut som en feil i oppsettet. */}
+                    {m.soloPlayOn && (
+                      <p className="mt-1 font-sans text-[12px] text-muted">
+                        {t('public.matchSoloPlayOn', {
+                          partner: m.soloPlayOn.partnerName,
+                        })}
+                      </p>
+                    )}
                   </div>
                   <div className="shrink-0 text-right">
                     <p
@@ -186,8 +224,20 @@ export async function CupMatchList({
               : `/admin/games/${m.gameId}`;
             // #1473: bytte-panelet ligger UTENFOR kort-lenken — en knapp inne
             // i en <a> ville navigert i stedet for å åpne panelet.
+            // #1814 (E6): et trekk frigjør ingen plass, så en kamp med et
+            // registrert trekk får ikke byttet inn noen. Serveren avviser det
+            // uansett (`match_has_withdrawal`) — dette skjuler bare knappen.
+            const hasWithdrawal = m.withdrawal != null || m.soloPlayOn != null;
             const swap =
-              m.status === 'scheduled' ? swapOptionsFor(m) : null;
+              m.status === 'scheduled' && !hasWithdrawal ? swapOptionsFor(m) : null;
+            // Fourball-valget: arrangøren kan snu «makkeren spiller alene» helt
+            // fram til kampen starter (E4).
+            const partnerName = m.soloPlayOn?.partnerName ?? remainingPartnerName(m);
+            const showPlayOn =
+              m.status === 'scheduled' &&
+              m.gameMode === 'fourball_matchplay' &&
+              hasWithdrawal &&
+              partnerName !== null;
             return (
               <li key={m.gameId}>
                 {href ? <SmartLink href={href}>{card}</SmartLink> : card}
@@ -197,6 +247,14 @@ export async function CupMatchList({
                     gameId={m.gameId}
                     outOptions={swap.outOptions}
                     inOptions={swap.inOptions}
+                  />
+                )}
+                {showPlayOn && (
+                  <FourballPlayOnPanel
+                    tournamentId={tournamentId}
+                    gameId={m.gameId}
+                    playOn={m.soloPlayOn != null}
+                    partnerName={partnerName}
                   />
                 )}
               </li>

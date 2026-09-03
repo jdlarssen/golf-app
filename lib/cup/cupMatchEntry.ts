@@ -145,6 +145,19 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
   const scoringSide1 = side1Players.filter((p) => p.withdrawn_at == null);
   const scoringSide2 = side2Players.filter((p) => p.withdrawn_at == null);
 
+  // Kampen SKAL spilles, men står én mot to fordi arrangøren valgte det.
+  // Kortet må si hvorfor — ellers ser en fourball med tre navn ut som en feil.
+  const soloSide =
+    withdrawal === null && readWithdrawalPlayOn(game.mode_config)
+      ? ([
+          [side1Players, scoringSide1] as const,
+          [side2Players, scoringSide2] as const,
+        ].find(([all, active]) => all.length !== active.length && active.length > 0) ?? null)
+      : null;
+  const soloPlayOn = soloSide
+    ? { partnerName: formatSideLabel(soloSide[1], unknownLabel) }
+    : null;
+
   const result = computeCupMatchDisplayResult({
     gameId: game.id,
     gameMode: game.game_mode,
@@ -188,8 +201,9 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
       // sidens kamppoeng.
       team1UserIds: side1Players.map((p) => p.user_id),
       team2UserIds: side2Players.map((p) => p.user_id),
-      // #1814: null når kampen skal spilles som normalt.
+      // #1814: begge null når kampen skal spilles som normalt.
       withdrawal,
+      soloPlayOn,
     },
     performance: buildPerformanceGame(input, holes),
   };

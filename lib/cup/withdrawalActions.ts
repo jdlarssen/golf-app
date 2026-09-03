@@ -259,9 +259,12 @@ export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdraw
   const tournamentId = String(formData.get('tournament_id') ?? '').trim();
   const userId = String(formData.get('user_id') ?? '').trim();
   if (!tournamentId || !userId) return { error: 'not_found' };
+  // Bekreftelsessiden sender én avkrysningsboks per fourball-kamp, så feltet
+  // kan komme flere ganger. `getAll` + komma-splitt dekker begge former.
   const playOnGameIds = new Set(
-    String(formData.get('play_on_game_ids') ?? '')
-      .split(',')
+    formData
+      .getAll('play_on_game_ids')
+      .flatMap((v) => String(v).split(','))
       .map((s) => s.trim())
       .filter(Boolean),
   );
