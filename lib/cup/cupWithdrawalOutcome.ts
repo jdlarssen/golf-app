@@ -44,6 +44,18 @@ export function readWithdrawalPlayOn(modeConfig: unknown): boolean {
   return (modeConfig as { withdrawal_play_on?: unknown }).withdrawal_play_on === true;
 }
 
+/**
+ * Har arrangøren TATT valget ennå? Fravær av nøkkelen betyr «ikke bestemt», mens
+ * en eksplisitt `false` betyr «etter regelen» — begge gir samme utfall i
+ * regelen over, men bare den første skal mase på arrangøren med et
+ * venter-banner (#1814, E4). Derfor skriver `setFourballWithdrawalChoice` en
+ * eksplisitt `false` i stedet for å slette nøkkelen.
+ */
+export function hasWithdrawalPlayOnChoice(modeConfig: unknown): boolean {
+  if (!modeConfig || typeof modeConfig !== 'object') return false;
+  return typeof (modeConfig as { withdrawal_play_on?: unknown }).withdrawal_play_on === 'boolean';
+}
+
 /** Én spillerrad i kampen, redusert til det regelen faktisk trenger. */
 export type CupWithdrawalPlayer = {
   userId: string;
