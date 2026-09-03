@@ -25,7 +25,7 @@ import {
  * Husregelen for destruktive flyter: egen rute, aldri en inline-toggle. Siden
  * viser konsekvensen for HVER ikke-startet kamp, regnet NÅ med den samme
  * regelmodulen skrivingen bruker — arrangøren skal se «halveres» eller
- * «dømmes som tap» før hen trykker, ikke etterpå.
+ * «walkover til {lag}» før hen trykker, ikke etterpå.
  *
  * Er spilleren allerede trukket, snur siden til angre-varianten (E7: kun
  * arrangøren kan angre, og bare for kamper som ennå ikke har startet).

@@ -18,6 +18,12 @@ import { expectAffected } from '@/lib/supabase/affectedRows';
  * vi gjør defense-in-depth-sjekk i koden også slik at feilmeldingen er
  * predictable.
  *
+ * ⚠️ Cup-kamper er unntaket fra den setningen: avvisningen av
+ * `tournament_id != null` (`game_locked`, #1814) finnes KUN her i
+ * server-action-en — policy 0092 slipper fortsatt en direkte PostgREST-DELETE
+ * av en cup-rad før start, så gaten her ER håndhevelsen inntil videre; se
+ * oppfølgingsissue.
+ *
  * Team-detection: hvis brukeren var en team-medlem (har team_number satt
  * OG det finnes andre spillere med samme team_number i samme spill), finner
  * vi kapteinen via `game_registration_requests` (raden med
@@ -55,7 +61,7 @@ type GameSnapshot = {
   game_mode: GameMode;
   /**
    * #1814: en cup-kamp har en helt annen trekk-semantikk (Ryder Cup-modellen —
-   * kampen halveres eller dømmes som tap). Sletting av raden her ville knekt
+   * kampen halveres eller går som walkover). Sletting av raden her ville knekt
    * kampen stille: siden blir ufullstendig og auto-start blokkerer for alltid.
    */
   tournament_id: string | null;
