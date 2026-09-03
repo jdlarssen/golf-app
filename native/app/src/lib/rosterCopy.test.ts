@@ -51,6 +51,7 @@ const START_REASONS: StartRoundFailure[] = [
   'no_players',
   'pending_players',
   'incomplete_sides',
+  'decided_by_withdrawal',
   'unassigned_teams',
   'unassigned_flights',
   'rotation_player_count',
