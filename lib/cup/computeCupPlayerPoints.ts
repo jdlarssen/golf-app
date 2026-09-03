@@ -12,7 +12,7 @@
 //     kamppoeng på nytt her. gir bidrar aldri til spillerregnskapet (#1489 —
 //     lag-attribuert, ingen spiller-kobling).
 
-import type { CupMatchSummary } from './computeCupLeaderboard';
+import { cupMatchDecision, type CupMatchSummary } from './computeCupLeaderboard';
 import type { CupRoster, CupRosterPlayer, CupSideAwardSnapshot } from './getCupSnapshot';
 
 export type CupPlayerContribution =
@@ -138,7 +138,12 @@ function creditSide(args: {
 }): void {
   const { byUser, userIds, points, opponentLabel, match: m } = args;
   if (points <= 0 || !userIds) return;
-  const outcome: 'won' | 'tied' = m.result?.winnerSide === 'tied' ? 'tied' : 'won';
+  // #1814: en kamp avgjort ved trekk har ingen `result` — avgjørelsen leses
+  // gjennom `cupMatchDecision`, samme regel som poengene selv ble regnet med.
+  // Halvert = vanlig delt (begge sider krediteres tie_points, som ekte
+  // Ryder Cup-statistikk); walkover krediteres motstanderne som en seier.
+  const outcome: 'won' | 'tied' =
+    cupMatchDecision(m)?.winnerSide === 'tied' ? 'tied' : 'won';
   for (const userId of userIds) {
     const row = byUser.get(userId);
     if (!row) continue;

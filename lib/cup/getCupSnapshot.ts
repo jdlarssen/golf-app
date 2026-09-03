@@ -92,8 +92,9 @@ type PlayerRow = CupMatchPlayerRow & {
   game_id: string;
   // #1502: leverings-tilstand per spiller — driver «Scorekort levert»-labelen
   // (alle ikke-trukne levert) og leverings-gaten i finishTournament.
+  // `withdrawn_at` kommer fra `CupMatchPlayerRow` (#1814) og driver dessuten
+  // konvoluttregelen og «Trukket»-merket i rosteret.
   submitted_at: string | null;
-  withdrawn_at: string | null;
 };
 
 type ScoreRow = CupMatchScoreRow & { game_id: string };
@@ -170,7 +171,7 @@ export async function getCupSnapshot(
   const { data: gameRows, error: gErr } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, tournament_match_label, course_id, tee_box_id, created_at, hole_segment, source_game_id, score_visibility',
+      'id, name, status, game_mode, mode_config, tournament_match_label, course_id, tee_box_id, created_at, hole_segment, source_game_id, score_visibility, scheduled_tee_off_at',
     )
     .eq('tournament_id', tournamentId)
     .order('created_at', { ascending: true });

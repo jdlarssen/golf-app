@@ -278,3 +278,86 @@ describe('computeCupLeaderboard — sidepoeng (#1441, D9)', () => {
     expect(result.team1Points).toBe(1);
   });
 });
+
+// #1814: en kamp avgjort ved trekk har `status: 'scheduled'` og ingen `result`
+// — poengene kommer fra `withdrawal`, utledet av konvoluttregelen. Regelen
+// selv er dekket i `cupWithdrawalOutcome.test.ts`; her testes bare at
+// aggregatoren teller den riktig.
+describe('computeCupLeaderboard — kamper avgjort ved trekk (#1814)', () => {
+  const halved = (winnerSide: 'tied' = 'tied') => ({
+    outcome: 'halved' as const,
+    winnerSide,
+    withdrawnSide: 1 as const,
+    withdrawnUserIds: ['p1'],
+    late: false,
+  });
+  const walkoverTo = (winnerSide: 1 | 2) => ({
+    outcome: 'walkover' as const,
+    winnerSide,
+    withdrawnSide: (winnerSide === 1 ? 2 : 1) as 1 | 2,
+    withdrawnUserIds: ['p1'],
+    late: true,
+  });
+
+  it('halvert kamp gir tie_points til begge lag, uten at kampen er spilt', () => {
+    const r = computeCupLeaderboard(cup(), [
+      match({ status: 'scheduled', result: null, withdrawal: halved() }),
+    ]);
+    expect(r.team1Points).toBe(0.5);
+    expect(r.team2Points).toBe(0.5);
+    expect(r.matches[0].pointsTeam1).toBe(0.5);
+    expect(r.matches[0].pointsTeam2).toBe(0.5);
+  });
+
+  it('walkover gir win_points til motstanderlaget og 0 til den trukne siden', () => {
+    const r = computeCupLeaderboard(cup(), [
+      match({ status: 'scheduled', result: null, withdrawal: walkoverTo(2) }),
+    ]);
+    expect(r.team1Points).toBe(0);
+    expect(r.team2Points).toBe(1);
+  });
+
+  it('bruker cupens egne vekter (#1441, D8) også for trekk', () => {
+    const weighted = cup({ win_points: 3, tie_points: 1, points_to_win: 6 });
+    const halvedResult = computeCupLeaderboard(weighted, [
+      match({ status: 'scheduled', result: null, withdrawal: halved() }),
+    ]);
+    expect(halvedResult.team1Points).toBe(1);
+    expect(halvedResult.team2Points).toBe(1);
+
+    const walkoverResult = computeCupLeaderboard(weighted, [
+      match({ status: 'scheduled', result: null, withdrawal: walkoverTo(1) }),
+    ]);
+    expect(walkoverResult.team1Points).toBe(3);
+    expect(walkoverResult.team2Points).toBe(0);
+  });
+
+  it('teller avgjorte kamper som ferdige i «X av N matcher spilt»', () => {
+    const r = computeCupLeaderboard(cup(), [
+      match({ gameId: 'g1' }),
+      match({ gameId: 'g2', status: 'scheduled', result: null, withdrawal: halved() }),
+      match({ gameId: 'g3', status: 'scheduled', result: null }),
+    ]);
+    expect(r.finishedMatches).toBe(2);
+    expect(r.remainingMatches).toBe(1);
+  });
+
+  it('kan kåre en vinner på poeng som kom fra trekk', () => {
+    const r = computeCupLeaderboard(cup({ points_to_win: 1 }), [
+      match({ status: 'scheduled', result: null, withdrawal: walkoverTo(2) }),
+    ]);
+    expect(r.winner).toBe(2);
+  });
+
+  it('lar trekket gå foran et gammelt result på samme rad (defensivt)', () => {
+    const r = computeCupLeaderboard(cup(), [
+      match({
+        status: 'scheduled',
+        result: { winnerSide: 1, formatted: '3&2' },
+        withdrawal: halved(),
+      }),
+    ]);
+    expect(r.team1Points).toBe(0.5);
+    expect(r.team2Points).toBe(0.5);
+  });
+});

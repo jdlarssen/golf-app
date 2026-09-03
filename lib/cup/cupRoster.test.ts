@@ -19,7 +19,7 @@ function player(
   team_number: number | null,
   users: CupUserRel | CupUserRel[] | null = { name: user_id, nickname: null },
 ): CupNamedPlayerRow {
-  return { user_id, team_number, users };
+  return { user_id, team_number, users, withdrawn_at: null };
 }
 
 describe('userOf — Supabase-joinens array-eller-objekt-form', () => {
@@ -85,8 +85,8 @@ describe('buildCupRoster', () => {
       ],
     ]);
     expect(roster).toEqual({
-      team1: [{ userId: 'a1', name: 'Per', nickname: 'Pelle' }],
-      team2: [{ userId: 'b1', name: 'Kari', nickname: null }],
+      team1: [{ userId: 'a1', name: 'Per', nickname: 'Pelle', withdrawn: false }],
+      team2: [{ userId: 'b1', name: 'Kari', nickname: null, withdrawn: false }],
     });
   });
 
@@ -103,7 +103,9 @@ describe('buildCupRoster', () => {
       [player('a1', 1, { name: 'Første', nickname: null })],
       [player('a1', 1, { name: 'Andre', nickname: null })],
     ]);
-    expect(roster.team1).toEqual([{ userId: 'a1', name: 'Første', nickname: null }]);
+    expect(roster.team1).toEqual([
+      { userId: 'a1', name: 'Første', nickname: null, withdrawn: false },
+    ]);
   });
 
   it.each<[string, number | null]>([
@@ -120,11 +122,61 @@ describe('buildCupRoster', () => {
 
   it('leser navn gjennom array-formen av users-joinen', () => {
     const roster = buildCupRoster([[player('a1', 1, [{ name: 'Per', nickname: 'Pelle' }])]]);
-    expect(roster.team1).toEqual([{ userId: 'a1', name: 'Per', nickname: 'Pelle' }]);
+    expect(roster.team1).toEqual([
+      { userId: 'a1', name: 'Per', nickname: 'Pelle', withdrawn: false },
+    ]);
   });
 
   it('spiller uten users-join får null-navn (ikke krasj)', () => {
     const roster = buildCupRoster([[player('a1', 1, null)]]);
-    expect(roster.team1).toEqual([{ userId: 'a1', name: null, nickname: null }]);
+    expect(roster.team1).toEqual([
+      { userId: 'a1', name: null, nickname: null, withdrawn: false },
+    ]);
+  });
+});
+
+// #1814: den trukne blir stående på laget sitt, merket «Trukket» (E5). Merket
+// settes av ENHVER trukket rad — et trekk flagger bare spillerens ikke-startede
+// kamper, og den første kampen i rekkefølgen kan godt være ferdigspilt.
+describe('buildCupRoster — «Trukket»-merket (#1814)', () => {
+  function withdrawnPlayer(user_id: string, team_number: number): CupNamedPlayerRow {
+    return {
+      user_id,
+      team_number,
+      users: { name: user_id, nickname: null },
+      withdrawn_at: '2026-09-10T07:00:00.000Z',
+    };
+  }
+
+  it('er false når ingen rader er trukket', () => {
+    const roster = buildCupRoster([[player('a1', 1)]]);
+    expect(roster.team1[0].withdrawn).toBe(false);
+  });
+
+  it('er true når spillerens eneste rad er trukket', () => {
+    const roster = buildCupRoster([[withdrawnPlayer('a1', 1)]]);
+    expect(roster.team1[0].withdrawn).toBe(true);
+  });
+
+  it('er true selv om den FØRSTE kampen er urørt og en senere er trukket', () => {
+    const roster = buildCupRoster([
+      [player('a1', 1)],
+      [withdrawnPlayer('a1', 1)],
+    ]);
+    expect(roster.team1).toHaveLength(1);
+    expect(roster.team1[0].withdrawn).toBe(true);
+  });
+
+  it('smitter ikke over på lagkameratene', () => {
+    const roster = buildCupRoster([
+      [withdrawnPlayer('a1', 1), player('a2', 1), player('b1', 2)],
+    ]);
+    expect(roster.team1.map((p) => p.withdrawn)).toEqual([true, false]);
+    expect(roster.team2[0].withdrawn).toBe(false);
+  });
+
+  it('flagger ikke en trukket rad uten lag', () => {
+    const roster = buildCupRoster([[withdrawnPlayer('x1', 3)]]);
+    expect(roster).toEqual({ team1: [], team2: [] });
   });
 });

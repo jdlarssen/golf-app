@@ -30,8 +30,19 @@ type MatchplayResult = { result: { winner: 'side1' | 'side2' | 'tied'; formatted
 
 type MatchplayConfig = {
   compute: (ctx: ScoringContext) => MatchplayResult;
-  /** Spillere per side: singles = 1, alle lag-format = 2. */
-  sideSize: 1 | 2;
+  /**
+   * Lagstørrelsen modusen er bygget for — styrer `mode_config`-formen som
+   * sendes til `compute()`: singles = 1, alle lag-format = 2.
+   */
+  teamSize: 1 | 2;
+  /**
+   * Hvor mange spillere en side FAKTISK kan møte opp med. Eksakt for de fleste
+   * modusene, men fourball godtar 1–2 (#1814): trekker den ene seg og
+   * arrangøren velger «makkeren spiller alene», spilles kampen én ball mot to.
+   * Foursomes, greensome, chapman og gruesome deler ball og har ingen
+   * alene-variant — de krever fortsatt eksakt 2.
+   */
+  allowedSideSizes: readonly number[];
   /**
    * WHS-allowance-default når `mode_config.allowance_pct` mangler. `null` for
    * singles (ingen allowance i mode_config). Bevart eksakt fra de tidligere
@@ -42,19 +53,49 @@ type MatchplayConfig = {
 };
 
 const MATCHPLAY_CONFIG: Record<CupMatchplayMode, MatchplayConfig> = {
-  singles_matchplay: { compute: computeSinglesMatchplay, sideSize: 1, defaultAllowance: null },
-  fourball_matchplay: { compute: computeFourballMatchplay, sideSize: 2, defaultAllowance: 100 },
-  foursomes_matchplay: { compute: computeFoursomesMatchplay, sideSize: 2, defaultAllowance: 50 },
-  greensome_matchplay: { compute: computeGreensomeMatchplay, sideSize: 2, defaultAllowance: 100 },
-  chapman_matchplay: { compute: computeChapmanMatchplay, sideSize: 2, defaultAllowance: 100 },
-  gruesome_matchplay: { compute: computeGruesomeMatchplay, sideSize: 2, defaultAllowance: 50 },
+  singles_matchplay: {
+    compute: computeSinglesMatchplay,
+    teamSize: 1,
+    allowedSideSizes: [1],
+    defaultAllowance: null,
+  },
+  fourball_matchplay: {
+    compute: computeFourballMatchplay,
+    teamSize: 2,
+    allowedSideSizes: [1, 2],
+    defaultAllowance: 100,
+  },
+  foursomes_matchplay: {
+    compute: computeFoursomesMatchplay,
+    teamSize: 2,
+    allowedSideSizes: [2],
+    defaultAllowance: 50,
+  },
+  greensome_matchplay: {
+    compute: computeGreensomeMatchplay,
+    teamSize: 2,
+    allowedSideSizes: [2],
+    defaultAllowance: 100,
+  },
+  chapman_matchplay: {
+    compute: computeChapmanMatchplay,
+    teamSize: 2,
+    allowedSideSizes: [2],
+    defaultAllowance: 100,
+  },
+  gruesome_matchplay: {
+    compute: computeGruesomeMatchplay,
+    teamSize: 2,
+    allowedSideSizes: [2],
+    defaultAllowance: 50,
+  },
 };
 
 /**
  * Runtime-oppslaget går via `Map`, ikke rått objekt-oppslag: `input.gameMode`
  * er fri tekst (`games.game_mode`), og `MATCHPLAY_CONFIG['toString']` ville
  * truffet `Object.prototype` og gitt en *funksjon* — truthy nok til å passere
- * `if (!cfg)`-guarden, for så å krasje på `cfg.sideSize` lenger nede (#1777).
+ * `if (!cfg)`-guarden, for så å krasje på `cfg.allowedSideSizes` lenger nede (#1777).
  * `Object.entries` gir kun egne nøkler, og avledningen skjer ÉN gang ved
  * modulens rot. Deklarasjonen over blir bevisst stående som
  * `Record<CupMatchplayMode, …>` så en ny matchplay-modus fortsatt gir
@@ -95,7 +136,12 @@ export type CupMatchScoringInput = {
 export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInput['result'] {
   const cfg = MATCHPLAY_CONFIG_BY_MODE.get(input.gameMode);
   if (!cfg) return null;
-  if (input.side1.length !== cfg.sideSize || input.side2.length !== cfg.sideSize) return null;
+  if (
+    !cfg.allowedSideSizes.includes(input.side1.length) ||
+    !cfg.allowedSideSizes.includes(input.side2.length)
+  ) {
+    return null;
+  }
 
   const allowancePct =
     cfg.defaultAllowance === null
@@ -112,7 +158,7 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
     input.gameMode === 'greensome_matchplay' ? input.modeConfig?.team_strokes_override : undefined;
 
   const modeConfig: GameModeConfig = (
-    cfg.sideSize === 1
+    cfg.teamSize === 1
       ? { kind: input.gameMode, team_size: 1, teams_count: 2 }
       : {
           kind: input.gameMode,

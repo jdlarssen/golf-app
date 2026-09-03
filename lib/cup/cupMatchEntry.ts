@@ -3,6 +3,10 @@ import { PERSONALLY_SCORED_CUP_GAME_MODES, type CupPerformanceGame } from './com
 import { computeCupMatchDisplayResult } from './cupMatchDisplayResult';
 import { toCupMatchGameMode } from './cupMatchGameMode';
 import { formatSideLabel, type CupNamedPlayerRow } from './cupRoster';
+import {
+  readWithdrawalPlayOn,
+  resolveCupMatchWithdrawal,
+} from './cupWithdrawalOutcome';
 import type { CupMatchInput } from './computeCupLeaderboard';
 import type { MatchSubmissionStatus } from './matchSubmissionStatus';
 
@@ -15,6 +19,8 @@ import type { MatchSubmissionStatus } from './matchSubmissionStatus';
 
 export type CupMatchPlayerRow = CupNamedPlayerRow & {
   course_handicap: number | null;
+  /** `game_players.withdrawn_at` — input til konvoluttregelen (#1814). */
+  withdrawn_at: string | null;
 };
 
 export type CupMatchScoreRow = {
@@ -33,6 +39,8 @@ export type CupMatchGameRow = {
   hole_segment: string;
   source_game_id: string | null;
   score_visibility: string;
+  /** #1814: 30-minutters-fristen konvoluttregelen måler trekket mot. */
+  scheduled_tee_off_at: string | null;
 };
 
 export type CupMatchEntryInput = {
@@ -114,17 +122,40 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
     team_strokes_override?: { team1: number; team2: number };
   } | null;
 
+  // #1814: er kampen avgjort ved trekk? Utledes hver gang, aldri lagret —
+  // «angre trekk» er derfor bare å nulle `withdrawn_at`. Regelen selv bor i
+  // `cupWithdrawalOutcome.ts`; her plumbes kun input og output.
+  const withdrawal = resolveCupMatchWithdrawal({
+    status: game.status,
+    gameMode: game.game_mode,
+    scheduledTeeOffAt: game.scheduled_tee_off_at,
+    playOn: readWithdrawalPlayOn(game.mode_config),
+    players: [...side1Players, ...side2Players].map((p) => ({
+      userId: p.user_id,
+      side: p.team_number as 1 | 2,
+      withdrawnAt: p.withdrawn_at,
+    })),
+  });
+
+  // Trukne spillere scorer ikke. Å filtrere dem her er det som gjør en
+  // fourball med «makkeren spiller alene» til en ekte 1-mot-2 på tavla —
+  // nøyaktig samme luking som kampens egen leaderboard gjør i
+  // `buildUniformContext`. Navne-labelen under beholder derimot ALLE
+  // spillerne: den trukne blir stående på laget sitt (E5).
+  const scoringSide1 = side1Players.filter((p) => p.withdrawn_at == null);
+  const scoringSide2 = side2Players.filter((p) => p.withdrawn_at == null);
+
   const result = computeCupMatchDisplayResult({
     gameId: game.id,
     gameMode: game.game_mode,
     status: game.status,
     scoreVisibility: game.score_visibility,
     modeConfig,
-    side1: side1Players.map((p) => ({
+    side1: scoringSide1.map((p) => ({
       userId: p.user_id,
       courseHandicap: p.course_handicap ?? 0,
     })),
-    side2: side2Players.map((p) => ({
+    side2: scoringSide2.map((p) => ({
       userId: p.user_id,
       courseHandicap: p.course_handicap ?? 0,
     })),
@@ -157,6 +188,8 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
       // sidens kamppoeng.
       team1UserIds: side1Players.map((p) => p.user_id),
       team2UserIds: side2Players.map((p) => p.user_id),
+      // #1814: null når kampen skal spilles som normalt.
+      withdrawal,
     },
     performance: buildPerformanceGame(input, holes),
   };
