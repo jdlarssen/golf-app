@@ -137,26 +137,30 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
     })),
   });
 
-  // Trukne spillere scorer ikke. Å filtrere dem her er det som gjør en
-  // fourball med «makkeren spiller alene» til en ekte 1-mot-2 på tavla —
-  // nøyaktig samme luking som kampens egen leaderboard gjør i
-  // `buildUniformContext`. Navne-labelen under beholder derimot ALLE
-  // spillerne: den trukne blir stående på laget sitt (E5).
-  const scoringSide1 = side1Players.filter((p) => p.withdrawn_at == null);
-  const scoringSide2 = side2Players.filter((p) => p.withdrawn_at == null);
-
-  // Kampen SKAL spilles, men står én mot to fordi arrangøren valgte det.
+  // Kampen SKAL spilles, men står én mot to fordi arrangøren valgte det (E4).
   // Kortet må si hvorfor — ellers ser en fourball med tre navn ut som en feil.
-  const soloSide =
-    withdrawal === null && readWithdrawalPlayOn(game.mode_config)
-      ? ([
-          [side1Players, scoringSide1] as const,
-          [side2Players, scoringSide2] as const,
-        ].find(([all, active]) => all.length !== active.length && active.length > 0) ?? null)
+  //
+  // Merk at scoring-inputen under IKKE lukes for trukne rader. Den trukne har
+  // ingen scores (hen ble flagget før kampen startet), og `bestBallForHole`
+  // hopper over en ball uten gross — lag-besten blir makkerens egen ball
+  // uansett. Å luke her ville dessuten brutt E3: en FERDIG best-ball-kamp der
+  // noen soft-trakk seg midtveis (#386, best_ball er i `supportsWithdrawal`)
+  // ville falt til én spiller per side, og `computeCupBestBallAward` krever
+  // eksakt to — cup-poenget hadde forsvunnet fra en kamp som alt er spilt.
+  const soloSide = ([side1Players, side2Players] as const).find(
+    (side) =>
+      side.some((p) => p.withdrawn_at != null) &&
+      side.some((p) => p.withdrawn_at == null),
+  );
+  const soloPlayOn =
+    withdrawal === null && readWithdrawalPlayOn(game.mode_config) && soloSide
+      ? {
+          partnerName: formatSideLabel(
+            soloSide.filter((p) => p.withdrawn_at == null),
+            unknownLabel,
+          ),
+        }
       : null;
-  const soloPlayOn = soloSide
-    ? { partnerName: formatSideLabel(soloSide[1], unknownLabel) }
-    : null;
 
   const result = computeCupMatchDisplayResult({
     gameId: game.id,
@@ -164,11 +168,11 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
     status: game.status,
     scoreVisibility: game.score_visibility,
     modeConfig,
-    side1: scoringSide1.map((p) => ({
+    side1: side1Players.map((p) => ({
       userId: p.user_id,
       courseHandicap: p.course_handicap ?? 0,
     })),
-    side2: scoringSide2.map((p) => ({
+    side2: side2Players.map((p) => ({
       userId: p.user_id,
       courseHandicap: p.course_handicap ?? 0,
     })),

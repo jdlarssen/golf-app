@@ -246,3 +246,140 @@ describe('buildCupMatchEntry — avledet kamp leser host-ens scores', () => {
     expect(match.result?.winnerSide).toBe(1);
   });
 });
+
+// #1814: scoring-inputen lukes IKKE for trukne rader. To grunner, begge
+// observerbare her: en fourball med «makkeren spiller alene» scorer riktig
+// uansett (en ball uten gross bidrar ikke til lag-besten), og en FERDIG
+// best-ball-kamp der noen soft-trakk seg midtveis må beholde cup-poenget sitt
+// — `computeCupBestBallAward` krever eksakt to spillere per side (E3).
+describe('buildCupMatchEntry — trukne rader og scoring (#1814)', () => {
+  it('scorer en fourball 1-mot-2 riktig når makkeren spiller alene', () => {
+    const { match } = buildCupMatchEntry(
+      entryInput({
+        game: {
+          id: 'g1',
+          status: 'finished',
+          game_mode: 'fourball_matchplay',
+          mode_config: {
+            kind: 'fourball_matchplay',
+            team_size: 2,
+            teams_count: 2,
+            allowance_pct: 100,
+            withdrawal_play_on: true,
+          },
+          tournament_match_label: 'Kamp 1',
+          hole_segment: 'full',
+          source_game_id: null,
+          score_visibility: 'live',
+          scheduled_tee_off_at: '2026-09-10T08:00:00.000Z',
+        },
+        players: [
+          {
+            user_id: 'a1',
+            team_number: 1,
+            course_handicap: 0,
+            users: { name: 'Per', nickname: null },
+            withdrawn_at: '2026-09-09T20:00:00.000Z',
+          },
+          {
+            user_id: 'a2',
+            team_number: 1,
+            course_handicap: 0,
+            users: { name: 'Kari', nickname: null },
+            withdrawn_at: null,
+          },
+          {
+            user_id: 'b1',
+            team_number: 2,
+            course_handicap: 0,
+            users: { name: 'Ola', nickname: null },
+            withdrawn_at: null,
+          },
+          {
+            user_id: 'b2',
+            team_number: 2,
+            course_handicap: 0,
+            users: { name: 'Ida', nickname: null },
+            withdrawn_at: null,
+          },
+        ],
+        // Kun de tre aktive har scores — den trukne slo aldri en ball.
+        scores: Array.from({ length: 18 }, (_, i) => i + 1).flatMap((hole) => [
+          { user_id: 'a2', hole_number: hole, strokes: 4 },
+          { user_id: 'b1', hole_number: hole, strokes: 5 },
+          { user_id: 'b2', hole_number: hole, strokes: 5 },
+        ]),
+      }),
+    );
+
+    // Kampen spilles (ingen avgjørelse ved trekk), og alenespilleren vinner.
+    expect(match.withdrawal).toBeNull();
+    expect(match.result?.winnerSide).toBe(1);
+    // Kortet forklarer hvorfor det står én mot to.
+    expect(match.soloPlayOn).toEqual({ partnerName: 'Kari' });
+    // Den trukne blir stående i navne-labelen (E5).
+    expect(match.team1PlayerName).toBe('Per/Kari');
+  });
+
+  it('beholder cup-poenget på en ferdig best-ball der noen soft-trakk seg', () => {
+    const { match } = buildCupMatchEntry(
+      entryInput({
+        game: {
+          id: 'g1',
+          status: 'finished',
+          game_mode: 'best_ball',
+          mode_config: null,
+          tournament_match_label: 'Kamp 1',
+          hole_segment: 'full',
+          source_game_id: null,
+          score_visibility: 'live',
+          scheduled_tee_off_at: null,
+        },
+        players: [
+          {
+            user_id: 'a1',
+            team_number: 1,
+            course_handicap: 0,
+            users: { name: 'Per', nickname: null },
+            // Trakk seg MIDT i runden (#386-mekanikken; best_ball er i
+            // `supportsWithdrawal`) — men rakk å levere alle hullene.
+            withdrawn_at: '2026-09-10T12:00:00.000Z',
+          },
+          {
+            user_id: 'a2',
+            team_number: 1,
+            course_handicap: 0,
+            users: { name: 'Kari', nickname: null },
+            withdrawn_at: null,
+          },
+          {
+            user_id: 'b1',
+            team_number: 2,
+            course_handicap: 0,
+            users: { name: 'Ola', nickname: null },
+            withdrawn_at: null,
+          },
+          {
+            user_id: 'b2',
+            team_number: 2,
+            course_handicap: 0,
+            users: { name: 'Ida', nickname: null },
+            withdrawn_at: null,
+          },
+        ],
+        scores: Array.from({ length: 18 }, (_, i) => i + 1).flatMap((hole) => [
+          { user_id: 'a1', hole_number: hole, strokes: 4 },
+          { user_id: 'a2', hole_number: hole, strokes: 4 },
+          { user_id: 'b1', hole_number: hole, strokes: 5 },
+          { user_id: 'b2', hole_number: hole, strokes: 5 },
+        ]),
+      }),
+    );
+
+    // E3: en ferdig kamp røres aldri av trekk-regelen, og lagtotalen regnes
+    // fortsatt over BEGGE spillerne — resultatet forsvinner ikke.
+    expect(match.withdrawal).toBeNull();
+    expect(match.result).not.toBeNull();
+    expect(match.result?.winnerSide).toBe(1);
+  });
+});
