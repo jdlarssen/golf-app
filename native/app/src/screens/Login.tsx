@@ -5,18 +5,44 @@
 // Ingen `next`-redirect og ingen dyplenker: appen har ingen URL å komme fra,
 // og `onAuthStateChange` i `App.tsx` bytter til stacken av seg selv når
 // `verifyOtp` har satt sesjonen.
+//
+// #1954 (P1b): en skjult passord-inngang for App Review. Holdes overskriften
+// inne i halvannet sekund, dukker et passordfelt og «Logg inn med passord» opp
+// under e-postfeltet. Ingen env-gate og ingen e-post-sjekk i appen — inngangen
+// må virke i butikk-bygget, der webbens `REVIEW_ACCOUNT_EMAIL`-port ikke
+// finnes. Sperren er den samme som alt gjelder for direkte kall mot
+// `/auth/v1/token`: Supabases rate-limit pluss et 28-tegns tilfeldig passord,
+// og bare review-kontoen har et passord i det hele tatt. `signInWithPassword`
+// kan aldri opprette en konto, og OTP-veien beholder `shouldCreateUser: false`.
+//
+// Overskriften er app-navnet fra den oppløste configen (`expo-constants`), ikke
+// en streng her: «Tørny Dev» i dev-bygget, «Tørny» når butikk-varianten (P2)
+// setter navnet.
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
+import {
+  APP_NAME_FALLBACK,
+  LOGIN_TEXT,
+  REVEAL_PASSWORD_LOGIN_MS,
+} from '../lib/loginCopy';
 import { supabase } from '../supabase';
 import { FONTS, useTheme } from '../theme';
+
+/** Hvilken knapp som venter på Supabase — de tre veiene deler ett felt. */
+type Busy = 'code' | 'password' | null;
 
 export function Login() {
   const { colors, ui } = useTheme();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
-  const [busy, setBusy] = useState(false);
+  // Vises først etter langtrykket, og går ikke tilbake: en reviewer som fikk
+  // feltet fram skal ikke miste det på et ekstra trykk.
+  const [passwordMode, setPasswordMode] = useState(false);
+  const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
 
   // `color` settes EKSPLISITT: `TextInput` tegner ellers svart tekst uansett
@@ -28,13 +54,13 @@ export function Login() {
   };
 
   const sendCode = async () => {
-    setBusy(true);
+    setBusy('code');
     setError(null);
     const { error: err } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { shouldCreateUser: false },
     });
-    setBusy(false);
+    setBusy(null);
     if (err) {
       setError(err.message);
     } else {
@@ -43,16 +69,31 @@ export function Login() {
   };
 
   const verifyCode = async () => {
-    setBusy(true);
+    setBusy('code');
     setError(null);
     const { error: err } = await supabase.auth.verifyOtp({
       email: email.trim(),
       token: code.trim(),
       type: 'email',
     });
-    setBusy(false);
+    setBusy(null);
     if (err) {
       setError(err.message);
+    }
+  };
+
+  const signInWithPassword = async () => {
+    setBusy('password');
+    setError(null);
+    const { error: err } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    setBusy(null);
+    // Én melding uansett årsak, aldri Supabases tekst: ukjent adresse, konto
+    // uten passord og feil passord skal være umulige å skille fra hverandre.
+    if (err) {
+      setError(LOGIN_TEXT.passwordFailed);
     }
   };
 
@@ -63,7 +104,16 @@ export function Login() {
     >
       {/* «auto» følger systemets lys/mørk — samme valg som `App.tsx`. */}
       <StatusBar style="auto" />
-      <Text style={[styles.heading, { color: colors.text }]}>Tørny Dev</Text>
+      <Pressable
+        onLongPress={() => setPasswordMode(true)}
+        delayLongPress={REVEAL_PASSWORD_LOGIN_MS}
+        accessibilityRole="header"
+        testID="login-heading"
+      >
+        <Text style={[styles.heading, { color: colors.text }]}>
+          {Constants.expoConfig?.name ?? APP_NAME_FALLBACK}
+        </Text>
+      </Pressable>
       {step === 'email' ? (
         <>
           <Text style={ui.body}>E-postadresse</Text>
@@ -76,9 +126,37 @@ export function Login() {
             onChangeText={setEmail}
             testID="email-input"
           />
-          <Pressable style={ui.button} onPress={sendCode} disabled={busy}>
-            <Text style={ui.buttonText}>{busy ? 'Sender …' : 'Send meg kode'}</Text>
+          <Pressable style={ui.button} onPress={sendCode} disabled={busy != null}>
+            <Text style={ui.buttonText}>
+              {busy === 'code' ? 'Sender …' : 'Send meg kode'}
+            </Text>
           </Pressable>
+          {passwordMode ? (
+            <>
+              <Text style={ui.body}>{LOGIN_TEXT.passwordLabel}</Text>
+              <TextInput
+                style={[styles.input, inputColors]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                testID="password-input"
+              />
+              <Pressable
+                style={ui.button}
+                onPress={signInWithPassword}
+                disabled={busy != null}
+                testID="password-login-button"
+              >
+                <Text style={ui.buttonText}>
+                  {busy === 'password'
+                    ? LOGIN_TEXT.passwordPending
+                    : LOGIN_TEXT.passwordButton}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
         </>
       ) : (
         <>
@@ -91,8 +169,10 @@ export function Login() {
             onChangeText={setCode}
             testID="code-input"
           />
-          <Pressable style={ui.button} onPress={verifyCode} disabled={busy}>
-            <Text style={ui.buttonText}>{busy ? 'Sjekker …' : 'Logg inn'}</Text>
+          <Pressable style={ui.button} onPress={verifyCode} disabled={busy != null}>
+            <Text style={ui.buttonText}>
+              {busy === 'code' ? 'Sjekker …' : 'Logg inn'}
+            </Text>
           </Pressable>
           <Pressable style={ui.link} onPress={() => setStep('email')}>
             <Text style={ui.linkText}>Tilbake</Text>

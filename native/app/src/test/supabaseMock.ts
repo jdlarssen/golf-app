@@ -107,6 +107,9 @@ export const supabase: {
   auth: {
     getSession: jest.Mock;
     signOut: jest.Mock;
+    signInWithOtp: jest.Mock;
+    verifyOtp: jest.Mock;
+    signInWithPassword: jest.Mock;
     onAuthStateChange: jest.Mock;
   };
 } = {
@@ -115,6 +118,11 @@ export const supabase: {
   auth: {
     getSession: jest.fn(),
     signOut: jest.fn(),
+    // Innloggingsskjermens tre veier inn (#1954 P1b la til passord-veien).
+    // Rene stubber: hver test rigger svaret den trenger.
+    signInWithOtp: jest.fn(),
+    verifyOtp: jest.fn(),
+    signInWithPassword: jest.fn(),
     onAuthStateChange: jest.fn((callback: (event: string) => void) => {
       authListeners.add(callback);
       return {
