@@ -175,6 +175,12 @@ describe('EndGame', () => {
   });
 
   it('kvitterer ut manglende kort, kårer slotene og sender alt inn i skrivingen', async () => {
+    // Første test i filen betaler engangskostnaden for modul-transform og RNTLs
+    // første render — 4,6 s alene i denne sandkassen, mot ~365 ms isolert med
+    // `-t` (som hopper over kaldstarten). Jests 5000ms-default er for knapp når
+    // CI kjører 60 native-suiter parallelt under last. Samme timeout-formede
+    // flake som #1872/#1916 (CreateGame), samme fiks. Diagnostisert i #1946,
+    // sett i CI på #1949/#1945 (#1952).
     setBundle(
       [
         player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
@@ -218,7 +224,7 @@ describe('EndGame', () => {
     // Resultatskjermen ERSTATTER avslutt-flaten: «tilbake» skal ikke lande på
     // en avslutt-side for en runde som nettopp ble lukket.
     expect(replace).toHaveBeenCalledWith('Leaderboard', { gameId: GAME_ID });
-  });
+  }, 20000);
 
   it('tilbyr ingen vei rundt manglende godkjenning', async () => {
     setBundle(
