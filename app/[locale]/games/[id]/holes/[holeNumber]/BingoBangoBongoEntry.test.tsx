@@ -119,6 +119,32 @@ describe('BingoBangoBongoEntry', () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it('følger savedHole når den endrer seg etter mount (flight-kamerat live, #1836)', () => {
+    const { rerender } = render(
+      <BingoBangoBongoEntry {...defaultProps({ savedHole: null })} />,
+    );
+    expect(
+      screen.getByTestId('bbb-chip-bingoUserId-u1').getAttribute('aria-pressed'),
+    ).toBe('false');
+
+    rerender(
+      <BingoBangoBongoEntry
+        {...defaultProps({
+          savedHole: {
+            holeNumber: 5,
+            bingoUserId: 'u1',
+            bangoUserId: null,
+            bongoUserId: null,
+          },
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByTestId('bbb-chip-bingoUserId-u1').getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
   it('disabler alle knapper når disabled=true', () => {
     render(<BingoBangoBongoEntry {...defaultProps({ disabled: true })} />);
     const buttons = screen

@@ -129,7 +129,9 @@ export function BingoBangoBongoEntry(
   const { gameId, holeNumber, players, savedHole, disabled = false, onSaved } =
     props;
 
-  // Local state for optimistic UI — speiler wolf-mønstret for valgstate.
+  // Local state for optimistic UI — speiler wolf-mønstret for valgstate, og
+  // mirrors `savedHole` (server-prop + realtime-merges fra flight-kamerater,
+  // #1836) via prop-synkroniseringen under.
   const [localHole, setLocalHole] = useState<BingoBangoBongoHoleInput>(() => ({
     holeNumber,
     bingoUserId: savedHole?.bingoUserId ?? null,
@@ -139,6 +141,27 @@ export function BingoBangoBongoEntry(
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Follow `savedHole` when it changes after mount: the parent merges realtime
+  // rows from flight-mates into it, and without this the chips would keep the
+  // value they were seeded with (#1836). This is React's render-phase
+  // "adjust state when a prop changes" pattern rather than an effect — an
+  // effect that setStates synchronously is a lint error here (cascading
+  // renders), and adjusting during render avoids the extra paint.
+  // Skipped while a save is in flight so the echo of an older row can't
+  // overwrite the optimistic edit in progress — `handleSelect` owns
+  // `localHole` until it settles, and the sync catches up once `saving` clears
+  // because `syncedHole` is only advanced when the sync actually runs.
+  const [syncedHole, setSyncedHole] = useState(savedHole);
+  if (savedHole !== syncedHole && !saving) {
+    setSyncedHole(savedHole);
+    setLocalHole({
+      holeNumber,
+      bingoUserId: savedHole?.bingoUserId ?? null,
+      bangoUserId: savedHole?.bangoUserId ?? null,
+      bongoUserId: savedHole?.bongoUserId ?? null,
+    });
+  }
 
   async function handleSelect(key: CategoryKey, userId: string | null) {
     if (disabled || saving) return;
