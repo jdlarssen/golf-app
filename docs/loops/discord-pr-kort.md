@@ -121,10 +121,16 @@ vinner:
    - **Aldri-lista** (`NEVER_AUTO_MERGE_GLOBS`): minst én endret fil rører
      `supabase/**`, `**/slett/**`, `**/slett-konto/**`, `proxy.ts`, `lib/auth/**`,
      `lib/supabase/**`, `app/api/**`, `app/[locale]/(auth)/**`, `**/betaling/**`,
-     `lib/payment/**`, `.github/**`, `.githooks/**`, `.claude/**`, `lib/loops/**`
-     eller `scripts/loops/**`. Migrasjoner, destruktive flyter, auth/sikkerhet,
-     penger, enforcement-flater og merge-porten selv beholder menneske-porten
-     (fail-closed, bredere enn issue-ets liste). Merk om porten-selv-radene
+     `lib/payment/**`, `.github/**`, `.githooks/**`, `.claude/**`, `lib/loops/**`,
+     `scripts/loops/**` eller `native/app/**`. Migrasjoner, destruktive flyter,
+     auth/sikkerhet, penger, enforcement-flater, merge-porten selv og hele
+     native-appen beholder menneske-porten (fail-closed, bredere enn issue-ets
+     liste). Native-raden er bred med vilje (#1944): web-radene dekker webbens
+     innlogging, utlogging, konto-sletting og Supabase-klient, appen har sine egne
+     motstykker, og ingen av dem matchet noe — PR #1943 (appens utlogging) ble
+     auto-merget forbi eieren. `docs/native/**` står utenfor: prosa om appen
+     trenger ingen menneske-port. Raden står til appen er sluppet og vurderes på
+     nytt da. Merk om porten-selv-radene
      (#1655): workflowen henter alltid main sin versjon av `lib/loops` +
      `scripts/loops` (#1181), så en PR dømmer aldri seg selv med egne regler —
      lista hindrer at en gate-endring auto-merges av den gamle gaten og deretter

@@ -37,6 +37,7 @@ describe('touchesNeverList', () => {
     ['.claude/hooks/bash-guard.sh', '.claude/**'],
     ['lib/loops/autoMerge.ts', 'lib/loops/**'],
     ['scripts/loops/decide-pr-card.ts', 'scripts/loops/**'],
+    ['native/app/src/screens/Login.tsx', 'native/app/**'],
   ])('%s treffer aldri-lista', (file) => {
     expect(touchesNeverList([file])).toBe(true);
   });
@@ -61,6 +62,60 @@ describe('touchesNeverList', () => {
 
   it('tom liste treffer ikke', () => {
     expect(touchesNeverList([])).toBe(false);
+  });
+
+  // ── Null-test av native-raden (#1944) ──────────────────────────────────────
+  //
+  // PR #1943 (appens profil-rom + utlogging) ble auto-merget av kortet 2026-09-03
+  // kl. 17:34 selv om den endret appens utloggings- og konto-flater. Fillista under
+  // er PR-ens faktiske 21 filer, lest med `gh pr view 1943 --json files` 2026-09-04.
+  // Den er porten sitt regresjonsanker: FØR `native/app/**` sto på lista ga dette
+  // `false`, og det er nettopp derfor eieren ble forbigått.
+  const PR_1943_FILES = [
+    'docs/native/app-spike.md',
+    'native/app/src/components/SettingRow.tsx',
+    'native/app/src/data/homeList.test.ts',
+    'native/app/src/data/homeList.ts',
+    'native/app/src/data/logout.test.ts',
+    'native/app/src/data/logout.ts',
+    'native/app/src/data/profile.test.ts',
+    'native/app/src/data/profile.ts',
+    'native/app/src/lib/accountCopy.test.ts',
+    'native/app/src/lib/accountCopy.ts',
+    'native/app/src/lib/profileCopy.test.ts',
+    'native/app/src/lib/profileCopy.ts',
+    'native/app/src/lib/stagingGate.test.ts',
+    'native/app/src/lib/stagingGate.ts',
+    'native/app/src/navigation.tsx',
+    'native/app/src/screens/Account.test.tsx',
+    'native/app/src/screens/Account.tsx',
+    'native/app/src/screens/Home.tsx',
+    'native/app/src/screens/Profile.test.tsx',
+    'native/app/src/screens/Profile.tsx',
+    'native/app/src/test/supabaseMock.ts',
+  ];
+
+  it('fillista fra PR #1943 treffer aldri-lista (#1944)', () => {
+    expect(touchesNeverList(PR_1943_FILES)).toBe(true);
+    expect(NEVER_AUTO_MERGE_GLOBS).toContain('native/app/**');
+  });
+
+  it('ren docs-PR treffer ikke — heller ikke docs om appen', () => {
+    // Motprøven til testen over: raden skal demotere appens KODE, ikke prosa om den.
+    // `docs/native/app-spike.md` er den ene fila i #1943 som ikke er appkode.
+    expect(
+      touchesNeverList([
+        'docs/native/app-spike.md',
+        'docs/loops/discord-pr-kort.md',
+        'docs/test-discipline.md',
+        'README.md',
+      ]),
+    ).toBe(false);
+  });
+
+  it('bare filer under native/app/ treffer — ikke naboer med samme prefiks', () => {
+    expect(touchesNeverList(['native/README.md'])).toBe(false);
+    expect(touchesNeverList(['native/application/foo.ts'])).toBe(false);
   });
 });
 
