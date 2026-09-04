@@ -207,10 +207,10 @@ describe('formatHcpNb', () => {
 describe('unsentStrokesWarning', () => {
   it('bøyer setningen riktig for ett slag og for flere', () => {
     expect(unsentStrokesWarning(1)).toBe(
-      '1 slag er ikke sendt ennå. Logger du ut nå, blir det liggende på telefonen til du logger inn igjen.',
+      '1 slag er ikke sendt ennå. Logger du ut nå, blir det liggende på telefonen til du logger inn igjen, med mindre noen andre logger inn før deg.',
     );
     expect(unsentStrokesWarning(3)).toBe(
-      '3 slag er ikke sendt ennå. Logger du ut nå, blir de liggende på telefonen til du logger inn igjen.',
+      '3 slag er ikke sendt ennå. Logger du ut nå, blir de liggende på telefonen til du logger inn igjen, med mindre noen andre logger inn før deg.',
     );
     expect(unsentStrokesWarning(1)).not.toBe(unsentStrokesWarning(3));
   });
@@ -218,10 +218,10 @@ describe('unsentStrokesWarning', () => {
   it('lover ikke at slagene blir sendt', () => {
     // Regelen bak setningen, ikke ordlyden: `logOut` teller karantene-rader
     // (#668) med i tallet, og de hoppes over av hver eneste senere drain — de
-    // går ALDRI opp. Logger dessuten en annen bruker inn på telefonen, finnes
-    // det ingen eier-vakt som rydder. Et løfte om levering ville altså vært
-    // usant i to av tre tilfeller, og spilleren tar valget «Logg ut likevel»
-    // på nettopp den setningen.
+    // går ALDRI opp. Logger dessuten en annen bruker inn på telefonen, tømmer
+    // eier-vakten (#1942) radene før første drain. Et løfte om levering ville
+    // altså vært usant i to av tre tilfeller, og spilleren tar valget «Logg ut
+    // likevel» på nettopp den setningen.
     for (const count of [1, 3]) {
       expect(unsentStrokesWarning(count)).not.toMatch(/sendes|blir sendt|går opp/);
     }

@@ -1406,18 +1406,20 @@ fortsatt er innlogget — og meldt at utloggingen gikk bra. Utfallet heter
 `signout-failed`, og skjermen sier at nett er kravet i stedet for å låse raden på
 «Logger ut …».
 
-**Copyen lover ikke levering.** «Blir liggende på telefonen til du logger inn igjen» —
-ikke «sendes». Karantene-rader (#668) telles med i antallet og går aldri opp, og logger
-en annen bruker inn på telefonen, finnes det ingen eier-vakt som rydder. Låst i test.
+**Copyen lover ikke levering.** «Blir liggende på telefonen til du logger inn igjen, med
+mindre noen andre logger inn før deg» — ikke «sendes». Karantene-rader (#668) telles
+med i antallet og går aldri opp, og logger en annen bruker inn på telefonen, tømmer
+eier-vakten (#1942) radene før første drain. Låst i test.
 
 ### Bokførte gap
 
-- **Ingen eier-vakt ved innlogging.** Webben har to lag (#1404): `prepareLogout` OG
-  `ensureLocalDataOwner`, som tømmer forrige brukers rester når en annen logger inn.
-  Appen har bare det første. Velger A «Logg ut likevel» og B logger inn på samme
-  telefon, drainer B sin sesjon A sine kø-rader, RLS avviser dem permanent, og etter
-  fem forsøk karanteneres de for godt. Filt som eget issue — utenfor #1906 (kontrakten
-  legger eierbytte-vakten til #1368-familien).
+- ~~**Ingen eier-vakt ved innlogging.**~~ Lukket i #1942 (N8 P1a, #1954):
+  `data/localOwner.ts` speiler webbens `ensureLocalDataOwner` — eier-id under
+  `torny:local-data-owner` i AsyncStorage, og logger en annen bruker inn, kjører
+  `App.tsx` `wipeLocalData()` FØR stacken (og dermed `startSyncTriggers`) monteres.
+  Første innlogging etter oppdateringen stempler uten å tømme; kaster wipen, står
+  stempelet på forrige eier og neste oppstart prøver igjen. Utloggings-advarselen sier
+  nå forbeholdet («… med mindre noen andre logger inn før deg»).
 - **«Sett handicap» rendres ikke.** Webben har lenka; den hopper til profilskjemaet, som
   først finnes i PR B. En rad som ber deg gjøre noe appen ikke lar deg gjøre er verre
   enn ingen rad. `PROFILE_TEXT.setHandicap` står klar og paritetstestet til PR B.
