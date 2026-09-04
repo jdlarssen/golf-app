@@ -173,8 +173,10 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
      økten og eskaleres ikke.
    - **Aldri auto-merge:** prod-DB-migrasjoner (prod-brannmuren #1074 står), destruktive
      flyter (sletting av data/kontoer), auth-/sikkerhetsendringer, noe som koster penger,
-     og endringer i selve merge-porten (`lib/loops/`, `scripts/loops/` — #1655).
-     Disse venter alltid på eksplisitt eier-godkjenning.
+     endringer i selve merge-porten (`lib/loops/`, `scripts/loops/` — #1655) og hele
+     native-appen (`native/app/**` — #1944; appens egne auth-flater matchet ingen
+     web-rad, så PR #1943 ble auto-merget forbi eieren). Disse venter alltid på
+     eksplisitt eier-godkjenning.
    - Eieren orienteres i etterkant i produktspråk (aldri teknisk, jf. #1302): morgen-
      briefens «Skjedde i natt» + CHANGELOG. Ingen egen merge-melding kreves.
    - Discord-PR-kortet (docs/loops/discord-pr-kort.md) håndhever samme policy på

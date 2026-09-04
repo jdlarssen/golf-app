@@ -31,6 +31,16 @@ export const NEVER_AUTO_MERGE_GLOBS = [
   '.claude/**',
   'lib/loops/**', // merge-porten selv + kort-logikken (#1655)
   'scripts/loops/**', // decide-/post-harnessen som kjører porten (#1655)
+  // Hele appen, ikke bare dens auth-filer (#1944). Web-radene over dekker webbens
+  // innlogging, utlogging, konto-sletting og Supabase-klient — appen har sine EGNE
+  // motstykker (`screens/Login.tsx`, `data/logout.ts`, `screens/DeleteAccount.tsx`,
+  // `data/webApi.ts`, `src/supabase.ts`), og ingen av dem matchet noen web-rad. PR #1943
+  // (appens utlogging) ble derfor auto-merget forbi eieren. Bevisst bredt fremfor seks
+  // fil-oppføringer: neste auth-flate i appen skal ikke måtte huskes på (eiervalg,
+  // kontrakten på #1954 §Design 0, rad P0). Appen er ikke sluppet, så kostnaden er noen
+  // ekstra knapp-kort. `docs/native/**` er MED VILJE utenfor — en ren docs-PR om appen
+  // trenger ingen menneske-port.
+  'native/app/**',
 ] as const;
 
 // Tre glob-former: `**/mid/**` (katalog hvor som helst), `prefix/**` (under prefiks),
