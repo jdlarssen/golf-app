@@ -22,8 +22,9 @@
 // det hele tatt — vi svarer `unsent` og lar skjermen spørre. Sier spilleren ja
 // (`keepUnsent`), logger vi ut UTEN wipe: radene blir liggende på enheten.
 // (De blir liggende — ikke mer enn det. Karantene-rader (#668) er gitt opp for
-// godt og prøver aldri igjen, og logger en ANNEN bruker inn på telefonen, har
-// appen ingen eier-vakt som rydder dem. Copyen lover derfor ikke levering.)
+// godt og prøver aldri igjen, og logger en ANNEN bruker inn på telefonen,
+// tømmer eier-vakten (`localOwner.ts`, #1942) dem før første drain. Copyen
+// lover derfor ikke levering, og sier forbeholdet rett ut.)
 import { supabase } from '../supabase';
 import { getDb, listQueue, wipeLocalData } from './db';
 import { drainQueue } from './syncWorker';

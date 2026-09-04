@@ -142,18 +142,21 @@ export function hcpUpdatedLine(dateText: string): string {
 /**
  * Advarselen spilleren møter når hen logger ut med slag i køen.
  *
- * Tre ting MÅ stå der, og de står der i denne rekkefølgen: hvor mange slag det
- * gjelder, at de blir liggende på telefonen, og at de blir der til hen logger
- * inn igjen. Uten den siste setningen leser den første som «du mister dem».
+ * Fire ting MÅ stå der, og de står der i denne rekkefølgen: hvor mange slag det
+ * gjelder, at de blir liggende på telefonen, at de blir der til hen logger inn
+ * igjen — og forbeholdet: med mindre noen andre logger inn før deg.
+ * Uten «til du logger inn igjen» leser den første setningen som «du mister
+ * dem»; uten forbeholdet lover den mer enn appen holder (#1942).
  *
  * **Setningen lover ikke levering, og det er med vilje.** Et første utkast sa
  * «… og sendes neste gang du logger inn». Det holder ikke alltid: en
  * karantene-rad (#668, gitt opp etter fem permanente feil) hoppes over av hver
  * eneste senere drain og går aldri opp — og `logOut` teller den med i tallet,
- * fordi den for spilleren er et slag som ikke kom fram. Logger dessuten en
- * annen bruker inn på telefonen, finnes det ingen eier-vakt som rydder. «Blir
- * liggende til du logger inn igjen» er sant i alle tre tilfellene; «sendes» var
- * det ikke.
+ * fordi den for spilleren er et slag som ikke kom fram. Og logger en annen
+ * bruker inn på telefonen, tømmer eier-vakten (#1942, `data/localOwner.ts`)
+ * radene før første drain — derfor forbeholdet i setningen. «Blir liggende til
+ * du logger inn igjen» er sant i de to første tilfellene; «sendes» var det
+ * ikke i noen av dem.
  *
  * Entall og flertall skilles på pronomenet («blir det liggende» / «blir de
  * liggende») — selve ordet «slag» er likt i begge tall på norsk, så tallet
@@ -164,8 +167,8 @@ export function hcpUpdatedLine(dateText: string): string {
 export function unsentStrokesWarning(count: number): string {
   const tail =
     count === 1
-      ? 'Logger du ut nå, blir det liggende på telefonen til du logger inn igjen.'
-      : 'Logger du ut nå, blir de liggende på telefonen til du logger inn igjen.';
+      ? 'Logger du ut nå, blir det liggende på telefonen til du logger inn igjen, med mindre noen andre logger inn før deg.'
+      : 'Logger du ut nå, blir de liggende på telefonen til du logger inn igjen, med mindre noen andre logger inn før deg.';
   return `${count} slag er ikke sendt ennå. ${tail}`;
 }
 
