@@ -52,14 +52,19 @@ export function MatchView({
       <View style={ui.card}>
         <View style={styles.sideRow}>
           <Text
-            style={[ui.body, standing.leader === 'side1' ? styles.leading : null]}
+            style={[ui.body, styles.sideName, standing.leader === 'side1' ? styles.leading : null]}
             testID="match-side1-name"
           >
             {side1Name}
           </Text>
-          <Text style={ui.muted}>mot</Text>
+          <Text style={[ui.muted, styles.versus]}>mot</Text>
           <Text
-            style={[ui.body, styles.sideRight, standing.leader === 'side2' ? styles.leading : null]}
+            style={[
+              ui.body,
+              styles.sideName,
+              styles.sideRight,
+              standing.leader === 'side2' ? styles.leading : null,
+            ]}
             testID="match-side2-name"
           >
             {side2Name}
@@ -129,6 +134,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
+  // #1842: without a flex basis the two names kept their intrinsic width, so a
+  // long pair label ("Test Spiller & Bjørn Bunkersen") ran past the card and the
+  // opponent was clipped on the right. `flex: 1` lets both names shrink and wrap
+  // over several lines; no `numberOfLines`, because the whole name must stay
+  // readable. Note that flexBasis 0% splits the row 50/50, so «mot» sits mid-row
+  // even when one side's name is much shorter — accepted.
+  sideName: { flex: 1 },
+  // «mot» is the only fixed part of the row: never squeezed out between two long
+  // names.
+  versus: { flexShrink: 0 },
   sideRight: { textAlign: 'right' },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
   leading: { fontFamily: FONTS.sansBold },
