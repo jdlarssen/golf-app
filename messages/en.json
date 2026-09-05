@@ -3335,6 +3335,7 @@
         "not_finished": "The game is not ended and cannot be reopened.",
         "pending_players": "These players have not completed their registration yet{list}. They must log in and fill in their name and handicap index before the game can be started.",
         "incomplete_sides": "One or both sides are missing players. All players must have a side and both sides must be complete before the game can be started.",
+        "decided_by_withdrawal": "The match is already decided without play — someone withdrew. It cannot be started.",
         "unassigned_flights": "Players have not yet been assigned to flights. Assign flights before starting the game.",
         "unassigned_teams": "Some players don't have a team yet. Assign them to teams before you start the round.",
         "flight_full": "The selected flight is full (maximum 4 players). Choose a different flight.",

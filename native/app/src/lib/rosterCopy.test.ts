@@ -100,6 +100,7 @@ describe('describeStartRefusal', () => {
     'tee_missing_rating',
     'no_players',
     'incomplete_sides',
+    'decided_by_withdrawal',
     'unassigned_teams',
     'unassigned_flights',
     'db_players',

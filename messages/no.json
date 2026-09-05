@@ -3335,6 +3335,7 @@
         "not_finished": "Spillet er ikke avsluttet og kan ikke gjenåpnes.",
         "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan startes.",
         "incomplete_sides": "En eller begge sider mangler spillere. Alle spillere må ha en side og begge sider må være fulltallige før spillet kan startes.",
+        "decided_by_withdrawal": "Kampen er allerede avgjort uten spill — noen trakk seg. Kan ikke startes.",
         "unassigned_flights": "Spillerne er ikke fordelt i flighter ennå. Del inn flightene før spillet kan startes.",
         "unassigned_teams": "Noen spillere står uten lag. Fordel dem på lag før du starter runden.",
         "flight_full": "Den valgte flighten er full (maks 4 spillere). Velg en annen flight.",
