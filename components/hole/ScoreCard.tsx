@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
 import { scoreShape, type ScoreShape as ScoreShapeKind } from '@/lib/scoring/scoreShape';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
+import { firstEntryStrokes, nextStrokes } from '@/lib/scorecard/strokeEntry';
 
 export interface ScoreCardProps {
   playerId: string;
@@ -47,15 +48,6 @@ export interface ScoreCardProps {
    * trigger the card's tap-to-par.
    */
   belowScore?: ReactNode;
-}
-
-const MIN_STROKES = 1;
-// Net double bogey for a 54 HCP on slope 155 lands at ~12 gross on par 5;
-// 15 leaves room for honest blow-up entries while still rejecting typos.
-const MAX_STROKES = 15;
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n));
 }
 
 function scoreNumberFontSize(shape: ScoreShapeKind, displayedNumber: number): number {
@@ -114,19 +106,19 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     // adjustments. Use +/− or ⋯ to change a set score; the card body becomes
     // a no-op surface.
     if (score != null) return;
-    onSetScore(playerId, clamp(par, MIN_STROKES, MAX_STROKES));
+    onSetScore(playerId, firstEntryStrokes(par));
   }
 
   function onStepperPlus(e: React.MouseEvent) {
     e.stopPropagation();
     if (disabled) return;
-    onSetScore(playerId, clamp((score ?? par) + 1, MIN_STROKES, MAX_STROKES));
+    onSetScore(playerId, nextStrokes({ current: score, par, delta: 1 }));
   }
 
   function onStepperMinus(e: React.MouseEvent) {
     e.stopPropagation();
     if (disabled) return;
-    onSetScore(playerId, clamp((score ?? par) - 1, MIN_STROKES, MAX_STROKES));
+    onSetScore(playerId, nextStrokes({ current: score, par, delta: -1 }));
   }
 
   function onStepperMore(e: React.MouseEvent) {
