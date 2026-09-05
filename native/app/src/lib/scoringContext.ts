@@ -14,10 +14,22 @@
 //     grep som `roster.ts` bruker mot flight-reglene. Switchen under speiler
 //     `buildModeResultForGame.buildContext`; selve fila kan ikke importeres fordi
 //     den åpner med `import 'server-only'`.
-//  2. **Trukne spillere filtreres HER, for alle modi.** Halvparten av de delte
-//     hjelperne filtrerer selv, halvparten tar rader som allerede er rene. Å
-//     gjøre det én gang i forkant er den eneste varianten som gir samme felt
-//     uansett format.
+//  2. **Trukne spillere filtreres av byggerne, ikke her (#1846).** Adapteren
+//     sender `withdrawn_at` videre som den står og lar hver delte hjelper
+//     avgjøre, nøyaktig som webbens resultat-bygger
+//     (`buildModeResultForGame`, den sammendrag, referat, cup og statistikk
+//     leser) gjør. `buildStablefordContext`, `buildSoloStrokeplayContext` og
+//     `buildUniformContext` (lag-, matchplay- og scramble-familien) luker ut de
+//     trukne selv, både fra spillerne og fra slagene deres. Wolf, skins, nines,
+//     nassau, round robin, acey deucey og BBB beholder dem — webbens tavle-ruter
+//     mater dem med ufiltrerte `game_players`, og byggerne har ingen WD-regel.
+//     Et filter her ville gitt appen andre tall enn nettsiden i den familien: i
+//     wolf styrer antallet n både rotasjonslengden (R = floor(18/n)·n) og
+//     lone/blind-potten, så én trukket spiller mindre flyttet både wolfen på
+//     trailing-hullene og poengsummen.
+//     Kjent rest (#1958): webbens LIVE-tavle for matchplay- og scramble-
+//     familien bygger konteksten inline UTEN WD-filter, i strid med sin egen
+//     resultat-bygger. Appen følger resultat-byggeren; den tvisten er webbens.
 //  3. **Ingen kast.** Et spill uten bane, uten spillere eller med en `mode_config`
 //     appen ikke kjenner igjen gir et typet «nei» tilbake, ikke et unntak. En
 //     leaderboard-skjerm som krasjer midt i runden er verre enn en som sier at
@@ -58,7 +70,11 @@ import type { GameBundle } from '../data/gameBundle';
  *                       og kalleren har ikke tredd dem inn. Se `ScoringExtras`
  *                       for hvorfor svaret er «nei» og ikke en tom liste.
  *  - `no-course`      — bundelen har ingen hull (banen er ikke satt ennå).
- *  - `no-players`     — ingen aktive spillere igjen etter WD-filtreringen.
+ *  - `no-players`     — den ferdig bygde konteksten har ingen spillere: tomt
+ *                       roster, eller et format der byggeren luker ut de trukne
+ *                       (stableford, solo, lag-familien) og alle er trukket. I
+ *                       hull-for-hull-familien beholder byggeren de trukne, så
+ *                       et helt trukket felt gir en gyldig kontekst der.
  */
 export type ScoringContextProblem =
   | 'unknown-mode'
@@ -184,19 +200,20 @@ function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | null {
   return kind === mode ? (raw as GameModeConfig) : null;
 }
 
+/** HELE rosteret, trukne spillere inkludert — se punkt 2 i topptekstet. */
 function toPlayerRows(bundle: GameBundle): ContextPlayerRow[] {
-  return bundle.players
-    .filter((player) => player.withdrawnAt == null)
-    .map((player) => ({
-      user_id: player.userId,
-      // Kolonnen er nullable i prod (#844). `?? 0` er samme kollaps som
-      // webbens `buildModeResultFromData` gjør på grensen.
-      team_number: player.teamNumber ?? 0,
-      course_handicap: player.courseHandicap,
-      tee_gender: asGender(player.teeGender),
-      withdrawn_at: null,
-      users: { name: player.name, nickname: player.nickname },
-    }));
+  return bundle.players.map((player) => ({
+    user_id: player.userId,
+    // Kolonnen er nullable i prod (#844). `?? 0` er samme kollaps som
+    // webbens `buildModeResultFromData` gjør på grensen.
+    team_number: player.teamNumber ?? 0,
+    course_handicap: player.courseHandicap,
+    tee_gender: asGender(player.teeGender),
+    // Den EKTE verdien. Hardkodet `null` her ville gjort WD-filtrene i
+    // stableford-, solo- og uniform-byggerne til død kode.
+    withdrawn_at: player.withdrawnAt,
+    users: { name: player.name, nickname: player.nickname },
+  }));
 }
 
 function toHoleRows(bundle: GameBundle): ContextHoleRow[] {
@@ -212,13 +229,17 @@ function toHoleRows(bundle: GameBundle): ContextHoleRow[] {
 /**
  * ALLE spillets rader fra den lokale basen, ikke bare mine.
  * `strokes` → `gross`: motoren har ikke noe puttbegrep.
+ *
+ * Filteret luker kun bort rader fra brukere som ikke står i rosteret i det
+ * hele tatt. Slagene til trukne spillere blir med videre; byggerne som
+ * filtrerer dem dropper dem selv, og de som ikke gjør det skal ha dem (web).
  */
 function toScoreRows(
   scores: readonly LocalScore[],
-  activeUserIds: ReadonlySet<string>,
+  rosterUserIds: ReadonlySet<string>,
 ): ContextScoreRow[] {
   return scores
-    .filter((score) => activeUserIds.has(score.userId))
+    .filter((score) => rosterUserIds.has(score.userId))
     .map((score) => ({
       user_id: score.userId,
       hole_number: score.holeNumber,
@@ -247,11 +268,44 @@ export function buildScoringContext(
   if (holesRows.length === 0) return { ok: false, problem: 'no-course' };
 
   const players = toPlayerRows(bundle);
+  // Tomt roster er `no-players` uansett format, og avgjøres FØR switchen: et
+  // spill uten spillere skal ikke svare `missing-choices` bare fordi det er
+  // wolf. Den andre veien til `no-players` — alle trukket i et format som
+  // filtrerer — kan bare avgjøres på den ferdige konteksten, under.
   if (players.length === 0) return { ok: false, problem: 'no-players' };
+  const rosterUserIds = new Set(players.map((player) => player.user_id));
+  const scoresRows = toScoreRows(scores, rosterUserIds);
 
-  const activeUserIds = new Set(players.map((player) => player.user_id));
-  const scoresRows = toScoreRows(scores, activeUserIds);
-  const gameId = bundle.game.id;
+  const outcome = buildContextForMode({
+    mode,
+    modeConfig,
+    gameId: bundle.game.id,
+    players,
+    holesRows,
+    scoresRows,
+    extras,
+  });
+  // `no-players` avgjøres på den FERDIGE konteksten, ikke på rosteret: hvilke
+  // spillere motoren faktisk får er byggerens svar, ikke vårt. Tomt roster og
+  // «alle trukket i et format som filtrerer» ender begge her; et helt trukket
+  // wolf-felt gjør det ikke, like lite som på web.
+  if (outcome.ok && outcome.ctx.players.length === 0) {
+    return { ok: false, problem: 'no-players' };
+  }
+  return outcome;
+}
+
+/** Switchen som speiler `buildModeResultForGame.buildContext` (punkt 1 over). */
+function buildContextForMode(args: {
+  mode: GameMode;
+  modeConfig: GameModeConfig;
+  gameId: string;
+  players: ContextPlayerRow[];
+  holesRows: ContextHoleRow[];
+  scoresRows: ContextScoreRow[];
+  extras: ScoringExtras;
+}): ScoringContextOutcome {
+  const { mode, modeConfig, gameId, players, holesRows, scoresRows, extras } = args;
 
   switch (mode) {
     case 'stableford':
