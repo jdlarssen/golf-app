@@ -6,6 +6,10 @@ delt `lib/scoring`-kilde med webappen, Supabase-OTP-innlogging mot staging
 hjem → game-home → hull-føring → scorekort → lever/godkjenn (N3). Dette er
 IKKE produkt-appen ennå — men fra N3 er det flatene spillerne skal arve.
 
+Alt her gjelder dev-appen `no.tornygolf.dev` mot staging. **Butikkbygget**
+(`APP_VARIANT=store`, N8 #1954) har egen runbook: `app-store-release.md` —
+varianten i `app.config.ts`, byggeskriptet, bevis-steget og slippet.
+
 ## Arkitektur-beslutninger (kontrakt på [#1818](https://github.com/jdlarssen/golf-app/issues/1818))
 
 - **Ingen npm-workspaces.** Appen er et selvstendig npm-prosjekt (samme mønster
@@ -1022,7 +1026,8 @@ Appen må vite hvor web-deployen står. Ny variabel i `native/app/.env.local`
 # native/app/.env.local
 # Staging-verify: lokal web i prod-server-modus, samme port som du starter under.
 EXPO_PUBLIC_WEB_BASE_URL=http://localhost:3111
-# Butikk-bygg: EXPO_PUBLIC_WEB_BASE_URL=https://tornygolf.no
+# Butikkbygget setter https://tornygolf.no selv (scripts/store-build-ios.sh) —
+# aldri her, og aldri i en .env.production*-fil (se app-store-release.md).
 ```
 
 ⚠️ **`EXPO_PUBLIC_*` leses IKKE ved oppstart — den bakes inn i bundelen.** Babel bytter
@@ -1214,10 +1219,10 @@ brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 4
 
 ### Bokførte gap
 
-- **Ingenting stopper et butikk-bygg uten `EXPO_PUBLIC_WEB_BASE_URL`.** Fila er
-  gitignorert, Babel baker inn `undefined`, og appen kjører helt normalt helt til noen
-  åpner «Slett konto» og får «Appen mangler adressen til serveren». Sjekk den før et
-  butikk-bygg — det finnes ingen port som gjør det for deg.
+- ~~**Ingenting stopper et butikk-bygg uten `EXPO_PUBLIC_WEB_BASE_URL`.**~~ Lukket i
+  N8 P2 (#1954): `app.config.ts` kaster før prebuild hvis `APP_VARIANT=store` mangler
+  noen av de tre `EXPO_PUBLIC_*`-verdiene, og `scripts/store-build-proof.sh` leser
+  bundelen etterpå og krever `https://tornygolf.no` der. Se `app-store-release.md`.
 - **Blokk-lesingen er fail-open.** `getDeleteBlockReason` forkaster PostgREST-feil og
   leser en forbigående DB-feil som «ikke blokkert». En 403 er derfor en port, ikke en
   garanti. Oppførselen er webbens egen og uendret her — regelen har ett hjem.
