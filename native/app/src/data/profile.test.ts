@@ -55,12 +55,13 @@ const ROW = {
   handicap_updated_at: '2026-08-30T10:00:00.000Z',
   gender: 'male',
   level: 'intermediate',
+  is_admin: false,
 };
 
 describe('fetchOwnProfile', () => {
   useFreshModules();
 
-  it('mapper raden til camelCase og ber om alle seks kolonnene', async () => {
+  it('mapper raden til camelCase og ber om alle sju kolonnene', async () => {
     const { queryStub, routeFrom, stepArgs } = mocks();
     const stub = queryStub({ data: ROW, error: null });
     routeFrom({ users: [stub] });
@@ -72,14 +73,32 @@ describe('fetchOwnProfile', () => {
       handicapUpdatedAt: '2026-08-30T10:00:00.000Z',
       gender: 'male',
       level: 'intermediate',
+      isAdmin: false,
     });
 
     expect(stepArgs(stub, 'select')[0]![0]).toBe(
-      'name, nickname, hcp_index, handicap_updated_at, gender, level',
+      'name, nickname, hcp_index, handicap_updated_at, gender, level, is_admin',
     );
     // Egen rad, ingen andres: id-filteret ER hele avgrensningen.
     expect(stepArgs(stub, 'eq')).toEqual([['id', ME]]);
     expect(stepArgs(stub, 'single')).toHaveLength(1);
+  });
+
+  // Fail-closed: bare `true` er admin. En kolonne som mangler i svaret — en
+  // eldre rad, en select som mistet feltet — skal gi den ærlige teksten, ikke
+  // en knapp til en side som sender spilleren rett hjem igjen (#1934).
+  it.each([
+    [true, true],
+    [false, false],
+    [null, false],
+    [undefined, false],
+  ])('leser is_admin=%p som isAdmin=%p', async (value, expected) => {
+    const { queryStub, routeFrom } = mocks();
+    routeFrom({
+      users: [queryStub({ data: { ...ROW, is_admin: value }, error: null })],
+    });
+
+    expect((await profile().fetchOwnProfile(ME)).isAdmin).toBe(expected);
   });
 
   it('lar tomme felt være tomme i stedet for å finne på en verdi', async () => {

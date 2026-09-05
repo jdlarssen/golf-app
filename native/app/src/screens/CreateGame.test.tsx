@@ -53,6 +53,21 @@ jest.mock('../data/formatCatalog', () => ({
   ]),
 }));
 
+// #1934: veiviseren leser egen profilrad for admin-flagget. Stubbet som de
+// andre hentingene, så lesingen faktisk lykkes i riggen i stedet for å ende i
+// en avvist promise som `useRemote` svelger stille.
+jest.mock('../data/profile', () => ({
+  fetchOwnProfile: jest.fn(async () => ({
+    name: 'Jørgen Arrangør',
+    nickname: null,
+    hcpIndex: 12.4,
+    handicapUpdatedAt: null,
+    gender: 'mens',
+    level: null,
+    isAdmin: false,
+  })),
+}));
+
 jest.mock('../data/createGame', () => ({
   fetchCourses: jest.fn(async () => [
     {

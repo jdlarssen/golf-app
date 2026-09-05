@@ -36,6 +36,7 @@ import {
   type RosterCandidate,
 } from '../data/createGame';
 import { fetchFormatCatalog } from '../data/formatCatalog';
+import { fetchOwnProfile } from '../data/profile';
 import { isDeviceOnline } from '../data/syncTriggers';
 import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
 import {
@@ -182,6 +183,13 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const formats = useRemote(fetchFormatCatalog);
   const courses = useRemote(fetchCourses);
   const candidates = useRemote(fetchRosterCandidates);
+  // Egen rad, kun for å vite om tee-knappen har en mottaker (#1934).
+  // `useCallback` er PÅKREVD her: effekten i `useRemote` har `fetcher` i
+  // dep-lista, så en fersk pilfunksjon per render ville hentet i det uendelige.
+  // De tre over slipper unna fordi de er modul-nivå og dermed stabile selv.
+  const profile = useRemote(
+    useCallback(() => fetchOwnProfile(userId), [userId]),
+  );
 
   // Tee-kjønnet UTLEDES fra profilen i stedet for å kopieres inn i state.
   // Jeg selv står i lista før kandidatene er hentet, så en kopi ville stått
@@ -358,6 +366,11 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
           onTee={setTeeBoxId}
           onTeeOff={setTeeOff}
           onRetry={courses.reload}
+          // Mens profilen hentes, og om lesingen feiler, står den som
+          // «ikke admin». Å skjule en knapp et øyeblikk er en bedre feil enn å
+          // love en dør som er låst, og steget har ingen feillinje for
+          // profilen: det handler om bane og tid.
+          isAdmin={profile.data?.isAdmin === true}
         />
       ) : null}
 

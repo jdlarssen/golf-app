@@ -69,23 +69,30 @@ describe('veiviserens lenkeknapper (#1891)', () => {
     expect(screen.getByTestId('create-players-empty-link')).toBeTruthy();
   });
 
-  it('gir en vei videre når banen mangler aktive teer', async () => {
-    await render(
-      <CourseStep
-        courses={[{ id: 'course-1', name: 'Testbanen', tees: [] }]}
-        failed={false}
-        courseId="course-1"
-        teeBoxId={null}
-        teeOff={new Date('2026-09-02T12:00:00.000Z')}
-        onCourse={jest.fn()}
-        onTee={jest.fn()}
-        onTeeOff={jest.fn()}
-        onRetry={jest.fn()}
-      />,
-    );
+  it('gir en vei videre når banen mangler aktive teer — men bare til den som slipper inn', async () => {
+    const props = {
+      courses: [{ id: 'course-1', name: 'Testbanen', tees: [] }],
+      failed: false,
+      courseId: 'course-1',
+      teeBoxId: null,
+      teeOff: new Date('2026-09-02T12:00:00.000Z'),
+      onCourse: jest.fn(),
+      onTee: jest.fn(),
+      onTeeOff: jest.fn(),
+      onRetry: jest.fn(),
+    };
+
+    const { rerender } = await render(<CourseStep {...props} isAdmin />);
 
     expect(screen.getByTestId('create-tee-none')).toBeTruthy();
     expect(screen.getByTestId('create-tee-none-link')).toBeTruthy();
+
+    // Og INGEN knapp for alle andre (#1934): tee-editoren er admin-only
+    // (`requireAdmin` sender resten hjem), så knappen var en blindvei. Noten
+    // står igjen, med en beskjed om hva som faktisk må skje.
+    await rerender(<CourseStep {...props} isAdmin={false} />);
+    expect(screen.getByTestId('create-tee-none')).toBeTruthy();
+    expect(screen.queryByTestId('create-tee-none-link')).toBeNull();
   });
 
   it('gir en vei videre når formatet ikke kan opprettes i appen — og bare da', async () => {

@@ -60,6 +60,7 @@ import {
   describeReminderPreviewFailure,
   END_GAME_TEXT,
   lastRemindedNote,
+  ownRowHint,
   REMIND_BUSY_LABEL,
   REMIND_DONE_NOTE,
   remindLabel,
@@ -332,7 +333,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                 }
                 hint={
                   entry.player.userId === userId
-                    ? END_GAME_TEXT.ownRowHint
+                    ? ownRowHint(plan.withdrawalSupported)
                     : entry.withdrawable
                       ? END_GAME_TEXT.withdrawHint
                       : END_GAME_TEXT.noCardHint
@@ -347,9 +348,11 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
           {plan.withdrawalSupported &&
           plan.missing.some((entry) => entry.player.userId === userId) ? (
             // Egen rad står i lista med `ownRowHint`, som sier at frafallet
-            // gjøres på nettsiden. Knappen står under KORTET og ikke inni
-            // raden: raden er selv en `Pressable` (avkryssingen), og en knapp
-            // inni den ville stjålet tappet fra avkryssingen.
+            // gjøres på nettsiden — men BARE i formatene som har frafall
+            // (#1934). Uten den grenen lovet teksten en side som i matchplay
+            // og scramble bare sender arrangøren tilbake igjen. Knappen står
+            // under KORTET og ikke inni raden: raden er selv en `Pressable`
+            // (avkryssingen), og en knapp inni den ville stjålet tappet.
             <WebLinkButton
               label={WITHDRAW_SELF_LINK_LABEL}
               path={withdrawSelfWebPath(gameId)}

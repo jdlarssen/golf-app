@@ -184,8 +184,6 @@ export const END_GAME_TEXT = {
   // Spilleren er fortsatt med i rangeringen, så her teller slagene faktisk.
   // Webbens `game.finish.bodyWithWd` gjør nøyaktig samme todeling.
   noCardHint: 'Spilleren blir stående som ikke levert. Slagene teller fortsatt.',
-  ownRowHint:
-    'Deg selv kan du ikke trekke herfra. Det gjør du på nettsiden. Huker du av, avslutter du runden uten kortet ditt.',
   unapprovedHeading: 'Venter på godkjenning',
   // #1891: siste setning pekte til nettsiden fordi appen ikke HADDE
   // overstyringen. Nå har den den (godkjenn-knappen under), og henvisningen er
@@ -213,6 +211,26 @@ export const END_GAME_TEXT = {
     'Resultatene låses og åpnes for alle. Skal runden åpnes igjen, må du gjøre det fra nettsiden.',
   confirmCta: 'Avslutt',
 } as const;
+
+/**
+ * Hinten på arrangørens EGEN rad blant dem som mangler kort.
+ *
+ * @param withdrawalSupported `plan.withdrawalSupported` — om formatet kjenner
+ *   frafall i det hele tatt (`supportsWithdrawal`).
+ *
+ * En funksjon og ikke to konstanter (#1934): da bor valget i ren tekst som kan
+ * testes uten å rendre noe, i stedet for i en gren inne i JSX-en. Knappen under
+ * lista var alt gatet på det samme flagget, men teksten var det ikke — i
+ * matchplay, scramble-familien og pott-formatene pekte den til en side som bare
+ * sender arrangøren tilbake igjen. Setningen uten frafall speiler
+ * {@link END_GAME_TEXT.noCardHint}: avkryssingen gjør det samme, og slagene blir
+ * med.
+ */
+export function ownRowHint(withdrawalSupported: boolean): string {
+  return withdrawalSupported
+    ? 'Deg selv kan du ikke trekke herfra. Det gjør du på nettsiden. Huker du av, avslutter du runden uten kortet ditt.'
+    : 'I dette formatet finnes ikke frafall. Huker du av, avslutter du runden uten kortet ditt. Slagene dine teller fortsatt.';
+}
 
 // -----------------------------------------------------------------------------
 // Purring (#1889)

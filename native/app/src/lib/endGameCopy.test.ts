@@ -22,6 +22,7 @@ import {
   describeReminderPreviewFailure,
   END_GAME_TEXT,
   lastRemindedNote,
+  ownRowHint,
   remindLabel,
   slotLabel,
   stillPlayingNote,
@@ -40,8 +41,8 @@ const REASONS: EndRoundFailure[] = [
   'not-all-approved',
   'withdrawal-unsupported',
   'withdraw-after-submit',
-  'db-withdraw',
   'withdraw-after-submit-partial',
+  'db-withdraw',
   'db-winners',
   'rls-denied',
   'no-rows',
@@ -105,7 +106,6 @@ describe('describeEndRoundFailure', () => {
     }
   });
 
-  it('sier samme nett-linje som roster-skrivingene', () => {
   it('sier IKKE «ingen ble trukket» når noen alt er trukket (#1896)', () => {
     // Det delvise utfallet: vakta på selve skrivet slo til etter at de første
     // i bunken var trukket. Da er «ingen ble trukket» en løgn som sender
@@ -116,6 +116,7 @@ describe('describeEndRoundFailure', () => {
     expect(text).not.toContain('ingen ble trukket');
   });
 
+  it('sier samme nett-linje som roster-skrivingene', () => {
     expect(describeEndRoundFailure('offline')).toBe(
       describeRosterFailure('offline'),
     );
@@ -179,6 +180,25 @@ describe('END_GAME_TEXT', () => {
     expect(END_GAME_TEXT.missingIntro).not.toContain('teller');
     expect(END_GAME_TEXT.withdrawHint).toContain('teller ikke i rangeringen');
     expect(END_GAME_TEXT.noCardHint).toContain('teller fortsatt');
+  });
+});
+
+describe('ownRowHint', () => {
+  it('peker til nettsiden BARE i formatene som har frafall', () => {
+    // Knappen under lista var alt gatet på `plan.withdrawalSupported`
+    // (`EndGame.tsx`), men teksten var det ikke: i matchplay, scramble-familien
+    // og pott-formatene sto «det gjør du på nettsiden» over en side som bare
+    // sender arrangøren tilbake igjen. Ordet «trekke» er med i sperren fordi
+    // hele handlingen mangler i disse formatene — ikke bare veien til den.
+    expect(ownRowHint(true)).toContain('nettsiden');
+    expect(ownRowHint(false)).not.toContain('nettsiden');
+    expect(ownRowHint(false)).not.toContain('trekke');
+  });
+
+  it('gir en ferdig setning begge veier', () => {
+    // Dekningen END_GAME_TEXT-løkka hadde før hinten ble en funksjon.
+    expect(isFinishedSentence(ownRowHint(true))).toBe(true);
+    expect(isFinishedSentence(ownRowHint(false))).toBe(true);
   });
 });
 

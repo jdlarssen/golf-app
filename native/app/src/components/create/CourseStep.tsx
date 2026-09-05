@@ -42,6 +42,7 @@ export function CourseStep({
   onTee,
   onTeeOff,
   onRetry,
+  isAdmin,
 }: {
   /** `null` mens hentingen pågår. */
   courses: CourseOption[] | null;
@@ -53,6 +54,12 @@ export function CourseStep({
   onTee: (teeBoxId: string) => void;
   onTeeOff: (date: Date) => void;
   onRetry: () => void;
+  /**
+   * Om arrangøren slipper inn i tee-editoren på nettsiden (#1934). Påkrevd, og
+   * med vilje uten default: en default ville latt et framtidig kallsted glemme
+   * den og stille vist «be en administrator» til en admin.
+   */
+  isAdmin: boolean;
 }) {
   const { colors, ui } = useTheme();
   const [search, setSearch] = useState('');
@@ -153,22 +160,31 @@ export function CourseStep({
 
       {selectedCourse && !browsing ? (
         <Field label="Tee">
+          {/* #1891 ga noten en knapp; #1934 ga den en mottaker.
+              `/admin/courses/{id}/edit` er den ENESTE flaten med tee-editoren,
+              og den er admin-only (`requireAdmin` sender alle andre hjem til
+              forsiden). Knappen sto derfor for alle og virket for nesten
+              ingen. Admin beholder den raske veien; resten får vite hva som må
+              skje i stedet, og slipper trykket som ender i en låst dør. */}
           {selectedCourse.tees.length === 0 ? (
-            <>
+            isAdmin ? (
+              <>
+                <Text style={ui.muted} testID="create-tee-none">
+                  Denne banen har ingen aktive teer. Velg en annen bane, eller
+                  legg inn teene på nettsiden.
+                </Text>
+                <WebLinkButton
+                  label="Legg inn teer på nettsiden"
+                  path={`/admin/courses/${encodeURIComponent(selectedCourse.id)}/edit`}
+                  testID="create-tee-none-link"
+                />
+              </>
+            ) : (
               <Text style={ui.muted} testID="create-tee-none">
-                Denne banen har ingen aktive teer. Velg en annen bane, eller legg
-                inn teene på nettsiden.
+                Denne banen har ingen aktive teer. Velg en annen bane, eller be
+                en administrator legge dem inn.
               </Text>
-              {/* #1891: `/admin/courses/{id}/edit` er den ENESTE flaten med
-                  tee-editoren, og den er admin-only (`requireAdmin` sender
-                  andre hjem). Alternativet, ingen knapp, lot arrangøren stå
-                  igjen med «på nettsiden» uten adresse. */}
-              <WebLinkButton
-                label="Legg inn teer på nettsiden"
-                path={`/admin/courses/${encodeURIComponent(selectedCourse.id)}/edit`}
-                testID="create-tee-none-link"
-              />
-            </>
+            )
           ) : null}
           {selectedCourse.tees.map((tee) => (
             <SelectRow
