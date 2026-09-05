@@ -82,6 +82,11 @@ export default async function CupSelfWithdrawPage({
   // en gyldig lenke, og en 404 forklarer ingenting.
   const cupActive = ctx.tournament.status === 'active';
   const toWrite = ctx.pending.filter((m) => !m.alreadyWithdrawn);
+  // Har spilleren alt trukket seg, står kampene hens igjen i `pending` — de er
+  // hverken i gang eller ferdigspilt, og `nothingPending` ville sagt det
+  // motsatte av det som faktisk skjedde. Samme skille som arrangørsiden gjør
+  // med `isUndo`.
+  const alreadyWithdrawn = ctx.pending.some((m) => m.alreadyWithdrawn);
   const teamNames = {
     team1: ctx.tournament.team_1_name,
     team2: ctx.tournament.team_2_name,
@@ -110,7 +115,7 @@ export default async function CupSelfWithdrawPage({
         </div>
       )}
 
-      {cupActive && (
+      {cupActive && toWrite.length > 0 && (
         <div className="mt-5">
           <Banner tone="warning">{t('withdraw.warningSelf')}</Banner>
         </div>
@@ -127,8 +132,15 @@ export default async function CupSelfWithdrawPage({
         </div>
       ) : toWrite.length === 0 ? (
         <div className="mt-5 rounded-xl border border-border bg-surface px-4 py-3.5">
-          <p className="font-sans text-[13px] leading-relaxed text-text">
-            {t('withdraw.nothingPending')}
+          <p
+            className="font-sans text-[13px] leading-relaxed text-text"
+            data-testid={
+              alreadyWithdrawn ? 'cup-withdraw-already' : 'cup-withdraw-nothing-pending'
+            }
+          >
+            {alreadyWithdrawn
+              ? t('withdraw.alreadyWithdrawnSelf')
+              : t('withdraw.nothingPending')}
           </p>
         </div>
       ) : (

@@ -4587,6 +4587,7 @@
       "playOnNo": "La kampen avgjøres uten spill",
       "playOnHelp": "Hør med {partner} først. Du kan endre valget helt fram til kampen starter.",
       "nothingPending": "Alle kampene er enten i gang eller ferdigspilt. Det er ingenting å trekke seg fra.",
+      "alreadyWithdrawnSelf": "Du har allerede trukket deg fra cupen. Vil du inn igjen, må arrangøren angre trekket.",
       "withdrawButtonAdmin": "Registrer trekket",
       "withdrawButtonSelf": "Trekk meg",
       "withdrawPending": "Registrerer …",
