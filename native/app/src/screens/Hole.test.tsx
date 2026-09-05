@@ -107,9 +107,27 @@ const mockTeamBundle = {
   fetchedAt: '2026-08-30T10:00:00.000Z',
 };
 
+/** En ferdig ført rad, slik SQLite ville gitt den tilbake. */
+function localScore(userId: string, strokes: number | null, putts: number | null) {
+  return {
+    id: `${GAME_ID}#${userId}#1`,
+    gameId: GAME_ID,
+    userId,
+    holeNumber: 1,
+    strokes,
+    putts,
+    enteredBy: 'me',
+    clientUpdatedAt: '2026-08-30T10:00:00.000Z',
+    serverUpdatedAt: null,
+  };
+}
+
 // Hvilken bundel skjermen får, satt per test. Navnet må starte med `mock` —
 // jest.mock-factoryene heises over importene og ser bare slike variabler.
-const mockState: { bundle: unknown } = { bundle: mockSoloBundle };
+const mockState: { bundle: unknown; scores: unknown[] } = {
+  bundle: mockSoloBundle,
+  scores: [],
+};
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../data/writeScore', () => ({
@@ -128,7 +146,7 @@ jest.mock('../data/realtime', () => ({
 jest.mock('../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
-  listScoresForGame: jest.fn(async () => []),
+  listScoresForGame: jest.fn(async () => mockState.scores),
 }));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
@@ -160,6 +178,7 @@ describe('Hole', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockState.bundle = mockSoloBundle;
+    mockState.scores = [];
   });
 
   it('tegner hele flighten og sender et tapp på «+» videre til writeScore', async () => {
@@ -243,16 +262,19 @@ describe('Hole', () => {
     });
   });
 
-  // #1988: tallene er dekket av lib/scorecard/strokeEntry.test.ts — det som
-  // testes her er KOBLINGEN, at kortflaten faktisk er trykkbar.
-  it('tapp på tomt kort fører par', async () => {
+  // #1988: de to føringsveiene webben har hatt hele tiden. Tallene er dekket av
+  // lib/scorecard/strokeEntry.test.ts — det som testes her er KOBLINGEN: at
+  // kortflaten er trykkbar, at «Angre» dukker opp først når det står et tall
+  // der, og at den skriver eksplisitt `null` (utelatt felt = behold, #939).
+  it('tapp på tomt kort fører par, og «Angre» nullstiller et ført slag', async () => {
     await renderHole();
 
     await waitFor(() => {
       expect(screen.getByTestId('player-card-me')).toBeTruthy();
     });
 
-    // Hint-linja peker på snarveien så lenge kortet er tomt.
+    // Uten score: ingen «Angre», men hint-linja peker på snarveien.
+    expect(screen.queryByTestId('player-me-undo')).toBeNull();
     expect(screen.getByTestId('player-me-hint')).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId('player-card-me'));
@@ -268,4 +290,37 @@ describe('Hole', () => {
     });
   });
 
+  it('«Angre» skriver strokes: null og lar putterne stå', async () => {
+    mockState.scores = [localScore('me', 6, 2)];
+    await renderHole();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('player-me-undo')).toBeTruthy();
+    });
+    // Hint-linja viker for tallet så snart noe er ført.
+    expect(screen.queryByTestId('player-me-hint')).toBeNull();
+    expect(screen.getByTestId('player-me-value').props.children).toBe(6);
+
+    // Kortflaten er en no-op når et tall står der — ellers ville en tommel på
+    // avveie skrevet par over en ærlig 6-er.
+    await fireEvent.press(screen.getByTestId('player-card-me'));
+    expect(writeScore).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('player-me-undo'));
+
+    await waitFor(() => {
+      expect(writeScore).toHaveBeenCalledWith({
+        gameId: GAME_ID,
+        userId: 'me',
+        holeNumber: 1,
+        strokes: null,
+        enteredBy: 'me',
+      });
+    });
+    // `putts` er UTELATT, ikke null: mergen i writeScore beholder de 2 puttene.
+    expect(writeScore).toHaveBeenCalledTimes(1);
+    expect(
+      (writeScore as jest.Mock).mock.calls[0][0],
+    ).not.toHaveProperty('putts');
+  });
 });

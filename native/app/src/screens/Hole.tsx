@@ -218,6 +218,12 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
     await writeStrokes(playerUserId, firstEntryStrokes(par));
   };
 
+  // «Angre»: eksplisitt `null` — IKKE et utelatt felt. Utelatt betyr «behold»
+  // i writeScore-mergen, og da ville et feiltastet slag blitt stående.
+  const clearStrokes = async (playerUserId: string) => {
+    await writeStrokes(playerUserId, null);
+  };
+
   const adjustPutts = async (playerUserId: string, delta: number) => {
     const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.putts ?? null;
     let next: number | null;
@@ -312,6 +318,11 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
                   scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
                 )
               }
+              onClearStrokes={() =>
+                void clearStrokes(
+                  scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
+                )
+              }
               onPutts={(delta) =>
                 void adjustPutts(
                   scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
@@ -330,6 +341,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
               locked={locked}
               onStrokes={(delta) => void adjustStrokes(entry.user_id, delta)}
               onFirstEntry={() => void setFirstEntryStrokes(entry.user_id)}
+              onClearStrokes={() => void clearStrokes(entry.user_id)}
               onPutts={(delta) => void adjustPutts(entry.user_id, delta)}
             />
           ))}
@@ -468,6 +480,7 @@ function TeamCardView({
   locked,
   onStrokes,
   onFirstEntry,
+  onClearStrokes,
   onPutts,
 }: {
   card: TeamCard;
@@ -479,6 +492,7 @@ function TeamCardView({
   locked: boolean;
   onStrokes: (delta: number) => void;
   onFirstEntry: () => void;
+  onClearStrokes: () => void;
   onPutts: (delta: number) => void;
 }) {
   const { ui } = useTheme();
@@ -519,6 +533,12 @@ function TeamCardView({
         onChange={onStrokes}
         testIDPrefix={`team-${card.teamNumber}`}
       />
+      <UndoStrokes
+        visible={!locked && score?.strokes != null}
+        label={`Nullstill scoren for lag ${card.teamNumber}`}
+        onPress={onClearStrokes}
+        testID={`team-${card.teamNumber}-undo`}
+      />
       <Stepper
         label="Putter"
         value={score?.putts ?? null}
@@ -543,6 +563,7 @@ function PlayerCard({
   locked,
   onStrokes,
   onFirstEntry,
+  onClearStrokes,
   onPutts,
 }: {
   entry: RosterEntry;
@@ -552,6 +573,7 @@ function PlayerCard({
   locked: boolean;
   onStrokes: (delta: number) => void;
   onFirstEntry: () => void;
+  onClearStrokes: () => void;
   onPutts: (delta: number) => void;
 }) {
   const { ui } = useTheme();
@@ -589,6 +611,12 @@ function PlayerCard({
         onChange={onStrokes}
         testIDPrefix={`player-${entry.user_id}`}
       />
+      <UndoStrokes
+        visible={!locked && score?.strokes != null}
+        label={`Nullstill scoren for ${displayName(player)}`}
+        onPress={onClearStrokes}
+        testID={`player-${entry.user_id}-undo`}
+      />
       <Stepper
         label="Putter"
         value={score?.putts ?? null}
@@ -601,6 +629,40 @@ function PlayerCard({
           {TAP_INSTRUCTION}
         </Text>
       ) : null}
+    </Pressable>
+  );
+}
+
+/**
+ * «Angre» — ett trykk tilbake til «—» når et slag er feiltastet.
+ *
+ * Vises kun når det står et tall der, akkurat som webbens lenke: uten en score
+ * er det ingenting å angre, og en død knapp på kortet ville bare tatt plass.
+ * Ordet og skjermleser-teksten er webbens (`holes.scoreCard.undoScore` /
+ * `undoScoreAriaLabel` i messages/no.json).
+ */
+function UndoStrokes({
+  visible,
+  label,
+  onPress,
+  testID,
+}: {
+  visible: boolean;
+  label: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  const { ui } = useTheme();
+  if (!visible) return null;
+  return (
+    <Pressable
+      style={[ui.link, styles.undo]}
+      onPress={onPress}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Text style={ui.linkText}>Angre</Text>
     </Pressable>
   );
 }
@@ -670,6 +732,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepDisabled: { opacity: 0.4 },
+  // Venstrestilt som stepper-etikettene, ikke midtstilt som `ui.link` er.
+  undo: { alignItems: 'flex-start' },
   stepText: { fontSize: 22, fontFamily: FONTS.sansBold },
   stepValue: { width: 44, textAlign: 'center' },
   strip: { flexDirection: 'row', gap: 6, paddingVertical: 8 },
