@@ -60,6 +60,8 @@ vinner over `.env`-filene), og nekter å kjøre hvis en `.env.production*` finne
 cd <repo-rota>
 native/app/scripts/store-build-ios.sh              # arkiver → bevis → last opp
 native/app/scripts/store-build-ios.sh --no-upload  # kandidat-sjekk: arkiver + bevis, ingen opplasting
+native/app/scripts/store-build-ios.sh --upload-only ~/.torny-native/dist/TornyNative-1.1.0-2.xcarchive
+                                                   # veien videre etter --no-upload: bevis + opplasting av SAMME arkiv
 ```
 
 Skriptet stopper ved første feil, og gjør i rekkefølge:
@@ -71,7 +73,9 @@ Skriptet stopper ved første feil, og gjør i rekkefølge:
    opp configen med `npx expo config --type prebuild` — der kaster `app.config.ts` hvis noe
    er galt. Navn, versjon, build og bundle-id skrives ut.
 4. **Duplikat-vakt:** finnes `~/.torny-native/dist/TornyNative-<versjon>-<build>.xcarchive`
-   alt, stopper skriptet (App Store Connect avviser samme buildnummer to ganger).
+   alt, stopper skriptet før kompilering og spør hva du vil: laste opp det arkivet
+   (`--upload-only`) eller kompilere på nytt (bump først — App Store Connect avviser samme
+   buildnummer to ganger).
 5. **`expo prebuild --platform ios --no-install`** — regenererer `ios/` (standard i SDK 57;
    `--no-clean` er unntaket). App-navnet endrer scheme-navnet (`TrnyDev` → `Trny`), så
    dev-`ios/` gjenbrukes aldri. Så `pod install` med `LANG=en_US.UTF-8`.
@@ -87,6 +91,17 @@ Skriptet stopper ved første feil, og gjør i rekkefølge:
 Alt havner i `~/.torny-native/dist/TornyNative-<versjon>-<build>.*`: `.xcarchive`,
 `.archive.log`, `.bevis.txt`, `.export.log`, `.export/`.
 
+**Etter `--no-upload`:** når beviset er lest og kandidaten er god, laster du opp *samme*
+arkiv — ingen ny kompilering, så bundelen som havner i App Store Connect er nøyaktig den
+bevis-fila beskriver:
+
+```bash
+native/app/scripts/store-build-ios.sh --upload-only ~/.torny-native/dist/TornyNative-1.1.0-2.xcarchive
+```
+
+Kommandoen kjører beviset på nytt (nøkkel-sjekken inkludert når repo-rotas `.env.local`
+finnes), eksporterer og laster opp. Den trenger ikke Node eller CocoaPods.
+
 ## Bevis-steget
 
 ```bash
@@ -100,16 +115,18 @@ Kan kjøres på nytt på et eksisterende arkiv (eller en `.app`) uten å bygge. 
 |---|---|
 | `main.jsbundle` (Hermes → `strings`) | **KREV** `https://glofubopddkjhymcbaph.supabase.co` og `https://tornygolf.no`. |
 | | **FORBY** `://snwmueecmfqqdurxedxv` (staging-adressen fra miljøet) og `localhost:3111`. Ett *bart* treff på staging-ref-en er forventet — `src/lib/stagingGate.ts` har verten som literal (gaten for utvikler-raden). |
-| | **FORBY** `127.0.0.1`, `192.168.x`, `10.0.x`, `.local:` — med grensetegn foran, fordi Hermes pakker strengtabellen uten skilletegn («draft-2020-12» + «7.0.0.1…» ser ut som en IP). |
-| | `http://` og `localhost`: hvert treff må stå på lista over kjente bibliotek-strenger i skriptet (zod sin JSON-Schema-URL, Metros `localhost:8081/assets/`, auth-js sin `localhost:9999`, phoenix sin bare `http://`). Alt annet → FAIL med kontekst. |
+| | **FORBY** hele adresser `127.0.0.1`, `192.168.x.x`, `10.0.x.x` (fire oktetter med ikke-siffer på begge sider), IPv6-literaler (`://[…]`) og `.local:` som ren tekst. Hermes pakker strengtabellen uten skilletegn («draft-2020-1» + «27.0.0.15…» inneholder 127.0.0.1 uten å være en IP), derfor kreves adresseformen. |
+| | Anon-nøkkelen: står `EXPO_PUBLIC_SUPABASE_ANON_KEY` i miljøet (byggeskriptet setter den; `--upload-only` leser den fra `.env.local`), må nøyaktig den verdien finnes i bundelen. Bare lengden skrives ut, aldri nøkkelen. |
+| | `http://` og `localhost`: hvert treff må stå på lista over kjente bibliotek-strenger i skriptet (zod sin JSON-Schema-URL, Metros `localhost:8081/assets/`, auth-js sin `localhost:9999`, phoenix sin bare `http://`). Alt annet → FAIL med kontekst. Phoenix-literalen har ingen vert selv, så det som følger i den pakkede tabellen er nabo-strengen; den godtas når halen ikke er en vert (et ord uten punktum, kolon eller skråstrek, eller en annen URL-literal). |
 | `Info.plist` | `CFBundleIdentifier = no.tornygolf.app`, versjon og build satt, `ITSAppUsesNonExemptEncryption = false`. |
 | Entitlements (`codesign -d --entitlements`) | INGEN `com.apple.developer.associated-domains`, INGEN `aps-environment`. |
 
 Lista over kjente bibliotek-strenger ble seedet fra `expo export` av begge varianter
 (2026-09-05, P2) og bekreftes mot det ekte arkivet i P3. Får du «UKJENT» på en `http://`-
 eller `localhost`-streng: les konteksten. Er det en ny bibliotek-streng, legg den på lista
-i `store-build-proof.sh` med kommentar om hvor den kommer fra. Er det en adresse vi eier,
-er bygget feil — ikke lista.
+i `store-build-proof.sh` med kommentar om hvor den kommer fra. En UKJENT på formen
+`http://<ord uten punktum, kolon eller skråstrek>` er phoenix-literalen med en ny nabo, ikke
+en lekkasje. Er det en adresse vi eier, er bygget feil — ikke lista.
 
 ## Bump-regelen
 
@@ -118,7 +135,8 @@ App Store Connect avviser et duplikat (versjon, build). Før hver ny opplasting:
 - `STORE_IOS_BUILD_NUMBER` i `native/app/app.config.ts` +1 (og `STORE_ANDROID_VERSION_CODE`
   i takt — Android-oppfølgeren arver tallet).
 - Ny `STORE_VERSION` når appen endrer seg for brukerne; hold den over skallets `1.0`.
-- Skriptet nekter å kjøre hvis arkivet for (versjon, build) alt finnes.
+- Skriptet nekter å kompilere hvis arkivet for (versjon, build) alt finnes. Skal det
+  arkivet lastes opp, er veien `--upload-only <arkiv>` — ikke en bump.
 
 Første kandidat er `1.1.0 (2)`; skallet brukte `1.0 (1)`.
 
@@ -172,6 +190,8 @@ Forutsetning for (2): `native/ios/` beholdes buildbar til N8 er lukket + én app
   nådde ikke bundleren. Kjør skriptet igjen fra et rent skall; sjekk at ingen
   `.env.production*` finnes i `native/app/`.
 - Beviset feiler på **UKJENT `http://…`** → se «Bevis-steget».
+- **Duplikat-vakten stopper deg** → var det `--no-upload`-arkivet du ville laste opp? Da er
+  det `--upload-only <arkiv>`, ikke en bump.
 - **To feilede byggeforsøk → stopp** og skriv opp hva som skjedde (T8 i
   `docs/agent-discipline/core.md`). Ikke forsøk nummer tre på håp.
 
