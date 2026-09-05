@@ -39,6 +39,17 @@ export interface OwnProfile {
   handicapUpdatedAt: string | null;
   gender: string | null;
   level: string | null;
+  /**
+   * Om denne brukeren er admin (#1934).
+   *
+   * Rollen står i `users.is_admin`, og appen leser den i stedet for å gjette
+   * den ut fra hva brukeren har gjort: regelen bor i basen, og en avledning
+   * her ville vært en andre regel ved siden av den (AGENTS trap 4). Feltet er
+   * IKKE nullbart som de andre — alt som ikke er `true` leses som «ikke
+   * admin», så en manglende kolonne skjuler en admin-knapp i stedet for å
+   * love en dør som er låst.
+   */
+  isAdmin: boolean;
 }
 
 interface ProfileRow {
@@ -48,10 +59,11 @@ interface ProfileRow {
   handicap_updated_at: string | null;
   gender: string | null;
   level: string | null;
+  is_admin: boolean | null;
 }
 
 const PROFILE_SELECT =
-  'name, nickname, hcp_index, handicap_updated_at, gender, level';
+  'name, nickname, hcp_index, handicap_updated_at, gender, level, is_admin';
 
 /**
  * Hent egen profilrad.
@@ -78,6 +90,10 @@ export async function fetchOwnProfile(userId: string): Promise<OwnProfile> {
     handicapUpdatedAt: data.handicap_updated_at,
     gender: data.gender,
     level: data.level,
+    // Fail-closed: bare `true` er admin. `null`, `undefined` og alt annet
+    // betyr «ikke admin» — den ærlige teksten er en bedre feil enn en knapp
+    // til en side som sender brukeren rett hjem igjen.
+    isAdmin: data.is_admin === true,
   };
 }
 
