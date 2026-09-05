@@ -12,10 +12,11 @@
 //     det hull uten slag, spør vi først, for de låses som ikke spilt.
 //
 // N4 (#1828): i lag-formatene som deler én ball viser kortet LAGETS rader
-// (kapteinens), og Lever-knappen er byttet ut med en henvisning til nettsiden.
-// Grunnen er RLS: webbens lag-levering skriver alle medlemmenes rader med
-// service-role, mens appen bare kan skrive sin egen. Et halvlevert lag ville
-// blokkert avslutningen av runden — så vi leverer ikke halvt.
+// (kapteinens). #1918: «Lever lagets kort» går gjennom app→server-ruta
+// (`data/submitTeam.ts`), ikke rett i basen. Grunnen er RLS: appen kan bare
+// skrive sin egen rad, mens rutas kjerne markerer hele lagets aktive, uleverte
+// rader med service-role. Et halvlevert lag ville blokkert avslutningen av
+// runden — så vi leverer ikke halvt.
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -28,12 +29,12 @@ import {
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { isActiveForGame } from '../../../../lib/sync/queueScope';
-import { WebLinkButton } from '../components/WebLinkButton';
 import { getDb, listQueue } from '../data/db';
 import { submitScorecard } from '../data/playerActions';
 import { seedGameScores } from '../data/seedScores';
+import { submitTeam } from '../data/submitTeam';
 import { drainQueue } from '../data/syncWorker';
-import { describeFailure } from '../lib/actionFeedback';
+import { describeFailure, describeTeamSubmitFailure } from '../lib/actionFeedback';
 import { isScoringSupported } from '../lib/formatGate';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, toRoster } from '../lib/roster';
@@ -130,13 +131,23 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     bundle.game.status === 'active' &&
     me.submitted_at == null &&
     me.withdrawn_at == null &&
-    isScoringSupported(bundle.game) &&
-    // Lag-levering er nettsidens jobb — se fil-toppen.
-    !teamMode;
+    isScoringSupported(bundle.game);
 
   const doSubmit = async () => {
     setBusy(true);
     setErrorText(null);
+    // Laget kan bare leveres av ruta: RLS lar appen skrive sin egen rad, og
+    // halve laget levert er verre enn ingen. Solo-greina skriver som før.
+    if (teamMode) {
+      const teamResult = await submitTeam(gameId);
+      setBusy(false);
+      if (teamResult.ok) {
+        navigation.navigate('GameHome', { gameId });
+        return;
+      }
+      setErrorText(describeTeamSubmitFailure(teamResult.reason));
+      return;
+    }
     const result = await submitScorecard(gameId);
     setBusy(false);
     if (result.ok) {
@@ -153,8 +164,10 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       return;
     }
     Alert.alert(
-      'Lever scorekortet?',
-      `${missing} hull står uten slag. De blir stående som ikke spilt.`,
+      teamMode ? 'Lever lagets kort?' : 'Lever scorekortet?',
+      teamMode
+        ? `${missing} hull står uten slag. De blir stående som ikke spilt for hele laget.`
+        : `${missing} hull står uten slag. De blir stående som ikke spilt.`,
       [
         { text: 'Avbryt', style: 'cancel' },
         { text: 'Lever likevel', onPress: () => void doSubmit() },
@@ -228,21 +241,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         ) : null}
       </View>
 
-      {teamMode ? (
-        <>
-          <Text style={ui.muted} testID="team-submit-gate">
-            Levering av lagkort gjøres på nettsiden ennå.
-          </Text>
-          {/* #1891: setningen sto uten vei videre. Webbens lever-side skriver
-              hele lagets rader med service-role — det er nettopp evnen appen
-              mangler (#1918), så knappen tar spilleren dit den finnes. */}
-          <WebLinkButton
-            label="Lever lagkortet på nettsiden"
-            path={`/games/${encodeURIComponent(gameId)}/submit`}
-            testID="team-submit-link"
-          />
-        </>
-      ) : canSubmit ? (
+      {canSubmit ? (
         <>
           {queued > 0 ? (
             <Text style={ui.muted} testID="queue-guard">
@@ -253,10 +252,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             style={[ui.button, (queued > 0 || busy) && styles.buttonDisabled]}
             onPress={onSubmitPress}
             disabled={queued > 0 || busy}
-            testID="submit-scorecard"
+            testID={teamMode ? 'submit-team-card' : 'submit-scorecard'}
           >
             <Text style={ui.buttonText}>
-              {busy ? 'Leverer …' : queued > 0 ? 'Synker slag …' : 'Lever scorekort'}
+              {busy
+                ? 'Leverer …'
+                : queued > 0
+                  ? 'Synker slag …'
+                  : teamMode
+                    ? 'Lever lagets kort'
+                    : 'Lever scorekort'}
             </Text>
           </Pressable>
         </>

@@ -396,10 +396,10 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
           onPress={() => navigation.navigate('Scorecard', { gameId })}
           testID="hole-submit"
         >
-          {/* Lagkort leveres på nettsiden (RLS lar appen bare skrive egen rad),
-              så knappen lover bare det den kan: å vise kortet. */}
+          {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
+              hjem der (#1918). */}
           <Text style={ui.buttonText}>
-            {collapsed ? 'Se lagets kort' : 'Lever scorekort'}
+            {collapsed ? 'Lever lagets kort' : 'Lever scorekort'}
           </Text>
         </Pressable>
       ) : null}

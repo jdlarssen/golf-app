@@ -10,6 +10,11 @@ import type {
   WolfChoiceValidationError,
 } from '../data/choices';
 import type { ActionResult } from '../data/playerActions';
+// Kun typen: `data/submitTeam.ts` drar med seg supabase-klienten gjennom
+// `webApi`, og en oversetter-modul skal ikke koble på noe av det.
+// `import type` forsvinner i kompileringen, så koden her er fortsatt ren tekst.
+import type { TeamSubmitFailure } from '../data/submitTeam';
+import { WEB_LINK_TEXT } from './webLink';
 
 export function describeFailure(result: ActionResult): string | null {
   if (result.ok) return null;
@@ -69,5 +74,43 @@ export function describeChoiceFailure(
       return 'Ingenting ble lagret. Prøv igjen.';
     case 'db_error':
       return 'Fikk ikke lagret valget. Sjekk nettet og prøv igjen.';
+  }
+}
+
+/**
+ * Hvorfor lagkortet ikke ble levert (#1918).
+ *
+ * Fire av kodene har hver sin setning fordi de krever fire helt ulike ting av
+ * spilleren: koble til nett, logge inn på nytt, innse at runden er lukket,
+ * eller innse at hen ikke står i den lenger. Resten («ikke deltaker», «fant
+ * ikke runden», nettverksfeil, serverfeil) ender i samme «prøv igjen» — de er
+ * alle utenfor spillerens kontroll her og nå, og fire varianter av samme råd
+ * hjelper ingen. Samme arbeidsdeling som `describeReminderFailure`.
+ *
+ * Ingen `default`-gren: legger ruta til en kode i `TeamSubmitFailure`, faller
+ * `tsc` på den manglende returverdien.
+ */
+export function describeTeamSubmitFailure(reason: TeamSubmitFailure): string {
+  switch (reason) {
+    case 'offline':
+      return 'Levering av lagkort krever nett.';
+    // Delt med lenke-knappene: den samme mangelen i bygget stopper begge, og
+    // meldingen skal ikke nevne én av dem.
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
+    case 'unauthorized':
+      return 'Logg inn på nytt og prøv igjen.';
+    // Samme setning som solo-greina (`describeFailure` → `not-active`): begge
+    // havner i det samme feltet på scorekortet, og formatet skal ikke avgjøre
+    // om det står «spillet» eller «runden».
+    case 'not_active':
+      return 'Spillet er ikke aktivt lenger.';
+    case 'withdrawn':
+      return 'Du er trukket fra dette spillet.';
+    case 'network':
+    case 'forbidden':
+    case 'not_found':
+    case 'submit_failed':
+      return 'Fikk ikke levert kortet. Prøv igjen.';
   }
 }
