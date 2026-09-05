@@ -171,6 +171,7 @@ describe('Hole', () => {
     });
     expect(screen.getByText('Meg Selv (deg)')).toBeTruthy();
 
+    // #1988: første «+» på et tomt kort fører PAR + 1 (par 4 → 5), ikke 1.
     await fireEvent.press(screen.getByTestId('player-mate-plus'));
 
     await waitFor(() => {
@@ -178,7 +179,7 @@ describe('Hole', () => {
         gameId: GAME_ID,
         userId: 'mate',
         holeNumber: 1,
-        strokes: 1,
+        strokes: 5,
         enteredBy: 'me',
       });
     });
@@ -223,7 +224,7 @@ describe('Hole', () => {
         gameId: GAME_ID,
         userId: 'makker',
         holeNumber: 1,
-        strokes: 1,
+        strokes: 5,
         enteredBy: 'me',
       });
     });
@@ -241,4 +242,30 @@ describe('Hole', () => {
       });
     });
   });
+
+  // #1988: tallene er dekket av lib/scorecard/strokeEntry.test.ts — det som
+  // testes her er KOBLINGEN, at kortflaten faktisk er trykkbar.
+  it('tapp på tomt kort fører par', async () => {
+    await renderHole();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('player-card-me')).toBeTruthy();
+    });
+
+    // Hint-linja peker på snarveien så lenge kortet er tomt.
+    expect(screen.getByTestId('player-me-hint')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('player-card-me'));
+
+    await waitFor(() => {
+      expect(writeScore).toHaveBeenCalledWith({
+        gameId: GAME_ID,
+        userId: 'me',
+        holeNumber: 1,
+        strokes: 4,
+        enteredBy: 'me',
+      });
+    });
+  });
+
 });

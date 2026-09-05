@@ -30,6 +30,10 @@ import {
 } from 'react-native';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
+import {
+  firstEntryStrokes,
+  nextStrokes,
+} from '../../../../lib/scorecard/strokeEntry';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
@@ -62,9 +66,12 @@ import { useSession } from '../session';
 import { FONTS, TAP, useTheme } from '../theme';
 
 const HOLE_COUNT = 18;
-/** Webbens grenser: én slag-verdi er alltid mellom 1 og 15. */
-const MIN_STROKES = 1;
-const MAX_STROKES = 15;
+/**
+ * Hint-linja under et utastet kort. Ordrett webbens streng
+ * (`holes.scoreCard.tapInstruction` i messages/no.json) — snarveien er ny i
+ * appen, og uten linja finner ingen den.
+ */
+const TAP_INSTRUCTION = 'Trykk kort = par. Bruk − / +.';
 /** `scores.putts` har CHECK (0..10) fra migrasjon 0123 — samme tak her. */
 const MAX_PUTTS = 10;
 /** Hvor ofte skjermen leser SQLite på nytt. Samme takt som Sync-laben. */
@@ -183,22 +190,32 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
       })
     : null;
 
-  const adjustStrokes = async (playerUserId: string, delta: number) => {
-    const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.strokes ?? null;
-    if (current == null && delta < 0) return;
-    const next = Math.min(
-      MAX_STROKES,
-      Math.max(MIN_STROKES, (current ?? 0) + delta),
-    );
+  // Alle tre slag-veiene skriver likt: SLAG alene (putter utelates, så mergen i
+  // writeScore beholder dem), så les tilbake og drain køen.
+  const writeStrokes = async (playerUserId: string, strokes: number | null) => {
     await writeScore({
       gameId,
       userId: playerUserId,
       holeNumber,
-      strokes: next,
+      strokes,
       enteredBy: userId,
     });
     await reload();
     void drainQueue('tasting');
+  };
+
+  const adjustStrokes = async (playerUserId: string, delta: number) => {
+    const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.strokes ?? null;
+    await writeStrokes(playerUserId, nextStrokes({ current, par, delta }));
+  };
+
+  // Tapp på selve kortet er en SNARVEI TIL FØRSTE FØRING — som på web. Står det
+  // alt et tall der, er tappet en no-op: en tommel på avveie skal ikke kunne
+  // viske ut en ærlig retting. Bruk «−»/«+» eller «Angre» i stedet.
+  const setFirstEntryStrokes = async (playerUserId: string) => {
+    const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.strokes ?? null;
+    if (current != null) return;
+    await writeStrokes(playerUserId, firstEntryStrokes(par));
   };
 
   const adjustPutts = async (playerUserId: string, delta: number) => {
@@ -290,6 +307,11 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
                   delta,
                 )
               }
+              onFirstEntry={() =>
+                void setFirstEntryStrokes(
+                  scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
+                )
+              }
               onPutts={(delta) =>
                 void adjustPutts(
                   scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
@@ -307,6 +329,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
               isMe={entry.user_id === userId}
               locked={locked}
               onStrokes={(delta) => void adjustStrokes(entry.user_id, delta)}
+              onFirstEntry={() => void setFirstEntryStrokes(entry.user_id)}
               onPutts={(delta) => void adjustPutts(entry.user_id, delta)}
             />
           ))}
@@ -444,6 +467,7 @@ function TeamCardView({
   teeStarterName,
   locked,
   onStrokes,
+  onFirstEntry,
   onPutts,
 }: {
   card: TeamCard;
@@ -454,11 +478,17 @@ function TeamCardView({
   teeStarterName: string | null;
   locked: boolean;
   onStrokes: (delta: number) => void;
+  onFirstEntry: () => void;
   onPutts: (delta: number) => void;
 }) {
   const { ui } = useTheme();
   return (
-    <View style={ui.card} testID={`team-card-${card.teamNumber}`}>
+    <Pressable
+      style={ui.card}
+      testID={`team-card-${card.teamNumber}`}
+      onPress={onFirstEntry}
+      disabled={locked}
+    >
       <View style={styles.cardHead}>
         <Text style={[ui.body, isMine && styles.meName]}>
           {card.label}
@@ -496,7 +526,12 @@ function TeamCardView({
         onChange={onPutts}
         testIDPrefix={`team-${card.teamNumber}-putts`}
       />
-    </View>
+      {score?.strokes == null ? (
+        <Text style={ui.muted} testID={`team-${card.teamNumber}-hint`}>
+          {TAP_INSTRUCTION}
+        </Text>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -507,6 +542,7 @@ function PlayerCard({
   isMe,
   locked,
   onStrokes,
+  onFirstEntry,
   onPutts,
 }: {
   entry: RosterEntry;
@@ -515,14 +551,23 @@ function PlayerCard({
   isMe: boolean;
   locked: boolean;
   onStrokes: (delta: number) => void;
+  onFirstEntry: () => void;
   onPutts: (delta: number) => void;
 }) {
   const { ui } = useTheme();
   const player: BundlePlayer = entry.player;
   const extra = strokesForHole(player.courseHandicap ?? 0, hole.strokeIndex);
 
+  // Kortflaten er selve snarveien til par. Stepperne og «Angre» inni er egne
+  // Pressables, og i React Native vinner den innerste berøringen — derfor
+  // trengs ingen stopPropagation slik webben må ha.
   return (
-    <View style={ui.card} testID={`player-card-${entry.user_id}`}>
+    <Pressable
+      style={ui.card}
+      testID={`player-card-${entry.user_id}`}
+      onPress={onFirstEntry}
+      disabled={locked}
+    >
       <View style={styles.cardHead}>
         <Text style={[ui.body, isMe && styles.meName]}>
           {displayName(player)}
@@ -551,7 +596,12 @@ function PlayerCard({
         onChange={onPutts}
         testIDPrefix={`player-${entry.user_id}-putts`}
       />
-    </View>
+      {score?.strokes == null ? (
+        <Text style={ui.muted} testID={`player-${entry.user_id}-hint`}>
+          {TAP_INSTRUCTION}
+        </Text>
+      ) : null}
+    </Pressable>
   );
 }
 
