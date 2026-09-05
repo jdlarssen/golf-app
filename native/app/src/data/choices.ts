@@ -27,8 +27,9 @@
 //
 // Valgene holdes IKKE i SQLite og går IKKE i sync-køen: de gjøres stående på
 // hullet, med nett. Oppdatering skjer ved refetch (skjerm-fokus, poll, og rett
-// etter egen skriving) — valg-tabellene står ikke i `supabase_realtime`, så en
-// `postgres_changes`-binding ville levert ingenting.
+// etter egen skriving). Valg-tabellene sto ikke i `supabase_realtime` da appen
+// ble bygget; migrasjon 0175 (#1836) legger dem inn, men appen poller fortsatt
+// til en realtime-oppgradering får sin egen kontrakt.
 import {
   expectAffected,
   NoRowsAffectedError,

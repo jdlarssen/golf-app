@@ -9,10 +9,12 @@
 //     `null` for de elleve andre, og da fyrer hooken ingen spørring i det hele
 //     tatt. En leaderboard-skjerm for et stableford-spill skal ikke koste et
 //     nettkall hvert tiende sekund.
-//  2. **Polling, ikke realtime.** `wolf_hole_choices` og
-//     `bingo_bango_bongo_holes` står ikke i `supabase_realtime`-publikasjonen
-//     (verifisert mot staging og prod), så en `postgres_changes`-binding ville
-//     levert ingenting. Intervallet går bare mens skjermen har fokus.
+//  2. **Polling, ikke realtime.** Da appen ble bygget (#1832) sto
+//     `wolf_hole_choices` og `bingo_bango_bongo_holes` ikke i
+//     `supabase_realtime`-publikasjonen, så en `postgres_changes`-binding
+//     ville levert ingenting. Migrasjon 0175 (#1836) legger dem inn; appen
+//     poller likevel til en realtime-oppgradering får sin egen kontrakt.
+//     Intervallet går bare mens skjermen har fokus.
 //  3. **Siste vellykkede henting blir stående.** En feilet refetch tømmer
 //     ingenting — gammelt er bedre enn borte. Men har INGEN henting lyktes,
 //     står svaret tomt, og adapteren sier `missing-choices` i stedet for å
