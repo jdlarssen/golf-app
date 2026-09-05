@@ -12,6 +12,7 @@ import { isProfileIncomplete } from '@/lib/auth/profileGate';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
+import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { ScorecardTableSkeleton } from './TableSkeleton';
 import { ParAsideInline } from '../_components/ParAsideInline';
@@ -133,11 +134,11 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     });
   }
 
-  // Withdrawn (#387): bounce a trukket spiller to game-home (which shows the
-  // «Du har trukket deg»-banner + Angre) rather than their now-frozen card.
-  if (me.withdrawn_at) {
-    redirect({ href: `/games/${id}` as string, locale });
-  }
+  // Withdrawn (#1895): a trukket spiller keeps read access to their own card —
+  // the app has always shown it, and hiding a player's own strokes from that
+  // player is hard to defend. The card is read-only: no submit path (#387 still
+  // guards submit/page.tsx + submit/actions.ts) and no «tilbake til hull N» CTA.
+  const withdrawn = me.withdrawn_at != null;
 
   const { supabase: scorecardSupabase } = await getScorecardContext();
   const courseRes = game.course_id
@@ -189,6 +190,12 @@ export default async function ScorecardPage({ params }: { params: Params }) {
           )}
         </Card>
 
+        {withdrawn && (
+          <Banner tone="info" testId="scorecard-withdrawn-notice">
+            {tScorecard('withdrawnNotice')}
+          </Banner>
+        )}
+
         <Suspense fallback={<ScorecardTableSkeleton />}>
           <ScorecardTable
             gameId={id}
@@ -196,6 +203,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
             layout={layout}
             submittedAt={me.submitted_at}
             gameFinished={game.status === 'finished'}
+            withdrawn={withdrawn}
             revealState={state}
             myTeeGender={me.tee_gender}
             pointsFn={stablefordPointsFn}
@@ -213,6 +221,7 @@ async function ScorecardTable({
   layout,
   submittedAt,
   gameFinished,
+  withdrawn,
   revealState: state,
   myTeeGender,
   pointsFn,
@@ -225,6 +234,9 @@ async function ScorecardTable({
   /** #1351: entry is closed once the game is finished — the «tilbake til hull N»
    *  CTA would bounce straight back here via the hole page's finished-redirect. */
   gameFinished: boolean;
+  /** #1895: entry is closed for a trukket spiller too — the hole page renders
+   *  read-only for them, so the «tilbake til hull N» CTA would be a dead end. */
+  withdrawn: boolean;
   revealState: RevealState;
   myTeeGender: ScoringGender;
   pointsFn: StablefordPointsFn;
@@ -308,7 +320,7 @@ async function ScorecardTable({
         />
       )}
 
-      {submittedAt || gameFinished ? (
+      {submittedAt || gameFinished || withdrawn ? (
         <LinkButton href={`/games/${gameId}`} full variant="secondary">
           {t('backToGame')}
         </LinkButton>

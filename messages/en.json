@@ -2228,7 +2228,8 @@
     "backLabel": "Back to {name}",
     "backToGame": "Back to game →",
     "backToHole": "Back to hole {hole} →",
-    "toGameOverview": "Game overview"
+    "toGameOverview": "Game overview",
+    "withdrawnNotice": "You have withdrawn. Your strokes stay on the card but don't count in the standings."
   },
   "holes": {
     "entry": {
