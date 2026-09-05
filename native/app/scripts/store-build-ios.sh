@@ -60,6 +60,7 @@ while [ $# -gt 0 ]; do
       shift
       UPLOAD_ONLY=${1:-}
       [ -n "$UPLOAD_ONLY" ] || die "--upload-only trenger stien til et .xcarchive."
+      UPLOAD_ONLY=${UPLOAD_ONLY%/}   # tab-fullføring gir «…xcarchive/»
       ;;
     -h|--help) print_help; exit 0 ;;
     *) die "Ukjent argument: $1 (prøv --help)" ;;
@@ -86,10 +87,13 @@ env_value() {
   [ -n "$line" ] || return 0
   local value=${line#*=}
   value=${value%$'\r'}
-  value=$(printf '%s' "$value" | sed -E 's/[[:space:]]+#.*$//; s/[[:space:]]+$//')
+  # Anførselstegn først: innholdet mellom dem er verdien, også når det har « #».
+  # Ellers gjelder dotenv-regelen for uanførte verdier: « # kommentar» og
+  # etterfølgende mellomrom strippes.
   case "$value" in
-    \"*\") value=${value#\"}; value=${value%\"} ;;
-    \'*\') value=${value#\'}; value=${value%\'} ;;
+    \"*) value=$(printf '%s' "$value" | sed -E 's/^"([^"]*)".*$/\1/') ;;
+    \'*) value=$(printf '%s' "$value" | sed -E "s/^'([^']*)'.*$/\\1/") ;;
+    *)   value=$(printf '%s' "$value" | sed -E 's/[[:space:]]+#.*$//; s/[[:space:]]+$//') ;;
   esac
   printf '%s' "$value"
 }
@@ -97,7 +101,7 @@ env_value() {
 run_proof() {
   local archive=$1 proof_file=$2
   step "Bevis-steg: $PROOF"
-  "$PROOF" "$archive" "$proof_file" || die "Beviset feilet — ingenting lastes opp. Les $proof_file."
+  "$PROOF" "$archive" "$proof_file" || die "Beviset feilet — ingenting lastes opp. Les $proof_file. Arkivet ligger igjen som $archive: slett det (rm -rf) før du kompilerer på nytt, ellers stopper duplikat-vakten deg."
 }
 
 run_export() {
@@ -131,6 +135,9 @@ if [ -n "$UPLOAD_ONLY" ]; then
   if [ -f "$ENV_FILE" ]; then
     EXPO_PUBLIC_SUPABASE_ANON_KEY=$(env_value NEXT_PUBLIC_SUPABASE_ANON_KEY)
     export EXPO_PUBLIC_SUPABASE_ANON_KEY
+  fi
+  if [ -z "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
+    printf '⚠ Fant ingen NEXT_PUBLIC_SUPABASE_ANON_KEY i %s — beviset kan ikke sjekke nøkkelen i bundelen (de andre reglene gjelder). Kjør fra hovedutsjekken, eller TORNY_ENV_FILE=…, for full sjekk.\n' "$ENV_FILE"
   fi
   run_proof "$ARCHIVE" "$STEM.bevis.txt"
   run_export "$ARCHIVE" "$STEM"
@@ -210,7 +217,7 @@ mkdir -p "$DIST"
 STEM="$DIST/TornyNative-$VERSION-$BUILD"
 ARCHIVE="$STEM.xcarchive"
 if [ -e "$ARCHIVE" ]; then
-  die "Arkivet $ARCHIVE finnes alt. Skal det lastes opp: $0 --upload-only $ARCHIVE. Skal det kompileres på nytt: bump STORE_IOS_BUILD_NUMBER i native/app/app.config.ts først (App Store Connect avviser samme buildnummer to ganger)."
+  die "Arkivet $ARCHIVE finnes alt. Skal det lastes opp: $0 --upload-only $ARCHIVE. Feilet beviset sist: rm -rf $ARCHIVE og kjør igjen. Skal en ny versjon kompileres: bump STORE_IOS_BUILD_NUMBER i native/app/app.config.ts først (App Store Connect avviser samme buildnummer to ganger)."
 fi
 
 # ── 3. Prebuild + pods ───────────────────────────────────────────────────────

@@ -86,7 +86,8 @@ Skriptet stopper ved første feil, og gjør i rekkefølge:
 7. **Bevis-steget** (under) — én FAIL, og ingenting lastes opp.
 8. **`xcodebuild -exportArchive`** med `ExportOptions.plist` → laster opp. Skriptet leter
    etter «Upload succeeded» i loggen; mangler frasen etter en grønn eksport, sjekk App Store
-   Connect → TestFlight før du kjører igjen (en ny kjøring krever bump).
+   Connect → TestFlight. Ligger bygget ikke der, last opp samme arkiv igjen med
+   `--upload-only` — ikke bump.
 
 Alt havner i `~/.torny-native/dist/TornyNative-<versjon>-<build>.*`: `.xcarchive`,
 `.archive.log`, `.bevis.txt`, `.export.log`, `.export/`.
@@ -114,7 +115,7 @@ Kan kjøres på nytt på et eksisterende arkiv (eller en `.app`) uten å bygge. 
 | Kilde | Regel |
 |---|---|
 | `main.jsbundle` (Hermes → `strings`) | **KREV** `https://glofubopddkjhymcbaph.supabase.co` og `https://tornygolf.no`. |
-| | **FORBY** `://snwmueecmfqqdurxedxv` (staging-adressen fra miljøet) og `localhost:3111`. Ett *bart* treff på staging-ref-en er forventet — `src/lib/stagingGate.ts` har verten som literal (gaten for utvikler-raden). |
+| | **FORBY** `://snwmueecmfqqdurxedxv` (staging-adressen fra miljøet) og `localhost:3111`. Ett *bart* treff på staging-ref-en er forventet — `src/lib/stagingGate.ts` har verten som literal (gaten for utvikler-raden); to eller flere bare treff feiler også. |
 | | **FORBY** hele adresser `127.0.0.1`, `192.168.x.x`, `10.0.x.x` (fire oktetter med ikke-siffer på begge sider), IPv6-literaler (`://[…]`) og `.local:` som ren tekst. Hermes pakker strengtabellen uten skilletegn («draft-2020-1» + «27.0.0.15…» inneholder 127.0.0.1 uten å være en IP), derfor kreves adresseformen. |
 | | Anon-nøkkelen: står `EXPO_PUBLIC_SUPABASE_ANON_KEY` i miljøet (byggeskriptet setter den; `--upload-only` leser den fra `.env.local`), må nøyaktig den verdien finnes i bundelen. Bare lengden skrives ut, aldri nøkkelen. |
 | | `http://` og `localhost`: hvert treff må stå på lista over kjente bibliotek-strenger i skriptet (zod sin JSON-Schema-URL, Metros `localhost:8081/assets/`, auth-js sin `localhost:9999`, phoenix sin bare `http://`). Alt annet → FAIL med kontekst. Phoenix-literalen har ingen vert selv, så det som følger i den pakkede tabellen er nabo-strengen; den godtas når halen ikke er en vert (et ord uten punktum, kolon eller skråstrek, eller en annen URL-literal). |
@@ -187,8 +188,10 @@ Forutsetning for (2): `native/ios/` beholdes buildbar til N8 er lukket + én app
 - Appen krasjer ved oppstart etter nye native moduler → `expo prebuild` + `pod install` på
   nytt; `expo export` fanger ikke dette.
 - Beviset feiler på **prod-adressen mangler** eller **`://snwmueecmfqqdurxedxv`** → miljøet
-  nådde ikke bundleren. Kjør skriptet igjen fra et rent skall; sjekk at ingen
-  `.env.production*` finnes i `native/app/`.
+  nådde ikke bundleren. Slett det feilede arkivet (`rm -rf ~/.torny-native/dist/TornyNative-<versjon>-<build>.xcarchive`,
+  ellers stopper duplikat-vakten deg), sjekk at ingen `.env.production*` finnes i
+  `native/app/`, og kjør skriptet igjen fra et rent skall. Samme buildnummer kan brukes — det
+  ble aldri lastet opp.
 - Beviset feiler på **UKJENT `http://…`** → se «Bevis-steget».
 - **Duplikat-vakten stopper deg** → var det `--no-upload`-arkivet du ville laste opp? Da er
   det `--upload-only <arkiv>`, ikke en bump.
