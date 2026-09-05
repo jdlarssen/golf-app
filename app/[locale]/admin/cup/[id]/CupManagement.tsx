@@ -122,12 +122,17 @@ function pendingPlayOnChoices(
   );
 }
 
-/** Venter-banneret selv — hopp-lenka scroller ned til kampens valg-panel. */
+/**
+ * Venter-banneret selv — hopp-lenka scroller ned til kampens valg-panel.
+ * Utenfor en cup i gang finnes ikke valget: `setFourballWithdrawalChoice`
+ * avviser både utkast og ferdigspilt (`wrong_status`).
+ */
 function playOnPendingBanner(
   rows: { gameId: string; label: string; partner: string }[],
   t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+  cupActive: boolean,
 ) {
-  if (rows.length === 0) return null;
+  if (!cupActive || rows.length === 0) return null;
   return (
     <div className="mb-4">
       <Banner tone="warning" testId="cup-playon-pending">
@@ -361,7 +366,7 @@ export async function CupManagement({
         </div>
       )}
 
-      {cupActive && playOnPendingBanner(pendingPlayOn, t)}
+      {playOnPendingBanner(pendingPlayOn, t, cupActive)}
 
       {/* Status-kort. Totaler + sidepoeng skjules her og på cup-siden (#1468) —
           resultatet bor på den låste resultatsiden. «X av N matcher spilt»
