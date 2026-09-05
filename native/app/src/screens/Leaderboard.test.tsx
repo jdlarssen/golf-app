@@ -165,6 +165,79 @@ describe('LeaderboardBody', () => {
   const withGame = (overrides: Record<string, unknown>) =>
     ({ ...mockBundle, game: { ...bundleGame, ...overrides } }) as never;
 
+  // #1978: best ball er det ene formatet der webben klipper den LIVE tabellen
+  // til første halvdel. Fikstur med to lag på par 4 og banehandicap 0, så
+  // tallene er lette å regne i hodet: lag 1 fører 4 på hvert hull, lag 2 fører
+  // 5. Front 9 = 36 mot 45; hele runden = 72 mot 90. Forskjellen mellom de to
+  // ER regresjonen.
+  const BEST_BALL_TEAMS = [
+    { userId: 'me', name: 'Meg Selv', teamNumber: 1, strokes: 4 },
+    { userId: 'mate', name: 'Makker Makkersen', teamNumber: 1, strokes: 5 },
+    { userId: 'rival', name: 'Rival Rivalsen', teamNumber: 2, strokes: 5 },
+    { userId: 'rival2', name: 'Andre Rival', teamNumber: 2, strokes: 6 },
+  ];
+
+  const bestBallBundle = (holesScored: number) =>
+    ({
+      ...mockBundle,
+      game: {
+        ...bundleGame,
+        gameMode: 'best_ball',
+        modeConfig: { kind: 'best_ball', team_size: 2, teams_count: 2 },
+        status: 'active',
+        scoreVisibility: 'live',
+      },
+      players: BEST_BALL_TEAMS.map((p) => ({
+        userId: p.userId,
+        name: p.name,
+        nickname: null,
+        teamNumber: p.teamNumber,
+        flightNumber: 1,
+        courseHandicap: 0,
+        teeGender: 'mens',
+        submittedAt: null,
+        approvedAt: null,
+        rejectionReason: null,
+        withdrawnAt: null,
+      })),
+      _holesScored: holesScored,
+    }) as never;
+
+  const bestBallScores = (holesScored: number) =>
+    BEST_BALL_TEAMS.flatMap((p) =>
+      Array.from({ length: holesScored }, (_, i) => ({
+        id: `${GAME_ID}:${p.userId}:${i + 1}`,
+        gameId: GAME_ID,
+        userId: p.userId,
+        holeNumber: i + 1,
+        strokes: p.strokes,
+        putts: null,
+        enteredBy: p.userId,
+        clientUpdatedAt: '2026-08-30T10:00:00.000Z',
+        serverUpdatedAt: null,
+      })),
+    );
+
+  it('klipper best ball til front 9 mens runden går — som nettsiden', async () => {
+    // Alle 18 hull ført. Webben viser likevel bare front 9 og skriver at
+    // resten kommer når arrangøren avslutter; appen viste 18-hulls-summen.
+    await render(
+      <LeaderboardBody bundle={bestBallBundle(18)} scores={bestBallScores(18)} />,
+    );
+
+    expect(screen.getByTestId('leaderboard-first-half-locked')).toBeTruthy();
+    // 36/45 er ni-hulls-summen. 72/90 ville vært lekkasjen.
+    expect(cell('1', 'net')).toBe('36');
+    expect(cell('2', 'net')).toBe('45');
+  });
+
+  it('sier fra før noe lag er gjennom hull 9', async () => {
+    await render(<LeaderboardBody bundle={bestBallBundle(3)} scores={bestBallScores(3)} />);
+
+    expect(screen.getByTestId('leaderboard-first-half-waiting')).toBeTruthy();
+    expect(screen.queryByTestId('leaderboard-table')).toBeNull();
+  });
+
   it('holder netto og poeng tilbake i en reveal-runde som fortsatt går', async () => {
     // Stableford i reveal: brutto vises, poengene ikke. En «Poeng»-kolonne her
     // ville vært hele lekkasjen.
