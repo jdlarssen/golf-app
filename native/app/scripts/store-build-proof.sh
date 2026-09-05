@@ -23,7 +23,8 @@
 #     `http://` og `localhost` finnes i bibliotekene våre (zod, Metro-asset-URL,
 #     auth-js, phoenix); de kjente strengene står på en eksplisitt liste under,
 #     alt annet feiler med kontekst, så en ny hit må vurderes med øynene før den
-#     eventuelt legges til.
+#     eventuelt legges til. Står `EXPO_PUBLIC_SUPABASE_ANON_KEY` i miljøet, må
+#     nøyaktig den verdien finnes i bundelen (bare lengden skrives ut).
 #  2. `Info.plist`: bundle-id, versjon, build, ITSAppUsesNonExemptEncryption.
 #  3. Entitlements (`codesign`): INGEN associated domains, INGEN push.
 #
@@ -57,7 +58,7 @@ ALLOW_HTTP=(
   # vert selv, så det som følger i den pakkede tabellen er NABO-strengen.
   # Kjent igjen på at halen ikke er en vert: et ord uten punktum, kolon eller
   # skråstrek (eller ingenting), eller en annen URL-literal rett etter.
-  '^http://[A-Za-z0-9_-]{0,24}([^A-Za-z0-9._:/-]|$)'
+  '^http://[A-Za-z0-9_-]{0,64}([^A-Za-z0-9._:/-]|$)'
   '^http://https?://'
 )
 # Samme for `localhost` uten skjema foran.
