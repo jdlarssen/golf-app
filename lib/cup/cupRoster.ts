@@ -26,7 +26,8 @@ export type CupNamedPlayerRow = {
   /**
    * `game_players.withdrawn_at` (#1814). Valgfri: `formatSideLabel` bryr seg
    * ikke om den, og eldre call-sites/tester som bare navngir en side slipper å
-   * fylle den ut. `buildCupRoster` leser den for «Trukket»-merket.
+   * fylle den ut. `buildCupRoster` leser den — sammen med kampens status — for
+   * «Trukket»-merket.
    */
   withdrawn_at?: string | null;
 };
@@ -36,9 +37,15 @@ export type CupRosterPlayer = {
   name: string | null;
   nickname: string | null;
   /**
-   * #1814: spilleren har trukket seg fra cupen — minst én av kampene hens er
-   * flagget. Hen blir stående på laget (E5), merket «Trukket»; spilte kamper
-   * og poeng beholdes. Merket endrer aldri plassering.
+   * #1814: spilleren har trukket seg fra cupen — minst én av kampene hens som
+   * ENNÅ IKKE HAR STARTET er flagget. Hen blir stående på laget (E5), merket
+   * «Trukket»; spilte kamper og poeng beholdes. Merket endrer aldri plassering.
+   *
+   * Startede og ferdigspilte kamper teller ikke: et mykt trekk midtveis i en
+   * pågående best ball (#386) er ikke det samme som å trekke seg fra cupen, og
+   * arrangørsiden (`CupWithdrawConfirm`) avgjør angre-mot-trekk fra nettopp de
+   * ikke-startede radene. Sto merket for begge deler, lovet lenka «Angre
+   * trekk» og siden svarte «Trekk fra cupen?».
    *
    * Valgfri for pre-#1814 call-sites/tester som bygger et roster for hånd;
    * `buildCupRoster` setter den alltid. Fravær leses som «ikke trukket».
@@ -49,6 +56,16 @@ export type CupRosterPlayer = {
 export type CupRoster = {
   team1: CupRosterPlayer[];
   team2: CupRosterPlayer[];
+};
+
+/**
+ * Én kamp i cupen: spillerradene dens, og statusen kampen står i. Statusen er
+ * med fordi «Trukket» bare gjelder kamper som ennå ikke har startet — se
+ * `CupRosterPlayer.withdrawn`.
+ */
+export type CupRosterGame = {
+  status: 'draft' | 'scheduled' | 'active' | 'finished';
+  players: readonly CupNamedPlayerRow[];
 };
 
 /** Normaliserer Supabase-joinens array-eller-objekt-form til ett objekt. */
@@ -99,23 +116,27 @@ function toRosterPlayer(p: CupNamedPlayerRow): CupRosterPlayer {
  * Spillere uten `team_number` (verken 1 eller 2) havner i ingen av lagene.
  */
 export function buildCupRoster(
-  playersByGameInOrder: ReadonlyArray<readonly CupNamedPlayerRow[]>,
+  gamesInOrder: ReadonlyArray<CupRosterGame>,
 ): CupRoster {
   const team1Map = new Map<string, CupRosterPlayer>();
   const team2Map = new Map<string, CupRosterPlayer>();
 
-  for (const gPlayers of playersByGameInOrder) {
-    for (const p of gPlayers) {
+  for (const g of gamesInOrder) {
+    // Samme grense som `PENDING_STATUSES` i `withdrawalActions` og
+    // `cupWithdrawalContext` trekker: en kamp som er i gang eller ferdigspilt
+    // er ikke lenger noe å trekke seg fra.
+    const notStarted = g.status === 'draft' || g.status === 'scheduled';
+    for (const p of g.players) {
       if (p.team_number === 1 && !team1Map.has(p.user_id)) {
         team1Map.set(p.user_id, toRosterPlayer(p));
       }
       if (p.team_number === 2 && !team2Map.has(p.user_id)) {
         team2Map.set(p.user_id, toRosterPlayer(p));
       }
-      // #1814: «Trukket» settes av ENHVER trukket rad, ikke bare den første
-      // treffet over. Et trekk flagger alle spillerens ikke-startede kamper,
-      // og den første kampen i rekkefølgen kan godt være en hen alt har spilt.
-      if (p.withdrawn_at != null) {
+      // #1814: «Trukket» settes av enhver trukket rad i en kamp som ennå ikke
+      // har startet — ikke bare det første treffet over; den første kampen i
+      // rekkefølgen kan godt være en hen alt har spilt.
+      if (notStarted && p.withdrawn_at != null) {
         const row =
           p.team_number === 1
             ? team1Map.get(p.user_id)
