@@ -94,12 +94,17 @@ function storeProblems(env: VariantEnv): string[] {
   const problems: string[] = [];
 
   const supabaseUrl = env.EXPO_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseHost = hostOf(supabaseUrl);
   if (!supabaseUrl) {
     problems.push(`EXPO_PUBLIC_SUPABASE_URL mangler (skal være https://${PROD_SUPABASE_HOST}).`);
-  } else if (hostOf(supabaseUrl) !== PROD_SUPABASE_HOST) {
+  } else if (supabaseHost === null) {
+    // Uten skjema finnes ingen vert å sammenligne — si det, i stedet for en
+    // setning der samme streng står på begge sider av «ikke».
     problems.push(
-      `EXPO_PUBLIC_SUPABASE_URL peker på «${hostOf(supabaseUrl) ?? supabaseUrl}», ikke på prod-verten ${PROD_SUPABASE_HOST}.`
+      `EXPO_PUBLIC_SUPABASE_URL «${supabaseUrl}» er ikke en http(s)-adresse med vert (skal være https://${PROD_SUPABASE_HOST}).`
     );
+  } else if (supabaseHost !== PROD_SUPABASE_HOST) {
+    problems.push(`EXPO_PUBLIC_SUPABASE_URL peker på «${supabaseHost}», ikke på prod-verten ${PROD_SUPABASE_HOST}.`);
   }
 
   // Aldri selve nøkkelen i meldingen — den havner i logger og PR-kommentarer.
