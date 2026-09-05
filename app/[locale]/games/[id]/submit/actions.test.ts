@@ -130,6 +130,35 @@ describe('submitScorecard', () => {
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
   });
 
+  it('#1918: en som ikke er med i spillet leverer ingenting (not_player)', async () => {
+    // Uttrekket til `submitScorecardCore` gjorde `meRow == null` til en egen
+    // grunn i stedet for en UPDATE som traff 0 rader og redirectet som suksess.
+    // Utfallet på webben er det samme blindsporet — `/games/…` notFound()-er en
+    // ikke-deltaker — men nå uten skrivingen og uten «alt levert»-løgnen.
+    supabaseMock = buildSupabaseMock([
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: null, error: null }, // ingen game_players-rad for denne brukeren
+    ]);
+    adminSupabaseMock = buildSupabaseMock([]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'en-fremmed' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe('/games/game-1');
+    expect(supabaseMock.__fromCalls.some((c) => c.method === 'update')).toBe(
+      false,
+    );
+    expect(adminSupabaseMock.__fromCalls).toEqual([]);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+  });
+
   it('happy path: marks submitted_at, notifies admins (filters self), redirects with ?status=submitted', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Vinter-cup', status: 'active' }, error: null },
