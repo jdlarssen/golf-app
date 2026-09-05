@@ -53,7 +53,12 @@ ALLOW_HTTP=(
   '^http://json-schema\.org/draft-0[47]/schema#'   # zod (JSON Schema-$schema)
   '^http://localhost:8081/assets/'                   # Metro sin asset-URL (expo-asset/google-fonts), brukes ikke i Release
   '^http://localhost:9999'                           # @supabase/auth-js: standardverdi for GoTrue-URL
-  '^http://[^A-Za-z0-9]'                             # @supabase/phoenix: bar «http://»-literal (longpoll)
+  # @supabase/phoenix (longpoll) har en bar «http://»-literal. Den har ingen
+  # vert selv, så det som følger i den pakkede tabellen er NABO-strengen.
+  # Kjent igjen på at halen ikke er en vert: et ord uten punktum, kolon eller
+  # skråstrek (eller ingenting), eller en annen URL-literal rett etter.
+  '^http://[A-Za-z0-9_-]{0,24}([^A-Za-z0-9._:/-]|$)'
+  '^http://https?://'
 )
 # Samme for `localhost` uten skjema foran.
 ALLOW_LOCALHOST=(
@@ -74,7 +79,8 @@ done
 
 case "$TARGET" in
   *.xcarchive)
-    APP=$(ls -d "$TARGET"/Products/Applications/*.app 2>/dev/null | head -1)
+    # `ls` svarer 1 på et tomt glob; under pipefail ville det avsluttet stille.
+    APP=$( (ls -d "$TARGET"/Products/Applications/*.app 2>/dev/null || true) | head -1)
     [ -n "$APP" ] || { printf '✗ Fant ingen .app under %s/Products/Applications/\n' "$TARGET" >&2; exit 2; }
     ;;
   *.app) APP=$TARGET ;;
@@ -180,11 +186,25 @@ else
   n=$(count_fixed 'localhost:3111')
   if [ "$n" = "0" ]; then pass "localhost:3111 (staging-verify-webben): 0 treff"; else fail "localhost:3111: $n treff — EXPO_PUBLIC_WEB_BASE_URL var Mac-en"; fi
 
+  # Anon-nøkkelen: når byggeskriptet har satt den i miljøet, må nøyaktig den
+  # verdien ligge i bundelen. Bare lengden skrives ut — aldri nøkkelen.
+  if [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
+    n=$(count_fixed "$EXPO_PUBLIC_SUPABASE_ANON_KEY")
+    if [ "$n" -ge 1 ]; then
+      pass "anon-nøkkelen fra miljøet (${#EXPO_PUBLIC_SUPABASE_ANON_KEY} tegn) finnes i bundelen ($n)"
+    else
+      fail "anon-nøkkelen fra miljøet (${#EXPO_PUBLIC_SUPABASE_ANON_KEY} tegn) finnes IKKE i bundelen — bygget fikk en annen nøkkel"
+    fi
+  else
+    say "      (EXPO_PUBLIC_SUPABASE_ANON_KEY står ikke i miljøet — nøkkel-sjekken hoppes over; byggeskriptet setter den)"
+  fi
+
   # Forbudt som HEL adresse: fire oktetter, ikke-siffer på begge sider. Hermes
   # pakker strenger, og «draft-2020-1» + «27.0.0.15…» inneholder 127.0.0.1 som
   # delstreng uten å være en IP — derfor kreves formen, ikke bare tegnene.
+  # IPv6-literaler (`://[::1]`) og `.local:` matches som ren tekst.
   OCTET='[0-9]{1,3}'
-  for pattern in "(^|[^0-9.])127\.0\.0\.1([^0-9]|$)" "(^|[^0-9.])192\.168\.$OCTET\.$OCTET([^0-9]|$)" "(^|[^0-9.])10\.0\.$OCTET\.$OCTET([^0-9]|$)" '\.local:'; do
+  for pattern in "(^|[^0-9.])127\.0\.0\.1([^0-9]|$)" "(^|[^0-9.])192\.168\.$OCTET\.$OCTET([^0-9]|$)" "(^|[^0-9.])10\.0\.$OCTET\.$OCTET([^0-9]|$)" '://\[[0-9a-fA-F:.]{2,}\]' '\.local:'; do
     n=$(count_regex "$pattern")
     if [ "$n" = "0" ]; then
       pass "LAN/loopback «$pattern»: 0 treff"
