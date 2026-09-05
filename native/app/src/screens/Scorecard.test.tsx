@@ -1,17 +1,19 @@
 // native/app/src/screens/Scorecard.test.tsx
-// Native #1891: den ene render-testen (Type C) for scorekortet.
+// Native #1918: den ene render-testen (Type C) for scorekortet.
 //
 // Kortets tall er dekket av `lib/scorecardRows.test.ts`, lag-oppslaget av
-// `lib/teamPlay.test.ts` og lever-skrivingen av `data/playerActions.test.ts`.
-// Ingen av dem gjentas her.
+// `lib/teamPlay.test.ts`, lever-skrivingen av `data/playerActions.test.ts` og
+// rute-kallet av `data/submitTeam.test.ts`. Ingen av dem gjentas her.
 //
 // Det som blir igjen er den ene koblingen: **i et format som kollapser til ett
-// lagkort finnes det ingen lever-knapp — og fra #1891 finnes det en knapp DIT
-// den er.** Webbens lag-levering skriver alle medlemmenes rader med
-// service-role, en evne appen ikke har (#1918). Fram til nå sto det bare en
-// setning: «Levering av lagkort gjøres på nettsiden ennå», uten adresse. En
-// setning uten knapp er en blindvei, og det er nettopp den kartleggingen i
-// #1891 gikk gjennom appen for å fjerne.
+// lagkort leverer appen nå selv.** Fram til #1918 sto det en setning og en
+// lenke ut («Levering av lagkort gjøres på nettsiden ennå»), fordi lag-
+// leveringen markerer alle medlemmenes rader med service-role — en evne appen
+// ikke har. Nå gjør ruta det på appens vegne, og testen låser at det er lagets
+// knapp som står der: ikke setningen, ikke lenka, og ikke solo-knappen.
+//
+// Kø-vakta testes ikke her. `listQueue` er mocket tom, så en disabled-assertion
+// ville krevd en andre render, og fila har ÉN (Type C).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { render, screen, waitFor } from '@testing-library/react-native';
 import type { ScreenProps } from '../navigation';
@@ -39,7 +41,7 @@ const PLAYER_BASE = {
 };
 
 // Greensome: 2v2 alternate shot — hele laget deler kapteinens rad hele veien
-// til hull 18, så `modeCollapsesToTeamCard` er sann og lever-porten stenger.
+// til hull 18, så `modeCollapsesToTeamCard` er sann og kortet er lagets.
 const mockBundle = {
   game: {
     id: GAME_ID,
@@ -94,6 +96,9 @@ jest.mock('../data/gameBundle', () => ({
 jest.mock('../data/playerActions', () => ({
   submitScorecard: jest.fn(async () => ({ ok: true, alreadyDone: false })),
 }));
+jest.mock('../data/submitTeam', () => ({
+  submitTeam: jest.fn(async () => ({ ok: true, alreadySubmitted: false })),
+}));
 jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
 jest.mock('../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
 jest.mock('../data/db', () => ({
@@ -111,7 +116,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 describe('Scorecard', () => {
-  it('bytter lever-knappen mot en vei til nettsidens lag-levering', async () => {
+  it('viser lever-knappen for laget i stedet for en vei til nettsiden', async () => {
     await render(
       <Scorecard
         {...({
@@ -122,12 +127,14 @@ describe('Scorecard', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('team-submit-gate')).toBeTruthy();
+      expect(screen.getByTestId('submit-team-card')).toBeTruthy();
     });
-    // Ingen lever-knapp: appen kan bare skrive sin EGEN rad, og et halvlevert
-    // lag ville blokkert avslutningen av runden.
+    // Veien ut av appen er borte, og det samme er setningen som sto der i
+    // stedet for en knapp.
+    expect(screen.queryByTestId('team-submit-link')).toBeNull();
+    expect(screen.queryByTestId('team-submit-gate')).toBeNull();
+    // Og det er LAGETS knapp som står der, ikke solo-knappen: leveringen går
+    // gjennom ruta, ikke gjennom spillerens egen rad.
     expect(screen.queryByTestId('submit-scorecard')).toBeNull();
-    // Men veien dit finnes nå (#1891) — setningen står ikke lenger alene.
-    expect(screen.getByTestId('team-submit-link')).toBeTruthy();
   });
 });

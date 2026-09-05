@@ -2,11 +2,11 @@
 // Native #1891: ekte knapper der appen før bare sa «det gjør du på nettsiden».
 //
 // **Hvorfor en lenke og ikke en handling.** Noen ting hører hjemme på webben —
-// enten fordi de er service-role-eide (invitasjon, lagkort-levering,
-// selv-frafall) eller fordi grensa er tegnet med vilje (cup-avslutning,
-// opprettelse av bane). Fram til nå sto det en setning uten vei videre, og en
-// setning uten knapp er en blindvei. Den ene tingen appen KAN gjøre er å åpne
-// riktig side i nettleseren, og si ærlig at det venter en kode-innlogging der:
+// enten fordi de er service-role-eide (invitasjon, selv-frafall) eller fordi
+// grensa er tegnet med vilje (cup-avslutning, opprettelse av bane). Fram til nå
+// sto det en setning uten vei videre, og en setning uten knapp er en blindvei.
+// Den ene tingen appen KAN gjøre er å åpne riktig side i nettleseren, og si
+// ærlig at det venter en kode-innlogging der:
 // appen og Safari deler ikke sesjon (OTP-kode, ingen URL å bære et token i).
 // Proxyen sender uinnloggede til `/login?next=<sti>`, så dyplenka lander
 // riktig etter innloggingen.
