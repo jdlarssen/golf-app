@@ -207,6 +207,35 @@ export const NASSAU_SECTION_LABELS: Record<
 };
 
 // ---------------------------------------------------------------------------
+// Første halvdel av runden (#1978)
+// ---------------------------------------------------------------------------
+
+/**
+ * Noten under den klippede tabellen.
+ *
+ * Ordene etter halvdel-etiketten er webbens, ord for ord
+ * (`messages/no.json` → `leaderboard.state35.lockedHeading` + `.lockedSub`).
+ * Etiketten foran svarer på det webben svarer med en pille over tabellen: at
+ * tallene gjelder ni hull, ikke atten. Uten den ser 23 ut som en 18-hulls-sum
+ * som er altfor lav.
+ */
+export function firstHalfLockedNote(lastHole: number): string {
+  return `Front 9 · 🤫 Vi sees ved hull ${lastHole}. Resten av tabellen vises når arrangøren avslutter spillet.`;
+}
+
+/**
+ * Noten før noe lag har fullført første halvdel.
+ *
+ * Første setning er webbens (`leaderboard.state3.headingFallback`). Andre
+ * setning er appens egen: webbens "Tabellen våkner når første kort kommer inn"
+ * stemmer på en side som også viser startlista, men ikke her — slag ER ført,
+ * det er de ni første hullene som ikke er i mål ennå. Ordet «Tabellen» er
+ * valgt for å matche søsteren `leaderboard-empty`.
+ */
+export const FIRST_HALF_WAITING_NOTE =
+  'Stille før stormen. Tabellen åpner når et lag har spilt de ni første hullene.';
+
+// ---------------------------------------------------------------------------
 // Wolf
 // ---------------------------------------------------------------------------
 

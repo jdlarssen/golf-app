@@ -7,6 +7,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { firstName } from '@/lib/firstName';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
+import { firstHalfTableView } from '@/lib/leaderboard/firstHalfReveal';
 import { isFrontNineOpen } from '@/lib/leaderboard/frontNineGate';
 import {
   EMPTY_NAV_CONTEXT,
@@ -514,14 +515,20 @@ export async function renderLeaderboardContent({
     | 'reveal-finished';
 
   const state = revealState(game.score_visibility, game.status);
+  // #1978: hvilke formater som klippes sto tidligere bare som POSISJON i denne
+  // if-kjeden — best ball er den eneste som når hit. Appen kunne ikke lese en
+  // regel skrevet slik, og viste hele 18-hulls-tavla live. Nå kaller begge
+  // flatene `firstHalfTableView`. Utfallet her er uendret: `tableClipsToFirstHalf`
+  // er alltid sann på denne grenen.
+  const firstHalf = firstHalfTableView({
+    gameMode: game.game_mode,
+    status: game.status,
+    scoreVisibility: game.score_visibility,
+    gateOpen: frontNineOpen,
+  });
   let view: View;
   if (state === 'live-always') {
-    view =
-      game.status === 'finished'
-        ? 'full'
-        : !frontNineOpen
-          ? 'state3'
-          : 'state3.5';
+    view = firstHalf === 'full' ? 'full' : firstHalf === 'waiting' ? 'state3' : 'state3.5';
   } else if (state === 'reveal-active') {
     view = 'reveal-active';
   } else {

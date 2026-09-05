@@ -12,6 +12,14 @@
 // får lov å vise.
 import { useEffect } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import {
+  firstHalfHoleNumbersForSegment,
+  lastHoleForSegment,
+} from '../../../../lib/games/holeScope';
+import type { GameStatus } from '../../../../lib/games/status';
+import type { ScoreVisibility } from '../../../../lib/games/visibility';
+import { firstHalfTableView } from '../../../../lib/leaderboard/firstHalfReveal';
+import { isFrontNineOpen } from '../../../../lib/leaderboard/frontNineGate';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import {
   ResultView,
@@ -30,7 +38,13 @@ import {
   gateMessage,
   gateReason,
 } from '../lib/formatGate';
-import { grossLines, leaderboardVisibility, nameLookup } from '../lib/leaderboardModel';
+import {
+  FIRST_HALF_WAITING_NOTE,
+  firstHalfLockedNote,
+  grossLines,
+  leaderboardVisibility,
+  nameLookup,
+} from '../lib/leaderboardModel';
 import {
   computeGameLeaderboard,
   type ScoringContextProblem,
@@ -234,7 +248,53 @@ export function LeaderboardBody({
     return <GrossOnlyTable bundle={bundle} scores={scores} />;
   }
 
-  const outcome = computeGameLeaderboard(bundle, scores, extras);
+  // #1978: lag-formatenes avsløring. Webben viser bare første halvdel av en
+  // best ball-runde som pågår, og skriver at resten kommer når arrangøren
+  // avslutter. Appen viste hele 18-hulls-tavla: én spiller med appen så
+  // fasiten mens en med nettsiden ikke gjorde det, i samme runde.
+  //
+  // `gateReason` stenger alle segment-spill ('segment'), så vi er alltid på
+  // hele runden her og porten er hull 1-9 — samme liste webben regner ut.
+  const gateHoles = firstHalfHoleNumbersForSegment('full');
+  const openHoles = new Set(gateHoles);
+  const revealView = firstHalfTableView({
+    gameMode: game.gameMode as GameMode,
+    status: game.status as GameStatus,
+    scoreVisibility: game.scoreVisibility as ScoreVisibility,
+    gateOpen: isFrontNineOpen({
+      // HELE rosteret, trukne inkludert — webben mater porten med den
+      // ufiltrerte lista (`leaderboardContent.tsx`), mens radene i tabellen
+      // filtrerer. Filtrerte vi her, ville et lag med en trukket spiller
+      // åpnet porten i appen og ikke på nettsiden.
+      //
+      // `teamNumber` er nullable i bundelen; en spiller uten lag hører ikke
+      // til noen port. Best ball har alltid lag, så filteret er defensivt.
+      players: bundle.players
+        .filter((p) => p.teamNumber != null)
+        .map((p) => ({ user_id: p.userId, team_number: p.teamNumber as number })),
+      scores: scores.map((s) => ({
+        user_id: s.userId,
+        hole_number: s.holeNumber,
+        strokes: s.strokes,
+      })),
+      gateHoles,
+    }),
+  });
+
+  if (revealView === 'waiting') {
+    return <CalmNote text={FIRST_HALF_WAITING_NOTE} testID="leaderboard-first-half-waiting" />;
+  }
+
+  // Klipper BEGGE veier, som webbens state3.5: både hull-lista og slagene,
+  // og så regnes tabellen om over det. Summen blir dermed en ekte
+  // ni-hulls-sum (23), ikke en 18-hulls-sum med rader gjemt (51).
+  const clipped = revealView === 'first-half';
+  const scopedScores = clipped ? scores.filter((s) => openHoles.has(s.holeNumber)) : scores;
+  const scopedBundle = clipped
+    ? { ...bundle, holes: bundle.holes.filter((h) => openHoles.has(h.holeNumber)) }
+    : bundle;
+
+  const outcome = computeGameLeaderboard(scopedBundle, scopedScores, extras);
   if (!outcome.ok) {
     // Ingen sideturnering her heller: uten et `ModeResult` finnes det ingen
     // fasit for lag-grupperingen, og en gjettet gruppering ville delt ut
@@ -269,7 +329,11 @@ export function LeaderboardBody({
   // kan stå registrert lenge før noen har tastet et tall. Slag-vakten under
   // ville skjult den tabellen bak «ingen slag ført ennå», som er sant og
   // irrelevant. Alle andre formater regner FRA slagene og beholder vakten.
-  if (game.gameMode !== 'bingo_bango_bongo' && !hasAnyStroke(scores)) {
+  // Slag-vakten leser den KLIPPEDE lista: en klippet tabell uten slag på de
+  // ni første hullene skal si «ingen slag ført ennå», ikke tegne en tabell av
+  // bare streker. (I praksis innebærer en åpen port at slagene finnes, men de
+  // to må uansett være enige om hvilke slag de snakker om.)
+  if (game.gameMode !== 'bingo_bango_bongo' && !hasAnyStroke(scopedScores)) {
     // Sideturneringen henger med: LD/CTP kåres av arrangøren og finnes selv om
     // ingen rakk å føre et slag.
     return (
@@ -291,6 +355,12 @@ export function LeaderboardBody({
         gameId={game.id}
         nameOf={nameOf}
       />
+      {clipped && (
+        <CalmNote
+          text={firstHalfLockedNote(lastHoleForSegment('full'))}
+          testID="leaderboard-first-half-locked"
+        />
+      )}
       {sideSection}
     </>
   );
