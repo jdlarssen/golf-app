@@ -242,7 +242,9 @@ export async function getCupSnapshot(
 
   // Roster: distinct players grouped by team_number across all matches, i
   // kamp-rekkefølge (created_at asc) — sidepoeng-mappingen under slår opp i det.
-  const roster = buildCupRoster(games.map((g) => playersByGame.get(g.id) ?? []));
+  const roster = buildCupRoster(
+    games.map((g) => ({ status: g.status, players: playersByGame.get(g.id) ?? [] })),
+  );
 
   const matchInputs: CupMatchInput[] = [];
   const performanceInputs: CupPerformanceGame[] = [];
