@@ -695,7 +695,10 @@ export default async function GameHomePage({
     // (matchene genereres mens cupen er utkast). Cup-siden har ingen
     // trekk-knapp da — bare setningen «Cupen er ikke i gang» — så lenka hit
     // ville vært en blindvei. Ikke-cup-spill beholder sin vanlige vei ut.
-    const showWithdrawLink = !game.tournament_id || cupRow?.status === 'active';
+    // Og den som alt har trukket seg skal ikke bli spurt en gang til: cup-siden
+    // har ingen knapp igjen til hen. Samme gate som den aktive grenen nedenfor.
+    const showWithdrawLink =
+      !me.withdrawn_at && (!game.tournament_id || cupRow?.status === 'active');
 
     // #543: venteroms-velger og unassigned_flights-banner.
     // Vises bare når spillet er eligible for flight-inndeling (>4 aktive, ikke wolf).

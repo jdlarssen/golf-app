@@ -4588,6 +4588,7 @@
       "playOnNo": "Settle the match without play",
       "playOnHelp": "Check with {partner} first. You can change the choice right up until the match starts.",
       "nothingPending": "Every match is either under way or already played. There is nothing to withdraw from.",
+      "alreadyWithdrawnSelf": "You have already withdrawn from the cup. If you want back in, the organiser has to undo it.",
       "withdrawButtonAdmin": "Register the withdrawal",
       "withdrawButtonSelf": "Withdraw me",
       "withdrawPending": "Registering …",
