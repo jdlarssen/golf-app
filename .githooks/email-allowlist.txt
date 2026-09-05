@@ -27,6 +27,12 @@
 @guest\.tornygolf\.no$
 @deleted\.tornygolf\.no$
 
+# Apples asset-katalog-navn (#1975). `@1x`/`@2x`/`@3x` er skala-suffikset i et
+# filnavn — «App-Icon-1024x1024@1x.png», «AppIcon60x60@2x.png» — ikke en
+# adresse. Halen `.png` etter skalaen kan ikke være et toppdomene, så mønsteret
+# slipper ikke gjennom noe som peker på et menneske.
+@[0-9]+x\.png$
+
 # Bevisste, offentlige kontaktadresser (står i copy og i changeloggen)
 ^klubb@tornygolf\.no$
 ^personvern@tornygolf\.no$
