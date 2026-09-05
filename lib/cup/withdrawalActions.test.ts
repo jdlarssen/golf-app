@@ -207,7 +207,12 @@ describe('withdrawCupPlayer — hvilke kamper som flagges (#1814)', () => {
 
     const { withdrawCupPlayer } = await import('./withdrawalActions');
     await withdrawCupPlayer(
-      form({ tournament_id: CUP, user_id: PLAYER, play_on_game_ids: 'g1' }),
+      form({
+        tournament_id: CUP,
+        user_id: PLAYER,
+        play_on_game_ids: 'g1',
+        play_on_offered_game_ids: 'g1',
+      }),
     ).catch(() => {});
 
     const gameWrites = updates('games');
@@ -255,7 +260,12 @@ describe('withdrawCupPlayer — hvilke kamper som flagges (#1814)', () => {
 
     const { withdrawCupPlayer } = await import('./withdrawalActions');
     await withdrawCupPlayer(
-      form({ tournament_id: CUP, user_id: PLAYER, play_on_game_ids: 'g1' }),
+      form({
+        tournament_id: CUP,
+        user_id: PLAYER,
+        play_on_game_ids: 'g1',
+        play_on_offered_game_ids: 'g1,g2',
+      }),
     ).catch(() => {});
 
     const configWrites = updates('games');
@@ -278,6 +288,66 @@ describe('withdrawCupPlayer — hvilke kamper som flagges (#1814)', () => {
         withdrawal_play_on: false,
       },
     });
+  });
+
+  // Den siste makkeren på siden trekker seg òg: da har spilleren ingen aktiv
+  // makker igjen, skjemaet viser ingen avkrysning, og et blindt `false` ville
+  // overskrevet arrangørens registrerte «makkeren spiller alene» fra det
+  // første trekket. Ingen boks = intet svar.
+  it('rører ikke mode_config på en fourball skjemaet ikke tilbød noe valg for', async () => {
+    const stored = {
+      kind: 'fourball_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      withdrawal_play_on: true,
+    };
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull,
+      ...reads({
+        games: [game('g1', 'scheduled', 'fourball_matchplay', stored)],
+        rows: [playerRow('g1')],
+      }),
+      { data: [{ user_id: PLAYER }], error: null }, // flagg raden
+      { data: [{ id: 'g1', status: 'scheduled' }], error: null }, // TOCTOU-re-lesing
+    ]);
+
+    const { withdrawCupPlayer } = await import('./withdrawalActions');
+    await withdrawCupPlayer(
+      form({ tournament_id: CUP, user_id: PLAYER }),
+    ).catch(() => {});
+
+    expect(updates('games')).toHaveLength(0);
+  });
+
+  // Et krysset felt for en kamp skjemaet ikke tilbød, teller ikke.
+  it('ser bort fra et avkrysset valg som ikke sto på skjemaets liste', async () => {
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull,
+      ...reads({
+        games: [
+          game('g1', 'scheduled', 'fourball_matchplay', {
+            kind: 'fourball_matchplay',
+            team_size: 2,
+            teams_count: 2,
+          }),
+        ],
+        rows: [playerRow('g1')],
+      }),
+      { data: [{ user_id: PLAYER }], error: null },
+      { data: [{ id: 'g1', status: 'scheduled' }], error: null },
+    ]);
+
+    const { withdrawCupPlayer } = await import('./withdrawalActions');
+    await withdrawCupPlayer(
+      form({
+        tournament_id: CUP,
+        user_id: PLAYER,
+        play_on_game_ids: 'g1',
+        play_on_offered_game_ids: '',
+      }),
+    ).catch(() => {});
+
+    expect(updates('games')).toHaveLength(0);
   });
 
   // Verken `true` eller den eksplisitte `false`-en: modusen deler ball, så det

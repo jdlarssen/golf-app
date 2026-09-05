@@ -109,7 +109,9 @@ export async function CupWithdrawConfirm({
   })();
 
   // Fourball-kampene der makkeren KAN spille videre alene. Forhåndsvalget er
-  // «etter regelen» (E4) — arrangøren huker av per kamp.
+  // «etter regelen» (E4) — arrangøren huker av per kamp. Lista følger med
+  // skjemaet (`play_on_offered_game_ids`): serveren skriver et svar kun for
+  // kampene som faktisk fikk en boks.
   const playOnChoices = toWrite.filter((m) => m.canPlayOn);
 
   return (
@@ -209,6 +211,16 @@ export async function CupWithdrawConfirm({
               <input type="hidden" name="tournament_id" value={tournamentId} />
               <input type="hidden" name="user_id" value={userId} />
               <input type="hidden" name="group_id" value={groupIdField} />
+              {/* Hvilke fourball-kamper skjemaet faktisk SPURTE om. En umerket
+                  boks er svaret «etter regelen», men en kamp uten boks — den
+                  siste makkeren på siden trekker seg òg — er intet svar, og
+                  serveren skal la det registrerte valget stå. */}
+              <input
+                type="hidden"
+                name="play_on_offered_game_ids"
+                value={playOnChoices.map((m) => m.gameId).join(',')}
+                data-testid="cup-withdraw-playon-offered"
+              />
 
               {playOnChoices.length > 0 && (
                 <div className="mb-4 rounded-xl border border-border bg-surface px-4 py-3.5">

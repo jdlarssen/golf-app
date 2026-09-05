@@ -53,6 +53,22 @@ type GameRow = {
 
 const PENDING_STATUSES = new Set(['draft', 'scheduled']);
 
+/**
+ * Kamp-ID-ene i ett skjemafelt. Bekreftelsessiden sender én avkrysningsboks per
+ * fourball-kamp, så feltet kan komme flere ganger — og lista av tilbudte kamper
+ * kommer som én kommaseparert verdi. `getAll` + komma-splitt dekker begge
+ * former, og settet gjør gjentakelser harmløse.
+ */
+function gameIdSet(formData: FormData, field: string): Set<string> {
+  return new Set(
+    formData
+      .getAll(field)
+      .flatMap((v) => String(v).split(','))
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+}
+
 /** Cupens spill + spillerens rader i dem. Delt av alle fire handlingene. */
 async function readCupTarget(
   admin: SupabaseClient<Database>,
@@ -306,24 +322,19 @@ async function undoRows(
  * spillerens ikke-startede kamper i cupen — host og avledede sammen (#1441 D3:
  * alt som rører spillerrader gjøres på hele bunten).
  *
- * `play_on_game_ids` er en kommaliste med de fourball-kampene arrangøren valgte
- * «makkeren spiller alene» for. De øvrige fourball-kampene får en eksplisitt
- * `withdrawal_play_on: false` — arrangøren SÅ avkrysningen og lot den stå, og
- * det er et svar, ikke et utsatt valg.
+ * `play_on_game_ids` er kampene arrangøren huket av «makkeren spiller alene»
+ * for; `play_on_offered_game_ids` er kampene skjemaet i det hele tatt VISTE en
+ * avkrysning for. Bare de sistnevnte får et svar skrevet: en umerket boks er
+ * et svar («etter regelen»), men en boks som aldri ble vist — fordi spilleren
+ * ikke har en aktiv makker igjen på siden — er ingenting, og et blindt `false`
+ * der ville overskrevet arrangørens valg fra et tidligere trekk i samme kamp.
  */
 export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdrawalError> {
   const tournamentId = String(formData.get('tournament_id') ?? '').trim();
   const userId = String(formData.get('user_id') ?? '').trim();
   if (!tournamentId || !userId) return { error: 'not_found' };
-  // Bekreftelsessiden sender én avkrysningsboks per fourball-kamp, så feltet
-  // kan komme flere ganger. `getAll` + komma-splitt dekker begge former.
-  const playOnGameIds = new Set(
-    formData
-      .getAll('play_on_game_ids')
-      .flatMap((v) => String(v).split(','))
-      .map((s) => s.trim())
-      .filter(Boolean),
-  );
+  const playOnGameIds = gameIdSet(formData, 'play_on_game_ids');
+  const offeredGameIds = gameIdSet(formData, 'play_on_offered_game_ids');
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
@@ -348,13 +359,19 @@ export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdraw
     // Kun fourball-kamper kan bære flagget — en klient som sender andre ID-er
     // skal ikke kunne skrive `withdrawal_play_on` på en foursomes.
     //
-    // Hver fourball får et EKSPLISITT svar, også når boksen sto tom: skjemaet
-    // viste avkrysningen, og å la den stå er arrangørens «etter regelen» — ikke
-    // «jeg har ikke bestemt meg». Uten dette kunne venter-banneret på
+    // Hver fourball SKJEMAET SPURTE OM får et eksplisitt svar, også når boksen
+    // sto tom: arrangøren så avkrysningen, og å la den stå er «etter regelen»
+    // — ikke «jeg har ikke bestemt meg». Uten det kunne venter-banneret på
     // cup-styringen aldri besvares med regelen, bare med alene-valget.
+    //
+    // Kamper skjemaet IKKE spurte om står urørt. Det gjelder den siste
+    // makkeren på en side: uten en aktiv makker igjen finnes ingen boks, og et
+    // `false` her ville stilltiende snudd svaret fra det første trekket.
     playOnChoices: new Map(
       pending
-        .filter((g) => g.game_mode === 'fourball_matchplay')
+        .filter(
+          (g) => g.game_mode === 'fourball_matchplay' && offeredGameIds.has(g.id),
+        )
         .map((g) => [g.id, playOnGameIds.has(g.id)] as const),
     ),
   });

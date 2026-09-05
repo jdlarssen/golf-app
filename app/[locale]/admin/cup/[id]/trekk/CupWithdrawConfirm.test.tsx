@@ -71,6 +71,23 @@ function context(status: 'draft' | 'active' | 'finished'): CupWithdrawalContext 
         alreadyWithdrawn: false,
         outcome: null,
       },
+      // Fourball uten et registrert valg: boksen skal stå UMERKET, ellers
+      // ville et klikk gjennom skjemaet registrert «makkeren spiller alene»
+      // for en kamp arrangøren aldri tok stilling til (E4).
+      {
+        gameId: 'g3',
+        matchLabel: 'Kamp 5',
+        gameMode: 'fourball_matchplay',
+        status: 'scheduled',
+        scheduledTeeOffAt: '2026-09-12T08:00:00.000Z',
+        canPlayOn: true,
+        playOn: false,
+        partnerName: 'Siri',
+        opponentLabel: 'Ola & Nils',
+        side: 1,
+        alreadyWithdrawn: false,
+        outcome: null,
+      },
     ],
     untouched: [],
   };
@@ -97,10 +114,19 @@ describe('CupWithdrawConfirm — cup-status-gaten (#1814)', () => {
       expect(screen.getByTestId('cup-withdraw-consequences')).toBeTruthy();
       expect(screen.getByRole('button')).toBeTruthy();
       // Registrert «spiller alene» må stå avkrysset — en umerket boks
-      // skriver eksplisitt «etter regelen» og ville snudd valget.
+      // skriver eksplisitt «etter regelen» og ville snudd valget. Og uten et
+      // registrert valg må boksen stå umerket: forhåndsvalget er regelen.
       expect(
         (screen.getByTestId('cup-withdraw-playon-g2') as HTMLInputElement).checked,
       ).toBe(true);
+      expect(
+        (screen.getByTestId('cup-withdraw-playon-g3') as HTMLInputElement).checked,
+      ).toBe(false);
+      // Skjemaet forteller serveren hvilke kamper det faktisk spurte om — de
+      // andre skal stå urørt.
+      expect(
+        (screen.getByTestId('cup-withdraw-playon-offered') as HTMLInputElement).value,
+      ).toBe('g2,g3');
     } else {
       expect(screen.getByTestId('cup-withdraw-cup-not-active')).toBeTruthy();
       expect(screen.queryByTestId('cup-withdraw-consequences')).toBeNull();
