@@ -282,11 +282,11 @@ finnes bevisst INGEN handicap-formel i appen (webbens hull-side har alt en
 duplikat; en tredje kopi var forbudt i kontrakten). Ukjent allokering → ingen
 badge og «—» i netto, aldri gjettet 0.
 
-Lever er GATET for kollapsede formater («Levering av lagkort gjøres på
-nettsiden ennå»): webbens team-submit skriver hele lagets rader med
-service-role; appen kan bare egen rad under RLS, og et halv-levert lag ville
-blokkert avslutning. Restanse: `submit_team_scorecard`-RPC som egen
-DB-kontrakt.
+Lever for kollapsede formater går gjennom app→server-ruta
+`POST /api/games/{id}/submit-team` (#1918, se §«App→server-ruter»): webbens
+team-submit skriver hele lagets rader med service-role, og appen kan bare egen
+rad under RLS — et halv-levert lag ville blokkert avslutning. Fram til #1918
+var knappen derfor en lenke til nettsiden; nå er det samme kjerne bak begge.
 
 ### Rigge testspill på staging (service-role)
 
@@ -1239,8 +1239,8 @@ brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 4
 
 Slette-ruta (#1876) var den første. Med purringen ble den et **mønster**, og fra og med
 #1891 har det ett hjem: `lib/api/appAuth.ts` på webben, `src/data/webApi.ts` i appen.
-`#1917` (trekk deg selv), `#1918` (lever lagkort) og `#1919` (inviter) arver begge og
-skal ikke lage en tredje variant.
+`#1918` (lever lagkort) er den tredje brukeren og arvet begge uendret. `#1917` (trekk
+deg selv) og `#1919` (inviter) gjør det samme — ingen skal lage en fjerde variant.
 
 ### Når trenger noe en rute i det hele tatt?
 
@@ -1293,6 +1293,33 @@ Regelen selv bor i `lib/games/remindUnsubmitted.ts` og speiles ALDRI i appen. Kj
 kjører på service-role og har **ingen egen authz** — porten ligger hos kalleren. Legger
 du til et kallsted, er gaten din del av sikkerheten; det finnes ingen RLS bak den.
 
+### Wire-kontrakten for lagkort-levering (#1918)
+
+```
+POST /api/games/{id}/submit-team   200 { submitted: number, alreadySubmitted: boolean }
+     401 unauthorized · 403 forbidden · 404 not_found · 409 not_active
+     422 withdrawn · 500 submit_failed
+```
+
+Frosset, og speilet i `src/data/submitTeam.ts`. **Endres den ene, endres den andre i
+samme PR.** `submitted` er rader UPDATE-en traff — 1 for en solo-levering, N for et lag.
+`alreadySubmitted` er sant når den traff 0 rader fordi kortet alt var levert; det er et
+lovlig utfall (makkeren rakk det først), og styrer ordlyd, ikke suksess. **422 og ikke en
+andre 409** for en trukket spiller: appen leser KUN statusen, så to ulike situasjoner må
+ha to ulike statuser.
+
+Regelen selv bor i `lib/games/submitScorecardCore.ts` — WD-porten, idempotensen,
+lag-deteksjonen, søsken-kaskaden (#1466), varslene og revalideringen — og speiles ALDRI i
+appen. Webbens server-action og ruta kaller den samme kjernen; forskjellen er klienten de
+sender inn (RLS-bundet cookie-klient fra webben, `getAdminClient()` fra ruta).
+
+⚠️ **Ruta kaller IKKE `gameOrganiserAccess`.** Dette er spillerens egen levering, og en
+arrangør-sjekk ville stengt ute nettopp dem ruta er for. Autorisasjonen er at kjernen er
+**selv-avgrenset**: den skriver kun raden der `user_id` = id-en fra tokenet, eller radene
+der `team_number` = lagnummeret på innsenderens EGEN rad. Er du ikke deltaker, finnes det
+ingen rad å utlede et lag fra, og svaret er 403. Service-role betyr at denne porten ER
+hele autorisasjonen — det finnes ingen RLS bak den.
+
 ### Appen ser aldri innboks-varselet
 
 Kanal-regelen i `notify()` sender in-app alltid, og push + e-post kun når `last_seen_at`
@@ -1307,7 +1334,7 @@ purringen plutselig også blir en push.
 ### Lenkeknapper: når svaret ikke er en rute
 
 Noen henvisninger til nettsiden blir stående — bevisste grenser (cup-avslutning,
-tee-editoren) og midlertidige (#1917–#1919). De skal likevel aldri være blindveier.
+tee-editoren) og midlertidige (#1917, #1919). De skal likevel aldri være blindveier.
 
 `lib/webLink.ts` eier `EXPO_PUBLIC_WEB_BASE_URL`-regelen, og `components/WebLinkButton.tsx`
 er knappen, med den faste underteksten «Åpner nettsiden i nettleseren. Der logger du inn
