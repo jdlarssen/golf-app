@@ -30,6 +30,9 @@ import { createClient } from '@supabase/supabase-js';
 const PROD_ENV = '.env.local';
 const STAGING_ENV = '.env.staging.local';
 
+/** Runbookens krav (steg 1 genererer 28 tegn). Porten under er fail-closed. */
+const MIN_PASSWORD_LENGTH = 24;
+
 /** Gjenkjennbart navn så gjenkjøringer finner spillet igjen. Engelsk — revieweren leser det. */
 const DEMO_GAME_NAME = 'Demo Round — Tørny';
 
@@ -279,7 +282,76 @@ async function resolveOrganizer(db) {
   );
 }
 
+/**
+ * Node 22+ kreves: `supabase-js` bruker den innebygde WebSocket-en, som kom i
+ * Node 22. På Node 20 stopper kjøringen uansett — men da med bibliotekets egen
+ * WebSocket-feil, og den leser ikke som «feil Node-versjon» for den som ikke
+ * kjenner stacken. Sjekken står først i main() så beskjeden kommer på norsk,
+ * før alt annet.
+ */
+function requireNode22() {
+  const major = Number(process.versions.node.split('.')[0]);
+  if (Number.isFinite(major) && major < 22) {
+    throw new Error(
+      `Node ${process.versions.node} er for gammel — skriptet krever Node 22 eller nyere.\n` +
+        '  Kjør dette først, i samme terminalvindu:\n' +
+        '    source ~/.nvm/nvm.sh && nvm use 22',
+    );
+  }
+}
+
+/**
+ * Plassholdere som har sneket seg inn fra en kopiert instruksjon. Sjekkes
+ * uavhengig av lengde: `<et-langt-plassholder-passord>` er langt nok til å
+ * passere lengdekravet og likevel helt feil.
+ */
+const PASSWORD_PLACEHOLDERS = [
+  '…',
+  '...',
+  '<passord>',
+  '<passordet>',
+  '<passordet-fra-steg-1>',
+  'passord',
+  'password',
+  'paste_her',
+  'lim_inn_her',
+  'changeme',
+];
+
+/** Runbookens steg 1 — samme kommando, så beskjeden er kopier-lim-klar. */
+const PASSWORD_GENERATOR_HINT =
+  '  Lag et ekte passord med kommandoen fra steg 1 i\n' +
+  '  docs/native/app-store-review-konto.md:\n' +
+  "    LC_ALL=C tr -dc 'A-Za-z0-9!@#%^&*-_' < /dev/urandom | head -c 28; echo";
+
+/**
+ * Passord-porten. Fail-closed (#1989): den advarte tidligere og skrev likevel.
+ *
+ * Sikkerhetsmodellen i runbooken sier det selv — appen har ingen adresse-port,
+ * inngangen kaller `/auth/v1/token?grant_type=password` rett fram, og
+ * passordstyrken er den bærende sperren. Da kan ikke et for kort passord være
+ * en advarsel midt i en lang logg; den blir ikke lest.
+ */
+function assertStrongPassword(password) {
+  const bare = password.trim().toLowerCase();
+  if (PASSWORD_PLACEHOLDERS.includes(bare)) {
+    throw new Error(
+      `REVIEW_ACCOUNT_PASSWORD ser ut som en plassholder («${password.trim()}»), ikke et passord.\n` +
+        PASSWORD_GENERATOR_HINT,
+    );
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(
+      `Passordet er ${password.length} tegn. Runbooken ber om minst ${MIN_PASSWORD_LENGTH} — ` +
+        'denne kontoen er den ene som kan angripes utenfra.\n' +
+        PASSWORD_GENERATOR_HINT,
+    );
+  }
+}
+
 async function main() {
+  requireNode22();
+
   // ------------------------------------------------------------- argumenter
   const args = process.argv.slice(2);
   let target = 'staging';
@@ -305,11 +377,7 @@ async function main() {
         '  REVIEW_ACCOUNT_EMAIL=… REVIEW_ACCOUNT_PASSWORD=… node scripts/provision-review-account.mjs',
     );
   }
-  if (password.length < 24) {
-    console.warn(
-      `⚠️  Passordet er ${password.length} tegn. Runbooken ber om minst 24 — denne kontoen er den ene som kan angripes utenfra.`,
-    );
-  }
+  assertStrongPassword(password);
 
   const envFile = target === 'prod' ? PROD_ENV : STAGING_ENV;
   const env = loadEnv(envFile);
