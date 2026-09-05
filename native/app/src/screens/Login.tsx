@@ -26,6 +26,8 @@ import {
   APP_NAME_FALLBACK,
   LOGIN_TEXT,
   REVEAL_PASSWORD_LOGIN_MS,
+  classifyLoginError,
+  describeLoginError,
 } from '../lib/loginCopy';
 import { supabase } from '../supabase';
 import { FONTS, useTheme } from '../theme';
@@ -54,31 +56,43 @@ export function Login() {
   };
 
   const sendCode = async () => {
+    const trimmed = email.trim();
+    // Ingen tur til Supabase på et tomt felt: svaret derfra («One of email or
+    // phone must be set») sier ikke det spilleren trenger å høre.
+    if (!trimmed) {
+      setError(LOGIN_TEXT.emailRequired);
+      return;
+    }
     setBusy('code');
     setError(null);
     const { error: err } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
+      email: trimmed,
       options: { shouldCreateUser: false },
     });
     setBusy(null);
     if (err) {
-      setError(err.message);
+      setError(describeLoginError(classifyLoginError('send-code', err)));
     } else {
       setStep('code');
     }
   };
 
   const verifyCode = async () => {
+    const trimmed = code.trim();
+    if (!trimmed) {
+      setError(LOGIN_TEXT.codeRequired);
+      return;
+    }
     setBusy('code');
     setError(null);
     const { error: err } = await supabase.auth.verifyOtp({
       email: email.trim(),
-      token: code.trim(),
+      token: trimmed,
       type: 'email',
     });
     setBusy(null);
     if (err) {
-      setError(err.message);
+      setError(describeLoginError(classifyLoginError('verify-code', err)));
     }
   };
 
