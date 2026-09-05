@@ -2228,7 +2228,8 @@
     "backLabel": "Tilbake til {name}",
     "backToGame": "Tilbake til spillet →",
     "backToHole": "Tilbake til hull {hole} →",
-    "toGameOverview": "Til spilloversikt"
+    "toGameOverview": "Til spilloversikt",
+    "withdrawnNotice": "Du har trukket deg. Slagene dine blir stående her, men teller ikke i rangeringen."
   },
   "holes": {
     "entry": {

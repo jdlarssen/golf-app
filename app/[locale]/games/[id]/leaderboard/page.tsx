@@ -29,6 +29,27 @@ type SearchParams = Promise<{
   from?: string | string[];
 }>;
 
+/**
+ * Who gets the «Mitt scorekort» CTA (#1289) and the putts-backfill nag
+ * (#1290 del B) on a finished game.
+ *
+ * #1895: a withdrawn participant gets the CTA too — the scorecard page renders
+ * their frozen card read-only — but is never nagged about putts: putter/page.tsx
+ * still bounces withdrawn players, and their strokes don't count anyway.
+ */
+function myScorecardAccess(
+  status: string,
+  players: ReadonlyArray<{ user_id: string; withdrawn_at: string | null }>,
+  userId: string | null | undefined,
+): { showMyScorecard: boolean; puttsNagEligible: boolean } {
+  const me = players.find((p) => p.user_id === userId);
+  const showMyScorecard = status === 'finished' && me != null;
+  return {
+    showMyScorecard,
+    puttsNagEligible: showMyScorecard && me?.withdrawn_at == null,
+  };
+}
+
 export default async function LeaderboardPage({
   params,
   searchParams,
@@ -148,11 +169,14 @@ export default async function LeaderboardPage({
   // Spill-arkiv, Historikk) lands on this leaderboard, so it must offer the
   // path onward to the viewer's own scorecard (e.g. hole-by-hole strokes for
   // Golfbox). Unlike Revansje there is NO standalone gate — cup/liga rounds
-  // have scorecards too. Withdrawn viewers are excluded: the scorecard page
-  // bounces them to game-home anyway (#387).
-  const showMyScorecard =
-    game.status === 'finished' &&
-    gwp.players.some((p) => p.user_id === userId && !p.withdrawn_at);
+  // have scorecards too. Withdrawn viewers get it as well (#1895): the
+  // scorecard page renders their frozen card read-only instead of bouncing
+  // them to game-home, so the CTA is no longer a dead end for them.
+  const { showMyScorecard, puttsNagEligible } = myScorecardAccess(
+    game.status,
+    gwp.players,
+    userId,
+  );
 
   // #1290 del B: «Putte-statistikken venter på N hull» — only when the viewer
   // opted into putt-keeping this round (≥1 putt recorded) but left some played
@@ -160,7 +184,7 @@ export default async function LeaderboardPage({
   // showMyScorecard so the extra query only runs for a finished-game
   // participant, and mounted via a provider so it can't leak to spectate/demo.
   let puttsBackfillMissing = 0;
-  if (showMyScorecard) {
+  if (puttsNagEligible) {
     const { data: myScores } = await supabase
       .from('scores')
       .select('strokes, putts')
