@@ -5,9 +5,11 @@
 // hvilke spillere som er med, hvilket par som følger hvilket kjønn, at slag
 // blir til gross, og at et spill vi ikke kan regne på svarer «nei» i stedet
 // for å kaste.
+import { determineWolfForHole } from '../../../../lib/wolf/wolfRotation';
 import type { LocalScore } from '../data/db';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { buildScoringContext, computeGameLeaderboard } from './scoringContext';
+import { wolfRotationPlayers } from './wolfHole';
 
 const GAME = 'game-1';
 
@@ -96,6 +98,12 @@ const BBB_GAME = {
   modeConfig: { kind: 'bingo_bango_bongo', team_size: 1 },
 };
 
+/** Skins er hull-for-hull: byggeren filtrerer IKKE trukne spillere. */
+const SKINS_GAME = {
+  gameMode: 'skins',
+  modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+};
+
 /** Fire spillere med hver sin rotasjons-slot. */
 const WOLF_PLAYERS = [
   player({ userId: 'a', teamNumber: 1, courseHandicap: 0 }),
@@ -174,7 +182,7 @@ describe('buildScoringContext', () => {
     ]);
   });
 
-  it('holder trukne spillere ute — og slagene deres med', () => {
+  it('stableford: byggeren luker ut den trukne spilleren — og slagene med', () => {
     const ctx = unwrap(
       buildScoringContext(
         bundle({
@@ -190,10 +198,33 @@ describe('buildScoringContext', () => {
       ),
     );
 
+    // Filteret er byggerens, ikke adapterens — og det virker BARE fordi
+    // adapteren sender den ekte `withdrawn_at`-verdien videre.
     expect(ctx.players.map((p) => p.userId)).toEqual(['a']);
-    // Uten dette ville en trukket spiller med tre gode hull fortsatt kunnet
-    // vinne et skins-hull eller flytte et lag-best.
     expect(ctx.scores.map((s) => s.userId)).toEqual(['a']);
+  });
+
+  it('skins: den trukne spilleren blir stående — og slagene med (web-paritet)', () => {
+    const ctx = unwrap(
+      buildScoringContext(
+        bundle({
+          game: { ...bundle().game, ...SKINS_GAME },
+          players: [
+            player({ userId: 'a' }),
+            player({ userId: 'wd', withdrawnAt: '2026-08-30T09:00:00.000Z' }),
+          ],
+        }),
+        [
+          score({ userId: 'a', holeNumber: 1, strokes: 5 }),
+          score({ userId: 'wd', holeNumber: 1, strokes: 3 }),
+        ],
+      ),
+    );
+
+    // Webbens skins-rute mater byggeren med ufiltrerte `game_players`, og
+    // byggeren har ingen WD-regel. Appen skal vise samme tabell.
+    expect(ctx.players.map((p) => p.userId)).toEqual(['a', 'wd']);
+    expect(ctx.scores.map((s) => s.userId)).toEqual(['a', 'wd']);
   });
 
   it('gir en tom score-liste for et spill ingen har begynt på', () => {
@@ -258,8 +289,14 @@ describe('buildScoringContext', () => {
       'missing-choices',
     ],
     ['banen er ikke satt ennå', { holes: [] }, 'no-course'],
+    ['tomt roster', { players: [] }, 'no-players'],
     [
-      'alle spillerne er trukket',
+      'tomt roster i wolf — no-players, ikke missing-choices',
+      { game: { ...bundle().game, ...WOLF_GAME }, players: [] },
+      'no-players',
+    ],
+    [
+      'stableford — alle spillerne er trukket, og byggeren luker dem bort',
       { players: [player({ withdrawnAt: '2026-08-30T09:00:00.000Z' })] },
       'no-players',
     ],
@@ -342,15 +379,42 @@ describe('wolf og bingo bango bongo', () => {
     expect(ctx.wolfChoices).toEqual([]);
   });
 
-  it('holder trukne spillere ute av wolf-konteksten', () => {
+  it('beholder trukne spillere i wolf-konteksten — og i rotasjonen', () => {
+    const withdrawn = player({
+      userId: 'e',
+      teamNumber: 5,
+      withdrawnAt: '2026-08-30T09:00:00.000Z',
+    });
+    const players = [...WOLF_PLAYERS, withdrawn];
+    const ctx = unwrap(
+      buildScoringContext(
+        bundle({ game: { ...bundle().game, ...WOLF_GAME }, players }),
+        [],
+        { wolfChoices: [] },
+      ),
+    );
+    expect(ctx.players.map((p) => p.userId)).toEqual(['a', 'b', 'c', 'd', 'e']);
+
+    // Konsekvensen, og hele grunnen til at filteret måtte bort: n styrer
+    // rotasjonen. Med n=5 er R = floor(18/5)*5 = 15, og hull 5 lander på slot
+    // 5 — den trukne spilleren. Hadde adapteren filtrert (n=4) ville hull 5
+    // falt på slot 1, altså «a». Badgen leser samme sett som tabellen.
+    const rotation = ctx.players.flatMap((p) =>
+      p.teamNumber == null ? [] : [{ userId: p.userId, teamNumber: p.teamNumber }],
+    );
+    expect(rotation).toEqual(wolfRotationPlayers(players));
+    expect(determineWolfForHole(5, rotation, new Map())).toBe('e');
+  });
+
+  it('bygger selv når HELE wolf-feltet er trukket — ikke no-players', () => {
     const ctx = unwrap(
       buildScoringContext(
         bundle({
           game: { ...bundle().game, ...WOLF_GAME },
-          players: [
-            ...WOLF_PLAYERS,
-            player({ userId: 'e', teamNumber: 5, withdrawnAt: '2026-08-30T09:00:00.000Z' }),
-          ],
+          players: WOLF_PLAYERS.map((p) => ({
+            ...p,
+            withdrawnAt: '2026-08-30T09:00:00.000Z',
+          })),
         }),
         [],
         { wolfChoices: [] },
