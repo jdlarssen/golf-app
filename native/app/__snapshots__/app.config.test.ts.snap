@@ -1,0 +1,93 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
+{
+  "android": {
+    "adaptiveIcon": {
+      "backgroundColor": "#E6F4FE",
+      "backgroundImage": "./assets/android-icon-background.png",
+      "foregroundImage": "./assets/android-icon-foreground.png",
+      "monochromeImage": "./assets/android-icon-monochrome.png",
+    },
+    "package": "no.tornygolf.app",
+    "predictiveBackGestureEnabled": false,
+    "versionCode": 2,
+  },
+  "icon": "./assets/icon.png",
+  "ios": {
+    "buildNumber": "2",
+    "bundleIdentifier": "no.tornygolf.app",
+    "config": {
+      "usesNonExemptEncryption": false,
+    },
+    "supportsTablet": false,
+  },
+  "name": "Tørny",
+  "orientation": "portrait",
+  "plugins": [
+    "expo-sqlite",
+    "expo-font",
+    [
+      "expo-splash-screen",
+      {
+        "backgroundColor": "#F8F6F0",
+        "dark": {
+          "backgroundColor": "#14201A",
+        },
+        "image": "./assets/splash-icon.png",
+        "imageWidth": 200,
+      },
+    ],
+    "@react-native-community/datetimepicker",
+  ],
+  "slug": "torny",
+  "userInterfaceStyle": "automatic",
+  "version": "1.1.0",
+  "web": {
+    "favicon": "./assets/favicon.png",
+  },
+}
+`;
+
+exports[`resolveConfig — dev-varianten (ingen APP_VARIANT) snapshot 1`] = `
+{
+  "android": {
+    "adaptiveIcon": {
+      "backgroundColor": "#E6F4FE",
+      "backgroundImage": "./assets/android-icon-background.png",
+      "foregroundImage": "./assets/android-icon-foreground.png",
+      "monochromeImage": "./assets/android-icon-monochrome.png",
+    },
+    "predictiveBackGestureEnabled": false,
+  },
+  "icon": "./assets/icon.png",
+  "ios": {
+    "bundleIdentifier": "no.tornygolf.dev",
+    "supportsTablet": false,
+  },
+  "name": "Tørny Dev",
+  "orientation": "portrait",
+  "plugins": [
+    "expo-sqlite",
+    "expo-font",
+    [
+      "expo-splash-screen",
+      {
+        "backgroundColor": "#F8F6F0",
+        "dark": {
+          "backgroundColor": "#14201A",
+        },
+        "image": "./assets/splash-icon.png",
+        "imageWidth": 200,
+      },
+    ],
+    "@react-native-community/datetimepicker",
+  ],
+  "slug": "torny-dev",
+  "userInterfaceStyle": "automatic",
+  "version": "1.0.0",
+  "web": {
+    "favicon": "./assets/favicon.png",
+  },
+}
+`;
