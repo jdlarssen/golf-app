@@ -48,12 +48,12 @@ export const STORE_VERSION = '1.1.0';
 
 /**
  * `CFBundleVersion`. **Bump før hver opplasting** — App Store Connect avviser
- * et duplikat (versjon, build). Skallet brukte `1`; første kandidat er `2`.
+ * et duplikat (versjon, build). Skallet brukte `1`; første kandidat var `2`.
  */
-export const STORE_IOS_BUILD_NUMBER = '2';
+export const STORE_IOS_BUILD_NUMBER = '3';
 
 /** Android-motstykket. Settes nå, brukes først av Android-oppfølgeren. */
-export const STORE_ANDROID_VERSION_CODE = 2;
+export const STORE_ANDROID_VERSION_CODE = 3;
 
 export type AppVariant = 'dev' | 'store';
 
