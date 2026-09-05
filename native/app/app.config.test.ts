@@ -21,7 +21,9 @@ import type { ExpoConfig } from 'expo/config';
 import appJson from './app.json';
 import {
   PROD_SUPABASE_HOST,
+  STORE_ANDROID_VERSION_CODE,
   STORE_BUNDLE_ID,
+  STORE_IOS_BUILD_NUMBER,
   STORE_WEB_BASE_URL,
   parseVariant,
   resolveConfig,
@@ -88,10 +90,14 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     expect(cfg.slug).toBe('torny');
     expect(cfg.version).toBe('1.1.0');
     expect(cfg.ios?.bundleIdentifier).toBe(STORE_BUNDLE_ID);
-    expect(cfg.ios?.buildNumber).toBe('2');
+    // Build-nummeret leses fra konstanten, ikke som literal: tallet bumpes
+    // før hver opplasting, og en kopi her ville bare vært et sted til å
+    // glemme. Selve VERDIEN er låst av snapshotet over — endrer den seg,
+    // vises den i snapshot-diffen (#1988).
+    expect(cfg.ios?.buildNumber).toBe(STORE_IOS_BUILD_NUMBER);
     expect(cfg.ios?.config?.usesNonExemptEncryption).toBe(false);
     expect(cfg.android?.package).toBe(STORE_BUNDLE_ID);
-    expect(cfg.android?.versionCode).toBe(2);
+    expect(cfg.android?.versionCode).toBe(STORE_ANDROID_VERSION_CODE);
   });
 
   it('setter ingen associated domains — lenker skal åpnes i Safari, der sesjonen finnes', () => {
