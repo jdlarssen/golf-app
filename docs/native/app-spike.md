@@ -382,14 +382,16 @@ som web — tilsiktet).
 
 ### Polling, ikke realtime
 
-`wolf_hole_choices` og `bingo_bango_bongo_holes` står IKKE i
-`supabase_realtime`-publikasjonen (staging + prod) — en
-`postgres_changes`-binding leverer ingenting. Henting skjer derfor via
+Da appen ble bygget sto `wolf_hole_choices` og `bingo_bango_bongo_holes`
+IKKE i `supabase_realtime`-publikasjonen — en `postgres_changes`-binding
+leverte ingenting. Migrasjon 0175 (#1836) legger dem inn, så grunnlaget
+finnes; appen poller likevel fortsatt via
 `useGameChoices` (`src/lib/useChoices.ts`): fetch ved fokus + intervall
 `CHOICES_POLL_MS = 10 000` mens skjermen er aktiv, umiddelbar refetch etter
 egen skriving. De elleve andre modiene fyrer null choice-requests
-(`choiceSourceFor()` → null). Oppgradering til realtime krever
-publikasjons-migrasjon (egen DB-kontrakt).
+(`choiceSourceFor()` → null). Oppgradering til realtime er en egen
+kontrakt: publikasjonen er på plass, kanal-/abonnementskoden i appen
+mangler.
 
 ### Rigge wolf-/BBB-testspill på staging (service-role)
 
