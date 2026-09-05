@@ -266,6 +266,11 @@ export async function CupManagement({
     return p.nickname?.trim() || p.name?.trim() || unknownLabel;
   }
 
+  // #1814: trekk-flatene (lenkene i spillerlista, fourball-valget og venter-
+  // banneret) finnes bare mens cupen er i gang — i utkast er det ingenting å
+  // trekke seg fra, og en avsluttet cup har et signert resultat. Serveren
+  // avviser begge tilfeller (`wrong_status`); dette holder inngangene borte.
+  const cupActive = tournament.status === 'active';
   const playersWithPendingMatch = playersWithNotStartedMatch(leaderboard.matches);
   const rosterNameOf = (userId: string): string => {
     const p = [...roster.team1, ...roster.team2].find((r) => r.userId === userId);
@@ -284,8 +289,7 @@ export async function CupManagement({
    * fra, og en avsluttet cup har et signert resultat.
    */
   function rosterRow(p: CupRosterPlayer) {
-    const canAct =
-      tournament.status === 'active' && playersWithPendingMatch.has(p.userId);
+    const canAct = cupActive && playersWithPendingMatch.has(p.userId);
     return (
       <li key={p.userId} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span>{preferredName(p)}</span>
@@ -357,7 +361,7 @@ export async function CupManagement({
         </div>
       )}
 
-      {playOnPendingBanner(pendingPlayOn, t)}
+      {cupActive && playOnPendingBanner(pendingPlayOn, t)}
 
       {/* Status-kort. Totaler + sidepoeng skjules her og på cup-siden (#1468) —
           resultatet bor på den låste resultatsiden. «X av N matcher spilt»
@@ -462,6 +466,7 @@ export async function CupManagement({
         roster={roster}
         team1Name={tournament.team_1_name}
         team2Name={tournament.team_2_name}
+        cupActive={cupActive}
       />
 
       <CupActionsSection
