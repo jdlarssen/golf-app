@@ -32,6 +32,26 @@ const STAGING_ENV = '.env.staging.local';
 
 /** Gjenkjennbart navn så gjenkjøringer finner spillet igjen. Engelsk — revieweren leser det. */
 const DEMO_GAME_NAME = 'Demo Round — Tørny';
+
+/** Formatet demo-runden spilles i. Speiles av `DEMO_MODE_CONFIG`. */
+const DEMO_GAME_MODE = 'stableford';
+
+/**
+ * Formatoppsettet for demo-runden (#1976).
+ *
+ * Skriptet skrev tidligere `{}` her. Kolonnen er `not null default '{}'::jsonb`,
+ * så det så uskyldig ut — og nettsiden viste da også en helt vanlig
+ * stableford-tavle, fordi motoren ruter på `games.game_mode`. Appen krevde
+ * derimot `mode_config.kind`, og ga blindveien «Formatet er ikke satt opp for
+ * denne runden.» uten vei videre. Nøyaktig den runden er den Apples anmelder
+ * blir bedt om å åpne.
+ *
+ * Appen faller nå tilbake på `game_mode` som webben gjør, men den ekte
+ * configen skal uansett stå: en demo-rad skal se ut som en rad veiviseren
+ * ville laget. Formen er hentet fra `GameModeConfig` i
+ * `lib/scoring/modes/types.ts` og fra ekte rader i prod.
+ */
+const DEMO_MODE_CONFIG = { kind: DEMO_GAME_MODE, team_size: 1, points_table: 'standard' };
 // Fornavnet brukes i hilsener («Hi, Alex.») — må lese som et ekte navn.
 const REVIEW_USER_NAME = 'Alex Reviewer';
 const REVIEW_HCP_INDEX = 18;
@@ -385,7 +405,7 @@ async function main() {
     'les games',
     await db
       .from('games')
-      .select('id, short_id, course_id, tee_box_id, created_by')
+      .select('id, short_id, course_id, tee_box_id, created_by, game_mode, mode_config')
       .eq('name', DEMO_GAME_NAME)
       .order('created_at', { ascending: false })
       .limit(1),
@@ -431,6 +451,35 @@ async function main() {
       game.created_by = organizer.id;
       console.log(`   Arrangør flyttet til ${organizerLabel}.`);
     }
+
+    // Formatoppsettet repareres på gjenkjøring (#1976). Runden i prod ble
+    // opprettet med `mode_config: {}` av en eldre versjon av dette skriptet,
+    // og reuse-grenen ville ellers latt den stå slik for alltid — «reset før
+    // hver innsending» må også rette det som var galt fra før.
+    const configIsCanonical =
+      game.game_mode === DEMO_GAME_MODE &&
+      JSON.stringify(game.mode_config ?? null) === JSON.stringify(DEMO_MODE_CONFIG);
+    if (!configIsCanonical) {
+      const repaired = ok(
+        'reparer demo-spillets formatoppsett',
+        await db
+          .from('games')
+          .update({ game_mode: DEMO_GAME_MODE, mode_config: DEMO_MODE_CONFIG })
+          .eq('id', game.id)
+          .select('id'),
+      );
+      if (repaired.length !== 1) {
+        throw new Error(
+          `reparer demo-spillets formatoppsett: traff ${repaired.length} rader, forventet 1`,
+        );
+      }
+      console.log(
+        `   Formatoppsett satt: ${DEMO_GAME_MODE} ${JSON.stringify(DEMO_MODE_CONFIG)} ` +
+          `(var ${game.game_mode} ${JSON.stringify(game.mode_config)}).`,
+      );
+      game.game_mode = DEMO_GAME_MODE;
+      game.mode_config = DEMO_MODE_CONFIG;
+    }
   } else {
     const tees = ok(
       'les tee_boxes',
@@ -468,8 +517,8 @@ async function main() {
           name: DEMO_GAME_NAME,
           course_id: picked.course_id,
           tee_box_id: picked.id,
-          game_mode: 'stableford',
-          mode_config: {},
+          game_mode: DEMO_GAME_MODE,
+          mode_config: DEMO_MODE_CONFIG,
           registration_mode: 'invite_only',
           registration_type: 'solo',
           status: 'active',

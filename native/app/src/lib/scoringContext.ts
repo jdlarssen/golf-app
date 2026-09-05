@@ -63,9 +63,13 @@ import type { GameBundle } from '../data/gameBundle';
  *  - `unknown-mode`   — `games.game_mode` er en verdi denne app-versjonen ikke
  *                       kjenner. Skjer hvis serveren får et nytt format før
  *                       appen er oppdatert.
- *  - `missing-config` — `mode_config` mangler eller peker på et annet format
- *                       enn `game_mode`. Motoren narrower på den, så en gjetning
- *                       her ville gitt tall som ser riktige ut.
+ *  - `missing-config` — `mode_config.kind` peker på et ANNET format enn
+ *                       `game_mode`. Raden gir da to motstridende svar på hva
+ *                       runden er, og motoren narrower på `kind` — en gjetning
+ *                       her ville gitt tall som ser riktige ut. En config som
+ *                       bare MANGLER (`{}`, som er kolonnens egen default) er
+ *                       ikke dette: den utledes fra `game_mode`, slik webben
+ *                       gjør (#1976).
  *  - `missing-choices`— wolf/BBB: halve regnestykket bor i per-hull-tabeller,
  *                       og kalleren har ikke tredd dem inn. Se `ScoringExtras`
  *                       for hvorfor svaret er «nei» og ikke en tom liste.
@@ -188,15 +192,60 @@ function asGender(raw: string): ScoringGender {
 }
 
 /**
- * `mode_config` kommer inn som `unknown` (kolonnen er `jsonb`). Kravet er det
- * motoren faktisk stiller: et objekt hvis `kind` er samme format som
- * `game_mode`. Hver eneste variant i `GameModeConfig` har den likheten — den er
- * dermed en ekte sjekk, ikke en formalitet, og fanger en rad der de to har
- * kommet i utakt.
+ * Verdiene webbens motor lander på når `mode_config.kind` IKKE er modusens
+ * egen — else-grenene i `lib/scoring/modes/*.ts`, tall for tall.
+ *
+ * Bare de seks modiene der motoren leser feltet DIREKTE etter en kind-sjekk
+ * står her. De øvrige gir samme svar uten en eneste rad:
+ *
+ *  - greensome/foursomes/fourball/round_robin har BÅDE en kind-vakt og en
+ *    `typeof raw === 'number'`-vakt med samme tall, så et utledet objekt uten
+ *    feltet lander på nøyaktig den samme defaulten (100/100/100/85);
+ *  - skins, nassau, nines, acey_deucey, shamble og patsome caster configen og
+ *    sjekker verdien, ikke `kind`;
+ *  - stableford/modified_stableford leser `team_size`, og `undefined` faller
+ *    til `computeSolo` akkurat som webbens `1` gjør;
+ *  - best_ball, singles_matchplay, solo_strokeplay og bingo_bango_bongo leser
+ *    aldri configen.
+ *
+ * MERK at scramble-radene betyr BRUTTO (`0`), ikke den golf-riktige 25/10 %.
+ * Det er ikke en feil her: det er nøyaktig det tornygolf.no viser for samme
+ * rad i dag, og paritet er hele poenget. Skal defaulten endres, endres den på
+ * webben først.
+ */
+const MODE_CONFIG_FALLBACK_FIELDS: Partial<Record<GameMode, Record<string, unknown>>> = {
+  wolf: { wolf_scoring: 'net' },
+  texas_scramble: { team_handicap_pct: 0 },
+  ambrose: { team_handicap_pct: 0 },
+  florida_scramble: { team_handicap_pct: 0 },
+  gruesome_matchplay: { allowance_pct: 50 },
+  chapman_matchplay: { allowance_pct: 100 },
+};
+
+/**
+ * `mode_config` kommer inn som `unknown` (kolonnen er `jsonb`).
+ *
+ * Kolonnen er `not null default '{}'::jsonb` (0030), så et TOMT objekt er
+ * DB-ens egen default — ikke et ødelagt spill. Webben behandler det som en
+ * ren fraværssak: `computeLeaderboard` ruter på `games.game_mode`, og hver
+ * `compute()` leser sine felt bak en defensiv vakt. Derfor UTLEDER vi `kind`
+ * fra `game_mode` når den mangler, og legger på nøyaktig de verdiene webben
+ * ville brukt (over) — så tavla i appen blir den samme som på nettsiden.
+ *
+ * En `kind` som ER satt og peker på et ANNET format er noe helt annet: da har
+ * raden to motstridende svar på hva runden er, og motorens `kind ===`-vakter
+ * ville stille valgt game_mode-grenen med en fremmed configs felter. Tall som
+ * ser autoritative ut og er oppspinn. Den svarer fortsatt `null`.
+ *
+ * Felt som ligger ved siden av en manglende `kind` tas IKKE med: ingen leser
+ * har noensinne sett dem (alle vaktene narrower på kind først), så å plukke
+ * dem opp nå ville gitt appen andre tall enn nettsiden.
  */
 function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | null {
-  if (typeof raw !== 'object' || raw === null) return null;
+  const derived = { kind: mode, ...MODE_CONFIG_FALLBACK_FIELDS[mode] } as GameModeConfig;
+  if (typeof raw !== 'object' || raw === null) return derived;
   const kind = (raw as { kind?: unknown }).kind;
+  if (kind === undefined || kind === null) return derived;
   return kind === mode ? (raw as GameModeConfig) : null;
 }
 
