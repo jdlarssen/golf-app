@@ -121,6 +121,7 @@ Kan kjøres på nytt på et eksisterende arkiv (eller en `.app`) uten å bygge. 
 | | `http://` og `localhost`: hvert treff må stå på lista over kjente bibliotek-strenger i skriptet (zod sin JSON-Schema-URL, Metros `localhost:8081/assets/`, auth-js sin `localhost:9999`, phoenix sin bare `http://`). Alt annet → FAIL med kontekst. Phoenix-literalen har ingen vert selv, så det som følger i den pakkede tabellen er nabo-strengen; den godtas når halen ikke er en vert (et ord uten punktum, kolon eller skråstrek, eller en annen URL-literal). |
 | `Info.plist` | `CFBundleIdentifier = no.tornygolf.app`, versjon og build satt, `ITSAppUsesNonExemptEncryption = false`. |
 | Entitlements (`codesign -d --entitlements`) | INGEN `com.apple.developer.associated-domains`, INGEN `aps-environment`. |
+| App-ikonet (#1975) | **Kilden:** `native/app/assets/icon.png` må ha samme sha256 som `native/assets/appstore-1024.png`, og aldri Expo-malens hash (den nevnes ved navn i FAIL-en). **Arkivet:** `Assets.car` må ha `App-Icon-1024x1024@1x.png`, og `.app`-en `AppIcon60x60@2x.png`. To regler fordi `Assets.car` er kompilert — kildens byte finnes ikke igjen der, så arkiv-regelen beviser bare at *et* ikon ble kompilert inn. **`--upload-only` leser dagens kilde**, ikke den arkivet ble bygget fra; i den vanlige kjeden (prebuild → archive → bevis) henger de sammen. |
 
 Lista over kjente bibliotek-strenger ble seedet fra `expo export` av begge varianter
 (2026-09-05, P2) og bekreftes mot det ekte arkivet i P3. Får du «UKJENT» på en `http://`-

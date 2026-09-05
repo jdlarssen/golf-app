@@ -29,6 +29,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const ASSETS_DIR = __dirname;
 const ICONS_PUBLIC_DIR = path.join(ROOT, 'public/icons');
+// Expo-appens egne assets (#1975). `app.json` peker hit, og fram til #1975 lå
+// Expo-malen der. Filene skal være BYTE-IDENTISKE med masterne over — det er
+// nettopp det `native/app/scripts/store-build-proof.sh` beviser med sha256 før
+// hver opplasting.
+const EXPO_APP_ASSETS_DIR = path.join(ROOT, 'native/app/assets');
 
 const FOREST = '#1B4332';
 const LINEN = '#F8F6F0';
@@ -227,6 +232,25 @@ async function main() {
     });
     writeFileSync(path.join(ASSETS_DIR, 'preview-contact-sheet.png'), contactBuf);
     assertDims('preview-contact-sheet.png', contactBuf, CANVAS_W, CANVAS_H);
+
+    // 7. Expo-appens assets (#1975) — samme buffere som over, skrevet dit
+    //    `native/app/app.json` peker. Ingen egen render: filene SKAL være
+    //    identiske med masterne, og bevis-skriptet sammenligner dem med sha256.
+    //    Splash: LYS bruker den heldekkende flisen (appstoreBuf), ikke motivet
+    //    — motivets T er fylt #F8F6F0, nøyaktig samme farge som den lyse
+    //    splash-bakgrunnen, så motivet ville vært usynlig der. MØRK bruker
+    //    motivet (splashBuf), som har god kontrast mot #14201A.
+    writeFileSync(path.join(EXPO_APP_ASSETS_DIR, 'icon.png'), appstoreBuf);
+    assertDims('native/app/assets/icon.png', appstoreBuf, 1024, 1024);
+    assertNoAlphaChannel('native/app/assets/icon.png', appstoreBuf);
+    writeFileSync(path.join(EXPO_APP_ASSETS_DIR, 'splash-icon.png'), appstoreBuf);
+    assertDims('native/app/assets/splash-icon.png', appstoreBuf, 1024, 1024);
+    writeFileSync(path.join(EXPO_APP_ASSETS_DIR, 'splash-icon-dark.png'), splashBuf);
+    assertDims('native/app/assets/splash-icon-dark.png', splashBuf, 512, 512);
+    writeFileSync(path.join(EXPO_APP_ASSETS_DIR, 'android-icon-foreground.png'), fgBuf);
+    assertDims('native/app/assets/android-icon-foreground.png', fgBuf, 432, 432);
+    writeFileSync(path.join(EXPO_APP_ASSETS_DIR, 'android-icon-background.png'), bgBuf);
+    assertDims('native/app/assets/android-icon-background.png', bgBuf, 432, 432);
   } finally {
     await browser.close();
   }

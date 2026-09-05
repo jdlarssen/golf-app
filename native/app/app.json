@@ -12,10 +12,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1B4332",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundImage": "./assets/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -32,6 +31,7 @@
           "imageWidth": 200,
           "backgroundColor": "#F8F6F0",
           "dark": {
+            "image": "./assets/splash-icon-dark.png",
             "backgroundColor": "#14201A"
           }
         }

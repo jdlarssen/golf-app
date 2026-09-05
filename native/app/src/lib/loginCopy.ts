@@ -19,7 +19,14 @@
  */
 export const REVEAL_PASSWORD_LOGIN_MS = 1_500;
 
-/** Navnet overskriften faller tilbake på når appen ikke kjenner sitt eget. */
+/**
+ * Navnet appen faller tilbake på når den ikke kjenner sitt eget.
+ *
+ * Brukes to steder, begge med `Constants.expoConfig?.name` foran seg:
+ * login-overskriften og hjem-headeren (#1975). Butikk-varianten setter `name`
+ * til «Tørny», dev-varianten til «Tørny Dev» — ingen av dem skal stå hardkodet
+ * i en skjerm.
+ */
 export const APP_NAME_FALLBACK = 'Tørny';
 
 export const LOGIN_TEXT = {

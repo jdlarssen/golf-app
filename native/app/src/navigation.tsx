@@ -19,6 +19,8 @@ import {
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import Constants from 'expo-constants';
+import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
 import { Approve } from './screens/Approve';
 import { CreateGame } from './screens/CreateGame';
@@ -150,7 +152,11 @@ export function RootNavigator() {
           // dermed å kjenne til en skjerm den ellers ikke har noe med — og
           // headeren er uansett navigatorens flate, ikke skjermens.
           options={({ navigation }) => ({
-            title: 'Tørny Dev',
+            // Navnet leses fra den oppløste configen, ikke hardkodes (#1975):
+            // butikk-varianten setter `name` til «Tørny», og en hardkodet
+            // «Tørny Dev» ville fulgt med inn i App Store. Login-skjermen har
+            // gjort det slik siden #1954 P1b — dette er den siste hardkodingen.
+            title: Constants.expoConfig?.name ?? APP_NAME_FALLBACK,
             headerRight: () => (
               <HeaderProfileLink onPress={() => navigation.navigate('Profile')} />
             ),

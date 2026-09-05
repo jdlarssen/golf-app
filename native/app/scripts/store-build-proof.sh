@@ -27,6 +27,12 @@
 #     nøyaktig den verdien finnes i bundelen (bare lengden skrives ut).
 #  2. `Info.plist`: bundle-id, versjon, build, ITSAppUsesNonExemptEncryption.
 #  3. Entitlements (`codesign`): INGEN associated domains, INGEN push.
+#  4. App-ikonet (#1975). To regler, fordi `Assets.car` er KOMPILERT: kildens
+#     byte finnes ikke igjen i arkivet, så den eksakte regelen må stå på kilden
+#     i repoet (sha256 mot merkevare-masteren, og et eksplisitt avslag på
+#     Expo-malens hash). Arkiv-regelen beviser bare at et ikon i det hele tatt
+#     ble kompilert inn. Merk at `--upload-only` på et eldre arkiv leser DAGENS
+#     kilde — i den vanlige kjeden (prebuild → archive → bevis) henger de sammen.
 #
 # Exit 0 = alle regler PASS. Exit 1 = minst én FAIL (byggeskriptet stopper før
 # opplasting). Exit 2 = feil bruk / mangler verktøy. Bevis-fila skrives uansett,
@@ -41,11 +47,24 @@ GREP=/usr/bin/grep
 STRINGS=/usr/bin/strings
 PLUTIL=/usr/bin/plutil
 CODESIGN=/usr/bin/codesign
+SHASUM=/usr/bin/shasum
+ASSETUTIL=/usr/bin/assetutil
 
 PROD_SUPABASE_HOST='glofubopddkjhymcbaph.supabase.co'
 STORE_WEB_BASE_URL='https://tornygolf.no'
 STAGING_REF='snwmueecmfqqdurxedxv'
 STORE_BUNDLE_ID='no.tornygolf.app'
+
+# Ikonet (#1975). Kilden ligger i repoet, ikke i arkivet — se punkt 4 øverst.
+PROOF_APP_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+ICON_SRC="$PROOF_APP_DIR/assets/icon.png"
+ICON_MASTER="$PROOF_APP_DIR/../assets/appstore-1024.png"
+# Expo SDK 57-malens ikon (den blå vinkelen). Sto i `native/app/assets/icon.png`
+# fra N1 til #1975 og ville fulgt med inn i App Store under samme bundle-id som
+# TestFlight-skallet — som HAR riktig ikon. Nevnes ved navn så en FAIL sier hva
+# som skjedde, ikke bare at to hasher er ulike.
+EXPO_TEMPLATE_ICON_SHA256='119462bb78eb240a65c869fc067ee599639b3cb5a41953f25c07b17d2a8c7e0f'
+ICON_RENDITION='"RenditionName" : "App-Icon-1024x1024@1x.png"'
 
 # Kjente, ufarlige `http://`-strenger fra bibliotekene (seedet fra eksportene
 # 2026-09-05, P2 — bekreftes mot det ekte arkivet i P3). Hver rad: regex som må
@@ -74,7 +93,7 @@ usage() {
 
 [ $# -ge 1 ] || usage
 TARGET=$1
-for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN"; do
+for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL"; do
   [ -x "$tool" ] || { printf '✗ Mangler verktøy: %s\n' "$tool" >&2; exit 2; }
 done
 
@@ -94,6 +113,11 @@ PLIST="$APP/Info.plist"
 
 PASS=0
 FAIL=0
+# Temp-filene ryddes av ÉN trap: en `trap ... EXIT` satt lenger nede ville
+# erstattet den forrige, ikke lagt seg ved siden av.
+STR=''
+CAR=''
+trap 'rm -f "$STR" "$CAR" 2>/dev/null || true' EXIT
 : > "$OUT"
 
 say()  { printf '%s\n' "$*" | tee -a "$OUT"; }
@@ -110,7 +134,6 @@ if [ ! -f "$BUNDLE" ]; then
   fail "main.jsbundle mangler i $APP — er dette et React Native-bygg?"
 else
   STR=$(mktemp -t torny-bevis)
-  trap 'rm -f "$STR"' EXIT
   "$STRINGS" "$BUNDLE" > "$STR"
   say "størrelse: $(wc -c < "$BUNDLE" | tr -d ' ') byte · sha256: $(shasum -a 256 "$BUNDLE" | cut -c1-16)…"
 
@@ -262,6 +285,48 @@ if ent=$("$CODESIGN" -d --entitlements - --xml "$APP" 2>/dev/null); then
   fi
 else
   fail "kunne ikke lese entitlements — er appen signert?"
+fi
+say ""
+
+# ── 4. App-ikonet ────────────────────────────────────────────────────────────
+say "## App-ikon"
+if [ ! -f "$ICON_SRC" ]; then
+  fail "$ICON_SRC mangler — app.json peker på ./assets/icon.png"
+elif [ ! -f "$ICON_MASTER" ]; then
+  fail "$ICON_MASTER mangler — merkevare-masteren fra native/assets/generate-icons.mjs"
+else
+  icon_sha=$("$SHASUM" -a 256 "$ICON_SRC" | cut -d' ' -f1)
+  master_sha=$("$SHASUM" -a 256 "$ICON_MASTER" | cut -d' ' -f1)
+  say "assets/icon.png sha256   = $icon_sha"
+  say "appstore-1024.png sha256 = $master_sha"
+  if [ "$icon_sha" = "$EXPO_TEMPLATE_ICON_SHA256" ]; then
+    fail "assets/icon.png ER Expo-malens ikon (#1975) — kopier native/assets/appstore-1024.png over den"
+  elif [ "$icon_sha" = "$master_sha" ]; then
+    pass "assets/icon.png er merkevare-masteren native/assets/appstore-1024.png"
+  else
+    fail "assets/icon.png er hverken Expo-malen eller masteren — kjør native/assets/generate-icons.mjs, eller kopier native/assets/appstore-1024.png over den"
+  fi
+fi
+
+# Arkiv-siden. `assetutil`-utdraget skrives til fil før det grepes: `grep -q`
+# lukker røret på første treff, og SIGPIPE-en tilbake ville under pipefail gjort
+# en GRØNN sjekk rød — samme grunn som `strings`-dumpen over skrives til fil.
+if [ ! -f "$APP/Assets.car" ]; then
+  fail "Assets.car mangler i $APP — ingen kompilert ikon-katalog"
+else
+  CAR=$(mktemp -t torny-bevis-car)
+  ("$ASSETUTIL" --info "$APP/Assets.car" 2>/dev/null || true) > "$CAR"
+  n=$(("$GREP" -cF -- "$ICON_RENDITION" "$CAR") || true)
+  if [ "${n:-0}" -ge 1 ]; then
+    pass "Assets.car har App-Icon-1024x1024@1x.png ($n rendition(er))"
+  else
+    fail "Assets.car har ingen App-Icon-1024x1024@1x.png — ikonet ble ikke kompilert inn"
+  fi
+fi
+if [ -f "$APP/AppIcon60x60@2x.png" ]; then
+  pass "AppIcon60x60@2x.png ligger i .app-en"
+else
+  fail "AppIcon60x60@2x.png mangler i .app-en"
 fi
 say ""
 
