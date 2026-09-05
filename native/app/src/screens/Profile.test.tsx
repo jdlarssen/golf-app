@@ -88,6 +88,9 @@ describe('Profile', () => {
       handicapUpdatedAt: new Date().toISOString(),
       gender: null,
       level: null,
+      // En vanlig spiller HAR fullført profilen. Uten stempelet leser kortet
+      // handicapet som «aldri satt» (#1979), og det er en annen test.
+      profileCompletedAt: '2026-08-30T10:00:00.000Z',
     });
     logOutMock.mockResolvedValue({ ok: true });
     isStagingBuildMock.mockReturnValue(false);
@@ -99,6 +102,31 @@ describe('Profile', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  // #1979: `hcp_index` er `not null default 54.0` og `handicap_updated_at`
+  // `default now()`, så en profil ingen har fylt ut leste «hcp 54,0 · Oppdatert
+  // i dag» — databasens default presentert som et tall spilleren hadde valgt.
+  // `profile_completed_at` er det eneste som skiller «satt til 54» fra «aldri
+  // satt», og kortet faller nå til samme gren som en tom profil.
+  it('presenterer ikke databasens default-handicap som et valgt tall', async () => {
+    fetchOwnProfileMock.mockResolvedValue({
+      name: null,
+      nickname: null,
+      hcpIndex: 54,
+      handicapUpdatedAt: new Date().toISOString(),
+      gender: null,
+      level: null,
+      profileCompletedAt: null,
+    });
+
+    await renderScreen();
+
+    expect(screen.getByTestId('profile-hcp-value')).toHaveTextContent('–');
+    // Ingen «Oppdatert i dag» på et handicap som aldri ble satt — en vei til
+    // skjemaet i stedet.
+    expect(screen.queryByTestId('profile-hcp-age')).toBeNull();
+    expect(screen.getByTestId('profile-set-handicap')).toBeTruthy();
   });
 
   it('viser hvem du er, logger ut, og har ingen utviklerflate i et butikk-bygg', async () => {

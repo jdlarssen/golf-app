@@ -114,7 +114,15 @@ export function PlayersStep({
       <SelectRow
         testID={`create-player-${meId}`}
         title={me ? displayName(me) : 'Deg'}
-        subtitle="Du er alltid med"
+        // #1979: din egen rad sa «Du er alltid med» selv når profilen din
+        // manglet navn og handicap — mens hver ANNEN ufullført spiller ble
+        // merket to linjer lenger ned. Publiseringen stoppet så på deg, med en
+        // melding om noen andre. Merkingen står nå på begge.
+        subtitle={
+          me?.pending
+            ? 'Du er alltid med. Men du har ikke fullført profilen din ennå.'
+            : 'Du er alltid med'
+        }
         selected
       />
       {teamLayout ? (

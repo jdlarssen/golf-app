@@ -50,6 +50,15 @@ export interface OwnProfile {
    * love en dør som er låst.
    */
   isAdmin: boolean;
+  /**
+   * `null` = profilen er ikke fullført (#1979).
+   *
+   * `hcp_index` er `not null default 54.0` og `handicap_updated_at`
+   * `default now()`, så en halvferdig profil ser fullstendig ut i radene alene:
+   * «hcp 54,0 · Oppdatert i dag», som om spilleren hadde satt det selv. Denne
+   * kolonnen er det eneste som skiller «satt til 54» fra «aldri satt».
+   */
+  profileCompletedAt: string | null;
 }
 
 interface ProfileRow {
@@ -60,10 +69,11 @@ interface ProfileRow {
   gender: string | null;
   level: string | null;
   is_admin: boolean | null;
+  profile_completed_at: string | null;
 }
 
 const PROFILE_SELECT =
-  'name, nickname, hcp_index, handicap_updated_at, gender, level, is_admin';
+  'name, nickname, hcp_index, handicap_updated_at, gender, level, is_admin, profile_completed_at';
 
 /**
  * Hent egen profilrad.
@@ -94,6 +104,7 @@ export async function fetchOwnProfile(userId: string): Promise<OwnProfile> {
     // betyr «ikke admin» — den ærlige teksten er en bedre feil enn en knapp
     // til en side som sender brukeren rett hjem igjen.
     isAdmin: data.is_admin === true,
+    profileCompletedAt: data.profile_completed_at,
   };
 }
 

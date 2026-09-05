@@ -14,6 +14,7 @@ import type { CreateGameFailure } from '../data/createGame';
 import {
   UNMIRRORED_WIZARD_ERROR_KEYS,
   describeCreateGameFailure,
+  describePendingPlayers,
 } from './createGameCopy';
 
 const wizardErrors = source.wizard.errors as Record<string, string>;
@@ -109,5 +110,39 @@ describe('describeCreateGameFailure', () => {
   it('skiller «du har ikke lov» fra «prøv igjen»', () => {
     expect(describeCreateGameFailure('rls_denied')).not.toContain('Prøv igjen');
     expect(describeCreateGameFailure('db_format')).toContain('prøv igjen');
+  });
+});
+
+// #1979: RPC-en `incomplete_profiles_for_ids` ekskluderer ikke kalleren, så en
+// arrangør med ufullført profil kom tilbake i sin egen liste — og leste en
+// melding om «noen på spillerlista … De må logge inn». Om seg selv.
+describe('describePendingPlayers', () => {
+  it('snakker til deg når det bare er deg', () => {
+    const text = describePendingPlayers({ selfPending: true, othersPending: false });
+    expect(text).toContain('Profilen din');
+    // Ikke tredjeperson om deg selv.
+    expect(text).not.toContain('De må');
+    expect(text).not.toContain('Noen på spillerlista');
+  });
+
+  it('nevner begge når både du og andre mangler', () => {
+    const text = describePendingPlayers({ selfPending: true, othersPending: true });
+    expect(text).toContain('du');
+    expect(text).toContain('andre');
+  });
+
+  it('beholder den gamle setningen når det bare er andre', () => {
+    expect(describePendingPlayers({ selfPending: false, othersPending: true })).toBe(
+      describeCreateGameFailure('pending_players'),
+    );
+  });
+
+  it('gir tre ulike setninger — ingen av tilfellene lyder likt', () => {
+    const texts = [
+      describePendingPlayers({ selfPending: true, othersPending: false }),
+      describePendingPlayers({ selfPending: true, othersPending: true }),
+      describePendingPlayers({ selfPending: false, othersPending: true }),
+    ];
+    expect(new Set(texts).size).toBe(3);
   });
 });

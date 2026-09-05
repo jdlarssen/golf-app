@@ -146,7 +146,8 @@ function valuesFrom(profile: {
   };
 }
 
-export function EditProfile({ navigation }: ScreenProps<'EditProfile'>) {
+export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
+  const returnTo = route.params?.returnTo ?? null;
   const { userId, email } = useSession();
   const { colors, ui } = useTheme();
 
@@ -210,6 +211,13 @@ export function EditProfile({ navigation }: ScreenProps<'EditProfile'>) {
       .then((result) => {
         setPending(false);
         if (result.ok) {
+          // #1979: kom du hit fra veiviseren, skal du TILBAKE dit — ikke inn i
+          // profil-rommet med veiviseren begravd under. `goBack` beholder
+          // veiviserens state; den står montert like under.
+          if (returnTo === 'CreateGame') {
+            navigation.goBack();
+            return;
+          }
           // Tilbake til rommet med kvitteringen. Rommet viser banneret og
           // henter raden på nytt — det er der den nye verdien skal leses.
           navigation.navigate('Profile', { saved: true });
@@ -222,7 +230,7 @@ export function EditProfile({ navigation }: ScreenProps<'EditProfile'>) {
         setPending(false);
         setError(describeProfileSaveFailure('update_failed'));
       });
-  }, [navigation, values]);
+  }, [navigation, returnTo, values]);
 
   if (loadFailed) {
     return (
