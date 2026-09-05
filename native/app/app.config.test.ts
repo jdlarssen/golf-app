@@ -110,6 +110,7 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     ['Supabase-adressen mangler', { EXPO_PUBLIC_SUPABASE_URL: undefined }, 'EXPO_PUBLIC_SUPABASE_URL'],
     ['Supabase-adressen er tom', { EXPO_PUBLIC_SUPABASE_URL: '   ' }, 'EXPO_PUBLIC_SUPABASE_URL'],
     ['Supabase-adressen peker på staging', { EXPO_PUBLIC_SUPABASE_URL: STAGING_URL }, STAGING_SUPABASE_HOST],
+    ['Supabase-adressen mangler skjema', { EXPO_PUBLIC_SUPABASE_URL: PROD_SUPABASE_HOST }, 'ikke en http(s)-adresse'],
     [
       'Supabase-adressen har prod-verten som delstreng i et annet domene',
       { EXPO_PUBLIC_SUPABASE_URL: `https://${PROD_SUPABASE_HOST}.angriper.no` },
