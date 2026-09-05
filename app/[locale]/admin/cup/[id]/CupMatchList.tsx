@@ -65,6 +65,7 @@ export async function CupMatchList({
   roster,
   team1Name,
   team2Name,
+  cupActive,
 }: {
   tournamentId: string;
   isClub: boolean;
@@ -73,6 +74,13 @@ export async function CupMatchList({
   roster: CupRoster;
   team1Name: string;
   team2Name: string;
+  /**
+   * #1814 (E4): fourball-valget finnes bare mens cupen er i gang — samme gate
+   * som trekk-lenkene i spillerlista. `setFourballWithdrawalChoice` avviser en
+   * cup i utkast eller ferdigspilt (`wrong_status`), så uten dette sto panelet
+   * igjen på en signert cup og svarte med en melding om å starte cupen.
+   */
+  cupActive: boolean;
 }) {
   const t = await getTranslations('cup');
   const unknownLabel = t('manage.unknownPlayer');
@@ -223,6 +231,7 @@ export async function CupMatchList({
               m.soloPlayOn?.partnerName ??
               remainingPartnerName(m, (uid) => matchPlayerNames.get(uid) ?? unknownLabel);
             const showPlayOn =
+              cupActive &&
               m.status === 'scheduled' &&
               m.gameMode === 'fourball_matchplay' &&
               hasWithdrawal &&
