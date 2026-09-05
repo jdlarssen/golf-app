@@ -42,6 +42,7 @@ import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
 import {
   createFailureBelongsOnWeb,
   describeCreateGameFailure,
+  describePendingPlayers,
 } from '../lib/createGameCopy';
 import { displayName, formatTeeOff } from '../lib/display';
 import {
@@ -170,15 +171,20 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   ]);
   const [busy, setBusy] = useState(false);
   /**
-   * Feilen etter et publiseringsforsøk, og om den peker til nettsiden (#1891).
+   * Feilen etter et publiseringsforsøk, og hvor veien videre går (#1891, #1979).
    *
    * Ett felt og ikke to `useState`: teksten og knappen beskriver SAMME feil, og
    * to tilstander som må settes i takt på fire steder er nettopp der de går ut
    * av takt — en knapp som blir stående etter neste, urelaterte feil.
+   *
+   * `action` er en DISKRIMINANT og ikke et nytt boolsk felt ved siden av det
+   * gamle, av samme grunn: to flagg som må være usanne sammen er den samme
+   * fella én gang til.
    */
-  const [failure, setFailure] = useState<{ text: string; onWeb: boolean } | null>(
-    null,
-  );
+  const [failure, setFailure] = useState<{
+    text: string;
+    action: 'web' | 'profile' | null;
+  } | null>(null);
 
   const formats = useRemote(fetchFormatCatalog);
   const courses = useRemote(fetchCourses);
@@ -288,7 +294,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     // gjennomkjøringer ville gitt to runder med samme navn.
     if (busy || !draft) return;
     if (!isDeviceOnline()) {
-      setFailure({ text: OFFLINE_NOTE, onWeb: false });
+      setFailure({ text: OFFLINE_NOTE, action: null });
       return;
     }
     setBusy(true);
@@ -301,20 +307,38 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
         navigation.replace('GameHome', { gameId: result.gameId });
         return;
       }
-      setFailure({
-        text: describeCreateGameFailure(result.error),
-        onWeb: createFailureBelongsOnWeb(result.error),
-      });
+      if (result.error === 'pending_players') {
+        // #1979: serveren sier bare AT noen mangler, ikke hvem. Kandidatlista
+        // vet det — den bærer `pending` for alle, deg selv inkludert — så vi
+        // avgjør her hvem meldingen skal handle om, og om det finnes en knapp.
+        const roster = candidates.data ?? [];
+        const inRound = new Set(picked.map((p) => p.userId));
+        const selfPending = roster.some((c) => c.id === userId && c.pending);
+        const othersPending = roster.some(
+          (c) => c.id !== userId && c.pending && inRound.has(c.id),
+        );
+        setFailure({
+          text: describePendingPlayers({ selfPending, othersPending }),
+          // Knappen bare når det er DIN profil som stopper det. Andres kan du
+          // ikke fylle ut for dem, og en knapp dit ville vært en blindvei til.
+          action: selfPending ? 'profile' : null,
+        });
+      } else {
+        setFailure({
+          text: describeCreateGameFailure(result.error),
+          action: createFailureBelongsOnWeb(result.error) ? 'web' : null,
+        });
+      }
     } catch {
       setFailure({
         text: 'Fikk ikke opprettet spillet. Sjekk nettet og prøv igjen.',
-        onWeb: false,
+        action: null,
       });
     }
     // Bevisst utenfor `finally`: på suksess er skjermen borte, og knappen skal
     // ikke låses opp igjen på vei ut.
     setBusy(false);
-  }, [busy, draft, navigation]);
+  }, [busy, candidates.data, draft, navigation, picked, userId]);
 
   const stepIndex = STEPS.indexOf(step);
   const blocker = stepBlocker(step, gameMode, common.name, courseId, teeBoxId);
@@ -393,7 +417,12 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
           lines={summaryLines(draft, gameMode, courses.data, candidates.data, teeOff)}
           warnings={summaryWarnings(draft, gameMode)}
           error={failure?.text ?? null}
-          errorOnWeb={failure?.onWeb ?? false}
+          errorAction={failure?.action ?? null}
+          // #1979: veien ut av «profilen din mangler noe». `EditProfile` ligger
+          // i samme stack, og `returnTo` gjør at Lagre kommer TILBAKE hit i
+          // stedet for å legge profil-rommet oppå veiviseren. Veiviseren står
+          // montert under, så alt du har valgt er der når du er tilbake.
+          onEditProfile={() => navigation.navigate('EditProfile', { returnTo: 'CreateGame' })}
           busy={busy}
           canPublish={courseId !== null && teeBoxId !== null}
           onPublish={() => void publish()}

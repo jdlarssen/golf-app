@@ -21,6 +21,7 @@
 // `CreateGameFailure` gjør `tsc` rød her til noen har skrevet setningen. Ingen
 // feil kan snike seg ut som `undefined`.
 import type { CreateGameFailure } from '../data/createGame';
+import { PROFILE_TEXT } from './profileCopy';
 
 /**
  * Kodene der appen bruker egen tekst i stedet for webbens.
@@ -132,4 +133,40 @@ export const CREATE_ON_WEB_PATH = '/opprett-spill';
  */
 export function createFailureBelongsOnWeb(error: CreateGameFailure): boolean {
   return error === 'unsupported_mode';
+}
+
+/**
+ * Knappen som tar arrangøren til sitt eget profilskjema (#1979).
+ *
+ * Re-eksportert og ikke skrevet om: profil-rommets egen inngang heter det
+ * samme, og to kopier av samme knappetekst er to steder å glemme neste gang
+ * eieren vil kalle den noe annet.
+ */
+export const EDIT_PROFILE_LABEL = PROFILE_TEXT.editRow;
+
+/**
+ * Hvem det er som mangler en fullført profil (#1979).
+ *
+ * RPC-en `incomplete_profiles_for_ids` ekskluderer ikke kalleren, så arrangøren
+ * kommer tilbake i sin egen liste. Meldingen sa likevel alltid «Noen på
+ * spillerlista … De må logge inn» — tredjeperson, om deg selv, uten noe å
+ * gjøre med det. Tre tilfeller, tre setninger:
+ *
+ *  - bare deg → si det rett ut; knappen «Rediger profil» hører til her;
+ *  - bare andre → som før;
+ *  - begge → nevn begge. En setning som bare snakker om deg selv ville flyttet
+ *    blindveien ett publiseringsforsøk fram i tid, ikke fjernet den.
+ */
+export function describePendingPlayers(opts: {
+  selfPending: boolean;
+  othersPending: boolean;
+}): string {
+  const { selfPending, othersPending } = opts;
+  if (selfPending && othersPending) {
+    return 'Både du og noen andre på lista mangler navn eller handicap. Fyll ut din, og be de andre gjøre det samme.';
+  }
+  if (selfPending) {
+    return 'Profilen din mangler navn eller handicap. Fyll det ut, så kan du publisere runden.';
+  }
+  return describeCreateGameFailure('pending_players');
 }

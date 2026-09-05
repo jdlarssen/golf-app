@@ -43,6 +43,7 @@ const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
 const saveProfileMock = saveProfile as jest.Mock;
 
 const navigate = jest.fn();
+const goBack = jest.fn();
 
 // Lagret −1,5 = plusshandicap 1,5. Feltet skal vise magnituden, «+»-knappen
 // bærer fortegnet, og det er de to som skal ut på tråden.
@@ -51,10 +52,15 @@ const MY_NAME = 'Jørgen Larssen';
 const NEW_NAME = 'Jørgen L. Larssen';
 
 /** Rendrer skjemaet og venter til raden har landet i feltene. */
-async function renderScreen() {
+async function renderScreen(routeParams: { returnTo?: 'CreateGame' } | undefined = undefined) {
   await render(
     <EditProfile
-      {...({ navigation: { navigate } } as unknown as ScreenProps<'EditProfile'>)}
+      {...({
+        navigation: { navigate, goBack },
+        // Navigatoren sender ALLTID `route`; fikstur uten den er ikke et
+        // scenario appen kan havne i.
+        route: { params: routeParams },
+      } as unknown as ScreenProps<'EditProfile'>)}
     />,
   );
   await screen.findByTestId('edit-profile-name');
@@ -124,6 +130,24 @@ describe('EditProfile', () => {
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith('Profile', { saved: true });
     });
+  });
+
+  // #1979: skjemaet nås nå også fra veiviserens siste steg, når din egen
+  // ufullførte profil er det som stopper publiseringen. Uten `returnTo` ville
+  // Lagre lagt profil-rommet OPPÅ veiviseren, og arrangøren måtte trykke seg
+  // bakover to ganger for å komme til knappen hen var på vei til.
+  it('går tilbake til veiviseren i stedet for profil-rommet når den kom derfra', async () => {
+    saveProfileMock.mockResolvedValue({ ok: true });
+    await renderScreen({ returnTo: 'CreateGame' });
+
+    await fireEvent.changeText(screen.getByTestId('edit-profile-name'), NEW_NAME);
+    await fireEvent.press(screen.getByTestId('edit-profile-save'));
+
+    await waitFor(() => {
+      expect(goBack).toHaveBeenCalledTimes(1);
+    });
+    // Ingen kvittering til et rom som ikke er der du skal.
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('fjerner feilen når spilleren retter feltet', async () => {

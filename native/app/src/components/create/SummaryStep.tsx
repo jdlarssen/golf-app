@@ -17,6 +17,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   CREATE_ON_WEB_LABEL,
   CREATE_ON_WEB_PATH,
+  EDIT_PROFILE_LABEL,
 } from '../../lib/createGameCopy';
 import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
@@ -37,7 +38,8 @@ export function SummaryStep({
   lines,
   warnings,
   error,
-  errorOnWeb = false,
+  errorAction = null,
+  onEditProfile,
   busy,
   canPublish,
   onPublish,
@@ -46,13 +48,20 @@ export function SummaryStep({
   warnings: readonly SummaryWarning[];
   error: string | null;
   /**
-   * Peker feilen til webbens veiviser (#1891)?
+   * Hvor veien videre går, hvis den finnes.
    *
-   * Bare `unsupported_mode` gjør det — formatet finnes, appen har bare ikke
-   * flaten for det. Skjermen avgjør (`createFailureBelongsOnWeb`); her rendres
-   * bare knappen, så to steder ikke kan bli uenige om hvilke koder det gjelder.
+   *  - `'web'`     — formatet finnes, men appen har ikke flaten (#1891).
+   *  - `'profile'` — din egen profil mangler navn eller handicap (#1979).
+   *  - `null`      — feilen løses her, eller ikke i det hele tatt.
+   *
+   * Skjermen avgjør hvilken (`createFailureBelongsOnWeb`, `pending_players`);
+   * her rendres bare knappen, så to steder ikke kan bli uenige om hvilke koder
+   * det gjelder. Én diskriminant, ikke to flagg: to boolske felt som må være
+   * usanne sammen er der de går ut av takt.
    */
-  errorOnWeb?: boolean;
+  errorAction?: 'web' | 'profile' | null;
+  /** Kalles av `'profile'`-knappen. Skjermen eier navigasjonen. */
+  onEditProfile?: () => void;
   busy: boolean;
   /** Falsk når et påkrevd valg mangler — knappen står, men gjør ingenting. */
   canPublish: boolean;
@@ -97,12 +106,23 @@ export function SummaryStep({
         </Text>
       ) : null}
 
-      {error && errorOnWeb ? (
+      {error && errorAction === 'web' ? (
         <WebLinkButton
           label={CREATE_ON_WEB_LABEL}
           path={CREATE_ON_WEB_PATH}
           testID="create-error-link"
         />
+      ) : null}
+
+      {error && errorAction === 'profile' && onEditProfile ? (
+        <Pressable
+          testID="create-error-profile"
+          accessibilityRole="button"
+          style={ui.buttonSecondary}
+          onPress={onEditProfile}
+        >
+          <Text style={ui.buttonSecondaryText}>{EDIT_PROFILE_LABEL}</Text>
+        </Pressable>
       ) : null}
     </View>
   );

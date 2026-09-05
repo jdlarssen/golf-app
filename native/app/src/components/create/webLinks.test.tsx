@@ -108,7 +108,7 @@ describe('veiviserens lenkeknapper (#1891)', () => {
       <SummaryStep
         {...props}
         error="Dette formatet opprettes på nettsiden ennå."
-        errorOnWeb
+        errorAction="web"
       />,
     );
     expect(screen.getByTestId('create-error-link')).toBeTruthy();
@@ -116,9 +116,22 @@ describe('veiviserens lenkeknapper (#1891)', () => {
     // Og INGEN knapp for de andre feilene: «lagene er ikke jevne» løses her i
     // appen, og en knapp til nettsiden ville sendt arrangøren bort fra svaret.
     await rerender(
-      <SummaryStep {...props} error="Lagene er ikke jevne." errorOnWeb={false} />,
+      <SummaryStep {...props} error="Lagene er ikke jevne." errorAction={null} />,
     );
     expect(screen.getByTestId('create-error')).toBeTruthy();
+    expect(screen.queryByTestId('create-error-link')).toBeNull();
+
+    // #1979: din egen ufullførte profil får sin EGEN knapp — til skjemaet, ikke
+    // til nettsiden. De to skal aldri stå samtidig.
+    await rerender(
+      <SummaryStep
+        {...props}
+        error="Du mangler navn eller handicap i profilen din."
+        errorAction="profile"
+        onEditProfile={jest.fn()}
+      />,
+    );
+    expect(screen.getByTestId('create-error-profile')).toBeTruthy();
     expect(screen.queryByTestId('create-error-link')).toBeNull();
   });
 });

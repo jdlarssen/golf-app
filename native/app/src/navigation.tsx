@@ -57,7 +57,16 @@ export type RootStackParamList = {
    */
   Profile: { saved?: boolean } | undefined;
   /** Skjemaet bak «Rediger profil» (#1906) — de fem feltene, lagret via ruta. */
-  EditProfile: undefined;
+  /**
+   * `returnTo` sier hvor Lagre skal legge deg av (#1979).
+   *
+   * Uten den navigerer skjermen alltid til `Profile`. Åpner du skjemaet fra
+   * veiviserens siste steg — der «Rediger profil»-knappen står når din egen
+   * profil stopper publiseringen — ville du havnet i profil-rommet med
+   * veiviseren begravd i stacken. `'CreateGame'` gir `goBack()` i stedet, og
+   * veiviseren står montert under med alt du har valgt.
+   */
+  EditProfile: { returnTo?: 'CreateGame' } | undefined;
   /** Bekreftelse på konto-sletting (#1876) — egen skjerm, husregelen. */
   DeleteAccount: undefined;
   SyncLab: undefined;

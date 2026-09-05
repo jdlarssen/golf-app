@@ -302,7 +302,13 @@ function HandicapLine({
   // Lokal konstant, ikke `profile.hcpIndex` direkte: `tsc` snevrer inn en const
   // etter null-sjekken, men ikke et felt på et objekt som kan ha endret seg
   // mellom de to lesningene. Alternativet ville vært en cast.
-  const hcp = profile.hcpIndex;
+  //
+  // #1979: en ufullført profil har ikke noe handicap å vise. Kolonnen er
+  // `not null default 54.0`, så raden sier «54» selv om spilleren aldri har
+  // tastet noe — og kortet sto dermed og presenterte databasens default som et
+  // tall hen hadde valgt, med «Oppdatert i dag» under. Vi lar den falle til
+  // samme gren som en tom profil: «hcp –» og en vei til skjemaet.
+  const hcp = profile.profileCompletedAt == null ? null : profile.hcpIndex;
 
   return (
     <View style={styles.hcpLine} testID="profile-hcp">
