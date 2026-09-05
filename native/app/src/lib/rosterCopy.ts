@@ -108,6 +108,8 @@ export function describeRosterFailure(
       return 'Den valgte flighten er full (maks 4 spillere). Velg en annen flight.';
     case 'rls-denied':
       return 'Du har ikke lov til å endre dette.';
+    case 'already-submitted':
+      return 'Spilleren rakk å levere kortet først, så frafallet gikk ikke gjennom. Ingenting er endret.';
     case 'no-rows':
       return 'Ingenting ble endret. Du har kanskje ikke tilgang, eller noen andre rakk det først.';
     case 'db':

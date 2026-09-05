@@ -41,6 +41,7 @@ const REASONS: EndRoundFailure[] = [
   'withdrawal-unsupported',
   'withdraw-after-submit',
   'db-withdraw',
+  'withdraw-after-submit-partial',
   'db-winners',
   'rls-denied',
   'no-rows',
@@ -57,7 +58,7 @@ describe('describeEndRoundFailure', () => {
     expect(isFinishedSentence(describeEndRoundFailure(reason))).toBe(true);
   });
 
-  it('gir femten FORSKJELLIGE setninger', () => {
+  it('gir seksten FORSKJELLIGE setninger', () => {
     const sentences = REASONS.map((reason) => describeEndRoundFailure(reason));
     expect(new Set(sentences).size).toBe(REASONS.length);
   });
@@ -105,6 +106,16 @@ describe('describeEndRoundFailure', () => {
   });
 
   it('sier samme nett-linje som roster-skrivingene', () => {
+  it('sier IKKE «ingen ble trukket» når noen alt er trukket (#1896)', () => {
+    // Det delvise utfallet: vakta på selve skrivet slo til etter at de første
+    // i bunken var trukket. Da er «ingen ble trukket» en løgn som sender
+    // arrangøren på leting etter feil rader.
+    const text = describeEndRoundFailure('withdraw-after-submit-partial', ['Even']);
+    expect(text).toContain('Even leverte kortet sitt');
+    expect(text).toContain('alt trukket');
+    expect(text).not.toContain('ingen ble trukket');
+  });
+
     expect(describeEndRoundFailure('offline')).toBe(
       describeRosterFailure('offline'),
     );

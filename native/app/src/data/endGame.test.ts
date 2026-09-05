@@ -602,6 +602,94 @@ describe('finishRound', () => {
       expect(tablesTouched()).toEqual(['games', 'game_players']);
     });
 
+    it('stopper med withdraw-after-submit når kortet lander ETTER for-lesingen (#1896)', async () => {
+      // Restvinduet for-lesingen ikke kan lukke: kortet kommer inn mellom
+      // roster-lesingen og selve skrivet. Filteret på UPDATE-en gjør skrivet
+      // til et 0-rads-treff, og oppfølgings-SELECT-et navngir grunnen.
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow()), queryStub(WD_GATE)],
+        game_players: [
+          queryStub(roster(playerRow(MATE, { submitted_at: null }))),
+          queryStub(ZERO_ROWS),
+          queryStub({
+            data: { withdrawn_at: null, submitted_at: SUBMITTED },
+            error: null,
+          }),
+        ],
+      });
+
+      expect(
+        await endGame().finishRound(GAME, {
+          allowMissing: true,
+          withdrawUserIds: [MATE],
+        }),
+      ).toEqual({
+        ok: false,
+        reason: 'withdraw-after-submit',
+        blockedUserIds: [MATE],
+      });
+
+      // De to `games`-oppslagene er gate-LESINGER (`loadFinishGate` og
+      // `refuseUnlessWithdrawable`). Poenget er det som IKKE står her:
+      // status-flippens `games`-UPDATE kommer aldri.
+      expect(tablesTouched()).toEqual([
+        'games',
+        'game_players',
+        'games',
+        'game_players',
+        'game_players',
+      ]);
+    });
+
+    it('melder DELVIS utfall når kortet lander etter at de første alt er trukket (#1896)', async () => {
+      // To avkryssede. MATE trekkes (1 rad). OTHER leverer i vinduet mellom
+      // for-lesingen og sitt eget skriv: 0 rader, og oppfølgings-SELECT-et
+      // viser kortet. Da er MATE trukket og OTHER ikke — og det MÅ ha en annen
+      // kode enn «ingen ble trukket».
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow()), queryStub(WD_GATE), queryStub(WD_GATE)],
+        game_players: [
+          queryStub(
+            roster(
+              playerRow(MATE, { submitted_at: null }),
+              playerRow(OTHER, { submitted_at: null }),
+            ),
+          ),
+          queryStub(ONE_ROW),
+          queryStub(ZERO_ROWS),
+          queryStub({
+            data: { withdrawn_at: null, submitted_at: SUBMITTED },
+            error: null,
+          }),
+        ],
+      });
+
+      expect(
+        await endGame().finishRound(GAME, {
+          allowMissing: true,
+          withdrawUserIds: [MATE, OTHER],
+        }),
+      ).toEqual({
+        ok: false,
+        reason: 'withdraw-after-submit-partial',
+        blockedUserIds: [OTHER],
+      });
+
+      // for-lesing, MATE (gate + skriv), OTHER (gate + skriv + oppfølging) —
+      // og ingen status-flipp.
+      expect(tablesTouched()).toEqual([
+        'games',
+        'game_players',
+        'games',
+        'game_players',
+        'games',
+        'game_players',
+        'game_players',
+      ]);
+    });
+
     it('stopper med db-withdraw når et frafalls-skriv feiler', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({

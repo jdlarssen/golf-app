@@ -74,6 +74,8 @@ export type RosterActionFailure =
   | 'flight-full'
   /** SQLSTATE 42501 — Postgres nektet skrivingen (policy eller vakt-trigger). */
   | 'rls-denied'
+  /** Kun med `onlyIfUnsubmitted`: kortet kom inn før skrivet — ingenting er endret. */
+  | 'already-submitted'
   /** Ingen feil, men heller ingen rad. Trap 2s eget utfall. */
   | 'no-rows'
   | 'db';
@@ -197,24 +199,29 @@ function readWriteResult<T>(
  * handlingen har lykkes. Er den det ikke — eller er raden usynlig for oss — ble
  * skrivingen nektet, og det MÅ vises som en feil.
  *
- * `isDone` får `null` når raden ikke finnes i det hele tatt. Det er meningen:
+ * `classify` får `null` når raden ikke finnes i det hele tatt. Det er meningen:
  * en sletting er nettopp da i mål, mens en oppdatering ikke er det.
+ *
+ * Den svarer med hele utfallet, ikke bare «i mål eller ikke» (#1896): med
+ * `onlyIfUnsubmitted` finnes det en TREDJE grunn til 0 rader — spilleren rakk å
+ * levere — og den fortjener sin egen kode i stedet for å bli slått sammen med
+ * «nektet». `columns` er kolonnelista oppfølgingen trenger for å skille dem.
  */
 async function resolveZeroRows(
   gameId: string,
   playerUserId: string,
-  column: string,
-  isDone: (row: Record<string, unknown> | null) => boolean,
+  columns: string,
+  classify: (row: Record<string, unknown> | null) => RosterActionResult,
 ): Promise<RosterActionResult> {
   const { data, error } = await supabase
     .from('game_players')
-    .select(column)
+    .select(columns)
     .eq('game_id', gameId)
     .eq('user_id', playerUserId)
     .maybeSingle<Record<string, unknown>>();
 
   if (error) return failed('db', error.message);
-  return isDone(data ?? null) ? done(true) : failed('no-rows');
+  return classify(data ?? null);
 }
 
 /**
@@ -408,7 +415,9 @@ export async function removePlayerFromGame(
   if (deleted.error !== 'no-rows') return failed(deleted.error, deleted.message);
 
   // Borte = i mål. Fortsatt der = RLS nektet slettingen.
-  return resolveZeroRows(gameId, playerUserId, 'user_id', (row) => row === null);
+  return resolveZeroRows(gameId, playerUserId, 'user_id', (row) =>
+    row === null ? done(true) : failed('no-rows'),
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -480,11 +489,8 @@ export async function setPlayerTeam(
   if (updated.ok) return done(false);
   if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
 
-  return resolveZeroRows(
-    gameId,
-    playerUserId,
-    'team_number',
-    (row) => row?.team_number === teamNumber,
+  return resolveZeroRows(gameId, playerUserId, 'team_number', (row) =>
+    row?.team_number === teamNumber ? done(true) : failed('no-rows'),
   );
 }
 
@@ -544,11 +550,8 @@ export async function setPlayerFlight(
   if (updated.ok) return done(false);
   if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
 
-  return resolveZeroRows(
-    gameId,
-    playerUserId,
-    'flight_number',
-    (row) => row?.flight_number === flightNumber,
+  return resolveZeroRows(gameId, playerUserId, 'flight_number', (row) =>
+    row?.flight_number === flightNumber ? done(true) : failed('no-rows'),
   );
 }
 
@@ -587,10 +590,17 @@ async function refuseUnlessWithdrawable(
  * denne skrivingen for en ikke-admin oppretter — vakta har ingen creator-vei
  * ut av egen-rad-grenen. Da svarer Postgres 42501 og resultatet blir
  * `rls-denied`. Webben treffer det aldri, fordi den skriver med service-role.
+ *
+ * @param opts `onlyIfUnsubmitted` legger `submitted_at IS NULL` på selve
+ * UPDATE-en (#1896), slik at et kort som lander mens skrivet er underveis
+ * vinner i stedet for å bli overkjørt. Kun avslutt-flyten ber om den: fra
+ * roster-flaten er det helt lovlig å trekke en spiller som HAR levert, og en
+ * ubetinget regel her ville gjort den handlingen umulig (AGENTS.md felle 4).
  */
 export async function withdrawPlayer(
   gameId: string,
   playerUserId: string,
+  opts: { onlyIfUnsubmitted?: boolean } = {},
 ): Promise<RosterActionResult> {
   const userId = await currentDeviceUserId();
   const notReady = refuseUnlessReady(userId);
@@ -599,27 +609,40 @@ export async function withdrawPlayer(
   const blocked = await refuseUnlessWithdrawable(gameId);
   if (blocked) return blocked;
 
+  const onlyIfUnsubmitted = opts.onlyIfUnsubmitted === true;
+  const write = supabase
+    .from('game_players')
+    .update({
+      withdrawn_at: new Date().toISOString(),
+      withdrawn_by_user_id: userId,
+    })
+    .eq('game_id', gameId)
+    .eq('user_id', playerUserId)
+    .is('withdrawn_at', null);
+
   const updated = readWriteResult(
-    await supabase
-      .from('game_players')
-      .update({
-        withdrawn_at: new Date().toISOString(),
-        withdrawn_by_user_id: userId,
-      })
-      .eq('game_id', gameId)
-      .eq('user_id', playerUserId)
-      .is('withdrawn_at', null)
-      .select('user_id'),
+    await (onlyIfUnsubmitted ? write.is('submitted_at', null) : write).select(
+      'user_id',
+    ),
     'withdrawPlayer',
   );
   if (updated.ok) return done(false);
   if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
 
+  // Uten opt-in leses bare `withdrawn_at`, som før: der er «rakk å levere»
+  // ingen egen grunn, og et treff på leverte rader er selve poenget.
   return resolveZeroRows(
     gameId,
     playerUserId,
-    'withdrawn_at',
-    (row) => row?.withdrawn_at != null,
+    onlyIfUnsubmitted ? 'withdrawn_at, submitted_at' : 'withdrawn_at',
+    (row) => {
+      if (row === null) return failed('no-rows');
+      if (row.withdrawn_at != null) return done(true);
+      if (onlyIfUnsubmitted && row.submitted_at != null) {
+        return failed('already-submitted');
+      }
+      return failed('no-rows');
+    },
   );
 }
 
@@ -654,10 +677,7 @@ export async function undoWithdrawPlayer(
   if (updated.ok) return done(false);
   if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
 
-  return resolveZeroRows(
-    gameId,
-    playerUserId,
-    'withdrawn_at',
-    (row) => row !== null && row.withdrawn_at == null,
+  return resolveZeroRows(gameId, playerUserId, 'withdrawn_at', (row) =>
+    row !== null && row.withdrawn_at == null ? done(true) : failed('no-rows'),
   );
 }
