@@ -87,6 +87,16 @@ export function describeEndRoundFailure(
       // som ikke finnes.
       return `${lead}, så ingen ble trukket. Sjekk listen og prøv igjen.`;
     }
+    case 'withdraw-after-submit-partial': {
+      // Her BLE noen trukket: vakta på selve skrivet (#1896) slo til etter at
+      // de første i bunken alt var skrevet. Alltid én person, alltid ett kort.
+      // Lista på skjermen refreshes, og setningen må ikke love noe annet enn
+      // det den da viser.
+      const lead = who
+        ? `${who} leverte kortet sitt i mellomtiden`
+        : 'Et kort kom inn i mellomtiden';
+      return `${lead}. De andre du huket av er alt trukket. Sjekk listen og prøv igjen.`;
+    }
     case 'db-withdraw':
       return who
         ? `Fikk ikke trukket ${who}. Prøv igjen.`

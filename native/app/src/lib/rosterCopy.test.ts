@@ -37,6 +37,7 @@ const ROSTER_REASONS: RosterActionFailure[] = [
   'team-full',
   'flight-full',
   'rls-denied',
+  'already-submitted',
   'no-rows',
   'db',
 ];

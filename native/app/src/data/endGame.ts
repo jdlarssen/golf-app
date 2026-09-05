@@ -92,6 +92,13 @@ export type EndRoundFailure =
    * Fail-closed: da trekkes INGEN — heller ikke de andre avkryssede.
    */
   | 'withdraw-after-submit'
+  /**
+   * Samme kappløp, men fanget av selve skrivet (#1896) ETTER at de første i
+   * bunken alt var trukket. Delvis utfall: de før er trukket, denne er ikke.
+   * Egen kode fordi copyen for `withdraw-after-submit` lover at ingen ble
+   * trukket — og her stemmer ikke det.
+   */
+  | 'withdraw-after-submit-partial'
   /** Et frafalls-skriv feilet; spillet står fortsatt `active`. */
   | 'db-withdraw'
   /** Kåringen ble ikke lagret; spillet står fortsatt `active`, retry er trygt. */
@@ -118,7 +125,8 @@ export type EndRoundResult =
       reason: EndRoundFailure;
       /**
        * Hvem det står på, ved `not-all-submitted`, `not-all-approved`,
-       * `withdrawal-unsupported` og `db-withdraw`. Råstoff for copyen — uten
+       * `withdrawal-unsupported`, `withdraw-after-submit(-partial)` og
+       * `db-withdraw`. Råstoff for copyen — uten
        * navnene må arrangøren gjette hvem hen skal purre på.
        */
       blockedUserIds?: string[];
@@ -370,6 +378,17 @@ function lateSubmitters(
  * skjermen ble tegnet, og et kort kan komme inn mellom det trykket og dette
  * skrivet. Derfor leses rosteret ÉN gang til her, før første frafall — se
  * {@link lateSubmitters}.
+ *
+ * For-lesingen lukker likevel ikke vinduet helt: for spiller nummer N spenner
+ * det 2N+1 rundturer, og et kort kan lande inni det. Siste linje er derfor
+ * `onlyIfUnsubmitted` (#1896), som legger betingelsen i selve UPDATE-en.
+ *
+ * ⚠️ Den kan gi et DELVIS utfall: spillerne 1..N−1 er trukket når nummer N
+ * avvises. Det er akseptert — alternativet er å rulle tilbake trekk arrangøren
+ * faktisk ba om. Utfallet får da sin EGEN kode, `withdraw-after-submit-partial`,
+ * for copyen til `withdraw-after-submit` lover at ingen ble trukket. Skjermen
+ * refresher på begge og viser sann tilstand, og et trekk som ble for mye angres
+ * fra roster-flaten.
  */
 async function markWithdrawals(
   gameId: string,
@@ -389,9 +408,25 @@ async function markWithdrawals(
   // liste hen nettopp har fått vite at hen ikke kan stole på.
   if (late.length > 0) return failed('withdraw-after-submit', undefined, late);
 
+  let withdrawn = 0;
   for (const playerUserId of userIds) {
-    const result = await withdrawPlayer(gameId, playerUserId);
-    if (result.ok) continue;
+    const result = await withdrawPlayer(gameId, playerUserId, {
+      onlyIfUnsubmitted: true,
+    });
+    if (result.ok) {
+      withdrawn += 1;
+      continue;
+    }
+    // Samme form som for-lesingen gir (`blockedUserIds` = den som rakk å
+    // levere). Koden skiller på om noen alt ER trukket: bare da er «ingen ble
+    // trukket» usant, og da må setningen si noe annet.
+    if (result.reason === 'already-submitted') {
+      return failed(
+        withdrawn === 0 ? 'withdraw-after-submit' : 'withdraw-after-submit-partial',
+        undefined,
+        [playerUserId],
+      );
+    }
     return failed(
       result.reason === 'rls-denied' ? 'rls-denied' : 'db-withdraw',
       result.message,

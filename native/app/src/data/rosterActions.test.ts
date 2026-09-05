@@ -701,6 +701,102 @@ describe('rosterActions', () => {
         reason: 'no-rows',
       });
     });
+
+    // #1896 — opt-in. Avslutt-flyten ber om den, roster-flaten aldri: der er
+    // det lov å trekke en spiller som har levert.
+    it('legger submitted_at-filteret på selve skrivet med onlyIfUnsubmitted', async () => {
+      const { queryStub, routeFrom } = mocks();
+      const update = queryStub(ONE_ROW);
+      routeFrom({
+        games: [queryStub(gameRow('active', 'stableford'))],
+        game_players: [update],
+      });
+
+      expect(
+        await actions().withdrawPlayer(GAME, MATE, { onlyIfUnsubmitted: true }),
+      ).toEqual({ ok: true, alreadyDone: false });
+
+      expect(filtersOf(update)).toEqual([
+        `eq(game_id,${GAME})`,
+        `eq(user_id,${MATE})`,
+        'is(withdrawn_at,null)',
+        // Betingelsen ligger i UPDATE-en, ikke i en for-lesing: et kort som
+        // lander i mellomtiden gir 0 rader i stedet for å bli overkjørt.
+        'is(submitted_at,null)',
+      ]);
+    });
+
+    it('leser 0 rader som already-submitted når kortet kom inn før skrivet', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const lookup = queryStub({
+        data: { withdrawn_at: null, submitted_at: '2026-09-01T10:00:00.000Z' },
+        error: null,
+      });
+      routeFrom({
+        games: [queryStub(gameRow('active', 'best_ball'))],
+        game_players: [queryStub(ZERO_ROWS), lookup],
+      });
+
+      expect(
+        await actions().withdrawPlayer(GAME, MATE, { onlyIfUnsubmitted: true }),
+      ).toEqual({ ok: false, reason: 'already-submitted' });
+
+      // Uten BEGGE kolonnene kan oppfølgingen ikke skille «alt trukket» fra
+      // «rakk å levere» — og da blir grunnen gjettet.
+      expect(stepArgs(lookup, 'select')).toEqual([['withdrawn_at, submitted_at']]);
+    });
+
+    it('leser 0 rader som FEIL med opt-in når raden ikke er synlig', async () => {
+      // Null-grenen bevares også med opt-in: en usynlig rad er nektet, ikke
+      // «rakk å levere».
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('active', 'best_ball'))],
+        game_players: [queryStub(ZERO_ROWS), queryStub({ data: null, error: null })],
+      });
+
+      expect(
+        await actions().withdrawPlayer(GAME, MATE, { onlyIfUnsubmitted: true }),
+      ).toEqual({ ok: false, reason: 'no-rows' });
+    });
+
+    it('bryr seg ikke om submitted_at uten opt-in — roster-flaten trekker leverte lovlig', async () => {
+      // Uten opt-in har «rakk å levere» ingen egen grunn: oppfølgingen leser
+      // bare withdrawn_at, og en levert, ikke-trukket rad er et vanlig avslag.
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const lookup = queryStub({
+        data: { withdrawn_at: null, submitted_at: '2026-09-01T10:00:00.000Z' },
+        error: null,
+      });
+      routeFrom({
+        games: [queryStub(gameRow('active', 'best_ball'))],
+        game_players: [queryStub(ZERO_ROWS), lookup],
+      });
+
+      expect(await actions().withdrawPlayer(GAME, MATE)).toEqual({
+        ok: false,
+        reason: 'no-rows',
+      });
+      expect(stepArgs(lookup, 'select')).toEqual([['withdrawn_at']]);
+    });
+
+    it('leser 0 rader som suksess med opt-in når spilleren alt er trukket', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('active', 'best_ball'))],
+        game_players: [
+          queryStub(ZERO_ROWS),
+          queryStub({
+            data: { withdrawn_at: '2026-08-30T08:00:00.000Z', submitted_at: null },
+            error: null,
+          }),
+        ],
+      });
+
+      expect(
+        await actions().withdrawPlayer(GAME, MATE, { onlyIfUnsubmitted: true }),
+      ).toEqual({ ok: true, alreadyDone: true });
+    });
   });
 
   describe('undoWithdrawPlayer', () => {
