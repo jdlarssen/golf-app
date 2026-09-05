@@ -269,11 +269,6 @@ describe('buildScoringContext', () => {
       'unknown-mode',
     ],
     [
-      'mode_config mangler helt',
-      { game: { ...bundle().game, modeConfig: null } },
-      'missing-config',
-    ],
-    [
       'mode_config peker på et annet format enn game_mode',
       { game: { ...bundle().game, modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' } } },
       'missing-config',
@@ -303,6 +298,46 @@ describe('buildScoringContext', () => {
   ])('svarer nei uten å kaste: %s', (_label, overrides, problem) => {
     const outcome = buildScoringContext(bundle(overrides), []);
     expect(outcome).toEqual({ ok: false, problem });
+  });
+
+  // #1976: `games.mode_config` er `not null default '{}'::jsonb`, så en tom
+  // config er kolonnens egen default — ikke et ødelagt spill. Webben ruter på
+  // `games.game_mode` og leser feltene bak defensive vakter; appen krevde
+  // `kind`, og ga blindvei der nettsiden viste en helt vanlig tavle. To rader
+  // i prod traff dette, demo-runden App Review åpner var den ene.
+  describe('mode_config som mangler utledes fra game_mode', () => {
+    it.each<[string, unknown]>([
+      ['null', null],
+      ['tomt objekt — kolonnens default', {}],
+      ['kind er null', { kind: null }],
+      ['kind mangler, men andre felt finnes', { team_size: 2 }],
+      ['ikke et objekt i det hele tatt', 'stableford'],
+    ])('%s → kind hentes fra game_mode', (_label, modeConfig) => {
+      const outcome = buildScoringContext(
+        bundle({ game: { ...bundle().game, modeConfig } }),
+        [],
+      );
+      expect(outcome.ok).toBe(true);
+      // Nabofeltene tas bevisst IKKE med: ingen leser har sett dem, så å
+      // plukke dem opp ville gitt appen andre tall enn nettsiden.
+      expect(outcome.ok && outcome.ctx.game.mode_config).toEqual({ kind: 'stableford' });
+    });
+
+    // Uten denne raden ville et bart `{ kind: 'wolf' }` slått motorens
+    // kind-vakt PÅ og lest `wolf_scoring: undefined` — wolf ville flippet fra
+    // netto til brutto, stille. Wolf er ett av de åtte formatene appen lager.
+    it('wolf får med seg webbens netto-default, ikke bare kind', () => {
+      const outcome = buildScoringContext(
+        bundle({ game: { ...bundle().game, ...WOLF_GAME, modeConfig: {} } }),
+        [],
+        { wolfChoices: [] },
+      );
+      expect(outcome.ok).toBe(true);
+      expect(outcome.ok && outcome.ctx.game.mode_config).toEqual({
+        kind: 'wolf',
+        wolf_scoring: 'net',
+      });
+    });
   });
 });
 

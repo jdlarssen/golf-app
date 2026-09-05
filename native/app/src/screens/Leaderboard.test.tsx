@@ -224,11 +224,19 @@ describe('LeaderboardBody', () => {
   });
 
   it('sier at oppsettet mangler — ikke at formatet finnes på nettsiden', async () => {
-    // `mode_config` er borte: motoren narrower på den, så adapteren svarer
-    // `missing-config`. Fram til #1844 delte den tekst med den gatede grenen
-    // over og sendte spilleren til en nettside-tabell vi ikke vet finnes.
+    // Raden gir to motstridende svar på hva runden er: `game_mode` sier
+    // stableford, `mode_config.kind` sier skins. Motoren narrower på `kind`,
+    // så en gjetning her ville gitt tall som ser riktige ut. Fram til #1844
+    // delte grenen tekst med den gatede over og sendte spilleren til en
+    // nettside-tabell vi ikke vet finnes.
+    //
+    // En config som bare MANGLER er noe annet og havner ikke her lenger
+    // (#1976) — den utledes fra `game_mode`, slik webben gjør.
     await render(
-      <LeaderboardBody bundle={withGame({ modeConfig: null })} scores={mockLocalScores} />,
+      <LeaderboardBody
+        bundle={withGame({ modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' } })}
+        scores={mockLocalScores}
+      />,
     );
     expect(screen.getByTestId('leaderboard-missing-config')).toBeTruthy();
     expect(screen.getByText('Formatet er ikke satt opp for denne runden.')).toBeTruthy();
