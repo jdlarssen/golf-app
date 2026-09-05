@@ -659,27 +659,43 @@ export default async function GameHomePage({
           })
           .join('/')
       : '';
-    // Walkover-banneret skal si HVEM som får kampen — «motstanderne» er ingen
-    // hjelp for en spiller som åpner appen den morgenen. Lagnavnene bor på
-    // turneringsraden, som ikke er lastet her; ett slankt oppslag i den
-    // sjeldne walkover-grenen er billigere enn å bære dem gjennom hele siden.
+    // Turneringsraden bak en cup-kamp. Ett oppslag dekker to behov:
+    //  - Walkover-banneret skal si HVEM som får kampen — «motstanderne» er
+    //    ingen hjelp for en spiller som åpner appen den morgenen, og
+    //    lagnavnene bor her, ikke på spill-raden.
+    //  - #1814: trekk-lenka under peker til cup-siden, og der finnes ingen
+    //    knapp før cupen er i gang (`wrong_status`).
     // Service-role som resten av cup-flatene (#1542) — gaten er ruta.
+    const cupRow = game.tournament_id
+      ? (
+          await getAdminClient()
+            .from('tournaments')
+            .select('status, team_1_name, team_2_name')
+            .eq('id', game.tournament_id)
+            .maybeSingle<{
+              status: string;
+              team_1_name: string;
+              team_2_name: string;
+            }>()
+        ).data
+      : null;
     const decidedWinnerTeam =
       cupWithdrawalDecision?.outcome === 'walkover' && game.tournament_id
-        ? await (async () => {
-            const { data: cup } = await getAdminClient()
-              .from('tournaments')
-              .select('team_1_name, team_2_name')
-              .eq('id', game.tournament_id!)
-              .maybeSingle<{ team_1_name: string; team_2_name: string }>();
+        ? (() => {
             const side = cupWithdrawalDecision.winnerSide === 1 ? 1 : 2;
-            const name = side === 1 ? cup?.team_1_name : cup?.team_2_name;
+            const name = side === 1 ? cupRow?.team_1_name : cupRow?.team_2_name;
             // Slår oppslaget feil, eller står lagnavnet tomt, endte setningen
             // på «… så walkover til .». «Lag 1»/«Lag 2» sier i det minste
             // hvilken side som får kampen.
             return name?.trim() || t('teamValue', { number: side });
           })()
         : '';
+
+    // #1814: en cup-kamp står `scheduled` lenge før cupen selv er i gang
+    // (matchene genereres mens cupen er utkast). Cup-siden har ingen
+    // trekk-knapp da — bare setningen «Cupen er ikke i gang» — så lenka hit
+    // ville vært en blindvei. Ikke-cup-spill beholder sin vanlige vei ut.
+    const showWithdrawLink = !game.tournament_id || cupRow?.status === 'active';
 
     // #543: venteroms-velger og unassigned_flights-banner.
     // Vises bare når spillet er eligible for flight-inndeling (>4 aktive, ikke wolf).
@@ -1033,14 +1049,16 @@ export default async function GameHomePage({
         {/* Self-withdraw — kun pre-active (#199 chunk 11). Trekker brukeren
             ut av game_players + sender team_member_withdrew-varsel til
             kapteinen hvis bruker var team-medlem. */}
-        <div className="pt-2 pb-4">
-          <SmartLink
-            href={withdrawHref}
-            className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
-          >
-            {t('withdrawLink')}
-          </SmartLink>
-        </div>
+        {showWithdrawLink && (
+          <div className="pt-2 pb-4">
+            <SmartLink
+              href={withdrawHref}
+              className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
+            >
+              {t('withdrawLink')}
+            </SmartLink>
+          </div>
+        )}
       </AppShell>
     );
   }
