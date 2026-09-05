@@ -1,5 +1,11 @@
 # iOS-skall — bygg og push-oppsett
 
+> **Skall — erstattes av native-appen i N8 (#1954).** Fra butikk-byttet er det
+> `native/app/` som ligger under oppføringen `no.tornygolf.app`; bygg- og
+> slipp-runboken er `app-store-release.md`. Dette dokumentet beholdes fordi
+> skallet er rollback-reserven (kontrakten §7) til N8 er lukket + én
+> app-oppdatering. Slipp-datoen settes inn her i P7.
+
 Tørny på iOS er et Capacitor 8-skall (`native/ios/`) som laster
 `https://tornygolf.no` (remote-URL, arkitektur besluttet i spike #1281 — funn-notat
 på epic #1276). Ingen service worker i skallet; CapacitorCookies skal ALDRI
