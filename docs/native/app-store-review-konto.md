@@ -192,45 +192,65 @@ husker det gamle.
 
 ## Notes-mal til App Store Connect
 
-Lim inn som den er, med adressen fylt inn:
+Skrevet for native-appen som sendes inn i N8 (#1954, build `1.1.0 (3)`). Lim den
+inn som den er, med adressen og passordet i feltene over — notatet nevner ingen
+av delene selv.
+
+Navnene står med de tegnene appen faktisk viser («Tørny», «Demo Round — Tørny»).
+Anmelderen skal lete etter det som står på skjermen, ikke etter en forenklet
+skrivemåte.
 
 ```text
-Tørny is a golf tournament app. Signing in normally uses a one-time code sent
-by email, which is not practical for review, so we have prepared a dedicated
-account with a password. The password sign-in is hidden behind a long press.
+Tørny is a Norwegian golf tournament app. Signing in normally uses a one-time
+code sent by email, which is not practical for review, so we have prepared a
+dedicated account with a password. The password field is hidden behind a long
+press, so that players never meet a sign-in method they cannot use.
 
 HOW TO SIGN IN
-1. Open the app. You land on the sign-in screen with the title "Tørny".
-2. Press and hold the title "Tørny" for about two seconds. A password field
-   and a button labelled "Logg inn med passord" (Sign in with password)
-   appear below the email field.
-3. Enter the user name and password from the fields above and tap
-   "Logg inn med passord".
+1. Open the app. You land on the sign-in screen, titled "Tørny".
+2. Press and hold the title "Tørny" for about two seconds. A password field and
+   a button labelled "Logg inn med passord" (Sign in with password) appear
+   below the email field.
+3. Enter the user name and password from the fields above, then tap
+   "Logg inn med passord". The password is long and random, so pasting it is
+   the surest way in.
 
 LANGUAGE
 The app is in Norwegian, its home market. The labels you will need:
-"Profil" = Profile (top right on the home screen), "Slett konto" = Delete
-account, "Logg ut" = Sign out, "Lever scorekort" = Submit scorecard,
-"Resultater" = Results (the leaderboard).
+"Profil" = Profile (top right on the home screen)
+"Fortsett runden" = Continue the round
+"Scorekort" = Scorecard
+"Lever scorekort" = Submit scorecard
+"Resultater" = Results (the leaderboard)
+"Logg ut" = Sign out
+"Slett konto" = Delete account
 
 WHAT YOU WILL SEE
-The account plays in an active demo round ("Demo Round — Tørny") with three
-co-players. Holes 1-6 are already scored for the co-players and holes 1-3 for
-the review account, so you can continue on hole 4, watch the leaderboard update
-and submit the scorecard. The round is hosted by a different account, so
-closing the round itself is not part of this account's view.
+The account plays in an active demo round called "Demo Round — Tørny", with
+three co-players. Holes 1-6 are already scored for the co-players and holes 1-3
+for the review account, so you can tap "Fortsett runden", continue on hole 4,
+watch "Resultater" update, and submit the card with "Lever scorekort". The round
+is hosted by a different account, so ending the round itself is not part of this
+account's view.
 
 FEATURES WORTH TESTING
-- Account deletion: tap "Profil" (top right) -> "Slett konto" -> confirm.
-  It goes through; the account is withdrawn from the demo round automatically.
-  You are signed out afterwards and these credentials stop working — that is
-  the expected result, and we restore the account and the demo data before
-  every submission.
-- Offline scoring: enable Airplane Mode while entering scores on a hole. The
-  scores are stored on the device and sync automatically once you go back
-  online — no data is lost.
+- Account deletion (5.1.1(v)): "Profil" (top right) -> "Slett konto" ->
+  confirm. It goes through. The account is withdrawn from the demo round
+  automatically, you are signed out, and these credentials stop working
+  afterwards. That is the expected result: we restore the account and the demo
+  data before every submission.
+- Offline scoring: turn on Airplane Mode while entering scores on a hole. The
+  scores are kept on the device and sync by themselves once it is back online.
+  Nothing is lost.
 
-The account is for review only and contains no real player data.
+WHAT THE APP DOES NOT DO
+- No push notifications. The app never asks for notification permission.
+- No location access. The app does not read the device location at all.
+- No purchases, no advertising, no third-party tracking.
+- The app plays eight golf formats. A round in any other format opens on our
+  website instead, and the app says so with a button that opens Safari.
+
+The account exists for review only and holds no real player data.
 ```
 
 ## Hva som bevisst IKKE ligger i repoet
