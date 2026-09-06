@@ -11,19 +11,24 @@ import { WEB_LINK_TEXT } from './webLink';
 
 type ChoiceFailure = Parameters<typeof describeChoiceFailure>[0];
 
-const ALL_CODES: readonly ChoiceFailure[] = [
-  'not_authenticated',
-  'invalid_hole',
-  'invalid_choice',
-  'partner_required',
-  'partner_must_be_null',
-  'partner_cannot_be_wolf',
-  'game_finished',
-  'game_not_found',
-  'rls_denied',
-  'no_rows',
-  'db_error',
-];
+// Kartet — ikke en håndholdt liste — er det som gjør dekningen komplett:
+// mangler en kode her, faller `tsc` på `satisfies` i det en ny feilkode dukker
+// opp i unionen. Da rekker den aldri ut i appen uten sin egen setning.
+const CODE_MAP = {
+  not_authenticated: true,
+  invalid_hole: true,
+  invalid_choice: true,
+  partner_required: true,
+  partner_must_be_null: true,
+  partner_cannot_be_wolf: true,
+  game_finished: true,
+  game_not_found: true,
+  rls_denied: true,
+  no_rows: true,
+  db_error: true,
+} as const satisfies Record<ChoiceFailure, true>;
+
+const ALL_CODES = Object.keys(CODE_MAP) as readonly ChoiceFailure[];
 
 describe('describeChoiceFailure', () => {
   it('gir hver feilkode sin egen norske setning', () => {
