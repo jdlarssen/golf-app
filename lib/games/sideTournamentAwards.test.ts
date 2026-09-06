@@ -30,8 +30,8 @@ function award(
 
 const ALL_SIDE_CATEGORIES: SideCategory[] = [
   'best_netto_18',
-  'best_netto_front9',
-  'best_netto_back9',
+  'best_netto_f9',
+  'best_netto_b9',
   'hole_win',
   'longest_drive',
   'closest_to_pin',
@@ -114,19 +114,19 @@ describe('selectNotableAwards', () => {
   it('returns [] when all awards are netto-race categories', () => {
     const input = [
       award('best_netto_18', 10),
-      award('best_netto_front9', 5),
-      award('best_netto_back9', 5),
+      award('best_netto_f9', 5),
+      award('best_netto_b9', 5),
     ];
     expect(selectNotableAwards(input, 3)).toEqual([]);
   });
 
   // ── netto-race filtering ─────────────────────────────────────────────────
 
-  it('drops best_netto_18, best_netto_front9, best_netto_back9', () => {
+  it('drops best_netto_18, best_netto_f9, best_netto_b9', () => {
     const input = [
       award('best_netto_18', 10),
-      award('best_netto_front9', 5),
-      award('best_netto_back9', 5),
+      award('best_netto_f9', 5),
+      award('best_netto_b9', 5),
       award('turkey', 4),
     ];
     const result = selectNotableAwards(input, 5);

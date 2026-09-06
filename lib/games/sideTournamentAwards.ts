@@ -25,8 +25,8 @@ import type { SideCategory, SideCategoryAward } from '@/lib/scoring/sideTourname
 export const SIDE_CATEGORY_CARD_LABEL: Record<SideCategory, string> = {
   // Netto-race (podium duplicates — filtered out by selectNotableAwards)
   best_netto_18: 'Best netto 18',
-  best_netto_front9: 'Best netto F9',
-  best_netto_back9: 'Best netto B9',
+  best_netto_f9: 'Best netto F9',
+  best_netto_b9: 'Best netto B9',
 
   // Hull-konkurranser
   hole_win: 'Hole-win',
@@ -95,8 +95,8 @@ export const SIDE_CATEGORY_CARD_LABEL: Record<SideCategory, string> = {
 
 const NETTO_RACE_CATEGORIES = new Set<SideCategory>([
   'best_netto_18',
-  'best_netto_front9',
-  'best_netto_back9',
+  'best_netto_f9',
+  'best_netto_b9',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -108,8 +108,8 @@ const NETTO_RACE_CATEGORIES = new Set<SideCategory>([
  * for display on a shareable result-card image.
  *
  * Selection rules (applied in order):
- * 1. Drop the base netto-race categories (`best_netto_18`, `best_netto_front9`,
- *    `best_netto_back9`) — those duplicate the podium/standings strip.
+ * 1. Drop the base netto-race categories (`best_netto_18`, `best_netto_f9`,
+ *    `best_netto_b9`) — those duplicate the podium/standings strip.
  * 2. Deduplicate by `category` — keep the entry with the highest `points` per
  *    category (stackable categories like `turkey` can appear multiple times; we
  *    collapse to the representative highest-value instance).

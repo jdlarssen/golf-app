@@ -474,19 +474,19 @@ function TeamAwards({
       </>
     ));
   }
-  if (awards.some((a) => a.category === 'best_netto_front9')) {
-    push('hovedkonkurranser', 'best_netto_front9', 5, 'best_netto_front9', (
+  if (awards.some((a) => a.category === 'best_netto_f9')) {
+    push('hovedkonkurranser', 'best_netto_f9', 5, 'best_netto_f9', (
       <>
         {t('awards.bestNettoFront9')} <Pts n={5} />
-        {tieSuffix(tieMates('best_netto_front9'))}
+        {tieSuffix(tieMates('best_netto_f9'))}
       </>
     ));
   }
-  if (awards.some((a) => a.category === 'best_netto_back9')) {
-    push('hovedkonkurranser', 'best_netto_back9', 5, 'best_netto_back9', (
+  if (awards.some((a) => a.category === 'best_netto_b9')) {
+    push('hovedkonkurranser', 'best_netto_b9', 5, 'best_netto_b9', (
       <>
         {t('awards.bestNettoBack9')} <Pts n={5} />
-        {tieSuffix(tieMates('best_netto_back9'))}
+        {tieSuffix(tieMates('best_netto_b9'))}
       </>
     ));
   }

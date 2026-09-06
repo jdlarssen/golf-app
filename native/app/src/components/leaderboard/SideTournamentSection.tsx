@@ -717,8 +717,8 @@ function buildAwardRows({
     [SideCategory, keyof typeof SIDE_TOURNAMENT_POINTS]
   > = [
     ['best_netto_18', 'bestNetto18'],
-    ['best_netto_front9', 'bestNettoF9'],
-    ['best_netto_back9', 'bestNettoB9'],
+    ['best_netto_f9', 'bestNettoF9'],
+    ['best_netto_b9', 'bestNettoB9'],
   ];
   for (const [category, pointsKey] of mainCompetitions) {
     if (!has(category)) continue;
