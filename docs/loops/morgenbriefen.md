@@ -229,11 +229,17 @@ postet (primærartefakten), så eieren kan lese den der.
 
 ## Månedlig arkivering
 
-Første brief i ny måned: flytt forrige måneds kommentarer til
-`docs/loops/logg/<år>-<måned>.md` via docs-PR. Arkiverte kommentarer kan ikke
-redigeres bort fra #1110; lenk til arkivfila i briefen i stedet. Samme runde
-arkiverer lanserings-tavla #1208 (Utroperens forslag + ✅-markører) til samme
-fil.
+Første brief i ny måned MELDER at forrige måneds kommentarer er due for
+arkivering — briefen er read-only (se over) og gjør ikke jobben selv. Inntil
+#1996 (månedlig GitHub Action) er på plass, tar en økt den for hånd: kopier
+forrige måneds kommentarer verbatim til
+`docs/loops/logg/<år>-<måned>-<tavle>-<issuenr>.md` (én fil per tavle; format
+i `docs/loops/logg/README.md`) via docs-PR, og slett kommentarene fra tavla
+FØRST ETTER at PR-en er merget, så kopien ligger på `main` før noe forsvinner
+(eierbeslutning 2026-09-06 — den gamle setningen om at kommentarene «ikke kan
+redigeres bort» var feil; juli ble òg arkivert ved sletting). Samme runde
+arkiverer lanserings-tavla #1208 (Utroperens forslag + ✅-markører) til sin
+egen fil. Briefen lenker til arkivfilene når den viser til eldre hendelser.
 
 Arkiv-PR-en er docs-only og har ikke noe produktvalg, så etter #1406 auto-merger
 PR-kortet den selv når checkene er grønne (kvitteringsutfall — forventet og
