@@ -53,7 +53,7 @@ og en etikett som underrapporterer er en avvisningsgrunn.
 | Marketing-URL | (tom) |
 | Personvern-URL | `https://tornygolf.no/legal/privacy` |
 | Aldersgrense | 4+ |
-| Kategori | Sports (primær), Utilities (sekundær) |
+| Kategori | Sports (primær). Anbefaling — sjekk hva som faktisk står i App Store Connect før innsending; den ble satt da appen ble opprettet (#1283) og er ikke lest av i denne økta. |
 
 ## Undertittel (maks 30 tegn)
 
