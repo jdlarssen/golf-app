@@ -143,8 +143,8 @@ function characterizationResult(): SideTournamentResult {
         awards: [
           // Hovedkonkurranser (bespoke, tieSuffix)
           a('best_netto_18'),
-          a('best_netto_front9'),
-          a('best_netto_back9'),
+          a('best_netto_f9'),
+          a('best_netto_b9'),
           // Skill — 11-pair run #1..#7 (simple dual variants)
           a('best_brutto_18_team'),
           a('best_brutto_18_individual', { winnerUserId: 'u1' }),

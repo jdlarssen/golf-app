@@ -7,53 +7,14 @@ import { SIDE_TOURNAMENT_POINTS, type SideCategoryId } from './sideTournamentCon
 export type TeamId = number;
 export type UserId = string;
 
-export type SideCategory =
-  | 'best_netto_18'
-  | 'best_netto_front9'
-  | 'best_netto_back9'
-  | 'hole_win'
-  | 'longest_drive'
-  | 'closest_to_pin'
-  | 'most_birdies_team'
-  | 'most_birdies_individual'
-  | 'most_eagles_team'
-  | 'most_eagles_individual'
-  | 'most_pars_team'
-  | 'most_pars_individual'
-  | 'best_brutto_18_team'
-  | 'best_brutto_18_individual'
-  | 'best_brutto_f9_team'
-  | 'best_brutto_f9_individual'
-  | 'best_brutto_b9_team'
-  | 'best_brutto_b9_individual'
-  | 'king_par3_team'
-  | 'king_par3_individual'
-  | 'king_par5_team'
-  | 'king_par5_individual'
-  | 'longest_bogey_free_streak'
-  | 'lowest_single_hole_brutto'
-  | 'turkey'
-  | 'solid'
-  | 'snowman'
-  // v1.19.0 new categories (issue #169)
-  | 'most_albatrosses_team'
-  | 'most_albatrosses_individual'
-  | 'most_hole_in_ones_team'
-  | 'most_hole_in_ones_individual'
-  | 'king_par4_team'
-  | 'king_par4_individual'
-  | 'clean_front_9'
-  | 'clean_back_9'
-  | 'no_double_plus_round'
-  | 'hardest_hole_winner'
-  | 'comeback_kid'
-  | 'all_par_groups_birdie'
-  | 'even_par_round'
-  | 'back_to_back_birdies'
-  | 'team_all_birdied_bonus'
-  | 'team_no_bogey_hole_coord'
-  | 'worst_single_hole_brutto'
-  | 'most_double_bogeys_individual';
+/**
+ * The category catalog has exactly one home: `SideCategoryId` in
+ * `sideTournamentConfig.ts` (mirrored by the DB CHECK
+ * `games_side_disabled_categories_valid`). This alias exists so awards and the
+ * config vocabulary can never drift apart again — the gate name and the award
+ * name are the same string.
+ */
+export type SideCategory = SideCategoryId;
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -445,7 +406,7 @@ export function calculateSideTournament(
       total: sumHoles(t.perHoleNetto, 0, 9),
     }));
     for (const teamId of findMinTeams(totalsF9)) {
-      award(teamId, { category: 'best_netto_front9', teamId, points: 5 });
+      award(teamId, { category: 'best_netto_f9', teamId, points: 5 });
     }
   }
 
@@ -456,7 +417,7 @@ export function calculateSideTournament(
       total: sumHoles(t.perHoleNetto, 9, 18),
     }));
     for (const teamId of findMinTeams(totalsB9)) {
-      award(teamId, { category: 'best_netto_back9', teamId, points: 5 });
+      award(teamId, { category: 'best_netto_b9', teamId, points: 5 });
     }
   }
 

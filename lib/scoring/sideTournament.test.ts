@@ -76,8 +76,8 @@ describe('calculateSideTournament', () => {
     const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
     const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
 
-    expect(t1.awards.find((a) => a.category === 'best_netto_front9')?.points).toBe(5);
-    expect(t2.awards.find((a) => a.category === 'best_netto_back9')?.points).toBe(5);
+    expect(t1.awards.find((a) => a.category === 'best_netto_f9')?.points).toBe(5);
+    expect(t2.awards.find((a) => a.category === 'best_netto_b9')?.points).toBe(5);
   });
 
   it('hole-win: alone winner gets 2 points per hole', () => {
@@ -208,9 +208,9 @@ describe('calculateSideTournament', () => {
     const team1 = result.teamStandings.find((t) => t.teamId === 1)!;
     const team2 = result.teamStandings.find((t) => t.teamId === 2)!;
 
-    // Team 1: best_netto_18 (10, tie) + best_netto_front9 (5) + hole_win F9 (18) + LD (2) + CTP (2) = 37
+    // Team 1: best_netto_18 (10, tie) + best_netto_f9 (5) + hole_win F9 (18) + LD (2) + CTP (2) = 37
     expect(team1.totalPoints).toBe(37);
-    // Team 2: best_netto_18 (10, tie) + best_netto_back9 (5) + hole_win B9 (18) + LD (2) + CTP (2) = 37
+    // Team 2: best_netto_18 (10, tie) + best_netto_b9 (5) + hole_win B9 (18) + LD (2) + CTP (2) = 37
     expect(team2.totalPoints).toBe(37);
   });
 
@@ -272,33 +272,33 @@ describe('calculateSideTournament', () => {
 
       expect(awards.some((a) => a.category === 'best_netto_18')).toBe(false);
       // Spot-check: other categories still fire (team 1 still wins F9/B9/hole-wins)
-      expect(awards.some((a) => a.category === 'best_netto_front9')).toBe(true);
+      expect(awards.some((a) => a.category === 'best_netto_f9')).toBe(true);
       expect(awards.some((a) => a.category === 'hole_win')).toBe(true);
     });
 
-    it('skips best_netto_front9 when best_netto_f9 in disabledCategories', () => {
+    it('skips best_netto_f9 when in disabledCategories', () => {
       // Team 1 wins F9 outright in baseInput
       const input = baseInput();
       input.config = { ...input.config, disabledCategories: ['best_netto_f9'] };
       const result = calculateSideTournament(input);
       const awards = result.teamStandings.flatMap((s) => s.awards);
 
-      expect(awards.some((a) => a.category === 'best_netto_front9')).toBe(false);
+      expect(awards.some((a) => a.category === 'best_netto_f9')).toBe(false);
       // Spot-check: 18-hole netto and B9 still fire
       expect(awards.some((a) => a.category === 'best_netto_18')).toBe(true);
-      expect(awards.some((a) => a.category === 'best_netto_back9')).toBe(true);
+      expect(awards.some((a) => a.category === 'best_netto_b9')).toBe(true);
     });
 
-    it('skips best_netto_back9 when best_netto_b9 in disabledCategories', () => {
+    it('skips best_netto_b9 when in disabledCategories', () => {
       const input = baseInput();
       input.config = { ...input.config, disabledCategories: ['best_netto_b9'] };
       const result = calculateSideTournament(input);
       const awards = result.teamStandings.flatMap((s) => s.awards);
 
-      expect(awards.some((a) => a.category === 'best_netto_back9')).toBe(false);
+      expect(awards.some((a) => a.category === 'best_netto_b9')).toBe(false);
       // Spot-check: 18-hole netto and F9 still fire
       expect(awards.some((a) => a.category === 'best_netto_18')).toBe(true);
-      expect(awards.some((a) => a.category === 'best_netto_front9')).toBe(true);
+      expect(awards.some((a) => a.category === 'best_netto_f9')).toBe(true);
     });
 
     it('skips hole_win when in disabledCategories', () => {
@@ -357,8 +357,8 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'hole_win')).toBe(false);
       expect(awards.some((a) => a.category === 'best_netto_18')).toBe(false);
       // Spot-check: F9 and B9 still fire
-      expect(awards.some((a) => a.category === 'best_netto_front9')).toBe(true);
-      expect(awards.some((a) => a.category === 'best_netto_back9')).toBe(true);
+      expect(awards.some((a) => a.category === 'best_netto_f9')).toBe(true);
+      expect(awards.some((a) => a.category === 'best_netto_b9')).toBe(true);
     });
   });
 
@@ -3417,9 +3417,9 @@ describe('calculateSideTournament', () => {
       expect(t2.awards.find((a) => a.category === 'best_netto_18')).toBeUndefined();
       expect(t3.awards.find((a) => a.category === 'best_netto_18')).toBeUndefined();
 
-      // best_netto_front9 / back9: user-a wins both (38 vs 39 vs 45 and 34 vs 38 vs 45)
-      expect(t1.awards.find((a) => a.category === 'best_netto_front9')?.points).toBe(5);
-      expect(t1.awards.find((a) => a.category === 'best_netto_back9')?.points).toBe(5);
+      // best_netto_f9 / best_netto_b9: user-a wins both (38 vs 39 vs 45 and 34 vs 38 vs 45)
+      expect(t1.awards.find((a) => a.category === 'best_netto_f9')?.points).toBe(5);
+      expect(t1.awards.find((a) => a.category === 'best_netto_b9')?.points).toBe(5);
 
       // hole_win: at least some alone-wins fire (team 1 wins many alone)
       const t1HoleWins = t1.awards.filter((a) => a.category === 'hole_win');

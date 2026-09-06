@@ -463,10 +463,10 @@ speiler subsettet i `src/lib/sideTournamentCopy.ts`, og en **jest-paritetstest**
 importerer `messages/no.json` node-side og krever at hver streng er identisk.
 Drift fanges i CI uten at JSON-en havner i app-bundelen.
 
-⚠️ Oppslagstabellen er nøklet på `SideCategory` (`lib/scoring/sideTournament.ts`),
-ikke `SideCategoryId` (`sideTournamentConfig.ts`). De to unionene har 45 medlemmer
-hver og er identiske bortsett fra `best_netto_front9`/`best_netto_back9` mot
-`best_netto_f9`/`best_netto_b9` — se #1851.
+Oppslagstabellen er nøklet på `SideCategory` (`lib/scoring/sideTournament.ts`),
+som etter #1851 bare er et alias for `SideCategoryId` (`sideTournamentConfig.ts`).
+Kategori-ordforrådet har dermed ett hjem — config-navnet er både det admin skrur
+AV og det utdelingen bærer.
 
 ### Ærlig note framfor feil tall
 

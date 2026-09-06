@@ -125,22 +125,17 @@ export const MATCHPLAY_SIDE_TEXT = {
 /**
  * Kategori → etikett-nøkkel.
  *
- * **Avvik verdt å kjenne til.** Oppgaven ba om oppslag på `SideCategoryId`
- * (`lib/scoring/sideTournamentConfig.ts`). To ting gjør et rett oppslag umulig:
+ * **Avvik verdt å kjenne til.** Tabellen slår opp på kategori-id-en, men kan
+ * ikke utledes mekanisk: kategoriene er snake_case (`most_birdies_team`),
+ * etikettene camelCase (`mostBirdiesTeam`), og ingen regel dekker begge veier
+ * (`king_par3_team` → `kingPar3Team`, `clean_front_9` → `cleanFront9`). Tabellen
+ * under ER kartet.
  *
- *  - **Ordforrådet stemmer ikke overens med i18n-nøklene.** Kategoriene er
- *    snake_case (`most_birdies_team`), etikettene camelCase
- *    (`mostBirdiesTeam`). Det finnes ingen mekanisk regel som dekker begge
- *    veier (`king_par3_team` → `kingPar3Team`, `clean_front_9` →
- *    `cleanFront9`), så tabellen under ER kartet.
- *  - **Det finnes to kategori-unioner.** `SideCategoryId` er config-
- *    ordforrådet (hva admin kan skru AV), `SideCategory` er det utdelte
- *    resultatet bærer. Begge har 45 medlemmer og er identiske bortsett fra to:
- *    config sier `best_netto_f9`/`best_netto_b9`, utdelingen sier
- *    `best_netto_front9`/`best_netto_back9`. Komponentlaget itererer over
- *    `SideCategoryAward.category`, altså `SideCategory` — så tabellen er
- *    nøklet på den. `Record` gir uttømmende dekning: legger noen til en
- *    kategori i motoren, stopper `tsc` her.
+ * Kategori-ordforrådet har ett hjem: `SideCategory` (motoren) er bare et alias
+ * for `SideCategoryId` (config-ordforrådet — hva admin kan skru AV), så
+ * gate-navnet og utdelings-navnet er samme streng. Komponentlaget itererer over
+ * `SideCategoryAward.category`, og tabellen er nøklet på den. `Record` gir
+ * uttømmende dekning: legger noen til en kategori i motoren, stopper `tsc` her.
  *
  * Tre awards-nøkler står med vilje utenfor tabellen: `holeWinsOn` (halesetning
  * til `holeWins`, ikke en egen kategori) og `turkeyCoord`/`solidCoord` — se
@@ -148,8 +143,8 @@ export const MATCHPLAY_SIDE_TEXT = {
  */
 export const AWARD_LABEL_KEY_BY_CATEGORY: Record<SideCategory, SideAwardLabelKey> = {
   best_netto_18: 'bestNetto18',
-  best_netto_front9: 'bestNettoFront9',
-  best_netto_back9: 'bestNettoBack9',
+  best_netto_f9: 'bestNettoFront9',
+  best_netto_b9: 'bestNettoBack9',
   best_brutto_18_team: 'bestBrutto18Team',
   best_brutto_18_individual: 'bestBrutto18Individual',
   best_brutto_f9_team: 'bestBruttoF9Team',
