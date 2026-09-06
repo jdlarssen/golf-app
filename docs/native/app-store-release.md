@@ -163,7 +163,9 @@ butikkbygget — skriptet skriver aldri til den.
    demo-runden, aldri en syntetisk runde.
 3. **App Review-pakken (P6)** — kontrakten §5: revidert personvern-etikett (ingen posisjon),
    omskrevet beskrivelse (bare det appen kan), skjermbilder fra staging-data, review-notatet
-   i `app-store-review-konto.md`. Eieren re-provisjonerer review-kontoen FØR innsending og
+   i `app-store-review-konto.md`. Alt eieren limer inn — klikk-tabellen for personvern,
+   undertittel, nøkkelord, promotekst, beskrivelse og skjermbilde-kravene — står i
+   [`app-store-metadata.md`](app-store-metadata.md). Eieren re-provisjonerer review-kontoen FØR innsending og
    ETTER hver review (`app-store-review-konto.md` §Reset).
 4. **Innsending = manuell utgivelse** («Manually release this version»). Eieren trykker
    «Release This Version» når det passer.
