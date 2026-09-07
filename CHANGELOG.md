@@ -16,6 +16,110 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.236.0 · mandag 7. september 2026
+
+<details>
+<summary><strong>Slutt på falsk alarm om spillermangel</strong></summary>
+
+[#1794](https://github.com/jdlarssen/golf-app/issues/1794) — Beskjeden om at du mangler spillere dukker nå bare opp når du faktisk står alene, ikke hver gang du har under åtte i lista.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
+<summary><strong>Ett trykk mindre når du setter opp en runde</strong></summary>
+
+[#1794](https://github.com/jdlarssen/golf-app/issues/1794) — Velger du hva slags arrangement det er, hopper veiviseren rett videre til formatet — «Neste» på det første steget er historie.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
+<summary><strong>Spill-detaljene samlet på færre kort</strong></summary>
+
+[#1795](https://github.com/jdlarssen/golf-app/issues/1795) — Format og bane står nå i ett kort på spillets admin-side, og «Steng påmelding» har flyttet inn i Påmelding-kortet — mindre å scrolle forbi før du finner det du skal gjøre.
+
+↳ /admin/games · «Åpne spillene»
+</details>
+
+<details>
+<summary><strong>Mine tall samlet i historikken</strong></summary>
+
+[#1800](https://github.com/jdlarssen/golf-app/issues/1800) — «Mine tall» ligger nå øverst i historikken, sammen med resten av statistikken din — og profilen har fått en ryddigere forside med tydelig vei dit.
+
+↳ /profile/historikk · «Se tallene dine»
+</details>
+
+<details>
+<summary><strong>Trekk deg fra en cup uten å velte kampene</strong></summary>
+
+[#1814](https://github.com/jdlarssen/golf-app/issues/1814) — Blir du syk midt i en cup kan du nå trekke deg: sier du fra i god tid blir kampene dine halvert, er det under en halvtime til start går de som tap — og i fourball kan makkeren spille videre alene.
+
+↳ /admin/cup · «Åpne cupen»
+</details>
+
+<details>
+<summary><strong>Mørk modus i hele appen</strong></summary>
+
+[#1833](https://github.com/jdlarssen/golf-app/issues/1833) — Appen følger nå mørk modus på alle skjermer — ikke bare på oppstartsbildet.
+</details>
+
+<details>
+<summary><strong>Velg antall matcher per økt</strong></summary>
+
+[#1883](https://github.com/jdlarssen/golf-app/issues/1883) — Genererings-veiviseren lar deg nå skru ned antall matcher i hver økt — kjør 12 singler selv om lagene har 16 spillere, så står resten over.
+
+↳ /admin/cup · «Sett opp cupen»
+</details>
+
+<details>
+<summary><strong>Cup i Ryder Cup-størrelse</strong></summary>
+
+[#1883](https://github.com/jdlarssen/golf-app/issues/1883) — Personlige cuper tar nå 40 deltakere og 36 matcher — nok til et fullt Ryder Cup-oppsett med 16 spillere per lag og kapteiner på toppen.
+
+↳ /admin/cup · «Sett opp cupen»
+</details>
+
+<details>
+<summary><strong>Kapteinene gjør uttaket selv</strong></summary>
+
+[#1884](https://github.com/jdlarssen/golf-app/issues/1884) — Pek ut en kaptein per lag, så setter de laget for hver økt selv. Ingen får se motstanderens oppstilling før begge har levert.
+
+↳ /admin/cup · «Sett opp kapteiner»
+</details>
+
+<details>
+<summary><strong>Purr på dem som mangler scorekort</strong></summary>
+
+[#1889](https://github.com/jdlarssen/golf-app/issues/1889) — Har noen ikke levert scorekortet når du skal avslutte runden, kan du purre på dem der og da, i stedet for å markere dem som trukket bare for å komme videre.
+
+↳ / · «Åpne runden din»
+</details>
+
+<details>
+<summary><strong>Poengmålet er klart før første ball slås</strong></summary>
+
+[#1902](https://github.com/jdlarssen/golf-app/issues/1902) — Du sier hvor mange kamper cupen skal ha i alt, og poengmålet følger tallet. En Ryder Cup som starter med 8 av 28 kamper sier «først til 14,5» fra dag én, ikke 4,5.
+
+↳ /admin/cup · «Sett opp cupen»
+</details>
+
+<details>
+<summary>11 rettinger</summary>
+
+- [#1810](https://github.com/jdlarssen/golf-app/issues/1810) — Cup-påmeldingen og matchgenereringen slipper ikke lenger noen forbi deltaker- og matchtaket hvis databasen svikter midt i tellingen.
+- [#1815](https://github.com/jdlarssen/golf-app/issues/1815) — Serveren står nå i Stockholm i stedet for Washington, så hvert sidebytte i appen venter mindre på data.
+- [#1836](https://github.com/jdlarssen/golf-app/issues/1836) — Wolf-valget og Bingo-Bango-Bongo-registreringen dukker nå opp hos resten av flighten med en gang — ingen trenger å laste siden på nytt.
+- [#1837](https://github.com/jdlarssen/golf-app/issues/1837) — Velger du arrangement i opprett-veiviseren, følger tastaturet og skjermleseren nå med til steg 2 — før havnet de på toppen av siden uten å si at steget hadde byttet.
+- [#1838](https://github.com/jdlarssen/golf-app/issues/1838) — «For få spillere»-banneret på admin-sidene dukker nå bare opp når du faktisk står alene — før maste det helt opp til sju spillere.
+- [#1842](https://github.com/jdlarssen/golf-app/issues/1842) — Duellkortet på Resultater i appen viser nå hele lagnavnene — lange navn brytes over flere linjer i stedet for å bli klippet.
+- [#1852](https://github.com/jdlarssen/golf-app/issues/1852) — Lengste bogey-fri rekke i sideturneringen sier nå «18 på hull 1–18» — før sto ordet «hull» to ganger.
+- [#1858](https://github.com/jdlarssen/golf-app/issues/1858) — Stopper publiseringen av et spill, sier appen nå hva som er galt med formatet du faktisk holder på med — ikke «singles matchplay krever nøyaktig 2 spillere» til en wolf-runde med seks.
+- [#1876](https://github.com/jdlarssen/golf-app/issues/1876) — Teksten om hva du beholder når du sletter kontoen er delt i to setninger og lettere å lese.
+- [#1895](https://github.com/jdlarssen/golf-app/issues/1895) — Trekker du deg fra en runde, kan du fortsatt se ditt eget scorekort på nettsiden, slik du alt kan i appen. Du kan bare ikke levere det.
+- [#1909](https://github.com/jdlarssen/golf-app/issues/1909) — Du kan nå slette kontoen din selv om du er med i en runde som pågår — du blir trukket automatisk, og resten av gruppa spiller videre. Bare den som arrangerer noe uavsluttet må avslutte det først.
+</details>
+
 ### 1.235.0 · mandag 31. august 2026
 
 <details>
