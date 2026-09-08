@@ -87,13 +87,13 @@ utvides når nye målbare claims dukker opp i styringsdokumentene.
 
 | # | Påstand (hjem) | Bevis-kommando | Sist verifisert |
 |---|---|---|---|
-| C1 | CLAUDE.md → Datamodell: tabell-antall og peker til generert seksjon | Steg 1-spørringen (`tables_total`) | 2026-08-31 (38 → **39** fikset i CLAUDE.md; kilde: generert seksjon målt 2026-08-30, dok-skjema-kjøring #10) |
-| C2 | CLAUDE.md → Scoring: tall-løs formulering + fasit-kommando | `npx vitest run lib/scoring` | 2026-08-31 (1176 uendret; 46 filer / 1176 tester grønne) |
-| C3 | CLAUDE.md → Samarbeidsmodell: SQL-tilgang beskriver MCP + staging-først + prod-luke | grep «Supabase MCP» CLAUDE.md; `.claude/hooks/mcp-guard.sh` finnes | 2026-08-31 (2 treff «Supabase MCP»; mcp-guard.sh finnes) |
-| C4 | forge-workflow.md: primær kontrakt-søkemetode er per-issue-iterasjon | `gh search issues ... in:comments` returnerer tomt (kjent); per-issue `gh api .../comments` virker | 2026-08-31 (doc-innhold uendret; gh-quirk ikke re-testbar fra sky) |
-| C5 | schema-ground-truth.md: generert seksjon < 15 dager gammel | dato i seksjons-headeren vs `date -u` | 2026-08-31 (seksjon målt 2026-08-30 = 1 dag) |
-| C6 | docs/test-discipline.md-terskler vs pre-commit-hook: kjent tre-tall-avvik (3/5/10) er ENTEN uendret ELLER løst per eierbeslutning | grep toContain i begge filer | 2026-08-31 (3/>5/>10-trapp konsistent; hook warner `-gt 10`) |
-| C7 | Levende styringsdokumenter (CLAUDE.md, AGENTS.md, docs/user-flows.md, docs/test-discipline.md, docs/agent-discipline/, docs/loops/ — men IKKE `docs/loops/logg/`, som er #1110-tavlas månedsarkiv) siterer kun fil-stier som finnes | `node scripts/check-doc-paths.mjs` (skanneren eier dokumentlista og filtrerings-reglene, #1554; historiske dokumenter — `docs/plans/`, `docs/audits/`, `docs/superpowers/specs/`, CHANGELOG — er punkt-i-tid-arkiv og skannes IKKE; `.forge/` er ute av repoet siden #1931) | 2026-08-31 (`sjekket 190, brutt 0`) |
+| C1 | CLAUDE.md → Datamodell: tabell-antall og peker til generert seksjon | Steg 1-spørringen (`tables_total`) | 2026-09-08 (39 → **41** fikset i CLAUDE.md; kilde: generert seksjon målt 2026-09-06, dok-skjema-kjøring #11) |
+| C2 | CLAUDE.md → Scoring: tall-løs formulering + fasit-kommando | `npx vitest run lib/scoring` | 2026-09-08 (1176 → **1209** fikset i CLAUDE.md; 47 filer / 1209 tester grønne) |
+| C3 | CLAUDE.md → Samarbeidsmodell: SQL-tilgang beskriver MCP + staging-først + prod-luke | grep «Supabase MCP» CLAUDE.md; `.claude/hooks/mcp-guard.sh` finnes | 2026-09-08 (2 treff «Supabase MCP»; mcp-guard.sh finnes) |
+| C4 | forge-workflow.md: primær kontrakt-søkemetode er per-issue-iterasjon | `gh search issues ... in:comments` returnerer tomt (kjent); per-issue `gh api .../comments` virker | 2026-09-08 (doc-innhold uendret; gh-quirk ikke re-testbar fra sky — ingen `gh` CLI i routine-miljøet) |
+| C5 | schema-ground-truth.md: generert seksjon < 15 dager gammel | dato i seksjons-headeren vs `date -u` | 2026-09-08 (seksjon målt 2026-09-06 = 2 dager) |
+| C6 | docs/test-discipline.md-terskler vs pre-commit-hook: kjent tre-tall-avvik (3/5/10) er ENTEN uendret ELLER løst per eierbeslutning | grep toContain i begge filer | 2026-09-08 (3/>5/>10-trapp konsistent; hook warner `-gt 10`) |
+| C7 | Levende styringsdokumenter (CLAUDE.md, AGENTS.md, docs/user-flows.md, docs/test-discipline.md, docs/agent-discipline/, docs/loops/ — men IKKE `docs/loops/logg/`, som er #1110-tavlas månedsarkiv) siterer kun fil-stier som finnes | `node scripts/check-doc-paths.mjs` (skanneren eier dokumentlista og filtrerings-reglene, #1554; historiske dokumenter — `docs/plans/`, `docs/audits/`, `docs/superpowers/specs/`, CHANGELOG — er punkt-i-tid-arkiv og skannes IKKE; `.forge/` er ute av repoet siden #1931) | 2026-09-08 (`sjekket 191, brutt 0`) |
 
 ## Steg 3 — Memory-drift-flagg (best effort — kun lokale kjøringer)
 
