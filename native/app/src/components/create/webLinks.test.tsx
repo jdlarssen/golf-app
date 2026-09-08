@@ -59,8 +59,10 @@ describe('veiviserens lenkeknapper (#1891)', () => {
         mode="stableford"
         players={[]}
         teamLayout={null}
+        teeAvailability={{ M: true, D: true, J: true }}
         onToggle={jest.fn()}
         onTeam={jest.fn()}
+        onTee={jest.fn()}
         onRetry={jest.fn()}
       />,
     );

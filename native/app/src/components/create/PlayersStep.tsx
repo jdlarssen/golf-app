@@ -15,6 +15,12 @@
 // droppet av payload-byggeren. Passer ikke ANTALLET formatet (wolf med to),
 // står det bare en rolig linje: å låse noe der ville hindret arrangøren i å
 // bygge rosteret ferdig.
+//
+// **Tee-settet velges her, ikke i profilen** (#1859, web-paritet). Raden står
+// under hver valgt spiller og kommer FØR lag-chipsene: hvem → hvilken tee →
+// hvilket lag. Settet fryser banehandicapet ved start, så et sett teen ikke
+// rater er ikke et valg — de chipsene står grå. Rater teen bare ett sett,
+// finnes det ikke noe valg å ta, og raden byttes ut med én rolig linje.
 import { useState } from 'react';
 import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 import type { RosterCandidate } from '../../data/createGame';
@@ -27,10 +33,11 @@ import {
   type TeamLayout,
 } from '../../lib/rosterLimits';
 import { CREATE_ON_WEB_PATH } from '../../lib/createGameCopy';
-import type { DraftPlayer } from '../../lib/wizardPayload';
+import type { TeeGenderAvailability } from '../../lib/teeChoice';
+import type { DraftPlayer, TeeGenderUi } from '../../lib/wizardPayload';
 import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
-import { Chips, Field, Note, SelectRow } from './primitives';
+import { Chips, Field, Note, SelectRow, type ChipOption } from './primitives';
 
 function teamOptions(layout: TeamLayout, userId: string) {
   const noun = layout.noun === 'lag' ? 'Lag' : 'Side';
@@ -41,6 +48,40 @@ function teamOptions(layout: TeamLayout, userId: string) {
   }));
 }
 
+const TEE_GENDERS = ['M', 'D', 'J'] as const;
+
+/** Chip-etikett. Samme ordforråd som `describeTee` i `CourseStep`. */
+const TEE_LABELS: Record<TeeGenderUi, string> = {
+  M: 'Herre',
+  D: 'Dame',
+  J: 'Junior',
+};
+
+function teeOptions(
+  userId: string,
+  avail: TeeGenderAvailability,
+): ChipOption<TeeGenderUi>[] {
+  return TEE_GENDERS.map((g) => ({
+    value: g,
+    label: TEE_LABELS[g],
+    testID: `create-tee-gender-${userId}-${g}`,
+    disabled: !avail[g],
+  }));
+}
+
+/**
+ * Linja som står i stedet for chipsene når det ikke er noe å velge mellom.
+ * `null` betyr «vis chipsene».
+ */
+function teeChoiceNote(avail: TeeGenderAvailability): string | null {
+  const rated = TEE_GENDERS.filter((g) => avail[g]);
+  if (rated.length > 1) return null;
+  if (rated.length === 0) {
+    return 'Teen mangler rating. Gå tilbake og velg en annen for å komme videre.';
+  }
+  return `Teen har bare ${TEE_LABELS[rated[0]!].toLowerCase()}-sett, så alle spiller derfra.`;
+}
+
 export function PlayersStep({
   candidates,
   failed,
@@ -48,8 +89,10 @@ export function PlayersStep({
   mode,
   players,
   teamLayout,
+  teeAvailability,
   onToggle,
   onTeam,
+  onTee,
   onRetry,
 }: {
   /** `null` mens hentingen pågår. */
@@ -59,14 +102,18 @@ export function PlayersStep({
   mode: AppGameMode;
   players: DraftPlayer[];
   teamLayout: TeamLayout | null;
+  /** Hvilke tee-sett den valgte teen rater. Alle tre når ingen tee er valgt. */
+  teeAvailability: TeeGenderAvailability;
   onToggle: (candidate: RosterCandidate) => void;
   onTeam: (userId: string, teamNumber: number) => void;
+  onTee: (userId: string, teeGender: TeeGenderUi) => void;
   onRetry: () => void;
 }) {
   const { colors, ui } = useTheme();
   const [search, setSearch] = useState('');
 
   const chosen = new Map(players.map((p) => [p.userId, p]));
+  const teeNote = teeChoiceNote(teeAvailability);
   const cap = maxPlayersForMode(mode);
   const atCap = players.length >= cap;
   const fits = rosterFitsMode(mode, players.length);
@@ -111,6 +158,10 @@ export function PlayersStep({
         </Note>
       ) : null}
 
+      {/* Én linje for hele lista, ikke én per spiller: teen er den samme for
+          alle, og fire like setninger ville vært støy. */}
+      {teeNote ? <Note testID="create-tee-note">{teeNote}</Note> : null}
+
       <SelectRow
         testID={`create-player-${meId}`}
         title={me ? displayName(me) : 'Deg'}
@@ -125,6 +176,14 @@ export function PlayersStep({
         }
         selected
       />
+      {teeNote === null ? (
+        <Chips
+          testID={`create-tee-row-${meId}`}
+          value={chosen.get(meId)?.teeGender ?? null}
+          onChange={(tee) => onTee(meId, tee)}
+          options={teeOptions(meId, teeAvailability)}
+        />
+      ) : null}
       {teamLayout ? (
         <Chips
           testID={`create-team-row-${meId}`}
@@ -183,6 +242,14 @@ export function PlayersStep({
               disabled={picked === undefined && atCap}
               onPress={() => onToggle(candidate)}
             />
+            {picked && teeNote === null ? (
+              <Chips
+                testID={`create-tee-row-${candidate.id}`}
+                value={picked.teeGender}
+                onChange={(tee) => onTee(candidate.id, tee)}
+                options={teeOptions(candidate.id, teeAvailability)}
+              />
+            ) : null}
             {picked && teamLayout ? (
               <Chips
                 testID={`create-team-row-${candidate.id}`}

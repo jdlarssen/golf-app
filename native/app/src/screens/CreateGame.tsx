@@ -51,6 +51,7 @@ import {
   rosterFitsMode,
   teamLayoutFor,
 } from '../lib/rosterLimits';
+import { resolveTeeGender, teeAvailability } from '../lib/teeChoice';
 import {
   defaultGameName,
   draftNeedsTeamAssignment,
@@ -59,6 +60,7 @@ import {
   type DraftPlayer,
   type GameDraft,
   type ModeSetup,
+  type TeeGenderUi,
 } from '../lib/wizardPayload';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -117,13 +119,18 @@ function useRemote<T>(fetcher: () => Promise<T>): {
 }
 
 /**
- * Det veiviseren faktisk VELGER om en spiller. Tee-kjønnet står ikke her —
- * det leses ut av profilen når utkastet settes sammen, så det aldri kan bli
- * en foreldet kopi.
+ * Det veiviseren faktisk VELGER om en spiller.
+ *
+ * `teeGender` er OVERSTYRINGEN, ikke settet: `null` betyr «følg profilen», og
+ * profilverdien kopieres aldri hit. En kopi ville stått igjen på herretee for
+ * spillere som er i lista før kandidatene er hentet — deg selv, alltid — til
+ * noen oppdaterte den, og en effekt som synker den inn er nettopp
+ * kaskaderendringen lint-regelen advarer mot. Settet utledes i `players`.
  */
 interface PickedPlayer {
   userId: string;
   teamNumber: number | null;
+  teeGender: TeeGenderUi | null;
 }
 
 /** Neste hele time, minst en time fram. Tee-off skal aldri starte tomt. */
@@ -132,15 +139,6 @@ function defaultTeeOff(): Date {
   date.setMinutes(0, 0, 0);
   date.setHours(date.getHours() + 2);
   return date;
-}
-
-/**
- * Profilens kjønn → tee-kjønnet spilleren starter med.
- * `users.gender` er enumen `mens | ladies` (0036); junior-teer finnes på
- * banene, men ikke i profilen, så `J` kan ikke utledes her.
- */
-function teeGenderFor(candidate: RosterCandidate | null): 'M' | 'D' {
-  return candidate?.gender === 'ladies' ? 'D' : 'M';
 }
 
 export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
@@ -167,7 +165,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const [teeBoxId, setTeeBoxId] = useState<string | null>(null);
   const [teeOff, setTeeOff] = useState<Date>(defaultTeeOff);
   const [picked, setPicked] = useState<PickedPlayer[]>([
-    { userId, teamNumber: null },
+    { userId, teamNumber: null, teeGender: null },
   ]);
   const [busy, setBusy] = useState(false);
   /**
@@ -197,20 +195,36 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     useCallback(() => fetchOwnProfile(userId), [userId]),
   );
 
-  // Tee-kjønnet UTLEDES fra profilen i stedet for å kopieres inn i state.
-  // Jeg selv står i lista før kandidatene er hentet, så en kopi ville stått
-  // igjen på herretee til noen oppdaterte den — og en effekt som synker den
-  // inn er nettopp kaskaderendringen lint-regelen advarer mot.
+  // Den valgte teen, slått opp i den valgte banen. Tee-id-ene er unike, men
+  // oppslaget går gjennom banen fordi `courses` bærer dem nøstet.
+  const selectedTee = useMemo(() => {
+    const course = (courses.data ?? []).find((c) => c.id === courseId) ?? null;
+    return course?.tees.find((t) => t.id === teeBoxId) ?? null;
+  }, [courses.data, courseId, teeBoxId]);
+
+  /** Hvilke tee-sett den valgte teen rater. Ingen tee valgt → alle tre. */
+  const teeAvail = useMemo(() => teeAvailability(selectedTee), [selectedTee]);
+
+  // Tee-settet UTLEDES i stedet for å kopieres inn i state: profilens default
+  // (delt `playerGenderDefault`, junior inkludert), arrangørens overstyring der
+  // den finnes, og klemmen til noe teen faktisk rater.
+  //
+  // Klemmen står HER, ved lesning, og ikke i en setter: banesteget ligger før
+  // spillersteget, så en spiller som legges til ETTER at teen er valgt ville
+  // aldri passert en klem-ved-tee-bytte. Hen ville stått med et sett teen ikke
+  // rater, med chipen grå og publiseringen sperret — uten vei ut.
   const players = useMemo<DraftPlayer[]>(
     () =>
       picked.map((p) => ({
         userId: p.userId,
         teamNumber: p.teamNumber,
-        teeGender: teeGenderFor(
+        teeGender: resolveTeeGender(
+          p.teeGender,
           candidates.data?.find((c) => c.id === p.userId) ?? null,
+          teeAvail,
         ),
       })),
-    [candidates.data, picked],
+    [candidates.data, picked, teeAvail],
   );
 
   const selectMode = useCallback(
@@ -244,7 +258,9 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
           return prev.filter((p) => p.userId !== candidate.id);
         }
         if (gameMode && prev.length >= maxPlayersForMode(gameMode)) return prev;
-        return [...prev, { userId: candidate.id, teamNumber: null }];
+        // `teeGender: null` — tas en spiller bort og legges til igjen, faller
+        // hen tilbake på profilen sin. Samme som på web.
+        return [...prev, { userId: candidate.id, teamNumber: null, teeGender: null }];
       });
     },
     [gameMode],
@@ -253,6 +269,12 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const assignTeam = useCallback((playerId: string, teamNumber: number) => {
     setPicked((prev) =>
       prev.map((p) => (p.userId === playerId ? { ...p, teamNumber } : p)),
+    );
+  }, []);
+
+  const assignTee = useCallback((playerId: string, teeGender: TeeGenderUi) => {
+    setPicked((prev) =>
+      prev.map((p) => (p.userId === playerId ? { ...p, teeGender } : p)),
     );
   }, []);
 
@@ -343,6 +365,12 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const stepIndex = STEPS.indexOf(step);
   const blocker = stepBlocker(step, gameMode, common.name, courseId, teeBoxId);
 
+  // Belte og seler, som webbens #721-backstop: ingen skal kunne publiseres på et
+  // tee-sett teen ikke rater — banehandicapet fryses fra det settet ved start.
+  // Med klem-ved-lesning slår den i praksis bare ut på en tee helt uten rating,
+  // og der er veien ut linja i spillersteget: velg en annen tee.
+  const everyoneOnRatedTee = players.every((p) => teeAvail[p.teeGender]);
+
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="create-screen">
       <Text style={ui.sectionTitle} testID="create-progress">
@@ -406,8 +434,10 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
           mode={gameMode}
           players={players}
           teamLayout={teamLayout}
+          teeAvailability={teeAvail}
           onToggle={togglePlayer}
           onTeam={assignTeam}
+          onTee={assignTee}
           onRetry={candidates.reload}
         />
       ) : null}
@@ -424,7 +454,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
           // montert under, så alt du har valgt er der når du er tilbake.
           onEditProfile={() => navigation.navigate('EditProfile', { returnTo: 'CreateGame' })}
           busy={busy}
-          canPublish={courseId !== null && teeBoxId !== null}
+          canPublish={courseId !== null && teeBoxId !== null && everyoneOnRatedTee}
           onPublish={() => void publish()}
         />
       ) : null}
@@ -483,6 +513,13 @@ function stepBlocker(
   return null;
 }
 
+/** Tee-sett i oppsummeringens ordforråd — som `describeTee` i `CourseStep`. */
+const TEE_SET_WORDS: Record<TeeGenderUi, string> = {
+  M: 'herre',
+  D: 'dame',
+  J: 'junior',
+};
+
 function summaryLines(
   draft: GameDraft,
   mode: AppGameMode,
@@ -492,10 +529,16 @@ function summaryLines(
 ): SummaryLine[] {
   const course = (courses ?? []).find((c) => c.id === draft.courseId) ?? null;
   const tee = course?.tees.find((t) => t.id === draft.teeBoxId) ?? null;
-  const names = draft.players.map((p) => {
-    const candidate = (candidates ?? []).find((c) => c.id === p.userId);
+  const nameOf = (userId: string) => {
+    const candidate = (candidates ?? []).find((c) => c.id === userId);
     return candidate ? displayName(candidate) : 'Deg';
-  });
+  };
+  const names = draft.players.map((p) => nameOf(p.userId));
+
+  // Bare de som IKKE spiller fra herretee. Står alle på herre, sier linja
+  // ingenting nytt — og en oppsummering som gjentar standarden per spiller er
+  // støy i et åtte-spillers følge.
+  const offMens = draft.players.filter((p) => p.teeGender !== 'M');
 
   const side = draft.sideTournamentEnabled
     ? [
@@ -531,6 +574,17 @@ function summaryLines(
       label: `Spillere (${draft.players.length})`,
       value: names.join(', '),
     },
+    ...(offMens.length > 0
+      ? [
+          {
+            key: 'tees',
+            label: 'Andre tee-sett',
+            value: offMens
+              .map((p) => `${nameOf(p.userId)}: ${TEE_SET_WORDS[p.teeGender]}`)
+              .join(' · '),
+          },
+        ]
+      : []),
     { key: 'side', label: 'Sideturnering', value: side },
     {
       key: 'approval',
