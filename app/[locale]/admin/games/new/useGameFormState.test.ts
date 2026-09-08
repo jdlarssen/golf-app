@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGameFormState, deriveDefaultGenders, clampGenderToTee, validateTeamSizeFormat } from './useGameFormState';
+import { useGameFormState, deriveDefaultGenders, validateTeamSizeFormat } from './useGameFormState';
 import type { CourseOption, PlayerOption } from './GameForm';
 
 const COURSES: CourseOption[] = [
@@ -674,24 +674,9 @@ describe('useGameFormState — forhåndsvelg arrangøren som spiller ved kompis-
   });
 });
 
-// ─── AC3 — clampGenderToTee (ren helper) ─────────────────────────────────────
-
-describe('clampGenderToTee — AC3', () => {
-  it.each([
-    // g, avail, expected
-    ['J', { M: true, D: false, J: false }, 'M'],   // junior på herre-only → M
-    ['D', { M: true, D: false, J: true }, 'M'],    // dame utilgjengelig, første tilgjengelige er M
-    ['M', { M: true, D: true, J: true }, 'M'],     // M tilgjengelig → uendret
-    ['J', { M: true, D: true, J: true }, 'J'],     // J tilgjengelig → uendret
-    ['D', { M: false, D: true, J: true }, 'D'],    // D tilgjengelig → uendret
-    ['J', { M: false, D: true, J: false }, 'D'],   // J utilgjengelig, M utilgjengelig → D
-  ] as const)(
-    '%s på avail=%o → %s',
-    (g, avail, expected) => {
-      expect(clampGenderToTee(g, avail)).toBe(expected);
-    },
-  );
-});
+// ─── AC3 — clampGenderToTee ──────────────────────────────────────────────────
+// Helperen ble løftet til `lib/games/clampGenderToTee.ts` (#1859) fordi appens
+// veiviser trenger den også. Casene bor nå i `lib/games/clampGenderToTee.test.ts`.
 
 // ─── AC1 — teeGenderAvailability derivasjon ───────────────────────────────────
 

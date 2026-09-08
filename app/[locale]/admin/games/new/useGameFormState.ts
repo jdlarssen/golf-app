@@ -7,6 +7,7 @@ import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
+import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
 import {
   gameModeSupportsTeams,
   type RegistrationMode,
@@ -192,22 +193,6 @@ export function defaultTexasHandicapPct(teamSize: TeamSize): number {
   if (teamSize === 2) return 25;
   if (teamSize === 4) return 10;
   return 25;
-}
-
-/**
- * Klemmer en spiller-kategori til nærmeste tilgjengelige kategori på en tee.
- * Returnerer `g` hvis den er tilgjengelig, ellers første av ['M','D','J'] som
- * er tilgjengelig, ellers `g` som siste fallback (aldri tom streng).
- *
- * Ren, importerbar for tester (AC3).
- */
-export function clampGenderToTee(
-  g: 'M' | 'D' | 'J',
-  avail: { M: boolean; D: boolean; J: boolean },
-): 'M' | 'D' | 'J' {
-  if (avail[g]) return g;
-  const fallback = (['M', 'D', 'J'] as const).find((c) => avail[c]);
-  return fallback ?? g;
 }
 
 // Re-derive gender-toggle defaults fra spillerens profil. Brukes ved mount og
