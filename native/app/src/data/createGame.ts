@@ -60,11 +60,20 @@ export interface RosterCandidate {
    * Rå `users.gender` — DB-enumen `'mens' | 'ladies'` (0036), eller null.
    *
    * ⚠️ IKKE veiviserens `'M' | 'D' | 'J'`-alfabet. Oversettelsen skjer i
-   * `teeGenderFor` (`screens/CreateGame.tsx`), som sammenligner mot `'ladies'`.
-   * Sammenlign aldri dette feltet mot `'D'` — det er alltid usant, og hver
-   * kvinne ville stille fått herretee og dermed feil banehandicap.
+   * `defaultTeeGender` (`lib/teeChoice.ts`), som kaller den delte
+   * `playerGenderDefault`. Sammenlign aldri dette feltet mot `'D'` — det er
+   * alltid usant, og hver kvinne ville stille fått herretee og dermed feil
+   * banehandicap.
    */
   gender: string | null;
+  /**
+   * Rå `users.level` — DB-enumen `player_level` (`junior | normal | senior`).
+   *
+   * Leses fordi `playerGenderDefault` lar `'junior'` slå kjønnet: en junior
+   * skal starte på juniortee i BEGGE flater. Uten kolonnen fikk en junior
+   * herretee i appen og juniortee på nettsiden — samme spiller, to sett.
+   */
+  level: string | null;
   /** Profilen er ikke fullført. Blokkerer publisering (delt RPC-gate). */
   pending: boolean;
 }
@@ -75,6 +84,7 @@ interface UserRow {
   nickname: string | null;
   hcp_index: number | string;
   gender: string | null;
+  level: string | null;
   profile_completed_at: string | null;
   is_guest: boolean | null;
 }
@@ -107,7 +117,9 @@ interface UserRow {
 export async function fetchRosterCandidates(): Promise<RosterCandidate[]> {
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, nickname, hcp_index, gender, profile_completed_at, is_guest')
+    .select(
+      'id, name, nickname, hcp_index, gender, level, profile_completed_at, is_guest',
+    )
     .is('deleted_at', null)
     .order('name', { ascending: true })
     .returns<UserRow[]>();
@@ -124,6 +136,7 @@ export async function fetchRosterCandidates(): Promise<RosterCandidate[]> {
       nickname: row.nickname,
       hcpIndex: Number(row.hcp_index),
       gender: row.gender,
+      level: row.level,
       pending: row.profile_completed_at === null,
     }));
 }

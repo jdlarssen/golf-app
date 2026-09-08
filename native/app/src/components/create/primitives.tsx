@@ -88,6 +88,14 @@ export interface ChipOption<T extends string | number> {
   value: T;
   label: string;
   testID: string;
+  /**
+   * Valget finnes, men kan ikke tas her (#1859: et tee-sett banen ikke rater).
+   *
+   * Dempet og synlig, ikke borte — som `SelectRow.disabled`. Forsvant chipen,
+   * ville arrangøren lurt på om appen mangler juniortee i det hele tatt; står
+   * den grå, sier raden hva banen har.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -113,12 +121,14 @@ export function Chips<T extends string | number>({
     <View style={styles.chips} testID={testID}>
       {options.map((option) => {
         const active = option.value === value;
+        const disabled = option.disabled === true;
         return (
           <Pressable
             key={option.testID}
             testID={option.testID}
             accessibilityRole="button"
-            accessibilityState={{ selected: active }}
+            accessibilityState={{ selected: active, disabled }}
+            disabled={disabled}
             onPress={() => onChange(option.value)}
             style={[
               styles.chip,
@@ -127,6 +137,7 @@ export function Chips<T extends string | number>({
                 borderWidth: active ? 2 : 1,
                 backgroundColor: active ? colors.surface : colors.bg,
               },
+              disabled && styles.chipDisabled,
             ]}
           >
             <Text style={active ? ui.body : ui.muted}>{option.label}</Text>
@@ -195,6 +206,7 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowDisabled: { opacity: 0.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipDisabled: { opacity: 0.4 },
   chip: {
     minHeight: TAP,
     borderRadius: 999,

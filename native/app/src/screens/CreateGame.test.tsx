@@ -74,7 +74,13 @@ jest.mock('../data/createGame', () => ({
       id: 'course-1',
       name: 'Losby Golfklubb',
       tees: [
-        { id: 'tee-1', name: 'Gul', hasMens: true, hasLadies: false, hasJuniors: false },
+        // Gul rater alle tre: uten dame-rating ville #1859-klemmen flyttet Ada
+        // til herre, og «tee-settet følger profilen» hadde ikke vært testbart
+        // i det hele tatt. Hvit mangler dame med vilje — den er den eneste
+        // måten å se at et sett teen ikke rater faktisk er avslått, og at en
+        // profilverdi teen ikke rater klemmes til noe den har.
+        { id: 'tee-1', name: 'Gul', hasMens: true, hasLadies: true, hasJuniors: true },
+        { id: 'tee-2', name: 'Hvit', hasMens: true, hasLadies: false, hasJuniors: true },
       ],
     },
   ]),
@@ -85,6 +91,7 @@ jest.mock('../data/createGame', () => ({
       nickname: null,
       hcpIndex: 12.4,
       gender: 'mens',
+      level: 'normal',
       pending: false,
     },
     {
@@ -93,6 +100,7 @@ jest.mock('../data/createGame', () => ({
       nickname: null,
       hcpIndex: 8.1,
       gender: 'ladies',
+      level: 'normal',
       pending: false,
     },
     {
@@ -101,6 +109,7 @@ jest.mock('../data/createGame', () => ({
       nickname: null,
       hcpIndex: 21.7,
       gender: 'mens',
+      level: 'normal',
       pending: false,
     },
   ]),
@@ -253,4 +262,46 @@ describe('CreateGame', () => {
     expect(screen.getByTestId('create-team-size-1').props.accessibilityState)
       .toMatchObject({ selected: true });
   });
+
+  // #1859. Selve utledningen (profil-default + overstyring + klem) er dekket i
+  // `lib/teeChoice.test.ts`; det som bare kan ses gjennom hele veiviseren er
+  // KOBLINGEN: at chipen faktisk skriver til utkastet, og at et sett teen ikke
+  // rater er avslått i stedet for å bli et stille feil banehandicap.
+  it('lar arrangøren velge tee-sett per spiller, og slår av settene teen ikke rater', async () => {
+    await renderWizard();
+
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    // Hvit rater herre og junior, men ikke dame.
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-2'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    await fireEvent.press(screen.getByTestId('create-player-p2'));
+    // Ada står som `ladies`, men Hvit har ingen dame-rating: klemmen setter
+    // herre, og dame-chipen er avslått.
+    expect(screen.getByTestId('create-tee-gender-p2-M').props.accessibilityState)
+      .toMatchObject({ selected: true });
+    expect(screen.getByTestId('create-tee-gender-p2-D').props.accessibilityState)
+      .toMatchObject({ disabled: true });
+
+    // Et avslått valg endrer ingenting.
+    await fireEvent.press(screen.getByTestId('create-tee-gender-p2-D'));
+    expect(screen.getByTestId('create-tee-gender-p2-M').props.accessibilityState)
+      .toMatchObject({ selected: true });
+
+    // Junior rates av Hvit, så det er et ekte valg.
+    await fireEvent.press(screen.getByTestId('create-tee-gender-p2-J'));
+    expect(screen.getByTestId('create-tee-gender-p2-J').props.accessibilityState)
+      .toMatchObject({ selected: true, disabled: false });
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    // Bare avvikene står i oppsummeringen — arrangøren selv spiller fra herre
+    // og skal ikke nevnes.
+    expect(screen.getByTestId('create-summary-tees').props.children).toBe(
+      'Ada Aas: junior',
+    );
+  }, 20000);
 });

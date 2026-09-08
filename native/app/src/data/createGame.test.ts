@@ -457,6 +457,7 @@ describe('fetchRosterCandidates', () => {
     nickname: null,
     hcp_index: '12.4',
     gender: 'D',
+    level: 'normal',
     profile_completed_at: '2026-01-01T00:00:00Z',
     is_guest: false,
     ...over,
@@ -473,6 +474,7 @@ describe('fetchRosterCandidates', () => {
         nickname: null,
         hcpIndex: 12.4,
         gender: 'D',
+        level: 'normal',
         pending: false,
       },
     ]);
