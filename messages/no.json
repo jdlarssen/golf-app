@@ -4638,6 +4638,7 @@
         "not_member": "Cupen er for medlemmene i klubben.",
         "full": "Cupen er full. Den tar {cap} spillere.",
         "not_joined": "Du står ikke på lista i denne cupen.",
+        "read_failed": "Fikk ikke sjekket påmeldingen. Prøv igjen.",
         "save_failed": "Klarte ikke å lagre. Prøv igjen.",
         "unexpected": "Uventet feil: {code}"
       }

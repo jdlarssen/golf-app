@@ -4638,6 +4638,7 @@
         "not_member": "This cup is for the club's members.",
         "full": "The cup is full. It takes {cap} players.",
         "not_joined": "You're not on the roster for this cup.",
+        "read_failed": "Couldn't check the signup. Please try again.",
         "save_failed": "Couldn't save. Please try again.",
         "unexpected": "Unexpected error: {code}"
       }

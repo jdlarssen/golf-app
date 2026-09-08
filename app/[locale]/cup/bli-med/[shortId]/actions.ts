@@ -10,8 +10,10 @@ import { notify } from '@/lib/notifications/notify';
 import { evaluateCupJoin, evaluateCupLeave } from '@/lib/cup/joinValidation';
 import {
   getCupJoinContext,
+  type CupJoinContext,
   type CupJoinCup,
 } from '@/lib/cup/getCupJoinContext';
+import { CupJoinReadError } from '@/lib/cup/cupJoinErrors';
 
 /**
  * Server-actions for spillerens ene dør inn i en cup: `/cup/bli-med/[shortId]`
@@ -118,7 +120,19 @@ export async function joinCup(
   // og her finnes ingen).
   if (!user) redirect({ href: `/login?next=${joinPath(shortId)}`, locale });
 
-  const { cup, facts } = await getCupJoinContext(shortId, user!.id);
+  // KUN lesingen pakkes inn: `redirect()` under kaster NEXT_REDIRECT, og en
+  // kropps-bred catch ville svelget den. Feiler lesingen vet vi ingenting, så
+  // vi sier nei med et banner i stedet for å skrive på et gjettet grunnlag
+  // (#1863).
+  let context: CupJoinContext;
+  try {
+    context = await getCupJoinContext(shortId, user!.id);
+  } catch (err) {
+    if (err instanceof CupJoinReadError) return { error: 'read_failed' };
+    throw err;
+  }
+
+  const { cup, facts } = context;
   const decision = evaluateCupJoin(facts);
 
   if (decision === 'already_joined') {
@@ -172,7 +186,16 @@ export async function leaveCup(
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: `/login?next=${joinPath(shortId)}`, locale });
 
-  const { cup, facts } = await getCupJoinContext(shortId, user!.id);
+  // Samme grep som i `joinCup`: kun lesingen fanges, så NEXT_REDIRECT slipper ut.
+  let context: CupJoinContext;
+  try {
+    context = await getCupJoinContext(shortId, user!.id);
+  } catch (err) {
+    if (err instanceof CupJoinReadError) return { error: 'read_failed' };
+    throw err;
+  }
+
+  const { cup, facts } = context;
   const decision = evaluateCupLeave(facts);
 
   if (decision === 'not_joined') {

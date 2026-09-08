@@ -5,6 +5,8 @@ import {
   RedirectError,
 } from '@/tests/serverActionMocks';
 import type { CupJoinContext } from '@/lib/cup/getCupJoinContext';
+// Umocket med vilje: `instanceof` i actionen må se den EKTE klassen.
+import { CupJoinReadError } from '@/lib/cup/cupJoinErrors';
 
 /**
  * Unit-tester for joinCup / leaveCup (#1490) — spillerens selvpåmelding via
@@ -173,6 +175,19 @@ describe('joinCup', () => {
     ).toBe(false);
   });
 
+  it('lesefeil i fakta-innsamlingen: ingen skriving, banner i stedet for gjetning', async () => {
+    // #1863: feiler lesingen vet vi ingenting om taket eller om spilleren alt
+    // står der — da skal actionen si nei, ikke skrive på et tomt grunnlag.
+    adminMock = buildSupabaseMock([]);
+    contextMock.mockRejectedValueOnce(new CupJoinReadError('participants'));
+
+    const { joinCup } = await import('./actions');
+    expect(await joinCup(form())).toEqual({ error: 'read_failed' });
+    expect(adminMock.__fromCalls).toEqual([]);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
   it('skaperen melder seg på sin egen cup: ingen selv-varsel, og bekreftelsen sier det ikke', async () => {
     adminMock = buildSupabaseMock([{ data: null, error: null }]); // kun upsert
     contextMock.mockResolvedValue(context());
@@ -233,6 +248,17 @@ describe('leaveCup', () => {
 
     expect((err as RedirectError).url).toBe('/cup/bli-med/abcd1234');
     expect(adminMock.__fromCalls.some((c) => c.method === 'delete')).toBe(false);
+  });
+
+  it('lesefeil i fakta-innsamlingen: ingen delete, banner i stedet for gjetning', async () => {
+    adminMock = buildSupabaseMock([]);
+    contextMock.mockRejectedValueOnce(new CupJoinReadError('participants'));
+
+    const { leaveCup } = await import('./actions');
+    expect(await leaveCup(form())).toEqual({ error: 'read_failed' });
+    expect(adminMock.__fromCalls).toEqual([]);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it('startet cup: avmeldingsveien er stengt, ingen delete', async () => {
