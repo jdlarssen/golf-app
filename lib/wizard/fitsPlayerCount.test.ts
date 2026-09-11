@@ -90,17 +90,23 @@ describe('fitsPlayerCount — best_ball (even 2–8 per #374)', () => {
 // Teams of 2 or 4; a single team (n=2) is not a competition, so the floor is 4.
 // 8-slot payload cap means {4, 6, 8} are the only buildable competition sizes.
 
-describe('fitsPlayerCount — texas_scramble (even 4–8, ≥2 teams per #467)', () => {
+describe('fitsPlayerCount — texas_scramble (2–4 per lag, 2–4 lag, #467 + #2009)', () => {
   it.each([
     [1, false],
     [2, false],  // bare 1 lag à 2 — ingen turnering
-    [3, false],
+    [3, false],  // bare 1 lag à 3 — ingen turnering
     [4, true],   // 2 lag à 2
     [5, false],
-    [6, true],   // 3 lag à 2
+    [6, true],   // 3 lag à 2 ELLER 2 lag à 3
     [7, false],
-    [8, true],   // 4 lag à 2 OR 2 lag à 4
-    [10, false], // over 8-slot-cap
+    [8, true],   // 4 lag à 2 ELLER 2 lag à 4
+    [9, true],   // 3 lag à 3 (#2009)
+    [10, false], // 5 lag à 2 — rutenettet har fire lag
+    [12, true],  // 4 lag à 3 (#2009 — bestillingen som utløste taket)
+    [14, false],
+    [16, true],  // 4 lag à 4
+    [17, false], // over taket
+    [20, false],
   ])('texas_scramble n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('texas_scramble', n)).toBe(expected);
   });
@@ -111,16 +117,20 @@ describe('fitsPlayerCount — texas_scramble (even 4–8, ≥2 teams per #467)',
 // (return true) since it was klubb-only; now in the Kompis catalog it needs a
 // real floor.
 
-describe('fitsPlayerCount — ambrose (even 4–8, ≥2 teams per #467)', () => {
+describe('fitsPlayerCount — ambrose (2–4 per lag, 2–4 lag, #467 + #2009)', () => {
   it.each([
     [1, false],
     [2, false],
     [3, false],
     [4, true],   // 2 lag à 2
     [5, false],
-    [6, true],   // 3 lag à 2
-    [8, true],   // 2 lag à 4 OR 4 lag à 2
-    [10, false],
+    [6, true],   // 3 lag à 2 ELLER 2 lag à 3
+    [8, true],   // 2 lag à 4 ELLER 4 lag à 2
+    [9, true],   // 3 lag à 3 (#2009)
+    [10, false], // 5 lag à 2 — rutenettet har fire lag
+    [12, true],  // 4 lag à 3 (#2009)
+    [16, true],  // 4 lag à 4
+    [17, false], // over taket
   ])('ambrose n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('ambrose', n)).toBe(expected);
   });
@@ -130,7 +140,7 @@ describe('fitsPlayerCount — ambrose (even 4–8, ≥2 teams per #467)', () => 
 // Florida ("step-aside") uses teams of 3 or 4, so the smallest competition is
 // 2 lag à 3 = 6. Was previously permissive (return true) as a klubb-only format.
 
-describe('fitsPlayerCount — florida_scramble (6 or 8, ≥2 teams per #467)', () => {
+describe('fitsPlayerCount — florida_scramble (3–4 per lag, 2–4 lag, #467 + #2009)', () => {
   it.each([
     [1, false],
     [2, false],
@@ -140,7 +150,11 @@ describe('fitsPlayerCount — florida_scramble (6 or 8, ≥2 teams per #467)', (
     [6, true],   // 2 lag à 3
     [7, false],
     [8, true],   // 2 lag à 4
-    [9, false],  // over 8-slot-cap (3 lag à 3 ikke byggbart)
+    [9, true],   // 3 lag à 3 (#2009)
+    [10, false], // går ikke opp i 3 eller 4
+    [12, true],  // 4 lag à 3 ELLER 3 lag à 4
+    [16, true],  // 4 lag à 4
+    [17, false], // over taket
   ])('florida_scramble n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('florida_scramble', n)).toBe(expected);
   });
@@ -287,10 +301,10 @@ describe('fitsPlayerCount — patsome', () => {
 
 // ── shamble: 6 or 8 — teams of 3 or 4, needs ≥2 teams (#469) ──────────────────
 // Same scramble-family principle as #467: a single team is not a tournament.
-// Teams of 3 or 4 → smallest competition is 2 lag à 3 = 6. 8-slot payload cap
-// means {6, 8} are the only buildable competition sizes.
+// Teams of 3 or 4 → smallest competition is 2 lag à 3 = 6. The cap is now four
+// teams / 16 players (#2009), so 12 (4 lag à 3) is buildable.
 
-describe('fitsPlayerCount — shamble (6 or 8, ≥2 teams per #469)', () => {
+describe('fitsPlayerCount — shamble (3–4 per lag, 2–4 lag, #469 + #2009)', () => {
   it.each([
     [1, false],
     [2, false],
@@ -300,8 +314,10 @@ describe('fitsPlayerCount — shamble (6 or 8, ≥2 teams per #469)', () => {
     [6, true],   // 2 lag à 3
     [7, false],
     [8, true],   // 2 lag à 4
-    [9, false],  // over 8-slot-cap (3 lag à 3 ikke byggbart)
-    [12, false], // over 8-slot-cap
+    [9, true],   // 3 lag à 3 (#2009)
+    [12, true],  // 4 lag à 3 ELLER 3 lag à 4
+    [16, true],  // 4 lag à 4
+    [17, false], // over taket
   ])('shamble n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('shamble', n)).toBe(expected);
   });

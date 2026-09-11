@@ -17,6 +17,7 @@
  */
 
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { fitsTeamFormat } from '@/lib/games/teamFormatLimits';
 
 export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
   if (n <= 0) return false;
@@ -40,16 +41,14 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     // En scramble er et lag-format. Ett lag er ingen konkurranse, så
     // antall-filteret i Kompis skjuler oppsett med bare ett lag.
     //
-    // texas_scramble + ambrose: lag på 2 eller 4 → minste turnering er 2 lag
-    // à 2 = 4. Med 8-slot-cap i payload er {4, 6, 8} de byggbare størrelsene.
+    // Lagstørrelsene og taket eies av `lib/games/teamFormatLimits.ts` (#2009):
+    // texas/ambrose 2–4 per lag, florida/shamble 3–4, alltid 2–4 lag. Byggbare
+    // størrelser er dermed alt fra 4 (2 lag à 2) til 16 (4 lag à 4) som går opp
+    // i en støttet lagstørrelse.
     case 'texas_scramble':
     case 'ambrose':
-      return n >= 4 && n <= 8 && n % 2 === 0;
-
-    // florida_scramble ("step-aside"): lag på 3 eller 4 → minste turnering er
-    // 2 lag à 3 = 6. Byggbare turnerings-størrelser med 8-slot-cap: {6, 8}.
     case 'florida_scramble':
-      return n >= 6 && n <= 8 && (n % 3 === 0 || n % 4 === 0);
+      return fitsTeamFormat(gameMode, n);
 
     // ── 3–5 (#465: Wolf har ekte 3- og 5-spiller-varianter) ─────────────────
     case 'wolf':
@@ -78,12 +77,11 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     case 'nines':
       return n === 3;
 
-    // ── shamble: krever ≥2 lag (lag på 3 eller 4) → {6, 8} (#469) ───────────
+    // ── shamble: krever ≥2 lag (lag på 3 eller 4) (#469) ────────────────────
     // Samme scramble-familie-prinsipp som #467: ett lag er ingen turnering.
-    // Minste turnering er 2 lag à 3 = 6; med 8-slot-cap er {6, 8} de byggbare
-    // størrelsene.
+    // Grensene leses fra `teamFormatLimits` som for resten av familien (#2009).
     case 'shamble':
-      return n >= 6 && n <= 8 && (n % 3 === 0 || n % 4 === 0);
+      return fitsTeamFormat(gameMode, n);
 
     // ── Partall 4+ (lag à 2, minst 2 lag) ───────────────────────────────────
     case 'patsome':

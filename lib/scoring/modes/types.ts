@@ -431,10 +431,11 @@ export function formatCapturesPutts(mode: GameMode): boolean {
  *  - Klassisk slagspill: lavest sum av netto-slag (gross − HCP-strokes) vinner
  *
  * Texas scramble (issue #44):
- *  - `team_size: 2 | 4` = antall spillere per lag (3-mannslag ikke i v1)
+ *  - `team_size: 2 | 3 | 4` = antall spillere per lag (3-mannslag kom i #2009)
  *  - `teams_count` = antall lag i spillet (fri, 1+)
  *  - `team_handicap_pct` = prosent av summert lag-HCP som blir effektivt
- *    lag-handicap (NGF-konvensjon: 25 for 2-mannslag, 10 for 4-mannslag).
+ *    lag-handicap (NGF-konvensjon: 25 for 2-mannslag, 15 for 3-mannslag,
+ *    10 for 4-mannslag).
  *    0-100 — admin kan justere som i best ball. 0 = gross, 100 = full sum.
  *  - Texas lagrer ÉN score per lag per hull (ikke per spiller). I scoring-
  *    laget representeres dette ved at lag-kapteinen (først-i-rekkefølge per
@@ -450,7 +451,7 @@ export type GameModeConfig =
   | { kind: 'solo_strokeplay'; team_size: 1 }
   | {
       kind: 'texas_scramble';
-      team_size: 2 | 4;
+      team_size: 2 | 3 | 4;
       teams_count: number;
       team_handicap_pct: number;
     }
@@ -469,7 +470,7 @@ export type GameModeConfig =
        * podium-/mail-visning rendres uendret.
        */
       kind: 'ambrose';
-      team_size: 2 | 4;
+      team_size: 2 | 3 | 4;
       teams_count: number;
       team_handicap_pct: number;
     }

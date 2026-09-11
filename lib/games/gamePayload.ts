@@ -12,6 +12,7 @@
 // fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
 
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { MAX_TEAM_FORMAT_PLAYERS } from './teamFormatLimits';
 import {
   gameModeSupportsTeams,
   isRegistrationMode,
@@ -863,7 +864,7 @@ function validateSoloStrokeplay(
  * struktur og lag-handicap-prosent ved publish.
  *
  * Form-felter:
- *  - `texas_team_size`: 2 eller 4 (3-mannslag ikke i v1 → unsupported_mode_size_combo)
+ *  - `texas_team_size`: 2, 3 eller 4 (andre verdier → unsupported_mode_size_combo)
  *  - `texas_team_handicap_pct`: 0..100 heltall (NGF-default 25 for 2-mannslag,
  *    10 for 4-mannslag, settes av GameForm når lagstørrelse endres). Utenfor
  *    range → bad_allowance (gjenbruker eksisterende kode siden semantikken
@@ -873,6 +874,7 @@ function validateSoloStrokeplay(
  *
  * Regler ved publish:
  *  - Minst 1 spiller (ellers min_players_for_mode).
+ *  - Maks `MAX_TEAM_FORMAT_PLAYERS` spillere (too_many_players_for_mode).
  *  - Hvert lag må ha EKSAKT `team_size` spillere (team_balance ved feil).
  *  - Hvert team_number må være ≥1 (bad_team).
  *  - flight_number = team_number per spiller — oppfyller DB-CHECK
@@ -901,7 +903,7 @@ function validateTexasScramble(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -920,6 +922,12 @@ function validateTexasScramble(
   if (mode === 'publish') {
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    // Slot-løkken leser én plass over taket (nassau-mønsteret, #460) slik at en
+    // spiller for mye avvises eksplisitt i stedet for å trunkeres stille og
+    // dukke opp som `team_balance` på det siste laget (#2009).
+    if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     const balanceError = validateTeamBalance(players, teamSize);
     if (balanceError) {
@@ -942,12 +950,14 @@ function validateTexasScramble(
 }
 
 /**
- * Leser `texas_team_size` fra form-data. Returnerer 2, 4 eller null. Null =
- * ikke-eksisterende felt, ugyldig verdi, eller 3 (3-mannslag utsatt til v1.1).
+ * Leser `texas_team_size` fra form-data. Returnerer 2, 3, 4 eller null. Null =
+ * ikke-eksisterende felt eller ugyldig verdi. 3-mannslag kom i #2009 —
+ * default-prosenten er 15 (`defaultTexasHandicapPct`).
  */
-function parseTexasTeamSize(formData: FormData): 2 | 4 | null {
+function parseTexasTeamSize(formData: FormData): 2 | 3 | 4 | null {
   const raw = String(formData.get('texas_team_size') ?? '').trim();
   if (raw === '2') return 2;
+  if (raw === '3') return 3;
   if (raw === '4') return 4;
   return null;
 }
@@ -976,11 +986,12 @@ function parseTexasHandicapPct(formData: FormData): number | null {
  * heltall-felt.
  *
  * Form-felter:
- *  - `ambrose_team_size`: 2 eller 4 (3-mannslag ikke i scope → unsupported_mode_size_combo)
+ *  - `ambrose_team_size`: 2, 3 eller 4 (andre verdier → unsupported_mode_size_combo)
  *  - `ambrose_team_handicap_pct`: 0..100, fraksjonell tillatt (utenfor range → bad_allowance)
  *  - `player_${i}_team`: positivt heltall, fri antall lag (klubb-turnering)
  *
- * Regler ved publish: minst 1 spiller, EKSAKT team_size per lag (team_balance),
+ * Regler ved publish: minst 1 spiller, maks `MAX_TEAM_FORMAT_PLAYERS`
+ * (too_many_players_for_mode), EKSAKT team_size per lag (team_balance),
  * team_number ≥ 1 (bad_team). flight_number = team_number oppfyller DB-CHECK
  * `game_players_team_flight_consistency`. Draft tolererer partial state.
  * Mode_config-output: `{kind: 'ambrose', team_size, teams_count, team_handicap_pct}`.
@@ -1001,7 +1012,7 @@ function validateAmbrose(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -1020,6 +1031,12 @@ function validateAmbrose(
   if (mode === 'publish') {
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    // Slot-løkken leser én plass over taket (nassau-mønsteret, #460) slik at en
+    // spiller for mye avvises eksplisitt i stedet for å trunkeres stille og
+    // dukke opp som `team_balance` på det siste laget (#2009).
+    if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     const balanceError = validateTeamBalance(players, teamSize);
     if (balanceError) {
@@ -1042,12 +1059,14 @@ function validateAmbrose(
 }
 
 /**
- * Leser `ambrose_team_size` fra form-data. Returnerer 2, 4 eller null (3-mannslag
- * ikke i scope — speiler Texas).
+ * Leser `ambrose_team_size` fra form-data. Returnerer 2, 3, 4 eller null —
+ * speiler Texas. 3-mannslag kom i #2009; Ambrose-formelen
+ * `100 / (2 × lagstørrelse)` dekker 3 uten ny default-verdi (16,7 %).
  */
-function parseAmbroseTeamSize(formData: FormData): 2 | 4 | null {
+function parseAmbroseTeamSize(formData: FormData): 2 | 3 | 4 | null {
   const raw = String(formData.get('ambrose_team_size') ?? '').trim();
   if (raw === '2') return 2;
+  if (raw === '3') return 3;
   if (raw === '4') return 4;
   return null;
 }
@@ -1082,7 +1101,8 @@ function parseAmbroseHandicapPct(formData: FormData): number | null {
  *  - `florida_team_handicap_pct`: 0..100, fraksjonell tillatt
  *  - `player_${i}_team`: positivt heltall, fri antall lag
  *
- * Regler ved publish: minst 1 spiller, EKSAKT team_size per lag (team_balance),
+ * Regler ved publish: minst 1 spiller, maks `MAX_TEAM_FORMAT_PLAYERS`
+ * (too_many_players_for_mode), EKSAKT team_size per lag (team_balance),
  * team_number ≥ 1 (bad_team). flight_number = team_number oppfyller DB-CHECK.
  * Mode_config-output: `{kind: 'florida_scramble', team_size, teams_count, team_handicap_pct}`.
  */
@@ -1102,7 +1122,7 @@ function validateFloridaScramble(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -1121,6 +1141,12 @@ function validateFloridaScramble(
   if (mode === 'publish') {
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    // Slot-løkken leser én plass over taket (nassau-mønsteret, #460) slik at en
+    // spiller for mye avvises eksplisitt i stedet for å trunkeres stille og
+    // dukke opp som `team_balance` på det siste laget (#2009).
+    if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     const balanceError = validateTeamBalance(players, teamSize);
     if (balanceError) {
@@ -1963,6 +1989,9 @@ function parseShambleCount(
  * captain/handicap-%. Tre config-dimensjoner: variant (shamble/champagne),
  * count (1/2/3, laveste som teller per hull) og scoring (gross/net).
  *
+ * Publish-grensene er familiens felles: maks `MAX_TEAM_FORMAT_PLAYERS` spillere
+ * (too_many_players_for_mode) fordelt på hele lag (team_balance).
+ *
  * Mode_config-output:
  *   `{kind, team_size, teams_count, shamble_variant, shamble_count, shamble_scoring}`.
  */
@@ -1981,7 +2010,7 @@ function validateShamble(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -1999,6 +2028,12 @@ function validateShamble(
   if (mode === 'publish') {
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    // Slot-løkken leser én plass over taket (nassau-mønsteret, #460) slik at en
+    // spiller for mye avvises eksplisitt i stedet for å trunkeres stille og
+    // dukke opp som `team_balance` på det siste laget (#2009).
+    if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     const balanceError = validateTeamBalance(players, teamSize);
     if (balanceError) {

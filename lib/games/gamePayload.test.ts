@@ -1198,7 +1198,7 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
    * trenger ikke sende player_${i}_flight i form-en.
    */
   function texasFd(opts: {
-    teamSize?: '2' | '4';
+    teamSize?: '2' | '3' | '4' | '5' | '';
     handicapPct?: string;
     players?: Array<{ userId: string; team: number }>;
     extras?: Record<string, string>;
@@ -1302,14 +1302,69 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     expect(result.errorCode).toBe('team_balance');
   });
 
-  it('publish med team_size=3 → unsupported_mode_size_combo', () => {
+  it('publish med 4 lag à 3 (12 spillere, 15 %) → ok (#2009)', () => {
+    const players = Array.from({ length: 12 }, (_, i) => ({
+      userId: `p${i}`,
+      team: Math.floor(i / 3) + 1,
+    }));
+    const result = buildGameInsertPayload(
+      texasFd({ teamSize: '3', handicapPct: '15', players }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(12);
+    expect(result.mode_config).toEqual({
+      kind: 'texas_scramble',
+      team_size: 3,
+      teams_count: 4,
+      team_handicap_pct: 15,
+    });
+  });
+
+  it('publish med 4 lag à 4 (16 spillere) → ok — taket er 16 (#2009)', () => {
+    const players = Array.from({ length: 16 }, (_, i) => ({
+      userId: `p${i}`,
+      team: Math.floor(i / 4) + 1,
+    }));
+    const result = buildGameInsertPayload(
+      texasFd({ teamSize: '4', players }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(16);
+  });
+
+  it('publish med 17 spillere → too_many_players_for_mode, ikke stille kutt (#2009)', () => {
+    const players = Array.from({ length: 17 }, (_, i) => ({
+      userId: `p${i}`,
+      team: Math.min(Math.floor(i / 4) + 1, 4),
+    }));
+    const result = buildGameInsertPayload(
+      texasFd({ teamSize: '4', players }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('publish med 11 spillere på 3-mannslag → team_balance', () => {
+    const players = Array.from({ length: 11 }, (_, i) => ({
+      userId: `p${i}`,
+      team: Math.floor(i / 3) + 1,
+    }));
+    const result = buildGameInsertPayload(
+      texasFd({ teamSize: '3', players }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish med ugyldig team_size (5) → unsupported_mode_size_combo', () => {
     const result = buildGameInsertPayload(
       texasFd({
-        teamSize: '3' as unknown as '2',
+        teamSize: '5',
         players: [
           { userId: 'a', team: 1 },
           { userId: 'b', team: 1 },
-          { userId: 'c', team: 1 },
         ],
       }),
       'publish',
@@ -1466,7 +1521,7 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     // de er forutsetninger for at noe annet skal gi mening.
     const result = buildGameInsertPayload(
       texasFd({
-        teamSize: '3' as unknown as '2',
+        teamSize: '5',
         players: [],
       }),
       'draft',
@@ -1506,7 +1561,7 @@ describe('buildGameInsertPayload — ambrose (issue #284)', () => {
    * må passere validatoren.
    */
   function ambroseFd(opts: {
-    teamSize?: '2' | '4' | '3';
+    teamSize?: '2' | '3' | '4' | '5';
     handicapPct?: string;
     players?: Array<{ userId: string; team: number }>;
     extras?: Record<string, string>;
@@ -1600,9 +1655,34 @@ describe('buildGameInsertPayload — ambrose (issue #284)', () => {
     expect(result.errorCode).toBe('team_balance');
   });
 
-  it('3-mannslag avvises → unsupported_mode_size_combo', () => {
+  it('3-mannslag godtas (#2009) — 2 lag à 3 med formel-default 16,7 %', () => {
     const result = buildGameInsertPayload(
-      ambroseFd({ teamSize: '3', players: [{ userId: 'a', team: 1 }] }),
+      ambroseFd({
+        teamSize: '3',
+        handicapPct: '16.7',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 2 },
+          { userId: 'e', team: 2 },
+          { userId: 'f', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'ambrose',
+      team_size: 3,
+      teams_count: 2,
+      team_handicap_pct: 16.7,
+    });
+  });
+
+  it('ugyldig lagstørrelse (5) avvises → unsupported_mode_size_combo', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({ teamSize: '5', players: [{ userId: 'a', team: 1 }] }),
       'publish',
     );
     expect(result.errorCode).toBe('unsupported_mode_size_combo');
