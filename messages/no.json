@@ -1106,6 +1106,7 @@
         "legend": "Lag-handicap",
         "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
         "nettoHelper2": "NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
+        "nettoHelper3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
         "nettoHelper4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
         "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
         "inputLabel": "Lag-handicap (%)"
@@ -1114,6 +1115,7 @@
         "legend": "Lag-handicap",
         "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
         "nettoHelper2": "Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
+        "nettoHelper3": "Standard Ambrose: 16,7 % av summen av spillernes spille-HCP for 3-mannslag.",
         "nettoHelper4": "Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.",
         "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
         "inputLabel": "Lag-handicap (%)"

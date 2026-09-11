@@ -71,6 +71,24 @@ type Props = {
   onSubmitStart?: () => void;
 };
 
+/**
+ * Hjelpeteksten under lag-handicap-feltet finnes per lagstørrelse. Texas og
+ * Ambrose fikk 3-mannslag i #2009, og en `teamSize === 2 ? … : …`-kjede ville
+ * da servert 4-manns-teksten («10 %») til et 3-mannslag mens feltet står på 15.
+ * Mappingen er eksplisitt så en ny lagstørrelse ikke kan lande på feil tall.
+ */
+function texasNettoHelperKey(teamSize: number) {
+  if (teamSize === 2) return 'allowanceProps.texas.nettoHelper2' as const;
+  if (teamSize === 3) return 'allowanceProps.texas.nettoHelper3' as const;
+  return 'allowanceProps.texas.nettoHelper4' as const;
+}
+
+function ambroseNettoHelperKey(teamSize: number) {
+  if (teamSize === 2) return 'allowanceProps.ambrose.nettoHelper2' as const;
+  if (teamSize === 3) return 'allowanceProps.ambrose.nettoHelper3' as const;
+  return 'allowanceProps.ambrose.nettoHelper4' as const;
+}
+
 export function ReadyStep({
   state,
   mode,
@@ -507,11 +525,7 @@ export function ReadyStep({
                 defaultPct={texasHandicapPct}
                 legend={tWizard('allowanceProps.texas.legend')}
                 description={tWizard('allowanceProps.texas.description')}
-                nettoHelperText={
-                  teamSize === 2
-                    ? tWizard('allowanceProps.texas.nettoHelper2')
-                    : tWizard('allowanceProps.texas.nettoHelper4')
-                }
+                nettoHelperText={tWizard(texasNettoHelperKey(teamSize))}
                 bruttoHelperText={tWizard('allowanceProps.texas.bruttoHelper')}
                 inputLabel={tWizard('allowanceProps.texas.inputLabel')}
                 value={texasHandicapPct}
@@ -528,11 +542,7 @@ export function ReadyStep({
                 defaultPct={ambroseHandicapPct}
                 legend={tWizard('allowanceProps.ambrose.legend')}
                 description={tWizard('allowanceProps.ambrose.description')}
-                nettoHelperText={
-                  teamSize === 2
-                    ? tWizard('allowanceProps.ambrose.nettoHelper2')
-                    : tWizard('allowanceProps.ambrose.nettoHelper4')
-                }
+                nettoHelperText={tWizard(ambroseNettoHelperKey(teamSize))}
                 bruttoHelperText={tWizard('allowanceProps.ambrose.bruttoHelper')}
                 inputLabel={tWizard('allowanceProps.ambrose.inputLabel')}
                 value={ambroseHandicapPct}

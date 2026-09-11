@@ -1106,6 +1106,7 @@
         "legend": "Team handicap",
         "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
         "nettoHelper2": "NGF standard: 25% of the sum of players' playing handicaps for 2-player teams.",
+        "nettoHelper3": "NGF standard: 15% of the sum of players' playing handicaps for 3-player teams.",
         "nettoHelper4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
         "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
         "inputLabel": "Team handicap (%)"
@@ -1114,6 +1115,7 @@
         "legend": "Team handicap",
         "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
         "nettoHelper2": "Standard Ambrose: 25% of the sum of players' playing handicaps for 2-player teams.",
+        "nettoHelper3": "Standard Ambrose: 16.7% of the sum of players' playing handicaps for 3-player teams.",
         "nettoHelper4": "Standard Ambrose: 12.5% of the sum of players' playing handicaps for 4-player teams.",
         "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
         "inputLabel": "Team handicap (%)"
