@@ -30,7 +30,7 @@ import type { TeeGender } from '@/lib/games/teeRating';
  *     liste sortert på laveste lag-netto.
  *
  * Speilet `renderSoloStrokeplay`-pattern for konsistens. Texas har
- * `team_size: 2 | 4` i mode_config og `team_number` per spiller — vi
+ * `team_size: 2 | 3 | 4` i mode_config og `team_number` per spiller — vi
  * videresender team_number til scoring-laget, og scoring-laget grupperer
  * og velger kaptein lex-min.
  *

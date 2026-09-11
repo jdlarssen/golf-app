@@ -1325,7 +1325,8 @@ export function useGameFormState({
   // lag må være fullt. Speiler `validateTexasScramble` i `lib/games/gamePayload.ts`.
   // Taket eies av `lib/games/teamFormatLimits.ts` (#2009): fire lag, maks 16
   // spillere — altså 4 lag à 2/3/4.
-  // Texas krever heltalls-pct (requireIntegerPct=true).
+  // Prosenten kan være fraksjonell (#2009): feltet tar imot prosent av snittet
+  // og lagrer prosent av summen, så 80 på et 3-mannslag blir 26,67 her.
   const {
     handicapPctValid: texasHandicapPctValid,
     playersValid: texasPlayersValid,
@@ -1335,7 +1336,7 @@ export function useGameFormState({
     teamByPlayer,
     teamSize,
     handicapPct: texasHandicapPct,
-    requireIntegerPct: true,
+    requireIntegerPct: false,
   });
 
   // Ambrose-validitet (#284): speiler Texas-validitets-reglene, men

@@ -173,7 +173,7 @@ function teamPagePath(shortId: string): string {
 
 /**
  * Resolve effective team size from `mode_config`. Texas scramble har
- * `team_size: 2 | 4`, best ball har `team_size: 2`. Hvis modi ikke
+ * `team_size: 2 | 3 | 4`, best ball har `team_size: 2`. Hvis modi ikke
  * støtter team i det hele tatt, returnerer vi null så caller kan
  * signalisere mode_does_not_support_teams.
  */
