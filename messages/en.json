@@ -1940,7 +1940,8 @@
         "not_member": "You're not a participant in this game.",
         "game_not_scheduled": "The game is no longer in the planning phase.",
         "flight_full": "That flight just filled up. Choose another.",
-        "db_error": "Something went wrong. Please try again."
+        "db_error": "Something went wrong. Please try again.",
+        "flight_bound_to_team": "Your team is your flight — it cannot be changed."
       }
     },
     "submit": {
