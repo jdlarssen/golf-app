@@ -78,6 +78,18 @@ export function fitsTeamFormat(mode: GameMode, n: number): boolean {
 }
 
 /**
+ * Hvor mange spillere velgeren lar arrangøren huke av for et lag-format: fulle
+ * lag i hele rutenettet, altså `MAX_TEAMS × lagstørrelse` — 8 for lag à 2,
+ * 12 for lag à 3, 16 for lag à 4. Var hardkodet til 8 i `PlayersSection`
+ * (det fjerde hjemmet for samme regel) og stoppet arrangøren ved åtte
+ * spillere selv om rutenettet og validatoren tok tolv (#2009, funnet i
+ * eierens klikkrunde).
+ */
+export function teamFormatPlayerCap(teamSize: number): number {
+  return MAX_TEAMS * Math.max(1, Math.floor(teamSize));
+}
+
+/**
  * Hvor mange lag rutenettet skal vise for en gitt lagstørrelse: alle fire, med
  * mindre lagstørrelsen gjør at det siste laget ikke får plass under taket.
  * Med dagens tall (16 slots, maks lagstørrelse 4) er svaret alltid

@@ -4,6 +4,7 @@ import {
   MAX_TEAMS,
   MAX_TEAM_FORMAT_PLAYERS,
   fitsTeamFormat,
+  teamFormatPlayerCap,
   teamSizesForMode,
   teamsShownForSize,
 } from './teamFormatLimits';
@@ -92,5 +93,21 @@ describe('teamsShownForSize', () => {
 
   it('ugyldig lagstørrelse faller tilbake til fullt rutenett', () => {
     expect(teamsShownForSize(0)).toBe(MAX_TEAMS);
+  });
+});
+
+describe('teamFormatPlayerCap — velgeren stopper der rutenettet er fullt', () => {
+  it.each([
+    [2, 8], // best ball, par-stableford, texas à 2
+    [3, 12], // texas/ambrose/florida/shamble à 3 — bestillingen i #2009
+    [4, 16],
+  ])('lagstørrelse %i → %i spillere kan velges', (size, cap) => {
+    expect(teamFormatPlayerCap(size)).toBe(cap);
+  });
+
+  it('taket er aldri større enn det validatoren leser', () => {
+    for (const size of [2, 3, 4]) {
+      expect(teamFormatPlayerCap(size)).toBeLessThanOrEqual(MAX_TEAM_FORMAT_PLAYERS);
+    }
   });
 });
