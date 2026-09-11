@@ -534,7 +534,7 @@
         },
         "ambrose": {
           "title": "Ambrose",
-          "description": "Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene."
+          "description": "Lag à 2, 3 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene."
         },
         "florida_scramble": {
           "title": "Florida Scramble",
@@ -1102,31 +1102,32 @@
         "description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, bare bruttoscoren teller.",
         "nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard)."
       },
+      "sumEquivalent": "Valget ditt tilsvarer {sumPct} % av summen av banehandicapene.",
       "texas": {
         "legend": "Lag-handicap",
-        "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
-        "nettoHelper2": "NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
-        "nettoHelper3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
-        "nettoHelper4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
+        "nettoHelper2": "NGF-standard for 2-mannslag: 50 (25 % av summen).",
+        "nettoHelper3": "NGF-standard for 3-mannslag: 45 (15 % av summen).",
+        "nettoHelper4": "NGF-standard for 4-mannslag: 40 (10 % av summen).",
         "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
-        "inputLabel": "Lag-handicap (%)"
+        "inputLabel": "Prosent av lagets snitt-handicap"
       },
       "ambrose": {
         "legend": "Lag-handicap",
-        "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
-        "nettoHelper2": "Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
-        "nettoHelper3": "Standard Ambrose: 16,7 % av summen av spillernes spille-HCP for 3-mannslag.",
-        "nettoHelper4": "Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
+        "nettoHelper2": "Ambrose-formelen gir alltid halve snittet: 50 (25 % av summen for 2-mannslag).",
+        "nettoHelper3": "Ambrose-formelen gir alltid halve snittet: 50 (16,7 % av summen for 3-mannslag).",
+        "nettoHelper4": "Ambrose-formelen gir alltid halve snittet: 50 (12,5 % av summen for 4-mannslag).",
         "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
-        "inputLabel": "Lag-handicap (%)"
+        "inputLabel": "Prosent av lagets snitt-handicap"
       },
       "florida": {
         "legend": "Lag-handicap",
-        "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
-        "nettoHelper3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
-        "nettoHelper4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
+        "nettoHelper3": "NGF-standard for 3-mannslag: 45 (15 % av summen).",
+        "nettoHelper4": "NGF-standard for 4-mannslag: 40 (10 % av summen).",
         "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
-        "inputLabel": "Lag-handicap (%)"
+        "inputLabel": "Prosent av lagets snitt-handicap"
       }
     },
     "errors": {
@@ -1344,7 +1345,7 @@
         ]
       },
       "texas_scramble": {
-        "shortDescription": "Lag à 4. Alle slår, beste velges.",
+        "shortDescription": "Lag à 2, 3 eller 4. Alle slår, beste velges.",
         "summary": "Laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår derfra igjen.",
         "points": [
           "Slik fortsetter dere til ballen er i hull. Laget får én score per hull.",
@@ -1373,7 +1374,7 @@
         "faq": [
           {
             "q": "Hvor mange er det på et texas scramble-lag?",
-            "a": "To eller fire. Fire er det vanligste på selskapsrunder og bedriftsturneringer, og laget spiller da 18 hull med én felles score per hull."
+            "a": "To, tre eller fire. Fire er det vanligste på selskapsrunder og bedriftsturneringer, og laget spiller da 18 hull med én felles score per hull."
           },
           {
             "q": "Må alle på laget bidra med utslag?",
@@ -1381,7 +1382,7 @@
           },
           {
             "q": "Hvordan regnes lag-handicapet i texas scramble?",
-            "a": "Tørny legger sammen banehandicapet til alle på laget og gir laget en prosent av summen. Forslaget følger NGF: 25 prosent for lag på to, 10 prosent for lag på fire. Arrangøren kan justere prosenten når runden opprettes."
+            "a": "Tørny legger sammen banehandicapet til alle på laget og gir laget en prosent av summen. Forslaget følger NGF: 25 prosent for lag på to, 15 for lag på tre, 10 for lag på fire. I veiviseren setter du tallet som prosent av lagets snitt-handicap, så forslaget for et lag på tre står som 45. Arrangøren kan justere det når runden opprettes."
           },
           {
             "q": "Kan vi legge ballen bedre der vi velger å spille fra?",
@@ -1390,7 +1391,7 @@
         ]
       },
       "ambrose": {
-        "shortDescription": "Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene.",
+        "shortDescription": "Lag à 2, 3 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene.",
         "summary": "En scramble der laget plukker det beste slaget hele veien, men med et lag-handikap som veier inn alle og jevner ut sterke og svake lag.",
         "points": [
           "Alle slår fra tee, dere velger det beste slaget, og alle spiller videre derfra.",

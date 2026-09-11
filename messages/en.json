@@ -534,7 +534,7 @@
         },
         "ambrose": {
           "title": "Ambrose",
-          "description": "Teams of 2 or 4. All play, best ball chosen. Team handicap evens out differences."
+          "description": "Teams of 2, 3 or 4. All play, best ball chosen. Team handicap evens out differences."
         },
         "florida_scramble": {
           "title": "Florida Scramble",
@@ -1102,31 +1102,32 @@
         "description": "Controls how much of the handicap is applied. Gross = no handicap, only gross strokes.",
         "nettoHelper": "Share of the player's handicap that counts. 100 = full course handicap (standard)."
       },
+      "sumEquivalent": "Your choice equals {sumPct}% of the sum of course handicaps.",
       "texas": {
         "legend": "Team handicap",
-        "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
-        "nettoHelper2": "NGF standard: 25% of the sum of players' playing handicaps for 2-player teams.",
-        "nettoHelper3": "NGF standard: 15% of the sum of players' playing handicaps for 3-player teams.",
-        "nettoHelper4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
+        "description": "The team plays off a share of the average of its players' course handicaps. 100 = the whole average, 50 = half. Tørny converts it to strokes per hole.",
+        "nettoHelper2": "NGF standard for 2-player teams: 50 (25% of the sum).",
+        "nettoHelper3": "NGF standard for 3-player teams: 45 (15% of the sum).",
+        "nettoHelper4": "NGF standard for 4-player teams: 40 (10% of the sum).",
         "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
-        "inputLabel": "Team handicap (%)"
+        "inputLabel": "Percent of the team's average handicap"
       },
       "ambrose": {
         "legend": "Team handicap",
-        "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
-        "nettoHelper2": "Standard Ambrose: 25% of the sum of players' playing handicaps for 2-player teams.",
-        "nettoHelper3": "Standard Ambrose: 16.7% of the sum of players' playing handicaps for 3-player teams.",
-        "nettoHelper4": "Standard Ambrose: 12.5% of the sum of players' playing handicaps for 4-player teams.",
+        "description": "The team plays off a share of the average of its players' course handicaps. 100 = the whole average, 50 = half. Tørny converts it to strokes per hole.",
+        "nettoHelper2": "The Ambrose formula is always half the average: 50 (25% of the sum for 2-player teams).",
+        "nettoHelper3": "The Ambrose formula is always half the average: 50 (16.7% of the sum for 3-player teams).",
+        "nettoHelper4": "The Ambrose formula is always half the average: 50 (12.5% of the sum for 4-player teams).",
         "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
-        "inputLabel": "Team handicap (%)"
+        "inputLabel": "Percent of the team's average handicap"
       },
       "florida": {
         "legend": "Team handicap",
-        "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
-        "nettoHelper3": "NGF standard: 15% of the sum of players' playing handicaps for 3-player teams.",
-        "nettoHelper4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
+        "description": "The team plays off a share of the average of its players' course handicaps. 100 = the whole average, 50 = half. Tørny converts it to strokes per hole.",
+        "nettoHelper3": "NGF standard for 3-player teams: 45 (15% of the sum).",
+        "nettoHelper4": "NGF standard for 4-player teams: 40 (10% of the sum).",
         "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
-        "inputLabel": "Team handicap (%)"
+        "inputLabel": "Percent of the team's average handicap"
       }
     },
     "errors": {
@@ -1344,7 +1345,7 @@
         ]
       },
       "texas_scramble": {
-        "shortDescription": "Teams of 4. Everyone tees off, the best is chosen.",
+        "shortDescription": "Teams of 2, 3 or 4. Everyone tees off, the best is chosen.",
         "summary": "The team plays one ball: everyone hits, you pick the best shot, and everyone plays again from there.",
         "points": [
           "You carry on like this until the ball is holed. The team records one score per hole.",
@@ -1373,7 +1374,7 @@
         "faq": [
           {
             "q": "How many players are on a Texas scramble team?",
-            "a": "Two or four. Four is the most common on social rounds and corporate days, and the team then plays 18 holes with one shared score per hole."
+            "a": "Two, three or four. Four is the most common on social rounds and corporate days, and the team then plays 18 holes with one shared score per hole."
           },
           {
             "q": "Does everyone on the team have to contribute drives?",
@@ -1381,7 +1382,7 @@
           },
           {
             "q": "How is the team handicap worked out in Texas scramble?",
-            "a": "Tørny adds up the course handicaps of everyone on the team and gives the team a percentage of that sum. The suggested default follows the Norwegian federation: 25 per cent for teams of two, 10 per cent for teams of four. The organiser can adjust the percentage when the round is created."
+            "a": "Tørny adds up the course handicaps of everyone on the team and gives the team a percentage of that sum. The suggested default follows the Norwegian federation: 25 per cent for teams of two, 15 for teams of three, 10 for teams of four. In the wizard you set the number as a percentage of the team's average handicap, so the suggestion for a team of three shows as 45. The organiser can adjust it when the round is created."
           },
           {
             "q": "Can we improve the lie where we choose to play from?",
@@ -1390,7 +1391,7 @@
         ]
       },
       "ambrose": {
-        "shortDescription": "Teams of 2 or 4. Everyone tees off, the best ball is chosen. A team handicap evens out the differences between teams.",
+        "shortDescription": "Teams of 2, 3 or 4. Everyone tees off, the best ball is chosen. A team handicap evens out the differences between teams.",
         "summary": "A scramble where the team picks the best shot all the way, but with a team handicap that weighs in everyone and evens out strong and weak teams.",
         "points": [
           "Everyone tees off, you choose the best shot, and everyone plays on from there.",

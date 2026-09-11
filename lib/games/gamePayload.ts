@@ -865,10 +865,11 @@ function validateSoloStrokeplay(
  *
  * Form-felter:
  *  - `texas_team_size`: 2, 3 eller 4 (andre verdier → unsupported_mode_size_combo)
- *  - `texas_team_handicap_pct`: 0..100 heltall (NGF-default 25 for 2-mannslag,
- *    10 for 4-mannslag, settes av GameForm når lagstørrelse endres). Utenfor
- *    range → bad_allowance (gjenbruker eksisterende kode siden semantikken
- *    er identisk: prosenttall mellom 0 og 100).
+ *  - `texas_team_handicap_pct`: 0..100, fraksjonell tillatt (NGF-default 25
+ *    for 2-mannslag, 15 for 3-mannslag, 10 for 4-mannslag — prosent av summen,
+ *    settes av veiviseren når lagstørrelse endres). Utenfor range →
+ *    bad_allowance (gjenbruker eksisterende kode siden semantikken er
+ *    identisk: prosenttall mellom 0 og 100).
  *  - `player_${i}_team`: positivt heltall, ingen øvre grense (par-stableford-
  *    mønsteret — admin kan kjøre stort antall lag for klubb-turnering).
  *
@@ -963,8 +964,14 @@ function parseTexasTeamSize(formData: FormData): 2 | 3 | 4 | null {
 }
 
 /**
- * Leser `texas_team_handicap_pct` fra form-data. Returnerer et heltall i
- * range 0..100 eller null hvis verdien er utenfor range / ikke parseable.
+ * Leser `texas_team_handicap_pct` fra form-data. Returnerer et tall i range
+ * 0..100 (fraksjonell tillatt) eller null hvis verdien er utenfor range / ikke
+ * parseable.
+ *
+ * Desimaler ble tillatt i #2009: veiviseren tar imot prosent av lagets SNITT
+ * og lagrer prosent av summen (`lib/games/teamHandicapUnit.ts`), så 80 % av
+ * snittet på et 3-mannslag lagres som 26,67. Samme regel som Ambrose og
+ * Florida hadde fra før; motoren runder uansett lag-handicapet til heltall.
  *
  * Tom string defaulter ikke — admin må eksplisitt sette prosenten via
  * GameForm når Texas-modus er valgt (default settes på lagstørrelse-endring).
@@ -973,7 +980,7 @@ function parseTexasHandicapPct(formData: FormData): number | null {
   const raw = formData.get('texas_team_handicap_pct');
   if (raw === null || raw === '') return null;
   const n = Number(raw);
-  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
   return n;
 }
 

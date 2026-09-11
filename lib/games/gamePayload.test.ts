@@ -1321,6 +1321,23 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     });
   });
 
+  it('publish med desimal-prosent (26.67 = 80 % av snittet på 3-mannslag) → ok (#2009)', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '3',
+        handicapPct: '26.67',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toMatchObject({ team_handicap_pct: 26.67 });
+  });
+
   it('publish med 4 lag à 4 (16 spillere) → ok — taket er 16 (#2009)', () => {
     const players = Array.from({ length: 16 }, (_, i) => ({
       userId: `p${i}`,

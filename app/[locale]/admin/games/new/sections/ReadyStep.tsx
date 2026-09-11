@@ -32,6 +32,7 @@ import { TEAM_NUMBERS } from '../useGameFormState';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import type { TeamSize } from '../TeamSizeSelector';
 import { AllowanceField } from '@/components/admin/AllowanceField';
+import { TeamHandicapField } from './TeamHandicapField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
 
 /** «Ingen feil»-formen; delt så useActionState-initen er referanse-stabil. */
@@ -70,24 +71,6 @@ type Props = {
    */
   onSubmitStart?: () => void;
 };
-
-/**
- * Hjelpeteksten under lag-handicap-feltet finnes per lagstørrelse. Texas og
- * Ambrose fikk 3-mannslag i #2009, og en `teamSize === 2 ? … : …`-kjede ville
- * da servert 4-manns-teksten («10 %») til et 3-mannslag mens feltet står på 15.
- * Mappingen er eksplisitt så en ny lagstørrelse ikke kan lande på feil tall.
- */
-function texasNettoHelperKey(teamSize: number) {
-  if (teamSize === 2) return 'allowanceProps.texas.nettoHelper2' as const;
-  if (teamSize === 3) return 'allowanceProps.texas.nettoHelper3' as const;
-  return 'allowanceProps.texas.nettoHelper4' as const;
-}
-
-function ambroseNettoHelperKey(teamSize: number) {
-  if (teamSize === 2) return 'allowanceProps.ambrose.nettoHelper2' as const;
-  if (teamSize === 3) return 'allowanceProps.ambrose.nettoHelper3' as const;
-  return 'allowanceProps.ambrose.nettoHelper4' as const;
-}
 
 export function ReadyStep({
   state,
@@ -518,57 +501,35 @@ export function ReadyStep({
                 hideHiddenInput
               />
             )}
+            {/* Scramble-familien (#2009): arrangøren setter lag-handicapet som
+                prosent av lagets snitt; feltet oversetter til og fra den
+                lagrede sum-prosenten. `key={teamSize}` forser remount ved
+                lagstørrelse-bytte så netto/brutto-minnet følger re-seedingen. */}
             {isTexas && (
-              <AllowanceField
+              <TeamHandicapField
                 key={teamSize}
-                fieldName="texas_team_handicap_pct"
-                defaultPct={texasHandicapPct}
-                legend={tWizard('allowanceProps.texas.legend')}
-                description={tWizard('allowanceProps.texas.description')}
-                nettoHelperText={tWizard(texasNettoHelperKey(teamSize))}
-                bruttoHelperText={tWizard('allowanceProps.texas.bruttoHelper')}
-                inputLabel={tWizard('allowanceProps.texas.inputLabel')}
-                value={texasHandicapPct}
-                onChange={setTexasHandicapPct}
-                hideHiddenInput
+                mode="texas_scramble"
+                teamSize={teamSize}
+                sumPct={texasHandicapPct}
+                onSumPctChange={setTexasHandicapPct}
               />
             )}
-            {/* Ambrose (#284): lag-handicap per standard Ambrose-formel.
-                `key={teamSize}` forser remount ved lagstørrelse-bytte. */}
             {isAmbrose && (
-              <AllowanceField
+              <TeamHandicapField
                 key={teamSize}
-                fieldName="ambrose_team_handicap_pct"
-                defaultPct={ambroseHandicapPct}
-                legend={tWizard('allowanceProps.ambrose.legend')}
-                description={tWizard('allowanceProps.ambrose.description')}
-                nettoHelperText={tWizard(ambroseNettoHelperKey(teamSize))}
-                bruttoHelperText={tWizard('allowanceProps.ambrose.bruttoHelper')}
-                inputLabel={tWizard('allowanceProps.ambrose.inputLabel')}
-                value={ambroseHandicapPct}
-                onChange={setAmbroseHandicapPct}
-                hideHiddenInput
+                mode="ambrose"
+                teamSize={teamSize}
+                sumPct={ambroseHandicapPct}
+                onSumPctChange={setAmbroseHandicapPct}
               />
             )}
-            {/* Florida Scramble (#283): lag-handicap per NGF-fasttabell.
-                `key={teamSize}` forser remount ved lagstørrelse-bytte. */}
             {isFlorida && (
-              <AllowanceField
+              <TeamHandicapField
                 key={teamSize}
-                fieldName="florida_team_handicap_pct"
-                defaultPct={floridaHandicapPct}
-                legend={tWizard('allowanceProps.florida.legend')}
-                description={tWizard('allowanceProps.florida.description')}
-                nettoHelperText={
-                  teamSize === 3
-                    ? tWizard('allowanceProps.florida.nettoHelper3')
-                    : tWizard('allowanceProps.florida.nettoHelper4')
-                }
-                bruttoHelperText={tWizard('allowanceProps.florida.bruttoHelper')}
-                inputLabel={tWizard('allowanceProps.florida.inputLabel')}
-                value={floridaHandicapPct}
-                onChange={setFloridaHandicapPct}
-                hideHiddenInput
+                mode="florida_scramble"
+                teamSize={teamSize}
+                sumPct={floridaHandicapPct}
+                onSumPctChange={setFloridaHandicapPct}
               />
             )}
 
