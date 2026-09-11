@@ -12,6 +12,7 @@ export type FlightJoinResult =
 export type FlightJoinError =
   | 'not_authed'
   | 'not_member'
+  | 'flight_bound_to_team'
   | 'game_not_scheduled'
   | 'flight_full'
   | 'db_error';
@@ -42,17 +43,30 @@ export async function joinFlight(
   // Verifiser at spilleren er aktiv deltaker i dette scheduled-spillet.
   const { data: membership } = await admin
     .from('game_players')
-    .select('user_id, withdrawn_at, flight_number')
+    .select('user_id, withdrawn_at, flight_number, team_number')
     .eq('game_id', gameId)
     .eq('user_id', userId)
     .maybeSingle<{
       user_id: string;
       withdrawn_at: string | null;
       flight_number: number | null;
+      team_number: number | null;
     }>();
 
   if (!membership || membership.withdrawn_at != null) {
     return { ok: false, error: 'not_member' };
+  }
+
+  // Lag-formater (scramble-familien, par-stableford, best ball, lag-matchplay)
+  // setter flight = lag i validatoren, og hull-siden, RLS-hjelperen
+  // `can_score_for` og lag-kortene leser flighten. Får en spiller flytte seg,
+  // står hen igjen i et annet lags flight med sitt eget lags scoring — kan
+  // taste for feil lag og ser feil kort. Velgeren (#543) er for solo-formater
+  // der flight er en fri gruppering; den skjules på hjemmesiden for spillere
+  // med lag, og dette er server-siden av samme regel (#2009: første spill med
+  // fire lag gjorde knappene synlige i praksis).
+  if (typeof membership.team_number === 'number') {
+    return { ok: false, error: 'flight_bound_to_team' };
   }
 
   const { data: game } = await admin

@@ -11,7 +11,7 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  *   - happy path: vellykket valg av flight
  *
  * Spørsmålsrekkefølge (adminMock FIFO):
- *   adminMock[0]: game_players.select(user_id, withdrawn_at, flight_number).eq.eq.maybeSingle
+ *   adminMock[0]: game_players.select(user_id, withdrawn_at, flight_number, team_number).eq.eq.maybeSingle
  *   adminMock[1]: games.select(status).eq.maybeSingle
  *   adminMock[2]: game_players.select({count}).eq.eq.neq.is    (before-count)
  *   adminMock[3]: game_players.update({flight_number}).eq.eq
@@ -63,6 +63,22 @@ describe('joinFlight', () => {
     const result = await joinFlight(GAME_ID, 1);
 
     expect(result).toEqual({ ok: false, error: 'not_member' });
+  });
+
+  it('spiller med lag → flight_bound_to_team (laget er flighten, #2009)', async () => {
+    adminMock = buildSupabaseMock([
+      {
+        data: { user_id: USER_ID, withdrawn_at: null, flight_number: 2, team_number: 2 },
+        error: null,
+      }, // membership i et lag-format: flight = lag
+    ]);
+
+    const { joinFlight } = await import('./flightJoinActions');
+    const result = await joinFlight(GAME_ID, 1);
+
+    expect(result).toEqual({ ok: false, error: 'flight_bound_to_team' });
+    // Ingen skriv: kun membership-oppslaget ble gjort.
+    expect(adminMock.from).toHaveBeenCalledTimes(1);
   });
 
   it('trukket spiller → not_member', async () => {

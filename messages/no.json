@@ -1940,7 +1940,8 @@
         "not_member": "Du er ikke deltaker i dette spillet.",
         "game_not_scheduled": "Spillet er ikke lenger i planleggingsfasen.",
         "flight_full": "Den flighten ble nettopp full. Velg en annen.",
-        "db_error": "Noe gikk galt. Prøv igjen."
+        "db_error": "Noe gikk galt. Prøv igjen.",
+        "flight_bound_to_team": "Laget ditt er flighten din — den kan ikke byttes."
       }
     },
     "submit": {

@@ -707,7 +707,12 @@ export default async function GameHomePage({
       flight_number: p.flight_number,
       withdrawn_at: p.withdrawn_at,
     }));
-    const showFlightPicker = eligibleForFlightAssignment(game.game_mode, flightPlayers);
+    // Spillere med lag har flight = lag (satt av validatoren) — velgeren er
+    // for solo-formater der flighten er en fri gruppering. `joinFlight` avviser
+    // det samme på serversiden (#2009).
+    const showFlightPicker =
+      eligibleForFlightAssignment(game.game_mode, flightPlayers) &&
+      me.team_number == null;
 
     // Bygg flight-alternativ-listen for velgeren. Grupper aktive spillere på
     // flight_number; én ekstra tom flight så spillere kan omfordele 3+3.
