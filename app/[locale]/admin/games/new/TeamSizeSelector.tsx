@@ -45,9 +45,9 @@ type Props = {
  * Scoring-motoren og payload-validatoren landet i fase 1; ModeSelector
  * wires inn modusen i fase 2 — inntil da har modusen ingen UI-eksponering.
  *
- * Texas scramble (issue #44) tillater team_size 2 eller 4 (3-mannslag utsatt
- * til v1.1). NGF-konvensjon: 25 % team-handicap for 2-mannslag, 10 % for
- * 4-mannslag — settes som default i GameForm når lagstørrelse endres.
+ * Texas scramble (issue #44, utvidet i #2009) tillater team_size 2, 3 eller 4.
+ * NGF-konvensjon: 25 % team-handicap for 2-mannslag, 15 % for 3-mannslag, 10 %
+ * for 4-mannslag — settes som default i GameForm når lagstørrelse endres.
  *
  * Ved fremtidige moduser utvider vi denne mappen — ingen DB-migrasjon eller
  * payload-endring nødvendig før en konkret kombinasjon er implementert.
@@ -59,9 +59,11 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   best_ball: new Set<TeamSize>([2]),
   singles_matchplay: new Set<TeamSize>([1]),
   solo_strokeplay: new Set<TeamSize>([1]),
-  texas_scramble: new Set<TeamSize>([2, 4]),
-  // Ambrose (#284): samme lagstørrelser som Texas scramble (2 eller 4).
-  ambrose: new Set<TeamSize>([2, 4]),
+  // Texas scramble: 2, 3 eller 4 per lag. 3-mannslag kom i #2009 (eier-pull:
+  // 4 lag à 3 lot seg ikke sette opp) — default-handicapet er 15 %.
+  texas_scramble: new Set<TeamSize>([2, 3, 4]),
+  // Ambrose (#284): samme lagstørrelser som Texas scramble (2, 3 eller 4).
+  ambrose: new Set<TeamSize>([2, 3, 4]),
   // Florida Scramble (#283): lagstørrelser 3 eller 4 (2-mannslag ikke støttet).
   florida_scramble: new Set<TeamSize>([3, 4]),
   fourball_matchplay: new Set<TeamSize>([2]),
@@ -130,17 +132,20 @@ type TileDef = {
  * Andre lag-moduser (best ball, texas, fourball, foursomes) er IKKE 4BBB-
  * stableford og beholder «Par».
  *
- * Florida Scramble (#283) viser 3-mannstile i stedet for Solo/Par — modusen
- * støtter lagstørrelser 3 og 4, ikke 1 og 2.
+ * Scramble-familien viser aldri Solo-tilen: Florida (#283) har 3- og 4-mannslag,
+ * Texas/Ambrose har 2, 3 og 4 etter #2009.
  */
 function tilesForMode(mode: GameMode): TileDef[] {
   const enabled = ENABLED_COMBOS[mode];
-  if (mode === 'florida_scramble') {
-    const floridaTiles: TileDef[] = [
+  // Scramble-familien har ingen solo-variant — lagstørrelsene er 2/3/4 (Texas,
+  // Ambrose) eller 3/4 (Florida). Filteret på `enabled` avgjør hvilke som vises.
+  if (mode === 'texas_scramble' || mode === 'ambrose' || mode === 'florida_scramble') {
+    const scrambleTiles: TileDef[] = [
+      { size: 2, key: 'par' },
       { size: 3, key: 'tremannslag' },
       { size: 4, key: 'firemann' },
     ];
-    return floridaTiles.filter((t) => enabled.has(t.size));
+    return scrambleTiles.filter((t) => enabled.has(t.size));
   }
   const teamTile: TileDef = isStablefordFamily(mode)
     ? { size: 2, key: 'fourBBB' }

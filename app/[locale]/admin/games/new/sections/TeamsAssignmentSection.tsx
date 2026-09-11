@@ -8,7 +8,7 @@
  *  - matchplay → sider-grid (side 1 + side 2)
  *  - best-ball-netto → lag-grid (4 lag à 2) + «Trekk tilfeldig»/«Tøm» + flights
  *  - par-stableford → lag-grid (1-4 lag à 2) + per-spiller-tee
- *  - texas-scramble → lag-grid (2 eller 4 spillere per lag) + per-spiller-tee
+ *  - texas-scramble → lag-grid (2, 3 eller 4 spillere per lag) + per-spiller-tee
  *  - solo (stableford / solo strokeplay) → kun per-spiller-tee
  *
  * Nummerering speiler GameForm-stacked-layouten («4. Lag», «5. Flights»,
@@ -22,6 +22,7 @@ import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
 import { FLIGHT_NUMBERS, TEAM_NUMBERS, type TeamNumber } from '../useGameFormState';
+import { teamsShownForSize } from '@/lib/games/teamFormatLimits';
 
 type Props = {
   state: GameFormState;
@@ -345,20 +346,20 @@ export function TeamsAssignmentSection({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {TEAM_NUMBERS.map((team) => {
-              // For Texas med team_size=4 har 8-spiller-limit i payload-laget
-              // konsekvensen at maks 2 lag kan fylles (2×4=8). Skjul lag 3 og 4
-              // for å unngå at admin tilordner spillere til et lag som ikke
-              // kan publiseres. Best-ball og par-stableford fortsetter å vise
-              // alle 4 lag uavhengig av lagstørrelse.
-              if ((isTexas || isAmbrose || isFlorida) && teamSize === 4 && team > 2) return null;
-              if (isFlorida && teamSize === 3 && team > 2) return null;
-              // Shamble med team_size=4 har samme 8-slots-logikk som Texas:
-              // maks 2 lag á 4 = 8 spillere. Shamble med team_size=3 viser
-              // alle 4 lag siden max er 4×3=12 (skiller seg fra Florida-3,
-              // som kun bruker 2 lag).
-              if (isShamble && teamSize === 4 && team > 2) return null;
+              // Scramble-familien viser så mange lag som spiller-taket tillater
+              // for valgt lagstørrelse (#2009). Reglene var tidligere hardkodet
+              // per format mot det gamle 8-taket, og shamble à 3 hadde drevet
+              // fra validatoren — den viste fire lag mens payload-laget bare
+              // leste åtte spillere, så 12 tilordnede spillere ga `team_balance`
+              // ved publisering. Nå leser begge fra `teamFormatLimits`.
+              if (
+                (isTexas || isAmbrose || isFlorida || isShamble) &&
+                team > teamsShownForSize(teamSize)
+              ) {
+                return null;
+              }
               // Lag-matchplay er 2v2: kun to sider. Skjul lag 3/4 så admin
-              // ikke kan tilordne en tredje side (samme mønster som Texas-4).
+              // ikke kan tilordne en tredje side.
               if (isTeamMatchplay && team > 2) return null;
               const slotCount =
                 isTexas || isAmbrose || isFlorida || isShamble ? teamSize : 2;

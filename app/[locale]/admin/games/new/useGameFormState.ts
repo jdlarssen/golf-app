@@ -191,6 +191,9 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
  */
 export function defaultTexasHandicapPct(teamSize: TeamSize): number {
   if (teamSize === 2) return 25;
+  // 3-mannslag (#2009): 15 % — samme verdi som NGF-tabellen gir Florida for
+  // 3-mannslag, og den ligger mellom Texas' 25 % (2-mann) og 10 % (4-mann).
+  if (teamSize === 3) return 15;
   if (teamSize === 4) return 10;
   return 25;
 }
@@ -281,6 +284,26 @@ export type MissingForPublishCode =
  * form vs. flerstegs-wizard). Endringer i validitets-logikk hører hjemme her,
  * ikke i de individuelle seksjonene.
  */
+/**
+ * Mangel-meldingene for lag-formatene finnes i tre varianter (lag à 2/3/4).
+ * Én mapping i stedet for en `teamSize === 2 ? … : …`-kjede per format, slik at
+ * en ny lagstørrelse ikke lander på feil tekst — 3-mannslag i Texas/Ambrose
+ * (#2009) traff nettopp den fellen i Texas-grenen.
+ */
+function teamOddKey(teamSize: number): 'teamOdd2' | 'teamOdd3' | 'teamOdd4' {
+  if (teamSize === 2) return 'teamOdd2';
+  if (teamSize === 3) return 'teamOdd3';
+  return 'teamOdd4';
+}
+
+function teamAssignKey(
+  teamSize: number,
+): 'teamAssign2' | 'teamAssign3' | 'teamAssign4' {
+  if (teamSize === 2) return 'teamAssign2';
+  if (teamSize === 3) return 'teamAssign3';
+  return 'teamAssign4';
+}
+
 export function useGameFormState({
   initialValues,
   players,
@@ -1298,10 +1321,10 @@ export function useGameFormState({
     flexTeamsHasAtLeastOneTeam;
 
   // Texas-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
-  // (2 eller 4), alle valgte spillere må ha team_number satt, og minst ett
+  // (2, 3 eller 4), alle valgte spillere må ha team_number satt, og minst ett
   // lag må være fullt. Speiler `validateTexasScramble` i `lib/games/gamePayload.ts`.
-  // Texas tillater team_size=2 eller 4. Med 8-slot-limit i payload-laget
-  // betyr det maks 4 lag á 2 (= 8) eller 2 lag á 4 (= 8) spillere.
+  // Taket eies av `lib/games/teamFormatLimits.ts` (#2009): fire lag, maks 16
+  // spillere — altså 4 lag à 2/3/4.
   // Texas krever heltalls-pct (requireIntegerPct=true).
   const {
     handicapPctValid: texasHandicapPctValid,
@@ -1615,27 +1638,27 @@ export function useGameFormState({
       pushMissing('players', tMissing('parAssign'));
     }
   } else if (isTexas) {
-    // Texas: lagstørrelse 2 eller 4. Trenger minst teamSize spillere
+    // Texas: lagstørrelse 2, 3 eller 4. Trenger minst teamSize spillere
     // fordelt på minst ett fullt lag. Mangler-meldingene speiler
     // `validateTexasScramble`-feilene fra payload-laget.
     if (selectedPlayerIds.length < teamSize) {
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
-      pushMissing('players', teamSize === 2 ? tMissing('teamOdd2') : tMissing('teamOdd4'));
+      pushMissing('players', tMissing(teamOddKey(teamSize)));
     } else if (!texasPlayersValid) {
-      pushMissing('players', teamSize === 2 ? tMissing('teamAssign2') : tMissing('teamAssign4'));
+      pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
     if (!texasHandicapPctValid) {
       pushMissing('allowance', tMissing('teamHandicapPct'));
     }
   } else if (isAmbrose) {
-    // Ambrose (#284): lagstørrelse 2 eller 4. Speiler Texas-mangler-meldingene.
+    // Ambrose (#284): lagstørrelse 2, 3 eller 4. Speiler Texas-mangler-meldingene.
     if (selectedPlayerIds.length < teamSize) {
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
-      pushMissing('players', teamSize === 2 ? tMissing('teamOdd2') : tMissing('teamOdd4'));
+      pushMissing('players', tMissing(teamOddKey(teamSize)));
     } else if (!ambrosePlayersValid) {
-      pushMissing('players', teamSize === 2 ? tMissing('teamAssign2') : tMissing('teamAssign4'));
+      pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
     if (!ambroseHandicapPctValid) {
       pushMissing('allowance', tMissing('teamHandicapPct'));
@@ -1647,9 +1670,9 @@ export function useGameFormState({
     if (selectedPlayerIds.length < teamSize) {
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
-      pushMissing('players', teamSize === 3 ? tMissing('teamOdd3') : tMissing('teamOdd4'));
+      pushMissing('players', tMissing(teamOddKey(teamSize)));
     } else if (!shamblePlayersValid) {
-      pushMissing('players', teamSize === 3 ? tMissing('teamAssign3') : tMissing('teamAssign4'));
+      pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
   } else if (isFlorida) {
     // Florida Scramble (#283): lagstørrelse 3 eller 4. Speiler Texas-/Ambrose-
@@ -1657,9 +1680,9 @@ export function useGameFormState({
     if (selectedPlayerIds.length < teamSize) {
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
-      pushMissing('players', teamSize === 3 ? tMissing('teamOdd3') : tMissing('teamOdd4'));
+      pushMissing('players', tMissing(teamOddKey(teamSize)));
     } else if (!floridaPlayersValid) {
-      pushMissing('players', teamSize === 3 ? tMissing('teamAssign3') : tMissing('teamAssign4'));
+      pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
     if (!floridaHandicapPctValid) {
       pushMissing('allowance', tMissing('teamHandicapPct'));
