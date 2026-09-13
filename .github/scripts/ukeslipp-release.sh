@@ -54,6 +54,16 @@ TAG="v$VERSION"
 LOCAL_CMD="GITHUB_REPOSITORY=$REPO INPUT_VERSION=$VERSION bash .github/scripts/ukeslipp-release.sh"
 echo "Versjon: $VERSION (package.json på main: $MAIN_VERSION)"
 
+# Lokalt avgjør package.json i utsjekken hvem som får «Latest» (steg 6). Er
+# utsjekken eldre enn main på GitHub, ville et gammelt slipp tatt «Latest» fra det
+# nyeste — da stopper vi heller. I Actions er utsjekken main (steg 0).
+if [ "${GITHUB_ACTIONS:-}" != "true" ]; then
+  git fetch -q origin main || die "git fetch origin main feilet — sjekk nettet og kjør igjen."
+  ORIGIN_VERSION=$(git show origin/main:package.json | jq -r '.version')
+  [ "$MAIN_VERSION" = "$ORIGIN_VERSION" ] \
+    || die "package.json her sier $MAIN_VERSION, men main på GitHub er $ORIGIN_VERSION. Kjør fra en oppdatert main (git checkout main && git pull) og prøv igjen."
+fi
+
 # ── 2. Idempotens: finnes releasen alt? ──
 RELEASE_URL=$(gh_get_or_empty "repos/$REPO/releases/tags/$TAG" '.html_url') || exit 1
 if [ -n "$RELEASE_URL" ]; then
@@ -114,8 +124,8 @@ if [ "$VERSION" = "$MAIN_VERSION" ]; then LATEST=true; fi
 #
 # GitHub nekter github.token å lage en tag på en commit der .github/workflows ikke
 # er lik den på noen branch-tupp — det krever Workflows-tillatelse, som
-# github.token aldri får (cli/cli#9514). Når workflow_run fyrer rett etter mergen,
-# er release-commiten main-tuppen og alt går. Har en workflow-endring kommet inn
+# github.token aldri får (cli/cli#9514). Når dispatchen fra Main verify kjører rett
+# etter mergen, er release-commiten main-tuppen og alt går. Har en workflow-endring kommet inn
 # etter, sier vi det rett ut i stedet for å gi en naken 403.
 if ! URL=$(gh release create "$TAG" --repo "$REPO" --target "$TARGET" --title "$TITLE" \
     --notes-file "$TMP/notes.md" --latest="$LATEST" 2>"$TMP/create.err"); then
