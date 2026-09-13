@@ -129,3 +129,23 @@ jobs:
             -f body="$BODY" \
             -f "labels[]=bug" \
             -F milestone=9
+
+  # #2019: start ukeslipp-release etter hver merge til main. Kortet merger
+  # ukes-PR-en med GITHUB_TOKEN, og da fyrer verken push eller workflow_run i
+  # ukeslipp-release — men kortet dispatcher denne workflowen, og
+  # workflow_dispatch er det eneste GITHUB_TOKEN alltid får starte. Egen jobb,
+  # ikke et steg i verify: releasen skal verken vente på eller farge porten, derfor
+  # også continue-on-error (den daglige reserven i ukeslipp-release tar en glipp).
+  # Skriptet der er idempotent og gjør ingenting når ukas release alt finnes.
+  ukeslipp-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch ukeslipp-release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ukeslipp-release.yml --repo "$GITHUB_REPOSITORY" --ref main -f kilde=main-verify

@@ -4,18 +4,23 @@
 # Oppfølgeren til ukesversjon.yml: den bumper versjonen i en PR, denne tagger
 # når PR-en er merget. Versjonsnummeret i footeren peker dermed på en commit.
 #
-# Hvorfor fire triggere: ukes-PR-en merges som regel av Discord-kortet med
-# GITHUB_TOKEN, og en slik merge utløser ingen push-workflows. Kortet
-# dispatcher derimot Main verify rett etter mergen. Derfor:
-#   - workflow_run når Main verify er ferdig på main: primærveien, minutter
-#     etter mergen. Da er release-commiten main-tuppen, og github.token får lage
-#     taggen (når den ikke får: steg 6 i skriptet).
+# Hvorfor disse triggerne: ukes-PR-en merges som regel av Discord-kortet med
+# GITHUB_TOKEN. En slik merge utløser ingen push-workflows, og en workflow_run
+# etter en GITHUB_TOKEN-startet kjøring fyrer heller ikke (community#48748). Det
+# eneste GITHUB_TOKEN alltid får starte, er workflow_dispatch. Derfor:
+#   - workflow_dispatch fra Main verify (input kilde=main-verify): primærveien.
+#     Kortet dispatcher Main verify rett etter mergen, og en menneske-merge gir
+#     push. Main verify starter denne workflowen fra en egen liten jobb, så
+#     releasen kommer innen et par minutter, mens release-commiten er
+#     main-tuppen og github.token får lage taggen (når den ikke får: steg 6).
 #   - push til main som endrer package.json: merger gjort av et menneske.
 #   - schedule: daglig reserve, ikke primærvei. GitHub forsinker cron her med
 #     timer (ukesversjon 03:00 UTC startet 07:59 og 09:25 de to siste mandagene).
-#   - workflow_dispatch med valgfri versjon: ny kjøring og bevis.
-# Skriptet er idempotent, så det er ufarlig at flere triggere treffer samme
-# slipp. Eldre slipp tilbakefylles lokalt (se skriptets header).
+#   - workflow_dispatch uten kilde: et menneske som kjører på nytt eller beviser.
+# Alt utenom menneske-dispatch er automatisk: det varsler ved rødt og hopper over
+# slipp fra før automatikken (steg 4b). Skriptet er idempotent, så det er
+# ufarlig at flere triggere treffer samme slipp. Slipp fra før automatikken
+# tilbakefylles lokalt (se skriptets header).
 #
 # Dispatcher du flere versjoner etter hverandre: vent til hver kjøring er
 # ferdig. Concurrency-gruppa holder bare én ventende kjøring, og en ny
@@ -26,10 +31,6 @@
 name: Ukeslipp-release
 
 on:
-  workflow_run:
-    workflows: [Main verify] # må være lik name: i main-verify.yml
-    types: [completed]
-    branches: [main]
   push:
     branches: [main]
     paths: [package.json]
@@ -39,6 +40,10 @@ on:
     inputs:
       version:
         description: 'Versjon å tagge, f.eks. 1.236.0. Tom = versjonen i package.json på main.'
+        required: false
+        default: ''
+      kilde:
+        description: 'Settes av Main verify (main-verify). La stå tom når du kjører for hånd.'
         required: false
         default: ''
 
@@ -69,14 +74,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           # Via env, aldri ${{ }} rett i run: — input-teksten er fri tekst.
           INPUT_VERSION: ${{ inputs.version }}
+          # Automatisk = alt utenom et menneske som dispatcher (steg 4b i skriptet).
+          UKESLIPP_AUTOMATISK: ${{ github.event_name != 'workflow_dispatch' || inputs.kilde == 'main-verify' }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: bash .github/scripts/ukeslipp-release.sh
 
-      # Rød kjøring skal aldri dø stille (samme mal som main-verify). Ikke for
-      # workflow_dispatch: den kjøringen følger et menneske med på, og unntaket
-      # holder rødt-bevis og feilede tilbakefyllinger fri for varsel-støy.
+      # Rød kjøring skal aldri dø stille (samme mal som main-verify). Ikke når et
+      # menneske dispatcher: den kjøringen følger noen med på, og unntaket holder
+      # rødt-bevis og feilede tilbakefyllinger fri for varsel-støy. Dispatch fra
+      # Main verify er automatisk og varsler.
       - name: Open alert issue on failure
-        if: failure() && github.event_name != 'workflow_dispatch'
+        if: failure() && (github.event_name != 'workflow_dispatch' || inputs.kilde == 'main-verify')
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -91,7 +99,7 @@ jobs:
             echo "Åpent varsel-issue finnes allerede — hopper over."
             exit 0
           fi
-          BODY=$(printf 'Ukeslipp-release feilet (utløst av `%s`).\n\nKjøring: %s\n\nIngen tag er flyttet, og ingen release er laget på gjetning. Vanlige årsaker: ukas blokk mangler i `CHANGELOG.md`, release-commiten finnes ikke på main, eller taggen står alt på en annen commit. Rett årsaken og kjør på nytt: `gh workflow run ukeslipp-release.yml --ref main`. Fix-protokoll: `docs/loops/ci-vakta.md`. Lukk issuet når kjøringen er grønn igjen.' "$EVENT" "$RUN_URL")
+          BODY=$(printf 'Ukeslipp-release feilet (utløst av `%s`).\n\nKjøring: %s\n\nIngen tag er flyttet, og ingen release er laget på gjetning. Vanlige årsaker: ukas blokk mangler i `CHANGELOG.md`, release-commiten finnes ikke på main, eller taggen står alt på en annen commit. Rett årsaken og kjør på nytt: `gh workflow run ukeslipp-release.yml --ref main`. Sier loggen at github.token ikke får lage taggen, hjelper ikke en ny kjøring: kjør den lokale kommandoen loggen gir. Fix-protokoll: `docs/loops/ci-vakta.md`. Lukk issuet når kjøringen er grønn igjen.' "$EVENT" "$RUN_URL")
           gh api "repos/$GITHUB_REPOSITORY/issues" \
             -f title="$TITLE" \
             -f body="$BODY" \

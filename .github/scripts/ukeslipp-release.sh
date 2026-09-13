@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Ukeslipp-release (#2019): git-tag vX.Y.Z + GitHub-release for ett ukeslipp.
 # Kjøres av .github/workflows/ukeslipp-release.yml — headeren der forklarer
-# hvorfor den har tre triggere.
+# triggerne (dispatch fra Main verify, push, daglig reserve, manuell dispatch).
 #
 # Arbeidsdelingen: scripts/release-notes.mjs henter ukas blokk fra CHANGELOG.md
 # (formatet eies av weekly-release.mjs), dette skriptet eier git, tag og release.
 #
 # Idempotent: finnes releasen alt, gjør skriptet ingenting (exit 0). Det er det
-# som gjør cron + push + dispatch mot samme slipp ufarlig.
+# som gjør at flere triggere mot samme slipp er ufarlig.
 #
 # Fail-closed: mangler ukas blokk, finnes ikke release-commiten, eller står en
 # tag alt på en annen commit → exit 1. Aldri en release på gjetning, og en tag
@@ -89,7 +89,9 @@ echo "Release-commit: $TARGET"
 # til tilbakefyllingen var gjort. Ber et menneske om en slik versjon via dispatch,
 # stopper vi med kommandoen. Filnavnet er ankeret: endres det, endre sjekken.
 if [ "${GITHUB_ACTIONS:-}" = "true" ] && ! git cat-file -e "$TARGET:.github/workflows/ukeslipp-release.yml" 2>/dev/null; then
-  if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
+  # UKESLIPP_AUTOMATISK settes av workflowen. Mangler den, regnes kjøringen som
+  # startet av et menneske — det strengeste valget.
+  if [ "${UKESLIPP_AUTOMATISK:-false}" != "true" ]; then
     die "$TAG er fra før ukeslipp-release fantes, og github.token får ikke tagge den. Kjør lokalt fra en oppdatert main, med en innlogget gh som har workflow-scope: $LOCAL_CMD"
   fi
   echo "::notice::$TAG er fra før ukeslipp-release fantes og fylles inn lokalt ($LOCAL_CMD) — hopper over."
