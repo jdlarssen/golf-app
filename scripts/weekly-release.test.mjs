@@ -7,6 +7,7 @@ import path from 'node:path';
 import {
   applyToChangelog,
   chooseBump,
+  extractWeekBlock,
   nextVersion,
   parseNote,
   readNotes,
@@ -469,5 +470,46 @@ describe('readNotes', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('extractWeekBlock', () => {
+  /** Two released weeks above the folded history — what the GitHub release job reads (#2019). */
+  const TWO_WEEKS = FIXTURE_CHANGELOG.replace(
+    '## Ukeslipp\n\n',
+    [
+      '## Ukeslipp',
+      '',
+      '### 1.233.0 · mandag 17. august 2026',
+      '',
+      '<details>',
+      '<summary>1 retting</summary>',
+      '',
+      `- [#1600](${ISSUE}/1600) — Ny retting.`,
+      '</details>',
+      '',
+      '',
+    ].join('\n'),
+  );
+
+  it('returns the heading as title and the block verbatim, stopping at the next week', () => {
+    expect(extractWeekBlock(TWO_WEEKS, '1.233.0')).toEqual({
+      title: '1.233.0 · mandag 17. august 2026',
+      notes: ['<details>', '<summary>1 retting</summary>', '', `- [#1600](${ISSUE}/1600) — Ny retting.`, '</details>'].join(
+        '\n',
+      ),
+    });
+  });
+
+  it('stops the last week at the history heading', () => {
+    const { title, notes } = extractWeekBlock(TWO_WEEKS, '1.232.0');
+    expect(title).toBe('1.232.0 · mandag 10. august 2026');
+    expect(notes.split('\n').at(0)).toBe('<details>');
+    expect(notes.split('\n').at(-1)).toBe('</details>');
+    expect(notes).not.toContain('Før ukeslippene');
+  });
+
+  it('throws in Norwegian for a version without a week block', () => {
+    expect(() => extractWeekBlock(TWO_WEEKS, '9.9.9')).toThrow(/fant 0 blokker for 9\.9\.9/);
   });
 });

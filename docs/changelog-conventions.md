@@ -24,6 +24,10 @@ ukerutinen alle notatene, velger ÉN versjon for hele uka (minst ett `feat`-nota
 Begge havner altså i **samme** blokk — ukas. Versjonen står én gang, i
 blokk-overskriften, og gjentas ikke på hver oppføring.
 
+Når ukes-PR-en er merget, gir `ukeslipp-release.yml` versjonen en git-tag
+(`v1.236.0`) og et innslag på [slipp-sida](https://github.com/jdlarssen/golf-app/releases)
+med blokka ordrett som tekst (#2019).
+
 Notatets frontmatter bærer de fire lanserings-feltene (`title`, `link`, `cta` +
 brødteksten); feltgrensene og malen står i [`.changes/README.md`](../.changes/README.md).
 Brødteksten er changelog-linja ordrett — skriv den ferdig i notatet.

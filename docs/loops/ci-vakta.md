@@ -19,7 +19,7 @@ Sjekk i denne rekkefølgen, og samle ALLE funn før fiksing:
 
 1. Åpne `CI-vakt:`-varsel-issues: `gh issue list --state open --search "CI-vakt in:title"`
 2. Røde checks på åpne PR-er: `gh pr list --state open --json number` → `gh pr checks <n>`
-3. Røde kjøringer av Main verify, Schema drift og Migration ledger: `gh run list --workflow main-verify.yml --limit 5` (og tilsvarende for schema-drift.yml og migration-ledger.yml)
+3. Røde kjøringer av Main verify, Schema drift, Migration ledger og Ukeslipp-release: `gh run list --workflow main-verify.yml --limit 5` (og tilsvarende for schema-drift.yml, migration-ledger.yml og ukeslipp-release.yml)
 
 Ingen funn → én logglinje («alt grønt») og ferdig. Det er suksess, ikke tomgang.
 

@@ -1,0 +1,91 @@
+# Ukeslipp-release (#2019): gir hvert ukeslipp en git-tag (v1.236.0) og en
+# release på GitHubs slipp-side, med ukas CHANGELOG-blokk som tekst.
+#
+# Oppfølgeren til ukesversjon.yml: den bumper versjonen i en PR, denne tagger
+# når PR-en er merget. Versjonsnummeret i footeren peker dermed på en commit.
+#
+# Hvorfor tre triggere: ukes-PR-en merges som regel av Discord-kortet med
+# GITHUB_TOKEN, og en slik merge utløser ingen push-workflows. En ren
+# `on: push` ville aldri fyrt på mandagsmergen. Derfor tidsstyrt — og
+# idempotent, så det er ufarlig at flere triggere treffer samme slipp:
+#   - schedule: mandag morgen etter at kortet har rukket å merge, pluss en
+#     daglig catch-all for ukes-PR-er som merges sent.
+#   - push til main som endrer package.json: merger gjort av et menneske.
+#   - workflow_dispatch med valgfri versjon: tilbakefylling og ny kjøring.
+#
+# Logikken bor i .github/scripts/ukeslipp-release.sh. Tags og releases laget
+# med github.token starter ingen andre workflows.
+name: Ukeslipp-release
+
+on:
+  schedule:
+    # Ukes-PR-en åpnes 03:00 UTC og merges etter CI. Skjeve minutter fordi
+    # GitHub forsinker kjøringer som ligger på hel time; 08:17 UTC = 10:17 Oslo
+    # sommertid, så slippet er ute før lunsj også med forsinkelse.
+    - cron: '17 5,8 * * 1'
+    - cron: '23 6 * * *' # daglig catch-all
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versjon å tagge, f.eks. 1.236.0. Tom = versjonen i package.json på main.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: ukeslipp-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # release-commiten letes opp i historikken
+
+      # Ingen npm ci: release-notes.mjs har null avhengigheter (som ukesversjon).
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Tag og release for ukeslippet
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Via env, aldri ${{ }} rett i run: — input-teksten er fri tekst.
+          INPUT_VERSION: ${{ inputs.version }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: bash .github/scripts/ukeslipp-release.sh
+
+      # Rød kjøring skal aldri dø stille (samme mal som main-verify). Ikke for
+      # workflow_dispatch: den kjøringen følger et menneske med på, og unntaket
+      # holder rødt-bevis og feilede tilbakefyllinger fri for varsel-støy.
+      - name: Open alert issue on failure
+        if: failure() && github.event_name != 'workflow_dispatch'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT: ${{ github.event_name }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          TITLE="CI-vakt: ukeslipp-release rød"
+          bash .github/scripts/discord-notify.sh "🔴 **Ukeslipp-release rød** — $RUN_URL"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Ukeslipp-release feilet (utløst av `%s`).\n\nKjøring: %s\n\nIngen tag er flyttet, og ingen release er laget på gjetning. Vanlige årsaker: ukas blokk mangler i `CHANGELOG.md`, release-commiten finnes ikke på main, eller taggen står alt på en annen commit. Rett årsaken og kjør på nytt: `gh workflow run ukeslipp-release.yml --ref main`. Fix-protokoll: `docs/loops/ci-vakta.md`. Lukk issuet når kjøringen er grønn igjen.' "$EVENT" "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -F milestone=9

@@ -9,6 +9,9 @@
 # Deploy-rytmen røres ikke: merge til main deployer fortsatt rett til prod.
 # Versjonsnummeret er et ukestempel, ikke et deploystempel.
 #
+# Oppfølger: ukeslipp-release.yml gir versjonen en git-tag og en GitHub-release
+# når PR-en er merget (#2019).
+#
 # Ops-forutsetning: secreten PR_AUTHOR_PAT (#1701). PR-en må åpnes med et
 # personlig token — github.token-PR-er får kjøringene sine parkert som «Approve
 # and run» siden GitHubs endring 11. juni 2026, og da kommer verken merge-porten
