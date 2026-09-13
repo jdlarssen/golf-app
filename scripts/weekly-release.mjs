@@ -301,6 +301,32 @@ export function applyToChangelog(changelog, { version, notes, now }) {
   return { text: applyEdits(lines, edits), edits };
 }
 
+/**
+ * One released week, read back for its GitHub release (#2019): the heading
+ * text as `title`, and everything under it — verbatim, up to the next heading —
+ * as `notes`. Only `## Ukeslipp` is searched, so a version from before the
+ * weekly rhythm never matches.
+ */
+export function extractWeekBlock(changelog, version) {
+  const lines = changelog.split('\n');
+  const start = headingIndex(lines, WEEK_HEADING);
+  const sectionEnd = lines.findIndex((line, i) => i > start && line.startsWith('## '));
+  const section = lines.slice(start + 1, sectionEnd === -1 ? lines.length : sectionEnd);
+
+  const prefix = `### ${version} · `;
+  const hits = section.reduce((acc, line, i) => (line.startsWith(prefix) ? [...acc, i] : acc), []);
+  if (hits.length !== 1) {
+    throw new Error(
+      `fant ${hits.length} blokker for ${version} under «${WEEK_HEADING}» i CHANGELOG.md — forventet nøyaktig én`,
+    );
+  }
+
+  const at = hits[0];
+  const next = section.findIndex((line, i) => i > at && line.startsWith('### '));
+  const body = section.slice(at + 1, next === -1 ? section.length : next);
+  return { title: section[at].slice('### '.length), notes: body.join('\n').trim() };
+}
+
 function applyEdits(lines, edits) {
   const out = [];
   let cursor = 0;
