@@ -130,7 +130,8 @@ jobs:
             -f "labels[]=bug" \
             -F milestone=9
 
-  # #2019: start ukeslipp-release etter hver merge til main. Kortet merger
+  # #2019: start ukeslipp-release hver gang Main verify kjører på main (alle merger
+  # utenom rene docs-merger; ukes-PR-en rører package.json). Kortet merger
   # ukes-PR-en med GITHUB_TOKEN, og da fyrer verken push eller workflow_run i
   # ukeslipp-release — men kortet dispatcher denne workflowen, og
   # workflow_dispatch er det eneste GITHUB_TOKEN alltid får starte. Egen jobb,
