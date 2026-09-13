@@ -66,7 +66,8 @@ native/app/scripts/store-build-ios.sh --upload-only ~/.torny-native/dist/TornyNa
 
 Skriptet stopper ved første feil, og gjør i rekkefølge:
 
-1. **Verktøy:** xcodebuild, pod, Node 22, `ExportOptions.plist`.
+1. **Verktøy og rent tre:** xcodebuild, pod, Node 22, `ExportOptions.plist` — og ingen lokale
+   endringer i sporede filer (se «Merke per bygg»).
 2. **Prod-verdiene** fra `.env.local`: verten må være prod-verten (hel vert, ikke delstreng);
    anon-nøkkelen må finnes. Skriver vert og nøkkel-lengde til skjermen — aldri nøkkelen.
 3. **Eksporterer** `APP_VARIANT=store` + de tre `EXPO_PUBLIC_*` i skall-miljøet, og løser
@@ -82,15 +83,19 @@ Skriptet stopper ved første feil, og gjør i rekkefølge:
 6. **`xcodebuild archive`** (Release, `generic/platform=iOS`, `DEVELOPMENT_TEAM=8C8WCW67J9`).
    Xcodes «Bundle React Native code and images»-steg kjører Metro med `--reset-cache`, så
    det finnes ingen gammel bundle å arve. Full logg i `…archive.log`; ved feil vises de
-   siste 60 linjene.
+   siste 60 linjene. Rett før arkiveringen sjekkes sporede filer på nytt, og etter
+   `ARCHIVE SUCCEEDED` skrives byggecommiten til `…commit`.
 7. **Bevis-steget** (under) — én FAIL, og ingenting lastes opp.
 8. **`xcodebuild -exportArchive`** med `ExportOptions.plist` → laster opp. Skriptet leter
    etter «Upload succeeded» i loggen; mangler frasen etter en grønn eksport, sjekk App Store
    Connect → TestFlight. Ligger bygget ikke der, last opp samme arkiv igjen med
    `--upload-only` — ikke bump.
+9. **Merke** (#2019): etter «Upload succeeded» setter `store-build-tag.sh` git-taggen
+   `native-ios/v<versjon>-<build>` på commiten i `…commit`. «Ferdig»-boksen viser den som
+   `Merke:   native-ios/v1.1.0-3 → <sha>`. Se «Merke per bygg».
 
 Alt havner i `~/.torny-native/dist/TornyNative-<versjon>-<build>.*`: `.xcarchive`,
-`.archive.log`, `.bevis.txt`, `.export.log`, `.export/`.
+`.archive.log`, `.commit` (byggecommiten), `.bevis.txt`, `.export.log`, `.export/`.
 
 **Etter `--no-upload`:** når beviset er lest og kandidaten er god, laster du opp *samme*
 arkiv — ingen ny kompilering, så bundelen som havner i App Store Connect er nøyaktig den
@@ -101,7 +106,8 @@ native/app/scripts/store-build-ios.sh --upload-only ~/.torny-native/dist/TornyNa
 ```
 
 Kommandoen kjører beviset på nytt (nøkkel-sjekken inkludert når repo-rotas `.env.local`
-finnes), eksporterer og laster opp. Den trenger ikke Node eller CocoaPods.
+finnes), eksporterer og laster opp. Den trenger ikke Node eller CocoaPods. Merket settes
+her, fra `…commit`-fila arkivet fikk da det ble laget — ikke fra HEAD nå.
 
 ## Bevis-steget
 
@@ -110,7 +116,8 @@ native/app/scripts/store-build-proof.sh ~/.torny-native/dist/TornyNative-1.1.0-2
 ```
 
 Kan kjøres på nytt på et eksisterende arkiv (eller en `.app`) uten å bygge. Skriver
-`…bevis.txt` — **lim den inn i issue-kommentaren** (P3 i kontrakten). Exit 0 = alt PASS.
+`…bevis.txt` — **lim den inn i issue-kommentaren** (P3 i kontrakten), sammen med merket.
+Exit 0 = alt PASS.
 
 | Kilde | Regel |
 |---|---|
@@ -130,6 +137,33 @@ i `store-build-proof.sh` med kommentar om hvor den kommer fra. En UKJENT på for
 `http://<ord uten punktum, kolon eller skråstrek>` er phoenix-literalen med en ny nabo, ikke
 en lekkasje. Er det en adresse vi eier, er bygget feil — ikke lista.
 
+## Merke per bygg
+
+Hvert opplastet bygg får git-taggen `native-ios/v<versjon>-<build>` på nøyaktig commiten det
+ble kompilert fra (#2019). Bump-commiten er ikke byggecommiten — i #1954 var bumpen
+`68f5d6cd` og bygget `fd3b850d` — så merket er det eneste i repoet som sier hvilken kode et
+TestFlight-bygg kom fra. Merkene vises ikke på slipp-sida; finn dem med
+`git ls-remote --tags origin 'refs/tags/native-ios/*'`.
+
+- **Rent tre:** skriptet stopper hvis sporede filer har lokale endringer, både før prebuild og
+  rett før arkivering. Usporede filer teller ikke (`native/app/ios/` er gitignorert).
+- **Byggecommiten fanges ved arkivering** i `…commit`, ikke ved opplasting — `--upload-only`
+  kan komme dager senere, med en annen HEAD.
+- **Via GitHub-API-et, aldri `git push`.** Commiten må ligge på `main`, og `gh` må være
+  innlogget (`gh auth login`).
+- **Idempotent, og flyttes aldri.** Finnes merket på samme commit, er alt i orden. Står det på
+  en annen commit, stopper skriptet: et nytt bygg får nytt buildnummer, og dermed nytt merke.
+- **Feiler merket etter en vellykket opplasting,** sier skriptet det rett ut og gir kommandoen.
+  Samme kommando merker et arkiv fra før #2019 (ingen `…commit`-fil):
+  ```bash
+  native/app/scripts/store-build-tag.sh 1.1.0 3 <commit>
+  ```
+- **Issue-kommentaren for et bygg** oppgir merket ved siden av `bevis.txt`.
+
+Limet i `store-build-ios.sh` rundt merket er ikke kjørt mot en ekte opplasting før første
+butikkbygg etter #2019. Les «Merke:»-linja i «Ferdig»-boksen da, og sjekk merket med
+`git ls-remote`.
+
 ## Bump-regelen
 
 App Store Connect avviser et duplikat (versjon, build). Før hver ny opplasting:
@@ -139,6 +173,8 @@ App Store Connect avviser et duplikat (versjon, build). Før hver ny opplasting:
 - Ny `STORE_VERSION` når appen endrer seg for brukerne; hold den over skallets `1.0`.
 - Skriptet nekter å kompilere hvis arkivet for (versjon, build) alt finnes. Skal det
   arkivet lastes opp, er veien `--upload-only <arkiv>` — ikke en bump.
+- Et merke flyttes aldri: `native-ios/v1.1.0-3` peker for alltid på commiten bygg 3 kom fra.
+  Nytt bygg = nytt buildnummer = nytt merke.
 
 Første kandidat er `1.1.0 (2)`; skallet brukte `1.0 (1)`.
 
@@ -198,6 +234,10 @@ Forutsetning for (2): `native/ios/` beholdes buildbar til N8 er lukket + én app
 - Beviset feiler på **UKJENT `http://…`** → se «Bevis-steget».
 - **Duplikat-vakten stopper deg** → var det `--no-upload`-arkivet du ville laste opp? Da er
   det `--upload-only <arkiv>`, ikke en bump.
+- **«Sporede filer har lokale endringer»** → commit eller forkast endringene (`git status`) og
+  kjør igjen. Merket skal peke på koden som faktisk ble bygget.
+- **«Opplastingen LYKTES — bare merket i git mangler»** → bygget ligger i App Store Connect;
+  ikke last opp på nytt. Rett feilen (typisk `gh auth login`) og kjør kommandoen meldingen gir.
 - **To feilede byggeforsøk → stopp** og skriv opp hva som skjedde (T8 i
   `docs/agent-discipline/core.md`). Ikke forsøk nummer tre på håp.
 
