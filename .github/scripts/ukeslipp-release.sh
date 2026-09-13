@@ -51,6 +51,7 @@ MAIN_VERSION=$(jq -r '.version' package.json)
 VERSION="${INPUT_VERSION:-$MAIN_VERSION}"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "«$VERSION» er ikke en versjon på formen X.Y.Z."
 TAG="v$VERSION"
+LOCAL_CMD="GITHUB_REPOSITORY=$REPO INPUT_VERSION=$VERSION bash .github/scripts/ukeslipp-release.sh"
 echo "Versjon: $VERSION (package.json på main: $MAIN_VERSION)"
 
 # ── 2. Idempotens: finnes releasen alt? ──
@@ -80,6 +81,21 @@ COMMIT_VERSION=$(git show "$TARGET:package.json" | jq -r '.version')
 [ "$COMMIT_VERSION" = "$VERSION" ] || die "commit $TARGET heter v$VERSION, men package.json der sier $COMMIT_VERSION."
 echo "Release-commit: $TARGET"
 
+# ── 4b. Slipp fra før automatikken ──
+# En release-commit uten denne workflowen i treet (1.233–1.236) kan github.token
+# aldri tagge: .github/workflows der er ulik alle branch-tupper (steg 6). Slike
+# slipp fylles inn lokalt. Automatiske kjøringer hopper over dem med en notis —
+# ellers ble første kjøring etter at automatikken kom inn rød, og varslet hver dag
+# til tilbakefyllingen var gjort. Ber et menneske om en slik versjon via dispatch,
+# stopper vi med kommandoen. Filnavnet er ankeret: endres det, endre sjekken.
+if [ "${GITHUB_ACTIONS:-}" = "true" ] && ! git cat-file -e "$TARGET:.github/workflows/ukeslipp-release.yml" 2>/dev/null; then
+  if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
+    die "$TAG er fra før ukeslipp-release fantes, og github.token får ikke tagge den. Kjør lokalt fra en oppdatert main, med en innlogget gh som har workflow-scope: $LOCAL_CMD"
+  fi
+  echo "::notice::$TAG er fra før ukeslipp-release fantes og fylles inn lokalt ($LOCAL_CMD) — hopper over."
+  exit 0
+fi
+
 # ── 5. En tag som alt finnes, må stå på release-commiten ──
 # Typisk etter en kjøring som laget taggen men døde før releasen. Står den et
 # annet sted, stopper vi: en tag flyttes aldri.
@@ -103,7 +119,7 @@ if ! URL=$(gh release create "$TAG" --repo "$REPO" --target "$TARGET" --title "$
     --notes-file "$TMP/notes.md" --latest="$LATEST" 2>"$TMP/create.err"); then
   cat "$TMP/create.err" >&2
   if [ "$(git rev-parse "$TARGET:.github/workflows")" != "$(git rev-parse "HEAD:.github/workflows")" ]; then
-    die "GitHub avviste $TAG: .github/workflows er endret siden release-commiten, og da får github.token ikke lage taggen. Kjør skriptet lokalt fra en oppdatert main, med en innlogget gh som har workflow-scope: GITHUB_REPOSITORY=$REPO INPUT_VERSION=$VERSION bash .github/scripts/ukeslipp-release.sh"
+    die "GitHub avviste $TAG: .github/workflows er endret siden release-commiten, og da får github.token ikke lage taggen. Kjør skriptet lokalt fra en oppdatert main, med en innlogget gh som har workflow-scope: $LOCAL_CMD"
   fi
   die "gh release create feilet for $TAG (feilen står over)."
 fi
