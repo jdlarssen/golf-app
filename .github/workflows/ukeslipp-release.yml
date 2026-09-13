@@ -4,29 +4,37 @@
 # Oppfølgeren til ukesversjon.yml: den bumper versjonen i en PR, denne tagger
 # når PR-en er merget. Versjonsnummeret i footeren peker dermed på en commit.
 #
-# Hvorfor tre triggere: ukes-PR-en merges som regel av Discord-kortet med
-# GITHUB_TOKEN, og en slik merge utløser ingen push-workflows. En ren
-# `on: push` ville aldri fyrt på mandagsmergen. Derfor tidsstyrt — og
-# idempotent, så det er ufarlig at flere triggere treffer samme slipp:
-#   - schedule: mandag morgen etter at kortet har rukket å merge, pluss en
-#     daglig catch-all for ukes-PR-er som merges sent.
+# Hvorfor fire triggere: ukes-PR-en merges som regel av Discord-kortet med
+# GITHUB_TOKEN, og en slik merge utløser ingen push-workflows. Kortet
+# dispatcher derimot Main verify rett etter mergen. Derfor:
+#   - workflow_run når Main verify er ferdig på main: primærveien, minutter
+#     etter mergen. Da er release-commiten main-tuppen, og github.token får lage
+#     taggen (når den ikke får: steg 6 i skriptet).
 #   - push til main som endrer package.json: merger gjort av et menneske.
-#   - workflow_dispatch med valgfri versjon: tilbakefylling og ny kjøring.
+#   - schedule: daglig reserve, ikke primærvei. GitHub forsinker cron her med
+#     timer (ukesversjon 03:00 UTC startet 07:59 og 09:25 de to siste mandagene).
+#   - workflow_dispatch med valgfri versjon: ny kjøring og bevis.
+# Skriptet er idempotent, så det er ufarlig at flere triggere treffer samme
+# slipp. Eldre slipp tilbakefylles lokalt (se skriptets header).
+#
+# Dispatcher du flere versjoner etter hverandre: vent til hver kjøring er
+# ferdig. Concurrency-gruppa holder bare én ventende kjøring, og en ny
+# erstatter den.
 #
 # Logikken bor i .github/scripts/ukeslipp-release.sh. Tags og releases laget
 # med github.token starter ingen andre workflows.
 name: Ukeslipp-release
 
 on:
-  schedule:
-    # Ukes-PR-en åpnes 03:00 UTC og merges etter CI. Skjeve minutter fordi
-    # GitHub forsinker kjøringer som ligger på hel time; 08:17 UTC = 10:17 Oslo
-    # sommertid, så slippet er ute før lunsj også med forsinkelse.
-    - cron: '17 5,8 * * 1'
-    - cron: '23 6 * * *' # daglig catch-all
+  workflow_run:
+    workflows: [Main verify] # må være lik name: i main-verify.yml
+    types: [completed]
+    branches: [main]
   push:
     branches: [main]
     paths: [package.json]
+  schedule:
+    - cron: '37 10 * * *' # daglig reserve; starter ofte timer senere
   workflow_dispatch:
     inputs:
       version:

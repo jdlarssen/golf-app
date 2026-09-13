@@ -13,8 +13,10 @@
 # tag alt på en annen commit → exit 1. Aldri en release på gjetning, og en tag
 # flyttes aldri. Varsel-issuet eies av workflowen.
 #
-# Lokalt (repo-rota, main sjekket ut):
+# Lokalt (repo-rota, main sjekket ut, gh innlogget med workflow-scope):
 #   GITHUB_REPOSITORY=jdlarssen/golf-app INPUT_VERSION=1.236.0 bash .github/scripts/ukeslipp-release.sh
+# Det er veien for eldre slipp: er .github/workflows endret siden release-
+# commiten, får github.token i workflowen ikke lage taggen (steg 6).
 set -euo pipefail
 
 REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY må være satt}"
@@ -91,9 +93,20 @@ fi
 # vilkårlig rekkefølge aldri stjeler den fra nyeste slipp.
 LATEST=false
 if [ "$VERSION" = "$MAIN_VERSION" ]; then LATEST=true; fi
-URL=$(gh release create "$TAG" --repo "$REPO" --target "$TARGET" --title "$TITLE" \
-  --notes-file "$TMP/notes.md" --latest="$LATEST") \
-  || die "gh release create feilet for $TAG."
+#
+# GitHub nekter github.token å lage en tag på en commit der .github/workflows ikke
+# er lik den på noen branch-tupp — det krever Workflows-tillatelse, som
+# github.token aldri får (cli/cli#9514). Når workflow_run fyrer rett etter mergen,
+# er release-commiten main-tuppen og alt går. Har en workflow-endring kommet inn
+# etter, sier vi det rett ut i stedet for å gi en naken 403.
+if ! URL=$(gh release create "$TAG" --repo "$REPO" --target "$TARGET" --title "$TITLE" \
+    --notes-file "$TMP/notes.md" --latest="$LATEST" 2>"$TMP/create.err"); then
+  cat "$TMP/create.err" >&2
+  if [ "$(git rev-parse "$TARGET:.github/workflows")" != "$(git rev-parse "HEAD:.github/workflows")" ]; then
+    die "GitHub avviste $TAG: .github/workflows er endret siden release-commiten, og da får github.token ikke lage taggen. Kjør skriptet lokalt fra en oppdatert main, med en innlogget gh som har workflow-scope: GITHUB_REPOSITORY=$REPO INPUT_VERSION=$VERSION bash .github/scripts/ukeslipp-release.sh"
+  fi
+  die "gh release create feilet for $TAG (feilen står over)."
+fi
 
 # ── 7. Bekreft positivt: taggen står på release-commiten ──
 CONFIRMED=$(gh_get_or_empty "repos/$REPO/git/ref/tags/$TAG" '.object.type + " " + .object.sha') || exit 1
