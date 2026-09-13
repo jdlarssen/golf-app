@@ -129,7 +129,7 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 
 ## Generert snapshot — RLS / CHECK / triggere / SECURITY DEFINER
 
-**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-09-06.** Staging matcher prod på alt under.
+**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-09-13.** Staging matcher prod på alt under.
 
 **Totaler:** 41 tabeller · 108 CHECK-constraints · 17 triggere · 48 SECURITY DEFINER-funksjoner.
 
