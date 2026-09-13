@@ -160,9 +160,11 @@ TestFlight-bygg kom fra. Merkene vises ikke på slipp-sida; finn dem med
   ```
 - **Issue-kommentaren for et bygg** oppgir merket ved siden av `bevis.txt`.
 
-Limet i `store-build-ios.sh` rundt merket er ikke kjørt mot en ekte opplasting før første
-butikkbygg etter #2019. Les «Merke:»-linja i «Ferdig»-boksen da, og sjekk merket med
-`git ls-remote`.
+**VERIFICATION GAP:** limet i `store-build-ios.sh` er ikke kjørt mot ekte Xcode og en ekte
+opplasting — verken skrivingen av `…commit` etter arkivering, vakta rett før arkivering eller
+merke-kallet etter «Upload succeeded». `--upload-only`-veien er prøvd med falsk `xcodebuild`
+og `gh` på en kopi av det ekte `1.1.0 (3)`-arkivet. Første butikkbygg etter #2019 er beviset:
+les «Merke:»-linja i «Ferdig»-boksen, og sjekk merket med `git ls-remote`.
 
 ## Bump-regelen
 
