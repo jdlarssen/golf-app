@@ -5,7 +5,7 @@
 #
 # Hvorfor et skript og ikke en oppskrift: de tre `EXPO_PUBLIC_*`-verdiene bakes
 # inn ved bundling, og ingenting stopper et butikkbygg med feil adresse — appen
-# kjører helt normalt til noen trykker «Slett konto». Skriptet gjør derfor tre
+# kjører helt normalt til noen trykker «Slett konto». Skriptet gjør derfor fire
 # ting en oppskrift ikke kan garantere:
 #
 #  1. **Prod-verdiene kommer fra skall-miljøet, aldri fra en `.env`-fil.**
@@ -19,6 +19,10 @@
 #     stopper skriptet: skal det arkivet lastes opp, bruk `--upload-only`; skal
 #     det kompileres på nytt, bump `STORE_IOS_BUILD_NUMBER` i `app.config.ts`
 #     først (App Store Connect avviser samme buildnummer to ganger).
+#  4. **Merke i git (#2019).** Etter bekreftet opplasting setter
+#     `store-build-tag.sh` taggen `native-ios/v<versjon>-<build>` på commiten
+#     arkivet ble bygget fra (fanget i `<arkiv>.commit` ved arkivering). Derfor
+#     må sporede filer være uendret før arkivering — ellers ville merket lyve.
 #
 # Bruk:  native/app/scripts/store-build-ios.sh [--no-upload]
 #        native/app/scripts/store-build-ios.sh --upload-only <sti.xcarchive>
@@ -36,6 +40,7 @@ DIST=${TORNY_DIST_DIR:-"$HOME/.torny-native/dist"}
 ENV_FILE=${TORNY_ENV_FILE:-"$REPO_ROOT/.env.local"}
 EXPORT_OPTIONS="$DIST/ExportOptions.plist"
 PROOF="$APP_DIR/scripts/store-build-proof.sh"
+TAG_SCRIPT="$APP_DIR/scripts/store-build-tag.sh"
 
 TEAM_ID='8C8WCW67J9'
 PROD_SUPABASE_HOST='glofubopddkjhymcbaph.supabase.co'
@@ -43,6 +48,7 @@ STORE_WEB_BASE_URL='https://tornygolf.no'
 STORE_BUNDLE_ID='no.tornygolf.app'
 
 GREP=/usr/bin/grep
+PLUTIL=/usr/bin/plutil
 
 step() { printf '\n▶ %s\n' "$*"; }
 die()  { printf '\n✗ %s\n' "$*" >&2; exit 1; }
@@ -76,6 +82,7 @@ require_export_tools() {
   command -v xcodebuild >/dev/null || die "xcodebuild mangler — installer Xcode (26.4+ for SDK 57)."
   [ -f "$EXPORT_OPTIONS" ] || die "Fant ikke $EXPORT_OPTIONS (method app-store-connect, destination upload — se docs/native/ios-shell.md §TestFlight)."
   [ -x "$PROOF" ] || die "Fant ikke bevis-skriptet $PROOF"
+  [ -x "$TAG_SCRIPT" ] || die "Fant ikke merke-skriptet $TAG_SCRIPT"
 }
 
 # Siste linje i .env-fila som setter nøkkelen; `export KEY=` og innrykk godtas.
@@ -104,8 +111,34 @@ run_proof() {
   "$PROOF" "$archive" "$proof_file" || die "Beviset feilet — ingenting lastes opp. Les $proof_file. Arkivet ligger igjen som $archive: slett det (rm -rf) før du kompilerer på nytt, ellers stopper duplikat-vakten deg."
 }
 
+# Merket (#2019) skal peke på koden som faktisk ble bygget. Endrede sporede filer
+# betyr at arkivet ikke er commiten — da stopper vi heller enn å sette et merke
+# som lyver. Usporede filer teller ikke (native/app/ios er gitignorert).
+require_clean_tree() {
+  local dirty
+  dirty=$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)
+  [ -z "$dirty" ] || die "Sporede filer har lokale endringer, så bygget ville ikke vært commiten merket peker på (#2019). Commit eller forkast dem, og kjør igjen:
+$dirty"
+}
+
+# Etter bekreftet opplasting: merket native-ios/v<versjon>-<build> på commiten i
+# <stem>.commit. Den fila skrives ved arkivering — --upload-only kan komme dager
+# senere, med en annen HEAD.
+TAG_LINE=''
+tag_build() {
+  local version=$1 build=$2 stem=$3 sha
+  if [ ! -s "$stem.commit" ]; then
+    printf '⚠ Fant ikke %s.commit (arkivet er eldre enn merkene, #2019). Opplastingen lyktes; sett merket selv når du vet hvilken commit arkivet ble bygget fra:\n  %s %s %s <commit>\n' "$stem" "$TAG_SCRIPT" "$version" "$build"
+    return 0
+  fi
+  sha=$(cat "$stem.commit")
+  step "Merke i git: $TAG_SCRIPT $version $build $sha"
+  TAG_LINE=$("$TAG_SCRIPT" "$version" "$build" "$sha") \
+    || die "Opplastingen LYKTES — bare merket i git mangler. Rett feilen over og kjør: $TAG_SCRIPT $version $build $sha"
+}
+
 run_export() {
-  local archive=$1 stem=$2
+  local archive=$1 stem=$2 version=$3 build=$4
   step "xcodebuild -exportArchive (laster opp via $EXPORT_OPTIONS; logg: $stem.export.log)"
   if ! xcodebuild -exportArchive -archivePath "$archive" \
       -exportOptionsPlist "$EXPORT_OPTIONS" -exportPath "$stem.export" \
@@ -115,6 +148,7 @@ run_export() {
   fi
   if "$GREP" -q 'Upload succeeded' "$stem.export.log"; then
     printf 'Upload succeeded — bygget dukker opp i App Store Connect → TestFlight om 5–30 min.\n'
+    tag_build "$version" "$build" "$stem"
   else
     printf '⚠ EXPORT SUCCEEDED, men fant ikke «Upload succeeded» i loggen. Sjekk App Store Connect → TestFlight før du kjører igjen (en ny kompilering krever bump).\n'
   fi
@@ -139,16 +173,22 @@ if [ -n "$UPLOAD_ONLY" ]; then
   if [ -z "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
     printf '⚠ Fant ingen NEXT_PUBLIC_SUPABASE_ANON_KEY i %s — beviset kan ikke sjekke nøkkelen i bundelen (de andre reglene gjelder). Kjør fra hovedutsjekken, eller TORNY_ENV_FILE=…, for full sjekk.\n' "$ENV_FILE"
   fi
+  # Versjon og build fra arkivet selv — det er dem som lastes opp, og merket
+  # skal bære dem (#2019).
+  VERSION=$("$PLUTIL" -extract ApplicationProperties.CFBundleShortVersionString raw -o - "$ARCHIVE/Info.plist" 2>/dev/null || true)
+  BUILD=$("$PLUTIL" -extract ApplicationProperties.CFBundleVersion raw -o - "$ARCHIVE/Info.plist" 2>/dev/null || true)
+  { [ -n "$VERSION" ] && [ -n "$BUILD" ]; } || die "Fant ikke versjon og build i $ARCHIVE/Info.plist — er dette et xcodebuild-arkiv?"
   run_proof "$ARCHIVE" "$STEM.bevis.txt"
-  run_export "$ARCHIVE" "$STEM"
+  run_export "$ARCHIVE" "$STEM" "$VERSION" "$BUILD"
   step "Ferdig"
-  printf 'Arkiv:   %s\nBevis:   %s.bevis.txt   ← lim inn i issue-/PR-kommentaren\n' "$ARCHIVE" "$STEM"
+  printf 'Arkiv:   %s\nBevis:   %s.bevis.txt   ← lim inn i issue-/PR-kommentaren\nMerke:   %s\n' "$ARCHIVE" "$STEM" "${TAG_LINE:-ikke satt — se meldingen over}"
   exit 0
 fi
 
 # ── 0. Verktøy ───────────────────────────────────────────────────────────────
 step "Sjekker verktøy"
 require_export_tools
+require_clean_tree   # tidlig, før minutter med prebuild; sjekkes igjen rett før arkivering
 command -v pod >/dev/null || die "CocoaPods (pod) mangler."
 if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split(".")[0]')" != "22" ]; then
   # Node 22 kreves (native/app/AGENTS + app-spike). Prøv nvm før vi gir opp.
@@ -234,6 +274,7 @@ SCHEME=$(basename "$WORKSPACE" .xcworkspace)
 printf 'workspace %s · scheme %s\n' "$WORKSPACE" "$SCHEME"
 
 # ── 4. Arkiv ─────────────────────────────────────────────────────────────────
+require_clean_tree
 step "xcodebuild archive → $ARCHIVE (logg: $STEM.archive.log)"
 if ! xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release \
     -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" archive \
@@ -242,6 +283,9 @@ if ! xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release
   die "xcodebuild archive feilet — se $STEM.archive.log (kjente feller: Xcode-versjon, LANG, native moduler etter prebuild)."
 fi
 printf 'ARCHIVE SUCCEEDED\n'
+# Byggecommiten fanges nå, ikke ved opplasting: --upload-only kan komme dager
+# senere med en annen HEAD (#2019).
+git -C "$REPO_ROOT" rev-parse HEAD > "$STEM.commit"
 
 # ── 5. Bevis (stopper før opplasting) ────────────────────────────────────────
 run_proof "$ARCHIVE" "$STEM.bevis.txt"
@@ -251,13 +295,20 @@ if [ "$UPLOAD" = "0" ]; then
   step "--no-upload: hopper over eksport/opplasting"
   printf 'Last opp dette arkivet senere med: %s --upload-only %s\n' "$0" "$ARCHIVE"
 else
-  run_export "$ARCHIVE" "$STEM"
+  run_export "$ARCHIVE" "$STEM" "$VERSION" "$BUILD"
+fi
+
+if [ "$UPLOAD" = "0" ]; then
+  MERKE="settes når arkivet lastes opp med --upload-only"
+else
+  MERKE=${TAG_LINE:-"ikke satt — se meldingen over"}
 fi
 
 step "Ferdig"
 cat <<EOF
 Arkiv:   $ARCHIVE
 Bevis:   $STEM.bevis.txt   ← lim inn i issue-/PR-kommentaren
+Merke:   $MERKE
 Neste:
   • Neste kompilering: bump STORE_IOS_BUILD_NUMBER i native/app/app.config.ts først.
   • ios/ er nå butikk-varianten. Før neste dev-bygg: (cd native/app && npx expo prebuild --platform ios --no-install)
