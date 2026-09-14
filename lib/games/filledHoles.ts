@@ -20,16 +20,16 @@ export type FilledRosterRow = {
 export type FilledScoreRow = { user_id: string; hole_number: number };
 
 /**
- * How many holes each player on the roster has filled — the one home for that
- * count (#2017).
+ * The rows each player on the roster has filled — the one home for that rule
+ * (#2017). `filledHolesByPlayer` counts them; the admin status page also reads
+ * the newest `updated_at` off them (#2041).
  *
- * Counting a player's OWN rows is wrong in the team-collapsed modes: the
- * captain owns every shared row, so a teammate reads «not started» however far
- * the team has got. This writes no new rule. It asks the existing ones, per
- * roster member and per ROW: `teamScoreOwnerId` picks the team's row owner
- * (#1538) and `scoreOwnerForHole` says who owns each hole (#1577). Per hole and
- * not per round, because patsome plays own ball on holes 1-6 and a shared ball
- * on 7-18.
+ * Taking a player's OWN rows is wrong in the team-collapsed modes: the captain
+ * owns every shared row, so a teammate reads «not started» however far the
+ * team has got. This writes no new rule. It asks the existing ones, per roster
+ * member and per ROW: `teamScoreOwnerId` picks the team's row owner (#1538) and
+ * `scoreOwnerForHole` says who owns each hole (#1577). Per hole and not per
+ * round, because patsome plays own ball on holes 1-6 and a shared ball on 7-18.
  *
  * Players are grouped on `team_number` with withdrawn members left in —
  * `teamScoreOwnerId` skips them itself and needs the whole team to do so. In
@@ -38,16 +38,17 @@ export type FilledScoreRow = { user_id: string; hole_number: number };
  * collapse.
  *
  * No dedupe: `scores` is unique on (game_id, user_id, hole_number) and exactly
- * one id owns each hole, so each hole is counted at most once per player.
+ * one id owns each hole, so each hole appears at most once per player.
  *
- * Returns one entry per player in `players`, including zeroes. Rows from users
- * outside the roster are ignored.
+ * Generic so the caller's extra columns come back unnarrowed. Rows keep their
+ * order from `scores`. Returns one entry per player in `players`, including
+ * empty ones. Rows from users outside the roster are ignored.
  */
-export function filledHolesByPlayer(opts: {
+export function ownedScoresByPlayer<T extends FilledScoreRow>(opts: {
   players: readonly FilledRosterRow[];
-  scores: readonly FilledScoreRow[];
+  scores: readonly T[];
   mode: GameMode;
-}): Map<string, number> {
+}): Map<string, T[]> {
   const { players, scores, mode } = opts;
 
   const ownerByTeam = new Map<number, string | null>();
@@ -62,19 +63,36 @@ export function filledHolesByPlayer(opts: {
     return ownerByTeam.get(teamNumber) ?? null;
   };
 
-  const filled = new Map<string, number>();
+  const owned = new Map<string, T[]>();
   for (const player of players) {
     const owner = teamOwner(player.team_number);
-    let count = 0;
-    for (const row of scores) {
-      if (
-        row.user_id ===
-        scoreOwnerForHole(mode, row.hole_number, player.user_id, owner)
-      ) {
-        count++;
-      }
-    }
-    filled.set(player.user_id, count);
+    owned.set(
+      player.user_id,
+      scores.filter(
+        (row) =>
+          row.user_id ===
+          scoreOwnerForHole(mode, row.hole_number, player.user_id, owner),
+      ),
+    );
+  }
+  return owned;
+}
+
+/**
+ * How many holes each player on the roster has filled — the count of
+ * `ownedScoresByPlayer`'s rows, so the two can never disagree.
+ *
+ * Returns one entry per player in `players`, including zeroes. Rows from users
+ * outside the roster are ignored.
+ */
+export function filledHolesByPlayer(opts: {
+  players: readonly FilledRosterRow[];
+  scores: readonly FilledScoreRow[];
+  mode: GameMode;
+}): Map<string, number> {
+  const filled = new Map<string, number>();
+  for (const [userId, rows] of ownedScoresByPlayer(opts)) {
+    filled.set(userId, rows.length);
   }
   return filled;
 }

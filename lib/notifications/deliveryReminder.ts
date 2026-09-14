@@ -3,6 +3,10 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { firstName } from '@/lib/firstName';
 import { sendDeliverReminderNotification } from '@/lib/mail/deliverReminderNotification';
 import { TOTAL_HOLES } from '@/lib/games/deliveryStatus';
+import { filledHolesByPlayer, type FilledRosterRow } from '@/lib/games/filledHoles';
+import { scoreOwnerUserIds } from '@/lib/games/scoreOwner';
+import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { notify } from './notify';
 
 /**
@@ -58,7 +62,8 @@ export async function sendDeliveryReminder(opts: {
  * som kaster i render-fasen). Self-gater på hull-telling + en atomisk
  * idempotens-guard, så den er trygg å kalle på hvert besøk:
  *
- *   1. Tell hull med registrert slag for spilleren. < expectedHoles → return.
+ *   1. Tell hull med registrert slag for spilleren — lagets kort i
+ *      én-ball-formatene (#2041). < expectedHoles → return.
  *   2. Atomisk «vinn raden»-update: sett deliver_reminder_sent_at = now() KUN
  *      hvis den er null + ikke levert + ikke trukket. Ingen rad tilbake →
  *      tapte race / allerede purret / levert / trukket → return.
@@ -74,19 +79,50 @@ export async function maybeSendDeliveryReminder(opts: {
   gameName: string;
   /** Hull som skal til for «ferdig» (#1441). Default `TOTAL_HOLES` (18). */
   expectedHoles?: number;
+  /**
+   * #2041: the game's whole roster, withdrawn members included and `userId`
+   * among them. It picks the team's row owner, so a teammate in a one-ball
+   * format counts the team's card.
+   */
+  players: readonly FilledRosterRow[];
+  mode: GameMode;
 }): Promise<void> {
-  const { gameId, userId, gameName, expectedHoles = TOTAL_HOLES } = opts;
+  const {
+    gameId,
+    userId,
+    gameName,
+    expectedHoles = TOTAL_HOLES,
+    players,
+    mode,
+  } = opts;
   const admin = getAdminClient();
 
   try {
-    const { count, error: countErr } = await admin
+    // #2041: in the one-ball formats the captain owns the team's rows, so
+    // counting the player's own rows never reached «done» for a teammate (a
+    // patsome teammate stopped at 6). Fetch the player's and the captain's rows
+    // — the same fetch as the Home card (#1624) — and let `filledHolesByPlayer`
+    // decide per hole which row counts. Read only this player's entry: the rest
+    // of the roster's rows were never fetched.
+    const me = players.find((p) => p.user_id === userId);
+    const owner =
+      me?.team_number == null
+        ? null
+        : teamScoreOwnerId(
+            players.filter((p) => p.team_number === me.team_number),
+          );
+    const { data: rows, error: scoresErr } = await admin
       .from('scores')
-      .select('hole_number', { count: 'exact', head: true })
+      .select('user_id, hole_number')
       .eq('game_id', gameId)
-      .eq('user_id', userId)
-      .not('strokes', 'is', null);
+      .in('user_id', scoreOwnerUserIds(mode, userId, owner))
+      .not('strokes', 'is', null)
+      .returns<{ user_id: string; hole_number: number }[]>();
 
-    if (countErr || (count ?? 0) < expectedHoles) return;
+    if (scoresErr) return;
+    const filled =
+      filledHolesByPlayer({ players, scores: rows ?? [], mode }).get(userId) ?? 0;
+    if (filled < expectedHoles) return;
 
     const { data: won, error: updErr } = await admin
       .from('game_players')

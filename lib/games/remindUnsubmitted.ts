@@ -67,7 +67,17 @@ type PlayerRow = {
 export type ReminderBlocked = { ok: false; reason: 'not_found' | 'not_active' };
 
 export type ReminderPreview =
-  | { ok: true; targets: number; lastRemindedAt: string | null }
+  | {
+      ok: true;
+      targets: number;
+      /**
+       * #2041: who `targets` counts. The admin status page marks exactly these
+       * rows with ⚠️, so the marks and the count cannot disagree. Not part of
+       * the app route's GET body, which whitelists its fields.
+       */
+      targetUserIds: string[];
+      lastRemindedAt: string | null;
+    }
   | ReminderBlocked;
 
 export type ReminderResult = { ok: true; reminded: number } | ReminderBlocked;
@@ -221,6 +231,7 @@ export async function previewReminder(gameId: string): Promise<ReminderPreview> 
   return {
     ok: true,
     targets: loaded.targets.length,
+    targetUserIds: loaded.targets.map((p) => p.user_id),
     lastRemindedAt: loaded.lastRemindedAt,
   };
 }

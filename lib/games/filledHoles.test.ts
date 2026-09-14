@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   filledHolesByPlayer,
+  ownedScoresByPlayer,
   type FilledRosterRow,
   type FilledScoreRow,
 } from './filledHoles';
@@ -187,5 +188,45 @@ describe('filledHolesByPlayer — formen på svaret', () => {
     });
 
     expect(result.size).toBe(0);
+  });
+});
+
+/**
+ * #2041: statussiden trenger radene bak tallet («sist aktiv» = nyeste
+ * `updated_at`), ikke bare antallet. Tellingen over går gjennom samme funksjon,
+ * så eierskaps-reglene re-asserteres ikke her — bare at radene kommer ut hele.
+ */
+describe('ownedScoresByPlayer — radene bak tallet (#2041)', () => {
+  it('patsome: makkeren får egne rader på 1–6 og kapteinens på 7–18, med alle feltene i behold', () => {
+    const stamped = (user_id: string, from: number, to: number) =>
+      rows(user_id, from, to).map((r) => ({
+        ...r,
+        updated_at: `${user_id}-${r.hole_number}`,
+      }));
+    const kaptein = stamped('a', 1, 18);
+    const makker = stamped('b', 1, 6);
+
+    const result = ownedScoresByPlayer({
+      mode: 'patsome',
+      players: [member('a', 1), member('b', 1)],
+      scores: [...kaptein, ...makker],
+    });
+
+    expect(result.get('a')).toEqual(kaptein);
+    // Radene kommer i samme rekkefølge som i `scores`.
+    expect(result.get('b')).toEqual([...kaptein.slice(6), ...makker]);
+  });
+
+  it('har én oppføring per spiller, også uten rader, og ignorerer rader fra ukjente', () => {
+    const result = ownedScoresByPlayer({
+      mode: 'stableford',
+      players: [member('a', null), member('b', null)],
+      scores: [...rows('a', 1, 2), ...rows('fremmed', 1, 18)],
+    });
+
+    expect([...result.entries()]).toEqual([
+      ['a', rows('a', 1, 2)],
+      ['b', []],
+    ]);
   });
 });

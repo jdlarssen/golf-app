@@ -13,12 +13,13 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import {
   classifyDeliveryStatus,
-  isDeliveryReminderTarget,
   type DeliveryStatus,
 } from '@/lib/games/deliveryStatus';
+import { ownedScoresByPlayer } from '@/lib/games/filledHoles';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import { previewReminder } from '@/lib/games/remindUnsubmitted';
 import type { HoleSegment } from '@/lib/scoring';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { remindUnsubmittedPlayers, remindUnconfirmedPlayers } from './actions';
 import { RemindButton } from './RemindButton';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
@@ -39,10 +40,15 @@ type GameRow = {
   courses: { name: string } | null;
   // #1441 — front9/back9-spill er «ferdig» ved 9 hull, ikke 18.
   hole_segment: HoleSegment;
+  // #2041: decides who owns each hole's row. DB type is `string`;
+  // games_game_mode_check constrains it to GameMode.
+  game_mode: GameMode;
 };
 
 type PlayerRow = {
   user_id: string;
+  // #2041: groups the roster into teams so a teammate counts the captain's card.
+  team_number: number | null;
   submitted_at: string | null;
   approved_at: string | null;
   withdrawn_at: string | null;
@@ -81,7 +87,7 @@ export default async function GameStatusPage({
 
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('id, name, status, require_peer_approval, courses(name), hole_segment')
+    .select('id, name, status, require_peer_approval, courses(name), hole_segment, game_mode')
     .eq('id', id)
     .maybeSingle<GameRow>();
   // Error ≠ absence (#1445): a transient query failure must reach the error
@@ -99,7 +105,7 @@ export default async function GameStatusPage({
     supabase
       .from('game_players')
       .select(
-        'user_id, submitted_at, approved_at, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, email)',
+        'user_id, team_number, submitted_at, approved_at, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, email)',
       )
       .eq('game_id', id)
       .returns<PlayerRow[]>(),
@@ -119,19 +125,30 @@ export default async function GameStatusPage({
   // et nøytralt historisk faktum, ikke en ventende handling.
   const isFinished = game.status === 'finished';
 
-  // Aggreger per spiller: antall hull med registrert slag + siste registrering
-  // (max updated_at). Ingen strokes-verdier hentes — ingen spoiler.
-  const filledByUser = new Map<string, number>();
-  const lastActionByUser = new Map<string, string>();
-  for (const s of scores) {
-    filledByUser.set(s.user_id, (filledByUser.get(s.user_id) ?? 0) + 1);
-    const prev = lastActionByUser.get(s.user_id);
-    if (!prev || s.updated_at > prev) lastActionByUser.set(s.user_id, s.updated_at);
-  }
+  // Per player: holes with an entered stroke + last action (max updated_at).
+  // No strokes values are fetched — no spoiler.
+  //
+  // #2041: both come from the rows that player's round runs on. In the one-ball
+  // formats the captain owns the team's rows, so counting own rows read a
+  // teammate as «not started» however far the team had got.
+  // `ownedScoresByPlayer` is the one home for that rule (#2017); withdrawn
+  // players stay in the roster so it can pick each team's row owner.
+  const ownedByUser = ownedScoresByPlayer({
+    players,
+    scores,
+    mode: game.game_mode,
+  });
 
   const rows = players
     .map((p) => {
-      const holesFilled = filledByUser.get(p.user_id) ?? 0;
+      const owned = ownedByUser.get(p.user_id) ?? [];
+      const holesFilled = owned.length;
+      let lastActionAt: string | null = null;
+      for (const s of owned) {
+        if (lastActionAt == null || s.updated_at > lastActionAt) {
+          lastActionAt = s.updated_at;
+        }
+      }
       const status = classifyDeliveryStatus({
         holesFilled,
         submittedAt: p.submitted_at,
@@ -146,7 +163,7 @@ export default async function GameStatusPage({
         name: fullName,
         displayName: firstName(fullName) ?? fullName,
         holesFilled,
-        lastActionAt: lastActionByUser.get(p.user_id) ?? null,
+        lastActionAt,
         status,
         acceptedAt: p.accepted_at,
       };
@@ -179,6 +196,9 @@ export default async function GameStatusPage({
   // never promise more reminders than the click sends.
   const preview = await previewReminder(id);
   const targetCount = preview.ok ? preview.targets : 0;
+  // #2041: ⚠️ marks exactly the players the count covers — teammates, guests
+  // and #1466 split-day players included — so the two cannot disagree.
+  const targetUserIds = new Set(preview.ok ? preview.targetUserIds : []);
   const unconfirmedCount = players.filter(
     (p) => p.accepted_at == null && !p.withdrawn_at,
   ).length;
@@ -294,7 +314,7 @@ export default async function GameStatusPage({
           <ul className="overflow-hidden rounded-xl border border-border bg-surface">
             {rows.map((r) => {
               const meta = statusLabels[r.status];
-              const isTarget = isDeliveryReminderTarget(r.status);
+              const isTarget = targetUserIds.has(r.userId);
               return (
                 <li
                   key={r.userId}
