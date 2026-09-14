@@ -2051,7 +2051,8 @@
       "finishButton": "Avslutt spillet",
       "finishPending": "Avslutter …",
       "cancelButton": "Avbryt",
-      "allSubmittedNote": "Alle har levert scorekort. Avslutter du nå, låses spillet og leaderboardet åpnes for alle deltakerne."
+      "allSubmittedNote": "Alle har levert scorekort. Avslutter du nå, låses spillet og leaderboardet åpnes for alle deltakerne.",
+      "rosterChanged": "Noen leverte scorekortet sitt eller ble trukket mens du hadde siden åpen, så spillet er ikke avsluttet. Det du ser nå, er oppdatert. Se over og prøv igjen."
     },
     "remind": {
       "button": "Purr på dem som mangler ({count})",
@@ -3617,7 +3618,8 @@
         "bodyNoWd": "Avslutter du nå, blir disse stående som <notDelivered>ikke levert</notDelivered>. Scorene de rakk å registrere teller fortsatt i resultatet. Resten låses og leaderboard åpnes for alle.",
         "submitButton": "Avslutt likevel",
         "submittingBusy": "Avslutter …",
-        "cancel": "Avbryt"
+        "cancel": "Avbryt",
+        "rosterChanged": "Noen leverte scorekortet sitt eller ble trukket mens du hadde siden åpen, så spillet er ikke avsluttet. Det du ser nå, er oppdatert. Se over og prøv igjen."
       },
       "status": {
         "brassRibbon": "Spillerstatus",
