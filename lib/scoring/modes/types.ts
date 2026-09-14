@@ -263,7 +263,7 @@ export function isSoloFormat(mode: GameMode, teamSize: number): boolean {
  */
 export type PlayStyle = 'solo' | 'individual' | 'team' | 'flexible';
 
-export function formatPlayStyle(mode: GameMode): PlayStyle {
+export function formatPlayStyle(mode: GameMode): PlayStyle | 'unknown' {
   switch (mode) {
     case 'solo_strokeplay':
       return 'solo';
@@ -292,8 +292,12 @@ export function formatPlayStyle(mode: GameMode): PlayStyle {
     case 'patsome':
       return 'team';
     default: {
+      // `never` keeps a new GameMode a compile error. At runtime an unknown
+      // mode (older app binary, seed before deploy) still lands here, and the
+      // mode string is not a valid PlayStyle: return an explicit 'unknown'
+      // that the return type names, so callers must handle it (#2034).
       const _exhaustive: never = mode;
-      return _exhaustive;
+      return 'unknown';
     }
   }
 }
