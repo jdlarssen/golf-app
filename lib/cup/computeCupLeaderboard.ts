@@ -11,6 +11,7 @@
 // uten å mocke games/game_players/scores.
 //
 import type { CupMatchWithdrawal } from './cupWithdrawalOutcome';
+import { DEFAULT_TIE_POINTS, DEFAULT_WIN_POINTS } from './pointsToWin';
 
 // Point-tildelings-regel (matcher PGA/European Tour-ryder-cup-tradisjon):
 //   - winnerSide === 1 → 1 point til team 1
@@ -199,12 +200,10 @@ export type CupLeaderboardResult = {
   sideAwardPoints: { team1: number; team2: number };
 };
 
-// Dagens 1/½-default (#1441, D8) — speiler DEFAULT_WIN_POINTS/DEFAULT_TIE_POINTS
-// i pointsToWin.ts (egen konstant her: computeCupLeaderboard og
-// derivePointsToWinWeighted er bevisst uavhengige rene moduler, ingen av dem
-// importerer fra hverandre).
-const DEFAULT_WIN_POINTS = 1;
-const DEFAULT_TIE_POINTS = 0.5;
+// Fallback-vektene når en cup mangler win_points/tie_points (#1441, D8) er
+// DEFAULT_WIN_POINTS/DEFAULT_TIE_POINTS fra pointsToWin.ts — ett hjem for
+// 1/½-defaulten (#1915). pointsToWin.ts importerer ingenting, så importen gir
+// ingen sirkel og modulen her forblir ren.
 
 function pointsForMatch(
   input: CupMatchInput,

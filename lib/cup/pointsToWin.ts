@@ -16,13 +16,15 @@ export function derivePointsToWin(matchCount: number): number {
   return matchCount / 2 + 0.5;
 }
 
-/** Dagens 1/½-default (#1441, D8) — samme verdier som computeCupLeaderboard
- * faller tilbake til når en cup mangler win_points/tie_points.
+/** Dagens 1/½-default (#1441, D8) — ett hjem for vektene en cup faller
+ * tilbake til når den mangler win_points/tie_points.
  *
- * Eksportert i #1902: tre steder må nå defaulte en cup-rad som bærer NULL i
- * `win_points`/`tie_points` (startTournament, synk-helperen, og denne fila
- * selv). Tre litteral-par ville vært tre hjem for én regel
- * (AGENTS.md-felle 4). */
+ * Eksportert i #1902. Alle som defaulter en cup-rad importerer herfra:
+ * startTournament (`actions.ts`), uttaks-rommet (`lineupActions.ts`,
+ * `lineupData.ts`), synk-helperen (`pointsToWinSync.ts`), lederbordet
+ * (`computeCupLeaderboard.ts`, fra #1915) og `hasDefaultCupWeights` under.
+ * Samme verdier er DB-defaulten i 0153; `pointsToWin.test.ts` låser at de er
+ * enige (AGENTS.md-felle 4). */
 export const DEFAULT_WIN_POINTS = 1;
 export const DEFAULT_TIE_POINTS = 0.5;
 
