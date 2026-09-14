@@ -17,6 +17,7 @@ import {
   type DeliveryStatus,
 } from '@/lib/games/deliveryStatus';
 import { holeCountForSegment } from '@/lib/games/holeScope';
+import { previewReminder } from '@/lib/games/remindUnsubmitted';
 import type { HoleSegment } from '@/lib/scoring';
 import { remindUnsubmittedPlayers, remindUnconfirmedPlayers } from './actions';
 import { RemindButton } from './RemindButton';
@@ -173,9 +174,11 @@ export default async function GameStatusPage({
 
   const rankable = players.filter((p) => !p.withdrawn_at);
   const deliveredCount = rankable.filter((p) => p.submitted_at != null).length;
-  const targetCount = rows.filter((r) =>
-    isDeliveryReminderTarget(r.status),
-  ).length;
+  // #2017: the button and the banner must count the same. `previewReminder` is
+  // exactly the selection `sendReminders` hits (#1891), so the button text can
+  // never promise more reminders than the click sends.
+  const preview = await previewReminder(id);
+  const targetCount = preview.ok ? preview.targets : 0;
   const unconfirmedCount = players.filter(
     (p) => p.accepted_at == null && !p.withdrawn_at,
   ).length;
@@ -208,7 +211,11 @@ export default async function GameStatusPage({
       </div>
 
       {remindedCount !== undefined && (
-        <div className="mt-4">
+        <div
+          className="mt-4"
+          data-testid="status-reminder-sent"
+          data-count={Number(remindedCount)}
+        >
           <Banner tone="success">
             {t('reminderSent', { count: Number(remindedCount) })}
           </Banner>
@@ -243,6 +250,7 @@ export default async function GameStatusPage({
                   count={targetCount}
                   labelKey="remindButton"
                   confirmKey="remindConfirm"
+                  testId="status-remind-button"
                 />
               </>
             ) : (
@@ -267,6 +275,7 @@ export default async function GameStatusPage({
               count={unconfirmedCount}
               labelKey="purreUnconfirmedButton"
               confirmKey="purreUnconfirmedConfirm"
+              testId="status-remind-unconfirmed-button"
             />
           </div>
         </section>

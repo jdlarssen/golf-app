@@ -4,7 +4,9 @@ import { sendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
 import { selectDeliveryReminderTargets } from '@/lib/games/deliveryStatus';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import { candidatesOnSameSplitDay } from '@/lib/games/splitDayPairing';
+import { filledHolesByPlayer } from '@/lib/games/filledHoles';
 import type { HoleSegment } from '@/lib/scoring';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 // Purre-kjernen (#376 → #1891): ett hjem for «hvem er ferdig uten å ha levert,
 // og send påminnelse til dem». Logikken bodde inni server-action-en
@@ -34,6 +36,8 @@ type GameRow = {
   id: string;
   name: string;
   status: string;
+  // DB type is `string`; games_game_mode_check (0111) constrains it to GameMode.
+  game_mode: GameMode;
   hole_segment: HoleSegment;
   tournament_id: string | null;
   scheduled_tee_off_at: string | null;
@@ -42,6 +46,8 @@ type GameRow = {
 
 type PlayerRow = {
   user_id: string;
+  // #2017: groups the roster into teams so a teammate counts the captain's card.
+  team_number: number | null;
   submitted_at: string | null;
   withdrawn_at: string | null;
   deliver_reminder_sent_at: string | null;
@@ -111,7 +117,7 @@ async function loadReminderContext(
   const { data: game } = await admin
     .from('games')
     .select(
-      'id, name, status, hole_segment, tournament_id, scheduled_tee_off_at, created_at',
+      'id, name, status, game_mode, hole_segment, tournament_id, scheduled_tee_off_at, created_at',
     )
     .eq('id', gameId)
     .maybeSingle<GameRow>();
@@ -126,24 +132,31 @@ async function loadReminderContext(
     admin
       .from('game_players')
       .select(
-        'user_id, submitted_at, withdrawn_at, deliver_reminder_sent_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',
+        'user_id, team_number, submitted_at, withdrawn_at, deliver_reminder_sent_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',
       )
       .eq('game_id', gameId)
       .returns<PlayerRow[]>(),
     admin
       .from('scores')
-      .select('user_id')
+      .select('user_id, hole_number')
       .eq('game_id', gameId)
       .not('strokes', 'is', null)
-      .returns<{ user_id: string }[]>(),
+      .returns<{ user_id: string; hole_number: number }[]>(),
   ]);
 
+  // Withdrawn players stay in on purpose: `filledHolesByPlayer` needs the whole
+  // team to pick its row owner, and the target selection drops them itself.
   const players = playersRes.data ?? [];
 
-  const filledByUser = new Map<string, number>();
-  for (const r of scoresRes.data ?? []) {
-    filledByUser.set(r.user_id, (filledByUser.get(r.user_id) ?? 0) + 1);
-  }
+  // #2017: in the one-ball formats the captain owns every team row, so counting
+  // a player's OWN rows read the teammates as «not started» however far the team
+  // had got. `filledHolesByPlayer` asks per hole who owns the row — the same
+  // rule as the hole page and the Home card (#1538/#1577).
+  const filledByUser = filledHolesByPlayer({
+    players,
+    scores: scoresRes.data ?? [],
+    mode: game.game_mode,
+  });
 
   // #1466: on a split-cup front9 host, a player whose back9 sibling is still
   // undelivered is nagged via the back9 game (one delivery covers the whole

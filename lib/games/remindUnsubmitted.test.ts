@@ -24,6 +24,7 @@ import {
 
 type PlayerRow = {
   user_id: string;
+  team_number: number | null;
   submitted_at: string | null;
   withdrawn_at: string | null;
   deliver_reminder_sent_at: string | null;
@@ -39,6 +40,7 @@ type GameRow = {
   id: string;
   name: string;
   status: string;
+  game_mode: string;
   hole_segment: 'full' | 'front9' | 'back9';
   tournament_id: string | null;
   scheduled_tee_off_at: string | null;
@@ -51,7 +53,7 @@ const GAME_ID = 'spill-1';
 let db: {
   game: GameRow | null;
   players: PlayerRow[];
-  scores: { user_id: string }[];
+  scores: { user_id: string; hole_number: number }[];
   back9Hosts: {
     id: string;
     scheduled_tee_off_at: string | null;
@@ -70,6 +72,7 @@ function player(
 ): PlayerRow {
   return {
     user_id,
+    team_number: null,
     submitted_at: null,
     withdrawn_at: null,
     deliver_reminder_sent_at: null,
@@ -83,9 +86,9 @@ function player(
   };
 }
 
-/** `count` registrerte hull for spilleren — én rad per hull, som i `scores`. */
+/** `count` registrerte hull for spilleren, fra hull 1 — én rad per hull, som i `scores`. */
 function holes(user_id: string, count: number) {
-  return Array.from({ length: count }, () => ({ user_id }));
+  return Array.from({ length: count }, (_, i) => ({ user_id, hole_number: i + 1 }));
 }
 
 function respond(op: QueryOp): QueryResponse {
@@ -140,6 +143,7 @@ beforeEach(() => {
       id: GAME_ID,
       name: 'Tirsdagsrunden',
       status: 'active',
+      game_mode: 'stableford',
       hole_segment: 'full',
       tournament_id: null,
       scheduled_tee_off_at: '2026-09-02T08:00:00+00:00',
@@ -306,6 +310,27 @@ describe('sendReminders — sending', () => {
       reminded: 3,
     });
     expect(remindedUserIds()).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('sendReminders — lagkort i én-ball-format (#2017)', () => {
+  it('lagkameraten i et scramble blir purre-mål når lagkortet er ført', async () => {
+    // Kapteinen (lex-min) eier alle lagets rader; lagkameraten har null egne.
+    // Lag 2 er ikke ferdig og skal ikke med.
+    db.game = { ...db.game!, game_mode: 'texas_scramble' };
+    db.players = [
+      player('kaptein', { team_number: 1 }),
+      player('makker', { team_number: 1 }),
+      player('lag2-a', { team_number: 2 }),
+      player('lag2-b', { team_number: 2 }),
+    ];
+    db.scores = [...holes('kaptein', 18), ...holes('lag2-a', 11)];
+
+    await expect(sendReminders(GAME_ID)).resolves.toEqual({
+      ok: true,
+      reminded: 2,
+    });
+    expect(remindedUserIds()).toEqual(['kaptein', 'makker']);
   });
 });
 
