@@ -4932,6 +4932,7 @@
       "errors": {
         "not_found": "Fant ikke kampen.",
         "already_started": "Kampen er i gang. Nå er det for sent å bytte.",
+        "match_has_withdrawal": "Kampen har et registrert trekk, så du kan ikke bytte spillere.",
         "player_not_in_match": "Spilleren står ikke i denne kampen lenger.",
         "already_in_match": "Den spilleren er allerede med i kampen.",
         "not_candidate": "Den spilleren kan du ikke bytte inn i denne cupen.",

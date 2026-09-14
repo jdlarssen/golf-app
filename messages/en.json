@@ -4932,6 +4932,7 @@
       "errors": {
         "not_found": "Match not found.",
         "already_started": "The match has started. It is too late to swap.",
+        "match_has_withdrawal": "The match has a registered withdrawal, so you cannot swap players.",
         "player_not_in_match": "That player is no longer in this match.",
         "already_in_match": "That player is already in the match.",
         "not_candidate": "You cannot swap that player into this cup.",
