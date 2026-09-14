@@ -28,9 +28,14 @@ export interface WolfChoiceChange {
  * `gameMode === 'wolf'`) for å oppdatere wolf-badge i sanntid når Wolf-
  * spilleren velger partner/lone/blind på sin device.
  *
- * Subscriber til alle event-typer (INSERT, UPDATE, DELETE) men UI bryr
- * seg primært om INSERT + UPDATE. DELETE skjer kun i admin-rebooting-
- * scenarier; vi propagerer dem så caller kan invalidere local state.
+ * Listens to every event type (`event: '*'`), but in practice only INSERT and
+ * UPDATE arrive: every write is an upsert (web and app), and a Wolf choice
+ * can be replaced but never removed. A DELETE only happens through an FK
+ * cascade (the game, or a hard-deleted wolf/partner/entered_by user) or manual
+ * SQL. Supabase cannot filter DELETE events without REPLICA IDENTITY FULL,
+ * which 0175 deliberately leaves unset, and a DELETE payload carries
+ * `new: {}`, so the guard below drops it. Nothing is propagated for DELETE
+ * (#1968).
  */
 export function subscribeWolfChoices(
   gameId: string,
