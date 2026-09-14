@@ -428,7 +428,7 @@ describe('isPlayOnChoicePending — «valg venter» (#1967)', () => {
       false,
     ],
     [
-      'én på hver side har trukket seg',
+      'én på hver side har trukket seg — alltid halvert (#2032)',
       {
         players: [
           { userId: 'a1', side: 1, withdrawnAt: EARLY },
@@ -438,7 +438,20 @@ describe('isPlayOnChoicePending — «valg venter» (#1967)', () => {
         ],
       },
       NO_CHOICE,
-      true,
+      false,
+    ],
+    [
+      'én på hver side, den ene sent — fortsatt halvert (#2032)',
+      {
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: null },
+          { userId: 'b1', side: 2, withdrawnAt: JUST_INSIDE },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      },
+      NO_CHOICE,
+      false,
     ],
     ['kampen står fortsatt i utkast', { status: 'draft', players: ONE_WITHDRAWN }, NO_CHOICE, false],
     ['kampen er i gang', { status: 'active', players: ONE_WITHDRAWN }, NO_CHOICE, false],
