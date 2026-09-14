@@ -194,3 +194,31 @@ export function resolveCupMatchWithdrawal(
     late: true,
   };
 }
+
+/**
+ * Does the match wait on the organiser's play-on choice? (#1814 E4, #1967)
+ *
+ * True while the rule decides the match right now, nobody has recorded the
+ * choice (the `withdrawal_play_on` key is missing), and «spiller alene» would
+ * get the match played. Only a published (`scheduled`) match is offered the
+ * choice; `setFourballWithdrawalChoice` refuses anything else.
+ *
+ * One home for the rule: `cupMatchEntry` (organiser surfaces and the cup page)
+ * and the waiting room both call it, so the player surfaces say «valg venter»
+ * exactly when the organiser is asked to choose.
+ *
+ * Also true when one player on EACH side has withdrawn. The surfaces need a
+ * remaining partner to show the choice, so that case keeps showing the rule
+ * outcome for now (#2032).
+ */
+export function isPlayOnChoicePending(
+  input: CupWithdrawalInput,
+  modeConfig: unknown,
+): boolean {
+  return (
+    input.status === 'scheduled' &&
+    !hasWithdrawalPlayOnChoice(modeConfig) &&
+    resolveCupMatchWithdrawal(input) !== null &&
+    resolveCupMatchWithdrawal({ ...input, playOn: true }) === null
+  );
+}

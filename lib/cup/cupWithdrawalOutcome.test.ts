@@ -4,6 +4,7 @@ import { buildCupRoster } from './cupRoster';
 import {
   WITHDRAWAL_LATE_WINDOW_MS,
   isNotStartedCupMatch,
+  isPlayOnChoicePending,
   resolveCupMatchWithdrawal,
   type CupWithdrawalInput,
 } from './cupWithdrawalOutcome';
@@ -367,5 +368,87 @@ describe('isNotStartedCupMatch — ett hjem for «ikke startet» (#1964)', () =>
 
   it('regner en ukjent status som startet — trekket skriver aldri på den', () => {
     expect(isNotStartedCupMatch('cancelled')).toBe(false);
+  });
+});
+
+/**
+ * #1967 — "choice pending" has one home. A match waits on the organiser while
+ * nobody has recorded the play-on choice (the mode_config key is missing) and
+ * "spiller alene" would still get the match played. cupMatchEntry (organiser
+ * surfaces and the cup page) and the waiting room both ask this helper.
+ */
+describe('isPlayOnChoicePending — «valg venter» (#1967)', () => {
+  const ONE_WITHDRAWN: CupWithdrawalInput['players'] = [
+    { userId: 'a1', side: 1, withdrawnAt: EARLY },
+    { userId: 'a2', side: 1, withdrawnAt: null },
+    { userId: 'b1', side: 2, withdrawnAt: null },
+    { userId: 'b2', side: 2, withdrawnAt: null },
+  ];
+  const NO_CHOICE = { kind: 'fourball_matchplay', team_size: 2, teams_count: 2 };
+
+  it.each<[string, Partial<CupWithdrawalInput>, unknown, boolean]>([
+    ['ingen har valgt, og makkeren kan spille alene', { players: ONE_WITHDRAWN }, NO_CHOICE, true],
+    ['mode_config mangler helt', { players: ONE_WITHDRAWN }, null, true],
+    [
+      'arrangøren har valgt regelen',
+      { players: ONE_WITHDRAWN },
+      { ...NO_CHOICE, withdrawal_play_on: false },
+      false,
+    ],
+    [
+      'arrangøren har valgt at makkeren spiller alene',
+      { players: ONE_WITHDRAWN, playOn: true },
+      { ...NO_CHOICE, withdrawal_play_on: true },
+      false,
+    ],
+    [
+      'ingen har trukket seg',
+      {
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: null },
+          { userId: 'a2', side: 1, withdrawnAt: null },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      },
+      NO_CHOICE,
+      false,
+    ],
+    [
+      'hele den ene siden har trukket seg',
+      {
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: EARLY },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      },
+      NO_CHOICE,
+      false,
+    ],
+    [
+      'én på hver side har trukket seg',
+      {
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: null },
+          { userId: 'b1', side: 2, withdrawnAt: EARLY },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      },
+      NO_CHOICE,
+      true,
+    ],
+    ['kampen står fortsatt i utkast', { status: 'draft', players: ONE_WITHDRAWN }, NO_CHOICE, false],
+    ['kampen er i gang', { status: 'active', players: ONE_WITHDRAWN }, NO_CHOICE, false],
+    [
+      'foursomes har ikke alene-valget',
+      { gameMode: 'foursomes_matchplay', players: ONE_WITHDRAWN },
+      NO_CHOICE,
+      false,
+    ],
+  ])('%s', (_name, overrides, modeConfig, expected) => {
+    expect(isPlayOnChoicePending(fourball(overrides), modeConfig)).toBe(expected);
   });
 });
