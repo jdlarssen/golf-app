@@ -264,7 +264,7 @@ export default async function PublicCupPage({
           <SmartLink
             href={`/cup/${id}/trekk`}
             data-testid="cup-withdraw-self-link"
-            className="block text-center text-xs text-muted underline underline-offset-2 decoration-muted/40 transition-colors hover:text-text"
+            className="flex min-h-[44px] items-center justify-center text-xs text-muted underline underline-offset-2 decoration-muted/40 transition-colors hover:text-text"
           >
             {t('public.withdrawSelfLink')}
           </SmartLink>

@@ -140,12 +140,14 @@ function playOnPendingBanner(
         <p className="font-semibold">{t('manage.playOnPendingHeading')}</p>
         <ul className="mt-1 space-y-1">
           {rows.map((m) => (
-            <li key={m.gameId}>
-              {t('manage.playOnPending', { match: m.label, partner: m.partner })}{' '}
+            // #1969: the jump link is its own flex item, not inline in the
+            // sentence, so a 44 px tap target doesn't stretch the line box.
+            <li key={m.gameId} className="flex flex-wrap items-center gap-x-2">
+              <span>{t('manage.playOnPending', { match: m.label, partner: m.partner })}</span>
               <a
                 href={`#playon-${m.gameId}`}
                 data-testid={`cup-playon-pending-link-${m.gameId}`}
-                className="underline underline-offset-2"
+                className="min-h-[44px] inline-flex items-center rounded px-2 py-1 text-muted underline hover:opacity-70"
               >
                 {t('manage.playOnChoose')}
               </a>
@@ -311,7 +313,7 @@ export async function CupManagement({
           <SmartLink
             href={`${roomHref('trekk')}/${p.userId}`}
             data-testid={`cup-withdraw-link-${p.userId}`}
-            className="text-[11px] text-muted underline-offset-2 hover:underline"
+            className="min-h-[44px] inline-flex items-center rounded px-2 py-1 font-sans text-[11px] font-medium text-muted underline hover:opacity-70"
           >
             {p.withdrawn ? t('manage.undoWithdrawLink') : t('manage.withdrawLink')}
           </SmartLink>
