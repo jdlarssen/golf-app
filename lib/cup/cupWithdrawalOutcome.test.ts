@@ -3,6 +3,7 @@ import type { GameStatus } from '@/lib/games/status';
 import { buildCupRoster } from './cupRoster';
 import {
   WITHDRAWAL_LATE_WINDOW_MS,
+  isDecidedByWithdrawal,
   isNotStartedCupMatch,
   isPlayOnChoicePending,
   resolveCupMatchWithdrawal,
@@ -463,5 +464,115 @@ describe('isPlayOnChoicePending — «valg venter» (#1967)', () => {
     ],
   ])('%s', (_name, overrides, modeConfig, expected) => {
     expect(isPlayOnChoicePending(fourball(overrides), modeConfig)).toBe(expected);
+  });
+});
+
+/**
+ * #2033 — "decided by withdrawal" means the rule outcome is final. While the
+ * organiser's play-on choice is pending, the outcome is provisional and the
+ * match is still to be played, so the remaining partner keeps the withdraw
+ * link on the cup page. Each row builds the match the way cupMatchEntry does:
+ * the raw rule result plus the pending flag.
+ */
+describe('isDecidedByWithdrawal — avgjort ved trekk (#2033)', () => {
+  const NO_CHOICE = { kind: 'fourball_matchplay', team_size: 2, teams_count: 2 };
+
+  it.each<[string, CupWithdrawalInput, unknown, boolean]>([
+    ['ingen har trukket seg', fourball(), NO_CHOICE, false],
+    [
+      'singles, trukket i god tid → halvert',
+      singles({
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+        ],
+      }),
+      null,
+      true,
+    ],
+    [
+      'singles, trukket sent → walkover',
+      singles({
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: JUST_INSIDE },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+        ],
+      }),
+      null,
+      true,
+    ],
+    [
+      'fourball, én trukket og ingen har valgt — valget venter',
+      fourball({
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: null },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      }),
+      NO_CHOICE,
+      false,
+    ],
+    [
+      'fourball, én trukket og arrangøren valgte regelen',
+      fourball({
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: null },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      }),
+      { ...NO_CHOICE, withdrawal_play_on: false },
+      true,
+    ],
+    [
+      'fourball, én trukket og makkeren spiller alene',
+      fourball({
+        playOn: true,
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: null },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      }),
+      { ...NO_CHOICE, withdrawal_play_on: true },
+      false,
+    ],
+    [
+      'fourball, én på hver side og ingen har valgt — alltid halvert (#2032)',
+      fourball({
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: null },
+          { userId: 'b1', side: 2, withdrawnAt: EARLY },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      }),
+      NO_CHOICE,
+      true,
+    ],
+    [
+      'fourball, hele den ene siden har trukket seg',
+      fourball({
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: EARLY },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      }),
+      NO_CHOICE,
+      true,
+    ],
+  ])('%s', (_name, input, modeConfig, expected) => {
+    expect(
+      isDecidedByWithdrawal({
+        withdrawal: resolveCupMatchWithdrawal(input),
+        playOnChoicePending: isPlayOnChoicePending(input, modeConfig),
+      }),
+    ).toBe(expected);
   });
 });

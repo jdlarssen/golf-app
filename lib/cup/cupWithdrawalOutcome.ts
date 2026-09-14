@@ -224,3 +224,23 @@ export function isPlayOnChoicePending(
     resolveCupMatchWithdrawal({ ...input, playOn: true }) === null
   );
 }
+
+/**
+ * Is the match decided by a withdrawal for good? (#2033)
+ *
+ * A withdrawal outcome only counts as final once nobody is waiting on the
+ * organiser's play-on choice. While the choice is pending the rule outcome is
+ * provisional and the match may still be played, so it stays open for the
+ * players in it. A missing `playOnChoicePending` means "not pending".
+ *
+ * Takes a structural match rather than `CupMatchInput`: `computeCupLeaderboard`
+ * imports from this module, and the rule module keeps zero imports. Not the
+ * scoreboard's `isCupMatchSettled`, which counts a pending match as settled
+ * with provisional points on purpose.
+ */
+export function isDecidedByWithdrawal(match: {
+  withdrawal?: CupMatchWithdrawal | null;
+  playOnChoicePending?: boolean;
+}): boolean {
+  return match.withdrawal != null && match.playOnChoicePending !== true;
+}

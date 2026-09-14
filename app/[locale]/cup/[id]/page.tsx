@@ -15,7 +15,7 @@ import {
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
 import { formatPoints } from '@/lib/cup/formatPoints';
-import { isNotStartedCupMatch } from '@/lib/cup/cupWithdrawalOutcome';
+import { isDecidedByWithdrawal, isNotStartedCupMatch } from '@/lib/cup/cupWithdrawalOutcome';
 import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
 import { CupLineupSpotlight } from './CupLineupSpotlight';
 
@@ -71,6 +71,11 @@ export default async function PublicCupPage({
   // spilleren selv. Lenka vises kun mens cupen er i gang, kun til deltakere som
   // faktisk har en kamp igjen som ikke har startet — er alt i gang eller
   // ferdigspilt, er det ingenting å trekke seg fra.
+  // #2033: a match decided by a withdrawal is not something left to withdraw
+  // from, but one still waiting on the organiser's play-on choice is, so the
+  // remaining partner keeps the link. Withdrawn players stay in the match's
+  // user ids, hence the withdrawnUserIds guard: the player who just withdrew
+  // lands back here in exactly that pending state.
   const rosterNames = new Map(
     [...roster.team1, ...roster.team2].map((p) => [
       p.userId,
@@ -83,7 +88,8 @@ export default async function PublicCupPage({
     leaderboard.matches.some(
       (m) =>
         isNotStartedCupMatch(m.status) &&
-        m.withdrawal == null &&
+        !isDecidedByWithdrawal(m) &&
+        !(m.withdrawal?.withdrawnUserIds.includes(userId) ?? false) &&
         [...(m.team1UserIds ?? []), ...(m.team2UserIds ?? [])].includes(userId),
     );
 
