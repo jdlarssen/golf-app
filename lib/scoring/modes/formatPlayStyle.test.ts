@@ -44,6 +44,13 @@ describe('formatPlayStyle', () => {
     expect(formatPlayStyle(mode)).toBe(expected);
   });
 
+  it('returns unknown for a mode the union does not know (#2034)', () => {
+    // The runtime path past `never`: an older app binary or a format seed that
+    // lands before the deploy can send a mode the union lacks. The result must
+    // be an explicit 'unknown', not the raw mode string typed as a PlayStyle.
+    expect(formatPlayStyle('future_mode' as unknown as GameMode)).toBe('unknown');
+  });
+
   it('har en norsk label for hver spillestil', () => {
     // #498: «Hver for seg» slått sammen til «Solo».
     expect(PLAY_STYLE_LABELS).toEqual({
