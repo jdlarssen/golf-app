@@ -64,8 +64,8 @@ export function cupWaitingRoomWithdrawalState({
   teamFallback,
 }: CupWaitingRoomWithdrawalInput): CupWaitingRoomWithdrawalState {
   // #1814: cup-kampen kan alt være avgjort fordi noen trakk seg. Samme
-  // regelmodul som `startScheduledGameCore` nettopp avslo starten med, så
-  // banneret og virkeligheten kan ikke si to forskjellige ting.
+  // regelmodul som `startScheduledGameCore` bruker når den avviser starten,
+  // så banneret og virkeligheten kan ikke si to forskjellige ting.
   const cupRuleInput = tournamentId
     ? {
         status: 'scheduled' as const,

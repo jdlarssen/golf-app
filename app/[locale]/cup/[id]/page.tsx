@@ -188,8 +188,9 @@ export default async function PublicCupPage({
               // #1967: while the organiser has not made the play-on choice,
               // the rule outcome is not final, so say «valg venter», not
               // «Halvert». Same gate as the organiser banner: the cup is under
-              // way and a partner is left to play alone. With no partner (both
-              // sides withdrew) the rule outcome stays (#2032).
+              // way and a partner is left to play alone. The flag is never
+              // pending when both sides withdrew (#2032); the partner check
+              // stays as a guard.
               const playOnPending =
                 m.playOnChoicePending === true &&
                 tournament.status === 'active' &&
