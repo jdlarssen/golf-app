@@ -13,9 +13,11 @@ import {
  *   1. auth.getUser                                  (vi.fn, mockResolvedValue)
  *   2. users.select(is_admin, email, name).eq.single (loadRole — admins skip
  *      the games.created_by read in requireAdminOrCreator)
- *   3. games.select(game_mode).eq.single             (supportsWithdrawal)
+ *   3. games.select(game_mode).eq.single             (supportsWithdrawal; a
+ *      read error fails closed → db_players)
  *   4. game_players.select(user_id, submitted_at, withdrawn_at)
- *        .eq(game_id).in(user_id)                    (pre-read, awaited)
+ *        .eq(game_id).in(user_id)                    (pre-read, awaited; a
+ *      missing, submitted or withdrawn ticked row → roster_changed)
  *   5. game_players.update(...).eq.in.is.is.select   (guarded write, awaited)
  * `endGame` is mocked: its own pipeline is covered in `../actions.test.ts` and
  * `lib/games/endGameCore.test.ts`.
@@ -34,6 +36,13 @@ vi.mock('next-intl/server', () => ({
   getLocale: async () => 'no',
 }));
 
+// A partial withdrawal commits rows without ever reaching endGame, so the
+// action revalidates the game tag itself.
+const revalidateTagMock = vi.fn();
+vi.mock('next/cache', () => ({
+  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -45,8 +54,6 @@ const endGameMock = vi.fn<(...args: unknown[]) => Promise<void>>(
 vi.mock('../actions', () => ({
   endGame: (...args: unknown[]) => endGameMock(...args),
 }));
-
-import { endGameMarkingWithdrawals } from './actions';
 
 const GAME_ID = 'game-1';
 const ROSTER_CHANGED = `/admin/games/${GAME_ID}/avslutt-likevel?error=roster_changed`;
@@ -77,16 +84,23 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-function asAdmin(queue: Array<{ data?: unknown; error?: unknown }>) {
+/**
+ * Queue an admin caller, then import the action. Dynamic import is the repo
+ * convention for server actions (tests/serverActionMocks.ts) so the `vi.mock`
+ * hoist applies before the module graph loads.
+ */
+async function asAdmin(queue: Array<{ data?: unknown; error?: unknown }>) {
   supabaseMock = buildSupabaseMock([...ADMIN_PREFIX, ...queue]);
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { user: { id: 'admin-1', email: 'admin@example.com' } },
   });
+  const { endGameMarkingWithdrawals } = await import('./actions');
+  return endGameMarkingWithdrawals;
 }
 
 describe('endGameMarkingWithdrawals', () => {
   it('withdraws the ticked players in ONE guarded, row-counted UPDATE and then ends the game', async () => {
-    asAdmin([
+    const endGameMarkingWithdrawals = await asAdmin([
       { data: [unsubmitted('user-a'), unsubmitted('user-b')], error: null }, // pre-read
       { data: [{ user_id: 'user-a' }, { user_id: 'user-b' }], error: null }, // update
     ]);
@@ -114,32 +128,45 @@ describe('endGameMarkingWithdrawals', () => {
     expect(endGameMock).toHaveBeenCalledWith(GAME_ID, true);
   });
 
-  it('a ticked player who submitted in the meantime stops everything: no write, no finish', async () => {
-    asAdmin([
-      {
-        data: [
-          unsubmitted('user-a'),
-          { user_id: 'user-b', submitted_at: '2026-09-14T10:00:00Z', withdrawn_at: null },
-        ],
-        error: null,
-      }, // pre-read
-    ]);
+  it.each([
+    [
+      'a ticked player submitted in the meantime',
+      [
+        unsubmitted('user-a'),
+        { user_id: 'user-b', submitted_at: '2026-09-14T10:00:00Z', withdrawn_at: null },
+      ],
+    ],
+    [
+      'a ticked player is already withdrawn',
+      [
+        unsubmitted('user-a'),
+        { user_id: 'user-b', submitted_at: null, withdrawn_at: '2026-09-14T10:00:00Z' },
+      ],
+    ],
+    ['a ticked player is missing from the roster', [unsubmitted('user-a')]],
+  ])(
+    'the pre-read stops everything when %s: no write, no finish',
+    async (_label, preReadRows) => {
+      const endGameMarkingWithdrawals = await asAdmin([
+        { data: preReadRows, error: null }, // pre-read
+      ]);
 
-    await expect(
-      endGameMarkingWithdrawals(GAME_ID, tickedForm('user-a', 'user-b')),
-    ).rejects.toMatchObject({ url: ROSTER_CHANGED });
+      await expect(
+        endGameMarkingWithdrawals(GAME_ID, tickedForm('user-a', 'user-b')),
+      ).rejects.toMatchObject({ url: ROSTER_CHANGED });
 
-    expect(rosterWrites()).toEqual([]);
-    expect(endGameMock).not.toHaveBeenCalled();
-  });
+      expect(rosterWrites()).toEqual([]);
+      expect(endGameMock).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
-    ['fewer rows than ticked', [{ user_id: 'user-a' }]],
-    ['0 rows (NoRowsAffectedError)', []],
+    ['fewer rows than ticked', [{ user_id: 'user-a' }], [[`game-${GAME_ID}`, 'max']]],
+    ['0 rows (NoRowsAffectedError)', [], []],
   ])(
     'an UPDATE that hits %s sends the organiser back to the confirm page without finishing',
-    async (_label, updatedRows) => {
-      asAdmin([
+    async (_label, updatedRows, expectedRevalidations) => {
+      const endGameMarkingWithdrawals = await asAdmin([
         { data: [unsubmitted('user-a'), unsubmitted('user-b')], error: null }, // pre-read
         { data: updatedRows, error: null }, // update lost the race
       ]);
@@ -149,6 +176,10 @@ describe('endGameMarkingWithdrawals', () => {
       await expect(run).rejects.toBeInstanceOf(RedirectError);
       await expect(run).rejects.toMatchObject({ url: ROSTER_CHANGED });
       expect(endGameMock).not.toHaveBeenCalled();
+      // Rows that did commit skip endGame's revalidation, so the action must
+      // refresh the cached game itself; a write that hit nothing has nothing
+      // to refresh.
+      expect(revalidateTagMock.mock.calls).toEqual(expectedRevalidations);
     },
   );
 });
