@@ -60,6 +60,7 @@ import {
   computeSideShortfall,
 } from '@/lib/games/matchplaySides';
 import {
+  isNotStartedCupMatch,
   readWithdrawalPlayOn,
   resolveCupMatchWithdrawal,
 } from '@/lib/cup/cupWithdrawalOutcome';
@@ -392,7 +393,7 @@ export default async function GameHomePage({
   // best ball) er fortsatt riktig vei ut. Ruter vi den til cup-siden, møter
   // spilleren en side som sier «ingenting å trekke seg fra».
   const withdrawHref =
-    game.tournament_id && (game.status === 'draft' || game.status === 'scheduled')
+    game.tournament_id && isNotStartedCupMatch(game.status)
       ? `/cup/${game.tournament_id}/trekk`
       : `/games/${id}/trekk-fra`;
 
@@ -599,6 +600,42 @@ export default async function GameHomePage({
   const modeLabel = tModes(modeLabelKey as Parameters<typeof tModes>[0]);
   const modeDetailHref = `/spillformater/${game.game_mode}`;
 
+  // Turneringsraden bak en cup-kamp. Ett oppslag dekker to behov:
+  //  - Walkover-banneret skal si HVEM som får kampen — «motstanderne» er
+  //    ingen hjelp for en spiller som åpner appen den morgenen, og
+  //    lagnavnene bor her, ikke på spill-raden.
+  //  - #1814: trekk-lenka under peker til cup-siden, og der finnes ingen
+  //    knapp før cupen er i gang (`wrong_status`).
+  // Service-role som resten av cup-flatene (#1542) — gaten er ruta.
+  // #1964: read once for both pre-start branches (scheduled and draft), and
+  // only for a cup game that has not started. That is exactly when
+  // `withdrawHref` points at the cup page; other games make no extra query.
+  const cupRow =
+    game.tournament_id && isNotStartedCupMatch(game.status)
+      ? (
+          await getAdminClient()
+            .from('tournaments')
+            .select('status, team_1_name, team_2_name')
+            .eq('id', game.tournament_id)
+            .maybeSingle<{
+              status: string;
+              team_1_name: string;
+              team_2_name: string;
+            }>()
+        ).data
+      : null;
+
+  // #1814: en cup-kamp står `scheduled` lenge før cupen selv er i gang
+  // (matchene genereres mens cupen er utkast). Cup-siden har ingen
+  // trekk-knapp da — bare setningen «Cupen er ikke i gang» — så lenka hit
+  // ville vært en blindvei. Ikke-cup-spill beholder sin vanlige vei ut.
+  // Og den som alt har trukket seg skal ikke bli spurt en gang til: cup-siden
+  // har ingen knapp igjen til hen. Samme gate som den aktive grenen nedenfor.
+  // #1964: the draft branch uses the same gate; a draft cup game used to
+  // show the link with no guard at all.
+  const showWithdrawLink =
+    !me.withdrawn_at && (!game.tournament_id || cupRow?.status === 'active');
+
   // State #2 — Scorekort venter. Shell renders synchronously; the flight
   // roster query streams in behind Suspense.
   if (game.status === 'scheduled') {
@@ -659,26 +696,6 @@ export default async function GameHomePage({
           })
           .join('/')
       : '';
-    // Turneringsraden bak en cup-kamp. Ett oppslag dekker to behov:
-    //  - Walkover-banneret skal si HVEM som får kampen — «motstanderne» er
-    //    ingen hjelp for en spiller som åpner appen den morgenen, og
-    //    lagnavnene bor her, ikke på spill-raden.
-    //  - #1814: trekk-lenka under peker til cup-siden, og der finnes ingen
-    //    knapp før cupen er i gang (`wrong_status`).
-    // Service-role som resten av cup-flatene (#1542) — gaten er ruta.
-    const cupRow = game.tournament_id
-      ? (
-          await getAdminClient()
-            .from('tournaments')
-            .select('status, team_1_name, team_2_name')
-            .eq('id', game.tournament_id)
-            .maybeSingle<{
-              status: string;
-              team_1_name: string;
-              team_2_name: string;
-            }>()
-        ).data
-      : null;
     const decidedWinnerTeam =
       cupWithdrawalDecision?.outcome === 'walkover' && game.tournament_id
         ? (() => {
@@ -690,15 +707,6 @@ export default async function GameHomePage({
             return name?.trim() || t('teamValue', { number: side });
           })()
         : '';
-
-    // #1814: en cup-kamp står `scheduled` lenge før cupen selv er i gang
-    // (matchene genereres mens cupen er utkast). Cup-siden har ingen
-    // trekk-knapp da — bare setningen «Cupen er ikke i gang» — så lenka hit
-    // ville vært en blindvei. Ikke-cup-spill beholder sin vanlige vei ut.
-    // Og den som alt har trukket seg skal ikke bli spurt en gang til: cup-siden
-    // har ingen knapp igjen til hen. Samme gate som den aktive grenen nedenfor.
-    const showWithdrawLink =
-      !me.withdrawn_at && (!game.tournament_id || cupRow?.status === 'active');
 
     // #543: venteroms-velger og unassigned_flights-banner.
     // Vises bare når spillet er eligible for flight-inndeling (>4 aktive, ikke wolf).
@@ -1549,7 +1557,7 @@ export default async function GameHomePage({
           <CupStandingsLink gameId={id} />
         </Suspense>
 
-        {isDraft && (
+        {isDraft && showWithdrawLink && (
           <div className="pt-2">
             <SmartLink
               href={withdrawHref}

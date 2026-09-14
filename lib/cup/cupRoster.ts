@@ -15,6 +15,8 @@
  * kamp. UI-en lister rosteret i denne rekkefølgen.
  */
 
+import { isNotStartedCupMatch } from './cupWithdrawalOutcome';
+
 /** `users`-joinen. Supabase JS typer FK-joins som array selv på many-to-one. */
 export type CupUserRel = { name: string | null; nickname: string | null };
 
@@ -122,10 +124,10 @@ export function buildCupRoster(
   const team2Map = new Map<string, CupRosterPlayer>();
 
   for (const g of gamesInOrder) {
-    // Samme grense som `PENDING_STATUSES` i `withdrawalActions` og
-    // `cupWithdrawalContext` trekker: en kamp som er i gang eller ferdigspilt
+    // Samme grense som `withdrawalActions` og `cupWithdrawalContext` trekker
+    // (#1964, `isNotStartedCupMatch`): en kamp som er i gang eller ferdigspilt
     // er ikke lenger noe å trekke seg fra.
-    const notStarted = g.status === 'draft' || g.status === 'scheduled';
+    const notStarted = isNotStartedCupMatch(g.status);
     for (const p of g.players) {
       if (p.team_number === 1 && !team1Map.has(p.user_id)) {
         team1Map.set(p.user_id, toRosterPlayer(p));

@@ -56,6 +56,24 @@ export function hasWithdrawalPlayOnChoice(modeConfig: unknown): boolean {
   return typeof (modeConfig as { withdrawal_play_on?: unknown }).withdrawal_play_on === 'boolean';
 }
 
+/**
+ * "Not started" in the withdrawal flow (#1964): a `draft` or `scheduled` match
+ * is something a player can still withdraw from; `active` and `finished` are
+ * never touched (E3). This is the rule's one TypeScript home: the withdraw
+ * actions, the confirmation context, the roster's «Trukket» flag, the organiser
+ * and player withdraw links and `resolveCupMatchWithdrawal` below all call it.
+ *
+ * Takes `string` because raw PostgREST rows carry the status untyped. An
+ * unknown status counts as started, so a withdrawal never writes to it.
+ *
+ * Not the narrower scheduled-only rule: the play-on choice and the swap panel
+ * are only offered on published matches. The SQL in migrations 0042, 0043 and
+ * 0174 keeps its own copy.
+ */
+export function isNotStartedCupMatch(status: string): boolean {
+  return status === 'draft' || status === 'scheduled';
+}
+
 /** Én spillerrad i kampen, redusert til det regelen faktisk trenger. */
 export type CupWithdrawalPlayer = {
   userId: string;
@@ -110,7 +128,7 @@ export function resolveCupMatchWithdrawal(
 ): CupMatchWithdrawal | null {
   // E3: en startet eller ferdig kamp står som den står — et trekk registrert
   // underveis flagger bare de øvrige, ikke-startede kampene.
-  if (input.status === 'active' || input.status === 'finished') return null;
+  if (!isNotStartedCupMatch(input.status)) return null;
 
   const sides = [1, 2] as const;
   const withdrawnBySide = sides.map((side) =>
