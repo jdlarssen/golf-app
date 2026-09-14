@@ -150,7 +150,7 @@ describe('adminWithdrawPlayer', () => {
         },
         error: null,
       }, // games (action body)
-      { data: null, error: null }, // game_players.update (withdrawn_at)
+      { data: [{ user_id: 'user-a' }], error: null }, // game_players.update (withdrawn_at) → 1 row
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'creator-1' } },
@@ -177,7 +177,7 @@ describe('adminWithdrawPlayer', () => {
         },
         error: null,
       }, // games
-      { data: null, error: null }, // game_players.update (withdrawn_at)
+      { data: [{ user_id: 'user-a' }], error: null }, // game_players.update (withdrawn_at) → 1 row
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
@@ -218,6 +218,58 @@ describe('adminWithdrawPlayer', () => {
     await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/admin/games/game-1?error=not_active');
   });
+
+  // #2030: a stale tab or a double click withdraws a player who is already
+  // withdrawn (or no longer on the roster). The guarded UPDATE matches 0 rows,
+  // and that must surface as its own error, never as a success with an audit row.
+  it('0 rows (already withdrawn): redirects ?error=withdraw_stale without an audit row', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Kari' }, error: null }, // users (loadRole)
+      { data: { created_by: 'creator-1' }, error: null }, // games.created_by (owner)
+      {
+        data: { id: 'game-1', name: 'Lørdagsrunde', status: 'active', game_mode: 'stableford' },
+        error: null,
+      }, // games (action body)
+      { data: [], error: null }, // game_players.update (withdrawn_at) → 0 rows
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'creator-1' } },
+    });
+
+    const { adminWithdrawPlayer } = await import('./actions');
+
+    await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/spillere?error=withdraw_stale');
+    expect(logAdminEventMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    const writeFilters = supabaseMock.__fromCalls
+      .filter((c) => c.table === 'game_players')
+      .map((c) => [c.method, ...c.args]);
+    expect(writeFilters).toContainEqual(['is', 'withdrawn_at', null]);
+    expect(writeFilters).toContainEqual(['select', 'user_id']);
+  });
+
+  it('DB error on the write: redirects ?error=db_players without an audit row', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      {
+        data: { id: 'game-1', name: 'Vinter-cup', status: 'active', game_mode: 'best_ball' },
+        error: null,
+      }, // games
+      { data: null, error: { message: 'boom' } }, // game_players.update → error
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { adminWithdrawPlayer } = await import('./actions');
+
+    await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=db_players');
+    expect(logAdminEventMock).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
 });
 
 // ─── adminUndoWithdraw ──────────────────────────────────────────────────────
@@ -235,7 +287,7 @@ describe('adminUndoWithdraw', () => {
         },
         error: null,
       }, // games
-      { data: null, error: null }, // game_players.update (null out withdrawn)
+      { data: [{ user_id: 'user-a' }], error: null }, // game_players.update (null out withdrawn) → 1 row
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
@@ -275,6 +327,35 @@ describe('adminUndoWithdraw', () => {
 
     await expect(adminUndoWithdraw('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/admin/games/game-1?error=not_active');
+  });
+
+  // #2030: undoing a withdrawal that is already undone (or for a player no
+  // longer on the roster) matches 0 rows. That is the opposite state of a stale
+  // withdraw, so it gets its own code.
+  it('0 rows (already back in): redirects ?error=reinstate_stale without an audit row', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      {
+        data: { id: 'game-1', name: 'Vinter-cup', status: 'active', game_mode: 'stableford' },
+        error: null,
+      }, // games
+      { data: [], error: null }, // game_players.update (null out withdrawn) → 0 rows
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { adminUndoWithdraw } = await import('./actions');
+
+    await expect(adminUndoWithdraw('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=reinstate_stale');
+    expect(logAdminEventMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    const writeFilters = supabaseMock.__fromCalls
+      .filter((c) => c.table === 'game_players')
+      .map((c) => [c.method, ...c.args]);
+    expect(writeFilters).toContainEqual(['not', 'withdrawn_at', 'is', null]);
+    expect(writeFilters).toContainEqual(['select', 'user_id']);
   });
 });
 
