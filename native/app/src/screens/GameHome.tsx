@@ -51,6 +51,7 @@ import {
 import {
   findInRoster,
   pendingApprovals,
+  rosterMarks,
   shouldConfirmParticipation,
   toRoster,
 } from '../lib/roster';
@@ -214,7 +215,13 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       <Text style={ui.sectionTitle}>Spillere</Text>
       <View style={ui.card} testID="roster">
         {bundle.players.map((player) => (
-          <RosterRow key={player.userId} player={player} isMe={player.userId === userId} />
+          <RosterRow
+            key={player.userId}
+            player={player}
+            isMe={player.userId === userId}
+            gameMode={mode}
+            players={bundle.players}
+          />
         ))}
       </View>
 
@@ -379,22 +386,42 @@ function PrimarySection({
   );
 }
 
-function RosterRow({ player, isMe }: { player: BundlePlayer; isMe: boolean }) {
+/**
+ * Én rad i spillerlista. Eksportert for render-testen (samme grep som
+ * `LeaderboardBody`) — hva raden SIER er delt logikk i `rosterMarks`, men at
+ * den lange wolf-merkelappen faktisk får plass er det bare en render som
+ * svarer på.
+ */
+export function RosterRow({
+  player,
+  isMe,
+  gameMode,
+  players,
+}: {
+  player: BundlePlayer;
+  isMe: boolean;
+  gameMode: GameMode;
+  /** Hele rosteret — `rosterMarks` teller selv n-en wolf-rotasjonen går over. */
+  players: readonly BundlePlayer[];
+}) {
   const { ui } = useTheme();
-  const marks: string[] = [];
-  if (player.flightNumber != null) marks.push(`Flight ${player.flightNumber}`);
-  if (player.teamNumber != null) marks.push(`Lag ${player.teamNumber}`);
-  if (player.withdrawnAt) marks.push('Trukket');
-  else if (player.approvedAt) marks.push('Godkjent');
-  else if (player.submittedAt) marks.push('Levert');
+  const marks = rosterMarks(player, gameMode, players);
 
   return (
     <View style={styles.rosterRow} testID={`roster-row-${player.userId}`}>
-      <Text style={[ui.body, isMe && styles.meName]}>
+      <Text style={[ui.body, styles.rosterName, isMe && styles.meName]}>
         {displayName(player)}
         {isMe ? ' (deg)' : ''}
       </Text>
-      {marks.length > 0 ? <Text style={ui.muted}>{marks.join(' · ')}</Text> : null}
+      {marks.length > 0 ? (
+        // `flexShrink` på begge sider: «Wolf på hull 3, 6, 9, 12, 15 og 18» er
+        // den lengste merkelappen som finnes, og uten dette renner den ut av
+        // raden på en smal telefon i stedet for å brekke (#1842-lærdommen —
+        // tekst som klippes er tekst som lyver).
+        <Text style={[ui.muted, styles.rosterMarks]} testID={`roster-marks-${player.userId}`}>
+          {marks.join(' · ')}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -407,6 +434,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  rosterName: { flexShrink: 1 },
+  rosterMarks: { flexShrink: 1, textAlign: 'right' },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
   meName: { fontFamily: FONTS.sansBold },
 });

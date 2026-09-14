@@ -10,6 +10,7 @@ import {
   findInRoster,
   pendingApprovals,
   resolveFlight,
+  rosterMarks,
   shouldConfirmParticipation,
   toRoster,
 } from './roster';
@@ -142,5 +143,93 @@ describe('shouldConfirmParticipation', () => {
 
   it('skriver ikke for noen som ikke står på rosteret', () => {
     expect(shouldConfirmParticipation(undefined, 'active')).toBe(false);
+  });
+});
+
+describe('rosterMarks', () => {
+  // #1874: i wolf og round robin ER `team_number` = `flight_number` plassen i
+  // rotasjonen, ikke et lag og ikke en ball. «Flight 3 · Lag 3» fikk eieren til
+  // å tro at spillerne gikk hver for seg. Merkelappene under er derfor ikke
+  // kosmetikk — de er forskjellen på sann og usann informasjon.
+
+  /** n spillere med slot 1..n, slik `assignRotationSlots` setter dem ved start. */
+  function rotation(n: number, overrides: Partial<BundlePlayer>[] = []): BundlePlayer[] {
+    return Array.from({ length: n }, (_, i) =>
+      player({
+        userId: `p${i + 1}`,
+        teamNumber: i + 1,
+        flightNumber: i + 1,
+        ...(overrides[i] ?? {}),
+      }),
+    );
+  }
+
+  it('sier hvilke hull rotasjons-plassen gir Wolf-rollen, i stedet for lag og flight', () => {
+    const players = rotation(4);
+    expect(rosterMarks(players[2], 'wolf', players)).toEqual([
+      'Wolf på hull 3, 7, 11 og 15',
+    ]);
+  });
+
+  it('lister hele runden når tre spiller — den lengste merkelappen som finnes', () => {
+    const players = rotation(3);
+    expect(rosterMarks(players[2], 'wolf', players)).toEqual([
+      'Wolf på hull 3, 6, 9, 12, 15 og 18',
+    ]);
+  });
+
+  // Den ene grenen som kan gi appen en ANNEN wolf enn nettsiden: n telles av
+  // `wolfRotationPlayers` (alle med slot, trukne også), akkurat som webbens
+  // `computeWolfContext`. Filtrerte vi bort den trukne her, ville rosteret sagt
+  // hull 3, 6, 9 … mens `WolfChoiceCard` sa hull 3, 7, 11 … på samme runde.
+  it('teller trukne spillere med i rotasjonen — samme n som nettsiden', () => {
+    const players = rotation(4, [{}, {}, {}, { withdrawnAt: '2026-09-01T10:00:00.000Z' }]);
+    expect(rosterMarks(players[2], 'wolf', players)).toEqual([
+      'Wolf på hull 3, 7, 11 og 15',
+    ]);
+    expect(rosterMarks(players[3], 'wolf', players)).toEqual([
+      'Wolf på hull 4, 8, 12 og 16',
+      'Trukket',
+    ]);
+  });
+
+  it.each([
+    ['rotasjonen ikke er trukket ennå', null, 4],
+    ['plassen ikke finnes lenger i rotasjonen', 9, 4],
+    ['spillertallet er utenfor wolf', 1, 6],
+  ] as [string, number | null, number][])(
+    'lar wolf-raden stå uten merkelapp når %s',
+    (_label, teamNumber, n) => {
+      const players = rotation(n);
+      const me = player({ userId: 'me', teamNumber, flightNumber: teamNumber });
+      expect(rosterMarks(me, 'wolf', [...players, me])).toEqual([]);
+    },
+  );
+
+  it('merker ikke rotasjonen i round robin — rekkefølgen der er rent kosmetisk', () => {
+    const players = rotation(4);
+    expect(rosterMarks(players[1], 'round_robin', players)).toEqual([]);
+  });
+
+  it('lar lag-formatene stå som før', () => {
+    const me = player({ userId: 'a', teamNumber: 1, flightNumber: 2 });
+    expect(rosterMarks(me, 'best_ball', [me])).toEqual(['Flight 2', 'Lag 1']);
+  });
+
+  it('holder status-merkene uendret', () => {
+    const approved = player({
+      userId: 'a',
+      flightNumber: 1,
+      submittedAt: '2026-09-01T09:00:00.000Z',
+      approvedAt: '2026-09-01T10:00:00.000Z',
+    });
+    expect(rosterMarks(approved, SOLO, [approved])).toEqual(['Flight 1', 'Godkjent']);
+
+    const submitted = player({
+      userId: 'b',
+      flightNumber: 1,
+      submittedAt: '2026-09-01T09:00:00.000Z',
+    });
+    expect(rosterMarks(submitted, SOLO, [submitted])).toEqual(['Flight 1', 'Levert']);
   });
 });
