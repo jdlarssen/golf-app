@@ -62,9 +62,11 @@ import {
 } from '@/lib/games/matchplaySides';
 import {
   isNotStartedCupMatch,
+  isPlayOnChoicePending,
   readWithdrawalPlayOn,
   resolveCupMatchWithdrawal,
 } from '@/lib/cup/cupWithdrawalOutcome';
+import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
 import {
   isSingleFlightGame,
   unassignedActivePlayers,
@@ -679,9 +681,9 @@ export default async function GameHomePage({
     // hverken nedtellingen eller start-CTA-en vises — den starter aldri.
     // Samme regelmodul som `startScheduledGameCore` nettopp avslo starten med,
     // så banneret og virkeligheten kan ikke si to forskjellige ting.
-    const cupWithdrawalDecision = game.tournament_id
-      ? resolveCupMatchWithdrawal({
-          status: 'scheduled',
+    const cupRuleInput = game.tournament_id
+      ? {
+          status: 'scheduled' as const,
           gameMode: game.game_mode,
           scheduledTeeOffAt: game.scheduled_tee_off_at,
           playOn: readWithdrawalPlayOn(gwp.game.mode_config),
@@ -692,18 +694,41 @@ export default async function GameHomePage({
               side: p.team_number as 1 | 2,
               withdrawnAt: p.withdrawn_at,
             })),
-        })
+        }
       : null;
+    const cupWithdrawalDecision = cupRuleInput
+      ? resolveCupMatchWithdrawal(cupRuleInput)
+      : null;
+    const cupPlayerName = (uid: string) => {
+      const u = gwp.players.find((p) => p.user_id === uid)?.users;
+      return u?.nickname?.trim() || u?.name?.trim() || t('withdrawnPlayerFallback');
+    };
     const decidedNames = cupWithdrawalDecision
-      ? cupWithdrawalDecision.withdrawnUserIds
-          .map((uid) => {
-            const u = gwp.players.find((p) => p.user_id === uid)?.users;
-            return (
-              u?.nickname?.trim() || u?.name?.trim() || t('withdrawnPlayerFallback')
-            );
-          })
-          .join('/')
+      ? cupWithdrawalDecision.withdrawnUserIds.map(cupPlayerName).join('/')
       : '';
+    // #1967: the organiser has not made the play-on choice yet, so the rule
+    // outcome above is not final. Same rule home as the cup page
+    // (`isPlayOnChoicePending`) and the same gate as the organiser banner: the
+    // cup is under way and a partner is left to play alone. With no partner
+    // (both sides withdrew) the decided banner stays (#2032).
+    const cupPlayOnPendingPartner =
+      cupRuleInput &&
+      cupWithdrawalDecision &&
+      cupRow?.status === 'active' &&
+      isPlayOnChoicePending(cupRuleInput, gwp.game.mode_config)
+        ? remainingPartnerName(
+            {
+              withdrawal: cupWithdrawalDecision,
+              team1UserIds: cupRuleInput.players
+                .filter((p) => p.side === 1)
+                .map((p) => p.userId),
+              team2UserIds: cupRuleInput.players
+                .filter((p) => p.side === 2)
+                .map((p) => p.userId),
+            },
+            cupPlayerName,
+          )
+        : null;
     const decidedWinnerTeam =
       cupWithdrawalDecision?.outcome === 'walkover' && game.tournament_id
         ? (() => {
@@ -999,7 +1024,18 @@ export default async function GameHomePage({
         {/* #1814: kampen er avgjort uten spill. Banneret ERSTATTER nedtellingen
             — spillerne åpner appen den morgenen og skal se med én gang at det
             ikke blir noe av, ikke en klokke som teller ned til ingenting. */}
-        {cupWithdrawalDecision ? (
+        {cupPlayOnPendingPartner ? (
+          /* #1967: the organiser has not decided yet. No countdown here
+             either: the match cannot start while the choice is open. */
+          <div className="mx-4 mt-4">
+            <Banner tone="warning" testId="cup-playon-pending-banner">
+              {t('cupPlayOnPending', {
+                names: decidedNames,
+                partner: cupPlayOnPendingPartner,
+              })}
+            </Banner>
+          </div>
+        ) : cupWithdrawalDecision ? (
           <div className="mx-4 mt-4">
             <Banner tone="warning">
               {cupWithdrawalDecision.outcome === 'halved'

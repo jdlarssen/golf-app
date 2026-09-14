@@ -250,9 +250,9 @@ export async function CupWithdrawConfirm({
                     </fieldset>
                   ))}
                   <p className="font-sans text-[12px] leading-relaxed text-muted">
-                    {t('withdraw.playOnHelp', {
-                      partner: playOnChoices[0].partnerName ?? '',
-                    })}
+                    {/* #1967: name-free — several fourballs can have different
+                        partners, and each legend above already names its own. */}
+                    {t('withdraw.playOnHelp')}
                   </p>
                 </div>
               )}

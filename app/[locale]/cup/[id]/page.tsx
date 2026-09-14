@@ -16,6 +16,7 @@ import {
 } from '@/lib/cup/cupMatchStatusLabel';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import { isNotStartedCupMatch } from '@/lib/cup/cupWithdrawalOutcome';
+import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
 import { CupLineupSpotlight } from './CupLineupSpotlight';
 
 type Params = Promise<{ id: string }>;
@@ -171,14 +172,25 @@ export default async function PublicCupPage({
                 allScorecardsSubmitted: m.allScorecardsSubmitted ?? false,
                 withdrawal: m.withdrawal,
               });
-              const statusLabel = t(
-                CUP_MATCH_STATUS_MESSAGE_KEY[statusKey],
-                cupMatchStatusValues(m, {
-                  nameOf: (uid) => rosterNames.get(uid) ?? t('manage.unknownPlayer'),
-                  team1Name: tournament.team_1_name,
-                  team2Name: tournament.team_2_name,
-                }),
-              );
+              const nameOf = (uid: string) =>
+                rosterNames.get(uid) ?? t('manage.unknownPlayer');
+              const statusValues = cupMatchStatusValues(m, {
+                nameOf,
+                team1Name: tournament.team_1_name,
+                team2Name: tournament.team_2_name,
+              });
+              // #1967: while the organiser has not made the play-on choice,
+              // the rule outcome is not final, so say «valg venter», not
+              // «Halvert». Same gate as the organiser banner: the cup is under
+              // way and a partner is left to play alone. With no partner (both
+              // sides withdrew) the rule outcome stays (#2032).
+              const playOnPending =
+                m.playOnChoicePending === true &&
+                tournament.status === 'active' &&
+                remainingPartnerName(m, nameOf) !== null;
+              const statusLabel = playOnPending
+                ? t('public.matchPlayOnPending', { name: statusValues.name })
+                : t(CUP_MATCH_STATUS_MESSAGE_KEY[statusKey], statusValues);
               const card = (
                 <Card
                   className={
@@ -214,7 +226,7 @@ export default async function PublicCupPage({
                       <p
                         className="text-xs text-muted"
                         data-testid={`cup-public-match-status-${m.gameId}`}
-                        data-status={statusKey}
+                        data-status={playOnPending ? 'playOnPending' : statusKey}
                       >
                         {statusLabel}
                       </p>

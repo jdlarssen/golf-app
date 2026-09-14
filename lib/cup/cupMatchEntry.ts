@@ -4,7 +4,7 @@ import { computeCupMatchDisplayResult } from './cupMatchDisplayResult';
 import { toCupMatchGameMode } from './cupMatchGameMode';
 import { formatSideLabel, type CupNamedPlayerRow } from './cupRoster';
 import {
-  hasWithdrawalPlayOnChoice,
+  isPlayOnChoicePending,
   readWithdrawalPlayOn,
   resolveCupMatchWithdrawal,
 } from './cupWithdrawalOutcome';
@@ -142,13 +142,9 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
   // #1814 (E4): kampen er avgjort NÅ, men den trenger ikke være det — hadde
   // arrangøren sagt «makkeren spiller alene», ville den blitt spilt. Så lenge
   // ingen har tatt valget (nøkkelen mangler helt), venter det på arrangøren, og
-  // `CupManagement` maser om det. Regelen spørres to ganger i stedet for å
-  // gjentas her: samme modul avgjør begge svarene.
-  const playOnChoicePending =
-    game.status === 'scheduled' &&
-    withdrawal !== null &&
-    !hasWithdrawalPlayOnChoice(game.mode_config) &&
-    resolveCupMatchWithdrawal({ ...ruleInput, playOn: true }) === null;
+  // `CupManagement` maser om det. The rule lives in `isPlayOnChoicePending`
+  // (#1967), so the waiting room asks exactly the same question.
+  const playOnChoicePending = isPlayOnChoicePending(ruleInput, game.mode_config);
 
   // Kampen SKAL spilles, men står én mot to fordi arrangøren valgte det (E4).
   // Kortet må si hvorfor — ellers ser en fourball med tre navn ut som en feil.
