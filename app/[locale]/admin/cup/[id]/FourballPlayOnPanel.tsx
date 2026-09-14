@@ -59,8 +59,10 @@ export function FourballPlayOnPanel({
 
   const errorMessage = (() => {
     if (!state.error) return null;
-    const key = `manage.errors.${state.error}` as Parameters<typeof t>[0];
-    return t.has(key) ? t(key) : t('manage.errors.withdraw_failed');
+    // The action's codes live under `cup.withdraw.errors` (#1963), like the
+    // sibling trekk pages; `manage.errors.wrong_status` is about starting a cup.
+    const key = `withdraw.errors.${state.error}` as Parameters<typeof t>[0];
+    return t.has(key) ? t(key) : t('withdraw.errors.withdraw_failed');
   })();
 
   function submit(e: React.FormEvent<HTMLFormElement>) {

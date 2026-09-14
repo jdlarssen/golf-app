@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import noMessages from '@/messages/no.json';
 
 /**
  * Type C render-test per docs/test-discipline.md — ÉN test, kun struktur:
@@ -7,11 +8,15 @@ import { render, screen } from '@testing-library/react';
  * veksleknappen sendte panelet alltid `play_on=1` fra venter-tilstanden, så
  * «Ett valg venter»-banneret kunne ikke besvares med regelen (#1814, E4).
  * Selve skrivingen er dekket av lib/cup/withdrawalActions.test.ts.
+ *
+ * A failed choice is translated from the action's own namespace,
+ * `cup.withdraw.errors`, not `cup.manage.errors` (#1963).
  */
 vi.mock('@/lib/cup/withdrawalActions', () => ({
   setFourballWithdrawalChoice: vi.fn(async () => ({ error: '' })),
 }));
 
+import { setFourballWithdrawalChoice } from '@/lib/cup/withdrawalActions';
 import { FourballPlayOnPanel } from './FourballPlayOnPanel';
 
 function playOnValues(): string[] {
@@ -25,7 +30,7 @@ describe('FourballPlayOnPanel (#1814)', () => {
     ['valget venter', { choicePending: true, playOn: false }, ['1', '0']],
     ['alene-valget er tatt', { choicePending: false, playOn: true }, ['0']],
     ['regelen er valgt', { choicePending: false, playOn: false }, ['1']],
-  ] as const)('%s → sender %s', (_name, props, expected) => {
+  ] as const)('%s → sender %s', async (_name, props, expected) => {
     render(
       <FourballPlayOnPanel
         tournamentId="cup-1"
@@ -43,5 +48,10 @@ describe('FourballPlayOnPanel (#1814)', () => {
     } else {
       expect(screen.getByTestId('cup-playon-toggle-g-1')).toBeTruthy();
     }
+
+    vi.mocked(setFourballWithdrawalChoice).mockResolvedValueOnce({ error: 'wrong_status' });
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+    const error = await screen.findByTestId('cup-playon-error-g-1');
+    expect(error.textContent).toBe(noMessages.cup.withdraw.errors.wrong_status);
   });
 });
