@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import type { CSSProperties, JSX, MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useModalFocus } from '@/hooks/useModalFocus';
+import { MAX_STROKES } from '@/lib/scorecard/strokeEntry';
 
 export interface SpecificValueSheetProps {
   open: boolean;
@@ -14,9 +15,8 @@ export interface SpecificValueSheetProps {
 }
 
 // The whole legal range in one grid: a blow-up score is one tap, not seven on
-// the stepper. Mirrors ScoreCard.tsx's 15-stroke cap — kept local since that
-// const is not exported.
-const MAX_STROKES = 15;
+// the stepper. The cap is the stroke-entry rule's own MAX_STROKES, the same
+// one ScoreCard.tsx steps against (#1995).
 const VALUES: number[] = Array.from(
   { length: MAX_STROKES },
   (_, i) => i + 1,
