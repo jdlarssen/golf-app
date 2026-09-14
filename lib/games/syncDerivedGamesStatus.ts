@@ -2,6 +2,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { isSilentBlockReason } from '@/lib/notifications/autoStartBlocked';
 import { startScheduledGame } from './startScheduledGame';
 import { persistResultSummaries } from './persistResultSummaries';
 import { persistScoreDifferentials } from './persistScoreDifferentials';
@@ -218,11 +219,14 @@ export async function startDerivedGames(
         startedCount += 1;
       } else {
         failedIds.push(id);
-        console.error('[startDerivedGames] derived game could not start', {
-          hostGameId,
-          derivedGameId: id,
-          reason: result.reason,
-        });
+        const details = { hostGameId, derivedGameId: id, reason: result.reason };
+        // #1971: a derived game decided by a withdrawal is an expected state,
+        // not a failure. Same tiering as the cron sweep.
+        if (isSilentBlockReason(result.reason)) {
+          console.log('[startDerivedGames] derived game not started', details);
+        } else {
+          console.error('[startDerivedGames] derived game could not start', details);
+        }
       }
     } catch (err) {
       failedIds.push(id);

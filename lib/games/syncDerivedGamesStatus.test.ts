@@ -140,6 +140,26 @@ describe('startDerivedGames', () => {
     expect(result.failedIds).toEqual(['d2', 'd3']);
     expect(startScheduledGameMock).toHaveBeenCalledTimes(3);
   });
+
+  it('logs a derived game decided by a withdrawal at info level, not as an error (#1971)', async () => {
+    const supabase = makeSupabase({
+      lookupResult: { data: [{ id: 'd1' }], error: null },
+    });
+    startScheduledGameMock.mockResolvedValueOnce({ ok: false, reason: 'decided_by_withdrawal' });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    try {
+      const result = await startDerivedGames(supabase, HOST);
+
+      expect(result.failedIds).toEqual(['d1']);
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(logSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+    }
+  });
 });
 
 describe('finishDerivedGames', () => {
