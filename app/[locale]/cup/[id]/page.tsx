@@ -15,6 +15,7 @@ import {
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
 import { formatPoints } from '@/lib/cup/formatPoints';
+import { isNotStartedCupMatch } from '@/lib/cup/cupWithdrawalOutcome';
 import { CupLineupSpotlight } from './CupLineupSpotlight';
 
 type Params = Promise<{ id: string }>;
@@ -80,7 +81,7 @@ export default async function PublicCupPage({
     tournament.status === 'active' &&
     leaderboard.matches.some(
       (m) =>
-        (m.status === 'draft' || m.status === 'scheduled') &&
+        isNotStartedCupMatch(m.status) &&
         m.withdrawal == null &&
         [...(m.team1UserIds ?? []), ...(m.team2UserIds ?? [])].includes(userId),
     );

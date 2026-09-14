@@ -10,7 +10,7 @@ import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/lib/database.types';
 import { cupBasePath } from './cupPaths';
-import { hasWithdrawalPlayOnChoice } from './cupWithdrawalOutcome';
+import { hasWithdrawalPlayOnChoice, isNotStartedCupMatch } from './cupWithdrawalOutcome';
 
 /**
  * Trekk underveis i en cup (#1814) — arrangørens og spillerens vei ut.
@@ -50,8 +50,6 @@ type GameRow = {
   game_mode: string;
   mode_config: unknown;
 };
-
-const PENDING_STATUSES = new Set(['draft', 'scheduled']);
 
 /**
  * Kamp-ID-ene i ett skjemafelt. Bekreftelsessiden sender én avkrysningsboks per
@@ -288,7 +286,7 @@ async function writeWithdrawal(
     return { error: 'withdraw_failed' };
   }
   const started = (after ?? [])
-    .filter((g) => !PENDING_STATUSES.has(g.status as string))
+    .filter((g) => !isNotStartedCupMatch(g.status as string))
     .map((g) => g.id as string);
   if (started.length > 0) await compensate(started);
 
@@ -345,7 +343,7 @@ export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdraw
 
   const pending = target.games.filter(
     (g) =>
-      PENDING_STATUSES.has(g.status) &&
+      isNotStartedCupMatch(g.status) &&
       target.myGameIds.includes(g.id) &&
       !target.withdrawnGameIds.includes(g.id),
   );
@@ -405,7 +403,7 @@ export async function withdrawSelfFromCup(formData: FormData): Promise<CupWithdr
 
   const pending = target.games.filter(
     (g) =>
-      PENDING_STATUSES.has(g.status) &&
+      isNotStartedCupMatch(g.status) &&
       target.myGameIds.includes(g.id) &&
       !target.withdrawnGameIds.includes(g.id),
   );
@@ -453,7 +451,7 @@ export async function undoCupWithdrawal(formData: FormData): Promise<CupWithdraw
   if ('error' in target) return { error: target.error };
 
   const toUndo = target.games.filter(
-    (g) => PENDING_STATUSES.has(g.status) && target.withdrawnGameIds.includes(g.id),
+    (g) => isNotStartedCupMatch(g.status) && target.withdrawnGameIds.includes(g.id),
   );
   if (toUndo.length === 0) return { error: 'not_withdrawn' };
 

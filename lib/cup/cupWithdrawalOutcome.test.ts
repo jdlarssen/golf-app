@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import type { GameStatus } from '@/lib/games/status';
+import { buildCupRoster } from './cupRoster';
 import {
   WITHDRAWAL_LATE_WINDOW_MS,
+  isNotStartedCupMatch,
   resolveCupMatchWithdrawal,
   type CupWithdrawalInput,
 } from './cupWithdrawalOutcome';
@@ -311,5 +314,58 @@ describe('resolveCupMatchWithdrawal — fourball «makkeren spiller alene» (E4)
         }),
       ),
     ).toBeNull();
+  });
+});
+
+/**
+ * #1964 — "not started" has one home. The truth table is typed as
+ * Record<GameStatus, boolean>, so a new status in the union fails to compile
+ * here until someone decides which side of the line it falls on. Each row also
+ * checks that the two pure consumers agree with the helper: the roster's
+ * «Trukket» flag and the envelope rule (E3).
+ */
+const NOT_STARTED: Record<GameStatus, boolean> = {
+  draft: true,
+  scheduled: true,
+  active: false,
+  finished: false,
+};
+
+describe('isNotStartedCupMatch — ett hjem for «ikke startet» (#1964)', () => {
+  it.each(Object.entries(NOT_STARTED) as [GameStatus, boolean][])(
+    '%s → %s, og rosteret og konvoluttregelen er enige',
+    (status, notStarted) => {
+      expect(isNotStartedCupMatch(status)).toBe(notStarted);
+
+      const roster = buildCupRoster([
+        {
+          status,
+          players: [
+            {
+              user_id: 'a1',
+              team_number: 1,
+              users: { name: 'a1', nickname: null },
+              withdrawn_at: EARLY,
+            },
+          ],
+        },
+      ]);
+      expect(roster.team1[0].withdrawn).toBe(notStarted);
+
+      const decision = resolveCupMatchWithdrawal(
+        singles({
+          status,
+          players: [
+            { userId: 'a1', side: 1, withdrawnAt: EARLY },
+            { userId: 'b1', side: 2, withdrawnAt: null },
+          ],
+        }),
+      );
+      expect(decision !== null).toBe(notStarted);
+    },
+  );
+
+  it('regner en ukjent status som startet — trekket skriver aldri på den', () => {
+    expect(isNotStartedCupMatch('cancelled')).toBe(false);
   });
 });

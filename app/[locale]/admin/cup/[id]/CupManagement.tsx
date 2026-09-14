@@ -16,6 +16,7 @@ import { matchBlocksOneTapFinish } from '@/lib/cup/matchSubmissionStatus';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import { unregisteredSideAwards } from '@/lib/cup/sideAwardsRegistered';
 import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
+import { isNotStartedCupMatch } from '@/lib/cup/cupWithdrawalOutcome';
 import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
 import { CupMatchList } from './CupMatchList';
 import { CupActionsSection } from './CupActionsSection';
@@ -90,7 +91,7 @@ function cupMatchesSummary(
 function playersWithNotStartedMatch(matches: CupMatchSummary[]): Set<string> {
   return new Set(
     matches
-      .filter((m) => m.status === 'draft' || m.status === 'scheduled')
+      .filter((m) => isNotStartedCupMatch(m.status))
       .flatMap((m) => [...(m.team1UserIds ?? []), ...(m.team2UserIds ?? [])]),
   );
 }

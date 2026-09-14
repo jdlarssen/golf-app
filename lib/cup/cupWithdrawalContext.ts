@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { userOf, type CupUserRel } from './cupRoster';
 import {
+  isNotStartedCupMatch,
   readWithdrawalPlayOn,
   resolveCupMatchWithdrawal,
   type CupMatchWithdrawal,
@@ -198,8 +199,8 @@ export async function loadCupWithdrawalContext(args: {
     };
 
     // E3: startede og ferdige kamper røres aldri av et trekk.
-    if (game.status === 'active' || game.status === 'finished') untouched.push(view);
-    else pending.push(view);
+    if (isNotStartedCupMatch(game.status)) pending.push(view);
+    else untouched.push(view);
   }
 
   return {
