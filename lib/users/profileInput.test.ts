@@ -9,8 +9,9 @@ import {
 /**
  * Type A (ren logikk): den delte profil-valideringen.
  *
- * Denne regelen har to inngangsdører — skjemaet i `app/[locale]/profile` og
- * ruta native-appen kaller (#1906) — så den er testet ÉN gang her, ikke én
+ * Denne regelen har tre inngangsdører — skjemaet i `app/[locale]/profile`,
+ * onboarding i `app/[locale]/complete-profile` (#1947) og ruta native-appen
+ * kaller (#1906) — så den er testet ÉN gang her, ikke én
  * gang per dør. Det som låses: grenseverdiene, plusshandicap-fortegnet,
  * #1064-oppførselen for tomt kjønn, og rekkefølgen på feilene.
  */
