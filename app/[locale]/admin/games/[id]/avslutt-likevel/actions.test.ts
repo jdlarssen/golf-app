@@ -13,8 +13,9 @@ import {
  *   1. auth.getUser                                  (vi.fn, mockResolvedValue)
  *   2. users.select(is_admin, email, name).eq.single (loadRole — admins skip
  *      the games.created_by read in requireAdminOrCreator)
- *   3. games.select(game_mode).eq.single             (supportsWithdrawal; a
- *      read error fails closed → db_players)
+ *   3. games.select(game_mode, status).eq.single     (supportsWithdrawal; a
+ *      read error fails closed → db_players; a game that is no longer active
+ *      → not_active before any roster I/O, #2031)
  *   4. game_players.select(user_id, submitted_at, withdrawn_at)
  *        .eq(game_id).in(user_id)                    (pre-read, awaited; a
  *      missing, submitted or withdrawn ticked row → roster_changed)
@@ -58,11 +59,13 @@ vi.mock('../actions', () => ({
 const GAME_ID = 'game-1';
 const ROSTER_CHANGED = `/admin/games/${GAME_ID}/avslutt-likevel?error=roster_changed`;
 
-/** Queue entries 2–3: an admin caller on a mode that supports withdrawal. */
-const ADMIN_PREFIX = [
-  { data: { is_admin: true, email: 'admin@example.com', name: 'Jørgen' }, error: null },
-  { data: { game_mode: 'stableford' }, error: null },
-];
+/** Queue entry 2: an admin caller. */
+const ADMIN_ROW = {
+  data: { is_admin: true, email: 'admin@example.com', name: 'Jørgen' },
+  error: null,
+};
+/** Queue entry 3 by default: a game in play, on a mode that supports withdrawal. */
+const ACTIVE_GAME = { game_mode: 'stableford', status: 'active' };
 
 function unsubmitted(userId: string) {
   return { user_id: userId, submitted_at: null, withdrawn_at: null };
@@ -89,8 +92,15 @@ beforeEach(() => {
  * convention for server actions (tests/serverActionMocks.ts) so the `vi.mock`
  * hoist applies before the module graph loads.
  */
-async function asAdmin(queue: Array<{ data?: unknown; error?: unknown }>) {
-  supabaseMock = buildSupabaseMock([...ADMIN_PREFIX, ...queue]);
+async function asAdmin(
+  queue: Array<{ data?: unknown; error?: unknown }>,
+  game: { game_mode: string; status: string } = ACTIVE_GAME,
+) {
+  supabaseMock = buildSupabaseMock([
+    ADMIN_ROW,
+    { data: game, error: null },
+    ...queue,
+  ]);
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { user: { id: 'admin-1', email: 'admin@example.com' } },
   });
@@ -127,6 +137,29 @@ describe('endGameMarkingWithdrawals', () => {
     expect(rosterWrites()).toHaveLength(1);
     expect(endGameMock).toHaveBeenCalledWith(GAME_ID, true);
   });
+
+  it.each(['finished', 'scheduled', 'draft'])(
+    'a stale tab on a %s game goes to the detail page with not_active: no roster read, no write, no finish',
+    async (status) => {
+      // Ticked players, so without the status gate the write path is reached.
+      const endGameMarkingWithdrawals = await asAdmin(
+        [
+          { data: [unsubmitted('user-a'), unsubmitted('user-b')], error: null }, // pre-read
+          { data: [{ user_id: 'user-a' }, { user_id: 'user-b' }], error: null }, // update
+        ],
+        { game_mode: 'stableford', status },
+      );
+
+      await expect(
+        endGameMarkingWithdrawals(GAME_ID, tickedForm('user-a', 'user-b')),
+      ).rejects.toMatchObject({ url: `/admin/games/${GAME_ID}?error=not_active` });
+
+      expect(
+        supabaseMock.__fromCalls.filter((c) => c.table === 'game_players'),
+      ).toEqual([]);
+      expect(endGameMock).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     [
