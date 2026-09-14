@@ -77,6 +77,13 @@ describe('parseProfileInput — handicap', () => {
     ['54 er på taket', '54', HCP_MAX],
     ['0 er scratch', '0', 0],
     ['desimal', '8,3', 8.3],
+    // #2044: ett etterfølgende skilletegn godtas (eierens valg B).
+    ['etterfølgende komma etter desimal', '12,5,', 12.5],
+    ['punktum-desimal med etterfølgende komma', '12.5,', 12.5],
+    ['heltall med etterfølgende komma', '12,', 12],
+    ['ledende komma', ',5', 0.5],
+    ['ledende punktum', '.5', 0.5],
+    ['mellomrom rundt trimmes', ' 12,5 ', 12.5],
   ])('%s → %s', (_label, hcpIndex, expected) => {
     expect(parse({ hcpIndex })).toMatchObject({
       ok: true,
@@ -90,6 +97,16 @@ describe('parseProfileInput — handicap', () => {
     ['tom', ''],
     ['ikke et tall', 'tolv'],
     ['utelatt', undefined],
+    // #2044: søppel etter tallet ble før lest som et annet handicap.
+    ['bokstaver etter tallet', '12abc'],
+    ['to desimalskilletegn', '1,2,3'],
+    ['doble komma', '12,,5'],
+    ['mellomrom rundt kommaet', '12 , 5'],
+    ['fortegn', '+3'],
+    ['eksponent', '1e1'],
+    ['heksadesimal', '0x10'],
+    ['to etterfølgende komma', '12,5,,'],
+    ['bare et komma', ','],
   ])('%s → hcp_invalid', (_label, hcpIndex) => {
     expect(parse({ hcpIndex })).toEqual({ ok: false, error: 'hcp_invalid' });
   });
