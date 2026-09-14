@@ -61,14 +61,6 @@ export function classifyDeliveryStatus(opts: {
 }
 
 /**
- * Purre-kandidat = ferdig med runden, men ikke levert (og ikke trukket).
- * Dette er den eneste statusen auto-nudgen og admin-purringen treffer.
- */
-export function isDeliveryReminderTarget(status: DeliveryStatus): boolean {
-  return status === 'ready_not_delivered';
-}
-
-/**
  * Purre-mål-utvelgelse for admin-purringen (#376/#1466). En spiller er et mål
  * når hen er ferdig (`holesFilled >= expectedHoles`), ikke levert, ikke trukket
  * og ikke gjest — OG (#1466) ikke har et ulevert back9-søsken. På en splittet

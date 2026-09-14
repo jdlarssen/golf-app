@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   classifyDeliveryStatus,
-  isDeliveryReminderTarget,
   selectDeliveryReminderTargets,
   type DeliveryStatus,
 } from './deliveryStatus';
@@ -126,19 +125,6 @@ describe('classifyDeliveryStatus', () => {
     },
   ])('$name', ({ opts, expected }) => {
     expect(classifyDeliveryStatus(opts)).toBe(expected);
-  });
-
-  it('teller kun ready_not_delivered som purre-mål', () => {
-    const all: DeliveryStatus[] = [
-      'withdrawn',
-      'delivered',
-      'pending_approval',
-      'ready_not_delivered',
-      'playing',
-      'not_started',
-    ];
-    const targets = all.filter(isDeliveryReminderTarget);
-    expect(targets).toEqual(['ready_not_delivered']);
   });
 });
 
