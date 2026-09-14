@@ -5,6 +5,7 @@ import {
   MAX_TEAM_FORMAT_PLAYERS,
   fitsTeamFormat,
   teamFormatPlayerCap,
+  teamModePlayerCap,
   teamSizesForMode,
   teamsShownForSize,
 } from './teamFormatLimits';
@@ -109,5 +110,32 @@ describe('teamFormatPlayerCap — velgeren stopper der rutenettet er fullt', () 
     for (const size of [2, 3, 4]) {
       expect(teamFormatPlayerCap(size)).toBeLessThanOrEqual(MAX_TEAM_FORMAT_PLAYERS);
     }
+  });
+});
+
+// #2011: open self-registration stops at the same cap as the wizard — full
+// teams across the whole grid. Best ball and patsome always play in pairs, so a
+// lying `team_size` cannot widen the cap, and a missing one falls to the
+// smallest supported size rather than the largest.
+describe('teamModePlayerCap — åpen påmelding stopper der rutenettet er fullt (#2011)', () => {
+  it.each([
+    ['best_ball', 2, 8],
+    ['patsome', 2, 8],
+    ['texas_scramble', 2, 8],
+    ['texas_scramble', 3, 12],
+    ['texas_scramble', 4, 16],
+    ['ambrose', 3, 12],
+    ['florida_scramble', 3, 12],
+    ['florida_scramble', 4, 16],
+    ['shamble', 4, 16],
+    ['texas_scramble', null, 8], // team_size missing → smallest supported size
+    ['florida_scramble', null, 12],
+    ['best_ball', 4, 8], // lying team_size — best ball is always pairs
+    ['wolf', 1, null],
+    ['stableford', 2, null],
+    ['singles_matchplay', 1, null],
+    ['fourball_matchplay', 2, null],
+  ] as const)('%s à %s → %s', (mode, teamSize, cap) => {
+    expect(teamModePlayerCap(mode, teamSize)).toBe(cap);
   });
 });
