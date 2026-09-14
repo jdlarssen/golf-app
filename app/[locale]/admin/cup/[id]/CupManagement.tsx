@@ -147,7 +147,7 @@ function playOnPendingBanner(
               <a
                 href={`#playon-${m.gameId}`}
                 data-testid={`cup-playon-pending-link-${m.gameId}`}
-                className="min-h-[44px] inline-flex items-center rounded px-2 py-1 text-muted underline hover:opacity-70"
+                className="inline-flex min-h-[44px] items-center underline underline-offset-2 hover:opacity-70"
               >
                 {t('manage.playOnChoose')}
               </a>

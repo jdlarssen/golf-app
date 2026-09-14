@@ -1113,7 +1113,7 @@ export default async function GameHomePage({
           <div className="pt-2 pb-4">
             <SmartLink
               href={withdrawHref}
-              className="flex min-h-[44px] items-center justify-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
+              className="flex min-h-[44px] items-center justify-center text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
             >
               {t('withdrawLink')}
             </SmartLink>
@@ -1605,7 +1605,7 @@ export default async function GameHomePage({
           <div className="pt-2">
             <SmartLink
               href={withdrawHref}
-              className="flex min-h-[44px] items-center justify-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
+              className="flex min-h-[44px] items-center justify-center text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
             >
               {t('withdrawLink')}
             </SmartLink>
@@ -1622,7 +1622,7 @@ export default async function GameHomePage({
             <div className="pt-1">
               <SmartLink
                 href={withdrawHref}
-                className="flex min-h-[44px] items-center justify-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
+                className="flex min-h-[44px] items-center justify-center text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
               >
                 {t('withdrawLink')}
               </SmartLink>
