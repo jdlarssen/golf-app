@@ -4952,7 +4952,7 @@
       "step1Heading": "Fordel spillere på lag",
       "unevenTeamsWarning": "Lagene er ujevne ({count1} vs {count2}). Kun det minste lagets antall matcher genereres.",
       "step1ValidationMin": "{team} trenger minst {minPerTeam} {minPerTeam, plural, one {spiller} other {spillere}}.",
-      "overCapWarning": "Oppsettet gir {totalMatches} matcher. En personlig cup tar maks {matchCap}. Skru ned antall matcher per økt rett under, velg færre økter eller lag en klubb-cup for flere.",
+      "overCapWarning": "Oppsettet gir {totalMatches} matcher. En personlig cup tar maks {matchCap}. Skru ned antall matcher per økt lenger ned, velg færre økter eller lag en klubb-cup for flere.",
       "overCapWarningSplitDay": "Oppsettet gir {totalMatches} matcher. En personlig cup tar maks {matchCap}. Velg færre sesjoner, eller lag en klubb-cup for flere.",
       "capInfoBanner": "Personlig cup: maks {matchCap} matcher. Trenger dere flere, er det en klubb-cup som gjelder.",
       "formatSingles": "Singel",
