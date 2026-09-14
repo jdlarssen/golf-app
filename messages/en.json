@@ -2051,7 +2051,8 @@
       "finishButton": "Finish game",
       "finishPending": "Finishing …",
       "cancelButton": "Cancel",
-      "allSubmittedNote": "Everyone has submitted their scorecard. If you finish now, the game will be locked and the leaderboard will open for all participants."
+      "allSubmittedNote": "Everyone has submitted their scorecard. If you finish now, the game will be locked and the leaderboard will open for all participants.",
+      "rosterChanged": "Someone submitted their scorecard or was withdrawn while you had this page open, so the game wasn't finished. What you see now is up to date. Take a look and try again."
     },
     "remind": {
       "button": "Remind the ones missing ({count})",
@@ -3617,7 +3618,8 @@
         "bodyNoWd": "If you finish now, these players will be listed as <notDelivered>not submitted</notDelivered>. Scores they registered still count in the result. The rest will be locked and the leaderboard will open for everyone.",
         "submitButton": "Finish anyway",
         "submittingBusy": "Finishing …",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "rosterChanged": "Someone submitted their scorecard or was withdrawn while you had this page open, so the game wasn't finished. What you see now is up to date. Take a look and try again."
       },
       "status": {
         "brassRibbon": "Player status",

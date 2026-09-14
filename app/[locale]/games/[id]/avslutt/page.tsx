@@ -8,6 +8,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { Banner } from '@/components/ui/Banner';
 import { RemindMissing } from '@/components/games/RemindMissing';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
@@ -201,7 +202,9 @@ export default async function CreatorAvsluttPage({
           ctpCount={game.side_ctp_count}
           players={playerOptions}
           action={action}
-          error={error}
+          // roster_changed has its own banner above every branch; passing it
+          // on would also render SideWinnersForm's DB-error banner.
+          error={error === 'roster_changed' ? undefined : error}
           cancelHref={detailPath}
         />
       </div>
@@ -291,6 +294,17 @@ export default async function CreatorAvsluttPage({
             : t('subtitlePlain', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })
         }
       />
+      {/* #1986: endGameMarkingWithdrawals lost a race. Rendered outside the
+          branches on purpose — a late submitter under require_peer_approval
+          flips this page into the unapproved branch, and the banner must still
+          explain why the game is not finished. */}
+      {error === 'roster_changed' && (
+        <div className="mb-4 px-1">
+          <Banner tone="error" testId="roster-changed-banner">
+            {t('rosterChanged')}
+          </Banner>
+        </div>
+      )}
       {body}
     </AppShell>
   );

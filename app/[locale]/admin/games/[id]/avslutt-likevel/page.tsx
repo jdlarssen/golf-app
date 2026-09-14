@@ -8,6 +8,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { Banner } from '@/components/ui/Banner';
 import { RemindMissing } from '@/components/games/RemindMissing';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -22,7 +23,9 @@ import { remindMissingPlayers } from '../avslutt/actions';
 type Params = Promise<{ id: string }>;
 // `status=reminded` er kvitteringen purre-action-en redirecter tilbake med —
 // samme search-param-mønster som admin-status-siden bruker.
-type SearchParams = Promise<{ status?: string }>;
+// `error=roster_changed` er endGameMarkingWithdrawals som tapte et kappløp
+// (#1986): noen leverte eller ble trukket mens siden sto åpen.
+type SearchParams = Promise<{ status?: string; error?: string }>;
 
 /**
  * «Avslutt likevel»-bekreftelse (#375) for spill UTEN sideturnering.
@@ -51,7 +54,7 @@ export default async function AvsluttLikevelPage({
   searchParams: SearchParams;
 }) {
   const { id: gameId } = await params;
-  const { status: notice } = await searchParams;
+  const { status: notice, error } = await searchParams;
   const detailPath = `/admin/games/${gameId}`;
 
   const locale = await getLocale();
@@ -142,6 +145,11 @@ export default async function AvsluttLikevelPage({
       />
 
       <div className="space-y-4 px-1">
+        {error === 'roster_changed' && (
+          <Banner tone="error" testId="roster-changed-banner">
+            {t('rosterChanged')}
+          </Banner>
+        )}
         <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
           <p className="font-medium">
             {t('missingHeader', { count: missing.length })}
