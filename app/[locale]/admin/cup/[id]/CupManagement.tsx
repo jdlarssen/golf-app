@@ -379,16 +379,16 @@ export async function CupManagement({
         <p className="text-center text-xs text-muted">
           {cupMatchesSummary(tournament, leaderboard, t)}
         </p>
-        <div className="mt-3 flex flex-col items-center gap-2">
+        <div className="mt-3 flex flex-col items-center gap-0">
           <SmartLink
             href={`/cup/${tournamentId}`}
-            className="text-xs text-primary underline-offset-2 hover:underline"
+            className="flex min-h-[44px] items-center justify-center text-center text-xs text-primary underline-offset-2 hover:underline"
           >
             {t('manage.openCupPage')}
           </SmartLink>
           <SmartLink
             href={`/cup/${tournamentId}/resultater`}
-            className="text-xs text-primary underline-offset-2 hover:underline"
+            className="flex min-h-[44px] items-center justify-center text-center text-xs text-primary underline-offset-2 hover:underline"
           >
             {t('manage.openResults')}
           </SmartLink>

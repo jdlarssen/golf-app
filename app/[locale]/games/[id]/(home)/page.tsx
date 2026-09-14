@@ -1635,7 +1635,7 @@ export default async function GameHomePage({
         <div className="pt-2">
           <SmartLink
             href="/"
-            className="block text-center text-sm text-muted hover:text-text transition-colors"
+            className="flex min-h-[44px] items-center justify-center text-center text-sm text-muted hover:text-text transition-colors"
           >
             {t('backToHome')}
           </SmartLink>
