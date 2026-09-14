@@ -63,7 +63,7 @@ export async function renderFoursomesMatchplay(opts: {
     // returnerer kind:'foursomes_matchplay', men config-oppsett kan avvike.
     gameMode: game.game_mode,
     modeConfig: game.mode_config,
-    // #844: team_number er nullable i prod selv om typen sier number.
+    // #844: team_number is nullable in prod even though the type says number.
     players: gwp.players.map((p) => ({ ...p, team_number: p.team_number ?? 0 })),
     holesRows: rawHolesRows,
     scoresRows: rawScoresRows,

@@ -62,7 +62,7 @@ export async function renderFourballMatchplay(opts: {
     gameMode: 'fourball_matchplay',
     modeConfig: game.mode_config,
     // Fourball-validatoren håndhever team_number ∈ {1, 2} med 2+2-fordeling.
-    // #844: kolonnen er likevel nullable i prod, så null kollapses til 0 her.
+    // #844: the column is still nullable in prod, so null collapses to 0 here.
     players: gwp.players.map((p) => ({ ...p, team_number: p.team_number ?? 0 })),
     holesRows: rawHolesRows,
     scoresRows: rawScoresRows,
