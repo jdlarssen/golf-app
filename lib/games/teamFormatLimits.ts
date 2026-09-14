@@ -100,3 +100,40 @@ export function teamsShownForSize(teamSize: number): number {
   if (teamSize <= 0) return MAX_TEAMS;
   return Math.min(MAX_TEAMS, Math.floor(MAX_TEAM_FORMAT_PLAYERS / teamSize));
 }
+
+/**
+ * Team size for the formats where the organiser does NOT choose one: best ball
+ * and patsome always play in pairs (`validateBestBall` / `validatePatsome` emit
+ * `team_size: 2` whatever the form data says). Kept apart from
+ * `TEAM_FORMAT_TEAM_SIZES` on purpose: best ball allows a single pair, which
+ * the two-team minimum in `fitsTeamFormat` would reject.
+ */
+const FIXED_TEAM_SIZES: Partial<Record<GameMode, number>> = {
+  best_ball: 2,
+  patsome: 2,
+};
+
+/**
+ * Upper player cap for a team-format game: full teams across the whole grid,
+ * i.e. `MAX_TEAMS × team size` (#2011). Open self-registration reads it so a
+ * game cannot collect more players or teams than the wizard can show. `null`
+ * for formats without a team concept here (solo, stableford, the matchplay
+ * family) — other rules own their cap.
+ *
+ * A missing or unsupported `teamSize` falls to the smallest size the format
+ * supports: an unknown cap must never be roomier than the grid.
+ */
+export function teamModePlayerCap(
+  mode: GameMode,
+  teamSize: number | null | undefined,
+): number | null {
+  const fixed = FIXED_TEAM_SIZES[mode];
+  if (fixed !== undefined) return teamFormatPlayerCap(fixed);
+
+  const sizes = teamSizesForMode(mode);
+  if (sizes.length === 0) return null;
+
+  const valid = typeof teamSize === 'number' && sizes.includes(teamSize);
+  const effective = valid ? teamSize : Math.min(...sizes);
+  return Math.min(teamFormatPlayerCap(effective), MAX_TEAM_FORMAT_PLAYERS);
+}

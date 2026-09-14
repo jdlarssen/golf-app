@@ -8,7 +8,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { fitsPlayerCount, soloPlayerCap } from './fitsPlayerCount';
+import {
+  fitsPlayerCount,
+  registrationPlayerCap,
+  soloPlayerCap,
+} from './fitsPlayerCount';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 // ── stableford / modified_stableford: 1+ (solo OR par config) ────────────────
@@ -372,4 +376,22 @@ describe('soloPlayerCap (#661)', () => {
   ] as GameMode[])('%s → null (no cap)', (mode) => {
     expect(soloPlayerCap(mode)).toBeNull();
   });
+});
+
+// ── registrationPlayerCap (#2011) ────────────────────────────────────────────
+// The cap the self-registration actions enforce: solo formats keep their fixed
+// ceiling (#661), team formats get the grid cap from teamFormatLimits.
+
+describe('registrationPlayerCap (#2011)', () => {
+  it.each([
+    ['wolf', { team_size: 1 }, 5], // solo branch still answers
+    ['best_ball', { team_size: 2 }, 8],
+    ['texas_scramble', { team_size: 3 }, 12],
+    ['fourball_matchplay', { team_size: 2 }, null], // side capacity rules instead
+  ] as [GameMode, { team_size?: number }, number | null][])(
+    '%s (%j) → %s',
+    (mode, modeConfig, expected) => {
+      expect(registrationPlayerCap(mode, modeConfig)).toBe(expected);
+    },
+  );
 });

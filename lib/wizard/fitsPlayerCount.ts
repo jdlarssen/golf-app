@@ -17,7 +17,7 @@
  */
 
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { fitsTeamFormat } from '@/lib/games/teamFormatLimits';
+import { fitsTeamFormat, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
 
 export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
   if (n <= 0) return false;
@@ -106,6 +106,7 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
  * Brukes av selv-påmeldings-action-en (`registerForOpenGame`) for å avvise
  * en N+1-spiller FØR INSERT, slik at publisering aldri blokkeres av
  * `too_many_players_for_mode` fra `buildInsertPayload`.
+ * (Via `registrationPlayerCap`, which adds the team-format cap — #2011.)
  *
  * Returnerer:
  *  - tallet maksimale spillere for formater med et øvre tak
@@ -138,4 +139,16 @@ export function soloPlayerCap(gameMode: GameMode): number | null {
     default:
       return null;
   }
+}
+
+/**
+ * The player cap open self-registration enforces: the solo formats' fixed
+ * ceiling (#661) OR the team formats' grid cap (#2011). `null` = no cap on this
+ * axis (the matchplay family, where side capacity applies instead).
+ */
+export function registrationPlayerCap(
+  gameMode: GameMode,
+  modeConfig: { team_size?: number } | null | undefined,
+): number | null {
+  return soloPlayerCap(gameMode) ?? teamModePlayerCap(gameMode, modeConfig?.team_size);
 }
