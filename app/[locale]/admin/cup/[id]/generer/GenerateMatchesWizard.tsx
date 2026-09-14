@@ -1222,8 +1222,16 @@ export function GenerateMatchesWizard({
           <div className="space-y-4">
             {matchCap !== undefined && (
               <Banner tone={overCap ? 'warning' : 'info'}>
+                {/* #1893: the «Matcher per økt» steppers under this banner are
+                    the local fix, so the warning points there first. Split day
+                    has no steppers (gated below), so it keeps the old advice. */}
                 {overCap
-                  ? t('generate.overCapWarning', { totalMatches: plannedTotal, matchCap })
+                  ? t(
+                      isSplitDay
+                        ? 'generate.overCapWarningSplitDay'
+                        : 'generate.overCapWarning',
+                      { totalMatches: plannedTotal, matchCap },
+                    )
                   : t('generate.capInfoBanner', { matchCap })}
               </Banner>
             )}
