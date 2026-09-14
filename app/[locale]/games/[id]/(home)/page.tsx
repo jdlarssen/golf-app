@@ -60,13 +60,8 @@ import {
   isMatchplayMode,
   computeSideShortfall,
 } from '@/lib/games/matchplaySides';
-import {
-  isNotStartedCupMatch,
-  isPlayOnChoicePending,
-  readWithdrawalPlayOn,
-  resolveCupMatchWithdrawal,
-} from '@/lib/cup/cupWithdrawalOutcome';
-import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
+import { isNotStartedCupMatch } from '@/lib/cup/cupWithdrawalOutcome';
+import { cupWaitingRoomWithdrawalState } from '@/lib/cup/cupWaitingRoomWithdrawalState';
 import {
   isSingleFlightGame,
   unassignedActivePlayers,
@@ -682,67 +677,28 @@ export default async function GameHomePage({
 
     // #1814: cup-kampen kan alt være avgjort fordi noen trakk seg. Da skal
     // hverken nedtellingen eller start-CTA-en vises — den starter aldri.
-    // Samme regelmodul som `startScheduledGameCore` nettopp avslo starten med,
-    // så banneret og virkeligheten kan ikke si to forskjellige ting.
-    const cupRuleInput = game.tournament_id
-      ? {
-          status: 'scheduled' as const,
-          gameMode: game.game_mode,
-          scheduledTeeOffAt: game.scheduled_tee_off_at,
-          playOn: readWithdrawalPlayOn(gwp.game.mode_config),
-          players: gwp.players
-            .filter((p) => p.team_number === 1 || p.team_number === 2)
-            .map((p) => ({
-              userId: p.user_id,
-              side: p.team_number as 1 | 2,
-              withdrawnAt: p.withdrawn_at,
-            })),
-        }
-      : null;
-    const cupWithdrawalDecision = cupRuleInput
-      ? resolveCupMatchWithdrawal(cupRuleInput)
-      : null;
+    // #2040: the derivation lives in `cupWaitingRoomWithdrawalState`; the two
+    // fallbacks stay here because they need `t()`.
     const cupPlayerName = (uid: string) => {
       const u = gwp.players.find((p) => p.user_id === uid)?.users;
       return u?.nickname?.trim() || u?.name?.trim() || t('withdrawnPlayerFallback');
     };
-    const decidedNames = cupWithdrawalDecision
-      ? cupWithdrawalDecision.withdrawnUserIds.map(cupPlayerName).join('/')
-      : '';
-    // #1967: the organiser has not made the play-on choice yet, so the rule
-    // outcome above is not final. Same rule home as the cup page
-    // (`isPlayOnChoicePending`) and the same gate as the organiser banner: the
-    // cup is under way and a partner is left to play alone. With no partner
-    // (both sides withdrew) the decided banner stays (#2032).
-    const cupPlayOnPendingPartner =
-      cupRuleInput &&
-      cupWithdrawalDecision &&
-      cupRow?.status === 'active' &&
-      isPlayOnChoicePending(cupRuleInput, gwp.game.mode_config)
-        ? remainingPartnerName(
-            {
-              withdrawal: cupWithdrawalDecision,
-              team1UserIds: cupRuleInput.players
-                .filter((p) => p.side === 1)
-                .map((p) => p.userId),
-              team2UserIds: cupRuleInput.players
-                .filter((p) => p.side === 2)
-                .map((p) => p.userId),
-            },
-            cupPlayerName,
-          )
-        : null;
-    const decidedWinnerTeam =
-      cupWithdrawalDecision?.outcome === 'walkover' && game.tournament_id
-        ? (() => {
-            const side = cupWithdrawalDecision.winnerSide === 1 ? 1 : 2;
-            const name = side === 1 ? cupRow?.team_1_name : cupRow?.team_2_name;
-            // Slår oppslaget feil, eller står lagnavnet tomt, endte setningen
-            // på «… så walkover til .». «Lag 1»/«Lag 2» sier i det minste
-            // hvilken side som får kampen.
-            return name?.trim() || t('teamValue', { number: side });
-          })()
-        : '';
+    const {
+      decision: cupWithdrawalDecision,
+      decidedNames,
+      pendingPartner: cupPlayOnPendingPartner,
+      winnerTeam: decidedWinnerTeam,
+    } = cupWaitingRoomWithdrawalState({
+      tournamentId: game.tournament_id,
+      gameMode: game.game_mode,
+      scheduledTeeOffAt: game.scheduled_tee_off_at,
+      // `gwp.game`, never `game`: a refetched `game` has no mode_config.
+      modeConfig: gwp.game.mode_config,
+      players: gwp.players,
+      cup: cupRow,
+      nameOf: cupPlayerName,
+      teamFallback: (side) => t('teamValue', { number: side }),
+    });
 
     // #543: venteroms-velger og unassigned_flights-banner.
     // Vises bare når spillet er eligible for flight-inndeling (>4 aktive, ikke wolf).
