@@ -31,10 +31,10 @@ export interface BingoBangoBongoChange {
  * UPDATE arrive: every write is an upsert (web and app), and clearing Bingo,
  * Bango or Bongo is an UPDATE that writes NULL, which reaches `onChange` like
  * any other change. A DELETE only happens through an FK cascade (the game, or
- * a hard-deleted entered_by user) or manual SQL. Supabase cannot filter DELETE
- * events without REPLICA IDENTITY FULL, which 0175 deliberately leaves unset,
- * and a DELETE payload carries `new: {}`, so the guard below drops it. Nothing
- * is propagated for DELETE (#1968).
+ * a hard-deleted entered_by user) or manual SQL. Supabase documents that DELETE
+ * events cannot be filtered in Postgres Changes, and a DELETE payload carries
+ * `new: {}`, so the guard below drops it. Nothing is propagated for DELETE
+ * (#1968).
  */
 export function subscribeBingoBangoBongo(
   gameId: string,
