@@ -2,35 +2,21 @@
 // Native N6a (#1854): typet feilkode fra opprett-flyten → én norsk setning.
 //
 // Samme jobb som `actionFeedback.ts` gjør for føringen, men i egen fil fordi
-// unionen er stor (32 koder) og halvparten av copyen er SPEILET fra webbens
+// unionen er stor og halvparten av copyen er SPEILET fra webbens
 // `messages/no.json` → `wizard.errors.*`. Paritetstesten leser kilden fra
 // node-siden og krever tegn-for-tegn likhet for den speilede halvparten.
 //
-// **To koder er bevisst IKKE speilet.** Webbens strenger for dem navngir tall
-// som bare stemmer for ett format: «Hver spiller må tilhøre en flight (1–4)»
-// forutsetter fire flighter, og «minst én spiller» er feil for alle formatene
-// appen tilbyr utenom stableford. Appen skriver dem format-agnostisk i stedet.
-// De står oppført i {@link UNMIRRORED_WIZARD_ERROR_KEYS} så avviket er lest ut
-// av koden og ikke oppdaget som en rar melding på banen.
-//
-// #1858: `bad_team`, `team_balance` og `too_many_players_for_mode` sto i den
-// lista til webben ble rettet. Webben har nå adoptert nøyaktig disse tre
-// setningene, så de speiles igjen — én tekst per feil, på begge flater.
+// #1858 og #1882: fem koder sto en periode med app-egen tekst fordi webbens
+// strenger navnga et antall spillere eller flighter som bare stemte for noen
+// formater. Webben har nå adoptert appens setninger for alle fem, så de
+// speiles igjen — én tekst per feil, på begge flater, og ingen avviks-liste å
+// holde i hodet.
 //
 // **Switchen har ingen `default`.** Det er hele poenget: en ny feilkode i
 // `CreateGameFailure` gjør `tsc` rød her til noen har skrevet setningen. Ingen
 // feil kan snike seg ut som `undefined`.
 import type { CreateGameFailure } from '../data/createGame';
 import { PROFILE_TEXT } from './profileCopy';
-
-/**
- * Kodene der appen bruker egen tekst i stedet for webbens.
- * Listet her, ikke bare i kommentaren over, så paritetstesten kan se dem.
- */
-export const UNMIRRORED_WIZARD_ERROR_KEYS = [
-  'bad_flight',
-  'min_players_for_mode',
-] as const;
 
 export function describeCreateGameFailure(error: CreateGameFailure): string {
   switch (error) {
@@ -79,15 +65,14 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
     case 'pending_players':
       return 'Noen på spillerlista har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.';
 
-    // #1858: speilet igjen — webben sluttet å navngi ett format i disse tre.
+    // #1858 og #1882: speilet igjen — webben sluttet å navngi ett format i
+    // disse fem.
     case 'bad_team':
       return 'Alle spillerne må ha et lag før du publiserer.';
     case 'team_balance':
       return 'Lagene er ikke jevne. Fordel spillerne likt før du publiserer.';
     case 'too_many_players_for_mode':
       return 'Du har valgt flere spillere enn formatet tar. Ta bort noen før du publiserer.';
-
-    // ── Egen tekst (webbens navngir tall som ikke gjelder alle formater) ───
     case 'bad_flight':
       return 'Alle spillerne må ha en flight før du publiserer.';
     case 'min_players_for_mode':
