@@ -550,6 +550,9 @@ export default async function GameHomePage({
         userId,
         gameName: game.name,
         expectedHoles: holeCountForSegment(game.hole_segment),
+        // #2041: roster + mode let a teammate count the team's card.
+        players: gwp.players,
+        mode: game.game_mode,
       }),
     );
   }

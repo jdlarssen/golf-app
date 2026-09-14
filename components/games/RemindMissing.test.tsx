@@ -35,7 +35,12 @@ describe('RemindMissing (#1889)', () => {
     );
 
   it('viser knappen med antallet previewReminder returnerer', async () => {
-    preview.mockResolvedValue({ ok: true, targets: 3, lastRemindedAt: null });
+    preview.mockResolvedValue({
+      ok: true,
+      targets: 3,
+      targetUserIds: ['a', 'b', 'c'],
+      lastRemindedAt: null,
+    });
 
     await renderBlock();
 
@@ -47,7 +52,12 @@ describe('RemindMissing (#1889)', () => {
   });
 
   it('bytter knappen mot én setning når ingen er ferdige uten å ha levert', async () => {
-    preview.mockResolvedValue({ ok: true, targets: 0, lastRemindedAt: null });
+    preview.mockResolvedValue({
+      ok: true,
+      targets: 0,
+      targetUserIds: [],
+      lastRemindedAt: null,
+    });
 
     await renderBlock();
 
@@ -59,7 +69,12 @@ describe('RemindMissing (#1889)', () => {
   });
 
   it('viser kvitteringen etter purring, med knappen fortsatt der', async () => {
-    preview.mockResolvedValue({ ok: true, targets: 2, lastRemindedAt: null });
+    preview.mockResolvedValue({
+      ok: true,
+      targets: 2,
+      targetUserIds: ['a', 'b'],
+      lastRemindedAt: null,
+    });
 
     await renderBlock(true);
 

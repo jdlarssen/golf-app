@@ -209,6 +209,8 @@ describe('previewReminder — antall', () => {
     await expect(previewReminder(GAME_ID)).resolves.toEqual({
       ok: true,
       targets: 1,
+      // #2041: statussidens ⚠️ leser nøyaktig disse id-ene.
+      targetUserIds: ['ferdig'],
       lastRemindedAt: null,
     });
   });
