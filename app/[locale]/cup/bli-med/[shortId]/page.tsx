@@ -72,22 +72,37 @@ export default async function CupBliMedPage({
   const decision = evaluateCupJoin(facts);
   const admin = getAdminClient();
 
+  // #2006: en lesefeil er en feil (samme regel som #1863), ikke en stille
+  // fallback. Den logges og kastes til `cup/bli-med/error.tsx`. `data === null`
+  // UTEN feil er derimot gyldig (klubben er borte, cupen har ingen plan-rad) og
+  // beholder dagens fallback.
+  const failRead = (which: 'club' | 'plan', error: unknown): never => {
+    console.error('[cup] bli-med read failed', {
+      shortId,
+      userId: user!.id,
+      which,
+      error,
+    });
+    throw new Error(`cup/bli-med: ${which} read failed`);
+  };
+
   // Klubb-navn + klubbens egen bli-med-lenke hentes kun når vi faktisk skal
   // sende spilleren dit (medlems-tilstanden). Bane/starttid kun når det finnes
   // en påmeldingsvei å pynte på.
   let club: { name: string; short_id: string } | null = null;
   if (decision === 'not_member' && cup!.group_id) {
-    const { data } = await admin
+    const { data, error } = await admin
       .from('groups')
       .select('name, short_id')
       .eq('id', cup!.group_id)
       .maybeSingle<{ name: string; short_id: string }>();
+    if (error) failRead('club', error);
     club = data ?? null;
   }
 
   let planLine: string | null = null;
   if (decision === 'can_join' || decision === 'already_joined') {
-    const { data: plan } = await admin
+    const { data: plan, error: planError } = await admin
       .from('tournament_plans')
       .select(
         'scheduled_tee_off_at, courses:courses!tournament_plans_course_id_fkey(name)',
@@ -97,6 +112,7 @@ export default async function CupBliMedPage({
         scheduled_tee_off_at: string | null;
         courses: { name: string } | { name: string }[] | null;
       }>();
+    if (planError) failRead('plan', planError);
     if (plan) {
       const rel = plan.courses;
       const courseName = (Array.isArray(rel) ? rel[0] : rel)?.name ?? null;
