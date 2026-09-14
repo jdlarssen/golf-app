@@ -9,6 +9,7 @@ import { SegmentedField } from '@/components/ui/SegmentedField';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { fromSignedHcp } from '@/lib/handicap/sign';
 import { formatGolfboxHcp } from '@/lib/handicap/signFormat';
+import { HCP_MAX } from '@/lib/users/profileInput';
 
 type Gender = 'mens' | 'ladies';
 type Level = 'junior' | 'normal' | 'senior';
@@ -199,7 +200,7 @@ export function ProfileFormBody({
               inputMode="decimal"
               step="0.1"
               min={0}
-              max={54}
+              max={HCP_MAX}
               required
               value={magnitude}
               onChange={(e) => setMagnitude(e.target.value)}

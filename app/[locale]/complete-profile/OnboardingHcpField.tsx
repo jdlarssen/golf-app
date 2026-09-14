@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatGolfboxHcp } from '@/lib/handicap/signFormat';
+import { HCP_MAX } from '@/lib/users/profileInput';
 
 const INPUT_CLASS =
   'w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 focus:border-accent transition-[border-color,box-shadow] duration-150';
@@ -62,7 +63,7 @@ export function OnboardingHcpField({
           inputMode="decimal"
           step="0.1"
           min={0}
-          max={54}
+          max={HCP_MAX}
           required
           value={magnitude}
           onChange={(e) => setMagnitude(e.target.value)}
