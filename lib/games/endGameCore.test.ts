@@ -261,7 +261,7 @@ beforeEach(() => {
   sendGameFinishedNotificationMock.mockReset().mockResolvedValue({ ok: true });
 });
 
-// ─── Validation gates (endGameCore:153-197) ─────────────────────────────────
+// ─── Validation gates (steps 1–2, before any write) ─────────────────────────
 
 describe('endGameCore — validation gates', () => {
   it.each(['draft', 'scheduled', 'finished'] as const)(
@@ -406,7 +406,7 @@ describe('endGameCore — validation gates', () => {
   });
 });
 
-// ─── Write order (endGameCore:213-267) ──────────────────────────────────────
+// ─── Write order (steps 3–4: side-winners upsert, then the status flip) ─────
 
 const SIDE_WINNERS: EndGameSideWinner[] = [
   { category: 'longest_drive', position: 1, winner_user_id: 'user-a' },
@@ -657,7 +657,7 @@ describe('endGameCore — write order', () => {
   });
 });
 
-// ─── The tail (endGameCore:231-331) ─────────────────────────────────────────
+// ─── The tail (runFinishPipeline, run only after a won status flip) ─────────
 
 describe('endGameCore — post-flip tail', () => {
   function happyClient() {

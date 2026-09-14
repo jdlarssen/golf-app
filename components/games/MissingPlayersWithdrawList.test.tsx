@@ -6,17 +6,18 @@ import {
 } from './MissingPlayersWithdrawList';
 
 /**
- * Én render-test (Type C) for skjema-eierskapet (#1932).
+ * One render test (Type C) for form ownership (#1932).
  *
- * Hakene står UTENFOR «Avslutt likevel»-skjemaet på begge sidene (purreknappen
- * har sitt eget skjema midt i blokka), så de når bare serveren via
- * `form`-attributtet. Å sjekke at attributtet finnes er ikke nok: testen bygger
- * FormData fra skjemaet slik nettleseren gjør ved innsending, og ser at den
- * avkryssede verdien faktisk er med.
+ * The checkboxes sit OUTSIDE the «Avslutt likevel» form on both pages
+ * (RemindMissing has its own form in between), so they only reach the server
+ * through the `form` attribute. Checking that the attribute exists is not
+ * enough: the test builds FormData from the form the way the browser does on
+ * submit, and checks that the ticked value is really in it.
  *
- * D8: arrangørens egen rad får ingen hake. Databasevakten (0168, ledd c) nekter
- * en ikke-admin å trekke seg selv, så en hake der ville feilet hele skrivet.
- * Appen har samme regel (`endGamePlan.ts`: `player.userId !== organiserUserId`).
+ * #1932 also gives the signed-in organiser no checkbox on their own row: the
+ * 0168 guard, clause (c), rejects a non-admin withdrawing themselves, which
+ * would fail the whole batched write. Same rule as the app
+ * (`native/app/src/lib/endGamePlan.ts`: `player.userId !== organiserUserId`).
  */
 describe('MissingPlayersWithdrawList (#1932)', () => {
   it('sends ticked checkboxes with the end-anyway form, and gives the organiser no checkbox on their own row', () => {
