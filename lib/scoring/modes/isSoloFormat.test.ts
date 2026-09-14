@@ -89,4 +89,11 @@ describe('isSoloFormat', () => {
       expect(typeof isSoloFormat(mode, 1)).toBe('boolean');
     }
   });
+
+  it('returns false for a mode the union does not know (fail closed, #1887)', () => {
+    // Runtime-veien forbi `never`: en eldre app-binær eller en format-seed som
+    // lander før deployen kan sende en modus unionen ikke har. Da skal
+    // predikatet si nei, ikke gi tilbake modus-strengen (som er truthy).
+    expect(isSoloFormat('future_mode' as unknown as GameMode, 1)).toBe(false);
+  });
 });

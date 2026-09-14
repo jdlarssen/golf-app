@@ -62,6 +62,13 @@ describe('supportsWithdrawal', () => {
     }
   });
 
+  it('returns false for a mode the union does not know (fail closed, #1887)', () => {
+    // Runtime-veien forbi `never`: en eldre app-binær eller en format-seed som
+    // lander før deployen kan sende en modus unionen ikke har. Da skal
+    // predikatet si nei, ikke gi tilbake modus-strengen (som er truthy).
+    expect(supportsWithdrawal('future_mode' as unknown as GameMode)).toBe(false);
+  });
+
   it('exactly four formats are in scope for v1', () => {
     const supported = ALL_MODES.filter((m) => supportsWithdrawal(m));
     expect(supported.sort()).toEqual([...IN_SCOPE].sort());

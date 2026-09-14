@@ -237,8 +237,11 @@ export function isSoloFormat(mode: GameMode, teamSize: number): boolean {
     case 'patsome':
       return false;
     default: {
+      // `never` keeps a new GameMode a compile error. At runtime an unknown
+      // mode (older app binary, seed before deploy) still lands here, and
+      // returning the mode string would be truthy: fail closed (#1887).
       const _exhaustive: never = mode;
-      return _exhaustive;
+      return false;
     }
   }
 }
@@ -352,8 +355,11 @@ export function supportsWithdrawal(mode: GameMode): boolean {
     case 'acey_deucey':
       return false;
     default: {
+      // `never` keeps a new GameMode a compile error. At runtime an unknown
+      // mode (older app binary, seed before deploy) still lands here, and
+      // returning the mode string would be truthy: fail closed (#1887).
       const _exhaustive: never = mode;
-      return _exhaustive;
+      return false;
     }
   }
 }
@@ -401,8 +407,11 @@ export function formatCapturesPutts(mode: GameMode): boolean {
     case 'acey_deucey':
       return false;
     default: {
+      // `never` keeps a new GameMode a compile error. At runtime an unknown
+      // mode (older app binary, seed before deploy) still lands here, and
+      // returning the mode string would be truthy: fail closed (#1887).
       const _exhaustive: never = mode;
-      return _exhaustive;
+      return false;
     }
   }
 }
