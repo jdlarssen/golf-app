@@ -575,4 +575,19 @@ describe('isDecidedByWithdrawal — avgjort ved trekk (#2033)', () => {
       }),
     ).toBe(expected);
   });
+
+  it('mangler flaggene, regnes et trekk som avgjort og ingen trekk som åpen', () => {
+    // CupMatchInput.playOnChoicePending and .withdrawal are optional: a missing
+    // pending flag means "not pending", a missing withdrawal means "no withdrawal".
+    const withdrawal = resolveCupMatchWithdrawal(
+      singles({
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+        ],
+      }),
+    );
+    expect(isDecidedByWithdrawal({ withdrawal })).toBe(true);
+    expect(isDecidedByWithdrawal({})).toBe(false);
+  });
 });
