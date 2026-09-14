@@ -11,6 +11,7 @@ import {
 } from '@/lib/supabase/affectedRows';
 import { supportsWithdrawal } from '@/lib/scoring';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import type { GameStatus } from '@/lib/games/status';
 import { endGame } from '../actions';
 
 /**
@@ -22,6 +23,9 @@ import { endGame } from '../actions';
  * lands in the admin shell.
  *
  * Flow:
+ *  0. Read the game. A failed read → `?error=db_players`; a game that is no
+ *     longer active (a stale tab, #2031) → `?error=not_active` on the detail
+ *     page. Either way: no roster read, no write, no finish.
  *  1. Collect the ticked `withdraw_<userId>` checkboxes (deduped; none at all
  *     for modes without withdrawal support). Nothing ticked → step 4.
  *  2. Pre-read the ticked rows (#1986, the app's all-or-nothing rule from
@@ -58,14 +62,20 @@ export async function endGameMarkingWithdrawals(
   // mirroring the page, which hides the checkboxes for these modes).
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('game_mode')
+    .select('game_mode, status')
     .eq('id', gameId)
-    .single<{ game_mode: GameMode }>();
+    .single<{ game_mode: GameMode; status: GameStatus }>();
   // Fail closed: a failed read would otherwise drop every tick (allowWd false)
   // and still finish the game with those players counted as active.
   if (gameError) {
     console.error('[endGameMarkingWithdrawals] game read failed', gameError);
     redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
+  // A stale confirm tab on a game that is no longer active (#2031): stop before
+  // any roster I/O. endGame would refuse it too, but only AFTER the withdrawal
+  // write below had committed. Same gate and target as adminWithdrawPlayer.
+  if (!game || game.status !== 'active') {
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
   const allowWd = game ? supportsWithdrawal(game.game_mode) : false;
 
