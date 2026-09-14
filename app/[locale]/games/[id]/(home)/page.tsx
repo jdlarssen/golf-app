@@ -9,6 +9,7 @@ import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { isSilentBlockReason } from '@/lib/notifications/autoStartBlocked';
 import { AppShell } from '@/components/ui/AppShell';
 import { PaymentInfo } from '@/components/PaymentInfo';
 import { PremiebordCard } from '@/components/PremiebordCard';
@@ -440,9 +441,16 @@ export default async function GameHomePage({
       }
       // Log to Vercel server logs so a "stuck in scheduled" report has a
       // trail. Don't crash — fall through to the existing scheduled fallback.
-      console.error(
-        `[auto-start] game ${id} could not flip to active: ${result.reason}`,
-      );
+      // #1971: a match decided by a withdrawal stays `scheduled` on purpose,
+      // so every visit after tee-off lands here. Log it at info level, like
+      // the cron sweep, so it doesn't drown real errors.
+      if (isSilentBlockReason(result.reason)) {
+        console.log(`[auto-start] game ${id} not started: ${result.reason}`);
+      } else {
+        console.error(
+          `[auto-start] game ${id} could not flip to active: ${result.reason}`,
+        );
+      }
     } else {
       // Invalidate the getGameWithPlayers cache for this game so the hull-page
       // (which reads from that tag) doesn't keep serving the pre-flip
