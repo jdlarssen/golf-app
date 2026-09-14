@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ShambleView, type ShamblePlayerInfo } from '../ShambleView';
 import { ShamblePodium } from '../ShamblePodium';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
+import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
@@ -37,6 +38,7 @@ export async function renderShamble(opts: {
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
       tee_gender: TeeGender;
+      withdrawn_at: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -48,43 +50,19 @@ export async function renderShamble(opts: {
   const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: 'shamble' as const,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        // Shamble-validatoren håndhever team_number ≥ 1 (speiler Texas-
-        // validatoren). Defensive fallback til 0 (som scoring-laget filtrerer
-        // bort) hvis kolonnen mot formodning er null.
-        teamNumber: p.team_number ?? 0,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // Shamble bruker netto (eller gross, per mode_config.shamble_scoring)
-        // basert på spillerens egen handicap — egne baller, ikke delt ball.
-        // Sender teeGender gjennom for per-kjønn-par-resolvering (#240).
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  };
+  // #1958: the shared builder drops withdrawn players and their scores, the
+  // same rule the result summary applies, so the live board agrees with it.
+  const ctx = buildUniformContext({
+    gameId,
+    gameMode: 'shamble',
+    modeConfig: game.mode_config,
+    // Shamble-validatoren håndhever team_number ≥ 1 (speiler Texas-
+    // validatoren). Defensive fallback til 0 (som scoring-laget filtrerer
+    // bort) hvis kolonnen mot formodning er null (#844).
+    players: gwp.players.map((p) => ({ ...p, team_number: p.team_number ?? 0 })),
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
 
   const result = computeModeResult(ctx);
   // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape

@@ -7,6 +7,7 @@ import {
 } from '../TexasScrambleView';
 import { TexasScramblePodium } from '../TexasScramblePodium';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
+import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
@@ -50,6 +51,7 @@ export async function renderTexasScramble(opts: {
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
       tee_gender: TeeGender;
+      withdrawn_at: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -70,8 +72,10 @@ export async function renderTexasScramble(opts: {
   const revSt = revealState(game.score_visibility, game.status);
   if (shouldHideNetto(revSt)) {
     const unknownPlayerForReveal = tc('unknownPlayer');
+    // #1958: this branch bypasses the context builder, so it drops withdrawn
+    // players and their scores itself — same shape as stableford.tsx.
     const bruttoPlayers = gwp.players
-      .filter((p) => p.users != null)
+      .filter((p) => p.users != null && p.withdrawn_at == null)
       .map((p) => ({
         userId: p.user_id,
         name: p.users!.name ?? unknownPlayerForReveal,
@@ -90,11 +94,18 @@ export async function renderTexasScramble(opts: {
       },
       strokeIndex: h.stroke_index,
     }));
-    const bruttoScores = rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      strokes: s.strokes,
-    }));
+    const withdrawnIdsSet = new Set(
+      gwp.players
+        .filter((p) => p.withdrawn_at != null)
+        .map((p) => p.user_id),
+    );
+    const bruttoScores = rawScoresRows
+      .filter((s) => !withdrawnIdsSet.has(s.user_id))
+      .map((s) => ({
+        userId: s.user_id,
+        holeNumber: s.hole_number,
+        strokes: s.strokes,
+      }));
     const bruttoLines = computeLeaderboard({
       mode: 'brutto',
       players: bruttoPlayers,
@@ -114,45 +125,19 @@ export async function renderTexasScramble(opts: {
     );
   }
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: game.game_mode,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        // Texas-validatoren håndhever team_number ≥ 1. Defensive fallback til
-        // 0 (som scoring-laget filtrerer bort) hvis kolonnen mot formodning er
-        // null — bedre å hoppe over enn å kaste her.
-        teamNumber: p.team_number ?? 0,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // #240 — Texas spiller én ball per lag, så par per hull avgjøres av
-        // lag-kapteinens tee_gender (lex-min userId). Sender per-spiller
-        // teeGender gjennom; texasScramble-modulen velger kaptein-varianten.
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      // #240 — per-kjønn-par-tabell. Texas-modulen leser parFor(hole, captain.teeGender)
-      // for å bestemme hull-par når lag har avvikende kapteins-tee.
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  };
+  // #1958: the shared builder drops withdrawn players and their scores, the
+  // same rule the result summary applies, so the live board agrees with it.
+  const ctx = buildUniformContext({
+    gameId,
+    gameMode: game.game_mode,
+    modeConfig: game.mode_config,
+    // Texas-validatoren håndhever team_number ≥ 1. Defensive fallback til
+    // 0 (som scoring-laget filtrerer bort) hvis kolonnen mot formodning er
+    // null (#844) — bedre å hoppe over enn å kaste her.
+    players: gwp.players.map((p) => ({ ...p, team_number: p.team_number ?? 0 })),
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
 
   const result = computeModeResult(ctx);
   // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
