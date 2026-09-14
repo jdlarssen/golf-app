@@ -12,7 +12,7 @@ import { signupSourceFromParam } from '@/lib/games/publicSignupVisibility';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { resolveRegistrationTypeView } from './registrationTypeView';
-import { soloPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -229,12 +229,16 @@ export async function registerForOpenGame(
     return { ok: false, error: 'rate_limited' };
   }
 
-  // #661: spillertak for eksakt-antall-formater (Wolf 3–5, Nines 3, RoundRobin 4,
-  // AceyDeucey 4, Skins/Nassau/BBB 2–16). Matchplay-familien ekskluderes her —
-  // side-kapasitet håndteres av sin egen sjekk under. Fail-open ved DB-error
-  // (la INSERT-sjansen leve; `buildInsertPayload` er hard-gaten ved publisering).
+  // Player cap before INSERT: the exact-count formats (#661 — Wolf 3–5, Nines 3,
+  // RoundRobin 4, AceyDeucey 4, Skins/Nassau/BBB 2–16) and the team formats'
+  // grid cap (#2011 — MAX_TEAMS × team size). The matchplay family has no cap
+  // here; side capacity has its own check below. Fail-open on a DB error (let
+  // the INSERT go ahead; `buildInsertPayload` is the hard gate at publish).
   const admin = getAdminClient();
-  const cap = soloPlayerCap(game.game_mode);
+  const cap = registrationPlayerCap(
+    game.game_mode,
+    game.mode_config as { team_size?: number } | null,
+  );
   if (cap !== null) {
     const { count: playerCount, error: capCountError } = await admin
       .from('game_players')
