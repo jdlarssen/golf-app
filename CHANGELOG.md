@@ -16,6 +16,30 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.237.0 · mandag 14. september 2026
+
+<details>
+<summary><strong>Lag-handicap i scramble settes som prosent av snittet</strong></summary>
+
+[#2009](https://github.com/jdlarssen/golf-app/issues/2009) — Lag-handicapet i scramble, Ambrose og Florida setter du nå som prosent av lagets snitt-handicap, slik klubbene regner det. Hjelpeteksten viser hva valget ditt tilsvarer av summen.
+
+↳ /admin/games/new · «Sett opp scramble»
+</details>
+
+<details>
+<summary><strong>Scramble for fire lag — også med tre på laget</strong></summary>
+
+[#2009](https://github.com/jdlarssen/golf-app/issues/2009) — Scramble tar nå opptil fire lag og seksten spillere, og du kan velge tre på laget i vanlig scramble og Ambrose — lag-handicapet settes til 15 prosent.
+
+↳ /admin/games/new · «Sett opp scramble»
+</details>
+
+<details>
+<summary>1 retting</summary>
+
+- [#1863](https://github.com/jdlarssen/golf-app/issues/1863) — Får ikke appen lest deltakerlista når du melder deg på en cup, sier den fra i stedet for å slippe deg inn i en cup som er full.
+</details>
+
 ### 1.236.0 · mandag 7. september 2026
 
 <details>
