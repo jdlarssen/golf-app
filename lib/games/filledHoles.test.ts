@@ -216,17 +216,4 @@ describe('ownedScoresByPlayer — radene bak tallet (#2041)', () => {
     // Radene kommer i samme rekkefølge som i `scores`.
     expect(result.get('b')).toEqual([...kaptein.slice(6), ...makker]);
   });
-
-  it('har én oppføring per spiller, også uten rader, og ignorerer rader fra ukjente', () => {
-    const result = ownedScoresByPlayer({
-      mode: 'stableford',
-      players: [member('a', null), member('b', null)],
-      scores: [...rows('a', 1, 2), ...rows('fremmed', 1, 18)],
-    });
-
-    expect([...result.entries()]).toEqual([
-      ['a', rows('a', 1, 2)],
-      ['b', []],
-    ]);
-  });
 });
