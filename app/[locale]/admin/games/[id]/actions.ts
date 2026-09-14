@@ -469,17 +469,33 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
   if (game!.status !== 'active') redirect({ href: `${detailPath}?error=not_active`, locale });
   if (!supportsWithdrawal(game!.game_mode)) redirect({ href: detailPath, locale });
 
-  const { error } = await supabase
-    .from('game_players')
-    .update({
-      withdrawn_at: new Date().toISOString(),
-      withdrawn_by_user_id: user.id,
-    })
-    .eq('game_id', gameId)
-    .eq('user_id', userId);
-  if (error) {
-    console.error('[adminWithdrawPlayer] withdraw update failed', error);
-    redirect({ href: `${detailPath}?error=db_players`, locale });
+  // #2030: the write only matches a player who is still in, and 0 rows (stale
+  // tab, double click, withdrawn from the app, player gone) is its own error,
+  // never a success with an audit row. Only expectAffected sits in the try:
+  // redirect() throws NEXT_REDIRECT, and the catch must never swallow it.
+  try {
+    expectAffected(
+      await supabase
+        .from('game_players')
+        .update({
+          withdrawn_at: new Date().toISOString(),
+          withdrawn_by_user_id: user.id,
+        })
+        .eq('game_id', gameId)
+        .eq('user_id', userId)
+        .is('withdrawn_at', null)
+        .select('user_id'),
+      'adminWithdrawPlayer',
+    );
+  } catch (err) {
+    if (!(err instanceof NoRowsAffectedError)) {
+      console.error('[adminWithdrawPlayer] withdraw update failed', err);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
+    // The native app writes withdrawn_at without revalidating the web cache;
+    // refresh it so the roster stops offering the same button.
+    revalidateTag(`game-${gameId}`, 'max');
+    redirect({ href: `${detailPath}?error=withdraw_stale`, locale });
   }
 
   await logAdminEvent({
@@ -520,17 +536,29 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
   if (game!.status !== 'active') redirect({ href: `${detailPath}?error=not_active`, locale });
   if (!supportsWithdrawal(game!.game_mode)) redirect({ href: detailPath, locale });
 
-  const { error } = await supabase
-    .from('game_players')
-    .update({
-      withdrawn_at: null,
-      withdrawn_by_user_id: null,
-    })
-    .eq('game_id', gameId)
-    .eq('user_id', userId);
-  if (error) {
-    console.error('[adminUndoWithdraw] undo-withdraw update failed', error);
-    redirect({ href: `${detailPath}?error=db_players`, locale });
+  // #2030: mirror of adminWithdrawPlayer. 0 rows means the player is already
+  // back in (or gone), which is the opposite state, so it gets its own code.
+  try {
+    expectAffected(
+      await supabase
+        .from('game_players')
+        .update({
+          withdrawn_at: null,
+          withdrawn_by_user_id: null,
+        })
+        .eq('game_id', gameId)
+        .eq('user_id', userId)
+        .not('withdrawn_at', 'is', null)
+        .select('user_id'),
+      'adminUndoWithdraw',
+    );
+  } catch (err) {
+    if (!(err instanceof NoRowsAffectedError)) {
+      console.error('[adminUndoWithdraw] undo-withdraw update failed', err);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
+    revalidateTag(`game-${gameId}`, 'max');
+    redirect({ href: `${detailPath}?error=reinstate_stale`, locale });
   }
 
   await logAdminEvent({

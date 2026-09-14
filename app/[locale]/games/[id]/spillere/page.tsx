@@ -61,6 +61,8 @@ const ERROR_KEYS = new Set([
   'roster_locked',
   'game_full',
   'db_players',
+  'withdraw_stale',
+  'reinstate_stale',
   'invite_failed',
   'mail_failed',
   'cancel_failed',
