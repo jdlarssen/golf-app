@@ -9,6 +9,7 @@ import {
   cupLedgerResult,
   type CupLedgerRow,
 } from '@/lib/cup/myCups';
+import { formatPoints } from '@/lib/cup/formatPoints';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -158,7 +159,7 @@ export default async function CupListPage({
                           : t('ledger.rowSubtitle', {
                               team1: cup.team_1_name,
                               team2: cup.team_2_name,
-                              points: String(cup.points_to_win).replace('.', ','),
+                              points: formatPoints(cup.points_to_win),
                             })}
                       </p>
                       {result && (

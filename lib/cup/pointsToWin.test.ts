@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { computeCupLeaderboard } from './computeCupLeaderboard';
 import {
+  DEFAULT_TIE_POINTS,
+  DEFAULT_WIN_POINTS,
   MAX_PLANNED_MATCH_COUNT,
   derivePointsToWin,
   derivePointsToWinWeighted,
@@ -213,6 +216,66 @@ describe('planned_match_count DB CHECK ↔ validator (trap #4)', () => {
     expect(parsePlannedMatchCount(String(max), 2)).toBe(max);
     expect(parsePlannedMatchCount(String(max + 1), 2)).toBeNull();
     expect(MAX_PLANNED_MATCH_COUNT).toBe(max);
+  });
+});
+
+/**
+ * Trap #4-avstemming (AGENTS.md, #1915): cup-vektenes default.
+ *
+ * `tournaments.win_points`/`tie_points` får `default 1`/`default 0.5` i 0153.
+ * De samme verdiene er `DEFAULT_WIN_POINTS`/`DEFAULT_TIE_POINTS` her, og
+ * `computeCupLeaderboard` faller tilbake på dem når vektene mangler. Endres
+ * DB-defaulten uten konstantene, eller slutter lederbordet å bruke dem, ryker
+ * denne.
+ */
+describe('win_points/tie_points DB default ↔ DEFAULT_* (trap #4)', () => {
+  function dbDefaults(): { win: number; tie: number } {
+    const sql = readFileSync(
+      resolve(__dirname, '../../supabase/migrations/0153_tournaments_weighted_points.sql'),
+      'utf-8',
+    );
+    const win = sql.match(/win_points numeric not null default ([\d.]+)/i);
+    const tie = sql.match(/tie_points numeric not null default ([\d.]+)/i);
+    if (!win || !tie) throw new Error('Fant ikke win_points/tie_points-defaultene i 0153');
+    return { win: Number(win[1]), tie: Number(tie[1]) };
+  }
+
+  it('DEFAULT_WIN_POINTS/DEFAULT_TIE_POINTS er lik DB-defaultene i 0153', () => {
+    const { win, tie } = dbDefaults();
+    expect(DEFAULT_WIN_POINTS).toBe(win);
+    expect(DEFAULT_TIE_POINTS).toBe(tie);
+  });
+
+  it('computeCupLeaderboard uten vekter betaler DEFAULT_* for seier og delt kamp', () => {
+    const result = computeCupLeaderboard(
+      {
+        team_1_name: 'Lag Skog',
+        team_2_name: 'Lag Sjø',
+        points_to_win: null,
+        status: 'active',
+        winner_team: null,
+      },
+      [
+        {
+          gameId: 'g1',
+          matchLabel: 'Singles 1',
+          team1PlayerName: 'Per',
+          team2PlayerName: 'Knut',
+          status: 'finished',
+          result: { winnerSide: 1, formatted: '3&2' },
+        },
+        {
+          gameId: 'g2',
+          matchLabel: 'Singles 2',
+          team1PlayerName: 'Ola',
+          team2PlayerName: 'Kari',
+          status: 'finished',
+          result: { winnerSide: 'tied', formatted: 'AS' },
+        },
+      ],
+    );
+    expect(result.team1Points).toBe(DEFAULT_WIN_POINTS + DEFAULT_TIE_POINTS);
+    expect(result.team2Points).toBe(DEFAULT_TIE_POINTS);
   });
 });
 
