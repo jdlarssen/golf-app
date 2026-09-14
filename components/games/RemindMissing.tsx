@@ -42,7 +42,11 @@ export async function RemindMissing({
 
   return (
     <div className="space-y-3">
-      {justReminded && <Banner tone="success">{t('sent')}</Banner>}
+      {justReminded && (
+        <Banner tone="success" testId="remind-missing-sent">
+          {t('sent')}
+        </Banner>
+      )}
       {targets > 0 ? (
         // Sekundær-knapp med vilje: avslutt-handlingen er fortsatt flatens
         // hovedknapp, og to fylte knapper etter hverandre hadde gjort begge
@@ -52,12 +56,17 @@ export async function RemindMissing({
             variant="secondary"
             className="w-full"
             pendingLabel={t('pending')}
+            data-testid="remind-missing-button"
+            data-targets={targets}
           >
             {t('button', { count: targets })}
           </SubmitButton>
         </form>
       ) : (
-        <p className="px-1 font-sans text-[13px] leading-relaxed text-muted">
+        <p
+          className="px-1 font-sans text-[13px] leading-relaxed text-muted"
+          data-testid="remind-missing-none"
+        >
           {t('none')}
         </p>
       )}
