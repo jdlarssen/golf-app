@@ -14,6 +14,7 @@ import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
+import { MAX_TEAMS, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
@@ -111,6 +112,7 @@ export type TeamRegistrationError =
   | 'disposable_email'
   | 'already_registered'
   | 'rate_limited'
+  | 'game_full'
   | 'db_error';
 
 const TEAM_NAME_MIN = 3;
@@ -303,6 +305,26 @@ export async function submitTeamRegistration(
   const captainStatus =
     game.registration_mode === 'open' ? 'approved' : 'pending';
 
+  // #2011: the player cap, checked before the captain row exists — a rejection
+  // must not leave an orphaned request row behind (AGENTS.md trap 5). Open mode
+  // only: that is when this action inserts game_players rows. manual_approval
+  // requests still queue up; the organiser's approval is the gate there (#662).
+  const cap = teamModePlayerCap(game.game_mode, teamSize);
+  if (captainStatus === 'approved' && cap !== null) {
+    const { count: activeCount, error: capCountError } = await admin
+      .from('game_players')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('game_id', game.id)
+      .is('withdrawn_at', null);
+    if (capCountError) {
+      console.error('[submitTeamRegistration] player cap count failed', capCountError);
+      // Fail-open like registerForOpenGame (#661): a transient DB error must not
+      // close registration. The team-slot gate below still stands.
+    } else if ((activeCount ?? 0) + teamSize > cap) {
+      return { ok: false, error: 'game_full' };
+    }
+  }
+
   // INSERT kaptein-rad. UNIQUE (game_id, user_id) fanger dobbel-submit.
   const { data: captainRow, error: captainError } = await admin
     .from('game_registration_requests')
@@ -333,6 +355,7 @@ export async function submitTeamRegistration(
   // For open-modus: tildel team_number deterministisk (laveste ledige) og
   // sett kapteinen i game_players umiddelbart. Manual_approval venter på
   // admin via det eksisterende approveRequest-action-et.
+  // #2011: the search stops at MAX_TEAMS — team 5+ does not exist in the grid.
   let assignedTeamNumber: number | null = null;
   if (captainStatus === 'approved') {
     const { data: existingTeams } = await admin
@@ -342,15 +365,38 @@ export async function submitTeamRegistration(
       .not('team_number', 'is', null)
       .returns<{ team_number: number }[]>();
     const taken = new Set((existingTeams ?? []).map((r) => r.team_number));
-    for (let slot = 1; slot <= 50; slot += 1) {
+    for (let slot = 1; slot <= MAX_TEAMS; slot += 1) {
       if (!taken.has(slot)) {
         assignedTeamNumber = slot;
         break;
       }
     }
     if (assignedTeamNumber === null) {
-      console.error('[submitTeamRegistration] no free team slot');
-      return { ok: false, error: 'db_error' };
+      // Every team number in the grid is taken even though the player count
+      // was under the cap (partly filled teams, or two captains racing past
+      // the check above). Roll back our own request row so the game is not
+      // left with a team without players (AGENTS.md trap 5), and say so.
+      //
+      // 0 rows = failure, not success (trap 2 / I3): a delete without
+      // `.select()` answers `error == null` even when it matched nothing.
+      // Same shape as `declineTeamInvite`.
+      try {
+        expectAffected(
+          await admin
+            .from('game_registration_requests')
+            .delete()
+            .eq('id', captainRequestId)
+            .select('id'),
+          'submitTeamRegistration',
+        );
+      } catch (rollbackErr) {
+        // The compensation failed and the request row stays behind. Log it,
+        // but never let expectAffected throw out of the server action: the
+        // captain should see «game full», not a 500.
+        console.error('[submitTeamRegistration] captain rollback failed', rollbackErr);
+      }
+      console.error('[submitTeamRegistration] no free team slot', { gameId: game.id });
+      return { ok: false, error: 'game_full' };
     }
 
     const { error: captainPlayerError } = await admin

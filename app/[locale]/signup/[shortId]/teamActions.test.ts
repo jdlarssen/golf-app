@@ -357,12 +357,14 @@ describe('submitTeamRegistration — happy paths', () => {
       email: 'kjent@example.com',
     });
     // admin-mock queue:
+    //   0) player cap count (#2011 — open mode only, before the captain insert)
     //   1) captain insert → {id: captain-request-id}
     //   2) captain display lookup (users) — vi returnerer en row
     //   3) existing teams lookup (team_number)
     //   4) captain game_players upsert
     //   5..) per-slot: insert child request, player upsert (open-modus)
     adminMock = buildSupabaseMock([
+      { count: 0, error: null }, // player cap count (#2011)
       { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
       {
         data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
@@ -413,6 +415,7 @@ describe('submitTeamRegistration — happy paths', () => {
     );
     lookupUserByEmailMock.mockResolvedValue(null); // ukjent
     adminMock = buildSupabaseMock([
+      { count: 0, error: null }, // player cap count (#2011)
       { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
       {
         data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
@@ -453,6 +456,7 @@ describe('submitTeamRegistration — happy paths', () => {
     );
     lookupUserByEmailMock.mockResolvedValue(null);
     adminMock = buildSupabaseMock([
+      { count: 0, error: null }, // player cap count (#2011)
       { data: { id: CAPTAIN_REQUEST_ID }, error: null },
       {
         data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
@@ -519,6 +523,7 @@ describe('submitTeamRegistration — happy paths', () => {
   it('kaptein dobbel-submit (UNIQUE 23505) → already_registered', async () => {
     getGameByShortIdMock.mockResolvedValue(makeGame());
     adminMock = buildSupabaseMock([
+      { count: 0, error: null }, // player cap count (#2011) — default game is open
       { data: null, error: { code: '23505', message: 'duplicate' } },
     ]);
 
@@ -577,11 +582,13 @@ describe('submitTeamRegistration — happy paths', () => {
     });
     // admin-mock queue — speiler happy-path-sekvensen men call #4
     // (captain game_players upsert) returnerer en feil.
+    //   0) player cap count (#2011)
     //   1) captain insert → {id: captain-request-id}
     //   2) captain display lookup (users)
     //   3) existing teams lookup (empty)
     //   4) captain game_players upsert → ERROR (#667)
     adminMock = buildSupabaseMock([
+      { count: 0, error: null }, // player cap count (#2011)
       { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
       {
         data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
@@ -599,6 +606,97 @@ describe('submitTeamRegistration — happy paths', () => {
     });
 
     expect(result).toEqual({ ok: false, error: 'db_error' });
+  });
+});
+
+/**
+ * #2011: open team registration used to skip the player cap and hunt for a free
+ * team slot in 1..50, so team 5+ landed outside the wizard's four-team grid. The
+ * cap check now runs before the captain row exists, and a full grid rolls back
+ * the captain's own request row instead of leaving it orphaned (AGENTS.md trap 5).
+ */
+describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
+  beforeEach(() => {
+    authedAsCaptain();
+    lookupUserByEmailMock.mockResolvedValue(null);
+  });
+
+  const threeSlots = [
+    { mode: 'email' as const, value: 'a@x' },
+    { mode: 'email' as const, value: 'b@x' },
+    { mode: 'email' as const, value: 'c@x' },
+  ];
+
+  it('texas à 4 med 16 aktive spillere → game_full, ingen kaptein-rad', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame()); // open, texas à 4 → cap 16
+    // The count comes first. The rest is what the action would consume if the
+    // cap let the team in — so a missing gate shows up as ok:true, not as a
+    // mock underflow.
+    adminMock = buildSupabaseMock([
+      { count: 16, error: null }, // player cap count — grid is full
+      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+      {
+        data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
+        error: null,
+      }, // captain display
+      { data: [], error: null }, // existing teams
+      { data: null, error: null }, // captain game_players upsert
+      { data: null, error: null }, // invitations insert (slot 1)
+      { data: null, error: null }, // invitations insert (slot 2)
+      { data: null, error: null }, // invitations insert (slot 3)
+    ]);
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Lag A',
+      slots: threeSlots,
+    });
+
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+    const requestInsert = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_registration_requests' && c.method === 'insert',
+    );
+    expect(requestInsert).toBeUndefined();
+  });
+
+  it('alle fire lag tatt under spiller-taket → game_full, kaptein-raden rulles tilbake', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame()); // open, texas à 4 → cap 16
+    adminMock = buildSupabaseMock([
+      { count: 4, error: null }, // player cap count — 4 + 4 ≤ 16, passes
+      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+      {
+        data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
+        error: null,
+      }, // captain display
+      {
+        data: [
+          { team_number: 1 },
+          { team_number: 2 },
+          { team_number: 3 },
+          { team_number: 4 },
+        ],
+        error: null,
+      }, // existing teams — the grid has no free slot
+      { data: [{ id: CAPTAIN_REQUEST_ID }], error: null }, // rollback delete .select('id')
+    ]);
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Lag A',
+      slots: threeSlots,
+    });
+
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+    const rollback = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_registration_requests' && c.method === 'delete',
+    );
+    expect(rollback).toBeDefined();
+    const captainPlayer = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'upsert',
+    );
+    expect(captainPlayer).toBeUndefined();
   });
 });
 

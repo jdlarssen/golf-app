@@ -174,8 +174,10 @@ export async function approveRequest(requestId: string): Promise<void> {
       redirect({ href: `${detailPath}?error=db_team_slot`, locale });
     }
     const taken = new Set((existing ?? []).map((r) => r.team_number));
-    // Match the public self-reg cap (teamActions.ts) and the widened
-    // game_players_team_number_check (0101): clubs can run more than 4 teams.
+    // Deliberately wider than the grid (#662): the organiser's approval keeps an
+    // escape hatch past MAX_TEAMS, while open self-registration stops at it
+    // (teamActions.ts, #2011). The widened game_players_team_number_check
+    // (0101) allows it.
     for (let slot = 1; slot <= 50; slot += 1) {
       if (!taken.has(slot)) {
         teamNumber = slot;
