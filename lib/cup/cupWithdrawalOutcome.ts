@@ -207,18 +207,20 @@ export function resolveCupMatchWithdrawal(
  * and the waiting room both call it, so the player surfaces say «valg venter»
  * exactly when the organiser is asked to choose.
  *
- * Also true when one player on EACH side has withdrawn. The surfaces need a
- * remaining partner to show the choice, so that case keeps showing the rule
- * outcome for now (#2032).
+ * False when one player on EACH side has withdrawn: that match is always
+ * halved and never waits on a choice (#2032, owner choice A).
  */
 export function isPlayOnChoicePending(
   input: CupWithdrawalInput,
   modeConfig: unknown,
 ): boolean {
+  if (input.status !== 'scheduled' || hasWithdrawalPlayOnChoice(modeConfig)) {
+    return false;
+  }
+  const decided = resolveCupMatchWithdrawal(input);
   return (
-    input.status === 'scheduled' &&
-    !hasWithdrawalPlayOnChoice(modeConfig) &&
-    resolveCupMatchWithdrawal(input) !== null &&
+    decided !== null &&
+    decided.withdrawnSide !== 'both' &&
     resolveCupMatchWithdrawal({ ...input, playOn: true }) === null
   );
 }
