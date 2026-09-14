@@ -6,15 +6,17 @@
 // rett mot `users`: en handicap-retting MENS en runde er i gang må også skrive
 // om de frosne banehandicapene, og den jobben er service-role. Så appen spør
 // serveren, akkurat som ved konto-sletting (#1876) og purring (#1889) — og da
-// får den samme regelen to inngangsdører: skjemaet i
-// `app/[locale]/profile/actions.ts` og ruta appen kaller. AGENTS trap 4 sier at
-// en regel har ETT hjem; dette er det hjemmet. Begge inngangene kaller
-// {@link parseProfileInput} og gjør ingenting selv utover å oversette feilkoden
-// til sin egen kanal (redirect med `?error=` for skjemaet, JSON-kropp for ruta).
+// får den samme regelen flere inngangsdører: profil-skjemaet i
+// `app/[locale]/profile/actions.ts`, onboarding-skjemaet i
+// `app/[locale]/complete-profile/actions.ts` (#1947) og ruta appen kaller.
+// AGENTS trap 4 sier at en regel har ETT hjem; dette er det hjemmet. Alle tre
+// kaller {@link parseProfileInput} og gjør ingenting selv utover å oversette
+// feilkoden til sin egen kanal (redirect med `?error=` for skjemaene,
+// JSON-kropp for ruta).
 //
-// (`app/[locale]/complete-profile/actions.ts` har fortsatt sin egen kopi av
-// reglene. Den ble bevisst stående utenfor denne slicen og har eget
-// oppfølgingsissue — ikke legg til et tredje hjem i mellomtiden.)
+// (Onboarding samler bare inn navn og handicap (#1064). Den sender derfor
+// verken kallenavn, kjønn eller spillerklasse inn hit, og sprer aldri `value`
+// inn i update-en — det ville nullet kallenavnet og skrevet over klassen.)
 //
 // **Ren modul med vilje:** ingen Supabase, ingen `server-only`, ingen
 // `FormData`. Kallerne gir et vanlig objekt, så regelen kan enhetstestes uten

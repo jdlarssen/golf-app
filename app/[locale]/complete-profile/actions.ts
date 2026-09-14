@@ -2,11 +2,8 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { toSignedHcp } from '@/lib/handicap/sign';
+import { parseProfileInput } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
-
-const HCP_MIN = -10;
-const HCP_MAX = 54.0;
 
 export async function completeProfile(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
@@ -32,19 +29,19 @@ export async function completeProfile(formData: FormData) {
     redirect(`/complete-profile?${qs.toString()}`);
   };
 
-  if (!name) {
-    fail('name_required');
+  // The rules live in parseProfileInput (#1947), shared with /profile and the
+  // app's API route. Only the fields onboarding collects go in — no nickname,
+  // gender or level (#1064) — so the parser can only answer name_required or
+  // hcp_invalid, in that order.
+  const parsed = parseProfileInput({
+    name: String(formData.get('name') ?? ''),
+    hcpIndex: hcpRaw,
+    hcpPlus,
+  });
+  if (!parsed.ok) {
+    return fail(parsed.error);
   }
-
-  // Accept both comma and dot as decimal separator (Norwegian users).
-  const hcpMagnitude = Number.parseFloat(hcpRaw.replace(',', '.'));
-  if (!Number.isFinite(hcpMagnitude) || hcpMagnitude < 0 || hcpMagnitude > HCP_MAX) {
-    fail('hcp_invalid');
-  }
-  const hcpParsed = toSignedHcp(hcpMagnitude, hcpPlus);
-  if (hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
-    fail('hcp_invalid');
-  }
+  const hcpParsed = parsed.value.hcpIndex;
 
   // #1064: gender and level are no longer collected during onboarding.
   // gender stays NULL (GenderSoftPrompt on /profile picks it up later);
