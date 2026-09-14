@@ -111,7 +111,11 @@ export default async function CreatorEditGamePage({
       />
 
       <div className="space-y-2">
-        {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+        {errorMessage && (
+          <Banner tone="error" testId="edit-error-banner">
+            {errorMessage}
+          </Banner>
+        )}
         <Banner tone="info">
           {game.status === 'draft' ? t('draftBanner') : t('scheduledBanner')}
         </Banner>
