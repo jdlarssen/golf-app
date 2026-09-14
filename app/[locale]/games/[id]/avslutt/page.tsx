@@ -10,6 +10,10 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Banner } from '@/components/ui/Banner';
 import { RemindMissing } from '@/components/games/RemindMissing';
+import {
+  END_ANYWAY_FORM_ID,
+  MissingPlayersWithdrawList,
+} from '@/components/games/MissingPlayersWithdrawList';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import type { GameStatus } from '@/lib/games/status';
@@ -62,9 +66,9 @@ export default async function CreatorAvsluttPage({
   const detailPath = `/games/${gameId}`;
 
   const supabase = await getServerClient();
-  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter); returverdien
-  // ble tidligere kun brukt til TopBar-bjella (#1133), så bindingen droppes.
-  await requireAdminOrCreator(supabase, gameId);
+  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter). `role.userId`
+  // skjuler arrangørens egen trekk-hake i lista under (D8).
+  const role = await requireAdminOrCreator(supabase, gameId);
 
   const { data: game } = await supabase
     .from('games')
@@ -214,40 +218,23 @@ export default async function CreatorAvsluttPage({
     const endAnywayAction = endGameMarkingWithdrawals.bind(null, gameId);
     body = (
       <div className="space-y-4 px-1">
-        <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
-          <p className="font-medium">
-            {t('missingCount', { count: missing.length })}
-          </p>
-          <ul className="mt-2 space-y-2">
-            {missing.map((gp) =>
-              allowWd ? (
-                <li key={gp.user_id} className="flex items-center gap-3">
-                  <label className="flex min-h-[44px] flex-1 cursor-pointer items-center gap-3">
-                    <input
-                      type="checkbox"
-                      name={`withdraw_${gp.user_id}`}
-                      value="on"
-                      className="h-4 w-4 rounded accent-primary"
-                    />
-                    <span className="text-sm text-text">{displayName(gp)}</span>
-                    <span className="ml-auto text-xs text-muted">
-                      {t('withdrawLabel')}
-                    </span>
-                  </label>
-                </li>
-              ) : (
-                <li key={gp.user_id} className="text-sm text-text">
-                  {displayName(gp)}
-                </li>
-              ),
-            )}
-          </ul>
-        </div>
+        <MissingPlayersWithdrawList
+          players={missing.map((gp) => ({
+            userId: gp.user_id,
+            displayName: displayName(gp),
+          }))}
+          allowWd={allowWd}
+          formId={END_ANYWAY_FORM_ID}
+          // D8: a non-admin organiser cannot withdraw themselves (0168 guard).
+          selfUserId={role.userId}
+          heading={t('missingCount', { count: missing.length })}
+          withdrawLabel={t('withdrawLabel')}
+        />
         {remindBlock}
         <p className="text-sm text-muted">
           {allowWd ? t('explanationAllowWd') : t('explanationNoWd')}
         </p>
-        <form action={endAnywayAction}>
+        <form id={END_ANYWAY_FORM_ID} action={endAnywayAction}>
           <SubmitButton className="w-full" pendingLabel={t('finishPending')}>
             {t('finishAnywayButton')}
           </SubmitButton>
