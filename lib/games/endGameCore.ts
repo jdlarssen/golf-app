@@ -4,6 +4,7 @@ import type { Database } from '@/lib/database.types';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { runFinishPipeline } from '@/lib/games/runFinishPipeline';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
@@ -221,11 +222,24 @@ export async function endGameCore(
       position: w.position,
       winner_user_id: w.winner_user_id,
     }));
-    const { error: winnerErr } = await supabase
+    // #1885 (trap 2): read the rows back. PostgREST reports a write that
+    // matched nothing as `error: null`, so without `.select` a silent 0-row
+    // upsert fell through to the flip and finished the game with no winners.
+    // At least one row, the same strictness as the app
+    // (`native/app/src/data/endGame.ts`).
+    const written = await supabase
       .from('game_side_winners')
-      .upsert(rows, { onConflict: 'game_id,category,position' });
-    if (winnerErr) {
-      console.error(`[${logContext}] winners insert failed`, winnerErr);
+      .upsert(rows, { onConflict: 'game_id,category,position' })
+      .select('position');
+    try {
+      expectAffected(written, `${logContext}.sideWinners`);
+    } catch (err) {
+      // Log the ORIGINAL PostgrestError when there is one; the 0-row branch
+      // logs the NoRowsAffectedError instead.
+      console.error(
+        `[${logContext}] winners insert failed`,
+        written.error ?? err,
+      );
       return { ok: false, reason: 'db_winners' };
     }
   }

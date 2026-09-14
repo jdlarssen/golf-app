@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
+import { NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 
 /**
  * Characterization tests for `endGameCore` — the finish pipeline (#1501).
@@ -31,8 +32,9 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  * Query sequence (FIFO queue order for `buildSupabaseMock`):
  *   1. games.select(...).eq('id').single()                    — injected client
  *   2. game_players.select(...).eq('game_id').returns()        — injected client
- *   3. game_side_winners.upsert(rows, {onConflict})            — injected client
- *      (only when `sideWinners` is a non-empty array)
+ *   3. game_side_winners.upsert(rows, {onConflict})
+ *      .select('position')                                    — injected client
+ *      (only when `sideWinners` is a non-empty array; 0 rows back → db_winners)
  *   4. games.update({status,ended_at}).eq('id').eq('status','active')
  *      .select('id')                                          — injected client
  *   5. games.update({finish_pipeline_at}) … .maybeSingle()     — ADMIN client
@@ -185,10 +187,10 @@ function playersRows(rows: unknown[]) {
   return { data: rows, error: null };
 }
 
-/** A resolved write with neither data nor error — how PostgREST reports a
- *  successful UPDATE/UPSERT that the code does not `.select()` back. Still the
- *  right shape for the side-winners upsert, which has no `.select()`. */
-const WRITE_OK = { data: null, error: null };
+/** The side-winners upsert wrote its rows: `.select('position')` hands them
+ *  back (#1885). An empty array is a silent 0-row write, which must fail the
+ *  finish with db_winners instead of flipping the status (AGENTS.md trap 2). */
+const WINNERS_OK = { data: [{ position: 1 }, { position: 2 }], error: null };
 
 /** The status flip WON its optimistic lock: `.select('id')` returns the row
  *  (#1856). An empty array here means another finisher got there first. */
@@ -404,7 +406,7 @@ describe('endGameCore — validation gates', () => {
   });
 });
 
-// ─── Write order (endGameCore:199-229) ──────────────────────────────────────
+// ─── Write order (endGameCore:213-267) ──────────────────────────────────────
 
 const SIDE_WINNERS: EndGameSideWinner[] = [
   { category: 'longest_drive', position: 1, winner_user_id: 'user-a' },
@@ -417,7 +419,7 @@ describe('endGameCore — write order', () => {
     const client = buildSupabaseMock([
       gameRow(),
       playersRows([PLAYER_A, PLAYER_B]),
-      WRITE_OK, // game_side_winners.upsert
+      WINNERS_OK, // game_side_winners.upsert(...).select('position')
       FLIP_WON, // games.update
     ]);
 
@@ -432,6 +434,13 @@ describe('endGameCore — write order', () => {
     const flipIdx = seq.indexOf('games.update');
     expect(winnersIdx).toBeGreaterThanOrEqual(0);
     expect(flipIdx).toBeGreaterThan(winnersIdx);
+    // #1885: the upsert reads its rows back, or a 0-row write looks exactly
+    // like success. The mock does not care about `.select`, so assert it here.
+    expect(client.__fromCalls[winnersIdx + 1]).toEqual({
+      table: 'game_side_winners',
+      method: 'select',
+      args: ['position'],
+    });
 
     const upsertCall = client.__fromCalls[winnersIdx];
     expect(upsertCall.args).toEqual([
@@ -493,6 +502,31 @@ describe('endGameCore — write order', () => {
     expect(consoleErr).toHaveBeenCalledWith(
       '[endGame] winners insert failed',
       expect.objectContaining({ message: 'boom' }),
+    );
+    consoleErr.mockRestore();
+  });
+
+  it('a 0-row winners upsert returns db_winners and leaves the game active', async () => {
+    // #1885 (trap 2): PostgREST reports a write that matched nothing as
+    // `error: null`. Without the row check the finish went on to the flip and
+    // the game ended with no side-tournament winners.
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const client = buildSupabaseMock([
+      gameRow(),
+      playersRows([PLAYER_A, PLAYER_B]),
+      { data: [], error: null }, // winners upsert hit 0 rows
+    ]);
+
+    const result = await endGameCore(client as never, GAME_ID, ACTOR, {
+      sideWinners: SIDE_WINNERS,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'db_winners' });
+    expect(callSeq(client)).not.toContain('games.update');
+    expectTailUntouched();
+    expect(consoleErr).toHaveBeenCalledWith(
+      '[endGame] winners insert failed',
+      expect.any(NoRowsAffectedError),
     );
     consoleErr.mockRestore();
   });
