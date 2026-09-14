@@ -3,14 +3,16 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import noMessages from '@/messages/no.json';
 
 /**
- * Type C render-test per docs/test-discipline.md — ÉN test, kun struktur:
- * begge svarene må være ett trykk unna så lenge ingen har valgt. Med bare
- * veksleknappen sendte panelet alltid `play_on=1` fra venter-tilstanden, så
+ * Type C render-test per docs/test-discipline.md — ÉN test som dekker to ting:
+ * strukturen og hvilket navnerom feilteksten hentes fra.
+ *
+ * Struktur: begge svarene må være ett trykk unna så lenge ingen har valgt. Med
+ * bare veksleknappen sendte panelet alltid `play_on=1` fra venter-tilstanden, så
  * «Ett valg venter»-banneret kunne ikke besvares med regelen (#1814, E4).
  * Selve skrivingen er dekket av lib/cup/withdrawalActions.test.ts.
  *
- * A failed choice is translated from the action's own namespace,
- * `cup.withdraw.errors`, not `cup.manage.errors` (#1963).
+ * Error namespace (#1963): a failed choice is translated from the action's own
+ * namespace, `cup.withdraw.errors`, not `cup.manage.errors`.
  */
 vi.mock('@/lib/cup/withdrawalActions', () => ({
   setFourballWithdrawalChoice: vi.fn(async () => ({ error: '' })),
