@@ -10,6 +10,10 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Banner } from '@/components/ui/Banner';
 import { RemindMissing } from '@/components/games/RemindMissing';
+import {
+  END_ANYWAY_FORM_ID,
+  MissingPlayersWithdrawList,
+} from '@/components/games/MissingPlayersWithdrawList';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
@@ -150,35 +154,16 @@ export default async function AvsluttLikevelPage({
             {t('rosterChanged')}
           </Banner>
         )}
-        <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
-          <p className="font-medium">
-            {t('missingHeader', { count: missing.length })}
-          </p>
-          {/* Per-spiller valg (kun in-scope-modi): default = tell scorene
-              (ingen hake), opt-in = marker som trukket. */}
-          <ul className="mt-2 space-y-2">
-            {missing.map(({ userId, displayName }) =>
-              allowWd ? (
-                <li key={userId} className="flex items-center gap-3">
-                  <label className="flex min-h-[44px] flex-1 cursor-pointer items-center gap-3">
-                    <input
-                      type="checkbox"
-                      name={`withdraw_${userId}`}
-                      value="on"
-                      className="h-4 w-4 rounded accent-primary"
-                    />
-                    <span className="text-sm text-text">{displayName}</span>
-                    <span className="ml-auto text-xs text-muted">{t('markWithdrawn')}</span>
-                  </label>
-                </li>
-              ) : (
-                <li key={userId} className="text-sm text-text">
-                  {displayName}
-                </li>
-              ),
-            )}
-          </ul>
-        </div>
+        {/* Per-spiller valg (kun in-scope-modi): default = tell scorene
+            (ingen hake), opt-in = marker som trukket. Hakene står utenfor
+            skjemaet under og bindes til det med id (#1932). */}
+        <MissingPlayersWithdrawList
+          players={missing}
+          allowWd={allowWd}
+          formId={END_ANYWAY_FORM_ID}
+          heading={t('missingHeader', { count: missing.length })}
+          withdrawLabel={t('markWithdrawn')}
+        />
 
         {/* Purreknappen (#1889): den ikke-destruktive veien videre, rett under
             lista over hvem som mangler — før «avslutt likevel»-forklaringen. */}
@@ -203,7 +188,7 @@ export default async function AvsluttLikevelPage({
               })}
         </p>
 
-        <form action={endAnywayAction}>
+        <form id={END_ANYWAY_FORM_ID} action={endAnywayAction}>
           <SubmitButton className="w-full" pendingLabel={t('submittingBusy')}>
             {t('submitButton')}
           </SubmitButton>
