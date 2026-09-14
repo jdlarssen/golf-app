@@ -117,7 +117,9 @@ describe('leaderboard format modules build scoring context through the shared bu
       'Rule 3 — this module builds its own brutto list for the reveal board but never ' +
         'mentions withdrawn players. That branch bypasses the context builder, so it must ' +
         'drop withdrawn players and their scores itself — see the withdrawnIdsSet in ' +
-        'stableford.tsx (#1958). Canary only: it proves the word is in the file, nothing more.',
+        'stableford.tsx (#1958). Canary only: it proves the word is in the file, nothing more. ' +
+        'The `withdrawn_at` field in the opts type alone satisfies it, so it only guards a ' +
+        'module that never declares that field — see #2058 for turning it into a real gate.',
     ).toEqual([]);
   });
 });
