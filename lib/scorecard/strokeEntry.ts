@@ -1,10 +1,11 @@
-// Tasteregelen for slag på et hull — ett hjem, to konsumenter.
+// Tasteregelen for slag på et hull: ett hjem.
 //
 // Regelen bor her og ikke i `lib/scoring/`: den avgjør hvilket tall neste tapp
 // setter, ikke hva tallet er verdt. Scoringen leser resultatet, den er ikke
 // med på å bestemme det.
 //
-// Konsumenter: `components/hole/ScoreCard.tsx` (web) og
+// Konsumenter blant annet: `components/hole/ScoreCard.tsx` (web),
+// `components/hole/SpecificValueSheet.tsx` (bare `MAX_STROKES`, #1995) og
 // `native/app/src/screens/Hole.tsx` (appen). Appen importerer denne fila rett
 // fra `lib/`, så modulen holdes bevisst dependency-fri — en ny import her må
 // også finnes i `native/app/`, og bare `expo export` fanger det (#1901).
