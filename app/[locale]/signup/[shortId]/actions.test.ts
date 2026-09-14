@@ -631,6 +631,76 @@ describe('registerForOpenGame', () => {
       expect.objectContaining({ href: `/games/${GAME_ID}` }),
     );
   });
+
+  // ── lag-format cap (#2011) ─────────────────────────────────────────────────
+  // registration_type stays 'solo' (the makeGame default): a team mode with
+  // 'team'/'both' is turned away by team_not_supported_yet before the cap.
+
+  it('#2011: best ball med 8 påmeldte — 9. spiller avvises med game_full', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
+      }),
+    );
+    // The count comes first. The insert + notify lookup behind it are what the
+    // action would consume if the cap let the player in — so a missing cap
+    // shows up as a redirect into the game, not as a mock underflow.
+    adminMock = buildSupabaseMock([
+      { count: 8, error: null }, // player cap count — grid is full
+      { data: null, error: null }, // insert
+      { data: { name: 'Kari', nickname: null, email: 'kari@example.com' }, error: null }, // notify lookup
+    ]);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+
+    const insertCall = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'insert',
+    );
+    expect(insertCall).toBeUndefined();
+  });
+
+  it('#2011: texas à 3 med 9 påmeldte (under cap 12) — påmelding går gjennom', async () => {
+    // Negative control: the team cap reads team_size from mode_config (3 → 12),
+    // so nine players still leave room.
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'texas_scramble',
+        mode_config: {
+          kind: 'texas_scramble',
+          team_size: 3,
+          teams_count: 3,
+          team_handicap_pct: 15,
+        },
+      }),
+    );
+    adminMock = buildSupabaseMock([
+      { count: 9, error: null }, // player cap count
+      { data: null, error: null }, // insert
+      { data: { name: 'Kari', nickname: null, email: 'kari@example.com' }, error: null }, // notify lookup
+    ]);
+
+    const { registerForOpenGame } = await import('./actions');
+    await expect(
+      registerForOpenGame(fd({ shortId: SHORT_ID })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/games/${GAME_ID}` }),
+    );
+    // The cap was actually evaluated for the team format, not skipped.
+    const capCount = adminMock.__fromCalls.find(
+      (c) =>
+        c.table === 'game_players' &&
+        c.method === 'select' &&
+        (c.args[1] as { head?: boolean } | undefined)?.head === true,
+    );
+    expect(capCount).toBeDefined();
+  });
 });
 
 describe('requestApproval', () => {
