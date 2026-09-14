@@ -66,8 +66,8 @@ export default async function CreatorAvsluttPage({
   const detailPath = `/games/${gameId}`;
 
   const supabase = await getServerClient();
-  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter). `role.userId`
-  // skjuler arrangørens egen trekk-hake i lista under (D8).
+  // Authz gate (redirects to '/' unless admin or creator). `role.userId` hides
+  // the signed-in organiser's own withdraw checkbox in the list below (#1932).
   const role = await requireAdminOrCreator(supabase, gameId);
 
   const { data: game } = await supabase
@@ -225,7 +225,9 @@ export default async function CreatorAvsluttPage({
           }))}
           allowWd={allowWd}
           formId={END_ANYWAY_FORM_ID}
-          // D8: a non-admin organiser cannot withdraw themselves (0168 guard).
+          // #1932: no checkbox on the signed-in organiser's own row. The 0168
+          // guard, clause (c), rejects a non-admin withdrawing themselves;
+          // same rule as the app (native/app/src/lib/endGamePlan.ts).
           selfUserId={role.userId}
           heading={t('missingCount', { count: missing.length })}
           withdrawLabel={t('withdrawLabel')}

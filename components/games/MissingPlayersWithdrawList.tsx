@@ -7,22 +7,23 @@
 export const END_ANYWAY_FORM_ID = 'end-anyway-form';
 
 /**
- * «Disse mangler kort»-blokka med «Marker som trukket»-haker (#386), delt av
- * admins `/avslutt-likevel` og oppretterens `/games/[id]/avslutt` — to flater,
- * én markup (trap 4).
+ * The «these players have not submitted» box with per-player «Marker som
+ * trukket» checkboxes (#386), shared by the admin `/avslutt-likevel` page and
+ * the creator's `/games/[id]/avslutt` page: two surfaces, one markup (trap 4).
  *
- * #1932: hakene lå utenfor innsendingsskjemaet og nådde aldri serveren. Hver
- * hake bærer nå `form={formId}`, så nettleseren tar den med i skjemaets
- * FormData uansett hvor i DOM-en den står.
+ * #1932: the checkboxes used to sit outside the submit form and never reached
+ * the server. Each one now carries `form={formId}`, so the browser includes it
+ * in that form's FormData wherever it sits in the DOM.
  *
- * Kallstedet eier tekst og navn: `heading`/`withdrawLabel` kommer ferdig
- * oversatt (de to flatene har hver sin nøkkel), og `displayName` ferdig
- * formatert (hver flate har sin egen navneregel).
+ * The call site owns text and names: `heading`/`withdrawLabel` arrive already
+ * translated (each surface has its own message key), and `displayName` arrives
+ * already formatted (each surface has its own name rule).
  *
- * `selfUserId` (D8): raden til den som avslutter vises uten hake. En ikke-admin
- * arrangør kan ikke trekke seg selv (databasevakten i 0168, ledd c), og én
- * slik rad i utvalget ville feilet hele det samlede skrivet. Samme regel som
- * appen (`endGamePlan.ts`: `player.userId !== organiserUserId`).
+ * `selfUserId` (#1932): the signed-in organiser's row renders without a
+ * checkbox. The 0168 guard, clause (c), rejects a non-admin withdrawing
+ * themselves, and one such row in the batch would fail the whole write. Same
+ * rule as the app (`native/app/src/lib/endGamePlan.ts`:
+ * `player.userId !== organiserUserId`).
  */
 export function MissingPlayersWithdrawList({
   players,
@@ -33,11 +34,11 @@ export function MissingPlayersWithdrawList({
   withdrawLabel,
 }: {
   players: { userId: string; displayName: string }[];
-  /** WD tilbys kun for in-scope-modi; ellers vises lista uten haker. */
+  /** Withdrawal is offered for in-scope modes only; otherwise no checkboxes. */
   allowWd: boolean;
-  /** `id`-en til skjemaet hakene skal sendes med — bruk `END_ANYWAY_FORM_ID`. */
+  /** The `id` of the form the checkboxes submit with: `END_ANYWAY_FORM_ID`. */
   formId: string;
-  /** Den innloggede arrangøren, hvis hen ikke kan trekke seg selv. */
+  /** The signed-in organiser: their own row renders without a checkbox, same rule as the app. */
   selfUserId?: string;
   heading: string;
   withdrawLabel: string;
