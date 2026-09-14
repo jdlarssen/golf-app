@@ -149,7 +149,7 @@ export default async function PublicCupPage({
           <SmartLink
             href={`/cup/${id}/resultater`}
             data-testid="cup-results-pending"
-            className="underline-offset-2 hover:underline"
+            className="flex min-h-[44px] items-center justify-center text-center underline-offset-2 hover:underline"
           >
             {t('public.resultsPending')}
           </SmartLink>
