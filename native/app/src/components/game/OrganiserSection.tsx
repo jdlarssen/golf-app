@@ -5,11 +5,15 @@
 // **Arrangør = `games.created_by`.** Ingen admin-flagg noe sted i appen.
 // Sekretariatets overstyringer bor på nettsiden; appen er arrangør-flaten.
 //
-// **Reglene er delte, monteringen er lokal.** Om lag skal fordeles i det hele
-// tatt svarer `needsTeamAssignment`; om flighter må deles svarer
-// `needsFlightAssignment`; om formatet i det hele tatt kjenner frafall svarer
-// `supportsWithdrawal`. Ingen av de tre spørsmålene besvares på nytt her, og
-// selve skrivingene ligger i `data/rosterActions.ts` med RLS som ekte port.
+// **Reglene er delte, monteringen er lokal.** Om formatet har lag i det hele
+// tatt svarer `modeRequiresTeamNumber`, og om noen MANGLER lag svarer
+// `needsTeamAssignment`; flight-tvillingene er `isSingleFlightGame` og
+// `needsFlightAssignment`; om formatet kjenner frafall svarer
+// `supportsWithdrawal`. Ingen av spørsmålene besvares på nytt her, og selve
+// skrivingene ligger i `data/rosterActions.ts` med RLS som ekte port.
+//
+// #1875: at «har» og «mangler» er to spørsmål er hele poenget med Juster-
+// modusen — se gatingen nede i komponenten.
 //
 // **Tema-bevisst via `useTheme()` (#1833).** Layout ligger i det statiske arket
 // nederst, fargene hentes fra paletten — appens ene mønster. (Seksjonen sto en
@@ -32,11 +36,13 @@ import {
   View,
 } from 'react-native';
 import {
+  isSingleFlightGame,
   MAX_FLIGHT_SIZE,
   needsFlightAssignment,
 } from '../../../../../lib/games/flightScope';
 import {
   expectedTeamSize,
+  modeRequiresTeamNumber,
   needsTeamAssignment,
   type TeamPlayer,
 } from '../../../../../lib/games/teamScope';
@@ -116,6 +122,20 @@ export function OrganiserSection({
   const [candidates, setCandidates] = useState<RosterCandidate[] | null>(null);
   const [candidatesFailed, setCandidatesFailed] = useState(false);
   const [search, setSearch] = useState('');
+  /**
+   * Forsvinn-vaksinen (#1875).
+   *
+   * Settes av «Juster» — OG av hvert eneste chip-trykk. Det siste er hele
+   * poenget: fyller arrangøren den siste tomme plassen, slutter de delte
+   * reglene å si «mangler», og uten dette flagget ville radene forsvunnet i
+   * samme bevegelse som de ble ferdig brukt. Nå står de til arrangøren selv
+   * lukker dem.
+   *
+   * Flagget overlever `onChanged`-refetchen fordi seksjonen ikke remountes:
+   * `useGameBundle.refresh` bytter ut bundle-objektet, og spill-hjem har ingen
+   * `key` på seksjonen. Setter noen en key her senere, ryker vaksinen.
+   */
+  const [adjusting, setAdjusting] = useState(false);
 
   const { game } = bundle;
 
@@ -192,12 +212,26 @@ export function OrganiserSection({
   );
   const teamPlayers = toTeamPlayers(bundle.players);
   const activeCount = teamPlayers.filter((p) => p.withdrawn_at == null).length;
-  // Lag- og flight-kontrollene vises kun når de DELTE reglene sier at noe
-  // mangler. Er alle fordelt, er det ingenting som blokkerer starten, og en
-  // omfordeling i etterkant hører hjemme på nettsiden (der arrangørens egen rad
-  // også kan flyttes — se #1868).
-  const showTeams = scheduled && needsTeamAssignment(mode, teamSize, teamPlayers);
-  const showFlights = scheduled && needsFlightAssignment(mode, teamPlayers);
+  // #1875: hvilke rader formatet HAR, og hvilke det mangler noe i, er to
+  // forskjellige spørsmål. Før var de ett — kontrollene var gatet på «mangler
+  // noen?», så de forsvant i samme bevegelse som arrangøren fylte siste tomme
+  // plass. Å rebalansere fra appen var dermed umulig, og eieren traff kanten to
+  // ganger på fem minutter i tapptest.
+  //
+  // Nå: mangler noen, står radene framme (påkrevd arbeid — starten er blokkert).
+  // Er alle fordelt, ligger de bak «Juster», og arrangøren bestemmer selv når
+  // lista lukkes igjen.
+  const hasTeamRows = scheduled && modeRequiresTeamNumber(mode, teamSize);
+  const hasFlightRows = scheduled && !isSingleFlightGame(mode, teamPlayers);
+  const teamsMissing = scheduled && needsTeamAssignment(mode, teamSize, teamPlayers);
+  const flightsMissing = scheduled && needsFlightAssignment(mode, teamPlayers);
+  const showTeams = hasTeamRows && (teamsMissing || adjusting);
+  const showFlights = hasFlightRows && (flightsMissing || adjusting);
+  // Knappen finnes bare når det ikke er noe påkrevd igjen: så lenge noen mangler
+  // lag eller flight, er radene der uansett, og en «Juster»-knapp ved siden av
+  // ville vært en knapp uten jobb.
+  const canAdjust =
+    (hasTeamRows || hasFlightRows) && !teamsMissing && !flightsMissing;
   const teamCount = Math.max(1, Math.ceil(activeCount / teamSize));
   const flightCount = Math.max(1, Math.ceil(activeCount / MAX_FLIGHT_SIZE));
   const canWithdraw = active && supportsWithdrawal(mode);
@@ -221,6 +255,23 @@ export function OrganiserSection({
   return (
     <View testID="organiser-section">
       <Text style={ui.sectionTitle}>Arrangør</Text>
+
+      {/* Tekst, ikke ikon: appen har ikke noe ikonspråk å låne fra (ingen
+          vector-icons-dep, ingen glyfknapper), og en kompakt tekstknapp er
+          mønsteret som allerede finnes. Står over lista, så lista vokser
+          nedover når den åpnes og knappen blir stående. */}
+      {canAdjust ? (
+        <Pressable
+          style={[ui.buttonSecondary, styles.rowButton]}
+          disabled={busy}
+          testID="organiser-adjust-toggle"
+          onPress={() => setAdjusting((on) => !on)}
+        >
+          <Text style={ui.buttonSecondaryText}>
+            {adjusting ? 'Ferdig' : 'Juster'}
+          </Text>
+        </Pressable>
+      ) : null}
 
       <View style={ui.card}>
         {bundle.players.map((player) => {
@@ -251,7 +302,10 @@ export function OrganiserSection({
                   selected={player.teamNumber}
                   disabled={busy}
                   testIDPrefix={`organiser-team-${player.userId}`}
-                  onPick={(n) => void run(() => setPlayerTeam(game.id, player.userId, n))}
+                  onPick={(n) => {
+                    setAdjusting(true);
+                    void run(() => setPlayerTeam(game.id, player.userId, n));
+                  }}
                 />
               ) : null}
 
@@ -262,7 +316,10 @@ export function OrganiserSection({
                   selected={player.flightNumber}
                   disabled={busy}
                   testIDPrefix={`organiser-flight-${player.userId}`}
-                  onPick={(n) => void run(() => setPlayerFlight(game.id, player.userId, n))}
+                  onPick={(n) => {
+                    setAdjusting(true);
+                    void run(() => setPlayerFlight(game.id, player.userId, n));
+                  }}
                 />
               ) : null}
 

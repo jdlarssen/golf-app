@@ -22,7 +22,7 @@
 import { Alert } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
-import { withdrawPlayer } from '../../data/rosterActions';
+import { setPlayerTeam, withdrawPlayer } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
 import { OrganiserSection } from './OrganiserSection';
 
@@ -104,6 +104,101 @@ function bundle(
     fetchedAt: '2026-08-30T10:00:00.000Z',
   };
 }
+
+/** Samme runde, men alle har fått lag — utgangspunktet for Juster-modusen. */
+function assigned(status: string): GameBundle {
+  const base = bundle(status);
+  return {
+    ...base,
+    players: base.players.map((p, i) => ({
+      ...p,
+      teamNumber: i + 1,
+      flightNumber: i + 1,
+    })),
+  };
+}
+
+describe('OrganiserSection — Juster (#1875)', () => {
+  // Kontrollene var gatet på «mangler noen lag/flight?». Fylte arrangøren siste
+  // tomme plass, forsvant de i samme bevegelse, og rebalansering fra appen var
+  // umulig. Eieren traff kanten to ganger på fem minutter i tapptest.
+  //
+  // Testen låser de tre tilstandene, i den rekkefølgen arrangøren møter dem.
+  it('lar radene stå til arrangøren lukker dem selv — også når siste plass fylles', async () => {
+    const onChanged = jest.fn();
+    const onFinish = jest.fn();
+
+    // 1. Noen mangler lag: radene er påkrevd arbeid og står framme av seg selv.
+    //    Ingen «Juster»-knapp — den ville vært en knapp uten jobb.
+    const { rerender } = await render(
+      <OrganiserSection
+        bundle={bundle('scheduled')}
+        userId={ME}
+        onChanged={onChanged}
+        onFinish={onFinish}
+      />,
+    );
+    expect(screen.getByTestId(`organiser-team-${MATE}-1`)).toBeTruthy();
+    expect(screen.queryByTestId('organiser-adjust-toggle')).toBeNull();
+
+    // 2. Arrangøren fyller den SISTE tomme plassen. Bundelen kommer tilbake
+    //    ferdig fordelt — og det er nøyaktig her radene pleide å forsvinne
+    //    under fingeren. Nå står de, og knappen sier «Ferdig».
+    await fireEvent.press(screen.getByTestId(`organiser-team-${MATE}-1`));
+    await waitFor(() => {
+      expect(setPlayerTeam).toHaveBeenCalledWith('game-1', MATE, 1);
+    });
+    await rerender(
+      <OrganiserSection
+        bundle={assigned('scheduled')}
+        userId={ME}
+        onChanged={onChanged}
+        onFinish={onFinish}
+      />,
+    );
+    expect(screen.getByTestId(`organiser-team-${MATE}-1`)).toBeTruthy();
+    expect(screen.getByTestId('organiser-adjust-toggle')).toHaveTextContent('Ferdig');
+
+    // 3. «Ferdig» lukker lista, og «Juster» åpner den igjen — omfordeling etter
+    //    at alle har fått lag er nå mulig fra appen.
+    await fireEvent.press(screen.getByTestId('organiser-adjust-toggle'));
+    expect(screen.queryByTestId(`organiser-team-${MATE}-1`)).toBeNull();
+    expect(screen.getByTestId('organiser-adjust-toggle')).toHaveTextContent('Juster');
+
+    await fireEvent.press(screen.getByTestId('organiser-adjust-toggle'));
+    expect(screen.getByTestId(`organiser-team-${MATE}-1`)).toBeTruthy();
+
+    // 4. Rebalansering etter start er fortsatt web/sekretariat: en aktiv runde
+    //    har hverken rader eller knapp.
+    await rerender(
+      <OrganiserSection
+        bundle={assigned('active')}
+        userId={ME}
+        onChanged={onChanged}
+        onFinish={onFinish}
+      />,
+    );
+    expect(screen.queryByTestId('organiser-adjust-toggle')).toBeNull();
+    expect(screen.queryByTestId(`organiser-team-${MATE}-1`)).toBeNull();
+  });
+
+  it('gir wolf ingen Juster-knapp — rotasjons-plassen er trukket, ikke fordelt', async () => {
+    await render(
+      <OrganiserSection
+        bundle={bundle('scheduled', {
+          gameMode: 'wolf',
+          modeConfig: { team_size: 1 },
+        })}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+      />,
+    );
+    expect(screen.queryByTestId('organiser-adjust-toggle')).toBeNull();
+    expect(screen.queryByTestId(`organiser-team-${MATE}-1`)).toBeNull();
+    expect(screen.queryByTestId(`organiser-flight-${MATE}-1`)).toBeNull();
+  });
+});
 
 describe('OrganiserSection', () => {
   it('aapner egen rad der basen tillater det, holder den utenfor der den ikke gjoer, og tegner en tapt start-flipp som suksess', async () => {
