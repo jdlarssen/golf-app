@@ -14,7 +14,7 @@ import {
   createGameDraft,
   createAndPublishGame,
 } from '@/app/[locale]/admin/games/new/actions';
-import { getNewGameFormData } from '@/lib/games/newGameFormData';
+import { getCreateGamePlayerRoster } from '@/lib/games/getCreateGamePlayerRoster';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getRoleContext } from '@/lib/admin/auth';
@@ -23,8 +23,6 @@ import {
   getFormatsForIntent,
 } from '@/lib/formats/getFormatsForIntent';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
-import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
-import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import {
@@ -267,7 +265,7 @@ export default async function OpprettSpillPage({
       )}
 
       <Suspense fallback={null}>
-        <PlayerShortageBanner />
+        <PlayerShortageBanner userId={currentUserId} />
       </Suspense>
 
       <div className="mt-5">
@@ -301,19 +299,25 @@ export default async function OpprettSpillPage({
  * dermed lærte brukeren å overse banneret. Ny terskel: `<= 1`, altså kun når
  * det ikke finnes noen å spille med.
  *
- * `=== 0` er bevisst IKKE terskelen: `getNewGameFormData` leser users-tabellen,
- * og en innlogget arrangør er alltid selv en rad der, så lista har minst ett
- * element. En null-gren ville vært død kode (og var det).
+ * #2018: tellingen er den sammenslåtte lista veiviseren under viser —
+ * medspillere ∪ venner ∪ klubbmedlemmer (`getCreateGamePlayerRoster`). Før telte
+ * banneret bare medspillerne, så en bruker med venner, men uten felles spill,
+ * fikk «du har bare 1 registrert spiller» over en velger med alle vennene.
  *
- * Steg 4 i veiviseren har sin egen tom-tilstand (`PickerSourceEmptyHint`) for
- * «ingen venner/klubbmedlemmer å velge blant» — den er picker-kildens problem,
- * dette er rosterets, og de to overlapper ikke.
+ * `=== 0` er bevisst IKKE terskelen: arrangøren er alltid selv en rad blant
+ * medspillerne (users-tabellen), og sammenslåingen tar hen med nøyaktig én gang,
+ * så lista har minst ett element. En null-gren ville vært død kode (og var det).
+ *
+ * Kjent avvik: lista er et supersett av det en ikke-admin faktisk kan velge
+ * (`selectablePlayers`: venner/ventende ∪ valgt klubb). Har du tidligere
+ * medspillere, men ingen venner, står banneret borte mens kompis-velgeren bare
+ * viser deg selv. Steg 4 har sin egen tom-tilstand (`PickerSourceEmptyHint`) for
+ * nettopp det — den er picker-kildens problem, dette er rosterets.
  */
-async function PlayerShortageBanner() {
-  // includeEmail=false (#435): non-admin create must not leak co-players'
-  // e-postadresser into the page payload. Same `(false)` arg here and in
-  // GameFormBody so React `cache` dedupes the two Suspense reads.
-  const { players } = await getNewGameFormData(false);
+async function PlayerShortageBanner({ userId }: { userId: string }) {
+  // Samme cachede hjelper, med samme `userId`-streng, som GameFormBody — React
+  // `cache` deler rundturene mellom de to Suspense-grensene.
+  const { players } = await getCreateGamePlayerRoster(userId);
   if (players.length > 1) return null;
   const t = await getTranslations('wizard');
   // Alltid nøyaktig én (se doc-kommentaren over) — derfor entall, uten
@@ -325,7 +329,7 @@ async function PlayerShortageBanner() {
   });
   return (
     <div className="mt-4">
-      <Banner tone="info">
+      <Banner tone="info" testId="player-shortage-banner">
         {bannerText}{' '}
         {t('createDoor.shortageBannerNote')}{' '}
         <SmartLink href="/" className="underline hover:no-underline">
@@ -367,38 +371,21 @@ async function GameFormBody({
     getFormatsForIntent('solo'),
     getFormatGuideEntries(),
   ]);
-  const [{ courses, players, clubs }, friendPlayers, clubMembers, isClubAdmin] =
-    await Promise.all([
-      getNewGameFormData(false),
-      // #464: vennene til brukeren — picker-kilde for kompis/cup. Hentes som hele
-      // PlayerOption-rader fordi users-RLS skjuler venner du aldri har spilt med.
-      getFriendPlayerOptions(userId).catch(() => []),
-      // #464: klubbmedlemmer — picker-kilde for klubb-intent. Må merges inn (under)
-      // fordi medlemmer som ikke er co-players ellers ville forsvinne fra rosteren.
-      getClubMemberPlayerOptions(userId).catch(() => ({
-        memberIdsByClub: {},
-        options: [],
-      })),
-      // #525: er brukeren klubb-admin? Styrer om «Klubb-turnering»-flisen vises.
-      isClubAdminAnywhere(userId),
-    ]);
-  // Union venner + klubbmedlemmer inn i spiller-lista (dedup på id) så picker-
-  // kilden har rad-data for alle, uansett om du har delt et spill med dem (#464).
-  // Co-players ligger allerede i `players`.
-  const seen = new Set(players.map((p) => p.id));
-  const mergedPlayers = [...players];
-  for (const extra of [...friendPlayers, ...clubMembers.options]) {
-    if (!seen.has(extra.id)) {
-      seen.add(extra.id);
-      mergedPlayers.push(extra);
-    }
-  }
-  const friendPlayerIds = friendPlayers.map((f) => f.id);
+  const [
+    { courses, players, clubs, friendPlayerIds, clubMemberIdsByClub },
+    isClubAdmin,
+  ] = await Promise.all([
+    // #464/#2018: medspillere ∪ venner ∪ klubbmedlemmer, samme cachede liste som
+    // PlayerShortageBanner teller — så banneret og velgeren aldri er uenige.
+    getCreateGamePlayerRoster(userId),
+    // #525: er brukeren klubb-admin? Styrer om «Klubb-turnering»-flisen vises.
+    isClubAdminAnywhere(userId),
+  ]);
   return (
     <GameWizard
       key={wizardKey}
       courses={courses}
-      players={mergedPlayers}
+      players={players}
       mode={{
         kind: 'create',
         createDraftAction: createGameDraft,
@@ -417,7 +404,7 @@ async function GameFormBody({
       // (kun for klubb-intent) viser den forhåndsvalgte klubben (#50-fix).
       initialIntent={initialIntent}
       friendPlayerIds={friendPlayerIds}
-      clubMemberIdsByClub={clubMembers.memberIdsByClub}
+      clubMemberIdsByClub={clubMemberIdsByClub}
       currentUserId={userId}
       isAdmin={isAdmin}
       isClubAdmin={isClubAdmin}
