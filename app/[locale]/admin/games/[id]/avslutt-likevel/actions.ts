@@ -2,6 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
+import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import {
@@ -15,22 +16,25 @@ import { endGame } from '../actions';
 /**
  * «Avslutt likevel» with per-player WD opt-in (#386).
  *
- * For each `withdraw_<userId>` checkbox set to `'on'` in formData, marks
- * that player as withdrawn (sets `withdrawn_at` + `withdrawn_by_user_id`)
- * before calling `endGame(gameId, true)` (allowMissing). Players without
- * the checkbox ticked keep their scores counting as «ikke levert».
+ * Called from both confirm pages: `/admin/games/[id]/avslutt-likevel` (admin)
+ * and `/games/[id]/avslutt` (the game's creator, #427). Gated by
+ * requireAdminOrCreator; every redirect branches on isAdmin, so a creator never
+ * lands in the admin shell.
  *
- * All-or-nothing against a late submission (#1986, the app's rule from
- * #1856/#1896): if any ticked player submitted (or was withdrawn) between
- * page load and the click, nothing is written and the game is NOT ended; the
- * organiser lands back on the confirm page with `?error=roster_changed` and
- * sees the fresh roster. The withdrawal write is row-counted (#1886, trap 2),
- * so a silently no-oped write can no longer end the game with a ticked player
- * still counted as active.
- *
- * Must be called from an avslutt-likevel confirm page. Requires admin OR the
- * game's creator (#427), gated via requireAdminOrCreator. Redirects branch on
- * isAdmin so a creator lands on /games/[id] instead of the admin shell.
+ * Flow:
+ *  1. Collect the ticked `withdraw_<userId>` checkboxes (deduped; none at all
+ *     for modes without withdrawal support). Nothing ticked → step 4.
+ *  2. Pre-read the ticked rows (#1986, the app's all-or-nothing rule from
+ *     #1856/#1896). A ticked player who is missing from the roster, has
+ *     submitted, or is already withdrawn sends the organiser back to the
+ *     confirm page with `?error=roster_changed`: no write, no finish.
+ *  3. ONE guarded UPDATE withdrawing those players (only while `submitted_at`
+ *     and `withdrawn_at` are still null), row-counted through expectAffected
+ *     (#1886, trap 2). Fewer rows than ticked (a race after the pre-read) →
+ *     roster_changed as well, after revalidating the game for the rows that
+ *     did commit. A DB error → `?error=db_players` on the detail page.
+ *  4. `endGame(gameId, true)` (allowMissing): unticked players keep their
+ *     scores counting as «ikke levert». endGame owns the final redirect.
  */
 export async function endGameMarkingWithdrawals(
   gameId: string,
@@ -52,11 +56,17 @@ export async function endGameMarkingWithdrawals(
   // WD is only valid for in-scope modes. Out-of-scope games get NO withdrawals
   // even from a crafted POST — they fall back to «ikke levert» (defense-in-depth
   // mirroring the page, which hides the checkboxes for these modes).
-  const { data: game } = await supabase
+  const { data: game, error: gameError } = await supabase
     .from('games')
     .select('game_mode')
     .eq('id', gameId)
     .single<{ game_mode: GameMode }>();
+  // Fail closed: a failed read would otherwise drop every tick (allowWd false)
+  // and still finish the game with those players counted as active.
+  if (gameError) {
+    console.error('[endGameMarkingWithdrawals] game read failed', gameError);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
   const allowWd = game ? supportsWithdrawal(game.game_mode) : false;
 
   // Collect all withdraw_<userId> keys that are checked. Deduped so a repeated
@@ -89,8 +99,12 @@ export async function endGameMarkingWithdrawals(
       );
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
+    // Stop before writing when any ticked player is missing from the roster
+    // (removed, or a crafted id), has submitted, or is already withdrawn.
+    const tickedRows = ticked ?? [];
     if (
-      (ticked ?? []).some(
+      tickedRows.length !== withdrawUserIds.length ||
+      tickedRows.some(
         (row) => row.submitted_at !== null || row.withdrawn_at !== null,
       )
     ) {
@@ -136,6 +150,9 @@ export async function endGameMarkingWithdrawals(
     // who were withdrawn stay withdrawn (undo lives on the roster page); the
     // game is not ended, and the confirm page shows the true state.
     if (withdrawnCount !== withdrawUserIds.length) {
+      // Those rows committed, but endGame never runs, so nothing else
+      // revalidates the cached game for them.
+      if (withdrawnCount > 0) revalidateTag(`game-${gameId}`, 'max');
       redirect({ href: rosterChangedPath, locale });
     }
   }
