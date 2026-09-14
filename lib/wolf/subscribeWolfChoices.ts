@@ -32,10 +32,9 @@ export interface WolfChoiceChange {
  * UPDATE arrive: every write is an upsert (web and app), and a Wolf choice
  * can be replaced but never removed. A DELETE only happens through an FK
  * cascade (the game, or a hard-deleted wolf/partner/entered_by user) or manual
- * SQL. Supabase cannot filter DELETE events without REPLICA IDENTITY FULL,
- * which 0175 deliberately leaves unset, and a DELETE payload carries
- * `new: {}`, so the guard below drops it. Nothing is propagated for DELETE
- * (#1968).
+ * SQL. Supabase documents that DELETE events cannot be filtered in Postgres
+ * Changes, and a DELETE payload carries `new: {}`, so the guard below drops
+ * it. Nothing is propagated for DELETE (#1968).
  */
 export function subscribeWolfChoices(
   gameId: string,
