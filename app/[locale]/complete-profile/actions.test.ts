@@ -14,9 +14,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 const getUserMock = vi.fn();
-const updateEqMock = vi.fn<(...args: unknown[]) => Promise<{ error: null }>>(
-  async () => ({ error: null }),
+type WriteResult = {
+  data: { id: string }[] | null;
+  error: { message: string } | null;
+};
+const updateSelectMock = vi.fn<(...args: unknown[]) => Promise<WriteResult>>(
+  async () => ({ data: [{ id: 'user-1' }], error: null }),
 );
+const updateEqMock = vi.fn<
+  (...args: unknown[]) => { select: typeof updateSelectMock }
+>(() => ({ select: updateSelectMock }));
 const updateMock = vi.fn<(...args: unknown[]) => { eq: typeof updateEqMock }>(
   () => ({ eq: updateEqMock }),
 );
@@ -97,6 +104,19 @@ describe('completeProfile — #356 next round-trip', () => {
     expect(updateEqMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toBe(
       '/complete-profile?error=name_required&next=%2Fgames%2Fabc&hcp_index=12%2C5',
+    );
+  });
+
+  it('bounces back with error=unknown when the profile write matches no row (#2036)', async () => {
+    updateSelectMock.mockResolvedValueOnce({ data: [], error: null });
+    const { completeProfile } = await import('./actions');
+    await expect(
+      completeProfile(fd({ ...VALID, next: '/games/abc' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(redirectMock).toHaveBeenCalledTimes(1);
+    expect(lastRedirect()).toBe(
+      '/complete-profile?error=unknown&next=%2Fgames%2Fabc&name=Kari+Nordmann&hcp_index=12%2C5',
     );
   });
 

@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { expectOne } from '@/lib/supabase/affectedRows';
 import { parseProfileInput } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 
@@ -61,18 +62,26 @@ export async function completeProfile(formData: FormData) {
   // The trigger on auth.users pre-creates a placeholder public.users row
   // (name=NULL, profile_completed_at=NULL). We update that row here and
   // stamp profile_completed_at to mark onboarding done.
+  // #2036: a write that matches no row (missing public.users row) returns
+  // error == null, so expectOne turns it into a throw (AGENTS trap 2). The try
+  // wraps only the write: fail() and redirect(next) throw by design.
   const now = new Date().toISOString();
-  const { error } = await supabase
-    .from('users')
-    .update({
-      name,
-      hcp_index: hcpParsed,
-      handicap_updated_at: now,
-      profile_completed_at: now,
-    })
-    .eq('id', user.id);
-
-  if (error) {
+  try {
+    expectOne(
+      await supabase
+        .from('users')
+        .update({
+          name,
+          hcp_index: hcpParsed,
+          handicap_updated_at: now,
+          profile_completed_at: now,
+        })
+        .eq('id', user.id)
+        .select('id'),
+      'completeProfile',
+    );
+  } catch (err) {
+    console.error('[completeProfile] profile write failed', err);
     fail('unknown');
   }
 
