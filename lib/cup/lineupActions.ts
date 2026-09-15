@@ -19,7 +19,11 @@ import { syncCupPointsToWin } from './pointsToWinSync';
 import { insertCupMatches, teeRatingsFrom } from './insertCupMatches';
 import { loadCupLineupAccess, canWriteTeamLineup } from './lineupAccess';
 import { squadUserIds } from './lineupData';
-import { buildRevealMatches, nextLabelNumber } from './lineupReveal';
+import {
+  buildRevealMatches,
+  canRetryReveal,
+  nextLabelNumber,
+} from './lineupReveal';
 import {
   planLineupPairs,
   validateLineupSubmission,
@@ -640,6 +644,74 @@ export async function unlockCupLineup(
 
   revalidateCup(tournamentId, access.groupId);
   return OK;
+}
+
+/**
+ * #1901 — the organiser's "Try again" on a session stuck after a failed reveal.
+ *
+ * The reveal only fires inside `submitCupLineup`, at the moment the second
+ * lineup lands. When it fails it rolls back `revealed_at` but leaves both
+ * submission stamps, and nothing calls it again. This runs the same reveal
+ * once more without touching the lineups, so a captain does not have to pick
+ * the whole team again after what may have been a one-second blip.
+ *
+ * No new locking and no new compensation: `revealCupLineupSession` claims
+ * `revealed_at` conditionally and undoes its own claim, so a retry is safe even
+ * when it races a first reveal that is still running.
+ */
+export async function retryCupLineupReveal(
+  formData: FormData,
+): Promise<CupLineupActionError> {
+  const tournamentId = String(formData.get('id') ?? '');
+  const sessionId = String(formData.get('session_id') ?? '');
+  if (!tournamentId || !sessionId) return { error: 'not_found' };
+
+  const access = await loadCupLineupAccess(tournamentId);
+  // Organiser-only, like unlocking: a captain must not be able to set off the
+  // reveal (and the notifications to every participant) on her own.
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const { data: session, error: sessionError } = await admin
+    .from('cup_lineup_sessions')
+    .select('revealed_at, team_1_submitted_at, team_2_submitted_at')
+    .eq('id', sessionId)
+    // Not decoration: the reveal's own session read has no cup filter, so
+    // without this an organiser could reveal a guessed session in someone
+    // else's cup.
+    .eq('tournament_id', tournamentId)
+    .maybeSingle();
+  if (sessionError) {
+    // A failed read is not "no such session" (I3).
+    console.error('[cup] retryCupLineupReveal session read failed', {
+      tournamentId,
+      sessionId,
+      error: sessionError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!session) return { error: 'not_found' };
+
+  const stuck = canRetryReveal({
+    revealedAt: session.revealed_at,
+    team1SubmittedAt: session.team_1_submitted_at,
+    team2SubmittedAt: session.team_2_submitted_at,
+  });
+  if (!stuck) {
+    if (session.revealed_at !== null) {
+      // The organiser's card is stale: a reveal already went through. Refresh
+      // first so the room shows the matches along with the message.
+      revalidateCup(tournamentId, access.groupId);
+      return { error: 'lineup_revealed' };
+    }
+    return { error: 'lineup_not_both_submitted' };
+  }
+
+  const revealError = await revealCupLineupSession(tournamentId, sessionId);
+  // Whatever the outcome: on success the card must show the revealed session,
+  // and on failure the state may still have moved underneath us.
+  revalidateCup(tournamentId, access.groupId);
+  return revealError ?? OK;
 }
 
 /**

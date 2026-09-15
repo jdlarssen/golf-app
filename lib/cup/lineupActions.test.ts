@@ -692,28 +692,12 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
     error: null,
   };
 
-  /** Køen fram til og med varsel-lesingen, for en 1-plass singel-økt. */
-  function revealQueue() {
+  /**
+   * The four reads loadRevealContext makes: the cup, the plan, the tee and the
+   * session. Shared by the submit path below and the retry path (#1901).
+   */
+  function revealContextReads() {
     return [
-      ...accessReads(),
-      {
-        data: {
-          id: 'sess-1',
-          format: 'singles_matchplay',
-          slot_count: 1,
-          revealed_at: null,
-          team_1_submitted_at: 'now',
-          team_2_submitted_at: null,
-        },
-        error: null,
-      },
-      { data: null, error: null }, // slots delete
-      { data: null, error: null }, // slots insert
-      {
-        data: [{ team_1_submitted_at: 'now', team_2_submitted_at: 'now' }],
-        error: null,
-      },
-      // loadRevealContext
       {
         data: {
           name: 'Ryder Cup',
@@ -739,14 +723,41 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       },
       TEE,
       { data: { format: 'singles_matchplay', slot_count: 1 }, error: null },
-      // begge lags lagrede plasser
+    ];
+  }
+
+  /** Both teams' stored slots for the one-slot singles session: pl vs opp. */
+  const STORED_SLOTS = {
+    data: [
+      { team_number: 1, slot_index: 0, seat: 1, user_id: 'pl' },
+      { team_number: 2, slot_index: 0, seat: 1, user_id: 'opp' },
+    ],
+    error: null,
+  };
+
+  /** Køen fram til og med varsel-lesingen, for en 1-plass singel-økt. */
+  function revealQueue() {
+    return [
+      ...accessReads(),
       {
-        data: [
-          { team_number: 1, slot_index: 0, seat: 1, user_id: 'pl' },
-          { team_number: 2, slot_index: 0, seat: 1, user_id: 'opp' },
-        ],
+        data: {
+          id: 'sess-1',
+          format: 'singles_matchplay',
+          slot_count: 1,
+          revealed_at: null,
+          team_1_submitted_at: 'now',
+          team_2_submitted_at: null,
+        },
         error: null,
       },
+      { data: null, error: null }, // slots delete
+      { data: null, error: null }, // slots insert
+      {
+        data: [{ team_1_submitted_at: 'now', team_2_submitted_at: 'now' }],
+        error: null,
+      },
+      ...revealContextReads(),
+      STORED_SLOTS, // begge lags lagrede plasser
       PARTICIPANTS, // stallene slik de er nå
       { data: [{ id: 'sess-1' }], error: null }, // klem revealed_at
       { data: [], error: null }, // games (labelnummer)
@@ -841,5 +852,172 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       expect.objectContaining({ tournamentId: 'cup-1' }),
     );
     errorSpy.mockRestore();
+  });
+
+  /**
+   * #1901 — the organiser's "Try again" on a session stuck after a failed
+   * reveal. Nested here to reuse the reveal reads above.
+   *
+   * Queue order:
+   *   1–3.   accessReads()
+   *   4.     cup_lineup_sessions.maybeSingle    (the retry's own pre-read)
+   *   5–8.   revealContextReads()
+   *   9.     cup_lineup_slots.select            (STORED_SLOTS)
+   *   10.    tournament_participants.select     (the squads now)
+   *   11.    cup_lineup_sessions.update         (claim revealed_at)
+   *   12.    games.select('game_mode')
+   *   13–15. syncCupPointsToWin
+   *   16.    tournament_participants.select     (notification recipients)
+   */
+  describe('retryCupLineupReveal — try the reveal again (#1901)', () => {
+    const AT = '2026-09-15T10:00:00.000Z';
+
+    function sessionRow(
+      revealedAt: string | null,
+      team1SubmittedAt: string | null,
+      team2SubmittedAt: string | null,
+    ) {
+      return {
+        data: {
+          revealed_at: revealedAt,
+          team_1_submitted_at: team1SubmittedAt,
+          team_2_submitted_at: team2SubmittedAt,
+        },
+        error: null,
+      };
+    }
+
+    function retryForm() {
+      return form({ id: 'cup-1', session_id: 'sess-1' });
+    }
+
+    /** Every patch written to `cup_lineup_sessions`, in order. */
+    function sessionUpdates(): unknown[] {
+      return adminMock.__fromCalls
+        .filter((c) => c.table === 'cup_lineup_sessions' && c.method === 'update')
+        .map((c) => c.args[0]);
+    }
+
+    it('a captain cannot retry, and nothing is written', async () => {
+      adminMock = buildSupabaseMock(accessReads());
+      supabaseMock = buildSupabaseMock([]);
+      setUser('cap1');
+
+      const { retryCupLineupReveal } = await import('./lineupActions');
+      expect(await retryCupLineupReveal(retryForm())).toEqual({
+        error: 'not_allowed',
+      });
+      // The lineup tables have no policies (0172): this gate is the only
+      // enforcement there is.
+      expect(writeCalls()).toHaveLength(0);
+      expect(insertMatchesMock).not.toHaveBeenCalled();
+    });
+
+    it('a session from another cup is not found', async () => {
+      adminMock = buildSupabaseMock([
+        ...accessReads(),
+        { data: null, error: null },
+      ]);
+      supabaseMock = buildSupabaseMock([]);
+      setUser('organizer');
+
+      const { retryCupLineupReveal } = await import('./lineupActions');
+      expect(await retryCupLineupReveal(retryForm())).toEqual({
+        error: 'not_found',
+      });
+      // The mock does not filter, so assert the filter itself: the reveal's
+      // own session read has no cup filter, which makes this the only guard.
+      expect(adminMock.__fromCalls).toContainEqual({
+        table: 'cup_lineup_sessions',
+        method: 'eq',
+        args: ['tournament_id', 'cup-1'],
+      });
+      expect(writeCalls()).toHaveLength(0);
+    });
+
+    it('an already revealed session refreshes the room and says so', async () => {
+      adminMock = buildSupabaseMock([...accessReads(), sessionRow(AT, AT, AT)]);
+      supabaseMock = buildSupabaseMock([]);
+      setUser('organizer');
+
+      const { retryCupLineupReveal } = await import('./lineupActions');
+      expect(await retryCupLineupReveal(retryForm())).toEqual({
+        error: 'lineup_revealed',
+      });
+      // The organiser's card was stale; the refresh shows the revealed session.
+      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', 'max');
+      expect(insertMatchesMock).not.toHaveBeenCalled();
+      expect(writeCalls()).toHaveLength(0);
+    });
+
+    it('only one lineup in: lineup_not_both_submitted, no reveal attempted', async () => {
+      adminMock = buildSupabaseMock([
+        ...accessReads(),
+        sessionRow(null, AT, null),
+      ]);
+      supabaseMock = buildSupabaseMock([]);
+      setUser('organizer');
+
+      const { retryCupLineupReveal } = await import('./lineupActions');
+      expect(await retryCupLineupReveal(retryForm())).toEqual({
+        error: 'lineup_not_both_submitted',
+      });
+      expect(insertMatchesMock).not.toHaveBeenCalled();
+      expect(writeCalls()).toHaveLength(0);
+    });
+
+    it('both in and the insert succeeds: OK, revealed_at claimed, lineups untouched', async () => {
+      adminMock = buildSupabaseMock([
+        ...accessReads(),
+        sessionRow(null, AT, AT),
+        ...revealContextReads(),
+        STORED_SLOTS,
+        PARTICIPANTS,
+        { data: [{ id: 'sess-1' }], error: null }, // claim revealed_at
+        { data: [], error: null }, // games (label number)
+        ...syncQueue(1, 28),
+        NOTIFY_RECIPIENTS,
+      ]);
+      supabaseMock = buildSupabaseMock([]);
+      setUser('organizer');
+      insertMatchesMock.mockResolvedValue({ ok: true });
+
+      const { retryCupLineupReveal } = await import('./lineupActions');
+      expect(await retryCupLineupReveal(retryForm())).toEqual({ error: '' });
+      expect(insertMatchesMock).toHaveBeenCalledTimes(1);
+      expect(sessionUpdates()).toEqual([{ revealed_at: expect.any(String) }]);
+      // Retrying never rewrites the lineups the captains submitted.
+      expect(
+        writeCalls().filter((c) => c.table === 'cup_lineup_slots'),
+      ).toHaveLength(0);
+    });
+
+    it('the teams changed since submission: lineup_squad_changed, revealed_at not claimed', async () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      // opp was moved to team 1 after both lineups were submitted.
+      const moved = {
+        data: PARTICIPANTS.data.map((p) =>
+          p.user_id === 'opp' ? { ...p, team_number: 1 } : p,
+        ),
+        error: null,
+      };
+      adminMock = buildSupabaseMock([
+        ...accessReads(),
+        sessionRow(null, AT, AT),
+        ...revealContextReads(),
+        STORED_SLOTS,
+        moved,
+      ]);
+      supabaseMock = buildSupabaseMock([]);
+      setUser('organizer');
+
+      const { retryCupLineupReveal } = await import('./lineupActions');
+      expect(await retryCupLineupReveal(retryForm())).toEqual({
+        error: 'lineup_squad_changed',
+      });
+      expect(sessionUpdates()).toEqual([]);
+      expect(insertMatchesMock).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
   });
 });
