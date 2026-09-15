@@ -3647,7 +3647,7 @@
         "unconfirmedReminderSent": "{count, plural, one {✓ Confirmation reminder sent to 1 player.} other {✓ Confirmation reminder sent to {count} players.}}",
         "notActiveError": "The game is no longer active. You cannot send reminders.",
         "remindReady": "{count, plural, one {1 player has finished but not submitted their scorecard. Send a reminder to submit.} other {{count} players have finished but not submitted their scorecard. Send a reminder to submit.}}",
-        "remindNone": "No one can be reminded right now. Players with an account automatically receive a reminder when they have entered all {totalHoles} holes.",
+        "remindNone": "No one can be reminded right now. Those who can be reminded automatically receive a reminder when they have entered all {totalHoles} holes.",
         "remindButton": "{count, plural, one {Send reminder to 1 player} other {Send reminder to {count} players}}",
         "remindConfirm": "{count, plural, one {Send submission reminder to 1 player?} other {Send submission reminder to {count} players?}}",
         "remindUnconfirmed": "{count, plural, one {1 player has not confirmed attendance yet. Send a reminder.} other {{count} players have not confirmed attendance yet. Send a reminder.}}",
