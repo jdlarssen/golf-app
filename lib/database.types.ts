@@ -2311,6 +2311,7 @@ export type Database = {
         Args: { p_game_id: string }
         Returns: boolean
       }
+      is_sole_club_owner: { Args: { p_user_id: string }; Returns: boolean }
       join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
       leave_club_league: { Args: { p_league_id: string }; Returns: string }
