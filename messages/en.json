@@ -4791,7 +4791,7 @@
       "unlock": "Unlock",
       "deleteSession": "Delete session",
       "retryHeading": "Both teams have submitted, but the matches are missing",
-      "retryHelper": "The matches weren't set up. If you try again, the lineups stay exactly as the captains submitted them.",
+      "retryHelper": "If you try again, the lineups stay exactly as the captains submitted them.",
       "retryButton": "Try again",
       "seatLabel": "Match {slot}, player {seat}",
       "pickPlayer": "Pick a player",

@@ -4791,7 +4791,7 @@
       "unlock": "Lås opp",
       "deleteSession": "Slett økten",
       "retryHeading": "Begge lag har levert, men kampene mangler",
-      "retryHelper": "Kampene ble ikke satt opp. Prøver du igjen, står uttakene akkurat som kapteinene leverte dem.",
+      "retryHelper": "Prøver du igjen, står uttakene akkurat som kapteinene leverte dem.",
       "retryButton": "Prøv igjen",
       "seatLabel": "Kamp {slot}, spiller {seat}",
       "pickPlayer": "Velg spiller",
