@@ -770,6 +770,48 @@ describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
       expect.objectContaining({ method: 'is', args: ['withdrawn_at', null] }),
     );
   });
+
+  it('manual_approval med fullt rutenett → forespørselen legges i kø uten tak-lesing', async () => {
+    // Owner's decision on #2011: the cap applies to open self-registration
+    // only. The grid may be full, but a manual_approval request still queues up
+    // and the organiser's approval is the gate (#662). The queue has no roster
+    // read, so a cap read here would take the captain insert's answer.
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ registration_mode: 'manual_approval' }),
+    );
+    adminMock = buildSupabaseMock([
+      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+      captainDisplay,
+      { data: null, error: null }, // invitations insert (slot 1)
+      { data: null, error: null }, // invitations insert (slot 2)
+      { data: null, error: null }, // invitations insert (slot 3)
+    ]);
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Lag E',
+      slots: threeSlots,
+    });
+
+    expect(result).toMatchObject({ ok: true, captainRequestId: CAPTAIN_REQUEST_ID });
+    expect(
+      adminMock.__fromCalls.filter((c) => c.table === 'game_players'),
+    ).toEqual([]);
+  });
+
+  it('kompenserende sletting treffer 0 rader → svarer fortsatt game_full', async () => {
+    // The rollback delete matches nothing (the row is already gone), so
+    // expectAffected throws. The action logs that and still answers game_full;
+    // the captain must never see a 500 for a full game.
+    const input = fullGridUnderCap({ data: [], error: null });
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration(input);
+
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+    expect(findCall('game_registration_requests', 'delete')).toBeDefined();
+  });
 });
 
 describe('#543: stengt påmelding — accept/attach-guards', () => {
