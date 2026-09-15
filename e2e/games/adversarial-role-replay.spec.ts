@@ -41,6 +41,13 @@ import {
  *     · Same INSERT of an ELIGIBLE friend SUCCEEDS — proving the trigger matches
  *       the #906 action guard (getInviteEligibleIds) and never false-blocks.
  *
+ *   Role E — player getting past the open-registration cap (#2062)
+ *     · Direct INSERT of their own game_players row into an open draft game is
+ *       rejected.
+ *     · Calling claim_open_registration_seat with their own JWT (and so their
+ *       own cap) is rejected — service_role only.
+ *     · A global admin can still insert a row with the user client.
+ *
  * Assertions: HTTP redirect URL, or .select()-returns-0-rows. NEVER on Norwegian
  * copy (test discipline D). Hostile writes use supabase-js clients signed in as
  * the attacker role so we test RLS at the DB layer, not the server-action layer.
@@ -602,6 +609,157 @@ test.describe('Role D – non-admin creator invite-eligibility on game_players @
         .eq('game_id', gameId)
         .eq('user_id', friend!.id);
       expect((rows ?? []).length, 'eligible friend should have been added').toBe(1);
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role E — player getting past the open-registration cap (#2062)
+// ---------------------------------------------------------------------------
+//
+// Open self-registration writes with the service role through
+// claim_open_registration_seat (0177), which enforces the player cap and picks
+// the team number under a lock on the game. A signed-in player must not be able
+// to register around it: not with a direct INSERT of their own row, and not by
+// calling the RPC with their own JWT and a cap of their choosing. The global
+// admin's user-client INSERT (inviteToGameActions, league flights) keeps working
+// through "game_players admin insert".
+//
+// The direct INSERT was already refused on main: the removed "self register
+// open" branch checked the game with an EXISTS that runs under the player's own
+// RLS on games, and a player who is neither in the game nor its creator cannot
+// see it (probed on staging 2026-09-15). This role locks that behaviour so a
+// future discovery SELECT policy on games cannot reopen it.
+//
+// Setup: an OPEN, DRAFT best ball game created by ADMIN_EMAIL — the player is
+// neither its creator nor on its roster, so no creator/participant path helps.
+test.describe('Role E – player past the open-registration cap @lifecycle', () => {
+  test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
+  test.describe.configure({ mode: 'serial' });
+
+  let gameId = '';
+  let playerUserId = '';
+  let target: EphemeralPlayer | null = null;
+
+  async function rowsFor(userId: string): Promise<number> {
+    const { data } = await adminClient()
+      .from('game_players')
+      .select('user_id')
+      .eq('game_id', gameId)
+      .eq('user_id', userId);
+    return (data ?? []).length;
+  }
+
+  test.beforeAll(async () => {
+    const admin = adminClient();
+
+    const { data: users } = await admin
+      .from('users')
+      .select('id, email')
+      .in('email', [PLAYER_EMAIL!, ADMIN_EMAIL!]);
+    const player = (users ?? []).find((u: { email: string }) => u.email === PLAYER_EMAIL);
+    const organiser = (users ?? []).find((u: { email: string }) => u.email === ADMIN_EMAIL);
+    if (!player || !organiser) throw new Error('Player or admin user not found');
+    playerUserId = player.id;
+
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    if (!tee) throw new Error('No tee_box available');
+
+    const { data: game, error: gameErr } = await admin
+      .from('games')
+      .insert({
+        name: `TEST-RoleE-OpenRegistration-${Date.now()}`,
+        course_id: tee.course_id,
+        tee_box_id: tee.id,
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
+        registration_mode: 'open',
+        registration_type: 'solo',
+        status: 'draft',
+        created_by: organiser.id,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    if (gameErr || !game) throw new Error(`Game insert failed: ${gameErr?.message}`);
+    gameId = game.id;
+
+    [target] = await seedEphemeralPlayers(1);
+  });
+
+  test.afterAll(async () => {
+    if (gameId) await cleanupTestGame(gameId);
+    if (target) await deleteEphemeralPlayers([target.id]);
+  });
+
+  test('direct INSERT of own row into an open draft game is rejected', async () => {
+    test.slow();
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { error } = await client.from('game_players').insert({
+        game_id: gameId,
+        user_id: playerUserId,
+        accepted_at: new Date().toISOString(),
+      });
+      expect(error, 'a player must not register past the server action').not.toBeNull();
+      if (error) {
+        expect(
+          error.code === '42501' || /policy|permission|denied|violat/i.test(error.message),
+          `unexpected error shape: ${error.code} ${error.message}`,
+        ).toBeTruthy();
+      }
+      expect(await rowsFor(playerUserId), 'no row may have been written').toBe(0);
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('claim_open_registration_seat with a player JWT is rejected', async () => {
+    test.slow();
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { error } = await client.rpc('claim_open_registration_seat', {
+        p_game_id: gameId,
+        p_user_id: playerUserId,
+        p_seat_team_size: 2,
+        p_max_teams: 4,
+        p_accepted_at: new Date().toISOString(),
+        p_cap: 1000,
+      });
+      expect(error, 'the seat claim is service_role only').not.toBeNull();
+      if (error) {
+        expect(
+          error.code === '42501' || /permission|denied/i.test(error.message),
+          `unexpected error shape: ${error.code} ${error.message}`,
+        ).toBeTruthy();
+      }
+      expect(await rowsFor(playerUserId), 'no row may have been written').toBe(0);
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('global admin can still insert a row with the user client (no false-block)', async () => {
+    test.slow();
+    expect(target).not.toBeNull();
+    const client = await signedInClient(ADMIN_EMAIL!);
+    try {
+      const { error } = await client.from('game_players').insert({
+        game_id: gameId,
+        user_id: target!.id,
+        accepted_at: null,
+      });
+      expect(
+        error,
+        `admin INSERT was rejected (${error?.code}: ${error?.message}) — admin insert policy missing!`,
+      ).toBeNull();
+      expect(await rowsFor(target!.id), 'the admin-added row should exist').toBe(1);
     } finally {
       await client.auth.signOut();
     }
