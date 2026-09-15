@@ -84,16 +84,22 @@ export function buildRevealMatches(input: {
 /**
  * Is the session stuck after a failed reveal? (#1901)
  *
- * The reveal only fires at the moment the second lineup lands. When it fails
- * (a database blip, or the teams changed after the lineups were submitted) it
- * rolls back: the compensation in `lineupActions` puts `revealed_at` back to
- * null and leaves both submission stamps in place. Nothing retries on its own,
- * so the organiser gets a button.
+ * The reveal only fires at the moment the second lineup lands, and it can fail
+ * two ways. Most rejections (the teams changed after the lineups were
+ * submitted, the plan or tee is no longer usable, the cup is finished, a read
+ * or the claim write failed) return before the claim takes, so `revealed_at`
+ * was never set. Only a
+ * failed match insert comes after the claim, and the compensation in
+ * `lineupActions` rolls `revealed_at` back. Either way `revealed_at` ends up
+ * null with both submission stamps in place (unless that rollback itself
+ * fails, which is logged). Nothing retries on its own, so the organiser gets a
+ * button.
  *
  * ⚠️ This means "both submitted and not revealed YET", not "something failed":
  * a first reveal that is still running matches it too for a few seconds (the
- * room is revalidated before the claim). A click in that window is a no-op,
- * because the claim on `revealed_at` lets only one caller through.
+ * room is revalidated before the claim). The claim on `revealed_at` is
+ * conditional on it still being null, so only one caller reveals and a click in
+ * that window cannot create a second batch of matches.
  *
  * The same function gates BOTH the button's visibility and the server action's
  * rejection, so the rule has one home (AGENTS.md trap 4).
