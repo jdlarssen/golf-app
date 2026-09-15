@@ -40,7 +40,7 @@ manglet. Aldri fortsett på antagelser om miljøet.
 
 - `gh pr checkout <N>` i arbeidstreet.
 - `preview_start("torny-staging")`.
-- Logg inn autonomt via OTP-mint-oppskriften i CLAUDE.md («Autonom login»):
+- Logg inn autonomt via OTP-mint-oppskriften i `docs/staging-testing.md` («Autonom login»):
   admin = `E2E_ADMIN_EMAIL`, spiller = `E2E_PLAYER_EMAIL`. Flyter som krever
   begge roller: kjør admin-delen først, logg ut, kjør spiller-delen.
 

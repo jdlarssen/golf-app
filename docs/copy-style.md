@@ -2,7 +2,7 @@
 
 Pattern-katalog for bruker-rettet copy i Tørny — strenger som vises i UI, mail-templates, feilmeldinger, banner-tekster, knapper, helper-tekster.
 
-Trigger: `.githooks/pre-commit` peker hit når den advarer. Korte hooked-mønstre + bevisst-bevart-listen ligger også i [`CLAUDE.md`](../CLAUDE.md) under «Språk-kvalitet i bruker-rettet copy» (slik at jeg er primet før commit, ikke bare etter).
+Trigger: `.githooks/pre-commit` peker hit når den advarer, og [`CLAUDE.md`](../CLAUDE.md) under «Språk-kvalitet i bruker-rettet copy» peker hit før commit. Selve regelen står rett under.
 
 ## Språk-kvalitet i bruker-rettet copy — regelen
 
@@ -35,7 +35,7 @@ Etablert i [PR #170](https://github.com/jdlarssen/golf-app/pull/170) og [PR #174
 
 ## Bevisst bevart (false-positives å ignorere ved hook-advarsel)
 
-- Brand-tagline `Tørny — fyr opp golfturneringen` (kanonisk per `CLAUDE.md → Brand`)
+- Brand-tagline `Tørny — fyr opp golfturneringen` (kanonisk per `docs/style-and-brand.md → Brand`)
 - Mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser eksakt streng)
 - «Sekretariat»-stemmen i admin-flater
 - Engelske achievement-navn (Turkey/Solid/Snowman — bevisste sportstermer)

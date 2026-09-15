@@ -61,7 +61,7 @@ Per kandidat, klassifiser:
   avviklet (eierbeslutning 2026-07-30, #1413; PR-alternativ-modellen #1406 tok
   over jobben). Velg det beste alternativet selv (A) og skriv kontrakten
   (steg 3) med en egen seksjon `## Alternativer (produktvalg)` i eierens
-  produktspråk, i den faste formen fra CLAUDE.md §«PR-presentasjon» (formens
+  produktspråk, i den faste formen fra `docs/pr-workflow.md` §«PR-presentasjon» (formens
   ene hjem, gjelder alle aktører): anbefaling øverst, fordeler/ulemper per
   alternativ (også A), ombyggingskostnad, reversibilitet. Nattkjøreren løfter
   seksjonen inn i PR-kommentaren; eieren svarer «alternativ B» i PR-en hvis A
