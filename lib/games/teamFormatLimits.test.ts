@@ -3,7 +3,9 @@ import { describe, it, expect } from 'vitest';
 import {
   MAX_TEAMS,
   MAX_TEAM_FORMAT_PLAYERS,
+  MIN_TEAMS,
   fitsTeamFormat,
+  randomDrawTeamCount,
   teamFormatPlayerCap,
   teamModePlayerCap,
   teamSizesForMode,
@@ -137,5 +139,44 @@ describe('teamModePlayerCap — åpen påmelding stopper der rutenettet er fullt
     ['fourball_matchplay', 2, null],
   ] as const)('%s à %s → %s', (mode, teamSize, cap) => {
     expect(teamModePlayerCap(mode, teamSize)).toBe(cap);
+  });
+});
+
+// #2012: «Trekk tilfeldig» deals the players into teams of the size the
+// organiser chose, and refuses whenever that would leave a leftover or need
+// more teams than the grid has.
+describe('randomDrawTeamCount — trekningen følger valgt lagstørrelse (#2012)', () => {
+  it.each([
+    [2, 2, 1], // one pair — best ball has always allowed a single team
+    [2, 8, 4],
+    [2, 10, null], // divides, but five teams do not fit the grid
+    [2, 12, null], // 12 picked at 3 per team, then switched to 2: six teams
+    [3, 12, 4],
+    [3, 10, null], // leftover player
+    [3, 15, null], // five teams
+    [4, 16, 4],
+    [4, 12, 3],
+    [1, 4, null], // solo has no teams
+    [3, 0, null], // nobody picked
+  ])('à %i med %i spillere → %s lag', (teamSize, n, expected) => {
+    expect(randomDrawTeamCount(teamSize, n)).toBe(expected);
+  });
+
+  // AGENTS.md trap 4: the draw may never accept a scramble roster that the
+  // format's own count rule rejects.
+  it('godtar aldri en scramble-tropp som fitsTeamFormat avviser', () => {
+    let checked = 0;
+    for (const mode of ['texas_scramble', 'ambrose', 'florida_scramble', 'shamble'] as const) {
+      for (const size of teamSizesForMode(mode)) {
+        for (let n = 1; n <= 17; n++) {
+          const teams = randomDrawTeamCount(size, n);
+          if (teams !== null && teams >= MIN_TEAMS) {
+            checked++;
+            expect(fitsTeamFormat(mode, n), `${mode} à ${size}, n=${n}`).toBe(true);
+          }
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });
