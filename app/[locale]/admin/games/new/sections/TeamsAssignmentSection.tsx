@@ -6,9 +6,11 @@
  *
  * Ansvar: per modus rendrer denne seksjonen relevante under-blokker:
  *  - matchplay → sider-grid (side 1 + side 2)
- *  - best-ball-netto → lag-grid (4 lag à 2) + «Trekk tilfeldig»/«Tøm» + flights
- *  - par-stableford → lag-grid (1-4 lag à 2) + per-spiller-tee
- *  - texas-scramble → lag-grid (2, 3 eller 4 spillere per lag) + per-spiller-tee
+ *  - best-ball-netto → lag-grid (4 lag à 2) + «Trekk tilfeldig»/«Tøm lag» + flights
+ *  - par-stableford → lag-grid (1-4 lag à 2) + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee
+ *  - scramble-familien (texas/ambrose/florida/shamble) → lag-grid (2, 3 eller 4
+ *    spillere per lag) + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee (#2012)
+ *  - patsome / lag-matchplay → lag-grid + «Tøm lag», ingen trekning
  *  - solo (stableford / solo strokeplay) → kun per-spiller-tee
  *
  * Nummerering speiler GameForm-stacked-layouten («4. Lag», «5. Flights»,
@@ -178,6 +180,7 @@ export function TeamsAssignmentSection({
     isTeamMatchplay,
     requiresTeams,
     teamSize,
+    canDrawRandomTeams,
     drawRandomTeams,
     clearTeams,
     assignPlayerToSlot,
@@ -308,14 +311,17 @@ export function TeamsAssignmentSection({
           <p className="text-xs text-muted">
             {teamsDescription()}
           </p>
-          {/* «Trekk tilfeldig»/«Tøm lag» — best-ball støtter nå 2/4/6/8 spillere
-              (#374); drawRandomTeams bruker det faktiske partall-antallet. */}
-          {isBestBall && (
+          {/* «Trekk tilfeldig»/«Tøm lag» for best ball, par-stableford and the
+              scramble family (#2012). The draw deals teams of the chosen size;
+              the button is disabled while the count leaves a leftover or needs
+              more teams than the grid shows (`canDrawRandomTeams`). */}
+          {(isBestBall || isParStableford || isTexas || isAmbrose || isFlorida || isShamble) && (
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={drawRandomTeams}
+                disabled={!canDrawRandomTeams}
                 className="flex-1 text-sm"
               >
                 {t('drawRandomButton')}
@@ -330,7 +336,9 @@ export function TeamsAssignmentSection({
               </Button>
             </div>
           )}
-          {(isParStableford || isTexas || isAmbrose || isFlorida || isShamble || isPatsome || isTeamMatchplay) &&
+          {/* Patsome and team matchplay have no draw: clearing only, once
+              someone is assigned. */}
+          {(isPatsome || isTeamMatchplay) &&
             selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined) && (
             <div className="flex">
               <Button

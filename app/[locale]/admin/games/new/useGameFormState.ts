@@ -14,6 +14,7 @@ import {
   type RegistrationType,
 } from '@/lib/games/registration';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
+import { randomDrawTeamCount } from '@/lib/games/teamFormatLimits';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
 import {
   prizeDraftFromList,
@@ -217,7 +218,8 @@ export function deriveDefaultGenders(
 export function cryptoShuffle<T>(input: T[]): T[] {
   const arr = input.slice();
   for (let i = arr.length - 1; i > 0; i--) {
-    // 32-bit unsigned random; modulo bias is negligible for our small i (<=7).
+    // 32-bit unsigned random; modulo bias is negligible for our small i
+    // (<=15: four teams of four).
     const buf = new Uint32Array(1);
     crypto.getRandomValues(buf);
     const j = buf[0] % (i + 1);
@@ -1077,16 +1079,25 @@ export function useGameFormState({
     );
   }
 
+  // «Trekk tilfeldig» (#2012): best ball, par-stableford and the scramble
+  // family. The draw deals teams of the chosen size, so the count must divide
+  // evenly and fit the grid; `randomDrawTeamCount` owns that rule. It reads the
+  // size at click time because `handleTeamSizeChange` keeps selections and
+  // teams: 12 players picked at 3 per team, then switched to pairs, is
+  // reachable and must not deal a team 5 or 6.
+  const canDrawRandomTeams =
+    (isBestBall || isParStableford || isTexas || isAmbrose || isFlorida || isShamble) &&
+    randomDrawTeamCount(teamSize, selectedPlayerIds.length) !== null;
+
   function drawRandomTeams() {
-    const count = selectedPlayerIds.length;
-    // Krever partall antall spillere (2, 4, 6 eller 8) for å fordele 2 per lag
-    if (count < 2 || count % 2 !== 0) return;
+    if (!canDrawRandomTeams) return;
     const shuffled = cryptoShuffle(selectedPlayerIds);
     const nextTeams: Record<string, TeamNumber> = {};
     const nextFlights: Record<string, number> = {};
-    for (let i = 0; i < count; i++) {
-      const team = (Math.floor(i / 2) + 1) as TeamNumber;
+    for (let i = 0; i < shuffled.length; i++) {
+      const team = (Math.floor(i / teamSize) + 1) as TeamNumber;
       nextTeams[shuffled[i]] = team;
+      // Only best ball reads these flights; the other modes publish flight = team.
       nextFlights[shuffled[i]] = teamDefaultFlight(team);
     }
     setTeamByPlayer(nextTeams);
@@ -1953,6 +1964,7 @@ export function useGameFormState({
     addGuestPlayer,
     handleModeChange,
     handleTeamSizeChange,
+    canDrawRandomTeams,
     drawRandomTeams,
     clearTeams,
     assignPlayerToSlot,

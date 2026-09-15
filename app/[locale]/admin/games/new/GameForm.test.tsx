@@ -402,7 +402,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     expect(screen.getByText(/inntil 4 lag à 2 spillere/i)).toBeInTheDocument();
   });
 
-  it('par-stableford: «Trekk tilfeldig»-knapp er ikke synlig (kun manuell tildeling i fase 2)', () => {
+  it('par-stableford: «Trekk tilfeldig»-knappen vises (#2012)', () => {
     render(
       <GameForm
         courses={COURSES}
@@ -416,7 +416,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     );
 
     selectParStableford();
-    // Fyll inn 8 spillere så grid + (eventuelt) knapper kan rendres.
+    // Fyll inn 8 spillere så grid + knapper kan rendres.
     for (const player of EIGHT_PLAYERS) {
       fireEvent.click(
         screen.getByRole('checkbox', { name: new RegExp(player.name!, 'i') }),
@@ -424,8 +424,8 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     }
 
     expect(
-      screen.queryByRole('button', { name: /trekk tilfeldig/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: /trekk tilfeldig/i }),
+    ).toBeInTheDocument();
   });
 
   it('par-stableford: 4 spillere på 2 lag à 2 → canPublish true når øvrige felt er satt', () => {

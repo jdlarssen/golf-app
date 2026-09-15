@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGameFormState, deriveDefaultGenders, validateTeamSizeFormat } from './useGameFormState';
+import {
+  TEAM_NUMBERS,
+  useGameFormState,
+  deriveDefaultGenders,
+  validateTeamSizeFormat,
+} from './useGameFormState';
 import type { CourseOption, PlayerOption } from './GameForm';
+import type { TeamSize } from './TeamSizeSelector';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 const COURSES: CourseOption[] = [
   {
@@ -285,6 +292,111 @@ describe('useGameFormState — Wolf 3-5 spillere (#465, #969)', () => {
       expect(row.team_number).toBeNull();
       expect(row.flight_number).toBeNull();
     }
+  });
+});
+
+// #2012: the draw deals teams of the chosen size and refuses instead of
+// dealing a team 5 or 6 — `playersByTeam` only has keys 1–4, so that would
+// throw during render rather than hide a team.
+describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#2012)', () => {
+  const DRAW_PLAYERS: PlayerOption[] = Array.from({ length: 16 }, (_, i) =>
+    makePlayer(`d${i + 1}`),
+  );
+
+  function setupDraw(mode: GameMode, teamSize: TeamSize, count: number) {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: DRAW_PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange(mode);
+    });
+    act(() => {
+      result.current.handleTeamSizeChange(teamSize);
+    });
+    act(() => {
+      for (let i = 0; i < count; i++) {
+        result.current.togglePlayer(`d${i + 1}`);
+      }
+    });
+    return result;
+  }
+
+  it.each([
+    ['texas_scramble', 3, 12],
+    ['ambrose', 3, 12],
+    ['florida_scramble', 4, 16],
+    ['shamble', 3, 12],
+  ] as const)('%s à %i med %i spillere → fire fulle lag, aldri lag 5', (mode, teamSize, count) => {
+    const result = setupDraw(mode, teamSize, count);
+    expect(result.current.canDrawRandomTeams).toBe(true);
+
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+
+    for (const team of TEAM_NUMBERS) {
+      expect(result.current.playersByTeam[team]).toHaveLength(teamSize);
+    }
+    const teams = Object.values(result.current.teamByPlayer);
+    expect(teams).toHaveLength(count);
+    expect(Math.max(...teams)).toBeLessThanOrEqual(4);
+    expect(result.current.playersValidForMode).toBe(true);
+  });
+
+  it('10 spillere à 3 går ikke opp → knappen er av og ingen lag endres', () => {
+    const result = setupDraw('texas_scramble', 3, 10);
+    expect(result.current.canDrawRandomTeams).toBe(false);
+
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+
+    expect(result.current.teamByPlayer).toEqual({});
+    expect(result.current.flightByPlayer).toEqual({});
+  });
+
+  it('12 valgt à 3, så byttet til à 2 → knappen er av, ingen kast og ingen lag 5 eller 6', () => {
+    const result = setupDraw('texas_scramble', 3, 12);
+    act(() => {
+      result.current.handleTeamSizeChange(2);
+    });
+    expect(result.current.canDrawRandomTeams).toBe(false);
+
+    expect(() =>
+      act(() => {
+        result.current.drawRandomTeams();
+      }),
+    ).not.toThrow();
+
+    expect(result.current.teamByPlayer).toEqual({});
+  });
+
+  it('par-stableford med 6 spillere → tre lag à 2', () => {
+    const result = setupDraw('stableford', 2, 6);
+    expect(result.current.isParStableford).toBe(true);
+    expect(result.current.canDrawRandomTeams).toBe(true);
+
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+
+    expect(TEAM_NUMBERS.map((t) => result.current.playersByTeam[t].length)).toEqual([2, 2, 2, 0]);
+    expect(result.current.parStablefordPlayersValid).toBe(true);
+  });
+
+  it('best ball med 8 spillere → fire lag à 2 med flights, som før', () => {
+    const result = setupDraw('best_ball', 2, 8);
+    expect(result.current.canDrawRandomTeams).toBe(true);
+
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+
+    for (const team of TEAM_NUMBERS) {
+      expect(result.current.playersByTeam[team]).toHaveLength(2);
+    }
+    expect(result.current.teamsComplete).toBe(true);
+    expect(result.current.flightsComplete).toBe(true);
   });
 });
 
