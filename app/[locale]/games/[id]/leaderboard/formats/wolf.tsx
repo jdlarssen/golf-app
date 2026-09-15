@@ -56,8 +56,8 @@ export async function renderWolf(opts: {
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
 
   // Per-hull-valg fra wolf_hole_choices. Tag-cachet på `game-${id}`, samme
-  // cache-tag som getGameWithPlayers — setWolfChoice-mutasjons-action revaliderer
-  // den ved hver endring.
+  // cache-tag som getGameWithPlayers — setWolfChoice-mutasjons-action utløper den
+  // med `updateTag` ved hver endring (#2091).
   const wolfChoices = await getWolfChoices(gameId);
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
