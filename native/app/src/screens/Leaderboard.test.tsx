@@ -448,6 +448,63 @@ describe('ResultView', () => {
     expect(screen.queryByTestId('bbb-no-points')).toBeNull();
   });
 
+  // #1892: Hull-kolonnen er «thru»-informasjon under runden og støy på
+  // sluttresultatet når alle spilte like mange. Regelen selv er Type A-dekket i
+  // `lib/leaderboard/holesColumn.test.ts` — disse to svarer bare på om tabellen
+  // faktisk får kolonnen eller ikke.
+  const stablefordResult = (holesPlayed: [number, number]) =>
+    ({
+      kind: 'stableford',
+      variant: 'solo',
+      holes: [],
+      players: [
+        {
+          userId: 'mate',
+          totalPoints: 4,
+          holesPlayed: holesPlayed[0],
+          rank: 1,
+          tiedWith: [],
+        },
+        {
+          userId: 'me',
+          totalPoints: 2,
+          holesPlayed: holesPlayed[1],
+          rank: 2,
+          tiedWith: [],
+        },
+      ],
+    }) as unknown as ModeResult;
+
+  it('dropper Hull-kolonnen på et ferdig spill der alle spilte like mange hull', async () => {
+    await render(
+      <ResultView
+        result={stablefordResult([18, 18])}
+        status="finished"
+        gameId={GAME_ID}
+        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      />,
+    );
+
+    expect(cell('me', 'points')).toBe('2');
+    expect(screen.queryByTestId('leaderboard-table-row-me-holes')).toBeNull();
+    expect(screen.queryByTestId('leaderboard-table-row-mate-holes')).toBeNull();
+  });
+
+  it('beholder Hull-kolonnen på et ferdig spill der én ga seg etter 12', async () => {
+    await render(
+      <ResultView
+        result={stablefordResult([18, 12])}
+        status="finished"
+        gameId={GAME_ID}
+        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      />,
+    );
+
+    // Tabellen bytter ikke form per rad: begge radene får kolonnen.
+    expect(cell('mate', 'holes')).toBe('18');
+    expect(cell('me', 'holes')).toBe('12');
+  });
+
   it('sier rolig fra i stedet for å krasje på en ukjent resultatform', async () => {
     // Eldre app, nyere server: motoren sender en `kind` denne versjonen ikke
     // kjenner. `tsc` fanger den når vi bygger MOT den nye motoren — dette er

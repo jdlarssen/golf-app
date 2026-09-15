@@ -8,6 +8,7 @@
 //
 // Ingen sortering her. Motoren har rangert radene; en `sort` til i render-laget
 // ville vært en andre og konkurrerende regel for hvem som leder.
+import { showHolesColumn } from '../../../../../lib/leaderboard/holesColumn';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
@@ -48,6 +49,12 @@ export const UNKNOWN_FORMAT_RESULT_MESSAGE = 'Appen kjenner ikke dette formatet 
 const RANK: LeaderColumn = { key: 'rank', label: '#', flex: 0.5, numeric: true };
 const PLAYER: LeaderColumn = { key: 'name', label: 'Navn', flex: 3 };
 const TEAM: LeaderColumn = { key: 'team', label: 'Lag', flex: 3 };
+/**
+ * Hull spilt. Under runden er den «thru»-informasjonen og står alltid; på
+ * sluttresultatet tas den bare med når radene er uenige — regelen bor i
+ * `lib/leaderboard/holesColumn.ts` og deles med nettsidens podier (#1892).
+ */
+const HOLES: LeaderColumn = { key: 'holes', label: 'Hull', numeric: true };
 
 export function ResultView({
   result,
@@ -87,28 +94,35 @@ export function ResultView({
         />
       );
 
-    case 'stableford':
-      return result.variant === 'solo' ? (
-        <LeaderTable
-          testID="leaderboard-table"
-          columns={[
-            RANK,
-            PLAYER,
-            { key: 'points', label: 'Poeng', numeric: true },
-            { key: 'holes', label: 'Hull', numeric: true },
-          ]}
-          rows={result.players.map((player) => ({
-            key: player.userId,
-            highlight: player.rank === 1,
-            cells: [
-              player.rank,
-              nameOf(player.userId),
-              player.totalPoints,
-              player.holesPlayed,
-            ],
-          }))}
-        />
-      ) : (
+    case 'stableford': {
+      if (result.variant === 'solo') {
+        const showHoles = showHolesColumn(
+          status,
+          result.players.map((player) => player.holesPlayed),
+        );
+        return (
+          <LeaderTable
+            testID="leaderboard-table"
+            columns={[
+              RANK,
+              PLAYER,
+              { key: 'points', label: 'Poeng', numeric: true },
+              ...(showHoles ? [HOLES] : []),
+            ]}
+            rows={result.players.map((player) => ({
+              key: player.userId,
+              highlight: player.rank === 1,
+              cells: [
+                player.rank,
+                nameOf(player.userId),
+                player.totalPoints,
+                ...(showHoles ? [player.holesPlayed] : []),
+              ],
+            }))}
+          />
+        );
+      }
+      return (
         <LeaderTable
           testID="leaderboard-table"
           columns={[RANK, TEAM, { key: 'points', label: 'Poeng', numeric: true }]}
@@ -123,6 +137,7 @@ export function ResultView({
           }))}
         />
       );
+    }
 
     case 'texas_scramble':
       return (
@@ -170,7 +185,11 @@ export function ResultView({
         />
       );
 
-    case 'shamble':
+    case 'shamble': {
+      const showHoles = showHolesColumn(
+        status,
+        result.teams.map((team) => team.holesCounted),
+      );
       return (
         <LeaderTable
           testID="leaderboard-table"
@@ -178,7 +197,7 @@ export function ResultView({
             RANK,
             TEAM,
             { key: 'total', label: 'Sum', numeric: true },
-            { key: 'holes', label: 'Hull', numeric: true },
+            ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.teams.map((team) => ({
             key: String(team.teamNumber),
@@ -187,13 +206,18 @@ export function ResultView({
               team.rank,
               teamLabel(team.teamNumber, team.members, nameOf),
               team.totalScore,
-              team.holesCounted,
+              ...(showHoles ? [team.holesCounted] : []),
             ],
           }))}
         />
       );
+    }
 
-    case 'nines':
+    case 'nines': {
+      const showHoles = showHolesColumn(
+        status,
+        result.players.map((player) => player.holesScored),
+      );
       return (
         <LeaderTable
           testID="leaderboard-table"
@@ -201,7 +225,7 @@ export function ResultView({
             RANK,
             PLAYER,
             { key: 'points', label: 'Poeng', numeric: true },
-            { key: 'holes', label: 'Hull', numeric: true },
+            ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.players.map((player) => ({
             key: player.userId,
@@ -210,11 +234,12 @@ export function ResultView({
               player.rank,
               nameOf(player.userId),
               player.totalPoints,
-              player.holesScored,
+              ...(showHoles ? [player.holesScored] : []),
             ],
           }))}
         />
       );
+    }
 
     case 'round_robin':
       return (
