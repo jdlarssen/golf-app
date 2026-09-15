@@ -1109,6 +1109,13 @@ export default async function GameHomePage({
       : null;
   }
 
+  // #1880: in matchplay `team_number` is a side in the duel, not a team, and
+  // the flight is always 1. A side outside {1, 2} is stale data — show nothing
+  // rather than falling back to «Lag».
+  const isMatchplay = isMatchplayMode(game.game_mode);
+  const matchplaySide =
+    me.team_number === 1 || me.team_number === 2 ? me.team_number : null;
+
   return (
     <AppShell>
       <TopBar
@@ -1318,17 +1325,28 @@ export default async function GameHomePage({
                     {` · ${t('courseHandicap')} ${displayedCourseHandicap ?? '—'}`}
                   </p>
                 )}
-                {!isSoloFormat(game.game_mode, modeTeamSize) && (
-                  <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-3 pt-3 border-t border-border">
-                    <dt className="text-muted">{t('teamLabel')}</dt>
-                    <dd className="text-text text-right">
-                      {t('teamValue', { number: me.team_number })}
-                    </dd>
-                    <dt className="text-muted">{t('flightValueLabel')}</dt>
-                    <dd className="text-text text-right">
-                      {t('flightValue', { number: me.flight_number })}
-                    </dd>
-                  </dl>
+                {isMatchplay ? (
+                  matchplaySide != null && (
+                    <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-3 pt-3 border-t border-border">
+                      <dt className="text-muted">{t('sideLabel')}</dt>
+                      <dd className="text-text text-right">
+                        {t('sideValue', { number: matchplaySide })}
+                      </dd>
+                    </dl>
+                  )
+                ) : (
+                  !isSoloFormat(game.game_mode, modeTeamSize) && (
+                    <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-3 pt-3 border-t border-border">
+                      <dt className="text-muted">{t('teamLabel')}</dt>
+                      <dd className="text-text text-right">
+                        {t('teamValue', { number: me.team_number })}
+                      </dd>
+                      <dt className="text-muted">{t('flightValueLabel')}</dt>
+                      <dd className="text-text text-right">
+                        {t('flightValue', { number: me.flight_number })}
+                      </dd>
+                    </dl>
+                  )
                 )}
               </Card>
             )}
@@ -1394,7 +1412,7 @@ export default async function GameHomePage({
             {isDraft ? (
               <Card>
                 <Kicker tone="muted" className="mb-2">
-                  {t('draftTeamsLabel')}
+                  {t(isMatchplay ? 'draftSidesLabel' : 'draftTeamsLabel')}
                 </Kicker>
                 <Suspense
                   fallback={
@@ -1403,7 +1421,11 @@ export default async function GameHomePage({
                     </p>
                   }
                 >
-                  <DraftTeamsOverview gameId={id} currentUserId={userId} />
+                  <DraftTeamsOverview
+                    gameId={id}
+                    currentUserId={userId}
+                    isMatchplay={isMatchplay}
+                  />
                 </Suspense>
               </Card>
             ) : (
@@ -1432,14 +1454,27 @@ export default async function GameHomePage({
                   </>
                 ) : (
                   <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
-                    <dt className="text-muted">{t('teamLabel')}</dt>
-                    <dd className="text-text text-right">
-                      {t('teamValue', { number: me.team_number })}
-                    </dd>
-                    <dt className="text-muted">{t('flightValueLabel')}</dt>
-                    <dd className="text-text text-right">
-                      {t('flightValue', { number: me.flight_number })}
-                    </dd>
+                    {isMatchplay ? (
+                      matchplaySide != null && (
+                        <>
+                          <dt className="text-muted">{t('sideLabel')}</dt>
+                          <dd className="text-text text-right">
+                            {t('sideValue', { number: matchplaySide })}
+                          </dd>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <dt className="text-muted">{t('teamLabel')}</dt>
+                        <dd className="text-text text-right">
+                          {t('teamValue', { number: me.team_number })}
+                        </dd>
+                        <dt className="text-muted">{t('flightValueLabel')}</dt>
+                        <dd className="text-text text-right">
+                          {t('flightValue', { number: me.flight_number })}
+                        </dd>
+                      </>
+                    )}
                     <dt className="text-muted">{t('courseHandicap')}</dt>
                     <dd className="score-num text-text text-right">
                       {displayedCourseHandicap ?? '—'}
