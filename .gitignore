@@ -48,6 +48,8 @@ next-env.d.ts
 .claude/worktrees/
 # typo-path some sessions still write worktrees under — keep out of git (#1203)
 .claire/worktrees/
+# orchestrator ledger and caches (floka-marketplace/orchestrator) — local state, never committed
+.claude/orchestrator/
 
 # guard-hooks (#1074): lokal vaktlogg + engangs prod-godkjenningssentinel
 .claude/logs/

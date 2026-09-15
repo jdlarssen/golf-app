@@ -1,0 +1,25 @@
+{
+  "max_parallel": 2,
+  "bootstrap": "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && npm install --no-audit --no-fund",
+  "env_files": [".env.local", ".env.staging.local"],
+  "hooks_path": ".githooks",
+  "contract_marker": "Forge-kontrakt tilgjengelig",
+  "milestone_order": [
+    "Tier 1 — Onboarding & førsteinntrykk",
+    "Runde 3 — Neste (konvertering, penger, sesongslutt)",
+    "Selvkjørende loops",
+    "Native app (iOS + Android)",
+    "Backlog — uplanlagt / scale-triggered"
+  ],
+  "worker_rules": [
+    "Node 22 kreves: `source ~/.nvm/nvm.sh && nvm use 22` før npm-kommandoer.",
+    "Alle commits har «Refs #{{ISSUE}}» i body (commit-msg-hooken krever det).",
+    "Bruker-synlig endring (feat/fix/perf): legg en notatfil i .changes/ etter .changes/README.md, og kjør skillet staging-verify før PR-en settes klar. Aldri bump package.json eller rediger CHANGELOG.md.",
+    "Ny norsk bruker-copy: kjør skillet humanizer:humanizer før commit.",
+    "Aldri skriv til prod-databasen; all testing mot torny-staging (se CLAUDE.md «Testing — staging, aldri prod»).",
+    "PR-body: «Closes #{{ISSUE}}», en kort Fordeler/ulemper-blokk, og `## Alternativer (produktvalg)` når det finnes et reelt produktvalg."
+  ],
+  "routing": {
+    "heavyLabels": ["area:scoring", "area:auth", "area:offline-sync", "area:tee-boxes", "area:courses"]
+  }
+}
