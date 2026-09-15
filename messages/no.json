@@ -289,6 +289,7 @@
       "backLabel": "Tilbake til profil",
       "blockedBanner": "Du arrangerer noe som ikke er avsluttet ennå. Runder avslutter du i appen eller på nettsiden, cup og liga på nettsiden. Etterpå kan du slette kontoen.",
       "adminBanner": "Admin-kontoen kan ikke slettes herfra.",
+      "soleClubOwnerBanner": "Du er eneste eier av en klubb som har andre medlemmer. Gjør et annet medlem til eier på klubbsiden. Etterpå kan du slette kontoen.",
       "blockedBackLink": "Tilbake til profil",
       "deletedHeading": "Dette vil bli slettet",
       "bullet1": "Brukerprofilen din (navn, kallenavn, handicap)",
@@ -304,6 +305,7 @@
       "errors": {
         "active_games": "Du arrangerer fortsatt noe som ikke er avsluttet. Avslutt det, så kan du slette kontoen.",
         "admin_account": "Admin-kontoen kan ikke slettes herfra.",
+        "sole_club_owner": "Du er fortsatt eneste eier av en klubb. Gjør et annet medlem til eier, så kan du slette kontoen.",
         "delete_failed": "Noe gikk galt ved sletting. Prøv igjen, eller ta kontakt med administrator."
       }
     },
@@ -3826,6 +3828,7 @@
           "not_admin": "Du har ikke tilgang.",
           "self_delete_forbidden": "Du kan ikke slette din egen konto.",
           "target_active": "Spilleren arrangerer noe som ikke er avsluttet ennå. Avslutt det først, så kan du slette kontoen.",
+          "target_sole_club_owner": "Spilleren er eneste eier av en klubb som har andre medlemmer. Gjør et annet medlem til eier i klubben først, så kan du slette kontoen.",
           "auth_delete_failed": "Klarte ikke slette kontoen. Prøv igjen.",
           "email_invalid": "Ugyldig e-postadresse.",
           "email_in_use": "E-postadressen er allerede registrert.",

@@ -45,6 +45,11 @@ export async function deleteUser(formData: FormData) {
   if (blockReason === 'active_engagements') {
     redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
   }
+  // #1910: også admin må ordne eierskapet i klubben først — en omgåelse her
+  // ville gjenskapt den eierløse klubben.
+  if (blockReason === 'sole_club_owner') {
+    redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
+  }
 
   // Aldri spilt → hard delete (kaskaden rydder alt); har historikk →
   // anonymisering via anonymize_user()-RPC + GoTrue soft delete (#1012).

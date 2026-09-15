@@ -30,6 +30,11 @@ export async function deleteOwnAccount() {
   if (blockReason === 'active_engagements') {
     redirect({ href: '/profile/slett-konto?error=active_games', locale });
   }
+  // #1910: uten denne grenen slipper en klubbeier som aldri har spilt rett
+  // gjennom på hard-delete-stien, der anonymize_user-vakta aldri er i spill.
+  if (blockReason === 'sole_club_owner') {
+    redirect({ href: '/profile/slett-konto?error=sole_club_owner', locale });
+  }
 
   // Aldri spilt → hard delete; ellers anonymisering (#1012): spillhistorikken
   // beholdes som «Slettet bruker», auth-raden soft-slettes (e-post frigjøres,

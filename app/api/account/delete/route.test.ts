@@ -168,7 +168,7 @@ describe('POST /api/account/delete — sletting', () => {
     expect(deleteCalls).toEqual([[TOKEN_USER_ID, '[api/account/delete]']]);
   });
 
-  it.each(['admin_account', 'active_engagements'] as const)(
+  it.each(['admin_account', 'active_engagements', 'sole_club_owner'] as const)(
     'blokkert (%s): 403 med hjelperens egen kode, og ingen sletting',
     async (reason) => {
       blockReasonMock.mockImplementation(async (userId: string) => {
@@ -215,7 +215,7 @@ describe('POST /api/account/delete — sletting', () => {
 });
 
 describe('GET /api/account/delete', () => {
-  it.each([null, 'admin_account', 'active_engagements'] as const)(
+  it.each([null, 'admin_account', 'active_engagements', 'sole_club_owner'] as const)(
     'rapporterer blokk-status %s for brukeren i tokenet',
     async (reason) => {
       blockReasonMock.mockImplementation(async (userId: string) => {
