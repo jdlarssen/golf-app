@@ -1,0 +1,100 @@
+# Tavle-arkiv (#1996): månedsarkivering av de levende tavlene #1110 og #1208.
+# Kopierer forrige måneds kommentarer verbatim til docs/loops/logg/ via en
+# docs-PR, og sletter dem fra tavla FØRST når kopien ligger på main og body-en er
+# byte-identisk (eierbeslutning 2026-09-06). Deterministisk, ingen språkmodell.
+#
+# Hvorfor cron 1.–3. og ikke bare den 1.: slettingen skal skje etter at
+# arkiv-PR-en er merget. Den 1. åpnes PR-en (kortet merger den), den 2. slettes
+# kommentarene, og den 3. tar det som ble igjen. En `pull_request: closed`-
+# trigger ville aldri fyrt: kortet merger med github.token, og handlinger med
+# github.token starter ikke andre workflows.
+#
+# Ops-forutsetning: secreten PR_AUTHOR_PAT (#1701), som for dok-skjema.
+# Oppskrift: docs/loops/discord-pr-kort.md. Protokoll: docs/loops/logg/README.md.
+name: Tavle-arkiv
+
+on:
+  schedule:
+    - cron: '10 4 1-3 * *' # 1.–3. i måneden, 04:10 UTC
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Måned å arkivere/slette (YYYY-MM). Tom = forrige måned (slett: de to nyeste arkivfilene)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Vis antall og filinnhold uten å skrive eller slette noe'
+        required: false
+        default: true
+        type: boolean
+      phase:
+        description: 'Hvilken fase som kjøres'
+        required: false
+        default: both
+        type: choice
+        options: [both, archive, delete]
+
+permissions:
+  contents: write # branch + push
+  issues: write # DELETE av tavle-kommentarer + varsel-issues
+  pull-requests: write # gh pr list/create
+
+# To overlappende kjøringer kunne begge åpnet PR eller slettet samme kommentarer.
+concurrency:
+  group: tavle-arkiv
+  cancel-in-progress: false
+
+jobs:
+  arkiver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Tynn runner (ingen npm ci): global fetch + rene lib-importer, som
+      # sweep-natt-drafts.ts. Inputs går via env, aldri rett inn i skallet.
+      - name: Slett arkiverte kommentarer og arkiver forrige måned
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          # Kun til `gh pr create` (#1701) — sletting, issues og push går på github.token.
+          PR_AUTHOR_PAT: ${{ secrets.PR_AUTHOR_PAT }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PHASE: ${{ inputs.phase || 'both' }}
+          MONTH: ${{ inputs.month }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: bash .github/scripts/tavle-arkiv.sh
+
+      # Rød kjøring skal aldri dø stille. Dette steget er det eneste hjemmet for
+      # varsel-issuet i denne rutina — også for slette-avvik (en kommentar som
+      # ikke stemmer med kopien blir stående, og kjøringen blir rød).
+      - name: Open alert issue on failure
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          TITLE="CI-vakt: tavle-arkiv-workflowen rød"
+          bash .github/scripts/discord-notify.sh "🔴 **Tavle-arkiv rød** — $RUN_URL"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Åpent varsel-issue finnes allerede — hopper over."
+            exit 0
+          fi
+          BODY=$(printf 'Tavle-arkiv-workflowen feilet. Enten stoppet kjøringen, eller slette-porten fant en kommentar som ikke stemmer med arkivfila (den står da urørt på tavla). Avvikene står i loggen, med prefikset `[archive-boards] AVVIK`.\n\nKjøring: %s\n\nProtokoll: `docs/loops/logg/README.md`.' "$RUN_URL")
+          gh api "repos/$GITHUB_REPOSITORY/issues" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            -f "labels[]=bug" \
+            -f "labels[]=area:devx" \
+            -F milestone=9
