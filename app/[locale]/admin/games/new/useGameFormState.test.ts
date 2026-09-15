@@ -355,8 +355,12 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
     expect(result.current.flightByPlayer).toEqual({});
   });
 
-  it('12 valgt à 3, så byttet til à 2 → knappen er av, ingen kast og ingen lag 5 eller 6', () => {
+  it('12 trukket à 3, så byttet til à 2 → knappen er av, ingen kast og lagene står', () => {
     const result = setupDraw('texas_scramble', 3, 12);
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+    const drawnAtThree = { ...result.current.teamByPlayer };
     act(() => {
       result.current.handleTeamSizeChange(2);
     });
@@ -368,7 +372,7 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
       }),
     ).not.toThrow();
 
-    expect(result.current.teamByPlayer).toEqual({});
+    expect(result.current.teamByPlayer).toEqual(drawnAtThree);
   });
 
   it('par-stableford med 6 spillere → tre lag à 2', () => {
