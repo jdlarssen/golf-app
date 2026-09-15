@@ -650,14 +650,20 @@ export async function unlockCupLineup(
  * #1901 — the organiser's "Try again" on a session stuck after a failed reveal.
  *
  * The reveal only fires inside `submitCupLineup`, at the moment the second
- * lineup lands. When it fails it rolls back `revealed_at` but leaves both
- * submission stamps, and nothing calls it again. This runs the same reveal
- * once more without touching the lineups, so a captain does not have to pick
- * the whole team again after what may have been a one-second blip.
+ * lineup lands, and nothing calls it again when it fails. A failure is either
+ * rejected before the claim (the teams changed, the plan, tee or cup is no
+ * longer usable, a read or the claim write failed), so `revealed_at` was never
+ * set, or rolled back after it when the match insert fails. Either way
+ * `revealed_at` ends up null with both submission stamps in place. This runs
+ * the same reveal once more without touching the lineups, so a captain does
+ * not have to pick the whole team again after what may have been a one-second
+ * blip.
  *
  * No new locking and no new compensation: `revealCupLineupSession` claims
- * `revealed_at` conditionally and undoes its own claim, so a retry is safe even
- * when it races a first reveal that is still running.
+ * `revealed_at` only while it is still null, so only one caller reveals and a
+ * retry that races a first reveal still running cannot create a second batch
+ * of matches. A failed insert after the claim is undone by its own
+ * compensation.
  */
 export async function retryCupLineupReveal(
   formData: FormData,
@@ -668,7 +674,7 @@ export async function retryCupLineupReveal(
 
   const access = await loadCupLineupAccess(tournamentId);
   // Organiser-only, like unlocking: a captain must not be able to set off the
-  // reveal (and the notifications to every participant) on her own.
+  // reveal (and the notifications to every participant) on their own.
   if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
 
   const admin = getAdminClient();
