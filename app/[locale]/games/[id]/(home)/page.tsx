@@ -1329,7 +1329,7 @@ export default async function GameHomePage({
                   matchplaySide != null && (
                     <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-3 pt-3 border-t border-border">
                       <dt className="text-muted">{t('sideLabel')}</dt>
-                      <dd className="text-text text-right">
+                      <dd className="text-text text-right" data-testid="game-home-side-value">
                         {t('sideValue', { number: matchplaySide })}
                       </dd>
                     </dl>
@@ -1338,11 +1338,11 @@ export default async function GameHomePage({
                   !isSoloFormat(game.game_mode, modeTeamSize) && (
                     <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-3 pt-3 border-t border-border">
                       <dt className="text-muted">{t('teamLabel')}</dt>
-                      <dd className="text-text text-right">
+                      <dd className="text-text text-right" data-testid="game-home-team-value">
                         {t('teamValue', { number: me.team_number })}
                       </dd>
                       <dt className="text-muted">{t('flightValueLabel')}</dt>
-                      <dd className="text-text text-right">
+                      <dd className="text-text text-right" data-testid="game-home-flight-value">
                         {t('flightValue', { number: me.flight_number })}
                       </dd>
                     </dl>
@@ -1458,7 +1458,7 @@ export default async function GameHomePage({
                       matchplaySide != null && (
                         <>
                           <dt className="text-muted">{t('sideLabel')}</dt>
-                          <dd className="text-text text-right">
+                          <dd className="text-text text-right" data-testid="game-home-side-value">
                             {t('sideValue', { number: matchplaySide })}
                           </dd>
                         </>
@@ -1466,11 +1466,11 @@ export default async function GameHomePage({
                     ) : (
                       <>
                         <dt className="text-muted">{t('teamLabel')}</dt>
-                        <dd className="text-text text-right">
+                        <dd className="text-text text-right" data-testid="game-home-team-value">
                           {t('teamValue', { number: me.team_number })}
                         </dd>
                         <dt className="text-muted">{t('flightValueLabel')}</dt>
-                        <dd className="text-text text-right">
+                        <dd className="text-text text-right" data-testid="game-home-flight-value">
                           {t('flightValue', { number: me.flight_number })}
                         </dd>
                       </>
