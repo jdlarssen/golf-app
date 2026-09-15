@@ -97,11 +97,18 @@ bypasses every TS guard — only RLS + the guard trigger stop it.
 | Actor | Operation | Policy |
 |-------|-----------|--------|
 | creator | INSERT / UPDATE / DELETE | authenticated |
-| self (open) | INSERT (register) | public |
+| global admin | INSERT | public — `game_players admin insert` (0177; was the admin branch of the removed `self register open`) |
 | self (pre-active) | DELETE (withdraw) | public |
 | self | UPDATE (mark accepted) | authenticated |
 | self | UPDATE (submit scorecard) | public |
 | peer (flightmate) | UPDATE (approve scorecard) | authenticated — added migration 0106 (#704) |
+
+There is **no self-INSERT policy** since migration 0177 (#2062). Open self-registration writes
+with the service role: capped formats go through the `SECURITY DEFINER` RPC
+**`claim_open_registration_seat`** (service_role only), which locks the `games` row, counts held seats
+(1 per player outside a team, `max(rows, team size)` per team, withdrawn rows excluded), refuses past
+the cap passed in from TypeScript, picks the lowest free team number in `1..MAX_TEAMS` and inserts the
+row — so concurrent registrations cannot overfill a game or share a team number (#2060).
 
 **`scores`:** INSERT / UPDATE / SELECT by flight (public).
 

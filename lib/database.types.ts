@@ -2246,6 +2246,19 @@ export type Database = {
         Args: { p_token: string; p_user_agent: string }
         Returns: undefined
       }
+      claim_open_registration_seat: {
+        Args: {
+          p_accepted_at: string
+          p_cap?: number
+          p_game_id: string
+          p_max_teams: number
+          p_new_team_size?: number
+          p_seat_team_size: number
+          p_signup_source?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       claim_push_subscription: {
         Args: {
           p_auth: string
