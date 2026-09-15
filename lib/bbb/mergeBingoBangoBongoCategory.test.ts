@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
 import {
+  bingoBangoBongoCategoryColumn,
   mergeCategory,
   type BingoBangoBongoCategoryKey,
 } from './mergeBingoBangoBongoCategory';
@@ -66,5 +67,15 @@ describe('mergeCategory', () => {
 
     expect(prev).toEqual(before);
     expect(next[0]).not.toBe(prev[0]);
+  });
+});
+
+describe('bingoBangoBongoCategoryColumn', () => {
+  // #1950: a key outside the type would otherwise fall out of the switch as
+  // undefined, and a spread of undefined is a payload without any category.
+  it('kaster på en nøkkel utenfor typen i stedet for å gi et fragment uten kategori', () => {
+    expect(() =>
+      bingoBangoBongoCategoryColumn('wolfUserId' as unknown as BingoBangoBongoCategoryKey, 'u-1'),
+    ).toThrow();
   });
 });
