@@ -1,5 +1,7 @@
-// Lag-format-grensene for scramble-familien (#2009) — ett hjem for «hvor mange
-// spillere og hvor mange lag kan et scramble-spill ha».
+// Team-format limits for the six team formats outside the matchplay family —
+// the scramble family (Texas, Ambrose, Florida, shamble) and the pair formats
+// best ball and patsome (#2009, #2011): one home for "how many players and how
+// many teams can this game have".
 //
 // Grensene bodde tidligere fire steder som ikke visste om hverandre: en
 // hardkodet `i < 8`-løkke per validator i `gamePayload.ts`, antalls-predikatet i
@@ -8,6 +10,11 @@
 // De divergerte: shamble à 3 viste fire lag i rutenettet mens validatoren bare
 // leste åtte spillere, så admin kunne fylle 12 plasser og få `team_balance` i
 // retur (#2009 sidefunn 1). Alle fire leser herfra nå — AGENTS.md trap 4.
+//
+// #2011 added readers outside the wizard, so open self-registration stops at
+// the same cap: `registerForOpenGame` through `registrationPlayerCap`
+// (`lib/wizard/fitsPlayerCount.ts`), and `submitTeamRegistration` through
+// `teamModePlayerCap` and `MAX_TEAMS`.
 //
 // Taket er `MAX_TEAMS × 4` fordi lag-rutenettet har fire lag og største
 // lagstørrelse er fire. Utvides rutenettet, endres `MAX_TEAMS` her og

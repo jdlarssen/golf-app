@@ -232,8 +232,12 @@ export async function registerForOpenGame(
   // Player cap before INSERT: the exact-count formats (#661 — Wolf 3–5, Nines 3,
   // RoundRobin 4, AceyDeucey 4, Skins/Nassau/BBB 2–16) and the team formats'
   // grid cap (#2011 — MAX_TEAMS × team size). The matchplay family has no cap
-  // here; side capacity has its own check below. Fail-open on a DB error (let
-  // the INSERT go ahead; `buildInsertPayload` is the hard gate at publish).
+  // here; side capacity has its own check below. Fail-open on a DB error: the
+  // INSERT goes ahead. The later backstop is buildGameInsertPayload when the
+  // organiser saves the game, and only for formats whose validator returns
+  // too_many_players_for_mode (the scramble family and the exact-count solo
+  // formats). Best ball and patsome have none: their validators read eight
+  // player slots and silently drop the rest.
   const admin = getAdminClient();
   const cap = registrationPlayerCap(
     game.game_mode,

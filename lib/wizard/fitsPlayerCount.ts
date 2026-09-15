@@ -105,7 +105,7 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
  *
  * Brukes av selv-påmeldings-action-en (`registerForOpenGame`) for å avvise
  * en N+1-spiller FØR INSERT, slik at publisering aldri blokkeres av
- * `too_many_players_for_mode` fra `buildInsertPayload`.
+ * `too_many_players_for_mode` fra `buildGameInsertPayload`.
  * (Via `registrationPlayerCap`, which adds the team-format cap — #2011.)
  *
  * Returnerer:
@@ -142,9 +142,13 @@ export function soloPlayerCap(gameMode: GameMode): number | null {
 }
 
 /**
- * The player cap open self-registration enforces: the solo formats' fixed
+ * The player cap `registerForOpenGame` enforces: the solo formats' fixed
  * ceiling (#661) OR the team formats' grid cap (#2011). `null` = no cap on this
- * axis (the matchplay family, where side capacity applies instead).
+ * axis (unbounded formats; the matchplay family uses side capacity instead).
+ *
+ * Not the only reader of the team cap: `submitTeamRegistration` calls
+ * `teamModePlayerCap` directly, because it counts reserved team seats rather
+ * than rows.
  */
 export function registrationPlayerCap(
   gameMode: GameMode,
