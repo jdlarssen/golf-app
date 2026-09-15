@@ -46,6 +46,7 @@ import { approveScorecard } from '../data/playerActions';
 import {
   fetchReminderPreview,
   sendReminder,
+  type UnremindableCounts,
   type ReminderPreview,
 } from '../data/remind';
 import { describeFailure } from '../lib/actionFeedback';
@@ -65,7 +66,7 @@ import {
   REMIND_DONE_NOTE,
   remindLabel,
   slotLabel,
-  stillPlayingNote,
+  unremindableNotes,
 } from '../lib/endGameCopy';
 import {
   buildFinishPlan,
@@ -359,7 +360,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
               testID="end-game-withdraw-self-link"
             />
           ) : null}
-          <ReminderPanel gameId={gameId} missingCount={plan.missing.length} />
+          <ReminderPanel gameId={gameId} />
         </>
       ) : plan.unapproved.length === 0 ? (
         <Text style={ui.muted} testID="end-game-all-ready">
@@ -424,24 +425,17 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
  * ville betydd at GET-en gikk av gårde også for runder der alle har levert,
  * eller at hooks-rekkefølgen i skjermen ble avhengig av bundelen.
  *
- * **Tallet kommer fra serveren, aldri fra lista på skjermen.** `missingCount`
- * er «mangler kort», mens `targets` er «ferdig UTEN å ha levert» — bare den
- * siste kan purres (`selectDeliveryReminderTargets`). Regnestykket for hvem
- * bor på serveren; her regnes bare differansen, for å kunne si hvorfor de to
- * tallene er ulike.
- *
- * @param missingCount hvor mange rader «Disse mangler kort» viser.
+ * **Tallene kommer fra serveren, aldri fra lista på skjermen.** Lista er
+ * «mangler kort», mens `targets` er «ferdig UTEN å ha levert» — bare den
+ * siste kan purres (`selectDeliveryReminderTargets`). Hvorfor resten ikke kan
+ * purres, teller serveren også, per grunn (#1933). Skjermen regnet før
+ * differansen selv og kalte alle «ikke ferdig», også en gjest som var det.
  */
-function ReminderPanel({
-  gameId,
-  missingCount,
-}: {
-  gameId: string;
-  missingCount: number;
-}) {
+function ReminderPanel({ gameId }: { gameId: string }) {
   const { ui } = useTheme();
   const [preview, setPreview] = useState<{
     targets: number;
+    unremindable: UnremindableCounts | null;
     lastRemindedAt: string | null;
   } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -457,7 +451,11 @@ function ReminderPanel({
    */
   const applyPreview = useCallback((result: ReminderPreview) => {
     if (result.ok) {
-      setPreview({ targets: result.targets, lastRemindedAt: result.lastRemindedAt });
+      setPreview({
+        targets: result.targets,
+        unremindable: result.unremindable,
+        lastRemindedAt: result.lastRemindedAt,
+      });
       setProblem(null);
       return;
     }
@@ -507,16 +505,16 @@ function ReminderPanel({
     }
   }, [applyPreview, gameId]);
 
-  // Negativ differanse er mulig: serveren teller på nytt, og noen kan ha
-  // levert siden bundelen ble hentet. Da er «−1 av dem …» tull, ikke data.
-  const stillPlaying = preview ? Math.max(0, missingCount - preview.targets) : 0;
+  // Uten grunn-tallene (`null`) står ingen setning: å gjette en grunn var
+  // nettopp feilen (#1933).
+  const notes = preview?.unremindable ? unremindableNotes(preview.unremindable) : [];
   const lastReminded = preview ? formatClock(preview.lastRemindedAt) : null;
 
   return (
     <View style={styles.reminder} testID="end-game-reminder">
-      {stillPlaying > 0 ? (
-        <Text style={ui.muted} testID="end-game-reminder-still-playing">
-          {stillPlayingNote(stillPlaying)}
+      {notes.length > 0 ? (
+        <Text style={ui.muted} testID="end-game-reminder-unremindable">
+          {notes.join(' ')}
         </Text>
       ) : null}
 

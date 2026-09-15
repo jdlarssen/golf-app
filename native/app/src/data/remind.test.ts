@@ -79,13 +79,33 @@ describe('purring', () => {
   });
 
   describe('fetchReminderPreview', () => {
-    it('leser antallet og «sist purret» fra ruta', async () => {
-      respondWith(200, { targets: 2, lastRemindedAt: '2026-09-02T10:15:00.000Z' });
+    it('leser antallet, grunn-tallene og «sist purret» fra ruta', async () => {
+      respondWith(200, {
+        targets: 2,
+        lastRemindedAt: '2026-09-02T10:15:00.000Z',
+        unfinished: 1,
+        guests: 1,
+        splitDay: 0,
+      });
 
       expect(await remind().fetchReminderPreview(GAME_ID)).toEqual({
         ok: true,
         targets: 2,
+        unremindable: { unfinished: 1, guests: 1, splitDay: 0 },
         lastRemindedAt: '2026-09-02T10:15:00.000Z',
+      });
+    });
+
+    it('#1933: uleselige grunn-tall blir null, ikke en gjettet grunn', async () => {
+      // Knappen står seg på `targets` alene; setningen under den skal heller
+      // tie enn å påstå noe om hvorfor resten ikke kan purres.
+      respondWith(200, { targets: 1, lastRemindedAt: null, unfinished: 2, guests: 'en' });
+
+      expect(await remind().fetchReminderPreview(GAME_ID)).toEqual({
+        ok: true,
+        targets: 1,
+        unremindable: null,
+        lastRemindedAt: null,
       });
     });
 
@@ -115,6 +135,7 @@ describe('purring', () => {
       expect(await remind().fetchReminderPreview(GAME_ID)).toEqual({
         ok: true,
         targets: 0,
+        unremindable: null,
         lastRemindedAt: null,
       });
     });
@@ -125,6 +146,7 @@ describe('purring', () => {
       expect(await remind().fetchReminderPreview(GAME_ID)).toEqual({
         ok: true,
         targets: 1,
+        unremindable: null,
         lastRemindedAt: null,
       });
     });

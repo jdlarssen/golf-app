@@ -14,7 +14,8 @@
 // **Wire-kontrakten er frosset** og står i ruta
 // (`app/api/games/[id]/remind/route.ts`). Denne fila er den andre halvdelen av
 // den; endres den ene, endres den andre i samme PR:
-//   GET  200 { targets: number, lastRemindedAt: string | null }
+//   GET  200 { targets: number, lastRemindedAt: string | null,
+//              unfinished: number, guests: number, splitDay: number }
 //   POST 200 { reminded: number }
 //   401 unauthorized · 403 forbidden · 404 not_found · 409 not_active
 //   500 remind_failed
@@ -45,18 +46,35 @@ export type ReminderFailure =
   | 'remind_failed';
 
 /**
+ * #1933: de som mangler kort og som purringen IKKE treffer, per grunn. Hvem
+ * som havner i hvilken bøtte avgjøres på serveren (`countUnremindable`).
+ */
+export type UnremindableCounts = {
+  unfinished: number;
+  guests: number;
+  splitDay: number;
+};
+
+/**
  * Hvor mange purringen ville truffet, og når noen sist fikk en.
  *
  * `targets` er de som er FERDIGE uten å ha levert — ikke alle som mangler kort.
- * Differansen er de som fortsatt spiller, og dem hjelper det ikke å purre på;
- * skjermen sier det med en setning i stedet for en knapp.
+ * `unremindable` er resten, delt på grunn: midt i runden, gjest, eller delt
+ * cup-dag. Skjermen sier det med én setning per grunn i stedet for en knapp.
+ * `null` når svaret mangler tallene — da sier skjermen ingenting heller enn å
+ * gjette på en grunn (#1933: gjetningen var at alle «ikke har ført ferdig»).
  *
  * `lastRemindedAt` er `max(deliver_reminder_sent_at)` over spillet, altså også
  * auto-purringens stempel. Det ER «sist noen fikk purring», og det er det
  * spørsmålet arrangøren stiller før hen trykker igjen.
  */
 export type ReminderPreview =
-  | { ok: true; targets: number; lastRemindedAt: string | null }
+  | {
+      ok: true;
+      targets: number;
+      unremindable: UnremindableCounts | null;
+      lastRemindedAt: string | null;
+    }
   | { ok: false; reason: ReminderFailure };
 
 export type ReminderResult =
@@ -94,6 +112,17 @@ function readCount(value: unknown): number | undefined {
     : undefined;
 }
 
+/** Alle tre grunn-tallene, eller `null` når ett av dem er uleselig. */
+function readUnremindable(body: Record<string, unknown>): UnremindableCounts | null {
+  const unfinished = readCount(body.unfinished);
+  const guests = readCount(body.guests);
+  const splitDay = readCount(body.splitDay);
+  if (unfinished === undefined || guests === undefined || splitDay === undefined) {
+    return null;
+  }
+  return { unfinished, guests, splitDay };
+}
+
 /** Tidsstempelet som streng, eller `null` for både `null` og alt uleselig. */
 function readTimestamp(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
@@ -121,6 +150,7 @@ export async function fetchReminderPreview(gameId: string): Promise<ReminderPrev
     return {
       ok: true,
       targets,
+      unremindable: readUnremindable(call.body),
       lastRemindedAt: readTimestamp(call.body.lastRemindedAt),
     };
   }
