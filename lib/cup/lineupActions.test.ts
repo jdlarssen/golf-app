@@ -898,10 +898,29 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
         .map((c) => c.args[0]);
     }
 
-    it('a captain cannot retry, and nothing is written', async () => {
-      adminMock = buildSupabaseMock(accessReads());
+    it.each([
+      { who: 'a captain', userId: 'cap1', reads: accessReads },
+      {
+        who: 'a cup participant who is not a captain',
+        userId: 'pl',
+        reads: accessReads,
+      },
+      // Logged out, loadCupLineupAccess skips the users read.
+      {
+        who: 'a logged-out visitor',
+        userId: null,
+        reads: () => [CUP, PARTICIPANTS],
+      },
+    ])('$who cannot retry, and nothing is written', async ({ userId, reads }) => {
+      adminMock = buildSupabaseMock(reads());
       supabaseMock = buildSupabaseMock([]);
-      setUser('cap1');
+      if (userId) {
+        setUser(userId);
+      } else {
+        (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+          data: { user: null },
+        });
+      }
 
       const { retryCupLineupReveal } = await import('./lineupActions');
       expect(await retryCupLineupReveal(retryForm())).toEqual({
@@ -925,13 +944,19 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       expect(await retryCupLineupReveal(retryForm())).toEqual({
         error: 'not_found',
       });
-      // The mock does not filter, so assert the filter itself: the reveal's
-      // own session read has no cup filter, which makes this the only guard.
-      expect(adminMock.__fromCalls).toContainEqual({
-        table: 'cup_lineup_sessions',
-        method: 'eq',
-        args: ['tournament_id', 'cup-1'],
-      });
+      // The mock does not filter, so assert the filters themselves: the
+      // reveal's own session read has no cup filter, which makes this pre-read
+      // the only guard, and it must pin both the session and the cup.
+      expect(
+        adminMock.__fromCalls
+          .filter((c) => c.table === 'cup_lineup_sessions')
+          .map((c) => [c.method, ...c.args]),
+      ).toEqual([
+        ['select', 'revealed_at, team_1_submitted_at, team_2_submitted_at'],
+        ['eq', 'id', 'sess-1'],
+        ['eq', 'tournament_id', 'cup-1'],
+        ['maybeSingle'],
+      ]);
       expect(writeCalls()).toHaveLength(0);
     });
 
@@ -986,6 +1011,8 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       expect(await retryCupLineupReveal(retryForm())).toEqual({ error: '' });
       expect(insertMatchesMock).toHaveBeenCalledTimes(1);
       expect(sessionUpdates()).toEqual([{ revealed_at: expect.any(String) }]);
+      // The organiser's card must show the revealed session.
+      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', 'max');
       // Retrying never rewrites the lineups the captains submitted.
       expect(
         writeCalls().filter((c) => c.table === 'cup_lineup_slots'),
@@ -1017,6 +1044,8 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       });
       expect(sessionUpdates()).toEqual([]);
       expect(insertMatchesMock).not.toHaveBeenCalled();
+      // A failed reveal still refreshes the room: the state may have moved.
+      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', 'max');
       errorSpy.mockRestore();
     });
   });
