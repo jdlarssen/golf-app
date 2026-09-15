@@ -607,8 +607,11 @@ describe('submitTeamRegistration — happy paths', () => {
 /**
  * #2011: open team registration used to skip the player cap and hunt for a free
  * team slot in 1..50, so team 5+ landed outside the wizard's four-team grid. The
- * cap check now runs before the captain row exists, and a full grid rolls back
- * the captain's own request row instead of leaving it orphaned (AGENTS.md trap 5).
+ * cap check now runs before the captain row exists and answers first: it counts
+ * the seats already held (every team at least its full size, the incoming team
+ * too), so a full game never reaches the insert. The rollback of the captain's
+ * own request row (AGENTS.md trap 5) only covers running out of team numbers
+ * while the cap still has room — a team_size below the format's smallest.
  */
 describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
   beforeEach(() => {
@@ -756,6 +759,20 @@ describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
     expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
   });
 
+  it('det nye lagets egne plasser teller: 14 holdte plasser og et lag på fire → game_full', async () => {
+    // Two players outside a team and teams 1–3: 2 + 3 × 4 = 14 seats held.
+    // The cap of 16 still has two free seats, but the incoming team needs
+    // four, so it must not fit — the check adds the new team's own seats
+    // rather than asking whether any seat is left.
+    const input = openTexasFours(rosterRows(null, null, 1, 2, 3));
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration(input);
+
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+    expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
+  });
+
   it('spillerlista kan ikke leses → db_error, ingen kaptein-rad', async () => {
     // A failed roster read says nothing about which team numbers are taken or
     // how many seats are left. Guessing would hand the captain team 1, perhaps
@@ -806,11 +823,12 @@ describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
     );
   });
 
-  it('manual_approval med fullt rutenett → forespørselen legges i kø uten tak-lesing', async () => {
+  it('manual_approval: forespørselen legges i kø uten å lese spillerlista — taket gjelder bare åpen påmelding', async () => {
     // Owner's decision on #2011: the cap applies to open self-registration
-    // only. The grid may be full, but a manual_approval request still queues up
-    // and the organiser's approval is the gate (#662). The queue has no roster
-    // read, so a cap read here would take the captain insert's answer.
+    // only; a manual_approval request queues up and the organiser's approval
+    // is the gate (#662). So the action must not read the player list at all:
+    // the queue below has no roster answer, and the last assertion pins that
+    // no game_players call happens.
     getGameByShortIdMock.mockResolvedValue(
       makeGame({ registration_mode: 'manual_approval' }),
     );
