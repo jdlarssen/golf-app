@@ -23,9 +23,16 @@ export interface BingoBangoBongoChange {
  * Subscribe to bingo_bango_bongo_holes changes for one game.
  *
  * Channel setup, auth handoff og leak-resistant teardown er identisk med
- * `subscribeWolfChoices`-mønsteret. Brukes av BingoBangoBongoEntry (når
- * `gameMode === 'bingo_bango_bongo'`) for å oppdatere valgte spillere i sanntid
- * når en flight-spiller registrerer Bingo/Bango/Bongo på sin device.
+ * `subscribeWolfChoices`-mønsteret. Brukes av hull-skjermen
+ * (`useBingoBangoBongoHoles`, når `gameMode === 'bingo_bango_bongo'`) for å
+ * oppdatere valgte spillere i sanntid når en flight-spiller registrerer
+ * Bingo/Bango/Bongo på sin device.
+ *
+ * The change is a signal that something changed, not state to apply (#1950).
+ * Realtime does not promise delivery order per subscriber: a screen can get a
+ * row's UPDATE before its older INSERT, so applying `change` as the row leaves
+ * the older commit on screen. Callers re-read the rows instead
+ * (`readBingoBangoBongoHoles`).
  *
  * Listens to every event type (`event: '*'`), but in practice only INSERT and
  * UPDATE arrive: every write is an upsert (web and app), and clearing Bingo,
