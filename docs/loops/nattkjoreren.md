@@ -1,5 +1,7 @@
 # Nattkjøreren — kø-drevet natt-autonomi (#1079, epic #1073)
 
+> **Deaktivert 2026-09-15 (eierbeslutning).** Routinen er slått av på routines-siden. Byggingen gjøres nå av orkestratorens arbeidere (`jdlarssen/claude-plugins`, spec «Planleggeren og Strategen» §9), som følger samme kjede: kontrakt → bygg → evaluator → staging-bevis → PR. Dokumentet beholdes som historikk og som referanse for kjeden; ingen rutine leser det lenger.
+
 Nattlig cloud-routine som bygger eier-merkede issues til ferdig-verifiserte
 draft-PR-er. Kjøres i fersk klone i isolert sky-VM — det finnes ingen lokal
 worktree-tilstand å skade.
