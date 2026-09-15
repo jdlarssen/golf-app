@@ -6,6 +6,7 @@ import {
   MIN_TEAMS,
   fitsTeamFormat,
   randomDrawTeamCount,
+  registrationSeatTeamSize,
   teamFormatPlayerCap,
   teamModePlayerCap,
   teamSizesForMode,
@@ -145,6 +146,38 @@ describe('teamModePlayerCap — åpen påmelding stopper der rutenettet er fullt
 // #2012: «Trekk tilfeldig» deals the players into teams of the size the
 // organiser chose, and refuses whenever that would leave a leftover or need
 // more teams than the grid has.
+describe('registrationSeatTeamSize — plassene et lag holder av ved åpen påmelding (#2062)', () => {
+  it.each([
+    ['best_ball', undefined, 2],
+    ['best_ball', 4, 2],
+    ['patsome', null, 2],
+    ['texas_scramble', 3, 3],
+    ['texas_scramble', undefined, 2],
+    ['texas_scramble', 5, 2],
+    ['florida_scramble', 2, 3],
+    ['shamble', 4, 4],
+    ['wolf', 1, 1],
+    ['stableford', undefined, 1],
+  ] as const)('%s med team_size %s → %i', (mode, teamSize, expected) => {
+    expect(registrationSeatTeamSize(mode, teamSize)).toBe(expected);
+  });
+
+  // Trap 4: the cap and the seats a team holds come from the same team size —
+  // a missing or unsupported size must not make the cap tight and the seats loose.
+  it.each([
+    ['best_ball', undefined],
+    ['patsome', 3],
+    ['texas_scramble', undefined],
+    ['texas_scramble', 3],
+    ['florida_scramble', 2],
+    ['shamble', 4],
+  ] as const)('%s med team_size %s: taket er MAX_TEAMS × plassene', (mode, teamSize) => {
+    expect(teamModePlayerCap(mode, teamSize)).toBe(
+      Math.min(MAX_TEAMS * registrationSeatTeamSize(mode, teamSize), MAX_TEAM_FORMAT_PLAYERS),
+    );
+  });
+});
+
 describe('randomDrawTeamCount — trekningen følger valgt lagstørrelse (#2012)', () => {
   it.each([
     [2, 2, 1], // one pair — best ball has always allowed a single team
