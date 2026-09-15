@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
+import type { BingoBangoBongoCategoryKey } from '@/lib/bbb/mergeBingoBangoBongoCategory';
 import { setBingoBangoBongoHole } from '@/lib/bbb/setBingoBangoBongoHole';
 import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
 
@@ -20,10 +21,11 @@ export interface BingoBangoBongoEntryProps {
   /** True når spillet er avsluttet — disabler alle knapper. */
   disabled?: boolean;
   /**
-   * Kalles med oppdatert input etter vellykket lagring.
-   * Lar parent oppdatere lokal state optimistisk.
+   * Kalles med kategorien som ble lagret og mottakeren, etter vellykket
+   * lagring. Parent fletter bare den kategorien inn i hullets rad (#1950), så
+   * en flight-kamerats samtidige kategori blir stående.
    */
-  onSaved: (updated: BingoBangoBongoHoleInput) => void;
+  onSaved: (key: BingoBangoBongoCategoryKey, userId: string | null) => void;
 }
 
 const CATEGORY_KEYS = [
@@ -31,8 +33,6 @@ const CATEGORY_KEYS = [
   { key: 'bangoUserId' as const, labelKey: 'bango' as const, descKey: 'bangoDesc' as const },
   { key: 'bongoUserId' as const, labelKey: 'bongo' as const, descKey: 'bongoDesc' as const },
 ] as const;
-
-type CategoryKey = 'bingoUserId' | 'bangoUserId' | 'bongoUserId';
 
 const wrapperStyle: CSSProperties = {
   margin: '0 14px 10px',
@@ -163,10 +163,14 @@ export function BingoBangoBongoEntry(
     });
   }
 
-  async function handleSelect(key: CategoryKey, userId: string | null) {
+  async function handleSelect(
+    key: BingoBangoBongoCategoryKey,
+    userId: string | null,
+  ) {
     if (disabled || saving) return;
 
-    // Optimistisk oppdatering: set lokal state med en gang.
+    // Optimistisk oppdatering: set lokal state med en gang. Hele raden vises,
+    // men bare den trykte kategorien sendes (#1950).
     const next: BingoBangoBongoHoleInput = {
       holeNumber,
       bingoUserId: key === 'bingoUserId' ? userId : localHole.bingoUserId,
@@ -182,13 +186,12 @@ export function BingoBangoBongoEntry(
       const result = await setBingoBangoBongoHole({
         gameId,
         holeNumber,
-        bingoUserId: next.bingoUserId,
-        bangoUserId: next.bangoUserId,
-        bongoUserId: next.bongoUserId,
+        key,
+        userId,
       });
 
       if (result.ok) {
-        onSaved(next);
+        onSaved(key, userId);
       } else {
         // Tilbakestill ved feil.
         setLocalHole(prev);

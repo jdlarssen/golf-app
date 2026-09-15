@@ -1,7 +1,16 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
+import {
+  bingoBangoBongoCategoryColumn,
+  isBingoBangoBongoCategoryKey,
+  type BingoBangoBongoCategoryKey,
+} from '@/lib/bbb/mergeBingoBangoBongoCategory';
+import type { Database } from '@/lib/database.types';
 import { getServerClient } from '@/lib/supabase/server';
+
+type BingoBangoBongoHoleInsert =
+  Database['public']['Tables']['bingo_bango_bongo_holes']['Insert'];
 
 export type SetBingoBangoBongoHoleResult =
   | { ok: true }
@@ -10,6 +19,10 @@ export type SetBingoBangoBongoHoleResult =
 export type SetBingoBangoBongoHoleError =
   | 'not_authenticated'
   | 'invalid_hole'
+  // #1950: `key` is not one of the three categories — an unknown value, or an
+  // old client that still sends the whole row. Refused before the DB so it can
+  // never write NULLs over a flight-mate's category.
+  | 'invalid_category'
   | 'game_not_found'
   | 'game_finished'
   | 'rls_denied'
@@ -21,23 +34,32 @@ export type SetBingoBangoBongoHoleError =
 export interface SetBingoBangoBongoHoleInput {
   gameId: string;
   holeNumber: number;
-  bingoUserId: string | null;
-  bangoUserId: string | null;
-  bongoUserId: string | null;
+  /** Kategorien som ble trykket. Bare dens kolonne skrives (#1950). */
+  key: BingoBangoBongoCategoryKey;
+  /** Mottakeren, eller null når kategorien tømmes («Ingen»). */
+  userId: string | null;
 }
 
 /**
- * Server-action for å lagre Bingo Bango Bongo-prestasjoner for ett hull.
+ * Server-action for å lagre ÉN Bingo Bango Bongo-kategori for ett hull.
  *
  * Delt registrering: alle flight-spillere kan sette/endre raden. RLS-policyen
  * `bbb_holes_write` håndhever dette. Vi sjekker auth her for en tydelig
  * feilkode istedenfor en cryptic Postgres-RLS-feil.
  *
+ * Én kategori per kall (#1950): payloaden har bare den trykte kategoriens
+ * kolonne pluss `entered_by`, og PostgREST sin ON CONFLICT DO UPDATE setter
+ * bare kolonnene i payloaden. To i flighten som registrerer ulike kategorier på
+ * samme hull samtidig beholder derfor begge. Første registrering på et hull
+ * lager raden med de to andre kategoriene NULL.
+ *
  * Forretningsregler:
- *  - Krever autentisert bruker
  *  - hole_number 1..18
+ *  - `key` må være en av de tre kategoriene (hvitliste, aldri kolonnenavn fra
+ *    klienten)
+ *  - Krever autentisert bruker
  *  - Lås ved `games.status === 'finished'` (per kontrakt §5 og §Edge Cases)
- *  - De tre user-id-ene er nullable (bango f.eks. stands often udelt)
+ *  - `userId` er nullable: null tømmer kategorien
  *
  * Etter upsert: revaliderer `game-${gameId}`-tagen så alle cache-konsumenter
  * (getBingoBangoBongoHoles, getGameWithPlayers, scoring) henter fresh data ved
@@ -48,10 +70,14 @@ export interface SetBingoBangoBongoHoleInput {
 export async function setBingoBangoBongoHole(
   input: SetBingoBangoBongoHoleInput,
 ): Promise<SetBingoBangoBongoHoleResult> {
-  const { gameId, holeNumber, bingoUserId, bangoUserId, bongoUserId } = input;
+  const { gameId, holeNumber, key, userId } = input;
 
   if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
     return { ok: false, error: 'invalid_hole' };
+  }
+
+  if (!isBingoBangoBongoCategoryKey(key)) {
+    return { ok: false, error: 'invalid_category' };
   }
 
   const supabase = await getServerClient();
@@ -88,19 +114,17 @@ export async function setBingoBangoBongoHole(
     return { ok: false, error: 'game_finished' };
   }
 
-  // Upsert på (game_id, hole_number) — primary key på tabellen. Alle tre
-  // user-id-ene er nullable; de settes eksplisitt (null overskriver previous).
-  const { error } = await supabase.from('bingo_bango_bongo_holes').upsert(
-    {
-      game_id: gameId,
-      hole_number: holeNumber,
-      bingo_user_id: bingoUserId,
-      bango_user_id: bangoUserId,
-      bongo_user_id: bongoUserId,
-      entered_by: user.id,
-    },
-    { onConflict: 'game_id,hole_number' },
-  );
+  // Upsert på (game_id, hole_number) — primary key på tabellen. Bare den ene
+  // kategoriens kolonne er med; de to andre står urørt i en eksisterende rad.
+  const row: BingoBangoBongoHoleInsert = {
+    game_id: gameId,
+    hole_number: holeNumber,
+    ...bingoBangoBongoCategoryColumn(key, userId),
+    entered_by: user.id,
+  };
+  const { error } = await supabase
+    .from('bingo_bango_bongo_holes')
+    .upsert(row, { onConflict: 'game_id,hole_number' });
 
   if (error) {
     console.error('[setBingoBangoBongoHole] upsert failed', { input, error });

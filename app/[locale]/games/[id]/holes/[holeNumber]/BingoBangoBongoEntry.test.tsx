@@ -87,18 +87,17 @@ describe('BingoBangoBongoEntry', () => {
 
     fireEvent.click(screen.getByTestId('bbb-chip-bingoUserId-u2'));
 
+    // #1950: only the tapped category travels, to the server and to the
+    // parent's merge, so a flight-mate's concurrent category is not overwritten.
     await waitFor(() => {
       expect(setBingoBangoBongoHoleMock).toHaveBeenCalledWith({
         gameId: 'game-1',
         holeNumber: 5,
-        bingoUserId: 'u2',
-        bangoUserId: null,
-        bongoUserId: null,
+        key: 'bingoUserId',
+        userId: 'u2',
       });
     });
-    expect(onSaved).toHaveBeenCalledWith(
-      expect.objectContaining({ bingoUserId: 'u2' }),
-    );
+    expect(onSaved).toHaveBeenCalledWith('bingoUserId', 'u2');
   });
 
   it('viser feilmelding og tilbakestiller ved ok:false', async () => {
