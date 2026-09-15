@@ -23,7 +23,7 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   som starter med `☀️ Morgenbrief`); rapporter kun endringer etter dens
   tidsstempel. Første brief noensinne: siste 24 timer.
 - **Titler er ikke nok (eierbeslutning 2026-07-28, #1408):** hver sak i gruppene
-  «Trenger deg nå», «Klar for natt-kø», «Auto-køet» og «Skjedde i natt» følges av
+  «Trenger deg nå», «Bygges nå» og «Skjedde i natt» følges av
   en innrykket `↳`-detaljlinje på 1–3 setninger produktspråk: hva saken betyr i
   appen, og for handlingslinjer hva som skjer ved tapp. Hent teksten fra
   funksjonell-setninger (kontrakt-json, closing-kommentarer, CHANGELOG) der de
@@ -67,88 +67,63 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 - 🛠 #N trenger kontrakt-økt — kjør `/forge:contract` på #N → <lenke>
   ↳ <1–2 setninger: hva saken gjelder og hvorfor den trenger en økt med deg>
 
-**Klar for natt-kø (ett tapp = køet):**
-- #N — <funksjonell-setning fra kontrakten>; forge-kontrakt klar, ikke merket enda → 🌙 <lenke>
+**Bygges nå (orkestratoren):**
+- 🏗️ #N — <funksjonell-setning>; <modell> siden <dato> → <lenke>
   ↳ <1–2 setninger: hva du/spillerne kan gjøre i appen når den er bygget>
-
-**Auto-køet (bygges i natt — tapp ⏸ for å stoppe):**
-- 🔧 #N — <funksjonell-setning> → <lenke>
-  ↳ <1–2 setninger: hva som blir annerledes, og hvorfor den er trygg å bygge uten deg>
+- 📝 #N — utredes (kontraktutkast underveis) → <lenke>
 
 **Skjedde i natt/i går:**
 - <merget PR / lukket issue / CI-vakt-fiks — kun verifiserte fakta, med lenke>
   ↳ <1–2 setninger: hva som er annerledes i appen nå — «Du kan nå …» / «Når X skjer, …»; ingen synlig endring → si det ærlig («ingen synlig endring — <hva som ble ryddet, i produktspråk>»)>
-- 🔧 #N — <funksjonell> (auto-køet sak bygget i natt; revisjonsspor #1302/#1413)
+- 🔧 #N — <funksjonell> (bygget av orkestratoren; PR-en er merget)
 
 **Loop-helse:**
-- Nattkjøreren: <heartbeat-status> · Dok-avstemmeren: <heartbeat-status hvis due> · CI-vakta: <antall CI-vakt-issues åpne; liveness sees på routines-siden>
+- Orkestratoren: <antall issues i Fase «Bygges» på tavla> i bygg, <antall> utredes, <antall PR-er fra claude/*-grener som venter på deg> venter på deg · Dok-avstemmeren: <heartbeat-status hvis due> · CI-vakta: <antall CI-vakt-issues åpne; liveness sees på routines-siden>
 ```
 
 Ingenting å melde i en gruppe → utelat gruppa. Alle fem tomme → tom-natt-linja.
 
-## Kø-kandidater (finn dem — ikke bare vis knappen)
+## Bygges nå — orkestratoren (fra 2026-09-15)
 
-«Klar for natt-kø»-gruppa lister åpne issues som er kontrakt-klare men ikke enda
-køet, så eieren kan merke dem `autonomy:ready` med ett tapp. Et issue kvalifiserer
-kun når ALT stemmer:
+Kontrakt-smeden og Nattkjøreren er slått av (eierbeslutning 2026-09-15). Kontrakter
+skrives nå av orkestratorens utredningsøkter (samme header «📋 Forge-kontrakt
+tilgjengelig» på issuet), og byggingen gjøres av orkestratorens arbeidere på eierens
+Mac, når som helst på døgnet, med samme kjede (kontrakt → bygg → evaluator →
+staging-bevis → PR). Hva som bygges, hva som utredes og hva som venter, står på
+GitHub-tavla (prosjekt 2): kilden for denne gruppa er tavla, ikke labels.
 
-- forge-kontrakt finnes: en kommentar på issuet med header «📋 Forge-kontrakt
-  tilgjengelig» (eneste kilde — kontrakt-filer committes ikke, #1931), OG
-- IKKE labelet `autonomy:ready` (ikke allerede i køen), OG
-- IKKE labelet `autonomy:blocked`, OG
-- IKKE issue **#1110 selv** — den levende Loop-drift-tavla skal aldri bygges
-  (nattkjøreren leverer med «Closes #N», så en merge ville lukket tavla).
-  #1147 la en kontrakt på #1110 for arkiv-arbeidet; det hører egentlig hjemme i
-  et eget issue, men inntil da er #1110 hardt ekskludert her.
+Slik finner du gruppa:
 
-Eldste kontrakt først, maks 5 i briefen; flere → «+N til, se #1110». Hver kandidat
-får den eksisterende `ready_issue:<N>`-knappen i Discord-speilingen («🌙 Klarer for
-natta», button style 1) — samme knapp som mappes i Discord-seksjonen under. Ingen
-kandidater → utelat gruppa (ikke en loop-feil; tom kandidat-liste er normalt).
+- `gh project item-list 2 --owner jdlarssen --format json --limit 200`; ta kortene med
+  Fase «🏗️ Bygges». Feltet «Ansvar» sier hvem: «<modell> via orkestratoren» = bygges,
+  «utredning (<modell>)» = kontraktutkast underveis, «venter på deg» = arbeideren
+  har et spørsmål eieren må svare på i orkestrator-chatten (list den under «Trenger
+  deg nå» som «Svar orkestratoren om #N»).
+- Linje: «🏗️ #N — <funksjonell-setning>; <modell> siden <Startdato> → <lenke>».
+  Funksjonell-setningen hentes fra kontraktens json-blokk der den finnes, ellers
+  skrives den i samme tone («Du kan nå …»). Utredninger får «📝 #N — utredes».
+- Ingen kort i Bygges → utelat gruppa (normalt når køen er tom eller Macen sover).
 
-Er kontrakten **auto-skrevet av kontrakt-smeden** (kommentaren starter med «🤖
-Auto-skrevet …», jf. docs/loops/kontrakt-smeden.md), behold 🤖 som opphavs-markør,
-men vis kø-linja på **`funksjonell`-setningen fra kontraktens json-blokk** — ikke
-et krav om å lese kontrakten: «#N — <funksjonell> → 🌙». Eieren kan ikke lese
-kontrakter (#1302), så han godkjenner på den norske oppsummeringen, ikke
-kontrakt-teksten.
+Det finnes ingen «natt-kø» lenger: 🌙-knappen («Klarer for natta») sendes ikke, og
+`autonomy:ready` betyr bare «har kontrakt» — orkestratoren tar issues i tavlas
+Prioritet-rekkefølge uansett label. Vil eieren stoppe noe, sier han «parkér #N» til
+orkestratoren eller setter Fase «❄️ Parkert» på tavla; ⏸-knappen (som setter
+`parked`) stopper ikke orkestratoren, så den sendes heller ikke for byggesaker.
 
-Kun **aldri-auto-kategoriene** (auth-/sikkerhetsendringer, destruktive flyter,
-alt som koster penger — jf. steg 3 i smed-docen) havner her etter #1413: alle
-andre kontrakter auto-køer smeden selv (`autonomy:ready` satt), så de er
-ekskludert fra denne gruppa (som før krever «IKKE `autonomy:ready`») og vises i
-stedet under **«Auto-køet»** (se innholdsmalen) med ⏸-veto.
+**PR-er som venter på eieren:** en PR fra en `claude/*`-gren som er ready (ikke
+draft) og ikke merget, er enten et eier-merge (aldri-lista) eller et produktvalg.
+Den hører under «Trenger deg nå» som «Godkjenn PR #M» etter samme regler som før
+(kun knapp-kort-PR-er). Står to eller flere slik, si det i én linje øverst: bygginga
+stopper til de er merget (plassene holdes, jf. orkestratorens spec).
 
-**Fallback (eldre kontrakter uten json-blokk):** mangler kommentaren
-`kontraktKlasse`/`funksjonell`-feltet, fall tilbake til dagens format — issue-tittel
-+ 🤖-markør — og noter «json-blokk mangler på #N» i Loop-helse (aldri stille anta en
-klasse). Ugyldig JSON i blokken behandles likt: tittel-linje + Loop-helse-flagg.
+🤖-markøren («Auto-skrevet …») finnes bare på gamle smed-kontrakter; behold den som
+opphavsmarkør der den står, men ingen nye kommer.
 
-## Auto-køet — smedens auto-køede kontrakter (#1302, utvidet av #1413)
+## Gråsone-punkter (legacy etter Smeden, #1151/#1413)
 
-Smeden setter `autonomy:ready` selv på alle kontrakter unntatt
-aldri-auto-kategoriene; briefen er veto-budbringeren (smeden har ingen
-Discord-tilgang). Finn åpne issues der ALT stemmer, og list dem i
-«Auto-køet»-gruppa:
-
-- forge-kontrakt-kommentar (🤖 smed-skrevet, `teknisk` eller `bruker-synlig`), OG
-- `autonomy:ready` satt (av smeden), OG
-- IKKE `autonomy:blocked`, IKKE `parked`, IKKE #1110.
-
-Har kontrakten `"produktvalg": true` i json-blokken: merk linja
-«(produktvalg — alternativene kommer i PR-en)» så eieren vet at valget hans
-kommer som PR-svar, ikke som ⏸-avgjørelse nå.
-
-Linje: «🔧 #N — <funksjonell> → <lenke>» med **⏸-knappen** (`snooze_issue:<N>`) —
-ett tapp stopper bygget (⏸ setter `parked` OG fjerner `autonomy:ready`, #1302).
-Vetovinduet er hele dagen: smeden kjører før briefen, nattkjøringen er først
-påfølgende natt. Ingen auto-køede → utelat gruppa (normalt, ikke en loop-feil).
-
-## Gråsone-punkter (smedens ruting, #1151 — innsnevret av #1413)
-
-Smeden ruter nå kun uskopbare kandidater til eieren; produktvalg lever som
-alternativer i kontrakt/PR i stedet. Briefen løfter fortsatt begge labels under
-«Trenger deg nå» til de gamle er tømt:
+Smeden er slått av og poster ingen nye. Briefen løfter fortsatt begge labels under
+«Trenger deg nå» til de gamle er tømt; nye spørsmål fra utredninger kommer i
+orkestrator-chatten, ikke som labels:
 
 - **`autonomy:needs-decision`** (legacy — smeden poster ingen nye etter #1413)
   — smeden har postet ett binært spørsmål (kommentar med header «🅰️🅱️
@@ -164,13 +139,19 @@ fortsatt er åpent.
 
 ## Heartbeat-vakta
 
-- **Forventning:** Nattkjøreren skal ha postet heartbeat på #1110 siden forrige
-  brief (den poster ALLTID, også «ingen kø»). Dok-avstemmeren: kun i uker der
+- **Forventning:** Dok-avstemmeren skal ha postet heartbeat på #1110 i uker der
   den var due. Utroperen (docs/loops/utroperen.md): skal ha postet på
   lanserings-tavla #1208 hver torsdag (forslag eller tom-uke-melding) —
   sjekkes i fredagens brief; samme mangler-én/mangler-to-eskalering som under.
-- **Mangler én kjøring:** varsellinje øverst i briefen («⚠️ Nattkjøreren la
-  ikke heartbeat i natt — sjekk claude.ai/code/routines»).
+  Nattkjøreren og Kontrakt-smeden er slått av (2026-09-15) og forventes IKKE:
+  savn dem aldri, og opprett aldri infra-issue for dem.
+- **Orkestratoren poster ikke heartbeat** (den kjører på eierens Mac, ikke som
+  routine). Helsen leses av tavla: et kort i Fase «Bygges» med Startdato eldre
+  enn 2 døgn og ingen åpen PR fra `claude/<N>-*` → linje i Loop-helse («#N har
+  stått i bygg i X døgn uten PR — spør orkestratoren»). Ingen kort i Bygges er
+  ikke en feil.
+- **Mangler én kjøring:** varsellinje øverst i briefen («⚠️ Dok-avstemmeren la
+  ikke heartbeat — sjekk claude.ai/code/routines»).
 - **Mangler to på rad:** i tillegg opprett infra-issue («Loop X har ikke kjørt
   på 2 forventede kjøringer», label bug, milestone 13) — dedupet mot åpent
   issue med samme tittel.
@@ -210,9 +191,8 @@ handlingslinjene i «Trenger deg nå» — custom_id-kontrakten er
 - Kontrakt-økt-linje (`autonomy:needs-contract-session`) → to knapper
   «🗑 Dropp»/«⏸ Ikke nå» med `custom_id: drop_issue:<issue>`, `snooze_issue:<issue>`
   (selve kontrakt-økten krever tastatur — kommandoen står i linjeteksten)
-- Natt-kø-kandidat med kontrakt → knapp «🌙 Klarer for natta» med `custom_id: ready_issue:<N>`
-- Auto-køet ren-teknikk-sak (#1302) → knapp «⏸ Ikke nå» med `custom_id: snooze_issue:<N>`
-  (stopper natt-bygget: ⏸ setter `parked` OG fjerner `autonomy:ready`)
+- «Bygges nå»-linjer får ingen knapper (🌙 `ready_issue` og ⏸ `snooze_issue` styrte
+  Nattkjøreren, som er slått av; orkestratoren stoppes i chatten eller på tavla)
 
 (Utroperen sender i tillegg `publish_lansering:<kommentar-id>` fra sin egen
 torsdags-melding — se docs/loops/utroperen.md; briefen sender aldri den knappen.)

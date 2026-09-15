@@ -1,5 +1,7 @@
 # Kontrakt-smeden — daglig kontrakt-forberedelse (#1150, epic #1073)
 
+> **Deaktivert 2026-09-15 (eierbeslutning).** Routinen er slått av på routines-siden. Kontrakter skrives nå av orkestratorens utredningsøkter, akkurat tidsnok og i tavlas prioritetsrekkefølge (`jdlarssen/claude-plugins`, spec «Planleggeren og Strategen» §4 og §9). `autonomy:ready` settes ikke lenger av noen. Dokumentet beholdes som historikk.
+
 Daglig cloud-routine som skriver forge-kontrakter for buildbare, kontraktløse
 issues, så natt-køen aldri sulter. Kontraktene postes som issue-kommentarer og
 auto-køes som hovedregel (`autonomy:ready` settes av smeden selv; ⏸-veto i
