@@ -74,8 +74,12 @@ export default async function SlettKontoPage({
       )}
 
       {isBlocked ? (
-        <div className="space-y-4">
-          <Banner tone="error">
+        <div
+          className="space-y-4"
+          data-testid="delete-account-blocked"
+          data-block-reason={blockReason ?? undefined}
+        >
+          <Banner tone="error" testId="delete-account-blocked-banner">
             {blockedText}
           </Banner>
           <SmartLink
