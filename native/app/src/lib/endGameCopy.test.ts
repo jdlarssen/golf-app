@@ -25,7 +25,7 @@ import {
   ownRowHint,
   remindLabel,
   slotLabel,
-  stillPlayingNote,
+  unremindableNotes,
 } from './endGameCopy';
 import { describeRosterFailure } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
@@ -274,9 +274,16 @@ describe('describeReminderPreviewFailure', () => {
 describe('purre-malene', () => {
   it('setter inn tallene og lar ingen `{}` slippe gjennom', () => {
     expect(remindLabel(3)).toBe('Purr på dem som mangler (3)');
-    expect(stillPlayingNote(2)).toBe(
+    // #1933: én setning per grunn, bare de som gjelder, entall for én gjest.
+    expect(unremindableNotes({ unfinished: 2, guests: 1, splitDay: 3 })).toEqual([
       '2 av dem har ikke ført alle hullene ennå. Purring hjelper først da.',
-    );
+      '1 av dem er gjest og leverer via markøren.',
+      '3 av dem leverer hele runden på Bak 9 og blir purret der.',
+    ]);
+    expect(unremindableNotes({ unfinished: 0, guests: 2, splitDay: 0 })).toEqual([
+      '2 av dem er gjester og leverer via markøren.',
+    ]);
+    expect(unremindableNotes({ unfinished: 0, guests: 0, splitDay: 0 })).toEqual([]);
     expect(lastRemindedNote('14:05')).toBe('Sist purret kl. 14:05');
     expect(approveConfirmBody('Kari')).toBe(
       'Godkjenn kortet til Kari? Du står som den som godkjente.',

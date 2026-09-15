@@ -30,7 +30,7 @@ import { refreshGameBundle } from '../data/gameBundle';
 import { approveScorecard } from '../data/playerActions';
 import { fetchReminderPreview, sendReminder } from '../data/remind';
 import type { ReminderFailure } from '../data/remind';
-import { describeReminderFailure } from '../lib/endGameCopy';
+import { describeReminderFailure, unremindableNotes } from '../lib/endGameCopy';
 import type { ScreenProps } from '../navigation';
 import { EndGame } from './EndGame';
 
@@ -113,6 +113,7 @@ jest.mock('../data/remind', () => ({
   fetchReminderPreview: jest.fn(async () => ({
     ok: true,
     targets: 1,
+    unremindable: null,
     lastRemindedAt: null,
   })),
   sendReminder: jest.fn(async () => ({ ok: true, reminded: 1 })),
@@ -287,12 +288,15 @@ describe('EndGame', () => {
 
   it('purrer på dem som er ferdige, og sier hvem knappen ikke treffer', async () => {
     // Tre mangler kort, men bare én av dem er FERDIG uten å ha levert. Purring
-    // treffer den ene; de to andre står midt i runden og får en setning.
-    // Blandes de to tallene, lover knappen noe den ikke gjør.
+    // treffer den ene; av de to andre står én midt i runden og én er gjest, og
+    // hver grunn får sin setning (#1933). Blandes tallene, lover knappen noe
+    // den ikke gjør.
     setMissing(3);
+    const unremindable = { unfinished: 1, guests: 1, splitDay: 0 };
     (fetchReminderPreview as jest.Mock).mockResolvedValue({
       ok: true,
       targets: 1,
+      unremindable,
       lastRemindedAt: '2026-09-02T12:05:00.000Z',
     });
     await renderScreen();
@@ -302,8 +306,8 @@ describe('EndGame', () => {
         'Purr på dem som mangler (1)',
       );
     });
-    expect(screen.getByTestId('end-game-reminder-still-playing')).toHaveTextContent(
-      /2 av dem har ikke ført alle hullene ennå/,
+    expect(screen.getByTestId('end-game-reminder-unremindable')).toHaveTextContent(
+      unremindableNotes(unremindable).join(' '),
     );
     // Suiten kjører med TZ=UTC (`jest.config.js`): dette er enhetens
     // veggklokke, ikke en Oslo-konvertering — Hermes har ikke tidssonene.
@@ -327,16 +331,18 @@ describe('EndGame', () => {
 
   it('viser bare setningen når ingen av dem kan purres ennå', async () => {
     setMissing(2);
+    const unremindable = { unfinished: 2, guests: 0, splitDay: 0 };
     (fetchReminderPreview as jest.Mock).mockResolvedValue({
       ok: true,
       targets: 0,
+      unremindable,
       lastRemindedAt: null,
     });
     await renderScreen();
 
     await waitFor(() => {
-      expect(screen.getByTestId('end-game-reminder-still-playing')).toHaveTextContent(
-        /2 av dem har ikke ført alle hullene ennå/,
+      expect(screen.getByTestId('end-game-reminder-unremindable')).toHaveTextContent(
+        unremindableNotes(unremindable).join(' '),
       );
     });
     // Ingen knapp: en «Purr på dem som mangler (0)» ville sendt null varsler

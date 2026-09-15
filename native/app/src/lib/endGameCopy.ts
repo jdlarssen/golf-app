@@ -242,8 +242,11 @@ export function ownRowHint(withdrawalSupported: boolean): string {
  * tabellen ville vært nøyaktig den feilen testen finnes for å hindre.
  */
 const REMIND_LABEL = 'Purr på dem som mangler ({n})';
-const STILL_PLAYING_NOTE =
+const UNFINISHED_NOTE =
   '{m} av dem har ikke ført alle hullene ennå. Purring hjelper først da.';
+const GUEST_NOTE = '1 av dem er gjest og leverer via markøren.';
+const GUESTS_NOTE = '{m} av dem er gjester og leverer via markøren.';
+const SPLIT_DAY_NOTE = '{m} av dem leverer hele runden på Bak 9 og blir purret der.';
 const LAST_REMINDED_NOTE = 'Sist purret kl. {clock}';
 const APPROVE_CONFIRM_BODY =
   'Godkjenn kortet til {name}? Du står som den som godkjente.';
@@ -260,15 +263,31 @@ export function remindLabel(targets: number): string {
 }
 
 /**
- * Linja om dem purringen IKKE treffer.
+ * Setningene om dem purringen IKKE treffer — én per grunn, bare de som gjelder.
  *
  * Serveren purrer bare spillere som er ferdige uten å ha levert
- * (`selectDeliveryReminderTargets`). Resten står midt i runden, og en purring
- * til dem er støy. Setningen sier hvorfor tallet på knappen er lavere enn
- * lista over — uten den ser differansen ut som en feil.
+ * (`selectDeliveryReminderTargets`). Setningene sier hvorfor tallet på knappen
+ * er lavere enn lista over — uten dem ser differansen ut som en feil.
+ *
+ * Én setning per grunn og ikke én for alle (#1933): «har ikke ført alle
+ * hullene» om en gjest som var ferdig, fikk arrangøren til å vente på noe som
+ * aldri kom. Tallene er serverens (`countUnremindable`), ikke skjermens.
  */
-export function stillPlayingNote(count: number): string {
-  return fillCopy(STILL_PLAYING_NOTE, { m: count });
+export function unremindableNotes(counts: {
+  unfinished: number;
+  guests: number;
+  splitDay: number;
+}): string[] {
+  const notes: string[] = [];
+  if (counts.unfinished > 0) {
+    notes.push(fillCopy(UNFINISHED_NOTE, { m: counts.unfinished }));
+  }
+  if (counts.guests === 1) notes.push(GUEST_NOTE);
+  if (counts.guests > 1) notes.push(fillCopy(GUESTS_NOTE, { m: counts.guests }));
+  if (counts.splitDay > 0) {
+    notes.push(fillCopy(SPLIT_DAY_NOTE, { m: counts.splitDay }));
+  }
+  return notes;
 }
 
 /**
