@@ -16,13 +16,33 @@ import type { CupLineupBoard as Board } from '@/lib/cup/lineupData';
 const setPlannedMock = vi.fn<(fd: FormData) => Promise<{ error: string }>>(
   async () => ({ error: '' }),
 );
+const retryMock = vi.fn<(fd: FormData) => Promise<{ error: string }>>(
+  async () => ({ error: '' }),
+);
 vi.mock('@/lib/cup/lineupActions', () => ({
   setCupPlannedMatchCount: (fd: FormData) => setPlannedMock(fd),
   openCupLineupSession: async () => ({ error: '' }),
   submitCupLineup: async () => ({ error: '' }),
   unlockCupLineup: async () => ({ error: '' }),
+  retryCupLineupReveal: (fd: FormData) => retryMock(fd),
   deleteCupLineupSession: async () => ({ error: '' }),
 }));
+
+/**
+ * En økt som står fast (#1901): begge uttak levert, ingen kamper opprettet.
+ * `slots: []` — plassene er ikke poenget her, knappen er.
+ */
+const STUCK_SESSION = {
+  id: 'sess-1',
+  sessionIndex: 0,
+  format: 'singles_matchplay',
+  slotCount: 1,
+  revealedAt: null,
+  teams: [
+    { teamNumber: 1, submittedAt: '2026-09-07T10:00:00.000Z', slots: [] },
+    { teamNumber: 2, submittedAt: '2026-09-07T10:05:00.000Z', slots: [] },
+  ],
+} as Board['sessions'][number];
 
 function board(overrides: Partial<Board> = {}): Board {
   return {
@@ -104,8 +124,13 @@ describe('CupLineupBoard — planlagt antall kamper (#1902)', () => {
     ).toBe(false);
   });
 
-  it('lagring sender id + planned_match_count til action-en', async () => {
-    render(<CupLineupBoard tournamentId="cup-1" board={board()} />);
+  it('skjemaene sender riktig intent og felter til action-ene', async () => {
+    render(
+      <CupLineupBoard
+        tournamentId="cup-1"
+        board={board({ sessions: [STUCK_SESSION] })}
+      />,
+    );
 
     fireEvent.change(screen.getByTestId('cup-lineup-planned-input'), {
       target: { value: '28' },
@@ -113,9 +138,26 @@ describe('CupLineupBoard — planlagt antall kamper (#1902)', () => {
     fireEvent.click(screen.getByTestId('cup-lineup-planned-save'));
 
     await vi.waitFor(() => expect(setPlannedMock).toHaveBeenCalledTimes(1));
-    const fd = setPlannedMock.mock.calls[0][0];
-    expect(fd.get('id')).toBe('cup-1');
-    expect(fd.get('planned_match_count')).toBe('28');
-    expect(fd.get('intent')).toBe('planned');
+    const planned = setPlannedMock.mock.calls[0][0];
+    expect(planned.get('id')).toBe('cup-1');
+    expect(planned.get('planned_match_count')).toBe('28');
+    expect(planned.get('intent')).toBe('planned');
+
+    // #1901: den fastlåste økta får banner + «Prøv igjen», og knappen sender
+    // økt-id-en til retry-action-en. Alle formene deler én `useActionState`, så
+    // knappen er sperret til lagringen over er ferdig — vent den ut.
+    expect(screen.getByTestId('cup-lineup-stuck-0')).toBeTruthy();
+    await vi.waitFor(() =>
+      expect(
+        screen.getByTestId('cup-lineup-retry-0').hasAttribute('disabled'),
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByTestId('cup-lineup-retry-0'));
+
+    await vi.waitFor(() => expect(retryMock).toHaveBeenCalledTimes(1));
+    const retry = retryMock.mock.calls[0][0];
+    expect(retry.get('intent')).toBe('retry');
+    expect(retry.get('id')).toBe('cup-1');
+    expect(retry.get('session_id')).toBe('sess-1');
   });
 });
