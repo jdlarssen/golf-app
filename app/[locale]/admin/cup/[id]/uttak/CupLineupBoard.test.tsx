@@ -11,9 +11,16 @@ import type { CupLineupBoard as Board } from '@/lib/cup/lineupData';
  *
  * Tallene selv (2,5 · 3,5 · 14,5) er Type A og er dekket i
  * `lib/cup/pointsToWin.test.ts` — de re-asserteres bevisst IKKE her.
+ *
+ * #1901 adds the "Try again" wiring to the existing wiring test rather than a
+ * fifth render test. When the button shows is Type A (`canRetryReveal` in
+ * `lib/cup/lineupReveal.test.ts`) and is not re-asserted here.
  */
 
 const setPlannedMock = vi.fn<(fd: FormData) => Promise<{ error: string }>>(
+  async () => ({ error: '' }),
+);
+const retryMock = vi.fn<(fd: FormData) => Promise<{ error: string }>>(
   async () => ({ error: '' }),
 );
 vi.mock('@/lib/cup/lineupActions', () => ({
@@ -22,6 +29,7 @@ vi.mock('@/lib/cup/lineupActions', () => ({
   submitCupLineup: async () => ({ error: '' }),
   unlockCupLineup: async () => ({ error: '' }),
   deleteCupLineupSession: async () => ({ error: '' }),
+  retryCupLineupReveal: (fd: FormData) => retryMock(fd),
 }));
 
 function board(overrides: Partial<Board> = {}): Board {
@@ -104,8 +112,26 @@ describe('CupLineupBoard — planlagt antall kamper (#1902)', () => {
     ).toBe(false);
   });
 
-  it('lagring sender id + planned_match_count til action-en', async () => {
-    render(<CupLineupBoard tournamentId="cup-1" board={board()} />);
+  it('lagring og «Prøv igjen» sender riktige felt til action-ene', async () => {
+    // #1901: a session stuck after a failed reveal — both in, not revealed.
+    const AT = '2026-09-15T10:00:00.000Z';
+    const stuck = {
+      id: 'sess-1',
+      sessionIndex: 0,
+      format: 'singles_matchplay',
+      slotCount: 1,
+      revealedAt: null,
+      teams: [
+        { teamNumber: 1, submittedAt: AT, slots: [] },
+        { teamNumber: 2, submittedAt: AT, slots: [] },
+      ],
+    } satisfies Board['sessions'][number];
+    render(
+      <CupLineupBoard
+        tournamentId="cup-1"
+        board={board({ sessions: [stuck] })}
+      />,
+    );
 
     fireEvent.change(screen.getByTestId('cup-lineup-planned-input'), {
       target: { value: '28' },
@@ -117,5 +143,20 @@ describe('CupLineupBoard — planlagt antall kamper (#1902)', () => {
     expect(fd.get('id')).toBe('cup-1');
     expect(fd.get('planned_match_count')).toBe('28');
     expect(fd.get('intent')).toBe('planned');
+
+    // The board shares one pending state, so wait for the save to settle
+    // before the retry button takes a click.
+    await vi.waitFor(() =>
+      expect(
+        screen.getByTestId('cup-lineup-retry-0').hasAttribute('disabled'),
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByTestId('cup-lineup-retry-0'));
+
+    await vi.waitFor(() => expect(retryMock).toHaveBeenCalledTimes(1));
+    const retryFd = retryMock.mock.calls[0][0];
+    expect(retryFd.get('intent')).toBe('retry');
+    expect(retryFd.get('id')).toBe('cup-1');
+    expect(retryFd.get('session_id')).toBe('sess-1');
   });
 });
