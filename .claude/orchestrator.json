@@ -51,5 +51,18 @@
     "documentation",
     "post-pilot"
   ],
-  "roadmap": "docs/roadmap.md"
+  "roadmap": "docs/roadmap.md",
+  "ready_limit": 5,
+  "planning": {
+    "issue": 2113,
+    "velocity_weeks": 4,
+    "stuck_after_weeks": 2
+  },
+  "strategy": {
+    "docs": [
+      "docs/visjon.md",
+      "docs/roadmap.md",
+      "docs/hva-er-nok.md"
+    ]
+  }
 }
