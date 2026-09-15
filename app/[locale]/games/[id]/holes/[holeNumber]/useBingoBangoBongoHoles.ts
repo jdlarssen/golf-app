@@ -39,6 +39,11 @@ export type BingoBangoBongoState = {
    * ny lesing etter lagringen henter raden slik databasen har den.
    */
   onSaved: (key: BingoBangoBongoCategoryKey, userId: string | null) => void;
+  /**
+   * Leser raden på nytt uten å lagre (#2090): et trykk som ikke endrer noe
+   * skriver ikke, men retter et gammelt bilde.
+   */
+  refresh: () => void;
 };
 
 export function useBingoBangoBongoHoles(args: {
@@ -117,5 +122,6 @@ export function useBingoBangoBongoHoles(args: {
       setState((s) => applyBbbLocalSave(s, seq, currentHole, key, userId));
       scheduleReadRef.current();
     },
+    refresh: () => scheduleReadRef.current(),
   };
 }

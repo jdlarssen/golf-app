@@ -502,6 +502,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
           savedHole={bingoBangoBongo.savedHole}
           disabled={gameInactive}
           onSaved={bingoBangoBongo.onSaved}
+          onRefresh={bingoBangoBongo.refresh}
         />
       )}
 
