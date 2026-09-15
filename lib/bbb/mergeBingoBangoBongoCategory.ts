@@ -75,6 +75,23 @@ export function bingoBangoBongoCategoryColumn(
 }
 
 /**
+ * True when a tap would write what the screen already shows for `key` (#2090).
+ *
+ * Both clients skip the write then and read again instead. The screen can be an
+ * old snapshot (the app polls, web realtime can lag), so «Ingen» on a category
+ * that shows empty could only write NULL over a flight-mate's registration the
+ * player never saw. A tap that clears a player the screen shows still writes:
+ * the player saw a name and chose to remove it.
+ */
+export function isBingoBangoBongoNoOp(
+  current: BingoBangoBongoHoleInput,
+  key: BingoBangoBongoCategoryKey,
+  userId: string | null,
+): boolean {
+  return current[key] === userId;
+}
+
+/**
  * Merge one saved category into the local hole rows.
  *
  * Sets only `key` on `holeNumber`'s row and keeps the other two as they stand,

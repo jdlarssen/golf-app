@@ -2,7 +2,10 @@
 
 import { useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
-import type { BingoBangoBongoCategoryKey } from '@/lib/bbb/mergeBingoBangoBongoCategory';
+import {
+  isBingoBangoBongoNoOp,
+  type BingoBangoBongoCategoryKey,
+} from '@/lib/bbb/mergeBingoBangoBongoCategory';
 import { setBingoBangoBongoHole } from '@/lib/bbb/setBingoBangoBongoHole';
 import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
 
@@ -26,6 +29,11 @@ export interface BingoBangoBongoEntryProps {
    * en flight-kamerats samtidige kategori blir stående.
    */
   onSaved: (key: BingoBangoBongoCategoryKey, userId: string | null) => void;
+  /**
+   * Ber om en fersk lesing uten å lagre (#2090). Kalles når trykket ikke endrer
+   * det chipsene viser, så et gammelt bilde rettes i stedet for å skrives over.
+   */
+  onRefresh: () => void;
 }
 
 const CATEGORY_KEYS = [
@@ -126,8 +134,15 @@ export function BingoBangoBongoEntry(
   props: BingoBangoBongoEntryProps,
 ): JSX.Element {
   const t = useTranslations('holes.bingoBangoBongo');
-  const { gameId, holeNumber, players, savedHole, disabled = false, onSaved } =
-    props;
+  const {
+    gameId,
+    holeNumber,
+    players,
+    savedHole,
+    disabled = false,
+    onSaved,
+    onRefresh,
+  } = props;
 
   // Local state for optimistic UI — speiler wolf-mønstret for valgstate, og
   // mirrors `savedHole` (server-prop + realtime-merges fra flight-kamerater,
@@ -168,6 +183,14 @@ export function BingoBangoBongoEntry(
     userId: string | null,
   ) {
     if (disabled || saving) return;
+
+    // #2090: the chips can be an old snapshot while realtime lags. A tap that
+    // matches what they show («Ingen» on an empty category) could only write
+    // NULL over a flight-mate's registration, so read again instead.
+    if (isBingoBangoBongoNoOp(localHole, key, userId)) {
+      onRefresh();
+      return;
+    }
 
     // Optimistisk oppdatering: set lokal state med en gang. Hele raden vises,
     // men bare den trykte kategorien sendes (#1950).

@@ -27,6 +27,7 @@ function defaultProps(
     savedHole: null,
     disabled: false,
     onSaved: vi.fn(),
+    onRefresh: vi.fn(),
     ...overrides,
   };
 }
@@ -98,6 +99,60 @@ describe('BingoBangoBongoEntry', () => {
       });
     });
     expect(onSaved).toHaveBeenCalledWith('bingoUserId', 'u2');
+  });
+
+  // #2090: the chips can show an old snapshot while realtime lags. «Ingen» on a
+  // category that already shows empty sends nothing (it could only write NULL
+  // over a flight-mate's registration) and asks for a fresh read instead.
+  it('«Ingen» på en tom kategori sender ingenting og ber om en fersk lesing', () => {
+    const onSaved = vi.fn();
+    const onRefresh = vi.fn();
+    render(
+      <BingoBangoBongoEntry
+        {...defaultProps({
+          onSaved,
+          onRefresh,
+          savedHole: { holeNumber: 5, bingoUserId: null, bangoUserId: 'u2', bongoUserId: null },
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('bbb-chip-bingoUserId-ingen'));
+
+    expect(setBingoBangoBongoHoleMock).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    // No save in flight, so the chips stay tappable.
+    expect(
+      (screen.getByTestId('bbb-chip-bingoUserId-u1') as HTMLButtonElement).disabled,
+    ).toBe(false);
+  });
+
+  it('«Ingen» på en valgt kategori tømmer den som før', async () => {
+    const onSaved = vi.fn();
+    const onRefresh = vi.fn();
+    render(
+      <BingoBangoBongoEntry
+        {...defaultProps({
+          onSaved,
+          onRefresh,
+          savedHole: { holeNumber: 5, bingoUserId: null, bangoUserId: 'u2', bongoUserId: null },
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('bbb-chip-bangoUserId-ingen'));
+
+    await waitFor(() => {
+      expect(setBingoBangoBongoHoleMock).toHaveBeenCalledWith({
+        gameId: 'game-1',
+        holeNumber: 5,
+        key: 'bangoUserId',
+        userId: null,
+      });
+    });
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('bangoUserId', null));
+    expect(onRefresh).not.toHaveBeenCalled();
   });
 
   it('viser feilmelding og tilbakestiller ved ok:false', async () => {

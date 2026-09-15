@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
 import {
   bingoBangoBongoCategoryColumn,
+  isBingoBangoBongoNoOp,
   mergeCategory,
   type BingoBangoBongoCategoryKey,
 } from './mergeBingoBangoBongoCategory';
@@ -67,6 +68,29 @@ describe('mergeCategory', () => {
 
     expect(prev).toEqual(before);
     expect(next[0]).not.toBe(prev[0]);
+  });
+});
+
+describe('isBingoBangoBongoNoOp', () => {
+  // #2090: the screen can show an old snapshot (app polling, web realtime lag).
+  // «Ingen» on a category that already shows empty must never reach the DB, or
+  // it writes NULL over a flight-mate's registration the player never saw.
+  it.each<[string, string | null, string | null, boolean]>([
+    ['«Ingen» på en kategori som alt er tom', null, null, true],
+    ['samme spiller som alt står', 'ola', 'ola', true],
+    ['tømming av en valgt spiller skrives', 'ola', null, false],
+    ['ny spiller i en tom kategori skrives', null, 'ola', false],
+    ['bytte til en annen spiller skrives', 'ola', 'kari', false],
+  ])('%s', (_label, shown, tapped, expected) => {
+    expect(isBingoBangoBongoNoOp(hole(5, shown, 'per', null), 'bingoUserId', tapped)).toBe(
+      expected,
+    );
+  });
+
+  it('ser bare på den trykte kategorien', () => {
+    const current = hole(5, 'ola', null, 'per');
+    expect(isBingoBangoBongoNoOp(current, 'bangoUserId', null)).toBe(true);
+    expect(isBingoBangoBongoNoOp(current, 'bongoUserId', null)).toBe(false);
   });
 });
 
