@@ -144,3 +144,23 @@ export function teamModePlayerCap(
   const effective = valid ? teamSize : Math.min(...sizes);
   return Math.min(teamFormatPlayerCap(effective), MAX_TEAM_FORMAT_PLAYERS);
 }
+
+/**
+ * How many teams «Trekk tilfeldig» deals `n` selected players into at the
+ * chosen `teamSize`, or `null` when the draw must refuse (#2012): every team
+ * full, no leftover, and no more teams than the grid shows.
+ *
+ * `fitsTeamFormat` cannot answer this. It asks whether ANY supported size
+ * fits, so 12 players pass through size 3 even when the organiser has
+ * switched to pairs and a draw would deal six teams. It also knows neither
+ * best ball nor par-stableford, and it demands two teams, while best ball
+ * has always let a single pair be drawn. The grid cap matters beyond looks:
+ * the form's `playersByTeam` only has keys 1–`MAX_TEAMS`, so a team 5 would
+ * crash the render rather than hide a team.
+ */
+export function randomDrawTeamCount(teamSize: number, n: number): number | null {
+  if (!Number.isInteger(teamSize) || teamSize < 2) return null;
+  if (!Number.isInteger(n) || n % teamSize !== 0) return null;
+  const teams = n / teamSize;
+  return teams >= 1 && teams <= teamsShownForSize(teamSize) ? teams : null;
+}
