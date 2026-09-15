@@ -50,3 +50,22 @@ See `../../docs/schema-ground-truth.md` for the authoritative schema snapshot an
 ## If you are unsure
 
 Stop and query the live DB before building. The typed client catches column-name drift at compile time; runtime CHECK and RLS gaps are only visible in the live schema. Trust the DB, not your memory or any doc snapshot.
+
+## RLS — hvem ser hvilke scores
+
+> Flyttet ordrett fra CLAUDE.md (#2100).
+
+Strengt håndhevet i Postgres. Spillere ser:
+- Sine egne scores
+- Samme-flight scores under aktivt spill
+- Alle scores i spill **de selv er med i**, etter `games.status = 'finished'`
+
+⚠️ Merk siste punkt: finished-grenen i `scores select gating per mode` krever
+fortsatt deltakelse i DET spillet. Et ferdig spill er altså ikke world-read (#1542).
+Flater som med vilje viser resultater til et bredere publikum — cup-sidene
+(`getCupSnapshot`), `/spectate/[token]`, og kamp-leaderboardet OG hull-drilldownen
+via `getResultReadClient` (#1632, eiervalg B: begge svarer likt) — leser derfor
+med service-role og holder autorisasjonen på call-site. Legger du til en slik
+flate: gaten i ruta ER håndhevelsen, det finnes ingen RLS bak den.
+
+Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
