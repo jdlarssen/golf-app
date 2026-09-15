@@ -94,6 +94,9 @@ describe('setBingoBangoBongoHole — validering før DB', () => {
   // #1950: `key` names the one column the write sets, and a server action takes
   // any payload. A column name, an unknown key, or an old client that still
   // sends the whole row is refused before the DB, so it can never write NULLs.
+  // A valid key with a userId that is neither null nor a user id would build
+  // `{ <column>: undefined }`; JSON drops it, and the upsert would write a row
+  // without the category yet answer ok. Refused the same way.
   it.each<[string, Record<string, unknown>]>([
     ['ukjent nøkkel', { gameId: 'g', holeNumber: 4, key: 'wolfUserId', userId: 'u-1' }],
     ['kolonnenavn i stedet for nøkkel', { gameId: 'g', holeNumber: 4, key: 'entered_by', userId: 'u-1' }],
@@ -101,6 +104,10 @@ describe('setBingoBangoBongoHole — validering før DB', () => {
       'gammel klient med hel rad og ingen nøkkel',
       { gameId: 'g', holeNumber: 4, bingoUserId: 'u-1', bangoUserId: null, bongoUserId: null },
     ],
+    ['gyldig nøkkel uten userId', { gameId: 'g', holeNumber: 4, key: 'bingoUserId' }],
+    ['userId satt til undefined', { gameId: 'g', holeNumber: 4, key: 'bangoUserId', userId: undefined }],
+    ['userId som tall', { gameId: 'g', holeNumber: 4, key: 'bongoUserId', userId: 42 }],
+    ['userId som tom streng', { gameId: 'g', holeNumber: 4, key: 'bingoUserId', userId: '' }],
   ])('avviser %s med invalid_category, uten upsert', async (_label, input) => {
     mockAuthed('u-1');
     mockGame('active');

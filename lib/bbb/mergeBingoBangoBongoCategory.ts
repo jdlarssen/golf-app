@@ -62,6 +62,15 @@ export function bingoBangoBongoCategoryColumn(
       return { bango_user_id: userId };
     case 'bongoUserId':
       return { bongo_user_id: userId };
+    default: {
+      // `never` keeps a new key a compile error. At runtime a key from outside
+      // the type would otherwise fall out as undefined, and spreading that is
+      // an upsert without any category: fail loudly instead.
+      const unreachable: never = key;
+      throw new Error(
+        `Unknown Bingo Bango Bongo category key: ${String(unreachable)}`,
+      );
+    }
   }
 }
 

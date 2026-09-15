@@ -20,8 +20,9 @@ export type SetBingoBangoBongoHoleError =
   | 'not_authenticated'
   | 'invalid_hole'
   // #1950: `key` is not one of the three categories — an unknown value, or an
-  // old client that still sends the whole row. Refused before the DB so it can
-  // never write NULLs over a flight-mate's category.
+  // old client that still sends the whole row — or `userId` is neither null nor
+  // a user id. Refused before the DB so it can never write NULLs over a
+  // flight-mate's category, nor a row without the category while answering ok.
   | 'invalid_category'
   | 'game_not_found'
   | 'game_finished'
@@ -59,7 +60,7 @@ export interface SetBingoBangoBongoHoleInput {
  *    klienten)
  *  - Krever autentisert bruker
  *  - Lås ved `games.status === 'finished'` (per kontrakt §5 og §Edge Cases)
- *  - `userId` er nullable: null tømmer kategorien
+ *  - `userId` er nullable: null tømmer kategorien, ellers en ikke-tom streng
  *
  * Etter upsert: revaliderer `game-${gameId}`-tagen så alle cache-konsumenter
  * (getBingoBangoBongoHoles, getGameWithPlayers, scoring) henter fresh data ved
@@ -77,6 +78,14 @@ export async function setBingoBangoBongoHole(
   }
 
   if (!isBingoBangoBongoCategoryKey(key)) {
+    return { ok: false, error: 'invalid_category' };
+  }
+
+  // The recipient lands in that one column. Anything but null or a user id (a
+  // missing field, a number) would build `{ <column>: undefined }`, JSON drops
+  // it, and the upsert would write a row without the category yet answer ok.
+  // An empty string is refused too: both clients send a player's uuid or null.
+  if (userId !== null && (typeof userId !== 'string' || userId === '')) {
     return { ok: false, error: 'invalid_category' };
   }
 
