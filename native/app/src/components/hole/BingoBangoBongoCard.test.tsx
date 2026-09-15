@@ -6,9 +6,10 @@
 //     sender bare bango. Sendte kortet hele raden fra øyeblikksbildet sitt,
 //     ville det nullet en kategori en i flighten registrerte i mellomtiden.
 //  2. **Ukjent tilstand låser kortet.** Har hentingen ikke lyktes, vet kortet
-//     ikke hva som står valgt: det viser tomme rader, og et tapp på en
-//     spiller som alt står valgt ville satt i stedet for å tømme. Knappene er
-//     låst, med en ærlig forklaring i stedet.
+//     ikke hva som står valgt og viser tomme rader. Et tapp ville da
+//     overskrive en registrering i den kategorien som spilleren ikke ser,
+//     eller tømme den med «Ingen». Knappene er låst, med en ærlig forklaring
+//     i stedet.
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { setBingoBangoBongoHole } from '../../data/choices';
 import { BingoBangoBongoCard } from './BingoBangoBongoCard';
