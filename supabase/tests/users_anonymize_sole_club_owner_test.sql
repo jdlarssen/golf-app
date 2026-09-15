@@ -100,7 +100,7 @@ select is(public.is_sole_club_owner(torny_sco.club_admin_id()) or public.is_sole
 select is(public.is_sole_club_owner(torny_sco.no_club_id()), false,
   '#1910: an account with no club membership is not a sole club owner');
 
--- ── 6–7. anonymize_user refuses the sole owner and writes nothing ──────────
+-- ── 6–8. anonymize_user refuses the sole owner and writes nothing ──────────
 select is(torny_sco.try_anonymize(torny_sco.sole_owner_id()), false,
   '#1910: anonymize_user raises sole_club_owner for the sole owner');
 select throws_ok(
