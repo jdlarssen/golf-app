@@ -15,6 +15,7 @@ import {
   pendingApprovalsFor,
   type FlightPlayer,
 } from '../../../../lib/games/flightScope';
+import { isMatchplayMode } from '../../../../lib/games/matchplaySides';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { wolfLinearHolesForSlot } from '../../../../lib/wolf/wolfLinearHolesForSlot';
 import type { BundlePlayer } from '../data/gameBundle';
@@ -133,6 +134,9 @@ function joinWithOg(items: readonly string[]): string {
  *    stillingen og annonseres av `WolfChoiceCard` når runden er der.
  *  - **Round robin:** ingen merkelapp. Rekkefølgen er rent kosmetisk for
  *    poengene, og nettsiden viser heller ingenting. Paritet, ikke utelatelse.
+ *  - **Matchplay (#1880):** `team_number` er en side i duellen, så det står
+ *    «Side N» — og ingen Flight, for en duell er alltid flight 1. En side
+ *    utenfor {1, 2} er utdatert data og får ingen merkelapp.
  *  - **Alt annet:** Flight og Lag som før.
  *
  * ⚠️ **n telles av `wolfRotationPlayers`, ikke av «aktive spillere».** Webbens
@@ -149,7 +153,11 @@ export function rosterMarks(
 ): string[] {
   const marks: string[] = [];
 
-  if (rotationSlotRange(gameMode) === null) {
+  if (isMatchplayMode(gameMode)) {
+    if (player.teamNumber === 1 || player.teamNumber === 2) {
+      marks.push(`Side ${player.teamNumber}`);
+    }
+  } else if (rotationSlotRange(gameMode) === null) {
     if (player.flightNumber != null) marks.push(`Flight ${player.flightNumber}`);
     if (player.teamNumber != null) marks.push(`Lag ${player.teamNumber}`);
   } else if (gameMode === 'wolf' && player.teamNumber != null) {

@@ -216,6 +216,16 @@ describe('rosterMarks', () => {
     expect(rosterMarks(me, 'best_ball', [me])).toEqual(['Flight 2', 'Lag 1']);
   });
 
+  // #1880: i matchplay er `team_number` en side i duellen, ikke et lag, og
+  // flighten er alltid 1 — en merkelapp som aldri endrer seg er bare støy.
+  it('kaller matchplay-plassen en side, uten flight — og gjetter ikke på stale sider', () => {
+    const me = player({ userId: 'a', teamNumber: 2, flightNumber: 1 });
+    expect(rosterMarks(me, 'singles_matchplay', [me])).toEqual(['Side 2']);
+
+    const stale = player({ userId: 'b', teamNumber: 3, flightNumber: 1 });
+    expect(rosterMarks(stale, 'fourball_matchplay', [stale])).toEqual([]);
+  });
+
   it('holder status-merkene uendret', () => {
     const approved = player({
       userId: 'a',
