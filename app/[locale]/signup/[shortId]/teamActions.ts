@@ -309,19 +309,39 @@ export async function submitTeamRegistration(
   // must not leave an orphaned request row behind (AGENTS.md trap 5). Open mode
   // only: that is when this action inserts game_players rows. manual_approval
   // requests still queue up; the organiser's approval is the gate there (#662).
-  const cap = teamModePlayerCap(game.game_mode, teamSize);
-  if (captainStatus === 'approved' && cap !== null) {
-    const { count: activeCount, error: capCountError } = await admin
+  //
+  // One read of the active roster serves both the cap and the team-slot search
+  // below. Withdrawn rows count for neither: a team whose members have all
+  // withdrawn no longer holds a number in the grid.
+  let takenTeamNumbers = new Set<number>();
+  if (captainStatus === 'approved') {
+    const { data: activeRoster, error: rosterError } = await admin
       .from('game_players')
-      .select('user_id', { count: 'exact', head: true })
+      .select('team_number')
       .eq('game_id', game.id)
-      .is('withdrawn_at', null);
-    if (capCountError) {
-      console.error('[submitTeamRegistration] player cap count failed', capCountError);
+      .is('withdrawn_at', null)
+      .returns<{ team_number: number | null }[]>();
+    if (rosterError) {
+      console.error('[submitTeamRegistration] active roster lookup failed', rosterError);
       // Fail-open like registerForOpenGame (#661): a transient DB error must not
-      // close registration. The team-slot gate below still stands.
-    } else if ((activeCount ?? 0) + teamSize > cap) {
-      return { ok: false, error: 'game_full' };
+      // close registration.
+    } else {
+      const roster = activeRoster ?? [];
+      takenTeamNumbers = new Set(
+        roster.flatMap((r) => (r.team_number === null ? [] : [r.team_number])),
+      );
+      const cap = teamModePlayerCap(game.game_mode, teamSize);
+      if (cap !== null) {
+        // A team holds all of its seats from the moment it exists. Its
+        // e-mail-invited teammates have only an invitations row until they join
+        // through attachToCaptainTeam, which checks no cap — counting rows alone
+        // let every captain in while those seats still looked empty.
+        const playersWithoutTeam = roster.filter((r) => r.team_number === null).length;
+        const reservedSeats = playersWithoutTeam + takenTeamNumbers.size * teamSize;
+        if (reservedSeats + teamSize > cap) {
+          return { ok: false, error: 'game_full' };
+        }
+      }
     }
   }
 
@@ -355,27 +375,26 @@ export async function submitTeamRegistration(
   // For open-modus: tildel team_number deterministisk (laveste ledige) og
   // sett kapteinen i game_players umiddelbart. Manual_approval venter på
   // admin via det eksisterende approveRequest-action-et.
-  // #2011: the search stops at MAX_TEAMS — team 5+ does not exist in the grid.
+  // #2011: the search reads the active roster fetched above and stops at
+  // MAX_TEAMS — team 5+ does not exist in the grid.
   let assignedTeamNumber: number | null = null;
   if (captainStatus === 'approved') {
-    const { data: existingTeams } = await admin
-      .from('game_players')
-      .select('team_number')
-      .eq('game_id', game.id)
-      .not('team_number', 'is', null)
-      .returns<{ team_number: number }[]>();
-    const taken = new Set((existingTeams ?? []).map((r) => r.team_number));
     for (let slot = 1; slot <= MAX_TEAMS; slot += 1) {
-      if (!taken.has(slot)) {
+      if (!takenTeamNumbers.has(slot)) {
         assignedTeamNumber = slot;
         break;
       }
     }
     if (assignedTeamNumber === null) {
-      // Every team number in the grid is taken even though the player count
-      // was under the cap (partly filled teams, or two captains racing past
-      // the check above). Roll back our own request row so the game is not
-      // left with a team without players (AGENTS.md trap 5), and say so.
+      // Every team number in the grid is taken although the cap had room. With
+      // a team size the format supports that cannot happen: four teams already
+      // reserve the whole cap, so the check above answers first. This is the
+      // backstop for a team_size below the format's smallest, where
+      // teamModePlayerCap computes the cap from that smallest size. Two
+      // captains racing past the check read the same roster and can pick the
+      // same number; nothing here stops that (the cap is not in the DB, #2062).
+      // Roll back our own request row so the game is not left with a team
+      // without players (AGENTS.md trap 5), and say so.
       //
       // 0 rows = failure, not success (trap 2 / I3): a delete without
       // `.select()` answers `error == null` even when it matched nothing.
