@@ -13,8 +13,9 @@
 //     i flighten som registrerer ulike kategorier samtidig beholder begge.
 //     Hele raden fra poll-øyeblikksbildet ville nullet den andres kategori.
 //     Har hentingen IKKE lyktes, er knappene likevel låst, med en ærlig
-//     forklaring: kortet vet ikke hva som står valgt, viser tomme rader, og et
-//     tapp på en spiller som alt står valgt ville satt i stedet for å tømme.
+//     forklaring: uten kjent tilstand viser kortet tomme rader, så et tapp
+//     ville overskrive en registrering i den kategorien som spilleren ikke
+//     ser, eller tømme den med «Ingen».
 //  2. **Finished-låsen ligger i datalaget.** RLS håndhever den ikke; webben
 //     gjør det i sin server action, og `setBingoBangoBongoHole` speiler den.
 //     Knappene er dessuten låst når runden ikke er aktiv — men et spill som
