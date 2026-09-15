@@ -8,8 +8,9 @@
  *  - matchplay → sider-grid (side 1 + side 2)
  *  - best-ball-netto → lag-grid (4 lag à 2) + «Trekk tilfeldig»/«Tøm lag» + flights
  *  - par-stableford → lag-grid (1-4 lag à 2) + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee
- *  - scramble-familien (texas/ambrose/florida/shamble) → lag-grid (2, 3 eller 4
- *    spillere per lag) + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee (#2012)
+ *  - scramble-familien (texas/ambrose/florida/shamble) → lag-grid (2–4 per lag
+ *    for texas/ambrose, 3–4 for florida/shamble, jf. TEAM_FORMAT_TEAM_SIZES)
+ *    + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee (#2012)
  *  - patsome / lag-matchplay → lag-grid + «Tøm lag», ingen trekning
  *  - solo (stableford / solo strokeplay) → kun per-spiller-tee
  *
