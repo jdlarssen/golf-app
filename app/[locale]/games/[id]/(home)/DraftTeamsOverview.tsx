@@ -63,7 +63,10 @@ export async function DraftTeamsOverview({
         return (
           <li key={teamNum}>
             {heading && (
-              <p className="text-xs text-muted uppercase tracking-[0.14em] font-semibold mb-1.5">
+              <p
+                className="text-xs text-muted uppercase tracking-[0.14em] font-semibold mb-1.5"
+                data-testid={`draft-${isMatchplay ? 'side' : 'team'}-heading-${teamNum}`}
+              >
                 {heading}
               </p>
             )}
