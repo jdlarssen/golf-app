@@ -32,7 +32,11 @@ import {
 const web = source.profile.deleteAccount;
 const webErrors: Record<string, string> = web.errors;
 
-const BLOCK_REASONS: DeleteBlockReason[] = ['admin_account', 'active_engagements'];
+const BLOCK_REASONS: DeleteBlockReason[] = [
+  'admin_account',
+  'active_engagements',
+  'sole_club_owner',
+];
 
 const FAILURES: AccountDeleteFailure[] = [
   'offline',
@@ -41,6 +45,7 @@ const FAILURES: AccountDeleteFailure[] = [
   'unauthorized',
   'admin_account',
   'active_engagements',
+  'sole_club_owner',
   'status_failed',
   'delete_failed',
 ];
@@ -58,7 +63,8 @@ describe('describeDeleteBlock', () => {
   it.each([
     ['admin_account', 'adminBanner'],
     ['active_engagements', 'blockedBanner'],
-  ] as [DeleteBlockReason, 'adminBanner' | 'blockedBanner'][])(
+    ['sole_club_owner', 'soleClubOwnerBanner'],
+  ] as [DeleteBlockReason, 'adminBanner' | 'blockedBanner' | 'soleClubOwnerBanner'][])(
     'viser webbens banner for «%s»',
     (reason, webKey) => {
       expect(describeDeleteBlock(reason)).toBe(web[webKey]);
@@ -74,6 +80,7 @@ describe('describeDeleteFailure', () => {
   it.each([
     ['admin_account', 'admin_account'],
     ['active_engagements', 'active_games'],
+    ['sole_club_owner', 'sole_club_owner'],
     ['delete_failed', 'delete_failed'],
   ] as [AccountDeleteFailure, string][])(
     'viser webbens feilmelding for «%s»',
