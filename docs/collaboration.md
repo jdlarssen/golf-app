@@ -17,7 +17,7 @@ Denne arbeidsdelingen har vist seg å fungere bra. Hold deg til den.
 ### Du (Claude) gjør (alt annet)
 
 - **All kode:** Edit/Write/Bash for filendringer, npm-kommandoer
-- **Git:** stage, commit (med atomic-disiplin), push til main — Vercel deployer automatisk
+- **Git:** stage, commit (atomisk), push branch + PR; grønne PR-er uten produktvalg merges automatisk (`docs/pr-workflow.md`) — Vercel deployer ved merge til main
 - **DNS-diagnostikk:** dig/curl via Bash for å sjekke propagering
 - **SQL og migrasjoner:** lager migrasjonsfiler i `supabase/migrations/` og påfører dem selv via Supabase MCP — staging først, verifiser, deretter prod KUN etter eksplisitt eier-godkjenning i økten (prod-brannmuren #1074 håndhever engangs-luken `touch .claude/approve-prod`). Read-only SELECT mot prod er sanksjonert.
 - **Diagnostikk:** legger til console.logs eller inline-debug i koden, leser server-side errors fra Vercel via brukerens skjermbilder
