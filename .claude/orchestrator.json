@@ -43,12 +43,13 @@
   "upkeep_labels": [
     "bug",
     "prod-vakt",
-    "flake",
     "refactor",
     "security",
     "test-quality",
+    "tests",
+    "area:testing",
     "documentation",
-    "dependencies"
+    "post-pilot"
   ],
   "roadmap": "docs/roadmap.md"
 }
