@@ -95,9 +95,7 @@ Hver `feat`/`fix`/`perf`-commit legger én notatfil under `.changes/`; aldri bum
 
 ### Språk-kvalitet i bruker-rettet copy
 
-Ny/endret norsk bruker-copy (i `.tsx`/`.ts`, mail-templates i `lib/mail/`, feilmeldinger, banner-/knapp-/helper-tekster): kjør `humanizer:humanizer`-skillet før commit. `.githooks/pre-commit` advarer (blokkerer ikke) på kjente AI-tells i nye `.tsx`/`.ts`-linjer; full pattern-katalog + `no-nb`-konvertering i [`docs/copy-style.md`](docs/copy-style.md). Markdown-filer skannes ikke.
-
-**Bevisst bevart (ignorer hook-advarsel for disse):** brand-taglinen `Tørny — fyr opp golfturneringen` (per `### Brand`), mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser strengen), «Sekretariat»-stemmen i admin-flater, engelske achievement-navn (Turkey/Solid/Snowman).
+Ny eller endret norsk bruker-copy: kjør `humanizer:humanizer`-skillet før commit. Mønsterkatalog og bevisst bevarte unntak: `docs/copy-style.md`.
 
 ### Testing — staging, aldri prod
 
