@@ -1,12 +1,13 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import {
   bingoBangoBongoCategoryColumn,
   isBingoBangoBongoCategoryKey,
   type BingoBangoBongoCategoryKey,
 } from '@/lib/bbb/mergeBingoBangoBongoCategory';
 import type { Database } from '@/lib/database.types';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getServerClient } from '@/lib/supabase/server';
 
 type BingoBangoBongoHoleInsert =
@@ -62,9 +63,14 @@ export interface SetBingoBangoBongoHoleInput {
  *  - Lås ved `games.status === 'finished'` (per kontrakt §5 og §Edge Cases)
  *  - `userId` er nullable: null tømmer kategorien, ellers en ikke-tom streng
  *
- * Etter upsert: revaliderer `game-${gameId}`-tagen så alle cache-konsumenter
- * (getBingoBangoBongoHoles, getGameWithPlayers, scoring) henter fresh data ved
- * neste request.
+ * Etter upsert: `updateTag` utløper `game-${gameId}`-tagen med én gang, så alle
+ * cache-konsumenter (getBingoBangoBongoHoles, getGameWithPlayers, scoring)
+ * venter på ferske data ved neste request (#2091). Lagring på hullet leser egen
+ * skriving: `revalidateTag(tag, 'max')` ga stale-while-revalidate, og første
+ * omlasting viste tilstanden fra før registreringen.
+ *
+ * Upserten må treffe en rad (#2080): PostgREST svarer `error == null` også når
+ * RLS lar skrivingen treffe ingenting.
  *
  * entered_by settes alltid til auth.uid() (audit-spor — hvem som tastet sist).
  */
@@ -131,17 +137,22 @@ export async function setBingoBangoBongoHole(
     ...bingoBangoBongoCategoryColumn(key, userId),
     entered_by: user.id,
   };
-  const { error } = await supabase
-    .from('bingo_bango_bongo_holes')
-    .upsert(row, { onConflict: 'game_id,hole_number' });
-
-  if (error) {
+  try {
+    expectAffected(
+      await supabase
+        .from('bingo_bango_bongo_holes')
+        .upsert(row, { onConflict: 'game_id,hole_number' })
+        .select('hole_number'),
+      'setBingoBangoBongoHole',
+    );
+  } catch (error) {
     console.error('[setBingoBangoBongoHole] upsert failed', { input, error });
-    // RLS-feil og constraint-violations rapporteres alle som rls_denied
-    // til UI — fra brukerens perspektiv er det "du har ikke lov til dette".
+    // RLS-feil, constraint-violations og en skriving som traff 0 rader
+    // rapporteres alle som rls_denied til UI — fra brukerens perspektiv er
+    // det "du har ikke lov til dette".
     return { ok: false, error: 'rls_denied' };
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  updateTag(`game-${gameId}`);
   return { ok: true };
 }
