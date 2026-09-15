@@ -31,7 +31,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-c",
-        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec node \"$HOME/.claude/plugins/marketplaces/claude-plugins/orchestrator/scripts/board.mjs\" --project \"$(git rev-parse --path-format=absolute --git-common-dir | xargs dirname)\" --port 3939"
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec node \"$HOME/.claude/plugins/marketplaces/jdl-plugins/orchestrator/scripts/board.mjs\" --project \"$(git rev-parse --path-format=absolute --git-common-dir | xargs dirname)\" --port 3939"
       ],
       "port": 3939
     }
