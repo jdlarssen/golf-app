@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const upsertMock = vi.fn();
+const upsertSelectMock = vi.fn();
 const getUserMock = vi.fn();
-const revalidateTagMock = vi.fn();
+const updateTagMock = vi.fn();
 const maybeSingleMock = vi.fn();
 
 // Track which table was queried for games-status check
@@ -25,8 +26,11 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
+// #2091: `updateTag`, not `revalidateTag(tag, 'max')` — the first reload after a
+// registration must show it, not the cached state from before. Only `updateTag`
+// is mocked, so a return to `revalidateTag` fails here.
 vi.mock('next/cache', () => ({
-  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
+  updateTag: (...args: unknown[]) => updateTagMock(...args),
 }));
 
 import { setBingoBangoBongoHole } from './setBingoBangoBongoHole';
@@ -35,10 +39,12 @@ type Input = Parameters<typeof setBingoBangoBongoHole>[0];
 
 beforeEach(() => {
   upsertMock.mockReset();
+  upsertSelectMock.mockReset();
   getUserMock.mockReset();
-  revalidateTagMock.mockReset();
+  updateTagMock.mockReset();
   maybeSingleMock.mockReset();
   fromCalls = [];
+  upsertMock.mockReturnValue({ select: upsertSelectMock });
 });
 
 function mockAuthed(userId: string) {
@@ -48,6 +54,16 @@ function mockAuthed(userId: string) {
 function mockGame(status: string) {
   maybeSingleMock.mockResolvedValue({ data: { status }, error: null });
 }
+
+/** What `upsert(...).select('hole_number')` resolves to. */
+function mockUpsert(result: {
+  data: { hole_number: number }[] | null;
+  error: { message: string } | null;
+}) {
+  upsertSelectMock.mockResolvedValue(result);
+}
+
+const UPSERTED = { data: [{ hole_number: 1 }], error: null };
 
 describe('setBingoBangoBongoHole — validering før DB', () => {
   it('avviser ikke-autentisert bruker', async () => {
@@ -111,13 +127,13 @@ describe('setBingoBangoBongoHole — validering før DB', () => {
   ])('avviser %s med invalid_category, uten upsert', async (_label, input) => {
     mockAuthed('u-1');
     mockGame('active');
-    upsertMock.mockResolvedValue({ error: null });
+    mockUpsert(UPSERTED);
 
     const result = await setBingoBangoBongoHole(input as unknown as Input);
 
     expect(result).toEqual({ ok: false, error: 'invalid_category' });
     expect(upsertMock).not.toHaveBeenCalled();
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(updateTagMock).not.toHaveBeenCalled();
   });
 });
 
@@ -135,7 +151,7 @@ describe('setBingoBangoBongoHole — finished-lock', () => {
 
     expect(result).toEqual({ ok: false, error: 'game_finished' });
     expect(upsertMock).not.toHaveBeenCalled();
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(updateTagMock).not.toHaveBeenCalled();
   });
 
   it('returnerer game_not_found hvis games-rad mangler', async () => {
@@ -172,7 +188,7 @@ describe('setBingoBangoBongoHole — finished-lock', () => {
 
     expect(result).toEqual({ ok: false, error: 'db_error' });
     expect(upsertMock).not.toHaveBeenCalled();
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(updateTagMock).not.toHaveBeenCalled();
   });
 });
 
@@ -181,10 +197,10 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
   // other two columns are absent, so PostgREST's ON CONFLICT DO UPDATE leaves a
   // flight-mate's concurrent registration standing. toStrictEqual, so a column
   // sent as undefined or null counts as present.
-  it('happy path: upserter bare den ene kategorien med entered_by + revaliderer game-tag', async () => {
+  it('happy path: upserter bare den ene kategorien med entered_by + utløper game-tag', async () => {
     mockAuthed('u-scorer');
     mockGame('active');
-    upsertMock.mockResolvedValue({ error: null });
+    mockUpsert({ data: [{ hole_number: 7 }], error: null });
 
     const result = await setBingoBangoBongoHole({
       gameId: 'g-42',
@@ -200,13 +216,15 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
         { onConflict: 'game_id,hole_number' },
       ],
     ]);
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-g-42', 'max');
+    // #2080: the row comes back so a 0-row write can be told apart from a save.
+    expect(upsertSelectMock).toHaveBeenCalledWith('hole_number');
+    expect(updateTagMock.mock.calls).toStrictEqual([['game-g-42']]);
   });
 
   it('tømming («Ingen») nuller bare den ene kolonnen', async () => {
     mockAuthed('u-scorer');
     mockGame('active');
-    upsertMock.mockResolvedValue({ error: null });
+    mockUpsert({ data: [{ hole_number: 9 }], error: null });
 
     const result = await setBingoBangoBongoHole({
       gameId: 'g',
@@ -227,7 +245,7 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
   it('samme spiller alle tre (3 poeng — lovlig): ett kall per kategori, hver til sin kolonne', async () => {
     mockAuthed('u-scorer');
     mockGame('active');
-    upsertMock.mockResolvedValue({ error: null });
+    mockUpsert({ data: [{ hole_number: 3 }], error: null });
 
     for (const key of ['bingoUserId', 'bangoUserId', 'bongoUserId'] as const) {
       expect(
@@ -245,7 +263,7 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
   it('entered_by settes til auth.uid() uavhengig av hvilken spiller som vant', async () => {
     mockAuthed('admin-user');
     mockGame('active');
-    upsertMock.mockResolvedValue({ error: null });
+    mockUpsert(UPSERTED);
 
     await setBingoBangoBongoHole({
       gameId: 'g',
@@ -263,7 +281,8 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
   it('Postgres-feil → rls_denied (uten å lekke detaljer)', async () => {
     mockAuthed('u-1');
     mockGame('active');
-    upsertMock.mockResolvedValue({
+    mockUpsert({
+      data: null,
       error: { message: 'new row violates row-level security policy' },
     });
 
@@ -275,13 +294,31 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
     });
 
     expect(result).toEqual({ ok: false, error: 'rls_denied' });
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(updateTagMock).not.toHaveBeenCalled();
   });
 
-  it('revaliderer IKKE game-tagen ved feil', async () => {
+  // #2080: PostgREST answers error == null when RLS lets the upsert touch
+  // nothing. That is not a save: same code as a refused write, no cache expiry.
+  it('upsert uten rader tilbake → rls_denied, ikke ok', async () => {
     mockAuthed('u-1');
     mockGame('active');
-    upsertMock.mockResolvedValue({ error: { message: 'db error' } });
+    mockUpsert({ data: [], error: null });
+
+    const result = await setBingoBangoBongoHole({
+      gameId: 'g',
+      holeNumber: 1,
+      key: 'bingoUserId',
+      userId: 'u-1',
+    });
+
+    expect(result).toEqual({ ok: false, error: 'rls_denied' });
+    expect(updateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('utløper IKKE game-tagen ved feil', async () => {
+    mockAuthed('u-1');
+    mockGame('active');
+    mockUpsert({ data: null, error: { message: 'db error' } });
 
     await setBingoBangoBongoHole({
       gameId: 'g-99',
@@ -290,6 +327,6 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
       userId: null,
     });
 
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(updateTagMock).not.toHaveBeenCalled();
   });
 });
