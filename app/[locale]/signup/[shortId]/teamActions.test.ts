@@ -588,6 +588,7 @@ describe('submitTeamRegistration — happy paths', () => {
           data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
           error: null,
         }, // captain display
+        { data: [{ id: CAPTAIN_REQUEST_ID }], error: null }, // rollback delete .select('id')
       ],
       {},
       { rpcErrors: { claim_open_registration_seat: { message: 'db constraint violation' } } },
@@ -601,6 +602,13 @@ describe('submitTeamRegistration — happy paths', () => {
     });
 
     expect(result).toEqual({ ok: false, error: 'db_error' });
+    // The request row is rolled back so a retry starts clean instead of
+    // answering already_registered.
+    expect(
+      adminMock.__fromCalls.find(
+        (c) => c.table === 'game_registration_requests' && c.method === 'delete',
+      ),
+    ).toBeDefined();
     // No teammate gets a game_players row when the captain has none.
     expect(
       adminMock.__fromCalls.filter((c) => c.table === 'game_players'),
