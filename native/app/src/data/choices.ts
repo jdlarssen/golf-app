@@ -31,6 +31,10 @@
 // ble bygget; migrasjon 0175 (#1836) legger dem inn, men appen poller fortsatt
 // til en realtime-oppgradering får sin egen kontrakt.
 import {
+  bingoBangoBongoCategoryColumn,
+  type BingoBangoBongoCategoryKey,
+} from '../../../../lib/bbb/mergeBingoBangoBongoCategory';
+import {
   expectAffected,
   NoRowsAffectedError,
 } from '../../../../lib/supabase/affectedRows';
@@ -153,7 +157,12 @@ export type WolfChoiceValidationError =
   | 'partner_must_be_null'
   | 'partner_cannot_be_wolf';
 
-/** Valideringsfeil for en BBB-rad. Speiler `lib/bbb/setBingoBangoBongoHole.ts:53-89`. */
+/**
+ * Valideringsfeil for en BBB-skriving. Speiler hull- og finished-sjekkene i
+ * `lib/bbb/setBingoBangoBongoHole.ts`. Webbens `invalid_category` har ingen
+ * tvilling her: appen tar nøkkelen fra en typet konstant, mens server action-en
+ * tar imot hva som helst.
+ */
 export type BingoBangoBongoValidationError = 'invalid_hole' | 'game_finished';
 
 /**
@@ -184,9 +193,10 @@ export interface WolfChoiceWrite {
 export interface BingoBangoBongoHoleWrite {
   gameId: string;
   holeNumber: number;
-  bingoUserId: string | null;
-  bangoUserId: string | null;
-  bongoUserId: string | null;
+  /** Kategorien som ble trykket. Bare dens kolonne skrives (#1950). */
+  key: BingoBangoBongoCategoryKey;
+  /** Mottakeren, eller `null` når kategorien tømmes («Ingen»). */
+  userId: string | null;
 }
 
 const VALID_CHOICES: readonly string[] = ['partner', 'lone', 'blind'];
@@ -355,12 +365,18 @@ async function refuseUnlessGameLives(
 }
 
 /**
- * Lagre bingo/bango/bongo for ett hull.
+ * Lagre ÉN bingo/bango/bongo-kategori for ett hull.
  *
  * Delt registrering: alle deltakere kan sette og endre raden, og alle tre
  * feltene er nullable — et hull der ingen nådde greena først har ingen bingo.
- * `null` settes eksplisitt, slik at en retting faktisk fjerner forrige mottaker
- * i stedet for å la den stå.
+ *
+ * Én kategori per kall (#1950): upserten har bare den trykte kategoriens
+ * kolonne pluss `entered_by`, og ON CONFLICT DO UPDATE setter bare kolonnene i
+ * payloaden. To i flighten som registrerer ulike kategorier på samme hull
+ * samtidig beholder derfor begge. Nøkkel → kolonne bor i
+ * `lib/bbb/mergeBingoBangoBongoCategory.ts`, delt med webbens action. `null`
+ * settes eksplisitt, slik at en retting faktisk fjerner forrige mottaker i den
+ * kategorien i stedet for å la den stå.
  *
  * To lag rundt finished-låsen: bundle-statusen svarer med én gang når kalleren
  * allerede vet at runden er over, og det ferske oppslaget fanger runden som ble
@@ -386,9 +402,7 @@ export async function setBingoBangoBongoHole(
         {
           game_id: input.gameId,
           hole_number: input.holeNumber,
-          bingo_user_id: input.bingoUserId,
-          bango_user_id: input.bangoUserId,
-          bongo_user_id: input.bongoUserId,
+          ...bingoBangoBongoCategoryColumn(input.key, input.userId),
           entered_by: userId,
         },
         { onConflict: 'game_id,hole_number' },

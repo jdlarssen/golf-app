@@ -2,12 +2,13 @@
 //
 // To ting kan gå galt her uten at noen ren funksjon ser det:
 //
-//  1. **Raden skrives hel.** Et tapp på «Bango» sender også bingo og bongo
-//     med. Sender kortet bare feltet som ble rørt, nuller upserten de to
-//     andre — og en registrering som allerede sto der forsvinner stille.
-//  2. **Ukjent tilstand låser kortet.** Har hentingen ikke lyktes, vet vi
-//     ikke hva de to andre feltene er, og da er et tapp det samme som å slette
-//     dem. Knappene er låst, med en ærlig forklaring i stedet.
+//  1. **Bare den trykte kategorien skrives (#1950).** Et tapp på «Bango»
+//     sender bare bango. Sendte kortet hele raden fra øyeblikksbildet sitt,
+//     ville det nullet en kategori en i flighten registrerte i mellomtiden.
+//  2. **Ukjent tilstand låser kortet.** Har hentingen ikke lyktes, vet kortet
+//     ikke hva som står valgt: det viser tomme rader, og et tapp på en
+//     spiller som alt står valgt ville satt i stedet for å tømme. Knappene er
+//     låst, med en ærlig forklaring i stedet.
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { setBingoBangoBongoHole } from '../../data/choices';
 import { BingoBangoBongoCard } from './BingoBangoBongoCard';
@@ -26,7 +27,7 @@ const PLAYERS = [
 ];
 
 describe('BingoBangoBongoCard', () => {
-  it('skriver hele raden, tømmer med «Ingen», og låser seg når valgene ikke er hentet', async () => {
+  it('skriver bare den trykte kategorien, tømmer med «Ingen», og låser seg når valgene ikke er hentet', async () => {
     const onSaved = jest.fn(async () => undefined);
     const { rerender } = await render(
       <BingoBangoBongoCard
@@ -47,17 +48,11 @@ describe('BingoBangoBongoCard', () => {
 
     await fireEvent.press(screen.getByTestId('bbb-bangoUserId-p2'));
 
-    // Bingoen som alt sto der følger med — ellers hadde upserten nullet den.
+    // Bare bango sendes. Bingoen som alt står, rører kortet ikke (#1950).
     // `gameStatus` går med som andre argument: finished-låsen bor i datalaget,
     // RLS håndhever den ikke.
     expect(setHoleMock).toHaveBeenCalledWith(
-      {
-        gameId: 'game-1',
-        holeNumber: 3,
-        bingoUserId: 'p1',
-        bangoUserId: 'p2',
-        bongoUserId: null,
-      },
+      { gameId: 'game-1', holeNumber: 3, key: 'bangoUserId', userId: 'p2' },
       'active',
     );
     expect(onSaved).toHaveBeenCalledTimes(1);
@@ -66,7 +61,7 @@ describe('BingoBangoBongoCard', () => {
     await fireEvent.press(screen.getByTestId('bbb-bingoUserId-ingen'));
 
     expect(setHoleMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ bingoUserId: null }),
+      { gameId: 'game-1', holeNumber: 3, key: 'bingoUserId', userId: null },
       'active',
     );
 

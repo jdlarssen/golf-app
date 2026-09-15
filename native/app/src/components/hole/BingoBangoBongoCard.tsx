@@ -8,10 +8,13 @@
 //
 // To ting styrer kortet:
 //
-//  1. **Raden skrives hel.** Upserten setter alle tre kolonnene hver gang, så
-//     et tapp på «Bango» sender også dagens bingo og bongo med. Har hentingen
-//     IKKE lyktes, vet vi ikke hva de to andre er — og et tapp ville nullet
-//     dem. Da er knappene låst, med en ærlig forklaring i stedet.
+//  1. **Bare den trykte kategorien skrives (#1950).** Et tapp på «Bango»
+//     sender `{ key, userId }` for bango og ingenting om bingo og bongo, så to
+//     i flighten som registrerer ulike kategorier samtidig beholder begge.
+//     Hele raden fra poll-øyeblikksbildet ville nullet den andres kategori.
+//     Har hentingen IKKE lyktes, er knappene likevel låst, med en ærlig
+//     forklaring: kortet vet ikke hva som står valgt, viser tomme rader, og et
+//     tapp på en spiller som alt står valgt ville satt i stedet for å tømme.
 //  2. **Finished-låsen ligger i datalaget.** RLS håndhever den ikke; webben
 //     gjør det i sin server action, og `setBingoBangoBongoHole` speiler den.
 //     Knappene er dessuten låst når runden ikke er aktiv — men et spill som
@@ -80,19 +83,14 @@ export function BingoBangoBongoCard({
 
   async function select(key: CategoryKey, userId: string | null) {
     if (locked) return;
+    // Overlaget viser hele raden; bare den trykte kategorien sendes.
     const next: BingoBangoBongoHoleInput = { ...current, holeNumber, [key]: userId };
     setPending(next);
     setSaving(true);
     setError(null);
     try {
       const result = await setBingoBangoBongoHole(
-        {
-          gameId,
-          holeNumber,
-          bingoUserId: next.bingoUserId,
-          bangoUserId: next.bangoUserId,
-          bongoUserId: next.bongoUserId,
-        },
+        { gameId, holeNumber, key, userId },
         gameStatus,
       );
       if (result.ok) {

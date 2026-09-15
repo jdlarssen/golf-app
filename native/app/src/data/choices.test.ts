@@ -57,9 +57,8 @@ function bbbWrite(over: BbbOver = {}) {
   return {
     gameId: GAME,
     holeNumber: 7,
-    bingoUserId: ME,
-    bangoUserId: null,
-    bongoUserId: MATE,
+    key: 'bingoUserId' as const,
+    userId: ME,
     ...over,
   };
 }
@@ -321,7 +320,7 @@ describe('choices', () => {
   });
 
   describe('setBingoBangoBongoHole', () => {
-    it('upserter alle tre plassene, tomme inkludert', async () => {
+    it('upserter bare den trykte kategorien, med entered_by (#1950)', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const write = queryStub(ONE_ROW);
       const lookup = queryStub(ACTIVE_GAME);
@@ -335,16 +334,32 @@ describe('choices', () => {
       expect(stepArgs(lookup, 'select')).toEqual([['status']]);
       expect(stepArgs(lookup, 'eq')).toEqual([['id', GAME]]);
 
-      // `null` skrives eksplisitt: en retting skal FJERNE forrige mottaker.
-      expect(stepArgs(write, 'upsert')[0]).toEqual([
-        {
-          game_id: GAME,
-          hole_number: 7,
-          bingo_user_id: ME,
-          bango_user_id: null,
-          bongo_user_id: MATE,
-          entered_by: ME,
-        },
+      // Bare den ene kolonnen: ON CONFLICT DO UPDATE setter kun kolonnene i
+      // payloaden, så en flight-kamerats samtidige kategori blir stående.
+      // toStrictEqual, så en kolonne sendt som undefined eller null teller.
+      expect(stepArgs(write, 'upsert')[0]).toStrictEqual([
+        { game_id: GAME, hole_number: 7, bingo_user_id: ME, entered_by: ME },
+        { onConflict: 'game_id,hole_number' },
+      ]);
+      expect(stepArgs(write, 'select')).toEqual([['hole_number']]);
+    });
+
+    it('«Ingen» skriver null i bare den ene kolonnen', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const write = queryStub(ONE_ROW);
+      routeFrom({ games: [queryStub(ACTIVE_GAME)], bingo_bango_bongo_holes: [write] });
+
+      expect(
+        await choices().setBingoBangoBongoHole(
+          bbbWrite({ key: 'bongoUserId', userId: null }),
+          'active',
+        ),
+      ).toEqual({ ok: true });
+
+      // `null` skrives eksplisitt: en retting skal FJERNE forrige mottaker —
+      // i den kategorien, og ingen andre.
+      expect(stepArgs(write, 'upsert')[0]).toStrictEqual([
+        { game_id: GAME, hole_number: 7, bongo_user_id: null, entered_by: ME },
         { onConflict: 'game_id,hole_number' },
       ]);
       expect(stepArgs(write, 'select')).toEqual([['hole_number']]);
