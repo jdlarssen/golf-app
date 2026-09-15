@@ -366,30 +366,30 @@ export async function submitTeamRegistration(
         '[submitTeamRegistration] captain seat claim failed',
         claimError,
       );
-      // Fatal (#667): uten game_players-raden står kapteinen utenfor
-      // spillerlista selv om de ellers ville sett en suksess-skjerm. Returner
-      // feil så de kan prøve igjen.
-      return { ok: false, error: 'db_error' };
     }
-    const { outcome, team_number: claimedTeam } = (claim ?? {}) as {
+    const { outcome, team_number: claimedTeam } = (claimError ? {} : (claim ?? {})) as {
       outcome?: string;
       team_number?: number | null;
     };
     if (outcome === 'ok') {
       assignedTeamNumber = claimedTeam ?? null;
     } else if (outcome !== 'already_on_roster') {
-      // The claim refused: the game is full, every team number is taken, or a
-      // state gate closed after the checks above. The claim runs after the
-      // captain row exists, so roll that row back — the game must not be left
-      // with a team without players (AGENTS.md trap 5).
+      // The claim refused (the game is full, every team number is taken, or a
+      // state gate closed after the checks above) or failed outright. It runs
+      // after the captain row exists, so roll that row back either way: the
+      // game must not be left with a team without players (AGENTS.md trap 5),
+      // and a retry must start clean — a request row left behind would answer
+      // the retry with already_registered and keep the captain off the roster
+      // (#667: without the game_players row the captain is not in the game).
       const rejection: TeamRegistrationError =
-        outcome === 'game_full' ||
-        outcome === 'game_locked' ||
-        outcome === 'signup_closed' ||
-        outcome === 'game_not_found'
+        !claimError &&
+        (outcome === 'game_full' ||
+          outcome === 'game_locked' ||
+          outcome === 'signup_closed' ||
+          outcome === 'game_not_found')
           ? outcome
           : 'db_error';
-      if (rejection === 'db_error') {
+      if (rejection === 'db_error' && !claimError) {
         console.error('[submitTeamRegistration] unexpected seat claim outcome', claim);
       }
       // 0 rows = failure, not success (trap 2 / I3): a delete without
@@ -407,7 +407,7 @@ export async function submitTeamRegistration(
       } catch (rollbackErr) {
         // The compensation failed and the request row stays behind. Log it,
         // but never let expectAffected throw out of the server action: the
-        // captain should see «game full», not a 500.
+        // captain should see an answer, not a 500.
         console.error('[submitTeamRegistration] captain rollback failed', rollbackErr);
       }
       return { ok: false, error: rejection };
