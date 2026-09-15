@@ -1,7 +1,11 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { sendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
-import { selectDeliveryReminderTargets } from '@/lib/games/deliveryStatus';
+import {
+  countUnremindable,
+  selectDeliveryReminderTargets,
+  type UnremindableCounts,
+} from '@/lib/games/deliveryStatus';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import { candidatesOnSameSplitDay } from '@/lib/games/splitDayPairing';
 import { filledHolesByPlayer } from '@/lib/games/filledHoles';
@@ -76,6 +80,11 @@ export type ReminderPreview =
        * the app route's GET body, which whitelists its fields.
        */
       targetUserIds: string[];
+      /**
+       * #1933: the ones still owing a card whom `targets` leaves out, per
+       * reason — so the sentence under the button can say why.
+       */
+      unremindable: UnremindableCounts;
       lastRemindedAt: string | null;
     }
   | ReminderBlocked;
@@ -86,6 +95,7 @@ type ReminderContext = {
   ok: true;
   game: GameRow;
   targets: PlayerRow[];
+  unremindable: UnremindableCounts;
   lastRemindedAt: string | null;
 };
 
@@ -209,14 +219,20 @@ async function loadReminderContext(
   // #1009: gjester purres ikke — plassholder-adressen kan ikke motta mail, og
   // gjesten leverer via markøren uansett. #1466: front9-spillere med ulevert
   // back9-søsken ekskluderes (purres via back9).
-  const targets = selectDeliveryReminderTargets({
+  const selection = {
     players,
     filledByUser,
     expectedHoles,
     undeliveredSiblingUserIds,
-  });
+  };
 
-  return { ok: true, game, targets, lastRemindedAt: latestReminder(players) };
+  return {
+    ok: true,
+    game,
+    targets: selectDeliveryReminderTargets(selection),
+    unremindable: countUnremindable(selection),
+    lastRemindedAt: latestReminder(players),
+  };
 }
 
 /**
@@ -232,6 +248,7 @@ export async function previewReminder(gameId: string): Promise<ReminderPreview> 
     ok: true,
     targets: loaded.targets.length,
     targetUserIds: loaded.targets.map((p) => p.user_id),
+    unremindable: loaded.unremindable,
     lastRemindedAt: loaded.lastRemindedAt,
   };
 }

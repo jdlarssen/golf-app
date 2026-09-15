@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   classifyDeliveryStatus,
+  countUnremindable,
   selectDeliveryReminderTargets,
   type DeliveryStatus,
 } from './deliveryStatus';
@@ -197,5 +198,84 @@ describe('selectDeliveryReminderTargets', () => {
       undeliveredSiblingUserIds: new Set(),
     });
     expect(targets.map((t) => t.user_id)).toEqual(['a', 'b']);
+  });
+});
+
+// #1933: the ones the reminder does NOT reach, counted per reason, so the
+// sentence under the button can say why without calling a finished guest
+// unfinished.
+describe('countUnremindable', () => {
+  const player = (
+    user_id: string,
+    over: Partial<{
+      submitted_at: string | null;
+      withdrawn_at: string | null;
+      is_guest: boolean;
+    }> = {},
+  ) => ({
+    user_id,
+    submitted_at: over.submitted_at ?? null,
+    withdrawn_at: over.withdrawn_at ?? null,
+    users: { is_guest: over.is_guest ?? false },
+  });
+
+  it('er null i alle bøttene for en tom liste', () => {
+    expect(
+      countUnremindable({ players: [], filledByUser: new Map(), expectedHoles: 18 }),
+    ).toEqual({ unfinished: 0, guests: 0, splitDay: 0 });
+  });
+
+  it('kaller en ferdig gjest gjest, ikke uferdig', () => {
+    expect(
+      countUnremindable({
+        players: [player('gjest', { is_guest: true })],
+        filledByUser: new Map([['gjest', 18]]),
+        expectedHoles: 18,
+      }),
+    ).toEqual({ unfinished: 0, guests: 1, splitDay: 0 });
+  });
+
+  it('teller hver spiller som mangler kort i nøyaktig én bøtte', () => {
+    const players = [
+      player('mål'), // 18/18 → purres, telles ikke
+      player('grense'), // 17/18 → uferdig
+      player('ingen-hull'), // ingen rad i kartet → uferdig
+      player('gjest-midt-i', { is_guest: true }), // gjest vinner over uferdig
+      player('søsken'), // ferdig, ulevert back9 → delt dag
+      player('søsken-midt-i'), // delt dag vinner over uferdig
+      player('levert', { submitted_at: '2026-09-02T13:00:00Z' }),
+      player('trukket', { withdrawn_at: '2026-09-02T09:00:00Z' }),
+      player('gjest-levert', { is_guest: true, submitted_at: '2026-09-02T13:00:00Z' }),
+      { user_id: 'uten-bruker', submitted_at: null, withdrawn_at: null, users: null },
+    ];
+    const filledByUser = new Map([
+      ['mål', 18],
+      ['grense', 17],
+      ['gjest-midt-i', 5],
+      ['søsken', 18],
+      ['søsken-midt-i', 4],
+      ['levert', 18],
+      ['trukket', 2],
+      ['gjest-levert', 18],
+      ['uten-bruker', 18],
+    ]);
+    const opts = {
+      players,
+      filledByUser,
+      expectedHoles: 18,
+      undeliveredSiblingUserIds: new Set(['søsken', 'søsken-midt-i']),
+    };
+
+    expect(countUnremindable(opts)).toEqual({
+      unfinished: 2,
+      guests: 1,
+      splitDay: 2,
+    });
+    // Same classification as the target selection: every undelivered, active
+    // player is either a target or in exactly one bucket.
+    expect(selectDeliveryReminderTargets(opts).map((t) => t.user_id)).toEqual([
+      'mål',
+      'uten-bruker',
+    ]);
   });
 });

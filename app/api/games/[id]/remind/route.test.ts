@@ -269,6 +269,10 @@ describe('GET — hva purringen ville truffet', () => {
     await expect(res.json()).resolves.toEqual({
       targets: 1,
       lastRemindedAt: '2026-09-02T10:00:00+00:00',
+      // #1933: who the reminder leaves out, per reason — the app's sentence.
+      unfinished: 1,
+      guests: 0,
+      splitDay: 0,
     });
     // Ren forhåndsvisning: ingenting sendes, ingenting skrives.
     expect(reminderMock).not.toHaveBeenCalled();

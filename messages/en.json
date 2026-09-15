@@ -2061,7 +2061,10 @@
     "remind": {
       "button": "Remind the ones missing ({count})",
       "pending": "Reminding …",
-      "none": "None of them have entered every hole yet. A reminder only helps once they have.",
+      "none": "None of them can be reminded right now.",
+      "unfinished": "{count, plural, one {# of them hasn't entered every hole yet.} other {# of them haven't entered every hole yet.}} A reminder only helps once they have.",
+      "guests": "{count, plural, one {# of them is a guest and hands in through their marker.} other {# of them are guests and hand in through their marker.}}",
+      "splitDay": "{count, plural, one {# of them hands in the whole round on Back 9 and is reminded there.} other {# of them hand in the whole round on Back 9 and are reminded there.}}",
       "sent": "Reminder sent. They'll get a notification now."
     },
     "delete": {
@@ -3644,7 +3647,7 @@
         "unconfirmedReminderSent": "{count, plural, one {✓ Confirmation reminder sent to 1 player.} other {✓ Confirmation reminder sent to {count} players.}}",
         "notActiveError": "The game is no longer active. You cannot send reminders.",
         "remindReady": "{count, plural, one {1 player has finished but not submitted their scorecard. Send a reminder to submit.} other {{count} players have finished but not submitted their scorecard. Send a reminder to submit.}}",
-        "remindNone": "No one has finished without submitting right now. Players automatically receive a reminder when they have entered all {totalHoles} holes.",
+        "remindNone": "No one can be reminded right now. Players with an account automatically receive a reminder when they have entered all {totalHoles} holes.",
         "remindButton": "{count, plural, one {Send reminder to 1 player} other {Send reminder to {count} players}}",
         "remindConfirm": "{count, plural, one {Send submission reminder to 1 player?} other {Send submission reminder to {count} players?}}",
         "remindUnconfirmed": "{count, plural, one {1 player has not confirmed attendance yet. Send a reminder.} other {{count} players have not confirmed attendance yet. Send a reminder.}}",

@@ -60,6 +60,49 @@ export function classifyDeliveryStatus(opts: {
   return 'not_started';
 }
 
+type ReminderRosterRow = {
+  user_id: string;
+  submitted_at: string | null;
+  withdrawn_at: string | null;
+  users: { is_guest: boolean } | null;
+};
+
+type ReminderSelectionOpts<T extends ReminderRosterRow> = {
+  players: readonly T[];
+  filledByUser: ReadonlyMap<string, number>;
+  expectedHoles: number;
+  /**
+   * #1466: brukere med et ulevert back9-søsken — ekskluderes (de purres via
+   * back9-spillet). Tom/utelatt for vanlige spill og back9-spill.
+   */
+  undeliveredSiblingUserIds?: ReadonlySet<string>;
+};
+
+/**
+ * #1933: why a player who still owes a card is or is not reminded. `null` =
+ * owes nothing (delivered or withdrawn). Target selection and the per-reason
+ * counts both read this, so the button's number and the sentence under it
+ * cannot disagree.
+ *
+ * Order matters: a guest is never reminded however far they got, and a
+ * split-day player hands in the whole round on back9 whatever the front9 hole
+ * count — so both win over «not finished yet».
+ */
+type ReminderReach = 'target' | 'guest' | 'split_day' | 'unfinished';
+
+function reminderReach<T extends ReminderRosterRow>(
+  p: T,
+  opts: ReminderSelectionOpts<T>,
+): ReminderReach | null {
+  if (p.submitted_at || p.withdrawn_at) return null;
+  if (p.users?.is_guest) return 'guest';
+  if (opts.undeliveredSiblingUserIds?.has(p.user_id)) return 'split_day';
+  if ((opts.filledByUser.get(p.user_id) ?? 0) < opts.expectedHoles) {
+    return 'unfinished';
+  }
+  return 'target';
+}
+
 /**
  * Purre-mål-utvelgelse for admin-purringen (#376/#1466). En spiller er et mål
  * når hen er ferdig (`holesFilled >= expectedHoles`), ikke levert, ikke trukket
@@ -71,31 +114,37 @@ export function classifyDeliveryStatus(opts: {
  * requireAdmin/redirect. Callers bygger `filledByUser` fra scores og
  * `undeliveredSiblingUserIds` fra ett batch-oppslag (aldri per-spiller-loop).
  */
-export function selectDeliveryReminderTargets<
-  T extends {
-    user_id: string;
-    submitted_at: string | null;
-    withdrawn_at: string | null;
-    users: { is_guest: boolean } | null;
-  },
->(opts: {
-  players: readonly T[];
-  filledByUser: ReadonlyMap<string, number>;
-  expectedHoles: number;
-  /**
-   * #1466: brukere med et ulevert back9-søsken — ekskluderes (de purres via
-   * back9-spillet). Tom/utelatt for vanlige spill og back9-spill.
-   */
-  undeliveredSiblingUserIds?: ReadonlySet<string>;
-}): T[] {
-  const { players, filledByUser, expectedHoles, undeliveredSiblingUserIds } =
-    opts;
-  return players.filter(
-    (p) =>
-      !p.submitted_at &&
-      !p.withdrawn_at &&
-      !p.users?.is_guest &&
-      (filledByUser.get(p.user_id) ?? 0) >= expectedHoles &&
-      !(undeliveredSiblingUserIds?.has(p.user_id) ?? false),
-  );
+export function selectDeliveryReminderTargets<T extends ReminderRosterRow>(
+  opts: ReminderSelectionOpts<T>,
+): T[] {
+  return opts.players.filter((p) => reminderReach(p, opts) === 'target');
+}
+
+/** #1933: the players a reminder does NOT reach, per reason. */
+export type UnremindableCounts = {
+  /** Not every hole entered yet — a reminder helps once they have. */
+  unfinished: number;
+  /** Guests hand in through their marker and have no address to remind. */
+  guests: number;
+  /** #1466: hand in the whole round on the same day's back9 game. */
+  splitDay: number;
+};
+
+/**
+ * Counterpart of {@link selectDeliveryReminderTargets}: everyone who still owes
+ * a card and is not a target lands in exactly one bucket. Lets the surfaces say
+ * why fewer can be reminded than are missing, without calling a finished guest
+ * unfinished.
+ */
+export function countUnremindable<T extends ReminderRosterRow>(
+  opts: ReminderSelectionOpts<T>,
+): UnremindableCounts {
+  const counts: UnremindableCounts = { unfinished: 0, guests: 0, splitDay: 0 };
+  for (const p of opts.players) {
+    const reach = reminderReach(p, opts);
+    if (reach === 'unfinished') counts.unfinished += 1;
+    else if (reach === 'guest') counts.guests += 1;
+    else if (reach === 'split_day') counts.splitDay += 1;
+  }
+  return counts;
 }
