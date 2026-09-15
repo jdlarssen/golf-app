@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(11);
+select plan(14);
 
 -- ── Fixture ids ──────────────────────────────────────────────────────────────
 create schema if not exists torny_sco;
@@ -115,26 +115,34 @@ select ok(
   '#1910: after the refusal the club still has its owner and the account is not anonymized'
 );
 
--- ── 8. Solo club: goes through, membership gone ─────────────────────────────
+-- The call and its check are SEPARATE statements on purpose: a statement's
+-- snapshot is taken when it starts, so a subquery in the same statement as
+-- try_anonymize() cannot see what anonymize_user just wrote.
+
+-- ── 9–10. Solo club: goes through, membership gone ──────────────────────────
+select is(torny_sco.try_anonymize(torny_sco.solo_owner_id()), true,
+  '#1910: sole owner alone in their club is anonymized');
 select ok(
-  torny_sco.try_anonymize(torny_sco.solo_owner_id())
-  and not exists(select 1 from public.group_members where user_id = torny_sco.solo_owner_id()),
-  '#1910: sole owner alone in their club is anonymized and the membership is removed'
+  not exists(select 1 from public.group_members where user_id = torny_sco.solo_owner_id()),
+  '#1910: the solo owner''s membership is removed'
 );
 
--- ── 9. Ordinary member of a club with an owner: goes through ────────────────
-select ok(
-  torny_sco.try_anonymize(torny_sco.member_id())
-  and (select deleted_at from public.users where id = torny_sco.member_id()) is not null,
-  '#1910: an ordinary member is anonymized as before'
+-- ── 11–12. Ordinary member of a club with an owner: goes through ────────────
+select is(torny_sco.try_anonymize(torny_sco.member_id()), true,
+  '#1910: an ordinary member is anonymized as before');
+select isnt(
+  (select deleted_at from public.users where id = torny_sco.member_id()),
+  null,
+  '#1910: the ordinary member is marked deleted'
 );
 
--- ── 10. One of two owners: goes through, the other owner remains ────────────
+-- ── 13–14. One of two owners: goes through, the other owner remains ─────────
+select is(torny_sco.try_anonymize(torny_sco.co_owner_a_id()), true,
+  '#1910: one of two owners is anonymized');
 select ok(
-  torny_sco.try_anonymize(torny_sco.co_owner_a_id())
-  and exists(select 1 from public.group_members
-              where group_id = torny_sco.co_club_id() and user_id = torny_sco.co_owner_b_id() and role = 'owner'),
-  '#1910: one of two owners is anonymized and the club keeps its other owner'
+  exists(select 1 from public.group_members
+          where group_id = torny_sco.co_club_id() and user_id = torny_sco.co_owner_b_id() and role = 'owner'),
+  '#1910: the club keeps its other owner'
 );
 
 select * from finish();
