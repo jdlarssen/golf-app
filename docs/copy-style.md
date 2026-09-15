@@ -4,6 +4,14 @@ Pattern-katalog for bruker-rettet copy i Tørny — strenger som vises i UI, mai
 
 Trigger: `.githooks/pre-commit` peker hit når den advarer. Korte hooked-mønstre + bevisst-bevart-listen ligger også i [`CLAUDE.md`](../CLAUDE.md) under «Språk-kvalitet i bruker-rettet copy» (slik at jeg er primet før commit, ikke bare etter).
 
+## Språk-kvalitet i bruker-rettet copy — regelen
+
+> Flyttet ordrett fra CLAUDE.md (#2100).
+
+Ny/endret norsk bruker-copy (i `.tsx`/`.ts`, mail-templates i `lib/mail/`, feilmeldinger, banner-/knapp-/helper-tekster): kjør `humanizer:humanizer`-skillet før commit. `.githooks/pre-commit` advarer (blokkerer ikke) på kjente AI-tells i nye `.tsx`/`.ts`-linjer; full pattern-katalog + `no-nb`-konvertering i [`docs/copy-style.md`](copy-style.md). Markdown-filer skannes ikke.
+
+**Bevisst bevart (ignorer hook-advarsel for disse):** brand-taglinen `Tørny — fyr opp golfturneringen` (per `### Brand`), mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser strengen), «Sekretariat»-stemmen i admin-flater, engelske achievement-navn (Turkey/Solid/Snowman).
+
 ## Hva hooken fanger mekanisk
 
 `.githooks/pre-commit` advarer (men blokkerer ikke) på følgende i nye linjer i `.tsx`/`.ts`-filer (ikke tester, ikke markdown):
