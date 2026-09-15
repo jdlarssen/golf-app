@@ -7,10 +7,18 @@
 // trenger ikke useEffect-sync mot prop-endringer på samme hull.
 
 import { useEffect, useState } from 'react';
+import {
+  mergeCategory,
+  type BingoBangoBongoCategoryKey,
+} from '@/lib/bbb/mergeBingoBangoBongoCategory';
 import { subscribeBingoBangoBongo } from '@/lib/bbb/subscribeBingoBangoBongo';
 import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
 
-/** Erstatt hullets rad (om den finnes) og hold lista sortert på hull-nummer. */
+/**
+ * Erstatt hullets rad (om den finnes) og hold lista sortert på hull-nummer.
+ * Riktig for realtime: `payload.new` er hele den committede raden, med
+ * flight-kameratenes samtidige kategorier allerede flettet inn av databasen.
+ */
 function upsertByHole(
   prev: BingoBangoBongoHoleInput[],
   row: BingoBangoBongoHoleInput,
@@ -24,8 +32,12 @@ function upsertByHole(
 export type BingoBangoBongoState = {
   /** Lagret rad for gjeldende hull, eller null når hullet ikke er ført ennå. */
   savedHole: BingoBangoBongoHoleInput | null;
-  /** Optimistisk merge etter lagring på egen device. */
-  onSaved: (updated: BingoBangoBongoHoleInput) => void;
+  /**
+   * Fletter egen lagret kategori inn i hullets rad (#1950). Bare den ene
+   * kategorien endres, så en flight-kamerats kategori som kom inn via realtime
+   * blir stående selv om kanalen er nede når vårt eget ekko skulle kommet.
+   */
+  onSaved: (key: BingoBangoBongoCategoryKey, userId: string | null) => void;
 };
 
 export function useBingoBangoBongoHoles(args: {
@@ -56,6 +68,7 @@ export function useBingoBangoBongoHoles(args: {
 
   return {
     savedHole: holes.find((h) => h.holeNumber === currentHole) ?? null,
-    onSaved: (updated) => setHoles((prev) => upsertByHole(prev, updated)),
+    onSaved: (key, userId) =>
+      setHoles((prev) => mergeCategory(prev, currentHole, key, userId)),
   };
 }

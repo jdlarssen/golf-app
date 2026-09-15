@@ -31,6 +31,8 @@ vi.mock('next/cache', () => ({
 
 import { setBingoBangoBongoHole } from './setBingoBangoBongoHole';
 
+type Input = Parameters<typeof setBingoBangoBongoHole>[0];
+
 beforeEach(() => {
   upsertMock.mockReset();
   getUserMock.mockReset();
@@ -54,9 +56,8 @@ describe('setBingoBangoBongoHole — validering før DB', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'g',
       holeNumber: 1,
-      bingoUserId: 'u-1',
-      bangoUserId: null,
-      bongoUserId: null,
+      key: 'bingoUserId',
+      userId: 'u-1',
     });
 
     expect(result).toEqual({ ok: false, error: 'not_authenticated' });
@@ -69,9 +70,8 @@ describe('setBingoBangoBongoHole — validering før DB', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'g',
       holeNumber: 0,
-      bingoUserId: 'u-1',
-      bangoUserId: null,
-      bongoUserId: null,
+      key: 'bingoUserId',
+      userId: 'u-1',
     });
 
     expect(result).toEqual({ ok: false, error: 'invalid_hole' });
@@ -84,12 +84,33 @@ describe('setBingoBangoBongoHole — validering før DB', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'g',
       holeNumber: 19,
-      bingoUserId: 'u-1',
-      bangoUserId: null,
-      bongoUserId: null,
+      key: 'bingoUserId',
+      userId: 'u-1',
     });
 
     expect(result).toEqual({ ok: false, error: 'invalid_hole' });
+  });
+
+  // #1950: `key` names the one column the write sets, and a server action takes
+  // any payload. A column name, an unknown key, or an old client that still
+  // sends the whole row is refused before the DB, so it can never write NULLs.
+  it.each<[string, Record<string, unknown>]>([
+    ['ukjent nøkkel', { gameId: 'g', holeNumber: 4, key: 'wolfUserId', userId: 'u-1' }],
+    ['kolonnenavn i stedet for nøkkel', { gameId: 'g', holeNumber: 4, key: 'entered_by', userId: 'u-1' }],
+    [
+      'gammel klient med hel rad og ingen nøkkel',
+      { gameId: 'g', holeNumber: 4, bingoUserId: 'u-1', bangoUserId: null, bongoUserId: null },
+    ],
+  ])('avviser %s med invalid_category, uten upsert', async (_label, input) => {
+    mockAuthed('u-1');
+    mockGame('active');
+    upsertMock.mockResolvedValue({ error: null });
+
+    const result = await setBingoBangoBongoHole(input as unknown as Input);
+
+    expect(result).toEqual({ ok: false, error: 'invalid_category' });
+    expect(upsertMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });
 
@@ -101,9 +122,8 @@ describe('setBingoBangoBongoHole — finished-lock', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'g-done',
       holeNumber: 5,
-      bingoUserId: 'u-1',
-      bangoUserId: 'u-2',
-      bongoUserId: 'u-3',
+      key: 'bangoUserId',
+      userId: 'u-2',
     });
 
     expect(result).toEqual({ ok: false, error: 'game_finished' });
@@ -118,9 +138,8 @@ describe('setBingoBangoBongoHole — finished-lock', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'missing',
       holeNumber: 1,
-      bingoUserId: null,
-      bangoUserId: null,
-      bongoUserId: null,
+      key: 'bingoUserId',
+      userId: null,
     });
 
     expect(result).toEqual({ ok: false, error: 'game_not_found' });
@@ -140,9 +159,8 @@ describe('setBingoBangoBongoHole — finished-lock', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'g-flaky',
       holeNumber: 1,
-      bingoUserId: null,
-      bangoUserId: null,
-      bongoUserId: null,
+      key: 'bingoUserId',
+      userId: null,
     });
 
     expect(result).toEqual({ ok: false, error: 'db_error' });
@@ -152,7 +170,11 @@ describe('setBingoBangoBongoHole — finished-lock', () => {
 });
 
 describe('setBingoBangoBongoHole — DB-interaksjon', () => {
-  it('happy path: upserter alle tre user-id-ene med entered_by + revaliderer game-tag', async () => {
+  // #1950: the payload carries only the tapped category (+ entered_by). The
+  // other two columns are absent, so PostgREST's ON CONFLICT DO UPDATE leaves a
+  // flight-mate's concurrent registration standing. toStrictEqual, so a column
+  // sent as undefined or null counts as present.
+  it('happy path: upserter bare den ene kategorien med entered_by + revaliderer game-tag', async () => {
     mockAuthed('u-scorer');
     mockGame('active');
     upsertMock.mockResolvedValue({ error: null });
@@ -160,27 +182,21 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'g-42',
       holeNumber: 7,
-      bingoUserId: 'u-1',
-      bangoUserId: 'u-2',
-      bongoUserId: 'u-3',
+      key: 'bangoUserId',
+      userId: 'u-2',
     });
 
     expect(result).toEqual({ ok: true });
-    expect(upsertMock).toHaveBeenCalledWith(
-      {
-        game_id: 'g-42',
-        hole_number: 7,
-        bingo_user_id: 'u-1',
-        bango_user_id: 'u-2',
-        bongo_user_id: 'u-3',
-        entered_by: 'u-scorer',
-      },
-      { onConflict: 'game_id,hole_number' },
-    );
+    expect(upsertMock.mock.calls).toStrictEqual([
+      [
+        { game_id: 'g-42', hole_number: 7, bango_user_id: 'u-2', entered_by: 'u-scorer' },
+        { onConflict: 'game_id,hole_number' },
+      ],
+    ]);
     expect(revalidateTagMock).toHaveBeenCalledWith('game-g-42', 'max');
   });
 
-  it('lagrer null-kategorier (bango udelt)', async () => {
+  it('tømming («Ingen») nuller bare den ene kolonnen', async () => {
     mockAuthed('u-scorer');
     mockGame('active');
     upsertMock.mockResolvedValue({ error: null });
@@ -188,40 +204,35 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'g',
       holeNumber: 9,
-      bingoUserId: 'u-1',
-      bangoUserId: null,
-      bongoUserId: null,
+      key: 'bingoUserId',
+      userId: null,
     });
 
     expect(result).toEqual({ ok: true });
-    expect(upsertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ bango_user_id: null, bongo_user_id: null }),
-      expect.any(Object),
-    );
+    expect(upsertMock.mock.calls).toStrictEqual([
+      [
+        { game_id: 'g', hole_number: 9, bingo_user_id: null, entered_by: 'u-scorer' },
+        { onConflict: 'game_id,hole_number' },
+      ],
+    ]);
   });
 
-  it('same spiller alle tre (3 poeng — lovlig)', async () => {
+  it('samme spiller alle tre (3 poeng — lovlig): ett kall per kategori, hver til sin kolonne', async () => {
     mockAuthed('u-scorer');
     mockGame('active');
     upsertMock.mockResolvedValue({ error: null });
 
-    const result = await setBingoBangoBongoHole({
-      gameId: 'g',
-      holeNumber: 3,
-      bingoUserId: 'u-star',
-      bangoUserId: 'u-star',
-      bongoUserId: 'u-star',
-    });
+    for (const key of ['bingoUserId', 'bangoUserId', 'bongoUserId'] as const) {
+      expect(
+        await setBingoBangoBongoHole({ gameId: 'g', holeNumber: 3, key, userId: 'u-star' }),
+      ).toEqual({ ok: true });
+    }
 
-    expect(result).toEqual({ ok: true });
-    expect(upsertMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        bingo_user_id: 'u-star',
-        bango_user_id: 'u-star',
-        bongo_user_id: 'u-star',
-      }),
-      expect.any(Object),
-    );
+    expect(upsertMock.mock.calls.map(([payload]) => payload)).toStrictEqual([
+      { game_id: 'g', hole_number: 3, bingo_user_id: 'u-star', entered_by: 'u-scorer' },
+      { game_id: 'g', hole_number: 3, bango_user_id: 'u-star', entered_by: 'u-scorer' },
+      { game_id: 'g', hole_number: 3, bongo_user_id: 'u-star', entered_by: 'u-scorer' },
+    ]);
   });
 
   it('entered_by settes til auth.uid() uavhengig av hvilken spiller som vant', async () => {
@@ -232,9 +243,8 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
     await setBingoBangoBongoHole({
       gameId: 'g',
       holeNumber: 1,
-      bingoUserId: 'player-1',
-      bangoUserId: 'player-2',
-      bongoUserId: 'player-3',
+      key: 'bongoUserId',
+      userId: 'player-3',
     });
 
     expect(upsertMock).toHaveBeenCalledWith(
@@ -253,9 +263,8 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
     const result = await setBingoBangoBongoHole({
       gameId: 'g',
       holeNumber: 1,
-      bingoUserId: 'u-1',
-      bangoUserId: null,
-      bongoUserId: null,
+      key: 'bingoUserId',
+      userId: 'u-1',
     });
 
     expect(result).toEqual({ ok: false, error: 'rls_denied' });
@@ -270,9 +279,8 @@ describe('setBingoBangoBongoHole — DB-interaksjon', () => {
     await setBingoBangoBongoHole({
       gameId: 'g-99',
       holeNumber: 2,
-      bingoUserId: null,
-      bangoUserId: null,
-      bongoUserId: null,
+      key: 'bangoUserId',
+      userId: null,
     });
 
     expect(revalidateTagMock).not.toHaveBeenCalled();
