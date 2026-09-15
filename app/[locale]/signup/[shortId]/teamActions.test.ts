@@ -657,12 +657,15 @@ describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
    * An open Texas à 4 game (cap 16) and a team of four with three e-mail slots.
    * The roster read comes first; the rest is what the action consumes once the
    * cap lets the team in — so a missing gate shows up as ok:true, not as a mock
-   * underflow.
+   * underflow. Pass `rosterError` to make the roster read fail instead.
    */
-  function openTexasFours(roster: Array<{ team_number: number | null }>) {
+  function openTexasFours(
+    roster: Array<{ team_number: number | null }>,
+    rosterError: { message: string } | null = null,
+  ) {
     getGameByShortIdMock.mockResolvedValue(makeGame()); // open, texas à 4 → cap 16
     adminMock = buildSupabaseMock([
-      { data: roster, error: null }, // active roster
+      { data: rosterError ? null : roster, error: rosterError }, // active roster
       { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
       captainDisplay,
       { data: null, error: null }, // captain game_players upsert
@@ -734,6 +737,38 @@ describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
     const result = await submitTeamRegistration(input);
 
     expect(result).toEqual({ ok: false, error: 'game_full' });
+    expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
+  });
+
+  it('lag med flere aktive spillere enn lagstørrelsen holder alle plassene sine → game_full', async () => {
+    // The organiser can put more players on a team than the team size: for a
+    // self-registration game buildGameInsertPayload validates the roster as a
+    // draft, so the scramble balance check never runs. Team 1 has six active
+    // rows and teams 2–3 only their captain: 6 + 4 + 4 = 14 seats, and a
+    // fourth team of four does not fit. Charging team 1 its team size would
+    // count 12 and let it in.
+    const input = openTexasFours(rosterRows(1, 1, 1, 1, 1, 1, 2, 3));
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration(input);
+
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+    expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
+  });
+
+  it('spillerlista kan ikke leses → db_error, ingen kaptein-rad', async () => {
+    // A failed roster read says nothing about which team numbers are taken or
+    // how many seats are left. Guessing would hand the captain team 1, perhaps
+    // on top of a team that already has it, so the action refuses before the
+    // captain row exists and a retry starts clean.
+    const input = openTexasFours([], {
+      message: 'AbortError: This operation was aborted',
+    });
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration(input);
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
     expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
   });
 
