@@ -40,6 +40,18 @@ export async function RemindMissing({
   const preview = await previewReminder(gameId);
   const targets = preview.ok ? preview.targets : 0;
 
+  // #1933: one sentence per reason nobody can be reminded. A single «none of
+  // them have entered every hole» called a finished guest unfinished. The
+  // neutral fallback covers the lost race above, where there are no counts.
+  const reasons = preview.ok ? preview.unremindable : null;
+  const notes = reasons
+    ? [
+        reasons.unfinished > 0 && t('unfinished', { count: reasons.unfinished }),
+        reasons.guests > 0 && t('guests', { count: reasons.guests }),
+        reasons.splitDay > 0 && t('splitDay', { count: reasons.splitDay }),
+      ].filter((note): note is string => Boolean(note))
+    : [];
+
   return (
     <div className="space-y-3">
       {justReminded && (
@@ -67,7 +79,7 @@ export async function RemindMissing({
           className="px-1 font-sans text-[13px] leading-relaxed text-muted"
           data-testid="remind-missing-none"
         >
-          {t('none')}
+          {notes.length > 0 ? notes.join(' ') : t('none')}
         </p>
       )}
     </div>

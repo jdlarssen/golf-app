@@ -211,6 +211,8 @@ describe('previewReminder — antall', () => {
       targets: 1,
       // #2041: statussidens ⚠️ leser nøyaktig disse id-ene.
       targetUserIds: ['ferdig'],
+      // #1933: the finished guest is counted as a guest, not as unfinished.
+      unremindable: { unfinished: 1, guests: 1, splitDay: 0 },
       lastRemindedAt: null,
     });
   });
@@ -410,6 +412,18 @@ describe('sendReminders — split-dag (#1466)', () => {
       op.filters.some((f) => f.column === 'game_id' && f.op === 'in'),
     );
     expect(siblingLookup?.filters[0].value).toEqual(['back9-samme-dag']);
+  });
+
+  it('#1933: forhåndsvisningen teller søsken-spilleren som delt dag', async () => {
+    db.back9Hosts = [
+      { id: 'back9-samme-dag', scheduled_tee_off_at: '2026-09-02T12:00:00+00:00', created_at: null },
+    ];
+    db.undeliveredSiblings = [{ user_id: 'begge-halvdeler' }];
+
+    await expect(previewReminder(GAME_ID)).resolves.toMatchObject({
+      targets: 1,
+      unremindable: { unfinished: 0, guests: 0, splitDay: 1 },
+    });
   });
 
   it('spør ikke etter søsken i det hele tatt for et vanlig 18-hulls spill', async () => {

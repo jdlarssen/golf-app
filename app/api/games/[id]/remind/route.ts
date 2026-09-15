@@ -17,7 +17,9 @@ import { previewReminder, sendReminders } from '@/lib/games/remindUnsubmitted';
 // under ER håndhevelsen.
 //
 // WIRE (frosset — appen speiler den):
-//   GET  200 { targets: number, lastRemindedAt: string | null }
+//   GET  200 { targets: number, lastRemindedAt: string | null,
+//              unfinished: number, guests: number, splitDay: number }
+//        (#1933: the last three count who a reminder does NOT reach, per reason)
 //   POST 200 { reminded: number }
 //        401 { error: 'unauthorized' }   403 { error: 'forbidden' }
 //        404 { error: 'not_found' }      409 { error: 'not_active' }
@@ -98,6 +100,9 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     return NextResponse.json({
       targets: result.targets,
       lastRemindedAt: result.lastRemindedAt,
+      unfinished: result.unremindable.unfinished,
+      guests: result.unremindable.guests,
+      splitDay: result.unremindable.splitDay,
     });
   } catch (err) {
     console.error(`[${LOG_PREFIX}] preview failed`, err);

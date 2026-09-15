@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { createTranslator } from 'next-intl';
 import noMessages from '@/messages/no.json';
 
 vi.mock('@/lib/games/remindUnsubmitted', () => ({
@@ -10,6 +11,8 @@ import { previewReminder } from '@/lib/games/remindUnsubmitted';
 import { RemindMissing } from './RemindMissing';
 
 const preview = vi.mocked(previewReminder);
+
+const NOBODY_LEFT_OUT = { unfinished: 0, guests: 0, splitDay: 0 };
 
 /**
  * Én render-test for purreknappen (#1889) — de tre presentasjonelle grenene
@@ -25,6 +28,12 @@ const preview = vi.mocked(previewReminder);
 describe('RemindMissing (#1889)', () => {
   beforeEach(() => preview.mockReset());
 
+  const t = createTranslator({
+    locale: 'no',
+    messages: noMessages,
+    namespace: 'game.remind',
+  });
+
   const renderBlock = async (justReminded = false) =>
     render(
       (await RemindMissing({
@@ -39,6 +48,7 @@ describe('RemindMissing (#1889)', () => {
       ok: true,
       targets: 3,
       targetUserIds: ['a', 'b', 'c'],
+      unremindable: NOBODY_LEFT_OUT,
       lastRemindedAt: null,
     });
 
@@ -46,23 +56,26 @@ describe('RemindMissing (#1889)', () => {
 
     expect(preview).toHaveBeenCalledWith('game-1');
     expect(screen.getByRole('button')).toHaveTextContent('3');
-    expect(
-      screen.queryByText(noMessages.game.remind.none),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('remind-missing-none')).not.toBeInTheDocument();
   });
 
-  it('bytter knappen mot én setning når ingen er ferdige uten å ha levert', async () => {
+  it('bytter knappen mot én setning per grunn når ingen kan purres (#1933)', async () => {
+    // To står midt i runden og én er en ferdig gjest. Gjesten skal kalles
+    // gjest — ikke en som «ikke har ført alle hullene».
     preview.mockResolvedValue({
       ok: true,
       targets: 0,
       targetUserIds: [],
+      unremindable: { unfinished: 2, guests: 1, splitDay: 0 },
       lastRemindedAt: null,
     });
 
     await renderBlock();
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    expect(screen.getByText(noMessages.game.remind.none)).toBeInTheDocument();
+    expect(screen.getByTestId('remind-missing-none').textContent).toBe(
+      `${t('unfinished', { count: 2 })} ${t('guests', { count: 1 })}`,
+    );
     expect(
       screen.queryByText(noMessages.game.remind.sent),
     ).not.toBeInTheDocument();
@@ -73,6 +86,7 @@ describe('RemindMissing (#1889)', () => {
       ok: true,
       targets: 2,
       targetUserIds: ['a', 'b'],
+      unremindable: NOBODY_LEFT_OUT,
       lastRemindedAt: null,
     });
 

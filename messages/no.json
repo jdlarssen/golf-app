@@ -2061,7 +2061,10 @@
     "remind": {
       "button": "Purr på dem som mangler ({count})",
       "pending": "Purrer …",
-      "none": "Ingen av dem har ført alle hullene ennå. Purring hjelper først da.",
+      "none": "Ingen av dem kan purres nå.",
+      "unfinished": "{count} av dem har ikke ført alle hullene ennå. Purring hjelper først da.",
+      "guests": "{count, plural, one {# av dem er gjest og leverer via markøren.} other {# av dem er gjester og leverer via markøren.}}",
+      "splitDay": "{count} av dem leverer hele runden på Bak 9 og blir purret der.",
       "sent": "Purret. De får et varsel nå."
     },
     "delete": {
@@ -3644,7 +3647,7 @@
         "unconfirmedReminderSent": "{count, plural, one {✓ Bekreftelses-påminnelse sendt til 1 spiller.} other {✓ Bekreftelses-påminnelse sendt til {count} spillere.}}",
         "notActiveError": "Spillet er ikke aktivt lenger. Du kan ikke sende påminnelser.",
         "remindReady": "{count, plural, one {1 spiller har gått ferdig, men ikke levert scorekortet. Send en påminnelse om å levere.} other {{count} spillere har gått ferdig, men ikke levert scorekortet. Send en påminnelse om å levere.}}",
-        "remindNone": "Ingen er ferdige uten å ha levert akkurat nå. Spillere får automatisk en påminnelse når de har tastet inn alle {totalHoles} hull.",
+        "remindNone": "Ingen kan purres akkurat nå. Spillere med konto får automatisk en påminnelse når de har ført alle {totalHoles} hull.",
         "remindButton": "{count, plural, one {Send påminnelse til 1 spiller} other {Send påminnelse til {count} spillere}}",
         "remindConfirm": "{count, plural, one {Sende leverings-påminnelse til 1 spiller?} other {Sende leverings-påminnelse til {count} spillere?}}",
         "remindUnconfirmed": "{count, plural, one {1 spiller har ikke bekreftet deltakelse ennå. Send en påminnelse.} other {{count} spillere har ikke bekreftet deltakelse ennå. Send en påminnelse.}}",
