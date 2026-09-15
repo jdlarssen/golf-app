@@ -76,7 +76,7 @@ Hva eieren gjør i nettleser-UI-er, hva du gjør, og malen for instrukser i en t
 📋 **Backlog:** [GitHub Issues](https://github.com/jdlarssen/golf-app/issues). `TODO.md` er en stub som peker dit — alle nye oppgaver opprettes som issues, ikke i markdown.
 
 - **Milestone på alle nye issues** og **brukerflyt-forankring:** flytene (`docs/flows/*-fremtid.svg`, `docs/user-flows.md`) er sannhetskilden for hva som er core; sjekk `docs/hva-er-nok.md` før feature-issues. → `docs/issue-workflow.md`
-- **Branch + PR-flyt:** alt via PR, aldri direkte push til `main`. Grønne PR-er uten produktvalg merges automatisk; produktvalg, prod-migrasjoner, auth, destruktive flyter, merge-porten og native-appen venter på eieren. → `docs/pr-workflow.md`
+- **Branch + PR-flyt:** alt via PR, aldri direkte push til `main`. Grønne PR-er uten produktvalg merges automatisk; produktvalg, prod-migrasjoner, auth, destruktive flyter, noe som koster penger, merge-porten og native-appen venter på eieren. → `docs/pr-workflow.md`
 - **Forge:** aldri start `/forge:auto`-løkken uten en kontrakt-kommentar på et åpent issue. → `docs/forge-workflow.md`
 - **Closing-kommentar og null-vekst:** én per issue, `## Teknisk` + `## Funksjonell`, linja `Nye issues: 0`; funn fikses i PR-en eller står under «Observert, ikke rørt». → `docs/issue-workflow.md`
 - **Versjonering / CHANGELOG:** `feat`/`fix`/`perf` legger én notatfil under `.changes/`; aldri bump `package.json` eller rediger `CHANGELOG.md`. Intern `fix` får `[no-changelog]` i commit-body-en. → `.changes/README.md`

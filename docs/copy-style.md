@@ -2,7 +2,7 @@
 
 Pattern-katalog for bruker-rettet copy i Tørny — strenger som vises i UI, mail-templates, feilmeldinger, banner-tekster, knapper, helper-tekster.
 
-Trigger: `.githooks/pre-commit` peker hit når den advarer, og [`CLAUDE.md`](../CLAUDE.md) under «Språk-kvalitet i bruker-rettet copy» peker hit før commit. Selve regelen står rett under.
+Trigger: `.githooks/pre-commit` peker hit når den advarer, og [`CLAUDE.md`](../CLAUDE.md) under «Språk-kvalitet» peker hit før commit. Selve regelen står rett under.
 
 ## Språk-kvalitet i bruker-rettet copy — regelen
 

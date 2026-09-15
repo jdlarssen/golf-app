@@ -22,7 +22,8 @@ procedure before continuing — each rule traces to a real failure in this repo'
    until it is met. SKIP-conditions are explicit; if none applies, you may not skip.
 5. `docs/agent-discipline/bindings.md` maps generic steps to this repo's exact commands,
    paths and domain traps. Procedures point to its sections (§T1–§T7 and §T9,
-   §Enforcement — which also covers T8's repo specifics — and §Domain triggers).
+   §Enforcement — which also covers T8's repo specifics — §Domain triggers, and
+   §Utførelse for subagent routing).
 
 ## Trigger table
 

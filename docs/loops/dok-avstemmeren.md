@@ -89,7 +89,7 @@ utvides når nye målbare claims dukker opp i styringsdokumentene.
 |---|---|---|---|
 | C1 | CLAUDE.md → Datamodell: tabell-antall og peker til generert seksjon | Steg 1-spørringen (`tables_total`) | 2026-09-14 (antallet **41** stemmer; måle-datoen 2026-09-06 → **2026-09-13** fikset i CLAUDE.md, så den følger generert seksjon som før; dok-skjema-kjøring #12) |
 | C2 | CLAUDE.md → Scoring: tall-løs formulering + fasit-kommando | `npx vitest run lib/scoring` | 2026-09-14 (uendret: 47 filer / 1209 tester grønne) |
-| C3 | docs/collaboration.md → Samarbeidsmodell: SQL-tilgang beskriver MCP + staging-først + prod-luke | grep «Supabase MCP» docs/collaboration.md; `.claude/hooks/mcp-guard.sh` finnes | 2026-09-14 (2 treff «Supabase MCP»; mcp-guard.sh finnes) |
+| C3 | docs/collaboration.md → Samarbeidsmodell: SQL-tilgang beskriver MCP + staging-først + prod-luke | grep «Supabase MCP» CLAUDE.md docs/collaboration.md; `.claude/hooks/mcp-guard.sh` finnes | 2026-09-14 (2 treff «Supabase MCP»; mcp-guard.sh finnes) |
 | C4 | forge-workflow.md: primær kontrakt-søkemetode er per-issue-iterasjon | `gh search issues ... in:comments` returnerer tomt (kjent); per-issue `gh api .../comments` virker | 2026-09-14 (doc-innhold uendret, `forge-workflow.md:11` + `:64`; gh-quirk ikke re-testbar fra sky — ingen `gh` CLI i routine-miljøet) |
 | C5 | schema-ground-truth.md: generert seksjon < 15 dager gammel | dato i seksjons-headeren vs `date -u` | 2026-09-14 (seksjon målt 2026-09-13 = 1 dag) |
 | C6 | docs/test-discipline.md-terskler vs pre-commit-hook: kjent tre-tall-avvik (3/5/10) er ENTEN uendret ELLER løst per eierbeslutning | grep toContain i begge filer | 2026-09-14 (3/>5/>10-trapp konsistent; hook warner `-gt 10`) |
