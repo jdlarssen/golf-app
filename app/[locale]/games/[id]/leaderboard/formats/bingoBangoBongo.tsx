@@ -53,7 +53,7 @@ export async function renderBingoBangoBongo(opts: {
 
   // Per-hull-prestasjonsdata fra bingo_bango_bongo_holes. Tag-cachet på
   // `game-${id}`, samme cache-tag som getGameWithPlayers — setBingoBangoBongoHole-
-  // mutasjons-action revaliderer den ved hver endring.
+  // mutasjons-action utløper den med `updateTag` ved hver endring (#2091).
   const bingoBangoBongoHoles = await getBingoBangoBongoHoles(gameId);
 
   // Bygges via den delte `buildBingoBangoBongoContext`-helperen (epic #496) slik
