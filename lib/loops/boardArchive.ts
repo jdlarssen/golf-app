@@ -113,10 +113,16 @@ export function canonicalize(raw: string, scan: LeakScanner): { body: string; ma
 }
 
 // Exit 0 = rent, exit 1 = adresser på stdout. Alt annet er en riggfeil og skal
-// aldri leses som «rent».
-export function scanEmailLeaks(text: string, script = '.githooks/scan-emails.sh'): string[] {
+// aldri leses som «rent». `root` peker skanneren på en annen allowlist-rot
+// (CLAUDE_PROJECT_DIR, skannerens egen konvensjon) — kun for tester.
+export function scanEmailLeaks(
+  text: string,
+  opts: { script?: string; root?: string } = {},
+): string[] {
+  const script = opts.script ?? '.githooks/scan-emails.sh';
+  const env = opts.root ? { ...process.env, CLAUDE_PROJECT_DIR: opts.root } : process.env;
   try {
-    execFileSync('bash', [script], { input: text, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    execFileSync('bash', [script], { input: text, encoding: 'utf8', env, stdio: ['pipe', 'pipe', 'pipe'] });
     return [];
   } catch (err) {
     const e = err as { status?: number | null; stdout?: string };
