@@ -174,8 +174,10 @@ target.
   exists (a build or night session posted it before merge), PATCH its stale
   statements — merge SHA, prod-migration status, deviations — instead of posting a
   second one (#1907; bash-guard reminds you when the thread already has one).
-- **Reviewer findings** → issues (with milestone) before merge (CLAUDE.md
-  §Reviewer-funn).
+- **Findings (reviewer, evaluator, your own reading):** fixed in this PR, or one line
+  under `## Observert, ikke rørt` in the PR body — never a new issue, except the single
+  documented exception (migration / auth-RLS / product choice outside the issue, and
+  reproduced). Closing comment carries `Nye issues: 0` (CLAUDE.md §Null-vekst, #2096).
 
 ## §T7 — Done verification
 
