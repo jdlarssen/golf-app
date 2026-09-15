@@ -2659,6 +2659,7 @@
     "soloStrokeplay": {
       "subtitle": "Etter {holes} hull · Slagspill · Sortert på laveste netto",
       "grossHolesRow": "{gross} brutto · {holes} hull spilt",
+      "grossRow": "{gross} brutto",
       "hullForHullSubtitle": "Slagspill · Netto",
       "podiumSubtitle": "Slagspill · Etter {holes} hull"
     },

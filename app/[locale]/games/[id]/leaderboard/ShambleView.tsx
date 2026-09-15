@@ -7,6 +7,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
 import type {
   ShambleResult,
   ShambleHoleRow,
@@ -125,6 +126,12 @@ export function ShambleView({
   const countLabel = `best ${result.count}`;
   const statusLabel = gameStatus === 'finished' ? t('common.afterNHoles', { holes: holesPlayed }) : t('common.live');
   const subtitleParts = [statusLabel, variantLabel, countLabel, scoringLabel];
+  // #1892: while the round runs the hole count is «thru»-information and always
+  // stays. On the finished board it only earns its line when the rows disagree.
+  const showHoles = showHolesColumn(
+    gameStatus,
+    result.teams.map((team) => team.holesCounted),
+  );
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
@@ -160,7 +167,7 @@ export function ShambleView({
               teamNumber={team.teamNumber}
               memberNames={memberNames}
               totalScore={team.totalScore}
-              holesCounted={team.holesCounted}
+              holesCounted={showHoles ? team.holesCounted : null}
               tiedWith={team.tiedWith}
               staggerIndex={i}
             />
@@ -205,7 +212,8 @@ function TeamRow({
   teamNumber: number;
   memberNames: string;
   totalScore: number;
-  holesCounted: number;
+  /** null når hull-tallet er likt for alle lag på et ferdig spill (#1892). */
+  holesCounted: number | null;
   tiedWith: number[];
   staggerIndex: number;
 }) {
@@ -241,9 +249,11 @@ function TeamRow({
           <p className="mt-0.5 text-[12px] text-muted truncate">
             {memberNames}
           </p>
-          <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {t('shamble.spiltHullOf18', { played: holesCounted })}
-          </p>
+          {holesCounted !== null && (
+            <p className="mt-0.5 text-[12px] text-muted tabular-nums">
+              {t('shamble.spiltHullOf18', { played: holesCounted })}
+            </p>
+          )}
           {isTied && (
             <p className="text-[11px] text-muted mt-0.5" data-testid={`shamble-tied-${rank}`}>
               {t('common.tiedRank', { rank })}

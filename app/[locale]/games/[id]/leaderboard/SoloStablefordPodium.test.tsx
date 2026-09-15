@@ -92,6 +92,23 @@ describe('SoloStablefordPodium', () => {
     expect(winner.textContent).toMatch(/18 hull/);
   });
 
+  it('utelater hull-teksten når alle spilte like mange hull (#1892)', () => {
+    render(
+      <SoloStablefordPodium
+        {...defaultProps({
+          result: makeResult([
+            { userId: 'u1', totalPoints: 38, rank: 1, holesPlayed: 18 },
+            { userId: 'u2', totalPoints: 32, rank: 2, holesPlayed: 18 },
+            { userId: 'u3', totalPoints: 28, rank: 3, holesPlayed: 18 },
+            { userId: 'u4', totalPoints: 24, rank: 4, holesPlayed: 18 },
+          ]),
+        })}
+      />,
+    );
+    expect(screen.getByTestId('stableford-podium').textContent).not.toMatch(/hull/i);
+    expect(screen.getByTestId('stableford-rest').textContent).not.toMatch(/hull/i);
+  });
+
   it('rendrer ConfettiBurst på 1.-plass etter useEffect har mountet', async () => {
     // Sørg for at sessionStorage er tom slik at useEffect ikke skipper.
     window.sessionStorage.clear();

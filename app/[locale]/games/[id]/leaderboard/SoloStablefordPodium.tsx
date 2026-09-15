@@ -7,6 +7,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
 import type {
   StablefordPlayerLine,
   StablefordSoloResult,
@@ -119,6 +120,15 @@ export function SoloStablefordPodium({
     player.tiedWith.length > 0
       ? t('common.tiedRank', { rank: player.rank })
       : null;
+  // #1892: the podium only ever renders on a finished game, so the hole count
+  // per row is noise unless the rows disagree — the subtitle above already says
+  // «Etter N hull». Same rule as the app's Hull-column.
+  const showHoles = showHolesColumn(
+    'finished',
+    result.players.map((player) => player.holesPlayed),
+  );
+  const hullChipFor = (player: StablefordPlayerLine): string | null =>
+    showHoles ? t('common.hullChip', { count: player.holesPlayed }) : null;
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
@@ -159,7 +169,7 @@ export function SoloStablefordPodium({
                   playerInfo={playersById.get(second.userId)}
                   staggerIndex={1}
                   poengLabel={t('common.poengLabel')}
-                  hullChip={t('common.hullChip', { count: second.holesPlayed })}
+                  hullChip={hullChipFor(second)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(second)}
                 />
@@ -176,7 +186,7 @@ export function SoloStablefordPodium({
               playerInfo={playersById.get(first.userId)}
               staggerIndex={0}
               poengLabel={t('common.poengLabel')}
-              hullChip={t('common.hullChip', { count: first.holesPlayed })}
+              hullChip={hullChipFor(first)}
               unknownPlayerLabel={t('common.unknownPlayerFull')}
               tiedBadge={tiedBadge(first)}
             />
@@ -193,7 +203,7 @@ export function SoloStablefordPodium({
                   playerInfo={playersById.get(third.userId)}
                   staggerIndex={2}
                   poengLabel={t('common.poengLabel')}
-                  hullChip={t('common.hullChip', { count: third.holesPlayed })}
+                  hullChip={hullChipFor(third)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(third)}
                 />
@@ -232,9 +242,11 @@ export function SoloStablefordPodium({
                       <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
                         {displayName}
                       </p>
-                      <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-                        {t('common.holesPlayedCount', { count: player.holesPlayed })}
-                      </p>
+                      {showHoles && (
+                        <p className="mt-0.5 text-[12px] text-muted tabular-nums">
+                          {t('common.holesPlayedCount', { count: player.holesPlayed })}
+                        </p>
+                      )}
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
@@ -275,7 +287,8 @@ function PodiumStep({
   playerInfo: SoloStablefordPlayerInfo | undefined;
   staggerIndex: number;
   poengLabel: string;
-  hullChip: string;
+  /** «X hull»-chip, eller null når hull-tallet er likt for alle (#1892). */
+  hullChip: string | null;
   unknownPlayerLabel: string;
   /** «Delt N. plass»-merke, eller null når spilleren ikke er delt-rangert. */
   tiedBadge: string | null;
@@ -336,10 +349,12 @@ function PodiumStep({
         </span>
       </div>
 
-      {/* «X hull»-chip */}
-      <p className="text-[11px] tabular-nums text-muted">
-        {hullChip}
-      </p>
+      {/* «X hull»-chip — utelatt når alle spilte like mange hull (#1892). */}
+      {hullChip && (
+        <p className="text-[11px] tabular-nums text-muted">
+          {hullChip}
+        </p>
+      )}
     </div>
   );
 }
