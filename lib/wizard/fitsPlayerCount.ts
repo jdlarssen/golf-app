@@ -103,13 +103,13 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
 /**
  * soloPlayerCap — øvre spillertak for solo-formater som har en hard grense.
  *
- * Brukes av selv-påmeldings-action-en (`registerForOpenGame`) for å avvise
- * en N+1-spiller FØR INSERT, slik at publisering aldri blokkeres av
- * `too_many_players_for_mode` fra `buildGameInsertPayload`.
- * `registrationPlayerCap` adds the team formats' grid cap on top (#2011). That
- * publish-time error only exists for the scramble family among the team
- * formats: the best ball and patsome validators read eight slots and drop the
- * rest silently, so for those two the signup cap is the only gate.
+ * Used by the self-registration action (`registerForOpenGame`, through
+ * `registrationPlayerCap`, which adds the team formats' grid cap — #2011) to
+ * turn away player N+1 BEFORE INSERT. For a self-registration game the signup
+ * cap is the only player-count gate before the game starts: for an open or
+ * manual_approval game `buildGameInsertPayload` runs the mode validator with
+ * effectiveMode 'draft', so none of its `too_many_players_for_mode` checks run
+ * when the organiser saves, in any format.
  *
  * Returnerer:
  *  - tallet maksimale spillere for formater med et øvre tak

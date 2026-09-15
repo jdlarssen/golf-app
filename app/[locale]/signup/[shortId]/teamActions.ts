@@ -420,7 +420,8 @@ export async function submitTeamRegistration(
       // backstop for a team_size below the format's smallest, where
       // teamModePlayerCap computes the cap from that smallest size. Two
       // captains racing past the check read the same roster and can pick the
-      // same number; nothing here stops that (the cap is not in the DB, #2062).
+      // same number; nothing here stops that (#2060), and the cap itself is not
+      // enforced in the DB either (#2062).
       // Roll back our own request row so the game is not left with a team
       // without players (AGENTS.md trap 5), and say so.
       //
