@@ -9,7 +9,10 @@ import { Banner } from '@/components/ui/Banner';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { deleteOwnAccount } from './actions';
-import { getDeleteBlockReason } from '@/lib/users/deleteAccount';
+import {
+  getDeleteBlockReason,
+  type DeleteBlockReason,
+} from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -34,11 +37,18 @@ export default async function SlettKontoPage({
 
   // #1012/#1909: delt blokk-regel med admin-flyten. Å DELTA blokkerer ikke
   // lenger (slettingen trekker deg automatisk); det gjør bare å arrangere noe
-  // uavsluttet (spill, cup, liga). Admin-kontoen er alltid blokkert.
+  // uavsluttet (spill, cup, liga). Admin-kontoen er alltid blokkert. Eneste
+  // eier av en klubb med andre medlemmer må gi eierskapet videre først (#1910).
   const blockReason = await getDeleteBlockReason(userId);
   const isBlocked = blockReason !== null;
-  const blockedText =
-    blockReason === 'admin_account' ? t('adminBanner') : t('blockedBanner');
+  // Uttømmende: en ny blokk-kode skal ikke kunne falle stille ned i en annen
+  // grunns tekst.
+  const blockedTexts: Record<DeleteBlockReason, string> = {
+    admin_account: t('adminBanner'),
+    active_engagements: t('blockedBanner'),
+    sole_club_owner: t('soleClubOwnerBanner'),
+  };
+  const blockedText = blockReason ? blockedTexts[blockReason] : undefined;
 
   // Get the user's name for display
   const { data: userProfile } = await supabase

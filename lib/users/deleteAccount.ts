@@ -24,7 +24,10 @@ import { getAdminClient } from '@/lib/supabase/admin';
  * (`deleted_at`-shortcircuiten hopper da rett til auth-steget).
  */
 
-export type DeleteBlockReason = 'admin_account' | 'active_engagements';
+export type DeleteBlockReason =
+  | 'admin_account'
+  | 'active_engagements'
+  | 'sole_club_owner';
 
 export type DeleteAccountResult =
   | { ok: true; mode: 'hard' | 'anonymized' }
@@ -53,6 +56,18 @@ export type DeleteAccountResult =
  *
  * Wire-koden `active_engagements` er frosset (appen fail-closer på ukjente
  * koder) — kun betydningen er snevret inn, ikke navnet.
+ *
+ * Eneste eier av en klubb som har andre medlemmer blokkeres også
+ * (`sole_club_owner`, #1910): ellers blir klubben eierløs, og ingen kan endre
+ * roller i den. Regelen bor i SQL (`is_sole_club_owner`, 0176), og
+ * `anonymize_user` håndhever den samme i DB-en, så et direkte RPC-kall ikke
+ * kommer forbi. Hard-delete-stien i `deleteOrAnonymizeUser` går derimot utenom
+ * RPC-en — der er det KUN at hver kaller faktisk handler på svaret herfra som
+ * stopper slettingen. Arrangør-blokken er mer akutt og har forrang.
+ *
+ * Feiler klubb-oppslaget, havner det i samme fail-closed-bøtte som de andre
+ * (`active_engagements`). Teksten er upresis for akkurat den grenen, men den
+ * sier «prøv igjen senere» og er den trygge retningen.
  */
 export async function getDeleteBlockReason(
   userId: string,
@@ -68,7 +83,7 @@ export async function getDeleteBlockReason(
   if (target.is_admin) return 'admin_account';
   if (target.deleted_at) return null; // allerede anonymisert → kun auth-retry igjen
 
-  const [games, cups, leagues] = await Promise.all([
+  const [games, cups, leagues, soleClubOwner] = await Promise.all([
     admin
       .from('games')
       .select('id')
@@ -87,6 +102,7 @@ export async function getDeleteBlockReason(
       .eq('created_by', userId)
       .neq('status', 'finished')
       .limit(1),
+    admin.rpc('is_sole_club_owner', { p_user_id: userId }),
   ]);
 
   // Fail-closed. En spørring som FEILER gir `data: null`, som ville lest som
@@ -96,12 +112,13 @@ export async function getDeleteBlockReason(
   // uten styring. RPC-en fanger det ikke — den nekter kun admin-kontoen. Ved
   // tvil blokkerer vi heller én sletting for mye: brukeren kan prøve igjen,
   // et herreløst spill kan ingen rydde opp i.
-  if (games.error || cups.error || leagues.error) {
+  if (games.error || cups.error || leagues.error || soleClubOwner.error) {
     console.error('[getDeleteBlockReason] engasjement-oppslag feilet — blokkerer', {
       userId,
       games: games.error,
       cups: cups.error,
       leagues: leagues.error,
+      soleClubOwner: soleClubOwner.error,
     });
     return 'active_engagements';
   }
@@ -110,7 +127,8 @@ export async function getDeleteBlockReason(
     (games.data?.length ?? 0) > 0 ||
     (cups.data?.length ?? 0) > 0 ||
     (leagues.data?.length ?? 0) > 0;
-  return organisesSomethingOpen ? 'active_engagements' : null;
+  if (organisesSomethingOpen) return 'active_engagements';
+  return soleClubOwner.data === true ? 'sole_club_owner' : null;
 }
 
 /** Sletter (hard) eller anonymiserer kontoen. Caller har allerede kjørt

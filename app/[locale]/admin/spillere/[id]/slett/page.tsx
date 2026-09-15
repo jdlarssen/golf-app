@@ -50,6 +50,9 @@ export default async function DeletePlayerPage({
   if (blockReason === 'active_engagements') {
     redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
   }
+  if (blockReason === 'sole_club_owner') {
+    redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
+  }
 
   const { count: gamePlayerCount } = await supabase
     .from('game_players')

@@ -21,11 +21,12 @@ import {
 // først (#1876) og ble flyttet ut da purre-ruta trengte den samme.
 //
 // WIRE (frosset — appen speiler den):
-//   GET  200 { blocked: 'admin_account' | 'active_engagements' | null }
+//   GET  200 { blocked: 'admin_account' | 'active_engagements'
+//                       | 'sole_club_owner' | null }
 //        401 { error: 'unauthorized' }   500 { error: 'status_failed' }
 //   POST 200 { mode: 'hard' | 'anonymized' }
 //        401 { error: 'unauthorized' }
-//        403 { error: 'admin_account' | 'active_engagements' }
+//        403 { error: 'admin_account' | 'active_engagements' | 'sole_club_owner' }
 //        500 { error: 'delete_failed' }
 //
 // 403-koden er hjelperens egen `DeleteBlockReason`, ikke webbens copy-nøkkel

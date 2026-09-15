@@ -255,6 +255,50 @@ describe('getDeleteBlockReason', () => {
     });
   });
 
+  // #1910: eneste eier av en klubb med andre medlemmer. Regelen bor i SQL
+  // (`is_sole_club_owner`), så her bevises kun at svaret leses riktig.
+  describe('sole club owner blocks', () => {
+    const nothingOrganised = {
+      users: livingUser,
+      games: { data: [] },
+      tournaments: { data: [] },
+      leagues: { data: [] },
+    };
+
+    it('asks the SQL rule about the account', async () => {
+      state.tables = nothingOrganised;
+      await getDeleteBlockReason(USER_ID);
+      expect(state.rpc).toHaveBeenCalledExactlyOnceWith('is_sole_club_owner', {
+        p_user_id: USER_ID,
+      });
+    });
+
+    it('blocks the sole owner of a club with other members', async () => {
+      state.tables = nothingOrganised;
+      state.rpc.mockResolvedValue({ data: true, error: null });
+      expect(await getDeleteBlockReason(USER_ID)).toBe('sole_club_owner');
+    });
+
+    it('passes when the rule says no', async () => {
+      state.tables = nothingOrganised;
+      state.rpc.mockResolvedValue({ data: false, error: null });
+      expect(await getDeleteBlockReason(USER_ID)).toBeNull();
+    });
+
+    it('blocks (fail-closed) when the club lookup fails', async () => {
+      state.tables = nothingOrganised;
+      state.rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+    });
+
+    it('lets the organiser block win when both apply', async () => {
+      state.tables = { ...nothingOrganised, games: { data: [{ id: 'g1' }] } };
+      state.rpc.mockResolvedValue({ data: true, error: null });
+      expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+    });
+  });
+
   describe('nothing left to run passes', () => {
     it('passes the creator of a draft game', async () => {
       // Mocken filtrerer ikke, så draft-caset må bevises på filteret:

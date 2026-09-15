@@ -289,6 +289,7 @@
       "backLabel": "Back to profile",
       "blockedBanner": "You're organising something that hasn't finished yet. You finish rounds in the app or on the website, and cups and leagues on the website. After that you can delete your account.",
       "adminBanner": "The admin account can't be deleted from here.",
+      "soleClubOwnerBanner": "You're the only owner of a club that has other members. Make another member the owner on the club page. After that you can delete your account.",
       "blockedBackLink": "Back to profile",
       "deletedHeading": "What will be deleted",
       "bullet1": "Your user profile (name, nickname, handicap)",
@@ -304,6 +305,7 @@
       "errors": {
         "active_games": "You're still organising something that hasn't finished. Finish it, and you can delete your account.",
         "admin_account": "The admin account can't be deleted from here.",
+        "sole_club_owner": "You're still the only owner of a club. Make another member the owner, and you can delete your account.",
         "delete_failed": "Something went wrong while deleting. Please try again, or contact an administrator."
       }
     },
@@ -3823,6 +3825,7 @@
           "not_admin": "You do not have access.",
           "self_delete_forbidden": "You cannot delete your own account.",
           "target_active": "This player is organising something that hasn't finished yet. Finish it first, and you can delete the account.",
+          "target_sole_club_owner": "This player is the only owner of a club that has other members. Make another member the owner of the club first, and you can delete the account.",
           "auth_delete_failed": "Could not delete the account. Please try again.",
           "email_invalid": "Invalid email address.",
           "email_in_use": "This email address is already registered.",
