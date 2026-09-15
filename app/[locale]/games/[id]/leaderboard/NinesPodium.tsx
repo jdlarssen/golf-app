@@ -6,6 +6,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
 import type { NinesResult, NinesPlayerLine } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import {
@@ -98,6 +99,13 @@ export function NinesPodium({
       ? t('common.tiedRank', { rank: player.rank })
       : null;
 
+  // #1892: the podium only ever renders on a finished game, so the hole count
+  // per row is noise unless the rows disagree.
+  const showHoles = showHolesColumn(
+    'finished',
+    result.players.map((player) => player.holesScored),
+  );
+
   const variantLabel =
     result.variant === 'split_sixes' ? t('nines.variantSplitSixes') : t('nines.variantNines');
   const scoringLabel = result.scoring === 'net' ? t('common.netto') : t('common.brutto');
@@ -131,6 +139,7 @@ export function NinesPodium({
                   player={second}
                   playerInfo={playersById.get(second.userId)}
                   staggerIndex={1}
+                  showHoles={showHoles}
                   tiedBadge={tiedBadge(second)}
                 />
                 <RowReactionsForPlayer targetUserId={second.userId} />
@@ -144,6 +153,7 @@ export function NinesPodium({
               player={first}
               playerInfo={playersById.get(first.userId)}
               staggerIndex={0}
+              showHoles={showHoles}
               tiedBadge={tiedBadge(first)}
             />
             <RowReactionsForPlayer targetUserId={first.userId} />
@@ -157,6 +167,7 @@ export function NinesPodium({
                   player={third}
                   playerInfo={playersById.get(third.userId)}
                   staggerIndex={2}
+                  showHoles={showHoles}
                   tiedBadge={tiedBadge(third)}
                 />
                 <RowReactionsForPlayer targetUserId={third.userId} />
@@ -186,9 +197,11 @@ export function NinesPodium({
                     <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
                       {displayName}
                     </p>
-                    <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-                      {t('nines.holesScored', { count: player.holesScored })}
-                    </p>
+                    {showHoles && (
+                      <p className="mt-0.5 text-[12px] text-muted tabular-nums">
+                        {t('nines.holesScored', { count: player.holesScored })}
+                      </p>
+                    )}
                   </div>
                   <div className="shrink-0 text-right">
                     <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
@@ -217,6 +230,7 @@ function PodiumStep({
   player,
   playerInfo,
   staggerIndex,
+  showHoles,
   tiedBadge,
 }: {
   /** Grid-posisjon: 1 = midten (høyest trinn), 2 = venstre, 3 = høyre. */
@@ -224,6 +238,8 @@ function PodiumStep({
   player: NinesPlayerLine;
   playerInfo: NinesPlayerInfo | undefined;
   staggerIndex: number;
+  /** Hull-teksten utelates når alle scoret like mange hull (#1892). */
+  showHoles: boolean;
   /** «Delt N. plass»-merke, eller null når spilleren ikke er delt-rangert. */
   tiedBadge: string | null;
 }) {
@@ -279,9 +295,11 @@ function PodiumStep({
         </span>
       </div>
 
-      <p className="text-[11px] tabular-nums text-muted">
-        {t('nines.podiumHullScored', { count: player.holesScored })}
-      </p>
+      {showHoles && (
+        <p className="text-[11px] tabular-nums text-muted">
+          {t('nines.podiumHullScored', { count: player.holesScored })}
+        </p>
+      )}
     </div>
   );
 }

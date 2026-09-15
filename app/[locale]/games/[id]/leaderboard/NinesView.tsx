@@ -7,6 +7,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
 import { SettlementTable } from './SettlementTable';
 import type { Settlement } from '@/lib/scoring/settlement';
 import type {
@@ -133,6 +134,12 @@ export function NinesView({
   const scoringLabel = result.scoring === 'net' ? t('common.netto') : t('common.brutto');
   const statusLabel = gameStatus === 'finished' ? t('common.afterNHoles', { holes: holesPlayed }) : t('common.live');
   const subtitleParts = [statusLabel, variantLabel, scoringLabel];
+  // #1892: while the round runs the hole count is «thru»-information and always
+  // stays. On the finished board it only earns its line when the rows disagree.
+  const showHoles = showHolesColumn(
+    gameStatus,
+    result.players.map((player) => player.holesScored),
+  );
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
@@ -164,7 +171,7 @@ export function NinesView({
               rank={player.rank}
               displayName={displayName}
               totalPoints={player.totalPoints}
-              holesScored={player.holesScored}
+              holesScored={showHoles ? player.holesScored : null}
               tiedWith={player.tiedWith}
               staggerIndex={i}
             />
@@ -217,7 +224,8 @@ function PlayerRow({
   rank: number;
   displayName: string;
   totalPoints: number;
-  holesScored: number;
+  /** null når hull-tallet er likt for alle på et ferdig spill (#1892). */
+  holesScored: number | null;
   tiedWith: string[];
   staggerIndex: number;
 }) {
@@ -250,9 +258,11 @@ function PlayerRow({
           <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text truncate">
             {displayName}
           </p>
-          <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {t('nines.holesScored', { count: holesScored })}
-          </p>
+          {holesScored !== null && (
+            <p className="mt-0.5 text-[12px] text-muted tabular-nums">
+              {t('nines.holesScored', { count: holesScored })}
+            </p>
+          )}
           {isTied && (
             <p className="text-[11px] text-muted mt-0.5" data-testid={`nines-tied-${rank}`}>
               {t('common.tiedRank', { rank })}

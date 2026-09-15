@@ -2659,6 +2659,7 @@
     "soloStrokeplay": {
       "subtitle": "After {holes} holes · Stroke play · Sorted by lowest net",
       "grossHolesRow": "{gross} gross · {holes} holes played",
+      "grossRow": "{gross} gross",
       "hullForHullSubtitle": "Stroke play · Net",
       "podiumSubtitle": "Stroke play · After {holes} holes"
     },

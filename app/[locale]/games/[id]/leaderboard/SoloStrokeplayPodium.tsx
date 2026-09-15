@@ -7,6 +7,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
 import type {
   SoloStrokeplayPlayerLine,
   SoloStrokeplayResult,
@@ -127,6 +128,15 @@ export function SoloStrokeplayPodium({
     player.tiedWith.length > 0
       ? t('common.tiedRank', { rank: player.rank })
       : null;
+  // #1892: the podium only ever renders on a finished game, so the hole count
+  // per row is noise unless the rows disagree — the subtitle above already says
+  // «Etter N hull». Same rule as the app's Hull-column.
+  const showHoles = showHolesColumn(
+    'finished',
+    result.players.map((player) => player.holesPlayed),
+  );
+  const hullChipFor = (player: SoloStrokeplayPlayerLine): string | null =>
+    showHoles ? t('common.hullChip', { count: player.holesPlayed }) : null;
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
@@ -167,7 +177,7 @@ export function SoloStrokeplayPodium({
                   playerInfo={playersById.get(second.userId)}
                   staggerIndex={1}
                   slagLabel={t('common.slagLabel')}
-                  hullChip={t('common.hullChip', { count: second.holesPlayed })}
+                  hullChip={hullChipFor(second)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(second)}
                 />
@@ -184,7 +194,7 @@ export function SoloStrokeplayPodium({
               playerInfo={playersById.get(first.userId)}
               staggerIndex={0}
               slagLabel={t('common.slagLabel')}
-              hullChip={t('common.hullChip', { count: first.holesPlayed })}
+              hullChip={hullChipFor(first)}
               unknownPlayerLabel={t('common.unknownPlayerFull')}
               tiedBadge={tiedBadge(first)}
             />
@@ -201,7 +211,7 @@ export function SoloStrokeplayPodium({
                   playerInfo={playersById.get(third.userId)}
                   staggerIndex={2}
                   slagLabel={t('common.slagLabel')}
-                  hullChip={t('common.hullChip', { count: third.holesPlayed })}
+                  hullChip={hullChipFor(third)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(third)}
                 />
@@ -241,10 +251,14 @@ export function SoloStrokeplayPodium({
                         {displayName}
                       </p>
                       <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-                        {t('soloStrokeplay.grossHolesRow', {
-                          gross: player.totalGrossStrokes,
-                          holes: player.holesPlayed,
-                        })}
+                        {showHoles
+                          ? t('soloStrokeplay.grossHolesRow', {
+                              gross: player.totalGrossStrokes,
+                              holes: player.holesPlayed,
+                            })
+                          : t('soloStrokeplay.grossRow', {
+                              gross: player.totalGrossStrokes,
+                            })}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
@@ -286,7 +300,8 @@ function PodiumStep({
   playerInfo: SoloStrokeplayPlayerInfo | undefined;
   staggerIndex: number;
   slagLabel: string;
-  hullChip: string;
+  /** «X hull»-chip, eller null når hull-tallet er likt for alle (#1892). */
+  hullChip: string | null;
   unknownPlayerLabel: string;
   /** «Delt N. plass»-merke, eller null når spilleren ikke er delt-rangert. */
   tiedBadge: string | null;
@@ -348,10 +363,13 @@ function PodiumStep({
       </div>
 
       {/* «X hull»-chip — bare hull-count på podiet for å holde det
-          lett-skannbart. Brutto-totalen finnes på rest-listen og i live-view. */}
-      <p className="text-[11px] tabular-nums text-muted">
-        {hullChip}
-      </p>
+          lett-skannbart. Brutto-totalen finnes på rest-listen og i live-view.
+          Utelatt når alle spilte like mange hull (#1892). */}
+      {hullChip && (
+        <p className="text-[11px] tabular-nums text-muted">
+          {hullChip}
+        </p>
+      )}
     </div>
   );
 }

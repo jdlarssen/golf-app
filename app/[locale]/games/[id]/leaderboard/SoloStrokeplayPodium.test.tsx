@@ -106,6 +106,26 @@ describe('SoloStrokeplayPodium', () => {
     expect(winner.textContent).toMatch(/18 hull/);
   });
 
+  it('utelater hull-teksten når alle spilte like mange hull — rest-raden står igjen med brutto (#1892)', () => {
+    window.sessionStorage.clear();
+    render(
+      <SoloStrokeplayPodium
+        {...defaultProps({
+          result: makeResult([
+            { userId: 'u1', totalNetStrokes: 68, totalGrossStrokes: 78, rank: 1, holesPlayed: 18 },
+            { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 82, rank: 2, holesPlayed: 18 },
+            { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 80, rank: 3, holesPlayed: 18 },
+            { userId: 'u4', totalNetStrokes: 80, totalGrossStrokes: 88, rank: 4, holesPlayed: 18 },
+          ]),
+        })}
+      />,
+    );
+    expect(screen.getByTestId('strokeplay-podium').textContent).not.toMatch(/hull/i);
+    const rest = screen.getByTestId('strokeplay-rest');
+    expect(rest.textContent).toContain('88 brutto');
+    expect(rest.textContent).not.toMatch(/hull/i);
+  });
+
   it('rendrer ConfettiBurst på 1.-plass etter useEffect har mountet', async () => {
     // Sørg for at sessionStorage er tom slik at useEffect ikke skipper.
     window.sessionStorage.clear();
