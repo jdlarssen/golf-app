@@ -286,8 +286,12 @@ describe('deleteMonths', () => {
   it('--month avgrenser til nøyaktig den måneden', () => {
     expect(deleteMonths(files, now, '2026-06')).toEqual(['2026-06']);
   });
-  it('nekter inneværende måned', () => {
-    expect(() => deleteMonths(files, now, '2026-09')).toThrow(/inneværende/);
+  // Tom liste, ikke kast: en dry-run av inneværende måned med fase `both` skal
+  // vise arkiv-forhåndsvisningen, ikke gå rødt (#1996 evaluator-runde 2).
+  // deleteArchivedComments sperrer inneværende måned uansett.
+  it('gir ingen måneder for inneværende eller framtidig måned', () => {
+    expect(deleteMonths(files, now, '2026-09')).toEqual([]);
+    expect(deleteMonths(files, now, '2026-11')).toEqual([]);
   });
 });
 
