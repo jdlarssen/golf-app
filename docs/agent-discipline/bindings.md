@@ -12,16 +12,19 @@ target.
 | Touching | Rule / reading |
 |---|---|
 | `lib/scoring/` | New test FIRST — no exceptions (`lib/scoring/AGENTS.md`) |
-| `lib/sync/` | Dexie DB name `'golf-app'` is frozen — rename deletes users' local data (pre-commit blocks removal) |
-| Any DB write / migration / RLS | §T3 below + `docs/bug-prevention.md` (the five traps) |
+| `lib/sync/` | Dexie DB name `'golf-app'` is frozen — rename deletes users' local data (pre-commit blocks removal). Sync flow + realtime `setAuth()` trap: `lib/sync/AGENTS.md` |
+| Any DB write / migration / RLS | §T3 below + `docs/bug-prevention.md` (the five traps); who may read which scores: `lib/supabase/AGENTS.md` §RLS |
 | `lib/mail/` | `lib/mail/AGENTS.md` (Type B snapshot rules); the best-effort send pattern's home is CLAUDE.md §Nøkkelfiler |
 | Forms in wizard/game flows | State that must survive submit needs always-mounted hidden inputs (§T4 row 7); heed the warning comment in `components/ui/Disclosure.tsx` |
 | `messages/*.json` or `t()`/`t.rich()` call sites | New keys, or values with `{placeholders}`/rich tags → render the route and watch the console (§T4 row 5). Plain-text edit of an existing key present in BOTH locales → the T7 click-through suffices; don't verify twice |
 | A user flow (create → join → play → finish) | Fires when a STEP, SCREEN or DECISION POINT is added/removed/renamed/reordered — not for styling/copy inside an existing step. Update the `docs/flows/` diagram + regenerate the PNG in the same PR (`docs/flows/README.md`) |
 | Next.js API not used this session | `node_modules/next/dist/docs/` — Next 16 breaking changes; middleware = `proxy.ts` |
 | A destructive user action | Dedicated confirmation page under a `/slett`-style route — never inline toggle or `<details>` popout |
-| Caching (`unstable_cache`, `cacheLife`) | Every cached read gets a tag; every mutation path calls `revalidateTag` — enumerate them (#1045) |
+| Caching (`unstable_cache`, `cacheLife`) | Every cached read gets a tag; every mutation path calls `revalidateTag` — enumerate them (#1045). The game cache: `lib/games/AGENTS.md` |
 | New/changed Norwegian copy | Run the `humanizer:humanizer` skill before commit; the pre-commit hook warns on only 4 patterns — full catalog + preserved exceptions: `docs/copy-style.md` |
+| Login, OTP codes or invitations (`app/[locale]/(auth)/login/`, `lib/mail/inviteNotification.ts`) | `docs/auth-flow.md` — the OTP flow, why no magic link, mail debugging |
+| UI styling, palette or brand copy | `docs/style-and-brand.md` |
+| The owner must act in a third-party UI (Supabase/Vercel/Resend dashboard, DNS registrar) | `docs/collaboration.md` — who does what, plus the four-step message template |
 
 ## §Enforcement — hook inventory and sanctioned workarounds
 
@@ -56,9 +59,10 @@ target.
   `docs/flows/*-fremtid.svg` (they define what we build toward). Zero hits → owner
   question (interactive) or `ASSUMPTION: not in flows, building because <reason>`
   (autonomous). Anchoring applies to backlog issues you picked up — a direct owner
-  request in this session is itself the mandate (CLAUDE.md §Brukerflyt-forankring).
+  request in this session is itself the mandate (`docs/issue-workflow.md`
+  §Brukerflyt-forankring).
 - **Routing (this repo):** an implementation-plan document exists → run it via the
-  subagent-driven-development skill (choice already made — CLAUDE.md §Arbeidsflyt).
+  subagent-driven-development skill (choice already made — §Utførelse below).
   Expected ≥ 5 files or > 100 LOC → implementer subagent, or the forge contract-first
   flow when forge is invoked — never `/forge:auto` without a contract file or a contract
   comment on an open issue (`docs/forge-workflow.md`). Below the threshold → direct
@@ -132,7 +136,9 @@ target.
 ## §T5 — Testing
 
 - Doctrine: `docs/test-discipline.md` (Type A–D + decision tree) is authoritative;
-  summarized in CLAUDE.md §Test-disiplin.
+  CLAUDE.md §Test-disiplin points there.
+- Staging, never prod: `docs/staging-testing.md` (setup, Node 22, autonomous login,
+  prod guard).
 - Area overlays: `lib/scoring/AGENTS.md` · `lib/mail/AGENTS.md`.
 - E2E: assert on `data-testid`/role, never on Norwegian copy.
 - Time idiom: `Date.now()` offsets or vitest fake timers.
@@ -140,18 +146,21 @@ target.
 ## §T6 — Commit and PR
 
 - **Metadata rules** (prefix → a new `.changes/` note file, `Refs #N`, escapes
-  `[no-changelog]` / `[no-issue]`): CLAUDE.md §Versjonering + §Branch/PR-flyt — enforced
+  `[no-changelog]` / `[no-issue]`): `.changes/README.md` §Versjonering +
+  `docs/pr-workflow.md` — enforced
   by `.githooks/commit-msg`; its block text names the remedy. Note template + field
   limits: `.changes/README.md`. Never bump `package.json` or edit `CHANGELOG.md` in a
   normal commit — the weekly release job (`.github/workflows/ukesversjon.yml`) owns both,
   and the hook blocks any non-`chore(release)` commit that changes the version field.
 - **Untracked work:** decide at intake — `gh issue create` with `type:`/`area:` labels +
-  milestone (mandatory), or the rare genuine `[no-issue]`. Tier 1/Tier 5 milestone
+  milestone (mandatory, `docs/issue-workflow.md`), or the rare genuine `[no-issue]`. Tier 1/Tier 5 milestone
   titles are mojibake-corrupted — set by number:
   `gh api -X PATCH repos/jdlarssen/golf-app/issues/N -F milestone=<num>`.
 - **Gates:** `npx vitest run <path>` for every changed file with a co-located `*.test.*`
   sibling (glob for it — zero siblings is a checkable fact, not an excuse) +
   `npm run build` (§T2).
+- **PR form** (Fordeler/ulemper, `## Alternativer (produktvalg)`), draft-first, the
+  auto-merge policy and the product-choice marker: `docs/pr-workflow.md`.
 - **PR-checks command:** `gh pr checks` — every required check "pass", zero "skipping".
 - **Merge:** `gh pr merge --rebase --delete-branch` (squash is denied); afterwards rebase
   the local branch onto `origin/main` before further work, then sweep the leftovers:
@@ -169,7 +178,7 @@ target.
   `.github/workflows/branch-sweep.yml` sweeps the rest weekly; a `claude/*` branch you
   left behind by hand is still yours to remove.
 - **Closing comment** on every closed issue: `## Teknisk` + `## Funksjonell`
-  (CLAUDE.md §Closing-kommentar) — the main chat writes it, not a subagent. ONE per
+  (`docs/issue-workflow.md` §Closing-kommentar) — the main chat writes it, not a subagent. ONE per
   issue: list the thread's comments first; if a delivery/closing comment already
   exists (a build or night session posted it before merge), PATCH its stale
   statements — merge SHA, prod-migration status, deviations — instead of posting a
@@ -177,17 +186,18 @@ target.
 - **Findings (reviewer, evaluator, your own reading):** fixed in this PR, or one line
   under `## Observert, ikke rørt` in the PR body — never a new issue, except the single
   documented exception (migration / auth-RLS / product choice outside the issue, and
-  reproduced). Closing comment carries `Nye issues: 0` (CLAUDE.md §Null-vekst, #2096).
+  reproduced). Closing comment carries `Nye issues: 0` (`docs/issue-workflow.md` §Null-vekst, #2096).
 
 ## §T7 — Done verification
 
 - **User-visible = the commit prefix is feat/fix/perf without `[no-changelog]`** (reuses
   the hook-enforced definition, so the two homes cannot drift). Such a change → staging
   click-through of the affected flow BEFORE merge: `preview_start("torny-staging")`,
-  autonomous OTP login per CLAUDE.md §Testing. A staging-minted code never validates
+  autonomous OTP login per `docs/staging-testing.md`. A staging-minted code never validates
   against prod — confirm the data is staging-shaped before writing anything.
-- Prod is in real use — never test against prod (CLAUDE.md §Testing — staging, aldri
-  prod).
+- Prod is in real use — never test against prod (`docs/staging-testing.md`).
+- Issue-closing comment (one per issue, `## Teknisk` + `## Funksjonell`, `Nye issues: 0`):
+  `docs/issue-workflow.md`.
 
 ## §Utførelse — subagenter vs direkte
 

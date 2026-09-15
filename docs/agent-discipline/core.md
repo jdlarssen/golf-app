@@ -37,6 +37,8 @@ procedure before continuing — each rule traces to a real failure in this repo'
 | T7 | About to send any message reporting task status to the user — end-of-turn summary, PR description, issue-closing comment — in any language (done/ferdig, fixed/fikset, works/funker, passing/grønt) | docs/agent-discipline/procedures/done-verification.md |
 | T8 | 2 failed attempts at the same goal (attempt: defined in I5) · a hook/permission denial whose remedy the active procedure or the denial text does NOT already give · missing access/info · conflicting instructions · about to re-run a command with identical arguments and no change in between | docs/agent-discipline/procedures/stuck-and-stop-loss.md |
 | T9 | Session start in a fresh worktree, or context was summarized/compacted | docs/agent-discipline/bindings.md §T9 |
+| T10 | About to open, present or merge a pull request — PR body form, draft-first, auto-merge policy, product-choice marker | docs/pr-workflow.md |
+| T11 | About to create, pick up or close an issue (milestone, flow anchoring, closing comment) — or you found something outside the task's diff | docs/issue-workflow.md |
 
 ## Global invariants (always active)
 
@@ -45,7 +47,7 @@ procedure before continuing — each rule traces to a real failure in this repo'
 | I1 | Ground truth over memory. Never write an API call, column name, enum value, config key or path from recall. If you did not read it in THIS session (file, live schema, bundled docs), verify before writing it. | discipline only |
 | I2 | Evidence before claims. "Done / fixed / passing" requires command output produced in this session that shows it (T7). | discipline only |
 | I3 | Absence of error ≠ success. Operations that can silently no-op (0-row write, empty query result, skipped gate) must be positively confirmed. Where in-session confirmation is impossible (e.g. fire-and-forget mail — best-effort by design here), write `VERIFICATION GAP:` instead of claiming success. | partial — affected-rows helper (bindings §T3) |
-| I4 | Scope = the task's pattern. Every changed line must trace to the task — and the task includes every sibling site of the same defect (T2 step 3). A finding outside the diff → one line under «Observert, ikke rørt» in the PR body: never a drive-by edit, never a new issue (CLAUDE.md §Null-vekst). | discipline only |
+| I4 | Scope = the task's pattern. Every changed line must trace to the task — and the task includes every sibling site of the same defect (T2 step 3). A finding outside the diff → one line under «Observert, ikke rørt» in the PR body: never a drive-by edit, never a new issue (docs/issue-workflow.md §Null-vekst). | discipline only |
 | I5 | Stop-loss. An attempt = an edit to product code intended to remove a symptom, followed by a rerun that still shows it. Probes and diagnostics are not attempts. Two failed attempts at the same symptom → stop editing, go to T8. Never attempt #3 on hope. | discipline only |
 | I6 | Unclear intent, requirements or architecture: interactive session → ask before writing code. Autonomous/unattended → pick the most reasonable interpretation, proceed, and record `ASSUMPTION:` in reply and notes. | discipline only |
 | I7 | Hooks are teammates. A block or denial is information about a rule, never an obstacle. Fix the cause; bypassing (skip-verify flags, force-push, bypass env vars, rewording a command to dodge a rule) is forbidden. Documented false-positive workarounds (bindings §Enforcement) are not dodges. | guard hooks deny bypass flags |
