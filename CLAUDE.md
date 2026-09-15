@@ -304,6 +304,8 @@ Ny/endret norsk bruker-copy (i `.tsx`/`.ts`, mail-templates i `lib/mail/`, feilm
 
 **Plan-eksekvering: alltid subagent-drevet.** Når det finnes et implementeringsplan-dokument (typisk `docs/plans/*-implementation.md`), kjøres den via `superpowers:subagent-driven-development`-skillet — fresh subagent per task, review mellom tasks. Ikke spør brukeren hvilket alternativ — valget er gjort.
 
+**Byggeøkter fra hovedchat (orkestratoren):** når hovedchatten skal få et issue bygget, starter den en egen Claude Code-økt per issue via orkestrator-pluginen (`/orchestrator:run`, `/orchestrator:dispatch <N>`) — ikke en subagent. Prosjektreglene arbeiderne får ligger i `.claude/orchestrator.json`; kladdeboka i `.claude/orchestrator/` er lokal og gitignorert. Pluginen bor i floka-marketplace (`~/.claude/plugins/marketplaces/floka-marketplace/orchestrator/README.md`).
+
 **Modell-routing per subagent:** Sett `model`-parameteren eksplisitt på hvert `Agent`-kall — ikke arv Opus i blinde.
 - **sonnet** for implementer-subagenter (følger ferdigskrevet plan), spec-compliance-reviewer (regel-følging), fix-subagenter med klare instrukser. Mekanisk arbeid med detaljert spec.
 - **opus** for code-quality-reviewer (krever skjønn om tradeoffs), final whole-branch-review, brainstorming-co-pilot.
