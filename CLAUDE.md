@@ -71,35 +71,20 @@ Hva eieren gjør i nettleser-UI-er, hva du gjør, og malen for instrukser i en t
 - Aldri `--no-verify`, aldri force-push uten god grunn
 - Vercel deployer automatisk på push til `main`
 
-### GitHub Issues — arbeidsflyt (mandatory)
+### Regler som leses ved utløser
 
-Alt backlog-arbeid spores i [GitHub Issues](https://github.com/jdlarssen/golf-app/issues), ikke i markdown-filer.
+📋 **Backlog:** [GitHub Issues](https://github.com/jdlarssen/golf-app/issues). `TODO.md` er en stub som peker dit — alle nye oppgaver opprettes som issues, ikke i markdown.
 
-Alle nye issues har milestone (§Milestone på alle nye issues). Brukerflytene (`docs/flows/*-fremtid.svg`, `docs/user-flows.md`) er sannhetskilden for hva som er core; sjekk `docs/hva-er-nok.md` før du oppretter eller bygger feature-issues (§Brukerflyt-forankring). Begge: `docs/issue-workflow.md`.
-
-#### Branch + PR-flyt
-
-Alt arbeid via PR — aldri direkte push til `main`. Grønne PR-er uten produktvalg merges automatisk; produktvalg, prod-migrasjoner, auth, destruktive flyter, merge-porten og native-appen venter på eieren. PR-form, draft-først, auto-merge-policy og produktvalg-markøren: `docs/pr-workflow.md`.
-
-#### Forge-arbeidsflyt (kontrakt-først)
-
-Kontrakt-først-disiplinen for `/forge:auto` (hva hovedchatten gjør når issue/kontrakt ikke er spesifisert) og hvordan `/forge:contract`-kontrakter postes som issue-kommentar er flyttet til [`docs/forge-workflow.md`](docs/forge-workflow.md). Kjernen: **aldri start `/forge:auto`-løkken uten en kontrakt-kommentar på et åpent issue** (kontrakt-filer committes ikke — `.forge/` er lokal arbeidsflate, #1931) — les docs-fila før du kjører `/forge:auto` uten spesifisert issue, eller når `/forge:contract` lager en kontrakt.
-
-#### Closing-kommentar og null-vekst
-
-Et lukket issue får én closing-kommentar med `## Teknisk` + `## Funksjonell` og linja `Nye issues: 0`. Funn fikses i PR-en eller står under «Observert, ikke rørt», aldri som nytt issue. Closing-kommentar, avvik, null-vekst og ceremoni: `docs/issue-workflow.md`.
-
-### Versjonering / CHANGELOG
-
-Hver `feat`/`fix`/`perf`-commit legger én notatfil under `.changes/`; aldri bump `package.json` eller rediger `CHANGELOG.md` (ukerutinen eier begge). Intern endring som shippes som `fix` får `[no-changelog]` i commit-body-en. Mal, felt og hvorfor: `.changes/README.md`.
-
-### Språk-kvalitet i bruker-rettet copy
-
-Ny eller endret norsk bruker-copy: kjør `humanizer:humanizer`-skillet før commit. Mønsterkatalog og bevisst bevarte unntak: `docs/copy-style.md`.
-
-### Testing — staging, aldri prod
-
-Tørny er i ekte bruk: test aldri ved å skrive til prod. All testing skjer mot `torny-staging` (Supabase-ref `snwmueecmfqqdurxedxv`), og bruker-synlige fikser verifiseres på staging før merge. Oppsett, Node 22, autonom login og prod-vakt: `docs/staging-testing.md`.
+- **Milestone på alle nye issues** og **brukerflyt-forankring:** flytene (`docs/flows/*-fremtid.svg`, `docs/user-flows.md`) er sannhetskilden for hva som er core; sjekk `docs/hva-er-nok.md` før feature-issues. → `docs/issue-workflow.md`
+- **Branch + PR-flyt:** alt via PR, aldri direkte push til `main`. Grønne PR-er uten produktvalg merges automatisk; produktvalg, prod-migrasjoner, auth, destruktive flyter, merge-porten og native-appen venter på eieren. → `docs/pr-workflow.md`
+- **Forge:** aldri start `/forge:auto`-løkken uten en kontrakt-kommentar på et åpent issue. → `docs/forge-workflow.md`
+- **Closing-kommentar og null-vekst:** én per issue, `## Teknisk` + `## Funksjonell`, linja `Nye issues: 0`; funn fikses i PR-en eller står under «Observert, ikke rørt». → `docs/issue-workflow.md`
+- **Versjonering / CHANGELOG:** `feat`/`fix`/`perf` legger én notatfil under `.changes/`; aldri bump `package.json` eller rediger `CHANGELOG.md`. Intern `fix` får `[no-changelog]` i commit-body-en. → `.changes/README.md`
+- **Språk-kvalitet:** kjør `humanizer:humanizer` på ny norsk bruker-copy før commit. → `docs/copy-style.md`
+- **Testing — staging, aldri prod:** Tørny er i ekte bruk; test aldri ved å skrive til prod. Test mot `torny-staging` (Supabase-ref `snwmueecmfqqdurxedxv`); bruker-synlige fikser verifiseres der før merge. → `docs/staging-testing.md`
+- **Test-disiplin:** fire test-typer, én per spørsmål (A logikk, B rendret output, C data-UI, D e2e); les beslutningstreet før du rører tester. → `docs/test-discipline.md`
+- **Arbeidsflyt:** planer kjøres via `superpowers:subagent-driven-development`; byggeøkter startes via orkestratoren. → `docs/agent-discipline/bindings.md` §Utførelse
+- **Stil og Brand:** forest-and-champagne (`app/globals.css`), `tabular-nums`, tap-targets ≥44px. → `docs/style-and-brand.md`
 
 ### Feilhåndtering / bugs
 
@@ -107,60 +92,16 @@ Tørny er i ekte bruk: test aldri ved å skrive til prod. All testing skjer mot 
 - Bruk `superpowers:systematic-debugging`-skill ved bug-rapport
 - Legg til diagnostikk (console.log eller inline rendering) FØR du foreslår løsning
 
-### Test-disiplin (mandatory)
-
-Fire test-typer, én per spørsmål: A logikk (TDD), B rendret output (snapshot), C data-UI (maks én render-test), D e2e (golden path, aldri norsk copy). Les `docs/test-discipline.md` (typene, beslutningstreet, forbudt-lista) før du rører tester.
-
-### Arbeidsflyt — subagenter vs direkte
-
-Implementeringsplaner kjøres via `superpowers:subagent-driven-development`; byggeøkter per issue startes via orkestratoren. Modell-ruting og terskelen for subagent: `docs/agent-discipline/bindings.md` §Utførelse.
-
-### Stil og Brand
-
-Forest-and-champagne-paletten (`app/globals.css`), Fraunces + Inter, `tabular-nums` i tall-tabeller og tap-targets ≥44px. Palett, tagline og brand-stemme: `docs/style-and-brand.md`.
-
 ## Arkitektur
 
-### Datamodell
-
-41 tabeller i `public` (målt 2026-09-13 — vedlikeholdes av dok-avstemmeren #1078). Kjernen:
-- `users` (utvider auth.users)
-- `courses` + `course_holes` + `tee_boxes`
-- `games` + `game_players`
-- `scores`
-- `invitations`
-
-Resten dekker klubb/grupper, liga, cup, vennskap, notifikasjoner, reaksjoner, sideturneringer og spillmodus-spesifikke tabeller. Full RLS-/CHECK-/trigger-oversikt: generert seksjon i `docs/schema-ground-truth.md`. Migrasjoner: `supabase/migrations/` (løpenummerert; live DB er fasit, jf. AGENTS.md trap 1).
-
-### Scoring-logikk
-
-Ren TypeScript i `lib/scoring/`:
-- `courseHandicap.ts` — WHS-formel
-- `strokeAllocation.ts` — slag per hull
-- `bestBall.ts` — netto + best-ball + lag-total
-- `tiebreaker.ts` — 5-tiers cascade
-
-Assertion-rik unit-suite, alle grønne (fasit: `npx vitest run lib/scoring` — 1209 tester per 2026-09-08). TDD-disiplin var streng her — endring krever ny test først.
-
-### Auth-flyt
-
-OTP-kode i mail, ingen magic-link: magic-link-URL-en brøt iOS PWA-innlogging (PKCE-handoff og mail-scannere). Login-flyten, invitasjoner og mail-debug: `docs/auth-flow.md`.
-
-### Offline-sync
-
-Lokal-først via Dexie med sync-kø og realtime. Sync-flyten og realtime-fella (`setAuth()` uten argument før subscribe, #1366): `lib/sync/AGENTS.md`.
+- **Datamodell:** 41 tabeller i `public` (målt 2026-09-13 — vedlikeholdes av dok-avstemmeren #1078); kjernen er `users`, `courses`, `games` + `game_players`, `scores`, `invitations`. Oversikt: `docs/schema-ground-truth.md`; migrasjoner i `supabase/migrations/` (live DB er fasit, jf. AGENTS.md trap 1).
+- **Scoring-logikk:** ren TypeScript i `lib/scoring/`; endring krever ny test først (fasit: `npx vitest run lib/scoring`).
+- **Auth-flyt:** OTP-kode i mail, ingen magic-link, fordi URL-en brøt iOS PWA-innlogging. → `docs/auth-flow.md`
+- **Offline-sync:** lokal-først via Dexie; realtime-fella (`setAuth()` uten argument, #1366). → `lib/sync/AGENTS.md`
+- **RLS:** Postgres-RLS er den ekte authz-en; et ferdig spill er ikke world-read (#1542). → `lib/supabase/AGENTS.md`
+- **Server-actions og caching:** `getGameWithPlayers` cacher med tag `game-${id}`; mutasjoner kaller `revalidateTag`. → `lib/games/AGENTS.md`
 
 ⚠️ Dexie database heter `'golf-app'` (historisk) — IKKE rename, det invaliderer eksisterende brukeres lokale data.
-
-### RLS
-
-Postgres-RLS er den ekte authz-en. Et ferdig spill er ikke world-read (#1542): flater som viser resultater bredere, leser med service-role og gater på call-site. Detaljer: `lib/supabase/AGENTS.md`.
-
-### Server-actions og caching
-
-`getGameWithPlayers` er `unstable_cache`-wrappet med tag `game-${id}`, og mutasjoner kaller `revalidateTag`. Detaljer: `lib/games/AGENTS.md`.
-
-📋 **Backlog:** [GitHub Issues](https://github.com/jdlarssen/golf-app/issues). `TODO.md` er en stub som peker dit — alle nye oppgaver opprettes som issues, ikke i markdown.
 
 ## Nøkkelfiler å kjenne til
 
@@ -175,4 +116,28 @@ Discoverable kataloger (`ls components/ui/`, `ls lib/`, etc.) er ikke listet her
 - `app/[locale]/admin/games/[id]/slett/` + `app/[locale]/admin/spillere/[id]/slett/` + `app/[locale]/profile/slett-konto/` — destruktive flyter har dedikerte konfirmasjons-sider; aldri inline-toggle eller `<details>`-popout
 - `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` (single source of truth for status-tekster)
 
-[GitHub Issues](https://github.com/jdlarssen/golf-app/issues) er backlog. `docs/launch-checklist.md` er admin-sjekkliste. `docs/email-templates.md` har Supabase Auth-malene. `docs/test-discipline.md` er full referanse for test-typer. `docs/changelog-conventions.md` er CHANGELOG-format. `docs/copy-style.md` er pattern-katalog for bruker-rettet copy. `docs/agent-discipline/` er event-triggede agent-prosedyrer (core.md lastes automatisk øverst i denne fila; prosedyrene leses ved trigger).
+## Kart — hvor resten bor
+
+Utløsertabellen står i `core.md` (lastet øverst). Les fila når utløseren inntreffer.
+
+- `docs/agent-discipline/` — prosedyrene per utløser; `bindings.md` kobler dem til repoet
+- `docs/auth-flow.md` — OTP-innlogging, invitasjoner, mail-debug
+- `docs/bug-prevention.md` — de fem fellene, med hendelsene bak
+- `docs/changelog-conventions.md` — CHANGELOG-format
+- `docs/collaboration.md` — hvem gjør hva, mal for tredjeparts-UI
+- `docs/copy-style.md` — mønsterkatalog for norsk bruker-copy
+- `docs/email-deliverability.md` — runbook for e-postlevering til Outlook/Hotmail
+- `docs/email-templates.md` — Supabase Auth-malene
+- `docs/forge-workflow.md` — kontrakt-først for `/forge:auto`
+- `docs/hva-er-nok.md` — ferdiggrensen: fryst, parkert, vekke-triggere
+- `docs/issue-workflow.md` — milestone, flyt-forankring, closing-kommentar, null-vekst
+- `docs/launch-checklist.md` — admin-sjekkliste
+- `docs/pr-workflow.md` — PR-form, draft-først, auto-merge, produktvalg-markøren
+- `docs/schema-ground-truth.md` — skjema-snapshot (live DB vinner)
+- `docs/staging-testing.md` — staging-oppsett, autonom login, prod-vakt
+- `docs/style-and-brand.md` — palett, typografi, tagline, brand-stemme
+- `docs/test-discipline.md` — test-typene A–D og beslutningstreet
+- `docs/uat-empty-states-and-scheduled-status.md` — UAT-sjekkliste for tomtilstander og planlagt status
+- `docs/user-flows.md` — brukerflytene i tekst
+
+AGENTS.md per område: `AGENTS.md` (Next.js 16, fem feller) · `lib/games/AGENTS.md` (spill-cache) · `lib/mail/AGENTS.md` (Type B) · `lib/scoring/AGENTS.md` (Type A, test først) · `lib/supabase/AGENTS.md` (skriveregler, RLS) · `lib/sync/AGENTS.md` (sync, realtime) · `native/app/AGENTS.md` (native-appen)
