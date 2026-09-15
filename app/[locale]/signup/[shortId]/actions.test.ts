@@ -283,6 +283,8 @@ describe('registerForOpenGame', () => {
         }),
       }),
     );
+    // Stableford has no cap: the direct INSERT path, no seat claim.
+    expect(adminMock.__rpcCalls).toEqual([]);
     // request_id skal IKKE være satt for open-modus.
     const notifyArgs = notifyMock.mock.calls[0]?.[0] as
       | { payload: { request_id?: string } }
@@ -516,156 +518,72 @@ describe('registerForOpenGame', () => {
 
   // ── eksakt-antall-format cap (#661) ────────────────────────────────────────
 
-  it('#661: wolf-spill med 5 påmeldte — 6. spiller avvises med game_full', async () => {
-    // Wolf støtter max 5 spillere. En 6. spiller som prøver å melde seg på
-    // skal avvises med game_full (eksisterende feilkode) og ingen INSERT.
-    authedAsUser();
-    getGameByShortIdMock.mockResolvedValue(
-      makeGame({
-        game_mode: 'wolf',
-        mode_config: { kind: 'wolf', team_size: 1, teams_count: 5, wolf_scoring: 'net' },
-      }),
-    );
-
-    // Spillertelling: 5 aktive spillere (ved cap)
-    const countBuilder = {
-      select: () => countBuilder,
-      eq: () => countBuilder,
-      is: () => countBuilder,
-      then: (onFulfilled?: (v: unknown) => unknown) =>
-        Promise.resolve({ count: 5, error: null }).then(onFulfilled),
-    };
-    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(countBuilder);
-
-    const { registerForOpenGame } = await import('./actions');
-    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
-    expect(result).toEqual({ ok: false, error: 'game_full' });
-
-    // Ingen INSERT skal ha skjedd
-    const insertCall = adminMock.__fromCalls.find(
-      (c) => c.table === 'game_players' && c.method === 'insert',
-    );
-    expect(insertCall).toBeUndefined();
-  });
-
-  it('#661: nines-spill med 3 påmeldte — 4. spiller avvises med game_full', async () => {
-    authedAsUser();
-    getGameByShortIdMock.mockResolvedValue(
-      makeGame({
-        game_mode: 'nines',
-        mode_config: { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' },
-      }),
-    );
-
-    // Spillertelling: 3 aktive spillere (nøyaktig cap)
-    const countBuilder = {
-      select: () => countBuilder,
-      eq: () => countBuilder,
-      is: () => countBuilder,
-      then: (onFulfilled?: (v: unknown) => unknown) =>
-        Promise.resolve({ count: 3, error: null }).then(onFulfilled),
-    };
-    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(countBuilder);
-
-    const { registerForOpenGame } = await import('./actions');
-    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
-    expect(result).toEqual({ ok: false, error: 'game_full' });
-  });
-
-  it('#661: skins-spill med 16 påmeldte — 17. spiller avvises med game_full', async () => {
-    authedAsUser();
-    getGameByShortIdMock.mockResolvedValue(
-      makeGame({
-        game_mode: 'skins',
-        mode_config: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
-      }),
-    );
-
-    const countBuilder = {
-      select: () => countBuilder,
-      eq: () => countBuilder,
-      is: () => countBuilder,
-      then: (onFulfilled?: (v: unknown) => unknown) =>
-        Promise.resolve({ count: 16, error: null }).then(onFulfilled),
-    };
-    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(countBuilder);
-
-    const { registerForOpenGame } = await import('./actions');
-    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
-    expect(result).toEqual({ ok: false, error: 'game_full' });
-  });
-
-  it('#661: wolf-spill med 4 påmeldte (under cap 5) — påmelding går gjennom', async () => {
-    // Regresjonstest: cap-sjekken blokkerer IKKE når det er plass.
-    authedAsUser();
-    getGameByShortIdMock.mockResolvedValue(
-      makeGame({
-        game_mode: 'wolf',
-        mode_config: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
-      }),
-    );
-
-    // admin-mock kø: count=4 (via thenable), insert, notify lookup.
-    // Spillertelling brukes FØR insert, så count-builder er FØRSTE kall.
-    adminMock = buildSupabaseMock([
-      { data: null, error: null }, // insert (popp 2)
-      { data: { name: 'Kari', nickname: null, email: 'kari@x.no' }, error: null }, // notify lookup (popp 3)
-    ]);
-    // count-query bruker thenable (count: 'exact', head: true) — vi injiserer
-    // countBuilder som første retur fra adminMock.from().
-    const countBuilder = {
-      select: () => countBuilder,
-      eq: () => countBuilder,
-      is: () => countBuilder,
-      then: (onFulfilled?: (v: unknown) => unknown) =>
-        Promise.resolve({ count: 4, error: null }).then(onFulfilled),
-    };
-    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(countBuilder);
-
-    const { registerForOpenGame } = await import('./actions');
-    await expect(
-      registerForOpenGame(fd({ shortId: SHORT_ID })),
-    ).rejects.toBeInstanceOf(RedirectError);
-
-    expect(redirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({ href: `/games/${GAME_ID}` }),
-    );
-  });
-
-  // ── lag-format cap (#2011) ─────────────────────────────────────────────────
+  // ── player cap (#661, #2011) → claim_open_registration_seat (#2060/#2062) ──
+  // The seat count and the INSERT are one RPC. These tests pin what the action
+  // hands the database — the cap number, the seat team size, a solo claim — and
+  // how each outcome maps to the action's error. The counting itself is tested
+  // against a real database in supabase/tests/open_registration_seat_claim_test.sql.
   // registration_type stays 'solo' (the makeGame default): a team mode with
   // 'team'/'both' is turned away by team_not_supported_yet before the cap.
 
-  it('#2011: best ball med 8 påmeldte — 9. spiller avvises med game_full', async () => {
-    authedAsUser();
-    getGameByShortIdMock.mockResolvedValue(
-      makeGame({
-        game_mode: 'best_ball',
-        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
-      }),
+  const notifyLookup = {
+    data: { name: 'Kari', nickname: null, email: 'kari@example.com' },
+    error: null,
+  };
+
+  /** Admin client whose seat claim answers `claim` (or fails with `rpcError`). */
+  function claimAdmin(claim: unknown, rpcError?: unknown) {
+    return buildSupabaseMock(
+      [notifyLookup],
+      { claim_open_registration_seat: claim },
+      rpcError ? { rpcErrors: { claim_open_registration_seat: rpcError } } : {},
     );
-    // The count comes first. The insert + notify lookup behind it are what the
-    // action would consume if the cap let the player in — so a missing cap
-    // shows up as a redirect into the game, not as a mock underflow.
-    adminMock = buildSupabaseMock([
-      { count: 8, error: null }, // player cap count — grid is full
-      { data: null, error: null }, // insert
-      { data: { name: 'Kari', nickname: null, email: 'kari@example.com' }, error: null }, // notify lookup
-    ]);
+  }
 
-    const { registerForOpenGame } = await import('./actions');
-    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
-    expect(result).toEqual({ ok: false, error: 'game_full' });
+  function claimParams(): Record<string, unknown> | undefined {
+    return adminMock.__rpcCalls.find((c) => c.name === 'claim_open_registration_seat')
+      ?.params as Record<string, unknown> | undefined;
+  }
 
-    const insertCall = adminMock.__fromCalls.find(
-      (c) => c.table === 'game_players' && c.method === 'insert',
-    );
-    expect(insertCall).toBeUndefined();
-  });
+  function gamePlayersCalls() {
+    return adminMock.__fromCalls.filter((c) => c.table === 'game_players');
+  }
 
-  it('#2011: texas à 3 med 9 påmeldte (under cap 12) — påmelding går gjennom', async () => {
-    // Negative control: the team cap reads team_size from mode_config (3 → 12),
-    // so nine players still leave room.
+  it.each([
+    ['wolf', { kind: 'wolf', team_size: 1, teams_count: 5, wolf_scoring: 'net' }, 5, 1],
+    ['nines', { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' }, 3, 1],
+    ['skins', { kind: 'skins', team_size: 1, skins_scoring: 'net' }, 16, 1],
+    ['best_ball', { kind: 'best_ball', team_size: 2, teams_count: 4 }, 8, 2],
+  ] as const)(
+    '%s: fullt spill → game_full; kravet fikk taket og lagstørrelsen, ingen direkte INSERT',
+    async (mode, modeConfig, cap, seatTeamSize) => {
+      authedAsUser();
+      getGameByShortIdMock.mockResolvedValue(
+        makeGame({ game_mode: mode, mode_config: modeConfig }),
+      );
+      adminMock = claimAdmin({ outcome: 'game_full', team_number: null });
+
+      const { registerForOpenGame } = await import('./actions');
+      const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+
+      expect(result).toEqual({ ok: false, error: 'game_full' });
+      expect(claimParams()).toMatchObject({
+        p_game_id: GAME_ID,
+        p_user_id: USER_ID,
+        p_cap: cap,
+        p_seat_team_size: seatTeamSize,
+        p_max_teams: 4,
+      });
+      // A solo claim: one seat, no team number.
+      expect(claimParams()).not.toHaveProperty('p_new_team_size');
+      expect(gamePlayersCalls()).toEqual([]);
+      expect(revalidateTagMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('#2011: texas à 3 med plass — kravet går gjennom → revalidate + notify + redirect', async () => {
+    // Negative control: the cap reads team_size from mode_config (3 → 12), and a
+    // claimed seat takes the same tail as a direct INSERT.
     authedAsUser();
     getGameByShortIdMock.mockResolvedValue(
       makeGame({
@@ -678,28 +596,83 @@ describe('registerForOpenGame', () => {
         },
       }),
     );
-    adminMock = buildSupabaseMock([
-      { count: 9, error: null }, // player cap count
-      { data: null, error: null }, // insert
-      { data: { name: 'Kari', nickname: null, email: 'kari@example.com' }, error: null }, // notify lookup
-    ]);
+    adminMock = claimAdmin({ outcome: 'ok', team_number: null });
 
     const { registerForOpenGame } = await import('./actions');
     await expect(
       registerForOpenGame(fd({ shortId: SHORT_ID })),
     ).rejects.toBeInstanceOf(RedirectError);
 
+    expect(claimParams()).toMatchObject({ p_cap: 12, p_seat_team_size: 3 });
     expect(redirectMock).toHaveBeenCalledWith(
       expect.objectContaining({ href: `/games/${GAME_ID}` }),
     );
-    // The cap was actually evaluated for the team format, not skipped.
-    const capCount = adminMock.__fromCalls.find(
-      (c) =>
-        c.table === 'game_players' &&
-        c.method === 'select' &&
-        (c.args[1] as { head?: boolean } | undefined)?.head === true,
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: ADMIN_USER_ID, kind: 'registration_request' }),
     );
-    expect(capCount).toBeDefined();
+    // The RPC wrote the row; the action must not insert a second time.
+    expect(gamePlayersCalls()).toEqual([]);
+  });
+
+  it('allerede på lista (already_on_roster) → already_registered', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ game_mode: 'wolf', mode_config: { kind: 'wolf', team_size: 1 } }),
+    );
+    adminMock = claimAdmin({ outcome: 'already_on_roster', team_number: null });
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'already_registered' });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('spillet ble låst mellom sjekken og kravet → game_locked', async () => {
+    // The claim re-checks status under the game lock; its answer wins over the
+    // action's earlier read.
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ game_mode: 'wolf', mode_config: { kind: 'wolf', team_size: 1 } }),
+    );
+    adminMock = claimAdmin({ outcome: 'game_locked', team_number: null });
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'game_locked' });
+  });
+
+  it('kravet feiler i databasen → db_error, ingen fail-open INSERT', async () => {
+    // Before #2060 a failed count fell through to the INSERT. The count and the
+    // INSERT are one call now, so a failure leaves nothing to fall back to.
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ game_mode: 'wolf', mode_config: { kind: 'wolf', team_size: 1 } }),
+    );
+    adminMock = claimAdmin(null, { message: 'AbortError: This operation was aborted' });
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(gamePlayersCalls()).toEqual([]);
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('ukjent svar fra kravet → db_error, aldri stille suksess', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ game_mode: 'wolf', mode_config: { kind: 'wolf', team_size: 1 } }),
+    );
+    adminMock = claimAdmin(null);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });
 

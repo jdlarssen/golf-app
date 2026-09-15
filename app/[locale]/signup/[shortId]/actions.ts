@@ -13,6 +13,7 @@ import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { resolveRegistrationTypeView } from './registrationTypeView';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import { MAX_TEAMS } from '@/lib/games/teamFormatLimits';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -229,11 +230,16 @@ export async function registerForOpenGame(
     return { ok: false, error: 'rate_limited' };
   }
 
-  // Player cap before INSERT: the exact-count formats (#661 — Wolf 3–5, Nines 3,
-  // RoundRobin 4, AceyDeucey 4, Skins/Nassau/BBB 2–16) and the team formats'
-  // grid cap (#2011 — MAX_TEAMS × team size). The matchplay family has no cap
-  // here; side capacity has its own check below. Fail-open on a DB error: the
-  // INSERT goes ahead.
+  // #1022: kanal-attribusjon fra offentlig flate. Allowlist-validert — ukjente
+  // verdier blir null og blokkerer aldri påmeldingen.
+  const signupSource = signupSourceFromParam(
+    String(formData.get('src') ?? '') || undefined,
+  );
+
+  // Player cap: the exact-count formats (#661 — Wolf 3–5, Nines 3, RoundRobin 4,
+  // AceyDeucey 4, Skins/Nassau/BBB 2–16) and the team formats' grid cap (#2011 —
+  // MAX_TEAMS × team size). The matchplay family has no cap here; side capacity
+  // has its own check below.
   //
   // For a self-registration game the signup caps (this one and the team cap in
   // submitTeamRegistration) are the only player-count gate before the game
@@ -241,23 +247,41 @@ export async function registerForOpenGame(
   // buildGameInsertPayload hands the mode validator effectiveMode 'draft', and
   // every too_many_players_for_mode check sits behind mode === 'publish' — so
   // no format's save catches a roster past the cap.
+  //
+  // #2060/#2062: the count and the INSERT are one call. claim_open_registration_seat
+  // locks the game, counts seats — a team holds its full size, so solo players
+  // cannot take seats a team's invited teammates are still to fill — and writes
+  // the row, so two players on the last seat cannot both get in. The cap number
+  // is still computed here; the database never guesses it.
   const admin = getAdminClient();
-  const cap = registrationPlayerCap(
-    game.game_mode,
-    game.mode_config as { team_size?: number } | null,
-  );
-  if (cap !== null) {
-    const { count: playerCount, error: capCountError } = await admin
-      .from('game_players')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('game_id', game.id)
-      .is('withdrawn_at', null);
-    if (capCountError) {
-      console.error('[registerForOpenGame] player cap count failed', capCountError);
-      // Fail-open: don't block signup on a transient DB error.
-    } else if ((playerCount ?? 0) >= cap) {
-      return { ok: false, error: 'game_full' };
+  const modeConfig = game.mode_config as { team_size?: number } | null;
+  const cap = registrationPlayerCap(game.game_mode, modeConfig);
+  if (cap !== null && !isMatchplayMode(game.game_mode)) {
+    const seatTeamSize =
+      typeof modeConfig?.team_size === 'number' && modeConfig.team_size >= 1
+        ? modeConfig.team_size
+        : 1;
+    const { data: claim, error: claimError } = await admin.rpc(
+      'claim_open_registration_seat',
+      {
+        p_game_id: game.id,
+        p_user_id: userId,
+        p_seat_team_size: seatTeamSize,
+        p_max_teams: MAX_TEAMS,
+        // #463: selv-påmelding → bekreftet med en gang.
+        p_accepted_at: new Date().toISOString(),
+        p_cap: cap,
+        // No p_new_team_size: a solo claim takes one seat and no team number.
+        ...(signupSource !== null ? { p_signup_source: signupSource } : {}),
+      },
+    );
+    if (claimError) {
+      console.error('[registerForOpenGame] seat claim failed', claimError);
+      return { ok: false, error: 'db_error' };
     }
+    const failure = seatClaimFailure(claim);
+    if (failure) return { ok: false, error: failure };
+    return completeOpenRegistration(game, userId);
   }
 
   // #544: for matchplay-familien leser vi `side` fra formData og setter
@@ -291,18 +315,10 @@ export async function registerForOpenGame(
     flightNumber = rawSide;
   }
 
-  // INSERT via admin-client. Den nye RLS-policyen `self register open game`
-  // (migrasjon 0042) tillater også INSERT via en cookie-basert klient med
-  // user-session, men admin-client gir oss deterministisk feilhåndtering
-  // uten å bli avhengig av at server-action cookie-handoff er konfigurert
-  // riktig på edge runtime. Authz over (registration_mode + status) er
-  // allerede sjekket på rad-nivå i koden.
-  // #1022: kanal-attribusjon fra offentlig flate. Allowlist-validert — ukjente
-  // verdier blir null og blokkerer aldri påmeldingen.
-  const signupSource = signupSourceFromParam(
-    String(formData.get('src') ?? '') || undefined,
-  );
-
+  // INSERT via admin-client: matchplay and the formats without a cap. There is
+  // no RLS path for a player's own row any more — 0177 removed the policy
+  // branch (#2062) — so self-registration always writes with the service role.
+  // Authz over (registration_mode + status) is checked in the code above.
   const { error: insertError } = await admin.from('game_players').insert({
     game_id: game.id,
     user_id: userId,
@@ -351,6 +367,43 @@ export async function registerForOpenGame(
     return { ok: false, error: 'db_error' };
   }
 
+  return completeOpenRegistration(game, userId);
+}
+
+/**
+ * Maps claim_open_registration_seat's outcome (0177) to the action's error, or
+ * null when the seat was claimed. The state gates repeat the action's own
+ * checks under the game lock, so they keep the same codes. Anything unknown is
+ * a db_error — never a silent success.
+ */
+function seatClaimFailure(claim: unknown): ActionError | null {
+  const outcome = (claim as { outcome?: unknown } | null)?.outcome;
+  switch (outcome) {
+    case 'ok':
+      return null;
+    case 'game_full':
+      return 'game_full';
+    case 'already_on_roster':
+      return 'already_registered';
+    case 'game_locked':
+    case 'signup_closed':
+    case 'game_not_found':
+      return outcome;
+    default:
+      console.error('[registerForOpenGame] unexpected seat claim outcome', claim);
+      return 'db_error';
+  }
+}
+
+/**
+ * What follows a successful open registration, whichever way the row was
+ * written: cache revalidation, the organiser's notification, and the redirect
+ * into the game.
+ */
+async function completeOpenRegistration(
+  game: { id: string; name: string; created_by: string | null },
+  userId: string,
+): Promise<ActionResult> {
   revalidateTag(`game-${game.id}`, 'max');
 
   // Notify game-creator. Best-effort — feil her skal aldri rulle tilbake
