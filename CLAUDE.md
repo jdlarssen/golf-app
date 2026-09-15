@@ -133,11 +133,13 @@ Utløsertabellen står i `core.md` (lastet øverst). Les fila når utløseren in
 - `docs/issue-workflow.md` — milestone, flyt-forankring, closing-kommentar, null-vekst
 - `docs/launch-checklist.md` — admin-sjekkliste
 - `docs/pr-workflow.md` — PR-form, draft-først, auto-merge, produktvalg-markøren
+- `docs/roadmap.md` — månedsmålene og kapasitetsregelen (tre mot målet, to til drift/bugs/forvaltning); issues lages fra målene
 - `docs/schema-ground-truth.md` — skjema-snapshot (live DB vinner)
 - `docs/staging-testing.md` — staging-oppsett, autonom login, prod-vakt
 - `docs/style-and-brand.md` — palett, typografi, tagline, brand-stemme
 - `docs/test-discipline.md` — test-typene A–D og beslutningstreet
 - `docs/uat-empty-states-and-scheduled-status.md` — UAT-sjekkliste for tomtilstander og planlagt status
 - `docs/user-flows.md` — brukerflytene i tekst
+- `docs/visjon.md` — visjonen, planleggingsløken (visjon → kvartalsmål → månedsmål → uke → issue) og reglene harnesset håndhever
 
 AGENTS.md per område: `AGENTS.md` (Next.js 16, fem feller) · `lib/games/AGENTS.md` (spill-cache) · `lib/mail/AGENTS.md` (Type B) · `lib/scoring/AGENTS.md` (Type A, test først) · `lib/supabase/AGENTS.md` (skriveregler, RLS) · `lib/sync/AGENTS.md` (sync, realtime) · `native/app/AGENTS.md` (native-appen)
