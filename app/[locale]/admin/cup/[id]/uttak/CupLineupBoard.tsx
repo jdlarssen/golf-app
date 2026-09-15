@@ -17,8 +17,10 @@ import {
   submitCupLineup,
   unlockCupLineup,
   deleteCupLineupSession,
+  retryCupLineupReveal,
   type CupLineupActionError,
 } from '@/lib/cup/lineupActions';
+import { canRetryReveal } from '@/lib/cup/lineupReveal';
 import { seatsPerSlot } from '@/lib/cup/lineupValidation';
 import { derivePointsToWin } from '@/lib/cup/pointsToWin';
 import { formatPoints } from '@/lib/cup/formatPoints';
@@ -99,6 +101,8 @@ export function CupLineupBoard({
           return unlockCupLineup(formData);
         case 'delete':
           return deleteCupLineupSession(formData);
+        case 'retry':
+          return retryCupLineupReveal(formData);
         default:
           return submitCupLineup(formData);
       }
@@ -471,6 +475,44 @@ function SessionCard({
           />
         ))}
       </div>
+
+      {/* #1901: both lineups in, nothing revealed. The reveal error went to the
+          captain who submitted last, so without this the organiser would see
+          an ordinary-looking card and no way forward but unlocking. */}
+      {isOrganizer &&
+        canRetryReveal({
+          revealedAt: session.revealedAt,
+          team1SubmittedAt: session.teams[0].submittedAt,
+          team2SubmittedAt: session.teams[1].submittedAt,
+        }) && (
+          <div className="mt-4 space-y-3">
+            <Banner
+              tone="warning"
+              testId={`cup-lineup-stuck-${session.sessionIndex}`}
+            >
+              <p className="font-semibold">{t('retryHeading')}</p>
+              <p className="mt-1 font-normal">{t('retryHelper')}</p>
+            </Banner>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData();
+                fd.set('intent', 'retry');
+                fd.set('id', tournamentId);
+                fd.set('session_id', session.id);
+                onSubmit(fd);
+              }}
+            >
+              <Button
+                type="submit"
+                disabled={isPending}
+                data-testid={`cup-lineup-retry-${session.sessionIndex}`}
+              >
+                {t('retryButton')}
+              </Button>
+            </form>
+          </div>
+        )}
 
       {isOrganizer && !revealed && (
         <form
