@@ -80,3 +80,32 @@ export function buildRevealMatches(input: {
       };
     });
 }
+
+/**
+ * Is the session stuck after a failed reveal? (#1901)
+ *
+ * The reveal only fires at the moment the second lineup lands. When it fails
+ * (a database blip, or the teams changed after the lineups were submitted) it
+ * rolls back: the compensation in `lineupActions` puts `revealed_at` back to
+ * null and leaves both submission stamps in place. Nothing retries on its own,
+ * so the organiser gets a button.
+ *
+ * ⚠️ This means "both submitted and not revealed YET", not "something failed":
+ * a first reveal that is still running matches it too for a few seconds (the
+ * room is revalidated before the claim). A click in that window is a no-op,
+ * because the claim on `revealed_at` lets only one caller through.
+ *
+ * The same function gates BOTH the button's visibility and the server action's
+ * rejection, so the rule has one home (AGENTS.md trap 4).
+ */
+export function canRetryReveal(input: {
+  revealedAt: string | null;
+  team1SubmittedAt: string | null;
+  team2SubmittedAt: string | null;
+}): boolean {
+  return (
+    input.revealedAt === null &&
+    input.team1SubmittedAt !== null &&
+    input.team2SubmittedAt !== null
+  );
+}
