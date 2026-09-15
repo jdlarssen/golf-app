@@ -27,8 +27,13 @@
 --     team-number pick (trap 4). The cap itself stays a number computed in
 --     TypeScript (registrationPlayerCap / teamModePlayerCap / MAX_TEAMS) and is
 --     passed in — SQL never guesses a format's limits. The games row is locked
---     FOR UPDATE, so registrations for the same game run one at a time and see
---     each other's rows; other games are not touched.
+--     FOR NO KEY UPDATE, so registrations for the same game run one at a time
+--     and see each other's rows; other games are not touched. NO KEY UPDATE
+--     rather than UPDATE: it does not conflict with the FOR KEY SHARE lock a
+--     game_players INSERT's foreign-key check takes, so a concurrent direct
+--     insert (an organiser add, an acceptTeamInvite upsert) never waits on the
+--     claim — waiting there, while the claim waits on that insert's row, is a
+--     deadlock.
 --
 --     Seats, not rows: a player outside a team holds one seat; a team holds
 --     max(active rows, p_seat_team_size) — e-mail-invited teammates have no row
@@ -87,7 +92,7 @@ as $function$
       into v_status, v_signups_closed_at
       from public.games g
      where g.id = p_game_id
-       for update;
+       for no key update;
 
     if not found then
       return jsonb_build_object('outcome', 'game_not_found', 'team_number', null);
