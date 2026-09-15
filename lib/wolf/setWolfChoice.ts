@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import type { WolfChoice } from '@/lib/scoring/modes/types';
 
@@ -38,9 +38,11 @@ export interface SetWolfChoiceInput {
  *  - partner_user_id !== wolf_user_id (selv-velgelse forbudt)
  *  - hole_number 1..18
  *
- * Etter upsert: revaliderer `game-${gameId}`-tagen så alle cache-konsumenter
- * (getWolfChoices, getGameWithPlayers, ev. scoring) henter fresh data ved
- * neste request.
+ * Etter upsert: `updateTag` utløper `game-${gameId}`-tagen med én gang, så alle
+ * cache-konsumenter (getWolfChoices, getGameWithPlayers, ev. scoring) venter på
+ * ferske data ved neste request (#2091). Lagring på hullet leser egen skriving:
+ * `revalidateTag(tag, 'max')` ga stale-while-revalidate, og første omlasting
+ * viste valget fra før.
  */
 export async function setWolfChoice(
   input: SetWolfChoiceInput,
@@ -98,6 +100,6 @@ export async function setWolfChoice(
     return { ok: false, error: 'rls_denied' };
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  updateTag(`game-${gameId}`);
   return { ok: true };
 }

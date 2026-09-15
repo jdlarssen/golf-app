@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const upsertMock = vi.fn();
 const getUserMock = vi.fn();
-const revalidateTagMock = vi.fn();
+const updateTagMock = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: () => ({
@@ -11,8 +11,11 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
+// #2091: `updateTag`, not `revalidateTag(tag, 'max')` — the next page load must
+// read the saved choice, not the cached one. Only `updateTag` is mocked, so a
+// return to `revalidateTag` fails here.
 vi.mock('next/cache', () => ({
-  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
+  updateTag: (...args: unknown[]) => updateTagMock(...args),
 }));
 
 import { setWolfChoice } from './setWolfChoice';
@@ -20,7 +23,7 @@ import { setWolfChoice } from './setWolfChoice';
 beforeEach(() => {
   upsertMock.mockReset();
   getUserMock.mockReset();
-  revalidateTagMock.mockReset();
+  updateTagMock.mockReset();
 });
 
 function mockAuthed(userId: string) {
@@ -169,7 +172,7 @@ describe('setWolfChoice — DB-interaksjon', () => {
       },
       { onConflict: 'game_id,hole_number' },
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-g-42', 'max');
+    expect(updateTagMock.mock.calls).toStrictEqual([['game-g-42']]);
   });
 
   it('lone-valg lagrer null partner', async () => {
@@ -227,6 +230,6 @@ describe('setWolfChoice — DB-interaksjon', () => {
     });
 
     expect(result).toEqual({ ok: false, error: 'rls_denied' });
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(updateTagMock).not.toHaveBeenCalled();
   });
 });
