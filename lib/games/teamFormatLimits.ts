@@ -121,6 +121,29 @@ const FIXED_TEAM_SIZES: Partial<Record<GameMode, number>> = {
 };
 
 /**
+ * The team size open self-registration counts seats with (#2062): the fixed
+ * size for best ball and patsome, the chosen size when the format supports it,
+ * otherwise the smallest size the format supports — and 1 for formats without
+ * teams. One home for the size, read by `teamModePlayerCap` for the cap and by
+ * `registerForOpenGame` for the seats an existing team holds, so an unknown
+ * size can never make the cap tight while the seats stay loose.
+ */
+export function registrationSeatTeamSize(
+  mode: GameMode,
+  teamSize: number | null | undefined,
+): number {
+  const fixed = FIXED_TEAM_SIZES[mode];
+  if (fixed !== undefined) return fixed;
+
+  const sizes = teamSizesForMode(mode);
+  if (sizes.length === 0) return 1;
+
+  return typeof teamSize === 'number' && sizes.includes(teamSize)
+    ? teamSize
+    : Math.min(...sizes);
+}
+
+/**
  * Upper player cap for a team-format game: full teams across the whole grid,
  * i.e. `MAX_TEAMS × team size` (#2011). Open self-registration reads it so a
  * game cannot collect more players or teams than the wizard can show. `null`
@@ -128,21 +151,20 @@ const FIXED_TEAM_SIZES: Partial<Record<GameMode, number>> = {
  * family) — other rules own their cap.
  *
  * A missing or unsupported `teamSize` falls to the smallest size the format
- * supports: an unknown cap must never be roomier than the grid.
+ * supports (`registrationSeatTeamSize`): an unknown cap must never be roomier
+ * than the grid.
  */
 export function teamModePlayerCap(
   mode: GameMode,
   teamSize: number | null | undefined,
 ): number | null {
-  const fixed = FIXED_TEAM_SIZES[mode];
-  if (fixed !== undefined) return teamFormatPlayerCap(fixed);
-
-  const sizes = teamSizesForMode(mode);
-  if (sizes.length === 0) return null;
-
-  const valid = typeof teamSize === 'number' && sizes.includes(teamSize);
-  const effective = valid ? teamSize : Math.min(...sizes);
-  return Math.min(teamFormatPlayerCap(effective), MAX_TEAM_FORMAT_PLAYERS);
+  if (FIXED_TEAM_SIZES[mode] === undefined && teamSizesForMode(mode).length === 0) {
+    return null;
+  }
+  return Math.min(
+    teamFormatPlayerCap(registrationSeatTeamSize(mode, teamSize)),
+    MAX_TEAM_FORMAT_PLAYERS,
+  );
 }
 
 /**

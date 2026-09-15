@@ -13,7 +13,7 @@ import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { resolveRegistrationTypeView } from './registrationTypeView';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
-import { MAX_TEAMS } from '@/lib/games/teamFormatLimits';
+import { MAX_TEAMS, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -257,16 +257,12 @@ export async function registerForOpenGame(
   const modeConfig = game.mode_config as { team_size?: number } | null;
   const cap = registrationPlayerCap(game.game_mode, modeConfig);
   if (cap !== null && !isMatchplayMode(game.game_mode)) {
-    const seatTeamSize =
-      typeof modeConfig?.team_size === 'number' && modeConfig.team_size >= 1
-        ? modeConfig.team_size
-        : 1;
     const { data: claim, error: claimError } = await admin.rpc(
       'claim_open_registration_seat',
       {
         p_game_id: game.id,
         p_user_id: userId,
-        p_seat_team_size: seatTeamSize,
+        p_seat_team_size: registrationSeatTeamSize(game.game_mode, modeConfig?.team_size),
         p_max_teams: MAX_TEAMS,
         // #463: selv-påmelding → bekreftet med en gang.
         p_accepted_at: new Date().toISOString(),
