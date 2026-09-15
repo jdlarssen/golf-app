@@ -94,6 +94,105 @@ function writeCalls() {
   );
 }
 
+/**
+ * Avdekkings-fikstene. Delt mellom de to veiene inn i
+ * `revealCupLineupSession`: kapteinens levering (`submitCupLineup`) og
+ * arrangørens «Prøv igjen» (`retryCupLineupReveal`, #1901).
+ */
+const TEE = {
+  data: {
+    course_id: 'course-1',
+    archived_at: null,
+    slope_mens: 113,
+    course_rating_mens: 70,
+    par_total_mens: 72,
+    slope_ladies: 113,
+    course_rating_ladies: 70,
+    par_total_ladies: 72,
+    slope_juniors: null,
+    course_rating_juniors: null,
+    par_total_juniors: null,
+  },
+  error: null,
+};
+
+/** `loadRevealContext` sine fire lesinger: cup, plan, tee, økt. */
+function revealContextReads() {
+  return [
+    {
+      data: {
+        name: 'Ryder Cup',
+        status: 'active',
+        group_id: null,
+        created_by: 'organizer',
+        fourball_allowance_pct: null,
+        foursomes_allowance_pct: null,
+        greensome_allowance_pct: null,
+        chapman_allowance_pct: null,
+        gruesome_allowance_pct: null,
+      },
+      error: null,
+    },
+    {
+      data: {
+        course_id: 'course-1',
+        tee_box_id: 'tee-1',
+        scheduled_tee_off_at: null,
+        best_ball_allowance_pct: null,
+      },
+      error: null,
+    },
+    TEE,
+    { data: { format: 'singles_matchplay', slot_count: 1 }, error: null },
+  ];
+}
+
+/** Begge lags lagrede plasser for en 1-plass singel-økt. */
+const STORED_SLOTS = {
+  data: [
+    { team_number: 1, slot_index: 0, seat: 1, user_id: 'pl' },
+    { team_number: 2, slot_index: 0, seat: 1, user_id: 'opp' },
+  ],
+  error: null,
+};
+
+/** Klemmen på `revealed_at` traff én rad. */
+const CLAIMED = { data: [{ id: 'sess-1' }], error: null };
+
+/** Varsel-mottakerne, lest helt til slutt. */
+const NOTIFY_RECIPIENTS = { data: [{ user_id: 'pl' }], error: null };
+
+/** `syncCupPointsToWin` sine tre kall. */
+function syncQueue(matches: number, planned: number | null) {
+  return [
+    {
+      data: {
+        status: 'active',
+        planned_match_count: planned,
+        win_points: 1,
+        tie_points: 0.5,
+      },
+      error: null,
+    },
+    { count: matches },
+    { data: [{ id: 'cup-1' }], error: null },
+  ];
+}
+
+/**
+ * Selve avdekkingen, fra `loadRevealContext` til og med label-lesingen:
+ * kontekst → begge lags plasser → stallene nå → klem → games.
+ */
+function revealTail() {
+  return [
+    ...revealContextReads(),
+    STORED_SLOTS,
+    PARTICIPANTS, // stallene slik de er nå
+    CLAIMED,
+    { data: [], error: null }, // games (labelnummer)
+  ];
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -675,24 +774,7 @@ describe('openCupLineupSession — første økt krever planlagt antall (#1902)',
  *   19.   tournament_participants.select           (varsel-mottakere)
  */
 describe('revealCupLineupSession — målet følger med når kampene kommer (#1902)', () => {
-  const TEE = {
-    data: {
-      course_id: 'course-1',
-      archived_at: null,
-      slope_mens: 113,
-      course_rating_mens: 70,
-      par_total_mens: 72,
-      slope_ladies: 113,
-      course_rating_ladies: 70,
-      par_total_ladies: 72,
-      slope_juniors: null,
-      course_rating_juniors: null,
-      par_total_juniors: null,
-    },
-    error: null,
-  };
-
-  /** Køen fram til og med varsel-lesingen, for en 1-plass singel-økt. */
+  /** Køen fram til og med label-lesingen, for en 1-plass singel-økt. */
   function revealQueue() {
     return [
       ...accessReads(),
@@ -713,64 +795,8 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
         data: [{ team_1_submitted_at: 'now', team_2_submitted_at: 'now' }],
         error: null,
       },
-      // loadRevealContext
-      {
-        data: {
-          name: 'Ryder Cup',
-          status: 'active',
-          group_id: null,
-          created_by: 'organizer',
-          fourball_allowance_pct: null,
-          foursomes_allowance_pct: null,
-          greensome_allowance_pct: null,
-          chapman_allowance_pct: null,
-          gruesome_allowance_pct: null,
-        },
-        error: null,
-      },
-      {
-        data: {
-          course_id: 'course-1',
-          tee_box_id: 'tee-1',
-          scheduled_tee_off_at: null,
-          best_ball_allowance_pct: null,
-        },
-        error: null,
-      },
-      TEE,
-      { data: { format: 'singles_matchplay', slot_count: 1 }, error: null },
-      // begge lags lagrede plasser
-      {
-        data: [
-          { team_number: 1, slot_index: 0, seat: 1, user_id: 'pl' },
-          { team_number: 2, slot_index: 0, seat: 1, user_id: 'opp' },
-        ],
-        error: null,
-      },
-      PARTICIPANTS, // stallene slik de er nå
-      { data: [{ id: 'sess-1' }], error: null }, // klem revealed_at
-      { data: [], error: null }, // games (labelnummer)
-      // …og her, FØR varselet, kaller koden syncCupPointsToWin.
-    ];
-  }
-
-  /** Varsel-mottakerne, lest etter synken. */
-  const NOTIFY_RECIPIENTS = { data: [{ user_id: 'pl' }], error: null };
-
-  /** Synk-helperens tre kall. */
-  function syncQueue(matches: number, planned: number | null) {
-    return [
-      {
-        data: {
-          status: 'active',
-          planned_match_count: planned,
-          win_points: 1,
-          tie_points: 0.5,
-        },
-        error: null,
-      },
-      { count: matches },
-      { data: [{ id: 'cup-1' }], error: null },
+      // …og her går den inn i avdekkingen. FØR varselet: syncCupPointsToWin.
+      ...revealTail(),
     ];
   }
 
@@ -840,6 +866,129 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       '[cup] revealCupLineupSession points sync failed',
       expect.objectContaining({ tournamentId: 'cup-1' }),
     );
+    errorSpy.mockRestore();
+  });
+});
+
+/**
+ * #1901 — arrangørens «Prøv igjen» på en økt som står fast.
+ *
+ * Gaten er hele poenget: tabellene er deny-by-default, så `loadCupLineupAccess`
+ * er det eneste som skiller arrangøren fra en kaptein som POSTer `intent=retry`
+ * utenom skjemaet.
+ *
+ * Lese-sekvensen, etter `accessReads()`:
+ *   4.  cup_lineup_sessions.maybeSingle (de tre tidsstemplene)
+ *   5+. avdekkingen selv — `revealTail()`, som i #1902-køen over.
+ */
+describe('retryCupLineupReveal — arrangøren kjører avdekkingen på nytt (#1901)', () => {
+  /** Den fastlåste økta: begge uttak levert, ingenting avdekket. */
+  const STUCK = {
+    data: {
+      revealed_at: null,
+      team_1_submitted_at: 'now',
+      team_2_submitted_at: 'now',
+    },
+    error: null,
+  };
+
+  function retryForm() {
+    return form({ id: 'cup-1', session_id: 'sess-1' });
+  }
+
+  /** Verdiene som ble skrevet til `cup_lineup_sessions`, i rekkefølge. */
+  function sessionUpdates(): Record<string, unknown>[] {
+    return adminMock.__fromCalls
+      .filter((c) => c.table === 'cup_lineup_sessions' && c.method === 'update')
+      .map((c) => c.args[0] as Record<string, unknown>);
+  }
+
+  it('kapteinen kan ikke kjøre avdekkingen på nytt', async () => {
+    adminMock = buildSupabaseMock(accessReads());
+    supabaseMock = buildSupabaseMock([]);
+    setUser('cap1');
+
+    const { retryCupLineupReveal } = await import('./lineupActions');
+    expect(await retryCupLineupReveal(retryForm())).toEqual({
+      error: 'not_allowed',
+    });
+    // Avvist FØR økta leses — ingen skriving i det hele tatt.
+    expect(writeCalls()).toHaveLength(0);
+  });
+
+  it('en alt avdekket økt avvises — kampene lages ikke to ganger', async () => {
+    adminMock = buildSupabaseMock([
+      ...accessReads(),
+      {
+        data: {
+          revealed_at: '2026-09-07T10:00:00.000Z',
+          team_1_submitted_at: 'now',
+          team_2_submitted_at: 'now',
+        },
+        error: null,
+      },
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('organizer');
+
+    const { retryCupLineupReveal } = await import('./lineupActions');
+    expect(await retryCupLineupReveal(retryForm())).toEqual({
+      error: 'lineup_revealed',
+    });
+    expect(insertMatchesMock).not.toHaveBeenCalled();
+    expect(writeCalls()).toHaveLength(0);
+  });
+
+  it('begge levert: avdekkingen kjører, kampene settes opp og økta klemmes', async () => {
+    adminMock = buildSupabaseMock([
+      ...accessReads(),
+      STUCK,
+      ...revealTail(),
+      ...syncQueue(1, 4),
+      NOTIFY_RECIPIENTS,
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('organizer');
+    insertMatchesMock.mockResolvedValue({ ok: true });
+
+    const { retryCupLineupReveal } = await import('./lineupActions');
+    expect(await retryCupLineupReveal(retryForm())).toEqual({ error: '' });
+
+    expect(insertMatchesMock).toHaveBeenCalledTimes(1);
+    // Ett skriv til økta: klemmen som markerer den avdekket.
+    expect(sessionUpdates()).toEqual([
+      { revealed_at: expect.any(String) },
+    ]);
+  });
+
+  it('lagene er endret siden uttaket: avvist, og økta blir stående uavdekket', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      ...accessReads(),
+      STUCK,
+      ...revealContextReads(),
+      STORED_SLOTS,
+      // `pl` står i lag 1s uttak, men er flyttet til lag 2 etterpå.
+      {
+        data: [
+          { user_id: 'pl', team_number: 2, is_captain: false },
+          { user_id: 'opp', team_number: 2, is_captain: false },
+        ],
+        error: null,
+      },
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('organizer');
+
+    const { retryCupLineupReveal } = await import('./lineupActions');
+    expect(await retryCupLineupReveal(retryForm())).toEqual({
+      error: 'lineup_squad_changed',
+    });
+
+    // Ingen kamper, og `revealed_at` ble aldri klemt: økta står fast med sin
+    // egen forklaring i stedet for å bli merket avdekket uten kamper.
+    expect(insertMatchesMock).not.toHaveBeenCalled();
+    expect(sessionUpdates()).toEqual([]);
     errorSpy.mockRestore();
   });
 });

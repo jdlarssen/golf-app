@@ -29,6 +29,32 @@ export function nextLabelNumber(
 }
 
 /**
+ * Står økta fast etter en feilet avdekking? (#1901)
+ *
+ * Begge uttak levert + ikke avdekket = avdekkingen ble forsøkt og rullet
+ * tilbake. Ingen kode prøver på nytt av seg selv — derfor knappen.
+ *
+ * ⚠️ Predikatet betyr «begge levert og ikke avdekket ENNÅ», ikke «noe har
+ * feilet»: lastes rommet i sekundet mens et førstegangs-forsøk går, er svaret
+ * `true` selv om ingenting er galt. Ufarlig — klemmen på `revealed_at` gjør et
+ * nytt forsøk til en no-op.
+ *
+ * Samme funksjon gater BÅDE knappens synlighet og server-action-ens avvisning
+ * (ett hjem), så de to kan ikke komme ut av takt.
+ */
+export function canRetryReveal(input: {
+  revealedAt: string | null;
+  team1SubmittedAt: string | null;
+  team2SubmittedAt: string | null;
+}): boolean {
+  return (
+    input.revealedAt === null &&
+    input.team1SubmittedAt !== null &&
+    input.team2SubmittedAt !== null
+  );
+}
+
+/**
  * Bygger match-planen for en avdekket økt.
  *
  * Kaster ved ugyldig input i stedet for å returnere en feilkode: kallstedet har

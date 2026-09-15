@@ -19,7 +19,11 @@ import { syncCupPointsToWin } from './pointsToWinSync';
 import { insertCupMatches, teeRatingsFrom } from './insertCupMatches';
 import { loadCupLineupAccess, canWriteTeamLineup } from './lineupAccess';
 import { squadUserIds } from './lineupData';
-import { buildRevealMatches, nextLabelNumber } from './lineupReveal';
+import {
+  buildRevealMatches,
+  canRetryReveal,
+  nextLabelNumber,
+} from './lineupReveal';
 import {
   planLineupPairs,
   validateLineupSubmission,
@@ -289,8 +293,9 @@ export async function setCupPlannedMatchCount(
  * kan stille med.
  *
  * Taket håndheves HER, ikke ved avdekking: har begge kapteiner levert, skal
- * matchene bli til. En feilet avdekking ville etterlatt to leverte uttak og
- * ingen kamper, uten noe arrangøren kunne gjøre med det. Regnestykket teller
+ * matchene bli til. En feilet avdekking etterlater to leverte uttak og ingen
+ * kamper — «Prøv igjen» (#1901) reparerer et blipp, men et tak-avslag ville
+ * stått der uansett hvor mange ganger arrangøren trykket. Regnestykket teller
  * derfor både cupens eksisterende matcher OG plassene i allerede åpnede,
  * ikke-avdekkede økter — ellers kunne tre økter åpnes én og én under taket og
  * til sammen sprenge det.
@@ -640,6 +645,79 @@ export async function unlockCupLineup(
 
   revalidateCup(tournamentId, access.groupId);
   return OK;
+}
+
+/**
+ * #1901 — arrangøren kjører avdekkingen på nytt på en økt som står fast.
+ *
+ * Avdekkingen fyrer i ett øyeblikk: inne i `submitCupLineup`, rett etter at det
+ * andre uttaket fikk leverings-stempelet sitt. Feiler den, ruller den tilbake
+ * (`revealed_at` nullstilles, matchene slettes) — men stemplene blir stående,
+ * og ingen kode fyrer avdekkingen igjen. Økta blir stående «Levert / Levert»
+ * med null kamper, og feilmeldingen gikk til kapteinen, ikke til arrangøren.
+ *
+ * Uttakene røres ikke: dette er det samme forsøket en gang til, ikke en ny
+ * runde med plukking. Ingen ny låsing heller — `revealCupLineupSession` klemmer
+ * `revealed_at` betinget på at den er null og no-op-er hvis den taper et
+ * kappløp mot et pågående førsteforsøk.
+ */
+export async function retryCupLineupReveal(
+  formData: FormData,
+): Promise<CupLineupActionError> {
+  const tournamentId = String(formData.get('id') ?? '');
+  const sessionId = String(formData.get('session_id') ?? '');
+  if (!tournamentId || !sessionId) return { error: 'not_found' };
+
+  const access = await loadCupLineupAccess(tournamentId);
+  // Arrangør-only, som `unlockCupLineup`: tabellene er deny-by-default (0172),
+  // så denne linja ER håndhevelsen. En kaptein som kunne utløst avdekkingen,
+  // kunne fått se motstanderens uttak før hun selv var ferdig.
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const { data: session, error: readError } = await admin
+    .from('cup_lineup_sessions')
+    .select('revealed_at, team_1_submitted_at, team_2_submitted_at')
+    // ⚠️ `tournament_id` er ikke pynt: uten den kunne en økt-id fra en helt
+    // annen cup avdekkes av den som er arrangør her.
+    .eq('id', sessionId)
+    .eq('tournament_id', tournamentId)
+    .maybeSingle();
+  if (readError) {
+    // En feilet lesing er ikke «ingen rad» (I3) — den skal si fra, ikke bli til
+    // en misvisende «fant ikke økta».
+    console.error('[cup] retryCupLineupReveal session read failed', {
+      tournamentId,
+      sessionId,
+      error: readError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!session) return { error: 'not_found' };
+
+  if (
+    !canRetryReveal({
+      revealedAt: session.revealed_at as string | null,
+      team1SubmittedAt: session.team_1_submitted_at as string | null,
+      team2SubmittedAt: session.team_2_submitted_at as string | null,
+    })
+  ) {
+    // Alt avdekket: da er knappen et levn fra en foreldet side. Revalider
+    // først, så arrangøren ser den ekte tilstanden når feilmeldingen kommer.
+    if (session.revealed_at !== null) {
+      revalidateCup(tournamentId, access.groupId);
+      return { error: 'lineup_revealed' };
+    }
+    return { error: 'lineup_not_both_submitted' };
+  }
+
+  const revealError = await revealCupLineupSession(tournamentId, sessionId);
+
+  // Uansett utfall: gikk det bra, står kampene der nå; gikk det galt, kan
+  // tilstanden likevel ha flyttet seg (et parallelt forsøk vant klemmen).
+  revalidateCup(tournamentId, access.groupId);
+
+  return revealError ?? OK;
 }
 
 /**

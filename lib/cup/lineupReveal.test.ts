@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildRevealMatches, nextLabelNumber } from './lineupReveal';
+import {
+  buildRevealMatches,
+  canRetryReveal,
+  nextLabelNumber,
+} from './lineupReveal';
 
 /**
  * Type A for avdekkings-øyeblikket (#1884): de to leverte uttakene blir til
@@ -30,6 +34,28 @@ describe('nextLabelNumber', () => {
     const existing = ['foursomes_matchplay', 'foursomes_matchplay'];
     expect(nextLabelNumber(existing, 'singles_matchplay')).toBe(1);
   });
+});
+
+describe('canRetryReveal (#1901)', () => {
+  const T = '2026-09-07T10:00:00.000Z';
+
+  // Alle åtte kombinasjonene av de tre tidsstemplene. Nøyaktig én er `true`:
+  // begge lag levert, ingenting avdekket — den fastlåste økta.
+  it.each([
+    { revealedAt: null, team1SubmittedAt: null, team2SubmittedAt: null, expected: false },
+    { revealedAt: null, team1SubmittedAt: T, team2SubmittedAt: null, expected: false },
+    { revealedAt: null, team1SubmittedAt: null, team2SubmittedAt: T, expected: false },
+    { revealedAt: null, team1SubmittedAt: T, team2SubmittedAt: T, expected: true },
+    { revealedAt: T, team1SubmittedAt: null, team2SubmittedAt: null, expected: false },
+    { revealedAt: T, team1SubmittedAt: T, team2SubmittedAt: null, expected: false },
+    { revealedAt: T, team1SubmittedAt: null, team2SubmittedAt: T, expected: false },
+    { revealedAt: T, team1SubmittedAt: T, team2SubmittedAt: T, expected: false },
+  ])(
+    'revealed=$revealedAt team1=$team1SubmittedAt team2=$team2SubmittedAt → $expected',
+    ({ expected, ...input }) => {
+      expect(canRetryReveal(input)).toBe(expected);
+    },
+  );
 });
 
 describe('buildRevealMatches', () => {
