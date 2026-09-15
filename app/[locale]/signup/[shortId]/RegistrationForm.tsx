@@ -178,7 +178,11 @@ export function RegistrationForm({
           })}
         </div>
 
-        {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+        {errorMessage && (
+        <div data-testid="signup-error" data-error-code={errorCode ?? undefined}>
+          <Banner tone="error">{errorMessage}</Banner>
+        </div>
+      )}
 
         <Button
           type="submit"
@@ -245,7 +249,11 @@ export function RegistrationForm({
           </button>
         ))}
 
-      {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+      {errorMessage && (
+        <div data-testid="signup-error" data-error-code={errorCode ?? undefined}>
+          <Banner tone="error">{errorMessage}</Banner>
+        </div>
+      )}
 
       <Button
         type="submit"

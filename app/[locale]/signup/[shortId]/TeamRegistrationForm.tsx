@@ -179,7 +179,7 @@ export function TeamRegistrationForm({
     const failed = result.slotResults.filter((r) => !r.ok);
     return (
       <div className="space-y-4">
-        <Banner tone="success">
+        <Banner tone="success" testId="team-registration-success">
           {t('teamSuccessBanner', { teamName: teamName.trim() })}
         </Banner>
         {knownAdded.length > 0 && (
@@ -443,7 +443,11 @@ export function TeamRegistrationForm({
         })}
       </div>
 
-      {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+      {errorMessage && (
+        <div data-testid="signup-error" data-error-code={serverErrorCode ?? undefined}>
+          <Banner tone="error">{errorMessage}</Banner>
+        </div>
+      )}
 
       <Button
         type="submit"
