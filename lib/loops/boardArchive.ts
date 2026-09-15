@@ -261,6 +261,20 @@ export function buildArchive(a: {
   });
   const markdown = renderArchive({ board: a.board, month: a.month, entries, masked: [...masked] });
 
+  // Fila må leses tilbake til nøyaktig de samme oppføringene. En body med en
+  // linje på overskriftsformen ville ellers gitt en fil slette-fasen kvelner på
+  // (eller en fantom-oppføring) hver måned etter.
+  let roundTrips = false;
+  try {
+    roundTrips = JSON.stringify(parseArchive(markdown)) === JSON.stringify(entries);
+  } catch {
+    roundTrips = false;
+  }
+  if (!roundTrips)
+    throw new Error(
+      `arkivet for ${a.month} #${a.board.issue} leses ikke tilbake likt (en body har trolig en linje på overskriftsformen) — skriver ingenting`,
+    );
+
   // Siste port: hele fila skannes på nytt. Hooks kjører ikke i Actions, så dette
   // er det eneste som står mellom en adresse og et offentlig repo. Adressen
   // skrives ikke i feilmeldingen.
@@ -276,17 +290,21 @@ export function buildArchive(a: {
 
 const ARCHIVE_FILE_RE = /^(\d{4}-(?:0[1-9]|1[0-2]))-.+-\d+\.md$/;
 
-// Uten --month: de to nyeste månedene som har arkivfil. Eldre filer er uansett
-// ferdig slettet, og taket holder kjøretiden flat når arkivet vokser.
-export function deleteMonths(files: string[], month?: string): string[] {
+// Uten --month: de to nyeste månedene før inneværende som har arkivfil. Eldre
+// filer er uansett ferdig slettet, og taket holder kjøretiden flat når arkivet
+// vokser. Inneværende måned røres aldri.
+export function deleteMonths(files: string[], now: Date, month?: string): string[] {
+  const current = currentMonth(now);
   if (month !== undefined) {
     monthWindow(month);
+    if (month >= current)
+      throw new Error(`${month} er inneværende (eller en framtidig) måned — slette-fasen rører den aldri.`);
     return [month];
   }
   const months = new Set<string>();
   for (const f of files) {
     const m = ARCHIVE_FILE_RE.exec(f);
-    if (m) months.add(m[1]);
+    if (m && m[1] < current) months.add(m[1]);
   }
   return [...months].sort().reverse().slice(0, 2);
 }
@@ -319,6 +337,7 @@ export async function deleteArchivedComments(a: {
   live: LiveComment[];
   dryRun: boolean;
   scan: LeakScanner;
+  now: Date;
 }): Promise<DeleteResult> {
   const result: DeleteResult = {
     deleted: 0,
@@ -350,8 +369,15 @@ export async function deleteArchivedComments(a: {
     return result;
   }
 
+  const currentStart = monthWindow(currentMonth(a.now)).startIso;
   for (const entry of a.archived) {
     const key = entryKey(entry);
+    // Inneværende måned røres aldri, heller ikke med byte-lik kopi: da ligger
+    // det en fil der den ikke skal (håndcommit eller feil ref), og det er et funn.
+    if (entry.createdAt >= currentStart) {
+      result.failures.push(`${key}: inneværende måned — røres ikke`);
+      continue;
+    }
     const comment = liveByKey.get(key);
     const verdict = deleteVerdict(entry, comment, a.scan);
     if (verdict === 'missing' || !comment) {

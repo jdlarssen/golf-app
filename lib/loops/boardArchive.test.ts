@@ -217,6 +217,16 @@ describe('buildArchive', () => {
     expect(built?.entries.map((e) => e.body)).toEqual(['kommentar 2', 'kommentar 3']);
   });
 
+  // En body med en linje på overskriftsformen ville gitt en fil som ikke leses
+  // tilbake likt — da skal ingenting skrives, i stedet for en fil slette-fasen
+  // senere kvelner på.
+  it('nekter å skrive en fil som ikke parses tilbake til de samme oppføringene', () => {
+    const tricky = { ...c(1, '2026-09-02T00:00:00Z'), body: 'sitat:\n\n## jdlarssen · 2026-08-01T00:00:00Z\n\nhei' };
+    expect(() => buildArchive({ board: LOOP_DRIFT, month: '2026-09', comments: [tricky], scan: noLeaks })).toThrow(
+      /leses ikke tilbake/,
+    );
+  });
+
   it('gir null når måneden er tom', () => {
     expect(buildArchive({ board: LOOP_DRIFT, month: '2026-09', comments: [], scan: noLeaks })).toBeNull();
   });
@@ -268,12 +278,16 @@ describe('planArchive', () => {
 });
 
 describe('deleteMonths', () => {
-  const files = ['README.md', '2026-07-loop-drift-1110.md', '2026-08-utroperen-1208.md', '2026-06-utroperen-1208.md', '2026-08-loop-drift-1110.md'];
-  it('tar de to nyeste månedene som standard', () => {
-    expect(deleteMonths(files)).toEqual(['2026-08', '2026-07']);
+  const now = new Date('2026-09-02T04:10:00Z');
+  const files = ['README.md', '2026-07-loop-drift-1110.md', '2026-09-utroperen-1208.md', '2026-08-utroperen-1208.md', '2026-06-utroperen-1208.md', '2026-08-loop-drift-1110.md'];
+  it('tar de to nyeste månedene før inneværende som standard', () => {
+    expect(deleteMonths(files, now)).toEqual(['2026-08', '2026-07']);
   });
   it('--month avgrenser til nøyaktig den måneden', () => {
-    expect(deleteMonths(files, '2026-06')).toEqual(['2026-06']);
+    expect(deleteMonths(files, now, '2026-06')).toEqual(['2026-06']);
+  });
+  it('nekter inneværende måned', () => {
+    expect(() => deleteMonths(files, now, '2026-09')).toThrow(/inneværende/);
   });
 });
 
@@ -295,6 +309,7 @@ function recordingGh(deleteStatus = 204) {
 describe('deleteArchivedComments', () => {
   const REPO = 'jdlarssen/golf-app';
   const archived: ArchivedEntry = { login: 'jdlarssen', createdAt: '2026-09-02T08:00:00Z', body: 'Morgenbrief\n\nalt vel' };
+  const NOW = new Date('2026-10-02T04:10:00Z');
 
   it.each([
     ['mismatch (ett tegn avvik) → ingen DELETE', live(archived, 11, 'Morgenbrief\n\nalt vel!'), false, 0],
@@ -303,7 +318,7 @@ describe('deleteArchivedComments', () => {
     ['match → nøyaktig én DELETE', live(archived, 11), false, 1],
   ])('%s', async (_label, liveComment, dryRun, expectedDeletes) => {
     const { gh, deletes } = recordingGh();
-    await deleteArchivedComments({ gh, repo: REPO, archived: [archived], live: [liveComment], dryRun, scan: noLeaks });
+    await deleteArchivedComments({ gh, repo: REPO, archived: [archived], live: [liveComment], dryRun, scan: noLeaks, now: NOW });
     expect(deletes()).toHaveLength(expectedDeletes);
     if (expectedDeletes === 1) expect(deletes()[0].path).toBe(`/repos/${REPO}/issues/comments/11`);
   });
@@ -311,21 +326,21 @@ describe('deleteArchivedComments', () => {
   it('returnerer avviket i stedet for å kaste', async () => {
     const { gh } = recordingGh();
     const liveComment = live(archived, 11, 'redigert');
-    const result = await deleteArchivedComments({ gh, repo: REPO, archived: [archived], live: [liveComment], dryRun: false, scan: noLeaks });
+    const result = await deleteArchivedComments({ gh, repo: REPO, archived: [archived], live: [liveComment], dryRun: false, scan: noLeaks, now: NOW });
     expect(result.mismatches).toEqual([{ login: 'jdlarssen', createdAt: archived.createdAt, htmlUrl: liveComment.htmlUrl }]);
     expect(result.deleted).toBe(0);
   });
 
   it('kommentar som alt er borte telles som missing, uten kall', async () => {
     const { gh, deletes } = recordingGh();
-    const result = await deleteArchivedComments({ gh, repo: REPO, archived: [archived], live: [], dryRun: false, scan: noLeaks });
+    const result = await deleteArchivedComments({ gh, repo: REPO, archived: [archived], live: [], dryRun: false, scan: noLeaks, now: NOW });
     expect(result).toMatchObject({ missing: 1, deleted: 0, mismatches: [], failures: [] });
     expect(deletes()).toHaveLength(0);
   });
 
   it('DELETE som ikke svarer 204 er en feil, ikke en sletting', async () => {
     const { gh } = recordingGh(403);
-    const result = await deleteArchivedComments({ gh, repo: REPO, archived: [archived], live: [live(archived, 11)], dryRun: false, scan: noLeaks });
+    const result = await deleteArchivedComments({ gh, repo: REPO, archived: [archived], live: [live(archived, 11)], dryRun: false, scan: noLeaks, now: NOW });
     expect(result.deleted).toBe(0);
     expect(result.failures).toEqual(['jdlarssen · 2026-09-02T08:00:00Z: DELETE svarte HTTP 403']);
   });
@@ -339,9 +354,27 @@ describe('deleteArchivedComments', () => {
       live: [live(archived, 11), live(archived, 12)],
       dryRun: false,
       scan: noLeaks,
+      now: NOW,
     });
     expect(deletes()).toHaveLength(0);
     expect(result.duplicates).toEqual(['jdlarssen · 2026-09-02T08:00:00Z']);
+  });
+
+  // Inneværende måned røres aldri, heller ikke med en byte-lik kopi (f.eks. en
+  // fil som kom på feil ref).
+  it('kommentar fra inneværende måned slettes ikke, og meldes', async () => {
+    const { gh, deletes } = recordingGh();
+    const result = await deleteArchivedComments({
+      gh,
+      repo: REPO,
+      archived: [archived],
+      live: [live(archived, 11)],
+      dryRun: false,
+      scan: noLeaks,
+      now: new Date('2026-09-15T12:00:00Z'),
+    });
+    expect(deletes()).toHaveLength(0);
+    expect(result.failures).toEqual(['jdlarssen · 2026-09-02T08:00:00Z: inneværende måned — røres ikke']);
   });
 });
 
@@ -360,6 +393,12 @@ describe('lockstep mot .github/workflows/tavle-arkiv.yml', () => {
     'bash .github/scripts/tavle-arkiv.sh',
   ])('workflowen inneholder %s', (needle) => {
     expect(workflow).toContain(needle);
+  });
+
+  // workflow_dispatch sjekker ut valgfri gren; «kopien ligger på main» må
+  // håndheves, ikke antas.
+  it('bash-limet nekter ekte kjøring utenfor main', () => {
+    expect(glue).toContain('git rev-parse origin/main');
   });
 
   it('bash-limet kjører runneren og åpner PR-en via robot-pr.sh (#1701)', () => {

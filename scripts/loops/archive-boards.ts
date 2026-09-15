@@ -93,7 +93,8 @@ async function fetchComments(gh: Gh, issue: number): Promise<LiveComment[]> {
 }
 
 async function runDelete(gh: Gh, args: Args, comments: (issue: number) => Promise<LiveComment[]>): Promise<number> {
-  const months = deleteMonths(readdirSync(args.loggDir), args.month);
+  const now = new Date();
+  const months = deleteMonths(readdirSync(args.loggDir), now, args.month);
   let problems = 0;
   for (const board of BOARDS) {
     const present = months.filter((m) => existsSync(archivePath(board, m, args.loggDir)));
@@ -109,6 +110,7 @@ async function runDelete(gh: Gh, args: Args, comments: (issue: number) => Promis
       live: await comments(board.issue),
       dryRun: args.dryRun,
       scan: (text) => scanEmailLeaks(text),
+      now,
     });
 
     const done = args.dryRun ? `ville slettet ${r.wouldDelete}` : `slettet ${r.deleted}`;

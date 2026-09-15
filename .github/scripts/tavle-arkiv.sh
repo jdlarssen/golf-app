@@ -81,6 +81,16 @@ if [ "$DRY_RUN" = "true" ]; then
   exit "$rc"
 fi
 
+# ── Ekte kjøring kun fra main ──
+# workflow_dispatch sjekker ut grenen valgt i «Use workflow from». Slette-fasen
+# skal bare stole på arkivfiler som ligger på main — fra en umerget
+# claude/arkiv-*-gren ville den slettet kommentarer uten en kopi på main. Cron
+# kjører alltid på main; alt annet må bruke dry_run.
+MAIN_SHA=$(git rev-parse origin/main 2>/dev/null) || fail_closed "fant ikke origin/main i checkouten"
+if [ "$(git rev-parse HEAD)" != "$MAIN_SHA" ]; then
+  fail_closed "ekte kjøring må starte fra main (HEAD $(git rev-parse --short HEAD) ≠ origin/main) — bruk dry_run fra andre grener"
+fi
+
 # ── 1. Slett (mens arbeidstreet fortsatt er ren main) ──
 delete_rc=0
 if [ "$PHASE" != "archive" ]; then
