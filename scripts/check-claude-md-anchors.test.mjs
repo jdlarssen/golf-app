@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -163,5 +164,48 @@ describe('CLAUDE.md rule anchors (#2100)', () => {
     const needle = normalize(anchor);
     const homes = HOMES.filter((_, i) => corpus[i].includes(needle));
     expect(homes, `no home holds «${anchor}»`).not.toEqual([]);
+  });
+});
+
+/** Files the #2100 move created: each must be on the map and reached from a trigger. */
+const NEW_HOMES = [
+  'docs/collaboration.md',
+  'docs/issue-workflow.md',
+  'docs/pr-workflow.md',
+  'docs/staging-testing.md',
+  'docs/style-and-brand.md',
+  'docs/auth-flow.md',
+  'lib/sync/AGENTS.md',
+  'lib/games/AGENTS.md',
+];
+
+const gitFiles = (pathspec) =>
+  execFileSync('git', ['ls-files', '--', pathspec], { cwd: ROOT, encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean);
+
+describe('CLAUDE.md is a map (#2100)', () => {
+  const claude = read('CLAUDE.md');
+  const agentsFiles = gitFiles('*AGENTS.md').filter((file) => path.basename(file) === 'AGENTS.md');
+  const topLevelDocs = gitFiles('docs/*.md').filter((file) => file.split('/').length === 2);
+  const triggerSources = [
+    'docs/agent-discipline/core.md',
+    'docs/agent-discipline/bindings.md',
+    ...agentsFiles,
+  ];
+
+  it('stays under 12 KiB', () => {
+    expect(Buffer.byteLength(claude, 'utf8')).toBeLessThan(12_288);
+  });
+
+  it.each(NEW_HOMES)('%s exists, is on the map and is reached from a trigger', (home) => {
+    expect(existsSync(path.join(ROOT, home))).toBe(true);
+    expect(claude).toContain(`\`${home}\``);
+    const reachedFrom = triggerSources.filter((source) => source !== home && read(source).includes(home));
+    expect(reachedFrom, `no trigger file points at ${home}`).not.toEqual([]);
+  });
+
+  it.each([...topLevelDocs, ...agentsFiles])('the map lists %s', (file) => {
+    expect(claude).toContain(`\`${file}\``);
   });
 });
