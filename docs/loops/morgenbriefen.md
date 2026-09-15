@@ -181,6 +181,12 @@ fortsatt er åpent.
   Siste kjøring eldre enn 48 timer → varsellinje øverst («⚠️ Prod-vakta har
   ikke kjørt på X timer — sjekk Actions»). Stillhet fra en cron er aldri bevis
   på at den lever («grønn kan bety kjørte aldri»-klassen).
+- **Tavle-arkivet (Actions-cron, ikke routine, #1996):** Loop-helse-linja skal
+  oppgi siste kjøring og utfall (`gh run list --workflow tavle-arkiv.yml --limit 1`).
+  Cron-en går 1.–3. i måneden, så siste kjøring eldre enn 40 døgn → varsellinje
+  øverst («⚠️ Tavle-arkivet har ikke kjørt på X døgn — sjekk Actions»). Rød
+  siste kjøring → egen linje; varsel-issuet «CI-vakt: tavle-arkiv-workflowen
+  rød» har detaljene.
 
 ## Discord-speiling (utgående varsel + knapper)
 
@@ -229,23 +235,24 @@ postet (primærartefakten), så eieren kan lese den der.
 
 ## Månedlig arkivering
 
-Første brief i ny måned MELDER at forrige måneds kommentarer er due for
-arkivering — briefen er read-only (se over) og gjør ikke jobben selv. Inntil
-#1996 (månedlig GitHub Action) er på plass, tar en økt den for hånd: kopier
-forrige måneds kommentarer verbatim til
-`docs/loops/logg/<år>-<måned>-<tavle>-<issuenr>.md` (én fil per tavle; format
-i `docs/loops/logg/README.md`) via docs-PR, og slett kommentarene fra tavla
-FØRST ETTER at PR-en er merget, så kopien ligger på `main` før noe forsvinner
-(eierbeslutning 2026-09-06 — den gamle setningen om at kommentarene «ikke kan
-redigeres bort» var feil; juli ble òg arkivert ved sletting). Samme runde
-arkiverer lanserings-tavla #1208 (Utroperens forslag + ✅-markører) til sin
-egen fil. Briefen lenker til arkivfilene når den viser til eldre hendelser.
+Jobben gjøres av workflowen `.github/workflows/tavle-arkiv.yml` (#1996), ikke av
+briefen — briefen er read-only (se over). Cron-en går 1.–3. i måneden, 04:10 UTC,
+og rekkefølgen er alltid kopi → merge → slett:
 
-Arkiv-PR-en er docs-only og har ikke noe produktvalg, så etter #1406 auto-merger
-PR-kortet den selv når checkene er grønne (kvitteringsutfall — forventet og
-riktig; ingen `main-verify`-dispatch siden diffen kun rører `docs/**`). Kortet
-fyrer hendelsesdrevet via no-op-tvillingen (#1483) — ingen manuell dispatch
-trengs (den gamle #1301-konvensjonen er fjernet). Den gamle
-«ALDRI selvmerget»-regelen gjaldt eieren; nå lander arkiv-PR-en selv via kortet.
-Briefen skal derfor IKKE vente på eier-merge av arkiv-PR-en — den lander på
-egen hånd.
+1. **Kopi:** forrige måneds kommentarer på #1110 og lanserings-tavla #1208
+   kopieres verbatim til `docs/loops/logg/<år>-<måned>-<tavle>-<issuenr>.md`
+   (én fil per tavle; format i `docs/loops/logg/README.md`), og en docs-PR
+   åpnes på `claude/arkiv-YYYY-MM`.
+2. **Merge:** arkiv-PR-en er docs-only og har ikke noe produktvalg, så etter
+   #1406 auto-merger PR-kortet den selv når checkene er grønne
+   (kvitteringsutfall — forventet og riktig; ingen `main-verify`-dispatch siden
+   diffen kun rører `docs/**`). Kortet fyrer hendelsesdrevet via
+   no-op-tvillingen (#1483) — ingen manuell dispatch trengs.
+3. **Slett:** neste kjøring sjekker hver kommentar mot fila på `main` og
+   sletter bare dem som er byte-identiske med kopien (eierbeslutning
+   2026-09-06). En kommentar som avviker blir stående, kjøringen blir rød, og
+   failure-steget filer varsel-issue. Issue-bodyene røres aldri.
+
+Briefen melder derfor ikke lenger «due» for arkivering; den rapporterer
+heartbeat på workflowen under Loop-helse (se over), og venter ikke på eier-merge
+av arkiv-PR-en. Briefen lenker til arkivfilene når den viser til eldre hendelser.

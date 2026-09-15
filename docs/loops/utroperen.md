@@ -131,6 +131,6 @@ varsellinje i briefen; to på rad → infra-issue (standard mønster, se
 ## Månedlig arkivering
 
 Kommentarene på #1208 arkiveres månedlig til
-`docs/loops/logg/<år>-<måned>-utroperen-1208.md` i samme runde som #1110-arkivet
-(en økt for hånd inntil #1996 automatiserer det; briefen selv er read-only).
+`docs/loops/logg/<år>-<måned>-utroperen-1208.md` i samme runde som #1110-arkivet,
+av workflowen `.github/workflows/tavle-arkiv.yml` (#1996): kopi → merge → slett.
 Rekkefølge og format: `docs/loops/logg/README.md`.
