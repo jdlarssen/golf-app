@@ -243,7 +243,7 @@ export function SoloStablefordPodium({
                         {displayName}
                       </p>
                       {showHoles && (
-                        <p className="mt-0.5 text-[12px] text-muted tabular-nums">
+                        <p data-testid="row-holes" className="mt-0.5 text-[12px] text-muted tabular-nums">
                           {t('common.holesPlayedCount', { count: player.holesPlayed })}
                         </p>
                       )}
@@ -351,7 +351,7 @@ function PodiumStep({
 
       {/* «X hull»-chip — utelatt når alle spilte like mange hull (#1892). */}
       {hullChip && (
-        <p className="text-[11px] tabular-nums text-muted">
+        <p data-testid="row-holes" className="text-[11px] tabular-nums text-muted">
           {hullChip}
         </p>
       )}

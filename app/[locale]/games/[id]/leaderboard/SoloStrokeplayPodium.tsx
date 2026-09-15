@@ -366,7 +366,7 @@ function PodiumStep({
           lett-skannbart. Brutto-totalen finnes på rest-listen og i live-view.
           Utelatt når alle spilte like mange hull (#1892). */}
       {hullChip && (
-        <p className="text-[11px] tabular-nums text-muted">
+        <p data-testid="row-holes" className="text-[11px] tabular-nums text-muted">
           {hullChip}
         </p>
       )}
