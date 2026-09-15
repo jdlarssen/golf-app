@@ -1,7 +1,10 @@
 {
   "max_parallel": 2,
   "bootstrap": "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && npm install --no-audit --no-fund",
-  "env_files": [".env.local", ".env.staging.local"],
+  "env_files": [
+    ".env.local",
+    ".env.staging.local"
+  ],
   "hooks_path": ".githooks",
   "contract_marker": "Forge-kontrakt tilgjengelig",
   "milestone_order": [
@@ -20,6 +23,32 @@
     "PR-body: «Closes #{{ISSUE}}», en kort Fordeler/ulemper-blokk, og `## Alternativer (produktvalg)` når det finnes et reelt produktvalg."
   ],
   "routing": {
-    "heavyLabels": ["area:scoring", "area:auth", "area:offline-sync", "area:tee-boxes", "area:courses"]
-  }
+    "heavyLabels": [
+      "area:scoring",
+      "area:auth",
+      "area:offline-sync",
+      "area:tee-boxes",
+      "area:courses"
+    ]
+  },
+  "project": {
+    "owner": "jdlarssen",
+    "number": 2
+  },
+  "capacity": {
+    "per_week": 5,
+    "goal": 3,
+    "upkeep": 2
+  },
+  "upkeep_labels": [
+    "bug",
+    "prod-vakt",
+    "flake",
+    "refactor",
+    "security",
+    "test-quality",
+    "documentation",
+    "dependencies"
+  ],
+  "roadmap": "docs/roadmap.md"
 }
