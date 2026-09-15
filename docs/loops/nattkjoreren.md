@@ -204,27 +204,27 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
   skille nattkjørerens egen tekst fra et eier-svar.
   - **Produktvalg i kontrakten** (`## Alternativer (produktvalg)`-seksjon eller
     `"produktvalg": true` i json-blokken): gjengi HELE seksjonen i
-    PR-kommentaren på norsk, i den faste formen fra CLAUDE.md
+    PR-kommentaren på norsk, i den faste formen fra `docs/pr-workflow.md`
     §«PR-presentasjon» (formens ene hjem) — anbefaling først, fordeler/ulemper
     per alternativ (også bygget A), ombyggingskostnad, reversibilitet, og
     avslutningen med svar-instruks + «ingen hast». **Headingen
     `## Alternativer (produktvalg)` skal OGSÅ stå i PR-body-en** — body er den
-    foreskrevne plassen for maskin-markøren (CLAUDE.md steg 5). Kortet leser
+    foreskrevne plassen for maskin-markøren (`docs/pr-workflow.md` steg 5). Kortet leser
     riktignok kommentarene også (#1656), så en markør kun i kommentaren stopper
     auto-mergen; body-headingen er likevel det som gjør valget synlig i PR-en
     uten å måtte scrolle. Produktvalg-PR-er auto-merges aldri av noen økt før
     eieren har valgt.
   - **Uten produktvalg:** feat/fix/perf-leveranser får likevel en kort
     «Fordeler/ulemper»-blokk for valgt løsning i PR-kommentaren (2–3 hver,
-    produktspråk — CLAUDE.md §«PR-presentasjon»).
+    produktspråk — `docs/pr-workflow.md` §«PR-presentasjon»).
   **Fjern deretter `autonomy:ready` fra issuet (#1307)** — PR-en bærer mandatet
   videre, og labelen skal aldri overleve leveringen (ellers re-plukkes issuet
   neste natt og bygges som duplikat, jf. #1253-varselet 2026-07-18).
 - **Closing-kommentar ved levering:** sjekk først om issuet ALT har en
   leveranse-/closing-kommentar (`## Teknisk`/`## Funksjonell` — fra en tidligere
   natt eller en interaktiv økt). Finnes den: korrigér den med PATCH, post ikke en
-  ny (CLAUDE.md §Closing-kommentar, eierregel #1907). Ellers: post CLAUDE.md-
-  konvensjonens Teknisk/Funksjonell-kommentar på ISSUET, innledet med «Lukkes
+  ny (`docs/issue-workflow.md` §Closing-kommentar, eierregel #1907). Ellers: post
+  konvensjonens Teknisk/Funksjonell-kommentar (`docs/issue-workflow.md`) på ISSUET, innledet med «Lukkes
   automatisk når eieren merger PR #<M>». Skriv statusutsagnene («venter på
   merge», «prod er ikke påført») som egne, lett gjenkjennelige linjer — det er
   nettopp dem økta som lander PR-en senere skal korrigere i stedet for å legge

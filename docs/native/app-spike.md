@@ -80,7 +80,7 @@ Fallgruver:
 
 ## Innlogging (staging)
 
-Samme autonome mønster som web-e2e (CLAUDE.md «Testing — staging»): mint kode
+Samme autonome mønster som web-e2e (`docs/staging-testing.md`): mint kode
 via service-role REST `POST <staging-URL>/auth/v1/admin/generate_link` med
 `type: "magiclink"` — koden ligger som **`email_otp`-felt i svaret** (dagens
 GoTrue avviser `type: "email_otp"` som request-type; verifisert 2026-08-30).

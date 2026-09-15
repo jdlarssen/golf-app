@@ -140,7 +140,7 @@ vinner:
      `## Alternativer (produktvalg)`) eller starter med `## Alternativ A`–`E` (a–e),
      ELLER et lenket issue (`closes|fixes|resolves|refs|part of #N`) har labelen
      `autonomy:needs-decision`. Headingen er maskin-markøren økter MÅ sette når de
-     presenterer et valg (CLAUDE.md steg 5); body er den foreskrevne plassen, men
+     presenterer et valg (`docs/pr-workflow.md` steg 5); body er den foreskrevne plassen, men
      kommentarene leses fordi nattkjøreren gjengir alternativ-seksjonen DER (#1656).
      Kortets og nattkjørerens EGNE kommentarer teller med — en markør de har skrevet
      er nettopp et valg eieren skal ta. Prosa uten heading teller ikke; en negasjon

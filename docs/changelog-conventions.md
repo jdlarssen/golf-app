@@ -1,6 +1,6 @@
 # CHANGELOG-konvensjoner
 
-Format-regler for `CHANGELOG.md`. Når-regler og hook-håndheving står i [CLAUDE.md](../CLAUDE.md) under «Versjonering / CHANGELOG».
+Format-regler for `CHANGELOG.md`. Når-regler og hook-håndheving står i [`.changes/README.md`](../.changes/README.md) under «Versjonering / CHANGELOG — regelen».
 
 Trigger: HTML-kommentaren øverst i `CHANGELOG.md` peker hit. `.githooks/commit-msg` og [`.changes/README.md`](../.changes/README.md) peker også hit. **Les denne fila før du skriver et notat.**
 

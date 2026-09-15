@@ -16,7 +16,7 @@
     "Alle commits har «Refs #{{ISSUE}}» i body (commit-msg-hooken krever det).",
     "Bruker-synlig endring (feat/fix/perf): legg en notatfil i .changes/ etter .changes/README.md, og kjør skillet staging-verify før PR-en settes klar. Aldri bump package.json eller rediger CHANGELOG.md.",
     "Ny norsk bruker-copy: kjør skillet humanizer:humanizer før commit.",
-    "Aldri skriv til prod-databasen; all testing mot torny-staging (se CLAUDE.md «Testing — staging, aldri prod»).",
+    "Aldri skriv til prod-databasen; all testing mot torny-staging (se docs/staging-testing.md).",
     "PR-body: «Closes #{{ISSUE}}», en kort Fordeler/ulemper-blokk, og `## Alternativer (produktvalg)` når det finnes et reelt produktvalg."
   ],
   "routing": {

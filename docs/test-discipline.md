@@ -55,7 +55,7 @@ Disse er gjensidig utelukkende. **Hvis en test prøver å svare på to spørsmå
 | Fil | `toContain`-kall på samme variabel i ÉN fil | **>5** | Review-signal (§ Hvor reglene håndheves) — vurder konvertering til Type B approval-snapshot |
 | Commit | Nye `.toContain()`-kall i ÉN commit | **>10** | Pre-commit-warn, ikke-blokkerende — se `.githooks/pre-commit` |
 
-Eierbeslutning 2026-07-07 (#1104): behold alle tre nivåer — de fanger ulike ting (per-test er en skrive-tids-regel, per-fil er et code-review-signal, per-commit er en mekanisk vakt som ikke kan se på tvers av filer). CLAUDE.md § «Test-disiplin» har kortversjonen (maks 3 per test); denne tabellen er den fulle forklaringen.
+Eierbeslutning 2026-07-07 (#1104): behold alle tre nivåer — de fanger ulike ting (per-test er en skrive-tids-regel, per-fil er et code-review-signal, per-commit er en mekanisk vakt som ikke kan se på tvers av filer). CLAUDE.md § «Test-disiplin» peker hit; denne tabellen er regelens hjem.
 
 ### Type C — Data-rendering UI
 
