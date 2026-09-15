@@ -18,9 +18,12 @@ type DraftRosterRow = {
 export async function DraftTeamsOverview({
   gameId,
   currentUserId,
+  isMatchplay,
 }: {
   gameId: string;
   currentUserId: string;
+  /** #1880: matchplay groups are sides in the duel, not teams. */
+  isMatchplay: boolean;
 }) {
   const { supabase } = await getGameContext();
   const { data: rows } = await supabase
@@ -50,11 +53,20 @@ export async function DraftTeamsOverview({
     <ul className="flex flex-col gap-3">
       {teamsWithPlayers.map((teamNum) => {
         const teamPlayers = players.filter((p) => p.team_number === teamNum);
+        // A matchplay side outside {1, 2} is stale data: list the players
+        // without a heading rather than calling them a «Lag».
+        const heading = !isMatchplay
+          ? tHome('teamLabel2', { number: teamNum })
+          : teamNum <= 2
+            ? tHome('sideValue', { number: teamNum })
+            : null;
         return (
           <li key={teamNum}>
-            <p className="text-xs text-muted uppercase tracking-[0.14em] font-semibold mb-1.5">
-              {tHome('teamLabel2', { number: teamNum })}
-            </p>
+            {heading && (
+              <p className="text-xs text-muted uppercase tracking-[0.14em] font-semibold mb-1.5">
+                {heading}
+              </p>
+            )}
             <ul className="flex flex-col gap-1">
               {teamPlayers.map((p) => {
                 const isCurrent = p.user_id === currentUserId;
