@@ -95,6 +95,10 @@ async function fetchComments(gh: Gh, issue: number): Promise<LiveComment[]> {
 async function runDelete(gh: Gh, args: Args, comments: (issue: number) => Promise<LiveComment[]>): Promise<number> {
   const now = new Date();
   const months = deleteMonths(readdirSync(args.loggDir), now, args.month);
+  if (args.month && months.length === 0) {
+    console.log(`${LOG} slett: ${args.month} er inneværende (eller en framtidig) måned — slette-fasen rører den ikke.`);
+    return 0;
+  }
   let problems = 0;
   for (const board of BOARDS) {
     const present = months.filter((m) => existsSync(archivePath(board, m, args.loggDir)));

@@ -292,14 +292,14 @@ const ARCHIVE_FILE_RE = /^(\d{4}-(?:0[1-9]|1[0-2]))-.+-\d+\.md$/;
 
 // Uten --month: de to nyeste månedene før inneværende som har arkivfil. Eldre
 // filer er uansett ferdig slettet, og taket holder kjøretiden flat når arkivet
-// vokser. Inneværende måned røres aldri.
+// vokser. Inneværende (og framtidig) måned gir tom liste i stedet for å kaste,
+// så en dry-run av inneværende måned med fase `both` fortsatt viser arkiv-
+// forhåndsvisningen; deleteArchivedComments sperrer den i tillegg.
 export function deleteMonths(files: string[], now: Date, month?: string): string[] {
   const current = currentMonth(now);
   if (month !== undefined) {
     monthWindow(month);
-    if (month >= current)
-      throw new Error(`${month} er inneværende (eller en framtidig) måned — slette-fasen rører den aldri.`);
-    return [month];
+    return month < current ? [month] : [];
   }
   const months = new Set<string>();
   for (const f of files) {
