@@ -71,3 +71,19 @@ node scripts/weekly-release.mjs --dry-run
 
 Den viser hvilken versjon uka ville fått og nøyaktig hvilken CHANGELOG-diff
 notatene dine gir — uten å skrive noe eller slette noe.
+
+## Versjonering / CHANGELOG — regelen
+
+> Flyttet ordrett fra CLAUDE.md (#2100); bare lenkemålene er justert til denne mappa.
+
+Hver bruker-synlig commit (`feat`/`fix`/`perf`) MÅ legge igjen én **notatfil** under `.changes/` — og skal hverken bumpe `package.json` eller redigere `CHANGELOG.md`. Mandag morgen folder ukerutinen (`.github/workflows/ukesversjon.yml` + `scripts/weekly-release.mjs`) alle ukas notater til **én** versjon og skriver oppføringene inn i changeloggen som ukas blokk (`feat` → en funksjonsrad, `fix`/`perf` → en linje i blokkas rettinger-skuff). Footeren (`AppVersionFooter.tsx`) viser dermed ett versjonsnummer per uke, ikke ett per commit. Når ukes-PR-en er merget, gir `.github/workflows/ukeslipp-release.yml` versjonen en git-tag (`v1.236.0`) og en release på GitHubs slipp-side med ukas blokk som tekst — uten håndgrep (#2019). **Intern** endring som likevel shippes som `fix` (test-only, refactor, tooling) → ingen notatfil; skriv `[no-changelog]` i commit-body-en.
+
+Hvorfor: `package.json` + `CHANGELOG.md` var to filer alle PR-er rørte — altså garantert rebase-konflikt mellom parallelle økter. Notatfilene har unike navn og kan ikke kollidere. Deploy-rytmen er uendret: merge til `main` deployer fortsatt rett til prod.
+
+**Håndheves av `.githooks/commit-msg`** — den blokkerer feat/fix/perf-commits uten en ny fil under `.changes/` (og uten `[no-changelog]`), OG alle commits unntatt `chore(release)` som endrer `version`-feltet i `package.json`. Feltet eies av ukerutinen.
+
+- **Notatfil:** `.changes/<issue>-<slug>.md` (issue-løs: `x-<slug>.md`), frontmatter `type` + `issue`, og for `feat` også `title`/`link`/`cta`. Mal og feltgrenser: [`.changes/README.md`](README.md). Ett ugyldig notat stopper hele ukesslippet (fail-closed), så hold deg til malen.
+- **Tørrkjøring:** `node scripts/weekly-release.mjs --dry-run` viser hvilken versjon uka ville fått og nøyaktig hvilken CHANGELOG-diff notatene gir — uten å skrive noe.
+- **Ikke bruker-synlig?** Bytt prefix til `docs/refactor/test/chore/style/ci/build` — de passerer fritt.
+- **CHANGELOG-format:** [`docs/changelog-conventions.md`](../docs/changelog-conventions.md) (les FØR du skriver et notat). Én ukeblokk per slipp under `## Ukeslipp` (funksjonsrader + rettinger-skuff), én linje per endring; ingen Teknisk-blokk (den bor i issue-closing-kommentaren), ingen humanizer påkrevd.
+- Aldri `--no-verify` for å omgå hooken (bash-guard blokkerer den uansett).
