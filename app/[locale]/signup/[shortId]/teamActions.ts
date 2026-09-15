@@ -189,37 +189,6 @@ function resolveTeamSize(
 }
 
 /**
- * The active roster as the open team-registration cap sees it (#2011): the
- * team numbers in use, and the seats already held.
- *
- * A player outside a team holds one seat. A team holds all of its seats from
- * the moment it exists: its e-mail-invited teammates have only an invitations
- * row until they join through attachToCaptainTeam, which checks no cap —
- * counting rows alone let every captain in while those seats still looked
- * empty. A team with more active rows than the team size holds every one of
- * them: for a self-registration game the organiser's save validates the roster
- * as a draft, so no balance check stops an over-full team.
- */
-function tallyActiveRoster(
-  roster: { team_number: number | null }[],
-  teamSize: number,
-): { takenTeamNumbers: Set<number>; reservedSeats: number } {
-  const rowsPerTeam = new Map<number, number>();
-  let reservedSeats = 0;
-  for (const { team_number } of roster) {
-    if (team_number === null) {
-      reservedSeats += 1;
-    } else {
-      rowsPerTeam.set(team_number, (rowsPerTeam.get(team_number) ?? 0) + 1);
-    }
-  }
-  for (const rows of rowsPerTeam.values()) {
-    reservedSeats += Math.max(rows, teamSize);
-  }
-  return { takenTeamNumbers: new Set(rowsPerTeam.keys()), reservedSeats };
-}
-
-/**
  * Kaptein submitter lag-form. Returnerer aggregert resultat per slot;
  * suksess på kaptein-raden men feil på en medspiller ruller ikke tilbake
  * resten — vi får et lag med en åpen plass, som kaptein kan fylle senere
@@ -336,43 +305,6 @@ export async function submitTeamRegistration(
   const captainStatus =
     game.registration_mode === 'open' ? 'approved' : 'pending';
 
-  // #2011: the player cap, checked before the captain row exists — a rejection
-  // must not leave an orphaned request row behind (AGENTS.md trap 5). Open mode
-  // only: that is when this action inserts game_players rows. manual_approval
-  // requests still queue up; the organiser's approval is the gate there (#662).
-  //
-  // One read of the active roster serves both the cap and the team-slot search
-  // below. Withdrawn rows count for neither: a team whose members have all
-  // withdrawn no longer holds a number in the grid.
-  let takenTeamNumbers = new Set<number>();
-  if (captainStatus === 'approved') {
-    const { data: activeRoster, error: rosterError } = await admin
-      .from('game_players')
-      .select('team_number')
-      .eq('game_id', game.id)
-      .is('withdrawn_at', null)
-      .returns<{ team_number: number | null }[]>();
-    if (rosterError) {
-      // Without the roster there is no knowing which team numbers are taken or
-      // how many seats are left, and a guess would hand out team 1 — perhaps on
-      // top of a team that already has it. Refuse before the captain row exists
-      // so a retry starts clean. registerForOpenGame's solo cap count still
-      // fails open (#661); this read cannot, because it also picks the number.
-      console.error('[submitTeamRegistration] active roster lookup failed', rosterError);
-      return { ok: false, error: 'db_error' };
-    }
-    // Seats, not rows: see tallyActiveRoster for why a team holds its full size.
-    const { takenTeamNumbers: taken, reservedSeats } = tallyActiveRoster(
-      activeRoster ?? [],
-      teamSize,
-    );
-    takenTeamNumbers = taken;
-    const cap = teamModePlayerCap(game.game_mode, teamSize);
-    if (cap !== null && reservedSeats + teamSize > cap) {
-      return { ok: false, error: 'game_full' };
-    }
-  }
-
   // INSERT kaptein-rad. UNIQUE (game_id, user_id) fanger dobbel-submit.
   const { data: captainRow, error: captainError } = await admin
     .from('game_registration_requests')
@@ -400,31 +332,66 @@ export async function submitTeamRegistration(
 
   const captainName = await getCaptainDisplayName(captain.id);
 
-  // For open-modus: tildel team_number deterministisk (laveste ledige) og
-  // sett kapteinen i game_players umiddelbart. Manual_approval venter på
-  // admin via det eksisterende approveRequest-action-et.
-  // #2011: the search reads the active roster fetched above and stops at
-  // MAX_TEAMS — team 5+ does not exist in the grid.
+  // For open-modus: sett kapteinen i game_players umiddelbart. Manual_approval
+  // venter på admin via det eksisterende approveRequest-action-et; the cap
+  // applies to open self-registration only (#2011, owner's choice A).
+  //
+  // #2060/#2062: claim_open_registration_seat (0177) decides the cap, picks the
+  // team number and writes the captain's row in one call that locks the game,
+  // so two captains arriving together can no longer read the same roster and
+  // take the same number. Seats, not rows: a team holds its full size from the
+  // moment it exists — its e-mail-invited teammates have only an invitations
+  // row until they join through attachToCaptainTeam, which checks no cap — and
+  // an over-full team holds every row it has. The number is the lowest in
+  // 1..MAX_TEAMS that no active row has; withdrawn rows hold neither seats nor
+  // numbers.
   let assignedTeamNumber: number | null = null;
   if (captainStatus === 'approved') {
-    for (let slot = 1; slot <= MAX_TEAMS; slot += 1) {
-      if (!takenTeamNumbers.has(slot)) {
-        assignedTeamNumber = slot;
-        break;
-      }
+    const cap = teamModePlayerCap(game.game_mode, teamSize);
+    const { data: claim, error: claimError } = await admin.rpc(
+      'claim_open_registration_seat',
+      {
+        p_game_id: game.id,
+        p_user_id: captain.id,
+        p_seat_team_size: teamSize,
+        p_max_teams: MAX_TEAMS,
+        // #463: kapteinen melder seg selv på → bekreftet med en gang.
+        p_accepted_at: acceptedAtForActor(captain.id, captain.id)!,
+        p_new_team_size: teamSize,
+        ...(cap !== null ? { p_cap: cap } : {}),
+      },
+    );
+    if (claimError) {
+      console.error(
+        '[submitTeamRegistration] captain seat claim failed',
+        claimError,
+      );
+      // Fatal (#667): uten game_players-raden står kapteinen utenfor
+      // spillerlista selv om de ellers ville sett en suksess-skjerm. Returner
+      // feil så de kan prøve igjen.
+      return { ok: false, error: 'db_error' };
     }
-    if (assignedTeamNumber === null) {
-      // Every team number in the grid is taken although the cap had room. With
-      // a team size the format supports that cannot happen: four teams already
-      // reserve the whole cap, so the check above answers first. This is the
-      // backstop for a team_size below the format's smallest, where
-      // teamModePlayerCap computes the cap from that smallest size. Two
-      // captains racing past the check read the same roster and can pick the
-      // same number; nothing here stops that (#2060), and the cap itself is not
-      // enforced in the DB either (#2062).
-      // Roll back our own request row so the game is not left with a team
-      // without players (AGENTS.md trap 5), and say so.
-      //
+    const { outcome, team_number: claimedTeam } = (claim ?? {}) as {
+      outcome?: string;
+      team_number?: number | null;
+    };
+    if (outcome === 'ok') {
+      assignedTeamNumber = claimedTeam ?? null;
+    } else if (outcome !== 'already_on_roster') {
+      // The claim refused: the game is full, every team number is taken, or a
+      // state gate closed after the checks above. The claim runs after the
+      // captain row exists, so roll that row back — the game must not be left
+      // with a team without players (AGENTS.md trap 5).
+      const rejection: TeamRegistrationError =
+        outcome === 'game_full' ||
+        outcome === 'game_locked' ||
+        outcome === 'signup_closed' ||
+        outcome === 'game_not_found'
+          ? outcome
+          : 'db_error';
+      if (rejection === 'db_error') {
+        console.error('[submitTeamRegistration] unexpected seat claim outcome', claim);
+      }
       // 0 rows = failure, not success (trap 2 / I3): a delete without
       // `.select()` answers `error == null` even when it matched nothing.
       // Same shape as `declineTeamInvite`.
@@ -443,35 +410,12 @@ export async function submitTeamRegistration(
         // captain should see «game full», not a 500.
         console.error('[submitTeamRegistration] captain rollback failed', rollbackErr);
       }
-      console.error('[submitTeamRegistration] no free team slot', { gameId: game.id });
-      return { ok: false, error: 'game_full' };
+      return { ok: false, error: rejection };
     }
-
-    const { error: captainPlayerError } = await admin
-      .from('game_players')
-      .upsert(
-        {
-          game_id: game.id,
-          user_id: captain.id,
-          team_number: assignedTeamNumber,
-          flight_number: assignedTeamNumber,
-          course_handicap: null,
-          // #463: kapteinen melder seg selv på → bekreftet med en gang.
-          accepted_at: acceptedAtForActor(captain.id, captain.id),
-        },
-        { onConflict: 'game_id,user_id', ignoreDuplicates: true },
-      );
-    if (captainPlayerError) {
-      console.error(
-        '[submitTeamRegistration] captain game_players insert failed',
-        captainPlayerError,
-      );
-      // Fatal (#667): uten game_players-raden står kapteinen utenfor
-      // spillerlista selv om de ellers ville sett en suksess-skjerm. Returner
-      // feil så de kan prøve igjen — game_registration_requests-raden er
-      // allerede på plass, så det er trygt å re-kjøre.
-      return { ok: false, error: 'db_error' };
-    }
+    // already_on_roster: the captain already has a game_players row, so the
+    // claim wrote nothing and the new team gets no number — the teammates
+    // below are not placed on one either. The ignoreDuplicates upsert this
+    // replaces also left the existing row alone; the rest of #2072 is #2061's.
   }
 
   // Per-slot-løkke. Hver slot håndteres separat så feil på én ikke

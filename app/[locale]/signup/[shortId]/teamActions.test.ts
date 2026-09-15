@@ -357,24 +357,23 @@ describe('submitTeamRegistration — happy paths', () => {
       email: 'kjent@example.com',
     });
     // admin-mock queue:
-    //   0) active roster (#2011 — open mode only, before the captain insert;
-    //      it feeds both the player cap and the team-slot search)
     //   1) captain insert → {id: captain-request-id}
     //   2) captain display lookup (users) — vi returnerer en row
-    //   3) captain game_players upsert
-    //   4..) per-slot: insert child request, player upsert (open-modus)
-    adminMock = buildSupabaseMock([
-      { data: [], error: null }, // active roster (#2011) — empty
-      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
-      {
-        data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
-        error: null,
-      }, // captain display
-      { data: null, error: null }, // captain game_players upsert
-      // Slot 1 (lookup, kjent)
-      { data: null, error: null }, // child request insert
-      { data: null, error: null }, // child player upsert
-    ]);
+    //   (the captain's game_players row comes from the seat claim RPC, #2060)
+    //   3..) per-slot: insert child request, player upsert (open-modus)
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+        {
+          data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
+          error: null,
+        }, // captain display
+        // Slot 1 (lookup, kjent)
+        { data: null, error: null }, // child request insert
+        { data: null, error: null }, // child player upsert
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
+    );
 
     const { submitTeamRegistration } = await import('./teamActions');
     const result = await submitTeamRegistration({
@@ -413,16 +412,17 @@ describe('submitTeamRegistration — happy paths', () => {
       }),
     );
     lookupUserByEmailMock.mockResolvedValue(null); // ukjent
-    adminMock = buildSupabaseMock([
-      { data: [], error: null }, // active roster (#2011) — empty
-      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
-      {
-        data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
-        error: null,
-      }, // captain display
-      { data: null, error: null }, // captain game_players upsert
-      { data: null, error: null }, // invitations insert
-    ]);
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+        {
+          data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
+          error: null,
+        }, // captain display
+        { data: null, error: null }, // invitations insert
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
+    );
 
     const { submitTeamRegistration } = await import('./teamActions');
     const result = await submitTeamRegistration({
@@ -453,15 +453,16 @@ describe('submitTeamRegistration — happy paths', () => {
       }),
     );
     lookupUserByEmailMock.mockResolvedValue(null);
-    adminMock = buildSupabaseMock([
-      { data: [], error: null }, // active roster (#2011) — empty
-      { data: { id: CAPTAIN_REQUEST_ID }, error: null },
-      {
-        data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
-        error: null,
-      },
-      { data: null, error: null }, // captain player upsert
-    ]);
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null },
+        {
+          data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
+          error: null,
+        },
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
+    );
 
     const { submitTeamRegistration } = await import('./teamActions');
     const result = await submitTeamRegistration({
@@ -520,7 +521,6 @@ describe('submitTeamRegistration — happy paths', () => {
   it('kaptein dobbel-submit (UNIQUE 23505) → already_registered', async () => {
     getGameByShortIdMock.mockResolvedValue(makeGame());
     adminMock = buildSupabaseMock([
-      { data: [], error: null }, // active roster (#2011) — default game is open
       { data: null, error: { code: '23505', message: 'duplicate' } },
     ]);
 
@@ -560,7 +560,7 @@ describe('submitTeamRegistration — happy paths', () => {
     );
   });
 
-  it('#667: captain game_players upsert feiler → db_error (ikke ok:true)', async () => {
+  it('#667: kapteinens plass-krav feiler → db_error (ikke ok:true)', async () => {
     getGameByShortIdMock.mockResolvedValue(
       makeGame({
         registration_mode: 'open',
@@ -577,21 +577,21 @@ describe('submitTeamRegistration — happy paths', () => {
       name: 'Kjent Bruker',
       email: 'kjent@example.com',
     });
-    // admin-mock queue — speiler happy-path-sekvensen men call #3
-    // (captain game_players upsert) returnerer en feil.
-    //   0) active roster (#2011, empty)
+    // admin-mock queue — speiler happy-path-sekvensen, men kapteinens
+    // game_players-rad kommer fra plass-kravet (#2060), og det feiler.
     //   1) captain insert → {id: captain-request-id}
     //   2) captain display lookup (users)
-    //   3) captain game_players upsert → ERROR (#667)
-    adminMock = buildSupabaseMock([
-      { data: [], error: null }, // active roster (#2011) — empty
-      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
-      {
-        data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
-        error: null,
-      }, // captain display
-      { data: null, error: { message: 'db constraint violation' } }, // captain game_players upsert feiler
-    ]);
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+        {
+          data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
+          error: null,
+        }, // captain display
+      ],
+      {},
+      { rpcErrors: { claim_open_registration_seat: { message: 'db constraint violation' } } },
+    );
 
     const { submitTeamRegistration } = await import('./teamActions');
     const result = await submitTeamRegistration({
@@ -601,19 +601,29 @@ describe('submitTeamRegistration — happy paths', () => {
     });
 
     expect(result).toEqual({ ok: false, error: 'db_error' });
+    // No teammate gets a game_players row when the captain has none.
+    expect(
+      adminMock.__fromCalls.filter((c) => c.table === 'game_players'),
+    ).toEqual([]);
   });
 });
 
 /**
- * #2011: open team registration used to skip the player cap and hunt for a free
- * team slot in 1..50, so team 5+ landed outside the wizard's four-team grid. The
- * cap check now runs before the captain row exists and answers first: it counts
- * the seats already held (every team at least its full size, the incoming team
- * too), so a full game never reaches the insert. The rollback of the captain's
- * own request row (AGENTS.md trap 5) only covers running out of team numbers
- * while the cap still has room — a team_size below the format's smallest.
+ * #2011: open team registration stops at the player cap and inside the
+ * four-team grid. #2060/#2062 moved the decision into
+ * claim_open_registration_seat: it locks the game, counts the seats already held
+ * (every team at least its full size, the incoming team too), picks the lowest
+ * free team number in 1..MAX_TEAMS and writes the captain's row — so two
+ * captains can no longer read the same roster. The seat counting these tests
+ * used to pin through tallyActiveRoster is tested against a real database in
+ * supabase/tests/open_registration_seat_claim_test.sql, row for row.
+ *
+ * What stays here: what the action hands the claim, how each outcome maps to
+ * the action's answer, and the rollback of the captain's own request row
+ * (AGENTS.md trap 5) — which a full game now reaches, because the claim runs
+ * after that row exists.
  */
-describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
+describe('#2011/#2060: åpen lag-påmelding stopper på spiller-taket', () => {
   beforeEach(() => {
     authedAsCaptain();
     lookupUserByEmailMock.mockResolvedValue(null);
@@ -631,204 +641,186 @@ describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
     error: null,
   };
 
-  /** Active game_players rows as the roster read returns them: one per player. */
-  function rosterRows(...teamNumbers: Array<number | null>) {
-    return teamNumbers.map((team_number) => ({ team_number }));
-  }
-
-  /** The recorded calls of the game_players roster read, select → returns. */
-  function teamRosterChain() {
-    const calls = adminMock.__fromCalls;
-    const start = calls.findIndex(
-      (c) =>
-        c.table === 'game_players' &&
-        c.method === 'select' &&
-        c.args[0] === 'team_number',
-    );
-    if (start === -1) return [];
-    const end = calls.findIndex((c, i) => i > start && c.method === 'returns');
-    return calls.slice(start, end === -1 ? undefined : end + 1);
-  }
-
   function findCall(table: string, method: string) {
     return adminMock.__fromCalls.find(
       (c) => c.table === table && c.method === method,
     );
   }
 
+  function claimParams(): Record<string, unknown> | undefined {
+    return adminMock.__rpcCalls.find((c) => c.name === 'claim_open_registration_seat')
+      ?.params as Record<string, unknown> | undefined;
+  }
+
   /**
-   * An open Texas à 4 game (cap 16) and a team of four with three e-mail slots.
-   * The roster read comes first; the rest is what the action consumes once the
-   * cap lets the team in — so a missing gate shows up as ok:true, not as a mock
-   * underflow. Pass `rosterError` to make the roster read fail instead.
+   * An open Texas à 4 game (cap 16), a team of four with three e-mail slots,
+   * and a seat claim that refuses with `outcome`. Queues the reads up to the
+   * compensating delete, whose answer the test passes in.
    */
-  function openTexasFours(
-    roster: Array<{ team_number: number | null }>,
-    rosterError: { message: string } | null = null,
+  function refusedTexasFours(
+    outcome: string | null,
+    rollbackDelete: { data: unknown; error: unknown } = {
+      data: [{ id: CAPTAIN_REQUEST_ID }],
+      error: null,
+    },
   ) {
     getGameByShortIdMock.mockResolvedValue(makeGame()); // open, texas à 4 → cap 16
-    adminMock = buildSupabaseMock([
-      { data: rosterError ? null : roster, error: rosterError }, // active roster
-      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
-      captainDisplay,
-      { data: null, error: null }, // captain game_players upsert
-      { data: null, error: null }, // invitations insert (slot 1)
-      { data: null, error: null }, // invitations insert (slot 2)
-      { data: null, error: null }, // invitations insert (slot 3)
-    ]);
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+        captainDisplay,
+        rollbackDelete, // rollback delete .select('id')
+        // What the action would consume if it went on past a refusal:
+        { data: null, error: null }, // invitations insert (slot 1)
+        { data: null, error: null }, // invitations insert (slot 2)
+        { data: null, error: null }, // invitations insert (slot 3)
+      ],
+      {
+        claim_open_registration_seat:
+          outcome === null ? null : { outcome, team_number: null },
+      },
+    );
     return { shortId: SHORT_ID, teamName: 'Lag D', slots: threeSlots };
   }
 
-  /**
-   * The one way into a full grid that the cap does not catch: a team_size
-   * below the format's smallest. Florida à 2 gets the cap of Florida à 3
-   * (4 × 3 = 12), so four pairs hold 8 seats and one more pair still fits —
-   * yet every team number is taken. Queues the reads up to the compensating
-   * delete, whose answer the test passes in.
-   */
-  function fullGridUnderCap(rollbackDelete: { data: unknown; error: unknown }) {
-    getGameByShortIdMock.mockResolvedValue(
-      makeGame({
-        game_mode: 'florida_scramble',
-        mode_config: { kind: 'florida_scramble', team_size: 2, teams_count: 4 },
-      }),
-    );
-    adminMock = buildSupabaseMock([
-      { data: rosterRows(1, 1, 2, 2, 3, 3, 4, 4), error: null }, // active roster
-      { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
-      captainDisplay,
-      rollbackDelete, // rollback delete .select('id')
-    ]);
-    return {
-      shortId: SHORT_ID,
-      teamName: 'Lag E',
-      slots: [{ mode: 'email' as const, value: 'a@x' }],
-    };
-  }
-
-  it('texas à 4 med 16 aktive spillere → game_full, ingen kaptein-rad', async () => {
-    const input = openTexasFours(
-      rosterRows(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4),
-    );
-
-    const { submitTeamRegistration } = await import('./teamActions');
-    const result = await submitTeamRegistration(input);
-
-    expect(result).toEqual({ ok: false, error: 'game_full' });
-    expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
-  });
-
-  it('alle fire lag tatt under spiller-taket → game_full, kaptein-raden rulles tilbake', async () => {
-    const input = fullGridUnderCap({ data: [{ id: CAPTAIN_REQUEST_ID }], error: null });
+  it('fullt spill → game_full, kaptein-raden rulles tilbake', async () => {
+    const input = refusedTexasFours('game_full');
 
     const { submitTeamRegistration } = await import('./teamActions');
     const result = await submitTeamRegistration(input);
 
     expect(result).toEqual({ ok: false, error: 'game_full' });
     expect(findCall('game_registration_requests', 'delete')).toBeDefined();
-    expect(findCall('game_players', 'upsert')).toBeUndefined();
+    expect(findCall('invitations', 'insert')).toBeUndefined();
+    expect(adminMock.__fromCalls.filter((c) => c.table === 'game_players')).toEqual([]);
   });
 
-  it('lag med e-post-inviterte medspillere holder hele plassen → game_full', async () => {
-    // Four players outside a team, and teams 1–3 with only their captain in
-    // game_players: the e-mail-invited teammates hold an invitation, not a row,
-    // and join later without a cap check. Only 7 rows are active, but the seats
-    // are 4 + 3 × 4 = 16, so a fourth team of four does not fit.
-    const input = openTexasFours(rosterRows(null, null, null, null, 1, 2, 3));
+  it('kravet får taket, lagstørrelsen og et nytt lag — tallene fra TypeScript', async () => {
+    const input = refusedTexasFours('game_full');
 
     const { submitTeamRegistration } = await import('./teamActions');
-    const result = await submitTeamRegistration(input);
+    await submitTeamRegistration(input);
 
-    expect(result).toEqual({ ok: false, error: 'game_full' });
-    expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
-  });
-
-  it('lag med flere aktive spillere enn lagstørrelsen holder alle plassene sine → game_full', async () => {
-    // The organiser can put more players on a team than the team size: for a
-    // self-registration game buildGameInsertPayload validates the roster as a
-    // draft, so the scramble balance check never runs. Team 1 has six active
-    // rows and teams 2–3 only their captain: 6 + 4 + 4 = 14 seats, and a
-    // fourth team of four does not fit. Charging team 1 its team size would
-    // count 12 and let it in.
-    const input = openTexasFours(rosterRows(1, 1, 1, 1, 1, 1, 2, 3));
-
-    const { submitTeamRegistration } = await import('./teamActions');
-    const result = await submitTeamRegistration(input);
-
-    expect(result).toEqual({ ok: false, error: 'game_full' });
-    expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
-  });
-
-  it('det nye lagets egne plasser teller: 14 holdte plasser og et lag på fire → game_full', async () => {
-    // Two players outside a team and teams 1–3: 2 + 3 × 4 = 14 seats held.
-    // The cap of 16 still has two free seats, but the incoming team needs
-    // four, so it must not fit — the check adds the new team's own seats
-    // rather than asking whether any seat is left.
-    const input = openTexasFours(rosterRows(null, null, 1, 2, 3));
-
-    const { submitTeamRegistration } = await import('./teamActions');
-    const result = await submitTeamRegistration(input);
-
-    expect(result).toEqual({ ok: false, error: 'game_full' });
-    expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
-  });
-
-  it('spillerlista kan ikke leses → db_error, ingen kaptein-rad', async () => {
-    // A failed roster read says nothing about which team numbers are taken or
-    // how many seats are left. Guessing would hand the captain team 1, perhaps
-    // on top of a team that already has it, so the action refuses before the
-    // captain row exists and a retry starts clean.
-    const input = openTexasFours([], {
-      message: 'AbortError: This operation was aborted',
+    expect(claimParams()).toMatchObject({
+      p_game_id: GAME_ID,
+      p_user_id: CAPTAIN_ID,
+      p_cap: 16,
+      p_seat_team_size: 4,
+      p_new_team_size: 4,
+      p_max_teams: 4,
     });
+    // #463: the captain registers themself → confirmed at once.
+    expect(typeof claimParams()?.p_accepted_at).toBe('string');
+  });
+
+  it.each(['signup_closed', 'game_locked'] as const)(
+    'porten lukket under låsen (%s) → samme feil, kaptein-raden rulles tilbake',
+    async (outcome) => {
+      const input = refusedTexasFours(outcome);
+
+      const { submitTeamRegistration } = await import('./teamActions');
+      const result = await submitTeamRegistration(input);
+
+      expect(result).toEqual({ ok: false, error: outcome });
+      expect(findCall('game_registration_requests', 'delete')).toBeDefined();
+    },
+  );
+
+  it('ukjent svar fra kravet → db_error, kaptein-raden rulles tilbake', async () => {
+    const input = refusedTexasFours(null);
 
     const { submitTeamRegistration } = await import('./teamActions');
     const result = await submitTeamRegistration(input);
 
     expect(result).toEqual({ ok: false, error: 'db_error' });
-    expect(findCall('game_registration_requests', 'insert')).toBeUndefined();
+    expect(findCall('game_registration_requests', 'delete')).toBeDefined();
   });
 
-  it('plassene står på taket minus ett lag → laget slipper inn på neste ledige nummer', async () => {
-    // Four players outside a team and teams 1–2: 4 + 2 × 4 = 12 seats, and
-    // 12 + 4 lands exactly on the cap of 16 — a full team still fits.
-    const input = openTexasFours(rosterRows(null, null, null, null, 1, 2));
+  it('kompenserende sletting treffer 0 rader → svarer fortsatt game_full', async () => {
+    // The rollback delete matches nothing (the row is already gone), so
+    // expectAffected throws. The action logs that and still answers game_full;
+    // the captain must never see a 500 for a full game.
+    const input = refusedTexasFours('game_full', { data: [], error: null });
 
     const { submitTeamRegistration } = await import('./teamActions');
     const result = await submitTeamRegistration(input);
 
-    expect(result.ok).toBe(true);
-    expect(findCall('game_players', 'upsert')?.args[0]).toMatchObject({
-      team_number: 3,
-    });
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+    expect(findCall('game_registration_requests', 'delete')).toBeDefined();
   });
 
-  it('lag der alle har trukket seg frigjør lagnummeret → nytt lag får nummer 4', async () => {
-    // Every member of team 4 has withdrawn, so their rows carry withdrawn_at.
-    // The roster read filters withdrawn rows, so only teams 1–3 come back:
-    // 3 × 4 = 12 seats, and 12 + 4 fits the cap of 16.
-    const input = openTexasFours(rosterRows(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3));
-
-    const { submitTeamRegistration } = await import('./teamActions');
-    const result = await submitTeamRegistration(input);
-
-    expect(result.ok).toBe(true);
-    expect(findCall('game_players', 'upsert')?.args[0]).toMatchObject({
-      team_number: 4,
+  it('kravet gir lag 3 → kjente medspillere havner på samme lag', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame());
+    lookupUserByEmailMock.mockResolvedValueOnce({
+      id: KNOWN_USER_ID,
+      name: 'Kjent Bruker',
+      email: 'a@x',
     });
-    // The mock cannot filter rows, so pin the filter itself: without it a team
-    // of withdrawn players keeps its number, and a full grid answers game_full.
-    expect(teamRosterChain()).toContainEqual(
-      expect.objectContaining({ method: 'is', args: ['withdrawn_at', null] }),
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+        captainDisplay,
+        { data: null, error: null }, // child request insert (slot 1, known)
+        { data: null, error: null }, // child player upsert (slot 1)
+        { data: null, error: null }, // invitations insert (slot 2)
+        { data: null, error: null }, // invitations insert (slot 3)
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 3 } },
     );
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Lag C',
+      slots: threeSlots,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(findCall('game_players', 'upsert')?.args[0]).toMatchObject({
+      user_id: KNOWN_USER_ID,
+      team_number: 3,
+      flight_number: 3,
+    });
+    expect(findCall('game_registration_requests', 'delete')).toBeUndefined();
   });
 
-  it('manual_approval: forespørselen legges i kø uten å lese spillerlista — taket gjelder bare åpen påmelding', async () => {
+  it('kapteinen står alt på lista (already_on_roster) → fortsetter uten lagnummer', async () => {
+    // The claim writes nothing and gives the new team no number, so a known
+    // teammate is not put on a team that does not exist.
+    getGameByShortIdMock.mockResolvedValue(makeGame());
+    lookupUserByEmailMock.mockResolvedValueOnce({
+      id: KNOWN_USER_ID,
+      name: 'Kjent Bruker',
+      email: 'a@x',
+    });
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+        captainDisplay,
+        { data: null, error: null }, // child request insert (slot 1, known)
+        { data: null, error: null }, // invitations insert (slot 2)
+        { data: null, error: null }, // invitations insert (slot 3)
+      ],
+      { claim_open_registration_seat: { outcome: 'already_on_roster', team_number: null } },
+    );
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Lag C',
+      slots: threeSlots,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(findCall('game_players', 'upsert')).toBeUndefined();
+    expect(findCall('game_registration_requests', 'delete')).toBeUndefined();
+  });
+
+  it('manual_approval: forespørselen legges i kø uten plass-krav — taket gjelder bare åpen påmelding', async () => {
     // Owner's decision on #2011: the cap applies to open self-registration
     // only; a manual_approval request queues up and the organiser's approval
-    // is the gate (#662). So the action must not read the player list at all:
-    // the queue below has no roster answer, and the last assertion pins that
-    // no game_players call happens.
+    // is the gate (#662). So the action must neither claim a seat nor touch
+    // game_players.
     getGameByShortIdMock.mockResolvedValue(
       makeGame({ registration_mode: 'manual_approval' }),
     );
@@ -848,22 +840,10 @@ describe('#2011: åpen lag-påmelding stopper på spiller-taket', () => {
     });
 
     expect(result).toMatchObject({ ok: true, captainRequestId: CAPTAIN_REQUEST_ID });
+    expect(adminMock.__rpcCalls).toEqual([]);
     expect(
       adminMock.__fromCalls.filter((c) => c.table === 'game_players'),
     ).toEqual([]);
-  });
-
-  it('kompenserende sletting treffer 0 rader → svarer fortsatt game_full', async () => {
-    // The rollback delete matches nothing (the row is already gone), so
-    // expectAffected throws. The action logs that and still answers game_full;
-    // the captain must never see a 500 for a full game.
-    const input = fullGridUnderCap({ data: [], error: null });
-
-    const { submitTeamRegistration } = await import('./teamActions');
-    const result = await submitTeamRegistration(input);
-
-    expect(result).toEqual({ ok: false, error: 'game_full' });
-    expect(findCall('game_registration_requests', 'delete')).toBeDefined();
   });
 });
 

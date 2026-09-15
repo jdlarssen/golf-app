@@ -67,6 +67,8 @@ export type QueryResult = {
  * `rpc(name, params)` resolves to `{ data: rpcResults[name] ?? null, error:
  * null }`. Keyed (not FIFO) so `Promise.all([rpc('a'), rpc('b')])` is
  * order-independent. Inspect via `client.__rpcCalls` ({name, params}).
+ * `opts.rpcErrors` keys an RPC name to the `error` it resolves with instead
+ * (data null) — the shape PostgREST gives a failed function call.
  *
  * Inspect query calls via `client.__fromCalls` (FIFO list of
  * `{table, method, args}`).
@@ -80,7 +82,7 @@ export type QueryResult = {
 export function buildSupabaseMock(
   queue: QueryResult[],
   rpcResults: Record<string, unknown> = {},
-  opts: { strictSingle?: boolean } = {},
+  opts: { strictSingle?: boolean; rpcErrors?: Record<string, unknown> } = {},
 ) {
   const fromCalls: Array<{
     table: string;
@@ -192,6 +194,9 @@ export function buildSupabaseMock(
     }),
     rpc: vi.fn((name: string, params?: unknown) => {
       rpcCalls.push({ name, params });
+      if (opts.rpcErrors && name in opts.rpcErrors) {
+        return Promise.resolve({ data: null, error: opts.rpcErrors[name] });
+      }
       return Promise.resolve({
         data: name in rpcResults ? rpcResults[name] : null,
         error: null,
