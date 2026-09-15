@@ -45,7 +45,7 @@ procedure before continuing — each rule traces to a real failure in this repo'
 | I1 | Ground truth over memory. Never write an API call, column name, enum value, config key or path from recall. If you did not read it in THIS session (file, live schema, bundled docs), verify before writing it. | discipline only |
 | I2 | Evidence before claims. "Done / fixed / passing" requires command output produced in this session that shows it (T7). | discipline only |
 | I3 | Absence of error ≠ success. Operations that can silently no-op (0-row write, empty query result, skipped gate) must be positively confirmed. Where in-session confirmation is impossible (e.g. fire-and-forget mail — best-effort by design here), write `VERIFICATION GAP:` instead of claiming success. | partial — affected-rows helper (bindings §T3) |
-| I4 | Scope = the task. Every changed line must trace to the task. Unrelated finding → separate issue, never a drive-by edit. | discipline only |
+| I4 | Scope = the task's pattern. Every changed line must trace to the task — and the task includes every sibling site of the same defect (T2 step 3). A finding outside the diff → one line under «Observert, ikke rørt» in the PR body: never a drive-by edit, never a new issue (CLAUDE.md §Null-vekst). | discipline only |
 | I5 | Stop-loss. An attempt = an edit to product code intended to remove a symptom, followed by a rerun that still shows it. Probes and diagnostics are not attempts. Two failed attempts at the same symptom → stop editing, go to T8. Never attempt #3 on hope. | discipline only |
 | I6 | Unclear intent, requirements or architecture: interactive session → ask before writing code. Autonomous/unattended → pick the most reasonable interpretation, proceed, and record `ASSUMPTION:` in reply and notes. | discipline only |
 | I7 | Hooks are teammates. A block or denial is information about a rule, never an obstacle. Fix the cause; bypassing (skip-verify flags, force-push, bypass env vars, rewording a command to dodge a rule) is forbidden. Documented false-positive workarounds (bindings §Enforcement) are not dodges. | guard hooks deny bypass flags |
@@ -77,8 +77,8 @@ Catching yourself thinking the left column means the right column applies.
 | "It compiles / types are green" | The #641–#648 cluster compiled green, passed unit tests, and was broken end-to-end in prod. Green build ≠ executed flow (T7). |
 | "I remember this API/schema" | Hand-recalled schema is this repo's #1 bug source. Read it (I1). |
 | "The fix is obviously X" | Two obvious fixes failing in a row = your model of the bug is wrong. Diagnose first (T4). |
-| "I'll fix this other thing while I'm here" | Separate issue (I4). |
+| "I'll fix this other thing while I'm here" | Same defect pattern? Then it IS the task — fix it here. Different thing? One line under «Observert» in the PR body, not an issue (I4). |
 | "The test/hook is wrong, I'll bypass it" | The gate encodes a shipped failure. Fix the cause or go to T8 (I7). |
 | "Third attempt will probably work" | Stop-loss (I5). |
 | "Recording the assumption slows me down" | An unrecorded wrong assumption costs a debugging session later (I6). |
-| "I fixed the reported site, so the bug is fixed" | The same pattern usually lives in sibling modules (#666, #907). T2 step 3. |
+| "I fixed the reported site, so the bug is fixed" | The same pattern usually lives in sibling modules (#666, #907). T2 step 3 — and filing the siblings as new issues is not finishing (#2096). |
