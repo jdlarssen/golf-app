@@ -93,4 +93,42 @@ describe('BingoBangoBongoCard', () => {
     await fireEvent.press(screen.getByTestId('bbb-bingoUserId-p1'));
     expect(setHoleMock.mock.calls.length).toBe(callsBefore);
   });
+
+  // #2090: the card shows a poll snapshot that can be up to 10 s old, or older
+  // when a poll fails. «Ingen» on a category that already shows empty sends
+  // nothing (it could only write NULL over a flight-mate's registration the
+  // player never saw) and fetches again instead.
+  it('«Ingen» på en tom kategori sender ingenting og henter på nytt', async () => {
+    setHoleMock.mockClear();
+    const onSaved = jest.fn(async () => undefined);
+    await render(
+      <BingoBangoBongoCard
+        gameId="game-1"
+        holeNumber={3}
+        gameStatus="active"
+        players={PLAYERS}
+        saved={{
+          holeNumber: 3,
+          bingoUserId: 'p1',
+          bangoUserId: null,
+          bongoUserId: null,
+        }}
+        loaded
+        onSaved={onSaved}
+      />,
+    );
+
+    await fireEvent.press(screen.getByTestId('bbb-bangoUserId-ingen'));
+
+    expect(setHoleMock).not.toHaveBeenCalled();
+    expect(onSaved).toHaveBeenCalledTimes(1);
+
+    // A deliberate clear of a shown player still writes.
+    await fireEvent.press(screen.getByTestId('bbb-bingoUserId-ingen'));
+
+    expect(setHoleMock).toHaveBeenCalledWith(
+      { gameId: 'game-1', holeNumber: 3, key: 'bingoUserId', userId: null },
+      'active',
+    );
+  });
 });

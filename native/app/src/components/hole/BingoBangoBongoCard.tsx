@@ -12,6 +12,8 @@
 //     sender `{ key, userId }` for bango og ingenting om bingo og bongo, så to
 //     i flighten som registrerer ulike kategorier samtidig beholder begge.
 //     Hele raden fra poll-øyeblikksbildet ville nullet den andres kategori.
+//     Et tapp som ikke endrer det kortet viser («Ingen» på en tom kategori),
+//     sender ingenting og henter på nytt (#2090): bildet kan være gammelt.
 //     Har hentingen IKKE lyktes, er knappene likevel låst, med en ærlig
 //     forklaring: uten kjent tilstand viser kortet tomme rader, så et tapp
 //     ville overskrive en registrering i den kategorien som spilleren ikke
@@ -23,6 +25,7 @@
 //     er det den norske meldingen spilleren får.
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { isBingoBangoBongoNoOp } from '../../../../../lib/bbb/mergeBingoBangoBongoCategory';
 import type { BingoBangoBongoHoleInput } from '../../../../../lib/scoring/modes/types';
 import { setBingoBangoBongoHole } from '../../data/choices';
 import { describeChoiceFailure } from '../../lib/actionFeedback';
@@ -84,6 +87,19 @@ export function BingoBangoBongoCard({
 
   async function select(key: CategoryKey, userId: string | null) {
     if (locked) return;
+    if (isBingoBangoBongoNoOp(current, key, userId)) {
+      // Samme som vises: ingen skriving, bare en fersk henting. Feiler den,
+      // står bildet som før, akkurat som når pollingen feiler.
+      setSaving(true);
+      try {
+        await onSaved();
+      } catch {
+        // Neste poll prøver igjen.
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     // Overlaget viser hele raden; bare den trykte kategorien sendes.
     const next: BingoBangoBongoHoleInput = { ...current, holeNumber, [key]: userId };
     setPending(next);
