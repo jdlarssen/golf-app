@@ -67,7 +67,7 @@ describe('DeleteAccount', () => {
     (deleteAccount as jest.Mock).mockResolvedValue({ ok: true, mode: 'anonymized' });
   });
 
-  it.each<DeleteBlockReason>(['admin_account', 'active_engagements'])(
+  it.each<DeleteBlockReason>(['admin_account', 'active_engagements', 'sole_club_owner'])(
     'viser banneret og ingen slette-knapp når kontoen er blokkert (%s)',
     async (blocked) => {
       (fetchDeleteStatus as jest.Mock).mockResolvedValue({ ok: true, blocked });

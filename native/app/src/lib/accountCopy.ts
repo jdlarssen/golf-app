@@ -43,7 +43,10 @@
  * Selve REGELEN gjentas ikke: appen spør serveren og viser svaret, den avgjør
  * ingenting selv (ett regel-hjem, AGENTS trap 4).
  */
-export type DeleteBlockReason = 'admin_account' | 'active_engagements';
+export type DeleteBlockReason =
+  | 'admin_account'
+  | 'active_engagements'
+  | 'sole_club_owner';
 
 /**
  * Alt som kan gå galt i slette-flyten, både på status-sjekken og på selve
@@ -65,6 +68,7 @@ export type AccountDeleteFailure =
   | 'unauthorized'
   | 'admin_account'
   | 'active_engagements'
+  | 'sole_club_owner'
   | 'status_failed'
   | 'delete_failed';
 
@@ -84,6 +88,9 @@ export function describeDeleteBlock(reason: DeleteBlockReason): string {
     // to nøkler, to setninger.
     case 'active_engagements':
       return 'Du arrangerer noe som ikke er avsluttet ennå. Runder avslutter du i appen eller på nettsiden, cup og liga på nettsiden. Etterpå kan du slette kontoen.';
+    // = profile.deleteAccount.soleClubOwnerBanner (#1910)
+    case 'sole_club_owner':
+      return 'Du er eneste eier av en klubb som har andre medlemmer. Gjør et annet medlem til eier på klubbsiden. Etterpå kan du slette kontoen.';
   }
 }
 
@@ -123,6 +130,9 @@ export function describeDeleteFailure(reason: AccountDeleteFailure): string {
     // står her, ikke i datalaget.
     case 'active_engagements':
       return 'Du arrangerer fortsatt noe som ikke er avsluttet. Avslutt det, så kan du slette kontoen.';
+    // = profile.deleteAccount.errors.sole_club_owner (#1910)
+    case 'sole_club_owner':
+      return 'Du er fortsatt eneste eier av en klubb. Gjør et annet medlem til eier, så kan du slette kontoen.';
     case 'status_failed':
       return 'Fikk ikke sjekket om kontoen kan slettes. Prøv igjen.';
     // = profile.deleteAccount.errors.delete_failed

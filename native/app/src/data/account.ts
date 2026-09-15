@@ -73,7 +73,9 @@ export type AccountDeleteResult =
  * `undefined` til sin egen «dette gikk ikke»-kode.
  */
 function readBlockReason(value: unknown): DeleteBlockReason | undefined {
-  return value === 'admin_account' || value === 'active_engagements'
+  return value === 'admin_account' ||
+    value === 'active_engagements' ||
+    value === 'sole_club_owner'
     ? value
     : undefined;
 }
