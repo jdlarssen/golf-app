@@ -189,6 +189,37 @@ function resolveTeamSize(
 }
 
 /**
+ * The active roster as the open team-registration cap sees it (#2011): the
+ * team numbers in use, and the seats already held.
+ *
+ * A player outside a team holds one seat. A team holds all of its seats from
+ * the moment it exists: its e-mail-invited teammates have only an invitations
+ * row until they join through attachToCaptainTeam, which checks no cap —
+ * counting rows alone let every captain in while those seats still looked
+ * empty. A team with more active rows than the team size holds every one of
+ * them: for a self-registration game the organiser's save validates the roster
+ * as a draft, so no balance check stops an over-full team.
+ */
+function tallyActiveRoster(
+  roster: { team_number: number | null }[],
+  teamSize: number,
+): { takenTeamNumbers: Set<number>; reservedSeats: number } {
+  const rowsPerTeam = new Map<number, number>();
+  let reservedSeats = 0;
+  for (const { team_number } of roster) {
+    if (team_number === null) {
+      reservedSeats += 1;
+    } else {
+      rowsPerTeam.set(team_number, (rowsPerTeam.get(team_number) ?? 0) + 1);
+    }
+  }
+  for (const rows of rowsPerTeam.values()) {
+    reservedSeats += Math.max(rows, teamSize);
+  }
+  return { takenTeamNumbers: new Set(rowsPerTeam.keys()), reservedSeats };
+}
+
+/**
  * Kaptein submitter lag-form. Returnerer aggregert resultat per slot;
  * suksess på kaptein-raden men feil på en medspiller ruller ikke tilbake
  * resten — vi får et lag med en åpen plass, som kaptein kan fylle senere
@@ -322,26 +353,23 @@ export async function submitTeamRegistration(
       .is('withdrawn_at', null)
       .returns<{ team_number: number | null }[]>();
     if (rosterError) {
+      // Without the roster there is no knowing which team numbers are taken or
+      // how many seats are left, and a guess would hand out team 1 — perhaps on
+      // top of a team that already has it. Refuse before the captain row exists
+      // so a retry starts clean. registerForOpenGame's solo cap count still
+      // fails open (#661); this read cannot, because it also picks the number.
       console.error('[submitTeamRegistration] active roster lookup failed', rosterError);
-      // Fail-open like registerForOpenGame (#661): a transient DB error must not
-      // close registration.
-    } else {
-      const roster = activeRoster ?? [];
-      takenTeamNumbers = new Set(
-        roster.flatMap((r) => (r.team_number === null ? [] : [r.team_number])),
-      );
-      const cap = teamModePlayerCap(game.game_mode, teamSize);
-      if (cap !== null) {
-        // A team holds all of its seats from the moment it exists. Its
-        // e-mail-invited teammates have only an invitations row until they join
-        // through attachToCaptainTeam, which checks no cap — counting rows alone
-        // let every captain in while those seats still looked empty.
-        const playersWithoutTeam = roster.filter((r) => r.team_number === null).length;
-        const reservedSeats = playersWithoutTeam + takenTeamNumbers.size * teamSize;
-        if (reservedSeats + teamSize > cap) {
-          return { ok: false, error: 'game_full' };
-        }
-      }
+      return { ok: false, error: 'db_error' };
+    }
+    // Seats, not rows: see tallyActiveRoster for why a team holds its full size.
+    const { takenTeamNumbers: taken, reservedSeats } = tallyActiveRoster(
+      activeRoster ?? [],
+      teamSize,
+    );
+    takenTeamNumbers = taken;
+    const cap = teamModePlayerCap(game.game_mode, teamSize);
+    if (cap !== null && reservedSeats + teamSize > cap) {
+      return { ok: false, error: 'game_full' };
     }
   }
 
