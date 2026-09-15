@@ -53,6 +53,7 @@ describe('reconcileBingoBangoBongoHoles', () => {
     // the row as it stood before our commit.
     const afterSave = applyBbbLocalSave(EMPTY, 2, 10, 'bangoUserId', 'B');
 
+    expect(afterSave.holes).toEqual([hole(10, null, 'B', null)]);
     expect(applyBbbRead(afterSave, 1, [])).toBe(afterSave);
   });
 
@@ -61,6 +62,9 @@ describe('reconcileBingoBangoBongoHoles', () => {
     // bingo 'C' is what the database holds.
     const afterRead = applyBbbRead(EMPTY, 1, [hole(10, null, 'B', null)]);
     const afterSave = applyBbbLocalSave(afterRead, 2, 10, 'bingoUserId', 'A');
+
+    // The local save merges only its category: the flight-mate's bango stays.
+    expect(afterSave.holes).toEqual([hole(10, 'A', 'B', null)]);
 
     const final = applyBbbRead(afterSave, 3, [hole(10, 'C', 'B', null)]);
 
