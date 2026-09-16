@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { computeScoreDifferential } from '@/lib/scoring/scoreDifferential';
 import { getRatingForGender } from '@/lib/games/teeRating';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /**
  * Beregner og lagrer WHS score-differensial for hvert kvalifisert spillerpar i
@@ -44,10 +45,16 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
         .from('game_players')
         .select('user_id, tee_gender, course_handicap')
         .eq('game_id', gameId),
-      admin
-        .from('scores')
-        .select('user_id, hole_number, strokes')
-        .eq('game_id', gameId),
+      selectAllRowsResult(
+        (from, to) =>
+          admin
+            .from('scores')
+            .select('user_id, hole_number, strokes')
+            .eq('game_id', gameId)
+            .order('id')
+            .range(from, to),
+        'persistScoreDifferentials scores',
+      ),
     ]);
 
     if (gameRes.error) {

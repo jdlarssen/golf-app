@@ -9,6 +9,7 @@ import {
 import { notify } from '@/lib/notifications/notify';
 import type { CourseHoleRow } from '@/lib/supabase/queryFragments';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /**
  * Best-effort: fyrer ÉTT bundlet `achievement_unlocked`-varsel per spiller som
@@ -51,11 +52,17 @@ export async function notifyAchievementUnlocks(gameId: string): Promise<number> 
         .returns<
           { user_id: string; tee_gender: ScoringGender | null; withdrawn_at: string | null }[]
         >(),
-      admin
-        .from('scores')
-        .select('user_id, hole_number, strokes')
-        .eq('game_id', gameId)
-        .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>(),
+      selectAllRowsResult(
+        (from, to) =>
+          admin
+            .from('scores')
+            .select('user_id, hole_number, strokes')
+            .eq('game_id', gameId)
+            .order('id')
+            .range(from, to)
+            .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>(),
+        'notifyAchievementUnlocks scores',
+      ),
     ]);
 
     if (gameRes.error) {

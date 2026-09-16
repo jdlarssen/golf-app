@@ -23,6 +23,7 @@ import {
 } from '@/lib/scoring/modes/types';
 import { firstName } from '@/lib/firstName';
 import type { GameFinishedNotificationMode } from './gameFinishedNotification';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 export interface FinishedMailRecipient {
   /**
@@ -176,11 +177,17 @@ export async function buildGameFinishedRecipients(
   // Stableford-grenen: hent scores + course_holes for å kunne kjøre
   // mode-router-en. Begge queries i parallell for hastighet.
   const [scoresRes, holesRes] = await Promise.all([
-    supabase
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', gameId)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        supabase
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', gameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'gameFinishedRecipients scores',
+    ),
     supabase
       .from('course_holes')
       .select(COURSE_HOLES_SELECT)
@@ -375,11 +382,17 @@ async function buildMatchplayRecipients(
   }[],
 ): Promise<FinishedMailRecipient[]> {
   const [scoresRes, holesRes] = await Promise.all([
-    supabase
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', gameId)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        supabase
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', gameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'gameFinishedRecipients scores',
+    ),
     supabase
       .from('course_holes')
       .select(COURSE_HOLES_SELECT)
@@ -543,11 +556,17 @@ async function buildSoloStrokeplayRecipients(
   }[],
 ): Promise<FinishedMailRecipient[]> {
   const [scoresRes, holesRes] = await Promise.all([
-    supabase
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', gameId)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        supabase
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', gameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'gameFinishedRecipients scores',
+    ),
     supabase
       .from('course_holes')
       .select(COURSE_HOLES_SELECT)
@@ -666,11 +685,17 @@ async function buildTexasScrambleRecipients(
   }[],
 ): Promise<FinishedMailRecipient[]> {
   const [scoresRes, holesRes] = await Promise.all([
-    supabase
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', gameId)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        supabase
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', gameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'gameFinishedRecipients scores',
+    ),
     supabase
       .from('course_holes')
       .select(COURSE_HOLES_SELECT)
