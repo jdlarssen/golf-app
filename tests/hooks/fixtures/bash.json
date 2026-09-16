@@ -20,9 +20,99 @@
     "payload": { "tool_input": { "command": "gh pr merge 5 --squash --delete-branch" } }
   },
   {
-    "name": "gh pr merge --rebase → context (stagingbevis-påminnelse #1076)",
+    "name": "gh pr merge --rebase, ugyldig PR-JSON → context (fail-open påminnelse, #1303)",
     "expect": "context",
+    "setup": "pr-invalid-json",
     "payload": { "tool_input": { "command": "gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: gh pr merge, bruker-synlig fix uten label → deny",
+    "expect": "deny",
+    "setup": "pr-visible-unlabeled",
+    "expect_reason_contains": ["staging-verify", "needs-manual-qa"],
+    "payload": { "tool_input": { "command": "gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: gh pr merge, bruker-synlig med staging-verified → none (sperren slipper, ingen påminnelse)",
+    "expect": "none",
+    "setup": "pr-visible-staging-verified",
+    "payload": { "tool_input": { "command": "gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: gh pr merge, bruker-synlig med needs-manual-qa → none (unntaksveien)",
+    "expect": "none",
+    "setup": "pr-visible-needs-manual-qa",
+    "payload": { "tool_input": { "command": "gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: gh pr merge, bare docs/chore/refactor/test uten label → none",
+    "expect": "none",
+    "setup": "pr-internal-only",
+    "payload": { "tool_input": { "command": "gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: gh pr merge, eneste fix har [no-changelog] uten label → none",
+    "expect": "none",
+    "setup": "pr-fix-no-changelog",
+    "payload": { "tool_input": { "command": "gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: gh pr ready && gh pr merge uten label → deny (mønsteret fra #2003)",
+    "expect": "deny",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "gh pr ready 5 && gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: gh pr merge med PR-URL, bruker-synlig uten label → deny",
+    "expect": "deny",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "gh pr merge https://github.com/jdlarssen/golf-app/pull/5 --rebase" } }
+  },
+  {
+    "name": "#1303 falskt treff: echo som nevner gh pr merge → none, ingen pr-merge-staging-hendelse",
+    "expect": "none",
+    "setup": "pr-visible-unlabeled",
+    "assert_no_log_rule": "pr-merge-staging",
+    "payload": { "tool_input": { "command": "echo \"EXPECT: PR #5 merged via gh pr merge\"" } }
+  },
+  {
+    "name": "#1303 falskt treff: gh pr merge i heredoc-innhold → none, ingen hendelse",
+    "expect": "none",
+    "setup": "pr-visible-unlabeled",
+    "assert_no_log_rule": "pr-merge-staging",
+    "payload": { "tool_input": { "command": "cat > /tmp/merge.sh <<'EOF'\ngh pr merge 5 --rebase --delete-branch\nEOF\nchmod +x /tmp/merge.sh" } }
+  },
+  {
+    "name": "#1303 falskt treff: ukvotert echo gh pr merge etter && → none, ingen hendelse",
+    "expect": "none",
+    "setup": "pr-visible-unlabeled",
+    "assert_no_log_rule": "pr-merge-staging",
+    "payload": { "tool_input": { "command": "gh pr checks 5 && echo gh pr merge 5 neste" } }
+  },
+  {
+    "name": "#1303: gh pr merge -R annet repo → context (ingen sperre)",
+    "expect": "context",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "gh pr merge 3 -R jdlarssen/claude-plugins --rebase" } }
+  },
+  {
+    "name": "#1303: cd inn i annen mappe && gh pr merge → context (ingen sperre)",
+    "expect": "context",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "cd ~/Dokumenter/GitHub/claude-plugins && gh pr merge 3 --rebase" } }
+  },
+  {
+    "name": "#1303: gh pr merge uten nummer, oppslaget feiler → context (dagens påminnelse)",
+    "expect": "context",
+    "setup": "pr-lookup-fails",
+    "payload": { "tool_input": { "command": "gh pr merge --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: gh pr merge med nummer, gh/nett feiler → context med «Klarte ikke sjekke labelen»",
+    "expect": "context",
+    "setup": "pr-lookup-fails",
+    "expect_reason_contains": ["Klarte ikke sjekke labelen"],
+    "payload": { "tool_input": { "command": "gh pr merge 5 --rebase" } }
   },
   {
     "name": "git push --force → ask",

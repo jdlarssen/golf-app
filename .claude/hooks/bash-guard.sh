@@ -10,6 +10,7 @@
 #            CLI mot prod (#1074) — engangs-luke: touch .claude/approve-prod
 #   • DENY   --no-verify         omgår commit-msg/pre-commit/pre-push (forbudt)
 #   • DENY   gh pr merge --squash «Squash brukes ikke» → bruk --rebase
+#   • DENY   gh pr merge på bruker-synlig PR uten staging-verified/needs-manual-qa (#1303)
 #   • ASK    git push --force     krever eksplisitt godkjenning (lease er OK)
 #   • REMIND gh issue create uten --milestone (mandatory milestone-regel)
 #   • REMIND gh pr create         README-friskhet + Closes #N i body
@@ -129,13 +130,90 @@ $(cat "$f" 2>/dev/null)"
     fi ;;
 esac
 
-# ── gh pr merge: DENY squash (rebase-only), ellers REMIND stagingbevis-porten (#1076) ──
+# ── gh pr merge: DENY squash (rebase-only), DENY bruker-synlig PR uten stagingbevis (#1303) ──
+# Squash sjekkes først og uendret (substring-match). Stagingporten slår bare til
+# når `gh pr merge` står som en EGEN kommando — i starten eller etter ; & | eller
+# linjeskift — med heredoc-innhold fjernet og quotede strenger erstattet av Q.
+# Da slipper echo/heredoc/PR-body-prosa som bare nevner mergen (16 av 25 logg-
+# hendelser før #1303 var slike falske treff).
+#
+# Bruker-synlig = samme regel som knapp-kortet (lib/loops/autoMerge.ts
+# isUserVisibleByCommits): ≥1 commit med feat|fix|perf-prefiks uten
+# [no-changelog]. Regexen under holdes i takt med TS-kopien av
+# tests/hooks/prMergeParity.test.ts — endre begge i samme commit.
+#
+# Fail-open til påminnelse: ukjent PR, annet repo/mappe, gh/nett/JSON-feil.
+# BASH_GUARD_PR_JSON peker på en stub-fil med `gh pr view --json labels,commits`-
+# utdata (fixture-harnessen, ingen nettavhengighet).
+USER_VISIBLE_PREFIX_RE='^(?:feat|fix|perf)(?:\([^)]*\))?!?:'
+PR_MERGE_REMIND_TEXT="Stagingbevis-porten (#1076/#1303): er PR-en bruker-synlig (feat/fix/perf-commit uten [no-changelog])? Da skal labelen staging-verified være satt før merge — hvis ikke, kjør staging-verify-skillet på PR-nummeret først (eller sett needs-manual-qa med begrunnelse i en kommentar). Docs/chore/refactor/test-PR-er passerer fritt."
 case "$cmd_stripped" in
   *"gh pr merge"*)
     case "$cmd_stripped" in
       *--squash*) emit_deny "squash-merge" "Squash brukes ikke i Tørny (mister granulær audit-trail per commit). Bruk: gh pr merge --rebase --delete-branch. Se CLAUDE.md → «Branch + PR-flyt»." ;;
-      *) emit_ctx "pr-merge-staging" "Stagingbevis-porten (#1076): er PR-en bruker-synlig (feat/fix)? Da skal labelen staging-verified være satt før merge — hvis ikke, kjør staging-verify-skillet på PR-nummeret først (eller sett needs-manual-qa med begrunnelse i en kommentar). Docs/chore/refactor/test-PR-er passerer fritt." ;;
-    esac ;;
+    esac
+    # Heredoc-kropper ut, quotede strenger → Q, kommandoskillere → linjeskift.
+    cmd_segments="$(printf '%s\n' "$cmd" | awk '
+      skip { t=$0; sub(/^[ \t]+/, "", t); if (t == word) skip=0; next }
+      match($0, /<<-?[ \t]*["'"'"']?[A-Za-z_][A-Za-z0-9_]*/) {
+        w=substr($0, RSTART, RLENGTH); sub(/^<<-?[ \t]*["'"'"']?/, "", w)
+        word=w; skip=1; print substr($0, 1, RSTART-1); next
+      }
+      { print }' | sed -E "s/'[^']*'/Q/g; s/\"[^\"]*\"/Q/g" | tr ';&|' '\n\n\n')"
+    merge_seg="$(printf '%s\n' "$cmd_segments" | grep -E '^[[:space:]]*gh[[:space:]]+pr[[:space:]]+merge([[:space:]]|$)' | head -n1)"
+    if [ -n "$merge_seg" ]; then
+      # Posisjonelt argument (nummer, URL eller branch); flagg med verdi hoppes over.
+      pr_arg="" other_repo=""
+      set -f
+      set -- $merge_seg
+      set +f
+      shift 3
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          -R|--repo) [ "${2:-}" != "jdlarssen/golf-app" ] && other_repo=1; shift; [ $# -gt 0 ] && shift; continue ;;
+          --repo=*) [ "${1#--repo=}" != "jdlarssen/golf-app" ] && other_repo=1 ;;
+          -b|--body|-F|--body-file|-t|--subject|-A|--author-email|--match-head-commit) shift; [ $# -gt 0 ] && shift; continue ;;
+          -*) : ;;
+          *) [ -z "$pr_arg" ] && pr_arg="$1" ;;
+        esac
+        shift
+      done
+      case "$pr_arg" in
+        https://github.com/*) case "$pr_arg" in https://github.com/jdlarssen/golf-app/*) : ;; *) other_repo=1 ;; esac ;;
+      esac
+      # cd inn i en annen mappe enn golf-app før mergen → ikke vår PR å sperre.
+      cd_other="$(printf '%s\n' "$cmd_segments" | grep -E '^[[:space:]]*cd[[:space:]]' | grep -v 'golf-app' | head -n1)"
+      if [ -n "$other_repo" ] || [ -n "$cd_other" ]; then
+        emit_ctx "pr-merge-staging" "$PR_MERGE_REMIND_TEXT"
+      fi
+      if [ -n "${BASH_GUARD_PR_JSON:-}" ]; then
+        pr_json="$(cat "$BASH_GUARD_PR_JSON" 2>/dev/null)"; pr_rc=$?
+      elif [ -n "$pr_arg" ]; then
+        pr_json="$(gh pr view "$pr_arg" --json number,labels,commits 2>/dev/null)"; pr_rc=$?
+      else
+        pr_json="$(gh pr view --json number,labels,commits 2>/dev/null)"; pr_rc=$?
+      fi
+      if [ "$pr_rc" -ne 0 ] || [ -z "$pr_json" ]; then
+        # Uten PR-nummer og uten PR på gjeldende branch: dagens påminnelse.
+        [ -z "$pr_arg" ] && emit_ctx "pr-merge-staging" "$PR_MERGE_REMIND_TEXT"
+        emit_ctx "pr-merge-staging" "$PR_MERGE_REMIND_TEXT Klarte ikke sjekke labelen — verifiser selv."
+      fi
+      verdict="$(printf '%s' "$pr_json" | jq -r --arg re "$USER_VISIBLE_PREFIX_RE" '
+        ([.labels[]?.name] | any(. == "staging-verified" or . == "needs-manual-qa")) as $cleared
+        | ([.commits[]?
+            | ((.messageHeadline // "") | gsub("^\\s+|\\s+$"; "") | test($re; "i"))
+              and (((.messageHeadline // "") + "\n\n" + (.messageBody // "")) | contains("[no-changelog]") | not)]
+           | any) as $visible
+        | if $cleared then "cleared" elif $visible then "block" else "internal" end' 2>/dev/null)"
+      case "$verdict" in
+        block)
+          emit_deny "pr-merge-staging" "Stagingbevis-sperren (#1303): PR-en er bruker-synlig (minst én feat/fix/perf-commit uten [no-changelog]) og mangler både staging-verified og needs-manual-qa. Gjør ett av to og kjør mergen på nytt: (1) kjør staging-verify-skillet på PR-nummeret — det setter staging-verified; eller (2) kan PR-en ikke staging-verifiseres i nettleseren (app-PR, prod-migrasjon, e-post), eller ba eieren om merge uten staging-test: sett labelen needs-manual-qa (gh pr edit <N> --add-label needs-manual-qa) og skriv begrunnelsen i en PR-kommentar, f.eks. «eier ba om merge uten staging-test». Se docs/agent-discipline/bindings.md §Enforcement." ;;
+        cleared|internal)
+          log_event "pr-merge-staging" "allow" ;;
+        *)
+          emit_ctx "pr-merge-staging" "$PR_MERGE_REMIND_TEXT Klarte ikke sjekke labelen — verifiser selv." ;;
+      esac
+    fi ;;
 esac
 
 # ── ASK: git push --force, men IKKE --force-with-lease (som rebase-flyten bruker) ──

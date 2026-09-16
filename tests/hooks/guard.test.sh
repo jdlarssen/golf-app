@@ -8,6 +8,9 @@
 # riktig hook-skript med CLAUDE_PROJECT_DIR pekt på en temp-katalog (loggen
 # lander der, aldri i repoet) og sammenligner beslutningen mot expect:
 #   deny | ask | context | none
+# expect_reason_contains:[…] krever at hver streng står i deny-/ask-grunnen eller
+# påminnelsesteksten; assert_no_log_rule:"<regel>" krever at fixturen ikke
+# skrev noen logglinje for den regelen (falske treff, #1303).
 # setup:"approve-prod" oppretter sentinel-filen før kjøring;
 # "approve-prod-stale" backdater den forbi 10-minutters-vinduet.
 # assert_sentinel_consumed verifiserer engangs-semantikken.
@@ -24,7 +27,7 @@ TMP="$(mktemp -d)"
 trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
 
 export CLAUDE_PROJECT_DIR="$TMP"
-unset APPROVE_PROD 2>/dev/null || true
+unset APPROVE_PROD BASH_GUARD_PR_JSON BASH_GUARD_ISSUE_COMMENTS_JSON 2>/dev/null || true
 
 SENTINEL="$TMP/.claude/approve-prod"
 pass=0
@@ -33,6 +36,7 @@ fail=0
 decide() { # hook-script <<< payload → deny|ask|context|none
   local hook_script="$1" payload="$2" out
   out="$(printf '%s' "$payload" | bash "$hook_script")"
+  printf '%s' "$out" > "$TMP/last-out.json"
   if [ -z "$out" ]; then
     printf 'none'
   else
@@ -42,6 +46,7 @@ decide() { # hook-script <<< payload → deny|ask|context|none
 
 run_fixture_file() { # fixtures.json hook-script
   local file="$1" hook_script="$2" count i name expect setup consume payload decision ok
+  local reason_needles no_log_rule log_before log_after needle reason
   count="$(jq 'length' "$file")"
   i=0
   while [ "$i" -lt "$count" ]; do
@@ -50,6 +55,8 @@ run_fixture_file() { # fixtures.json hook-script
     setup="$(jq -r ".[$i].setup // empty" "$file")"
     consume="$(jq -r ".[$i].assert_sentinel_consumed // empty" "$file")"
     payload="$(jq -c ".[$i].payload" "$file")"
+    reason_needles="$(jq -r ".[$i].expect_reason_contains // [] | .[]" "$file")"
+    no_log_rule="$(jq -r ".[$i].assert_no_log_rule // empty" "$file")"
 
     case "$setup" in
       approve-prod)
@@ -70,10 +77,34 @@ run_fixture_file() { # fixtures.json hook-script
       closing-comment-inline-mention)
         printf '%s' '[{"id":1,"body":"## 📋 Forge-kontrakt tilgjengelig\n\n- Closing-kommentar etter merge: `## Teknisk` (inkl. avvik) + `## Funksjonell`."}]' > "$TMP/issue-comments.json"
         export BASH_GUARD_ISSUE_COMMENTS_JSON="$TMP/issue-comments.json" ;;
+      # #1303: stubber `gh pr view --json number,labels,commits` for merge-sperren.
+      pr-visible-unlabeled)
+        printf '%s' '{"number":5,"labels":[],"commits":[{"messageHeadline":"docs: x","messageBody":"Refs #5"},{"messageHeadline":"fix(cup): fail closed","messageBody":"Refs #5"}]}' > "$TMP/pr.json"
+        export BASH_GUARD_PR_JSON="$TMP/pr.json" ;;
+      pr-visible-staging-verified)
+        printf '%s' '{"number":5,"labels":[{"name":"staging-verified"}],"commits":[{"messageHeadline":"fix(cup): fail closed","messageBody":"Refs #5"}]}' > "$TMP/pr.json"
+        export BASH_GUARD_PR_JSON="$TMP/pr.json" ;;
+      pr-visible-needs-manual-qa)
+        printf '%s' '{"number":5,"labels":[{"name":"autonomy:review"},{"name":"needs-manual-qa"}],"commits":[{"messageHeadline":"feat(native)!: x","messageBody":"Refs #5"}]}' > "$TMP/pr.json"
+        export BASH_GUARD_PR_JSON="$TMP/pr.json" ;;
+      pr-internal-only)
+        printf '%s' '{"number":5,"labels":[],"commits":[{"messageHeadline":"docs(x): a","messageBody":""},{"messageHeadline":"chore: b","messageBody":""},{"messageHeadline":"refactor(y): c","messageBody":""},{"messageHeadline":"test: d","messageBody":""},{"messageHeadline":"prefix fix: not a prefix","messageBody":""}]}' > "$TMP/pr.json"
+        export BASH_GUARD_PR_JSON="$TMP/pr.json" ;;
+      pr-fix-no-changelog)
+        printf '%s' '{"number":5,"labels":[],"commits":[{"messageHeadline":"fix(hooks): x","messageBody":"[no-changelog]\n\nRefs #5"},{"messageHeadline":"test(hooks): y","messageBody":""}]}' > "$TMP/pr.json"
+        export BASH_GUARD_PR_JSON="$TMP/pr.json" ;;
+      pr-invalid-json)
+        printf '%s' '{"number":5,"labels":[' > "$TMP/pr.json"
+        export BASH_GUARD_PR_JSON="$TMP/pr.json" ;;
+      pr-lookup-fails)
+        rm -f "$TMP/pr-missing.json"
+        export BASH_GUARD_PR_JSON="$TMP/pr-missing.json" ;;
     esac
 
+    log_before="$(grep -c "\"rule\":\"${no_log_rule:-__none__}\"" "$TMP/.claude/logs/guard-events.jsonl" 2>/dev/null || true)"
+
     decision="$(decide "$hook_script" "$payload")"
-    unset BASH_GUARD_ISSUE_COMMENTS_JSON
+    unset BASH_GUARD_ISSUE_COMMENTS_JSON BASH_GUARD_PR_JSON
 
     ok=1
     [ "$decision" = "$expect" ] || ok=0
@@ -82,6 +113,23 @@ run_fixture_file() { # fixtures.json hook-script
       decision="$decision (sentinel ikke konsumert)"
     fi
     rm -f "$SENTINEL"
+
+    if [ -n "$reason_needles" ]; then
+      reason="$(jq -r '.hookSpecificOutput | (.permissionDecisionReason // .additionalContext // "")' "$TMP/last-out.json" 2>/dev/null)"
+      while IFS= read -r needle; do
+        case "$reason" in
+          *"$needle"*) : ;;
+          *) ok=0; decision="$decision (grunnen mangler «$needle»)" ;;
+        esac
+      done <<< "$reason_needles"
+    fi
+    if [ -n "$no_log_rule" ]; then
+      log_after="$(grep -c "\"rule\":\"${no_log_rule}\"" "$TMP/.claude/logs/guard-events.jsonl" 2>/dev/null || true)"
+      if [ "${log_after:-0}" != "${log_before:-0}" ]; then
+        ok=0
+        decision="$decision (skrev $no_log_rule-hendelse)"
+      fi
+    fi
 
     if [ "$ok" -eq 1 ]; then
       pass=$((pass + 1))
