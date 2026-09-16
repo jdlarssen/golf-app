@@ -25,8 +25,10 @@
 // godt og prøver aldri igjen, og logger en ANNEN bruker inn på telefonen,
 // tømmer eier-vakten (`localOwner.ts`, #1942) dem før første drain. Copyen
 // lover derfor ikke levering, og sier forbeholdet rett ut.)
-import { supabase } from '../supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { currentDeviceUserId, supabase } from '../supabase';
 import { getDb, listQueue, wipeLocalData } from './db';
+import { LOCAL_DATA_OWNER_KEY } from './localOwner';
 import { drainQueue } from './syncWorker';
 
 /**
@@ -64,6 +66,23 @@ export type LogoutResult =
 async function pendingCount(): Promise<number> {
   const db = await getDb();
   return (await listQueue(db)).length;
+}
+
+/**
+ * Tilhører basen noen andre enn den som er innlogget? Bare et lesbart stempel
+ * OG en kjent bruker kan svare ja; alt annet går den vanlige veien, samme
+ * fail-open-lesning som vakten selv (`localOwner.ts`).
+ */
+async function ownedBySomeoneElse(): Promise<boolean> {
+  let stored: string | null;
+  try {
+    stored = await AsyncStorage.getItem(LOCAL_DATA_OWNER_KEY);
+  } catch {
+    return false;
+  }
+  if (!stored) return false;
+  const userId = await currentDeviceUserId();
+  return userId != null && stored !== userId;
 }
 
 /**
@@ -159,6 +178,17 @@ async function signOutAndConfirm(): Promise<boolean> {
 export async function logOut(opts?: {
   keepUnsent?: boolean;
 }): Promise<LogoutResult> {
+  // #1959: eierbytte-wipen kastet, og køen er forrige brukers. Drainen ville
+  // sendt radene under DENNE sesjonen (RLS avviser → karantene), spørsmålet om
+  // «uleverte slag» gjelder ikke denne spilleren, og wipen ville kastet dem.
+  // Logg ut og la alt ligge; vakten prøver wipen igjen ved neste innlogging.
+  if (await ownedBySomeoneElse()) {
+    if (!(await signOutAndConfirm())) {
+      return { ok: false, reason: 'signout-failed' };
+    }
+    return { ok: true };
+  }
+
   let pending = await pendingCount();
 
   if (pending > 0) {

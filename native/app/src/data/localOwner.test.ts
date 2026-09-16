@@ -147,11 +147,58 @@ describe('ensureLocalDataOwnerOnDevice', () => {
     await drainQueue('oppstart');
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
+
+  // #1959: wipen kaster under eierbyttet. A sine rader ligger igjen i basen,
+  // og ingen drain, uansett hvem som kaller den, skal sende dem under B.
+  it('sperrer drainen når wipen kaster ved eierbytte, og løfter sperren når neste forsøk lykkes', async () => {
+    const { supabase, currentDeviceUserId } = mocks();
+    const { logOut } = require('./logout') as typeof import('./logout');
+    const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+
+    await owner().ensureLocalDataOwnerOnDevice(USER_A);
+    supabase.auth.signOut.mockResolvedValue({ error: null });
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Network request failed' },
+    });
+    await typeStroke(USER_A, 4);
+    expect(await logOut({ keepUnsent: true })).toEqual({ ok: true });
+
+    supabase.rpc.mockClear();
+    currentDeviceUserId.mockResolvedValue(USER_B);
+
+    // Wipen kaster, akkurat én gang.
+    const dbModule = db();
+    const realWipe = dbModule.wipeLocalData;
+    const wipeSpy = jest
+      .spyOn(dbModule, 'wipeLocalData')
+      .mockRejectedValueOnce(new Error('database is locked'));
+
+    const err = await owner()
+      .ensureLocalDataOwnerOnDevice(USER_B)
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(owner().OwnerWipeFailedError);
+    expect(await storage().getItem(owner().LOCAL_DATA_OWNER_KEY)).toBe(USER_A);
+    expect(await queueLength()).toBe(1);
+
+    // Ekte drain mot ekte sqlite: null RPC-kall, raden står urørt.
+    await drainQueue('oppstart');
+    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(await queueLength()).toBe(1);
+
+    // «Prøv igjen» lykkes: basen tømmes, B stemples, sperren løftes.
+    wipeSpy.mockImplementation(realWipe);
+    expect(await owner().ensureLocalDataOwnerOnDevice(USER_B)).toBe('switched');
+    expect(await queueLength()).toBe(0);
+    const { isOwnerWipeBlocked } = require('./ownerWipeBlock') as typeof import('./ownerWipeBlock');
+    expect(isOwnerWipeBlocked()).toBe(false);
+  });
 });
 
 describe('ensureLocalDataOwner', () => {
-  it('lar stempelet stå på forrige eier når wipen kaster', async () => {
-    const { ensureLocalDataOwner } = owner();
+  it('lar stempelet stå på forrige eier når wipen kaster — og kaster den typede feilen', async () => {
+    const { ensureLocalDataOwner, OwnerWipeFailedError } = owner();
+    const cause = new Error('disken svarte ikke');
     let stored: string | null = USER_A;
     const store = {
       getStoredOwnerId: async () => stored,
@@ -159,15 +206,49 @@ describe('ensureLocalDataOwner', () => {
         stored = userId;
       },
       clear: jest.fn(async () => {
-        throw new Error('disken svarte ikke');
+        throw cause;
       }),
     };
 
-    await expect(ensureLocalDataOwner(USER_B, store)).rejects.toThrow('disken svarte ikke');
+    const err = await ensureLocalDataOwner(USER_B, store).catch((e: unknown) => e);
+    // #1959: kallerne skiller denne ene feilen fra resten — den holder
+    // sync-motoren av, alt annet er fortsatt fail-open.
+    expect(err).toBeInstanceOf(OwnerWipeFailedError);
+    expect((err as Error).cause).toBe(cause);
 
     // Ikke stemplet over: neste oppstart ser fortsatt A og prøver wipen igjen.
     // Motsatt rekkefølge ville skrevet B over A sine rester for godt.
     expect(store.clear).toHaveBeenCalledTimes(1);
     expect(stored).toBe(USER_A);
+  });
+
+  it.each([
+    ['first', null],
+    ['same', USER_B],
+  ] as const)('kaster aldri den typede feilen ved %s', async (expected, storedOwner) => {
+    const { ensureLocalDataOwner } = owner();
+    const store = {
+      getStoredOwnerId: async () => storedOwner,
+      setStoredOwnerId: async () => {},
+      clear: jest.fn(async () => {
+        throw new Error('skulle ikke vært kalt');
+      }),
+    };
+    await expect(ensureLocalDataOwner(USER_B, store)).resolves.toBe(expected);
+    expect(store.clear).not.toHaveBeenCalled();
+  });
+
+  it('andre feil beholder sin egen type (fail-open hos kalleren)', async () => {
+    const { ensureLocalDataOwner, OwnerWipeFailedError } = owner();
+    const store = {
+      getStoredOwnerId: async (): Promise<string | null> => {
+        throw new Error('AsyncStorage låst');
+      },
+      setStoredOwnerId: async () => {},
+      clear: jest.fn(async () => {}),
+    };
+    const err = await ensureLocalDataOwner(USER_B, store).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(OwnerWipeFailedError);
   });
 });
