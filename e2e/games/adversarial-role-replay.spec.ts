@@ -48,6 +48,13 @@ import {
  *       own cap) is rejected — service_role only.
  *     · A global admin can still insert a row with the user client.
  *
+ *   Role F — direct DELETE out of a cup match before start (#1937)
+ *     · A player's DELETE of their own row in a scheduled cup match leaves the
+ *       row in place.
+ *     · The cup organizer's (games.created_by) DELETE of a player's row in a cup
+ *       match leaves the row in place.
+ *     · The same organizer DELETE in a plain game succeeds (no false-block).
+ *
  * Assertions: HTTP redirect URL, or .select()-returns-0-rows. NEVER on Norwegian
  * copy (test discipline D). Hostile writes use supabase-js clients signed in as
  * the attacker role so we test RLS at the DB layer, not the server-action layer.
@@ -760,6 +767,177 @@ test.describe('Role E – player past the open-registration cap @lifecycle', () 
         `admin INSERT was rejected (${error?.code}: ${error?.message}) — admin insert policy missing!`,
       ).toBeNull();
       expect(await rowsFor(target!.id), 'the admin-added row should exist').toBe(1);
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role F — direct DELETE out of a cup match before start (#1937)
+// ---------------------------------------------------------------------------
+//
+// A missing game_players row in a cup match leaves the side short and blocks
+// auto-start forever (#1814). withdrawFromGame and the roster page refuse cup
+// matches, but only RLS stops a direct PostgREST DELETE: since 0178 neither
+// "self withdraw pre active" nor "creator delete" matches a row in a game with
+// tournament_id set. The cup withdrawal and the player swap run on the service
+// role and are not affected.
+//
+// Setup (service role): one tournament created by ADMIN_EMAIL and
+//   · cupSelf     — scheduled cup match by ADMIN_EMAIL, PLAYER_EMAIL on the roster
+//   · cupOrganise — scheduled cup match with created_by = PLAYER_EMAIL (non-admin),
+//                   an ephemeral player on the roster
+//   · plain       — scheduled plain game with created_by = PLAYER_EMAIL, the
+//                   other ephemeral player on the roster (control)
+// Every row is read back with the service role, so a surviving row cannot be
+// confused with one the attacker merely cannot see.
+test.describe('Role F – direct DELETE out of a cup match before start @lifecycle', () => {
+  test.skip(!envReady, `E2E-env mangler: ${skipReason}`);
+  test.describe.configure({ mode: 'serial' });
+
+  let tournamentId = '';
+  let cupSelfId = '';
+  let cupOrganiseId = '';
+  let plainId = '';
+  let playerUserId = '';
+  let targets: EphemeralPlayer[] = [];
+
+  async function rowExists(gameId: string, userId: string): Promise<boolean> {
+    const { data, error } = await adminClient()
+      .from('game_players')
+      .select('user_id')
+      .eq('game_id', gameId)
+      .eq('user_id', userId);
+    if (error) throw new Error(`rowExists failed: ${error.message}`);
+    return (data ?? []).length === 1;
+  }
+
+  test.beforeAll(async () => {
+    const admin = adminClient();
+
+    const { data: users } = await admin
+      .from('users')
+      .select('id, email, is_admin')
+      .in('email', [PLAYER_EMAIL!, ADMIN_EMAIL!]);
+    const player = (users ?? []).find((u: { email: string }) => u.email === PLAYER_EMAIL);
+    const organiser = (users ?? []).find((u: { email: string }) => u.email === ADMIN_EMAIL);
+    if (!player || !organiser) throw new Error('Player or admin user not found');
+    if (player.is_admin) throw new Error('PLAYER_EMAIL must be a non-admin for Role F');
+    playerUserId = player.id;
+
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    if (!tee) throw new Error('No tee_box available');
+
+    const { data: tournament, error: tErr } = await admin
+      .from('tournaments')
+      .insert({
+        name: `TEST-RoleF-Cup-${Date.now()}`,
+        team_1_name: 'Lag 1',
+        team_2_name: 'Lag 2',
+        status: 'active',
+        created_by: organiser.id,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    if (tErr || !tournament) throw new Error(`Tournament insert failed: ${tErr?.message}`);
+    tournamentId = tournament.id;
+
+    const base = {
+      course_id: tee.course_id,
+      tee_box_id: tee.id,
+      game_mode: 'singles_matchplay',
+      status: 'scheduled',
+    };
+    const { data: games, error: gErr } = await admin
+      .from('games')
+      .insert([
+        { ...base, name: `TEST-RoleF-CupSelf-${Date.now()}`, created_by: organiser.id, tournament_id: tournamentId },
+        { ...base, name: `TEST-RoleF-CupOrganise-${Date.now()}`, created_by: player.id, tournament_id: tournamentId },
+        { ...base, name: `TEST-RoleF-Plain-${Date.now()}`, created_by: player.id, tournament_id: null },
+      ])
+      .select('id, name')
+      .returns<{ id: string; name: string }[]>();
+    if (gErr || !games || games.length !== 3) throw new Error(`Game insert failed: ${gErr?.message}`);
+    cupSelfId = games.find((g) => g.name.startsWith('TEST-RoleF-CupSelf'))!.id;
+    cupOrganiseId = games.find((g) => g.name.startsWith('TEST-RoleF-CupOrganise'))!.id;
+    plainId = games.find((g) => g.name.startsWith('TEST-RoleF-Plain'))!.id;
+
+    targets = await seedEphemeralPlayers(2);
+    const { error: gpErr } = await admin.from('game_players').insert([
+      { game_id: cupSelfId, user_id: playerUserId },
+      { game_id: cupOrganiseId, user_id: targets[0]!.id },
+      { game_id: plainId, user_id: targets[1]!.id },
+    ]);
+    if (gpErr) throw new Error(`game_players insert failed: ${gpErr.message}`);
+  });
+
+  test.afterAll(async () => {
+    for (const id of [cupSelfId, cupOrganiseId, plainId]) {
+      if (id) await cleanupTestGame(id);
+    }
+    if (tournamentId) await adminClient().from('tournaments').delete().eq('id', tournamentId);
+    if (targets.length > 0) await deleteEphemeralPlayers(targets.map((t) => t.id));
+  });
+
+  test('player DELETE of own row in a scheduled cup match leaves the row', async () => {
+    test.slow();
+    expect(await rowExists(cupSelfId, playerUserId), 'non-vacuity: row seeded').toBe(true);
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { data, error } = await client
+        .from('game_players')
+        .delete()
+        .eq('game_id', cupSelfId)
+        .eq('user_id', playerUserId)
+        .select('user_id');
+      expect(error).toBeNull();
+      expect(data ?? [], 'RLS must match 0 rows').toHaveLength(0);
+      expect(await rowExists(cupSelfId, playerUserId), 'the cup row must survive').toBe(true);
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('organizer DELETE of a player row in a cup match leaves the row', async () => {
+    test.slow();
+    const target = targets[0]!;
+    expect(await rowExists(cupOrganiseId, target.id), 'non-vacuity: row seeded').toBe(true);
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { data, error } = await client
+        .from('game_players')
+        .delete()
+        .eq('game_id', cupOrganiseId)
+        .eq('user_id', target.id)
+        .select('user_id');
+      expect(error).toBeNull();
+      expect(data ?? [], 'RLS must match 0 rows').toHaveLength(0);
+      expect(await rowExists(cupOrganiseId, target.id), 'the cup row must survive').toBe(true);
+    } finally {
+      await client.auth.signOut();
+    }
+  });
+
+  test('organizer DELETE in a plain game still works (no false-block)', async () => {
+    test.slow();
+    const target = targets[1]!;
+    const client = await signedInClient(PLAYER_EMAIL!);
+    try {
+      const { data, error } = await client
+        .from('game_players')
+        .delete()
+        .eq('game_id', plainId)
+        .eq('user_id', target.id)
+        .select('user_id');
+      expect(error).toBeNull();
+      expect(data ?? [], 'the creator delete must match the row').toHaveLength(1);
+      expect(await rowExists(plainId, target.id), 'the plain-game row is gone').toBe(false);
     } finally {
       await client.auth.signOut();
     }
