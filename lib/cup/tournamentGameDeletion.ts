@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { GameStatus } from '@/lib/games/status';
+import { selectAllRows } from '@/lib/supabase/selectAllRows';
 
 /**
  * #1441 (owner-QA finding A): «når jeg sletter en cup for godt så slettes
@@ -108,13 +109,20 @@ export async function planTournamentGameDeletion(
     .map((h) => h.id);
   const scoredHostIds = new Set<string>();
   if (activeHostIds.length > 0) {
-    const { data: scoreRows, error: scoresError } = await supabase
-      .from('scores')
-      .select('game_id')
-      .in('game_id', activeHostIds)
-      .returns<{ game_id: string }[]>();
-    if (scoresError) throw scoresError;
-    for (const row of scoreRows ?? []) scoredHostIds.add(row.game_id);
+    // #1894: paged, because a response cut at the row cap would read a played
+    // host as «never played» — and this plan deletes those.
+    const scoreRows = await selectAllRows(
+      (from, to) =>
+        supabase
+          .from('scores')
+          .select('game_id')
+          .in('game_id', activeHostIds)
+          .order('id')
+          .range(from, to)
+          .returns<{ game_id: string }[]>(),
+      'planTournamentGameDeletion scores',
+    );
+    for (const row of scoreRows) scoredHostIds.add(row.game_id);
   }
 
   const hostIdsToDelete = selectNeverPlayedHostGameIds(

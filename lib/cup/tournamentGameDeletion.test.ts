@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { createAdminClientMock } from '@/lib/supabase/testing/adminClientMock';
+
+let adminClient: unknown;
+vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => adminClient }));
+
 import {
+  planTournamentGameDeletion,
   selectNeverPlayedHostGameIds,
   type CupHostGameForDeletion,
 } from './tournamentGameDeletion';
@@ -50,5 +56,40 @@ describe('selectNeverPlayedHostGameIds', () => {
       { id: 'dup', status: 'draft', hasScores: false },
     ];
     expect(selectNeverPlayedHostGameIds(hosts)).toEqual(['dup', 'dup']);
+  });
+});
+
+// #1894: the only destructive scores read. A response cut at the row cap
+// would read a played host as «never played» and delete it.
+describe('planTournamentGameDeletion — scores past the row cap', () => {
+  it('keeps an active host whose scores only show up on page 2', async () => {
+    const fake = createAdminClientMock({
+      respond: (op) => {
+        if (op.table === 'games') {
+          return {
+            data: [
+              { id: 'g-big', status: 'active', source_game_id: null },
+              { id: 'g-late', status: 'active', source_game_id: null },
+            ],
+          };
+        }
+        // Page 1 is a full 1 000 rows of g-big; g-late's only row is on page 2.
+        const [from] = op.range ?? [0, 0];
+        return from === 0
+          ? { data: Array.from({ length: 1000 }, () => ({ game_id: 'g-big' })) }
+          : from === 1000
+            ? { data: [{ game_id: 'g-late' }] }
+            : { data: [] };
+      },
+    });
+    adminClient = fake.client;
+
+    const plan = await planTournamentGameDeletion('t1');
+
+    expect(plan.hostIdsToDelete).toEqual([]);
+    expect(fake.ops.filter((op) => op.table === 'scores').map((op) => op.range)).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
   });
 });
