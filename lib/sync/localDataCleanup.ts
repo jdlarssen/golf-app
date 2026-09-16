@@ -150,7 +150,16 @@ export async function prepareLogout(deps: {
 export async function finishAccountDeletion(deps: {
   clear: () => Promise<void>;
   clearStoredOwner: () => void;
-}): Promise<'cleared' | 'clear_failed'> {
+  /**
+   * #1959: false when the stamp names someone other than the deleted account
+   * — the rows on board are that user's, and their account still exists.
+   * Omitted → treated as a match.
+   */
+  ownerMatches?: () => boolean;
+}): Promise<'cleared' | 'clear_failed' | 'kept'> {
+  // Same rule as logout: never clear another user's rows, never drop their
+  // stamp — the switch guard retries the wipe at their next login.
+  if (deps.ownerMatches && !deps.ownerMatches()) return 'kept';
   let outcome: 'cleared' | 'clear_failed' = 'cleared';
   try {
     await deps.clear();
@@ -174,7 +183,10 @@ export async function finishAccountDeletion(deps: {
 export async function drainBeforeDeletion(
   drain: () => Promise<unknown>,
   timeoutMs: number,
+  ownerMatches?: () => boolean,
 ): Promise<void> {
+  // #1959: someone else's rows would be pushed under this session.
+  if (ownerMatches && !ownerMatches()) return;
   const run = Promise.resolve()
     .then(drain)
     .then(
@@ -297,10 +309,28 @@ export async function prepareLogoutBrowser(
  */
 export async function drainBeforeDeletionBrowser(): Promise<void> {
   if (typeof window === 'undefined') return;
-  await drainBeforeDeletion(async () => {
-    const { drainQueue } = await import('./syncWorker');
-    return drainQueue();
-  }, LOGOUT_DRAIN_TIMEOUT_MS);
+  const matches = await ownerMatchesSessionBrowser();
+  await drainBeforeDeletion(
+    async () => {
+      const { drainQueue } = await import('./syncWorker');
+      return drainQueue();
+    },
+    LOGOUT_DRAIN_TIMEOUT_MS,
+    () => matches,
+  );
+}
+
+/**
+ * #1959 reading of the stamp for the deletion path: no stamp or no readable
+ * session → nothing to compare, treat as a match (same fail-open reading as
+ * the logout path). Read from local storage, so it still works after the
+ * server revoked the session.
+ */
+async function ownerMatchesSessionBrowser(): Promise<boolean> {
+  const stored = getStoredOwnerIdBrowser();
+  if (stored == null) return true;
+  const sessionUserId = await getSessionUserIdBrowser();
+  return sessionUserId == null || stored === sessionUserId;
 }
 
 /**
@@ -309,11 +339,13 @@ export async function drainBeforeDeletionBrowser(): Promise<void> {
  * account still exists, and so must its strokes.
  */
 export async function finishAccountDeletionBrowser(): Promise<
-  'cleared' | 'clear_failed'
+  'cleared' | 'clear_failed' | 'kept'
 > {
   if (typeof window === 'undefined') return 'cleared';
+  const matches = await ownerMatchesSessionBrowser();
   return finishAccountDeletion({
     clear: clearAllLocalData,
     clearStoredOwner: clearStoredOwnerBrowser,
+    ownerMatches: () => matches,
   });
 }

@@ -282,7 +282,37 @@ describe('finishAccountDeletion', () => {
   });
 });
 
+describe('finishAccountDeletion — #1959 owner mismatch', () => {
+  it("stamp names someone else → keeps their rows AND their stamp", async () => {
+    const deps = {
+      clear: vi.fn(async () => {}),
+      clearStoredOwner: vi.fn(),
+      ownerMatches: () => false,
+    };
+    const result = await finishAccountDeletion(deps);
+    expect(result).toBe('kept');
+    expect(deps.clear).not.toHaveBeenCalled();
+    expect(deps.clearStoredOwner).not.toHaveBeenCalled();
+  });
+
+  it('stamp matches → clears as usual', async () => {
+    const deps = {
+      clear: vi.fn(async () => {}),
+      clearStoredOwner: vi.fn(),
+      ownerMatches: () => true,
+    };
+    expect(await finishAccountDeletion(deps)).toBe('cleared');
+    expect(deps.clear).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('drainBeforeDeletion', () => {
+  it("stamp names someone else → never drains (their rows, this session)", async () => {
+    const drain = vi.fn(async () => {});
+    await drainBeforeDeletion(drain, 4_000, () => false);
+    expect(drain).not.toHaveBeenCalled();
+  });
+
   it('waits for a drain that finishes in time', async () => {
     const drain = vi.fn(async () => {});
     await expect(drainBeforeDeletion(drain, 4_000)).resolves.toBeUndefined();
