@@ -18,11 +18,10 @@ import { expectAffected } from '@/lib/supabase/affectedRows';
  * vi gjør defense-in-depth-sjekk i koden også slik at feilmeldingen er
  * predictable.
  *
- * ⚠️ Cup-kamper er unntaket fra den setningen: avvisningen av
- * `tournament_id != null` (`game_locked`, #1814) finnes KUN her i
- * server-action-en — policy 0092 slipper fortsatt en direkte PostgREST-DELETE
- * av en cup-rad før start, så gaten her ER håndhevelsen inntil videre; se
- * oppfølgingsissue.
+ * Cup-kamper avvises med `game_locked` (#1814). Håndhevelsen ligger i RLS:
+ * siden 0178 (#1937) nekter begge DELETE-policyene en rad i en cup-kamp, også
+ * for en direkte PostgREST-DELETE. Sjekken her er forsvar i dybden og gir en
+ * forutsigbar feilmelding.
  *
  * Team-detection: hvis brukeren var en team-medlem (har team_number satt
  * OG det finnes andre spillere med samme team_number i samme spill), finner
