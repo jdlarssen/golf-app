@@ -62,6 +62,7 @@ import {
   expectedTeamSize,
 } from '@/lib/games/teamScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -448,12 +449,18 @@ async function PlayersSections({
   type ProgressRow = { user_id: string; hole_number: number };
   const progressPromise =
     game.status === 'active'
-      ? supabase
-          .from('scores')
-          .select('user_id, hole_number')
-          .eq('game_id', gameId)
-          .not('strokes', 'is', null)
-          .returns<ProgressRow[]>()
+      ? selectAllRowsResult(
+          (from, to) =>
+            supabase
+              .from('scores')
+              .select('user_id, hole_number')
+              .eq('game_id', gameId)
+              .not('strokes', 'is', null)
+              .order('id')
+              .range(from, to)
+              .returns<ProgressRow[]>(),
+          'AdminGamePage progress',
+        )
       : Promise.resolve({ data: [] as ProgressRow[], error: null });
 
   const [playersRes, progressRes] = await Promise.all([

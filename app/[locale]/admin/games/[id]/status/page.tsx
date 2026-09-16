@@ -23,6 +23,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import { remindUnsubmittedPlayers, remindUnconfirmedPlayers } from './actions';
 import { RemindButton } from './RemindButton';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -109,12 +110,18 @@ export default async function GameStatusPage({
       )
       .eq('game_id', id)
       .returns<PlayerRow[]>(),
-    supabase
-      .from('scores')
-      .select('user_id, hole_number, updated_at')
-      .eq('game_id', id)
-      .not('strokes', 'is', null)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        supabase
+          .from('scores')
+          .select('user_id, hole_number, updated_at')
+          .eq('game_id', id)
+          .not('strokes', 'is', null)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'AdminGameStatusPage scores',
+    ),
   ]);
 
   const players = playersRes.data ?? [];
