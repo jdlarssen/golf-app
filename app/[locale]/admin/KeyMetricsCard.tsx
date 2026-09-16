@@ -29,7 +29,7 @@ export async function KeyMetricsCard() {
 }
 
 /** Narrows the RPC's jsonb payload; null on any drift (caller renders nothing). */
-function parseMetrics(data: unknown): KeyMetrics | null {
+export function parseMetrics(data: unknown): KeyMetrics | null {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     return null;
   }
@@ -65,6 +65,8 @@ function parseMetrics(data: unknown): KeyMetrics | null {
   ) {
     return null;
   }
+  const livstegn = parseLivstegn(d);
+  if (!livstegn) return null;
   return {
     usersGe1: d.users_ge1,
     usersGe2: d.users_ge2,
@@ -77,6 +79,57 @@ function parseMetrics(data: unknown): KeyMetrics | null {
       accepted: f.accepted,
       profileCompleted: f.profile_completed,
       firstScore: f.first_score,
+    },
+    ...livstegn,
+  };
+}
+
+/** #2119 (0180): the livstegn months + all-time total; null on any drift. */
+function parseLivstegn(
+  d: Record<string, unknown>,
+): Pick<KeyMetrics, 'months' | 'livstegnTotal'> | null {
+  if (!Array.isArray(d.months)) return null;
+  const months: KeyMetrics['months'] = [];
+  for (const entry of d.months) {
+    if (typeof entry !== 'object' || entry === null) return null;
+    const m = entry as Record<string, unknown>;
+    if (
+      typeof m.month !== 'string' ||
+      !/^\d{4}-\d{2}$/.test(m.month) ||
+      typeof m.finished !== 'number' ||
+      typeof m.by_others !== 'number' ||
+      typeof m.without_admin !== 'number'
+    ) {
+      return null;
+    }
+    months.push({
+      month: m.month,
+      finished: m.finished,
+      byOthers: m.by_others,
+      withoutAdmin: m.without_admin,
+    });
+  }
+  if (
+    typeof d.livstegn_total !== 'object' ||
+    d.livstegn_total === null ||
+    Array.isArray(d.livstegn_total)
+  ) {
+    return null;
+  }
+  const lt = d.livstegn_total as Record<string, unknown>;
+  if (
+    typeof lt.finished !== 'number' ||
+    typeof lt.by_others !== 'number' ||
+    typeof lt.without_admin !== 'number'
+  ) {
+    return null;
+  }
+  return {
+    months,
+    livstegnTotal: {
+      finished: lt.finished,
+      byOthers: lt.by_others,
+      withoutAdmin: lt.without_admin,
     },
   };
 }

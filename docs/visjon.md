@@ -51,3 +51,5 @@ en annen opprettet (juni) var på Jørgens oppfordring.
 Tallet skal stå i Sekretariatets nøkkeltall (oktober-målet i roadmapen) og rapporteres av retroen ved
 siden av månedsmålet. Sesongen i Norge er stille oktober–mars; reisegolf kan flytte tallet i vinter,
 ellers er det en vårtest. Q2-målet «Liv laga» er det første målet som måles på dette tallet.
+
+Kilde: `admin_key_metrics()` → `months[].without_admin` og `livstegn_total` (Nøkkeltall i Sekretariatet).
