@@ -52,6 +52,10 @@ betaling-flaten etter eier-pull — en eksplisitt eier-bestilling overstyrer gre
 (jf. «Eieren overstyrer alltid» over). Flaten er fortsatt fryst; unntaket gjaldt
 det ene issuet.
 
+**Presisert 2026-09-16 — liga:** flaten forblir fryst, men har nå en navngitt vekke-trigger: en
+gjeng som i dag fører liga i en Messenger-chat tar Tørny-ligaen i bruk. Det er en test av det som
+finnes, ikke bygging; livstegnet i `visjon.md` avgjør om noe mer skal til.
+
 ## 3. Tillatte baner nå (per juli 2026)
 
 | Bane | Hva | Issues |
@@ -73,6 +77,11 @@ board-møtet 2026-07-10; design-dokumentet ligger i
 `docs/superpowers/specs/2026-07-10-avstand-til-green-design.md`. Gjenværende baner er
 Herding og Sesongstyrt — neste bane besluttes av eieren.
 
+**Innenfor kjernen 2026-09-16 — reisegolf:** en runde på utenlandsk bane er kjerneflyten på en annen
+bane, ikke en ny feature. Ingenting bygges på forskudd. Når en navngitt bruker faktisk reiser, testes
+friksjonen: lage banen på under fem minutter, offline-scoring uten nett, avstand til green. Funn
+behandles som friksjon i brukte flater, som alltid er innenfor grensen.
+
 ## 4. Parkert — med vekke-trigger
 
 | Hva | Issues | Vekkes av |
@@ -83,6 +92,7 @@ Herding og Sesongstyrt — neste bane besluttes av eieren.
 | Emoji-reaksjoner på lag/matchplay | #977 | Målt bruk av reaksjoner i solo-formater |
 | Lag-påmeldings-forenklinger (slot-radioer, lagnavn-forslag + rename, kvittering→oversikt) | #1069 (lukket — triage-kart der) | Første reelle lag-påmelding i prod |
 | QR-snarvei forbi re-bekreftelsen etter OTP (open+solo) | #1069 (lukket — triage-kart der) | Eier-pull, eller turnering med plakat-QR planlagt |
+| Liga videre (§2) | — | Messenger-liga-gjengen tar Tørny-ligaen i bruk |
 
 Worth-do-forenklingene fra subtraksjonsrevisjonen (#1133–#1141) er alle tatt —
 siste lukket 2026-07-15. Beslutnings-issues (f.eks. #1146) venter på eier-svar og
