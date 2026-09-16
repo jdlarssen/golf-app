@@ -47,6 +47,12 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
 
 ---
 
+## `users`
+
+- **Guard trigger `guard_users_admin_delete`** (migration 0179, #1903): `BEFORE DELETE` refuses any row with `is_admin = true`, service-role included (no `auth.uid() is null` escape). The `auth.users` cascade rolls back with it, so `auth.admin.deleteUser(adminId)` returns an error. To retire an admin: `update public.users set is_admin = false` first.
+
+---
+
 ## `scores`
 
 - **`strokes`**: `NULLABLE int`. `CHECK (strokes >= 1 AND strokes <= 20)` applies when not null (null = hole not yet entered).
