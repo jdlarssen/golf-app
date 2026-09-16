@@ -84,7 +84,9 @@ describe('DeleteAccountForm', () => {
     expect(finishAccountDeletionBrowser).toHaveBeenCalledTimes(1);
   });
 
-  it('blocked/failed delete (server redirect, no ok) → never wipes, never navigates', async () => {
+  // Defensive: Next rejects the action promise on a server redirect (covered by
+  // the throw case below), but a resolve without `ok` must not wipe either.
+  it('action resolves without ok → never wipes, never navigates', async () => {
     deleteOwnAccount.mockImplementation(async () => {
       calls.push('delete');
       return undefined;
@@ -98,7 +100,7 @@ describe('DeleteAccountForm', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('action throws → never wipes', async () => {
+  it('action rejects (server redirect with ?error= or network) → never wipes', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     deleteOwnAccount.mockImplementation(async () => {
       calls.push('delete');

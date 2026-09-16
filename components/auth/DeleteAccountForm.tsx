@@ -16,7 +16,8 @@ import { deleteOwnAccount } from '@/app/[locale]/profile/slett-konto/actions';
  *  3. ONLY when the action returned `{ ok: true }`: wipe the local base and
  *     the owner stamp, then go to login.
  * A blocked or failed delete redirects server-side back to this page with
- * `?error=`; the action then never hands us `ok`, so nothing local is touched
+ * `?error=` (the action promise rejects and Next follows the redirect), so
+ * the wipe below is never reached and nothing local is touched
  * — the account still exists, and so must its strokes.
  *
  * `onSubmit` + `startTransition` instead of `<form action>`: React 19 resets a

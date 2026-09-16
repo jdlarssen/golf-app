@@ -11,7 +11,8 @@ import type { AppLocale } from '@/i18n/routing';
 
 // #1987: success RETURNS instead of redirecting, so the client form can wipe
 // the browser's local base before it navigates to login. Every failure still
-// redirects back here with `?error=` (redirect throws, hence the `void`).
+// redirects back here with `?error=`; called from the client, that redirect
+// rejects the action promise and Next follows it. `void` types the throwing branches.
 export async function deleteOwnAccount(): Promise<{ ok: true } | void> {
   const locale = (await getLocale()) as AppLocale;
   const supabase = await getServerClient();
