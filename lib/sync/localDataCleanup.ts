@@ -5,7 +5,7 @@ import { setOwnerWipeBlocked } from './ownerWipeBlock';
  * #1404 — local-data hygiene on shared devices (the #819 class: one user's
  * data must never reach the next user on the same device).
  *
- * Two layers, both feeding on the same decision core:
+ * Three exits, all feeding on the same decision core:
  *
  *  1. Logout (`prepareLogout`, driven by `LogoutForm` before the POST):
  *     best-effort drain, then clear ONLY when the queue is empty — an
@@ -15,6 +15,10 @@ import { setOwnerWipeBlocked } from './ownerWipeBlock';
  *     sync engine starts): a different user logging in wipes the previous
  *     user's leftovers before the first drain can push them under the wrong
  *     session.
+ *  3. Account deletion (`finishAccountDeletion`, driven by
+ *     `DeleteAccountForm` only AFTER the server delete succeeded, #1987):
+ *     clears unconditionally — the account is gone, so its queue can never
+ *     be delivered, and keeping it would only hand it to the next user.
  *
  * The decision functions are Dexie-free with injected dependencies (unit
  * tested); the `*Browser` bindings below wire in localStorage, the Supabase
@@ -143,6 +147,48 @@ export async function prepareLogout(deps: {
   return outcome;
 }
 
+export async function finishAccountDeletion(deps: {
+  clear: () => Promise<void>;
+  clearStoredOwner: () => void;
+}): Promise<'cleared' | 'clear_failed'> {
+  let outcome: 'cleared' | 'clear_failed' = 'cleared';
+  try {
+    await deps.clear();
+  } catch (error) {
+    // Best-effort: the account IS deleted, so "try again" would ask for
+    // something that can no longer happen. Log and move on to login.
+    console.error('[localDataCleanup] clear after account deletion failed', error);
+    outcome = 'clear_failed';
+  }
+  // Removed either way: with no stamp the next login is 'first', and a
+  // leftover is wiped again at the following owner switch.
+  deps.clearStoredOwner();
+  return outcome;
+}
+
+/**
+ * Best-effort delivery of offline strokes before the account is deleted
+ * (#1987). Never throws and never outlasts `timeoutMs` — its outcome must not
+ * decide whether the deletion runs.
+ */
+export async function drainBeforeDeletion(
+  drain: () => Promise<unknown>,
+  timeoutMs: number,
+): Promise<void> {
+  const run = Promise.resolve()
+    .then(drain)
+    .then(
+      () => {},
+      () => {},
+    );
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, timeoutMs);
+  });
+  await Promise.race([run, timeout]);
+  clearTimeout(timer);
+}
+
 // --- Browser bindings (thin, untested — system boundary) -------------------
 
 function getStoredOwnerIdBrowser(): string | null {
@@ -150,6 +196,14 @@ function getStoredOwnerIdBrowser(): string | null {
     return window.localStorage.getItem(LOCAL_DATA_OWNER_KEY);
   } catch {
     return null;
+  }
+}
+
+function clearStoredOwnerBrowser(): void {
+  try {
+    window.localStorage.removeItem(LOCAL_DATA_OWNER_KEY);
+  } catch {
+    // Harmless: a stale stamp only makes the next boot re-check.
   }
 }
 
@@ -226,13 +280,7 @@ export async function prepareLogoutBrowser(
       drain: drainQueue,
       pendingCount: () => localDb.syncQueue.count(),
       clear: clearAllLocalData,
-      clearStoredOwner: () => {
-        try {
-          window.localStorage.removeItem(LOCAL_DATA_OWNER_KEY);
-        } catch {
-          // Harmless: a stale stamp only makes the next boot re-check.
-        }
-      },
+      clearStoredOwner: clearStoredOwnerBrowser,
       cleanupPush,
     });
   })();
@@ -240,4 +288,32 @@ export async function prepareLogoutBrowser(
     setTimeout(() => resolve('kept'), LOGOUT_DRAIN_TIMEOUT_MS);
   });
   return Promise.race([run, timeout]);
+}
+
+/**
+ * Account-deletion path, step 1 — called by `DeleteAccountForm` BEFORE the
+ * delete action: gives offline strokes one bounded chance to reach the server
+ * (same budget as logout).
+ */
+export async function drainBeforeDeletionBrowser(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  await drainBeforeDeletion(async () => {
+    const { drainQueue } = await import('./syncWorker');
+    return drainQueue();
+  }, LOGOUT_DRAIN_TIMEOUT_MS);
+}
+
+/**
+ * Account-deletion path, step 2 — called by `DeleteAccountForm` only after
+ * the server confirmed the delete. Never on a failed or blocked delete: the
+ * account still exists, and so must its strokes.
+ */
+export async function finishAccountDeletionBrowser(): Promise<
+  'cleared' | 'clear_failed'
+> {
+  if (typeof window === 'undefined') return 'cleared';
+  return finishAccountDeletion({
+    clear: clearAllLocalData,
+    clearStoredOwner: clearStoredOwnerBrowser,
+  });
 }
