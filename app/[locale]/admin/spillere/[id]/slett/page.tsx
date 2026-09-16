@@ -53,6 +53,10 @@ export default async function DeletePlayerPage({
   if (blockReason === 'sole_club_owner') {
     redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
   }
+  // #1903: sjekken fikk ikke svar fra basen → vis ikke slette-knappen.
+  if (blockReason === 'check_failed') {
+    redirect({ href: `/admin/spillere/${id}?error=auth_delete_failed`, locale });
+  }
 
   const { count: gamePlayerCount } = await supabase
     .from('game_players')

@@ -29,6 +29,9 @@ import {
 //        403 { error: 'admin_account' | 'active_engagements' | 'sole_club_owner' }
 //        500 { error: 'delete_failed' }
 //
+// `check_failed` (blokk-sjekken fikk ikke svar, #1903) går aldri ut på tråden:
+// GET mapper den til 500 status_failed, POST til 500 delete_failed.
+//
 // 403-koden er hjelperens egen `DeleteBlockReason`, ikke webbens copy-nøkkel
 // (`active_games`). Regelen har ett navn; appen oversetter kode → tekst.
 //
@@ -54,7 +57,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const body: StatusBody = { blocked: await getDeleteBlockReason(userId) };
+    const outcome = await getDeleteBlockReason(userId);
+    if (outcome === 'check_failed') {
+      return NextResponse.json({ error: 'status_failed' }, { status: 500 });
+    }
+    const body: StatusBody = { blocked: outcome };
     return NextResponse.json(body);
   } catch (err) {
     console.error(`[${LOG_PREFIX}] status failed`, err);
@@ -72,6 +79,9 @@ export async function POST(request: NextRequest) {
     // Autoritativ re-sjekk: GET-en er bare pynt for skjermen, og noe kan ha
     // startet i mellomtiden.
     const blocked = await getDeleteBlockReason(userId);
+    if (blocked === 'check_failed') {
+      return NextResponse.json({ error: 'delete_failed' }, { status: 500 });
+    }
     if (blocked) {
       return NextResponse.json({ error: blocked }, { status: 403 });
     }

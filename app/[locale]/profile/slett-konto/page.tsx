@@ -11,7 +11,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { deleteOwnAccount } from './actions';
 import {
   getDeleteBlockReason,
-  type DeleteBlockReason,
+  type DeleteCheckOutcome,
 } from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -43,10 +43,12 @@ export default async function SlettKontoPage({
   const isBlocked = blockReason !== null;
   // Uttømmende: en ny blokk-kode skal ikke kunne falle stille ned i en annen
   // grunns tekst.
-  const blockedTexts: Record<DeleteBlockReason, string> = {
+  const blockedTexts: Record<NonNullable<DeleteCheckOutcome>, string> = {
     admin_account: t('adminBanner'),
     active_engagements: t('blockedBanner'),
     sole_club_owner: t('soleClubOwnerBanner'),
+    // #1903: sjekken fikk ikke svar — samme skall som blokkert, ingen knapp.
+    check_failed: t('errors.delete_failed'),
   };
   const blockedText = blockReason ? blockedTexts[blockReason] : undefined;
 

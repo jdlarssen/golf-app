@@ -22,12 +22,26 @@ import { getAdminClient } from '@/lib/supabase/admin';
  * FK-kaskaden aldri fyrer. Rekkefølgen RPC-før-auth er bevisst: feiler
  * auth-steget har brukeren fortsatt sesjon og kan prøve igjen
  * (`deleted_at`-shortcircuiten hopper da rett til auth-steget).
+ *
+ * Admin-kontoen har en sperre DB-en selv håndhever på BEGGE stier (#1903):
+ * `anonymize_user` nekter admin, og `guard_users_admin_delete` (BEFORE DELETE
+ * på `public.users`) ruller tilbake GoTrue-slettingen via kaskaden. Hard-stien
+ * er dermed ikke lenger avhengig av at blokk-sjekken foran svarte riktig.
+ *
+ * Alle lesninger her er fail-closed: en spørring som feiler betyr «vi vet
+ * ikke → stopp», aldri «ikke blokkert» eller «aldri spilt».
  */
 
 export type DeleteBlockReason =
   | 'admin_account'
   | 'active_engagements'
   | 'sole_club_owner';
+
+/**
+ * Blokk-sjekken fikk ikke svar fra basen (#1903). Ikke en blokk-GRUNN og aldri
+ * på tråden til appen — kallerne stopper med sin vanlige «prøv igjen»-feil.
+ */
+export type DeleteCheckOutcome = DeleteBlockReason | 'check_failed' | null;
 
 export type DeleteAccountResult =
   | { ok: true; mode: 'hard' | 'anonymized' }
@@ -65,20 +79,29 @@ export type DeleteAccountResult =
  * RPC-en — der er det KUN at hver kaller faktisk handler på svaret herfra som
  * stopper slettingen. Arrangør-blokken er mer akutt og har forrang.
  *
- * Feiler klubb-oppslaget, havner det i samme fail-closed-bøtte som de andre
- * (`active_engagements`). Teksten er upresis for akkurat den grenen, men den
- * sier «prøv igjen senere» og er den trygge retningen.
+ * Feiler en av lesningene, svarer funksjonen `check_failed` (#1903) — ikke en
+ * blokk-grunn, for «du arrangerer noe» er usant når sjekken bare ikke fikk
+ * svar. Eneste utfall som slipper slettingen videre er `null`.
  */
 export async function getDeleteBlockReason(
   userId: string,
-): Promise<DeleteBlockReason | null> {
+): Promise<DeleteCheckOutcome> {
   const admin = getAdminClient();
 
-  const { data: target } = await admin
+  const { data: target, error: targetError } = await admin
     .from('users')
     .select('is_admin, deleted_at')
     .eq('id', userId)
     .maybeSingle();
+  // #1903: uten denne leste en forbigående feil som «finnes ikke» → null, og en
+  // admin uten spillhistorikk gikk rett på hard-stien.
+  if (targetError) {
+    console.error('[getDeleteBlockReason] users-oppslag feilet — stopper', {
+      userId,
+      error: targetError,
+    });
+    return 'check_failed';
+  }
   if (!target) return null; // finnes ikke → ingen blokk; delete-stien håndterer
   if (target.is_admin) return 'admin_account';
   if (target.deleted_at) return null; // allerede anonymisert → kun auth-retry igjen
@@ -120,7 +143,7 @@ export async function getDeleteBlockReason(
       leagues: leagues.error,
       soleClubOwner: soleClubOwner.error,
     });
-    return 'active_engagements';
+    return 'check_failed';
   }
 
   const organisesSomethingOpen =
@@ -139,11 +162,15 @@ export async function deleteOrAnonymizeUser(
 ): Promise<DeleteAccountResult> {
   const admin = getAdminClient();
 
-  const { data: target } = await admin
+  const { data: target, error: targetError } = await admin
     .from('users')
     .select('deleted_at')
     .eq('id', userId)
     .maybeSingle();
+  if (targetError) {
+    console.error(`${logPrefix} users read failed`, { userId, targetError });
+    return { ok: false, reason: 'failed' };
+  }
 
   // Retry-shortcircuit: public-siden er alt anonymisert, kun auth-steget gjenstår.
   if (target?.deleted_at) {
@@ -155,12 +182,18 @@ export async function deleteOrAnonymizeUser(
     return { ok: true, mode: 'anonymized' };
   }
 
-  const { count: gpCount } = await admin
+  const { count: gpCount, error: gpError } = await admin
     .from('game_players')
     .select('game_id', { count: 'exact', head: true })
     .eq('user_id', userId);
+  // #1903: en manglende telling er IKKE null rader — `?? 0` her ville forsøkt
+  // hard delete på en bruker som kan ha historikk.
+  if (gpError || gpCount === null) {
+    console.error(`${logPrefix} game_players count failed`, { userId, gpError });
+    return { ok: false, reason: 'failed' };
+  }
 
-  if ((gpCount ?? 0) === 0) {
+  if (gpCount === 0) {
     // Aldri spilt → full sletting. Kaskaden rydder public.users + CASCADE-barna.
     const { error } = await admin.auth.admin.deleteUser(userId);
     if (!error) return { ok: true, mode: 'hard' };

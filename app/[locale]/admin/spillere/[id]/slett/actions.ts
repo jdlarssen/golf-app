@@ -38,17 +38,30 @@ export async function deleteUser(formData: FormData) {
   // #1012: delt blokk-regel med selv-slett — deltakelse i eller arrangering av
   // noe pågående blokkerer (erstatter den gamle still_has_games-blokken;
   // spillhistorikk blokkerer ikke lenger, den anonymiseres).
-  const blockReason = await getDeleteBlockReason(id);
-  if (blockReason === 'admin_account') {
-    redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
-  }
-  if (blockReason === 'active_engagements') {
-    redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
-  }
-  // #1910: også admin må ordne eierskapet i klubben først — en omgåelse her
-  // ville gjenskapt den eierløse klubben.
-  if (blockReason === 'sole_club_owner') {
-    redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
+  //
+  // #1903: switch over hele utfallet — `null` er eneste vei videre til sletting.
+  const outcome = await getDeleteBlockReason(id);
+  switch (outcome) {
+    case null:
+      break;
+    case 'admin_account':
+      redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
+      return;
+    case 'active_engagements':
+      redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
+      return;
+    // #1910: også admin må ordne eierskapet i klubben først — en omgåelse her
+    // ville gjenskapt den eierløse klubben.
+    case 'sole_club_owner':
+      redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
+      return;
+    case 'check_failed':
+      redirect({ href: `/admin/spillere/${id}?error=auth_delete_failed`, locale });
+      return;
+    default: {
+      const unhandled: never = outcome;
+      throw new Error(`unhandled delete check outcome: ${String(unhandled)}`);
+    }
   }
 
   // Aldri spilt → hard delete (kaskaden rydder alt); har historikk →
