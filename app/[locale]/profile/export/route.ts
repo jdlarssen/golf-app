@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 export async function GET() {
   const userId = await getProxyVerifiedUserId();
@@ -27,10 +28,16 @@ export async function GET() {
   //    scores THEY entered for others (entered_by matches). Exporting scores
   //    for the entire game would leak teammates' and opponents' personal data,
   //    which is not what GDPR Article 20 entitles the requester to.
-  const { data: scoresData } = await supabase
-    .from('scores')
-    .select('*')
-    .or(`user_id.eq.${userId},entered_by.eq.${userId}`);
+  const { data: scoresData } = await selectAllRowsResult(
+    (from, to) =>
+      supabase
+        .from('scores')
+        .select('*')
+        .or(`user_id.eq.${userId},entered_by.eq.${userId}`)
+        .order('id')
+        .range(from, to),
+    'profile export scores',
+  );
   const scores = scoresData ?? [];
 
   // 4. public.invitations — rows where email matches OR invited_by matches

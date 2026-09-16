@@ -10,6 +10,7 @@
 // LWW er fortsatt den eneste veien server-data kommer inn lokalt: hver rad går
 // gjennom `mergeServerScore`, som dropper alt som ikke er strengt nyere. En seed
 // kan derfor aldri kaste et slag spilleren nettopp tastet offline.
+import { selectAllRows } from '../../../../lib/supabase/selectAllRows';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { mergeServerScore } from './realtime';
 
@@ -21,13 +22,18 @@ const SCORE_SELECT =
  * vurdert (ikke antall som vant — de fleste seed-radene er alt kjent).
  */
 export async function seedGameScores(gameId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from('scores')
-    .select(SCORE_SELECT)
-    .eq('game_id', gameId);
-
-  if (error) throw new Error(error.message);
-  if (!data || data.length === 0) return 0;
+  // #1894: sidevis, ellers kutter PostgREST et ferdig klubbspill ved 1 000 rader.
+  const data = await selectAllRows(
+    (from, to) =>
+      supabase
+        .from('scores')
+        .select(SCORE_SELECT)
+        .eq('game_id', gameId)
+        .order('id')
+        .range(from, to),
+    'seedGameScores',
+  );
+  if (data.length === 0) return 0;
 
   // Slås opp ÉN gang for hele seeden, ikke per rad: konflikt-regelen trenger
   // den, og en auth-tur per hull ville vært 18 turer for ingenting.

@@ -48,6 +48,7 @@ const CHAIN_METHODS = [
   'gte',
   'order',
   'limit',
+  'range',
   'returns',
   'single',
   'maybeSingle',
