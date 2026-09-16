@@ -191,7 +191,9 @@ async function main(): Promise<void> {
   if (args.phase !== 'delete') await runArchive(args, comments);
 
   console.log(`${LOG} ferdig${exitCode ? ' med avvik (se over)' : ''}.`);
-  process.exit(exitCode);
+  // exitCode, ikke process.exit(): stdout mot en pipe (Actions) skrives asynkront,
+  // og exit() kuttet dry-run-utskriften midt i arkivfila (#2120).
+  process.exitCode = exitCode;
 }
 
 main().catch((err) => {
