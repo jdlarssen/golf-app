@@ -161,8 +161,9 @@ function getStoredOwnerIdBrowser(): string | null {
 export async function ensureLocalDataOwnerBrowser(): Promise<void> {
   if (typeof window === 'undefined') return;
   try {
-    await runOwnerGuardBrowser();
-    setOwnerWipeBlocked(false);
+    // 'no_session' proves nothing about the owner (the session read may have
+    // failed) — only a real check may lift the lock.
+    if ((await runOwnerGuardBrowser()) !== 'no_session') setOwnerWipeBlocked(false);
   } catch (err) {
     // #1959: lock every drain caller, not just the engine start — see
     // `ownerWipeBlock.ts`. Other failures leave the lock as it was.
@@ -181,8 +182,8 @@ async function getSessionUserIdBrowser(): Promise<string | null> {
   }
 }
 
-async function runOwnerGuardBrowser(): Promise<void> {
-  await ensureLocalDataOwner({
+async function runOwnerGuardBrowser(): Promise<OwnerChange | 'no_session'> {
+  return ensureLocalDataOwner({
     getSessionUserId: getSessionUserIdBrowser,
     getStoredOwnerId: getStoredOwnerIdBrowser,
     setStoredOwnerId: (userId) => {
