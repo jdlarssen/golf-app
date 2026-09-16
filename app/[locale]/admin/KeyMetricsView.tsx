@@ -229,7 +229,7 @@ function LivstegnSection({
 }) {
   const t = useTranslations('admin.dashboard');
   const rows = [...months].reverse();
-  const cell = 'py-1 text-right font-serif text-sm font-medium tabular-nums text-text';
+  const cell = 'text-right font-serif text-sm font-medium tabular-nums text-text';
   const head = 'pb-1 font-sans text-[10px] font-normal text-muted';
 
   return (
@@ -273,9 +273,9 @@ function LivstegnSection({
                     <span className="tabular-nums text-muted"> {year}</span>
                   )}
                 </th>
-                <td className={cell}>{row.finished}</td>
-                <td className={cell}>{row.byOthers}</td>
-                <td className={cell}>{row.withoutAdmin}</td>
+                <td className={`${cell} py-1`}>{row.finished}</td>
+                <td className={`${cell} py-1`}>{row.byOthers}</td>
+                <td className={`${cell} py-1`}>{row.withoutAdmin}</td>
               </tr>
             );
           })}
