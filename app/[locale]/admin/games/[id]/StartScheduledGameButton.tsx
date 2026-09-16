@@ -28,6 +28,7 @@ export function StartScheduledGameButton({ startAction }: Props) {
     >
       <button
         type="submit"
+        data-testid="start-scheduled-game"
         className="w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white dark:text-bg font-medium rounded-xl px-4 py-3 transition-colors"
       >
         {t('startRoundNow')}
