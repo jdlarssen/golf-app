@@ -7,7 +7,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isSilentBlockReason } from '@/lib/notifications/autoStartBlocked';
 import { AppShell } from '@/components/ui/AppShell';
@@ -457,16 +457,18 @@ export default async function GameHomePage({
       // the next read to wait for fresh data instead of stale-while-revalidate
       // bouncing the player back through the `status='scheduled'` redirect.
       after(() => {
-        revalidateTag(`game-${id}`, { expire: 0 });
+        expireGameCache(id);
       });
       // #1441 (D3): this visit won the flip → start every derived game too.
       // Best-effort, see startDerivedGames. Live for cup games since F3d: a
       // cup with a start time gives every generated match a
       // `scheduled_tee_off_at`, so a player who opens the greensome at tee-off
       // can win the flip here before the cron sweep does — same fan-out as the
-      // other two start paths (admin button, cron sweep).
+      // other two start paths (admin button, cron sweep). Inside after()
+      // because it expires each derived game's cache, which throws during
+      // render (#2068).
       if (result.started) {
-        await startDerivedGames(getAdminClient(), id);
+        after(() => startDerivedGames(getAdminClient(), id));
       }
       // #502: this visit won the flip → tell the other players the round is
       // live. The visitor is excluded (they're looking at it), withdrawn

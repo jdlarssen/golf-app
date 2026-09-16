@@ -16,6 +16,12 @@ vi.mock('./persistScoreDifferentials', () => ({
     persistScoreDifferentialsMock(...args),
 }));
 
+// #2068: every derived game's own cache tag is expired after its write.
+const revalidateTagMock = vi.fn();
+vi.mock('next/cache', () => ({
+  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
+}));
+
 import {
   syncDerivedGamesStatus,
   startDerivedGames,
@@ -60,6 +66,7 @@ function makeSupabase(opts: {
 }
 
 beforeEach(() => {
+  revalidateTagMock.mockReset();
   startScheduledGameMock.mockReset();
   persistResultSummariesMock.mockReset().mockResolvedValue(0);
   persistScoreDifferentialsMock.mockReset().mockResolvedValue(0);
@@ -76,6 +83,7 @@ describe('syncDerivedGamesStatus', () => {
 
     expect(result).toEqual({ count: 0 });
     expect(supabase.updateSpy).not.toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('patches every derived game with the same status/timestamp and returns the count', async () => {
@@ -89,6 +97,10 @@ describe('syncDerivedGamesStatus', () => {
 
     expect(result).toEqual({ count: 2 });
     expect(supabase.updateSpy).toHaveBeenCalledWith(patch);
+    expect(revalidateTagMock.mock.calls).toEqual([
+      ['game-d1', { expire: 0 }],
+      ['game-d2', { expire: 0 }],
+    ]);
   });
 
   it('swallows a 0-row UPDATE on a non-empty derived set instead of throwing (#667/#704 pattern)', async () => {
@@ -123,6 +135,10 @@ describe('startDerivedGames', () => {
 
     expect(result).toEqual({ startedCount: 2, failedIds: [] });
     expect(startScheduledGameMock).toHaveBeenCalledTimes(2);
+    expect(revalidateTagMock.mock.calls).toEqual([
+      ['game-d1', { expire: 0 }],
+      ['game-d2', { expire: 0 }],
+    ]);
   });
 
   it('collects failed ids without aborting the rest of the batch', async () => {
@@ -139,6 +155,20 @@ describe('startDerivedGames', () => {
     expect(result.startedCount).toBe(1);
     expect(result.failedIds).toEqual(['d2', 'd3']);
     expect(startScheduledGameMock).toHaveBeenCalledTimes(3);
+    // Only the game that actually started is expired.
+    expect(revalidateTagMock.mock.calls).toEqual([['game-d1', { expire: 0 }]]);
+  });
+
+  it('does not expire a derived game another path already started', async () => {
+    const supabase = makeSupabase({
+      lookupResult: { data: [{ id: 'd1' }], error: null },
+    });
+    startScheduledGameMock.mockResolvedValueOnce({ ok: true, started: false });
+
+    const result = await startDerivedGames(supabase, HOST);
+
+    expect(result).toEqual({ startedCount: 1, failedIds: [] });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('logs a derived game decided by a withdrawal at info level, not as an error (#1971)', async () => {
@@ -198,6 +228,14 @@ describe('finishDerivedGames', () => {
       status: 'finished',
       ended_at: endedAt,
     });
+    expect(revalidateTagMock.mock.calls).toEqual([
+      ['game-d1', { expire: 0 }],
+      ['game-d2', { expire: 0 }],
+    ]);
+    // Expired after the summaries are written, so the first read sees them.
+    expect(revalidateTagMock.mock.invocationCallOrder[0]).toBeGreaterThan(
+      persistScoreDifferentialsMock.mock.invocationCallOrder[1],
+    );
     expect(persistResultSummariesMock).toHaveBeenCalledTimes(2);
     expect(persistResultSummariesMock).toHaveBeenCalledWith(rows[0]);
     expect(persistResultSummariesMock).toHaveBeenCalledWith(rows[1]);
