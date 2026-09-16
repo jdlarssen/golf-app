@@ -43,6 +43,8 @@ export type QueryOp = {
   filters: QueryFilter[];
   /** `true` når kjeden endte i `.single()`/`.maybeSingle()`. */
   single: boolean;
+  /** Sidevinduet fra `.range(from, to)` (#1894 `selectAllRows`), ellers `null`. */
+  range: [number, number] | null;
 };
 
 /** Svaret `respond` gir. Utelatt `error` betyr «gikk bra». */
@@ -64,6 +66,9 @@ export interface QueryChain extends PromiseLike<QueryResponse> {
   in(column: string, value: unknown): QueryChain;
   is(column: string, value: unknown): QueryChain;
   not(column: string, operator: string, value: unknown): QueryChain;
+  /** Sortering registreres ikke; sidevinduet står i `op.range`. */
+  order(column: string, options?: unknown): QueryChain;
+  range(from: number, to: number): QueryChain;
   returns(): QueryChain;
   single(): QueryChain;
   maybeSingle(): QueryChain;
@@ -122,6 +127,7 @@ export function createAdminClientMock(opts: {
       payload,
       filters: [],
       single: false,
+      range: null,
     };
     const push = (filterOp: QueryFilter['op'], column: string, value: unknown) => {
       op.filters.push({ op: filterOp, column, value });
@@ -138,6 +144,11 @@ export function createAdminClientMock(opts: {
       in: (column, value) => push('in', column, value),
       is: (column, value) => push('is', column, value),
       not: (column, _operator, value) => push('not', column, value),
+      order: () => api,
+      range: (from, to) => {
+        op.range = [from, to];
+        return api;
+      },
       returns: () => api,
       single: () => {
         op.single = true;

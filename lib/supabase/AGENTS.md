@@ -25,6 +25,31 @@ const result = await supabase
 const row = expectOne(result, 'approveScorecard'); // throws if 0 or >1 rows affected
 ```
 
+## Sister of #2 — a short read = failure too: page unbounded reads with `selectAllRows`
+
+PostgREST cuts a SELECT at the project's «Max rows» (1 000 — measured on staging,
+`content-range 0-999/1897`) and returns `error == null`. `data` is just shorter.
+`#1894`/`#2050`: a 150-player game has ~2 700 score rows, so an unpaged read drops
+holes from leaderboards, reminders and mail, and made cup deletion read a played
+match as «never played».
+
+A read whose row count grows with players or games (a whole game, a whole cup,
+a player's whole history) goes through `selectAllRows` / `selectAllRowsResult`
+from `./selectAllRows.ts`. The factory orders on a unique column and applies the
+window it is given:
+
+```ts
+const scores = await selectAllRows(
+  (from, to) =>
+    supabase.from('scores').select(SCORES_SELECT).eq('game_id', gameId)
+      .order('id').range(from, to).returns<ScoreRow[]>(),
+  'loadScores',
+);
+```
+
+`scoresReadSites.test.ts` holds every `from('scores')` read to this: a new site
+either pages or joins its allowlist with a one-line reason why it is bounded.
+
 ## Principle #3 — RLS is the real authz layer; app guards are not enough
 
 A client can call PostgREST directly and bypass every TypeScript guard.
