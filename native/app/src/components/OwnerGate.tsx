@@ -13,9 +13,10 @@ import { useTheme } from '../theme';
  * Eier-vakten (#1942) mellom sesjonen og stacken.
  *
  * Barna (og dermed `startSyncTriggers` i Hjem) rendres ikke før vakten har
- * svart, og aldri mens eierbytte-wipen står som feilet (#1959). Kalleren setter `key={userId}`, så porten monteres på nytt for hver
- * bruker og starter alltid som «ikke sjekket»; det er derfor ingen effekt
- * trenger å nullstille noe når sesjonen bytter.
+ * svart, og aldri mens eierbytte-wipen står som feilet (#1959). Kalleren
+ * setter `key={userId}`, så porten monteres på nytt for hver bruker og starter
+ * alltid som «ikke sjekket»; det er derfor ingen effekt trenger å nullstille
+ * noe når sesjonen bytter.
  */
 export function OwnerGate({ userId, children }: { userId: string; children: ReactNode }) {
   const { colors, ui } = useTheme();
