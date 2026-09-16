@@ -56,7 +56,9 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
      flyter (sletting av data/kontoer), auth-/sikkerhetsendringer, noe som koster penger,
      endringer i selve merge-porten (`lib/loops/`, `scripts/loops/` — #1655) og hele
      native-appen (`native/app/**` — #1944; appens egne auth-flater matchet ingen
-     web-rad, så PR #1943 ble auto-merget forbi eieren). Disse venter alltid på
+     web-rad, så PR #1943 ble auto-merget forbi eieren), pluss skallmappene
+     `native/ios/**` og `native/android/**` (#1956; signerings-, rettighets- og
+     dyplenke-flater). Disse venter alltid på
      eksplisitt eier-godkjenning.
    - Eieren orienteres i etterkant i produktspråk (aldri teknisk, jf. #1302): morgen-
      briefens «Skjedde i natt» + CHANGELOG. Ingen egen merge-melding kreves.

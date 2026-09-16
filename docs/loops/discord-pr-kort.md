@@ -122,7 +122,8 @@ vinner:
      `supabase/**`, `**/slett/**`, `**/slett-konto/**`, `proxy.ts`, `lib/auth/**`,
      `lib/supabase/**`, `app/api/**`, `app/[locale]/(auth)/**`, `**/betaling/**`,
      `lib/payment/**`, `.github/**`, `.githooks/**`, `.claude/**`, `lib/loops/**`,
-     `scripts/loops/**` eller `native/app/**`. Migrasjoner, destruktive flyter,
+     `scripts/loops/**`, `native/app/**`, `native/ios/**` eller `native/android/**`.
+     Migrasjoner, destruktive flyter,
      auth/sikkerhet, penger, enforcement-flater, merge-porten selv og hele
      native-appen beholder menneske-porten (fail-closed, bredere enn issue-ets
      liste). Native-raden er bred med vilje (#1944): web-radene dekker webbens
@@ -130,7 +131,9 @@ vinner:
      motstykker, og ingen av dem matchet noe — PR #1943 (appens utlogging) ble
      auto-merget forbi eieren. `docs/native/**` står utenfor: prosa om appen
      trenger ingen menneske-port. Raden står til appen er sluppet og vurderes på
-     nytt da. Merk om porten-selv-radene
+     nytt da. Skall-radene (#1956) dekker Capacitor- og TWA-skallets signerings-,
+     rettighets- og dyplenke-filer (`App.entitlements`, `AndroidManifest.xml` m.fl.),
+     fordi `native/ios/` er nød-utgangen etter slipp; `native/assets/**` står utenfor. Merk om porten-selv-radene
      (#1655): workflowen henter alltid main sin versjon av `lib/loops` +
      `scripts/loops` (#1181), så en PR dømmer aldri seg selv med egne regler —
      lista hindrer at en gate-endring auto-merges av den gamle gaten og deretter
