@@ -9,7 +9,10 @@ import {
 } from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
 
-export async function deleteOwnAccount() {
+// #1987: success RETURNS instead of redirecting, so the client form can wipe
+// the browser's local base before it navigates to login. Every failure still
+// redirects back here with `?error=` (redirect throws, hence the `void`).
+export async function deleteOwnAccount(): Promise<{ ok: true } | void> {
   const locale = (await getLocale()) as AppLocale;
   const supabase = await getServerClient();
   const {
@@ -59,6 +62,7 @@ export async function deleteOwnAccount() {
     redirect({ href: '/profile/slett-konto?error=delete_failed', locale });
   }
 
-  // Session is now invalid — redirect to login
-  redirect({ href: '/login?melding=konto_slettet', locale });
+  // Session is now invalid — DeleteAccountForm clears local data and
+  // navigates to /login?melding=konto_slettet.
+  return { ok: true as const };
 }
