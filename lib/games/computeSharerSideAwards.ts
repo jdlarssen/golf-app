@@ -16,6 +16,7 @@ import { buildSideTournamentInput } from '@/lib/scoring/sideTournamentInput';
 import { SIDE_CATEGORY_CARD_LABEL, selectNotableAwards } from './sideTournamentAwards';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import type { CourseHoleRow, ScoreRow } from '@/lib/supabase/queryFragments';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 // ---------------------------------------------------------------------------
 // Types — mirroring what buildModeResultForGame + leaderboard page use.
@@ -104,11 +105,17 @@ export async function computeSharerSideAwards(
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
-    client
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', game.id)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        client
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', game.id)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'computeSharerSideAwards scores',
+    ),
     client
       .from('game_side_winners')
       .select('category, position, winner_user_id')

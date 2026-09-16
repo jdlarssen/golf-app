@@ -28,6 +28,7 @@ import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinCon
 import { buildAceyDeuceyContext } from '@/lib/scoring/context/buildAceyDeuceyContext';
 import { buildBingoBangoBongoContext } from '@/lib/scoring/context/buildBingoBangoBongoContext';
 import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /**
  * Game-feltene scoring trenger. Matcher `endGame`-contextet + backfill-spørringen.
@@ -116,11 +117,17 @@ export async function buildModeResultForGame(
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
-    client
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', scoresGameId)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        client
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', scoresGameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'buildModeResultForGame scores',
+    ),
   ]);
 
   if (playersRes.error) throw playersRes.error;

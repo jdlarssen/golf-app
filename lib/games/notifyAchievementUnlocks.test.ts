@@ -12,6 +12,10 @@ vi.mock('@/lib/supabase/admin', () => ({
         eq: () => ({
           single: async () => fixtures[table],
           returns: () => Promise.resolve(fixtures[table]),
+          // The paged scores read (#1894): one short page.
+          order: () => ({
+            range: () => ({ returns: () => Promise.resolve(fixtures[table]) }),
+          }),
         }),
       }),
     }),
