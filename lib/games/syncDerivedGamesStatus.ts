@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { isSilentBlockReason } from '@/lib/notifications/autoStartBlocked';
+import { expireGameCache } from './expireGameCache';
 import { startScheduledGame } from './startScheduledGame';
 import { persistResultSummaries } from './persistResultSummaries';
 import { persistScoreDifferentials } from './persistScoreDifferentials';
@@ -87,6 +88,9 @@ export async function syncDerivedGamesStatus(
         .select('id'),
       'syncDerivedGamesStatus',
     );
+    // #2068: each derived game has its own cache tag; the host's expiry
+    // does not reach it.
+    for (const row of updated) expireGameCache(row.id);
     return { count: updated.length };
   } catch (err) {
     console.error('[syncDerivedGamesStatus] fan-out failed', {
@@ -156,11 +160,12 @@ export async function finishDerivedGames(
         .select('id'),
       'finishDerivedGames',
     );
-
     for (const g of derived) {
       await persistResultSummaries(g);
       await persistScoreDifferentials(g.id);
     }
+    // #2068: after the summaries, so the first read sees them too.
+    for (const row of updated) expireGameCache(row.id);
 
     return { count: updated.length };
   } catch (err) {
@@ -217,6 +222,9 @@ export async function startDerivedGames(
       const result = await startScheduledGame(supabase, id);
       if (result.ok) {
         startedCount += 1;
+        // #2068: same as the host's start paths. Callers must not run this
+        // during render (the game-home fallback calls it inside `after()`).
+        if (result.started) expireGameCache(id);
       } else {
         failedIds.push(id);
         const details = { hostGameId, derivedGameId: id, reason: result.reason };
