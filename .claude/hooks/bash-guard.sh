@@ -160,7 +160,21 @@ case "$cmd_stripped" in
         word=w; skip=1; print substr($0, 1, RSTART-1); next
       }
       { print }' | sed -E "s/'[^']*'/Q/g; s/\"[^\"]*\"/Q/g" | tr ';&|' '\n\n\n')"
+    # Prefikser som fortsatt kjører mergen: ( { ! $( ` then/do/else, env/command/
+    # sudo/time/exec og NAME=verdi. Fire runder holder for realistisk stabling;
+    # avsluttende ) } ` fjernes så `$(… 5)` ikke gir PR-argumentet «5)».
+    run_prefix='^[[:space:]]*(\$\(|[({!`]|(then|do|else|env|command|sudo|time|exec)[[:space:]]|[A-Za-z_][A-Za-z0-9_]*=\$\(|[A-Za-z_][A-Za-z0-9_]*=[^[:space:]$(]*[[:space:]])'
+    cmd_segments="$(printf '%s\n' "$cmd_segments" | sed -E \
+      -e "s/${run_prefix}//" -e "s/${run_prefix}//" -e "s/${run_prefix}//" -e "s/${run_prefix}//" \
+      -e 's/[)}`[:space:]]+$//')"
     merge_seg="$(printf '%s\n' "$cmd_segments" | grep -E '^[[:space:]]*gh[[:space:]]+pr[[:space:]]+merge([[:space:]]|$)' | head -n1)"
+    # Sikkerhetsnett: står mergen ukvotert i en form vi ikke gjenkjenner (og ikke
+    # som echo/printf-tekst), får den minst dagens påminnelse — aldri mindre vern
+    # enn før #1303.
+    if [ -z "$merge_seg" ] && printf '%s\n' "$cmd_segments" | grep -E 'gh[[:space:]]+pr[[:space:]]+merge' \
+      | grep -Evq '^[[:space:]]*(echo|printf|#)'; then
+      emit_ctx "pr-merge-staging" "$PR_MERGE_REMIND_TEXT"
+    fi
     if [ -n "$merge_seg" ]; then
       # Posisjonelt argument (nummer, URL eller branch); flagg med verdi hoppes over.
       pr_arg="" other_repo=""
