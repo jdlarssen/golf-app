@@ -41,6 +41,11 @@ export const NEVER_AUTO_MERGE_GLOBS = [
   // ekstra knapp-kort. `docs/native/**` er MED VILJE utenfor — en ren docs-PR om appen
   // trenger ingen menneske-port.
   'native/app/**',
+  // Skallenes signerings-, rettighets- og dyplenke-flater (#1956): `App.entitlements`,
+  // `Info.plist`, `capacitor.config.json`, `AndroidManifest.xml`, `twa-manifest.json`.
+  // `native/ios/` er nød-utgangen etter slipp til N8 er lukket og én app-oppdatering er ute.
+  'native/ios/**',
+  'native/android/**',
 ] as const;
 
 // Tre glob-former: `**/mid/**` (katalog hvor som helst), `prefix/**` (under prefiks),

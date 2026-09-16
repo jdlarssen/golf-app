@@ -38,6 +38,8 @@ describe('touchesNeverList', () => {
     ['lib/loops/autoMerge.ts', 'lib/loops/**'],
     ['scripts/loops/decide-pr-card.ts', 'scripts/loops/**'],
     ['native/app/src/screens/Login.tsx', 'native/app/**'],
+    ['native/ios/ios/App/App/App.entitlements', 'native/ios/**'],
+    ['native/android/app/src/main/AndroidManifest.xml', 'native/android/**'],
   ])('%s treffer aldri-lista', (file) => {
     expect(touchesNeverList([file])).toBe(true);
   });
@@ -116,6 +118,21 @@ describe('touchesNeverList', () => {
   it('bare filer under native/app/ treffer — ikke naboer med samme prefiks', () => {
     expect(touchesNeverList(['native/README.md'])).toBe(false);
     expect(touchesNeverList(['native/application/foo.ts'])).toBe(false);
+  });
+
+  it('skallmappene native/ios og native/android står på aldri-lista (#1956)', () => {
+    // Signerings-, rettighets- og dyplenke-flatene i Capacitor-/TWA-skallet — nød-utgangen
+    // etter slipp til N8 er lukket og én app-oppdatering er ute.
+    expect(NEVER_AUTO_MERGE_GLOBS).toContain('native/ios/**');
+    expect(NEVER_AUTO_MERGE_GLOBS).toContain('native/android/**');
+  });
+
+  it('skall-radene treffer ikke naboer med samme prefiks eller native/assets (#1956)', () => {
+    expect(touchesNeverList(['native/iosx/foo'])).toBe(false);
+    expect(touchesNeverList(['native/android-notes.md'])).toBe(false);
+    // Ikoner og generatorskript er ingen signerings-/rettighetsflate; kopiene i skallene
+    // fanges av skall-radene.
+    expect(touchesNeverList(['native/assets/appstore-1024.png'])).toBe(false);
   });
 });
 
