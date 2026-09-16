@@ -8,6 +8,7 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { publishProductUpdate } from '@/lib/productUpdates/publish';
 import { editProductUpdate } from '@/lib/productUpdates/edit';
 import { validateProductUpdateInput } from '@/lib/productUpdates/validateUpdateInput';
+import { stampLaunchBoard } from '@/lib/loops/launchMarker';
 import type { AppLocale } from '@/i18n/routing';
 
 /**
@@ -42,6 +43,14 @@ export async function publishProductUpdateAction(formData: FormData) {
       ...parsed.value,
       createdByUserId: userId,
     });
+
+    // ✅-markøren på Utroperens tavle (#1305) — best-effort, kun prod, og før
+    // redirect() siden den kaster. En feil her logges og stopper ingenting.
+    try {
+      await stampLaunchBoard(parsed.value.title);
+    } catch (err) {
+      console.error('[publishProductUpdateAction] stampLaunchBoard', err);
+    }
 
     revalidatePath('/admin/lanseringer');
     redirect({

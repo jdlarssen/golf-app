@@ -46,6 +46,11 @@ vi.mock('@/lib/productUpdates/publish', () => ({
   publishProductUpdate: (input: unknown) => publishMock(input),
 }));
 
+const stampMock = vi.fn();
+vi.mock('@/lib/loops/launchMarker', () => ({
+  stampLaunchBoard: (title: string) => stampMock(title),
+}));
+
 const editMock = vi.fn();
 vi.mock('@/lib/productUpdates/edit', () => ({
   editProductUpdate: (input: unknown) => editMock(input),
@@ -153,6 +158,56 @@ describe('publishProductUpdateAction', () => {
       createdByUserId: 'admin-1',
     });
     expect(lastRedirect()).toBe('/admin/lanseringer?published=1&recipients=5');
+    expect(stampMock).toHaveBeenCalledTimes(1);
+    expect(stampMock).toHaveBeenCalledWith('Texas scramble er ute!');
+  });
+
+  it('stempler ikke tavla ved valideringsfeil', async () => {
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(fd({ title: '   ', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(stampMock).not.toHaveBeenCalled();
+  });
+
+  it('stempler ikke tavla når publiseringen feiler', async () => {
+    publishMock.mockRejectedValueOnce(new Error('db nede'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(fd({ title: 'X', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/lanseringer?error=publish_failed');
+    expect(stampMock).not.toHaveBeenCalled();
+  });
+
+  it('best-effort: stampLaunchBoard som avviser gir likevel ?published=1', async () => {
+    publishMock.mockResolvedValueOnce({ id: 'pu-2', recipientCount: 3, failedCount: 0 });
+    stampMock.mockRejectedValueOnce(new Error('github nede'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(fd({ title: 'X', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(stampMock).toHaveBeenCalledWith('X');
+    expect(lastRedirect()).toBe('/admin/lanseringer?published=1&recipients=3');
+  });
+
+  it('best-effort: stampLaunchBoard som kaster synkront gir likevel ?published=1', async () => {
+    publishMock.mockResolvedValueOnce({ id: 'pu-3', recipientCount: 4, failedCount: 0 });
+    stampMock.mockImplementationOnce(() => {
+      throw new Error('boom');
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(fd({ title: 'X', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/lanseringer?published=1&recipients=4');
   });
 });
 
