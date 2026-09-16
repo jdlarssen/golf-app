@@ -30,6 +30,19 @@ export type KeyMetrics = {
     profileCompleted: number;
     firstScore: number;
   };
+  /**
+   * Livstegn (#2119) per Oslo month (`YYYY-MM`), oldest first, current month
+   * last — twelve rows, empty months included. `byOthers` = not created by an
+   * admin; `withoutAdmin` = also no non-withdrawn admin player.
+   */
+  months: {
+    month: string;
+    finished: number;
+    byOthers: number;
+    withoutAdmin: number;
+  }[];
+  /** The same three counts over all time. */
+  livstegnTotal: { finished: number; byOthers: number; withoutAdmin: number };
 };
 
 /**
@@ -54,7 +67,12 @@ export function KeyMetricsView({ metrics }: { metrics: KeyMetrics }) {
         {t('keyMetricsLabel')}
       </p>
       <Card className="p-4 sm:p-5">
-        <dl className="space-y-3">
+        <LivstegnSection
+          months={metrics.months}
+          total={metrics.livstegnTotal}
+        />
+
+        <dl className="mt-4 space-y-3 border-t border-border pt-3">
           <div>
             <div className="flex items-baseline justify-between gap-3">
               <dt className="font-sans text-[13px] text-text">
@@ -191,6 +209,106 @@ function FunnelSection({ funnel }: { funnel: KeyMetrics['funnel'] }) {
           );
         })}
       </dl>
+    </div>
+  );
+}
+
+/**
+ * Livstegn (#2119, docs/visjon.md §Livstegn): finished games per Oslo month,
+ * split into «by others» and «without Jørgen», newest month on top, with the
+ * all-time total underneath. The month label is parsed from the `YYYY-MM`
+ * string itself — no Date, so no timezone can shift it — and carries the
+ * year on the top row and wherever the year changes.
+ */
+function LivstegnSection({
+  months,
+  total,
+}: {
+  months: KeyMetrics['months'];
+  total: KeyMetrics['livstegnTotal'];
+}) {
+  const t = useTranslations('admin.dashboard');
+  const rows = [...months].reverse();
+  const cell = 'py-1 text-right font-serif text-sm font-medium tabular-nums text-text';
+  const head = 'pb-1 text-right font-sans text-[10px] font-normal text-muted';
+
+  return (
+    <div data-testid="key-metrics-livstegn">
+      <p className="font-sans text-[13px] text-text">
+        {t('keyMetricsLivstegnLabel')}
+      </p>
+      <table className="mt-2 w-full border-collapse">
+        <thead>
+          <tr>
+            <th scope="col" className={`${head} text-left`}>
+              {t('keyMetricsLivstegnMonth')}
+            </th>
+            <th scope="col" className={head}>
+              {t('keyMetricsLivstegnFinished')}
+            </th>
+            <th scope="col" className={head}>
+              {t('keyMetricsLivstegnByOthers')}
+            </th>
+            <th scope="col" className={head}>
+              {t('keyMetricsLivstegnWithoutAdmin')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => {
+            const [year, month] = row.month.split('-');
+            const showYear = i === 0 || rows[i - 1].month.slice(0, 4) !== year;
+            return (
+              <tr
+                key={row.month}
+                data-testid="key-metrics-livstegn-month"
+                data-month={row.month}
+              >
+                <th
+                  scope="row"
+                  className="py-1 text-left font-sans text-[13px] font-normal text-text"
+                >
+                  {t('keyMetricsLivstegnMonthName', { month: Number(month) })}
+                  {showYear && (
+                    <span className="tabular-nums text-muted"> {year}</span>
+                  )}
+                </th>
+                <td className={cell}>{row.finished}</td>
+                <td className={cell}>{row.byOthers}</td>
+                <td className={cell}>{row.withoutAdmin}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr className="border-t border-border">
+            <th
+              scope="row"
+              className="pt-1.5 text-left font-sans text-[13px] font-semibold text-text"
+            >
+              {t('keyMetricsLivstegnTotal')}
+            </th>
+            <td
+              className={`${cell} pt-1.5`}
+              data-testid="key-metrics-livstegn-total-finished"
+            >
+              {total.finished}
+            </td>
+            <td
+              className={`${cell} pt-1.5`}
+              data-testid="key-metrics-livstegn-total-by-others"
+            >
+              {total.byOthers}
+            </td>
+            <td
+              className={`${cell} pt-1.5`}
+              data-testid="key-metrics-livstegn-total-without-admin"
+            >
+              {total.withoutAdmin}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   );
 }
