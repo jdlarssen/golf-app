@@ -95,9 +95,16 @@ ukens forslag; «Fra arkivet»-seksjonen telles ikke som lager.
 Tom uke: kommentar med «Ingen lansering denne uka — neste kandidat i kø:
 <tittel eller ‘kø tom’>» (ingen json-blokk, ingen knapp i Discord).
 
-**✅-markøren** (postes av endepunktet ved publisering, leses av Utroperen som
-publisert-tilstand): `✅ Publisert: <tittel> — YYYY-MM-DD`. Match på tittel
-mot CHANGELOG-oppføringen; datoen brukes i månedsbrev-vakta.
+**✅-markøren** (leses av Utroperen som publisert-tilstand):
+`✅ Publisert: <tittel> — YYYY-MM-DD`. Match på tittel mot
+CHANGELOG-oppføringen; datoen brukes i månedsbrev-vakta. Formatet bor i
+`lib/loops/launchMarker.ts`, og markøren postes fra begge publiseringsstiene:
+
+- **📣-knappen** (endepunktet) markerer tavle-issuet forslaget sto på, og
+  kvitteringen i Discord sier fra hvis markeringen feilet.
+- **`/admin/lanseringer`** markerer #1208 etter vellykket publisering, men
+  **kun i prod** (`VERCEL_ENV=production`). Staging og preview stempler aldri
+  den ekte tavla. Feil havner bare i loggen og stopper aldri publiseringen.
 
 ## Discord-speiling (etter tavle-kommentaren)
 
@@ -117,9 +124,8 @@ Samme mønster som morgenbriefen (`docs/loops/morgenbriefen.md`):
 Månedsbrevet (#202) sender ALLE lanseringer fra forrige kalendermåned 1. i
 måneden. Tell ✅-markører med inneværende måneds dato; **≥ 4 → varsellinje**
 («månedsbrevet begynner å bli fullt — vurder å la denne vente») men fortsatt
-forslag — redaksjonen er eierens, vakta stopper aldri. Manuelle publiseringer
-utenom Utroperen fanges ikke her; endepunktets kvittering gir eksakt
-DB-telling ved hvert tapp.
+forslag — redaksjonen er eierens, vakta stopper aldri. Endepunktets
+kvittering gir eksakt DB-telling ved hvert tapp.
 
 ## Heartbeat
 
