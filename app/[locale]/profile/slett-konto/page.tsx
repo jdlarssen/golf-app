@@ -7,8 +7,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { SubmitButton } from '@/components/ui/SubmitButton';
-import { deleteOwnAccount } from './actions';
+import { DeleteAccountForm } from '@/components/auth/DeleteAccountForm';
 import {
   getDeleteBlockReason,
   type DeleteCheckOutcome,
@@ -142,15 +141,10 @@ export default async function SlettKontoPage({
           </div>
 
           <div className="flex flex-col gap-2.5">
-            <form action={deleteOwnAccount}>
-              <SubmitButton
-                className="w-full"
-                style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
-                pendingLabel={t('deletePending')}
-              >
-                {t('deleteButton')}
-              </SubmitButton>
-            </form>
+            <DeleteAccountForm
+              label={t('deleteButton')}
+              pendingLabel={t('deletePending')}
+            />
             <SmartLink
               href="/profile"
               className="rounded-full border border-border bg-surface px-4 py-3 text-center font-sans text-[13px] font-medium text-text"
