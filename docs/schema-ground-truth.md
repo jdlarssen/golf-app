@@ -96,12 +96,17 @@ bypasses every TS guard — only RLS + the guard trigger stop it.
 
 | Actor | Operation | Policy |
 |-------|-----------|--------|
-| creator | INSERT / UPDATE / DELETE | authenticated |
+| creator | INSERT / UPDATE | authenticated |
+| creator | DELETE | authenticated — `game_players creator delete`; not in cup matches (`games.tournament_id` set) since 0178 (#1937) |
 | global admin | INSERT | public — `game_players admin insert` (0177; was the admin branch of the removed `self register open`) |
-| self (pre-active) | DELETE (withdraw) | public |
+| self (pre-active) | DELETE (withdraw) | public — `game_players self withdraw pre active` (admin branch included); not in cup matches since 0178 (#1937) |
 | self | UPDATE (mark accepted) | authenticated |
 | self | UPDATE (submit scorecard) | public |
 | peer (flightmate) | UPDATE (approve scorecard) | authenticated — added migration 0106 (#704) |
+
+Cup matches have **no non-admin DELETE path** since 0178: a missing row leaves the side short and blocks
+auto-start (#1814). Leaving or swapping goes through the cup withdrawal and `swapCupMatchPlayer`, both on
+the service role.
 
 There is **no self-INSERT policy** since migration 0177 (#2062). Open self-registration writes
 with the service role: capped formats go through the `SECURITY DEFINER` RPC
