@@ -319,5 +319,18 @@ describe('OrganiserSection', () => {
     expect(screen.queryByTestId('organiser-finish')).toBeNull();
     expect(screen.getByTestId('organiser-cup-note')).toBeTruthy();
     expect(screen.getByTestId('organiser-cup-link')).toBeTruthy();
+
+    // 9. #1937: planlagt cupkamp har ingen Fjern-knapp. RLS (0178) nekter
+    //    slettingen, og knappen skal ikke love noe basen sier nei til.
+    await rerender(
+      <OrganiserSection
+        bundle={bundle('scheduled', { tournamentId: 'cup-1' })}
+        userId={ME}
+        onChanged={onChanged}
+        onFinish={onFinish}
+      />,
+    );
+    expect(screen.queryByTestId(`organiser-remove-${MATE}`)).toBeNull();
+    expect(screen.queryByTestId(`organiser-remove-${ME}`)).toBeNull();
   });
 });
