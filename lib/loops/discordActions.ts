@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { fetchCiRunsForSha } from './ciRuns';
+import { postLaunchMarker } from './launchMarker';
 import {
   validateProductUpdateInput,
   type ProductUpdateInputError,
@@ -395,19 +396,12 @@ async function handlePublishLansering(
   const issueMatch = /\/issues\/(\d+)$/.exec(comment.issue_url ?? '');
   let markerNote = '';
   if (issueMatch) {
-    try {
-      const marker = await gh.rest(
-        'POST',
-        `/repos/${LOOP_REPO}/issues/${issueMatch[1]}/comments`,
-        { body: `✅ Publisert: ${value.title} — ${new Date().toISOString().slice(0, 10)}` },
-      );
-      if (marker.status !== 201)
-        markerNote = ` (fikk ikke markert tavla: HTTP ${marker.status})`;
-    } catch {
-      // Nettverksfeil mot GitHub etter at lanseringen er ute — kvitteringen
-      // må fortsatt melde suksess, bare med caveat.
-      markerNote = ' (fikk ikke markert tavla: nettverksfeil)';
-    }
+    const marker = await postLaunchMarker(gh, Number(issueMatch[1]), value.title);
+    if (!marker.ok)
+      markerNote =
+        marker.reason === 'http'
+          ? ` (fikk ikke markert tavla: HTTP ${marker.status})`
+          : ' (fikk ikke markert tavla: nettverksfeil)';
   } else {
     markerNote = ' (fant ikke tavle-issuet å markere)';
   }

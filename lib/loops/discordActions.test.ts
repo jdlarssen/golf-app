@@ -601,6 +601,15 @@ describe('executeAction: publish_lansering', () => {
     expect(msg).toContain('fikk ikke markert tavla');
   });
 
+  it('markør-post feiler → kvitteringen navngir HTTP-statusen ordrett (#1305)', async () => {
+    const { gh } = mockGh([
+      { status: 200, json: tavleComment },
+      { status: 500 },
+    ]);
+    const msg = await executeAction(publishAction, gh, mockDeps());
+    expect(msg).toContain('(fikk ikke markert tavla: HTTP 500)');
+  });
+
   it('markør-post KASTER (nettverksfeil) etter publisering → suksessmelding med caveat', async () => {
     const rest = vi
       .fn()

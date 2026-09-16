@@ -5,9 +5,9 @@ import {
   isTimestampFresh,
   parseCustomId,
   verifyDiscordSignature,
-  type GitHubClient,
   type LanseringDeps,
 } from '@/lib/loops/discordActions';
+import { githubClient } from '@/lib/loops/githubClient';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { publishProductUpdate } from '@/lib/productUpdates/publish';
 import { formatMonthLongNb } from '@/lib/format/date';
@@ -118,32 +118,6 @@ function lanseringDeps(): LanseringDeps {
       return count ?? 0;
     },
     monthLabel: () => month.label,
-  };
-}
-
-function githubClient(pat: string): GitHubClient {
-  const headers = {
-    Authorization: `Bearer ${pat}`,
-    Accept: 'application/vnd.github+json',
-    'Content-Type': 'application/json',
-  };
-  return {
-    async rest(method, path, body) {
-      const res = await fetch(`https://api.github.com${path}`, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      return { status: res.status, json: await res.json().catch(() => null) };
-    },
-    async graphql(query, variables) {
-      const res = await fetch('https://api.github.com/graphql', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ query, variables }),
-      });
-      return { status: res.status, json: await res.json().catch(() => null) };
-    },
   };
 }
 
