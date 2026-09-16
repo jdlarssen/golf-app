@@ -122,16 +122,18 @@ vinner:
      `supabase/**`, `**/slett/**`, `**/slett-konto/**`, `proxy.ts`, `lib/auth/**`,
      `lib/supabase/**`, `app/api/**`, `app/[locale]/(auth)/**`, `**/betaling/**`,
      `lib/payment/**`, `.github/**`, `.githooks/**`, `.claude/**`, `lib/loops/**`,
-     `scripts/loops/**`, `native/app/**`, `native/ios/**` eller `native/android/**`.
+     `scripts/loops/**`, appens innloggings-, konto- og butikkflater under `native/app/`
+     (fillista i `NEVER_AUTO_MERGE_GLOBS`, #2134), `native/ios/**` eller `native/android/**`.
      Migrasjoner, destruktive flyter,
-     auth/sikkerhet, penger, enforcement-flater, merge-porten selv og hele
-     native-appen beholder menneske-porten (fail-closed, bredere enn issue-ets
-     liste). Native-raden er bred med vilje (#1944): web-radene dekker webbens
-     innlogging, utlogging, konto-sletting og Supabase-klient, appen har sine egne
-     motstykker, og ingen av dem matchet noe — PR #1943 (appens utlogging) ble
-     auto-merget forbi eieren. `docs/native/**` står utenfor: prosa om appen
-     trenger ingen menneske-port. Raden står til appen er sluppet og vurderes på
-     nytt da. Skall-radene (#1956) dekker Capacitor- og TWA-skallets signerings-,
+     auth/sikkerhet, penger, enforcement-flater, merge-porten selv og appens
+     auth-, konto- og butikkflater beholder menneske-porten (fail-closed, bredere enn issue-ets
+     liste). Native-raden var bred fra #1944 til #2134 (`native/app/**`): appens egne
+     auth-flater matchet ingen web-rad, og PR #1943 (appens utlogging) ble auto-merget
+     forbi eieren. Fra 2026-09-16 (eierbeslutning, #2134) står bare innlogging, konto
+     og butikkbygg igjen i fillista: appen er ikke sluppet, main er ikke produksjon
+     for den, og hele appen testes før slipp. Ny auth-flate i appen legges til i
+     fillista. `docs/native/**` står utenfor: prosa om appen trenger ingen
+     menneske-port. Skall-radene (#1956) dekker Capacitor- og TWA-skallets signerings-,
      rettighets- og dyplenke-filer (`App.entitlements`, `AndroidManifest.xml` m.fl.),
      fordi `native/ios/` er nød-utgangen etter slipp; `native/assets/**` står utenfor. Merk om porten-selv-radene
      (#1655): workflowen henter alltid main sin versjon av `lib/loops` +

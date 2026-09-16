@@ -54,11 +54,14 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
      økten og eskaleres ikke.
    - **Aldri auto-merge:** prod-DB-migrasjoner (prod-brannmuren #1074 står), destruktive
      flyter (sletting av data/kontoer), auth-/sikkerhetsendringer, noe som koster penger,
-     endringer i selve merge-porten (`lib/loops/`, `scripts/loops/` — #1655) og hele
-     native-appen (`native/app/**` — #1944; appens egne auth-flater matchet ingen
-     web-rad, så PR #1943 ble auto-merget forbi eieren), pluss skallmappene
-     `native/ios/**` og `native/android/**` (#1956; signerings-, rettighets- og
-     dyplenke-flater). Disse venter alltid på
+     endringer i selve merge-porten (`lib/loops/`, `scripts/loops/` — #1655) og
+     appens innloggings-, konto- og butikkflater (`Login.tsx`, `DeleteAccount.tsx`,
+     `session.tsx`, `data/account.ts`, `data/logout.ts`, `data/webApi.ts`,
+     `src/supabase.ts`, `loginCopy.ts`, `accountCopy.ts`, `app.json`, `app.config.ts`,
+     `native/app/scripts/**` — #1944 og #2134; fra 2026-09-16 auto-merges resten av
+     `native/app/**` som annen kode, fordi appen ikke er sluppet og main ikke er
+     produksjon for den), pluss skallmappene `native/ios/**` og `native/android/**`
+     (#1956; signerings-, rettighets- og dyplenke-flater). Disse venter alltid på
      eksplisitt eier-godkjenning.
    - Eieren orienteres i etterkant i produktspråk (aldri teknisk, jf. #1302): morgen-
      briefens «Skjedde i natt» + CHANGELOG. Ingen egen merge-melding kreves.

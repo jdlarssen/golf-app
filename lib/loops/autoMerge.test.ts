@@ -37,7 +37,11 @@ describe('touchesNeverList', () => {
     ['.claude/hooks/bash-guard.sh', '.claude/**'],
     ['lib/loops/autoMerge.ts', 'lib/loops/**'],
     ['scripts/loops/decide-pr-card.ts', 'scripts/loops/**'],
-    ['native/app/src/screens/Login.tsx', 'native/app/**'],
+    ['native/app/src/screens/Login.tsx', 'native/app/src/screens/Login.tsx'],
+    ['native/app/src/data/logout.ts', 'native/app/src/data/logout.ts'],
+    ['native/app/src/supabase.ts', 'native/app/src/supabase.ts'],
+    ['native/app/app.json', 'native/app/app.json'],
+    ['native/app/scripts/store-build-ios.sh', 'native/app/scripts/**'],
     ['native/ios/ios/App/App/App.entitlements', 'native/ios/**'],
     ['native/android/app/src/main/AndroidManifest.xml', 'native/android/**'],
   ])('%s treffer aldri-lista', (file) => {
@@ -71,8 +75,9 @@ describe('touchesNeverList', () => {
   // PR #1943 (appens profil-rom + utlogging) ble auto-merget av kortet 2026-09-03
   // kl. 17:34 selv om den endret appens utloggings- og konto-flater. Fillista under
   // er PR-ens faktiske 21 filer, lest med `gh pr view 1943 --json files` 2026-09-04.
-  // Den er porten sitt regresjonsanker: FØR `native/app/**` sto på lista ga dette
-  // `false`, og det er nettopp derfor eieren ble forbigått.
+  // Den er porten sitt regresjonsanker: FØR appens auth-flater sto på lista ga dette
+  // `false`, og det er nettopp derfor eieren ble forbigått. Etter #2134 treffer lista
+  // via `data/logout.ts` (utloggingen), ikke via en bred `native/app/**`-rad.
   const PR_1943_FILES = [
     'docs/native/app-spike.md',
     'native/app/src/components/SettingRow.tsx',
@@ -99,7 +104,35 @@ describe('touchesNeverList', () => {
 
   it('fillista fra PR #1943 treffer aldri-lista (#1944)', () => {
     expect(touchesNeverList(PR_1943_FILES)).toBe(true);
-    expect(NEVER_AUTO_MERGE_GLOBS).toContain('native/app/**');
+    expect(NEVER_AUTO_MERGE_GLOBS).toContain('native/app/src/data/logout.ts');
+    expect(NEVER_AUTO_MERGE_GLOBS).not.toContain('native/app/**');
+  });
+
+  it('en ren paritetsfiks i appen (komponenter, kopi, tester) auto-merges (#2134)', () => {
+    // Eierbeslutning 2026-09-16: appen er ikke sluppet, main er ikke produksjon for den,
+    // og hele appen testes før slipp. Filene under er PR #2108 sine app-filer.
+    expect(
+      touchesNeverList([
+        'native/app/src/components/hole/BingoBangoBongoCard.tsx',
+        'native/app/src/components/hole/BingoBangoBongoCard.test.tsx',
+        'native/app/src/lib/roster.ts',
+        'native/app/src/lib/roster.test.ts',
+        'native/app/src/screens/Home.tsx',
+      ]),
+    ).toBe(false);
+  });
+
+  it('appens innloggings-, konto- og butikkflater beholder menneske-porten (#2134)', () => {
+    for (const f of [
+      'native/app/src/screens/Login.tsx',
+      'native/app/src/screens/DeleteAccount.tsx',
+      'native/app/src/session.tsx',
+      'native/app/src/data/account.ts',
+      'native/app/src/data/webApi.ts',
+      'native/app/src/lib/loginCopy.ts',
+      'native/app/app.config.ts',
+      'native/app/scripts/store-build-proof.sh',
+    ]) expect(touchesNeverList([f]), f).toBe(true);
   });
 
   it('ren docs-PR treffer ikke — heller ikke docs om appen', () => {

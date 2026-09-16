@@ -93,7 +93,7 @@ const ANCHORS = [
   '`gh pr merge --rebase --delete-branch` — ikke vent på eieren',
   'Rene tekniske valg (implementasjonsdetaljer) er aldri et produktvalg',
   'endringer i selve merge-porten (`lib/loops/`, `scripts/loops/` — #1655)',
-  'native-appen (`native/app/**` — #1944',
+  'appens innloggings-, konto- og butikkflater', // #2134: ikke lenger hele native/app/**
   'PR-body-en er den foreskrevne plassen',
   'Prosa uten heading teller ikke',
   // Forge
