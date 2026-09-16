@@ -5679,7 +5679,8 @@
     "queueWaiting": "{count} slag venter på lagring.",
     "retry": "Prøv igjen",
     "retrying": "Sender…",
-    "loginAction": "Logg inn"
+    "loginAction": "Logg inn",
+    "ownerWipeFailed": "Telefonen har fortsatt slag fra forrige bruker, og appen fikk ikke fjernet dem. Ingen slag sendes før det er gjort. Prøv igjen, eller logg ut."
   },
   "installButton": {
     "label": "Installer som app"

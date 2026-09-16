@@ -267,3 +267,35 @@ describe('drainQueue — konflikt-varsel når du fører for andre (#1368)', () =
     expect(fake.conflicts.has(ID)).toBe(false);
   });
 });
+
+// #1959: kaster eier-vaktens wipe ved eierbytte, ligger forrige brukers kø
+// fortsatt i basen. drainQueue har flere kallere enn motoren (banneret, hull-
+// siden, service worker), så sperren må sitte i drainen selv.
+describe('drainQueue — sperret etter feilet eierbytte-wipe (#1959)', () => {
+  it('gjør null RPC-kall og lar køen stå mens sperren er på', async () => {
+    seedScore(4, '2026-09-16T10:00:00.000Z');
+    const block = await import('./ownerWipeBlock');
+    block.setOwnerWipeBlocked(true);
+
+    const { drainQueue } = await import('./syncWorker');
+    const res = await drainQueue();
+
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(res.pushed).toBe(0);
+    expect(fake.syncQueue.has(ID)).toBe(true);
+    expect(fake.syncQueue.get(ID)!.attemptCount).toBe(0);
+  });
+
+  it('drainer som vanlig når sperren er løftet', async () => {
+    seedScore(4, '2026-09-16T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({
+      data: [{ was_applied: true, updated_at: '2026-09-16T10:00:01.000Z' }],
+      error: null,
+    });
+    const block = await import('./ownerWipeBlock');
+    block.setOwnerWipeBlocked(false);
+
+    const { drainQueue } = await import('./syncWorker');
+    expect((await drainQueue()).pushed).toBe(1);
+  });
+});

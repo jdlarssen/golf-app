@@ -40,12 +40,19 @@ export function GlobalSyncBanner() {
         // Lazy import for the same reason as the banner itself: the guard
         // pulls in Dexie + the supabase browser client.
         const cleanup = await import('@/lib/sync/localDataCleanup');
-        await cleanup.ensureLocalDataOwnerBrowser();
+        try {
+          await cleanup.ensureLocalDataOwnerBrowser();
+        } catch (err) {
+          // #1959: the switch wipe threw — the queue on board is the previous
+          // user's, so the banner stays hidden (it would report their strokes,
+          // the #1697 leak). `SyncBoot` owns the «Prøv igjen» notice.
+          if (err instanceof cleanup.OwnerWipeFailedError) return;
+          // Every other failure: silent and fail-OPEN, same tolerance as
+          // SyncBoot. Hiding the banner on a guard failure would punish the
+          // far commoner case — one owner, one phone, real stranded strokes.
+        }
       } catch {
-        // Silent, and fail-OPEN: same tolerance as SyncBoot (:28–30). The
-        // guard is defensive; hiding the banner on a guard failure would
-        // punish the far commoner case — one owner, one phone, real stranded
-        // strokes to report.
+        // Import failed — fail-open as above.
       }
       setGuardDone(true);
     })();

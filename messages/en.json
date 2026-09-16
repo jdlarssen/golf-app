@@ -5679,7 +5679,8 @@
     "queueWaiting": "{count, plural, one {1 stroke} other {# strokes}} waiting to be saved.",
     "retry": "Try again",
     "retrying": "Sending…",
-    "loginAction": "Log in"
+    "loginAction": "Log in",
+    "ownerWipeFailed": "This phone still has strokes from the previous user, and the app couldn't remove them. No strokes are sent until that's done. Try again, or log out."
   },
   "installButton": {
     "label": "Install app"
