@@ -217,8 +217,8 @@ function FunnelSection({ funnel }: { funnel: KeyMetrics['funnel'] }) {
  * Livstegn (#2119, docs/visjon.md §Livstegn): finished games per Oslo month,
  * split into «by others» and «without Jørgen», newest month on top, with the
  * all-time total underneath. The month label is parsed from the `YYYY-MM`
- * string itself — no Date, so no timezone can shift it — and carries the
- * year on the top row and wherever the year changes.
+ * string itself (no Date, so no timezone can shift it) and carries the year
+ * on the top row and wherever the year changes.
  */
 function LivstegnSection({
   months,
