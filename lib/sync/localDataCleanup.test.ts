@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   detectOwnerChange,
+  drainBeforeDeletion,
   ensureLocalDataOwner,
+  finishAccountDeletion,
   OwnerWipeFailedError,
   prepareLogout,
 } from './localDataCleanup';
@@ -243,5 +245,72 @@ describe('prepareLogout', () => {
     });
     await expect(prepareLogout(deps)).resolves.toBe('kept');
     expect(deps.clear).not.toHaveBeenCalled();
+  });
+});
+
+// #1987 — deleting the account on the web. The server delete has already
+// succeeded when this runs; the account can never deliver its queue again.
+describe('finishAccountDeletion', () => {
+  it('clears the tables, then removes the owner stamp', async () => {
+    const calls: string[] = [];
+    const deps = {
+      clear: vi.fn(async () => {
+        calls.push('clear');
+      }),
+      clearStoredOwner: vi.fn(() => {
+        calls.push('clearStoredOwner');
+      }),
+    };
+    const result = await finishAccountDeletion(deps);
+    expect(result).toBe('cleared');
+    expect(calls).toEqual(['clear', 'clearStoredOwner']);
+  });
+
+  it('clear throwing is logged, the stamp is removed anyway, nothing rethrows', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const deps = {
+      clear: vi.fn(async () => {
+        throw new Error('IndexedDB blocked');
+      }),
+      clearStoredOwner: vi.fn(),
+    };
+    const result = await finishAccountDeletion(deps);
+    expect(result).toBe('clear_failed');
+    expect(deps.clearStoredOwner).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});
+
+describe('drainBeforeDeletion', () => {
+  it('waits for a drain that finishes in time', async () => {
+    const drain = vi.fn(async () => {});
+    await expect(drainBeforeDeletion(drain, 4_000)).resolves.toBeUndefined();
+    expect(drain).toHaveBeenCalledTimes(1);
+  });
+
+  it('swallows a drain that throws', async () => {
+    const drain = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    await expect(drainBeforeDeletion(drain, 4_000)).resolves.toBeUndefined();
+  });
+
+  it('resolves at the timeout when the drain hangs', async () => {
+    vi.useFakeTimers();
+    try {
+      const drain = vi.fn(() => new Promise<void>(() => {}));
+      let settled = false;
+      const pending = drainBeforeDeletion(drain, 4_000).then(() => {
+        settled = true;
+      });
+      await vi.advanceTimersByTimeAsync(3_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await pending;
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
