@@ -131,6 +131,46 @@ describe('deleteOrAnonymizeUser', () => {
     expect(state.deleteUser).toHaveBeenCalledExactlyOnceWith(USER_ID, true);
   });
 
+  // #1903: en feilende lesning skal aldri leses som «ikke anonymisert» eller
+  // «aldri spilt». `count: null` → `?? 0` ville forsøkt hard delete på en
+  // bruker som kan ha historikk — og på admin-kontoen finnes ingen FK som
+  // redder den grenen.
+  it('reports failure when the users read fails, without touching GoTrue or the RPC', async () => {
+    state.tables = {
+      users: { data: null, error: { message: 'boom' } },
+      game_players: { count: 0 },
+    };
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
+    expect(result).toEqual({ ok: false, reason: 'failed' });
+    expect(state.deleteUser).not.toHaveBeenCalled();
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
+  it('reports failure when the game_players count fails, without touching GoTrue or the RPC', async () => {
+    state.tables = {
+      users: { data: { deleted_at: null } },
+      game_players: { count: null, error: { message: 'boom' } },
+    };
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
+    expect(result).toEqual({ ok: false, reason: 'failed' });
+    expect(state.deleteUser).not.toHaveBeenCalled();
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
+  it('reports failure when the game_players count is missing without an error', async () => {
+    state.tables = {
+      users: { data: { deleted_at: null } },
+      game_players: { count: null },
+    };
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
+    expect(result).toEqual({ ok: false, reason: 'failed' });
+    expect(state.deleteUser).not.toHaveBeenCalled();
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
   it('reports failure when the anonymize RPC errors', async () => {
     state.tables = {
       users: { data: { deleted_at: null } },
@@ -164,6 +204,16 @@ describe('getDeleteBlockReason', () => {
       expect(await getDeleteBlockReason(USER_ID)).toBeNull();
       expect(queriedTables()).toEqual(['users']);
     });
+
+    // #1903: feilet lesningen, vet vi ikke om kontoen er admin. «Finnes ikke»
+    // (0 rader, ingen error) er fortsatt null — det er kun feilen som stopper.
+    it('returns check_failed when the users lookup fails, and asks nothing else', async () => {
+      state.tables = { users: { data: null, error: { message: 'boom' } } };
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      expect(await getDeleteBlockReason(USER_ID)).toBe('check_failed');
+      expect(queriedTables()).toEqual(['users']);
+      expect(state.rpc).not.toHaveBeenCalled();
+    });
   });
 
   describe('participation no longer blocks (#1909)', () => {
@@ -189,7 +239,7 @@ describe('getDeleteBlockReason', () => {
     // etterlater turneringen uten styring. En feilende spørring gir
     // `data: null`, som uten vakten ville lest som «arrangerer ingenting».
     it.each(['games', 'tournaments', 'leagues'])(
-      'blocks when the %s query fails, instead of reading the error as "nothing"',
+      'stops (check_failed) when the %s query fails, instead of reading the error as "nothing"',
       async (failing) => {
         state.tables = {
           users: livingUser,
@@ -198,7 +248,8 @@ describe('getDeleteBlockReason', () => {
           leagues: { data: [] },
           [failing]: { data: null, error: { message: 'boom' } },
         };
-        expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        expect(await getDeleteBlockReason(USER_ID)).toBe('check_failed');
       },
     );
 
@@ -285,11 +336,11 @@ describe('getDeleteBlockReason', () => {
       expect(await getDeleteBlockReason(USER_ID)).toBeNull();
     });
 
-    it('blocks (fail-closed) when the club lookup fails', async () => {
+    it('stops (check_failed) when the club lookup fails', async () => {
       state.tables = nothingOrganised;
       state.rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
       vi.spyOn(console, 'error').mockImplementation(() => {});
-      expect(await getDeleteBlockReason(USER_ID)).toBe('active_engagements');
+      expect(await getDeleteBlockReason(USER_ID)).toBe('check_failed');
     });
 
     it('lets the organiser block win when both apply', async () => {

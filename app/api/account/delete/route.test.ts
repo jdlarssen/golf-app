@@ -185,6 +185,23 @@ describe('POST /api/account/delete — sletting', () => {
     },
   );
 
+  // #1903: blokk-sjekken fikk ikke svar. Ikke en blokk-grunn — koden skal
+  // aldri ut på tråden, og slettingen skal aldri forsøkes.
+  it('check_failed: 500 delete_failed, ingen sletting, koden lekker ikke', async () => {
+    blockReasonMock.mockImplementation(async (userId: string) => {
+      blockChecks.push(userId);
+      return 'check_failed';
+    });
+
+    const res = await POST(request('POST', { token: `Bearer ${VALID_TOKEN}` }));
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: 'delete_failed' });
+    expect(blockChecks).toEqual([TOKEN_USER_ID]);
+    expect(deleteCalls).toEqual([]);
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
   it('hjelperen svarer { ok: false }: 500 med ugjennomsiktig kode', async () => {
     deleteMock.mockImplementation(async (userId: string, logPrefix: string) => {
       deleteCalls.push([userId, logPrefix]);
@@ -230,6 +247,20 @@ describe('GET /api/account/delete', () => {
       expect(blockChecks).toEqual([TOKEN_USER_ID]);
     },
   );
+
+  it('check_failed: 500 status_failed, aldri { blocked: "check_failed" }', async () => {
+    blockReasonMock.mockImplementation(async (userId: string) => {
+      blockChecks.push(userId);
+      return 'check_failed';
+    });
+
+    const res = await GET(request('GET', { token: `Bearer ${VALID_TOKEN}` }));
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: 'status_failed' });
+    expect(blockChecks).toEqual([TOKEN_USER_ID]);
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
 
   it('uten gyldig token: 401 uten å slå opp blokk-status', async () => {
     const res = await GET(request('GET', { token: 'Bearer utgatt-token' }));
