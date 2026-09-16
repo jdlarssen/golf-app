@@ -325,6 +325,9 @@ export default async function GameStatusPage({
               return (
                 <li
                   key={r.userId}
+                  data-testid="status-player-row"
+                  data-userid={r.userId}
+                  data-holes-filled={r.holesFilled}
                   className="flex items-center justify-between gap-3 border-t px-3.5 py-3 first:border-t-0"
                   style={{ borderColor: 'var(--row-divider-warm)' }}
                 >

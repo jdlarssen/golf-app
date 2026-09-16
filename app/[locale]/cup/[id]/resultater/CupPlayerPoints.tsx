@@ -93,7 +93,12 @@ export function CupPlayerPoints({
                 );
 
                 return (
-                  <li key={row.userId} data-testid="cup-player-row" data-userid={row.userId}>
+                  <li
+                    key={row.userId}
+                    data-testid="cup-player-row"
+                    data-userid={row.userId}
+                    data-points={row.points}
+                  >
                     {expandable ? (
                       <details
                         className="group rounded-2xl border bg-surface"
