@@ -8,7 +8,8 @@
 //   • `game_players self mark accepted` (0082) — spillerens egen bekreftelse.
 //   • `game_players creator insert` (0071) + BEFORE-triggeren
 //     `guard_game_players_invite_eligibility` (0115) — hvem som kan legges til.
-//   • `game_players creator delete` (0071) — fjerning før start.
+//   • `game_players creator delete` (0071, uten cupkamper fra 0178) — fjerning
+//     før start.
 //   • `game_players creator update` (0071) + `guard_game_players_self_update`
 //     (0147), som slipper spillets oppretter forbi på ANDRES rader.
 //
@@ -60,6 +61,8 @@ export type RosterActionFailure =
   | 'not-found'
   /** Legge til / fjerne krever `draft` eller `scheduled`. */
   | 'roster-locked'
+  /** Cupkamper byttes på cupsiden, aldri ved å fjerne en rad (#1937). */
+  | 'cup-roster-locked'
   /** Formatet tar ikke flere spillere (`maxPlayersForMode`). */
   | 'roster-full'
   /** Lag/flight krever `scheduled`/`active`; WD krever `active`. */
@@ -124,6 +127,7 @@ const failed = (
 /** Rå spill-felter gatene leser. `status` og `game_mode` smalnes ved bruk. */
 interface GameGateRow {
   status: string;
+  tournament_id: string | null;
   game_mode: string;
   mode_config: { team_size?: number } | null;
 }
@@ -148,7 +152,7 @@ async function loadGame(
 ): Promise<{ row: GameGateRow } | { error: RosterActionResult }> {
   const { data, error } = await supabase
     .from('games')
-    .select('status, game_mode, mode_config')
+    .select('status, tournament_id, game_mode, mode_config')
     .eq('id', gameId)
     .maybeSingle<GameGateRow>();
   if (error) return { error: failed('db', error.message) };
@@ -382,10 +386,16 @@ export async function addPlayerToGame(
  * ({@link withdrawPlayer}) i stedet — en sletting ville tatt scorene med seg
  * uten å si fra (#386).
  *
+ * Cupkamper (`tournament_id` satt) nektes (#1937): en slettet rad gjør siden
+ * ufullstendig, og kampen starter aldri (#1814). Arrangøren bytter spilleren
+ * på cupsiden. RLS sier det samme (0178), så vakta her gir bare en forutsigbar
+ * melding. Webben slipper global admin forbi; appen har ingen admin-flate og
+ * nekter alle.
+ *
  * Ingen vakt mot å fjerne sin EGEN rad. Det er webbens oppførsel: hverken
  * actionen eller `spillere/page.tsx` skiller på arrangørens rad, og både
- * `game_players creator delete` (0071) og `game_players self register open`s
- * delete-gren (0043) tillater den. Skal regelen endres, hører den hjemme i
+ * `game_players creator delete` og `game_players self withdraw pre active`
+ * tillater den i vanlige spill. Skal regelen endres, hører den hjemme i
  * begge flatene på én gang.
  */
 export async function removePlayerFromGame(
@@ -398,6 +408,7 @@ export async function removePlayerFromGame(
 
   const game = await loadGame(gameId);
   if ('error' in game) return game.error;
+  if (game.row.tournament_id !== null) return failed('cup-roster-locked');
   if (game.row.status !== 'draft' && game.row.status !== 'scheduled') {
     return failed('roster-locked');
   }

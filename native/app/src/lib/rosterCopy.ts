@@ -8,7 +8,8 @@
 // **Ordforrådet er webbens der webben har et.** Start-kodene er
 // `game.errors.*` i `messages/no.json` tegn for tegn; det samme gjelder
 // `bad_team`, `team_full`, `bad_flight` og `flight_full`, som roster-skrivingene
-// deler med webbens flight-side. Resten er app-egne koder uten fasit, skrevet i
+// deler med webbens flight-side, og `cup-roster-locked`, som er webbens
+// `game.players.errorMessages.cup_roster_locked` (#1937). Resten er app-egne koder uten fasit, skrevet i
 // husets stemme. Ingen av setningene er oversatt fritt: en arrangør som får
 // «laget er fullt» på nettsiden og noe annet i appen begynner å lure på om det
 // er to forskjellige regler.
@@ -90,6 +91,8 @@ export function describeRosterFailure(
       return 'Fant ikke spilleren i denne runden.';
     case 'roster-locked':
       return 'Runden er i gang. Nå trekker du spillere i stedet for å fjerne dem.';
+    case 'cup-roster-locked':
+      return 'Dette er en cupkamp. Bytt spilleren på cupsiden i stedet.';
     case 'roster-full':
       return 'Formatet har ikke plass til flere spillere.';
     case 'not-active':

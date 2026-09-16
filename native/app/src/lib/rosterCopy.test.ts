@@ -28,6 +28,7 @@ const ROSTER_REASONS: RosterActionFailure[] = [
   'offline',
   'not-found',
   'roster-locked',
+  'cup-roster-locked',
   'roster-full',
   'not-active',
   'no-team-mode',
@@ -80,6 +81,12 @@ describe('describeRosterFailure', () => {
       expect(describeRosterFailure(reason)).toBe(web[webKey]);
     },
   );
+
+  it('bruker webbens ordlyd for «cup-roster-locked» (#1937)', () => {
+    expect(describeRosterFailure('cup-roster-locked')).toBe(
+      source.game.players.errorMessages.cup_roster_locked,
+    );
+  });
 
   it('viser serverens egen melding ved en rå DB-feil, og en rolig linje uten', () => {
     expect(describeRosterFailure('db', 'connection reset')).toBe('connection reset');

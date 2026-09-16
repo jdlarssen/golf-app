@@ -59,6 +59,7 @@ const ERROR_KEYS = new Set([
   'remove_missing_user',
   'game_locked',
   'roster_locked',
+  'cup_roster_locked',
   'game_full',
   'db_players',
   'withdraw_stale',
@@ -133,6 +134,10 @@ export default async function CreatorSpillerePage({
   const courseName = courseRes.data?.name ?? null;
   const status = game.status;
   const isPreStart = status === 'draft' || status === 'scheduled';
+  // #1937: a cup match's roster is changed by swapping players on the cup,
+  // never by removing a row here (RLS 0178 refuses it for non-admins).
+  const isCupRosterLocked = game.tournament_id !== null && !role.isAdmin;
+  const canRemove = isPreStart && !isCupRosterLocked;
   const isActive = status === 'active';
   const canWithdraw = supportsWithdrawal(game.game_mode);
   const isBestBall = game.game_mode === 'best_ball';
@@ -256,6 +261,11 @@ export default async function CreatorSpillerePage({
         {/* ── Roster ───────────────────────────────────────────────── */}
         <section>
           <MiniRibbon>{t('rosterSection')}</MiniRibbon>
+          {isPreStart && isCupRosterLocked && (
+            <p className="mb-2 px-1 text-sm text-muted" data-testid="cup-roster-locked-hint">
+              {t('cupRosterLockedHint')}
+            </p>
+          )}
           {players.length === 0 ? (
             <p className="px-1 text-sm text-muted">{t('noPlayers')}</p>
           ) : (
@@ -295,7 +305,7 @@ export default async function CreatorSpillerePage({
                         for redigering without justify-between pushing them
                         apart (#1362). */}
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                      {isPreStart && (
+                      {canRemove && (
                         <form action={removePlayerFromGame.bind(null, gameId)}>
                           <input type="hidden" name="user_id" value={p.user_id} />
                           <button

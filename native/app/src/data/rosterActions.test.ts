@@ -44,9 +44,15 @@ function gameRow(
   status: string,
   gameMode = 'stableford',
   modeConfig: { team_size?: number } | null = null,
+  tournamentId: string | null = null,
 ) {
   return {
-    data: { status, game_mode: gameMode, mode_config: modeConfig },
+    data: {
+      status,
+      tournament_id: tournamentId,
+      game_mode: gameMode,
+      mode_config: modeConfig,
+    },
     error: null,
   };
 }
@@ -365,6 +371,20 @@ describe('rosterActions', () => {
         reason: 'no-rows',
       });
     });
+
+    it.each(['draft', 'scheduled'])(
+      'nekter fjerning i en cupkamp (%s) uten å røre game_players (#1937)',
+      async (status) => {
+        const { queryStub, routeFrom, supabase } = mocks();
+        routeFrom({ games: [queryStub(gameRow(status, 'singles_matchplay', null, 'cup-1'))] });
+
+        expect(await actions().removePlayerFromGame(GAME, MATE)).toEqual({
+          ok: false,
+          reason: 'cup-roster-locked',
+        });
+        expect(supabase.from).toHaveBeenCalledTimes(1);
+      },
+    );
 
     it('nekter fjerning i en aktiv runde — der trekkes spilleren i stedet', async () => {
       const { queryStub, routeFrom, supabase } = mocks();
