@@ -106,7 +106,7 @@ describe('removePlayerFromGame', () => {
 
     expect(url).toBe(`/games/${GAME_ID}/spillere?status=player_removed`);
     expect(deleteCalls()).toHaveLength(1);
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
   it('aktivt spill → roster_locked uten DELETE', async () => {
