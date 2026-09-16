@@ -5,6 +5,7 @@ import { redirect } from '@/i18n/navigation';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import type { GameStatus } from '@/lib/games/status';
 
 /**
@@ -25,8 +26,13 @@ function detailPathFor(isAdmin: boolean, gameId: string): string {
  * Remove a player from a game's roster before it starts. Only draft/scheduled —
  * once a round is active, a player leaves via withdrawal (#386), not deletion,
  * so their scores aren't silently dropped. Gated on requireAdminOrCreator; the
- * delete runs on the request-scoped client (RLS 0071 game_players creator-delete
- * for creators, admin-write for admins).
+ * delete runs on the request-scoped client (RLS "game_players creator delete"
+ * for creators, the is_admin() branch for admins).
+ *
+ * Cup matches (tournament_id set) are refused for non-admins (#1937): a deleted
+ * row leaves the side short and blocks auto-start (#1814). The organizer swaps
+ * players on the cup instead. RLS enforces the same rule (0178) — the guard here
+ * gives a predictable message instead of a silent 0-row delete.
  */
 export async function removePlayerFromGame(
   gameId: string,
@@ -44,22 +50,36 @@ export async function removePlayerFromGame(
 
   const { data: game } = await supabase
     .from('games')
-    .select('status')
+    .select('status, tournament_id')
     .eq('id', gameId)
-    .single<{ status: GameStatus }>();
+    .single<{ status: GameStatus; tournament_id: string | null }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found` as string, locale });
+  if (game!.tournament_id !== null && !ctx.isAdmin) {
+    redirect({ href: `${detailPath}?error=cup_roster_locked` as string, locale });
+  }
   if (game!.status !== 'draft' && game!.status !== 'scheduled') {
     // Active/finished: removal isn't allowed — use withdrawal instead.
     redirect({ href: `${detailPath}?error=roster_locked` as string, locale });
   }
 
-  const { error } = await supabase
-    .from('game_players')
-    .delete()
-    .eq('game_id', gameId)
-    .eq('user_id', playerUserId);
-  if (error) {
-    console.error('[removePlayerFromGame] delete failed', error);
+  // A delete RLS refuses matches 0 rows with error == null (trap 2), so the
+  // affected rows are asserted rather than trusting the missing error.
+  let removed = true;
+  try {
+    expectAffected(
+      await supabase
+        .from('game_players')
+        .delete()
+        .eq('game_id', gameId)
+        .eq('user_id', playerUserId)
+        .select('user_id'),
+      'removePlayerFromGame',
+    );
+  } catch (err) {
+    console.error('[removePlayerFromGame] delete failed', err);
+    removed = false;
+  }
+  if (!removed) {
     redirect({ href: `${detailPath}?error=db_players` as string, locale });
   }
 
