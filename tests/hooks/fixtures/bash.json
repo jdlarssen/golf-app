@@ -69,6 +69,42 @@
     "payload": { "tool_input": { "command": "gh pr merge https://github.com/jdlarssen/golf-app/pull/5 --rebase" } }
   },
   {
+    "name": "#1303: miljøvariabel foran gh pr merge, uten label → deny",
+    "expect": "deny",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "GH_PAGER= gh pr merge 5 --rebase --delete-branch" } }
+  },
+  {
+    "name": "#1303: env/command foran gh pr merge, uten label → deny",
+    "expect": "deny",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "env GH_TOKEN=x command gh pr merge 5 --rebase" } }
+  },
+  {
+    "name": "#1303: gh pr merge i for … do-løkke, uten label → deny",
+    "expect": "deny",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "for n in 5 6; do gh pr merge $n --rebase; done" } }
+  },
+  {
+    "name": "#1303: gh pr merge i out=$( … ), uten label → deny",
+    "expect": "deny",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "out=$(gh pr merge 5 --rebase)" } }
+  },
+  {
+    "name": "#1303: gh pr merge i subshell ( … ), uten label → deny",
+    "expect": "deny",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "(gh pr merge 5 --rebase)" } }
+  },
+  {
+    "name": "#1303 sikkerhetsnett: ukjent form (xargs) → context, aldri mindre vern enn før",
+    "expect": "context",
+    "setup": "pr-visible-unlabeled",
+    "payload": { "tool_input": { "command": "echo 5 6 | xargs -n1 gh pr merge --rebase" } }
+  },
+  {
     "name": "#1303 falskt treff: echo som nevner gh pr merge → none, ingen pr-merge-staging-hendelse",
     "expect": "none",
     "setup": "pr-visible-unlabeled",
