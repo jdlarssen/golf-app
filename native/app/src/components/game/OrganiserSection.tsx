@@ -323,10 +323,11 @@ export function OrganiserSection({
                 />
               ) : null}
 
-              {scheduled ? (
+              {scheduled && !isCupGame ? (
                 // Ingen vakt mot å fjerne seg selv — hverken webbens action
                 // eller RLS har en, og to flater med hver sin regel er verre
-                // enn regelen selv.
+                // enn regelen selv. Cupkamper har ingen knapp: RLS (0178)
+                // nekter slettingen, og spilleren byttes på cupsiden (#1937).
                 <Pressable
                   style={[ui.buttonSecondary, styles.rowButton]}
                   disabled={busy}
