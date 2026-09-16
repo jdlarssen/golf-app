@@ -61,6 +61,9 @@ describe('seedGameScores', () => {
     // `.eq('user_id', …)`. Flight-synligheten er RLS sin jobb.
     expect(scores.steps.filter((s) => s.method !== 'select')).toEqual([
       { method: 'eq', args: ['game_id', GAME] },
+      // #1894: sidevis lesing, én kort side.
+      { method: 'order', args: ['id'] },
+      { method: 'range', args: [0, 999] },
     ]);
 
     const { getDb, listScoresForGame } = require('./db') as Db;

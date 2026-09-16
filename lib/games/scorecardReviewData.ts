@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /**
  * Course-hole row as the scorecard review table needs it. Mirrors the
@@ -46,12 +47,18 @@ export async function fetchScorecardReviewData(
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<ScorecardHole[]>(),
-    scoresClient
-      .from('scores')
-      .select('user_id, hole_number, strokes')
-      .eq('game_id', gameId)
-      .in('user_id', userIds)
-      .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        scoresClient
+          .from('scores')
+          .select('user_id, hole_number, strokes')
+          .eq('game_id', gameId)
+          .in('user_id', userIds)
+          .order('id')
+          .range(from, to)
+          .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>(),
+      'fetchScorecardReviewData scores',
+    ),
   ]);
   if (holesRes.error) throw holesRes.error;
   if (scoresRes.error) throw scoresRes.error;

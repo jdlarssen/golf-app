@@ -65,6 +65,7 @@ import type {
   ScoringGender,
 } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /** En komplett 18-hulls-runde (alle 18 hull registrert). */
 const COMPLETE_ROUND_HOLES = 18;
@@ -180,12 +181,18 @@ export default async function HistorikkPage() {
   const teeById = new Map<string, TeeBoxRatings>();
   if (gameIds.length > 0) {
     const [scoresRes, holesRes, teeRes] = await Promise.all([
-      supabase
-        .from('scores')
-        .select('game_id, hole_number, strokes, putts')
-        .eq('user_id', userId) // userId is string — narrowed after redirect guard above
-        .in('game_id', gameIds)
-        .not('strokes', 'is', null),
+      selectAllRowsResult(
+        (from, to) =>
+          supabase
+            .from('scores')
+            .select('game_id, hole_number, strokes, putts')
+            .eq('user_id', userId) // userId is string — narrowed after redirect guard above
+            .in('game_id', gameIds)
+            .not('strokes', 'is', null)
+            .order('id')
+            .range(from, to),
+        'historikk scores',
+      ),
       supabase
         .from('course_holes')
         .select(`course_id, ${COURSE_HOLES_SELECT}`)

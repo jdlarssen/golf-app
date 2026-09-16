@@ -5,6 +5,7 @@ import { subscribeGameScores } from '@/lib/sync/realtime';
 import { currentDeviceUserId } from '@/lib/sync/currentUser';
 import { mergeServerScore } from '@/lib/sync/mergeServerScore';
 import { getBrowserClient } from '@/lib/supabase/client';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 export function RealtimeMount({ gameId }: { gameId: string }) {
   useEffect(() => {
@@ -15,12 +16,18 @@ export function RealtimeMount({ gameId }: { gameId: string }) {
   useEffect(() => {
     async function catchUp() {
       const supabase = getBrowserClient();
-      const { data } = await supabase
-        .from('scores')
-        .select(
-          'game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, updated_at',
-        )
-        .eq('game_id', gameId);
+      const { data } = await selectAllRowsResult(
+        (from, to) =>
+          supabase
+            .from('scores')
+            .select(
+              'game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, updated_at',
+            )
+            .eq('game_id', gameId)
+            .order('id')
+            .range(from, to),
+        'RealtimeMount catch-up scores',
+      );
       if (!data) return;
       // Once per catch-up run, outside the merge: awaiting a non-Dexie promise
       // inside a Dexie transaction commits it early (PrematureCommitError).
