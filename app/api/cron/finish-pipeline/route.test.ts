@@ -191,8 +191,8 @@ describe('POST /api/cron/finish-pipeline — per spill', () => {
       logContext: 'finishPipeline',
     });
     expect(revalidateTagMock.mock.calls).toEqual([
-      ['game-g1', 'max'],
-      ['game-g2', 'max'],
+      ['game-g1', { expire: 0 }],
+      ['game-g2', { expire: 0 }],
     ]);
     await expect(res.json()).resolves.toEqual({
       ok: true,
@@ -240,8 +240,8 @@ describe('POST /api/cron/finish-pipeline — per spill', () => {
     });
     // Det som feilet får ingen cache-invalidering; naboene får sin.
     expect(revalidateTagMock.mock.calls).toEqual([
-      ['game-g1', 'max'],
-      ['game-g3', 'max'],
+      ['game-g1', { expire: 0 }],
+      ['game-g3', { expire: 0 }],
     ]);
   });
 });

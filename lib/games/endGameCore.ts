@@ -1,7 +1,7 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from './expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { runFinishPipeline } from '@/lib/games/runFinishPipeline';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -294,7 +294,7 @@ export async function endGameCore(
     });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   return { ok: true, gameName: game.name, alreadyFinished: !flipWon };

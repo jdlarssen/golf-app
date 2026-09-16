@@ -592,7 +592,7 @@ describe('endGameCore — write order', () => {
     expect(adminClientMock.__fromCalls).toEqual([]);
     // Revalidation still runs: this request's caller is about to render the
     // finished game, and a stale `game-${id}` tag would show it as active.
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('#1856: flip WON but marker claim LOST silently skips the whole tail', async () => {
@@ -915,7 +915,7 @@ describe('endGameCore — post-flip tail', () => {
 
     await endGameCore(client as never, GAME_ID, ACTOR);
 
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/admin/games/game-1');
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
   });
@@ -947,7 +947,7 @@ describe('endGameCore — suppressPerGameNotifications', () => {
     expect(notifyAchievementUnlocksMock).toHaveBeenCalledTimes(1);
     expect(generateAndPersistRoundReportMock).toHaveBeenCalledTimes(1);
     expect(logAdminEventMock).toHaveBeenCalledTimes(1);
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 });
 

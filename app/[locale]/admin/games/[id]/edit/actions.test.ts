@@ -356,7 +356,7 @@ describe('updateScheduledAction — mode-lock', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 });
 
@@ -579,7 +579,7 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe('/games/game-1?status=updated');
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('oppretter publish med pending-spiller bouncer til /games/[id]/rediger (ikke /admin/*)', async () => {

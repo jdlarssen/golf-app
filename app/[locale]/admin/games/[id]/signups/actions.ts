@@ -2,7 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -283,7 +283,7 @@ export async function approveRequest(requestId: string): Promise<void> {
     );
   }
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
   redirect({ href: `${detailPath}?status=approved`, locale });
 }
 
@@ -407,6 +407,6 @@ export async function rejectRequest(
     );
   }
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
   redirect({ href: `${detailPath}?status=rejected`, locale });
 }

@@ -2,7 +2,7 @@
 
 import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { notify } from '@/lib/notifications/notify';
@@ -127,7 +127,7 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
 
     if (existing?.approved_at) {
       // Allerede godkjent — idempotent. Ikke send varsel på nytt.
-      revalidateTag(`game-${gameId}`, 'max');
+      expireGameCache(gameId);
       revalidatePath(`/games/${gameId}`);
       revalidatePath(`/games/${gameId}/approve`);
       redirect({ href: `/games/${gameId}/approve?status=approved` as string, locale });
@@ -176,7 +176,7 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
     console.error('[approveScorecard] scorecard_approved notify failed', err);
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/approve`);
   redirect({ href: `/games/${gameId}/approve?status=approved` as string, locale });
@@ -255,7 +255,7 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
     if (existing && existing.submitted_at === null) {
       // Allerede avvist — idempotent. Revalider så et stakkars «venter på
       // godkjenning»-UI ikke blir hengende, men ikke varsle på nytt.
-      revalidateTag(`game-${gameId}`, 'max');
+      expireGameCache(gameId);
       revalidatePath(`/games/${gameId}`);
       revalidatePath(`/games/${gameId}/approve`);
       redirect({ href: `/games/${gameId}/approve?status=rejected` as string, locale });
@@ -305,7 +305,7 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
     console.error('[rejectScorecard] scorecard_rejected notify failed', err);
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/approve`);
   redirect({ href: `/games/${gameId}/approve?status=rejected` as string, locale });

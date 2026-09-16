@@ -128,7 +128,7 @@ describe('joinFlight', () => {
     const result = await joinFlight(GAME_ID, 2);
 
     expect(result).toEqual({ ok: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
   it('race-guard: after-count > 4 → angrer rad, returnerer flight_full', async () => {

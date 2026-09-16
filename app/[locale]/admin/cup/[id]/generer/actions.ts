@@ -2,7 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
+import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -281,7 +281,7 @@ export async function createCupMatchesFromPlan(
   );
   if ('error' in outcome) return outcome;
 
-  revalidateTag(`tournament-${tournamentId}`, 'max');
+  expireTournamentCache(tournamentId);
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
   revalidatePath(`/cup/${tournamentId}`);

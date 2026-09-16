@@ -194,7 +194,7 @@ describe('endGameMarkingWithdrawals', () => {
   );
 
   it.each([
-    ['fewer rows than ticked', [{ user_id: 'user-a' }], [[`game-${GAME_ID}`, 'max']]],
+    ['fewer rows than ticked', [{ user_id: 'user-a' }], [[`game-${GAME_ID}`, { expire: 0 }]]],
     ['0 rows (NoRowsAffectedError)', [], []],
   ])(
     'an UPDATE that hits %s sends the organiser back to the confirm page without finishing',

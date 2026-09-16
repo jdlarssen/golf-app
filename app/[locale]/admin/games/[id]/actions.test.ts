@@ -193,7 +193,7 @@ describe('adminWithdrawPlayer', () => {
         targetId: 'game-1',
       }),
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('redirects with ?error=not_active for non-active game', async () => {
@@ -241,7 +241,7 @@ describe('adminWithdrawPlayer', () => {
     await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/games/game-1/spillere?error=withdraw_stale');
     expect(logAdminEventMock).not.toHaveBeenCalled();
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     const writeFilters = supabaseMock.__fromCalls
       .filter((c) => c.table === 'game_players')
       .map((c) => [c.method, ...c.args]);
@@ -303,7 +303,7 @@ describe('adminUndoWithdraw', () => {
         targetId: 'game-1',
       }),
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('redirects with ?error=not_active when game is finished', async () => {
@@ -350,7 +350,7 @@ describe('adminUndoWithdraw', () => {
     await expect(adminUndoWithdraw('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/admin/games/game-1?error=reinstate_stale');
     expect(logAdminEventMock).not.toHaveBeenCalled();
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     const writeFilters = supabaseMock.__fromCalls
       .filter((c) => c.table === 'game_players')
       .map((c) => [c.method, ...c.args]);
@@ -871,7 +871,7 @@ describe('endGame', () => {
     );
 
     expect(sendGameFinishedNotificationMock).toHaveBeenCalledTimes(2);
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(lastRedirect()).toBe('/admin/games/game-1?status=finished');
   });
 

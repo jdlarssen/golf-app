@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireCronAuth } from '@/lib/cron/auth';
 import { runFinishPipelineForGame } from '@/lib/games/runFinishPipeline';
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       // straight through PostgREST, which no cache tag can see, and this pass
       // has just written result summaries and differentials on top. Without it
       // the game page keeps serving its pre-finish snapshot.
-      revalidateTag(`game-${game.id}`, 'max');
+      expireGameCache(game.id);
     } catch (err) {
       console.error(`[${LOG_PREFIX}] game ${game.id} failed`, err);
       failed.push({

@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -139,10 +139,10 @@ async function readCupTarget(
 
 /** Buster hver cache-flate et trekk kan ha endret. */
 function revalidateCup(tournamentId: string, groupId: string | null, gameIds: string[]) {
-  revalidateTag(`tournament-${tournamentId}`, 'max');
+  expireTournamentCache(tournamentId);
   // Hver skrevet kamp har sin egen tag (`getGameWithPlayers`) — uten dette
   // viser venterommet og hull-siden den gamle troppen i opptil 15 minutter.
-  for (const gameId of gameIds) revalidateTag(`game-${gameId}`, 'max');
+  for (const gameId of gameIds) expireGameCache(gameId);
   const base = cupBasePath(tournamentId, groupId);
   revalidatePath(base);
   revalidatePath(`${base}/spillere`);

@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import type { Database } from '@/lib/database.types';
 import { getServerClient } from '@/lib/supabase/server';
@@ -49,7 +49,7 @@ function cupPath(id: string, groupId: string | null, sub = ''): string {
 }
 
 function revalidateCup(id: string, groupId: string | null): void {
-  revalidateTag(`tournament-${id}`, 'max');
+  expireTournamentCache(id);
   revalidatePath(`/admin/cup/${id}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
 }
@@ -147,7 +147,7 @@ async function writePlanToScheduledMatches(
     updatedIds.push(...affected.map((row) => row.id));
   }
 
-  for (const gameId of updatedIds) revalidateTag(`game-${gameId}`, 'max');
+  for (const gameId of updatedIds) expireGameCache(gameId);
   return true;
 }
 

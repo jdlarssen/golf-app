@@ -159,7 +159,7 @@ describe('setFoursomesTeeStarter', () => {
 
     const result = await setFoursomesTeeStarter(GAME_ID, 1, PARTNER_ID);
     expect(result).toEqual({ ok: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
 
     // Verifiser at update gikk mot riktig kolonne for side 1
     const updateCall = serverMock.__fromCalls.find(

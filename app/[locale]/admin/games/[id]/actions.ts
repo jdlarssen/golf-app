@@ -2,7 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -158,7 +158,7 @@ export async function startScheduledGameAction(gameId: string) {
     }
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   redirect({ href: `${detailPath}?status=started`, locale });
@@ -248,7 +248,7 @@ export async function adminApproveScorecard(
 
     // Idempotent: scorecard already approved (or the row is gone) → treat as
     // success without re-notifying.
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     redirect({ href: `${detailPath}?status=admin_approved#leverte-scorekort`, locale });
   }
 
@@ -291,7 +291,7 @@ export async function adminApproveScorecard(
     );
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   // #1067: the `#leverte-scorekort` hash is a best-effort UX nicety — Next.js
   // strips URL fragments when replaying a server-action redirect on the
   // client (see ScrollToAnchorOnStatus for the evidence + the client-side
@@ -406,7 +406,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
       console.error('[reopenScorecard] reopen update failed', err);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     redirect({ href: `${detailPath}?status=scorecard_reopened`, locale });
   }
 
@@ -441,7 +441,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     console.error('[reopenScorecard] scorecard_reopened notify failed', err);
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   redirect({ href: `${detailPath}?status=scorecard_reopened`, locale });
@@ -494,7 +494,7 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
     }
     // The native app writes withdrawn_at without revalidating the web cache;
     // refresh it so the roster stops offering the same button.
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     redirect({ href: `${detailPath}?error=withdraw_stale`, locale });
   }
 
@@ -512,7 +512,7 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
   // dedicated WD notification is deferred — the audit-log entry above is the
   // record for now.
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=player_withdrawn`, locale });
 }
 
@@ -557,7 +557,7 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
       console.error('[adminUndoWithdraw] undo-withdraw update failed', err);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     redirect({ href: `${detailPath}?error=reinstate_stale`, locale });
   }
 
@@ -570,7 +570,7 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
     payload: { gameId, userId },
   });
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=player_reinstated`, locale });
 }
 
@@ -671,7 +671,7 @@ export async function reopenGame(gameId: string) {
     );
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/leaderboard`);

@@ -2,7 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -400,7 +400,7 @@ async function completeOpenRegistration(
   game: { id: string; name: string; created_by: string | null },
   userId: string,
 ): Promise<ActionResult> {
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
 
   // Notify game-creator. Best-effort — feil her skal aldri rulle tilbake
   // selve påmeldingen. Admin uten created_by-rad (sjelden — manuell DB-fix)
@@ -519,7 +519,7 @@ export async function requestApproval(
     return { ok: false, error: 'db_error' };
   }
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
 
   if (game.created_by && inserted?.id) {
     const requesterName = await getRequesterName(userId);

@@ -186,7 +186,7 @@ describe('submitScorecard', () => {
       RedirectError,
     );
 
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
 
     // Submitter (user-1) is filtered out — only Jørgen receives mail.
@@ -352,7 +352,7 @@ describe('submitScorecard', () => {
 
     expect(notifyMock).not.toHaveBeenCalled();
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
   });
 });
@@ -504,8 +504,8 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
       calls.some((c) => c.method === 'eq' && c.args[0] === 'game_id' && c.args[1] === 'front9-a'),
     ).toBe(true);
     // Begge spill revalideres.
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-front9-a', 'max');
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-front9-a', { expire: 0 });
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
   });
 

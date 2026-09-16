@@ -552,7 +552,7 @@ describe('setCupPlannedMatchCount — planlagt antall kamper (#1902)', () => {
     // Tallet står — handlingen rullet ingenting tilbake.
     expect(tournamentUpdates()).toEqual([{ planned_match_count: 28 }]);
     // …og tavla ble revalidert, så arrangøren ser det lagrede tallet.
-    expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', 'max');
+    expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', { expire: 0 });
     errorSpy.mockRestore();
   });
 
@@ -970,7 +970,7 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
         error: 'lineup_revealed',
       });
       // The organiser's card was stale; the refresh shows the revealed session.
-      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', 'max');
+      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', { expire: 0 });
       expect(insertMatchesMock).not.toHaveBeenCalled();
       expect(writeCalls()).toHaveLength(0);
     });
@@ -1012,7 +1012,7 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       expect(insertMatchesMock).toHaveBeenCalledTimes(1);
       expect(sessionUpdates()).toEqual([{ revealed_at: expect.any(String) }]);
       // The organiser's card must show the revealed session.
-      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', 'max');
+      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', { expire: 0 });
       // Retrying never rewrites the lineups the captains submitted.
       expect(
         writeCalls().filter((c) => c.table === 'cup_lineup_slots'),
@@ -1045,7 +1045,7 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       expect(sessionUpdates()).toEqual([]);
       expect(insertMatchesMock).not.toHaveBeenCalled();
       // A failed reveal still refreshes the room: the state may have moved.
-      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', 'max');
+      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', { expire: 0 });
       errorSpy.mockRestore();
     });
   });

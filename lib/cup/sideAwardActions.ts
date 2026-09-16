@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -170,7 +170,7 @@ export async function saveSideAwardConfig(
     }
   }
 
-  revalidateTag(`tournament-${tournamentId}`, 'max');
+  expireTournamentCache(tournamentId);
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
   revalidatePath(`/cup/${tournamentId}`);
@@ -231,7 +231,7 @@ export async function registerGirCounts(input: {
     return { ok: false, error: 'save_failed' };
   }
 
-  revalidateTag(`tournament-${tournamentId}`, 'max');
+  expireTournamentCache(tournamentId);
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
   revalidatePath(`/cup/${tournamentId}`);
@@ -319,7 +319,7 @@ export async function registerSideAwardWinner(input: {
     return { ok: false, error: 'save_failed' };
   }
 
-  revalidateTag(`tournament-${tournamentId}`, 'max');
+  expireTournamentCache(tournamentId);
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
   revalidatePath(`/cup/${tournamentId}`);

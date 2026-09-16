@@ -357,11 +357,13 @@ async function createGameInternal(
   // /admin/cup/[id] og /cup/[id] viser den nye matchen umiddelbart, og
   // redirect tilbake til cup-detaljsiden i stedet for game-detalj.
   if (tournamentId) {
-    const { revalidateTag } = await import('next/cache');
+    const { expireTournamentCache } = await import(
+      '@/lib/games/expireGameCache'
+    );
     const { revalidatePath } = await import(
       '@/lib/i18n/revalidateLocalePath'
     );
-    revalidateTag(`tournament-${tournamentId}`, 'max');
+    expireTournamentCache(tournamentId);
     revalidatePath(`/admin/cup/${tournamentId}`);
     revalidatePath(`/cup/${tournamentId}`);
     redirect({ href: `/admin/cup/${tournamentId}?status=match_added`, locale });

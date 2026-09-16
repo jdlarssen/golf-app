@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireCronAuth } from '@/lib/cron/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
           started.push(game.id);
           // Same invalidation as the other start paths so cached game pages
           // stop serving the pre-flip 'scheduled' snapshot.
-          revalidateTag(`game-${game.id}`, 'max');
+          expireGameCache(game.id);
 
           // #1441 (D3): this sweep won the flip → start every derived game
           // too. Best-effort, see startDerivedGames.

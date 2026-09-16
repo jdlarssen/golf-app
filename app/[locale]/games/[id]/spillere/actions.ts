@@ -2,7 +2,7 @@
 
 import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import type { GameStatus } from '@/lib/games/status';
@@ -63,7 +63,7 @@ export async function removePlayerFromGame(
     redirect({ href: `${detailPath}?error=db_players` as string, locale });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=player_removed` as string, locale });
 }
 
@@ -97,6 +97,6 @@ export async function cancelGameInvitation(
     redirect({ href: `${detailPath}?error=cancel_failed` as string, locale });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=invite_cancelled` as string, locale });
 }

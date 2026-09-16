@@ -208,7 +208,7 @@ describe('submitScorecardCore — levering', () => {
       }),
     );
 
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
   });
 
@@ -277,7 +277,7 @@ describe('submitScorecardCore — levering', () => {
     expect(notifyMock).not.toHaveBeenCalled();
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
     // Cachen bustes likevel, så kortet ikke står stale hos kalleren.
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
   });
 
@@ -299,7 +299,7 @@ describe('submitScorecardCore — levering', () => {
     expect(result).toEqual({ ok: true, alreadySubmitted: true, submitted: 0 });
     expect(notifyMock).not.toHaveBeenCalled();
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('DB-feil på oppdateringen → `db`, ingen varsler, ingen cache-busting', async () => {

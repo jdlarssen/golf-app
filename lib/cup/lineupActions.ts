@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -63,7 +63,7 @@ const SESSION_FORMATS: readonly CupSessionFormat[] = [
 ];
 
 function revalidateCup(id: string, groupId: string | null): void {
-  revalidateTag(`tournament-${id}`, 'max');
+  expireTournamentCache(id);
   revalidatePath(`/admin/cup/${id}`);
   revalidatePath(`/admin/cup/${id}/uttak`);
   revalidatePath(`/admin/cup/${id}/spillere`);

@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -57,7 +57,7 @@ export async function togglePlayerPaid(
 
   // Betaling-siden leser game_players ferskt; spill-hjem/PaymentInfo leser via
   // getGameWithPlayers (cache-tag `game-${id}`). Bust begge.
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}/betaling`);
 }
 

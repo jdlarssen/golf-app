@@ -116,7 +116,7 @@ describe('approveScorecard', () => {
       RedirectError,
     );
 
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1/approve');
     expect(lastRedirect()).toBe('/games/game-1/approve?status=approved');
@@ -220,7 +220,7 @@ describe('approveScorecard', () => {
     );
     expect(lastRedirect()).toBe('/games/game-1/approve?status=approved');
     // Idempotent success still revalidates so stale "pending" UI clears.
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('edge case (authorization): non-admin in a different flight (>4 spill) redirects to /', async () => {
@@ -284,7 +284,7 @@ describe('approveScorecard', () => {
       RedirectError,
     );
     expect(lastRedirect()).toBe('/games/game-1/approve?status=approved');
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 });
 
@@ -312,7 +312,7 @@ describe('rejectScorecard', () => {
       rejectScorecard('game-1', makeFormData('player-2')),
     ).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/games/game-1/approve?status=rejected');
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('#704: 0-row reject (RLS-blocked peer) → ?error=db, no success redirect', async () => {
@@ -371,7 +371,7 @@ describe('rejectScorecard', () => {
     // The whole point of #1395: the player gets one notification, not two.
     expect(notifyMock).not.toHaveBeenCalled();
     // Idempotent success still revalidates so stale "waiting" UI clears.
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('#1358: notifies the player with scorecard_rejected when the card is rejected', async () => {

@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
@@ -42,7 +42,7 @@ function joinPath(shortId: string, sub = ''): string {
  * `cupPath` lokal. Endres den ene, endres den andre.
  */
 function revalidateCup(id: string, groupId: string | null): void {
-  revalidateTag(`tournament-${id}`, 'max');
+  expireTournamentCache(id);
   revalidatePath(`/admin/cup/${id}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
 }

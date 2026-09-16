@@ -1,7 +1,7 @@
 'use server';
 
 import 'server-only';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from './expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getServerClient } from '@/lib/supabase/server';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -87,7 +87,7 @@ export async function setLiveFollow(
       'setLiveFollow:enable',
     );
 
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     return rows[0].spectate_token;
   }
 
@@ -100,6 +100,6 @@ export async function setLiveFollow(
     'setLiveFollow:disable',
   );
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   return null;
 }

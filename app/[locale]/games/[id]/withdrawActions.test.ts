@@ -140,7 +140,7 @@ describe('withdrawFromGame', () => {
 
     const result = await withdrawFromGame(GAME_ID);
     expect(result).toEqual({ ok: true, kept: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     // Skal ikke slette raden
     const deleteCalls = adminMock.__fromCalls.filter(
       (c) => c.method === 'delete',
@@ -225,7 +225,7 @@ describe('withdrawFromGame', () => {
     const result = await withdrawFromGame(GAME_ID);
 
     expect(result).toEqual({ ok: true, kept: false });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
@@ -273,7 +273,7 @@ describe('withdrawFromGame', () => {
     const result = await withdrawFromGame(GAME_ID);
 
     expect(result).toEqual({ ok: true, kept: false });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: CAPTAIN_ID,
@@ -341,7 +341,7 @@ describe('undoWithdraw', () => {
 
     const result = await undoWithdraw(GAME_ID);
     expect(result).toEqual({ ok: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     const updateCalls = adminMock.__fromCalls.filter(
       (c) => c.method === 'update',
     );
