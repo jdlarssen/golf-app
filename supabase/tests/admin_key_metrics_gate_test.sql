@@ -8,6 +8,8 @@
 --   4. anon has NO EXECUTE grant
 --   5. PUBLIC has NO EXECUTE grant
 --   6. authenticated HAS EXECUTE (the in-body is_admin() gate does the rest)
+--   7. The function comment names #2119 (0180), so a later migration that
+--      re-creates the body from an older copy (dropping the livstegn) is caught
 --
 -- Catalog state only — no runtime seed, no role impersonation. The runtime
 -- gate (player-JWT call raises not_authorized) is probed on staging per the
@@ -18,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(6);
+select plan(7);
 
 -- ── 1. Function exists ────────────────────────────────────────────────────────
 select ok(
@@ -95,6 +97,13 @@ select ok(
       and privilege_type = 'EXECUTE'
   ),
   '#1010: authenticated has EXECUTE on admin_key_metrics (in-body is_admin() gates further)'
+);
+
+-- ── 7. Comment carries the 0180 livstegn marker ───────────────────────────────
+select ok(
+  obj_description('public.admin_key_metrics()'::regprocedure, 'pg_proc')
+    like '%#2119 (0180)%',
+  '#2119: admin_key_metrics comment names the 0180 livstegn body'
 );
 
 select * from finish();
