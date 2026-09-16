@@ -230,7 +230,7 @@ function LivstegnSection({
   const t = useTranslations('admin.dashboard');
   const rows = [...months].reverse();
   const cell = 'py-1 text-right font-serif text-sm font-medium tabular-nums text-text';
-  const head = 'pb-1 text-right font-sans text-[10px] font-normal text-muted';
+  const head = 'pb-1 font-sans text-[10px] font-normal text-muted';
 
   return (
     <div data-testid="key-metrics-livstegn">
@@ -243,13 +243,13 @@ function LivstegnSection({
             <th scope="col" className={`${head} text-left`}>
               {t('keyMetricsLivstegnMonth')}
             </th>
-            <th scope="col" className={head}>
+            <th scope="col" className={`${head} text-right`}>
               {t('keyMetricsLivstegnFinished')}
             </th>
-            <th scope="col" className={head}>
+            <th scope="col" className={`${head} text-right`}>
               {t('keyMetricsLivstegnByOthers')}
             </th>
-            <th scope="col" className={head}>
+            <th scope="col" className={`${head} text-right`}>
               {t('keyMetricsLivstegnWithoutAdmin')}
             </th>
           </tr>
