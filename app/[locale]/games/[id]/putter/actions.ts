@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 
@@ -95,7 +95,7 @@ export async function backfillPutts(
       );
       updated += 1;
     }
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     return { ok: true, updated };
   } catch (err) {
     if (err instanceof NoRowsAffectedError) {

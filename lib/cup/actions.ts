@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { allSettledInBatches } from '@/lib/async/allSettledInBatches';
@@ -294,7 +294,7 @@ export async function startTournament(formData: FormData) {
     console.error('[cup] startTournament mail-fan-out failed', e);
   }
 
-  revalidateTag(`tournament-${id}`, 'max');
+  expireTournamentCache(id);
   base.revalidate();
   revalidatePath(`/cup/${id}`);
   redirect(`${base.path}?status=started`);
@@ -458,7 +458,7 @@ export async function finishTournament(formData: FormData) {
     console.error('[cup] finishTournament mail-fan-out failed', e);
   }
 
-  revalidateTag(`tournament-${id}`, 'max');
+  expireTournamentCache(id);
   base.revalidate();
   revalidatePath(`/cup/${id}`);
   redirect(`${base.path}?status=finished`);
@@ -993,11 +993,11 @@ export async function swapCupMatchPlayer(
     }),
   ]);
 
-  revalidateTag(`tournament-${tournamentId}`, 'max');
+  expireTournamentCache(tournamentId);
   // Hver skrevet match har sin egen cache-tag (`getGameWithPlayers`) — uten
   // dette viser hull-siden og kamp-hjemmet den gamle spilleren i opptil 15 min.
   for (const writtenGameId of gameIds) {
-    revalidateTag(`game-${writtenGameId}`, 'max');
+    expireGameCache(writtenGameId);
   }
   base.revalidate();
   revalidatePath(`/cup/${tournamentId}`);
@@ -1057,7 +1057,7 @@ export async function deleteTournament(formData: FormData) {
     redirect(deleteErrorPath);
   }
 
-  revalidateTag(`tournament-${id}`, 'max');
+  expireTournamentCache(id);
   // Klubb-cup: tilbake til klubb-siden (Klubbens cuper). Frittstående: admin-lista.
   if (groupId) {
     revalidatePath(`/klubber/${groupId}`);

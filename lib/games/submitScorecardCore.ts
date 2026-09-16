@@ -1,7 +1,7 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from './expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { sendScorecardSubmittedNotification } from '@/lib/mail/scorecardSubmittedNotification';
@@ -133,7 +133,7 @@ export async function submitScorecardCore(
   // denne kunne et re-klikk i lag-modusene re-fyre varsler for en lagkamerat
   // som ennå ikke sto som levert.
   if (meRow.submitted_at) {
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     revalidatePath(`/games/${gameId}`);
     return { ok: true, alreadySubmitted: true, submitted: 0 };
   }
@@ -176,7 +176,7 @@ export async function submitScorecardCore(
   // but keep the revalidate so UX matches a fresh submit.
   const submitted = updated?.length ?? 0;
   if (submitted === 0) {
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     revalidatePath(`/games/${gameId}`);
     return { ok: true, alreadySubmitted: true, submitted: 0 };
   }
@@ -234,7 +234,7 @@ export async function submitScorecardCore(
         if (siblingError) throw siblingError;
 
         // Both games are now delivered — revalidate the front9 host too.
-        revalidateTag(`game-${sibling.gameId}`, 'max');
+        expireGameCache(sibling.gameId);
         revalidatePath(`/games/${sibling.gameId}`);
       }
     } catch (err) {
@@ -384,7 +384,7 @@ export async function submitScorecardCore(
     }
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/games/${gameId}`);
   return { ok: true, alreadySubmitted: false, submitted };
 }

@@ -148,7 +148,7 @@ describe('setPatsomeTeeStarter', () => {
 
     const result = await setPatsomeTeeStarter(GAME_ID, TEAM_NUMBER, PARTNER_ID);
     expect(result).toEqual({ ok: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
 
     // Verifiser at upsert gikk mot riktig tabell med riktige data
     const upsertCall = serverMock.__fromCalls.find(

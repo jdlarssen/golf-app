@@ -2,7 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -126,7 +126,7 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
     }
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   redirect({ href: `${detailPath}?status=flight_suggested`, locale });
 }
@@ -186,7 +186,7 @@ export async function setPlayerFlight(
     redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   redirect({ href: `${detailPath}?status=flight_updated`, locale });
 }
@@ -301,7 +301,7 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
     }
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   redirect({ href: `${detailPath}?status=team_suggested`, locale });
 }
@@ -379,7 +379,7 @@ export async function setPlayerTeam(
     redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   redirect({ href: `${detailPath}?status=team_updated`, locale });
 }
@@ -426,7 +426,7 @@ export async function toggleSignupsClosed(
     redirect({ href: `${detailPath}?error=db_game`, locale });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/signup`);
   redirect({

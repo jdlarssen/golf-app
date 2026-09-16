@@ -233,7 +233,7 @@ describe('approveRequest', () => {
         }),
       }),
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(lastRedirect()).toBe(
       `/admin/games/${GAME_ID}/signups?status=approved`,
     );

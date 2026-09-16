@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
@@ -123,6 +123,6 @@ export async function joinFlight(
     return { ok: false, error: 'flight_full' };
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   return { ok: true };
 }

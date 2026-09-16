@@ -158,7 +158,7 @@ describe('suggestFlightAssignment', () => {
     const { suggestFlightAssignment } = await import('./flightActions');
     await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=flight_suggested`);
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 });
 
@@ -229,7 +229,7 @@ describe('setPlayerFlight', () => {
     const { setPlayerFlight } = await import('./flightActions');
     await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=flight_updated`);
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 });
 
@@ -295,7 +295,7 @@ describe('suggestTeamAssignment', () => {
     const { suggestTeamAssignment } = await import('./flightActions');
     await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=team_suggested`);
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
 
     // Lag OG flight må skrives sammen — CHECK-en krever begge.
     const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
@@ -401,7 +401,7 @@ describe('setPlayerTeam', () => {
       RedirectError,
     );
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=team_updated`);
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
 
     const update = adminMock.__fromCalls.find((c) => c.method === 'update');
     expect(update?.args[0]).toEqual({ team_number: 3, flight_number: 3 });
@@ -443,7 +443,7 @@ describe('toggleSignupsClosed', () => {
     const { toggleSignupsClosed } = await import('./flightActions');
     await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=signups_closed`);
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
   it('gjenåpner påmeldingen → redirect til ?status=signups_reopened', async () => {

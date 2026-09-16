@@ -2,7 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -108,7 +108,7 @@ export async function addExistingPlayerToGame(
     });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=invite_added`, locale });
 }
 
@@ -211,7 +211,7 @@ export async function inviteEmailToGame(
       });
     }
 
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     redirect({ href: `${detailPath}?status=invite_added&email=${encodeURIComponent(rawEmail)}`, locale });
   }
 
@@ -271,7 +271,7 @@ export async function inviteEmailToGame(
     } catch (retryErr) {
       console.error('[inviteToGame/inviteEmail] retry mail failed (best-effort)', retryErr);
     }
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     redirect({ href: `${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`, locale });
   }
 
@@ -327,7 +327,7 @@ export async function inviteEmailToGame(
     redirect({ href: `${detailPath}?error=mail_failed&email=${encodeURIComponent(rawEmail)}`, locale });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`, locale });
 }
 

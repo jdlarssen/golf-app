@@ -2,7 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -89,7 +89,7 @@ export async function addGuestToGame(
     redirect({ href: `${detailPath}?error=${created.error}`, locale });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=guest_added`, locale });
 }
 
@@ -239,14 +239,14 @@ export async function sendGuestResult(
     // E-post-flippen beholdes (kontrakt-beslutning 7): gjesten kan logge inn
     // likevel, og arrangøren kan sende mailen på nytt fra samme skjema.
     console.error('[sendGuestResult] claim mail failed (flip kept)', err);
-    revalidateTag(`game-${gameId}`, 'max');
+    expireGameCache(gameId);
     redirect({
       href: `${detailPath}?error=guest_claim_mail_failed&email=${encodeURIComponent(email!)}`,
       locale,
     });
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   redirect({
     href: `${detailPath}?status=guest_claim_sent&email=${encodeURIComponent(email!)}`,
     locale,

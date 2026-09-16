@@ -396,7 +396,7 @@ describe('submitTeamRegistration — happy paths', () => {
         teamName: 'Birdie-jegerne',
       }),
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
   it('open-modus med ukjent e-post: opprettet invitations-rad (slot resultat unknown_invited)', async () => {

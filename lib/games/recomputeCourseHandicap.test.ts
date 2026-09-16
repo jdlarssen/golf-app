@@ -447,7 +447,7 @@ describe('recomputeCourseHandicapForUser — greensome-overstyring (#1537)', () 
         team_strokes_override: { team1: 14, team2: 19 },
       },
     });
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-greensome-2', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-greensome-2', { expire: 0 });
     // To revalideringer: én etter CH-skrivingen (#1629), én etter mode_config-
     // skrivingen — den siste må komme etterpå for at kampbrettet skal lese det
     // nye lag-slaget.
@@ -537,7 +537,7 @@ describe('recomputeCourseHandicapForUser — cache-revalidering (#1629)', () => 
       updated: 1,
       overridesUpdated: 0,
     });
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-g-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-g-1', { expire: 0 });
     expect(revalidateTagMock).toHaveBeenCalledTimes(1);
   });
 

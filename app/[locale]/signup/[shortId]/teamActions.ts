@@ -3,7 +3,7 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
@@ -597,7 +597,7 @@ export async function submitTeamRegistration(
     );
   }
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
 
   return {
     ok: true,
@@ -761,7 +761,7 @@ export async function acceptTeamInvite(
     return { ok: false, error: 'db_error' };
   }
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
   return { ok: true };
 }
 
@@ -859,7 +859,7 @@ export async function declineTeamInvite(
     }
   }
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
   return { ok: true };
 }
 
@@ -945,7 +945,7 @@ export async function removeTeamMember(
     console.error('[removeTeamMember] notify failed', err),
   );
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
   return { ok: true };
 }
 
@@ -1152,7 +1152,7 @@ export async function attachToCaptainTeam(
 
   // Vi bruker requestId for å returnere noe meningsfullt — caller ignorerer.
   void inserted;
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
   return { ok: true };
 }
 

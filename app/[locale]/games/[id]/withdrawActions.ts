@@ -2,7 +2,7 @@
 
 import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
@@ -156,7 +156,7 @@ export async function withdrawFromGame(
       return { ok: false, error: 'db_error' };
     }
 
-    revalidateTag(`game-${game.id}`, 'max');
+    expireGameCache(game.id);
     return { ok: true, kept: true };
   }
 
@@ -232,7 +232,7 @@ export async function withdrawFromGame(
     .eq('game_id', gameId)
     .eq('user_id', user!.id);
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
 
   // Varsle kapteinen hvis bruker var team-medlem.
   if (captainUserId && teamMatesUserId && teamName) {
@@ -342,6 +342,6 @@ export async function undoWithdraw(
     return { ok: false, error: 'db_error' };
   }
 
-  revalidateTag(`game-${game.id}`, 'max');
+  expireGameCache(game.id);
   return { ok: true };
 }

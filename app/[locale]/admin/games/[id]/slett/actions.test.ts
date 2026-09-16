@@ -98,7 +98,7 @@ describe('deleteGame — admin', () => {
     expect(lastRedirect()).toBe(
       '/admin/games?status=deleted&name=Vinter-cup',
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(deleteCalls()).toHaveLength(1);
     // Ingen logo-paths i prizes → ingen storage-opprydding.
     expect(storageRemoveMock).not.toHaveBeenCalled();

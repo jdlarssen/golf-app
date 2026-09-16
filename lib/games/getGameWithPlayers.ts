@@ -41,8 +41,9 @@ import type { ScoreVisibility } from './visibility';
  *
  * Tag convention: `game-${id}`. The 15-minute `revalidate` is a safety net
  * for edge cases (e.g., admin edits a row directly in the Supabase
- * dashboard). The primary invalidation mechanism is `revalidateTag` calls
- * in the mutation server-actions that touch `games` or `game_players`:
+ * dashboard). The primary invalidation mechanism is `expireGameCache(id)`
+ * (`lib/games/expireGameCache.ts`, immediate expiry — #2068) in the mutations
+ * that touch `games` or `game_players`, for example:
  *
  *  - `app/games/[id]/submit/actions.ts` — submitScorecard
  *  - `app/games/[id]/approve/actions.ts` — approveScorecard, rejectScorecard

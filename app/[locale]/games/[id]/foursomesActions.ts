@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import type { TablesUpdate } from '@/lib/database.types';
@@ -128,6 +128,6 @@ export async function setFoursomesTeeStarter(
     return { ok: false, error: 'update_failed' };
   }
 
-  revalidateTag(`game-${gameId}`, 'max');
+  expireGameCache(gameId);
   return { ok: true };
 }

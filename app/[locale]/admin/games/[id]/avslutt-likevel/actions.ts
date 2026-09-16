@@ -2,7 +2,7 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import {
@@ -162,7 +162,7 @@ export async function endGameMarkingWithdrawals(
     if (withdrawnCount !== withdrawUserIds.length) {
       // Those rows committed, but endGame never runs, so nothing else
       // revalidates the cached game for them.
-      if (withdrawnCount > 0) revalidateTag(`game-${gameId}`, 'max');
+      if (withdrawnCount > 0) expireGameCache(gameId);
       redirect({ href: rosterChangedPath, locale });
     }
   }

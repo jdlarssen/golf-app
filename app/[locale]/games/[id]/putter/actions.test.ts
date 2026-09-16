@@ -52,7 +52,7 @@ describe('backfillPutts', () => {
     const result = await backfillPutts(GAME_ID, [{ holeNumber: 9, putts: 2 }]);
 
     expect(result).toEqual({ ok: true, updated: 1 });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
   it('writes ONLY putts — never client_updated_at (0109 LWW key stays untouched)', async () => {

@@ -200,7 +200,7 @@ describe('addExistingPlayerToGame', () => {
       gameId: GAME_ID,
       inviterUserId: ADMIN_ID,
     });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=invite_added`);
   });
 

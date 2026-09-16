@@ -1,4 +1,4 @@
-import { revalidateTag } from 'next/cache';
+import { expireGameCache } from './expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import {
   calculateCourseHandicap,
@@ -310,7 +310,7 @@ export async function recomputeCourseHandicapForUser(
       // Roster og banehandicap leses via den cachede `getGameWithPlayers`
       // (tag `game-${id}`) — uten dette viser spillsidene den gamle verdien
       // til revalidate-vinduet løper ut (#1629).
-      revalidateTag(`game-${update.gameId}`, 'max');
+      expireGameCache(update.gameId);
     }
   }
 
@@ -425,7 +425,7 @@ async function recomputeGreensomeOverrides(
     if (!affected?.length) continue;
     written += affected.length;
     // Hull-siden og kamp-tavla leser mode_config via `game-${id}`-cachen.
-    revalidateTag(`game-${update.gameId}`, 'max');
+    expireGameCache(update.gameId);
   }
   return written;
 }

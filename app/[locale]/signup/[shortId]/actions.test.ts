@@ -271,7 +271,7 @@ describe('registerForOpenGame', () => {
     expect(redirectMock).toHaveBeenCalledWith(
       expect.objectContaining({ href: `/games/${GAME_ID}` }),
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: ADMIN_USER_ID,
@@ -398,7 +398,7 @@ describe('registerForOpenGame', () => {
     expect(redirectMock).toHaveBeenCalledWith(
       expect.objectContaining({ href: `/games/${GAME_ID}` }),
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
 
     // SF-3: verifiser insert-payload direkte via __fromCalls
     const insertCall = adminMock.__fromCalls.find(
@@ -607,7 +607,7 @@ describe('registerForOpenGame', () => {
     expect(redirectMock).toHaveBeenCalledWith(
       expect.objectContaining({ href: `/games/${GAME_ID}` }),
     );
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: ADMIN_USER_ID, kind: 'registration_request' }),
     );
@@ -769,7 +769,7 @@ describe('requestApproval', () => {
     );
 
     expect(result).toEqual({ ok: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: ADMIN_USER_ID,
@@ -824,7 +824,7 @@ describe('requestApproval', () => {
     );
 
     expect(result).toEqual({ ok: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: ADMIN_USER_ID,
