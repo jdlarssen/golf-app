@@ -36,6 +36,7 @@
 // nederst er tynn nok til å lese seg til.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { wipeLocalData } from './db';
+import { setOwnerWipeBlocked } from './ownerWipeBlock';
 
 /**
  * AsyncStorage-nøkkelen stempelet bor under. `torny:`-prefikset holder den
@@ -60,6 +61,19 @@ export function detectOwnerChange(
   return storedOwnerId === userId ? 'same' : 'switched';
 }
 
+/**
+ * #1959: wipen kastet ved eierbytte. Forrige brukers kø ligger fortsatt i
+ * basen, så kalleren skal holde sync-motoren AV. Alle andre feil fra vakten er
+ * fortsatt fail-open. Kastes bare ved `switched`; ved `first`/`same` tømmes
+ * ingenting, og da finnes det ingenting å beskytte.
+ */
+export class OwnerWipeFailedError extends Error {
+  constructor(cause: unknown) {
+    super('Eierbytte: lokal wipe feilet', { cause });
+    this.name = 'OwnerWipeFailedError';
+  }
+}
+
 /** Lageret vakten trenger. Bindingen nederst fyller det med AsyncStorage + sqlite. */
 export interface OwnerStore {
   getStoredOwnerId: () => Promise<string | null>;
@@ -81,7 +95,11 @@ export async function ensureLocalDataOwner(
   const change = detectOwnerChange(await store.getStoredOwnerId(), userId);
   if (change === 'switched') {
     // Tøm FØR stemplingen — se fil-kommentaren.
-    await store.clear();
+    try {
+      await store.clear();
+    } catch (err) {
+      throw new OwnerWipeFailedError(err);
+    }
   }
   if (change !== 'same') await store.setStoredOwnerId(userId);
   return change;
@@ -94,10 +112,21 @@ const deviceStore: OwnerStore = {
   setStoredOwnerId: (userId) => AsyncStorage.setItem(LOCAL_DATA_OWNER_KEY, userId),
   // Tømmer alle fire tabellene, også `cache_entries` — den globale
   // hjem-cachen (`HOME_CACHE_KEY`) ryker dermed med, og B ser aldri A sine kort.
-  clear: wipeLocalData,
+  // Pil-funksjon, ikke referansen: bindingen leser `wipeLocalData` ved kall,
+  // så testen kan la akkurat én wipe kaste.
+  clear: () => wipeLocalData(),
 };
 
 /** Vakten mot enhetens eget lager. Se {@link ensureLocalDataOwner}. */
-export function ensureLocalDataOwnerOnDevice(userId: string): Promise<OwnerChange> {
-  return ensureLocalDataOwner(userId, deviceStore);
+export async function ensureLocalDataOwnerOnDevice(userId: string): Promise<OwnerChange> {
+  try {
+    const change = await ensureLocalDataOwner(userId, deviceStore);
+    setOwnerWipeBlocked(false);
+    return change;
+  } catch (err) {
+    // #1959: sperr drainen for alle kallere, ikke bare triggerne i Hjem.
+    // Andre feil lar sperren stå som den sto.
+    if (err instanceof OwnerWipeFailedError) setOwnerWipeBlocked(true);
+    throw err;
+  }
 }

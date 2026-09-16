@@ -22,6 +22,7 @@ import {
   putScore,
   withTxn,
 } from './db';
+import { isOwnerWipeBlocked } from './ownerWipeBlock';
 
 export interface DrainResult {
   pushed: number;
@@ -54,6 +55,8 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
   // `inFlight`-vakten: to parallelle drains ville sendt samme kø-element to
   // ganger og kjempet om de samme radene.
   if (inFlight) return EMPTY;
+  // #1959: eierbytte-wipen kastet — køen tilhører forrige bruker.
+  if (isOwnerWipeBlocked()) return EMPTY;
   inFlight = true;
   try {
     const db = await getDb();

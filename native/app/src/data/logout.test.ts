@@ -19,6 +19,11 @@
 import { useFreshModules } from '../test/harness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// #1959: utloggingen leser eier-stempelet. Pakkens egen jest-mock gir et
+// lager i minnet som bygges på nytt per test.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest'),
+);
 
 // Kall-loggen er rekkefølge-beviset. Wipen skriver seg inn her (og gjør
 // deretter den ekte jobben mot basen), signOut-stubben gjør det samme — en
@@ -115,6 +120,29 @@ describe('logOut', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  // #1959: eierbytte-wipen kastet, så stempelet står fortsatt på forrige
+  // bruker, og radene i køen er hens. Drainen ville sendt dem under denne
+  // sesjonen (RLS avviser → karantene), og wipen ville kastet dem.
+  it('drainer ikke, spør ikke og tømmer ikke når stempelet tilhører en annen bruker', async () => {
+    const { supabase } = mocks();
+    const AsyncStorage = (
+      require('@react-native-async-storage/async-storage') as {
+        default: typeof import('@react-native-async-storage/async-storage').default;
+      }
+    ).default;
+    const { LOCAL_DATA_OWNER_KEY } = require('./localOwner') as typeof import('./localOwner');
+    await AsyncStorage.setItem(LOCAL_DATA_OWNER_KEY, 'user-previous');
+    await typeStroke(4);
+
+    expect(await logout().logOut()).toEqual({ ok: true });
+
+    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(mockCalls).toEqual(['signOut']);
+    expect(wipeMock()).not.toHaveBeenCalled();
+    expect(await queueLength()).toBe(1);
+    expect(await AsyncStorage.getItem(LOCAL_DATA_OWNER_KEY)).toBe('user-previous');
   });
 
   it('logger ut og tømmer basen når køen er tom', async () => {
