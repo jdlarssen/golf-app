@@ -36,6 +36,10 @@ target.
   trips the prod-firewall or Closes-detection matchers · `--force-with-lease` inside the
   documented rebase flow · owner-approved `touch .claude/approve-prod` (one-shot, 10 min)
   for prod DB writes.
+- Merging a user-visible PR (a feat/fix/perf commit without `[no-changelog]`) is denied
+  until it has `staging-verified` or `needs-manual-qa` (#1303). The escape hatch is
+  `needs-manual-qa` plus a PR comment with the reason — also when the owner asks for a
+  merge without a staging test («eier ba om merge uten staging-test»).
 - `expectAffected`/`expectOne` (`lib/supabase/affectedRows.ts`) partially enforce I3 for
   mutations.
 
