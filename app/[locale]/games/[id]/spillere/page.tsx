@@ -310,6 +310,7 @@ export default async function CreatorSpillerePage({
                           <input type="hidden" name="user_id" value={p.user_id} />
                           <button
                             type="submit"
+                            data-testid="remove-player-button"
                             className="min-h-[44px] rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
                           >
                             {t('removeButton')}
