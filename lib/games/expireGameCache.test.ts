@@ -10,8 +10,8 @@ import { expireGameCache, expireTournamentCache } from './expireGameCache';
 /**
  * #2068: a mutation expires the game/cup cache at once, and the rule has one
  * home. Part 1 pins the helpers; part 2 sweeps `app/` and `lib/` so nobody goes
- * back to `revalidateTag(`game-…`, 'max')` (stale-while-revalidate: the first
- * visit after the write shows the old status).
+ * back to revalidating these tags with the 'max' profile directly
+ * (stale-while-revalidate: the first visit after the write shows the old status).
  */
 
 describe('expireGameCache / expireTournamentCache', () => {
