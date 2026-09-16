@@ -11,6 +11,7 @@ import { candidatesOnSameSplitDay } from '@/lib/games/splitDayPairing';
 import { filledHolesByPlayer } from '@/lib/games/filledHoles';
 import type { HoleSegment } from '@/lib/scoring';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 // Purre-kjernen (#376 → #1891): ett hjem for «hvem er ferdig uten å ha levert,
 // og send påminnelse til dem». Logikken bodde inni server-action-en
@@ -156,12 +157,18 @@ async function loadReminderContext(
       )
       .eq('game_id', gameId)
       .returns<PlayerRow[]>(),
-    admin
-      .from('scores')
-      .select('user_id, hole_number')
-      .eq('game_id', gameId)
-      .not('strokes', 'is', null)
-      .returns<{ user_id: string; hole_number: number }[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        admin
+          .from('scores')
+          .select('user_id, hole_number')
+          .eq('game_id', gameId)
+          .not('strokes', 'is', null)
+          .order('id')
+          .range(from, to)
+          .returns<{ user_id: string; hole_number: number }[]>(),
+      'remindUnsubmitted scores',
+    ),
   ]);
 
   // Withdrawn players stay in on purpose: `filledHolesByPlayer` needs the whole

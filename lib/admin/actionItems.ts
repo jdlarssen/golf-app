@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { classifyDeliveryStatus } from '@/lib/games/deliveryStatus';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -134,11 +135,17 @@ export const getActionItemCounts = cache(async (): Promise<ActionItemCounts> => 
     .is('withdrawn_at', null);
 
   // 3. Count filled holes per (game_id, user_id).
-  const { data: scoresData } = await supabase
-    .from('scores')
-    .select('game_id, user_id')
-    .not('strokes', 'is', null)
-    .in('game_id', activeIds);
+  const { data: scoresData } = await selectAllRowsResult(
+    (from, to) =>
+      supabase
+        .from('scores')
+        .select('game_id, user_id')
+        .not('strokes', 'is', null)
+        .in('game_id', activeIds)
+        .order('id')
+        .range(from, to),
+    'getAdminActionItems scores',
+  );
 
   // Aggregate hole counts in TS (PostgREST has no GROUP BY).
   const holesMap = new Map<string, number>();

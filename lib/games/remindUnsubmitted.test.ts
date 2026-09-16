@@ -101,7 +101,11 @@ function respond(op: QueryOp): QueryResponse {
   }
   // Eneste andre games-spørring er #1466-oppslaget etter back9-verter.
   if (op.table === 'games') return { data: db.back9Hosts };
-  if (op.table === 'scores') return { data: db.scores };
+  // Serves the page window like PostgREST does, capped at 1 000 rows (#1894).
+  if (op.table === 'scores') {
+    const [from, to] = op.range ?? [0, db.scores.length];
+    return { data: db.scores.slice(from, Math.min(to + 1, from + 1000)) };
+  }
   if (op.table === 'game_players' && op.kind === 'update') return db.stamp;
   // Søsken-oppslaget filtrerer på `in game_id`; spillerlista på `eq game_id`.
   if (op.filters.some((f) => f.column === 'game_id' && f.op === 'in')) {
@@ -224,6 +228,19 @@ describe('previewReminder — antall', () => {
     const result = await previewReminder(GAME_ID);
 
     expect(result).toMatchObject({ ok: true, targets: 1 });
+  });
+
+  it('teller en ferdig spiller hvis hull ligger forbi rad-taket (#2050)', async () => {
+    // 59 × 17 = 1 003 rader først, så «ferdig» sine 18 hull på side 2.
+    const field = Array.from({ length: 59 }, (_, i) => `midt-i-${i}`);
+    db.players = [...field.map((id) => player(id)), player('ferdig')];
+    db.scores = [...field.flatMap((id) => holes(id, 17)), ...holes('ferdig', 18)];
+
+    await expect(previewReminder(GAME_ID)).resolves.toMatchObject({
+      ok: true,
+      targets: 1,
+      targetUserIds: ['ferdig'],
+    });
   });
 
   it('svarer 0 uten å feile når ingen er ferdige', async () => {
@@ -433,10 +450,12 @@ describe('sendReminders — split-dag (#1466)', () => {
     await sendReminders(GAME_ID);
 
     // Negativt bevis: kun spill-oppslaget, spillere, scores og stemplingen.
+    // Spillere og scores hentes samtidig; den sidevise scores-lesingen (#1894)
+    // venter først.
     expect(fake.ops.map((op) => `${op.kind} ${op.table}`)).toEqual([
       'select games',
-      'select game_players',
       'select scores',
+      'select game_players',
       'update game_players',
     ]);
   });
