@@ -11,6 +11,7 @@ import {
 } from '@/lib/games/getGameWithPlayers';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 export type CourseHoleRow = {
   hole_number: number;
@@ -106,11 +107,17 @@ export async function fetchHolesAndScores(
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
-    scoresClient
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', scoresGameId)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        scoresClient
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', scoresGameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'holesData scores',
+    ),
   ]);
   if (rawHolesRes.error) throw rawHolesRes.error;
   if (rawScoresRes.error) throw rawScoresRes.error;

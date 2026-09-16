@@ -14,6 +14,7 @@ import {
   type LbPlayer,
   type LbScore,
 } from '@/lib/leaderboard';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 type CourseHoleRow = {
   hole_number: number;
@@ -109,11 +110,17 @@ export async function GET(
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
-    supabase
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', scoresGameId)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        supabase
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', scoresGameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'leaderboard export scores',
+    ),
   ]);
 
   if (rawHolesRes.error) {

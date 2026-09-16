@@ -34,7 +34,7 @@ const SCORES = [{ user_id: 'user-1', hole_number: 1, strokes: 5 }];
 /**
  * Minimal chainable mock covering the two query shapes fetchHolesAndScores
  * issues: `course_holes.select(...).eq(...).order(...).returns()` and
- * `scores.select(...).eq(...).returns()`. Captures the `game_id` the
+ * `scores.select(...).eq(...).order(...).range(...).returns()` (paged, #1894). Captures the `game_id` the
  * scores fetch is filtered on — the load-bearing assertion for #1631.
  */
 function makeSupabase() {
@@ -62,7 +62,11 @@ function makeSupabase() {
           eq: (_col: string, val: string) => {
             captured.scoresGameId = val;
             return {
-              returns: () => Promise.resolve({ data: SCORES, error: null }),
+              order: () => ({
+                range: () => ({
+                  returns: () => Promise.resolve({ data: SCORES, error: null }),
+                }),
+              }),
             };
           },
         }),

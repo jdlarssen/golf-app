@@ -20,6 +20,7 @@ import { computeGreenCenter } from '@/lib/geo/greenCenter';
 import { PIN_GATE_MAX_PINS, PIN_GATE_WINDOW_DAYS } from '@/lib/geo/pinRules';
 import type { LatLng } from '@/lib/geo/distance';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /** Cookie-basert per-request-klient (typet via helperen, jf. #844). */
 type ServerClient = Awaited<ReturnType<typeof getServerClient>>;
@@ -152,11 +153,17 @@ export async function fetchHolePageData(args: {
         : Promise.resolve({ data: null, error: null }),
       isWolf ? getWolfChoices(gameId) : Promise.resolve([]),
       isWolf
-        ? supabase
-            .from('scores')
-            .select(SCORES_SELECT)
-            .eq('game_id', gameId)
-            .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>()
+        ? selectAllRowsResult(
+            (from, to) =>
+              supabase
+                .from('scores')
+                .select(SCORES_SELECT)
+                .eq('game_id', gameId)
+                .order('id')
+                .range(from, to)
+                .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>(),
+            'holePageData wolf scores',
+          )
         : Promise.resolve({ data: null, error: null }),
       isWolf
         ? supabase
@@ -168,11 +175,17 @@ export async function fetchHolePageData(args: {
       // Skins: alle scores for hele spillet + alle hull-definisjonar for å
       // bygge full ScoringContext og finne riktig atStake for gjeldende hull.
       isSkins
-        ? supabase
-            .from('scores')
-            .select(SCORES_SELECT)
-            .eq('game_id', gameId)
-            .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>()
+        ? selectAllRowsResult(
+            (from, to) =>
+              supabase
+                .from('scores')
+                .select(SCORES_SELECT)
+                .eq('game_id', gameId)
+                .order('id')
+                .range(from, to)
+                .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>(),
+            'holePageData skins scores',
+          )
         : Promise.resolve({ data: null, error: null }),
       isSkins
         ? supabase

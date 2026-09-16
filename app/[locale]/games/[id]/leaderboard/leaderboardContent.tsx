@@ -77,6 +77,7 @@ import type {
   CourseHoleRow,
   ScoreRow,
 } from './leaderboardTypes';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 export type LeaderboardContentOpts = {
   gameId: string;
@@ -179,11 +180,17 @@ export async function renderLeaderboardContent({
       .eq('course_id', gameRow.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
-    readClient
-      .from('scores')
-      .select(SCORES_SELECT)
-      .eq('game_id', scoresGameId)
-      .returns<ScoreRow[]>(),
+    selectAllRowsResult(
+      (from, to) =>
+        readClient
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', scoresGameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'leaderboardContent scores',
+    ),
     gameRow.course_id
       ? readClient
           .from('courses')
