@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   detectOwnerChange,
   ensureLocalDataOwner,
+  OwnerWipeFailedError,
   prepareLogout,
 } from './localDataCleanup';
 
@@ -74,6 +75,47 @@ describe('ensureLocalDataOwner', () => {
     expect(order).toEqual(['clear', 'stamp']);
     expect(deps.setStoredOwnerId).toHaveBeenCalledWith('user-b');
   });
+
+  // #1959: a wipe that throws on a switch is the one failure the caller must
+  // NOT shrug off — the previous owner's queue is still on board.
+  it('switched owner + throwing wipe → OwnerWipeFailedError, stamp untouched', async () => {
+    const cause = new Error('QuotaExceededError');
+    const deps = ownerDeps({
+      clear: vi.fn(async () => {
+        throw cause;
+      }),
+    });
+    const err = await ensureLocalDataOwner(deps).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(OwnerWipeFailedError);
+    expect((err as OwnerWipeFailedError).cause).toBe(cause);
+    expect(deps.setStoredOwnerId).not.toHaveBeenCalled();
+  });
+
+  it('other failures keep their own type (fail-open for the caller)', async () => {
+    const deps = ownerDeps({
+      getSessionUserId: vi.fn(async () => {
+        throw new Error('storage blocked');
+      }),
+    });
+    const err = await ensureLocalDataOwner(deps).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(OwnerWipeFailedError);
+  });
+
+  it.each([
+    ['first', null, 'user-b'],
+    ['same', 'user-b', 'user-b'],
+  ] as const)('%s owner never raises OwnerWipeFailedError', async (_label, stored, session) => {
+    const deps = ownerDeps({
+      getStoredOwnerId: vi.fn(() => stored),
+      getSessionUserId: vi.fn(async () => session as string | null),
+      clear: vi.fn(async () => {
+        throw new Error('would fail if called');
+      }),
+    });
+    await expect(ensureLocalDataOwner(deps)).resolves.toBe(_label);
+    expect(deps.clear).not.toHaveBeenCalled();
+  });
 });
 
 function logoutDeps(overrides: Partial<Parameters<typeof prepareLogout>[0]> = {}) {
@@ -94,6 +136,35 @@ describe('prepareLogout', () => {
     expect(deps.drain).toHaveBeenCalledTimes(1);
     expect(deps.clear).toHaveBeenCalledTimes(1);
     expect(deps.clearStoredOwner).toHaveBeenCalledTimes(1);
+  });
+
+  // #1959: the rows on board belong to someone else (the owner guard's wipe
+  // failed). Draining them under this session is exactly the RLS-reject →
+  // quarantine path the guard exists to prevent; clearing them would lose the
+  // previous owner's strokes.
+  it('stored owner ≠ session → no drain, no clear, stamp stays, kept', async () => {
+    const deps = logoutDeps({ ownerMatches: vi.fn(() => false) });
+    const result = await prepareLogout(deps);
+    expect(result).toBe('kept');
+    expect(deps.drain).not.toHaveBeenCalled();
+    expect(deps.pendingCount).not.toHaveBeenCalled();
+    expect(deps.clear).not.toHaveBeenCalled();
+    expect(deps.clearStoredOwner).not.toHaveBeenCalled();
+  });
+
+  it('owner mismatch still runs the push cleanup (it belongs to the session)', async () => {
+    const deps = logoutDeps({
+      ownerMatches: vi.fn(() => false),
+      cleanupPush: vi.fn(async () => {}),
+    });
+    await expect(prepareLogout(deps)).resolves.toBe('kept');
+    expect(deps.cleanupPush).toHaveBeenCalledTimes(1);
+  });
+
+  it('owner matches → the normal drain path', async () => {
+    const deps = logoutDeps({ ownerMatches: vi.fn(() => true) });
+    await expect(prepareLogout(deps)).resolves.toBe('cleared');
+    expect(deps.drain).toHaveBeenCalledTimes(1);
   });
 
   it('queue still holding strokes → keeps data AND the owner stamp', async () => {

@@ -3,6 +3,7 @@ import { getBrowserClient } from '@/lib/supabase/client';
 import { syncRetryDecision } from './classifyError';
 import { conflictRecordFor, resolveConflict } from './conflict';
 import { currentDeviceUserId } from './currentUser';
+import { isOwnerWipeBlocked } from './ownerWipeBlock';
 
 let inFlight = false;
 
@@ -13,6 +14,10 @@ export async function drainQueue(): Promise<{
   abandoned: number;
 }> {
   if (inFlight) return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+  // #1959: the owner-switch wipe failed — the queue is the previous user's.
+  if (isOwnerWipeBlocked()) {
+    return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+  }
   inFlight = true;
   try {
     const queue = await localDb.syncQueue.orderBy('createdAt').toArray();

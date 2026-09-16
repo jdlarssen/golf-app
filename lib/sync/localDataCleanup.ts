@@ -1,4 +1,5 @@
 import { localDb } from './db';
+import { setOwnerWipeBlocked } from './ownerWipeBlock';
 
 /**
  * #1404 — local-data hygiene on shared devices (the #819 class: one user's
@@ -53,6 +54,19 @@ export function detectOwnerChange(
   return storedOwnerId === sessionUserId ? 'same' : 'switched';
 }
 
+/**
+ * #1959: the owner-switch wipe threw. The previous user's queue is still on
+ * board, so the caller must keep the sync engine OFF — unlike every other
+ * guard failure, which stays fail-open. Only raised for `switched`; on
+ * `first`/`same` nothing is ever cleared, so there is nothing to protect.
+ */
+export class OwnerWipeFailedError extends Error {
+  constructor(cause: unknown) {
+    super('Local data owner switch: wipe failed', { cause });
+    this.name = 'OwnerWipeFailedError';
+  }
+}
+
 export async function ensureLocalDataOwner(deps: {
   getSessionUserId: () => Promise<string | null>;
   getStoredOwnerId: () => string | null;
@@ -68,7 +82,11 @@ export async function ensureLocalDataOwner(deps: {
   if (change === 'switched') {
     // Clear BEFORE stamping: if the wipe throws, the stamp still names the
     // previous owner and the next boot retries the wipe.
-    await deps.clear();
+    try {
+      await deps.clear();
+    } catch (err) {
+      throw new OwnerWipeFailedError(err);
+    }
   }
   if (change !== 'same') deps.setStoredOwnerId(userId);
   return change;
@@ -80,6 +98,12 @@ export async function prepareLogout(deps: {
   clear: () => Promise<void>;
   clearStoredOwner: () => void;
   cleanupPush?: () => Promise<unknown>;
+  /**
+   * #1959: false when the stored owner stamp names someone other than the
+   * session logging out — the owner-switch wipe failed and the rows on board
+   * are the previous user's. Omitted → treated as a match.
+   */
+  ownerMatches?: () => boolean;
 }): Promise<'cleared' | 'kept'> {
   // #1790: drop the device's push registration for the account logging out —
   // server row, browser subscription and the remembered native token — while
@@ -92,6 +116,13 @@ export async function prepareLogout(deps: {
     : undefined;
 
   let outcome: 'cleared' | 'kept';
+  if (deps.ownerMatches && !deps.ownerMatches()) {
+    // #1959: someone else's rows. Draining pushes them under this session
+    // (RLS reject → quarantine); clearing loses them. Leave data AND stamp —
+    // the switch guard retries the wipe on the next login.
+    if (pushCleanup) await pushCleanup;
+    return 'kept';
+  }
   try {
     await deps.drain();
   } catch {
@@ -129,16 +160,30 @@ function getStoredOwnerIdBrowser(): string | null {
  */
 export async function ensureLocalDataOwnerBrowser(): Promise<void> {
   if (typeof window === 'undefined') return;
-  const { getBrowserClient } = await import('@/lib/supabase/client');
+  try {
+    await runOwnerGuardBrowser();
+    setOwnerWipeBlocked(false);
+  } catch (err) {
+    // #1959: lock every drain caller, not just the engine start — see
+    // `ownerWipeBlock.ts`. Other failures leave the lock as it was.
+    if (err instanceof OwnerWipeFailedError) setOwnerWipeBlocked(true);
+    throw err;
+  }
+}
+
+async function getSessionUserIdBrowser(): Promise<string | null> {
+  try {
+    const { getBrowserClient } = await import('@/lib/supabase/client');
+    const { data } = await getBrowserClient().auth.getSession();
+    return data.session?.user.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function runOwnerGuardBrowser(): Promise<void> {
   await ensureLocalDataOwner({
-    getSessionUserId: async () => {
-      try {
-        const { data } = await getBrowserClient().auth.getSession();
-        return data.session?.user.id ?? null;
-      } catch {
-        return null;
-      }
-    },
+    getSessionUserId: getSessionUserIdBrowser,
     getStoredOwnerId: getStoredOwnerIdBrowser,
     setStoredOwnerId: (userId) => {
       try {
@@ -170,7 +215,13 @@ export async function prepareLogoutBrowser(
   if (typeof window === 'undefined') return 'kept';
   const run = (async () => {
     const { drainQueue } = await import('./syncWorker');
+    const stored = getStoredOwnerIdBrowser();
+    const sessionUserId = stored == null ? null : await getSessionUserIdBrowser();
     return prepareLogout({
+      // #1959: no stamp or no readable session → nothing to compare, keep the
+      // normal path (same fail-open reading as the guard itself).
+      ownerMatches: () =>
+        stored == null || sessionUserId == null || stored === sessionUserId,
       drain: drainQueue,
       pendingCount: () => localDb.syncQueue.count(),
       clear: clearAllLocalData,
