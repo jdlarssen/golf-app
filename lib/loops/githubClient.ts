@@ -8,6 +8,8 @@
 
 import type { GitHubClient } from './discordActions';
 
+export const LOOP_REPO = 'jdlarssen/golf-app';
+
 export function githubClient(pat: string, opts: { timeoutMs?: number } = {}): GitHubClient {
   const headers = {
     Authorization: `Bearer ${pat}`,

@@ -12,7 +12,9 @@ import {
 // denne modulen eier signaturverifisering, custom_id-parsing og GitHub-kallene.
 // DB-avhengighetene for publish_lansering (#1207) injiseres via LanseringDeps.
 
-export const LOOP_REPO = 'jdlarssen/golf-app';
+import { LOOP_REPO } from './githubClient';
+
+export { LOOP_REPO };
 
 // Discord signerer `timestamp + rawBody` med appens ed25519-nøkkel. Node kan
 // verifisere natively, men trenger nøkkelen DER-innpakket (SPKI) — Discord

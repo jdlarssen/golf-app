@@ -9,8 +9,8 @@
 // Best-effort som lib/mail/-helperne: kaster aldri, en feil stopper aldri
 // publiseringen — lanseringen er allerede ute når markøren postes.
 
-import { LOOP_REPO, type GitHubClient } from './discordActions';
-import { githubClient } from './githubClient';
+import type { GitHubClient } from './discordActions';
+import { githubClient, LOOP_REPO } from './githubClient';
 
 export const LAUNCH_BOARD_ISSUE = 1208;
 
