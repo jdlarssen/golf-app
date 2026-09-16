@@ -48,6 +48,9 @@ create or replace function torny_rls.reset() returns void
     delete from public.tee_boxes    where id      = torny_rls.tee_box_id();
     delete from public.course_holes where course_id = torny_rls.course_id();
     delete from public.courses      where id      = torny_rls.course_id();
+    -- 0179 (#1903): a row with is_admin = true cannot be deleted, and admin_id()
+    -- is one. Clear the flag first — the documented way to retire an admin.
+    update public.users set is_admin = false where id = any(torny_rls.all_user_ids());
     delete from public.users        where id = any(torny_rls.all_user_ids());
     delete from auth.users          where id = any(torny_rls.all_user_ids());
   end;
