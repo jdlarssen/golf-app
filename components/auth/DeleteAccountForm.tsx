@@ -61,6 +61,7 @@ export function DeleteAccountForm({
     >
       <Button
         type="submit"
+        data-testid="delete-account-submit"
         className="w-full"
         style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
         pending={isPending}
