@@ -16,7 +16,7 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 |---|---|---|---|
 | 2026-09 | Orkestratoren styrer arbeidet | 0.3.0 er inne, planleggingsløken er i harnesset, og første uke har gått med kapasitetsregelen | Selvkjørende loops |
 | 2026-10 | Løkkene går av seg selv, og null kjente spillerbugs | løkke-issuene er lukket, arkivkjøringen 1. oktober er verifisert, bugene i backloggen er borte, Kavalkade-kontrakten er skrevet (#1040), og livstegnet står i Sekretariatets nøkkeltall | Selvkjørende loops (31.10) |
-| 2026-11 | Kavalkaden, golfåret som delbar fortelling | bygget mot kontrakten og sluppet på web, som er døråpneren for dem som ikke har appen (#1040) | Runde 3 — sesongslutt |
+| 2026-11 | Kavalkaden, golfåret som delbar fortelling | bygget mot kontrakten og i prod på web, som er døråpneren for dem som ikke har appen, skjult til den vises for alle 24. desember (#1040, del-issues #2127–#2131) | Runde 3 — sesongslutt |
 | 2026-12 | Native: paritet, og Kavalkaden delt i romjula | appen gjør det samme som nettsiden i kjerneflyten (#1954), og Kavalkaden er delt av minst tre spillere som ikke er Jørgen | Native app (Kavalkaden: Runde 3 — sesongslutt, 31.12) |
 | 2027-01 | Native: vennegjengen tester | TestFlight og lukket Play-test i gang | Native app |
 | 2027-02 | Native: butikkinnsending | begge butikkene har fått appen | Native app |
