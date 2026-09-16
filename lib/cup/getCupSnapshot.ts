@@ -21,6 +21,7 @@ import {
   type CupMatchInput,
   type TournamentInput,
 } from './computeCupLeaderboard';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /**
  * Server-side snapshot-loader for en cup. Fetcher tournament + alle matches +
@@ -207,10 +208,16 @@ export async function getCupSnapshot(
           .in('game_id', gameIds),
     gameIds.length === 0
       ? Promise.resolve({ data: [] as ScoreRow[], error: null })
-      : supabase
-          .from('scores')
-          .select(`game_id, ${SCORES_SELECT}`)
-          .in('game_id', gameIds),
+      : selectAllRowsResult(
+          (from, to) =>
+            supabase
+              .from('scores')
+              .select(`game_id, ${SCORES_SELECT}`)
+              .in('game_id', gameIds)
+              .order('id')
+              .range(from, to),
+          'getCupSnapshot scores',
+        ),
     games.length === 0
       ? Promise.resolve({ data: [] as CourseHoleRow[], error: null })
       : supabase

@@ -13,6 +13,7 @@ import type {
   LeagueStandingsConfig,
   StandingsMetric,
 } from './types';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /**
  * Server-side snapshot for a league (#453). Mirrors `getCupSnapshot`: loads the
@@ -181,10 +182,16 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
           .in('game_id', gameIds)
       : Promise.resolve({ data: [], error: null }),
     gameIds.length
-      ? supabase
-          .from('scores')
-          .select(`game_id, ${SCORES_SELECT}`)
-          .in('game_id', gameIds)
+      ? selectAllRowsResult(
+          (from, to) =>
+            supabase
+              .from('scores')
+              .select(`game_id, ${SCORES_SELECT}`)
+              .in('game_id', gameIds)
+              .order('id')
+              .range(from, to),
+          'getLigaSnapshot scores',
+        )
       : Promise.resolve({ data: [], error: null }),
     courseIds.length
       ? supabase

@@ -66,14 +66,14 @@ describe('getCupSnapshot — course_holes par-select (#642)', () => {
       },
       // 3. tournament_side_awards (#1441, D9) — none configured for this cup.
       { data: [] },
-      // 4. Promise.all → game_players, scores, course_holes (in array order)
+      // 4. Promise.all → scores (paged: claims its entry first, #1894), game_players, course_holes
+      { data: [] }, // scores
       {
         data: [
           { game_id: 'g1', user_id: 'u1', team_number: 1, course_handicap: 0, users: { name: 'Spiller 1', nickname: null } },
           { game_id: 'g1', user_id: 'u2', team_number: 2, course_handicap: 0, users: { name: 'Spiller 2', nickname: null } },
         ],
       },
-      { data: [] }, // scores
       {
         data: [
           { course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 5, par_juniors: 4, stroke_index: 1 },
@@ -200,21 +200,7 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
           { id: 'sa1', kind: 'ld', hole_number: 6, points: 3, winner_user_id: 'p6', slot: 1, gir_max_per_team: null, gir_team1_count: null, gir_team2_count: null },
         ],
       },
-      // 4. Promise.all → game_players, scores, course_holes.
-      {
-        data: [
-          { game_id: 'g1', ...player('p1', 1) },
-          { game_id: 'g1', ...player('p2', 1) },
-          { game_id: 'g1', ...player('p3', 2) },
-          { game_id: 'g1', ...player('p4', 2) },
-          { game_id: 'g2', ...player('p1', 1) },
-          { game_id: 'g2', ...player('p3', 2) },
-          { game_id: 'g3', ...player('p5', 1) },
-          { game_id: 'g3', ...player('p6', 1) },
-          { game_id: 'g3', ...player('p7', 2) },
-          { game_id: 'g3', ...player('p8', 2) },
-        ],
-      },
+      // 4. Promise.all → scores (paged: claims its entry first, #1894), game_players, course_holes
       {
         // g2 (avledet) har INGEN egne rader — leses fra g1 via source_game_id.
         // g3 (greensome/alternate-shot) bærer scoren kun på lagets
@@ -227,6 +213,20 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
           { game_id: 'g1', user_id: 'p4', hole_number: 10, strokes: 5 },
           { game_id: 'g3', user_id: 'p5', hole_number: 1, strokes: 4 },
           { game_id: 'g3', user_id: 'p7', hole_number: 1, strokes: 5 },
+        ],
+      },
+      {
+        data: [
+          { game_id: 'g1', ...player('p1', 1) },
+          { game_id: 'g1', ...player('p2', 1) },
+          { game_id: 'g1', ...player('p3', 2) },
+          { game_id: 'g1', ...player('p4', 2) },
+          { game_id: 'g2', ...player('p1', 1) },
+          { game_id: 'g2', ...player('p3', 2) },
+          { game_id: 'g3', ...player('p5', 1) },
+          { game_id: 'g3', ...player('p6', 1) },
+          { game_id: 'g3', ...player('p7', 2) },
+          { game_id: 'g3', ...player('p8', 2) },
         ],
       },
       {
@@ -373,14 +373,14 @@ describe('getCupSnapshot — sidepoeng-slots + GIR (#1489)', () => {
           { id: 'sa6', kind: 'ld', hole_number: 9, points: 4, winner_user_id: null, no_winner: true, slot: 1, gir_max_per_team: null, gir_team1_count: null, gir_team2_count: null },
         ],
       },
-      // 4. Promise.all → game_players, scores, course_holes.
+      // 4. Promise.all → scores (paged: claims its entry first, #1894), game_players, course_holes
+      { data: [] }, // scores
       {
         data: [
           { game_id: 'g1', user_id: 'u1', team_number: 1, course_handicap: 0, users: { name: 'Spiller 1', nickname: null } },
           { game_id: 'g1', user_id: 'u2', team_number: 2, course_handicap: 0, users: { name: 'Spiller 2', nickname: null } },
         ],
       },
-      { data: [] }, // scores
       {
         data: [
           { course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 5, par_juniors: 4, stroke_index: 1 },

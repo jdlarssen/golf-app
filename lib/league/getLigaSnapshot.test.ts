@@ -81,9 +81,9 @@ describe('getLigaSnapshot — course_holes par-select (#647)', () => {
           },
         ],
       },
-      // 4. Promise.all → game_players, scores, course_holes, tee_boxes (array order)
-      { data: [] }, // game_players
+      // 4. Promise.all → scores (paged: claims its entry first, #1894), game_players, course_holes, tee_boxes
       { data: [] }, // scores
+      { data: [] }, // game_players
       {
         data: [
           { course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 5, par_juniors: 4, stroke_index: 1 },
@@ -183,19 +183,19 @@ describe('getLigaSnapshot — stableford per-gender par (#677)', () => {
           },
         ],
       },
-      // 4. Promise.all → game_players, scores, course_holes, tee_boxes
-      {
-        data: [
-          { game_id: 'g1', user_id: 'F', course_handicap: 0, tee_gender: 'ladies', submitted_at: '2026-06-15T18:00:00Z', withdrawn_at: null },
-          { game_id: 'g1', user_id: 'M', course_handicap: 0, tee_gender: 'mens', submitted_at: '2026-06-15T18:00:00Z', withdrawn_at: null },
-        ],
-      },
+      // 4. Promise.all → scores (paged: claims its entry first, #1894), game_players, course_holes, tee_boxes
       {
         data: [
           { game_id: 'g1', user_id: 'F', hole_number: 1, strokes: 5 },
           { game_id: 'g1', user_id: 'F', hole_number: 2, strokes: 4 },
           { game_id: 'g1', user_id: 'M', hole_number: 1, strokes: 5 },
           { game_id: 'g1', user_id: 'M', hole_number: 2, strokes: 4 },
+        ],
+      },
+      {
+        data: [
+          { game_id: 'g1', user_id: 'F', course_handicap: 0, tee_gender: 'ladies', submitted_at: '2026-06-15T18:00:00Z', withdrawn_at: null },
+          { game_id: 'g1', user_id: 'M', course_handicap: 0, tee_gender: 'mens', submitted_at: '2026-06-15T18:00:00Z', withdrawn_at: null },
         ],
       },
       {
@@ -298,9 +298,9 @@ describe('getLigaSnapshot — per-round deliveredUserIds (#740)', () => {
           },
         ],
       },
-      // 4. Promise.all → game_players, scores, course_holes (none), tee_boxes (none)
-      { data: gamePlayers },
+      // 4. Promise.all → scores (paged: claims its entry first, #1894), game_players, course_holes, tee_boxes
       { data: [] }, // scores
+      { data: gamePlayers },
       // course_holes and tee_boxes fetches are skipped when courseIds/teeBoxIds empty
     ]);
   }
