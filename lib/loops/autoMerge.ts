@@ -31,16 +31,29 @@ export const NEVER_AUTO_MERGE_GLOBS = [
   '.claude/**',
   'lib/loops/**', // merge-porten selv + kort-logikken (#1655)
   'scripts/loops/**', // decide-/post-harnessen som kjører porten (#1655)
-  // Hele appen, ikke bare dens auth-filer (#1944). Web-radene over dekker webbens
-  // innlogging, utlogging, konto-sletting og Supabase-klient — appen har sine EGNE
-  // motstykker (`screens/Login.tsx`, `data/logout.ts`, `screens/DeleteAccount.tsx`,
-  // `data/webApi.ts`, `src/supabase.ts`), og ingen av dem matchet noen web-rad. PR #1943
-  // (appens utlogging) ble derfor auto-merget forbi eieren. Bevisst bredt fremfor seks
-  // fil-oppføringer: neste auth-flate i appen skal ikke måtte huskes på (eiervalg,
-  // kontrakten på #1954 §Design 0, rad P0). Appen er ikke sluppet, så kostnaden er noen
-  // ekstra knapp-kort. `docs/native/**` er MED VILJE utenfor — en ren docs-PR om appen
-  // trenger ingen menneske-port.
-  'native/app/**',
+  // Appens innloggings-, konto- og butikkflater — ikke hele appen (#2134, eierbeslutning
+  // 2026-09-16). Fra #1944 til #2134 sto `native/app/**` her i sin helhet, fordi PR #1943
+  // (appens utlogging) ble auto-merget forbi eieren: web-radene over dekker webbens
+  // innlogging, utlogging, konto-sletting og Supabase-klient, og appen har sine EGNE
+  // motstykker som ikke matchet noen web-rad. Første uke med orkestratoren viste at
+  // den brede raden stoppet rene paritetsfikser (#2106, #2107, #2108: komponenter, kopi,
+  // tester), og appen er ikke sluppet: main er ikke produksjon for appen, ingenting når
+  // spillere før eieren bygger og sender til TestFlight, og hele appen testes før slipp.
+  // Derfor står bare det som faktisk sved i #1943 igjen, pluss butikkbygg og
+  // signering. Ny auth-flate i appen? Legg fila til her — det er prisen for at resten
+  // auto-merges. `docs/native/**` er fortsatt utenfor.
+  'native/app/src/screens/Login.tsx',
+  'native/app/src/screens/DeleteAccount.tsx',
+  'native/app/src/session.tsx',
+  'native/app/src/data/account.ts',
+  'native/app/src/data/logout.ts',
+  'native/app/src/data/webApi.ts',
+  'native/app/src/supabase.ts',
+  'native/app/src/lib/loginCopy.ts',
+  'native/app/src/lib/accountCopy.ts',
+  'native/app/app.json',
+  'native/app/app.config.ts',
+  'native/app/scripts/**',
   // Skallenes signerings-, rettighets- og dyplenke-flater (#1956): `App.entitlements`,
   // `Info.plist`, `capacitor.config.json`, `AndroidManifest.xml`, `twa-manifest.json`.
   // `native/ios/` er nød-utgangen etter slipp til N8 er lukket og én app-oppdatering er ute.
