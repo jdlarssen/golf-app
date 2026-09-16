@@ -43,19 +43,29 @@ export default async function DeletePlayerPage({
   // #1012: spillhistorikk blokkerer ikke lenger (den anonymiseres), men
   // deltakelse i / arrangering av noe pågående gjør det — delt regel med
   // selv-slett-flyten.
+  // #1903: uttømmende over utfallet, som i action-en — `null` er eneste vei
+  // til slette-knappen.
   const blockReason = await getDeleteBlockReason(id);
-  if (blockReason === 'admin_account') {
-    redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
-  }
-  if (blockReason === 'active_engagements') {
-    redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
-  }
-  if (blockReason === 'sole_club_owner') {
-    redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
-  }
-  // #1903: sjekken fikk ikke svar fra basen → vis ikke slette-knappen.
-  if (blockReason === 'check_failed') {
-    redirect({ href: `/admin/spillere/${id}?error=auth_delete_failed`, locale });
+  switch (blockReason) {
+    case null:
+      break;
+    case 'admin_account':
+      redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
+      break;
+    case 'active_engagements':
+      redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
+      break;
+    case 'sole_club_owner':
+      redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
+      break;
+    // Sjekken fikk ikke svar fra basen → vis ikke slette-knappen.
+    case 'check_failed':
+      redirect({ href: `/admin/spillere/${id}?error=auth_delete_failed`, locale });
+      break;
+    default: {
+      const unhandled: never = blockReason;
+      throw new Error(`unhandled delete check outcome: ${String(unhandled)}`);
+    }
   }
 
   const { count: gamePlayerCount } = await supabase

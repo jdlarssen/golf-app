@@ -84,7 +84,7 @@ select ok(
 -- ── 8. anonymize_user still refuses the admin (regression guard) ────────────
 select throws_ok(
   format('select public.anonymize_user(%L::uuid)', torny_adm.admin_id()),
-  '42501', null,
+  '42501', 'admin accounts cannot be anonymized (public.users.is_admin)',
   '#1903: anonymize_user still refuses an admin account'
 );
 
