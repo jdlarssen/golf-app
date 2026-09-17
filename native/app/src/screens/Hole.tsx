@@ -59,7 +59,7 @@ import {
   type TeamCard,
 } from '../lib/teamPlay';
 import { useGameChoices } from '../lib/useChoices';
-import { useGameBundle, useLocalScores } from '../lib/useGameData';
+import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { wolfHoleState, wolfPointsByUser } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -82,7 +82,12 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   const { gameId, holeNumber } = route.params;
   const { userId } = useSession();
   const { bundle, loading } = useGameBundle(gameId);
-  const { scores, reload } = useLocalScores(gameId, POLL_MS);
+  const { scores: localScores, reload } = useLocalScores(gameId, POLL_MS);
+  // #2067: lagets rader fra før en kontosletting ligger på den trukne
+  // kapteinen. Foldes inn her, før noe annet leser slagene, så kortet, stripen
+  // og «+» ser ett sett rader på den nye eieren. Skrivingen går fortsatt på
+  // eier-id-en, aldri på en foldet rads `id`.
+  const scores = useTeamScores(localScores, bundle);
   // Wolf/BBB henter valgene sine fra serveren. De elleve andre formatene
   // svarer `null` på kilde-spørsmålet og koster ikke et eneste nettkall — og
   // før bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.

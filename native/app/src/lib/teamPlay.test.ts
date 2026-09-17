@@ -22,6 +22,7 @@ import {
   buildTeamCards,
   filledHolesForOwner,
   findMyTeamCard,
+  foldLocalScores,
   foursomesTeeStarterId,
   myTeamCaptainId,
   teamExtraForHole,
@@ -295,6 +296,72 @@ describe('CTA-en på spill-hjem for et lagkort', () => {
         requirePeerApproval: true,
       }),
     ).toBe('in_progress');
+  });
+});
+
+describe('foldLocalScores — kapteinen har slettet kontoen (#2067)', () => {
+  const WD = '2026-09-17T10:00:00.000Z';
+  // Lag 1: kaptein anna er trukket, bjorn eier radene nå. Lag 2 er urørt.
+  const roster = toRoster([
+    player({ userId: 'anna', teamNumber: 1, withdrawnAt: WD }),
+    player({ userId: 'bjorn', teamNumber: 1 }),
+    player({ userId: 'cato', teamNumber: 2 }),
+    player({ userId: 'dina', teamNumber: 2 }),
+  ]);
+  const holesOf = (userId: string, from: number, to: number, strokes = 5) =>
+    Array.from({ length: to - from + 1 }, (_, i) =>
+      score({ userId, holeNumber: from + i, strokes }),
+    );
+
+  it('hullene den trukne kapteinen førte, teller for makkeren som eier raden nå', () => {
+    const scores = [...holesOf('anna', 1, 9), ...holesOf('cato', 1, 9)];
+    const ownerId = myTeamCaptainId(roster, 'bjorn');
+
+    const folded = foldLocalScores(scores, roster, SCRAMBLE);
+    const filled = filledHolesForOwner(folded, SCRAMBLE, 'bjorn', ownerId);
+
+    expect(ownerId).toBe('bjorn');
+    expect(filled).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(nextUnfilledHole(filled)).toBe(10);
+    // Lag 2 har ingen trukne: radene er de samme objektene.
+    expect(folded.filter((row) => row.userId === 'cato')).toEqual(
+      scores.filter((row) => row.userId === 'cato'),
+    );
+    expect(folded.find((row) => row.userId === 'cato')).toBe(scores[9]);
+  });
+
+  it('en retting den nye eieren gjør etter slettingen, slår den gamle verdien', () => {
+    const scores = [
+      score({ userId: 'anna', holeNumber: 5, strokes: 4 }),
+      score({ userId: 'bjorn', holeNumber: 5, strokes: 6 }),
+    ];
+
+    const folded = foldLocalScores(scores, roster, SCRAMBLE);
+
+    expect(folded).toHaveLength(1);
+    expect(folded[0]).toMatchObject({ userId: 'bjorn', holeNumber: 5, strokes: 6 });
+  });
+
+  it('patsome: hull 1–6 er egen ball og røres ikke, 7–18 følger laget', () => {
+    const scores = [
+      ...holesOf('anna', 1, 8, 4),
+      ...holesOf('bjorn', 1, 6, 6),
+    ];
+
+    const folded = foldLocalScores(scores, roster, 'patsome');
+
+    // Egen ball: begge har sine seks hull, som de samme objektene.
+    const ownBall = scores.filter((row) => row.holeNumber <= 6);
+    const keptOwnBall = folded.filter((row) => row.holeNumber <= 6);
+    expect(keptOwnBall).toHaveLength(12);
+    keptOwnBall.forEach((row, i) => expect(row).toBe(ownBall[i]));
+    // Foursomes-halvdelen: kapteinens hull 7–8 ligger nå på bjorn.
+    expect(
+      folded.filter((row) => row.holeNumber >= 7).map((row) => [row.userId, row.holeNumber]),
+    ).toEqual([
+      ['bjorn', 7],
+      ['bjorn', 8],
+    ]);
   });
 });
 

@@ -61,7 +61,7 @@ import {
   findMyTeamCard,
   myTeamCaptainId,
 } from '../lib/teamPlay';
-import { useGameBundle, useLocalScores } from '../lib/useGameData';
+import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, useTheme } from '../theme';
@@ -74,7 +74,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const { gameId } = route.params;
   const { userId } = useSession();
   const { bundle, errorText, loading, refresh } = useGameBundle(gameId);
-  const { scores, reload } = useLocalScores(gameId);
+  const { scores: localScores, reload } = useLocalScores(gameId);
+  // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
+  // noe annet leser slagene.
+  const scores = useTeamScores(localScores, bundle);
 
   // Hent ned det serveren har hver gang skjermen åpnes, og les lokalt etterpå.
   // Feiler seeden (offline), står de lokale radene som de var.

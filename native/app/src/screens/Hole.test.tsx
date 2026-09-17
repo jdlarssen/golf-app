@@ -108,12 +108,17 @@ const mockTeamBundle = {
 };
 
 /** En ferdig ført rad, slik SQLite ville gitt den tilbake. */
-function localScore(userId: string, strokes: number | null, putts: number | null) {
+function localScore(
+  userId: string,
+  strokes: number | null,
+  putts: number | null,
+  holeNumber = 1,
+) {
   return {
-    id: `${GAME_ID}#${userId}#1`,
+    id: `${GAME_ID}#${userId}#${holeNumber}`,
     gameId: GAME_ID,
     userId,
-    holeNumber: 1,
+    holeNumber,
     strokes,
     putts,
     enteredBy: 'me',
@@ -121,6 +126,25 @@ function localScore(userId: string, strokes: number | null, putts: number | null
     serverUpdatedAt: null,
   };
 }
+
+// #2067: texas scramble der kapteinen («makker», lex-min) har slettet kontoen
+// etter ni hull. Raden hans er trukket, og «me» eier lagets rader nå.
+const mockWithdrawnCaptainBundle = {
+  ...mockTeamBundle,
+  game: {
+    ...GAME_BASE,
+    gameMode: 'texas_scramble',
+    modeConfig: {
+      kind: 'texas_scramble',
+      team_size: 2,
+      teams_count: 2,
+      team_handicap_pct: 25,
+    },
+  },
+  players: mockTeamBundle.players.map((p) =>
+    p.userId === 'makker' ? { ...p, withdrawnAt: '2026-09-17T10:00:00.000Z' } : p,
+  ),
+};
 
 // Hvilken bundel skjermen får, satt per test. Navnet må starte med `mock` —
 // jest.mock-factoryene heises over importene og ser bare slike variabler.
@@ -343,5 +367,34 @@ describe('Hole', () => {
     expect(
       (writeScore as jest.Mock).mock.calls[0][0],
     ).not.toHaveProperty('putts');
+  });
+
+  it('kapteinen har slettet kontoen: hullet viser verdien hans, og «+» skriver til den nye eieren', async () => {
+    mockState.bundle = mockWithdrawnCaptainBundle;
+    mockState.scores = Array.from({ length: 9 }, (_, i) =>
+      localScore('makker', i === 4 ? 6 : 5, null, i + 1),
+    );
+    await renderHole(5);
+
+    // Hull 5 ble ført av kapteinen før slettingen.
+    await waitFor(() => {
+      expect(screen.getByTestId('team-1-value').props.children).toBe(6);
+    });
+
+    await fireEvent.press(screen.getByTestId('team-1-plus'));
+
+    await waitFor(() => {
+      expect(writeScore).toHaveBeenCalledWith({
+        gameId: GAME_ID,
+        userId: 'me',
+        holeNumber: 5,
+        strokes: 7,
+        enteredBy: 'me',
+      });
+    });
+    // Den trukne raden kan ikke skrives til, og skal ikke prøves.
+    expect(
+      (writeScore as jest.Mock).mock.calls.map(([args]) => args.userId),
+    ).toEqual(['me']);
   });
 });
