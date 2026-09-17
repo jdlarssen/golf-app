@@ -88,19 +88,22 @@ export function buildUniformContext(opts: {
 
   // #2067: i én-ball-formatene blir et trukket medlem stående på et lag som
   // fortsatt har et aktivt medlem.
+  // Regnes over spillerne konteksten kan beholde (users-join satt), så
+  // foldingen aldri legger lagets rader på en id modusene ikke leser.
   const oneBall = modeCollapsesToTeamCard(gameMode, 18);
+  const joined = players.filter((p) => p.users != null);
   const teamsInPlay = new Set(
-    players.filter((p) => p.withdrawn_at == null).map((p) => p.team_number),
+    joined.filter((p) => p.withdrawn_at == null).map((p) => p.team_number),
   );
   const keptWithdrawnIds = new Set(
     oneBall
-      ? players
+      ? joined
           .filter((p) => p.withdrawn_at != null && teamsInPlay.has(p.team_number))
           .map((p) => p.user_id)
       : [],
   );
   const scores = foldTeamRows({
-    roster: players,
+    roster: joined,
     rows: scoresRows.map((s) => ({
       userId: s.user_id,
       holeNumber: s.hole_number,
