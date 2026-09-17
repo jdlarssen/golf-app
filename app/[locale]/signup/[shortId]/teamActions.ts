@@ -373,22 +373,32 @@ export async function submitTeamRegistration(
     };
     if (outcome === 'ok') {
       assignedTeamNumber = claimedTeam ?? null;
-    } else if (outcome !== 'already_on_roster') {
-      // The claim refused (the game is full, every team number is taken, or a
-      // state gate closed after the checks above) or failed outright. It runs
-      // after the captain row exists, so roll that row back either way: the
-      // game must not be left with a team without players (AGENTS.md trap 5),
-      // and a retry must start clean — a request row left behind would answer
-      // the retry with already_registered and keep the captain off the roster
-      // (#667: without the game_players row the captain is not in the game).
-      const rejection: TeamRegistrationError =
+    } else {
+      // The claim refused (the game is full, every team number is taken, the
+      // captain is already on the roster, or a state gate closed after the
+      // checks above) or failed outright. It runs after the captain row
+      // exists, so roll that row back either way: the game must not be left
+      // with a team without players (AGENTS.md trap 5), and a retry must start
+      // clean — a request row left behind would answer the retry with
+      // already_registered and keep the captain off the roster (#667: without
+      // the game_players row the captain is not in the game).
+      //
+      // already_on_roster (#2072): the captain already has a game_players row
+      // (added by the organiser without a team), so the claim wrote nothing and
+      // the new team would get no number — nor would its teammates. The
+      // captain is already registered, so that is the answer.
+      let rejection: TeamRegistrationError = 'db_error';
+      if (!claimError && outcome === 'already_on_roster') {
+        rejection = 'already_registered';
+      } else if (
         !claimError &&
         (outcome === 'game_full' ||
           outcome === 'game_locked' ||
           outcome === 'signup_closed' ||
           outcome === 'game_not_found')
-          ? outcome
-          : 'db_error';
+      ) {
+        rejection = outcome;
+      }
       if (rejection === 'db_error' && !claimError) {
         console.error('[submitTeamRegistration] unexpected seat claim outcome', claim);
       }
@@ -412,10 +422,6 @@ export async function submitTeamRegistration(
       }
       return { ok: false, error: rejection };
     }
-    // already_on_roster: the captain already has a game_players row, so the
-    // claim wrote nothing and the new team gets no number — the teammates
-    // below are not placed on one either. The ignoreDuplicates upsert this
-    // replaces also left the existing row alone; the rest of #2072 is #2061's.
   }
 
   // Per-slot-løkke. Hver slot håndteres separat så feil på én ikke
@@ -607,9 +613,10 @@ export async function submitTeamRegistration(
 }
 
 /**
- * Medspiller aksepterer team-invite. Insert game_players-rad og oppdater
- * request-status til approved (om den var pending, eller no-op om allerede
- * approved fra open-modus).
+ * Medspiller aksepterer team-invite. Oppdaterer request-status til approved
+ * (om den var pending, eller no-op om allerede approved fra open-modus), og
+ * setter medspilleren i game_players på kapteinens lag — bare hvis kapteinen
+ * alt har et lagnummer. Ellers venter raden på arrangørens godkjenning (#2061).
  *
  * Kalles fra `/signup/[shortId]/team`-siden av medspilleren selv.
  */
@@ -691,74 +698,85 @@ export async function acceptTeamInvite(
     return { ok: false, error: 'signup_closed' };
   }
 
-  // Hent kapteinens team_number fra game_players hvis det finnes (open-
-  // modus eller kaptein er allerede approved). Hvis ikke, fall tilbake
-  // til auto-tildeling (manual_approval pre-approve).
+  // Hent kapteinens team_number fra game_players. Har kapteinen ingen rad
+  // eller intet nummer (manual_approval, kapteinen venter på arrangøren),
+  // venter medspilleren også: ingen game_players-rad nå. approveRequest
+  // setter hele laget på samme lag når kapteinen godkjennes (#2061). Before
+  // this the teammate took the lowest free number for themself, the captain
+  // got the next one, and the team was split in two.
+  // Error ≠ absence (#1445): a failed lookup must not read as «no captain».
   let teamNumber: number | null = null;
   if (req.team_request_id) {
-    const { data: captainReqRow } = await admin
+    const { data: captainReqRow, error: captainReqError } = await admin
       .from('game_registration_requests')
       .select('user_id')
       .eq('id', req.team_request_id)
       .maybeSingle<{ user_id: string }>();
+    if (captainReqError) {
+      console.error('[acceptTeamInvite] captain request lookup failed', {
+        requestId,
+        error: captainReqError,
+      });
+      return { ok: false, error: 'db_error' };
+    }
     if (captainReqRow?.user_id) {
-      const { data: captainPlayer } = await admin
+      const { data: captainPlayer, error: captainPlayerError } = await admin
         .from('game_players')
         .select('team_number')
         .eq('game_id', game.id)
         .eq('user_id', captainReqRow.user_id)
         .maybeSingle<{ team_number: number | null }>();
-      teamNumber = captainPlayer?.team_number ?? null;
-    }
-  }
-
-  if (teamNumber === null) {
-    const { data: existingTeams } = await admin
-      .from('game_players')
-      .select('team_number')
-      .eq('game_id', game.id)
-      .not('team_number', 'is', null)
-      .returns<{ team_number: number }[]>();
-    const taken = new Set((existingTeams ?? []).map((r) => r.team_number));
-    for (let slot = 1; slot <= 50; slot += 1) {
-      if (!taken.has(slot)) {
-        teamNumber = slot;
-        break;
+      if (captainPlayerError) {
+        console.error('[acceptTeamInvite] captain player lookup failed', {
+          requestId,
+          error: captainPlayerError,
+        });
+        return { ok: false, error: 'db_error' };
       }
+      teamNumber = captainPlayer?.team_number ?? null;
     }
   }
 
   const decidedAt = new Date().toISOString();
   if (req.status === 'pending') {
-    const { error: updateError } = await admin
-      .from('game_registration_requests')
-      .update({
-        status: 'approved',
-        decided_at: decidedAt,
-        decided_by_user_id: user.id,
-      })
-      .eq('id', req.id);
-    if (updateError) {
-      console.error('[acceptTeamInvite] update failed', updateError);
+    // 0 rows = failure (trap 2): when the captain has no team yet this is the
+    // only write, so a silent no-op would answer ok for nothing.
+    try {
+      expectAffected(
+        await admin
+          .from('game_registration_requests')
+          .update({
+            status: 'approved',
+            decided_at: decidedAt,
+            decided_by_user_id: user.id,
+          })
+          .eq('id', req.id)
+          .select('id'),
+        'acceptTeamInvite',
+      );
+    } catch (updateErr) {
+      console.error('[acceptTeamInvite] update failed', updateErr);
       return { ok: false, error: 'db_error' };
     }
   }
 
-  const { error: playerError } = await admin.from('game_players').upsert(
-    {
-      game_id: game.id,
-      user_id: user.id,
-      team_number: teamNumber,
-      flight_number: teamNumber,
-      course_handicap: null,
-      // #463: spilleren godtar invitasjonen selv → bekreftet med en gang.
-      accepted_at: acceptedAtForActor(user.id, user.id),
-    },
-    { onConflict: 'game_id,user_id', ignoreDuplicates: true },
-  );
-  if (playerError) {
-    console.error('[acceptTeamInvite] player upsert failed', playerError);
-    return { ok: false, error: 'db_error' };
+  if (teamNumber !== null) {
+    const { error: playerError } = await admin.from('game_players').upsert(
+      {
+        game_id: game.id,
+        user_id: user.id,
+        team_number: teamNumber,
+        flight_number: teamNumber,
+        course_handicap: null,
+        // #463: spilleren godtar invitasjonen selv → bekreftet med en gang.
+        accepted_at: acceptedAtForActor(user.id, user.id),
+      },
+      { onConflict: 'game_id,user_id', ignoreDuplicates: true },
+    );
+    if (playerError) {
+      console.error('[acceptTeamInvite] player upsert failed', playerError);
+      return { ok: false, error: 'db_error' };
+    }
   }
 
   expireGameCache(game.id);
@@ -1086,9 +1104,11 @@ export async function attachToCaptainTeam(
     return { ok: false, error: 'db_error' };
   }
 
-  // For open-modus: legg brukeren i game_players umiddelbart.
+  // For open-modus: legg brukeren i game_players umiddelbart — på kapteinens
+  // lag. Har kapteinen intet lagnummer, skrives ingen rad: en lag-medspiller
+  // uten lag er det #2061/#2072 fjernet fra alle andre stier.
   if (childStatus === 'approved') {
-    const { data: captainPlayer } = await admin
+    const { data: captainPlayer, error: captainPlayerError } = await admin
       .from('game_players')
       .select('team_number')
       .eq('game_id', game.id)
@@ -1096,20 +1116,30 @@ export async function attachToCaptainTeam(
       .maybeSingle<{ team_number: number | null }>();
     const teamNumber = captainPlayer?.team_number ?? null;
 
-    const { error: playerError } = await admin.from('game_players').upsert(
-      {
-        game_id: game.id,
-        user_id: user.id,
-        team_number: teamNumber,
-        flight_number: teamNumber,
-        course_handicap: null,
-        // #463: brukeren kobler seg selv på et lag → bekreftet med en gang.
-        accepted_at: acceptedAtForActor(user.id, user.id),
-      },
-      { onConflict: 'game_id,user_id', ignoreDuplicates: true },
-    );
-    if (playerError) {
-      console.error('[attachToCaptainTeam] player upsert failed', playerError);
+    // A failed lookup resolves data null, so it lands here too.
+    if (teamNumber === null) {
+      console.error('[attachToCaptainTeam] captain has no team number', {
+        gameId: game.id,
+        userId: user.id,
+        captainUserId: captain.user_id,
+        error: captainPlayerError,
+      });
+    } else {
+      const { error: playerError } = await admin.from('game_players').upsert(
+        {
+          game_id: game.id,
+          user_id: user.id,
+          team_number: teamNumber,
+          flight_number: teamNumber,
+          course_handicap: null,
+          // #463: brukeren kobler seg selv på et lag → bekreftet med en gang.
+          accepted_at: acceptedAtForActor(user.id, user.id),
+        },
+        { onConflict: 'game_id,user_id', ignoreDuplicates: true },
+      );
+      if (playerError) {
+        console.error('[attachToCaptainTeam] player upsert failed', playerError);
+      }
     }
   }
 
