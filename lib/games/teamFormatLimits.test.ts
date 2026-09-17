@@ -6,6 +6,7 @@ import {
   MIN_TEAMS,
   TEAM_FORMAT_PLAYER_CAP,
   defaultFlightForTeam,
+  fitAssignmentsToGrid,
   fitsTeamFormat,
   maxTeamsForSize,
   organizerPlayerCap,
@@ -13,6 +14,7 @@ import {
   registrationSeatTeamSize,
   teamFormatPlayerCap,
   teamModePlayerCap,
+  teamGridShape,
   teamGridSize,
   teamNumberRange,
   teamSizesForMode,
@@ -323,5 +325,110 @@ describe('teamsDesc-tekstene lover like mange lag som rutenettet (#2075, #2148)'
       expect(text, key).toContain('{maxTeams}');
       expect(text, key).not.toMatch(/\b(4|fire|four)\s+(lag|teams|par|pairs)\b/i);
     }
+  });
+});
+
+/** Every assigned, selected player has a slot the grid draws (#2079). */
+function everyAssignedPlayerVisible(
+  teamByPlayer: Record<string, number>,
+  selectedPlayerIds: readonly string[],
+  shape: { slotsPerTeam: number; teamCount: number },
+): boolean {
+  const seen = new Map<number, number>();
+  return selectedPlayerIds.every((pid) => {
+    const team = teamByPlayer[pid];
+    if (team === undefined) return true;
+    const index = seen.get(team) ?? 0;
+    seen.set(team, index + 1);
+    return team <= shape.teamCount && index < shape.slotsPerTeam;
+  });
+}
+
+/** `count` players `p1..pN` dealt in order into teams of `size`. */
+function dealt(count: number, size: number) {
+  const ids = Array.from({ length: count }, (_, i) => `p${i + 1}`);
+  const teams: Record<string, number> = {};
+  ids.forEach((pid, i) => {
+    teams[pid] = Math.floor(i / size) + 1;
+  });
+  return { ids, teams };
+}
+
+function highestTeam(teams: Record<string, number>): number {
+  return Math.max(0, ...Object.values(teams));
+}
+
+describe('teamGridShape — plasser og lagkort i rutenettet (#2079)', () => {
+  it.each([
+    ['texas_scramble', 2, 12, 2, 6],
+    ['texas_scramble', 3, 12, 3, 4],
+    ['texas_scramble', 4, 40, 4, 10],
+    ['ambrose', 2, 4, 2, 2],
+    ['ambrose', 3, 39, 3, 13],
+    ['ambrose', 4, 16, 4, 4],
+    ['florida_scramble', 3, 9, 3, 3],
+    ['florida_scramble', 4, 16, 4, 4],
+    ['shamble', 3, 12, 3, 4],
+    ['shamble', 4, 8, 4, 2],
+    ['best_ball', 2, 12, 2, 6],
+    ['patsome', 2, 8, 2, 4],
+    ['stableford', 2, 6, 2, 3],
+    ['modified_stableford', 2, 40, 2, 20],
+  ] as const)('%s à %i med %i valgt → %i plasser, %i lagkort', (mode, size, selected, slots, teams) => {
+    expect(teamGridShape(mode, size, selected)).toEqual({ slotsPerTeam: slots, teamCount: teams });
+  });
+
+  it.each([
+    'fourball_matchplay',
+    'foursomes_matchplay',
+    'greensome_matchplay',
+    'chapman_matchplay',
+    'gruesome_matchplay',
+  ] as const)('%s har alltid to sider à 2', (mode) => {
+    expect(teamGridShape(mode, 2, 12, 6)).toEqual({ slotsPerTeam: 2, teamCount: 2 });
+  });
+
+  it('et lag som alt har spillere vises selv om rutenettet ellers ville krympet (#2148)', () => {
+    expect(teamGridShape('texas_scramble', 4, 12, 6)).toEqual({ slotsPerTeam: 4, teamCount: 6 });
+  });
+});
+
+describe('fitAssignmentsToGrid — ingen fordelt spiller blir usynlig (#2079)', () => {
+  it.each([
+    // [label, mode, count, fromSize, toSize, kept]
+    ['12 à 3 → par', 'texas_scramble', 12, 3, 2, 8],
+    ['16 à 4 → à 3', 'texas_scramble', 16, 4, 3, 12],
+    ['12 à 4 → par', 'ambrose', 12, 4, 2, 6],
+    ['12 i seks par → à 4 (lagene med spillere står)', 'texas_scramble', 12, 2, 4, 12],
+    ['Texas à 3 → best ball', 'best_ball', 12, 3, 2, 8],
+    ['Texas à 2, fire lag → fourball (to sider)', 'fourball_matchplay', 8, 2, 2, 4],
+  ] as const)('%s → %i beholdt', (_label, mode, count, fromSize, toSize, kept) => {
+    const { ids, teams } = dealt(count, fromSize);
+    const shape = teamGridShape(mode, toSize, ids.length, highestTeam(teams));
+    const next = fitAssignmentsToGrid(teams, ids, shape);
+
+    expect(Object.keys(next)).toHaveLength(kept);
+    expect(everyAssignedPlayerVisible(next, ids, shape)).toBe(true);
+    // Players who still fit keep the team they had.
+    for (const [pid, team] of Object.entries(next)) {
+      expect(teams[pid]).toBe(team);
+    }
+  });
+
+  it('12 à 3 → par løser den tredje spilleren i hvert lag', () => {
+    const { ids, teams } = dealt(12, 3);
+    const next = fitAssignmentsToGrid(teams, ids, teamGridShape('texas_scramble', 2, 12, 4));
+    expect(ids.filter((pid) => next[pid] === undefined)).toEqual(['p3', 'p6', 'p9', 'p12']);
+  });
+
+  it('alt passer → samme objekt tilbake', () => {
+    const { ids, teams } = dealt(8, 2);
+    const shape = teamGridShape('texas_scramble', 4, 8, highestTeam(teams));
+    expect(fitAssignmentsToGrid(teams, ids, shape)).toBe(teams);
+  });
+
+  it('tomt kart → samme tomme kart', () => {
+    const empty: Record<string, number> = {};
+    expect(fitAssignmentsToGrid(empty, ['p1', 'p2'], teamGridShape('texas_scramble', 2, 2))).toBe(empty);
   });
 });
